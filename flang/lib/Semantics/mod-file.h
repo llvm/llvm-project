@@ -71,7 +71,8 @@ private:
   std::optional<SourceName> GetUseName(
       const Scope &, const Symbol &, const Scope &symMod);
   void PutRenamedSymbolUse(const Scope &, const Symbol &);
-  void PutSymbols(const Scope &, bool omitModules);
+  void PutSymbols(
+      const Scope &, bool omitModules, UnorderedSymbolSet *fullHermeticModules);
   std::string PutDependencyModules(
       std::string originalModuleName, const SymbolVector &);
   std::string PutDependencyModule(

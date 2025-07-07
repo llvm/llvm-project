@@ -28,6 +28,8 @@
 #include <variant>
 #include <vector>
 
+static constexpr bool pruneHermeticModuleFiles{true};
+
 namespace Fortran::semantics {
 
 using namespace parser::literals;
@@ -144,14 +146,40 @@ void ModFileWriter::Write(const Symbol &symbol) {
       ModFileName(symbol.name(), ancestorName, context_.moduleFileSuffix())};
 
   SymbolVector dependenceClosure;
-  if (hermeticModuleFileOutput_ && !isSubmodule_) {
+  if (hermeticModuleFileOutput_ && !isSubmodule_ && pruneHermeticModuleFiles) {
     dependenceClosure = CollectAllDependences(DEREF(symbol.scope()),
         FollowUseAssociations | IncludeUsesOfGenerics |
             IncludeSpecificsOfGenerics | NotJustForOneModule);
   }
-  PutSymbols(DEREF(symbol.scope()), hermeticModuleFileOutput_);
+  UnorderedSymbolSet fullHermeticModules;
+  PutSymbols(DEREF(symbol.scope()), hermeticModuleFileOutput_,
+      hermeticModuleFileOutput_ && !pruneHermeticModuleFiles
+          ? &fullHermeticModules
+          : nullptr);
   auto asStr{GetAsString(&symbol, symbol.name().ToString())};
-  asStr += PutDependencyModules(symbol.name().ToString(), dependenceClosure);
+  if (!dependenceClosure.empty()) {
+    // Emit minimal modules on which this module depends, if emitting a
+    // hermetic module file
+    asStr += PutDependencyModules(symbol.name().ToString(), dependenceClosure);
+  } else if (!fullHermeticModules.empty()) {
+    // Emit full (complete) modules on which this module depends
+    std::set<std::string> hermeticModuleNames;
+    hermeticModuleNames.insert(symbol.name().ToString());
+    while (!fullHermeticModules.empty()) {
+      UnorderedSymbolSet nextPass{std::move(fullHermeticModules)};
+      fullHermeticModules.clear();
+      for (const Symbol &modSym : nextPass) {
+        if (!modSym.owner().IsIntrinsicModules() &&
+            hermeticModuleNames.find(modSym.name().ToString()) ==
+                hermeticModuleNames.end()) {
+          hermeticModuleNames.insert(modSym.name().ToString());
+          PutSymbols(DEREF(modSym.scope()), /*omitModules=*/false,
+              &fullHermeticModules);
+          asStr += GetAsString(&modSym, modSym.name().ToString());
+        }
+      }
+    }
+  }
   ModuleCheckSumType checkSum;
   if (std::error_code error{
           WriteFile(path, asStr, checkSum, context_.debugModuleWriter())}) {
@@ -167,7 +195,8 @@ void ModFileWriter::WriteClosure(llvm::raw_ostream &out, const Symbol &symbol,
       !nonIntrinsicModulesWritten.insert(symbol).second) {
     return;
   }
-  PutSymbols(DEREF(symbol.scope()), /*omitModules=*/false);
+  PutSymbols(DEREF(symbol.scope()), /*omitModules=*/false,
+      /*fullHermeticModules=*/nullptr);
   needsBuf_.clear(); // omit module checksums
   auto str{GetAsString(&symbol, symbol.name().ToString())};
   for (auto depRef : std::move(usedNonIntrinsicModules_)) {
@@ -310,7 +339,8 @@ void ModFileWriter::PutRenamedSymbolUse(const Scope &scope, const Symbol &sym) {
 }
 
 // Put out the visible symbols from scope.
-void ModFileWriter::PutSymbols(const Scope &scope, bool omitModules) {
+void ModFileWriter::PutSymbols(const Scope &scope, bool omitModules,
+    UnorderedSymbolSet *fullHermeticModules) {
   SymbolVector sorted;
   SymbolVector uses;
   auto &renamings{context_.moduleFileOutputRenamings()};
@@ -320,7 +350,11 @@ void ModFileWriter::PutSymbols(const Scope &scope, bool omitModules) {
   CollectSymbols(scope, sorted, uses, modules);
   // Write module files for compiled dependency modules first so that their
   // hashes are known.
-  if (!omitModules) {
+  if (fullHermeticModules) {
+    for (const Symbol &mod : modules) {
+      fullHermeticModules->insert(mod);
+    }
+  } else if (!omitModules) {
     for (const Symbol &mod : modules) {
       Write(mod);
       // It's possible that the module's file already existed and
@@ -445,7 +479,7 @@ std::string ModFileWriter::PutDependencyModule(
     } else if (names.find(symbolName) != names.end()) {
       if (const auto *use{symbol.detailsIf<UseDetails>()}) {
         if (use->symbol().GetUltimate().has<GenericDetails>()) {
-          order.push_back(symbol); // pmk duplicates?
+          order.push_back(symbol);
         }
       }
     } else if (symbol.has<NamelistDetails>()) {
@@ -474,7 +508,6 @@ std::string ModFileWriter::PutDependencyModule(
       PutSymbol(typeBindings, sym);
     }
   }
-  // pmk TODO: equivalence sets
   CHECK(typeBindings.str().empty());
   renamings = std::move(previousRenamings);
   return GetAsString(nullptr, moduleName);

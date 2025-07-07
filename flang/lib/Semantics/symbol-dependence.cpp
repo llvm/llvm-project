@@ -158,6 +158,13 @@ void Collector::CollectSymbolDependences(const Symbol &symbol) {
                 Need(equivObject.symbol);
               }
             }
+            if (symbol.owner().IsModule()) {
+              if (const EquivalenceSet *equiv{FindEquivalenceSet(symbol)}) {
+                for (const EquivalenceObject &eqObj : *equiv) {
+                  Need(eqObj.symbol);
+                }
+              }
+            }
           },
           [this, &symbol](const ProcEntityDetails &x) {
             Collect(x.rawProcInterface());
