@@ -1256,19 +1256,19 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       (actual.isArray() || mlir::isa<fir::BaseBoxType>(dummyType));
 
   // Helper function to make it easier to unwrap and use expression
-  auto argHasTriplet =
-      [](const Fortran::evaluate::ActualArgument &arg) -> bool {
+  auto argHasTriplet = [](const Fortran::evaluate::ActualArgument &arg) -> bool {
     if (const auto *expr = arg.UnwrapExpr())
       return HasTriplet(*expr);
     return false;
   };
 
+  const bool actualHasTriplet = argHasTriplet(*arg.entity);
+
   // The simple contiguity of the actual is "lost" when passing a polymorphic
   // to a non polymorphic entity because the dummy dynamic type matters for
   // the contiguity.
   const bool mustDoCopyInOut =
-      actual.isArray() &&
-      arg.mustBeMadeContiguous(argHasTriplet(*arg.entity)) &&
+      actual.isArray() && arg.mustBeMadeContiguous(actualHasTriplet) &&
       (passingPolymorphicToNonPolymorphic ||
        !isSimplyContiguous(*arg.entity, foldingContext));
 

@@ -1417,6 +1417,8 @@ bool Fortran::lower::CallInterface<T>::PassedEntity::isIntentOut() const {
   return characteristics->GetIntent() == Fortran::common::Intent::Out;
 }
 
+/// Returning "true" from this function is a prerequisite for running
+/// contiguity check on the actual argument.
 template <typename T>
 bool Fortran::lower::CallInterface<T>::PassedEntity::mustBeMadeContiguous(
     const bool argHasTriplet) const {
