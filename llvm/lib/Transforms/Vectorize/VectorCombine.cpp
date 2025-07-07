@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -125,6 +126,7 @@ private:
   bool scalarizeLoadExtract(Instruction &I);
   bool scalarizeExtExtract(Instruction &I);
   bool foldConcatOfBoolMasks(Instruction &I);
+  bool foldIntegerPackFromVector(Instruction &I);
   bool foldPermuteOfBinops(Instruction &I);
   bool foldShuffleOfBinops(Instruction &I);
   bool foldShuffleOfSelects(Instruction &I);
@@ -1957,6 +1959,126 @@ bool VectorCombine::foldConcatOfBoolMasks(Instruction &I) {
   return true;
 }
 
+/// Match "shufflevector -> bitcast" or "extractelement -> zext -> shl" patterns
+/// which extract vector elements and pack them in the same relative positions.
+static bool matchSubIntegerPackFromVector(Value *V, Value *&Vec,
+                                          uint64_t &VecOffset,
+                                          SmallBitVector &Mask) {
+  static const auto m_ConstShlOrSelf = [](const auto &Base, uint64_t &ShlAmt) {
+    ShlAmt = 0;
+    return m_CombineOr(m_Shl(Base, m_ConstantInt(ShlAmt)), Base);
+  };
+
+  // First try to match extractelement -> zext -> shl
+  uint64_t VecIdx, ShlAmt;
+  if (match(V, m_ConstShlOrSelf(m_ZExtOrSelf(m_ExtractElt(
+                                    m_Value(Vec), m_ConstantInt(VecIdx))),
+                                ShlAmt))) {
+    auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
+    if (!VecTy)
+      return false;
+    auto *EltTy = dyn_cast<IntegerType>(VecTy->getElementType());
+    if (!EltTy)
+      return false;
+
+    const unsigned EltBitWidth = EltTy->getBitWidth();
+    const unsigned TargetBitWidth = V->getType()->getIntegerBitWidth();
+    if (TargetBitWidth % EltBitWidth != 0 || ShlAmt % EltBitWidth != 0)
+      return false;
+    const unsigned ShlEltAmt = ShlAmt / EltBitWidth;
+
+    if (ShlEltAmt > VecIdx)
+      return false;
+    VecOffset = VecIdx - ShlEltAmt;
+    Mask.resize(V->getType()->getIntegerBitWidth() / EltBitWidth);
+    Mask.set(ShlEltAmt);
+    return true;
+  }
+
+  // Now try to match shufflevector -> bitcast
+  Value *Lhs, *Rhs;
+  ArrayRef<int> ShuffleMask;
+  if (!match(V, m_BitCast(m_Shuffle(m_Value(Lhs), m_Value(Rhs),
+                                    m_Mask(ShuffleMask)))))
+    return false;
+  Mask.resize(ShuffleMask.size());
+
+  if (isa<Constant>(Lhs))
+    std::swap(Lhs, Rhs);
+
+  auto *RhsConst = dyn_cast<Constant>(Rhs);
+  if (!RhsConst)
+    return false;
+
+  auto *LhsTy = dyn_cast<FixedVectorType>(Lhs->getType());
+  if (!LhsTy)
+    return false;
+
+  Vec = Lhs;
+  const unsigned NumLhsElts = LhsTy->getNumElements();
+  bool FoundVecOffset = false;
+  for (unsigned Idx = 0; Idx < ShuffleMask.size(); ++Idx) {
+    if (ShuffleMask[Idx] == PoisonMaskElem)
+      return false;
+    const unsigned ShuffleIdx = ShuffleMask[Idx];
+    if (ShuffleIdx >= NumLhsElts) {
+      const unsigned RhsIdx = ShuffleIdx - NumLhsElts;
+      auto *RhsElt =
+          dyn_cast<ConstantInt>(RhsConst->getAggregateElement(RhsIdx));
+      if (!RhsElt || RhsElt->getZExtValue() != 0)
+        return false;
+      continue;
+    }
+
+    if (FoundVecOffset) {
+      if (VecOffset + Idx != ShuffleIdx)
+        return false;
+    } else {
+      if (ShuffleIdx < Idx)
+        return false;
+      VecOffset = ShuffleIdx - Idx;
+      FoundVecOffset = true;
+    }
+    Mask.set(Idx);
+  }
+  return FoundVecOffset;
+}
+/// Try to fold the or of two scalar integers whose contents are packed elements
+/// of the same vector.
+bool VectorCombine::foldIntegerPackFromVector(Instruction &I) {
+  assert(I.getOpcode() == Instruction::Or);
+  Value *LhsVec, *RhsVec;
+  uint64_t LhsVecOffset, RhsVecOffset;
+  SmallBitVector Mask;
+  if (!matchSubIntegerPackFromVector(I.getOperand(0), LhsVec, LhsVecOffset,
+                                     Mask))
+    return false;
+  if (!matchSubIntegerPackFromVector(I.getOperand(1), RhsVec, RhsVecOffset,
+                                     Mask))
+    return false;
+  if (LhsVec != RhsVec || LhsVecOffset != RhsVecOffset)
+    return false;
+
+  // Convert into shufflevector -> bitcast
+  SmallVector<int> ShuffleMask;
+  ShuffleMask.reserve(Mask.size());
+  const unsigned ZeroVecIdx =
+      cast<FixedVectorType>(LhsVec->getType())->getNumElements();
+  for (unsigned Idx = 0; Idx < Mask.size(); ++Idx) {
+    if (Mask.test(Idx))
+      ShuffleMask.push_back(LhsVecOffset + Idx);
+    else
+      ShuffleMask.push_back(ZeroVecIdx);
+  }
+
+  Value *MaskedVec = Builder.CreateShuffleVector(
+      LhsVec, Constant::getNullValue(LhsVec->getType()), ShuffleMask,
+      LhsVec->getName() + ".extract");
+  Value *CastedVec = Builder.CreateBitCast(MaskedVec, I.getType(), I.getName());
+  replaceValue(I, *CastedVec);
+  return true;
+}
+
 /// Try to convert "shuffle (binop (shuffle, shuffle)), undef"
 ///           -->  "binop (shuffle), (shuffle)".
 bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
@@ -3741,6 +3863,9 @@ bool VectorCombine::run() {
 
     if (Opcode == Instruction::Store)
       MadeChange |= foldSingleElementStore(I);
+
+    if (isa<IntegerType>(I.getType()) && Opcode == Instruction::Or)
+      MadeChange |= foldIntegerPackFromVector(I);
 
     // If this is an early pipeline invocation of this pass, we are done.
     if (TryEarlyFoldsOnly)
