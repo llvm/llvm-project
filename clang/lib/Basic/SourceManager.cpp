@@ -832,7 +832,7 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
   // SLocOffset.
   unsigned LessIndex = 0;
   // upper bound of the search range.
-  unsigned GreaterIndex = LocalSLocEntryTable.size();
+  unsigned GreaterIndex = LocalLocOffsetTable.size();
   // Use the LastFileIDLookup to prune the search space.
   if (LastLookupStartOffset < SLocOffset)
     LessIndex = LastFileIDLookup.ID;
@@ -848,11 +848,11 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
       FileID Res = FileID::get(int(GreaterIndex));
       // Remember it.  We have good locality across FileID lookups.
       LastFileIDLookup = Res;
-      LastLookupStartOffset = LocalSLocEntryTable[GreaterIndex].getOffset();
+      LastLookupStartOffset = LocalLocOffsetTable[GreaterIndex];
       LastLookupEndOffset =
-          GreaterIndex + 1 >= LocalSLocEntryTable.size()
+          GreaterIndex + 1 >= LocalLocOffsetTable.size()
               ? NextLocalOffset
-              : LocalSLocEntryTable[GreaterIndex + 1].getOffset();
+              : LocalLocOffsetTable[GreaterIndex + 1];
       NumLinearScans += NumProbes + 1;
       return Res;
     }
@@ -873,8 +873,8 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
   // At this point, LessIndex is the index of the *first element greater than*
   // SLocOffset. The element we are actually looking for is the one immediately
   // before it.
-  LastLookupStartOffset = LocalSLocEntryTable[LessIndex - 1].getOffset();
-  LastLookupEndOffset = LocalSLocEntryTable[LessIndex].getOffset();
+  LastLookupStartOffset = LocalLocOffsetTable[LessIndex - 1];
+  LastLookupEndOffset = LocalLocOffsetTable[LessIndex];
   return LastFileIDLookup = FileID::get(LessIndex - 1);
 }
 
