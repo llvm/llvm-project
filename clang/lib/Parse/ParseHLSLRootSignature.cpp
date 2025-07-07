@@ -136,6 +136,11 @@ std::optional<RootConstants> RootSignatureParser::parseRootConstants() {
   if (!Params.has_value())
     return std::nullopt;
 
+  if (consumeExpectedToken(TokenKind::pu_r_paren,
+                           diag::err_hlsl_unexpected_end_of_params,
+                           /*param of=*/TokenKind::kw_RootConstants))
+    return std::nullopt;
+
   // Check mandatory parameters where provided
   if (!Params->Num32BitConstants.has_value()) {
     reportDiag(diag::err_hlsl_rootsig_missing_param)
@@ -158,11 +163,6 @@ std::optional<RootConstants> RootSignatureParser::parseRootConstants() {
 
   if (Params->Space.has_value())
     Constants.Space = Params->Space.value();
-
-  if (consumeExpectedToken(TokenKind::pu_r_paren,
-                           diag::err_hlsl_unexpected_end_of_params,
-                           /*param of=*/TokenKind::kw_RootConstants))
-    return std::nullopt;
 
   return Constants;
 }
@@ -429,9 +429,9 @@ RootSignatureParser::parseRootConstantParams() {
          "Expects to only be invoked starting at given token");
 
   ParsedConstantParams Params;
-  do {
-    // `num32BitConstants` `=` POS_INT
+  while (!peekExpectedToken(TokenKind::pu_r_paren)) {
     if (tryConsumeExpectedToken(TokenKind::kw_num32BitConstants)) {
+      // `num32BitConstants` `=` POS_INT
       if (Params.Num32BitConstants.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -444,10 +444,8 @@ RootSignatureParser::parseRootConstantParams() {
       if (!Num32BitConstants.has_value())
         return std::nullopt;
       Params.Num32BitConstants = Num32BitConstants;
-    }
-
-    // `b` POS_INT
-    if (tryConsumeExpectedToken(TokenKind::bReg)) {
+    } else if (tryConsumeExpectedToken(TokenKind::bReg)) {
+      // `b` POS_INT
       if (Params.Reg.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -456,10 +454,8 @@ RootSignatureParser::parseRootConstantParams() {
       if (!Reg.has_value())
         return std::nullopt;
       Params.Reg = Reg;
-    }
-
-    // `space` `=` POS_INT
-    if (tryConsumeExpectedToken(TokenKind::kw_space)) {
+    } else if (tryConsumeExpectedToken(TokenKind::kw_space)) {
+      // `space` `=` POS_INT
       if (Params.Space.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -472,10 +468,8 @@ RootSignatureParser::parseRootConstantParams() {
       if (!Space.has_value())
         return std::nullopt;
       Params.Space = Space;
-    }
-
-    // `visibility` `=` SHADER_VISIBILITY
-    if (tryConsumeExpectedToken(TokenKind::kw_visibility)) {
+    } else if (tryConsumeExpectedToken(TokenKind::kw_visibility)) {
+      // `visibility` `=` SHADER_VISIBILITY
       if (Params.Visibility.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -489,7 +483,11 @@ RootSignatureParser::parseRootConstantParams() {
         return std::nullopt;
       Params.Visibility = Visibility;
     }
-  } while (tryConsumeExpectedToken(TokenKind::pu_comma));
+
+    // ',' denotes another element, otherwise, expected to be at ')'
+    if (!tryConsumeExpectedToken(TokenKind::pu_comma))
+      break;
+  }
 
   return Params;
 }
