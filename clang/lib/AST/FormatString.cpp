@@ -322,17 +322,12 @@ bool clang::analyze_format_string::ParseUTF8InvalidSpecifier(
 
 static bool namedTypeToLengthModifierKind(ASTContext &Ctx, QualType QT,
                                           LengthModifier::Kind &K) {
-  for (/**/; const auto *TT = QT->getAs<TypedefType>();
-       QT = TT->getDecl()->getUnderlyingType()) {
+  if (!Ctx.getLangOpts().C99 && !Ctx.getLangOpts().CPlusPlus)
+    return false;
+  for (/**/; const auto *TT = QT->getAs<TypedefType>(); QT = TT->desugar()) {
     const auto *TD = TT->getDecl();
     const auto *DC = TT->getDecl()->getDeclContext();
-    bool RC = false;
-    if (Ctx.getLangOpts().C99) {
-      RC = DC->isTranslationUnit();
-    } else if (Ctx.getLangOpts().CPlusPlus) {
-      RC = DC->isTranslationUnit() || DC->isStdNamespace();
-    }
-    if (RC) {
+    if (DC->isTranslationUnit() || DC->isStdNamespace()) {
       StringRef Name = TD->getIdentifier()->getName();
       if (Name == "size_t") {
         K = LengthModifier::AsSizeT;
@@ -362,9 +357,8 @@ static bool namedTypeToLengthModifierKind(ASTContext &Ctx, QualType QT,
     case Kind::PtrdiffT:
       K = LengthModifier::AsPtrDiff;
       return true;
-    case Kind::NumElements:
-      llvm_unreachable("unexpected kind");
     }
+    llvm_unreachable("unexpected kind");
   }
   return false;
 }

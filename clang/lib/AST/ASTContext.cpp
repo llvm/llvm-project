@@ -2595,7 +2595,6 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       Align = static_cast<unsigned>(Width);
     }
   }
-
   break;
 
   case Type::PredefinedSugar:
@@ -5224,8 +5223,6 @@ QualType
 ASTContext::getPredefinedSugarType(PredefinedSugarType::Kind KD) const {
   using Kind = PredefinedSugarType::Kind;
 
-  assert(KD != Kind::NumElements);
-
   if (auto *Target = PredefinedSugarTypes[llvm::to_underlying(KD)];
       Target != nullptr)
     return QualType(Target, 0);
@@ -5243,7 +5240,6 @@ ASTContext::getPredefinedSugarType(PredefinedSugarType::Kind KD) const {
       return Ctx.getFromTargetType(Ctx.Target->getSignedSizeType());
     case Kind::PtrdiffT:
       return Ctx.getFromTargetType(Ctx.Target->getPtrDiffType(LangAS::Default));
-    case Kind::NumElements:;
     }
     llvm_unreachable("unexpected kind");
   };

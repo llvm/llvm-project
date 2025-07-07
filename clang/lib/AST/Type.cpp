@@ -5622,7 +5622,6 @@ StringRef PredefinedSugarType::getName(Kind KD) {
     return "__signed_size_t";
   case Kind::PtrdiffT:
     return "__ptrdiff_t";
-  case Kind::NumElements:;
   }
   llvm_unreachable("unexpected kind");
 }
