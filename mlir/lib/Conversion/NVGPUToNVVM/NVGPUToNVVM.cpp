@@ -20,8 +20,8 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
@@ -114,7 +114,7 @@ static Value convertIntrinsicResult(Location loc, Type intrinsicResultType,
 
   auto makeConst = [&](int32_t index) -> Value {
     return LLVM::ConstantOp::create(rewriter, loc, IntegerType::get(ctx, 32),
-                                             rewriter.getI32IntegerAttr(index));
+                                    rewriter.getI32IntegerAttr(index));
   };
 
   if (arrayType) {
@@ -147,11 +147,11 @@ static Value convertIntrinsicResult(Location loc, Type intrinsicResultType,
         Value x1 =
             LLVM::ExtractValueOp::create(rewriter, loc, intrinsicResult, i * 2);
         Value x2 = LLVM::ExtractValueOp::create(rewriter, loc, intrinsicResult,
-                                                         i * 2 + 1);
+                                                i * 2 + 1);
         vec = LLVM::InsertElementOp::create(rewriter, loc, vec.getType(), vec,
-                                                     x1, makeConst(0));
+                                            x1, makeConst(0));
         vec = LLVM::InsertElementOp::create(rewriter, loc, vec.getType(), vec,
-                                                     x2, makeConst(1));
+                                            x2, makeConst(1));
         elements.push_back(vec);
       }
     }
@@ -160,7 +160,7 @@ static Value convertIntrinsicResult(Location loc, Type intrinsicResultType,
     Value result = LLVM::PoisonOp::create(rewriter, loc, arrayType);
     for (const auto &el : llvm::enumerate(elements)) {
       result = LLVM::InsertValueOp::create(rewriter, loc, result, el.value(),
-                                                    el.index());
+                                           el.index());
     }
     return result;
   }
@@ -208,8 +208,8 @@ static SmallVector<Value> unpackOperandVector(ImplicitLocOpBuilder &b,
                          innerArrayTy.getElementType() == f32Ty)) {
       for (unsigned idx = 0, innerSize = innerArrayTy.getNumElements();
            idx < innerSize; idx++) {
-        result.push_back(LLVM::ExtractElementOp::create(b,
-            toUse,
+        result.push_back(LLVM::ExtractElementOp::create(
+            b, toUse,
             LLVM::ConstantOp::create(b, i64Ty, b.getI64IntegerAttr(idx))));
       }
       continue;
@@ -285,8 +285,8 @@ struct MmaLdMatrixOpToNVVM : public ConvertOpToLLVMPattern<nvgpu::LdMatrixOp> {
     Value srcPtr =
         getStridedElementPtr(rewriter, b.getLoc(), srcMemrefType,
                              adaptor.getSrcMemref(), adaptor.getIndices());
-    Value ldMatrixResult = NVVM::LdMatrixOp::create(b,
-        ldMatrixResultType, srcPtr,
+    Value ldMatrixResult = NVVM::LdMatrixOp::create(
+        b, ldMatrixResultType, srcPtr,
         /*num=*/op.getNumTiles(),
         /*layout=*/op.getTranspose() ? NVVM::MMALayout::col
                                      : NVVM::MMALayout::row);
@@ -375,16 +375,16 @@ struct MmaSyncOptoNVVM : public ConvertOpToLLVMPattern<nvgpu::MmaSyncOp> {
     Type desiredRetTy = typeConverter->convertType(op->getResultTypes()[0]);
     Type intrinsicResTy = inferIntrinsicResultType(
         typeConverter->convertType(op->getResultTypes()[0]));
-    Value intrinsicResult = NVVM::MmaOp::create(b,
-        intrinsicResTy, matA, matB, matC,
-        /*shape=*/gemmShape,
-        /*b1Op=*/std::nullopt,
-        /*intOverflow=*/overflow,
-        /*multiplicandPtxTypes=*/
-        std::array<NVVM::MMATypes, 2>{*ptxTypeA, *ptxTypeB},
-        /*multiplicandLayouts=*/
-        std::array<NVVM::MMALayout, 2>{NVVM::MMALayout::row,
-                                       NVVM::MMALayout::col});
+    Value intrinsicResult =
+        NVVM::MmaOp::create(b, intrinsicResTy, matA, matB, matC,
+                            /*shape=*/gemmShape,
+                            /*b1Op=*/std::nullopt,
+                            /*intOverflow=*/overflow,
+                            /*multiplicandPtxTypes=*/
+                            std::array<NVVM::MMATypes, 2>{*ptxTypeA, *ptxTypeB},
+                            /*multiplicandLayouts=*/
+                            std::array<NVVM::MMALayout, 2>{
+                                NVVM::MMALayout::row, NVVM::MMALayout::col});
     rewriter.replaceOp(op, convertIntrinsicResult(op.getLoc(), intrinsicResTy,
                                                   desiredRetTy, intrinsicResult,
                                                   rewriter));
@@ -566,14 +566,15 @@ static FailureOr<LLVM::InlineAsmOp> emitMmaSparseSyncOpAsm(
   asmVals.push_back(indexData);
 
   return LLVM::InlineAsmOp::create(b,
-      /*resultTypes=*/intrinsicResultType,
-      /*operands=*/asmVals,
-      /*asm_string=*/asmStr,
-      /*constraints=*/constraintStr,
-      /*has_side_effects=*/true,
-      /*is_align_stack=*/false, LLVM::TailCallKind::None,
-      /*asm_dialect=*/asmDialectAttr,
-      /*operand_attrs=*/ArrayAttr());
+                                   /*resultTypes=*/intrinsicResultType,
+                                   /*operands=*/asmVals,
+                                   /*asm_string=*/asmStr,
+                                   /*constraints=*/constraintStr,
+                                   /*has_side_effects=*/true,
+                                   /*is_align_stack=*/false,
+                                   LLVM::TailCallKind::None,
+                                   /*asm_dialect=*/asmDialectAttr,
+                                   /*operand_attrs=*/ArrayAttr());
 }
 
 /// Lowers `nvgpu.mma.sp.sync` to inline assembly.
@@ -698,12 +699,12 @@ struct NVGPUAsyncCopyLowering
       // filled with zeros.
       Value c3I32 =
           LLVM::ConstantOp::create(b, b.getI32Type(), b.getI32IntegerAttr(3));
-      Value bitwidth = LLVM::ConstantOp::create(b,
-          b.getI32Type(),
+      Value bitwidth = LLVM::ConstantOp::create(
+          b, b.getI32Type(),
           b.getI32IntegerAttr(srcMemrefType.getElementTypeBitWidth()));
       Value srcElementsI32 = LLVM::TruncOp::create(b, b.getI32Type(), srcBytes);
-      srcBytes = LLVM::LShrOp::create(b,
-          LLVM::MulOp::create(b, bitwidth, srcElementsI32), c3I32);
+      srcBytes = LLVM::LShrOp::create(
+          b, LLVM::MulOp::create(b, bitwidth, srcElementsI32), c3I32);
     }
     // Cache global (.cg) for 16 dst bytes, Cache all (.ca) for sizes other than
     // 16 dst bytes.
@@ -712,14 +713,15 @@ struct NVGPUAsyncCopyLowering
             ? NVVM::LoadCacheModifierKind::CG
             : NVVM::LoadCacheModifierKind::CA;
 
-    NVVM::CpAsyncOp::create(b,
-        dstPtr, scrPtr, rewriter.getI32IntegerAttr(sizeInBytes),
+    NVVM::CpAsyncOp::create(
+        b, dstPtr, scrPtr, rewriter.getI32IntegerAttr(sizeInBytes),
         NVVM::LoadCacheModifierKindAttr::get(op->getContext(), cacheModifier),
         srcBytes);
 
     // Drop the result token.
-    Value zero = LLVM::ConstantOp::create(b,
-        IntegerType::get(op.getContext(), 32), rewriter.getI32IntegerAttr(0));
+    Value zero =
+        LLVM::ConstantOp::create(b, IntegerType::get(op.getContext(), 32),
+                                 rewriter.getI32IntegerAttr(0));
     rewriter.replaceOp(op, zero);
     return success();
   }
@@ -735,9 +737,9 @@ struct NVGPUAsyncCreateGroupLowering
                   ConversionPatternRewriter &rewriter) const override {
     NVVM::CpAsyncCommitGroupOp::create(rewriter, op.getLoc());
     // Drop the result token.
-    Value zero = LLVM::ConstantOp::create(rewriter,
-        op->getLoc(), IntegerType::get(op.getContext(), 32),
-        rewriter.getI32IntegerAttr(0));
+    Value zero = LLVM::ConstantOp::create(rewriter, op->getLoc(),
+                                          IntegerType::get(op.getContext(), 32),
+                                          rewriter.getI32IntegerAttr(0));
     rewriter.replaceOp(op, zero);
     return success();
   }
@@ -771,8 +773,8 @@ struct NVGPUMBarrierCreateLowering
     SymbolTable symbolTable(moduleOp);
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPoint(&moduleOp.front());
-    auto global = memref::GlobalOp::create(rewriter,
-        funcOp->getLoc(), "__mbarrier",
+    auto global = memref::GlobalOp::create(
+        rewriter, funcOp->getLoc(), "__mbarrier",
         /*sym_visibility=*/rewriter.getStringAttr("private"),
         /*type=*/barrierType,
         /*initial_value=*/ElementsAttr(),
@@ -1119,7 +1121,7 @@ struct NVGPUGenerateWarpgroupDescriptorLowering
 
 static Value makeI64Const(ImplicitLocOpBuilder &b, int32_t index) {
   return LLVM::ConstantOp::create(b, b.getIntegerType(64),
-                                    b.getI32IntegerAttr(index));
+                                  b.getI32IntegerAttr(index));
 }
 
 /// Returns a Value that holds data type enum that is expected by CUDA driver.
@@ -1182,11 +1184,11 @@ struct NVGPUTmaCreateDescriptorOpLowering
     auto promotedOperands = getTypeConverter()->promoteOperands(
         b.getLoc(), op->getOperands(), adaptor.getOperands(), b);
 
-    Value boxArrayPtr = LLVM::AllocaOp::create(b, llvmPointerType, llvmInt64Type,
-                                                 makeI64Const(b, 5));
+    Value boxArrayPtr = LLVM::AllocaOp::create(
+        b, llvmPointerType, llvmInt64Type, makeI64Const(b, 5));
     for (auto [index, value] : llvm::enumerate(adaptor.getBoxDimensions())) {
       Value gep = LLVM::GEPOp::create(b, llvmPointerType, llvmPointerType,
-                                        boxArrayPtr, makeI64Const(b, index));
+                                      boxArrayPtr, makeI64Const(b, index));
       LLVM::StoreOp::create(b, value, gep);
     }
 
@@ -1430,9 +1432,9 @@ struct NVGPUWarpgroupMmaOpLowering
       auto overflow = NVVM::MMAIntOverflowAttr::get(
           op->getContext(), NVVM::MMAIntOverflow::wrapped);
 
-      return NVVM::WgmmaMmaAsyncOp::create(b,
-          matrixC.getType(), matrixC, descriptorA, descriptorB, shape, itypeA,
-          itypeB, itypeD, scaleOut, scaleIn, scaleIn, layoutA, layoutB,
+      return NVVM::WgmmaMmaAsyncOp::create(
+          b, matrixC.getType(), matrixC, descriptorA, descriptorB, shape,
+          itypeA, itypeB, itypeD, scaleOut, scaleIn, scaleIn, layoutA, layoutB,
           overflow);
     }
 
@@ -1444,7 +1446,8 @@ struct NVGPUWarpgroupMmaOpLowering
       // Perform GEMM
       SmallVector<Value> wgmmaResults;
       for (int i = 0; i < iterationM; ++i) {
-        Value matrixC = LLVM::ExtractValueOp::create(b, adaptor.getMatrixC(), i);
+        Value matrixC =
+            LLVM::ExtractValueOp::create(b, adaptor.getMatrixC(), i);
         for (int j = 0; j < iterationN; ++j)
           for (int k = 0; k < iterationK; ++k)
             matrixC = generateWgmma(i, j, k, matrixC);
@@ -1452,7 +1455,7 @@ struct NVGPUWarpgroupMmaOpLowering
       }
       for (auto [idx, matrix] : llvm::enumerate(wgmmaResults)) {
         wgmmaResult = LLVM::InsertValueOp::create(b, wgmmaResult.getType(),
-                                                    wgmmaResult, matrix, idx);
+                                                  wgmmaResult, matrix, idx);
       }
       return wgmmaResult;
     }
@@ -1486,9 +1489,9 @@ struct NVGPUWarpgroupMmaOpLowering
     /// (WgmmaGroupSyncAlignedOp) for group synchronization
     /// (WgmmaWaitGroupSyncOp) after the instructions.
     Value generateWarpgroupMma() {
-      NVVM::WgmmaFenceAlignedOp::create(b, );
+      NVVM::WgmmaFenceAlignedOp::create(b);
       Value wgmmaResult = generateWgmmaGroup();
-      NVVM::WgmmaGroupSyncAlignedOp::create(b, );
+      NVVM::WgmmaGroupSyncAlignedOp::create(b);
       NVVM::WgmmaWaitGroupSyncOp::create(b, op.getWaitGroup());
       return wgmmaResult;
     }
@@ -1626,7 +1629,8 @@ struct NVGPUWarpgroupMmaStoreOpLowering
     auto stype = cast<LLVM::LLVMStructType>(matriDValue.getType());
     for (auto [idx, matrixD] : llvm::enumerate(stype.getBody())) {
       auto structType = cast<LLVM::LLVMStructType>(matrixD);
-      Value innerStructValue = LLVM::ExtractValueOp::create(b, matriDValue, idx);
+      Value innerStructValue =
+          LLVM::ExtractValueOp::create(b, matriDValue, idx);
       storeFragmentedMatrix(b, innerStructValue, op.getDstMemref(), offset);
       offset += structType.getBody().size();
     }
@@ -1656,15 +1660,15 @@ struct NVGPUWarpgroupMmaInitAccumulatorOpLowering
       auto structType = cast<LLVM::LLVMStructType>(s);
       Value structValue = LLVM::ExtractValueOp::create(b, packStruct, idx);
       for (unsigned i = 0; i < structType.getBody().size(); ++i) {
-        structValue = LLVM::InsertValueOp::create(b,
-            structType, structValue, zero, ArrayRef<int64_t>({i}));
+        structValue = LLVM::InsertValueOp::create(b, structType, structValue,
+                                                  zero, ArrayRef<int64_t>({i}));
       }
       innerStructs.push_back(structValue);
     }
     // Pack the inner structs into a single struct
     for (auto [idx, matrix] : llvm::enumerate(innerStructs)) {
       packStruct = LLVM::InsertValueOp::create(b, packStruct.getType(),
-                                                 packStruct, matrix, idx);
+                                               packStruct, matrix, idx);
     }
     rewriter.replaceOp(op, packStruct);
     return success();
