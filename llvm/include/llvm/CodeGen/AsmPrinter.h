@@ -173,8 +173,6 @@ private:
   // function. This is used to calculate the size of the BB section.
   MCSymbol *CurrentSectionBeginSym = nullptr;
 
-  bool HasAnyCallsitesForBBAddrMap = false;
-
   /// This map keeps track of which symbol is being used for the specified basic
   /// block's address of label.
   std::unique_ptr<AddrLabelMap> AddrLabelSymbols;
