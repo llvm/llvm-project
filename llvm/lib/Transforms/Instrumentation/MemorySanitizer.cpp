@@ -4342,6 +4342,61 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  // e.g., call <16 x i32> @llvm.x86.avx512.mask.cvtps2dq.512
+  //                           (<16 x float> a, <16 x i32> writethru, i16 mask,
+  //                           i32 rounding)
+  //
+  // dst[i] = mask[i] ? convert(a[i]) : writethru[i]
+  // dst_shadow[i] = mask[i] ? all_or_nothing(a_shadow[i]) : writethru_shadow[i]
+  //    where all_or_nothing(x) is fully uninitialized if x has any
+  //    uninitialized bits
+  void handleAVX512VectorConvertFPToInt(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+
+    assert(I.arg_size() == 4);
+    Value *A = I.getOperand(0);
+    Value *WriteThrough = I.getOperand(1);
+    Value *Mask = I.getOperand(2);
+    [[maybe_unused]] Value *RoundingMode = I.getOperand(3);
+
+    assert(isa<FixedVectorType>(A->getType()));
+    assert(A->getType()->isFPOrFPVectorTy());
+
+    assert(isa<FixedVectorType>(WriteThrough->getType()));
+    assert(WriteThrough->getType()->isIntOrIntVectorTy());
+
+    unsigned ANumElements =
+        cast<FixedVectorType>(A->getType())->getNumElements();
+    assert(ANumElements ==
+           cast<FixedVectorType>(WriteThrough->getType())->getNumElements());
+
+    assert(Mask->getType()->isIntegerTy());
+    assert(Mask->getType()->getScalarSizeInBits() == ANumElements);
+
+    assert(RoundingMode->getType()->isIntegerTy());
+
+    assert(I.getType() == WriteThrough->getType());
+
+    // Convert i16 mask to <16 x i1>
+    Mask = IRB.CreateBitCast(
+        Mask, FixedVectorType::get(IRB.getInt1Ty(), ANumElements));
+
+    Value *AShadow = getShadow(A);
+    /// For scalars:
+    /// Since they are converting from floating-point, the output is:
+    /// - fully uninitialized if *any* bit of the input is uninitialized
+    /// - fully ininitialized if all bits of the input are ininitialized
+    /// We apply the same principle on a per-element basis for vectors.
+    AShadow = IRB.CreateSExt(IRB.CreateICmpNE(AShadow, getCleanShadow(A)),
+                             getShadowTy(A));
+
+    Value *WriteThroughShadow = getShadow(WriteThrough);
+    Value *Shadow = IRB.CreateSelect(Mask, AShadow, WriteThroughShadow);
+
+    setShadow(&I, Shadow);
+    setOriginForNaryOp(I);
+  }
+
   // Instrument BMI / BMI2 intrinsics.
   // All of these intrinsics are Z = I(X, Y)
   // where the types of all operands and the result match, and are either i32 or
@@ -5317,6 +5372,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512_vpermi2var_qi_512:
       handleAVXVpermi2var(I);
       break;
+
+    case Intrinsic::x86_avx512_mask_cvtps2dq_512: {
+      handleAVX512VectorConvertFPToInt(I);
+      break;
+    }
 
     case Intrinsic::x86_avx512fp16_mask_add_sh_round:
     case Intrinsic::x86_avx512fp16_mask_sub_sh_round:
