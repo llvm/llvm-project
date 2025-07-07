@@ -26,20 +26,20 @@ private:
   const T *src;
   size_t src_len;
   size_t src_idx;
-  size_t bytes_pushed;
+  size_t num_pushed;
   size_t num_to_write;
 
   int pushFullCharacter() {
-    for (bytes_pushed = 0; !cr.isFull() && src_idx + bytes_pushed < src_len;
-         ++bytes_pushed) {
-      int err = cr.push(src[src_idx + bytes_pushed]);
+    for (num_pushed = 0; !cr.isFull() && src_idx + num_pushed < src_len;
+         ++num_pushed) {
+      int err = cr.push(src[src_idx + num_pushed]);
       if (err != 0)
         return err;
     }
 
     // if we aren't able to read a full character from the source string
-    if (src_idx + bytes_pushed == src_len && !cr.isFull()) {
-      src_idx += bytes_pushed;
+    if (src_idx + num_pushed == src_len && !cr.isFull()) {
+      src_idx += num_pushed;
       return -1;
     }
 
@@ -48,7 +48,7 @@ private:
 
 public:
   StringConverter(const T *s, size_t srclen, size_t dstlen, mbstate *ps)
-      : cr(ps), src(s), src_len(srclen), src_idx(0), bytes_pushed(0),
+      : cr(ps), src(s), src_len(srclen), src_idx(0), num_pushed(0),
         num_to_write(dstlen) {
     pushFullCharacter();
   }
@@ -70,7 +70,7 @@ public:
 
     auto out = cr.pop_utf32();
     if (cr.isEmpty())
-      src_idx += bytes_pushed;
+      src_idx += num_pushed;
 
     if (out.has_value() && out.value() == L'\0')
       src_len = src_idx;
@@ -94,7 +94,7 @@ public:
 
     auto out = cr.pop_utf8();
     if (cr.isEmpty())
-      src_idx += bytes_pushed;
+      src_idx += num_pushed;
 
     if (out.has_value() && out.value() == '\0')
       src_len = src_idx;
