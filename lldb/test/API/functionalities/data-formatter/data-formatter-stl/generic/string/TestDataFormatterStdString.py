@@ -38,28 +38,8 @@ class StdStringDataFormatterTestCase(TestBase):
 
         ns = self.namespace
 
-        self.expect(
-            "frame variable",
-            substrs=[
-                '(%s::wstring) wempty = L""' % ns,
-                '(%s::wstring) s = L"hello world! מזל טוב!"' % ns,
-                '(%s::wstring) S = L"!!!!"' % ns,
-                "(const wchar_t *) mazeltov = 0x",
-                'L"מזל טוב"',
-                '(%s::string) empty = ""' % ns,
-                '(%s::string) q = "hello world"' % ns,
-                '(%s::string) Q = "quite a long std::strin with lots of info inside it"'
-                % ns,
-                '(%s::string) IHaveEmbeddedZeros = "a\\0b\\0c\\0d"' % ns,
-                '(%s::wstring) IHaveEmbeddedZerosToo = L"hello world!\\0てざ ル゜䋨ミ㠧槊 きゅへ狦穤襩 じゃ馩リョ 䤦監"'
-                % ns,
-                '(%s::u16string) u16_string = u"ß水氶"' % ns,
-                '(%s::u16string) u16_empty = u""' % ns,
-                '(%s::u32string) u32_string = U"🍄🍅🍆🍌"' % ns,
-                '(%s::u32string) u32_empty = U""' % ns,
-                "(%s::string *) null_str = nullptr" % ns,
-            ],
-        )
+        # Check 'S' pre-assignment.
+        self.expect("frame variable S", substrs=['(%s::wstring) S = L"!!!!"' % ns])
 
         thread.StepOver()
 
@@ -99,9 +79,12 @@ class StdStringDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable",
             substrs=[
+                '(%s::wstring) wempty = L""' % ns,
+                '(%s::wstring) s = L"hello world! מזל טוב!"' % ns,
                 '(%s::wstring) S = L"!!!!!"' % ns,
                 "(const wchar_t *) mazeltov = 0x",
                 'L"מזל טוב"',
+                '(%s::string) empty = ""' % ns,
                 '(%s::string) q = "hello world"' % ns,
                 '(%s::string) Q = "quite a long std::strin with lots of info inside it"'
                 % ns,
@@ -109,6 +92,7 @@ class StdStringDataFormatterTestCase(TestBase):
                 '(%s::wstring) IHaveEmbeddedZerosToo = L"hello world!\\0てざ ル゜䋨ミ㠧槊 きゅへ狦穤襩 じゃ馩リョ 䤦監"'
                 % ns,
                 '(%s::u16string) u16_string = u"ß水氶"' % ns,
+                '(%s::u16string) u16_empty = u""' % ns,
                 '(%s::u32string) u32_string = U"🍄🍅🍆🍌"' % ns,
                 '(%s::u32string) u32_empty = U""' % ns,
                 "(%s::string *) null_str = nullptr" % ns,
@@ -168,3 +152,36 @@ class StdStringDataFormatterTestCase(TestBase):
     def test_libstdcxx(self):
         self.build(dictionary={"USE_LIBSTDCPP": 1})
         self.do_test()
+
+    def do_test_multibyte(self):
+        lldbutil.run_to_source_breakpoint(
+            self, "Set break point at this line.", self.main_spec
+        )
+
+        ns = self.namespace
+
+        self.expect(
+            "frame variable",
+            substrs=[
+                '(%s::string) IHaveEmbeddedZeros = "a\\0b\\0c\\0d"' % ns,
+                '(%s::wstring) IHaveEmbeddedZerosToo = L"hello world!\\0てざ ル゜䋨ミ㠧槊 きゅへ狦穤襩 じゃ馩リョ 䤦監"'
+                % ns,
+                '(%s::u16string) u16_string = u"ß水氶"' % ns,
+                '(%s::u16string) u16_empty = u""' % ns,
+                '(%s::u32string) u32_string = U"🍄🍅🍆🍌"' % ns,
+                '(%s::u32string) u32_empty = U""' % ns,
+            ],
+        )
+
+    @add_test_categories(["libc++"])
+    def test_multibyte_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test_multibyte()
+
+    @expectedFailureAll(
+        bugnumber="libstdc++ formatters don't support UTF-16/UTF-32 strings yet."
+    )
+    @add_test_categories(["libstdcxx"])
+    def test_multibyte_libstdcxx(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test_multibyte()
