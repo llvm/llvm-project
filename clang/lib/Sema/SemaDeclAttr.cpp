@@ -3279,20 +3279,52 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
 }
 
 bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
-                                  StringRef AttrStr) {
+                                  StringRef AttrStr, SmallString<64> &NewStr) {
   enum FirstParam { Unsupported };
   enum SecondParam { None };
   enum ThirdParam { Target, TargetClones, TargetVersion };
-  llvm::SmallVector<StringRef, 8> Features;
-  if (Context.getTargetInfo().getTriple().isRISCV()) {
-    llvm::SmallVector<StringRef, 8> AttrStrs;
-    AttrStr.split(AttrStrs, ';');
 
-    bool HasArch = false;
-    bool HasPriority = false;
-    bool HasDefault = false;
-    bool DuplicateAttr = false;
-    for (auto &AttrStr : AttrStrs) {
+  StringRef PriorityString[5] = {"priority5", "priority4", "priority3",
+                                 "priority2", "priority1"};
+
+  llvm::SmallVector<StringRef, 8> AttrStrs;
+  AttrStr.split(AttrStrs, ';');
+
+  bool HasArch = false;
+  bool HasFeatures = false;
+  bool HasPriority = false;
+  bool HasDefault = false;
+  bool DuplicateAttr = false;
+  for (StringRef AttrStr : AttrStrs) {
+    AttrStr = AttrStr.trim();
+    if (AttrStr.starts_with("default")) {
+      if (HasDefault)
+        DuplicateAttr = true;
+      HasDefault = true;
+      if (Context.getTargetInfo().getTriple().isAArch64())
+        NewStr.append(AttrStr);
+    } else if (AttrStr.consume_front("priority=")) {
+      if (HasPriority)
+        DuplicateAttr = true;
+      HasPriority = true;
+      unsigned Digit;
+      if (AttrStr.getAsInteger(0, Digit))
+        return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << AttrStr << TargetVersion;
+      if (Context.getTargetInfo().getTriple().isAArch64()) {
+        if (Digit < 1 || Digit > 32)
+          return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
+                 << Unsupported << None << AttrStr << TargetVersion;
+        // Convert priority=[1-32] -> priority1 + ... + priority5
+        for (int BitPos = 4; BitPos >= 0; --BitPos) {
+          if ((32 - Digit) & (1U << BitPos)) {
+            if (!NewStr.empty())
+              NewStr.append("+");
+            NewStr.append(PriorityString[BitPos]);
+          }
+        }
+      }
+    } else if (Context.getTargetInfo().getTriple().isRISCV()) {
       // Only support arch=+ext,... syntax.
       if (AttrStr.starts_with("arch=+")) {
         if (HasArch)
@@ -3307,51 +3339,46 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
             }))
           return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
                  << Unsupported << None << AttrStr << TargetVersion;
-      } else if (AttrStr.starts_with("default")) {
-        if (HasDefault)
-          DuplicateAttr = true;
-        HasDefault = true;
-      } else if (AttrStr.consume_front("priority=")) {
-        if (HasPriority)
-          DuplicateAttr = true;
-        HasPriority = true;
-        unsigned Digit;
-        if (AttrStr.getAsInteger(0, Digit))
-          return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
-                 << Unsupported << None << AttrStr << TargetVersion;
       } else {
         return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
                << Unsupported << None << AttrStr << TargetVersion;
       }
+    } else if (Context.getTargetInfo().getTriple().isAArch64()) {
+      llvm::SmallVector<StringRef, 8> Features;
+      AttrStr.split(Features, "+");
+      for (StringRef Feat : Features) {
+        Feat = Feat.trim();
+        if (!Context.getTargetInfo().validateCpuSupports(Feat))
+          return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
+                 << Unsupported << None << Feat << TargetVersion;
+        if (!NewStr.empty())
+          NewStr.append("+");
+        NewStr.append(Feat);
+      }
+      HasFeatures = !Features.empty();
     }
-
-    if (((HasPriority || HasArch) && HasDefault) || DuplicateAttr ||
-        (HasPriority && !HasArch))
-      return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
-             << Unsupported << None << AttrStr << TargetVersion;
-
-    return false;
   }
-  AttrStr.split(Features, "+");
-  for (auto &CurFeature : Features) {
-    CurFeature = CurFeature.trim();
-    if (CurFeature == "default")
-      continue;
-    if (!Context.getTargetInfo().validateCpuSupports(CurFeature))
-      return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
-             << Unsupported << None << CurFeature << TargetVersion;
-  }
+
+  if ((HasDefault && (HasPriority || HasArch || HasFeatures)) ||
+      DuplicateAttr || (HasPriority && !HasArch && !HasFeatures))
+    return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
+           << Unsupported << None << AttrStr << TargetVersion;
+
+  if (Context.getTargetInfo().getTriple().isRISCV())
+    NewStr = AttrStr;
+
   return false;
 }
 
 static void handleTargetVersionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   StringRef Str;
+  SmallString<64> NewStr;
   SourceLocation LiteralLoc;
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &LiteralLoc) ||
-      S.checkTargetVersionAttr(LiteralLoc, D, Str))
+      S.checkTargetVersionAttr(LiteralLoc, D, Str, NewStr))
     return;
   TargetVersionAttr *NewAttr =
-      ::new (S.Context) TargetVersionAttr(S.Context, AL, Str);
+      ::new (S.Context) TargetVersionAttr(S.Context, AL, NewStr);
   D->addAttr(NewAttr);
 }
 
@@ -3368,7 +3395,7 @@ static void handleTargetAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 bool Sema::checkTargetClonesAttrString(
     SourceLocation LiteralLoc, StringRef Str, const StringLiteral *Literal,
-    Decl *D, bool &HasDefault, bool &HasCommas, bool &HasNotDefault,
+    Decl *D, bool &HasDefault, bool &HasCommas, bool &HasNonDefault,
     SmallVectorImpl<SmallString<64>> &StringsBuffer) {
   enum FirstParam { Unsupported, Duplicate, Unknown };
   enum SecondParam { None, CPU, Tune };
@@ -3379,6 +3406,9 @@ bool Sema::checkTargetClonesAttrString(
   if (Str.size() == 0)
     return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
            << Unsupported << None << "" << TargetClones;
+
+  StringRef PriorityString[5] = {"priority5", "priority4", "priority3",
+                                 "priority2", "priority1"};
 
   std::pair<StringRef, StringRef> Parts = {{}, Str};
   while (!Parts.second.empty()) {
@@ -3394,100 +3424,7 @@ bool Sema::checkTargetClonesAttrString(
       return Diag(CurLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << "" << TargetClones;
 
-    if (TInfo.getTriple().isAArch64()) {
-      // AArch64 target clones specific
-      if (Cur == "default") {
-        DefaultIsDupe = HasDefault;
-        HasDefault = true;
-        if (llvm::is_contained(StringsBuffer, Cur) || DefaultIsDupe)
-          Diag(CurLoc, diag::warn_target_clone_duplicate_options);
-        else
-          StringsBuffer.push_back(Cur);
-      } else {
-        std::pair<StringRef, StringRef> CurParts = {{}, Cur};
-        llvm::SmallVector<StringRef, 8> CurFeatures;
-        while (!CurParts.second.empty()) {
-          CurParts = CurParts.second.split('+');
-          StringRef CurFeature = CurParts.first.trim();
-          if (!TInfo.validateCpuSupports(CurFeature)) {
-            Diag(CurLoc, diag::warn_unsupported_target_attribute)
-                << Unsupported << None << CurFeature << TargetClones;
-            continue;
-          }
-          if (TInfo.doesFeatureAffectCodeGen(CurFeature))
-            HasCodeGenImpact = true;
-          CurFeatures.push_back(CurFeature);
-        }
-        // Canonize TargetClones Attributes
-        llvm::sort(CurFeatures);
-        SmallString<64> Res;
-        for (auto &CurFeat : CurFeatures) {
-          if (!Res.empty())
-            Res.append("+");
-          Res.append(CurFeat);
-        }
-        if (llvm::is_contained(StringsBuffer, Res) || DefaultIsDupe)
-          Diag(CurLoc, diag::warn_target_clone_duplicate_options);
-        else if (!HasCodeGenImpact)
-          // Ignore features in target_clone attribute that don't impact
-          // code generation
-          Diag(CurLoc, diag::warn_target_clone_no_impact_options);
-        else if (!Res.empty()) {
-          StringsBuffer.push_back(Res);
-          HasNotDefault = true;
-        }
-      }
-    } else if (TInfo.getTriple().isRISCV()) {
-      // Suppress warn_target_clone_mixed_values
-      HasCommas = false;
-
-      // Cur is split's parts of Str. RISC-V uses Str directly,
-      // so skip when encountered more than once.
-      if (!Str.starts_with(Cur))
-        continue;
-
-      llvm::SmallVector<StringRef, 8> AttrStrs;
-      Str.split(AttrStrs, ";");
-
-      bool IsPriority = false;
-      bool IsDefault = false;
-      for (auto &AttrStr : AttrStrs) {
-        // Only support arch=+ext,... syntax.
-        if (AttrStr.starts_with("arch=+")) {
-          ParsedTargetAttr TargetAttr =
-              Context.getTargetInfo().parseTargetAttr(AttrStr);
-
-          if (TargetAttr.Features.empty() ||
-              llvm::any_of(TargetAttr.Features, [&](const StringRef Ext) {
-                return !RISCV().isValidFMVExtension(Ext);
-              }))
-            return Diag(CurLoc, diag::warn_unsupported_target_attribute)
-                   << Unsupported << None << Str << TargetClones;
-        } else if (AttrStr.starts_with("default")) {
-          IsDefault = true;
-          DefaultIsDupe = HasDefault;
-          HasDefault = true;
-        } else if (AttrStr.consume_front("priority=")) {
-          IsPriority = true;
-          unsigned Digit;
-          if (AttrStr.getAsInteger(0, Digit))
-            return Diag(CurLoc, diag::warn_unsupported_target_attribute)
-                   << Unsupported << None << Str << TargetClones;
-        } else {
-          return Diag(CurLoc, diag::warn_unsupported_target_attribute)
-                 << Unsupported << None << Str << TargetClones;
-        }
-      }
-
-      if (IsPriority && IsDefault)
-        return Diag(CurLoc, diag::warn_unsupported_target_attribute)
-               << Unsupported << None << Str << TargetClones;
-
-      if (llvm::is_contained(StringsBuffer, Str) || DefaultIsDupe)
-        Diag(CurLoc, diag::warn_target_clone_duplicate_options);
-      StringsBuffer.push_back(Str);
-    } else {
-      // Other targets ( currently X86 )
+    if (TInfo.getTriple().isX86()) {
       if (Cur.starts_with("arch=")) {
         if (!Context.getTargetInfo().isValidCPUName(
                 Cur.drop_front(sizeof("arch=") - 1)))
@@ -3505,6 +3442,106 @@ bool Sema::checkTargetClonesAttrString(
         Diag(CurLoc, diag::warn_target_clone_duplicate_options);
       // Note: Add even if there are duplicates, since it changes name mangling.
       StringsBuffer.push_back(Cur);
+    } else {
+      // Other targets ( currently AArch64 and RISC-V )
+      if (TInfo.getTriple().isRISCV()) {
+        // Suppress warn_target_clone_mixed_values
+        HasCommas = false;
+
+        // Cur is split's parts of Str. RISC-V uses Str directly,
+        // so skip when encountered more than once.
+        if (!Str.starts_with(Cur))
+          continue;
+      }
+      SmallString<64> NewStr;
+      llvm::SmallVector<StringRef, 8> AttrStrs;
+      Str.split(AttrStrs, ";");
+
+      bool IsPriority = false;
+      bool IsDefault = false;
+      for (StringRef AttrStr : AttrStrs) {
+        AttrStr = AttrStr.trim();
+        if (AttrStr == "default") {
+          IsDefault = true;
+          DefaultIsDupe = HasDefault;
+          HasDefault = true;
+          if (TInfo.getTriple().isAArch64())
+            NewStr.append(AttrStr);
+        } else if (AttrStr.consume_front("priority=")) {
+          IsPriority = true;
+          unsigned Digit;
+          if (AttrStr.getAsInteger(0, Digit))
+            return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+                   << Unsupported << None << Str << TargetClones;
+          if (TInfo.getTriple().isAArch64()) {
+            if (Digit < 1 || Digit > 32)
+              return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+                     << Unsupported << None << Str << TargetClones;
+            // Convert priority=[1-32] -> priority1 + ... + priority5
+            for (int BitPos = 4; BitPos >= 0; --BitPos) {
+              if ((32 - Digit) & (1U << BitPos)) {
+                if (!NewStr.empty())
+                  NewStr.append("+");
+                NewStr.append(PriorityString[BitPos]);
+              }
+            }
+          }
+        } else if (TInfo.getTriple().isRISCV()) {
+          // Only support arch=+ext,... syntax.
+          if (AttrStr.starts_with("arch=+")) {
+            ParsedTargetAttr TargetAttr =
+                Context.getTargetInfo().parseTargetAttr(AttrStr);
+
+            if (TargetAttr.Features.empty() ||
+                llvm::any_of(TargetAttr.Features, [&](const StringRef Ext) {
+                  return !RISCV().isValidFMVExtension(Ext);
+                }))
+              return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+                     << Unsupported << None << Str << TargetClones;
+          } else {
+            return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+                   << Unsupported << None << Str << TargetClones;
+          }
+        } else if (TInfo.getTriple().isAArch64()) {
+          llvm::SmallVector<StringRef, 8> Features;
+          llvm::SmallVector<StringRef, 8> ValidFeatures;
+          AttrStr.split(Features, "+");
+          for (StringRef Feat : Features) {
+            Feat = Feat.trim();
+            if (!TInfo.validateCpuSupports(Feat)) {
+              Diag(CurLoc, diag::warn_unsupported_target_attribute)
+                     << Unsupported << None << Feat << TargetClones;
+              continue;
+            }
+            if (TInfo.doesFeatureAffectCodeGen(Feat))
+              HasCodeGenImpact = true;
+            ValidFeatures.push_back(Feat);
+          }
+          HasNonDefault = !ValidFeatures.empty();
+          // Ignore features in target_clone attribute that don't impact
+          // code generation
+          if (!HasCodeGenImpact)
+            Diag(CurLoc, diag::warn_target_clone_no_impact_options);
+
+          // Canonize TargetClones Attributes
+          llvm::sort(ValidFeatures);
+          for (StringRef Feat : ValidFeatures) {
+            if (!NewStr.empty())
+              NewStr.append("+");
+            NewStr.append(Feat);
+          }
+        }
+      }
+      if (TInfo.getTriple().isAArch64())
+        Str = NewStr;
+
+      if (IsPriority && IsDefault)
+        return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << Str << TargetClones;
+
+      if (llvm::is_contained(StringsBuffer, Str) || DefaultIsDupe)
+        Diag(CurLoc, diag::warn_target_clone_duplicate_options);
+      StringsBuffer.push_back(Str);
     }
   }
   if (Str.rtrim().ends_with(","))
@@ -3530,7 +3567,7 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   SmallVector<StringRef, 2> Strings;
   SmallVector<SmallString<64>, 2> StringsBuffer;
-  bool HasCommas = false, HasDefault = false, HasNotDefault = false;
+  bool HasCommas = false, HasDefault = false, HasNonDefault = false;
 
   for (unsigned I = 0, E = AL.getNumArgs(); I != E; ++I) {
     StringRef CurStr;
@@ -3539,7 +3576,7 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
         S.checkTargetClonesAttrString(
             LiteralLoc, CurStr,
             cast<StringLiteral>(AL.getArgAsExpr(I)->IgnoreParenCasts()), D,
-            HasDefault, HasCommas, HasNotDefault, StringsBuffer))
+            HasDefault, HasCommas, HasNonDefault, StringsBuffer))
       return;
   }
   for (auto &SmallStr : StringsBuffer)
@@ -3565,7 +3602,7 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   // No multiversion if we have default version only.
-  if (S.Context.getTargetInfo().getTriple().isAArch64() && !HasNotDefault)
+  if (S.Context.getTargetInfo().getTriple().isAArch64() && !HasNonDefault)
     return;
 
   cast<FunctionDecl>(D)->setIsMultiVersion();
