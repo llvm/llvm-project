@@ -2212,7 +2212,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     assert(!Plan.isUnrolled() && "When unrolled splices might not use "
                                  "VPFirstOrederRecurrencePHIRecipe!");
 
-    for (VPUser *User : PhiR.getVPSingleValue()->users()) {
+    for (VPUser *User : FOR->users()) {
       auto *R = cast<VPRecipeBase>(User);
       using namespace VPlanPatternMatch;
       VPValue *V1, *V2;
