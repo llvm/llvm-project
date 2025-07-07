@@ -3853,7 +3853,7 @@ void MallocChecker::printState(raw_ostream &Out, ProgramStateRef State,
       Sym->dumpToStream(Out);
       Out << " : ";
       Data.dump(Out);
-      if (Frontend)
+      if (Frontend && Frontend->isEnabled())
         Out << " (" << Frontend->getName() << ")";
       Out << NL;
     }
