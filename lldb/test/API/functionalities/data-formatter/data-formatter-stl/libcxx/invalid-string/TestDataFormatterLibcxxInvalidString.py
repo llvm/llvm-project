@@ -10,8 +10,8 @@ from lldbsuite.test import lldbutil
 
 class LibcxxInvalidStringDataFormatterTestCase(TestBase):
     @add_test_categories(["libc++"])
-    @skipUnlessDarwin
-    @skipIf(archs=no_match(["arm"]))
+    @skipIf(oslist=[lldbplatformutil.getDarwinOSTriples()],
+            archs=["arm", "aarch64"])
     def test(self):
         self.build()
 
