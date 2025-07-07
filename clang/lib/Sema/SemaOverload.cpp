@@ -15829,10 +15829,6 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
 
     CXXRecordDecl *NamingClass = nullptr; // lookup ignores member operators
     // CHECKME: no 'operator' keyword?
-    // DeclarationNameInfo OpNameInfo(
-    //     OpName, LLoc,
-    //     DeclarationNameLoc::makeCXXOperatorNameLoc(
-    //         Context.getCXXOperatorSourceInfo(SourceRange(LLoc, RLoc))));
     DeclarationNameInfo OpNameInfo(OpName, LLoc);
     OpNameInfo.setCXXOperatorNameInfo(
         Context.getCXXOperatorSourceInfo(SourceRange(LLoc, RLoc)));
