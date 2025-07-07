@@ -946,6 +946,9 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
     if (MO.isUse() && !MO.readsReg() && !MO.isTied())
       continue;
 
+    if (MI->isCopy() && MI->getOperand(1).isUndef())
+      continue;
+
     if (MO.isImplicit()) {
       ImpReg = MO.getReg();
       continue;
