@@ -4876,17 +4876,20 @@ static SDValue getBitwiseToSrcModifierOp(SDValue N,
 
   switch (Opc) {
   case ISD::XOR:
-    if (Mask == 0x80000000u || Mask == 0x8000000000000000u)
+    if ((Mask == 0x80000000u && VT.getFixedSizeInBits() == 32) ||
+        (Mask == 0x8000000000000000u && VT.getFixedSizeInBits() == 64))
       return DAG.getNode(ISD::FNEG, SL, FVT, BC);
     break;
   case ISD::OR:
-    if (Mask == 0x80000000u || Mask == 0x8000000000000000u) {
-      SDValue Neg = DAG.getNode(ISD::FNEG, SDLoc(N), FVT, BC);
-      return DAG.getNode(ISD::FABS, SL, FVT, Neg);
+    if ((Mask == 0x80000000u && VT.getFixedSizeInBits() == 32) ||
+        (Mask == 0x8000000000000000u && VT.getFixedSizeInBits() == 64)) {
+      SDValue Abs = DAG.getNode(ISD::ABS, SDLoc(N), FVT, BC);
+      return DAG.getNode(ISD::FNEG, SL, FVT, Abs);
     }
     break;
   case ISD::AND:
-    if (Mask == 0x7fffffffu || Mask == 0x7fffffffffffffffu)
+    if ((Mask == 0x7fffffffu && VT.getFixedSizeInBits() == 32) ||
+        (Mask == 0x7fffffffffffffffu && VT.getFixedSizeInBits() == 64))
       return DAG.getNode(ISD::FABS, SL, FVT, BC);
     break;
   default:
