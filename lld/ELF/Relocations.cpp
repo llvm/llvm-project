@@ -1674,7 +1674,7 @@ void RelocationScanner::scan(Relocs<RelTy> rels) {
   // R_RISCV_PCREL_HI20, R_PPC64_ADDR64 and the branch-to-branch optimization.
   if (ctx.arg.emachine == EM_RISCV ||
       (ctx.arg.emachine == EM_PPC64 && sec->name == ".toc") ||
-      ctx.arg.branchToBranch)
+      ctx.arg.branchToBranch || sec->name.starts_with(".text..L.cfi.jumptable"))
     llvm::stable_sort(sec->relocs(),
                       [](const Relocation &lhs, const Relocation &rhs) {
                         return lhs.offset < rhs.offset;

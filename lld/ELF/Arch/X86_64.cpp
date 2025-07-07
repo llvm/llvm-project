@@ -318,6 +318,9 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
 }
 
 bool X86_64::relaxOnce(int pass) const {
+  if (pass == 0)
+    relaxJumpTables(ctx);
+
   uint64_t minVA = UINT64_MAX, maxVA = 0;
   for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_ALLOC))
@@ -1229,6 +1232,98 @@ void X86_64::applyBranchToBranchOpt() const {
   applyBranchToBranchOptImpl(ctx, getControlTransferAddend,
                              getBranchInfoAtTarget,
                              redirectControlTransferRelocations);
+}
+
+void elf::relaxJumpTables(Ctx &ctx) {
+  // Relax CFI jump tables.
+  // - Split jump table into pieces and place target functions inside the jump
+  //   table if small enough.
+  // - Move jump table before last called function and delete last branch
+  //   instruction.
+  std::map<InputSection *, std::vector<InputSection *>> sectionReplacements;
+  SmallVector<InputSection *, 0> storage;
+  for (OutputSection *osec : ctx.outputSections) {
+    if (!(osec->flags & SHF_EXECINSTR))
+      continue;
+    for (InputSection *sec : getInputSections(*osec, storage)) {
+      if (!sec->name.starts_with(".text..L.cfi.jumptable"))
+        continue;
+      std::vector<InputSection *> replacements;
+      replacements.push_back(sec);
+      auto addSectionSlice = [&](size_t begin, size_t end, Relocation *rbegin,
+                                 Relocation *rend) {
+        if (begin == end)
+          return;
+        auto *slice = make<InputSection>(
+            sec->file, sec->name, sec->type, sec->flags, 1, sec->entsize,
+            sec->contentMaybeDecompress().slice(begin, end - begin));
+        for (const Relocation &r : ArrayRef<Relocation>(rbegin, rend)) {
+          slice->relocations.push_back(
+              Relocation{r.expr, r.type, r.offset - begin, r.addend, r.sym});
+        }
+        replacements.push_back(slice);
+      };
+      auto getMovableSection = [&](Relocation &r) -> InputSection * {
+        auto *sym = dyn_cast_or_null<Defined>(r.sym);
+        if (!sym || sym->isPreemptible || sym->isGnuIFunc() || sym->value != 0)
+          return nullptr;
+        auto *sec = dyn_cast_or_null<InputSection>(sym->section);
+        if (!sec || sectionReplacements.count(sec))
+          return nullptr;
+        return sec;
+      };
+      size_t begin = 0;
+      Relocation *rbegin = sec->relocs().begin();
+      for (auto &r : sec->relocs().slice(0, sec->relocs().size() - 1)) {
+        auto entrySize = (&r + 1)->offset - r.offset;
+        InputSection *target = getMovableSection(r);
+        if (!target || target->size > entrySize)
+          continue;
+        target->addralign = 1;
+        addSectionSlice(begin, r.offset - 1, rbegin, &r);
+        replacements.push_back(target);
+        sectionReplacements[target] = {};
+        begin = r.offset - 1 + target->size;
+        rbegin = &r + 1;
+      }
+      InputSection *lastSec = getMovableSection(sec->relocs().back());
+      if (lastSec) {
+        lastSec->addralign = 1;
+        addSectionSlice(begin, sec->relocs().back().offset - 1, rbegin,
+                        &sec->relocs().back());
+        replacements.push_back(lastSec);
+        sectionReplacements[sec] = {};
+        sectionReplacements[lastSec] = replacements;
+        for (auto *s : replacements)
+          s->parent = lastSec->parent;
+      } else {
+        addSectionSlice(begin, sec->size, rbegin, sec->relocs().end());
+        sectionReplacements[sec] = replacements;
+        for (auto *s : replacements)
+          s->parent = sec->parent;
+      }
+      sec->relocations.clear();
+      sec->size = 0;
+    }
+  }
+  for (OutputSection *osec : ctx.outputSections) {
+    if (!(osec->flags & SHF_EXECINSTR))
+      continue;
+    for (SectionCommand *cmd : osec->commands) {
+      auto *isd = dyn_cast<InputSectionDescription>(cmd);
+      if (!isd)
+        continue;
+      SmallVector<InputSection *> newSections;
+      for (auto *sec : isd->sections) {
+        auto i = sectionReplacements.find(sec);
+        if (i == sectionReplacements.end())
+          newSections.push_back(sec);
+        else
+          newSections.append(i->second.begin(), i->second.end());
+      }
+      isd->sections = std::move(newSections);
+    }
+  }
 }
 
 // If Intel Indirect Branch Tracking is enabled, we have to emit special PLT
