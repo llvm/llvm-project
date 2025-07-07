@@ -1119,6 +1119,16 @@ static bool needsWinCFI(const MachineFunction &MF) {
          F.needsUnwindTableEntry();
 }
 
+static bool shouldSignReturnAddressEverywhere(const MachineFunction &MF) {
+  // FIXME: With WinCFI, extra care should be taken to place SEH_PACSignLR
+  //        and SEH_EpilogEnd instructions in the correct order.
+  if (MF.getTarget().getMCAsmInfo()->usesWindowsCFI())
+    return false;
+  const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+  bool SignReturnAddressAll = AFI->shouldSignReturnAddress(/*SpillsLR=*/false);
+  return SignReturnAddressAll;
+}
+
 bool AArch64FrameLowering::shouldCombineCSRLocalStackBump(
     MachineFunction &MF, uint64_t StackBumpBytes) const {
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
@@ -1822,7 +1832,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   if (MFnI.shouldSignReturnAddress(MF)) {
     // If pac-ret+leaf is in effect, PAUTH_PROLOGUE pseudo instructions
     // are inserted by emitPacRetPlusLeafHardening().
-    if (!MFnI.shouldSignReturnAddressEverywhere()) {
+    if (!shouldSignReturnAddressEverywhere(MF)) {
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::PAUTH_PROLOGUE))
           .setMIFlag(MachineInstr::FrameSetup);
     }
@@ -2394,7 +2404,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     if (AFI->shouldSignReturnAddress(MF)) {
       // If pac-ret+leaf is in effect, PAUTH_EPILOGUE pseudo instructions
       // are inserted by emitPacRetPlusLeafHardening().
-      if (!AFI->shouldSignReturnAddressEverywhere()) {
+      if (!shouldSignReturnAddressEverywhere(MF)) {
         BuildMI(MBB, MBB.getFirstTerminator(), DL,
                 TII->get(AArch64::PAUTH_EPILOGUE))
             .setMIFlag(MachineInstr::FrameDestroy);
@@ -5184,8 +5194,6 @@ static void emitVGSaveRestore(MachineBasicBlock::iterator II,
 
 void AArch64FrameLowering::processFunctionBeforeFrameIndicesReplaced(
     MachineFunction &MF, RegScavenger *RS = nullptr) const {
-  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
-
   for (auto &BB : MF)
     for (MachineBasicBlock::iterator II = BB.begin(); II != BB.end();) {
       if (requiresSaveVG(MF))
@@ -5198,7 +5206,7 @@ void AArch64FrameLowering::processFunctionBeforeFrameIndicesReplaced(
   // already emitted, whether its location was affected by the shrink-wrapping
   // optimization or not.
   if (!MF.getFunction().hasFnAttribute(Attribute::Naked) &&
-      AFI->shouldSignReturnAddressEverywhere())
+      shouldSignReturnAddressEverywhere(MF))
     emitPacRetPlusLeafHardening(MF);
 }
 
