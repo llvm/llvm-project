@@ -410,7 +410,7 @@ private:
 /// Manages information utilized by the profitability check for cache. The main
 /// purpose of this class is to delay the computation of CacheCost until it is
 /// actually needed.
-class LoopInterchangeCacheCostManager {
+class CacheCostManager {
   Loop *OutermostLoop;
   LoopStandardAnalysisResults *AR;
   DependenceInfo *DI;
@@ -426,9 +426,8 @@ class LoopInterchangeCacheCostManager {
   void computeIfUnitinialized();
 
 public:
-  LoopInterchangeCacheCostManager(Loop *OutermostLoop,
-                                  LoopStandardAnalysisResults *AR,
-                                  DependenceInfo *DI)
+  CacheCostManager(Loop *OutermostLoop, LoopStandardAnalysisResults *AR,
+                   DependenceInfo *DI)
       : OutermostLoop(OutermostLoop), AR(AR), DI(DI) {}
   CacheCost *getCacheCost();
   const DenseMap<const Loop *, unsigned> &getCostMap();
@@ -445,8 +444,7 @@ public:
   /// Check if the loop interchange is profitable.
   bool isProfitable(const Loop *InnerLoop, const Loop *OuterLoop,
                     unsigned InnerLoopId, unsigned OuterLoopId,
-                    CharMatrix &DepMatrix,
-                    LoopInterchangeCacheCostManager &LICCM);
+                    CharMatrix &DepMatrix, CacheCostManager &CCM);
 
 private:
   int getInstrOrderCost();
@@ -565,7 +563,7 @@ struct LoopInterchange {
     }
 
     unsigned SelecLoopId = selectLoopForInterchange(LoopList);
-    LoopInterchangeCacheCostManager LICCM(LoopList[0], AR, DI);
+    CacheCostManager CCM(LoopList[0], AR, DI);
     // We try to achieve the globally optimal memory access for the loopnest,
     // and do interchange based on a bubble-sort fasion. We start from
     // the innermost loop, move it outwards to the best possible position
@@ -574,7 +572,7 @@ struct LoopInterchange {
       bool ChangedPerIter = false;
       for (unsigned i = SelecLoopId; i > SelecLoopId - j; i--) {
         bool Interchanged =
-            processLoop(LoopList, i, i - 1, DependencyMatrix, LICCM);
+            processLoop(LoopList, i, i - 1, DependencyMatrix, CCM);
         ChangedPerIter |= Interchanged;
         Changed |= Interchanged;
       }
@@ -589,7 +587,7 @@ struct LoopInterchange {
   bool processLoop(SmallVectorImpl<Loop *> &LoopList, unsigned InnerLoopId,
                    unsigned OuterLoopId,
                    std::vector<std::vector<char>> &DependencyMatrix,
-                   LoopInterchangeCacheCostManager &LICCM) {
+                   CacheCostManager &CCM) {
     Loop *OuterLoop = LoopList[OuterLoopId];
     Loop *InnerLoop = LoopList[InnerLoopId];
     LLVM_DEBUG(dbgs() << "Processing InnerLoopId = " << InnerLoopId
@@ -602,7 +600,7 @@ struct LoopInterchange {
     LLVM_DEBUG(dbgs() << "Loops are legal to interchange\n");
     LoopInterchangeProfitability LIP(OuterLoop, InnerLoop, SE, ORE);
     if (!LIP.isProfitable(InnerLoop, OuterLoop, InnerLoopId, OuterLoopId,
-                          DependencyMatrix, LICCM)) {
+                          DependencyMatrix, CCM)) {
       LLVM_DEBUG(dbgs() << "Interchanging loops not profitable.\n");
       return false;
     }
@@ -1135,7 +1133,7 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
   return true;
 }
 
-void LoopInterchangeCacheCostManager::computeIfUnitinialized() {
+void CacheCostManager::computeIfUnitinialized() {
   if (CC.has_value())
     return;
 
@@ -1154,13 +1152,12 @@ void LoopInterchangeCacheCostManager::computeIfUnitinialized() {
       CostMap[Cost.first] = Idx;
 }
 
-CacheCost *LoopInterchangeCacheCostManager::getCacheCost() {
+CacheCost *CacheCostManager::getCacheCost() {
   computeIfUnitinialized();
   return CC->get();
 }
 
-const DenseMap<const Loop *, unsigned> &
-LoopInterchangeCacheCostManager::getCostMap() {
+const DenseMap<const Loop *, unsigned> &CacheCostManager::getCostMap() {
   computeIfUnitinialized();
   return CostMap;
 }
@@ -1288,8 +1285,7 @@ std::optional<bool> LoopInterchangeProfitability::isProfitableForVectorization(
 
 bool LoopInterchangeProfitability::isProfitable(
     const Loop *InnerLoop, const Loop *OuterLoop, unsigned InnerLoopId,
-    unsigned OuterLoopId, CharMatrix &DepMatrix,
-    LoopInterchangeCacheCostManager &LICCM) {
+    unsigned OuterLoopId, CharMatrix &DepMatrix, CacheCostManager &CCM) {
   // isProfitable() is structured to avoid endless loop interchange. If the
   // highest priority rule (isProfitablePerLoopCacheAnalysis by default) could
   // decide the profitability then, profitability check will stop and return the
@@ -1303,8 +1299,8 @@ bool LoopInterchangeProfitability::isProfitable(
   for (RuleTy RT : Profitabilities) {
     switch (RT) {
     case RuleTy::PerLoopCacheAnalysis: {
-      CacheCost *CC = LICCM.getCacheCost();
-      const DenseMap<const Loop *, unsigned> &CostMap = LICCM.getCostMap();
+      CacheCost *CC = CCM.getCacheCost();
+      const DenseMap<const Loop *, unsigned> &CostMap = CCM.getCostMap();
       shouldInterchange = isProfitablePerLoopCacheAnalysis(CostMap, CC);
       break;
     }
