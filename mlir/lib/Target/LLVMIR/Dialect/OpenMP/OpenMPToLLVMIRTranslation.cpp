@@ -1291,6 +1291,11 @@ initReductionVars(OP op, ArrayRef<BlockArgument> reductionArgs,
     mapInitializationArgs(op, moduleTranslation, reductionDecls,
                           reductionVariableMap, i);
 
+    // TODO In some cases (specially on the GPU), the init regions may
+    // contains stack alloctaions. If the region is inlined in a loop, this is
+    // problematic. Instead of just inlining the region, handle allocations by
+    // hoisting fixed length allocations to the function entry and using
+    // stacksave and restore for variable length ones.
     if (failed(inlineConvertOmpRegions(reductionDecls[i].getInitializerRegion(),
                                        "omp.reduction.neutral", builder,
                                        moduleTranslation, &phis)))
@@ -2894,7 +2899,8 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
           .failed())
     return failure();
 
-  // TODO: no call to copyFirstPrivateVars?
+  // No call to copyFirstPrivateVars because FIRSTPRIVATE is not allowed for
+  // SIMD.
 
   assert(afterAllocas.get()->getSinglePredecessor());
   if (failed(initReductionVars(simdOp, reductionArgs, builder,
@@ -5456,8 +5462,26 @@ static LogicalResult
 convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
                  LLVM::ModuleTranslation &moduleTranslation) {
   auto targetOp = cast<omp::TargetOp>(opInst);
+  // The current debug location already has the DISubprogram for the outlined
+  // function that will be created for the target op. We save it here so that
+  // we can set it on the outlined function.
+  llvm::DebugLoc outlinedFnLoc = builder.getCurrentDebugLocation();
   if (failed(checkImplementationStatus(opInst)))
     return failure();
+
+  // During the handling of target op, we will generate instructions in the
+  // parent function like call to the oulined function or branch to a new
+  // BasicBlock. We set the debug location here to parent function so that those
+  // get the correct debug locations. For outlined functions, the normal MLIR op
+  // conversion will automatically pick the correct location.
+  llvm::BasicBlock *parentBB = builder.GetInsertBlock();
+  assert(parentBB && "No insert block is set for the builder");
+  llvm::Function *parentLLVMFn = parentBB->getParent();
+  assert(parentLLVMFn && "Parent Function must be valid");
+  if (llvm::DISubprogram *SP = parentLLVMFn->getSubprogram())
+    builder.SetCurrentDebugLocation(llvm::DILocation::get(
+        parentLLVMFn->getContext(), outlinedFnLoc.getLine(),
+        outlinedFnLoc.getCol(), SP, outlinedFnLoc.getInlinedAt()));
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   bool isTargetDevice = ompBuilder->Config.isTargetDevice();
@@ -5551,6 +5575,9 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
     llvmOutlinedFn = codeGenIP.getBlock()->getParent();
     assert(llvmParentFn && llvmOutlinedFn &&
            "Both parent and outlined functions must exist at this point");
+
+    if (outlinedFnLoc && llvmParentFn->getSubprogram())
+      llvmOutlinedFn->setSubprogram(outlinedFnLoc->getScope()->getSubprogram());
 
     if (auto attr = llvmParentFn->getFnAttribute("target-cpu");
         attr.isStringAttribute())

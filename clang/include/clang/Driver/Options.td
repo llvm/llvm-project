@@ -1138,6 +1138,10 @@ def fno_convergent_functions : Flag<["-"], "fno-convergent-functions">,
 
 // Common offloading options
 let Group = offload_Group in {
+def offload_targets_EQ : CommaJoined<["--"], "offload-targets=">,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+  HelpText<"Specify a list of target architectures to use for offloading.">;
+
 def offload_arch_EQ : CommaJoined<["--"], "offload-arch=">,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Specify an offloading device architecture for CUDA, HIP, or OpenMP. (e.g. sm_35). "
@@ -3255,6 +3259,13 @@ def modules_reduced_bmi : Flag<["-"], "fmodules-reduced-bmi">,
   HelpText<"Generate the reduced BMI">,
   MarshallingInfoFlag<FrontendOpts<"GenReducedBMI">>;
 
+def fmodules_driver : Flag<["-"], "fmodules-driver">,
+  Group<f_Group>, Visibility<[ClangOption]>,
+  HelpText<"Enable support for driver managed module builds (experimental)">;
+def fno_modules_driver : Flag<["-"], "fno-modules-driver">,
+  Group<f_Group>, Visibility<[ClangOption]>,
+  HelpText<"Disable support for driver managed module builds (experimental)">;
+
 def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Alias<modules_reduced_bmi>;
 
@@ -3681,7 +3692,7 @@ def fopenmp_use_tls : Flag<["-"], "fopenmp-use-tls">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>;
 def fnoopenmp_use_tls : Flag<["-"], "fnoopenmp-use-tls">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
-def fopenmp_targets_EQ : CommaJoined<["-"], "fopenmp-targets=">,
+def fopenmp_targets_EQ : CommaJoined<["-"], "fopenmp-targets=">, Alias<offload_targets_EQ>,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Specify comma-separated list of triples OpenMP offloading targets to be supported">;
 def fopenmp_relocatable_target : Flag<["-"], "fopenmp-relocatable-target">,
@@ -5218,6 +5229,14 @@ def msve_vector_bits_EQ : Joined<["-"], "msve-vector-bits=">, Group<m_aarch64_Fe
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Specify the size in bits of an SVE vector register. Defaults to the"
            " vector length agnostic value of \"scalable\". (AArch64 only)">;
+def msve_streaming_vector_bits_EQ
+    : Joined<["-"], "msve-streaming-vector-bits=">,
+      Group<m_aarch64_Features_Group>,
+      Visibility<[ClangOption, FlangOption]>,
+      HelpText<
+          "Specify the size in bits of an SVE vector register in streaming "
+          "mode. Defaults to the vector length agnostic value of "
+          "\"scalable\". (AArch64 only)">;
 } // let Flags = [TargetSpecific]
 
 def mvscale_min_EQ : Joined<["-"], "mvscale-min=">,
@@ -5229,6 +5248,17 @@ def mvscale_max_EQ : Joined<["-"], "mvscale-max=">,
   HelpText<"Specify the vscale maximum. Defaults to the"
            " vector length agnostic value of \"0\". (AArch64/RISC-V only)">,
   MarshallingInfoInt<LangOpts<"VScaleMax">>;
+def mvscale_streaming_min_EQ
+    : Joined<["-"], "mvscale-streaming-min=">,
+      Visibility<[CC1Option, FC1Option]>,
+      HelpText<"Specify the vscale minimum. Defaults to \"1\". (AArch64 only)">,
+      MarshallingInfoInt<LangOpts<"VScaleStreamingMin">>;
+def mvscale_streaming_max_EQ
+    : Joined<["-"], "mvscale-streaming-max=">,
+      Visibility<[CC1Option, FC1Option]>,
+      HelpText<"Specify the vscale maximum. Defaults to the"
+               " vector length agnostic value of \"0\". (AArch64 only)">,
+      MarshallingInfoInt<LangOpts<"VScaleStreamingMax">>;
 
 def msign_return_address_EQ : Joined<["-"], "msign-return-address=">,
   Visibility<[ClangOption, CC1Option]>,

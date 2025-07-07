@@ -28211,9 +28211,6 @@ SDValue X86TargetLowering::LowerRETURNADDR(SDValue Op,
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
   MFI.setReturnAddressIsTaken(true);
 
-  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
-
   unsigned Depth = Op.getConstantOperandVal(0);
   SDLoc dl(Op);
   EVT PtrVT = Op.getValueType();
@@ -29422,15 +29419,21 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
                    Op->getFlags().hasNoNaNs() || (IsXNeverNaN && IsYNeverNaN);
 
   // If we did no ordering operands for signed zero handling and we need
-  // to process NaN and we know that the second operand is not NaN then put
-  // it in first operand and we will not need to post handle NaN after max/min.
-  if (IgnoreSignedZero && !IgnoreNaN && DAG.isKnownNeverNaN(NewY))
+  // to process NaN and we know that one of the operands is not NaN then:
+  //  - For minimum/maximum, put it in the first operand,
+  //  - For minimumnum/maximumnum, put it in the second operand,
+  // and we will not need to post handle NaN after max/min.
+  if (IgnoreSignedZero && !IgnoreNaN &&
+      DAG.isKnownNeverNaN(IsNum ? NewX : NewY))
     std::swap(NewX, NewY);
 
   SDValue MinMax = DAG.getNode(MinMaxOp, DL, VT, NewX, NewY, Op->getFlags());
 
-  if (IgnoreNaN || DAG.isKnownNeverNaN(NewX))
+  if (IgnoreNaN || DAG.isKnownNeverNaN(IsNum ? NewY : NewX))
     return MinMax;
+
+  if (DAG.isKnownNeverNaN(NewX))
+    NewX = NewY;
 
   SDValue IsNaN =
       DAG.getSetCC(DL, SetCCType, NewX, NewX, IsNum ? ISD::SETO : ISD::SETUO);
@@ -34150,7 +34153,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
 
-    if (VT.isVector() && Subtarget.hasFP16() &&
+    if (VT.isVector() && Subtarget.hasFP16() && Subtarget.hasVLX() &&
         SrcVT.getVectorElementType() == MVT::f16) {
       EVT EleVT = VT.getVectorElementType();
       EVT ResVT = EleVT == MVT::i32 ? MVT::v4i32 : MVT::v8i16;
@@ -34164,10 +34167,12 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       }
 
       if (IsStrict) {
+        Opc = IsSigned ? X86ISD::STRICT_CVTTP2SI : X86ISD::STRICT_CVTTP2UI;
         Res =
             DAG.getNode(Opc, dl, {ResVT, MVT::Other}, {N->getOperand(0), Src});
         Chain = Res.getValue(1);
       } else {
+        Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
         Res = DAG.getNode(Opc, dl, ResVT, Src);
       }
 
@@ -47568,31 +47573,26 @@ static SDValue combineLogicBlendIntoConditionalNegate(
 
 static SDValue commuteSelect(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
                              const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
   if (!Subtarget.hasAVX512())
     return SDValue();
-  if (N->getOpcode() != ISD::VSELECT)
+
+  ISD::CondCode CC;
+  SDValue Cond, X, Y, LHS, RHS;
+  if (!sd_match(N, m_VSelect(m_AllOf(m_Value(Cond),
+                                     m_OneUse(m_SetCC(m_Value(X), m_Value(Y),
+                                                      m_CondCode(CC)))),
+                             m_Value(LHS), m_Value(RHS))))
     return SDValue();
 
-  SDValue Cond = N->getOperand(0);
-  SDValue LHS = N->getOperand(1);
-  SDValue RHS = N->getOperand(2);
-
-  if (canCombineAsMaskOperation(LHS, Subtarget))
-    return SDValue();
-
-  if (!canCombineAsMaskOperation(RHS, Subtarget))
-    return SDValue();
-
-  if (Cond.getOpcode() != ISD::SETCC || !Cond.hasOneUse())
+  if (canCombineAsMaskOperation(LHS, Subtarget) ||
+      !canCombineAsMaskOperation(RHS, Subtarget))
     return SDValue();
 
   // Commute LHS and RHS to create opportunity to select mask instruction.
   // (vselect M, L, R) -> (vselect ~M, R, L)
-  ISD::CondCode NewCC =
-      ISD::getSetCCInverse(cast<CondCodeSDNode>(Cond.getOperand(2))->get(),
-                           Cond.getOperand(0).getValueType());
-  Cond = DAG.getSetCC(SDLoc(Cond), Cond.getValueType(), Cond.getOperand(0),
-                      Cond.getOperand(1), NewCC);
+  ISD::CondCode NewCC = ISD::getSetCCInverse(CC, X.getValueType());
+  Cond = DAG.getSetCC(SDLoc(Cond), Cond.getValueType(), X, Y, NewCC);
   return DAG.getSelect(DL, LHS.getValueType(), Cond, RHS, LHS);
 }
 
@@ -49843,15 +49843,11 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
 static SDValue combineShiftToPMULH(SDNode *N, SelectionDAG &DAG,
                                    const SDLoc &DL,
                                    const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
   assert((N->getOpcode() == ISD::SRL || N->getOpcode() == ISD::SRA) &&
-           "SRL or SRA node is required here!");
+         "SRL or SRA node is required here!");
 
   if (!Subtarget.hasSSE2())
-    return SDValue();
-
-  // The operation feeding into the shift must be a multiply.
-  SDValue ShiftOperand = N->getOperand(0);
-  if (ShiftOperand.getOpcode() != ISD::MUL || !ShiftOperand.hasOneUse())
     return SDValue();
 
   // Input type should be at least vXi32.
@@ -49859,14 +49855,11 @@ static SDValue combineShiftToPMULH(SDNode *N, SelectionDAG &DAG,
   if (!VT.isVector() || VT.getVectorElementType().getSizeInBits() < 32)
     return SDValue();
 
-  // Need a shift by 16.
-  APInt ShiftAmt;
-  if (!ISD::isConstantSplatVector(N->getOperand(1).getNode(), ShiftAmt) ||
-      ShiftAmt != 16)
+  // The operation must be a multiply shifted right by 16.
+  SDValue LHS, RHS;
+  if (!sd_match(N->getOperand(1), m_SpecificInt(16)) ||
+      !sd_match(N->getOperand(0), m_OneUse(m_Mul(m_Value(LHS), m_Value(RHS)))))
     return SDValue();
-
-  SDValue LHS = ShiftOperand.getOperand(0);
-  SDValue RHS = ShiftOperand.getOperand(1);
 
   unsigned ExtOpc = LHS.getOpcode();
   if ((ExtOpc != ISD::SIGN_EXTEND && ExtOpc != ISD::ZERO_EXTEND) ||
@@ -52601,7 +52594,8 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
 ///   XOR(TRUNCATE(SRL(X, size(X)-1)), 1)
 /// into:
 ///   SETGT(X, -1)
-static SDValue foldXorTruncShiftIntoCmp(SDNode *N, SelectionDAG &DAG) {
+static SDValue foldXorTruncShiftIntoCmp(SDNode *N, const SDLoc &DL,
+                                        SelectionDAG &DAG) {
   // This is only worth doing if the output type is i8 or i1.
   EVT ResultType = N->getValueType(0);
   if (ResultType != MVT::i8 && ResultType != MVT::i1)
@@ -52636,7 +52630,6 @@ static SDValue foldXorTruncShiftIntoCmp(SDNode *N, SelectionDAG &DAG) {
   // Create a greater-than comparison against -1.
   // N.B. Using SETGE against 0 works but we want a canonical looking
   // comparison, using SETGT matches up with what TranslateX86CC.
-  SDLoc DL(N);
   SDValue ShiftOp = Shift.getOperand(0);
   EVT ShiftOpTy = ShiftOp.getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -54806,11 +54799,7 @@ static SDValue lowerX86FPLogicOp(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   SDLoc dl(N);
-
-  unsigned IntBits = VT.getScalarSizeInBits();
-  MVT IntSVT = MVT::getIntegerVT(IntBits);
-  MVT IntVT = MVT::getVectorVT(IntSVT, VT.getSizeInBits() / IntBits);
-
+  MVT IntVT = VT.changeVectorElementTypeToInteger();
   SDValue Op0 = DAG.getBitcast(IntVT, N->getOperand(0));
   SDValue Op1 = DAG.getBitcast(IntVT, N->getOperand(1));
   unsigned IntOpcode;
@@ -54827,9 +54816,8 @@ static SDValue lowerX86FPLogicOp(SDNode *N, SelectionDAG &DAG,
   return DAG.getBitcast(VT, IntOp);
 }
 
-
 /// Fold a xor(setcc cond, val), 1 --> setcc (inverted(cond), val)
-static SDValue foldXor1SetCC(SDNode *N, SelectionDAG &DAG) {
+static SDValue foldXor1SetCC(SDNode *N, const SDLoc &DL, SelectionDAG &DAG) {
   if (N->getOpcode() != ISD::XOR)
     return SDValue();
 
@@ -54839,7 +54827,6 @@ static SDValue foldXor1SetCC(SDNode *N, SelectionDAG &DAG) {
 
   X86::CondCode NewCC = X86::GetOppositeBranchCondition(
       X86::CondCode(LHS->getConstantOperandVal(0)));
-  SDLoc DL(N);
   return getSETCC(NewCC, LHS->getOperand(1), DL, DAG);
 }
 
@@ -54937,13 +54924,13 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
-  if (SDValue SetCC = foldXor1SetCC(N, DAG))
+  if (SDValue SetCC = foldXor1SetCC(N, DL, DAG))
     return SetCC;
 
   if (SDValue R = combineOrXorWithSETCC(N->getOpcode(), DL, VT, N0, N1, DAG))
     return R;
 
-  if (SDValue RV = foldXorTruncShiftIntoCmp(N, DAG))
+  if (SDValue RV = foldXorTruncShiftIntoCmp(N, DL, DAG))
     return RV;
 
   // Fold not(iX bitcast(vXi1)) -> (iX bitcast(not(vec))) for legal boolvecs.
@@ -57452,7 +57439,7 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
   bool IsSub = X86ISD::SUB == N->getOpcode();
   unsigned GenericOpc = IsSub ? ISD::SUB : ISD::ADD;
 
-  if (IsSub && isOneConstant(N->getOperand(1)) && !N->hasAnyUseOfValue(0))
+  if (IsSub && isOneConstant(RHS) && !N->hasAnyUseOfValue(0))
     if (SDValue CMP = combineX86SubCmpForFlags(N, SDValue(N, 1), DAG, DCI, ST))
       return CMP;
 
