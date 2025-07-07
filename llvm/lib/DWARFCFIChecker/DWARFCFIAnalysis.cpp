@@ -201,7 +201,7 @@ void DWARFCFIAnalysis::checkRegDiff(const MCInst &Inst, DWARFRegNum Reg,
   // `llvm/include/llvm/DWARFCFIChecker/DWARFCFIAnalysis.h`.
 
   // TODO: Expressions are not supported yet, but if they were to be supported,
-  // note that structure equality for expressions is defined as follows. Two
+  // note that structure equality for expressions is defined as follows: Two
   // expressions are structurally equal if they become the same after you
   // replace every operand with a placeholder.
 
