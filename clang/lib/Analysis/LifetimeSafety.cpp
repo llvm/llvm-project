@@ -25,21 +25,11 @@ namespace {
 
 /// Represents the storage location being borrowed, e.g., a specific stack
 /// variable.
+/// TODO: Model access paths of other types, e.g., s.field, heap and globals.
 struct AccessPath {
   const clang::ValueDecl *D;
 
-  enum class Kind : uint8_t {
-    StackVariable,
-    Temporary,    // TODO: Handle.
-    Field,        // TODO: Handle like `s.y`.
-    Heap,         // TODO: Handle.
-    ArrayElement, // TODO: Handle.
-    Static,       // TODO: Handle.
-  };
-
-  Kind PathKind;
-
-  AccessPath(const clang::ValueDecl *D, Kind K) : D(D), PathKind(K) {}
+  AccessPath(const clang::ValueDecl *D) : D(D) {}
 };
 
 /// A generic, type-safe wrapper for an ID, distinguished by its `Tag` type.
@@ -399,11 +389,11 @@ public:
     if (!hasOrigin(ICE->getType()))
       return;
     Visit(ICE->getSubExpr());
-    /// TODO: Consider if this is actually useful in practice. Alternatively, we
-    /// could directly use the sub-expression's OriginID instead of creating a
-    /// new one.
     // An ImplicitCastExpr node itself gets an origin, which flows from the
     // origin of its sub-expression (after stripping its own parens/casts).
+    // TODO: Consider if this is actually useful in practice. Alternatively, we
+    // could directly use the sub-expression's OriginID instead of creating a
+    // new one.
     addAssignOriginFact(*ICE, *ICE->getSubExpr());
   }
 
@@ -415,9 +405,9 @@ public:
           // Check if it's a local variable.
           if (VD->hasLocalStorage()) {
             OriginID OID = FactMgr.getOriginMgr().getOrCreate(*UO);
-            AccessPath AddrOfLocalVarPath(VD, AccessPath::Kind::StackVariable);
-            Loan &L = FactMgr.getLoanMgr().addLoan(AddrOfLocalVarPath,
-                                                   UO->getOperatorLoc());
+            AccessPath AddrOfLocalVarPath(VD);
+            const Loan &L = FactMgr.getLoanMgr().addLoan(AddrOfLocalVarPath,
+                                                         UO->getOperatorLoc());
             CurrentBlockFacts.push_back(
                 FactMgr.createFact<IssueFact>(L.ID, OID));
           }
@@ -469,6 +459,8 @@ private:
     /// TODO: Also handle trivial destructors (e.g., for `int`
     /// variables) which will never have a CFGAutomaticObjDtor node.
     /// TODO: Handle loans to temporaries.
+    /// TODO: Consider using clang::CFG::BuildOptions::AddLifetime to reuse the
+    /// lifetime ends.
     const VarDecl *DestructedVD = DtorOpt.getVarDecl();
     if (!DestructedVD)
       return;
@@ -479,9 +471,8 @@ private:
       const AccessPath &LoanPath = L.Path;
       // Check if the loan is for a stack variable and if that variable
       // is the one being destructed.
-      if (LoanPath.PathKind == AccessPath::Kind::StackVariable)
-        if (LoanPath.D == DestructedVD)
-          CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(L.ID));
+      if (LoanPath.D == DestructedVD)
+        CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(L.ID));
     }
   }
 
@@ -495,9 +486,9 @@ private:
 // ========================================================================= //
 } // anonymous namespace
 
-void runLifetimeAnalysis(const DeclContext &DC, const CFG &Cfg,
-                         AnalysisDeclContext &AC) {
-  llvm::TimeTraceScope TimeProfile("Lifetime Analysis");
+void runLifetimeSafetyAnalysis(const DeclContext &DC, const CFG &Cfg,
+                               AnalysisDeclContext &AC) {
+  llvm::TimeTraceScope TimeProfile("LifetimeSafetyAnalysis");
   DEBUG_WITH_TYPE("PrintCFG", Cfg.dump(AC.getASTContext().getLangOpts(),
                                        /*ShowColors=*/true));
   FactManager FactMgr;
