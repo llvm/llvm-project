@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - %s -verify
-// RUN: not %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -fsyntax-only %s -verify
+// RUN: not %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -fsyntax-only %s 2>&1 | FileCheck %s
 
 // Attr test
 
