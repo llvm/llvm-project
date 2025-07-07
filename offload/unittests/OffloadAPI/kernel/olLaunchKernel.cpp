@@ -38,21 +38,19 @@ struct LaunchKernelTestBase : OffloadQueueTest {
   ol_kernel_launch_size_args_t LaunchArgs{};
 };
 
-struct olLaunchKernelTest : LaunchKernelTestBase {
-  void SetUp() override {
-    RETURN_ON_FATAL_FAILURE(LaunchKernelTestBase::SetUpKernel("foo"));
-  }
-};
-OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olLaunchKernelTest);
+#define KERNEL_TEST(NAME, KERNEL)                                              \
+  struct olLaunchKernel##NAME##Test : LaunchKernelTestBase {                   \
+    void SetUp() override { LaunchKernelTestBase::SetUpKernel(#KERNEL); }      \
+  };                                                                           \
+  OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olLaunchKernel##NAME##Test);
 
-struct olLaunchKernelNoArgsTest : LaunchKernelTestBase {
-  void SetUp() override {
-    RETURN_ON_FATAL_FAILURE(LaunchKernelTestBase::SetUpKernel("noargs"));
-  }
-};
-OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olLaunchKernelNoArgsTest);
+KERNEL_TEST(Foo, foo)
+KERNEL_TEST(NoArgs, noargs)
+KERNEL_TEST(LocalMem, localmem)
+KERNEL_TEST(LocalMemReduction, localmem_reduction)
+KERNEL_TEST(LocalMemStatic, localmem_static)
 
-TEST_P(olLaunchKernelTest, Success) {
+TEST_P(olLaunchKernelFooTest, Success) {
   void *Mem;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
                             LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
@@ -80,7 +78,7 @@ TEST_P(olLaunchKernelNoArgsTest, Success) {
   ASSERT_SUCCESS(olWaitQueue(Queue));
 }
 
-TEST_P(olLaunchKernelTest, SuccessSynchronous) {
+TEST_P(olLaunchKernelFooTest, SuccessSynchronous) {
   void *Mem;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
                             LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
@@ -96,6 +94,77 @@ TEST_P(olLaunchKernelTest, SuccessSynchronous) {
   for (uint32_t i = 0; i < 64; i++) {
     ASSERT_EQ(Data[i], i);
   }
+
+  ASSERT_SUCCESS(olMemFree(Mem));
+}
+
+TEST_P(olLaunchKernelLocalMemTest, Success) {
+  LaunchArgs.NumGroups.x = 4;
+  LaunchArgs.DynSharedMemory = 64 * sizeof(uint32_t);
+
+  void *Mem;
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+                            LaunchArgs.GroupSize.x * LaunchArgs.NumGroups.x *
+                                sizeof(uint32_t),
+                            &Mem));
+  struct {
+    void *Mem;
+  } Args{Mem};
+
+  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
+                                &LaunchArgs, nullptr));
+
+  ASSERT_SUCCESS(olWaitQueue(Queue));
+
+  uint32_t *Data = (uint32_t *)Mem;
+  for (uint32_t i = 0; i < LaunchArgs.GroupSize.x * LaunchArgs.NumGroups.x; i++)
+    ASSERT_EQ(Data[i], (i % 64) * 2);
+
+  ASSERT_SUCCESS(olMemFree(Mem));
+}
+
+TEST_P(olLaunchKernelLocalMemReductionTest, Success) {
+  LaunchArgs.NumGroups.x = 4;
+  LaunchArgs.DynSharedMemory = 64 * sizeof(uint32_t);
+
+  void *Mem;
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+                            LaunchArgs.NumGroups.x * sizeof(uint32_t), &Mem));
+  struct {
+    void *Mem;
+  } Args{Mem};
+
+  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
+                                &LaunchArgs, nullptr));
+
+  ASSERT_SUCCESS(olWaitQueue(Queue));
+
+  uint32_t *Data = (uint32_t *)Mem;
+  for (uint32_t i = 0; i < LaunchArgs.NumGroups.x; i++)
+    ASSERT_EQ(Data[i], 2 * LaunchArgs.GroupSize.x);
+
+  ASSERT_SUCCESS(olMemFree(Mem));
+}
+
+TEST_P(olLaunchKernelLocalMemStaticTest, Success) {
+  LaunchArgs.NumGroups.x = 4;
+  LaunchArgs.DynSharedMemory = 0;
+
+  void *Mem;
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+                            LaunchArgs.NumGroups.x * sizeof(uint32_t), &Mem));
+  struct {
+    void *Mem;
+  } Args{Mem};
+
+  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
+                                &LaunchArgs, nullptr));
+
+  ASSERT_SUCCESS(olWaitQueue(Queue));
+
+  uint32_t *Data = (uint32_t *)Mem;
+  for (uint32_t i = 0; i < LaunchArgs.NumGroups.x; i++)
+    ASSERT_EQ(Data[i], 2 * LaunchArgs.GroupSize.x);
 
   ASSERT_SUCCESS(olMemFree(Mem));
 }
