@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: .cfi_offset r31, -4
 ; CHECK: .cfi_offset r30, -8
 ; CHECK: .cfi_offset r17, -12

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 
 ; Test that we convert 128B vcombine instructions to REG_SEQUENCE instructions.
 

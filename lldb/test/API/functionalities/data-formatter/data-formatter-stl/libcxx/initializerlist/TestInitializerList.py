@@ -3,6 +3,7 @@ Test lldb data formatter subsystem.
 """
 
 
+import re
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -24,9 +25,7 @@ class InitializerListTestCase(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
-        lldbutil.skip_if_library_missing(
-            self, self.target(), lldbutil.PrintableRegex("libc\+\+")
-        )
+        lldbutil.skip_if_library_missing(self, self.target(), re.compile(r"libc\+\+"))
 
         # The stop reason of the thread should be breakpoint.
         self.expect(
@@ -40,5 +39,3 @@ class InitializerListTestCase(TestBase):
             "frame variable ils",
             substrs=['[4] = "surprise it is a long string!! yay!!"'],
         )
-
-        self.expect("image list", substrs=self.getLibcPlusPlusLibs())

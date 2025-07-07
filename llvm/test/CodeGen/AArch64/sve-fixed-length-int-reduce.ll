@@ -37,8 +37,7 @@ define i8 @uaddv_v32i8(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ptrue p0.b, vl32
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    uaddv d0, p0, z0.b
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %op = load <32 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.add.v32i8(<32 x i8> %op)
@@ -54,8 +53,7 @@ define i8 @uaddv_v64i8(ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    add z0.b, z1.b, z0.b
 ; VBITS_GE_256-NEXT:    uaddv d0, p0, z0.b
-; VBITS_GE_256-NEXT:    fmov x0, d0
-; VBITS_GE_256-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; VBITS_GE_256-NEXT:    fmov w0, s0
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: uaddv_v64i8:
@@ -63,8 +61,7 @@ define i8 @uaddv_v64i8(ptr %a) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.b, vl64
 ; VBITS_GE_512-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    uaddv d0, p0, z0.b
-; VBITS_GE_512-NEXT:    fmov x0, d0
-; VBITS_GE_512-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; VBITS_GE_512-NEXT:    fmov w0, s0
 ; VBITS_GE_512-NEXT:    ret
   %op = load <64 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.add.v64i8(<64 x i8> %op)
@@ -77,8 +74,7 @@ define i8 @uaddv_v128i8(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ptrue p0.b, vl128
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    uaddv d0, p0, z0.b
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %op = load <128 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.add.v128i8(<128 x i8> %op)
@@ -91,8 +87,7 @@ define i8 @uaddv_v256i8(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ptrue p0.b, vl256
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    uaddv d0, p0, z0.b
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %op = load <256 x i8>, ptr %a
   %res = call i8 @llvm.vector.reduce.add.v256i8(<256 x i8> %op)
@@ -127,8 +122,7 @@ define i16 @uaddv_v16i16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ptrue p0.h, vl16
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    uaddv d0, p0, z0.h
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %op = load <16 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %op)
@@ -144,8 +138,7 @@ define i16 @uaddv_v32i16(ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    add z0.h, z1.h, z0.h
 ; VBITS_GE_256-NEXT:    uaddv d0, p0, z0.h
-; VBITS_GE_256-NEXT:    fmov x0, d0
-; VBITS_GE_256-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; VBITS_GE_256-NEXT:    fmov w0, s0
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: uaddv_v32i16:
@@ -153,8 +146,7 @@ define i16 @uaddv_v32i16(ptr %a) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
 ; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    uaddv d0, p0, z0.h
-; VBITS_GE_512-NEXT:    fmov x0, d0
-; VBITS_GE_512-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; VBITS_GE_512-NEXT:    fmov w0, s0
 ; VBITS_GE_512-NEXT:    ret
   %op = load <32 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.add.v32i16(<32 x i16> %op)
@@ -167,8 +159,7 @@ define i16 @uaddv_v64i16(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ptrue p0.h, vl64
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    uaddv d0, p0, z0.h
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %op = load <64 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.add.v64i16(<64 x i16> %op)
@@ -181,8 +172,7 @@ define i16 @uaddv_v128i16(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ptrue p0.h, vl128
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    uaddv d0, p0, z0.h
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %op = load <128 x i16>, ptr %a
   %res = call i16 @llvm.vector.reduce.add.v128i16(<128 x i16> %op)
@@ -217,8 +207,7 @@ define i32 @uaddv_v8i32(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    uaddv d0, p0, z0.s
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %op = load <8 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %op)
@@ -234,8 +223,7 @@ define i32 @uaddv_v16i32(ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    add z0.s, z1.s, z0.s
 ; VBITS_GE_256-NEXT:    uaddv d0, p0, z0.s
-; VBITS_GE_256-NEXT:    fmov x0, d0
-; VBITS_GE_256-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; VBITS_GE_256-NEXT:    fmov w0, s0
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: uaddv_v16i32:
@@ -243,8 +231,7 @@ define i32 @uaddv_v16i32(ptr %a) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    uaddv d0, p0, z0.s
-; VBITS_GE_512-NEXT:    fmov x0, d0
-; VBITS_GE_512-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; VBITS_GE_512-NEXT:    fmov w0, s0
 ; VBITS_GE_512-NEXT:    ret
   %op = load <16 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %op)
@@ -257,8 +244,7 @@ define i32 @uaddv_v32i32(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    uaddv d0, p0, z0.s
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %op = load <32 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.add.v32i32(<32 x i32> %op)
@@ -271,8 +257,7 @@ define i32 @uaddv_v64i32(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ptrue p0.s, vl64
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    uaddv d0, p0, z0.s
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %op = load <64 x i32>, ptr %a
   %res = call i32 @llvm.vector.reduce.add.v64i32(<64 x i32> %op)

@@ -12,7 +12,7 @@
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_4:.*]] = arith.constant false
 ! CHECK:           %[[VAL_5:.*]] = arith.constant false
-! CHECK:           %[[VAL_6:.*]] = fir.call @_FortranAStopStatement(%[[VAL_3]], %[[VAL_4]], %[[VAL_5]]) fastmath<contract> : (i32, i1, i1) -> none
+! CHECK:           fir.call @_FortranAStopStatement(%[[VAL_3]], %[[VAL_4]], %[[VAL_5]]) fastmath<contract> : (i32, i1, i1) -> ()
 ! CHECK:           fir.unreachable
 ! CHECK:         ^bb2:
 ! CHECK:           cf.br ^bb3

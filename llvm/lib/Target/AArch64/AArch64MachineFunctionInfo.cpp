@@ -72,6 +72,18 @@ static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
   return Key == "b_key";
 }
 
+static bool hasELFSignedGOTHelper(const Function &F,
+                                  const AArch64Subtarget *STI) {
+  if (!STI->getTargetTriple().isOSBinFormatELF())
+    return false;
+  const Module *M = F.getParent();
+  const auto *Flag = mdconst::extract_or_null<ConstantInt>(
+      M->getModuleFlag("ptrauth-elf-got"));
+  if (Flag && Flag->getZExtValue() == 1)
+    return true;
+  return false;
+}
+
 AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
                                          const AArch64Subtarget *STI) {
   // If we already know that the function doesn't have a redzone, set
@@ -80,12 +92,16 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
     HasRedZone = false;
   std::tie(SignReturnAddress, SignReturnAddressAll) = GetSignReturnAddress(F);
   SignWithBKey = ShouldSignWithBKey(F, *STI);
+  HasELFSignedGOT = hasELFSignedGOTHelper(F, STI);
   // TODO: skip functions that have no instrumented allocas for optimization
   IsMTETagged = F.hasFnAttribute(Attribute::SanitizeMemTag);
 
   // BTI/PAuthLR are set on the function attribute.
   BranchTargetEnforcement = F.hasFnAttribute("branch-target-enforcement");
   BranchProtectionPAuthLR = F.hasFnAttribute("branch-protection-pauth-lr");
+
+  // Parse the SME function attributes.
+  SMEFnAttrs = SMEAttrs(F);
 
   // The default stack probe size is 4096 if the function has no
   // stack-probe-size attribute. This is a safe default because it is the

@@ -32,11 +32,11 @@ void test() {
     S<int> s;
 }
 
-// expected-error@mod1.cppm:* {{declaration 'v' attached to named module 'mod1' can't be attached to other modules}}
+// expected-error@mod1.cppm:* {{declaration 'v' attached to named module 'mod1' cannot be attached to other modules}}
 // expected-note@mod2.cppm:* {{}}
-// expected-error@mod1.cppm:* {{declaration 'func' attached to named module 'mod1' can't be attached to other modules}}
+// expected-error@mod1.cppm:* {{declaration 'func' attached to named module 'mod1' cannot be attached to other modules}}
 // expected-note@mod2.cppm:* {{}}
-// expected-error@mod1.cppm:* {{declaration 'A' attached to named module 'mod1' can't be attached to other modules}}
+// expected-error@mod1.cppm:* {{declaration 'A' attached to named module 'mod1' cannot be attached to other modules}}
 // expected-note@mod2.cppm:* {{}}
-// expected-error@mod1.cppm:* 1+{{declaration 'S' attached to named module 'mod1' can't be attached to other modules}}
+// expected-error@mod1.cppm:* 1+{{declaration 'S' attached to named module 'mod1' cannot be attached to other modules}}
 // expected-note@mod2.cppm:* 1+{{}}

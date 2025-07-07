@@ -16,8 +16,8 @@ define void @test() #0 {
 ; CHECK-NEXT:    [[DUMMY_ADD:%.*]] = add i16 0, 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[DUMMY_SHL:%.*]] = shl i64 [[TMP5]], 32
-; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i64> <i64 1, i64 1, i64 1, i64 1>, [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = ashr exact <4 x i64> [[TMP6]], <i64 32, i64 32, i64 32, i64 32>
+; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i64> splat (i64 1), [[TMP3]]
+; CHECK-NEXT:    [[TMP7:%.*]] = ashr exact <4 x i64> [[TMP6]], splat (i64 32)
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP7]])
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = add i64 [[TMP8]], [[TMP4]]
 ; CHECK-NEXT:    [[OP_RDX1]] = add i64 [[OP_RDX]], 0

@@ -274,10 +274,10 @@ namespace TrailingPack {
   // CHECK: |-TemplateArgument pack
   // CHECK: | |-TemplateArgument type 'TrailingPack::(lambda at {{.*}})'
   // CHECK: | | `-RecordType {{.*}} 'TrailingPack::(lambda at {{.*}})'
-  // CHECK: | |   `-CXXRecord {{.*}} ''
+  // CHECK: | |   `-CXXRecord {{.*}} <line:262:5>
   // CHECK: | `-TemplateArgument type 'TrailingPack::(lambda at {{.*}})'
   // CHECK: |   `-RecordType {{.*}} 'TrailingPack::(lambda at {{.*}})'
-  // CHECK: |     `-CXXRecord {{.*}} ''
+  // CHECK: |     `-CXXRecord {{.*}} <line:263:5>
   // CHECK: |-ParmVarDecl {{.*}} 'TrailingPack::(lambda at {{.*}})'
   // CHECK: `-ParmVarDecl {{.*}} 'TrailingPack::(lambda at {{.*}})'
   // CHECK: FunctionProtoType {{.*}} 'auto (T...) -> A<T...>' dependent trailing_return cdecl
@@ -331,7 +331,7 @@ namespace DeduceArity {
   // CHECK: | |-ParmVarDecl {{.*}} 'Types<T...>'
   // CHECK: | `-ParmVarDecl {{.*}} 'T...' pack
   // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for F>
-  // CHECK-SAME: 'auto (Types<X, Y, Z>, DeduceArity::X, DeduceArity::Y, DeduceArity::Z) ->
+  // CHECK-SAME:  'auto (Types<DeduceArity::X, DeduceArity::Y, DeduceArity::Z>, DeduceArity::X, DeduceArity::Y, DeduceArity::Z) ->
   // CHECK-SAME:     DeduceArity::F<DeduceArity::X, DeduceArity::Y, DeduceArity::Z>'
   // CHECK: | |-TemplateArgument pack
   // CHECK: | | |-TemplateArgument type 'DeduceArity::X'
@@ -343,16 +343,16 @@ namespace DeduceArity {
   // CHECK: | | `-TemplateArgument type 'DeduceArity::Z'
   // CHECK: | |   `-RecordType {{.*}} 'DeduceArity::Z'
   // CHECK: | |     `-CXXRecord {{.*}} 'Z'
-  // CHECK: | |-ParmVarDecl {{.*}} 'Types<X, Y, Z>':'DeduceArity::Types<DeduceArity::X, DeduceArity::Y, DeduceArity::Z>'
+  // CHECK: | |-ParmVarDecl {{.*}} 'Types<DeduceArity::X, DeduceArity::Y, DeduceArity::Z>':'DeduceArity::Types<DeduceArity::X, DeduceArity::Y, DeduceArity::Z>'
   // CHECK: | |-ParmVarDecl {{.*}} 'DeduceArity::X'
   // CHECK: | |-ParmVarDecl {{.*}} 'DeduceArity::Y'
   // CHECK: | `-ParmVarDecl {{.*}} 'DeduceArity::Z'
-  // CHECK: `-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for F> 'auto (Types<X>, DeduceArity::X) -> DeduceArity::F<DeduceArity::X>'
+  // CHECK: `-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for F> 'auto (Types<DeduceArity::X>, DeduceArity::X) -> DeduceArity::F<DeduceArity::X>'
   // CHECK:   |-TemplateArgument pack
   // CHECK:   | `-TemplateArgument type 'DeduceArity::X'
   // CHECK:   |   `-RecordType {{.*}} 'DeduceArity::X'
   // CHECK:   |     `-CXXRecord {{.*}} 'X'
-  // CHECK:   |-ParmVarDecl {{.*}} 'Types<X>':'DeduceArity::Types<DeduceArity::X>'
+  // CHECK:   |-ParmVarDecl {{.*}} 'Types<DeduceArity::X>':'DeduceArity::Types<DeduceArity::X>'
   // CHECK:   `-ParmVarDecl {{.*}} 'DeduceArity::X'
   // CHECK: FunctionProtoType {{.*}} 'auto (Types<T...>, T...) -> F<T...>' dependent trailing_return cdecl
   // CHECK: |-InjectedClassNameType {{.*}} 'F<T...>' dependent

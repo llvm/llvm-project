@@ -15,18 +15,31 @@ function(add_linalg_ods_yaml_gen yaml_ast_file output_file)
     MAIN_DEPENDENCY
     ${YAML_AST_SOURCE}
     DEPENDS
-    ${MLIR_LINALG_ODS_YAML_GEN_EXE}
     ${MLIR_LINALG_ODS_YAML_GEN_TARGET})
   add_custom_target(
     MLIR${output_file}YamlIncGen
     DEPENDS
-    ${MLIR_LINALG_ODS_YAML_GEN_EXE}
-    ${MLIR_LINALG_ODS_YAML_GEN_TARGET}
     ${GEN_ODS_FILE} ${GEN_CPP_FILE})
   set_target_properties(MLIR${output_file}YamlIncGen PROPERTIES FOLDER "MLIR/Tablegenning")
   list(APPEND LLVM_TARGET_DEPENDS ${GEN_ODS_FILE})
   set(LLVM_TARGET_DEPENDS ${LLVM_TARGET_DEPENDS} PARENT_SCOPE)
 endfunction()
+
+# NOTE: `add_mlir_interface(interface)` adds `interface` as a dependency of
+# mlir-generic-headers, i.e.:
+#   * mlir-generic-headers -> interface
+# In addition, we have an existing MLIR-wide dependency of:
+#   * mlir-headers -> mlir-generic-headers.
+# Now, observe that:
+#   1. The targets below define _new_ dependencies for mlir-headers.
+#   2. Before the new targets are defined, `add_linalg_ods_yaml_gen` updates
+#     LLVM_TARGET_DEPENDS.
+#   3. All tablegen targets pick-up LLVM_TARGET_DEPENDS.
+# In order to avoid cyclic dependencies, we need to invoke
+# `add_mlir_interface` (and update `mlir-generic-headers`) _before_
+# LLVM_TARGET_DEPENDS is updated and new dependencies for `mlir-headers` are
+# defined + added.
+add_mlir_interface(RelayoutOpInterface)
 
 # NOTE: LLVM_TARGET_DEPENDS gets picked up by tablegen targets to add file
 # level dependencies. This is gross but CMake requires depending on both
@@ -68,8 +81,16 @@ add_public_tablegen_target(MLIRLinalgStructuredOpsIncGen)
 add_dependencies(MLIRLinalgStructuredOpsIncGen LinalgOdsGen)
 add_dependencies(mlir-headers MLIRLinalgStructuredOpsIncGen)
 
+set(LLVM_TARGET_DEFINITIONS LinalgRelayoutOps.td)
+mlir_tablegen(LinalgRelayoutOps.h.inc -gen-op-decls)
+mlir_tablegen(LinalgRelayoutOps.cpp.inc -gen-op-defs)
+add_public_tablegen_target(MLIRLinalgRelayoutOpsIncGen)
+add_dependencies(MLIRLinalgRelayoutOpsIncGen LinalgOdsGen)
+add_dependencies(mlir-headers MLIRLinalgRelayoutOpsIncGen)
+
 set(LLVM_TARGET_DEFINITIONS LinalgInterfaces.td)
 mlir_tablegen(LinalgInterfaces.h.inc -gen-op-interface-decls)
 mlir_tablegen(LinalgInterfaces.cpp.inc -gen-op-interface-defs)
 add_public_tablegen_target(MLIRLinalgInterfacesIncGen)
 add_dependencies(mlir-headers MLIRLinalgInterfacesIncGen)
+

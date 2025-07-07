@@ -160,7 +160,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*desc=*/[{
         Return a vector of all the static or dynamic offsets of the op.
       }],
-      /*retTy=*/"::llvm::SmallVector<::mlir::OpFoldResult, 4>",
+      /*retTy=*/"::llvm::SmallVector<::mlir::OpFoldResult>",
       /*methodName=*/"getMixedOffsets",
       /*args=*/(ins),
       /*methodBody=*/"",
@@ -174,7 +174,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*desc=*/[{
         Return a vector of all the static or dynamic sizes of the op.
       }],
-      /*retTy=*/"::llvm::SmallVector<::mlir::OpFoldResult, 4>",
+      /*retTy=*/"::llvm::SmallVector<::mlir::OpFoldResult>",
       /*methodName=*/"getMixedSizes",
       /*args=*/(ins),
       /*methodBody=*/"",
@@ -188,7 +188,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*desc=*/[{
         Return a vector of all the static or dynamic strides of the op.
       }],
-      /*retTy=*/"::llvm::SmallVector<::mlir::OpFoldResult, 4>",
+      /*retTy=*/"::llvm::SmallVector<::mlir::OpFoldResult>",
       /*methodName=*/"getMixedStrides",
       /*args=*/(ins),
       /*methodBody=*/"",

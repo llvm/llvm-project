@@ -3,9 +3,9 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK-LABEL: @func()
+; CHECK-LABEL: @func(i1 %arg)
 ; Function Attrs: noinline
-define dso_local void @func() unnamed_addr #0 align 2 {
+define dso_local void @func(i1 %arg) unnamed_addr #0 align 2 {
 entry:
   %NoFinalize.addr = alloca i8, align 1
   call void @blah()
@@ -97,7 +97,7 @@ if.then94:                                        ; preds = %while.end
   br label %for.cond
 
 for.cond:                                         ; preds = %for.body, %if.then94
-  br i1 undef, label %for.body, label %if.end120
+  br i1 %arg, label %for.body, label %if.end120
 
 for.body:                                         ; preds = %for.cond
   call void @blah()

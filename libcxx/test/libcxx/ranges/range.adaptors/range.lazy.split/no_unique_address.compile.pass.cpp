@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// XFAIL: msvc && clang-17
 
 // class lazy_split_view {
 //   _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();

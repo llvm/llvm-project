@@ -249,7 +249,7 @@ public:
   bool CanLowerReturn(CallingConv::ID CallConv,
                       MachineFunction &MF, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      LLVMContext &Context) const override;
+                      LLVMContext &Context, const Type *RetTy) const override;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -342,8 +342,13 @@ public:
   SDValue getPICJumpTableRelocBase(SDValue Table, SelectionDAG &DAG)
                                    const override;
 
-  bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy,
-                             EVT NewVT) const override;
+  /// Returns true if it is beneficial to convert a load of a constant
+  /// to just the constant itself.
+  bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
+                                         Type *Ty) const override;
+
+  bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
+                             std::optional<unsigned> ByteOffset) const override;
 
   void AdjustInstrPostInstrSelection(MachineInstr &MI,
                                      SDNode *Node) const override;
@@ -362,6 +367,7 @@ public:
   shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override {
     return AtomicExpansionKind::LLSC;
   }
+  bool softPromoteHalfType() const override { return true; }
 
 private:
   void initializeHVXLowering();

@@ -13,7 +13,6 @@
 #include "llvm/Transforms/IPO/ExtractGV.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include <algorithm>
 
 using namespace llvm;
 
@@ -53,7 +52,7 @@ static void makeVisible(GlobalValue &GV, bool Delete) {
 /// global values specified.
 ExtractGVPass::ExtractGVPass(std::vector<GlobalValue *> &GVs, bool deleteS,
                              bool keepConstInit)
-    : Named(GVs.begin(), GVs.end()), deleteStuff(deleteS),
+    : Named(llvm::from_range, GVs), deleteStuff(deleteS),
       keepConstInit(keepConstInit) {}
 
 PreservedAnalyses ExtractGVPass::run(Module &M, ModuleAnalysisManager &) {

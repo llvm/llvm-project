@@ -346,8 +346,11 @@ DiagnosedSilenceableFailure mlir::test::TestEmitRemarkAndEraseOperandOp::apply(
     transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
   emitRemark() << getRemark();
-  for (Operation *op : state.getPayloadOps(getTarget()))
+  for (Operation *op : state.getPayloadOps(getTarget())) {
+    if (!op->getUses().empty())
+      return emitSilenceableError() << "cannot erase an op that has uses";
     rewriter.eraseOp(op);
+  }
 
   if (getFailAfterErase())
     return emitSilenceableError() << "silenceable error";
@@ -871,9 +874,9 @@ public:
     });
     auto unrealizedCastConverter = [&](OpBuilder &builder, Type resultType,
                                        ValueRange inputs,
-                                       Location loc) -> std::optional<Value> {
+                                       Location loc) -> Value {
       if (inputs.size() != 1)
-        return std::nullopt;
+        return Value();
       return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
           .getResult(0);
     };

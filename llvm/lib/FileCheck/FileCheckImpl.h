@@ -51,7 +51,7 @@ struct ExpressionFormat {
   };
 
 private:
-  Kind Value;
+  Kind Value = Kind::NoFormat;
   unsigned Precision = 0;
   /// printf-like "alternate form" selected.
   bool AlternateForm = false;
@@ -78,7 +78,7 @@ public:
   /// \returns the format specifier corresponding to this format as a string.
   StringRef toString() const;
 
-  ExpressionFormat() : Value(Kind::NoFormat){};
+  ExpressionFormat() = default;
   explicit ExpressionFormat(Kind Value) : Value(Value), Precision(0){};
   explicit ExpressionFormat(Kind Value, unsigned Precision)
       : Value(Value), Precision(Precision){};
@@ -366,9 +366,15 @@ public:
   /// \returns the index where the substitution is to be performed in RegExStr.
   size_t getIndex() const { return InsertIdx; }
 
+  /// \returns a regular expression string that matches the result of the
+  /// substitution represented by this class instance or an error if
+  /// substitution failed.
+  virtual Expected<std::string> getResultRegex() const = 0;
+
   /// \returns a string containing the result of the substitution represented
-  /// by this class instance or an error if substitution failed.
-  virtual Expected<std::string> getResult() const = 0;
+  /// by this class instance in a form suitable for diagnostics, or an error if
+  /// substitution failed.
+  virtual Expected<std::string> getResultForDiagnostics() const = 0;
 };
 
 class StringSubstitution : public Substitution {
@@ -379,7 +385,12 @@ public:
 
   /// \returns the text that the string variable in this substitution matched
   /// when defined, or an error if the variable is undefined.
-  Expected<std::string> getResult() const override;
+  Expected<std::string> getResultRegex() const override;
+
+  /// \returns the text that the string variable in this substitution matched
+  /// when defined, in a form suitable for diagnostics, or an error if the
+  /// variable is undefined.
+  Expected<std::string> getResultForDiagnostics() const override;
 };
 
 class NumericSubstitution : public Substitution {
@@ -397,7 +408,12 @@ public:
 
   /// \returns a string containing the result of evaluating the expression in
   /// this substitution, or an error if evaluation failed.
-  Expected<std::string> getResult() const override;
+  Expected<std::string> getResultRegex() const override;
+
+  /// \returns a string containing the result of evaluating the expression in
+  /// this substitution, in a form suitable for diagnostics, or an error if
+  /// evaluation failed.
+  Expected<std::string> getResultForDiagnostics() const override;
 };
 
 //===----------------------------------------------------------------------===//
@@ -837,8 +853,9 @@ struct FileCheckString {
   /// Hold the DAG/NOT strings occurring in the input file.
   std::vector<DagNotPrefixInfo> DagNotStrings;
 
-  FileCheckString(const Pattern &P, StringRef S, SMLoc L)
-      : Pat(P), Prefix(S), Loc(L) {}
+  FileCheckString(Pattern &&P, StringRef S, SMLoc L,
+                  std::vector<DagNotPrefixInfo> &&D)
+      : Pat(std::move(P)), Prefix(S), Loc(L), DagNotStrings(std::move(D)) {}
 
   /// Matches check string and its "not strings" and/or "dag strings".
   size_t Check(const SourceMgr &SM, StringRef Buffer, bool IsLabelScanMode,

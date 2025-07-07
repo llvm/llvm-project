@@ -635,7 +635,7 @@ std::optional<uint64_t> DWARFDebugNames::Entry::getRelatedCUIndex() const {
   if (std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_compile_unit))
     return Off->getAsUnsignedConstant();
   // In a per-CU index, the entries without a DW_IDX_compile_unit attribute
-  // implicitly refer to the single CU. 
+  // implicitly refer to the single CU.
   if (NameIdx->getCUCount() == 1)
     return 0;
   return std::nullopt;
@@ -665,7 +665,7 @@ std::optional<uint64_t> DWARFDebugNames::Entry::getRelatedCUOffset() const {
 }
 
 std::optional<uint64_t> DWARFDebugNames::Entry::getLocalTUOffset() const {
-  std::optional<uint64_t> Index = getLocalTUIndex();
+  std::optional<uint64_t> Index = getTUIndex();
   if (!Index || *Index >= NameIdx->getLocalTUCount())
     return std::nullopt;
   return NameIdx->getLocalTUOffset(*Index);
@@ -673,7 +673,7 @@ std::optional<uint64_t> DWARFDebugNames::Entry::getLocalTUOffset() const {
 
 std::optional<uint64_t>
 DWARFDebugNames::Entry::getForeignTUTypeSignature() const {
-  std::optional<uint64_t> Index = getLocalTUIndex();
+  std::optional<uint64_t> Index = getTUIndex();
   const uint32_t NumLocalTUs = NameIdx->getLocalTUCount();
   if (!Index || *Index < NumLocalTUs)
     return std::nullopt; // Invalid TU index or TU index is for a local TU
@@ -684,7 +684,7 @@ DWARFDebugNames::Entry::getForeignTUTypeSignature() const {
   return NameIdx->getForeignTUSignature(ForeignTUIndex);
 }
 
-std::optional<uint64_t> DWARFDebugNames::Entry::getLocalTUIndex() const {
+std::optional<uint64_t> DWARFDebugNames::Entry::getTUIndex() const {
   if (std::optional<DWARFFormValue> Off = lookup(dwarf::DW_IDX_type_unit))
     return Off->getAsUnsignedConstant();
   return std::nullopt;
@@ -1061,14 +1061,16 @@ DWARFDebugNames::equal_range(StringRef Key) const {
 }
 
 const DWARFDebugNames::NameIndex *
-DWARFDebugNames::getCUNameIndex(uint64_t CUOffset) {
-  if (CUToNameIndex.size() == 0 && NameIndices.size() > 0) {
+DWARFDebugNames::getCUOrTUNameIndex(uint64_t UnitOffset) {
+  if (UnitOffsetToNameIndex.size() == 0 && NameIndices.size() > 0) {
     for (const auto &NI : *this) {
       for (uint32_t CU = 0; CU < NI.getCUCount(); ++CU)
-        CUToNameIndex.try_emplace(NI.getCUOffset(CU), &NI);
+        UnitOffsetToNameIndex.try_emplace(NI.getCUOffset(CU), &NI);
+      for (uint32_t TU = 0; TU < NI.getLocalTUCount(); ++TU)
+        UnitOffsetToNameIndex.try_emplace(NI.getLocalTUOffset(TU), &NI);
     }
   }
-  return CUToNameIndex.lookup(CUOffset);
+  return UnitOffsetToNameIndex.lookup(UnitOffset);
 }
 
 static bool isObjCSelector(StringRef Name) {

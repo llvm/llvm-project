@@ -1,5 +1,3 @@
-set(LIBCXX_LIB_CMAKEFILES_DIR "${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}"  PARENT_SCOPE)
-
 # Get sources
 set(LIBCXX_SOURCES
   algorithm.cpp
@@ -31,7 +29,7 @@ set(LIBCXX_SOURCES
   include/ryu/f2s.h
   include/ryu/ryu.h
   include/to_chars_floating_point.h
-  legacy_pointer_safety.cpp
+  include/from_chars_floating_point.h
   memory.cpp
   memory_resource.cpp
   new_handler.cpp
@@ -172,11 +170,14 @@ endif()
 split_list(LIBCXX_COMPILE_FLAGS)
 split_list(LIBCXX_LINK_FLAGS)
 
+include(FindLibcCommonUtils)
+
 # Build the shared library.
 add_library(cxx_shared SHARED ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
 target_include_directories(cxx_shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(cxx_shared PUBLIC cxx-headers libcxx-libc-shared
-                                  PRIVATE ${LIBCXX_LIBRARIES})
+                                  PRIVATE ${LIBCXX_LIBRARIES}
+                                  PRIVATE llvm-libc-common-utilities)
 set_target_properties(cxx_shared
   PROPERTIES
     EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBCXX_ENABLE_SHARED}>,FALSE,TRUE>"
@@ -247,18 +248,18 @@ if (LIBCXX_ENABLE_SHARED)
   list(APPEND LIBCXX_BUILD_TARGETS "cxx_shared")
 endif()
 
-  if(WIN32 AND NOT MINGW AND NOT "${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Windows")
-    # Since we most likely do not have a mt.exe replacement, disable the
-    # manifest bundling.  This allows a normal cmake invocation to pass which
-    # will attempt to use the manifest tool to generate the bundled manifest
-    if (${CMAKE_CXX_COMPILER_FRONTEND_VARIANT} STREQUAL "MSVC")
-      set_target_properties(cxx_shared PROPERTIES
-                            APPEND_STRING PROPERTY LINK_FLAGS " /MANIFEST:NO")
-    else()
-      set_target_properties(cxx_shared PROPERTIES
-                            APPEND_STRING PROPERTY LINK_FLAGS " -Xlinker /MANIFEST:NO")
-    endif()
+if(WIN32 AND NOT MINGW AND NOT "${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Windows")
+  # Since we most likely do not have a mt.exe replacement, disable the
+  # manifest bundling.  This allows a normal cmake invocation to pass which
+  # will attempt to use the manifest tool to generate the bundled manifest
+  if (${CMAKE_CXX_COMPILER_FRONTEND_VARIANT} STREQUAL "MSVC")
+    set_target_properties(cxx_shared PROPERTIES
+                          APPEND_STRING PROPERTY LINK_FLAGS " /MANIFEST:NO")
+  else()
+    set_target_properties(cxx_shared PROPERTIES
+                          APPEND_STRING PROPERTY LINK_FLAGS " -Xlinker /MANIFEST:NO")
   endif()
+endif()
 
 set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
 
@@ -267,7 +268,8 @@ add_library(cxx_static STATIC ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
 target_include_directories(cxx_static PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(cxx_static PUBLIC cxx-headers libcxx-libc-static
                                   PRIVATE ${LIBCXX_LIBRARIES}
-                                  PRIVATE libcxx-abi-static)
+                                  PRIVATE libcxx-abi-static
+                                  PRIVATE llvm-libc-common-utilities)
 set_target_properties(cxx_static
   PROPERTIES
     EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBCXX_ENABLE_STATIC}>,FALSE,TRUE>"

@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 %s -fsyntax-only -fobjc-exceptions -verify -Wreturn-type -Wmissing-noreturn
+// RUN: %clang_cc1 %s -fsyntax-only -fobjc-exceptions -verify -Wreturn-type -Wmissing-noreturn -Werror=return-type
 
 id f(id self) {
-} // expected-warning {{non-void function does not return a value}}
+} // expected-error {{non-void function does not return a value}}
 
 id f2(id self) {
   @try {

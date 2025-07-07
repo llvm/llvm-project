@@ -97,9 +97,11 @@ try.cont:                                         ; preds = %catchret.dest, %inv
 ; CHECK: vmovaps 48(%rsp), %xmm7
 ; CHECK: vmovaps 32(%rsp), %xmm8
 ; CHECK: leaq    .LBB0_1(%rip), %rax
+; CHECK: .seh_startepilogue
 ; CHECK: addq    $88, %rsp
 ; CHECK: popq    %rbx
 ; CHECK: popq    %rbp
+; CHECK: .seh_endepilogue
 ; CHECK: retq # CATCHRET
 
 ; CHECK-LABEL: "$handlerMap$0$?foo@@YAXHHHHH@Z":

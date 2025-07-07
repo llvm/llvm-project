@@ -48,11 +48,9 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cstdint>
 #include <deque>
 #include <map>
@@ -623,8 +621,6 @@ public:
     else
       return getNormalTypeUnitMap();
   }
-
-
 };
 
 class ThreadSafeState : public ThreadUnsafeDWARFContextState {
@@ -1345,8 +1341,7 @@ void DWARFContext::dump(
     getDebugNames().dump(OS);
 }
 
-DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint16_t Version, uint64_t Hash,
-                                                bool IsDWO) {
+DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint64_t Hash, bool IsDWO) {
   DWARFUnitVector &DWOUnits = State->getDWOUnits();
   if (const auto &TUI = getTUIndex()) {
     if (const auto *R = TUI.getFromHash(Hash))
@@ -1733,13 +1728,14 @@ DWARFContext::getLocalsForAddress(object::SectionedAddress Address) {
   return Result;
 }
 
-DILineInfo DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
-                                               DILineInfoSpecifier Spec) {
-  DILineInfo Result;
+std::optional<DILineInfo>
+DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
+                                    DILineInfoSpecifier Spec) {
   DWARFCompileUnit *CU = getCompileUnitForCodeAddress(Address.Address);
   if (!CU)
-    return Result;
+    return std::nullopt;
 
+  DILineInfo Result;
   getFunctionNameAndStartLineForAddress(
       CU, Address.Address, Spec.FNKind, Spec.FLIKind, Result.FunctionName,
       Result.StartFileName, Result.StartLine, Result.StartAddress);
@@ -1754,7 +1750,7 @@ DILineInfo DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
   return Result;
 }
 
-DILineInfo
+std::optional<DILineInfo>
 DWARFContext::getLineInfoForDataAddress(object::SectionedAddress Address) {
   DILineInfo Result;
   DWARFCompileUnit *CU = getCompileUnitForDataAddress(Address.Address);
@@ -1906,8 +1902,8 @@ static Error createError(const Twine &Reason, llvm::Error E) {
 /// SymInfo contains information about symbol: it's address
 /// and section index which is -1LL for absolute symbols.
 struct SymInfo {
-  uint64_t Address;
-  uint64_t SectionIndex;
+  uint64_t Address = 0;
+  uint64_t SectionIndex = 0;
 };
 
 /// Returns the address of symbol relocation used against and a section index.
@@ -1925,7 +1921,7 @@ static Expected<SymInfo> getSymbolInfo(const object::ObjectFile &Obj,
   // in the object file
   if (Sym != Obj.symbol_end()) {
     bool New;
-    std::tie(CacheIt, New) = Cache.insert({*Sym, {0, 0}});
+    std::tie(CacheIt, New) = Cache.try_emplace(*Sym);
     if (!New)
       return CacheIt->second;
 
@@ -2478,3 +2474,5 @@ uint8_t DWARFContext::getCUAddrSize() {
   auto CUs = compile_units();
   return CUs.empty() ? 0 : (*CUs.begin())->getAddressByteSize();
 }
+
+bool DWARFContext::isDWP() const { return !DObj->getCUIndexSection().empty(); }

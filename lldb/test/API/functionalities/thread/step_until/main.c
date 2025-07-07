@@ -4,6 +4,9 @@
  * unrelated to the program, just to achieve consistent
  * debug line tables, across platforms, that are not
  * dependent on compiler optimzations. */
+
+int foo(int x) { return x; /* In foo */ }
+
 int call_me(int argc) {
   printf ("At the start, argc: %d.\n", argc);
 

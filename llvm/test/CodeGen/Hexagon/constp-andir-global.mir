@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass hexagon-constp %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-constp %s -o - | FileCheck %s
 
 # Check that this doesn't crash.
 # CHECK: A2_andir killed %{{[0-9]+}}, @g

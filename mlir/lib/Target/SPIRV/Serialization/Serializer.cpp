@@ -217,8 +217,40 @@ static std::string getDecorationName(StringRef attrName) {
   // similar here
   if (attrName == "fp_rounding_mode")
     return "FPRoundingMode";
+  // convertToCamelFromSnakeCase will not capitalize "INTEL".
+  if (attrName == "cache_control_load_intel")
+    return "CacheControlLoadINTEL";
+  if (attrName == "cache_control_store_intel")
+    return "CacheControlStoreINTEL";
 
   return llvm::convertToCamelFromSnakeCase(attrName, /*capitalizeFirst=*/true);
+}
+
+template <typename AttrTy, typename EmitF>
+LogicalResult processDecorationList(Location loc, Decoration decoration,
+                                    Attribute attrList, StringRef attrName,
+                                    EmitF emitter) {
+  auto arrayAttr = dyn_cast<ArrayAttr>(attrList);
+  if (!arrayAttr) {
+    return emitError(loc, "expecting array attribute of ")
+           << attrName << " for " << stringifyDecoration(decoration);
+  }
+  if (arrayAttr.empty()) {
+    return emitError(loc, "expecting non-empty array attribute of ")
+           << attrName << " for " << stringifyDecoration(decoration);
+  }
+  for (Attribute attr : arrayAttr.getValue()) {
+    auto cacheControlAttr = dyn_cast<AttrTy>(attr);
+    if (!cacheControlAttr) {
+      return emitError(loc, "expecting array attribute of ")
+             << attrName << " for " << stringifyDecoration(decoration);
+    }
+    // This named attribute encodes several decorations. Emit one per
+    // element in the array.
+    if (failed(emitter(cacheControlAttr)))
+      return failure();
+  }
+  return success();
 }
 
 LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
@@ -294,6 +326,26 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
     return emitError(loc,
                      "expected unit attribute or decoration attribute for ")
            << stringifyDecoration(decoration);
+  case spirv::Decoration::CacheControlLoadINTEL:
+    return processDecorationList<CacheControlLoadINTELAttr>(
+        loc, decoration, attr, "CacheControlLoadINTEL",
+        [&](CacheControlLoadINTELAttr attr) {
+          unsigned cacheLevel = attr.getCacheLevel();
+          LoadCacheControl loadCacheControl = attr.getLoadCacheControl();
+          return emitDecoration(
+              resultID, decoration,
+              {cacheLevel, static_cast<uint32_t>(loadCacheControl)});
+        });
+  case spirv::Decoration::CacheControlStoreINTEL:
+    return processDecorationList<CacheControlStoreINTELAttr>(
+        loc, decoration, attr, "CacheControlStoreINTEL",
+        [&](CacheControlStoreINTELAttr attr) {
+          unsigned cacheLevel = attr.getCacheLevel();
+          StoreCacheControl storeCacheControl = attr.getStoreCacheControl();
+          return emitDecoration(
+              resultID, decoration,
+              {cacheLevel, static_cast<uint32_t>(storeCacheControl)});
+        });
   default:
     return emitError(loc, "unhandled decoration ")
            << stringifyDecoration(decoration);
@@ -471,6 +523,9 @@ LogicalResult Serializer::prepareBasicType(
   if (auto floatType = dyn_cast<FloatType>(type)) {
     typeEnum = spirv::Opcode::OpTypeFloat;
     operands.push_back(floatType.getWidth());
+    if (floatType.isBF16()) {
+      operands.push_back(static_cast<uint32_t>(spirv::FPEncoding::BFloat16KHR));
+    }
     return success();
   }
 
@@ -674,6 +729,54 @@ LogicalResult Serializer::prepareBasicType(
     return success();
   }
 
+  if (auto tensorArmType = llvm::dyn_cast<TensorArmType>(type)) {
+    uint32_t elementTypeID = 0;
+    uint32_t rank = 0;
+    uint32_t shapeID = 0;
+    uint32_t rankID = 0;
+    if (failed(processTypeImpl(loc, tensorArmType.getElementType(),
+                               elementTypeID, serializationCtx))) {
+      return failure();
+    }
+    if (tensorArmType.hasRank()) {
+      ArrayRef<int64_t> dims = tensorArmType.getShape();
+      rank = dims.size();
+      rankID = prepareConstantInt(loc, mlirBuilder.getI32IntegerAttr(rank));
+      if (rankID == 0) {
+        return failure();
+      }
+
+      bool shaped = llvm::all_of(dims, [](const auto &dim) { return dim > 0; });
+      if (rank > 0 && shaped) {
+        auto I32Type = IntegerType::get(type.getContext(), 32);
+        auto shapeType = ArrayType::get(I32Type, rank);
+        if (rank == 1) {
+          SmallVector<uint64_t, 1> index(rank);
+          shapeID = prepareDenseElementsConstant(
+              loc, shapeType,
+              mlirBuilder.getI32TensorAttr(SmallVector<int32_t>(dims)), 0,
+              index);
+        } else {
+          shapeID = prepareArrayConstant(
+              loc, shapeType,
+              mlirBuilder.getI32ArrayAttr(SmallVector<int32_t>(dims)));
+        }
+        if (shapeID == 0) {
+          return failure();
+        }
+      }
+    }
+    typeEnum = spirv::Opcode::OpTypeTensorARM;
+    operands.push_back(elementTypeID);
+    if (rankID == 0)
+      return success();
+    operands.push_back(rankID);
+    if (shapeID == 0)
+      return success();
+    operands.push_back(shapeID);
+    return success();
+  }
+
   // TODO: Handle other types.
   return emitError(loc, "unhandled type in serialization: ") << type;
 }
@@ -793,17 +896,43 @@ Serializer::prepareDenseElementsConstant(Location loc, Type constType,
     return 0;
   }
 
+  int64_t numberOfConstituents = shapedType.getDimSize(dim);
   uint32_t resultID = getNextID();
   SmallVector<uint32_t, 4> operands = {typeID, resultID};
-  operands.reserve(shapedType.getDimSize(dim) + 2);
   auto elementType = cast<spirv::CompositeType>(constType).getElementType(0);
-  for (int i = 0; i < shapedType.getDimSize(dim); ++i) {
-    index[dim] = i;
+
+  // "If the Result Type is a cooperative matrix type, then there must be only
+  // one Constituent, with scalar type matching the cooperative matrix Component
+  // Type, and all components of the matrix are initialized to that value."
+  // (https://github.khronos.org/SPIRV-Registry/extensions/KHR/SPV_KHR_cooperative_matrix.html)
+  if (isa<spirv::CooperativeMatrixType>(constType)) {
+    if (!valueAttr.isSplat()) {
+      emitError(
+          loc,
+          "cannot serialize a non-splat value for a cooperative matrix type");
+      return 0;
+    }
+    // numberOfConstituents is 1, so we only need one more elements in the
+    // SmallVector, so the total is 3 (1 + 2).
+    operands.reserve(3);
+    // We set dim directly to `shapedType.getRank()` so the recursive call
+    // directly returns the scalar type.
     if (auto elementID = prepareDenseElementsConstant(
-            loc, elementType, valueAttr, dim + 1, index)) {
+            loc, elementType, valueAttr, /*dim=*/shapedType.getRank(), index)) {
       operands.push_back(elementID);
     } else {
       return 0;
+    }
+  } else {
+    operands.reserve(numberOfConstituents + 2);
+    for (int i = 0; i < numberOfConstituents; ++i) {
+      index[dim] = i;
+      if (auto elementID = prepareDenseElementsConstant(
+              loc, elementType, valueAttr, dim + 1, index)) {
+        operands.push_back(elementID);
+      } else {
+        return 0;
+      }
     }
   }
   spirv::Opcode opcode = spirv::Opcode::OpConstantComposite;
@@ -944,22 +1073,23 @@ uint32_t Serializer::prepareConstantFp(Location loc, FloatAttr floatAttr,
 
   auto resultID = getNextID();
   APFloat value = floatAttr.getValue();
-  APInt intValue = value.bitcastToAPInt();
+  const llvm::fltSemantics *semantics = &value.getSemantics();
 
   auto opcode =
       isSpec ? spirv::Opcode::OpSpecConstant : spirv::Opcode::OpConstant;
 
-  if (&value.getSemantics() == &APFloat::IEEEsingle()) {
+  if (semantics == &APFloat::IEEEsingle()) {
     uint32_t word = llvm::bit_cast<uint32_t>(value.convertToFloat());
     encodeInstructionInto(typesGlobalValues, opcode, {typeID, resultID, word});
-  } else if (&value.getSemantics() == &APFloat::IEEEdouble()) {
+  } else if (semantics == &APFloat::IEEEdouble()) {
     struct DoubleWord {
       uint32_t word1;
       uint32_t word2;
     } words = llvm::bit_cast<DoubleWord>(value.convertToDouble());
     encodeInstructionInto(typesGlobalValues, opcode,
                           {typeID, resultID, words.word1, words.word2});
-  } else if (&value.getSemantics() == &APFloat::IEEEhalf()) {
+  } else if (semantics == &APFloat::IEEEhalf() ||
+             semantics == &APFloat::BFloat()) {
     uint32_t word =
         static_cast<uint32_t>(value.bitcastToAPInt().getZExtValue());
     encodeInstructionInto(typesGlobalValues, opcode, {typeID, resultID, word});

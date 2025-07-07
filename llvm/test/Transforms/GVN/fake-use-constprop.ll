@@ -7,7 +7,7 @@
 ; with respect to keeping the variable live up until the fake.use.
 ; This test checks that we don't generate any fake.uses with constant 0.
 ;
-; Reduced from the following test case, generated with clang -O2 -S -emit-llvm -fextend-lifetimes test.c
+; Reduced from the following test case, generated with clang -O2 -S -emit-llvm -fextend-variable-liveness test.c
 ;
 ; extern void func1();
 ; extern int bar();

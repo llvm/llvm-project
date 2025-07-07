@@ -143,7 +143,7 @@ define i32 @ashr_overshift(i32 %x) {
 
 define <2 x i32> @ashr_ashr_splat_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @ashr_ashr_splat_vec(
-; CHECK-NEXT:    [[SH2:%.*]] = ashr <2 x i32> [[X:%.*]], <i32 12, i32 12>
+; CHECK-NEXT:    [[SH2:%.*]] = ashr <2 x i32> [[X:%.*]], splat (i32 12)
 ; CHECK-NEXT:    ret <2 x i32> [[SH2]]
 ;
   %sh1 = ashr <2 x i32> %x, <i32 5, i32 5>
@@ -155,7 +155,7 @@ define <2 x i32> @ashr_ashr_splat_vec(<2 x i32> %x) {
 
 define <2 x i32> @ashr_overshift_splat_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @ashr_overshift_splat_vec(
-; CHECK-NEXT:    [[SH2:%.*]] = ashr <2 x i32> [[X:%.*]], <i32 31, i32 31>
+; CHECK-NEXT:    [[SH2:%.*]] = ashr <2 x i32> [[X:%.*]], splat (i32 31)
 ; CHECK-NEXT:    ret <2 x i32> [[SH2]]
 ;
   %sh1 = ashr <2 x i32> %x, <i32 15, i32 15>
@@ -180,7 +180,7 @@ define i32 @hoist_ashr_ahead_of_sext_1(i8 %x) {
 
 define <2 x i32> @hoist_ashr_ahead_of_sext_1_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @hoist_ashr_ahead_of_sext_1_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 3, i8 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> [[X:%.*]], splat (i8 3)
 ; CHECK-NEXT:    [[R:%.*]] = sext <2 x i8> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
@@ -206,7 +206,7 @@ define i32 @hoist_ashr_ahead_of_sext_2(i8 %x) {
 
 define <2 x i32> @hoist_ashr_ahead_of_sext_2_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @hoist_ashr_ahead_of_sext_2_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 7, i8 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> [[X:%.*]], splat (i8 7)
 ; CHECK-NEXT:    [[R:%.*]] = sext <2 x i8> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;

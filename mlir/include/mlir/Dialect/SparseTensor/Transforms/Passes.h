@@ -13,10 +13,10 @@
 #ifndef MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_PASSES_H_
 #define MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_PASSES_H_
 
+#include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/OneToNTypeConversion.h"
 
 //===----------------------------------------------------------------------===//
 // Include the generated pass header (which needs some early definitions).
@@ -150,7 +150,7 @@ std::unique_ptr<Pass> createLowerForeachToSCFPass();
 //===----------------------------------------------------------------------===//
 
 /// Type converter for iter_space and iterator.
-struct SparseIterationTypeConverter : public OneToNTypeConverter {
+struct SparseIterationTypeConverter : public TypeConverter {
   SparseIterationTypeConverter();
 };
 

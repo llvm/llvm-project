@@ -80,7 +80,7 @@ define i32 @ray_sphere(ptr nocapture noundef readonly %sph, ptr nocapture nounde
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP93]], i1 [[CMP94]], i1 false
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[CLEANUP]], label [[LOR_LHS_FALSE:%.*]]
 ; CHECK:       lor.lhs.false:
-; CHECK-NEXT:    [[TMP36:%.*]] = fcmp ule <2 x double> [[TMP33]], <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[TMP36:%.*]] = fcmp ule <2 x double> [[TMP33]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <2 x i1> [[TMP36]], i32 0
 ; CHECK-NEXT:    [[TMP38:%.*]] = extractelement <2 x i1> [[TMP36]], i32 1
 ; CHECK-NEXT:    [[OR_COND106:%.*]] = select i1 [[TMP38]], i1 true, i1 [[TMP37]]

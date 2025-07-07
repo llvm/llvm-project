@@ -30,6 +30,7 @@ static constexpr llvm::StringRef kProcPtrSeparator = ".p.";
 static constexpr llvm::StringRef kSpecialBindingSeparator = ".s.";
 static constexpr llvm::StringRef kBindingTableSeparator = ".v.";
 static constexpr llvm::StringRef boxprocSuffix = "UnboxProc";
+static constexpr llvm::StringRef kDerivedTypeInitSuffix = "DerivedInit";
 
 /// Internal name mangling of identifiers
 ///
@@ -183,6 +184,10 @@ struct NameUniquer {
   dropTypeConversionMarkers(llvm::StringRef mangledTypeName);
 
   static std::string replaceSpecialSymbols(const std::string &name);
+
+  /// Returns true if the passed name denotes a special symbol (e.g. global
+  /// symbol generated for derived type description).
+  static bool isSpecialSymbol(llvm::StringRef name);
 
 private:
   static std::string intAsString(std::int64_t i);

@@ -11,7 +11,6 @@
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/UserExpression.h"
@@ -25,13 +24,14 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
 BreakpointLocation::BreakpointLocation(break_id_t loc_id, Breakpoint &owner,
                                        const Address &addr, lldb::tid_t tid,
-                                       bool hardware, bool check_for_resolver)
+                                       bool check_for_resolver)
     : m_should_resolve_indirect_functions(false), m_is_reexported(false),
       m_is_indirect(false), m_address(addr), m_owner(owner),
       m_condition_hash(0), m_loc_id(loc_id), m_hit_counter() {
@@ -55,8 +55,7 @@ const BreakpointOptions &BreakpointLocation::GetOptionsSpecifyingKind(
     BreakpointOptions::OptionKind kind) const {
   if (m_options_up && m_options_up->IsOptionSet(kind))
     return *m_options_up;
-  else
-    return m_owner.GetOptions();
+  return m_owner.GetOptions();
 }
 
 Address &BreakpointLocation::GetAddress() { return m_address; }
@@ -68,29 +67,25 @@ Target &BreakpointLocation::GetTarget() { return m_owner.GetTarget(); }
 bool BreakpointLocation::IsEnabled() const {
   if (!m_owner.IsEnabled())
     return false;
-  else if (m_options_up != nullptr)
+  if (m_options_up != nullptr)
     return m_options_up->IsEnabled();
-  else
-    return true;
+  return true;
 }
 
-void BreakpointLocation::SetEnabled(bool enabled) {
+bool BreakpointLocation::SetEnabled(bool enabled) {
   GetLocationOptions().SetEnabled(enabled);
-  if (enabled) {
-    ResolveBreakpointSite();
-  } else {
-    ClearBreakpointSite();
-  }
+  const bool success =
+      enabled ? ResolveBreakpointSite() : ClearBreakpointSite();
   SendBreakpointLocationChangedEvent(enabled ? eBreakpointEventTypeEnabled
                                              : eBreakpointEventTypeDisabled);
+  return success;
 }
 
 bool BreakpointLocation::IsAutoContinue() const {
   if (m_options_up &&
       m_options_up->IsOptionSet(BreakpointOptions::eAutoContinue))
     return m_options_up->IsAutoContinue();
-  else
-    return m_owner.IsAutoContinue();
+  return m_owner.IsAutoContinue();
 }
 
 void BreakpointLocation::SetAutoContinue(bool auto_continue) {
@@ -109,8 +104,7 @@ lldb::tid_t BreakpointLocation::GetThreadID() {
           .GetThreadSpecNoCreate();
   if (thread_spec)
     return thread_spec->GetTID();
-  else
-    return LLDB_INVALID_THREAD_ID;
+  return LLDB_INVALID_THREAD_ID;
 }
 
 void BreakpointLocation::SetThreadIndex(uint32_t index) {
@@ -131,8 +125,7 @@ uint32_t BreakpointLocation::GetThreadIndex() const {
           .GetThreadSpecNoCreate();
   if (thread_spec)
     return thread_spec->GetIndex();
-  else
-    return 0;
+  return 0;
 }
 
 void BreakpointLocation::SetThreadName(const char *thread_name) {
@@ -153,8 +146,7 @@ const char *BreakpointLocation::GetThreadName() const {
           .GetThreadSpecNoCreate();
   if (thread_spec)
     return thread_spec->GetName();
-  else
-    return nullptr;
+  return nullptr;
 }
 
 void BreakpointLocation::SetQueueName(const char *queue_name) {
@@ -175,22 +167,19 @@ const char *BreakpointLocation::GetQueueName() const {
           .GetThreadSpecNoCreate();
   if (thread_spec)
     return thread_spec->GetQueueName();
-  else
-    return nullptr;
+  return nullptr;
 }
 
 bool BreakpointLocation::InvokeCallback(StoppointCallbackContext *context) {
   if (m_options_up != nullptr && m_options_up->HasCallback())
     return m_options_up->InvokeCallback(context, m_owner.GetID(), GetID());
-  else
-    return m_owner.InvokeCallback(context, GetID());
+  return m_owner.InvokeCallback(context, GetID());
 }
 
 bool BreakpointLocation::IsCallbackSynchronous() {
   if (m_options_up != nullptr && m_options_up->HasCallback())
     return m_options_up->IsCallbackSynchronous();
-  else
-    return m_owner.GetOptions().IsCallbackSynchronous();
+  return m_owner.GetOptions().IsCallbackSynchronous();
 }
 
 void BreakpointLocation::SetCallback(BreakpointHitCallback callback,
@@ -445,10 +434,10 @@ bool BreakpointLocation::ResolveBreakpointSite() {
       process->CreateBreakpointSite(shared_from_this(), m_owner.IsHardware());
 
   if (new_id == LLDB_INVALID_BREAK_ID) {
-    Log *log = GetLog(LLDBLog::Breakpoints);
-    if (log)
-      log->Warning("Failed to add breakpoint site at 0x%" PRIx64,
-                   m_address.GetOpcodeLoadAddress(&m_owner.GetTarget()));
+    LLDB_LOGF(GetLog(LLDBLog::Breakpoints),
+              "Failed to add breakpoint site at 0x%" PRIx64 "(resolved=%s)",
+              m_address.GetOpcodeLoadAddress(&m_owner.GetTarget()),
+              IsResolved() ? "yes" : "no");
   }
 
   return IsResolved();
@@ -508,8 +497,20 @@ void BreakpointLocation::GetDescription(Stream *s,
         s->PutCString("re-exported target = ");
       else
         s->PutCString("where = ");
+
+      // If there's a preferred line entry for printing, use that.
+      bool show_function_info = true;
+      if (auto preferred = GetPreferredLineEntry()) {
+        sc.line_entry = *preferred;
+        // FIXME: We're going to get the function name wrong when the preferred
+        // line entry is not the lowest one.  For now, just leave the function
+        // out in this case, but we really should also figure out how to easily
+        // fake the function name here.
+        show_function_info = false;
+      }
       sc.DumpStopContext(s, m_owner.GetTarget().GetProcessSP().get(), m_address,
-                         false, true, false, true, true, true);
+                         false, true, false, show_function_info,
+                         show_function_info, show_function_info);
     } else {
       if (sc.module_sp) {
         s->EOL();
@@ -537,7 +538,10 @@ void BreakpointLocation::GetDescription(Stream *s,
         if (sc.line_entry.line > 0) {
           s->EOL();
           s->Indent("location = ");
-          sc.line_entry.DumpStopContext(s, true);
+          if (auto preferred = GetPreferredLineEntry())
+            preferred->DumpStopContext(s, true);
+          else
+            sc.line_entry.DumpStopContext(s, true);
         }
 
       } else {
@@ -654,6 +658,50 @@ void BreakpointLocation::SendBreakpointLocationChangedEvent(
     m_owner.GetTarget().BroadcastEvent(Target::eBroadcastBitBreakpointChanged,
                                        data_sp);
   }
+}
+
+std::optional<uint32_t> BreakpointLocation::GetSuggestedStackFrameIndex() {
+  auto preferred_opt = GetPreferredLineEntry();
+  if (!preferred_opt)
+    return {};
+  LineEntry preferred = *preferred_opt;
+  SymbolContext sc;
+  if (!m_address.CalculateSymbolContext(&sc))
+    return {};
+  // Don't return anything special if frame 0 is the preferred line entry.
+  // We not really telling the stack frame list to do anything special in that
+  // case.
+  if (!LineEntry::Compare(sc.line_entry, preferred))
+    return {};
+
+  if (!sc.block)
+    return {};
+
+  // Blocks have their line info in Declaration form, so make one here:
+  Declaration preferred_decl(preferred.GetFile(), preferred.line,
+                             preferred.column);
+
+  uint32_t depth = 0;
+  Block *inlined_block = sc.block->GetContainingInlinedBlock();
+  while (inlined_block) {
+    // If we've moved to a block that this isn't the start of, that's not
+    // our inlining info or call site, so we can stop here.
+    Address start_address;
+    if (!inlined_block->GetStartAddress(start_address) ||
+        start_address != m_address)
+      return {};
+
+    const InlineFunctionInfo *info = inlined_block->GetInlinedFunctionInfo();
+    if (info) {
+      if (preferred_decl == info->GetDeclaration())
+        return depth;
+      if (preferred_decl == info->GetCallSite())
+        return depth + 1;
+    }
+    inlined_block = inlined_block->GetInlinedParent();
+    depth++;
+  }
+  return {};
 }
 
 void BreakpointLocation::SwapLocation(BreakpointLocationSP swap_from) {

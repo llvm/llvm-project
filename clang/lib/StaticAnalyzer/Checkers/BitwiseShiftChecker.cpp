@@ -13,13 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/CharUnits.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
@@ -252,11 +250,11 @@ BugReportPtr BitwiseShiftValidator::checkLeftShiftOverflow() {
 
   // We should have already reported a bug if the left operand of the shift was
   // negative, so it cannot be negative here.
-  assert(Left->getValue().isNonNegative());
+  assert(Left->getValue()->isNonNegative());
 
   const unsigned LeftAvailableBitWidth =
       LeftBitWidth - static_cast<unsigned>(ShouldPreserveSignBit);
-  const unsigned UsedBitsInLeftOperand = Left->getValue().getActiveBits();
+  const unsigned UsedBitsInLeftOperand = Left->getValue()->getActiveBits();
   assert(LeftBitWidth >= UsedBitsInLeftOperand);
   const unsigned MaximalAllowedShift =
       LeftAvailableBitWidth - UsedBitsInLeftOperand;
@@ -275,9 +273,9 @@ BugReportPtr BitwiseShiftValidator::checkLeftShiftOverflow() {
   if (const auto ConcreteRight = Right.getAs<nonloc::ConcreteInt>()) {
     // Here ConcreteRight must contain a small non-negative integer, because
     // otherwise one of the earlier checks should've reported a bug.
-    const unsigned RHS = ConcreteRight->getValue().getExtValue();
+    const int64_t RHS = ConcreteRight->getValue()->getExtValue();
     assert(RHS > MaximalAllowedShift);
-    const unsigned OverflownBits = RHS - MaximalAllowedShift;
+    const int64_t OverflownBits = RHS - MaximalAllowedShift;
     ShortMsg = formatv(
         "The shift '{0} << {1}' overflows the capacity of '{2}'",
         Left->getValue(), ConcreteRight->getValue(), LHSTy.getAsString());

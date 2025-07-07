@@ -25,7 +25,6 @@
 #include "AMDGPU.h"
 #include "llvm/CodeGen/MachineSSAUpdater.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Target/CGPassBuilderOption.h"
 
 #define DEBUG_TYPE "si-i1-copies"
 
@@ -110,8 +109,7 @@ class PhiIncomingAnalysis {
 
   // For each reachable basic block, whether it is a source in the induced
   // subgraph of the CFG.
-  DenseMap<MachineBasicBlock *, bool> ReachableMap;
-  SmallVector<MachineBasicBlock *, 4> ReachableOrdered;
+  MapVector<MachineBasicBlock *, bool> ReachableMap;
   SmallVector<MachineBasicBlock *, 4> Stack;
   SmallVector<MachineBasicBlock *, 4> Predecessors;
 
@@ -130,13 +128,11 @@ public:
   void analyze(MachineBasicBlock &DefBlock, ArrayRef<Incoming> Incomings) {
     assert(Stack.empty());
     ReachableMap.clear();
-    ReachableOrdered.clear();
     Predecessors.clear();
 
     // Insert the def block first, so that it acts as an end point for the
     // traversal.
     ReachableMap.try_emplace(&DefBlock, false);
-    ReachableOrdered.push_back(&DefBlock);
 
     for (auto Incoming : Incomings) {
       MachineBasicBlock *MBB = Incoming.Block;
@@ -146,7 +142,6 @@ public:
       }
 
       ReachableMap.try_emplace(MBB, false);
-      ReachableOrdered.push_back(MBB);
 
       // If this block has a divergent terminator and the def block is its
       // post-dominator, the wave may first visit the other successors.
@@ -156,14 +151,11 @@ public:
 
     while (!Stack.empty()) {
       MachineBasicBlock *MBB = Stack.pop_back_val();
-      if (!ReachableMap.try_emplace(MBB, false).second)
-        continue;
-      ReachableOrdered.push_back(MBB);
-
-      append_range(Stack, MBB->successors());
+      if (ReachableMap.try_emplace(MBB, false).second)
+        append_range(Stack, MBB->successors());
     }
 
-    for (MachineBasicBlock *MBB : ReachableOrdered) {
+    for (auto &[MBB, Reachable] : ReachableMap) {
       bool HaveReachablePred = false;
       for (MachineBasicBlock *Pred : MBB->predecessors()) {
         if (ReachableMap.count(Pred)) {
@@ -173,7 +165,7 @@ public:
         }
       }
       if (!HaveReachablePred)
-        ReachableMap[MBB] = true;
+        Reachable = true;
       if (HaveReachablePred) {
         for (MachineBasicBlock *UnreachablePred : Stack) {
           if (!llvm::is_contained(Predecessors, UnreachablePred))
@@ -487,7 +479,7 @@ bool PhiLoweringHelper::lowerPhis() {
   if (Vreg1Phis.empty())
     return false;
 
-  DT->getBase().updateDFSNumbers();
+  DT->updateDFSNumbers();
   MachineBasicBlock *PrevMBB = nullptr;
   for (MachineInstr *MI : Vreg1Phis) {
     MachineBasicBlock &MBB = *MI->getParent();
@@ -867,8 +859,7 @@ void Vreg1LoweringHelper::constrainAsLaneMask(Incoming &In) {}
 static bool runFixI1Copies(MachineFunction &MF, MachineDominatorTree &MDT,
                            MachinePostDominatorTree &MPDT) {
   // Only need to run this in SelectionDAG path.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::Selected))
+  if (MF.getProperties().hasSelected())
     return false;
 
   Vreg1LoweringHelper Helper(&MF, &MDT, &MPDT);

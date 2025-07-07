@@ -438,7 +438,8 @@ bool BreakpointOptions::InvokeCallback(StoppointCallbackContext *context,
         return m_callback(m_callback_baton_sp ? m_callback_baton_sp->data()
                                           : nullptr,
                       context, break_id, break_loc_id);
-    } else if (IsCallbackSynchronous()) {
+    }
+    if (IsCallbackSynchronous()) {
       return false;
     }
   }
@@ -482,9 +483,8 @@ const char *BreakpointOptions::GetConditionText(size_t *hash) const {
       *hash = m_condition_text_hash;
 
     return m_condition_text.c_str();
-  } else {
-    return nullptr;
   }
+  return nullptr;
 }
 
 const ThreadSpec *BreakpointOptions::GetThreadSpecNoCreate() const {
@@ -620,10 +620,8 @@ bool BreakpointOptions::BreakpointOptionsCallbackFunction(
 
       // Rig up the results secondary output stream to the debugger's, so the
       // output will come out synchronously if the debugger is set up that way.
-      StreamSP output_stream(debugger.GetAsyncOutputStream());
-      StreamSP error_stream(debugger.GetAsyncErrorStream());
-      result.SetImmediateOutputStream(output_stream);
-      result.SetImmediateErrorStream(error_stream);
+      result.SetImmediateOutputStream(debugger.GetAsyncOutputStream());
+      result.SetImmediateErrorStream(debugger.GetAsyncErrorStream());
 
       CommandInterpreterRunOptions options;
       options.SetStopOnContinue(true);

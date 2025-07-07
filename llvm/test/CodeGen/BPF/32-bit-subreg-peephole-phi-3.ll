@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=bpfel -mcpu=v2 -mattr=+alu32 < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=bpfel -mcpu=v2 -mattr=+alu32 < %s | FileCheck %s
 ;
 ; For the below example, two phi node in the loop may depend on
 ; each other. So implementation must handle recursion properly.

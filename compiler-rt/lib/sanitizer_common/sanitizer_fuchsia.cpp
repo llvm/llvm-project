@@ -523,7 +523,6 @@ uptr ReadLongProcessName(/*out*/ char *buf, uptr buf_len) {
 uptr MainThreadStackBase, MainThreadStackSize;
 
 bool GetRandom(void *buffer, uptr length, bool blocking) {
-  CHECK_LE(length, ZX_CPRNG_DRAW_MAX_LEN);
   _zx_cprng_draw(buffer, length);
   return true;
 }
@@ -548,6 +547,8 @@ void __sanitizer_startup_hook(int argc, char **argv, char **envp,
   __sanitizer::StoredEnviron = envp;
   __sanitizer::MainThreadStackBase = reinterpret_cast<uintptr_t>(stack_base);
   __sanitizer::MainThreadStackSize = stack_size;
+
+  EarlySanitizerInit();
 }
 
 void __sanitizer_set_report_path(const char *path) {

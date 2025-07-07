@@ -283,20 +283,3 @@ def use_support_substitutions(config):
     llvm_config.add_tool_substitutions(support_tools, additional_tool_dirs)
 
     _disallow(config, "clang")
-
-
-def use_lldb_repro_substitutions(config, mode):
-    lldb_init = _get_lldb_init_path(config)
-    substitutions = [
-        ToolSubst(
-            "%lldb",
-            command=FindTool("lldb-repro"),
-            extra_args=[mode, "--no-lldbinit", "-S", lldb_init],
-        ),
-        ToolSubst(
-            "%lldb-init",
-            command=FindTool("lldb-repro"),
-            extra_args=[mode, "-S", lldb_init],
-        ),
-    ]
-    llvm_config.add_tool_substitutions(substitutions, [config.lldb_tools_dir])

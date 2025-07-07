@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-w64-windows-gnu | FileCheck %s -check-prefix=X64
 ; Control Flow Guard is currently only available on Windows
 
+%struct.HVA = type { double, double, double, double }
 
 ; Test that Control Flow Guard checks are correctly added for x86_64 vector calls.
 define void @func_cf_vector_x64(ptr %0, ptr %1) #0 {
@@ -22,7 +23,9 @@ define void @func_cf_vector_x64(ptr %0, ptr %1) #0 {
 ; X64-NEXT:    movsd {{.*#+}} xmm3 = mem[0],zero
 ; X64-NEXT:    callq *__guard_dispatch_icall_fptr(%rip)
 ; X64-NEXT:    nop
+; X64-NEXT:    .seh_startepilogue
 ; X64-NEXT:    addq $72, %rsp
+; X64-NEXT:    .seh_endepilogue
 ; X64-NEXT:    retq
 ; X64-NEXT:    .seh_endproc
 entry:
@@ -34,8 +37,6 @@ entry:
 
 }
 attributes #0 = { "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" }
-
-%struct.HVA = type { double, double, double, double }
 
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1 immarg) #1
 attributes #1 = { argmemonly nounwind willreturn }

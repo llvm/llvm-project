@@ -12,8 +12,6 @@
 
 #include "XCoreInstrInfo.h"
 #include "XCore.h"
-#include "XCoreMachineFunctionInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -21,8 +19,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -330,8 +326,8 @@ XCoreInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved) const {
 
 void XCoreInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
-                                 const DebugLoc &DL, MCRegister DestReg,
-                                 MCRegister SrcReg, bool KillSrc,
+                                 const DebugLoc &DL, Register DestReg,
+                                 Register SrcReg, bool KillSrc,
                                  bool RenamableDest, bool RenamableSrc) const {
   bool GRDest = XCore::GRRegsRegClass.contains(DestReg);
   bool GRSrc  = XCore::GRRegsRegClass.contains(SrcReg);
@@ -359,7 +355,8 @@ void XCoreInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 void XCoreInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register SrcReg,
     bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+    const TargetRegisterInfo *TRI, Register VReg,
+    MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end() && !I->isDebugInstr())
     DL = I->getDebugLoc();
@@ -381,7 +378,8 @@ void XCoreInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                           Register DestReg, int FrameIndex,
                                           const TargetRegisterClass *RC,
                                           const TargetRegisterInfo *TRI,
-                                          Register VReg) const {
+                                          Register VReg,
+                                          MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end() && !I->isDebugInstr())
     DL = I->getDebugLoc();

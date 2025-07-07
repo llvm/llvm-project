@@ -20,7 +20,7 @@ for.body45:                                       ; preds = %for.end72, %entry
 
 for.body48:                                       ; preds = %for.body48, %for.body45
   store i32 433429641, ptr undef, align 1
-  br i1 undef, label %for.body48, label %for.end72
+  br i1 false, label %for.body48, label %for.end72
 
 for.end72:                                        ; preds = %for.body48
   br label %for.body45

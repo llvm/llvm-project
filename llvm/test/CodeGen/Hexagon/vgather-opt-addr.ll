@@ -1,5 +1,5 @@
-; RUN: llc -march=hexagon -O3 -disable-hexagon-amodeopt < %s | FileCheck %s --check-prefix=CHECK-NO-AMODE
-; RUN: llc -march=hexagon -O3 < %s | FileCheck %s --check-prefix=CHECK-AMODE
+; RUN: llc -mtriple=hexagon -O3 -disable-hexagon-amodeopt < %s | FileCheck %s --check-prefix=CHECK-NO-AMODE
+; RUN: llc -mtriple=hexagon -O3 < %s | FileCheck %s --check-prefix=CHECK-AMODE
 
 ; CHECK-NO-AMODE: [[REG1:(r[0-9]+)]] = add({{r[0-9]+}},#0)
 

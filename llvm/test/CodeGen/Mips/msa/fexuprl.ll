@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=mips -mcpu=mips32r5 -mattr=+fp64,+msa | FileCheck %s
+; RUN: llc < %s -mtriple=mips -mcpu=mips32r5 -mattr=+fp64,+msa | FileCheck %s
 
 ; Test that fexup[rl].w don't crash LLVM during type legalization.
 

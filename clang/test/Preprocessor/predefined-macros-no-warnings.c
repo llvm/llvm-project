@@ -14,6 +14,7 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple aarch64-fuchsia
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple aarch64-linux
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple aarch64-linux-openhos
+// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple aarch64-managarm
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple aarch64-netbsd
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple aarch64-openbsd
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple aarch64-win32-gnu
@@ -108,6 +109,7 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple riscv64-fuchsia
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple riscv64-linux
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple riscv64-linux-openhos
+// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple riscv64-managarm
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple sparc
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple sparc-linux
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple sparc-solaris
@@ -167,6 +169,7 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64-nacl
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64-ps4
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64-ps5
+// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple x86_64-managarm
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple spir
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple spir64
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple spirv32
@@ -179,8 +182,6 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple wasm64-wasi
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple wasm64-emscripten
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple dxil
-// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple renderscript32
-// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple renderscript64
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple ve
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple csky
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple csky-linux

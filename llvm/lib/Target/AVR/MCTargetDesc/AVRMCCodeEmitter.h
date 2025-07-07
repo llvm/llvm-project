@@ -52,11 +52,6 @@ private:
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const;
 
-  /// Encodes the `PTRREGS` operand to a load or store instruction.
-  unsigned encodeLDSTPtrReg(const MCInst &MI, unsigned OpNo,
-                            SmallVectorImpl<MCFixup> &Fixups,
-                            const MCSubtargetInfo &STI) const;
-
   /// Encodes a `register+immediate` operand for `LDD`/`STD`.
   unsigned encodeMemri(const MCInst &MI, unsigned OpNo,
                        SmallVectorImpl<MCFixup> &Fixups,

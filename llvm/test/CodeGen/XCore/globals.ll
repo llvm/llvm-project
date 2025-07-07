@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=xcore -mcpu=xs1b-generic | FileCheck %s
-; RUN: llc -march=xcore -mcpu=xs1b-generic -filetype=null %s
+; RUN: llc < %s -mtriple=xcore -mcpu=xs1b-generic | FileCheck %s
+; RUN: llc -mtriple=xcore -mcpu=xs1b-generic -filetype=null %s
 
 define ptr @addr_G1() {
 entry:
@@ -127,4 +127,4 @@ entry:
 
 @array = global [10 x i16] zeroinitializer, align 2
 ; CHECK: .globl  array.globound
-; CHECK: .set array.globound, 10
+; CHECK: array.globound = 10

@@ -79,6 +79,18 @@ public:
   void handleNewAttr(Decl *D, const ParsedAttr &AL);
   void handleCmseNSEntryAttr(Decl *D, const ParsedAttr &AL);
   void handleInterruptAttr(Decl *D, const ParsedAttr &AL);
+  void handleInterruptSaveFPAttr(Decl *D, const ParsedAttr &AL);
+
+  void CheckSMEFunctionDefAttributes(const FunctionDecl *FD);
+
+  /// Return true if the given types are an SVE builtin and a VectorType that
+  /// is a fixed-length representation of the SVE builtin for a specific
+  /// vector-length.
+  bool areCompatibleSveTypes(QualType FirstType, QualType SecondType);
+
+  /// Return true if the given vector types are lax-compatible SVE vector types,
+  /// false otherwise.
+  bool areLaxCompatibleSveTypes(QualType FirstType, QualType SecondType);
 };
 
 SemaARM::ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD);

@@ -1,0 +1,131 @@
+functions:
+  btowc:
+    c-definition: 7.31.6.2.1
+  fgetwc:
+    c-definition: 7.31.3.1
+  fgetws:
+    c-definition: 7.31.3.2
+  fputwc:
+    c-definition: 7.31.3.3
+  fputws:
+    c-definition: 7.31.3.4
+  fwide:
+    c-definition: 7.31.3.5
+  fwprintf:
+    c-definition: 7.31.2.2
+  fwscanf:
+    c-definition: 7.31.2.3
+  getwc:
+    c-definition: 7.31.3.6
+  getwchar:
+    c-definition: 7.31.3.7
+  mbrlen:
+    c-definition: 7.31.6.4.2
+  mbrtowc:
+    c-definition: 7.31.6.4.3
+  mbsinit:
+    c-definition: 7.31.6.3.1
+  mbsrtowcs:
+    c-definition: 7.31.6.5.2
+  putwc:
+    c-definition: 7.31.3.8
+  putwchar:
+    c-definition: 7.31.3.9
+  swprintf:
+    c-definition: 7.31.2.4
+  swscanf:
+    c-definition: 7.31.2.5
+  ungetwc:
+    c-definition: 7.31.3.10
+  vfwprintf:
+    c-definition: 7.31.2.6
+  vfwscanf:
+    c-definition: 7.31.2.7
+  vswprintf:
+    c-definition: 7.31.2.8
+  vswscanf:
+    c-definition: 7.31.2.9
+  vwprintf:
+    c-definition: 7.31.2.10
+  vwscanf:
+    c-definition: 7.31.2.11
+  wcrtomb:
+    c-definition: 7.31.6.4.4
+  wcscat:
+    c-definition: 7.31.4.4.1
+  wcschr:
+    c-definition: 7.31.4.6.2
+  wcscmp:
+    c-definition: 7.31.4.5.2
+  wcscoll:
+    c-definition: 7.31.4.5.3
+  wcscpy:
+    c-definition: 7.31.4.3.1
+  wcscspn:
+    c-definition: 7.31.4.6.3
+  wcsftime:
+    c-definition: 7.31.5.1
+  wcslen:
+    c-definition: 7.31.4.7.1
+  wcsncat:
+    c-definition: 7.31.4.4.2
+  wcsncmp:
+    c-definition: 7.31.4.5.4
+  wcsncpy:
+    c-definition: 7.31.4.3.2
+  wcspbrk:
+    c-definition: 7.31.4.6.4
+  wcsrchr:
+    c-definition: 7.31.4.6.5
+  wcsrtombs:
+    c-definition: 7.31.6.5.3
+  wcsspn:
+    c-definition: 7.31.4.6.6
+  wcsstr:
+    c-definition: 7.31.4.6.7
+  wcstod:
+    c-definition: 7.31.4.2.2
+  wcstod128:
+    c-definition: 7.31.4.2.3
+  wcstod32:
+    c-definition: 7.31.4.2.3
+  wcstod64:
+    c-definition: 7.31.4.2.3
+  wcstof:
+    c-definition: 7.31.4.2.2
+  wcstok:
+    c-definition: 7.31.4.6.8
+  wcstol:
+    c-definition: 7.31.4.2.4
+  wcstold:
+    c-definition: 7.31.4.2.2
+  wcstoll:
+    c-definition: 7.31.4.2.4
+  wcstoul:
+    c-definition: 7.31.4.2.4
+  wcstoull:
+    c-definition: 7.31.4.2.4
+  wcsxfrm:
+    c-definition: 7.31.4.5.5
+  wctob:
+    c-definition: 7.31.6.2.2
+  wmemchr:
+    c-definition: 7.31.4.6.9
+  wmemcmp:
+    c-definition: 7.31.4.5.6
+  wmemcpy:
+    c-definition: 7.31.4.3.3
+  wmemmove:
+    c-definition: 7.31.4.3.4
+  wmemset:
+    c-definition: 7.31.4.7.2
+  wprintf:
+    c-definition: 7.31.2.12
+  wscanf:
+    c-definition: 7.31.2.13
+macros:
+  WEOF:
+    c-definition: 7.31.1
+  __STDC_VERSION_WCHAR_H__:
+    c-definition: 7.31.1
+

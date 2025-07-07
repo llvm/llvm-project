@@ -21,9 +21,10 @@ namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 namespace x86 {
 
-LIBC_INLINE void normalize(int &exponent, UInt128 &mantissa) {
+LIBC_INLINE void normalize(int &exponent,
+                           FPBits<long double>::StorageType &mantissa) {
   const unsigned int shift = static_cast<unsigned int>(
-      cpp::countl_zero(static_cast<uint64_t>(mantissa)) -
+      static_cast<size_t>(cpp::countl_zero(static_cast<uint64_t>(mantissa))) -
       (8 * sizeof(uint64_t) - 1 - FPBits<long double>::FRACTION_LEN));
   exponent -= shift;
   mantissa <<= shift;

@@ -160,7 +160,7 @@ static Module *getInternal(LLVMContext &Ctx) {
   IRBuilder<> Builder(BB);
   Builder.CreateRetVoid();
 
-  StructType *STy = StructType::create(Ctx, PointerType::get(FTy, 0));
+  StructType *STy = StructType::create(Ctx, PointerType::get(Ctx, 0));
 
   GlobalVariable *GV =
       new GlobalVariable(*InternalM, STy, false /*=isConstant*/,
@@ -358,7 +358,7 @@ TEST_F(LinkModuleTest, RemangleIntrinsics) {
   // types, so they must be uniquified by linker. Check that they use the same
   // intrinsic definition.
   Function *F = Foo->getFunction("llvm.ssa.copy.s_struct.rtx_defs");
-  ASSERT_EQ(F->getNumUses(), (unsigned)2);
+  ASSERT_TRUE(F->hasNUses(2));
 }
 
 } // end anonymous namespace

@@ -75,7 +75,7 @@ define <2 x i32> @or_bitcast_int_to_vec(i64 %a) {
 
 define <2 x i64> @is_negative(<4 x i32> %x) {
 ; CHECK-LABEL: @is_negative(
-; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], <i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], splat (i32 31)
 ; CHECK-NEXT:    [[NOTNOT:%.*]] = bitcast <4 x i32> [[X_LOBIT]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[NOTNOT]]
 ;
@@ -91,7 +91,7 @@ define <2 x i64> @is_negative(<4 x i32> %x) {
 
 define <4 x i32> @is_negative_bonus_bitcast(<4 x i32> %x) {
 ; CHECK-LABEL: @is_negative_bonus_bitcast(
-; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], <i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], splat (i32 31)
 ; CHECK-NEXT:    ret <4 x i32> [[X_LOBIT]]
 ;
   %lobit = ashr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
@@ -107,7 +107,7 @@ define <4 x i32> @is_negative_bonus_bitcast(<4 x i32> %x) {
 define <2 x i8> @canonicalize_bitcast_logic_with_constant(<4 x i4> %x) {
 ; CHECK-LABEL: @canonicalize_bitcast_logic_with_constant(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i4> [[X:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[B:%.*]] = and <2 x i8> [[TMP1]], <i8 -128, i8 -128>
+; CHECK-NEXT:    [[B:%.*]] = and <2 x i8> [[TMP1]], splat (i8 -128)
 ; CHECK-NEXT:    ret <2 x i8> [[B]]
 ;
   %a = and <4 x i4> %x, <i4 0, i4 8, i4 0, i4 8>

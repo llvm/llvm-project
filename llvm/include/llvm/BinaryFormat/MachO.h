@@ -1571,7 +1571,9 @@ enum CPUType {
   CPU_TYPE_ARM64_32 = CPU_TYPE_ARM | CPU_ARCH_ABI64_32,
   CPU_TYPE_SPARC = 14,
   CPU_TYPE_POWERPC = 18,
-  CPU_TYPE_POWERPC64 = CPU_TYPE_POWERPC | CPU_ARCH_ABI64
+  CPU_TYPE_POWERPC64 = CPU_TYPE_POWERPC | CPU_ARCH_ABI64,
+
+  CPU_TYPE_RISCV = 24,
 };
 
 enum : uint32_t {
@@ -1698,10 +1700,15 @@ enum CPUSubTypePowerPC {
   CPU_SUBTYPE_MC98601 = CPU_SUBTYPE_POWERPC_601
 };
 
-Expected<uint32_t> getCPUType(const Triple &T);
-Expected<uint32_t> getCPUSubType(const Triple &T);
-Expected<uint32_t> getCPUSubType(const Triple &T, unsigned PtrAuthABIVersion,
-                                 bool PtrAuthKernelABIVersion);
+enum CPUSubTypeRISCV {
+  CPU_SUBTYPE_RISCV_ALL = 0,
+};
+
+LLVM_ABI Expected<uint32_t> getCPUType(const Triple &T);
+LLVM_ABI Expected<uint32_t> getCPUSubType(const Triple &T);
+LLVM_ABI Expected<uint32_t> getCPUSubType(const Triple &T,
+                                          unsigned PtrAuthABIVersion,
+                                          bool PtrAuthKernelABIVersion);
 
 struct x86_thread_state32_t {
   uint32_t eax;

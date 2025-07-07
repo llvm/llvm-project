@@ -1,4 +1,6 @@
 # REQUIRES: x86
+# This test intentionally checks for fatal errors, and fatal errors aren't supported for testing when main is run twice.
+# XFAIL: main-run-twice
 # RUN: rm -rf %t && mkdir -p %t
 
 ## In this test, we check that able to report objects with

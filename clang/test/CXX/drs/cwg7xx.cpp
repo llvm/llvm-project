@@ -2,14 +2,16 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 %s -verify=expected,cxx98-14,cxx98-11,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++14 %s -verify=expected,cxx98-14,since-cxx14,since-cxx11,cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++17 %s -verify=expected,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++2a %s -verify=expected,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 %s -verify=expected,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++23 %s -verify=expected,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++2c %s -verify=expected,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
 // cxx98-error@-1 {{variadic macros are a C99 feature}}
 #endif
 
-namespace cwg705 { // cwg705: yes
+namespace cwg705 { // cwg705: 2.7
   namespace N {
     struct S {};
     void f(S); // #cwg705-f
@@ -22,7 +24,7 @@ namespace cwg705 { // cwg705: yes
     // expected-error@-1 {{use of undeclared identifier 'f'}}
     //   expected-note@#cwg705-f {{'N::f' declared here}}
   }
-}
+} // namespace cwg705
 
 namespace cwg712 { // cwg712: partial
   void use(int);
@@ -74,7 +76,7 @@ namespace cwg712 { // cwg712: partial
     };
   }
 #endif
-}
+} // namespace cwg712
 
 namespace cwg713 { // cwg713: 3.0
 template<typename T>
@@ -322,7 +324,7 @@ namespace cwg727 { // cwg727: partial
     //   expected-note@#cwg727-S2-T {{previous}}
   };
   Collision<int, int> c; // #cwg727-Collision-int-int
-}
+} // namespace cwg727
 
 namespace cwg777 { // cwg777: 3.7
 #if __cplusplus >= 201103L
@@ -336,4 +338,15 @@ void g(int i = 0, T ...args, T ...args2) {}
 template <typename... T>
 void h(int i = 0, T ...args, int j = 1) {}
 #endif
-}
+} // namespace cwg777
+
+namespace cwg794 { // cwg794: 2.7
+struct B {};
+struct D : B {};
+struct X {
+  D d;
+};
+struct Y : X {};
+B Y::*pm = &X::d;
+// expected-error@-1 {{cannot initialize a variable of type 'B Y::*' with an rvalue of type 'D X::*': different classes ('Y' vs 'X')}}
+} // namespace cwg794

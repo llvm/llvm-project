@@ -33,13 +33,13 @@ define void @pr59074(ptr %0) {
 ; LE32-NEXT:    li 8, 12
 ; LE32-NEXT:    xxswapd 0, 0
 ; LE32-NEXT:    rlwimi 5, 6, 0, 30, 28
-; LE32-NEXT:    addi 4, 4, -12
-; LE32-NEXT:    rlwinm 9, 4, 29, 28, 29
-; LE32-NEXT:    stxvd2x 0, 0, 5
 ; LE32-NEXT:    stw 7, 44(1)
+; LE32-NEXT:    addi 4, 4, -12
 ; LE32-NEXT:    stw 7, 40(1)
 ; LE32-NEXT:    stw 7, 36(1)
 ; LE32-NEXT:    stw 8, 16(1)
+; LE32-NEXT:    rlwinm 9, 4, 29, 28, 29
+; LE32-NEXT:    stxvd2x 0, 0, 5
 ; LE32-NEXT:    clrlwi 4, 4, 27
 ; LE32-NEXT:    lwzux 5, 9, 6
 ; LE32-NEXT:    lwz 6, 8(9)

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -disable-llvm-passes -O -fsanitize=signed-integer-overflow -fsanitize-trap=signed-integer-overflow %s -o - -debug-info-kind=line-tables-only | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -disable-llvm-passes -O -fsanitize=signed-integer-overflow -fsanitize-trap=signed-integer-overflow -fsanitize-merge=signed-integer-overflow %s -o - -debug-info-kind=line-tables-only | FileCheck %s
 
 
 void foo(volatile int a) {

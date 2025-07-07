@@ -15,11 +15,11 @@ define i32 @check(ptr %node) {
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[NODE]], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @check(ptr [[TMP0]])
-; CHECK-NEXT:    [[RIGHT:%.*]] = getelementptr inbounds [[STRUCT_NODE:%.*]], ptr [[NODE]], i32 0, i32 1
+; CHECK-NEXT:    [[RIGHT:%.*]] = getelementptr inbounds nuw [[STRUCT_NODE:%.*]], ptr [[NODE]], i32 0, i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[RIGHT]], align 8
 ; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @check(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[RIGHT]], align 8
-; CHECK-NEXT:    [[HEIGHT:%.*]] = getelementptr inbounds [[STRUCT_NODE]], ptr [[TMP2]], i32 0, i32 2
+; CHECK-NEXT:    [[HEIGHT:%.*]] = getelementptr inbounds nuw [[STRUCT_NODE]], ptr [[TMP2]], i32 0, i32 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[HEIGHT]], align 4
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[TMP3]], [[CALL1]]
 ; CHECK-NEXT:    br i1 [[CMP3]], label [[IF_THEN4:%.*]], label [[IF_END5:%.*]]

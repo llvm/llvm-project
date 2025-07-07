@@ -34,7 +34,7 @@ define i32 @p(i32 %x, i32 %y, i32 noundef %m) {
 define <2 x i32> @p_splatvec(<2 x i32> %x, <2 x i32> %y, <2 x i32> noundef %m) {
 ; CHECK-LABEL: @p_splatvec(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], [[M:%.*]]
-; CHECK-NEXT:    [[NEG:%.*]] = xor <2 x i32> [[M]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[NEG:%.*]] = xor <2 x i32> [[M]], splat (i32 -1)
 ; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i32> [[Y:%.*]], [[NEG]]
 ; CHECK-NEXT:    [[RET:%.*]] = or disjoint <2 x i32> [[AND]], [[AND1]]
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
@@ -95,8 +95,8 @@ define i32 @p_constmask(i32 %x, i32 %y) {
 
 define <2 x i32> @p_constmask_splatvec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @p_constmask_splatvec(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], <i32 65280, i32 65280>
-; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i32> [[Y:%.*]], <i32 -65281, i32 -65281>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 65280)
+; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i32> [[Y:%.*]], splat (i32 -65281)
 ; CHECK-NEXT:    [[RET:%.*]] = or disjoint <2 x i32> [[AND]], [[AND1]]
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
@@ -151,8 +151,8 @@ define i32 @p_constmask2(i32 %x, i32 %y) {
 
 define <2 x i32> @p_constmask2_splatvec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @p_constmask2_splatvec(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], <i32 61440, i32 61440>
-; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i32> [[Y:%.*]], <i32 -65281, i32 -65281>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 61440)
+; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i32> [[Y:%.*]], splat (i32 -65281)
 ; CHECK-NEXT:    [[RET:%.*]] = or disjoint <2 x i32> [[AND]], [[AND1]]
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;

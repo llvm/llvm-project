@@ -1,4 +1,6 @@
-# RUN: llc -march=hexagon -run-pass machine-sink -o - %s | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass machine-sink -o - %s | FileCheck %s
+
+# RUN: llc -march=hexagon -passes machine-sink -o - %s | FileCheck %s
 
 # Test that MachineSink does not sink F2_conv_w2sf.
 # CHECK: name:{{.*}} main

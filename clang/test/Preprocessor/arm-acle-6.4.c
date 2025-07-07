@@ -93,6 +93,10 @@
  
 // CHECK-V6K: __ARM_FEATURE_LDREX 0xf
 
+// RUN: %clang -target arm-none-linux-eabi -march=armv6kz -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-V6KZ
+ 
+// CHECK-V6KZ: __ARM_FEATURE_LDREX 0xf
+
 // RUN: %clang -target arm-none-linux-eabi -march=armv7-a -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-V7A
 
 // CHECK-V7A: __ARM_ARCH 7

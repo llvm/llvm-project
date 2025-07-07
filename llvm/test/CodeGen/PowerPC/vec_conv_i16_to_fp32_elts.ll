@@ -166,10 +166,10 @@ define void @test16elt(ptr noalias nocapture sret(<16 x float>) %agg.result, ptr
 ; CHECK-P8-NEXT:    xxswapd vs1, vs1
 ; CHECK-P8-NEXT:    stxvd2x vs2, r3, r4
 ; CHECK-P8-NEXT:    li r4, 32
+; CHECK-P8-NEXT:    stxvd2x vs1, r3, r5
 ; CHECK-P8-NEXT:    xxswapd vs3, vs3
 ; CHECK-P8-NEXT:    xxswapd vs0, vs0
 ; CHECK-P8-NEXT:    stxvd2x vs3, r3, r4
-; CHECK-P8-NEXT:    stxvd2x vs1, r3, r5
 ; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
@@ -397,9 +397,9 @@ define void @test16elt_signed(ptr noalias nocapture sret(<16 x float>) %agg.resu
 ; CHECK-P8-NEXT:    xxswapd vs0, vs0
 ; CHECK-P8-NEXT:    stxvd2x vs2, r3, r4
 ; CHECK-P8-NEXT:    li r4, 32
-; CHECK-P8-NEXT:    stxvd2x vs3, r3, r4
 ; CHECK-P8-NEXT:    stxvd2x vs1, r3, r5
 ; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    stxvd2x vs3, r3, r4
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test16elt_signed:

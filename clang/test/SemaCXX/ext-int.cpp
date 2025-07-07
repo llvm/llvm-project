@@ -84,25 +84,19 @@ struct is_same<T,T> {
 };
 
 // Reject vector types:
-// expected-error@+1{{'_BitInt' vector element width must be at least as wide as 'CHAR_BIT'}}
-typedef _BitInt(2) __attribute__((vector_size(16))) VecTy;
-// expected-error@+1{{'_BitInt' vector element width must be at least as wide as 'CHAR_BIT'}}
-typedef _BitInt(2) __attribute__((ext_vector_type(32))) OtherVecTy;
-// expected-error@+1{{'_BitInt' vector element width must be at least as wide as 'CHAR_BIT'}}
-typedef _BitInt(4) __attribute__((vector_size(16))) VecTy2;
-// expected-error@+1{{'_BitInt' vector element width must be at least as wide as 'CHAR_BIT'}}
-typedef _BitInt(4) __attribute__((ext_vector_type(32))) OtherVecTy2;
-// expected-error@+1{{'_BitInt' vector element width must be at least as wide as 'CHAR_BIT'}}
+// expected-error@+1{{'_BitInt' vector element width must be a power of 2}}
 typedef _BitInt(5) __attribute__((vector_size(16))) VecTy3;
-// expected-error@+1{{'_BitInt' vector element width must be at least as wide as 'CHAR_BIT'}}
+// expected-error@+1{{'_BitInt' vector element width must be a power of 2}}
 typedef _BitInt(5) __attribute__((ext_vector_type(32))) OtherVecTy3;
 // expected-error@+1{{'_BitInt' vector element width must be a power of 2}}
 typedef _BitInt(37) __attribute__((vector_size(16))) VecTy4;
 // expected-error@+1{{'_BitInt' vector element width must be a power of 2}}
 typedef _BitInt(37) __attribute__((ext_vector_type(32))) OtherVecTy4;
 
-// Allow _Complex:
+// expected-error@+1{{'_Complex _BitInt' is invalid}}
 _Complex _BitInt(3) Cmplx;
+// expected-error@+1{{'_Complex _BitInt' is invalid}}
+typedef _Complex _BitInt(3) Cmp;
 
 // Reject cases of _Atomic:
 // expected-error@+1{{_Atomic cannot be applied to integer type '_BitInt(4)'}}

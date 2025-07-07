@@ -591,9 +591,9 @@ lldb::DisassemblerSP Symbol::GetInstructions(const ExecutionContext &exe_ctx,
                                              bool prefer_file_cache) {
   ModuleSP module_sp(m_addr_range.GetBaseAddress().GetModule());
   if (module_sp && exe_ctx.HasTargetScope()) {
-    return Disassembler::DisassembleRange(module_sp->GetArchitecture(), nullptr,
-                                          flavor, exe_ctx.GetTargetRef(),
-                                          m_addr_range, !prefer_file_cache);
+    return Disassembler::DisassembleRange(
+        module_sp->GetArchitecture(), nullptr, flavor, nullptr, nullptr,
+        exe_ctx.GetTargetRef(), m_addr_range, !prefer_file_cache);
   }
   return lldb::DisassemblerSP();
 }
@@ -639,7 +639,9 @@ void Symbol::SynthesizeNameIfNeeded() const {
     // breakpoints on them.
     llvm::SmallString<256> name;
     llvm::raw_svector_ostream os(name);
-    os << GetSyntheticSymbolPrefix() << GetID();
+    os << GetSyntheticSymbolPrefix()
+       << llvm::format_hex_no_prefix(
+              m_addr_range.GetBaseAddress().GetFileAddress(), 0);
     m_mangled.SetDemangledName(ConstString(os.str()));
   }
 }

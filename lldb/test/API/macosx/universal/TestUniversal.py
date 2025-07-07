@@ -57,8 +57,6 @@ class UniversalTestCase(TestBase):
     @skipIf(compiler="clang", compiler_version=["<", "7.0"])
     def test_process_launch_for_universal(self):
         """Test process launch of a universal binary."""
-        from lldbsuite.test.lldbutil import print_registers
-
         if not haswellOrLater():
             return
 

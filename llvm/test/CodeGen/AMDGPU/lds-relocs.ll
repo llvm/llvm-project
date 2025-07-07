@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -amdgpu-enable-lower-module-lds=0 -filetype=obj < %s | llvm-readobj -r --syms - | FileCheck -check-prefixes=ELF %s
 
 @lds.external = external unnamed_addr addrspace(3) global [0 x i32]
-@lds.defined = unnamed_addr addrspace(3) global [8 x i32] undef, align 8
+@lds.defined = unnamed_addr addrspace(3) global [8 x i32] poison, align 8
 
 ; ELF:      Relocations [
 ; ELF-NEXT:   Section (3) .rel.text {

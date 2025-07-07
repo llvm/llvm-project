@@ -309,22 +309,22 @@ define float @sitofp_scalar_intrinsic_with_FMF(i8 %x) {
 define <2 x float> @sitofp_vector_intrinsic_with_FMF(<2 x i8> %x) {
 ; LDEXP32-LABEL: @sitofp_vector_intrinsic_with_FMF(
 ; LDEXP32-NEXT:    [[TMP1:%.*]] = sext <2 x i8> [[X:%.*]] to <2 x i32>
-; LDEXP32-NEXT:    [[R:%.*]] = call nnan <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x i32> [[TMP1]])
+; LDEXP32-NEXT:    [[R:%.*]] = call nnan <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> splat (float 1.000000e+00), <2 x i32> [[TMP1]])
 ; LDEXP32-NEXT:    ret <2 x float> [[R]]
 ;
 ; LDEXP16-LABEL: @sitofp_vector_intrinsic_with_FMF(
 ; LDEXP16-NEXT:    [[TMP1:%.*]] = sext <2 x i8> [[X:%.*]] to <2 x i16>
-; LDEXP16-NEXT:    [[R:%.*]] = call nnan <2 x float> @llvm.ldexp.v2f32.v2i16(<2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x i16> [[TMP1]])
+; LDEXP16-NEXT:    [[R:%.*]] = call nnan <2 x float> @llvm.ldexp.v2f32.v2i16(<2 x float> splat (float 1.000000e+00), <2 x i16> [[TMP1]])
 ; LDEXP16-NEXT:    ret <2 x float> [[R]]
 ;
 ; NOLDEXPF-LABEL: @sitofp_vector_intrinsic_with_FMF(
 ; NOLDEXPF-NEXT:    [[TMP1:%.*]] = sext <2 x i8> [[X:%.*]] to <2 x i32>
-; NOLDEXPF-NEXT:    [[R:%.*]] = call nnan <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x i32> [[TMP1]])
+; NOLDEXPF-NEXT:    [[R:%.*]] = call nnan <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> splat (float 1.000000e+00), <2 x i32> [[TMP1]])
 ; NOLDEXPF-NEXT:    ret <2 x float> [[R]]
 ;
 ; NOLDEXP-LABEL: @sitofp_vector_intrinsic_with_FMF(
 ; NOLDEXP-NEXT:    [[TMP1:%.*]] = sext <2 x i8> [[X:%.*]] to <2 x i32>
-; NOLDEXP-NEXT:    [[R:%.*]] = call nnan <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x i32> [[TMP1]])
+; NOLDEXP-NEXT:    [[R:%.*]] = call nnan <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> splat (float 1.000000e+00), <2 x i32> [[TMP1]])
 ; NOLDEXP-NEXT:    ret <2 x float> [[R]]
 ;
   %s = sitofp <2 x i8> %x to <2 x float>

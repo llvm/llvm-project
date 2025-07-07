@@ -27,35 +27,20 @@ void SMEAttrs::set(unsigned M, bool Enable) {
          "ZA_New and SME_ABI_Routine are mutually exclusive");
 
   assert(
-      (!sharesZA() ||
-       (isNewZA() ^ isInZA() ^ isInOutZA() ^ isOutZA() ^ isPreservesZA())) &&
+      (isNewZA() + isInZA() + isOutZA() + isInOutZA() + isPreservesZA()) <= 1 &&
       "Attributes 'aarch64_new_za', 'aarch64_in_za', 'aarch64_out_za', "
       "'aarch64_inout_za' and 'aarch64_preserves_za' are mutually exclusive");
 
   // ZT0 Attrs
   assert(
-      (!sharesZT0() || (isNewZT0() ^ isInZT0() ^ isInOutZT0() ^ isOutZT0() ^
-                        isPreservesZT0())) &&
+      (isNewZT0() + isInZT0() + isOutZT0() + isInOutZT0() + isPreservesZT0()) <=
+          1 &&
       "Attributes 'aarch64_new_zt0', 'aarch64_in_zt0', 'aarch64_out_zt0', "
       "'aarch64_inout_zt0' and 'aarch64_preserves_zt0' are mutually exclusive");
-}
 
-SMEAttrs::SMEAttrs(const CallBase &CB) {
-  *this = SMEAttrs(CB.getAttributes());
-  if (auto *F = CB.getCalledFunction()) {
-    set(SMEAttrs(*F).Bitmask | SMEAttrs(F->getName()).Bitmask);
-  }
-}
-
-SMEAttrs::SMEAttrs(StringRef FuncName) : Bitmask(0) {
-  if (FuncName == "__arm_tpidr2_save" || FuncName == "__arm_sme_state")
-    Bitmask |= (SMEAttrs::SM_Compatible | SMEAttrs::SME_ABI_Routine);
-  if (FuncName == "__arm_tpidr2_restore")
-    Bitmask |= SMEAttrs::SM_Compatible | encodeZAState(StateValue::In) |
-               SMEAttrs::SME_ABI_Routine;
-  if (FuncName == "__arm_sc_memcpy" || FuncName == "__arm_sc_memset" ||
-      FuncName == "__arm_sc_memmove" || FuncName == "__arm_sc_memchr")
-    Bitmask |= SMEAttrs::SM_Compatible;
+  assert(!(hasAgnosticZAInterface() && hasSharedZAInterface()) &&
+         "Function cannot have a shared-ZA interface and an agnostic-ZA "
+         "interface");
 }
 
 SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
@@ -66,6 +51,10 @@ SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
     Bitmask |= SM_Compatible;
   if (Attrs.hasFnAttr("aarch64_pstate_sm_body"))
     Bitmask |= SM_Body;
+  if (Attrs.hasFnAttr("aarch64_za_state_agnostic"))
+    Bitmask |= ZA_State_Agnostic;
+  if (Attrs.hasFnAttr("aarch64_zt0_undef"))
+    Bitmask |= ZT0_Undef;
   if (Attrs.hasFnAttr("aarch64_in_za"))
     Bitmask |= encodeZAState(StateValue::In);
   if (Attrs.hasFnAttr("aarch64_out_za"))
@@ -88,17 +77,48 @@ SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
     Bitmask |= encodeZT0State(StateValue::New);
 }
 
-bool SMEAttrs::requiresSMChange(const SMEAttrs &Callee) const {
-  if (Callee.hasStreamingCompatibleInterface())
+void SMEAttrs::addKnownFunctionAttrs(StringRef FuncName) {
+  unsigned KnownAttrs = SMEAttrs::Normal;
+  if (FuncName == "__arm_tpidr2_save" || FuncName == "__arm_sme_state")
+    KnownAttrs |= (SMEAttrs::SM_Compatible | SMEAttrs::SME_ABI_Routine);
+  if (FuncName == "__arm_tpidr2_restore")
+    KnownAttrs |= SMEAttrs::SM_Compatible | encodeZAState(StateValue::In) |
+                  SMEAttrs::SME_ABI_Routine;
+  if (FuncName == "__arm_sc_memcpy" || FuncName == "__arm_sc_memset" ||
+      FuncName == "__arm_sc_memmove" || FuncName == "__arm_sc_memchr")
+    KnownAttrs |= SMEAttrs::SM_Compatible;
+  if (FuncName == "__arm_sme_save" || FuncName == "__arm_sme_restore" ||
+      FuncName == "__arm_sme_state_size")
+    KnownAttrs |= SMEAttrs::SM_Compatible | SMEAttrs::SME_ABI_Routine;
+  set(KnownAttrs);
+}
+
+bool SMECallAttrs::requiresSMChange() const {
+  if (callee().hasStreamingCompatibleInterface())
     return false;
 
   // Both non-streaming
-  if (hasNonStreamingInterfaceAndBody() && Callee.hasNonStreamingInterface())
+  if (caller().hasNonStreamingInterfaceAndBody() &&
+      callee().hasNonStreamingInterface())
     return false;
 
   // Both streaming
-  if (hasStreamingInterfaceOrBody() && Callee.hasStreamingInterface())
+  if (caller().hasStreamingInterfaceOrBody() &&
+      callee().hasStreamingInterface())
     return false;
 
   return true;
+}
+
+SMECallAttrs::SMECallAttrs(const CallBase &CB)
+    : CallerFn(*CB.getFunction()), CalledFn(SMEAttrs::Normal),
+      Callsite(CB.getAttributes()), IsIndirect(CB.isIndirectCall()) {
+  if (auto *CalledFunction = CB.getCalledFunction())
+    CalledFn = SMEAttrs(*CalledFunction, SMEAttrs::InferAttrsFromName::Yes);
+
+  // FIXME: We probably should not allow SME attributes on direct calls but
+  // clang duplicates streaming mode attributes at each callsite.
+  assert((IsIndirect ||
+          ((Callsite.withoutPerCallsiteFlags() | CalledFn) == CalledFn)) &&
+         "SME attributes at callsite do not match declaration");
 }

@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=bpfel -mcpu=v1 -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -march=bpfeb -mcpu=v1 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=bpfel -mcpu=v1 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=bpfeb -mcpu=v1 -verify-machineinstrs | FileCheck %s
 
 ; Source code:
 ; struct test_t1 {

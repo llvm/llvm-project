@@ -20,6 +20,7 @@
 
 #include <cassert>
 #include <concepts>
+#include <cstddef>
 #include <cstdint>
 #include <ranges>
 #include <type_traits>

@@ -62,8 +62,8 @@ createModuleFromMemoryBuffer(std::unique_ptr<MemoryBuffer> &MB,
   SMDiagnostic Err;
   auto Mod = parseIR(*MB, Err, Context);
   if (!Mod)
-    return make_error<StringError>("Failed to create module",
-                                   inconvertibleErrorCode());
+    return error::createOffloadError(error::ErrorCode::UNKNOWN,
+                                     "failed to create module");
   return std::move(Mod);
 }
 Expected<std::unique_ptr<Module>>
@@ -100,7 +100,8 @@ createTargetMachine(Module &M, std::string CPU, unsigned OptLevel) {
   std::string Msg;
   const Target *T = TargetRegistry::lookupTarget(M.getTargetTriple(), Msg);
   if (!T)
-    return make_error<StringError>(Msg, inconvertibleErrorCode());
+    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
+                                     Msg.data());
 
   SubtargetFeatures Features;
   Features.getDefaultSubtargetFeatures(TT);
@@ -118,8 +119,8 @@ createTargetMachine(Module &M, std::string CPU, unsigned OptLevel) {
       T->createTargetMachine(M.getTargetTriple(), CPU, Features.getString(),
                              Options, RelocModel, CodeModel, CGOptLevel));
   if (!TM)
-    return make_error<StringError>("Failed to create target machine",
-                                   inconvertibleErrorCode());
+    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
+                                     "failed to create target machine");
   return std::move(TM);
 }
 
@@ -175,8 +176,7 @@ void JITEngine::codegen(TargetMachine *TM, TargetLibraryInfoImpl *TLII,
                         Module &M, raw_pwrite_stream &OS) {
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(*TLII));
-  MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(
-      reinterpret_cast<LLVMTargetMachine *>(TM));
+  MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(TM);
   TM->addPassesToEmitFile(PM, OS, nullptr,
                           TT.isNVPTX() ? CodeGenFileType::AssemblyFile
                                        : CodeGenFileType::ObjectFile,
@@ -222,8 +222,9 @@ JITEngine::backend(Module &M, const std::string &ComputeUnitKind,
     raw_fd_stream FD(PostOptIRModuleFileName.get(), EC);
     if (EC)
       return createStringError(
-          EC, "Could not open %s to write the post-opt IR module\n",
-          PreOptIRModuleFileName.get().c_str());
+          error::ErrorCode::HOST_IO,
+          "Could not open %s to write the post-opt IR module\n",
+          PostOptIRModuleFileName.get().c_str());
     M.print(FD, nullptr);
   }
 

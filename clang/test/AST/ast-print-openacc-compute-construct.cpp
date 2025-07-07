@@ -56,12 +56,16 @@ void foo() {
 #pragma acc parallel no_create(i, array[1], array, array[1:2]) present(i, array[1], array, array[1:2])
   while(true);
 
-// CHECK: #pragma acc parallel copyin(i, array[1], array, array[1:2]) pcopyin(readonly: i, array[1], array, array[1:2]) present_or_copyin(i, array[1], array, array[1:2])
-#pragma acc parallel copyin(i, array[1], array, array[1:2]) pcopyin(readonly:i, array[1], array, array[1:2]) present_or_copyin(i, array[1], array, array[1:2])
+// CHECK: #pragma acc parallel copy(i, array[1], array, array[1:2]) pcopy(alwaysin: i, array[1], array, array[1:2]) present_or_copy(always, alwaysout: i, array[1], array, array[1:2])
+#pragma acc parallel copy(i, array[1], array, array[1:2]) pcopy(alwaysin:i, array[1], array, array[1:2]) present_or_copy(always, alwaysout: i, array[1], array, array[1:2])
   while(true);
 
-// CHECK: #pragma acc parallel copyout(i, array[1], array, array[1:2]) pcopyout(zero: i, array[1], array, array[1:2]) present_or_copyout(i, array[1], array, array[1:2])
-#pragma acc parallel copyout(i, array[1], array, array[1:2]) pcopyout(zero: i, array[1], array, array[1:2]) present_or_copyout(i, array[1], array, array[1:2])
+// CHECK: #pragma acc parallel copyin(i, array[1], array, array[1:2]) pcopyin(readonly: i, array[1], array, array[1:2]) present_or_copyin(always, readonly: i, array[1], array, array[1:2])
+#pragma acc parallel copyin(i, array[1], array, array[1:2]) pcopyin(readonly:i, array[1], array, array[1:2]) present_or_copyin(readonly, always: i, array[1], array, array[1:2])
+  while(true);
+
+// CHECK: #pragma acc parallel copyout(i, array[1], array, array[1:2]) pcopyout(zero: i, array[1], array, array[1:2]) present_or_copyout(always, zero: i, array[1], array, array[1:2])
+#pragma acc parallel copyout(i, array[1], array, array[1:2]) pcopyout(zero: i, array[1], array, array[1:2]) present_or_copyout(always, zero: i, array[1], array, array[1:2])
   while(true);
 
 // CHECK: #pragma acc parallel create(i, array[1], array, array[1:2]) pcreate(zero: i, array[1], array, array[1:2]) present_or_create(i, array[1], array, array[1:2])
@@ -88,8 +92,8 @@ void foo() {
 #pragma acc parallel wait
   while(true);
 
-// CHECK: #pragma acc parallel wait()
-#pragma acc parallel wait()
+// CHECK: #pragma acc parallel wait
+#pragma acc parallel wait
   while(true);
 
 // CHECK: #pragma acc parallel wait(*iPtr, i)
@@ -111,24 +115,24 @@ void foo() {
   bool SomeB;
   struct SomeStruct{} SomeStructImpl;
 
-//CHECK: #pragma acc parallel dtype(SomeB)
-#pragma acc parallel dtype(SomeB)
+//CHECK: #pragma acc parallel dtype(default)
+#pragma acc parallel dtype(default)
   while(true);
 
-//CHECK: #pragma acc parallel device_type(SomeStruct)
-#pragma acc parallel device_type(SomeStruct)
+//CHECK: #pragma acc parallel device_type(radeon)
+#pragma acc parallel device_type(radeon)
   while(true);
 
-//CHECK: #pragma acc parallel device_type(int)
-#pragma acc parallel device_type(int)
+//CHECK: #pragma acc parallel device_type(nvidia)
+#pragma acc parallel device_type(nvidia)
   while(true);
 
-//CHECK: #pragma acc parallel dtype(bool)
-#pragma acc parallel dtype(bool)
+//CHECK: #pragma acc parallel dtype(multicore)
+#pragma acc parallel dtype(multicore)
   while(true);
 
-//CHECK: #pragma acc parallel device_type(SomeStructImpl)
-#pragma acc parallel device_type (SomeStructImpl)
+//CHECK: #pragma acc parallel device_type(host)
+#pragma acc parallel device_type (host)
   while(true);
 
 //CHECK: #pragma acc parallel reduction(+: iPtr)

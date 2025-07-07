@@ -9,14 +9,9 @@
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 
 #include "llvm/Config/config.h"
-#include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "orc"
 
@@ -169,15 +164,17 @@ static Error deregisterEHFrameWrapper(ExecutorAddrRange EHFrame) {
 }
 
 extern "C" orc::shared::CWrapperFunctionResult
-llvm_orc_registerEHFrameSectionWrapper(const char *Data, uint64_t Size) {
+llvm_orc_registerEHFrameSectionAllocAction(const char *ArgData,
+                                           size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddrRange)>::handle(
-             Data, Size, registerEHFrameWrapper)
+             ArgData, ArgSize, registerEHFrameWrapper)
       .release();
 }
 
 extern "C" orc::shared::CWrapperFunctionResult
-llvm_orc_deregisterEHFrameSectionWrapper(const char *Data, uint64_t Size) {
+llvm_orc_deregisterEHFrameSectionAllocAction(const char *ArgData,
+                                             size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddrRange)>::handle(
-             Data, Size, deregisterEHFrameWrapper)
+             ArgData, ArgSize, deregisterEHFrameWrapper)
       .release();
 }

@@ -103,6 +103,7 @@ class SessionSaveTestCase(TestBase):
 
         # These commands won't be saved, so are arbitrary.
         commands = [
+            "settings set interpreter.open-transcript-in-editor false",
             "p 1",
             "settings set interpreter.save-session-on-quit true",
             "fr v",

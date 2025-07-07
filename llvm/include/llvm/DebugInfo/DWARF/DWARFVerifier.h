@@ -9,13 +9,17 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFVERIFIER_H
 #define LLVM_DEBUGINFO_DWARF_DWARFVERIFIER_H
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <map>
+#include <mutex>
 #include <set>
 
 namespace llvm {
@@ -30,9 +34,16 @@ class DWARFDebugAbbrev;
 class DataExtractor;
 struct DWARFSection;
 
+struct AggregationData {
+  unsigned OverallCount;
+  std::map<std::string, unsigned> DetailedCounts;
+};
+
 class OutputCategoryAggregator {
 private:
-  std::map<std::string, unsigned> Aggregation;
+  std::mutex WriteMutex;
+  std::map<std::string, AggregationData, std::less<>> Aggregation;
+  uint64_t NumErrors = 0;
   bool IncludeDetail;
 
 public:
@@ -40,8 +51,17 @@ public:
       : IncludeDetail(includeDetail) {}
   void ShowDetail(bool showDetail) { IncludeDetail = showDetail; }
   size_t GetNumCategories() const { return Aggregation.size(); }
-  void Report(StringRef s, std::function<void()> detailCallback);
-  void EnumerateResults(std::function<void(StringRef, unsigned)> handleCounts);
+  LLVM_ABI void Report(StringRef category,
+                       std::function<void()> detailCallback);
+  LLVM_ABI void Report(StringRef category, StringRef sub_category,
+                       std::function<void()> detailCallback);
+  LLVM_ABI void
+  EnumerateResults(std::function<void(StringRef, unsigned)> handleCounts);
+  LLVM_ABI void EnumerateDetailedResultsFor(
+      StringRef category,
+      std::function<void(StringRef, unsigned)> handleCounts);
+  /// Return the number of errors that have been reported.
+  uint64_t GetNumErrors() const { return NumErrors; }
 };
 
 /// A class that verifies DWARF debug information given a DWARF Context.
@@ -68,26 +88,31 @@ public:
 
     /// Inserts the address range. If the range overlaps with an existing
     /// range, the range that it overlaps with will be returned and the two
-    /// address ranges will be unioned together in "Ranges".
+    /// address ranges will be unioned together in "Ranges". If a duplicate
+    /// entry is attempted to be added, the duplicate range will not actually be
+    /// added and the returned iterator will point to end().
     ///
     /// This is used for finding overlapping ranges in the DW_AT_ranges
     /// attribute of a DIE. It is also used as a set of address ranges that
     /// children address ranges must all be contained in.
-    std::optional<DWARFAddressRange> insert(const DWARFAddressRange &R);
+    LLVM_ABI std::optional<DWARFAddressRange>
+    insert(const DWARFAddressRange &R);
 
     /// Inserts the address range info. If any of its ranges overlaps with a
     /// range in an existing range info, the range info is *not* added and an
-    /// iterator to the overlapping range info.
+    /// iterator to the overlapping range info. If a duplicate entry is
+    /// attempted to be added, the duplicate range will not actually be added
+    /// and the returned iterator will point to end().
     ///
     /// This is used for finding overlapping children of the same DIE.
-    die_range_info_iterator insert(const DieRangeInfo &RI);
+    LLVM_ABI die_range_info_iterator insert(const DieRangeInfo &RI);
 
     /// Return true if ranges in this object contains all ranges within RHS.
-    bool contains(const DieRangeInfo &RHS) const;
+    LLVM_ABI bool contains(const DieRangeInfo &RHS) const;
 
     /// Return true if any range in this object intersects with any range in
-    /// RHS.
-    bool intersects(const DieRangeInfo &RHS) const;
+    /// RHS. Identical ranges are not considered to be intersecting.
+    LLVM_ABI bool intersects(const DieRangeInfo &RHS) const;
   };
 
 private:
@@ -100,6 +125,7 @@ private:
   bool IsObjectFile;
   bool IsMachOObject;
   using ReferenceMap = std::map<uint64_t, std::set<uint64_t>>;
+  std::mutex AccessMutex;
 
   raw_ostream &error() const;
   raw_ostream &warn() const;
@@ -260,21 +286,23 @@ private:
   /// \param SectionName the name of the table we're verifying
   ///
   /// \returns The number of errors occurred during verification
-  unsigned verifyAppleAccelTable(const DWARFSection *AccelSection,
-                                 DataExtractor *StrData,
-                                 const char *SectionName);
+  void verifyAppleAccelTable(const DWARFSection *AccelSection,
+                             DataExtractor *StrData, const char *SectionName);
 
-  unsigned verifyDebugNamesCULists(const DWARFDebugNames &AccelTable);
-  unsigned verifyNameIndexBuckets(const DWARFDebugNames::NameIndex &NI,
-                                  const DataExtractor &StrData);
-  unsigned verifyNameIndexAbbrevs(const DWARFDebugNames::NameIndex &NI);
-  unsigned verifyNameIndexAttribute(const DWARFDebugNames::NameIndex &NI,
-                                    const DWARFDebugNames::Abbrev &Abbr,
-                                    DWARFDebugNames::AttributeEncoding AttrEnc);
-  unsigned verifyNameIndexEntries(const DWARFDebugNames::NameIndex &NI,
-                                  const DWARFDebugNames::NameTableEntry &NTE);
-  unsigned verifyNameIndexCompleteness(const DWARFDie &Die,
-                                       const DWARFDebugNames::NameIndex &NI);
+  void verifyDebugNamesCULists(const DWARFDebugNames &AccelTable);
+  void verifyNameIndexBuckets(const DWARFDebugNames::NameIndex &NI,
+                              const DataExtractor &StrData);
+  void verifyNameIndexAbbrevs(const DWARFDebugNames::NameIndex &NI);
+  void verifyNameIndexAttribute(const DWARFDebugNames::NameIndex &NI,
+                                const DWARFDebugNames::Abbrev &Abbr,
+                                DWARFDebugNames::AttributeEncoding AttrEnc);
+  void verifyNameIndexEntries(
+      const DWARFDebugNames::NameIndex &NI,
+      const DWARFDebugNames::NameTableEntry &NTE,
+      const DenseMap<uint64_t, DWARFUnit *> &CUOffsetsToDUMap);
+  void verifyNameIndexCompleteness(
+      const DWARFDie &Die, const DWARFDebugNames::NameIndex &NI,
+      const StringMap<DenseSet<uint64_t>> &NamesToDieOffsets);
 
   /// Verify that the DWARF v5 accelerator table is valid.
   ///
@@ -293,10 +321,28 @@ private:
   /// \param StrData string section
   ///
   /// \returns The number of errors occurred during verification
-  unsigned verifyDebugNames(const DWARFSection &AccelSection,
-                            const DataExtractor &StrData);
+  void verifyDebugNames(const DWARFSection &AccelSection,
+                        const DataExtractor &StrData);
+
+  /// Verify that the the expression is valid within the context of unit U.
+  ///
+  /// \param E expression to verify.
+  /// \param U containing DWARFUnit, if any.
+  ///
+  /// returns true if E is a valid expression.
+  bool verifyExpression(const DWARFExpression &E, DWARFUnit *U);
+
+  /// Verify that the the expression operation is valid within the context of
+  /// unit U.
+  ///
+  /// \param Op operation to verify
+  /// \param U containing DWARFUnit, if any
+  ///
+  /// returns true if Op is a valid Dwarf operation
+  bool verifyExpressionOp(const DWARFExpression::Operation &Op, DWARFUnit *U);
 
 public:
+  LLVM_ABI
   DWARFVerifier(raw_ostream &S, DWARFContext &D,
                 DIDumpOptions DumpOpts = DIDumpOptions::getForSingleDIE());
 
@@ -308,7 +354,7 @@ public:
   ///
   /// \returns true if .debug_abbrev and .debug_abbrev.dwo verify successfully,
   /// false otherwise.
-  bool handleDebugAbbrev();
+  LLVM_ABI bool handleDebugAbbrev();
 
   /// Verify the information in the .debug_info and .debug_types sections.
   ///
@@ -316,7 +362,7 @@ public:
   /// constructed with.
   ///
   /// \returns true if all sections verify successfully, false otherwise.
-  bool handleDebugInfo();
+  LLVM_ABI bool handleDebugInfo();
 
   /// Verify the information in the .debug_cu_index section.
   ///
@@ -325,7 +371,7 @@ public:
   ///
   /// \returns true if the .debug_cu_index verifies successfully, false
   /// otherwise.
-  bool handleDebugCUIndex();
+  LLVM_ABI bool handleDebugCUIndex();
 
   /// Verify the information in the .debug_tu_index section.
   ///
@@ -334,7 +380,7 @@ public:
   ///
   /// \returns true if the .debug_tu_index verifies successfully, false
   /// otherwise.
-  bool handleDebugTUIndex();
+  LLVM_ABI bool handleDebugTUIndex();
 
   /// Verify the information in the .debug_line section.
   ///
@@ -342,7 +388,7 @@ public:
   /// constructed with.
   ///
   /// \returns true if the .debug_line verifies successfully, false otherwise.
-  bool handleDebugLine();
+  LLVM_ABI bool handleDebugLine();
 
   /// Verify the information in accelerator tables, if they exist.
   ///
@@ -351,7 +397,7 @@ public:
   ///
   /// \returns true if the existing Apple-style accelerator tables verify
   /// successfully, false otherwise.
-  bool handleAccelTables();
+  LLVM_ABI bool handleAccelTables();
 
   /// Verify the information in the .debug_str_offsets[.dwo].
   ///
@@ -359,13 +405,14 @@ public:
   /// constructed with.
   ///
   /// \returns true if the .debug_line verifies successfully, false otherwise.
-  bool handleDebugStrOffsets();
-  bool verifyDebugStrOffsets(std::optional<dwarf::DwarfFormat> LegacyFormat,
-                             StringRef SectionName, const DWARFSection &Section,
-                             StringRef StrData);
+  LLVM_ABI bool handleDebugStrOffsets();
+  LLVM_ABI bool
+  verifyDebugStrOffsets(std::optional<dwarf::DwarfFormat> LegacyFormat,
+                        StringRef SectionName, const DWARFSection &Section,
+                        StringRef StrData);
 
   /// Emits any aggregate information collected, depending on the dump options
-  void summarize();
+  LLVM_ABI void summarize();
 };
 
 static inline bool operator<(const DWARFVerifier::DieRangeInfo &LHS,

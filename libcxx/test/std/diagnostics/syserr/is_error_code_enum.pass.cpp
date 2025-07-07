@@ -12,8 +12,10 @@
 
 // template <> struct is_error_code_enum<> : public false_type {};
 
-#include <system_error>
+#include <cstddef>
 #include <string>
+#include <system_error>
+
 #include "test_macros.h"
 
 template <bool Expected, class T>

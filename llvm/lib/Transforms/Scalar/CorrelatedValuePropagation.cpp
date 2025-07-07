@@ -33,12 +33,11 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <optional>
@@ -289,24 +288,35 @@ static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
   if (!Cmp->getOperand(0)->getType()->isIntOrIntVectorTy())
     return false;
 
-  if (!Cmp->isSigned())
+  if (!Cmp->isSigned() && (!Cmp->isUnsigned() || Cmp->hasSameSign()))
     return false;
 
-  ICmpInst::Predicate UnsignedPred =
-      ConstantRange::getEquivalentPredWithFlippedSignedness(
-          Cmp->getPredicate(),
-          LVI->getConstantRangeAtUse(Cmp->getOperandUse(0),
-                                     /*UndefAllowed*/ true),
-          LVI->getConstantRangeAtUse(Cmp->getOperandUse(1),
-                                     /*UndefAllowed*/ true));
+  bool Changed = false;
 
-  if (UnsignedPred == ICmpInst::Predicate::BAD_ICMP_PREDICATE)
-    return false;
+  ConstantRange CR1 = LVI->getConstantRangeAtUse(Cmp->getOperandUse(0),
+                                                 /*UndefAllowed=*/false),
+                CR2 = LVI->getConstantRangeAtUse(Cmp->getOperandUse(1),
+                                                 /*UndefAllowed=*/false);
 
-  ++NumSICmps;
-  Cmp->setPredicate(UnsignedPred);
+  if (Cmp->isSigned()) {
+    ICmpInst::Predicate UnsignedPred =
+        ConstantRange::getEquivalentPredWithFlippedSignedness(
+            Cmp->getPredicate(), CR1, CR2);
 
-  return true;
+    if (UnsignedPred == ICmpInst::Predicate::BAD_ICMP_PREDICATE)
+      return false;
+
+    ++NumSICmps;
+    Cmp->setPredicate(UnsignedPred);
+    Changed = true;
+  }
+
+  if (ConstantRange::areInsensitiveToSignednessOfICmpPredicate(CR1, CR2)) {
+    Cmp->setSameSign();
+    Changed = true;
+  }
+
+  return Changed;
 }
 
 /// See if LazyValueInfo's ability to exploit edge conditions or range
@@ -360,15 +370,30 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
   { // Scope for SwitchInstProfUpdateWrapper. It must not live during
     // ConstantFoldTerminator() as the underlying SwitchInst can be changed.
     SwitchInstProfUpdateWrapper SI(*I);
+    ConstantRange CR =
+        LVI->getConstantRangeAtUse(I->getOperandUse(0), /*UndefAllowed=*/false);
     unsigned ReachableCaseCount = 0;
 
     for (auto CI = SI->case_begin(), CE = SI->case_end(); CI != CE;) {
       ConstantInt *Case = CI->getCaseValue();
-      auto *Res = dyn_cast_or_null<ConstantInt>(
-          LVI->getPredicateAt(CmpInst::ICMP_EQ, Cond, Case, I,
-                              /* UseBlockValue */ true));
+      std::optional<bool> Predicate = std::nullopt;
+      if (!CR.contains(Case->getValue()))
+        Predicate = false;
+      else if (CR.isSingleElement() &&
+               *CR.getSingleElement() == Case->getValue())
+        Predicate = true;
+      if (!Predicate) {
+        // Handle missing cases, e.g., the range has a hole.
+        auto *Res = dyn_cast_or_null<ConstantInt>(
+            LVI->getPredicateAt(CmpInst::ICMP_EQ, Cond, Case, I,
+                                /* UseBlockValue=*/true));
+        if (Res && Res->isZero())
+          Predicate = false;
+        else if (Res && Res->isOne())
+          Predicate = true;
+      }
 
-      if (Res && Res->isZero()) {
+      if (Predicate && !*Predicate) {
         // This case never fires - remove it.
         BasicBlock *Succ = CI->getCaseSuccessor();
         Succ->removePredecessor(BB);
@@ -385,7 +410,7 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
           DTU.applyUpdatesPermissive({{DominatorTree::Delete, BB, Succ}});
         continue;
       }
-      if (Res && Res->isOne()) {
+      if (Predicate && *Predicate) {
         // This case always fires.  Arrange for the switch to be turned into an
         // unconditional branch by replacing the switch condition with the case
         // value.
@@ -400,28 +425,25 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
       ++ReachableCaseCount;
     }
 
-    BasicBlock *DefaultDest = SI->getDefaultDest();
-    if (ReachableCaseCount > 1 &&
-        !isa<UnreachableInst>(DefaultDest->getFirstNonPHIOrDbg())) {
-      ConstantRange CR = LVI->getConstantRangeAtUse(I->getOperandUse(0),
-                                                    /*UndefAllowed*/ false);
-      // The default dest is unreachable if all cases are covered.
-      if (!CR.isSizeLargerThan(ReachableCaseCount)) {
-        BasicBlock *NewUnreachableBB =
-            BasicBlock::Create(BB->getContext(), "default.unreachable",
-                               BB->getParent(), DefaultDest);
-        new UnreachableInst(BB->getContext(), NewUnreachableBB);
+    // The default dest is unreachable if all cases are covered.
+    if (!SI->defaultDestUnreachable() &&
+        !CR.isSizeLargerThan(ReachableCaseCount)) {
+      BasicBlock *DefaultDest = SI->getDefaultDest();
+      BasicBlock *NewUnreachableBB =
+          BasicBlock::Create(BB->getContext(), "default.unreachable",
+                             BB->getParent(), DefaultDest);
+      auto *UI = new UnreachableInst(BB->getContext(), NewUnreachableBB);
+      UI->setDebugLoc(DebugLoc::getTemporary());
 
-        DefaultDest->removePredecessor(BB);
-        SI->setDefaultDest(NewUnreachableBB);
+      DefaultDest->removePredecessor(BB);
+      SI->setDefaultDest(NewUnreachableBB);
 
-        if (SuccessorsCount[DefaultDest] == 1)
-          DTU.applyUpdates({{DominatorTree::Delete, BB, DefaultDest}});
-        DTU.applyUpdates({{DominatorTree::Insert, BB, NewUnreachableBB}});
+      if (SuccessorsCount[DefaultDest] == 1)
+        DTU.applyUpdates({{DominatorTree::Delete, BB, DefaultDest}});
+      DTU.applyUpdates({{DominatorTree::Insert, BB, NewUnreachableBB}});
 
-        ++NumDeadCases;
-        Changed = true;
-      }
+      ++NumDeadCases;
+      Changed = true;
     }
   }
 
@@ -832,9 +854,7 @@ static bool expandUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
 
   // Even if we don't know X's range, the divisor may be so large, X can't ever
   // be 2x larger than that. I.e. if divisor is always negative.
-  if (!XCR.icmp(ICmpInst::ICMP_ULT,
-                YCR.umul_sat(APInt(YCR.getBitWidth(), 2))) &&
-      !YCR.isAllNegative())
+  if (!XCR.icmp(ICmpInst::ICMP_ULT, YCR.uadd_sat(YCR)) && !YCR.isAllNegative())
     return false;
 
   IRBuilder<> B(Instr);
@@ -1204,6 +1224,34 @@ static bool processAnd(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   return true;
 }
 
+static bool processTrunc(TruncInst *TI, LazyValueInfo *LVI) {
+  if (TI->hasNoSignedWrap() && TI->hasNoUnsignedWrap())
+    return false;
+
+  ConstantRange Range =
+      LVI->getConstantRangeAtUse(TI->getOperandUse(0), /*UndefAllowed=*/false);
+  uint64_t DestWidth = TI->getDestTy()->getScalarSizeInBits();
+  bool Changed = false;
+
+  if (!TI->hasNoUnsignedWrap()) {
+    if (Range.getActiveBits() <= DestWidth) {
+      TI->setHasNoUnsignedWrap(true);
+      ++NumNUW;
+      Changed = true;
+    }
+  }
+
+  if (!TI->hasNoSignedWrap()) {
+    if (Range.getMinSignedBits() <= DestWidth) {
+      TI->setHasNoSignedWrap(true);
+      ++NumNSW;
+      Changed = true;
+    }
+  }
+
+  return Changed;
+}
+
 static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
                     const SimplifyQuery &SQ) {
   bool FnChanged = false;
@@ -1266,6 +1314,9 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
         break;
       case Instruction::And:
         BBChanged |= processAnd(cast<BinaryOperator>(&II), LVI);
+        break;
+      case Instruction::Trunc:
+        BBChanged |= processTrunc(cast<TruncInst>(&II), LVI);
         break;
       }
     }

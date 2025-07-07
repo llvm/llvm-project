@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fsyntax-only %s 2>&1 | FileCheck %s
+! RUN: not %flang_fc1 -fsyntax-only %s 2>&1 | FileCheck %s
 
 ! Test ignoring @PROCESS directive in fixed source form
 
@@ -18,3 +18,5 @@ c@process
 
 !CHECK: Character in fixed-form label field must be a digit
 @precoss 
+
+!CHECK: at-process.f:14:1: error: parser FAIL (final position)

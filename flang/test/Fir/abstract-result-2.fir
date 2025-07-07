@@ -21,11 +21,11 @@ func.func @_QMi8Pintrinsic_pack0(%arg0: !fir.box<!fir.array<?x?x?xi32>> {fir.bin
   %9 = fir.convert %arg0 : (!fir.box<!fir.array<?x?x?xi32>>) -> !fir.box<none>
   %10 = fir.convert %5 : (!fir.box<!fir.logical<4>>) -> !fir.box<none>
   %11 = fir.convert %arg2 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
-  %12 = fir.call @_FortranAPack(%8, %9, %10, %11) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>) -> none
+  fir.call @_FortranAPack(%8, %9, %10, %11) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>) -> ()
   %13 = fir.load %1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   return %13 : !fir.box<!fir.heap<!fir.array<?xi32>>>
 }
-func.func private @_FortranAPack(!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>) -> none attributes {fir.runtime}
+func.func private @_FortranAPack(!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.box<none>) -> () attributes {fir.runtime}
 
 // CHECK-LABEL: func.func private @empty
 // CHECK-SAME:(!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.array<?x?x?xi32>> {fir.bindc_name = "array"}, !fir.ref<!fir.logical<4>> {fir.bindc_name = "mask"}, !fir.box<!fir.array<?xi32>> {fir.bindc_name = "vector", fir.optional})

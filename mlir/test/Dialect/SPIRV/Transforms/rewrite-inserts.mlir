@@ -29,3 +29,15 @@ spirv.module Logical GLSL450 {
     spirv.ReturnValue %3 : vector<3xf32>
   }
 }
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.func @insertCoopMatrix(%value : f32) -> !spirv.coopmatrix<4x4xf32, Subgroup, MatrixA> "None" {
+    %0 = spirv.Undef : !spirv.coopmatrix<4x4xf32, Subgroup, MatrixA>
+    // CHECK: spirv.CompositeInsert {{%.*}}, {{%.*}} : f32 into !spirv.coopmatrix<4x4xf32, Subgroup, MatrixA>
+    %1 = spirv.CompositeInsert %value, %0[0 : i32] : f32 into !spirv.coopmatrix<4x4xf32, Subgroup, MatrixA>
+
+    spirv.ReturnValue %1 : !spirv.coopmatrix<4x4xf32, Subgroup, MatrixA>
+  }
+}

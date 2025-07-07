@@ -11,14 +11,12 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Shape/IR/Shape.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTSHAPECONSTRAINTS
+#define GEN_PASS_DEF_CONVERTSHAPECONSTRAINTSPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -54,7 +52,7 @@ namespace {
 // is emitted, witnesses are satisfied, so they are replace with
 // `shape.const_witness true`.
 class ConvertShapeConstraints
-    : public impl::ConvertShapeConstraintsBase<ConvertShapeConstraints> {
+    : public impl::ConvertShapeConstraintsPassBase<ConvertShapeConstraints> {
   void runOnOperation() override {
     auto *func = getOperation();
     auto *context = &getContext();
@@ -62,12 +60,8 @@ class ConvertShapeConstraints
     RewritePatternSet patterns(context);
     populateConvertShapeConstraintsConversionPatterns(patterns);
 
-    if (failed(applyPatternsAndFoldGreedily(func, std::move(patterns))))
+    if (failed(applyPatternsGreedily(func, std::move(patterns))))
       return signalPassFailure();
   }
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::createConvertShapeConstraintsPass() {
-  return std::make_unique<ConvertShapeConstraints>();
-}

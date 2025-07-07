@@ -7,7 +7,7 @@
 define amdgpu_kernel void @stack_write_fi() {
 ; CHECK-LABEL: stack_write_fi:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_add_u32 s0, s0, s15
+; CHECK-NEXT:    s_add_u32 s0, s0, s17
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-NEXT:    s_mov_b32 s5, 0
 ; CHECK-NEXT:    s_mov_b32 s6, 0
@@ -26,5 +26,3 @@ entry:
   ret void
 }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

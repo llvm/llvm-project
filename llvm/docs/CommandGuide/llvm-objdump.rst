@@ -217,7 +217,7 @@ OPTIONS
 
 .. option:: --offloading
 
-  Display the content of the LLVM offloading section.
+  Display the content of the LLVM offloading sections and HIP offload bundles.
 
 .. option:: --prefix=<prefix>
 
@@ -278,7 +278,7 @@ OPTIONS
   any analysis with a special representation (i.e. BlockFrequency,
   BranchProbability, etc) are printed as raw hex values.
 
-  Only works with PowerPC objects or X86 linked images.
+  Only supported for AArch64, BPF, PowerPC, and X86.
 
   Example:
     A non-symbolized branch instruction with a local target and pc-relative memory access like

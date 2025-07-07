@@ -20,6 +20,8 @@
 #include <optional>
 
 namespace mlir {
+class ShapedDimOpInterface;
+
 namespace intrange {
 /// Function that performs inference on an array of `ConstantIntRanges`,
 /// abstracted away here to permit writing the function that handles both
@@ -142,6 +144,12 @@ enum class CmpPredicate : uint64_t {
 std::optional<bool> evaluatePred(CmpPredicate pred,
                                  const ConstantIntRanges &lhs,
                                  const ConstantIntRanges &rhs);
+
+/// Returns the integer range for the result of a `ShapedDimOpInterface` given
+/// the optional inferred ranges for the `dimension` index `maybeDim`. When a
+/// dynamic dimension is encountered, returns [0, signed_max(type(result))].
+ConstantIntRanges inferShapedDimOpInterface(ShapedDimOpInterface op,
+                                            const IntegerValueRange &maybeDim);
 
 } // namespace intrange
 } // namespace mlir

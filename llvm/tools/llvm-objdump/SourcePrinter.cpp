@@ -15,10 +15,8 @@
 #include "SourcePrinter.h"
 #include "llvm-objdump.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/StringSet.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
-#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
-#include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "objdump"
@@ -48,7 +46,7 @@ void LiveVariable::print(raw_ostream &OS, const MCRegisterInfo &MRI) const {
     return {};
   };
 
-  Expression.printCompact(OS, GetRegName);
+  printDwarfExpressionCompact(&Expression, OS, GetRegName);
 }
 
 void LiveVariablePrinter::addVariable(DWARFDie FuncDie, DWARFDie VarDie) {
@@ -381,7 +379,6 @@ void SourcePrinter::printSourceLine(formatted_raw_ostream &OS,
   DILineInfo LineInfo = DILineInfo();
   Expected<DILineInfo> ExpectedLineInfo =
       Symbolizer->symbolizeCode(*Obj, Address);
-  std::string ErrorMessage;
   if (ExpectedLineInfo) {
     LineInfo = *ExpectedLineInfo;
   } else if (!WarnedInvalidDebugInfo) {

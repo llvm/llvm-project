@@ -70,7 +70,7 @@ void TestFunction(...) {
     // execution continues after the try block: the exception is consumed
   } catch (double) {
     ...double stuff...
-   throw;            // Exception is propogated
+   throw;            // Exception is propagated
   }
 }
 
@@ -83,14 +83,14 @@ Func:
   %b = alloca B   // minor detail for this example
   B::B(%b)
 
-  call foo() with fooCleanup // An exception in foo is propogated to fooCleanup
-  call bar() with barCleanup // An exception in bar is propogated to barCleanup
+  call foo() with fooCleanup // An exception in foo is propagated to fooCleanup
+  call bar() with barCleanup // An exception in bar is propagated to barCleanup
 
   %c = alloca C
   C::C(c)
   %d = alloca D
   D::D(d)
-  call baz() with bazCleanup // An exception in baz is propogated to bazCleanup
+  call baz() with bazCleanup // An exception in baz is propagated to bazCleanup
   d->~D();
 EndTry:                   // This label corresponds to the end of the try block
   c->~C()       // These could also throw, these are also ignored

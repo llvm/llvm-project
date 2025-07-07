@@ -20,7 +20,6 @@ define void @compute_known_fpclass_phi_assert(i1 %cmp46, i1 %tobool51, ptr %a01)
 ; CHECK-NEXT:    [[TMP1]] = phi double [ 0.000000e+00, [[IF_THEN52]] ], [ [[TMP0]], [[FOR_BODY48]] ]
 ; CHECK-NEXT:    br label [[FOR_COND45]]
 ; CHECK:       for.end82:
-; CHECK-NEXT:    [[MUL84:%.*]] = fmul double [[TMP0]], 0.000000e+00
 ; CHECK-NEXT:    ret void
 ;
 entry:

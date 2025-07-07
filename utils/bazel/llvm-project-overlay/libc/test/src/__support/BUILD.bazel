@@ -30,8 +30,8 @@ libc_test(
 # )
 
 libc_test(
-    name = "endian_test",
-    srcs = ["endian_test.cpp"],
+    name = "endian_internal_test",
+    srcs = ["endian_internal_test.cpp"],
     deps = ["//libc:__support_common"],
 )
 

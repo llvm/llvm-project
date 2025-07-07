@@ -87,3 +87,48 @@ define float @constraint_float_abi_name(float %a) nounwind {
   ret float %2
 }
 
+define float @constraint_f_float(float %a) nounwind {
+; RV32FINX-LABEL: constraint_f_float:
+; RV32FINX:       # %bb.0:
+; RV32FINX-NEXT:    lui a1, %hi(gf)
+; RV32FINX-NEXT:    lw a1, %lo(gf)(a1)
+; RV32FINX-NEXT:    #APP
+; RV32FINX-NEXT:    fadd.s a0, a0, a1
+; RV32FINX-NEXT:    #NO_APP
+; RV32FINX-NEXT:    ret
+;
+; RV64FINX-LABEL: constraint_f_float:
+; RV64FINX:       # %bb.0:
+; RV64FINX-NEXT:    lui a1, %hi(gf)
+; RV64FINX-NEXT:    lw a1, %lo(gf)(a1)
+; RV64FINX-NEXT:    #APP
+; RV64FINX-NEXT:    fadd.s a0, a0, a1
+; RV64FINX-NEXT:    #NO_APP
+; RV64FINX-NEXT:    ret
+  %1 = load float, ptr @gf
+  %2 = tail call float asm "fadd.s $0, $1, $2", "=f,f,f"(float %a, float %1)
+  ret float %2
+}
+
+define float @constraint_cf_float(float %a) nounwind {
+; RV32FINX-LABEL: constraint_cf_float:
+; RV32FINX:       # %bb.0:
+; RV32FINX-NEXT:    lui a1, %hi(gf)
+; RV32FINX-NEXT:    lw a1, %lo(gf)(a1)
+; RV32FINX-NEXT:    #APP
+; RV32FINX-NEXT:    fadd.s a0, a0, a1
+; RV32FINX-NEXT:    #NO_APP
+; RV32FINX-NEXT:    ret
+;
+; RV64FINX-LABEL: constraint_cf_float:
+; RV64FINX:       # %bb.0:
+; RV64FINX-NEXT:    lui a1, %hi(gf)
+; RV64FINX-NEXT:    lw a1, %lo(gf)(a1)
+; RV64FINX-NEXT:    #APP
+; RV64FINX-NEXT:    fadd.s a0, a0, a1
+; RV64FINX-NEXT:    #NO_APP
+; RV64FINX-NEXT:    ret
+  %1 = load float, ptr @gf
+  %2 = tail call float asm "fadd.s $0, $1, $2", "=^cf,cf,cf"(float %a, float %1)
+  ret float %2
+}

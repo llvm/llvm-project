@@ -1,6 +1,6 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+xsifivecdiscarddlone,+xsifivecflushdlone,+xsfcease -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xsifivecdiscarddlone,+xsifivecflushdlone,+xsfcease -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+xsifivecdiscarddlone,+xsifivecflushdlone,+xsfcease -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+xsifivecdiscarddlone,+xsifivecflushdlone,+xsfcease -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xsifivecdiscarddlone,+xsifivecflushdlone,+xsfcease < %s \
 # RUN:     | llvm-objdump --mattr=+xsifivecdiscarddlone,+xsifivecflushdlone,+xsfcease -M no-aliases -d - \

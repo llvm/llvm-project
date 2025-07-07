@@ -222,7 +222,7 @@ Combiner::WorkListMaintainer::create(Level Lvl, WorkListTy &WorkList,
 }
 
 Combiner::Combiner(MachineFunction &MF, CombinerInfo &CInfo,
-                   const TargetPassConfig *TPC, GISelKnownBits *KB,
+                   const TargetPassConfig *TPC, GISelValueTracking *VT,
                    GISelCSEInfo *CSEInfo)
     : Builder(CSEInfo ? std::make_unique<CSEMIRBuilder>()
                       : std::make_unique<MachineIRBuilder>()),
@@ -230,7 +230,7 @@ Combiner::Combiner(MachineFunction &MF, CombinerInfo &CInfo,
                                             MF.getRegInfo())),
       ObserverWrapper(std::make_unique<GISelObserverWrapper>()), CInfo(CInfo),
       Observer(*ObserverWrapper), B(*Builder), MF(MF), MRI(MF.getRegInfo()),
-      KB(KB), TPC(TPC), CSEInfo(CSEInfo) {
+      VT(VT), TPC(TPC), CSEInfo(CSEInfo) {
   (void)this->TPC; // FIXME: Remove when used.
 
   // Setup builder.
@@ -255,15 +255,14 @@ bool Combiner::tryDCE(MachineInstr &MI, MachineRegisterInfo &MRI) {
 bool Combiner::combineMachineInstrs() {
   // If the ISel pipeline failed, do not bother running this pass.
   // FIXME: Should this be here or in individual combiner passes.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
 
   // We can't call this in the constructor because the derived class is
   // uninitialized at that time.
   if (!HasSetupMF) {
     HasSetupMF = true;
-    setupMF(MF, KB);
+    setupMF(MF, VT);
   }
 
   LLVM_DEBUG(dbgs() << "Generic MI Combiner for: " << MF.getName() << '\n');

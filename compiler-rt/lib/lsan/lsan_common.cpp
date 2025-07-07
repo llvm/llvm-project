@@ -124,7 +124,8 @@ static const char kStdSuppressions[] =
 #  endif
     // TLS leak in some glibc versions, described in
     // https://sourceware.org/bugzilla/show_bug.cgi?id=12650.
-    "leak:*tls_get_addr*\n";
+    "leak:*tls_get_addr*\n"
+    "leak:*dlerror*\n";
 
 void InitializeSuppressions() {
   CHECK_EQ(nullptr, suppression_ctx);
@@ -394,10 +395,10 @@ void ScanGlobalRange(uptr begin, uptr end, Frontier *frontier) {
 }
 
 template <class Accessor>
-void ScanExtraStack(const InternalMmapVector<Range> &ranges, Frontier *frontier,
-                    Accessor &accessor) {
+void ScanRanges(const InternalMmapVector<Range> &ranges, Frontier *frontier,
+                const char *region_type, Accessor &accessor) {
   for (uptr i = 0; i < ranges.size(); i++) {
-    ScanForPointers(ranges[i].begin, ranges[i].end, frontier, "FAKE STACK",
+    ScanForPointers(ranges[i].begin, ranges[i].end, frontier, region_type,
                     kReachable, accessor);
   }
 }
@@ -405,7 +406,7 @@ void ScanExtraStack(const InternalMmapVector<Range> &ranges, Frontier *frontier,
 void ScanExtraStackRanges(const InternalMmapVector<Range> &ranges,
                           Frontier *frontier) {
   DirectMemoryAccessor accessor;
-  ScanExtraStack(ranges, frontier, accessor);
+  ScanRanges(ranges, frontier, "FAKE STACK", accessor);
 }
 
 #  if SANITIZER_FUCHSIA
@@ -499,7 +500,7 @@ static void ProcessThread(tid_t os_id, uptr sp,
     ScanForPointers(stack_begin, stack_end, frontier, "STACK", kReachable,
                     accessor);
     GetThreadExtraStackRangesLocked(os_id, &extra_ranges);
-    ScanExtraStack(extra_ranges, frontier, accessor);
+    ScanRanges(extra_ranges, frontier, "FAKE STACK", accessor);
   }
 
   if (flags()->use_tls) {
@@ -521,13 +522,14 @@ static void ProcessThread(tid_t os_id, uptr sp,
       }
     }
 #    if SANITIZER_ANDROID
+    extra_ranges.clear();
     auto *cb = +[](void *dtls_begin, void *dtls_end, uptr /*dso_idd*/,
                    void *arg) -> void {
-      ScanForPointers(
-          reinterpret_cast<uptr>(dtls_begin), reinterpret_cast<uptr>(dtls_end),
-          reinterpret_cast<Frontier *>(arg), "DTLS", kReachable, accessor);
+      reinterpret_cast<InternalMmapVector<Range> *>(arg)->push_back(
+          {reinterpret_cast<uptr>(dtls_begin),
+           reinterpret_cast<uptr>(dtls_end)});
     };
-
+    ScanRanges(extra_ranges, frontier, "DTLS", accessor);
     // FIXME: There might be a race-condition here (and in Bionic) if the
     // thread is suspended in the middle of updating its DTLS. IOWs, we
     // could scan already freed memory. (probably fine for now)
@@ -568,7 +570,7 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
     PtraceRegistersStatus have_registers =
         suspended_threads.GetRegistersAndSP(i, &registers, &sp);
     if (have_registers != REGISTERS_AVAILABLE) {
-      Report("Unable to get registers from thread %llu.\n", os_id);
+      VReport(1, "Unable to get registers from thread %llu.\n", os_id);
       // If unable to get SP, consider the entire stack to be reachable unless
       // GetRegistersAndSP failed with ESRCH.
       if (have_registers == REGISTERS_UNAVAILABLE_FATAL)

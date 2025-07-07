@@ -81,7 +81,7 @@ template<int L, class T, class N> T test_template(T* arr, N num) {
 
 template<int LEN> int test_warn() {
   int ind2 = 0;
-  // expected-warning@+1 {{zero linear step (ind2 should probably be const)}}
+  // expected-warning@+1 {{zero linear step ('ind2' should probably be const)}}
   #pragma omp masked taskloop simd linear(ind2:LEN)
   for (int i = 0; i < 100; i++) {
     ind2 += LEN;
@@ -152,7 +152,7 @@ template<class I, class C> int foomain(I argc, C **argv) {
   #pragma omp masked taskloop simd linear (S1) // expected-error {{'S1' does not refer to a value}}
   for (int k = 0; k < argc; ++k) ++k;
 #if defined(OMP52)
-  // omp52-error@+3{{step simple modifier is exclusive and can't be use with 'val', 'uval' or 'ref' modifier}}
+  // omp52-error@+3{{step simple modifier is exclusive and cannot be use with 'val', 'uval' or 'ref' modifier}}
   // expected-error@+2 {{linear variable with incomplete type 'S1'}}
   // expected-error@+1 {{argument of a linear clause should be of integral or pointer type, not 'S2'}}
   #pragma omp masked taskloop simd linear (a, b: val, B::ib)
@@ -274,13 +274,13 @@ int main(int argc, char **argv) {
   }
 #ifdef OMP52
   #pragma omp masked taskloop simd linear(j: ref)
-#else  
+#else
   #pragma omp masked taskloop simd linear(ref(j))
 #endif
   for (int k = 0; k < argc; ++k) ++k;
 #ifdef OMP52
   #pragma omp masked taskloop simd linear(i: step(1), step(2)) // omp52-error {{multiple 'step size' found in linear clause}}
-#else  
+#else
   #pragma omp masked taskloop simd linear(i)
 #endif
   for (int k = 0; k < argc; ++k) ++k;

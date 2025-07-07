@@ -7,7 +7,8 @@
 ; GCN-NEXT: amdpal.pipelines:
 ; GCN-NEXT:   - .hardware_stages:
 ; GCN-NEXT:       .es:
-; GCN-NEXT:         .entry_point:    es_amdpal
+; GCN-NEXT:         .entry_point:    _amdgpu_es_main
+; GCN-NEXT:         .entry_point_symbol:    es_amdpal
 ; GCN-NEXT:         .scratch_memory_size: 0
 ; GCN:     .registers:
 ; GCN-NEXT:       '0x2cca (SPI_SHADER_PGM_RSRC1_ES)': 0

@@ -19,7 +19,7 @@ entry:
 }
 
 ; Test has highly predictable select according to profile data,
-; which should be transformed to a branch on cores with enabled FeaturePredictableSelectIsExpensive
+; which should be transformed to a branch on cores with enabled TunePredictableSelectIsExpensive
 define i32 @test2(i32 %a) {
 ; CHEAP-LABEL: test2:
 ; CHEAP:       # %bb.0: # %entry

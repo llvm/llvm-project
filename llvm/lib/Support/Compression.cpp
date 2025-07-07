@@ -206,12 +206,13 @@ Error zstd::decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
   const size_t Res = ::ZSTD_decompress(
       Output, UncompressedSize, (const uint8_t *)Input.data(), Input.size());
   UncompressedSize = Res;
+  if (ZSTD_isError(Res))
+    return make_error<StringError>(ZSTD_getErrorName(Res),
+                                   inconvertibleErrorCode());
   // Tell MemorySanitizer that zstd output buffer is fully initialized.
   // This avoids a false report when running LLVM with uninstrumented ZLib.
   __msan_unpoison(Output, UncompressedSize);
-  return ZSTD_isError(Res) ? make_error<StringError>(ZSTD_getErrorName(Res),
-                                                     inconvertibleErrorCode())
-                           : Error::success();
+  return Error::success();
 }
 
 Error zstd::decompress(ArrayRef<uint8_t> Input,

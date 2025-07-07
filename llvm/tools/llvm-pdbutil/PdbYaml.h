@@ -11,6 +11,7 @@
 
 #include "OutputStyle.h"
 
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
@@ -80,6 +81,7 @@ struct PdbDbiStream {
   PDB_Machine MachineType = PDB_Machine::x86;
 
   std::vector<PdbDbiModuleInfo> ModInfos;
+  COFF::header FakeHeader;
 };
 
 struct PdbTpiStream {
@@ -111,16 +113,16 @@ struct PdbObject {
 }
 }
 
-LLVM_YAML_DECLARE_MAPPING_TRAITS(pdb::yaml::PdbObject)
-LLVM_YAML_DECLARE_MAPPING_TRAITS(pdb::yaml::MSFHeaders)
-LLVM_YAML_DECLARE_MAPPING_TRAITS(msf::SuperBlock)
-LLVM_YAML_DECLARE_MAPPING_TRAITS(pdb::yaml::StreamBlockList)
-LLVM_YAML_DECLARE_MAPPING_TRAITS(pdb::yaml::PdbInfoStream)
-LLVM_YAML_DECLARE_MAPPING_TRAITS(pdb::yaml::PdbDbiStream)
-LLVM_YAML_DECLARE_MAPPING_TRAITS(pdb::yaml::PdbTpiStream)
-LLVM_YAML_DECLARE_MAPPING_TRAITS(pdb::yaml::PdbPublicsStream)
-LLVM_YAML_DECLARE_MAPPING_TRAITS(pdb::yaml::NamedStreamMapping)
-LLVM_YAML_DECLARE_MAPPING_TRAITS(pdb::yaml::PdbModiStream)
-LLVM_YAML_DECLARE_MAPPING_TRAITS(pdb::yaml::PdbDbiModuleInfo)
+LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbObject)
+LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::MSFHeaders)
+LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(msf::SuperBlock)
+LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::StreamBlockList)
+LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbInfoStream)
+LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbDbiStream)
+LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbTpiStream)
+LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbPublicsStream)
+LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::NamedStreamMapping)
+LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbModiStream)
+LLVM_YAML_DECLARE_MAPPING_TRAITS_PRIVATE(pdb::yaml::PdbDbiModuleInfo)
 
 #endif // LLVM_TOOLS_LLVMPDBDUMP_PDBYAML_H

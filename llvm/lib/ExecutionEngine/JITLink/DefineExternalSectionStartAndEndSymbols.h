@@ -112,13 +112,13 @@ identifyELFSectionStartAndEndSymbols(LinkGraph &G, Symbol &Sym) {
   constexpr StringRef EndSymbolPrefix = "__stop_";
 
   auto SymName = Sym.getName();
-  if (SymName.starts_with(StartSymbolPrefix)) {
-    if (auto *Sec =
-            G.findSectionByName(SymName.drop_front(StartSymbolPrefix.size())))
+  if ((*SymName).starts_with(StartSymbolPrefix)) {
+    if (auto *Sec = G.findSectionByName(
+            (*SymName).drop_front(StartSymbolPrefix.size())))
       return {*Sec, true};
-  } else if (SymName.starts_with(EndSymbolPrefix)) {
+  } else if ((*SymName).starts_with(EndSymbolPrefix)) {
     if (auto *Sec =
-            G.findSectionByName(SymName.drop_front(EndSymbolPrefix.size())))
+            G.findSectionByName((*SymName).drop_front(EndSymbolPrefix.size())))
       return {*Sec, false};
   }
   return {};
@@ -131,15 +131,15 @@ identifyMachOSectionStartAndEndSymbols(LinkGraph &G, Symbol &Sym) {
   constexpr StringRef EndSymbolPrefix = "section$end$";
 
   auto SymName = Sym.getName();
-  if (SymName.starts_with(StartSymbolPrefix)) {
+  if ((*SymName).starts_with(StartSymbolPrefix)) {
     auto [SegName, SecName] =
-      SymName.drop_front(StartSymbolPrefix.size()).split('$');
+        (*SymName).drop_front(StartSymbolPrefix.size()).split('$');
     std::string SectionName = (SegName + "," + SecName).str();
     if (auto *Sec = G.findSectionByName(SectionName))
       return {*Sec, true};
-  } else if (SymName.starts_with(EndSymbolPrefix)) {
+  } else if ((*SymName).starts_with(EndSymbolPrefix)) {
     auto [SegName, SecName] =
-      SymName.drop_front(EndSymbolPrefix.size()).split('$');
+        (*SymName).drop_front(EndSymbolPrefix.size()).split('$');
     std::string SectionName = (SegName + "," + SecName).str();
     if (auto *Sec = G.findSectionByName(SectionName))
       return {*Sec, false};

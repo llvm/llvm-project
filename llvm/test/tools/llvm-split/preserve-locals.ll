@@ -2,14 +2,15 @@
 ; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 %s
 ; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 %s
 
-; The local_var and local_func must not be separated.
-; CHECK0: @local_var
-; CHECK0: define internal fastcc void @local_func
 ; The main and a must not be separated.
 ; The main and local_func must not be together.
-; CHECK1: @a
-; CHECK1: define i32 @main
-; CHECK1: declare dso_local fastcc void @local_func
+; CHECK0: @a
+; CHECK0: define i32 @main
+; CHECK0: declare dso_local fastcc void @local_func
+
+; The local_var and local_func must not be separated.
+; CHECK1: @local_var
+; CHECK1: define internal fastcc void @local_func
 
 @a = internal global i32 0, align 4
 @global_storage = common global i32 0, align 4

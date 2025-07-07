@@ -183,4 +183,98 @@ define i32 @promote_with_objectsize_nullunknown_true() {
   ret i32 %size
 }
 
+define i64 @out_of_bound_gep() {
+; CHECK-LABEL: @out_of_bound_gep(
+; CHECK-NEXT:    [[OBJ:%.*]] = alloca i8, i32 4, align 1
+; CHECK-NEXT:    [[SLIDE:%.*]] = getelementptr i8, ptr [[OBJ]], i8 8
+; CHECK-NEXT:    ret i64 0
+;
+  %obj = alloca i8, i32 4
+  %slide = getelementptr i8, ptr %obj, i8 8
+  %objsize = call i64 @llvm.objectsize.i64(ptr %slide, i1 false, i1 false, i1 false)
+  ret i64 %objsize
+}
+
+define i64 @wrapping_gep(i1 %c) {
+; CHECK-LABEL: @wrapping_gep(
+; CHECK-NEXT:    [[OBJ:%.*]] = alloca i8, i64 4, align 1
+; CHECK-NEXT:    [[SLIDE:%.*]] = getelementptr i8, ptr [[OBJ]], i64 -9223372036854775807
+; CHECK-NEXT:    [[SLIDE_BIS:%.*]] = getelementptr i8, ptr [[SLIDE]], i64 -9223372036854775808
+; CHECK-NEXT:    ret i64 3
+;
+  %obj = alloca i8, i64 4
+  %slide = getelementptr i8, ptr %obj, i64 9223372036854775809
+  %slide.bis = getelementptr i8, ptr %slide, i64 9223372036854775808
+  %objsize = call i64 @llvm.objectsize.i64(ptr %slide.bis, i1 false, i1 false, i1 false)
+  ret i64 %objsize
+}
+
+define i64 @wrapping_gep_neg(i1 %c) {
+; CHECK-LABEL: @wrapping_gep_neg(
+; CHECK-NEXT:    [[OBJ:%.*]] = alloca i8, i64 4, align 1
+; CHECK-NEXT:    [[SLIDE:%.*]] = getelementptr i8, ptr [[OBJ]], i64 9223372036854775807
+; CHECK-NEXT:    [[SLIDE_BIS:%.*]] = getelementptr i8, ptr [[SLIDE]], i64 9223372036854775807
+; CHECK-NEXT:    ret i64 -1
+;
+  %obj = alloca i8, i64 4
+  %slide = getelementptr i8, ptr %obj, i64 9223372036854775807
+  %slide.bis = getelementptr i8, ptr %slide, i64 9223372036854775807
+  %objsize = call i64 @llvm.objectsize.i64(ptr %slide.bis, i1 false, i1 false, i1 false)
+  ret i64 %objsize
+}
+
+define i64 @wrapping_gep_large_alloc(i1 %c) {
+; CHECK-LABEL: @wrapping_gep_large_alloc(
+; CHECK-NEXT:    [[OBJ:%.*]] = alloca i8, i64 9223372036854775807, align 1
+; CHECK-NEXT:    [[SLIDE:%.*]] = getelementptr i8, ptr [[OBJ]], i64 9223372036854775807
+; CHECK-NEXT:    [[SLIDE_BIS:%.*]] = getelementptr i8, ptr [[SLIDE]], i64 3
+; CHECK-NEXT:    [[SLIDE_TER:%.*]] = getelementptr i8, ptr [[SLIDE_BIS]], i64 -4
+; CHECK-NEXT:    ret i64 1
+;
+  %obj = alloca i8, i64 9223372036854775807
+  %slide = getelementptr i8, ptr %obj, i64 9223372036854775807
+  %slide.bis = getelementptr i8, ptr %slide, i64 3
+  %slide.ter = getelementptr i8, ptr %slide.bis, i64 -4
+  %objsize = call i64 @llvm.objectsize.i64(ptr %slide.ter, i1 false, i1 false, i1 false)
+  ret i64 %objsize
+}
+
+; We don't analyze allocations larger than platform's ptrdiff_t
+define i64 @large_alloca() {
+; CHECK-LABEL: @large_alloca(
+; CHECK-NEXT:    [[OBJ:%.*]] = alloca i8, i64 -9223372036854775808, align 1
+; CHECK-NEXT:    [[SLIDE:%.*]] = getelementptr i8, ptr [[OBJ]], i64 9223372036854775807
+; CHECK-NEXT:    ret i64 -1
+;
+  %obj = alloca i8, i64 9223372036854775808
+  %slide = getelementptr i8, ptr %obj, i64 9223372036854775807
+  %objsize = call i64 @llvm.objectsize.i64(ptr %slide, i1 false, i1 false, i1 false)
+  ret i64 %objsize
+}
+
+; We don't analyze allocations larger than platform's ptrdiff_t
+define i64 @large_malloc() {
+; CHECK-LABEL: @large_malloc(
+; CHECK-NEXT:    [[OBJ:%.*]] = call ptr @malloc(i64 -9223372036854775808)
+; CHECK-NEXT:    [[SLIDE:%.*]] = getelementptr i8, ptr [[OBJ]], i64 9223372036854775807
+; CHECK-NEXT:    ret i64 -1
+;
+  %obj = call ptr @malloc(i64 9223372036854775808)
+  %slide = getelementptr i8, ptr %obj, i64 9223372036854775807
+  %objsize = call i64 @llvm.objectsize.i64(ptr %slide, i1 false, i1 false, i1 false)
+  ret i64 %objsize
+}
+
+define i64 @out_of_bound_negative_gep(i1 %c) {
+; CHECK-LABEL: @out_of_bound_negative_gep(
+; CHECK-NEXT:    [[OBJ:%.*]] = alloca i8, i32 4, align 1
+; CHECK-NEXT:    [[SLIDE:%.*]] = getelementptr i8, ptr [[OBJ]], i8 -8
+; CHECK-NEXT:    ret i64 -1
+;
+  %obj = alloca i8, i32 4
+  %slide = getelementptr i8, ptr %obj, i8 -8
+  %objsize = call i64 @llvm.objectsize.i64(ptr %slide, i1 false, i1 false, i1 false)
+  ret i64 %objsize
+}
+
 declare i32 @llvm.objectsize.i32.p0(ptr, i1, i1, i1)

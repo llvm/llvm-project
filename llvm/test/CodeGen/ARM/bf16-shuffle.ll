@@ -229,7 +229,6 @@ entry:
 define dso_local <8 x bfloat> @test_vdupq_lane_bf16(<4 x bfloat> %a) {
 ; CHECK-LABEL: test_vdupq_lane_bf16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    @ kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    vdup.16 q0, d0[3]
 ; CHECK-NEXT:    bx lr
 entry:

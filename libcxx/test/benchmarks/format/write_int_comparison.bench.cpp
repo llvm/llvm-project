@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// Don't warn about std::sprintf
+// ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated
+
 #include <array>
 #include <charconv>
 #include <cstdio>
@@ -29,7 +34,7 @@ static void BM_sprintf(benchmark::State& state) {
   std::array<char, 100> output;
   while (state.KeepRunningBatch(data.size()))
     for (auto value : data) {
-      sprintf(output.data(), "%d", value);
+      std::sprintf(output.data(), "%d", value);
       benchmark::DoNotOptimize(output.data());
     }
 }

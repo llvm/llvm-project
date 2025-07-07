@@ -59,6 +59,8 @@ private:
 
 public:
   DynamicAllocator() = default;
+  DynamicAllocator(DynamicAllocator &) = delete;
+  DynamicAllocator(DynamicAllocator &&) = delete;
   ~DynamicAllocator();
 
   void cleanup();
@@ -97,7 +99,7 @@ public:
 private:
   llvm::DenseMap<const Expr *, AllocationSite> AllocationSites;
 
-  using PoolAllocTy = llvm::BumpPtrAllocatorImpl<llvm::MallocAllocator>;
+  using PoolAllocTy = llvm::BumpPtrAllocator;
   PoolAllocTy DescAllocator;
 
   /// Allocates a new descriptor.

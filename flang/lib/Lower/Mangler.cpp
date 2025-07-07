@@ -119,8 +119,7 @@ std::string Fortran::lower::mangle::mangleName(
             // Mangle external procedure without any scope prefix.
             if (!keepExternalInScope &&
                 Fortran::semantics::IsExternal(ultimateSymbol))
-              return fir::NameUniquer::doProcedure(std::nullopt, std::nullopt,
-                                                   symbolName);
+              return fir::NameUniquer::doProcedure({}, {}, symbolName);
             // A separate module procedure must be mangled according to its
             // declaration scope, not its definition scope.
             const Fortran::semantics::Symbol *interface = &ultimateSymbol;
@@ -142,8 +141,7 @@ std::string Fortran::lower::mangle::mangleName(
             }
             // Otherwise, this is an external procedure, with or without an
             // explicit EXTERNAL attribute. Mangle it without any prefix.
-            return fir::NameUniquer::doProcedure(std::nullopt, std::nullopt,
-                                                 symbolName);
+            return fir::NameUniquer::doProcedure({}, {}, symbolName);
           },
           [&](const Fortran::semantics::ObjectEntityDetails &) {
             return mangleObject();
@@ -266,6 +264,8 @@ static std::string typeToString(Fortran::common::TypeCategory cat, int kind,
   switch (cat) {
   case Fortran::common::TypeCategory::Integer:
     return "i" + std::to_string(kind);
+  case Fortran::common::TypeCategory::Unsigned:
+    return "u" + std::to_string(kind);
   case Fortran::common::TypeCategory::Real:
     return "r" + std::to_string(kind);
   case Fortran::common::TypeCategory::Complex:

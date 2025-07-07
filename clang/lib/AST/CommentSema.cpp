@@ -9,13 +9,13 @@
 #include "clang/AST/CommentSema.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/CommentCommandTraits.h"
-#include "clang/AST/CommentDiagnostic.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/Basic/DiagnosticComment.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/SimpleTypoCorrection.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Preprocessor.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
 
 namespace clang {
@@ -268,7 +268,7 @@ void Sema::actOnParamCommandParamNameArg(ParamCommandComment *Command,
   }
   auto *A = new (Allocator)
       Comment::Argument{SourceRange(ArgLocBegin, ArgLocEnd), Arg};
-  Command->setArgs(llvm::ArrayRef(A, 1));
+  Command->setArgs(ArrayRef(A, 1));
 }
 
 void Sema::actOnParamCommandFinish(ParamCommandComment *Command,
@@ -304,7 +304,7 @@ void Sema::actOnTParamCommandParamNameArg(TParamCommandComment *Command,
 
   auto *A = new (Allocator)
       Comment::Argument{SourceRange(ArgLocBegin, ArgLocEnd), Arg};
-  Command->setArgs(llvm::ArrayRef(A, 1));
+  Command->setArgs(ArrayRef(A, 1));
 
   if (!isTemplateOrSpecialization()) {
     // We already warned that this \\tparam is not attached to a template decl.
@@ -315,7 +315,7 @@ void Sema::actOnTParamCommandParamNameArg(TParamCommandComment *Command,
       ThisDeclInfo->TemplateParameters;
   SmallVector<unsigned, 2> Position;
   if (resolveTParamReference(Arg, TemplateParameters, &Position)) {
-    Command->setPosition(copyArray(llvm::ArrayRef(Position)));
+    Command->setPosition(copyArray(ArrayRef(Position)));
     TParamCommandComment *&PrevCommand = TemplateParameterDocs[Arg];
     if (PrevCommand) {
       SourceRange ArgRange(ArgLocBegin, ArgLocEnd);
@@ -976,69 +976,22 @@ unsigned Sema::resolveParmVarReference(StringRef Name,
   return ParamCommandComment::InvalidParamIndex;
 }
 
-namespace {
-class SimpleTypoCorrector {
-  const NamedDecl *BestDecl;
-
-  StringRef Typo;
-  const unsigned MaxEditDistance;
-
-  unsigned BestEditDistance;
-  unsigned BestIndex;
-  unsigned NextIndex;
-
-public:
-  explicit SimpleTypoCorrector(StringRef Typo)
-      : BestDecl(nullptr), Typo(Typo), MaxEditDistance((Typo.size() + 2) / 3),
-        BestEditDistance(MaxEditDistance + 1), BestIndex(0), NextIndex(0) {}
-
-  void addDecl(const NamedDecl *ND);
-
-  const NamedDecl *getBestDecl() const {
-    if (BestEditDistance > MaxEditDistance)
-      return nullptr;
-
-    return BestDecl;
-  }
-
-  unsigned getBestDeclIndex() const {
-    assert(getBestDecl());
-    return BestIndex;
-  }
-};
-
-void SimpleTypoCorrector::addDecl(const NamedDecl *ND) {
-  unsigned CurrIndex = NextIndex++;
-
-  const IdentifierInfo *II = ND->getIdentifier();
-  if (!II)
-    return;
-
-  StringRef Name = II->getName();
-  unsigned MinPossibleEditDistance = abs((int)Name.size() - (int)Typo.size());
-  if (MinPossibleEditDistance > 0 &&
-      Typo.size() / MinPossibleEditDistance < 3)
-    return;
-
-  unsigned EditDistance = Typo.edit_distance(Name, true, MaxEditDistance);
-  if (EditDistance < BestEditDistance) {
-    BestEditDistance = EditDistance;
-    BestDecl = ND;
-    BestIndex = CurrIndex;
-  }
-}
-} // end anonymous namespace
-
-unsigned Sema::correctTypoInParmVarReference(
-                                    StringRef Typo,
+unsigned
+Sema::correctTypoInParmVarReference(StringRef Typo,
                                     ArrayRef<const ParmVarDecl *> ParamVars) {
-  SimpleTypoCorrector Corrector(Typo);
-  for (unsigned i = 0, e = ParamVars.size(); i != e; ++i)
-    Corrector.addDecl(ParamVars[i]);
-  if (Corrector.getBestDecl())
-    return Corrector.getBestDeclIndex();
-  else
-    return ParamCommandComment::InvalidParamIndex;
+  SimpleTypoCorrection STC(Typo);
+  for (unsigned i = 0, e = ParamVars.size(); i != e; ++i) {
+    const ParmVarDecl *Param = ParamVars[i];
+    if (!Param)
+      continue;
+
+    STC.add(Param->getIdentifier());
+  }
+
+  if (STC.hasCorrection())
+    return STC.getCorrectionIndex();
+
+  return ParamCommandComment::InvalidParamIndex;
 }
 
 namespace {
@@ -1080,16 +1033,18 @@ bool Sema::resolveTParamReference(
 
 namespace {
 void CorrectTypoInTParamReferenceHelper(
-                            const TemplateParameterList *TemplateParameters,
-                            SimpleTypoCorrector &Corrector) {
+    const TemplateParameterList *TemplateParameters,
+    SimpleTypoCorrection &STC) {
   for (unsigned i = 0, e = TemplateParameters->size(); i != e; ++i) {
     const NamedDecl *Param = TemplateParameters->getParam(i);
-    Corrector.addDecl(Param);
+    if (!Param)
+      continue;
+
+    STC.add(Param->getIdentifier());
 
     if (const TemplateTemplateParmDecl *TTP =
             dyn_cast<TemplateTemplateParmDecl>(Param))
-      CorrectTypoInTParamReferenceHelper(TTP->getTemplateParameters(),
-                                         Corrector);
+      CorrectTypoInTParamReferenceHelper(TTP->getTemplateParameters(), STC);
   }
 }
 } // end anonymous namespace
@@ -1097,13 +1052,12 @@ void CorrectTypoInTParamReferenceHelper(
 StringRef Sema::correctTypoInTParamReference(
                             StringRef Typo,
                             const TemplateParameterList *TemplateParameters) {
-  SimpleTypoCorrector Corrector(Typo);
-  CorrectTypoInTParamReferenceHelper(TemplateParameters, Corrector);
-  if (const NamedDecl *ND = Corrector.getBestDecl()) {
-    const IdentifierInfo *II = ND->getIdentifier();
-    assert(II && "SimpleTypoCorrector should not return this decl");
-    return II->getName();
-  }
+  SimpleTypoCorrection STC(Typo);
+  CorrectTypoInTParamReferenceHelper(TemplateParameters, STC);
+
+  if (auto CorrectedTParamReference = STC.getCorrection())
+    return *CorrectedTParamReference;
+
   return StringRef();
 }
 

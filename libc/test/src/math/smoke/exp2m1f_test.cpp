@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/math/exp2m1f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -16,7 +16,10 @@ using LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
 using LIBC_NAMESPACE::fputil::testing::RoundingMode;
 
 TEST_F(LlvmLibcExp2m1fTest, SpecialNumbers) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
+
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::exp2m1f(sNaN), FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::exp2m1f(aNaN));
   EXPECT_FP_EQ_ALL_ROUNDING(inf, LIBC_NAMESPACE::exp2m1f(inf));
@@ -31,7 +34,7 @@ TEST_F(LlvmLibcExp2m1fTest, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcExp2m1fTest, Overflow) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
 
   EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::exp2m1f(0x1.fffffep+127),
                               FE_OVERFLOW);
@@ -47,7 +50,7 @@ TEST_F(LlvmLibcExp2m1fTest, Overflow) {
 }
 
 TEST_F(LlvmLibcExp2m1fTest, Underflow) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
 
   EXPECT_FP_EQ_WITH_EXCEPTION(-1.0f, LIBC_NAMESPACE::exp2m1f(-0x1.fffffep+127),
                               FE_UNDERFLOW);
@@ -61,3 +64,30 @@ TEST_F(LlvmLibcExp2m1fTest, Underflow) {
                               FE_UNDERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
 }
+
+#ifdef LIBC_TEST_FTZ_DAZ
+
+using namespace LIBC_NAMESPACE::testing;
+
+TEST_F(LlvmLibcExp2m1fTest, FTZMode) {
+  ModifyMXCSR mxcsr(FTZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::exp2m1f(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::exp2m1f(max_denormal));
+}
+
+TEST_F(LlvmLibcExp2m1fTest, DAZMode) {
+  ModifyMXCSR mxcsr(DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::exp2m1f(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::exp2m1f(max_denormal));
+}
+
+TEST_F(LlvmLibcExp2m1fTest, FTZDAZMode) {
+  ModifyMXCSR mxcsr(FTZ | DAZ);
+
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::exp2m1f(min_denormal));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::exp2m1f(max_denormal));
+}
+
+#endif

@@ -21,10 +21,20 @@ Status SaveCoreOptions::SetPluginName(const char *name) {
     return error;
   }
 
-  if (!PluginManager::IsRegisteredObjectFilePluginName(name)) {
-    return Status::FromErrorStringWithFormat(
-        "plugin name '%s' is not a valid ObjectFile plugin name", name);
-    return error;
+  std::vector<llvm::StringRef> plugin_names =
+      PluginManager::GetSaveCorePluginNames();
+  if (!llvm::is_contained(plugin_names, name)) {
+    StreamString stream;
+    stream.Printf("plugin name '%s' is not a valid ObjectFile plugin name.",
+                  name);
+
+    if (!plugin_names.empty()) {
+      stream.PutCString(" Valid names are: ");
+      std::string plugin_names_str = llvm::join(plugin_names, ", ");
+      stream.PutCString(plugin_names_str);
+      stream.PutChar('.');
+    }
+    return Status(stream.GetString().str());
   }
 
   m_plugin_name = name;
@@ -114,9 +124,8 @@ void SaveCoreOptions::AddMemoryRegionToSave(
 const MemoryRanges &SaveCoreOptions::GetCoreFileMemoryRanges() const {
   return m_regions_to_save;
 }
-
-Status SaveCoreOptions::EnsureValidConfiguration(
-    lldb::ProcessSP process_sp) const {
+Status
+SaveCoreOptions::EnsureValidConfiguration(lldb::ProcessSP process_sp) const {
   Status error;
   std::string error_str;
   if (!m_threads_to_save.empty() && GetStyle() == lldb::eSaveCoreFull)
@@ -132,10 +141,45 @@ Status SaveCoreOptions::EnsureValidConfiguration(
   return error;
 }
 
-void SaveCoreOptions::ClearProcessSpecificData() { 
+lldb_private::ThreadCollection::collection
+SaveCoreOptions::GetThreadsToSave() const {
+  lldb_private::ThreadCollection::collection thread_collection;
+  // In cases where no process is set, such as when no threads are specified.
+  if (!m_process_sp)
+    return thread_collection;
+
+  ThreadList &thread_list = m_process_sp->GetThreadList();
+  for (const auto &tid : m_threads_to_save)
+    thread_collection.push_back(thread_list.FindThreadByID(tid));
+
+  return thread_collection;
+}
+
+llvm::Expected<uint64_t> SaveCoreOptions::GetCurrentSizeInBytes() {
+  Status error;
+  if (!m_process_sp)
+    return Status::FromErrorString("Requires a process to be set.").takeError();
+
+  error = EnsureValidConfiguration(m_process_sp);
+  if (error.Fail())
+    return error.takeError();
+
+  CoreFileMemoryRanges ranges;
+  error = m_process_sp->CalculateCoreFileSaveRanges(*this, ranges);
+  if (error.Fail())
+    return error.takeError();
+
+  uint64_t total_in_bytes = 0;
+  for (auto &core_range : ranges)
+    total_in_bytes += core_range.data.range.size();
+
+  return total_in_bytes;
+}
+
+void SaveCoreOptions::ClearProcessSpecificData() {
   // Deliberately not following the formatter style here to indicate that
   // this method will be expanded in the future.
-  m_threads_to_save.clear(); 
+  m_threads_to_save.clear();
 }
 
 void SaveCoreOptions::Clear() {

@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s \
 // RUN:  -gpu-lower-to-nvvm-pipeline="cubin-chip=sm_90 cubin-features=+ptx80 opt-level=3" \
-// RUN:  | mlir-cpu-runner \
+// RUN:  | mlir-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --entry-point-result=void \
@@ -39,8 +39,6 @@
 
 module @mymod {
   func.func private @printMemrefF32(memref<*xf32>)
-  memref.global "private" @bufferLhsGlobal : !shmemlhs
-  memref.global "private" @bufferRhsGlobal : !shmemrhs
   llvm.func @printf(!llvm.ptr, ...) -> i32
   func.func @main() {
     %c32768 = arith.constant 32768 : index
@@ -49,7 +47,7 @@ module @mymod {
     %c64 = arith.constant 64 : index
     %c1 = arith.constant 1 : index
     %c32 = arith.constant 32 : index
-    %c0 = arith.constant 0 : index
+    %c01 = arith.constant 0 : index
     %c128 = arith.constant 128 : index
     %c8 = arith.constant 8 : index
     
@@ -58,8 +56,8 @@ module @mymod {
     %rhs = memref.alloc() : !rhs
     %lhs32 = memref.alloc() : memref<128x64xf32>
     %rhs32 = memref.alloc() : memref<64x128xf32>
-    scf.for %i = %c0 to %c64 step %c1 {
-      scf.for %j = %c0 to %c128 step %c1 {
+    scf.for %i = %c01 to %c64 step %c1 {
+      scf.for %j = %c01 to %c128 step %c1 {
         %v0 = arith.muli %i, %c128 : index
         %v00 = arith.addi %v0, %j : index     
         %v01 = arith.divui %v00, %c8 : index 
@@ -92,15 +90,21 @@ module @mymod {
 
     %d_lhsTensorMap = nvgpu.tma.create.descriptor %d_lhs_unranked box[%c128, %c64] : memref<*xf16> -> !lhsTensorMap
     %d_rhsTensorMap = nvgpu.tma.create.descriptor %d_rhs_unranked box[%c64, %c64] : memref<*xf16> -> !rhsTensorMap
+    %c32768_i32 = arith.constant 32768 : i32
 
     // Step 4. Launch a GPU kernel
-    gpu.launch blocks(%arg0, %arg1, %arg2) in (%arg6 = %c1, %arg7 = %c1, %arg8 = %c1) threads(%arg3, %arg4, %arg5) in (%arg9 = %c128, %arg10 = %c1, %arg11 = %c1) {
+    gpu.launch blocks(%arg0, %arg1, %arg2) in (%arg6 = %c1, %arg7 = %c1, %arg8 = %c1) threads(%arg3, %arg4, %arg5) in (%arg9 = %c128, %arg10 = %c1, %arg11 = %c1) dynamic_shared_memory_size %c32768_i32 {
       %5 = gpu.block_dim  x
       %6 = gpu.thread_id  x
-      %lhsShmem = memref.get_global @bufferLhsGlobal : !shmemlhs
-      %rhsShmem = memref.get_global @bufferRhsGlobal : !shmemrhs
-      %rhsShmem1 = memref.subview %rhsShmem[0, 0][64, 64][1, 1] : !shmemrhs to memref<64x64xf16, strided<[128, 1]>, 3>
-      %rhsShmem2 = memref.subview %rhsShmem[32, 0][64, 64][1, 1] : !shmemrhs to memref<64x64xf16, strided<[128, 1], offset: 4096>, 3>
+      %c0 = arith.constant 0 : index
+      %txcount = arith.constant 32768 : index     
+      %c24576 = arith.constant 24576 : index
+      %c16384 = arith.constant 16384 : index
+      %dynsmem = gpu.dynamic_shared_memory : memref<?xi8, #gpu.address_space<workgroup>>
+      %lhsSlice = memref.view %dynsmem[%c01][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<128x64xf16, #gpu.address_space<workgroup>>
+      %rhsSlice = memref.view %dynsmem[%c16384][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<64x128xf16, #gpu.address_space<workgroup>>
+      %halfFirst = memref.view %dynsmem[%c16384][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<64x64xf16, #gpu.address_space<workgroup>>
+      %halfSecond = memref.view %dynsmem[%c24576][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<64x64xf16, #gpu.address_space<workgroup>>
     
       // Step 5. Initialize the mbarrier
       %9 = nvgpu.mbarrier.create -> !barrierType
@@ -109,10 +113,10 @@ module @mymod {
       
       // Step 6. First thread does TMA load
       scf.if %10 {
-        gpu.printf "[GPU] TMA SIZE %d\0A" %c32768 : index
-        nvgpu.tma.async.load %d_lhsTensorMap[%c0, %c0], %9[%c0] to %lhsShmem : !lhsTensorMap, !barrierType -> !shmemlhs
-        nvgpu.tma.async.load %d_rhsTensorMap[%c0, %c0], %9[%c0] to %rhsShmem1 : !rhsTensorMap, !barrierType -> memref<64x64xf16, strided<[128, 1]>, 3>
-        nvgpu.tma.async.load %d_rhsTensorMap[%c64, %c0], %9[%c0] to %rhsShmem2 : !rhsTensorMap, !barrierType -> memref<64x64xf16, strided<[128, 1], offset: 4096>, 3>
+        gpu.printf "[GPU] TMA SIZE %d\0A", %c32768 : index
+        nvgpu.tma.async.load %d_lhsTensorMap[%c0, %c0], %9[%c0] to %lhsSlice : !lhsTensorMap, !barrierType -> memref<128x64xf16, #gpu.address_space<workgroup>>
+        nvgpu.tma.async.load %d_rhsTensorMap[%c0, %c0], %9[%c0] to %halfFirst : !rhsTensorMap, !barrierType -> memref<64x64xf16, #gpu.address_space<workgroup>>
+        nvgpu.tma.async.load %d_rhsTensorMap[%c64, %c0], %9[%c0] to %halfSecond : !rhsTensorMap, !barrierType -> memref<64x64xf16, #gpu.address_space<workgroup>>
         nvgpu.mbarrier.arrive.expect_tx %9[%c0], %c32768 : !barrierType
       } else {
         nvgpu.mbarrier.arrive.expect_tx %9[%c0], %c0 : !barrierType
@@ -124,16 +128,16 @@ module @mymod {
 
       // Step 8. Print loaded data in 128b swizzled
       scf.if %10 {        
-        gpu.printf "===--- Matrix B ---=== %d \n" %c-1_i32 : i32
+        gpu.printf "===--- Matrix B ---=== %d \n", %c-1_i32 : i32
         scf.for %ii = %c0 to %c64 step %c1 {
           scf.for %j = %c0 to %c128 step %c1 {
-            %lhs0 = memref.load %rhsShmem[%ii, %j] : !shmemrhs
+            %lhs0 = memref.load %rhsSlice[%ii, %j] : memref<64x128xf16, #gpu.address_space<workgroup>>
             %lhs032 = arith.extf %lhs0: f16 to f32
-            gpu.printf "%.0f,   " %lhs032 : f32
+            gpu.printf "%.0f,   ", %lhs032 : f32
           }
-          gpu.printf "%d\n" %c-1_i32 : i32
+          gpu.printf "%d\n", %c-1_i32 : i32
         }
-        gpu.printf "===----------------=== %d \n" %c-1_i32 : i32
+        gpu.printf "===----------------=== %d \n", %c-1_i32 : i32
       }
       gpu.barrier
       gpu.terminator
@@ -209,4 +213,3 @@ module @mymod {
 // CHECK: 938,   938,   938,   938,   938,   938,   938,   938,   939,   939,   939,   939,   939,   939,   939,   939,   936,   936,   936,   936,   936,   936,   936,   936,   937,   937,   937,   937,   937,   937,   937,   937,   942,   942,   942,   942,   942,   942,   942,   942,   943,   943,   943,   943,   943,   943,   943,   943,   940,   940,   940,   940,   940,   940,   940,   940,   941,   941,   941,   941,   941,   941,   941,   941,   955,   955,   955,   955,   955,   955,   955,   955,   954,   954,   954,   954,   954,   954,   954,   954,   953,   953,   953,   953,   953,   953,   953,   953,   952,   952,   952,   952,   952,   952,   952,   952,   959,   959,   959,   959,   959,   959,   959,   959,   958,   958,   958,   958,   958,   958,   958,   958,   957,   957,   957,   957,   957,   957,   957,   957,   956,   956,   956,   956,   956,   956,   956,   956
 // CHECK: 972,   972,   972,   972,   972,   972,   972,   972,   973,   973,   973,   973,   973,   973,   973,   973,   974,   974,   974,   974,   974,   974,   974,   974,   975,   975,   975,   975,   975,   975,   975,   975,   968,   968,   968,   968,   968,   968,   968,   968,   969,   969,   969,   969,   969,   969,   969,   969,   970,   970,   970,   970,   970,   970,   970,   970,   971,   971,   971,   971,   971,   971,   971,   971,   989,   989,   989,   989,   989,   989,   989,   989,   988,   988,   988,   988,   988,   988,   988,   988,   991,   991,   991,   991,   991,   991,   991,   991,   990,   990,   990,   990,   990,   990,   990,   990,   985,   985,   985,   985,   985,   985,   985,   985,   984,   984,   984,   984,   984,   984,   984,   984,   987,   987,   987,   987,   987,   987,   987,   987,   986,   986,   986,   986,   986,   986,   986,   986
 // CHECK: 1006,   1006,   1006,   1006,   1006,   1006,   1006,   1006,   1007,   1007,   1007,   1007,   1007,   1007,   1007,   1007,   1004,   1004,   1004,   1004,   1004,   1004,   1004,   1004,   1005,   1005,   1005,   1005,   1005,   1005,   1005,   1005,   1002,   1002,   1002,   1002,   1002,   1002,   1002,   1002,   1003,   1003,   1003,   1003,   1003,   1003,   1003,   1003,   1000,   1000,   1000,   1000,   1000,   1000,   1000,   1000,   1001,   1001,   1001,   1001,   1001,   1001,   1001,   1001,   1023,   1023,   1023,   1023,   1023,   1023,   1023,   1023,   1022,   1022,   1022,   1022,   1022,   1022,   1022,   1022,   1021,   1021,   1021,   1021,   1021,   1021,   1021,   1021,   1020,   1020,   1020,   1020,   1020,   1020,   1020,   1020,   1019,   1019,   1019,   1019,   1019,   1019,   1019,   1019,   1018,   1018,   1018,   1018,   1018,   1018,   1018,   1018,   1017,   1017,   1017,   1017,   1017,   1017,   1017,   1017,   1016,   1016,   1016,   1016,   1016,   1016,   1016,   1016
-

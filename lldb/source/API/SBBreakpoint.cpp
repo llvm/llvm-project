@@ -137,7 +137,7 @@ SBBreakpointLocation SBBreakpoint::FindLocationByAddress(addr_t vm_addr) {
           bkpt_sp->GetTarget().GetAPIMutex());
       Address address;
       Target &target = bkpt_sp->GetTarget();
-      if (!target.GetSectionLoadList().ResolveLoadAddress(vm_addr, address)) {
+      if (!target.ResolveLoadAddress(vm_addr, address)) {
         address.SetRawAddress(vm_addr);
       }
       sb_bp_location.SetLocation(bkpt_sp->FindLocationByAddress(address));
@@ -157,7 +157,7 @@ break_id_t SBBreakpoint::FindLocationIDByAddress(addr_t vm_addr) {
         bkpt_sp->GetTarget().GetAPIMutex());
     Address address;
     Target &target = bkpt_sp->GetTarget();
-    if (!target.GetSectionLoadList().ResolveLoadAddress(vm_addr, address)) {
+    if (!target.ResolveLoadAddress(vm_addr, address)) {
       address.SetRawAddress(vm_addr);
     }
     break_id = bkpt_sp->FindLocationIDByAddress(address);
@@ -779,6 +779,18 @@ bool SBBreakpoint::IsHardware() const {
   if (bkpt_sp)
     return bkpt_sp->IsHardware();
   return false;
+}
+
+lldb::SBError SBBreakpoint::SetIsHardware(bool is_hardware) {
+  LLDB_INSTRUMENT_VA(this, is_hardware);
+
+  BreakpointSP bkpt_sp = GetSP();
+  if (bkpt_sp) {
+    std::lock_guard<std::recursive_mutex> guard(
+        bkpt_sp->GetTarget().GetAPIMutex());
+    return SBError(Status::FromError(bkpt_sp->SetIsHardware(is_hardware)));
+  }
+  return SBError();
 }
 
 BreakpointSP SBBreakpoint::GetSP() const { return m_opaque_wp.lock(); }

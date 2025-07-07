@@ -22,9 +22,9 @@ define amdgpu_kernel void @return_type_is_too_big_vector() {
   ; CHECK-LABEL: name: return_type_is_too_big_vector
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $sgpr2_sgpr3
+  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr2_sgpr3
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1 (%ir-block.0):
   %sgpr = call <4 x i32> asm sideeffect "; def $0", "={s[8:12]}" ()
@@ -37,9 +37,9 @@ define amdgpu_kernel void @return_type_is_too_small_vector() {
   ; CHECK-LABEL: name: return_type_is_too_small_vector
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $sgpr2_sgpr3
+  ; CHECK-NEXT:   liveins: $sgpr4_sgpr5
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr2_sgpr3
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1 (%ir-block.0):
   %sgpr = call <4 x i32> asm sideeffect "; def $0", "={s[8:10]}" ()

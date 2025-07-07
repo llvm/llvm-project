@@ -212,9 +212,10 @@ void VarLenInst::buildRec(const DagInit *DI) {
 
     if (NeedSwap) {
       // Normalization: Hi bit should always be the second argument.
-      const Init *const NewArgs[] = {OperandName, LoBit, HiBit};
-      Segments.push_back({NumBits,
-                          DagInit::get(DI->getOperator(), nullptr, NewArgs, {}),
+      SmallVector<std::pair<const Init *, const StringInit *>> NewArgs(
+          DI->getArgAndNames());
+      std::swap(NewArgs[1], NewArgs[2]);
+      Segments.push_back({NumBits, DagInit::get(DI->getOperator(), NewArgs),
                           CustomEncoder, CustomDecoder});
     } else {
       Segments.push_back({NumBits, DI, CustomEncoder, CustomDecoder});
@@ -225,7 +226,7 @@ void VarLenInst::buildRec(const DagInit *DI) {
 void VarLenCodeEmitterGen::run(raw_ostream &OS) {
   CodeGenTarget Target(Records);
 
-  auto NumberedInstructions = Target.getInstructionsByEnumValue();
+  auto NumberedInstructions = Target.getInstructions();
 
   for (const CodeGenInstruction *CGI : NumberedInstructions) {
     const Record *R = CGI->TheDef;
@@ -240,21 +241,21 @@ void VarLenCodeEmitterGen::run(raw_ostream &OS) {
         const CodeGenHwModes &HWM = Target.getHwModes();
         EncodingInfoByHwMode EBM(DI->getDef(), HWM);
         for (const auto [Mode, EncodingDef] : EBM) {
-          Modes.insert({Mode, "_" + HWM.getMode(Mode).Name.str()});
+          Modes.try_emplace(Mode, "_" + HWM.getMode(Mode).Name.str());
           const RecordVal *RV = EncodingDef->getValue("Inst");
           const DagInit *DI = cast<DagInit>(RV->getValue());
-          VarLenInsts[R].insert({Mode, VarLenInst(DI, RV)});
+          VarLenInsts[R].try_emplace(Mode, VarLenInst(DI, RV));
         }
         continue;
       }
     }
     const RecordVal *RV = R->getValue("Inst");
     const DagInit *DI = cast<DagInit>(RV->getValue());
-    VarLenInsts[R].insert({Universal, VarLenInst(DI, RV)});
+    VarLenInsts[R].try_emplace(Universal, VarLenInst(DI, RV));
   }
 
   if (Modes.empty())
-    Modes.insert({Universal, ""}); // Base case, skip suffix.
+    Modes.try_emplace(Universal, ""); // Base case, skip suffix.
 
   // Emit function declaration
   OS << "void " << Target.getName()

@@ -4,7 +4,7 @@
 ; RUN: llvm-lto -thinlto -o 3 1.bc 2.bc
 ; RUN: opt -S -passes=function-import -summary-file 3.thinlto.bc 1.bc 2>&1 | FileCheck %s
 
-; CHECK: Function Import: link error: linking module flags 'Error': IDs have conflicting values in '2.bc' and '1.bc'
+; CHECK: Function Import: link error: linking module flags 'Error': IDs have conflicting values: 'i32 1' from 2.bc, and 'i32 0' from 1.bc
 
 ;--- 1.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

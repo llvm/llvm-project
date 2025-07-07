@@ -8,7 +8,7 @@ define i16 @constant_fold_barrier_i16(i16 %x, i16 %y) {
 ; RV64-NEXT:    li a1, 1
 ; RV64-NEXT:    slli a1, a1, 11
 ; RV64-NEXT:    and a0, a0, a1
-; RV64-NEXT:    addiw a1, a1, 289
+; RV64-NEXT:    addi a1, a1, 289
 ; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 entry:
@@ -23,11 +23,9 @@ define i128 @constant_fold_barrier_i128(i128 %x) {
 ; RV64-NEXT:    li a2, 1
 ; RV64-NEXT:    slli a2, a2, 11
 ; RV64-NEXT:    and a0, a0, a2
-; RV64-NEXT:    and a1, a1, zero
 ; RV64-NEXT:    add a0, a0, a2
 ; RV64-NEXT:    sltu a2, a0, a2
-; RV64-NEXT:    add a1, a1, zero
-; RV64-NEXT:    add a1, a1, a2
+; RV64-NEXT:    mv a1, a2
 ; RV64-NEXT:    ret
 entry:
   %and = and i128 %x, 2048
