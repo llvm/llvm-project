@@ -996,23 +996,23 @@ class BinOpSameOpcodeHelper {
     bool hasCandidateOpcode(unsigned Opcode) const {
       MaskType Candidate = Mask & SeenBefore;
       switch (Opcode) {
-        case Instruction::Shl:
-          return Candidate & ShlBIT;
-        case Instruction::AShr:
-          return Candidate & AShrBIT;
-        case Instruction::Mul:
-          return Candidate & MulBIT;
-        case Instruction::Add:
-          return Candidate & AddBIT;
-        case Instruction::Sub:
-          return Candidate & SubBIT;
-        case Instruction::And:
-          return Candidate & AndBIT;
-        case Instruction::Or:
-          return Candidate & OrBIT;
-        case Instruction::Xor:
-          return Candidate & XorBIT;
-        default:
+      case Instruction::Shl:
+        return Candidate & ShlBIT;
+      case Instruction::AShr:
+        return Candidate & AShrBIT;
+      case Instruction::Mul:
+        return Candidate & MulBIT;
+      case Instruction::Add:
+        return Candidate & AddBIT;
+      case Instruction::Sub:
+        return Candidate & SubBIT;
+      case Instruction::And:
+        return Candidate & AndBIT;
+      case Instruction::Or:
+        return Candidate & OrBIT;
+      case Instruction::Xor:
+        return Candidate & XorBIT;
+      default:
         break;
       }
       llvm_unreachable("Cannot find interchangeable instruction.");
@@ -5052,9 +5052,7 @@ private:
     const ScheduleBundle &getBundle() const { return Bundle; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    void dump(raw_ostream &OS) const {
-      OS << "[Copyable]" << *getInst();
-    }
+    void dump(raw_ostream &OS) const { OS << "[Copyable]" << *getInst(); }
 
     LLVM_DUMP_METHOD void dump() const {
       dump(dbgs());
@@ -5306,13 +5304,16 @@ private:
               .try_emplace(std::make_pair(std::make_pair(In, EI.EdgeIdx), I))
               .first->getSecond()
               .push_back(CD);
-          ScheduleCopyableDataMapByUsers.try_emplace(I).first->getSecond().insert(CD);
+          ScheduleCopyableDataMapByUsers.try_emplace(I)
+              .first->getSecond()
+              .insert(CD);
           // Remove extra deps for users, becoming non-immediate users of the
           // instruction. It may happen, if the chain of same copyable elements
           // appears in the tree.
           if (In == I) {
             EdgeInfo UserEI = EI.UserTE->UserTreeIndex;
-            if (ScheduleCopyableData *UserCD = getScheduleCopyableData(UserEI, In))
+            if (ScheduleCopyableData *UserCD =
+                    getScheduleCopyableData(UserEI, In))
               ScheduleCopyableDataMapByUsers[I].remove(UserCD);
           }
           It = find(make_range(std::next(It), Op.end()), I);
@@ -5417,7 +5418,8 @@ private:
                 ++OperandsUses[I];
             }
           }
-          // Decrement the unscheduled counter and insert to ready list if ready.
+          // Decrement the unscheduled counter and insert to ready list if
+          // ready.
           auto DecrUnschedForInst = [&](Instruction *I, TreeEntry *UserTE,
                                         unsigned OpIdx) {
             const EdgeInfo EI = {UserTE, OpIdx};
@@ -10709,7 +10711,7 @@ public:
     S = InstructionsState(MainOp, MainOp, /*HasCopyables=*/true);
     if (!WithProfitabilityCheck)
       return S;
-   // Check if it is profitable to vectorize the instruction.
+    // Check if it is profitable to vectorize the instruction.
     SmallVector<BoUpSLP::ValueList> Operands = buildOperands(S, VL);
     if (VL.size() == 2) {
       // Check if the operands allow better vectorization.
