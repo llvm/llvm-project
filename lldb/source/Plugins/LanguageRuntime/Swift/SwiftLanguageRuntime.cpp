@@ -1612,13 +1612,14 @@ protected:
       return nullptr;
     }
 
-    size_t GetIndexOfChildWithName(ConstString name) override {
+    llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
       for (size_t idx = 0; idx < m_projection->field_projections.size();
            idx++) {
         if (m_projection->field_projections.at(idx).name == name)
           return idx;
       }
-      return UINT32_MAX;
+      return llvm::createStringError("Type has no child named '%s'",
+                                     name.AsCString());
     }
 
     lldb::ChildCacheState Update() override {
