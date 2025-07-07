@@ -410,12 +410,6 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
                                  name.AsCString());
 }
 
-bool lldb_private::formatters::LibcxxContainerSummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  return FormatEntity::FormatStringRef("size=${svar%#}", stream, nullptr,
-                                       nullptr, nullptr, &valobj, false, false);
-}
-
 /// The field layout in a libc++ string (cap, side, data or data, size, cap).
 namespace {
 enum class StringLayout { CSD, DSC };
