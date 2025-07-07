@@ -990,6 +990,13 @@ static bool addIfNotExistent(LLVMContext &Ctx, const Attribute &Attr,
     AB.addAttribute(Attr);
     return true;
   }
+  if (Attr.isConstantRangeAttribute()) {
+    Attribute::AttrKind Kind = Attr.getKindAsEnum();
+    if (!ForceReplace && AttrSet.hasAttribute(Kind))
+      return false;
+    AB.addAttribute(Attr);
+    return true;
+  }
 
   llvm_unreachable("Expected enum or string attribute!");
 }
@@ -3612,6 +3619,8 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       if (SimplifyAllLoads)
         getAssumedSimplified(IRPosition::value(I), nullptr,
                              UsedAssumedInformation, AA::Intraprocedural);
+      getOrCreateAAFor<AAInvariantLoadPointer>(
+          IRPosition::value(*LI->getPointerOperand()));
       getOrCreateAAFor<AAAddressSpace>(
           IRPosition::value(*LI->getPointerOperand()));
     } else {

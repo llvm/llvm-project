@@ -2524,15 +2524,6 @@ public:
   /// types.
   bool areCompatibleVectorTypes(QualType FirstVec, QualType SecondVec);
 
-  /// Return true if the given types are an SVE builtin and a VectorType that
-  /// is a fixed-length representation of the SVE builtin for a specific
-  /// vector-length.
-  bool areCompatibleSveTypes(QualType FirstType, QualType SecondType);
-
-  /// Return true if the given vector types are lax-compatible SVE vector types,
-  /// false otherwise.
-  bool areLaxCompatibleSveTypes(QualType FirstType, QualType SecondType);
-
   /// Return true if the given types are an RISC-V vector builtin type and a
   /// VectorType that is a fixed-length representation of the RISC-V vector
   /// builtin type for a specific vector-length.
