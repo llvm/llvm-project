@@ -43,6 +43,7 @@ add_comgr_lit_binary(spirv-translator c)
 add_comgr_lit_binary(compile-opencl-minimal c)
 add_comgr_lit_binary(spirv-to-reloc c)
 add_comgr_lit_binary(unbundle c)
+add_comgr_lit_binary(get-version c)
 add_comgr_lit_binary(status-string c)
 add_comgr_lit_binary(data-action c)
 
