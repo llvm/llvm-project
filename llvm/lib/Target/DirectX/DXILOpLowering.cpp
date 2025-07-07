@@ -39,11 +39,13 @@ class OpLowerer {
   DXILOpBuilder OpBuilder;
   DXILResourceMap &DRM;
   DXILResourceTypeMap &DRTM;
+  const ModuleMetadataInfo &MMDI;
   SmallVector<CallInst *> CleanupCasts;
 
 public:
-  OpLowerer(Module &M, DXILResourceMap &DRM, DXILResourceTypeMap &DRTM)
-      : M(M), OpBuilder(M), DRM(DRM), DRTM(DRTM) {}
+  OpLowerer(Module &M, DXILResourceMap &DRM, DXILResourceTypeMap &DRTM,
+            const ModuleMetadataInfo &MMDI)
+      : M(M), OpBuilder(M), DRM(DRM), DRTM(DRTM), MMDI(MMDI) {}
 
   /// Replace every call to \c F using \c ReplaceCall, and then erase \c F. If
   /// there is an error replacing a call, we emit a diagnostic and return true.
@@ -745,6 +747,37 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerLifetimeIntrinsic(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+      Value *Ptr = CI->getArgOperand(1);
+      assert(Ptr->getType()->isPointerTy() &&
+             "Expected operand of lifetime intrinsic to be a pointer");
+
+      auto ZeroOrUndef = [&](Type *Ty) {
+        return MMDI.ValidatorVersion < VersionTuple(1, 6)
+                   ? Constant::getNullValue(Ty)
+                   : UndefValue::get(Ty);
+      };
+
+      Value *Val = nullptr;
+      if (auto *GV = dyn_cast<GlobalVariable>(Ptr)) {
+        if (GV->hasInitializer() || GV->isExternallyInitialized())
+          return Error::success();
+        Val = ZeroOrUndef(GV->getValueType());
+      } else if (auto *AI = dyn_cast<AllocaInst>(Ptr))
+        Val = ZeroOrUndef(AI->getAllocatedType());
+
+      assert(Val && "Expected operand of lifetime intrinsic to be a global "
+                    "variable or alloca instruction");
+      IRB.CreateStore(Val, Ptr, false);
+
+      CI->eraseFromParent();
+      return Error::success();
+    });
+  }
+
   [[nodiscard]] bool lowerIsFPClass(Function &F) {
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *RetTy = IRB.getInt1Ty();
@@ -803,8 +836,6 @@ public:
       case Intrinsic::dx_resource_casthandle:
       // NOTE: llvm.dbg.value is supported as is in DXIL.
       case Intrinsic::dbg_value:
-      case Intrinsic::lifetime_start:
-      case Intrinsic::lifetime_end:
       case Intrinsic::not_intrinsic:
         if (F.use_empty())
           F.eraseFromParent();
@@ -855,6 +886,17 @@ public:
       case Intrinsic::ctpop:
         HasErrors |= lowerCtpopToCountBits(F);
         break;
+      case Intrinsic::lifetime_start:
+      case Intrinsic::lifetime_end:
+        if (F.use_empty())
+          F.eraseFromParent();
+        else {
+          if (MMDI.DXILVersion < VersionTuple(1, 6))
+            HasErrors |= lowerLifetimeIntrinsic(F);
+          else
+            continue;
+        }
+        break;
       case Intrinsic::is_fpclass:
         HasErrors |= lowerIsFPClass(F);
         break;
@@ -872,8 +914,9 @@ public:
 PreservedAnalyses DXILOpLowering::run(Module &M, ModuleAnalysisManager &MAM) {
   DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
+  const ModuleMetadataInfo MMDI = MAM.getResult<DXILMetadataAnalysis>(M);
 
-  bool MadeChanges = OpLowerer(M, DRM, DRTM).lowerIntrinsics();
+  bool MadeChanges = OpLowerer(M, DRM, DRTM, MMDI).lowerIntrinsics();
   if (!MadeChanges)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
@@ -891,8 +934,10 @@ public:
         getAnalysis<DXILResourceWrapperPass>().getResourceMap();
     DXILResourceTypeMap &DRTM =
         getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
+  const ModuleMetadataInfo MMDI =
+      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
-    return OpLowerer(M, DRM, DRTM).lowerIntrinsics();
+    return OpLowerer(M, DRM, DRTM, MMDI).lowerIntrinsics();
   }
   StringRef getPassName() const override { return "DXIL Op Lowering"; }
   DXILOpLoweringLegacy() : ModulePass(ID) {}
@@ -901,6 +946,7 @@ public:
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
     AU.addRequired<DXILResourceTypeWrapperPass>();
     AU.addRequired<DXILResourceWrapperPass>();
+    AU.addRequired<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<DXILResourceWrapperPass>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
