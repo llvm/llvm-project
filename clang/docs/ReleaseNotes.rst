@@ -61,7 +61,8 @@ Potentially Breaking Changes
   is compiled with clang 21, the ``::delete`` call might dispatch to the
   scalar deleting destructor emitted in library ``A`` which will erroneously
   call the member ``operator delete`` instead of the expected global
-  delete operator.
+  delete operator. The old behavior is retained under ``-fclang-abi-compat=20``
+  flag.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
