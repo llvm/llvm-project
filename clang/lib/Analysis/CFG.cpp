@@ -41,6 +41,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -6317,6 +6318,12 @@ void CFGBlock::printTerminatorJson(raw_ostream &Out, const LangOptions &LO,
 // There may be many more reasons why a sink would appear during analysis
 // (eg. checkers may generate sinks arbitrarily), but here we only consider
 // sinks that would be obvious by looking at the CFG.
+//
+// This function also performs inter-procedural analysis by recursively
+// examining called functions to detect forwarding chains to noreturn
+// functions. When a function is determined to never return through this
+// analysis, it's automatically marked with analyzer_noreturn attribute
+// for caching and future reference.
 static bool isImmediateSinkBlock(const CFGBlock *Blk) {
   if (Blk->hasNoReturnElement())
     return true;
@@ -6327,10 +6334,9 @@ static bool isImmediateSinkBlock(const CFGBlock *Blk) {
   // at least for now, but once we have better support for exceptions,
   // we'd need to carefully handle the case when the throw is being
   // immediately caught.
-  if (llvm::any_of(*Blk, [](const CFGElement &Elm) {
+  if (llvm::any_of(*Blk, [](const CFGElement &Elm) -> bool {
         if (std::optional<CFGStmt> StmtElm = Elm.getAs<CFGStmt>())
-          if (isa<CXXThrowExpr>(StmtElm->getStmt()))
-            return true;
+          return isa<CXXThrowExpr>(StmtElm->getStmt());
         return false;
       }))
     return true;
@@ -6339,10 +6345,15 @@ static bool isImmediateSinkBlock(const CFGBlock *Blk) {
     if (!CE)
       return false;
 
+    static thread_local llvm::SmallPtrSet<const FunctionDecl *, 32> InProgress;
+
     auto *FD = CE->getDirectCallee();
 
-    if (!FD)
+    if (!FD || InProgress.count(FD))
       return false;
+
+    InProgress.insert(FD);
+    auto DoCleanup = llvm::make_scope_exit([&]() { InProgress.erase(FD); });
 
     auto NoReturnFromCFG = [FD]() {
       if (!FD->getBody())

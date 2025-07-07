@@ -699,8 +699,8 @@ protected:
   template <typename Matcher>
   void runDataflow(llvm::StringRef Code, Matcher Expectations) {
     tooling::FileContentMappings FilesContents;
-    FilesContents.push_back(std::make_pair<std::string, std::string>(
-        "noreturn_test_defs.h", R"(
+    FilesContents.push_back(
+        std::make_pair<std::string, std::string>("noreturn_test_defs.h", R"(
       void assertionHandler() __attribute__((analyzer_noreturn));
 
       void assertionTrampoline() {
@@ -730,8 +730,7 @@ protected:
   }
 };
 
-TEST_F(AnalyzerNoreturnTest,
-       Breathing) {
+TEST_F(AnalyzerNoreturnTest, Breathing) {
   std::string Code = R"(
     #include "noreturn_test_defs.h"
 
