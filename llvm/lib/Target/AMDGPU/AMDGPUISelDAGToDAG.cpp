@@ -449,7 +449,6 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
     return;
   }
 
-  bool IsGCN = CurDAG->getSubtarget().getTargetTriple().isAMDGCN();
   if (IsGCN && Subtarget->has64BitLiterals() && VT.getSizeInBits() == 64 &&
       CurDAG->isConstantValueOfAnyType(SDValue(N, 0))) {
     uint64_t C = 0;
