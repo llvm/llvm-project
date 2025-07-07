@@ -777,7 +777,7 @@ struct Allocator {
       CHECK_NE(REAL(memcpy), nullptr);
       REAL(memcpy)(new_ptr, old_ptr, memcpy_size);
 #else
-      // AIX does not intercept memcpy, we have to use internal_memcpy here.
+      // AIX currently can't retrieve memcpy's address, we have to use internal_memcpy here.
       internal_memcpy(new_ptr, old_ptr, memcpy_size);
 #endif
       Deallocate(old_ptr, 0, 0, stack, FROM_MALLOC);

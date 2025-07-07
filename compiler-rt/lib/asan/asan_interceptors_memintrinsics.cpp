@@ -22,7 +22,7 @@
 
 using namespace __asan;
 
-// AIX does not intercept memcpy, so we have to use internal_memcpy.
+// AIX currently can't retrieve memcpy's address, we have to use internal_memcpy here.
 #if !SANITIZER_AIX
 #  define ASAN_MEMCPY_RETURN(to, from, size) REAL(memcpy)(to, from, size)
 #else

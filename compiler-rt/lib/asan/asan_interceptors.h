@@ -31,6 +31,7 @@ void InitializePlatformInterceptors();
 // really defined to replace libc functions.
 #if !SANITIZER_FUCHSIA
 
+// AIX currently can't retrieve the address of longjmp
 #  if !SANITIZER_AIX
 #    define ASAN_INTERCEPT_LONGJMP 1
 #  else
@@ -40,6 +41,7 @@ void InitializePlatformInterceptors();
 // Use macro to describe if specific function should be
 // intercepted on a given platform.
 #if !SANITIZER_WINDOWS
+     // AIX currently can't retrieve the address of _longjmp
 #    if !SANITIZER_AIX
 #      define ASAN_INTERCEPT__LONGJMP 1
 #    else
@@ -94,6 +96,7 @@ void InitializePlatformInterceptors();
 #    define ASAN_INTERCEPT__UNWIND_SJLJ_RAISEEXCEPTION 0
 #  endif
 
+// AIX currently can't retrieve the address of __cxa_atexit
 #  if !SANITIZER_WINDOWS && !SANITIZER_AIX
 #    define ASAN_INTERCEPT___CXA_ATEXIT 1
 #  else
@@ -126,6 +129,7 @@ void InitializePlatformInterceptors();
 #    define ASAN_INTERCEPT_TRYJOIN 0
 #  endif
 
+// AIX currently can't retrieve the address of strcat or strcpy
 #  if SANITIZER_AIX
 #    define ASAN_INTERCEPT_STRCAT 0
 #    define ASAN_INTERCEPT_STRCPY 0
