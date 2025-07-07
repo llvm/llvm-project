@@ -18,7 +18,6 @@
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -2444,7 +2443,7 @@ public:
     const uint64_t RelOffset = Fixup.getOffset();
 
     uint32_t RelType;
-    if (FKI.Flags & MCFixupKindInfo::FKF_IsPCRel) {
+    if (Fixup.isPCRel()) {
       switch (FKI.TargetSize) {
       default:
         return std::nullopt;
