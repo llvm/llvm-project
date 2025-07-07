@@ -195,7 +195,7 @@ bool AVRMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
       return false;
 
     auto Spec = AVR::S_None;
-    if (Value.getSpecifier() != MCSymbolRefExpr::VK_None)
+    if (Value.getSpecifier())
       return false;
     assert(!Value.getSubSym());
     if (E.getSpecifier() == AVR::S_PM)

@@ -8,10 +8,15 @@
 ; CHECK: .LBB0_[[LOOP]]:
 ; CHECK: {
 ; CHECK-NEXT: mpy
-; CHECK-NEXT: combine
-; CHECK-NEXT: memw
-; CHECK-NEXT: }
+; CHECK-NOT: memw
+; CHECK: }
+; CHECK: {
 ; CHECK: memw
+; CHECK-NOT: memw
+; CHECK: }
+; CHECK: {
+; CHECK: memw
+; CHECK-NOT: memw
 ; CHECK: } :endloop0
 
 ; Test the loop contains a single packet with 4 instructions.

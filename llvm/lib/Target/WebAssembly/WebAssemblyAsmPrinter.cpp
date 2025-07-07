@@ -14,7 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyAsmPrinter.h"
-#include "MCTargetDesc/WebAssemblyMCExpr.h"
+#include "MCTargetDesc/WebAssemblyMCAsmInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
