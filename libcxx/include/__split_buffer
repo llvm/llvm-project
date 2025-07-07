@@ -410,8 +410,8 @@ public:
 #endif
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20
-_LIBCPP_HIDE_FROM_ABI void __split_buffer<_Tp, _Allocator>::__layout::__update_first(pointer __new_first) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
+__split_buffer<_Tp, _Allocator>::__layout::__update_first(pointer __new_first) _NOEXCEPT {
   __first_ = __new_first;
 }
 
@@ -422,31 +422,31 @@ __split_buffer<_Tp, _Allocator>::__layout::__update_begin(pointer __new_begin) _
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __split_buffer<_Tp, _Allocator>::pointer
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename __split_buffer<_Tp, _Allocator>::pointer
 __split_buffer<_Tp, _Allocator>::__layout::first() _NOEXCEPT {
   return __first_;
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __split_buffer<_Tp, _Allocator>::const_pointer
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename __split_buffer<_Tp, _Allocator>::const_pointer
 __split_buffer<_Tp, _Allocator>::__layout::first() const _NOEXCEPT {
   return __first_;
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __split_buffer<_Tp, _Allocator>::pointer
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename __split_buffer<_Tp, _Allocator>::pointer
 __split_buffer<_Tp, _Allocator>::__layout::begin() _NOEXCEPT {
   return __begin_;
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __split_buffer<_Tp, _Allocator>::const_pointer
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename __split_buffer<_Tp, _Allocator>::const_pointer
 __split_buffer<_Tp, _Allocator>::__layout::begin() const _NOEXCEPT {
   return __begin_;
 }
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __split_buffer<_Tp, _Allocator>::size_type
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename __split_buffer<_Tp, _Allocator>::size_type
 __split_buffer<_Tp, _Allocator>::__layout::__front_spare() const _NOEXCEPT {
   return static_cast<size_type>(__begin_ - __first_);
 }

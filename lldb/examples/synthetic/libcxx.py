@@ -801,7 +801,9 @@ class stddeque_SynthProvider:
             self.map_begin = map_.GetChildMemberWithName("__begin_")
             map_begin = self.map_begin.GetValueAsUnsigned(0)
             map_end = get_buffer_end(map_, map_begin)
-            map_endcap = get_buffer_endcap(self, map_, map_begin, has_compressed_pair_layout, is_size_based)
+            map_endcap = get_buffer_endcap(
+                self, map_, map_begin, has_compressed_pair_layout, is_size_based
+            )
 
             # check consistency
             if not map_first <= map_begin <= map_end <= map_endcap:
