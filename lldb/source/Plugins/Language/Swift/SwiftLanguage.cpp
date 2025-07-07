@@ -1917,24 +1917,28 @@ GetAndValidateInfo(const SymbolContext &sc) {
   if (!mangled)
     return llvm::createStringError("Function does not have a mangled name.");
 
-  auto demangled_name = mangled.GetDemangledName().GetStringRef();
+  const char *mangled_name = mangled.GetMangledName().AsCString("");
+  auto [demangled_name, info] =
+      SwiftLanguageRuntime::TrackedDemangleSymbolAsString(
+          mangled_name, SwiftLanguageRuntime::eSimplified, &sc);
+  info.PrefixRange.second =
+      std::min(info.BasenameRange.first, info.ArgumentsRange.first);
+  info.SuffixRange.first =
+      std::max(info.BasenameRange.second, info.ArgumentsRange.second);
+  info.SuffixRange.second = demangled_name.length();
+
   if (demangled_name.empty())
     return llvm::createStringError(
         "Function '%s' does not have a demangled name.",
         mangled.GetMangledName().AsCString(""));
 
-  const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
-  if (!info)
-    return llvm::createStringError(
-        "Function '%s' does not have demangled info.", demangled_name.data());
-
   // Function without a basename is nonsense.
-  if (!info->hasBasename())
+  if (!info.hasBasename())
     return llvm::createStringError(
         "DemangledInfo for '%s does not have basename range.",
         demangled_name.data());
 
-  return std::make_pair(demangled_name, *info);
+  return std::make_pair(demangled_name, info);
 }
 
 static llvm::Expected<llvm::StringRef>
