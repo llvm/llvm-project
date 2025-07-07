@@ -77,44 +77,71 @@ llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
   // Read build ID.
   Gsym.setUUID(getUUID(Obj));
 
-  // Parse the symbol table.
-  size_t NumBefore = Gsym.getNumFunctionInfos();
-  for (const object::SymbolRef &Sym : Obj.symbols()) {
-    Expected<SymbolRef::Type> SymType = Sym.getType();
-    if (!SymType) {
-      consumeError(SymType.takeError());
-      continue;
-    }
-    Expected<uint64_t> AddrOrErr = Sym.getValue();
-    if (!AddrOrErr)
-      // TODO: Test this error.
-      return AddrOrErr.takeError();
+  const auto ParseSymbols =
+      [&Out, &Gsym, IsMachO,
+       IsELF](object::ObjectFile::symbol_iterator_range Symbols,
+              std::string_view SymbolsOrigin) -> llvm::Error {
+    size_t NumBefore = Gsym.getNumFunctionInfos();
+    for (const object::SymbolRef &Sym : Symbols) {
+      Expected<SymbolRef::Type> SymType = Sym.getType();
+      if (!SymType) {
+        consumeError(SymType.takeError());
+        continue;
+      }
+      Expected<uint64_t> AddrOrErr = Sym.getValue();
+      if (!AddrOrErr)
+        // TODO: Test this error.
+        return AddrOrErr.takeError();
 
-    if (SymType.get() != SymbolRef::Type::ST_Function ||
-        !Gsym.IsValidTextAddress(*AddrOrErr))
-      continue;
-    // Function size for MachO files will be 0
-    constexpr bool NoCopy = false;
-    const uint64_t size = IsELF ? ELFSymbolRef(Sym).getSize() : 0;
-    Expected<StringRef> Name = Sym.getName();
-    if (!Name) {
-      if (Out.GetOS())
-        logAllUnhandledErrors(Name.takeError(), *Out.GetOS(),
-                              "ObjectFileTransformer: ");
-      else
-        consumeError(Name.takeError());
-      continue;
+      if ((SymType.get() != SymbolRef::Type::ST_Function &&
+           // We allow unknown (yet with valid text address) symbols,
+           // since these are common with handwritten assembly in the wild.
+           SymType.get() != SymbolRef::Type::ST_Function) ||
+          !Gsym.IsValidTextAddress(*AddrOrErr))
+        continue;
+      // Function size for MachO files will be 0
+      constexpr bool NoCopy = false;
+      const uint64_t size = IsELF ? ELFSymbolRef(Sym).getSize() : 0;
+      Expected<StringRef> Name = Sym.getName();
+      if (!Name) {
+        if (Out.GetOS())
+          logAllUnhandledErrors(Name.takeError(), *Out.GetOS(),
+                                "ObjectFileTransformer: ");
+        else
+          consumeError(Name.takeError());
+        continue;
+      }
+      // Could happen with ST_Unknown symbols.
+      if (Name->empty())
+        continue;
+
+      // Remove the leading '_' character in any symbol names if there is one
+      // for mach-o files.
+      if (IsMachO)
+        Name->consume_front("_");
+      Gsym.addFunctionInfo(
+          FunctionInfo(*AddrOrErr, size, Gsym.insertString(*Name, NoCopy)));
     }
-    // Remove the leading '_' character in any symbol names if there is one
-    // for mach-o files.
-    if (IsMachO)
-      Name->consume_front("_");
-    Gsym.addFunctionInfo(
-        FunctionInfo(*AddrOrErr, size, Gsym.insertString(*Name, NoCopy)));
+
+    const size_t FunctionsAddedCount = Gsym.getNumFunctionInfos() - NumBefore;
+    if (Out.GetOS())
+      *Out.GetOS() << "Loaded " << FunctionsAddedCount << " functions from "
+                   << SymbolsOrigin << ".\n";
+
+    return Error::success();
+  };
+
+  // Parse the symbol table.
+  if (auto Err = ParseSymbols(Obj.symbols(), "symbol table"))
+    return Err;
+
+  if (IsELF) {
+    // Parse the dynamic symbol table.
+    if (auto Err = ParseSymbols(llvm::dyn_cast<ELFObjectFileBase>(&Obj)
+                                    ->getDynamicSymbolIterators(),
+                                "dynamic symbol table"))
+      return Err;
   }
-  size_t FunctionsAddedCount = Gsym.getNumFunctionInfos() - NumBefore;
-  if (Out.GetOS())
-    *Out.GetOS() << "Loaded " << FunctionsAddedCount
-                 << " functions from symbol table.\n";
+
   return Error::success();
 }
