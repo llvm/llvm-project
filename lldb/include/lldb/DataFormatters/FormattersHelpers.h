@@ -61,7 +61,7 @@ void DumpCxxSmartPtrPointerSummary(Stream &stream, ValueObject &ptr,
                                    const TypeSummaryOptions &options);
 
 bool ContainerSizeSummaryProvider(ValueObject &valobj, Stream &stream,
-                                 const TypeSummaryOptions &options);
+                                  const TypeSummaryOptions &options);
 
 Address GetArrayAddressOrPointerValue(ValueObject &valobj);
 
