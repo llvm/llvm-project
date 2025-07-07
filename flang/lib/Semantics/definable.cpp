@@ -371,9 +371,6 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
         return parser::Message{at,
             "Variable '%s' has a vector subscript"_err_en_US, expr.AsFortran()};
       }
-    } else if (evaluate::HasTriplet(expr)) {
-      return parser::Message{at,
-          "Variable '%s' has array section"_err_en_US, expr.AsFortran()};
     }
     if (FindPureProcedureContaining(scope) &&
         evaluate::ExtractCoarrayRef(expr)) {
