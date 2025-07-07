@@ -249,6 +249,8 @@ C Language Changes
 - The ``[[clang::assume()]]`` attribute is now correctly recognized in C. The
   ``__attribute__((assume()))`` form has always been supported, so the fix is
   specific to the attribute syntax used.
+- The ``clang-cl`` driver now recognizes ``/std:clatest`` and sets the language
+  mode to C23. (#GH147233)
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -306,6 +308,8 @@ C23 Feature Support
   which clarified how Clang is handling underspecified object declarations.
 - Clang now accepts single variadic parameter in type-name. It's a part of
   `WG14 N2975 <https://open-std.org/JTC1/SC22/WG14/www/docs/n2975.pdf>`_
+- Fixed a bug with handling the type operand form of ``typeof`` when it is used
+  to specify a fixed underlying type for an enumeration. #GH146351
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -671,6 +675,8 @@ Improvements to Clang's diagnostics
   false positives in exception-heavy code, though only simple patterns
   are currently recognized.
 
+- Clang now accepts ``@tparam`` comments on variable template partial
+  specializations. (#GH144775)
 
 Improvements to Clang's time-trace
 ----------------------------------
