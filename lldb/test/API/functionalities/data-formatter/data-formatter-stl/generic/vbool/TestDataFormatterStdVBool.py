@@ -2,24 +2,21 @@
 Test lldb data formatter subsystem.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class LibcxxVBoolDataFormatterTestCase(TestBase):
+class StdVBoolDataFormatterTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break at.
         self.line = line_number("main.cpp", "// Set break point at this line.")
 
-    @add_test_categories(["libc++"])
-    def test_with_run_command(self):
+    def do_test(self):
         """Test that that file and class static variables display correctly."""
-        self.build()
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
@@ -74,3 +71,20 @@ class LibcxxVBoolDataFormatterTestCase(TestBase):
                 "[48] = true",
             ],
         )
+
+    @add_test_categories(["libc++"])
+    def test_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()
+
+    @add_test_categories(["libstdcxx"])
+    def test_libstdcxx(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test()
+
+    @add_test_categories(["libstdcxx"])
+    def test_libstdcxx_debug(self):
+        self.build(
+            dictionary={"USE_LIBSTDCPP": 1, "CXXFLAGS_EXTRAS": "-D_GLIBCXX_DEBUG"}
+        )
+        self.do_test()
