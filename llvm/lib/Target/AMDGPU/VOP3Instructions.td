@@ -2252,7 +2252,7 @@ multiclass VOP3_Real_BITOP3_gfx9<bits<10> op, string AsmName, bit isSingle = 0> 
 
 // Instructions such as v_alignbyte_b32 allows op_sel in gfx9, but not in vi.
 // The following is created to support that.
-multiclass VOP3OpSel_Real_gfx9_with_names<bits<10> op, string opName, string AsmName> {
+multiclass VOP3OpSel_Real_gfx9_with_name<bits<10> op, string opName, string AsmName> {
   defvar psName = opName#"_e64";
   def _gfx9 : VOP3_Real<!cast<VOP3_Pseudo>(psName), SIEncodingFamily.VI>, // note: encoding family is VI
             VOP3OpSel_gfx9 <op, !cast<VOP3_Pseudo>(psName).Pfl> {
@@ -2328,8 +2328,8 @@ defm V_INTERP_P2_LEGACY_F16 : VOP3Interp_F16_Real_gfx9 <0x276, "V_INTERP_P2_F16"
 defm V_MAD_LEGACY_U16       : VOP3_F16_Real_gfx9 <0x1eb, "V_MAD_U16",       "v_mad_legacy_u16">;
 defm V_MAD_LEGACY_I16       : VOP3_F16_Real_gfx9 <0x1ec, "V_MAD_I16",       "v_mad_legacy_i16">;
 
-defm V_ALIGNBIT_B32_opsel   : VOP3OpSel_Real_gfx9_with_names <0x1ce, "V_ALIGNBIT_B32_opsel", "v_alignbit_b32">;
-defm V_ALIGNBYTE_B32_opsel  : VOP3OpSel_Real_gfx9_with_names <0x1cf, "V_ALIGNBYTE_B32_opsel", "v_alignbyte_b32">;
+defm V_ALIGNBIT_B32_opsel   : VOP3OpSel_Real_gfx9_with_name <0x1ce, "V_ALIGNBIT_B32_opsel", "v_alignbit_b32">;
+defm V_ALIGNBYTE_B32_opsel  : VOP3OpSel_Real_gfx9_with_name <0x1cf, "V_ALIGNBYTE_B32_opsel", "v_alignbyte_b32">;
 
 defm V_MAD_F16_gfx9         : VOP3OpSel_F16_Real_gfx9 <0x203, "v_mad_f16">;
 defm V_MAD_U16_gfx9         : VOP3OpSel_F16_Real_gfx9 <0x204, "v_mad_u16">;
