@@ -861,7 +861,9 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
 
   // Write Result to ResultPtr and put Overflow on the stack.
   assignInteger(S, ResultPtr, ResultT, Result);
-  ResultPtr.initialize();
+  if (ResultPtr.canBeInitialized())
+    ResultPtr.initialize();
+
   assert(Call->getDirectCallee()->getReturnType()->isBooleanType());
   S.Stk.push<Boolean>(Overflow);
   return true;
