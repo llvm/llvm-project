@@ -9,6 +9,7 @@
 #ifndef LLVM_FRONTEND_OPENMP_DIRECTIVENAMEPARSER_H
 #define LLVM_FRONTEND_OPENMP_DIRECTIVENAMEPARSER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -44,7 +45,7 @@ namespace llvm::omp {
 ///   }
 /// }
 struct DirectiveNameParser {
-  DirectiveNameParser(SourceLanguage L = SourceLanguage::C);
+  LLVM_ABI DirectiveNameParser(SourceLanguage L = SourceLanguage::C);
 
   struct State {
     Directive Value = Directive::OMPD_unknown;
@@ -62,9 +63,9 @@ struct DirectiveNameParser {
   };
 
   const State *initial() const { return &InitialState; }
-  const State *consume(const State *Current, StringRef Tok) const;
+  LLVM_ABI const State *consume(const State *Current, StringRef Tok) const;
 
-  static SmallVector<StringRef> tokenize(StringRef N);
+  LLVM_ABI static SmallVector<StringRef> tokenize(StringRef N);
 
 private:
   void insertName(StringRef Name, Directive D);
