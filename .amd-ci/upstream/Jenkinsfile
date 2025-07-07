@@ -2,8 +2,9 @@ import hudson.model.Result
 
 /* groovylint-disable-next-line CompileStatic */
 String actualTarget = env.CHANGE_TARGET ?: env.BRANCH_NAME
+String upstreamBranch = 'upstream-main', stagingBranch = 'amd-staging'
 
-if (actualTarget != 'upstream-main') {
+if (!(actualTarget in [stagingBranch, upstreamBranch])) {
     echo 'Pipeline skipped for base branch ' + actualTarget
     return this
 }
@@ -11,10 +12,12 @@ if (actualTarget != 'upstream-main') {
 String actualHead = env.CHANGE_BRANCH ?: env.BRANCH_NAME
 Boolean isPrBranch = env.CHANGE_BRANCH != null
 
-if (!isPrBranch) {
-    echo 'Pipeline skipped for non-PR branch ' + actualHead
+if (!isPrBranch && actualTarget != upstreamBranch) {
+    echo 'Pipeline skipped for non-PR branch ' + actualHead + ' of base ' + actualTarget
     return this
 }
+
+Boolean postsub = !isPrBranch && actualTarget == upstreamBranch && actualHead == upstreamBranch
 
 /**
  * Coerce Result enums to String, seems to
@@ -23,7 +26,7 @@ if (!isPrBranch) {
 String abortedResultStr = Result.ABORTED, failureResultStr = Result.FAILURE
 String notBuiltResultStr = Result.NOT_BUILT, successResultStr = Result.SUCCESS
 
-String space = ' ', andChain = '&&'
+String space = ' ', andChain = '&&', underScore = '_'
 
 List propsList = []
 if (isPrBranch) {
@@ -97,7 +100,7 @@ try {
                             label: 'clone-essentials',
                             script: (
                                 'set +x; . aocc-devops/utils.sh' + space + andChain + space +
-                                    'export BRANCH_NAME=amd-staging' + space + andChain + space +
+                                    'export BRANCH_NAME=' + stagingBranch + space + andChain + space +
                                     'sparse_clone_essentials' + space + andChain + space +
                                     'mv llvm-project/aocc-essentials . '  + space + andChain + space +
                                     'rm -rf llvm-project'
@@ -186,11 +189,30 @@ try {
                 )
                 return this
             }
+            if (postsub) {
+                stage ('merge-pre') {
+                    withCredentials([
+                        gitUsernamePassword(
+                            credentialsId: gitHubAppCredsId,
+                            gitToolName: gitTool
+                        )
+                    ]) {
+                        withEnv([gitPathEnv]) {
+                            sh(
+                                label: 'merge-main',
+                                script: '''git merge origin/main -m "Merge from main on $(date +'%Y-%m-%d')"'''
+                            )
+                        }
+                    }
+                }
+            }
             stage ('run') {
-                // ToDo this jobName string is 'presub' specific:
-                String jobName = 'presub_' + env.CHANGE_TARGET ?: (env.BRANCH_NAME ?: 'NoSuchBranchName')
+                String jobName = (
+                    (isPrBranch ? 'presub' : 'update') + underScore +
+                        env.CHANGE_TARGET ?: (env.BRANCH_NAME ?: 'NoSuchBranchName')
+                )
                 if (env.CHANGE_BRANCH) {
-                    jobName += '_' + env.BRANCH_NAME // Sic, the PR-<n> string.
+                    jobName += underScore + env.BRANCH_NAME // Sic, the PR-<n> string.
                 }
                 try {
                     withEnv([
@@ -201,6 +223,20 @@ try {
                     }
                     currentBuild.result = successResultStr
                 } finally {
+                    if (postsub) {
+                        stage ('merge-post') {
+                            withCredentials([
+                                gitUsernamePassword(
+                                    credentialsId: gitHubAppCredsId,
+                                    gitToolName: gitTool
+                                )
+                            ]) {
+                                withEnv([gitPathEnv]) {
+                                    sh 'llvm-project/.amd-ci/upstream/repo_sync.sh'
+                                }
+                            }
+                        }
+                    }
                     archiveArtifacts(
                         allowEmptyArchive: true,
                         artifacts: '*.tar.xz,*.txt'
