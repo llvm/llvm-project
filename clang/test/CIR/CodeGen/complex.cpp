@@ -571,10 +571,10 @@ void foo23(int _Complex a, int _Complex b) {
 // OGCG: %[[B_REAL:.*]] = load i32, ptr %[[B_REAL_PTR]], align 4
 // OGCG: %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[COMPLEX_B]], i32 0, i32 1
 // OGCG: %[[B_IMAG:.*]] = load i32, ptr %[[B_IMAG_PTR]], align 4
-// OGCG: %[[RESULT_REAL_PT:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[RESULT]], i32 0, i32 0
-// OGCG: %[[RESULT_IMAG_PT:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[RESULT]], i32 0, i32 1
-// OGCG: store i32 %[[B_REAL]], ptr %[[RESULT_REAL_PT]], align 4
-// OGCG: store i32 %[[B_IMAG]], ptr %[[RESULT_IMAG_PT]], align 4
+// OGCG: %[[RESULT_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[RESULT]], i32 0, i32 0
+// OGCG: %[[RESULT_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[RESULT]], i32 0, i32 1
+// OGCG: store i32 %[[B_REAL]], ptr %[[RESULT_REAL_PTR]], align 4
+// OGCG: store i32 %[[B_IMAG]], ptr %[[RESULT_IMAG_PTR]], align 4
 
 void foo24() {
   int _Complex arr[2];
@@ -654,6 +654,68 @@ void foo26(int _Complex* a) {
 // OGCG: %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[COMPLEX_B]], i32 0, i32 1
 // OGCG: store i32 %[[A_REAL]], ptr %[[B_REAL_PTR]], align 4
 // OGCG: store i32 %[[A_IMAG]], ptr %[[B_IMAG_PTR]], align 4
+
+void foo27(bool cond, int _Complex a, int _Complex b) {
+  int _Complex c = cond ? a : b;
+}
+
+// CIR: %[[COND:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cond", init]
+// CIR: %[[COMPLEX_A:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["a", init]
+// CIR: %[[COMPLEX_B:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["b", init]
+// CIR: %[[RESULT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["c", init]
+// CIR: %[[TMP_COND:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR: %[[RESULT_VAL:.*]] = cir.ternary(%[[TMP_COND]], true {
+// CIR:   %[[TMP_A:.*]] = cir.load{{.*}} %[[COMPLEX_A]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+// CIR:   cir.yield %[[TMP_A]] : !cir.complex<!s32i>
+// CIR: }, false {
+// CIR:   %[[TMP_B:.*]] = cir.load{{.*}} %[[COMPLEX_B]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+// CIR:   cir.yield %[[TMP_B]] : !cir.complex<!s32i>
+// CIR: }) : (!cir.bool) -> !cir.complex<!s32i>
+// CIR: cir.store{{.*}} %[[RESULT_VAL]], %[[RESULT]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+
+// LLVM: %[[COND:.*]] = alloca i8, i64 1, align 1
+// LLVM: %[[COMPLEX_A:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: %[[COMPLEX_B:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: %[[RESULT:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: %[[TMP_COND:.*]] = load i8, ptr %[[COND]], align 1
+// LLVM: %[[COND_VAL:.*]] = trunc i8 %[[TMP_COND]] to i1
+// LLVM: br i1 %[[COND_VAL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// LLVM: [[TRUE_BB]]:
+// LLVM:  %[[TMP_A:.*]] = load { i32, i32 }, ptr %[[COMPLEX_A]], align 4
+// LLVM:  br label %[[END_BB:.*]]
+// LLVM: [[FALSE_BB]]:
+// LLVM:  %[[TMP_B:.*]] = load { i32, i32 }, ptr %[[COMPLEX_B]], align 4
+// LLVM:  br label %[[END_BB]]
+// LLVM: [[END_BB]]:
+// LLVM: %[[RESULT_VAL:.*]] = phi { i32, i32 } [ %[[TMP_B]], %[[FALSE_BB]] ], [ %[[TMP_A]], %[[TRUE_BB]] ]
+// LLVM: store { i32, i32 } %[[RESULT_VAL]], ptr %[[RESULT]], align 4
+
+// OGCG: %[[COMPLEX_A:.*]] = alloca { i32, i32 }, align 4
+// OGCG: %[[COMPLEX_B:.*]] = alloca { i32, i32 }, align 4
+// OGCG: %[[COND:.*]] = alloca i8, align 1
+// OGCG: %[[RESULT:.*]] = alloca { i32, i32 }, align 4
+// OGCG: %[[TMP_COND:.*]] = load i8, ptr %[[COND]], align 1
+// OGCG: %[[COND_VAL:.*]] = trunc i8 %[[TMP_COND]] to i1
+// OGCG: br i1 %[[COND_VAL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
+// OGCG: [[TRUE_BB]]:
+// OGCG:  %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[COMPLEX_A]], i32 0, i32 0
+// OGCG:  %[[A_REAL:.*]] = load i32, ptr %[[A_REAL_PTR]], align 4
+// OGCG:  %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[COMPLEX_A]], i32 0, i32 1
+// OGCG:  %[[A_IMAG:.*]] = load i32, ptr %[[A_IMAG_PTR]], align 4
+// OGCG:  br label %[[END_BB:.*]]
+// OGCG: [[FALSE_BB]]:
+// OGCG:  %[[B_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[COMPLEX_B]], i32 0, i32 0
+// OGCG:  %[[B_REAL:.*]] = load i32, ptr %[[B_REAL_PTR]], align 4
+// OGCG:  %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[COMPLEX_B]], i32 0, i32 1
+// OGCG:  %[[B_IMAG:.*]] = load i32, ptr %[[B_IMAG_PTR]], align 4
+// OGCG:  br label %[[END_BB]]
+// OGCG: [[END_BB]]:
+// OGCG:  %[[REAL:.*]] = phi i32 [ %[[A_REAL]], %[[TRUE_BB]] ], [ %[[B_REAL]], %[[FALSE_BB]] ]
+// OGCG:  %[[IMAG:.*]] = phi i32 [ %[[A_IMAG]], %[[TRUE_BB]] ], [ %[[B_IMAG]], %[[FALSE_BB]] ]
+// OGCG:  %[[RESULT_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[RESULT]], i32 0, i32 0
+// OGCG:  %[[RESULT_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[RESULT]], i32 0, i32 1
+// OGCG:  store i32 %[[REAL]], ptr %[[RESULT_REAL_PTR]], align 4
+// OGCG:  store i32 %[[IMAG]], ptr %[[RESULT_IMAG_PTR]], align 4
 
 void foo29() {
   using IntComplex = int _Complex;
