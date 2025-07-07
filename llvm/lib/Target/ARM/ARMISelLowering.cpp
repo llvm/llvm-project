@@ -12359,6 +12359,11 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     Fn->insert(BBI, RSBBB);
     Fn->insert(BBI, SinkBB);
 
+    // Set the call frame size on entry to the new basic blocks.
+    unsigned CallFrameSize = TII->getCallFrameSizeAt(MI);
+    RSBBB->setCallFrameSize(CallFrameSize);
+    SinkBB->setCallFrameSize(CallFrameSize);
+
     Register ABSSrcReg = MI.getOperand(1).getReg();
     Register ABSDstReg = MI.getOperand(0).getReg();
     bool ABSSrcKIll = MI.getOperand(1).isKill();
