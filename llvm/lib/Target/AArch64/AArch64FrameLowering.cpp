@@ -1819,10 +1819,6 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   DebugLoc DL;
 
   const auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
-  if (MFnI.needsShadowCallStackPrologueEpilogue(MF))
-    emitShadowCallStackPrologue(*TII, MF, MBB, MBBI, DL, NeedsWinCFI,
-                                MFnI.needsDwarfUnwindInfo(MF));
-
   if (MFnI.shouldSignReturnAddress(MF)) {
     // If pac-ret+leaf is in effect, PAUTH_PROLOGUE pseudo instructions
     // are inserted by emitPacRetPlusLeafHardening().
@@ -1833,6 +1829,10 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     if (NeedsWinCFI)
       HasWinCFI = true; // AArch64PointerAuth pass will insert SEH_PACSignLR
   }
+
+  if (MFnI.needsShadowCallStackPrologueEpilogue(MF))
+    emitShadowCallStackPrologue(*TII, MF, MBB, MBBI, DL, NeedsWinCFI,
+                                MFnI.needsDwarfUnwindInfo(MF));
 
   if (EmitCFI && MFnI.isMTETagged()) {
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::EMITMTETAGGED))
@@ -2387,6 +2387,10 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   MachineBasicBlock::iterator EpilogStartI = MBB.end();
 
   auto FinishingTouches = make_scope_exit([&]() {
+    if (AFI->needsShadowCallStackPrologueEpilogue(MF))
+      emitShadowCallStackEpilogue(*TII, MF, MBB, MBB.getFirstTerminator(), DL);
+    if (EmitCFI)
+      emitCalleeSavedGPRRestores(MBB, MBB.getFirstTerminator());
     if (AFI->shouldSignReturnAddress(MF)) {
       // If pac-ret+leaf is in effect, PAUTH_EPILOGUE pseudo instructions
       // are inserted by emitPacRetPlusLeafHardening().
@@ -2398,10 +2402,6 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
       if (NeedsWinCFI)
         HasWinCFI = true; // AArch64PointerAuth pass will insert SEH_PACSignLR
     }
-    if (AFI->needsShadowCallStackPrologueEpilogue(MF))
-      emitShadowCallStackEpilogue(*TII, MF, MBB, MBB.getFirstTerminator(), DL);
-    if (EmitCFI)
-      emitCalleeSavedGPRRestores(MBB, MBB.getFirstTerminator());
     if (HasWinCFI) {
       BuildMI(MBB, MBB.getFirstTerminator(), DL,
               TII->get(AArch64::SEH_EpilogEnd))
