@@ -248,7 +248,7 @@ C Language Changes
   not valid in C++.
 - The ``[[clang::assume()]]`` attribute is now correctly recognized in C. The
   ``__attribute__((assume()))`` form has always been supported, so the fix is
-  specific to the attribute syntax used.'
+  specific to the attribute syntax used.
 - The ``clang-cl`` driver now recognizes ``/std:clatest`` and sets the language
   mode to C23. (#GH147233)
 
