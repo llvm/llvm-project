@@ -78,10 +78,14 @@ static void SetSigaction(int signum,
   }
 
   struct sigaction new_sigact = {};
-  // Address sanitizer needs SA_ONSTACK (causing the signal handler to run on a
-  // dedicated stack) in order to be able to detect stack overflows; keep the
-  // flag if it's set.
-  new_sigact.sa_flags = SA_SIGINFO | (sigact.sa_flags & SA_ONSTACK);
+  // SA_ONSTACK is required for certain runtimes that use small stacks, for
+  // instance the Go runtime.
+  // See https://github.com/golang/go/issues/49075
+  // Address sanitizer also wants SA_ONSTACK, and the fuzzer and sanitizer
+  // often run together.
+  // SA_ONSTACK is a no-op unless someone also calls sigaltstack. That is left
+  // up to code that needs it.
+  new_sigact.sa_flags = SA_SIGINFO | SA_ONSTACK;
   new_sigact.sa_sigaction = callback;
   if (sigaction(signum, &new_sigact, nullptr)) {
     Printf("libFuzzer: sigaction failed with %d\n", errno);
