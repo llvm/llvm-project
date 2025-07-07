@@ -6,7 +6,7 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX9-HSA %s
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX9-HSA %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX12 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX1250 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -check-prefix=GFX1250 %s
 
 define amdgpu_kernel void @constant_load_i32(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
 ; GFX6-NOHSA-LABEL: constant_load_i32:

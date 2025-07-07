@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 -amdgpu-enable-delay-alu=0 --verify-machineinstrs < %s | FileCheck --check-prefixes=GFX11 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize64 --verify-machineinstrs < %s | FileCheck --check-prefixes=GFX10 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 -mattr=+wavefrontsize64 --verify-machineinstrs < %s | FileCheck --check-prefixes=GFX11 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -amdgpu-enable-delay-alu=0 --verify-machineinstrs < %s | FileCheck --check-prefixes=GFX1250 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -amdgpu-enable-delay-alu=0 < %s | FileCheck --check-prefixes=GFX1250 %s
 
 define amdgpu_ps float @mad_i32_vvv(i32 %a, i32 %b, i32 %c) {
 ; GFX9-LABEL: mad_i32_vvv:

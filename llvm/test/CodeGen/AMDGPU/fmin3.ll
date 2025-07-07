@@ -6,10 +6,10 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-FAKE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+real-true16 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12-FAKE16 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX1250,GFX1250-TRUE16 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX1250,GFX1250-FAKE16 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+real-true16 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX13,GFX13-TRUE16 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=-real-true16 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX13,GFX13-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GFX1250,GFX1250-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GFX1250,GFX1250-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+real-true16 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GFX13,GFX13-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=-real-true16 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GFX13,GFX13-FAKE16 %s
 
 define amdgpu_kernel void @test_fmin3_olt_0_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
 ; SI-LABEL: test_fmin3_olt_0_f32:

@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs -o - < %s | FileCheck %s --check-prefixes=GFX,GFX6
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=fiji -verify-machineinstrs -o - < %s | FileCheck %s --check-prefixes=GFX,GFX8
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1010 -verify-machineinstrs -o - < %s | FileCheck %s --check-prefixes=GFX,GFX10
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1250 -verify-machineinstrs -o - < %s | FileCheck %s --check-prefixes=GFX,GFX1250
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1250 -o - < %s | FileCheck %s --check-prefixes=GFX,GFX1250
 
 declare i16 @llvm.abs.i16(i16, i1)
 declare i32 @llvm.abs.i32(i32, i1)

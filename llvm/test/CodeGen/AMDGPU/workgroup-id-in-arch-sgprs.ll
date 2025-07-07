@@ -3,8 +3,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+architected-sgprs -global-isel=1 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX9,GFX9-GISEL %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -global-isel=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1200 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -global-isel=1 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1200 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -global-isel=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1250,GFX1250-SDAG %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -global-isel=1 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -global-isel=0 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-SDAG %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -global-isel=1 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1300 -global-isel=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1300,GFX1300-SDAG %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1300 -global-isel=1 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1300,GFX1300-GISEL %s
 

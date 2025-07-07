@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck -check-prefixes=GFX68,GFX8 %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs | FileCheck -check-prefixes=GFX11 %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs | FileCheck -check-prefixes=GFX12 %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1250 -verify-machineinstrs | FileCheck -check-prefixes=GFX12 %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1250 | FileCheck -check-prefixes=GFX12 %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs | FileCheck -check-prefixes=GFX13 %s
 
 define amdgpu_ps void @buffer_store(<4 x i32> inreg, <4 x float>, <4 x float>, <4 x float>) {

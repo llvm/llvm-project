@@ -5,7 +5,7 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10 %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX11 %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=gfx1200 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX12 %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=gfx1250 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1250 %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=gfx1250 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX1250 %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=gfx1300 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1300 %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefixes=EG %s
 

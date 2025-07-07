@@ -6,6 +6,23 @@ target datalayout = "A5"
 @out = external local_unnamed_addr addrspace(10) global <8 x i16>, align 16
 
 define void @dummy_store() #5 {
+; CHECK-LABEL: dummy_store:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_mov_b32 s0, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, 1
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %out_i32_ptr = bitcast <8 x i16> addrspace(10)* @out to i32 addrspace(10)*
   store volatile i32 1, i32 addrspace(10)* %out_i32_ptr, align 4
@@ -13,6 +30,23 @@ entry:
 }
 
 define void @dummy_rank1a() #5 {
+; CHECK-LABEL: dummy_rank1a:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_mov_b32 s0, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, 1
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %out_i32_ptr = bitcast <8 x i16> addrspace(10)* @out to i32 addrspace(10)*
   store volatile i32 1, i32 addrspace(10)* %out_i32_ptr, align 4
@@ -20,6 +54,23 @@ entry:
 }
 
 define void @dummy_rank1b() #5 {
+; CHECK-LABEL: dummy_rank1b:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    s_wait_expcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_mov_b32 s0, 0
+; CHECK-NEXT:    v_mov_b32_e32 v0, 1
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    s_wait_samplecnt 0x0
+; CHECK-NEXT:    s_wait_rtscnt 0x0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
+; CHECK-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %out_i32_ptr = bitcast <8 x i16> addrspace(10)* @out to i32 addrspace(10)*
   store volatile i32 1, i32 addrspace(10)* %out_i32_ptr, align 4
@@ -148,79 +199,79 @@ define dso_local amdgpu_kernel void @test_kernel_1() local_unnamed_addr #1 !reqd
 ; CHECK:       test_kernel_1$local:
 ; CHECK-NEXT:    .type test_kernel_1$local,@function
 ; CHECK-NEXT:  ; %bb.0: ; %entry
-; CHECK-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
+; CHECK-NEXT:    s_getreg_b32 s9, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_mul_i32 s33, s0, s8
-; CHECK-NEXT:    s_mul_i32 s1, s0, 0
+; CHECK-NEXT:    s_mul_i32 s33, s9, s8
+; CHECK-NEXT:    s_mul_i32 s10, s9, 0
 ; CHECK-NEXT:    s_add_co_u32 s33, s33, 16
-; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
+; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s10
 ; CHECK-NEXT:    s_add_co_u32 s32, s33, 0
 ; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
-; CHECK-NEXT:    s_getreg_b32 s2, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
-; CHECK-NEXT:    s_mov_b32 s0, -1
-; CHECK-NEXT:    s_cmp_lg_u32 s2, 1
+; CHECK-NEXT:    s_getreg_b32 s9, hwreg(HW_REG_WAVE_GROUP_INFO, 16, 4)
+; CHECK-NEXT:    s_mov_b32 s10, -1
+; CHECK-NEXT:    s_cmp_lg_u32 s9, 1
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB5_3
 ; CHECK-NEXT:  ; %bb.1: ; %Flow
-; CHECK-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
+; CHECK-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s10
 ; CHECK-NEXT:    s_cbranch_vccz .LBB5_18
 ; CHECK-NEXT:  .LBB5_2: ; %common.ret
 ; CHECK-NEXT:    s_endpgm
 ; CHECK-NEXT:  .LBB5_3: ; %bb.rank_0_2_3_4_5_6_7
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, 0
-; CHECK-NEXT:    s_cmp_eq_u32 s2, 0
-; CHECK-NEXT:    s_get_pc_i64 s[0:1]
-; CHECK-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_kernel_1.rank_0_2_3_4_5_6_7@rel64+4
+; CHECK-NEXT:    s_cmp_eq_u32 s9, 0
+; CHECK-NEXT:    s_get_pc_i64 s[10:11]
+; CHECK-NEXT:    s_add_nc_u64 s[10:11], s[10:11], test_kernel_1.rank_0_2_3_4_5_6_7@rel64+4
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_5
 ; CHECK-NEXT:  ; %bb.4:
-; CHECK-NEXT:    s_set_pc_i64 s[0:1]
+; CHECK-NEXT:    s_set_pc_i64 s[10:11]
 ; CHECK-NEXT:  .LBB5_5: ; %bb.rank_0_2_3_4_5_6_7
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr)
-; CHECK-NEXT:    s_cmp_eq_u32 s2, 2
+; CHECK-NEXT:    s_cmp_eq_u32 s9, 2
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_7
 ; CHECK-NEXT:  ; %bb.6:
-; CHECK-NEXT:    s_set_pc_i64 s[0:1]
+; CHECK-NEXT:    s_set_pc_i64 s[10:11]
 ; CHECK-NEXT:  .LBB5_7: ; %bb.rank_0_2_3_4_5_6_7
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr)
-; CHECK-NEXT:    s_cmp_eq_u32 s2, 3
+; CHECK-NEXT:    s_cmp_eq_u32 s9, 3
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_9
 ; CHECK-NEXT:  ; %bb.8:
-; CHECK-NEXT:    s_set_pc_i64 s[0:1]
+; CHECK-NEXT:    s_set_pc_i64 s[10:11]
 ; CHECK-NEXT:  .LBB5_9: ; %bb.rank_0_2_3_4_5_6_7
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr)
-; CHECK-NEXT:    s_cmp_eq_u32 s2, 4
+; CHECK-NEXT:    s_cmp_eq_u32 s9, 4
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_11
 ; CHECK-NEXT:  ; %bb.10:
-; CHECK-NEXT:    s_set_pc_i64 s[0:1]
+; CHECK-NEXT:    s_set_pc_i64 s[10:11]
 ; CHECK-NEXT:  .LBB5_11: ; %bb.rank_0_2_3_4_5_6_7
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr)
-; CHECK-NEXT:    s_cmp_eq_u32 s2, 5
+; CHECK-NEXT:    s_cmp_eq_u32 s9, 5
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_13
 ; CHECK-NEXT:  ; %bb.12:
-; CHECK-NEXT:    s_set_pc_i64 s[0:1]
+; CHECK-NEXT:    s_set_pc_i64 s[10:11]
 ; CHECK-NEXT:  .LBB5_13: ; %bb.rank_0_2_3_4_5_6_7
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr)
-; CHECK-NEXT:    s_cmp_eq_u32 s2, 6
+; CHECK-NEXT:    s_cmp_eq_u32 s9, 6
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_15
 ; CHECK-NEXT:  ; %bb.14:
-; CHECK-NEXT:    s_set_pc_i64 s[0:1]
+; CHECK-NEXT:    s_set_pc_i64 s[10:11]
 ; CHECK-NEXT:  .LBB5_15: ; %bb.rank_0_2_3_4_5_6_7
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr)
-; CHECK-NEXT:    s_cmp_eq_u32 s2, 7
+; CHECK-NEXT:    s_cmp_eq_u32 s9, 7
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_17
 ; CHECK-NEXT:  ; %bb.16:
-; CHECK-NEXT:    s_set_pc_i64 s[0:1]
+; CHECK-NEXT:    s_set_pc_i64 s[10:11]
 ; CHECK-NEXT:  .LBB5_17: ; %bb.rank_0_2_3_4_5_6_7
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr)
 ; CHECK-NEXT:    s_cbranch_execnz .LBB5_2
 ; CHECK-NEXT:  .LBB5_18: ; %bb.rank_1
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, 0
-; CHECK-NEXT:    s_cmp_eq_u32 s2, 1
+; CHECK-NEXT:    s_cmp_eq_u32 s9, 1
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_20
 ; CHECK-NEXT:  ; %bb.19:
-; CHECK-NEXT:    s_get_pc_i64 s[0:1]
-; CHECK-NEXT:    s_add_nc_u64 s[0:1], s[0:1], test_kernel_1.rank_1@rel64+4
+; CHECK-NEXT:    s_get_pc_i64 s[10:11]
+; CHECK-NEXT:    s_add_nc_u64 s[10:11], s[10:11], test_kernel_1.rank_1@rel64+4
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_set_pc_i64 s[0:1]
+; CHECK-NEXT:    s_set_pc_i64 s[10:11]
 ; CHECK-NEXT:  .LBB5_20: ; %bb.rank_1
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, max(128, dummy_store.num_vgpr, dummy_rank1a.num_vgpr, dummy_rank1b.num_vgpr)
 ; CHECK-NEXT:    s_endpgm
@@ -257,3 +308,5 @@ declare !callback !0 void @llvm.amdgcn.wavegroup.rank.p0(i32 immarg, ptr)
 attributes #1 = { "amdgpu-wavegroup-enable" }
 attributes #3 = { "amdgpu-wavegroup-enable" "amdgpu-wavegroup-rank-function" }
 attributes #5 = { noinline optnone nounwind }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; KERNEL: {{.*}}
