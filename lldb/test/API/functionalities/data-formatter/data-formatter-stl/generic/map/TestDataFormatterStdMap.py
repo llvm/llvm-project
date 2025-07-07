@@ -334,6 +334,7 @@ class StdMapDataFormatterTestCase(TestBase):
         self.build(dictionary={"USE_LIBSTDCPP": 1})
         self.do_test()
 
+    @expectedFailureAll(bugnumber="Don't support formatting __gnu_debug::_Safe_iterator yet")
     @add_test_categories(["libstdcxx"])
     def test_libstdcxx_debug(self):
         self.build(
