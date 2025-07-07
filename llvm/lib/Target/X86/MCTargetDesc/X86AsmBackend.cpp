@@ -422,14 +422,10 @@ static size_t getSizeForInstFragment(const MCFragment *F) {
   if (!F || !F->hasInstructions())
     return 0;
   // MCEncodedFragmentWithContents being templated makes this tricky.
-  switch (F->getKind()) {
-  default:
+  if (auto *DF = dyn_cast<MCEncodedFragment>(F))
+    return DF->getContents().size();
+  else
     llvm_unreachable("Unknown fragment with instructions!");
-  case MCFragment::FT_Data:
-    return cast<MCDataFragment>(*F).getContents().size();
-  case MCFragment::FT_Relaxable:
-    return cast<MCRelaxableFragment>(*F).getContents().size();
-  }
 }
 
 /// Return true if we can insert NOP or prefixes automatically before the

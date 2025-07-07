@@ -39,8 +39,8 @@ class raw_ostream;
 class Triple;
 
 // Represents a contiguous piece of code or data within a section. Its size is
-// determined by MCAssembler::layout. All subclasses (except
-// MCRelaxableFragment, which stores a MCInst) must have trivial destructors.
+// determined by MCAssembler::layout. All subclasses must have trivial
+// destructors.
 //
 // Declaration order: MCFragment, MCSection, then MCFragment's derived classes.
 // This allows MCSection's inline functions to access MCFragment members and
@@ -100,12 +100,6 @@ public:
   MCFragment() = delete;
   MCFragment(const MCFragment &) = delete;
   MCFragment &operator=(const MCFragment &) = delete;
-
-  /// Destroys the current fragment.
-  ///
-  /// This must be used instead of delete as MCFragment is non-virtual.
-  /// This method will dispatch to the appropriate subclass.
-  LLVM_ABI void destroy();
 
   MCFragment *getNext() const { return Next; }
 
