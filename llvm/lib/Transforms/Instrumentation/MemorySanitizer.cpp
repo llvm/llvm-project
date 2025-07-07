@@ -3395,7 +3395,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// This function will return a vector type with the same number of elements
   /// as the input, but same per-element width as the return value e.g.,
   /// <8 x i8>.
-  FixedVectorType *shrinkVectorShadowType(Value *Src, IntrinsicInst &I) {
+  FixedVectorType *maybeShrinkVectorShadowType(Value *Src, IntrinsicInst &I) {
     assert(isa<FixedVectorType>(getShadowTy(&I)));
     FixedVectorType *ShadowType = cast<FixedVectorType>(getShadowTy(&I));
 
@@ -3413,7 +3413,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// Doubles the length of a vector shadow (filled with zeros) if necessary to
   /// match the length of the shadow for the instruction.
   /// This is more type-safe than CreateShadowCast().
-  Value *extendVectorShadowWithZeros(Value *Shadow, IntrinsicInst &I) {
+  Value *maybeExtendVectorShadowWithZeros(Value *Shadow, IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     assert(isa<FixedVectorType>(Shadow->getType()));
     assert(isa<FixedVectorType>(I.getType()));
@@ -3470,7 +3470,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // The return type might have more elements than the input.
     // Temporarily shrink the return type's number of elements.
-    VectorType *ShadowType = shrinkVectorShadowType(Src, I);
+    VectorType *ShadowType = maybeShrinkVectorShadowType(Src, I);
 
     IRBuilder<> IRB(&I);
     Value *S0 = getShadow(&I, 0);
@@ -3485,7 +3485,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // The return type might have more elements than the input.
     // Extend the return type back to its original width if necessary.
-    Value *FullShadow = extendVectorShadowWithZeros(Shadow, I);
+    Value *FullShadow = maybeExtendVectorShadowWithZeros(Shadow, I);
 
     setShadow(&I, FullShadow);
     setOriginForNaryOp(I);
