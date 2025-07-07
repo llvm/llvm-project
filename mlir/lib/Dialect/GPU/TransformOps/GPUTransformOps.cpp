@@ -18,6 +18,7 @@
 #include "mlir/Dialect/GPU/TransformOps/Utils.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -136,14 +137,13 @@ void transform::ApplyGPUToROCDLConversionPatternsOp::populatePatterns(
       llvmTypeConverter, [](AddressSpace space) {
         switch (space) {
         case AddressSpace::Global:
-          return 1;
+          return ROCDL::ROCDLDialect::kGlobalMemoryAddressSpace;
         case AddressSpace::Workgroup:
-          return 3;
+          return ROCDL::ROCDLDialect::kSharedMemoryAddressSpace;
         case AddressSpace::Private:
-          return 5;
+          return ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace;
         }
         llvm_unreachable("unknown address space enum value");
-        return 0;
       });
   FailureOr<amdgpu::Chipset> maybeChipset =
       amdgpu::Chipset::parse(getChipset());
