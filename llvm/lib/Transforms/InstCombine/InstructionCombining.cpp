@@ -232,38 +232,43 @@ Value *InstCombinerImpl::EmitGEPOffsets(ArrayRef<GEPOperator *> GEPs,
   Value *OneUseBase = nullptr;
   GEPNoWrapFlags OneUseFlags = GEPNoWrapFlags::all();
   for (GEPOperator *GEP : reverse(GEPs)) {
-    IRBuilderBase::InsertPointGuard Guard(Builder);
-    auto *Inst = dyn_cast<Instruction>(GEP);
-    if (RewriteGEPs && Inst)
-      Builder.SetInsertPoint(Inst);
+    Value *Offset;
+    {
+      // Expand the offset at the point of the previous GEP to enable rewriting.
+      // However, use the original insertion point for calculating Sum.
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      auto *Inst = dyn_cast<Instruction>(GEP);
+      if (RewriteGEPs && Inst)
+        Builder.SetInsertPoint(Inst);
 
-    Value *Offset = llvm::emitGEPOffset(&Builder, DL, GEP);
-    if (Offset->getType() != IdxTy)
-      Offset = Builder.CreateVectorSplat(
-          cast<VectorType>(IdxTy)->getElementCount(), Offset);
-    if (GEP->hasOneUse()) {
-      // Offsets of one-use GEPs will be merged into the next multi-use GEP.
-      OneUseSum = Add(OneUseSum, Offset);
-      OneUseFlags = OneUseFlags.intersectForOffsetAdd(GEP->getNoWrapFlags());
-      if (!OneUseBase)
-        OneUseBase = GEP->getPointerOperand();
-      continue;
-    }
+      Offset = llvm::emitGEPOffset(&Builder, DL, GEP);
+      if (Offset->getType() != IdxTy)
+        Offset = Builder.CreateVectorSplat(
+            cast<VectorType>(IdxTy)->getElementCount(), Offset);
+      if (GEP->hasOneUse()) {
+        // Offsets of one-use GEPs will be merged into the next multi-use GEP.
+        OneUseSum = Add(OneUseSum, Offset);
+        OneUseFlags = OneUseFlags.intersectForOffsetAdd(GEP->getNoWrapFlags());
+        if (!OneUseBase)
+          OneUseBase = GEP->getPointerOperand();
+        continue;
+      }
 
-    if (OneUseSum)
-      Offset = Add(OneUseSum, Offset);
+      if (OneUseSum)
+        Offset = Add(OneUseSum, Offset);
 
-    // Rewrite the GEP to reuse the computed offset. This also includes offsets
-    // from preceding one-use GEPs.
-    if (RewriteGEPs && Inst &&
-        !(GEP->getSourceElementType()->isIntegerTy(8) &&
-          GEP->getOperand(1) == Offset)) {
-      replaceInstUsesWith(
-          *Inst,
-          Builder.CreatePtrAdd(
-              OneUseBase ? OneUseBase : GEP->getPointerOperand(), Offset, "",
-              OneUseFlags.intersectForOffsetAdd(GEP->getNoWrapFlags())));
-      eraseInstFromFunction(*Inst);
+      // Rewrite the GEP to reuse the computed offset. This also includes
+      // offsets from preceding one-use GEPs.
+      if (RewriteGEPs && Inst &&
+          !(GEP->getSourceElementType()->isIntegerTy(8) &&
+            GEP->getOperand(1) == Offset)) {
+        replaceInstUsesWith(
+            *Inst,
+            Builder.CreatePtrAdd(
+                OneUseBase ? OneUseBase : GEP->getPointerOperand(), Offset, "",
+                OneUseFlags.intersectForOffsetAdd(GEP->getNoWrapFlags())));
+        eraseInstFromFunction(*Inst);
+      }
     }
 
     Sum = Add(Sum, Offset);

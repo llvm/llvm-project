@@ -998,6 +998,29 @@ define i64 @multiple_geps_two_chains_partial_multi_use(ptr %base, i64 %idx1, i64
   ret i64 %d
 }
 
+define i64 @multiple_geps_two_chains_partial_multi_use_insert_point(ptr %p, i64 %idx1, i64 %idx2, i64 %idx3) {
+; CHECK-LABEL: @multiple_geps_two_chains_partial_multi_use_insert_point(
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 8
+; CHECK-NEXT:    call void @use(ptr [[GEP2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[IDX2:%.*]], [[IDX3:%.*]]
+; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr i8, ptr [[GEP2]], i64 [[TMP1]]
+; CHECK-NEXT:    call void @use(ptr [[GEP4]])
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 8
+; CHECK-NEXT:    [[GEPDIFF:%.*]] = sub i64 [[IDX1:%.*]], [[TMP2]]
+; CHECK-NEXT:    ret i64 [[GEPDIFF]]
+;
+  %gep1 = getelementptr i8, ptr %p, i64 %idx1
+  %gep2 = getelementptr i8, ptr %p, i64 8
+  call void @use(ptr %gep2)
+  %gep3 = getelementptr i8, ptr %gep2, i64 %idx2
+  %gep4 = getelementptr i8, ptr %gep3, i64 %idx3
+  call void @use(ptr %gep4)
+  %gep1.int = ptrtoint ptr %gep1 to i64
+  %gep4.int = ptrtoint ptr %gep4 to i64
+  %sub = sub i64 %gep1.int, %gep4.int
+  ret i64 %sub
+}
+
 define i64 @multiple_geps_inbounds(ptr %base, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @multiple_geps_inbounds(
 ; CHECK-NEXT:    [[D:%.*]] = add nsw i64 [[IDX:%.*]], [[IDX2:%.*]]
