@@ -157,6 +157,7 @@ Members of the LLVM Security Response Group are expected to:
 * Help write and review patches to address security issues.
 * Participate in the member nomination and removal processes.
 
+.. _security-group-discussion-medium:
 
 Discussion Medium
 =================
@@ -204,10 +205,9 @@ The LLVM Security Policy may be changed by majority vote of the LLVM Security Re
 What is considered a security issue?
 ====================================
 
-Below, with "security-sensitive", we mean that a discovered bug or vulnerability
-that might enable an exploit, may require coordinated disclosure, and therefore
-should be reported to the LLVM Security Response group rather than publishing in
-the public bug tracker.
+We define "security-sensitive" to mean that a discovered bug or vulnerability
+may require coordinated disclosure, and therefore should be reported to the LLVM
+Security Response group rather than publishing in the public bug tracker.
 
 The LLVM Project has a significant amount of code, and not all of it is
 considered security-sensitive. This is particularly true because LLVM is used in
@@ -223,15 +223,11 @@ community as for any RFC. In some cases, parts of the codebase could be handled
 as security-sensitive but need significant work to get to the stage where that's
 manageable. The LLVM community will need to decide whether it wants to invest in
 making these parts of the code securable, and maintain these security properties
-over time. In all cases the LLVM Security Response Group should be consulted,
-since they'll be responding to security issues filed against these parts of the
-codebase.
+over time. In all cases the LLVM Security Response Group
+`should be consulted <security-group-discussion-medium_>`__, since they'll be
+responding to security issues filed against these parts of the codebase.
 
-The security-sensitive parts of the LLVM Project currently are the following.
-Note that this list can change over time. If you're not sure whether an issue is
-in-scope for this security process or not, err towards assuming that it is. The
-Security Response Group might agree or disagree and will explain its rationale
-in the report, as well as update this document through the above process.
+The security-sensitive parts of the LLVM Project currently are the following:
 
 * Code generation: most miscompilations are not security sensitive. However, a
   miscompilation where there are clear indications that it can result in the
@@ -241,17 +237,17 @@ in the report, as well as update this document through the above process.
   security-sensitive. The parts that are not considered security-sensitive are
   documented below.
 
-The parts of the LLVM Project which are currently treated as non-security
-sensitive are the following. Note that this list can change over time.
+The following parts of the LLVM Project are currently treated as non-security
+sensitive:
 
 * LLVM's language frontends, analyzers, optimizers, and code generators for
   which a malicious input can cause undesirable behavior. For example, a
-  maliciously crafted C, Rust or bitcode input file can cause arbitrary code
-  to execute in LLVM. These parts of LLVM haven't been hardened, and handling
+  maliciously crafted C, Rust or bitcode input file can cause arbitrary code to
+  execute in LLVM. These parts of LLVM haven't been hardened, and handling
   untrusted code usually also includes running utilities such as make which can
-  more readily perform malicious things. For example, vulnerabilities in
-  clang, clangd, or the LLVM optimizer in a JIT caused by untrusted inputs are
-  outside of the scope. We recommend the use of an external sandbox in those
+  more readily perform malicious things. For example, vulnerabilities in clang,
+  clangd, or the LLVM optimizer in a JIT caused by untrusted inputs are not
+  security-sensitive. We recommend the use of an external sandbox in those
   cases.
 * The following parts of the run-time libraries are explicitly not considered
   security-sensitive:
@@ -267,6 +263,12 @@ sensitive are the following. Note that this list can change over time.
   * unwinding and exception handling: the implementations are not hardened
     against malformed or malicious unwind or exception handling data. This is
     not considered security sensitive.
+
+Note that both the explicit security-sensitive and explicit non-security
+sensitive lists can change over time. If you're not sure whether an issue is
+in-scope for this security process or not, err towards assuming that it is. The
+Security Response Group might agree or disagree and will explain its rationale
+in the report, as well as update this document through the above process.
 
 .. _CVE process: https://cve.mitre.org
 .. _report a vulnerability: https://github.com/llvm/llvm-security-repo/security/advisories/new
