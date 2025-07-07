@@ -632,7 +632,7 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
 bool VPlanTransforms::handleFMaxReductionsWithoutFastMath(VPlan &Plan) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPReductionPHIRecipe *RedPhiR = nullptr;
-  VPRecipeWithIRFlags *MinMaxOp = nullptr;
+  VPRecipeWithIRFlags *MaxOp = nullptr;
   VPWidenIntOrFpInductionRecipe *WideIV = nullptr;
 
   // Check if there are any FCmpOGTSelect reductions using wide selects that we
@@ -669,9 +669,9 @@ bool VPlanTransforms::handleFMaxReductionsWithoutFastMath(VPlan &Plan) {
         !(RepR && (isa<SelectInst>(RepR->getUnderlyingInstr()))))
       return false;
 
-    MinMaxOp = cast<VPRecipeWithIRFlags>(Inc);
-    auto *Cmp = cast<VPRecipeWithIRFlags>(MinMaxOp->getOperand(0));
-    if (MinMaxOp->getOperand(1) == RedPhiR ||
+    MaxOp = cast<VPRecipeWithIRFlags>(Inc);
+    auto *Cmp = cast<VPRecipeWithIRFlags>(MaxOp->getOperand(0));
+    if (MaxOp->getOperand(1) == RedPhiR ||
         !CmpInst::isStrictPredicate(Cmp->getPredicate()))
       return false;
   }
@@ -701,9 +701,9 @@ bool VPlanTransforms::handleFMaxReductionsWithoutFastMath(VPlan &Plan) {
   auto *IdxPhi = new VPReductionPHIRecipe(nullptr, RecurKind::FindFirstIVUMin,
                                           *UMinSentinel, false, false, 1);
   IdxPhi->insertBefore(RedPhiR);
-  auto *MinIdxSel = new VPInstruction(
-      Instruction::Select, {MinMaxOp->getOperand(0), WideIV, IdxPhi});
-  MinIdxSel->insertAfter(MinMaxOp);
+  auto *MinIdxSel = new VPInstruction(Instruction::Select,
+                                      {MaxOp->getOperand(0), WideIV, IdxPhi});
+  MinIdxSel->insertAfter(MaxOp);
   IdxPhi->addOperand(MinIdxSel);
 
   // Find the first index of with the maximum value. This is used to extract the
