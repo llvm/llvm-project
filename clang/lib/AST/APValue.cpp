@@ -187,14 +187,14 @@ APValue::LValueBase::operator bool () const {
 clang::APValue::LValueBase
 llvm::DenseMapInfo<clang::APValue::LValueBase>::getEmptyKey() {
   clang::APValue::LValueBase B;
-  B.Ptr = DenseMapInfo<clang::APValue::LValueBase::PtrTy>::getEmptyKey();
+  B.Ptr = DenseMapInfo<const ValueDecl*>::getEmptyKey();
   return B;
 }
 
 clang::APValue::LValueBase
 llvm::DenseMapInfo<clang::APValue::LValueBase>::getTombstoneKey() {
   clang::APValue::LValueBase B;
-  B.Ptr = DenseMapInfo<clang::APValue::LValueBase::PtrTy>::getTombstoneKey();
+  B.Ptr = DenseMapInfo<const ValueDecl*>::getTombstoneKey();
   return B;
 }
 

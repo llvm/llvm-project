@@ -56,13 +56,30 @@ struct DenseMapInfo {
   //static bool isEqual(const T &LHS, const T &RHS);
 };
 
-template <typename T> struct DenseMapInfo<T *> {
+// Provide DenseMapInfo for all pointers. Come up with sentinel pointer values
+// that are aligned to alignof(T) bytes, but try to avoid requiring T to be
+// complete. This allows clients to instantiate DenseMap<T*, ...> with forward
+// declared key types. Assume that no pointer key type requires more than 4096
+// bytes of alignment.
+template<typename T>
+struct DenseMapInfo<T*> {
+  // The following should hold, but it would require T to be complete:
+  // static_assert(alignof(T) <= (1 << Log2MaxAlign),
+  //               "DenseMap does not support pointer keys requiring more than "
+  //               "Log2MaxAlign bits of alignment");
+  static constexpr uintptr_t Log2MaxAlign = 12;
+
   static inline T* getEmptyKey() {
-    // We assume that raw pointers do not carry alignment requirements.
-    return reinterpret_cast<T *>(-1);
+    uintptr_t Val = static_cast<uintptr_t>(-1);
+    Val <<= Log2MaxAlign;
+    return reinterpret_cast<T*>(Val);
   }
 
-  static inline T *getTombstoneKey() { return reinterpret_cast<T *>(-2); }
+  static inline T* getTombstoneKey() {
+    uintptr_t Val = static_cast<uintptr_t>(-2);
+    Val <<= Log2MaxAlign;
+    return reinterpret_cast<T*>(Val);
+  }
 
   static unsigned getHashValue(const T *PtrVal) {
     return (unsigned((uintptr_t)PtrVal) >> 4) ^
