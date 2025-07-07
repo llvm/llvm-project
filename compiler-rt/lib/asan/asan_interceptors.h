@@ -68,7 +68,7 @@ void InitializePlatformInterceptors();
 # define ASAN_INTERCEPT_SWAPCONTEXT 0
 #endif
 
-// // AIX currently can't retrieve the address of siglongjmp
+// AIX currently can't retrieve the address of siglongjmp
 #  if !SANITIZER_WINDOWS && !SANITIZER_AIX
 #    define ASAN_INTERCEPT_SIGLONGJMP 1
 #  else
