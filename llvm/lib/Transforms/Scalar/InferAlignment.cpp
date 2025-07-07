@@ -15,6 +15,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -65,7 +66,41 @@ bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
             KnownBits Known = computeKnownBits(PtrOp, DL, &AC, &I, &DT);
             unsigned TrailZ = std::min(Known.countMinTrailingZeros(),
                                        +Value::MaxAlignmentExponent);
-            return Align(1ull << std::min(Known.getBitWidth() - 1, TrailZ));
+            Align NewAlign =
+                Align(1ull << std::min(Known.getBitWidth() - 1, TrailZ));
+
+            // add align_offset metadata
+            Align BetterAlign = std::max(NewAlign, OldAlign);
+            if (BetterAlign < PrefAlign) {
+              if (auto *GEP = dyn_cast<GetElementPtrInst>(PtrOp);
+                  GEP && !GEP->getMetadata(LLVMContext::MD_align_offset)) {
+                APInt OffsetAccumulated =
+                    APInt(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
+                if (GEP->accumulateConstantOffset(DL, OffsetAccumulated)) {
+                  KnownBits SplitKnown = KnownBits::add(
+                      Known, KnownBits::makeConstant(APInt(
+                                 Known.getBitWidth(), BetterAlign.value())));
+                  unsigned TrailZ = std::min(SplitKnown.countMinTrailingZeros(),
+                                             +Value::MaxAlignmentExponent);
+                  Align ExpandAlign =
+                      Align(1ull << std::min(Known.getBitWidth() - 1, TrailZ));
+                  if (ExpandAlign > BetterAlign) {
+                    KnownBits BaseKnown = KnownBits::sub(
+                        Known, KnownBits::makeConstant(OffsetAccumulated));
+                    unsigned TrailZ =
+                        std::min(BaseKnown.countMinTrailingZeros(),
+                                 +Value::MaxAlignmentExponent);
+                    Align BaseAlignment = Align(
+                        1ull << std::min(BaseKnown.getBitWidth() - 1, TrailZ));
+                    MDBuilder MDB(GEP->getContext());
+                    llvm::MDNode *AONode =
+                        MDB.createAlignOffset(BaseAlignment, OffsetAccumulated);
+                    GEP->setMetadata(LLVMContext::MD_align_offset, AONode);
+                  }
+                }
+              }
+            }
+            return NewAlign;
           });
     }
   }

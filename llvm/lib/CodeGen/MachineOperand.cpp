@@ -1136,7 +1136,10 @@ void MachineMemOperand::refineAlignment(const MachineMemOperand *MMO) {
 /// getAlign - Return the minimum known alignment in bytes of the
 /// actual memory reference.
 Align MachineMemOperand::getAlign() const {
-  return commonAlignment(getBaseAlign(), getOffset());
+  return getAlignOffset()
+             ? commonAlignment(getAlignOffset()->first,
+                               getAlignOffset()->second + getOffset())
+             : commonAlignment(getBaseAlign(), getOffset());
 }
 
 void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,

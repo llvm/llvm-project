@@ -20,7 +20,9 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Value.h" // PointerLikeTypeTraits<Value*>
@@ -49,11 +51,22 @@ struct MachinePointerInfo {
   unsigned AddrSpace = 0;
 
   uint8_t StackID;
+  std::optional<std::pair<Align, int64_t>> AlignOffset = std::nullopt;
 
   explicit MachinePointerInfo(const Value *v, int64_t offset = 0,
                               uint8_t ID = 0)
       : V(v), Offset(offset), StackID(ID) {
     AddrSpace = v ? v->getType()->getPointerAddressSpace() : 0;
+    if (v && isa<Instruction>(v)) {
+      auto *I = cast<Instruction>(v);
+      if (auto *MDAO = I->getMetadata(LLVMContext::MD_align_offset)) {
+        Align Al(
+            mdconst::extract<ConstantInt>(MDAO->getOperand(0))->getZExtValue());
+        int64_t Offset =
+            mdconst::extract<ConstantInt>(MDAO->getOperand(1))->getSExtValue();
+        AlignOffset = std::make_pair(Al, Offset);
+      }
+    }
   }
 
   explicit MachinePointerInfo(const PseudoSourceValue *v, int64_t offset = 0,
@@ -233,6 +246,9 @@ public:
   /// For PseudoSourceValue::FPRel values, this is the FrameIndex number.
   int64_t getOffset() const { return PtrInfo.Offset; }
 
+  std::optional<std::pair<Align, int64_t>> getAlignOffset() const {
+    return PtrInfo.AlignOffset;
+  }
   unsigned getAddrSpace() const { return PtrInfo.getAddrSpace(); }
 
   /// Return the memory type of the memory reference. This should only be relied
