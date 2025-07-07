@@ -216,6 +216,20 @@ void foo9(double a, double b) {
 // OGCG: store double %[[TMP_A]], ptr %[[C_REAL_PTR]], align 8
 // OGCG: store double %[[TMP_B]], ptr %[[C_IMAG_PTR]], align 8
 
+void foo10() {
+  double _Complex c;
+  double *realPtr = &__real__ c;
+}
+
+// CIR: %[[COMPLEX:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["c"]
+// CIR: %[[REAL_PTR:.*]] = cir.complex.real_ptr %[[COMPLEX]] : !cir.ptr<!cir.complex<!cir.double>> -> !cir.ptr<!cir.double>
+
+// LLVM: %[[COMPLEX:.*]] = alloca { double, double }, i64 1, align 8
+// LLVM: %[[REAL_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[COMPLEX]], i32 0, i32 0
+
+// OGCG: %[[COMPLEX:.*]] = alloca { double, double }, align 8
+// OGCG: %[[REAL_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[COMPLEX]], i32 0, i32 0
+
 void foo12() {
   double _Complex c;
   double imag = __imag__ c;
