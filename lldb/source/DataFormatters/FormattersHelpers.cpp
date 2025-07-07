@@ -146,7 +146,7 @@ void lldb_private::formatters::DumpCxxSmartPtrPointerSummary(
     stream.Printf("ptr = 0x%" PRIx64, ptr.GetValueAsUnsigned(0));
 }
 
-bool lldb_private::formatters::CxxContainerSummaryProvider(
+bool lldb_private::formatters::ContainerSizeSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   return FormatEntity::FormatStringRef("size=${svar%#}", stream, nullptr,
                                        nullptr, nullptr, &valobj, false, false);

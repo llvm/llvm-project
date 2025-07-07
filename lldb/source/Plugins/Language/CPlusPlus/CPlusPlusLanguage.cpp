@@ -1016,15 +1016,15 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
   AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::CxxContainerSummaryProvider,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
                 "libc++ std::bitset summary provider",
                 "^std::__[[:alnum:]]+::bitset<.+>$", stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::CxxContainerSummaryProvider,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
                 "libc++ std::vector summary provider",
                 "^std::__[[:alnum:]]+::vector<.+>$", stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::CxxContainerSummaryProvider,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
                 "libc++ std::valarray summary provider",
                 "^std::__[[:alnum:]]+::valarray<.+>$", stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
@@ -1033,16 +1033,16 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "^std::__[[:alnum:]]+::slice_array<.+>$", stl_summary_flags,
                 true);
   AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::CxxContainerSummaryProvider,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
                 "libc++ summary provider for the valarray proxy arrays",
                 "^std::__[[:alnum:]]+::(gslice|mask|indirect)_array<.+>$",
                 stl_summary_flags, true);
   AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::CxxContainerSummaryProvider,
+      cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
       "libc++ std::list summary provider",
       "^std::__[[:alnum:]]+::forward_list<.+>$", stl_summary_flags, true);
   AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::CxxContainerSummaryProvider,
+      cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
       "libc++ std::list summary provider",
       // A POSIX variant of: "^std::__(?!cxx11:)[[:alnum:]]+::list<.+>$"
       // so that it does not clash with: "^std::(__cxx11::)?list<.+>$"
@@ -1050,35 +1050,35 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "cxx11[[:alnum:]])[[:alnum:]]*::list<.+>$",
       stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::CxxContainerSummaryProvider,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
                 "libc++ std::map summary provider",
                 "^std::__[[:alnum:]]+::map<.+>$", stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::CxxContainerSummaryProvider,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
                 "libc++ std::deque summary provider",
                 "^std::__[[:alnum:]]+::deque<.+>$", stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::CxxContainerSummaryProvider,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
                 "libc++ std::queue summary provider",
                 "^std::__[[:alnum:]]+::queue<.+>$", stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::CxxContainerSummaryProvider,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
                 "libc++ std::set summary provider",
                 "^std::__[[:alnum:]]+::set<.+>$", stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::CxxContainerSummaryProvider,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
                 "libc++ std::multiset summary provider",
                 "^std::__[[:alnum:]]+::multiset<.+>$", stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::CxxContainerSummaryProvider,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
                 "libc++ std::multimap summary provider",
                 "^std::__[[:alnum:]]+::multimap<.+>$", stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::CxxContainerSummaryProvider,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
                 "libc++ std::unordered containers summary provider",
                 "^std::__[[:alnum:]]+::unordered_(multi)?(map|set)<.+> >$",
                 stl_summary_flags, true);
-  AddCXXSummary(cpp_category_sp, CxxContainerSummaryProvider,
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
                 "libc++ std::tuple summary provider",
                 "^std::__[[:alnum:]]+::tuple<.*>$", stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
@@ -1094,7 +1094,7 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "libc++ std::variant summary provider",
                 "^std::__[[:alnum:]]+::variant<.+>$", stl_summary_flags, true);
   AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::CxxContainerSummaryProvider,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
                 "libc++ std::span summary provider",
                 "^std::__[[:alnum:]]+::span<.+>$", stl_summary_flags, true);
 
@@ -1458,48 +1458,48 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   stl_summary_flags.SetSkipPointers(false);
 
   AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::CxxContainerSummaryProvider,
+      cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
       "libstdc++ std::bitset summary provider",
       "^std::(__debug::)?bitset<.+>(( )?&)?$", stl_summary_flags, true);
 
   AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::CxxContainerSummaryProvider,
+      cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
       "libstdc++ std::vector summary provider",
       "^std::(__debug::)?vector<.+>(( )?&)?$", stl_summary_flags, true);
 
   AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::CxxContainerSummaryProvider,
+      cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
       "libstdc++ std::map summary provider",
       "^std::(__debug::)?map<.+> >(( )?&)?$", stl_summary_flags, true);
 
   AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::CxxContainerSummaryProvider,
+      cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
       "libstdc++ std::set summary provider",
       "^std::(__debug::)?set<.+> >(( )?&)?$", stl_summary_flags, true);
 
   AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::CxxContainerSummaryProvider,
+      cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
       "libstdc++ std::deque summary provider",
       "^std::(__debug::)?deque<.+>(( )?&)?$", stl_summary_flags, true);
 
   AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::CxxContainerSummaryProvider,
+      cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
       "libstdc++ std::multimap summary provider",
       "^std::(__debug::)?multimap<.+> >(( )?&)?$", stl_summary_flags, true);
 
   AddCXXSummary(
-      cpp_category_sp, lldb_private::formatters::CxxContainerSummaryProvider,
+      cpp_category_sp, lldb_private::formatters::ContainerSizeSummaryProvider,
       "libstdc++ std::multiset summary provider",
       "^std::(__debug::)?multiset<.+> >(( )?&)?$", stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::CxxContainerSummaryProvider,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
                 "libstdc++ std unordered container summary provider",
                 "^std::(__debug::)?unordered_(multi)?(map|set)<.+> >$",
                 stl_summary_flags, true);
 
   AddCXXSummary(cpp_category_sp,
-                lldb_private::formatters::CxxContainerSummaryProvider,
+                lldb_private::formatters::ContainerSizeSummaryProvider,
                 "libstdc++ std::list summary provider",
                 "^std::((__debug::)?|(__cxx11::)?)list<.+>(( )?&)?$",
                 stl_summary_flags, true);
