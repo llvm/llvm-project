@@ -15,7 +15,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -83,12 +82,6 @@ bool MachObjectWriter::doesSymbolRequireExternRelocation(const MCSymbol &S) {
 bool MachObjectWriter::
 MachSymbolData::operator<(const MachSymbolData &RHS) const {
   return Symbol->getName() < RHS.Symbol->getName();
-}
-
-bool MachObjectWriter::isFixupKindPCRel(const MCAssembler &Asm, unsigned Kind) {
-  MCFixupKindInfo FKI = Asm.getBackend().getFixupKindInfo((MCFixupKind)Kind);
-
-  return FKI.Flags & MCFixupKindInfo::FKF_IsPCRel;
 }
 
 uint64_t
