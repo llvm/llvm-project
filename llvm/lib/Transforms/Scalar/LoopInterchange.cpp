@@ -430,7 +430,7 @@ public:
                                   LoopStandardAnalysisResults *AR,
                                   DependenceInfo *DI)
       : OutermostLoop(OutermostLoop), AR(AR), DI(DI) {}
-  std::unique_ptr<CacheCost> &getCacheCost();
+  CacheCost *getCacheCost();
   const DenseMap<const Loop *, unsigned> &getCostMap();
 };
 
@@ -451,8 +451,7 @@ public:
 private:
   int getInstrOrderCost();
   std::optional<bool> isProfitablePerLoopCacheAnalysis(
-      const DenseMap<const Loop *, unsigned> &CostMap,
-      std::unique_ptr<CacheCost> &CC);
+      const DenseMap<const Loop *, unsigned> &CostMap, CacheCost *CC);
   std::optional<bool> isProfitablePerInstrOrderCost();
   std::optional<bool> isProfitableForVectorization(unsigned InnerLoopId,
                                                    unsigned OuterLoopId,
@@ -1155,9 +1154,9 @@ void LoopInterchangeCacheCostManager::computeIfUnitinialized() {
       CostMap[Cost.first] = Idx;
 }
 
-std::unique_ptr<CacheCost> &LoopInterchangeCacheCostManager::getCacheCost() {
+CacheCost *LoopInterchangeCacheCostManager::getCacheCost() {
   computeIfUnitinialized();
-  return *CC;
+  return CC->get();
 }
 
 const DenseMap<const Loop *, unsigned> &
@@ -1221,8 +1220,7 @@ int LoopInterchangeProfitability::getInstrOrderCost() {
 
 std::optional<bool>
 LoopInterchangeProfitability::isProfitablePerLoopCacheAnalysis(
-    const DenseMap<const Loop *, unsigned> &CostMap,
-    std::unique_ptr<CacheCost> &CC) {
+    const DenseMap<const Loop *, unsigned> &CostMap, CacheCost *CC) {
   // This is the new cost model returned from loop cache analysis.
   // A smaller index means the loop should be placed an outer loop, and vice
   // versa.
@@ -1305,7 +1303,7 @@ bool LoopInterchangeProfitability::isProfitable(
   for (RuleTy RT : Profitabilities) {
     switch (RT) {
     case RuleTy::PerLoopCacheAnalysis: {
-      std::unique_ptr<CacheCost> &CC = LICCM.getCacheCost();
+      CacheCost *CC = LICCM.getCacheCost();
       const DenseMap<const Loop *, unsigned> &CostMap = LICCM.getCostMap();
       shouldInterchange = isProfitablePerLoopCacheAnalysis(CostMap, CC);
       break;
