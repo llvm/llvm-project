@@ -34,11 +34,7 @@ entry:
   ret void
 }
 
-!llvm.module.flags = !{!12}
-!llvm.ident = !{!13}
-!spirv.EntryPoint = !{}
 !spirv.ExecutionMode = !{!17, !18, !19, !20, !21, !22, !23, !24, !25, !26}
-
 
 ; CHECK: OpEntryPoint Kernel %[[#KERNEL_HALF:]] "k_float_controls_half"
 !0 = !{ptr @k_float_controls_half, !"k_float_controls_half", !6, i32 0, !6, !7, !8, i32 0, i32 0}
@@ -60,9 +56,6 @@ entry:
 !6 = !{i32 2, i32 2}
 !7 = !{i32 32, i32 36}
 !8 = !{i32 0, i32 0}
-!12 = !{i32 1, !"wchar_size", i32 4}
-!13 = !{!"clang version 8.0.1"}
-!14 = !{i32 1, i32 0}
 
 ; CHECK-DAG: OpExecutionMode %[[#KERNEL_HALF]] FPFastMathDefault %[[#HALF_TYPE:]] 1 
 !17 = !{ptr @k_float_controls_half, i32 6028, half poison, i32 1}

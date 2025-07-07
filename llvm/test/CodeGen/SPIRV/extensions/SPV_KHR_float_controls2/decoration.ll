@@ -87,12 +87,6 @@ entry:
   ret void
 }
 
-!llvm.module.flags = !{!12}
-!llvm.ident = !{!13}
-!spirv.EntryPoint = !{}
-
 !3 = !{!5, !4}
 !4 = !{i32 42} ; 42 is NoContraction decoration
 !5 = !{i32 40, i32 393216} ; 40 is FPFastMathMode
-!12 = !{i32 1, !"wchar_size", i32 4}
-!13 = !{!"clang version 8.0.1"}
