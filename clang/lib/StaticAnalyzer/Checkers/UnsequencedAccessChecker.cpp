@@ -26,22 +26,6 @@ using namespace ento;
 using StmtVec = llvm::SmallVector<const Stmt*>;
 
 namespace {
-class UnsequencedAccessChecker
-    : public Checker<check::Location> {
-
-    static StmtVec getAllASTAncestors(const Stmt* CurrentS,
-                                      const StackFrameContext* CurrentFrame,
-                                      ParentMapContext& ParentMap);
-    static const Stmt* findCommonAncestor(const StmtVec& A, const StmtVec& B);
-
-    void reportBug(CheckerContext& C, const Stmt* A, const Stmt* B) const;
-
-    BugType BT{this, "Unsequenced-access", categories::LogicError};
-
-public:
-    void checkLocation(SVal Location, bool isLoad, const Stmt *S,
-                       CheckerContext &C) const;
-};
 
 class AccessStmt {
     llvm::PointerIntPair<const Stmt*, 1, bool> StmtAndIsStore;
@@ -74,6 +58,26 @@ bool operator<(const AccessStmt& A, const AccessStmt& B) {
             (A.getStmt() == B.getStmt() && A.getFrame() < B.getFrame())));
 }
 
+class UnsequencedAccessChecker
+    : public Checker<check::Location> {
+
+    static StmtVec getAllASTAncestors(const Stmt* CurrentS,
+                                      const StackFrameContext* CurrentFrame,
+                                      ParentMapContext& ParentMap);
+    static const Stmt* findCommonAncestor(const StmtVec& A, const StmtVec& B);
+
+    void checkCommonAncestor(const Stmt* Common, AccessStmt A, AccessStmt B,
+                             CheckerContext& C) const;
+
+    void reportBug(CheckerContext& C, const Stmt* Common, AccessStmt A,
+                   AccessStmt B) const;
+
+    BugType BT{this, "Unsequenced-access", categories::LogicError};
+
+public:
+    void checkLocation(SVal Location, bool isLoad, const Stmt *S,
+                       CheckerContext &C) const;
+};
 } // namespace
 
 REGISTER_SET_FACTORY_WITH_PROGRAMSTATE(AccessStmtSet, AccessStmt);
@@ -134,11 +138,8 @@ void UnsequencedAccessChecker::checkLocation(
                     break;
                 }
 
-                if (const auto* BO = dyn_cast<BinaryOperator>(Common)) {
-                    if (BO->isAdditiveOp()) {
-                        reportBug(C, S, AS.getStmt());
-                    }
-                }
+                checkCommonAncestor(Common, AccessStmt(S, !isLoad, C.getStackFrame()), AS, C);
+
             }
         }
         AccessStmtSet Updated =
@@ -171,10 +172,36 @@ const Stmt* UnsequencedAccessChecker::findCommonAncestor(const StmtVec& A,
     return A[A.size() - (I - 1)];
 }
 
-void UnsequencedAccessChecker::reportBug(CheckerContext& C, const Stmt* A,
-                                         const Stmt* B) const {
+void UnsequencedAccessChecker::checkCommonAncestor(
+        const Stmt* Common, AccessStmt A, AccessStmt B,
+        CheckerContext& C) const {
+
+    if (const auto* BO = dyn_cast<BinaryOperator>(Common)) {
+        if (BO->isAdditiveOp()) {
+            reportBug(C, Common, A, B);
+        }
+    }
+
+    if (const auto* CE = dyn_cast<CallExpr>(Common)) {
+        reportBug(C, Common, A, B);
+    }
+}
+
+void UnsequencedAccessChecker::reportBug(CheckerContext& C, const Stmt* Common,
+                                         AccessStmt A, AccessStmt B) const {
     if (ExplodedNode* N = C.generateErrorNode()) {
-        auto BR = std::make_unique<PathSensitiveBugReport>(BT, "hello", N);
+        auto BR = std::make_unique<PathSensitiveBugReport>(BT,
+                A.isStore() ? "unsequenced write to variable" 
+                            : "unsequenced read from variable", N);
+
+        PathDiagnosticLocation BLoc(B.getStmt(), C.getSourceManager(),
+                                    C.getLocationContext());
+        BR->addNote(B.isStore() ? "variable is written to here" 
+                                : "variable is read from here", BLoc);
+
+        PathDiagnosticLocation CommLoc(Common, C.getSourceManager(),
+                                       C.getLocationContext());
+        BR->addNote("unsequenced expression here", CommLoc);
         C.emitReport(std::move(BR));
     }
 }
