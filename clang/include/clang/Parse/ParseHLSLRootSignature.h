@@ -197,9 +197,9 @@ private:
 private:
   llvm::dxbc::RootSignatureVersion Version;
   SmallVector<llvm::hlsl::rootsig::RootElement> &Elements;
-  clang::StringLiteral *Signature;
+  StringLiteral *Signature;
   RootSignatureLexer Lexer;
-  clang::Preprocessor &PP;
+  Preprocessor &PP;
 
   RootSignatureToken CurToken;
 };
