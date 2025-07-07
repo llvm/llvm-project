@@ -172,7 +172,7 @@ if(ENABLE_SHARED)
       # improve compatibility.
       set(UNPAINTED_TARGET_NAME "$<TARGET_FILE_DIR:libclang>/$<TARGET_FILE_PREFIX:libclang>clang$<TARGET_FILE_SUFFIX:libclang>")
       add_custom_command(TARGET libclang POST_BUILD
-                         COMMAND ${CMAKE_COMMAND} -E create_symlink "$<TARGET_FILE:libclang>" "${UNPAINTED_TARGET_NAME}")
+                         COMMAND ${CMAKE_COMMAND} -E create_symlink "$<TARGET_FILE_NAME:libclang>" "${UNPAINTED_TARGET_NAME}")
       install(FILES "${UNPAINTED_TARGET_NAME}" DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT libclang)
     endif()
     # Avoid declaring clang c++ symbols that are statically linked into libclang as dllimport'ed.
