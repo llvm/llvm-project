@@ -635,9 +635,9 @@ bool VPlanTransforms::handleFMaxReductionsWithoutFastMath(VPlan &Plan) {
   VPRecipeWithIRFlags *MinMaxOp = nullptr;
   VPWidenIntOrFpInductionRecipe *WideIV = nullptr;
 
-  // Check if there are any FMaxNoFMFs reductions using wide selects that we can
-  // fix up. To do so, we also need a  wide canonical IV to keep track of the
-  // indices of the max values.
+  // Check if there are any FCmpOGTSelect reductions using wide selects that we
+  // can fix up. To do so, we also need a  wide canonical IV to keep track of
+  // the indices of the max values.
   for (auto &R : LoopRegion->getEntryBasicBlock()->phis()) {
     // We need a wide canonical IV
     if (auto *CurIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
@@ -647,14 +647,14 @@ bool VPlanTransforms::handleFMaxReductionsWithoutFastMath(VPlan &Plan) {
       continue;
     }
 
-    // And a single FMaxNoFMFs reduction phi.
+    // And a single FCmpOGTSelect reduction phi.
     // TODO: Support FMin reductions as well.
     auto *CurRedPhiR = dyn_cast<VPReductionPHIRecipe>(&R);
     if (!CurRedPhiR)
       continue;
     if (RedPhiR)
       return false;
-    if (CurRedPhiR->getRecurrenceKind() != RecurKind::FMaxNoFMFs ||
+    if (CurRedPhiR->getRecurrenceKind() != RecurKind::FCmpOGTSelect ||
         CurRedPhiR->isInLoop() || CurRedPhiR->isOrdered())
       continue;
     RedPhiR = CurRedPhiR;

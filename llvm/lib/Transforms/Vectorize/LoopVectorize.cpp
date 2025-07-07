@@ -4348,10 +4348,8 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
   // currently unsupported.
   if (any_of(OrigLoop->getHeader()->phis(), [&](PHINode &Phi) {
         return Legal->isFixedOrderRecurrence(&Phi) ||
-               (Legal->isReductionVariable(&Phi) &&
-                Legal->getReductionVars()
-                        .find(&Phi)
-                        ->second.getRecurrenceKind() == RecurKind::FMaxNoFMFs);
+               Legal->getReductionVars().lookup(&Phi).getRecurrenceKind() ==
+                   RecurKind::FCmpOGTSelect;
       }))
     return false;
 

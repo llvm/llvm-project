@@ -819,7 +819,7 @@ RecurrenceDescriptor::isMinMaxPattern(Instruction *I, RecurKind Kind,
   if (match(I, m_OrdOrUnordFMin(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMin, I);
   if (match(I, m_OrdOrUnordFMax(m_Value(), m_Value())))
-    return InstDesc(Kind == RecurKind::FMax || Kind == RecurKind::FMaxNoFMFs,
+    return InstDesc(Kind == RecurKind::FMax || Kind == RecurKind::FCmpOGTSelect,
                     I);
   if (match(I, m_FMinNum(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMin, I);
@@ -947,9 +947,9 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
     if (isFPMinMaxRecurrenceKind(Kind)) {
       if (HasRequiredFMF())
         return isMinMaxPattern(I, Kind, Prev);
-      if ((Kind == RecurKind::FMax || Kind == RecurKind::FMaxNoFMFs) &&
+      if ((Kind == RecurKind::FMax || Kind == RecurKind::FCmpOGTSelect) &&
           isMinMaxPattern(I, Kind, Prev).isRecurrence())
-        return InstDesc(I, RecurKind::FMaxNoFMFs);
+        return InstDesc(I, RecurKind::FCmpOGTSelect);
     } else if (isFMulAddIntrinsic(I))
       return InstDesc(Kind == RecurKind::FMulAdd, I,
                       I->hasAllowReassoc() ? nullptr : I);
@@ -1213,7 +1213,7 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::UMin:
     return Instruction::ICmp;
   case RecurKind::FMax:
-  case RecurKind::FMaxNoFMFs:
+  case RecurKind::FCmpOGTSelect:
   case RecurKind::FMin:
   case RecurKind::FMaximum:
   case RecurKind::FMinimum:
