@@ -18,6 +18,7 @@
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/Casting.h"
 
 #define DEBUG_TYPE "dxil-post-optimization-validation"
 
@@ -83,6 +84,16 @@ static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
       PrevRI = CurrentRI;
     }
   }
+}
+
+static void reportTextureBoundInRs(Module &M, Twine Type,
+                                   ResourceInfo::ResourceBinding Binding) {
+  SmallString<128> Message;
+  raw_svector_ostream OS(Message);
+  OS << "register " << Type << " (space=" << Binding.Space
+     << ", register=" << Binding.LowerBound << ")"
+     << " is bound to a texture.";
+  M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
 static void reportRegNotBound(Module &M, Twine Type,
@@ -155,24 +166,40 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
 
     for (const ResourceInfo &CBuf : DRM.cbuffers()) {
       ResourceInfo::ResourceBinding Binding = CBuf.getBinding();
+
+      if (auto *TB = dyn_cast<TextureExtType>(CBuf.getHandleTy()))
+        reportTextureBoundInRs(M, "cbuffer", Binding);
+
       if (!Validation.checkCRegBinding(Binding))
         reportRegNotBound(M, "cbuffer", Binding);
     }
 
     for (const ResourceInfo &SRV : DRM.srvs()) {
       ResourceInfo::ResourceBinding Binding = SRV.getBinding();
+
+      if (auto *TB = dyn_cast<TextureExtType>(SRV.getHandleTy()))
+        reportTextureBoundInRs(M, "srv", Binding);
+
       if (!Validation.checkTRegBinding(Binding))
         reportRegNotBound(M, "srv", Binding);
     }
 
     for (const ResourceInfo &UAV : DRM.uavs()) {
       ResourceInfo::ResourceBinding Binding = UAV.getBinding();
+
+      if (auto *TB = dyn_cast<TextureExtType>(UAV.getHandleTy()))
+        reportTextureBoundInRs(M, "uav", Binding);
+
       if (!Validation.checkURegBinding(Binding))
         reportRegNotBound(M, "uav", Binding);
     }
 
     for (const ResourceInfo &Sampler : DRM.samplers()) {
       ResourceInfo::ResourceBinding Binding = Sampler.getBinding();
+
+      if (auto *TB = dyn_cast<TextureExtType>(Sampler.getHandleTy()))
+        reportTextureBoundInRs(M, "sampler", Binding);
+
       if (!Validation.checkSamplerBinding(Binding))
         reportRegNotBound(M, "sampler", Binding);
     }
