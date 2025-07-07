@@ -341,8 +341,8 @@ public:
                                              SMLoc Loc = SMLoc());
 
   static const MCBinaryExpr *createAdd(const MCExpr *LHS, const MCExpr *RHS,
-                                       MCContext &Ctx) {
-    return create(Add, LHS, RHS, Ctx);
+                                       MCContext &Ctx, SMLoc Loc = SMLoc()) {
+    return create(Add, LHS, RHS, Ctx, Loc);
   }
 
   static const MCBinaryExpr *createAnd(const MCExpr *LHS, const MCExpr *RHS,

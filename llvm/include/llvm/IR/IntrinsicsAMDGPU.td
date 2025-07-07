@@ -3504,10 +3504,35 @@ def int_amdgcn_ashr_pk_u8_i32 : ClangBuiltin<"__builtin_amdgcn_ashr_pk_u8_i32">,
 // gfx1250 intrinsics
 // ===----------------------------------------------------------------------===//
 
+def int_amdgcn_ds_atomic_async_barrier_arrive_b64 :
+  ClangBuiltin<"__builtin_amdgcn_ds_atomic_async_barrier_arrive_b64">,
+  Intrinsic<[], [local_ptr_ty],
+            // Atomically updates LDS and also ASYNC_CNT which is modeled as InaccessibleMem.
+            [IntrConvergent, IntrWillReturn, IntrInaccessibleMemOrArgMemOnly],
+            "", [SDNPMemOperand]>;
+
+def int_amdgcn_ds_atomic_barrier_arrive_rtn_b64 :
+  ClangBuiltin<"__builtin_amdgcn_ds_atomic_barrier_arrive_rtn_b64">,
+  Intrinsic<[llvm_i64_ty], [local_ptr_ty, llvm_i64_ty],
+            [IntrConvergent, IntrWillReturn, IntrArgMemOnly, NoCapture<ArgIndex<0>>],
+            "", [SDNPMemOperand]>;
+
 def int_amdgcn_s_monitor_sleep :
   ClangBuiltin<"__builtin_amdgcn_s_monitor_sleep">,
   DefaultAttrsIntrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem,
                                             IntrHasSideEffects]>;
+
+// llvm.amdgcn.cvt.f16.fp8 half vdst, int srcA, imm byte_sel [0..3]
+def int_amdgcn_cvt_f16_fp8 : ClangBuiltin<"__builtin_amdgcn_cvt_f16_fp8">,
+  DefaultAttrsIntrinsic<[llvm_half_ty],
+            [llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+
+// llvm.amdgcn.cvt.f16.bf8 half vdst, int srcA, imm byte_sel [0..3]
+def int_amdgcn_cvt_f16_bf8 : ClangBuiltin<"__builtin_amdgcn_cvt_f16_bf8">,
+  DefaultAttrsIntrinsic<[llvm_half_ty],
+            [llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 //===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend
@@ -3554,6 +3579,41 @@ def int_amdgcn_fdiv_fast : DefaultAttrsIntrinsic<
   [llvm_float_ty], [llvm_float_ty, llvm_float_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
+
+class AMDGPUTensorLoadStore:
+  Intrinsic<
+    [],
+    [llvm_v4i32_ty, // D# group 0
+     llvm_v8i32_ty, // D# group 1
+     llvm_v4i32_ty, // D# group 2
+     llvm_v4i32_ty, // D# group 3
+     llvm_i32_ty],  // cachepolicy:
+                    //   bits [0-2] = th
+                    //   bits [3-4] = scope
+    [IntrInaccessibleMemOrArgMemOnly, ImmArg<ArgIndex<4>>, IntrWillReturn, IntrConvergent, IntrNoCallback, IntrNoFree],
+    "", [SDNPMemOperand]
+  >;
+
+class AMDGPUTensorLoadStoreD2:
+  Intrinsic<
+    [],
+    [llvm_v4i32_ty,  // D# group 0
+     llvm_v8i32_ty,  // D# group 1
+     llvm_i32_ty],   // cachepolicy:
+                     //   bits [0-2] = th
+                     //   bits [3-4] = scope
+    [IntrInaccessibleMemOrArgMemOnly, ImmArg<ArgIndex<2>>, IntrWillReturn, IntrConvergent, IntrNoCallback, IntrNoFree],
+    "", [SDNPMemOperand]
+  >;
+
+def int_amdgcn_tensor_load_to_lds :
+  ClangBuiltin<"__builtin_amdgcn_tensor_load_to_lds">, AMDGPUTensorLoadStore;
+def int_amdgcn_tensor_store_from_lds :
+  ClangBuiltin<"__builtin_amdgcn_tensor_store_from_lds">, AMDGPUTensorLoadStore;
+def int_amdgcn_tensor_load_to_lds_d2 :
+  ClangBuiltin<"__builtin_amdgcn_tensor_load_to_lds_d2">, AMDGPUTensorLoadStoreD2;
+def int_amdgcn_tensor_store_from_lds_d2 :
+  ClangBuiltin<"__builtin_amdgcn_tensor_store_from_lds_d2">, AMDGPUTensorLoadStoreD2;
 
 /// Emit an addrspacecast without null pointer checking.
 /// Should only be inserted by a pass based on analysis of an addrspacecast's src.
