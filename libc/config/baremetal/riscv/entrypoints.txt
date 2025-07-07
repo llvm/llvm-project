@@ -218,6 +218,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.abort
     libc.src.stdlib.abs
     libc.src.stdlib.aligned_alloc
+    libc.src.stdlib.atexit
     libc.src.stdlib.atof
     libc.src.stdlib.atoi
     libc.src.stdlib.atol
