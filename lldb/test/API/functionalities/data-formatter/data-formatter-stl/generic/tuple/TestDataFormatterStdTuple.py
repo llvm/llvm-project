@@ -45,7 +45,7 @@ class TestDataFormatterStdTuple(TestBase):
         self.assertTrue(frame.IsValid())
 
         self.assertEqual(
-            1, frame.GetValueForVariablePath("one_elt[0]").GetValueAsUnsigned()
+            47, frame.GetValueForVariablePath("one_elt[0]").GetValueAsUnsigned()
         )
         self.assertFalse(frame.GetValueForVariablePath("one_elt[1]").IsValid())
 
@@ -58,10 +58,10 @@ class TestDataFormatterStdTuple(TestBase):
             1, frame.GetValueForVariablePath("three_elts[0]").GetValueAsUnsigned()
         )
         self.assertEqual(
-            '"baz"', frame.GetValueForVariablePath("three_elts[1]").GetSummary()
+            47, frame.GetValueForVariablePath("three_elts[1]").GetValueAsUnsigned()
         )
         self.assertEqual(
-            2, frame.GetValueForVariablePath("three_elts[2]").GetValueAsUnsigned()
+            '"foo"', frame.GetValueForVariablePath("three_elts[2]").GetSummary()
         )
         self.assertFalse(frame.GetValueForVariablePath("three_elts[3]").IsValid())
 
