@@ -1,5 +1,4 @@
-# RUN: llvm-mc -triple x86_64-pc-linux-gnu %s --validate-cfi --filetype=null 2>&1 \
-# RUN:   | FileCheck %s 
+# RUN: llvm-mc -triple x86_64-pc-linux-gnu %s --validate-cfi --filetype=null 2>&1 | FileCheck %s 
 # TODO: Should check no warnings are emitted but for now, the tool is naive and emitting warnings for every change.
         .text
         .type   _start,@function
