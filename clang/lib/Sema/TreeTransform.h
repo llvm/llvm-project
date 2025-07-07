@@ -4561,6 +4561,13 @@ bool TreeTransform<Derived>::TransformExprs(Expr *const *Inputs,
 template <typename Derived>
 Sema::ConditionResult TreeTransform<Derived>::TransformCondition(
     SourceLocation Loc, VarDecl *Var, Expr *Expr, Sema::ConditionKind Kind) {
+
+  EnterExpressionEvaluationContext Eval(
+      SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+      /*LambdaContextDecl=*/nullptr,
+      /*ExprContext=*/Sema::ExpressionEvaluationContextRecord::EK_Other,
+      /*ShouldEnter=*/Kind == Sema::ConditionKind::ConstexprIf);
+
   if (Var) {
     VarDecl *ConditionVar = cast_or_null<VarDecl>(
         getDerived().TransformDefinition(Var->getLocation(), Var));
