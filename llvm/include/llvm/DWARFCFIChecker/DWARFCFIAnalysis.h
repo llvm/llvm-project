@@ -44,7 +44,7 @@ namespace llvm {
 /// `DWARFCFIAnalysis` validates the DWARF Call Frame Information one machine
 /// instruction at a time. This class maintains an internal CFI state
 /// initialized with the prologue directives and updated with each instruction's
-/// associated directives. In each update, it checks if the machine 
+/// associated directives. In each update, it checks if the machine
 /// instruction changes the CFI state in a way that matches the changes
 /// from the CFI directives. This checking may results in errors and warnings.
 ///
