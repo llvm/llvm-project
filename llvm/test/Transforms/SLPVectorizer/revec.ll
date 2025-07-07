@@ -332,12 +332,12 @@ define void @test11(<2 x i64> %0, i64 %1, <2 x i64> %2) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> [[TMP0:%.*]], i64 [[TMP1:%.*]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i64> <i64 5, i64 0>, [[TMP2:%.*]]
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc <2 x i64> [[TMP4]] to <2 x i16>
-; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i16> @llvm.vector.insert.v4i16.v2i16(<4 x i16> poison, <2 x i16> [[TMP5]], i64 0)
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc <2 x i64> [[TMP3]] to <2 x i16>
-; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i16> @llvm.vector.insert.v4i16.v2i16(<4 x i16> [[TMP6]], <2 x i16> [[TMP7]], i64 2)
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc <4 x i16> [[TMP8]] to <4 x i8>
+; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i64> @llvm.vector.insert.v4i64.v2i64(<4 x i64> poison, <2 x i64> <i64 5, i64 0>, i64 0)
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i64> @llvm.vector.insert.v4i64.v2i64(<4 x i64> [[TMP4]], <2 x i64> zeroinitializer, i64 2)
+; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i64> @llvm.vector.insert.v4i64.v2i64(<4 x i64> poison, <2 x i64> [[TMP2:%.*]], i64 0)
+; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x i64> @llvm.vector.insert.v4i64.v2i64(<4 x i64> [[TMP6]], <2 x i64> [[TMP3]], i64 2)
+; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i64> [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc <4 x i64> [[TMP8]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <4 x i8> @llvm.vector.insert.v4i8.v2i8(<4 x i8> poison, <2 x i8> zeroinitializer, i64 0)
 ; CHECK-NEXT:    [[TMP11:%.*]] = call <4 x i8> @llvm.vector.insert.v4i8.v2i8(<4 x i8> [[TMP10]], <2 x i8> zeroinitializer, i64 2)
 ; CHECK-NEXT:    [[TMP12:%.*]] = urem <4 x i8> [[TMP9]], [[TMP11]]
