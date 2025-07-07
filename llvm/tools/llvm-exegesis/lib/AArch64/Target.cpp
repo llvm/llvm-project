@@ -39,7 +39,7 @@
 namespace llvm {
 namespace exegesis {
 
-static cl::opt<bool> AArch64DisablePacControl(
+static cl::opt<bool> AArch64KeepPacKeys(
     "aarch64-keep-pac-keys",
     cl::desc("Disable PAC key control at runtime for benchmarking. Use this if "
              "llvm-exegesis crashes or instruction timings are affected."),
@@ -56,7 +56,7 @@ static bool isPointerAuth(unsigned Opcode) {
   // different for these instructions,
   // Platform-specific handling:  On Linux, owing to the fact that disabling
   // keys can cause exegesis to crash, the user may pass
-  // --aarch64-keep-pack-keys in case we disable authentication to ensure
+  // --aarch64-keep-pac-keys in case we disable authentication to ensure
   // forward progress. On non-Linux platforms, disable opcodes for now.
   case AArch64::AUTIAZ:
   case AArch64::AUTIBZ:
@@ -232,7 +232,7 @@ private:
     if (isPointerAuth(Opcode)) {
 #if defined(__aarch64__) && defined(__linux__)
       // Only proceed with PAC key control if explicitly requested
-      if (!AArch64DisablePacControl) {
+      if (!AArch64KeepPacKeys) {
         // For some systems with existing PAC keys set, it is better to
         // check the existing state of the key before setting it.
         // If the CPU implements FEAT_FPAC,
@@ -240,7 +240,7 @@ private:
         // benchmarked, so disable all the keys by default. On the other hand,
         // disabling the keys at run-time can probably crash llvm-exegesis at
         // some later point, depending on how it was built. For that reason, the
-        // user may pass --aarch64-keep-pack-keys in case
+        // user may pass --aarch64-keep-pac-keys in case
         // llvm-exegesis crashes or instruction timings are affected.
         // Hence the guard for switching.
         errno = 0;
