@@ -19,6 +19,11 @@ if (!isPrBranch && actualTarget != upstreamBranch) {
 
 Boolean postsub = !isPrBranch && actualTarget == upstreamBranch && actualHead == upstreamBranch
 
+if (postsub && env.BRANCH_NAME != upstreamBranch) {
+    echo 'Pipeline postsub not supported for branch ' + env.BRANCH_NAME
+    return this
+}
+
 /**
  * Coerce Result enums to String, seems to
  * be required by CatchErrorStep.setStageResult()
@@ -26,7 +31,7 @@ Boolean postsub = !isPrBranch && actualTarget == upstreamBranch && actualHead ==
 String abortedResultStr = Result.ABORTED, failureResultStr = Result.FAILURE
 String notBuiltResultStr = Result.NOT_BUILT, successResultStr = Result.SUCCESS
 
-String space = ' ', andChain = '&&', underScore = '_'
+String space = ' ', andChain = '&&', underScore = '_', slash = '/'
 
 List propsList = []
 if (isPrBranch) {
@@ -46,6 +51,13 @@ properties(propsList)
 
 String linuxBasePath = '/usr/sbin:/usr/bin:/bin'
 String gitHubAppCredsId = 'Jenkins-AOCC-nonER'
+String gitTool = 'LinuxGit2.45'
+String gitPathEnv = (
+    'PATH=/proj/csse_jenkins2/swtools/c/rhel7-gcc8.3.1/git-2.45.2-ilh23rcg/bin:' +
+        linuxBasePath
+)
+String llvmProj = 'llvm-project', llvmProjRepo = llvmProj + '.git'
+String theUrl
 Boolean hasSourceChanges = true
 Integer successStat = 0
 
@@ -59,12 +71,7 @@ try {
                 [pattern: 'llvm-project/.git/**', type: 'EXCLUDE']
             ]
             stage ('prepare') {
-                String gitTool = 'LinuxGit2.45'
                 String referenceRepo = env.JENKINS_REMOTE_GIT_CACHE ?: 'NoSuchReferenceRepo'
-                String gitPathEnv = (
-                    'PATH=/proj/csse_jenkins2/swtools/c/rhel7-gcc8.3.1/git-2.45.2-ilh23rcg/bin:' +
-                        linuxBasePath
-                )
                 cleanWs(
                     deleteDirs: true,
                     patterns: cleanExcludes
@@ -108,77 +115,97 @@ try {
                         )
                     }
                 }
-                dir ('llvm-project') {
-                    String theUrl = 'https://github.amd.com/AOCC/llvm-project'
-                    def gitVars = checkout( // groovylint-disable-line NoDef,VariableTypeRequired
-                        changelog: true,
-                        scm: scmGit(
-                            gitTool: gitTool,
-                            branches: scm.branches,
-                            browser: github(theUrl),
-                            extensions: scm.extensions + [
-                                cloneOption(
-                                    depth: 2, // To compute the changelog.
-                                    honorRefspec: true, noTags: true, shallow: true,
-                                    reference: referenceRepo + '/llvm-project.git'
-                                ),
-                                firstBuildChangelog()
-                            ],
-                            userRemoteConfigs: [
-                                [
-                                    credentialsId: gitHubAppCredsId,
-                                    refspec: (
-                                        '+refs/heads/' + actualHead + ':' +
-                                            'refs/remotes/origin/' + actualHead
-                                    ),
-                                    url: theUrl
-                                ]
-                            ]
-                        )
-                    )
-                    assert gitVars.GIT_COMMIT
-                    Integer activeStat = successStat
+                if (postsub) {
+                    theUrl = 'ssh://git@github.amd.com/AOCC/llvm-project.git'
+                    /*
+                     * Direct CLI clone using the system's orequest SSH credentials,
+                     * so that the later pushes in repo_sync.sh are successful.
+                     */
                     withEnv([gitPathEnv]) {
-                        if (
-                            gitVars.GIT_PREVIOUS_SUCCESSFUL_COMMIT &&
-                                gitVars.GIT_PREVIOUS_SUCCESSFUL_COMMIT != gitVars.GIT_COMMIT
-                        ) {
-                            withCredentials([
-                                gitUsernamePassword(
-                                    credentialsId: gitHubAppCredsId,
-                                    gitToolName: gitTool
-                                )
-                            ]) {
+                        sh(
+                            label: 'clone-direct',
+                            script: (
+                                'git clone -q --reference ' +
+                                    referenceRepo + slash + llvmProjRepo + ' -b main ' + theUrl + andChain +
+                                    'cd ' + llvmProj + andChain +
+                                    'git checkout ' + env.BRANCH_NAME + andChain +
+                                    '''git merge main -m "Merge from main on $(date +'%Y-%m-%d')"'''
+                            )
+                        )
+                    }
+                } else {
+                    theUrl = 'https://github.amd.com/AOCC/llvm-project'
+                    dir (llvmProj) {
+                        def gitVars = checkout( // groovylint-disable-line NoDef,VariableTypeRequired
+                            changelog: true,
+                            scm: scmGit(
+                                gitTool: gitTool,
+                                branches: scm.branches,
+                                browser: github(theUrl),
+                                extensions: scm.extensions + [
+                                    cloneOption(
+                                        depth: 2, // To compute the changelog.
+                                        honorRefspec: true, noTags: true, shallow: true,
+                                        reference: referenceRepo + slash + llvmProjRepo
+                                    ),
+                                    firstBuildChangelog()
+                                ],
+                                userRemoteConfigs: [
+                                    [
+                                        credentialsId: gitHubAppCredsId,
+                                        refspec: (
+                                            '+refs/heads/' + actualHead + ':' +
+                                                'refs/remotes/origin/' + actualHead
+                                        ),
+                                        url: theUrl
+                                    ]
+                                ]
+                            )
+                        )
+                        assert gitVars.GIT_COMMIT
+                        Integer activeStat = successStat
+                        withEnv([gitPathEnv]) {
+                            if (
+                                gitVars.GIT_PREVIOUS_SUCCESSFUL_COMMIT &&
+                                    gitVars.GIT_PREVIOUS_SUCCESSFUL_COMMIT != gitVars.GIT_COMMIT
+                            ) {
+                                withCredentials([
+                                    gitUsernamePassword(
+                                        credentialsId: gitHubAppCredsId,
+                                        gitToolName: gitTool
+                                    )
+                                ]) {
+                                    activeStat = sh(
+                                        label: 'has-file-changes',
+                                        script: (
+                                            'bash ../aocc-essentials/build_essentials/has_file_changes.sh' + space +
+                                                gitVars.GIT_COMMIT + space + gitVars.GIT_PREVIOUS_SUCCESSFUL_COMMIT
+                                        ),
+                                        returnStatus: true
+                                    )
+                                }
+                            }
+                            if (activeStat == successStat) {
+                                String dummyFile = env.BUILD_TAG + '_dummy.txt'
                                 activeStat = sh(
-                                    label: 'has-file-changes',
+                                    label: 'has-active-files',
                                     script: (
-                                        'bash ../aocc-essentials/build_essentials/has_file_changes.sh' + space +
-                                            gitVars.GIT_COMMIT + space + gitVars.GIT_PREVIOUS_SUCCESSFUL_COMMIT
+                                        'set +x; echo "# Dummy" > ' + dummyFile + andChain +
+                                            'bash ../aocc-essentials/build_essentials/has_active_files.sh' + space +
+                                            gitVars.GIT_COMMIT + space + dummyFile + ' && rm -f ' + dummyFile
                                     ),
                                     returnStatus: true
                                 )
                             }
                         }
-                        if (activeStat == successStat) {
-                            String dummyFile = env.BUILD_TAG + '_dummy.txt'
-                            activeStat = sh(
-                                label: 'has-active-files',
-                                script: (
-                                    'set +x; echo "# Dummy" > ' + dummyFile + ' && ' +
-                                        'bash ../aocc-essentials/build_essentials/has_active_files.sh' + space +
-                                        gitVars.GIT_COMMIT + space + dummyFile + ' && rm -f ' + dummyFile
-                                ),
-                                returnStatus: true
-                            )
+                        if (activeStat != successStat && activeStat != 1) {
+                            error 'Unexpected exit checking file activity.'
                         }
-                    }
-                    if (activeStat != successStat && activeStat != 1) {
-                        error 'Unexpected exit checking file activity.'
-                    }
-                    if (activeStat == 1) {
-                        echo('Skipping build.')
-                        hasSourceChanges = false
-                        return // From stage
+                        if (activeStat == 1) {
+                            echo('Skipping build.')
+                            hasSourceChanges = false
+                            return // From stage
+                        }
                     }
                 }
             }
@@ -188,23 +215,6 @@ try {
                     patterns: cleanExcludes
                 )
                 return this
-            }
-            if (postsub) {
-                stage ('merge-pre') {
-                    withCredentials([
-                        gitUsernamePassword(
-                            credentialsId: gitHubAppCredsId,
-                            gitToolName: gitTool
-                        )
-                    ]) {
-                        withEnv([gitPathEnv]) {
-                            sh(
-                                label: 'merge-main',
-                                script: '''git merge origin/main -m "Merge from main on $(date +'%Y-%m-%d')"'''
-                            )
-                        }
-                    }
-                }
             }
             stage ('run') {
                 String jobName = (
@@ -225,15 +235,8 @@ try {
                 } finally {
                     if (postsub) {
                         stage ('merge-post') {
-                            withCredentials([
-                                gitUsernamePassword(
-                                    credentialsId: gitHubAppCredsId,
-                                    gitToolName: gitTool
-                                )
-                            ]) {
-                                withEnv([gitPathEnv]) {
-                                    sh 'llvm-project/.amd-ci/upstream/repo_sync.sh'
-                                }
+                            withEnv([gitPathEnv]) {
+                                sh 'llvm-project/.amd-ci/upstream/repo_sync.sh'
                             }
                         }
                     }
