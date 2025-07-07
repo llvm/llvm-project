@@ -190,7 +190,7 @@ Changes in existing checks
   length parameters.
 
 - Improved :doc:`bugprone-unhandled-self-assignment
-  <clang-tidy/checks/bugprone/unhandled-self-assignment` check by adding
+  <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
   an additional matcher that generalizes the copy-and-swap idiom pattern
   detection. The checker now properly recognizes copy-and-swap implementations
   that use "extended" copy/move constructors.
