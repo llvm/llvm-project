@@ -19,9 +19,10 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
-#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -72,14 +73,15 @@ public:
                 const DominatorTree &DT, AAResults &AA, AssumptionCache &AC,
                 const DataLayout *DL, TTI::TargetCostKind CostKind,
                 bool TryEarlyFoldsOnly)
-      : F(F), Builder(F.getContext()), TTI(TTI), DT(DT), AA(AA), AC(AC), DL(DL),
-        CostKind(CostKind), TryEarlyFoldsOnly(TryEarlyFoldsOnly) {}
+      : F(F), Builder(F.getContext(), InstSimplifyFolder(*DL)), TTI(TTI),
+        DT(DT), AA(AA), AC(AC), DL(DL), CostKind(CostKind),
+        TryEarlyFoldsOnly(TryEarlyFoldsOnly) {}
 
   bool run();
 
 private:
   Function &F;
-  IRBuilder<> Builder;
+  IRBuilder<InstSimplifyFolder> Builder;
   const TargetTransformInfo &TTI;
   const DominatorTree &DT;
   AAResults &AA;
@@ -121,6 +123,7 @@ private:
   bool foldBinopOfReductions(Instruction &I);
   bool foldSingleElementStore(Instruction &I);
   bool scalarizeLoadExtract(Instruction &I);
+  bool scalarizeExtExtract(Instruction &I);
   bool foldConcatOfBoolMasks(Instruction &I);
   bool foldPermuteOfBinops(Instruction &I);
   bool foldShuffleOfBinops(Instruction &I);
@@ -529,7 +532,7 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
 /// Create a shuffle that translates (shifts) 1 element from the input vector
 /// to a new element location.
 static Value *createShiftShuffle(Value *Vec, unsigned OldIndex,
-                                 unsigned NewIndex, IRBuilder<> &Builder) {
+                                 unsigned NewIndex, IRBuilderBase &Builder) {
   // The shuffle mask is poison except for 1 lane that is being translated
   // to the new element index. Example for OldIndex == 2 and NewIndex == 0:
   // ShufMask = { 2, poison, poison, poison }
@@ -545,7 +548,7 @@ static Value *createShiftShuffle(Value *Vec, unsigned OldIndex,
 /// unnecessary instructions.
 static ExtractElementInst *translateExtract(ExtractElementInst *ExtElt,
                                             unsigned NewIndex,
-                                            IRBuilder<> &Builder) {
+                                            IRBuilderBase &Builder) {
   // Shufflevectors can only be created for fixed-width vectors.
   Value *X = ExtElt->getVectorOperand();
   if (!isa<FixedVectorType>(X->getType()))
@@ -1091,12 +1094,14 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
     return false;
 
   // TODO: Allow intrinsics with different argument types
-  // TODO: Allow intrinsics with scalar arguments
-  if (II && (!isTriviallyVectorizable(II->getIntrinsicID()) ||
-             !all_of(II->args(), [&II](Value *Arg) {
-               return Arg->getType() == II->getType();
-             })))
-    return false;
+  if (II) {
+    if (!isTriviallyVectorizable(II->getIntrinsicID()))
+      return false;
+    for (auto [Idx, Arg] : enumerate(II->args()))
+      if (Arg->getType() != II->getType() &&
+          !isVectorIntrinsicWithScalarOpAtArg(II->getIntrinsicID(), Idx, &TTI))
+        return false;
+  }
 
   // Do not convert the vector condition of a vector select into a scalar
   // condition. That may cause problems for codegen because of differences in
@@ -1109,19 +1114,18 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
 
   // Match constant vectors or scalars being inserted into constant vectors:
   // vec_op [VecC0 | (inselt VecC0, V0, Index)], ...
-  SmallVector<Constant *> VecCs;
-  SmallVector<Value *> ScalarOps;
+  SmallVector<Value *> VecCs, ScalarOps;
   std::optional<uint64_t> Index;
 
   auto Ops = II ? II->args() : I.operands();
-  for (Value *Op : Ops) {
+  for (auto [OpNum, Op] : enumerate(Ops)) {
     Constant *VecC;
     Value *V;
     uint64_t InsIdx = 0;
-    VectorType *OpTy = cast<VectorType>(Op->getType());
-    if (match(Op, m_InsertElt(m_Constant(VecC), m_Value(V),
-                              m_ConstantInt(InsIdx)))) {
+    if (match(Op.get(), m_InsertElt(m_Constant(VecC), m_Value(V),
+                                    m_ConstantInt(InsIdx)))) {
       // Bail if any inserts are out of bounds.
+      VectorType *OpTy = cast<VectorType>(Op->getType());
       if (OpTy->getElementCount().getKnownMinValue() <= InsIdx)
         return false;
       // All inserts must have the same index.
@@ -1132,7 +1136,11 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
         return false;
       VecCs.push_back(VecC);
       ScalarOps.push_back(V);
-    } else if (match(Op, m_Constant(VecC))) {
+    } else if (II && isVectorIntrinsicWithScalarOpAtArg(II->getIntrinsicID(),
+                                                        OpNum, &TTI)) {
+      VecCs.push_back(Op.get());
+      ScalarOps.push_back(Op.get());
+    } else if (match(Op.get(), m_Constant(VecC))) {
       VecCs.push_back(VecC);
       ScalarOps.push_back(nullptr);
     } else {
@@ -1176,16 +1184,17 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
   // Fold the vector constants in the original vectors into a new base vector to
   // get more accurate cost modelling.
   Value *NewVecC = nullptr;
+  TargetFolder Folder(*DL);
   if (CI)
-    NewVecC = ConstantFoldCompareInstOperands(CI->getPredicate(), VecCs[0],
-                                              VecCs[1], *DL);
+    NewVecC = Folder.FoldCmp(CI->getPredicate(), VecCs[0], VecCs[1]);
   else if (UO)
-    NewVecC = ConstantFoldUnaryOpOperand(Opcode, VecCs[0], *DL);
+    NewVecC =
+        Folder.FoldUnOpFMF(UO->getOpcode(), VecCs[0], UO->getFastMathFlags());
   else if (BO)
-    NewVecC = ConstantFoldBinaryOpOperands(Opcode, VecCs[0], VecCs[1], *DL);
+    NewVecC = Folder.FoldBinOp(BO->getOpcode(), VecCs[0], VecCs[1]);
   else if (II->arg_size() == 2)
-    NewVecC = ConstantFoldBinaryIntrinsic(II->getIntrinsicID(), VecCs[0],
-                                          VecCs[1], II->getType(), II);
+    NewVecC = Folder.FoldBinaryIntrinsic(II->getIntrinsicID(), VecCs[0],
+                                         VecCs[1], II->getType(), &I);
 
   // Get cost estimate for the insert element. This cost will factor into
   // both sequences.
@@ -1193,8 +1202,9 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
   InstructionCost NewCost =
       ScalarOpCost + TTI.getVectorInstrCost(Instruction::InsertElement, VecTy,
                                             CostKind, *Index, NewVecC);
-  for (auto [Op, VecC, Scalar] : zip(Ops, VecCs, ScalarOps)) {
-    if (!Scalar)
+  for (auto [Idx, Op, VecC, Scalar] : enumerate(Ops, VecCs, ScalarOps)) {
+    if (!Scalar || (II && isVectorIntrinsicWithScalarOpAtArg(
+                              II->getIntrinsicID(), Idx, &TTI)))
       continue;
     InstructionCost InsertCost = TTI.getVectorInstrCost(
         Instruction::InsertElement, VecTy, CostKind, *Index, VecC, Scalar);
@@ -1238,16 +1248,12 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
 
   // Create a new base vector if the constant folding failed.
   if (!NewVecC) {
-    SmallVector<Value *> VecCValues;
-    VecCValues.reserve(VecCs.size());
-    append_range(VecCValues, VecCs);
     if (CI)
       NewVecC = Builder.CreateCmp(CI->getPredicate(), VecCs[0], VecCs[1]);
     else if (UO || BO)
-      NewVecC = Builder.CreateNAryOp(Opcode, VecCValues);
+      NewVecC = Builder.CreateNAryOp(Opcode, VecCs);
     else
-      NewVecC =
-          Builder.CreateIntrinsic(VecTy, II->getIntrinsicID(), VecCValues);
+      NewVecC = Builder.CreateIntrinsic(VecTy, II->getIntrinsicID(), VecCs);
   }
   Value *Insert = Builder.CreateInsertElement(NewVecC, Scalar, *Index);
   replaceValue(I, *Insert);
@@ -1459,10 +1465,12 @@ bool VectorCombine::foldBinopOfReductions(Instruction &I) {
   LLVM_DEBUG(dbgs() << "Found two mergeable reductions: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
                     << "\n");
-  Value *VectorBO = Builder.CreateBinOp(BinOpOpc, V0, V1);
-  if (auto *PDInst = dyn_cast<PossiblyDisjointInst>(&I))
-    if (auto *PDVectorBO = dyn_cast<PossiblyDisjointInst>(VectorBO))
-      PDVectorBO->setIsDisjoint(PDInst->isDisjoint());
+  Value *VectorBO;
+  if (BinOpOpc == Instruction::Or)
+    VectorBO = Builder.CreateOr(V0, V1, "",
+                                cast<PossiblyDisjointInst>(I).isDisjoint());
+  else
+    VectorBO = Builder.CreateBinOp(BinOpOpc, V0, V1);
 
   Instruction *Rdx = Builder.CreateIntrinsic(ReductionIID, {VTy}, {VectorBO});
   replaceValue(I, *Rdx);
@@ -1519,7 +1527,7 @@ public:
   }
 
   /// Freeze the ToFreeze and update the use in \p User to use it.
-  void freeze(IRBuilder<> &Builder, Instruction &UserI) {
+  void freeze(IRBuilderBase &Builder, Instruction &UserI) {
     assert(isSafeWithFreeze() &&
            "should only be used when freezing is required");
     assert(is_contained(ToFreeze->users(), &UserI) &&
@@ -1767,6 +1775,73 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   }
 
   FailureGuard.release();
+  return true;
+}
+
+bool VectorCombine::scalarizeExtExtract(Instruction &I) {
+  auto *Ext = dyn_cast<ZExtInst>(&I);
+  if (!Ext)
+    return false;
+
+  // Try to convert a vector zext feeding only extracts to a set of scalar
+  //   (Src << ExtIdx *Size) & (Size -1)
+  // if profitable   .
+  auto *SrcTy = dyn_cast<FixedVectorType>(Ext->getOperand(0)->getType());
+  if (!SrcTy)
+    return false;
+  auto *DstTy = cast<FixedVectorType>(Ext->getType());
+
+  Type *ScalarDstTy = DstTy->getElementType();
+  if (DL->getTypeSizeInBits(SrcTy) != DL->getTypeSizeInBits(ScalarDstTy))
+    return false;
+
+  InstructionCost VectorCost =
+      TTI.getCastInstrCost(Instruction::ZExt, DstTy, SrcTy,
+                           TTI::CastContextHint::None, CostKind, Ext);
+  unsigned ExtCnt = 0;
+  bool ExtLane0 = false;
+  for (User *U : Ext->users()) {
+    const APInt *Idx;
+    if (!match(U, m_ExtractElt(m_Value(), m_APInt(Idx))))
+      return false;
+    if (cast<Instruction>(U)->use_empty())
+      continue;
+    ExtCnt += 1;
+    ExtLane0 |= Idx->isZero();
+    VectorCost += TTI.getVectorInstrCost(Instruction::ExtractElement, DstTy,
+                                         CostKind, Idx->getZExtValue(), U);
+  }
+
+  InstructionCost ScalarCost =
+      ExtCnt * TTI.getArithmeticInstrCost(
+                   Instruction::And, ScalarDstTy, CostKind,
+                   {TTI::OK_AnyValue, TTI::OP_None},
+                   {TTI::OK_NonUniformConstantValue, TTI::OP_None}) +
+      (ExtCnt - ExtLane0) *
+          TTI.getArithmeticInstrCost(
+              Instruction::LShr, ScalarDstTy, CostKind,
+              {TTI::OK_AnyValue, TTI::OP_None},
+              {TTI::OK_NonUniformConstantValue, TTI::OP_None});
+  if (ScalarCost > VectorCost)
+    return false;
+
+  Value *ScalarV = Ext->getOperand(0);
+  if (!isGuaranteedNotToBePoison(ScalarV, &AC, dyn_cast<Instruction>(ScalarV),
+                                 &DT))
+    ScalarV = Builder.CreateFreeze(ScalarV);
+  ScalarV = Builder.CreateBitCast(
+      ScalarV,
+      IntegerType::get(SrcTy->getContext(), DL->getTypeSizeInBits(SrcTy)));
+  uint64_t SrcEltSizeInBits = DL->getTypeSizeInBits(SrcTy->getElementType());
+  uint64_t EltBitMask = (1ull << SrcEltSizeInBits) - 1;
+  for (User *U : Ext->users()) {
+    auto *Extract = cast<ExtractElementInst>(U);
+    uint64_t Idx =
+        cast<ConstantInt>(Extract->getIndexOperand())->getZExtValue();
+    Value *LShr = Builder.CreateLShr(ScalarV, Idx * SrcEltSizeInBits);
+    Value *And = Builder.CreateAnd(LShr, EltBitMask);
+    U->replaceAllUsesWith(And);
+  }
   return true;
 }
 
@@ -2617,7 +2692,7 @@ static Value *generateNewInstTree(ArrayRef<InstLane> Item, FixedVectorType *Ty,
                                   const SmallPtrSet<Use *, 4> &IdentityLeafs,
                                   const SmallPtrSet<Use *, 4> &SplatLeafs,
                                   const SmallPtrSet<Use *, 4> &ConcatLeafs,
-                                  IRBuilder<> &Builder,
+                                  IRBuilderBase &Builder,
                                   const TargetTransformInfo *TTI) {
   auto [FrontU, FrontLane] = Item.front();
 
@@ -2975,17 +3050,20 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
                     << "\n");
   LLVM_DEBUG(dbgs() << "  OldCost: " << OldCost << " vs NewCost: " << NewCost
                     << "\n");
+  bool MadeChanges = false;
   if (NewCost < OldCost) {
     Builder.SetInsertPoint(Shuffle);
     Value *NewShuffle = Builder.CreateShuffleVector(
         Shuffle->getOperand(0), Shuffle->getOperand(1), ConcatMask);
     LLVM_DEBUG(dbgs() << "Created new shuffle: " << *NewShuffle << "\n");
     replaceValue(*Shuffle, *NewShuffle);
+    MadeChanges = true;
   }
 
   // See if we can re-use foldSelectShuffle, getting it to reduce the size of
   // the shuffle into a nicer order, as it can ignore the order of the shuffles.
-  return foldSelectShuffle(*Shuffle, true);
+  MadeChanges |= foldSelectShuffle(*Shuffle, true);
+  return MadeChanges;
 }
 
 /// Determine if its more efficient to fold:
@@ -3655,6 +3733,7 @@ bool VectorCombine::run() {
     if (IsVectorType) {
       MadeChange |= scalarizeOpOrCmp(I);
       MadeChange |= scalarizeLoadExtract(I);
+      MadeChange |= scalarizeExtExtract(I);
       MadeChange |= scalarizeVPIntrinsic(I);
       MadeChange |= foldInterleaveIntrinsics(I);
     }

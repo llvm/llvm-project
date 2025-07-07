@@ -12,7 +12,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 
@@ -126,7 +125,7 @@ public:
 
   /// Emit an instruction to a special fragment, because this instruction
   /// can change its size during relaxation.
-  virtual void emitInstToFragment(const MCInst &Inst, const MCSubtargetInfo &);
+  void emitInstToFragment(const MCInst &Inst, const MCSubtargetInfo &);
 
   void emitBundleAlignMode(Align Alignment) override;
   void emitBundleLock(bool AlignToEnd) override;

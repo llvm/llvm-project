@@ -732,6 +732,7 @@ public:
   bool isUImm6() const { return isUImm<6>(); }
   bool isUImm7() const { return isUImm<7>(); }
   bool isUImm8() const { return isUImm<8>(); }
+  bool isUImm9() const { return isUImm<9>(); }
   bool isUImm10() const { return isUImm<10>(); }
   bool isUImm11() const { return isUImm<11>(); }
   bool isUImm16() const { return isUImm<16>(); }
@@ -807,6 +808,7 @@ public:
 
   bool isSImm5() const { return isSImm<5>(); }
   bool isSImm6() const { return isSImm<6>(); }
+  bool isSImm10() const { return isSImm<10>(); }
   bool isSImm11() const { return isSImm<11>(); }
   bool isSImm16() const { return isSImm<16>(); }
   bool isSImm26() const { return isSImm<26>(); }
@@ -900,6 +902,8 @@ public:
     return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
            VK == RISCV::S_QC_ABS20;
   }
+
+  bool isSImm10Unsigned() const { return isSImm<10>() || isUImm<10>(); }
 
   bool isUImm20LUI() const {
     if (!isImm())
@@ -1524,6 +1528,9 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 8) - 8,
         "immediate must be a multiple of 8 bytes in the range");
+  case Match_InvalidUImm9:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 9) - 1,
+                                      "immediate offset must be in the range");
   case Match_InvalidBareSImm9Lsb0:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 8), (1 << 8) - 2,
@@ -1532,6 +1539,12 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 9) - 8,
         "immediate must be a multiple of 8 bytes in the range");
+  case Match_InvalidSImm10:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 9),
+                                      (1 << 9) - 1);
+  case Match_InvalidSImm10Unsigned:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 9),
+                                      (1 << 10) - 1);
   case Match_InvalidUImm10Lsb00NonZero:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 4, (1 << 10) - 4,
@@ -2079,12 +2092,13 @@ ParseStatus RISCVAsmParser::parseOperandWithSpecifier(OperandVector &Operands) {
 }
 
 bool RISCVAsmParser::parseExprWithSpecifier(const MCExpr *&Res, SMLoc &E) {
+  SMLoc Loc = getLoc();
   if (getLexer().getKind() != AsmToken::Identifier)
-    return Error(getLoc(), "expected '%' relocation specifier");
+    return TokError("expected '%' relocation specifier");
   StringRef Identifier = getParser().getTok().getIdentifier();
   auto Spec = RISCV::parseSpecifierName(Identifier);
   if (!Spec)
-    return Error(getLoc(), "invalid relocation specifier");
+    return TokError("invalid relocation specifier");
 
   getParser().Lex(); // Eat the identifier
   if (parseToken(AsmToken::LParen, "expected '('"))
@@ -2094,7 +2108,7 @@ bool RISCVAsmParser::parseExprWithSpecifier(const MCExpr *&Res, SMLoc &E) {
   if (getParser().parseParenExpression(SubExpr, E))
     return true;
 
-  Res = MCSpecifierExpr::create(SubExpr, Spec, getContext());
+  Res = MCSpecifierExpr::create(SubExpr, Spec, getContext(), Loc);
   return false;
 }
 
@@ -3750,9 +3764,9 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
   if (!(MCID.TSFlags & RISCVII::ConstraintMask))
     return false;
 
-  if (Opcode == RISCV::VC_V_XVW || Opcode == RISCV::VC_V_IVW ||
-      Opcode == RISCV::VC_V_FVW || Opcode == RISCV::VC_V_VVW) {
-    // Operands Opcode, Dst, uimm, Dst, Rs2, Rs1 for VC_V_XVW.
+  if (Opcode == RISCV::SF_VC_V_XVW || Opcode == RISCV::SF_VC_V_IVW ||
+      Opcode == RISCV::SF_VC_V_FVW || Opcode == RISCV::SF_VC_V_VVW) {
+    // Operands Opcode, Dst, uimm, Dst, Rs2, Rs1 for SF_VC_V_XVW.
     MCRegister VCIXDst = Inst.getOperand(0).getReg();
     SMLoc VCIXDstLoc = Operands[2]->getStartLoc();
     if (MCID.TSFlags & RISCVII::VS1Constraint) {

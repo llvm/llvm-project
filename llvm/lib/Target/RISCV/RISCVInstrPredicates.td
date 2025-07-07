@@ -54,6 +54,8 @@ def isSelectPseudo
                        Select_GPRNoX0_Using_CC_UImm5NonZero_QC,
                        Select_GPRNoX0_Using_CC_SImm16NonZero_QC,
                        Select_GPRNoX0_Using_CC_UImm16NonZero_QC,
+                       Select_GPR_Using_CC_UImmLog2XLen_NDS,
+                       Select_GPR_Using_CC_UImm7_NDS,
                        Select_FPR16_Using_CC_GPR,
                        Select_FPR16INX_Using_CC_GPR,
                        Select_FPR32_Using_CC_GPR,

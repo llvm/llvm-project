@@ -447,8 +447,7 @@ void llvm::printLLVMNameWithoutPrefix(raw_ostream &OS, StringRef Name) {
       // in the range 0-255.  This is important when building with MSVC because
       // its implementation will assert.  This situation can arise when dealing
       // with UTF-8 multibyte characters.
-      if (!isalnum(static_cast<unsigned char>(C)) && C != '-' && C != '.' &&
-          C != '_') {
+      if (!isalnum(C) && C != '-' && C != '.' && C != '_') {
         NeedsQuotes = true;
         break;
       }
@@ -2612,6 +2611,11 @@ static void writeDILabel(raw_ostream &Out, const DILabel *N,
   Printer.printString("name", N->getName());
   Printer.printMetadata("file", N->getRawFile());
   Printer.printInt("line", N->getLine());
+  Printer.printInt("column", N->getColumn());
+  Printer.printBool("isArtificial", N->isArtificial(), false);
+  if (N->getCoroSuspendIdx())
+    Printer.printInt("coroSuspendIdx", *N->getCoroSuspendIdx(),
+                     /* ShouldSkipZero */ false);
   Out << ")";
 }
 
@@ -4129,6 +4133,9 @@ void AssemblyWriter::printFunction(const Function *F) {
     if (!AttrStr.empty())
       Out << "; Function Attrs: " << AttrStr << '\n';
   }
+
+  if (F->isIntrinsic() && F->getIntrinsicID() == Intrinsic::not_intrinsic)
+    Out << "; Unknown intrinsic\n";
 
   Machine.incorporateFunction(F);
 

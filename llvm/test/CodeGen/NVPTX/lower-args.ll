@@ -31,7 +31,7 @@ define void @load_alignment(ptr nocapture readonly byval(%class.outer) align 8 %
 ; PTX-LABEL: load_alignment(
 ; PTX:       {
 ; PTX-NEXT:    .reg .b32 %r<4>;
-; PTX-NEXT:    .reg .b64 %rd<8>;
+; PTX-NEXT:    .reg .b64 %rd<7>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    mov.b64 %rd1, load_alignment_param_0;
@@ -76,7 +76,7 @@ define void @load_padding(ptr nocapture readonly byval(%class.padded) %arg) {
 ;
 ; PTX-LABEL: load_padding(
 ; PTX:       {
-; PTX-NEXT:    .reg .b64 %rd<5>;
+; PTX-NEXT:    .reg .b64 %rd<4>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
 ; PTX-NEXT:    mov.b64 %rd1, load_padding_param_0;

@@ -135,6 +135,8 @@ C++2c Feature Support
 
 - Implemented `P2719R4 Type-aware allocation and deallocation functions <https://wg21.link/P2719>`_.
 
+- Implemented `P3618R0 Allow attaching main to the global module <https://wg21.link/P3618>`_.
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -655,6 +657,10 @@ Improvements to Clang's diagnostics
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
 
+- Fixed false positives in ``-Wformat-truncation`` and ``-Wformat-overflow``
+  diagnostics when floating-point numbers had both width field and plus or space
+  prefix specified. (#GH143951)
+
 - A warning is now emitted when ``main`` is attached to a named module,
   which can be turned off with ``-Wno-main-attached-to-named-module``. (#GH146247)
 
@@ -893,6 +899,8 @@ Bug Fixes to C++ Support
 - Fixed a crash when constant evaluating some explicit object member assignment operators. (#GH142835)
 - Fixed an access checking bug when substituting into concepts (#GH115838)
 - Fix a bug where private access specifier of overloaded function not respected. (#GH107629)
+- Correctly handle allocations in the condition of a ``if constexpr``.(#GH120197) (#GH134820)
+- Fixed a crash when handling invalid member using-declaration in C++20+ mode. (#GH63254)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -903,6 +911,7 @@ Bug Fixes to AST Handling
 - Fixed dependency calculation for TypedefTypes (#GH89774)
 - The ODR checker now correctly hashes the names of conversion operators. (#GH143152)
 - Fixed the right parenthesis source location of ``CXXTemporaryObjectExpr``. (#GH143711)
+- Fixed a crash when performing an ``IgnoreUnlessSpelledInSource`` traversal of ASTs containing ``catch(...)`` statements. (#GH146103)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -965,6 +974,8 @@ Arm and AArch64 Support
 
 - For AArch64, added support for generating executable-only code sections by using the
   ``-mexecute-only`` or ``-mpure-code`` compiler flags. (#GH125688)
+- Added ``-msve-streaming-vector-bits=`` flag, which allows specifying the
+  SVE vector width in streaming mode.
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -982,6 +993,23 @@ Windows Support
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
+
+- Add support for OHOS on loongarch64.
+
+- Add target attribute support for function. Supported formats include:
+  * `arch=<arch>` strings - specifies architecture features for a function (equivalent to `-march=<arch>`).
+  * `tune=<cpu>` strings - specifies the tune CPU for a function (equivalent to `-mtune`).
+  * `<feature>`/`no-<feature>` - enables/disables specific features.
+
+- Add support for the `_Float16` type. And fix incorrect ABI lowering of `_Float16`
+  in the case of structs containing fp16 that are eligible for passing via `GPR+FPR`
+  or `FPR+FPR`. Also fix `int16` -> `__fp16` conversion code gen, which uses generic LLVM
+  IR rather than `llvm.convert.to.fp16` intrinsics.
+
+- Add support for the `__bf16` type.
+
+- Fix incorrect _BitInt(N>64) alignment. Now consistently uses 16-byte alignment for all
+  `_BitInt(N)` where N > 64.
 
 RISC-V Support
 ^^^^^^^^^^^^^^
