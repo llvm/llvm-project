@@ -889,12 +889,17 @@ def VariantSummaryProvider(valobj, dict):
     if not (index_obj and index_obj.IsValid() and data_obj and data_obj.IsValid()):
         return "<Can't find _M_index or _M_u>"
 
-    npos = valobj.GetTarget().FindFirstGlobalVariable("std::variant_npos")
-    if not npos:
-        return "<Can't find std::variant_npos sentinel>"
+    def get_variant_npos_value(index_byte_size):
+        if index_byte_size == 1:
+            return 0xFF
+        elif index_byte_size == 2:
+            return 0xFFFF
+        else:
+            return 0xFFFFFFFF
 
+    npos_value = get_variant_npos_value(index_obj.GetByteSize())
     index = index_obj.GetValueAsUnsigned(0)
-    if index == npos.GetValueAsUnsigned(0):
+    if index == npos_value:
         return " No Value"
 
     # Strip references and typedefs.

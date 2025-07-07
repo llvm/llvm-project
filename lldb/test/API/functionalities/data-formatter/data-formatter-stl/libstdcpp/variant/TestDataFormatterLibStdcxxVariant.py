@@ -62,11 +62,11 @@ class LibStdcxxVariantDataFormatterTestCase(TestBase):
             substrs=["v3 =  Active Type = char  {", "Value = 'A'", "}"],
         )
 
-        self.expect("frame variable v_no_value", substrs=["v_no_value =  No Value"])
+        self.expect("frame variable v_valueless", substrs=["v_valueless =  No Value"])
 
         self.expect(
-            "frame variable v_many_types_no_value",
-            substrs=["v_many_types_no_value =  No Value"],
+            "frame variable v_many_types_valueless",
+            substrs=["v_many_types_valueless =  No Value"],
         )
 
     @add_test_categories(["libstdcxx"])
