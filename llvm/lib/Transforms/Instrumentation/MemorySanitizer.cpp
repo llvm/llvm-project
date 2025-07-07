@@ -3393,7 +3393,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// e.g., <16 x i8> @llvm.x86.avx512.mask.pmov.qb.512(<8 x i64>, ...)
   ///
   /// This function will return a vector type with the same number of elements
-  /// as the input, but same width as the return value e.g., <8 x i8>.
+  /// as the input, but same per-element width as the return value e.g.,
+  /// <8 x i8>.
   FixedVectorType *shrinkVectorShadowType(Value *Src, IntrinsicInst &I) {
     assert(isa<FixedVectorType>(getShadowTy(&I)));
     // The return type might have more elements than the input.
