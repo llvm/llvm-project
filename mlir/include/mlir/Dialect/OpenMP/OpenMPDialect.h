@@ -25,11 +25,6 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 
-namespace mlir::omp {
-/// Find the omp.new_cli, generator, and consumer of a canonical loop info.
-std::tuple<NewCliOp, OpOperand *, OpOperand *> decodeCli(mlir::Value cli);
-} // namespace mlir::omp
-
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOpsTypes.h.inc"
 
