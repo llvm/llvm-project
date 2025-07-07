@@ -1298,7 +1298,42 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, SRAI);
     return;
   }
-  case ISD::OR:
+  case ISD::OR: {
+    if (Subtarget->hasVendorXqcibm()) {
+      auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
+      if (!N1C)
+        break;
+
+      int32_t C1 = N1C->getSExtValue();
+      // If C1 is a shifted mask (but can't be formed as an ORI),
+      // use a bitfield insert of -1.
+      // Transform (or x, C1)
+      //        -> (qc.insbi x, width, shift)
+      if (isShiftedMask_32(C1) && !isInt<12>(C1)) {
+        const unsigned Leading = llvm::countl_zero((uint32_t)C1);
+        const unsigned Trailing = llvm::countr_zero((uint32_t)C1);
+
+        // If Zbs is enabled and it is a single bit set we can use BSETI which
+        // can be compressed to C_BSETI when Xqcibm in enabled.
+        if ((Leading + Trailing == 31) && Subtarget->hasStdExtZbs())
+          break;
+
+        const unsigned Width = 32 - Leading - Trailing;
+        SmallVector<SDValue, 4> Ops = {
+            CurDAG->getSignedTargetConstant(-1, DL, VT),
+            CurDAG->getTargetConstant(Width, DL, VT),
+            CurDAG->getTargetConstant(Trailing, DL, VT)};
+        SDNode *BitIns = CurDAG->getMachineNode(RISCV::QC_INSBI, DL, VT, Ops);
+        ReplaceNode(Node, BitIns);
+        return;
+      }
+    }
+
+    if (tryShrinkShlLogicImm(Node))
+      return;
+
+    break;
+  }
   case ISD::XOR:
     if (tryShrinkShlLogicImm(Node))
       return;
