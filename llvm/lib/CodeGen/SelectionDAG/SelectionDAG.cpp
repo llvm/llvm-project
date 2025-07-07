@@ -12570,9 +12570,9 @@ bool llvm::isAllOnesOrAllOnesSplat(SDValue N, bool AllowUndefs) {
 }
 
 bool llvm::isOnesOrOnesSplat(SDValue N, bool AllowUndefs) {
-  N = peekThroughBitcasts(N);
   ConstantSDNode *C = isConstOrConstSplat(N, AllowUndefs);
-  return C && C->getAPIntValue() == 1;
+  return C && APInt::isSameValue(C->getAPIntValue(),
+                                 APInt(C->getAPIntValue().getBitWidth(), 1));
 }
 
 bool llvm::isZeroOrZeroSplat(SDValue N, bool AllowUndefs) {

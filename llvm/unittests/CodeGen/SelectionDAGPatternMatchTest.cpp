@@ -867,7 +867,7 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
     SDValue SplatVal = DAG->getConstant(1, DL, MVT::i32);
     SDValue VecSplat = DAG->getSplatBuildVector(VecVT, DL, SplatVal);
     SDValue Bitcasted = DAG->getNode(ISD::BITCAST, DL, VecF32, VecSplat);
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_One()));
+    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_One()));
   }
 
   // m_AllOnes: splat vector of -1 → bitcast
@@ -887,9 +887,8 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
     SmallVector<SDValue, 4> Ops(4, Zero);
     Ops[2] = Undef;
     SDValue Vec = DAG->getBuildVector(VecVT, DL, Ops);
-    SDValue Bitcasted = DAG->getNode(ISD::BITCAST, DL, VecF32, Vec);
-    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_Zero()));
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_Zero(true)));
+    EXPECT_FALSE(sd_match(Vec, DAG.get(), m_Zero()));
+    EXPECT_TRUE(sd_match(Vec, DAG.get(), m_Zero(true)));
   }
 
   {
@@ -898,9 +897,8 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
     SmallVector<SDValue, 4> Ops(4, One);
     Ops[1] = Undef;
     SDValue Vec = DAG->getBuildVector(VecVT, DL, Ops);
-    SDValue Bitcasted = DAG->getNode(ISD::BITCAST, DL, VecF32, Vec);
-    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_One()));
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_One(true)));
+    EXPECT_FALSE(sd_match(Vec, DAG.get(), m_One()));
+    EXPECT_TRUE(sd_match(Vec, DAG.get(), m_One(true)));
   }
 
   {
@@ -909,8 +907,7 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
     SmallVector<SDValue, 4> Ops(4, AllOnes);
     Ops[0] = Undef;
     SDValue Vec = DAG->getBuildVector(VecVT, DL, Ops);
-    SDValue Bitcasted = DAG->getNode(ISD::BITCAST, DL, VecF32, Vec);
-    EXPECT_FALSE(sd_match(Bitcasted, DAG.get(), m_AllOnes()));
-    EXPECT_TRUE(sd_match(Bitcasted, DAG.get(), m_AllOnes(true)));
+    EXPECT_FALSE(sd_match(Vec, DAG.get(), m_AllOnes()));
+    EXPECT_TRUE(sd_match(Vec, DAG.get(), m_AllOnes(true)));
   }
 }
