@@ -4587,6 +4587,9 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
 
   if (Result.is(tok::hash) && Result.isAtStartOfLine()) {
     PP->HandleDirective(Result);
+    if (PP->hadModuleLoaderFatalFailure())
+      // With a fatal failure in the module loader, we abort parsing.
+      return true;
     return false;
   }
   if (Result.is(tok::raw_identifier)) {
