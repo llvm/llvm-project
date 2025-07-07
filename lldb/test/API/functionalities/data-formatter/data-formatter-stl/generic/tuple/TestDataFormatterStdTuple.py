@@ -41,6 +41,9 @@ class TestDataFormatterStdTuple(TestBase):
             ],
         )
 
+        frame = self.frame()
+        self.assertTrue(frame.IsValid())
+
         self.assertEqual(
             1, frame.GetValueForVariablePath("one_elt[0]").GetValueAsUnsigned()
         )
