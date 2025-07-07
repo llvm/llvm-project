@@ -64,4 +64,13 @@ TEST(OffloadingTest, checkOffloadingBinary) {
   // Ensure the size and alignment of the data is correct.
   EXPECT_TRUE(Binary.getSize() % OffloadBinary::getAlignment() == 0);
   EXPECT_TRUE(Binary.getSize() == BinaryBuffer->getBuffer().size());
+
+  OffloadBinary::OffloadingImage OI = Binary.getOffloadingImage();
+  ASSERT_EQ(Data.TheImageKind, OI.TheImageKind);
+  ASSERT_EQ(Data.TheOffloadKind, OI.TheOffloadKind);
+  ASSERT_EQ(Data.Flags, OI.Flags);
+  ASSERT_EQ(Data.Image->getBuffer(), OI.Image->getBuffer());
+  for (const auto &KeyAndValue : Data.StringData)
+    ASSERT_EQ(Data.StringData[KeyAndValue.first],
+              OI.StringData[KeyAndValue.first]);
 }
