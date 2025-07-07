@@ -861,7 +861,9 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
 
   // Write Result to ResultPtr and put Overflow on the stack.
   assignInteger(S, ResultPtr, ResultT, Result);
-  ResultPtr.initialize();
+  if (ResultPtr.canBeInitialized())
+    ResultPtr.initialize();
+
   assert(Call->getDirectCallee()->getReturnType()->isBooleanType());
   S.Stk.push<Boolean>(Overflow);
   return true;
@@ -1564,7 +1566,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
                                 DynamicAllocator::Form::Operator);
   assert(B);
-  S.Stk.push<Pointer>(Pointer(B).atIndex(0));
+  S.Stk.push<Pointer>(Pointer(B).atIndex(0).narrow());
   return true;
 }
 

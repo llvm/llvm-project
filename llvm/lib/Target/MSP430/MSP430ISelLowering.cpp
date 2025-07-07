@@ -1142,9 +1142,6 @@ SDValue MSP430TargetLowering::LowerRETURNADDR(SDValue Op,
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
   MFI.setReturnAddressIsTaken(true);
 
-  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
-
   unsigned Depth = Op.getConstantOperandVal(0);
   SDLoc dl(Op);
   EVT PtrVT = Op.getValueType();

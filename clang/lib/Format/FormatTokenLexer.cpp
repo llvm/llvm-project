@@ -488,7 +488,7 @@ bool FormatTokenLexer::tryMergeCSharpKeywordVariables() {
 
 // In C# transform identifier foreach into kw_foreach
 bool FormatTokenLexer::tryTransformCSharpForEach() {
-  if (Tokens.size() < 1)
+  if (Tokens.empty())
     return false;
   auto &Identifier = *(Tokens.end() - 1);
   if (Identifier->isNot(tok::identifier))
@@ -948,7 +948,7 @@ void FormatTokenLexer::handleTableGenNumericLikeIdentifier() {
   // 4. The first non-digit character is 'x', and the next is a hex digit.
   // Note that in the case 3 and 4, if the next character does not exists in
   // this token, the token is an identifier.
-  if (Text.size() < 1 || Text[0] == '+' || Text[0] == '-')
+  if (Text.empty() || Text[0] == '+' || Text[0] == '-')
     return;
   const auto NonDigitPos = Text.find_if([](char C) { return !isdigit(C); });
   // All the characters are digits
@@ -1371,8 +1371,7 @@ FormatToken *FormatTokenLexer::getNextToken() {
       } else if (FormatTok->TokenText == "``") {
         FormatTok->Tok.setIdentifierInfo(nullptr);
         FormatTok->Tok.setKind(tok::hashhash);
-      } else if (Tokens.size() > 0 &&
-                 Tokens.back()->is(Keywords.kw_apostrophe) &&
+      } else if (!Tokens.empty() && Tokens.back()->is(Keywords.kw_apostrophe) &&
                  NumberBase.match(FormatTok->TokenText, &Matches)) {
         // In Verilog in a based number literal like `'b10`, there may be
         // whitespace between `'b` and `10`. Therefore we handle the base and
@@ -1420,7 +1419,7 @@ FormatToken *FormatTokenLexer::getNextToken() {
     tryParseJavaTextBlock();
   }
 
-  if (Style.isVerilog() && Tokens.size() > 0 &&
+  if (Style.isVerilog() && !Tokens.empty() &&
       Tokens.back()->is(TT_VerilogNumberBase) &&
       FormatTok->Tok.isOneOf(tok::identifier, tok::question)) {
     // Mark the number following a base like `'h?a0` as a number.
@@ -1454,9 +1453,9 @@ FormatToken *FormatTokenLexer::getNextToken() {
   if (Style.isCpp()) {
     auto *Identifier = FormatTok->Tok.getIdentifierInfo();
     auto it = Macros.find(Identifier);
-    if (!(Tokens.size() > 0 && Tokens.back()->Tok.getIdentifierInfo() &&
-          Tokens.back()->Tok.getIdentifierInfo()->getPPKeywordID() ==
-              tok::pp_define) &&
+    if ((Tokens.empty() || !Tokens.back()->Tok.getIdentifierInfo() ||
+         Tokens.back()->Tok.getIdentifierInfo()->getPPKeywordID() !=
+             tok::pp_define) &&
         it != Macros.end()) {
       FormatTok->setType(it->second);
       if (it->second == TT_IfMacro) {
