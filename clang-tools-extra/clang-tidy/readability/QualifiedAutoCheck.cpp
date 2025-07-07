@@ -177,7 +177,7 @@ void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
 void QualifiedAutoCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Var = Result.Nodes.getNodeAs<VarDecl>("auto")) {
     if (RespectOpaqueTypes) {
-      auto DeducedType =
+      QualType DeducedType =
           Var->getType()->getContainedAutoType()->getDeducedType();
 
       // Remove one sugar if the type if part of a template
