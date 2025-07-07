@@ -408,12 +408,11 @@ namespace llvm {
 template <>
 struct DenseMapInfo<MlirTypeID> {
   static inline MlirTypeID getEmptyKey() {
-    // Shift by 3 to satisfy the TypeID alignment requirement.
-    void *pointer = reinterpret_cast<void *>(uintptr_t(-1) << 3);
+    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
     return mlirTypeIDCreate(pointer);
   }
   static inline MlirTypeID getTombstoneKey() {
-    void *pointer = reinterpret_cast<void *>(uintptr_t(-2) << 3);
+    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
     return mlirTypeIDCreate(pointer);
   }
   static inline unsigned getHashValue(const MlirTypeID &val) {
