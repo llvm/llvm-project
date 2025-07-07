@@ -10,6 +10,7 @@
 #include "LibCxx.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/VectorIterator.h"
 #include "lldb/Target/Target.h"
@@ -330,29 +331,37 @@ bool lldb_private::formatters::LibStdcppSmartPointerSummaryProvider(
   if (!ptr_sp)
     return false;
 
-  ValueObjectSP usecount_sp(
-      valobj_sp->GetChildAtNamePath({"_M_refcount", "_M_pi", "_M_use_count"}));
-  if (!usecount_sp)
+  DumpCxxSmartPtrPointerSummary(stream, *ptr_sp, options);
+
+  ValueObjectSP pi_sp = valobj_sp->GetChildAtNamePath({"_M_refcount", "_M_pi"});
+  if (!pi_sp)
     return false;
 
-  if (ptr_sp->GetValueAsUnsigned(0) == 0 ||
-      usecount_sp->GetValueAsUnsigned(0) == 0) {
-    stream.Printf("nullptr");
+  bool success;
+  uint64_t pi_addr = pi_sp->GetValueAsUnsigned(0, &success);
+  // Empty control field. We're done.
+  if (!success || pi_addr == 0)
     return true;
+
+  int64_t shared_count = 0;
+  if (auto count_sp = pi_sp->GetChildMemberWithName("_M_use_count")) {
+    bool success;
+    shared_count = count_sp->GetValueAsSigned(0, &success);
+    if (!success)
+      return false;
+
+    stream.Printf(" strong=%" PRId64, shared_count);
   }
 
-  Status error;
-  ValueObjectSP pointee_sp = ptr_sp->Dereference(error);
-  if (pointee_sp && error.Success()) {
-    if (pointee_sp->DumpPrintableRepresentation(
-            stream, ValueObject::eValueObjectRepresentationStyleSummary,
-            lldb::eFormatInvalid,
-            ValueObject::PrintableRepresentationSpecialCases::eDisable,
-            false)) {
-      return true;
-    }
+  // _M_weak_count is the number of weak references + (_M_use_count != 0).
+  if (auto weak_count_sp = pi_sp->GetChildMemberWithName("_M_weak_count")) {
+    bool success;
+    int64_t count = weak_count_sp->GetValueAsUnsigned(0, &success);
+    if (!success)
+      return false;
+
+    stream.Printf(" weak=%" PRId64, count - (shared_count != 0));
   }
 
-  stream.Printf("ptr = 0x%" PRIx64, ptr_sp->GetValueAsUnsigned(0));
   return true;
 }
