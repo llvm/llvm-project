@@ -61,8 +61,8 @@ class StdVariantDataFormatterTestCase(TestBase):
         self.expect("frame variable v_valueless", substrs=["v_valueless =  No Value"])
 
         self.expect(
-            "frame variable v_many_types_valueless",
-            substrs=["v_many_types_valueless =  No Value"],
+            "frame variable v_300_types_valueless",
+            substrs=["v_300_types_valueless =  No Value"],
         )
 
     @add_test_categories(["libc++"])
