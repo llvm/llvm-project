@@ -47,7 +47,7 @@ public:
   RootSignatureBindingInfo() = default;
   RootSignatureBindingInfo(
       SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc> Map)
-      : FuncToRsMap(Map) {};
+      : FuncToRsMap(Map){};
 
   iterator find(const Function *F) { return FuncToRsMap.find(F); }
 
@@ -88,8 +88,6 @@ private:
 
 public:
   static char ID;
-  using Result = RootSignatureBindingInfo;
-
   RootSignatureAnalysisWrapper() : ModulePass(ID) {}
 
   RootSignatureBindingInfo &getRSInfo() { return *FuncToRsMap; }
