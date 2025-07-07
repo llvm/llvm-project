@@ -612,11 +612,11 @@ public:
   getELFUniqueIDForEntsize(StringRef SectionName, unsigned Flags,
                            unsigned EntrySize);
 
-  MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef Name,
+  LLVM_ABI MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef Name,
                                 GOFF::SDAttr SDAttributes);
-  MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef Name,
+  LLVM_ABI MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef Name,
                                 GOFF::EDAttr EDAttributes, MCSection *Parent);
-  MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef Name,
+  LLVM_ABI MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef Name,
                                 GOFF::PRAttr PRAttributes, MCSection *Parent);
 
   LLVM_ABI MCSectionCOFF *
