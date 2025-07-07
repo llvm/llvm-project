@@ -1,4 +1,3 @@
-// clang/test/Sema/implicit-deprecated-special-member.cpp
 // RUN: %clang_cc1 -std=c++20 -Wdeprecated-declarations -verify %s
 
 struct A {
