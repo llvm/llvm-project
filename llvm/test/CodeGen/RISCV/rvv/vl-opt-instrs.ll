@@ -5380,12 +5380,11 @@ define <vscale x 4 x double> @vfrec7(<vscale x 4 x float> %a) {
 ;
 ; VLOPT-LABEL: vfrec7:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetivli zero, 7, e32, m2, ta, ma
+; VLOPT-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; VLOPT-NEXT:    vmv2r.v v12, v8
 ; VLOPT-NEXT:    fsrmi a0, 0
 ; VLOPT-NEXT:    vfrec7.v v14, v8
 ; VLOPT-NEXT:    fsrm a0
-; VLOPT-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
 ; VLOPT-NEXT:    vfwmacc.vv v8, v12, v14
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x float> @llvm.riscv.vfrec7.nxv4f32(<vscale x 4 x float> poison, <vscale x 4 x float> %a, iXLen 0, iXLen 7)

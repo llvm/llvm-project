@@ -3891,7 +3891,7 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     llvm::interleave(
         Opts.OMPTargetTriples, OS,
         [&OS](const llvm::Triple &T) { OS << T.str(); }, ",");
-    GenerateArg(Consumer, OPT_fopenmp_targets_EQ, Targets);
+    GenerateArg(Consumer, OPT_offload_targets_EQ, Targets);
   }
 
   if (!Opts.OMPHostIRFile.empty())
@@ -4322,7 +4322,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   Opts.OpenMPIRBuilder =
       Opts.OpenMP && Args.hasArg(options::OPT_fopenmp_enable_irbuilder);
   bool IsTargetSpecified =
-      Opts.OpenMPIsTargetDevice || Args.hasArg(options::OPT_fopenmp_targets_EQ);
+      Opts.OpenMPIsTargetDevice || Args.hasArg(options::OPT_offload_targets_EQ);
 
   if (Opts.OpenMP || Opts.OpenMPSimd) {
     if (int Version = getLastArgIntValue(
@@ -4382,7 +4382,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   }
 
   // Get the OpenMP target triples if any.
-  if (Arg *A = Args.getLastArg(options::OPT_fopenmp_targets_EQ)) {
+  if (Arg *A = Args.getLastArg(options::OPT_offload_targets_EQ)) {
     enum ArchPtrSize { Arch16Bit, Arch32Bit, Arch64Bit };
     auto getArchPtrSize = [](const llvm::Triple &T) {
       if (T.isArch16Bit())
@@ -5222,11 +5222,14 @@ std::string CompilerInvocation::getModuleHash() const {
   HBuilder.add(serialization::VERSION_MAJOR, serialization::VERSION_MINOR);
 
   // Extend the signature with the language options
-#define LANGOPT(Name, Bits, Default, Description) HBuilder.add(LangOpts->Name);
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description)                   \
-  HBuilder.add(static_cast<unsigned>(LangOpts->get##Name()));
-#define BENIGN_LANGOPT(Name, Bits, Default, Description)
-#define BENIGN_ENUM_LANGOPT(Name, Type, Bits, Default, Description)
+  // FIXME: Replace with C++20 `using enum LangOptions::CompatibilityKind`.
+  using CK = LangOptions::CompatibilityKind;
+#define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
+  if constexpr (CK::Compatibility != CK::Benign)                               \
+    HBuilder.add(LangOpts->Name);
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
+  if constexpr (CK::Compatibility != CK::Benign)                               \
+    HBuilder.add(static_cast<unsigned>(LangOpts->get##Name()));
 #include "clang/Basic/LangOptions.def"
 
   HBuilder.addRange(getLangOpts().ModuleFeatures);
@@ -5305,13 +5308,17 @@ std::string CompilerInvocation::getModuleHash() const {
 
   // Extend the signature with the affecting debug options.
   if (getHeaderSearchOpts().ModuleFormat == "obj") {
-#define DEBUGOPT(Name, Bits, Default) HBuilder.add(CodeGenOpts->Name);
-#define VALUE_DEBUGOPT(Name, Bits, Default) HBuilder.add(CodeGenOpts->Name);
-#define ENUM_DEBUGOPT(Name, Type, Bits, Default)                               \
-  HBuilder.add(static_cast<unsigned>(CodeGenOpts->get##Name()));
-#define BENIGN_DEBUGOPT(Name, Bits, Default)
-#define BENIGN_VALUE_DEBUGOPT(Name, Bits, Default)
-#define BENIGN_ENUM_DEBUGOPT(Name, Type, Bits, Default)
+    // FIXME: Replace with C++20 `using enum CodeGenOptions::CompatibilityKind`.
+    using CK = CodeGenOptions::CompatibilityKind;
+#define DEBUGOPT(Name, Bits, Default, Compatibility)                           \
+  if constexpr (CK::Compatibility == CK::Affecting)                            \
+    HBuilder.add(CodeGenOpts->Name);
+#define VALUE_DEBUGOPT(Name, Bits, Default, Compatibility)                     \
+  if constexpr (CK::Compatibility == CK::Affecting)                            \
+    HBuilder.add(CodeGenOpts->Name);
+#define ENUM_DEBUGOPT(Name, Type, Bits, Default, Compatibility)                \
+  if constexpr (CK::Compatibility == CK::Affecting)                            \
+    HBuilder.add(static_cast<unsigned>(CodeGenOpts->get##Name()));
 #include "clang/Basic/DebugOptions.def"
   }
 
