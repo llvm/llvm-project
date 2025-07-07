@@ -22,8 +22,8 @@
 #include "clang/Analysis/CFG.h"
 namespace clang {
 
-void runLifetimeAnalysis(const DeclContext &DC, const CFG &Cfg,
-                         AnalysisDeclContext &AC);
+void runLifetimeSafetyAnalysis(const DeclContext &DC, const CFG &Cfg,
+                               AnalysisDeclContext &AC);
 
 } // namespace clang
 
