@@ -15,6 +15,14 @@
 #define SVE_ACLE_FUNC(A1,A2,A3,A4) A1##A2##A3##A4
 #endif
 
+#if defined(__ARM_FEATURE_SME) && defined(__ARM_FEATURE_SVE)
+#define ATTR __arm_streaming_compatible
+#elif defined(__ARM_FEATURE_SME)
+#define ATTR __arm_streaming
+#else
+#define ATTR
+#endif
+
 // CHECK-LABEL: @test_svrax1_s64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.rax1(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]])
@@ -25,7 +33,7 @@
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.rax1(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-svint64_t test_svrax1_s64(svint64_t op1, svint64_t op2)
+svint64_t test_svrax1_s64(svint64_t op1, svint64_t op2) ATTR
 {
   return SVE_ACLE_FUNC(svrax1,_s64,,)(op1, op2);
 }
@@ -40,7 +48,7 @@ svint64_t test_svrax1_s64(svint64_t op1, svint64_t op2)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.rax1(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-svuint64_t test_svrax1_u64(svuint64_t op1, svuint64_t op2)
+svuint64_t test_svrax1_u64(svuint64_t op1, svuint64_t op2) ATTR
 {
   return SVE_ACLE_FUNC(svrax1,_u64,,)(op1, op2);
 }

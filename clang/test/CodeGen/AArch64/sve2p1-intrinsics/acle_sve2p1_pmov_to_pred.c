@@ -21,6 +21,14 @@
 #define SVE_ACLE_FUNC(A1, A2) A1##A2
 #endif
 
+#if defined(__ARM_FEATURE_SME) && defined(__ARM_FEATURE_SVE)
+#define ATTR __arm_streaming_compatible
+#elif defined(__ARM_FEATURE_SME)
+#define ATTR __arm_streaming
+#else
+#define ATTR
+#endif
+
 // CHECK-LABEL: define dso_local <vscale x 16 x i1> @test_svpmov_lane_u8
 // CHECK-SAME: (<vscale x 16 x i8> [[ZN:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
@@ -33,7 +41,7 @@
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.pmov.to.pred.lane.nxv16i8(<vscale x 16 x i8> [[ZN]], i32 0)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-svbool_t test_svpmov_lane_u8(svuint8_t zn) {
+svbool_t test_svpmov_lane_u8(svuint8_t zn) ATTR {
   return SVE_ACLE_FUNC(svpmov_lane, _u8)(zn, 0);
 }
 
@@ -49,7 +57,7 @@ svbool_t test_svpmov_lane_u8(svuint8_t zn) {
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.pmov.to.pred.lane.nxv16i8(<vscale x 16 x i8> [[ZN]], i32 0)
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-svbool_t test_svpmov_lane_s8(svint8_t zn) {
+svbool_t test_svpmov_lane_s8(svint8_t zn) ATTR {
   return SVE_ACLE_FUNC(svpmov_lane, _s8)(zn, 0);
 }
 
@@ -67,7 +75,7 @@ svbool_t test_svpmov_lane_s8(svint8_t zn) {
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-svbool_t test_svpmov_lane_u16(svuint16_t zn) {
+svbool_t test_svpmov_lane_u16(svuint16_t zn) ATTR {
   return SVE_ACLE_FUNC(svpmov_lane, _u16)(zn, 0);
 }
 
@@ -85,7 +93,7 @@ svbool_t test_svpmov_lane_u16(svuint16_t zn) {
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-svbool_t test_svpmov_lane_s16(svint16_t zn) {
+svbool_t test_svpmov_lane_s16(svint16_t zn) ATTR {
   return SVE_ACLE_FUNC(svpmov_lane, _s16)(zn, 1);
 }
 
@@ -103,7 +111,7 @@ svbool_t test_svpmov_lane_s16(svint16_t zn) {
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-svbool_t test_svpmov_lane_u32(svuint32_t zn) {
+svbool_t test_svpmov_lane_u32(svuint32_t zn) ATTR {
   return SVE_ACLE_FUNC(svpmov_lane, _u32)(zn, 0);
 }
 
@@ -121,7 +129,7 @@ svbool_t test_svpmov_lane_u32(svuint32_t zn) {
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-svbool_t test_svpmov_lane_s32(svint32_t zn) {
+svbool_t test_svpmov_lane_s32(svint32_t zn) ATTR {
   return SVE_ACLE_FUNC(svpmov_lane, _s32)(zn, 3);
 }
 
@@ -139,7 +147,7 @@ svbool_t test_svpmov_lane_s32(svint32_t zn) {
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-svbool_t test_svpmov_lane_u64(svuint64_t zn) {
+svbool_t test_svpmov_lane_u64(svuint64_t zn) ATTR {
   return SVE_ACLE_FUNC(svpmov_lane, _u64)(zn, 0);
 }
 
@@ -157,7 +165,7 @@ svbool_t test_svpmov_lane_u64(svuint64_t zn) {
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-svbool_t test_svpmov_lane_s64(svint64_t zn) {
+svbool_t test_svpmov_lane_s64(svint64_t zn) ATTR {
   return SVE_ACLE_FUNC(svpmov_lane, _s64)(zn, 7);
 }
 
@@ -174,7 +182,7 @@ svbool_t test_svpmov_lane_s64(svint64_t zn) {
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.pmov.to.pred.lane.zero.nxv16i8(<vscale x 16 x i8> [[ZN]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-svbool_t test_svpmov_u8(svuint8_t zn) {
+svbool_t test_svpmov_u8(svuint8_t zn) ATTR {
   return SVE_ACLE_FUNC(svpmov, _u8)(zn);
 }
 
@@ -190,7 +198,7 @@ svbool_t test_svpmov_u8(svuint8_t zn) {
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.pmov.to.pred.lane.zero.nxv16i8(<vscale x 16 x i8> [[ZN]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 //
-svbool_t test_svpmov_s8(svint8_t zn) {
+svbool_t test_svpmov_s8(svint8_t zn) ATTR {
   return SVE_ACLE_FUNC(svpmov, _s8)(zn);
 }
 
@@ -208,7 +216,7 @@ svbool_t test_svpmov_s8(svint8_t zn) {
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-svbool_t test_svpmov_u16(svuint16_t zn) {
+svbool_t test_svpmov_u16(svuint16_t zn) ATTR {
   return SVE_ACLE_FUNC(svpmov, _u16)(zn);
 }
 
@@ -226,7 +234,7 @@ svbool_t test_svpmov_u16(svuint16_t zn) {
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-svbool_t test_svpmov_s16(svint16_t zn) {
+svbool_t test_svpmov_s16(svint16_t zn) ATTR {
   return SVE_ACLE_FUNC(svpmov, _s16)(zn);
 }
 
@@ -244,7 +252,7 @@ svbool_t test_svpmov_s16(svint16_t zn) {
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-svbool_t test_svpmov_u32(svuint32_t zn) {
+svbool_t test_svpmov_u32(svuint32_t zn) ATTR {
   return SVE_ACLE_FUNC(svpmov, _u32)(zn);
 }
 
@@ -262,7 +270,7 @@ svbool_t test_svpmov_u32(svuint32_t zn) {
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-svbool_t test_svpmov_s32(svint32_t zn) {
+svbool_t test_svpmov_s32(svint32_t zn) ATTR {
   return SVE_ACLE_FUNC(svpmov, _s32)(zn);
 }
 
@@ -280,7 +288,7 @@ svbool_t test_svpmov_s32(svint32_t zn) {
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-svbool_t test_svpmov_u64(svuint64_t zn) {
+svbool_t test_svpmov_u64(svuint64_t zn) ATTR {
   return SVE_ACLE_FUNC(svpmov, _u64)(zn);
 }
 
@@ -298,7 +306,7 @@ svbool_t test_svpmov_u64(svuint64_t zn) {
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
-svbool_t test_svpmov_s64(svint64_t zn) {
+svbool_t test_svpmov_s64(svint64_t zn) ATTR {
   return SVE_ACLE_FUNC(svpmov, _s64)(zn);
 }
 
