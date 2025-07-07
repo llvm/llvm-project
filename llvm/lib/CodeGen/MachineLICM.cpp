@@ -1219,7 +1219,7 @@ bool MachineLICMImpl::HasHighOperandLatency(MachineInstr &MI, unsigned DefIdx,
 /// Return true if the instruction is marked "cheap" or the operand latency
 /// between its def and a use is one or less.
 bool MachineLICMImpl::IsCheapInstruction(MachineInstr &MI) const {
-  if (TII->isAsCheapAsAMove(MI) || MI.isCopyLike())
+  if (TII->isAsCheapAsAMove(MI) || MI.isSubregToReg())
     return true;
 
   bool isCheap = false;

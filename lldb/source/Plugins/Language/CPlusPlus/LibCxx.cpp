@@ -177,6 +177,9 @@ bool lldb_private::formatters::LibcxxSmartPointerSummaryProvider(
     if (!success)
       return false;
 
+    // std::shared_ptr releases the underlying resource when the
+    // __shared_owners_ count hits -1. So `__shared_owners_ == 0` indicates 1
+    // owner. Hence add +1 here.
     stream.Printf(" strong=%" PRIu64, count + 1);
   }
 
@@ -187,7 +190,9 @@ bool lldb_private::formatters::LibcxxSmartPointerSummaryProvider(
     if (!success)
       return false;
 
-    stream.Printf(" weak=%" PRIu64, count + 1);
+    // Unlike __shared_owners_, __shared_weak_owners_ indicates the exact
+    // std::weak_ptr reference count.
+    stream.Printf(" weak=%" PRIu64, count);
   }
 
   return true;

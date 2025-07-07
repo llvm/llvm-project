@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <memory>
 #include <string>
 
@@ -26,5 +27,12 @@ int main() {
   std::shared_ptr<int> si(new int(47));
   std::shared_ptr<int> sie(si, nullptr);
 
-  return 0; // break here
+  std::puts("// break here");
+
+  std::weak_ptr<int> wie = sie;
+  std::weak_ptr<int> wie2 = sie;
+
+  std::puts("// break here");
+
+  return 0;
 }
