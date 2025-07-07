@@ -1044,7 +1044,7 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
                                                getTypeConverter()));
     return mlir::success();
   } else if (auto complexTy = mlir::dyn_cast<cir::ComplexType>(op.getType())) {
-    auto complexElemTy = complexTy.getElementType();
+    mlir::Type complexElemTy = complexTy.getElementType();
     mlir::Type complexElemLLVMTy = typeConverter->convertType(complexElemTy);
 
     if (auto zeroInitAttr = mlir::dyn_cast<cir::ZeroAttr>(op.getValue())) {

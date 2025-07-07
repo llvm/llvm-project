@@ -205,8 +205,8 @@ mlir::Value ComplexExprEmitter::VisitChooseExpr(ChooseExpr *e) {
 mlir::Value
 ComplexExprEmitter::VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *e) {
   mlir::Location loc = cgf.getLoc(e->getExprLoc());
-  mlir::Type complexLLVMTy = cgf.convertType(e->getType());
-  return builder.getNullValue(complexLLVMTy, loc);
+  mlir::Type complexTy = cgf.convertType(e->getType());
+  return builder.getNullValue(complexTy, loc);
 }
 
 mlir::Value ComplexExprEmitter::VisitDeclRefExpr(DeclRefExpr *e) {
