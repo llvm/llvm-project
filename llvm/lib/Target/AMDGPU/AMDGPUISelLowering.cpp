@@ -4887,8 +4887,8 @@ static SDValue BitwiseToSrcModifierOp(SDValue N,
     break;
   case ISD::OR:
     if (Mask == 0x80000000u || Mask == 0x8000000000000000u) {
-      SDValue Abs = DAG.getNode(ISD::FNEG, SDLoc(N), FVT, BC);
-      return DAG.getNode(ISD::FABS, SDLoc(N), FVT, Abs);
+      SDValue Neg = DAG.getNode(ISD::FNEG, SDLoc(N), FVT, BC);
+      return DAG.getNode(ISD::FABS, SDLoc(N), FVT, Neg);
     }
     break;
   case ISD::AND:
