@@ -591,7 +591,7 @@ void RuntimePointerChecking::groupChecks(
   //
   // The above case requires that we have an UnknownDependence between
   // accesses to the same underlying object. This cannot happen unless
-  // FoundNonConstantDistanceDependence is set, and therefore UseDependencies
+  // ShouldRetryWithRuntimeChecks is set, and therefore UseDependencies
   // is also false. In this case we will use the fallback path and create
   // separate checking groups for all pointers.
 
@@ -819,7 +819,7 @@ public:
   /// perform dependency checking.
   ///
   /// Note that this can later be cleared if we retry memcheck analysis without
-  /// dependency checking (i.e. FoundNonConstantDistanceDependence).
+  /// dependency checking (i.e. ShouldRetryWithRuntimeChecks).
   bool isDependencyCheckNeeded() const { return !CheckDeps.empty(); }
 
   /// We decided that no dependence analysis would be used.  Reset the state.
@@ -896,7 +896,7 @@ private:
   ///
   /// Note that, this is different from isDependencyCheckNeeded.  When we retry
   /// memcheck analysis without dependency checking
-  /// (i.e. FoundNonConstantDistanceDependence), isDependencyCheckNeeded is
+  /// (i.e. ShouldRetryWithRuntimeChecks), isDependencyCheckNeeded is
   /// cleared while this remains set if we have potentially dependent accesses.
   bool IsRTCheckAnalysisNeeded = false;
 
@@ -2079,11 +2079,10 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   if (StrideAScaled == StrideBScaled)
     CommonStride = StrideAScaled;
 
-  // TODO: FoundNonConstantDistanceDependence is used as a necessary condition
-  // to consider retrying with runtime checks. Historically, we did not set it
-  // when (unscaled) strides were different but there is no inherent reason to.
+  // TODO: Historically, we didn't retry with runtime checks when (unscaled)
+  // strides were different but there is no inherent reason to.
   if (!isa<SCEVConstant>(Dist))
-    FoundNonConstantDistanceDependence |= StrideAPtrInt == StrideBPtrInt;
+    ShouldRetryWithRuntimeChecks |= StrideAPtrInt == StrideBPtrInt;
 
   // If distance is a SCEVCouldNotCompute, return Unknown immediately.
   if (isa<SCEVCouldNotCompute>(Dist)) {
@@ -2712,7 +2711,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     DepsAreSafe =
         DepChecker->areDepsSafe(DepCands, Accesses.getDependenciesToCheck());
 
-    if (!DepsAreSafe && DepChecker->shouldRetryWithRuntimeCheck()) {
+    if (!DepsAreSafe && DepChecker->shouldRetryWithRuntimeChecks()) {
       LLVM_DEBUG(dbgs() << "LAA: Retrying with memory checks\n");
 
       // Clear the dependency checks. We assume they are not needed.
