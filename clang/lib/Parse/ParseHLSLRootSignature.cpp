@@ -199,8 +199,13 @@ std::optional<RootDescriptor> RootSignatureParser::parseRootDescriptor() {
   }
   Descriptor.setDefaultFlags(Version);
 
-  auto Params = parseRootDescriptorParams(ExpectedReg);
+  auto Params = parseRootDescriptorParams(DescriptorKind, ExpectedReg);
   if (!Params.has_value())
+    return std::nullopt;
+
+  if (consumeExpectedToken(TokenKind::pu_r_paren,
+                           diag::err_hlsl_unexpected_end_of_params,
+                           /*param of=*/DescriptorKind))
     return std::nullopt;
 
   // Check mandatory parameters were provided
@@ -220,11 +225,6 @@ std::optional<RootDescriptor> RootSignatureParser::parseRootDescriptor() {
 
   if (Params->Flags.has_value())
     Descriptor.Flags = Params->Flags.value();
-
-  if (consumeExpectedToken(TokenKind::pu_r_paren,
-                           diag::err_hlsl_unexpected_end_of_params,
-                           /*param of=*/TokenKind::kw_RootConstants))
-    return std::nullopt;
 
   return Descriptor;
 }
@@ -493,14 +493,15 @@ RootSignatureParser::parseRootConstantParams() {
 }
 
 std::optional<RootSignatureParser::ParsedRootDescriptorParams>
-RootSignatureParser::parseRootDescriptorParams(TokenKind RegType) {
+RootSignatureParser::parseRootDescriptorParams(TokenKind DescType,
+                                               TokenKind RegType) {
   assert(CurToken.TokKind == TokenKind::pu_l_paren &&
          "Expects to only be invoked starting at given token");
 
   ParsedRootDescriptorParams Params;
-  do {
-    // ( `b` | `t` | `u`) POS_INT
+  while (!peekExpectedToken(TokenKind::pu_r_paren)) {
     if (tryConsumeExpectedToken(RegType)) {
+      // ( `b` | `t` | `u`) POS_INT
       if (Params.Reg.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -509,10 +510,8 @@ RootSignatureParser::parseRootDescriptorParams(TokenKind RegType) {
       if (!Reg.has_value())
         return std::nullopt;
       Params.Reg = Reg;
-    }
-
-    // `space` `=` POS_INT
-    if (tryConsumeExpectedToken(TokenKind::kw_space)) {
+    } else if (tryConsumeExpectedToken(TokenKind::kw_space)) {
+      // `space` `=` POS_INT
       if (Params.Space.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -525,10 +524,8 @@ RootSignatureParser::parseRootDescriptorParams(TokenKind RegType) {
       if (!Space.has_value())
         return std::nullopt;
       Params.Space = Space;
-    }
-
-    // `visibility` `=` SHADER_VISIBILITY
-    if (tryConsumeExpectedToken(TokenKind::kw_visibility)) {
+    } else if (tryConsumeExpectedToken(TokenKind::kw_visibility)) {
+      // `visibility` `=` SHADER_VISIBILITY
       if (Params.Visibility.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -541,10 +538,8 @@ RootSignatureParser::parseRootDescriptorParams(TokenKind RegType) {
       if (!Visibility.has_value())
         return std::nullopt;
       Params.Visibility = Visibility;
-    }
-
-    // `flags` `=` ROOT_DESCRIPTOR_FLAGS
-    if (tryConsumeExpectedToken(TokenKind::kw_flags)) {
+    } else if (tryConsumeExpectedToken(TokenKind::kw_flags)) {
+      // `flags` `=` ROOT_DESCRIPTOR_FLAGS
       if (Params.Flags.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -558,7 +553,11 @@ RootSignatureParser::parseRootDescriptorParams(TokenKind RegType) {
         return std::nullopt;
       Params.Flags = Flags;
     }
-  } while (tryConsumeExpectedToken(TokenKind::pu_comma));
+
+    // ',' denotes another element, otherwise, expected to be at ')'
+    if (!tryConsumeExpectedToken(TokenKind::pu_comma))
+      break;
+  }
 
   return Params;
 }
