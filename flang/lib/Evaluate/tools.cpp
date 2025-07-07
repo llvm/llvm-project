@@ -1174,9 +1174,8 @@ bool HasVectorSubscript(const Expr<SomeType> &expr) {
 }
 
 // HasTriplet()
-struct HasTripletHelper
-    : public AnyTraverse<HasTripletHelper, bool,
-          /*TraverseAssocEntityDetails=*/false> {
+struct HasTripletHelper : public AnyTraverse<HasTripletHelper, bool,
+                              /*TraverseAssocEntityDetails=*/false> {
   using Base = AnyTraverse<HasTripletHelper, bool, false>;
   HasTripletHelper() : Base{*this} {}
   using Base::operator();
@@ -1188,9 +1187,7 @@ struct HasTripletHelper
   }
 };
 
-bool HasTriplet(const Expr<SomeType> &expr) {
-  return HasTripletHelper{}(expr);
-}
+bool HasTriplet(const Expr<SomeType> &expr) { return HasTripletHelper{}(expr); }
 
 // HasConstant()
 struct HasConstantHelper : public AnyTraverse<HasConstantHelper, bool,

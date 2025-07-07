@@ -1418,8 +1418,8 @@ bool Fortran::lower::CallInterface<T>::PassedEntity::isIntentOut() const {
 }
 
 template <typename T>
-bool Fortran::lower::CallInterface<T>::PassedEntity::mustBeMadeContiguous(const bool argHasTriplet)
-    const {
+bool Fortran::lower::CallInterface<T>::PassedEntity::mustBeMadeContiguous(
+    const bool argHasTriplet) const {
   if (!characteristics)
     return true;
   const auto *dummy =
