@@ -1,7 +1,6 @@
 set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.errno
-    libc.src.string.strstr
 )
 
 set(TARGET_LIBM_ENTRYPOINTS)
