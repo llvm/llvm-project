@@ -3470,7 +3470,7 @@ func.func @fold_insert_use_chain(%arg : vector<4x4xf32>, %value : f32, %pos: ind
 //       CHECK:   %[[DEST_1:.*]] = vector.insert %[[VAL]], %[[DEST_0]] [0] : f32 into vector<4xf32>
 //       CHECK:   %[[RES:.*]] = vector.insert %[[VAL]], %[[DEST_1]] [1] : f32 into vector<4xf32>
 //       CHECK:   return %[[RES]] : vector<4xf32>
-func.func @no_fold_insert_use_chain(%v : vector<4xf32>, %value : f32) -> vector<4xf32> {
+func.func @no_fold_insert_use_chain_mismatch_static_position(%v : vector<4xf32>, %value : f32) -> vector<4xf32> {
   %v_0 = vector.insert %value, %v[0] : f32 into vector<4xf32>
   %v_2 = vector.insert %value, %v_0[1] : f32 into vector<4xf32>
   return %v_2 : vector<4xf32>  
