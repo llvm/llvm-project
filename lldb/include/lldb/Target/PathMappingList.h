@@ -63,8 +63,8 @@ public:
 
   /// Invokes callback for each pair of paths in the list. The callback can
   /// return false to immediately stop iteration.
-  void
-  ForEach(std::function<bool(llvm::StringRef, llvm::StringRef)> callback) const;
+  void ForEach(std::function<bool(size_t, llvm::StringRef, llvm::StringRef)>
+                   callback) const;
 
   void Insert(llvm::StringRef path, llvm::StringRef replacement,
               uint32_t insert_idx, bool notify);

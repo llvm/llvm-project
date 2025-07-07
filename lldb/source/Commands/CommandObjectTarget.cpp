@@ -1141,12 +1141,11 @@ public:
     const PathMappingList &list = target->GetImageSearchPathList();
 
     StreamString strm;
-    size_t index = 0;
-    list.ForEach([&](llvm::StringRef orig_path, llvm::StringRef remap_path) {
+    list.ForEach([&](size_t index, llvm::StringRef orig_path,
+                     llvm::StringRef remap_path) {
       strm << orig_path << " -> " << remap_path;
       request.TryCompleteCurrentArg(std::to_string(index), strm.GetString());
 
-      index++;
       strm.Clear();
       return true;
     });

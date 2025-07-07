@@ -347,10 +347,12 @@ PathMappingList::FindIteratorForPath(ConstString path) {
 }
 
 void PathMappingList::ForEach(
-    std::function<bool(llvm::StringRef, llvm::StringRef)> callback) const {
+    std::function<bool(size_t, llvm::StringRef, llvm::StringRef)> callback)
+    const {
   std::lock_guard<std::mutex> lock(m_pairs_mutex);
+  size_t index = 0;
   for (const auto &[original, replacement] : m_pairs)
-    if (!callback(original, replacement))
+    if (!callback(index++, original, replacement))
       break;
 }
 
