@@ -147,18 +147,18 @@ static Value sanitizeDynamicIndex(ConversionPatternRewriter &rewriter,
                                   Location loc, Value dynamicIndex,
                                   int64_t kPoisonIndex, unsigned vectorSize) {
   if (llvm::isPowerOf2_32(vectorSize)) {
-    Value inBoundsMask = rewriter.create<spirv::ConstantOp>(
+    Value inBoundsMask = spirv::ConstantOp::create(rewriter,
         loc, dynamicIndex.getType(),
         rewriter.getIntegerAttr(dynamicIndex.getType(), vectorSize - 1));
-    return rewriter.create<spirv::BitwiseAndOp>(loc, dynamicIndex,
+    return spirv::BitwiseAndOp::create(rewriter, loc, dynamicIndex,
                                                 inBoundsMask);
   }
-  Value poisonIndex = rewriter.create<spirv::ConstantOp>(
+  Value poisonIndex = spirv::ConstantOp::create(rewriter,
       loc, dynamicIndex.getType(),
       rewriter.getIntegerAttr(dynamicIndex.getType(), kPoisonIndex));
   Value cmpResult =
-      rewriter.create<spirv::IEqualOp>(loc, dynamicIndex, poisonIndex);
-  return rewriter.create<spirv::SelectOp>(
+      spirv::IEqualOp::create(rewriter, loc, dynamicIndex, poisonIndex);
+  return spirv::SelectOp::create(rewriter,
       loc, cmpResult,
       spirv::ConstantOp::getZero(dynamicIndex.getType(), loc, rewriter),
       dynamicIndex);
@@ -427,7 +427,7 @@ static SmallVector<Value> extractAllElements(
   Location loc = reduceOp.getLoc();
 
   for (int i = 0; i < numElements; ++i) {
-    values.push_back(rewriter.create<spirv::CompositeExtractOp>(
+    values.push_back(spirv::CompositeExtractOp::create(rewriter,
         loc, srcVectorType.getElementType(), adaptor.getVector(),
         rewriter.getI32ArrayAttr({i})));
   }
@@ -481,16 +481,16 @@ struct VectorReductionPattern final : OpConversionPattern<vector::ReductionOp> {
 #define INT_AND_FLOAT_CASE(kind, iop, fop)                                     \
   case vector::CombiningKind::kind:                                            \
     if (llvm::isa<IntegerType>(resultType)) {                                  \
-      result = rewriter.create<spirv::iop>(loc, resultType, result, next);     \
+      result = spirv::iop::create(rewriter, loc, resultType, result, next);     \
     } else {                                                                   \
       assert(llvm::isa<FloatType>(resultType));                                \
-      result = rewriter.create<spirv::fop>(loc, resultType, result, next);     \
+      result = spirv::fop::create(rewriter, loc, resultType, result, next);     \
     }                                                                          \
     break
 
 #define INT_OR_FLOAT_CASE(kind, fop)                                           \
   case vector::CombiningKind::kind:                                            \
-    result = rewriter.create<fop>(loc, resultType, result, next);              \
+    result = fop::create(rewriter, loc, resultType, result, next);              \
     break
 
         INT_AND_FLOAT_CASE(ADD, IAddOp, FAddOp);
@@ -537,7 +537,7 @@ struct VectorReductionFloatMinMax final
 
 #define INT_OR_FLOAT_CASE(kind, fop)                                           \
   case vector::CombiningKind::kind:                                            \
-    result = rewriter.create<fop>(loc, resultType, result, next);              \
+    result = fop::create(rewriter, loc, resultType, result, next);              \
     break
 
         INT_OR_FLOAT_CASE(MAXIMUMF, SPIRVFMaxOp);
@@ -613,7 +613,7 @@ struct VectorShuffleOpConvert final
     auto getElementAtIdx = [&rewriter, loc = shuffleOp.getLoc()](
                                Value scalarOrVec, int32_t idx) -> Value {
       if (auto vecTy = dyn_cast<VectorType>(scalarOrVec.getType()))
-        return rewriter.create<spirv::CompositeExtractOp>(loc, scalarOrVec,
+        return spirv::CompositeExtractOp::create(rewriter, loc, scalarOrVec,
                                                           idx);
 
       assert(idx == 0 && "Invalid scalar element index");
@@ -712,10 +712,10 @@ struct VectorDeinterleaveOpConvert final
     // We cannot use `spirv::VectorShuffleOp` directly in this case, and need to
     // use `spirv::CompositeExtractOp`.
     if (n == 2) {
-      auto elem0 = rewriter.create<spirv::CompositeExtractOp>(
+      auto elem0 = spirv::CompositeExtractOp::create(rewriter,
           loc, newResultType, sourceVector, rewriter.getI32ArrayAttr({0}));
 
-      auto elem1 = rewriter.create<spirv::CompositeExtractOp>(
+      auto elem1 = spirv::CompositeExtractOp::create(rewriter,
           loc, newResultType, sourceVector, rewriter.getI32ArrayAttr({1}));
 
       rewriter.replaceOp(deinterleaveOp, {elem0, elem1});
@@ -733,11 +733,11 @@ struct VectorDeinterleaveOpConvert final
         llvm::map_to_vector(seqOdd, [](int i) { return i * 2 + 1; });
 
     // Create two SPIR-V shuffles.
-    auto shuffleEven = rewriter.create<spirv::VectorShuffleOp>(
+    auto shuffleEven = spirv::VectorShuffleOp::create(rewriter,
         loc, newResultType, sourceVector, sourceVector,
         rewriter.getI32ArrayAttr(indicesEven));
 
-    auto shuffleOdd = rewriter.create<spirv::VectorShuffleOp>(
+    auto shuffleOdd = spirv::VectorShuffleOp::create(rewriter,
         loc, newResultType, sourceVector, sourceVector,
         rewriter.getI32ArrayAttr(indicesOdd));
 
@@ -781,7 +781,7 @@ struct VectorLoadOpConverter final
     // to a scalar.
     Value castedAccessChain = (vectorType.getNumElements() == 1)
                                   ? accessChain
-                                  : rewriter.create<spirv::BitcastOp>(
+                                  : spirv::BitcastOp::create(rewriter,
                                         loc, vectorPtrType, accessChain);
 
     rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp, spirvVectorType,
@@ -823,7 +823,7 @@ struct VectorStoreOpConverter final
     // to a scalar.
     Value castedAccessChain = (vectorType.getNumElements() == 1)
                                   ? accessChain
-                                  : rewriter.create<spirv::BitcastOp>(
+                                  : spirv::BitcastOp::create(rewriter,
                                         loc, vectorPtrType, accessChain);
 
     rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, castedAccessChain,
@@ -905,9 +905,9 @@ private:
       auto v4i8Type = VectorType::get({4}, i8Type);
       Location loc = op.getLoc();
       Value zero = spirv::ConstantOp::getZero(i8Type, loc, rewriter);
-      lhsIn = rewriter.create<spirv::CompositeConstructOp>(
+      lhsIn = spirv::CompositeConstructOp::create(rewriter,
           loc, v4i8Type, ValueRange{lhsIn, zero});
-      rhsIn = rewriter.create<spirv::CompositeConstructOp>(
+      rhsIn = spirv::CompositeConstructOp::create(rewriter,
           loc, v4i8Type, ValueRange{rhsIn, zero});
     }
 
@@ -971,14 +971,14 @@ struct VectorReductionToFPDotProd final
       Attribute oneAttr =
           rewriter.getFloatAttr(vectorType.getElementType(), 1.0);
       oneAttr = SplatElementsAttr::get(vectorType, oneAttr);
-      rhs = rewriter.create<spirv::ConstantOp>(loc, vectorType, oneAttr);
+      rhs = spirv::ConstantOp::create(rewriter, loc, vectorType, oneAttr);
     }
     assert(lhs);
     assert(rhs);
 
-    Value res = rewriter.create<spirv::DotOp>(loc, resultType, lhs, rhs);
+    Value res = spirv::DotOp::create(rewriter, loc, resultType, lhs, rhs);
     if (acc)
-      res = rewriter.create<spirv::FAddOp>(loc, acc, res);
+      res = spirv::FAddOp::create(rewriter, loc, acc, res);
 
     rewriter.replaceOp(op, res);
     return success();
@@ -1013,7 +1013,7 @@ struct VectorStepOpConvert final : OpConversionPattern<vector::StepOp> {
     source.reserve(numElements);
     for (int64_t i = 0; i < numElements; ++i) {
       Attribute intAttr = rewriter.getIntegerAttr(intType, i);
-      Value constOp = rewriter.create<spirv::ConstantOp>(loc, intType, intAttr);
+      Value constOp = spirv::ConstantOp::create(rewriter, loc, intType, intAttr);
       source.push_back(constOp);
     }
     rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(stepOp, dstType,
@@ -1056,7 +1056,7 @@ struct VectorToElementOpConvert final
       if (element.use_empty())
         continue;
 
-      Value result = rewriter.create<spirv::CompositeExtractOp>(
+      Value result = spirv::CompositeExtractOp::create(rewriter,
           loc, elementType, adaptor.getSource(),
           rewriter.getI32ArrayAttr({static_cast<int32_t>(idx)}));
       results[idx] = result;

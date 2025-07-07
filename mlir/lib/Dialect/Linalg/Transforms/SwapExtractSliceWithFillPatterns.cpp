@@ -29,7 +29,7 @@ struct SwapExtractSliceOfFill final
     if (!fillOp || !fillOp->hasOneUse())
       return failure();
 
-    auto newExtractOp = rewriter.create<tensor::ExtractSliceOp>(
+    auto newExtractOp = tensor::ExtractSliceOp::create(rewriter,
         extractOp.getLoc(), extractOp.getType(), fillOp.getOutputs()[0],
         extractOp.getMixedOffsets(), extractOp.getMixedSizes(),
         extractOp.getMixedStrides());

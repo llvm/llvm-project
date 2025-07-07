@@ -286,7 +286,7 @@ static Value rankReducingSubviewDroppingUnitDims(PatternRewriter &rewriter,
   if (resultType.canonicalizeStridedLayout() ==
       inputType.canonicalizeStridedLayout())
     return input;
-  return rewriter.create<memref::SubViewOp>(loc, resultType, input, offsets,
+  return memref::SubViewOp::create(rewriter, loc, resultType, input, offsets,
                                             sizes, strides);
 }
 
@@ -395,11 +395,11 @@ class TransferReadDropUnitDimsPattern
 
     Value reducedShapeSource =
         rankReducingSubviewDroppingUnitDims(rewriter, loc, source);
-    Value c0 = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
     SmallVector<Value> zeros(reducedRank, c0);
     auto identityMap = rewriter.getMultiDimIdentityMap(reducedRank);
     SmallVector<bool> inBounds(reducedVectorType.getRank(), true);
-    Operation *newTransferReadOp = rewriter.create<vector::TransferReadOp>(
+    Operation *newTransferReadOp = vector::TransferReadOp::create(rewriter,
         loc, reducedVectorType, reducedShapeSource, zeros, identityMap,
         transferReadOp.getPadding(), maskOp,
         rewriter.getBoolArrayAttr(inBounds));
@@ -477,13 +477,13 @@ class TransferWriteDropUnitDimsPattern
     }
     Value reducedShapeSource =
         rankReducingSubviewDroppingUnitDims(rewriter, loc, source);
-    Value c0 = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
     SmallVector<Value> zeros(reducedRank, c0);
     auto identityMap = rewriter.getMultiDimIdentityMap(reducedRank);
     SmallVector<bool> inBounds(reducedVectorType.getRank(), true);
     auto shapeCastSrc = rewriter.createOrFold<vector::ShapeCastOp>(
         loc, reducedVectorType, vector);
-    Operation *newXferWrite = rewriter.create<vector::TransferWriteOp>(
+    Operation *newXferWrite = vector::TransferWriteOp::create(rewriter,
         loc, Type(), shapeCastSrc, reducedShapeSource, zeros, identityMap,
         maskOp, rewriter.getBoolArrayAttr(inBounds));
 
@@ -520,7 +520,7 @@ static Value collapseInnerDims(PatternRewriter &rewriter, mlir::Location loc,
   for (int64_t i = firstDimToCollapse; i < inputType.getRank(); ++i)
     collapsedIndices.push_back(i);
   reassociation.push_back(collapsedIndices);
-  return rewriter.create<memref::CollapseShapeOp>(loc, input, reassociation);
+  return memref::CollapseShapeOp::create(rewriter, loc, input, reassociation);
 }
 
 /// Returns the new indices that collapses the inner dimensions starting from
@@ -559,7 +559,7 @@ static SmallVector<Value> getCollapsedIndices(RewriterBase &rewriter,
   // one would get the following offset:
   //    %offset = %arg0 * 43
   OpFoldResult collapsedOffset =
-      rewriter.create<arith::ConstantIndexOp>(loc, 0).getResult();
+      arith::ConstantIndexOp::create(rewriter, loc, 0).getResult();
 
   auto collapsedStrides = computeSuffixProduct(
       ArrayRef<int64_t>(shape.begin() + firstDimToCollapse, shape.end()));
@@ -573,7 +573,7 @@ static SmallVector<Value> getCollapsedIndices(RewriterBase &rewriter,
   if (auto value = dyn_cast<Value>(collapsedOffset)) {
     indicesAfterCollapsing.push_back(value);
   } else {
-    indicesAfterCollapsing.push_back(rewriter.create<arith::ConstantIndexOp>(
+    indicesAfterCollapsing.push_back(arith::ConstantIndexOp::create(rewriter,
         loc, *getConstantIntValue(collapsedOffset)));
   }
 
@@ -659,7 +659,7 @@ public:
     // 3. Create new vector.transfer_read that reads from the collapsed memref
     VectorType flatVectorType = VectorType::get({vectorType.getNumElements()},
                                                 vectorType.getElementType());
-    vector::TransferReadOp flatRead = rewriter.create<vector::TransferReadOp>(
+    vector::TransferReadOp flatRead = vector::TransferReadOp::create(rewriter,
         loc, flatVectorType, collapsedSource, collapsedIndices,
         transferReadOp.getPadding(), collapsedMap);
     flatRead.setInBoundsAttr(rewriter.getBoolArrayAttr({true}));
@@ -757,9 +757,9 @@ public:
     VectorType flatVectorType = VectorType::get({vectorType.getNumElements()},
                                                 vectorType.getElementType());
     Value flatVector =
-        rewriter.create<vector::ShapeCastOp>(loc, flatVectorType, vector);
+        vector::ShapeCastOp::create(rewriter, loc, flatVectorType, vector);
     vector::TransferWriteOp flatWrite =
-        rewriter.create<vector::TransferWriteOp>(
+        vector::TransferWriteOp::create(rewriter,
             loc, flatVector, collapsedSource, collapsedIndices, collapsedMap);
     flatWrite.setInBoundsAttr(rewriter.getBoolArrayAttr({true}));
 
@@ -846,7 +846,7 @@ public:
       if (auto value = dyn_cast<Value>(composedIdx)) {
         newIndices[idx] = value;
       } else {
-        newIndices[idx] = rewriter.create<arith::ConstantIndexOp>(
+        newIndices[idx] = arith::ConstantIndexOp::create(rewriter,
             extractOp.getLoc(), *getConstantIntValue(composedIdx));
       }
     }
@@ -884,7 +884,7 @@ class RewriteScalarWrite : public OpRewritePattern<vector::TransferWriteOp> {
       return failure();
     // Only float and integer element types are supported.
     Value scalar =
-        rewriter.create<vector::ExtractOp>(xferOp.getLoc(), xferOp.getVector());
+        vector::ExtractOp::create(rewriter, xferOp.getLoc(), xferOp.getVector());
     // Construct a scalar store.
     if (isa<MemRefType>(xferOp.getBase().getType())) {
       rewriter.replaceOpWithNewOp<memref::StoreOp>(

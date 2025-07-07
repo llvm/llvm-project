@@ -64,7 +64,7 @@ FailureOr<Value> tensor::buildIndependentOp(OpBuilder &b, tensor::PadOp padOp,
     return padOp.getResult();
 
   // Create a new tensor::PadOp.
-  auto newPadOp = b.create<PadOp>(
+  auto newPadOp = PadOp::create(b,
       loc, padOp.getResultType(), padOp.getSource(), newMixedLow, newMixedHigh,
       constantPadding, padOp.getNofold(), /*attrs=*/ArrayRef<NamedAttribute>{});
 
@@ -83,7 +83,7 @@ FailureOr<Value> tensor::buildIndependentOp(OpBuilder &b, tensor::PadOp padOp,
       offsets.push_back(b.getIndexAttr(0));
     } else {
       offsets.push_back(
-          b.create<affine::AffineApplyOp>(
+          affine::AffineApplyOp::create(b,
                loc, b.getAffineDimExpr(0) - b.getAffineDimExpr(1),
                std::initializer_list<Value>{cast<Value>(newMixedLow[i]),
                                             cast<Value>(prevLow)})
@@ -99,7 +99,7 @@ FailureOr<Value> tensor::buildIndependentOp(OpBuilder &b, tensor::PadOp padOp,
     strides.push_back(b.getIndexAttr(1));
   }
 
-  return b.create<ExtractSliceOp>(loc, newPadOp, offsets, sizes, strides)
+  return ExtractSliceOp::create(b, loc, newPadOp, offsets, sizes, strides)
       .getResult();
 }
 
@@ -124,7 +124,7 @@ FailureOr<Value> tensor::buildIndependentOp(OpBuilder &b,
 
   // Create a new tensor::EmptyOp.
   Value newEmptyOp =
-      b.create<EmptyOp>(loc, newSizes, emptyOp.getType().getElementType());
+      EmptyOp::create(b, loc, newSizes, emptyOp.getType().getElementType());
 
   // Create a tensor::ExtractSliceOp.
   SmallVector<OpFoldResult> offsets(newSizes.size(), b.getIndexAttr(0));

@@ -143,7 +143,7 @@ struct SimplifyUnPackToCollapseShape : public OpRewritePattern<UnPackOp> {
                        Type newOperandType, ArrayAttr reassociation) const {
     if (operand.getType() == newOperandType)
       return operand;
-    return rewriter.create<tensor::CollapseShapeOp>(loc, newOperandType,
+    return tensor::CollapseShapeOp::create(rewriter, loc, newOperandType,
                                                     operand, reassociation);
   }
 
@@ -265,7 +265,7 @@ public:
 
     // Create a new empty output tensor.
     Type elementType = unpackOp.getDestType().getElementType();
-    Value output = rewriter.create<tensor::EmptyOp>(
+    Value output = tensor::EmptyOp::create(rewriter,
         sliceOp.getLoc(), sliceOp.getMixedSizes(), elementType);
     rewriter.replaceOpWithNewOp<UnPackOp>(
         sliceOp, unpackOp.getSource(), output, unpackOp.getInnerDimsPos(),
@@ -529,7 +529,7 @@ public:
 
     auto elemType =
         cast<ShapedType>(unPackOp->getResultTypes()[0]).getElementType();
-    Value output = rewriter.create<tensor::EmptyOp>(
+    Value output = tensor::EmptyOp::create(rewriter,
         unPackOp->getLoc(), unpackOpResultDims[0], elemType);
 
     rewriter.replaceOpWithNewOp<UnPackOp>(

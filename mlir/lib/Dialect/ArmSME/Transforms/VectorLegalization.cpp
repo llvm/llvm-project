@@ -82,13 +82,13 @@ SmallVector<Value, 2> addConstantScalableOffset(OpBuilder &builder,
                                                 Location loc,
                                                 ValueRange indices,
                                                 ArrayRef<int> scalableOffsets) {
-  auto vscale = builder.create<vector::VectorScaleOp>(loc);
+  auto vscale = vector::VectorScaleOp::create(builder, loc);
   return llvm::map_to_vector(
       llvm::zip_equal(indices, scalableOffsets), [&](auto pair) -> Value {
         auto [index, base] = pair;
-        auto offset = builder.create<arith::MulIOp>(
-            loc, builder.create<arith::ConstantIndexOp>(loc, base), vscale);
-        return builder.create<arith::AddIOp>(loc, index, offset);
+        auto offset = arith::MulIOp::create(builder,
+            loc, arith::ConstantIndexOp::create(builder, loc, base), vscale);
+        return arith::AddIOp::create(builder, loc, index, offset);
       });
 }
 
@@ -132,7 +132,7 @@ Value extractSMEMask(OpBuilder &builder, Location loc, Value mask,
   // from the mask operands to get the parameters for this sub-tile.
   auto smeTileMaskDims = addConstantScalableOffset(
       builder, loc, createMask.getOperands(), {-smeTile.row, -smeTile.col});
-  auto smeTileCreateMask = builder.create<vector::CreateMaskOp>(
+  auto smeTileCreateMask = vector::CreateMaskOp::create(builder,
       loc, smeTile.type.clone(builder.getI1Type()), smeTileMaskDims);
   return smeTileCreateMask.getResult();
 }
@@ -190,7 +190,7 @@ struct LegalizeArithConstantOpsByDecomposition
 
     auto smeTileType = getSMETileTypeForElement(vectorType.getElementType());
     auto tileCount = getNumberOfSMETilesForVectorType(vectorType);
-    auto tileSplat = rewriter.create<arith::ConstantOp>(
+    auto tileSplat = arith::ConstantOp::create(rewriter,
         constantOp.getLoc(), denseAttr.resizeSplat(smeTileType));
     SmallVector<Value> repl(tileCount, tileSplat);
     rewriter.replaceOpWithMultiple(constantOp, {repl});
@@ -237,11 +237,11 @@ struct LegalizeVectorOuterProductOpsByDecomposition
              decomposeToSMETiles(rewriter, vectorType, smeTileType))) {
 
       auto smeMask = extractSMEMask(rewriter, loc, mask, smeTile);
-      auto lhs = rewriter.create<vector::ScalableExtractOp>(
+      auto lhs = vector::ScalableExtractOp::create(rewriter,
           loc, sliceType, outerProductOp.getLhs(), smeTile.row);
-      auto rhs = rewriter.create<vector::ScalableExtractOp>(
+      auto rhs = vector::ScalableExtractOp::create(rewriter,
           loc, sliceType, outerProductOp.getRhs(), smeTile.col);
-      auto smeOuterProduct = rewriter.create<vector::OuterProductOp>(
+      auto smeOuterProduct = vector::OuterProductOp::create(rewriter,
           loc, smeTileType, lhs, rhs,
           !accSMETiles.empty() ? accSMETiles[index] : Value{},
           outerProductOp.getKind());
@@ -314,7 +314,7 @@ struct LegalizeTransferReadOpsByDecomposition
     for (SMESubTile smeTile :
          decomposeToSMETiles(rewriter, vectorType, smeTileType, transposed)) {
       auto smeMask = extractSMEMask(rewriter, loc, mask, smeTile);
-      auto smeRead = rewriter.create<vector::TransferReadOp>(
+      auto smeRead = vector::TransferReadOp::create(rewriter,
           loc, smeTileType, readOp.getBase(),
           getSMESubTileIndices(rewriter, loc, readOp.getIndices(), smeTile),
           readOp.getPermutationMapAttr(), readOp.getPadding(), smeMask,
@@ -363,7 +363,7 @@ struct LegalizeTransferWriteOpsByDecomposition
     for (auto [index, smeTile] : llvm::enumerate(decomposeToSMETiles(
              rewriter, vectorType, smeTileType, transposed))) {
       auto smeMask = extractSMEMask(rewriter, loc, mask, smeTile);
-      auto smeWrite = rewriter.create<vector::TransferWriteOp>(
+      auto smeWrite = vector::TransferWriteOp::create(rewriter,
           loc, inputSMETiles[index], destTensorOrMemref,
           getSMESubTileIndices(rewriter, loc, writeOp.getIndices(), smeTile),
           writeOp.getPermutationMapAttr(), smeMask, writeOp.getInBoundsAttr());
@@ -456,11 +456,11 @@ struct LegalizeMultiTileTransferWriteAsStoreLoop
         VectorType::get(minTileSlices, rewriter.getI1Type(), true);
 
     // Create loop over all tile slices.
-    auto lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    auto lowerBound = arith::ConstantIndexOp::create(rewriter, loc, 0);
     auto upperBound = createVscaleMultiple(minTileSlices);
-    auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    auto step = arith::ConstantIndexOp::create(rewriter, loc, 1);
     auto storeLoop =
-        rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step);
+        scf::ForOp::create(rewriter, loc, lowerBound, upperBound, step);
     rewriter.setInsertionPointToStart(storeLoop.getBody());
 
     // For each sub-tile of the multi-tile `vectorType`.
@@ -474,29 +474,29 @@ struct LegalizeMultiTileTransferWriteAsStoreLoop
 
       // The current slice of `vectorType` we are processing.
       auto sliceIndex =
-          rewriter.create<arith::AddIOp>(loc, tileRow, tileSliceIndex);
+          arith::AddIOp::create(rewriter, loc, tileRow, tileSliceIndex);
 
       // Where in the destination memref the current slice will be stored.
-      auto storeRow = rewriter.create<arith::AddIOp>(loc, sliceIndex,
+      auto storeRow = arith::AddIOp::create(rewriter, loc, sliceIndex,
                                                      writeOp.getIndices()[0]);
       auto storeCol =
-          rewriter.create<arith::AddIOp>(loc, tileCol, writeOp.getIndices()[1]);
+          arith::AddIOp::create(rewriter, loc, tileCol, writeOp.getIndices()[1]);
 
       // Extract the mask for the current slice.
       Value sliceMask = nullptr;
       if (mask) {
-        sliceMask = rewriter.create<vector::ExtractOp>(
+        sliceMask = vector::ExtractOp::create(rewriter,
             loc, mask, OpFoldResult(sliceIndex));
         if (sliceMaskType != sliceMask.getType())
-          sliceMask = rewriter.create<vector::ScalableExtractOp>(
+          sliceMask = vector::ScalableExtractOp::create(rewriter,
               loc, sliceMaskType, sliceMask, smeTile.col);
       }
 
       // Extract and store the current slice.
       Value tile = inputSMETiles[index];
       auto slice =
-          rewriter.create<vector::ExtractOp>(loc, tile, tileSliceIndex);
-      rewriter.create<vector::TransferWriteOp>(
+          vector::ExtractOp::create(rewriter, loc, tile, tileSliceIndex);
+      vector::TransferWriteOp::create(rewriter,
           loc, slice, writeOp.getBase(), ValueRange{storeRow, storeCol},
           AffineMapAttr::get(writeOp.getPermutationMap().dropResult(0)),
           sliceMask,
@@ -567,13 +567,13 @@ struct FoldExtractFromVectorOfSMELikeCreateMasks
           extractOp,
           "constant vector.create_masks dims should be folded elsewhere");
 
-    auto zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    auto zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
     auto extractionIndex = getValueOrCreateConstantIndexOp(
         rewriter, loc, extractOp.getMixedPosition()[0]);
-    auto extractionInTrueRegion = rewriter.create<arith::CmpIOp>(
+    auto extractionInTrueRegion = arith::CmpIOp::create(rewriter,
         loc, rewriter.getI1Type(), arith::CmpIPredicate::slt, extractionIndex,
         frontMaskDim);
-    auto newMaskFrontDim = rewriter.create<arith::SelectOp>(
+    auto newMaskFrontDim = arith::SelectOp::create(rewriter,
         loc, extractionInTrueRegion, createMaskOp.getOperand(1), zero);
 
     rewriter.replaceOpWithNewOp<vector::CreateMaskOp>(
@@ -660,8 +660,8 @@ struct LiftIllegalVectorTransposeToMemory
           illegalRead, "expected read to have identity permutation map");
 
     auto loc = transposeOp.getLoc();
-    auto zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-    auto one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    auto zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    auto one = arith::ConstantIndexOp::create(rewriter, loc, 1);
 
     // Create a subview that matches the size of the illegal read vector type.
     auto readType = illegalRead.getVectorType();
@@ -669,14 +669,14 @@ struct LiftIllegalVectorTransposeToMemory
         llvm::zip_equal(readType.getShape(), readType.getScalableDims()),
         [&](auto dim) -> Value {
           auto [size, isScalable] = dim;
-          auto dimSize = rewriter.create<arith::ConstantIndexOp>(loc, size);
+          auto dimSize = arith::ConstantIndexOp::create(rewriter, loc, size);
           if (!isScalable)
             return dimSize;
-          auto vscale = rewriter.create<vector::VectorScaleOp>(loc);
-          return rewriter.create<arith::MulIOp>(loc, vscale, dimSize);
+          auto vscale = vector::VectorScaleOp::create(rewriter, loc);
+          return arith::MulIOp::create(rewriter, loc, vscale, dimSize);
         });
     SmallVector<Value> strides(readType.getRank(), Value(one));
-    auto readSubview = rewriter.create<memref::SubViewOp>(
+    auto readSubview = memref::SubViewOp::create(rewriter,
         loc, illegalRead.getBase(), illegalRead.getIndices(), readSizes,
         strides);
 
@@ -686,13 +686,13 @@ struct LiftIllegalVectorTransposeToMemory
     if (mask) {
       // Note: The transpose for the mask should fold into the
       // vector.create_mask/constant_mask op, which will then become legal.
-      mask = rewriter.create<vector::TransposeOp>(loc, mask,
+      mask = vector::TransposeOp::create(rewriter, loc, mask,
                                                   transposeOp.getPermutation());
     }
     // - The source memref
     mlir::AffineMap transposeMap = AffineMap::getPermutationMap(
         transposeOp.getPermutation(), getContext());
-    auto transposedSubview = rewriter.create<memref::TransposeOp>(
+    auto transposedSubview = memref::TransposeOp::create(rewriter,
         loc, readSubview, AffineMapAttr::get(transposeMap));
     ArrayAttr inBoundsAttr = illegalRead.getInBoundsAttr();
     // - The `in_bounds` attribute
@@ -706,7 +706,7 @@ struct LiftIllegalVectorTransposeToMemory
     VectorType legalReadType = resultType.clone(readType.getElementType());
     // Note: The indices are all zero as the subview is already offset.
     SmallVector<Value> readIndices(illegalRead.getIndices().size(), zero);
-    auto legalRead = rewriter.create<vector::TransferReadOp>(
+    auto legalRead = vector::TransferReadOp::create(rewriter,
         loc, legalReadType, transposedSubview, readIndices,
         illegalRead.getPermutationMapAttr(), illegalRead.getPadding(), mask,
         inBoundsAttr);
@@ -797,12 +797,12 @@ struct LowerIllegalTransposeStoreViaZA
         AffineMap::getPermutationMap(ArrayRef<int64_t>{1, 0}, getContext()));
 
     // Note: We need to use `get_tile` as there's no vector-level `undef`.
-    Value undefTile = rewriter.create<arm_sme::GetTileOp>(loc, smeTileType);
+    Value undefTile = arm_sme::GetTileOp::create(rewriter, loc, smeTileType);
     Value destTensorOrMemref = writeOp.getBase();
     auto numSlicesPerTile =
         std::min(sourceType.getDimSize(0), smeTileType.getDimSize(0));
     auto numSlices =
-        rewriter.create<arith::ConstantIndexOp>(loc, numSlicesPerTile);
+        arith::ConstantIndexOp::create(rewriter, loc, numSlicesPerTile);
     for (auto [index, smeTile] : llvm::enumerate(
              decomposeToSMETiles(rewriter, sourceType, smeTileType))) {
       // 1. _Deliberately_ drop a scalable dimension and insert a fixed number
@@ -811,46 +811,46 @@ struct LowerIllegalTransposeStoreViaZA
       // rows of the tile after 1*vscale rows.
       Value tile = undefTile;
       for (int d = 0; d < numSlicesPerTile; ++d) {
-        Value vector = rewriter.create<vector::ExtractOp>(
+        Value vector = vector::ExtractOp::create(rewriter,
             loc, transposeOp.getVector(),
             rewriter.getIndexAttr(d + smeTile.row));
         if (vector.getType() != smeSliceType) {
-          vector = rewriter.create<vector::ScalableExtractOp>(
+          vector = vector::ScalableExtractOp::create(rewriter,
               loc, smeSliceType, vector, smeTile.col);
         }
-        tile = rewriter.create<vector::InsertOp>(loc, vector, tile, d);
+        tile = vector::InsertOp::create(rewriter, loc, vector, tile, d);
       }
 
       // 2. Transpose the tile position.
       auto transposedRow = createVscaleMultiple(smeTile.col);
       auto transposedCol =
-          rewriter.create<arith::ConstantIndexOp>(loc, smeTile.row);
+          arith::ConstantIndexOp::create(rewriter, loc, smeTile.row);
 
       // 3. Compute mask for tile store.
       Value maskRows;
       Value maskCols;
       if (auto mask = writeOp.getMask()) {
         auto createMask = mask.getDefiningOp<vector::CreateMaskOp>();
-        maskRows = rewriter.create<arith::SubIOp>(loc, createMask.getOperand(0),
+        maskRows = arith::SubIOp::create(rewriter, loc, createMask.getOperand(0),
                                                   transposedRow);
-        maskCols = rewriter.create<arith::SubIOp>(loc, createMask.getOperand(1),
+        maskCols = arith::SubIOp::create(rewriter, loc, createMask.getOperand(1),
                                                   transposedCol);
-        maskCols = rewriter.create<index::MinSOp>(loc, maskCols, numSlices);
+        maskCols = index::MinSOp::create(rewriter, loc, maskCols, numSlices);
       } else {
         maskRows = createVscaleMultiple(smeTileType.getDimSize(0));
         maskCols = numSlices;
       }
-      auto subMask = rewriter.create<vector::CreateMaskOp>(
+      auto subMask = vector::CreateMaskOp::create(rewriter,
           loc, smeTileType.clone(rewriter.getI1Type()),
           ValueRange{maskRows, maskCols});
 
       // 4. Emit a transposed tile write.
       auto writeIndices = writeOp.getIndices();
       Value destRow =
-          rewriter.create<arith::AddIOp>(loc, transposedRow, writeIndices[0]);
+          arith::AddIOp::create(rewriter, loc, transposedRow, writeIndices[0]);
       Value destCol =
-          rewriter.create<arith::AddIOp>(loc, transposedCol, writeIndices[1]);
-      auto smeWrite = rewriter.create<vector::TransferWriteOp>(
+          arith::AddIOp::create(rewriter, loc, transposedCol, writeIndices[1]);
+      auto smeWrite = vector::TransferWriteOp::create(rewriter,
           loc, tile, destTensorOrMemref, ValueRange{destRow, destCol},
           transposeMap, subMask, writeOp.getInBounds());
 
@@ -934,41 +934,41 @@ struct LowerColumnTransferReadToLoops
 
     // Create a loop over all rows and load one element at a time.
     auto loc = readOp.getLoc();
-    auto lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    auto lowerBound = arith::ConstantIndexOp::create(rewriter, loc, 0);
     auto createVscaleMultiple =
         vector::makeVscaleConstantBuilder(rewriter, loc);
     auto upperBound = createVscaleMultiple(numRows);
-    auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
-    Value init = rewriter.create<arith::ConstantOp>(
+    auto step = arith::ConstantIndexOp::create(rewriter, loc, 1);
+    Value init = arith::ConstantOp::create(rewriter,
         loc, newResType, DenseElementsAttr::get(newResType, 0.0f));
 
     scf::ForOp loadLoop;
     {
       OpBuilder::InsertionGuard g(rewriter);
-      loadLoop = rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step,
+      loadLoop = scf::ForOp::create(rewriter, loc, lowerBound, upperBound, step,
                                              ValueRange{init});
       rewriter.setInsertionPointToStart(loadLoop.getBody());
 
       auto tileSliceIndex = loadLoop.getInductionVar();
 
-      auto idx0 = rewriter.create<arith::AddIOp>(loc, tileSliceIndex,
+      auto idx0 = arith::AddIOp::create(rewriter, loc, tileSliceIndex,
                                                  readOp.getIndices()[0]);
       auto idx1 = readOp.getIndices()[1];
 
-      Value scalar = rewriter.create<memref::LoadOp>(
+      Value scalar = memref::LoadOp::create(rewriter,
           loc, readOp.getBase(), SmallVector<Value>({idx0, idx1}));
 
-      Operation *updateInit = rewriter.create<vector::InsertOp>(
+      Operation *updateInit = vector::InsertOp::create(rewriter,
           loc, scalar, loadLoop.getRegionIterArg(0), tileSliceIndex);
 
-      rewriter.create<scf::YieldOp>(loc, updateInit->getResult(0));
+      scf::YieldOp::create(rewriter, loc, updateInit->getResult(0));
     }
 
     // The read operation has been "legalized", but since the original result
     // type was a 2D vector, we need to cast before returning the result. This
     // ShapeCast should cancel-out with some other ShapeCast (i.e. it's a
     // no-op).
-    auto sc = rewriter.create<vector::ShapeCastOp>(
+    auto sc = vector::ShapeCastOp::create(rewriter,
         loc, readOp.getResult().getType(), loadLoop.getResult(0));
 
     rewriter.replaceOp(readOp, sc);

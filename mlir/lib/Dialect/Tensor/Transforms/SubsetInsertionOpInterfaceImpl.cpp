@@ -59,7 +59,7 @@ struct InsertSliceLikeOpSubsetInsertionOpInterface
   Value buildSubsetExtraction(Operation *op, OpBuilder &builder,
                               Location loc) const {
     auto insertSliceOp = cast<OpTy>(op);
-    auto extractOp = builder.create<tensor::ExtractSliceOp>(
+    auto extractOp = tensor::ExtractSliceOp::create(builder,
         loc, insertSliceOp.getSourceType(), insertSliceOp.getDest(),
         insertSliceOp.getMixedOffsets(), insertSliceOp.getMixedSizes(),
         insertSliceOp.getMixedStrides());

@@ -37,7 +37,7 @@ LogicalResult mlir::LLVMImportInterface::convertUnregisteredIntrinsic(
     return failure();
 
   Type resultType = moduleImport.convertType(inst->getType());
-  auto op = builder.create<::mlir::LLVM::CallIntrinsicOp>(
+  auto op = ::mlir::LLVM::CallIntrinsicOp::create(builder,
       moduleImport.translateLoc(inst->getDebugLoc()),
       isa<LLVMVoidType>(resultType) ? TypeRange{} : TypeRange{resultType},
       StringAttr::get(builder.getContext(), intrinName),

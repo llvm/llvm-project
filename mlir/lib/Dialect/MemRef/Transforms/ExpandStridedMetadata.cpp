@@ -66,7 +66,7 @@ resolveSubviewStridedMetadata(RewriterBase &rewriter,
   unsigned sourceRank = sourceType.getRank();
 
   auto newExtractStridedMetadata =
-      rewriter.create<memref::ExtractStridedMetadataOp>(origLoc, source);
+      memref::ExtractStridedMetadataOp::create(rewriter, origLoc, source);
 
   auto [sourceStrides, sourceOffset] = sourceType.getStridesAndOffset();
 #ifndef NDEBUG
@@ -577,7 +577,7 @@ static FailureOr<StridedMetadata> resolveReshapeStridedMetadata(
   unsigned sourceRank = sourceType.getRank();
 
   auto newExtractStridedMetadata =
-      rewriter.create<memref::ExtractStridedMetadataOp>(origLoc, source);
+      memref::ExtractStridedMetadataOp::create(rewriter, origLoc, source);
 
   // Collect statically known information.
   auto [strides, offset] = sourceType.getStridesAndOffset();
@@ -828,14 +828,14 @@ public:
       if (allocLikeOp.getType() == baseBufferType)
         results.push_back(allocLikeOp);
       else
-        results.push_back(rewriter.create<memref::ReinterpretCastOp>(
+        results.push_back(memref::ReinterpretCastOp::create(rewriter,
             loc, baseBufferType, allocLikeOp, offset,
             /*sizes=*/ArrayRef<int64_t>(),
             /*strides=*/ArrayRef<int64_t>()));
     }
 
     // Offset.
-    results.push_back(rewriter.create<arith::ConstantIndexOp>(loc, offset));
+    results.push_back(arith::ConstantIndexOp::create(rewriter, loc, offset));
 
     for (OpFoldResult size : sizes)
       results.push_back(getValueOrCreateConstantIndexOp(rewriter, loc, size));
@@ -900,19 +900,19 @@ public:
     if (getGlobalOp.getType() == baseBufferType)
       results.push_back(getGlobalOp);
     else
-      results.push_back(rewriter.create<memref::ReinterpretCastOp>(
+      results.push_back(memref::ReinterpretCastOp::create(rewriter,
           loc, baseBufferType, getGlobalOp, offset,
           /*sizes=*/ArrayRef<int64_t>(),
           /*strides=*/ArrayRef<int64_t>()));
 
     // Offset.
-    results.push_back(rewriter.create<arith::ConstantIndexOp>(loc, offset));
+    results.push_back(arith::ConstantIndexOp::create(rewriter, loc, offset));
 
     for (auto size : sizes)
-      results.push_back(rewriter.create<arith::ConstantIndexOp>(loc, size));
+      results.push_back(arith::ConstantIndexOp::create(rewriter, loc, size));
 
     for (auto stride : strides)
-      results.push_back(rewriter.create<arith::ConstantIndexOp>(loc, stride));
+      results.push_back(arith::ConstantIndexOp::create(rewriter, loc, stride));
 
     rewriter.replaceOp(op, results);
     return success();
@@ -1009,7 +1009,7 @@ class ExtractStridedMetadataOpReinterpretCastFolder
     results.resize_for_overwrite(rank * 2 + 2);
 
     auto newExtractStridedMetadata =
-        rewriter.create<memref::ExtractStridedMetadataOp>(
+        memref::ExtractStridedMetadataOp::create(rewriter,
             loc, reinterpretCastOp.getSource());
 
     // Register the base_buffer.
@@ -1083,7 +1083,7 @@ class ExtractStridedMetadataOpCastFolder
     results.resize_for_overwrite(rank * 2 + 2);
 
     auto newExtractStridedMetadata =
-        rewriter.create<memref::ExtractStridedMetadataOp>(loc,
+        memref::ExtractStridedMetadataOp::create(rewriter, loc,
                                                           castOp.getSource());
 
     // Register the base_buffer.
@@ -1143,7 +1143,7 @@ class ExtractStridedMetadataOpMemorySpaceCastFolder
     if (!memSpaceCastOp)
       return failure();
     auto newExtractStridedMetadata =
-        rewriter.create<memref::ExtractStridedMetadataOp>(
+        memref::ExtractStridedMetadataOp::create(rewriter,
             loc, memSpaceCastOp.getSource());
     SmallVector<Value> results(newExtractStridedMetadata.getResults());
     // As with most other strided metadata rewrite patterns, don't introduce
@@ -1158,7 +1158,7 @@ class ExtractStridedMetadataOpMemorySpaceCastFolder
       MemRefType::Builder newTypeBuilder(baseBufferType);
       newTypeBuilder.setMemorySpace(
           memSpaceCastOp.getResult().getType().getMemorySpace());
-      results[0] = rewriter.create<memref::MemorySpaceCastOp>(
+      results[0] = memref::MemorySpaceCastOp::create(rewriter,
           loc, Type{newTypeBuilder}, baseBuffer);
     } else {
       results[0] = nullptr;

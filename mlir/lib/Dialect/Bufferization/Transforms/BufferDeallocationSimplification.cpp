@@ -167,7 +167,7 @@ struct RemoveDeallocMemrefsContainedInRetained
       std::optional<bool> analysisResult =
           analysis.isSameAllocation(retained, memref);
       if (analysisResult == true) {
-        auto disjunction = rewriter.create<arith::OrIOp>(
+        auto disjunction = arith::OrIOp::create(rewriter,
             deallocOp.getLoc(), updatedCondition, cond);
         rewriter.replaceAllUsesExcept(updatedCondition, disjunction.getResult(),
                                       disjunction);
@@ -247,14 +247,14 @@ struct RemoveRetainedMemrefsGuaranteedToNotAlias
         continue;
       }
 
-      replacements.push_back(rewriter.create<arith::ConstantOp>(
+      replacements.push_back(arith::ConstantOp::create(rewriter,
           deallocOp.getLoc(), rewriter.getBoolAttr(false)));
     }
 
     if (newRetainedMemrefs.size() == deallocOp.getRetained().size())
       return failure();
 
-    auto newDeallocOp = rewriter.create<DeallocOp>(
+    auto newDeallocOp = DeallocOp::create(rewriter,
         deallocOp.getLoc(), deallocOp.getMemrefs(), deallocOp.getConditions(),
         newRetainedMemrefs);
     int i = 0;
@@ -326,7 +326,7 @@ struct SplitDeallocWhenNotAliasingAnyOther
       }
 
       // Create new bufferization.dealloc op for `memref`.
-      auto newDeallocOp = rewriter.create<DeallocOp>(loc, memref, cond,
+      auto newDeallocOp = DeallocOp::create(rewriter, loc, memref, cond,
                                                      deallocOp.getRetained());
       updatedConditions.push_back(
           llvm::to_vector(ValueRange(newDeallocOp.getUpdatedConditions())));
@@ -337,7 +337,7 @@ struct SplitDeallocWhenNotAliasingAnyOther
       return failure();
 
     // Create bufferization.dealloc op for all remaining memrefs.
-    auto newDeallocOp = rewriter.create<DeallocOp>(
+    auto newDeallocOp = DeallocOp::create(rewriter,
         loc, remainingMemrefs, remainingConditions, deallocOp.getRetained());
 
     // Bit-or all conditions.
@@ -347,7 +347,7 @@ struct SplitDeallocWhenNotAliasingAnyOther
       assert(replacements.size() == additionalConditions.size() &&
              "expected same number of updated conditions");
       for (int64_t i = 0, e = replacements.size(); i < e; ++i) {
-        replacements[i] = rewriter.create<arith::OrIOp>(
+        replacements[i] = arith::OrIOp::create(rewriter,
             loc, replacements[i], additionalConditions[i]);
       }
     }

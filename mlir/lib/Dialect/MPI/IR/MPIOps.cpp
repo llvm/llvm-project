@@ -60,7 +60,7 @@ struct FoldRank final : public mlir::OpRewritePattern<mlir::mpi::CommRankOp> {
     if (!isa<IntegerAttr>(dltiAttr.value()))
       return op->emitError()
              << "Expected an integer attribute for MPI:comm_world_rank";
-    Value res = b.create<arith::ConstantIndexOp>(
+    Value res = arith::ConstantIndexOp::create(b,
         op.getLoc(), cast<IntegerAttr>(dltiAttr.value()).getInt());
     if (Value retVal = op.getRetval())
       b.replaceOp(op, {retVal, res});

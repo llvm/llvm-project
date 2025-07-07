@@ -131,17 +131,17 @@ static Value createDestinationPassingStyleInitOperand(
     ImplicitLocOpBuilder &builder) {
   Value processLinearIndexInReductionGroup = mesh::createProcessLinearIndex(
       meshOp.getSymName(), reductionMeshAxes, builder);
-  Value zero = builder.create<arith::ConstantIndexOp>(0);
-  Value isLeadProcess = builder.create<arith::CmpIOp>(
+  Value zero = arith::ConstantIndexOp::create(builder, 0);
+  Value isLeadProcess = arith::CmpIOp::create(builder,
       builder.getI1Type(), arith::CmpIPredicate::eq,
       processLinearIndexInReductionGroup, zero);
-  scf::IfOp ifOp = builder.create<scf::IfOp>(spmdizedOperand.getType(),
+  scf::IfOp ifOp = scf::IfOp::create(builder, spmdizedOperand.getType(),
                                              isLeadProcess, true, true);
   // Then block.
   {
     OpBuilder::InsertionGuard insertionGuard(builder);
     builder.setInsertionPointToEnd(&ifOp.getThenRegion().front());
-    builder.create<scf::YieldOp>(spmdizedOperand);
+    scf::YieldOp::create(builder, spmdizedOperand);
   }
 
   // Else block.
@@ -157,14 +157,14 @@ static Value createDestinationPassingStyleInitOperand(
     std::optional<TypedAttr> neutralEl =
         arith::getNeutralElement(combinerOps[0]);
 
-    Value init = builder.create<tensor::EmptyOp>(op.getLoc(), shape,
+    Value init = tensor::EmptyOp::create(builder, op.getLoc(), shape,
                                                  neutralEl.value().getType());
     Value constant =
-        builder.create<arith::ConstantOp>(op.getLoc(), neutralEl.value());
-    Value fill = builder.create<linalg::FillOp>(op.getLoc(), constant, init)
+        arith::ConstantOp::create(builder, op.getLoc(), neutralEl.value());
+    Value fill = linalg::FillOp::create(builder, op.getLoc(), constant, init)
                      .getResult(0);
 
-    builder.create<scf::YieldOp>(fill);
+    scf::YieldOp::create(builder, fill);
   }
   return ifOp.getResult(0);
 }
@@ -202,7 +202,7 @@ static void createAllReduceForResultWithoutPartialSharding(
   }
 
   Value spmdizedLinalgOpResult = spmdizationMap.lookup(unshardedLinalgOpResult);
-  Value reducedValue = builder.create<mesh::AllReduceOp>(
+  Value reducedValue = mesh::AllReduceOp::create(builder,
       spmdizedLinalgOpResult, resultSharding.getMesh(), allReduceMeshAxes,
       reductionKind);
   spmdizationMap.map(unshardedLinalgOpResult, reducedValue);

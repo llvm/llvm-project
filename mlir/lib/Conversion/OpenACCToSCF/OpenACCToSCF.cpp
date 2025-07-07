@@ -39,7 +39,7 @@ class ExpandIfCondition : public OpRewritePattern<OpTy> {
 
     IntegerAttr constAttr;
     if (!matchPattern(op.getIfCond(), m_Constant(&constAttr))) {
-      auto ifOp = rewriter.create<scf::IfOp>(op.getLoc(), TypeRange(),
+      auto ifOp = scf::IfOp::create(rewriter, op.getLoc(), TypeRange(),
                                              op.getIfCond(), false);
       rewriter.modifyOpInPlace(op, [&]() { op.getIfCondMutable().erase(0); });
       auto thenBodyBuilder = ifOp.getThenBodyBuilder(rewriter.getListener());

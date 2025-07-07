@@ -43,7 +43,7 @@ using namespace mlir::bufferization;
 //===----------------------------------------------------------------------===//
 
 static Value buildBoolValue(OpBuilder &builder, Location loc, bool value) {
-  return builder.create<arith::ConstantOp>(loc, builder.getBoolAttr(value));
+  return arith::ConstantOp::create(builder, loc, builder.getBoolAttr(value));
 }
 
 static bool isMemref(Value v) { return isa<BaseMemRefType>(v.getType()); }
@@ -755,12 +755,12 @@ Value BufferDeallocation::materializeMemrefWithGuaranteedOwnership(
           .create<scf::IfOp>(
               memref.getLoc(), condition,
               [&](OpBuilder &builder, Location loc) {
-                builder.create<scf::YieldOp>(loc, newMemref);
+                scf::YieldOp::create(builder, loc, newMemref);
               },
               [&](OpBuilder &builder, Location loc) {
                 Value clone =
-                    builder.create<bufferization::CloneOp>(loc, newMemref);
-                builder.create<scf::YieldOp>(loc, clone);
+                    bufferization::CloneOp::create(builder, loc, newMemref);
+                scf::YieldOp::create(builder, loc, clone);
               })
           .getResult(0);
   Value trueVal = buildBoolValue(builder, memref.getLoc(), true);
@@ -797,7 +797,7 @@ BufferDeallocation::handleInterface(BranchOpInterface op) {
   state.getMemrefsToRetain(block, op->getSuccessor(0), forwardedOperands,
                            toRetain);
 
-  auto deallocOp = builder.create<bufferization::DeallocOp>(
+  auto deallocOp = bufferization::DeallocOp::create(builder,
       op.getLoc(), memrefs, conditions, toRetain);
 
   // We want to replace the current ownership of the retained values with the
@@ -885,10 +885,10 @@ BufferDeallocation::handleInterface(MemoryEffectOpInterface op) {
       builder.setInsertionPoint(op);
       Ownership ownership = state.getOwnership(operand, block);
       if (ownership.isUnique()) {
-        Value ownershipInverted = builder.create<arith::XOrIOp>(
+        Value ownershipInverted = arith::XOrIOp::create(builder,
             op.getLoc(), ownership.getIndicator(),
             buildBoolValue(builder, op.getLoc(), true));
-        builder.create<cf::AssertOp>(
+        cf::AssertOp::create(builder,
             op.getLoc(), ownershipInverted,
             "expected that the block does not have ownership");
       }

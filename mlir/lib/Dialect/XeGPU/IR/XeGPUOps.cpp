@@ -414,7 +414,7 @@ void CreateDescOp::build(OpBuilder &builder, OperationState &state,
   int64_t size = static_cast<int64_t>(offsets.size());
   auto type = VectorType::get(size, builder.getIndexType());
   auto values = getValueOrCreateConstantIndexOp(builder, loc, offsets);
-  auto offset = builder.create<vector::FromElementsOp>(loc, type, values);
+  auto offset = vector::FromElementsOp::create(builder, loc, type, values);
   build(builder, state, TensorDesc, source, offset);
 }
 
@@ -534,7 +534,7 @@ void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
   int64_t size = static_cast<int64_t>(offsets.size());
   auto type = VectorType::get({size}, builder.getIndexType());
   auto values = getValueOrCreateConstantIndexOp(builder, loc, offsets);
-  auto offset = builder.create<vector::FromElementsOp>(loc, type, values);
+  auto offset = vector::FromElementsOp::create(builder, loc, type, values);
   build(builder, state, tdescTy, tensorDesc, offset);
 }
 

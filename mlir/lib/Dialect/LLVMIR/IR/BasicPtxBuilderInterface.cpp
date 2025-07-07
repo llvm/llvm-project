@@ -90,7 +90,7 @@ void PtxBuilder::insertValue(Value v, PTXRegisterMod itype) {
     }
     for (auto [idx, t] : llvm::enumerate(stype.getBody())) {
       if (itype != PTXRegisterMod::Write) {
-        Value extractValue = rewriter.create<LLVM::ExtractValueOp>(
+        Value extractValue = LLVM::ExtractValueOp::create(rewriter,
             interfaceOp->getLoc(), v, idx);
         addValue(extractValue);
       }
@@ -132,7 +132,7 @@ LLVM::InlineAsmOp PtxBuilder::build() {
   // Replace all % with $
   llvm::replace(ptxInstruction, '%', '$');
 
-  return rewriter.create<LLVM::InlineAsmOp>(
+  return LLVM::InlineAsmOp::create(rewriter,
       interfaceOp->getLoc(),
       /*result types=*/resultTypes,
       /*operands=*/ptxOperands,

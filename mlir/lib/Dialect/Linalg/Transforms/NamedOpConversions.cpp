@@ -59,7 +59,7 @@ matchAndReplaceDepthwiseConv(Operation *operation, Value input, Value kernel,
   auto newKernelTy = RankedTensorType::get(
       {kernelTy.getDimSize(0), kernelTy.getDimSize(1), kernelTy.getDimSize(2)},
       kernelTy.getElementType());
-  auto collapsedKernel = rewriter.create<tensor::CollapseShapeOp>(
+  auto collapsedKernel = tensor::CollapseShapeOp::create(rewriter,
       loc, newKernelTy, kernel, collapsedKernelDims);
 
   // Collapse init dims.
@@ -70,7 +70,7 @@ matchAndReplaceDepthwiseConv(Operation *operation, Value input, Value kernel,
       RankedTensorType::get({initTy.getDimSize(0), initTy.getDimSize(1),
                              initTy.getDimSize(2), initTy.getDimSize(3)},
                             initTy.getElementType());
-  auto collapsedInit = rewriter.create<tensor::CollapseShapeOp>(
+  auto collapsedInit = tensor::CollapseShapeOp::create(rewriter,
       loc, newInitTy, init, collapsedInitDims);
 
   SmallVector<NamedAttribute> preservedAttrs;
@@ -78,13 +78,13 @@ matchAndReplaceDepthwiseConv(Operation *operation, Value input, Value kernel,
       TypeSwitch<Operation *, Operation *>(operation)
           .Case<DepthwiseConv2DNhwcHwcmOp>([&](auto op) {
             preservedAttrs = getPrunedAttributeList(op);
-            return rewriter.create<DepthwiseConv2DNhwcHwcOp>(
+            return DepthwiseConv2DNhwcHwcOp::create(rewriter,
                 loc, newInitTy, ValueRange{input, collapsedKernel},
                 ValueRange{collapsedInit}, stride, dilation);
           })
           .Case<DepthwiseConv2DNhwcHwcmQOp>([&](auto op) {
             preservedAttrs = getPrunedAttributeList(op);
-            return rewriter.create<DepthwiseConv2DNhwcHwcQOp>(
+            return DepthwiseConv2DNhwcHwcQOp::create(rewriter,
                 loc, newInitTy, ValueRange{input, collapsedKernel, iZp, kZp},
                 ValueRange{collapsedInit}, stride, dilation);
           })

@@ -518,7 +518,7 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
   }
 
   std::string fnName = getFunctionSymbol(fnID);
-  auto funcOp = opBuilder.create<spirv::FuncOp>(
+  auto funcOp = spirv::FuncOp::create(opBuilder,
       unknownLoc, fnName, functionType, fnControl.value());
   // Processing other function attributes.
   if (decorations.count(fnID)) {
@@ -706,7 +706,7 @@ spirv::SpecConstantOp
 spirv::Deserializer::createSpecConstant(Location loc, uint32_t resultID,
                                         TypedAttr defaultValue) {
   auto symName = opBuilder.getStringAttr(getSpecConstantSymbol(resultID));
-  auto op = opBuilder.create<spirv::SpecConstantOp>(unknownLoc, symName,
+  auto op = spirv::SpecConstantOp::create(opBuilder, unknownLoc, symName,
                                                     defaultValue);
   if (decorations.count(resultID)) {
     for (auto attr : decorations[resultID].getAttrs())
@@ -782,7 +782,7 @@ spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
            << wordIndex << " of " << operands.size() << " processed";
   }
   auto loc = createFileLineColLoc(opBuilder);
-  auto varOp = opBuilder.create<spirv::GlobalVariableOp>(
+  auto varOp = spirv::GlobalVariableOp::create(opBuilder,
       loc, TypeAttr::get(type), opBuilder.getStringAttr(variableName),
       initializer);
 
@@ -1581,7 +1581,7 @@ spirv::Deserializer::processSpecConstantComposite(ArrayRef<uint32_t> operands) {
     elements.push_back(SymbolRefAttr::get(elementInfo));
   }
 
-  auto op = opBuilder.create<spirv::SpecConstantCompositeOp>(
+  auto op = spirv::SpecConstantCompositeOp::create(opBuilder,
       unknownLoc, TypeAttr::get(resultType), symName,
       opBuilder.getArrayAttr(elements));
   specConstCompositeMap[resultID] = op;
@@ -1656,7 +1656,7 @@ Value spirv::Deserializer::materializeSpecConstantOperation(
 
   auto loc = createFileLineColLoc(opBuilder);
   auto specConstOperationOp =
-      opBuilder.create<spirv::SpecConstantOperationOp>(loc, resultType);
+      spirv::SpecConstantOperationOp::create(opBuilder, loc, resultType);
 
   Region &body = specConstOperationOp.getBody();
   // Move the new block into SpecConstantOperation's body.
@@ -1669,7 +1669,7 @@ Value spirv::Deserializer::materializeSpecConstantOperation(
   OpBuilder::InsertionGuard moduleInsertionGuard(opBuilder);
   opBuilder.setInsertionPointToEnd(&block);
 
-  opBuilder.create<spirv::YieldOp>(loc, block.front().getResult(0));
+  spirv::YieldOp::create(opBuilder, loc, block.front().getResult(0));
   return specConstOperationOp.getResult();
 }
 
@@ -1733,7 +1733,7 @@ LogicalResult spirv::Deserializer::processBranch(ArrayRef<uint32_t> operands) {
   // The preceding instruction for the OpBranch instruction could be an
   // OpLoopMerge or an OpSelectionMerge instruction, in this case they will have
   // the same OpLine information.
-  opBuilder.create<spirv::BranchOp>(loc, target);
+  spirv::BranchOp::create(opBuilder, loc, target);
 
   clearDebugLine();
   return success();
@@ -1764,7 +1764,7 @@ spirv::Deserializer::processBranchConditional(ArrayRef<uint32_t> operands) {
   // an OpSelectionMerge instruction, in this case they will have the same
   // OpLine information.
   auto loc = createFileLineColLoc(opBuilder);
-  opBuilder.create<spirv::BranchConditionalOp>(
+  spirv::BranchConditionalOp::create(opBuilder,
       loc, condition, trueBlock,
       /*trueArguments=*/ArrayRef<Value>(), falseBlock,
       /*falseArguments=*/ArrayRef<Value>(), weights);
@@ -1947,7 +1947,7 @@ ControlFlowStructurizer::createSelectionOp(uint32_t selectionControl) {
   OpBuilder builder(&mergeBlock->front());
 
   auto control = static_cast<spirv::SelectionControl>(selectionControl);
-  auto selectionOp = builder.create<spirv::SelectionOp>(location, control);
+  auto selectionOp = spirv::SelectionOp::create(builder, location, control);
   selectionOp.addMergeBlock(builder);
 
   return selectionOp;
@@ -1959,7 +1959,7 @@ spirv::LoopOp ControlFlowStructurizer::createLoopOp(uint32_t loopControl) {
   OpBuilder builder(&mergeBlock->front());
 
   auto control = static_cast<spirv::LoopControl>(loopControl);
-  auto loopOp = builder.create<spirv::LoopOp>(location, control);
+  auto loopOp = spirv::LoopOp::create(builder, location, control);
   loopOp.addEntryAndMergeBlock(builder);
 
   return loopOp;
@@ -2092,7 +2092,7 @@ LogicalResult ControlFlowStructurizer::structurize() {
     // The loop entry block should have a unconditional branch jumping to the
     // loop header block.
     builder.setInsertionPointToEnd(&body.front());
-    builder.create<spirv::BranchOp>(location, mapper.lookupOrNull(headerBlock),
+    spirv::BranchOp::create(builder, location, mapper.lookupOrNull(headerBlock),
                                     ArrayRef<Value>(blockArgs));
   }
 
@@ -2177,11 +2177,11 @@ LogicalResult ControlFlowStructurizer::structurize() {
     Operation *newOp = nullptr;
 
     if (isLoop)
-      newOp = builder.create<spirv::LoopOp>(
+      newOp = spirv::LoopOp::create(builder,
           location, TypeRange(ValueRange(outsideUses)),
           static_cast<spirv::LoopControl>(control));
     else
-      newOp = builder.create<spirv::SelectionOp>(
+      newOp = spirv::SelectionOp::create(builder,
           location, TypeRange(ValueRange(outsideUses)),
           static_cast<spirv::SelectionControl>(control));
 
@@ -2308,7 +2308,7 @@ LogicalResult ControlFlowStructurizer::structurize() {
       // but replace all ops inside with a branch to the merge block.
       block->clear();
       builder.setInsertionPointToEnd(block);
-      builder.create<spirv::BranchOp>(location, mergeBlock);
+      spirv::BranchOp::create(builder, location, mergeBlock);
     } else {
       LLVM_DEBUG(logger.startLine() << "[cf] erasing block " << block << "\n");
       block->erase();
@@ -2362,7 +2362,7 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
 
     if (auto branchOp = dyn_cast<spirv::BranchOp>(op)) {
       // Replace the previous branch op with a new one with block arguments.
-      opBuilder.create<spirv::BranchOp>(branchOp.getLoc(), branchOp.getTarget(),
+      spirv::BranchOp::create(opBuilder, branchOp.getLoc(), branchOp.getTarget(),
                                         blockArgs);
       branchOp.erase();
     } else if (auto branchCondOp = dyn_cast<spirv::BranchConditionalOp>(op)) {
@@ -2370,13 +2370,13 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
               branchCondOp.getFalseBlock() == target) &&
              "expected target to be either the true or false target");
       if (target == branchCondOp.getTrueTarget())
-        opBuilder.create<spirv::BranchConditionalOp>(
+        spirv::BranchConditionalOp::create(opBuilder,
             branchCondOp.getLoc(), branchCondOp.getCondition(), blockArgs,
             branchCondOp.getFalseBlockArguments(),
             branchCondOp.getBranchWeightsAttr(), branchCondOp.getTrueTarget(),
             branchCondOp.getFalseTarget());
       else
-        opBuilder.create<spirv::BranchConditionalOp>(
+        spirv::BranchConditionalOp::create(opBuilder,
             branchCondOp.getLoc(), branchCondOp.getCondition(),
             branchCondOp.getTrueBlockArguments(), blockArgs,
             branchCondOp.getBranchWeightsAttr(), branchCondOp.getTrueBlock(),
@@ -2437,7 +2437,7 @@ LogicalResult spirv::Deserializer::splitConditionalBlocks() {
     if (!llvm::hasSingleElement(*block) || splitHeaderMergeBlock) {
       Block *newBlock = block->splitBlock(terminator);
       OpBuilder builder(block, block->end());
-      builder.create<spirv::BranchOp>(block->getParent()->getLoc(), newBlock);
+      spirv::BranchOp::create(builder, block->getParent()->getLoc(), newBlock);
 
       // After splitting we need to update the map to use the new block as a
       // header.

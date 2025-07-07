@@ -43,13 +43,13 @@ static Value insertOne(ConversionPatternRewriter &rewriter,
   assert(rank > 0 && "0-D vector corner case should have been handled already");
   if (rank == 1) {
     auto idxType = rewriter.getIndexType();
-    auto constant = rewriter.create<LLVM::ConstantOp>(
+    auto constant = LLVM::ConstantOp::create(rewriter,
         loc, typeConverter.convertType(idxType),
         rewriter.getIntegerAttr(idxType, pos));
-    return rewriter.create<LLVM::InsertElementOp>(loc, llvmType, val1, val2,
+    return LLVM::InsertElementOp::create(rewriter, loc, llvmType, val1, val2,
                                                   constant);
   }
-  return rewriter.create<LLVM::InsertValueOp>(loc, val1, val2, pos);
+  return LLVM::InsertValueOp::create(rewriter, loc, val1, val2, pos);
 }
 
 // Helper that picks the proper sequence for extracting.
@@ -58,13 +58,13 @@ static Value extractOne(ConversionPatternRewriter &rewriter,
                         Value val, Type llvmType, int64_t rank, int64_t pos) {
   if (rank <= 1) {
     auto idxType = rewriter.getIndexType();
-    auto constant = rewriter.create<LLVM::ConstantOp>(
+    auto constant = LLVM::ConstantOp::create(rewriter,
         loc, typeConverter.convertType(idxType),
         rewriter.getIntegerAttr(idxType, pos));
-    return rewriter.create<LLVM::ExtractElementOp>(loc, llvmType, val,
+    return LLVM::ExtractElementOp::create(rewriter, loc, llvmType, val,
                                                    constant);
   }
-  return rewriter.create<LLVM::ExtractValueOp>(loc, val, pos);
+  return LLVM::ExtractValueOp::create(rewriter, loc, val, pos);
 }
 
 // Helper that returns data layout alignment of a vector.
@@ -141,7 +141,7 @@ static Value getIndexedPtrs(ConversionPatternRewriter &rewriter, Location loc,
   auto ptrsType =
       LLVM::getVectorType(pType, vectorType.getDimSize(0),
                           /*isScalable=*/vectorType.getScalableDims()[0]);
-  return rewriter.create<LLVM::GEPOp>(
+  return LLVM::GEPOp::create(rewriter,
       loc, ptrsType, typeConverter.convertType(memRefType.getElementType()),
       base, index);
 }
@@ -152,7 +152,7 @@ static Value getAsLLVMValue(OpBuilder &builder, Location loc,
                             OpFoldResult foldResult) {
   if (auto attr = dyn_cast<Attribute>(foldResult)) {
     auto intAttr = cast<IntegerAttr>(attr);
-    return builder.create<LLVM::ConstantOp>(loc, intAttr).getResult();
+    return LLVM::ConstantOp::create(builder, loc, intAttr).getResult();
   }
 
   return cast<Value>(foldResult);
@@ -475,7 +475,7 @@ class ReductionNeutralFPMax {};
 static Value createReductionNeutralValue(ReductionNeutralZero neutral,
                                          ConversionPatternRewriter &rewriter,
                                          Location loc, Type llvmType) {
-  return rewriter.create<LLVM::ConstantOp>(loc, llvmType,
+  return LLVM::ConstantOp::create(rewriter, loc, llvmType,
                                            rewriter.getZeroAttr(llvmType));
 }
 
@@ -483,7 +483,7 @@ static Value createReductionNeutralValue(ReductionNeutralZero neutral,
 static Value createReductionNeutralValue(ReductionNeutralIntOne neutral,
                                          ConversionPatternRewriter &rewriter,
                                          Location loc, Type llvmType) {
-  return rewriter.create<LLVM::ConstantOp>(
+  return LLVM::ConstantOp::create(rewriter,
       loc, llvmType, rewriter.getIntegerAttr(llvmType, 1));
 }
 
@@ -491,7 +491,7 @@ static Value createReductionNeutralValue(ReductionNeutralIntOne neutral,
 static Value createReductionNeutralValue(ReductionNeutralFPOne neutral,
                                          ConversionPatternRewriter &rewriter,
                                          Location loc, Type llvmType) {
-  return rewriter.create<LLVM::ConstantOp>(
+  return LLVM::ConstantOp::create(rewriter,
       loc, llvmType, rewriter.getFloatAttr(llvmType, 1.0));
 }
 
@@ -499,7 +499,7 @@ static Value createReductionNeutralValue(ReductionNeutralFPOne neutral,
 static Value createReductionNeutralValue(ReductionNeutralAllOnes neutral,
                                          ConversionPatternRewriter &rewriter,
                                          Location loc, Type llvmType) {
-  return rewriter.create<LLVM::ConstantOp>(
+  return LLVM::ConstantOp::create(rewriter,
       loc, llvmType,
       rewriter.getIntegerAttr(
           llvmType, llvm::APInt::getAllOnes(llvmType.getIntOrFloatBitWidth())));
@@ -509,7 +509,7 @@ static Value createReductionNeutralValue(ReductionNeutralAllOnes neutral,
 static Value createReductionNeutralValue(ReductionNeutralSIntMin neutral,
                                          ConversionPatternRewriter &rewriter,
                                          Location loc, Type llvmType) {
-  return rewriter.create<LLVM::ConstantOp>(
+  return LLVM::ConstantOp::create(rewriter,
       loc, llvmType,
       rewriter.getIntegerAttr(llvmType, llvm::APInt::getSignedMinValue(
                                             llvmType.getIntOrFloatBitWidth())));
@@ -519,7 +519,7 @@ static Value createReductionNeutralValue(ReductionNeutralSIntMin neutral,
 static Value createReductionNeutralValue(ReductionNeutralUIntMin neutral,
                                          ConversionPatternRewriter &rewriter,
                                          Location loc, Type llvmType) {
-  return rewriter.create<LLVM::ConstantOp>(
+  return LLVM::ConstantOp::create(rewriter,
       loc, llvmType,
       rewriter.getIntegerAttr(llvmType, llvm::APInt::getMinValue(
                                             llvmType.getIntOrFloatBitWidth())));
@@ -529,7 +529,7 @@ static Value createReductionNeutralValue(ReductionNeutralUIntMin neutral,
 static Value createReductionNeutralValue(ReductionNeutralSIntMax neutral,
                                          ConversionPatternRewriter &rewriter,
                                          Location loc, Type llvmType) {
-  return rewriter.create<LLVM::ConstantOp>(
+  return LLVM::ConstantOp::create(rewriter,
       loc, llvmType,
       rewriter.getIntegerAttr(llvmType, llvm::APInt::getSignedMaxValue(
                                             llvmType.getIntOrFloatBitWidth())));
@@ -539,7 +539,7 @@ static Value createReductionNeutralValue(ReductionNeutralSIntMax neutral,
 static Value createReductionNeutralValue(ReductionNeutralUIntMax neutral,
                                          ConversionPatternRewriter &rewriter,
                                          Location loc, Type llvmType) {
-  return rewriter.create<LLVM::ConstantOp>(
+  return LLVM::ConstantOp::create(rewriter,
       loc, llvmType,
       rewriter.getIntegerAttr(llvmType, llvm::APInt::getMaxValue(
                                             llvmType.getIntOrFloatBitWidth())));
@@ -550,7 +550,7 @@ static Value createReductionNeutralValue(ReductionNeutralFPMin neutral,
                                          ConversionPatternRewriter &rewriter,
                                          Location loc, Type llvmType) {
   auto floatType = cast<FloatType>(llvmType);
-  return rewriter.create<LLVM::ConstantOp>(
+  return LLVM::ConstantOp::create(rewriter,
       loc, llvmType,
       rewriter.getFloatAttr(
           llvmType, llvm::APFloat::getQNaN(floatType.getFloatSemantics(),
@@ -562,7 +562,7 @@ static Value createReductionNeutralValue(ReductionNeutralFPMax neutral,
                                          ConversionPatternRewriter &rewriter,
                                          Location loc, Type llvmType) {
   auto floatType = cast<FloatType>(llvmType);
-  return rewriter.create<LLVM::ConstantOp>(
+  return LLVM::ConstantOp::create(rewriter,
       loc, llvmType,
       rewriter.getFloatAttr(
           llvmType, llvm::APFloat::getQNaN(floatType.getFloatSemantics(),
@@ -591,7 +591,7 @@ static Value createVectorLengthValue(ConversionPatternRewriter &rewriter,
   auto vShape = vType.getShape();
   assert(vShape.size() == 1 && "Unexpected multi-dim vector type");
 
-  Value baseVecLength = rewriter.create<LLVM::ConstantOp>(
+  Value baseVecLength = LLVM::ConstantOp::create(rewriter,
       loc, rewriter.getI32Type(),
       rewriter.getIntegerAttr(rewriter.getI32Type(), vShape[0]));
 
@@ -599,11 +599,11 @@ static Value createVectorLengthValue(ConversionPatternRewriter &rewriter,
     return baseVecLength;
 
   // For a scalable vector type, create and return `vScale * baseVecLength`.
-  Value vScale = rewriter.create<vector::VectorScaleOp>(loc);
+  Value vScale = vector::VectorScaleOp::create(rewriter, loc);
   vScale =
-      rewriter.create<arith::IndexCastOp>(loc, rewriter.getI32Type(), vScale);
+      arith::IndexCastOp::create(rewriter, loc, rewriter.getI32Type(), vScale);
   Value scalableVecLength =
-      rewriter.create<arith::MulIOp>(loc, baseVecLength, vScale);
+      arith::MulIOp::create(rewriter, loc, baseVecLength, vScale);
   return scalableVecLength;
 }
 
@@ -616,10 +616,10 @@ static Value createIntegerReductionArithmeticOpLowering(
     ConversionPatternRewriter &rewriter, Location loc, Type llvmType,
     Value vectorOperand, Value accumulator) {
 
-  Value result = rewriter.create<LLVMRedIntrinOp>(loc, llvmType, vectorOperand);
+  Value result = LLVMRedIntrinOp::create(rewriter, loc, llvmType, vectorOperand);
 
   if (accumulator)
-    result = rewriter.create<ScalarOp>(loc, accumulator, result);
+    result = ScalarOp::create(rewriter, loc, accumulator, result);
   return result;
 }
 
@@ -631,11 +631,11 @@ template <class LLVMRedIntrinOp>
 static Value createIntegerReductionComparisonOpLowering(
     ConversionPatternRewriter &rewriter, Location loc, Type llvmType,
     Value vectorOperand, Value accumulator, LLVM::ICmpPredicate predicate) {
-  Value result = rewriter.create<LLVMRedIntrinOp>(loc, llvmType, vectorOperand);
+  Value result = LLVMRedIntrinOp::create(rewriter, loc, llvmType, vectorOperand);
   if (accumulator) {
     Value cmp =
-        rewriter.create<LLVM::ICmpOp>(loc, predicate, accumulator, result);
-    result = rewriter.create<LLVM::SelectOp>(loc, cmp, accumulator, result);
+        LLVM::ICmpOp::create(rewriter, loc, predicate, accumulator, result);
+    result = LLVM::SelectOp::create(rewriter, loc, cmp, accumulator, result);
   }
   return result;
 }
@@ -666,11 +666,11 @@ static Value createFPReductionComparisonOpLowering(
     ConversionPatternRewriter &rewriter, Location loc, Type llvmType,
     Value vectorOperand, Value accumulator, LLVM::FastmathFlagsAttr fmf) {
   Value result =
-      rewriter.create<LLVMRedIntrinOp>(loc, llvmType, vectorOperand, fmf);
+      LLVMRedIntrinOp::create(rewriter, loc, llvmType, vectorOperand, fmf);
 
   if (accumulator) {
     result =
-        rewriter.create<typename VectorToScalarMapper<LLVMRedIntrinOp>::Type>(
+        typename VectorToScalarMapper<LLVMRedIntrinOp>::Type::create(rewriter,
             loc, result, accumulator);
   }
 
@@ -702,7 +702,7 @@ static Value createMaskNeutralValue(ConversionPatternRewriter &rewriter,
   const auto &floatSemantics = cast<FloatType>(llvmType).getFloatSemantics();
   auto value = getMaskNeutralValue(MaskNeutral{}, floatSemantics);
   auto denseValue = DenseElementsAttr::get(cast<ShapedType>(vectorType), value);
-  return rewriter.create<LLVM::ConstantOp>(loc, vectorType, denseValue);
+  return LLVM::ConstantOp::create(rewriter, loc, vectorType, denseValue);
 }
 
 /// Lowers masked `fmaximum` and `fminimum` reductions using the non-masked
@@ -717,7 +717,7 @@ lowerMaskedReductionWithRegular(ConversionPatternRewriter &rewriter,
                                 Value mask, LLVM::FastmathFlagsAttr fmf) {
   const Value vectorMaskNeutral = createMaskNeutralValue<MaskNeutral>(
       rewriter, loc, llvmType, vectorOperand.getType());
-  const Value selectedVectorByMask = rewriter.create<LLVM::SelectOp>(
+  const Value selectedVectorByMask = LLVM::SelectOp::create(rewriter,
       loc, mask, vectorOperand, vectorMaskNeutral);
   return createFPReductionComparisonOpLowering<LLVMRedIntrinOp>(
       rewriter, loc, llvmType, selectedVectorByMask, accumulator, fmf);
@@ -730,7 +730,7 @@ lowerReductionWithStartValue(ConversionPatternRewriter &rewriter, Location loc,
                              Value accumulator, LLVM::FastmathFlagsAttr fmf) {
   accumulator = getOrCreateAccumulator<ReductionNeutral>(rewriter, loc,
                                                          llvmType, accumulator);
-  return rewriter.create<LLVMRedIntrinOp>(loc, llvmType,
+  return LLVMRedIntrinOp::create(rewriter, loc, llvmType,
                                           /*startValue=*/accumulator,
                                           vectorOperand, fmf);
 }
@@ -745,7 +745,7 @@ lowerPredicatedReductionWithStartValue(ConversionPatternRewriter &rewriter,
                                        Value vectorOperand, Value accumulator) {
   accumulator = getOrCreateAccumulator<ReductionNeutral>(rewriter, loc,
                                                          llvmType, accumulator);
-  return rewriter.create<LLVMVPRedIntrinOp>(loc, llvmType,
+  return LLVMVPRedIntrinOp::create(rewriter, loc, llvmType,
                                             /*startValue=*/accumulator,
                                             vectorOperand);
 }
@@ -758,7 +758,7 @@ static Value lowerPredicatedReductionWithStartValue(
                                                          llvmType, accumulator);
   Value vectorLength =
       createVectorLengthValue(rewriter, loc, vectorOperand.getType());
-  return rewriter.create<LLVMVPRedIntrinOp>(loc, llvmType,
+  return LLVMVPRedIntrinOp::create(rewriter, loc, llvmType,
                                             /*startValue=*/accumulator,
                                             vectorOperand, mask, vectorLength);
 }
@@ -1071,7 +1071,7 @@ public:
     // For rank 0 and 1, where both operands have *exactly* the same vector
     // type, there is direct shuffle support in LLVM. Use it!
     if (rank <= 1 && v1Type == v2Type) {
-      Value llvmShuffleOp = rewriter.create<LLVM::ShuffleVectorOp>(
+      Value llvmShuffleOp = LLVM::ShuffleVectorOp::create(rewriter,
           loc, adaptor.getV1(), adaptor.getV2(),
           llvm::to_vector_of<int32_t>(mask));
       rewriter.replaceOp(shuffleOp, llvmShuffleOp);
@@ -1085,7 +1085,7 @@ public:
       eltType = arrayType.getElementType();
     else
       eltType = cast<VectorType>(llvmType).getElementType();
-    Value insert = rewriter.create<LLVM::PoisonOp>(loc, llvmType);
+    Value insert = LLVM::PoisonOp::create(rewriter, loc, llvmType);
     int64_t insPos = 0;
     for (int64_t extPos : mask) {
       Value value = adaptor.getV1();
@@ -1122,7 +1122,7 @@ public:
     if (vectorType.getRank() == 0) {
       Location loc = extractEltOp.getLoc();
       auto idxType = rewriter.getIndexType();
-      auto zero = rewriter.create<LLVM::ConstantOp>(
+      auto zero = LLVM::ConstantOp::create(rewriter,
           loc, typeConverter->convertType(idxType),
           rewriter.getIntegerAttr(idxType, 0));
       rewriter.replaceOpWithNewOp<LLVM::ExtractElementOp>(
@@ -1193,12 +1193,12 @@ public:
       if (!llvm::all_of(position, llvm::IsaPred<Attribute>)) {
         return failure();
       }
-      extracted = rewriter.create<LLVM::ExtractValueOp>(
+      extracted = LLVM::ExtractValueOp::create(rewriter,
           loc, extracted, getAsIntegers(position));
     }
 
     if (extractsScalar) {
-      extracted = rewriter.create<LLVM::ExtractElementOp>(
+      extracted = LLVM::ExtractElementOp::create(rewriter,
           loc, extracted, getAsLLVMValue(rewriter, loc, positionVec.back()));
     }
 
@@ -1256,7 +1256,7 @@ public:
     if (vectorType.getRank() == 0) {
       Location loc = insertEltOp.getLoc();
       auto idxType = rewriter.getIndexType();
-      auto zero = rewriter.create<LLVM::ConstantOp>(
+      auto zero = LLVM::ConstantOp::create(rewriter,
           loc, typeConverter->convertType(idxType),
           rewriter.getIntegerAttr(idxType, 0));
       rewriter.replaceOpWithNewOp<LLVM::InsertElementOp>(
@@ -1342,7 +1342,7 @@ public:
           // llvm.extractvalue does not support dynamic dimensions.
           return failure();
         }
-        sourceAggregate = rewriter.create<LLVM::ExtractValueOp>(
+        sourceAggregate = LLVM::ExtractValueOp::create(rewriter,
             loc, adaptor.getDest(),
             getAsIntegers(positionOf1DVectorWithinAggregate));
       } else {
@@ -1351,7 +1351,7 @@ public:
         sourceAggregate = adaptor.getDest();
       }
       // Insert the scalar into the 1D vector.
-      sourceAggregate = rewriter.create<LLVM::InsertElementOp>(
+      sourceAggregate = LLVM::InsertElementOp::create(rewriter,
           loc, sourceAggregate.getType(), sourceAggregate,
           adaptor.getValueToStore(),
           getAsLLVMValue(rewriter, loc, positionOfScalarWithin1DVector));
@@ -1359,7 +1359,7 @@ public:
 
     Value result = sourceAggregate;
     if (isNestedAggregate) {
-      result = rewriter.create<LLVM::InsertValueOp>(
+      result = LLVM::InsertValueOp::create(rewriter,
           loc, adaptor.getDest(), sourceAggregate,
           getAsIntegers(positionOf1DVectorWithinAggregate));
     }
@@ -1439,15 +1439,15 @@ public:
 
     auto loc = op.getLoc();
     auto elemType = vType.getElementType();
-    Value zero = rewriter.create<arith::ConstantOp>(
+    Value zero = arith::ConstantOp::create(rewriter,
         loc, elemType, rewriter.getZeroAttr(elemType));
-    Value desc = rewriter.create<vector::SplatOp>(loc, vType, zero);
+    Value desc = vector::SplatOp::create(rewriter, loc, vType, zero);
     for (int64_t i = 0, e = vType.getShape().front(); i != e; ++i) {
-      Value extrLHS = rewriter.create<ExtractOp>(loc, op.getLhs(), i);
-      Value extrRHS = rewriter.create<ExtractOp>(loc, op.getRhs(), i);
-      Value extrACC = rewriter.create<ExtractOp>(loc, op.getAcc(), i);
-      Value fma = rewriter.create<FMAOp>(loc, extrLHS, extrRHS, extrACC);
-      desc = rewriter.create<InsertOp>(loc, fma, desc, i);
+      Value extrLHS = ExtractOp::create(rewriter, loc, op.getLhs(), i);
+      Value extrRHS = ExtractOp::create(rewriter, loc, op.getRhs(), i);
+      Value extrACC = ExtractOp::create(rewriter, loc, op.getAcc(), i);
+      Value fma = FMAOp::create(rewriter, loc, extrLHS, extrRHS, extrACC);
+      desc = InsertOp::create(rewriter, loc, fma, desc, i);
     }
     rewriter.replaceOp(op, desc);
     return success();
@@ -1537,7 +1537,7 @@ public:
     desc.setAlignedPtr(rewriter, loc, ptr);
     // Fill offset 0.
     auto attr = rewriter.getIntegerAttr(rewriter.getIndexType(), 0);
-    auto zero = rewriter.create<LLVM::ConstantOp>(loc, int64Ty, attr);
+    auto zero = LLVM::ConstantOp::create(rewriter, loc, int64Ty, attr);
     desc.setOffset(rewriter, loc, zero);
 
     // Fill size and stride descriptors in memref.
@@ -1546,11 +1546,11 @@ public:
       int64_t index = indexedSize.index();
       auto sizeAttr =
           rewriter.getIntegerAttr(rewriter.getIndexType(), indexedSize.value());
-      auto size = rewriter.create<LLVM::ConstantOp>(loc, int64Ty, sizeAttr);
+      auto size = LLVM::ConstantOp::create(rewriter, loc, int64Ty, sizeAttr);
       desc.setSize(rewriter, loc, index, size);
       auto strideAttr = rewriter.getIntegerAttr(rewriter.getIndexType(),
                                                 (*targetStrides)[index]);
-      auto stride = rewriter.create<LLVM::ConstantOp>(loc, int64Ty, strideAttr);
+      auto stride = LLVM::ConstantOp::create(rewriter, loc, int64Ty, strideAttr);
       desc.setStride(rewriter, loc, index, stride);
     }
 
@@ -1578,13 +1578,13 @@ public:
     IntegerType idxType =
         force32BitVectorIndices ? rewriter.getI32Type() : rewriter.getI64Type();
     auto loc = op->getLoc();
-    Value indices = rewriter.create<LLVM::StepVectorOp>(
+    Value indices = LLVM::StepVectorOp::create(rewriter,
         loc, LLVM::getVectorType(idxType, dstType.getShape()[0],
                                  /*isScalable=*/true));
     auto bound = getValueOrCreateCastToIndexLike(rewriter, loc, idxType,
                                                  adaptor.getOperands()[0]);
-    Value bounds = rewriter.create<SplatOp>(loc, indices.getType(), bound);
-    Value comp = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
+    Value bounds = SplatOp::create(rewriter, loc, indices.getType(), bound);
+    Value comp = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
                                                 indices, bounds);
     rewriter.replaceOp(op, comp);
     return success();
@@ -1741,15 +1741,15 @@ private:
 
     switch (conversion) {
     case PrintConversion::ZeroExt64:
-      value = rewriter.create<arith::ExtUIOp>(
+      value = arith::ExtUIOp::create(rewriter,
           loc, IntegerType::get(rewriter.getContext(), 64), value);
       break;
     case PrintConversion::SignExt64:
-      value = rewriter.create<arith::ExtSIOp>(
+      value = arith::ExtSIOp::create(rewriter,
           loc, IntegerType::get(rewriter.getContext(), 64), value);
       break;
     case PrintConversion::Bitcast16:
-      value = rewriter.create<LLVM::BitcastOp>(
+      value = LLVM::BitcastOp::create(rewriter,
           loc, IntegerType::get(rewriter.getContext(), 16), value);
       break;
     case PrintConversion::None:
@@ -1762,7 +1762,7 @@ private:
   // Helper to emit a call.
   static void emitCall(ConversionPatternRewriter &rewriter, Location loc,
                        Operation *ref, ValueRange params = ValueRange()) {
-    rewriter.create<LLVM::CallOp>(loc, TypeRange(), SymbolRefAttr::get(ref),
+    LLVM::CallOp::create(rewriter, loc, TypeRange(), SymbolRefAttr::get(ref),
                                   params);
   }
 };
@@ -1782,8 +1782,8 @@ struct VectorSplatOpLowering : public ConvertOpToLLVMPattern<vector::SplatOp> {
     // First insert it into a poison vector so we can shuffle it.
     auto vectorType = typeConverter->convertType(splatOp.getType());
     Value poison =
-        rewriter.create<LLVM::PoisonOp>(splatOp.getLoc(), vectorType);
-    auto zero = rewriter.create<LLVM::ConstantOp>(
+        LLVM::PoisonOp::create(rewriter, splatOp.getLoc(), vectorType);
+    auto zero = LLVM::ConstantOp::create(rewriter,
         splatOp.getLoc(),
         typeConverter->convertType(rewriter.getIntegerType(32)),
         rewriter.getZeroAttr(rewriter.getIntegerType(32)));
@@ -1796,7 +1796,7 @@ struct VectorSplatOpLowering : public ConvertOpToLLVMPattern<vector::SplatOp> {
     }
 
     // For 1-d vector, we additionally do a `vectorshuffle`.
-    auto v = rewriter.create<LLVM::InsertElementOp>(
+    auto v = LLVM::InsertElementOp::create(rewriter,
         splatOp.getLoc(), vectorType, poison, adaptor.getInput(), zero);
 
     int64_t width = cast<VectorType>(splatOp.getType()).getDimSize(0);
@@ -1832,26 +1832,26 @@ struct VectorSplatNdOpLowering : public ConvertOpToLLVMPattern<SplatOp> {
       return failure();
 
     // Construct returned value.
-    Value desc = rewriter.create<LLVM::PoisonOp>(loc, llvmNDVectorTy);
+    Value desc = LLVM::PoisonOp::create(rewriter, loc, llvmNDVectorTy);
 
     // Construct a 1-D vector with the splatted value that we insert in all the
     // places within the returned descriptor.
-    Value vdesc = rewriter.create<LLVM::PoisonOp>(loc, llvm1DVectorTy);
-    auto zero = rewriter.create<LLVM::ConstantOp>(
+    Value vdesc = LLVM::PoisonOp::create(rewriter, loc, llvm1DVectorTy);
+    auto zero = LLVM::ConstantOp::create(rewriter,
         loc, typeConverter->convertType(rewriter.getIntegerType(32)),
         rewriter.getZeroAttr(rewriter.getIntegerType(32)));
-    Value v = rewriter.create<LLVM::InsertElementOp>(loc, llvm1DVectorTy, vdesc,
+    Value v = LLVM::InsertElementOp::create(rewriter, loc, llvm1DVectorTy, vdesc,
                                                      adaptor.getInput(), zero);
 
     // Shuffle the value across the desired number of elements.
     int64_t width = resultType.getDimSize(resultType.getRank() - 1);
     SmallVector<int32_t> zeroValues(width, 0);
-    v = rewriter.create<LLVM::ShuffleVectorOp>(loc, v, v, zeroValues);
+    v = LLVM::ShuffleVectorOp::create(rewriter, loc, v, v, zeroValues);
 
     // Iterate of linear index, convert to coords space and insert splatted 1-D
     // vector in each position.
     nDVectorIterate(vectorTypeInfo, rewriter, [&](ArrayRef<int64_t> position) {
-      desc = rewriter.create<LLVM::InsertValueOp>(loc, desc, v, position);
+      desc = LLVM::InsertValueOp::create(rewriter, loc, desc, v, position);
     });
     rewriter.replaceOp(splatOp, desc);
     return success();
@@ -1921,12 +1921,12 @@ struct VectorDeinterleaveOpLowering
       auto deinterleaveResults = deinterleaveOp.getResultTypes();
       auto packedOpResults =
           llvmTypeConverter->packOperationResults(deinterleaveResults);
-      auto intrinsic = rewriter.create<LLVM::vector_deinterleave2>(
+      auto intrinsic = LLVM::vector_deinterleave2::create(rewriter,
           loc, packedOpResults, adaptor.getSource());
 
-      auto evenResult = rewriter.create<LLVM::ExtractValueOp>(
+      auto evenResult = LLVM::ExtractValueOp::create(rewriter,
           loc, intrinsic->getResult(0), 0);
-      auto oddResult = rewriter.create<LLVM::ExtractValueOp>(
+      auto oddResult = LLVM::ExtractValueOp::create(rewriter,
           loc, intrinsic->getResult(0), 1);
 
       rewriter.replaceOp(deinterleaveOp, ValueRange{evenResult, oddResult});
@@ -1950,10 +1950,10 @@ struct VectorDeinterleaveOpLowering
         oddShuffleMask.push_back(i);
     }
 
-    auto poison = rewriter.create<LLVM::PoisonOp>(loc, sourceType);
-    auto evenShuffle = rewriter.create<LLVM::ShuffleVectorOp>(
+    auto poison = LLVM::PoisonOp::create(rewriter, loc, sourceType);
+    auto evenShuffle = LLVM::ShuffleVectorOp::create(rewriter,
         loc, adaptor.getSource(), poison, evenShuffleMask);
-    auto oddShuffle = rewriter.create<LLVM::ShuffleVectorOp>(
+    auto oddShuffle = LLVM::ShuffleVectorOp::create(rewriter,
         loc, adaptor.getSource(), poison, oddShuffleMask);
 
     rewriter.replaceOp(deinterleaveOp, ValueRange{evenShuffle, oddShuffle});
@@ -1977,9 +1977,9 @@ struct VectorFromElementsLowering
       return rewriter.notifyMatchFailure(fromElementsOp,
                                          "rank > 1 vectors are not supported");
     Type llvmType = typeConverter->convertType(vectorType);
-    Value result = rewriter.create<LLVM::PoisonOp>(loc, llvmType);
+    Value result = LLVM::PoisonOp::create(rewriter, loc, llvmType);
     for (auto [idx, val] : llvm::enumerate(adaptor.getElements()))
-      result = rewriter.create<vector::InsertOp>(loc, val, result, idx);
+      result = vector::InsertOp::create(rewriter, loc, val, result, idx);
     rewriter.replaceOp(fromElementsOp, result);
     return success();
   }
@@ -2003,11 +2003,11 @@ struct VectorToElementsLowering
       if (element.use_empty())
         continue;
 
-      auto constIdx = rewriter.create<LLVM::ConstantOp>(
+      auto constIdx = LLVM::ConstantOp::create(rewriter,
           loc, idxType, rewriter.getIntegerAttr(idxType, idx));
       auto llvmType = typeConverter->convertType(element.getType());
 
-      Value result = rewriter.create<LLVM::ExtractElementOp>(loc, llvmType,
+      Value result = LLVM::ExtractElementOp::create(rewriter, loc, llvmType,
                                                              source, constIdx);
       results[idx] = result;
     }

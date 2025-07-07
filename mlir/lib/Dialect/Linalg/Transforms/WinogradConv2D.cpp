@@ -201,7 +201,7 @@ Value create2DTransformMatrix(OpBuilder &builder, Location loc,
                               TransformMatrix transform, Type type) {
   ArrayRef<float> constVec(transform.table, transform.rows * transform.cols);
 
-  return builder.create<arith::ConstantOp>(
+  return arith::ConstantOp::create(builder,
       loc, DenseFPElementsAttr::get(
                RankedTensorType::get(
                    SmallVector<int64_t>{transform.rows, transform.cols}, type),
@@ -233,7 +233,7 @@ Value extract2DDataFrom4D(OpBuilder &builder, Location loc, Value source,
 
   auto extractFilterType =
       RankedTensorType::get({extractHeight, extractWidth}, elementType);
-  auto extractFilterOp = builder.create<tensor::ExtractSliceOp>(
+  auto extractFilterOp = tensor::ExtractSliceOp::create(builder,
       loc, extractFilterType, source, offsets, sizes, strides);
 
   return extractFilterOp;
@@ -267,7 +267,7 @@ Value extract2DDataFrom6D(OpBuilder &builder, Location loc, Value source,
   SmallVector<OpFoldResult> strides(srcSize, oneIndex);
 
   auto extractFilterType = RankedTensorType::get({height, width}, elementType);
-  auto extractFilterOp = builder.create<tensor::ExtractSliceOp>(
+  auto extractFilterOp = tensor::ExtractSliceOp::create(builder,
       loc, extractFilterType, source, offsets, sizes, strides);
 
   return extractFilterOp;
@@ -293,7 +293,7 @@ Value insert2DDataTo4D(OpBuilder &builder, Location loc, Value source,
   retSizes[widthIdx] = builder.getIndexAttr(width);
   SmallVector<OpFoldResult> strides(destSize, oneIndex);
 
-  auto insertSliceOp = builder.create<tensor::InsertSliceOp>(
+  auto insertSliceOp = tensor::InsertSliceOp::create(builder,
       loc, source, dest, retOffsets, retSizes, strides);
 
   return insertSliceOp;
@@ -321,7 +321,7 @@ Value insert2DDataTo6D(OpBuilder &builder, Location loc, Value source,
   retSizes[widthIdx] = builder.getIndexAttr(width);
   SmallVector<OpFoldResult> strides(destSize, oneIndex);
 
-  auto insertSliceOp = builder.create<tensor::InsertSliceOp>(
+  auto insertSliceOp = tensor::InsertSliceOp::create(builder,
       loc, source, dest, retOffsets, retSizes, strides);
 
   return insertSliceOp;
@@ -372,7 +372,7 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
   if (filterW != r && filterW != 1)
     return Value();
 
-  Value zeroIdx = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+  Value zeroIdx = arith::ConstantIndexOp::create(rewriter, loc, 0);
   auto buildBody = [&](OpBuilder &builder, Location loc, ValueRange ivs,
                        ValueRange args) -> scf::ValueVector {
     Value FIter = ivs[0];
@@ -386,7 +386,7 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
 
     int64_t retRows = 1;
     Value matmulRetValue = extractFilter;
-    Value zero = builder.create<arith::ConstantOp>(
+    Value zero = arith::ConstantOp::create(builder,
         loc, rewriter.getZeroAttr(elementType));
     if (leftTransform) {
       // Get constant transform matrix G.
@@ -401,11 +401,11 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
           builder
               .create<tensor::EmptyOp>(loc, matmulType.getShape(), elementType)
               .getResult();
-      auto init = builder.create<linalg::FillOp>(loc, zero, empty).getResult(0);
+      auto init = linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
 
       Value G = create2DTransformMatrix(builder, loc, GMatrix, elementType);
       // Multiply G x g.
-      auto matmulOp = builder.create<linalg::MatmulOp>(
+      auto matmulOp = linalg::MatmulOp::create(builder,
           loc, matmulType, ValueRange{G, extractFilter}, ValueRange{init});
       matmulRetValue = matmulOp.getResult(0);
     }
@@ -423,11 +423,11 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
           builder
               .create<tensor::EmptyOp>(loc, matmulType.getShape(), elementType)
               .getResult();
-      auto init = builder.create<linalg::FillOp>(loc, zero, empty).getResult(0);
+      auto init = linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
 
       Value GT = create2DTransformMatrix(builder, loc, GTMatrix, elementType);
       // Multiply u = (G x g) x GT.
-      auto matmulOp = builder.create<linalg::MatmulOp>(
+      auto matmulOp = linalg::MatmulOp::create(builder,
           loc, matmulType, ValueRange{matmulRetValue, GT}, ValueRange{init});
       matmulRetValue = matmulOp.getResult(0);
     }
@@ -445,9 +445,9 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
     return {insertSliceOp};
   };
 
-  auto fUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, filterF);
-  auto cUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, filterC);
-  auto oneStep = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+  auto fUpperBound = arith::ConstantIndexOp::create(rewriter, loc, filterF);
+  auto cUpperBound = arith::ConstantIndexOp::create(rewriter, loc, filterC);
+  auto oneStep = arith::ConstantIndexOp::create(rewriter, loc, 1);
   scf::LoopNest loops = scf::buildLoopNest(
       rewriter, loc, {zeroIdx, zeroIdx}, {fUpperBound, cUpperBound},
       {oneStep, oneStep}, {retValue}, buildBody);
@@ -516,9 +516,9 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
     auto identityAffineMap = rewriter.getMultiDimIdentityMap(1);
     auto affineMap =
         AffineMap::get(1, 0, {builder.getAffineDimExpr(0) * m}, context);
-    Value heightOffset = builder.create<affine::AffineApplyOp>(
+    Value heightOffset = affine::AffineApplyOp::create(builder,
         loc, leftTransform ? affineMap : identityAffineMap, tileHIter);
-    Value widthOffset = builder.create<affine::AffineApplyOp>(
+    Value widthOffset = affine::AffineApplyOp::create(builder,
         loc, rightTransform ? affineMap : identityAffineMap, tileWIter);
 
     // Extract (H, W) from (N, H, W, C).
@@ -530,7 +530,7 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
     int64_t retRows = 1;
     int64_t retCols = 1;
     Value matmulRetValue = extractInput;
-    Value zero = builder.create<arith::ConstantOp>(
+    Value zero = arith::ConstantOp::create(builder,
         loc, rewriter.getZeroAttr(elementType));
     if (leftTransform) {
       // Get constant transform matrix BT.
@@ -545,12 +545,12 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
           builder
               .create<tensor::EmptyOp>(loc, matmulType.getShape(), elementType)
               .getResult();
-      auto init = builder.create<linalg::FillOp>(loc, zero, empty).getResult(0);
+      auto init = linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
 
       Value BT =
           create2DTransformMatrix(builder, loc, BTMatrix, builder.getF32Type());
       // Multiply BT x d.
-      auto matmulOp = builder.create<linalg::MatmulOp>(
+      auto matmulOp = linalg::MatmulOp::create(builder,
           loc, matmulType, ValueRange{BT, matmulRetValue}, ValueRange{init});
       matmulRetValue = matmulOp.getResult(0);
     }
@@ -568,11 +568,11 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
           builder
               .create<tensor::EmptyOp>(loc, matmulType.getShape(), elementType)
               .getResult();
-      auto init = builder.create<linalg::FillOp>(loc, zero, empty).getResult(0);
+      auto init = linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
       Value B =
           create2DTransformMatrix(builder, loc, BMatrix, builder.getF32Type());
       // Multiply v = (BT x d) x B.
-      auto matmulOp = builder.create<linalg::MatmulOp>(
+      auto matmulOp = linalg::MatmulOp::create(builder,
           loc, matmulType, ValueRange{matmulRetValue, B}, ValueRange{init});
       matmulRetValue = matmulOp.getResult(0);
     }
@@ -586,12 +586,12 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
     return {combinedVal};
   };
 
-  auto zeroIdx = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-  auto tileHBound = rewriter.create<arith::ConstantIndexOp>(loc, tileH);
-  auto tileWBound = rewriter.create<arith::ConstantIndexOp>(loc, tileW);
-  auto nUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, inputN);
-  auto cUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, inputC);
-  auto oneStep = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+  auto zeroIdx = arith::ConstantIndexOp::create(rewriter, loc, 0);
+  auto tileHBound = arith::ConstantIndexOp::create(rewriter, loc, tileH);
+  auto tileWBound = arith::ConstantIndexOp::create(rewriter, loc, tileW);
+  auto nUpperBound = arith::ConstantIndexOp::create(rewriter, loc, inputN);
+  auto cUpperBound = arith::ConstantIndexOp::create(rewriter, loc, inputC);
+  auto oneStep = arith::ConstantIndexOp::create(rewriter, loc, 1);
   scf::LoopNest loops = scf::buildLoopNest(
       rewriter, loc, {zeroIdx, zeroIdx, zeroIdx, zeroIdx},
       {tileHBound, tileWBound, nUpperBound, cUpperBound},
@@ -629,7 +629,7 @@ static Value matrixMultiply(RewriterBase &rewriter, Location loc,
       {filterShape[0] * filterShape[1], filterShape[2], filterShape[3]},
       filterElementType);
   SmallVector<ReassociationIndices> filterReassoc = {{0, 1}, {2}, {3}};
-  Value collapseFilter = rewriter.create<tensor::CollapseShapeOp>(
+  Value collapseFilter = tensor::CollapseShapeOp::create(rewriter,
       loc, filterReassocType, transformedFilter, filterReassoc);
 
   // Convert (alphaH, alphaW, tileH, tileW, N, C) to
@@ -643,7 +643,7 @@ static Value matrixMultiply(RewriterBase &rewriter, Location loc,
        inputShape[2] * inputShape[3] * inputShape[4], inputShape[5]},
       inputElementType);
   SmallVector<ReassociationIndices> inputReassoc = {{0, 1}, {2, 3, 4}, {5}};
-  Value collapseInput = rewriter.create<tensor::CollapseShapeOp>(
+  Value collapseInput = tensor::CollapseShapeOp::create(rewriter,
       loc, inputReassocType, transformedInput, inputReassoc);
 
   // Batched matrix multiply.
@@ -655,11 +655,11 @@ static Value matrixMultiply(RewriterBase &rewriter, Location loc,
                     .create<tensor::EmptyOp>(loc, matmulType.getShape(),
                                              outputElementType)
                     .getResult();
-  Value zero = rewriter.create<arith::ConstantOp>(
+  Value zero = arith::ConstantOp::create(rewriter,
       loc, rewriter.getZeroAttr(outputElementType));
-  Value init = rewriter.create<linalg::FillOp>(loc, zero, empty).getResult(0);
+  Value init = linalg::FillOp::create(rewriter, loc, zero, empty).getResult(0);
 
-  auto matmulOp = rewriter.create<linalg::BatchMatmulOp>(
+  auto matmulOp = linalg::BatchMatmulOp::create(rewriter,
       loc, matmulType, ValueRange({collapseInput, collapseFilter}),
       ValueRange{init});
 
@@ -670,7 +670,7 @@ static Value matrixMultiply(RewriterBase &rewriter, Location loc,
       RankedTensorType::get({inputShape[0], inputShape[1], inputShape[2],
                              inputShape[3], inputShape[4], filterShape[3]},
                             outputElementType);
-  auto expandOutput = rewriter.create<tensor::ExpandShapeOp>(
+  auto expandOutput = tensor::ExpandShapeOp::create(rewriter,
       loc, outputReassocType, matmulOp.getResult(0), outputReassoc);
   return expandOutput;
 }
@@ -750,15 +750,15 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
     int64_t retRows = leftTransform ? ATMatrix.rows : 1;
 
     Value matmulRetValue = extractValue;
-    Value zero = builder.create<arith::ConstantOp>(
+    Value zero = arith::ConstantOp::create(builder,
         loc, rewriter.getZeroAttr(elementType));
 
     auto identityAffineMap = rewriter.getMultiDimIdentityMap(1);
     auto affineMap =
         AffineMap::get(1, 0, {builder.getAffineDimExpr(0) * m}, context);
-    Value heightOffset = builder.create<affine::AffineApplyOp>(
+    Value heightOffset = affine::AffineApplyOp::create(builder,
         loc, leftTransform ? affineMap : identityAffineMap, tileHIter);
-    Value widthOffset = builder.create<affine::AffineApplyOp>(
+    Value widthOffset = affine::AffineApplyOp::create(builder,
         loc, rightTransform ? affineMap : identityAffineMap, tileWIter);
 
     Value outInitVal =
@@ -775,12 +775,12 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
                          .create<tensor::EmptyOp>(loc, matmulType.getShape(),
                                                   elementType)
                          .getResult();
-        init = builder.create<linalg::FillOp>(loc, zero, empty).getResult(0);
+        init = linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
       }
 
       Value AT = create2DTransformMatrix(builder, loc, ATMatrix, elementType);
       // Multiply AT x m.
-      auto matmulOp = builder.create<linalg::MatmulOp>(
+      auto matmulOp = linalg::MatmulOp::create(builder,
           loc, matmulType, ValueRange{AT, matmulRetValue}, ValueRange{init});
       matmulRetValue = matmulOp.getResult(0);
     }
@@ -794,19 +794,19 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
                          .create<tensor::EmptyOp>(loc, matmulType.getShape(),
                                                   elementType)
                          .getResult();
-        init = builder.create<linalg::FillOp>(loc, zero, empty).getResult(0);
+        init = linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
       }
 
       Value A = create2DTransformMatrix(builder, loc, AMatrix, elementType);
       // Multiply y = (AT x m) x A.
-      auto matmulOp = builder.create<linalg::MatmulOp>(
+      auto matmulOp = linalg::MatmulOp::create(builder,
           loc, matmulType, ValueRange{matmulRetValue, A}, ValueRange{init});
       matmulRetValue = matmulOp.getResult(0);
     }
 
     if (scalarFactor != 1) {
       // Multiply by scalar factor and add outInitVal.
-      Value scalarFactorValue = builder.create<arith::ConstantOp>(
+      Value scalarFactorValue = arith::ConstantOp::create(builder,
           loc, FloatAttr::get(elementType, scalarFactor));
       auto matmulType = RankedTensorType::get({retRows, retCols}, elementType);
       auto identityAffineMap = rewriter.getMultiDimIdentityMap(2);
@@ -824,11 +824,11 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
                       utils::IteratorType::parallel},
                   [&](OpBuilder &nestedBuilder, Location nestedLoc,
                       ValueRange args) {
-                    auto mulf = nestedBuilder.create<arith::MulFOp>(
+                    auto mulf = arith::MulFOp::create(nestedBuilder,
                         nestedLoc, args[0], args[1]);
-                    auto addf = nestedBuilder.create<arith::AddFOp>(
+                    auto addf = arith::AddFOp::create(nestedBuilder,
                         nestedLoc, mulf.getResult(), args[2]);
-                    nestedBuilder.create<linalg::YieldOp>(nestedLoc,
+                    linalg::YieldOp::create(nestedBuilder, nestedLoc,
                                                           addf.getResult());
                   })
               .getResult(0);
@@ -847,12 +847,12 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
 
   int64_t tilwH = valueShape[2];
   int64_t tileW = valueShape[3];
-  auto zeroIdx = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-  auto tileHBound = rewriter.create<arith::ConstantIndexOp>(loc, tilwH);
-  auto tileWBound = rewriter.create<arith::ConstantIndexOp>(loc, tileW);
-  auto nUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, valueN);
-  auto fUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, valueF);
-  auto oneStep = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+  auto zeroIdx = arith::ConstantIndexOp::create(rewriter, loc, 0);
+  auto tileHBound = arith::ConstantIndexOp::create(rewriter, loc, tilwH);
+  auto tileWBound = arith::ConstantIndexOp::create(rewriter, loc, tileW);
+  auto nUpperBound = arith::ConstantIndexOp::create(rewriter, loc, valueN);
+  auto fUpperBound = arith::ConstantIndexOp::create(rewriter, loc, valueF);
+  auto oneStep = arith::ConstantIndexOp::create(rewriter, loc, 1);
   scf::LoopNest loops = scf::buildLoopNest(
       rewriter, loc, {zeroIdx, zeroIdx, zeroIdx, zeroIdx},
       {tileHBound, tileWBound, nUpperBound, fUpperBound},
@@ -867,7 +867,7 @@ static Value padToAlignedTensor(RewriterBase &rewriter, Location loc,
   auto valueType = cast<ShapedType>(value.getType());
   Type elementType = valueType.getElementType();
   auto alignedType = RankedTensorType::get(alignedShape, elementType);
-  Value padValue = rewriter.create<arith::ConstantOp>(
+  Value padValue = arith::ConstantOp::create(rewriter,
       loc, elementType, rewriter.getZeroAttr(elementType));
 
   return linalg::makeComposedPadHighOp(rewriter, loc, alignedType, value,
@@ -887,7 +887,7 @@ static Value extractFromAlignedTensor(RewriterBase &rewriter, Location loc,
   SmallVector<OpFoldResult> sizes =
       getAsOpFoldResult(rewriter.getI64ArrayAttr(extractedShape));
 
-  return rewriter.create<tensor::ExtractSliceOp>(loc, extractedType, value,
+  return tensor::ExtractSliceOp::create(rewriter, loc, extractedType, value,
                                                  offsets, sizes, strides);
 }
 
@@ -979,9 +979,9 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
   int64_t tileW = llvm::divideCeilSigned(outputW, widthM);
   auto retType = RankedTensorType::get({alphaH, alphaW, filterC, filterF},
                                        filterElementType);
-  Value retValue = rewriter.create<tensor::EmptyOp>(loc, retType.getShape(),
+  Value retValue = tensor::EmptyOp::create(rewriter, loc, retType.getShape(),
                                                     filterElementType);
-  auto transformedFilter = rewriter.create<linalg::WinogradFilterTransformOp>(
+  auto transformedFilter = linalg::WinogradFilterTransformOp::create(rewriter,
       loc, retType, filter, retValue, fmr);
 
   // --- Create operation for input transform ---
@@ -998,9 +998,9 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
 
   retType = RankedTensorType::get(
       {alphaH, alphaW, tileH, tileW, inputN, inputC}, inputElementType);
-  retValue = rewriter.create<tensor::EmptyOp>(loc, retType.getShape(),
+  retValue = tensor::EmptyOp::create(rewriter, loc, retType.getShape(),
                                               inputElementType);
-  auto transformedInput = rewriter.create<linalg::WinogradInputTransformOp>(
+  auto transformedInput = linalg::WinogradInputTransformOp::create(rewriter,
       loc, retType, input, retValue, fmr);
 
   Type outputElementType = outputType.getElementType();
@@ -1023,7 +1023,7 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
     outputType = alignedOutputType;
   }
 
-  Value transformedOutput = rewriter.create<linalg::WinogradOutputTransformOp>(
+  Value transformedOutput = linalg::WinogradOutputTransformOp::create(rewriter,
       loc, outputType, matmulRet, output, fmr);
 
   // When output size is not aligned with output tile size, extract the

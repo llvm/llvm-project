@@ -103,12 +103,12 @@ public:
     // If masked, transpose the original mask.
     Value transposedMask;
     if (maskableOp.isMasked()) {
-      transposedMask = rewriter.create<vector::TransposeOp>(
+      transposedMask = vector::TransposeOp::create(rewriter,
           loc, maskableOp.getMaskingOp().getMask(), indices);
     }
 
     // Transpose reduction source.
-    auto transposeOp = rewriter.create<vector::TransposeOp>(loc, src, indices);
+    auto transposeOp = vector::TransposeOp::create(rewriter, loc, src, indices);
     SmallVector<bool> reductionMask(srcRank, false);
     for (int i = 0; i < reductionSize; ++i) {
       if (useInnerDimsForReduction)
@@ -117,7 +117,7 @@ public:
         reductionMask[i] = true;
     }
 
-    Operation *newMultiRedOp = rewriter.create<vector::MultiDimReductionOp>(
+    Operation *newMultiRedOp = vector::MultiDimReductionOp::create(rewriter,
         multiReductionOp.getLoc(), transposeOp.getResult(),
         multiReductionOp.getAcc(), reductionMask, multiReductionOp.getKind());
     newMultiRedOp =
@@ -256,13 +256,13 @@ public:
           vectorShape,
           llvm::cast<VectorType>(vectorMask.getType()).getElementType());
       newVectorMask =
-          rewriter.create<vector::ShapeCastOp>(loc, maskCastedType, vectorMask);
+          vector::ShapeCastOp::create(rewriter, loc, maskCastedType, vectorMask);
     }
 
     auto castedType = VectorType::get(
         vectorShape, multiReductionOp.getSourceVectorType().getElementType(),
         scalableDims);
-    Value cast = rewriter.create<vector::ShapeCastOp>(
+    Value cast = vector::ShapeCastOp::create(rewriter,
         loc, castedType, multiReductionOp.getSource());
 
     Value acc = multiReductionOp.getAcc();
@@ -271,11 +271,11 @@ public:
           {flattenedParallelDim},
           multiReductionOp.getSourceVectorType().getElementType(),
           /*scalableDims=*/{isParallelDimScalable});
-      acc = rewriter.create<vector::ShapeCastOp>(loc, accType, acc);
+      acc = vector::ShapeCastOp::create(rewriter, loc, accType, acc);
     }
     // 6. Creates the flattened form of vector.multi_reduction with inner/outer
     // most dim as reduction.
-    Operation *newMultiDimRedOp = rewriter.create<vector::MultiDimReductionOp>(
+    Operation *newMultiDimRedOp = vector::MultiDimReductionOp::create(rewriter,
         loc, cast, acc, mask, multiReductionOp.getKind());
     newMultiDimRedOp =
         mlir::vector::maskOperation(rewriter, newMultiDimRedOp, newVectorMask);
@@ -339,11 +339,11 @@ struct TwoDimMultiReductionToElementWise
 
     Value result = multiReductionOp.getAcc();
     for (int64_t i = 0; i < srcShape[0]; i++) {
-      auto operand = rewriter.create<vector::ExtractOp>(
+      auto operand = vector::ExtractOp::create(rewriter,
           loc, multiReductionOp.getSource(), i);
       Value extractMask = nullptr;
       if (mask) {
-        extractMask = rewriter.create<vector::ExtractOp>(loc, mask, i);
+        extractMask = vector::ExtractOp::create(rewriter, loc, mask, i);
       }
       result =
           makeArithReduction(rewriter, loc, multiReductionOp.getKind(), operand,
@@ -383,27 +383,27 @@ struct TwoDimMultiReductionToReduction
     }
 
     auto loc = multiReductionOp.getLoc();
-    Value result = rewriter.create<arith::ConstantOp>(
+    Value result = arith::ConstantOp::create(rewriter,
         loc, multiReductionOp.getDestType(),
         rewriter.getZeroAttr(multiReductionOp.getDestType()));
     int outerDim = multiReductionOp.getSourceVectorType().getShape()[0];
 
     for (int i = 0; i < outerDim; ++i) {
-      auto v = rewriter.create<vector::ExtractOp>(
+      auto v = vector::ExtractOp::create(rewriter,
           loc, multiReductionOp.getSource(), ArrayRef<int64_t>{i});
-      auto acc = rewriter.create<vector::ExtractOp>(
+      auto acc = vector::ExtractOp::create(rewriter,
           loc, multiReductionOp.getAcc(), ArrayRef<int64_t>{i});
-      Operation *reductionOp = rewriter.create<vector::ReductionOp>(
+      Operation *reductionOp = vector::ReductionOp::create(rewriter,
           loc, multiReductionOp.getKind(), v, acc);
 
       // If masked, slice the mask and mask the new reduction operation.
       if (maskableOp.isMasked()) {
-        Value mask = rewriter.create<vector::ExtractOp>(
+        Value mask = vector::ExtractOp::create(rewriter,
             loc, maskableOp.getMaskingOp().getMask(), ArrayRef<int64_t>{i});
         reductionOp = mlir::vector::maskOperation(rewriter, reductionOp, mask);
       }
 
-      result = rewriter.create<vector::InsertOp>(loc, reductionOp->getResult(0),
+      result = vector::InsertOp::create(rewriter, loc, reductionOp->getResult(0),
                                                  result, i);
     }
 
@@ -459,9 +459,9 @@ struct OneDimMultiReductionToTwoDim
     SmallVector<bool, 2> reductionMask{false, true};
 
     /// vector.extract(vector.multi_reduce(vector.shape_cast(v, 1xk)), 0)
-    Value cast = rewriter.create<vector::ShapeCastOp>(
+    Value cast = vector::ShapeCastOp::create(rewriter,
         loc, castedType, multiReductionOp.getSource());
-    Value castAcc = rewriter.create<vector::BroadcastOp>(
+    Value castAcc = vector::BroadcastOp::create(rewriter,
         loc, accType, multiReductionOp.getAcc());
     Value castMask;
     if (maskableOp.isMasked()) {
@@ -470,10 +470,10 @@ struct OneDimMultiReductionToTwoDim
           ArrayRef<int64_t>{1, maskType.getShape().back()},
           maskType.getElementType(),
           ArrayRef<bool>{false, maskType.getScalableDims().back()});
-      castMask = rewriter.create<vector::BroadcastOp>(loc, castMaskType, mask);
+      castMask = vector::BroadcastOp::create(rewriter, loc, castMaskType, mask);
     }
 
-    Operation *newOp = rewriter.create<vector::MultiDimReductionOp>(
+    Operation *newOp = vector::MultiDimReductionOp::create(rewriter,
         loc, cast, castAcc, reductionMask, multiReductionOp.getKind());
     newOp = vector::maskOperation(rewriter, newOp, castMask);
 

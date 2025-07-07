@@ -203,7 +203,7 @@ static void addAsyncRuntimeApiDeclarations(ModuleOp module) {
   auto addFuncDecl = [&](StringRef name, FunctionType type) {
     if (module.lookupSymbol(name))
       return;
-    builder.create<func::FuncOp>(name, type).setPrivate();
+    func::FuncOp::create(builder, name, type).setPrivate();
   };
 
   MLIRContext *ctx = module.getContext();
@@ -254,15 +254,15 @@ static void addResumeFunction(ModuleOp module) {
   auto voidTy = LLVM::LLVMVoidType::get(ctx);
   Type ptrType = AsyncAPI::opaquePointerType(ctx);
 
-  auto resumeOp = moduleBuilder.create<LLVM::LLVMFuncOp>(
+  auto resumeOp = LLVM::LLVMFuncOp::create(moduleBuilder,
       kResume, LLVM::LLVMFunctionType::get(voidTy, {ptrType}));
   resumeOp.setPrivate();
 
   auto *block = resumeOp.addEntryBlock(moduleBuilder);
   auto blockBuilder = ImplicitLocOpBuilder::atBlockEnd(loc, block);
 
-  blockBuilder.create<LLVM::CoroResumeOp>(resumeOp.getArgument(0));
-  blockBuilder.create<LLVM::ReturnOp>(ValueRange());
+  LLVM::CoroResumeOp::create(blockBuilder, resumeOp.getArgument(0));
+  LLVM::ReturnOp::create(blockBuilder, ValueRange());
 }
 
 //===----------------------------------------------------------------------===//
@@ -282,7 +282,7 @@ public:
     // in patterns for other dialects.
     auto addUnrealizedCast = [](OpBuilder &builder, Type type,
                                 ValueRange inputs, Location loc) -> Value {
-      auto cast = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+      auto cast = UnrealizedConversionCastOp::create(builder, loc, type, inputs);
       return cast.getResult(0);
     };
 
@@ -343,8 +343,8 @@ public:
 
     // Constants for initializing coroutine frame.
     auto constZero =
-        rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI32Type(), 0);
-    auto nullPtr = rewriter.create<LLVM::ZeroOp>(loc, ptrType);
+        LLVM::ConstantOp::create(rewriter, loc, rewriter.getI32Type(), 0);
+    auto nullPtr = LLVM::ZeroOp::create(rewriter, loc, ptrType);
 
     // Get coroutine id: @llvm.coro.id.
     rewriter.replaceOpWithNewOp<LLVM::CoroIdOp>(
@@ -372,32 +372,32 @@ public:
 
     // Get coroutine frame size: @llvm.coro.size.i64.
     Value coroSize =
-        rewriter.create<LLVM::CoroSizeOp>(loc, rewriter.getI64Type());
+        LLVM::CoroSizeOp::create(rewriter, loc, rewriter.getI64Type());
     // Get coroutine frame alignment: @llvm.coro.align.i64.
     Value coroAlign =
-        rewriter.create<LLVM::CoroAlignOp>(loc, rewriter.getI64Type());
+        LLVM::CoroAlignOp::create(rewriter, loc, rewriter.getI64Type());
 
     // Round up the size to be multiple of the alignment. Since aligned_alloc
     // requires the size parameter be an integral multiple of the alignment
     // parameter.
     auto makeConstant = [&](uint64_t c) {
-      return rewriter.create<LLVM::ConstantOp>(op->getLoc(),
+      return LLVM::ConstantOp::create(rewriter, op->getLoc(),
                                                rewriter.getI64Type(), c);
     };
-    coroSize = rewriter.create<LLVM::AddOp>(op->getLoc(), coroSize, coroAlign);
+    coroSize = LLVM::AddOp::create(rewriter, op->getLoc(), coroSize, coroAlign);
     coroSize =
-        rewriter.create<LLVM::SubOp>(op->getLoc(), coroSize, makeConstant(1));
+        LLVM::SubOp::create(rewriter, op->getLoc(), coroSize, makeConstant(1));
     Value negCoroAlign =
-        rewriter.create<LLVM::SubOp>(op->getLoc(), makeConstant(0), coroAlign);
+        LLVM::SubOp::create(rewriter, op->getLoc(), makeConstant(0), coroAlign);
     coroSize =
-        rewriter.create<LLVM::AndOp>(op->getLoc(), coroSize, negCoroAlign);
+        LLVM::AndOp::create(rewriter, op->getLoc(), coroSize, negCoroAlign);
 
     // Allocate memory for the coroutine frame.
     auto allocFuncOp = LLVM::lookupOrCreateAlignedAllocFn(
         rewriter, op->getParentOfType<ModuleOp>(), rewriter.getI64Type());
     if (failed(allocFuncOp))
       return failure();
-    auto coroAlloc = rewriter.create<LLVM::CallOp>(
+    auto coroAlloc = LLVM::CallOp::create(rewriter,
         loc, allocFuncOp.value(), ValueRange{coroAlign, coroSize});
 
     // Begin a coroutine: @llvm.coro.begin.
@@ -427,7 +427,7 @@ public:
 
     // Get a pointer to the coroutine frame memory: @llvm.coro.free.
     auto coroMem =
-        rewriter.create<LLVM::CoroFreeOp>(loc, ptrType, adaptor.getOperands());
+        LLVM::CoroFreeOp::create(rewriter, loc, ptrType, adaptor.getOperands());
 
     // Free the memory.
     auto freeFuncOp =
@@ -455,13 +455,13 @@ public:
   matchAndRewrite(CoroEndOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // We are not in the block that is part of the unwind sequence.
-    auto constFalse = rewriter.create<LLVM::ConstantOp>(
+    auto constFalse = LLVM::ConstantOp::create(rewriter,
         op->getLoc(), rewriter.getI1Type(), rewriter.getBoolAttr(false));
-    auto noneToken = rewriter.create<LLVM::NoneTokenOp>(op->getLoc());
+    auto noneToken = LLVM::NoneTokenOp::create(rewriter, op->getLoc());
 
     // Mark the end of a coroutine: @llvm.coro.end.
     auto coroHdl = adaptor.getHandle();
-    rewriter.create<LLVM::CoroEndOp>(
+    LLVM::CoroEndOp::create(rewriter,
         op->getLoc(), rewriter.getI1Type(),
         ValueRange({coroHdl, constFalse, noneToken}));
     rewriter.eraseOp(op);
@@ -534,12 +534,12 @@ public:
     auto loc = op->getLoc();
 
     // This is not a final suspension point.
-    auto constFalse = rewriter.create<LLVM::ConstantOp>(
+    auto constFalse = LLVM::ConstantOp::create(rewriter,
         loc, rewriter.getI1Type(), rewriter.getBoolAttr(false));
 
     // Suspend a coroutine: @llvm.coro.suspend
     auto coroState = adaptor.getState();
-    auto coroSuspend = rewriter.create<LLVM::CoroSuspendOp>(
+    auto coroSuspend = LLVM::CoroSuspendOp::create(rewriter,
         loc, i8, ValueRange({coroState, constFalse}));
 
     // Cast return code to i32.
@@ -551,7 +551,7 @@ public:
     llvm::SmallVector<Block *, 2> caseDest = {op.getResumeDest(),
                                               op.getCleanupDest()};
     rewriter.replaceOpWithNewOp<LLVM::SwitchOp>(
-        op, rewriter.create<LLVM::SExtOp>(loc, i32, coroSuspend.getResult()),
+        op, LLVM::SExtOp::create(rewriter, loc, i32, coroSuspend.getResult()),
         /*defaultDestination=*/op.getSuspendDest(),
         /*defaultOperands=*/ValueRange(),
         /*caseValues=*/caseValues,
@@ -602,11 +602,11 @@ public:
 
         // %Size = getelementptr %T* null, int 1
         // %SizeI = ptrtoint %T* %Size to i64
-        auto nullPtr = rewriter.create<LLVM::ZeroOp>(loc, storagePtrType);
+        auto nullPtr = LLVM::ZeroOp::create(rewriter, loc, storagePtrType);
         auto gep =
-            rewriter.create<LLVM::GEPOp>(loc, storagePtrType, storedType,
+            LLVM::GEPOp::create(rewriter, loc, storagePtrType, storedType,
                                          nullPtr, ArrayRef<LLVM::GEPArg>{1});
-        return rewriter.create<LLVM::PtrToIntOp>(loc, i64, gep);
+        return LLVM::PtrToIntOp::create(rewriter, loc, i64, gep);
       };
 
       rewriter.replaceOpWithNewOp<func::CallOp>(op, kCreateValue, resultType,
@@ -739,7 +739,7 @@ public:
             .Case<ValueType>([](Type) { return kAwaitValue; })
             .Case<GroupType>([](Type) { return kAwaitGroup; });
 
-    rewriter.create<func::CallOp>(op->getLoc(), apiFuncName, TypeRange(),
+    func::CallOp::create(rewriter, op->getLoc(), apiFuncName, TypeRange(),
                                   adaptor.getOperands());
     rewriter.eraseOp(op);
 
@@ -772,11 +772,11 @@ public:
 
     // A pointer to coroutine resume intrinsic wrapper.
     addResumeFunction(op->getParentOfType<ModuleOp>());
-    auto resumePtr = rewriter.create<LLVM::AddressOfOp>(
+    auto resumePtr = LLVM::AddressOfOp::create(rewriter,
         op->getLoc(), AsyncAPI::opaquePointerType(rewriter.getContext()),
         kResume);
 
-    rewriter.create<func::CallOp>(
+    func::CallOp::create(rewriter,
         op->getLoc(), apiFuncName, TypeRange(),
         ValueRange({operand, handle, resumePtr.getRes()}));
     rewriter.eraseOp(op);
@@ -801,7 +801,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     // A pointer to coroutine resume intrinsic wrapper.
     addResumeFunction(op->getParentOfType<ModuleOp>());
-    auto resumePtr = rewriter.create<LLVM::AddressOfOp>(
+    auto resumePtr = LLVM::AddressOfOp::create(rewriter,
         op->getLoc(), AsyncAPI::opaquePointerType(rewriter.getContext()),
         kResume);
 
@@ -832,7 +832,7 @@ public:
     // Get a pointer to the async value storage from the runtime.
     auto ptrType = AsyncAPI::opaquePointerType(rewriter.getContext());
     auto storage = adaptor.getStorage();
-    auto storagePtr = rewriter.create<func::CallOp>(
+    auto storagePtr = func::CallOp::create(rewriter,
         loc, kGetValueStorage, TypeRange(ptrType), storage);
 
     // Cast from i8* to the LLVM pointer type.
@@ -845,7 +845,7 @@ public:
     Value castedStoragePtr = storagePtr.getResult(0);
     // Store the yielded value into the async value storage.
     auto value = adaptor.getValue();
-    rewriter.create<LLVM::StoreOp>(loc, value, castedStoragePtr);
+    LLVM::StoreOp::create(rewriter, loc, value, castedStoragePtr);
 
     // Erase the original runtime store operation.
     rewriter.eraseOp(op);
@@ -872,7 +872,7 @@ public:
     // Get a pointer to the async value storage from the runtime.
     auto ptrType = AsyncAPI::opaquePointerType(rewriter.getContext());
     auto storage = adaptor.getStorage();
-    auto storagePtr = rewriter.create<func::CallOp>(
+    auto storagePtr = func::CallOp::create(rewriter,
         loc, kGetValueStorage, TypeRange(ptrType), storage);
 
     // Cast from i8* to the LLVM pointer type.
@@ -960,7 +960,7 @@ public:
   LogicalResult
   matchAndRewrite(RefCountingOp op, typename RefCountingOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto count = rewriter.create<arith::ConstantOp>(
+    auto count = arith::ConstantOp::create(rewriter,
         op->getLoc(), rewriter.getI64Type(),
         rewriter.getI64IntegerAttr(op.getCount()));
 

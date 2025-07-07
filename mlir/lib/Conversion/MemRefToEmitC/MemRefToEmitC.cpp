@@ -161,7 +161,7 @@ struct ConvertLoad final : public OpConversionPattern<memref::LoadOp> {
       return rewriter.notifyMatchFailure(op.getLoc(), "expected array type");
     }
 
-    auto subscript = rewriter.create<emitc::SubscriptOp>(
+    auto subscript = emitc::SubscriptOp::create(rewriter,
         op.getLoc(), arrayValue, operands.getIndices());
 
     rewriter.replaceOpWithNewOp<emitc::LoadOp>(op, resultTy, subscript);
@@ -181,7 +181,7 @@ struct ConvertStore final : public OpConversionPattern<memref::StoreOp> {
       return rewriter.notifyMatchFailure(op.getLoc(), "expected array type");
     }
 
-    auto subscript = rewriter.create<emitc::SubscriptOp>(
+    auto subscript = emitc::SubscriptOp::create(rewriter,
         op.getLoc(), arrayValue, operands.getIndices());
     rewriter.replaceOpWithNewOp<emitc::AssignOp>(op, subscript,
                                                  operands.getValue());
@@ -212,7 +212,7 @@ void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
     if (inputs.size() != 1)
       return Value();
 
-    return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
+    return UnrealizedConversionCastOp::create(builder, loc, resultType, inputs)
         .getResult(0);
   };
 
