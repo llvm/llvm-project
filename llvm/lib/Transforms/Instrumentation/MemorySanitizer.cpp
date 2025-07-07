@@ -3394,7 +3394,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// This function will return a vector type with the same number of elements
   /// as the input, but same width as the return value e.g., <8 x i8>.
-  FixedVectorType *shrinkVectorShadow(Value *Src, IntrinsicInst &I) {
+  FixedVectorType *shrinkVectorShadowType(Value *Src, IntrinsicInst &I) {
     assert(isa<FixedVectorType>(getShadowTy(&I)));
     // The return type might have more elements than the input.
     // Temporarily shrink the return type's number of elements.
@@ -3471,7 +3471,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // The return type might have more elements than the input.
     // Temporarily shrink the return type's number of elements.
-    VectorType *ShadowType = shrinkVectorShadow(Src, I);
+    VectorType *ShadowType = shrinkVectorShadowType(Src, I);
 
     IRBuilder<> IRB(&I);
     Value *S0 = getShadow(&I, 0);
