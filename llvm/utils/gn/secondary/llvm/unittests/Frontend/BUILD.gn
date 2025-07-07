@@ -19,6 +19,8 @@ unittest("LLVMFrontendTests") {
     "OpenMPCompositionTest.cpp",
     "OpenMPContextTest.cpp",
     "OpenMPDecompositionTest.cpp",
+    "OpenMPDirectiveNameParserTest.cpp",
+    "OpenMPDirectiveNameTest.cpp",
     "OpenMPIRBuilderTest.cpp",
     "OpenMPParsingTest.cpp",
   ]

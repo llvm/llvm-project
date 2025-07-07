@@ -129,6 +129,11 @@ unsigned getKmcntBitWidth(unsigned VersionMajor) {
   return VersionMajor >= 12 ? 5 : 0;
 }
 
+/// \returns Xcnt bit width.
+unsigned getXcntBitWidth(unsigned VersionMajor, unsigned VersionMinor) {
+  return VersionMajor == 12 && VersionMinor == 5 ? 6 : 0;
+}
+
 /// \returns shift for Loadcnt/Storecnt in combined S_WAIT instructions.
 unsigned getLoadcntStorecntBitShift(unsigned VersionMajor) {
   return VersionMajor >= 12 ? 8 : 0;
@@ -677,6 +682,30 @@ bool isGenericAtomic(unsigned Opc) {
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMAX ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_CMPSWAP ||
          Opc == AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG;
+}
+
+bool isAsyncStore(unsigned Opc) {
+  return false; // placeholder before async store implementation.
+}
+
+bool isTensorStore(unsigned Opc) {
+  return Opc == TENSOR_STORE_FROM_LDS_gfx1250 ||
+         Opc == TENSOR_STORE_FROM_LDS_D2_gfx1250;
+}
+
+unsigned getTemporalHintType(const MCInstrDesc TID) {
+  if (TID.TSFlags & (SIInstrFlags::IsAtomicNoRet | SIInstrFlags::IsAtomicRet))
+    return CPol::TH_TYPE_ATOMIC;
+  unsigned Opc = TID.getOpcode();
+  // Async and Tensor store should have the temporal hint type of TH_TYPE_STORE
+  if (TID.mayStore() &&
+      (isAsyncStore(Opc) || isTensorStore(Opc) || !TID.mayLoad()))
+    return CPol::TH_TYPE_STORE;
+
+  // This will default to returning TH_TYPE_LOAD when neither MayStore nor
+  // MayLoad flag is present which is the case with instructions like
+  // image_get_resinfo.
+  return CPol::TH_TYPE_LOAD;
 }
 
 bool isTrue16Inst(unsigned Opc) {
@@ -1491,6 +1520,10 @@ unsigned getDscntBitMask(const IsaVersion &Version) {
 
 unsigned getKmcntBitMask(const IsaVersion &Version) {
   return (1 << getKmcntBitWidth(Version.Major)) - 1;
+}
+
+unsigned getXcntBitMask(const IsaVersion &Version) {
+  return (1 << getXcntBitWidth(Version.Major, Version.Minor)) - 1;
 }
 
 unsigned getStorecntBitMask(const IsaVersion &Version) {

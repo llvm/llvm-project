@@ -144,6 +144,54 @@ exit:                                              ; preds = %loop
   ret i16 %crc.next
 }
 
+define i8 @crc8.le.tc16(i16 %msg, i8 %checksum) {
+; CHECK-LABEL: 'crc8.le.tc16'
+; CHECK-NEXT:  Found little-endian CRC-8 loop with trip count 16
+; CHECK-NEXT:    Initial CRC: i8 %checksum
+; CHECK-NEXT:    Generating polynomial: 29
+; CHECK-NEXT:    Computed CRC: %crc.next = select i1 %check.sb, i8 %crc.lshr, i8 %crc.xor
+; CHECK-NEXT:    Auxiliary data: i16 %msg
+; CHECK-NEXT:    Computed CRC lookup table:
+; CHECK-NEXT:  0 9 18 27 31 22 13 4 5 12 23 30 26 19 8 1
+; CHECK-NEXT:  10 3 24 17 21 28 7 14 15 6 29 20 16 25 2 11
+; CHECK-NEXT:  20 29 6 15 11 2 25 16 17 24 3 10 14 7 28 21
+; CHECK-NEXT:  30 23 12 5 1 8 19 26 27 18 9 0 4 13 22 31
+; CHECK-NEXT:  19 26 1 8 12 5 30 23 22 31 4 13 9 0 27 18
+; CHECK-NEXT:  25 16 11 2 6 15 20 29 28 21 14 7 3 10 17 24
+; CHECK-NEXT:  7 14 21 28 24 17 10 3 2 11 16 25 29 20 15 6
+; CHECK-NEXT:  13 4 31 22 18 27 0 9 8 1 26 19 23 30 5 12
+; CHECK-NEXT:  29 20 15 6 2 11 16 25 24 17 10 3 7 14 21 28
+; CHECK-NEXT:  23 30 5 12 8 1 26 19 18 27 0 9 13 4 31 22
+; CHECK-NEXT:  9 0 27 18 22 31 4 13 12 5 30 23 19 26 1 8
+; CHECK-NEXT:  3 10 17 24 28 21 14 7 6 15 20 29 25 16 11 2
+; CHECK-NEXT:  14 7 28 21 17 24 3 10 11 2 25 16 20 29 6 15
+; CHECK-NEXT:  4 13 22 31 27 18 9 0 1 8 19 26 30 23 12 5
+; CHECK-NEXT:  26 19 8 1 5 12 23 30 31 22 13 4 0 9 18 27
+; CHECK-NEXT:  16 25 2 11 15 6 29 20 21 28 7 14 10 3 24 17
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i8 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i16 [ %msg, %entry ], [ %data.next, %loop ]
+  %data.trunc = trunc i16 %data to i8
+  %xor.crc.data = xor i8 %crc, %data.trunc
+  %and.crc.data = and i8 %xor.crc.data, 1
+  %data.next = lshr i16 %data, 1
+  %check.sb = icmp eq i8 %and.crc.data, 0
+  %crc.lshr = lshr i8 %crc, 1
+  %crc.xor = xor i8 %crc.lshr, 29
+  %crc.next = select i1 %check.sb, i8 %crc.lshr, i8 %crc.xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 15
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i8 %crc.next
+}
+
 define i16 @crc16.be.tc8.crc.init.li(i16 %checksum, i8 %msg) {
 ; CHECK-LABEL: 'crc16.be.tc8.crc.init.li'
 ; CHECK-NEXT:  Found big-endian CRC-16 loop with trip count 8
@@ -601,7 +649,7 @@ exit:                                              ; preds = %loop
 define i16 @not.crc.wrong.sb.check.const(i8 %msg, i16 %checksum) {
 ; CHECK-LABEL: 'not.crc.wrong.sb.check.const'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Simple recurrence doesn't use conditional recurrence with XOR
+; CHECK-NEXT:  Reason: Bad RHS of significant-bit-check
 ;
 entry:
   br label %loop
@@ -610,9 +658,8 @@ loop:                                              ; preds = %loop, %entry
   %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
   %data = phi i8 [ %msg, %entry ], [ %data.next, %loop ]
   %crc = phi i16 [ %checksum, %entry ], [ %crc.next, %loop ]
-  %crc.lshr = lshr i16 %crc, 8
   %data.ext = zext i8 %data to i16
-  %xor.crc.data = xor i16 %crc.lshr, %data.ext
+  %xor.crc.data = xor i16 %crc, %data.ext
   %check.sb = icmp samesign ult i16 %xor.crc.data, 128
   %crc.shl = shl i16 %crc, 1
   %crc.xor = xor i16 %crc.shl, 258
@@ -649,10 +696,10 @@ exit:                                              ; preds = %loop
   ret i16 %crc.next
 }
 
-define i16 @not.crc.excess.tc(i16 %msg, i16 %checksum) {
+define i16 @not.crc.excess.tc(i8 %msg, i16 %checksum) {
 ; CHECK-LABEL: 'not.crc.excess.tc'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Loop iterations exceed bitwidth of result
+; CHECK-NEXT:  Reason: Loop iterations exceed bitwidth of data
 ;
 entry:
   br label %loop
@@ -660,16 +707,40 @@ entry:
 loop:                                              ; preds = %loop, %entry
   %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
   %crc = phi i16 [ %checksum, %entry ], [ %crc.next, %loop ]
-  %data = phi i16 [ %msg, %entry ], [ %data.next, %loop ]
-  %xor.crc.data = xor i16 %crc, %data
-  %and.crc.data = and i16 %xor.crc.data, 1
-  %data.next = lshr i16 %data, 1
-  %check.sb = icmp eq i16 %and.crc.data, 0
+  %data = phi i8 [ %msg, %entry ], [ %data.next, %loop ]
+  %crc.trunc = trunc i16 %crc to i8
+  %xor.crc.data = xor i8 %crc.trunc, %data
+  %and.crc.data = and i8 %xor.crc.data, 1
+  %data.next = lshr i8 %data, 1
+  %check.sb = icmp eq i8 %and.crc.data, 0
   %crc.lshr = lshr i16 %crc, 1
   %crc.xor = xor i16 %crc.lshr, -24575
   %crc.next = select i1 %check.sb, i16 %crc.lshr, i16 %crc.xor
   %iv.next = add nuw nsw i8 %iv, 1
-  %exit.cond = icmp samesign ult i8 %iv, 31
+  %exit.cond = icmp samesign ult i8 %iv, 15
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
+define i16 @not.crc.init.arg.excess.tc(i16 %crc.init) {
+; CHECK-LABEL: 'not.crc.init.arg.excess.tc'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Loop iterations exceed bitwidth of data
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %crc.init, %entry ], [ %crc.next, %loop ]
+  %crc.shl = shl i16 %crc, 1
+  %crc.xor = xor i16 %crc.shl, 4129
+  %check.sb = icmp slt i16 %crc, 0
+  %crc.next = select i1 %check.sb, i16 %crc.xor, i16 %crc.shl
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exit.cond = icmp samesign ult i32 %iv, 31
   br i1 %exit.cond, label %loop, label %exit
 
 exit:                                              ; preds = %loop
@@ -838,10 +909,37 @@ exit:                                              ; preds = %loop
   ret i16 %crc.next
 }
 
+define i16 @not.crc.bad.cast(i8 %msg, i16 %checksum) {
+; CHECK-LABEL: 'not.crc.bad.cast'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Expected bottom 8 bits zero (????????00001011)
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %data = phi i8 [ %msg, %entry ], [ %data.next, %loop ]
+  %crc = phi i16 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data.ext = zext i8 %data to i16
+  %xor.crc.data = xor i16 %crc, %data.ext
+  %check.sb = icmp slt i16 %xor.crc.data, 0
+  %crc.shl = shl i16 %crc, 1
+  %crc.xor = xor i16 %crc.shl, 29
+  %crc.next = select i1 %check.sb, i16 %crc.shl, i16 %crc.xor
+  %data.next = shl i8 %data, 1
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
 define i32 @not.crc.dead.msg.bad.use(i32 %checksum, i32 %msg) {
 ; CHECK-LABEL: 'not.crc.dead.msg.bad.use'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Simple recurrence doesn't use conditional recurrence with XOR
+; CHECK-NEXT:  Reason: Recurrences not intertwined with XOR
 ;
 entry:
   br label %loop
@@ -869,7 +967,7 @@ exit:                                              ; preds = %loop
 define i16 @not.crc.dead.msg.no.use(i8 %msg, i16 %checksum) {
 ; CHECK-LABEL: 'not.crc.dead.msg.no.use'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Simple recurrence doesn't use conditional recurrence with XOR
+; CHECK-NEXT:  Reason: Recurrences have stray uses
 ;
 entry:
   br label %loop
@@ -898,7 +996,7 @@ exit:                                              ; preds = %loop
 define i32 @not.crc.dead.msg.wrong.op(i32 %checksum, i32 %msg) {
 ; CHECK-LABEL: 'not.crc.dead.msg.wrong.op'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Simple recurrence doesn't use conditional recurrence with XOR
+; CHECK-NEXT:  Reason: Recurrences not intertwined with XOR
 ;
 entry:
   br label %loop
@@ -920,6 +1018,120 @@ loop:                                              ; preds = %loop, %entry
 
 exit:                                              ; preds = %loop
   ret i32 %crc.next
+}
+
+define i16 @not.crc.dead.msg.xor.notin.select.chain(i16 %msg, i16 %checksum) {
+; CHECK-LABEL: 'not.crc.dead.msg.xor.notin.select.chain'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Recurrences have stray uses
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i16 [ %msg, %entry ], [ %data.next, %loop ]
+  %xor.crc.data = xor i16 %crc, %data
+  %or.crc.data = or i16 %crc, %data
+  %and.crc.data = and i16 %or.crc.data, 1
+  %data.next = lshr i16 %data, 1
+  %check.sb = icmp eq i16 %and.crc.data, 0
+  %crc.lshr = lshr i16 %crc, 1
+  %crc.xor = xor i16 %crc.lshr, -24575
+  %crc.next = select i1 %check.sb, i16 %crc.lshr, i16 %crc.xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 15
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
+define i16 @not.crc.bad.xor.crc.data(i16 %msg, i16 %checksum) {
+; CHECK-LABEL: 'not.crc.bad.xor.crc.data'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Recurrences have stray uses
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i16 [ %msg, %entry ], [ %data.next, %loop ]
+  %xor.crc.data = xor i16 %crc, %data
+  %mul.corrupt = mul i16 %xor.crc.data, 0
+  %xor.crc.data.corrupt = xor i16 %mul.corrupt, %crc
+  %and.crc.data = and i16 %xor.crc.data.corrupt, 1
+  %data.next = lshr i16 %data, 1
+  %check.sb = icmp eq i16 %and.crc.data, 0
+  %crc.lshr = lshr i16 %crc, 1
+  %crc.xor = xor i16 %crc.lshr, -24575
+  %crc.next = select i1 %check.sb, i16 %crc.lshr, i16 %crc.xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 15
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
+define i16 @not.crc.dead.msg.or.zero(i16 %msg, i16 %checksum) {
+; CHECK-LABEL: 'not.crc.dead.msg.or.zero'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Recurrences have stray uses
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i16 [ %msg, %entry ], [ %data.next, %loop ]
+  %xor.crc.data = xor i16 %crc, %data
+  %mul.corrupt = mul i16 %xor.crc.data, 0
+  %or.crc.data.corrupt = or i16 %mul.corrupt, %crc
+  %and.crc.data = and i16 %or.crc.data.corrupt, 1
+  %data.next = lshr i16 %data, 1
+  %check.sb = icmp eq i16 %and.crc.data, 0
+  %crc.lshr = lshr i16 %crc, 1
+  %crc.xor = xor i16 %crc.lshr, -24575
+  %crc.next = select i1 %check.sb, i16 %crc.lshr, i16 %crc.xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 15
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
+define i16 @not.crc.unknown.value(i16 %msg, i16 %checksum, i16 %corrupt) {
+; CHECK-LABEL: 'not.crc.unknown.value'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Unknown Value
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i16 [ %msg, %entry ], [ %data.next, %loop ]
+  %xor.crc.data = xor i16 %crc, %data
+  %xor.crc.data.corrupt = mul i16 %xor.crc.data, %corrupt
+  %and.crc.data = and i16 %xor.crc.data.corrupt, 1
+  %data.next = lshr i16 %data, 1
+  %check.sb = icmp eq i16 %and.crc.data, 0
+  %crc.lshr = lshr i16 %crc, 1
+  %crc.xor = xor i16 %crc.lshr, -24575
+  %crc.next = select i1 %check.sb, i16 %crc.lshr, i16 %crc.xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 15
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
 }
 
 define i16 @not.crc.float.simple.recurrence(float %msg, i16 %checksum) {
