@@ -84,8 +84,6 @@ public:
 
   bool fixupNeedsRelaxation(const MCFixup &Fixup,
                             uint64_t Value) const override;
-  void relaxInstruction(MCInst &Inst,
-                        const MCSubtargetInfo &STI) const override;
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 
@@ -507,11 +505,6 @@ bool AArch64AsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
   //
   // Relax if the value is too big for a (signed) i8.
   return int64_t(Value) != int64_t(int8_t(Value));
-}
-
-void AArch64AsmBackend::relaxInstruction(MCInst &Inst,
-                                         const MCSubtargetInfo &STI) const {
-  llvm_unreachable("AArch64AsmBackend::relaxInstruction() unimplemented");
 }
 
 bool AArch64AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,

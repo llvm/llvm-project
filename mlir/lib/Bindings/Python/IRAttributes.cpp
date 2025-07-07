@@ -1670,7 +1670,7 @@ public:
         [](int64_t rank, DefaultingPyMlirContext ctx) {
           auto dynamic = mlirShapedTypeGetDynamicStrideOrOffset();
           std::vector<int64_t> strides(rank);
-          std::fill(strides.begin(), strides.end(), dynamic);
+          llvm::fill(strides, dynamic);
           MlirAttribute attr = mlirStridedLayoutAttrGet(
               ctx->get(), dynamic, strides.size(), strides.data());
           return PyStridedLayoutAttribute(ctx->getRef(), attr);

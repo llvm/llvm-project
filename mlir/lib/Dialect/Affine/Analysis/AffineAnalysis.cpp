@@ -391,7 +391,7 @@ static void addOrderingConstraints(const FlatAffineValueConstraints &srcDomain,
   unsigned numCommonLoops = getNumCommonLoops(srcDomain, dstDomain);
   unsigned numCommonLoopConstraints = std::min(numCommonLoops, loopDepth);
   for (unsigned i = 0; i < numCommonLoopConstraints; ++i) {
-    std::fill(eq.begin(), eq.end(), 0);
+    llvm::fill(eq, 0);
     eq[i] = -1;
     eq[i + numSrcDims] = 1;
     if (i == loopDepth - 1) {
@@ -433,7 +433,7 @@ static void computeDirectionVector(
   // Constraint variables format:
   // [num-common-loops][num-src-dim-ids][num-dst-dim-ids][num-symbols][constant]
   for (unsigned j = 0; j < numCommonLoops; ++j) {
-    std::fill(eq.begin(), eq.end(), 0);
+    llvm::fill(eq, 0);
     eq[j] = 1;
     eq[j + numCommonLoops] = 1;
     eq[j + numCommonLoops + numSrcDims] = -1;

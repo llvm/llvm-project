@@ -135,8 +135,8 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
          shape.size() == strides.size() && shape.size() == offsets.size());
 
   Type srcTy = source.getType();
-  assert(isa<IntegerType>(srcTy) ||
-         isa<MemRefType>(srcTy) && "Source has to be either int or memref.");
+  assert((isa<IntegerType, MemRefType>(srcTy)) &&
+         "Source has to be either int or memref.");
 
   llvm::SmallVector<Value> dynamicOffsets;
   llvm::SmallVector<Value> dynamicShape;

@@ -8,9 +8,9 @@
 
 #undef isgreaterequal
 
-#define __CLC_FUNCTION isgreaterequal
+#define FUNCTION isgreaterequal
 #define __CLC_BODY <clc/relational/binary_decl.inc>
 
 #include <clc/relational/floatn.inc>
 
-#undef __CLC_FUNCTION
+#undef FUNCTION

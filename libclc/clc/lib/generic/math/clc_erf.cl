@@ -516,7 +516,7 @@ _CLC_OVERLOAD _CLC_DEF double __clc_erf(double y) {
 
 // Forward the half version of this builtin onto the float one
 #define __HALF_ONLY
-#define __CLC_FUNCTION __clc_erf
+#define FUNCTION __clc_erf
 #define __CLC_BODY <clc/math/unary_def_via_fp32.inc>
 #include <clc/math/gentype.inc>
 
