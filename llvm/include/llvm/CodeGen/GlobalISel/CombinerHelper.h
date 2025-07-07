@@ -145,7 +145,7 @@ public:
 
   /// \return true if \p Query is legal on the target, or if \p Query will
   /// perform WidenScalar action on the target.
-  bool isLegalorHasWidenScalar(const LegalityQuery &Query) const;
+  bool isLegalOrHasWidenScalar(const LegalityQuery &Query) const;
 
   /// \return true if the combine is running prior to legalization, or if \p Ty
   /// is a legal integer constant type on the target.

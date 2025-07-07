@@ -1131,13 +1131,13 @@ def form_bitfield_extract : GICombineGroup<[bitfield_extract_from_sext_inreg,
 
 def udiv_by_const : GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_UDIV):$root,
+  (match (G_UDIV $dst, $x, $y):$root,
    [{ return Helper.matchUDivorURemByConst(*${root}); }]),
   (apply [{ Helper.applyUDivorURemByConst(*${root}); }])>;
 
 def sdiv_by_const : GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_SDIV):$root,
+  (match (G_SDIV $dst, $x, $y):$root,
    [{ return Helper.matchSDivByConst(*${root}); }]),
   (apply [{ Helper.applySDivByConst(*${root}); }])>;
 
@@ -1153,8 +1153,8 @@ def udiv_by_pow2 : GICombineRule<
    [{ return Helper.matchDivByPow2(*${root}, /*IsSigned=*/false); }]),
   (apply [{ Helper.applyUDivByPow2(*${root}); }])>;
 
-def intdiv_combines : GICombineGroup<[udiv_by_const, sdiv_by_const,
-                                      sdiv_by_pow2, udiv_by_pow2]>;
+def intdiv_combines : GICombineGroup<[udiv_by_pow2, sdiv_by_pow2, 
+                                      udiv_by_const, sdiv_by_const,]>;
 
 def urem_by_const : GICombineRule<
   (defs root:$root),

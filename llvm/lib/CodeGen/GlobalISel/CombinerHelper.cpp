@@ -162,7 +162,7 @@ bool CombinerHelper::isLegalOrBeforeLegalizer(
   return isPreLegalize() || isLegal(Query);
 }
 
-bool CombinerHelper::isLegalorHasWidenScalar(const LegalityQuery &Query) const {
+bool CombinerHelper::isLegalOrHasWidenScalar(const LegalityQuery &Query) const {
   return isLegal(Query) ||
          LI->getAction(Query).Action == LegalizeActions::WidenScalar;
 }
@@ -5557,7 +5557,7 @@ bool CombinerHelper::matchSDivByConst(MachineInstr &MI) const {
     if (!isLegalOrBeforeLegalizer({TargetOpcode::G_MUL, {DstTy, DstTy}}))
       return false;
     if (!isLegal({TargetOpcode::G_SMULH, {DstTy}}) &&
-        !isLegalorHasWidenScalar({TargetOpcode::G_MUL, {WideTy, WideTy}}))
+        !isLegalOrHasWidenScalar({TargetOpcode::G_MUL, {WideTy, WideTy}}))
       return false;
   }
 
