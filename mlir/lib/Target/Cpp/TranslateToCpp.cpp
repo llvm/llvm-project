@@ -226,7 +226,7 @@ struct CppEmitter {
   /// value names.
   struct FunctionScope : Scope {
     FunctionScope(CppEmitter &emitter) : Scope(emitter) {
-      // Re-use value names
+      // Re-use value names.
       emitter.resetValueCounter();
     }
   };
@@ -1034,7 +1034,6 @@ static LogicalResult printOperation(CppEmitter &emitter, ModuleOp moduleOp) {
 }
 
 static LogicalResult printOperation(CppEmitter &emitter, ClassOp classOp) {
-  CppEmitter::Scope classScope(emitter);
   raw_indented_ostream &os = emitter.ostream();
   os << "class " << classOp.getSymName() << " {\n";
   os << "public:\n";
