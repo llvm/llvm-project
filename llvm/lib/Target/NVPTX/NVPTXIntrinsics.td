@@ -753,30 +753,11 @@ foreach dim = [1, 2, 3, 4, 5] in {
 //Prefetchu and Prefetch
 
 class PREFETCH_CONST_CHK<dag frag>
-          : PatFrag<!setdagop(frag, ops), frag, [{
-            auto *Addr = N->getOperand(2).getNode();
-            auto *MemNode = dyn_cast<MemSDNode>(Addr);
-            bool result = MemNode->getMemOperand()->getAddrSpace() == llvm::ADDRESS_SPACE_CONST;
-            return result;
-          }]>;
-
-
+          : PatFrag<!setdagop(frag, ops), frag, AS_match.const>;
 class PREFETCH_GENERIC_CHK<dag frag>
-          : PatFrag<!setdagop(frag, ops), frag,  [{
-            auto *Addr = N->getOperand(2).getNode();
-            auto *MemNode = dyn_cast<MemSDNode>(Addr);
-            bool result= MemNode->getMemOperand()->getAddrSpace() == llvm::ADDRESS_SPACE_GENERIC;
-            return result;
-          }]>;
-
-
+          : PatFrag<!setdagop(frag, ops), frag, AS_match.generic>;
 class PREFETCH_PARAM_CHK<dag frag>
-          : PatFrag<!setdagop(frag, ops), frag, [{
-            auto *Addr = N->getOperand(2).getNode();
-            auto *MemNode = dyn_cast<MemSDNode>(Addr);
-            bool result = MemNode->getMemOperand()->getAddrSpace() == llvm::ADDRESS_SPACE_PARAM;
-            return result;
-          }]>;
+          : PatFrag<!setdagop(frag, ops), frag, AS_match.param>;
 
 defvar frag_pat = (int_nvvm_prefetch_tensormap node:$addr);
 
