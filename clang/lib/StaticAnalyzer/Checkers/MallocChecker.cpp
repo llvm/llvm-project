@@ -449,20 +449,6 @@ public:
                   const char *NL, const char *Sep) const override;
 
 private:
-  /// Helper method to handle the cases where there is no associated frontend
-  /// (just exit early) or the associated frontend is disabled (sink the
-  /// execution path and and then exit early). Intended to be called as
-  ///   if (handleNullOrDisabled(Frontend, C))
-  ///     return;
-  static bool handleNullOrDisabled(const CheckerFrontend *F,
-                                   CheckerContext &C) {
-    if (F && F->isEnabled())
-      return false;
-    if (F)
-      C.addSink();
-    return true;
-  }
-
 #define CHECK_FN(NAME)                                                         \
   void NAME(ProgramStateRef State, const CallEvent &Call, CheckerContext &C)   \
       const;
@@ -2534,8 +2520,12 @@ void MallocChecker::HandleNonHeapDealloc(CheckerContext &C, SVal ArgVal,
                                          const Expr *DeallocExpr,
                                          AllocationFamily Family) const {
   const BadFree *Frontend = getRelevantFrontendAs<BadFree>(Family);
-  if (handleNullOrDisabled(Frontend, C))
+  if (!Frontend)
     return;
+  if (!Frontend->isEnabled()) {
+    C.addSink();
+    return;
+  }
 
   if (ExplodedNode *N = C.generateErrorNode()) {
     SmallString<100> buf;
@@ -2648,8 +2638,12 @@ void MallocChecker::HandleOffsetFree(CheckerContext &C, SVal ArgVal,
                                      AllocationFamily Family,
                                      const Expr *AllocExpr) const {
   const OffsetFree *Frontend = getRelevantFrontendAs<OffsetFree>(Family);
-  if (handleNullOrDisabled(Frontend, C))
+  if (!Frontend)
     return;
+  if (!Frontend->isEnabled()) {
+    C.addSink();
+    return;
+  }
 
   ExplodedNode *N = C.generateErrorNode();
   if (!N)
@@ -2694,8 +2688,12 @@ void MallocChecker::HandleOffsetFree(CheckerContext &C, SVal ArgVal,
 void MallocChecker::HandleUseAfterFree(CheckerContext &C, SourceRange Range,
                                        SymbolRef Sym) const {
   const UseFree *Frontend = getRelevantFrontendAs<UseFree>(C, Sym);
-  if (handleNullOrDisabled(Frontend, C))
+  if (!Frontend)
     return;
+  if (!Frontend->isEnabled()) {
+    C.addSink();
+    return;
+  }
 
   if (ExplodedNode *N = C.generateErrorNode()) {
     AllocationFamily AF =
@@ -2723,8 +2721,12 @@ void MallocChecker::HandleDoubleFree(CheckerContext &C, SourceRange Range,
                                      bool Released, SymbolRef Sym,
                                      SymbolRef PrevSym) const {
   const DoubleFree *Frontend = getRelevantFrontendAs<DoubleFree>(C, Sym);
-  if (handleNullOrDisabled(Frontend, C))
+  if (!Frontend)
     return;
+  if (!Frontend->isEnabled()) {
+    C.addSink();
+    return;
+  }
 
   if (ExplodedNode *N = C.generateErrorNode()) {
     auto R = std::make_unique<PathSensitiveBugReport>(
@@ -2743,8 +2745,12 @@ void MallocChecker::HandleDoubleFree(CheckerContext &C, SourceRange Range,
 
 void MallocChecker::HandleDoubleDelete(CheckerContext &C, SymbolRef Sym) const {
   const DoubleDelete *Frontend = getRelevantFrontendAs<DoubleDelete>(C, Sym);
-  if (handleNullOrDisabled(Frontend, C))
+  if (!Frontend)
     return;
+  if (!Frontend->isEnabled()) {
+    C.addSink();
+    return;
+  }
 
   if (ExplodedNode *N = C.generateErrorNode()) {
 
@@ -2761,8 +2767,12 @@ void MallocChecker::HandleUseZeroAlloc(CheckerContext &C, SourceRange Range,
                                        SymbolRef Sym) const {
   const UseZeroAllocated *Frontend =
       getRelevantFrontendAs<UseZeroAllocated>(C, Sym);
-  if (handleNullOrDisabled(Frontend, C))
+  if (!Frontend)
     return;
+  if (!Frontend->isEnabled()) {
+    C.addSink();
+    return;
+  }
 
   if (ExplodedNode *N = C.generateErrorNode()) {
     auto R = std::make_unique<PathSensitiveBugReport>(
@@ -2783,8 +2793,12 @@ void MallocChecker::HandleFunctionPtrFree(CheckerContext &C, SVal ArgVal,
                                           const Expr *FreeExpr,
                                           AllocationFamily Family) const {
   const BadFree *Frontend = getRelevantFrontendAs<BadFree>(Family);
-  if (handleNullOrDisabled(Frontend, C))
+  if (!Frontend)
     return;
+  if (!Frontend->isEnabled()) {
+    C.addSink();
+    return;
+  }
 
   if (ExplodedNode *N = C.generateErrorNode()) {
     SmallString<100> Buf;
