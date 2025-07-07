@@ -226,7 +226,7 @@ def ShapedTypeInterface : TypeInterface<"ShapedType"> {
 
     /// Whether the given dimension size indicates a statically-sized dimension.
     static constexpr bool isStatic(int64_t dValue) {
-      return !isDynamic(dValue);
+      return dValue != kDynamic;
     }
 
     /// Whether the given shape has static dimensions only.
