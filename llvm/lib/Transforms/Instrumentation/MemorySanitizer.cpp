@@ -4297,7 +4297,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void handleAVXVpermilvar(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *Shadow = getShadow(&I, 0);
-    insertShadowCheck(I.getArgOperand(1), &I);
+    maskedCheckAVXIndexShadow(IRB, I.getArgOperand(1), &I);
 
     // Shadows are integer-ish types but some intrinsics require a
     // different (e.g., floating-point) type.
