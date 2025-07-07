@@ -22,12 +22,11 @@ static constexpr llvm::StringRef DefaultExclusionStr =
 ProBoundsAvoidUncheckedContainerAccesses::
     ProBoundsAvoidUncheckedContainerAccesses(StringRef Name,
                                              ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context) {
-  ExcludedClasses = utils::options::parseStringList(
-      Options.get("ExcludeClasses", DefaultExclusionStr));
-  FixMode = Options.get("FixMode", None);
-  FixFunction = Options.get("FixFunction", "gsl::at");
-}
+    : ClangTidyCheck(Name, Context),
+      ExcludedClasses(utils::options::parseStringList(
+          Options.get("ExcludeClasses", DefaultExclusionStr))),
+      FixMode(Options.get("FixMode", None)),
+      FixFunction(Options.get("FixFunction", "gsl::at")) {}
 
 void ProBoundsAvoidUncheckedContainerAccesses::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
