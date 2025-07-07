@@ -13,8 +13,7 @@ define void @neg_cond(ptr noalias %p, ptr noalias %q) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[P]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[TMP0]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 42)
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <4 x i1> [[TMP2]], splat (i1 true)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <4 x i32> [[WIDE_LOAD]], splat (i32 42)
 ; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> splat (i32 42), <4 x i32> splat (i32 43)
 ; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
