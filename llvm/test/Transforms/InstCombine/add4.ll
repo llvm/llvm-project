@@ -375,3 +375,27 @@ define i32 @fold_add_udiv_urem_pow2_both_mul(i32 noundef %arg) {
   %add = add i32 %mul1, %mul2
   ret i32 %add
 }
+
+define i32 @fold_add_udiv_urem_by_two_no_mul(i32 noundef %arg) {
+; CHECK-LABEL: @fold_add_udiv_urem_by_two_no_mul(
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[ARG:%.*]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[ARG]], [[LSHR]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %lshr = lshr i32 %arg, 1
+  %and = and i32 %arg, 1
+  %add = add i32 %lshr, %and
+  ret i32 %add
+}
+
+define i32 @fold_add_sdiv_srem_by_two_no_mul(i32 noundef %arg) {
+; CHECK-LABEL: @fold_add_sdiv_srem_by_two_no_mul(
+; CHECK-NEXT:    [[DIV_NEG:%.*]] = sdiv i32 [[ARG:%.*]], -2
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[DIV_NEG]], [[ARG]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %div = sdiv i32 %arg, 2
+  %rem = srem i32 %arg, 2
+  %add = add i32 %div, %rem
+  ret i32 %add
+}
