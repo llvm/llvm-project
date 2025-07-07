@@ -421,7 +421,6 @@ public:
 /// if its hoisted to predecessor block. So, this returns true.
 static bool isHoistableInstruction(Instruction *I, BasicBlock *BB,
                                    TargetTransformInfo *TTI) {
-
   if (I->getParent() != BB)
     return false;
 
