@@ -4111,6 +4111,10 @@ static ActionResult<CXXRecordDecl *> getPatternForClassTemplateSpecialization(
         if (Ambiguous) {
           // Partial ordering did not produce a clear winner. Complain.
           Inst.Clear();
+
+          if (!S.isSFINAEContext())
+            ClassTemplateSpec->setInvalidDecl();
+
           S.Diag(PointOfInstantiation,
                  diag::err_partial_spec_ordering_ambiguous)
               << ClassTemplateSpec;
