@@ -29422,15 +29422,21 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
                    Op->getFlags().hasNoNaNs() || (IsXNeverNaN && IsYNeverNaN);
 
   // If we did no ordering operands for signed zero handling and we need
-  // to process NaN and we know that the second operand is not NaN then put
-  // it in first operand and we will not need to post handle NaN after max/min.
-  if (IgnoreSignedZero && !IgnoreNaN && DAG.isKnownNeverNaN(NewY))
+  // to process NaN and we know that one of the operands is not NaN then:
+  //  - For minimum/maximum, put it in the first operand,
+  //  - For minimumnum/maximumnum, put it in the second operand,
+  // and we will not need to post handle NaN after max/min.
+  if (IgnoreSignedZero && !IgnoreNaN &&
+      DAG.isKnownNeverNaN(IsNum ? NewX : NewY))
     std::swap(NewX, NewY);
 
   SDValue MinMax = DAG.getNode(MinMaxOp, DL, VT, NewX, NewY, Op->getFlags());
 
-  if (IgnoreNaN || DAG.isKnownNeverNaN(NewX))
+  if (IgnoreNaN || DAG.isKnownNeverNaN(IsNum ? NewY : NewX))
     return MinMax;
+
+  if (DAG.isKnownNeverNaN(NewX))
+    NewX = NewY;
 
   SDValue IsNaN =
       DAG.getSetCC(DL, SetCCType, NewX, NewX, IsNum ? ISD::SETO : ISD::SETUO);
