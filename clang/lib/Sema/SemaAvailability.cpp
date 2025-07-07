@@ -452,6 +452,28 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
       }
     }
   }
+  // Suppress -Wdeprecated-declarations in purely implicit special-member functions.
+  if (K == AR_Deprecated) {
+    if (const FunctionDecl *FD = S.getCurFunctionDecl()) {
+      // Implicit, defaulted constructor (default / copy / move)
+      if (auto *CD = dyn_cast<CXXConstructorDecl>(FD)) {
+        if (CD->isImplicit() && CD->isDefaulted())
+          return;
+      }
+      //Implicit, defaulted destructor
+      if (auto *DD = dyn_cast<CXXDestructorDecl>(FD)) {
+        if (DD->isImplicit() && DD->isDefaulted())
+          return;
+      }
+      //Implicit copy- or move-assignment operator
+      if (auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
+        if (MD->isImplicit() &&
+            (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator()))
+          return;
+      }
+    }
+  }
+
 
   switch (K) {
   case AR_NotYetIntroduced: {
