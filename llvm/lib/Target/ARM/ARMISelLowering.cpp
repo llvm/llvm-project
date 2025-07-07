@@ -2815,13 +2815,20 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   auto PtrVt = getPointerTy(DAG.getDataLayout());
 
   if (Subtarget->genLongCalls()) {
-    assert((!isPositionIndependent() || Subtarget->isTargetWindows()) &&
-           "long-calls codegen is not position independent!");
     // Handle a global address or an external symbol. If it's not one of
     // those, the target's already in a register, so we don't need to do
     // anything extra.
     if (isa<GlobalAddressSDNode>(Callee)) {
-      if (Subtarget->genExecuteOnly()) {
+      if (isPositionIndependent() && !Subtarget->isTargetWindows() &&
+          !Subtarget->genExecuteOnly()) {
+        SDValue G = DAG.getTargetGlobalAddress(
+            GVal, dl, PtrVt, 0, GVal->isDSOLocal() ? 0 : ARMII::MO_GOT);
+        Callee = DAG.getNode(ARMISD::WrapperPIC, dl, PtrVt, G);
+        if (!GVal->isDSOLocal())
+          Callee =
+              DAG.getLoad(PtrVt, dl, DAG.getEntryNode(), Callee,
+                          MachinePointerInfo::getGOT(DAG.getMachineFunction()));
+      } else if (Subtarget->genExecuteOnly()) {
         if (Subtarget->useMovt())
           ++NumMovwMovt;
         Callee = DAG.getNode(ARMISD::Wrapper, dl, PtrVt,
@@ -2839,7 +2846,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
             PtrVt, dl, DAG.getEntryNode(), Addr,
             MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
       }
-    } else if (ExternalSymbolSDNode *S=dyn_cast<ExternalSymbolSDNode>(Callee)) {
+    } else if (ExternalSymbolSDNode *S =
+                   dyn_cast<ExternalSymbolSDNode>(Callee)) {
       const char *Sym = S->getSymbol();
 
       if (Subtarget->genExecuteOnly()) {
