@@ -7412,17 +7412,6 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
   return Blended;
 }
 
-bool TargetLowering::
-verifyReturnAddressArgumentIsConstant(SDValue Op, SelectionDAG &DAG) const {
-  if (!isa<ConstantSDNode>(Op.getOperand(0))) {
-    DAG.getContext()->emitError("argument to '__builtin_return_address' must "
-                                "be a constant integer");
-    return true;
-  }
-
-  return false;
-}
-
 SDValue TargetLowering::getSqrtInputTest(SDValue Op, SelectionDAG &DAG,
                                          const DenormalMode &Mode) const {
   SDLoc DL(Op);
