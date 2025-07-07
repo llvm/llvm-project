@@ -6760,7 +6760,7 @@ SDValue SystemZTargetLowering::lowerFSHR(SDValue Op, SelectionDAG &DAG) const {
 }
 
 static SDValue lowerAddrSpaceCast(SDValue Op, SelectionDAG &DAG) {
-  SDLoc Dl(Op);
+  SDLoc DL(Op);
   SDValue Src = Op.getOperand(0);
   MVT DstVT = Op.getSimpleValueType();
 
@@ -6773,14 +6773,14 @@ static SDValue lowerAddrSpaceCast(SDValue Op, SelectionDAG &DAG) {
   // addrspacecast [0 <- 1] : Assinging a ptr32 value to a 64-bit pointer.
   // addrspacecast [1 <- 0] : Assigining a 64-bit pointer to a ptr32 value.
   if (SrcAS == SYSTEMZAS::PTR32 && DstVT == MVT::i64) {
-    Op = DAG.getNode(ISD::AND, Dl, MVT::i32, Src,
-                     DAG.getConstant(0x7fffffff, Dl, MVT::i32));
-    Op = DAG.getNode(ISD::ZERO_EXTEND, Dl, DstVT, Op);
+    Op = DAG.getNode(ISD::AND, DL, MVT::i32, Src,
+                     DAG.getConstant(0x7fffffff, DL, MVT::i32));
+    Op = DAG.getNode(ISD::ZERO_EXTEND, DL, DstVT, Op);
   } else if (DstVT == MVT::i32) {
-    Op = DAG.getNode(ISD::TRUNCATE, Dl, DstVT, Src);
-    Op = DAG.getNode(ISD::AND, Dl, MVT::i32, Op,
-                     DAG.getConstant(0x7fffffff, Dl, MVT::i32));
-    Op = DAG.getNode(ISD::ZERO_EXTEND, Dl, DstVT, Op);
+    Op = DAG.getNode(ISD::TRUNCATE, DL, DstVT, Src);
+    Op = DAG.getNode(ISD::AND, DL, MVT::i32, Op,
+                     DAG.getConstant(0x7fffffff, DL, MVT::i32));
+    Op = DAG.getNode(ISD::ZERO_EXTEND, DL, DstVT, Op);
   } else {
     report_fatal_error("Bad address space in addrspacecast");
   }
@@ -9504,10 +9504,10 @@ static bool checkCCKill(MachineInstr &MI, MachineBasicBlock *MBB) {
   // Scan forward through BB for a use/def of CC.
   MachineBasicBlock::iterator miI(std::next(MachineBasicBlock::iterator(MI)));
   for (MachineBasicBlock::iterator miE = MBB->end(); miI != miE; ++miI) {
-    const MachineInstr& Mi = *miI;
-    if (Mi.readsRegister(SystemZ::CC, /*TRI=*/nullptr))
+    const MachineInstr& MI = *miI;
+    if (MI.readsRegister(SystemZ::CC, /*TRI=*/nullptr))
       return false;
-    if (Mi.definesRegister(SystemZ::CC, /*TRI=*/nullptr))
+    if (MI.definesRegister(SystemZ::CC, /*TRI=*/nullptr))
       break; // Should have kill-flag - update below.
   }
 
