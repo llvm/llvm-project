@@ -491,6 +491,10 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
 
   IdBuilderResult builderResult =
       gpuIdBuilder.idBuilder(rewriter, loc, forallMappingSizes, originalBasis);
+  if (!builderResult.errorMsg.empty())
+    return definiteFailureHelper(transformOp, forallOp, builderResult.errorMsg);
+
+  LLVM_DEBUG(DBGS() << builderResult);
 
   // Step 4. Map the induction variables to the mappingIdOps, this may involve
   // a permutation.
@@ -501,7 +505,7 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
            forallMappingAttrs.getArrayRef().take_front(forallOp.getRank()))) {
     auto mappingAttr = cast<DeviceMappingAttrInterface>(dim);
     Value peIdOp = mappingIdOps[mappingAttr.getRelativeIndex()];
-    LDBG("----map: " << iv << " to" << peIdOp);
+    LDBG("----map: " << iv << " to " << peIdOp);
     bvm.map(iv, peIdOp);
   }
 
@@ -510,32 +514,7 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
   // originalBasis and no predication occurs.
   Value predicate;
   if (originalBasisWasProvided) {
-    SmallVector<int64_t> activeMappingSizes = builderResult.activeMappingSizes;
-    SmallVector<int64_t> availableMappingSizes =
-        builderResult.availableMappingSizes;
-    SmallVector<Value> activeIdOps = builderResult.activeIdOps;
-    LDBG("----activeMappingSizes: " << llvm::interleaved(activeMappingSizes));
-    LDBG("----availableMappingSizes: "
-         << llvm::interleaved(availableMappingSizes));
-    LDBG("----activeIdOps: " << llvm::interleaved(activeIdOps));
-    for (auto [activeId, activeMappingSize, availableMappingSize] :
-         llvm::zip_equal(activeIdOps, activeMappingSizes,
-                         availableMappingSizes)) {
-      if (activeMappingSize > availableMappingSize) {
-        return definiteFailureHelper(
-            transformOp, forallOp,
-            "Trying to map to fewer GPU threads than loop iterations but "
-            "overprovisioning is not yet supported. "
-            "Try additional tiling of the before mapping or map to more "
-            "threads.");
-      }
-      if (activeMappingSize == availableMappingSize)
-        continue;
-      Value idx =
-          rewriter.create<arith::ConstantIndexOp>(loc, activeMappingSize);
-      Value tmpPredicate = rewriter.create<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::ult, activeId, idx);
-      LDBG("----predicate: " << tmpPredicate);
+    for (Value tmpPredicate : builderResult.predicateOps) {
       predicate = predicate ? rewriter.create<arith::AndIOp>(loc, predicate,
                                                              tmpPredicate)
                             : tmpPredicate;
