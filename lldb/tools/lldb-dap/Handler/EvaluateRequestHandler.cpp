@@ -181,14 +181,14 @@ void EvaluateRequestHandler::operator()(
         expression = dap.last_nonempty_var_expression;
       else
         dap.last_nonempty_var_expression = expression;
-    } else {
-      // If this isn't a REPL context, trim leading pointer/reference characters
+    } else if (context == "hover") {
+      // If we're in the hover context trim leading pointer/reference characters
       // to ensure we return the actual value of the expression.
       // This can come up if you hover over a pointer or reference declaration
       // like 'MyType *foo;' or `void fn(std::string &arg)`, which results in
-      // the hover request sending '*foo' or `&arg`. When we're not in the REPL,
-      // we should trim these characters to get to the actual variable, which
-      // should have the proper type encoded by the compiler.
+      // the hover request sending '*foo' or `&arg`. Trim these characters to
+      // get to the actual variable, which should have the proper type encoded
+      // by the compiler.
       expression = llvm::StringRef(expression).ltrim("*&").str();
     }
 
@@ -205,7 +205,10 @@ void EvaluateRequestHandler::operator()(
     if (value.GetError().Success() && context == "repl")
       value = value.Persist();
 
-    if (value.GetError().Fail() && context != "hover")
+    // Only the repl should evaluate expressions, which can mutate application
+    // state. Other contexts are used for observing debuggee state only, not
+    // mutating state.
+    if (value.GetError().Fail() && context == "repl")
       value = frame.EvaluateExpression(expression.data());
 
     if (value.GetError().Fail()) {
