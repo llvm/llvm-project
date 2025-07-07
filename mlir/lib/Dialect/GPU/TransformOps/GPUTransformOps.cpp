@@ -12,9 +12,7 @@
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/TransformOps/Utils.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
@@ -758,7 +756,8 @@ static DiagnosedSilenceableFailure
 getThreadIdBuilder(std::optional<TransformOpInterface> transformOp,
                    scf::ForallOp forallOp, ArrayRef<int64_t> blockSizes,
                    int64_t warpSize, GpuIdBuilder &gpuIdBuilder) {
-  auto mappingAttr = forallOp.getDeviceMappingAttrs().front();
+  DeviceMappingAttrInterface mappingAttr =
+      forallOp.getDeviceMappingAttrs().front();
   bool useLinearMapping = mappingAttr.isLinearMapping();
 
   // Sanity checks that may result in runtime verification errors.

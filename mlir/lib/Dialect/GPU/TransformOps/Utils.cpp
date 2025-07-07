@@ -160,7 +160,7 @@ commonLinearIdBuilderFn(int64_t multiplicity = 1,
       scaledLinearIdI64 = rewriter.create<arith::IndexCastUIOp>(
           loc, rewriter.getI64Type(), scaledLinearId);
       Value logicalLinearIdI64 =
-          mask.getLogicalLinearMappingId(rewriter, scaledLinearIdI64);
+          mask.createLogicalLinearMappingId(rewriter, scaledLinearIdI64);
       scaledLinearId = rewriter.create<arith::IndexCastUIOp>(
           loc, rewriter.getIndexType(), logicalLinearIdI64);
       LDBG("------adjusting linearId with mask: " << scaledLinearId);
@@ -184,7 +184,7 @@ commonLinearIdBuilderFn(int64_t multiplicity = 1,
     // 4. If mask present, it takes precedence to determine predication.
     if (mask) {
       Value isActiveIdPredicate =
-          mask.getIsActiveIdPredicate(rewriter, scaledLinearIdI64);
+          mask.createIsActiveIdPredicate(rewriter, scaledLinearIdI64);
       LDBG("------adjusting predicate with mask: " << isActiveIdPredicate);
       predicateOps.push_back(isActiveIdPredicate);
     } else {

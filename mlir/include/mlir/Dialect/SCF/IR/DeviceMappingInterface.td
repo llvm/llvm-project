@@ -66,18 +66,35 @@ def DeviceMaskingAttrInterface : AttrInterface<"DeviceMaskingAttrInterface"> {
     Attribute interface describing how to filter the processing units that a
     region is mapped to.
 
-    A popcount can be applied to determine the logical linear index that a
-    physical processing unit is responsible for.
+    For instance, consider the following example mask which specifies processing
+    units 2, 4 and 5 are active:
+    ```
+              8       4       0
+      mask  : 0 0 0 1 1 0 1 0 0
+    ```
+    The logical ID for an active processing unit is defined as its position
+    relative to the other active processing units. In this example, we have:
+    ```
+      Processing Unit    LogicalID
+              0             N/A
+              1             N/A
+              2              0
+              3             N/A
+              4              1
+              5              2
+              6             N/A
+              7             N/A
+    ```
   }];
 
  let methods = [
     InterfaceMethod<
       /*desc=*/[{
-        Return the logical active id for a given physical id.
+        Create the logical active id for a given physical id.
         Expects a physicalLinearMappingId of I64Type.
       }],
       /*retTy=*/"Value",
-      /*methodName=*/"getLogicalLinearMappingId",
+      /*methodName=*/"createLogicalLinearMappingId",
       /*args=*/(ins "OpBuilder&":$builder, "Value":$physicalLinearMappingId)
     >,
     InterfaceMethod<
@@ -87,7 +104,7 @@ def DeviceMaskingAttrInterface : AttrInterface<"DeviceMaskingAttrInterface"> {
         Expects a physicalLinearMappingId of I64Type.
       }],
       /*retTy=*/"Value",
-      /*methodName=*/"getIsActiveIdPredicate",
+      /*methodName=*/"createIsActiveIdPredicate",
       /*args=*/(ins "OpBuilder&":$builder, "Value":$physicalLinearMappingId)
     >,
     InterfaceMethod<

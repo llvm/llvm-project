@@ -133,7 +133,7 @@ int64_t GPUMappingMaskAttr::getMaxNumPhysicalIds() const { return 64; }
 /// Example filter: 0 0 0 0 1 1 1 1 1
 /// Intersection  : 0 0 0 0 1 0 1 0 0
 /// PopCnt        : 2
-Value GPUMappingMaskAttr::getLogicalLinearMappingId(
+Value GPUMappingMaskAttr::createLogicalLinearMappingId(
     OpBuilder &b, Value physicalLinearMappingId) const {
   Location loc = physicalLinearMappingId.getLoc();
   Value mask = b.create<arith::ConstantOp>(loc, b.getI64IntegerAttr(getMask()));
@@ -154,7 +154,7 @@ Value GPUMappingMaskAttr::getLogicalLinearMappingId(
 /// Example filter: 0 0 0 1 0 0 0 0 0
 /// Intersection  : 0 0 0 1 0 0 0 0 0
 /// Cmp           : 1
-Value GPUMappingMaskAttr::getIsActiveIdPredicate(
+Value GPUMappingMaskAttr::createIsActiveIdPredicate(
     OpBuilder &b, Value physicalLinearMappingId) const {
   Location loc = physicalLinearMappingId.getLoc();
   Value mask = b.create<arith::ConstantOp>(loc, b.getI64IntegerAttr(getMask()));
