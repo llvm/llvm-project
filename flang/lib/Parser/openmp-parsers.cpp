@@ -1501,7 +1501,7 @@ TYPE_PARSER(
     // In this context "TARGET UPDATE" can be parsed as a TARGET directive
     // followed by an UPDATE clause. This is the only combination at the
     // moment, exclude it explicitly.
-    (!"TARGET UPDATE"_sptok) >=
+    (!("TARGET UPDATE"_sptok || "TARGET_UPDATE"_sptok)) >=
     construct<OmpBlockDirective>(first(
         "MASKED" >> pure(llvm::omp::Directive::OMPD_masked),
         "MASTER" >> pure(llvm::omp::Directive::OMPD_master),
@@ -1514,6 +1514,7 @@ TYPE_PARSER(
         "SCOPE" >> pure(llvm::omp::Directive::OMPD_scope),
         "SINGLE" >> pure(llvm::omp::Directive::OMPD_single),
         "TARGET DATA" >> pure(llvm::omp::Directive::OMPD_target_data),
+        "TARGET_DATA" >> pure(llvm::omp::Directive::OMPD_target_data),
         "TARGET PARALLEL" >> pure(llvm::omp::Directive::OMPD_target_parallel),
         "TARGET TEAMS" >> pure(llvm::omp::Directive::OMPD_target_teams),
         "TARGET" >> pure(llvm::omp::Directive::OMPD_target),
@@ -1534,12 +1535,13 @@ TYPE_PARSER(construct<OmpInitializerClause>(
 
 // OpenMP 5.2: 7.5.4 Declare Variant directive
 TYPE_PARSER(sourced(
-    construct<OmpDeclareVariantDirective>(verbatim("DECLARE VARIANT"_tok),
+    construct<OmpDeclareVariantDirective>(
+        verbatim("DECLARE VARIANT"_tok) || verbatim("DECLARE_VARIANT"_tok),
         "(" >> maybe(name / ":"), name / ")", Parser<OmpClauseList>{})))
 
 // 2.16 Declare Reduction Construct
 TYPE_PARSER(sourced(construct<OpenMPDeclareReductionConstruct>(
-    verbatim("DECLARE REDUCTION"_tok),
+    verbatim("DECLARE REDUCTION"_tok) || verbatim("DECLARE_REDUCTION"_tok),
     "(" >> indirect(Parser<OmpReductionSpecifier>{}) / ")",
     maybe(Parser<OmpClauseList>{}))))
 
@@ -1558,7 +1560,8 @@ TYPE_PARSER(
 
 // 2.10.6 Declare Target Construct
 TYPE_PARSER(sourced(construct<OpenMPDeclareTargetConstruct>(
-    verbatim("DECLARE TARGET"_tok), Parser<OmpDeclareTargetSpecifier>{})))
+    verbatim("DECLARE TARGET"_tok) || verbatim("DECLARE_TARGET"_tok),
+    Parser<OmpDeclareTargetSpecifier>{})))
 
 static OmpMapperSpecifier ConstructOmpMapperSpecifier(
     std::optional<Name> &&mapperName, TypeSpec &&typeSpec, Name &&varName) {
@@ -1586,7 +1589,8 @@ TYPE_PARSER(applyFunction<OmpMapperSpecifier>(ConstructOmpMapperSpecifier,
 
 // OpenMP 5.2: 5.8.8 Declare Mapper Construct
 TYPE_PARSER(sourced(
-    construct<OpenMPDeclareMapperConstruct>(verbatim("DECLARE MAPPER"_tok),
+    construct<OpenMPDeclareMapperConstruct>(
+        verbatim("DECLARE MAPPER"_tok) || verbatim("DECLARE_MAPPER"_tok),
         parenthesized(Parser<OmpMapperSpecifier>{}), Parser<OmpClauseList>{})))
 
 TYPE_PARSER(construct<OmpReductionCombiner>(Parser<AssignmentStmt>{}) ||
@@ -1633,7 +1637,8 @@ TYPE_PARSER(construct<OmpEndAllocators>(startOmpLine >> "END ALLOCATORS"_tok))
 
 // 2.8.2 Declare Simd construct
 TYPE_PARSER(
-    sourced(construct<OpenMPDeclareSimdConstruct>(verbatim("DECLARE SIMD"_tok),
+    sourced(construct<OpenMPDeclareSimdConstruct>(
+        verbatim("DECLARE SIMD"_tok) || verbatim("DECLARE_SIMD"_tok),
         maybe(parenthesized(name)), Parser<OmpClauseList>{})))
 
 // 2.4 Requires construct
