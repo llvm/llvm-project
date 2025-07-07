@@ -11,7 +11,7 @@
 
 #include <clc/internal/clc.h>
 
-#define __CLC_FUNCTION __clc_atomic_exchange
+#define FUNCTION __clc_atomic_exchange
 
 #define __CLC_BODY <clc/atomic/atomic_decl.inc>
 #include <clc/integer/gentype.inc>
@@ -19,6 +19,6 @@
 #define __CLC_BODY <clc/atomic/atomic_decl.inc>
 #include <clc/math/gentype.inc>
 
-#undef __CLC_FUNCTION
+#undef FUNCTION
 
 #endif // __CLC_ATOMIC_CLC_ATOMIC_EXCHANGE_H__
