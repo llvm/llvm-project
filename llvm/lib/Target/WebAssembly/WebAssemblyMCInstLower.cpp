@@ -220,7 +220,6 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
       // The return type needs special handling because it could be void.
       auto ReturnType = static_cast<WebAssembly::BlockType>(
           CImm.extractBitsAsZExtValue(64, (NumWords - 1) * 64));
-      assert(ReturnType != WebAssembly::BlockType::Invalid);
       SmallVector<wasm::ValType, 2> Returns;
       switch (ReturnType) {
       case WebAssembly::BlockType::Invalid:
@@ -271,7 +270,7 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
       if (DescIndex < Desc.NumOperands) {
         const MCOperandInfo &Info = Desc.operands()[DescIndex];
         // Replace type index placeholder with actual type index. The type index
-        // placeholders are immedates or CImmediates and have an operand type of
+        // placeholders are Immediates and have an operand type of
         // OPERAND_TYPEINDEX or OPERAND_SIGNATURE.
         if (Info.OperandType == WebAssembly::OPERAND_TYPEINDEX) {
           // Lower type index placeholder for a CALL_INDIRECT instruction
