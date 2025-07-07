@@ -30,9 +30,8 @@ public:
 
   void Elif(SourceLocation Loc, SourceRange ConditionRange, ConditionValueKind,
             SourceLocation) override {
-    if (PP.getLangOpts().C23 || PP.getLangOpts().CPlusPlus23) {
+    if (PP.getLangOpts().C23 || PP.getLangOpts().CPlusPlus23)
       impl(Loc, ConditionRange, {"elifdef", "elifndef"});
-    }
   }
 
 private:
