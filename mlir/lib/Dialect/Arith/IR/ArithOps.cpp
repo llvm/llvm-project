@@ -255,16 +255,47 @@ void arith::ConstantIntOp::build(OpBuilder &builder, OperationState &result,
                            builder.getIntegerAttr(type, value));
 }
 
+arith::ConstantIntOp arith::ConstantIntOp::create(OpBuilder &builder,
+                                                  Location location,
+                                                  int64_t value,
+                                                  unsigned width) {
+  mlir::OperationState state(location, getOperationName());
+  build(builder, state, value, width);
+  auto result = llvm::dyn_cast<ConstantIntOp>(builder.create(state));
+  assert(result && "builder didn't return the right type");
+  return result;
+}
+
 void arith::ConstantIntOp::build(OpBuilder &builder, OperationState &result,
                                  Type type, int64_t value) {
   arith::ConstantOp::build(builder, result, type,
                            builder.getIntegerAttr(type, value));
 }
 
+arith::ConstantIntOp arith::ConstantIntOp::create(OpBuilder &builder,
+                                                  Location location, Type type,
+                                                  int64_t value) {
+  mlir::OperationState state(location, getOperationName());
+  build(builder, state, type, value);
+  auto result = llvm::dyn_cast<ConstantIntOp>(builder.create(state));
+  assert(result && "builder didn't return the right type");
+  return result;
+}
+
 void arith::ConstantIntOp::build(OpBuilder &builder, OperationState &result,
                                  Type type, const APInt &value) {
   arith::ConstantOp::build(builder, result, type,
                            builder.getIntegerAttr(type, value));
+}
+
+arith::ConstantIntOp arith::ConstantIntOp::create(OpBuilder &builder,
+                                                  Location location, Type type,
+                                                  const APInt &value) {
+  mlir::OperationState state(location, getOperationName());
+  build(builder, state, type, value);
+  auto result = llvm::dyn_cast<ConstantIntOp>(builder.create(state));
+  assert(result && "builder didn't return the right type");
+  return result;
 }
 
 bool arith::ConstantIntOp::classof(Operation *op) {
@@ -279,6 +310,17 @@ void arith::ConstantFloatOp::build(OpBuilder &builder, OperationState &result,
                            builder.getFloatAttr(type, value));
 }
 
+arith::ConstantFloatOp arith::ConstantFloatOp::create(OpBuilder &builder,
+                                                      Location location,
+                                                      FloatType type,
+                                                      const APFloat &value) {
+  mlir::OperationState state(location, getOperationName());
+  build(builder, state, type, value);
+  auto result = llvm::dyn_cast<ConstantFloatOp>(builder.create(state));
+  assert(result && "builder didn't return the right type");
+  return result;
+}
+
 bool arith::ConstantFloatOp::classof(Operation *op) {
   if (auto constOp = dyn_cast_or_null<arith::ConstantOp>(op))
     return llvm::isa<FloatType>(constOp.getType());
@@ -289,6 +331,16 @@ void arith::ConstantIndexOp::build(OpBuilder &builder, OperationState &result,
                                    int64_t value) {
   arith::ConstantOp::build(builder, result, builder.getIndexType(),
                            builder.getIndexAttr(value));
+}
+
+arith::ConstantIndexOp arith::ConstantIndexOp::create(OpBuilder &builder,
+                                                      Location location,
+                                                      int64_t value) {
+  mlir::OperationState state(location, getOperationName());
+  build(builder, state, value);
+  auto result = llvm::dyn_cast<ConstantIndexOp>(builder.create(state));
+  assert(result && "builder didn't return the right type");
+  return result;
 }
 
 bool arith::ConstantIndexOp::classof(Operation *op) {
@@ -2334,9 +2386,8 @@ public:
     // comparison.
     rewriter.replaceOpWithNewOp<CmpIOp>(
         op, pred, intVal,
-        ConstantOp::create(rewriter,
-            op.getLoc(), intVal.getType(),
-            rewriter.getIntegerAttr(intVal.getType(), rhsInt)));
+        ConstantOp::create(rewriter, op.getLoc(), intVal.getType(),
+                           rewriter.getIntegerAttr(intVal.getType(), rhsInt)));
     return success();
   }
 };
@@ -2373,10 +2424,10 @@ struct SelectToExtUI : public OpRewritePattern<arith::SelectOp> {
         matchPattern(op.getFalseValue(), m_One())) {
       rewriter.replaceOpWithNewOp<arith::ExtUIOp>(
           op, op.getType(),
-          arith::XOrIOp::create(rewriter,
-              op.getLoc(), op.getCondition(),
-              arith::ConstantIntOp::create(rewriter,
-                  op.getLoc(), op.getCondition().getType(), 1)));
+          arith::XOrIOp::create(
+              rewriter, op.getLoc(), op.getCondition(),
+              arith::ConstantIntOp::create(rewriter, op.getLoc(),
+                                           op.getCondition().getType(), 1)));
       return success();
     }
 
@@ -2439,12 +2490,12 @@ OpFoldResult arith::SelectOp::fold(FoldAdaptor adaptor) {
 
   // Constant-fold constant operands over non-splat constant condition.
   // select %cst_vec, %cst0, %cst1 => %cst2
-  if (auto cond =
-          llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getCondition())) {
-    if (auto lhs =
-            llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getTrueValue())) {
-      if (auto rhs =
-              llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getFalseValue())) {
+  if (auto cond = llvm::dyn_cast_if_present<DenseElementsAttr>(
+          adaptor.getCondition())) {
+    if (auto lhs = llvm::dyn_cast_if_present<DenseElementsAttr>(
+            adaptor.getTrueValue())) {
+      if (auto rhs = llvm::dyn_cast_if_present<DenseElementsAttr>(
+              adaptor.getFalseValue())) {
         SmallVector<Attribute> results;
         results.reserve(static_cast<size_t>(cond.getNumElements()));
         auto condVals = llvm::make_range(cond.value_begin<BoolAttr>(),
@@ -2712,7 +2763,7 @@ Value mlir::arith::getReductionOp(AtomicRMWKind op, OpBuilder &builder,
     return arith::MaximumFOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::minimumf:
     return arith::MinimumFOp::create(builder, loc, lhs, rhs);
-   case AtomicRMWKind::maxnumf:
+  case AtomicRMWKind::maxnumf:
     return arith::MaxNumFOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::minnumf:
     return arith::MinNumFOp::create(builder, loc, lhs, rhs);
