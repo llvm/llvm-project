@@ -1928,18 +1928,13 @@ GetAndValidateInfo(const SymbolContext &sc) {
         "Function '%s' does not have a demangled name.",
         mangled.GetMangledName().AsCString(""));
 
-  const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
-  if (!info)
-    return llvm::createStringError(
-        "Function '%s' does not have demangled info.", demangled_name.data());
-
   // Function without a basename is nonsense.
-  if (!info->hasBasename())
+  if (!info.hasBasename())
     return llvm::createStringError(
         "DemangledInfo for '%s does not have basename range.",
         demangled_name.data());
 
-  return std::make_pair(demangled_name, *info);
+  return std::make_pair(demangled_name, info);
 }
 
 static llvm::Expected<llvm::StringRef>
