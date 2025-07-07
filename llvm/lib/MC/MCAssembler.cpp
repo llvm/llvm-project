@@ -863,33 +863,23 @@ bool MCAssembler::fixupNeedsRelaxation(const MCRelaxableFragment &F,
                                                    Resolved);
 }
 
-bool MCAssembler::fragmentNeedsRelaxation(const MCRelaxableFragment &F) const {
-  assert(getBackendPtr() && "Expected assembler backend");
+bool MCAssembler::relaxInstruction(MCRelaxableFragment &F) {
+  assert(getEmitterPtr() &&
+         "Expected CodeEmitter defined for relaxInstruction");
   // If this inst doesn't ever need relaxation, ignore it. This occurs when we
   // are intentionally pushing out inst fragments, or because we relaxed a
   // previous instruction to one that doesn't need relaxation.
   if (!getBackend().mayNeedRelaxation(F.getInst(), *F.getSubtargetInfo()))
     return false;
 
+  bool DoRelax = false;
   for (const MCFixup &Fixup : F.getFixups())
-    if (fixupNeedsRelaxation(F, Fixup))
-      return true;
-
-  return false;
-}
-
-bool MCAssembler::relaxInstruction(MCRelaxableFragment &F) {
-  assert(getEmitterPtr() &&
-         "Expected CodeEmitter defined for relaxInstruction");
-  if (!fragmentNeedsRelaxation(F))
+    if ((DoRelax = fixupNeedsRelaxation(F, Fixup)))
+      break;
+  if (!DoRelax)
     return false;
 
   ++stats::RelaxedInstructions;
-
-  // FIXME-PERF: We could immediately lower out instructions if we can tell
-  // they are fully resolved, to avoid retesting on later passes.
-
-  // Relax the fragment.
 
   MCInst Relaxed = F.getInst();
   getBackend().relaxInstruction(Relaxed, *F.getSubtargetInfo());

@@ -1402,7 +1402,7 @@ LogicalResult SimpleAffineExprFlattener::visitModExpr(AffineBinaryOpExpr expr) {
       break;
   // If yes, modulo expression here simplifies to zero.
   if (i == lhs.size()) {
-    std::fill(lhs.begin(), lhs.end(), 0);
+    llvm::fill(lhs, 0);
     return success();
   }
 
@@ -1482,7 +1482,7 @@ LogicalResult SimpleAffineExprFlattener::addLocalVariableSemiAffine(
     if (failed(addLocalIdSemiAffine(lhs, rhs, localExpr)))
       return failure();
   }
-  std::fill(result.begin(), result.end(), 0);
+  llvm::fill(result, 0);
   if (loc == -1)
     result[getLocalVarStartIndex() + numLocals - 1] = 1;
   else
@@ -1569,7 +1569,7 @@ LogicalResult SimpleAffineExprFlattener::visitDivExpr(AffineBinaryOpExpr expr,
   }
   // Set the expression on stack to the local var introduced to capture the
   // result of the division (floor or ceil).
-  std::fill(lhs.begin(), lhs.end(), 0);
+  llvm::fill(lhs, 0);
   if (loc == -1)
     lhs[getLocalVarStartIndex() + numLocals - 1] = 1;
   else
