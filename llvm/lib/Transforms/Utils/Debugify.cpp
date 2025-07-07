@@ -16,8 +16,10 @@
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -28,6 +30,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
 #include <optional>
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+// We need the Signals header to operate on stacktraces if we're using DebugLoc
+// origin-tracking.
+#include "llvm/Support/Signals.h"
+#endif
 
 #define DEBUG_TYPE "debugify"
 
@@ -58,6 +65,54 @@ cl::opt<Level> DebugifyLevel(
     cl::init(Level::LocationsAndVariables));
 
 raw_ostream &dbg() { return Quiet ? nulls() : errs(); }
+
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+// These maps refer to addresses in the current LLVM process, so we can reuse
+// them everywhere - therefore, we store them at file scope.
+static SymbolizedAddressMap SymbolizedAddrs;
+static AddressSet UnsymbolizedAddrs;
+
+std::string symbolizeStackTrace(const Instruction *I) {
+  // We flush the set of unsymbolized addresses at the latest possible moment,
+  // i.e. now.
+  if (!UnsymbolizedAddrs.empty()) {
+    sys::symbolizeAddresses(UnsymbolizedAddrs, SymbolizedAddrs);
+    UnsymbolizedAddrs.clear();
+  }
+  const DbgLocOrigin::StackTracesTy &OriginStackTraces =
+      I->getDebugLoc().getOriginStackTraces();
+  std::string Result;
+  raw_string_ostream OS(Result);
+  for (size_t TraceIdx = 0; TraceIdx < OriginStackTraces.size(); ++TraceIdx) {
+    if (TraceIdx != 0)
+      OS << "========================================\n";
+    auto &[Depth, StackTrace] = OriginStackTraces[TraceIdx];
+    unsigned VirtualFrameNo = 0;
+    for (int Frame = 0; Frame < Depth; ++Frame) {
+      assert(SymbolizedAddrs.contains(StackTrace[Frame]) &&
+             "Expected each address to have been symbolized.");
+      for (std::string &SymbolizedFrame : SymbolizedAddrs[StackTrace[Frame]]) {
+        OS << right_justify(formatv("#{0}", VirtualFrameNo++).str(),
+                            std::log10(Depth) + 2)
+           << ' ' << SymbolizedFrame << '\n';
+      }
+    }
+  }
+  return Result;
+}
+void collectStackAddresses(Instruction &I) {
+  auto &OriginStackTraces = I.getDebugLoc().getOriginStackTraces();
+  for (auto &[Depth, StackTrace] : OriginStackTraces) {
+    for (int Frame = 0; Frame < Depth; ++Frame) {
+      void *Addr = StackTrace[Frame];
+      if (!SymbolizedAddrs.contains(Addr))
+        UnsymbolizedAddrs.insert(Addr);
+    }
+  }
+}
+#else
+void collectStackAddresses(Instruction &I) {}
+#endif // LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
 
 uint64_t getAllocSizeInBits(Module &M, Type *Ty) {
   return Ty->isSized() ? M.getDataLayout().getTypeAllocSizeInBits(Ty) : 0;
@@ -375,6 +430,8 @@ bool llvm::collectDebugInfoMetadata(Module &M,
         LLVM_DEBUG(dbgs() << "  Collecting info for inst: " << I << '\n');
         DebugInfoBeforePass.InstToDelete.insert({&I, &I});
 
+        // Track the addresses to symbolize, if the feature is enabled.
+        collectStackAddresses(I);
         DebugInfoBeforePass.DILocations.insert({&I, hasLoc(I)});
       }
     }
@@ -450,14 +507,23 @@ static bool checkInstructions(const DebugInstMap &DILocsBefore,
     auto BBName = BB->hasName() ? BB->getName() : "no-name";
     auto InstName = Instruction::getOpcodeName(Instr->getOpcode());
 
+    auto CreateJSONBugEntry = [&](const char *Action) {
+      Bugs.push_back(llvm::json::Object({
+          {"metadata", "DILocation"},
+          {"fn-name", FnName.str()},
+          {"bb-name", BBName.str()},
+          {"instr", InstName},
+          {"action", Action},
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+          {"origin", symbolizeStackTrace(Instr)},
+#endif
+      }));
+    };
+
     auto InstrIt = DILocsBefore.find(Instr);
     if (InstrIt == DILocsBefore.end()) {
       if (ShouldWriteIntoJSON)
-        Bugs.push_back(llvm::json::Object({{"metadata", "DILocation"},
-                                           {"fn-name", FnName.str()},
-                                           {"bb-name", BBName.str()},
-                                           {"instr", InstName},
-                                           {"action", "not-generate"}}));
+        CreateJSONBugEntry("not-generate");
       else
         dbg() << "WARNING: " << NameOfWrappedPass
               << " did not generate DILocation for " << *Instr
@@ -470,11 +536,7 @@ static bool checkInstructions(const DebugInstMap &DILocsBefore,
       // If the instr had the !dbg attached before the pass, consider it as
       // a debug info issue.
       if (ShouldWriteIntoJSON)
-        Bugs.push_back(llvm::json::Object({{"metadata", "DILocation"},
-                                           {"fn-name", FnName.str()},
-                                           {"bb-name", BBName.str()},
-                                           {"instr", InstName},
-                                           {"action", "drop"}}));
+        CreateJSONBugEntry("drop");
       else
         dbg() << "WARNING: " << NameOfWrappedPass << " dropped DILocation of "
               << *Instr << " (BB: " << BBName << ", Fn: " << FnName
@@ -612,6 +674,8 @@ bool llvm::checkDebugInfoMetadata(Module &M,
 
         LLVM_DEBUG(dbgs() << "  Collecting info for inst: " << I << '\n');
 
+        // Track the addresses to symbolize, if the feature is enabled.
+        collectStackAddresses(I);
         DebugInfoAfterPass.DILocations.insert({&I, hasLoc(I)});
       }
     }

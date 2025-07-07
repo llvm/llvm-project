@@ -518,27 +518,6 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   return false;
 }
 
-/// Should the Frame Pointer be reserved for the current function?
-bool AArch64FrameLowering::isFPReserved(const MachineFunction &MF) const {
-  const TargetMachine &TM = MF.getTarget();
-  const Triple &TT = TM.getTargetTriple();
-
-  // These OSes require the frame chain is valid, even if the current frame does
-  // not use a frame pointer.
-  if (TT.isOSDarwin() || TT.isOSWindows())
-    return true;
-
-  // If the function has a frame pointer, it is reserved.
-  if (hasFP(MF))
-    return true;
-
-  // Frontend has requested to preserve the frame pointer.
-  if (TM.Options.FramePointerIsReserved(MF))
-    return true;
-
-  return false;
-}
-
 /// hasReservedCallFrame - Under normal circumstances, when a frame pointer is
 /// not required, we reserve argument space for call sites in the function
 /// immediately on entry to the current function.  This eliminates the need for
