@@ -1371,8 +1371,7 @@ FormatToken *FormatTokenLexer::getNextToken() {
       } else if (FormatTok->TokenText == "``") {
         FormatTok->Tok.setIdentifierInfo(nullptr);
         FormatTok->Tok.setKind(tok::hashhash);
-      } else if (Tokens.size() > 0 &&
-                 Tokens.back()->is(Keywords.kw_apostrophe) &&
+      } else if (!Tokens.empty() && Tokens.back()->is(Keywords.kw_apostrophe) &&
                  NumberBase.match(FormatTok->TokenText, &Matches)) {
         // In Verilog in a based number literal like `'b10`, there may be
         // whitespace between `'b` and `10`. Therefore we handle the base and
@@ -1420,7 +1419,7 @@ FormatToken *FormatTokenLexer::getNextToken() {
     tryParseJavaTextBlock();
   }
 
-  if (Style.isVerilog() && Tokens.size() > 0 &&
+  if (Style.isVerilog() && !Tokens.empty() &&
       Tokens.back()->is(TT_VerilogNumberBase) &&
       FormatTok->Tok.isOneOf(tok::identifier, tok::question)) {
     // Mark the number following a base like `'h?a0` as a number.
@@ -1454,9 +1453,9 @@ FormatToken *FormatTokenLexer::getNextToken() {
   if (Style.isCpp()) {
     auto *Identifier = FormatTok->Tok.getIdentifierInfo();
     auto it = Macros.find(Identifier);
-    if (!(Tokens.size() > 0 && Tokens.back()->Tok.getIdentifierInfo() &&
-          Tokens.back()->Tok.getIdentifierInfo()->getPPKeywordID() ==
-              tok::pp_define) &&
+    if ((Tokens.empty() || !Tokens.back()->Tok.getIdentifierInfo() ||
+         Tokens.back()->Tok.getIdentifierInfo()->getPPKeywordID() !=
+             tok::pp_define) &&
         it != Macros.end()) {
       FormatTok->setType(it->second);
       if (it->second == TT_IfMacro) {

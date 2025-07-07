@@ -1248,7 +1248,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 
   // Get the OpenMP target triples if any.
   if (auto *arg =
-          args.getLastArg(clang::driver::options::OPT_fopenmp_targets_EQ)) {
+          args.getLastArg(clang::driver::options::OPT_offload_targets_EQ)) {
     enum ArchPtrSize { Arch16Bit, Arch32Bit, Arch64Bit };
     auto getArchPtrSize = [](const llvm::Triple &triple) {
       if (triple.isArch16Bit())

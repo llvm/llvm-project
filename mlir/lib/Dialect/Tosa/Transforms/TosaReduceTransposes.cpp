@@ -602,8 +602,7 @@ void TosaReduceTransposes::runOnOperation() {
         !llvm::isa<RankedTensorType>(output.getType()))
       return;
 
-    llvm::for_each(transposeOp.getPerms(),
-                   [&perms](const auto i) { perms.emplace_back(i); });
+    llvm::append_range(perms, transposeOp.getPerms());
 
     // We let --canonicalize deal with identity transpose.
     if (llvm::equal(llvm::seq<int32_t>(0, perms.size()), perms))

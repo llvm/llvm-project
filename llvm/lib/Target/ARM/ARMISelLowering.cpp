@@ -1548,6 +1548,14 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       setOperationAction(ISD::FFLOOR, MVT::v4f32, Legal);
       setOperationAction(ISD::FROUND, MVT::v2f32, Legal);
       setOperationAction(ISD::FROUND, MVT::v4f32, Legal);
+      setOperationAction(ISD::FROUNDEVEN, MVT::v2f32, Legal);
+      setOperationAction(ISD::FROUNDEVEN, MVT::v4f32, Legal);
+      setOperationAction(ISD::FCEIL, MVT::v2f32, Legal);
+      setOperationAction(ISD::FCEIL, MVT::v4f32, Legal);
+      setOperationAction(ISD::FTRUNC, MVT::v2f32, Legal);
+      setOperationAction(ISD::FTRUNC, MVT::v4f32, Legal);
+      setOperationAction(ISD::FRINT, MVT::v2f32, Legal);
+      setOperationAction(ISD::FRINT, MVT::v4f32, Legal);
     }
 
     if (Subtarget->hasFullFP16()) {
@@ -1565,6 +1573,14 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       setOperationAction(ISD::FFLOOR, MVT::v8f16, Legal);
       setOperationAction(ISD::FROUND, MVT::v4f16, Legal);
       setOperationAction(ISD::FROUND, MVT::v8f16, Legal);
+      setOperationAction(ISD::FROUNDEVEN, MVT::v4f16, Legal);
+      setOperationAction(ISD::FROUNDEVEN, MVT::v8f16, Legal);
+      setOperationAction(ISD::FCEIL, MVT::v4f16, Legal);
+      setOperationAction(ISD::FCEIL, MVT::v8f16, Legal);
+      setOperationAction(ISD::FTRUNC, MVT::v4f16, Legal);
+      setOperationAction(ISD::FTRUNC, MVT::v8f16, Legal);
+      setOperationAction(ISD::FRINT, MVT::v4f16, Legal);
+      setOperationAction(ISD::FRINT, MVT::v8f16, Legal);
     }
   }
 
@@ -5510,6 +5526,21 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue FalseVal = Op.getOperand(3);
   ConstantSDNode *CFVal = dyn_cast<ConstantSDNode>(FalseVal);
   ConstantSDNode *CTVal = dyn_cast<ConstantSDNode>(TrueVal);
+  ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS);
+  if (Op.getValueType().isInteger()) {
+    // Check for sign pattern (SELECT_CC setgt, iN lhs, -1, 1, -1) and transform
+    // into (OR (ASR lhs, N-1), 1), which requires less instructions for the
+    // supported types.
+    if (CC == ISD::SETGT && RHSC && RHSC->isAllOnes() && CTVal && CFVal &&
+        CTVal->isOne() && CFVal->isAllOnes() &&
+        LHS.getValueType() == TrueVal.getValueType()) {
+      EVT VT = LHS.getValueType();
+      SDValue Shift =
+          DAG.getNode(ISD::SRA, dl, VT, LHS,
+                      DAG.getConstant(VT.getSizeInBits() - 1, dl, VT));
+      return DAG.getNode(ISD::OR, dl, VT, Shift, DAG.getConstant(1, dl, VT));
+    }
+  }
 
   if (Subtarget->hasV8_1MMainlineOps() && CFVal && CTVal &&
       LHS.getValueType() == MVT::i32 && RHS.getValueType() == MVT::i32) {
