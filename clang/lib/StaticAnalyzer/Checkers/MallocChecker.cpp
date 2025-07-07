@@ -3001,6 +3001,9 @@ void MallocChecker::HandleLeak(SymbolRef Sym, ExplodedNode *N,
     return;
 
   const Leak *Frontend = getRelevantFrontendAs<Leak>(Family);
+  // Note that for leaks we don't add a sink when the relevant frontend is
+  // disabled because the leak is reported with a non-fatal error node, while
+  // the sink would be the "silent" alternative of a (fatal) error node.
   if (!Frontend || !Frontend->isEnabled())
     return;
 
