@@ -31,7 +31,7 @@ public:
   DWARFCFIState(MCContext *Context) : Context(Context), IsInitiated(false) {};
 
   std::optional<dwarf::UnwindRow> getCurrentUnwindRow() const;
-  
+
   /// This method updates the state by applying \p Directive to the current
   /// state. If the directive is not supported by the checker or any error
   /// happens while applying the CFI directive, a warning or error is reported
