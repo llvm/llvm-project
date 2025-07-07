@@ -10,6 +10,7 @@
 
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
+#include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -17,6 +18,7 @@
 #include "mlir/Dialect/GPU/TransformOps/Utils.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -40,6 +42,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/InterleavedRange.h"
+#include "llvm/Support/LogicalResult.h"
 #include <type_traits>
 
 using namespace mlir;
@@ -122,6 +125,41 @@ void transform::ApplyGPUSubgroupReduceToNVVMConversionPatternsOp::
 
 LogicalResult transform::ApplyGPUSubgroupReduceToNVVMConversionPatternsOp::
     verifyTypeConverter(transform::TypeConverterBuilderOpInterface builder) {
+  if (builder.getTypeConverterType() != "LLVMTypeConverter")
+    return emitOpError("expected LLVMTypeConverter");
+  return success();
+}
+
+void transform::ApplyGPUToROCDLConversionPatternsOp::populatePatterns(
+    TypeConverter &typeConverter, RewritePatternSet &patterns) {
+  auto &llvmTypeConverter = static_cast<LLVMTypeConverter &>(typeConverter);
+  populateGpuMemorySpaceAttributeConversions(
+      llvmTypeConverter, [](AddressSpace space) {
+        switch (space) {
+        case AddressSpace::Global:
+          return ROCDL::ROCDLDialect::kGlobalMemoryAddressSpace;
+        case AddressSpace::Workgroup:
+          return ROCDL::ROCDLDialect::kSharedMemoryAddressSpace;
+        case AddressSpace::Private:
+          return ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace;
+        }
+        llvm_unreachable("unknown address space enum value");
+      });
+  FailureOr<amdgpu::Chipset> maybeChipset =
+      amdgpu::Chipset::parse(getChipset());
+  assert(llvm::succeeded(maybeChipset) && "expected valid chipset");
+  populateGpuToROCDLConversionPatterns(
+      llvmTypeConverter, patterns, mlir::gpu::amd::Runtime::HIP, *maybeChipset);
+}
+
+LogicalResult
+transform::ApplyGPUToROCDLConversionPatternsOp::verifyTypeConverter(
+    transform::TypeConverterBuilderOpInterface builder) {
+  FailureOr<amdgpu::Chipset> maybeChipset =
+      amdgpu::Chipset::parse(getChipset());
+  if (failed(maybeChipset)) {
+    return emitOpError("Invalid chipset name: " + getChipset());
+  }
   if (builder.getTypeConverterType() != "LLVMTypeConverter")
     return emitOpError("expected LLVMTypeConverter");
   return success();
