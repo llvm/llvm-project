@@ -20,6 +20,7 @@
 #undef sparc
 
 namespace llvm {
+enum class ExceptionHandling;
 class Twine;
 
 /// Triple - Helper class for working with autoconf configuration names. For
@@ -1322,6 +1323,8 @@ public:
   /// Returns whether an OS version is invalid and would not map to an Apple OS.
   LLVM_ABI static bool isValidVersionForOS(OSType OSKind,
                                            const VersionTuple &Version);
+
+  LLVM_ABI ExceptionHandling getDefaultExceptionHandling() const;
 };
 
 } // End llvm namespace
