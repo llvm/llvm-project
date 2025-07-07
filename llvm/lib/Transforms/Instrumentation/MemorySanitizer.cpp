@@ -3397,8 +3397,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// <8 x i8>.
   FixedVectorType *shrinkVectorShadowType(Value *Src, IntrinsicInst &I) {
     assert(isa<FixedVectorType>(getShadowTy(&I)));
-    // The return type might have more elements than the input.
-    // Temporarily shrink the return type's number of elements.
     FixedVectorType *ShadowType = cast<FixedVectorType>(getShadowTy(&I));
 
     // TODO: generalize beyond 2x?
