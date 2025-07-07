@@ -47,7 +47,6 @@ DEPENDENTS_TO_TEST = {
         "mlir",
         "polly",
         "flang",
-        "libclc",
     },
     "lld": {"bolt", "cross-project-tests"},
     # TODO(issues/132795): LLDB should be enabled on clang changes.
@@ -65,7 +64,6 @@ DEPENDENTS_TO_TEST = {
         "mlir",
         "polly",
         "flang",
-        "libclc",
         "openmp",
     },
 }
@@ -120,6 +118,7 @@ EXCLUDE_MAC = {
     "cross-project-tests",
     "flang",
     "libc",
+    "libclc",
     "lldb",
     "openmp",
     "polly",
