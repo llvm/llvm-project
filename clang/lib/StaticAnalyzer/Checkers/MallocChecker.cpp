@@ -2987,7 +2987,7 @@ void MallocChecker::HandleLeak(SymbolRef Sym, ExplodedNode *N,
     return;
 
   const Leak *Frontend = getRelevantFrontendAs<Leak>(Family);
-  if (handleNullOrDisabled(Frontend, C))
+  if (!Frontend || !Frontend->isEnabled())
     return;
 
   // Most bug reports are cached at the location where they occurred.
