@@ -810,10 +810,16 @@ amd_comgr_status_t AMDGPUCompiler::createTmpDirs() {
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
+amd_comgr_status_t AMDGPUCompiler::removeTmpDirs() {
+  if (TmpDir.empty()) {
+    return AMD_COMGR_STATUS_SUCCESS;
+  }
+  ProfilePoint Point("RemoveDir");
+
+#ifdef _WIN32
 // On windows fs::remove_directories takes huge time so use fs::remove.
-amd_comgr_status_t removeDirectory(const StringRef DirName) {
   std::error_code EC;
-  for (fs::directory_iterator Dir(DirName, EC), DirEnd; Dir != DirEnd && !EC;
+  for (fs::directory_iterator Dir(TmpDir, EC), DirEnd; Dir != DirEnd && !EC;
        Dir.increment(EC)) {
     const StringRef Path = Dir->path();
 
@@ -843,25 +849,16 @@ amd_comgr_status_t removeDirectory(const StringRef DirName) {
     }
   }
 
-  if (fs::remove(DirName)) {
+  if (fs::remove(TmpDir)) {
     return AMD_COMGR_STATUS_ERROR;
   }
 
   return AMD_COMGR_STATUS_SUCCESS;
-}
-
-amd_comgr_status_t AMDGPUCompiler::removeTmpDirs() {
-  if (TmpDir.empty()) {
-    return AMD_COMGR_STATUS_SUCCESS;
-  }
-  ProfilePoint Point("RemoveDir");
-#ifndef _WIN32
+#else
   if (fs::remove_directories(TmpDir)) {
     return AMD_COMGR_STATUS_ERROR;
   }
   return AMD_COMGR_STATUS_SUCCESS;
-#else
-  return removeDirectory(TmpDir);
 #endif
 }
 
