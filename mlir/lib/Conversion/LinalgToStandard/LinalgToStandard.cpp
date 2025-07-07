@@ -78,7 +78,7 @@ getLibraryCallSymbolRef(Operation *op, PatternRewriter &rewriter) {
   // Insert before module terminator.
   rewriter.setInsertionPoint(module.getBody(),
                              std::prev(module.getBody()->end()));
-  func::FuncOp funcOp = rewriter.create<func::FuncOp>(
+  func::FuncOp funcOp = func::FuncOp::create(rewriter,
       op->getLoc(), fnNameAttr.getValue(), libFnType);
   // Insert a function attribute that will trigger the emission of the
   // corresponding `_mlir_ciface_xxx` interface so that external libraries see
@@ -101,7 +101,7 @@ createTypeCanonicalizedMemRefOperands(OpBuilder &b, Location loc,
       continue;
     }
     Value cast =
-        b.create<memref::CastOp>(loc, makeStridedLayoutDynamic(memrefType), op);
+        memref::CastOp::create(b, loc, makeStridedLayoutDynamic(memrefType), op);
     res.push_back(cast);
   }
   return res;

@@ -403,7 +403,7 @@ std::optional<Value> TosaReduceTransposes::buildMappedToValue(
     return std::nullopt;
   }
   ImplicitLocOpBuilder builder(reshapeOp.getLoc(), rewriter);
-  auto foldedReshape = rewriter.create<ReshapeOp>(
+  auto foldedReshape = ReshapeOp::create(rewriter,
       reshapeOp.getLoc(),
       RankedTensorType::get(applyTOSAPermutation(shape, hoistedPerms),
                             reshapeOutputType.getElementType()),
@@ -423,7 +423,7 @@ std::optional<Value> TosaReduceTransposes::buildMappedToValue(
   if (!maybeNewDenseAttr.has_value())
     return std::nullopt;
   auto newDenseAttr = maybeNewDenseAttr.value();
-  auto newConstOp = rewriter.create<ConstOp>(
+  auto newConstOp = ConstOp::create(rewriter,
       constOp.getLoc(), newDenseAttr.getType(), newDenseAttr);
   return newConstOp->getResult(0);
 }

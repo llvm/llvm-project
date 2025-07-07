@@ -118,14 +118,14 @@ struct MoveInitOperandsToInput : public OpRewritePattern<GenericOp> {
       OpBuilder::InsertionGuard guard(rewriter);
       rewriter.setInsertionPointAfterValue(op->get());
       auto elemType = cast<ShapedType>(op->get().getType()).getElementType();
-      auto empty = rewriter.create<tensor::EmptyOp>(
+      auto empty = tensor::EmptyOp::create(rewriter,
           loc, tensor::getMixedSizes(rewriter, loc, op->get()), elemType);
 
       unsigned start = genericOp.getDpsInits().getBeginOperandIndex();
       newOutputOperands[op->getOperandNumber() - start] = empty.getResult();
     }
 
-    auto newOp = rewriter.create<GenericOp>(
+    auto newOp = GenericOp::create(rewriter,
         loc, genericOp.getResultTypes(), newInputOperands, newOutputOperands,
         newIndexingMaps, genericOp.getIteratorTypesArray(),
         /*bodyBuild=*/nullptr, linalg::getPrunedAttributeList(genericOp));
@@ -295,7 +295,7 @@ static Value collapseValue(
     MemRefLayoutAttrInterface layout;
     auto targetType = MemRefType::get(targetShape, memrefType.getElementType(),
                                       layout, memrefType.getMemorySpace());
-    return rewriter.create<memref::CollapseShapeOp>(loc, targetType, operand,
+    return memref::CollapseShapeOp::create(rewriter, loc, targetType, operand,
                                                     reassociation);
   }
   if (auto tensorType = dyn_cast<RankedTensorType>(operand.getType())) {
@@ -314,7 +314,7 @@ static Value collapseValue(
         "unknown rank reduction strategy");
     auto targetType =
         RankedTensorType::get(targetShape, tensorType.getElementType());
-    return rewriter.create<tensor::CollapseShapeOp>(loc, targetType, operand,
+    return tensor::CollapseShapeOp::create(rewriter, loc, targetType, operand,
                                                     reassociation);
   }
   llvm_unreachable("unsupported operand type");
@@ -519,7 +519,7 @@ linalg::dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
   for (unsigned i : llvm::seq<unsigned>(0, genericOp.getNumResults()))
     resultTypes.push_back(newOutputs[i].getType());
   GenericOp replacementOp =
-      rewriter.create<GenericOp>(loc, resultTypes, newInputs, newOutputs,
+      GenericOp::create(rewriter, loc, resultTypes, newInputs, newOutputs,
                                  newIndexingMaps, newIteratorTypes);
   rewriter.inlineRegionBefore(genericOp.getRegion(), replacementOp.getRegion(),
                               replacementOp.getRegion().begin());
@@ -652,7 +652,7 @@ struct DropPadUnitDims : public OpRewritePattern<tensor::PadOp> {
         collapseValue(rewriter, padOp.getLoc(), padOp.getSource(), newShape,
                       reassociationMap, options.rankReductionStrategy);
 
-    auto newPadOp = rewriter.create<tensor::PadOp>(
+    auto newPadOp = tensor::PadOp::create(rewriter,
         padOp.getLoc(), /*result=*/Type(), collapsedSource, newLowPad,
         newHighPad, paddingVal, padOp.getNofold());
 
@@ -670,7 +670,7 @@ struct DropPadUnitDims : public OpRewritePattern<tensor::PadOp> {
         expandedSizes.push_back(tensor::getMixedSize(
             rewriter, padOp.getLoc(), newPadOp, dim - numUnitDims));
       }
-      dest = rewriter.create<tensor::EmptyOp>(
+      dest = tensor::EmptyOp::create(rewriter,
           padOp.getLoc(), expandedSizes,
           padOp.getResultType().getElementType());
     }
@@ -713,7 +713,7 @@ struct RankReducedExtractSliceOp
             strides));
 
     Location loc = sliceOp.getLoc();
-    Value newSlice = rewriter.create<tensor::ExtractSliceOp>(
+    Value newSlice = tensor::ExtractSliceOp::create(rewriter,
         loc, rankReducedType, sliceOp.getSource(), offsets, sizes, strides);
     rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(
         sliceOp, resultType, newSlice, *reassociation);
@@ -747,7 +747,7 @@ struct RankReducedInsertSliceOp : public OpRewritePattern<InsertOpTy> {
       // parallel case.
       if (std::is_same<InsertOpTy, tensor::ParallelInsertSliceOp>::value)
         rewriter.setInsertionPoint(insertSliceOp->getParentOp());
-      reshapedSource = rewriter.create<tensor::CollapseShapeOp>(
+      reshapedSource = tensor::CollapseShapeOp::create(rewriter,
           loc, insertSliceOp.getSource(), *reassociation);
     }
     rewriter.replaceOpWithNewOp<InsertOpTy>(
@@ -898,7 +898,7 @@ struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
   /// Expand result tensor.
   Value expandResult(PatternRewriter &rewriter, Value result,
                      RankedTensorType expandedType, int64_t dim) const {
-    return rewriter.create<tensor::ExpandShapeOp>(
+    return tensor::ExpandShapeOp::create(rewriter,
         result.getLoc(), expandedType, result,
         getReassociationForReshapeAtDim(expandedType.getRank(), dim));
   }
@@ -934,7 +934,7 @@ struct RankReduceContractionOps : OpRewritePattern<FromOpTy> {
     SmallVector<Type, 1> collapsedResultTy;
     if (isa<RankedTensorType>(collapsedInit.getType()))
       collapsedResultTy.push_back(collapsedInit.getType());
-    auto collapsedOp = rewriter.create<ToOpTy>(
+    auto collapsedOp = ToOpTy::create(rewriter,
         loc, collapsedResultTy, ValueRange{collapsedLhs, collapsedRhs},
         ValueRange{collapsedInit});
     for (auto attr : contractionOp->getAttrs()) {

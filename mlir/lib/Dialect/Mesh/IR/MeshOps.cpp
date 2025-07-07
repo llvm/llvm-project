@@ -91,7 +91,7 @@ SmallVector<Value> mlir::mesh::getMixedAsValues(OpBuilder b,
       values.emplace_back(*(dyn++));
     } else {
       TypedAttr val = type == i64 ? b.getI64IntegerAttr(s) : b.getIndexAttr(s);
-      values.emplace_back(b.create<arith::ConstantOp>(loc, type, val));
+      values.emplace_back(arith::ConstantOp::create(b, loc, type, val));
     }
   }
   return values;
@@ -316,9 +316,9 @@ static void maybeInsertTargetShardingAnnotationImpl(MeshSharding sharding,
 
   if (!newShardOp) {
     auto shardingOp =
-        builder.create<ShardingOp>(operandValue.getLoc(), sharding);
+        ShardingOp::create(builder, operandValue.getLoc(), sharding);
     newShardOp =
-        builder.create<ShardOp>(operandValue.getLoc(), operandValue, shardingOp,
+        ShardOp::create(builder, operandValue.getLoc(), operandValue, shardingOp,
                                 /*annotate_for_users*/ false);
   }
   operandValue.replaceUsesWithIf(
@@ -330,7 +330,7 @@ static void maybeInsertTargetShardingAnnotationImpl(MeshSharding sharding,
     return;
   }
 
-  auto newShardOp2 = builder.create<ShardOp>(operandValue.getLoc(), newShardOp,
+  auto newShardOp2 = ShardOp::create(builder, operandValue.getLoc(), newShardOp,
                                              newShardOp.getSharding(),
                                              /*annotate_for_users*/ true);
   newShardOp.getResult().replaceAllUsesExcept(newShardOp2, newShardOp2);
@@ -378,9 +378,9 @@ void mlir::mesh::maybeInsertSourceShardingAnnotation(MeshSharding sharding,
 
   builder.setInsertionPoint(operandOp);
   auto shardingOp =
-      builder.create<ShardingOp>(operand.get().getLoc(), sharding);
+      ShardingOp::create(builder, operand.get().getLoc(), sharding);
   auto newShardOp =
-      builder.create<ShardOp>(operandValue.getLoc(), operandValue, shardingOp,
+      ShardOp::create(builder, operandValue.getLoc(), operandValue, shardingOp,
                               /*annotate_for_users*/ true);
   IRRewriter rewriter(builder);
   rewriter.replaceUsesWithIf(
@@ -395,7 +395,7 @@ void mlir::mesh::maybeInsertSourceShardingAnnotation(MeshSharding sharding,
 
   builder.setInsertionPoint(newShardOp);
   auto newPreceedingShardOp =
-      builder.create<ShardOp>(operandValue.getLoc(), operandValue, shardingOp,
+      ShardOp::create(builder, operandValue.getLoc(), operandValue, shardingOp,
                               /*annotate_for_users*/ false);
   rewriter.replaceUsesWithIf(
       newShardOp.getSrc(), newPreceedingShardOp, [&newShardOp](OpOperand &use) {

@@ -120,13 +120,13 @@ static Value resolveDistributedTy(Value orig, T expected,
   // If orig is a vector type, create a shape cast op to reconcile the types.
   if (isa<VectorType>(orig.getType())) {
     auto castOp =
-        rewriter.create<vector::ShapeCastOp>(orig.getLoc(), expected, orig);
+        vector::ShapeCastOp::create(rewriter, orig.getLoc(), expected, orig);
     return castOp.getResult();
   }
   // If orig is a tensor descriptor type, create an unrealized conversion cast
   // op to reconcile the types.
   if (isa<xegpu::TensorDescType>(orig.getType())) {
-    auto castOp = rewriter.create<UnrealizedConversionCastOp>(orig.getLoc(),
+    auto castOp = UnrealizedConversionCastOp::create(rewriter, orig.getLoc(),
                                                               expected, orig);
     castOp->setAttr(resolveSIMTTypeMismatch, rewriter.getUnitAttr());
     return castOp.getResult(0);
@@ -198,16 +198,16 @@ struct MoveFuncBodyToWarpExecuteOnLane0
         }))
       return failure();
     // Create a new function with the same signature.
-    auto newGpuFunc = rewriter.create<gpu::GPUFuncOp>(
+    auto newGpuFunc = gpu::GPUFuncOp::create(rewriter,
         gpuFuncOp.getLoc(), gpuFuncOp.getName(), gpuFuncOp.getFunctionType());
     // Create a WarpExecuteOnLane0Op with same arguments and results as the
     // original gpuFuncOp.
     rewriter.setInsertionPointToEnd(&newGpuFunc.getFunctionBody().front());
-    auto laneId = rewriter.create<gpu::LaneIdOp>(
+    auto laneId = gpu::LaneIdOp::create(rewriter,
         newGpuFunc.getLoc(), rewriter.getIndexType(),
         /** upperBound = **/ mlir::IntegerAttr());
     ArrayRef<Type> gpuFuncResultType = gpuFuncOp.getFunctionType().getResults();
-    auto warpOp = rewriter.create<gpu::WarpExecuteOnLane0Op>(
+    auto warpOp = gpu::WarpExecuteOnLane0Op::create(rewriter,
         laneId.getLoc(), gpuFuncResultType, laneId,
         xegpu::targetinfo::subgroupSize, newGpuFunc.getArguments(),
         newGpuFunc.getArgumentTypes());
@@ -216,7 +216,7 @@ struct MoveFuncBodyToWarpExecuteOnLane0
     auto origRetunOp =
         cast<gpu::ReturnOp>(gpuFuncOp.getBlocks().back().getTerminator());
     rewriter.setInsertionPointAfter(origRetunOp);
-    rewriter.create<gpu::YieldOp>(origRetunOp.getLoc(),
+    gpu::YieldOp::create(rewriter, origRetunOp.getLoc(),
                                   origRetunOp.getOperands());
     rewriter.eraseOp(origRetunOp);
     // Move the original function body to the WarpExecuteOnLane0Op body.
@@ -225,7 +225,7 @@ struct MoveFuncBodyToWarpExecuteOnLane0
     rewriter.eraseBlock(&warpBodyBlock);
     // Insert a new ReturnOp after the WarpExecuteOnLane0Op.
     rewriter.setInsertionPointAfter(warpOp);
-    rewriter.create<gpu::ReturnOp>(newGpuFunc.getLoc(), warpOp.getResults());
+    gpu::ReturnOp::create(rewriter, newGpuFunc.getLoc(), warpOp.getResults());
     rewriter.replaceOp(gpuFuncOp, newGpuFunc);
     return success();
   }
@@ -301,7 +301,7 @@ struct CreateNdDescDistribution final : public gpu::WarpDistributionPattern {
     xegpu::TensorDescType distributedTensorDescTy =
         descOp.getType().dropLayouts(); // Distributed tensor descriptor type
                                         // does not contain layout info.
-    Value newDescOp = rewriter.create<xegpu::CreateNdDescOp>(
+    Value newDescOp = xegpu::CreateNdDescOp::create(rewriter,
         newWarpOp.getLoc(), distributedTensorDescTy, newDescOperands,
         descOp->getAttrs());
 
@@ -403,7 +403,7 @@ struct StoreNdDistribution final : public gpu::WarpDistributionPattern {
         resolveDistributedTy(newWarpOp.getResult(newRetIndices[1]),
                              distributedTensorDescTy, rewriter));
 
-    rewriter.create<xegpu::StoreNdOp>(
+    xegpu::StoreNdOp::create(rewriter,
         newWarpOp.getLoc(), TypeRange{}, newStoreOperands,
         removeTemporaryLayoutAttributes(storeOp->getAttrs()));
     rewriter.eraseOp(storeOp);
@@ -494,7 +494,7 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
         loadOp.getTensorDescType().dropLayouts(); // Distributed tensor
                                                   // descriptor type does not
                                                   // contain layout info.
-    auto newLoadOp = rewriter.create<xegpu::LoadNdOp>(
+    auto newLoadOp = xegpu::LoadNdOp::create(rewriter,
         newWarpOp.getLoc(), loadNdDistValueTyOrFailure.value(),
         resolveDistributedTy(newWarpOp->getResult(newRetIndices[0]),
                              distributedTensorDescTy, rewriter),
@@ -630,7 +630,7 @@ struct DpasDistribution final : public gpu::WarpDistributionPattern {
           resolveDistributedTy(newWarpOp.getResult(newRetIndices[i]),
                                newDpasOperandExpectedTypes[i], rewriter));
     }
-    Value newDpasOp = rewriter.create<xegpu::DpasOp>(
+    Value newDpasOp = xegpu::DpasOp::create(rewriter,
         newWarpOp->getLoc(), distributedResultTy, newDpasOperands,
         removeTemporaryLayoutAttributes(dpasOp->getAttrs()));
     Value distributedVal = newWarpOp.getResult(operandIdx);
@@ -717,7 +717,7 @@ struct UpdateNdOffsetDistribution final : public gpu::WarpDistributionPattern {
       }
     }
     // Create a new update op outside the warp op.
-    Value newUpdateOp = rewriter.create<xegpu::UpdateNdOffsetOp>(
+    Value newUpdateOp = xegpu::UpdateNdOffsetOp::create(rewriter,
         newWarpOp.getLoc(), newTensorDescTy, newUpdateOperands,
         removeTemporaryLayoutAttributes(updateOp->getAttrs()));
     Value distributedVal = newWarpOp.getResult(operandIdx);
@@ -783,7 +783,7 @@ struct PrefetchNdDistribution final : public gpu::WarpDistributionPattern {
     rewriter.setInsertionPointAfter(newWarpOp);
     SmallVector<Value> newPrefetchOperands = {resolveDistributedTy(
         newWarpOp.getResult(newRetIndices[0]), newTensorDescTy, rewriter)};
-    rewriter.create<xegpu::PrefetchNdOp>(
+    xegpu::PrefetchNdOp::create(rewriter,
         newWarpOp.getLoc(), TypeRange{}, newPrefetchOperands,
         removeTemporaryLayoutAttributes(prefetchOp->getAttrs()));
     rewriter.eraseOp(prefetchOp);
@@ -806,7 +806,7 @@ struct GpuBarrierDistribution final : public gpu::WarpDistributionPattern {
       return failure();
     // Move the barrier op outside of the warp op.
     rewriter.setInsertionPointAfter(subgroupOp);
-    rewriter.create<gpu::BarrierOp>(
+    gpu::BarrierOp::create(rewriter,
         barrierOp.getLoc(), barrierOp->getResultTypes(),
         barrierOp->getOperands(), barrierOp->getAttrs());
     rewriter.eraseOp(barrierOp);

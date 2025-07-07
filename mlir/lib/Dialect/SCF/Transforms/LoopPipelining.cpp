@@ -279,24 +279,24 @@ LogicalResult LoopPipelinerInternal::emitPrologue(RewriterBase &rewriter) {
     if (dynamicLoop) {
       Type t = ub.getType();
       // pred = ub > lb + (i * step)
-      Value iv = rewriter.create<arith::AddIOp>(
+      Value iv = arith::AddIOp::create(rewriter,
           loc, lb,
-          rewriter.create<arith::MulIOp>(
+          arith::MulIOp::create(rewriter,
               loc, step,
-              rewriter.create<arith::ConstantOp>(
+              arith::ConstantOp::create(rewriter,
                   loc, rewriter.getIntegerAttr(t, i))));
-      predicates[i] = rewriter.create<arith::CmpIOp>(
+      predicates[i] = arith::CmpIOp::create(rewriter,
           loc, arith::CmpIPredicate::slt, iv, ub);
     }
 
     // special handling for induction variable as the increment is implicit.
     // iv = lb + i * step
     Type t = lb.getType();
-    Value iv = rewriter.create<arith::AddIOp>(
+    Value iv = arith::AddIOp::create(rewriter,
         loc, lb,
-        rewriter.create<arith::MulIOp>(
+        arith::MulIOp::create(rewriter,
             loc, step,
-            rewriter.create<arith::ConstantOp>(loc,
+            arith::ConstantOp::create(rewriter, loc,
                                                rewriter.getIntegerAttr(t, i))));
     setValueMapping(forOp.getInductionVar(), iv, i);
     for (Operation *op : opOrder) {
@@ -332,7 +332,7 @@ LogicalResult LoopPipelinerInternal::emitPrologue(RewriterBase &rewriter) {
             Value prevValue = valueMapping
                 [forOp.getRegionIterArgs()[operand.getOperandNumber()]]
                 [i - stages[op]];
-            source = rewriter.create<arith::SelectOp>(
+            source = arith::SelectOp::create(rewriter,
                 loc, predicates[predicateIdx], source, prevValue);
           }
           setValueMapping(forOp.getRegionIterArgs()[operand.getOperandNumber()],
@@ -444,14 +444,14 @@ scf::ForOp LoopPipelinerInternal::createKernelLoop(
     Type t = ub.getType();
     Location loc = forOp.getLoc();
     // newUb = ub - maxStage * step
-    Value maxStageValue = rewriter.create<arith::ConstantOp>(
+    Value maxStageValue = arith::ConstantOp::create(rewriter,
         loc, rewriter.getIntegerAttr(t, maxStage));
     Value maxStageByStep =
-        rewriter.create<arith::MulIOp>(loc, step, maxStageValue);
-    newUb = rewriter.create<arith::SubIOp>(loc, ub, maxStageByStep);
+        arith::MulIOp::create(rewriter, loc, step, maxStageValue);
+    newUb = arith::SubIOp::create(rewriter, loc, ub, maxStageByStep);
   }
   auto newForOp =
-      rewriter.create<scf::ForOp>(forOp.getLoc(), forOp.getLowerBound(), newUb,
+      scf::ForOp::create(rewriter, forOp.getLoc(), forOp.getLowerBound(), newUb,
                                   forOp.getStep(), newLoopArg);
   // When there are no iter args, the loop body terminator will be created.
   // Since we always create it below, remove the terminator if it was created.
@@ -483,14 +483,14 @@ LogicalResult LoopPipelinerInternal::createKernel(
     Type t = ub.getType();
     for (unsigned i = 0; i < maxStage; i++) {
       // c = ub - (maxStage - i) * step
-      Value c = rewriter.create<arith::SubIOp>(
+      Value c = arith::SubIOp::create(rewriter,
           loc, ub,
-          rewriter.create<arith::MulIOp>(
+          arith::MulIOp::create(rewriter,
               loc, step,
-              rewriter.create<arith::ConstantOp>(
+              arith::ConstantOp::create(rewriter,
                   loc, rewriter.getIntegerAttr(t, int64_t(maxStage - i)))));
 
-      Value pred = rewriter.create<arith::CmpIOp>(
+      Value pred = arith::CmpIOp::create(rewriter,
           newForOp.getLoc(), arith::CmpIPredicate::slt,
           newForOp.getInductionVar(), c);
       predicates[i] = pred;
@@ -515,12 +515,12 @@ LogicalResult LoopPipelinerInternal::createKernel(
 
         // offset = (maxStage - stages[op]) * step
         Type t = step.getType();
-        Value offset = rewriter.create<arith::MulIOp>(
+        Value offset = arith::MulIOp::create(rewriter,
             forOp.getLoc(), step,
-            rewriter.create<arith::ConstantOp>(
+            arith::ConstantOp::create(rewriter,
                 forOp.getLoc(),
                 rewriter.getIntegerAttr(t, maxStage - stages[op])));
-        Value iv = rewriter.create<arith::AddIOp>(
+        Value iv = arith::AddIOp::create(rewriter,
             forOp.getLoc(), newForOp.getInductionVar(), offset);
         nestedNewOp->setOperand(operand->getOperandNumber(), iv);
         rewriter.setInsertionPointAfter(newOp);
@@ -594,7 +594,7 @@ LogicalResult LoopPipelinerInternal::createKernel(
         auto defStage = stages.find(def);
         if (defStage != stages.end() && defStage->second < maxStage) {
           Value pred = predicates[defStage->second];
-          source = rewriter.create<arith::SelectOp>(
+          source = arith::SelectOp::create(rewriter,
               pred.getLoc(), pred, source,
               newForOp.getBody()
                   ->getArguments()[yieldOperand.getOperandNumber() + 1]);
@@ -638,7 +638,7 @@ LogicalResult LoopPipelinerInternal::createKernel(
                       maxStage - defStage->second + 1);
     }
   }
-  rewriter.create<scf::YieldOp>(forOp.getLoc(), yieldOperands);
+  scf::YieldOp::create(rewriter, forOp.getLoc(), yieldOperands);
   return success();
 }
 
@@ -652,7 +652,7 @@ LoopPipelinerInternal::emitEpilogue(RewriterBase &rewriter,
   // removed by dead code if not used.
 
   auto createConst = [&](int v) {
-    return rewriter.create<arith::ConstantOp>(loc,
+    return arith::ConstantOp::create(rewriter, loc,
                                               rewriter.getIntegerAttr(t, v));
   };
 
@@ -661,41 +661,41 @@ LoopPipelinerInternal::emitEpilogue(RewriterBase &rewriter,
   // - total_iterations = (range_diff + step + (step < 0 ? 1 : -1)) / step
   Value zero = createConst(0);
   Value one = createConst(1);
-  Value stepLessZero = rewriter.create<arith::CmpIOp>(
+  Value stepLessZero = arith::CmpIOp::create(rewriter,
       loc, arith::CmpIPredicate::slt, step, zero);
   Value stepDecr =
-      rewriter.create<arith::SelectOp>(loc, stepLessZero, one, createConst(-1));
+      arith::SelectOp::create(rewriter, loc, stepLessZero, one, createConst(-1));
 
-  Value rangeDiff = rewriter.create<arith::SubIOp>(loc, ub, lb);
-  Value rangeIncrStep = rewriter.create<arith::AddIOp>(loc, rangeDiff, step);
+  Value rangeDiff = arith::SubIOp::create(rewriter, loc, ub, lb);
+  Value rangeIncrStep = arith::AddIOp::create(rewriter, loc, rangeDiff, step);
   Value rangeDecr =
-      rewriter.create<arith::AddIOp>(loc, rangeIncrStep, stepDecr);
-  Value totalIterations = rewriter.create<arith::DivSIOp>(loc, rangeDecr, step);
+      arith::AddIOp::create(rewriter, loc, rangeIncrStep, stepDecr);
+  Value totalIterations = arith::DivSIOp::create(rewriter, loc, rangeDecr, step);
 
   // If total_iters < max_stage, start the epilogue at zero to match the
   // ramp-up in the prologue.
   // start_iter = max(0, total_iters - max_stage)
-  Value iterI = rewriter.create<arith::SubIOp>(loc, totalIterations,
+  Value iterI = arith::SubIOp::create(rewriter, loc, totalIterations,
                                                createConst(maxStage));
-  iterI = rewriter.create<arith::MaxSIOp>(loc, zero, iterI);
+  iterI = arith::MaxSIOp::create(rewriter, loc, zero, iterI);
 
   // Capture predicates for dynamic loops.
   SmallVector<Value> predicates(maxStage + 1);
 
   for (int64_t i = 1; i <= maxStage; i++) {
     // newLastIter = lb + step * iterI
-    Value newlastIter = rewriter.create<arith::AddIOp>(
-        loc, lb, rewriter.create<arith::MulIOp>(loc, step, iterI));
+    Value newlastIter = arith::AddIOp::create(rewriter,
+        loc, lb, arith::MulIOp::create(rewriter, loc, step, iterI));
 
     setValueMapping(forOp.getInductionVar(), newlastIter, i);
 
     // increment to next iterI
-    iterI = rewriter.create<arith::AddIOp>(loc, iterI, one);
+    iterI = arith::AddIOp::create(rewriter, loc, iterI, one);
 
     if (dynamicLoop) {
       // Disable stages when `i` is greater than total_iters.
       // pred = total_iters >= i
-      predicates[i] = rewriter.create<arith::CmpIOp>(
+      predicates[i] = arith::CmpIOp::create(rewriter,
           loc, arith::CmpIPredicate::sge, totalIterations, createConst(i));
     }
   }
@@ -758,7 +758,7 @@ LoopPipelinerInternal::emitEpilogue(RewriterBase &rewriter,
           unsigned nextVersion = currentVersion + 1;
           Value pred = predicates[currentVersion];
           Value prevValue = valueMapping[mapVal][currentVersion];
-          auto selOp = rewriter.create<arith::SelectOp>(loc, pred, pair.value(),
+          auto selOp = arith::SelectOp::create(rewriter, loc, pred, pair.value(),
                                                         prevValue);
           returnValues[ri] = selOp;
           if (nextVersion <= maxStage)

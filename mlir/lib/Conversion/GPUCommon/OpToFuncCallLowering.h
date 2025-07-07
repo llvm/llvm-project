@@ -103,7 +103,7 @@ public:
 
     LLVMFuncOp funcOp = appendOrGetFuncOp(funcName, funcType, op);
     auto callOp =
-        rewriter.create<LLVM::CallOp>(op->getLoc(), funcOp, castedOperands);
+        LLVM::CallOp::create(rewriter, op->getLoc(), funcOp, castedOperands);
 
     if (resultType == adaptor.getOperands().front().getType()) {
       rewriter.replaceOp(op, {callOp.getResult()});
@@ -115,10 +115,10 @@ public:
     // there is no guarantee of a specific value being used to indicate true,
     // compare for inequality with zero (rather than truncate or shift).
     if (isResultBool) {
-      Value zero = rewriter.create<LLVM::ConstantOp>(
+      Value zero = LLVM::ConstantOp::create(rewriter,
           op->getLoc(), rewriter.getIntegerType(32),
           rewriter.getI32IntegerAttr(0));
-      Value truncated = rewriter.create<LLVM::ICmpOp>(
+      Value truncated = LLVM::ICmpOp::create(rewriter,
           op->getLoc(), LLVM::ICmpPredicate::ne, callOp.getResult(), zero);
       rewriter.replaceOp(op, {truncated});
       return success();
@@ -126,7 +126,7 @@ public:
 
     assert(callOp.getResult().getType().isF32() &&
            "only f32 types are supposed to be truncated back");
-    Value truncated = rewriter.create<LLVM::FPTruncOp>(
+    Value truncated = LLVM::FPTruncOp::create(rewriter,
         op->getLoc(), adaptor.getOperands().front().getType(),
         callOp.getResult());
     rewriter.replaceOp(op, {truncated});
@@ -142,7 +142,7 @@ public:
     if (!f16Func.empty() && isa<Float16Type>(type))
       return operand;
 
-    return rewriter.create<LLVM::FPExtOp>(
+    return LLVM::FPExtOp::create(rewriter,
         operand.getLoc(), Float32Type::get(rewriter.getContext()), operand);
   }
 
@@ -169,7 +169,7 @@ public:
     // location as debug info metadata inside of a function cannot be used
     // outside of that function.
     auto globalloc = op->getLoc()->findInstanceOfOrUnknown<FileLineColLoc>();
-    return b.create<LLVMFuncOp>(globalloc, funcName, funcType);
+    return LLVMFuncOp::create(b, globalloc, funcName, funcType);
   }
 
   StringRef getFunctionName(Type type, SourceOp op) const {

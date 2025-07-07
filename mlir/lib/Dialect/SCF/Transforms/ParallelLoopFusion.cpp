@@ -190,7 +190,7 @@ static void fuseIfLegal(ParallelOp firstPloop, ParallelOp &secondPloop,
 
   IRRewriter b(builder);
   b.setInsertionPoint(secondPloop);
-  auto newSecondPloop = b.create<ParallelOp>(
+  auto newSecondPloop = ParallelOp::create(b,
       secondPloop.getLoc(), secondPloop.getLowerBound(),
       secondPloop.getUpperBound(), secondPloop.getStep(), newInitVars);
 
@@ -212,7 +212,7 @@ static void fuseIfLegal(ParallelOp firstPloop, ParallelOp &secondPloop,
     SmallVector<Value> newReduceArgs(reduceArgs1.begin(), reduceArgs1.end());
     newReduceArgs.append(reduceArgs2.begin(), reduceArgs2.end());
 
-    auto newReduceOp = b.create<scf::ReduceOp>(term2.getLoc(), newReduceArgs);
+    auto newReduceOp = scf::ReduceOp::create(b, term2.getLoc(), newReduceArgs);
 
     for (auto &&[i, reg] : llvm::enumerate(llvm::concat<Region>(
              term1.getReductions(), term2.getReductions()))) {

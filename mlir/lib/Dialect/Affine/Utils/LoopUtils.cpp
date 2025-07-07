@@ -55,7 +55,7 @@ getCleanupLoopLowerBound(AffineForOp forOp, unsigned unrollFactor,
 
   OpBuilder b(forOp);
   auto lbMap = forOp.getLowerBoundMap();
-  auto lb = b.create<AffineApplyOp>(forOp.getLoc(), lbMap,
+  auto lb = AffineApplyOp::create(b, forOp.getLoc(), lbMap,
                                     forOp.getLowerBoundOperands());
 
   // For each upper bound expr, get the range.
@@ -72,7 +72,7 @@ getCleanupLoopLowerBound(AffineForOp forOp, unsigned unrollFactor,
     auto bumpMap = AffineMap::get(tripCountMap.getNumDims(),
                                   tripCountMap.getNumSymbols(), bumpExprs[i]);
     bumpValues[i] =
-        b.create<AffineApplyOp>(forOp.getLoc(), bumpMap, tripCountOperands);
+        AffineApplyOp::create(b, forOp.getLoc(), bumpMap, tripCountOperands);
   }
 
   SmallVector<AffineExpr, 4> newUbExprs(tripCountMap.getNumResults());
@@ -135,7 +135,7 @@ LogicalResult mlir::affine::promoteIfSingleIteration(AffineForOp forOp) {
         builder.setInsertionPointToStart(&func.getFunctionBody().front());
       else
         builder.setInsertionPoint(forOp);
-      auto constOp = builder.create<arith::ConstantIndexOp>(
+      auto constOp = arith::ConstantIndexOp::create(builder,
           forOp.getLoc(), forOp.getConstantLowerBound());
       iv.replaceAllUsesWith(constOp);
     } else {
@@ -147,7 +147,7 @@ LogicalResult mlir::affine::promoteIfSingleIteration(AffineForOp forOp) {
         iv.replaceAllUsesWith(lbOperands[0]);
       } else {
         auto affineApplyOp =
-            builder.create<AffineApplyOp>(forOp.getLoc(), lbMap, lbOperands);
+            AffineApplyOp::create(builder, forOp.getLoc(), lbMap, lbOperands);
         iv.replaceAllUsesWith(affineApplyOp);
       }
     }
@@ -182,7 +182,7 @@ static AffineForOp generateShiftedLoop(
   assert(ubMap.getNumInputs() == ubOperands.size());
 
   auto loopChunk =
-      b.create<AffineForOp>(srcForOp.getLoc(), lbOperands, lbMap, ubOperands,
+      AffineForOp::create(b, srcForOp.getLoc(), lbOperands, lbMap, ubOperands,
                             ubMap, srcForOp.getStepAsInt());
   auto loopChunkIV = loopChunk.getInductionVar();
   auto srcIV = srcForOp.getInductionVar();
@@ -198,7 +198,7 @@ static AffineForOp generateShiftedLoop(
     // Generate the remapping if the shift is not zero: remappedIV = newIV -
     // shift.
     if (!srcIV.use_empty() && shift != 0) {
-      auto ivRemap = bodyBuilder.create<AffineApplyOp>(
+      auto ivRemap = AffineApplyOp::create(bodyBuilder,
           srcForOp.getLoc(),
           bodyBuilder.getSingleDimShiftAffineMap(
               -static_cast<int64_t>(srcForOp.getStepAsInt() * shift)),
@@ -434,7 +434,7 @@ static void constructTiledLoopNest(MutableArrayRef<AffineForOp> origLoops,
   for (unsigned i = 0; i < width; i++) {
     OpBuilder b(topLoop);
     // Loop bounds will be set later.
-    AffineForOp pointLoop = b.create<AffineForOp>(loc, 0, 0);
+    AffineForOp pointLoop = AffineForOp::create(b, loc, 0, 0);
     pointLoop.getBody()->getOperations().splice(
         pointLoop.getBody()->begin(), topLoop->getBlock()->getOperations(),
         topLoop);
@@ -448,7 +448,7 @@ static void constructTiledLoopNest(MutableArrayRef<AffineForOp> origLoops,
   for (unsigned i = width; i < 2 * width; i++) {
     OpBuilder b(topLoop);
     // Loop bounds will be set later.
-    AffineForOp tileSpaceLoop = b.create<AffineForOp>(loc, 0, 0);
+    AffineForOp tileSpaceLoop = AffineForOp::create(b, loc, 0, 0);
     tileSpaceLoop.getBody()->getOperations().splice(
         tileSpaceLoop.getBody()->begin(), topLoop->getBlock()->getOperations(),
         topLoop);
@@ -1063,7 +1063,7 @@ LogicalResult mlir::affine::loopUnrollByFactor(
         // iv' = iv + i * step
         auto d0 = b.getAffineDimExpr(0);
         auto bumpMap = AffineMap::get(1, 0, d0 + i * step);
-        return b.create<AffineApplyOp>(forOp.getLoc(), bumpMap, iv);
+        return AffineApplyOp::create(b, forOp.getLoc(), bumpMap, iv);
       },
       /*annotateFn=*/annotateFn,
       /*iterArgs=*/iterArgs, /*yieldedValues=*/yieldedValues);
@@ -1227,7 +1227,7 @@ LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
         auto d0 = builder.getAffineDimExpr(0);
         auto bumpMap = AffineMap::get(1, 0, d0 + i * step);
         auto ivUnroll =
-            builder.create<AffineApplyOp>(forOp.getLoc(), bumpMap, forOpIV);
+            AffineApplyOp::create(builder, forOp.getLoc(), bumpMap, forOpIV);
         operandMaps[i - 1].map(forOpIV, ivUnroll);
       }
       // Clone the sub-block being unroll-jammed.
@@ -1556,7 +1556,7 @@ stripmineSink(AffineForOp forOp, uint64_t factor,
   for (auto t : targets) {
     // Insert newForOp before the terminator of `t`.
     auto b = OpBuilder::atBlockTerminator(t.getBody());
-    auto newForOp = b.create<AffineForOp>(t.getLoc(), lbOperands, lbMap,
+    auto newForOp = AffineForOp::create(b, t.getLoc(), lbOperands, lbMap,
                                           ubOperands, ubMap, originalStep);
     auto begin = t.getBody()->begin();
     // Skip terminator and `newForOp` which is just before the terminator.
@@ -1631,9 +1631,9 @@ LogicalResult mlir::affine::coalesceLoops(MutableArrayRef<AffineForOp> loops) {
   // 1. Store the upper bound of the outermost loop in a variable.
   Value prev;
   if (!llvm::hasSingleElement(origUbMap.getResults()))
-    prev = builder.create<AffineMinOp>(loc, origUbMap, ubOperands);
+    prev = AffineMinOp::create(builder, loc, origUbMap, ubOperands);
   else
-    prev = builder.create<AffineApplyOp>(loc, origUbMap, ubOperands);
+    prev = AffineApplyOp::create(builder, loc, origUbMap, ubOperands);
   upperBoundSymbols.push_back(prev);
 
   // 2. Emit code computing the upper bound of the coalesced loop as product of
@@ -1645,15 +1645,15 @@ LogicalResult mlir::affine::coalesceLoops(MutableArrayRef<AffineForOp> loops) {
     Value upperBound;
     // If upper bound map has more than one result, take their minimum.
     if (!llvm::hasSingleElement(origUbMap.getResults()))
-      upperBound = builder.create<AffineMinOp>(loc, origUbMap, ubOperands);
+      upperBound = AffineMinOp::create(builder, loc, origUbMap, ubOperands);
     else
-      upperBound = builder.create<AffineApplyOp>(loc, origUbMap, ubOperands);
+      upperBound = AffineApplyOp::create(builder, loc, origUbMap, ubOperands);
     upperBoundSymbols.push_back(upperBound);
     SmallVector<Value, 4> operands;
     operands.push_back(prev);
     operands.push_back(upperBound);
     // Maintain running product of loop upper bounds.
-    prev = builder.create<AffineApplyOp>(
+    prev = AffineApplyOp::create(builder,
         loc,
         AffineMap::get(/*dimCount=*/1,
                        /*symbolCount=*/1,
@@ -1683,7 +1683,7 @@ LogicalResult mlir::affine::coalesceLoops(MutableArrayRef<AffineForOp> loops) {
       SmallVector<Value, 4> operands;
       operands.push_back(previous);
       operands.push_back(upperBoundSymbols[idx]);
-      previous = builder.create<AffineApplyOp>(
+      previous = AffineApplyOp::create(builder,
           loc,
           AffineMap::get(
               /*dimCount=*/1, /*symbolCount=*/1,
@@ -1700,7 +1700,7 @@ LogicalResult mlir::affine::coalesceLoops(MutableArrayRef<AffineForOp> loops) {
       SmallVector<Value, 4> applyOperands;
       applyOperands.push_back(previous);
       applyOperands.push_back(upperBoundSymbols[idx - 1]);
-      inductionVariable = builder.create<AffineApplyOp>(
+      inductionVariable = AffineApplyOp::create(builder,
           loc,
           AffineMap::get(
               /*dimCount=*/1, /*symbolCount=*/1,
@@ -1738,21 +1738,21 @@ void mlir::affine::mapLoopToProcessorIds(scf::ForOp forOp,
 
   Value linearIndex = processorId.front();
   for (unsigned i = 1, e = processorId.size(); i < e; ++i) {
-    auto mulApplyOp = b.create<AffineApplyOp>(
+    auto mulApplyOp = AffineApplyOp::create(b,
         loc, mulMap, ValueRange{linearIndex, numProcessors[i]});
-    linearIndex = b.create<AffineApplyOp>(
+    linearIndex = AffineApplyOp::create(b,
         loc, addMap, ValueRange{mulApplyOp, processorId[i]});
   }
 
-  auto mulApplyOp = b.create<AffineApplyOp>(
+  auto mulApplyOp = AffineApplyOp::create(b,
       loc, mulMap, ValueRange{linearIndex, forOp.getStep()});
-  Value lb = b.create<AffineApplyOp>(
+  Value lb = AffineApplyOp::create(b,
       loc, addMap, ValueRange{mulApplyOp, forOp.getLowerBound()});
   forOp.setLowerBound(lb);
 
   Value step = forOp.getStep();
   for (auto numProcs : numProcessors)
-    step = b.create<AffineApplyOp>(loc, mulMap, ValueRange{numProcs, step});
+    step = AffineApplyOp::create(b, loc, mulMap, ValueRange{numProcs, step});
   forOp.setStep(step);
 }
 
@@ -1889,7 +1889,7 @@ generatePointWiseCopy(Location loc, Value memref, Value fastMemRef,
 
     auto fastBufOffsetMap =
         AffineMap::get(lbOperands.size(), 0, fastBufOffsets[d]);
-    auto offset = b.create<AffineApplyOp>(loc, fastBufOffsetMap, lbOperands);
+    auto offset = AffineApplyOp::create(b, loc, fastBufOffsetMap, lbOperands);
 
     // Construct the subscript for the fast memref being copied into/from:
     // x - offset_x.
@@ -1916,16 +1916,16 @@ generatePointWiseCopy(Location loc, Value memref, Value fastMemRef,
 
   if (!isCopyOut) {
     // Copy in.
-    auto load = b.create<AffineLoadOp>(loc, memref, memIndices);
-    b.create<AffineStoreOp>(loc, load, fastMemRef, fastBufMap,
+    auto load = AffineLoadOp::create(b, loc, memref, memIndices);
+    AffineStoreOp::create(b, loc, load, fastMemRef, fastBufMap,
                             fastBufMapOperands);
     return copyNestRoot;
   }
 
   // Copy out.
   auto load =
-      b.create<AffineLoadOp>(loc, fastMemRef, fastBufMap, fastBufMapOperands);
-  b.create<AffineStoreOp>(loc, load, memref, memIndices);
+      AffineLoadOp::create(b, loc, fastMemRef, fastBufMap, fastBufMapOperands);
+  AffineStoreOp::create(b, loc, load, memref, memIndices);
   return copyNestRoot;
 }
 
@@ -1960,7 +1960,7 @@ static LogicalResult generateCopy(
 
   auto f = begin->getParentOfType<FunctionOpInterface>();
   OpBuilder topBuilder(f.getFunctionBody());
-  Value zeroIndex = topBuilder.create<arith::ConstantIndexOp>(f.getLoc(), 0);
+  Value zeroIndex = arith::ConstantIndexOp::create(topBuilder, f.getLoc(), 0);
 
   *sizeInBytes = 0;
 
@@ -2071,7 +2071,7 @@ static LogicalResult generateCopy(
         memIndices.push_back(zeroIndex);
       } else {
         memIndices.push_back(
-            top.create<arith::ConstantIndexOp>(loc, indexVal).getResult());
+            arith::ConstantIndexOp::create(top, loc, indexVal).getResult());
       }
     } else {
       // The coordinate for the start location is just the lower bound along the
@@ -2085,7 +2085,7 @@ static LogicalResult generateCopy(
       lbs[d] = lbs[d].replaceDimsAndSymbols(
           /*dimReplacements=*/{}, symReplacements, lbs[d].getNumSymbols(),
           /*numResultSyms=*/0);
-      memIndices.push_back(b.create<AffineApplyOp>(loc, lbs[d], regionSymbols));
+      memIndices.push_back(AffineApplyOp::create(b, loc, lbs[d], regionSymbols));
     }
     // The fast buffer is copied into at location zero; addressing is relative.
     bufIndices.push_back(zeroIndex);
@@ -2109,7 +2109,7 @@ static LogicalResult generateCopy(
     // Create the fast memory space buffer just before the 'affine.for'
     // operation.
     fastMemRef =
-        prologue.create<memref::AllocOp>(loc, fastMemRefType).getResult();
+        memref::AllocOp::create(prologue, loc, fastMemRefType).getResult();
     // Record it.
     fastBufferMap[memref] = fastMemRef;
     // fastMemRefType is a constant shaped memref.
@@ -2126,7 +2126,7 @@ static LogicalResult generateCopy(
     fastMemRef = fastBufferMap[memref];
   }
 
-  auto numElementsSSA = top.create<arith::ConstantIndexOp>(loc, *numElements);
+  auto numElementsSSA = arith::ConstantIndexOp::create(top, loc, *numElements);
 
   Value dmaStride;
   Value numEltPerDmaStride;
@@ -2143,8 +2143,8 @@ static LogicalResult generateCopy(
 
     if (!dmaStrideInfos.empty()) {
       dmaStride =
-          top.create<arith::ConstantIndexOp>(loc, dmaStrideInfos[0].stride);
-      numEltPerDmaStride = top.create<arith::ConstantIndexOp>(
+          arith::ConstantIndexOp::create(top, loc, dmaStrideInfos[0].stride);
+      numEltPerDmaStride = arith::ConstantIndexOp::create(top,
           loc, dmaStrideInfos[0].numEltPerStride);
     }
   }
@@ -2175,20 +2175,20 @@ static LogicalResult generateCopy(
     // Create a tag (single element 1-d memref) for the DMA.
     auto tagMemRefType = MemRefType::get({1}, top.getIntegerType(32), {},
                                          copyOptions.tagMemorySpace);
-    auto tagMemRef = prologue.create<memref::AllocOp>(loc, tagMemRefType);
+    auto tagMemRef = memref::AllocOp::create(prologue, loc, tagMemRefType);
 
     SmallVector<Value, 4> tagIndices({zeroIndex});
     auto tagAffineMap = b.getMultiDimIdentityMap(tagIndices.size());
     fullyComposeAffineMapAndOperands(&tagAffineMap, &tagIndices);
     if (!region.isWrite()) {
       // DMA non-blocking read from original buffer to fast buffer.
-      b.create<AffineDmaStartOp>(loc, memref, memAffineMap, memIndices,
+      AffineDmaStartOp::create(b, loc, memref, memAffineMap, memIndices,
                                  fastMemRef, bufAffineMap, bufIndices,
                                  tagMemRef, tagAffineMap, tagIndices,
                                  numElementsSSA, dmaStride, numEltPerDmaStride);
     } else {
       // DMA non-blocking write from fast buffer to the original memref.
-      auto op = b.create<AffineDmaStartOp>(
+      auto op = AffineDmaStartOp::create(b,
           loc, fastMemRef, bufAffineMap, bufIndices, memref, memAffineMap,
           memIndices, tagMemRef, tagAffineMap, tagIndices, numElementsSSA,
           dmaStride, numEltPerDmaStride);
@@ -2199,11 +2199,11 @@ static LogicalResult generateCopy(
     }
 
     // Matching DMA wait to block on completion; tag always has a 0 index.
-    b.create<AffineDmaWaitOp>(loc, tagMemRef, tagAffineMap, zeroIndex,
+    AffineDmaWaitOp::create(b, loc, tagMemRef, tagAffineMap, zeroIndex,
                               numElementsSSA);
 
     // Generate dealloc for the tag.
-    auto tagDeallocOp = epilogue.create<memref::DeallocOp>(loc, tagMemRef);
+    auto tagDeallocOp = memref::DeallocOp::create(epilogue, loc, tagMemRef);
     if (*nEnd == end && isCopyOutAtEndOfBlock)
       // Since new ops are being appended (for outgoing DMAs), adjust the end to
       // mark end of range of the original.
@@ -2212,7 +2212,7 @@ static LogicalResult generateCopy(
 
   // Generate dealloc for the buffer.
   if (!existingBuf) {
-    auto bufDeallocOp = epilogue.create<memref::DeallocOp>(loc, fastMemRef);
+    auto bufDeallocOp = memref::DeallocOp::create(epilogue, loc, fastMemRef);
     // When generating pointwise copies, `nEnd' has to be set to deallocOp on
     // the fast buffer (since it marks the new end insertion point).
     if (!copyOptions.generateDma && *nEnd == end && isCopyOutAtEndOfBlock)
@@ -2582,7 +2582,7 @@ AffineForOp mlir::affine::createCanonicalizedAffineForOp(
   canonicalizeMapAndOperands(&ubMap, &upperOperands);
   ubMap = removeDuplicateExprs(ubMap);
 
-  return b.create<AffineForOp>(loc, lowerOperands, lbMap, upperOperands, ubMap,
+  return AffineForOp::create(b, loc, lowerOperands, lbMap, upperOperands, ubMap,
                                step);
 }
 
@@ -2666,7 +2666,7 @@ static AffineIfOp createSeparationCondition(MutableArrayRef<AffineForOp> loops,
   SmallVector<Value, 4> setOperands;
   cst.getValues(0, cst.getNumDimAndSymbolVars(), &setOperands);
   canonicalizeSetAndOperands(&ifCondSet, &setOperands);
-  return b.create<AffineIfOp>(loops[0].getLoc(), ifCondSet, setOperands,
+  return AffineIfOp::create(b, loops[0].getLoc(), ifCondSet, setOperands,
                               /*withElseRegion=*/true);
 }
 

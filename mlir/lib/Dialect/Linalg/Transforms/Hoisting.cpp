@@ -53,7 +53,7 @@ static scf::ForOp replaceWithDifferentYield(RewriterBase &rewriter,
   assert(index < inits.size());
   inits[index] = newInitOperand;
 
-  scf::ForOp newLoop = rewriter.create<scf::ForOp>(
+  scf::ForOp newLoop = scf::ForOp::create(rewriter,
       loop.getLoc(), loop.getLowerBound(), loop.getUpperBound(), loop.getStep(),
       inits, [](OpBuilder &, Location, Value, ValueRange) {});
 

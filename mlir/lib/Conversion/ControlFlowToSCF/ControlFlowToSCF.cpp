@@ -33,7 +33,7 @@ ControlFlowToSCFTransformation::createStructuredBranchRegionOp(
     MutableArrayRef<Region> regions) {
   if (auto condBrOp = dyn_cast<cf::CondBranchOp>(controlFlowCondOp)) {
     assert(regions.size() == 2);
-    auto ifOp = builder.create<scf::IfOp>(controlFlowCondOp->getLoc(),
+    auto ifOp = scf::IfOp::create(builder, controlFlowCondOp->getLoc(),
                                           resultTypes, condBrOp.getCondition());
     ifOp.getThenRegion().takeBody(regions[0]);
     ifOp.getElseRegion().takeBody(regions[1]);
@@ -43,7 +43,7 @@ ControlFlowToSCFTransformation::createStructuredBranchRegionOp(
   if (auto switchOp = dyn_cast<cf::SwitchOp>(controlFlowCondOp)) {
     // `getCFGSwitchValue` returns an i32 that we need to convert to index
     // fist.
-    auto cast = builder.create<arith::IndexCastUIOp>(
+    auto cast = arith::IndexCastUIOp::create(builder,
         controlFlowCondOp->getLoc(), builder.getIndexType(),
         switchOp.getFlag());
     SmallVector<int64_t> cases;
@@ -55,7 +55,7 @@ ControlFlowToSCFTransformation::createStructuredBranchRegionOp(
 
     assert(regions.size() == cases.size() + 1);
 
-    auto indexSwitchOp = builder.create<scf::IndexSwitchOp>(
+    auto indexSwitchOp = scf::IndexSwitchOp::create(builder,
         controlFlowCondOp->getLoc(), resultTypes, cast, cases, cases.size());
 
     indexSwitchOp.getDefaultRegion().takeBody(regions[0]);
@@ -75,7 +75,7 @@ LogicalResult
 ControlFlowToSCFTransformation::createStructuredBranchRegionTerminatorOp(
     Location loc, OpBuilder &builder, Operation *branchRegionOp,
     Operation *replacedControlFlowOp, ValueRange results) {
-  builder.create<scf::YieldOp>(loc, results);
+  scf::YieldOp::create(builder, loc, results);
   return success();
 }
 
@@ -84,7 +84,7 @@ ControlFlowToSCFTransformation::createStructuredDoWhileLoopOp(
     OpBuilder &builder, Operation *replacedOp, ValueRange loopVariablesInit,
     Value condition, ValueRange loopVariablesNextIter, Region &&loopBody) {
   Location loc = replacedOp->getLoc();
-  auto whileOp = builder.create<scf::WhileOp>(loc, loopVariablesInit.getTypes(),
+  auto whileOp = scf::WhileOp::create(builder, loc, loopVariablesInit.getTypes(),
                                               loopVariablesInit);
 
   whileOp.getBefore().takeBody(loopBody);
@@ -92,15 +92,15 @@ ControlFlowToSCFTransformation::createStructuredDoWhileLoopOp(
   builder.setInsertionPointToEnd(&whileOp.getBefore().back());
   // `getCFGSwitchValue` returns a i32. We therefore need to truncate the
   // condition to i1 first. It is guaranteed to be either 0 or 1 already.
-  builder.create<scf::ConditionOp>(
-      loc, builder.create<arith::TruncIOp>(loc, builder.getI1Type(), condition),
+  scf::ConditionOp::create(builder,
+      loc, arith::TruncIOp::create(builder, loc, builder.getI1Type(), condition),
       loopVariablesNextIter);
 
   Block *afterBlock = builder.createBlock(&whileOp.getAfter());
   afterBlock->addArguments(
       loopVariablesInit.getTypes(),
       SmallVector<Location>(loopVariablesInit.size(), loc));
-  builder.create<scf::YieldOp>(loc, afterBlock->getArguments());
+  scf::YieldOp::create(builder, loc, afterBlock->getArguments());
 
   return whileOp.getOperation();
 }
@@ -108,7 +108,7 @@ ControlFlowToSCFTransformation::createStructuredDoWhileLoopOp(
 Value ControlFlowToSCFTransformation::getCFGSwitchValue(Location loc,
                                                         OpBuilder &builder,
                                                         unsigned int value) {
-  return builder.create<arith::ConstantOp>(loc,
+  return arith::ConstantOp::create(builder, loc,
                                            builder.getI32IntegerAttr(value));
 }
 
@@ -117,7 +117,7 @@ void ControlFlowToSCFTransformation::createCFGSwitchOp(
     ArrayRef<unsigned int> caseValues, BlockRange caseDestinations,
     ArrayRef<ValueRange> caseArguments, Block *defaultDest,
     ValueRange defaultArgs) {
-  builder.create<cf::SwitchOp>(loc, flag, defaultDest, defaultArgs,
+  cf::SwitchOp::create(builder, loc, flag, defaultDest, defaultArgs,
                                llvm::to_vector_of<int32_t>(caseValues),
                                caseDestinations, caseArguments);
 }
@@ -125,7 +125,7 @@ void ControlFlowToSCFTransformation::createCFGSwitchOp(
 Value ControlFlowToSCFTransformation::getUndefValue(Location loc,
                                                     OpBuilder &builder,
                                                     Type type) {
-  return builder.create<ub::PoisonOp>(loc, type, nullptr);
+  return ub::PoisonOp::create(builder, loc, type, nullptr);
 }
 
 FailureOr<Operation *>

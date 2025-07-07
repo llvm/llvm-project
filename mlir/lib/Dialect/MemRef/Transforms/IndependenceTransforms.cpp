@@ -51,7 +51,7 @@ FailureOr<Value> memref::buildIndependentOp(OpBuilder &b,
 
   // Create a new memref::AllocaOp.
   Value newAllocaOp =
-      b.create<AllocaOp>(loc, newSizes, allocaOp.getType().getElementType());
+      AllocaOp::create(b, loc, newSizes, allocaOp.getType().getElementType());
 
   // Create a memref::SubViewOp.
   SmallVector<OpFoldResult> offsets(newSizes.size(), b.getIndexAttr(0));
@@ -71,10 +71,10 @@ propagateSubViewOp(RewriterBase &rewriter,
   MemRefType newResultType = SubViewOp::inferRankReducedResultType(
       op.getType().getShape(), op.getSourceType(), op.getMixedOffsets(),
       op.getMixedSizes(), op.getMixedStrides());
-  Value newSubview = rewriter.create<SubViewOp>(
+  Value newSubview = SubViewOp::create(rewriter,
       op.getLoc(), newResultType, conversionOp.getOperand(0),
       op.getMixedOffsets(), op.getMixedSizes(), op.getMixedStrides());
-  auto newConversionOp = rewriter.create<UnrealizedConversionCastOp>(
+  auto newConversionOp = UnrealizedConversionCastOp::create(rewriter,
       op.getLoc(), op.getType(), newSubview);
   rewriter.replaceAllUsesWith(op.getResult(), newConversionOp->getResult(0));
   return newConversionOp;
@@ -106,7 +106,7 @@ static void replaceAndPropagateMemRefType(RewriterBase &rewriter,
   SmallVector<UnrealizedConversionCastOp> unrealizedConversions;
   for (const auto &it :
        llvm::enumerate(llvm::zip(from->getResults(), to->getResults()))) {
-    unrealizedConversions.push_back(rewriter.create<UnrealizedConversionCastOp>(
+    unrealizedConversions.push_back(UnrealizedConversionCastOp::create(rewriter,
         to->getLoc(), std::get<0>(it.value()).getType(),
         std::get<1>(it.value())));
     rewriter.replaceAllUsesWith(from->getResult(it.index()),

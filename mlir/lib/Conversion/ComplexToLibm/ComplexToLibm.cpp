@@ -84,7 +84,7 @@ LogicalResult ScalarOpToLibmCall<Op, TypeResolver>::matchAndRewrite(
     rewriter.setInsertionPointToStart(&module->getRegion(0).front());
     auto opFunctionTy = FunctionType::get(
         rewriter.getContext(), op->getOperandTypes(), op->getResultTypes());
-    opFunc = rewriter.create<func::FuncOp>(rewriter.getUnknownLoc(), name,
+    opFunc = func::FuncOp::create(rewriter, rewriter.getUnknownLoc(), name,
                                            opFunctionTy);
     opFunc.setPrivate();
   }

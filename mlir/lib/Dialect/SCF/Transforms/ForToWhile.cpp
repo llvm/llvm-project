@@ -50,7 +50,7 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
     SmallVector<Value> initArgs;
     initArgs.push_back(forOp.getLowerBound());
     llvm::append_range(initArgs, forOp.getInitArgs());
-    auto whileOp = rewriter.create<WhileOp>(forOp.getLoc(), lcvTypes, initArgs,
+    auto whileOp = WhileOp::create(rewriter, forOp.getLoc(), lcvTypes, initArgs,
                                             forOp->getAttrs());
 
     // 'before' region contains the loop condition and forwarding of iteration
@@ -58,10 +58,10 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
     auto *beforeBlock = rewriter.createBlock(
         &whileOp.getBefore(), whileOp.getBefore().begin(), lcvTypes, lcvLocs);
     rewriter.setInsertionPointToStart(whileOp.getBeforeBody());
-    auto cmpOp = rewriter.create<arith::CmpIOp>(
+    auto cmpOp = arith::CmpIOp::create(rewriter,
         whileOp.getLoc(), arith::CmpIPredicate::slt,
         beforeBlock->getArgument(0), forOp.getUpperBound());
-    rewriter.create<scf::ConditionOp>(whileOp.getLoc(), cmpOp.getResult(),
+    scf::ConditionOp::create(rewriter, whileOp.getLoc(), cmpOp.getResult(),
                                       beforeBlock->getArguments());
 
     // Inline for-loop body into an executeRegion operation in the "after"
@@ -72,7 +72,7 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
 
     // Add induction variable incrementation
     rewriter.setInsertionPointToEnd(afterBlock);
-    auto ivIncOp = rewriter.create<arith::AddIOp>(
+    auto ivIncOp = arith::AddIOp::create(rewriter,
         whileOp.getLoc(), afterBlock->getArgument(0), forOp.getStep());
 
     // Rewrite uses of the for-loop block arguments to the new while-loop

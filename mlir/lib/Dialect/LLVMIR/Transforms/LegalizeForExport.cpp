@@ -58,7 +58,7 @@ static void ensureDistinctSuccessors(Block &bb) {
       terminator->setSuccessor(dummyBlock, position);
       for (BlockArgument arg : successor.first->getArguments())
         dummyBlock->addArgument(arg.getType(), arg.getLoc());
-      builder.create<LLVM::BrOp>(terminator->getLoc(),
+      LLVM::BrOp::create(builder, terminator->getLoc(),
                                  dummyBlock->getArguments(), successor.first);
     }
   }

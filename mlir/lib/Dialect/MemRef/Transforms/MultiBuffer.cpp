@@ -63,7 +63,7 @@ static void replaceUsesAndPropagateType(RewriterBase &rewriter,
         subviewUse.getType().getShape(), cast<MemRefType>(val.getType()),
         subviewUse.getStaticOffsets(), subviewUse.getStaticSizes(),
         subviewUse.getStaticStrides());
-    Value newSubview = rewriter.create<memref::SubViewOp>(
+    Value newSubview = memref::SubViewOp::create(rewriter,
         subviewUse->getLoc(), newType, val, subviewUse.getMixedOffsets(),
         subviewUse.getMixedSizes(), subviewUse.getMixedStrides());
 
@@ -177,7 +177,7 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
   Location loc = allocOp->getLoc();
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(allocOp);
-  auto mbAlloc = rewriter.create<memref::AllocOp>(
+  auto mbAlloc = memref::AllocOp::create(rewriter,
       loc, mbMemRefType, ValueRange{}, allocOp->getAttrs());
   LLVM_DEBUG(DBGS() << "--multi-buffered alloc: " << mbAlloc << "\n");
 
@@ -211,7 +211,7 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
   // Strides is [1, 1 ... 1 ].
   MemRefType dstMemref = memref::SubViewOp::inferRankReducedResultType(
       originalShape, mbMemRefType, offsets, sizes, strides);
-  Value subview = rewriter.create<memref::SubViewOp>(loc, dstMemref, mbAlloc,
+  Value subview = memref::SubViewOp::create(rewriter, loc, dstMemref, mbAlloc,
                                                      offsets, sizes, strides);
   LLVM_DEBUG(DBGS() << "--multi-buffered slice: " << subview << "\n");
 
@@ -224,7 +224,7 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPoint(deallocOp);
     auto newDeallocOp =
-        rewriter.create<memref::DeallocOp>(deallocOp->getLoc(), mbAlloc);
+        memref::DeallocOp::create(rewriter, deallocOp->getLoc(), mbAlloc);
     (void)newDeallocOp;
     LLVM_DEBUG(DBGS() << "----Created dealloc: " << newDeallocOp << "\n");
     rewriter.eraseOp(deallocOp);

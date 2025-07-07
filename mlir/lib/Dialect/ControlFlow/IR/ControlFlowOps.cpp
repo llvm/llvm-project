@@ -312,7 +312,7 @@ struct SimplifyCondBranchIdenticalSuccessors
       if (std::get<0>(it) == std::get<1>(it))
         mergedOperands.push_back(std::get<0>(it));
       else
-        mergedOperands.push_back(rewriter.create<arith::SelectOp>(
+        mergedOperands.push_back(arith::SelectOp::create(rewriter,
             condbr.getLoc(), condition, std::get<0>(it), std::get<1>(it)));
     }
 
@@ -412,7 +412,7 @@ struct CondBranchTruthPropagation : public OpRewritePattern<CondBranchOp> {
           replaced = true;
 
           if (!constantTrue)
-            constantTrue = rewriter.create<arith::ConstantOp>(
+            constantTrue = arith::ConstantOp::create(rewriter,
                 condbr.getLoc(), ty, rewriter.getBoolAttr(true));
 
           rewriter.modifyOpInPlace(use.getOwner(),
@@ -427,7 +427,7 @@ struct CondBranchTruthPropagation : public OpRewritePattern<CondBranchOp> {
           replaced = true;
 
           if (!constantFalse)
-            constantFalse = rewriter.create<arith::ConstantOp>(
+            constantFalse = arith::ConstantOp::create(rewriter,
                 condbr.getLoc(), ty, rewriter.getBoolAttr(false));
 
           rewriter.modifyOpInPlace(use.getOwner(),

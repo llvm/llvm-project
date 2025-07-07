@@ -108,7 +108,7 @@ createNdDescriptor(PatternRewriter &rewriter, Location loc,
 
   xegpu::CreateNdDescOp ndDesc;
   if (srcTy.hasStaticShape()) {
-    ndDesc = rewriter.create<xegpu::CreateNdDescOp>(loc, descType, src,
+    ndDesc = xegpu::CreateNdDescOp::create(rewriter, loc, descType, src,
                                                     getAsOpFoldResult(offsets));
   } else {
     // In case of any dynamic shapes, source's shape and strides have to be
@@ -116,7 +116,7 @@ createNdDescriptor(PatternRewriter &rewriter, Location loc,
     SmallVector<Value> sourceDims;
     unsigned srcRank = srcTy.getRank();
     for (unsigned i = 0; i < srcRank; ++i)
-      sourceDims.push_back(rewriter.create<memref::DimOp>(loc, src, i));
+      sourceDims.push_back(memref::DimOp::create(rewriter, loc, src, i));
 
     SmallVector<int64_t> constOffsets;
     SmallVector<Value> dynOffsets;
@@ -135,17 +135,17 @@ createNdDescriptor(PatternRewriter &rewriter, Location loc,
 
     // Compute strides in reverse order.
     SmallVector<Value> dynStrides;
-    Value accStride = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    Value accStride = arith::ConstantIndexOp::create(rewriter, loc, 1);
     // Last stride is guaranteed to be static and unit.
     for (int i = static_cast<int>(strides.size()) - 2; i >= 0; --i) {
       accStride =
-          rewriter.create<arith::MulIOp>(loc, accStride, sourceDims[i + 1]);
+          arith::MulIOp::create(rewriter, loc, accStride, sourceDims[i + 1]);
       if (strides[i] == ShapedType::kDynamic)
         dynStrides.push_back(accStride);
     }
     std::reverse(dynStrides.begin(), dynStrides.end());
 
-    ndDesc = rewriter.create<xegpu::CreateNdDescOp>(
+    ndDesc = xegpu::CreateNdDescOp::create(rewriter,
         loc, descType, src, dynOffsets, dynShapes, dynStrides,
         DenseI64ArrayAttr::get(rewriter.getContext(), constOffsets),
         DenseI64ArrayAttr::get(rewriter.getContext(), srcTy.getShape()),
@@ -200,7 +200,7 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
                                                   ArrayRef<int64_t>{1, 0});
     // By default, no specific caching policy is assigned.
     xegpu::CachePolicyAttr hint = nullptr;
-    auto loadOp = rewriter.create<xegpu::LoadNdOp>(
+    auto loadOp = xegpu::LoadNdOp::create(rewriter,
         loc, vecTy, ndDesc, /*packed=*/nullptr, transposeAttr,
         /*l1_hint=*/hint,
         /*l2_hint=*/hint, /*l3_hint=*/hint);
@@ -238,7 +238,7 @@ struct TransferWriteLowering
     // By default, no specific caching policy is assigned.
     xegpu::CachePolicyAttr hint = nullptr;
     auto storeOp =
-        rewriter.create<xegpu::StoreNdOp>(loc, writeOp.getVector(), ndDesc,
+        xegpu::StoreNdOp::create(rewriter, loc, writeOp.getVector(), ndDesc,
                                           /*l1_hint=*/hint,
                                           /*l2_hint=*/hint, /*l3_hint=*/hint);
     rewriter.replaceOp(writeOp, storeOp);
@@ -269,7 +269,7 @@ struct LoadLowering : public OpRewritePattern<vector::LoadOp> {
 
     // By default, no specific caching policy is assigned.
     xegpu::CachePolicyAttr hint = nullptr;
-    auto loadNdOp = rewriter.create<xegpu::LoadNdOp>(
+    auto loadNdOp = xegpu::LoadNdOp::create(rewriter,
         loc, vecTy, ndDesc, /*packed=*/nullptr, /*transpose=*/nullptr,
         /*l1_hint=*/hint,
         /*l2_hint=*/hint, /*l3_hint=*/hint);
@@ -303,7 +303,7 @@ struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
     // By default, no specific caching policy is assigned.
     xegpu::CachePolicyAttr hint = nullptr;
     auto storeNdOp =
-        rewriter.create<xegpu::StoreNdOp>(loc, vector, ndDesc,
+        xegpu::StoreNdOp::create(rewriter, loc, vector, ndDesc,
                                           /*l1_hint=*/hint,
                                           /*l2_hint=*/hint, /*l3_hint=*/hint);
     rewriter.replaceOp(storeOp, storeNdOp);
@@ -339,7 +339,7 @@ struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
     if (!isRowMajorMatmul(contractOp.getIndexingMapsAttr()))
       return rewriter.notifyMatchFailure(contractOp, "Invalid indexing maps");
 
-    auto dpasOp = rewriter.create<xegpu::DpasOp>(
+    auto dpasOp = xegpu::DpasOp::create(rewriter,
         loc, TypeRange{contractOp.getResultType()}, ValueRange{lhs, rhs, acc});
     rewriter.replaceOp(contractOp, dpasOp);
 

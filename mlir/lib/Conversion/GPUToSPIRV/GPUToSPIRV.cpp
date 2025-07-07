@@ -169,11 +169,11 @@ LogicalResult LaunchConfigConversion<SourceOp, builtin>::matchAndRewrite(
 
   Value vector =
       spirv::getBuiltinVariableValue(op, builtin, builtinType, rewriter);
-  Value dim = rewriter.create<spirv::CompositeExtractOp>(
+  Value dim = spirv::CompositeExtractOp::create(rewriter,
       op.getLoc(), builtinType, vector,
       rewriter.getI32ArrayAttr({static_cast<int32_t>(op.getDimension())}));
   if (forShader && builtinType != indexType)
-    dim = rewriter.create<spirv::UConvertOp>(op.getLoc(), indexType, dim);
+    dim = spirv::UConvertOp::create(rewriter, op.getLoc(), indexType, dim);
   rewriter.replaceOp(op, dim);
   return success();
 }
@@ -198,7 +198,7 @@ SingleDimLaunchConfigConversion<SourceOp, builtin>::matchAndRewrite(
   Value builtinValue =
       spirv::getBuiltinVariableValue(op, builtin, i32Type, rewriter);
   if (i32Type != indexType)
-    builtinValue = rewriter.create<spirv::UConvertOp>(op.getLoc(), indexType,
+    builtinValue = spirv::UConvertOp::create(rewriter, op.getLoc(), indexType,
                                                       builtinValue);
   rewriter.replaceOp(op, builtinValue);
   return success();
@@ -257,7 +257,7 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, const TypeConverter &typeConverter,
       signatureConverter.addInputs(argType.index(), convertedType);
     }
   }
-  auto newFuncOp = rewriter.create<spirv::FuncOp>(
+  auto newFuncOp = spirv::FuncOp::create(rewriter,
       funcOp.getLoc(), funcOp.getName(),
       rewriter.getFunctionType(signatureConverter.getConvertedTypes(), {}));
   for (const auto &namedAttr : funcOp->getAttrs()) {
@@ -367,7 +367,7 @@ LogicalResult GPUModuleConversion::matchAndRewrite(
 
   // Add a keyword to the module name to avoid symbolic conflict.
   std::string spvModuleName = (kSPIRVModule + moduleOp.getName()).str();
-  auto spvModule = rewriter.create<spirv::ModuleOp>(
+  auto spvModule = spirv::ModuleOp::create(rewriter,
       moduleOp.getLoc(), addressingModel, *memoryModel, std::nullopt,
       StringRef(spvModuleName));
 
@@ -452,41 +452,41 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
 
   switch (shuffleOp.getMode()) {
   case gpu::ShuffleMode::XOR: {
-    result = rewriter.create<spirv::GroupNonUniformShuffleXorOp>(
+    result = spirv::GroupNonUniformShuffleXorOp::create(rewriter,
         loc, scope, adaptor.getValue(), adaptor.getOffset());
     validVal = spirv::ConstantOp::getOne(rewriter.getI1Type(),
                                          shuffleOp.getLoc(), rewriter);
     break;
   }
   case gpu::ShuffleMode::IDX: {
-    result = rewriter.create<spirv::GroupNonUniformShuffleOp>(
+    result = spirv::GroupNonUniformShuffleOp::create(rewriter,
         loc, scope, adaptor.getValue(), adaptor.getOffset());
     validVal = spirv::ConstantOp::getOne(rewriter.getI1Type(),
                                          shuffleOp.getLoc(), rewriter);
     break;
   }
   case gpu::ShuffleMode::DOWN: {
-    result = rewriter.create<spirv::GroupNonUniformShuffleDownOp>(
+    result = spirv::GroupNonUniformShuffleDownOp::create(rewriter,
         loc, scope, adaptor.getValue(), adaptor.getOffset());
 
-    Value laneId = rewriter.create<gpu::LaneIdOp>(loc, widthAttr);
+    Value laneId = gpu::LaneIdOp::create(rewriter, loc, widthAttr);
     Value resultLaneId =
-        rewriter.create<arith::AddIOp>(loc, laneId, adaptor.getOffset());
-    validVal = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
+        arith::AddIOp::create(rewriter, loc, laneId, adaptor.getOffset());
+    validVal = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::ult,
                                               resultLaneId, adaptor.getWidth());
     break;
   }
   case gpu::ShuffleMode::UP: {
-    result = rewriter.create<spirv::GroupNonUniformShuffleUpOp>(
+    result = spirv::GroupNonUniformShuffleUpOp::create(rewriter,
         loc, scope, adaptor.getValue(), adaptor.getOffset());
 
-    Value laneId = rewriter.create<gpu::LaneIdOp>(loc, widthAttr);
+    Value laneId = gpu::LaneIdOp::create(rewriter, loc, widthAttr);
     Value resultLaneId =
-        rewriter.create<arith::SubIOp>(loc, laneId, adaptor.getOffset());
+        arith::SubIOp::create(rewriter, loc, laneId, adaptor.getOffset());
     auto i32Type = rewriter.getIntegerType(32);
-    validVal = rewriter.create<arith::CmpIOp>(
+    validVal = arith::CmpIOp::create(rewriter,
         loc, arith::CmpIPredicate::sge, resultLaneId,
-        rewriter.create<arith::ConstantOp>(
+        arith::ConstantOp::create(rewriter,
             loc, i32Type, rewriter.getIntegerAttr(i32Type, 0)));
     break;
   }
@@ -516,14 +516,14 @@ LogicalResult GPURotateConversion::matchAndRewrite(
 
   Location loc = rotateOp.getLoc();
   auto scope = rewriter.getAttr<spirv::ScopeAttr>(spirv::Scope::Subgroup);
-  Value rotateResult = rewriter.create<spirv::GroupNonUniformRotateKHROp>(
+  Value rotateResult = spirv::GroupNonUniformRotateKHROp::create(rewriter,
       loc, scope, adaptor.getValue(), adaptor.getOffset(), adaptor.getWidth());
   Value validVal;
   if (widthAttr.getValue().getZExtValue() == subgroupSize) {
     validVal = spirv::ConstantOp::getOne(rewriter.getI1Type(), loc, rewriter);
   } else {
-    Value laneId = rewriter.create<gpu::LaneIdOp>(loc, widthAttr);
-    validVal = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
+    Value laneId = gpu::LaneIdOp::create(rewriter, loc, widthAttr);
+    validVal = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::ult,
                                               laneId, adaptor.getWidth());
   }
 
@@ -548,13 +548,13 @@ static Value createGroupReduceOpImpl(OpBuilder &builder, Location loc,
                                 ? spirv::GroupOperation::ClusteredReduce
                                 : spirv::GroupOperation::Reduce);
   if (isUniform) {
-    return builder.create<UniformOp>(loc, type, scope, groupOp, arg)
+    return UniformOp::create(builder, loc, type, scope, groupOp, arg)
         .getResult();
   }
 
   Value clusterSizeValue;
   if (clusterSize.has_value())
-    clusterSizeValue = builder.create<spirv::ConstantOp>(
+    clusterSizeValue = spirv::ConstantOp::create(builder,
         loc, builder.getI32Type(),
         builder.getIntegerAttr(builder.getI32Type(), *clusterSize));
 
@@ -740,7 +740,7 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
     std::string specCstName =
         makeVarName(moduleOp, llvm::Twine(globalVarName) + "_sc");
 
-    return rewriter.create<spirv::SpecConstantOp>(
+    return spirv::SpecConstantOp::create(rewriter,
         loc, rewriter.getStringAttr(specCstName), attr);
   };
   {
@@ -774,7 +774,7 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
     std::string specCstCompositeName =
         (llvm::Twine(globalVarName) + "_scc").str();
 
-    specCstComposite = rewriter.create<spirv::SpecConstantCompositeOp>(
+    specCstComposite = spirv::SpecConstantCompositeOp::create(rewriter,
         loc, TypeAttr::get(globalType),
         rewriter.getStringAttr(specCstCompositeName),
         rewriter.getArrayAttr(constituents));
@@ -785,15 +785,15 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
     // Define a GlobalVarOp initialized using specialized constants
     // that is used to specify the printf format string
     // to be passed to the SPIRV CLPrintfOp.
-    globalVar = rewriter.create<spirv::GlobalVariableOp>(
+    globalVar = spirv::GlobalVariableOp::create(rewriter,
         loc, ptrType, globalVarName, FlatSymbolRefAttr::get(specCstComposite));
 
     globalVar->setAttr("Constant", rewriter.getUnitAttr());
   }
   // Get SSA value of Global variable and create pointer to i8 to point to
   // the format string.
-  Value globalPtr = rewriter.create<spirv::AddressOfOp>(loc, globalVar);
-  Value fmtStr = rewriter.create<spirv::BitcastOp>(
+  Value globalPtr = spirv::AddressOfOp::create(rewriter, loc, globalVar);
+  Value fmtStr = spirv::BitcastOp::create(rewriter,
       loc,
       spirv::PointerType::get(i8Type, spirv::StorageClass::UniformConstant),
       globalPtr);
@@ -801,7 +801,7 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
   // Get printf arguments.
   auto printfArgs = llvm::to_vector_of<Value, 4>(adaptor.getArgs());
 
-  rewriter.create<spirv::CLPrintfOp>(loc, i32Type, fmtStr, printfArgs);
+  spirv::CLPrintfOp::create(rewriter, loc, i32Type, fmtStr, printfArgs);
 
   // Need to erase the gpu.printf op as gpu.printf does not use result vs
   // spirv::CLPrintfOp has i32 resultType so cannot replace with new SPIR-V

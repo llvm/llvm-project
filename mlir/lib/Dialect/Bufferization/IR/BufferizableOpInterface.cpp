@@ -170,7 +170,7 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
   if (llvm::isa<RankedTensorType>(shapedValue.getType())) {
     tensor = shapedValue;
   } else if (llvm::isa<MemRefType>(shapedValue.getType())) {
-    tensor = b.create<ToTensorOp>(
+    tensor = ToTensorOp::create(b,
         loc, memref::getTensorTypeFromMemRefType(shapedValue.getType()),
         shapedValue);
   } else if (llvm::isa<UnrankedTensorType>(shapedValue.getType()) ||
@@ -209,7 +209,7 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
   }
 
   // Create AllocTensorOp.
-  auto allocTensorOp = b.create<AllocTensorOp>(loc, tensorType, dynamicSizes,
+  auto allocTensorOp = AllocTensorOp::create(b, loc, tensorType, dynamicSizes,
                                                copy ? tensor : Value());
 
   // Add 'memory_space' attribute. Not needed if 'copy' operand is specified.
@@ -753,7 +753,7 @@ void bufferization::replaceOpWithBufferizedValues(RewriterBase &rewriter,
       // ToTensorOp. Throughout bufferization, this ToTensorOp will gradually
       // loose all of its users and eventually DCE away.
       rewriter.setInsertionPointAfter(op);
-      replacement = rewriter.create<bufferization::ToTensorOp>(
+      replacement = bufferization::ToTensorOp::create(rewriter,
           replacement.getLoc(), opResult.getType(), replacement);
     }
     replacements.push_back(replacement);
@@ -779,7 +779,7 @@ FailureOr<Value> BufferizationOptions::createAlloc(OpBuilder &b, Location loc,
         .create<memref::AllocOp>(loc, type, dynShape,
                                  b.getI64IntegerAttr(bufferAlignment))
         .getResult();
-  return b.create<memref::AllocOp>(loc, type, dynShape).getResult();
+  return memref::AllocOp::create(b, loc, type, dynShape).getResult();
 }
 
 /// Create a memory copy between two memref buffers.
@@ -788,7 +788,7 @@ LogicalResult BufferizationOptions::createMemCpy(OpBuilder &b, Location loc,
   if (memCpyFn)
     return (*memCpyFn)(b, loc, from, to);
 
-  b.create<memref::CopyOp>(loc, from, to);
+  memref::CopyOp::create(b, loc, from, to);
   return success();
 }
 

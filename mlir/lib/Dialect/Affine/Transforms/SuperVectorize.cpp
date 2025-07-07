@@ -905,7 +905,7 @@ static void computeMemoryOpIndices(Operation *op, AffineMap map,
   for (auto resultExpr : map.getResults()) {
     auto singleResMap =
         AffineMap::get(map.getNumDims(), map.getNumSymbols(), resultExpr);
-    auto afOp = state.builder.create<AffineApplyOp>(op->getLoc(), singleResMap,
+    auto afOp = state.AffineApplyOp::create(builder, op->getLoc(), singleResMap,
                                                     mapOperands);
     results.push_back(afOp);
   }
@@ -961,7 +961,7 @@ static arith::ConstantOp vectorizeConstant(arith::ConstantOp constOp,
   auto vecForOp = cast<AffineForOp>(parentOp);
   state.builder.setInsertionPointToStart(vecForOp.getBody());
   auto newConstOp =
-      state.builder.create<arith::ConstantOp>(constOp.getLoc(), vecAttr);
+      state.arith::ConstantOp::create(builder, constOp.getLoc(), vecAttr);
 
   // Register vector replacement for future uses in the scope.
   state.registerOpVectorReplacement(constOp, newConstOp);
@@ -986,7 +986,7 @@ static Operation *vectorizeAffineApplyOp(AffineApplyOp applyOp,
     }
   }
 
-  auto newApplyOp = state.builder.create<AffineApplyOp>(
+  auto newApplyOp = state.AffineApplyOp::create(builder,
       applyOp.getLoc(), applyOp.getAffineMap(), updatedOperands);
 
   // Register the new affine.apply result.
@@ -1010,7 +1010,7 @@ static arith::ConstantOp createInitialVector(arith::AtomicRMWKind reductionKind,
   auto vecTy = getVectorType(scalarTy, state.strategy);
   auto vecAttr = DenseElementsAttr::get(vecTy, valueAttr);
   auto newConstOp =
-      state.builder.create<arith::ConstantOp>(oldOperand.getLoc(), vecAttr);
+      state.arith::ConstantOp::create(builder, oldOperand.getLoc(), vecAttr);
 
   return newConstOp;
 }
@@ -1062,10 +1062,10 @@ static Value createMask(AffineForOp vecForOp, VectorizationState &state) {
   AffineMap ubMap = vecForOp.getUpperBoundMap();
   Value ub;
   if (ubMap.getNumResults() == 1)
-    ub = state.builder.create<AffineApplyOp>(loc, vecForOp.getUpperBoundMap(),
+    ub = state.AffineApplyOp::create(builder, loc, vecForOp.getUpperBoundMap(),
                                              vecForOp.getUpperBoundOperands());
   else
-    ub = state.builder.create<AffineMinOp>(loc, vecForOp.getUpperBoundMap(),
+    ub = state.AffineMinOp::create(builder, loc, vecForOp.getUpperBoundMap(),
                                            vecForOp.getUpperBoundOperands());
   // Then we compute the number of (original) iterations left in the loop.
   AffineExpr subExpr =
@@ -1080,7 +1080,7 @@ static Value createMask(AffineForOp vecForOp, VectorizationState &state) {
   Type maskTy = VectorType::get(state.strategy->vectorSizes,
                                 state.builder.getIntegerType(1));
   Value mask =
-      state.builder.create<vector::CreateMaskOp>(loc, maskTy, itersLeft);
+      state.vector::CreateMaskOp::create(builder, loc, maskTy, itersLeft);
 
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ creating a mask:\n"
                     << itersLeft << "\n"
@@ -1123,7 +1123,7 @@ static Operation *vectorizeUniform(Value uniformVal,
   state.builder.setInsertionPointAfterValue(uniformScalarRepl);
 
   auto vectorTy = getVectorType(uniformVal.getType(), state.strategy);
-  auto bcastOp = state.builder.create<BroadcastOp>(uniformVal.getLoc(),
+  auto bcastOp = state.BroadcastOp::create(builder, uniformVal.getLoc(),
                                                    vectorTy, uniformScalarRepl);
   state.registerValueVectorReplacement(uniformVal, bcastOp);
   return bcastOp;
@@ -1256,7 +1256,7 @@ static Operation *vectorizeAffineLoad(AffineLoadOp loadOp,
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ permutationMap: ");
   LLVM_DEBUG(permutationMap.print(dbgs()));
 
-  auto transfer = state.builder.create<vector::TransferReadOp>(
+  auto transfer = state.vector::TransferReadOp::create(builder,
       loadOp.getLoc(), vectorType, loadOp.getMemRef(), indices,
       /*padding=*/std::nullopt, permutationMap);
 
@@ -1303,7 +1303,7 @@ static Operation *vectorizeAffineStore(AffineStoreOp storeOp,
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ permutationMap: ");
   LLVM_DEBUG(permutationMap.print(dbgs()));
 
-  auto transfer = state.builder.create<vector::TransferWriteOp>(
+  auto transfer = state.vector::TransferWriteOp::create(builder,
       storeOp.getLoc(), vectorValue, storeOp.getMemRef(), indices,
       permutationMap);
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ vectorized store: " << transfer);
@@ -1387,7 +1387,7 @@ static Operation *vectorizeAffineForOp(AffineForOp forOp,
     }
   }
 
-  auto vecForOp = state.builder.create<AffineForOp>(
+  auto vecForOp = state.AffineForOp::create(builder,
       forOp.getLoc(), forOp.getLowerBoundOperands(), forOp.getLowerBoundMap(),
       forOp.getUpperBoundOperands(), forOp.getUpperBoundMap(), newStep,
       vecIterOperands,
@@ -1512,7 +1512,7 @@ static Operation *vectorizeAffineYieldOp(AffineYieldOp yieldOp,
       // IterOperands are neutral element vectors.
       Value neutralVal = cast<AffineForOp>(newParentOp).getInits()[i];
       state.builder.setInsertionPoint(combinerOps.back());
-      Value maskedReducedVal = state.builder.create<arith::SelectOp>(
+      Value maskedReducedVal = state.arith::SelectOp::create(builder,
           reducedVal.getLoc(), mask, reducedVal, neutralVal);
       LLVM_DEBUG(
           dbgs() << "\n[early-vect]+++++ masking an input to a binary op that"

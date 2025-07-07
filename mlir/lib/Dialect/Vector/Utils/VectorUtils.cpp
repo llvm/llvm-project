@@ -331,7 +331,7 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
   assert(padValue.getType() == sourceShapedType.getElementType() &&
          "expected same pad element type to match source element type");
   int64_t readRank = inputVectorSizes.size();
-  auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+  auto zero = arith::ConstantIndexOp::create(builder, loc, 0);
   SmallVector<bool> inBoundsVal(readRank, true);
 
   if (useInBoundsInsteadOfMasking) {
@@ -341,7 +341,7 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
       inBoundsVal[i] = (sourceShape[i] == inputVectorSizes[i]) &&
                        ShapedType::isStatic(sourceShape[i]);
   }
-  auto transferReadOp = builder.create<vector::TransferReadOp>(
+  auto transferReadOp = vector::TransferReadOp::create(builder,
       loc,
       /*vectorType=*/vectorType,
       /*source=*/source,
@@ -356,7 +356,7 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
 
   auto maskType = VectorType::get(inputVectorSizes, builder.getI1Type());
   Value mask =
-      builder.create<vector::CreateMaskOp>(loc, maskType, mixedSourceDims);
+      vector::CreateMaskOp::create(builder, loc, maskType, mixedSourceDims);
   return mlir::vector::maskOperation(builder, transferReadOp, mask)
       ->getResult(0);
 }

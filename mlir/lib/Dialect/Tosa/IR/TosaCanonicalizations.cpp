@@ -845,7 +845,7 @@ struct PadSliceOptimization : public OpRewritePattern<tosa::SliceOp> {
         getTosaConstShape(rewriter, sliceOp.getLoc(), newPadPaddings);
     auto newPadTy =
         RankedTensorType::get(newPadShape, inputTy.getElementType());
-    auto newPadOp = rewriter.create<tosa::PadOp>(
+    auto newPadOp = tosa::PadOp::create(rewriter,
         padOp.getLoc(), newPadTy, padOp.getInput1(), newPaddingsOp,
         padOp.getPadConst());
 
@@ -897,7 +897,7 @@ struct SliceDynamicSizeCanonicalization
     }
 
     auto size_op = getTosaConstShape(rewriter, sliceOp.getLoc(), sliceSizes);
-    auto newSliceOp = rewriter.create<tosa::SliceOp>(
+    auto newSliceOp = tosa::SliceOp::create(rewriter,
         sliceOp.getLoc(), sliceOp.getType(), sliceOp.getInput1(),
         sliceOp.getStart(), size_op);
 

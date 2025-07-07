@@ -42,7 +42,7 @@ static Value castBuffer(OpBuilder &b, Value buffer, Type type) {
   // iter_arg's layout map must be changed (see uses of `castBuffer`).
   assert(memref::CastOp::areCastCompatible(buffer.getType(), type) &&
          "scf.while op bufferization: cast incompatible");
-  return b.create<memref::CastOp>(buffer.getLoc(), type, buffer).getResult();
+  return memref::CastOp::create(b, buffer.getLoc(), type, buffer).getResult();
 }
 
 /// Helper function for loop bufferization. Return "true" if the given value
@@ -191,7 +191,7 @@ struct ExecuteRegionOpInterface
 
     // Create new op and move over region.
     auto newOp =
-        rewriter.create<scf::ExecuteRegionOp>(op->getLoc(), newResultTypes);
+        scf::ExecuteRegionOp::create(rewriter, op->getLoc(), newResultTypes);
     newOp.getRegion().takeBody(executeRegionOp.getRegion());
 
     // Bufferize every block.
@@ -205,7 +205,7 @@ struct ExecuteRegionOpInterface
     SmallVector<Value> newResults;
     for (const auto &it : llvm::enumerate(executeRegionOp->getResultTypes())) {
       if (isa<TensorType>(it.value())) {
-        newResults.push_back(rewriter.create<bufferization::ToTensorOp>(
+        newResults.push_back(bufferization::ToTensorOp::create(rewriter,
             executeRegionOp.getLoc(), it.value(),
             newOp->getResult(it.index())));
       } else {
@@ -261,7 +261,7 @@ struct IfOpInterface
     // Create new op.
     rewriter.setInsertionPoint(ifOp);
     auto newIfOp =
-        rewriter.create<scf::IfOp>(ifOp.getLoc(), newTypes, ifOp.getCondition(),
+        scf::IfOp::create(rewriter, ifOp.getLoc(), newTypes, ifOp.getCondition(),
                                    /*withElseRegion=*/true);
 
     // Move over then/else blocks.
@@ -374,7 +374,7 @@ struct IndexSwitchOpInterface
 
     // Create new op.
     rewriter.setInsertionPoint(switchOp);
-    auto newSwitchOp = rewriter.create<scf::IndexSwitchOp>(
+    auto newSwitchOp = scf::IndexSwitchOp::create(rewriter,
         switchOp.getLoc(), newTypes, switchOp.getArg(), switchOp.getCases(),
         switchOp.getCases().size());
 
@@ -769,7 +769,7 @@ struct ForOpInterface
     }
 
     // Construct a new scf.for op with memref instead of tensor values.
-    auto newForOp = rewriter.create<scf::ForOp>(
+    auto newForOp = scf::ForOp::create(rewriter,
         forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
         forOp.getStep(), castedInitArgs);
     newForOp->setAttrs(forOp->getAttrs());
@@ -1005,7 +1005,7 @@ struct WhileOpInterface
     // Construct a new scf.while op with memref instead of tensor values.
     ValueRange argsRangeBefore(castedInitArgs);
     TypeRange argsTypesBefore(argsRangeBefore);
-    auto newWhileOp = rewriter.create<scf::WhileOp>(
+    auto newWhileOp = scf::WhileOp::create(rewriter,
         whileOp.getLoc(), argsTypesAfter, castedInitArgs);
 
     // Add before/after regions to the new op.
@@ -1265,7 +1265,7 @@ struct ForallOpInterface
              forallOp.getBody()->getArguments().drop_front(rank), buffers)) {
       BlockArgument bbArg = std::get<0>(it);
       Value buffer = std::get<1>(it);
-      Value bufferAsTensor = rewriter.create<ToTensorOp>(
+      Value bufferAsTensor = ToTensorOp::create(rewriter,
           forallOp.getLoc(), bbArg.getType(), buffer);
       bbArg.replaceAllUsesWith(bufferAsTensor);
     }
@@ -1274,7 +1274,7 @@ struct ForallOpInterface
     // introduced terminator.
     rewriter.setInsertionPoint(forallOp);
     ForallOp newForallOp;
-    newForallOp = rewriter.create<ForallOp>(
+    newForallOp = ForallOp::create(rewriter,
         forallOp.getLoc(), forallOp.getMixedLowerBound(),
         forallOp.getMixedUpperBound(), forallOp.getMixedStep(),
         /*outputs=*/ValueRange(), forallOp.getMapping());

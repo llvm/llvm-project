@@ -73,7 +73,7 @@ void mlir::math::populateExtendToSupportedTypesTypeConverter(
       });
   typeConverter.addTargetMaterialization(
       [](OpBuilder &b, Type target, ValueRange input, Location loc) {
-        auto extFOp = b.create<arith::ExtFOp>(loc, target, input);
+        auto extFOp = arith::ExtFOp::create(b, loc, target, input);
         extFOp.setFastmath(arith::FastMathFlags::contract);
         return extFOp;
       });
@@ -104,7 +104,7 @@ LogicalResult ExtendToSupportedTypesRewritePattern::matchAndRewrite(
   for (auto [result, newType, origType] : llvm::zip_equal(
            results, (*legalized)->getResultTypes(), op->getResultTypes())) {
     if (newType != origType) {
-      auto truncFOp = rewriter.create<arith::TruncFOp>(loc, origType, result);
+      auto truncFOp = arith::TruncFOp::create(rewriter, loc, origType, result);
       truncFOp.setFastmath(arith::FastMathFlags::contract);
       result = truncFOp.getResult();
     }

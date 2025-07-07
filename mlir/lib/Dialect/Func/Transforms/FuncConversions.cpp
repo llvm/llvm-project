@@ -46,7 +46,7 @@ struct CallOpSignatureConversion : public OpConversionPattern<CallOp> {
 
     // Substitute with the new result types from the corresponding FuncType
     // conversion.
-    auto newCallOp = rewriter.create<CallOp>(
+    auto newCallOp = CallOp::create(rewriter,
         callOp.getLoc(), callOp.getCallee(), convertedResults,
         flattenValues(adaptor.getOperands()));
     SmallVector<ValueRange> replacements;

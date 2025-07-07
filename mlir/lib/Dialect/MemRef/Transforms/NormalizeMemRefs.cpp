@@ -276,7 +276,7 @@ void NormalizeMemRefs::updateFunctionSignature(func::FuncOp funcOp,
     if (!callOp)
       continue;
     Operation *newCallOp =
-        builder.create<func::CallOp>(userOp->getLoc(), callOp.getCalleeAttr(),
+        func::CallOp::create(builder, userOp->getLoc(), callOp.getCalleeAttr(),
                                      resultTypes, userOp->getOperands());
     bool replacingMemRefUsesFailed = false;
     bool returnTypeChanged = false;

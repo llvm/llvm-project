@@ -118,7 +118,7 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
     // Update function calls.
     for (func::CallOp callOp : callerMap[funcOp]) {
       rewriter.setInsertionPoint(callOp);
-      auto newCallOp = rewriter.create<func::CallOp>(callOp.getLoc(), funcOp,
+      auto newCallOp = func::CallOp::create(rewriter, callOp.getLoc(), funcOp,
                                                      callOp.getOperands());
       SmallVector<Value> newResults;
       int64_t nextResult = 0;
@@ -134,7 +134,7 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
         Type expectedType = callOp.getResult(i).getType();
         if (replacement.getType() != expectedType) {
           // A cast must be inserted at the call site.
-          replacement = rewriter.create<memref::CastOp>(
+          replacement = memref::CastOp::create(rewriter,
               callOp.getLoc(), expectedType, replacement);
         }
         newResults.push_back(replacement);

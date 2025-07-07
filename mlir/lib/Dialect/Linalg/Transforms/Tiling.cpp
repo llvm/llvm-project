@@ -94,10 +94,10 @@ static void emitIsPositiveIndexAssertion(ImplicitLocOpBuilder &b,
     return;
   }
 
-  Value zero = b.create<arith::ConstantIndexOp>(0);
-  Value condition = b.create<arith::CmpIOp>(arith::CmpIPredicate::sgt,
+  Value zero = arith::ConstantIndexOp::create(b, 0);
+  Value condition = arith::CmpIOp::create(b, arith::CmpIPredicate::sgt,
                                             cast<Value>(value), zero);
-  b.create<cf::AssertOp>(
+  cf::AssertOp::create(b,
       condition,
       b.getStringAttr("expected strictly positive tile size and divisor"));
 }
@@ -317,9 +317,9 @@ mlir::linalg::computeMultiTileSizes(OpBuilder &builder, LinalgOp op,
     Value coveredSize =
         apply(s0 * s1 + s2 * s3, {spec.lowTileSize, spec.lowTripCount,
                                   spec.highTileSize, spec.highTripCount});
-    Value equals = b.create<arith::CmpIOp>(arith::CmpIPredicate::eq,
+    Value equals = arith::CmpIOp::create(b, arith::CmpIPredicate::eq,
                                            coveredSize, tripCount);
-    b.create<cf::AssertOp>(
+    cf::AssertOp::create(b,
         equals, builder.getStringAttr(
                     "could not compute dynamic multi-size tile shapes"));
   }
@@ -656,7 +656,7 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
       getValueOrCreateConstantIndexOp(b, loc, nonZeroNumThreads);
 
   // 2. Create the ForallOp with an empty region.
-  scf::ForallOp forallOp = b.create<scf::ForallOp>(
+  scf::ForallOp forallOp = scf::ForallOp::create(b,
       loc, getAsOpFoldResult(materializedNonZeroNumThreads), initTensors,
       mapping);
 
@@ -689,7 +689,7 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
       sizes[reductionDim] = b.getIndexAttr(1);
       outOffsets[reductionDim] = forallOp.getInductionVars()[0];
       // TODO: use SubsetExtractOpInterface once it is available.
-      tiledDpsInitOperands.push_back(b.create<tensor::ExtractSliceOp>(
+      tiledDpsInitOperands.push_back(tensor::ExtractSliceOp::create(b,
           loc, cast<RankedTensorType>(initOperand.getType()),
           destBbArgs[destNum], outOffsets, sizes, strides));
     }
@@ -768,7 +768,7 @@ FailureOr<linalg::ForallReductionTilingResult> linalg::tileReductionUsingForall(
     // 6.b. Parallel insertions are inserted at the end of the combining
     // terminator.
     b.setInsertionPointToEnd(forallOp.getTerminator().getBody());
-    b.create<tensor::ParallelInsertSliceOp>(
+    tensor::ParallelInsertSliceOp::create(b,
         loc, result, bbArg, resultOffsetsRank, resultSizesRank, strides);
   }
 

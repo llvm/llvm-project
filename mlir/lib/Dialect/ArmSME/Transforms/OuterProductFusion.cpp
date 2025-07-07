@@ -136,7 +136,7 @@ public:
 
     auto loc = op.getLoc();
     auto packInputs = [&](Value lhs, Value rhs) {
-      return rewriter.create<vector::InterleaveOp>(loc, lhs, rhs);
+      return vector::InterleaveOp::create(rewriter, loc, lhs, rhs);
     };
 
     auto lhs = packInputs(op1.getLhs().getDefiningOp()->getOperand(0),
@@ -284,7 +284,7 @@ public:
 
     auto loc = op.getLoc();
     auto packInputs = [&](Value lhs, Value rhs) {
-      return rewriter.create<vector::InterleaveOp>(loc, lhs, rhs);
+      return vector::InterleaveOp::create(rewriter, loc, lhs, rhs);
     };
 
     auto lhs0 = packInputs(op1.getLhs().getDefiningOp()->getOperand(0),
@@ -456,7 +456,7 @@ struct SwapVectorExtractOfArithExtend
     Value extendSource = extendOp->getOperand(0);
 
     // Create new extract from source of extend.
-    Value newExtract = rewriter.create<vector::ExtractOp>(
+    Value newExtract = vector::ExtractOp::create(rewriter,
         loc, extendSource, extractOp.getMixedPosition());
 
     // Extend new extract to original result type.
@@ -503,7 +503,7 @@ struct SwapVectorScalableExtractOfArithExtend
     // Create new extract from source of extend.
     VectorType extractResultVectorType =
         resultType.clone(extendSourceVectorType.getElementType());
-    Value newExtract = rewriter.create<vector::ScalableExtractOp>(
+    Value newExtract = vector::ScalableExtractOp::create(rewriter,
         loc, extractResultVectorType, extendSource, extractOp.getPos());
 
     // Extend new extract to original result type.

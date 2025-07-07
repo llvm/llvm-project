@@ -58,27 +58,27 @@ std::pair<ParallelOp, ParallelOp>
 mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
                             bool noMinMaxBounds) {
   OpBuilder b(op);
-  auto zero = b.create<arith::ConstantIndexOp>(op.getLoc(), 0);
+  auto zero = arith::ConstantIndexOp::create(b, op.getLoc(), 0);
   SmallVector<Value, 2> tileSizeConstants;
   tileSizeConstants.reserve(op.getUpperBound().size());
   for (size_t i = 0, end = op.getUpperBound().size(); i != end; ++i) {
     if (i < tileSizes.size())
       tileSizeConstants.push_back(
-          b.create<arith::ConstantIndexOp>(op.getLoc(), tileSizes[i]));
+          arith::ConstantIndexOp::create(b, op.getLoc(), tileSizes[i]));
     else
       // Just pick 1 for the remaining dimensions.
       tileSizeConstants.push_back(
-          b.create<arith::ConstantIndexOp>(op.getLoc(), 1));
+          arith::ConstantIndexOp::create(b, op.getLoc(), 1));
   }
 
   // Create the outer loop with adjusted steps.
   SmallVector<Value, 2> newSteps;
   newSteps.reserve(op.getStep().size());
   for (auto step : llvm::zip(op.getStep(), tileSizeConstants)) {
-    newSteps.push_back(b.create<arith::MulIOp>(op.getLoc(), std::get<0>(step),
+    newSteps.push_back(arith::MulIOp::create(b, op.getLoc(), std::get<0>(step),
                                                std::get<1>(step)));
   }
-  auto outerLoop = b.create<ParallelOp>(op.getLoc(), op.getLowerBound(),
+  auto outerLoop = ParallelOp::create(b, op.getLoc(), op.getLowerBound(),
                                         op.getUpperBound(), newSteps);
   b.setInsertionPointToStart(outerLoop.getBody());
 
@@ -130,10 +130,10 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
     // Otherwise, we dynamically compute the bound for
     // each iteration of the outer loop.
     newBounds.push_back(
-        b.create<affine::AffineMinOp>(op.getLoc(), b.getIndexType(), minMap,
+        affine::AffineMinOp::create(b, op.getLoc(), b.getIndexType(), minMap,
                                       ValueRange{newStep, upperBound, iv}));
   }
-  auto innerLoop = b.create<ParallelOp>(
+  auto innerLoop = ParallelOp::create(b,
       op.getLoc(), SmallVector<Value, 2>(newBounds.size(), zero), newBounds,
       op.getStep());
 
@@ -141,20 +141,20 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
     b.setInsertionPointToStart(innerLoop.getBody());
     // Insert in-bound check
     Value inbound =
-        b.create<arith::ConstantIntOp>(op.getLoc(), b.getIntegerType(1), 1);
+        arith::ConstantIntOp::create(b, op.getLoc(), b.getIntegerType(1), 1);
     for (auto [outerUpperBound, outerIV, innerIV, innerStep] :
          llvm::zip(outerLoop.getUpperBound(), outerLoop.getInductionVars(),
                    innerLoop.getInductionVars(), innerLoop.getStep())) {
       // %in_bound = %in_bound &&
       //             (%inner_iv * %inner_step + %outer_iv < %outer_upper_bound)
-      Value index = b.create<arith::AddIOp>(
-          op.getLoc(), b.create<arith::MulIOp>(op.getLoc(), innerIV, innerStep),
+      Value index = arith::AddIOp::create(b,
+          op.getLoc(), arith::MulIOp::create(b, op.getLoc(), innerIV, innerStep),
           outerIV);
-      Value dimInbound = b.create<arith::CmpIOp>(
+      Value dimInbound = arith::CmpIOp::create(b,
           op.getLoc(), arith::CmpIPredicate::ult, index, outerUpperBound);
-      inbound = b.create<arith::AndIOp>(op.getLoc(), inbound, dimInbound);
+      inbound = arith::AndIOp::create(b, op.getLoc(), inbound, dimInbound);
     }
-    auto ifInbound = b.create<IfOp>(op.getLoc(),
+    auto ifInbound = IfOp::create(b, op.getLoc(),
                                     /*resultTypes*/ ArrayRef<Type>{}, inbound,
                                     /*hasElseRegion*/ false);
     ifInbound.getThenRegion().takeBody(op.getRegion());
@@ -162,12 +162,12 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
     // Replace the scf.reduce terminator with an scf.yield terminator.
     Operation *reduceOp = thenBlock.getTerminator();
     b.setInsertionPointToEnd(&thenBlock);
-    b.create<scf::YieldOp>(reduceOp->getLoc());
+    scf::YieldOp::create(b, reduceOp->getLoc());
     reduceOp->erase();
     b.setInsertionPointToStart(innerLoop.getBody());
     for (const auto &ivs : llvm::enumerate(llvm::zip(
              innerLoop.getInductionVars(), outerLoop.getInductionVars()))) {
-      auto newIndex = b.create<arith::AddIOp>(
+      auto newIndex = arith::AddIOp::create(b,
           op.getLoc(), std::get<0>(ivs.value()), std::get<1>(ivs.value()));
       thenBlock.getArgument(ivs.index())
           .replaceAllUsesExcept(newIndex, newIndex);
@@ -179,7 +179,7 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
     for (auto ivs : llvm::zip(innerLoop.getInductionVars(),
                               outerLoop.getInductionVars())) {
       Value innerIndex = std::get<0>(ivs);
-      auto newIndex = b.create<arith::AddIOp>(op.getLoc(), std::get<0>(ivs),
+      auto newIndex = arith::AddIOp::create(b, op.getLoc(), std::get<0>(ivs),
                                               std::get<1>(ivs));
       innerIndex.replaceAllUsesExcept(newIndex, newIndex);
     }

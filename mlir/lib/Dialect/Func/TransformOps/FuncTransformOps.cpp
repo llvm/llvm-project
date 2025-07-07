@@ -170,7 +170,7 @@ transform::CastAndCallOp::apply(transform::TransformRewriter &rewriter,
     }
   }
 
-  auto callOp = rewriter.create<func::CallOp>(insertionPoint->getLoc(),
+  auto callOp = func::CallOp::create(rewriter, insertionPoint->getLoc(),
                                               targetFunction, inputs);
 
   // Cast the call results back to the expected types. If any conversions fail

@@ -236,11 +236,11 @@ static void generateFusedElementwiseOpRegion(
     fusedIndices.reserve(numFusedOpLoops);
     llvm::transform(llvm::seq<uint64_t>(0, numFusedOpLoops),
                     std::back_inserter(fusedIndices), [&](uint64_t dim) {
-                      return rewriter.create<IndexOp>(producer.getLoc(), dim);
+                      return IndexOp::create(rewriter, producer.getLoc(), dim);
                     });
     for (IndexOp indexOp :
          llvm::make_early_inc_range(producerBlock.getOps<IndexOp>())) {
-      Value newIndex = rewriter.create<affine::AffineApplyOp>(
+      Value newIndex = affine::AffineApplyOp::create(rewriter,
           producer.getLoc(),
           consumerToProducerLoopsMap.getSubMap(indexOp.getDim()), fusedIndices);
       mapper.map(indexOp.getResult(), newIndex);
@@ -327,7 +327,7 @@ static void generateFusedElementwiseOpRegion(
   }
   for (auto consumerYieldVal : consumerYieldOp.getOperands())
     fusedYieldValues.push_back(mapper.lookupOrDefault(consumerYieldVal));
-  rewriter.create<YieldOp>(fusedOp.getLoc(), fusedYieldValues);
+  YieldOp::create(rewriter, fusedOp.getLoc(), fusedYieldValues);
 
   // Sanity checks.
   assert(fusedBlock->getNumArguments() == fusedOp.getNumOperands() &&
@@ -416,7 +416,7 @@ mlir::linalg::fuseElementwiseOps(RewriterBase &rewriter,
   }
 
   // Generate the fused op.
-  auto fusedOp = rewriter.create<GenericOp>(
+  auto fusedOp = GenericOp::create(rewriter,
       consumer.getLoc(), fusedResultTypes, fusedInputOperands,
       fusedOutputOperands, rewriter.getAffineMapArrayAttr(fusedIndexMaps),
       consumer.getIteratorTypes(),
@@ -750,9 +750,9 @@ static void updateExpandedGenericOpRegion(PatternRewriter &rewriter,
     expandedIndices.reserve(expandedDims.size() - 1);
     llvm::transform(
         expandedDims.drop_front(), std::back_inserter(expandedIndices),
-        [&](int64_t dim) { return rewriter.create<IndexOp>(loc, dim); });
+        [&](int64_t dim) { return IndexOp::create(rewriter, loc, dim); });
     OpFoldResult newIndex =
-        rewriter.create<IndexOp>(loc, expandedDims.front()).getResult();
+        IndexOp::create(rewriter, loc, expandedDims.front()).getResult();
     for (auto [expandedShape, expandedIndex] :
          llvm::zip(expandedDimsShape, expandedIndices)) {
       AffineExpr idx, acc, shape;
@@ -796,7 +796,7 @@ static Operation *createExpandedTransposeOp(PatternRewriter &rewriter,
       newPerm.push_back(dim);
     }
   }
-  return rewriter.create<TransposeOp>(transposeOp.getLoc(), expandedInput,
+  return TransposeOp::create(rewriter, transposeOp.getLoc(), expandedInput,
                                       output, invertPermutationVector(newPerm));
 }
 
@@ -813,7 +813,7 @@ static Operation *createExpandedGenericOp(
     for (auto j : expansionInfo.getExpandedDims(i))
       iteratorTypes[j] = type;
 
-  Operation *fused = rewriter.create<GenericOp>(
+  Operation *fused = GenericOp::create(rewriter,
       linalgOp.getLoc(), resultTypes, expandedOpOperands, outputs,
       expandedOpIndexingMaps, iteratorTypes);
 
@@ -933,7 +933,7 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, Operation *reshapeOp,
                 reassociation,
                 /*isExpandingReshape=*/true)))
           return std::nullopt;
-        expandedOpOperands.push_back(rewriter.create<tensor::ExpandShapeOp>(
+        expandedOpOperands.push_back(tensor::ExpandShapeOp::create(rewriter,
             loc, expandedOperandType, opOperand->get(), reassociation,
             expandedOperandShape));
         continue;
@@ -961,7 +961,7 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, Operation *reshapeOp,
               reassociation,
               /*isExpandingReshape=*/true)))
         return std::nullopt;
-      outputs.push_back(rewriter.create<tensor::ExpandShapeOp>(
+      outputs.push_back(tensor::ExpandShapeOp::create(rewriter,
           loc, expandedOutputType, opOperand.get(), reassociation,
           expandedOutputShape));
     } else {
@@ -984,7 +984,7 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, Operation *reshapeOp,
               linalgOp.getMatchingIndexingMap(
                   linalgOp.getDpsInitOperand(resultNumber)),
               expansionInfo);
-      resultVals.push_back(rewriter.create<tensor::CollapseShapeOp>(
+      resultVals.push_back(tensor::CollapseShapeOp::create(rewriter,
           linalgOp.getLoc(), opResult.getType(),
           fusedOp->getResult(resultNumber), reassociation));
     } else {
@@ -1086,7 +1086,7 @@ public:
 
     Location loc = padOp->getLoc();
     RankedTensorType expandedPaddedType = paddedType.clone(expandedPaddedShape);
-    auto newPadOp = rewriter.create<tensor::PadOp>(
+    auto newPadOp = tensor::PadOp::create(rewriter,
         loc, expandedPaddedType, reshapeOp.getSrc(), newLow, newHigh,
         padOp.getConstantPaddingValue(), padOp.getNofold());
 
@@ -1603,7 +1603,7 @@ static void generateCollapsedIndexingRegion(
        enumerate(collapsingInfo.getCollapsedOpToOrigOpMapping())) {
     ReassociationIndicesRef foldedDimsRef(foldedDims.value());
     Value newIndexVal =
-        rewriter.create<linalg::IndexOp>(loc, foldedDims.index());
+        linalg::IndexOp::create(rewriter, loc, foldedDims.index());
     for (auto dim : llvm::reverse(foldedDimsRef.drop_front())) {
       Value loopDim =
           getValueOrCreateConstantIndexOp(rewriter, loc, loopRange[dim]);
@@ -1687,7 +1687,7 @@ GenericOp cloneToCollapsedOp<GenericOp>(RewriterBase &rewriter,
   SmallVector<utils::IteratorType> iteratorTypes(getCollapsedOpIteratorTypes(
       origOp.getIteratorTypesArray(), collapsingInfo));
 
-  GenericOp collapsedOp = rewriter.create<linalg::GenericOp>(
+  GenericOp collapsedOp = linalg::GenericOp::create(rewriter,
       origOp.getLoc(), resultTypes, inputOperands, outputOperands, indexingMaps,
       iteratorTypes, [](OpBuilder &builder, Location loc, ValueRange args) {});
   Block *origOpBlock = &origOp->getRegion(0).front();
@@ -1794,11 +1794,11 @@ FailureOr<CollapseResult> mlir::linalg::collapseOpIterationDims(
       if (isa<MemRefType>(collapsedOpResult.getType())) {
         MemRefType expandShapeResultType = MemRefType::get(
             originalResultType.getShape(), originalResultType.getElementType());
-        result = rewriter.create<memref::ExpandShapeOp>(
+        result = memref::ExpandShapeOp::create(rewriter,
             loc, expandShapeResultType, collapsedOpResult, reassociation,
             resultShape);
       } else {
-        result = rewriter.create<tensor::ExpandShapeOp>(
+        result = tensor::ExpandShapeOp::create(rewriter,
             loc, originalResultType, collapsedOpResult, reassociation,
             resultShape);
       }
@@ -1982,7 +1982,7 @@ public:
 
     RankedTensorType collapsedPaddedType =
         paddedType.clone(collapsedPaddedShape);
-    auto newPadOp = rewriter.create<tensor::PadOp>(
+    auto newPadOp = tensor::PadOp::create(rewriter,
         loc, collapsedPaddedType, reshapeOp.getSrc(), newLow, newHigh,
         padOp.getConstantPaddingValue(), padOp.getNofold());
 
@@ -2117,10 +2117,10 @@ public:
 
       // Create a constant scalar value from the splat constant.
       Value scalarConstant =
-          rewriter.create<arith::ConstantOp>(def->getLoc(), constantAttr);
+          arith::ConstantOp::create(rewriter, def->getLoc(), constantAttr);
 
       SmallVector<Value> outputOperands = genericOp.getOutputs();
-      auto fusedOp = rewriter.create<GenericOp>(
+      auto fusedOp = GenericOp::create(rewriter,
           rewriter.getFusedLoc(fusedLocs), genericOp->getResultTypes(),
           /*inputs=*/fusedOperands,
           /*outputs=*/outputOperands,
@@ -2183,7 +2183,7 @@ struct RemoveOutsDependency : public OpRewritePattern<GenericOp> {
         modifiedOutput = true;
         SmallVector<OpFoldResult> mixedSizes =
             tensor::getMixedSizes(rewriter, loc, operandVal);
-        Value emptyTensor = rewriter.create<tensor::EmptyOp>(
+        Value emptyTensor = tensor::EmptyOp::create(rewriter,
             loc, mixedSizes, operandType.getElementType());
         op->setOperand(opOperand.getOperandNumber(), emptyTensor);
       }

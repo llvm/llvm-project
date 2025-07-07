@@ -100,7 +100,7 @@ static bool doubleBuffer(Value oldMemRef, AffineForOp forOp) {
   }
 
   // Create and place the alloc right before the 'affine.for' operation.
-  Value newMemRef = bOuter.create<memref::AllocOp>(
+  Value newMemRef = memref::AllocOp::create(bOuter,
       forOp.getLoc(), newMemRefType, allocOperands);
 
   // Create 'iv mod 2' value to index the leading dimension.
@@ -108,7 +108,7 @@ static bool doubleBuffer(Value oldMemRef, AffineForOp forOp) {
   int64_t step = forOp.getStepAsInt();
   auto modTwoMap =
       AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0, d0.floorDiv(step) % 2);
-  auto ivModTwoOp = bInner.create<AffineApplyOp>(forOp.getLoc(), modTwoMap,
+  auto ivModTwoOp = AffineApplyOp::create(bInner, forOp.getLoc(), modTwoMap,
                                                  forOp.getInductionVar());
 
   // replaceAllMemRefUsesWith will succeed unless the forOp body has
@@ -130,7 +130,7 @@ static bool doubleBuffer(Value oldMemRef, AffineForOp forOp) {
   }
   // Insert the dealloc op right after the for loop.
   bOuter.setInsertionPointAfter(forOp);
-  bOuter.create<memref::DeallocOp>(forOp.getLoc(), newMemRef);
+  memref::DeallocOp::create(bOuter, forOp.getLoc(), newMemRef);
 
   return true;
 }

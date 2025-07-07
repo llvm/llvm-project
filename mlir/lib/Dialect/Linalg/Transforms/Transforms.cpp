@@ -269,11 +269,11 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
       packingMetadata.reassociations);
   Value paddingValue = packOp.getPaddingValue();
   if (!paddingValue) {
-    paddingValue = rewriter.create<arith::ConstantOp>(
+    paddingValue = arith::ConstantOp::create(rewriter,
         loc, rewriter.getZeroAttr(getElementTypeOrSelf(collapsed)));
   }
   auto padOp =
-      rewriter.create<tensor::PadOp>(loc, collapsed, packOp.getSource(), lows,
+      tensor::PadOp::create(rewriter, loc, collapsed, packOp.getSource(), lows,
                                      highs, paddingValue, /*nofold=*/false);
 
   LLVM_DEBUG(
@@ -313,7 +313,7 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
       SmallVector<OpFoldResult> sizes =
           tensor::getMixedSizes(rewriter, loc, packOp.getDest());
 
-      auto insertSliceOp = rewriter.create<tensor::InsertSliceOp>(
+      auto insertSliceOp = tensor::InsertSliceOp::create(rewriter,
           loc, /*source=*/padOp, /*dest=*/packOp.getDest(),
           /*offsets=*/zeros, sizes, /*strides=*/ones);
 
@@ -329,14 +329,14 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
   // 5. Expand from the padded result to the stripMinedShape.
   auto expandShapeResultType =
       RankedTensorType::Builder(packedTensorType).setShape(stripMinedShape);
-  auto reshapeOp = rewriter.create<tensor::ExpandShapeOp>(
+  auto reshapeOp = tensor::ExpandShapeOp::create(rewriter,
       loc, expandShapeResultType, padOp.getResult(),
       packingMetadata.reassociations);
 
   // 6. Transpose stripMinedShape to packedShape.
   SmallVector<int64_t> transpPerm =
       invertPermutationVector(packedToStripMinedShapePerm);
-  auto transposeOp = rewriter.create<linalg::TransposeOp>(
+  auto transposeOp = linalg::TransposeOp::create(rewriter,
       loc, reshapeOp.getResult(), packOp.getDest(), transpPerm);
 
   LLVM_DEBUG(DBGSNL(); DBGSNL(); DBGSNL();
@@ -371,7 +371,7 @@ linalg::lowerUnPack(RewriterBase &rewriter, linalg::UnPackOp unPackOp,
     SmallVector<OpFoldResult> sizes(packedRank - destShape.size(), one);
     sizes.append(tensor::getMixedSizes(rewriter, loc, unPackOp.getDest()));
 
-    auto extractSliceOp = rewriter.create<tensor::ExtractSliceOp>(
+    auto extractSliceOp = tensor::ExtractSliceOp::create(rewriter,
         loc, destTensorType, unPackOp.getSource(),
         SmallVector<OpFoldResult>(packedRank, zero), sizes,
         SmallVector<OpFoldResult>(packedRank, one));
@@ -404,9 +404,9 @@ linalg::lowerUnPack(RewriterBase &rewriter, linalg::UnPackOp unPackOp,
   SmallVector<OpFoldResult, 4> dims =
       tensor::getMixedSizes(rewriter, loc, unPackOp.getSource());
   applyPermutationToVector(dims, packedToStripMinedShapePerm);
-  auto emptyOp = rewriter.create<tensor::EmptyOp>(
+  auto emptyOp = tensor::EmptyOp::create(rewriter,
       loc, dims, stripMinedTensorType.getElementType());
-  auto transposeOp = rewriter.create<linalg::TransposeOp>(
+  auto transposeOp = linalg::TransposeOp::create(rewriter,
       loc, unPackOp.getSource(), emptyOp, packedToStripMinedShapePerm);
 
   LLVM_DEBUG(
@@ -426,20 +426,20 @@ linalg::lowerUnPack(RewriterBase &rewriter, linalg::UnPackOp unPackOp,
       DBGSNL(); DBGS() << "collapsed type: " << collapsedType; DBGSNL(););
 
   // 4. Collapse from the stripMinedShape to the padded result.
-  auto reshapeOp = rewriter.create<tensor::CollapseShapeOp>(
+  auto reshapeOp = tensor::CollapseShapeOp::create(rewriter,
       loc, collapsedType, transposeOp->getResult(0),
       packingMetadata.reassociations);
 
   // 5. ExtractSlice.
   int64_t destRank = destTensorType.getRank();
-  auto extractSliceOp = rewriter.create<tensor::ExtractSliceOp>(
+  auto extractSliceOp = tensor::ExtractSliceOp::create(rewriter,
       loc, destTensorType, reshapeOp->getResult(0),
       SmallVector<OpFoldResult>(destRank, zero),
       tensor::getMixedSizes(rewriter, loc, unPackOp.getDest()),
       SmallVector<OpFoldResult>(destRank, one));
 
   // 6. Inject a copy to preserve DPS.
-  auto copyOp = rewriter.create<linalg::CopyOp>(
+  auto copyOp = linalg::CopyOp::create(rewriter,
       loc, extractSliceOp->getResult(0), unPackOp.getDest());
 
   // 7. Replace unPackOp by copyOp.
@@ -554,15 +554,15 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
               operandType.getShape(), innerPos,
               cast<ShapedType>(dest.getType()).getShape(), {},
               innerPackSizes)) {
-        packOps.push_back(rewriter.create<linalg::PackOp>(
+        packOps.push_back(linalg::PackOp::create(rewriter,
             loc, operand, dest, innerPos, innerPackSizes));
       } else {
         // TODO: value of the padding attribute should be determined by
         // consumers.
         auto zeroAttr =
             rewriter.getZeroAttr(getElementTypeOrSelf(dest.getType()));
-        Value zero = rewriter.create<arith::ConstantOp>(loc, zeroAttr);
-        packOps.push_back(rewriter.create<linalg::PackOp>(
+        Value zero = arith::ConstantOp::create(rewriter, loc, zeroAttr);
+        packOps.push_back(linalg::PackOp::create(rewriter,
             loc, operand, dest, innerPos, innerPackSizes, zero));
       }
       inputsAndInits.push_back(packOps.back());
@@ -574,7 +574,7 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
       ValueRange{inputsAndInits}.take_front(linalgOp.getNumDpsInputs());
   ValueRange inits =
       ValueRange{inputsAndInits}.take_back(linalgOp.getNumDpsInits());
-  auto packedLinalgOp = rewriter.create<linalg::GenericOp>(
+  auto packedLinalgOp = linalg::GenericOp::create(rewriter,
       linalgOp.getLoc(), inits.getTypes(), inputs, inits, indexingMaps,
       iteratorTypes);
   packedLinalgOp.getRegion().takeBody(linalgOp->getRegion(0));
@@ -589,7 +589,7 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
       continue;
     }
     // Build the symmetrical UnPackOp to the existing PackOp.
-    unPackOps.push_back(rewriter.create<linalg::UnPackOp>(
+    unPackOps.push_back(linalg::UnPackOp::create(rewriter,
         packedLinalgOp->getLoc(), result, maybePackedInit.getSource(),
         maybePackedInit.getInnerDimsPos(), maybePackedInit.getMixedTiles()));
     results.push_back(unPackOps.back());
@@ -655,7 +655,7 @@ static LinalgOp transposeOneLinalgOperandAndReplace(
   operands[opOperand.getOperandNumber()] = transposedValue;
 
   ValueRange operandsRef(operands);
-  auto transposedGenericOp = rewriter.create<linalg::GenericOp>(
+  auto transposedGenericOp = linalg::GenericOp::create(rewriter,
       /*location=*/linalgOp->getLoc(),
       /*resultTensorTypes=*/
       operandsRef.drop_front(linalgOp.getNumDpsInputs()).getTypes(),
@@ -904,7 +904,7 @@ mlir::linalg::LinalgTilingOptions::setTileSizes(ArrayRef<int64_t> ts) {
     b.setInsertionPointToStart(
         &op->getParentOfType<func::FuncOp>().getBody().front());
     return llvm::to_vector<4>(map_range(tileSizes, [&](int64_t s) {
-      Value v = b.create<arith::ConstantIndexOp>(op->getLoc(), s);
+      Value v = arith::ConstantIndexOp::create(b, op->getLoc(), s);
       return v;
     }));
   };
@@ -926,11 +926,11 @@ Value DecomposePadOpPattern::createFillOrGenerateOp(
     // Move the padding value defined inside the PadOp block to outside.
     if (padValue.getParentBlock() == &padOp.getRegion().front())
       rewriter.moveOpBefore(padValue.getDefiningOp(), padOp);
-    return rewriter.create<FillOp>(padOp.getLoc(), padValue, dest).result();
+    return FillOp::create(rewriter, padOp.getLoc(), padValue, dest).result();
   }
 
   // Fill could not be optimized: Lower to tensor::GenerateOp with region.
-  auto generateOp = rewriter.create<tensor::GenerateOp>(
+  auto generateOp = tensor::GenerateOp::create(rewriter,
       padOp.getLoc(), padOp.getResultType(), dynSizes);
   // Copy region to new op.
   IRMapping bvm;
@@ -970,7 +970,7 @@ DecomposePadOpPattern::matchAndRewrite(tensor::PadOp padOp,
   }
 
   // Init tensor and fill it with padding.
-  Value emptyTensor = rewriter.create<tensor::EmptyOp>(
+  Value emptyTensor = tensor::EmptyOp::create(rewriter,
       padOp.getLoc(), staticSizes, resultType.getElementType(), dynSizes);
   Value fill = createFillOrGenerateOp(rewriter, padOp, emptyTensor, dynSizes);
 
@@ -1222,11 +1222,11 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
 
   applyPermutationToVector<OpFoldResult>(transShapeForEmptyOp,
                                          srcPermForTranspose);
-  Value empty = rewriter.create<tensor::EmptyOp>(
+  Value empty = tensor::EmptyOp::create(rewriter,
       loc, transShapeForEmptyOp, packOp.getSourceType().getElementType());
 
   // 2.2 Create linalg.transpose
-  auto transposedOp = rewriter.create<linalg::TransposeOp>(loc, input, empty,
+  auto transposedOp = linalg::TransposeOp::create(rewriter, loc, input, empty,
                                                            srcPermForTranspose);
 
   // 3. Insert the inner tile to the destination:
@@ -1246,7 +1246,7 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
   }
 
   // 4. Replace tensor.packOp with tensor.insert_slice created above
-  auto insert = rewriter.create<tensor::InsertSliceOp>(
+  auto insert = tensor::InsertSliceOp::create(rewriter,
       loc, transposedOp.getResult()[0], packOp.getDest(), writeOffsets,
       writeSizes, writeStrides);
   rewriter.replaceOp(packOp, insert.getResult());
@@ -1313,7 +1313,7 @@ LogicalResult DecomposeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
     // outer-untiled-dims
     if (ShapedType::isDynamic(srcShape[i])) {
       OpFoldResult dynamicDim =
-          rewriter.create<tensor::DimOp>(loc, source, i).getResult();
+          tensor::DimOp::create(rewriter, loc, source, i).getResult();
       extractSliceSizes.push_back(dynamicDim);
       shapeForEmptyOp.push_back(dynamicDim);
     } else {
@@ -1340,7 +1340,7 @@ LogicalResult DecomposeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
   readShapeForExtractSlice.append(tileShape.begin(), tileShape.end());
   Type elemType = unpackOp.getSourceType().getElementType();
   auto readType = RankedTensorType::get(readShapeForExtractSlice, elemType);
-  Value innerTile = rewriter.create<tensor::ExtractSliceOp>(
+  Value innerTile = tensor::ExtractSliceOp::create(rewriter,
       loc, readType, unpackOp.getSource(), extractSliceOffsets,
       extractSliceSizes, extractSliceStrides);
 
@@ -1352,9 +1352,9 @@ LogicalResult DecomposeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
   applyPermutationToVector<OpFoldResult>(shapeForEmptyOp, perm);
 
   Value empty =
-      rewriter.create<tensor::EmptyOp>(loc, shapeForEmptyOp, elemType);
+      tensor::EmptyOp::create(rewriter, loc, shapeForEmptyOp, elemType);
   auto transposedOp =
-      rewriter.create<linalg::TransposeOp>(loc, innerTile, empty, perm);
+      linalg::TransposeOp::create(rewriter, loc, innerTile, empty, perm);
 
   // 3. Handle in-complete tiles if needed. It truncates trailing data from the
   // transposed tile.
@@ -1369,7 +1369,7 @@ LogicalResult DecomposeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
           tensor::getMixedSize(rewriter, loc, unpackOp.getDest(), i));
   }
 
-  auto partialTile = rewriter.create<tensor::ExtractSliceOp>(
+  auto partialTile = tensor::ExtractSliceOp::create(rewriter,
       loc, transposedOp.getResult()[0], tileOffsets, tileSizes, tileStrides);
 
   // 4. Insert the result to the destination tensor.
@@ -1382,7 +1382,7 @@ LogicalResult DecomposeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
     else
       writeSizes.push_back(oneIdxAttr);
   }
-  auto insert = rewriter.create<tensor::InsertSliceOp>(
+  auto insert = tensor::InsertSliceOp::create(rewriter,
       loc, partialTile, unpackOp.getDest(), writeOffsets, writeSizes,
       writeStrides);
   rewriter.replaceOp(unpackOp, insert.getResult());
@@ -1491,7 +1491,7 @@ FailureOr<Conv1DOp> DownscaleSizeOneWindowed2DConvolution<Conv2DOp, Conv1DOp>::
   dilations.erase(dilations.begin() + (removeH ? 0 : 1));
   auto dilationsAttr = rewriter.getI64VectorAttr(dilations);
 
-  auto conv1DOp = rewriter.create<Conv1DOp>(
+  auto conv1DOp = Conv1DOp::create(rewriter,
       loc, newOutputType, ValueRange{newInput, newKernel},
       ValueRange{newOutput}, stridesAttr, dilationsAttr);
 
@@ -1578,7 +1578,7 @@ DownscaleDepthwiseConv2DNhwcHwcOp::returningMatchAndRewrite(
   dilations.erase(dilations.begin() + (removeH ? 0 : 1));
   auto dilationsAttr = rewriter.getI64VectorAttr(dilations);
 
-  auto conv1DOp = rewriter.create<DepthwiseConv1DNwcWcOp>(
+  auto conv1DOp = DepthwiseConv1DNwcWcOp::create(rewriter,
       loc, newOutputType, ValueRange{newInput, newKernel},
       ValueRange{newOutput}, stridesAttr, dilationsAttr);
 
@@ -1635,7 +1635,7 @@ DownscaleConv2DOp::returningMatchAndRewrite(Conv2DOp convOp,
   Value newOutput = tensor::createCanonicalRankReducingExtractSliceOp(
       rewriter, loc, output, newOutputType);
 
-  auto conv1DOp = rewriter.create<Conv1DOp>(loc, newOutputType,
+  auto conv1DOp = Conv1DOp::create(rewriter, loc, newOutputType,
                                             ValueRange{newInput, newKernel},
                                             ValueRange{newOutput});
 

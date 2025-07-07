@@ -137,10 +137,10 @@ class ShapeCastOpRewritePattern : public OpRewritePattern<vector::ShapeCastOp> {
     const int64_t resultLeading = delta > 0 ? 0 : -delta;
 
     const Value source = shapeCast.getSource();
-    const Value poison = rewriter.create<ub::PoisonOp>(loc, resultType);
-    const Value extracted = rewriter.create<vector::ExtractOp>(
+    const Value poison = ub::PoisonOp::create(rewriter, loc, resultType);
+    const Value extracted = vector::ExtractOp::create(rewriter,
         loc, source, SmallVector<int64_t>(sourceLeading, 0));
-    const Value result = rewriter.create<vector::InsertOp>(
+    const Value result = vector::InsertOp::create(rewriter,
         loc, extracted, poison, SmallVector<int64_t>(resultLeading, 0));
 
     rewriter.replaceOp(shapeCast, result);
@@ -171,13 +171,13 @@ class ShapeCastOpRewritePattern : public OpRewritePattern<vector::ShapeCastOp> {
 
     SmallVector<int64_t> extractIndex(sourceDim, 0);
     SmallVector<int64_t> insertIndex(resultDim, 0);
-    Value result = rewriter.create<ub::PoisonOp>(loc, resultType);
+    Value result = ub::PoisonOp::create(rewriter, loc, resultType);
 
     for (int i = 0; i < nSlices; ++i) {
       Value extracted =
-          rewriter.create<vector::ExtractOp>(loc, source, extractIndex);
+          vector::ExtractOp::create(rewriter, loc, source, extractIndex);
 
-      result = rewriter.create<vector::InsertOp>(loc, extracted, result,
+      result = vector::InsertOp::create(rewriter, loc, extracted, result,
                                                  insertIndex);
 
       inplaceAdd(1, sourceShape.take_front(sourceDim), extractIndex);
@@ -276,9 +276,9 @@ public:
     Value extracted = {};
     Value extractedStrided = {};
     Value insertedSlice = {};
-    Value result = rewriter.create<ub::PoisonOp>(loc, resultType);
+    Value result = ub::PoisonOp::create(rewriter, loc, resultType);
     const Value partResult =
-        rewriter.create<ub::PoisonOp>(loc, insertStridedType);
+        ub::PoisonOp::create(rewriter, loc, insertStridedType);
 
     for (size_t i = 0; i < nAtomicSlices; ++i) {
 
@@ -288,14 +288,14 @@ public:
       // vector.extract
       if (extractStridedPhase == 0) {
         extracted =
-            rewriter.create<vector::ExtractOp>(loc, source, extractIndex);
+            vector::ExtractOp::create(rewriter, loc, source, extractIndex);
         inplaceAdd(1, sourceShape.take_front(sourceSuffixStartDim),
                    extractIndex);
       }
 
       // vector.extract_strided_slice
       extractOffsets[0] = extractStridedPhase * greatestCommonDivisor;
-      extractedStrided = rewriter.create<vector::ExtractStridedSliceOp>(
+      extractedStrided = vector::ExtractStridedSliceOp::create(rewriter,
           loc, extracted, extractOffsets, atomicShape, sizes);
 
       // vector.insert_strided_slice
@@ -303,12 +303,12 @@ public:
         insertedSlice = partResult;
       }
       insertOffsets[0] = insertStridedPhase * greatestCommonDivisor;
-      insertedSlice = rewriter.create<vector::InsertStridedSliceOp>(
+      insertedSlice = vector::InsertStridedSliceOp::create(rewriter,
           loc, extractedStrided, insertedSlice, insertOffsets, sizes);
 
       // vector.insert
       if (insertStridedPhase + 1 == insertPeriod) {
-        result = rewriter.create<vector::InsertOp>(loc, insertedSlice, result,
+        result = vector::InsertOp::create(rewriter, loc, insertedSlice, result,
                                                    insertIndex);
         inplaceAdd(1, resultType.getShape().take_front(resultSuffixStartDim),
                    insertIndex);
@@ -394,7 +394,7 @@ public:
     auto extractionVectorType = VectorType::get(
         {minExtractionSize}, sourceVectorType.getElementType(), {true});
 
-    Value result = rewriter.create<ub::PoisonOp>(loc, resultVectorType);
+    Value result = ub::PoisonOp::create(rewriter, loc, resultVectorType);
     SmallVector<int64_t> srcIdx(srcRank, 0);
     SmallVector<int64_t> resIdx(resRank, 0);
 
@@ -406,7 +406,7 @@ public:
       // 1. Extract a scalable subvector from the source vector.
       if (!currentSourceScalableVector) {
         if (srcRank != 1) {
-          currentSourceScalableVector = rewriter.create<vector::ExtractOp>(
+          currentSourceScalableVector = vector::ExtractOp::create(rewriter,
               loc, op.getSource(), llvm::ArrayRef(srcIdx).drop_back());
         } else {
           currentSourceScalableVector = op.getSource();
@@ -414,7 +414,7 @@ public:
       }
       Value sourceSubVector = currentSourceScalableVector;
       if (minExtractionSize < minSourceTrailingSize) {
-        sourceSubVector = rewriter.create<vector::ScalableExtractOp>(
+        sourceSubVector = vector::ScalableExtractOp::create(rewriter,
             loc, extractionVectorType, sourceSubVector, srcIdx.back());
       }
 
@@ -423,14 +423,14 @@ public:
         if (minExtractionSize == minResultTrailingSize) {
           currentResultScalableVector = sourceSubVector;
         } else if (resRank != 1) {
-          currentResultScalableVector = rewriter.create<vector::ExtractOp>(
+          currentResultScalableVector = vector::ExtractOp::create(rewriter,
               loc, result, llvm::ArrayRef(resIdx).drop_back());
         } else {
           currentResultScalableVector = result;
         }
       }
       if (minExtractionSize < minResultTrailingSize) {
-        currentResultScalableVector = rewriter.create<vector::ScalableInsertOp>(
+        currentResultScalableVector = vector::ScalableInsertOp::create(rewriter,
             loc, sourceSubVector, currentResultScalableVector, resIdx.back());
       }
 
@@ -439,7 +439,7 @@ public:
           currentResultScalableVector != result) {
         // Finished row of result. Insert complete scalable vector into result
         // (n-D) vector.
-        result = rewriter.create<vector::InsertOp>(
+        result = vector::InsertOp::create(rewriter,
             loc, currentResultScalableVector, result,
             llvm::ArrayRef(resIdx).drop_back());
         currentResultScalableVector = {};

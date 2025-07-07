@@ -229,7 +229,7 @@ public:
 
     // Initial accumulator for the final result. This is the un-tiled result if
     // tiling is done.
-    Value result = rewriter.create<arith::ConstantOp>(
+    Value result = arith::ConstantOp::create(rewriter,
         loc, op.getResultType(), rewriter.getZeroAttr(op.getResultType()));
 
     SmallVector<int64_t> unrolledSize = *op.getShapeForUnroll();
@@ -281,7 +281,7 @@ public:
       if (isVecmat) {
         auto expandForSMMLA = [&](Value tiledOperand,
                                   VectorType expandedTypeType) {
-          auto emptyOperand = rewriter.create<arith::ConstantOp>(
+          auto emptyOperand = arith::ConstantOp::create(rewriter,
               loc, expandedTypeType, rewriter.getZeroAttr(expandedTypeType));
           SmallVector<int64_t> offsets(
               cast<ShapedType>(emptyOperand.getType()).getRank(), 0);
@@ -298,7 +298,7 @@ public:
       // using the instruction for unsigned by signed multiplication with
       // reversed operands.
       if (mmlaOp == MMLA::MixedSwapped)
-        tiledAcc = rewriter.create<vector::TransposeOp>(
+        tiledAcc = vector::TransposeOp::create(rewriter,
             loc, tiledAcc, ArrayRef<int64_t>({1, 0}));
 
       // Collapse tiled operands to 1D vectors required by smmla intrinsic
@@ -331,7 +331,7 @@ public:
       // Because of the reversed operands the result is obtained transposed.
       // Transpose it back,
       if (mmlaOp == MMLA::MixedSwapped)
-        tiledRes = rewriter.create<vector::TransposeOp>(
+        tiledRes = vector::TransposeOp::create(rewriter,
             loc, tiledRes, ArrayRef<int64_t>({1, 0}));
 
       // With vecmat, only one row of tiled ACC can be inserted into the final
