@@ -320,8 +320,13 @@ RootSignatureParser::parseDescriptorTableClause() {
   }
   Clause.setDefaultFlags(Version);
 
-  auto Params = parseDescriptorTableClauseParams(ExpectedReg);
+  auto Params = parseDescriptorTableClauseParams(ParamKind, ExpectedReg);
   if (!Params.has_value())
+    return std::nullopt;
+
+  if (consumeExpectedToken(TokenKind::pu_r_paren,
+                           diag::err_hlsl_unexpected_end_of_params,
+                           /*param of=*/ParamKind))
     return std::nullopt;
 
   // Check mandatory parameters were provided
@@ -344,11 +349,6 @@ RootSignatureParser::parseDescriptorTableClause() {
 
   if (Params->Flags.has_value())
     Clause.Flags = Params->Flags.value();
-
-  if (consumeExpectedToken(TokenKind::pu_r_paren,
-                           diag::err_hlsl_unexpected_end_of_params,
-                           /*param of=*/ParamKind))
-    return std::nullopt;
 
   return Clause;
 }
@@ -563,14 +563,15 @@ RootSignatureParser::parseRootDescriptorParams(TokenKind DescType,
 }
 
 std::optional<RootSignatureParser::ParsedClauseParams>
-RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
+RootSignatureParser::parseDescriptorTableClauseParams(TokenKind DescType,
+                                                      TokenKind RegType) {
   assert(CurToken.TokKind == TokenKind::pu_l_paren &&
          "Expects to only be invoked starting at given token");
 
   ParsedClauseParams Params;
-  do {
-    // ( `b` | `t` | `u` | `s`) POS_INT
+  while (!peekExpectedToken(TokenKind::pu_r_paren)) {
     if (tryConsumeExpectedToken(RegType)) {
+      // ( `b` | `t` | `u` | `s`) POS_INT
       if (Params.Reg.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -579,10 +580,8 @@ RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
       if (!Reg.has_value())
         return std::nullopt;
       Params.Reg = Reg;
-    }
-
-    // `numDescriptors` `=` POS_INT | unbounded
-    if (tryConsumeExpectedToken(TokenKind::kw_numDescriptors)) {
+    } else if (tryConsumeExpectedToken(TokenKind::kw_numDescriptors)) {
+      // `numDescriptors` `=` POS_INT | unbounded
       if (Params.NumDescriptors.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -601,10 +600,8 @@ RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
       }
 
       Params.NumDescriptors = NumDescriptors;
-    }
-
-    // `space` `=` POS_INT
-    if (tryConsumeExpectedToken(TokenKind::kw_space)) {
+    } else if (tryConsumeExpectedToken(TokenKind::kw_space)) {
+      // `space` `=` POS_INT
       if (Params.Space.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -617,10 +614,8 @@ RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
       if (!Space.has_value())
         return std::nullopt;
       Params.Space = Space;
-    }
-
-    // `offset` `=` POS_INT | DESCRIPTOR_RANGE_OFFSET_APPEND
-    if (tryConsumeExpectedToken(TokenKind::kw_offset)) {
+    } else if (tryConsumeExpectedToken(TokenKind::kw_offset)) {
+      // `offset` `=` POS_INT | DESCRIPTOR_RANGE_OFFSET_APPEND
       if (Params.Offset.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -639,10 +634,8 @@ RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
       }
 
       Params.Offset = Offset;
-    }
-
-    // `flags` `=` DESCRIPTOR_RANGE_FLAGS
-    if (tryConsumeExpectedToken(TokenKind::kw_flags)) {
+    } else if (tryConsumeExpectedToken(TokenKind::kw_flags)) {
+      // `flags` `=` DESCRIPTOR_RANGE_FLAGS
       if (Params.Flags.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -657,7 +650,10 @@ RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
       Params.Flags = Flags;
     }
 
-  } while (tryConsumeExpectedToken(TokenKind::pu_comma));
+    // ',' denotes another element, otherwise, expected to be at ')'
+    if (!tryConsumeExpectedToken(TokenKind::pu_comma))
+      break;
+  }
 
   return Params;
 }
