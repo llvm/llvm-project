@@ -12,20 +12,22 @@
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/cast.h"
+#include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
+
 struct BFloat16 {
   uint16_t bits;
 
-  BFloat16() = default;
+  LIBC_INLINE BFloat16() = default;
 
-  constexpr explicit BFloat16(uint16_t bits) : bits(bits) {}
+  LIBC_INLINE constexpr explicit BFloat16(uint16_t bits) : bits(bits) {}
 
-  template <typename T> constexpr explicit BFloat16(T value) {
+  template <typename T> LIBC_INLINE constexpr explicit BFloat16(T value) {
     if constexpr (cpp::is_floating_point_v<T>) {
       bits = fputil::cast<bfloat16>(value).bits;
     } else if constexpr (cpp::is_integral_v<T>) {
@@ -38,18 +40,19 @@ struct BFloat16 {
         }
       }
 
-      bits = fputil::DyadicFloat<
-                 cpp::numeric_limits<cpp::make_unsigned_t<T>>::digits>(sign, 0,
-                                                                       value)
-                 .template as<bfloat16, /*ShouldSignalExceptions=*/true>()
-                 .bits;
+      fputil::DyadicFloat<cpp::numeric_limits<cpp::make_unsigned_t<T>>::digits>
+          xd(sign, 0, value);
+      bits = xd.template as<bfloat16, /*ShouldSignalExceptions=*/true>().bits;
 
     } else {
       bits = fputil::cast<bfloat16>(static_cast<float>(value)).bits;
     }
   }
 
-  constexpr float as_float() const {
+  template <cpp::enable_if_t<fputil::get_fp_type<float>() ==
+                                 fputil::FPType::IEEE754_Binary32,
+                             int> = 0>
+  operator float() const {
     uint32_t x_bits = static_cast<uint32_t>(bits) << 16U;
     return cpp::bit_cast<float>(x_bits);
   }

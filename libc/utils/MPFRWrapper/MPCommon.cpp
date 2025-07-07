@@ -9,11 +9,10 @@
 #include "MPCommon.h"
 
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
-
-#include "src/__support/FPUtil/bfloat16.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {

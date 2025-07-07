@@ -7,11 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/bfloat16.h"
-
-#include "utils/MPFRWrapper/MPCommon.h"
-
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
+#include "utils/MPFRWrapper/MPCommon.h"
 
 using LlvmLibcBfloat16ToFloatTest = LIBC_NAMESPACE::testing::FPTest<bfloat16>;
 
@@ -32,7 +30,7 @@ TEST_F(LlvmLibcBfloat16ToFloatTest, PositiveRange) {
 
     // bfloat16 to float
     float mpfr_float = mpfr_num.as<float>();
-    EXPECT_FP_EQ_ALL_ROUNDING(mpfr_float, bf16_num.as_float());
+    EXPECT_FP_EQ_ALL_ROUNDING(mpfr_float, static_cast<float>(bf16_num));
 
     // float to bfloat16
     bfloat16 bf16_from_float{mpfr_float};
@@ -49,7 +47,7 @@ TEST_F(LlvmLibcBfloat16ToFloatTest, NegativeRange) {
 
     // bfloat16 to float
     float mpfr_float = mpfr_num.as<float>();
-    EXPECT_FP_EQ_ALL_ROUNDING(mpfr_float, bf16_num.as_float());
+    EXPECT_FP_EQ_ALL_ROUNDING(mpfr_float, static_cast<float>(bf16_num));
 
     // float to bfloat16
     bfloat16 bf16_from_float{mpfr_float};
@@ -60,13 +58,13 @@ TEST_F(LlvmLibcBfloat16ToFloatTest, NegativeRange) {
 }
 
 TEST_F(LlvmLibcBfloat16ToFloatTest, SpecialIntegers) {
-  const auto test_for_int = [&](const int i) {
-    const auto mpfr_bfloat = MPFRNumber(i).as<bfloat16>();
-    const bfloat16 libc_bfloat{i};
+  auto test_for_int = [&](const int i) {
+    bfloat16 mpfr_bfloat = MPFRNumber(i).as<bfloat16>();
+    bfloat16 libc_bfloat{i};
     EXPECT_FP_EQ_ALL_ROUNDING(mpfr_bfloat, libc_bfloat);
   };
 
-  constexpr int RANGE = 100000;
+  constexpr int RANGE = 100'000;
   for (int i = -RANGE; i <= RANGE; i++) {
     test_for_int(i);
   }

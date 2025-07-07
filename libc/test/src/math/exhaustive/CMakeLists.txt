@@ -536,7 +536,6 @@ add_fp_unittest(
     -lpthread
 )
 
-
 add_fp_unittest(
   bfloat16_test
   NO_RUN_POSTBUILD
@@ -552,4 +551,3 @@ add_fp_unittest(
   LINK_LIBRARIES
   -lpthread
 )
-
