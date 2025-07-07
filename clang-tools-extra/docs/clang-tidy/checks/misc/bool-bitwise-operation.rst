@@ -33,6 +33,20 @@ of using ``|=`` operator:
     // error handling
   }
 
+Limitations
+-------
+
+* Templates aren't matched.
+
+.. code-block:: c++
+
+     template <typename X>
+     void f(X a, X b) {
+         a | b;
+     }
+
+     // even 'f(true, false)' (or similar) won't trigger the warning.
+
 Options
 -------
 
