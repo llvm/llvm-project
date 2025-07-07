@@ -93,18 +93,19 @@ public:
 };
 
 #  if _LIBCPP_HAS_EXCEPTIONS
+#    if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
 template <class _Ep>
 _LIBCPP_HIDE_FROM_ABI exception_ptr __make_exception_ptr_explicit(_Ep& __e) _NOEXCEPT {
   using _Ep2 = __decay_t<_Ep>;
   void* __ex = __cxxabiv1::__cxa_allocate_exception(sizeof(_Ep));
-#    ifdef __wasm__
+#      ifdef __wasm__
   auto __cleanup = [](void* __p) -> void* {
     std::__destroy_at(static_cast<_Ep2*>(__p));
     return __p;
   };
-#    else
+#      else
   auto __cleanup = [](void* __p) { std::__destroy_at(static_cast<_Ep2*>(__p)); };
-#    endif
+#      endif
   (void)__cxxabiv1::__cxa_init_primary_exception(__ex, const_cast<std::type_info*>(&typeid(_Ep)), __cleanup);
 
   try {
@@ -115,6 +116,7 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr __make_exception_ptr_explicit(_Ep& __e) _NOE
     return current_exception();
   }
 }
+#    endif
 
 template <class _Ep>
 _LIBCPP_HIDE_FROM_ABI exception_ptr __make_exception_ptr_via_throw(_Ep& __e) _NOEXCEPT {
