@@ -28,7 +28,7 @@ void bad_root_signature_5() {}
  "CBV(b0)," \
  "RootConstants(num32BitConstants = 3, b0, invalid)"
 
-// CHECK: note: expanded from macro 'MultiLineRootSignature'
+// CHECK: [[@LINE-2]]:42: note: expanded from macro 'MultiLineRootSignature'
 // CHECK-NEXT: [[@LINE-3]] | "RootConstants(num32BitConstants = 3, b0, invalid)"
 // CHECK-NEXT:             |                                         ^
 // expected-error@+1 {{expected ')' to denote end of parameters, or, another valid parameter of RootConstants}}
