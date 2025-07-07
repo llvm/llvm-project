@@ -750,7 +750,7 @@ Bug Fixes in This Version
 - Fixed an infinite recursion when checking constexpr destructors. (#GH141789)
 - Fixed a crash when a malformed using declaration appears in a ``constexpr`` function. (#GH144264)
 - Fixed a bug when use unicode character name in macro concatenation. (#GH145240)
-- Clang doesn't erroneously inject static_assert macro in ms-compatibility and
+- Clang doesn't erroneously inject a ``static_assert`` macro in ms-compatibility and
   -std=c99 mode.
 
 Bug Fixes to Compiler Builtins
