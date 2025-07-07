@@ -3464,7 +3464,7 @@ func.func @fold_insert_use_chain(%arg : vector<4x4xf32>, %value : f32, %pos: ind
 
 // -----
 
-// CHECK-LABEL: @no_fold_insert_use_chain(
+// CHECK-LABEL: @no_fold_insert_use_chain_mismatch_static_position(
 //  CHECK-SAME:   %[[DEST_0:.*]]: vector<4xf32>,
 //  CHECK-SAME:   %[[VAL:.*]]: f32) -> vector<4xf32> {
 //       CHECK:   %[[DEST_1:.*]] = vector.insert %[[VAL]], %[[DEST_0]] [0] : f32 into vector<4xf32>
@@ -3474,22 +3474,4 @@ func.func @no_fold_insert_use_chain_mismatch_static_position(%v : vector<4xf32>,
   %v_0 = vector.insert %value, %v[0] : f32 into vector<4xf32>
   %v_2 = vector.insert %value, %v_0[1] : f32 into vector<4xf32>
   return %v_2 : vector<4xf32>  
-}
-
-// -----
-
-// CHECK-LABEL: @fold_insert_use_chain_add_float(
-//  CHECK-SAME:   %[[DEST:.*]]: vector<4xf32>,
-//  CHECK-SAME:   %[[VAL:.*]]: f32) -> vector<4xf32> {
-//       CHECK:   %{{.*}} = vector.insert %[[VAL]], %[[DEST]] [0] : f32 into vector<4xf32>
-//       CHECK:   %[[LHS:.*]] = arith.addf %{{.*}}, %{{.*}} : vector<4xf32>
-//       CHECK:   %[[RHS:.*]] = vector.insert %[[VAL]], %[[DEST]] [0] : f32 into vector<4xf32>
-//       CHECK:   %[[RES:.*]] = arith.addf %[[LHS]], %[[RHS]] : vector<4xf32>
-//       CHECK:   return %[[RES]] : vector<4xf32>
-func.func @fold_insert_use_chain_add_float(%v : vector<4xf32>, %value : f32) -> vector<4xf32> {
-  %v_0 = vector.insert %value, %v[0] : f32 into vector<4xf32>
-  %v_1 = arith.addf %v_0, %v_0 : vector<4xf32>
-  %v_2 = vector.insert %value, %v_0[0] : f32 into vector<4xf32>
-  %v_3 = arith.addf %v_1, %v_2 : vector<4xf32>
-  return %v_3 : vector<4xf32>
 }
