@@ -82,28 +82,28 @@ int test9(void) {
 #if __STDC_VERSION__ >= 202311L
 void attr_decl_in_selection_statement(int n) {
   if (1)
-    [[]]; // expected-warning {{expected a statement before ';' but got an attribute declaration, it is not allowed by the syntax in places where a statement is required}}
+    [[]]; // expected-warning {{ISO C does not allow an attribute list to appear here}}
 
   if (1) {
 
   } else
-    [[]]; // expected-warning {{expected a statement before ';' but got an attribute declaration, it is not allowed by the syntax in places where a statement is required}}
+    [[]]; // expected-warning {{ISO C does not allow an attribute list to appear here}}
 
 
   switch (n)
-    [[]]; // expected-warning {{expected a statement before ';' but got an attribute declaration, it is not allowed by the syntax in places where a statement is required}}
+    [[]]; // expected-warning {{ISO C does not allow an attribute list to appear here}}
 }
 
 void attr_decl_in_iteration_statement(int n) {
   int i;
   for (i = 0; i < n; ++i)
-    [[]];     // expected-warning {{expected a statement before ';' but got an attribute declaration, it is not allowed by the syntax in places where a statement is required}}
+    [[]];     // expected-warning {{ISO C does not allow an attribute list to appear here}}
 
   while (i > 0)
-    [[]];     // expected-warning {{expected a statement before ';' but got an attribute declaration, it is not allowed by the syntax in places where a statement is required}}
+    [[]];     // expected-warning {{ISO C does not allow an attribute list to appear here}}
 
   do
-    [[]];     // expected-warning {{expected a statement before ';' but got an attribute declaration, it is not allowed by the syntax in places where a statement is required}}
+    [[]];     // expected-warning {{ISO C does not allow an attribute list to appear here}}
   while (i > 0);
 }
 #endif // __STDC_VERSION__ >= 202311L

@@ -14,6 +14,7 @@
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/Basic/Attributes.h"
 #include "clang/Basic/PrettyStackTrace.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Parse/LoopHint.h"
@@ -84,8 +85,8 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
   if (HasStdAttr && getLangOpts().C23 &&
       (StmtCtx & ParsedStmtContext::SecondaryBlockInC) != ParsedStmtContext{} &&
       isa_and_present<NullStmt>(Res.get()))
-    Diag(Res.get()->getBeginLoc(),
-         diag::warn_expected_stmt_before_semi_in_secondary_block);
+    Diag(CXX11Attrs.Range.getBegin(), diag::warn_attr_in_secondary_block)
+        << CXX11Attrs.Range;
 
   if (CXX11Attrs.empty() || Res.isInvalid())
     return Res;
