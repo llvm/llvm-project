@@ -972,31 +972,15 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI map(const map& __m) : __tree_(__m.__tree_) { insert(__m.begin(), __m.end()); }
 
-  _LIBCPP_HIDE_FROM_ABI map& operator=(const map& __m) {
-#  ifndef _LIBCPP_CXX03_LANG
-    __tree_ = __m.__tree_;
-#  else
-    if (this != std::addressof(__m)) {
-      __tree_.clear();
-      __tree_.value_comp() = __m.__tree_.value_comp();
-      __tree_.__copy_assign_alloc(__m.__tree_);
-      insert(__m.begin(), __m.end());
-    }
-#  endif
-    return *this;
-  }
+  _LIBCPP_HIDE_FROM_ABI map& operator=(const map& __m) = default;
 
 #  ifndef _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI map(map&& __m) noexcept(is_nothrow_move_constructible<__base>::value)
-      : __tree_(std::move(__m.__tree_)) {}
+  _LIBCPP_HIDE_FROM_ABI map(map&& __m) noexcept(is_nothrow_move_constructible<__base>::value) = default;
 
   _LIBCPP_HIDE_FROM_ABI map(map&& __m, const allocator_type& __a);
 
-  _LIBCPP_HIDE_FROM_ABI map& operator=(map&& __m) noexcept(is_nothrow_move_assignable<__base>::value) {
-    __tree_ = std::move(__m.__tree_);
-    return *this;
-  }
+  _LIBCPP_HIDE_FROM_ABI map& operator=(map&& __m) noexcept(is_nothrow_move_assignable<__base>::value) = default;
 
   _LIBCPP_HIDE_FROM_ABI map(initializer_list<value_type> __il, const key_compare& __comp = key_compare())
       : __tree_(__vc(__comp)) {
@@ -1659,31 +1643,16 @@ public:
     insert(__m.begin(), __m.end());
   }
 
-  _LIBCPP_HIDE_FROM_ABI multimap& operator=(const multimap& __m) {
-#  ifndef _LIBCPP_CXX03_LANG
-    __tree_ = __m.__tree_;
-#  else
-    if (this != std::addressof(__m)) {
-      __tree_.clear();
-      __tree_.value_comp() = __m.__tree_.value_comp();
-      __tree_.__copy_assign_alloc(__m.__tree_);
-      insert(__m.begin(), __m.end());
-    }
-#  endif
-    return *this;
-  }
+  _LIBCPP_HIDE_FROM_ABI multimap& operator=(const multimap& __m) = default;
 
 #  ifndef _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI multimap(multimap&& __m) noexcept(is_nothrow_move_constructible<__base>::value)
-      : __tree_(std::move(__m.__tree_)) {}
+  _LIBCPP_HIDE_FROM_ABI multimap(multimap&& __m) noexcept(is_nothrow_move_constructible<__base>::value) = default;
 
   _LIBCPP_HIDE_FROM_ABI multimap(multimap&& __m, const allocator_type& __a);
 
-  _LIBCPP_HIDE_FROM_ABI multimap& operator=(multimap&& __m) noexcept(is_nothrow_move_assignable<__base>::value) {
-    __tree_ = std::move(__m.__tree_);
-    return *this;
-  }
+  _LIBCPP_HIDE_FROM_ABI multimap&
+  operator=(multimap&& __m) noexcept(is_nothrow_move_assignable<__base>::value) = default;
 
   _LIBCPP_HIDE_FROM_ABI multimap(initializer_list<value_type> __il, const key_compare& __comp = key_compare())
       : __tree_(__vc(__comp)) {
