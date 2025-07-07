@@ -2698,9 +2698,6 @@ lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue MipsTargetLowering::lowerRETURNADDR(SDValue Op,
                                             SelectionDAG &DAG) const {
-  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
-
   // check the depth
   if (Op.getConstantOperandVal(0) != 0) {
     DAG.getContext()->emitError(

@@ -9463,8 +9463,7 @@ void ASTReader::AssignedLambdaNumbering(CXXRecordDecl *Lambda) {
 
   // Keep track of this lambda so it can be merged with another lambda that
   // is loaded later.
-  LambdaDeclarationsForMerging.insert(
-      {LambdaInfo, const_cast<CXXRecordDecl *>(Lambda)});
+  LambdaDeclarationsForMerging.insert({LambdaInfo, Lambda});
 }
 
 void ASTReader::LoadSelector(Selector Sel) {
@@ -9683,7 +9682,7 @@ ModuleFile *ASTReader::getLocalModuleFile(ModuleFile &M, unsigned ID) const {
     // It's a prefix (preamble, PCH, ...). Look it up by index.
    int IndexFromEnd = static_cast<int>(ID >> 1);
     assert(IndexFromEnd && "got reference to unknown module file");
-    return getModuleManager().pch_modules().end()[-static_cast<int>(IndexFromEnd)];
+    return getModuleManager().pch_modules().end()[-IndexFromEnd];
   }
 }
 
@@ -9731,10 +9730,6 @@ ExternalASTSource::ExtKind ASTReader::hasExternalDefinitions(const Decl *FD) {
 
 bool ASTReader::wasThisDeclarationADefinition(const FunctionDecl *FD) {
   return ThisDeclarationWasADefinitionSet.contains(FD);
-}
-
-bool ASTReader::hasInitializerWithSideEffects(const VarDecl *VD) const {
-  return InitSideEffectVars.count(VD);
 }
 
 Selector ASTReader::getLocalSelector(ModuleFile &M, unsigned LocalID) {
