@@ -2517,6 +2517,9 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
   EVT VT = Node->getValueType(0);
   unsigned NumResults = Node->getNumValues();
 
+  if (LC == RTLIB::UNKNOWN_LIBCALL)
+    return false;
+
   const char *LCName = TLI->getLibcallName(LC);
   if (!LCName)
     return false;
