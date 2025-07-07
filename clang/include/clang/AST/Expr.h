@@ -40,23 +40,24 @@
 #include <optional>
 
 namespace clang {
-  class APValue;
-  class ASTContext;
-  class BlockDecl;
-  class CXXBaseSpecifier;
-  class CXXMemberCallExpr;
-  class CXXOperatorCallExpr;
-  class CastExpr;
-  class Decl;
-  class IdentifierInfo;
-  class MaterializeTemporaryExpr;
-  class NamedDecl;
-  class ObjCPropertyRefExpr;
-  class OpaqueValueExpr;
-  class ParmVarDecl;
-  class StringLiteral;
-  class TargetInfo;
-  class ValueDecl;
+class AllocSizeAttr;
+class APValue;
+class ASTContext;
+class BlockDecl;
+class CXXBaseSpecifier;
+class CXXMemberCallExpr;
+class CXXOperatorCallExpr;
+class CastExpr;
+class Decl;
+class IdentifierInfo;
+class MaterializeTemporaryExpr;
+class NamedDecl;
+class ObjCPropertyRefExpr;
+class OpaqueValueExpr;
+class ParmVarDecl;
+class StringLiteral;
+class TargetInfo;
+class ValueDecl;
 
 /// A simple array of base specifiers.
 typedef SmallVector<CXXBaseSpecifier*, 4> CXXCastPath;
@@ -3255,6 +3256,14 @@ public:
   void markDependentForPostponedNameLookup() {
     setDependence(getDependence() | ExprDependence::TypeValueInstantiation);
   }
+
+  /// Try to get the alloc_size attribute of the callee. May return null.
+  const AllocSizeAttr *getAllocSizeAttr() const;
+
+  /// Get the total size in bytes allocated by calling a function decorated with
+  /// alloc_size. Returns true if the the result was successfully evaluated.
+  bool getBytesReturnedByAllocSizeCall(const ASTContext &Ctx,
+                                       llvm::APInt &Result) const;
 
   bool isCallToStdMove() const;
 
