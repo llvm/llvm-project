@@ -2201,11 +2201,8 @@ void CodeGenFunction::EnterSEHTryStmt(const SEHTryStmt &S) {
     llvm::Function *FinallyFunc =
         HelperCGF.GenerateSEHFinallyFunction(*this, *Finally);
 
-    // Allocate a flag to ensure the finally block is only executed once.
-    llvm::Value *FinallyExecutedFlag = CreateTempAlloca(Builder.getInt1Ty(), "finally.executed");
-    Builder.CreateFlagStore(false, FinallyExecutedFlag);
     // Push a cleanup for __finally blocks.
-    EHStack.pushCleanup<PerformSEHFinally>(NormalAndEHCleanup, FinallyFunc, FinallyExecutedFlag);
+    pushSEHCleanup(NormalAndEHCleanup, FinallyFunc);
     return;
   }
 
@@ -2238,7 +2235,13 @@ void CodeGenFunction::EnterSEHTryStmt(const SEHTryStmt &S) {
 void CodeGenFunction::ExitSEHTryStmt(const SEHTryStmt &S) {
   // Just pop the cleanup if it's a __finally block.
   if (S.getFinallyHandler()) {
-    PopCleanupBlock();
+    // In most cases, the cleanup is active, but if the __try contains a
+    // noreturn call, the block will be terminated and the cleanup will be
+    // inactive.
+    if (HaveInsertPoint())
+      PopCleanupBlock();
+    else
+      EHStack.popCleanup();
     return;
   }
 
