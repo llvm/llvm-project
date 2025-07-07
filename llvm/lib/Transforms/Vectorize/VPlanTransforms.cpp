@@ -2138,18 +2138,20 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
         return new VPReductionEVLRecipe(*Red, EVL, NewMask);
       })
       .Case<VPInstruction>([&](VPInstruction *VPI) -> VPRecipeBase * {
-        VPValue *LHS, *RHS;
+        VPValue *LHS, *RHS, *Mask = &AllOneMask;
         // Transform select with a header mask condition
-        //   select(header_mask, LHS, RHS)
+        //   select(mask, LHS, RHS)
         // into vector predication merge.
-        //   vp.merge(all-true, LHS, RHS, EVL)
-        if (!match(VPI, m_Select(m_Specific(HeaderMask), m_VPValue(LHS),
-                                 m_VPValue(RHS))))
+        //   vp.merge(opt_mask, LHS, RHS, EVL)
+        // TODO: Make m_LogicalAnd commutative?
+        if (!match(VPI,
+                   m_Select(m_CombineOr(m_Specific(HeaderMask),
+                                        m_LogicalAnd(m_Specific(HeaderMask),
+                                                     m_VPValue(Mask))),
+                            m_VPValue(LHS), m_VPValue(RHS))))
           return nullptr;
-        // Use all true as the condition because this transformation is
-        // limited to selects whose condition is a header mask.
         return new VPWidenIntrinsicRecipe(
-            Intrinsic::vp_merge, {&AllOneMask, LHS, RHS, &EVL},
+            Intrinsic::vp_merge, {Mask, LHS, RHS, &EVL},
             TypeInfo.inferScalarType(LHS), VPI->getDebugLoc());
       })
       .Default([&](VPRecipeBase *R) { return nullptr; });
