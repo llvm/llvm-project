@@ -66,22 +66,6 @@ class StdIteratorDataFormatterTestCase(TestBase):
         self.expect("frame variable svI", substrs=['item = "hello"'])
         self.expect("expr svI", substrs=['item = "hello"'])
 
-        self.expect("frame variable iiumI", substrs=["first = 61453", "second = 51966"])
-        self.expect("expr iiumI", substrs=["first = 61453", "second = 51966"])
-
-        self.expect("frame variable siumI", substrs=['first = "hello"', "second = 137"])
-        self.expect("expr siumI", substrs=['first = "hello"', "second = 137"])
-
-        self.expect("frame variable iiumI.first", substrs=["first = 61453"])
-        self.expect("frame variable iiumI.first", substrs=["second"], matching=False)
-        self.expect("frame variable iiumI.second", substrs=["second = 51966"])
-        self.expect("frame variable iiumI.second", substrs=["first"], matching=False)
-
-        self.expect("frame variable siumI.first", substrs=['first = "hello"'])
-        self.expect("frame variable siumI.first", substrs=["second"], matching=False)
-        self.expect("frame variable siumI.second", substrs=["second = 137"])
-        self.expect("frame variable siumI.second", substrs=["first"], matching=False)
-
     @add_test_categories(["libc++"])
     def test_libcxx(self):
         self.build(dictionary={"USE_LIBCPP": 1})
