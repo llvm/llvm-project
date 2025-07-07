@@ -29,7 +29,6 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/RegionUtils.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 

@@ -118,6 +118,15 @@
 ; CV:         GlobalProcIdSym {
 ; CV:           DisplayName: func
 ; CV-NOT:     GlobalProcIdSym
+; CV:           LabelSym {
+; CV-NEXT:        Kind: S_LABEL32 (0x1105)
+; CV-NEXT:        CodeOffset: 0xC0
+; CV-NEXT:        Segment: 0x0
+; CV-NEXT:        Flags: 0x0
+; CV-NEXT:        Flags [ (0x0)
+; CV-NEXT:        ]
+; CV-NEXT:        DisplayName:
+; CV-NEXT:      }
 ; CV:           JumpTableSym {
 ; CV-NEXT:        Kind: S_ARMSWITCHTABLE (0x1159)
 ; CV-NEXT:        BaseOffset: 0x0

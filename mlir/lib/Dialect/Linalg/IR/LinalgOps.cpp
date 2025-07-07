@@ -19,20 +19,16 @@
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
-#include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
@@ -42,7 +38,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -4569,7 +4564,7 @@ static SmallVector<OpFoldResult> getMixedTilesImpl(OpTy op) {
   SmallVector<OpFoldResult> mixedInnerTiles;
   unsigned dynamicValIndex = 0;
   for (int64_t staticTile : op.getStaticInnerTiles()) {
-    if (!ShapedType::isDynamic(staticTile))
+    if (ShapedType::isStatic(staticTile))
       mixedInnerTiles.push_back(builder.getI64IntegerAttr(staticTile));
     else
       mixedInnerTiles.push_back(op.getInnerTiles()[dynamicValIndex++]);
@@ -4834,7 +4829,7 @@ bool PackOp::requirePaddingValue(ArrayRef<int64_t> inputShape,
     std::optional<int64_t> constantTile = getConstantIntValue(tileSize);
 
     if (!constantTile) {
-      if (!ShapedType::isDynamic(outputTileSizes[pos]) &&
+      if (ShapedType::isStatic(outputTileSizes[pos]) &&
           (inputShape[pos] % outputTileSizes[pos] != 0))
         return true;
     } else if (inputShape[pos] % (*constantTile) != 0) {
@@ -4940,7 +4935,7 @@ SmallVector<OpFoldResult> PackOp::getResultShape(
   // use dispatchIndexOpFoldResults on the result, and rely on exact number of
   // dynamic dims returned by that.
   for (unsigned i = 0; i < resultDims.size(); ++i) {
-    if (!ShapedType::isDynamic(resultTypeShape[i]))
+    if (ShapedType::isStatic(resultTypeShape[i]))
       continue;
     resultDims[i] =
         getValueOrCreateConstantIndexOp(builder, loc, resultDims[i]);

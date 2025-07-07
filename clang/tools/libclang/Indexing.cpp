@@ -389,9 +389,7 @@ public:
     if (SM.isInSystemHeader(Loc))
       return true; // always skip bodies from system headers.
 
-    FileID FID;
-    unsigned Offset;
-    std::tie(FID, Offset) = SM.getDecomposedLoc(Loc);
+    auto [FID, Offset] = SM.getDecomposedLoc(Loc);
     // Don't skip bodies from main files; this may be revisited.
     if (SM.getMainFileID() == FID)
       return false;
