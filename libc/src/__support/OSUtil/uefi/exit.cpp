@@ -15,8 +15,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 [[noreturn]] void exit(int status) {
-  app.system_table->BootServices->Exit(app.image_handle, status, 0,
-                                       nullptr);
+  app.system_table->BootServices->Exit(app.image_handle, status, 0, nullptr);
   __builtin_unreachable();
 }
 
