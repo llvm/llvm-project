@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=aarch64 -mattr=+sha3 < %s | FileCheck --check-prefix=SHA3 %s
 ; RUN: llc -mtriple=aarch64 -mattr=-sha3 < %s | FileCheck --check-prefix=NOSHA3 %s
 ; RUN: llc -mtriple=aarch64 -mattr=+sve2 < %s | FileCheck --check-prefix=SVE2 %s
+; RUN: llc -mtriple=aarch64 -mattr=+sha3,+sve2 < %s | FileCheck --check-prefix=SHA3 %s
 
 define <2 x i64> @bcax_64x2(<2 x i64> %0, <2 x i64> %1, <2 x i64> %2) {
 ; SHA3-LABEL: bcax_64x2:

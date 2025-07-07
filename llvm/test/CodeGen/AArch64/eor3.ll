@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=aarch64 -mattr=+sha3 < %s | FileCheck --check-prefix=SHA3 %s
 ; RUN: llc -mtriple=aarch64 -mattr=-sha3 < %s | FileCheck --check-prefix=NOSHA3 %s
 ; RUN: llc -mtriple=aarch64 -mattr=+sve2 < %s | FileCheck --check-prefix=SVE2 %s
+; RUN: llc -mtriple=aarch64 -mattr=+sha3,+sve2 < %s | FileCheck --check-prefix=SHA3 %s
 
 define <16 x i8> @eor3_16x8_left(<16 x i8> %0, <16 x i8> %1, <16 x i8> %2) {
 ; SHA3-LABEL: eor3_16x8_left:
