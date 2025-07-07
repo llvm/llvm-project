@@ -693,7 +693,30 @@ bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
   return false;
 }
 
-ExprResult Parser::ParseBuiltinPtrauthTypeDiscriminator() {
+ExprResult Parser::ParseBuiltinPtrauthTypeTrait() {
+  UnaryExprOrTypeTrait ExprKind;
+  switch (Tok.getKind()) {
+  case tok::kw___builtin_ptrauth_type_discriminator:
+    ExprKind = UETT_PtrAuthTypeDiscriminator;
+    break;
+  case tok::kw___builtin_ptrauth_has_authentication:
+    ExprKind = UETT_PtrAuthHasAuthentication;
+    break;
+  case tok::kw___builtin_ptrauth_schema_key:
+    ExprKind = UETT_PtrAuthSchemaKey;
+    break;
+  case tok::kw___builtin_ptrauth_schema_is_address_discriminated:
+    ExprKind = UETT_PtrAuthSchemaIsAddressDiscriminated;
+    break;
+  case tok::kw___builtin_ptrauth_schema_extra_discriminator:
+    ExprKind = UETT_PtrAuthSchemaExtraDiscriminator;
+    break;
+  case tok::kw___builtin_ptrauth_schema_options:
+    ExprKind = UETT_PtrAuthSchemaOptions;
+    break;
+  default:
+    return ExprError();
+  }
   SourceLocation Loc = ConsumeToken();
 
   BalancedDelimiterTracker T(*this, tok::l_paren);
@@ -709,9 +732,10 @@ ExprResult Parser::ParseBuiltinPtrauthTypeDiscriminator() {
   SourceLocation EndLoc = Tok.getLocation();
   T.consumeClose();
   return Actions.ActOnUnaryExprOrTypeTraitExpr(
-      Loc, UETT_PtrAuthTypeDiscriminator,
+      Loc, ExprKind,
       /*isType=*/true, Ty.get().getAsOpaquePtr(), SourceRange(Loc, EndLoc));
 }
+
 
 ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
                                        bool isAddressOfOperand,
@@ -1503,7 +1527,12 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     break;
 
   case tok::kw___builtin_ptrauth_type_discriminator:
-    return ParseBuiltinPtrauthTypeDiscriminator();
+  case tok::kw___builtin_ptrauth_has_authentication:
+  case tok::kw___builtin_ptrauth_schema_key:
+  case tok::kw___builtin_ptrauth_schema_is_address_discriminated:
+  case tok::kw___builtin_ptrauth_schema_extra_discriminator:
+  case tok::kw___builtin_ptrauth_schema_options:
+    return ParseBuiltinPtrauthTypeTrait();
 
   case tok::kw___is_lvalue_expr:
   case tok::kw___is_rvalue_expr:

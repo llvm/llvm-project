@@ -4354,8 +4354,6 @@ private:
   /// \endverbatim
   bool tryParseOpenMPArrayShapingCastPart();
 
-  ExprResult ParseBuiltinPtrauthTypeDiscriminator();
-
   ///@}
 
   //
@@ -5130,6 +5128,26 @@ private:
   /// \endverbatim
   ///
   ExprResult ParseExpressionTrait();
+
+  //===--------------------------------------------------------------------===//
+  // Pointer Authentication: Builtins to help work with pointer authentication
+  // qualifiers
+
+  /// ParseBuiltinPtrauthTypeTrait - Parse the pointer authentication
+  /// pseudo-functions. These consist of a number of operations to query the
+  /// authentication schema of a type, or to generate information for the
+  /// construction of authentication schemas.
+  ///
+  /// \verbatim
+  ///       primary-expression:
+  ///          '__builtin_ptrauth_type_discriminator' '(' type-id ')'
+  ///          '__builtin_ptrauth_has_authentication' '(' type-id ')'
+  ///          '__builtin_ptrauth_schema_key' '(' type-id ')'
+  ///          '__builtin_ptrauth_schema_is_address_discriminated' '(' type-id ')'
+  ///          '__builtin_ptrauth_schema_extra_discriminator' '(' type-id ')'
+  ///          '__builtin_ptrauth_schema_options' '(' type-id ')'
+  /// \endverbatim
+  ExprResult ParseBuiltinPtrauthTypeTrait();
 
   ///@}
 

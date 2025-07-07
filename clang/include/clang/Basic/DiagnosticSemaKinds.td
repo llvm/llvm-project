@@ -1046,6 +1046,8 @@ def err_ptrauth_address_discrimination_invalid : Error<
 def err_ptrauth_extra_discriminator_invalid : Error<
   "invalid extra discriminator flag '%0'; '__ptrauth' requires a value between "
   "'0' and '%1'">;
+def err_ptrauth_query_type_has_no_pointer_authentication
+    : Error<"argument to %0 parameter is not an authenticated value">;
 
 /// main()
 // static main() is not an error in C, just in C++.
