@@ -14,6 +14,9 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 
+namespace LIBC_NAMESPACE_DECL {
+namespace internal {
+
 bool check_span(wchar_t c, const wchar_t *str) {
   for (int n = 0; str[n]; ++n) {
     if (str[n] == c)
@@ -21,9 +24,6 @@ bool check_span(wchar_t c, const wchar_t *str) {
   }
   return false;
 }
-
-namespace LIBC_NAMESPACE_DECL {
-namespace internal {
 
 // To avoid duplicated code, call this with true for wcscspn and call with false
 // for wcsspn
