@@ -194,6 +194,11 @@ private:
   /// StringLiterals
   SourceLocation getTokenLocation(RootSignatureToken Tok);
 
+  /// Construct a diagnostics at the location of the current token
+  DiagnosticBuilder reportDiag(unsigned DiagID) {
+    return getDiags().Report(getTokenLocation(CurToken), DiagID);
+  }
+
 private:
   llvm::dxbc::RootSignatureVersion Version;
   SmallVector<llvm::hlsl::rootsig::RootElement> &Elements;
