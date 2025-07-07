@@ -598,7 +598,7 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Continue(
         std::size_t componentByteSize{
             this->component_->SizeInBytes(this->instance_)};
         if (IS_COMPONENTWISE && toIsContiguous_ && fromIsContiguous_) {
-          std::size_t offset{this->component_->offset()};
+          std::uint64_t offset{this->component_->offset()};
           char *to{this->instance_.template OffsetElement<char>(offset)};
           const char *from{
               this->from_->template OffsetElement<const char>(offset)};
@@ -630,7 +630,7 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Continue(
       std::size_t componentByteSize{
           this->component_->SizeInBytes(this->instance_)};
       if (IS_COMPONENTWISE && toIsContiguous_ && fromIsContiguous_) {
-        std::size_t offset{this->component_->offset()};
+        std::uint64_t offset{this->component_->offset()};
         char *to{this->instance_.template OffsetElement<char>(offset)};
         const char *from{
             this->from_->template OffsetElement<const char>(offset)};
