@@ -1504,6 +1504,10 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "^std::((__debug::)?|(__cxx11::)?)list<.+>(( )?&)?$",
                 stl_summary_flags, true);
 
+  AddCXXSummary(cpp_category_sp, ContainerSizeSummaryProvider,
+                "libstdc++ std::tuple summary provider",
+                "^std::tuple<.+>$", stl_summary_flags, true);
+
   cpp_category_sp->AddTypeSummary(
       "^std::((__debug::)?|(__cxx11::)?)forward_list<.+>(( )?&)?$",
       eFormatterMatchRegex,
