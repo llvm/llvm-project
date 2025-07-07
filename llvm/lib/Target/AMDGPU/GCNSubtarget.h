@@ -1475,8 +1475,6 @@ public:
 
   bool hasTensorCvtLutInsts() const { return HasTensorCvtLutInsts; }
 
-  bool hasTransposeLoadF4F6Insts() const { return HasTransposeLoadF4F6Insts; }
-
 
   bool hasAddPC64Inst() const { return GFX1250Insts; }
 
@@ -1500,6 +1498,8 @@ public:
   bool hasSGPRVMEM() const { return HasSGPRVMEM; }
 
   bool hasParallelBitInsts() const { return HasParallelBitInsts; }
+
+  bool hasTransposeLoadF4F6Insts() const { return HasTransposeLoadF4F6Insts; }
 
   /// \returns true if the target supports using software to avoid hazards
   /// between VMEM and VALU instructions in some instances.

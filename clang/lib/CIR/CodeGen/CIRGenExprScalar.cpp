@@ -155,7 +155,7 @@ public:
 
   mlir::Value VisitFloatingLiteral(const FloatingLiteral *e) {
     mlir::Type type = cgf.convertType(e->getType());
-    assert(mlir::isa<cir::CIRFPTypeInterface>(type) &&
+    assert(mlir::isa<cir::FPTypeInterface>(type) &&
            "expect floating-point type");
     return builder.create<cir::ConstantOp>(
         cgf.getLoc(e->getExprLoc()),
@@ -331,18 +331,18 @@ public:
         cgf.getCIRGenModule().errorNYI("signed bool");
       if (cgf.getBuilder().isInt(dstTy))
         castKind = cir::CastKind::bool_to_int;
-      else if (mlir::isa<cir::CIRFPTypeInterface>(dstTy))
+      else if (mlir::isa<cir::FPTypeInterface>(dstTy))
         castKind = cir::CastKind::bool_to_float;
       else
         llvm_unreachable("Internal error: Cast to unexpected type");
     } else if (cgf.getBuilder().isInt(srcTy)) {
       if (cgf.getBuilder().isInt(dstTy))
         castKind = cir::CastKind::integral;
-      else if (mlir::isa<cir::CIRFPTypeInterface>(dstTy))
+      else if (mlir::isa<cir::FPTypeInterface>(dstTy))
         castKind = cir::CastKind::int_to_float;
       else
         llvm_unreachable("Internal error: Cast to unexpected type");
-    } else if (mlir::isa<cir::CIRFPTypeInterface>(srcTy)) {
+    } else if (mlir::isa<cir::FPTypeInterface>(srcTy)) {
       if (cgf.getBuilder().isInt(dstTy)) {
         // If we can't recognize overflow as undefined behavior, assume that
         // overflow saturates. This protects against normal optimizations if we
@@ -351,7 +351,7 @@ public:
           cgf.getCIRGenModule().errorNYI("strict float cast overflow");
         assert(!cir::MissingFeatures::fpConstraints());
         castKind = cir::CastKind::float_to_int;
-      } else if (mlir::isa<cir::CIRFPTypeInterface>(dstTy)) {
+      } else if (mlir::isa<cir::FPTypeInterface>(dstTy)) {
         // TODO: split this to createFPExt/createFPTrunc
         return builder.createFloatingCast(src, fullDstTy);
       } else {
@@ -609,6 +609,10 @@ public:
 
   mlir::Value VisitCXXThisExpr(CXXThisExpr *te) { return cgf.loadCXXThis(); }
 
+  mlir::Value VisitCXXNewExpr(const CXXNewExpr *e) {
+    return cgf.emitCXXNewExpr(e);
+  }
+
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are CIR scalar types.
   /// TODO: do we need ScalarConversionOpts here? Should be done in another
@@ -654,7 +658,7 @@ public:
     if (srcType->isHalfType() &&
         !cgf.getContext().getLangOpts().NativeHalfType) {
       // Cast to FP using the intrinsic if the half type itself isn't supported.
-      if (mlir::isa<cir::CIRFPTypeInterface>(mlirDstType)) {
+      if (mlir::isa<cir::FPTypeInterface>(mlirDstType)) {
         if (cgf.getContext().getTargetInfo().useFP16ConversionIntrinsics())
           cgf.getCIRGenModule().errorNYI(loc,
                                          "cast via llvm.convert.from.fp16");

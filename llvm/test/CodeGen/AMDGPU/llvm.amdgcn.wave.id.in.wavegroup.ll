@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX13 %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs < %s | FileCheck -check-prefix=GFX13 %s
 ; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=SDAG-ERR %s
-; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GISEL-ERR %s
+; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=GISEL-ERR %s
 
 ; SDAG-ERR: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.wave.id.in.wavegroup
 ; GISEL-ERR: LLVM ERROR: unable to legalize instruction: %{{[0-9]+}}:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.wave.id.in.wavegroup)
