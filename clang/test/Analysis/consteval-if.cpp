@@ -6,3 +6,10 @@ void test_consteval() {
     *ptr = 42; // expected-warning{{Dereference of null pointer (loaded from variable 'ptr')}}
   }
 }
+
+void test_not_consteval() {
+  if !consteval {
+    int *ptr = nullptr;
+    *ptr = 42; // expected-warning{{Dereference of null pointer (loaded from variable 'ptr')}}
+  }
+}
