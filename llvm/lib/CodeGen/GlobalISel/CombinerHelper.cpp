@@ -6414,14 +6414,11 @@ bool CombinerHelper::matchCombineFMinMaxNaN(MachineInstr &MI,
 bool CombinerHelper::matchRepeatedFPDivisor(
     MachineInstr &MI, SmallVector<MachineInstr *> &MatchInfo) const {
   assert(MI.getOpcode() == TargetOpcode::G_FDIV);
-  auto *MF = MI.getMF();
-  const TargetOptions &Options = MF->getTarget().Options;
 
   Register X = MI.getOperand(1).getReg();
   Register Y = MI.getOperand(2).getReg();
 
-  bool UnsafeMath = Options.UnsafeFPMath;
-  if (!UnsafeMath && !MI.getFlag(MachineInstr::MIFlag::FmArcp))
+  if (!MI.getFlag(MachineInstr::MIFlag::FmArcp))
     return false;
 
   // Skip if current node is a reciprocal/fneg-reciprocal.
@@ -6446,7 +6443,7 @@ bool CombinerHelper::matchRepeatedFPDivisor(
         U.getOperand(2).getReg() == Y && U.getOperand(1).getReg() != Y) {
       // This division is eligible for optimization only if global unsafe math
       // is enabled or if this division allows reciprocal formation.
-      if (UnsafeMath || U.getFlag(MachineInstr::MIFlag::FmArcp)) {
+      if (U.getFlag(MachineInstr::MIFlag::FmArcp)) {
         MatchInfo.push_back(&U);
         if (dominates(U, *MatchInfo[0]))
           std::swap(MatchInfo[0], MatchInfo.back());
