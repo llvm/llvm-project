@@ -2601,8 +2601,8 @@ static Instruction *foldCastShuffle(ShuffleVectorInst &Shuf,
 
   // shuffle (cast X), Poison, identity-with-extract-mask -->
   // cast (shuffle X, Poison, identity-with-extract-mask).
-  if (Cast0->hasOneUse() && Shuf.isIdentityWithExtract() &&
-      isa<PoisonValue>(Shuf.getOperand(1))) {
+  if (isa<PoisonValue>(Shuf.getOperand(1)) && Cast0->hasOneUse() &&
+      Shuf.isIdentityWithExtract()) {
     auto *NewIns = Builder.CreateShuffleVector(Cast0->getOperand(0),
                                                PoisonValue::get(CastSrcTy),
                                                Shuf.getShuffleMask());
