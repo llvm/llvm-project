@@ -384,13 +384,14 @@ struct DynMemFrontend : virtual public CheckerFrontend, public BT_PROVIDERS... {
 //===----------------------------------------------------------------------===//
 
 class MallocChecker
-    : public Checker<check::DeadSymbols, check::PointerEscape,
+    : public CheckerFamily<check::DeadSymbols, check::PointerEscape,
                      check::ConstPointerEscape, check::PreStmt<ReturnStmt>,
                      check::EndFunction, check::PreCall, check::PostCall,
                      eval::Call, check::NewAllocator,
                      check::PostStmt<BlockExpr>, check::PostObjCMessage,
                      check::Location, eval::Assume> {
 public:
+
   /// In pessimistic mode, the checker assumes that it does not know which
   /// functions might free the memory.
   /// In optimistic mode, the checker assumes that all user-defined functions
@@ -447,6 +448,8 @@ public:
 
   void printState(raw_ostream &Out, ProgramStateRef State,
                   const char *NL, const char *Sep) const override;
+
+  StringRef getDebugTag() const override { return "MallocChecker"; }
 
 private:
 #define CHECK_FN(NAME)                                                         \
@@ -3908,12 +3911,14 @@ void ento::registerInnerPointerCheckerAux(CheckerManager &Mgr) {
 }
 
 void ento::registerDynamicMemoryModeling(CheckerManager &Mgr) {
-  auto *Chk = Mgr.registerChecker<MallocChecker>();
+  auto *Chk = Mgr.getChecker<MallocChecker>();
+  // FIXME: This is a "hidden" undocumented frontend but there are public
+  // checker options which are attached to it.
+  CheckerNameRef DMMName = Mgr.getCurrentCheckerName();
   Chk->ShouldIncludeOwnershipAnnotatedFunctions =
-      Mgr.getAnalyzerOptions().getCheckerBooleanOption(Chk, "Optimistic");
+      Mgr.getAnalyzerOptions().getCheckerBooleanOption(DMMName, "Optimistic");
   Chk->ShouldRegisterNoOwnershipChangeVisitor =
-      Mgr.getAnalyzerOptions().getCheckerBooleanOption(
-          Chk, "AddNoOwnershipChangeNotes");
+      Mgr.getAnalyzerOptions().getCheckerBooleanOption(DMMName, "AddNoOwnershipChangeNotes");
 }
 
 bool ento::shouldRegisterDynamicMemoryModeling(const CheckerManager &mgr) {
