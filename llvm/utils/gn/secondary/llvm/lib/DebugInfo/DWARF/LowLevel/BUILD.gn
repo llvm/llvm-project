@@ -1,0 +1,13 @@
+static_library("LowLevel") {
+  output_name = "LLVMDebugInfoDWARFLowLevel"
+  deps = [
+    "//llvm/lib/BinaryFormat",
+    "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
+  ]
+  sources = [
+    "DWARFCFIProgram.cpp",
+    "DWARFExpression.cpp",
+    "DWARFUnwindTable.cpp",
+  ]
+}

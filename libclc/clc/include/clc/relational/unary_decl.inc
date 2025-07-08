@@ -6,4 +6,4 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DECL __CLC_INTN __CLC_FUNCTION(__CLC_FLOATN x);
+_CLC_OVERLOAD _CLC_DECL __CLC_INTN FUNCTION(__CLC_FLOATN x);

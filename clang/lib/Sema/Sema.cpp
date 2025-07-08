@@ -2261,6 +2261,24 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
         }
       }
     }
+
+    if (auto *VT = Ty->getAs<VectorType>();
+        VT && FD &&
+        (VT->getVectorKind() == VectorKind::SveFixedLengthData ||
+         VT->getVectorKind() == VectorKind::SveFixedLengthPredicate) &&
+        (LangOpts.VScaleMin != LangOpts.VScaleStreamingMin ||
+         LangOpts.VScaleMax != LangOpts.VScaleStreamingMax)) {
+      if (IsArmStreamingFunction(FD, /*IncludeLocallyStreaming=*/true)) {
+        Diag(Loc, diag::err_sve_fixed_vector_in_streaming_function)
+            << Ty << /*Streaming*/ 0;
+      } else if (const auto *FTy = FD->getType()->getAs<FunctionProtoType>()) {
+        if (FTy->getAArch64SMEAttributes() &
+            FunctionType::SME_PStateSMCompatibleMask) {
+          Diag(Loc, diag::err_sve_fixed_vector_in_streaming_function)
+              << Ty << /*StreamingCompatible*/ 1;
+        }
+      }
+    }
   };
 
   CheckType(Ty);
@@ -2434,9 +2452,10 @@ Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
     OpenMP().popOpenMPFunctionRegion(Scope.get());
 
   // Issue any analysis-based warnings.
-  if (WP && D)
+  if (WP && D) {
+    inferNoReturnAttr(*this, D);
     AnalysisWarnings.IssueWarnings(*WP, Scope.get(), D, BlockType);
-  else
+  } else
     for (const auto &PUD : Scope->PossiblyUnreachableDiags)
       Diag(PUD.Loc, PUD.PD);
 

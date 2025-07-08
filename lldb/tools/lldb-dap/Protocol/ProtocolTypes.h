@@ -28,6 +28,7 @@
 #include <string>
 
 #define LLDB_DAP_INVALID_VARRERF UINT64_MAX
+#define LLDB_DAP_INVALID_SRC_REF 0
 
 namespace lldb_dap::protocol {
 
@@ -328,7 +329,7 @@ struct Source {
   /// `source` request (even if a path is specified). Since a `sourceReference`
   /// is only valid for a session, it can not be used to persist a source. The
   /// value should be less than or equal to 2147483647 (2^31-1).
-  std::optional<int64_t> sourceReference;
+  std::optional<int32_t> sourceReference;
 
   /// A hint for how to present the source in the UI. A value of `deemphasize`
   /// can be used to indicate that the source is not available or that it is
@@ -741,6 +742,52 @@ llvm::json::Value toJSON(const DisassembledInstruction::PresentationHint &);
 bool fromJSON(const llvm::json::Value &, DisassembledInstruction &,
               llvm::json::Path);
 llvm::json::Value toJSON(const DisassembledInstruction &);
+
+struct Module {
+  /// Unique identifier for the module.
+  std::string id;
+
+  /// A name of the module.
+  std::string name;
+
+  /// Logical full path to the module. The exact definition is implementation
+  /// defined, but usually this would be a full path to the on-disk file for the
+  /// module.
+  std::string path;
+
+  /// True if the module is optimized.
+  bool isOptimized = false;
+
+  /// True if the module is considered 'user code' by a debugger that supports
+  /// 'Just My Code'.
+  bool isUserCode = false;
+
+  /// Version of Module.
+  std::string version;
+
+  /// User-understandable description of if symbols were found for the module
+  /// (ex: 'Symbols Loaded', 'Symbols not found', etc.)
+  std::string symbolStatus;
+
+  /// Logical full path to the symbol file. The exact definition is
+  /// implementation defined.
+  std::string symbolFilePath;
+
+  /// Module created or modified, encoded as an RFC 3339 timestamp.
+  std::string dateTimeStamp;
+
+  /// Address range covered by this module.
+  std::string addressRange;
+
+  /// Custom fields
+  /// @{
+
+  /// Size of the debug_info sections in the module in bytes.
+  uint64_t debugInfoSizeBytes = 0;
+
+  //// @}
+};
+llvm::json::Value toJSON(const Module &);
 
 } // namespace lldb_dap::protocol
 

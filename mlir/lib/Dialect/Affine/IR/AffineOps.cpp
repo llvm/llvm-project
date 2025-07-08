@@ -23,14 +23,12 @@
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MathExtras.h"
-#include <limits>
 #include <numeric>
 #include <optional>
 
@@ -42,6 +40,7 @@ using llvm::divideFloorSigned;
 using llvm::mod;
 
 #define DEBUG_TYPE "affine-ops"
+#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE << "]: ")
 
 #include "mlir/Dialect/Affine/IR/AffineOpsDialect.cpp.inc"
 
@@ -1065,6 +1064,10 @@ static LogicalResult replaceAffineMinBoundingBoxExpression(AffineMinOp minOp,
                                                            ValueRange syms) {
   AffineMap affineMinMap = minOp.getAffineMap();
 
+  LLVM_DEBUG({
+    DBGS() << "replaceAffineMinBoundingBoxExpression: `" << minOp << "`\n";
+  });
+
   // Check the value is positive.
   for (unsigned i = 0, e = affineMinMap.getNumResults(); i < e; ++i) {
     // Compare each expression in the minimum against 0.
@@ -1261,6 +1264,12 @@ void mlir::affine::fullyComposeAffineMapAndOperands(
   while (llvm::any_of(*operands, [](Value v) {
     return isa_and_nonnull<AffineApplyOp>(v.getDefiningOp());
   })) {
+    composeAffineMapAndOperands(map, operands, composeAffineMin);
+  }
+  // Additional trailing step for AffineMinOps in case no chains of AffineApply.
+  if (composeAffineMin && llvm::any_of(*operands, [](Value v) {
+        return isa_and_nonnull<AffineMinOp>(v.getDefiningOp());
+      })) {
     composeAffineMapAndOperands(map, operands, composeAffineMin);
   }
 }

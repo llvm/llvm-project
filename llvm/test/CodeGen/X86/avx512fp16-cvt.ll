@@ -1054,4 +1054,22 @@ define <8 x half> @u64tof16(<8 x i64> %a) #0 {
   ret <8 x half> %1
 }
 
+define void @f16tou32(ptr %ptr) {
+; X64-LABEL: f16tou32:
+; X64:       # %bb.0:
+; X64-NEXT:    vcvttph2udq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0
+; X64-NEXT:    vmovlps %xmm0, (%rdi)
+; X64-NEXT:    retq
+;
+; X86-LABEL: f16tou32:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vcvttph2udq {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm0
+; X86-NEXT:    vmovlps %xmm0, (%eax)
+; X86-NEXT:    retl
+  %1 = fptoui <2 x half> splat (half 0xH7E00) to <2 x i32>
+  store <2 x i32> %1, ptr %ptr, align 8
+  ret void
+}
+
 attributes #0 = { "min-legal-vector-width"="256" "prefer-vector-width"="256" }

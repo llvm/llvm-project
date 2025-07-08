@@ -550,6 +550,9 @@ public:
     return it->second;
   }
 
+  Address getAddrOfBitFieldStorage(LValue base, const clang::FieldDecl *field,
+                                   mlir::Type fieldType, unsigned index);
+
   /// Load the value for 'this'. This function is only valid while generating
   /// code for an C++ member function.
   /// FIXME(cir): this should return a mlir::Value!
@@ -770,6 +773,15 @@ public:
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
                   const CallArgList &args, cir::CIRCallOpInterface *callOp,
                   mlir::Location loc);
+  RValue emitCall(const CIRGenFunctionInfo &funcInfo,
+                  const CIRGenCallee &callee, ReturnValueSlot returnValue,
+                  const CallArgList &args,
+                  cir::CIRCallOpInterface *callOrTryCall = nullptr) {
+    assert(currSrcLoc && "source location must have been set");
+    return emitCall(funcInfo, callee, returnValue, args, callOrTryCall,
+                    *currSrcLoc);
+  }
+
   RValue emitCall(clang::QualType calleeTy, const CIRGenCallee &callee,
                   const clang::CallExpr *e, ReturnValueSlot returnValue);
   void emitCallArg(CallArgList &args, const clang::Expr *e,
@@ -836,6 +848,8 @@ public:
       clang::NestedNameSpecifier *qualifier, bool isArrow,
       const clang::Expr *base);
 
+  mlir::Value emitCXXNewExpr(const CXXNewExpr *e);
+
   RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
                                        const CXXMethodDecl *md,
                                        ReturnValueSlot returnValue);
@@ -867,6 +881,8 @@ public:
 
   mlir::LogicalResult emitFunctionBody(const clang::Stmt *body);
 
+  void emitImplicitAssignmentOperatorBody(FunctionArgList &args);
+
   void emitInitializerForField(clang::FieldDecl *field, LValue lhs,
                                clang::Expr *init);
 
@@ -883,9 +899,8 @@ public:
 
   // Build CIR for a statement. useCurrentScope should be true if no
   // new scopes need be created when finding a compound statement.
-  mlir::LogicalResult
-  emitStmt(const clang::Stmt *s, bool useCurrentScope,
-           llvm::ArrayRef<const Attr *> attrs = std::nullopt);
+  mlir::LogicalResult emitStmt(const clang::Stmt *s, bool useCurrentScope,
+                               llvm::ArrayRef<const Attr *> attrs = {});
 
   mlir::LogicalResult emitSimpleStmt(const clang::Stmt *s,
                                      bool useCurrentScope);
@@ -944,6 +959,8 @@ public:
   /// ignoring the result.
   void emitIgnoredExpr(const clang::Expr *e);
 
+  RValue emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc);
+
   /// Given an expression that represents a value lvalue, this method emits
   /// the address of the lvalue, then loads the result as an rvalue,
   /// returning the rvalue.
@@ -964,6 +981,7 @@ public:
   /// of the expression.
   /// FIXME: document this function better.
   LValue emitLValue(const clang::Expr *e);
+  LValue emitLValueForBitField(LValue base, const FieldDecl *field);
   LValue emitLValueForField(LValue base, const clang::FieldDecl *field);
 
   /// Like emitLValueForField, excpet that if the Field is a reference, this
@@ -1186,7 +1204,41 @@ private:
   void updateLoopOpParallelism(mlir::acc::LoopOp &op, bool isOrphan,
                                OpenACCDirectiveKind dk);
 
+  // The OpenACC 'cache' construct actually applies to the 'loop' if present. So
+  // keep track of the 'loop' so that we can add the cache vars to it correctly.
+  mlir::acc::LoopOp *activeLoopOp = nullptr;
+
+  struct ActiveOpenACCLoopRAII {
+    CIRGenFunction &cgf;
+    mlir::acc::LoopOp *oldLoopOp;
+
+    ActiveOpenACCLoopRAII(CIRGenFunction &cgf, mlir::acc::LoopOp *newOp)
+        : cgf(cgf), oldLoopOp(cgf.activeLoopOp) {
+      cgf.activeLoopOp = newOp;
+    }
+    ~ActiveOpenACCLoopRAII() { cgf.activeLoopOp = oldLoopOp; }
+  };
+
 public:
+  // Helper type used to store the list of important information for a 'data'
+  // clause variable, or a 'cache' variable reference.
+  struct OpenACCDataOperandInfo {
+    mlir::Location beginLoc;
+    mlir::Value varValue;
+    std::string name;
+    llvm::SmallVector<mlir::Value> bounds;
+  };
+  // Gets the collection of info required to lower and OpenACC clause or cache
+  // construct variable reference.
+  OpenACCDataOperandInfo getOpenACCDataOperandInfo(const Expr *e);
+  // Helper function to emit the integer expressions as required by an OpenACC
+  // clause/construct.
+  mlir::Value emitOpenACCIntExpr(const Expr *intExpr);
+  // Helper function to emit an integer constant as an mlir int type, used for
+  // constants in OpenACC constructs/clauses.
+  mlir::Value createOpenACCConstantInt(mlir::Location loc, unsigned width,
+                                       int64_t value);
+
   mlir::LogicalResult
   emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s);
   mlir::LogicalResult emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s);
