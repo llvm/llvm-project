@@ -117,8 +117,10 @@ public:
         continue;
       }
 
-      ResetEvent(m_ready);
+      // Notify that data is available on the pipe. It's important to set this before clearing m_ready to avoid a race with WillPoll.
       SetEvent(m_event);
+      // Stop polling until we're told to resume.
+      ResetEvent(m_ready);
 
       // Wait until the current read is consumed before doing the next read.
       WaitForSingleObject(m_ready, INFINITE);
