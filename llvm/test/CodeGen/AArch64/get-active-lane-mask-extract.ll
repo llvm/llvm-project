@@ -210,8 +210,8 @@ define void @test_fixed_extract(i64 %i, i64 %n) #0 {
 ; CHECK-SME2-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SME2-NEXT:    b use
     %r = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 %i, i64 %n)
-    %v0 = call <2 x i1> @llvm.vector.extract.v2i1.nxv8i1.i64(<vscale x 4 x i1> %r, i64 0)
-    %v1 = call <2 x i1> @llvm.vector.extract.v2i1.nxv8i1.i64(<vscale x 4 x i1> %r, i64 2)
+    %v0 = call <2 x i1> @llvm.vector.extract.v2i1.nxv4i1.i64(<vscale x 4 x i1> %r, i64 0)
+    %v1 = call <2 x i1> @llvm.vector.extract.v2i1.nxv4i1.i64(<vscale x 4 x i1> %r, i64 2)
     tail call void @use(<2 x i1> %v0, <2 x i1> %v1)
     ret void
 }
