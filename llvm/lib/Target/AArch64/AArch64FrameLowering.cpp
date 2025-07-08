@@ -435,6 +435,8 @@ AArch64FrameLowering::getStackIDForScalableVectors() const {
 static unsigned getFixedObjectSize(const MachineFunction &MF,
                                    const AArch64FunctionInfo *AFI, bool IsWin64,
                                    bool IsFunclet) {
+  assert(AFI->getTailCallReservedStack() % 16 == 0 &&
+         "Tail call reserved stack must be aligned to 16 bytes");
   if (!IsWin64 || IsFunclet) {
     return AFI->getTailCallReservedStack();
   } else {
@@ -442,12 +444,31 @@ static unsigned getFixedObjectSize(const MachineFunction &MF,
         !MF.getFunction().getAttributes().hasAttrSomewhere(
             Attribute::SwiftAsync))
       report_fatal_error("cannot generate ABI-changing tail call for Win64");
+    unsigned FixedObjectSize = AFI->getTailCallReservedStack();
+
     // Var args are stored here in the primary function.
-    const unsigned VarArgsArea = AFI->getVarArgsGPRSize();
-    // To support EH funclets we allocate an UnwindHelp object
-    const unsigned UnwindHelpObject = (MF.hasEHFunclets() ? 8 : 0);
-    return AFI->getTailCallReservedStack() +
-           alignTo(VarArgsArea + UnwindHelpObject, 16);
+    FixedObjectSize += AFI->getVarArgsGPRSize();
+
+    if (MF.hasEHFunclets()) {
+      // Catch objects are stored here in the primary function.
+      const MachineFrameInfo &MFI = MF.getFrameInfo();
+      const WinEHFuncInfo &EHInfo = *MF.getWinEHFuncInfo();
+      SmallSetVector<int, 8> CatchObjFrameIndices;
+      for (const WinEHTryBlockMapEntry &TBME : EHInfo.TryBlockMap) {
+        for (const WinEHHandlerType &H : TBME.HandlerArray) {
+          int FrameIndex = H.CatchObj.FrameIndex;
+          if ((FrameIndex != INT_MAX) &&
+              CatchObjFrameIndices.insert(FrameIndex)) {
+            FixedObjectSize = alignTo(FixedObjectSize,
+                                      MFI.getObjectAlign(FrameIndex).value()) +
+                              MFI.getObjectSize(FrameIndex);
+          }
+        }
+      }
+      // To support EH funclets we allocate an UnwindHelp object
+      FixedObjectSize += 8;
+    }
+    return alignTo(FixedObjectSize, 16);
   }
 }
 
@@ -4662,22 +4683,38 @@ void AArch64FrameLowering::processFunctionBeforeFrameFinalized(
   // anything.
   if (!MF.hasEHFunclets())
     return;
-  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+
+  // Win64 C++ EH needs to allocate space for the catch objects in the fixed
+  // object area right next to the UnwindHelp object.
   WinEHFuncInfo &EHInfo = *MF.getWinEHFuncInfo();
+  int64_t CurrentOffset =
+      AFI->getVarArgsGPRSize() + AFI->getTailCallReservedStack();
+  for (WinEHTryBlockMapEntry &TBME : EHInfo.TryBlockMap) {
+    for (WinEHHandlerType &H : TBME.HandlerArray) {
+      int FrameIndex = H.CatchObj.FrameIndex;
+      if ((FrameIndex != INT_MAX) && MFI.getObjectOffset(FrameIndex) == 0) {
+        CurrentOffset =
+            alignTo(CurrentOffset, MFI.getObjectAlign(FrameIndex).value());
+        CurrentOffset += MFI.getObjectSize(FrameIndex);
+        MFI.setObjectOffset(FrameIndex, -CurrentOffset);
+      }
+    }
+  }
+
+  // Create an UnwindHelp object.
+  // The UnwindHelp object is allocated at the start of the fixed object area
+  int64_t UnwindHelpOffset = alignTo(CurrentOffset + 8, Align(16));
+  assert(UnwindHelpOffset == getFixedObjectSize(MF, AFI, /*IsWin64*/ true,
+                                                /*IsFunclet*/ false) &&
+         "UnwindHelpOffset must be at the start of the fixed object area");
+  int UnwindHelpFI = MFI.CreateFixedObject(/*Size*/ 8, -UnwindHelpOffset,
+                                           /*IsImmutable=*/false);
+  EHInfo.UnwindHelpFrameIdx = UnwindHelpFI;
 
   MachineBasicBlock &MBB = MF.front();
   auto MBBI = MBB.begin();
   while (MBBI != MBB.end() && MBBI->getFlag(MachineInstr::FrameSetup))
     ++MBBI;
-
-  // Create an UnwindHelp object.
-  // The UnwindHelp object is allocated at the start of the fixed object area
-  int64_t FixedObject =
-      getFixedObjectSize(MF, AFI, /*IsWin64*/ true, /*IsFunclet*/ false);
-  int UnwindHelpFI = MFI.CreateFixedObject(/*Size*/ 8,
-                                           /*SPOffset*/ -FixedObject,
-                                           /*IsImmutable=*/false);
-  EHInfo.UnwindHelpFrameIdx = UnwindHelpFI;
 
   // We need to store -2 into the UnwindHelp object at the start of the
   // function.
@@ -4686,6 +4723,7 @@ void AArch64FrameLowering::processFunctionBeforeFrameFinalized(
   RS->backward(MBBI);
   Register DstReg = RS->FindUnusedReg(&AArch64::GPR64commonRegClass);
   assert(DstReg && "There must be a free register after frame setup");
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   BuildMI(MBB, MBBI, DL, TII.get(AArch64::MOVi64imm), DstReg).addImm(-2);
   BuildMI(MBB, MBBI, DL, TII.get(AArch64::STURXi))
       .addReg(DstReg, getKillRegState(true))
