@@ -47,6 +47,42 @@ entry:
   ret <2 x i64> %res
 }
 
+; Function to test ternary(A, and(B, C), or(B, C)) for <16 x i8>
+define <16 x i8> @ternary_A_and_BC_or_BC_16x8(<16 x i1> %A, <16 x i8> %B, <16 x i8> %C) {
+; CHECK-LABEL: ternary_A_and_BC_or_BC_16x8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxspltib v5, 7
+; CHECK-NEXT:    xxland vs0, v3, v4
+; CHECK-NEXT:    xxlor vs1, v3, v4
+; CHECK-NEXT:    vslb v2, v2, v5
+; CHECK-NEXT:    vsrab v2, v2, v5
+; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    blr
+entry:
+  %and = and <16 x i8> %B, %C
+  %or = or <16 x i8> %B, %C
+  %res = select <16 x i1> %A, <16 x i8> %and, <16 x i8> %or
+  ret <16 x i8> %res
+}
+
+; Function to test ternary(A, and(B, C), or(B, C)) for <8 x i16>
+define <8 x i16> @ternary_A_and_BC_or_BC_8x16(<8 x i1> %A, <8 x i16> %B, <8 x i16> %C) {
+; CHECK-LABEL: ternary_A_and_BC_or_BC_8x16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxspltiw v5, 983055
+; CHECK-NEXT:    xxland vs0, v3, v4
+; CHECK-NEXT:    xxlor vs1, v3, v4
+; CHECK-NEXT:    vslh v2, v2, v5
+; CHECK-NEXT:    vsrah v2, v2, v5
+; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    blr
+entry:
+  %and = and <8 x i16> %B, %C
+  %or = or <8 x i16> %B, %C
+  %res = select <8 x i1> %A, <8 x i16> %and, <8 x i16> %or
+  ret <8 x i16> %res
+}
+
 ; Function to test ternary(A, B, or(B, C)) for <4 x i32>
 define <4 x i32> @ternary_A_B_or_BC_4x32(<4 x i1> %A, <4 x i32> %B, <4 x i32> %C) {
 ; CHECK-LABEL: ternary_A_B_or_BC_4x32:
@@ -80,6 +116,37 @@ entry:
   ret <2 x i64> %res
 }
 
+; Function to test ternary(A, B, or(B, C)) for <16 x i8>
+define <16 x i8> @ternary_A_B_or_BC_16x8(<16 x i1> %A, <16 x i8> %B, <16 x i8> %C) {
+; CHECK-LABEL: ternary_A_B_or_BC_16x8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxspltib v5, 7
+; CHECK-NEXT:    xxlor vs0, v3, v4
+; CHECK-NEXT:    vslb v2, v2, v5
+; CHECK-NEXT:    vsrab v2, v2, v5
+; CHECK-NEXT:    xxsel v2, vs0, v3, v2
+; CHECK-NEXT:    blr
+entry:
+  %or = or <16 x i8> %B, %C
+  %res = select <16 x i1> %A, <16 x i8> %B, <16 x i8> %or
+  ret <16 x i8> %res
+}
+
+; Function to test ternary(A, B, or(B, C)) for <8 x i16>
+define <8 x i16> @ternary_A_B_or_BC_8x16(<8 x i1> %A, <8 x i16> %B, <8 x i16> %C) {
+; CHECK-LABEL: ternary_A_B_or_BC_8x16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxspltiw v5, 983055
+; CHECK-NEXT:    xxlor vs0, v3, v4
+; CHECK-NEXT:    vslh v2, v2, v5
+; CHECK-NEXT:    vsrah v2, v2, v5
+; CHECK-NEXT:    xxsel v2, vs0, v3, v2
+; CHECK-NEXT:    blr
+entry:
+  %or = or <8 x i16> %B, %C
+  %res = select <8 x i1> %A, <8 x i16> %B, <8 x i16> %or
+  ret <8 x i16> %res
+}
 
 ; Function to test ternary(A, C, or(B, C)) for <4 x i32>
 define <4 x i32> @ternary_A_C_or_BC_4x32(<4 x i1> %A, <4 x i32> %B, <4 x i32> %C) {
@@ -114,6 +181,37 @@ entry:
   ret <2 x i64> %res
 }
 
+; Function to test ternary(A, C, or(B, C)) for <16 x i8>
+define <16 x i8> @ternary_A_C_or_BC_16x8(<16 x i1> %A, <16 x i8> %B, <16 x i8> %C) {
+; CHECK-LABEL: ternary_A_C_or_BC_16x8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxspltib v5, 7
+; CHECK-NEXT:    xxlor vs0, v3, v4
+; CHECK-NEXT:    vslb v2, v2, v5
+; CHECK-NEXT:    vsrab v2, v2, v5
+; CHECK-NEXT:    xxsel v2, vs0, v4, v2
+; CHECK-NEXT:    blr
+entry:
+  %or = or <16 x i8> %B, %C
+  %res = select <16 x i1> %A, <16 x i8> %C, <16 x i8> %or
+  ret <16 x i8> %res
+}
+
+; Function to test ternary(A, C, or(B, C)) for <8 x i16>
+define <8 x i16> @ternary_A_C_or_BC_8x16(<8 x i1> %A, <8 x i16> %B, <8 x i16> %C) {
+; CHECK-LABEL: ternary_A_C_or_BC_8x16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxspltiw v5, 983055
+; CHECK-NEXT:    xxlor vs0, v3, v4
+; CHECK-NEXT:    vslh v2, v2, v5
+; CHECK-NEXT:    vsrah v2, v2, v5
+; CHECK-NEXT:    xxsel v2, vs0, v4, v2
+; CHECK-NEXT:    blr
+entry:
+  %or = or <8 x i16> %B, %C
+  %res = select <8 x i1> %A, <8 x i16> %C, <8 x i16> %or
+  ret <8 x i16> %res
+}
 
 ; Function to test ternary(A, eqv(B,C), or(B, C)) for <4 x i32>
 define <4 x i32> @ternary_A_eqv_BC_or_BC_4x32(<4 x i1> %A, <4 x i32> %B, <4 x i32> %C) {
@@ -154,6 +252,44 @@ entry:
   ret <2 x i64> %res
 }
 
+; Function to test ternary(A, eqv(B,C), or(B, C)) for <16 x i8>
+define <16 x i8> @ternary_A_eqv_BC_or_BC_16x8(<16 x i1> %A, <16 x i8> %B, <16 x i8> %C) {
+; CHECK-LABEL: ternary_A_eqv_BC_or_BC_16x8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxspltib v5, 7
+; CHECK-NEXT:    xxleqv vs0, v3, v4
+; CHECK-NEXT:    xxlor vs1, v3, v4
+; CHECK-NEXT:    vslb v2, v2, v5
+; CHECK-NEXT:    vsrab v2, v2, v5
+; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    blr
+entry:
+  %xor = xor <16 x i8> %B, %C
+  %eqv = xor <16 x i8> %xor, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>  ; Vector eqv operation
+  %or = or <16 x i8> %B, %C
+  %res = select <16 x i1> %A, <16 x i8> %eqv, <16 x i8> %or
+  ret <16 x i8> %res
+}
+
+; Function to test ternary(A, eqv(B,C), or(B, C)) for <8 x i16>
+define <8 x i16> @ternary_A_eqv_BC_or_BC_8x16(<8 x i1> %A, <8 x i16> %B, <8 x i16> %C) {
+; CHECK-LABEL: ternary_A_eqv_BC_or_BC_8x16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxspltiw v5, 983055
+; CHECK-NEXT:    xxleqv vs0, v3, v4
+; CHECK-NEXT:    xxlor vs1, v3, v4
+; CHECK-NEXT:    vslh v2, v2, v5
+; CHECK-NEXT:    vsrah v2, v2, v5
+; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    blr
+entry:
+  %xor = xor <8 x i16> %B, %C
+  %eqv = xor <8 x i16> %xor, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>  ; Vector eqv operation
+  %or = or <8 x i16> %B, %C
+  %res = select <8 x i1> %A, <8 x i16> %eqv, <8 x i16> %or
+  ret <8 x i16> %res
+}
+
 ; Function to test ternary(A, not(C), or(B, C)) for <4 x i32>
 define <4 x i32> @ternary_A_not_C_or_BC_4x32(<4 x i1> %A, <4 x i32> %B, <4 x i32> %C) {
 ; CHECK-LABEL: ternary_A_not_C_or_BC_4x32:
@@ -189,6 +325,42 @@ entry:
   %or = or <2 x i64> %B, %C
   %res = select <2 x i1> %A, <2 x i64> %not, <2 x i64> %or
   ret <2 x i64> %res
+}
+
+; Function to test ternary(A, not(C), or(B, C)) for <16 x i8>
+define <16 x i8> @ternary_A_not_C_or_BC_16x8(<16 x i1> %A, <16 x i8> %B, <16 x i8> %C) {
+; CHECK-LABEL: ternary_A_not_C_or_BC_16x8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxspltib v5, 7
+; CHECK-NEXT:    xxlnor vs0, v4, v4
+; CHECK-NEXT:    xxlor vs1, v3, v4
+; CHECK-NEXT:    vslb v2, v2, v5
+; CHECK-NEXT:    vsrab v2, v2, v5
+; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    blr
+entry:
+  %not = xor <16 x i8> %C, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>  ; Vector not operation
+  %or = or <16 x i8> %B, %C
+  %res = select <16 x i1> %A, <16 x i8> %not, <16 x i8> %or
+  ret <16 x i8> %res
+}
+
+; Function to test ternary(A, not(C), or(B, C)) for <8 x i16>
+define <8 x i16> @ternary_A_not_C_or_BC_8x16(<8 x i1> %A, <8 x i16> %B, <8 x i16> %C) {
+; CHECK-LABEL: ternary_A_not_C_or_BC_8x16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxspltiw v5, 983055
+; CHECK-NEXT:    xxlnor vs0, v4, v4
+; CHECK-NEXT:    xxlor vs1, v3, v4
+; CHECK-NEXT:    vslh v2, v2, v5
+; CHECK-NEXT:    vsrah v2, v2, v5
+; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    blr
+entry:
+  %not = xor <8 x i16> %C, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>  ; Vector not operation
+  %or = or <8 x i16> %B, %C
+  %res = select <8 x i1> %A, <8 x i16> %not, <8 x i16> %or
+  ret <8 x i16> %res
 }
 
 ; Function to test ternary(A, not(B), or(B, C)) for <4 x i32>
@@ -228,6 +400,42 @@ entry:
   ret <2 x i64> %res
 }
 
+; Function to test ternary(A, not(B), or(B, C)) for <16 x i8>
+define <16 x i8> @ternary_A_not_B_or_BC_16x8(<16 x i1> %A, <16 x i8> %B, <16 x i8> %C) {
+; CHECK-LABEL: ternary_A_not_B_or_BC_16x8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxspltib v5, 7
+; CHECK-NEXT:    xxlnor vs0, v3, v3
+; CHECK-NEXT:    xxlor vs1, v3, v4
+; CHECK-NEXT:    vslb v2, v2, v5
+; CHECK-NEXT:    vsrab v2, v2, v5
+; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    blr
+entry:
+  %not = xor <16 x i8> %B, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>  ; Vector not operation
+  %or = or <16 x i8> %B, %C
+  %res = select <16 x i1> %A, <16 x i8> %not, <16 x i8> %or
+  ret <16 x i8> %res
+}
+
+; Function to test ternary(A, not(B), or(B, C)) for <8 x i16>
+define <8 x i16> @ternary_A_not_B_or_BC_8x16(<8 x i1> %A, <8 x i16> %B, <8 x i16> %C) {
+; CHECK-LABEL: ternary_A_not_B_or_BC_8x16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxspltiw v5, 983055
+; CHECK-NEXT:    xxlnor vs0, v3, v3
+; CHECK-NEXT:    xxlor vs1, v3, v4
+; CHECK-NEXT:    vslh v2, v2, v5
+; CHECK-NEXT:    vsrah v2, v2, v5
+; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    blr
+entry:
+  %not = xor <8 x i16> %B, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>  ; Vector not operation
+  %or = or <8 x i16> %B, %C
+  %res = select <8 x i1> %A, <8 x i16> %not, <8 x i16> %or
+  ret <8 x i16> %res
+}
+
 ; Function to test ternary(A, nand(B,C), or(B, C)) for <4 x i32>
 define <4 x i32> @ternary_A_nand_BC_or_BC_4x32(<4 x i1> %A, <4 x i32> %B, <4 x i32> %C) {
 ; CHECK-LABEL: ternary_A_nand_BC_or_BC_4x32:
@@ -265,4 +473,42 @@ entry:
   %or = or <2 x i64> %B, %C
   %res = select <2 x i1> %A, <2 x i64> %nand, <2 x i64> %or
   ret <2 x i64> %res
+}
+
+; Function to test ternary(A, nand(B,C), or(B, C)) for <16 x i8>
+define <16 x i8> @ternary_A_nand_BC_or_BC_16x8(<16 x i1> %A, <16 x i8> %B, <16 x i8> %C) {
+; CHECK-LABEL: ternary_A_nand_BC_or_BC_16x8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxspltib v5, 7
+; CHECK-NEXT:    xxlnand vs0, v3, v4
+; CHECK-NEXT:    xxlor vs1, v3, v4
+; CHECK-NEXT:    vslb v2, v2, v5
+; CHECK-NEXT:    vsrab v2, v2, v5
+; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    blr
+entry:
+  %and = and <16 x i8> %B, %C
+  %nand = xor <16 x i8> %and, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>  ; Vector nand operation
+  %or = or <16 x i8> %B, %C
+  %res = select <16 x i1> %A, <16 x i8> %nand, <16 x i8> %or
+  ret <16 x i8> %res
+}
+
+; Function to test ternary(A, nand(B,C), or(B, C)) for <8 x i16>
+define <8 x i16> @ternary_A_nand_BC_or_BC_8x16(<8 x i1> %A, <8 x i16> %B, <8 x i16> %C) {
+; CHECK-LABEL: ternary_A_nand_BC_or_BC_8x16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxspltiw v5, 983055
+; CHECK-NEXT:    xxlnand vs0, v3, v4
+; CHECK-NEXT:    xxlor vs1, v3, v4
+; CHECK-NEXT:    vslh v2, v2, v5
+; CHECK-NEXT:    vsrah v2, v2, v5
+; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
+; CHECK-NEXT:    blr
+entry:
+  %and = and <8 x i16> %B, %C
+  %nand = xor <8 x i16> %and, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>  ; Vector nand operation
+  %or = or <8 x i16> %B, %C
+  %res = select <8 x i1> %A, <8 x i16> %nand, <8 x i16> %or
+  ret <8 x i16> %res
 }

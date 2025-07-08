@@ -109,6 +109,18 @@ TEST(EmbeddingTest, ConstructorsAndAccessors) {
   }
 }
 
+TEST(EmbeddingTest, AddVectorsOutOfPlace) {
+  Embedding E1 = {1.0, 2.0, 3.0};
+  Embedding E2 = {0.5, 1.5, -1.0};
+
+  Embedding E3 = E1 + E2;
+  EXPECT_THAT(E3, ElementsAre(1.5, 3.5, 2.0));
+
+  // Check that E1 and E2 are unchanged
+  EXPECT_THAT(E1, ElementsAre(1.0, 2.0, 3.0));
+  EXPECT_THAT(E2, ElementsAre(0.5, 1.5, -1.0));
+}
+
 TEST(EmbeddingTest, AddVectors) {
   Embedding E1 = {1.0, 2.0, 3.0};
   Embedding E2 = {0.5, 1.5, -1.0};
@@ -117,6 +129,18 @@ TEST(EmbeddingTest, AddVectors) {
   EXPECT_THAT(E1, ElementsAre(1.5, 3.5, 2.0));
 
   // Check that E2 is unchanged
+  EXPECT_THAT(E2, ElementsAre(0.5, 1.5, -1.0));
+}
+
+TEST(EmbeddingTest, SubtractVectorsOutOfPlace) {
+  Embedding E1 = {1.0, 2.0, 3.0};
+  Embedding E2 = {0.5, 1.5, -1.0};
+
+  Embedding E3 = E1 - E2;
+  EXPECT_THAT(E3, ElementsAre(0.5, 0.5, 4.0));
+
+  // Check that E1 and E2 are unchanged
+  EXPECT_THAT(E1, ElementsAre(1.0, 2.0, 3.0));
   EXPECT_THAT(E2, ElementsAre(0.5, 1.5, -1.0));
 }
 
@@ -137,6 +161,15 @@ TEST(EmbeddingTest, ScaleVector) {
   EXPECT_THAT(E1, ElementsAre(0.5, 1.0, 1.5));
 }
 
+TEST(EmbeddingTest, ScaleVectorOutOfPlace) {
+  Embedding E1 = {1.0, 2.0, 3.0};
+  Embedding E2 = E1 * 0.5f;
+  EXPECT_THAT(E2, ElementsAre(0.5, 1.0, 1.5));
+
+  // Check that E1 is unchanged
+  EXPECT_THAT(E1, ElementsAre(1.0, 2.0, 3.0));
+}
+
 TEST(EmbeddingTest, AddScaledVector) {
   Embedding E1 = {1.0, 2.0, 3.0};
   Embedding E2 = {2.0, 0.5, -1.0};
@@ -154,14 +187,14 @@ TEST(EmbeddingTest, ApproximatelyEqual) {
   EXPECT_TRUE(E1.approximatelyEquals(E2)); // Diff = 1e-7
 
   Embedding E3 = {1.00002, 2.00002, 3.00002}; // Diff = 2e-5
-  EXPECT_FALSE(E1.approximatelyEquals(E3));
+  EXPECT_FALSE(E1.approximatelyEquals(E3, 1e-6));
   EXPECT_TRUE(E1.approximatelyEquals(E3, 3e-5));
 
   Embedding E_clearly_within = {1.0000005, 2.0000005, 3.0000005}; // Diff = 5e-7
   EXPECT_TRUE(E1.approximatelyEquals(E_clearly_within));
 
   Embedding E_clearly_outside = {1.00001, 2.00001, 3.00001}; // Diff = 1e-5
-  EXPECT_FALSE(E1.approximatelyEquals(E_clearly_outside));
+  EXPECT_FALSE(E1.approximatelyEquals(E_clearly_outside, 1e-6));
 
   Embedding E4 = {1.0, 2.0, 3.5}; // Large diff
   EXPECT_FALSE(E1.approximatelyEquals(E4, 0.01));
@@ -178,6 +211,12 @@ TEST(EmbeddingTest, AccessOutOfBounds) {
   EXPECT_DEATH(E[3], "Index out of bounds");
   EXPECT_DEATH(E[-1], "Index out of bounds");
   EXPECT_DEATH(E[4] = 4.0, "Index out of bounds");
+}
+
+TEST(EmbeddingTest, MismatchedDimensionsAddVectorsOutOfPlace) {
+  Embedding E1 = {1.0, 2.0};
+  Embedding E2 = {1.0};
+  EXPECT_DEATH(E1 + E2, "Vectors must have the same dimension");
 }
 
 TEST(EmbeddingTest, MismatchedDimensionsAddVectors) {
