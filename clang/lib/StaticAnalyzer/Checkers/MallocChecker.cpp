@@ -1280,11 +1280,9 @@ static bool isStandardRealloc(const CallEvent &Call) {
   const FunctionDecl *FD = dyn_cast<FunctionDecl>(Call.getDecl());
   assert(FD);
   ASTContext &AC = FD->getASTContext();
-
-  return FD->getDeclaredReturnType().getDesugaredType(AC) == AC.VoidPtrTy &&
-         FD->getParamDecl(0)->getType().getDesugaredType(AC) == AC.VoidPtrTy &&
-         FD->getParamDecl(1)->getType().getDesugaredType(AC) ==
-             AC.getCanonicalSizeType();
+  return AC.hasSameType(FD->getDeclaredReturnType(), AC.VoidPtrTy) &&
+         AC.hasSameType(FD->getParamDecl(0)->getType(), AC.VoidPtrTy) &&
+         AC.hasSameType(FD->getParamDecl(1)->getType(), AC.getSizeType());
 }
 
 static bool isGRealloc(const CallEvent &Call) {
@@ -1292,10 +1290,9 @@ static bool isGRealloc(const CallEvent &Call) {
   assert(FD);
   ASTContext &AC = FD->getASTContext();
 
-  return FD->getDeclaredReturnType().getDesugaredType(AC) == AC.VoidPtrTy &&
-         FD->getParamDecl(0)->getType().getDesugaredType(AC) == AC.VoidPtrTy &&
-         FD->getParamDecl(1)->getType().getDesugaredType(AC) ==
-             AC.UnsignedLongTy;
+  return AC.hasSameType(FD->getDeclaredReturnType(), AC.VoidPtrTy) &&
+         AC.hasSameType(FD->getParamDecl(0)->getType(), AC.VoidPtrTy) &&
+         AC.hasSameType(FD->getParamDecl(1)->getType(), AC.UnsignedLongTy);
 }
 
 void MallocChecker::checkRealloc(ProgramStateRef State, const CallEvent &Call,
@@ -1906,7 +1903,7 @@ void MallocChecker::checkTaintedness(CheckerContext &C, const CallEvent &Call,
     return;
 
   SValBuilder &SVB = C.getSValBuilder();
-  QualType SizeTy = SVB.getContext().getCanonicalSizeType();
+  QualType SizeTy = SVB.getContext().getSizeType();
   QualType CmpTy = SVB.getConditionType();
   // In case the symbol is tainted, we give a warning if the
   // size is larger than SIZE_MAX/4
