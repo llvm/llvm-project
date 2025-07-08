@@ -23,7 +23,14 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#ifdef LLVM_ON_UNIX
 #include <unistd.h>
+#else
+// Windows/MSVC fallback
+#define STDIN_FILENO 0
+#define STDOUT_FILENO 1
+#define STDERR_FILENO 2
+#endif
 
 llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
 launchExecutor(llvm::StringRef ExecutablePath, bool UseSharedMemory,
@@ -38,11 +45,13 @@ llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
 connectTCPSocket(llvm::StringRef NetworkAddress, bool UseSharedMemory,
                  llvm::StringRef SlabAllocateSizeString);
 
+#ifdef LLVM_ON_UNIX
 /// Returns PID of last launched executor.
 pid_t getLastLaunchedExecutorPID();
 
 /// Returns PID of nth launched executor.
 /// 1-based indexing.
 pid_t getNthLaunchedExecutorPID(int n);
+#endif
 
 #endif // LLVM_CLANG_INTERPRETER_REMOTEJITUTILS_H

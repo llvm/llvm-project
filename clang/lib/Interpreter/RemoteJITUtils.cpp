@@ -288,6 +288,8 @@ connectTCPSocket(StringRef NetworkAddress, bool UseSharedMemory,
 #endif
 }
 
+#if LLVM_ON_UNIX
+
 pid_t getLastLaunchedExecutorPID() {
   if (!LaunchedExecutorPID.size())
     return -1;
@@ -299,3 +301,4 @@ pid_t getNthLaunchedExecutorPID(int n) {
     return -1;
   return LaunchedExecutorPID.at(n - 1);
 }
+#endif
