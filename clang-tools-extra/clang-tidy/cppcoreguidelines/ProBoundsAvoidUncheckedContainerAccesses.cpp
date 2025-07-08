@@ -30,11 +30,10 @@ ProBoundsAvoidUncheckedContainerAccesses::
 
 void ProBoundsAvoidUncheckedContainerAccesses::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
-
-  Options.store(Opts, "FixFunction", FixFunction);
-  Options.store(Opts, "FixMode", FixMode);
   Options.store(Opts, "ExcludeClasses",
                 utils::options::serializeStringList(ExcludedClasses));
+  Options.store(Opts, "FixMode", FixMode);
+  Options.store(Opts, "FixFunction", FixFunction);
 }
 
 // TODO: if at() is defined in another class in the class hierarchy of the class
