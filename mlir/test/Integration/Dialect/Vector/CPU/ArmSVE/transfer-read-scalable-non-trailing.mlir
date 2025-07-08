@@ -15,7 +15,7 @@
 // Test the transfer_read with vector type with a non-trailing scalable
 // dimension as transformed by the pattern LegalizeTransferRead.
 
-func.func @transfer_read_scalable_non_trailing(%M : memref<?x8xi8>) {
+func.func @transfer_read_scalable_non_trailing(%M : memref<?x8xi8>) attributes {no_inline} {
   // Read an LLVM-illegal vector
   %c0 = arith.constant 0 : index
   %c0_i8 = arith.constant 0 : i8

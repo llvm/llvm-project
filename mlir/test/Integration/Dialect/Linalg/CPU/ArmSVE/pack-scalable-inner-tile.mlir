@@ -50,7 +50,7 @@ func.func @main() {
   return
 }
 
-func.func private @pack(%A: tensor<7x16xi32>) {
+func.func private @pack(%A: tensor<7x16xi32>) attributes {no_inline} {
   %c1 = arith.constant 1 : index
   %pad_val = arith.constant 123 : i32
 

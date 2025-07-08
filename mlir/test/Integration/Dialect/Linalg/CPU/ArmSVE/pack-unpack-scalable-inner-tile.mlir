@@ -10,7 +10,7 @@
 // RUN: rm -f %t && %{compile} && %{run} | FileCheck %s
 
 /// End-to-end test for linalg.pack + linalg.unpack where one of the inner tile sizes is
-/// scalable. 
+/// scalable.
 /// NOTE: Vectorization has not been enabled yet!
 
 
@@ -26,7 +26,7 @@ func.func @main() {
   return
 }
 
-func.func @test_pack_unpack_scalable_inner_tile() {
+func.func @test_pack_unpack_scalable_inner_tile() attributes {no_inline} {
   // Dynamic/scalable tile size (vscale x 4)
   %c4 = arith.constant 4 : index
   %vs = vector.vscale
