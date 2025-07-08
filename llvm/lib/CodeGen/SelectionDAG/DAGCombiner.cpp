@@ -9902,14 +9902,14 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     if (SDValue Combined = visitADDLike(N))
       return Combined;
 
-  // fold xor (setcc x y cc) -1 -> setcc x y !cc
-  // Avoid breaking: and (xor (setcc x y cc) -1) z -> andn for vec
+  // fold not (setcc x, y, cc) -> setcc x y !cc
+  // Avoid breaking: and (not(setcc x, y, cc), z) -> andn for vec
   unsigned N0Opcode = N0.getOpcode();
   SDValue LHS, RHS, CC;
   if (TLI.isConstTrueVal(N1) &&
       isSetCCEquivalent(N0, LHS, RHS, CC, /*MatchStrict*/ true) &&
-      !(N->hasOneUse() && TLI.hasAndNot(SDValue(N, 0)) &&
-        N->use_begin()->getUser()->getOpcode() == ISD::AND && VT.isVector())) {
+      !(VT.isVector() && TLI.hasAndNot(SDValue(N, 0)) && N->hasOneUse() &&
+        N->use_begin()->getUser()->getOpcode() == ISD::AND)) {
     ISD::CondCode NotCC = ISD::getSetCCInverse(cast<CondCodeSDNode>(CC)->get(),
                                                LHS.getValueType());
     if (!LegalOperations ||
