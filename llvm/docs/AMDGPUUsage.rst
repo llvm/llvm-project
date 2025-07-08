@@ -1563,20 +1563,24 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    - `v_mov_b32 <dest> <old>`
                                                    - `v_mov_b32 <dest> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>`
 
-  :ref:`llvm.prefetch`                             Implemented on gfx125x, ignored on earlier targets.
+  :ref:`llvm.prefetch <int_prefetch>`              Implemented on gfx125x, ignored on earlier targets.
                                                    First argument is flat, global, or constant address space pointer.
                                                    Any other address space is not supported.
                                                    On gfx125x generates flat_prefetch_b8 or global_prefetch_b8 and brings data to GL2.
                                                    Second argument is rw and currently ignored. Can be 0 or 1.
                                                    Third argument is locality, 0-3. Translates to memory scope:
-                                                     0 - SCOPE_SYS
-                                                     1 - SCOPE_DEV
-                                                     2 - SCOPE_SE
-                                                     3 - SCOPE_SE
+
+                                                   * 0 - SCOPE_SYS
+                                                   * 1 - SCOPE_DEV
+                                                   * 2 - SCOPE_SE
+                                                   * 3 - SCOPE_SE
+
                                                    Note that SCOPE_CU is not generated and not safe on an invalid address.
                                                    Fourth argument is cache type:
-                                                     0 - Instruction cache, currently ignored and no code is generated.
-                                                     1 - Data cache.
+
+                                                   * 0 - Instruction cache, currently ignored and no code is generated.
+                                                   * 1 - Data cache.
+
                                                    Instruction cache prefetches are unsafe on invalid address.
 
   llvm.amdgcn.wavegroup.id                         In a wavegroup-enabled dispatch, return the 0-based ID of the
@@ -2032,7 +2036,7 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       This is only relevant on targets with cluster support.
 
      "amdgpu-wavegroup-enable"                        GFX13+ only. Indicate that a kernel uses wavegroup launch. Requires
-                                                     `!reqd_work_group_size` metadata on the kernel function.
+                                                      `!reqd_work_group_size` metadata on the kernel function.
 
      "amdgpu-wavegroup-rank-function"                 GFX13+ only. Indicate it is a rank-specialized function for wavegroup.
 
@@ -6941,7 +6945,7 @@ to safely synchronize accesses to the hit buffer, for example as follows:
       fence syncscope("workgroup-rts") release
       call void @llvm.amdgcn.rts.update.ray(...)
 
-.. _amdgpu-bvh-invalidation
+.. _amdgpu-bvh-invalidation:
 
 BVH invalidation
 ################
@@ -15085,7 +15089,7 @@ Wavefronts can be executed in WGP or CU wavefront execution mode:
   work-group synchronization.
 
 See ``WGP_MODE`` field in
-:ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table` and
+:ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx13-table` and
 :ref:`amdgpu-target-features`.
 
 The code sequences used to implement the memory model for GFX12 are defined in
@@ -17187,7 +17191,7 @@ the instruction in the code sequence that references the table.
 .. _amdgpu-amdhsa-memory-model-gfx125x-cooperative-atomics:
 
 '``llvm.amdgcn.cooperative.atomic``' Intrinsics
-"""""""""""""""""""""""""""""""""""""""""""""""""
+###############################################
 
 The collection of convergent threads participating in a cooperative atomic must belong
 to the same wave32.
@@ -18970,7 +18974,7 @@ terminated by an ``.end_amdhsa_kernel`` directive.
      ``.amdhsa_uses_dynamic_stack``                           0                   GFX6-GFX12   Controls USES_DYNAMIC_STACK in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_named_barrier_count``                          0                   GFX1250+     Controls NAMED_BAR_CNT in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-table`.
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-gfx13-table`.
      ``.amdhsa_enable_wavegroup``                             0                   GFX13+       Controls ENABLE_WAVEGROUP in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_enable_spatial_cluster``                       0                   GFX13+       Controls ENABLE_SPATIAL_CLUSTER in
@@ -19056,7 +19060,7 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table`.
      ``.amdhsa_inst_pref_size``                               0                   GFX11-GFX12  Controls INST_PREF_SIZE in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table` or
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-table`
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-gfx13-table`
      ``.amdhsa_exception_fp_ieee_invalid_op``                 0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_IEEE_754_FP_INVALID_OPERATION in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx13-table`.
      ``.amdhsa_exception_fp_denorm_src``                      0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_FP_DENORMAL_SOURCE in
