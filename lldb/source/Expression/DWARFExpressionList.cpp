@@ -58,8 +58,7 @@ std::optional<DWARFExpressionList::DWARFExpressionEntry>
 DWARFExpressionList::GetExpressionEntryAtAddress(lldb::addr_t func_load_addr,
                                                 lldb::addr_t load_addr) const {
   if (const DWARFExpression *always = GetAlwaysValidExpr()) {
-    AddressRange full_range(m_func_file_addr, /*size=*/LLDB_INVALID_ADDRESS);
-    return DWARFExpressionEntry{full_range, always};
+    return DWARFExpressionEntry{std::nullopt, always};
   }
 
   if (func_load_addr == LLDB_INVALID_ADDRESS)

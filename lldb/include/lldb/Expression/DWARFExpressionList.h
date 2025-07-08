@@ -63,7 +63,7 @@ public:
   /// Represents an entry in the DWARFExpressionList with all needed metadata.
   struct DWARFExpressionEntry {
     /// Represents a DWARF location range in the DWARF unit’s file‐address space
-    AddressRange file_range;
+    std::optional<AddressRange> file_range; ///< None = always-valid single expr
     const DWARFExpression *expr;
   };
 
