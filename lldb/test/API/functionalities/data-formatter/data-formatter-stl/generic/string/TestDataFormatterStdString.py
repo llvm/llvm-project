@@ -45,15 +45,6 @@ class StdStringDataFormatterTestCase(TestBase):
 
         TheVeryLongOne = frame.FindVariable("TheVeryLongOne")
         summaryOptions = lldb.SBTypeSummaryOptions()
-        summaryOptions.SetCapping(lldb.eTypeSummaryUncapped)
-        uncappedSummaryStream = lldb.SBStream()
-        TheVeryLongOne.GetSummary(uncappedSummaryStream, summaryOptions)
-        uncappedSummary = uncappedSummaryStream.GetData()
-        self.assertGreater(
-            uncappedSummary.find("someText"),
-            0,
-            "uncappedSummary does not include the full string",
-        )
         summaryOptions.SetCapping(lldb.eTypeSummaryCapped)
         cappedSummaryStream = lldb.SBStream()
         TheVeryLongOne.GetSummary(cappedSummaryStream, summaryOptions)
@@ -88,13 +79,6 @@ class StdStringDataFormatterTestCase(TestBase):
                 '(%s::string) q = "hello world"' % ns,
                 '(%s::string) Q = "quite a long std::strin with lots of info inside it"'
                 % ns,
-                '(%s::string) IHaveEmbeddedZeros = "a\\0b\\0c\\0d"' % ns,
-                '(%s::wstring) IHaveEmbeddedZerosToo = L"hello world!\\0てざ ル゜䋨ミ㠧槊 きゅへ狦穤襩 じゃ馩リョ 䤦監"'
-                % ns,
-                '(%s::u16string) u16_string = u"ß水氶"' % ns,
-                '(%s::u16string) u16_empty = u""' % ns,
-                '(%s::u32string) u32_string = U"🍄🍅🍆🍌"' % ns,
-                '(%s::u32string) u32_empty = U""' % ns,
                 "(%s::string *) null_str = nullptr" % ns,
             ],
         )
@@ -117,19 +101,6 @@ class StdStringDataFormatterTestCase(TestBase):
             '"quite a long std::strin with lots of info inside it"',
             "pQ summary wrong",
         )
-
-        # Finally, make sure that if the string is not readable, we give an error:
-        bkpt_2 = target.BreakpointCreateBySourceRegex(
-            "Break here to look at bad string", self.main_spec
-        )
-        self.assertEqual(bkpt_2.GetNumLocations(), 1, "Got one location")
-        threads = lldbutil.continue_to_breakpoint(process, bkpt_2)
-        self.assertEqual(len(threads), 1, "Stopped at second breakpoint")
-        frame = threads[0].frames[0]
-        var = frame.FindVariable("in_str")
-        self.assertTrue(var.GetError().Success(), "Made variable")
-        summary = var.GetSummary()
-        self.assertEqual(summary, "Summary Unavailable", "No summary for bad value")
 
     @expectedFailureAll(
         bugnumber="llvm.org/pr36109", debug_info="gmodules", triple=".*-android"
@@ -185,3 +156,59 @@ class StdStringDataFormatterTestCase(TestBase):
     def test_multibyte_libstdcxx(self):
         self.build(dictionary={"USE_LIBSTDCPP": 1})
         self.do_test_multibyte()
+
+    def do_test_uncapped_summary(self):
+        lldbutil.run_to_source_breakpoint(
+            self, "Set break point at this line.", self.main_spec
+        )
+
+        TheVeryLongOne = frame.FindVariable("TheVeryLongOne")
+        summaryOptions = lldb.SBTypeSummaryOptions()
+        summaryOptions.SetCapping(lldb.eTypeSummaryUncapped)
+        uncappedSummaryStream = lldb.SBStream()
+        TheVeryLongOne.GetSummary(uncappedSummaryStream, summaryOptions)
+        uncappedSummary = uncappedSummaryStream.GetData()
+        self.assertGreater(
+            uncappedSummary.find("someText"),
+            0,
+            "uncappedSummary does not include the full string",
+        )
+
+    @add_test_categories(["libc++"])
+    def test_uncapped_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test_uncapped_summary()
+
+    @expectedFailureAll(
+        bugnumber="libstdc++ std::string summary provider doesn't obey summary options."
+    )
+    @add_test_categories(["libstdcxx"])
+    def test_uncapped_libstdcxx(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test_uncapped_summary()
+
+    def do_test_summary_unavailable(self):
+        """
+        Make sure that if the string is not readable, we give an error.
+        """
+        (_, _, thread, _) = lldbutil.run_to_source_breakpoint(
+            self, "Break here to look at bad string", self.main_spec
+        )
+
+        var = thread.frames[0].FindVariable("in_str")
+        self.assertTrue(var.GetError().Success(), "Found variable")
+        summary = var.GetSummary()
+        self.assertEqual(summary, "Summary Unavailable", "No summary for bad value")
+
+    @add_test_categories(["libc++"])
+    def test_unavailable_summary_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test_summary_unavailable()
+
+    @expectedFailureAll(
+        bugnumber="libstdc++ std::string summary provider doesn't output a user-friendly message for invalid strings."
+    )
+    @add_test_categories(["libstdcxx"])
+    def test_unavailable_summary_libstdcxx(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test_summary_unavailable()
