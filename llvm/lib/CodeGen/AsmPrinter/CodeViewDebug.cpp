@@ -3572,7 +3572,8 @@ void CodeViewDebug::collectDebugInfoForJumpTables(const MachineFunction *MF,
                             BaseOffset,
                             Branch,
                             MF->getJTISymbol(JumpTableIndex, MMI->getContext()),
-                            JTE.MBBs.size()};
+                            JTE.MBBs.size(),
+                            {}};
         for (const auto &MBB : JTE.MBBs)
           CVJTI.Cases.push_back(MBB->getSymbol());
         CurFn->JumpTables.push_back(std::move(CVJTI));
