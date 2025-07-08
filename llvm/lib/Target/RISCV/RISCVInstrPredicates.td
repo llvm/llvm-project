@@ -73,7 +73,8 @@ def isVectorConfigInstr
                        PseudoVSETVLIX0X0,
                        PseudoVSETIVLI,
                        PseudoSF_VSETTNT,
-                       PseudoSF_VSETTNTX0
+                       PseudoSF_VSETTNTX0,
+                       PseudoSF_VSETTNTX0X0
                      ]>>>;
 
 // Returns true if this is a PseudoSF_VSETTNT* instructions.
@@ -82,7 +83,8 @@ def isXSfmmVectorTNConfigInstr
                    MCReturnStatement<
                      CheckOpcode<[
                        PseudoSF_VSETTNT,
-                       PseudoSF_VSETTNTX0
+                       PseudoSF_VSETTNTX0,
+                       PseudoSF_VSETTNTX0X0
                      ]>>>;
 
 // Returns true if this is PseudoSF_VSETTM or PseudoSF_VSETTK.
@@ -101,6 +103,7 @@ def isXSfmmVectorConfigInstr
                      CheckOpcode<[
                        PseudoSF_VSETTNT,
                        PseudoSF_VSETTNTX0,
+                       PseudoSF_VSETTNTX0X0,
                        PseudoSF_VSETTM,
                        PseudoSF_VSETTK
                      ]>>>;

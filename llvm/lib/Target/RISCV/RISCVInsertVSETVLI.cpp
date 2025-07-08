@@ -527,7 +527,7 @@ class VSETVLIInfo {
   uint8_t MaskAgnostic : 1;
   uint8_t SEWLMULRatioOnly : 1;
   uint8_t AltFmt : 1;
-  uint8_t TWiden = 0;
+  uint8_t TWiden : 3;
 
 public:
   VSETVLIInfo()
@@ -856,7 +856,7 @@ public:
        << "TailAgnostic=" << (bool)TailAgnostic << ", "
        << "MaskAgnostic=" << (bool)MaskAgnostic << ", "
        << "SEWLMULRatioOnly=" << (bool)SEWLMULRatioOnly << "}";
-    OS << "TWiden=" << (bool)TWiden << ", ";
+    OS << "TWiden=" << (unsigned)TWiden << ", ";
     OS << "AltFmt=" << (bool)AltFmt << "}";
   }
 #endif
@@ -984,13 +984,15 @@ RISCVInsertVSETVLI::getInfoForVSETVLI(const MachineInstr &MI) const {
   if (MI.getOpcode() == RISCV::PseudoVSETIVLI) {
     NewInfo.setAVLImm(MI.getOperand(1).getImm());
   } else if (RISCVInstrInfo::isXSfmmVectorTNConfigInstr(MI)) {
-    Register ATReg = MI.getOperand(1).getReg();
+    assert(MI.getOpcode() == RISCV::PseudoSF_VSETTNT ||
+           MI.getOpcode() == RISCV::PseudoSF_VSETTNTX0);
     switch (MI.getOpcode()) {
     case RISCV::PseudoSF_VSETTNTX0:
       NewInfo.setAVLVLMAX();
       break;
     case RISCV::PseudoSF_VSETTNT:
-      NewInfo.setAVLRegDef(getVNInfoFromReg(ATReg, MI, LIS), ATReg);
+      Register ATNReg = MI.getOperand(1).getReg();
+      NewInfo.setAVLRegDef(getVNInfoFromReg(ATNReg, MI, LIS), ATNReg);
       break;
     }
   } else {
@@ -1070,12 +1072,12 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
 
     InstrInfo.setAVLVLMAX();
     if (RISCVII::hasVLOp(TSFlags)) {
-      const MachineOperand &TnOp =
+      const MachineOperand &TNOp =
           MI.getOperand(RISCVII::getTNOpNum(MI.getDesc()));
 
-      if (TnOp.getReg().isVirtual())
-        InstrInfo.setAVLRegDef(getVNInfoFromReg(TnOp.getReg(), MI, LIS),
-                               TnOp.getReg());
+      if (TNOp.getReg().isVirtual())
+        InstrInfo.setAVLRegDef(getVNInfoFromReg(TNOp.getReg(), MI, LIS),
+                               TNOp.getReg());
     }
 
     InstrInfo.setVTYPE(VLMul, SEW, TailAgnostic, MaskAgnostic, AltFmt, TWiden);
@@ -1888,7 +1890,8 @@ void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
 }
 
 static void shrinkIntervalAndRemoveDeadMI(MachineOperand &MO,
-                                          LiveIntervals *LIS) {
+                                          LiveIntervals *LIS,
+                                          const TargetInstrInfo *TII) {
   Register Reg = MO.getReg();
   MO.setReg(RISCV::NoRegister);
   MO.setIsKill(false);
@@ -1906,6 +1909,8 @@ static void shrinkIntervalAndRemoveDeadMI(MachineOperand &MO,
   // LIS->splitSeparateComponents(LI, SplitLIs);
 
   for (MachineInstr *DeadMI : DeadMIs) {
+    if (!TII->isAddImmediate(*DeadMI, Reg))
+      continue;
     LIS->RemoveMachineInstrFromMaps(*DeadMI);
     DeadMI->eraseFromParent();
   }
@@ -1956,7 +1961,7 @@ bool RISCVInsertVSETVLI::insertVSETMTK(MachineBasicBlock &MBB,
     if (LIS)
       LIS->InsertMachineInstrInMaps(*TmpMI);
 
-    shrinkIntervalAndRemoveDeadMI(MI.getOperand(OpNum), LIS);
+    shrinkIntervalAndRemoveDeadMI(MI.getOperand(OpNum), LIS, TII);
   }
   return Changed;
 }

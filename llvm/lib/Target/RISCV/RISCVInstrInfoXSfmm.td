@@ -363,7 +363,12 @@ let Defs = [VL, VTYPE] in {
         PseudoInstExpansion<(VSETVLI GPR:$rd, GPR:$rs1, VTypeIOp11:$vtypei)>, 
         Sched<[WriteVSETVLI, ReadVSETVLI]>;
   def PseudoSF_VSETTNTX0
-      : Pseudo<(outs GPR:$rd),
+      : Pseudo<(outs GPRNoX0:$rd),
+               (ins GPRX0:$rs1, XSfmmVTypeOp:$vtypei), []>,
+        PseudoInstExpansion<(VSETVLI GPR:$rd, GPR:$rs1, VTypeIOp11:$vtypei)>,
+        Sched<[WriteVSETVLI, ReadVSETVLI]>;
+  def PseudoSF_VSETTNTX0X0
+      : Pseudo<(outs GPRX0:$rd),
                (ins GPRX0:$rs1, XSfmmVTypeOp:$vtypei), []>,
         PseudoInstExpansion<(VSETVLI GPR:$rd, GPR:$rs1, VTypeIOp11:$vtypei)>, 
         Sched<[WriteVSETVLI, ReadVSETVLI]>;

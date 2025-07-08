@@ -145,11 +145,8 @@ enum {
   AltFmtTypeShift = DestEEWShift + 2,
   AltFmtTypeMask = 3ULL << AltFmtTypeShift,
 
-  IsWidenShift = AltFmtTypeShift + 2,
-  IsWidenMask = 1ULL << IsWidenShift,
-
   // XSfmmbase
-  HasTWidenOpShift = IsWidenShift + 1,
+  HasTWidenOpShift = AltFmtTypeShift + 2,
   HasTWidenOpMask = 1ULL << HasTWidenOpShift,
 
   HasTMOpShift = HasTWidenOpShift + 1,
@@ -256,7 +253,7 @@ static inline unsigned getVLOpNum(const MCInstrDesc &Desc) {
   // This method is only called if we expect to have a VL operand, and all
   // instructions with VL also have SEW.
   assert(hasSEWOp(TSFlags) && hasVLOp(TSFlags));
-  // In Xsfmmbase, TN is alias for VL, so here we use the same TSFlags bit.
+  // In Xsfmmbase, TN is an alias for VL, so here we use the same TSFlags bit.
   if (hasTWidenOp(TSFlags))
     return getTNOpNum(Desc);
   unsigned Offset = 2;
@@ -433,12 +430,13 @@ enum OperandType : unsigned {
   OPERAND_SEW_MASK,
   // Vector rounding mode for VXRM or FRM.
   OPERAND_VEC_RM,
-  OPERAND_LAST_RISCV_IMM = OPERAND_VEC_RM,
+  // Vtype operand for XSfmm extension.
+  OPERAND_XSFMM_VTYPE,
+  OPERAND_LAST_RISCV_IMM = OPERAND_XSFMM_VTYPE,
   // Operand is either a register or uimm5, this is used by V extension pseudo
   // instructions to represent a value that be passed as AVL to either vsetvli
   // or vsetivli.
   OPERAND_AVL,
-  OPERAND_XSFMM_VTYPE,
 };
 } // namespace RISCVOp
 
