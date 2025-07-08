@@ -9902,11 +9902,14 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     if (SDValue Combined = visitADDLike(N))
       return Combined;
 
-  // fold !(x cc y) -> (x !cc y)
+  // fold not (setcc x, y, cc) -> setcc x y !cc
+  // Avoid breaking: and (not(setcc x, y, cc), z) -> andn for vec
   unsigned N0Opcode = N0.getOpcode();
   SDValue LHS, RHS, CC;
   if (TLI.isConstTrueVal(N1) &&
-      isSetCCEquivalent(N0, LHS, RHS, CC, /*MatchStrict*/ true)) {
+      isSetCCEquivalent(N0, LHS, RHS, CC, /*MatchStrict*/ true) &&
+      !(VT.isVector() && TLI.hasAndNot(SDValue(N, 0)) && N->hasOneUse() &&
+        N->use_begin()->getUser()->getOpcode() == ISD::AND)) {
     ISD::CondCode NotCC = ISD::getSetCCInverse(cast<CondCodeSDNode>(CC)->get(),
                                                LHS.getValueType());
     if (!LegalOperations ||
@@ -13162,6 +13165,15 @@ static SDValue combineVSelectWithAllOnesOrZeros(SDValue Cond, SDValue TVal,
   if (IsFAllZero) {
     SDValue X = DAG.getBitcast(CondVT, TVal);
     SDValue And = DAG.getNode(ISD::AND, DL, CondVT, Cond, X);
+    return DAG.getBitcast(VT, And);
+  }
+
+  // select Cond, 0, x -> and not(Cond), x
+  if (IsTAllZero &&
+      (isBitwiseNot(peekThroughBitcasts(Cond)) || TLI.hasAndNot(Cond))) {
+    SDValue X = DAG.getBitcast(CondVT, FVal);
+    SDValue And =
+        DAG.getNode(ISD::AND, DL, CondVT, DAG.getNOT(DL, Cond, CondVT), X);
     return DAG.getBitcast(VT, And);
   }
 
