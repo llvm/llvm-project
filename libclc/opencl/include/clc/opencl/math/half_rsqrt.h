@@ -6,8 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_MATH_HALF_RSQRT_H__
+#define __CLC_OPENCL_MATH_HALF_RSQRT_H__
+
 #define __CLC_BODY <clc/math/unary_decl.inc>
 #define FUNCTION half_rsqrt
 #define __FLOAT_ONLY
 #include <clc/math/gentype.inc>
 #undef FUNCTION
+
+#endif // __CLC_OPENCL_MATH_HALF_RSQRT_H__
