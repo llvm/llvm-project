@@ -5321,6 +5321,7 @@ cc_library(
         ":InferIntRangeInterface",
         ":InferTypeOpInterface",
         ":InliningUtils",
+        ":MathDialect",
         ":MemRefDialect",
         ":SCFDialect",
         ":SideEffectInterfaces",
