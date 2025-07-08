@@ -768,8 +768,9 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
       Fortran::evaluate::HasCUDAImplicitTransfer(assign->rhs)) {
     if (GetNbOfCUDAManagedOrUnifiedSymbols(assign->lhs) == 1 &&
         GetNbOfCUDAManagedOrUnifiedSymbols(assign->rhs) == 1 &&
-        GetNbOfCUDADeviceSymbols(assign->rhs) == 1)
+        GetNbOfCUDADeviceSymbols(assign->rhs) == 1) {
       return; // This is a special case handled on the host.
+    }
     context_.Say(lhsLoc, "Unsupported CUDA data transfer"_err_en_US);
   }
 }
