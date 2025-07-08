@@ -91,8 +91,7 @@ struct is_error_code_enum<llvm::sampleprof_error> : std::true_type {};
 namespace llvm {
 namespace sampleprof {
 
-constexpr char kBodySampleVTableProfPrefix[] = "<vt-call> ";
-// constexpr char kInlinedCallsiteVTablerofPrefix[] = "<vt-inline> ";
+constexpr char kBodySampleVTableProfPrefix[] = "vtables ";
 
 enum SampleProfileFormat {
   SPF_None = 0,
@@ -908,6 +907,14 @@ public:
     return Ret->second.getSamples();
   }
 
+  SampleRecord *getBodySampleRecordAt(LineLocation Loc) {
+    auto MappedLoc = mapIRLocToProfileLoc(Loc);
+    auto Iter = BodySamples.find(MappedLoc);
+    if (Iter == BodySamples.end())
+      return nullptr;
+    return &Iter->second;
+  }
+
   /// Returns the call target map collected at a given location.
   /// Each location is specified by \p LineOffset and \p Discriminator.
   /// If the location is not found in profile, return error.
@@ -938,6 +945,13 @@ public:
   /// Returns the FunctionSamplesMap at the given \p Loc.
   const FunctionSamplesMap *
   findFunctionSamplesMapAt(const LineLocation &Loc) const {
+    auto Iter = CallsiteSamples.find(mapIRLocToProfileLoc(Loc));
+    if (Iter == CallsiteSamples.end())
+      return nullptr;
+    return &Iter->second;
+  }
+
+  FunctionSamplesMap *findFunctionSamplesMapAt(LineLocation Loc) {
     auto Iter = CallsiteSamples.find(mapIRLocToProfileLoc(Loc));
     if (Iter == CallsiteSamples.end())
       return nullptr;
