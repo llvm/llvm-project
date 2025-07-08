@@ -934,8 +934,8 @@ public:
         getAnalysis<DXILResourceWrapperPass>().getResourceMap();
     DXILResourceTypeMap &DRTM =
         getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
-  const ModuleMetadataInfo MMDI =
-      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
+    const ModuleMetadataInfo MMDI =
+        getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
     return OpLowerer(M, DRM, DRTM, MMDI).lowerIntrinsics();
   }
