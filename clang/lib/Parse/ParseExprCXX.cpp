@@ -3605,7 +3605,7 @@ Parser::ParseCXXAmbiguousParenExpression(ParenParseOption &ExprType,
       Result = ParseCastExpression(CastParseKind::AnyCastExpr,
                                    false /*isAddressofOperand*/, NotCastExpr,
                                    // type-id has priority.
-                                   TypeCastState::IsTypeCast);
+                                   TypoCorrectionTypeBehavior::AllowTypes);
     }
 
     // If we parsed a cast-expression, it's really a type-id, otherwise it's

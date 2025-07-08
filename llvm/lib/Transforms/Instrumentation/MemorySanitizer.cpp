@@ -158,6 +158,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -4272,12 +4273,31 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, PtrSrcOrigin);
   }
 
+  void maskedCheckAVXIndexShadow(IRBuilder<> &IRB, Value *Idx, Instruction *I) {
+    auto IdxVectorSize =
+        cast<FixedVectorType>(Idx->getType())->getNumElements();
+    assert(isPowerOf2_64(IdxVectorSize));
+    auto *IdxVectorElemType =
+        cast<FixedVectorType>(Idx->getType())->getElementType();
+    Constant *IndexBits =
+        ConstantInt::get(IdxVectorElemType, IdxVectorSize - 1);
+    auto *IdxShadow = getShadow(Idx);
+    // Only the low bits of Idx are used.
+    Value *V = nullptr;
+    for (size_t i = 0; i < IdxVectorSize; ++i) {
+      V = IRB.CreateExtractElement(IdxShadow, i);
+      assert(V->getType() == IndexBits->getType());
+      V = IRB.CreateOr(V, IRB.CreateAnd(V, IndexBits));
+    }
+    insertShadowCheck(V, getOrigin(Idx), I);
+  }
+
   // Instrument AVX permutation intrinsic.
   // We apply the same permutation (argument index 1) to the shadow.
   void handleAVXVpermilvar(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *Shadow = getShadow(&I, 0);
-    insertShadowCheck(I.getArgOperand(1), &I);
+    maskedCheckAVXIndexShadow(IRB, I.getArgOperand(1), &I);
 
     // Shadows are integer-ish types but some intrinsics require a
     // different (e.g., floating-point) type.
@@ -4286,6 +4306,94 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                        {Shadow, I.getArgOperand(1)});
 
     setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
+    setOriginForNaryOp(I);
+  }
+
+  // Instrument AVX permutation intrinsic.
+  // We apply the same permutation (argument index 1) to the shadows.
+  void handleAVXVpermi2var(IntrinsicInst &I) {
+    assert(I.arg_size() == 3);
+    assert(isa<FixedVectorType>(I.getArgOperand(0)->getType()));
+    assert(isa<FixedVectorType>(I.getArgOperand(1)->getType()));
+    assert(isa<FixedVectorType>(I.getArgOperand(2)->getType()));
+    [[maybe_unused]] auto ArgVectorSize =
+        cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements();
+    assert(cast<FixedVectorType>(I.getArgOperand(1)->getType())
+               ->getNumElements() == ArgVectorSize);
+    assert(cast<FixedVectorType>(I.getArgOperand(2)->getType())
+               ->getNumElements() == ArgVectorSize);
+    assert(I.getArgOperand(0)->getType() == I.getArgOperand(2)->getType());
+    assert(I.getType() == I.getArgOperand(0)->getType());
+    assert(I.getArgOperand(1)->getType()->isIntOrIntVectorTy());
+    IRBuilder<> IRB(&I);
+    Value *AShadow = getShadow(&I, 0);
+    Value *Idx = I.getArgOperand(1);
+    Value *BShadow = getShadow(&I, 2);
+
+    maskedCheckAVXIndexShadow(IRB, Idx, &I);
+
+    // Shadows are integer-ish types but some intrinsics require a
+    // different (e.g., floating-point) type.
+    AShadow = IRB.CreateBitCast(AShadow, I.getArgOperand(0)->getType());
+    BShadow = IRB.CreateBitCast(BShadow, I.getArgOperand(2)->getType());
+    CallInst *CI = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
+                                       {AShadow, Idx, BShadow});
+    setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
+    setOriginForNaryOp(I);
+  }
+
+  // e.g., call <16 x i32> @llvm.x86.avx512.mask.cvtps2dq.512
+  //                           (<16 x float> a, <16 x i32> writethru, i16 mask,
+  //                           i32 rounding)
+  //
+  // dst[i] = mask[i] ? convert(a[i]) : writethru[i]
+  // dst_shadow[i] = mask[i] ? all_or_nothing(a_shadow[i]) : writethru_shadow[i]
+  //    where all_or_nothing(x) is fully uninitialized if x has any
+  //    uninitialized bits
+  void handleAVX512VectorConvertFPToInt(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+
+    assert(I.arg_size() == 4);
+    Value *A = I.getOperand(0);
+    Value *WriteThrough = I.getOperand(1);
+    Value *Mask = I.getOperand(2);
+    [[maybe_unused]] Value *RoundingMode = I.getOperand(3);
+
+    assert(isa<FixedVectorType>(A->getType()));
+    assert(A->getType()->isFPOrFPVectorTy());
+
+    assert(isa<FixedVectorType>(WriteThrough->getType()));
+    assert(WriteThrough->getType()->isIntOrIntVectorTy());
+
+    unsigned ANumElements =
+        cast<FixedVectorType>(A->getType())->getNumElements();
+    assert(ANumElements ==
+           cast<FixedVectorType>(WriteThrough->getType())->getNumElements());
+
+    assert(Mask->getType()->isIntegerTy());
+    assert(Mask->getType()->getScalarSizeInBits() == ANumElements);
+
+    assert(RoundingMode->getType()->isIntegerTy());
+
+    assert(I.getType() == WriteThrough->getType());
+
+    // Convert i16 mask to <16 x i1>
+    Mask = IRB.CreateBitCast(
+        Mask, FixedVectorType::get(IRB.getInt1Ty(), ANumElements));
+
+    Value *AShadow = getShadow(A);
+    /// For scalars:
+    /// Since they are converting from floating-point, the output is:
+    /// - fully uninitialized if *any* bit of the input is uninitialized
+    /// - fully ininitialized if all bits of the input are ininitialized
+    /// We apply the same principle on a per-element basis for vectors.
+    AShadow = IRB.CreateSExt(IRB.CreateICmpNE(AShadow, getCleanShadow(A)),
+                             getShadowTy(A));
+
+    Value *WriteThroughShadow = getShadow(WriteThrough);
+    Value *Shadow = IRB.CreateSelect(Mask, AShadow, WriteThroughShadow);
+
+    setShadow(&I, Shadow);
     setOriginForNaryOp(I);
   }
 
@@ -5241,6 +5349,32 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx_vpermilvar_ps_256:
     case Intrinsic::x86_avx512_vpermilvar_ps_512: {
       handleAVXVpermilvar(I);
+      break;
+    }
+
+    case Intrinsic::x86_avx512_vpermi2var_d_128:
+    case Intrinsic::x86_avx512_vpermi2var_d_256:
+    case Intrinsic::x86_avx512_vpermi2var_d_512:
+    case Intrinsic::x86_avx512_vpermi2var_hi_128:
+    case Intrinsic::x86_avx512_vpermi2var_hi_256:
+    case Intrinsic::x86_avx512_vpermi2var_hi_512:
+    case Intrinsic::x86_avx512_vpermi2var_pd_128:
+    case Intrinsic::x86_avx512_vpermi2var_pd_256:
+    case Intrinsic::x86_avx512_vpermi2var_pd_512:
+    case Intrinsic::x86_avx512_vpermi2var_ps_128:
+    case Intrinsic::x86_avx512_vpermi2var_ps_256:
+    case Intrinsic::x86_avx512_vpermi2var_ps_512:
+    case Intrinsic::x86_avx512_vpermi2var_q_128:
+    case Intrinsic::x86_avx512_vpermi2var_q_256:
+    case Intrinsic::x86_avx512_vpermi2var_q_512:
+    case Intrinsic::x86_avx512_vpermi2var_qi_128:
+    case Intrinsic::x86_avx512_vpermi2var_qi_256:
+    case Intrinsic::x86_avx512_vpermi2var_qi_512:
+      handleAVXVpermi2var(I);
+      break;
+
+    case Intrinsic::x86_avx512_mask_cvtps2dq_512: {
+      handleAVX512VectorConvertFPToInt(I);
       break;
     }
 

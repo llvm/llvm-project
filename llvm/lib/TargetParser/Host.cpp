@@ -176,18 +176,33 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
   SmallVector<StringRef, 32> Lines;
   ProcCpuinfoContent.split(Lines, '\n');
 
-  // Look for the CPU implementer line.
+  // Look for the CPU implementer and hardware lines, and store the CPU part
+  // numbers found.
   StringRef Implementer;
   StringRef Hardware;
-  StringRef Part;
+  SmallVector<StringRef, 32> Parts;
   for (StringRef Line : Lines) {
     if (Line.consume_front("CPU implementer"))
       Implementer = Line.ltrim("\t :");
     else if (Line.consume_front("Hardware"))
       Hardware = Line.ltrim("\t :");
     else if (Line.consume_front("CPU part"))
-      Part = Line.ltrim("\t :");
+      Parts.emplace_back(Line.ltrim("\t :"));
   }
+
+  // Last `Part' seen, in case we don't analyse all `Parts' parsed.
+  StringRef Part = Parts.empty() ? StringRef() : Parts.back();
+
+  // Remove duplicate `Parts'.
+  llvm::sort(Parts);
+  Parts.erase(llvm::unique(Parts), Parts.end());
+
+  auto MatchBigLittle = [](auto const &Parts, StringRef Big, StringRef Little) {
+    if (Parts.size() == 2)
+      return (Parts[0] == Big && Parts[1] == Little) ||
+             (Parts[1] == Big && Parts[0] == Little);
+    return false;
+  };
 
   if (Implementer == "0x41") { // ARM Ltd.
     // MSM8992/8994 may give cpu part for the core that the kernel is running on,
@@ -195,6 +210,9 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
     if (Hardware.ends_with("MSM8994") || Hardware.ends_with("MSM8996"))
       return "cortex-a53";
 
+    // Detect big.LITTLE systems.
+    if (MatchBigLittle(Parts, "0xd85", "0xd87"))
+      return "cortex-x925";
 
     // The CPU part is a 3 digit hexadecimal number with a 0x prefix. The
     // values correspond to the "Part number" in the CP15/c0 register. The

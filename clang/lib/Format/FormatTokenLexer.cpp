@@ -488,7 +488,7 @@ bool FormatTokenLexer::tryMergeCSharpKeywordVariables() {
 
 // In C# transform identifier foreach into kw_foreach
 bool FormatTokenLexer::tryTransformCSharpForEach() {
-  if (Tokens.size() < 1)
+  if (Tokens.empty())
     return false;
   auto &Identifier = *(Tokens.end() - 1);
   if (Identifier->isNot(tok::identifier))
@@ -948,7 +948,7 @@ void FormatTokenLexer::handleTableGenNumericLikeIdentifier() {
   // 4. The first non-digit character is 'x', and the next is a hex digit.
   // Note that in the case 3 and 4, if the next character does not exists in
   // this token, the token is an identifier.
-  if (Text.size() < 1 || Text[0] == '+' || Text[0] == '-')
+  if (Text.empty() || Text[0] == '+' || Text[0] == '-')
     return;
   const auto NonDigitPos = Text.find_if([](char C) { return !isdigit(C); });
   // All the characters are digits

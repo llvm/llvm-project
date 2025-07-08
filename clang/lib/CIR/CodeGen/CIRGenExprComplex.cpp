@@ -39,10 +39,13 @@ public:
   void emitStoreOfComplex(mlir::Location loc, mlir::Value val, LValue lv,
                           bool isInit);
 
+  mlir::Value
+  VisitAbstractConditionalOperator(const AbstractConditionalOperator *e);
   mlir::Value VisitArraySubscriptExpr(Expr *e);
   mlir::Value VisitBinAssign(const BinaryOperator *e);
   mlir::Value VisitBinComma(const BinaryOperator *e);
   mlir::Value VisitCallExpr(const CallExpr *e);
+  mlir::Value VisitCastExpr(CastExpr *e);
   mlir::Value VisitChooseExpr(ChooseExpr *e);
   mlir::Value VisitDeclRefExpr(DeclRefExpr *e);
   mlir::Value VisitGenericSelectionExpr(GenericSelectionExpr *e);
@@ -83,12 +86,13 @@ LValue ComplexExprEmitter::emitBinAssignLValue(const BinaryOperator *e,
 mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
                                          QualType destTy) {
   switch (ck) {
+  case CK_NoOp:
   case CK_LValueToRValue:
     return Visit(op);
   default:
-    cgf.cgm.errorNYI("ComplexType Cast");
     break;
   }
+  cgf.cgm.errorNYI("ComplexType Cast");
   return {};
 }
 
@@ -125,6 +129,27 @@ void ComplexExprEmitter::emitStoreOfComplex(mlir::Location loc, mlir::Value val,
   builder.createStore(loc, val, destAddr);
 }
 
+mlir::Value ComplexExprEmitter::VisitAbstractConditionalOperator(
+    const AbstractConditionalOperator *e) {
+  mlir::Value condValue = Visit(e->getCond());
+  mlir::Location loc = cgf.getLoc(e->getSourceRange());
+
+  return builder
+      .create<cir::TernaryOp>(
+          loc, condValue,
+          /*thenBuilder=*/
+          [&](mlir::OpBuilder &b, mlir::Location loc) {
+            mlir::Value trueValue = Visit(e->getTrueExpr());
+            b.create<cir::YieldOp>(loc, trueValue);
+          },
+          /*elseBuilder=*/
+          [&](mlir::OpBuilder &b, mlir::Location loc) {
+            mlir::Value falseValue = Visit(e->getFalseExpr());
+            b.create<cir::YieldOp>(loc, falseValue);
+          })
+      .getResult();
+}
+
 mlir::Value ComplexExprEmitter::VisitArraySubscriptExpr(Expr *e) {
   return emitLoadOfLValue(e);
 }
@@ -155,6 +180,21 @@ mlir::Value ComplexExprEmitter::VisitCallExpr(const CallExpr *e) {
     return emitLoadOfLValue(e);
 
   return cgf.emitCallExpr(e).getValue();
+}
+
+mlir::Value ComplexExprEmitter::VisitCastExpr(CastExpr *e) {
+  if (const auto *ece = dyn_cast<ExplicitCastExpr>(e)) {
+    // Bind VLAs in the cast type.
+    if (ece->getType()->isVariablyModifiedType()) {
+      cgf.cgm.errorNYI("VisitCastExpr Bind VLAs in the cast type");
+      return {};
+    }
+  }
+
+  if (e->changesVolatileQualification())
+    return emitLoadOfLValue(e);
+
+  return emitCast(e->getCastKind(), e->getSubExpr(), e->getType());
 }
 
 mlir::Value ComplexExprEmitter::VisitChooseExpr(ChooseExpr *e) {
