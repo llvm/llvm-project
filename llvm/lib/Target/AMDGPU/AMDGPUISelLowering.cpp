@@ -4935,7 +4935,8 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
       SDValue SrcModFalse = getBitwiseToSrcModifierOp(False, DCI);
       if (SrcModTrue || SrcModFalse) {
         SDLoc SL(N);
-        EVT FVT = getFloatVT(VT);
+        EVT FVT =
+            SrcModTrue ? SrcModTrue.getValueType() : SrcModFalse.getValueType();
         SDValue FLHS =
             SrcModTrue ? SrcModTrue : DAG.getNode(ISD::BITCAST, SL, FVT, True);
         SDValue FRHS = SrcModFalse ? SrcModFalse
