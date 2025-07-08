@@ -4561,9 +4561,9 @@ static SrcStatus getNegStatus(Register Reg, SrcStatus S,
     }
     break;
   default:
-    llvm_unreachable("unexpected SrcStatus");
+    break;
   }
-  llvm_unreachable("unexpected SrcStatus");
+  llvm_unreachable("unexpected SrcStatus & NegType combination");
 }
 
 static std::optional<std::pair<Register, SrcStatus>>
