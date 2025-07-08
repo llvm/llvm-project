@@ -21,7 +21,12 @@ func.func @main() {
   // (If your platform supports it, you can play with other values as well)
   %c256 = arith.constant 256 : i32
   func.call @setArmVLBits(%c256) : (i32) -> ()
+  func.call @test_pack_unpack_scalable_inner_tile() : () -> ()
 
+  return
+}
+
+func.func @test_pack_unpack_scalable_inner_tile() {
   // Dynamic/scalable tile size (vscale x 4)
   %c4 = arith.constant 4 : index
   %vs = vector.vscale

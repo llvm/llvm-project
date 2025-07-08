@@ -131,10 +131,6 @@ func.func @test_smmla() {
   %acc_mem = func.call @prepareAccTestData(%acc_cst) : (vector<4x4xi32>) -> memref<4x?xi32>
   %acc = vector.transfer_read %acc_mem[%c0, %c0], %c0_i32 {in_bounds = [true, true]} : memref<4x?xi32>, vector<4x[4]xi32>
 
-  // FIXME: Workaround for a crash, see https://github.com/llvm/llvm-project/issues/143670
-  %acc_cast = memref.cast %acc_mem : memref<4x?xi32> to memref<*xi32>
-  call @printMemrefI32(%acc_cast) : (memref<*xi32>) -> ()
-
   // LHS test data
   %lhs_cst = arith.constant dense<[[-35, -27, -36, -31,  23, -34,  -8, -33],
                                    [-20,  17, -32, -47,  37,  22,  -7, -21],
