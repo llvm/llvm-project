@@ -18,7 +18,6 @@
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/Casting.h"
 
 #define DEBUG_TYPE "dxil-post-optimization-validation"
 
@@ -167,14 +166,12 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
 
     for (const ResourceInfo &CBuf : DRM.cbuffers()) {
       ResourceInfo::ResourceBinding Binding = CBuf.getBinding();
-
       if (!Validation.checkCRegBinding(Binding))
         reportRegNotBound(M, "cbuffer", Binding);
     }
 
     for (const ResourceInfo &SRV : DRM.srvs()) {
       ResourceInfo::ResourceBinding Binding = SRV.getBinding();
-
       if (!Validation.checkTRegBinding(Binding))
         reportRegNotBound(M, "srv", Binding);
       else {
@@ -188,7 +185,6 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
 
     for (const ResourceInfo &UAV : DRM.uavs()) {
       ResourceInfo::ResourceBinding Binding = UAV.getBinding();
-
       if (!Validation.checkURegBinding(Binding))
         reportRegNotBound(M, "uav", Binding);
       else {
@@ -202,7 +198,6 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
 
     for (const ResourceInfo &Sampler : DRM.samplers()) {
       ResourceInfo::ResourceBinding Binding = Sampler.getBinding();
-
       if (!Validation.checkSamplerBinding(Binding))
         reportRegNotBound(M, "sampler", Binding);
     }
