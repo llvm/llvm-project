@@ -66,11 +66,16 @@ public:
   }
 
   void WillPoll() override {
-    // If the m_event is signaled, wait until it is consumed before telling the
-    // monitor thread to continue.
-    if (WaitForSingleObject(m_event, /*dwMilliseconds=*/0) == WAIT_TIMEOUT &&
-        WaitForSingleObject(m_ready, /*dwMilliseconds=*/0) == WAIT_TIMEOUT)
-      SetEvent(m_ready);
+    if (WaitForSingleObject(m_event, /*dwMilliseconds=*/0) != WAIT_TIMEOUT) {
+      // The thread has already signalled that the data is available. No need for further polling until we consume that event.
+      return;
+    }
+    if (WaitForSingleObject(m_ready, /*dwMilliseconds=*/0) != WAIT_TIMEOUT) {
+      // The thread is already waiting for data to become available.
+      return;
+    }
+    // Start waiting.
+    SetEvent(m_ready);
   }
 
   void Disarm() override { ResetEvent(m_event); }
