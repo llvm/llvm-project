@@ -304,7 +304,8 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
     return Info.write<void *>(Device->Platform);
   if (PropName == OL_DEVICE_INFO_TYPE)
     return Info.write<ol_device_type_t>(OL_DEVICE_TYPE_GPU);
-  // TODO: Update when https://github.com/llvm/llvm-project/pull/147314 is merged
+  // TODO: Update when https://github.com/llvm/llvm-project/pull/147314 is
+  // merged
   if (PropName > OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE)
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getDeviceInfo enum '%i' is invalid", PropName);
