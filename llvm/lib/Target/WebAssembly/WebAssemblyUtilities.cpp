@@ -195,3 +195,40 @@ bool WebAssembly::canLowerReturn(size_t ResultSize,
                                  const WebAssemblySubtarget *Subtarget) {
   return ResultSize <= 1 || canLowerMultivalueReturn(Subtarget);
 }
+
+APInt WebAssembly::encodeFunctionSignature(SmallVector<MVT, 4> &Params,
+                                           SmallVector<MVT, 1> &Returns) {
+  auto toWasmValType = [](MVT VT) {
+    if (VT == MVT::i32) {
+      return wasm::ValType::I32;
+    }
+    if (VT == MVT::i64) {
+      return wasm::ValType::I64;
+    }
+    if (VT == MVT::f32) {
+      return wasm::ValType::F32;
+    }
+    if (VT == MVT::f64) {
+      return wasm::ValType::F64;
+    }
+    llvm_unreachable("Unhandled type!");
+  };
+  auto NParams = Params.size();
+  auto NReturns = Params.size();
+  auto BitWidth = (NParams + NReturns + 2) * 64;
+  auto Sig = APInt(BitWidth, 0);
+
+  Sig |= NParams;
+  for (auto &Param : Params) {
+    auto V = toWasmValType(Param);
+    Sig <<= 64;
+    Sig |= (int64_t)V;
+  }
+  Sig |= NReturns;
+  for (auto &Return : Returns) {
+    auto V = toWasmValType(Return);
+    Sig <<= 64;
+    Sig |= (int64_t)V;
+  }
+  return Sig;
+}

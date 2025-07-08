@@ -12,6 +12,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolTableEntry.h"
 
+
 namespace llvm {
 
 class MCSymbolWasm : public MCSymbol {

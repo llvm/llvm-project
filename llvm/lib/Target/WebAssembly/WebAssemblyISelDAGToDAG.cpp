@@ -15,12 +15,14 @@
 #include "WebAssembly.h"
 #include "WebAssemblyISelLowering.h"
 #include "WebAssemblyTargetMachine.h"
+#include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h" // To access function attributes.
 #include "llvm/IR/IntrinsicsWebAssembly.h"
+#include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -188,6 +190,42 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
           CurDAG->getTargetExternalSymbol("__tls_align", PtrVT));
       ReplaceNode(Node, TLSAlign);
       return;
+    }
+    case Intrinsic::wasm_ref_test_func: {
+      // First emit the TABLE_GET instruction to convert function pointer ==>
+      // funcref
+      MachineFunction &MF = CurDAG->getMachineFunction();
+      auto PtrVT = MVT::getIntegerVT(MF.getDataLayout().getPointerSizeInBits());
+      MCSymbol *Table = WebAssembly::getOrCreateFunctionTableSymbol(
+          MF.getContext(), Subtarget);
+      SDValue TableSym = CurDAG->getMCSymbol(Table, PtrVT);
+      SDValue FuncRef = SDValue(
+          CurDAG->getMachineNode(WebAssembly::TABLE_GET_FUNCREF, DL,
+                                 MVT::funcref, TableSym, Node->getOperand(1)),
+          0);
+
+      // Encode the signature information into the type index placeholder.
+      // This gets decoded and converted into the actual type signature in
+      // WebAssemblyMCInstLower.cpp.
+      SmallVector<MVT, 4> Params;
+      SmallVector<MVT, 1> Results;
+
+      MVT VT = Node->getOperand(2).getValueType().getSimpleVT();
+      if (VT != MVT::Untyped) {
+        Params.push_back(VT);
+      }
+      for (unsigned I = 3; I < Node->getNumOperands(); ++I) {
+        MVT VT = Node->getOperand(I).getValueType().getSimpleVT();
+        Results.push_back(VT);
+      }
+      auto Sig = WebAssembly::encodeFunctionSignature(Params, Results);
+
+      SmallVector<SDValue, 4> Ops;
+      auto SigOp = CurDAG->getTargetConstant(
+          Sig, DL, EVT::getIntegerVT(*CurDAG->getContext(), Sig.getBitWidth()));
+      MachineSDNode *RefTestNode = CurDAG->getMachineNode(
+          WebAssembly::REF_TEST_FUNCREF, DL, MVT::i32, {SigOp, FuncRef});
+      ReplaceNode(Node, RefTestNode);
     }
     }
     break;

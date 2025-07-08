@@ -21,6 +21,7 @@
 #include "WebAssemblyAsmPrinter.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyUtilities.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -156,6 +157,29 @@ MCOperand WebAssemblyMCInstLower::lowerTypeIndexOperand(
   return MCOperand::createExpr(Expr);
 }
 
+MCOperand
+WebAssemblyMCInstLower::lowerEncodedFunctionSignature(const APInt &Sig) const {
+  auto NumWords = Sig.getNumWords();
+  SmallVector<wasm::ValType, 4> Params;
+  SmallVector<wasm::ValType, 2> Returns;
+
+  int Idx = NumWords;
+
+  auto GetWord = [&Idx, &Sig]() {
+    Idx--;
+    return Sig.extractBitsAsZExtValue(64, 64 * Idx);
+  };
+  int NParams = GetWord();
+  for (int I = 0; I < NParams; I++) {
+    Params.push_back(static_cast<wasm::ValType>(GetWord()));
+  }
+  int NReturns = GetWord();
+  for (int I = 0; I < NReturns; I++) {
+    Returns.push_back(static_cast<wasm::ValType>(GetWord()));
+  }
+  return lowerTypeIndexOperand(std::move(Params), std::move(Returns));
+}
+
 static void getFunctionReturns(const MachineInstr *MI,
                                SmallVectorImpl<wasm::ValType> &Returns) {
   const Function &F = MI->getMF()->getFunction();
@@ -212,57 +236,7 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
       if (Info.OperandType != WebAssembly::OPERAND_TYPEINDEX) {
         llvm_unreachable("unexpected CImmediate operand");
       }
-      auto CImm = MO.getCImm()->getValue();
-      auto NumWords = CImm.getNumWords() - 1;
-      // Extract the type data we packed into the CImm in LowerRefTestFuncRef.
-      // We need to load the words from most significant to least significant
-      // order because of the way we bitshifted them in from the right.
-      // The return type needs special handling because it could be void.
-      auto ReturnType = static_cast<WebAssembly::BlockType>(
-          CImm.extractBitsAsZExtValue(64, (NumWords - 1) * 64));
-      SmallVector<wasm::ValType, 2> Returns;
-      switch (ReturnType) {
-      case WebAssembly::BlockType::Invalid:
-        llvm_unreachable("Invalid return type");
-      case WebAssembly::BlockType::I32:
-        Returns = {wasm::ValType::I32};
-        break;
-      case WebAssembly::BlockType::I64:
-        Returns = {wasm::ValType::I64};
-        break;
-      case WebAssembly::BlockType::F32:
-        Returns = {wasm::ValType::F32};
-        break;
-      case WebAssembly::BlockType::F64:
-        Returns = {wasm::ValType::F64};
-        break;
-      case WebAssembly::BlockType::Void:
-        Returns = {};
-        break;
-      case WebAssembly::BlockType::Exnref:
-        Returns = {wasm::ValType::EXNREF};
-        break;
-      case WebAssembly::BlockType::Externref:
-        Returns = {wasm::ValType::EXTERNREF};
-        break;
-      case WebAssembly::BlockType::Funcref:
-        Returns = {wasm::ValType::FUNCREF};
-        break;
-      case WebAssembly::BlockType::V128:
-        Returns = {wasm::ValType::V128};
-        break;
-      case WebAssembly::BlockType::Multivalue: {
-        llvm_unreachable("Invalid return type");
-      }
-      }
-      SmallVector<wasm::ValType, 4> Params;
-
-      for (int I = NumWords - 2; I >= 0; I--) {
-        auto Val = CImm.extractBitsAsZExtValue(64, 64 * I);
-        auto ParamType = static_cast<wasm::ValType>(Val);
-        Params.push_back(ParamType);
-      }
-      MCOp = lowerTypeIndexOperand(std::move(Returns), std::move(Params));
+      MCOp = lowerEncodedFunctionSignature(MO.getCImm()->getValue());
       break;
     }
     case MachineOperand::MO_Immediate: {
