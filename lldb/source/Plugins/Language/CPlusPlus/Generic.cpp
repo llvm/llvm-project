@@ -16,7 +16,7 @@ lldb::ValueObjectSP lldb_private::formatters::GetDesugaredSmartPointerValue(
 
   auto arg = container_type.GetTypeTemplateArgument(0);
   if (!arg)
-    return nullptr;
+    return ptr.GetSP(); // FIXME: PDB doesn't have info about template arguments
 
   return ptr.Cast(arg.GetPointerType());
 }

@@ -29,6 +29,14 @@ bool MsvcStlWStringSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // VC 2015+ std::wstring
 
+// MSVC STL std::shared_ptr<> and std::weak_ptr<>
+bool IsMsvcStlSmartPointer(ValueObject &valobj);
+bool MsvcStlSmartPointerSummaryProvider(ValueObject &valobj, Stream &stream,
+                                        const TypeSummaryOptions &options);
+
+lldb_private::SyntheticChildrenFrontEnd *
+MsvcStlSmartPointerSyntheticFrontEndCreator(lldb::ValueObjectSP valobj_sp);
+
 } // namespace formatters
 } // namespace lldb_private
 
