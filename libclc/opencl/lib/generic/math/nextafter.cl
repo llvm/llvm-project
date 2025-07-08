@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_nextafter.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/nextafter.h>
 
 #define FUNCTION nextafter
 #define __IMPL_FUNCTION(x) __clc_nextafter
