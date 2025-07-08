@@ -667,3 +667,84 @@ AArch64Subtarget::getPtrAuthBlockAddressDiscriminatorIfEnabled(
 bool AArch64Subtarget::enableMachinePipeliner() const {
   return getSchedModel().hasInstrSchedModel();
 }
+
+bool AArch64Subtarget::isRegInClass(const MachineInstr *MI, const Register &Reg,
+                                    const TargetRegisterClass *TRC) const {
+  if (Reg.isPhysical()) {
+    return TRC->contains(Reg);
+  } else {
+    const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+    return TRC->hasSubClassEq(MRI.getRegClass(Reg));
+  }
+}
+
+/// NOTE: must maintain consistency with `AArch64InstrInfo::copyPhysReg`.
+bool AArch64Subtarget::canLowerToZeroCycleRegMove(
+    const MachineInstr *CopyMI, const Register &DestReg,
+    const Register &SrcReg) const {
+  if (isRegInClass(CopyMI, DestReg, &AArch64::GPR32allRegClass) &&
+      isRegInClass(CopyMI, SrcReg, &AArch64::GPR32allRegClass) &&
+      DestReg != AArch64::WZR) {
+    if (DestReg == AArch64::WSP || SrcReg == AArch64::WSP ||
+        SrcReg != AArch64::WZR || !hasZeroCycleZeroingGP()) {
+      return hasZeroCycleRegMoveGPR64() || hasZeroCycleRegMoveGPR32();
+    }
+    return false;
+  }
+
+  if (isRegInClass(CopyMI, DestReg, &AArch64::GPR64allRegClass) &&
+      isRegInClass(CopyMI, SrcReg, &AArch64::GPR64allRegClass) &&
+      DestReg != AArch64::XZR) {
+    if (DestReg == AArch64::SP || SrcReg == AArch64::SP ||
+        SrcReg != AArch64::XZR || !hasZeroCycleZeroingGP()) {
+      return hasZeroCycleRegMoveGPR64();
+    }
+    return false;
+  }
+
+  if (isRegInClass(CopyMI, DestReg, &AArch64::FPR128RegClass) &&
+      isRegInClass(CopyMI, SrcReg, &AArch64::FPR128RegClass)) {
+    return isNeonAvailable() && hasZeroCycleRegMoveFPR128();
+  }
+
+  if (isRegInClass(CopyMI, DestReg, &AArch64::FPR64RegClass) &&
+      isRegInClass(CopyMI, SrcReg, &AArch64::FPR64RegClass)) {
+    return hasZeroCycleRegMoveFPR64();
+  }
+
+  if (isRegInClass(CopyMI, DestReg, &AArch64::FPR32RegClass) &&
+      isRegInClass(CopyMI, SrcReg, &AArch64::FPR32RegClass)) {
+    return hasZeroCycleRegMoveFPR32() || hasZeroCycleRegMoveFPR64();
+  }
+
+  if (isRegInClass(CopyMI, DestReg, &AArch64::FPR16RegClass) &&
+      isRegInClass(CopyMI, SrcReg, &AArch64::FPR16RegClass)) {
+    return hasZeroCycleRegMoveFPR32() || hasZeroCycleRegMoveFPR64();
+  }
+
+  if (isRegInClass(CopyMI, DestReg, &AArch64::FPR8RegClass) &&
+      isRegInClass(CopyMI, SrcReg, &AArch64::FPR8RegClass)) {
+    return hasZeroCycleRegMoveFPR32() || hasZeroCycleRegMoveFPR64();
+  }
+
+  return false;
+}
+
+/// NOTE: must maintain consistency with `AArch64InstrInfo::copyPhysReg`.
+bool AArch64Subtarget::canLowerToZeroCycleRegZeroing(
+    const MachineInstr *CopyMI, const Register &DestReg,
+    const Register &SrcReg) const {
+  if (isRegInClass(CopyMI, DestReg, &AArch64::GPR32allRegClass) &&
+      isRegInClass(CopyMI, SrcReg, &AArch64::GPR32allRegClass) &&
+      DestReg != AArch64::WZR) {
+    return AArch64::WZR == SrcReg && hasZeroCycleZeroingGP();
+  }
+
+  if (isRegInClass(CopyMI, DestReg, &AArch64::GPR64allRegClass) &&
+      isRegInClass(CopyMI, SrcReg, &AArch64::GPR64allRegClass) &&
+      DestReg != AArch64::XZR) {
+    return AArch64::XZR == SrcReg && hasZeroCycleZeroingGP();
+  }
+
+  return false;
+}

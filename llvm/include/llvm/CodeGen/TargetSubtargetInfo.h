@@ -185,6 +185,48 @@ public:
     return false;
   }
 
+  /// Returns true if CopyMI can be lowered to a zero cycle register move.
+  /// Otherwise, returns false.
+  ///
+  /// Lowering to zero cycle register moves depend on the microarchitecture
+  /// for the specific architectural registers and instructions supported.
+  /// Thus, currently its applied after register allocation,
+  /// when `ExpandPostRAPseudos` pass calls `TargetInstrInfo::lowerCopy`
+  /// which in turn calls `TargetInstrInfo::copyPhysReg`.
+  ///
+  /// Subtargets can override this method to classify lowering candidates.
+  /// Note that this cannot be defined in tablegen because it operates at
+  /// a higher level.
+  ///
+  /// NOTE: Subtargets must maintain consistency between the logic here and
+  /// on lowering.
+  virtual bool canLowerToZeroCycleRegMove(const MachineInstr *CopyMI,
+                                          const Register &DestReg,
+                                          const Register &SrcReg) const {
+    return false;
+  }
+
+  /// Returns true if CopyMI can be lowered to a zero cycle register zeroing.
+  /// Otherwise, returns false.
+  ///
+  /// Lowering to zero cycle register zeroing depends on the microarchitecture
+  /// for the specific architectural registers and instructions supported.
+  /// Thus, currently it takes place after register allocation,
+  /// when `ExpandPostRAPseudos` pass calls `TargetInstrInfo::lowerCopy`
+  /// which in turn calls `TargetInstrInfo::copyPhysReg`.
+  ///
+  /// Subtargets can override this method to classify lowering candidates.
+  /// Note that this cannot be defined in tablegen because it operates at
+  /// a higher level.
+  ///
+  /// NOTE: Subtargets must maintain consistency between the logic here and
+  /// on lowering.
+  virtual bool canLowerToZeroCycleRegZeroing(const MachineInstr *CopyMI,
+                                             const Register &DestReg,
+                                             const Register &SrcReg) const {
+    return false;
+  }
+
   /// True if the subtarget should run MachineScheduler after aggressive
   /// coalescing.
   ///
