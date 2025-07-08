@@ -3,7 +3,7 @@ name: Build libsycl
 on:
   pull_request:
     paths:
-      - 'libsycl/**
+      - 'libsycl/**'
       - '.github/workflows/libsycl-build-and-test.yaml'
     paths-ignore:
       - 'libsycl/doc/**'
