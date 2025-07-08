@@ -11,6 +11,7 @@
 
 #include "Fortran-consts.h"
 #include "enum-set.h"
+#include "llvm/Support/MathExtras.h"
 #include <cstring>
 
 // Define a FormatValidator class template to validate a format expression
@@ -214,16 +215,18 @@ template <typename CHAR> void FormatValidator<CHAR>::NextToken() {
   case '7':
   case '8':
   case '9': {
-    int64_t lastValue;
     const CHAR *lastCursor;
     integerValue_ = 0;
     bool overflow{false};
     do {
-      lastValue = integerValue_;
       lastCursor = cursor_;
-      integerValue_ = 10 * integerValue_ + c - '0';
-      if (lastValue > integerValue_) {
-        overflow = true;
+      if (LLVM_LIKELY(!overflow)) {
+        overflow = llvm::MulOverflow(
+            static_cast<int64_t>(10), integerValue_, integerValue_);
+      }
+      if (LLVM_LIKELY(!overflow)) {
+        overflow = llvm::AddOverflow(
+            integerValue_, static_cast<int64_t>(c - '0'), integerValue_);
       }
       c = NextChar();
     } while (c >= '0' && c <= '9');
