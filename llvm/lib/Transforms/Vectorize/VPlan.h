@@ -2871,9 +2871,7 @@ class VPExpressionRecipe : public VPSingleDefRecipe {
     MulAccReduction,
     /// Represent an inloop multiply-accumulate reduction, multiplying the
     /// extended vector operands, negating the multiplication, performing a
-    /// reduction.add
-    /// on the result, and adding
-    /// the scalar result to a chain.
+    /// reduction.add on the result, and adding the scalar result to a chain.
     ExtNegatedMulAccReduction,
   };
 

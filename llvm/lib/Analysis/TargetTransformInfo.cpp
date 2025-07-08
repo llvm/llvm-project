@@ -1283,9 +1283,9 @@ InstructionCost TargetTransformInfo::getExtendedReductionCost(
 }
 
 InstructionCost TargetTransformInfo::getMulAccReductionCost(
-    bool IsUnsigned, Type *ResTy, VectorType *Ty, bool Negated,
+    bool IsUnsigned, bool IsNegated, Type *ResTy, VectorType *Ty,
     TTI::TargetCostKind CostKind) const {
-  return TTIImpl->getMulAccReductionCost(IsUnsigned, ResTy, Ty, Negated,
+  return TTIImpl->getMulAccReductionCost(IsUnsigned, IsNegated, ResTy, Ty,
                                          CostKind);
 }
 
