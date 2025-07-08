@@ -321,6 +321,7 @@ def : ReadAdvance<ReadSingleBitImm, 0>;
 defm : UnsupportedSchedQ;
 defm : UnsupportedSchedV;
 defm : UnsupportedSchedXsfvcp;
+defm : UnsupportedSchedXSfvfnrclipxfqf;
 defm : UnsupportedSchedZabha;
 defm : UnsupportedSchedZbc;
 defm : UnsupportedSchedZbkb;

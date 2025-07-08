@@ -331,6 +331,7 @@ defm : UnsupportedSchedQ;
 defm : UnsupportedSchedSFB;
 defm : UnsupportedSchedV;
 defm : UnsupportedSchedXsfvcp;
+defm : UnsupportedSchedXSfvfnrclipxfqf;
 defm : UnsupportedSchedZabha;
 defm : UnsupportedSchedZbkb;
 defm : UnsupportedSchedZbkx;
