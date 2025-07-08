@@ -536,9 +536,19 @@ def LLVM_DIRecursiveTypeAttrInterface
 def LLVM_TargetAttrInterface
   : AttrInterface<"TargetAttrInterface", [DLTIQueryInterface]> {
   let description = [{
-    TODO
+    Interface for attributes that describe LLVM targets.
 
-    NEEDS TO document which TI keys it responds to.
+    These attributes should be able to return the specified target
+    `triple`, `chip` and `features` and are expected to be able to
+    produce the corresponding `llvm::TargetMachine` and
+    `llvm::DataLayout`. These methods can fail in case the backend
+    is not available.
+
+    Implementing attributes should provide a
+    `DLTIQueryInterface::query()` implementation which responds to
+    keys `"triple"`, `"chip"` and `"features"` by returning an
+    appropriate `StringAttr`, `StringAttr` and
+    `LLVM_TargetFeaturesAttr`.
   }];
   let cppNamespace = "::mlir::LLVM";
   let methods = [

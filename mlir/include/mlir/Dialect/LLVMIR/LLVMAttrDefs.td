@@ -19,11 +19,24 @@ include "mlir/Interfaces/DataLayoutInterfaces.td"
 // LLVM_TargetAttr
 //===----------------------------------------------------------------------===//
 
-def LLVM_TargetAttr : LLVM_Attr<"Target", "target", [LLVM_TargetAttrInterface]> {
-  let mnemonic = "target";
-  let summary = "TODO";
+def LLVM_TargetAttr : LLVM_Attr<"Target", "target",
+                                [LLVM_TargetAttrInterface]> {
+  let summary = "LLVM target info: triple, chip, features";
   let description = [{
-    TODO
+    An attribute to hold LLVM target information, specifying LLVM's target
+    `triple` string, the target `chip` string (i.e. the `cpu` string), and
+    target `features` string as an attribute. The latter two are optional.
+
+    Has facilities to obtain the corresponding `llvm::TargetMachine` and
+    `llvm::DataLayout`, given the relevant LLVM backend is loaded.
+
+    ---
+
+    Responds to DLTI-queries on the keys:
+       * A query for `"triple"` returns the `StringAttr` for the `triple`.
+       * A query for `"chip"` returns the `StringAttr` for the `chip`/`cpu`, if provided.
+       * A query for `"features"` returns the `TargetFeaturesAttr`, if provided.
+         * Individual features can be queried for on this attribute.
   }];
   let parameters = (ins "StringAttr":$triple,
                         OptionalParameter<"StringAttr">:$chip,
@@ -50,9 +63,14 @@ def LLVM_TargetAttr : LLVM_Attr<"Target", "target", [LLVM_TargetAttrInterface]> 
 
 def LLVM_DataLayoutAttr
     : LLVM_Attr<"DataLayout", "data_layout", [DataLayoutSpecInterface]> {
-  let summary = "TODO";
+  let summary = "LLVM data layout string, exposed through DLTI";
   let description = [{
-    TODO
+    An attribute to hold a LLVM data layout string.
+
+    The LLVM data layout string is parsed and mapped to the corresponding MLIR
+    data layout specification. The `#llvm.data_layout` attribute then serves as
+    a proxy, forwarding all DLTI queries to the underlying MLIR data layout
+    specification.
   }];
   let parameters = (ins "StringAttr":$data_layout_str,
                          OptionalParameter<"DataLayoutSpecInterface", "{}">:$data_layout_spec);
