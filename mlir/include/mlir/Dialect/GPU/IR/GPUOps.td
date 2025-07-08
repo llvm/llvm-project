@@ -1304,8 +1304,8 @@ def GPU_ShuffleOp : GPU_Op<
     Results<(outs AnyIntegerOrFloatOr1DVector:$shuffleResult, I1:$valid)> {
   let summary = "Shuffles values within a subgroup.";
   let description = [{
-    The "shuffle" op moves values to a across lanes (a.k.a., invocations,
-    work items) within the same subgroup. The `width` argument specifies the
+    The "shuffle" op moves values across lanes in a subgroup (a.k.a., local
+    invocation) within the same subgroup. The `width` argument specifies the
     number of lanes that participate in the shuffle, and must be uniform
     across all lanes. Further, the first `width` lanes of the subgroup must
     be active.
@@ -1364,6 +1364,54 @@ def GPU_ShuffleOp : GPU_Op<
     OpBuilder<(ins "Value":$value, "int32_t":$offset, "int32_t":$width,
                    "ShuffleMode":$mode)>
   ];
+}
+
+def GPU_RotateOp : GPU_Op<
+    "rotate", [Pure, AllTypesMatch<["value", "rotateResult"]>]>,
+    Arguments<(ins AnyIntegerOrFloatOr1DVector:$value, I32:$offset, I32:$width)>,
+    Results<(outs AnyIntegerOrFloatOr1DVector:$rotateResult, I1:$valid)> {
+  let summary = "Rotate values within a subgroup.";
+  let description = [{
+    The "rotate" op moves values across lanes in a subgroup (a.k.a., local
+    invocations) within the same subgroup. The `width` argument specifies the
+    number of lanes that participate in the rotation, and must be uniform across
+    all participating lanes. Further, the first `width` lanes of the subgroup
+    must be active.
+
+    `width` must be a power of two, and `offset` must be in the range
+    `[0, width)`.
+
+    Return the `rotateResult` of the invocation whose id within the group is
+    calculated as follows:
+
+    ```mlir
+    Invocation ID = ((LaneId + offset) & (width - 1)) + (LaneId & ~(width - 1))
+    ```
+
+    Returns the `rotateResult` and `true` if the current lane id is smaller than
+    `width`, and poison value and `false` otherwise.
+
+    example:
+
+    ```mlir
+    %offset = arith.constant 1 : i32
+    %width = arith.constant 16 : i32
+    %1, %2 = gpu.rotate %0, %offset, %width : f32
+    ```
+
+    For lane `k`, returns the value from lane `(k + cst1) % width`.
+  }];
+
+  let assemblyFormat = [{
+    $value `,` $offset `,` $width attr-dict `:` type($value)
+  }];
+
+  let builders = [
+    // Helper function that creates a rotate with constant offset/width.
+    OpBuilder<(ins "Value":$value, "int32_t":$offset, "int32_t":$width)>
+  ];
+
+  let hasVerifier = 1;
 }
 
 def GPU_BarrierOp : GPU_Op<"barrier"> {

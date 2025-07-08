@@ -1,10 +1,10 @@
 // RUN: llvm-profdata merge %S/Inputs/mcdc-general.proftext -o %t.profdata
 // RUN: llvm-cov export --format=text %S/Inputs/mcdc-general.o -instr-profile %t.profdata | FileCheck %s
 
-// CHECK: 12,7,12,27,0,5,[true,true,true,true]
-// CHECK: 15,7,15,13,0,5,[true,true]
-// CHECK: 15,19,15,25,0,5,[true,false]
-// CHECK: 18,7,19,15,0,5,[true,true,false,true]
+// CHECK: 12,7,12,27,2,4,0,0,5,[true,true,true,true]
+// CHECK: 15,7,15,13,1,2,0,0,5,[true,true]
+// CHECK: 15,19,15,25,1,1,0,0,5,[true,false]
+// CHECK: 18,7,19,15,1,3,0,0,5,[true,true,false,true]
 // CHECK: "mcdc":{"count":12,"covered":10,"notcovered":2,"percent":83.333333333333343}
 
 Instructions for regenerating the test:

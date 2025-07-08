@@ -600,7 +600,7 @@ CXXOperatorCallExpr::CXXOperatorCallExpr(OverloadedOperatorKind OpKind,
   assert(
       (CXXOperatorCallExprBits.OperatorKind == static_cast<unsigned>(OpKind)) &&
       "OperatorKind overflow!");
-  Range = getSourceRangeImpl();
+  BeginLoc = getSourceRangeImpl().getBegin();
 }
 
 CXXOperatorCallExpr::CXXOperatorCallExpr(unsigned NumArgs, bool HasFPFeatures,
@@ -1208,7 +1208,7 @@ CXXConstructExpr::CXXConstructExpr(
 
   Stmt **TrailingArgs = getTrailingArgs();
   llvm::copy(Args, TrailingArgs);
-  assert(llvm::all_of(Args, [](const Stmt *Arg) { return Arg != nullptr; }));
+  assert(!llvm::is_contained(Args, nullptr));
 
   // CXXTemporaryObjectExpr does this itself after setting its TypeSourceInfo.
   if (SC == CXXConstructExprClass)

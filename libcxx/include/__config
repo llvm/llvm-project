@@ -903,23 +903,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
 #  endif
 
-// Work around the attribute handling in clang.  When both __declspec and
-// __attribute__ are present, the processing goes awry preventing the definition
-// of the types. In MinGW mode, __declspec evaluates to __attribute__, and thus
-// combining the two does work.
-#  if defined(_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS) && defined(__clang__) &&                                       \
-      __has_attribute(acquire_capability) && !defined(_MSC_VER)
-#    define _LIBCPP_HAS_THREAD_SAFETY_ANNOTATIONS 1
-#  else
-#    define _LIBCPP_HAS_THREAD_SAFETY_ANNOTATIONS 0
-#  endif
-
-#  if _LIBCPP_HAS_THREAD_SAFETY_ANNOTATIONS
-#    define _LIBCPP_THREAD_SAFETY_ANNOTATION(x) __attribute__((x))
-#  else
-#    define _LIBCPP_THREAD_SAFETY_ANNOTATION(x)
-#  endif
-
 #  if _LIBCPP_STD_VER >= 20
 #    define _LIBCPP_CONSTINIT constinit
 #  elif __has_attribute(__require_constant_initialization__)
@@ -1145,6 +1128,60 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_PREFERRED_NAME(x) [[_Clang::__preferred_name__(x)]]
 #  else
 #    define _LIBCPP_PREFERRED_NAME(x)
+#  endif
+
+#  if __has_cpp_attribute(_Clang::__scoped_lockable__)
+#    define _LIBCPP_SCOPED_LOCKABLE [[_Clang::__scoped_lockable__]]
+#  else
+#    define _LIBCPP_SCOPED_LOCKABLE
+#  endif
+
+#  if __has_cpp_attribute(_Clang::__capability__)
+#    define _LIBCPP_CAPABILITY(...) [[_Clang::__capability__(__VA_ARGS__)]]
+#  else
+#    define _LIBCPP_CAPABILITY(...)
+#  endif
+
+#  if __has_attribute(__acquire_capability__)
+#    define _LIBCPP_ACQUIRE_CAPABILITY(...) __attribute__((__acquire_capability__(__VA_ARGS__)))
+#  else
+#    define _LIBCPP_ACQUIRE_CAPABILITY(...)
+#  endif
+
+#  if __has_cpp_attribute(_Clang::__try_acquire_capability__)
+#    define _LIBCPP_TRY_ACQUIRE_CAPABILITY(...) [[_Clang::__try_acquire_capability__(__VA_ARGS__)]]
+#  else
+#    define _LIBCPP_TRY_ACQUIRE_CAPABILITY(...)
+#  endif
+
+#  if __has_cpp_attribute(_Clang::__acquire_shared_capability__)
+#    define _LIBCPP_ACQUIRE_SHARED_CAPABILITY [[_Clang::__acquire_shared_capability__]]
+#  else
+#    define _LIBCPP_ACQUIRE_SHARED_CAPABILITY
+#  endif
+
+#  if __has_cpp_attribute(_Clang::__try_acquire_shared_capability__)
+#    define _LIBCPP_TRY_ACQUIRE_SHARED_CAPABILITY(...) [[_Clang::__try_acquire_shared_capability__(__VA_ARGS__)]]
+#  else
+#    define _LIBCPP_TRY_ACQUIRE_SHARED_CAPABILITY(...)
+#  endif
+
+#  if __has_cpp_attribute(_Clang::__release_capability__)
+#    define _LIBCPP_RELEASE_CAPABILITY [[_Clang::__release_capability__]]
+#  else
+#    define _LIBCPP_RELEASE_CAPABILITY
+#  endif
+
+#  if __has_cpp_attribute(_Clang::__release_shared_capability__)
+#    define _LIBCPP_RELEASE_SHARED_CAPABILITY [[_Clang::__release_shared_capability__]]
+#  else
+#    define _LIBCPP_RELEASE_SHARED_CAPABILITY
+#  endif
+
+#  if __has_attribute(__requires_capability__)
+#    define _LIBCPP_REQUIRES_CAPABILITY(...) __attribute__((__requires_capability__(__VA_ARGS__)))
+#  else
+#    define _LIBCPP_REQUIRES_CAPABILITY(...)
 #  endif
 
 #  if defined(_LIBCPP_ABI_MICROSOFT) && __has_declspec_attribute(empty_bases)

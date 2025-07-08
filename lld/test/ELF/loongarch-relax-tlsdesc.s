@@ -9,19 +9,18 @@
 # RUN: llvm-readobj -r -x .got a.64.so | FileCheck --check-prefix=GD64-RELA %s
 # RUN: llvm-objdump --no-show-raw-insn -dr -h a.64.so | FileCheck %s --check-prefix=GD64
 
-## FIXME: The transition from TLSDESC to IE/LE has not yet been implemented.
-## Keep the dynamic relocations and hand them over to dynamic linker.
-
-# RUN: ld.lld --relax -e 0 -z now a.64.o c.64.o -o a.64.le
-# RUN: llvm-readobj -r -x .got a.64.le | FileCheck --check-prefix=LE64-RELA %s
-# RUN: llvm-objdump --no-show-raw-insn -d -h a.64.le | FileCheck %s --check-prefix=LE64
+## FIXME: IE/LE relaxation have not yet been implemented, --relax/--no-relax obtain the same results.
+## Transition from TLSDESC to IE/LE. Also check --emit-relocs.
+# RUN: ld.lld -e 0 -z now --emit-relocs a.64.o c.64.o -o a.64.le
+# RUN: llvm-readobj -r -x .got a.64.le 2>&1 | FileCheck --check-prefix=LE64-RELA %s
+# RUN: llvm-objdump --no-show-raw-insn -dr -h a.64.le | FileCheck %s --check-prefix=LE64
 
 # RUN: ld.lld --no-relax -e 0 -z now a.64.o c.64.o -o a.64.le.norelax
 # RUN: llvm-objdump --no-show-raw-insn -d -h a.64.le.norelax | FileCheck %s --check-prefix=LE64-NORELAX
 
-# RUN: ld.lld --relax -e 0 -z now a.64.o c.64.so -o a.64.ie
+# RUN: ld.lld --relax -e 0 -z now --emit-relocs a.64.o c.64.so -o a.64.ie
 # RUN: llvm-readobj -r -x .got a.64.ie | FileCheck --check-prefix=IE64-RELA %s
-# RUN: llvm-objdump --no-show-raw-insn -d -h a.64.ie | FileCheck %s --check-prefix=IE64
+# RUN: llvm-objdump --no-show-raw-insn -dr -h a.64.ie | FileCheck %s --check-prefix=IE64
 
 # RUN: ld.lld --no-relax -e 0 -z now a.64.o c.64.so -o a.64.ie.norelax
 # RUN: llvm-objdump --no-show-raw-insn -d -h a.64.ie.norelax | FileCheck %s --check-prefix=IE64-NORELAX
@@ -71,172 +70,199 @@
 # GD64-NEXT:          jirl    $ra, $ra, 0
 # GD64-NEXT:          add.d   $a4, $a0, $tp
 
-# LE64-RELA:      .rela.dyn {
-# LE64-RELA-NEXT:   0x30280 R_LARCH_TLS_DESC64 - 0x8
-# LE64-RELA-NEXT:   0x30290 R_LARCH_TLS_DESC64 - 0x800
-# LE64-RELA-NEXT:   0x302A0 R_LARCH_TLS_DESC64 - 0x1000
-# LE64-RELA-NEXT:   0x302B0 R_LARCH_TLS_DESC64 - 0x7FF
-# LE64-RELA-NEXT: }
-# LE64-RELA:      Hex dump of section '.got':
-# LE64-RELA-NEXT: 0x00030280 00000000 00000000 00000000 00000000 .
-# LE64-RELA-NEXT: 0x00030290 00000000 00000000 00000000 00000000 .
-# LE64-RELA-NEXT: 0x000302a0 00000000 00000000 00000000 00000000 .
-# LE64-RELA-NEXT: 0x000302b0 00000000 00000000 00000000 00000000 .
+# LE64-RELA: could not find section '.got'
 
-# LE64:   .got    00000040 0000000000030280
-
-## &.got[a]-. = 0x30280 - 0x20228 = 16406<<2
-# LE64:        20228: pcaddi  $a0, 16406
-# LE64-NEXT:          ld.d    $ra, $a0, 0
-# LE64-NEXT:          jirl    $ra, $ra, 0
+## a@tprel = 0x8
+# LE64:        20158: nop
+# LE64-NEXT:            R_LARCH_TLS_DESC_PC_HI20 a
+# LE64-NEXT:            R_LARCH_RELAX *ABS*
+# LE64-NEXT:          nop
+# LE64-NEXT:            R_LARCH_TLS_DESC_PC_LO12 a
+# LE64-NEXT:            R_LARCH_RELAX *ABS*
+# LE64-NEXT:          nop
+# LE64-NEXT:            R_LARCH_TLS_DESC_LD a
+# LE64-NEXT:            R_LARCH_RELAX *ABS*
+# LE64-NEXT:          ori     $a0, $zero, 8
+# LE64-NEXT:            R_LARCH_TLS_DESC_CALL a
+# LE64-NEXT:            R_LARCH_RELAX *ABS*
 # LE64-NEXT:          add.d   $a1, $a0, $tp
 
-## &.got[b]-. = 0x30280+48 - 0x20238: 0x10 pages, page offset 0x2b0
-## R_LARCH_RELAX does not appear in pairs. No relaxation.
-# LE64:        20238: pcalau12i $a0, 16
-# LE64-NEXT:          addi.d  $a0, $a0, 688
-# LE64-NEXT:          ld.d    $ra, $a0, 0
-# LE64-NEXT:          jirl    $ra, $ra, 0
+## b@tprel = 0x7ff
+# LE64:        2016c: nop
+# LE64-NEXT:            R_LARCH_TLS_DESC_PC_HI20 b
+# LE64-NEXT:            R_LARCH_RELAX *ABS*
+# LE64-NEXT:          nop
+# LE64-NEXT:            R_LARCH_TLS_DESC_PC_LO12 b
+# LE64-NEXT:          nop
+# LE64-NEXT:            R_LARCH_TLS_DESC_LD b
+# LE64-NEXT:          ori     $a0, $zero, 2047
+# LE64-NEXT:            R_LARCH_TLS_DESC_CALL b
 # LE64-NEXT:          add.d   $a2, $a0, $tp
 
-## &.got[c]-. = 0x30280+16 - 0x2024c: 0x10 pages, page offset 0x290
+## c@tprel = 0x800
 ## Without R_LARCH_RELAX relocation. No relaxation.
-# LE64:        2024c: pcalau12i $a0, 16
+# LE64:        20180: nop
+# LE64-NEXT:            R_LARCH_TLS_DESC_PC_HI20 c
 # LE64-NEXT:          addi.d  $t0, $zero, 0
-# LE64-NEXT:          addi.d  $a0, $a0, 656
+# LE64-NEXT:          nop
+# LE64-NEXT:            R_LARCH_TLS_DESC_PC_LO12 c
 # LE64-NEXT:          addi.d  $t0, $t0, 1
-# LE64-NEXT:          ld.d    $ra, $a0, 0
+# LE64-NEXT:          nop
+# LE64-NEXT:            R_LARCH_TLS_DESC_LD c
 # LE64-NEXT:          addi.d  $t0, $t0, 1
-# LE64-NEXT:          jirl    $ra, $ra, 0
+# LE64-NEXT:          ori     $a0, $zero, 2048
+# LE64-NEXT:            R_LARCH_TLS_DESC_CALL c
 # LE64-NEXT:          add.d   $a3, $a0, $tp
 
-## &.got[d]-. = 0x30280+32 - 0x2026c = 16397<<2
-# LE64:        2026c: pcaddi  $a0, 16397
-# LE64-NEXT:          ld.d    $ra, $a0, 0
-# LE64-NEXT:          jirl    $ra, $ra, 0
+## d@tprel = 0x1000
+# LE64:        201a0: nop
+# LE64-NEXT:            R_LARCH_TLS_DESC_PC_HI20 d
+# LE64-NEXT:            R_LARCH_RELAX *ABS*
+# LE64-NEXT:          nop
+# LE64-NEXT:            R_LARCH_TLS_DESC_PC_LO12 d
+# LE64-NEXT:            R_LARCH_RELAX *ABS*
+# LE64-NEXT:          lu12i.w $a0, 1
+# LE64-NEXT:            R_LARCH_TLS_DESC_LD d
+# LE64-NEXT:          ori     $a0, $a0, 0
+# LE64-NEXT:            R_LARCH_TLS_DESC_CALL d
 # LE64-NEXT:          add.d   $a4, $a0, $tp
 
-# LE64-NORELAX: .got    00000040 0000000000030288
-
-## &.got[a]-. = 0x30288 - 0x20228 = 0x10 pages, page offset 0x288
-# LE64-NORELAX:        20228: pcalau12i $a0, 16
-# LE64-NORELAX-NEXT:          addi.d  $a0, $a0, 648
-# LE64-NORELAX-NEXT:          ld.d    $ra, $a0, 0
-# LE64-NORELAX-NEXT:          jirl    $ra, $ra, 0
+## a@tprel = 0x8
+# LE64-NORELAX:        20158: nop
+# LE64-NORELAX-NEXT:          nop
+# LE64-NORELAX-NEXT:          nop
+# LE64-NORELAX-NEXT:          ori     $a0, $zero, 8
 # LE64-NORELAX-NEXT:          add.d   $a1, $a0, $tp
 
-## &.got[b]-. = 0x30288+48 - 0x2023c: 0x10 pages, page offset 0x2b8
-## R_LARCH_RELAX does not appear in pairs. No relaxation.
-# LE64-NORELAX:        2023c: pcalau12i $a0, 16
-# LE64-NORELAX-NEXT:          addi.d  $a0, $a0, 696
-# LE64-NORELAX-NEXT:          ld.d    $ra, $a0, 0
-# LE64-NORELAX-NEXT:          jirl    $ra, $ra, 0
+## b@tprel = 0x7ff
+# LE64-NORELAX:        2016c: nop
+# LE64-NORELAX-NEXT:          nop
+# LE64-NORELAX-NEXT:          nop
+# LE64-NORELAX-NEXT:          ori     $a0, $zero, 2047
 # LE64-NORELAX-NEXT:          add.d   $a2, $a0, $tp
 
-## &.got[c]-. = 0x30288+16 - 0x20250: 0x10 pages, page offset 0x298
+## c@tprel = 0x800
 ## Without R_LARCH_RELAX relocation. No relaxation.
-# LE64-NORELAX:        20250: pcalau12i $a0, 16
+# LE64-NORELAX:        20180: nop
 # LE64-NORELAX-NEXT:          addi.d  $t0, $zero, 0
-# LE64-NORELAX-NEXT:          addi.d  $a0, $a0, 664
+# LE64-NORELAX-NEXT:          nop
 # LE64-NORELAX-NEXT:          addi.d  $t0, $t0, 1
-# LE64-NORELAX-NEXT:          ld.d    $ra, $a0, 0
+# LE64-NORELAX-NEXT:          nop
 # LE64-NORELAX-NEXT:          addi.d  $t0, $t0, 1
-# LE64-NORELAX-NEXT:          jirl    $ra, $ra, 0
+# LE64-NORELAX-NEXT:          ori     $a0, $zero, 2048
 # LE64-NORELAX-NEXT:          add.d   $a3, $a0, $tp
 
-## &.got[d]-. = 0x30288+32 - 0x20270: 0x10 pages, page offset 0x2a8
-# LE64-NORELAX:        20270: pcalau12i $a0, 16
-# LE64-NORELAX-NEXT:          addi.d  $a0, $a0, 680
-# LE64-NORELAX-NEXT:          ld.d    $ra, $a0, 0
-# LE64-NORELAX-NEXT:          jirl    $ra, $ra, 0
+## d@tprel = 0x1000
+# LE64-NORELAX:        201a0: nop
+# LE64-NORELAX-NEXT:          nop
+# LE64-NORELAX-NEXT:          lu12i.w $a0, 1
+# LE64-NORELAX-NEXT:          ori     $a0, $a0, 0
 # LE64-NORELAX-NEXT:          add.d   $a4, $a0, $tp
 
 # IE64-RELA:      .rela.dyn {
-# IE64-RELA-NEXT:   0x30430 R_LARCH_TLS_DESC64 - 0x8
-# IE64-RELA-NEXT:   0x30460 R_LARCH_TLS_DESC64 - 0x7FF
-# IE64-RELA-NEXT:   0x30440 R_LARCH_TLS_DESC64 c 0x0
-# IE64-RELA-NEXT:   0x30450 R_LARCH_TLS_DESC64 d 0x0
+# IE64-RELA-NEXT:   0x30408 R_LARCH_TLS_TPREL64 c 0x0
+# IE64-RELA-NEXT:   0x30410 R_LARCH_TLS_TPREL64 d 0x0
 # IE64-RELA-NEXT: }
 # IE64-RELA:      Hex dump of section '.got':
-# IE64-RELA-NEXT: 0x00030430 00000000 00000000 00000000 00000000 .
-# IE64-RELA-NEXT: 0x00030440 00000000 00000000 00000000 00000000 .
-# IE64-RELA-NEXT: 0x00030450 00000000 00000000 00000000 00000000 .
-# IE64-RELA-NEXT: 0x00030460 00000000 00000000 00000000 00000000 .
+# IE64-RELA-NEXT: 0x00030408 00000000 00000000 00000000 00000000 .
 
-# IE64:   .got           00000040 0000000000030430
+# IE64:   .got           00000010 0000000000030408
 
 ## a and b are optimized to use LE. c and d are optimized to IE.
-## &.got[a]-. = 0x30430 - 0x202f8 = 16462<<2
-# IE64:        202f8: pcaddi  $a0, 16462
-# IE64-NEXT:          ld.d    $ra, $a0, 0
-# IE64-NEXT:          jirl    $ra, $ra, 0
+## a@tprel = 0x8
+# IE64:        202c8: nop
+# IE64-NEXT:            R_LARCH_TLS_DESC_PC_HI20 a
+# IE64-NEXT:            R_LARCH_RELAX *ABS*
+# IE64-NEXT:          nop
+# IE64-NEXT:            R_LARCH_TLS_DESC_PC_LO12 a
+# IE64-NEXT:            R_LARCH_RELAX *ABS*
+# IE64-NEXT:          nop
+# IE64-NEXT:            R_LARCH_TLS_DESC_LD a
+# IE64-NEXT:            R_LARCH_RELAX *ABS*
+# IE64-NEXT:          ori     $a0, $zero, 8
+# IE64-NEXT:            R_LARCH_TLS_DESC_CALL a
+# IE64-NEXT:            R_LARCH_RELAX *ABS*
 # IE64-NEXT:          add.d   $a1, $a0, $tp
 
-## &.got[b]-. = 0x30430+48 - 0x20308: 0x10 pages, page offset 0x460
-## R_LARCH_RELAX does not appear in pairs. No relaxation.
-# IE64:        20308: pcalau12i $a0, 16
-# IE64-NEXT:          addi.d  $a0, $a0, 1120
-# IE64-NEXT:          ld.d    $ra, $a0, 0
-# IE64-NEXT:          jirl    $ra, $ra, 0
+## b@tprel = 0x7ff
+# IE64:        202dc: nop
+# IE64-NEXT:            R_LARCH_TLS_DESC_PC_HI20 b
+# IE64-NEXT:            R_LARCH_RELAX *ABS*
+# IE64-NEXT:          nop
+# IE64-NEXT:            R_LARCH_TLS_DESC_PC_LO12 b
+# IE64-NEXT:          nop
+# IE64-NEXT:            R_LARCH_TLS_DESC_LD b
+# IE64-NEXT:          ori     $a0, $zero, 2047
+# IE64-NEXT:            R_LARCH_TLS_DESC_CALL b
 # IE64-NEXT:          add.d   $a2, $a0, $tp
 
-## &.got[c]-. = 0x30430+16 - 0x2031c: 0x10 pages, page offset 0x440
+## &.got[c]-. = 0x30408 - 0x20300: 0x10 pages, page offset 0x408
 ## Without R_LARCH_RELAX relocation. No relaxation.
-# IE64:        2031c: pcalau12i $a0, 16
+# IE64:        202f0: nop
+# IE64-NEXT:            R_LARCH_TLS_DESC_PC_HI20 c
 # IE64-NEXT:          addi.d  $t0, $zero, 0
-# IE64-NEXT:          addi.d  $a0, $a0, 1088
+# IE64-NEXT:          nop
+# IE64-NEXT:            R_LARCH_TLS_DESC_PC_LO12 c
 # IE64-NEXT:          addi.d  $t0, $t0, 1
-# IE64-NEXT:          ld.d    $ra, $a0, 0
+# IE64-NEXT:          pcalau12i $a0, 16
+# IE64-NEXT:            R_LARCH_TLS_DESC_LD c
 # IE64-NEXT:          addi.d  $t0, $t0, 1
-# IE64-NEXT:          jirl    $ra, $ra, 0
+# IE64-NEXT:          ld.d    $a0, $a0, 1032
+# IE64-NEXT:            R_LARCH_TLS_DESC_CALL c
 # IE64-NEXT:          add.d   $a3, $a0, $tp
 
-## &.got[d]-. = 0x30430+32 - 0x2033c = 16453<<2
-# IE64:        2033c: pcaddi  $a0, 16453
-# IE64-NEXT:          ld.d    $ra, $a0, 0
-# IE64-NEXT:          jirl    $ra, $ra, 0
+## &.got[d]-. = 0x30408+8 - 0x20318: 0x10 pages, page offset 0x410
+# IE64:        20310: nop
+# IE64-NEXT:            R_LARCH_TLS_DESC_PC_HI20 d
+# IE64-NEXT:            R_LARCH_RELAX *ABS*
+# IE64-NEXT:          nop
+# IE64-NEXT:            R_LARCH_TLS_DESC_PC_LO12 d
+# IE64-NEXT:            R_LARCH_RELAX *ABS*
+# IE64-NEXT:          pcalau12i $a0, 16
+# IE64-NEXT:            R_LARCH_TLS_DESC_LD d
+# IE64-NEXT:          ld.d    $a0, $a0, 1040
+# IE64-NEXT:            R_LARCH_TLS_DESC_CALL d
 # IE64-NEXT:          add.d   $a4, $a0, $tp
 
-# IE64-NORELAX: .got    00000040 0000000000030438
+# IE64-NORELAX: .got    00000010 0000000000030408
 
-## &.got[a]-. = 0x30438 - 0x202f8 = 0x10 pages, page offset 0x438
-# IE64-NORELAX:        202f8: pcalau12i $a0, 16
-# IE64-NORELAX-NEXT:          addi.d  $a0, $a0, 1080
-# IE64-NORELAX-NEXT:          ld.d    $ra, $a0, 0
-# IE64-NORELAX-NEXT:          jirl    $ra, $ra, 0
+## a@tprel = 0x8
+# IE64-NORELAX:        202c8: nop
+# IE64-NORELAX-NEXT:          nop
+# IE64-NORELAX-NEXT:          nop
+# IE64-NORELAX-NEXT:          ori     $a0, $zero, 8
 # IE64-NORELAX-NEXT:          add.d   $a1, $a0, $tp
 
-## &.got[b]-. = 0x30438+48 - 0x2030c: 0x10 pages, page offset 0x468
-## R_LARCH_RELAX does not appear in pairs. No relaxation.
-# IE64-NORELAX:        2030c: pcalau12i $a0, 16
-# IE64-NORELAX-NEXT:          addi.d  $a0, $a0, 1128
-# IE64-NORELAX-NEXT:          ld.d    $ra, $a0, 0
-# IE64-NORELAX-NEXT:          jirl    $ra, $ra, 0
+## b@tprel = 0x7ff
+# IE64-NORELAX:        202dc: nop
+# IE64-NORELAX-NEXT:          nop
+# IE64-NORELAX-NEXT:          nop
+# IE64-NORELAX-NEXT:          ori     $a0, $zero, 2047
 # IE64-NORELAX-NEXT:          add.d   $a2, $a0, $tp
 
-## &.got[c]-. = 0x30438+16 - 0x20320: 0x10 pages, page offset 0x448
+## &.got[c]-. = 0x30408 - 0x20300: 0x10 pages, page offset 0x408
 ## Without R_LARCH_RELAX relocation. No relaxation.
-# IE64-NORELAX:        20320: pcalau12i $a0, 16
+# IE64-NORELAX:        202f0: nop
 # IE64-NORELAX-NEXT:          addi.d  $t0, $zero, 0
-# IE64-NORELAX-NEXT:          addi.d  $a0, $a0, 1096
+# IE64-NORELAX-NEXT:          nop
 # IE64-NORELAX-NEXT:          addi.d  $t0, $t0, 1
-# IE64-NORELAX-NEXT:          ld.d    $ra, $a0, 0
+# IE64-NORELAX-NEXT:          pcalau12i $a0, 16
 # IE64-NORELAX-NEXT:          addi.d  $t0, $t0, 1
-# IE64-NORELAX-NEXT:          jirl    $ra, $ra, 0
+# IE64-NORELAX-NEXT:          ld.d    $a0, $a0, 1032
 # IE64-NORELAX-NEXT:          add.d   $a3, $a0, $tp
 
-## &.got[d]-. = 0x30438+32 - 0x20340: 0x10 pages, page offset 0x458
-# IE64-NORELAX:        20340: pcalau12i $a0, 16
-# IE64-NORELAX-NEXT:          addi.d  $a0, $a0, 1112
-# IE64-NORELAX-NEXT:          ld.d    $ra, $a0, 0
-# IE64-NORELAX-NEXT:          jirl    $ra, $ra, 0
+## &.got[d]-. = 0x30408+8 - 0x20318: 0x10 pages, page offset 0x410
+# IE64-NORELAX:        20310: nop
+# IE64-NORELAX-NEXT:          nop
+# IE64-NORELAX-NEXT:          pcalau12i $a0, 16
+# IE64-NORELAX-NEXT:          ld.d    $a0, $a0, 1040
 # IE64-NORELAX-NEXT:          add.d   $a4, $a0, $tp
 
 #--- a.s
 la.tls.desc $a0, a
 add.d $a1, $a0, $tp
 
-# ADDI.D does not have R_LARCH_RELAX. No relaxation.
+# ADDI.D does not have R_LARCH_RELAX. No relaxation when it is not optimized to IE/LE (--shared).
 pcalau12i $a0, %desc_pc_hi20(b)
 .reloc .-4, R_LARCH_RELAX, 0
 addi.d $a0, $a0, %desc_pc_lo12(b)

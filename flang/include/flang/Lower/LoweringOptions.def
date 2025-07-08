@@ -66,5 +66,9 @@ ENUM_LOWERINGOPT(RepackArraysWhole, unsigned, 1, 0)
 /// If true, CUDA Fortran runtime check is inserted.
 ENUM_LOWERINGOPT(CUDARuntimeCheck, unsigned, 1, 0)
 
+/// If true, do not generate definition for runtime type info global objects of
+/// derived types defined in other compilation units.
+ENUM_LOWERINGOPT(SkipExternalRttiDefinition, unsigned, 1, 0)
+
 #undef LOWERINGOPT
 #undef ENUM_LOWERINGOPT

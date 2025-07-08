@@ -21,6 +21,7 @@
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
+#include "llvm-c/Visibility.h"
 #include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -1002,11 +1003,11 @@ static bool usesMSVCFloatingPoint(const Triple &TT, const Module &M) {
 
   for (const Function &F : M) {
     for (const Instruction &I : instructions(F)) {
-      if (I.getType()->isFPOrFPVectorTy())
+      if (I.getType()->isFloatingPointTy())
         return true;
 
       for (const auto &Op : I.operands()) {
-        if (Op->getType()->isFPOrFPVectorTy())
+        if (Op->getType()->isFloatingPointTy())
           return true;
       }
     }
