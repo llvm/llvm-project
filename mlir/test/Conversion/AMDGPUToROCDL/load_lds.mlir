@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx942 | FileCheck %s
+// RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx950 | FileCheck %s
 
 #gpu_global_addrspace = 1
 #gpu_lds_addrspace = 3
@@ -117,7 +118,6 @@ func.func @global_load_to_rocdl_vec(%global : memref<128x72xi16, #gpu_global_add
     : vector<2 x i16>, memref<128x72xi16, #gpu_global_addrspace>, memref<64x128xi16, #gpu_lds_addrspace>
   func.return
 }
-
 
 // CHECK-LABEL: func @global_load_to_rocdl_dynamic_indices
 // CHECK-SAME: (%[[ARG0:.*]]: memref<512xi32, 1>, %[[SRC_IDX:.*]]: index, %[[DST_IDX:.*]]: index)

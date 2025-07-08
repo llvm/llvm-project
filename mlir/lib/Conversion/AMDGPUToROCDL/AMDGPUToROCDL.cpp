@@ -1198,14 +1198,19 @@ struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
     Type transferType = op.getTransferType();
     size_t loadWidth = [&]() -> size_t {
       if (auto transferVectorType = dyn_cast<VectorType>(transferType)) {
-        return transferVectorType.getNumElements() *
-               (transferVectorType.getElementTypeBitWidth() / 8);
+        return (transferVectorType.getNumElements() *
+                transferVectorType.getElementTypeBitWidth()) /
+               8;
       }
       return transferType.getIntOrFloatBitWidth() / 8;
     }();
 
-    // Currently only 1, 2, and 4 byte loads are supported.
-    if (loadWidth != 1 && loadWidth != 2 && loadWidth != 4)
+    // Currently only 1, 2, 4, 14 and 16 byte loads are supported.
+    if (loadWidth != 1 && loadWidth != 2 && loadWidth != 4 && loadWidth != 12 &&
+        loadWidth != 16)
+      return op.emitOpError("chipset unsupported element size");
+
+    if (chipset != kGfx950 && (loadWidth == 12 || loadWidth == 16))
       return op.emitOpError("chipset unsupported element size");
 
     Value srcPtr =
