@@ -591,3 +591,29 @@
 // RUN:     --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf \
 // RUN:   | FileCheck --check-prefix=CHECK-RV64-RELAX %s
 // CHECK-RV64-RELAX-NOT: "--no-relax"
+
+// Check that "-static -pie" is forwarded to linker when "-static-pie" is used
+
+// RUN: %clang -static-pie -### %s 2>&1 \
+// RUN:     --target=armv6m-none-eabi -rtlib=platform --unwindlib=platform \
+// RUN:     --sysroot=%S/Inputs/baremetal_arm \
+// RUN:   | FileCheck --check-prefix=CHECK-CLANG-LD-STATIC-PIE %s
+
+// RUN: %clang -static-pie -### %s 2>&1 \
+// RUN:     --target=aarch64-none-elf -rtlib=platform --unwindlib=platform \
+// RUN:     --sysroot=%S/Inputs/baremetal_arm \
+// RUN:   | FileCheck --check-prefix=CHECK-CLANG-LD-STATIC-PIE %s
+
+// RUN: %clang -static-pie -### %s 2>&1 \
+// RUN:     --target=riscv32-unknown-elf-rtlib=platform --unwindlib=platform \
+// RUN:     --sysroot=%S/Inputs/basic_riscv32_tree/riscv32-unknown-elf \
+// RUN:   | FileCheck --check-prefix=CHECK-CLANG-LD-STATIC-PIE %s
+
+// RUN: %clang -static-pie -### %s 2>&1 \
+// RUN:     --target=riscv64-unknown-elf-rtlib=platform --unwindlib=platform \
+// RUN:     --sysroot=%S/Inputs/basic_riscv32_tree/riscv64-unknown-elf \
+// RUN:   | FileCheck --check-prefix=CHECK-CLANG-LD-STATIC-PIE %s
+
+// CHECK-CLANG-LD-STATIC-PIE: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-CLANG-LD-STATIC-PIE-SAME: "-static" "-pie" "--no-dynamic-linker" "-z" "text"
+// CHECK-CLANG-LD-STATIC-PIE: "{{.*}}rcrt1.o"
