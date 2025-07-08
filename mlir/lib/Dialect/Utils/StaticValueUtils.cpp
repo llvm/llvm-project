@@ -280,13 +280,13 @@ std::optional<int64_t> constantTripCount(OpFoldResult lb, OpFoldResult ub,
 
 bool hasValidSizesOffsets(SmallVector<int64_t> sizesOrOffsets) {
   return llvm::none_of(sizesOrOffsets, [](int64_t value) {
-    return !ShapedType::isDynamic(value) && value < 0;
+    return ShapedType::isStatic(value) && value < 0;
   });
 }
 
 bool hasValidStrides(SmallVector<int64_t> strides) {
   return llvm::none_of(strides, [](int64_t value) {
-    return !ShapedType::isDynamic(value) && value == 0;
+    return ShapedType::isStatic(value) && value == 0;
   });
 }
 
