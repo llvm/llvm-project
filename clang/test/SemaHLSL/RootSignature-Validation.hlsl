@@ -16,11 +16,11 @@ cbuffer CB : register(b3, space1) {
 StructuredBuffer<int> In : register(t0, space0);
 RWStructuredBuffer<int> Out : register(u0);
 
-RWBuffer<float> UAV : register(u4294967294);
+RWStructuredBuffer<float> UAV : register(u4294967294);
 
-RWBuffer<float> UAV1 : register(u2), UAV2 : register(u4);
+RWStructuredBuffer<float> UAV1 : register(u2), UAV2 : register(u4);
 
-RWBuffer<float> UAV3 : register(space0);
+RWStructuredBuffer<float> UAV3 : register(space0);
 
 
 
