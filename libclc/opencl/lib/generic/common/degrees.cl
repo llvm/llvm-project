@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/common/clc_degrees.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/common/degrees.h>
 
 #define FUNCTION degrees
 #define __CLC_BODY <clc/shared/unary_def.inc>

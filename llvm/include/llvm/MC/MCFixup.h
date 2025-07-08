@@ -9,6 +9,7 @@
 #ifndef LLVM_MC_MCFIXUP_H
 #define LLVM_MC_MCFIXUP_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SMLoc.h"
@@ -18,7 +19,8 @@ namespace llvm {
 class MCExpr;
 
 /// Extensible enumeration to represent the type of a fixup.
-enum MCFixupKind : uint16_t {
+using MCFixupKind = uint16_t;
+enum {
   // [0, FirstLiteralRelocationKind) encodes raw relocation types.
 
   // [FirstLiteralRelocationKind, FK_NONE) encodes raw relocation types coming
@@ -34,10 +36,6 @@ enum MCFixupKind : uint16_t {
   FK_Data_4,      ///< A four-byte fixup.
   FK_Data_8,      ///< A eight-byte fixup.
   FK_Data_leb128, ///< A leb128 fixup.
-  FK_PCRel_1,     ///< A one-byte pc relative fixup.
-  FK_PCRel_2,     ///< A two-byte pc relative fixup.
-  FK_PCRel_4,     ///< A four-byte pc relative fixup.
-  FK_PCRel_8,     ///< A eight-byte pc relative fixup.
   FK_SecRel_1,    ///< A one-byte section relative fixup.
   FK_SecRel_2,    ///< A two-byte section relative fixup.
   FK_SecRel_4,    ///< A four-byte section relative fixup.
@@ -71,12 +69,11 @@ class MCFixup {
 
   /// The target dependent kind of fixup item this is. The kind is used to
   /// determine how the operand value should be encoded into the instruction.
-  uint16_t Kind = FK_NONE;
+  MCFixupKind Kind = FK_NONE;
 
   /// True if this is a PC-relative fixup. The relocatable expression is
   /// typically resolved When SymB is nullptr and SymA is a local symbol defined
-  /// within the current section. While MCAssembler currently sets this based on
-  /// FKF_IsPCRel, targets should ideally set it at creation.
+  /// within the current section.
   bool PCRel = false;
 
   /// Used by RISC-V style linker relaxation. Whether the fixup is
@@ -86,7 +83,7 @@ class MCFixup {
   /// Consider bit fields if we need more flags.
 
 public:
-  static MCFixup create(uint32_t Offset, const MCExpr *Value, uint16_t Kind,
+  static MCFixup create(uint32_t Offset, const MCExpr *Value, MCFixupKind Kind,
                         bool PCRel = false) {
     MCFixup FI;
     FI.Value = Value;
@@ -95,13 +92,8 @@ public:
     FI.PCRel = PCRel;
     return FI;
   }
-  static MCFixup create(uint32_t Offset, const MCExpr *Value,
-                        MCFixupKind Kind) {
-    return create(Offset, Value, unsigned(Kind));
-  }
 
-  MCFixupKind getKind() const { return MCFixupKind(Kind); }
-
+  MCFixupKind getKind() const { return Kind; }
   unsigned getTargetKind() const { return Kind; }
 
   uint32_t getOffset() const { return Offset; }
@@ -130,7 +122,7 @@ public:
     }
   }
 
-  SMLoc getLoc() const;
+  LLVM_ABI SMLoc getLoc() const;
 };
 
 namespace mc {
