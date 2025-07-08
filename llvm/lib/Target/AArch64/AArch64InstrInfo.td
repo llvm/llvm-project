@@ -6612,6 +6612,19 @@ def : Pat<(f64 (AArch64frsqrts (f64 FPR64:$Rn), (f64 FPR64:$Rm))),
 def : Pat<(v2f64 (AArch64frsqrts (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm))),
           (FRSQRTSv2f64 FPR128:$Rn, FPR128:$Rm)>;
 
+let HasOneUse = 1 in {
+def fp_to_uint_oneuse : PatFrag<(ops node:$src0), (fp_to_uint $src0)>;
+def fp_to_sint_oneuse : PatFrag<(ops node:$src0), (fp_to_sint $src0)>;
+}
+
+class TruncStoreMaybeAssert<PatFrag op> : PatFrags<(ops node:$val, node:$ptr),
+                                                   [(op node:$val, node:$ptr),
+                                                    (op (assertzext node:$val), node:$ptr),
+                                                    (op (assertsext node:$val), node:$ptr)]>;
+
+def truncstorei8_maybe_assert : TruncStoreMaybeAssert<truncstorei8>;
+def truncstorei16_maybe_assert : TruncStoreMaybeAssert<truncstorei16>;
+
 // Some float -> int -> float conversion patterns for which we want to keep the
 // int values in FP registers using the corresponding NEON instructions to
 // avoid more costly int <-> fp register transfers.
@@ -6645,6 +6658,38 @@ def : Pat<(f64 (sint_to_fp (i64 (vector_extract (v2i64 FPR128:$Rn), (i64 0))))),
 
 def : Pat<(f64 (uint_to_fp (i64 (vector_extract (v2i64 FPR128:$Rn), (i64 0))))),
           (UCVTFv1i64 (i64 (EXTRACT_SUBREG (v2i64 FPR128:$Rn), dsub)))>;
+
+// float -> int conversion followed by a store should use the value in the first
+// lane to avoid expensive fpr -> gpr transfers.
+let AddedComplexity = 10 in {
+// f32 -> i8
+def : Pat<(truncstorei8_maybe_assert (i32 (fp_to_uint_oneuse (f32 FPR32:$src))), (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset)),
+          (STRBui (aarch64mfp8 (EXTRACT_SUBREG (FCVTZUv1i32 (f32 FPR32:$src)), bsub)),
+                  GPR64sp:$Rn, uimm12s1:$offset)>;
+def : Pat<(truncstorei8_maybe_assert (i32 (fp_to_sint_oneuse (f32 FPR32:$src))), (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset)),
+          (STRBui (aarch64mfp8 (EXTRACT_SUBREG (FCVTZSv1i32 (f32 FPR32:$src)), bsub)),
+                  GPR64sp:$Rn, uimm12s1:$offset)>;
+
+// f32 -> i16
+def : Pat<(truncstorei16_maybe_assert (i32 (fp_to_uint_oneuse (f32 FPR32:$src))), (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset)),
+          (STRHui (f16 (EXTRACT_SUBREG (FCVTZUv1i32 (f32 FPR32:$src)), hsub)), 
+                  GPR64sp:$Rn, uimm12s2:$offset)>;
+def : Pat<(truncstorei16_maybe_assert (i32 (fp_to_sint_oneuse (f32 FPR32:$src))), (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset)),
+          (STRHui (f16 (EXTRACT_SUBREG (FCVTZSv1i32 (f32 FPR32:$src)), hsub)), 
+                  GPR64sp:$Rn, uimm12s2:$offset)>;
+
+// f32 -> i32
+def : Pat<(store (i32 (fp_to_uint_oneuse f32:$src)), (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset)),
+          (STRSui (FCVTZUv1i32 f32:$src), GPR64sp:$Rn, uimm12s4:$offset)>;
+def : Pat<(store (i32 (fp_to_sint_oneuse f32:$src)), (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset)),
+          (STRSui (FCVTZSv1i32 f32:$src), GPR64sp:$Rn, uimm12s4:$offset)>;
+
+// f64 -> i64
+def : Pat<(store (i64 (fp_to_uint_oneuse f64:$src)), (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset)),
+          (STRDui (FCVTZUv1i64 f64:$src), GPR64sp:$Rn, uimm12s8:$offset)>;
+def : Pat<(store (i64 (fp_to_sint_oneuse f64:$src)), (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset)),
+          (STRDui (FCVTZSv1i64 f64:$src), GPR64sp:$Rn, uimm12s8:$offset)>;
+} // AddedComplexity = 10
 
 // fp16: integer extraction from vector must be at least 32-bits to be legal.
 // Actual extraction result is then an in-reg sign-extension of lower 16-bits.
