@@ -2106,7 +2106,7 @@ const StringMap<bool> sys::getHostCPUFeatures() {
                                    .Case("sve2", "sve2")
                                    .Case("sveaes", "sve-aes")
                                    .Case("svesha3", "sve-sha3")
-                                   .Case("svesm4", "sve2-sm4")
+                                   .Case("svesm4", "sve-sm4")
 #else
                                    .Case("half", "fp16")
                                    .Case("neon", "neon")
