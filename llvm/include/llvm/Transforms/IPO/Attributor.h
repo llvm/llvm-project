@@ -1230,7 +1230,7 @@ struct InformationCache {
           });
   }
 
-  ~InformationCache() {
+  virtual ~InformationCache() {
     // The FunctionInfo objects are allocated via a BumpPtrAllocator, we call
     // the destructor manually.
     for (auto &It : FuncInfoMap)
