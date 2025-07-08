@@ -243,7 +243,7 @@ define <4 x i8> @test_v4i8(<4 x i8> %a) {
 ; CHECK:      call.uni (retval0), test_v5i8,
 ; CHECK-DAG:  ld.param.b32    [[RE0:%r[0-9]+]], [retval0];
 ; CHECK-DAG:  ld.param.b8     [[RE4:%rs[0-9]+]], [retval0+4];
-; CHECK-DAG:  st.param.b32  [func_retval0], {{%r[0-9]+}};
+; CHECK-DAG:  st.param.b32  [func_retval0], [[RE0]];
 ; CHECK-DAG:  st.param.b8     [func_retval0+4], [[RE4]];
 ; CHECK-NEXT: ret;
 define <5 x i8> @test_v5i8(<5 x i8> %a) {
@@ -311,8 +311,9 @@ define signext i16 @test_i16s(i16 signext %a) {
 ; CHECK-DAG:  st.param.b32    [param0], [[E0]];
 ; CHECK-DAG:  st.param.b16    [param0+4], [[E2]];
 ; CHECK:      call.uni (retval0), test_v3i16,
-; CHECK:      ld.param.v2.b16 {[[RE0:%rs[0-9]+]], [[RE1:%rs[0-9]+]]}, [retval0];
+; CHECK:      ld.param.b32 [[RE:%r[0-9]+]], [retval0];
 ; CHECK:      ld.param.b16    [[RE2:%rs[0-9]+]], [retval0+4];
+; CHECK-DAG:  mov.b32       {[[RE0:%rs[0-9]+]], [[RE1:%rs[0-9]+]]}, [[RE]];
 ; CHECK-DAG:  st.param.v2.b16 [func_retval0], {[[RE0]], [[RE1]]};
 ; CHECK-DAG:  st.param.b16    [func_retval0+4], [[RE2]];
 ; CHECK-NEXT: ret;
@@ -347,9 +348,9 @@ define <4 x i16> @test_v4i16(<4 x i16> %a) {
 ; CHECK-DAG:  st.param.v2.b32 [param0], {[[E0]], [[E1]]};
 ; CHECK-DAG:  st.param.b16    [param0+8], [[E4]];
 ; CHECK:      call.uni (retval0), test_v5i16,
-; CHECK-DAG:  ld.param.v4.b16 {[[RE0:%rs[0-9]+]], [[RE1:%rs[0-9]+]], [[RE2:%rs[0-9]+]], [[RE3:%rs[0-9]+]]}, [retval0];
+; CHECK-DAG:  ld.param.v2.b32 {[[RE0:%r[0-9]+]], [[RE1:%r[0-9]+]]}, [retval0];
 ; CHECK-DAG:  ld.param.b16    [[RE4:%rs[0-9]+]], [retval0+8];
-; CHECK-DAG:  st.param.v4.b16 [func_retval0], {[[RE0]], [[RE1]], [[RE2]], [[RE3]]}
+; CHECK-DAG:  st.param.v2.b32 [func_retval0], {[[RE0]], [[RE1]]}
 ; CHECK-DAG:  st.param.b16    [func_retval0+8], [[RE4]];
 ; CHECK-NEXT: ret;
 define <5 x i16> @test_v5i16(<5 x i16> %a) {
@@ -432,8 +433,9 @@ define <2 x bfloat> @test_v2bf16(<2 x bfloat> %a) {
 ; CHECK-DAG:  st.param.b32    [param0], [[E0]];
 ; CHECK-DAG:  st.param.b16    [param0+4], [[E2]];
 ; CHECK:      call.uni (retval0),      test_v3f16,
-; CHECK-DAG:  ld.param.v2.b16 {[[R0:%rs[0-9]+]], [[R1:%rs[0-9]+]]}, [retval0];
+; CHECK-DAG:  ld.param.b32 [[R:%r[0-9]+]], [retval0];
 ; CHECK-DAG:  ld.param.b16    [[R2:%rs[0-9]+]], [retval0+4];
+; CHECK-DAG:  mov.b32       {[[R0:%rs[0-9]+]], [[R1:%rs[0-9]+]]}, [[R]];
 ; CHECK-DAG:  st.param.v2.b16 [func_retval0], {[[R0]], [[R1]]};
 ; CHECK-DAG:  st.param.b16    [func_retval0+4], [[R2]];
 ; CHECK:      ret;
@@ -468,9 +470,9 @@ define <4 x half> @test_v4f16(<4 x half> %a) {
 ; CHECK-DAG:  st.param.v2.b32 [param0], {[[E0]], [[E1]]};
 ; CHECK-DAG:  st.param.b16    [param0+8], [[E4]];
 ; CHECK:      call.uni (retval0),      test_v5f16,
-; CHECK-DAG:  ld.param.v4.b16 {[[R0:%rs[0-9]+]], [[R1:%rs[0-9]+]], [[R2:%rs[0-9]+]], [[R3:%rs[0-9]+]]}, [retval0];
+; CHECK-DAG:  ld.param.v2.b32 {[[R0:%r[0-9]+]], [[R1:%r[0-9]+]]}, [retval0];
 ; CHECK-DAG:  ld.param.b16    [[R4:%rs[0-9]+]], [retval0+8];
-; CHECK-DAG:  st.param.v4.b16 [func_retval0], {[[R0]], [[R1]], [[R2]], [[R3]]};
+; CHECK-DAG:  st.param.v2.b32 [func_retval0], {[[R0]], [[R1]]};
 ; CHECK-DAG:  st.param.b16    [func_retval0+8], [[R4]];
 ; CHECK:      ret;
 define <5 x half> @test_v5f16(<5 x half> %a) {
@@ -506,11 +508,11 @@ define <8 x half> @test_v8f16(<8 x half> %a) {
 ; CHECK-DAG:  st.param.v2.b32 [param0+8], {[[E2]], [[E3]]};
 ; CHECK-DAG:  st.param.b16    [param0+16], [[E8]];
 ; CHECK:      call.uni (retval0), test_v9f16,
-; CHECK-DAG:  ld.param.v4.b16 {[[R0:%rs[0-9]+]], [[R1:%rs[0-9]+]], [[R2:%rs[0-9]+]], [[R3:%rs[0-9]+]]}, [retval0];
-; CHECK-DAG:  ld.param.v4.b16 {[[R4:%rs[0-9]+]], [[R5:%rs[0-9]+]], [[R6:%rs[0-9]+]], [[R7:%rs[0-9]+]]}, [retval0+8];
+; CHECK-DAG:  ld.param.v2.b32 {[[R0:%r[0-9]+]], [[R1:%r[0-9]+]]}, [retval0];
+; CHECK-DAG:  ld.param.v2.b32 {[[R2:%r[0-9]+]], [[R3:%r[0-9]+]]}, [retval0+8];
 ; CHECK-DAG:  ld.param.b16    [[R8:%rs[0-9]+]], [retval0+16];
-; CHECK-DAG:  st.param.v4.b16 [func_retval0], {[[R0]], [[R1]], [[R2]], [[R3]]};
-; CHECK-DAG:  st.param.v4.b16 [func_retval0+8], {[[R4]], [[R5]], [[R6]], [[R7]]};
+; CHECK-DAG:  st.param.v2.b32 [func_retval0], {[[R0]], [[R1]]};
+; CHECK-DAG:  st.param.v2.b32 [func_retval0+8], {[[R2]], [[R3]]};
 ; CHECK-DAG:  st.param.b16    [func_retval0+16], [[R8]];
 ; CHECK:      ret;
 define <9 x half> @test_v9f16(<9 x half> %a) {
