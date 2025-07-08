@@ -531,4 +531,39 @@ json::Value toJSON(const ModulesResponseBody &MR) {
   return result;
 }
 
+bool fromJSON(const json::Value &Param, VariablesArguments::VariablesFilter &VA,
+              json::Path Path) {
+  auto rawFilter = Param.getAsString();
+  if (!rawFilter) {
+    Path.report("expected a string");
+    return false;
+  }
+  std::optional<VariablesArguments::VariablesFilter> filter =
+      StringSwitch<std::optional<VariablesArguments::VariablesFilter>>(
+          *rawFilter)
+          .Case("indexed", VariablesArguments::eVariablesFilterIndexed)
+          .Case("named", VariablesArguments::eVariablesFilterNamed)
+          .Default(std::nullopt);
+  if (!filter) {
+    Path.report("unexpected value, expected 'named' or 'indexed'");
+    return false;
+  }
+
+  VA = *filter;
+  return true;
+}
+
+bool fromJSON(const json::Value &Param, VariablesArguments &VA,
+              json::Path Path) {
+  json::ObjectMapper O(Param, Path);
+  return O && O.map("variablesReference", VA.variablesReference) &&
+         O.mapOptional("filter", VA.filter) &&
+         O.mapOptional("start", VA.start) && O.mapOptional("count", VA.count) &&
+         O.mapOptional("format", VA.format);
+}
+
+json::Value toJSON(const VariablesResponseBody &VRB) {
+  return json::Object{{"variables", VRB.variables}};
+}
+
 } // namespace lldb_dap::protocol

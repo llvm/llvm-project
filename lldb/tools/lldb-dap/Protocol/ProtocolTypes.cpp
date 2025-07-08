@@ -953,4 +953,69 @@ json::Value toJSON(const Module &M) {
   return result;
 }
 
+json::Value toJSON(const VariablePresentationHint &VPH) {
+  json::Object result{};
+
+  if (!VPH.kind.empty())
+    result.insert({"kind", VPH.kind});
+  if (!VPH.attributes.empty())
+    result.insert({"attributes", VPH.attributes});
+  if (!VPH.visibility.empty())
+    result.insert({"visibility", VPH.visibility});
+  if (VPH.lazy)
+    result.insert({"lazy", VPH.lazy});
+
+  return result;
+}
+
+bool fromJSON(const json::Value &Param, VariablePresentationHint &VPH,
+              json::Path Path) {
+  json::ObjectMapper O(Param, Path);
+  return O && O.mapOptional("kind", VPH.kind) &&
+         O.mapOptional("attributes", VPH.attributes) &&
+         O.mapOptional("visibility", VPH.visibility) &&
+         O.mapOptional("lazy", VPH.lazy);
+}
+
+json::Value toJSON(const Variable &V) {
+  json::Object result{{"name", V.name},
+                      {"variablesReference", V.variablesReference},
+                      {"value", V.value}};
+
+  if (!V.type.empty())
+    result.insert({"type", V.type});
+  if (V.presentationHint)
+    result.insert({"presentationHint", *V.presentationHint});
+  if (!V.evaluateName.empty())
+    result.insert({"evaluateName", V.evaluateName});
+  if (V.namedVariables)
+    result.insert({"namedVariables", V.namedVariables});
+  if (V.indexedVariables)
+    result.insert({"indexedVariables", V.indexedVariables});
+  if (!V.memoryReference.empty())
+    result.insert({"memoryReference", V.memoryReference});
+  if (V.declarationLocationReference)
+    result.insert(
+        {"declarationLocationReference", V.declarationLocationReference});
+  if (V.valueLocationReference)
+    result.insert({"valueLocationReference", V.valueLocationReference});
+
+  return result;
+}
+
+bool fromJSON(const json::Value &Param, Variable &V, json::Path Path) {
+  json::ObjectMapper O(Param, Path);
+  return O && O.map("name", V.name) &&
+         O.map("variablesReference", V.variablesReference) &&
+         O.map("value", V.value) && O.mapOptional("type", V.type) &&
+         O.mapOptional("presentationHint", *V.presentationHint) &&
+         O.mapOptional("evaluateName", V.evaluateName) &&
+         O.mapOptional("namedVariables", V.namedVariables) &&
+         O.mapOptional("indexedVariables", V.indexedVariables) &&
+         O.mapOptional("memoryReference", V.memoryReference) &&
+         O.mapOptional("declarationLocationReference",
+                       V.declarationLocationReference) &&
+         O.mapOptional("valueLocationReference", V.valueLocationReference);
+}
+
 } // namespace lldb_dap::protocol
