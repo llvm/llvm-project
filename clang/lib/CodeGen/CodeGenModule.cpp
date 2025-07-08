@@ -6239,8 +6239,7 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
                 getModule().getNamedValue(II->getName())) {
           GVDef->replaceAllUsesWith(GV);
           GVDef->eraseFromParent();
-        } else if (!D->hasAttr<AlwaysInlineAttr>() &&
-                   !D->hasAttr<GNUInlineAttr>()) {
+        } else if (!D->hasAttr<GNUInlineAttr>()) {
           // Create a GlobalAlias to the original symbol in case it was
           // referenced in the inline assembly
           unsigned AS = GV->getType()->getPointerAddressSpace();
