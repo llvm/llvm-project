@@ -678,7 +678,10 @@ Improvements to Clang's diagnostics
 - Clang now accepts ``@tparam`` comments on variable template partial
   specializations. (#GH144775)
 
-- Clang now rejects ``#`` operators in attribute argument lists. (#GH147217)
+- Clang rejects the ``#`` and ``##`` preprocessor tokens in an attribute
+  argument list in C++. The operators can be used in macro replacement lists
+  with the usual preprocessor semantics. What is rejected are non-preprocessor
+  uses of the tokens. The same restrictions do not apply in C. (#GH147217)
 
 Improvements to Clang's time-trace
 ----------------------------------
