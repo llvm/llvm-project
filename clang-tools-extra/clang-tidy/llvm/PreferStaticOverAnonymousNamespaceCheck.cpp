@@ -52,9 +52,10 @@ void PreferStaticOverAnonymousNamespaceCheck::registerMatchers(
                                       hasParent(cxxRecordDecl()))))))
             .bind("function"),
         this);
-  } else
+  } else {
     Finder->addMatcher(
         functionDecl(IsDefinitionInAnonymousNamespace).bind("function"), this);
+  }
 
   if (!AllowVariableDeclarations)
     Finder->addMatcher(varDecl(IsDefinitionInAnonymousNamespace,
