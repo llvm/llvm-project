@@ -10,6 +10,22 @@
 // a JSON.
 //
 //===----------------------------------------------------------------------===//
+//
+// Modifications to this file by SEI staff are copyright Carnegie Mellon
+// University and contributed under the Apache License v2.0 with LLVM
+// Exceptions.
+//
+// SEI Contributions are made with funding sand support from the Department of
+// Defense under Contract No. FA8702-15-D-0002 with Carnegie Mellon University
+// for the operation of the Software Engineering Institute, a federally funded
+// research and development center.
+//
+// The view, opinions, and/or findings contained in this material are those of
+// the author(s) and should not be construed as an official Government position,
+// policy, or decision, unless designated by other documentation.
+// DM24-0194
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_AST_JSONNODEDUMPER_H
 #define LLVM_CLANG_AST_JSONNODEDUMPER_H
@@ -25,6 +41,9 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/Type.h"
 #include "llvm/Support/JSON.h"
+
+// SEI: added for caching addresses of certain visited nodes
+#include <unordered_set>
 
 namespace clang {
 
@@ -111,8 +130,8 @@ public:
 // Dumps AST nodes in JSON format. There is no implied stability for the
 // content or format of the dump between major releases of Clang, other than it
 // being valid JSON output. Further, there is no requirement that the
-// information dumped is a complete representation of the AST, only that the
-// information presented is correct.
+// information dumped be a complete representation of the AST, only that the
+// information presented be correct.
 class JSONNodeDumper
     : public ConstAttrVisitor<JSONNodeDumper>,
       public comments::ConstCommentVisitor<JSONNodeDumper, void,
@@ -131,6 +150,9 @@ class JSONNodeDumper
   const comments::CommandTraits *Traits;
   StringRef LastLocFilename, LastLocPresumedFilename;
   unsigned LastLocLine, LastLocPresumedLine;
+
+  // SEI: caches addresses for QualType nodes that are duplicates
+  std::unordered_set<void *> AddressCache;
 
   using InnerAttrVisitor = ConstAttrVisitor<JSONNodeDumper>;
   using InnerCommentVisitor =
@@ -184,6 +206,18 @@ class JSONNodeDumper
 
   StringRef getCommentCommandName(unsigned CommandID) const;
 
+  /// SEI: simple cacher for addresses of nodes to reduce
+  /// bloat caused by SEI changes
+  /// Return True if it's already cached, otherwise false
+  bool cacheAddress(void *p) {
+    if (AddressCache.find(p) == AddressCache.end()) {
+      AddressCache.insert(p);
+      return false;
+    }
+
+    return true;
+  }
+
 public:
   JSONNodeDumper(raw_ostream &OS, const SourceManager &SrcMgr, ASTContext &Ctx,
                  const PrintingPolicy &PrintPolicy,
@@ -196,6 +230,13 @@ public:
   void Visit(const Stmt *Node);
   void Visit(const Type *T);
   void Visit(QualType T);
+
+  // SEI: get specific details from the qual type
+  void VisitQualTypeDetails(QualType T);
+
+  // SEI: traverse ReturnType information
+  void VisitReturnType(QualType T);
+
   void Visit(const Decl *D);
   void Visit(TypeLoc TL);
 
