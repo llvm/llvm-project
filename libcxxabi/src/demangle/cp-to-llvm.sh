@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# Copies the 'demangle' library, excluding 'DemangleConfig.h', to llvm. If no
-# llvm directory is specified, then assume a monorepo layout.
+# Copies the 'demangle' library, excluding 'DemangleConfig.h' and
+# 'Visibility.h', to llvm. If no llvm directory is specified, then assume a
+# monorepo layout.
 
 set -e
 
