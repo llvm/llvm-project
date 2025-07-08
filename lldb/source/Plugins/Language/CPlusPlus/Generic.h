@@ -21,8 +21,8 @@ bool GenericOptionalSummaryProvider(ValueObject &valobj, Stream &stream,
 
 /// Return the ValueObjectSP of the underlying pointer member whose type
 /// is a desugared 'std::shared_ptr::element_type *'.
-lldb::ValueObjectSP GetCxxSmartPtrElementPointerType(ValueObject &ptr,
-                                                     ValueObject &container);
+lldb::ValueObjectSP GetDesugaredSmartPointerValue(ValueObject &ptr,
+                                                  ValueObject &container);
 
 } // namespace formatters
 } // namespace lldb_private

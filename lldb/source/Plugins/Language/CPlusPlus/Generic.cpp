@@ -8,7 +8,7 @@
 
 #include "Generic.h"
 
-lldb::ValueObjectSP lldb_private::formatters::GetCxxSmartPtrElementPointerType(
+lldb::ValueObjectSP lldb_private::formatters::GetDesugaredSmartPointerValue(
     ValueObject &ptr, ValueObject &container) {
   auto container_type = container.GetCompilerType().GetNonReferenceType();
   if (!container_type)

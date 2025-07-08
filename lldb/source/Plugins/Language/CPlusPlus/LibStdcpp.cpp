@@ -294,7 +294,7 @@ lldb::ChildCacheState LibStdcppSharedPtrSyntheticFrontEnd::Update() {
   if (!ptr_obj_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  auto cast_ptr_sp = GetCxxSmartPtrElementPointerType(*ptr_obj_sp, *valobj_sp);
+  auto cast_ptr_sp = GetDesugaredSmartPointerValue(*ptr_obj_sp, *valobj_sp);
   if (!cast_ptr_sp)
     return lldb::ChildCacheState::eRefetch;
 
