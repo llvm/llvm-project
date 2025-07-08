@@ -19,8 +19,10 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -1779,22 +1781,35 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     if (llvm::is_contained(distTypes, Type{}))
       return failure();
 
+    SmallVector<Value> nonForYieldedValues;
+    // SmallVector<Type> nonForYieldedTypes;
+    SmallVector<unsigned> nonForResultIndices;
+
     // record result mapping.
-    SmallVector<unsigned> resultIdx;
-    llvm::SmallDenseMap<unsigned, unsigned> forResultToWarpResultMapping;
+    DenseMap<unsigned, unsigned> forResultMapping;
+    DenseMap<unsigned, unsigned> warpResultMapping;
+    // llvm::SmallDenseMap<unsigned, unsigned> forResultToWarpResultMapping;
     for (OpOperand &yieldOperand : yield->getOpOperands()) {
-      if (yieldOperand.get().getDefiningOp() != forOp.getOperation())
+      if (yieldOperand.get().getDefiningOp() != forOp.getOperation()) {
+        nonForYieldedValues.push_back(yieldOperand.get());
+        // nonForYieldedTypes.push_back(
+        //     warpOp.getResult(yieldOperand.getOperandNumber()).getType());
+        nonForResultIndices.push_back(yieldOperand.getOperandNumber());
         continue;
+      }
       OpResult forResult = cast<OpResult>(yieldOperand.get());
-      resultIdx.push_back(forResult.getResultNumber());
-      forResultToWarpResultMapping[forResult.getResultNumber()] =
-          yieldOperand.getOperandNumber();
+      forResultMapping[yieldOperand.getOperandNumber()] =
+          forResult.getResultNumber();
+      // forResultToWarpResultMapping[forResult.getResultNumber()] =
+      //     yieldOperand.getOperandNumber();
       // yieldOperand.set(forOp.getInitArgs()[forResult.getResultNumber()]);
     }
 
+    // llvm::errs() << "non for yielded values size: "
+    //              << nonForYieldedValues.size() << "\n";
+
     // llvm::errs() << "escpaing values size: " << escapingValues.size() <<
     // "\n";
-
     SmallVector<Value> yieldedValuesFromWarpOp;
     SmallVector<Type> yieldedTypesFromWarpOp;
     // All init args of the forOp are yielded from the original warp op.
@@ -1803,15 +1818,16 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
       // find distributed type for the init arg.
       Type distType = initArg.getType();
       if (auto vecType = dyn_cast<VectorType>(distType)) {
-        if (forResultToWarpResultMapping.contains(i)) {
-          // If the init arg is yielded from the warp op, we need to compute the
-          // distributed type.
-          distType =
-              warpOp.getResult(forResultToWarpResultMapping[i]).getType();
-        } else {
-          AffineMap map = distributionMapFn(initArg);
-          distType = getDistributedType(vecType, map, warpOp.getWarpSize());
-        }
+        // if (forResultToWarpResultMapping.contains(i)) {
+        //   // If the init arg is yielded from the warp op, we need to compute
+        //   the
+        //   // distributed type.
+        //   distType =
+        //       warpOp.getResult(forResultToWarpResultMapping[i]).getType();
+        // } else {
+        AffineMap map = distributionMapFn(initArg);
+        distType = getDistributedType(vecType, map, warpOp.getWarpSize());
+        // }
       }
       // llvm::errs() << "distributed type: " << distType << "\n";
       yieldedTypesFromWarpOp.push_back(distType);
@@ -1823,11 +1839,22 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     yieldedTypesFromWarpOp.insert(yieldedTypesFromWarpOp.end(),
                                   distTypes.begin(), distTypes.end());
 
+    for (auto [i, v] : llvm::enumerate(nonForYieldedValues)) {
+      warpResultMapping[nonForResultIndices[i]] =
+          yieldedValuesFromWarpOp.size();
+      yieldedValuesFromWarpOp.push_back(v);
+      yieldedTypesFromWarpOp.push_back(
+          warpOp.getResult(nonForResultIndices[i]).getType());
+    }
+
     // SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndReplaceReturns(
         rewriter, warpOp, yieldedValuesFromWarpOp, yieldedTypesFromWarpOp);
     yield = cast<gpu::YieldOp>(
         newWarpOp.getBodyRegion().getBlocks().begin()->getTerminator());
+
+    // newWarpOp->print(llvm::outs());
+    // llvm::outs() << "\n";
 
     SmallVector<Value> newOperands;
     // Collect the new init args coming from the new warp op.
@@ -1857,12 +1884,13 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
                                     forOp.getResultTypes().end());
     llvm::SmallDenseMap<Value, int64_t> argIndexMapping;
     // llvm::errs() << "setting arg index mapping\n";
-    for (size_t i = forOp.getInitArgs().size(); i < newWarpOp->getNumResults();
-         ++i) {
+    unsigned escapingValuesStartIdx = forOp.getInitArgs().size();
+    for (size_t i = escapingValuesStartIdx;
+         i < escapingValuesStartIdx + escapingValues.size(); ++i) {
       warpInput.push_back(newWarpOp.getResult(i));
-      argIndexMapping[escapingValues[i - forOp.getInitArgs().size()]] =
+      argIndexMapping[escapingValues[i - escapingValuesStartIdx]] =
           warpInputType.size();
-      warpInputType.push_back(inputTypes[i - forOp.getInitArgs().size()]);
+      warpInputType.push_back(inputTypes[i - escapingValuesStartIdx]);
     }
     // for (auto [i, r] : llvm::enumerate(
     //          newWarpOp.getResults().drop_front(forOp.getInitArgs().size())))
@@ -1907,9 +1935,16 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     // for (auto idx : resultIdx)
     //   llvm::errs() << idx << " ";
     // llvm::errs() << "\n";
-    for (const auto &res : llvm::enumerate(resultIdx)) {
-      rewriter.replaceAllUsesExcept(warpOp.getResult(res.value()),
-                                    newForOp.getResult(res.index()), newForOp);
+    for (auto [origIdx, newIdx] : forResultMapping) {
+      rewriter.replaceAllUsesExcept(warpOp.getResult(origIdx),
+                                    newForOp.getResult(newIdx), newForOp);
+      // newForOp->setOperand(res.index() + 3,
+      // newWarpOp.getResult(res.value()));
+    }
+
+    for (auto [origIdx, newIdx] : warpResultMapping) {
+      rewriter.replaceAllUsesWith(warpOp.getResult(origIdx),
+                                  newWarpOp.getResult(newIdx));
       // newForOp->setOperand(res.index() + 3,
       // newWarpOp.getResult(res.value()));
     }
