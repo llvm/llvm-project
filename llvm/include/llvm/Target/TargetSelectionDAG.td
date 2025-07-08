@@ -1145,7 +1145,7 @@ def or_disjoint : PatFrag<(ops node:$lhs, node:$rhs),
   return N->getFlags().hasDisjoint();
 }]> {
   let GISelPredicateCode = [{
-    return mi_match(MI, MRI, m_GDisjointOr(m_Reg(), m_Reg()));
+    return MI.getFlag(MachineInstr::Disjoint);
   }];
 }
 
