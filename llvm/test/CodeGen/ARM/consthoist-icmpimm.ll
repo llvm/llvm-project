@@ -44,19 +44,19 @@ define i32 @icmp64_sge_0(i64 %x, i64 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV7M-NEXT:    ldrd r2, r0, [sp]
 ; CHECKV7M-NEXT:    beq .LBB0_2
 ; CHECKV7M-NEXT:  @ %bb.1: @ %then
-; CHECKV7M-NEXT:    cmp.w r3, #-1
+; CHECKV7M-NEXT:    cmp r3, #0
 ; CHECKV7M-NEXT:    mov r3, r0
-; CHECKV7M-NEXT:    it gt
-; CHECKV7M-NEXT:    movgt r3, r2
-; CHECKV7M-NEXT:    cmp.w r1, #-1
-; CHECKV7M-NEXT:    it gt
-; CHECKV7M-NEXT:    movgt r0, r2
+; CHECKV7M-NEXT:    it ge
+; CHECKV7M-NEXT:    movge r3, r2
+; CHECKV7M-NEXT:    cmp r1, #0
+; CHECKV7M-NEXT:    it ge
+; CHECKV7M-NEXT:    movge r0, r2
 ; CHECKV7M-NEXT:    add r0, r3
 ; CHECKV7M-NEXT:    bx lr
 ; CHECKV7M-NEXT:  .LBB0_2: @ %else
-; CHECKV7M-NEXT:    cmp.w r1, #-1
-; CHECKV7M-NEXT:    it gt
-; CHECKV7M-NEXT:    movgt r0, r2
+; CHECKV7M-NEXT:    cmp r1, #0
+; CHECKV7M-NEXT:    it ge
+; CHECKV7M-NEXT:    movge r0, r2
 ; CHECKV7M-NEXT:    bx lr
 ;
 ; CHECKV7A-LABEL: icmp64_sge_0:
@@ -66,19 +66,19 @@ define i32 @icmp64_sge_0(i64 %x, i64 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV7A-NEXT:    lsls r2, r2, #31
 ; CHECKV7A-NEXT:    beq .LBB0_2
 ; CHECKV7A-NEXT:  @ %bb.1: @ %then
-; CHECKV7A-NEXT:    cmp.w r3, #-1
+; CHECKV7A-NEXT:    cmp r3, #0
 ; CHECKV7A-NEXT:    mov r2, r0
-; CHECKV7A-NEXT:    it gt
-; CHECKV7A-NEXT:    movgt r2, r12
-; CHECKV7A-NEXT:    cmp.w r1, #-1
-; CHECKV7A-NEXT:    it gt
-; CHECKV7A-NEXT:    movgt r0, r12
+; CHECKV7A-NEXT:    it ge
+; CHECKV7A-NEXT:    movge r2, r12
+; CHECKV7A-NEXT:    cmp r1, #0
+; CHECKV7A-NEXT:    it ge
+; CHECKV7A-NEXT:    movge r0, r12
 ; CHECKV7A-NEXT:    add r0, r2
 ; CHECKV7A-NEXT:    bx lr
 ; CHECKV7A-NEXT:  .LBB0_2: @ %else
-; CHECKV7A-NEXT:    cmp.w r1, #-1
-; CHECKV7A-NEXT:    it gt
-; CHECKV7A-NEXT:    movgt r0, r12
+; CHECKV7A-NEXT:    cmp r1, #0
+; CHECKV7A-NEXT:    it ge
+; CHECKV7A-NEXT:    movge r0, r12
 ; CHECKV7A-NEXT:    bx lr
   br i1 %c, label %then, label %else
 then:
@@ -135,19 +135,19 @@ define i32 @icmp64_sgt_m1(i64 %x, i64 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV7M-NEXT:    ldrd r2, r0, [sp]
 ; CHECKV7M-NEXT:    beq .LBB1_2
 ; CHECKV7M-NEXT:  @ %bb.1: @ %then
-; CHECKV7M-NEXT:    cmp.w r3, #-1
+; CHECKV7M-NEXT:    cmp r3, #0
 ; CHECKV7M-NEXT:    mov r3, r0
-; CHECKV7M-NEXT:    it gt
-; CHECKV7M-NEXT:    movgt r3, r2
-; CHECKV7M-NEXT:    cmp.w r1, #-1
-; CHECKV7M-NEXT:    it gt
-; CHECKV7M-NEXT:    movgt r0, r2
+; CHECKV7M-NEXT:    it ge
+; CHECKV7M-NEXT:    movge r3, r2
+; CHECKV7M-NEXT:    cmp r1, #0
+; CHECKV7M-NEXT:    it ge
+; CHECKV7M-NEXT:    movge r0, r2
 ; CHECKV7M-NEXT:    add r0, r3
 ; CHECKV7M-NEXT:    bx lr
 ; CHECKV7M-NEXT:  .LBB1_2: @ %else
-; CHECKV7M-NEXT:    cmp.w r3, #-1
-; CHECKV7M-NEXT:    it gt
-; CHECKV7M-NEXT:    movgt r0, r2
+; CHECKV7M-NEXT:    cmp r3, #0
+; CHECKV7M-NEXT:    it ge
+; CHECKV7M-NEXT:    movge r0, r2
 ; CHECKV7M-NEXT:    bx lr
 ;
 ; CHECKV7A-LABEL: icmp64_sgt_m1:
@@ -157,19 +157,19 @@ define i32 @icmp64_sgt_m1(i64 %x, i64 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV7A-NEXT:    lsls r2, r2, #31
 ; CHECKV7A-NEXT:    beq .LBB1_2
 ; CHECKV7A-NEXT:  @ %bb.1: @ %then
-; CHECKV7A-NEXT:    cmp.w r3, #-1
+; CHECKV7A-NEXT:    cmp r3, #0
 ; CHECKV7A-NEXT:    mov r2, r0
-; CHECKV7A-NEXT:    it gt
-; CHECKV7A-NEXT:    movgt r2, r12
-; CHECKV7A-NEXT:    cmp.w r1, #-1
-; CHECKV7A-NEXT:    it gt
-; CHECKV7A-NEXT:    movgt r0, r12
+; CHECKV7A-NEXT:    it ge
+; CHECKV7A-NEXT:    movge r2, r12
+; CHECKV7A-NEXT:    cmp r1, #0
+; CHECKV7A-NEXT:    it ge
+; CHECKV7A-NEXT:    movge r0, r12
 ; CHECKV7A-NEXT:    add r0, r2
 ; CHECKV7A-NEXT:    bx lr
 ; CHECKV7A-NEXT:  .LBB1_2: @ %else
-; CHECKV7A-NEXT:    cmp.w r3, #-1
-; CHECKV7A-NEXT:    it gt
-; CHECKV7A-NEXT:    movgt r0, r12
+; CHECKV7A-NEXT:    cmp r3, #0
+; CHECKV7A-NEXT:    it ge
+; CHECKV7A-NEXT:    movge r0, r12
 ; CHECKV7A-NEXT:    bx lr
   br i1 %c, label %then, label %else
 then:
@@ -227,19 +227,19 @@ define i32 @icmp32_sge_0(i32 %x, i32 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV7M-NEXT:    lsls r3, r3, #31
 ; CHECKV7M-NEXT:    beq .LBB2_2
 ; CHECKV7M-NEXT:  @ %bb.1: @ %then
-; CHECKV7M-NEXT:    cmp.w r1, #-1
+; CHECKV7M-NEXT:    cmp r1, #0
 ; CHECKV7M-NEXT:    mov r1, r12
-; CHECKV7M-NEXT:    it gt
-; CHECKV7M-NEXT:    movgt r1, r2
-; CHECKV7M-NEXT:    cmp.w r0, #-1
-; CHECKV7M-NEXT:    it gt
-; CHECKV7M-NEXT:    movgt r12, r2
+; CHECKV7M-NEXT:    it ge
+; CHECKV7M-NEXT:    movge r1, r2
+; CHECKV7M-NEXT:    cmp r0, #0
+; CHECKV7M-NEXT:    it ge
+; CHECKV7M-NEXT:    movge r12, r2
 ; CHECKV7M-NEXT:    add.w r0, r12, r1
 ; CHECKV7M-NEXT:    bx lr
 ; CHECKV7M-NEXT:  .LBB2_2: @ %else
-; CHECKV7M-NEXT:    cmp.w r0, #-1
-; CHECKV7M-NEXT:    it gt
-; CHECKV7M-NEXT:    movgt r12, r2
+; CHECKV7M-NEXT:    cmp r0, #0
+; CHECKV7M-NEXT:    it ge
+; CHECKV7M-NEXT:    movge r12, r2
 ; CHECKV7M-NEXT:    mov r0, r12
 ; CHECKV7M-NEXT:    bx lr
 ;
@@ -250,19 +250,19 @@ define i32 @icmp32_sge_0(i32 %x, i32 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV7A-NEXT:    lsls r3, r3, #31
 ; CHECKV7A-NEXT:    beq .LBB2_2
 ; CHECKV7A-NEXT:  @ %bb.1: @ %then
-; CHECKV7A-NEXT:    cmp.w r1, #-1
+; CHECKV7A-NEXT:    cmp r1, #0
 ; CHECKV7A-NEXT:    mov r1, r12
-; CHECKV7A-NEXT:    it gt
-; CHECKV7A-NEXT:    movgt r1, r2
-; CHECKV7A-NEXT:    cmp.w r0, #-1
-; CHECKV7A-NEXT:    it gt
-; CHECKV7A-NEXT:    movgt r12, r2
+; CHECKV7A-NEXT:    it ge
+; CHECKV7A-NEXT:    movge r1, r2
+; CHECKV7A-NEXT:    cmp r0, #0
+; CHECKV7A-NEXT:    it ge
+; CHECKV7A-NEXT:    movge r12, r2
 ; CHECKV7A-NEXT:    add.w r0, r12, r1
 ; CHECKV7A-NEXT:    bx lr
 ; CHECKV7A-NEXT:  .LBB2_2: @ %else
-; CHECKV7A-NEXT:    cmp.w r0, #-1
-; CHECKV7A-NEXT:    it gt
-; CHECKV7A-NEXT:    movgt r12, r2
+; CHECKV7A-NEXT:    cmp r0, #0
+; CHECKV7A-NEXT:    it ge
+; CHECKV7A-NEXT:    movge r12, r2
 ; CHECKV7A-NEXT:    mov r0, r12
 ; CHECKV7A-NEXT:    bx lr
   br i1 %c, label %then, label %else
@@ -321,19 +321,19 @@ define i32 @icmp32_sgt_m1(i32 %x, i32 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV7M-NEXT:    lsls r3, r3, #31
 ; CHECKV7M-NEXT:    beq .LBB3_2
 ; CHECKV7M-NEXT:  @ %bb.1: @ %then
-; CHECKV7M-NEXT:    cmp.w r1, #-1
+; CHECKV7M-NEXT:    cmp r1, #0
 ; CHECKV7M-NEXT:    mov r1, r12
-; CHECKV7M-NEXT:    it gt
-; CHECKV7M-NEXT:    movgt r1, r2
-; CHECKV7M-NEXT:    cmp.w r0, #-1
-; CHECKV7M-NEXT:    it gt
-; CHECKV7M-NEXT:    movgt r12, r2
+; CHECKV7M-NEXT:    it ge
+; CHECKV7M-NEXT:    movge r1, r2
+; CHECKV7M-NEXT:    cmp r0, #0
+; CHECKV7M-NEXT:    it ge
+; CHECKV7M-NEXT:    movge r12, r2
 ; CHECKV7M-NEXT:    add.w r0, r12, r1
 ; CHECKV7M-NEXT:    bx lr
 ; CHECKV7M-NEXT:  .LBB3_2: @ %else
-; CHECKV7M-NEXT:    cmp.w r1, #-1
-; CHECKV7M-NEXT:    it gt
-; CHECKV7M-NEXT:    movgt r12, r2
+; CHECKV7M-NEXT:    cmp r1, #0
+; CHECKV7M-NEXT:    it ge
+; CHECKV7M-NEXT:    movge r12, r2
 ; CHECKV7M-NEXT:    mov r0, r12
 ; CHECKV7M-NEXT:    bx lr
 ;
@@ -344,19 +344,19 @@ define i32 @icmp32_sgt_m1(i32 %x, i32 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV7A-NEXT:    lsls r3, r3, #31
 ; CHECKV7A-NEXT:    beq .LBB3_2
 ; CHECKV7A-NEXT:  @ %bb.1: @ %then
-; CHECKV7A-NEXT:    cmp.w r1, #-1
+; CHECKV7A-NEXT:    cmp r1, #0
 ; CHECKV7A-NEXT:    mov r1, r12
-; CHECKV7A-NEXT:    it gt
-; CHECKV7A-NEXT:    movgt r1, r2
-; CHECKV7A-NEXT:    cmp.w r0, #-1
-; CHECKV7A-NEXT:    it gt
-; CHECKV7A-NEXT:    movgt r12, r2
+; CHECKV7A-NEXT:    it ge
+; CHECKV7A-NEXT:    movge r1, r2
+; CHECKV7A-NEXT:    cmp r0, #0
+; CHECKV7A-NEXT:    it ge
+; CHECKV7A-NEXT:    movge r12, r2
 ; CHECKV7A-NEXT:    add.w r0, r12, r1
 ; CHECKV7A-NEXT:    bx lr
 ; CHECKV7A-NEXT:  .LBB3_2: @ %else
-; CHECKV7A-NEXT:    cmp.w r1, #-1
-; CHECKV7A-NEXT:    it gt
-; CHECKV7A-NEXT:    movgt r12, r2
+; CHECKV7A-NEXT:    cmp r1, #0
+; CHECKV7A-NEXT:    it ge
+; CHECKV7A-NEXT:    movge r12, r2
 ; CHECKV7A-NEXT:    mov r0, r12
 ; CHECKV7A-NEXT:    bx lr
   br i1 %c, label %then, label %else
