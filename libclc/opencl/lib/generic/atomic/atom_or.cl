@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/opencl/atomic/atom_or.h>
+#include <clc/opencl/atomic/atomic_or.h>
 
 #ifdef cl_khr_global_int32_extended_atomics
 #define __CLC_ATOMIC_OP or
