@@ -323,8 +323,8 @@ public:
         const GCCInstallCandidate &GCCInstallation,
         const llvm::opt::ArgList &DriverArgs) const;
 
-    /// Select a GCC installation directory from \p Installations.
-    /// Set \p SelectedInstallation
+    /// Select a GCC installation directory from \p Installations and
+    /// set \p SelectedInstallation accordingly.
     bool SelectGCCInstallationDirectory(
         const SmallVector<GCCInstallCandidate, 3> &Installations,
         const llvm::opt::ArgList &Args,
