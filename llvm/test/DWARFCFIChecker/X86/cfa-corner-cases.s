@@ -11,6 +11,8 @@ f:
         .cfi_undefined %rax
         .cfi_undefined %flags
 
+        .cfi_val_offset %rbp, -8 
+
         pushq   %rax
         # CHECK: error: modified CFA register RSP but not changed CFA rule
         
