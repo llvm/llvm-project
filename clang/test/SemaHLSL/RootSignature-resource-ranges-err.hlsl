@@ -92,10 +92,10 @@ void valid_root_signature_13() {}
  "  UAV(u0, numDescriptors = 3), " \
  ")"
 
-// CHECK: note: expanded from macro 'DemoNoteSourceLocations'
+// CHECK: [[@LINE-4]]:5: note: expanded from macro 'DemoNoteSourceLocations'
 // CHECK-NEXT: [[@LINE-5]] | "  SRV(t17, numDescriptors = 7), " \
 // CHECK-NEXT:             |    ^
-// CHECK: note: expanded from macro 'DemoNoteSourceLocations'
+// CHECK: [[@LINE-14]]:5: note: expanded from macro 'DemoNoteSourceLocations'
 // CHECK-NEXT: [[@LINE-15]] | "  SRV(t22, numDescriptors = 1), "
 // CHECK-NEXT:              |    ^
 
