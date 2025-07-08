@@ -1390,6 +1390,18 @@ def __hexagon_memcpy_likely_aligned_min32bytes_mult8bytes
     : RuntimeLibcallImpl<HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES>;
 
 //===----------------------------------------------------------------------===//
+// Lanai Runtime Libcalls
+//===----------------------------------------------------------------------===//
+
+def isLanai : RuntimeLibcallPredicate<"TT.getArch() == Triple::lanai">;
+
+// Use fast calling convention for library functions.
+def LanaiSystemLibrary
+    : SystemRuntimeLibrary<isLanai, (add DefaultRuntimeLibcallImpls)> {
+  let DefaultLibcallCallingConv = FASTCC;
+}
+
+//===----------------------------------------------------------------------===//
 // Mips16 Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
