@@ -7,29 +7,14 @@ template<typename KN, typename Func>
   F();
 }
 
-template<typename Func>
-void kernel_wrapper(Func F) {
-  kernel<Func>(F);
-}
-
 template<typename KN, typename Func>
 [[clang::sycl_kernel_entry_point(KN)]] void kernel2(Func F){
   F(1);
 }
 
-template<typename Func>
-void kernel2_wrapper(Func F) {
-  kernel2<Func>(F);
-}
-
 template<typename KN, typename Func>
 [[clang::sycl_kernel_entry_point(KN)]] void kernel3(Func F){
   F(1.1);
-}
-
-template<typename Func>
-void kernel3_wrapper(Func F) {
-  kernel3<Func>(F);
 }
 
 int main() {
@@ -40,9 +25,9 @@ int main() {
   auto lambda2 = [](int){};
   auto lambda3 = [](double){};
 
-  kernel_wrapper(lambda1);
-  kernel2_wrapper(lambda2);
-  kernel3_wrapper(lambda3);
+  kernel<class K1>(lambda1);
+  kernel2<class K2>(lambda2);
+  kernel3<class K3>(lambda3);
 
   // Ensure the kernels are named the same between the device and host
   // invocations.
