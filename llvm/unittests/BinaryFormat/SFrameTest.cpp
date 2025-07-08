@@ -14,85 +14,85 @@ using namespace llvm::sframe;
 
 namespace {
 // Test structure sizes and triviality.
-static_assert(std::is_trivial_v<sframe_preamble>);
-static_assert(sizeof(sframe_preamble) == 4);
+static_assert(std::is_trivial_v<Preamble>);
+static_assert(sizeof(Preamble) == 4);
 
-static_assert(std::is_trivial_v<sframe_header>);
-static_assert(sizeof(sframe_header) == 28);
+static_assert(std::is_trivial_v<Header>);
+static_assert(sizeof(Header) == 28);
 
-static_assert(std::is_trivial_v<sframe_func_desc_entry>);
-static_assert(sizeof(sframe_func_desc_entry) == 20);
+static_assert(std::is_trivial_v<FuncDescEntry>);
+static_assert(sizeof(FuncDescEntry) == 20);
 
-static_assert(std::is_trivial_v<sframe_frame_row_entry_addr1>);
-static_assert(sizeof(sframe_frame_row_entry_addr1) == 2);
+static_assert(std::is_trivial_v<FrameRowEntryAddr1>);
+static_assert(sizeof(FrameRowEntryAddr1) == 2);
 
-static_assert(std::is_trivial_v<sframe_frame_row_entry_addr2>);
-static_assert(sizeof(sframe_frame_row_entry_addr2) == 3);
+static_assert(std::is_trivial_v<FrameRowEntryAddr2>);
+static_assert(sizeof(FrameRowEntryAddr2) == 3);
 
-static_assert(std::is_trivial_v<sframe_frame_row_entry_addr4>);
-static_assert(sizeof(sframe_frame_row_entry_addr4) == 5);
+static_assert(std::is_trivial_v<FrameRowEntryAddr4>);
+static_assert(sizeof(FrameRowEntryAddr4) == 5);
 
 TEST(SFrameTest, FDEFlags) {
-  sframe_func_desc_entry FDE = {};
-  EXPECT_EQ(FDE.sfde_func_info, 0u);
-  EXPECT_EQ(FDE.getPAuthKey(), SFRAME_AARCH64_PAUTH_KEY_A);
-  EXPECT_EQ(FDE.getFDEType(), SFRAME_FDE_TYPE_PCINC);
-  EXPECT_EQ(FDE.getFREType(), SFRAME_FRE_TYPE_ADDR1);
+  FuncDescEntry FDE = {};
+  EXPECT_EQ(FDE.Info, 0u);
+  EXPECT_EQ(FDE.getPAuthKey(), 0);
+  EXPECT_EQ(FDE.getFDEType(), FDEType::PCInc);
+  EXPECT_EQ(FDE.getFREType(), FREType::Addr1);
 
-  FDE.setPAuthKey(SFRAME_AARCH64_PAUTH_KEY_B);
-  EXPECT_EQ(FDE.sfde_func_info, 0x20u);
-  EXPECT_EQ(FDE.getPAuthKey(), SFRAME_AARCH64_PAUTH_KEY_B);
-  EXPECT_EQ(FDE.getFDEType(), SFRAME_FDE_TYPE_PCINC);
-  EXPECT_EQ(FDE.getFREType(), SFRAME_FRE_TYPE_ADDR1);
+  FDE.setPAuthKey(1);
+  EXPECT_EQ(FDE.Info, 0x20u);
+  EXPECT_EQ(FDE.getPAuthKey(), 1);
+  EXPECT_EQ(FDE.getFDEType(), FDEType::PCInc);
+  EXPECT_EQ(FDE.getFREType(), FREType::Addr1);
 
-  FDE.setFDEType(SFRAME_FDE_TYPE_PCMASK);
-  EXPECT_EQ(FDE.sfde_func_info, 0x30u);
-  EXPECT_EQ(FDE.getPAuthKey(), SFRAME_AARCH64_PAUTH_KEY_B);
-  EXPECT_EQ(FDE.getFDEType(), SFRAME_FDE_TYPE_PCMASK);
-  EXPECT_EQ(FDE.getFREType(), SFRAME_FRE_TYPE_ADDR1);
+  FDE.setFDEType(FDEType::PCMask);
+  EXPECT_EQ(FDE.Info, 0x30u);
+  EXPECT_EQ(FDE.getPAuthKey(), 1);
+  EXPECT_EQ(FDE.getFDEType(), FDEType::PCMask);
+  EXPECT_EQ(FDE.getFREType(), FREType::Addr1);
 
-  FDE.setFREType(SFRAME_FRE_TYPE_ADDR4);
-  EXPECT_EQ(FDE.sfde_func_info, 0x32u);
-  EXPECT_EQ(FDE.getPAuthKey(), SFRAME_AARCH64_PAUTH_KEY_B);
-  EXPECT_EQ(FDE.getFDEType(), SFRAME_FDE_TYPE_PCMASK);
-  EXPECT_EQ(FDE.getFREType(), SFRAME_FRE_TYPE_ADDR4);
+  FDE.setFREType(FREType::Addr4);
+  EXPECT_EQ(FDE.Info, 0x32u);
+  EXPECT_EQ(FDE.getPAuthKey(), 1);
+  EXPECT_EQ(FDE.getFDEType(), FDEType::PCMask);
+  EXPECT_EQ(FDE.getFREType(), FREType::Addr4);
 }
 
 TEST(SFrameTest, FREFlags) {
-  sframe_fre_info Info = {};
-  EXPECT_EQ(Info.fre_info, 0u);
+  FREInfo Info = {};
+  EXPECT_EQ(Info.Info, 0u);
   EXPECT_FALSE(Info.isReturnAddressSigned());
-  EXPECT_EQ(Info.getOffsetSize(), SFRAME_FRE_OFFSET_1B);
+  EXPECT_EQ(Info.getOffsetSize(), FREOffset::B1);
   EXPECT_EQ(Info.getOffsetCount(), 0u);
-  EXPECT_EQ(Info.getBaseRegister(), SFRAME_BASE_REG_FP);
+  EXPECT_EQ(Info.getBaseRegister(), BaseReg::FP);
 
   Info.setReturnAddressSigned(true);
-  EXPECT_EQ(Info.fre_info, 0x80u);
+  EXPECT_EQ(Info.Info, 0x80u);
   EXPECT_TRUE(Info.isReturnAddressSigned());
-  EXPECT_EQ(Info.getOffsetSize(), SFRAME_FRE_OFFSET_1B);
+  EXPECT_EQ(Info.getOffsetSize(), FREOffset::B1);
   EXPECT_EQ(Info.getOffsetCount(), 0u);
-  EXPECT_EQ(Info.getBaseRegister(), SFRAME_BASE_REG_FP);
+  EXPECT_EQ(Info.getBaseRegister(), BaseReg::FP);
 
-  Info.setOffsetSize(SFRAME_FRE_OFFSET_4B);
-  EXPECT_EQ(Info.fre_info, 0xc0u);
+  Info.setOffsetSize(FREOffset::B4);
+  EXPECT_EQ(Info.Info, 0xc0u);
   EXPECT_TRUE(Info.isReturnAddressSigned());
-  EXPECT_EQ(Info.getOffsetSize(), SFRAME_FRE_OFFSET_4B);
+  EXPECT_EQ(Info.getOffsetSize(), FREOffset::B4);
   EXPECT_EQ(Info.getOffsetCount(), 0u);
-  EXPECT_EQ(Info.getBaseRegister(), SFRAME_BASE_REG_FP);
+  EXPECT_EQ(Info.getBaseRegister(), BaseReg::FP);
 
   Info.setOffsetCount(3);
-  EXPECT_EQ(Info.fre_info, 0xc6u);
+  EXPECT_EQ(Info.Info, 0xc6u);
   EXPECT_TRUE(Info.isReturnAddressSigned());
-  EXPECT_EQ(Info.getOffsetSize(), SFRAME_FRE_OFFSET_4B);
+  EXPECT_EQ(Info.getOffsetSize(), FREOffset::B4);
   EXPECT_EQ(Info.getOffsetCount(), 3u);
-  EXPECT_EQ(Info.getBaseRegister(), SFRAME_BASE_REG_FP);
+  EXPECT_EQ(Info.getBaseRegister(), BaseReg::FP);
 
-  Info.setBaseRegister(SFRAME_BASE_REG_SP);
-  EXPECT_EQ(Info.fre_info, 0xc7u);
+  Info.setBaseRegister(BaseReg::SP);
+  EXPECT_EQ(Info.Info, 0xc7u);
   EXPECT_TRUE(Info.isReturnAddressSigned());
-  EXPECT_EQ(Info.getOffsetSize(), SFRAME_FRE_OFFSET_4B);
+  EXPECT_EQ(Info.getOffsetSize(), FREOffset::B4);
   EXPECT_EQ(Info.getOffsetCount(), 3u);
-  EXPECT_EQ(Info.getBaseRegister(), SFRAME_BASE_REG_SP);
+  EXPECT_EQ(Info.getBaseRegister(), BaseReg::SP);
 }
 
 } // namespace
