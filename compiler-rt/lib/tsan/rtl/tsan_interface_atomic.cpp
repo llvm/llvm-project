@@ -25,6 +25,8 @@
 #include "tsan_interface.h"
 #include "tsan_rtl.h"
 
+#include "rsan_instrument.hpp"
+
 using namespace __tsan;
 
 #if !SANITIZER_GO && __TSAN_HAS_INT128
@@ -226,9 +228,16 @@ namespace {
 
 template <typename T, T (*F)(volatile T *v, T op)>
 static T AtomicRMW(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
+  Lock instLock(Robustness::ins.getLockForAddr((Robustness::Address(a))));
+  Robustness::DebugInfo dbg = { .thr = thr, .pc = pc };
+  auto oldValue = *a;
   MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), kAccessWrite | kAccessAtomic);
-  if (LIKELY(mo == mo_relaxed))
-    return F(a, v);
+  if (LIKELY(mo == mo_relaxed)) {
+    auto newValue = F(a, v);
+	if (Robustness::isRobustness())
+		Robustness::ins.updateRmwStatement(Robustness::Action::AtomicRMWAction{.tid = thr->tid, .addr = (Robustness::Address(a)), .mo = mo, .size = AccessSize<T>(), .oldValue = static_cast<u64>(oldValue), .newValue=static_cast<u64>(newValue), .dbg = move(dbg)});
+    return newValue;
+  }
   SlotLocker locker(thr);
   {
     auto s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
@@ -241,6 +250,8 @@ static T AtomicRMW(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
       thr->clock.Acquire(s->clock);
     v = F(a, v);
   }
+  if (Robustness::isRobustness())
+	  Robustness::ins.updateRmwStatement(Robustness::Action::AtomicRMWAction{.tid = thr->tid, .addr = (Robustness::Address(a)), .mo = mo, .size = AccessSize<T>(), .oldValue = static_cast<u64>(oldValue), .newValue=static_cast<u64>(v), .dbg = move(dbg)});
   if (IsReleaseOrder(mo))
     IncrementEpoch(thr);
   return v;
@@ -262,6 +273,10 @@ struct OpLoad {
   template <typename T>
   static T Atomic(ThreadState *thr, uptr pc, morder mo, const volatile T *a) {
     DCHECK(IsLoadOrder(mo));
+    Lock instLock(Robustness::ins.getLockForAddr((Robustness::Address(a))));
+    Robustness::DebugInfo dbg = { .thr = thr, .pc = pc };
+	if (Robustness::isRobustness())
+		Robustness::ins.updateLoadStatement(Robustness::Action::AtomicLoadAction{.tid = thr->tid, .addr = (Robustness::Address(a)), .mo = mo, .size = AccessSize<T>(), .rmw = false, .dbg = move(dbg)});
     // This fast-path is critical for performance.
     // Assume the access is atomic.
     if (!IsAcquireOrder(mo)) {
@@ -303,6 +318,10 @@ struct OpStore {
   template <typename T>
   static void Atomic(ThreadState *thr, uptr pc, morder mo, volatile T *a, T v) {
     DCHECK(IsStoreOrder(mo));
+    Lock instLock(Robustness::ins.getLockForAddr((Robustness::Address(a))));
+    Robustness::DebugInfo dbg = { .thr = thr, .pc = pc };
+	if (Robustness::isRobustness())
+		Robustness::ins.updateStoreStatement(Robustness::Action::AtomicStoreAction{.tid = thr->tid, .addr = (Robustness::Address(a)), .mo = mo, .size = AccessSize<T>(), .oldValue = static_cast<u64>(*a), .newValue = static_cast<u64>(v), .dbg = move(dbg)});
     MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(),
                  kAccessWrite | kAccessAtomic);
     // This fast-path is critical for performance.
@@ -438,39 +457,65 @@ struct OpCAS {
     // nor memory_order_acq_rel". LLVM (2021-05) fallbacks to Monotonic
     // (mo_relaxed) when those are used.
     DCHECK(IsLoadOrder(fmo));
+    Lock instLock(Robustness::ins.getLockForAddr((Robustness::Address(a))));
+    Robustness::DebugInfo dbg = { .thr = thr, .pc = pc };
 
     MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(),
                  kAccessWrite | kAccessAtomic);
+
+    bool success;
+    bool release = IsReleaseOrder(mo);
+    T cc;
+    T pr;
     if (LIKELY(mo == mo_relaxed && fmo == mo_relaxed)) {
-      T cc = *c;
-      T pr = func_cas(a, cc, v);
-      if (pr == cc)
-        return true;
+      //T cc = *c;
+      //T pr = func_cas(a, cc, v);
+      cc = *c;
+      pr = func_cas(a, cc, v);
+      if (pr == cc) {
+        success = true;
+		goto cleanup;
+		// return true;
+	  }
       *c = pr;
+	  success = false;
+	  goto cleanup;
       return false;
     }
-    SlotLocker locker(thr);
-    bool release = IsReleaseOrder(mo);
-    bool success;
-    {
-      auto s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
-      RWLock lock(&s->mtx, release);
-      T cc = *c;
-      T pr = func_cas(a, cc, v);
-      success = pr == cc;
-      if (!success) {
-        *c = pr;
-        mo = fmo;
+	{
+      SlotLocker locker(thr);
+      // bool release = IsReleaseOrder(mo);
+      {
+        auto *s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
+        RWLock lock(&s->mtx, release);
+        // T cc = *c;
+        // T pr = func_cas(a, cc, v);
+        cc = *c;
+        pr = func_cas(a, cc, v);
+        success = pr == cc;
+        if (!success) {
+          *c = pr;
+          mo = fmo;
+        }
+        if (success && IsAcqRelOrder(mo))
+          thr->clock.ReleaseAcquire(&s->clock);
+        else if (success && IsReleaseOrder(mo))
+          thr->clock.Release(&s->clock);
+        else if (IsAcquireOrder(mo))
+          thr->clock.Acquire(s->clock);
       }
-      if (success && IsAcqRelOrder(mo))
-        thr->clock.ReleaseAcquire(&s->clock);
-      else if (success && IsReleaseOrder(mo))
-        thr->clock.Release(&s->clock);
-      else if (IsAcquireOrder(mo))
-        thr->clock.Acquire(s->clock);
-    }
-    if (success && release)
-      IncrementEpoch(thr);
+      if (success && release)
+        IncrementEpoch(thr);
+	}
+	cleanup:
+	morder correctmo;
+	if (success){
+		correctmo = mo;
+	} else {
+		correctmo = fmo;
+	}
+	if (Robustness::isRobustness())
+		Robustness::ins.updateCasStatement(Robustness::Action::AtomicCasAction{.tid = thr->tid, .addr = (Robustness::Address(a)), .mo = correctmo, .size = AccessSize<T>(), .oldValue = static_cast<u64>(cc), .newValue = static_cast<u64>(v), .success = success, .dbg = dbg});
     return success;
   }
 
@@ -488,6 +533,14 @@ struct OpFence {
 
   static void Atomic(ThreadState *thr, uptr pc, morder mo) {
     // FIXME(dvyukov): not implemented.
+	if (Robustness::isRobustness()) {
+		if (mo == mo_seq_cst){
+			(void) Robustness::ins.getLockForAddr(Robustness::Address(0)); // Call for side effect
+			Robustness::ins.updateFenceStatement(thr->tid, mo);
+		} else {
+			Robustness::ins.updateFenceStatement(thr->tid, mo);
+		}
+	}
     __sync_synchronize();
   }
 };

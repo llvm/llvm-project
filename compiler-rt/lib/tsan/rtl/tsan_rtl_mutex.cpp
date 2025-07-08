@@ -20,6 +20,8 @@
 #include "tsan_symbolize.h"
 #include "tsan_platform.h"
 
+#include "rsan_instrument.hpp"
+
 namespace __tsan {
 
 void ReportDeadlock(ThreadState *thr, uptr pc, DDReport *r);
@@ -156,6 +158,9 @@ void MutexPreLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
 }
 
 void MutexPostLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz, int rec) {
+  Lock instLock(Robustness::ins.getLockForAddr((Robustness::LocationId) addr));
+  Robustness::DebugInfo dbg = { .thr = thr, .pc = pc };
+ // Note: We treat Mutex as atomic release/acquire var for robustness
   DPrintf("#%d: MutexPostLock %zx flag=0x%x rec=%d\n",
       thr->tid, addr, flagz, rec);
   if (flagz & MutexFlagRecursiveLock)
@@ -204,6 +209,8 @@ void MutexPostLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz, int rec) {
       }
     }
   }
+  if (Robustness::isRobustness())
+	  Robustness::ins.updateLoadStatement(Robustness::Action::AtomicLoadAction{.tid = thr->tid, .addr = (Robustness::Address(addr)), .mo = mo_acquire, .rmw = false, .dbg = dbg});
   if (report_double_lock)
     ReportMutexMisuse(thr, pc, ReportTypeMutexDoubleLock, addr,
                       creation_stack_id);
@@ -214,6 +221,8 @@ void MutexPostLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz, int rec) {
 }
 
 int MutexUnlock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
+  Lock instLock(Robustness::ins.getLockForAddr((Robustness::LocationId) addr));
+  Robustness::DebugInfo dbg = { .thr = thr, .pc = pc };
   DPrintf("#%d: MutexUnlock %zx flagz=0x%x\n", thr->tid, addr, flagz);
   if (pc && IsAppMem(addr))
     MemoryAccess(thr, pc, addr, 1, kAccessRead | kAccessAtomic);
@@ -221,6 +230,8 @@ int MutexUnlock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   RecordMutexUnlock(thr, addr);
   bool report_bad_unlock = false;
   int rec = 0;
+  if (Robustness::isRobustness())
+	  Robustness::ins.updateStoreStatement(Robustness::Action::AtomicStoreAction{.tid = thr->tid, .addr = (Robustness::Address(addr)), .mo = mo_release, .oldValue = 0, .dbg = dbg});
   {
     SlotLocker locker(thr);
     auto s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, true);
