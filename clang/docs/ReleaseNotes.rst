@@ -671,6 +671,12 @@ Improvements to Clang's diagnostics
   false positives in exception-heavy code, though only simple patterns
   are currently recognized.
 
+- Fixed a bug that caused diagnostic line wrapping to not function correctly on
+  some systems. (#GH139499)
+
+- Clang now tries to avoid printing file paths that contain ``..``, instead preferring
+  the canonical file path if it ends up being shorter.
+
 
 Improvements to Clang's time-trace
 ----------------------------------
