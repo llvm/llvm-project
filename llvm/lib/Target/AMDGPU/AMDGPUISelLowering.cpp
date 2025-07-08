@@ -4940,7 +4940,6 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
             SrcModTrue ? SrcModTrue : DAG.getNode(ISD::BITCAST, SL, FVT, True);
         SDValue FRHS = SrcModFalse ? SrcModFalse
                                    : DAG.getNode(ISD::BITCAST, SL, FVT, False);
-        ;
         SDValue FSelect = DAG.getNode(ISD::SELECT, SL, FVT, Cond, FLHS, FRHS);
         return DAG.getNode(ISD::BITCAST, SL, VT, FSelect);
       }
