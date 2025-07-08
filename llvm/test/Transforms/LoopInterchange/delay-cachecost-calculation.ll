@@ -23,7 +23,7 @@ for.i.header:
 
 for.j:
   %j = phi i32 [ 0, %for.i.header ], [ %j.next, %for.j ]
-  %idx = getelementptr inbounds [16 x [16 x i32]], ptr @A, i32 %j, i32 %i
+  %idx = getelementptr inbounds [16 x [16 x i32]], ptr @A, i32 0, i32 %j, i32 %i
   %val = load i32, ptr %idx
   %inc = add i32 %val, 1
   store i32 %inc, ptr %idx
@@ -59,8 +59,8 @@ for.i.header:
 
 for.j:
   %j = phi i32 [ 0, %for.i.header ], [ %j.next, %for.j ]
-  %idx.load = getelementptr inbounds [16 x [16 x i32]], ptr @A, i32 %i, i32 %j
-  %idx.store = getelementptr inbounds [16 x [16 x i32]], ptr @A, i32 %j, i32 %i
+  %idx.load = getelementptr inbounds [16 x [16 x i32]], ptr @A, i32 0, i32 %i, i32 %j
+  %idx.store = getelementptr inbounds [16 x [16 x i32]], ptr @A, i32 0, i32 %j, i32 %i
   %val = load i32, ptr %idx.load
   store i32 %val, ptr %idx.store
   %j.next = add i32 %j, 1
