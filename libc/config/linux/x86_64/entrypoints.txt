@@ -855,10 +855,6 @@ if(LIBC_TYPES_HAS_FLOAT128)
   )
 endif()
 
-# Bfloat16 Entrypoints
-list(APPEND TARGET_LIBM_ENTRYPOINTS
-)
-
 if(LIBC_COMPILER_HAS_FIXED_POINT)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # stdfix.h _Fract and _Accum entrypoints

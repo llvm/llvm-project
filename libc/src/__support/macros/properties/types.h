@@ -13,12 +13,11 @@
 #include "hdr/float_macros.h"                        // LDBL_MANT_DIG
 #include "include/llvm-libc-macros/float16-macros.h" // LIBC_TYPES_HAS_FLOAT16
 #include "include/llvm-libc-types/float128.h"        // float128
+#include "src/__support/macros/config.h"             // LIBC_NAMESPACE_DECL
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/compiler.h"
 #include "src/__support/macros/properties/cpu_features.h"
 #include "src/__support/macros/properties/os.h"
-
-#include "src/__support/macros/config.h" // LIBC_NAMESPACE_DECL
 
 #include <stdint.h> // UINT64_MAX, __SIZEOF_INT128__
 
