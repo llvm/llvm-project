@@ -3,6 +3,7 @@
 // and doesn't fall back to "unknown" due to constructor ambiguity.
 
 // REQUIRES: system-aix
+// SUPPORTED: target={{.*}}-aix{{.*}}
 // RUN: %clang -v %s -c 2>&1 | FileCheck %s --check-prefix=CHECK-TARGET
 
 // Test that the target triple contains AIX and is not "unknown"
