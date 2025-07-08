@@ -254,7 +254,7 @@ std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {
       auto Clause = parseDescriptorTableClause();
       if (!Clause.has_value())
         return std::nullopt;
-      Elements.push_back(RootSignatureElement(ElementLoc, *Clause));
+      Elements.emplace_back(RootSignatureElement(ElementLoc, *Clause));
       Table.NumClauses++;
     } else if (tryConsumeExpectedToken(TokenKind::kw_visibility)) {
       // visibility = SHADER_VISIBILITY
