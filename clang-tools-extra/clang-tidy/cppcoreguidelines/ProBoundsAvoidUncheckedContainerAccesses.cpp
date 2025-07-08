@@ -26,7 +26,8 @@ ProBoundsAvoidUncheckedContainerAccesses::
       ExcludedClasses(utils::options::parseStringList(
           Options.get("ExcludeClasses", DefaultExclusionStr))),
       FixMode(Options.get("FixMode", None)),
-      FixFunction(Options.get("FixFunction", "gsl::at")) {}
+      FixFunction(Options.get("FixFunction", "gsl::at")),
+      FixFunctionEmptyArgs(Options.get("FixFunctionEmptyArgs", FixFunction)) {}
 
 void ProBoundsAvoidUncheckedContainerAccesses::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
@@ -34,6 +35,7 @@ void ProBoundsAvoidUncheckedContainerAccesses::storeOptions(
                 utils::options::serializeStringList(ExcludedClasses));
   Options.store(Opts, "FixMode", FixMode);
   Options.store(Opts, "FixFunction", FixFunction);
+  Options.store(Opts, "FixFunctionEmptyArgs", FixFunctionEmptyArgs);
 }
 
 // TODO: if at() is defined in another class in the class hierarchy of the class
@@ -145,18 +147,30 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
 
     } else if (FixMode == Function) {
       // Case: a[i] => f(a, i)
-      diag(MatchedExpr->getCallee()->getBeginLoc(),
-           "possibly unsafe 'operator[]', use safe function '" +
-               FixFunction.str() + "()' instead")
-          << MatchedExpr->getCallee()->getSourceRange()
-          << FixItHint::CreateInsertion(OCE->getArg(0)->getBeginLoc(),
-                                        FixFunction.str() + "(")
-          // Since C++23, the subscript operator may also be called without an
-          // argument, which makes the following distinction necessary
-          << (MatchedExpr->getDirectCallee()->getNumParams() > 0
-                  ? FixItHint::CreateReplacement(LeftBracket, ", ")
-                  : FixItHint::CreateRemoval(LeftBracket))
-          << FixItHint::CreateReplacement(RightBracket, ")");
+      //
+      // Since C++23, the subscript operator may also be called without an
+      // argument, which makes the following distinction necessary
+      bool EmptySubscript = MatchedExpr->getDirectCallee()->getNumParams() == 0;
+
+      if (EmptySubscript) {
+        diag(MatchedExpr->getCallee()->getBeginLoc(),
+             "possibly unsafe 'operator[]', use safe function '" +
+                 FixFunctionEmptyArgs.str() + "()' instead")
+            << MatchedExpr->getCallee()->getSourceRange()
+            << FixItHint::CreateInsertion(OCE->getArg(0)->getBeginLoc(),
+                                          FixFunctionEmptyArgs.str() + "(")
+            << FixItHint::CreateRemoval(LeftBracket)
+            << FixItHint::CreateReplacement(RightBracket, ")");
+      } else {
+        diag(MatchedExpr->getCallee()->getBeginLoc(),
+             "possibly unsafe 'operator[]', use safe function '" +
+                 FixFunction.str() + "()' instead")
+            << MatchedExpr->getCallee()->getSourceRange()
+            << FixItHint::CreateInsertion(OCE->getArg(0)->getBeginLoc(),
+                                          FixFunction.str() + "(")
+            << FixItHint::CreateReplacement(LeftBracket, ", ")
+            << FixItHint::CreateReplacement(RightBracket, ")");
+      }
     }
   } else if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(MatchedExpr)) {
     // Case: a.operator[](i) or a->operator[](i)
@@ -189,28 +203,41 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
     } else if (FixMode == Function) {
       // Cases: a.operator[](i) => f(a, i) and a->operator[](i) => f(*a, i)
       const auto *Callee = dyn_cast<MemberExpr>(MCE->getCallee());
-      std::string BeginInsertion = FixFunction.str() + "(";
+
+      bool EmptySubscript = MCE->getMethodDecl()->getNumNonObjectParams() == 0;
+
+      std::string BeginInsertion =
+          (EmptySubscript ? FixFunctionEmptyArgs.str() : FixFunction.str()) +
+          "(";
 
       if (Callee->isArrow())
         BeginInsertion += "*";
 
-      diag(Callee->getBeginLoc(),
-           "possibly unsafe 'operator[]', use safe function '" +
-               FixFunction.str() + "()' instead")
-          << Callee->getSourceRange()
-          << FixItHint::CreateInsertion(MatchedExpr->getBeginLoc(),
-                                        BeginInsertion)
-          // Since C++23, the subscript operator may also be called without an
-          // argument, which makes the following distinction necessary
-          << ((MCE->getMethodDecl()->getNumNonObjectParams() > 0)
-                  ? FixItHint::CreateReplacement(
-                        SourceRange(
-                            Callee->getOperatorLoc(),
-                            MCE->getArg(0)->getBeginLoc().getLocWithOffset(-1)),
-                        ", ")
-                  : FixItHint::CreateRemoval(
-                        SourceRange(Callee->getOperatorLoc(),
-                                    MCE->getRParenLoc().getLocWithOffset(-1))));
+      // Since C++23, the subscript operator may also be called without an
+      // argument, which makes the following distinction necessary
+      if (EmptySubscript) {
+        diag(Callee->getBeginLoc(),
+             "possibly unsafe 'operator[]', use safe function '" +
+                 FixFunctionEmptyArgs.str() + "()' instead")
+            << Callee->getSourceRange()
+            << FixItHint::CreateInsertion(MatchedExpr->getBeginLoc(),
+                                          BeginInsertion)
+            << FixItHint::CreateRemoval(
+                   SourceRange(Callee->getOperatorLoc(),
+                               MCE->getRParenLoc().getLocWithOffset(-1)));
+      } else {
+        diag(Callee->getBeginLoc(),
+             "possibly unsafe 'operator[]', use safe function '" +
+                 FixFunction.str() + "()' instead")
+            << Callee->getSourceRange()
+            << FixItHint::CreateInsertion(MatchedExpr->getBeginLoc(),
+                                          BeginInsertion)
+            << FixItHint::CreateReplacement(
+                   SourceRange(
+                       Callee->getOperatorLoc(),
+                       MCE->getArg(0)->getBeginLoc().getLocWithOffset(-1)),
+                   ", ");
+      }
     }
   }
 }

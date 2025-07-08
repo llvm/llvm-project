@@ -51,4 +51,14 @@ Options
 
 .. option:: FixFunction
 
-    The function to use in the `function` mode. `gsl::at` by default.
+    The function to use in the `function` mode. `gsl::at` by default. For C++23
+    and beyond, the passed function must support the empty subscript operator,
+    i.e., the case where ``a[]`` becomes ``f(a)``. The `FixFunctionEmptyArgs`
+    option can be used to override the suggested function in that case.
+
+.. option:: FixFunctionEmptyArgs
+
+    The function to use in the `function` mode for the empty subscript operator
+    case in C++23 and beyond only. Defaults to the value of `FixFunction`. If
+    no fixes should be made for empty subscript operators, pass an empty
+    string.
