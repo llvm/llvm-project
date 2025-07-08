@@ -9,7 +9,7 @@
 #ifndef __CLC_OPENCL_WORKITEM_GET_NUM_SUB_GROUPS_H__
 #define __CLC_OPENCL_WORKITEM_GET_NUM_SUB_GROUPS_H__
 
-#include <clc/internal/clc.h>
+#include <clc/opencl/opencl-base.h>
 
 _CLC_OVERLOAD _CLC_DECL uint get_num_sub_groups();
 

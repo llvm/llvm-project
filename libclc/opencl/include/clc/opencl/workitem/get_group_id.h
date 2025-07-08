@@ -9,7 +9,7 @@
 #ifndef __CLC_OPENCL_WORKITEM_GET_GROUP_ID_H__
 #define __CLC_OPENCL_WORKITEM_GET_GROUP_ID_H__
 
-#include <clc/internal/clc.h>
+#include <clc/opencl/opencl-base.h>
 
 _CLC_OVERLOAD _CLC_DECL size_t get_group_id(uint dim);
 

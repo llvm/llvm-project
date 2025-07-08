@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/workitem/get_work_dim.h>
 #include <clc/workitem/clc_get_work_dim.h>
 
 #if __clang_major__ >= 8
