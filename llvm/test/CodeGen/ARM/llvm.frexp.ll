@@ -141,8 +141,8 @@ define <2 x i32> @test_frexp_v2f16_v2i32_only_use_exp(<2 x half> %a) {
   ret <2 x i32> %result.1
 }
 
-define { <3 x float>, <3 x i32> } @test_frexp_v3f16_v3i32(<3 x float> %a) {
-; CHECK-LABEL: test_frexp_v3f16_v3i32:
+define { <3 x float>, <3 x i32> } @test_frexp_v3f32_v3i32(<3 x float> %a) {
+; CHECK-LABEL: test_frexp_v3f32_v3i32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
 ; CHECK-NEXT:    vpush {d8, d9}
@@ -174,7 +174,7 @@ define { <3 x float>, <3 x i32> } @test_frexp_v3f16_v3i32(<3 x float> %a) {
 ; CHECK-NEXT:    add sp, #8
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
-  %result = call { <3 x float>, <3 x i32> } @llvm.frexp.v3float.v3i32(<3 x float> %a)
+  %result = call { <3 x float>, <3 x i32> } @llvm.frexp.v3f32.v3i32(<3 x float> %a)
   ret { <3 x float>, <3 x i32> } %result
 }
 
