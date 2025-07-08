@@ -612,37 +612,36 @@ RTLIB::Libcall RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
 ISD::CondCode TargetLoweringBase::getSoftFloatCmpLibcallPredicate(
     RTLIB::LibcallImpl Impl) const {
   switch (Impl) {
-  case RTLIB::__aeabi_dcmpeq__ne:
-    return ISD::SETNE;
   case RTLIB::__aeabi_dcmpeq__eq:
-    return ISD::SETEQ;
-  case RTLIB::__aeabi_dcmplt:
-    return ISD::SETNE;
-  case RTLIB::__aeabi_dcmple:
-    return ISD::SETNE;
-  case RTLIB::__aeabi_dcmpge:
-    return ISD::SETNE;
-  case RTLIB::__aeabi_dcmpgt:
-    return ISD::SETNE;
-  case RTLIB::__aeabi_dcmpun:
-    return ISD::SETNE;
-  case RTLIB::__aeabi_fcmpeq__ne:
-    return ISD::SETNE;
   case RTLIB::__aeabi_fcmpeq__eq:
+    // Usage in the eq case, so we have to invert the comparison.
     return ISD::SETEQ;
+  case RTLIB::__aeabi_dcmpeq__ne:
+  case RTLIB::__aeabi_fcmpeq__ne:
+    // Normal comparison to boolean value.
+    return ISD::SETNE;
+  case RTLIB::__aeabi_dcmplt:
+  case RTLIB::__aeabi_dcmple:
+  case RTLIB::__aeabi_dcmpge:
+  case RTLIB::__aeabi_dcmpgt:
+  case RTLIB::__aeabi_dcmpun:
   case RTLIB::__aeabi_fcmplt:
-    return ISD::SETNE;
   case RTLIB::__aeabi_fcmple:
-    return ISD::SETNE;
   case RTLIB::__aeabi_fcmpge:
-    return ISD::SETNE;
   case RTLIB::__aeabi_fcmpgt:
+    /// The AEABI versions return a typical boolean value, so we can compare
+    /// against the integer result as simply != 0.
     return ISD::SETNE;
   default:
     break;
   }
 
-  // Assume libgcc/compiler-rt behavior
+  // Assume libgcc/compiler-rt behavior. Most of the cases are really aliases of
+  // each other, and return a 3-way comparison style result of -1, 0, or 1
+  // depending on lt/eq/gt.
+  //
+  // FIXME: It would be cleaner to directly express this as a 3-way comparison
+  // soft FP libcall instead of individual compares.
   RTLIB::Libcall LC = RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl(Impl);
   switch (LC) {
   case RTLIB::OEQ_F32:
