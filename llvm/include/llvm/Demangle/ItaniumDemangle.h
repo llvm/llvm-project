@@ -16,10 +16,10 @@
 #ifndef DEMANGLE_ITANIUMDEMANGLE_H
 #define DEMANGLE_ITANIUMDEMANGLE_H
 
-#include "llvm/Demangle/Visibility.h"
 #include "DemangleConfig.h"
 #include "StringViewExtras.h"
 #include "Utility.h"
+#include "Visibility.h"
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
