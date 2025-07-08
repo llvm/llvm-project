@@ -337,6 +337,15 @@ export namespace std {
     }
 #endif // _LIBCPP_STD_VER >= 23
 
+#if _LIBCPP_STD_VER >= 26
+	// [range.to.input], to input view
+	using std::ranges::to_input_view;
+
+	namespace views {
+	  using std::ranges::views::to_input;
+	}
+#endif // _LIBCPP_STD_VER >= 26
+
 #if 0
     // [range.stride], stride view
     using std::ranges::stride_view;
