@@ -528,6 +528,9 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<MCInstPrinter> IP;
   if (ValidateCFI) {
+    // TODO: The DWARF CFI checker support for emitting anything other than
+    // errors and warnings has not been implemented yet. Because of this, it is
+    // assert-checked that the filetype output is null.
     assert(FileType == OFT_Null);
     auto FFA = std::make_unique<CFIFunctionFrameAnalyzer>(Ctx, *MCII);
     auto FFS = std::make_unique<CFIFunctionFrameStreamer>(Ctx, std::move(FFA));
