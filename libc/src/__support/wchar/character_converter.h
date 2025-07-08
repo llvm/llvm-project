@@ -11,10 +11,10 @@
 
 #include "hdr/types/char32_t.h"
 #include "hdr/types/char8_t.h"
+#include "hdr/types/size_t.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/wchar/mbstate.h"
-#include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {

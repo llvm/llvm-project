@@ -9,12 +9,12 @@
 #include "hdr/errno_macros.h"
 #include "hdr/types/char32_t.h"
 #include "hdr/types/char8_t.h"
+#include "hdr/types/size_t.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/math_extras.h"
 #include "src/__support/wchar/mbstate.h"
-#include <stddef.h>
 
 #include "character_converter.h"
 

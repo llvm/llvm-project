@@ -15,8 +15,11 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcStringConverterTest, UTF8To32) {
-  // first 4 bytes are clown emoji (🤡), then next 3 are sigma symbol (∑)
-  const char *src = "\xF0\x9F\xA4\xA1\xE2\x88\x91";
+  // first 4 bytes are clown emoji (🤡)
+  // next 3 bytes are sigma symbol (∑)
+  // next 2 bytes are y with diaeresis (ÿ)
+  // last byte is the letter A
+  const char *src = "\xF0\x9F\xA4\xA1\xE2\x88\x91\xC3\xBF\x41";
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char8_t> sc(
       reinterpret_cast<const char8_t *>(src), SIZE_MAX, &state);
@@ -33,17 +36,28 @@ TEST(LlvmLibcStringConverterTest, UTF8To32) {
 
   res = sc.popUTF32();
   ASSERT_TRUE(res.has_value());
+  ASSERT_EQ(static_cast<int>(res.value()), 0xff);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 9);
+
+  res = sc.popUTF32();
+  ASSERT_TRUE(res.has_value());
+  ASSERT_EQ(static_cast<int>(res.value()), 0x41);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 10);
+
+  res = sc.popUTF32();
+  ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0);
-  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 8);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 11);
 
   res = sc.popUTF32();
   ASSERT_FALSE(res.has_value());
   ASSERT_EQ(res.error(), -1);
-  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 8);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 11);
 }
 
 TEST(LlvmLibcStringConverterTest, UTF32To8) {
-  const wchar_t *src = L"\x1f921\x2211"; // clown emoji, sigma symbol
+  // clown emoji, sigma symbol, y with diaeresis, letter A
+  const wchar_t *src = L"\x1f921\x2211\xff\x41";
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char32_t> sc(
       reinterpret_cast<const char32_t *>(src), SIZE_MAX, &state);
@@ -68,6 +82,7 @@ TEST(LlvmLibcStringConverterTest, UTF32To8) {
   ASSERT_EQ(static_cast<int>(res.value()), 0xA1);
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 1);
 
+  // end of clown emoji, sigma symbol begins
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0xE2);
@@ -83,15 +98,33 @@ TEST(LlvmLibcStringConverterTest, UTF32To8) {
   ASSERT_EQ(static_cast<int>(res.value()), 0x91);
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 2);
 
+  // end of sigma symbol, y with diaeresis begins
+  res = sc.popUTF8();
+  ASSERT_TRUE(res.has_value());
+  ASSERT_EQ(static_cast<int>(res.value()), 0xC3);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 2);
+
+  res = sc.popUTF8();
+  ASSERT_TRUE(res.has_value());
+  ASSERT_EQ(static_cast<int>(res.value()), 0xBF);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 3);
+
+  // end of y with diaeresis, letter A begins
+  res = sc.popUTF8();
+  ASSERT_TRUE(res.has_value());
+  ASSERT_EQ(static_cast<int>(res.value()), 0x41);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 4);
+
+  // null byte
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0);
-  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 3);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 5);
 
   res = sc.popUTF8();
   ASSERT_FALSE(res.has_value());
   ASSERT_EQ(res.error(), -1);
-  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 3);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 5);
 }
 
 TEST(LlvmLibcStringConverterTest, UTF32To8PartialRead) {
@@ -120,6 +153,7 @@ TEST(LlvmLibcStringConverterTest, UTF32To8PartialRead) {
   ASSERT_EQ(static_cast<int>(res.value()), 0xA1);
   ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 1);
 
+  // can only read 1 character from source string, so error on next pop
   res = sc.popUTF8();
   ASSERT_FALSE(res.has_value());
   ASSERT_EQ(res.error(), -1);
@@ -200,7 +234,7 @@ TEST(LlvmLibcStringConverterTest, MultipleStringConverters32To8) {
   StringConverter to continue where we left off. This is not expected to work
   and considered invalid.
   */
-  const wchar_t *src = L"\x1f921\xff"; // clown emoji, sigma symbol
+  const wchar_t *src = L"\x1f921\xff"; // clown emoji, y with diaeresis (ÿ)
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char32_t> sc1(
       reinterpret_cast<const char32_t *>(src), 1, SIZE_MAX, &state);
@@ -225,6 +259,7 @@ TEST(LlvmLibcStringConverterTest, MultipleStringConverters32To8) {
   ASSERT_EQ(static_cast<int>(res.value()), 0xA1);
   ASSERT_EQ(static_cast<int>(sc1.getSourceIndex()), 1);
 
+  // sc2 should pick up where sc1 left off and continue the conversion
   LIBC_NAMESPACE::internal::StringConverter<char32_t> sc2(
       reinterpret_cast<const char32_t *>(src) + sc1.getSourceIndex(), 1,
       SIZE_MAX, &state);
@@ -251,6 +286,7 @@ TEST(LlvmLibcStringConverterTest, MultipleStringConverters8To32) {
   ASSERT_EQ(static_cast<int>(res.error()), -1);
   ASSERT_EQ(static_cast<int>(sc1.getSourceIndex()), 2);
 
+  // sc2 should pick up where sc1 left off and continue the conversion
   LIBC_NAMESPACE::internal::StringConverter<char8_t> sc2(
       reinterpret_cast<const char8_t *>(src) + sc1.getSourceIndex(), 3,
       SIZE_MAX, &state);
@@ -266,7 +302,7 @@ TEST(LlvmLibcStringConverterTest, MultipleStringConverters8To32) {
   ASSERT_EQ(static_cast<int>(sc2.getSourceIndex()), 3);
 }
 
-TEST(LlvmLibcStringConverterTest, DstLimitUTF8To32) {
+TEST(LlvmLibcStringConverterTest, DestLimitUTF8To32) {
   const char *src = "\xF0\x9F\xA4\xA1\xF0\x9F\xA4\xA1"; // 2 clown emojis
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char8_t> sc(
@@ -280,7 +316,7 @@ TEST(LlvmLibcStringConverterTest, DstLimitUTF8To32) {
   ASSERT_FALSE(res.has_value());
 }
 
-TEST(LlvmLibcStringConverterTest, DstLimitUTF32To8) {
+TEST(LlvmLibcStringConverterTest, DestLimitUTF32To8) {
   const wchar_t *src = L"\x1f921\x1f921"; // 2 clown emojis
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char32_t> sc(

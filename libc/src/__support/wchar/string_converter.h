@@ -26,7 +26,11 @@ private:
   const T *src;
   size_t src_len;
   size_t src_idx;
+
+  // # of src elements pushed to cr needed to represent the current character
   size_t num_pushed;
+
+  // # of pops we are allowed to perform (essentially size of the dest buffer)
   size_t num_to_write;
 
   int pushFullCharacter() {
@@ -56,6 +60,8 @@ public:
   StringConverter(const T *s, size_t dstlen, mbstate *ps)
       : StringConverter(s, SIZE_MAX, dstlen, ps) {}
 
+  // TODO: following functions are almost identical
+  // look into templating CharacterConverter pop functions
   ErrorOr<char32_t> popUTF32() {
     if (cr.isEmpty()) {
       int err = pushFullCharacter();
