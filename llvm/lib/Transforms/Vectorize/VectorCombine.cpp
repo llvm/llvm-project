@@ -3782,10 +3782,12 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
                                 : Index);
 
         // Update costs.
-        OldCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, OldLoadTy,
-                                      OldMask, CostKind);
-        NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, NewLoadTy,
-                                      NewMask, CostKind);
+        OldCost +=
+            TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, Shuffle->getType(),
+                               OldLoadTy, OldMask, CostKind);
+        NewCost +=
+            TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, Shuffle->getType(),
+                               NewLoadTy, NewMask, CostKind);
       }
 
       if (OldCost < NewCost || !NewCost.isValid())
