@@ -2470,7 +2470,8 @@ public:
 
   static inline bool classof(const VPRecipeBase *R) {
     return R->getVPDefID() == VPRecipeBase::VPReductionSC ||
-           R->getVPDefID() == VPRecipeBase::VPReductionEVLSC;
+           R->getVPDefID() == VPRecipeBase::VPReductionEVLSC ||
+           R->getVPDefID() == VPRecipeBase::VPPartialReductionSC;
   }
 
   static inline bool classof(const VPUser *U) {
@@ -2532,7 +2533,10 @@ public:
         Opcode(Opcode), VFScaleFactor(ScaleFactor) {
     [[maybe_unused]] auto *AccumulatorRecipe =
         getChainOp()->getDefiningRecipe();
-    assert((isa<VPReductionPHIRecipe>(AccumulatorRecipe) ||
+    // When cloning as part of a VPExpressionRecipe, the chain op could have
+    // been removed from the plan and so doesn't have a defining recipe.
+    assert((!AccumulatorRecipe ||
+            isa<VPReductionPHIRecipe>(AccumulatorRecipe) ||
             isa<VPPartialReductionRecipe>(AccumulatorRecipe)) &&
            "Unexpected operand order for partial reduction recipe");
   }
