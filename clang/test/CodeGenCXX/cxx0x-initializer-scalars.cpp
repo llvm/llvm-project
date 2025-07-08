@@ -13,4 +13,7 @@ void f() {
   void();
 }
 
+// CHECK: define{{.*}} void @_ZN8GH1164401fEv()
+// CHECK-NEXT: entry
+// CHECK-NEXT: ret void
 }
