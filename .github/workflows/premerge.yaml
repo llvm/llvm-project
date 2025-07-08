@@ -26,7 +26,7 @@ concurrency:
 jobs:
   premerge-checks-linux:
     if: >-
-        false && github.repository_owner == 'llvm' &&
+        github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')
     runs-on: llvm-premerge-linux-runners
     steps:
@@ -84,7 +84,7 @@ jobs:
 
   premerge-checks-windows:
     if: >-
-        false && github.repository_owner == 'llvm' &&
+        github.repository_owner == 'llvm' &&
         (github.event_name != 'pull_request' || github.event.action != 'closed')
     runs-on: llvm-premerge-windows-runners
     defaults:
