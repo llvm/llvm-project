@@ -2041,9 +2041,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampScalar(0, S32, S64)
     .lower();
 
-  getActionDefinitionsBuilder({G_ROTR, G_ROTL})
-    .scalarize(0)
-    .lower();
+  getActionDefinitionsBuilder(G_ROTR).legalFor({S32}).scalarize(0).lower();
+
+  getActionDefinitionsBuilder(G_ROTL).scalarize(0).lower();
 
   // TODO: Only Try to form v2s16 with legal packed instructions.
   getActionDefinitionsBuilder(G_FSHR)
