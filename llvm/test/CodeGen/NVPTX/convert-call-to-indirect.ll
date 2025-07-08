@@ -173,8 +173,8 @@ define i64 @test_param_type_mismatch_variadic(ptr %p) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_param_type_mismatch_variadic_param_0];
 ; CHECK-NEXT:    { // callseq 4, 0
-; CHECK-NEXT:    .param .b64 param0;
 ; CHECK-NEXT:    .param .align 8 .b8 param1[8];
+; CHECK-NEXT:    .param .b64 param0;
 ; CHECK-NEXT:    .param .b64 retval0;
 ; CHECK-NEXT:    st.param.b64 [param0], %rd1;
 ; CHECK-NEXT:    st.param.b64 [param1], 7;
@@ -195,8 +195,8 @@ define i64 @test_param_count_mismatch_variadic(ptr %p) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_param_count_mismatch_variadic_param_0];
 ; CHECK-NEXT:    { // callseq 5, 0
-; CHECK-NEXT:    .param .b64 param0;
 ; CHECK-NEXT:    .param .align 8 .b8 param1[8];
+; CHECK-NEXT:    .param .b64 param0;
 ; CHECK-NEXT:    .param .b64 retval0;
 ; CHECK-NEXT:    st.param.b64 [param0], %rd1;
 ; CHECK-NEXT:    st.param.b64 [param1], 7;

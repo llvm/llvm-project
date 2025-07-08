@@ -1389,6 +1389,36 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     return DAG.getConstant(I, dl, MVT::i32);
   };
 
+  const unsigned UniqueCallSite = GlobalUniqueCallSite++;
+  const SDValue CallChain = CLI.Chain;
+  const SDValue StartChain =
+      DAG.getCALLSEQ_START(CallChain, UniqueCallSite, 0, dl);
+  SDValue DeclareGlue = StartChain.getValue(1);
+
+  SmallVector<SDValue, 16> CallPrereqs{StartChain};
+
+  const auto MakeDeclareScalarParam = [&](SDValue Symbol, unsigned Size) {
+    // PTX ABI requires integral types to be at least 32 bits in size. FP16 is
+    // loaded/stored using i16, so it's handled here as well.
+    const unsigned SizeBits = promoteScalarArgumentSize(Size * 8);
+    SDValue Declare =
+        DAG.getNode(NVPTXISD::DeclareScalarParam, dl, {MVT::Other, MVT::Glue},
+                    {StartChain, Symbol, GetI32(SizeBits), DeclareGlue});
+    CallPrereqs.push_back(Declare);
+    DeclareGlue = Declare.getValue(1);
+    return Declare;
+  };
+
+  const auto MakeDeclareArrayParam = [&](SDValue Symbol, Align Align,
+                                         unsigned Size) {
+    SDValue Declare = DAG.getNode(
+        NVPTXISD::DeclareArrayParam, dl, {MVT::Other, MVT::Glue},
+        {StartChain, Symbol, GetI32(Align.value()), GetI32(Size), DeclareGlue});
+    CallPrereqs.push_back(Declare);
+    DeclareGlue = Declare.getValue(1);
+    return Declare;
+  };
+
   // Variadic arguments.
   //
   // Normally, for each argument, we declare a param scalar or a param
@@ -1404,40 +1434,17 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   //
   // After all vararg is processed, 'VAOffset' holds the size of the
   // vararg byte array.
+  assert((CLI.IsVarArg || CLI.Args.size() == CLI.NumFixedArgs) &&
+         "Non-VarArg function with extra arguments");
 
-  SDValue VADeclareParam = SDValue();           // vararg byte array
   const unsigned FirstVAArg = CLI.NumFixedArgs; // position of first variadic
-  unsigned VAOffset = 0;                  // current offset in the param array
+  unsigned VAOffset = 0; // current offset in the param array
 
-  const unsigned UniqueCallSite = GlobalUniqueCallSite++;
-  const SDValue CallChain = CLI.Chain;
-  const SDValue StartChain =
-      DAG.getCALLSEQ_START(CallChain, UniqueCallSite, 0, dl);
-  SDValue DeclareGlue = StartChain.getValue(1);
-
-  SmallVector<SDValue, 16> CallPrereqs{StartChain};
-
-  const auto DeclareScalarParam = [&](SDValue Symbol, unsigned Size) {
-    // PTX ABI requires integral types to be at least 32 bits in size. FP16 is
-    // loaded/stored using i16, so it's handled here as well.
-    const unsigned SizeBits = promoteScalarArgumentSize(Size * 8);
-    SDValue Declare =
-        DAG.getNode(NVPTXISD::DeclareScalarParam, dl, {MVT::Other, MVT::Glue},
-                    {StartChain, Symbol, GetI32(SizeBits), DeclareGlue});
-    CallPrereqs.push_back(Declare);
-    DeclareGlue = Declare.getValue(1);
-    return Declare;
-  };
-
-  const auto DeclareArrayParam = [&](SDValue Symbol, Align Align,
-                                     unsigned Size) {
-    SDValue Declare = DAG.getNode(
-        NVPTXISD::DeclareArrayParam, dl, {MVT::Other, MVT::Glue},
-        {StartChain, Symbol, GetI32(Align.value()), GetI32(Size), DeclareGlue});
-    CallPrereqs.push_back(Declare);
-    DeclareGlue = Declare.getValue(1);
-    return Declare;
-  };
+  const SDValue VADeclareParam =
+      CLI.Args.size() > FirstVAArg
+          ? MakeDeclareArrayParam(getCallParamSymbol(DAG, FirstVAArg, MVT::i32),
+                                  Align(STI.getMaxRequiredAlignment()), 0)
+          : SDValue();
 
   // Args.size() and Outs.size() need not match.
   // Outs.size() will be larger
@@ -1499,21 +1506,17 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
            "type size mismatch");
 
     const SDValue ArgDeclare = [&]() {
-      if (IsVAArg) {
-        if (ArgI == FirstVAArg)
-          VADeclareParam = DeclareArrayParam(
-              ParamSymbol, Align(STI.getMaxRequiredAlignment()), 0);
+      if (IsVAArg)
         return VADeclareParam;
-      }
 
       if (IsByVal || shouldPassAsArray(Arg.Ty))
-        return DeclareArrayParam(ParamSymbol, ArgAlign, TypeSize);
+        return MakeDeclareArrayParam(ParamSymbol, ArgAlign, TypeSize);
 
       assert(ArgOuts.size() == 1 && "We must pass only one value as non-array");
       assert((ArgOuts[0].VT.isInteger() || ArgOuts[0].VT.isFloatingPoint()) &&
              "Only int and float types are supported as non-array arguments");
 
-      return DeclareScalarParam(ParamSymbol, TypeSize);
+      return MakeDeclareScalarParam(ParamSymbol, TypeSize);
     }();
 
     // PTX Interoperability Guide 3.3(A): [Integer] Values shorter
@@ -1573,7 +1576,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       if (NumElts == 1) {
         Val = GetStoredValue(J, EltVT, CurrentAlign);
       } else {
-        SmallVector<SDValue, 6> StoreVals;
+        SmallVector<SDValue, 8> StoreVals;
         for (const unsigned K : llvm::seq(NumElts)) {
           SDValue ValJ = GetStoredValue(J + K, EltVT, CurrentAlign);
           if (ValJ.getValueType().isVector())
@@ -1614,9 +1617,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     const unsigned ResultSize = DL.getTypeAllocSize(RetTy);
     if (shouldPassAsArray(RetTy)) {
       const Align RetAlign = getArgumentAlignment(CB, RetTy, 0, DL);
-      DeclareArrayParam(RetSymbol, RetAlign, ResultSize);
+      MakeDeclareArrayParam(RetSymbol, RetAlign, ResultSize);
     } else {
-      DeclareScalarParam(RetSymbol, ResultSize);
+      MakeDeclareScalarParam(RetSymbol, ResultSize);
     }
   }
 
@@ -1740,9 +1743,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
       LoadChains.push_back(R.getValue(1));
 
-      if (NumElts == 1) {
+      if (NumElts == 1)
         ProxyRegOps.push_back(R);
-      } else {
+      else
         for (const unsigned J : llvm::seq(NumElts)) {
           SDValue Elt = DAG.getNode(
               LoadVT.isVector() ? ISD::EXTRACT_SUBVECTOR
@@ -1750,7 +1753,6 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
               dl, LoadVT, R, DAG.getVectorIdxConstant(J * PackingAmt, dl));
           ProxyRegOps.push_back(Elt);
         }
-      }
       I += NumElts;
     }
   }
@@ -5770,7 +5772,7 @@ static SDValue sinkProxyReg(SDValue R, SDValue Chain,
                            {Chain, R});
   }
   case ISD::BUILD_VECTOR: {
-    if (DCI.isAfterLegalizeDAG())
+    if (DCI.isBeforeLegalize())
       return SDValue();
 
     SmallVector<SDValue, 16> Ops;
@@ -5781,6 +5783,15 @@ static SDValue sinkProxyReg(SDValue R, SDValue Chain,
       Ops.push_back(V);
     }
     return DCI.DAG.getNode(ISD::BUILD_VECTOR, SDLoc(R), R.getValueType(), Ops);
+  }
+  case ISD::EXTRACT_VECTOR_ELT: {
+    if (DCI.isBeforeLegalize())
+      return SDValue();
+
+    if (SDValue V = sinkProxyReg(R.getOperand(0), Chain, DCI))
+      return DCI.DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(R), R.getValueType(),
+                             V, R.getOperand(1));
+    return SDValue();
   }
   default:
     return SDValue();
