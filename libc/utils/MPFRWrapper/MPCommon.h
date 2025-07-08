@@ -178,8 +178,7 @@ public:
       : mpfr_precision(precision),
         mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
     mpfr_init2(value, mpfr_precision);
-    // BFloat16::as_float() requires no rounding
-    mpfr_set_flt(value, x.as_float(), mpfr_rounding);
+    mpfr_set_flt(value, static_cast<float>(x), mpfr_rounding);
   }
 
   MPFRNumber(const MPFRNumber &other);

@@ -9,36 +9,50 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_BFLOAT16_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_BFLOAT16_H
 
-#include "src/__support/CPP/bit.h"                 // cpp::bit_cast
-#include "src/__support/CPP/type_traits.h"         // cpp::is_floating_point_v
-#include "src/__support/FPUtil/cast.h"             // fputil::cast
-#include "src/__support/macros/config.h"           // LIBC_NAMESPACE_DECL
-#include "src/__support/macros/properties/types.h" // bfloat16
+#include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/type_traits.h"
+#include "src/__support/FPUtil/cast.h"
+#include "src/__support/FPUtil/dyadic_float.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h"
 
-#include <stdint.h> // uint16_t
+#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
+
 struct BFloat16 {
   uint16_t bits;
 
-  BFloat16() = default;
+  LIBC_INLINE BFloat16() = default;
 
-  constexpr explicit BFloat16(uint16_t bits) : bits(bits) {}
+  LIBC_INLINE constexpr explicit BFloat16(uint16_t bits) : bits(bits) {}
 
-  // TODO: verify this if correct for integers and similar types.
-  template <typename T> constexpr explicit BFloat16(T value) {
+  template <typename T> LIBC_INLINE constexpr explicit BFloat16(T value) {
     if constexpr (cpp::is_floating_point_v<T>) {
       bits = fputil::cast<bfloat16>(value).bits;
+    } else if constexpr (cpp::is_integral_v<T>) {
+      Sign sign = Sign::POS;
+
+      if constexpr (cpp::is_signed_v<T>) {
+        if (value < 0) {
+          sign = Sign::NEG;
+          value = -value;
+        }
+      }
+
+      fputil::DyadicFloat<cpp::numeric_limits<cpp::make_unsigned_t<T>>::digits>
+          xd(sign, 0, value);
+      bits = xd.template as<bfloat16, /*ShouldSignalExceptions=*/true>().bits;
+
     } else {
       bits = fputil::cast<bfloat16>(static_cast<float>(value)).bits;
     }
   }
 
-  constexpr bool operator==(const BFloat16 other) const {
-    return bits == other.bits;
-  }
-
-  constexpr float as_float() const {
+  template <cpp::enable_if_t<fputil::get_fp_type<float>() ==
+                                 fputil::FPType::IEEE754_Binary32,
+                             int> = 0>
+  operator float() const {
     uint32_t x_bits = static_cast<uint32_t>(bits) << 16U;
     return cpp::bit_cast<float>(x_bits);
   }
