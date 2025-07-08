@@ -43,7 +43,8 @@ bool cuf::isCUDADeviceContext(mlir::Operation *op) {
 // for it.
 // If the insertion point is inside an OpenACC region op, it is considered
 // device context.
-bool cuf::isCUDADeviceContext(mlir::Region &region, bool isStdParEnabled) {
+bool cuf::isCUDADeviceContext(mlir::Region &region,
+                              bool isDoConcurrentOffloadEnabled) {
   if (region.getParentOfType<cuf::KernelOp>())
     return true;
   if (region.getParentOfType<mlir::acc::ComputeRegionOpInterface>())
@@ -56,7 +57,8 @@ bool cuf::isCUDADeviceContext(mlir::Region &region, bool isStdParEnabled) {
              cudaProcAttr.getValue() != cuf::ProcAttribute::HostDevice;
     }
   }
-  if (isStdParEnabled && region.getParentOfType<fir::DoConcurrentLoopOp>())
+  if (isDoConcurrentOffloadEnabled &&
+      region.getParentOfType<fir::DoConcurrentLoopOp>())
     return true;
   return false;
 }

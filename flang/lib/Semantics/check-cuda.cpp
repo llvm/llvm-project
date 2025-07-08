@@ -729,14 +729,14 @@ void CUDAChecker::Leave(const parser::OpenACCLoopConstruct &) {
 void CUDAChecker::Enter(const parser::DoConstruct &x) {
   if (x.IsDoConcurrent() &&
       context_.foldingContext().languageFeatures().IsEnabled(
-          common::LanguageFeature::StdPar)) {
+          common::LanguageFeature::DoConcurrentOffload)) {
     ++deviceConstructDepth_;
   }
 }
 void CUDAChecker::Leave(const parser::DoConstruct &x) {
   if (x.IsDoConcurrent() &&
       context_.foldingContext().languageFeatures().IsEnabled(
-          common::LanguageFeature::StdPar)) {
+          common::LanguageFeature::DoConcurrentOffload)) {
     --deviceConstructDepth_;
   }
 }

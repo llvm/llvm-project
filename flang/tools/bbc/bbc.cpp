@@ -223,9 +223,10 @@ static llvm::cl::opt<bool> enableCUDA("fcuda",
                                       llvm::cl::desc("enable CUDA Fortran"),
                                       llvm::cl::init(false));
 
-static llvm::cl::opt<bool> enableStdPar("stdpar",
-                                        llvm::cl::desc("enable stdpar"),
-                                        llvm::cl::init(false));
+static llvm::cl::opt<bool>
+    enableDoConcurrentOffload("fdoconcurrent-offload",
+                              llvm::cl::desc("enable do concurrent offload"),
+                              llvm::cl::init(false));
 
 static llvm::cl::opt<bool>
     disableCUDAWarpFunction("fcuda-disable-warp-function",
@@ -612,8 +613,9 @@ int main(int argc, char **argv) {
     options.features.Enable(Fortran::common::LanguageFeature::CUDA);
   }
 
-  if (enableStdPar) {
-    options.features.Enable(Fortran::common::LanguageFeature::StdPar);
+  if (enableDoConcurrentOffload) {
+    options.features.Enable(
+        Fortran::common::LanguageFeature::DoConcurrentOffload);
   }
 
   if (disableCUDAWarpFunction) {

@@ -4887,8 +4887,9 @@ private:
     fir::FirOpBuilder &builder = getFirOpBuilder();
 
     bool isInDeviceContext = cuf::isCUDADeviceContext(
-        builder.getRegion(), getFoldingContext().languageFeatures().IsEnabled(
-                                 Fortran::common::LanguageFeature::StdPar));
+        builder.getRegion(),
+        getFoldingContext().languageFeatures().IsEnabled(
+            Fortran::common::LanguageFeature::DoConcurrentOffload));
 
     bool isCUDATransfer =
         IsCUDADataTransfer(assign.lhs, assign.rhs) && !isInDeviceContext;
