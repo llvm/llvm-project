@@ -506,7 +506,15 @@ void clang::FormatASTNodeDiagnosticArgument(
     case DiagnosticsEngine::ak_attr: {
       const Attr *At = reinterpret_cast<Attr *>(Val);
       assert(At && "Received null Attr object!");
-      OS << '\'' << At->getSpelling() << '\'';
+
+      OS << '\'';
+      if (At->hasScope()) {
+        OS << At->getNormalizedFullName(At->getScopeName()->getName(),
+                                        At->getSpelling());
+      } else {
+        OS << At->getSpelling();
+      }
+      OS << '\'';
       NeedQuotes = false;
       break;
     }
@@ -514,6 +522,20 @@ void clang::FormatASTNodeDiagnosticArgument(
       const Expr *E = reinterpret_cast<Expr *>(Val);
       assert(E && "Received null Expr!");
       E->printPretty(OS, /*Helper=*/nullptr, Context.getPrintingPolicy());
+      break;
+    }
+    case DiagnosticsEngine::ak_attr_info: {
+      AttributeCommonInfo *AT = reinterpret_cast<AttributeCommonInfo *>(Val);
+      assert(AT && "Received null AttributeCommonInfo object!");
+
+      OS << '\'';
+      if (AT->isStandardAttributeSyntax()) {
+        OS << AT->getNormalizedFullName();
+      } else {
+        OS << AT->getAttrName()->getName();
+      }
+      OS << '\'';
+      NeedQuotes = false;
       break;
     }
   }

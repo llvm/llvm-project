@@ -72,7 +72,6 @@ ForceFastISel("arm-force-fast-isel",
 /// so that we can use initializer lists for subtarget initialization.
 ARMSubtarget &ARMSubtarget::initializeSubtargetDependencies(StringRef CPU,
                                                             StringRef FS) {
-  initializeEnvironment();
   initSubtargetFeatures(CPU, FS);
   return *this;
 }
@@ -135,19 +134,6 @@ const RegisterBankInfo *ARMSubtarget::getRegBankInfo() const {
 bool ARMSubtarget::isXRaySupported() const {
   // We don't currently suppport Thumb, but Windows requires Thumb.
   return hasV6Ops() && hasARMOps() && !isTargetWindows();
-}
-
-void ARMSubtarget::initializeEnvironment() {
-  // MCAsmInfo isn't always present (e.g. in opt) so we can't initialize this
-  // directly from it, but we can try to make sure they're consistent when both
-  // available.
-  UseSjLjEH = (isTargetDarwin() && !isTargetWatchABI() &&
-               Options.ExceptionModel == ExceptionHandling::None) ||
-              Options.ExceptionModel == ExceptionHandling::SjLj;
-  assert((!TM.getMCAsmInfo() ||
-          (TM.getMCAsmInfo()->getExceptionHandlingType() ==
-           ExceptionHandling::SjLj) == UseSjLjEH) &&
-         "inconsistent sjlj choice between CodeGen and MC");
 }
 
 void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
