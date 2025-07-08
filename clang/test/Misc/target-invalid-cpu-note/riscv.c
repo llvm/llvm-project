@@ -29,6 +29,7 @@
 // RISCV64-NEXT: note: valid target CPU values are:
 // RISCV64-SAME: {{^}} andes-ax25
 // RISCV64-SAME: {{^}}, andes-ax45
+// RISCV64-SAME: {{^}}, andes-ax45mpv
 // RISCV64-SAME: {{^}}, andes-nx45
 // RISCV64-SAME: {{^}}, generic-rv64
 // RISCV64-SAME: {{^}}, mips-p8700
@@ -89,6 +90,7 @@
 // TUNE-RISCV64-NEXT: note: valid target CPU values are:
 // TUNE-RISCV64-SAME: {{^}} andes-ax25
 // TUNE-RISCV64-SAME: {{^}}, andes-ax45
+// TUNE-RISCV64-SAME: {{^}}, andes-ax45mpv
 // TUNE-RISCV64-SAME: {{^}}, andes-nx45
 // TUNE-RISCV64-SAME: {{^}}, generic-rv64
 // TUNE-RISCV64-SAME: {{^}}, mips-p8700

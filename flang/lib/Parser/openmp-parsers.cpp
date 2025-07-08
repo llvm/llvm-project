@@ -1004,6 +1004,8 @@ TYPE_PARSER( //
     "IF" >> construct<OmpClause>(construct<OmpClause::If>(
                 parenthesized(Parser<OmpIfClause>{}))) ||
     "INBRANCH" >> construct<OmpClause>(construct<OmpClause::Inbranch>()) ||
+    "INDIRECT" >> construct<OmpClause>(construct<OmpClause::Indirect>(
+                      maybe(parenthesized(scalarLogicalExpr)))) ||
     "INIT" >> construct<OmpClause>(construct<OmpClause::Init>(
                   parenthesized(Parser<OmpInitClause>{}))) ||
     "INCLUSIVE" >> construct<OmpClause>(construct<OmpClause::Inclusive>(
@@ -1551,7 +1553,7 @@ static OmpMapperSpecifier ConstructOmpMapperSpecifier(
         std::get<Name>(derived->t).ToString() + llvm::omp::OmpDefaultMapperName,
         std::move(typeSpec), std::move(varName)};
   }
-  return OmpMapperSpecifier{std::string("omp.default.mapper"),
+  return OmpMapperSpecifier{std::string(llvm::omp::OmpDefaultMapperName),
       std::move(typeSpec), std::move(varName)};
 }
 

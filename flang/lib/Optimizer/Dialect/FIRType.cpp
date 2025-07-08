@@ -261,6 +261,8 @@ mlir::Type dyn_cast_ptrOrBoxEleTy(mlir::Type t) {
 }
 
 static bool hasDynamicSize(fir::RecordType recTy) {
+  if (recTy.getLenParamList().empty())
+    return false;
   for (auto field : recTy.getTypeList()) {
     if (auto arr = mlir::dyn_cast<fir::SequenceType>(field.second)) {
       if (sequenceWithNonConstantShape(arr))
@@ -1006,7 +1008,7 @@ mlir::Type fir::RecordType::parse(mlir::AsmParser &parser) {
     return {};
   RecordType result = RecordType::get(parser.getContext(), name);
 
-  RecordType::TypeList lenParamList;
+  RecordType::TypeVector lenParamList;
   if (!parser.parseOptionalLParen()) {
     while (true) {
       llvm::StringRef lenparam;
@@ -1024,7 +1026,7 @@ mlir::Type fir::RecordType::parse(mlir::AsmParser &parser) {
       return {};
   }
 
-  RecordType::TypeList typeList;
+  RecordType::TypeVector typeList;
   if (!parser.parseOptionalLess()) {
     result.pack(true);
   }

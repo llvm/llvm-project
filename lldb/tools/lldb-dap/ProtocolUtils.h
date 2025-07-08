@@ -13,6 +13,7 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_PROTOCOL_PROTOCOL_UTILS_H
 #define LLDB_TOOLS_LLDB_DAP_PROTOCOL_PROTOCOL_UTILS_H
 
+#include "ExceptionBreakpoint.h"
 #include "Protocol/ProtocolTypes.h"
 
 #include "lldb/API/SBAddress.h"
@@ -25,25 +26,14 @@ namespace lldb_dap {
 ///     The SBFileSpec to use when populating out the "Source" object
 ///
 /// \return
-///     A "Source" JSON object that follows the formal JSON
+///     An optional "Source" JSON object that follows the formal JSON
 ///     definition outlined by Microsoft.
-protocol::Source CreateSource(const lldb::SBFileSpec &file);
-
-/// Create a "Source" JSON object as described in the debug adapter definition.
-///
-/// \param[in] address
-///     The address to use when populating out the "Source" object.
-///
-/// \param[in] target
-///     The target that has the address.
-///
-/// \return
-///     A "Source" JSON object that follows the formal JSON
-///     definition outlined by Microsoft.
-protocol::Source CreateSource(lldb::SBAddress address, lldb::SBTarget &target);
+std::optional<protocol::Source> CreateSource(const lldb::SBFileSpec &file);
 
 /// Checks if the given source is for assembly code.
 bool IsAssemblySource(const protocol::Source &source);
+
+bool DisplayAssemblySource(lldb::SBDebugger &debugger, lldb::SBAddress address);
 
 /// Get the address as a 16-digit hex string, e.g. "0x0000000000012345"
 std::string GetLoadAddressString(const lldb::addr_t addr);
@@ -73,6 +63,18 @@ protocol::Thread CreateThread(lldb::SBThread &thread, lldb::SBFormat &format);
 /// Returns the set of threads associated with the process.
 std::vector<protocol::Thread> GetThreads(lldb::SBProcess process,
                                          lldb::SBFormat &format);
+
+/// Create a "ExceptionBreakpointsFilter" JSON object as described in
+/// the debug adapter definition.
+///
+/// \param[in] bp
+///     The exception breakpoint object to use
+///
+/// \return
+///     A "ExceptionBreakpointsFilter" JSON object with that follows
+///     the formal JSON definition outlined by Microsoft.
+protocol::ExceptionBreakpointsFilter
+CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp);
 
 } // namespace lldb_dap
 

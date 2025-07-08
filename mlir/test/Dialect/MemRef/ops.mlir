@@ -174,6 +174,9 @@ memref.global "private" @memref3 : memref<2xf32>  = uninitialized
 // CHECK-LABEL: memref.global "private" constant @memref4 : memref<2xf32> = uninitialized
 memref.global "private" constant @memref4 : memref<2xf32>  = uninitialized
 
+// CHECK-LABEL: memref.global "private" constant @memref5 : memref<1xf16, 42 : i32> = dense<1.000000e+00>
+"memref.global"() <{constant, initial_value = dense<1.000000e+00> : tensor<1xf16>, sym_name = "memref5", sym_visibility = "private", type = memref<1xf16, 42 : i32>}> : () -> ()
+
 // CHECK-LABEL: func @read_global_memref
 func.func @read_global_memref() {
   %0 = memref.get_global @memref0 : memref<2xf32>

@@ -76,7 +76,7 @@ class MatcherGen {
   /// NextRecordedOperandNo - As we emit opcodes to record matched values in
   /// the RecordedNodes array, this keeps track of which slot will be next to
   /// record into.
-  unsigned NextRecordedOperandNo;
+  unsigned NextRecordedOperandNo = 0;
 
   /// MatchedChainNodes - This maintains the position in the recorded nodes
   /// array of all of the recorded input nodes that have chains.
@@ -94,11 +94,11 @@ class MatcherGen {
   SmallVector<std::pair<const Record *, unsigned>, 2> PhysRegInputs;
 
   /// Matcher - This is the top level of the generated matcher, the result.
-  Matcher *TheMatcher;
+  Matcher *TheMatcher = nullptr;
 
   /// CurPredicate - As we emit matcher nodes, this points to the latest check
   /// which should have future checks stuck into its Next position.
-  Matcher *CurPredicate;
+  Matcher *CurPredicate = nullptr;
 
 public:
   MatcherGen(const PatternToMatch &pattern, const CodeGenDAGPatterns &cgp);
@@ -147,8 +147,7 @@ private:
 
 MatcherGen::MatcherGen(const PatternToMatch &pattern,
                        const CodeGenDAGPatterns &cgp)
-    : Pattern(pattern), CGP(cgp), NextRecordedOperandNo(0), TheMatcher(nullptr),
-      CurPredicate(nullptr) {
+    : Pattern(pattern), CGP(cgp) {
   // We need to produce the matcher tree for the patterns source pattern.  To
   // do this we need to match the structure as well as the types.  To do the
   // type matching, we want to figure out the fewest number of type checks we

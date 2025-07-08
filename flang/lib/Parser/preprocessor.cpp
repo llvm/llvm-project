@@ -1276,15 +1276,19 @@ static std::int64_t ExpressionValue(const TokenSequence &token,
       left = right >= 64 ? 0 : left >> right;
       break;
     case BITAND:
-    case AND:
       left = left & right;
       break;
     case BITXOR:
       left = left ^ right;
       break;
     case BITOR:
-    case OR:
       left = left | right;
+      break;
+    case AND:
+      left = left && right;
+      break;
+    case OR:
+      left = left || right;
       break;
     case LT:
       left = -(left < right);

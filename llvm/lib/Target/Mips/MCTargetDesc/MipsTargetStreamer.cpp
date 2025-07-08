@@ -16,7 +16,6 @@
 #include "MipsBaseInfo.h"
 #include "MipsELFStreamer.h"
 #include "MipsInstPrinter.h"
-#include "MipsMCExpr.h"
 #include "MipsMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -1035,43 +1034,43 @@ MCELFStreamer &MipsTargetELFStreamer::getStreamer() {
 
 void MipsTargetELFStreamer::emitGPRel32Value(const MCExpr *Value) {
   MCDataFragment *DF = getStreamer().getOrCreateDataFragment();
-  DF->getFixups().push_back(MCFixup::create(
-      DF->getContents().size(), Value, MCFixupKind(Mips::fixup_Mips_GPREL32)));
+  DF->addFixup(MCFixup::create(DF->getContents().size(), Value,
+                               Mips::fixup_Mips_GPREL32));
   DF->appendContents(4, 0);
 }
 
 void MipsTargetELFStreamer::emitGPRel64Value(const MCExpr *Value) {
   MCDataFragment *DF = getStreamer().getOrCreateDataFragment();
-  DF->getFixups().push_back(MCFixup::create(
-      DF->getContents().size(), Value, MCFixupKind(Mips::fixup_Mips_GPREL32)));
+  DF->addFixup(MCFixup::create(DF->getContents().size(), Value,
+                               Mips::fixup_Mips_GPREL32));
   DF->appendContents(8, 0);
 }
 
 void MipsTargetELFStreamer::emitDTPRel32Value(const MCExpr *Value) {
   MCDataFragment *DF = getStreamer().getOrCreateDataFragment();
-  DF->getFixups().push_back(MCFixup::create(
-      DF->getContents().size(), Value, MCFixupKind(Mips::fixup_Mips_DTPREL32)));
+  DF->addFixup(MCFixup::create(DF->getContents().size(), Value,
+                               Mips::fixup_Mips_DTPREL32));
   DF->appendContents(4, 0);
 }
 
 void MipsTargetELFStreamer::emitDTPRel64Value(const MCExpr *Value) {
   MCDataFragment *DF = getStreamer().getOrCreateDataFragment();
-  DF->getFixups().push_back(MCFixup::create(
-      DF->getContents().size(), Value, MCFixupKind(Mips::fixup_Mips_DTPREL64)));
+  DF->addFixup(MCFixup::create(DF->getContents().size(), Value,
+                               Mips::fixup_Mips_DTPREL64));
   DF->appendContents(8, 0);
 }
 
 void MipsTargetELFStreamer::emitTPRel32Value(const MCExpr *Value) {
   MCDataFragment *DF = getStreamer().getOrCreateDataFragment();
-  DF->getFixups().push_back(MCFixup::create(
-      DF->getContents().size(), Value, MCFixupKind(Mips::fixup_Mips_TPREL32)));
+  DF->addFixup(MCFixup::create(DF->getContents().size(), Value,
+                               Mips::fixup_Mips_TPREL32));
   DF->appendContents(4, 0);
 }
 
 void MipsTargetELFStreamer::emitTPRel64Value(const MCExpr *Value) {
   MCDataFragment *DF = getStreamer().getOrCreateDataFragment();
-  DF->getFixups().push_back(MCFixup::create(
-      DF->getContents().size(), Value, MCFixupKind(Mips::fixup_Mips_TPREL64)));
+  DF->addFixup(MCFixup::create(DF->getContents().size(), Value,
+                               Mips::fixup_Mips_TPREL64));
   DF->appendContents(8, 0);
 }
 
@@ -1266,9 +1265,7 @@ void MipsTargetELFStreamer::emitDirectiveCpLoad(unsigned RegNo) {
   MCInst TmpInst;
   TmpInst.setOpcode(Mips::LUi);
   TmpInst.addOperand(MCOperand::createReg(GPReg));
-  const MCExpr *HiSym = MipsMCExpr::create(
-      Mips::S_HI, MCSymbolRefExpr::create(GP_Disp, MCA.getContext()),
-      MCA.getContext());
+  auto *HiSym = MCSpecifierExpr::create(GP_Disp, Mips::S_HI, MCA.getContext());
   TmpInst.addOperand(MCOperand::createExpr(HiSym));
   getStreamer().emitInstruction(TmpInst, STI);
 
@@ -1277,9 +1274,7 @@ void MipsTargetELFStreamer::emitDirectiveCpLoad(unsigned RegNo) {
   TmpInst.setOpcode(Mips::ADDiu);
   TmpInst.addOperand(MCOperand::createReg(GPReg));
   TmpInst.addOperand(MCOperand::createReg(GPReg));
-  const MCExpr *LoSym = MipsMCExpr::create(
-      Mips::S_LO, MCSymbolRefExpr::create(GP_Disp, MCA.getContext()),
-      MCA.getContext());
+  auto *LoSym = MCSpecifierExpr::create(GP_Disp, Mips::S_LO, MCA.getContext());
   TmpInst.addOperand(MCOperand::createExpr(LoSym));
   getStreamer().emitInstruction(TmpInst, STI);
 
@@ -1342,12 +1337,12 @@ void MipsTargetELFStreamer::emitDirectiveCpsetup(unsigned RegNo,
     emitRRI(Mips::SD, GPReg, Mips::SP, RegOrOffset, SMLoc(), &STI);
   }
 
-  const MipsMCExpr *HiExpr = MipsMCExpr::createGpOff(
-      Mips::S_HI, MCSymbolRefExpr::create(&Sym, MCA.getContext()),
-      MCA.getContext());
-  const MipsMCExpr *LoExpr = MipsMCExpr::createGpOff(
-      Mips::S_LO, MCSymbolRefExpr::create(&Sym, MCA.getContext()),
-      MCA.getContext());
+  auto *HiExpr =
+      Mips::createGpOff(MCSymbolRefExpr::create(&Sym, MCA.getContext()),
+                        Mips::S_HI, MCA.getContext());
+  auto *LoExpr =
+      Mips::createGpOff(MCSymbolRefExpr::create(&Sym, MCA.getContext()),
+                        Mips::S_LO, MCA.getContext());
 
   // lui $gp, %hi(%neg(%gp_rel(funcSym)))
   emitRX(Mips::LUi, GPReg, MCOperand::createExpr(HiExpr), SMLoc(), &STI);
