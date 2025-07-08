@@ -248,6 +248,8 @@ inline bool NeedCUDAAlloc(const Symbol &sym) {
   return false;
 }
 
+bool CanCUDASymbolBeGlobal(const Symbol &sym);
+
 const Scope *FindCUDADeviceContext(const Scope *);
 std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *);
 
