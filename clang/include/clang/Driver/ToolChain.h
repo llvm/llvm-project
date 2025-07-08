@@ -228,29 +228,26 @@ protected:
   static void addSystemFrameworkInclude(const llvm::opt::ArgList &DriverArgs,
                                         llvm::opt::ArgStringList &CC1Args,
                                         const Twine &Path);
-
   static void addExternCSystemInclude(const llvm::opt::ArgList &DriverArgs,
                                       llvm::opt::ArgStringList &CC1Args,
                                       const Twine &Path);
-  static std::string concat(StringRef Path, const Twine &A, const Twine &B = "",
-                            const Twine &C = "", const Twine &D = "");
-  ///@}
-
-public:
-  static void addSystemInclude(const llvm::opt::ArgList &DriverArgs,
-                               llvm::opt::ArgStringList &CC1Args,
-                               const Twine &Path);
   static void
-  addExternCSystemIncludeIfExists(const llvm::opt::ArgList &DriverArgs,
-                                  llvm::opt::ArgStringList &CC1Args,
-                                  const Twine &Path);
+      addExternCSystemIncludeIfExists(const llvm::opt::ArgList &DriverArgs,
+                                      llvm::opt::ArgStringList &CC1Args,
+                                      const Twine &Path);
   static void addSystemFrameworkIncludes(const llvm::opt::ArgList &DriverArgs,
                                          llvm::opt::ArgStringList &CC1Args,
                                          ArrayRef<StringRef> Paths);
   static void addSystemIncludes(const llvm::opt::ArgList &DriverArgs,
                                 llvm::opt::ArgStringList &CC1Args,
                                 ArrayRef<StringRef> Paths);
-
+  static std::string concat(StringRef Path, const Twine &A, const Twine &B = "",
+                            const Twine &C = "", const Twine &D = "");
+  ///@}
+public:
+  static void addSystemInclude(const llvm::opt::ArgList &DriverArgs,
+                               llvm::opt::ArgStringList &CC1Args,
+                               const Twine &Path);
   virtual ~ToolChain();
 
   // Accessors

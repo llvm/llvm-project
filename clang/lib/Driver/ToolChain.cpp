@@ -1370,6 +1370,14 @@ ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
   return *cxxStdlibType;
 }
 
+/// Utility function to add a system framework directory to CC1 arguments.
+void ToolChain::addSystemFrameworkInclude(const llvm::opt::ArgList &DriverArgs,
+                                          llvm::opt::ArgStringList &CC1Args,
+                                          const Twine &Path) {
+  CC1Args.push_back("-internal-iframework");
+  CC1Args.push_back(DriverArgs.MakeArgString(Path));
+}
+
 /// Utility function to add a system include directory with extern "C"
 /// semantics to CC1 arguments.
 ///
@@ -1397,14 +1405,6 @@ void ToolChain::addExternCSystemIncludeIfExists(const ArgList &DriverArgs,
                                             ArgStringList &CC1Args,
                                             const Twine &Path) {
   CC1Args.push_back("-internal-isystem");
-  CC1Args.push_back(DriverArgs.MakeArgString(Path));
-}
-
-/// Utility function to add a system framework directory to CC1 arguments.
-void ToolChain::addSystemFrameworkInclude(const llvm::opt::ArgList &DriverArgs,
-                                          llvm::opt::ArgStringList &CC1Args,
-                                          const Twine &Path) {
-  CC1Args.push_back("-internal-iframework");
   CC1Args.push_back(DriverArgs.MakeArgString(Path));
 }
 
