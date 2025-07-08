@@ -1,63 +1,63 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - %s -verify
 // RUN: not %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - %s 2>&1 | FileCheck %s
 
-// expected-note@+2 {{overlapping resource range here}}
-// expected-error@+1 {{resource ranges b[42;42] and b[42;42] overlap within space = 0 and visibility = All}}
+// expected-error@+2 {{resource ranges b[42;42] and b[42;42] overlap within space = 0 and visibility = All}}
+// expected-note@+1 {{overlapping resource range here}}
 [RootSignature("CBV(b42), CBV(b42)")]
 void bad_root_signature_0() {}
 
-// expected-note@+2 {{overlapping resource range here}}
-// expected-error@+1 {{resource ranges t[0;0] and t[0;0] overlap within space = 3 and visibility = All}}
+// expected-error@+2 {{resource ranges t[0;0] and t[0;0] overlap within space = 3 and visibility = All}}
+// expected-note@+1 {{overlapping resource range here}}
 [RootSignature("SRV(t0, space = 3), SRV(t0, space = 3)")]
 void bad_root_signature_1() {}
 
-// expected-note@+2 {{overlapping resource range here}}
-// expected-error@+1 {{resource ranges u[0;0] and u[0;0] overlap within space = 0 and visibility = Pixel}}
+// expected-error@+2 {{resource ranges u[0;0] and u[0;0] overlap within space = 0 and visibility = Pixel}}
+// expected-note@+1 {{overlapping resource range here}}
 [RootSignature("UAV(u0, visibility = SHADER_VISIBILITY_PIXEL), UAV(u0, visibility = SHADER_VISIBILITY_PIXEL)")]
 void bad_root_signature_2() {}
 
-// expected-note@+2 {{overlapping resource range here}}
-// expected-error@+1 {{resource ranges u[0;0] and u[0;0] overlap within space = 0 and visibility = Pixel}}
+// expected-error@+2 {{resource ranges u[0;0] and u[0;0] overlap within space = 0 and visibility = Pixel}}
+// expected-note@+1 {{overlapping resource range here}}
 [RootSignature("UAV(u0, visibility = SHADER_VISIBILITY_ALL), UAV(u0, visibility = SHADER_VISIBILITY_PIXEL)")]
 void bad_root_signature_3() {}
 
-// expected-note@+2 {{overlapping resource range here}}
-// expected-error@+1 {{resource ranges u[0;0] and u[0;0] overlap within space = 0 and visibility = Pixel}}
+// expected-error@+2 {{resource ranges u[0;0] and u[0;0] overlap within space = 0 and visibility = Pixel}}
+// expected-note@+1 {{overlapping resource range here}}
 [RootSignature("UAV(u0, visibility = SHADER_VISIBILITY_PIXEL), UAV(u0, visibility = SHADER_VISIBILITY_ALL)")]
 void bad_root_signature_4() {}
 
-// expected-note@+2 {{overlapping resource range here}}
-// expected-error@+1 {{resource ranges b[0;0] and b[0;0] overlap within space = 0 and visibility = All}}
+// expected-error@+2 {{resource ranges b[0;0] and b[0;0] overlap within space = 0 and visibility = All}}
+// expected-note@+1 {{overlapping resource range here}}
 [RootSignature("RootConstants(num32BitConstants=4, b0), RootConstants(num32BitConstants=2, b0)")]
 void bad_root_signature_5() {}
 
-// expected-note@+2 {{overlapping resource range here}}
-// expected-error@+1 {{resource ranges s[3;3] and s[3;3] overlap within space = 0 and visibility = All}}
+// expected-error@+2 {{resource ranges s[3;3] and s[3;3] overlap within space = 0 and visibility = All}}
+// expected-note@+1 {{overlapping resource range here}}
 [RootSignature("StaticSampler(s3), StaticSampler(s3)")]
 void bad_root_signature_6() {}
 
-// expected-note@+2 {{overlapping resource range here}}
-// expected-error@+1 {{resource ranges t[2;5] and t[0;3] overlap within space = 0 and visibility = All}}
+// expected-error@+2 {{resource ranges t[2;5] and t[0;3] overlap within space = 0 and visibility = All}}
+// expected-note@+1 {{overlapping resource range here}}
 [RootSignature("DescriptorTable(SRV(t0, numDescriptors=4), SRV(t2, numDescriptors=4))")]
 void bad_root_signature_7() {}
 
-// expected-note@+2 {{overlapping resource range here}}
-// expected-error@+1 {{resource ranges u[2;5] and u[0;unbounded) overlap within space = 0 and visibility = Hull}}
+// expected-error@+2 {{resource ranges u[2;5] and u[0;unbounded) overlap within space = 0 and visibility = Hull}}
+// expected-note@+1 {{overlapping resource range here}}
 [RootSignature("DescriptorTable(UAV(u0, numDescriptors=unbounded), visibility = SHADER_VISIBILITY_HULL), DescriptorTable(UAV(u2, numDescriptors=4))")]
 void bad_root_signature_8() {}
 
-// expected-note@+2 {{overlapping resource range here}}
-// expected-error@+1 {{resource ranges b[0;2] and b[2;2] overlap within space = 0 and visibility = All}}
+// expected-error@+2 {{resource ranges b[0;2] and b[2;2] overlap within space = 0 and visibility = All}}
+// expected-note@+1 {{overlapping resource range here}}
 [RootSignature("RootConstants(num32BitConstants=4, b2), DescriptorTable(CBV(b0, numDescriptors=3))")]
 void bad_root_signature_9() {}
 
-// expected-note@+2 {{overlapping resource range here}}
-// expected-error@+1 {{resource ranges s[4;unbounded) and s[17;17] overlap within space = 0 and visibility = All}}
+// expected-error@+2 {{resource ranges s[4;unbounded) and s[17;17] overlap within space = 0 and visibility = All}}
+// expected-note@+1 {{overlapping resource range here}}
 [RootSignature("StaticSampler(s17), DescriptorTable(Sampler(s0, numDescriptors=3),Sampler(s4, numDescriptors=unbounded))")]
 void bad_root_signature_10() {}
 
-// expected-note@+2 {{overlapping resource range here}}
-// expected-error@+1 {{resource ranges b[45;45] and b[4;unbounded) overlap within space = 0 and visibility = Geometry}}
+// expected-error@+2 {{resource ranges b[45;45] and b[4;unbounded) overlap within space = 0 and visibility = Geometry}}
+// expected-note@+1 {{overlapping resource range here}}
 [RootSignature("DescriptorTable(CBV(b4, numDescriptors=unbounded)), CBV(b45, visibility = SHADER_VISIBILITY_GEOMETRY)")]
 void bad_root_signature_11() {}
 
@@ -68,13 +68,13 @@ void bad_root_signature_11() {}
  "  CBV(b0, numDescriptors = 8), " \
  ")"
 
-// expected-note@+2 {{overlapping resource range here}}
-// expected-error@+1 {{resource ranges b[0;7] and b[1;2] overlap within space = 0 and visibility = All}}
+// expected-error@+2 {{resource ranges b[0;7] and b[1;2] overlap within space = 0 and visibility = All}}
+// expected-note@+1 {{overlapping resource range here}}
 [RootSignature(ReportFirstOverlap)]
 void bad_root_signature_12() {}
 
-// expected-note@+2 {{overlapping resource range here}}
-// expected-error@+1 {{resource ranges s[2;2] and s[2;2] overlap within space = 0 and visibility = Vertex}}
+// expected-error@+2 {{resource ranges s[2;2] and s[2;2] overlap within space = 0 and visibility = Vertex}}
+// expected-note@+1 {{overlapping resource range here}}
 [RootSignature("StaticSampler(s2, visibility=SHADER_VISIBILITY_ALL), DescriptorTable(Sampler(s2), visibility=SHADER_VISIBILITY_VERTEX)")]
 void valid_root_signature_13() {}
 
@@ -99,7 +99,7 @@ void valid_root_signature_13() {}
 // CHECK-NEXT: [[@LINE-15]] | "  SRV(t22, numDescriptors = 1), "
 // CHECK-NEXT:              |    ^
 
-// expected-note@+2 {{overlapping resource range here}}
-// expected-error@+1 {{resource ranges t[17;23] and t[22;22] overlap within space = 0 and visibility = All}}
+// expected-error@+2 {{resource ranges t[17;23] and t[22;22] overlap within space = 0 and visibility = All}}
+// expected-note@+1 {{overlapping resource range here}}
 [RootSignature(DemoNoteSourceLocations)]
 void bad_root_signature_14() {}
