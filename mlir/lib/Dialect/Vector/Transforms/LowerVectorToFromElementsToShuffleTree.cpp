@@ -59,7 +59,7 @@ constexpr unsigned kMaxUnsigned = std::numeric_limits<unsigned>::max();
 ///      the `vector.from_elements` operand list.
 ///   2. Each vector at each level is used only once.
 ///   3. The number of levels in the tree is:
-///        ceil(log2(# `vector.to_elements` ops)).
+///        1 (input vectors) + ceil(max(1,log2(# `vector.to_elements` ops))).
 ///   4. Vectors at each level of the tree have the same vector length.
 ///   5. Vector positions that do not need to be shuffled are represented with
 ///      poison in the shuffle mask.
@@ -83,15 +83,15 @@ constexpr unsigned kMaxUnsigned = std::numeric_limits<unsigned>::max();
 ///     : vector<8xf32>, vector<8xf32>
 ///
 ///   Comments:
-///     * The shuffle tree has two levels:
+///     * The shuffle tree has three levels:
+///         - Level 0 = (%a, %b, %c, %c)
 ///         - Level 1 = (%shuffle0, %shuffle1)
 ///         - Level 2 = (%result)
 ///     * `%a` and `%b` are shuffled first because they appear first in the
 ///       `vector.from_elements` operand list (`%0#0` and `%1#0`).
 ///     * `%c` is shuffled with itself because the number of
 ///       `vector.from_elements` operands is odd.
-///     * The vector length for the first and second levels are 8 and 16,
-///       respectively.
+///     * The vector length for level 1 and level 2 are 8 and 16, respectively.
 ///     * `%shuffle1` uses poison values to match the vector length of its
 ///       tree level (8).
 ///
@@ -117,8 +117,7 @@ constexpr unsigned kMaxUnsigned = std::numeric_limits<unsigned>::max();
 ///       `vector.from_elements` operand list (`%2#2` and `%1#1`).
 ///     * `%a` is shuffled with itself because the number of
 ///       `vector.from_elements` operands is odd.
-///     * The vector length for the first and second levels are 8 and 9,
-///       respectively.
+///     * The vector length for level 1 and level 2 are 8 and 9, respectively.
 ///     * `%shuffle0` uses poison values to mark unused vector positions and
 ///       match the vector length of its tree level (8).
 ///
@@ -181,8 +180,8 @@ static void duplicateLastIfOdd(SmallVectorImpl<T> &values) {
 // ===---------------------------------------------------------------------===//
 
 /// Compute the intervals for all the vectors in the shuffle tree. The interval
-/// of a vector is the range of positions that vector contributes to the final
-/// output vector.
+/// interval of a vector is the range of positions that the vector contributes
+/// to the final output vector.
 ///
 /// Example: Arbitrary shuffling of 3x vector<5xf32> to vector<9xf32>:
 ///
@@ -192,8 +191,9 @@ static void duplicateLastIfOdd(SmallVectorImpl<T> &values) {
 ///   %3 = vector.from_elements %2#2, %1#1, %0#1, %0#1, %1#2,
 ///                             %2#2, %2#0, %1#1, %0#4 : vector<9xf32>
 ///
-/// Level 0 has 4 vectors (%2, %1, %0, %0, the last one is duplicated to make
-/// the number of inputs even) so we compute the interval for each vector:
+/// The shuffle tree has 3 levels. Level 0 has 4 vectors (%2, %1, %0, %0, the
+/// last one is duplicated to make the number of inputs even) so we compute the
+/// interval for each vector:
 ///
 ///    * intervalsPerLevel[0][0] = interval(%2) = [0,6]
 ///    * intervalsPerLevel[0][1] = interval(%1) = [1,7]
@@ -202,8 +202,15 @@ static void duplicateLastIfOdd(SmallVectorImpl<T> &values) {
 ///
 /// Level 1 has 2 vectors, resulting from the shuffling of %2 + %1 and %0 + %0
 /// so we compute the intervals for each vector at level 1 as:
-///    * intervalsPerLevel[1][0] = interval(%2) U interval(%1) = [0,7]
-///    * intervalsPerLevel[1][1] = interval(%0) U interval(%0) = [2,8]
+///    * intervalsPerLevel[1][0] = intervalsPerLevel[0][0] U
+///                                intervalsPerLevel[0][1] = [0,7]
+///    * intervalsPerLevel[1][1] = intervalsPerLevel[0][2] U
+///                                intervalsPerLevel[0][3] = [2,8]
+///
+/// Level 2 is the last level and only contains the output vector so the
+/// interval should be the whole output vector:
+///    * intervalsPerLevel[2][0] = intervalsPerLevel[1][0] U
+///                                intervalsPerLevel[1][1] = [0,8]
 ///
 void VectorShuffleTreeBuilder::computeShuffleTreeIntervals() {
   // Map `vector.to_elements` ops to their ordinal position in the
@@ -241,13 +248,14 @@ void VectorShuffleTreeBuilder::computeShuffleTreeIntervals() {
   unsigned outputNumElements =
       cast<VectorType>(fromElemsOp.getResult().getType()).getNumElements();
   for (unsigned level = 1; level < numLevels; ++level) {
+    bool isLastLevel = level == numLevels - 1;
     const auto &prevLevelIntervals = intervalsPerLevel[level - 1];
     SmallVector<Interval> currentLevelIntervals(
         llvm::divideCeil(prevLevelIntervals.size(), 2),
         {kMaxUnsigned, kMaxUnsigned});
 
-    for (size_t inputIdx = 0; inputIdx < currentLevelIntervals.size();
-         ++inputIdx) {
+    size_t currentNumLevels = currentLevelIntervals.size();
+    for (size_t inputIdx = 0; inputIdx < currentNumLevels; ++inputIdx) {
       auto &interval = currentLevelIntervals[inputIdx];
       const auto &prevLhsInterval = prevLevelIntervals[inputIdx * 2];
       const auto &prevRhsInterval = prevLevelIntervals[inputIdx * 2 + 1];
@@ -255,48 +263,57 @@ void VectorShuffleTreeBuilder::computeShuffleTreeIntervals() {
       // The interval of a vector at the current level is the union of the
       // intervals of the two vectors from the previous level being shuffled at
       // this level.
-      interval.first = std::min(prevLhsInterval.first, prevRhsInterval.first);
+      interval.first = prevLhsInterval.first;
       interval.second =
-          std::min(std::max(prevLhsInterval.second, prevRhsInterval.second),
-                   outputNumElements - 1);
+          std::max(prevLhsInterval.second, prevRhsInterval.second);
     }
 
-    duplicateLastIfOdd(currentLevelIntervals);
+    // Duplicate the last interval if the number of intervals is odd, except for
+    // the last level as it only contains the output vector, which doesn't have
+    // to be shuffled.
+    if (!isLastLevel)
+      duplicateLastIfOdd(currentLevelIntervals);
+
     intervalsPerLevel.push_back(std::move(currentLevelIntervals));
   }
 }
 
 /// Compute the uniform vector size for each level of the shuffle tree, given
-/// the intervals of the vectors at that level. The vector size of a level is
-/// the size of the widest interval resulting from shuffling each pair of
-/// vectors.
+/// the intervals of the vectors at each level. The vector size of a level is
+/// the size of the widest interval at that level.
 ///
 /// Example: Arbitrary shuffling of 3x vector<5xf32> to vector<9xf32>:
 ///
 ///   Intervals:
 ///     * Level 0: [0,6], [1,7], [2,8], [2,8]
 ///     * Level 1: [0,7], [2,8]
+///     * Level 2: [0,8]
 ///
 ///   Vector sizes:
 ///     * Level 0: Arbitrary sizes from input vectors.
-///     * Level 1: max(size_of([0,6] U [1,7] = [0,7]) = 8,
-///                    size_of([2,8] U [2,8] = [2,8]) = 7) = 8
-///
-///     * Level 2: max(size_of([0,7] U [2,8] = [0,8]) = 9) = 9
+///     * Level 1: max(size_of([0,7]) = 8, size_of([2,8]) = 7) = 8
+///     * Level 2: max(size_of([0,8]) = 9) = 9
 ///
 void VectorShuffleTreeBuilder::computeShuffleTreeVectorSizes() {
-  // Compute vector size for each level.
-  for (unsigned level = 1; level < numLevels; ++level) {
+  // Compute vector size for each level. There are two direct cases:
+  //   * First level: the vector size depends on the actual size of the input
+  //     vectors and it's allowed to be non-uniform. We set it to 0.
+  //   * Last level: the vector size is the output vector size so it doesn't
+  //     have to be computed using intervals.
+  vectorSizePerLevel.front() = 0;
+  vectorSizePerLevel.back() =
+      cast<VectorType>(fromElemsOp.getResult().getType()).getNumElements();
+
+  for (unsigned level = 1; level < numLevels - 1; ++level) {
     const auto &currentLevelIntervals = intervalsPerLevel[level];
     unsigned currentVectorSize = 1;
-    for (size_t i = 0; i < currentLevelIntervals.size(); i += 2) {
-      const auto &lhsInterval = currentLevelIntervals[i];
-      const auto &rhsInterval = currentLevelIntervals[i + 1];
-      unsigned combinedIntervalSize =
-          std::max(lhsInterval.second, rhsInterval.second) - lhsInterval.first +
-          1;
-      currentVectorSize = std::max(currentVectorSize, combinedIntervalSize);
+    size_t numIntervals = currentLevelIntervals.size();
+    for (size_t i = 0; i < numIntervals; ++i) {
+      const auto &interval = currentLevelIntervals[i];
+      unsigned intervalSize = interval.second - interval.first + 1;
+      currentVectorSize = std::max(currentVectorSize, intervalSize);
     }
+    assert(currentVectorSize > 0 && "vector size must be positive");
     vectorSizePerLevel[level] = currentVectorSize;
   }
 }
@@ -317,14 +334,13 @@ void VectorShuffleTreeBuilder::dump() {
     llvm::dbgs() << llvm::indent(indLv, kIndScale)
                  << "* Total levels: " << numLevels << "\n";
     llvm::dbgs() << llvm::indent(indLv, kIndScale)
-                 << "* Vector sizes per level: [";
+                 << "* Vector sizes per level: ";
     llvm::interleaveComma(vectorSizePerLevel, llvm::dbgs());
-    llvm::dbgs() << "]\n";
+    llvm::dbgs() << "\n";
     llvm::dbgs() << llvm::indent(indLv, kIndScale)
                  << "* Input intervals per level:\n";
     ++indLv;
-    for (const auto &[level, intervals] :
-         llvm::enumerate(inputIntervalsPerLevel)) {
+    for (const auto &[level, intervals] : llvm::enumerate(intervalsPerLevel)) {
       llvm::dbgs() << llvm::indent(indLv, kIndScale) << "* Level " << level
                    << ": ";
       llvm::interleaveComma(intervals, llvm::dbgs(),
@@ -359,12 +375,14 @@ void VectorShuffleTreeBuilder::dump() {
 ///
 /// The actual representation of the shuffle tree configuration is based on
 /// intervals of each vector at each level of the shuffle tree (i.e., %2, %1,
-/// %0, %0, %2_1, %0_0 and %2_1_0_0) and the output vector size for each level.
-/// For further details on intervals and output vector size computation, please,
-/// take a look at the corresponding utility functions.
+/// %0, %0, %2_1, %0_0 and %2_1_0_0) and the vector size for each level. For
+/// further details on intervals and vector size computation, please, take a
+/// look at the corresponding utility functions.
 LogicalResult VectorShuffleTreeBuilder::computeShuffleTree() {
-  // Initialize shuffle tree information based on its size.
-  numLevels = 1 + llvm::Log2_64_Ceil(toElemsDefs.size());
+  // Initialize shuffle tree information based on its size. For the number of
+  // levels, we add one to account for the input `vector.to_elements` as one
+  // tree level. We need the std::max(1) to account for a single element input.
+  numLevels = 1u + std::max(1u, llvm::Log2_64_Ceil(toElemsDefs.size()));
   vectorSizePerLevel.resize(numLevels, 0);
   intervalsPerLevel.reserve(numLevels);
 
@@ -394,7 +412,7 @@ LogicalResult VectorShuffleTreeBuilder::computeShuffleTree() {
 ///
 ///   =>
 ///
-///   // Level 0, vector length = 8
+///   // Level 1, vector length = 8
 ///   %2_1 = PermutationShuffleMask(%2, %1) = [2, 6, -1, -1, 7, 2, 0, 6]
 ///   %0_0 = PermutationShuffleMask(%0, %0) = [1, 1, -1, -1, -1, -1, 4, -1]
 ///
@@ -463,13 +481,13 @@ static SmallVector<int64_t> computePermutationShuffleMask(
 ///   %3 = vector.from_elements %2#2, %1#1, %0#1, %0#1, %1#2,
 ///                             %2#2, %2#0, %1#1, %0#4 : vector<9xf32>
 ///
-///   // Level 0, vector length = 8
+///   // Level 1, vector length = 8
 ///   %2_1 = PermutationShuffleMask(%2, %1) = [2, 6, -1, -1, 7, 2, 0, 6]
 ///   %0_0 = PermutationShuffleMask(%0, %0) = [1, 1, -1, -1, -1, -1, 4, -1]
 ///
 ///   =>
 ///
-///   // Level 1, vector length = 9
+///   // Level 2, vector length = 9
 ///   PropagationShuffleMask(%2_1, %0_0) = [0, 1, 8, 9, 4, 5, 6, 7, 14]
 ///
 /// TODO: Implement mask compression to reduce the number of intermediate poison
@@ -534,10 +552,11 @@ static SmallVector<int64_t> computePropagationShuffleMask(
 ///
 ///   with the pre-computed shuffle tree configuration:
 ///
-///     * Vector sizes per level: [8, 9]
+///     * Vector sizes per level: 0, 8, 9
 ///     * Input intervals per level:
 ///       * Level 0: [0,6], [1,7], [2,8], [2,8]
 ///       * Level 1: [0,7], [2,8]
+///       * Level 2: [0,8]
 ///
 ///   =>
 ///
@@ -551,12 +570,15 @@ static SmallVector<int64_t> computePropagationShuffleMask(
 /// The code generation consists of combining pairs of vectors at each level of
 /// the tree, using the pre-computed tree intervals and vector sizes. The
 /// algorithm generates two kinds of shuffle masks: permutation masks and
-/// permutation masks and propagation masks. Permutation masks are computed for
-/// the first level of the tree and permute the input vector elements to their
-/// relative position in the final output. Propagation masks are computed for
-/// subsequent levels and propagate the elements to the next level without
-/// permutation. For further details on the shuffle mask computation, please,
-/// take a look at the corresponding `computePermutationShuffleMask` and
+/// permutation masks and propagation masks:
+///   * Permutation masks are computed for the first level of the tree and
+///     permute the input vector elements to their relative position in the
+///     final output.
+///   * Propagation masks are computed for subsequent levels and propagate the
+///     elements to the next level without permutation.
+///
+/// For further details on the shuffle mask computation, please, take a look at
+/// the corresponding `computePermutationShuffleMask` and
 /// `computePropagationShuffleMask` functions.
 ///
 Value VectorShuffleTreeBuilder::generateShuffleTree(PatternRewriter &rewriter) {
@@ -587,7 +609,8 @@ Value VectorShuffleTreeBuilder::generateShuffleTree(PatternRewriter &rewriter) {
 
     // Process level input vectors in pairs.
     SmallVector<Value> levelOutputs;
-    for (size_t i = 0; i < levelInputs.size(); i += 2) {
+    for (size_t i = 0, numLevelInputs = levelInputs.size(); i < numLevelInputs;
+         i += 2) {
       Value lhsVector = levelInputs[i];
       Value rhsVector = levelInputs[i + 1];
       const Interval &lhsInterval = intervals[i];
