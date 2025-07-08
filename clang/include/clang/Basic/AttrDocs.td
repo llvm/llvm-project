@@ -3643,10 +3643,10 @@ make the function's CFI jump table canonical. See :ref:`the CFI documentation
   }];
 }
 
-def CFISaltDocs : Documentation {
+def KCFISaltDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-Use ``__attribute__((cfi_salt("<salt>")))`` on a function declaration, function
+Use ``__attribute__((kcfi_salt("<salt>")))`` on a function declaration, function
 definition, or typedef to help distinguish CFI hashes between functions with
 the same type signature.
 
@@ -3655,11 +3655,11 @@ Example use:
 .. code-block:: c
 
   // .h file:
-  #define __cfi_salt __attribute__((cfi_salt("vogon")))
+  #define __kcfi_salt __attribute__((kcfi_salt("vogon")))
 
   // Convenient typedefs to avoid nested declarator syntax.
   typedef int (*fptr_t)(void); // Non-salted function call.
-  typedef int (*fptr_salted_t)(void) __cfi_salt;
+  typedef int (*fptr_salted_t)(void) __kcfi_salt;
 
   struct widget_generator {
     fptr_t init;
@@ -3669,7 +3669,7 @@ Example use:
 
   // 1st .c file:
   static int internal_init(void) { /* ... */ }
-  static int internal_salted_exec(void) __cfi_salt { /* ... */ }
+  static int internal_salted_exec(void) __kcfi_salt { /* ... */ }
   static int internal_teardown(void) { /* ... */ }
 
   static struct widget_generator _generator = {
