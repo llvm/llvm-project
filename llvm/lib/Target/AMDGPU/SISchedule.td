@@ -537,5 +537,4 @@ def : HWWriteRes<WriteDoubleCvt,         [HWVALU, HWRC],   5>;
 def : HWWriteRes<WriteTrans64,           [HWVALU, HWTransVALU, HWRC], 7>;
 
 def : InstRW<[Write8PassWMMA],  (instregex "^V_WMMA_F64_16X16X4_F64")>;
-def : InstRW<[Write16PassWMMA], (instregex "^V_WMMA_F64_16X16X8_F64")>;
 } // SchedModel = GFX1251SpeedModel

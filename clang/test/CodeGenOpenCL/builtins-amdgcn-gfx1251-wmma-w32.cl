@@ -3,7 +3,6 @@
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1251 -target-feature +wavefrontsize32 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-GFX1251
 
 typedef double v8d   __attribute__((ext_vector_type(8)));
-typedef double v4d   __attribute__((ext_vector_type(4)));
 typedef double v2d   __attribute__((ext_vector_type(2)));
 typedef float  v8f   __attribute__((ext_vector_type(8)));
 typedef half   v8h   __attribute__((ext_vector_type(8)));
@@ -17,15 +16,4 @@ typedef half   v8h   __attribute__((ext_vector_type(8)));
 void test_amdgcn_wmma_f64_16x16x4_f64(global v8d* out, v2d a, v2d b, v8d c)
 {
   *out = __builtin_amdgcn_wmma_f64_16x16x4_f64(0, a, 0, b, 0, c);
-}
-
-// CHECK-GFX1251-LABEL: @test_amdgcn_wmma_f64_16x16x8_f64(
-// CHECK-GFX1251-NEXT:  entry:
-// CHECK-GFX1251-NEXT:    [[TMP0:%.*]] = tail call <8 x double> @llvm.amdgcn.wmma.f64.16x16x8.f64.v8f64.v4f64(i1 false, <4 x double> [[A:%.*]], i1 false, <4 x double> [[B:%.*]], i16 0, <8 x double> [[C:%.*]])
-// CHECK-GFX1251-NEXT:    store <8 x double> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 64, !tbaa [[TBAA4]]
-// CHECK-GFX1251-NEXT:    ret void
-//
-void test_amdgcn_wmma_f64_16x16x8_f64(global v8d* out, v4d a, v4d b, v8d c)
-{
-  *out = __builtin_amdgcn_wmma_f64_16x16x8_f64(0, a, 0, b, 0, c);
 }
