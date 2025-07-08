@@ -4865,22 +4865,24 @@ static SDValue getBitwiseToSrcModifierOp(SDValue N,
   EVT VT = RHS.getValueType();
   EVT FVT = getFloatVT(VT);
   SDLoc SL = SDLoc(N);
-  SDValue BC = DAG.getNode(ISD::BITCAST, SL, FVT, LHS);
 
   switch (Opc) {
   case ISD::XOR:
     if (CRHS->getAPIntValue().isSignMask())
-      return DAG.getNode(ISD::FNEG, SL, FVT, BC);
+      return DAG.getNode(ISD::FNEG, SL, FVT,
+                         DAG.getNode(ISD::BITCAST, SL, FVT, LHS));
     break;
   case ISD::OR:
     if (CRHS->getAPIntValue().isSignMask()) {
-      SDValue Abs = DAG.getNode(ISD::FABS, SL, FVT, BC);
+      SDValue Abs = DAG.getNode(ISD::FABS, SL, FVT,
+                                DAG.getNode(ISD::BITCAST, SL, FVT, LHS));
       return DAG.getNode(ISD::FNEG, SL, FVT, Abs);
     }
     break;
   case ISD::AND:
     if (CRHS->getAPIntValue().isMaxSignedValue())
-      return DAG.getNode(ISD::FABS, SL, FVT, BC);
+      return DAG.getNode(ISD::FABS, SL, FVT,
+                         DAG.getNode(ISD::BITCAST, SL, FVT, LHS));
     break;
   default:
     return SDValue();
