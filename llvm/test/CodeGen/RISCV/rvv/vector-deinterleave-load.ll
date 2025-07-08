@@ -49,6 +49,32 @@ define {<vscale x 16 x i8>, <vscale x 16 x i8>} @vector_deinterleave_load_nxv16i
   ret {<vscale x 16 x i8>, <vscale x 16 x i8>} %res1
 }
 
+define <vscale x 16 x i8> @vector_deinterleave_load_nxv16i8_nxv32i8_oneactive(ptr %p) {
+; CHECK-LABEL: vector_deinterleave_load_nxv16i8_nxv32i8_oneactive:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl4r.v v12, (a0)
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v12, 0
+; CHECK-NEXT:    ret
+  %vec = load <vscale x 32 x i8>, ptr %p
+  %deinterleaved.results = call {<vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> %vec)
+  %t0 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %deinterleaved.results, 0
+  ret <vscale x 16 x i8> %t0
+}
+
+define <vscale x 16 x i8> @vector_deinterleave_load_nxv16i8_nxv32i8_oneactive2(ptr %p) {
+; CHECK-LABEL: vector_deinterleave_load_nxv16i8_nxv32i8_oneactive2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl4r.v v12, (a0)
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v12, 8
+; CHECK-NEXT:    ret
+  %vec = load <vscale x 32 x i8>, ptr %p
+  %deinterleaved.results = call {<vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> %vec)
+  %t1 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %deinterleaved.results, 1
+  ret <vscale x 16 x i8> %t1
+}
+
 ; Shouldn't be lowered to vlseg because it's unaligned
 define {<vscale x 8 x i16>, <vscale x 8 x i16>} @vector_deinterleave_load_nxv8i16_nxv16i16_align1(ptr %p) {
 ; CHECK-LABEL: vector_deinterleave_load_nxv8i16_nxv16i16_align1:
@@ -378,6 +404,90 @@ define { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x 
   %res2 = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %res1, <vscale x 8 x i8> %t2, 2
   %res3 = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %res2, <vscale x 8 x i8> %t3, 3
   ret { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %res3
+}
+
+define <vscale x 8 x i8> @vector_deinterleave_load_factor4_oneactive(ptr %p) {
+; CHECK-LABEL: vector_deinterleave_load_factor4_oneactive:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 2
+; CHECK-NEXT:    sub sp, sp, a1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
+; CHECK-NEXT:    vl4r.v v8, (a0)
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs4r.v v8, (a0)
+; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vlseg4e8.v v8, (a0)
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 2
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+  %vec = load <vscale x 32 x i8>, ptr %p
+  %d0 = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.vector.deinterleave4(<vscale x 32 x i8> %vec)
+  %t0 = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %d0, 0
+  ret <vscale x 8 x i8> %t0
+}
+
+define <vscale x 8 x i8> @vector_deinterleave_load_factor4_oneactive2(ptr %p) {
+; CHECK-LABEL: vector_deinterleave_load_factor4_oneactive2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 2
+; CHECK-NEXT:    sub sp, sp, a1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
+; CHECK-NEXT:    vl4r.v v8, (a0)
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs4r.v v8, (a0)
+; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vlseg4e8.v v5, (a0)
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 2
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+  %vec = load <vscale x 32 x i8>, ptr %p
+  %d0 = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.vector.deinterleave4(<vscale x 32 x i8> %vec)
+  %t0 = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %d0, 3
+  ret <vscale x 8 x i8> %t0
+}
+
+define { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @vector_deinterleave_load_factor4_twoactive(ptr %p) {
+; CHECK-LABEL: vector_deinterleave_load_factor4_twoactive:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 2
+; CHECK-NEXT:    sub sp, sp, a1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
+; CHECK-NEXT:    vl4r.v v8, (a0)
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs4r.v v8, (a0)
+; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vlseg4e8.v v8, (a0)
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 2
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+  %vec = load <vscale x 32 x i8>, ptr %p
+  %d0 = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.vector.deinterleave4(<vscale x 32 x i8> %vec)
+  %t0 = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %d0, 0
+  %t1 = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %d0, 1
+  %res0 = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } poison, <vscale x 8 x i8> %t0, 0
+  %res1 = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %res0, <vscale x 8 x i8> %t1, 1
+  ret { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %res1
 }
 
 define { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @vector_deinterleave_load_factor5(ptr %p) {
