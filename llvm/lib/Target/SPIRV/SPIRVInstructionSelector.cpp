@@ -296,6 +296,8 @@ private:
   bool selectImageWriteIntrinsic(MachineInstr &I) const;
   bool selectResourceGetPointer(Register &ResVReg, const SPIRVType *ResType,
                                 MachineInstr &I) const;
+  bool selectModf(Register ResVReg, const SPIRVType *ResType,
+                  MachineInstr &I) const;
 
   // Utilities
   std::pair<Register, bool>
@@ -3207,6 +3209,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_discard: {
     return selectDiscard(ResVReg, ResType, I);
   }
+  case Intrinsic::modf: {
+    return selectModf(ResVReg, ResType, I);
+  }
   default: {
     std::string DiagMsg;
     raw_string_ostream OS(DiagMsg);
@@ -3988,6 +3993,77 @@ bool SPIRVInstructionSelector::selectLog10(Register ResVReg,
                        .addUse(VarReg)
                        .addUse(ScaleReg)
                        .constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectModf(Register ResVReg,
+                                          const SPIRVType *ResType,
+                                          MachineInstr &I) const {
+  // llvm.modf has a single arg --the number to be decomposed-- and returns a
+  // struct { restype, restype }, while OpenCLLIB::modf has two args --the
+  // number to be decomposed and a pointer--, returns the fractional part and
+  // the integral part is stored in the pointer argument. Therefore, we can't
+  // use directly the OpenCLLIB::modf intrinsic. However, we can do some
+  // scaffolding to make it work. The idea is to create an alloca instruction
+  // to get a ptr, pass this ptr to OpenCL::modf, and then load the value
+  // from this ptr to place it in the struct. llvm.modf returns the fractional
+  // part as the first element of the result, and the integral part as the
+  // second element of the result.
+
+  // At this point, the return type is not a struct anymore, but rather two
+  // independent elements of SPIRVResType. We can get each independent element
+  // from I.getDefs() or I.getOperands().
+  ExtInstList ExtInsts = {{SPIRV::InstructionSet::OpenCL_std, CL::modf},
+                          {SPIRV::InstructionSet::GLSL_std_450, GL::Modf}};
+  for (const auto &Ex : ExtInsts) {
+    SPIRV::InstructionSet::InstructionSet Set = Ex.first;
+    uint32_t Opcode = Ex.second;
+    if (STI.canUseExtInstSet(Set)) {
+      MachineIRBuilder MIRBuilder(I);
+      // Get pointer type for alloca variable.
+      const SPIRVType *PtrType = GR.getOrCreateSPIRVPointerType(
+          ResType, MIRBuilder, SPIRV::StorageClass::Input);
+      // Create new register for the pointer type of alloca variable.
+      Register NewRegister =
+          MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::iIDRegClass);
+      MIRBuilder.getMRI()->setType(NewRegister, LLT::pointer(0, 64));
+      // Assign SPIR-V type of the pointer type of the alloca variable to the
+      // new register.
+      GR.assignSPIRVTypeToVReg(PtrType, NewRegister, MIRBuilder.getMF());
+      // Build the alloca variable.
+      Register Variable = GR.buildGlobalVariable(
+          NewRegister, PtrType, "placeholder", nullptr,
+          SPIRV::StorageClass::Function, nullptr, true, false,
+          SPIRV::LinkageType::Import, MIRBuilder, false);
+      // Modf must have 4 operands, the first two are the 2 parts of the result,
+      // the third is the operand, and the last one is the floating point value.
+      assert(I.getNumOperands() == 4 &&
+             "Expected 4 operands for modf instruction");
+      MachineBasicBlock &BB = *I.getParent();
+      // Create the OpenCLLIB::modf instruction.
+      auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+                     .addDef(ResVReg)
+                     .addUse(GR.getSPIRVTypeID(ResType))
+                     .addImm(static_cast<uint32_t>(Set))
+                     .addImm(Opcode)
+                     .setMIFlags(I.getFlags())
+                     .add(I.getOperand(3)) // Floating point value.
+                     .addUse(Variable);    // Pointer to integral part.
+      // Assign the integral part stored in the ptr to the second element of the
+      // result.
+      Register IntegralPartReg = I.getOperand(1).getReg();
+      if (IntegralPartReg.isValid()) {
+        // Load the value from the pointer to integral part.
+        auto LoadMIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
+                           .addDef(IntegralPartReg)
+                           .addUse(GR.getSPIRVTypeID(ResType))
+                           .addUse(Variable);
+        return LoadMIB.constrainAllUses(TII, TRI, RBI);
+      }
+
+      return MIB.constrainAllUses(TII, TRI, RBI);
+    }
+  }
+  return false;
 }
 
 // Generate the instructions to load 3-element vector builtin input
