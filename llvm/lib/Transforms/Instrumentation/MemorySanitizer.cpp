@@ -4657,7 +4657,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     VectorType *ShadowType = maybeShrinkVectorShadowType(A, I);
 
     // PMOV truncates; PMOVS/PMOVUS uses signed/unsigned saturation.
-    // This handler treats them all as truncation.
+    // This handler treats them all as truncation, which leads to some rare
+    // false positives in the cases where the truncated bytes could
+    // unambiguously saturate the value e.g., if A = 10?????? ????????
+    // (big-endian), the unsigned saturated byte conversion is 1111111 i.e.,
+    // fully defined, but the truncated byte is ????????.
     //
     // TODO: use GetMinMaxUnsigned() to handle saturation precisely.
     AShadow = IRB.CreateTrunc(AShadow, ShadowType, "_ms_trunc_shadow");
