@@ -1280,7 +1280,7 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
     return V;
   }
 
-  // If there S is expanded outside the defining loop, check if there is a
+  // If S is expanded outside the defining loop, check if there is a
   // matching LCSSA phi node for it.
   if (Value *V = tryToReuseLCSSAPhi(S))
     return V;
