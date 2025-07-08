@@ -300,11 +300,8 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       ReplaceThisGEP = true;
 
   if (ReplaceThisGEP) {
-    // GEP.collectOffset returns the offset in bytes. So we need to divide its
-    // offsets by the size in bytes of the element type
-    unsigned BytesPerElem = Info.RootFlattenedArrayType->getArrayElementType()
-                                ->getPrimitiveSizeInBits() /
-                            8;
+    unsigned BytesPerElem =
+        DL.getTypeAllocSize(Info.RootFlattenedArrayType->getArrayElementType());
     assert(isPowerOf2_32(BytesPerElem) &&
            "Bytes per element should be a power of 2");
 
