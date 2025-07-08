@@ -1131,8 +1131,9 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
 }
 
 void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
-                     MachineBasicBlock::iterator InsertPt, DebugLoc DL,
-                     const VSETVLIInfo &Info, const VSETVLIInfo &PrevInfo) {
+                                       MachineBasicBlock::iterator InsertPt,
+                                       DebugLoc DL, const VSETVLIInfo &Info,
+                                       const VSETVLIInfo &PrevInfo) {
   ++NumInsertedVSETVL;
 
   if (Info.getTWiden()) {
