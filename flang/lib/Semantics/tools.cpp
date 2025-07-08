@@ -1081,10 +1081,67 @@ const Scope *FindCUDADeviceContext(const Scope *scope) {
   });
 }
 
+bool IsDeviceAllocatable(const Symbol &symbol) {
+  if (IsAllocatable(symbol)) {
+    if (const auto *details{
+            symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
+      if (details->cudaDataAttr() &&
+          *details->cudaDataAttr() != common::CUDADataAttr::Pinned) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+UltimateComponentIterator::const_iterator
+FindCUDADeviceAllocatableUltimateComponent(const DerivedTypeSpec &derived) {
+  UltimateComponentIterator ultimates{derived};
+  return std::find_if(ultimates.begin(), ultimates.end(), IsDeviceAllocatable);
+}
+
+bool CanCUDASymbolBeGlobal(const Symbol &sym) {
+  const Symbol &symbol{GetAssociationRoot(sym)};
+  const Scope &scope{symbol.owner()};
+  auto scopeKind{scope.kind()};
+  const common::LanguageFeatureControl &features{
+      scope.context().languageFeatures()};
+  if (features.IsEnabled(common::LanguageFeature::CUDA) &&
+      scopeKind == Scope::Kind::MainProgram) {
+    if (const auto *details{
+            sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
+      const Fortran::semantics::DeclTypeSpec *type{details->type()};
+      const Fortran::semantics::DerivedTypeSpec *derived{
+          type ? type->AsDerived() : nullptr};
+      if (derived) {
+        if (FindCUDADeviceAllocatableUltimateComponent(*derived)) {
+          return false;
+        }
+      }
+      if (details->cudaDataAttr() &&
+          *details->cudaDataAttr() != common::CUDADataAttr::Unified) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *symbol) {
-  const auto *object{
+  const auto *details{
       symbol ? symbol->detailsIf<ObjectEntityDetails>() : nullptr};
-  return object ? object->cudaDataAttr() : std::nullopt;
+  if (details) {
+    const Fortran::semantics::DeclTypeSpec *type{details->type()};
+    const Fortran::semantics::DerivedTypeSpec *derived{
+        type ? type->AsDerived() : nullptr};
+    if (derived) {
+      if (FindCUDADeviceAllocatableUltimateComponent(*derived)) {
+        return common::CUDADataAttr::Managed;
+      }
+    }
+    return details->cudaDataAttr();
+  }
+  return std::nullopt;
 }
 
 bool IsAccessible(const Symbol &original, const Scope &scope) {

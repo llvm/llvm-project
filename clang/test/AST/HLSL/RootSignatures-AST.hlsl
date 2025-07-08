@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -ast-dump \
-// RUN:  -disable-llvm-passes -o - %s | FileCheck %s
+// RUN:  -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-V1_1
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -ast-dump \
 // RUN:  -fdx-rootsignature-version=rootsig_1_0 \
-// RUN:  -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=CHECK-V1_0
+// RUN:  -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-V1_0
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -ast-dump \
 // RUN:  -fdx-rootsignature-version=rootsig_1_1 \
-// RUN:  -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=CHECK-V1_1
+// RUN:  -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-V1_1
 
 // This test ensures that the sample root signature is parsed without error and
 // the Attr AST Node is created succesfully. If an invalid root signature was
@@ -37,13 +37,17 @@
 // CHECK-SAME:   space = 1, visibility = All, flags = DataStatic
 // CHECK-SAME: ),
 // CHECK-SAME: RootSRV(t0,
-// CHECK-SAME:   space = 0, visibility = All, flags = DataStaticWhileSetAtExecute
+// CHECK-SAME:   space = 0, visibility = All,
+// CHECK-V1_0-SAME: flags = DataVolatile
+// CHECK-V1_1-SAME: flags = DataStaticWhileSetAtExecute
 // CHECK-SAME: ),
 // CHECK-SAME: RootUAV(
 // CHECK-SAME:   u0, space = 0, visibility = All, flags = DataVolatile
 // CHECK-SAME: ),
 // CHECK-SAME: CBV(
-// CHECK-SAME:   b1, numDescriptors = 1, space = 0, offset = DescriptorTableOffsetAppend, flags = DataStaticWhileSetAtExecute
+// CHECK-SAME:   b1, numDescriptors = 1, space = 0, offset = DescriptorTableOffsetAppend,
+// CHECK-V1_0-SAME: flags = DescriptorsVolatile | DataVolatile
+// CHECK-V1_1-SAME: flags = DataStaticWhileSetAtExecute
 // CHECK-SAME: ),
 // CHECK-SAME: SRV(
 // CHECK-SAME:   t1, numDescriptors = 8, space = 0, offset = DescriptorTableOffsetAppend, flags = DescriptorsVolatile
@@ -55,7 +59,9 @@
 // CHECK-SAME:   numClauses = 3, visibility = All
 // CHECK-SAME: ),
 // CHECK-SAME: Sampler(
-// CHECK-SAME:   s0, numDescriptors = 4, space = 1, offset = DescriptorTableOffsetAppend, flags = None
+// CHECK-SAME:   s0, numDescriptors = 4, space = 1, offset = DescriptorTableOffsetAppend,
+// CHECK-V1_0-SAME:  flags = DescriptorsVolatile
+// CHECK-V1_1-SAME:  flags = None
 // CHECK-SAME: ),
 // CHECK-SAME: DescriptorTable(
 // CHECK-SAME:   numClauses = 1, visibility = All
@@ -112,9 +118,13 @@ void same_rs_string_main() {}
 // a seperate decl and identifier to reference
 
 // CHECK: -HLSLRootSignatureDecl 0x{{.*}} {{.*}} implicit [[DIFF_RS_DECL:__hlsl_rootsig_decl_\d*]]
+// CHECK-V1_0: version: 1.0,
+// CHECK-V1_1: version: 1.1,
 // CHECK-SAME: RootElements{
-// CHECK-SAME:   Sampler(s0, numDescriptors = 4, space = 1,
-// CHECK-SAME:     offset = DescriptorTableOffsetAppend, flags = None),
+// CHECK-SAME:   Sampler(s0, numDescriptors = 4, space = 1, offset = DescriptorTableOffsetAppend,
+// CHECK-V1_0-SAME:  flags = DescriptorsVolatile
+// CHECK-V1_1-SAME:  flags = None
+// CHECK-SAME: ),
 // CHECK-SAME:   DescriptorTable(numClauses = 1, visibility = All)
 // CHECK-SAME: }
 
