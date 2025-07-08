@@ -3389,6 +3389,57 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  /// Some instructions have additional zero-elements in the return type
+  /// e.g., <16 x i8> @llvm.x86.avx512.mask.pmov.qb.512(<8 x i64>, ...)
+  ///
+  /// This function will return a vector type with the same number of elements
+  /// as the input, but same per-element width as the return value e.g.,
+  /// <8 x i8>.
+  FixedVectorType *maybeShrinkVectorShadowType(Value *Src, IntrinsicInst &I) {
+    assert(isa<FixedVectorType>(getShadowTy(&I)));
+    FixedVectorType *ShadowType = cast<FixedVectorType>(getShadowTy(&I));
+
+    // TODO: generalize beyond 2x?
+    if (ShadowType->getElementCount() ==
+        cast<VectorType>(Src->getType())->getElementCount() * 2)
+      ShadowType = FixedVectorType::getHalfElementsVectorType(ShadowType);
+
+    assert(ShadowType->getElementCount() ==
+           cast<VectorType>(Src->getType())->getElementCount());
+
+    return ShadowType;
+  }
+
+  /// Doubles the length of a vector shadow (filled with zeros) if necessary to
+  /// match the length of the shadow for the instruction.
+  /// This is more type-safe than CreateShadowCast().
+  Value *maybeExtendVectorShadowWithZeros(Value *Shadow, IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    assert(isa<FixedVectorType>(Shadow->getType()));
+    assert(isa<FixedVectorType>(I.getType()));
+
+    Value *FullShadow = getCleanShadow(&I);
+    assert(cast<FixedVectorType>(Shadow->getType())->getNumElements() <=
+           cast<FixedVectorType>(FullShadow->getType())->getNumElements());
+    assert(cast<FixedVectorType>(Shadow->getType())->getScalarType() ==
+           cast<FixedVectorType>(FullShadow->getType())->getScalarType());
+
+    if (Shadow->getType() == FullShadow->getType()) {
+      FullShadow = Shadow;
+    } else {
+      // TODO: generalize beyond 2x?
+      SmallVector<int, 32> ShadowMask(
+          cast<FixedVectorType>(FullShadow->getType())->getNumElements());
+      std::iota(ShadowMask.begin(), ShadowMask.end(), 0);
+
+      // Append zeros
+      FullShadow =
+          IRB.CreateShuffleVector(Shadow, getCleanShadow(Shadow), ShadowMask);
+    }
+
+    return FullShadow;
+  }
+
   /// Handle x86 SSE vector conversion.
   ///
   /// e.g., single-precision to half-precision conversion:
@@ -3419,13 +3470,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // The return type might have more elements than the input.
     // Temporarily shrink the return type's number of elements.
-    VectorType *ShadowType = cast<VectorType>(getShadowTy(&I));
-    if (ShadowType->getElementCount() ==
-        cast<VectorType>(Src->getType())->getElementCount() * 2)
-      ShadowType = VectorType::getHalfElementsVectorType(ShadowType);
-
-    assert(ShadowType->getElementCount() ==
-           cast<VectorType>(Src->getType())->getElementCount());
+    VectorType *ShadowType = maybeShrinkVectorShadowType(Src, I);
 
     IRBuilder<> IRB(&I);
     Value *S0 = getShadow(&I, 0);
@@ -3440,19 +3485,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // The return type might have more elements than the input.
     // Extend the return type back to its original width if necessary.
-    Value *FullShadow = getCleanShadow(&I);
-
-    if (Shadow->getType() == FullShadow->getType()) {
-      FullShadow = Shadow;
-    } else {
-      SmallVector<int, 8> ShadowMask(
-          cast<FixedVectorType>(FullShadow->getType())->getNumElements());
-      std::iota(ShadowMask.begin(), ShadowMask.end(), 0);
-
-      // Append zeros
-      FullShadow =
-          IRB.CreateShuffleVector(Shadow, getCleanShadow(Shadow), ShadowMask);
-    }
+    Value *FullShadow = maybeExtendVectorShadowWithZeros(Shadow, I);
 
     setShadow(&I, FullShadow);
     setOriginForNaryOp(I);
