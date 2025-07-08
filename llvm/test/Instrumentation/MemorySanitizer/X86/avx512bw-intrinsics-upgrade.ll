@@ -2264,9 +2264,9 @@ define <32 x i16> @test_mask_packs_epi32_rmb_512(<16 x i32> %a, ptr %ptr_b) noun
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <16 x i32> splat (i32 -1), i32 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i32> undef, i32 [[Q]], i32 0
+; CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i32> poison, i32 [[Q]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = shufflevector <16 x i32> [[_MSPROP]], <16 x i32> splat (i32 -1), <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[B:%.*]] = shufflevector <16 x i32> [[VECINIT_I]], <16 x i32> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[B:%.*]] = shufflevector <16 x i32> [[VECINIT_I]], <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <16 x i32> [[TMP2]] to i512
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i512 [[TMP8]], 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <16 x i32> [[_MSPROP1]] to i512
@@ -2282,8 +2282,8 @@ define <32 x i16> @test_mask_packs_epi32_rmb_512(<16 x i32> %a, ptr %ptr_b) noun
 ; CHECK-NEXT:    ret <32 x i16> [[TMP12]]
 ;
   %q = load i32, ptr %ptr_b
-  %vecinit.i = insertelement <16 x i32> undef, i32 %q, i32 0
-  %b = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
+  %vecinit.i = insertelement <16 x i32> poison, i32 %q, i32 0
+  %b = shufflevector <16 x i32> %vecinit.i, <16 x i32> poison, <16 x i32> zeroinitializer
   %res = call <32 x i16> @llvm.x86.avx512.mask.packssdw.512(<16 x i32> %a, <16 x i32> %b, <32 x i16> zeroinitializer, i32 -1)
   ret <32 x i16> %res
 }
@@ -2307,9 +2307,9 @@ define <32 x i16> @test_mask_packs_epi32_rmbk_512(<16 x i32> %a, ptr %ptr_b, <32
 ; CHECK-NEXT:    [[TMP9:%.*]] = inttoptr i64 [[TMP8]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <16 x i32> splat (i32 -1), i32 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i32> undef, i32 [[Q]], i32 0
+; CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i32> poison, i32 [[Q]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = shufflevector <16 x i32> [[_MSPROP]], <16 x i32> splat (i32 -1), <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[B:%.*]] = shufflevector <16 x i32> [[VECINIT_I]], <16 x i32> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[B:%.*]] = shufflevector <16 x i32> [[VECINIT_I]], <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <16 x i32> [[TMP2]] to i512
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i512 [[TMP10]], 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <16 x i32> [[_MSPROP1]] to i512
@@ -2333,8 +2333,8 @@ define <32 x i16> @test_mask_packs_epi32_rmbk_512(<16 x i32> %a, ptr %ptr_b, <32
 ; CHECK-NEXT:    ret <32 x i16> [[TMP21]]
 ;
   %q = load i32, ptr %ptr_b
-  %vecinit.i = insertelement <16 x i32> undef, i32 %q, i32 0
-  %b = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
+  %vecinit.i = insertelement <16 x i32> poison, i32 %q, i32 0
+  %b = shufflevector <16 x i32> %vecinit.i, <16 x i32> poison, <16 x i32> zeroinitializer
   %res = call <32 x i16> @llvm.x86.avx512.mask.packssdw.512(<16 x i32> %a, <16 x i32> %b, <32 x i16> %passThru, i32 %mask)
   ret <32 x i16> %res
 }
@@ -2357,9 +2357,9 @@ define <32 x i16> @test_mask_packs_epi32_rmbkz_512(<16 x i32> %a, ptr %ptr_b, i3
 ; CHECK-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP7]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <16 x i32> splat (i32 -1), i32 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i32> undef, i32 [[Q]], i32 0
+; CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i32> poison, i32 [[Q]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = shufflevector <16 x i32> [[_MSPROP]], <16 x i32> splat (i32 -1), <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[B:%.*]] = shufflevector <16 x i32> [[VECINIT_I]], <16 x i32> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[B:%.*]] = shufflevector <16 x i32> [[VECINIT_I]], <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <16 x i32> [[TMP2]] to i512
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i512 [[TMP9]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <16 x i32> [[_MSPROP1]] to i512
@@ -2383,8 +2383,8 @@ define <32 x i16> @test_mask_packs_epi32_rmbkz_512(<16 x i32> %a, ptr %ptr_b, i3
 ; CHECK-NEXT:    ret <32 x i16> [[TMP20]]
 ;
   %q = load i32, ptr %ptr_b
-  %vecinit.i = insertelement <16 x i32> undef, i32 %q, i32 0
-  %b = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
+  %vecinit.i = insertelement <16 x i32> poison, i32 %q, i32 0
+  %b = shufflevector <16 x i32> %vecinit.i, <16 x i32> poison, <16 x i32> zeroinitializer
   %res = call <32 x i16> @llvm.x86.avx512.mask.packssdw.512(<16 x i32> %a, <16 x i32> %b, <32 x i16> zeroinitializer, i32 %mask)
   ret <32 x i16> %res
 }
@@ -2835,9 +2835,9 @@ define <32 x i16> @test_mask_packus_epi32_rmb_512(<16 x i32> %a, ptr %ptr_b) nou
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <16 x i32> splat (i32 -1), i32 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i32> undef, i32 [[Q]], i32 0
+; CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i32> poison, i32 [[Q]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = shufflevector <16 x i32> [[_MSPROP]], <16 x i32> splat (i32 -1), <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[B:%.*]] = shufflevector <16 x i32> [[VECINIT_I]], <16 x i32> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[B:%.*]] = shufflevector <16 x i32> [[VECINIT_I]], <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <16 x i32> [[TMP2]] to i512
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i512 [[TMP8]], 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <16 x i32> [[_MSPROP1]] to i512
@@ -2853,8 +2853,8 @@ define <32 x i16> @test_mask_packus_epi32_rmb_512(<16 x i32> %a, ptr %ptr_b) nou
 ; CHECK-NEXT:    ret <32 x i16> [[TMP12]]
 ;
   %q = load i32, ptr %ptr_b
-  %vecinit.i = insertelement <16 x i32> undef, i32 %q, i32 0
-  %b = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
+  %vecinit.i = insertelement <16 x i32> poison, i32 %q, i32 0
+  %b = shufflevector <16 x i32> %vecinit.i, <16 x i32> poison, <16 x i32> zeroinitializer
   %res = call <32 x i16> @llvm.x86.avx512.mask.packusdw.512(<16 x i32> %a, <16 x i32> %b, <32 x i16> zeroinitializer, i32 -1)
   ret <32 x i16> %res
 }
@@ -2878,9 +2878,9 @@ define <32 x i16> @test_mask_packus_epi32_rmbk_512(<16 x i32> %a, ptr %ptr_b, <3
 ; CHECK-NEXT:    [[TMP9:%.*]] = inttoptr i64 [[TMP8]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <16 x i32> splat (i32 -1), i32 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i32> undef, i32 [[Q]], i32 0
+; CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i32> poison, i32 [[Q]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = shufflevector <16 x i32> [[_MSPROP]], <16 x i32> splat (i32 -1), <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[B:%.*]] = shufflevector <16 x i32> [[VECINIT_I]], <16 x i32> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[B:%.*]] = shufflevector <16 x i32> [[VECINIT_I]], <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <16 x i32> [[TMP2]] to i512
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i512 [[TMP10]], 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <16 x i32> [[_MSPROP1]] to i512
@@ -2904,8 +2904,8 @@ define <32 x i16> @test_mask_packus_epi32_rmbk_512(<16 x i32> %a, ptr %ptr_b, <3
 ; CHECK-NEXT:    ret <32 x i16> [[TMP21]]
 ;
   %q = load i32, ptr %ptr_b
-  %vecinit.i = insertelement <16 x i32> undef, i32 %q, i32 0
-  %b = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
+  %vecinit.i = insertelement <16 x i32> poison, i32 %q, i32 0
+  %b = shufflevector <16 x i32> %vecinit.i, <16 x i32> poison, <16 x i32> zeroinitializer
   %res = call <32 x i16> @llvm.x86.avx512.mask.packusdw.512(<16 x i32> %a, <16 x i32> %b, <32 x i16> %passThru, i32 %mask)
   ret <32 x i16> %res
 }
@@ -2928,9 +2928,9 @@ define <32 x i16> @test_mask_packus_epi32_rmbkz_512(<16 x i32> %a, ptr %ptr_b, i
 ; CHECK-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[TMP7]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i32, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <16 x i32> splat (i32 -1), i32 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i32> undef, i32 [[Q]], i32 0
+; CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i32> poison, i32 [[Q]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = shufflevector <16 x i32> [[_MSPROP]], <16 x i32> splat (i32 -1), <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[B:%.*]] = shufflevector <16 x i32> [[VECINIT_I]], <16 x i32> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[B:%.*]] = shufflevector <16 x i32> [[VECINIT_I]], <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <16 x i32> [[TMP2]] to i512
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i512 [[TMP9]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <16 x i32> [[_MSPROP1]] to i512
@@ -2954,8 +2954,8 @@ define <32 x i16> @test_mask_packus_epi32_rmbkz_512(<16 x i32> %a, ptr %ptr_b, i
 ; CHECK-NEXT:    ret <32 x i16> [[TMP20]]
 ;
   %q = load i32, ptr %ptr_b
-  %vecinit.i = insertelement <16 x i32> undef, i32 %q, i32 0
-  %b = shufflevector <16 x i32> %vecinit.i, <16 x i32> undef, <16 x i32> zeroinitializer
+  %vecinit.i = insertelement <16 x i32> poison, i32 %q, i32 0
+  %b = shufflevector <16 x i32> %vecinit.i, <16 x i32> poison, <16 x i32> zeroinitializer
   %res = call <32 x i16> @llvm.x86.avx512.mask.packusdw.512(<16 x i32> %a, <16 x i32> %b, <32 x i16> zeroinitializer, i32 %mask)
   ret <32 x i16> %res
 }
