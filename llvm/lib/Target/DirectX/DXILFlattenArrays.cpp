@@ -250,9 +250,8 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   const DataLayout &DL = GEP.getDataLayout();
   unsigned BitWidth = DL.getIndexTypeSizeInBits(GEP.getType());
   Info.ConstantOffset = {BitWidth, 0};
-  bool Success = GEP.collectOffset(DL, BitWidth, Info.VariableOffsets,
-                                   Info.ConstantOffset);
-  (void)Success;
+  [[maybe_unused]] bool Success = GEP.collectOffset(
+      DL, BitWidth, Info.VariableOffsets, Info.ConstantOffset);
   assert(Success && "Failed to collect offsets for GEP");
 
   // If there is a parent GEP, inherit the root array type and pointer, and
