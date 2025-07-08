@@ -110,8 +110,8 @@ struct RuntimeLibcallsInfo {
   }
 
   ArrayRef<RTLIB::LibcallImpl> getLibcallImpls() const {
-    // Trim Unsupported from the start
-    return ArrayRef(LibcallImpls).drop_front();
+    // Trim UNKNOWN_LIBCALL from the back
+    return ArrayRef(LibcallImpls).drop_back();
   }
 
   /// Get the comparison predicate that's to be used to test the result of the
