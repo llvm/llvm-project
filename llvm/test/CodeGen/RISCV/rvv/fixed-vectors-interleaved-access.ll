@@ -1665,16 +1665,16 @@ define <4 x i8> @load_factor8_one_active(ptr %ptr) vscale_range(8,1024) {
 define <4 x ptr> @load_factor3_one_active_ptr(ptr %ptr) {
 ; RV32-LABEL: load_factor3_one_active_ptr:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lw a0, 0(a0)
+; RV32-NEXT:    li a1, 12
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.x v8, a0
+; RV32-NEXT:    vlse32.v v8, (a0), a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: load_factor3_one_active_ptr:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    ld a0, 0(a0)
+; RV64-NEXT:    li a1, 24
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vmv.v.x v8, a0
+; RV64-NEXT:    vlse64.v v8, (a0), a1
 ; RV64-NEXT:    ret
   %interleaved.vec = load <12 x ptr>, ptr %ptr
   %v0 = shufflevector <12 x ptr> %interleaved.vec, <12 x ptr> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
@@ -1770,14 +1770,16 @@ define void @store_factor4_one_active_slidedown(ptr %ptr, <4 x i32> %v) {
 define void @store_factor4_one_active_ptr(ptr %ptr, <4 x ptr> %v) {
 ; RV32-LABEL: store_factor4_one_active_ptr:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, 16
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vsse32.v v8, (a0), zero
+; RV32-NEXT:    vsse32.v v8, (a0), a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: store_factor4_one_active_ptr:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, 32
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vsse64.v v8, (a0), zero
+; RV64-NEXT:    vsse64.v v8, (a0), a1
 ; RV64-NEXT:    ret
   %v0 = shufflevector <4 x ptr> %v, <4 x ptr> poison, <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3,  i32 undef, i32 undef, i32 undef>
   store <16 x ptr> %v0, ptr %ptr
