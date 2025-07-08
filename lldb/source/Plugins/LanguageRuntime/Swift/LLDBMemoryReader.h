@@ -52,7 +52,6 @@ private:
 class LLDBMemoryReader : public swift::remote::MemoryReader {
 public:
 
-
   LLDBMemoryReader(Process &p,
                    std::function<swift::remote::RemoteAbsolutePointer(
                        swift::remote::RemoteAbsolutePointer)>
@@ -122,7 +121,6 @@ private:
   std::optional<Address>
   resolveRemoteAddressFromSymbolObjectFile(uint64_t address) const;
 
-private:
   Process &m_process;
   size_t m_max_read_amount;
 

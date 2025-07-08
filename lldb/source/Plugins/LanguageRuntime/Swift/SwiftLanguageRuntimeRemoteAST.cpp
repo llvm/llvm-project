@@ -105,7 +105,7 @@ std::optional<uint64_t> SwiftLanguageRuntime::GetMemberVariableOffsetRemoteAST(
 
   // Dig out metadata describing the type, if it's easy to find.
   // FIXME: the Remote AST library should make this easier.
-  swift::remote::RemoteAddress optmeta(nullptr);
+  swift::remote::RemoteAddress optmeta;
   const swift::TypeKind type_kind = swift_type->getKind();
   switch (type_kind) {
   case swift::TypeKind::Class:
@@ -118,13 +118,14 @@ std::optional<uint64_t> SwiftLanguageRuntime::GetMemberVariableOffsetRemoteAST(
       lldb::addr_t pointer = instance->GetPointerValue();
       if (!pointer || pointer == LLDB_INVALID_ADDRESS)
         break;
-      swift::remote::RemoteAddress address(pointer);
+      auto address = swift::remote::RemoteAddress(
+          pointer, swift::remote::RemoteAddress::DefaultAddressSpace);
       if (auto metadata = remote_ast->getHeapMetadataForObject(address))
         optmeta = metadata.getValue();
     }
     LLDB_LOGF(GetLog(LLDBLog::Types),
               "[MemberVariableOffsetResolver] optmeta = 0x%" PRIx64,
-              optmeta.getAddressData());
+              optmeta.getRawAddress());
     break;
   }
 
@@ -200,8 +201,9 @@ ConstString SwiftLanguageRuntime::GetDynamicTypeName_ClassRemoteAST(
     return {};
 
   auto &remote_ast = GetRemoteASTContext(*swift_ast_ctx);
-  auto remote_ast_metadata_address = remote_ast.getHeapMetadataForObject(
-      swift::remote::RemoteAddress(instance_ptr));
+  auto remote_ast_metadata_address =
+      remote_ast.getHeapMetadataForObject(swift::remote::RemoteAddress(
+          instance_ptr, swift::remote::RemoteAddress::DefaultAddressSpace));
   if (remote_ast_metadata_address) {
     auto instance_type = remote_ast.getTypeForRemoteTypeMetadata(
         remote_ast_metadata_address.getValue(),
@@ -238,7 +240,8 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_ExistentialRemoteAST(
   if (!swift_ast_ctx)
     return {};
 
-  swift::remote::RemoteAddress remote_existential(existential_address);
+  auto remote_existential = swift::remote::RemoteAddress(
+      existential_address, swift::remote::RemoteAddress::DefaultAddressSpace);
   auto &remote_ast = GetRemoteASTContext(*swift_ast_ctx);
   auto swift_type =
       llvm::expectedToStdOptional(swift_ast_ctx->GetSwiftType(existential_type))
@@ -261,7 +264,7 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_ExistentialRemoteAST(
 
   CompilerType type = ToCompilerType(type_and_address.InstanceType);
   Address address;
-  address.SetRawAddress(type_and_address.PayloadAddress.getAddressData());
+  address.SetRawAddress(type_and_address.PayloadAddress.getRawAddress());
   return {{type, address}};
 }
 #endif
@@ -376,7 +379,9 @@ SwiftLanguageRuntime::BindGenericTypeParametersRemoteAST(
                                       ->getAs<swift::GenericTypeParamType>();
               auto underlying_type_result =
                   remote_ast.getUnderlyingTypeForOpaqueType(
-                      swift::remote::RemoteAddress(addr),
+                      swift::remote::RemoteAddress(
+                          addr,
+                          swift::remote::RemoteAddress::DefaultAddressSpace),
                       opaque_type->getSubstitutions(),
                       genericParam->getIndex());
 
@@ -473,8 +478,9 @@ CompilerType SwiftLanguageRuntime::MetadataPromise::FulfillTypePromise(
   }
   auto &remote_ast = m_swift_runtime.GetRemoteASTContext(*swift_ast_ctx);
   swift::remoteAST::Result<swift::Type> result =
-      remote_ast.getTypeForRemoteTypeMetadata(
-          swift::remote::RemoteAddress(m_metadata_location));
+      remote_ast.getTypeForRemoteTypeMetadata(swift::remote::RemoteAddress(
+          m_metadata_location,
+          swift::remote::RemoteAddress::DefaultAddressSpace));
 
   if (result) {
     m_compiler_type = {swift_ast_ctx->weak_from_this(),
