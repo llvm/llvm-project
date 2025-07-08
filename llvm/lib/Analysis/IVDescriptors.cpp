@@ -776,9 +776,8 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
   };
 
   // We are looking for selects of the form:
-  //   select(cmp(), phi, increasing_loop_induction) or
-  //   select(cmp(), increasing_loop_induction, phi)
-  // TODO: Support for monotonically decreasing induction variable
+  //   select(cmp(), phi, loop_induction) or
+  //   select(cmp(), loop_induction, phi)
   if (auto RK = GetRecurKind(NonRdxPhi))
     return InstDesc(I, *RK);
 
