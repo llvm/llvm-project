@@ -1,6 +1,4 @@
 CXX_SOURCES := main.cpp
-
-CFLAGS_EXTRAS := -O0
-USE_LIBSTDCPP := 1
+CXXFLAGS_EXTRAS := -std=c++17
 
 include Makefile.rules

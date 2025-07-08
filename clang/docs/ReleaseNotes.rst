@@ -678,6 +678,12 @@ Improvements to Clang's diagnostics
 - Clang now accepts ``@tparam`` comments on variable template partial
   specializations. (#GH144775)
 
+- Fixed a bug that caused diagnostic line wrapping to not function correctly on
+  some systems. (#GH139499)
+
+- Clang now tries to avoid printing file paths that contain ``..``, instead preferring
+  the canonical file path if it ends up being shorter.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -913,6 +919,7 @@ Bug Fixes to C++ Support
 - Fix a bug where private access specifier of overloaded function not respected. (#GH107629)
 - Correctly handle allocations in the condition of a ``if constexpr``.(#GH120197) (#GH134820)
 - Fixed a crash when handling invalid member using-declaration in C++20+ mode. (#GH63254)
+- Fix a crash when trying to instantiate an ambiguous specialization. (#GH51866)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
