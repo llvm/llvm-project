@@ -2672,7 +2672,7 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
         RedTy, SrcVecTy, std::nullopt, Ctx.CostKind);
   }
   case ExpressionTypes::MulAccReduction:
-    return Ctx.TTI.getMulAccReductionCost(false, RedTy, SrcVecTy, false,
+    return Ctx.TTI.getMulAccReductionCost(false, false, RedTy, SrcVecTy,
                                           Ctx.CostKind);
 
   case ExpressionTypes::ExtNegatedMulAccReduction:
@@ -2681,7 +2681,7 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
     return Ctx.TTI.getMulAccReductionCost(
         cast<VPWidenCastRecipe>(ExpressionRecipes.front())->getOpcode() ==
             Instruction::ZExt,
-        RedTy, SrcVecTy, Negated, Ctx.CostKind);
+        Negated, RedTy, SrcVecTy, Ctx.CostKind);
   }
   }
   llvm_unreachable("Unknown VPExpressionRecipe::ExpressionTypes enum");
