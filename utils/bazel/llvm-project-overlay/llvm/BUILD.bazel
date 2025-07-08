@@ -220,6 +220,8 @@ genrule(
           "echo -e '#undef HANDLE_EXTENSION' >> $@\n",
 )
 
+
+
 cc_library(
     name = "Support",
     srcs = glob([
@@ -269,6 +271,7 @@ cc_library(
         "include/llvm-c/ExternC.h",
         "include/llvm-c/Support.h",
         "include/llvm-c/Types.h",
+        "include/llvm-c/Visibility.h",
         "include/llvm-c/blake3.h",
         "include/llvm/ExecutionEngine/JITSymbol.h",
         "include/llvm/Support/Extension.def",
