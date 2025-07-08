@@ -291,7 +291,7 @@ public:
   }
 
   DominatorTree *getDT() const {
-    assert(AC && "requested DT, but it is not available");
+    assert(DT && "requested DT, but it is not available");
     return DT;
   }
   AssumptionCache *getAC() const {
