@@ -35,6 +35,7 @@
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/State.h"
+#include "llvm/Support/FormatAdapters.h"
 
 #include "llvm/ADT/ScopeExit.h"
 
@@ -642,8 +643,12 @@ protected:
             BreakpointLocationSP loc_sp = bp_sp->GetLocationAtIndex(loc_idx);
             tmp_id.SetBreakpointLocationID(loc_idx);
             if (!with_locs.Contains(tmp_id) && loc_sp->IsEnabled()) {
-              locs_disabled.push_back(tmp_id);
-              loc_sp->SetEnabled(false);
+              if (llvm::Error error = loc_sp->SetEnabled(false))
+                result.AppendErrorWithFormatv(
+                    "failed to disable breakpoint location: {0}",
+                    llvm::fmt_consume(std::move(error)));
+              else
+                locs_disabled.push_back(tmp_id);
             }
           }
         }
@@ -698,8 +703,12 @@ protected:
         if (bp_sp) {
           BreakpointLocationSP loc_sp
               = bp_sp->FindLocationByID(bkpt_id.GetLocationID());
-          if (loc_sp)
-            loc_sp->SetEnabled(true);
+          if (loc_sp) {
+            if (llvm::Error error = loc_sp->SetEnabled(true))
+              result.AppendErrorWithFormatv(
+                  "failed to enable breakpoint location: {0}",
+                  llvm::fmt_consume(std::move(error)));
+          }
         }
       }
 
