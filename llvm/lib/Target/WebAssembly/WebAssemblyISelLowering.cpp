@@ -182,6 +182,12 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   // SIMD-specific configuration
   if (Subtarget->hasSIMD128()) {
 
+    // Enable fma optimization for wasm relaxed simd
+    if (Subtarget->hasRelaxedSIMD()) {
+      setTargetDAGCombine(ISD::FADD);
+      setTargetDAGCombine(ISD::FMA);
+    }
+
     // Combine partial.reduce.add before legalization gets confused.
     setTargetDAGCombine(ISD::INTRINSIC_WO_CHAIN);
 
@@ -3412,6 +3418,37 @@ static SDValue performSETCCCombine(SDNode *N,
   return SDValue();
 }
 
+static SDValue performFAddCombine(SDNode *N, SelectionDAG &DAG) {
+  assert(N->getOpcode() == ISD::FADD);
+  using namespace llvm::SDPatternMatch;
+  if (!N->getFlags().hasFastMath())
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue A, B, C;
+  EVT VecVT = N->getValueType(0);
+  if (sd_match(N, m_FAdd(m_Value(A), m_FMul(m_Value(B), m_Value(C)))))
+    return DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, VecVT,
+        {DAG.getConstant(Intrinsic::wasm_relaxed_madd, DL, MVT::i32), A, B, C});
+
+  return SDValue();
+}
+
+static SDValue performFMACombine(SDNode *N, SelectionDAG &DAG) {
+  assert(N->getOpcode() == ISD::FMA);
+  if (!N->getFlags().hasFastMath())
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue A = N->getOperand(0), B = N->getOperand(1), C = N->getOperand(2);
+  EVT VecVT = N->getValueType(0);
+
+  return DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, VecVT,
+      {DAG.getConstant(Intrinsic::wasm_relaxed_madd, DL, MVT::i32), A, B, C});
+}
+
 static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == ISD::MUL);
   EVT VT = N->getValueType(0);
@@ -3529,6 +3566,10 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
       return AnyAllCombine;
     return performLowerPartialReduction(N, DCI.DAG);
   }
+  case ISD::FADD:
+    return performFAddCombine(N, DCI.DAG);
+  case ISD::FMA:
+    return performFMACombine(N, DCI.DAG);
   case ISD::MUL:
     return performMulCombine(N, DCI.DAG);
   }

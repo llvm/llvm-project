@@ -475,6 +475,7 @@ public:
   bool hasAllowReassociation() const { return Flags & AllowReassociation; }
   bool hasNoFPExcept() const { return Flags & NoFPExcept; }
   bool hasUnpredictable() const { return Flags & Unpredictable; }
+  bool hasFastMath() const { return Flags & FastMathFlags; }
 
   bool operator==(const SDNodeFlags &Other) const {
     return Flags == Other.Flags;

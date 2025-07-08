@@ -6,12 +6,11 @@ define void @fma_seperate(ptr %a, ptr %b, ptr %c, ptr %dest) {
 ; CHECK-LABEL: fma_seperate:
 ; CHECK:         .functype fma_seperate (i32, i32, i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    v128.load $push2=, 0($2):p2align=0
 ; CHECK-NEXT:    v128.load $push1=, 0($1):p2align=0
 ; CHECK-NEXT:    v128.load $push0=, 0($0):p2align=0
-; CHECK-NEXT:    f32x4.mul $push2=, $pop1, $pop0
-; CHECK-NEXT:    v128.load $push3=, 0($2):p2align=0
-; CHECK-NEXT:    f32x4.add $push4=, $pop2, $pop3
-; CHECK-NEXT:    v128.store 0($3):p2align=0, $pop4
+; CHECK-NEXT:    f32x4.relaxed_madd $push3=, $pop2, $pop1, $pop0
+; CHECK-NEXT:    v128.store 0($3):p2align=0, $pop3
 ; CHECK-NEXT:    return
 entry:
   %0 = load <4 x float>, ptr %a, align 1
@@ -28,33 +27,11 @@ define void @fma_llvm(ptr %a, ptr %b, ptr %c, ptr %dest) {
 ; CHECK-LABEL: fma_llvm:
 ; CHECK:         .functype fma_llvm (i32, i32, i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0: # %entry
-; CHECK-NEXT:    v128.load $push25=, 0($0):p2align=0
-; CHECK-NEXT:    local.tee $push24=, $6=, $pop25
-; CHECK-NEXT:    f32x4.extract_lane $push2=, $pop24, 0
-; CHECK-NEXT:    v128.load $push23=, 0($1):p2align=0
-; CHECK-NEXT:    local.tee $push22=, $5=, $pop23
-; CHECK-NEXT:    f32x4.extract_lane $push1=, $pop22, 0
-; CHECK-NEXT:    v128.load $push21=, 0($2):p2align=0
-; CHECK-NEXT:    local.tee $push20=, $4=, $pop21
-; CHECK-NEXT:    f32x4.extract_lane $push0=, $pop20, 0
-; CHECK-NEXT:    call $push3=, fmaf, $pop2, $pop1, $pop0
-; CHECK-NEXT:    f32x4.splat $push4=, $pop3
-; CHECK-NEXT:    f32x4.extract_lane $push7=, $6, 1
-; CHECK-NEXT:    f32x4.extract_lane $push6=, $5, 1
-; CHECK-NEXT:    f32x4.extract_lane $push5=, $4, 1
-; CHECK-NEXT:    call $push8=, fmaf, $pop7, $pop6, $pop5
-; CHECK-NEXT:    f32x4.replace_lane $push9=, $pop4, 1, $pop8
-; CHECK-NEXT:    f32x4.extract_lane $push12=, $6, 2
-; CHECK-NEXT:    f32x4.extract_lane $push11=, $5, 2
-; CHECK-NEXT:    f32x4.extract_lane $push10=, $4, 2
-; CHECK-NEXT:    call $push13=, fmaf, $pop12, $pop11, $pop10
-; CHECK-NEXT:    f32x4.replace_lane $push14=, $pop9, 2, $pop13
-; CHECK-NEXT:    f32x4.extract_lane $push17=, $6, 3
-; CHECK-NEXT:    f32x4.extract_lane $push16=, $5, 3
-; CHECK-NEXT:    f32x4.extract_lane $push15=, $4, 3
-; CHECK-NEXT:    call $push18=, fmaf, $pop17, $pop16, $pop15
-; CHECK-NEXT:    f32x4.replace_lane $push19=, $pop14, 3, $pop18
-; CHECK-NEXT:    v128.store 0($3):p2align=0, $pop19
+; CHECK-NEXT:    v128.load $push2=, 0($0):p2align=0
+; CHECK-NEXT:    v128.load $push1=, 0($1):p2align=0
+; CHECK-NEXT:    v128.load $push0=, 0($2):p2align=0
+; CHECK-NEXT:    f32x4.relaxed_madd $push3=, $pop2, $pop1, $pop0
+; CHECK-NEXT:    v128.store 0($3):p2align=0, $pop3
 ; CHECK-NEXT:    return
 entry:
   %0 = load <4 x float>, ptr %a, align 1
