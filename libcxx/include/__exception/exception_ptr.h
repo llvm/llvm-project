@@ -138,7 +138,7 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
   //
   // [1]:
   // https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/Exceptions/Articles/Exceptions64Bit.html
-  if _LIBCPP_CONSTEXPR (is_pointer<_Ep>::value) {
+  if _LIBCPP_CONSTEXPR_SINCE_CXX17 (is_pointer<_Ep>::value) {
     return std::__make_exception_ptr_via_throw(__e);
   }
 
