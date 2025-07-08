@@ -35,7 +35,7 @@ TEST(LlvmLibcWCSLCpyTest, CopyZero) {
 
 TEST(LlvmLibcWCSLCpyTest, SmallerSource) {
   const wchar_t *src = L"abc";
-  wchar_t dst[7]{L"111111"};
+  wchar_t dst[7]{L"123456"};
   size_t res = LIBC_NAMESPACE::wcslcpy(dst, src, 7);
   ASSERT_TRUE(dst[0] == L'a');
   ASSERT_TRUE(dst[1] == L'b');
@@ -43,9 +43,23 @@ TEST(LlvmLibcWCSLCpyTest, SmallerSource) {
   // Should append null terminator after copying source
   ASSERT_TRUE(dst[3] == L'\0');
   // Should not change following characters
-  ASSERT_TRUE(dst[4] == L'1');
-  ASSERT_TRUE(dst[5] == L'1');
+  ASSERT_TRUE(dst[4] == L'5');
+  ASSERT_TRUE(dst[5] == L'6');
   ASSERT_TRUE(dst[6] == L'\0');
   // Should still return length of src
   ASSERT_EQ(res, size_t(3));
+}
+
+TEST(LlvmLibcWCSLCpyTest, DoesNotCopyAfterNull) {
+  const wchar_t src[5] = {L'a', L'b', L'\0', L'c', L'd'};
+  wchar_t dst[5]{L"1234"};
+  size_t res = LIBC_NAMESPACE::wcslcpy(dst, src, 5);
+  ASSERT_TRUE(dst[0] == L'a');
+  ASSERT_TRUE(dst[1] == L'b');
+  ASSERT_TRUE(dst[2] == L'\0');
+  // Should not change following characters
+  ASSERT_TRUE(dst[3] == L'4');
+  ASSERT_TRUE(dst[4] == L'\0');
+  // Should still return length of src
+  ASSERT_EQ(res, size_t(2));
 }
