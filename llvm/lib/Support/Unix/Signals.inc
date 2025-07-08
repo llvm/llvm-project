@@ -415,8 +415,20 @@ static void SignalHandler(int Sig, siginfo_t *Info, void *) {
 
   // Signal sent from another userspace process, do not assume that continuing
   // the execution would re-raise it.
-  if (Info->si_pid != getpid() && Info->si_pid != 0)
+  if (Info->si_pid != getpid() && Info->si_pid != 0) {
+#if defined(__linux__) || defined(__ANDROID__)
+    // Re-raising a signal via `raise` loses the original siginfo. Recent
+    // versions of linux (>= 3.9) support processes sending a signal to itself
+    // with arbitrary signal information using a syscall. If this syscall is
+    // unsupported, errno will be set to EPERM and `raise` will be used instead.
+    int retval = syscall(SYS_rt_tgsigqueueinfo, getpid(), syscall(SYS_gettid),
+                         Sig, Info);
+    if (retval != 0 && errno == EPERM)
+      raise(Sig);
+#else
     raise(Sig);
+#endif
+  }
 }
 
 static void InfoSignalHandler(int Sig) {
