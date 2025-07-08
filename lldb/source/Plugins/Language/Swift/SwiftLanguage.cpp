@@ -1911,7 +1911,7 @@ SwiftLanguage::GetDemangledFunctionNameWithoutArguments(Mangled mangled) const {
   return mangled_name;
 }
 
-static llvm::Expected<std::pair<llvm::StringRef, DemangledNameInfo>>
+static llvm::Expected<std::pair<std::string, DemangledNameInfo>>
 GetAndValidateInfo(const SymbolContext &sc) {
   Mangled mangled = sc.GetPossiblyInlinedFunctionName();
   if (!mangled)
@@ -1941,7 +1941,7 @@ GetAndValidateInfo(const SymbolContext &sc) {
   return std::make_pair(demangled_name, info);
 }
 
-static llvm::Expected<llvm::StringRef>
+static llvm::Expected<std::string>
 GetDemangledBasename(const SymbolContext &sc) {
   auto info_or_err = GetAndValidateInfo(sc);
   if (!info_or_err)
@@ -1949,11 +1949,11 @@ GetDemangledBasename(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
-  return demangled_name.slice(info.BasenameRange.first,
-                              info.BasenameRange.second);
+  return demangled_name.substr(info.BasenameRange.first,
+                               info.BasenameRange.second);
 }
 
-static llvm::Expected<llvm::StringRef>
+static llvm::Expected<std::string>
 GetDemangledFunctionPrefix(const SymbolContext &sc) {
   auto info_or_err = GetAndValidateInfo(sc);
   if (!info_or_err)
@@ -1966,10 +1966,10 @@ GetDemangledFunctionPrefix(const SymbolContext &sc) {
         "DemangledInfo for '%s does not have suffix range.",
         demangled_name.data());
 
-  return demangled_name.slice(info.PrefixRange.first, info.PrefixRange.second);
+  return demangled_name.substr(info.PrefixRange.first, info.PrefixRange.second);
 }
 
-static llvm::Expected<llvm::StringRef>
+static llvm::Expected<std::string>
 GetDemangledFunctionSuffix(const SymbolContext &sc) {
   auto info_or_err = GetAndValidateInfo(sc);
   if (!info_or_err)
@@ -1982,7 +1982,7 @@ GetDemangledFunctionSuffix(const SymbolContext &sc) {
         "DemangledInfo for '%s does not have suffix range.",
         demangled_name.data());
 
-  return demangled_name.slice(info.SuffixRange.first, info.SuffixRange.second);
+  return demangled_name.substr(info.SuffixRange.first, info.SuffixRange.second);
 }
 
 static bool PrintDemangledArgumentList(Stream &s, const SymbolContext &sc) {
@@ -2000,8 +2000,8 @@ static bool PrintDemangledArgumentList(Stream &s, const SymbolContext &sc) {
   if (!info.hasArguments())
     return false;
 
-  s << demangled_name.slice(info.ArgumentsRange.first,
-                            info.ArgumentsRange.second);
+  s << demangled_name.substr(info.ArgumentsRange.first,
+                             info.ArgumentsRange.second);
 
   return true;
 }
