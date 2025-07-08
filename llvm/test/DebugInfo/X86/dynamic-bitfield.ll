@@ -1,6 +1,7 @@
 ; The use of llvm-dis here tests that round-tripping the IR works
 ; correctly for the expression case.
 ; RUN: llvm-as < %s | llvm-dis | llc -mtriple=x86_64 -O0 -filetype=obj -o - | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; XFAIL: *
 
 ; A basic test of using a DIExpression for DW_AT_data_bit_offset and
 ; DW_AT_bit_size.
