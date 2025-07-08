@@ -1165,7 +1165,9 @@ static ExprResult formImmediatelyDeclaredConstraint(
   ExprResult ImmediatelyDeclaredConstraint = S.CheckConceptTemplateId(
       SS, /*TemplateKWLoc=*/SourceLocation(), NameInfo,
       /*FoundDecl=*/FoundDecl ? FoundDecl : NamedConcept, NamedConcept,
-      &ConstraintArgs);
+      &ConstraintArgs,
+      /*DoCheckConstraintSatisfaction=*/
+      !S.inParameterMappingSubstitution());
   if (ImmediatelyDeclaredConstraint.isInvalid() || !EllipsisLoc.isValid())
     return ImmediatelyDeclaredConstraint;
 
@@ -4712,13 +4714,11 @@ void Sema::diagnoseMissingTemplateArguments(const CXXScopeSpec &SS,
   diagnoseMissingTemplateArguments(Name, Loc);
 }
 
-ExprResult
-Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
-                             SourceLocation TemplateKWLoc,
-                             const DeclarationNameInfo &ConceptNameInfo,
-                             NamedDecl *FoundDecl,
-                             ConceptDecl *NamedConcept,
-                             const TemplateArgumentListInfo *TemplateArgs) {
+ExprResult Sema::CheckConceptTemplateId(
+    const CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
+    const DeclarationNameInfo &ConceptNameInfo, NamedDecl *FoundDecl,
+    ConceptDecl *NamedConcept, const TemplateArgumentListInfo *TemplateArgs,
+    bool DoCheckConstraintSatisfaction) {
   assert(NamedConcept && "A concept template id without a template?");
 
   if (NamedConcept->isInvalidDecl())
@@ -4744,26 +4744,32 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
           *TemplateArgs, CTAI.CanonicalConverted);
   MultiLevelTemplateArgumentList MLTAL(NamedConcept, CTAI.CanonicalConverted,
                                        /*Final=*/false);
-  LocalInstantiationScope Scope(*this);
-
-  EnterExpressionEvaluationContext EECtx{
-      *this, ExpressionEvaluationContext::Unevaluated, CSD};
-
-  ContextRAII CurContext(*this, CSD->getDeclContext(),
-                         /*NewThisContext=*/false);
-  if (!AreArgsDependent &&
-      CheckConstraintSatisfaction(
-          NamedConcept, AssociatedConstraint(NamedConcept->getConstraintExpr()),
-          MLTAL,
-          SourceRange(SS.isSet() ? SS.getBeginLoc() : ConceptNameInfo.getLoc(),
-                      TemplateArgs->getRAngleLoc()),
-          Satisfaction))
-    return ExprError();
   auto *CL = ConceptReference::Create(
       Context,
       SS.isSet() ? SS.getWithLocInContext(Context) : NestedNameSpecifierLoc{},
       TemplateKWLoc, ConceptNameInfo, FoundDecl, NamedConcept,
       ASTTemplateArgumentListInfo::Create(Context, *TemplateArgs));
+
+  bool Error = false;
+  if (!AreArgsDependent && DoCheckConstraintSatisfaction) {
+
+    LocalInstantiationScope Scope(*this);
+
+    EnterExpressionEvaluationContext EECtx{
+        *this, ExpressionEvaluationContext::Unevaluated, CSD};
+
+    Error = CheckConstraintSatisfaction(
+        NamedConcept, AssociatedConstraint(NamedConcept->getConstraintExpr()),
+        MLTAL,
+        SourceRange(SS.isSet() ? SS.getBeginLoc() : ConceptNameInfo.getLoc(),
+                    TemplateArgs->getRAngleLoc()),
+        Satisfaction, CL);
+  }
+
+  if (!DoCheckConstraintSatisfaction)
+    Satisfaction.IsSatisfied = false;
+  Satisfaction.ContainsErrors = Error;
+
   return ConceptSpecializationExpr::Create(
       Context, CL, CSD, AreArgsDependent ? nullptr : &Satisfaction);
 }
@@ -5073,10 +5079,11 @@ bool Sema::CheckTemplateTypeArgument(
   }
   default: {
     // We allow instantiating a template with template argument packs when
-    // building deduction guides.
+    // building deduction guides or mapping constraint template parameters.
     if (Arg.getKind() == TemplateArgument::Pack &&
-        CodeSynthesisContexts.back().Kind ==
-            Sema::CodeSynthesisContext::BuildingDeductionGuides) {
+        (CodeSynthesisContexts.back().Kind ==
+             Sema::CodeSynthesisContext::BuildingDeductionGuides ||
+         inParameterMappingSubstitution())) {
       SugaredConverted.push_back(Arg);
       CanonicalConverted.push_back(Arg);
       return false;
@@ -5674,6 +5681,20 @@ bool Sema::CheckTemplateArgumentList(
     TemplateArgumentListInfo &TemplateArgs, const DefaultArguments &DefaultArgs,
     bool PartialTemplateArgs, CheckTemplateArgumentInfo &CTAI,
     bool UpdateArgsWithConversions, bool *ConstraintsNotSatisfied) {
+  return CheckTemplateArgumentList(
+      Template, GetTemplateParameterList(Template), TemplateLoc, TemplateArgs,
+      DefaultArgs, PartialTemplateArgs, CTAI, UpdateArgsWithConversions,
+      ConstraintsNotSatisfied);
+}
+
+/// Check that the given template argument list is well-formed
+/// for specializing the given template.
+bool Sema::CheckTemplateArgumentList(
+    TemplateDecl *Template, TemplateParameterList *Params,
+    SourceLocation TemplateLoc, TemplateArgumentListInfo &TemplateArgs,
+    const DefaultArguments &DefaultArgs, bool PartialTemplateArgs,
+    CheckTemplateArgumentInfo &CTAI, bool UpdateArgsWithConversions,
+    bool *ConstraintsNotSatisfied) {
 
   if (ConstraintsNotSatisfied)
     *ConstraintsNotSatisfied = false;
@@ -5682,8 +5703,6 @@ bool Sema::CheckTemplateArgumentList(
   // changes at the end when successful in matching the arguments to the
   // template.
   TemplateArgumentListInfo NewArgs = TemplateArgs;
-
-  TemplateParameterList *Params = GetTemplateParameterList(Template);
 
   SourceLocation RAngleLoc = NewArgs.getRAngleLoc();
 
@@ -5876,6 +5895,19 @@ bool Sema::CheckTemplateArgumentList(
         return true;
       }
 
+      // For constraint parameter mapping, we have already built a pack in
+      // TransformTemplateArguments
+      // if (inParameterMappingSubstitution()) {
+      //   llvm::copy(SugaredArgumentPack,
+      //   std::back_inserter(CTAI.SugaredConverted));
+      //   SugaredArgumentPack.clear();
+      //   llvm::copy(CanonicalArgumentPack,
+      //   std::back_inserter(CTAI.CanonicalConverted));
+      //   CanonicalArgumentPack.clear();
+      //   ++Param;
+      //   continue;
+      // }
+
       CTAI.SugaredConverted.push_back(
           TemplateArgument::CreatePackCopy(Context, SugaredArgumentPack));
       SugaredArgumentPack.clear();
@@ -6005,7 +6037,8 @@ bool Sema::CheckTemplateArgumentList(
         /*RelativeToPrimary=*/true,
         /*Pattern=*/nullptr,
         /*ForConceptInstantiation=*/true);
-    if (EnsureTemplateArgumentListConstraints(
+    if (!isa<ConceptDecl>(Template) &&
+        EnsureTemplateArgumentListConstraints(
             Template, MLTAL,
             SourceRange(TemplateLoc, TemplateArgs.getRAngleLoc()))) {
       if (ConstraintsNotSatisfied)
