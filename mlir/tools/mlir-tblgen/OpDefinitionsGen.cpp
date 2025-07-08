@@ -3100,6 +3100,7 @@ void OpEmitter::genBuilder() {
     fctx.addSubst("_state", builderOpState);
     if (body)
       method->body() << tgfmt(*body, &fctx);
+    genInlineCreateBody(arguments);
   }
 
   // Generate default builders that requires all result type, operands, and
