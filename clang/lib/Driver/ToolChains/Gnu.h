@@ -244,7 +244,7 @@ public:
     const std::string GentooConfigDir = "/etc/env.d/gcc";
 
   public:
-    /// Function for converting a Triple to a Debian multiarch.  The
+    /// Function for converting a triple to a Debian multiarch.  The
     /// toolchains use this to adjust the target specific component of
     /// include paths for Debian.
     std::function<StringRef(const llvm::Triple &)> TripleToDebianMultiarch =

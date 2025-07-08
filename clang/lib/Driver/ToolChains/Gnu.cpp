@@ -2805,8 +2805,9 @@ bool Generic_GCC::GCCInstallationDetector::SelectGCCInstallationDirectory(
       });
 
   // FIXME Start selecting installation with libstdc++ in clang 22,
-  // using the current way of selecting the installation as a fallback only.
-  // For now, warn if install with libstdc++ differs SelectedInstallation.
+  // using the current way of selecting the installation as a fallback
+  // only.  For now, warn if the installation with libstdc++ differs
+  // from SelectedInstallation.
   const GCCInstallCandidate *InstallWithIncludes = nullptr;
   for (const auto &I : Installations) {
     if ((!InstallWithIncludes || I.Version > InstallWithIncludes->Version) &&
