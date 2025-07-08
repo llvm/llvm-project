@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Serialize.h"
-#include "../clangd/CodeCompletionStrings.h"
 #include "BitcodeWriter.h"
 
 #include "clang/AST/Attr.h"

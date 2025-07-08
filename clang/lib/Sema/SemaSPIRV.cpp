@@ -116,7 +116,7 @@ static bool checkGenericCastToPtr(Sema &SemaRef, CallExpr *Call) {
   RT = RT->getPointeeType();
   auto Qual = RT.getQualifiers();
   LangAS AddrSpace;
-  switch (static_cast<spirv::StorageClass>(StorageClass)) {
+  switch (StorageClass) {
   case spirv::StorageClass::CrossWorkgroup:
     AddrSpace =
         SemaRef.LangOpts.isSYCL() ? LangAS::sycl_global : LangAS::opencl_global;

@@ -307,9 +307,8 @@ define <vscale x 1 x double> @test16(i64 %avl, double %a, <vscale x 1 x double> 
 ; CHECK-LABEL: test16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64, mf2, ta, ma
-; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vfadd.vv v8, v9, v8
 ; CHECK-NEXT:    ret
 entry:
@@ -721,4 +720,36 @@ define i64 @avl_undef2() {
 ; CHECK-NEXT:    ret
   %1 = tail call i64 @llvm.riscv.vsetvli(i64 poison, i64 2, i64 7)
   ret i64 %1
+}
+
+define i64 @vsetvli_vleff(ptr %s, i64 %evl) {
+; CHECK-LABEL: vsetvli_vleff:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a3, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:  .LBB37_1: # %while.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, tu, ma
+; CHECK-NEXT:    vmv1r.v v9, v8
+; CHECK-NEXT:    vle16ff.v v9, (a0)
+; CHECK-NEXT:    csrr a2, vl
+; CHECK-NEXT:    beqz a2, .LBB37_1
+; CHECK-NEXT:  # %bb.2: # %while.end
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+entry:
+  br label %while.cond
+
+while.cond:
+  %new_vl.0 = phi i64 [ 0, %entry ], [ %1, %while.body ]
+  %cmp = icmp eq i64 %new_vl.0, 0
+  br i1 %cmp, label %while.body, label %while.end
+
+while.body:
+  %0 = tail call { <vscale x 4 x i16>, i64 } @llvm.riscv.vleff.nxv4i16.i64(<vscale x 4 x i16> zeroinitializer, ptr %s, i64 %evl)
+  %1 = extractvalue { <vscale x 4 x i16>, i64 } %0, 1
+  br label %while.cond
+
+while.end:
+  ret i64 0
 }
