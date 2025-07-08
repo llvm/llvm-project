@@ -151,7 +151,7 @@ private:
               std::move(*doCons);
           nextIt = block.erase(nextIt);
           // try to match OmpEndLoopDirective
-          if(nextIt != block.end()) {
+          if (nextIt != block.end()) {
             if (auto *endDir{
                     GetConstructIf<parser::OmpEndLoopDirective>(*nextIt)}) {
               std::get<std::optional<parser::OmpEndLoopDirective>>(x.t) =
