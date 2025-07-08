@@ -3510,7 +3510,7 @@ bool Sema::checkTargetClonesAttrString(
             Feat = Feat.trim();
             if (!TInfo.validateCpuSupports(Feat)) {
               Diag(CurLoc, diag::warn_unsupported_target_attribute)
-                     << Unsupported << None << Feat << TargetClones;
+                  << Unsupported << None << Feat << TargetClones;
               continue;
             }
             if (TInfo.doesFeatureAffectCodeGen(Feat))
