@@ -2538,7 +2538,7 @@ bool AVRExpandPseudo::expand<AVR::SPWRITE>(Block &MBB, BlockIt MBBI) {
   //
   // For old devices disable interrupts (3 extra instructions)
 
-  if (STI.getELFArch() < 102) { // Not an XMEGA device
+  if (STI.getELFArch() < 102 && STI.getIORegSPH() >= 0) { // Not an XMEGA device and not just SPL
     buildMI(MBB, MBBI, AVR::INRdA)
         .addReg(STI.getTmpRegister(), RegState::Define)
         .addImm(STI.getIORegSREG())
@@ -2558,7 +2558,8 @@ bool AVRExpandPseudo::expand<AVR::SPWRITE>(Block &MBB, BlockIt MBBI) {
         .addReg(STI.getTmpRegister(), RegState::Kill)
         .setMIFlags(Flags);
 
-  buildMI(MBB, MBBI, AVR::OUTARr)
+  if (STI.getIORegSPH() >= 0)
+    buildMI(MBB, MBBI, AVR::OUTARr)
       .addImm(STI.getIORegSPH())
       .addReg(SrcHiReg, getKillRegState(SrcIsKill))
       .setMIFlags(Flags);
