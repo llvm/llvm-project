@@ -6275,7 +6275,7 @@ Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
   SyncScope::ID SSID = cast<AtomicCmpXchgInst>(Inst)->getSyncScopeID();
   if (isReleaseOrStronger(Ord))
     return Builder.CreateFence(Ord == AtomicOrdering::SequentiallyConsistent
-                                   ? AtomicOrdering::SequentiallyConsistent
+                                   ? Ord
                                    : AtomicOrdering::Release,
                                SSID);
 

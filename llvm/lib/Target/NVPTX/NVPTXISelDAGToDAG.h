@@ -102,9 +102,8 @@ private:
   inline SDValue getI32Imm(unsigned Imm, const SDLoc &DL) {
     return CurDAG->getTargetConstant(Imm, DL, MVT::i32);
   }
-  unsigned int getAddrSpace(const MemSDNode *N) const;
-  unsigned int getMemOrder(const MemSDNode *N) const;
-  unsigned int getAtomicScope(const MemSDNode *N) const;
+  NVPTX::Ordering getMemOrder(const MemSDNode *N) const;
+  NVPTX::Scope getAtomicScope(const MemSDNode *N) const;
 
   bool SelectADDR(SDValue Addr, SDValue &Base, SDValue &Offset);
   SDValue getPTXCmpMode(const CondCodeSDNode &CondCode);
@@ -119,6 +118,9 @@ private:
   std::pair<NVPTX::Ordering, NVPTX::Scope>
   insertMemoryInstructionFence(SDLoc DL, SDValue &Chain, MemSDNode *N);
   NVPTX::Scope getOperationScope(MemSDNode *N, NVPTX::Ordering O) const;
+
+public:
+  static NVPTX::AddressSpace getAddrSpace(const MemSDNode *N);
 };
 
 class NVPTXDAGToDAGISelLegacy : public SelectionDAGISelLegacy {

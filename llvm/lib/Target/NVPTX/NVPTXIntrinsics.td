@@ -1881,29 +1881,27 @@ multiclass F_ATOMIC_2<RegTyInfo t, string sem_str, string as_str, string op_str,
   }
 }
 
-multiclass F_ATOMIC_3<RegTyInfo t, string op_str> {
-  defvar asm_str = "atom${sem:sem}${scope:scope}${addsp:addsp}" # op_str # "\t$dst, [$addr], $b, $c;";
+multiclass F_ATOMIC_3<RegTyInfo t, string op_str, SDPatternOperator op, SDNode atomic> {
+  defvar asm_str = "atom${sem:sem}${scope:scope}${addsp:addsp}" # op_str;
 
   let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
-    def _rr : NVPTXInst<(outs t.RC:$dst),
-      (ins ADDR:$addr, t.RC:$b, t.RC:$c, AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+    def _rr : BasicFlagsNVPTXInst<(outs t.RC:$dst),
+      (ins ADDR:$addr, t.RC:$b, t.RC:$c), (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
       asm_str, []>;
 
-    def _ir : NVPTXInst<(outs t.RC:$dst),
-      (ins ADDR:$addr, t.Imm:$b, t.RC:$c, AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+    def _ir : BasicFlagsNVPTXInst<(outs t.RC:$dst),
+      (ins ADDR:$addr, t.Imm:$b, t.RC:$c), (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
       asm_str, []>;
 
-    def _ri : NVPTXInst<(outs t.RC:$dst),
-      (ins ADDR:$addr, t.RC:$b, t.Imm:$c, AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+    def _ri : BasicFlagsNVPTXInst<(outs t.RC:$dst),
+      (ins ADDR:$addr, t.RC:$b, t.Imm:$c), (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
       asm_str, []>;
 
-    def _ii : NVPTXInst<(outs t.RC:$dst),
-      (ins ADDR:$addr, t.Imm:$b, t.Imm:$c, AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+    def _ii : BasicFlagsNVPTXInst<(outs t.RC:$dst),
+      (ins ADDR:$addr, t.Imm:$b, t.Imm:$c), (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
       asm_str, []>;
   }
-}
 
-multiclass F_ATOMIC_3_PATTERN<RegTyInfo t, string InstructionName, SDPatternOperator op, SDNode atomic> {
   defvar GetSem = SDNodeXForm<atomic, [{
     return getI32Imm(getMemOrder(cast<MemSDNode>(N)), SDLoc(N));
   }]>;
@@ -1917,16 +1915,16 @@ multiclass F_ATOMIC_3_PATTERN<RegTyInfo t, string InstructionName, SDPatternOper
   }]>;
 
   def : Pat<(op:$this addr:$addr, t.Ty:$b, t.Ty:$c),
-        (!cast<Instruction>(InstructionName#_rr) ADDR:$addr, t.Ty:$b, t.Ty:$c, (GetSem $this), (GetScope $this), (GetAddSp $this))>;
+        (!cast<Instruction>(NAME # _rr) ADDR:$addr, t.Ty:$b, t.Ty:$c, (GetSem $this), (GetScope $this), (GetAddSp $this))>;
 
   def : Pat<(op:$this addr:$addr, (t.Ty t.ImmNode:$b), t.Ty:$c),
-        (!cast<Instruction>(InstructionName#_ir) ADDR:$addr, (t.Ty t.ImmNode:$b), t.Ty:$c, (GetSem $this), (GetScope $this), (GetAddSp $this))>;
+        (!cast<Instruction>(NAME # _ir) ADDR:$addr, (t.Ty t.ImmNode:$b), t.Ty:$c, (GetSem $this), (GetScope $this), (GetAddSp $this))>;
 
   def : Pat<(op:$this addr:$addr, t.Ty:$b, (t.Ty t.ImmNode:$c)),
-        (!cast<Instruction>(InstructionName#_#ri) ADDR:$addr, t.Ty:$b, (t.Ty t.ImmNode:$c), (GetSem $this), (GetScope $this), (GetAddSp $this))>;
+        (!cast<Instruction>(NAME # _#ri) ADDR:$addr, t.Ty:$b, (t.Ty t.ImmNode:$c), (GetSem $this), (GetScope $this), (GetAddSp $this))>;
 
   def : Pat<(op:$this addr:$addr, (t.Ty t.ImmNode:$b), (t.Ty t.ImmNode:$c)),
-        (!cast<Instruction>(InstructionName#_#ii) ADDR:$addr, (t.Ty t.ImmNode:$b), (t.Ty t.ImmNode:$c), (GetSem $this), (GetScope $this), (GetAddSp $this))>;
+        (!cast<Instruction>(NAME # _#ii) ADDR:$addr, (t.Ty t.ImmNode:$b), (t.Ty t.ImmNode:$c), (GetSem $this), (GetScope $this), (GetAddSp $this))>;
 }
 
 multiclass F_ATOMIC_2_AS<RegTyInfo t, SDPatternOperator frag, string op_str, list<Predicate> preds = []> {
@@ -1984,9 +1982,7 @@ defm INT_PTX_ATOM_XOR_64 : F_ATOMIC_2_AS<I64RT, atomic_load_xor_i64, "xor.b64", 
 foreach t = [I16RT, I32RT, I64RT] in {
     defvar atomic_cmp_swap_pat = !cast<PatFrag>("atomic_cmp_swap_i"#t.Size);
     defm INT_PTX_ATOM_CAS_#t.Size
-     : F_ATOMIC_3<t, ".cas.b"#t.Size>;
-
-    defm INT_PTX_ATOM_CAS_PAT_#t.Size : F_ATOMIC_3_PATTERN<t, "INT_PTX_ATOM_CAS_"#t.Size, atomic_cmp_swap_pat, atomic_cmp_swap>;
+     : F_ATOMIC_3<t, ".cas.b"#t.Size, atomic_cmp_swap_pat, atomic_cmp_swap>;
 }
 
 // Support for scoped atomic operations.  Matches
@@ -2027,10 +2023,10 @@ multiclass ATOM2S_impl<string OpStr, string IntTypeStr, string TypeStr,
   }
 }
 
-multiclass F_ATOMIC_3_INTRINSIC_PATTERN<RegTyInfo t, string OpStr, string InstructionName, string IntTypeStr> {
+multiclass F_ATOMIC_3_INTRINSIC_PATTERN<RegTyInfo t, string OpStr, string InstructionName> {
   foreach scope = ["cta", "sys"] in {
     foreach space = ["gen"] in {
-      defvar intrinsic = !cast<SDPatternOperator>("int_nvvm_atomic_" # OpStr # "_" # space # "_" # IntTypeStr # "_" # scope);
+      defvar intrinsic = !cast<SDPatternOperator>("int_nvvm_atomic_" # OpStr # "_" # space # "_i_" # scope);
       def : Pat<(t.Ty (intrinsic addr:$addr, t.Ty:$b, t.Ty:$c)),
             (!cast<Instruction>(InstructionName # "_rr") ADDR:$addr, t.Ty:$b, t.Ty:$c, Ordering_not_atomic, !cast<PatLeaf>("Scope_" # scope), !cast<PatLeaf>("AddrSpace_" # space))>;
 
@@ -2084,9 +2080,9 @@ multiclass ATOM2_incdec_impl<string OpStr> {
 
 // atom.cas
 multiclass ATOM3_cas_impl<string OpStr> {
-  defm _b16 : F_ATOMIC_3_INTRINSIC_PATTERN<I16RT, OpStr, "INT_PTX_ATOM_CAS_16", "i">;
-  defm _b32 : F_ATOMIC_3_INTRINSIC_PATTERN<I32RT, OpStr, "INT_PTX_ATOM_CAS_32", "i">;
-  defm _b64 : F_ATOMIC_3_INTRINSIC_PATTERN<I64RT, OpStr, "INT_PTX_ATOM_CAS_64", "i">;
+  defm _b16 : F_ATOMIC_3_INTRINSIC_PATTERN<I16RT, OpStr, "INT_PTX_ATOM_CAS_16">;
+  defm _b32 : F_ATOMIC_3_INTRINSIC_PATTERN<I32RT, OpStr, "INT_PTX_ATOM_CAS_32">;
+  defm _b64 : F_ATOMIC_3_INTRINSIC_PATTERN<I64RT, OpStr, "INT_PTX_ATOM_CAS_64">;
 }
 
 defm INT_PTX_SATOM_ADD  : ATOM2_add_impl<"add">;
