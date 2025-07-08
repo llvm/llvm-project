@@ -834,7 +834,7 @@ TEST_F(SelectionDAGPatternMatchTest, MatchZeroOneAllOnes) {
 
   // Scalar constant 0
   SDValue Zero = DAG->getConstant(0, DL, VT);
-  EXPECT_TRUE(sd_match(Zero, DAG.get(), llvm::SDPatternMatch::m_Zero()));
+  EXPECT_TRUE(sd_match(Zero, DAG.get(), m_Zero()));
   EXPECT_FALSE(sd_match(Zero, DAG.get(), m_One()));
   EXPECT_FALSE(sd_match(Zero, DAG.get(), m_AllOnes()));
 
