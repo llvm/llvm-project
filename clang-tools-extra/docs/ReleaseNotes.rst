@@ -349,7 +349,6 @@ Changes in existing checks
   <clang-tidy/checks/readability/redundant-smartptr-get>` check by fixing
   some false positives involving smart pointers to arrays.
 
-
 Removed checks
 ^^^^^^^^^^^^^^
 
