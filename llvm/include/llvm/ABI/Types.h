@@ -28,6 +28,8 @@ namespace abi {
 
 enum class TypeKind {
   Void,
+  MemberPointer,
+  Complex,
   Integer,
   Float,
   Pointer,
@@ -67,6 +69,8 @@ public:
   bool isVector() const { return Kind == TypeKind::Vector; }
   bool isStruct() const { return Kind == TypeKind::Struct; }
   bool isUnion() const { return Kind == TypeKind::Union; }
+  bool isMemberPointer() const { return Kind == TypeKind::MemberPointer; }
+  bool isComplex() const { return Kind == TypeKind::Union; }
 };
 
 class VoidType : public Type {
@@ -74,6 +78,43 @@ public:
   VoidType() : Type(TypeKind::Void, TypeSize::getFixed(0), Align(1)) {}
 
   static bool classof(const Type *T) { return T->getKind() == TypeKind::Void; }
+};
+
+class ComplexType : public Type {
+public:
+  ComplexType(const Type *ElementType, uint64_t SizeInBits, Align Alignment)
+      : Type(TypeKind::Complex, TypeSize::getFixed(SizeInBits), Alignment),
+        ElementType(ElementType) {}
+
+  const Type *getElementType() const { return ElementType; }
+
+  static bool classof(const Type *T) {
+    return T->getKind() == TypeKind::Complex;
+  }
+
+private:
+  const Type *ElementType;
+};
+
+class MemberPointerType : public Type {
+public:
+  MemberPointerType(bool IsFunctionPointer, bool Has64BitPointers,
+                    uint64_t SizeInBits, Align Alignment)
+      : Type(TypeKind::MemberPointer, TypeSize::getFixed(SizeInBits),
+             Alignment),
+        IsFunctionPointer(IsFunctionPointer),
+        Has64BitPointers(Has64BitPointers) {}
+
+  bool isFunctionPointer() const { return IsFunctionPointer; }
+  bool has64BitPointers() const { return Has64BitPointers; }
+
+  static bool classof(const Type *T) {
+    return T->getKind() == TypeKind::MemberPointer;
+  }
+
+private:
+  bool IsFunctionPointer;
+  bool Has64BitPointers;
 };
 
 class IntegerType : public Type {
@@ -179,15 +220,52 @@ private:
   uint32_t NumFields;
   StructPacking Packing;
 
+  bool IsCXXRecord;
+  bool IsPolymorphic;
+  bool HasNonTrivialCopyConstructor;
+  bool HasNonTrivialDestructor;
+  bool HasFlexibleArrayMember;
+  bool HasUnalignedFields;
+  const FieldInfo *BaseClasses;
+  uint32_t NumBaseClasses;
+  const FieldInfo *VirtualBaseClasses;
+  uint32_t NumVirtualBaseClasses;
+
 public:
-  StructType(const FieldInfo *StructFields, uint32_t FieldCount, TypeSize Size,
-             Align Align, StructPacking Pack = StructPacking::Default)
+  StructType(const FieldInfo *StructFields, uint32_t FieldCount,
+             const FieldInfo *Bases, uint32_t BaseCount,
+             const FieldInfo *VBases, uint32_t VBaseCount, TypeSize Size,
+             Align Align, StructPacking Pack = StructPacking::Default,
+             bool CXXRecord = false, bool Polymorphic = false,
+             bool NonTrivialCopy = false, bool NonTrivialDtor = false,
+             bool FlexibleArray = false, bool UnalignedFields = false)
       : Type(TypeKind::Struct, Size, Align), Fields(StructFields),
-        NumFields(FieldCount), Packing(Pack) {}
+        NumFields(FieldCount), Packing(Pack), IsCXXRecord(CXXRecord),
+        IsPolymorphic(Polymorphic),
+        HasNonTrivialCopyConstructor(NonTrivialCopy),
+        HasNonTrivialDestructor(NonTrivialDtor),
+        HasFlexibleArrayMember(FlexibleArray),
+        HasUnalignedFields(UnalignedFields), BaseClasses(Bases),
+        NumBaseClasses(BaseCount), VirtualBaseClasses(VBases),
+        NumVirtualBaseClasses(VBaseCount) {}
 
   const FieldInfo *getFields() const { return Fields; }
   uint32_t getNumFields() const { return NumFields; }
   StructPacking getPacking() const { return Packing; }
+
+  bool isCXXRecord() const { return IsCXXRecord; }
+  bool isPolymorphic() const { return IsPolymorphic; }
+  bool hasNonTrivialCopyConstructor() const {
+    return HasNonTrivialCopyConstructor;
+  }
+  bool hasNonTrivialDestructor() const { return HasNonTrivialDestructor; }
+  bool hasFlexibleArrayMember() const { return HasFlexibleArrayMember; }
+  bool hasUnalignedFields() const { return HasUnalignedFields; }
+
+  const FieldInfo *getBaseClasses() const { return BaseClasses; }
+  uint32_t getNumBaseClasses() const { return NumBaseClasses; }
+  const FieldInfo *getVirtualBaseClasses() const { return VirtualBaseClasses; }
+  uint32_t getNumVirtualBaseClasses() const { return NumVirtualBaseClasses; }
 
   static bool classof(const Type *T) {
     return T->getKind() == TypeKind::Struct;
@@ -250,19 +328,42 @@ public:
         VectorType(ElementType, NumElements, Align);
   }
 
-  const StructType *getStructType(ArrayRef<FieldInfo> Fields, TypeSize Size,
-                                  Align Align,
-                                  StructPacking Pack = StructPacking::Default) {
+  const StructType *
+  getStructType(ArrayRef<FieldInfo> Fields, TypeSize Size, Align Align,
+                StructPacking Pack = StructPacking::Default,
+                ArrayRef<FieldInfo> BaseClasses = {},
+                ArrayRef<FieldInfo> VirtualBaseClasses = {},
+                bool CXXRecord = false, bool Polymorphic = false,
+                bool NonTrivialCopy = false, bool NonTrivialDtor = false,
+                bool FlexibleArray = false, bool UnalignedFields = false) {
     FieldInfo *FieldArray = Allocator.Allocate<FieldInfo>(Fields.size());
-
     for (size_t I = 0; I < Fields.size(); ++I) {
       new (&FieldArray[I]) FieldInfo(Fields[I]);
     }
 
-    return new (Allocator.Allocate<StructType>()) StructType(
-        FieldArray, static_cast<uint32_t>(Fields.size()), Size, Align, Pack);
-  }
+    FieldInfo *BaseArray = nullptr;
+    if (!BaseClasses.empty()) {
+      BaseArray = Allocator.Allocate<FieldInfo>(BaseClasses.size());
+      for (size_t I = 0; I < BaseClasses.size(); ++I) {
+        new (&BaseArray[I]) FieldInfo(BaseClasses[I]);
+      }
+    }
 
+    FieldInfo *VBaseArray = nullptr;
+    if (!VirtualBaseClasses.empty()) {
+      VBaseArray = Allocator.Allocate<FieldInfo>(VirtualBaseClasses.size());
+      for (size_t I = 0; I < VirtualBaseClasses.size(); ++I) {
+        new (&VBaseArray[I]) FieldInfo(VirtualBaseClasses[I]);
+      }
+    }
+
+    return new (Allocator.Allocate<StructType>())
+        StructType(FieldArray, static_cast<uint32_t>(Fields.size()), BaseArray,
+                   static_cast<uint32_t>(BaseClasses.size()), VBaseArray,
+                   static_cast<uint32_t>(VirtualBaseClasses.size()), Size,
+                   Align, Pack, CXXRecord, Polymorphic, NonTrivialCopy,
+                   NonTrivialDtor, FlexibleArray, UnalignedFields);
+  }
   const UnionType *getUnionType(ArrayRef<FieldInfo> Fields, TypeSize Size,
                                 Align Align,
                                 StructPacking Pack = StructPacking::Default) {
