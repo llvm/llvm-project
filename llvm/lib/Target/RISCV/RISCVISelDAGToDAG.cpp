@@ -691,7 +691,7 @@ bool RISCVDAGToDAGISel::trySignedBitfieldInsertInMask(SDNode *Node) {
     return false;
 
   int32_t C1 = N1C->getSExtValue();
-  if (!(isShiftedMask_32(C1) && !isInt<12>(C1)))
+  if (!isShiftedMask_32(C1) || isInt<12>(C1))
     return false;
 
   // If C1 is a shifted mask (but can't be formed as an ORI),
@@ -710,9 +710,9 @@ bool RISCVDAGToDAGISel::trySignedBitfieldInsertInMask(SDNode *Node) {
   SDLoc DL(Node);
   MVT VT = Node->getSimpleValueType(0);
 
-  SmallVector<SDValue, 4> Ops = {CurDAG->getSignedTargetConstant(-1, DL, VT),
-                                 CurDAG->getTargetConstant(Width, DL, VT),
-                                 CurDAG->getTargetConstant(Trailing, DL, VT)};
+  SDValue Ops[] = {CurDAG->getSignedTargetConstant(-1, DL, VT),
+                   CurDAG->getTargetConstant(Width, DL, VT),
+                   CurDAG->getTargetConstant(Trailing, DL, VT)};
   SDNode *BitIns = CurDAG->getMachineNode(RISCV::QC_INSBI, DL, VT, Ops);
   ReplaceNode(Node, BitIns);
   return true;
