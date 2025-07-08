@@ -1400,7 +1400,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   setOperationAction(ISD::EH_SJLJ_SETJMP, MVT::i32, Custom);
   setOperationAction(ISD::EH_SJLJ_LONGJMP, MVT::Other, Custom);
   setOperationAction(ISD::EH_SJLJ_SETUP_DISPATCH, MVT::Other, Custom);
-  if (Subtarget->useSjLjEH())
+  if (getTargetMachine().getExceptionModel() == ExceptionHandling::SjLj)
     setLibcallImpl(RTLIB::UNWIND_RESUME, RTLIB::_Unwind_SjLj_Resume);
 
   setOperationAction(ISD::SETCC,     MVT::i32, Expand);
@@ -21961,14 +21961,16 @@ Register ARMTargetLowering::getExceptionPointerRegister(
     const Constant *PersonalityFn) const {
   // Platforms which do not use SjLj EH may return values in these registers
   // via the personality function.
-  return Subtarget->useSjLjEH() ? Register() : ARM::R0;
+  ExceptionHandling EM = getTargetMachine().getExceptionModel();
+  return EM == ExceptionHandling::SjLj ? Register() : ARM::R0;
 }
 
 Register ARMTargetLowering::getExceptionSelectorRegister(
     const Constant *PersonalityFn) const {
   // Platforms which do not use SjLj EH may return values in these registers
   // via the personality function.
-  return Subtarget->useSjLjEH() ? Register() : ARM::R1;
+  ExceptionHandling EM = getTargetMachine().getExceptionModel();
+  return EM == ExceptionHandling::SjLj ? Register() : ARM::R1;
 }
 
 void ARMTargetLowering::initializeSplitCSR(MachineBasicBlock *Entry) const {
