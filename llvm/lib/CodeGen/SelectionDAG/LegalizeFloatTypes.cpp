@@ -704,12 +704,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_ROUND(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FPOW(SDNode *N) {
-  return SoftenFloatRes_Binary(N, GetFPLibCall(N->getValueType(0),
-                                               RTLIB::POW_F32,
-                                               RTLIB::POW_F64,
-                                               RTLIB::POW_F80,
-                                               RTLIB::POW_F128,
-                                               RTLIB::POW_PPCF128));
+  return SoftenFloatRes_Binary(N, RTLIB::getPOW(N->getValueType(0)));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_ExpOp(SDNode *N) {
