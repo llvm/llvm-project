@@ -624,7 +624,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        Expand);
     setOperationAction({ISD::FLDEXP, ISD::STRICT_FLDEXP}, MVT::f16, Custom);
     setOperationAction(ISD::FFREXP, MVT::f16, Custom);
-    setOperationAction(ISD::FDIV, MVT::f16, Custom);
+    setOperationAction(ISD::FDIV, {MVT::f16, MVT::bf16}, Custom);
 
     // F16 - VOP3 Actions.
     setOperationAction(ISD::FMA, MVT::f16, Legal);
@@ -11229,6 +11229,7 @@ SDValue SITargetLowering::LowerFDIV16(SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
+  EVT VT = Op.getValueType();
 
   // a32.u = opx(V_CVT_F32_F16, a.u); // CVT to F32
   // b32.u = opx(V_CVT_F32_F16, b.u); // CVT to F32
@@ -11265,10 +11266,14 @@ SDValue SITargetLowering::LowerFDIV16(SDValue Op, SelectionDAG &DAG) const {
                         DAG.getConstant(0xff800000, SL, MVT::i32));
   Tmp = DAG.getNode(ISD::BITCAST, SL, MVT::f32, TmpCast);
   Quot = DAG.getNode(ISD::FADD, SL, MVT::f32, Tmp, Quot, Op->getFlags());
-  SDValue RDst = DAG.getNode(ISD::FP_ROUND, SL, MVT::f16, Quot,
+
+  EVT FixupVT = VT == MVT::bf16 ? MVT::f32 : VT;
+  SDValue RDst = DAG.getNode(ISD::FP_ROUND, SL, FixupVT, Quot,
                              DAG.getTargetConstant(0, SL, MVT::i32));
-  return DAG.getNode(AMDGPUISD::DIV_FIXUP, SL, MVT::f16, RDst, RHS, LHS,
-                     Op->getFlags());
+  SDValue Fixup = DAG.getNode(AMDGPUISD::DIV_FIXUP, SL, FixupVT, RDst, RHS, LHS,
+                              Op->getFlags());
+  return DAG.getNode(ISD::FP_ROUND, SL, VT, Fixup,
+                     DAG.getTargetConstant(0, SL, MVT::i32));
 }
 
 // Faster 2.5 ULP division that does not support denormals.
@@ -11531,7 +11536,7 @@ SDValue SITargetLowering::LowerFDIV(SDValue Op, SelectionDAG &DAG) const {
   if (VT == MVT::f64)
     return LowerFDIV64(Op, DAG);
 
-  if (VT == MVT::f16)
+  if (VT == MVT::f16 || VT == MVT::bf16)
     return LowerFDIV16(Op, DAG);
 
   llvm_unreachable("Unexpected type for fdiv");
