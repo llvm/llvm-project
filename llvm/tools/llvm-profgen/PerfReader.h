@@ -567,12 +567,10 @@ private:
 // Read perf trace to parse the events and samples.
 class PerfReaderBase {
 public:
-  PerfReaderBase(ProfiledBinary *B, StringRef PerfTrace, bool reset = true)
+  PerfReaderBase(ProfiledBinary *B, StringRef PerfTrace)
       : Binary(B), PerfTraceFile(PerfTrace) {
-    if (reset) {
     // Initialize the base address to preferred address.
     Binary->setBaseAddress(Binary->getPreferredBaseAddress());
-    }
   };
   virtual ~PerfReaderBase() = default;
   static std::unique_ptr<PerfReaderBase>
@@ -603,15 +601,14 @@ protected:
   uint64_t NumTotalSample = 0;
   uint64_t NumLeafExternalFrame = 0;
   uint64_t NumLeadingOutgoingLBR = 0;
-  DataAccessSample DataAccessProfInfo;
 };
 
 // Read perf script to parse the events and samples.
 class PerfScriptReader : public PerfReaderBase {
 public:
   PerfScriptReader(ProfiledBinary *B, StringRef PerfTrace,
-                   std::optional<int32_t> PID, bool reset = true)
-      : PerfReaderBase(B, PerfTrace, reset), PIDFilter(PID) {};
+                   std::optional<int32_t> PID)
+      : PerfReaderBase(B, PerfTrace), PIDFilter(PID) {};
 
   // Entry of the reader to parse multiple perf traces
   void parsePerfTraces() override;
