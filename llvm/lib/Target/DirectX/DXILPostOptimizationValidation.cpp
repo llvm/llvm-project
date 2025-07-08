@@ -85,6 +85,17 @@ static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
   }
 }
 
+static void
+reportInvalidHandleTyBoundInRs(Module &M, Twine Type,
+                               ResourceInfo::ResourceBinding Binding) {
+  SmallString<128> Message;
+  raw_svector_ostream OS(Message);
+  OS << "register " << Type << " (space=" << Binding.Space
+     << ", register=" << Binding.LowerBound << ")"
+     << " is bound to a texture or typed buffer.";
+  M.getContext().diagnose(DiagnosticInfoGeneric(Message));
+}
+
 static void reportRegNotBound(Module &M, Twine Type,
                               ResourceInfo::ResourceBinding Binding) {
   SmallString<128> Message;
@@ -163,12 +174,26 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
       ResourceInfo::ResourceBinding Binding = SRV.getBinding();
       if (!Validation.checkTRegBinding(Binding))
         reportRegNotBound(M, "srv", Binding);
+      else {
+        const auto *Handle =
+            dyn_cast_or_null<RawBufferExtType>(SRV.getHandleTy());
+
+        if (!Handle)
+          reportInvalidHandleTyBoundInRs(M, "srv", Binding);
+      }
     }
 
     for (const ResourceInfo &UAV : DRM.uavs()) {
       ResourceInfo::ResourceBinding Binding = UAV.getBinding();
       if (!Validation.checkURegBinding(Binding))
         reportRegNotBound(M, "uav", Binding);
+      else {
+        const auto *Handle =
+            dyn_cast_or_null<RawBufferExtType>(UAV.getHandleTy());
+
+        if (!Handle)
+          reportInvalidHandleTyBoundInRs(M, "srv", Binding);
+      }
     }
 
     for (const ResourceInfo &Sampler : DRM.samplers()) {

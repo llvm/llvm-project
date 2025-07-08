@@ -47,7 +47,7 @@ public:
   RootSignatureBindingInfo() = default;
   RootSignatureBindingInfo(
       SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc> Map)
-      : FuncToRsMap(Map){};
+      : FuncToRsMap(Map) {};
 
   iterator find(const Function *F) { return FuncToRsMap.find(F); }
 
@@ -73,9 +73,6 @@ public:
   using Result = RootSignatureBindingInfo;
 
   Result run(Module &M, ModuleAnalysisManager &AM);
-
-private:
-  std::unique_ptr<RootSignatureBindingInfo> AnalysisResult;
 };
 
 /// Wrapper pass for the legacy pass manager.

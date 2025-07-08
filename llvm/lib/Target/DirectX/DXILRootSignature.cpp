@@ -556,10 +556,7 @@ AnalysisKey RootSignatureAnalysis::Key;
 
 RootSignatureAnalysis::Result
 RootSignatureAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
-  if (!AnalysisResult)
-    AnalysisResult = std::make_unique<RootSignatureBindingInfo>(
-        RootSignatureBindingInfo(analyzeModule(M)));
-  return *AnalysisResult;
+  return RootSignatureBindingInfo(analyzeModule(M));
 }
 
 //===----------------------------------------------------------------------===//
@@ -638,15 +635,14 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
 
 //===----------------------------------------------------------------------===//
 bool RootSignatureAnalysisWrapper::runOnModule(Module &M) {
-  if (!FuncToRsMap)
-    FuncToRsMap = std::make_unique<RootSignatureBindingInfo>(
-        RootSignatureBindingInfo(analyzeModule(M)));
+  FuncToRsMap = std::make_unique<RootSignatureBindingInfo>(
+      RootSignatureBindingInfo(analyzeModule(M)));
   return false;
 }
 
 void RootSignatureAnalysisWrapper::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<DXILMetadataAnalysisWrapperPass>();
+  AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
 }
 
 char RootSignatureAnalysisWrapper::ID = 0;
