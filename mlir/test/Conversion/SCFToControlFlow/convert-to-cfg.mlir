@@ -678,12 +678,12 @@ func.func @forall(%num_threads: index) {
 
 // -----
 
-//      CHECK: #loop_unroll = #llvm.loop_unroll<disable = true>
-// CHECK-NEXT: #loop_unroll1 = #llvm.loop_unroll<full = true>
-// CHECK-NEXT: #[[NO_UNROLL:.*]] = #llvm.loop_annotation<unroll = #loop_unroll>
-// CHECK-NEXT: #[[FULL_UNROLL:.*]] = #llvm.loop_annotation<unroll = #loop_unroll1>
-//      CHECK: cf.cond_br %{{.*}}, ^bb2, ^bb6 {llvm.loop_annotation = #[[NO_UNROLL]]}
-//      CHECK: cf.cond_br %{{.*}}, ^bb4, ^bb5 {llvm.loop_annotation = #[[FULL_UNROLL]]}
+//      CHECK: #[[LOOP_UNROLL:.*]] = #llvm.loop_unroll<full = true>
+// CHECK-NEXT: #[[LOOP_UNROLL_DISABLE:.*]] = #llvm.loop_unroll<disable = true>
+// CHECK-NEXT: #[[FULL_UNROLL:.*]] = #llvm.loop_annotation<unroll = #[[LOOP_UNROLL]]>
+// CHECK-NEXT: #[[NO_UNROLL:.*]] = #llvm.loop_annotation<unroll = #[[LOOP_UNROLL_DISABLE]]>
+//      CHECK: cf.br ^bb3({{.*}}) {llvm.loop_annotation = #[[FULL_UNROLL]]}
+//      CHECK: cf.br ^bb1({{.*}}) {llvm.loop_annotation = #[[NO_UNROLL]]}
 #no_unroll = #llvm.loop_annotation<unroll = <disable = true>>
 #full_unroll = #llvm.loop_annotation<unroll = <full = true>>
 func.func @simple_std_for_loops_annotation(%arg0 : index, %arg1 : index, %arg2 : index) {
