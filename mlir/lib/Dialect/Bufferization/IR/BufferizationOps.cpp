@@ -44,7 +44,7 @@ FailureOr<Value> mlir::bufferization::castOrReallocMemRefValue(
         failed(target.getStridesAndOffset(targetStrides, targetOffset)))
       return false;
     auto dynamicToStatic = [](int64_t a, int64_t b) {
-      return ShapedType::isDynamic(a) && !ShapedType::isDynamic(b);
+      return ShapedType::isDynamic(a) && ShapedType::isStatic(b);
     };
     if (dynamicToStatic(sourceOffset, targetOffset))
       return false;

@@ -25,6 +25,7 @@ add_clang_library(clangCIR
   CIRGenFunction.cpp
   CIRGenItaniumCXXABI.cpp
   CIRGenModule.cpp
+  CIRGenOpenACC.cpp
   CIRGenOpenACCClause.cpp
   CIRGenRecordLayoutBuilder.cpp
   CIRGenStmt.cpp

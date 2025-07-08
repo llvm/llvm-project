@@ -146,6 +146,7 @@ private:
     const MCSymbol *Branch;
     const MCSymbol *Table;
     size_t TableSize;
+    std::vector<const MCSymbol *> Cases;
   };
 
   // For each function, store a vector of labels to its instructions, as well as

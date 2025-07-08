@@ -53,7 +53,7 @@ MemRefDescriptor MemRefDescriptor::fromStaticShape(
 
   // Extract all strides and offsets and verify they are static.
   auto [strides, offset] = type.getStridesAndOffset();
-  assert(!ShapedType::isDynamic(offset) && "expected static offset");
+  assert(ShapedType::isStatic(offset) && "expected static offset");
   assert(!llvm::any_of(strides, ShapedType::isDynamic) &&
          "expected static strides");
 

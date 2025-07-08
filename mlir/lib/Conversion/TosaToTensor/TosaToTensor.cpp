@@ -83,7 +83,7 @@ TensorType inferReshapeExpandedType(TensorType inputType,
         return totalSize / totalSizeNoPlaceholder;
       });
 
-  bool resultIsStatic = !ShapedType::isDynamicShape(resultShape);
+  bool resultIsStatic = ShapedType::isStaticShape(resultShape);
 
   // A syntactic restriction in 'tensor.expand_shape' forbids a dynamically
   // shaped input from being reshaped into a statically shaped result. We may
@@ -305,7 +305,7 @@ public:
       int64_t size = i.value();
       size_t index = i.index();
       sizes.push_back(size == -1 ? ShapedType::kDynamic : size);
-      if (!ShapedType::isDynamic(sizes.back()))
+      if (ShapedType::isStatic(sizes.back()))
         continue;
 
       auto dim = rewriter.create<tensor::DimOp>(loc, input, index);

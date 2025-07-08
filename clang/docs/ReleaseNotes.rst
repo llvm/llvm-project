@@ -675,6 +675,8 @@ Improvements to Clang's diagnostics
   false positives in exception-heavy code, though only simple patterns
   are currently recognized.
 
+- Clang now accepts ``@tparam`` comments on variable template partial
+  specializations. (#GH144775)
 
 Improvements to Clang's time-trace
 ----------------------------------

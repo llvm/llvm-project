@@ -99,7 +99,7 @@ static void constifyIndexValues(SmallVectorImpl<OpFoldResult> &values,
          "incorrect number of const values");
   for (auto [i, cstVal] : llvm::enumerate(constValues)) {
     Builder builder(values[i].getContext());
-    if (!ShapedType::isDynamic(cstVal)) {
+    if (ShapedType::isStatic(cstVal)) {
       // Constant value is known, use it directly.
       values[i] = builder.getIndexAttr(cstVal);
       continue;
@@ -189,7 +189,7 @@ struct SimplifyAllocConst : public OpRewritePattern<AllocLikeOp> {
     for (unsigned dim = 0, e = memrefType.getRank(); dim < e; ++dim) {
       int64_t dimSize = memrefType.getDimSize(dim);
       // If this is already static dimension, keep it.
-      if (!ShapedType::isDynamic(dimSize)) {
+      if (ShapedType::isStatic(dimSize)) {
         newShapeConstants.push_back(dimSize);
         continue;
       }
@@ -615,21 +615,21 @@ bool CastOp::canFoldIntoConsumerOp(CastOp castOp) {
   for (auto it : llvm::zip(sourceType.getShape(), resultType.getShape())) {
     auto ss = std::get<0>(it), st = std::get<1>(it);
     if (ss != st)
-      if (ShapedType::isDynamic(ss) && !ShapedType::isDynamic(st))
+      if (ShapedType::isDynamic(ss) && ShapedType::isStatic(st))
         return false;
   }
 
   // If cast is towards more static offset along any dimension, don't fold.
   if (sourceOffset != resultOffset)
     if (ShapedType::isDynamic(sourceOffset) &&
-        !ShapedType::isDynamic(resultOffset))
+        ShapedType::isStatic(resultOffset))
       return false;
 
   // If cast is towards more static strides along any dimension, don't fold.
   for (auto it : llvm::zip(sourceStrides, resultStrides)) {
     auto ss = std::get<0>(it), st = std::get<1>(it);
     if (ss != st)
-      if (ShapedType::isDynamic(ss) && !ShapedType::isDynamic(st))
+      if (ShapedType::isDynamic(ss) && ShapedType::isStatic(st))
         return false;
   }
 
@@ -679,7 +679,7 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 
     for (unsigned i = 0, e = aT.getRank(); i != e; ++i) {
       int64_t aDim = aT.getDimSize(i), bDim = bT.getDimSize(i);
-      if (!ShapedType::isDynamic(aDim) && !ShapedType::isDynamic(bDim) &&
+      if (ShapedType::isStatic(aDim) && ShapedType::isStatic(bDim) &&
           aDim != bDim)
         return false;
     }
@@ -1862,7 +1862,7 @@ LogicalResult ReinterpretCastOp::verify() {
   // Match sizes in result memref type and in static_sizes attribute.
   for (auto [idx, resultSize, expectedSize] :
        llvm::enumerate(resultType.getShape(), getStaticSizes())) {
-    if (!ShapedType::isDynamic(resultSize) && resultSize != expectedSize)
+    if (ShapedType::isStatic(resultSize) && resultSize != expectedSize)
       return emitError("expected result type with size = ")
              << (ShapedType::isDynamic(expectedSize)
                      ? std::string("dynamic")
@@ -1881,7 +1881,7 @@ LogicalResult ReinterpretCastOp::verify() {
 
   // Match offset in result memref type and in static_offsets attribute.
   int64_t expectedOffset = getStaticOffsets().front();
-  if (!ShapedType::isDynamic(resultOffset) && resultOffset != expectedOffset)
+  if (ShapedType::isStatic(resultOffset) && resultOffset != expectedOffset)
     return emitError("expected result type with offset = ")
            << (ShapedType::isDynamic(expectedOffset)
                    ? std::string("dynamic")
@@ -1891,7 +1891,7 @@ LogicalResult ReinterpretCastOp::verify() {
   // Match strides in result memref type and in static_strides attribute.
   for (auto [idx, resultStride, expectedStride] :
        llvm::enumerate(resultStrides, getStaticStrides())) {
-    if (!ShapedType::isDynamic(resultStride) && resultStride != expectedStride)
+    if (ShapedType::isStatic(resultStride) && resultStride != expectedStride)
       return emitError("expected result type with stride = ")
              << (ShapedType::isDynamic(expectedStride)
                      ? std::string("dynamic")
@@ -1928,7 +1928,7 @@ OpFoldResult ReinterpretCastOp::fold(FoldAdaptor /*operands*/) {
   }
 
   // reinterpret_cast(x) w/o offset/shape/stride changes -> x
-  if (!ShapedType::isDynamicShape(getType().getShape()) &&
+  if (ShapedType::isStaticShape(getType().getShape()) &&
       src.getType() == getType() && getStaticOffsets().front() == 0) {
     return src;
   }
@@ -2379,7 +2379,7 @@ LogicalResult ExpandShapeOp::verify() {
   DenseI64ArrayAttr staticOutputShapes = getStaticOutputShapeAttr();
   ArrayRef<int64_t> resShape = getResult().getType().getShape();
   for (auto [pos, shape] : llvm::enumerate(resShape)) {
-    if (!ShapedType::isDynamic(shape) && shape != staticOutputShapes[pos]) {
+    if (ShapedType::isStatic(shape) && shape != staticOutputShapes[pos]) {
       return emitOpError("invalid output shape provided at pos ") << pos;
     }
   }
@@ -2422,7 +2422,7 @@ computeCollapsedLayoutMap(MemRefType srcType,
     ArrayRef<int64_t> ref = llvm::ArrayRef(reassoc);
     while (srcShape[ref.back()] == 1 && ref.size() > 1)
       ref = ref.drop_back();
-    if (!ShapedType::isDynamic(srcShape[ref.back()]) || ref.size() == 1) {
+    if (ShapedType::isStatic(srcShape[ref.back()]) || ref.size() == 1) {
       resultStrides.push_back(srcStrides[ref.back()]);
     } else {
       // Dynamically-sized dims may turn out to be dims of size 1 at runtime, so
@@ -3509,7 +3509,7 @@ struct ViewOpShapeFolder : public OpRewritePattern<ViewOp> {
     for (unsigned dim = 0, e = rank; dim < e; ++dim) {
       int64_t dimSize = memrefType.getDimSize(dim);
       // If this is already static dimension, keep it.
-      if (!ShapedType::isDynamic(dimSize)) {
+      if (ShapedType::isStatic(dimSize)) {
         newShapeConstants.push_back(dimSize);
         continue;
       }

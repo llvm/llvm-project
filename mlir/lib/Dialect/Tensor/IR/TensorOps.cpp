@@ -292,7 +292,7 @@ bool mlir::tensor::preservesStaticInformation(Type source, Type target) {
 
   // If cast is towards more static sizes along any dimension, don't fold.
   for (auto t : llvm::zip(sourceType.getShape(), targetType.getShape())) {
-    if (!ShapedType::isDynamic(std::get<0>(t)) &&
+    if (ShapedType::isStatic(std::get<0>(t)) &&
         ShapedType::isDynamic(std::get<1>(t)))
       return false;
   }
@@ -1235,7 +1235,7 @@ struct FoldEmptyTensorWithCastOp : public OpRewritePattern<CastOp> {
 
       // Case 2 : The tensor cast shape is static, but empty tensor result
       // shape is dynamic.
-      if (!ShapedType::isDynamic(newDim)) {
+      if (ShapedType::isStatic(newDim)) {
         newMixedSizes.push_back(rewriter.getIndexAttr(newDim));
         continue;
       }
@@ -2197,7 +2197,7 @@ struct ConvertToStaticExpandShape : public OpRewritePattern<ExpandShapeOp> {
 
     for (const auto &[inputDim, innerReassoc] : llvm::enumerate(reassoc)) {
       for (uint64_t outDim : innerReassoc) {
-        if (!ShapedType::isDynamic(newOutputShape[outDim]))
+        if (ShapedType::isStatic(newOutputShape[outDim]))
           continue;
 
         // If the cast's src type is dynamic, don't infer any of the
@@ -3579,7 +3579,7 @@ struct FoldOrthogonalPaddings : public OpRewritePattern<PadOp> {
         continue;
       OpFoldResult sliceSize = innerSliceOp.getMixedSizes()[en.index()];
       int64_t sourceSize = innerSliceOp.getSourceType().getShape()[en.index()];
-      assert(!ShapedType::isDynamic(sourceSize) &&
+      assert(ShapedType::isStatic(sourceSize) &&
              "expected padded dimension to have a static size");
       if (getConstantIntValue(sliceSize) != sourceSize) {
         return rewriter.notifyMatchFailure(

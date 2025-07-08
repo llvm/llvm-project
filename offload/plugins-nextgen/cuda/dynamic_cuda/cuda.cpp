@@ -31,6 +31,7 @@ DLWRAP(cuDeviceGet, 2)
 DLWRAP(cuDeviceGetAttribute, 3)
 DLWRAP(cuDeviceGetCount, 1)
 DLWRAP(cuFuncGetAttribute, 3)
+DLWRAP(cuFuncSetAttribute, 3)
 
 // Device info
 DLWRAP(cuDeviceGetName, 3)

@@ -545,6 +545,15 @@ void mlir::PyShapedType::bindDerived(ClassTy &c) {
       "Returns whether the dim-th dimension of the given shaped type is "
       "dynamic.");
   c.def(
+      "is_static_dim",
+      [](PyShapedType &self, intptr_t dim) -> bool {
+        self.requireHasRank();
+        return mlirShapedTypeIsStaticDim(self, dim);
+      },
+      nb::arg("dim"),
+      "Returns whether the dim-th dimension of the given shaped type is "
+      "static.");
+  c.def(
       "get_dim_size",
       [](PyShapedType &self, intptr_t dim) {
         self.requireHasRank();
@@ -558,6 +567,12 @@ void mlir::PyShapedType::bindDerived(ClassTy &c) {
       nb::arg("dim_size"),
       "Returns whether the given dimension size indicates a dynamic "
       "dimension.");
+  c.def_static(
+      "is_static_size",
+      [](int64_t size) -> bool { return mlirShapedTypeIsStaticSize(size); },
+      nb::arg("dim_size"),
+      "Returns whether the given dimension size indicates a static "
+      "dimension.");
   c.def(
       "is_dynamic_stride_or_offset",
       [](PyShapedType &self, int64_t val) -> bool {
@@ -567,6 +582,15 @@ void mlir::PyShapedType::bindDerived(ClassTy &c) {
       nb::arg("dim_size"),
       "Returns whether the given value is used as a placeholder for dynamic "
       "strides and offsets in shaped types.");
+  c.def(
+      "is_static_stride_or_offset",
+      [](PyShapedType &self, int64_t val) -> bool {
+        self.requireHasRank();
+        return mlirShapedTypeIsStaticStrideOrOffset(val);
+      },
+      nb::arg("dim_size"),
+      "Returns whether the given shaped type stride or offset value is "
+      "statically-sized.");
   c.def_prop_ro(
       "shape",
       [](PyShapedType &self) {
