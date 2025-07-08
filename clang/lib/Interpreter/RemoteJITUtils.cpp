@@ -33,7 +33,9 @@
 using namespace llvm;
 using namespace llvm::orc;
 
+#if LLVM_ON_UNIX
 static std::vector<pid_t> LaunchedExecutorPID;
+#endif
 
 Expected<uint64_t> getSlabAllocSize(StringRef SizeString) {
   SizeString = SizeString.trim();
