@@ -81,7 +81,7 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
   assert((CXX11Attrs.empty() || Res.isInvalid() || Res.isUsable()) &&
          "attributes on empty statement");
 
-  if (HasStdAttr && getLangOpts().C99 &&
+  if (HasStdAttr && getLangOpts().C23 &&
       (StmtCtx & ParsedStmtContext::AllowDeclarationsInC) == ParsedStmtContext{} &&
       isa_and_present<NullStmt>(Res.get()))
     Diag(CXX11Attrs.Range.getBegin(), diag::warn_attr_in_secondary_block)
