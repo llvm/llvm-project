@@ -4632,6 +4632,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     assert(Mask->getType()->isIntegerTy());
     assert(Mask->getType()->getScalarSizeInBits() == ANumElements);
+    insertCheckShadowOf(Mask, &I);
 
     assert(I.getType() == WriteThrough->getType());
 
