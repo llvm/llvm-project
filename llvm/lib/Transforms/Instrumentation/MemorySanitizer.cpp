@@ -4667,13 +4667,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //
     // TODO: use GetMinMaxUnsigned() to handle saturation precisely.
     AShadow = IRB.CreateTrunc(AShadow, ShadowType, "_ms_trunc_shadow");
-
     AShadow = maybeExtendVectorShadowWithZeros(AShadow, I);
 
     Value *WriteThroughShadow = getShadow(WriteThrough);
 
     Value *Shadow = IRB.CreateSelect(Mask, AShadow, WriteThroughShadow);
-
     setShadow(&I, Shadow);
     setOriginForNaryOp(I);
   }
