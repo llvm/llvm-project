@@ -1046,13 +1046,6 @@ bool ModuleList::RemoveSharedModuleIfOrphaned(const Module *module_ptr) {
   return GetSharedModuleList().RemoveIfOrphaned(module_ptr);
 }
 
-void ModuleList::ClearSharedModules() {
-  GetSharedModuleList().Clear();
-  Log *log = GetLog(LLDBLog::Modules);
-  if (log != nullptr)
-    LLDB_LOGF(log, "cleared shared modules");
-}
-
 bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
                                                 std::list<Status> &errors,
                                                 Stream &feedback_stream,

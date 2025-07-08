@@ -12,7 +12,6 @@ add_lldb_unittest(TargetTests
   RemoteAwarePlatformTest.cpp
   StackFrameRecognizerTest.cpp
   SummaryStatisticsTest.cpp
-  SharedModuleListTest.cpp
   FindFileTest.cpp
 
   LINK_COMPONENTS
