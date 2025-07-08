@@ -18,6 +18,7 @@
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/ASTMutationListener.h"
+#include <limits>
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
@@ -1906,7 +1907,7 @@ ExprResult Sema::CreateGenericSelectionExpr(
   }
 
   SmallVector<unsigned, 1> CompatIndices;
-  unsigned DefaultIndex = -1U;
+  unsigned DefaultIndex = std::numeric_limits<unsigned>::max();
   // Look at the canonical type of the controlling expression in case it was a
   // deduced type like __auto_type. However, when issuing diagnostics, use the
   // type the user wrote in source rather than the canonical one.
@@ -1961,7 +1962,7 @@ ExprResult Sema::CreateGenericSelectionExpr(
   // C11 6.5.1.1p2 "If a generic selection has no default generic association,
   // its controlling expression shall have type compatible with exactly one of
   // the types named in its generic association list."
-  if (DefaultIndex == -1U && CompatIndices.size() == 0) {
+  if (DefaultIndex == std::numeric_limits<unsigned>::max() && CompatIndices.size() == 0) {
     auto P = GetControllingRangeAndType(ControllingExpr, ControllingType);
     SourceRange SR = P.first;
     Diag(SR.getBegin(), diag::err_generic_sel_no_match) << SR << P.second;
