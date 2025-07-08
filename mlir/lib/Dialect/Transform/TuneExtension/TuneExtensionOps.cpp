@@ -37,7 +37,7 @@ transform::tune::KnobOp::apply(transform::TransformRewriter &rewriter,
                                transform::TransformResults &results,
                                transform::TransformState &state) {
   if (getSelected()) {
-    results.setParams(getOperation()->getOpResults()[0], *getSelected());
+    results.setParams(llvm::cast<OpResult>(getResult()), *getSelected());
     return DiagnosedSilenceableFailure::success();
   }
 

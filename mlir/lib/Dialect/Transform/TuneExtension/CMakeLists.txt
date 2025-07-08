@@ -8,5 +8,4 @@ add_mlir_dialect_library(MLIRTransformTuneExtension
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRTransformDialect
-  MLIRTransforms
 )

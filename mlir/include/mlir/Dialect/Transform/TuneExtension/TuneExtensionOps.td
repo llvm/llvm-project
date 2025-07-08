@@ -37,7 +37,8 @@ def KnobOp : Op<Transform_Dialect, "tune.knob", [
 
     -----
 
-    In case the `options` attribute is an `ArrayAttr`, the verifier checks that the provided `selected` attribute occurs in `options`.
+    In case the `options` attribute is an `ArrayAttr`, the verifier
+    checks that the provided `selected` attribute occurs in `options`.
   }];
   let cppNamespace = [{ mlir::transform::tune }];
   let hasVerifier = 1;
