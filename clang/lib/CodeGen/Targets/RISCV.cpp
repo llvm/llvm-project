@@ -473,6 +473,14 @@ bool RISCVABIInfo::detectVLSCCEligibleStruct(QualType Ty, unsigned ABIVLen,
   if (!FixedVecTy)
     return false;
 
+  // Check registers needed <= 8.
+  if (NumElts * llvm::divideCeil(
+                    FixedVecTy->getNumElements() *
+                        FixedVecTy->getElementType()->getScalarSizeInBits(),
+                    ABIVLen) >
+      8)
+    return false;
+
   // Turn them into scalable vector type or vector tuple type if legal.
   if (NumElts == 1) {
     // Handle single fixed-length vector.
@@ -481,12 +489,9 @@ bool RISCVABIInfo::detectVLSCCEligibleStruct(QualType Ty, unsigned ABIVLen,
         llvm::divideCeil(FixedVecTy->getNumElements() *
                              llvm::RISCV::RVVBitsPerBlock,
                          ABIVLen));
-    // Check registers needed <= 8.
-    return llvm::divideCeil(
-               FixedVecTy->getNumElements() *
-                   FixedVecTy->getElementType()->getScalarSizeInBits(),
-               ABIVLen) <= 8;
+    return true;
   }
+
   // LMUL
   // = fixed-length vector size / ABIVLen
   // = 8 * I8EltCount / RVVBitsPerBlock
@@ -503,12 +508,7 @@ bool RISCVABIInfo::detectVLSCCEligibleStruct(QualType Ty, unsigned ABIVLen,
       llvm::ScalableVectorType::get(llvm::Type::getInt8Ty(getVMContext()),
                                     I8EltCount),
       NumElts);
-  // Check registers needed <= 8.
-  return NumElts * llvm::divideCeil(
-                       FixedVecTy->getNumElements() *
-                           FixedVecTy->getElementType()->getScalarSizeInBits(),
-                       ABIVLen) <=
-         8;
+  return true;
 }
 
 // Fixed-length RVV vectors are represented as scalable vectors in function
