@@ -1193,11 +1193,10 @@ Value *InstCombinerImpl::SimplifyAddWithRemainder(BinaryOperator &I) {
   }
   Value *DivOpV;
   APInt DivOpC;
-  // The transform is valid for C1==1, but not profitable. Unless the division
-  // is by two, in which case this enables further folding.
   if (MatchRem(Rem, X, C0, IsSigned) &&
       MatchDiv(Div, DivOpV, DivOpC, IsSigned) && X == DivOpV && C0 == DivOpC &&
-      (!C1.isOne() || DivOpC == 2)) {
+      // Avoid unprofitable replacement of and with mul.
+      !(C1.isOne() && !IsSigned && DivOpC.isPowerOf2() && DivOpC != 2)) {
     APInt NewC = C1 - C2 * C0;
     if (!NewC.isZero() && !Rem->hasOneUse())
       return nullptr;

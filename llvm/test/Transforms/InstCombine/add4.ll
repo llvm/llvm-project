@@ -293,8 +293,8 @@ entry:
 define i32 @fold_add_udiv_urem_no_mul(i32 noundef %val) {
 ; CHECK-LABEL: @fold_add_udiv_urem_no_mul(
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[VAL:%.*]], 10
-; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[VAL]], 10
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[DIV]], [[REM]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[DIV]], -9
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP1]], [[VAL]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %div = udiv i32 %val, 10
@@ -306,9 +306,9 @@ define i32 @fold_add_udiv_urem_no_mul(i32 noundef %val) {
 define i32 @fold_add_udiv_urem_rem_mul(i32 noundef %val) {
 ; CHECK-LABEL: @fold_add_udiv_urem_rem_mul(
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[VAL:%.*]], 10
-; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[VAL]], 10
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[REM]], 3
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[DIV]], [[MUL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[VAL]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[DIV]], -29
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %div = udiv i32 %val, 10
@@ -342,6 +342,19 @@ define i32 @fold_add_udiv_urem_pow2_div_mul(i32 noundef %arg) {
   %mul = mul i32 %lshr, 3
   %and = and i32 %arg, 15
   %add = add i32 %mul, %and
+  ret i32 %add
+}
+
+define i32 @fold_add_sdiv_srem_no_mul(i32 noundef %val) {
+; CHECK-LABEL: @fold_add_sdiv_srem_no_mul(
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[VAL:%.*]], 10
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[DIV]], -9
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP1]], [[VAL]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %div = sdiv i32 %val, 10
+  %rem = srem i32 %val, 10
+  %add = add i32 %div, %rem
   ret i32 %add
 }
 
