@@ -24262,8 +24262,8 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
   assert(LI->isSimple());
   IRBuilder<> Builder(LI);
 
-  Value *FirstActive = *llvm::find_if(DeinterleaveValues,
-                                      [](Value *V) { return V != nullptr; });
+  Value *FirstActive =
+      *llvm::find_if(DeinterleaveValues, [](Value *V) { return V != nullptr; });
   VectorType *ResVTy = cast<VectorType>(FirstActive->getType());
 
   const DataLayout &DL = LI->getDataLayout();
