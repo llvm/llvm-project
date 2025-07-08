@@ -79,8 +79,8 @@ class StdStringDataFormatterTestCase(TestBase):
                 '(%s::string) q = "hello world"' % ns,
                 '(%s::string) Q = "quite a long std::strin with lots of info inside it"'
                 % ns,
-                "(%s::string *) null_str = nullptr" % ns,
                 '(std::string) overwritten_zero = "abc"',
+                "(%s::string *) null_str = nullptr" % ns,
             ],
         )
 
