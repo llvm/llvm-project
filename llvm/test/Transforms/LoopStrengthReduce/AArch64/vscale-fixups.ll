@@ -154,66 +154,26 @@ for.exit:
 }
 
 define void @mixed_offsets_scalable_then_fixed(ptr %src, ptr %dst, i64 %count) #0 {
-; BASE-LABEL: mixed_offsets_scalable_then_fixed:
-; BASE:       // %bb.0: // %entry
-; BASE-NEXT:    incb x0, all, mul #4
-; BASE-NEXT:    ptrue p0.s
-; BASE-NEXT:    mov x8, #8 // =0x8
-; BASE-NEXT:  .LBB3_1: // %for.body
-; BASE-NEXT:    // =>This Inner Loop Header: Depth=1
-; BASE-NEXT:    ldr z0, [x0, #-4, mul vl]
-; BASE-NEXT:    ldr z1, [x0]
-; BASE-NEXT:    decw x2
-; BASE-NEXT:    ld1w { z2.s }, p0/z, [x0, x8, lsl #2]
-; BASE-NEXT:    incb x0
-; BASE-NEXT:    add z0.s, z0.s, z1.s
-; BASE-NEXT:    add z0.s, z0.s, z2.s
-; BASE-NEXT:    str z0, [x1]
-; BASE-NEXT:    incb x1
-; BASE-NEXT:    cbnz x2, .LBB3_1
-; BASE-NEXT:  // %bb.2: // %for.exit
-; BASE-NEXT:    ret
-;
-; PREINDEX-LABEL: mixed_offsets_scalable_then_fixed:
-; PREINDEX:       // %bb.0: // %entry
-; PREINDEX-NEXT:    incb x0, all, mul #4
-; PREINDEX-NEXT:    ptrue p0.s
-; PREINDEX-NEXT:    mov x8, #8 // =0x8
-; PREINDEX-NEXT:  .LBB3_1: // %for.body
-; PREINDEX-NEXT:    // =>This Inner Loop Header: Depth=1
-; PREINDEX-NEXT:    ldr z0, [x0, #-4, mul vl]
-; PREINDEX-NEXT:    ldr z1, [x0]
-; PREINDEX-NEXT:    decw x2
-; PREINDEX-NEXT:    ld1w { z2.s }, p0/z, [x0, x8, lsl #2]
-; PREINDEX-NEXT:    incb x0
-; PREINDEX-NEXT:    add z0.s, z0.s, z1.s
-; PREINDEX-NEXT:    add z0.s, z0.s, z2.s
-; PREINDEX-NEXT:    str z0, [x1]
-; PREINDEX-NEXT:    incb x1
-; PREINDEX-NEXT:    cbnz x2, .LBB3_1
-; PREINDEX-NEXT:  // %bb.2: // %for.exit
-; PREINDEX-NEXT:    ret
-;
-; POSTINDEX-LABEL: mixed_offsets_scalable_then_fixed:
-; POSTINDEX:       // %bb.0: // %entry
-; POSTINDEX-NEXT:    incb x0, all, mul #4
-; POSTINDEX-NEXT:    ptrue p0.s
-; POSTINDEX-NEXT:    mov x8, xzr
-; POSTINDEX-NEXT:    mov x9, #8 // =0x8
-; POSTINDEX-NEXT:  .LBB3_1: // %for.body
-; POSTINDEX-NEXT:    // =>This Inner Loop Header: Depth=1
-; POSTINDEX-NEXT:    ldr z0, [x0, #-4, mul vl]
-; POSTINDEX-NEXT:    ldr z1, [x0]
-; POSTINDEX-NEXT:    ld1w { z2.s }, p0/z, [x0, x9, lsl #2]
-; POSTINDEX-NEXT:    incb x0
-; POSTINDEX-NEXT:    add z0.s, z0.s, z1.s
-; POSTINDEX-NEXT:    add z0.s, z0.s, z2.s
-; POSTINDEX-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
-; POSTINDEX-NEXT:    incw x8
-; POSTINDEX-NEXT:    cmp x2, x8
-; POSTINDEX-NEXT:    b.ne .LBB3_1
-; POSTINDEX-NEXT:  // %bb.2: // %for.exit
-; POSTINDEX-NEXT:    ret
+; COMMON-LABEL: mixed_offsets_scalable_then_fixed:
+; COMMON:       // %bb.0: // %entry
+; COMMON-NEXT:    incb x0, all, mul #4
+; COMMON-NEXT:    ptrue p0.s
+; COMMON-NEXT:    mov x8, xzr
+; COMMON-NEXT:    mov x9, #8 // =0x8
+; COMMON-NEXT:  .LBB3_1: // %for.body
+; COMMON-NEXT:    // =>This Inner Loop Header: Depth=1
+; COMMON-NEXT:    ldr z0, [x0, #-4, mul vl]
+; COMMON-NEXT:    ldr z1, [x0]
+; COMMON-NEXT:    ld1w { z2.s }, p0/z, [x0, x9, lsl #2]
+; COMMON-NEXT:    incb x0
+; COMMON-NEXT:    add z0.s, z0.s, z1.s
+; COMMON-NEXT:    add z0.s, z0.s, z2.s
+; COMMON-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
+; COMMON-NEXT:    incw x8
+; COMMON-NEXT:    cmp x2, x8
+; COMMON-NEXT:    b.ne .LBB3_1
+; COMMON-NEXT:  // %bb.2: // %for.exit
+; COMMON-NEXT:    ret
 entry:
   %vscale = tail call i64 @llvm.vscale.i64()
   %mul = shl nuw nsw i64 %vscale, 4
@@ -297,58 +257,24 @@ for.exit:
 ;; base (but in range of the other).
 ;;
 define void @three_access_wide_gap(ptr %src, ptr %dst, i64 %count) #0 {
-; BASE-LABEL: three_access_wide_gap:
-; BASE:       // %bb.0: // %entry
-; BASE-NEXT:  .LBB5_1: // %for.body
-; BASE-NEXT:    // =>This Inner Loop Header: Depth=1
-; BASE-NEXT:    ldr z0, [x0]
-; BASE-NEXT:    ldr z1, [x0, #4, mul vl]
-; BASE-NEXT:    decw x2
-; BASE-NEXT:    ldr z2, [x0, #8, mul vl]
-; BASE-NEXT:    incb x0
-; BASE-NEXT:    add z0.s, z0.s, z1.s
-; BASE-NEXT:    add z0.s, z0.s, z2.s
-; BASE-NEXT:    str z0, [x1]
-; BASE-NEXT:    incb x1
-; BASE-NEXT:    cbnz x2, .LBB5_1
-; BASE-NEXT:  // %bb.2: // %for.exit
-; BASE-NEXT:    ret
-;
-; PREINDEX-LABEL: three_access_wide_gap:
-; PREINDEX:       // %bb.0: // %entry
-; PREINDEX-NEXT:  .LBB5_1: // %for.body
-; PREINDEX-NEXT:    // =>This Inner Loop Header: Depth=1
-; PREINDEX-NEXT:    ldr z0, [x0]
-; PREINDEX-NEXT:    ldr z1, [x0, #4, mul vl]
-; PREINDEX-NEXT:    decw x2
-; PREINDEX-NEXT:    ldr z2, [x0, #8, mul vl]
-; PREINDEX-NEXT:    incb x0
-; PREINDEX-NEXT:    add z0.s, z0.s, z1.s
-; PREINDEX-NEXT:    add z0.s, z0.s, z2.s
-; PREINDEX-NEXT:    str z0, [x1]
-; PREINDEX-NEXT:    incb x1
-; PREINDEX-NEXT:    cbnz x2, .LBB5_1
-; PREINDEX-NEXT:  // %bb.2: // %for.exit
-; PREINDEX-NEXT:    ret
-;
-; POSTINDEX-LABEL: three_access_wide_gap:
-; POSTINDEX:       // %bb.0: // %entry
-; POSTINDEX-NEXT:    ptrue p0.s
-; POSTINDEX-NEXT:    mov x8, xzr
-; POSTINDEX-NEXT:  .LBB5_1: // %for.body
-; POSTINDEX-NEXT:    // =>This Inner Loop Header: Depth=1
-; POSTINDEX-NEXT:    ldr z0, [x0]
-; POSTINDEX-NEXT:    ldr z1, [x0, #4, mul vl]
-; POSTINDEX-NEXT:    ldr z2, [x0, #8, mul vl]
-; POSTINDEX-NEXT:    incb x0
-; POSTINDEX-NEXT:    add z0.s, z0.s, z1.s
-; POSTINDEX-NEXT:    add z0.s, z0.s, z2.s
-; POSTINDEX-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
-; POSTINDEX-NEXT:    incw x8
-; POSTINDEX-NEXT:    cmp x2, x8
-; POSTINDEX-NEXT:    b.ne .LBB5_1
-; POSTINDEX-NEXT:  // %bb.2: // %for.exit
-; POSTINDEX-NEXT:    ret
+; COMMON-LABEL: three_access_wide_gap:
+; COMMON:       // %bb.0: // %entry
+; COMMON-NEXT:    ptrue p0.s
+; COMMON-NEXT:    mov x8, xzr
+; COMMON-NEXT:  .LBB5_1: // %for.body
+; COMMON-NEXT:    // =>This Inner Loop Header: Depth=1
+; COMMON-NEXT:    ldr z0, [x0]
+; COMMON-NEXT:    ldr z1, [x0, #4, mul vl]
+; COMMON-NEXT:    ldr z2, [x0, #8, mul vl]
+; COMMON-NEXT:    incb x0
+; COMMON-NEXT:    add z0.s, z0.s, z1.s
+; COMMON-NEXT:    add z0.s, z0.s, z2.s
+; COMMON-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
+; COMMON-NEXT:    incw x8
+; COMMON-NEXT:    cmp x2, x8
+; COMMON-NEXT:    b.ne .LBB5_1
+; COMMON-NEXT:  // %bb.2: // %for.exit
+; COMMON-NEXT:    ret
 entry:
   %vscale = tail call i64 @llvm.vscale.i64()
   %mul = mul nuw nsw i64 %vscale, 16
@@ -428,3 +354,7 @@ for.exit:
 }
 
 attributes #0 = { "target-features"="+sve2" vscale_range(1,16) }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; BASE: {{.*}}
+; POSTINDEX: {{.*}}
+; PREINDEX: {{.*}}

@@ -22,14 +22,12 @@ define void @main(i8 %val8) nounwind "frame-pointer"="none" {
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr r1, [r0, #-21]
 ; CHECK-NEXT:    ldr r2, [r0, #-17]
+; CHECK-NEXT:    adds r0, #12
 ; CHECK-NEXT:    muls r1, r2, r1
 ; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    bxne lr
-; CHECK-NEXT:  LBB0_2: @ %_Z14printIsNotZeroi.exit17.for.body_crit_edge
-; CHECK-NEXT:    @ in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    adds r0, #12
-; CHECK-NEXT:    b LBB0_1
+; CHECK-NEXT:    beq LBB0_1
+; CHECK-NEXT:  @ %bb.2: @ %if.then.i16
+; CHECK-NEXT:    bx lr
 for.body.lr.ph:
   br label %for.body
 

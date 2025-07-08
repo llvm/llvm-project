@@ -195,7 +195,7 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=1
 ; CHECK-NEXT:    movl $2, %ebp
 ; CHECK-NEXT:    jmp LBB0_20
-; CHECK-NEXT:  LBB0_32: ## %if.end517.loopexitsplit
+; CHECK-NEXT:  LBB0_32: ## %do.body479.backedge.if.end517.loopexit_crit_edge
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=1
 ; CHECK-NEXT:    incq %rbx
 ; CHECK-NEXT:  LBB0_33: ## %if.end517

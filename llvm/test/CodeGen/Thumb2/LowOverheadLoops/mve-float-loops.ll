@@ -663,14 +663,14 @@ define arm_aapcs_vfpcc void @float_int_mul(ptr nocapture readonly %a, ptr nocapt
 ; CHECK-NEXT:    bic r12, r3, #3
 ; CHECK-NEXT:    movs r6, #1
 ; CHECK-NEXT:    sub.w r7, r12, #4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r4, r1
+; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    add.w lr, r6, r7, lsr #2
 ; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:  .LBB3_4: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q0, [r5], #16
-; CHECK-NEXT:    vldrw.u32 q1, [r4], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r4], #16
+; CHECK-NEXT:    vldrw.u32 q1, [r5], #16
 ; CHECK-NEXT:    vcvt.f32.s32 q0, q0
 ; CHECK-NEXT:    vmul.f32 q0, q1, q0
 ; CHECK-NEXT:    vstrb.8 q0, [r6], #16
@@ -688,14 +688,14 @@ define arm_aapcs_vfpcc void @float_int_mul(ptr nocapture readonly %a, ptr nocapt
 ; CHECK-NEXT:    add.w r8, r12, r7
 ; CHECK-NEXT:    wls lr, r7, .LBB3_10
 ; CHECK-NEXT:  @ %bb.8: @ %for.body.prol.preheader
-; CHECK-NEXT:    add.w r6, r0, r12, lsl #2
-; CHECK-NEXT:    add.w r7, r1, r12, lsl #2
+; CHECK-NEXT:    add.w r6, r1, r12, lsl #2
+; CHECK-NEXT:    add.w r7, r0, r12, lsl #2
 ; CHECK-NEXT:    add.w r5, r2, r12, lsl #2
 ; CHECK-NEXT:    mov r12, r8
 ; CHECK-NEXT:  .LBB3_9: @ %for.body.prol
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr r4, [r7], #4
-; CHECK-NEXT:    vldmia r6!, {s2}
+; CHECK-NEXT:    ldr r4, [r6], #4
+; CHECK-NEXT:    vldmia r7!, {s2}
 ; CHECK-NEXT:    vmov s0, r4
 ; CHECK-NEXT:    vcvt.f32.s32 s0, s0
 ; CHECK-NEXT:    vmul.f32 s0, s2, s0
@@ -718,10 +718,10 @@ define arm_aapcs_vfpcc void @float_int_mul(ptr nocapture readonly %a, ptr nocapt
 ; CHECK-NEXT:    vldr s0, [r1, #-8]
 ; CHECK-NEXT:    adds r7, r0, r3
 ; CHECK-NEXT:    adds r6, r2, r3
-; CHECK-NEXT:    adds r0, #16
+; CHECK-NEXT:    adds r2, #16
 ; CHECK-NEXT:    vcvt.f32.s32 s0, s0
 ; CHECK-NEXT:    vldr s2, [r7]
-; CHECK-NEXT:    adds r2, #16
+; CHECK-NEXT:    adds r0, #16
 ; CHECK-NEXT:    vmul.f32 s0, s2, s0
 ; CHECK-NEXT:    vstr s0, [r6]
 ; CHECK-NEXT:    vldr s0, [r1, #-4]
@@ -970,37 +970,37 @@ define arm_aapcs_vfpcc void @half_half_mul(ptr nocapture readonly %a, ptr nocapt
 ; CHECK-NEXT:    bic r12, r3, #3
 ; CHECK-NEXT:    movs r5, #1
 ; CHECK-NEXT:    sub.w r6, r12, #4
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    add.w lr, r5, r6, lsr #2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    mov r6, r1
 ; CHECK-NEXT:  .LBB5_4: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr.w r9, [r4]
-; CHECK-NEXT:    ldr r7, [r5]
-; CHECK-NEXT:    ldr.w r8, [r4, #4]
+; CHECK-NEXT:    ldr.w r9, [r5]
+; CHECK-NEXT:    ldr r7, [r6]
+; CHECK-NEXT:    ldr.w r8, [r5, #4]
 ; CHECK-NEXT:    vmov.32 q0[0], r9
-; CHECK-NEXT:    ldr.w r10, [r5, #4]
+; CHECK-NEXT:    ldr.w r10, [r6, #4]
 ; CHECK-NEXT:    vmov.32 q1[0], r7
 ; CHECK-NEXT:    vmov.32 q0[1], r8
-; CHECK-NEXT:    adds r4, #8
-; CHECK-NEXT:    vmov.32 q1[1], r10
 ; CHECK-NEXT:    adds r5, #8
+; CHECK-NEXT:    vmov.32 q1[1], r10
+; CHECK-NEXT:    adds r6, #8
 ; CHECK-NEXT:    vmul.f16 q0, q0, q1
 ; CHECK-NEXT:    vcvtt.f32.f16 s3, s1
 ; CHECK-NEXT:    vcvtb.f32.f16 s2, s1
 ; CHECK-NEXT:    vcvtt.f32.f16 s1, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-NEXT:    vstrb.8 q0, [r6], #16
+; CHECK-NEXT:    vstrb.8 q0, [r4], #16
 ; CHECK-NEXT:    le lr, .LBB5_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
 ; CHECK-NEXT:    cmp r12, r3
 ; CHECK-NEXT:    beq .LBB5_8
 ; CHECK-NEXT:  .LBB5_6: @ %for.body.preheader11
 ; CHECK-NEXT:    sub.w lr, r3, r12
+; CHECK-NEXT:    add.w r2, r2, r12, lsl #2
 ; CHECK-NEXT:    add.w r0, r0, r12, lsl #1
 ; CHECK-NEXT:    add.w r1, r1, r12, lsl #1
-; CHECK-NEXT:    add.w r2, r2, r12, lsl #2
 ; CHECK-NEXT:  .LBB5_7: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldr.16 s0, [r1]
@@ -1081,37 +1081,37 @@ define arm_aapcs_vfpcc void @half_half_add(ptr nocapture readonly %a, ptr nocapt
 ; CHECK-NEXT:    bic r12, r3, #3
 ; CHECK-NEXT:    movs r5, #1
 ; CHECK-NEXT:    sub.w r6, r12, #4
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    add.w lr, r5, r6, lsr #2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    mov r6, r1
 ; CHECK-NEXT:  .LBB6_4: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr.w r9, [r4]
-; CHECK-NEXT:    ldr r7, [r5]
-; CHECK-NEXT:    ldr.w r8, [r4, #4]
+; CHECK-NEXT:    ldr.w r9, [r5]
+; CHECK-NEXT:    ldr r7, [r6]
+; CHECK-NEXT:    ldr.w r8, [r5, #4]
 ; CHECK-NEXT:    vmov.32 q0[0], r9
-; CHECK-NEXT:    ldr.w r10, [r5, #4]
+; CHECK-NEXT:    ldr.w r10, [r6, #4]
 ; CHECK-NEXT:    vmov.32 q1[0], r7
 ; CHECK-NEXT:    vmov.32 q0[1], r8
-; CHECK-NEXT:    adds r4, #8
-; CHECK-NEXT:    vmov.32 q1[1], r10
 ; CHECK-NEXT:    adds r5, #8
+; CHECK-NEXT:    vmov.32 q1[1], r10
+; CHECK-NEXT:    adds r6, #8
 ; CHECK-NEXT:    vadd.f16 q0, q0, q1
 ; CHECK-NEXT:    vcvtt.f32.f16 s3, s1
 ; CHECK-NEXT:    vcvtb.f32.f16 s2, s1
 ; CHECK-NEXT:    vcvtt.f32.f16 s1, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-NEXT:    vstrb.8 q0, [r6], #16
+; CHECK-NEXT:    vstrb.8 q0, [r4], #16
 ; CHECK-NEXT:    le lr, .LBB6_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
 ; CHECK-NEXT:    cmp r12, r3
 ; CHECK-NEXT:    beq .LBB6_8
 ; CHECK-NEXT:  .LBB6_6: @ %for.body.preheader11
 ; CHECK-NEXT:    sub.w lr, r3, r12
+; CHECK-NEXT:    add.w r2, r2, r12, lsl #2
 ; CHECK-NEXT:    add.w r0, r0, r12, lsl #1
 ; CHECK-NEXT:    add.w r1, r1, r12, lsl #1
-; CHECK-NEXT:    add.w r2, r2, r12, lsl #2
 ; CHECK-NEXT:  .LBB6_7: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldr.16 s0, [r1]
@@ -1192,37 +1192,37 @@ define arm_aapcs_vfpcc void @half_half_sub(ptr nocapture readonly %a, ptr nocapt
 ; CHECK-NEXT:    bic r12, r3, #3
 ; CHECK-NEXT:    movs r5, #1
 ; CHECK-NEXT:    sub.w r6, r12, #4
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    add.w lr, r5, r6, lsr #2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    mov r6, r1
 ; CHECK-NEXT:  .LBB7_4: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr.w r9, [r4]
-; CHECK-NEXT:    ldr r7, [r5]
-; CHECK-NEXT:    ldr.w r8, [r4, #4]
+; CHECK-NEXT:    ldr.w r9, [r5]
+; CHECK-NEXT:    ldr r7, [r6]
+; CHECK-NEXT:    ldr.w r8, [r5, #4]
 ; CHECK-NEXT:    vmov.32 q0[0], r9
-; CHECK-NEXT:    ldr.w r10, [r5, #4]
+; CHECK-NEXT:    ldr.w r10, [r6, #4]
 ; CHECK-NEXT:    vmov.32 q1[0], r7
 ; CHECK-NEXT:    vmov.32 q0[1], r8
-; CHECK-NEXT:    adds r4, #8
-; CHECK-NEXT:    vmov.32 q1[1], r10
 ; CHECK-NEXT:    adds r5, #8
+; CHECK-NEXT:    vmov.32 q1[1], r10
+; CHECK-NEXT:    adds r6, #8
 ; CHECK-NEXT:    vsub.f16 q0, q0, q1
 ; CHECK-NEXT:    vcvtt.f32.f16 s3, s1
 ; CHECK-NEXT:    vcvtb.f32.f16 s2, s1
 ; CHECK-NEXT:    vcvtt.f32.f16 s1, s0
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-NEXT:    vstrb.8 q0, [r6], #16
+; CHECK-NEXT:    vstrb.8 q0, [r4], #16
 ; CHECK-NEXT:    le lr, .LBB7_4
 ; CHECK-NEXT:  @ %bb.5: @ %middle.block
 ; CHECK-NEXT:    cmp r12, r3
 ; CHECK-NEXT:    beq .LBB7_8
 ; CHECK-NEXT:  .LBB7_6: @ %for.body.preheader11
 ; CHECK-NEXT:    sub.w lr, r3, r12
+; CHECK-NEXT:    add.w r2, r2, r12, lsl #2
 ; CHECK-NEXT:    add.w r0, r0, r12, lsl #1
 ; CHECK-NEXT:    add.w r1, r1, r12, lsl #1
-; CHECK-NEXT:    add.w r2, r2, r12, lsl #2
 ; CHECK-NEXT:  .LBB7_7: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldr.16 s0, [r1]
@@ -1777,8 +1777,8 @@ define arm_aapcs_vfpcc float @half_short_mac(ptr nocapture readonly %a, ptr noca
 ; CHECK-NEXT:  .LBB11_6: @ %for.cond.cleanup.loopexit.unr-lcssa
 ; CHECK-NEXT:    wls lr, r12, .LBB11_9
 ; CHECK-NEXT:  @ %bb.7: @ %for.body.epil.preheader
-; CHECK-NEXT:    add.w r0, r0, r2, lsl #1
 ; CHECK-NEXT:    add.w r1, r1, r2, lsl #1
+; CHECK-NEXT:    add.w r0, r0, r2, lsl #1
 ; CHECK-NEXT:  .LBB11_8: @ %for.body.epil
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrsh r2, [r1], #2

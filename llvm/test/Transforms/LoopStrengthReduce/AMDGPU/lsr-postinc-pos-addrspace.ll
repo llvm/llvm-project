@@ -10,10 +10,10 @@ define amdgpu_kernel void @local_cmp_user(i32 %arg0) nounwind {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[ARG0:%.*]], 1
 ; CHECK-NEXT:    br label [[BB11:%.*]]
 ; CHECK:       bb11:
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i32 [ [[LSR_IV_NEXT2:%.*]], [[BB:%.*]] ], [ -2, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[BB]] ], [ [[TMP0]], [[ENTRY]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i32 [[LSR_IV]], -1
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[BB:%.*]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i32 [ [[LSR_IV_NEXT2:%.*]], [[BB]] ], [ -2, [[ENTRY]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT2]] = add i32 [[LSR_IV1]], 2
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i32 [[LSR_IV]], -1
 ; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[C0]], label [[BB13:%.*]], label [[BB]]
 ; CHECK:       bb:
@@ -50,10 +50,10 @@ define amdgpu_kernel void @global_cmp_user(i64 %arg0) nounwind {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[ARG0:%.*]], 1
 ; CHECK-NEXT:    br label [[BB11:%.*]]
 ; CHECK:       bb11:
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i64 [ [[LSR_IV_NEXT2:%.*]], [[BB:%.*]] ], [ -2, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[BB]] ], [ [[TMP0]], [[ENTRY]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], -1
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[BB:%.*]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i64 [ [[LSR_IV_NEXT2:%.*]], [[BB]] ], [ -2, [[ENTRY]] ]
 ; CHECK-NEXT:    [[LSR_IV_NEXT2]] = add i64 [[LSR_IV1]], 2
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], -1
 ; CHECK-NEXT:    [[C0:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[C0]], label [[BB13:%.*]], label [[BB]]
 ; CHECK:       bb:

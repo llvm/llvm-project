@@ -84,11 +84,11 @@ define void @foo(ptr %r, i32 %s, i32 %w, i32 %x, ptr %j, i32 %d) nounwind {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax ## 4-byte Reload
 ; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:    movl (%esp), %esi ## 4-byte Reload
+; CHECK-NEXT:    addl %esi, %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-NEXT:    addl $2, %esi
 ; CHECK-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Spill
-; CHECK-NEXT:    movl (%esp), %esi ## 4-byte Reload
-; CHECK-NEXT:    addl %esi, %ecx
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    .p2align 4
@@ -118,9 +118,9 @@ define void @foo(ptr %r, i32 %s, i32 %w, i32 %x, ptr %j, i32 %d) nounwind {
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi ## 4-byte Reload
 ; CHECK-NEXT:    incl %edi
 ; CHECK-NEXT:    addl %edx, %eax
+; CHECK-NEXT:    addl %edx, %ecx
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi ## 4-byte Reload
 ; CHECK-NEXT:    addl $2, %esi
-; CHECK-NEXT:    addl %edx, %ecx
 ; CHECK-NEXT:    cmpl {{[-0-9]+}}(%e{{[sb]}}p), %edi ## 4-byte Folded Reload
 ; CHECK-NEXT:    jl LBB0_9
 ; CHECK-NEXT:  LBB0_13: ## %bb20
@@ -517,11 +517,11 @@ define void @bar(ptr %r, i32 %s, i32 %w, i32 %x, ptr %j, i32 %d) nounwind {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx ## 4-byte Reload
 ; CHECK-NEXT:    addl %eax, %ecx
+; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx ## 4-byte Reload
+; CHECK-NEXT:    addl %edx, %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; CHECK-NEXT:    addl $2, %edx
 ; CHECK-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Spill
-; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx ## 4-byte Reload
-; CHECK-NEXT:    addl %edx, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    .p2align 4
@@ -551,9 +551,9 @@ define void @bar(ptr %r, i32 %s, i32 %w, i32 %x, ptr %j, i32 %d) nounwind {
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx ## 4-byte Reload
 ; CHECK-NEXT:    incl %ebx
 ; CHECK-NEXT:    addl %ebp, %ecx
+; CHECK-NEXT:    addl %ebp, %eax
 ; CHECK-NEXT:    movl (%esp), %edx ## 4-byte Reload
 ; CHECK-NEXT:    addl $2, %edx
-; CHECK-NEXT:    addl %ebp, %eax
 ; CHECK-NEXT:    cmpl {{[-0-9]+}}(%e{{[sb]}}p), %ebx ## 4-byte Folded Reload
 ; CHECK-NEXT:    jb LBB1_9
 ; CHECK-NEXT:  LBB1_13: ## %bb20

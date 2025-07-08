@@ -740,7 +740,7 @@ for.cond.cleanup:                                 ; preds = %for.cond1.for.cond.
 ; CHECK-DEFAULT-NOT: str{{.*}}]!
 
 ; TODO: Increased complexity shouldn't prevent indexed accesses.
-; CHECK-COMPLEX-NOT: ldr{{.*}}]!
+; CHECK-COMPLEX: ldr{{.*}}, #4]!
 ; CHECK-COMPLEX-NOT: str{{.*}}]!
 
 ; DISABLED-NOT: ldr{{.*}}]!

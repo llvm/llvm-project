@@ -2229,6 +2229,7 @@ class LSRInstance {
   void NarrowSearchSpaceByDeletingCostlyFormulas();
   void NarrowSearchSpaceByPickingWinnerRegs();
   void NarrowSearchSpaceUsingHeuristics();
+  bool SortLSRUses();
 
   void SolveRecurse(SmallVectorImpl<const Formula *> &Solution,
                     Cost &SolutionCost,
@@ -5368,6 +5369,46 @@ void LSRInstance::NarrowSearchSpaceUsingHeuristics() {
     NarrowSearchSpaceByPickingWinnerRegs();
 }
 
+/// Sort LSRUses to address side effects of compile time optimization done in
+/// SolveRecurse which filters out formulae not including required registers.
+/// Such optimization makes the found best solution sensitive to the order
+/// of LSRUses processing, hence it's important to ensure that that order
+/// isn't random to avoid fluctuations and sub-optimal results.
+///
+/// Also check that all LSRUses have formulae as otherwise the situation is
+/// unsolvable.
+bool LSRInstance::SortLSRUses() {
+  SmallVector<LSRUse *, 16> NewOrder;
+  for (auto &LU : Uses) {
+    if (!LU.Formulae.size()) {
+      return false;
+    }
+    NewOrder.push_back(&LU);
+  }
+
+  std::stable_sort(
+      NewOrder.begin(), NewOrder.end(), [](const LSRUse *L, const LSRUse *R) {
+        auto CalcKey = [](const LSRUse *LU) {
+          // LSRUses w/ many registers and formulae go first avoid too big
+          // reduction of considered solutions count
+          return std::tuple(LU->Regs.size(), LU->Formulae.size(), LU->Kind,
+                            LU->MinOffset.getKnownMinValue(),
+                            LU->MaxOffset.getKnownMinValue(),
+                            LU->AllFixupsOutsideLoop, LU->RigidFormula);
+        };
+        return CalcKey(L) > CalcKey(R);
+      });
+
+  SmallVector<LSRUse, 4> NewUses;
+  for (LSRUse *LU : NewOrder)
+    NewUses.push_back(std::move(*LU));
+  Uses = std::move(NewUses);
+
+  LLVM_DEBUG(dbgs() << "\nAfter sorting:\n"; print_uses(dbgs()));
+
+  return true;
+}
+
 /// This is the recursive solver.
 void LSRInstance::SolveRecurse(SmallVectorImpl<const Formula *> &Solution,
                                Cost &SolutionCost,
@@ -5387,6 +5428,10 @@ void LSRInstance::SolveRecurse(SmallVectorImpl<const Formula *> &Solution,
 
   const LSRUse &LU = Uses[Workspace.size()];
 
+  assert(LU.Formulae.size() &&
+         "LSRUse w/o formulae leads to unsolvable situation so it"
+         "shouldn't be here");
+
   // If this use references any register that's already a part of the
   // in-progress solution, consider it a requirement that a formula must
   // reference that register in order to be considered. This prunes out
@@ -5398,54 +5443,69 @@ void LSRInstance::SolveRecurse(SmallVectorImpl<const Formula *> &Solution,
 
   SmallPtrSet<const SCEV *, 16> NewRegs;
   Cost NewCost(L, SE, TTI, AMK);
-  for (const Formula &F : LU.Formulae) {
-    // Ignore formulae which may not be ideal in terms of register reuse of
-    // ReqRegs.  The formula should use all required registers before
-    // introducing new ones.
-    // This can sometimes (notably when trying to favour postinc) lead to
-    // sub-optimial decisions. There it is best left to the cost modelling to
-    // get correct.
-    if (AMK != TTI::AMK_PostIndexed || LU.Kind != LSRUse::Address) {
-      int NumReqRegsToFind = std::min(F.getNumRegs(), ReqRegs.size());
-      for (const SCEV *Reg : ReqRegs) {
-        if ((F.ScaledReg && F.ScaledReg == Reg) ||
-            is_contained(F.BaseRegs, Reg)) {
-          --NumReqRegsToFind;
-          if (NumReqRegsToFind == 0)
-            break;
+  bool FormulaeTested = false;
+  unsigned NumReqRegsToIgnore = 0;
+
+  while (!FormulaeTested) {
+    assert(
+        !NumReqRegsToIgnore ||
+        NumReqRegsToIgnore < ReqRegs.size() &&
+            "at least one formulae should have at least one required register");
+
+    for (const Formula &F : LU.Formulae) {
+      // ReqRegs. The formula should use required registers before
+      // introducing new ones. Firstly try the most aggressive option
+      // (when maximum of required registers are used) and then gradually make
+      // it weaker if all formulae don't satisfy this requirement.
+      //
+      // This can sometimes (notably when trying to favour postinc) lead to
+      // sub-optimal decisions. There it is best left to the cost modeling to
+      // get correct.
+      if (ReqRegs.size() &&
+          (AMK != TTI::AMK_PostIndexed || LU.Kind != LSRUse::Address)) {
+        unsigned NumReqRegsToFind = std::min(F.getNumRegs(), ReqRegs.size());
+        bool ReqRegsFound = false;
+        for (const SCEV *Reg : ReqRegs) {
+          if ((F.ScaledReg && F.ScaledReg == Reg) ||
+              is_contained(F.BaseRegs, Reg)) {
+            ReqRegsFound = true;
+            if (--NumReqRegsToFind == NumReqRegsToIgnore)
+              break;
+          }
+        }
+        if (!ReqRegsFound || NumReqRegsToFind != NumReqRegsToIgnore) {
+          continue;
         }
       }
-      if (NumReqRegsToFind != 0) {
-        // If none of the formulae satisfied the required registers, then we could
-        // clear ReqRegs and try again. Currently, we simply give up in this case.
-        continue;
+
+      // Evaluate the cost of the current formula. If it's already worse than
+      // the current best, prune the search at that point.
+      FormulaeTested = true;
+      NewCost = CurCost;
+      NewRegs = CurRegs;
+      NewCost.RateFormula(F, NewRegs, VisitedRegs, LU);
+      if (NewCost.isLess(SolutionCost)) {
+        Workspace.push_back(&F);
+        if (Workspace.size() != Uses.size()) {
+          SolveRecurse(Solution, SolutionCost, Workspace, NewCost, NewRegs,
+                       VisitedRegs);
+          if (F.getNumRegs() == 1 && Workspace.size() == 1)
+            VisitedRegs.insert(F.ScaledReg ? F.ScaledReg : F.BaseRegs[0]);
+        } else {
+          LLVM_DEBUG(dbgs() << "New best at "; NewCost.print(dbgs());
+                     dbgs() << ".\nRegs:\n";
+                     for (const SCEV *S : NewRegs) dbgs() << "- " << *S << "\n";
+                     dbgs() << '\n');
+          SolutionCost = NewCost;
+          Solution = Workspace;
+        }
+        Workspace.pop_back();
       }
     }
 
-    // Evaluate the cost of the current formula. If it's already worse than
-    // the current best, prune the search at that point.
-    NewCost = CurCost;
-    NewRegs = CurRegs;
-    NewCost.RateFormula(F, NewRegs, VisitedRegs, LU);
-    if (NewCost.isLess(SolutionCost)) {
-      Workspace.push_back(&F);
-      if (Workspace.size() != Uses.size()) {
-        SolveRecurse(Solution, SolutionCost, Workspace, NewCost,
-                     NewRegs, VisitedRegs);
-        if (F.getNumRegs() == 1 && Workspace.size() == 1)
-          VisitedRegs.insert(F.ScaledReg ? F.ScaledReg : F.BaseRegs[0]);
-      } else {
-        LLVM_DEBUG(dbgs() << "New best at "; NewCost.print(dbgs());
-                   dbgs() << ".\nRegs:\n";
-                   for (const SCEV *S : NewRegs) dbgs()
-                      << "- " << *S << "\n";
-                   dbgs() << '\n');
-
-        SolutionCost = NewCost;
-        Solution = Workspace;
-      }
-      Workspace.pop_back();
-    }
+    // none of formulae has necessary number of required registers - then
+    // make the requirement weaker
+    NumReqRegsToIgnore++;
   }
 }
 
@@ -6180,7 +6240,11 @@ LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
   NarrowSearchSpaceUsingHeuristics();
 
   SmallVector<const Formula *, 8> Solution;
-  Solve(Solution);
+  bool LSRUsesConsistent = SortLSRUses();
+
+  if (LSRUsesConsistent) {
+    Solve(Solution);
+  }
 
   // Release memory that is no longer needed.
   Factors.clear();
