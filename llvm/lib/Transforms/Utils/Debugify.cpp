@@ -16,8 +16,10 @@
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -28,12 +30,19 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
 #include <optional>
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+// We need the Signals header to operate on stacktraces if we're using DebugLoc
+// origin-tracking.
+#include "llvm/Support/Signals.h"
+#endif
 
 #define DEBUG_TYPE "debugify"
 
 using namespace llvm;
 
 namespace {
+
+cl::opt<bool> ApplyAtomGroups("debugify-atoms", cl::init(false));
 
 cl::opt<bool> Quiet("debugify-quiet",
                     cl::desc("Suppress verbose debugify output"));
@@ -56,6 +65,54 @@ cl::opt<Level> DebugifyLevel(
     cl::init(Level::LocationsAndVariables));
 
 raw_ostream &dbg() { return Quiet ? nulls() : errs(); }
+
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+// These maps refer to addresses in the current LLVM process, so we can reuse
+// them everywhere - therefore, we store them at file scope.
+static SymbolizedAddressMap SymbolizedAddrs;
+static AddressSet UnsymbolizedAddrs;
+
+std::string symbolizeStackTrace(const Instruction *I) {
+  // We flush the set of unsymbolized addresses at the latest possible moment,
+  // i.e. now.
+  if (!UnsymbolizedAddrs.empty()) {
+    sys::symbolizeAddresses(UnsymbolizedAddrs, SymbolizedAddrs);
+    UnsymbolizedAddrs.clear();
+  }
+  const DbgLocOrigin::StackTracesTy &OriginStackTraces =
+      I->getDebugLoc().getOriginStackTraces();
+  std::string Result;
+  raw_string_ostream OS(Result);
+  for (size_t TraceIdx = 0; TraceIdx < OriginStackTraces.size(); ++TraceIdx) {
+    if (TraceIdx != 0)
+      OS << "========================================\n";
+    auto &[Depth, StackTrace] = OriginStackTraces[TraceIdx];
+    unsigned VirtualFrameNo = 0;
+    for (int Frame = 0; Frame < Depth; ++Frame) {
+      assert(SymbolizedAddrs.contains(StackTrace[Frame]) &&
+             "Expected each address to have been symbolized.");
+      for (std::string &SymbolizedFrame : SymbolizedAddrs[StackTrace[Frame]]) {
+        OS << right_justify(formatv("#{0}", VirtualFrameNo++).str(),
+                            std::log10(Depth) + 2)
+           << ' ' << SymbolizedFrame << '\n';
+      }
+    }
+  }
+  return Result;
+}
+void collectStackAddresses(Instruction &I) {
+  auto &OriginStackTraces = I.getDebugLoc().getOriginStackTraces();
+  for (auto &[Depth, StackTrace] : OriginStackTraces) {
+    for (int Frame = 0; Frame < Depth; ++Frame) {
+      void *Addr = StackTrace[Frame];
+      if (!SymbolizedAddrs.contains(Addr))
+        UnsymbolizedAddrs.insert(Addr);
+    }
+  }
+}
+#else
+void collectStackAddresses(Instruction &I) {}
+#endif // LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
 
 uint64_t getAllocSizeInBits(Module &M, Type *Ty) {
   return Ty->isSized() ? M.getDataLayout().getTypeAllocSizeInBits(Ty) : 0;
@@ -121,13 +178,15 @@ bool llvm::applyDebugifyMetadata(
     if (F.hasPrivateLinkage() || F.hasInternalLinkage())
       SPFlags |= DISubprogram::SPFlagLocalToUnit;
     auto SP = DIB.createFunction(CU, F.getName(), F.getName(), File, NextLine,
-                                 SPType, NextLine, DINode::FlagZero, SPFlags);
+                                 SPType, NextLine, DINode::FlagZero, SPFlags,
+                                 nullptr, nullptr, nullptr, nullptr, "",
+                                 /*UseKeyInstructions*/ ApplyAtomGroups);
     F.setSubprogram(SP);
 
     // Helper that inserts a dbg.value before \p InsertBefore, copying the
     // location (and possibly the type, if it's non-void) from \p TemplateInst.
     auto insertDbgVal = [&](Instruction &TemplateInst,
-                            Instruction *InsertBefore) {
+                            BasicBlock::iterator InsertPt) {
       std::string Name = utostr(NextVar++);
       Value *V = &TemplateInst;
       if (TemplateInst.getType()->isVoidTy())
@@ -137,13 +196,18 @@ bool llvm::applyDebugifyMetadata(
                                              getCachedDIType(V->getType()),
                                              /*AlwaysPreserve=*/true);
       DIB.insertDbgValueIntrinsic(V, LocalVar, DIB.createExpression(), Loc,
-                                  InsertBefore);
+                                  InsertPt);
     };
 
     for (BasicBlock &BB : F) {
       // Attach debug locations.
-      for (Instruction &I : BB)
-        I.setDebugLoc(DILocation::get(Ctx, NextLine++, 1, SP));
+      for (Instruction &I : BB) {
+        uint64_t AtomGroup = ApplyAtomGroups ? NextLine : 0;
+        uint8_t AtomRank = ApplyAtomGroups ? 1 : 0;
+        uint64_t Line = NextLine++;
+        I.setDebugLoc(DILocation::get(Ctx, Line, 1, SP, nullptr, false,
+                                      AtomGroup, AtomRank));
+      }
 
       if (DebugifyLevel < Level::LocationsAndVariables)
         continue;
@@ -161,7 +225,9 @@ bool llvm::applyDebugifyMetadata(
       // are made.
       BasicBlock::iterator InsertPt = BB.getFirstInsertionPt();
       assert(InsertPt != BB.end() && "Expected to find an insertion point");
-      Instruction *InsertBefore = &*InsertPt;
+
+      // Insert after existing debug values to preserve order.
+      InsertPt.setHeadBit(false);
 
       // Attach debug values.
       for (Instruction *I = &*BB.begin(); I != LastInst; I = I->getNextNode()) {
@@ -172,9 +238,9 @@ bool llvm::applyDebugifyMetadata(
         // Phis and EH pads must be grouped at the beginning of the block.
         // Only advance the insertion point when we finish visiting these.
         if (!isa<PHINode>(I) && !I->isEHPad())
-          InsertBefore = I->getNextNode();
+          InsertPt = std::next(I->getIterator());
 
-        insertDbgVal(*I, InsertBefore);
+        insertDbgVal(*I, InsertPt);
         InsertedDbgVal = true;
       }
     }
@@ -185,7 +251,7 @@ bool llvm::applyDebugifyMetadata(
     // those tests, and this helps with that.)
     if (DebugifyLevel == Level::LocationsAndVariables && !InsertedDbgVal) {
       auto *Term = findTerminatingInstruction(F.getEntryBlock());
-      insertDbgVal(*Term, Term);
+      insertDbgVal(*Term, Term->getIterator());
     }
     if (ApplyToMF)
       ApplyToMF(DIB, F);
@@ -212,30 +278,27 @@ bool llvm::applyDebugifyMetadata(
   return true;
 }
 
-static bool
-applyDebugify(Function &F,
-              enum DebugifyMode Mode = DebugifyMode::SyntheticDebugInfo,
-              DebugInfoPerPass *DebugInfoBeforePass = nullptr,
-              StringRef NameOfWrappedPass = "") {
+static bool applyDebugify(Function &F, enum DebugifyMode Mode,
+                          DebugInfoPerPass *DebugInfoBeforePass,
+                          StringRef NameOfWrappedPass = "") {
   Module &M = *F.getParent();
   auto FuncIt = F.getIterator();
   if (Mode == DebugifyMode::SyntheticDebugInfo)
     return applyDebugifyMetadata(M, make_range(FuncIt, std::next(FuncIt)),
                                  "FunctionDebugify: ", /*ApplyToMF*/ nullptr);
-  assert(DebugInfoBeforePass);
+  assert(DebugInfoBeforePass && "Missing debug info metadata");
   return collectDebugInfoMetadata(M, M.functions(), *DebugInfoBeforePass,
                                   "FunctionDebugify (original debuginfo)",
                                   NameOfWrappedPass);
 }
 
-static bool
-applyDebugify(Module &M,
-              enum DebugifyMode Mode = DebugifyMode::SyntheticDebugInfo,
-              DebugInfoPerPass *DebugInfoBeforePass = nullptr,
-              StringRef NameOfWrappedPass = "") {
+static bool applyDebugify(Module &M, enum DebugifyMode Mode,
+                          DebugInfoPerPass *DebugInfoBeforePass,
+                          StringRef NameOfWrappedPass = "") {
   if (Mode == DebugifyMode::SyntheticDebugInfo)
     return applyDebugifyMetadata(M, M.functions(),
                                  "ModuleDebugify: ", /*ApplyToMF*/ nullptr);
+  assert(DebugInfoBeforePass && "Missing debug info metadata");
   return collectDebugInfoMetadata(M, M.functions(), *DebugInfoBeforePass,
                                   "ModuleDebugify (original debuginfo)",
                                   NameOfWrappedPass);
@@ -291,6 +354,16 @@ bool llvm::stripDebugifyMetadata(Module &M) {
   return Changed;
 }
 
+bool hasLoc(const Instruction &I) {
+  const DILocation *Loc = I.getDebugLoc().get();
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
+  DebugLocKind Kind = I.getDebugLoc().getKind();
+  return Loc || Kind != DebugLocKind::Normal;
+#else
+  return Loc;
+#endif
+}
+
 bool llvm::collectDebugInfoMetadata(Module &M,
                                     iterator_range<Module::iterator> Functions,
                                     DebugInfoPerPass &DebugInfoBeforePass,
@@ -337,7 +410,7 @@ bool llvm::collectDebugInfoMetadata(Module &M,
 
         // Cllect dbg.values and dbg.declare.
         if (DebugifyLevel > Level::Locations) {
-          auto HandleDbgVariable = [&](auto *DbgVar) {
+          auto HandleDbgVariable = [&](DbgVariableRecord *DbgVar) {
             if (!SP)
               return;
             // Skip inlined variables.
@@ -352,20 +425,14 @@ bool llvm::collectDebugInfoMetadata(Module &M,
           };
           for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
             HandleDbgVariable(&DVR);
-          if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
-            HandleDbgVariable(DVI);
         }
-
-        // Skip debug instructions other than dbg.value and dbg.declare.
-        if (isa<DbgInfoIntrinsic>(&I))
-          continue;
 
         LLVM_DEBUG(dbgs() << "  Collecting info for inst: " << I << '\n');
         DebugInfoBeforePass.InstToDelete.insert({&I, &I});
 
-        const DILocation *Loc = I.getDebugLoc().get();
-        bool HasLoc = Loc != nullptr;
-        DebugInfoBeforePass.DILocations.insert({&I, HasLoc});
+        // Track the addresses to symbolize, if the feature is enabled.
+        collectStackAddresses(I);
+        DebugInfoBeforePass.DILocations.insert({&I, hasLoc(I)});
       }
     }
   }
@@ -440,14 +507,23 @@ static bool checkInstructions(const DebugInstMap &DILocsBefore,
     auto BBName = BB->hasName() ? BB->getName() : "no-name";
     auto InstName = Instruction::getOpcodeName(Instr->getOpcode());
 
+    auto CreateJSONBugEntry = [&](const char *Action) {
+      Bugs.push_back(llvm::json::Object({
+          {"metadata", "DILocation"},
+          {"fn-name", FnName.str()},
+          {"bb-name", BBName.str()},
+          {"instr", InstName},
+          {"action", Action},
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+          {"origin", symbolizeStackTrace(Instr)},
+#endif
+      }));
+    };
+
     auto InstrIt = DILocsBefore.find(Instr);
     if (InstrIt == DILocsBefore.end()) {
       if (ShouldWriteIntoJSON)
-        Bugs.push_back(llvm::json::Object({{"metadata", "DILocation"},
-                                           {"fn-name", FnName.str()},
-                                           {"bb-name", BBName.str()},
-                                           {"instr", InstName},
-                                           {"action", "not-generate"}}));
+        CreateJSONBugEntry("not-generate");
       else
         dbg() << "WARNING: " << NameOfWrappedPass
               << " did not generate DILocation for " << *Instr
@@ -460,11 +536,7 @@ static bool checkInstructions(const DebugInstMap &DILocsBefore,
       // If the instr had the !dbg attached before the pass, consider it as
       // a debug info issue.
       if (ShouldWriteIntoJSON)
-        Bugs.push_back(llvm::json::Object({{"metadata", "DILocation"},
-                                           {"fn-name", FnName.str()},
-                                           {"bb-name", BBName.str()},
-                                           {"instr", InstName},
-                                           {"action", "drop"}}));
+        CreateJSONBugEntry("drop");
       else
         dbg() << "WARNING: " << NameOfWrappedPass << " dropped DILocation of "
               << *Instr << " (BB: " << BBName << ", Fn: " << FnName
@@ -583,7 +655,7 @@ bool llvm::checkDebugInfoMetadata(Module &M,
 
         // Collect dbg.values and dbg.declares.
         if (DebugifyLevel > Level::Locations) {
-          auto HandleDbgVariable = [&](auto *DbgVar) {
+          auto HandleDbgVariable = [&](DbgVariableRecord *DbgVar) {
             if (!SP)
               return;
             // Skip inlined variables.
@@ -598,20 +670,13 @@ bool llvm::checkDebugInfoMetadata(Module &M,
           };
           for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
             HandleDbgVariable(&DVR);
-          if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
-            HandleDbgVariable(DVI);
         }
-
-        // Skip debug instructions other than dbg.value and dbg.declare.
-        if (isa<DbgInfoIntrinsic>(&I))
-          continue;
 
         LLVM_DEBUG(dbgs() << "  Collecting info for inst: " << I << '\n');
 
-        const DILocation *Loc = I.getDebugLoc().get();
-        bool HasLoc = Loc != nullptr;
-
-        DebugInfoAfterPass.DILocations.insert({&I, HasLoc});
+        // Track the addresses to symbolize, if the feature is enabled.
+        collectStackAddresses(I);
+        DebugInfoAfterPass.DILocations.insert({&I, hasLoc(I)});
       }
     }
   }
@@ -694,7 +759,7 @@ bool diagnoseMisSizedDbgValue(Module &M, DbgValTy *DbgVal) {
   bool HasBadSize = false;
   if (Ty->isIntegerTy()) {
     auto Signedness = DbgVal->getVariable()->getSignedness();
-    if (Signedness && *Signedness == DIBasicType::Signedness::Signed)
+    if (Signedness == DIBasicType::Signedness::Signed)
       HasBadSize = ValueOperandSize < *DbgVarSize;
   } else {
     HasBadSize = ValueOperandSize != *DbgVarSize;

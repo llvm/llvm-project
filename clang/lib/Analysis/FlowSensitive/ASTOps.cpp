@@ -64,8 +64,7 @@ static void getFieldsFromClassHierarchy(QualType Type, FieldSet &Fields) {
       !Type->isRecordType())
     return;
 
-  for (const FieldDecl *Field : Type->getAsRecordDecl()->fields())
-    Fields.insert(Field);
+  Fields.insert_range(Type->getAsRecordDecl()->fields());
   if (auto *CXXRecord = Type->getAsCXXRecordDecl())
     for (const CXXBaseSpecifier &Base : CXXRecord->bases())
       getFieldsFromClassHierarchy(Base.getType(), Fields);
@@ -260,15 +259,13 @@ public:
 
   bool VisitInitListExpr(InitListExpr *InitList) override {
     if (InitList->getType()->isRecordType())
-      for (const auto *FD : getFieldsForInitListExpr(InitList))
-        Referenced.Fields.insert(FD);
+      Referenced.Fields.insert_range(getFieldsForInitListExpr(InitList));
     return true;
   }
 
   bool VisitCXXParenListInitExpr(CXXParenListInitExpr *ParenInitList) override {
     if (ParenInitList->getType()->isRecordType())
-      for (const auto *FD : getFieldsForInitListExpr(ParenInitList))
-        Referenced.Fields.insert(FD);
+      Referenced.Fields.insert_range(getFieldsForInitListExpr(ParenInitList));
     return true;
   }
 

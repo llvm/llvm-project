@@ -21,9 +21,8 @@ define void @foo(ptr %start, ptr %end) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 0, [[INDEX]]
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add i32 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[INDUCTION3:%.*]] = add i32 [[OFFSET_IDX]], -1
-; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i32 -1, [[INDUCTION]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i32 -1, [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i32 -1, [[INDUCTION3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[END]], i32 [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[END]], i32 [[TMP5]]

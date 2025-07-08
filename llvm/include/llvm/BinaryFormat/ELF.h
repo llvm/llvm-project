@@ -20,6 +20,8 @@
 #define LLVM_BINARYFORMAT_ELF_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 #include <cstring>
 #include <type_traits>
@@ -612,28 +614,7 @@ enum {
 
 // Hexagon-specific e_flags
 enum {
-  // Object processor version flags, bits[11:0]
-  EF_HEXAGON_MACH_V2 = 0x00000001,   // Hexagon V2
-  EF_HEXAGON_MACH_V3 = 0x00000002,   // Hexagon V3
-  EF_HEXAGON_MACH_V4 = 0x00000003,   // Hexagon V4
-  EF_HEXAGON_MACH_V5 = 0x00000004,   // Hexagon V5
-  EF_HEXAGON_MACH_V55 = 0x00000005,  // Hexagon V55
-  EF_HEXAGON_MACH_V60 = 0x00000060,  // Hexagon V60
-  EF_HEXAGON_MACH_V62 = 0x00000062,  // Hexagon V62
-  EF_HEXAGON_MACH_V65 = 0x00000065,  // Hexagon V65
-  EF_HEXAGON_MACH_V66 = 0x00000066,  // Hexagon V66
-  EF_HEXAGON_MACH_V67 = 0x00000067,  // Hexagon V67
-  EF_HEXAGON_MACH_V67T = 0x00008067, // Hexagon V67T
-  EF_HEXAGON_MACH_V68 = 0x00000068,  // Hexagon V68
-  EF_HEXAGON_MACH_V69 = 0x00000069,  // Hexagon V69
-  EF_HEXAGON_MACH_V71 = 0x00000071,  // Hexagon V71
-  EF_HEXAGON_MACH_V71T = 0x00008071, // Hexagon V71T
-  EF_HEXAGON_MACH_V73 = 0x00000073,  // Hexagon V73
-  EF_HEXAGON_MACH_V75 = 0x00000075,  // Hexagon V75
-  EF_HEXAGON_MACH_V79 = 0x00000079,  // Hexagon V79
-  EF_HEXAGON_MACH = 0x000003ff,      // Hexagon V..
-
-  // Highest ISA version flags
+  // Hexagon ISA version, bits[11:0]
   EF_HEXAGON_ISA_MACH = 0x00000000, // Same as specified in bits[11:0]
                                     // of e_flags
   EF_HEXAGON_ISA_V2 = 0x00000010,   // Hexagon V2 ISA
@@ -642,6 +623,7 @@ enum {
   EF_HEXAGON_ISA_V5 = 0x00000040,   // Hexagon V5 ISA
   EF_HEXAGON_ISA_V55 = 0x00000050,  // Hexagon V55 ISA
   EF_HEXAGON_ISA_V60 = 0x00000060,  // Hexagon V60 ISA
+  EF_HEXAGON_ISA_V61 = 0x00000061,  // Hexagon V61 ISA
   EF_HEXAGON_ISA_V62 = 0x00000062,  // Hexagon V62 ISA
   EF_HEXAGON_ISA_V65 = 0x00000065,  // Hexagon V65 ISA
   EF_HEXAGON_ISA_V66 = 0x00000066,  // Hexagon V66 ISA
@@ -651,8 +633,48 @@ enum {
   EF_HEXAGON_ISA_V71 = 0x00000071,  // Hexagon V71 ISA
   EF_HEXAGON_ISA_V73 = 0x00000073,  // Hexagon V73 ISA
   EF_HEXAGON_ISA_V75 = 0x00000075,  // Hexagon V75 ISA
+  EF_HEXAGON_ISA_V77 = 0x00000077,  // Hexagon V77 ISA
   EF_HEXAGON_ISA_V79 = 0x00000079,  // Hexagon V79 ISA
+  EF_HEXAGON_ISA_V81 = 0x00000081,  // Hexagon V81 ISA
+  EF_HEXAGON_ISA_V83 = 0x00000083,  // Hexagon V83 ISA
+  EF_HEXAGON_ISA_V85 = 0x00000085,  // Hexagon V85 ISA
+  EF_HEXAGON_ISA_V87 = 0x00000087,  // Hexagon V87 ISA
+  EF_HEXAGON_ISA_V89 = 0x00000089,  // Hexagon V89 ISA
   EF_HEXAGON_ISA = 0x000003ff,      // Hexagon V.. ISA
+
+  // Tiny core flag, bit[15]
+  EF_HEXAGON_TINY_CORE = 0x00008000, // Hexagon Tiny Core
+
+  // Hexagon processor version, bits[15:0]
+  EF_HEXAGON_MACH_V2 = 0x00000001,          // Hexagon V2
+  EF_HEXAGON_MACH_V3 = 0x00000002,          // Hexagon V3
+  EF_HEXAGON_MACH_V4 = 0x00000003,          // Hexagon V4
+  EF_HEXAGON_MACH_V5 = 0x00000004,          // Hexagon V5
+  EF_HEXAGON_MACH_V55 = 0x00000005,         // Hexagon V55
+  EF_HEXAGON_MACH_V60 = EF_HEXAGON_ISA_V60, // Hexagon V60
+  EF_HEXAGON_MACH_V61 = EF_HEXAGON_ISA_V61, // Hexagon V61
+  EF_HEXAGON_MACH_V62 = EF_HEXAGON_ISA_V62, // Hexagon V62
+  EF_HEXAGON_MACH_V65 = EF_HEXAGON_ISA_V65, // Hexagon V65
+  EF_HEXAGON_MACH_V66 = EF_HEXAGON_ISA_V66, // Hexagon V66
+  EF_HEXAGON_MACH_V67 = EF_HEXAGON_ISA_V67, // Hexagon V67
+  EF_HEXAGON_MACH_V67T =
+      EF_HEXAGON_ISA_V67 | EF_HEXAGON_TINY_CORE, // Hexagon V67T
+  EF_HEXAGON_MACH_V68 = EF_HEXAGON_ISA_V68,      // Hexagon V68
+  EF_HEXAGON_MACH_V69 = EF_HEXAGON_ISA_V69,      // Hexagon V69
+  EF_HEXAGON_MACH_V71 = EF_HEXAGON_ISA_V71,      // Hexagon V71
+  EF_HEXAGON_MACH_V71T =
+      EF_HEXAGON_ISA_V71 | EF_HEXAGON_TINY_CORE, // Hexagon V71T
+  EF_HEXAGON_MACH_V73 = EF_HEXAGON_ISA_V73,      // Hexagon V73
+  EF_HEXAGON_MACH_V75 = EF_HEXAGON_ISA_V75,      // Hexagon V75
+  EF_HEXAGON_MACH_V77 = EF_HEXAGON_ISA_V77,      // Hexagon V77
+  EF_HEXAGON_MACH_V79 = EF_HEXAGON_ISA_V79,      // Hexagon V79
+  EF_HEXAGON_MACH_V81 = EF_HEXAGON_ISA_V81,      // Hexagon V81
+  EF_HEXAGON_MACH_V83 = EF_HEXAGON_ISA_V83,      // Hexagon V83
+  EF_HEXAGON_MACH_V85 = EF_HEXAGON_ISA_V85,      // Hexagon V85
+  EF_HEXAGON_MACH_V87 = EF_HEXAGON_ISA_V87,      // Hexagon V87
+  EF_HEXAGON_MACH_V89 = EF_HEXAGON_ISA_V89,      // Hexagon V89
+
+  EF_HEXAGON_MACH = 0x0000ffff, // Hexagon V..
 };
 
 // Hexagon-specific section indexes for common small data
@@ -804,7 +826,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX1035         = 0x03d,
   EF_AMDGPU_MACH_AMDGCN_GFX1034         = 0x03e,
   EF_AMDGPU_MACH_AMDGCN_GFX90A          = 0x03f,
-  EF_AMDGPU_MACH_AMDGCN_GFX940          = 0x040,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X40   = 0x040,
   EF_AMDGPU_MACH_AMDGCN_GFX1100         = 0x041,
   EF_AMDGPU_MACH_AMDGCN_GFX1013         = 0x042,
   EF_AMDGPU_MACH_AMDGCN_GFX1150         = 0x043,
@@ -813,9 +835,9 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX1101         = 0x046,
   EF_AMDGPU_MACH_AMDGCN_GFX1102         = 0x047,
   EF_AMDGPU_MACH_AMDGCN_GFX1200         = 0x048,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X49   = 0x049,
+  EF_AMDGPU_MACH_AMDGCN_GFX1250         = 0x049,
   EF_AMDGPU_MACH_AMDGCN_GFX1151         = 0x04a,
-  EF_AMDGPU_MACH_AMDGCN_GFX941          = 0x04b,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4B   = 0x04b,
   EF_AMDGPU_MACH_AMDGCN_GFX942          = 0x04c,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D   = 0x04d,
   EF_AMDGPU_MACH_AMDGCN_GFX1201         = 0x04e,
@@ -1131,9 +1153,7 @@ enum : unsigned {
   SHT_LLVM_SYMPART = 0x6fff4c05,   // Symbol partition specification.
   SHT_LLVM_PART_EHDR = 0x6fff4c06, // ELF header for loadable partition.
   SHT_LLVM_PART_PHDR = 0x6fff4c07, // Phdrs for loadable partition.
-  SHT_LLVM_BB_ADDR_MAP_V0 =
-      0x6fff4c08, // LLVM Basic Block Address Map (old version kept for
-                  // backward-compatibility).
+  // SHT_LLVM_BB_ADDR_MAP_V0 = 0x6fff4c08,  // Do not use.
   SHT_LLVM_CALL_GRAPH_PROFILE = 0x6fff4c09, // LLVM Call Graph Profile.
   SHT_LLVM_BB_ADDR_MAP = 0x6fff4c0a,        // LLVM Basic Block Address Map.
   SHT_LLVM_OFFLOADING = 0x6fff4c0b,         // LLVM device offloading data.
@@ -1289,8 +1309,11 @@ enum : unsigned {
   // Section data is string data by default.
   SHF_MIPS_STRING = 0x80000000,
 
-  // Make code section unreadable when in execute-only mode
-  SHF_ARM_PURECODE = 0x20000000
+  // Section contains only program instructions and no program data.
+  SHF_ARM_PURECODE = 0x20000000,
+
+  // Section contains only program instructions and no program data.
+  SHF_AARCH64_PURECODE = 0x20000000
 };
 
 // Section Group Flags
@@ -1788,6 +1811,7 @@ enum : unsigned {
   GNU_PROPERTY_AARCH64_FEATURE_1_AND = 0xc0000000,
   GNU_PROPERTY_AARCH64_FEATURE_PAUTH = 0xc0000001,
   GNU_PROPERTY_X86_FEATURE_1_AND = 0xc0000002,
+  GNU_PROPERTY_RISCV_FEATURE_1_AND = 0xc0000000,
 
   GNU_PROPERTY_X86_UINT32_OR_LO = 0xc0008000,
   GNU_PROPERTY_X86_FEATURE_2_NEEDED = GNU_PROPERTY_X86_UINT32_OR_LO + 1,
@@ -1850,6 +1874,13 @@ enum : unsigned {
   GNU_PROPERTY_X86_ISA_1_V2 = 1 << 1,
   GNU_PROPERTY_X86_ISA_1_V3 = 1 << 2,
   GNU_PROPERTY_X86_ISA_1_V4 = 1 << 3,
+};
+
+// RISC-V processor feature bits.
+enum : unsigned {
+  GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED = 1 << 0,
+  GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS = 1 << 1,
+  GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_FUNC_SIG = 1 << 2,
 };
 
 // FreeBSD note types.
@@ -1992,17 +2023,20 @@ enum {
 constexpr unsigned CREL_HDR_ADDEND = 4;
 
 /// Convert an architecture name into ELF's e_machine value.
-uint16_t convertArchNameToEMachine(StringRef Arch);
+LLVM_ABI uint16_t convertArchNameToEMachine(StringRef Arch);
 
 /// Convert an ELF's e_machine value into an architecture name.
-StringRef convertEMachineToArchName(uint16_t EMachine);
+LLVM_ABI StringRef convertEMachineToArchName(uint16_t EMachine);
+
+// Convert a triple's architecture to ELF's e_machine value.
+LLVM_ABI uint16_t convertTripleArchTypeToEMachine(Triple::ArchType ArchType);
 
 // Convert a lowercase string identifier into an OSABI value.
-uint8_t convertNameToOSABI(StringRef Name);
+LLVM_ABI uint8_t convertNameToOSABI(StringRef Name);
 
 // Convert an OSABI value into a string that identifies the OS- or ABI-
 // specific ELF extension.
-StringRef convertOSABIToName(uint8_t OSABI);
+LLVM_ABI StringRef convertOSABIToName(uint8_t OSABI);
 
 } // end namespace ELF
 } // end namespace llvm

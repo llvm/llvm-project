@@ -14,9 +14,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
 using namespace tosa;
@@ -68,13 +66,13 @@ public:
   LogicalResult matchAndRewrite(tosa::IfOp op,
                                 PatternRewriter &rewriter) const final {
     auto condition =
-        rewriter.create<tensor::ExtractOp>(op.getLoc(), op.getCond());
+        rewriter.create<tensor::ExtractOp>(op.getLoc(), op.getCondition());
     auto newIf = rewriter.create<scf::IfOp>(op.getLoc(), op.getResultTypes(),
                                             condition, true);
 
-    inlineIfCase(op.getThenBranch(), newIf.getThenRegion(), op.getInputs(),
+    inlineIfCase(op.getThenGraph(), newIf.getThenRegion(), op.getInputList(),
                  rewriter);
-    inlineIfCase(op.getElseBranch(), newIf.getElseRegion(), op.getInputs(),
+    inlineIfCase(op.getElseGraph(), newIf.getElseRegion(), op.getInputList(),
                  rewriter);
 
     rewriter.replaceOp(op, newIf.getResults());
@@ -158,12 +156,12 @@ public:
   LogicalResult matchAndRewrite(tosa::WhileOp op,
                                 PatternRewriter &rewriter) const final {
     auto newWhile = rewriter.create<scf::WhileOp>(
-        op.getLoc(), op.getResultTypes(), op.getInputs());
+        op.getLoc(), op.getResultTypes(), op.getInputList());
     rewriter.createBlock(&newWhile.getBefore());
     rewriter.createBlock(&newWhile.getAfter());
 
-    inlineWhileCase(op.getCond(), newWhile.getBefore(), rewriter, true);
-    inlineWhileCase(op.getBody(), newWhile.getAfter(), rewriter, false);
+    inlineWhileCase(op.getCondGraph(), newWhile.getBefore(), rewriter, true);
+    inlineWhileCase(op.getBodyGraph(), newWhile.getAfter(), rewriter, false);
 
     rewriter.replaceOp(op, newWhile.getResults());
 

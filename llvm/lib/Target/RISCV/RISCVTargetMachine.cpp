@@ -34,9 +34,11 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Vectorize/EVLIndVarSimplify.h"
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include <optional>
 using namespace llvm;
@@ -78,7 +80,7 @@ static cl::opt<bool> EnableRISCVCopyPropagation(
 static cl::opt<bool> EnableRISCVDeadRegisterElimination(
     "riscv-enable-dead-defs", cl::Hidden,
     cl::desc("Enable the pass that removes dead"
-             " definitons and replaces stores to"
+             " definitions and replaces stores to"
              " them with stores to x0"),
     cl::init(true));
 
@@ -117,7 +119,7 @@ static cl::opt<bool>
                            cl::desc("Enable Machine Pipeliner for RISC-V"),
                            cl::init(false), cl::Hidden);
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
   auto *PR = PassRegistry::getPassRegistry();
@@ -127,22 +129,30 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVPostLegalizerCombinerPass(*PR);
   initializeKCFIPass(*PR);
   initializeRISCVDeadRegisterDefinitionsPass(*PR);
+  initializeRISCVLateBranchOptPass(*PR);
   initializeRISCVMakeCompressibleOptPass(*PR);
   initializeRISCVGatherScatterLoweringPass(*PR);
   initializeRISCVCodeGenPreparePass(*PR);
   initializeRISCVPostRAExpandPseudoPass(*PR);
   initializeRISCVMergeBaseOffsetOptPass(*PR);
   initializeRISCVOptWInstrsPass(*PR);
+  initializeRISCVFoldMemOffsetPass(*PR);
   initializeRISCVPreRAExpandPseudoPass(*PR);
   initializeRISCVExpandPseudoPass(*PR);
   initializeRISCVVectorPeepholePass(*PR);
   initializeRISCVVLOptimizerPass(*PR);
+  initializeRISCVVMV0EliminationPass(*PR);
   initializeRISCVInsertVSETVLIPass(*PR);
   initializeRISCVInsertReadWriteCSRPass(*PR);
   initializeRISCVInsertWriteVXRMPass(*PR);
   initializeRISCVDAGToDAGISelLegacyPass(*PR);
   initializeRISCVMoveMergePass(*PR);
   initializeRISCVPushPopOptPass(*PR);
+  initializeRISCVIndirectBranchTrackingPass(*PR);
+  initializeRISCVLoadStoreOptPass(*PR);
+  initializeRISCVExpandAtomicPseudoPass(*PR);
+  initializeRISCVRedundantCopyEliminationPass(*PR);
+  initializeRISCVAsmPrinterPass(*PR);
 }
 
 static StringRef computeDataLayout(const Triple &TT,
@@ -275,7 +285,7 @@ MachineFunctionInfo *RISCVTargetMachine::createMachineFunctionInfo(
 
 TargetTransformInfo
 RISCVTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(RISCVTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<RISCVTTIImpl>(this, F));
 }
 
 // A RISC-V hart has a single byte-addressable address space of 2^XLEN bytes
@@ -285,6 +295,36 @@ RISCVTargetMachine::getTargetTransformInfo(const Function &F) const {
 bool RISCVTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
                                              unsigned DstAS) const {
   return true;
+}
+
+ScheduleDAGInstrs *
+RISCVTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMILive *DAG = createSchedLive(C);
+  if (EnableMISchedLoadStoreClustering) {
+    DAG->addMutation(createLoadClusterDAGMutation(
+        DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
+    DAG->addMutation(createStoreClusterDAGMutation(
+        DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
+  }
+
+  const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
+  if (!DisableVectorMaskMutation && ST.hasVInstructions())
+    DAG->addMutation(createRISCVVectorMaskDAGMutation(DAG->TRI));
+
+  return DAG;
+}
+
+ScheduleDAGInstrs *
+RISCVTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  ScheduleDAGMI *DAG = createSchedPostRA(C);
+  if (EnablePostMISchedLoadStoreClustering) {
+    DAG->addMutation(createLoadClusterDAGMutation(
+        DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
+    DAG->addMutation(createStoreClusterDAGMutation(
+        DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
+  }
+
+  return DAG;
 }
 
 namespace {
@@ -360,39 +400,6 @@ public:
     return getTM<RISCVTargetMachine>();
   }
 
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMILive *DAG = nullptr;
-    if (EnableMISchedLoadStoreClustering) {
-      DAG = createGenericSchedLive(C);
-      DAG->addMutation(createLoadClusterDAGMutation(
-          DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
-      DAG->addMutation(createStoreClusterDAGMutation(
-          DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
-    }
-
-    const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
-    if (!DisableVectorMaskMutation && ST.hasVInstructions()) {
-      DAG = DAG ? DAG : createGenericSchedLive(C);
-      DAG->addMutation(createRISCVVectorMaskDAGMutation(DAG->TRI));
-    }
-    return DAG;
-  }
-
-  ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const override {
-    ScheduleDAGMI *DAG = nullptr;
-    if (EnablePostMISchedLoadStoreClustering) {
-      DAG = createGenericSchedPostRA(C);
-      DAG->addMutation(createLoadClusterDAGMutation(
-          DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
-      DAG->addMutation(createStoreClusterDAGMutation(
-          DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
-    }
-
-    return DAG;
-  }
-  
   void addIRPasses() override;
   bool addPreISel() override;
   void addCodeGenPrepare() override;
@@ -549,6 +556,8 @@ void RISCVPassConfig::addPreSched2() {
 
   // Emit KCFI checks for indirect calls.
   addPass(createKCFIPass());
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createRISCVLoadStoreOptPass());
 }
 
 void RISCVPassConfig::addPreEmitPass() {
@@ -560,6 +569,12 @@ void RISCVPassConfig::addPreEmitPass() {
   if (TM->getOptLevel() >= CodeGenOptLevel::Default &&
       EnableRISCVCopyPropagation)
     addPass(createMachineCopyPropagationPass(true));
+  if (TM->getOptLevel() >= CodeGenOptLevel::Default)
+    addPass(createRISCVLateBranchOptPass());
+  // The IndirectBranchTrackingPass inserts lpad and could have changed the
+  // basic block alignment. It must be done before Branch Relaxation to
+  // prevent the adjusted offset exceeding the branch range.
+  addPass(createRISCVIndirectBranchTrackingPass());
   addPass(&BranchRelaxationPassID);
   addPass(createRISCVMakeCompressibleOptPass());
 }
@@ -571,7 +586,6 @@ void RISCVPassConfig::addPreEmitPass2() {
     // ensuring return instruction is detected correctly.
     addPass(createRISCVPushPopOptimizationPass());
   }
-  addPass(createRISCVIndirectBranchTrackingPass());
   addPass(createRISCVExpandPseudoPass());
 
   // Schedule the expansion of AMOs at the last possible moment, avoiding the
@@ -587,6 +601,7 @@ void RISCVPassConfig::addPreEmitPass2() {
 
 void RISCVPassConfig::addMachineSSAOptimization() {
   addPass(createRISCVVectorPeepholePass());
+  addPass(createRISCVFoldMemOffsetPass());
 
   TargetPassConfig::addMachineSSAOptimization();
 
@@ -612,6 +627,8 @@ void RISCVPassConfig::addPreRegAlloc() {
 
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableMachinePipeliner)
     addPass(&MachinePipelinerID);
+
+  addPass(createRISCVVMV0EliminationPass());
 }
 
 void RISCVPassConfig::addFastRegAlloc() {
@@ -631,6 +648,12 @@ void RISCVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
                                                  OptimizationLevel Level) {
     LPM.addPass(LoopIdiomVectorizePass(LoopIdiomVectorizeStyle::Predicated));
   });
+
+  PB.registerVectorizerEndEPCallback(
+      [](FunctionPassManager &FPM, OptimizationLevel Level) {
+        if (Level.isOptimizingForSpeed())
+          FPM.addPass(createFunctionToLoopPassAdaptor(EVLIndVarSimplifyPass()));
+      });
 }
 
 yaml::MachineFunctionInfo *

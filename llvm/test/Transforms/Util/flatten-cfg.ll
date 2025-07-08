@@ -309,3 +309,143 @@ if.then.y:
 exit:
   ret i1 %cmp.y
 }
+
+declare void @foo()
+declare void @bar() #1
+
+; Test that two if-regions are not merged when there's potential aliasing
+; between a store in the first if-region and a load in the second if-region's header
+define i32 @test_alias(i32 %a, i32 %b, ptr %p1, ptr %p2) {
+; CHECK-LABEL: define i32 @test_alias
+; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], ptr [[P1:%.*]], ptr [[P2:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i32 42, ptr [[P1]], align 4
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i32 [[A]], 0
+; CHECK-NEXT:    br i1 [[COND1]], label [[IF_THEN1:%.*]], label [[IF_END1:%.*]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    store i32 100, ptr [[P2]], align 4
+; CHECK-NEXT:    br label [[IF_END1]]
+; CHECK:       if.end1:
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[P1]], align 4
+; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i32 [[B]], 0
+; CHECK-NEXT:    br i1 [[COND2]], label [[IF_THEN2:%.*]], label [[IF_END2:%.*]]
+; CHECK:       if.then2:
+; CHECK-NEXT:    store i32 100, ptr [[P2]], align 4
+; CHECK-NEXT:    br label [[IF_END2]]
+; CHECK:       if.end2:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  store i32 42, ptr %p1
+  %cond1 = icmp eq i32 %a, 0
+  br i1 %cond1, label %if.then1, label %if.end1
+
+if.then1:
+  store i32 100, ptr %p2  ; May alias with the load below
+  br label %if.end1
+
+if.end1:
+  %val = load i32, ptr %p1  ; This load prevents merging due to potential alias
+  %cond2 = icmp eq i32 %b, 0
+  br i1 %cond2, label %if.then2, label %if.end2
+
+if.then2:
+  store i32 100, ptr %p2
+  br label %if.end2
+
+if.end2:
+  ret i32 0
+}
+
+; Test that two if-regions are not merged when there's potential aliasing
+; between a store in the first if-region and a function call in the second if-region's header
+define i32 @test_alias_2(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @test_alias_2
+; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 42, ptr [[P]], align 4
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i32 [[A]], 0
+; CHECK-NEXT:    br i1 [[COND1]], label [[IF_THEN1:%.*]], label [[IF_END1:%.*]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    store i32 100, ptr @g, align 4
+; CHECK-NEXT:    br label [[IF_END1]]
+; CHECK:       if.end1:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i32 [[B]], 0
+; CHECK-NEXT:    br i1 [[COND2]], label [[IF_THEN2:%.*]], label [[IF_END2:%.*]]
+; CHECK:       if.then2:
+; CHECK-NEXT:    store i32 100, ptr @g, align 4
+; CHECK-NEXT:    br label [[IF_END2]]
+; CHECK:       if.end2:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %p = alloca i32
+  store i32 42, ptr %p
+  %cond1 = icmp eq i32 %a, 0
+  br i1 %cond1, label %if.then1, label %if.end1
+
+if.then1:
+  store i32 100, ptr @g
+  br label %if.end1
+
+if.end1:
+  call void @foo()
+  %cond2 = icmp eq i32 %b, 0
+  br i1 %cond2, label %if.then2, label %if.end2
+
+if.then2:
+  store i32 100, ptr @g
+  br label %if.end2
+
+if.end2:
+  ret i32 0
+}
+
+; Test that two if-regions are merged when there's no potential aliasing
+; between a store in the first if-region and a load in the second if-region's header
+define i32 @test_no_alias(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @test_no_alias
+; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 42, ptr [[P]], align 4
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i32 [[A]], 0
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr @g, align 4
+; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i32 [[B]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[COND1]], [[COND2]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN2:%.*]], label [[IF_END2:%.*]]
+; CHECK:       if.then2:
+; CHECK-NEXT:    store i32 100, ptr [[P]], align 4
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br label [[IF_END2]]
+; CHECK:       if.end2:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %p = alloca i32
+  store i32 42, ptr %p
+  %cond1 = icmp eq i32 %a, 0
+  br i1 %cond1, label %if.then1, label %if.end1
+
+if.then1:
+  store i32 100, ptr %p  ; No alias with the load below
+  call void @bar() ; No alias with the load below since it's a pure function
+  br label %if.end1
+
+if.end1:
+  %val = load i32, ptr @g
+  %cond2 = icmp eq i32 %b, 0
+  br i1 %cond2, label %if.then2, label %if.end2
+
+if.then2:
+  store i32 100, ptr %p
+  call void @bar()
+  br label %if.end2
+
+if.end2:
+  ret i32 0
+}
+
+attributes #1 = { readnone willreturn nounwind }

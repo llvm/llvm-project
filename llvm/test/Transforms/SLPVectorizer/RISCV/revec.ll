@@ -141,7 +141,7 @@ define ptr @test4() {
 ; POWEROF2-NEXT:    [[TMP1:%.*]] = fadd <8 x float> zeroinitializer, zeroinitializer
 ; POWEROF2-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <2 x i32> <i32 1, i32 2>
 ; POWEROF2-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <2 x i32> <i32 5, i32 6>
-; POWEROF2-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <2 x i32> <i32 4, i32 0>
+; POWEROF2-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <2 x i32> <i32 0, i32 4>
 ; POWEROF2-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> poison, <2 x float> [[TMP2]], i64 0)
 ; POWEROF2-NEXT:    [[TMP6:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> [[TMP5]], <2 x float> [[TMP3]], i64 2)
 ; POWEROF2-NEXT:    br label [[TMP8:%.*]]
@@ -156,10 +156,10 @@ define ptr @test4() {
 ; POWEROF2-NEXT:    [[TMP13:%.*]] = fmul <2 x float> [[TMP12]], zeroinitializer
 ; POWEROF2-NEXT:    [[TMP14:%.*]] = call <2 x float> @llvm.vector.extract.v2f32.v4f32(<4 x float> [[TMP10]], i64 2)
 ; POWEROF2-NEXT:    [[TMP15:%.*]] = fmul <2 x float> zeroinitializer, [[TMP14]]
-; POWEROF2-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[TMP9]], i32 1
-; POWEROF2-NEXT:    [[TMP17:%.*]] = fmul float 0.000000e+00, [[TMP16]]
 ; POWEROF2-NEXT:    [[TMP18:%.*]] = extractelement <2 x float> [[TMP9]], i32 0
-; POWEROF2-NEXT:    [[TMP19:%.*]] = fmul float [[TMP18]], 0.000000e+00
+; POWEROF2-NEXT:    [[TMP17:%.*]] = fmul float 0.000000e+00, [[TMP18]]
+; POWEROF2-NEXT:    [[TMP30:%.*]] = extractelement <2 x float> [[TMP9]], i32 1
+; POWEROF2-NEXT:    [[TMP19:%.*]] = fmul float [[TMP30]], 0.000000e+00
 ; POWEROF2-NEXT:    [[TMP20:%.*]] = extractelement <2 x float> [[TMP13]], i32 0
 ; POWEROF2-NEXT:    [[TMP21:%.*]] = fadd reassoc nsz float [[TMP20]], [[TMP17]]
 ; POWEROF2-NEXT:    [[TMP22:%.*]] = extractelement <2 x float> [[TMP15]], i32 0

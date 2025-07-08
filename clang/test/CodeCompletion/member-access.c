@@ -36,3 +36,12 @@ void test4(struct Point *p) {
 }
 // RUN: %clang_cc1 -fsyntax-only -code-completion-with-fixits -code-completion-at=%s:%(line-3):13 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
 // RUN: %clang_cc1 -fsyntax-only -code-completion-with-fixits -code-completion-at=%s:%(line-3):23 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
+
+float test5(void) {
+  struct Point array[4];
+  return array->x;
+}
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-2):17 %s -o - | FileCheck -check-prefix=CHECK-CC4 %s
+// CHECK-CC4: COMPLETION: x : [#float#]x
+// CHECK-CC4: COMPLETION: y : [#float#]y
+// CHECK-CC4: COMPLETION: z : [#float#]z

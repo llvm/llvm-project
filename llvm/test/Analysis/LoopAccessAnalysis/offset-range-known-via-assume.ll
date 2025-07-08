@@ -55,15 +55,15 @@ define void @offset_i32_known_positive_via_assume_forward_dep_1(ptr %A, i64 %off
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep = getelementptr inbounds i32, ptr %A, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.off = getelementptr inbounds i32, ptr %off, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %A High: (-3 + (4 * %N) + %A))
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: ((4 * %offset)<nsw> + %A) High: (-3 + (4 * %offset)<nsw> + (4 * %N) + %A))
 ; CHECK-NEXT:            Member: {((4 * %offset)<nsw> + %A),+,4}<nw><%loop>
 ; CHECK-EMPTY:
@@ -145,15 +145,15 @@ define void @offset_may_be_negative_via_assume_unknown_dep(ptr %A, i64 %offset, 
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.mul.2 = getelementptr inbounds i32, ptr %A, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP4:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep = getelementptr inbounds i32, ptr %off, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %A High: ((4 * %N) + %A))
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP4]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: ((4 * %offset)<nsw> + %A) High: ((4 * %offset)<nsw> + (4 * %N) + %A))
 ; CHECK-NEXT:            Member: {((4 * %offset)<nsw> + %A),+,4}<nw><%loop>
 ; CHECK-EMPTY:
@@ -192,15 +192,15 @@ define void @offset_no_assumes(ptr %A, i64 %offset, i64 %N) {
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP5:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep = getelementptr inbounds i32, ptr %A, i64 %iv
-; CHECK-NEXT:        Against group ([[GRP6:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.off = getelementptr inbounds i32, ptr %off, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP5]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %A High: ((4 * %N) + %A))
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop>
-; CHECK-NEXT:        Group [[GRP6]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: ((4 * %offset)<nsw> + %A) High: ((4 * %offset)<nsw> + (4 * %N) + %A))
 ; CHECK-NEXT:            Member: {((4 * %offset)<nsw> + %A),+,4}<nw><%loop>
 ; CHECK-EMPTY:

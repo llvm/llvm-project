@@ -21,9 +21,7 @@
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMPass.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
-#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/GPUCommon/GPUToLLVM.h"
-#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
@@ -40,8 +38,6 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "gpu-to-llvm"
 
@@ -76,14 +72,16 @@ protected:
   Value getNumElements(ConversionPatternRewriter &rewriter, Location loc,
                        MemRefType type, MemRefDescriptor desc) const {
     Type indexType = ConvertToLLVMPattern::getIndexType();
-    return type.hasStaticShape()
-               ? ConvertToLLVMPattern::createIndexAttrConstant(
-                     rewriter, loc, indexType, type.getNumElements())
-               // For identity maps (verified by caller), the number of
-               // elements is stride[0] * size[0].
-               : rewriter.create<LLVM::MulOp>(loc,
-                                              desc.stride(rewriter, loc, 0),
-                                              desc.size(rewriter, loc, 0));
+    if (type.hasStaticShape())
+      return ConvertToLLVMPattern::createIndexAttrConstant(
+          rewriter, loc, indexType, type.getNumElements());
+    // Compute the number of elements by multiplying all the dim sizes.
+    uint64_t rank = type.getRank();
+    Value numElements = desc.size(rewriter, loc, /*pos=*/0);
+    for (unsigned i = 1; i < rank; i++)
+      numElements = rewriter.create<LLVM::MulOp>(
+          loc, numElements, desc.size(rewriter, loc, /*pos=*/i));
+    return numElements;
   }
 
   MLIRContext *context = &this->getTypeConverter()->getContext();

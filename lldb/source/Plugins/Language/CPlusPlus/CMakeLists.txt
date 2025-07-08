@@ -1,3 +1,11 @@
+lldb_tablegen(LanguageCPlusPlusProperties.inc -gen-lldb-property-defs
+  SOURCE LanguageCPlusPlusProperties.td
+  TARGET LLDBPluginLanguageCPlusPlusPropertiesGen)
+
+lldb_tablegen(LanguageCPlusPlusPropertiesEnum.inc -gen-lldb-property-enum-defs
+  SOURCE LanguageCPlusPlusProperties.td
+  TARGET LLDBPluginLanguageCPlusPlusPropertiesEnumGen)
+
 add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   BlockPointer.cpp
   Coroutines.cpp
@@ -24,8 +32,11 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   LibStdcpp.cpp
   LibStdcppTuple.cpp
   LibStdcppUniquePointer.cpp
+  MsvcStl.cpp
   MSVCUndecoratedNameParser.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbCore
     lldbDataFormatters
@@ -37,7 +48,8 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
     lldbPluginClangCommon
     lldbPluginCPPRuntime
     lldbPluginTypeSystemClang
-
-  LINK_COMPONENTS
-    Support
 )
+
+add_dependencies(lldbPluginCPlusPlusLanguage
+  LLDBPluginLanguageCPlusPlusPropertiesGen
+  LLDBPluginLanguageCPlusPlusPropertiesEnumGen)

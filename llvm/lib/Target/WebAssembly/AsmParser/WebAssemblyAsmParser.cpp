@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AsmParser/WebAssemblyAsmTypeCheck.h"
+#include "MCTargetDesc/WebAssemblyMCAsmInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
@@ -22,7 +23,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCSectionWasm.h"
@@ -31,6 +32,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SourceMgr.h"
 
 using namespace llvm;
@@ -178,7 +180,7 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
     }
   }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case Token:
       OS << "Tok:" << Tok.Tok;
@@ -204,7 +206,7 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
 
 // Perhaps this should go somewhere common.
 static wasm::WasmLimits defaultLimits() {
-  return {wasm::WASM_LIMITS_FLAG_NONE, 0, 0};
+  return {wasm::WASM_LIMITS_FLAG_NONE, 0, 0, 0};
 }
 
 static MCSymbolWasm *getOrCreateFunctionTableSymbol(MCContext &Ctx,
@@ -225,7 +227,7 @@ static MCSymbolWasm *getOrCreateFunctionTableSymbol(MCContext &Ctx,
 
 class WebAssemblyAsmParser final : public MCTargetAsmParser {
   MCAsmParser &Parser;
-  MCAsmLexer &Lexer;
+  AsmLexer &Lexer;
 
   // Order of labels, directives and instructions in a .s file have no
   // syntactical enforcement. This class is a callback from the actual parser,
@@ -667,6 +669,10 @@ public:
       if (parseFunctionTableOperand(&FunctionTable))
         return true;
       ExpectFuncType = true;
+    } else if (Name == "ref.test") {
+      // When we get support for wasm-gc types, this should become
+      // ExpectRefType.
+      ExpectFuncType = true;
     }
 
     // Returns true if the next tokens are a catch clause
@@ -700,8 +706,8 @@ public:
       auto *WasmSym = cast<MCSymbolWasm>(Sym);
       WasmSym->setSignature(Signature);
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
-      const MCExpr *Expr = MCSymbolRefExpr::create(
-          WasmSym, MCSymbolRefExpr::VK_WASM_TYPEINDEX, Ctx);
+      const MCExpr *Expr =
+          MCSymbolRefExpr::create(WasmSym, WebAssembly::S_TYPEINDEX, Ctx);
       Operands.push_back(std::make_unique<WebAssemblyOperand>(
           Loc.getLoc(), Loc.getEndLoc(), WebAssemblyOperand::SymOp{Expr}));
     }
@@ -1246,7 +1252,7 @@ public:
     if (Group)
       WasmSym->setComdat(true);
     auto *WS = getContext().getWasmSection(SecName, SectionKind::getText(), 0,
-                                           Group, MCContext::GenericSectionID);
+                                           Group, MCSection::NonUniqueID);
     getStreamer().switchSection(WS);
     // Also generate DWARF for this section if requested.
     if (getContext().getGenDwarfForAssembly())
@@ -1281,7 +1287,8 @@ public:
 } // end anonymous namespace
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeWebAssemblyAsmParser() {
   RegisterMCAsmParser<WebAssemblyAsmParser> X(getTheWebAssemblyTarget32());
   RegisterMCAsmParser<WebAssemblyAsmParser> Y(getTheWebAssemblyTarget64());
 }

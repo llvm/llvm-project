@@ -65,8 +65,6 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -360,7 +358,7 @@ static StringRef ToolName;
 
 std::unique_ptr<BuildIDFetcher> BIDFetcher;
 
-Dumper::Dumper(const object::ObjectFile &O) : O(O) {
+Dumper::Dumper(const object::ObjectFile &O) : O(O), OS(outs()) {
   WarningHandler = [this](const Twine &Msg) {
     if (Warnings.insert(Msg.str()).second)
       reportWarning(Msg, this->O.getFileName());
@@ -702,14 +700,18 @@ class HexagonPrettyPrinter : public PrettyPrinter {
 public:
   void printLead(ArrayRef<uint8_t> Bytes, uint64_t Address,
                  formatted_raw_ostream &OS) {
-    uint32_t opcode =
-      (Bytes[3] << 24) | (Bytes[2] << 16) | (Bytes[1] << 8) | Bytes[0];
     if (LeadingAddr)
       OS << format("%8" PRIx64 ":", Address);
     if (ShowRawInsn) {
       OS << "\t";
-      dumpBytes(Bytes.slice(0, 4), OS);
-      OS << format("\t%08" PRIx32, opcode);
+      if (Bytes.size() >= 4) {
+        dumpBytes(Bytes.slice(0, 4), OS);
+        uint32_t opcode =
+            (Bytes[3] << 24) | (Bytes[2] << 16) | (Bytes[1] << 8) | Bytes[0];
+        OS << format("\t%08" PRIx32, opcode);
+      } else {
+        dumpBytes(Bytes, OS);
+      }
     }
   }
   void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
@@ -1233,12 +1235,7 @@ addMissingWasmCodeSymbols(const WasmObjectFile &Obj,
   }
 }
 
-static void addPltEntries(const ObjectFile &Obj,
-                          std::map<SectionRef, SectionSymbolsTy> &AllSymbols,
-                          StringSaver &Saver) {
-  auto *ElfObj = dyn_cast<ELFObjectFileBase>(&Obj);
-  if (!ElfObj)
-    return;
+static DenseMap<StringRef, SectionRef> getSectionNames(const ObjectFile &Obj) {
   DenseMap<StringRef, SectionRef> Sections;
   for (SectionRef Section : Obj.sections()) {
     Expected<StringRef> SecNameOrErr = Section.getName();
@@ -1248,13 +1245,23 @@ static void addPltEntries(const ObjectFile &Obj,
     }
     Sections[*SecNameOrErr] = Section;
   }
-  for (auto Plt : ElfObj->getPltEntries()) {
+  return Sections;
+}
+
+static void addPltEntries(const MCSubtargetInfo &STI, const ObjectFile &Obj,
+                          DenseMap<StringRef, SectionRef> &SectionNames,
+                          std::map<SectionRef, SectionSymbolsTy> &AllSymbols,
+                          StringSaver &Saver) {
+  auto *ElfObj = dyn_cast<ELFObjectFileBase>(&Obj);
+  if (!ElfObj)
+    return;
+  for (auto Plt : ElfObj->getPltEntries(STI)) {
     if (Plt.Symbol) {
       SymbolRef Symbol(*Plt.Symbol, ElfObj);
       uint8_t SymbolType = getElfSymbolType(Obj, Symbol);
       if (Expected<StringRef> NameOrErr = Symbol.getName()) {
         if (!NameOrErr->empty())
-          AllSymbols[Sections[Plt.Section]].emplace_back(
+          AllSymbols[SectionNames[Plt.Section]].emplace_back(
               Plt.Address, Saver.save((*NameOrErr + "@plt").str()), SymbolType);
         continue;
       } else {
@@ -1370,7 +1377,7 @@ static uint64_t dumpARMELFData(uint64_t SectionAddr, uint64_t Index,
 }
 
 static void dumpELFData(uint64_t SectionAddr, uint64_t Index, uint64_t End,
-                        ArrayRef<uint8_t> Bytes) {
+                        ArrayRef<uint8_t> Bytes, raw_ostream &OS) {
   // print out data up to 8 bytes at a time in hex and ascii
   uint8_t AsciiData[9] = {'\0'};
   uint8_t Byte;
@@ -1378,9 +1385,9 @@ static void dumpELFData(uint64_t SectionAddr, uint64_t Index, uint64_t End,
 
   for (; Index < End; ++Index) {
     if (NumBytes == 0)
-      outs() << format("%8" PRIx64 ":", SectionAddr + Index);
+      OS << format("%8" PRIx64 ":", SectionAddr + Index);
     Byte = Bytes.slice(Index)[0];
-    outs() << format(" %02x", Byte);
+    OS << format(" %02x", Byte);
     AsciiData[NumBytes] = isPrint(Byte) ? Byte : '.';
 
     uint8_t IndentOffset = 0;
@@ -1395,9 +1402,9 @@ static void dumpELFData(uint64_t SectionAddr, uint64_t Index, uint64_t End,
     }
     if (NumBytes == 8) {
       AsciiData[8] = '\0';
-      outs() << std::string(IndentOffset, ' ') << "         ";
-      outs() << reinterpret_cast<char *>(AsciiData);
-      outs() << '\n';
+      OS << std::string(IndentOffset, ' ') << "         ";
+      OS << reinterpret_cast<char *>(AsciiData);
+      OS << '\n';
       NumBytes = 0;
     }
   }
@@ -1488,15 +1495,15 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
   // Supported by certain targets.
   const bool isPPC = STI->getTargetTriple().isPPC();
   const bool isX86 = STI->getTargetTriple().isX86();
+  const bool isAArch64 = STI->getTargetTriple().isAArch64();
   const bool isBPF = STI->getTargetTriple().isBPF();
-  if (!isPPC && !isX86 && !isBPF)
+  if (!isPPC && !isX86 && !isAArch64 && !isBPF)
     return;
 
   if (MIA)
     MIA->resetState();
 
-  Labels.clear();
-  unsigned LabelCount = 0;
+  std::set<uint64_t> Targets;
   Start += SectionAddr;
   End += SectionAddr;
   const bool isXCOFF = STI->getTargetTriple().isOSBinFormatXCOFF();
@@ -1516,13 +1523,13 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
         uint64_t Target;
         bool TargetKnown = MIA->evaluateBranch(Inst, Index, Size, Target);
         if (TargetKnown && (Target >= Start && Target < End) &&
-            !Labels.count(Target)) {
+            !Targets.count(Target)) {
           // On PowerPC and AIX, a function call is encoded as a branch to 0.
           // On other PowerPC platforms (ELF), a function call is encoded as
           // a branch to self. Do not add a label for these cases.
           if (!(isPPC &&
                 ((Target == 0 && isXCOFF) || (Target == Index && !isXCOFF))))
-            Labels[Target] = ("L" + Twine(LabelCount++)).str();
+            Targets.insert(Target);
         }
         MIA->updateState(Inst, Index);
       } else
@@ -1530,6 +1537,10 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
     }
     Index += Size;
   }
+
+  Labels.clear();
+  for (auto [Idx, Target] : enumerate(Targets))
+    Labels[Target] = ("L" + Twine(Idx)).str();
 }
 
 // Create an MCSymbolizer for the target and add it to the MCDisassembler.
@@ -1570,8 +1581,7 @@ static void addSymbolizer(
   ArrayRef<uint64_t> LabelAddrsRef = SymbolizerPtr->getReferencedAddresses();
   // Copy and sort to remove duplicates.
   std::vector<uint64_t> LabelAddrs;
-  LabelAddrs.insert(LabelAddrs.end(), LabelAddrsRef.begin(),
-                    LabelAddrsRef.end());
+  llvm::append_range(LabelAddrs, LabelAddrsRef);
   llvm::sort(LabelAddrs);
   LabelAddrs.resize(llvm::unique(LabelAddrs) - LabelAddrs.begin());
   // Add the labels.
@@ -1659,7 +1669,7 @@ static void
 disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                   DisassemblerTarget &PrimaryTarget,
                   std::optional<DisassemblerTarget> &SecondaryTarget,
-                  SourcePrinter &SP, bool InlineRelocs) {
+                  SourcePrinter &SP, bool InlineRelocs, raw_ostream &OS) {
   DisassemblerTarget *DT = &PrimaryTarget;
   bool PrimaryIsThumb = false;
   SmallVector<std::pair<uint64_t, uint64_t>, 0> CHPECodeMap;
@@ -1770,9 +1780,34 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
   if (Obj.isELF() && Obj.sections().empty())
     createFakeELFSections(Obj);
 
+  DisassemblerTarget *PltTarget = DT;
+  auto SectionNames = getSectionNames(Obj);
+  if (SecondaryTarget && isArmElf(Obj)) {
+    auto PltSectionRef = SectionNames.find(".plt");
+    if (PltSectionRef != SectionNames.end()) {
+      bool PltIsThumb = false;
+      for (auto [Addr, SymbolName] : AllMappingSymbols[PltSectionRef->second]) {
+        if (Addr != 0)
+          continue;
+
+        if (SymbolName == 't') {
+          PltIsThumb = true;
+          break;
+        }
+        if (SymbolName == 'a')
+          break;
+      }
+
+      if (PrimaryTarget.SubtargetInfo->checkFeatures("+thumb-mode"))
+        PltTarget = PltIsThumb ? &PrimaryTarget : &*SecondaryTarget;
+      else
+        PltTarget = PltIsThumb ? &*SecondaryTarget : &PrimaryTarget;
+    }
+  }
   BumpPtrAllocator A;
   StringSaver Saver(A);
-  addPltEntries(Obj, AllSymbols, Saver);
+  addPltEntries(*PltTarget->SubtargetInfo, Obj, SectionNames, AllSymbols,
+                Saver);
 
   // Create a mapping from virtual address to section. An empty section can
   // cause more than one section at the same address. Sort such sections to be
@@ -2043,8 +2078,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       if (Start < SectionAddr || StopAddress <= Start)
         continue;
 
-      for (size_t i = 0; i < SymbolsHere.size(); ++i)
-        FoundDisasmSymbolSet.insert(SymNamesHere[i]);
+      FoundDisasmSymbolSet.insert_range(SymNamesHere);
 
       // The end is the section end, the beginning of the next symbol, or
       // --stop-address.
@@ -2058,10 +2092,10 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
 
       if (!PrintedSection) {
         PrintedSection = true;
-        outs() << "\nDisassembly of section ";
+        OS << "\nDisassembly of section ";
         if (!SegmentName.empty())
-          outs() << SegmentName << ",";
-        outs() << SectionName << ":\n";
+          OS << SegmentName << ",";
+        OS << SectionName << ":\n";
       }
 
       bool PrintedLabel = false;
@@ -2073,22 +2107,22 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         const StringRef SymbolName = SymNamesHere[i];
 
         if (!PrintedLabel) {
-          outs() << '\n';
+          OS << '\n';
           PrintedLabel = true;
         }
         if (LeadingAddr)
-          outs() << format(Is64Bits ? "%016" PRIx64 " " : "%08" PRIx64 " ",
-                           SectionAddr + Start + VMAAdjustment);
+          OS << format(Is64Bits ? "%016" PRIx64 " " : "%08" PRIx64 " ",
+                       SectionAddr + Start + VMAAdjustment);
         if (Obj.isXCOFF() && SymbolDescription) {
-          outs() << getXCOFFSymbolDescription(Symbol, SymbolName) << ":\n";
+          OS << getXCOFFSymbolDescription(Symbol, SymbolName) << ":\n";
         } else
-          outs() << '<' << SymbolName << ">:\n";
+          OS << '<' << SymbolName << ">:\n";
       }
 
       // Don't print raw contents of a virtual section. A virtual section
       // doesn't have any contents in the file.
       if (Section.isVirtual()) {
-        outs() << "...\n";
+        OS << "...\n";
         continue;
       }
 
@@ -2125,17 +2159,17 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           do {
             StringRef Line;
             std::tie(Line, ErrMsg) = ErrMsg.split('\n');
-            outs() << DT->Context->getAsmInfo()->getCommentString()
-                   << " error decoding " << SymNamesHere[SHI] << ": " << Line
-                   << '\n';
+            OS << DT->Context->getAsmInfo()->getCommentString()
+               << " error decoding " << SymNamesHere[SHI] << ": " << Line
+               << '\n';
           } while (!ErrMsg.empty());
 
           if (Size) {
-            outs() << DT->Context->getAsmInfo()->getCommentString()
-                   << " decoding failed region as bytes\n";
+            OS << DT->Context->getAsmInfo()->getCommentString()
+               << " decoding failed region as bytes\n";
             for (uint64_t I = 0; I < Size; ++I)
-              outs() << "\t.byte\t " << format_hex(Bytes[I], 1, /*Upper=*/true)
-                     << '\n';
+              OS << "\t.byte\t " << format_hex(Bytes[I], 1, /*Upper=*/true)
+                 << '\n';
           }
         }
 
@@ -2148,13 +2182,13 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         Start += Size;
         break;
       }
-
+      formatted_raw_ostream FOS(OS);
       Index = Start;
       if (SectionAddr < StartAddress)
         Index = std::max<uint64_t>(Index, StartAddress - SectionAddr);
 
       if (DisassembleAsELFData) {
-        dumpELFData(SectionAddr, Index, End, Bytes);
+        dumpELFData(SectionAddr, Index, End, Bytes, FOS);
         Index = End;
         continue;
       }
@@ -2171,8 +2205,6 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           Obj.isXCOFF() && Section.isText() && TracebackTable &&
           Symbols[SI - 1].XCOFFSymInfo.StorageMappingClass &&
           (*Symbols[SI - 1].XCOFFSymInfo.StorageMappingClass == XCOFF::XMC_PR);
-
-      formatted_raw_ostream FOS(outs());
 
       std::unordered_map<uint64_t, std::string> AllLabels;
       std::unordered_map<uint64_t, std::vector<BBAddrMapLabel>> BBAddrMapLabels;
@@ -2294,7 +2326,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           // provided
           MCInst Inst;
           ArrayRef<uint8_t> ThisBytes = Bytes.slice(Index);
-          uint64_t ThisAddr = SectionAddr + Index;
+          uint64_t ThisAddr = SectionAddr + Index + VMAAdjustment;
           bool Disassembled = DT->DisAsm->getInstruction(
               Inst, Size, ThisBytes, ThisAddr, CommentStream);
           if (Size == 0)
@@ -2505,16 +2537,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         if (InlineRelocs && Obj.getArch() != Triple::hexagon) {
           while (findRel()) {
             // When --adjust-vma is used, update the address printed.
-            if (RelCur->getSymbol() != Obj.symbol_end()) {
-              Expected<section_iterator> SymSI =
-                  RelCur->getSymbol()->getSection();
-              if (SymSI && *SymSI != Obj.section_end() &&
-                  shouldAdjustVA(**SymSI))
-                RelOffset += AdjustVMA;
-            }
-
             printRelocation(FOS, Obj.getFileName(), *RelCur,
-                            SectionAddr + RelOffset, Is64Bits);
+                            SectionAddr + RelOffset + VMAAdjustment, Is64Bits);
             LVP.printAfterOtherLine(FOS, true);
             ++RelCur;
           }
@@ -2530,7 +2554,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
     reportWarning("failed to disassemble missing symbol " + Sym, FileName);
 }
 
-static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
+static void disassembleObject(ObjectFile *Obj, bool InlineRelocs,
+                              raw_ostream &OS) {
   // If information useful for showing the disassembly is missing, try to find a
   // more complete binary and disassemble that instead.
   OwningBinary<Binary> FetchedBinary;
@@ -2656,7 +2681,7 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
                   "Unrecognized disassembler option: " + Opt);
 
   disassembleObject(*Obj, *DbgObj, PrimaryTarget, SecondaryTarget, SP,
-                    InlineRelocs);
+                    InlineRelocs, OS);
 }
 
 void Dumper::printRelocations() {
@@ -3317,7 +3342,7 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
   if (SectionContents)
     printSectionContents(O);
   if (Disassemble)
-    disassembleObject(O, Relocations);
+    disassembleObject(O, Relocations, outs());
   if (UnwindInfo)
     printUnwindInfo(O);
 
@@ -3339,7 +3364,7 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
   if (FaultMapSection)
     printFaultMaps(O);
   if (Offloading)
-    dumpOffloadBinary(*O);
+    dumpOffloadBinary(*O, StringRef(ArchName));
 }
 
 static void dumpObject(const COFFImportFile *I, const Archive *A,
@@ -3743,7 +3768,7 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
     return 2;
   }
 
-  DisasmSymbolSet.insert(DisassembleSymbols.begin(), DisassembleSymbols.end());
+  DisasmSymbolSet.insert_range(DisassembleSymbols);
 
   llvm::for_each(InputFilenames, dumpInput);
 

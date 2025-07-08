@@ -14,6 +14,7 @@
 #include "lld/Common/LLVM.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/xxhash.h"
+#include <algorithm>
 
 #define DEBUG_TYPE "lld"
 
@@ -167,6 +168,17 @@ void InputChunk::relocate(uint8_t *buf) const {
   }
 }
 
+static bool relocIsLive(const WasmRelocation &rel, ObjFile *file) {
+  return rel.Type == R_WASM_TYPE_INDEX_LEB ||
+         file->getSymbol(rel.Index)->isLive();
+}
+
+size_t InputChunk::getNumLiveRelocations() const {
+  return llvm::count_if(relocations, [this](const WasmRelocation &rel) {
+    return relocIsLive(rel, file);
+  });
+}
+
 // Copy relocation entries to a given output stream.
 // This function is used only when a user passes "-r". For a regular link,
 // we consume relocations instead of copying them to an output file.
@@ -179,6 +191,8 @@ void InputChunk::writeRelocations(raw_ostream &os) const {
                     << " offset=" << Twine(off) << "\n");
 
   for (const WasmRelocation &rel : relocations) {
+    if (!relocIsLive(rel, file))
+      continue;
     writeUleb128(os, rel.Type, "reloc type");
     writeUleb128(os, rel.Offset + off, "reloc offset");
     writeUleb128(os, file->calcNewIndex(rel), "reloc index");
@@ -214,7 +228,7 @@ void InputFunction::setTableIndex(uint32_t index) {
 // witten.
 static unsigned writeCompressedReloc(uint8_t *buf, const WasmRelocation &rel,
                                      uint64_t value) {
-  switch (rel.Type) {
+  switch (rel.getType()) {
   case R_WASM_TYPE_INDEX_LEB:
   case R_WASM_FUNCTION_INDEX_LEB:
   case R_WASM_GLOBAL_INDEX_LEB:
@@ -225,16 +239,33 @@ static unsigned writeCompressedReloc(uint8_t *buf, const WasmRelocation &rel,
     return encodeULEB128(value, buf);
   case R_WASM_TABLE_INDEX_SLEB:
   case R_WASM_TABLE_INDEX_SLEB64:
+  case R_WASM_TABLE_INDEX_REL_SLEB64:
   case R_WASM_MEMORY_ADDR_SLEB:
   case R_WASM_MEMORY_ADDR_SLEB64:
+  case R_WASM_MEMORY_ADDR_REL_SLEB:
+  case R_WASM_MEMORY_ADDR_REL_SLEB64:
+  case R_WASM_MEMORY_ADDR_TLS_SLEB:
+  case R_WASM_MEMORY_ADDR_TLS_SLEB64:
+  case R_WASM_TABLE_INDEX_REL_SLEB:
     return encodeSLEB128(static_cast<int64_t>(value), buf);
-  default:
-    llvm_unreachable("unexpected relocation type");
+  case R_WASM_TABLE_INDEX_I32:
+  case R_WASM_MEMORY_ADDR_I32:
+  case R_WASM_FUNCTION_OFFSET_I32:
+  case R_WASM_SECTION_OFFSET_I32:
+  case R_WASM_GLOBAL_INDEX_I32:
+  case R_WASM_MEMORY_ADDR_I64:
+  case R_WASM_TABLE_INDEX_I64:
+  case R_WASM_FUNCTION_OFFSET_I64:
+  case R_WASM_MEMORY_ADDR_LOCREL_I32:
+  case R_WASM_FUNCTION_INDEX_I32:
+    fatal("relocation compression not supported for " +
+          relocTypeToString(rel.Type));
   }
+  llvm_unreachable("unhandled relocation type");
 }
 
 static unsigned getRelocWidthPadded(const WasmRelocation &rel) {
-  switch (rel.Type) {
+  switch (rel.getType()) {
   case R_WASM_TYPE_INDEX_LEB:
   case R_WASM_FUNCTION_INDEX_LEB:
   case R_WASM_GLOBAL_INDEX_LEB:
@@ -242,15 +273,32 @@ static unsigned getRelocWidthPadded(const WasmRelocation &rel) {
   case R_WASM_MEMORY_ADDR_LEB:
   case R_WASM_TABLE_NUMBER_LEB:
   case R_WASM_TABLE_INDEX_SLEB:
+  case R_WASM_TABLE_INDEX_REL_SLEB:
   case R_WASM_MEMORY_ADDR_SLEB:
+  case R_WASM_MEMORY_ADDR_REL_SLEB:
+  case R_WASM_MEMORY_ADDR_TLS_SLEB:
     return 5;
   case R_WASM_TABLE_INDEX_SLEB64:
+  case R_WASM_TABLE_INDEX_REL_SLEB64:
   case R_WASM_MEMORY_ADDR_LEB64:
   case R_WASM_MEMORY_ADDR_SLEB64:
+  case R_WASM_MEMORY_ADDR_REL_SLEB64:
+  case R_WASM_MEMORY_ADDR_TLS_SLEB64:
     return 10;
-  default:
-    llvm_unreachable("unexpected relocation type");
+  case R_WASM_TABLE_INDEX_I32:
+  case R_WASM_MEMORY_ADDR_I32:
+  case R_WASM_FUNCTION_OFFSET_I32:
+  case R_WASM_SECTION_OFFSET_I32:
+  case R_WASM_GLOBAL_INDEX_I32:
+  case R_WASM_MEMORY_ADDR_I64:
+  case R_WASM_TABLE_INDEX_I64:
+  case R_WASM_FUNCTION_OFFSET_I64:
+  case R_WASM_MEMORY_ADDR_LOCREL_I32:
+  case R_WASM_FUNCTION_INDEX_I32:
+    fatal("relocation compression not supported for " +
+          relocTypeToString(rel.Type));
   }
+  llvm_unreachable("unhandled relocation type");
 }
 
 static unsigned getRelocWidth(const WasmRelocation &rel, uint64_t value) {
@@ -397,9 +445,9 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
     if (ctx.isPic) {
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
       if (isTLS())
-        writeUleb128(os, WasmSym::tlsBase->getGlobalIndex(), "tls_base");
+        writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "tls_base");
       else
-        writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(), "memory_base");
+        writeUleb128(os, ctx.sym.memoryBase->getGlobalIndex(), "memory_base");
       writeU8(os, opcode_ptr_add, "ADD");
     }
 
@@ -422,12 +470,12 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
       }
     } else {
       assert(ctx.isPic);
-      const GlobalSymbol* baseSymbol = WasmSym::memoryBase;
+      const GlobalSymbol *baseSymbol = ctx.sym.memoryBase;
       if (rel.Type == R_WASM_TABLE_INDEX_I32 ||
           rel.Type == R_WASM_TABLE_INDEX_I64)
-        baseSymbol = WasmSym::tableBase;
+        baseSymbol = ctx.sym.tableBase;
       else if (sym->isTLS())
-        baseSymbol = WasmSym::tlsBase;
+        baseSymbol = ctx.sym.tlsBase;
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
       writeUleb128(os, baseSymbol->getGlobalIndex(), "base");
       writeU8(os, opcode_reloc_const, "CONST");

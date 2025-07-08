@@ -9,11 +9,9 @@
 #include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMPass.h"
-#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include <memory>
@@ -279,8 +277,4 @@ LogicalResult ConvertToLLVMPassInterface::visitInterfaces(
 void mlir::registerConvertToLLVMDependentDialectLoading(
     DialectRegistry &registry) {
   registry.addExtensions<LoadDependentDialectExtension>();
-}
-
-std::unique_ptr<Pass> mlir::createConvertToLLVMPass() {
-  return std::make_unique<ConvertToLLVMPass>();
 }

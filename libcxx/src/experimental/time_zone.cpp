@@ -29,6 +29,15 @@
 // These quirks often use a 12h interval; this is the scan interval of zdump,
 // which implies there are no sys_info objects with a duration of less than 12h.
 
+// Work around https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120502
+
+#include <__config>
+
+// TODO(LLVM 23): When upgrading to GCC 16 this can be removed
+#ifdef _LIBCPP_COMPILER_GCC
+#  pragma GCC optimize("-O0")
+#endif
+
 #include <algorithm>
 #include <cctype>
 #include <chrono>
@@ -668,7 +677,7 @@ __first_rule(seconds __stdoff, const vector<__tz::__rule>& __rules) {
                __continuation_end,
                __continuation.__stdoff + __save,
                chrono::duration_cast<minutes>(__save),
-               __continuation.__format},
+               chrono::__format(__continuation, __continuation.__format, __save)},
       true};
 }
 

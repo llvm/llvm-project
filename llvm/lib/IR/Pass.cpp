@@ -60,8 +60,8 @@ static std::string getDescription(const Module &M) {
   return "module (" + M.getName().str() + ")";
 }
 
-bool ModulePass::skipModule(Module &M) const {
-  OptPassGate &Gate = M.getContext().getOptPassGate();
+bool ModulePass::skipModule(const Module &M) const {
+  const OptPassGate &Gate = M.getContext().getOptPassGate();
   return Gate.isEnabled() &&
          !Gate.shouldRunPass(this->getPassName(), getDescription(M));
 }
@@ -105,10 +105,6 @@ void Pass::releaseMemory() {
 
 void Pass::verifyAnalysis() const {
   // By default, don't do anything.
-}
-
-void *Pass::getAdjustedAnalysisPointer(AnalysisID AID) {
-  return this;
 }
 
 ImmutablePass *Pass::getAsImmutablePass() {
@@ -282,3 +278,21 @@ AnalysisUsage &AnalysisUsage::addRequiredTransitiveID(char &ID) {
   pushUnique(RequiredTransitive, &ID);
   return *this;
 }
+
+#ifndef NDEBUG
+const char *llvm::to_string(ThinOrFullLTOPhase Phase) {
+  switch (Phase) {
+  case ThinOrFullLTOPhase::None:
+    return "None";
+  case ThinOrFullLTOPhase::ThinLTOPreLink:
+    return "ThinLTOPreLink";
+  case ThinOrFullLTOPhase::ThinLTOPostLink:
+    return "ThinLTOPostLink";
+  case ThinOrFullLTOPhase::FullLTOPreLink:
+    return "FullLTOPreLink";
+  case ThinOrFullLTOPhase::FullLTOPostLink:
+    return "FullLTOPostLink";
+  }
+  llvm_unreachable("invalid phase");
+}
+#endif

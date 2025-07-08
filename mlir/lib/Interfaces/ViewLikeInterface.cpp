@@ -27,13 +27,69 @@ LogicalResult mlir::verifyListOfOperandsOrIntegers(Operation *op,
     return op->emitError("expected ") << numElements << " " << name
                                       << " values, got " << staticVals.size();
   unsigned expectedNumDynamicEntries =
-      llvm::count_if(staticVals, [](int64_t staticVal) {
-        return ShapedType::isDynamic(staticVal);
-      });
+      llvm::count_if(staticVals, ShapedType::isDynamic);
   if (values.size() != expectedNumDynamicEntries)
     return op->emitError("expected ")
            << expectedNumDynamicEntries << " dynamic " << name << " values";
   return success();
+}
+
+SliceBoundsVerificationResult mlir::verifyInBoundsSlice(
+    ArrayRef<int64_t> shape, ArrayRef<int64_t> staticOffsets,
+    ArrayRef<int64_t> staticSizes, ArrayRef<int64_t> staticStrides,
+    bool generateErrorMessage) {
+  SliceBoundsVerificationResult result;
+  result.isValid = true;
+  for (int64_t i = 0, e = shape.size(); i < e; ++i) {
+    // Nothing to verify for dynamic source dims.
+    if (ShapedType::isDynamic(shape[i]))
+      continue;
+    // Nothing to verify if the offset is dynamic.
+    if (ShapedType::isDynamic(staticOffsets[i]))
+      continue;
+    if (staticOffsets[i] >= shape[i]) {
+      result.errorMessage =
+          std::string("offset ") + std::to_string(i) +
+          " is out-of-bounds: " + std::to_string(staticOffsets[i]) +
+          " >= " + std::to_string(shape[i]);
+      result.isValid = false;
+      return result;
+    }
+    if (ShapedType::isDynamic(staticSizes[i]) ||
+        ShapedType::isDynamic(staticStrides[i]))
+      continue;
+    int64_t lastPos =
+        staticOffsets[i] + (staticSizes[i] - 1) * staticStrides[i];
+    if (lastPos >= shape[i]) {
+      result.errorMessage = std::string("slice along dimension ") +
+                            std::to_string(i) +
+                            " runs out-of-bounds: " + std::to_string(lastPos) +
+                            " >= " + std::to_string(shape[i]);
+      result.isValid = false;
+      return result;
+    }
+  }
+  return result;
+}
+
+SliceBoundsVerificationResult mlir::verifyInBoundsSlice(
+    ArrayRef<int64_t> shape, ArrayRef<OpFoldResult> mixedOffsets,
+    ArrayRef<OpFoldResult> mixedSizes, ArrayRef<OpFoldResult> mixedStrides,
+    bool generateErrorMessage) {
+  auto getStaticValues = [](ArrayRef<OpFoldResult> ofrs) {
+    SmallVector<int64_t> staticValues;
+    for (OpFoldResult ofr : ofrs) {
+      if (auto attr = dyn_cast<Attribute>(ofr)) {
+        staticValues.push_back(cast<IntegerAttr>(attr).getInt());
+      } else {
+        staticValues.push_back(ShapedType::kDynamic);
+      }
+    }
+    return staticValues;
+  };
+  return verifyInBoundsSlice(
+      shape, getStaticValues(mixedOffsets), getStaticValues(mixedSizes),
+      getStaticValues(mixedStrides), generateErrorMessage);
 }
 
 LogicalResult
@@ -68,12 +124,12 @@ mlir::detail::verifyOffsetSizeAndStrideOp(OffsetSizeAndStrideOpInterface op) {
     return failure();
 
   for (int64_t offset : op.getStaticOffsets()) {
-    if (offset < 0 && !ShapedType::isDynamic(offset))
+    if (offset < 0 && ShapedType::isStatic(offset))
       return op->emitError("expected offsets to be non-negative, but got ")
              << offset;
   }
   for (int64_t size : op.getStaticSizes()) {
-    if (size < 0 && !ShapedType::isDynamic(size))
+    if (size < 0 && ShapedType::isStatic(size))
       return op->emitError("expected sizes to be non-negative, but got ")
              << size;
   }
@@ -212,5 +268,5 @@ bool mlir::detail::sameOffsetsSizesAndStrides(
 unsigned mlir::detail::getNumDynamicEntriesUpToIdx(ArrayRef<int64_t> staticVals,
                                                    unsigned idx) {
   return std::count_if(staticVals.begin(), staticVals.begin() + idx,
-                       [&](int64_t val) { return ShapedType::isDynamic(val); });
+                       ShapedType::isDynamic);
 }

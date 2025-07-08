@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 
 #include "AVR.h"
 #include "AVRMachineFunctionInfo.h"
@@ -87,11 +88,12 @@ void AVRPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRTarget() {
   // Register the target.
   RegisterTargetMachine<AVRTargetMachine> X(getTheAVRTarget());
 
   auto &PR = *PassRegistry::getPassRegistry();
+  initializeAVRAsmPrinterPass(PR);
   initializeAVRExpandPseudoPass(PR);
   initializeAVRShiftExpandPass(PR);
   initializeAVRDAGToDAGISelLegacyPass(PR);
@@ -125,9 +127,7 @@ bool AVRPassConfig::addInstSelector() {
   return false;
 }
 
-void AVRPassConfig::addPreSched2() {
-  addPass(createAVRExpandPseudoPass());
-}
+void AVRPassConfig::addPreSched2() { addPass(createAVRExpandPseudoPass()); }
 
 void AVRPassConfig::addPreEmitPass() {
   // Must run branch selection immediately preceding the asm printer.

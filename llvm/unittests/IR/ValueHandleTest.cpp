@@ -329,7 +329,7 @@ TEST_F(ValueHandle, CallbackVH_DeletionCanRAUW) {
     }
     void allUsesReplacedWith(Value *new_value) override {
       ASSERT_TRUE(nullptr != getValPtr());
-      EXPECT_EQ(1U, getValPtr()->getNumUses());
+      EXPECT_TRUE(getValPtr()->hasOneUse());
       EXPECT_EQ(nullptr, AURWArgument);
       AURWArgument = new_value;
     }

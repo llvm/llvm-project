@@ -41,9 +41,6 @@ class LibcxxStringDataFormatterTestCase(TestBase):
             self.runCmd("type summary clear", check=False)
             self.runCmd("type filter clear", check=False)
             self.runCmd("type synth clear", check=False)
-            self.runCmd("settings set target.max-children-count 256", check=False)
-
-        is_64_bit = self.process().GetAddressByteSize() == 8
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
@@ -66,11 +63,9 @@ class LibcxxStringDataFormatterTestCase(TestBase):
                 '(%s::wstring) IHaveEmbeddedZerosToo = L"hello world!\\0てざ ル゜䋨ミ㠧槊 きゅへ狦穤襩 じゃ馩リョ 䤦監"'
                 % ns,
                 '(%s::u16string) u16_string = u"ß水氶"' % ns,
-                # FIXME: This should have a 'u' prefix.
-                '(%s::u16string) u16_empty = ""' % ns,
+                '(%s::u16string) u16_empty = u""' % ns,
                 '(%s::u32string) u32_string = U"🍄🍅🍆🍌"' % ns,
-                # FIXME: This should have a 'U' prefix.
-                '(%s::u32string) u32_empty = ""' % ns,
+                '(%s::u32string) u32_empty = U""' % ns,
                 "(%s::string *) null_str = nullptr" % ns,
             ],
         )
@@ -124,29 +119,10 @@ class LibcxxStringDataFormatterTestCase(TestBase):
                 % ns,
                 '(%s::u16string) u16_string = u"ß水氶"' % ns,
                 '(%s::u32string) u32_string = U"🍄🍅🍆🍌"' % ns,
-                '(%s::u32string) u32_empty = ""' % ns,
+                '(%s::u32string) u32_empty = U""' % ns,
                 "(%s::string *) null_str = nullptr" % ns,
             ],
         )
-
-        # The test assumes that std::string is in its cap-size-data layout.
-        is_alternate_layout = (
-            "arm" in self.getArchitecture()
-        ) and self.platformIsDarwin()
-        if is_64_bit and not is_alternate_layout:
-            self.expect(
-                "frame variable garbage1", substrs=["garbage1 = Summary Unavailable"]
-            )
-            self.expect(
-                "frame variable garbage2", substrs=[r'garbage2 = "\xfa\xfa\xfa\xfa"']
-            )
-            self.expect("frame variable garbage3", substrs=[r'garbage3 = "\xf0\xf0"'])
-            self.expect(
-                "frame variable garbage4", substrs=["garbage4 = Summary Unavailable"]
-            )
-            self.expect(
-                "frame variable garbage5", substrs=["garbage5 = Summary Unavailable"]
-            )
 
         # Finally, make sure that if the string is not readable, we give an error:
         bkpt_2 = target.BreakpointCreateBySourceRegex(

@@ -34,8 +34,7 @@ define i32 @test_rev_w_srl16(i16 %a) {
 ; CHECK-GI-LABEL: test_rev_w_srl16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    and w8, w0, #0xffff
-; CHECK-GI-NEXT:    rev w8, w8
-; CHECK-GI-NEXT:    lsr w0, w8, #16
+; CHECK-GI-NEXT:    rev16 w0, w8
 ; CHECK-GI-NEXT:    ret
 entry:
   %0 = zext i16 %a to i32
@@ -45,12 +44,18 @@ entry:
 }
 
 define i32 @test_rev_w_srl16_load(ptr %a) {
-; CHECK-LABEL: test_rev_w_srl16_load:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    rev w8, w8
-; CHECK-NEXT:    lsr w0, w8, #16
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_rev_w_srl16_load:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ldrh w8, [x0]
+; CHECK-SD-NEXT:    rev w8, w8
+; CHECK-SD-NEXT:    lsr w0, w8, #16
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_rev_w_srl16_load:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldrh w8, [x0]
+; CHECK-GI-NEXT:    rev16 w0, w8
+; CHECK-GI-NEXT:    ret
 entry:
   %0 = load i16, ptr %a
   %1 = zext i16 %0 to i32
@@ -71,8 +76,7 @@ define i32 @test_rev_w_srl16_add(i8 %a, i8 %b) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    and w8, w1, #0xff
 ; CHECK-GI-NEXT:    add w8, w8, w0, uxtb
-; CHECK-GI-NEXT:    rev w8, w8
-; CHECK-GI-NEXT:    lsr w0, w8, #16
+; CHECK-GI-NEXT:    rev16 w0, w8
 ; CHECK-GI-NEXT:    ret
 entry:
   %0 = zext i8 %a to i32
@@ -96,8 +100,7 @@ define i64 @test_rev_x_srl32(i32 %a) {
 ; CHECK-GI-LABEL: test_rev_x_srl32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov w8, w0
-; CHECK-GI-NEXT:    rev x8, x8
-; CHECK-GI-NEXT:    lsr x0, x8, #32
+; CHECK-GI-NEXT:    rev32 x0, x8
 ; CHECK-GI-NEXT:    ret
 entry:
   %0 = zext i32 %a to i64
@@ -107,12 +110,18 @@ entry:
 }
 
 define i64 @test_rev_x_srl32_load(ptr %a) {
-; CHECK-LABEL: test_rev_x_srl32_load:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    rev x8, x8
-; CHECK-NEXT:    lsr x0, x8, #32
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_rev_x_srl32_load:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ldr w8, [x0]
+; CHECK-SD-NEXT:    rev x8, x8
+; CHECK-SD-NEXT:    lsr x0, x8, #32
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_rev_x_srl32_load:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldr w8, [x0]
+; CHECK-GI-NEXT:    rev32 x0, x8
+; CHECK-GI-NEXT:    ret
 entry:
   %0 = load i32, ptr %a
   %1 = zext i32 %0 to i64
@@ -122,18 +131,11 @@ entry:
 }
 
 define i64 @test_rev_x_srl32_shift(i64 %a) {
-; CHECK-SD-LABEL: test_rev_x_srl32_shift:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ubfx x8, x0, #2, #29
-; CHECK-SD-NEXT:    rev32 x0, x8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_rev_x_srl32_shift:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ubfx x8, x0, #2, #29
-; CHECK-GI-NEXT:    rev x8, x8
-; CHECK-GI-NEXT:    lsr x0, x8, #32
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_rev_x_srl32_shift:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ubfx x8, x0, #2, #29
+; CHECK-NEXT:    rev32 x0, x8
+; CHECK-NEXT:    ret
 entry:
   %0 = shl i64 %a, 33
   %1 = lshr i64 %0, 35
@@ -213,9 +215,9 @@ define <8 x i8> @test_vrev64D8(ptr %A) nounwind {
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    rev64.8b v0, v0
 ; CHECK-NEXT:    ret
-	%tmp1 = load <8 x i8>, ptr %A
-	%tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-	ret <8 x i8> %tmp2
+  %tmp1 = load <8 x i8>, ptr %A
+  %tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  ret <8 x i8> %tmp2
 }
 
 define <4 x i16> @test_vrev64D16(ptr %A) nounwind {
@@ -224,9 +226,9 @@ define <4 x i16> @test_vrev64D16(ptr %A) nounwind {
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    rev64.4h v0, v0
 ; CHECK-NEXT:    ret
-	%tmp1 = load <4 x i16>, ptr %A
-	%tmp2 = shufflevector <4 x i16> %tmp1, <4 x i16> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-	ret <4 x i16> %tmp2
+  %tmp1 = load <4 x i16>, ptr %A
+  %tmp2 = shufflevector <4 x i16> %tmp1, <4 x i16> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x i16> %tmp2
 }
 
 define <2 x i32> @test_vrev64D32(ptr %A) nounwind {
@@ -235,9 +237,9 @@ define <2 x i32> @test_vrev64D32(ptr %A) nounwind {
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    rev64.2s v0, v0
 ; CHECK-NEXT:    ret
-	%tmp1 = load <2 x i32>, ptr %A
-	%tmp2 = shufflevector <2 x i32> %tmp1, <2 x i32> undef, <2 x i32> <i32 1, i32 0>
-	ret <2 x i32> %tmp2
+  %tmp1 = load <2 x i32>, ptr %A
+  %tmp2 = shufflevector <2 x i32> %tmp1, <2 x i32> undef, <2 x i32> <i32 1, i32 0>
+  ret <2 x i32> %tmp2
 }
 
 define <2 x float> @test_vrev64Df(ptr %A) nounwind {
@@ -246,9 +248,9 @@ define <2 x float> @test_vrev64Df(ptr %A) nounwind {
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    rev64.2s v0, v0
 ; CHECK-NEXT:    ret
-	%tmp1 = load <2 x float>, ptr %A
-	%tmp2 = shufflevector <2 x float> %tmp1, <2 x float> undef, <2 x i32> <i32 1, i32 0>
-	ret <2 x float> %tmp2
+  %tmp1 = load <2 x float>, ptr %A
+  %tmp2 = shufflevector <2 x float> %tmp1, <2 x float> undef, <2 x i32> <i32 1, i32 0>
+  ret <2 x float> %tmp2
 }
 
 define <16 x i8> @test_vrev64Q8(ptr %A) nounwind {
@@ -257,9 +259,9 @@ define <16 x i8> @test_vrev64Q8(ptr %A) nounwind {
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    rev64.16b v0, v0
 ; CHECK-NEXT:    ret
-	%tmp1 = load <16 x i8>, ptr %A
-	%tmp2 = shufflevector <16 x i8> %tmp1, <16 x i8> undef, <16 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8>
-	ret <16 x i8> %tmp2
+  %tmp1 = load <16 x i8>, ptr %A
+  %tmp2 = shufflevector <16 x i8> %tmp1, <16 x i8> undef, <16 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8>
+  ret <16 x i8> %tmp2
 }
 
 define <8 x i16> @test_vrev64Q16(ptr %A) nounwind {
@@ -268,9 +270,9 @@ define <8 x i16> @test_vrev64Q16(ptr %A) nounwind {
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    rev64.8h v0, v0
 ; CHECK-NEXT:    ret
-	%tmp1 = load <8 x i16>, ptr %A
-	%tmp2 = shufflevector <8 x i16> %tmp1, <8 x i16> undef, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
-	ret <8 x i16> %tmp2
+  %tmp1 = load <8 x i16>, ptr %A
+  %tmp2 = shufflevector <8 x i16> %tmp1, <8 x i16> undef, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
+  ret <8 x i16> %tmp2
 }
 
 define <4 x i32> @test_vrev64Q32(ptr %A) nounwind {
@@ -279,9 +281,9 @@ define <4 x i32> @test_vrev64Q32(ptr %A) nounwind {
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    rev64.4s v0, v0
 ; CHECK-NEXT:    ret
-	%tmp1 = load <4 x i32>, ptr %A
-	%tmp2 = shufflevector <4 x i32> %tmp1, <4 x i32> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
-	ret <4 x i32> %tmp2
+  %tmp1 = load <4 x i32>, ptr %A
+  %tmp2 = shufflevector <4 x i32> %tmp1, <4 x i32> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  ret <4 x i32> %tmp2
 }
 
 define <4 x float> @test_vrev64Qf(ptr %A) nounwind {
@@ -290,9 +292,9 @@ define <4 x float> @test_vrev64Qf(ptr %A) nounwind {
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    rev64.4s v0, v0
 ; CHECK-NEXT:    ret
-	%tmp1 = load <4 x float>, ptr %A
-	%tmp2 = shufflevector <4 x float> %tmp1, <4 x float> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
-	ret <4 x float> %tmp2
+  %tmp1 = load <4 x float>, ptr %A
+  %tmp2 = shufflevector <4 x float> %tmp1, <4 x float> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  ret <4 x float> %tmp2
 }
 
 define <8 x i8> @test_vrev32D8(ptr %A) nounwind {
@@ -301,9 +303,9 @@ define <8 x i8> @test_vrev32D8(ptr %A) nounwind {
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    rev32.8b v0, v0
 ; CHECK-NEXT:    ret
-	%tmp1 = load <8 x i8>, ptr %A
-	%tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
-	ret <8 x i8> %tmp2
+  %tmp1 = load <8 x i8>, ptr %A
+  %tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
+  ret <8 x i8> %tmp2
 }
 
 define <4 x i16> @test_vrev32D16(ptr %A) nounwind {
@@ -312,9 +314,9 @@ define <4 x i16> @test_vrev32D16(ptr %A) nounwind {
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    rev32.4h v0, v0
 ; CHECK-NEXT:    ret
-	%tmp1 = load <4 x i16>, ptr %A
-	%tmp2 = shufflevector <4 x i16> %tmp1, <4 x i16> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
-	ret <4 x i16> %tmp2
+  %tmp1 = load <4 x i16>, ptr %A
+  %tmp2 = shufflevector <4 x i16> %tmp1, <4 x i16> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  ret <4 x i16> %tmp2
 }
 
 define <16 x i8> @test_vrev32Q8(ptr %A) nounwind {
@@ -323,9 +325,9 @@ define <16 x i8> @test_vrev32Q8(ptr %A) nounwind {
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    rev32.16b v0, v0
 ; CHECK-NEXT:    ret
-	%tmp1 = load <16 x i8>, ptr %A
-	%tmp2 = shufflevector <16 x i8> %tmp1, <16 x i8> undef, <16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
-	ret <16 x i8> %tmp2
+  %tmp1 = load <16 x i8>, ptr %A
+  %tmp2 = shufflevector <16 x i8> %tmp1, <16 x i8> undef, <16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
+  ret <16 x i8> %tmp2
 }
 
 define <8 x i16> @test_vrev32Q16(ptr %A) nounwind {
@@ -334,9 +336,9 @@ define <8 x i16> @test_vrev32Q16(ptr %A) nounwind {
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    rev32.8h v0, v0
 ; CHECK-NEXT:    ret
-	%tmp1 = load <8 x i16>, ptr %A
-	%tmp2 = shufflevector <8 x i16> %tmp1, <8 x i16> undef, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
-	ret <8 x i16> %tmp2
+  %tmp1 = load <8 x i16>, ptr %A
+  %tmp2 = shufflevector <8 x i16> %tmp1, <8 x i16> undef, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+  ret <8 x i16> %tmp2
 }
 
 define <8 x i8> @test_vrev16D8(ptr %A) nounwind {
@@ -345,9 +347,9 @@ define <8 x i8> @test_vrev16D8(ptr %A) nounwind {
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    rev16.8b v0, v0
 ; CHECK-NEXT:    ret
-	%tmp1 = load <8 x i8>, ptr %A
-	%tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
-	ret <8 x i8> %tmp2
+  %tmp1 = load <8 x i8>, ptr %A
+  %tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+  ret <8 x i8> %tmp2
 }
 
 define <16 x i8> @test_vrev16Q8(ptr %A) nounwind {
@@ -356,9 +358,81 @@ define <16 x i8> @test_vrev16Q8(ptr %A) nounwind {
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    rev16.16b v0, v0
 ; CHECK-NEXT:    ret
-	%tmp1 = load <16 x i8>, ptr %A
-	%tmp2 = shufflevector <16 x i8> %tmp1, <16 x i8> undef, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
-	ret <16 x i8> %tmp2
+  %tmp1 = load <16 x i8>, ptr %A
+  %tmp2 = shufflevector <16 x i8> %tmp1, <16 x i8> undef, <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6, i32 9, i32 8, i32 11, i32 10, i32 13, i32 12, i32 15, i32 14>
+  ret <16 x i8> %tmp2
+}
+
+define <4 x half> @test_vrev32Df16(<4 x half> %A) nounwind {
+; CHECK-LABEL: test_vrev32Df16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev32.4h v0, v0
+; CHECK-NEXT:    ret
+  %tmp2 = shufflevector <4 x half> %A, <4 x half> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  ret <4 x half> %tmp2
+}
+
+define <8 x half> @test_vrev32Qf16(<8 x half> %A) nounwind {
+; CHECK-LABEL: test_vrev32Qf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev32.8h v0, v0
+; CHECK-NEXT:    ret
+  %tmp2 = shufflevector <8 x half> %A, <8 x half> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+  ret <8 x half> %tmp2
+}
+
+define <4 x half> @test_vrev64Df16(<4 x half> %A) nounwind {
+; CHECK-LABEL: test_vrev64Df16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev64.4h v0, v0
+; CHECK-NEXT:    ret
+  %tmp2 = shufflevector <4 x half> %A, <4 x half> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x half> %tmp2
+}
+
+define <8 x half> @test_vrev64Qf16(<8 x half> %A) nounwind {
+; CHECK-LABEL: test_vrev64Qf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev64.8h v0, v0
+; CHECK-NEXT:    ret
+  %tmp2 = shufflevector <8 x half> %A, <8 x half> poison, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
+  ret <8 x half> %tmp2
+}
+
+define <4 x bfloat> @test_vrev32Dbf16(<4 x bfloat> %A) nounwind {
+; CHECK-LABEL: test_vrev32Dbf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev32.4h v0, v0
+; CHECK-NEXT:    ret
+  %tmp2 = shufflevector <4 x bfloat> %A, <4 x bfloat> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  ret <4 x bfloat> %tmp2
+}
+
+define <8 x bfloat> @test_vrev32Qbf16(<8 x bfloat> %A) nounwind {
+; CHECK-LABEL: test_vrev32Qbf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev32.8h v0, v0
+; CHECK-NEXT:    ret
+  %tmp2 = shufflevector <8 x bfloat> %A, <8 x bfloat> poison, <8 x i32> <i32 1, i32 0, i32 3, i32 2, i32 5, i32 4, i32 7, i32 6>
+  ret <8 x bfloat> %tmp2
+}
+
+define <4 x bfloat> @test_vrev64Dbf16(<4 x bfloat> %A) nounwind {
+; CHECK-LABEL: test_vrev64Dbf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev64.4h v0, v0
+; CHECK-NEXT:    ret
+  %tmp2 = shufflevector <4 x bfloat> %A, <4 x bfloat> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x bfloat> %tmp2
+}
+
+define <8 x bfloat> @test_vrev64Qbf16(<8 x bfloat> %A) nounwind {
+; CHECK-LABEL: test_vrev64Qbf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev64.8h v0, v0
+; CHECK-NEXT:    ret
+  %tmp2 = shufflevector <8 x bfloat> %A, <8 x bfloat> poison, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
+  ret <8 x bfloat> %tmp2
 }
 
 ; Undef shuffle indices should not prevent matching to VREV:
@@ -369,9 +443,9 @@ define <8 x i8> @test_vrev64D8_undef(ptr %A) nounwind {
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    rev64.8b v0, v0
 ; CHECK-NEXT:    ret
-	%tmp1 = load <8 x i8>, ptr %A
-	%tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <8 x i32> <i32 7, i32 undef, i32 undef, i32 4, i32 3, i32 2, i32 1, i32 0>
-	ret <8 x i8> %tmp2
+  %tmp1 = load <8 x i8>, ptr %A
+  %tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <8 x i32> <i32 7, i32 undef, i32 undef, i32 4, i32 3, i32 2, i32 1, i32 0>
+  ret <8 x i8> %tmp2
 }
 
 define <8 x i16> @test_vrev32Q16_undef(ptr %A) nounwind {
@@ -380,9 +454,9 @@ define <8 x i16> @test_vrev32Q16_undef(ptr %A) nounwind {
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    rev32.8h v0, v0
 ; CHECK-NEXT:    ret
-	%tmp1 = load <8 x i16>, ptr %A
-	%tmp2 = shufflevector <8 x i16> %tmp1, <8 x i16> undef, <8 x i32> <i32 undef, i32 0, i32 undef, i32 2, i32 5, i32 4, i32 7, i32 undef>
-	ret <8 x i16> %tmp2
+  %tmp1 = load <8 x i16>, ptr %A
+  %tmp2 = shufflevector <8 x i16> %tmp1, <8 x i16> undef, <8 x i32> <i32 undef, i32 0, i32 undef, i32 2, i32 5, i32 4, i32 7, i32 undef>
+  ret <8 x i16> %tmp2
 }
 
 ; vrev <4 x i16> should use REV32 and not REV64
@@ -390,9 +464,9 @@ define void @test_vrev64(ptr nocapture %source, ptr nocapture %dst) nounwind ssp
 ; CHECK-SD-LABEL: test_vrev64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldr q0, [x0]
-; CHECK-SD-NEXT:    add x8, x1, #2
-; CHECK-SD-NEXT:    st1.h { v0 }[5], [x8]
+; CHECK-SD-NEXT:    mov h1, v0[5]
 ; CHECK-SD-NEXT:    st1.h { v0 }[6], [x1]
+; CHECK-SD-NEXT:    str h1, [x1, #2]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_vrev64:
@@ -426,9 +500,9 @@ define void @float_vrev64(ptr nocapture %source, ptr nocapture %dest) nounwind n
 ; CHECK-GI-LABEL: float_vrev64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    movi d0, #0000000000000000
-; CHECK-GI-NEXT:    adrp x8, .LCPI28_0
+; CHECK-GI-NEXT:    adrp x8, .LCPI36_0
 ; CHECK-GI-NEXT:    ldr q1, [x0]
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI28_0]
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI36_0]
 ; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v2
 ; CHECK-GI-NEXT:    str q0, [x1, #176]
 ; CHECK-GI-NEXT:    ret
@@ -456,27 +530,27 @@ declare <4 x i32> @llvm.bswap.v4i32(<4 x i32>) nounwind readnone
 define void @test_rev16_truncstore() {
 ; CHECK-SD-LABEL: test_rev16_truncstore:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    cbnz wzr, .LBB30_2
-; CHECK-SD-NEXT:  .LBB30_1: // %cleanup
+; CHECK-SD-NEXT:    cbnz wzr, .LBB38_2
+; CHECK-SD-NEXT:  .LBB38_1: // %cleanup
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-SD-NEXT:    ldrh w8, [x8]
 ; CHECK-SD-NEXT:    rev16 w8, w8
 ; CHECK-SD-NEXT:    strh w8, [x8]
-; CHECK-SD-NEXT:    cbz wzr, .LBB30_1
-; CHECK-SD-NEXT:  .LBB30_2: // %fail
+; CHECK-SD-NEXT:    cbz wzr, .LBB38_1
+; CHECK-SD-NEXT:  .LBB38_2: // %fail
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_rev16_truncstore:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    tbnz wzr, #0, .LBB30_2
-; CHECK-GI-NEXT:  .LBB30_1: // %cleanup
+; CHECK-GI-NEXT:    tbnz wzr, #0, .LBB38_2
+; CHECK-GI-NEXT:  .LBB38_1: // %cleanup
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    ldrh w8, [x8]
 ; CHECK-GI-NEXT:    rev w8, w8
 ; CHECK-GI-NEXT:    lsr w8, w8, #16
 ; CHECK-GI-NEXT:    strh w8, [x8]
-; CHECK-GI-NEXT:    tbz wzr, #0, .LBB30_1
-; CHECK-GI-NEXT:  .LBB30_2: // %fail
+; CHECK-GI-NEXT:    tbz wzr, #0, .LBB38_1
+; CHECK-GI-NEXT:  .LBB38_2: // %fail
 ; CHECK-GI-NEXT:    ret
 entry:
   br label %body

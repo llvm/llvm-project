@@ -15,10 +15,9 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Pass/Pass.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTLINALGTOSTANDARD
+#define GEN_PASS_DEF_CONVERTLINALGTOSTANDARDPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -133,7 +132,8 @@ void mlir::linalg::populateLinalgToStandardConversionPatterns(
 
 namespace {
 struct ConvertLinalgToStandardPass
-    : public impl::ConvertLinalgToStandardBase<ConvertLinalgToStandardPass> {
+    : public impl::ConvertLinalgToStandardPassBase<
+          ConvertLinalgToStandardPass> {
   void runOnOperation() override;
 };
 } // namespace
@@ -149,9 +149,4 @@ void ConvertLinalgToStandardPass::runOnOperation() {
   populateLinalgToStandardConversionPatterns(patterns);
   if (failed(applyFullConversion(module, target, std::move(patterns))))
     signalPassFailure();
-}
-
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createConvertLinalgToStandardPass() {
-  return std::make_unique<ConvertLinalgToStandardPass>();
 }

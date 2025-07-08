@@ -2,10 +2,6 @@
 ; RUN: opt -passes='default<O0>,mergefunc' -S -mergefunc-preserve-debug-info < %s | FileCheck %s --check-prefix=OPTIMIZATION_LEVEL_0
 ; RUN: opt -passes='default<O2>,mergefunc' -S -mergefunc-preserve-debug-info < %s | FileCheck %s --check-prefix=OPTIMIZATION_LEVEL_2
 
-;; Does this continue to work under non-intrinsic debug-info?
-; RUN: opt -passes='default<O0>,mergefunc' -S -mergefunc-preserve-debug-info < %s --try-experimental-debuginfo-iterators | FileCheck %s --check-prefix=OPTIMIZATION_LEVEL_0
-; RUN: opt -passes='default<O2>,mergefunc' -S -mergefunc-preserve-debug-info < %s --try-experimental-debuginfo-iterators | FileCheck %s --check-prefix=OPTIMIZATION_LEVEL_2
-
 ; Preserve debug info in thunks under -passes=mergefunc -mergefunc-preserve-debug-info
 ;
 ; We test that:
@@ -84,8 +80,8 @@ define i32 @maxA(i32 %x, i32 %y) !dbg !6 {
 ; OPTIMIZATION_LEVEL_2-NEXT:  entry:
 ; OPTIMIZATION_LEVEL_2-NEXT:      #dbg_value(i32 [[X]], [[META11:![0-9]+]], !DIExpression(), [[META12:![0-9]+]])
 ; OPTIMIZATION_LEVEL_2-NEXT:      #dbg_value(i32 [[Y]], [[META13:![0-9]+]], !DIExpression(), [[META12]])
-; OPTIMIZATION_LEVEL_2-NEXT:      #dbg_declare(ptr undef, [[META14:![0-9]+]], !DIExpression(), [[META15:![0-9]+]])
-; OPTIMIZATION_LEVEL_2-NEXT:      #dbg_declare(ptr undef, [[META16:![0-9]+]], !DIExpression(), [[META17:![0-9]+]])
+; OPTIMIZATION_LEVEL_2-NEXT:      #dbg_declare(ptr poison, [[META14:![0-9]+]], !DIExpression(), [[META15:![0-9]+]])
+; OPTIMIZATION_LEVEL_2-NEXT:      #dbg_declare(ptr poison, [[META16:![0-9]+]], !DIExpression(), [[META17:![0-9]+]])
 ; OPTIMIZATION_LEVEL_2-NEXT:    [[X_Y:%.*]] = tail call i32 @llvm.smax.i32(i32 [[X]], i32 [[Y]])
 ; OPTIMIZATION_LEVEL_2-NEXT:      #dbg_value(i32 [[X_Y]], [[META18:![0-9]+]], !DIExpression(), [[META12]])
 ; OPTIMIZATION_LEVEL_2-NEXT:    ret i32 [[X_Y]], !dbg [[DBG19:![0-9]+]]

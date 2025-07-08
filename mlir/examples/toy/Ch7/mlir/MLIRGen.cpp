@@ -182,7 +182,7 @@ private:
         return nullptr;
       argTypes.push_back(type);
     }
-    auto funcType = builder.getFunctionType(argTypes, std::nullopt);
+    auto funcType = builder.getFunctionType(argTypes, /*results=*/{});
     return builder.create<mlir::toy::FuncOp>(location, proto.getName(),
                                              funcType);
   }
@@ -441,10 +441,10 @@ private:
     for (auto &var : lit.getValues()) {
       if (auto *number = llvm::dyn_cast<NumberExprAST>(var.get())) {
         attrElements.push_back(getConstantAttr(*number));
-        typeElements.push_back(getType(std::nullopt));
+        typeElements.push_back(getType(/*shape=*/{}));
       } else if (auto *lit = llvm::dyn_cast<LiteralExprAST>(var.get())) {
         attrElements.push_back(getConstantAttr(*lit));
-        typeElements.push_back(getType(std::nullopt));
+        typeElements.push_back(getType(/*shape=*/{}));
       } else {
         auto *structLit = llvm::cast<StructLiteralExprAST>(var.get());
         auto attrTypePair = getConstantAttr(*structLit);
@@ -535,8 +535,7 @@ private:
     }
     mlir::toy::FuncOp calledFunc = calledFuncIt->second;
     return builder.create<GenericCallOp>(
-        location, calledFunc.getFunctionType().getResult(0),
-        mlir::SymbolRefAttr::get(builder.getContext(), callee), operands);
+        location, calledFunc.getFunctionType().getResult(0), callee, operands);
   }
 
   /// Emit a print expression. It emits specific operations for two builtins:

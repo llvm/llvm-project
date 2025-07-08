@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -std=c++20 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -verify=ref,both %s
-// RUN: %clang_cc1 -std=c++20 -verify=ref,both %s
+// RUN: %clang_cc1            -verify=expected,both %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 -verify=expected,both %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1            -verify=ref,both      %s
+// RUN: %clang_cc1 -std=c++20 -verify=ref,both      %s
 
 union U {
   int a;
@@ -76,9 +76,10 @@ namespace DefaultInit {
 
   constexpr U1 u1; /// OK.
 
-  constexpr int foo() {
+  constexpr int foo() { // expected-error {{never produces a constant expression}}
     U1 u;
-    return u.a; // both-note {{read of member 'a' of union with active member 'b'}}
+    return u.a; // both-note {{read of member 'a' of union with active member 'b'}} \
+                // expected-note {{read of member 'a' of union with active member 'b'}}
   }
   static_assert(foo() == 42); // both-error {{not an integral constant expression}} \
                               // both-note {{in call to}}
@@ -402,7 +403,6 @@ namespace UnionInBase {
   static_assert(return_uninit().a.x == 2);
 }
 
-/// FIXME: Our diagnostic here is a little off.
 namespace One {
   struct A { long x; };
 
@@ -421,4 +421,333 @@ namespace One {
                       // both-note {{constinit}}
 }
 
+namespace CopyAssign {
+  union A {
+    int a;
+    int b;
+  };
+
+  constexpr int f() {
+    A a{12};
+    A b{13};
+
+    b.b = 32;
+    b = a ;
+    return b.a;
+  }
+  static_assert(f()== 12);
+
+
+  constexpr int f2() {
+    A a{12};
+    A b{13};
+
+    b.b = 32;
+    b = a ;
+    return b.b; // both-note {{read of member 'b' of union with active member 'a'}}
+  }
+  static_assert(f2() == 12); // both-error {{not an integral constant expression}} \
+                             // both-note {{in call to}}
+}
+
+namespace MoveAssign {
+  union A {
+    int a;
+    int b;
+  };
+
+  constexpr int f() {
+    A b{13};
+
+    b = A{12} ;
+    return b.a;
+  }
+  static_assert(f()== 12);
+}
+
+namespace IFD {
+  template <class T>
+  struct Optional {
+    struct {
+      union {
+        char null_state;
+        T val;
+      };
+    };
+    constexpr Optional() : null_state(){}
+  };
+
+  constexpr bool test()
+  {
+    Optional<int> opt{};
+    Optional<int> opt2{};
+    opt = opt2;
+    return true;
+  }
+  static_assert(test());
+}
+
+namespace AnonymousUnion {
+  struct A {
+    int x;
+    union { int p, q; };
+  };
+  union B {
+    A a;
+    int bb;
+  };
+
+  constexpr B return_init_all() {
+    B b = {.bb = 1};
+    b.a.x = 2;
+    return b;
+  }
+  static_assert(return_init_all().a.p == 7); // both-error {{}} \
+                                             // both-note {{read of member 'p' of union with no active member}}
+}
+
+namespace MemberCalls {
+  struct S {
+    constexpr bool foo() const { return true; }
+  };
+
+  constexpr bool foo() { // both-error {{never produces a constant expression}}
+    union {
+      int a;
+      S s;
+    } u;
+
+    u.a = 10;
+    return u.s.foo(); // both-note 2{{member call on member 's' of union with active member 'a'}}
+  }
+  static_assert(foo()); // both-error {{not an integral constant expression}} \
+                        // both-note {{in call to}}
+}
+
+namespace InactiveDestroy {
+  struct A {
+    constexpr ~A() {}
+  };
+  union U {
+    A a;
+    constexpr ~U() {
+    }
+  };
+
+  constexpr bool foo() { // both-error {{never produces a constant expression}}
+    U u;
+    u.a.~A(); // both-note 2{{destruction of member 'a' of union with no active member}}
+    return true;
+  }
+  static_assert(foo()); // both-error {{not an integral constant expression}} \
+                        // both-note {{in call to}}
+}
+
+namespace InactiveTrivialDestroy {
+  struct A {};
+  union U {
+    A a;
+  };
+
+  constexpr bool foo() { // both-error {{never produces a constant expression}}
+    U u;
+    u.a.~A(); // both-note 2{{destruction of member 'a' of union with no active member}}
+    return true;
+  }
+  static_assert(foo()); // both-error {{not an integral constant expression}} \
+                        // both-note {{in call to}}
+}
+
+namespace ActiveDestroy {
+  struct A {};
+  union U {
+    A a;
+  };
+  constexpr bool foo2() {
+    U u{};
+    u.a.~A();
+    return true;
+  }
+  static_assert(foo2());
+}
+
+namespace MoveOrAssignOp {
+  struct min_pointer {
+    int *ptr_;
+    constexpr min_pointer(int *p) : ptr_(p) {}
+    min_pointer() = default;
+  };
+
+  class F {
+    struct __long {
+      min_pointer __data_;
+    };
+    union __rep {
+      int __s;
+      __long __l;
+    } __rep_;
+
+  public:
+    constexpr F() {
+      __rep_ = __rep();
+      __rep_.__l.__data_ = nullptr;
+    }
+  };
+
+  constexpr bool foo() {
+    F f{};
+    return true;
+  }
+  static_assert(foo());
+}
+
+namespace CopyEmptyUnion {
+  struct A {
+    union {}; // both-warning {{declaration does not declare anything}}
+  };
+  constexpr int foo() {
+     A a;
+     A a2 = a;
+     return 1;
+  }
+  static_assert(foo() == 1);
+}
+
+namespace BitFields {
+  constexpr bool simple() {
+    union U {
+      unsigned a : 1;
+      unsigned b : 1;
+    };
+
+    U u{1};
+    u.b = 1;
+    return u.b;
+  }
+  static_assert(simple());
+}
+
+namespace deactivateRecurses {
+
+  constexpr int foo() {
+    struct A {
+      struct {
+        int a;
+      };
+      int b;
+    };
+    struct B {
+      struct {
+        int a;
+        int b;
+      };
+    };
+
+    union U {
+      A a;
+      B b;
+    } u;
+
+    u.b.a = 10;
+    ++u.b.a;
+
+    u.a.a = 10;
+    ++u.a.a;
+
+    if (__builtin_constant_p(u.b.a))
+      return 10;
+
+    return 1;
+  }
+  static_assert(foo() == 1);
+}
+
+namespace AnonymousUnion {
+  struct Long {
+    struct {
+      unsigned is_long;
+    };
+    unsigned Size;
+  };
+
+  struct Short {
+    struct {
+      unsigned is_long;
+      unsigned Size;
+    };
+    char data;
+  };
+
+  union Rep {
+    Short S;
+    Long L;
+  };
+
+#define assert_active(F)   if (!__builtin_is_within_lifetime(&F)) (1/0);
+#define assert_inactive(F) if ( __builtin_is_within_lifetime(&F)) (1/0);
+  consteval int test() {
+    union UU {
+      struct {
+        Rep R;
+        int a;
+      };
+    } U;
+
+    U.R.S.Size = 10;
+    assert_active(U);
+    assert_active(U.R);
+    assert_active(U.R.S);
+    assert_active(U.R.S.Size);
+
+    U.a = 10;
+    assert_active(U.a);
+    assert_active(U);
+
+    assert_active(U);
+    assert_active(U.R);
+    assert_active(U.R.S);
+    assert_active(U.R.S.Size);
+
+    return 1;
+  }
+  static_assert(test() == 1);
+}
 #endif
+
+namespace AddressComparison {
+  union {
+    int a;
+    int c;
+  } U;
+  static_assert(__builtin_addressof(U.a) == (void*)__builtin_addressof(U.c));
+  static_assert(&U.a == &U.c);
+
+
+  struct {
+    union {
+      struct {
+        int a;
+        int b;
+      } a;
+      struct {
+        int b;
+        int a;
+      }b;
+    } u;
+    int b;
+  } S;
+
+  static_assert(&S.u.a.a == &S.u.b.b);
+  static_assert(&S.u.a.b != &S.u.b.b);
+  static_assert(&S.u.a.b == &S.u.b.b); // both-error {{failed}}
+
+
+  union {
+    int a[2];
+    int b[2];
+  } U2;
+
+  static_assert(&U2.a[0] == &U2.b[0]);
+  static_assert(&U2.a[0] != &U2.b[1]);
+  static_assert(&U2.a[0] == &U2.b[1]); // both-error {{failed}}
+}

@@ -25,11 +25,10 @@
 #include "test_macros.h"
 #include "is_transparent.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     typedef std::map<int, double, transparent_less_not_a_type> M;
 
     TEST_IGNORE_NODISCARD M().lower_bound(C2Int{5});
-    }
+  }
 }

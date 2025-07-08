@@ -16,7 +16,7 @@
 
 namespace mlir {
 namespace bufferization {
-#define GEN_PASS_DEF_BUFFERRESULTSTOOUTPARAMS
+#define GEN_PASS_DEF_BUFFERRESULTSTOOUTPARAMSPASS
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 } // namespace bufferization
 } // namespace mlir
@@ -33,7 +33,7 @@ static bool hasFullyDynamicLayoutMap(MemRefType type) {
     return false;
   if (!llvm::all_of(strides, ShapedType::isDynamic))
     return false;
-  if (!ShapedType::isDynamic(offset))
+  if (ShapedType::isStatic(offset))
     return false;
   return true;
 }
@@ -92,7 +92,8 @@ updateFuncOp(func::FuncOp func,
   }
 
   // Erase the results.
-  func.eraseResults(erasedResultIndices);
+  if (failed(func.eraseResults(erasedResultIndices)))
+    return failure();
 
   // Add the new arguments to the entry block if the function is not external.
   if (func.isExternal())
@@ -233,11 +234,9 @@ LogicalResult mlir::bufferization::promoteBufferResultsToOutParams(
 
 namespace {
 struct BufferResultsToOutParamsPass
-    : bufferization::impl::BufferResultsToOutParamsBase<
+    : bufferization::impl::BufferResultsToOutParamsPassBase<
           BufferResultsToOutParamsPass> {
-  explicit BufferResultsToOutParamsPass(
-      const bufferization::BufferResultsToOutParamsOpts &options)
-      : options(options) {}
+  using Base::Base;
 
   void runOnOperation() override {
     // Convert from pass options in tablegen to BufferResultsToOutParamsOpts.
@@ -255,8 +254,3 @@ private:
   bufferization::BufferResultsToOutParamsOpts options;
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::bufferization::createBufferResultsToOutParamsPass(
-    const bufferization::BufferResultsToOutParamsOpts &options) {
-  return std::make_unique<BufferResultsToOutParamsPass>(options);
-}

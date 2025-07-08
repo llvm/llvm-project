@@ -325,3 +325,79 @@ cleanup:
   %retval.0 = phi i1 [ false, %if.then ], [ true, %if.end ]
   ret i1 %retval.0
 }
+
+define i8 @masked_min_reduction(ptr %data, ptr %mask) {
+; CHECK-LABEL: @masked_min_reduction(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <32 x i8> [ splat (i8 -1), [[ENTRY]] ], [ [[TMP16:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <32 x i8> [ splat (i8 -1), [[ENTRY]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <32 x i8> [ splat (i8 -1), [[ENTRY]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <32 x i8> [ splat (i8 -1), [[ENTRY]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[DATA:%.*]] = getelementptr i8, ptr [[DATA1:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DATA]], i64 32
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[DATA]], i64 64
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[DATA]], i64 96
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[DATA]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <32 x i8>, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <32 x i8>, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <32 x i8>, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[MASK:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP7]], i64 32
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP7]], i64 64
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[TMP7]], i64 96
+; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <32 x i8>, ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <32 x i8>, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <32 x i8>, ptr [[TMP6]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <32 x i8>, ptr [[TMP22]], align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <32 x i8> [[WIDE_LOAD7]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <32 x i8> [[WIDE_LOAD8]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <32 x i8> [[WIDE_LOAD9]], zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <32 x i8> [[WIDE_LOAD10]], zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = select <32 x i1> [[TMP8]], <32 x i8> [[WIDE_LOAD]], <32 x i8> splat (i8 -1)
+; CHECK-NEXT:    [[TMP13:%.*]] = select <32 x i1> [[TMP9]], <32 x i8> [[WIDE_LOAD4]], <32 x i8> splat (i8 -1)
+; CHECK-NEXT:    [[TMP14:%.*]] = select <32 x i1> [[TMP10]], <32 x i8> [[WIDE_LOAD5]], <32 x i8> splat (i8 -1)
+; CHECK-NEXT:    [[TMP15:%.*]] = select <32 x i1> [[TMP11]], <32 x i8> [[WIDE_LOAD6]], <32 x i8> splat (i8 -1)
+; CHECK-NEXT:    [[TMP16]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[VEC_PHI]], <32 x i8> [[TMP12]])
+; CHECK-NEXT:    [[TMP17]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[VEC_PHI1]], <32 x i8> [[TMP13]])
+; CHECK-NEXT:    [[TMP18]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[VEC_PHI2]], <32 x i8> [[TMP14]])
+; CHECK-NEXT:    [[TMP19]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[VEC_PHI3]], <32 x i8> [[TMP15]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 128
+; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[TMP16]], <32 x i8> [[TMP17]])
+; CHECK-NEXT:    [[RDX_MINMAX11:%.*]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[RDX_MINMAX]], <32 x i8> [[TMP18]])
+; CHECK-NEXT:    [[RDX_MINMAX12:%.*]] = tail call <32 x i8> @llvm.umin.v32i8(<32 x i8> [[RDX_MINMAX11]], <32 x i8> [[TMP19]])
+; CHECK-NEXT:    [[TMP21:%.*]] = tail call i8 @llvm.vector.reduce.umin.v32i8(<32 x i8> [[RDX_MINMAX12]])
+; CHECK-NEXT:    ret i8 [[TMP21]]
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %next, %loop ]
+  %acc = phi i8 [ 255, %entry ], [ %acc_next, %loop ]
+
+  %ptr_i = getelementptr i8, ptr %data, i64 %i
+  %val = load i8, ptr %ptr_i, align 1
+
+  %mask_ptr = getelementptr i8, ptr %mask, i64 %i
+  %m = load i8, ptr %mask_ptr, align 1
+  %cond = icmp eq i8 %m, 0
+
+  ; Use select to implement masking
+  %masked_val = select i1 %cond, i8 %val, i8 255
+
+  ; min reduction
+  %acc_next = call i8 @llvm.umin.i8(i8 %acc, i8 %masked_val)
+
+  %next = add i64 %i, 1
+  %cmp = icmp ult i64 %next, 1024
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i8 %acc_next
+}

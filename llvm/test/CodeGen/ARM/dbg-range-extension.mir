@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=arm-eabi -run-pass=livedebugvalues %s -o - | FileCheck %s
+# RUN: llc -mtriple=arm-eabi -passes=live-debug-values %s -o - | FileCheck %s
 #
 # Check that the debug information for variables are propagated into the correct blocks.
 #

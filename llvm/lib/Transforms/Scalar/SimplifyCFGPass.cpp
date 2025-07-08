@@ -31,7 +31,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ValueHandle.h"
@@ -128,7 +127,7 @@ performBlockTailMerging(Function &F, ArrayRef<BasicBlock *> BBs,
 
   // Now, go through each block (with the current terminator type)
   // we've recorded, and rewrite it to branch to the new common block.
-  DILocation *CommonDebugLoc = nullptr;
+  DebugLoc CommonDebugLoc;
   for (BasicBlock *BB : BBs) {
     auto *Term = BB->getTerminator();
     assert(Term->getOpcode() == CanonicalTerm->getOpcode() &&
@@ -145,7 +144,7 @@ performBlockTailMerging(Function &F, ArrayRef<BasicBlock *> BBs,
       CommonDebugLoc = Term->getDebugLoc();
     else
       CommonDebugLoc =
-          DILocation::getMergedLocation(CommonDebugLoc, Term->getDebugLoc());
+          DebugLoc::getMergedLocation(CommonDebugLoc, Term->getDebugLoc());
 
     // And turn BB into a block that just unconditionally branches
     // to the canonical block.

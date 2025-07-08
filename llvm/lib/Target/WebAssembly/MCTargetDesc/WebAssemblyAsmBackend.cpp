@@ -16,10 +16,10 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/MC/MCWasmObjectWriter.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -36,16 +36,10 @@ public:
       : MCAsmBackend(llvm::endianness::little), Is64Bit(Is64Bit),
         IsEmscripten(IsEmscripten) {}
 
-  unsigned getNumFixupKinds() const override {
-    return WebAssembly::NumTargetFixupKinds;
-  }
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
-
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsPCRel,
-                  const MCSubtargetInfo *STI) const override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  MutableArrayRef<char> Data, uint64_t Value, bool) override;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
@@ -54,7 +48,7 @@ public:
                     const MCSubtargetInfo *STI) const override;
 };
 
-const MCFixupKindInfo &
+MCFixupKindInfo
 WebAssemblyAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[WebAssembly::NumTargetFixupKinds] = {
       // This table *must* be in the order that the fixup_* kinds are defined in
@@ -70,7 +64,8 @@ WebAssemblyAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+  assert(unsigned(Kind - FirstTargetFixupKind) <
+             WebAssembly::NumTargetFixupKinds &&
          "Invalid kind!");
   return Infos[Kind - FirstTargetFixupKind];
 }
@@ -83,13 +78,15 @@ bool WebAssemblyAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
-void WebAssemblyAsmBackend::applyFixup(const MCAssembler &Asm,
+void WebAssemblyAsmBackend::applyFixup(const MCFragment &F,
                                        const MCFixup &Fixup,
                                        const MCValue &Target,
                                        MutableArrayRef<char> Data,
-                                       uint64_t Value, bool IsPCRel,
-                                       const MCSubtargetInfo *STI) const {
-  const MCFixupKindInfo &Info = getFixupKindInfo(Fixup.getKind());
+                                       uint64_t Value, bool IsResolved) {
+  if (!IsResolved)
+    Asm->getWriter().recordRelocation(F, Fixup, Target, Value);
+
+  MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
   assert(Info.Flags == 0 && "WebAssembly does not use MCFixupKindInfo flags");
 
   unsigned NumBytes = alignTo(Info.TargetSize, 8) / 8;

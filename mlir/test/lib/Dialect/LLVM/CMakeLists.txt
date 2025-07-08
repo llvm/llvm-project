@@ -20,6 +20,7 @@ mlir_target_link_libraries(MLIRLLVMTestPasses PUBLIC
   MLIRReconcileUnrealizedCasts
   MLIRSCFToControlFlow
   MLIRTransforms
+  MLIRUBToLLVM
   MLIRVectorToLLVMPass
   MLIRVectorToSCF
   )

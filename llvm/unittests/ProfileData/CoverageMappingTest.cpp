@@ -277,7 +277,9 @@ struct CoverageMappingTest : ::testing::TestWithParam<std::tuple<bool, bool>> {
       CoverageReaders.push_back(
           std::make_unique<CoverageMappingReaderMock>(Funcs));
     }
-    return CoverageMapping::load(CoverageReaders, *ProfileReader);
+    auto ProfileReaderRef = std::make_optional(
+        std::reference_wrapper<IndexedInstrProfReader>(*ProfileReader));
+    return CoverageMapping::load(CoverageReaders, ProfileReaderRef);
   }
 
   Error loadCoverageMapping(bool EmitFilenames = true) {

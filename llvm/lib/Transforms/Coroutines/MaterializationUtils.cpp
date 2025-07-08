@@ -70,11 +70,12 @@ struct RematGraph {
                std::deque<std::unique_ptr<RematNode>> &WorkList,
                User *FirstUse) {
     RematNode *N = NUPtr.get();
-    if (Remats.count(N->Node))
+    auto [It, Inserted] = Remats.try_emplace(N->Node);
+    if (!Inserted)
       return;
 
     // We haven't see this node yet - add to the list
-    Remats[N->Node] = std::move(NUPtr);
+    It->second = std::move(NUPtr);
     for (auto &Def : N->Node->operands()) {
       Instruction *D = dyn_cast<Instruction>(Def.get());
       if (!D || !MaterializableCallback(*D) ||
@@ -292,7 +293,8 @@ void coro::doRematerializations(
     for (Instruction *U : E.second) {
       // Don't process a user twice (this can happen if the instruction uses
       // more than one rematerializable def)
-      if (AllRemats.count(U))
+      auto [It, Inserted] = AllRemats.try_emplace(U);
+      if (!Inserted)
         continue;
 
       // Constructor creates the whole RematGraph for the given Use
@@ -305,7 +307,7 @@ void coro::doRematerializations(
                       ++I) { (*I)->Node->dump(); } dbgs()
                  << "\n";);
 
-      AllRemats[U] = std::move(RematUPtr);
+      It->second = std::move(RematUPtr);
     }
   }
 

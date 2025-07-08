@@ -80,7 +80,7 @@ void UseStmtAnnotations() { HasStmtAnnotations<int>(); }
 // CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
 // CHECK-NEXT:   FunctionDecl {{.*}} HasPackAnnotations 'void ()'
 // CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_BAZ"
-// CHECK-NEXT:       PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:       PackExpansionExpr {{.*}} 'int'
 // CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
 // CHECK-NEXT:   FunctionDecl {{.*}} used HasPackAnnotations 'void ()'
 // CHECK-NEXT:     TemplateArgument{{.*}} pack
@@ -111,7 +111,7 @@ void UsePackAnnotations() { HasPackAnnotations<1, 2, 3>(); }
 // CHECK-NEXT:   FunctionDecl {{.*}} HasStmtPackAnnotations 'void ()'
 // CHECK:          AttributedStmt {{.*}}
 // CHECK-NEXT:       AnnotateAttr {{.*}} "ANNOTATE_QUUX"
-// CHECK-NEXT:         PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:         PackExpansionExpr {{.*}} 'int'
 // CHECK-NEXT:           DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
 // CHECK:        FunctionDecl {{.*}} used HasStmtPackAnnotations 'void ()'
 // CHECK-NEXT:     TemplateArgument{{.*}} pack
@@ -152,7 +152,7 @@ void UseOnlyPackAnnotations() {
 // CHECK-NEXT:       MoveAssignment
 // CHECK-NEXT:       Destructor
 // CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_FOZ"
-// CHECK-NEXT:       PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:       PackExpansionExpr {{.*}} 'int'
 // CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
 // CHECK-NEXT:     CXXRecordDecl {{.*}} implicit struct AnnotatedPackTemplateStruct
 // CHECK-NEXT:   ClassTemplateSpecializationDecl {{.*}} struct AnnotatedPackTemplateStruct definition
@@ -285,7 +285,7 @@ void UseOnlyPackAnnotations() {
 // CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
 // CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
 // CHECK-NEXT:   AnnotateAttr {{.*}} "ANNOTATE_BOO"
-// CHECK-NEXT:     PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:     PackExpansionExpr {{.*}} 'int'
 // CHECK-NEXT:       DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
 // CHECK-NEXT:   CXXRecordDecl {{.*}} implicit struct AnnotatedPackTemplateStruct
 // CHECK-NEXT: ClassTemplatePartialSpecializationDecl {{.*}} struct AnnotatedPackTemplateStruct definition
@@ -428,7 +428,7 @@ void UseAnnotatedPackTemplateStructSpecializations() {
 // CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
 // CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
 // CHECK-NEXT:   AnnotateAttr {{.*}} "ANNOTATE_BIR"
-// CHECK-NEXT:     PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:     PackExpansionExpr {{.*}} 'int'
 // CHECK-NEXT:       DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
 // CHECK-NEXT:   CXXRecordDecl {{.*}} implicit struct InvalidAnnotatedPackTemplateStruct
 // CHECK-NEXT: ClassTemplatePartialSpecializationDecl {{.*}} struct InvalidAnnotatedPackTemplateStruct definition
@@ -478,7 +478,7 @@ void UseInvalidAnnotatedPackTemplateStruct() {
 // CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
 // CHECK-NEXT:   FunctionDecl {{.*}} RedeclaredAnnotatedFunc 'void ()'
 // CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_FAR"
-// CHECK-NEXT:       PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:       PackExpansionExpr {{.*}} 'int'
 // CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
 // CHECK-NEXT:   FunctionDecl {{.*}} used RedeclaredAnnotatedFunc 'void ()'
 // CHECK-NEXT:     TemplateArgument{{.*}} pack
@@ -517,20 +517,20 @@ void UseInvalidAnnotatedPackTemplateStruct() {
 // CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} referenced 'int' depth 0 index 0 ... Is
 // CHECK-NEXT:   FunctionDecl {{.*}} prev {{.*}} RedeclaredAnnotatedFunc 'void ()'
 // CHECK-NEXT:     AnnotateAttr {{.*}} Inherited "ANNOTATE_FAR"
-// CHECK-NEXT:       PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:       PackExpansionExpr {{.*}} 'int'
 // CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
 // CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_BOZ"
-// CHECK-NEXT:       PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:       PackExpansionExpr {{.*}} 'int'
 // CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
 // CHECK-NEXT:   Function {{.*}} 'RedeclaredAnnotatedFunc' 'void ()'
 // CHECK-NEXT: FunctionTemplateDecl {{.*}} prev {{.*}} RedeclaredAnnotatedFunc
 // CHECK-NEXT:   NonTypeTemplateParmDecl {{.*}} 'int' depth 0 index 0 ... Is
 // CHECK-NEXT:   FunctionDecl {{.*}} prev {{.*}} RedeclaredAnnotatedFunc 'void ()'
 // CHECK-NEXT:     AnnotateAttr {{.*}} Inherited "ANNOTATE_FAR"
-// CHECK-NEXT:       PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:       PackExpansionExpr {{.*}} 'int'
 // CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
 // CHECK-NEXT:     AnnotateAttr {{.*}} Inherited "ANNOTATE_BOZ"
-// CHECK-NEXT:       PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:       PackExpansionExpr {{.*}} 'int'
 // CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
 // CHECK-NEXT:     AnnotateAttr {{.*}} "ANNOTATE_FIZ"
 // CHECK-NEXT:       ConstantExpr {{.*}} 'int'
@@ -545,7 +545,7 @@ void UseInvalidAnnotatedPackTemplateStruct() {
 // CHECK-NEXT:   FunctionDecl {{.*}} prev {{.*}} RedeclaredAnnotatedFunc 'void ()'
 // CHECK-NEXT:     CompoundStmt
 // CHECK-NEXT:     AnnotateAttr {{.*}} Inherited "ANNOTATE_FAR"
-// CHECK-NEXT:       PackExpansionExpr {{.*}} '<dependent type>'
+// CHECK-NEXT:       PackExpansionExpr {{.*}} 'int'
 // CHECK-NEXT:         DeclRefExpr {{.*}} 'int' NonTypeTemplateParm {{.*}} 'Is' 'int'
 // CHECK-NEXT:     AnnotateAttr {{.*}} Inherited "ANNOTATE_FIZ"
 // CHECK-NEXT:       ConstantExpr {{.*}} 'int'
@@ -572,14 +572,14 @@ void UseRedeclaredAnnotatedFunc() {
 
 namespace preferred_name {
   int x [[clang::preferred_name("frank")]]; // expected-error {{expected a type}}
-  int y [[clang::preferred_name(int)]]; // expected-warning {{'preferred_name' attribute only applies to class templates}}
-  struct [[clang::preferred_name(int)]] A; // expected-warning {{'preferred_name' attribute only applies to class templates}}
-  template<typename T> struct [[clang::preferred_name(int)]] B; // expected-error {{argument 'int' to 'preferred_name' attribute is not a typedef for a specialization of 'B'}}
+  int y [[clang::preferred_name(int)]]; // expected-warning {{'clang::preferred_name' attribute only applies to class templates}}
+  struct [[clang::preferred_name(int)]] A; // expected-warning {{'clang::preferred_name' attribute only applies to class templates}}
+  template<typename T> struct [[clang::preferred_name(int)]] B; // expected-error {{argument 'int' to 'clang::preferred_name' attribute is not a typedef for a specialization of 'B'}}
   template<typename T> struct C;
   using X = C<int>; // expected-note {{'X' declared here}}
   typedef C<float> Y;
   using Z = const C<double>; // expected-note {{'Z' declared here}}
-  template<typename T> struct [[clang::preferred_name(C<int>)]] C; // expected-error {{argument 'C<int>' to 'preferred_name' attribute is not a typedef for a specialization of 'C'}}
+  template<typename T> struct [[clang::preferred_name(C<int>)]] C; // expected-error {{argument 'C<int>' to 'clang::preferred_name' attribute is not a typedef for a specialization of 'C'}}
   template<typename T> struct [[clang::preferred_name(X), clang::preferred_name(Y)]] C;
   template<typename T> struct [[clang::preferred_name(const X)]] C; // expected-error {{argument 'const X'}}
   template<typename T> struct [[clang::preferred_name(Z)]] C; // expected-error {{argument 'Z' (aka 'const C<double>')}}
