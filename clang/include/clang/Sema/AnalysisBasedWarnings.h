@@ -14,6 +14,7 @@
 #define LLVM_CLANG_SEMA_ANALYSISBASEDWARNINGS_H
 
 #include "clang/AST/Decl.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "llvm/ADT/DenseMap.h"
 #include <memory>
 
@@ -107,6 +108,8 @@ public:
   // Issue warnings that require whole-translation-unit analysis.
   void IssueWarnings(TranslationUnitDecl *D);
 
+  void InferNoReturnAttributes(Sema &S, TranslationUnitDecl *TU);
+
   // Gets the default policy which is in effect at the given source location.
   Policy getPolicyInEffectAt(SourceLocation Loc);
 
@@ -119,6 +122,17 @@ public:
 };
 
 } // namespace sema
+
+enum ControlFlowKind {
+  UnknownFallThrough,
+  NeverFallThrough,
+  MaybeFallThrough,
+  AlwaysFallThrough,
+  NeverFallThroughOrReturn
+};
+
+ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC);
+
 } // namespace clang
 
 #endif

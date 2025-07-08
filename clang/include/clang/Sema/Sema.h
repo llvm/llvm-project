@@ -834,7 +834,7 @@ enum class CCEKind {
                            ///< message.
 };
 
-void inferNoReturnAttr(Sema &S, const Decl *D);
+bool inferNoReturnAttr(Sema &S, const Decl *D, bool FirstPass);
 
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping

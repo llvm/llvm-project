@@ -403,14 +403,6 @@ static bool isNoexcept(const FunctionDecl *FD) {
 // Check for missing return value.
 //===----------------------------------------------------------------------===//
 
-enum ControlFlowKind {
-  UnknownFallThrough,
-  NeverFallThrough,
-  MaybeFallThrough,
-  AlwaysFallThrough,
-  NeverFallThroughOrReturn
-};
-
 /// CheckFallThrough - Check that we don't fall off the end of a
 /// Statement that should return a value.
 ///
@@ -420,7 +412,7 @@ enum ControlFlowKind {
 /// return.  We assume NeverFallThrough iff we never fall off the end of the
 /// statement but we may return.  We assume that functions not marked noreturn
 /// will return.
-static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
+clang::ControlFlowKind clang::CheckFallThrough(AnalysisDeclContext &AC) {
   CFG *cfg = AC.getCFG();
   if (!cfg) return UnknownFallThrough;
 
@@ -2676,6 +2668,35 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     CallableVisitor(CallAnalyzers, TU->getOwningModule())
         .TraverseTranslationUnitDecl(TU);
   }
+}
+
+void clang::sema::AnalysisBasedWarnings::InferNoReturnAttributes(
+    Sema &S, TranslationUnitDecl *TU) {
+  llvm::SmallVector<Decl *, 32> AllFunctions;
+
+  for (Decl *D : TU->decls()) {
+    // Collect ordinary (non-template) functions and methods:
+    if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+      if (!FD->getDescribedFunctionTemplate() && FD->hasBody())
+        AllFunctions.push_back(FD);
+    }
+
+    // For each function template, include all its instantiations:
+    if (auto *FT = dyn_cast<FunctionTemplateDecl>(D)) {
+      for (auto *Spec : FT->specializations()) {
+        if (auto *FDs = dyn_cast<FunctionDecl>(Spec))
+          if (FDs->hasBody())
+            AllFunctions.push_back(FDs);
+      }
+    }
+  }
+
+  // Pass 1: Mark all trivial always-throwing functions.
+  for (Decl *D : AllFunctions)
+    inferNoReturnAttr(S, D, /*FirstPass*/ true);
+  // Pass 2:  Run until no changes.
+  for (Decl *D : AllFunctions)
+    inferNoReturnAttr(S, D, /*FirstPass*/ false);
 }
 
 void clang::sema::AnalysisBasedWarnings::IssueWarnings(

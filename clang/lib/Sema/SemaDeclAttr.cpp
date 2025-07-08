@@ -23,6 +23,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/Type.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/DarwinSDKInfo.h"
@@ -32,6 +33,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/AnalysisBasedWarnings.h"
 #include "clang/Sema/Attr.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/DelayedDiagnostic.h"
@@ -1939,11 +1941,7 @@ static void handleNakedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) NakedAttr(S.Context, AL));
 }
 
-// FIXME: This is a best-effort heuristic.
-// Currently only handles single throw expressions (optionally with
-// ExprWithCleanups). We could expand this to perform control-flow analysis for
-// more complex patterns.
-static bool isKnownToAlwaysThrow(const FunctionDecl *FD) {
+static bool alwaysThrowsDirect(const FunctionDecl *FD) {
   if (!FD->hasBody())
     return false;
   const Stmt *Body = FD->getBody();
@@ -1965,25 +1963,52 @@ static bool isKnownToAlwaysThrow(const FunctionDecl *FD) {
   return isa<CXXThrowExpr>(OnlyStmt);
 }
 
-void clang::inferNoReturnAttr(Sema &S, const Decl *D) {
+static bool isKnownToAlwaysThrowCFG(const FunctionDecl *FD, Sema &S) {
+  if (!FD->hasBody())
+    return false;
+
+  // Drop the const qualifier to do an analysis.
+  FunctionDecl *NonConstFD = const_cast<FunctionDecl *>(FD);
+  AnalysisDeclContext AC(nullptr, NonConstFD);
+
+  switch (CheckFallThrough(AC)) {
+  case NeverFallThrough:
+  case NeverFallThroughOrReturn:
+    return true;
+  case AlwaysFallThrough:
+  case UnknownFallThrough:
+  case MaybeFallThrough:
+    return false;
+  }
+}
+
+bool clang::inferNoReturnAttr(Sema &S, const Decl *D, bool FirstPass) {
   auto *FD = dyn_cast<FunctionDecl>(D);
   if (!FD)
-    return;
+    return false;
+  if (FD->isInvalidDecl())
+    return false;
+  if (FD->hasAttr<NoReturnAttr>() || FD->hasAttr<InferredNoReturnAttr>())
+    return false;
 
   auto *NonConstFD = const_cast<FunctionDecl *>(FD);
-  DiagnosticsEngine &Diags = S.getDiagnostics();
-  if (Diags.isIgnored(diag::warn_falloff_nonvoid, FD->getLocation()) &&
-      Diags.isIgnored(diag::warn_suggest_noreturn_function, FD->getLocation()))
-    return;
 
-  if (!FD->hasAttr<NoReturnAttr>() && !FD->hasAttr<InferredNoReturnAttr>() &&
-      isKnownToAlwaysThrow(FD)) {
-    NonConstFD->addAttr(InferredNoReturnAttr::CreateImplicit(S.Context));
+  auto tryAddInferredNoReturn = [&](bool Condition) {
+    if (Condition) {
+      NonConstFD->addAttr(InferredNoReturnAttr::CreateImplicit(S.Context));
+      if (FD->getReturnType()->isVoidType())
+        S.Diag(FD->getLocation(), diag::warn_suggest_noreturn_function)
+            << /*isFunction=*/0 << FD;
+      return true;
+    }
+    return false;
+  };
 
-    // Emit a diagnostic suggesting the function being marked [[noreturn]].
-    S.Diag(FD->getLocation(), diag::warn_suggest_noreturn_function)
-        << /*isFunction=*/0 << FD;
+  if (FirstPass) {
+    // Look for trivial function bodies that always throw.
+    return tryAddInferredNoReturn(alwaysThrowsDirect(FD));
   }
+  return tryAddInferredNoReturn(isKnownToAlwaysThrowCFG(FD, S));
 }
 
 static void handleNoReturnAttr(Sema &S, Decl *D, const ParsedAttr &Attrs) {
