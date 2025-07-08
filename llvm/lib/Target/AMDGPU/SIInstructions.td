@@ -3104,6 +3104,8 @@ def : GCNPat <
                     (i32 (EXTRACT_SUBREG $a, sub0))), (i32 1))
 >;
 
+// This pattern for bswap is used for pre-GFX8. For GFX8+, bswap is mapped
+// to V_PERM_B32.
 let True16Predicate = NotHasTrue16BitInsts in
 def : GCNPat <
   (i32 (bswap i32:$a)),
