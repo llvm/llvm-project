@@ -259,10 +259,11 @@ def _get_modified_projects(modified_files: list[str]) -> Set[str]:
         if len(path_parts) > 3 and path_parts[:3] == ("llvm", "utils", "gn"):
             continue
         # If the file is in the clang/lib/CIR directory, add the CIR project.
-        if (len(path_parts) > 3 and
-               (path_parts[:3] == ("clang", "lib", "CIR") or
-                path_parts[:3] == ("clang", "test", "CIR") or
-                path_parts[:4] == ("clang", "include", "clang", "CIR"))):
+        if len(path_parts) > 3 and (
+            path_parts[:3] == ("clang", "lib", "CIR") or
+            path_parts[:3] == ("clang", "test", "CIR") or
+            path_parts[:4] == ("clang", "include", "clang", "CIR")
+        ):
             modified_projects.add("clang")
             modified_projects.add("CIR")
             continue
@@ -288,7 +289,9 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
     )
 
     # Check if both clang and mlir are in projects_to_build to enable CIR
-    enable_cir = "ON" if "clang" in projects_to_build and "mlir" in projects_to_build else "OFF"
+    enable_cir = (
+        "ON" if "clang" in projects_to_build and "mlir" in projects_to_build else "OFF"
+    )
 
     # We use a semicolon to separate the projects/runtimes as they get passed
     # to the CMake invocation and thus we need to use the CMake list separator
