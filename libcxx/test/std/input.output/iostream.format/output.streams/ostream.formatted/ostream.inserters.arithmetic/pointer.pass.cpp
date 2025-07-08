@@ -62,14 +62,14 @@ int main(int, char**)
     {
         testbuf<char> sb1;
         std::ostream os1(&sb1);
-        int n1 = 0;
+        int n1;
         os1 << &n1;
         assert(os1.good());
         std::string s1(sb1.str());
 
         testbuf<char> sb2;
         std::ostream os2(&sb2);
-        int n2 = 0;
+        int n2;
         os2 << &n2;
         assert(os2.good());
         std::string s2(sb2.str());

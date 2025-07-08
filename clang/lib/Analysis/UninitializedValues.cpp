@@ -438,10 +438,13 @@ void ClassifyRefs::VisitCallExpr(CallExpr *CE) {
     return;
   }
   bool isTrivialBody = hasTrivialBody(CE);
-  // A value passed by const pointer or reference to a function should already
-  // be initialized.
-  for (CallExpr::arg_iterator I = CE->arg_begin(), E = CE->arg_end(); I != E;
-       ++I) {
+  // If a value is passed by const pointer to a function,
+  // we should not assume that it is initialized by the call, and we
+  // conservatively do not assume that it is used.
+  // If a value is passed by const reference to a function,
+  // it should already be initialized.
+  for (CallExpr::arg_iterator I = CE->arg_begin(), E = CE->arg_end();
+       I != E; ++I) {
     if ((*I)->isGLValue()) {
       if ((*I)->getType().isConstQualified())
         classify((*I), isTrivialBody ? Ignore : ConstRefUse);
@@ -449,8 +452,7 @@ void ClassifyRefs::VisitCallExpr(CallExpr *CE) {
       const Expr *Ex = stripCasts(DC->getParentASTContext(), *I);
       const auto *UO = dyn_cast<UnaryOperator>(Ex);
       if (UO && UO->getOpcode() == UO_AddrOf)
-        Ex = UO->getSubExpr();
-      classify(Ex, Use);
+        classify(UO->getSubExpr(), Ignore);
     }
   }
 }
