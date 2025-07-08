@@ -2688,6 +2688,31 @@ bool RISCVTargetLowering::mergeStoresAfterLegalization(EVT VT) const {
          (VT.isFixedLengthVector() && VT.getVectorElementType() == MVT::i1);
 }
 
+// Disable normalizing for most cases
+// select(N0&N1, X, Y) => select(N0, select(N1, X, Y), Y) and
+// select(N0|N1, X, Y) => select(N0, Y, select(N1, X, Y))
+// If y == 0 and N0 == setcc(eqz || nez) -> czero (select(N1, X, 0), N0)
+bool RISCVTargetLowering::shouldNormalizeToSelectSequence(LLVMContext &, EVT VT,
+                                                          SDNode *N) const {
+  if (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps()) {
+    assert(
+        N->getOpcode() == ISD::SELECT &&
+        "shouldNormalizeTooSelectSequence() called with non-SELECT operation");
+    const SDValue &CondV = N->getOperand(0);
+    if (CondV.getOpcode() == ISD::SETCC && isNullConstant(N->getOperand(2))) {
+      ISD::CondCode CondCode = cast<CondCodeSDNode>(CondV.getOperand(2))->get();
+      if (CondCode == ISD::SETNE || CondCode == ISD::SETEQ) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool RISCVTargetLowering::hasConditionalZero() const {
+  return Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps();
+}
+
 bool RISCVTargetLowering::isLegalElementTypeForRVV(EVT ScalarTy) const {
   if (!ScalarTy.isSimple())
     return false;
@@ -15730,6 +15755,35 @@ static SDValue performANDCombine(SDNode *N,
 
   if (SDValue V = reverseZExtICmpCombine(N, DAG, Subtarget))
     return V;
+
+  if (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps()) {
+    auto IsCzeroCompatible = [](const SDValue &Op0,
+                                const SDValue &Op1) -> bool {
+      if (Op0.getValueType() == MVT::i1 && Op1.getOpcode() == ISD::SETCC &&
+          isNullConstant(Op1.getOperand(1))) {
+        ISD::CondCode CondCode = cast<CondCodeSDNode>(Op1.getOperand(2))->get();
+        return CondCode == ISD::SETNE || CondCode == ISD::SETEQ;
+      }
+      return false;
+    };
+    // (and (i1) f, (setcc c, 0, ne)) -> (select c, f, 0) -> (czero.nez f, c)
+    // (and (i1) f, (setcc c, 0, eq)) -> (select c, 0, f) -> (czero.eqz f, c)
+    // (and (setcc c, 0, ne), (i1) g) -> (select c, g, 0) -> (czero.nez g, c)
+    // (and (setcc c, 0, eq), (i1) g) -> (select c, 0, g) -> (czero.eqz g, c)
+    if (IsCzeroCompatible(N->getOperand(0), N->getOperand(1)) ||
+        IsCzeroCompatible(N->getOperand(1), N->getOperand(0))) {
+      const bool CzeroOp1 =
+          IsCzeroCompatible(N->getOperand(0), N->getOperand(1));
+      const SDValue &I1Op = CzeroOp1 ? N->getOperand(0) : N->getOperand(1);
+      const SDValue &SetCCOp = CzeroOp1 ? N->getOperand(1) : N->getOperand(0);
+
+      ISD::CondCode CondCode =
+          cast<CondCodeSDNode>(SetCCOp.getOperand(2))->get();
+      SDLoc DL(N);
+      const SDValue &Condition = SetCCOp.getOperand(0);
+      return DAG.getNode(ISD::SELECT, DL, MVT::i1, SetCCOp, I1Op, DAG.getConstant(0, DL, MVT::i1));
+    }
+  }
 
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
