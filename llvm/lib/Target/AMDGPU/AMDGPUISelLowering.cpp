@@ -4843,17 +4843,15 @@ AMDGPUTargetLowering::foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
 }
 
 static EVT getFloatVT(EVT VT) {
-  return VT.isVector() ? MVT::getVectorVT(
-                             MVT::getFloatingPointVT(VT.getScalarSizeInBits()),
-                             VT.getVectorNumElements())
-                       : MVT::getFloatingPointVT(VT.getFixedSizeInBits());
+  EVT FT = MVT::getFloatingPointVT(VT.getScalarSizeInBits());
+  return VT.isVector() ? VT.changeVectorElementType(FT) : FT;
 }
 
 static SDValue getBitwiseToSrcModifierOp(SDValue N,
                                          TargetLowering::DAGCombinerInfo &DCI) {
 
   unsigned Opc = N.getNode()->getOpcode();
-  if (Opc != ISD::AND && Opc != ISD::XOR && Opc != ISD::AND)
+  if (Opc != ISD::AND && Opc != ISD::XOR && Opc != ISD::OR)
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;
@@ -4865,31 +4863,23 @@ static SDValue getBitwiseToSrcModifierOp(SDValue N,
     return SDValue();
 
   EVT VT = RHS.getValueType();
-
-  assert((VT == MVT::i32 || VT == MVT::v2i32 || VT == MVT::i64) &&
-         "Expected i32, v2i32 or i64 value type.");
-
-  uint64_t Mask = CRHS->getZExtValue();
   EVT FVT = getFloatVT(VT);
   SDLoc SL = SDLoc(N);
   SDValue BC = DAG.getNode(ISD::BITCAST, SL, FVT, LHS);
 
   switch (Opc) {
   case ISD::XOR:
-    if ((Mask == 0x80000000u && VT.getFixedSizeInBits() == 32) ||
-        (Mask == 0x8000000000000000u && VT.getFixedSizeInBits() == 64))
+    if (CRHS->getAPIntValue().isSignMask())
       return DAG.getNode(ISD::FNEG, SL, FVT, BC);
     break;
   case ISD::OR:
-    if ((Mask == 0x80000000u && VT.getFixedSizeInBits() == 32) ||
-        (Mask == 0x8000000000000000u && VT.getFixedSizeInBits() == 64)) {
+    if (CRHS->getAPIntValue().isSignMask()) {
       SDValue Abs = DAG.getNode(ISD::FABS, SL, FVT, BC);
       return DAG.getNode(ISD::FNEG, SL, FVT, Abs);
     }
     break;
   case ISD::AND:
-    if ((Mask == 0x7fffffffu && VT.getFixedSizeInBits() == 32) ||
-        (Mask == 0x7fffffffffffffffu && VT.getFixedSizeInBits() == 64))
+    if (CRHS->getAPIntValue().isMaxSignedValue())
       return DAG.getNode(ISD::FABS, SL, FVT, BC);
     break;
   default:
@@ -4939,15 +4929,20 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
       return MinMax;
     }
 
-    // Support source modifiers as integer.
+    // Support source modifiers on integer types.
     if (VT == MVT::i32 || VT == MVT::v2i32 || VT == MVT::i64) {
-      if (SDValue SrcMod = getBitwiseToSrcModifierOp(True, DCI)) {
+      SDValue SrcModTrue = getBitwiseToSrcModifierOp(True, DCI);
+      SDValue SrcModFalse = getBitwiseToSrcModifierOp(False, DCI);
+      if (SrcModTrue || SrcModFalse) {
         SDLoc SL(N);
         EVT FVT = getFloatVT(VT);
-        SDValue FRHS = DAG.getNode(ISD::BITCAST, SL, FVT, False);
-        SDValue FSelect = DAG.getNode(ISD::SELECT, SL, FVT, Cond, SrcMod, FRHS);
-        SDValue BC = DAG.getNode(ISD::BITCAST, SL, VT, FSelect);
-        return BC;
+        SDValue FLHS =
+            SrcModTrue ? SrcModTrue : DAG.getNode(ISD::BITCAST, SL, FVT, True);
+        SDValue FRHS = SrcModFalse ? SrcModFalse
+                                   : DAG.getNode(ISD::BITCAST, SL, FVT, False);
+        ;
+        SDValue FSelect = DAG.getNode(ISD::SELECT, SL, FVT, Cond, FLHS, FRHS);
+        return DAG.getNode(ISD::BITCAST, SL, VT, FSelect);
       }
     }
   }
