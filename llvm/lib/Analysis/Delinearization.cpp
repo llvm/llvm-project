@@ -642,7 +642,7 @@ bool llvm::findFixedSizeArrayDimensions(ScalarEvolution &SE, const SCEV *Expr,
 /// TODO: At the moment, this function can handle only simple cases. For
 /// example, we cannot handle a case where a step recurrence is not divisible
 /// by the next smaller step recurrence, e.g., A[i][3*j].
-void llvm::delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
+bool llvm::delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
                                      SmallVectorImpl<const SCEV *> &Subscripts,
                                      SmallVectorImpl<const SCEV *> &Sizes,
                                      const SCEV *ElementSize) {
@@ -651,7 +651,7 @@ void llvm::delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
   SmallVector<unsigned, 4> ConstSizes;
   if (!findFixedSizeArrayDimensions(SE, Expr, ConstSizes, ElementSize)) {
     Sizes.clear();
-    return;
+    return false;
   }
 
   // Convert the constant size to SCEV.
@@ -661,8 +661,7 @@ void llvm::delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
   // Second step: compute the access functions for each subscript.
   computeAccessFunctions(SE, Expr, Subscripts, Sizes);
 
-  if (Subscripts.empty())
-    return;
+  return !Subscripts.empty();
 }
 
 bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,

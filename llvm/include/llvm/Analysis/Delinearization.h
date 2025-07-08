@@ -136,7 +136,7 @@ bool findFixedSizeArrayDimensions(ScalarEvolution &SE, const SCEV *Expr,
 /// This function is intended to replace getIndexExpressionsFromGEP and
 /// tryDelinearizeFixedSizeImpl. They rely on the GEP source element type so
 /// that they will be removed in the future.
-void delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
+bool delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
                                SmallVectorImpl<const SCEV *> &Subscripts,
                                SmallVectorImpl<const SCEV *> &Sizes,
                                const SCEV *ElementSize);
