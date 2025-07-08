@@ -658,15 +658,13 @@ struct MaxMin_match {
     auto MatchMinMax = [&](SDValue L, SDValue R, SDValue TrueValue,
                            SDValue FalseValue, ISD::CondCode CC) {
       if ((TrueValue != L || FalseValue != R) &&
-          (TrueValue != R || FalseValue != L)) {
+          (TrueValue != R || FalseValue != L))
         return false;
-      }
 
       ISD::CondCode Cond =
           TrueValue == L ? CC : getSetCCInverse(CC, L.getValueType());
-      if (!Pred_t::match(Cond)) {
+      if (!Pred_t::match(Cond))
         return false;
-      }
 
       return (LHS.match(Ctx, L) && RHS.match(Ctx, R)) ||
              (Commutable && LHS.match(Ctx, R) && RHS.match(Ctx, L));
