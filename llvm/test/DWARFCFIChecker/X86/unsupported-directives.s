@@ -6,7 +6,14 @@
         .type   f, @function
 f:
         .cfi_startproc
+        
+        .cfi_remember_state
+        # CHECK: warning: this directive is not supported, ignoring it
         .cfi_escape 0
+        # CHECK: warning: this directive is not supported, ignoring it
+        .cfi_restore %rsp
+        # CHECK: warning: this directive behavior depends on the assembler, ignoring it
+        .cfi_restore_state
         # CHECK: warning: this directive is not supported, ignoring it
 .Lfunc_end0:
         .size   f, .Lfunc_end0-f

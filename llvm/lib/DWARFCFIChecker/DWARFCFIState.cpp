@@ -37,6 +37,14 @@ void DWARFCFIState::update(const MCCFIInstruction &Directive) {
   // in `PrecedingRows`. For now, there is no need to store these rows in the
   // state, so they are ignored in the end.
   dwarf::UnwindTable::RowContainer PrecedingRows;
+
+  // TODO: `.cfi_remember_state` and `.cfi_restore_state` directives are not
+  // supported yet. The reason is that `parseRows` expects the stack of states
+  // to be produced and used in a single `CFIProgram`. However, in this use
+  // case, each instruction creates its own `CFIProgram`, which means the stack
+  // of states is forgotten between instructions. To fix it, `parseRows` should
+  // be refactored to read the current stack of states from the argument and
+  // update it based on the `CFIProgram.`
   if (Error Err = parseRows(CFIP, NewRow, nullptr).takeError()) {
     Context->reportError(
         Directive.getLoc(),
@@ -65,10 +73,8 @@ dwarf::CFIProgram DWARFCFIState::convert(MCCFIInstruction Directive) {
     // TODO: remember state is not supported yet, the following line does not
     // work:
     // CFIP.addInstruction(dwarf::DW_CFA_remember_state);
-    // The reason is that `parseRows` expects .cfi_remember_state and
-    // .cfi_restore_state to be in the same CFIProgram. However, each
-    // instruction creates its own CFI program, which means that states are
-    // forgotten between instructions.
+    // The reason is explained in the `DWARFCFIState::update` method where
+    // `dwarf::parseRows` is used.
     Context->reportWarning(Directive.getLoc(),
                            "this directive is not supported, ignoring it");
     break;
@@ -76,10 +82,8 @@ dwarf::CFIProgram DWARFCFIState::convert(MCCFIInstruction Directive) {
     // TODO: restore state is not supported yet, the following line does not
     // work:
     // CFIP.addInstruction(dwarf::DW_CFA_restore_state);
-    // The reason is that `parseRows` expects .cfi_remember_state and
-    // .cfi_restore_state to be in the same CFIProgram. However, each
-    // instruction creates its own CFI program, which means that states are
-    // forgotten between instructions.
+    // The reason is explained in the `DWARFCFIState::update` method where
+    // `dwarf::parseRows` is used.
     Context->reportWarning(Directive.getLoc(),
                            "this directive is not supported, ignoring it");
     break;
@@ -105,14 +109,14 @@ dwarf::CFIProgram DWARFCFIState::convert(MCCFIInstruction Directive) {
   case MCCFIInstruction::OpRelOffset:
     assert(
         IsInitiated &&
-        "Cannot define relative offset to a non-existing CFA unwinding rule");
+        "cannot define relative offset to a non-existing CFA unwinding rule");
 
     CFIP.addInstruction(dwarf::DW_CFA_offset, Directive.getRegister(),
                         Directive.getOffset() - Row.getCFAValue().getOffset());
     break;
   case MCCFIInstruction::OpAdjustCfaOffset:
     assert(IsInitiated &&
-           "Cannot adjust CFA offset of a non-existing CFA unwinding rule");
+           "cannot adjust CFA offset of a non-existing CFA unwinding rule");
 
     CFIP.addInstruction(dwarf::DW_CFA_def_cfa_offset,
                         Directive.getOffset() + Row.getCFAValue().getOffset());
@@ -123,7 +127,13 @@ dwarf::CFIProgram DWARFCFIState::convert(MCCFIInstruction Directive) {
                            "this directive is not supported, ignoring it");
     break;
   case MCCFIInstruction::OpRestore:
-    CFIP.addInstruction(dwarf::DW_CFA_restore);
+    // The `.cfi_restore register` directive restores the register's unwinding
+    // information to its CIE value. However, assemblers decide where CIE ends
+    // and the FDE starts, so the functionality of this directive depends on the
+    // assembler's decision and cannot be validated.
+    Context->reportWarning(
+        Directive.getLoc(),
+        "this directive behavior depends on the assembler, ignoring it");
     break;
   case MCCFIInstruction::OpUndefined:
     CFIP.addInstruction(dwarf::DW_CFA_undefined, Directive.getRegister());
