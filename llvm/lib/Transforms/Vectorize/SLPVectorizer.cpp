@@ -23748,7 +23748,8 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
       Candidates.emplace_back(A1, B);
   }
 
-  auto TryToReduce = [this, &R, &TTI=*TTI](Instruction *Inst, ArrayRef<Value *> Ops) {
+  auto TryToReduce = [this, &R, &TTI = *TTI](Instruction *Inst,
+                                             ArrayRef<Value *> Ops) {
     if (!isReductionCandidate(Inst))
       return false;
     Type *Ty = Inst->getType();
@@ -23758,7 +23759,7 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
     if (!HorRdx.matchReductionForOperands())
       return false;
     // Check the cost of operations.
-    VectorType *VecTy= getWidenedType(Ty, Ops.size());
+    VectorType *VecTy = getWidenedType(Ty, Ops.size());
     constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     InstructionCost ScalarCost =
         TTI.getScalarizationOverhead(
