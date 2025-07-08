@@ -10,21 +10,16 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/TransformOps/GPUTransformOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
-#include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Value.h"
@@ -32,7 +27,6 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/InterleavedRange.h"
 
@@ -44,7 +38,7 @@ using namespace mlir::transform::gpu;
 #define DEBUG_TYPE "gpu-transforms"
 
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << (X) << "\n")
+#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 #define DBGS_ALIAS() (llvm::dbgs() << '[' << DEBUG_TYPE_ALIAS << "] ")
 
 /// Build predicates to filter execution by only the activeIds. Along each
@@ -120,10 +114,25 @@ static Value buildLinearId(RewriterBase &rewriter, Location loc,
 /// it in the basis of `forallMappingSizes`. The linear id builder returns an
 /// n-D vector of ids for indexing and 1-D size + id for predicate generation.
 template <typename ThreadOrBlockIdOp>
-static GpuIdBuilderFnType commonLinearIdBuilderFn(int64_t multiplicity = 1) {
-  auto res = [multiplicity](RewriterBase &rewriter, Location loc,
-                            ArrayRef<int64_t> forallMappingSizes,
-                            ArrayRef<int64_t> originalBasis) {
+static GpuIdBuilderFnType
+commonLinearIdBuilderFn(int64_t multiplicity = 1,
+                        DeviceMaskingAttrInterface mask = nullptr) {
+  auto res = [multiplicity, mask](RewriterBase &rewriter, Location loc,
+                                  ArrayRef<int64_t> forallMappingSizes,
+                                  ArrayRef<int64_t> originalBasis) {
+    // 0. Early-exit mask case.
+    if (mask) {
+      if (computeProduct(originalBasis) >
+          mask.getMaxNumPhysicalIds() * multiplicity) {
+        return IdBuilderResult{
+            /*errorMsg=*/std::string(
+                "mask representation too short to capture all physical ids: ") +
+                std::to_string(mask.getMaxNumPhysicalIds()),
+            /*mappingIdOps=*/{},
+            /*predicateOps=*/{}};
+      }
+    }
+
     // 1. Compute linearId.
     SmallVector<OpFoldResult> originalBasisOfr =
         getAsIndexOpFoldResult(rewriter.getContext(), originalBasis);
@@ -132,8 +141,24 @@ static GpuIdBuilderFnType commonLinearIdBuilderFn(int64_t multiplicity = 1) {
 
     // 2. Compute scaledLinearId.
     AffineExpr d0 = getAffineDimExpr(0, rewriter.getContext());
-    OpFoldResult scaledLinearId = affine::makeComposedFoldedAffineApply(
+    OpFoldResult scaledLinearIdOfr = affine::makeComposedFoldedAffineApply(
         rewriter, loc, d0.floorDiv(multiplicity), {physicalLinearId});
+
+    // 2.b. Adjust with mask if needed.
+    Value scaledLinearIdI64;
+    Value scaledLinearId =
+        getValueOrCreateConstantIndexOp(rewriter, loc, scaledLinearIdOfr);
+    if (mask) {
+      scaledLinearId =
+          getValueOrCreateConstantIndexOp(rewriter, loc, scaledLinearIdOfr);
+      scaledLinearIdI64 = rewriter.create<arith::IndexCastUIOp>(
+          loc, rewriter.getI64Type(), scaledLinearId);
+      Value logicalLinearIdI64 =
+          mask.createLogicalLinearMappingId(rewriter, scaledLinearIdI64);
+      scaledLinearId = rewriter.create<arith::IndexCastUIOp>(
+          loc, rewriter.getIndexType(), logicalLinearIdI64);
+      LDBG("------adjusting linearId with mask: " << scaledLinearId);
+    }
 
     // 3. Compute remapped indices.
     SmallVector<Value> ids;
@@ -148,15 +173,23 @@ static GpuIdBuilderFnType commonLinearIdBuilderFn(int64_t multiplicity = 1) {
           affine::makeComposedAffineApply(rewriter, loc, e, {scaledLinearId}));
     }
 
-    // 4. Handle predicates using physicalLinearId.
     std::string errorMsg;
     SmallVector<Value> predicateOps;
-    FailureOr<SmallVector<Value>> maybePredicateOps =
-        buildPredicates(rewriter, loc, physicalLinearId,
-                        computeProduct(forallMappingSizes) * multiplicity,
-                        computeProduct(originalBasis), errorMsg);
-    if (succeeded(maybePredicateOps))
-      predicateOps = *maybePredicateOps;
+    // 4. If mask present, it takes precedence to determine predication.
+    if (mask) {
+      Value isActiveIdPredicate =
+          mask.createIsActiveIdPredicate(rewriter, scaledLinearIdI64);
+      LDBG("------adjusting predicate with mask: " << isActiveIdPredicate);
+      predicateOps.push_back(isActiveIdPredicate);
+    } else {
+      // 4.b. Otherwise, handle predicates using physicalLinearId.
+      FailureOr<SmallVector<Value>> maybePredicateOps =
+          buildPredicates(rewriter, loc, physicalLinearId,
+                          computeProduct(forallMappingSizes) * multiplicity,
+                          computeProduct(originalBasis), errorMsg);
+      if (succeeded(maybePredicateOps))
+        predicateOps = *maybePredicateOps;
+    }
 
     return IdBuilderResult{/*errorMsg=*/errorMsg,
                            /*mappingIdOps=*/ids,
@@ -271,58 +304,67 @@ GpuIdBuilder::GpuIdBuilder(MLIRContext *ctx, bool useLinearMapping,
   }
 }
 
-GpuBlockIdBuilder::GpuBlockIdBuilder(MLIRContext *ctx, bool useLinearMapping)
+GpuBlockIdBuilder::GpuBlockIdBuilder(MLIRContext *ctx, bool useLinearMapping,
+                                     DeviceMaskingAttrInterface mask)
     : GpuIdBuilder(ctx, useLinearMapping, [](MLIRContext *ctx, MappingId id) {
         return GPUBlockMappingAttr::get(ctx, id);
       }) {
+  assert((!mask || useLinearMapping) && "mask requires linear mapping");
   idBuilder = useLinearMapping
-                  ? commonLinearIdBuilderFn<BlockIdOp>(/*multiplicity=*/1)
+                  ? commonLinearIdBuilderFn<BlockIdOp>(/*multiplicity=*/1, mask)
                   : common3DIdBuilderFn<BlockIdOp>(/*multiplicity=*/1);
 }
 
 GpuWarpgroupIdBuilder::GpuWarpgroupIdBuilder(MLIRContext *ctx, int64_t warpSize,
-                                             bool useLinearMapping)
+                                             bool useLinearMapping,
+                                             DeviceMaskingAttrInterface mask)
     : GpuIdBuilder(ctx, useLinearMapping,
                    [](MLIRContext *ctx, MappingId id) {
                      return GPUWarpgroupMappingAttr::get(ctx, id);
                    }),
       warpSize(warpSize) {
+  assert((!mask || useLinearMapping) && "mask requires linear mapping");
   idBuilder = useLinearMapping
                   ? commonLinearIdBuilderFn<ThreadIdOp>(
-                        /*multiplicity=*/kNumWarpsPerGroup * warpSize)
+                        /*multiplicity=*/kNumWarpsPerGroup * warpSize, mask)
                   : common3DIdBuilderFn<ThreadIdOp>(
                         /*multiplicity=*/kNumWarpsPerGroup * warpSize);
 }
 
 GpuWarpIdBuilder::GpuWarpIdBuilder(MLIRContext *ctx, int64_t warpSize,
-                                   bool useLinearMapping)
+                                   bool useLinearMapping,
+                                   DeviceMaskingAttrInterface mask)
     : GpuIdBuilder(ctx, useLinearMapping,
                    [](MLIRContext *ctx, MappingId id) {
                      return GPUWarpMappingAttr::get(ctx, id);
                    }),
       warpSize(warpSize) {
-  idBuilder =
-      useLinearMapping
-          ? commonLinearIdBuilderFn<ThreadIdOp>(/*multiplicity=*/warpSize)
-          : common3DIdBuilderFn<ThreadIdOp>(/*multiplicity=*/warpSize);
+  assert((!mask || useLinearMapping) && "mask requires linear mapping");
+  idBuilder = useLinearMapping
+                  ? commonLinearIdBuilderFn<ThreadIdOp>(
+                        /*multiplicity=*/warpSize, mask)
+                  : common3DIdBuilderFn<ThreadIdOp>(/*multiplicity=*/warpSize);
 }
 
-GpuThreadIdBuilder::GpuThreadIdBuilder(MLIRContext *ctx, bool useLinearMapping)
+GpuThreadIdBuilder::GpuThreadIdBuilder(MLIRContext *ctx, bool useLinearMapping,
+                                       DeviceMaskingAttrInterface mask)
     : GpuIdBuilder(ctx, useLinearMapping, [](MLIRContext *ctx, MappingId id) {
         return GPUThreadMappingAttr::get(ctx, id);
       }) {
-  idBuilder = useLinearMapping
-                  ? commonLinearIdBuilderFn<ThreadIdOp>(/*multiplicity=*/1)
-                  : common3DIdBuilderFn<ThreadIdOp>(/*multiplicity=*/1);
+  idBuilder =
+      useLinearMapping
+          ? commonLinearIdBuilderFn<ThreadIdOp>(/*multiplicity=*/1, mask)
+          : common3DIdBuilderFn<ThreadIdOp>(/*multiplicity=*/1);
 }
 
 GpuLaneIdBuilder::GpuLaneIdBuilder(MLIRContext *ctx, int64_t warpSize,
-                                   bool unused)
+                                   bool unused, DeviceMaskingAttrInterface mask)
     : GpuIdBuilder(ctx, /*useLinearMapping=*/true,
                    [](MLIRContext *ctx, MappingId id) {
                      return GPULaneMappingAttr::get(ctx, id);
                    }),
       warpSize(warpSize) {
+  assert(!mask && "mask NYI for lanes, unclear it should be at all");
   idBuilder = laneIdBuilderFn(/*periodicity=*/warpSize);
 }
 

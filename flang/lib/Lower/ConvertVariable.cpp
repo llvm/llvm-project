@@ -702,6 +702,29 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
   mapSymbolAttributes(converter, var, symMap, stmtCtx, cast);
 }
 
+bool needCUDAAlloc(const Fortran::semantics::Symbol &sym) {
+  if (Fortran::semantics::IsDummy(sym))
+    return false;
+  if (const auto *details{
+          sym.GetUltimate()
+              .detailsIf<Fortran::semantics::ObjectEntityDetails>()}) {
+    if (details->cudaDataAttr() &&
+        (*details->cudaDataAttr() == Fortran::common::CUDADataAttr::Device ||
+         *details->cudaDataAttr() == Fortran::common::CUDADataAttr::Managed ||
+         *details->cudaDataAttr() == Fortran::common::CUDADataAttr::Unified ||
+         *details->cudaDataAttr() == Fortran::common::CUDADataAttr::Shared ||
+         *details->cudaDataAttr() == Fortran::common::CUDADataAttr::Pinned))
+      return true;
+    const Fortran::semantics::DeclTypeSpec *type{details->type()};
+    const Fortran::semantics::DerivedTypeSpec *derived{type ? type->AsDerived()
+                                                            : nullptr};
+    if (derived)
+      if (FindCUDADeviceAllocatableUltimateComponent(*derived))
+        return true;
+  }
+  return false;
+}
+
 //===----------------------------------------------------------------===//
 // Local variables instantiation (not for alias)
 //===----------------------------------------------------------------===//
@@ -732,7 +755,7 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
   if (ultimateSymbol.test(Fortran::semantics::Symbol::Flag::CrayPointee))
     return builder.create<fir::ZeroOp>(loc, fir::ReferenceType::get(ty));
 
-  if (Fortran::semantics::NeedCUDAAlloc(ultimateSymbol)) {
+  if (needCUDAAlloc(ultimateSymbol)) {
     cuf::DataAttributeAttr dataAttr =
         Fortran::lower::translateSymbolCUFDataAttribute(builder.getContext(),
                                                         ultimateSymbol);
@@ -1087,7 +1110,7 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
     Fortran::lower::defaultInitializeAtRuntime(converter, var.getSymbol(),
                                                symMap);
   auto *builder = &converter.getFirOpBuilder();
-  if (Fortran::semantics::NeedCUDAAlloc(var.getSymbol()) &&
+  if (needCUDAAlloc(var.getSymbol()) &&
       !cuf::isCUDADeviceContext(builder->getRegion())) {
     cuf::DataAttributeAttr dataAttr =
         Fortran::lower::translateSymbolCUFDataAttribute(builder->getContext(),
