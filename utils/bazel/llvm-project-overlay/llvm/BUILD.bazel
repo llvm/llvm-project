@@ -220,8 +220,6 @@ genrule(
           "echo -e '#undef HANDLE_EXTENSION' >> $@\n",
 )
 
-
-
 cc_library(
     name = "Support",
     srcs = glob([
