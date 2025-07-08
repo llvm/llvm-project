@@ -221,27 +221,27 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
   // Replace a GEP ConstantExpr pointer operand with a GEP instruction so that
   // it can be visited
-  if (auto *PtrOpGEPCE = dyn_cast<ConstantExpr>(PtrOperand))
-    if (PtrOpGEPCE->getOpcode() == Instruction::GetElementPtr) {
-      GetElementPtrInst *OldGEPI =
-          cast<GetElementPtrInst>(PtrOpGEPCE->getAsInstruction());
-      OldGEPI->insertBefore(GEP.getIterator());
+  if (auto *PtrOpGEPCE = dyn_cast<ConstantExpr>(PtrOperand);
+      PtrOpGEPCE && PtrOpGEPCE->getOpcode() == Instruction::GetElementPtr) {
+    GetElementPtrInst *OldGEPI =
+        cast<GetElementPtrInst>(PtrOpGEPCE->getAsInstruction());
+    OldGEPI->insertBefore(GEP.getIterator());
 
-      IRBuilder<> Builder(&GEP);
-      SmallVector<Value *> Indices(GEP.indices());
-      Value *NewGEP =
-          Builder.CreateGEP(GEP.getSourceElementType(), OldGEPI, Indices,
-                            GEP.getName(), GEP.getNoWrapFlags());
-      assert(isa<GetElementPtrInst>(NewGEP) &&
-             "Expected newly-created GEP to be an instruction");
-      GetElementPtrInst *NewGEPI = cast<GetElementPtrInst>(NewGEP);
+    IRBuilder<> Builder(&GEP);
+    SmallVector<Value *> Indices(GEP.indices());
+    Value *NewGEP =
+        Builder.CreateGEP(GEP.getSourceElementType(), OldGEPI, Indices,
+                          GEP.getName(), GEP.getNoWrapFlags());
+    assert(isa<GetElementPtrInst>(NewGEP) &&
+           "Expected newly-created GEP to be an instruction");
+    GetElementPtrInst *NewGEPI = cast<GetElementPtrInst>(NewGEP);
 
-      GEP.replaceAllUsesWith(NewGEPI);
-      GEP.eraseFromParent();
-      visitGetElementPtrInst(*OldGEPI);
-      visitGetElementPtrInst(*NewGEPI);
-      return true;
-    }
+    GEP.replaceAllUsesWith(NewGEPI);
+    GEP.eraseFromParent();
+    visitGetElementPtrInst(*OldGEPI);
+    visitGetElementPtrInst(*NewGEPI);
+    return true;
+  }
 
   // Construct GEPInfo for this GEP
   GEPInfo Info;
