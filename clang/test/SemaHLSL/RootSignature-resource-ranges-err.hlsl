@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - %s -verify
-// RUN: not %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -fsyntax-only %s -verify
+// RUN: not %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -fsyntax-only %s 2>&1 | FileCheck %s
 
 // expected-error@+2 {{resource ranges b[42;42] and b[42;42] overlap within space = 0 and visibility = All}}
 // expected-note@+1 {{overlapping resource range here}}
