@@ -446,7 +446,7 @@ static MCFixupKind getImmFixupKind(uint64_t TSFlags) {
     default:
       llvm_unreachable("Unsupported signed fixup size!");
     case 4:
-      return MCFixupKind(X86::reloc_signed_4byte);
+      return X86::reloc_signed_4byte;
     }
   }
   switch (Size) {
@@ -890,8 +890,8 @@ void X86MCCodeEmitter::emitMemModRMByte(
     emitImmediate(Disp, MI.getLoc(), FK_Data_1, false, StartByte, CB, Fixups,
                   ImmOffset);
   else if (ForceDisp32)
-    emitImmediate(Disp, MI.getLoc(), MCFixupKind(X86::reloc_signed_4byte),
-                  false, StartByte, CB, Fixups);
+    emitImmediate(Disp, MI.getLoc(), X86::reloc_signed_4byte, false, StartByte,
+                  CB, Fixups);
 }
 
 /// Emit all instruction prefixes.
@@ -1626,8 +1626,8 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
       break;
 
     const MCOperand &Op = MI.getOperand(CurOp++);
-    emitImmediate(Op, MI.getLoc(), MCFixupKind(X86::reloc_branch_4byte_pcrel),
-                  true, StartByte, CB, Fixups);
+    emitImmediate(Op, MI.getLoc(), X86::reloc_branch_4byte_pcrel, true,
+                  StartByte, CB, Fixups);
     break;
   }
   case X86II::RawFrmMemOffs:
@@ -2009,12 +2009,12 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
     // (SSE4a extrq and insertq) have two trailing immediates.
 
     // Skip two trainling conditional operands encoded in EVEX prefix
-    unsigned RemaningOps = NumOps - CurOp - 2 * HasTwoConditionalOps;
-    while (RemaningOps) {
+    unsigned RemainingOps = NumOps - CurOp - 2 * HasTwoConditionalOps;
+    while (RemainingOps) {
       emitImmediate(MI.getOperand(CurOp++), MI.getLoc(),
-                    getImmFixupKind(TSFlags), X86II::isImmPCRel(TSFlags),
-                    StartByte, CB, Fixups);
-      --RemaningOps;
+                    getImmFixupKind(Desc.TSFlags),
+                    X86II::isImmPCRel(Desc.TSFlags), StartByte, CB, Fixups);
+      --RemainingOps;
     }
     CurOp += 2 * HasTwoConditionalOps;
   }

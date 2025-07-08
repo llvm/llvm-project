@@ -6,6 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+include "llvm/TableGen/SetTheory.td"
+
+// Predicate for whether a libcall exists for the target ABI. This is
+// a module level property that should only be computed based on the
+// triple.
+class RuntimeLibcallPredicate<code cond> {
+  // Expression of an llvm::Triple named TT for whether a libcall
+  // should exist.
+  code Cond = cond;
+}
+
+// Predicate for whether a libcall should be used for the current
+// function/subtarget.
+class LibcallLoweringPredicate<code cond> { code Cond = cond; }
+
+def AlwaysAvailable : RuntimeLibcallPredicate<[{}]>;
+
 /// Abstract definition for functionality the compiler may need to
 /// emit a call to. Emits the RTLIB::Libcall enum - This enum defines
 /// all of the runtime library calls the backend can emit. The various
@@ -28,5 +45,24 @@ class RuntimeLibcall {
 class RuntimeLibcallImpl<RuntimeLibcall P, string Name = NAME> {
   RuntimeLibcall Provides = P;
   string LibCallFuncName = Name;
+  list<LibcallLoweringPredicate> LoweringPredicates;
   bit IsDefault = false;
+}
+
+class LibcallImpls<dag funcList,
+                   RuntimeLibcallPredicate Pred = AlwaysAvailable> {
+  // Function of the triple where this applies
+  RuntimeLibcallPredicate AvailabilityPredicate = Pred;
+  dag MemberList = funcList;
+}
+
+/// Convenience wrapper around LibcallImplSet to make a single libcall
+/// implementation conditionally conditionally available.
+class AvailableIf<RuntimeLibcallImpl Impl, RuntimeLibcallPredicate Pred>
+    : LibcallImpls<(add Impl), Pred>;
+
+/// Define a complete top level set of runtime libcalls for a target.
+class SystemRuntimeLibrary<RuntimeLibcallPredicate Pred, dag funcList> {
+  RuntimeLibcallPredicate TriplePred = Pred;
+  LibcallImpls MemberList = LibcallImpls<funcList>;
 }
