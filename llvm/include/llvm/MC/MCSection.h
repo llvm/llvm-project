@@ -427,8 +427,8 @@ public:
 /// relaxed during the assembler layout and relaxation stage.
 ///
 class MCRelaxableFragment : public MCEncodedFragment {
-  /// The instruction this is a fragment for.
-  unsigned Opcode = 0;
+  uint32_t Opcode = 0;
+  uint32_t Flags = 0;
   uint32_t OperandStart = 0;
   uint32_t OperandSize = 0;
 
@@ -446,16 +446,14 @@ public:
   MCInst getInst() const {
     MCInst Inst;
     Inst.setOpcode(Opcode);
+    Inst.setFlags(Flags);
     Inst.setOperands(ArrayRef(getParent()->MCOperandStorage)
                          .slice(OperandStart, OperandSize));
     return Inst;
   }
   void setInst(const MCInst &Inst) {
-    // If we ever support Flags in relaxable fragments, revisit the data
-    // structure.
-    assert(Inst.getFlags() == 0 && "relaxable fragment doesn't support flags");
-
     Opcode = Inst.getOpcode();
+    Flags = Inst.getFlags();
     auto &S = getParent()->MCOperandStorage;
     if (Inst.getNumOperands() > OperandSize) {
       OperandStart = S.size();

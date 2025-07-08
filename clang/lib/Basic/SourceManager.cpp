@@ -329,6 +329,7 @@ SourceManager::~SourceManager() {
 void SourceManager::clearIDTables() {
   MainFileID = FileID();
   LocalSLocEntryTable.clear();
+  LocalLocOffsetTable.clear();
   LoadedSLocEntryTable.clear();
   SLocEntryLoaded.clear();
   SLocEntryOffsetLoaded.clear();
@@ -628,9 +629,11 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
     noteSLocAddressSpaceUsage(Diag);
     return FileID();
   }
+  assert(LocalSLocEntryTable.size() == LocalLocOffsetTable.size());
   LocalSLocEntryTable.push_back(
       SLocEntry::get(NextLocalOffset,
                      FileInfo::get(IncludePos, File, FileCharacter, Filename)));
+  LocalLocOffsetTable.push_back(NextLocalOffset);
   LastLookupStartOffset = NextLocalOffset;
   // We do a +1 here because we want a SourceLocation that means "the end of the
   // file", e.g. for the "no newline at the end of the file" diagnostic.
@@ -684,7 +687,9 @@ SourceManager::createExpansionLocImpl(const ExpansionInfo &Info,
     SLocEntryLoaded[Index] = SLocEntryOffsetLoaded[Index] = true;
     return SourceLocation::getMacroLoc(LoadedOffset);
   }
+  assert(LocalSLocEntryTable.size() == LocalLocOffsetTable.size());
   LocalSLocEntryTable.push_back(SLocEntry::get(NextLocalOffset, Info));
+  LocalLocOffsetTable.push_back(NextLocalOffset);
   if (NextLocalOffset + Length + 1 <= NextLocalOffset ||
       NextLocalOffset + Length + 1 > CurrentLoadedOffset) {
     Diag.Report(diag::err_sloc_space_too_large);
@@ -807,6 +812,7 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
   assert(SLocOffset < NextLocalOffset && "Bad function choice");
   assert(SLocOffset >= LocalSLocEntryTable[0].getOffset() && SLocOffset > 0 &&
          "Invalid SLocOffset");
+  assert(LocalSLocEntryTable.size() == LocalLocOffsetTable.size());
   assert(LastFileIDLookup.ID >= 0 && "Only cache local file sloc entry");
 
   // After the first and second level caches, I see two common sorts of
@@ -826,7 +832,7 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
   // SLocOffset.
   unsigned LessIndex = 0;
   // upper bound of the search range.
-  unsigned GreaterIndex = LocalSLocEntryTable.size();
+  unsigned GreaterIndex = LocalLocOffsetTable.size();
   // Use the LastFileIDLookup to prune the search space.
   if (LastLookupStartOffset < SLocOffset)
     LessIndex = LastFileIDLookup.ID;
@@ -837,16 +843,16 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
   unsigned NumProbes = 0;
   while (true) {
     --GreaterIndex;
-    assert(GreaterIndex < LocalSLocEntryTable.size());
-    if (LocalSLocEntryTable[GreaterIndex].getOffset() <= SLocOffset) {
+    assert(GreaterIndex < LocalLocOffsetTable.size());
+    if (LocalLocOffsetTable[GreaterIndex] <= SLocOffset) {
       FileID Res = FileID::get(int(GreaterIndex));
       // Remember it.  We have good locality across FileID lookups.
       LastFileIDLookup = Res;
-      LastLookupStartOffset = LocalSLocEntryTable[GreaterIndex].getOffset();
+      LastLookupStartOffset = LocalLocOffsetTable[GreaterIndex];
       LastLookupEndOffset =
-          GreaterIndex + 1 >= LocalSLocEntryTable.size()
+          GreaterIndex + 1 >= LocalLocOffsetTable.size()
               ? NextLocalOffset
-              : LocalSLocEntryTable[GreaterIndex + 1].getOffset();
+              : LocalLocOffsetTable[GreaterIndex + 1];
       NumLinearScans += NumProbes + 1;
       return Res;
     }
@@ -858,11 +864,7 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
     ++NumBinaryProbes;
 
     unsigned MiddleIndex = LessIndex + (GreaterIndex - LessIndex) / 2;
-
-    SourceLocation::UIntTy MidOffset =
-        LocalSLocEntryTable[MiddleIndex].getOffset();
-
-    if (MidOffset <= SLocOffset)
+    if (LocalLocOffsetTable[MiddleIndex] <= SLocOffset)
       LessIndex = MiddleIndex + 1;
     else
       GreaterIndex = MiddleIndex;
@@ -871,8 +873,8 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
   // At this point, LessIndex is the index of the *first element greater than*
   // SLocOffset. The element we are actually looking for is the one immediately
   // before it.
-  LastLookupStartOffset = LocalSLocEntryTable[LessIndex - 1].getOffset();
-  LastLookupEndOffset = LocalSLocEntryTable[LessIndex].getOffset();
+  LastLookupStartOffset = LocalLocOffsetTable[LessIndex - 1];
+  LastLookupEndOffset = LocalLocOffsetTable[LessIndex];
   return LastFileIDLookup = FileID::get(LessIndex - 1);
 }
 
@@ -1793,9 +1795,8 @@ void SourceManager::associateFileChunkWithMacroArgExp(
     // spelling range and if one is itself a macro argument expansion, recurse
     // and associate the file chunk that it represents.
 
-    FileID SpellFID; // Current FileID in the spelling range.
-    unsigned SpellRelativeOffs;
-    std::tie(SpellFID, SpellRelativeOffs) = getDecomposedLoc(SpellLoc);
+    // Current FileID in the spelling range.
+    auto [SpellFID, SpellRelativeOffs] = getDecomposedLoc(SpellLoc);
     while (true) {
       const SLocEntry &Entry = getSLocEntry(SpellFID);
       SourceLocation::UIntTy SpellFIDBeginOffs = Entry.getOffset();
@@ -1877,9 +1878,7 @@ SourceManager::getMacroArgExpandedLocation(SourceLocation Loc) const {
   if (Loc.isInvalid() || !Loc.isFileID())
     return Loc;
 
-  FileID FID;
-  unsigned Offset;
-  std::tie(FID, Offset) = getDecomposedLoc(Loc);
+  auto [FID, Offset] = getDecomposedLoc(Loc);
   if (FID.isInvalid())
     return Loc;
 
@@ -2390,4 +2389,76 @@ SourceManagerForFile::SourceManagerForFile(StringRef FileName,
       SourceMgr->createFileID(FE, SourceLocation(), clang::SrcMgr::C_User);
   assert(ID.isValid());
   SourceMgr->setMainFileID(ID);
+}
+
+StringRef
+SourceManager::getNameForDiagnostic(StringRef Filename,
+                                    const DiagnosticOptions &Opts) const {
+  OptionalFileEntryRef File = getFileManager().getOptionalFileRef(Filename);
+  if (!File)
+    return Filename;
+
+  bool SimplifyPath = [&] {
+    if (Opts.AbsolutePath)
+      return true;
+
+    // Try to simplify paths that contain '..' in any case since paths to
+    // standard library headers especially tend to get quite long otherwise.
+    // Only do that for local filesystems though to avoid slowing down
+    // compilation too much.
+    if (!File->getName().contains(".."))
+      return false;
+
+    // If we're not on Windows, check if we're on a network file system and
+    // avoid simplifying the path in that case since that can be slow. On
+    // Windows, the check for a local filesystem is already slow, so skip it.
+#ifndef _WIN32
+    if (!llvm::sys::fs::is_local(File->getName()))
+      return false;
+#endif
+
+    return true;
+  }();
+
+  if (!SimplifyPath)
+    return Filename;
+
+  // This may involve computing canonical names, so cache the result.
+  StringRef &CacheEntry = DiagNames[Filename];
+  if (!CacheEntry.empty())
+    return CacheEntry;
+
+  // We want to print a simplified absolute path, i. e. without "dots".
+  //
+  // The hardest part here are the paths like "<part1>/<link>/../<part2>".
+  // On Unix-like systems, we cannot just collapse "<link>/..", because
+  // paths are resolved sequentially, and, thereby, the path
+  // "<part1>/<part2>" may point to a different location. That is why
+  // we use FileManager::getCanonicalName(), which expands all indirections
+  // with llvm::sys::fs::real_path() and caches the result.
+  //
+  // On the other hand, it would be better to preserve as much of the
+  // original path as possible, because that helps a user to recognize it.
+  // real_path() expands all links, which sometimes too much. Luckily,
+  // on Windows we can just use llvm::sys::path::remove_dots(), because,
+  // on that system, both aforementioned paths point to the same place.
+  SmallString<256> TempBuf;
+#ifdef _WIN32
+  TempBuf = File->getName();
+  llvm::sys::fs::make_absolute(TempBuf);
+  llvm::sys::path::native(TempBuf);
+  llvm::sys::path::remove_dots(TempBuf, /* remove_dot_dot */ true);
+#else
+  TempBuf = getFileManager().getCanonicalName(*File);
+#endif
+
+  // In some cases, the resolved path may actually end up being longer (e.g.
+  // if it was originally a relative path), so just retain whichever one
+  // ends up being shorter.
+  if (!Opts.AbsolutePath && TempBuf.size() > Filename.size())
+    CacheEntry = Filename;
+  else
+    CacheEntry = TempBuf.str().copy(DiagNameAlloc);
+
+  return CacheEntry;
 }
