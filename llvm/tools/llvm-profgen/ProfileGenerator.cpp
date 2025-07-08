@@ -542,32 +542,19 @@ void ProfileGenerator::generateLineNumBasedProfile() {
   // Fill in boundary sample counts as well as call site samples for calls
   populateBoundarySamplesForAllFunctions(SC.BranchCounter);
 
-  // Process data access counters.
-  const auto &DataAccessCounters = SC.DataAccessCounter;
-  for (const auto &Entry : DataAccessCounters) {
-    uint64_t InstAddr = Entry.first.first;
-    StringRef DataSymbol = Entry.first.second;
-
-    FunctionId DataSymbolName(DataSymbol);
-    // If the symbol is not a valid address, skip it.
-
-    // symbolize vtable here.
-    uint64_t Count = Entry.second;
+  // For each instruction with vtable accesses, get its symbolized inline
+  // stack, and add the vtable counters to the function samples.
+  for (const auto &[IpData, Count] : SC.DataAccessCounter) {
+    uint64_t InstAddr = IpData.first;
     const SampleContextFrameVector &FrameVec =
         Binary->getCachedFrameLocationStack(InstAddr, false);
-
     if (!FrameVec.empty()) {
-      // If the leaf function sample has only one of body sample or call site
-      // sample, use one of them.
       FunctionSamples &FunctionProfile =
           getLeafProfileAndAddTotalSamples(FrameVec, 0);
-      LineLocation Loc(FrameVec.back().Location.LineOffset,
-                       getBaseDiscriminator(FrameVec.back().Location.Discriminator));
-
-            // Assume inlined callsites and call targets have different
-      // discriminators.
-
-      FunctionProfile.getTypeSamplesAt(Loc)[DataSymbolName] += Count;
+      LineLocation Loc(
+          FrameVec.back().Location.LineOffset,
+          getBaseDiscriminator(FrameVec.back().Location.Discriminator));
+      FunctionProfile.getTypeSamplesAt(Loc)[FunctionId(IpData.second)] += Count;
     }
   }
 

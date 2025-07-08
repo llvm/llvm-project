@@ -387,8 +387,6 @@ void PerfReaderBase::parseDataAccessPerfTraces(
   if (EC)
     exitWithError("Failed to open perf trace file: " + DataAccessPerfTraceFile);
 
-  DenseMap<uint64_t, DenseMap<StringRef, uint64_t>> IpDataAccessCount;
-
   assert(!SampleCounters.empty() && "Sample counters should not be empty!");
   SampleCounter &Counter = SampleCounters.begin()->second;
   line_iterator LineIt(*BufferOrErr.get(), true);
@@ -417,22 +415,16 @@ void PerfReaderBase::parseDataAccessPerfTraces(
       if (matches.size() != 5)
         continue;
 
-      uint64_t DataAddress = std::stoull(matches[4].str(), nullptr, 16);
-
-      // Skip addresses out of the specified PT_LOAD section for data sections.
-      if (!Binary->InRange(DataAddress))
-        continue;
-
-      int32_t PID = std::stoi(matches[1].str());
+      const int32_t PID = std::stoi(matches[1].str());
       if (PIDFilter && *PIDFilter != PID) {
         continue;
       }
 
-      uint64_t IP = std::stoull(matches[3].str(), nullptr, 16);
-
+      const uint64_t DataAddress = std::stoull(matches[4].str(), nullptr, 16);
       StringRef DataSymbol = Binary->symbolizeDataAddress(
           Binary->CanonicalizeNonTextAddress(DataAddress));
       if (DataSymbol.starts_with("_ZTV")) {
+        const uint64_t IP = std::stoull(matches[3].str(), nullptr, 16);
         Counter.recordDataAccessCount(Binary->canonicalizeVirtualAddress(IP),
                                       DataSymbol, 1);
       }

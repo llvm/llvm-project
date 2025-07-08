@@ -630,22 +630,12 @@ public:
     return ProbeDecoder.getInlinerDescForProbe(Probe);
   }
 
-  bool InRange(uint64_t Address, const MMapEvent &MMap) const {
-    return Address >= MMap.Address && Address < MMap.Address + MMap.Size;
-  }
-
-  bool InRange(uint64_t Address) const {
-    for (const auto &MMap : MMapNonTextEvents) {
-      if (InRange(Address, MMap))
-        return true;
-    }
-    return false;
-  }
-
   void addMMapNonTextEvent(MMapEvent MMap) {
     MMapNonTextEvents.push_back(MMap);
   }
 
+  // Given a runtime address, canonicalize it to the virtual address in the
+  // binary.
   uint64_t CanonicalizeNonTextAddress(uint64_t Address);
 
   bool getTrackFuncContextSize() { return TrackFuncContextSize; }
