@@ -37,13 +37,15 @@ public:
                             bool IsResolved, MCContext &Ctx,
                             const MCSubtargetInfo *STI) const;
 
+  std::optional<bool> evaluateFixup(const MCFragment &, MCFixup &, MCValue &,
+                                    uint64_t &) override;
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   MutableArrayRef<char> Data, uint64_t Value,
                   bool IsResolved) override;
 
   unsigned getRelaxedOpcode(unsigned Op, const MCSubtargetInfo &STI) const;
 
-  bool mayNeedRelaxation(const MCInst &Inst,
+  bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override;
 
   const char *reasonForFixupRelaxation(const MCFixup &Fixup,
