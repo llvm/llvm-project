@@ -395,7 +395,8 @@ struct IdentifierNode : public Node {
   NodeArrayNode *TemplateParams = nullptr;
 
 protected:
-  DEMANGLE_ABI void outputTemplateParameters(OutputBuffer &OB, OutputFlags Flags) const;
+  DEMANGLE_ABI void outputTemplateParameters(OutputBuffer &OB,
+                                             OutputFlags Flags) const;
 };
 
 struct DEMANGLE_ABI VcallThunkIdentifierNode : public IdentifierNode {

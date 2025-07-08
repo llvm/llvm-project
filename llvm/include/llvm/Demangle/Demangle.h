@@ -34,7 +34,8 @@ enum : int {
 /// Returns a non-NULL pointer to a NUL-terminated C style string
 /// that should be explicitly freed, if successful. Otherwise, may return
 /// nullptr if mangled_name is not a valid mangling or is nullptr.
-DEMANGLE_ABI char *itaniumDemangle(std::string_view mangled_name, bool ParseParams = true);
+DEMANGLE_ABI char *itaniumDemangle(std::string_view mangled_name,
+                                   bool ParseParams = true);
 
 enum MSDemangleFlags {
   MSDF_None = 0,
@@ -53,8 +54,9 @@ enum MSDemangleFlags {
 /// bytes of the input string were consumed.
 /// status receives one of the demangle_ enum entries above if it's not nullptr.
 /// Flags controls various details of the demangled representation.
-DEMANGLE_ABI char *microsoftDemangle(std::string_view mangled_name, size_t *n_read,
-                        int *status, MSDemangleFlags Flags = MSDF_None);
+DEMANGLE_ABI char *microsoftDemangle(std::string_view mangled_name,
+                                     size_t *n_read, int *status,
+                                     MSDemangleFlags Flags = MSDF_None);
 
 DEMANGLE_ABI std::optional<size_t>
 getArm64ECInsertionPointInMangledName(std::string_view MangledName);
@@ -72,9 +74,10 @@ DEMANGLE_ABI char *dlangDemangle(std::string_view MangledName);
 /// demangling occurred.
 DEMANGLE_ABI std::string demangle(std::string_view MangledName);
 
-DEMANGLE_ABI bool nonMicrosoftDemangle(std::string_view MangledName, std::string &Result,
-                          bool CanHaveLeadingDot = true,
-                          bool ParseParams = true);
+DEMANGLE_ABI bool nonMicrosoftDemangle(std::string_view MangledName,
+                                       std::string &Result,
+                                       bool CanHaveLeadingDot = true,
+                                       bool ParseParams = true);
 
 /// "Partial" demangler. This supports demangling a string into an AST
 /// (typically an intermediate stage in itaniumDemangle) and querying certain
@@ -83,7 +86,8 @@ struct ItaniumPartialDemangler {
   DEMANGLE_ABI ItaniumPartialDemangler();
 
   DEMANGLE_ABI ItaniumPartialDemangler(ItaniumPartialDemangler &&Other);
-  DEMANGLE_ABI ItaniumPartialDemangler &operator=(ItaniumPartialDemangler &&Other);
+  DEMANGLE_ABI ItaniumPartialDemangler &
+  operator=(ItaniumPartialDemangler &&Other);
 
   /// Demangle into an AST. Subsequent calls to the rest of the member functions
   /// implicitly operate on the AST this produces.
