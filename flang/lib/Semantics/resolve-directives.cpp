@@ -23,6 +23,7 @@
 #include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Flags.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 #include "llvm/Support/Debug.h"
 #include <list>
@@ -2297,6 +2298,34 @@ static bool IsSymbolStaticStorageDuration(const Symbol &symbol) {
       (ultSym.flags().test(Symbol::Flag::InCommonBlock));
 }
 
+static bool IsTargetCaptureImplicitlyFirstPrivatizeable(
+    const Symbol &symbol, const Symbol::Flags &dsa) {
+  // if we're associated with any other flags we skip implicit privitization
+  // for now. If we're an allocatable, pointer or declare target, we're not
+  // implicitly firstprivitizeable under OpenMP restrictions.
+  // TODO: Relax restriction as we progress privitization and further
+  // investigate the flags we can intermix with.
+  if (!dsa.none() || !symbol.flags().none() ||
+      semantics::IsAllocatableOrPointer(symbol)) {
+    return false;
+  }
+
+  // It is default firstprivatizeable as far as the OpenMP specification is
+  // concerned if it is a non-array scalar type that has been implicitly
+  // captured in a target region
+  const auto *type{symbol.GetType()};
+  if ((!symbol.GetShape() || symbol.GetShape()->empty()) &&
+      (type->category() ==
+              Fortran::semantics::DeclTypeSpec::Category::Numeric ||
+          type->category() ==
+              Fortran::semantics::DeclTypeSpec::Category::Logical ||
+          type->category() ==
+              Fortran::semantics::DeclTypeSpec::Category::Character)) {
+    return true;
+  }
+  return false;
+}
+
 void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
   if (!IsPrivatizable(symbol)) {
     return;
@@ -2444,7 +2473,15 @@ void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
       useLastDeclSymbol();
       PRINT_IMPLICIT_RULE("3) enclosing context");
     } else if (targetDir) {
-      // TODO 4) not mapped target variable -> firstprivate
+      // 4) not mapped target variable  -> firstprivate
+      //    - i.e. implicit, but meets OpenMP specification rules for
+      //    firstprivate "promotion"
+      if (enableDelayedPrivatizationStaging && symbol &&
+          IsTargetCaptureImplicitlyFirstPrivatizeable(*symbol, prevDSA)) {
+        prevDSA.set(Symbol::Flag::OmpImplicit);
+        prevDSA.set(Symbol::Flag::OmpFirstPrivate);
+        makeSymbol(prevDSA);
+      }
       dsa = prevDSA;
     } else if (taskGenDir) {
       // TODO 5) dummy arg in orphaned taskgen construct -> firstprivate
