@@ -171,7 +171,7 @@ public:
   const DeclTypeSpec &MakeNumericType(TypeCategory, int kind = 0);
   const DeclTypeSpec &MakeLogicalType(int kind = 0);
 
-  size_t maxErrors() const { return maxErrors_; }
+  std::size_t maxErrors() const { return maxErrors_; }
 
   bool AnyFatalError() const;
 
@@ -330,7 +330,7 @@ private:
   Scope *currentHermeticModuleFileScope_{nullptr};
   ScopeIndex scopeIndex_;
   parser::Messages messages_;
-  size_t maxErrors_{0};
+  std::size_t maxErrors_{0};
   evaluate::FoldingContext foldingContext_;
   ConstructStack constructStack_;
   struct IndexVarInfo {

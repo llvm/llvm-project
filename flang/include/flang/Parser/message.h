@@ -355,7 +355,7 @@ public:
   void Emit(llvm::raw_ostream &, const AllCookedSources &,
       bool echoSourceLines = true,
       const common::LanguageFeatureControl *hintFlags = nullptr,
-      size_t maxErrorsToEmit = 0) const;
+      std::size_t maxErrorsToEmit = 0) const;
   void AttachTo(Message &, std::optional<Severity> = std::nullopt);
   bool AnyFatalError() const;
 
