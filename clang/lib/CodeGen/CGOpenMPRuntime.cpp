@@ -8126,16 +8126,10 @@ struct AttachInfo {
 
 static AttachInfo findAttachComponent(
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components) {
-               ->isAnyPointerType())
-        return false;
-      BaseExpr = OASE->getBase();
+
   const auto *Begin = Components.begin();
   const auto *End = Components.end();
-               .getCanonicalType()
-               ->isAnyPointerType())
-        return false;
-      BaseExpr = ASE->getBase();
-    } else {
+
   for (const auto *I = Begin; I != End; ++I) {
     // Check if current component is an array section or subscript
     const Expr *CurrentExpr = I->getAssociatedExpression();
@@ -8143,29 +8137,9 @@ static AttachInfo findAttachComponent(
       break;
     }
 
-    // For something like p->s[1].q[10], the pointee should be "p->s[1].q",
-    // while base-ptr would be p.
-    const auto *ME = dyn_cast<MemberExpr>(CurrentExpr);
-    if (ME) {
-            dyn_cast<DeclRefExpr>(BaseExpr->IgnoreParenImpCasts())) {
-      if (!ME->isArrow()) {
-        // Check that the original declaration is a single-level pointer, not
-        PreviousMemberExpr = CurrentExpr;  // Track this as potential PteeExpr
-        continue;
-      }
-    }
-    return false;
-    const auto *OASE = dyn_cast<ArraySectionExpr>(CurrentExpr);
-    const auto *ASE = dyn_cast<ArraySubscriptExpr>(CurrentExpr);
-
-    if (!OASE && !ASE && !ME) {
-      break;
-    }
-
     // Check if the next component (in forward direction) has a pointer type
     const auto *NextI = std::next(I);
     if (NextI == End) {
-      // Check if the next component (in forward direction) has a pointer type
       break;
     }
 
@@ -8182,10 +8156,6 @@ static AttachInfo findAttachComponent(
    // Stop if the next component is a pointer type - this means we found our component
    if (!NextType->isPointerType())
      continue;
-
-      llvm::errs() << "DEBUG findAttachComponent: Next component not pointer type, continuing\n";
-    }
-  }
 
    // Get the pointer expression (NextRI) and use the candidate PteeExpr
    const Expr *BasePtrExpr = NextI->getAssociatedExpression();
