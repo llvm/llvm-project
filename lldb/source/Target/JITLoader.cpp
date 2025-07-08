@@ -30,3 +30,8 @@ void JITLoader::LoadPlugins(Process *process, JITLoaderList &list) {
 JITLoader::JITLoader(Process *process) : m_process(process) {}
 
 JITLoader::~JITLoader() = default;
+
+bool JITLoader::ResolveLoadAddress(addr_t load_addr, Address &addr) {
+  addr.Clear();
+  return false;
+}

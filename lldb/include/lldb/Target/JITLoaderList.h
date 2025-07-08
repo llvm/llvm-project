@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "lldb/lldb-forward.h"
+#include "lldb/lldb-types.h"
 
 namespace lldb_private {
 
@@ -37,6 +38,10 @@ public:
   void DidAttach();
 
   void ModulesDidLoad(ModuleList &module_list);
+
+  /// Called when the debugger needs to resolve an address that might be
+  /// know to the jit.
+  bool ResolveLoadAddress(lldb::addr_t load_addr, Address &addr);
 
 private:
   std::vector<lldb::JITLoaderSP> m_jit_loaders_vec;

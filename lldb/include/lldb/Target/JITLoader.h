@@ -58,6 +58,10 @@ public:
   /// probed for JIT entry point hooks.
   virtual void ModulesDidLoad(lldb_private::ModuleList &module_list) = 0;
 
+  /// Called when the debugger needs to resolve an address that might be
+  /// know to the jit.
+  virtual bool ResolveLoadAddress(lldb::addr_t load_addr, Address &addr);
+
 protected:
   // Member variables.
   Process *m_process;

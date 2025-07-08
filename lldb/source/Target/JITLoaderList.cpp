@@ -51,3 +51,11 @@ void JITLoaderList::ModulesDidLoad(ModuleList &module_list) {
   for (auto const &jit_loader : m_jit_loaders_vec)
     jit_loader->ModulesDidLoad(module_list);
 }
+
+bool JITLoaderList::ResolveLoadAddress(lldb::addr_t load_addr, Address &addr) {
+  std::lock_guard<std::recursive_mutex> guard(m_jit_loaders_mutex);
+  for (auto const &jit_loader : m_jit_loaders_vec)
+    if (jit_loader->ResolveLoadAddress(load_addr, addr))
+      return true;
+  return false;
+}
