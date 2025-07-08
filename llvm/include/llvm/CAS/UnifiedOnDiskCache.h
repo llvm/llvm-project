@@ -155,6 +155,8 @@ public:
 
   Error validateActionCache();
 
+  OnDiskGraphDB *getUpstreamGraphDB() const { return UpstreamGraphDB; }
+
 private:
   UnifiedOnDiskCache();
 

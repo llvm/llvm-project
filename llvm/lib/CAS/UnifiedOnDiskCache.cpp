@@ -170,8 +170,6 @@ Error UnifiedOnDiskCache::validateActionCache() {
     };
     if (ID.getOpaqueData() == 0)
       return formatError("zero is not a valid ref");
-    if (!PrimaryGraphDB->containsObject(ID))
-      return formatError("cas does not contain ref");
     return Error::success();
   };
   if (Error E = PrimaryKVDB->validate(ValidateRef))
