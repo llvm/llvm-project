@@ -368,6 +368,8 @@ BUGTYPE_PROVIDER(MismatchedDealloc, "Bad deallocator")
 BUGTYPE_PROVIDER(OffsetFree, "Offset free")
 BUGTYPE_PROVIDER(UseZeroAllocated, "Use of zero allocated")
 
+#undef BUGTYPE_PROVIDER
+
 template <typename... BT_PROVIDERS>
 struct DynMemFrontend : virtual public CheckerFrontend, public BT_PROVIDERS... {
   template <typename T> const T *getAs() const {
