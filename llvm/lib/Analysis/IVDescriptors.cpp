@@ -722,11 +722,10 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
 
     // Keep the minimum (FindLast) or maximum (FindFirst) value of the
     // recurrence type as the sentinel value. The maximum acceptable range for
-    // the induction variable, called the valid range, will be defined as
-    //   [<sentinel value> + 1, <sentinel value>)
-    // where <sentinel value> is [Signed|Unsigned]Min(<recurrence type>) for
-    // FindLastIV or [Signed|Unsigned]Max(<recurrence type>) for FindFirstIV,
-    // noting that this is a wrapped range since Start > End.
+    // the induction variable, called the valid range will exclude <sentinel
+    // value>, where <sentinel value> is [Signed|Unsigned]Min(<recurrence type>)
+    // for FindLastIV or [Signed|Unsigned]Max(<recurrence type>) for
+    // FindFirstIV.
     // TODO: This range restriction can be lifted by adding an additional
     // virtual OR reduction.
     auto CheckRange = [&](bool IsSigned) {
@@ -739,9 +738,13 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
                                   : APInt::getMinValue(NumBits);
         ValidRange = ConstantRange::getNonEmpty(Sentinel + 1, Sentinel);
       } else {
-        APInt Sentinel = IsSigned ? APInt::getSignedMaxValue(NumBits)
-                                  : APInt::getMaxValue(NumBits);
-        ValidRange = ConstantRange::getNonEmpty(Sentinel + 1, Sentinel);
+        if (IsSigned)
+          ValidRange =
+              ConstantRange::getNonEmpty(APInt::getSignedMinValue(NumBits),
+                                         APInt::getSignedMaxValue(NumBits) - 1);
+        else
+          ValidRange = ConstantRange::getNonEmpty(
+              APInt::getMinValue(NumBits), APInt::getMaxValue(NumBits) - 1);
       }
 
       LLVM_DEBUG(dbgs() << "LV: "

@@ -1142,41 +1142,46 @@ exit:                                             ; preds = %loop
 
 ; The unsigned sentinel value for decreasing-IV vectorization is ULONG_MAX,
 ; and since the IV hits this value, it is impossible to vectorize this case.
-define i64 @not_vectorized_select_decreasing_induction_icmp_iv_out_of_bound(ptr %a) {
+; This test includes both signed and unsigned sentinel values.
+define i64 @not_vectorized_select_decreasing_induction_icmp_iv_out_of_bound(ptr %a, ptr %b, i64 %rdx.start) {
 ; CHECK-LABEL: define i64 @not_vectorized_select_decreasing_induction_icmp_iv_out_of_bound(
-; CHECK-SAME: ptr [[A:%.*]]) {
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[RDX_START:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ -1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RDX:%.*]] = phi i64 [ 331, %[[ENTRY]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[GEP_A_IV:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[LD_A:%.*]] = load i64, ptr [[GEP_A_IV]], align 8
-; CHECK-NEXT:    [[CMP_A_3:%.*]] = icmp sgt i64 [[LD_A]], 3
-; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP_A_3]], i64 [[IV]], i64 [[RDX]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
-; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[IV]], 0
+; CHECK-NEXT:    [[RDX:%.*]] = phi i64 [ [[RDX_START]], %[[ENTRY]] ], [ [[COND:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], -1
+; CHECK-NEXT:    [[GEP_A_IV:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[LD_A:%.*]] = load i8, ptr [[GEP_A_IV]], align 1
+; CHECK-NEXT:    [[GEP_B_IV:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[LD_B:%.*]] = load i8, ptr [[GEP_B_IV]], align 1
+; CHECK-NEXT:    [[CMP_A_B:%.*]] = icmp sgt i8 [[LD_A]], [[LD_B]]
+; CHECK-NEXT:    [[COND]] = select i1 [[CMP_A_B]], i64 [[IV_NEXT]], i64 [[RDX]]
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi i64 [ [[SPEC_SELECT]], %[[LOOP]] ]
-; CHECK-NEXT:    ret i64 [[SPEC_SELECT_LCSSA]]
+; CHECK-NEXT:    [[COND_LCSSA:%.*]] = phi i64 [ [[COND]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i64 [[COND_LCSSA]]
 ;
 entry:
   br label %loop
 
-loop:                                             ; preds = %entry, %loop
+loop:
   %iv = phi i64 [ -1, %entry ], [ %iv.next, %loop ]
-  %rdx = phi i64 [ 331, %entry ], [ %spec.select, %loop ]
-  %gep.a.iv = getelementptr inbounds i64, ptr %a, i64 %iv
-  %ld.a = load i64, ptr %gep.a.iv, align 8
-  %cmp.a.3 = icmp sgt i64 %ld.a, 3
-  %spec.select = select i1 %cmp.a.3, i64 %iv, i64 %rdx
-  %iv.next = add nsw i64 %iv, -1
-  %exit.cond = icmp eq i64 %iv, 0
+  %rdx = phi i64 [ %rdx.start, %entry ], [ %cond, %loop ]
+  %iv.next = add i64 %iv, -1
+  %gep.a.iv = getelementptr inbounds i8, ptr %a, i64 %iv.next
+  %ld.a = load i8, ptr %gep.a.iv, align 1
+  %gep.b.iv = getelementptr inbounds i8, ptr %b, i64 %iv.next
+  %ld.b = load i8, ptr %gep.b.iv, align 1
+  %cmp.a.b = icmp sgt i8 %ld.a, %ld.b
+  %cond = select i1 %cmp.a.b, i64 %iv.next, i64 %rdx
+  %exit.cond = icmp eq i64 %iv.next, 0
   br i1 %exit.cond, label %exit, label %loop
 
-exit:                                             ; preds = %loop
-  ret i64 %spec.select
+exit:
+  ret i64 %cond
 }
 
 define i64 @not_vectorized_select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64 %rdx.start, i64 %n) {
