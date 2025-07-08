@@ -497,12 +497,12 @@ static std::optional<APInt> tryIntoAPInt(const SCEV *S) {
 /// Expr is divisible by \p ElementSize. Each step recurrence is stored in \p
 /// Steps after divided by \p ElementSize.
 static bool collectConstantAbsSteps(ScalarEvolution &SE, const SCEV *Expr,
-                                    SmallVectorImpl<unsigned> &Steps,
-                                    unsigned ElementSize) {
+                                    SmallVectorImpl<uint64_t> &Steps,
+                                    uint64_t ElementSize) {
   // End of recursion. The constant value also must be a multiple of
   // ElementSize.
   if (const auto *Const = dyn_cast<SCEVConstant>(Expr)) {
-    const unsigned Mod = Const->getAPInt().urem(ElementSize);
+    const uint64_t Mod = Const->getAPInt().urem(ElementSize);
     return Mod == 0;
   }
 
@@ -522,7 +522,7 @@ static bool collectConstantAbsSteps(ScalarEvolution &SE, const SCEV *Expr,
     return false;
 
   // Bail out when the step is too large.
-  std::optional<unsigned> StepVal = Q.tryZExtValue();
+  std::optional<uint64_t> StepVal = Q.tryZExtValue();
   if (!StepVal)
     return false;
 
@@ -531,7 +531,7 @@ static bool collectConstantAbsSteps(ScalarEvolution &SE, const SCEV *Expr,
 }
 
 bool llvm::findFixedSizeArrayDimensions(ScalarEvolution &SE, const SCEV *Expr,
-                                        SmallVectorImpl<unsigned> &Sizes,
+                                        SmallVectorImpl<uint64_t> &Sizes,
                                         const SCEV *ElementSize) {
   if (!ElementSize)
     return false;
@@ -540,7 +540,7 @@ bool llvm::findFixedSizeArrayDimensions(ScalarEvolution &SE, const SCEV *Expr,
   if (!ElementSizeAPInt || *ElementSizeAPInt == 0)
     return false;
 
-  std::optional<unsigned> ElementSizeConst = ElementSizeAPInt->tryZExtValue();
+  std::optional<uint64_t> ElementSizeConst = ElementSizeAPInt->tryZExtValue();
 
   // Early exit when ElementSize is not a positive constant.
   if (!ElementSizeConst)
@@ -578,7 +578,7 @@ bool llvm::findFixedSizeArrayDimensions(ScalarEvolution &SE, const SCEV *Expr,
   Sizes.back() = 1;
 
   for (unsigned I = 0; I + 1 < Sizes.size(); I++) {
-    unsigned PrevSize = Sizes[I + 1];
+    uint64_t PrevSize = Sizes[I + 1];
     if (Sizes[I] % PrevSize) {
       Sizes.clear();
       return false;
@@ -648,14 +648,14 @@ bool llvm::delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
                                      const SCEV *ElementSize) {
 
   // First step: find the fixed array size.
-  SmallVector<unsigned, 4> ConstSizes;
+  SmallVector<uint64_t, 4> ConstSizes;
   if (!findFixedSizeArrayDimensions(SE, Expr, ConstSizes, ElementSize)) {
     Sizes.clear();
     return false;
   }
 
   // Convert the constant size to SCEV.
-  for (unsigned Size : ConstSizes)
+  for (uint64_t Size : ConstSizes)
     Sizes.push_back(SE.getConstant(Expr->getType(), Size));
 
   // Second step: compute the access functions for each subscript.

@@ -115,7 +115,7 @@ void delinearize(ScalarEvolution &SE, const SCEV *Expr,
 /// Compute the dimensions of fixed size array from \Expr and save the results
 /// in \p Sizes.
 bool findFixedSizeArrayDimensions(ScalarEvolution &SE, const SCEV *Expr,
-                                  SmallVectorImpl<unsigned> &Sizes,
+                                  SmallVectorImpl<uint64_t> &Sizes,
                                   const SCEV *ElementSize);
 
 /// Split this SCEVAddRecExpr into two vectors of SCEVs representing the
