@@ -7405,7 +7405,7 @@ bool AArch64AsmParser::parseDirectiveLOH(StringRef IDVal, SMLoc Loc) {
   if (parseEOL())
     return true;
 
-  getStreamer().emitLOHDirective((MCLOHType)Kind, Args);
+  getStreamer().emitLOHDirective(Kind, Args);
   return false;
 }
 

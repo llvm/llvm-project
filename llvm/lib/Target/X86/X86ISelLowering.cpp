@@ -46003,20 +46003,6 @@ static bool detectExtMul(SelectionDAG &DAG, const SDValue &Mul, SDValue &Op0,
   return false;
 }
 
-// Given a ABS node, detect the following pattern:
-// (ABS (SUB (ZERO_EXTEND a), (ZERO_EXTEND b))).
-// This is useful as it is the input into a SAD pattern.
-static bool detectZextAbsDiff(SDValue Abs, SDValue &Op0, SDValue &Op1) {
-  using namespace SDPatternMatch;
-
-  // Check if the operands of the sub are zero-extended from vectors of i8.
-  return sd_match(
-      Abs,
-      m_Abs(m_Sub(
-          m_AllOf(m_Value(Op0), m_ZExt(m_SpecificVectorElementVT(MVT::i8))),
-          m_AllOf(m_Value(Op1), m_ZExt(m_SpecificVectorElementVT(MVT::i8))))));
-}
-
 static SDValue createVPDPBUSD(SelectionDAG &DAG, SDValue LHS, SDValue RHS,
                               unsigned &LogBias, const SDLoc &DL,
                               const X86Subtarget &Subtarget) {
@@ -46379,6 +46365,8 @@ static SDValue combineVPDPBUSDPattern(SDNode *Extract, SelectionDAG &DAG,
 
 static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
+
   // PSADBW is only supported on SSE2 and up.
   if (!Subtarget.hasSSE2())
     return SDValue();
@@ -46399,8 +46387,7 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
   if (!Root)
     return SDValue();
 
-  // The operand is expected to be zero extended from i8
-  // (verified in detectZextAbsDiff).
+  // The operand is expected to be zero extended from i8.
   // In order to convert to i64 and above, additional any/zero/sign
   // extend is expected.
   // The zero extend from 32 bit has no mathematical effect on the result.
@@ -46412,9 +46399,15 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
       Root.getOpcode() == ISD::ANY_EXTEND)
     Root = Root.getOperand(0);
 
-  // Check whether we have an abs-diff pattern feeding into the select.
+  // Check whether we have an abdu pattern.
+  // TODO: Add handling for ISD::ABDU.
   SDValue Zext0, Zext1;
-  if (!detectZextAbsDiff(Root, Zext0, Zext1))
+  if (!sd_match(
+          Root,
+          m_Abs(m_Sub(m_AllOf(m_Value(Zext0),
+                              m_ZExt(m_SpecificVectorElementVT(MVT::i8))),
+                      m_AllOf(m_Value(Zext1),
+                              m_ZExt(m_SpecificVectorElementVT(MVT::i8)))))))
     return SDValue();
 
   // Create the SAD instruction.

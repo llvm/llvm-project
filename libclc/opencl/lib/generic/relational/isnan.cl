@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/relational/isnan.h>
 #include <clc/relational/clc_isnan.h>
 
 #define FUNCTION isnan
