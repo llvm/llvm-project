@@ -7513,7 +7513,9 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
       continue;
 
     if (!Seen.insert(BB).second) {
-      BBToSuccessorIndexes[BB].emplace_back(I);
+      auto It = BBToSuccessorIndexes.find(BB);
+      if (It != BBToSuccessorIndexes.end())
+        It->second.emplace_back(I);
       continue;
     }
 
