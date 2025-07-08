@@ -96,6 +96,10 @@ TEST(IntrinsicNameLookup, NonNullterminatedStringRef) {
   // Make an intrinsic name "llvm.memcpy.inline" on the heap.
   std::string Name = "llvm.memcpy.inline";
   assert(Name.size() == 18);
+  // Create a StringRef backed by heap allocated memory such that OOB access
+  // in that StringRef can be flagged by asan. Here, the String `S` is of size
+  // 18, and backed by a heap allocated buffer `Data`, so access to S[18] will
+  // be flagged bby asan.
   std::unique_ptr<char[]> Data = std::make_unique<char[]>(Name.size());
   std::strncpy(Data.get(), Name.data(), Name.size());
   StringRef S(Data.get(), Name.size());
