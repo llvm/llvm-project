@@ -591,15 +591,19 @@ public:
 
   // Entry of the reader to parse multiple perf traces
   virtual void parsePerfTraces() = 0;
+
+  // Parse the <ip, vtable-data-symbol> from the data access perf trace file,
+  // and accummuate the data access count for each <ip, data-symbol> pair.
+  void parseDataAccessPerfTraces(
+      StringRef DataAccessPerfFile,
+      std::optional<int32_t> PIDFilter = std::nullopt);
+
   void recordDataAccessCountRef(
       const DenseMap<uint64_t, DenseMap<StringRef, uint64_t>> &In) {
     DataAccessProfInfo.clear();
     for (const auto &[IpAddr, DataCount] : In) {
       for (const auto [DataAddr, Count] : DataCount) {
-        uint64_t CanonicalIp = Binary->canonicalizeVirtualAddress(IpAddr);
-        errs() << "Canonicalize IP: " << format("%llx", IpAddr) << " to "
-               << format("%llx", CanonicalIp) << "\n";
-        DataAccessProfInfo[{CanonicalIp, DataAddr}] += Count;
+        DataAccessProfInfo[{IpAddr, DataAddr}] += Count;
       }
     }
 
@@ -637,6 +641,12 @@ public:
 
   // Entry of the reader to parse multiple perf traces
   void parsePerfTraces() override;
+
+  // Parse a single line of a PERF_RECORD_MMAP event looking for a
+  // mapping between the binary name and its memory layout.
+  static bool extractMMapEventForBinary(ProfiledBinary *Binary, StringRef Line,
+                                        MMapEvent &MMap);
+
   // Generate perf script from perf data
   static PerfInputFile convertPerfDataToTrace(ProfiledBinary *Binary,
                                               bool SkipPID, PerfInputFile &File,
@@ -654,10 +664,7 @@ protected:
   static bool isLBRSample(StringRef Line);
   // Check whether a given line is MMAP event
   static bool isMMapEvent(StringRef Line);
-  // Parse a single line of a PERF_RECORD_MMAP event looking for a
-  // mapping between the binary name and its memory layout.
-  static bool extractMMapEventForBinary(ProfiledBinary *Binary, StringRef Line,
-                                        MMapEvent &MMap);
+
   // Update base address based on mmap events
   void updateBinaryAddress(const MMapEvent &Event);
   // Parse mmap event and update binary address

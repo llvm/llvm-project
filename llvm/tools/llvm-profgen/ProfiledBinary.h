@@ -384,8 +384,8 @@ public:
   ProfiledBinary(const StringRef ExeBinPath, const StringRef DebugBinPath);
   ~ProfiledBinary();
 
-    /// Symbolize a given address as data and return a FunctionId.
-  /// Strings are owned by this ProfiledBinary object.
+  /// Symbolize an address and return the symbol name. The returned StringRef is
+  /// owned by this ProfiledBinary object.
   StringRef symbolizeDataAddress(uint64_t Address);
 
   void decodePseudoProbe();
@@ -393,11 +393,7 @@ public:
   StringRef getPath() const { return Path; }
   StringRef getName() const { return llvm::sys::path::filename(Path); }
   uint64_t getBaseAddress() const { return BaseAddress; }
-  void setBaseAddress(uint64_t Address) {
-    errs() << "Set base address to " << format("0x%llx", Address)
-           << " for binary: " << getName() << "\n";
-    BaseAddress = Address;
-  }
+  void setBaseAddress(uint64_t Address) { BaseAddress = Address; }
 
   bool isCOFF() const { return IsCOFF; }
 

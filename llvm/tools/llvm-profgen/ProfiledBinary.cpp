@@ -60,10 +60,6 @@ static cl::opt<bool>
     KernelBinary("kernel",
                  cl::desc("Generate the profile for Linux kernel binary."));
 
-static cl::opt<bool> RecordDataSegment("record-data-segment", cl::init(false),
-                                       cl::desc("Record data segment size "
-                                                "in the profile."));
-
 extern cl::opt<bool> ShowDetailedWarning;
 extern cl::opt<bool> InferMissingFrames;
 

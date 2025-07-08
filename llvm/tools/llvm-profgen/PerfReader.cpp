@@ -6,12 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 #include "PerfReader.h"
+#include "ErrorHandling.h"
+#include "PerfReader.h"
 #include "ProfileGenerator.h"
+#include "ProfiledBinary.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LineIterator.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/ToolOutputFile.h"
+
+#include <regex>
 
 #define DEBUG_TYPE "perf-reader"
 
@@ -368,6 +375,80 @@ PerfReaderBase::create(ProfiledBinary *Binary, PerfInputFile &PerfInput,
   }
 
   return PerfReader;
+}
+
+void PerfReaderBase::parseDataAccessPerfTraces(
+    StringRef DataAccessPerfTraceFile, std::optional<int32_t> PIDFilter) {
+  std::regex logRegex(
+      R"(^.*?PERF_RECORD_SAMPLE\(.*?\):\s*(\d+)\/(\d+):\s*(0x[0-9a-fA-F]+)\s+period:\s*\d+\s+addr:\s*(0x[0-9a-fA-F]+)$)");
+
+  auto BufferOrErr = MemoryBuffer::getFile(DataAccessPerfTraceFile);
+  std::error_code EC = BufferOrErr.getError();
+  if (EC)
+    exitWithError("Failed to open perf trace file: " + DataAccessPerfTraceFile);
+
+  DenseMap<uint64_t, DenseMap<StringRef, uint64_t>> IpDataAccessCount;
+
+  assert(!SampleCounters.empty() && "Sample counters should not be empty!");
+  SampleCounter &Counter = SampleCounters.begin()->second;
+  line_iterator LineIt(*BufferOrErr.get(), true);
+  for (; !LineIt.is_at_eof(); ++LineIt) {
+    StringRef Line = *LineIt;
+
+    // Parse MMAP event from perf trace.
+    // Parse MMAP event from perf trace.
+    // Construct a binary from the binary file path.
+    MMapEvent MMap;
+    if (Line.contains("PERF_RECORD_MMAP2")) {
+      if (PerfScriptReader::extractMMapEventForBinary(Binary, Line, MMap)) {
+        if (!MMap.MemProtectionFlag.contains("x")) {
+          outs() << "PerfReader.cpp:469\tMMap: " << MMap.BinaryPath
+                 << " loaded at " << format("0x%" PRIx64, MMap.Address)
+                 << " with size " << format("0x%" PRIx64, MMap.Size)
+                 << " and offset " << format("0x%" PRIx64, MMap.Offset) << "\t"
+                 << "Protection: " << MMap.MemProtectionFlag << "\n";
+          Binary->addMMapNonTextEvent(MMap);
+        }
+      }
+      continue;
+    }
+
+    if (!Line.contains("PERF_RECORD_SAMPLE")) {
+      // Skip lines that do not contain "PERF_RECORD_SAMPLE".
+      continue;
+    }
+
+    std::smatch matches;
+    const std::string LineStr = Line.str();
+
+    if (std::regex_search(LineStr.begin(), LineStr.end(), matches, logRegex)) {
+      if (matches.size() != 5)
+        continue;
+
+      uint64_t DataAddress = std::stoull(matches[4].str(), nullptr, 16);
+
+      // Skip addresses out of the specified PT_LOAD section for data.
+      if (!Binary->InRange(DataAddress))
+        continue;
+
+      int32_t PID = std::stoi(matches[1].str());
+      if (PIDFilter && *PIDFilter != PID) {
+        continue;
+      }
+
+      uint64_t IP = std::stoull(matches[3].str(), nullptr, 16);
+
+      uint64_t DataAddressCanonicalized =
+          Binary->CanonicalizeNonTextAddress(DataAddress);
+
+      StringRef DataSymbol =
+          Binary->symbolizeDataAddress(DataAddressCanonicalized);
+      if (DataSymbol.starts_with("_ZTV")) {
+        Counter.recordDataAccessCount(Binary->canonicalizeVirtualAddress(IP),
+                                      DataSymbol, 1);
+      }
+    }
+  }
 }
 
 PerfInputFile
