@@ -530,9 +530,9 @@ static bool collectConstantAbsSteps(ScalarEvolution &SE, const SCEV *Expr,
   return collectConstantAbsSteps(SE, AR->getStart(), Steps, ElementSize);
 }
 
-static bool findFixedSizeArrayDimensions(ScalarEvolution &SE, const SCEV *Expr,
-                                         SmallVectorImpl<unsigned> &Sizes,
-                                         const SCEV *ElementSize) {
+bool llvm::findFixedSizeArrayDimensions(ScalarEvolution &SE, const SCEV *Expr,
+                                        SmallVectorImpl<unsigned> &Sizes,
+                                        const SCEV *ElementSize) {
   if (!ElementSize)
     return false;
 
