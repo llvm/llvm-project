@@ -65,6 +65,7 @@ class RegAllocBase {
 
 protected:
   const TargetRegisterInfo *TRI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   VirtRegMap *VRM = nullptr;
   LiveIntervals *LIS = nullptr;
