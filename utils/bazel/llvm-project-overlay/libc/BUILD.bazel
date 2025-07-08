@@ -2097,14 +2097,6 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_math_exp_float16_constants",
-    hdrs = ["src/__support/math/exp_float16_constants.h"],
-    deps = [
-        ":__support_FPUtil_except_value_utils"
-    ],
-)
-
-libc_support_library(
     name = "__support_math_expf16",
     hdrs = ["src/__support/math/expf16.h"],
     deps = [

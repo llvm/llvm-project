@@ -24,14 +24,6 @@ add_header_library(
 )
 
 add_header_library(
-  exp_float16_constants
-  HDRS
-    exp_float16_constants.h
-  DEPENDS
-    libc.src.__support.FPUtil.except_value_utils
-)
-
-add_header_library(
   expf16
   HDRS
     expf16.h
