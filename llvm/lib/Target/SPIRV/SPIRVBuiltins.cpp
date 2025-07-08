@@ -1132,7 +1132,33 @@ static bool generateExtInst(const SPIRV::IncomingCall *Call,
   const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
   uint32_t Number =
       SPIRV::lookupExtendedBuiltin(Builtin->Name, Builtin->Set)->Number;
-
+  if (Builtin->Name == "printf") {
+    const SPIRVType *PtrType = GR->getSPIRVTypeForVReg(Call->Arguments[0]);
+    if (PtrType) {
+      MachineOperand ASOp = PtrType->getOperand(1);
+      if (ASOp.isImm()) {
+        unsigned AddrSpace = ASOp.getImm();
+        if (AddrSpace != SPIRV::StorageClass::UniformConstant) {
+          MachineFunction &MF = MIRBuilder.getMF();
+          const auto *ST =
+              static_cast<const SPIRVSubtarget *>(&MF.getSubtarget());
+          if (!ST->canUseExtension(
+                  SPIRV::Extension::
+                      SPV_EXT_relaxed_printf_string_address_space)) {
+            report_fatal_error(
+                "Either SPV_EXT_relaxed_printf_string_address_space extension "
+                "should be allowed to translate this module, because this LLVM "
+                "module contains the printf function with format string, whose "
+                "address space is not equal to 2 (constant).",
+                false);
+          }
+          MIRBuilder.buildInstr(SPIRV::OpExtension)
+              .addImm(SPIRV::Extension::
+                          SPV_EXT_relaxed_printf_string_address_space);
+        }
+      }
+    }
+  }
   // Build extended instruction.
   auto MIB =
       MIRBuilder.buildInstr(SPIRV::OpExtInst)
