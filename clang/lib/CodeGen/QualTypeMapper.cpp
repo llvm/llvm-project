@@ -210,6 +210,8 @@ const llvm::abi::StructType *
 QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
   const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(RD);
   SmallVector<llvm::abi::FieldInfo, 16> Fields;
+  SmallVector<llvm::abi::FieldInfo, 8> BaseClasses;
+  SmallVector<llvm::abi::FieldInfo, 8> VirtualBaseClasses;
 
   if (RD->isPolymorphic()) {
     const llvm::abi::Type *VtablePointer =
@@ -229,6 +231,7 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
         8;
 
     Fields.emplace_back(BaseType, BaseOffset);
+    BaseClasses.emplace_back(BaseType, BaseOffset);
   }
 
   for (const auto &VBase : RD->vbases()) {
@@ -243,6 +246,7 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
         8;
 
     Fields.emplace_back(VBaseType, VBaseOffset);
+    VirtualBaseClasses.emplace_back(VBaseType, VBaseOffset);
   }
   computeFieldInfo(RD, Fields, Layout);
 
@@ -255,7 +259,26 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
       llvm::TypeSize::getFixed(Layout.getSize().getQuantity() * 8);
   llvm::Align Alignment = llvm::Align(Layout.getAlignment().getQuantity());
 
-  return Builder.getStructType(Fields, Size, Alignment);
+  bool HasNonTrivialCopy = !RD->hasSimpleCopyConstructor();
+  bool HasNonTrivialDtor = !RD->hasSimpleDestructor();
+  bool HasFlexibleArrayMember = false;
+  bool HasUnalignedFields = false;
+
+  unsigned FieldIndex = 0;
+  for (const auto *FD : RD->fields()) {
+    uint64_t FieldOffset = Layout.getFieldOffset(FieldIndex);
+    uint64_t ExpectedAlignment = ASTCtx.getTypeAlign(FD->getType());
+    if (FieldOffset % ExpectedAlignment != 0) {
+      HasUnalignedFields = true;
+      break;
+    }
+    ++FieldIndex;
+  }
+
+  return Builder.getStructType(
+      Fields, Size, Alignment, llvm::abi::StructPacking::Default, BaseClasses,
+      VirtualBaseClasses, true, RD->isPolymorphic(), HasNonTrivialCopy,
+      HasNonTrivialDtor, HasFlexibleArrayMember, HasUnalignedFields);
 }
 
 /// Converts reference types to pointer representations in the ABI.
