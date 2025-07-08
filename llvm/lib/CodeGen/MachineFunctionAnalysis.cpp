@@ -47,7 +47,7 @@ MachineFunctionAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
 }
 
 PreservedAnalyses FreeMachineFunctionPass::run(Function &F,
-                                           FunctionAnalysisManager &FAM) {
+                                               FunctionAnalysisManager &FAM) {
   FAM.clearAnalysis<MachineFunctionAnalysis>(F);
   return PreservedAnalyses::all();
 }
