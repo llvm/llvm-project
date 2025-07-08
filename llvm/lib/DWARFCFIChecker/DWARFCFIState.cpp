@@ -62,10 +62,22 @@ dwarf::CFIProgram DWARFCFIState::convert(MCCFIInstruction Directive) {
     CFIP.addInstruction(dwarf::DW_CFA_same_value, Directive.getRegister());
     break;
   case MCCFIInstruction::OpRememberState:
-    CFIP.addInstruction(dwarf::DW_CFA_remember_state);
+    // TODO: remember state is not supported yet, the following line does not
+    // work:
+    // CFIP.addInstruction(dwarf::DW_CFA_remember_state);
+    // The reason is that `parseRows` expects .cfi_remember_state and
+    // .cfi_restore_state to be in the same CFIProgram.
+    Context->reportWarning(Directive.getLoc(),
+                           "this directive is not supported, ignoring it");
     break;
   case MCCFIInstruction::OpRestoreState:
-    CFIP.addInstruction(dwarf::DW_CFA_restore_state);
+    // TODO: restore state is not supported yet, the following line does not
+    // work:
+    // CFIP.addInstruction(dwarf::DW_CFA_restore_state);
+    // The reason is that `parseRows` expects .cfi_remember_state and
+    // .cfi_restore_state to be in the same CFIProgram.
+    Context->reportWarning(Directive.getLoc(),
+                           "this directive is not supported, ignoring it");
     break;
   case MCCFIInstruction::OpOffset:
     CFIP.addInstruction(dwarf::DW_CFA_offset, Directive.getRegister(),
