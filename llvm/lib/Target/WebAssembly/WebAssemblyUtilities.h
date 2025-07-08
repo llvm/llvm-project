@@ -15,10 +15,6 @@
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_UTILS_WEBASSEMBLYUTILITIES_H
 #define LLVM_LIB_TARGET_WEBASSEMBLY_UTILS_WEBASSEMBLYUTILITIES_H
 
-#include "llvm/ADT/APInt.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/BinaryFormat/Wasm.h"
-#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/CommandLine.h"
 
 namespace llvm {
@@ -76,9 +72,6 @@ bool canLowerMultivalueReturn(const WebAssemblySubtarget *Subtarget);
 /// i.e., not indirectly via a pointer parameter that points to the value in
 /// memory.
 bool canLowerReturn(size_t ResultSize, const WebAssemblySubtarget *Subtarget);
-
-APInt encodeFunctionSignature(SmallVector<MVT, 4> &Params,
-                              SmallVector<MVT, 1> &Returns);
 
 } // end namespace WebAssembly
 
