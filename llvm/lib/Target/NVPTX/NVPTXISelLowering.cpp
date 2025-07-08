@@ -1380,7 +1380,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // After all vararg is processed, 'VAOffset' holds the size of the
   // vararg byte array.
 
-  SDValue VADeclareParam;                 // vararg byte array
+  SDValue VADeclareParam = SDValue();           // vararg byte array
   const unsigned FirstVAArg = CLI.NumFixedArgs; // position of first variadic
   unsigned VAOffset = 0;                  // current offset in the param array
 
@@ -1583,8 +1583,6 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       VAOffset += TypeSize;
   }
 
-  GlobalAddressSDNode *Func = dyn_cast<GlobalAddressSDNode>(Callee.getNode());
-
   // Handle Result
   if (!Ins.empty()) {
     const SDValue RetSymbol = DAG.getExternalSymbol("retval0", MVT::i32);
@@ -1597,10 +1595,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     }
   }
 
-  const bool HasVAArgs = CLI.IsVarArg && (CLI.Args.size() > CLI.NumFixedArgs);
   // Set the size of the vararg param byte array if the callee is a variadic
   // function and the variadic part is not empty.
-  if (HasVAArgs) {
+  if (VADeclareParam) {
     SDValue DeclareParamOps[] = {VADeclareParam.getOperand(0),
                                  VADeclareParam.getOperand(1),
                                  VADeclareParam.getOperand(2), GetI32(VAOffset),
@@ -1609,6 +1606,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                     VADeclareParam->getVTList(), DeclareParamOps);
   }
 
+  const auto *Func = dyn_cast<GlobalAddressSDNode>(Callee.getNode());
   // If the type of the callsite does not match that of the function, convert
   // the callsite to an indirect call.
   const bool ConvertToIndirectCall = shouldConvertToIndirectCall(CB, Func);
@@ -1638,6 +1636,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // instruction.
     // The prototype is embedded in a string and put as the operand for a
     // CallPrototype SDNode which will print out to the value of the string.
+    const bool HasVAArgs = CLI.IsVarArg && (CLI.Args.size() > CLI.NumFixedArgs);
     std::string Proto =
         getPrototype(DL, RetTy, Args, CLI.Outs,
                      HasVAArgs ? std::optional(FirstVAArg) : std::nullopt, *CB,
@@ -5540,6 +5539,15 @@ static SDValue combineADDRSPACECAST(SDNode *N,
   return SDValue();
 }
 
+// During call lowering we wrap the return values in a ProxyReg node which
+// depend on the chain value produced by the completed call. This ensures that
+// the full call is emitted in cases where libcalls are used to legalize
+// operations. To improve the functioning of other DAG combines we pull all
+// operations we can through one of these nodes, ensuring that the ProxyReg
+// directly wraps a load. That is:
+//
+//  (ProxyReg (zext (load retval0)))  =>  (zext (ProxyReg (load retval0)))
+//
 static SDValue sinkProxyReg(SDValue R, SDValue Chain,
                             TargetLowering::DAGCombinerInfo &DCI) {
   switch (R.getOpcode()) {
@@ -5593,6 +5601,8 @@ static SDValue combineProxyReg(SDNode *N,
   SDValue Chain = N->getOperand(0);
   SDValue Reg = N->getOperand(1);
 
+  // If the ProxyReg is not wrapping a load, try to pull the operations through
+  // the ProxyReg.
   if (Reg.getOpcode() != ISD::LOAD) {
     if (SDValue V = sinkProxyReg(Reg, Chain, DCI))
       return V;
