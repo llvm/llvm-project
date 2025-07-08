@@ -1,4 +1,4 @@
-//===-- Implementation of frexpf128 function ------------------------------===//
+//===-- Shared frexpf128 function -------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/frexpf128.h"
+#ifndef LLVM_LIBC_SHARED_MATH_FREXPF128_H
+#define LLVM_LIBC_SHARED_MATH_FREXPF128_H
 
-#include "src/__support/math//frexpf128.h"
+#include "shared/libc_common.h"
+#include "src/__support/math/expf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float128, frexpf128, (float128 x, int *exp)) {
-  return math::frexpf128(x, exp);
-}
+using math::frexpf128;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_FREXPF128_H
