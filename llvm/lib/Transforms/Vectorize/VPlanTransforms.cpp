@@ -2187,7 +2187,11 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   // VPTypeAnalysis cache.
   SmallVector<VPRecipeBase *> ToErase;
 
-  // Fix-up first-order recurrences
+  // When unrolling splices may not use VPFirstOrderRecurrencePHIRecipes, so the
+  // below transformation will need to be fixed.
+  assert(!Plan.isUnrolled() && "Unrolling not supported with EVL tail folding.");
+
+  // Replace FirstOrderRecurrenceSplice with experimental_vp_splice intrinsics.
   VPValue *PrevEVL = nullptr;
   for (VPRecipeBase &PhiR : Header->phis()) {
     auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&PhiR);
@@ -2208,9 +2212,6 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
       Builder.setInsertPoint(Header, Header->getFirstNonPhi());
       PrevEVL = Builder.createScalarPhi({MaxEVL, &EVL}, DebugLoc(), "prev.evl");
     }
-
-    assert(!Plan.isUnrolled() && "When unrolled splices might not use "
-                                 "VPFirstOrederRecurrencePHIRecipe!");
 
     for (VPUser *User : FOR->users()) {
       auto *R = cast<VPRecipeBase>(User);
