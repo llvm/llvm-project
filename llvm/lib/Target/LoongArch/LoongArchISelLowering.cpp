@@ -2009,7 +2009,7 @@ static SDValue lowerVECTOR_SHUFFLE_XVSHUF(const SDLoc &DL, ArrayRef<int> Mask,
     if (*it < 0) // UNDEF
       MaskAlloc.push_back(DAG.getTargetConstant(0, DL, MVT::i64));
     else if ((*it >= 0 && *it < HalfSize) ||
-             (*it >= MaskSize && *it <= MaskSize + HalfSize)) {
+             (*it >= MaskSize && *it < MaskSize + HalfSize)) {
       int M = *it < HalfSize ? *it : *it - HalfSize;
       MaskAlloc.push_back(DAG.getTargetConstant(M, DL, MVT::i64));
     } else
@@ -2607,9 +2607,6 @@ SDValue LoongArchTargetLowering::lowerFRAMEADDR(SDValue Op,
 
 SDValue LoongArchTargetLowering::lowerRETURNADDR(SDValue Op,
                                                  SelectionDAG &DAG) const {
-  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
-
   // Currently only support lowering return address for current frame.
   if (Op.getConstantOperandVal(0) != 0) {
     DAG.getContext()->emitError(

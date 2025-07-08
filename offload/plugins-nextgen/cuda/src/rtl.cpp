@@ -160,6 +160,9 @@ struct CUDAKernelTy : public GenericKernelTy {
 private:
   /// The CUDA kernel function to execute.
   CUfunction Func;
+  /// The maximum amount of dynamic shared memory per thread group. By default,
+  /// this is set to 48 KB.
+  mutable uint32_t MaxDynCGroupMemLimit = 49152;
 };
 
 /// Class wrapping a CUDA stream reference. These are the objects handled by the
@@ -930,13 +933,17 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     CUresult Res = cuDriverGetVersion(&TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("CUDA Driver Version", TmpInt);
+      // For consistency with other drivers, store the version as a string
+      // rather than an integer
+      Info.add("CUDA Driver Version", std::to_string(TmpInt));
 
     Info.add("CUDA OpenMP Device Number", DeviceId);
 
     Res = cuDeviceGetName(TmpChar, 1000, Device);
     if (Res == CUDA_SUCCESS)
       Info.add("Device Name", TmpChar);
+
+    Info.add("Vendor Name", "NVIDIA");
 
     Res = cuDeviceTotalMem(&TmpSt, Device);
     if (Res == CUDA_SUCCESS)
@@ -1299,6 +1306,16 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   // whenever there is a kernel running and let it sleep otherwise.
   if (GenericDevice.getRPCServer())
     GenericDevice.Plugin.getRPCServer().Thread->notify();
+
+  // In case we require more memory than the current limit.
+  if (MaxDynCGroupMem >= MaxDynCGroupMemLimit) {
+    CUresult AttrResult = cuFuncSetAttribute(
+        Func, CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES, MaxDynCGroupMem);
+    Plugin::check(
+        AttrResult,
+        "Error in cuLaunchKernel while setting the memory limits: %s");
+    MaxDynCGroupMemLimit = MaxDynCGroupMem;
+  }
 
   CUresult Res = cuLaunchKernel(Func, NumBlocks[0], NumBlocks[1], NumBlocks[2],
                                 NumThreads[0], NumThreads[1], NumThreads[2],

@@ -234,10 +234,19 @@ class URReg<bits<8> num, string n, list<string> alt = []> : XtensaReg<n> {
   let AltNames = alt;
 }
 
+// Thread Pointer register
+def THREADPTR : URReg<231, "threadptr", ["THREADPTR"]>;
+
 def FCR : URReg<232, "fcr", ["FCR"]>;
 def FSR : URReg<233, "fsr", ["FSR"]>;
 
-def UR :  RegisterClass<"Xtensa", [i32], 32, (add FCR, FSR)>;
+// DFPAccel registers
+def F64R_LO : URReg<234, "f64r_lo", ["F64R_LO"]>;
+def F64R_HI : URReg<235, "f64r_hi", ["F64R_HI"]>;
+def F64S : URReg<236, "f64s", ["F64S"]>;
+
+def UR :  RegisterClass<"Xtensa", [i32], 32, (add
+  THREADPTR, FCR, FSR, F64R_LO, F64R_HI, F64S)>;
 
 //===----------------------------------------------------------------------===//
 // Floating-Point registers

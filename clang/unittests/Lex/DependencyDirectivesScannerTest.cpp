@@ -880,6 +880,37 @@ TEST(MinimizeSourceToDependencyDirectivesTest,
   EXPECT_EQ(pp_eof, Directives[22].Kind);
 }
 
+TEST(MinimizeSourceToDependencyDirectivesTest,
+     TestFixedBugThatReportUnterminatedDirectiveFalsely) {
+  SmallVector<char, 512> Out;
+  SmallVector<dependency_directives_scan::Token, 16> Tokens;
+  SmallVector<Directive, 16> Directives;
+
+  StringRef Input = "#ifndef __TEST \n"
+                    "#define __TEST \n"
+                    "#if defined(__TEST_DUMMY) \n"
+                    "#if defined(__TEST_DUMMY2) \n"
+                    "#pragma GCC warning        \\  \n"
+                    "\"hello!\"\n"
+                    "#else\n"
+                    "#pragma GCC error          \\  \n"
+                    "\"world!\" \n"
+                    "#endif // defined(__TEST_DUMMY2) \n"
+                    "#endif  // defined(__TEST_DUMMY) \n"
+                    "#endif // #ifndef __TEST \n";
+  ASSERT_FALSE( // False on no error:
+      minimizeSourceToDependencyDirectives(Input, Out, Tokens, Directives));
+  ASSERT_TRUE(Directives.size() == 8);
+  EXPECT_EQ(pp_ifndef, Directives[0].Kind);
+  EXPECT_EQ(pp_define, Directives[1].Kind);
+  EXPECT_EQ(pp_if, Directives[2].Kind);
+  EXPECT_EQ(pp_if, Directives[3].Kind);
+  EXPECT_EQ(pp_endif, Directives[4].Kind);
+  EXPECT_EQ(pp_endif, Directives[5].Kind);
+  EXPECT_EQ(pp_endif, Directives[6].Kind);
+  EXPECT_EQ(pp_eof, Directives[7].Kind);
+}
+
 TEST(MinimizeSourceToDependencyDirectivesTest, PoundWarningAndError) {
   SmallVector<char, 128> Out;
 
