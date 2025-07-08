@@ -1308,9 +1308,9 @@ class QCIMVCCPat<CondCode Cond, QCIMVCC Inst>
     : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rs1), (XLenVT GPRNoX0:$rs2), Cond)), (XLenVT GPRNoX0:$rs3), (XLenVT GPRNoX0:$rd)),
           (Inst GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, GPRNoX0:$rs3)>;
 
-class QCIMVCCIPat<CondCode Cond, QCIMVCCI Inst>
-    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rs1), simm5:$imm, Cond)), (XLenVT GPRNoX0:$rs3), (XLenVT GPRNoX0:$rd)),
-          (Inst GPRNoX0:$rd, GPRNoX0:$rs1, simm5:$imm, GPRNoX0:$rs3)>;
+class QCIMVCCIPat<CondCode Cond, QCIMVCCI Inst, DAGOperand InTyImm>
+    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rs1), InTyImm:$imm, Cond)), (XLenVT GPRNoX0:$rs3), (XLenVT GPRNoX0:$rd)),
+          (Inst GPRNoX0:$rd, GPRNoX0:$rs1, InTyImm:$imm, GPRNoX0:$rs3)>;
 
 // Match `riscv_brcc` and lower to the appropriate XQCIBI branch instruction.
 class BcciPat<CondCode Cond, QCIBranchInst_rii Inst, DAGOperand InTyImm>
@@ -1455,10 +1455,10 @@ def : QCIMVCCPat <SETNE,  QC_MVNE>;
 def : QCIMVCCPat <SETLT,  QC_MVLT>;
 def : QCIMVCCPat <SETULT, QC_MVLTU>;
 
-def : QCIMVCCIPat <SETEQ,  QC_MVEQI>;
-def : QCIMVCCIPat <SETNE,  QC_MVNEI>;
-def : QCIMVCCIPat <SETLT,  QC_MVLTI>;
-def : QCIMVCCIPat <SETULT, QC_MVLTUI>;
+def : QCIMVCCIPat <SETEQ,  QC_MVEQI, simm5>;
+def : QCIMVCCIPat <SETNE,  QC_MVNEI, simm5>;
+def : QCIMVCCIPat <SETLT,  QC_MVLTI, simm5>;
+def : QCIMVCCIPat <SETULT, QC_MVLTUI, uimm5>;
 }
 
 //===----------------------------------------------------------------------===/i
