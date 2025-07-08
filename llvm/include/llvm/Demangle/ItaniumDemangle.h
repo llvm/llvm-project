@@ -16,6 +16,7 @@
 #ifndef DEMANGLE_ITANIUMDEMANGLE_H
 #define DEMANGLE_ITANIUMDEMANGLE_H
 
+#include "llvm/Demangle/Visibility.h"
 #include "DemangleConfig.h"
 #include "StringViewExtras.h"
 #include "Utility.h"
@@ -3049,7 +3050,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
   Node *parse(bool ParseParams = true);
 };
 
-const char* parse_discriminator(const char* first, const char* last);
+DEMANGLE_ABI const char* parse_discriminator(const char* first, const char* last);
 
 // <name> ::= <nested-name> // N
 //        ::= <local-name> # See Scope Encoding below  // Z
