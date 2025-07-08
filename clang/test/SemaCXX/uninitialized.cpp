@@ -1508,7 +1508,7 @@ struct InheritWithExplicit<Special> {
 void aggregate() {
   struct NonAgg {
     NonAgg() { }
-    [[clang::require_explicit_initialization]] int na;  // expected-warning {{'require_explicit_initialization' attribute is ignored in non-aggregate type 'NonAgg'}}
+    [[clang::require_explicit_initialization]] int na;  // expected-warning {{'clang::require_explicit_initialization' attribute is ignored in non-aggregate type 'NonAgg'}}
   };
   NonAgg nonagg;  // no-warning
   (void)nonagg;
@@ -1717,7 +1717,7 @@ void aggregate() {
   InheritWithExplicit<> agg;  // expected-warning {{field in 'InheritWithExplicit<>' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_G2 {{'g2' declared here}}
   (void)agg;
 
-  InheritWithExplicit<Polymorphic> polymorphic;  // expected-warning@#FIELD_G2 {{'require_explicit_initialization' attribute is ignored in non-aggregate type 'InheritWithExplicit<Polymorphic>'}}
+  InheritWithExplicit<Polymorphic> polymorphic;  // expected-warning@#FIELD_G2 {{'clang::require_explicit_initialization' attribute is ignored in non-aggregate type 'InheritWithExplicit<Polymorphic>'}}
   (void)polymorphic;
 
   Inherit<Special> specialized_explicit;  // expected-warning {{field in 'Inherit<Special>' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_G3 {{'g3' declared here}}

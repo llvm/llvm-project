@@ -18,7 +18,6 @@
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 
@@ -59,9 +58,6 @@ public:
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
-
-  void relaxInstruction(MCInst &Inst,
-                        const MCSubtargetInfo &STI) const override {}
 
   bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
                           bool &WasRelaxed) const override;

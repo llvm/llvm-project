@@ -52,15 +52,15 @@ class MCFragment {
 
 public:
   enum FragmentType : uint8_t {
-    FT_Align,
     FT_Data,
-    FT_Fill,
-    FT_Nops,
     FT_Relaxable,
+    FT_Align,
+    FT_Fill,
+    FT_LEB,
+    FT_Nops,
     FT_Org,
     FT_Dwarf,
     FT_DwarfFrame,
-    FT_LEB,
     FT_BoundaryAlign,
     FT_SymbolId,
     FT_CVInlineLines,
@@ -386,7 +386,7 @@ public:
     getContentsForAppending().append(Num, Elt);
     doneAppending();
   }
-  void setContents(ArrayRef<char> Contents);
+  LLVM_ABI void setContents(ArrayRef<char> Contents);
   MutableArrayRef<char> getContents() {
     return MutableArrayRef(getParent()->ContentStorage)
         .slice(ContentStart, ContentEnd - ContentStart);
@@ -399,9 +399,9 @@ public:
   // Fixup-related functions manage parent's storage using FixupStart and
   // FixupSize.
   void clearFixups() { FixupEnd = FixupStart; }
-  void addFixup(MCFixup Fixup);
-  void appendFixups(ArrayRef<MCFixup> Fixups);
-  void setFixups(ArrayRef<MCFixup> Fixups);
+  LLVM_ABI void addFixup(MCFixup Fixup);
+  LLVM_ABI void appendFixups(ArrayRef<MCFixup> Fixups);
+  LLVM_ABI void setFixups(ArrayRef<MCFixup> Fixups);
   MutableArrayRef<MCFixup> getFixups() {
     return MutableArrayRef(getParent()->FixupStorage)
         .slice(FixupStart, FixupEnd - FixupStart);
