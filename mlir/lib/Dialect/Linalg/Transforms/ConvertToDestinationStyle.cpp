@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 //
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -24,7 +23,6 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Debug.h"
 
 using namespace mlir;
 using namespace mlir::tensor;
@@ -252,7 +250,8 @@ Value linalg::bufferizeToAllocation(
   // Create bufferization.to_tensor with "restrict" and "writable". The returned
   // tensor is a new buffer allocation, so it does not alias with any buffer.
   Value toTensorOp = rewriter.create<bufferization::ToTensorOp>(
-      loc, alloc, /*restrict=*/true, /*writable=*/true);
+      loc, padOp.getResult().getType(), alloc, /*restrict=*/true,
+      /*writable=*/true);
   rewriter.replaceOp(padOp, toTensorOp);
   return alloc;
 }
@@ -340,7 +339,8 @@ Value linalg::bufferizeToAllocation(
   // Create bufferization.to_tensor with "restrict" and "writable". The returned
   // tensor is a new buffer allocation, so it does not alias with any buffer.
   Value toTensorOp = rewriter.create<bufferization::ToTensorOp>(
-      loc, alloc, /*restrict=*/true, /*writable=*/true);
+      loc, allocTensorOp.getResult().getType(), alloc, /*restrict=*/true,
+      /*writable=*/true);
   rewriter.replaceOp(allocTensorOp, toTensorOp);
   return alloc;
 }
@@ -567,7 +567,8 @@ Value linalg::bufferizeToAllocation(
       createMemcpy(rewriter, op->getLoc(), operand->get(), alloc, options);
     }
     rewriter.modifyOpInPlace(op, [&]() {
-      auto toTensorOp = rewriter.create<ToTensorOp>(op->getLoc(), alloc);
+      auto toTensorOp = rewriter.create<ToTensorOp>(
+          op->getLoc(), operand->get().getType(), alloc);
       operand->set(toTensorOp);
       if (options.bufferizeDestinationOnly) {
         rewriter.modifyOpInPlace(toTensorOp, [&]() {

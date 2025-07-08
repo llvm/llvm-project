@@ -151,9 +151,6 @@ protected:
   ///  blocks.
   bool RestrictIT = false;
 
-  /// UseSjLjEH - If true, the target uses SjLj exception handling (e.g. iOS).
-  bool UseSjLjEH = false;
-
   /// stackAlignment - The minimum alignment known to hold of the stack frame on
   /// entry to the function and which must be maintained by every function.
   Align stackAlignment = Align(4);
@@ -270,7 +267,6 @@ private:
   std::unique_ptr<LegalizerInfo> Legalizer;
   std::unique_ptr<RegisterBankInfo> RegBankInfo;
 
-  void initializeEnvironment();
   void initSubtargetFeatures(StringRef CPU, StringRef FS);
   ARMFrameLowering *initializeFrameLowering(StringRef CPU, StringRef FS);
 
@@ -321,7 +317,6 @@ public:
   }
   bool useFPVFMx16() const { return useFPVFMx() && hasFullFP16(); }
   bool useFPVFMx64() const { return useFPVFMx() && hasFP64(); }
-  bool useSjLjEH() const { return UseSjLjEH; }
   bool hasBaseDSP() const {
     if (isThumb())
       return hasThumb2() && hasDSP();
@@ -334,6 +329,9 @@ public:
 
   const Triple &getTargetTriple() const { return TargetTriple; }
 
+  /// @{
+  /// These properties are per-module, please use the TargetMachine
+  /// TargetTriple.
   bool isTargetDarwin() const { return TargetTriple.isOSDarwin(); }
   bool isTargetIOS() const { return TargetTriple.isiOS(); }
   bool isTargetWatchOS() const { return TargetTriple.isWatchOS(); }
@@ -359,8 +357,7 @@ public:
   bool isTargetEHABICompatible() const {
     return TargetTriple.isTargetEHABICompatible();
   }
-
-  bool isTargetHardFloat() const;
+  /// @}
 
   bool isReadTPSoft() const {
     return !(isReadTPTPIDRURW() || isReadTPTPIDRURO() || isReadTPTPIDRPRW());
@@ -369,10 +366,6 @@ public:
   bool isTargetAndroid() const { return TargetTriple.isAndroid(); }
 
   bool isXRaySupported() const override;
-
-  bool isAPCS_ABI() const;
-  bool isAAPCS_ABI() const;
-  bool isAAPCS16_ABI() const;
 
   bool isROPI() const;
   bool isRWPI() const;

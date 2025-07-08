@@ -40,6 +40,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -52,6 +53,10 @@ ARMAsmPrinter::ARMAsmPrinter(TargetMachine &TM,
                              std::unique_ptr<MCStreamer> Streamer)
     : AsmPrinter(TM, std::move(Streamer), ID), Subtarget(nullptr), AFI(nullptr),
       MCP(nullptr), InConstantPool(false), OptimizationGoals(-1) {}
+
+const ARMBaseTargetMachine &ARMAsmPrinter::getTM() const {
+  return static_cast<const ARMBaseTargetMachine &>(TM);
+}
 
 void ARMAsmPrinter::emitFunctionBodyEnd() {
   // Make sure to terminate any constant pools that were at the end
@@ -749,7 +754,7 @@ void ARMAsmPrinter::emitAttributes() {
   ATS.emitAttribute(ARMBuildAttrs::ABI_align_preserved, 1);
 
   // Hard float.  Use both S and D registers and conform to AAPCS-VFP.
-  if (STI.isAAPCS_ABI() && TM.Options.FloatABIType == FloatABI::Hard)
+  if (getTM().isAAPCS_ABI() && TM.Options.FloatABIType == FloatABI::Hard)
     ATS.emitAttribute(ARMBuildAttrs::ABI_VFP_args, ARMBuildAttrs::HardFPAAPCS);
 
   // FIXME: To support emitting this build attribute as GCC does, the
@@ -854,7 +859,7 @@ static uint8_t getModifierSpecifier(ARMCP::ARMCPModifier Modifier) {
   case ARMCP::GOT_PREL:
     return ARM::S_GOT_PREL;
   case ARMCP::SECREL:
-    return MCSymbolRefExpr::VK_SECREL;
+    return ARM::S_COFF_SECREL;
   }
   llvm_unreachable("Invalid ARMCPModifier!");
 }
@@ -2456,7 +2461,8 @@ INITIALIZE_PASS(ARMAsmPrinter, "arm-asm-printer", "ARM Assembly Printer", false,
 //===----------------------------------------------------------------------===//
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeARMAsmPrinter() {
   RegisterAsmPrinter<ARMAsmPrinter> X(getTheARMLETarget());
   RegisterAsmPrinter<ARMAsmPrinter> Y(getTheARMBETarget());
   RegisterAsmPrinter<ARMAsmPrinter> A(getTheThumbLETarget());

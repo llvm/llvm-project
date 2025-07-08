@@ -446,19 +446,6 @@ LogicalResult Serializer::processType(Location loc, Type type,
 LogicalResult
 Serializer::processTypeImpl(Location loc, Type type, uint32_t &typeID,
                             SetVector<StringRef> &serializationCtx) {
-
-  // Map unsigned integer types to singless integer types.
-  // This is needed otherwise the generated spirv assembly will contain
-  // twice a type declaration (like OpTypeInt 32 0) which is no permitted and
-  // such module fails validation. Indeed at MLIR level the two types are
-  // different and lookup in the cache below misses.
-  // Note: This conversion needs to happen here before the type is looked up in
-  // the cache.
-  if (type.isUnsignedInteger()) {
-    type = IntegerType::get(loc->getContext(), type.getIntOrFloatBitWidth(),
-                            IntegerType::SignednessSemantics::Signless);
-  }
-
   typeID = getTypeID(type);
   if (typeID)
     return success();
@@ -739,6 +726,54 @@ LogicalResult Serializer::prepareBasicType(
     }
     typeEnum = spirv::Opcode::OpTypeMatrix;
     llvm::append_values(operands, elementTypeID, matrixType.getNumColumns());
+    return success();
+  }
+
+  if (auto tensorArmType = llvm::dyn_cast<TensorArmType>(type)) {
+    uint32_t elementTypeID = 0;
+    uint32_t rank = 0;
+    uint32_t shapeID = 0;
+    uint32_t rankID = 0;
+    if (failed(processTypeImpl(loc, tensorArmType.getElementType(),
+                               elementTypeID, serializationCtx))) {
+      return failure();
+    }
+    if (tensorArmType.hasRank()) {
+      ArrayRef<int64_t> dims = tensorArmType.getShape();
+      rank = dims.size();
+      rankID = prepareConstantInt(loc, mlirBuilder.getI32IntegerAttr(rank));
+      if (rankID == 0) {
+        return failure();
+      }
+
+      bool shaped = llvm::all_of(dims, [](const auto &dim) { return dim > 0; });
+      if (rank > 0 && shaped) {
+        auto I32Type = IntegerType::get(type.getContext(), 32);
+        auto shapeType = ArrayType::get(I32Type, rank);
+        if (rank == 1) {
+          SmallVector<uint64_t, 1> index(rank);
+          shapeID = prepareDenseElementsConstant(
+              loc, shapeType,
+              mlirBuilder.getI32TensorAttr(SmallVector<int32_t>(dims)), 0,
+              index);
+        } else {
+          shapeID = prepareArrayConstant(
+              loc, shapeType,
+              mlirBuilder.getI32ArrayAttr(SmallVector<int32_t>(dims)));
+        }
+        if (shapeID == 0) {
+          return failure();
+        }
+      }
+    }
+    typeEnum = spirv::Opcode::OpTypeTensorARM;
+    operands.push_back(elementTypeID);
+    if (rankID == 0)
+      return success();
+    operands.push_back(rankID);
+    if (shapeID == 0)
+      return success();
+    operands.push_back(shapeID);
     return success();
   }
 

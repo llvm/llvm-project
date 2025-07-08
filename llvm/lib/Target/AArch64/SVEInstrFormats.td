@@ -5368,6 +5368,19 @@ multiclass sve2_int_bitwise_ternary_op<bits<3> opc, string asm,
   def : SVE_3_Op_Pat<nxv8i16, op, nxv8i16, nxv8i16, nxv8i16, !cast<Instruction>(NAME)>;
   def : SVE_3_Op_Pat<nxv4i32, op, nxv4i32, nxv4i32, nxv4i32, !cast<Instruction>(NAME)>;
   def : SVE_3_Op_Pat<nxv2i64, op, nxv2i64, nxv2i64, nxv2i64, !cast<Instruction>(NAME)>;
+
+  // Allow selecting SVE2 ternary ops with Neon types.
+  foreach VT = [nxv16i8, nxv8i16, nxv4i32, nxv2i64] in {
+    def : Pat<(SVEType<VT>.DSub (op V64:$op1, V64:$op2, V64:$op3)),
+              (EXTRACT_SUBREG (!cast<Instruction>(NAME) (INSERT_SUBREG (IMPLICIT_DEF), $op1, dsub),
+                                                        (INSERT_SUBREG (IMPLICIT_DEF), $op2, dsub),
+                                                        (INSERT_SUBREG (IMPLICIT_DEF), $op3, dsub)), dsub)>;
+
+    def : Pat<(SVEType<VT>.ZSub (op V128:$op1, V128:$op2, V128:$op3)),
+              (EXTRACT_SUBREG (!cast<Instruction>(NAME) (INSERT_SUBREG (IMPLICIT_DEF), $op1, zsub),
+                                                        (INSERT_SUBREG (IMPLICIT_DEF), $op2, zsub),
+                                                        (INSERT_SUBREG (IMPLICIT_DEF), $op3, zsub)), zsub)>;
+  }
 }
 
 class sve2_int_rotate_right_imm<bits<4> tsz8_64, string asm,

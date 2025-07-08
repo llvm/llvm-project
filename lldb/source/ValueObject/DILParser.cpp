@@ -183,12 +183,14 @@ ASTNodeUP DILParser::ParsePostfixExpression() {
 //    "(" expression ")"
 //
 ASTNodeUP DILParser::ParsePrimaryExpression() {
-  if (CurToken().IsOneOf({Token::coloncolon, Token::identifier})) {
+  if (CurToken().IsOneOf(
+          {Token::coloncolon, Token::identifier, Token::l_paren})) {
     // Save the source location for the diagnostics message.
     uint32_t loc = CurToken().GetLocation();
-    auto identifier = ParseIdExpression();
+    std::string identifier = ParseIdExpression();
 
-    return std::make_unique<IdentifierNode>(loc, identifier);
+    if (!identifier.empty())
+      return std::make_unique<IdentifierNode>(loc, identifier);
   }
 
   if (CurToken().Is(Token::l_paren)) {
@@ -232,16 +234,15 @@ std::string DILParser::ParseNestedNameSpecifier() {
         m_dil_lexer.LookAhead(4).Is(Token::coloncolon)) {
       m_dil_lexer.Advance(4);
 
-      assert(
-          (CurToken().Is(Token::identifier) || CurToken().Is(Token::l_paren)) &&
-          "Expected an identifier or anonymous namespace, but not found.");
+      Expect(Token::coloncolon);
+      m_dil_lexer.Advance();
+      if (!CurToken().Is(Token::identifier) && !CurToken().Is(Token::l_paren)) {
+        BailOut("Expected an identifier or anonymous namespace, but not found.",
+                CurToken().GetLocation(), CurToken().GetSpelling().length());
+      }
       // Continue parsing the nested_namespace_specifier.
       std::string identifier2 = ParseNestedNameSpecifier();
-      if (identifier2.empty()) {
-        Expect(Token::identifier);
-        identifier2 = CurToken().GetSpelling();
-        m_dil_lexer.Advance();
-      }
+
       return "(anonymous namespace)::" + identifier2;
     }
 
@@ -301,6 +302,9 @@ std::string DILParser::ParseIdExpression() {
                          nested_name_specifier, unqualified_id);
   }
 
+  if (!CurToken().Is(Token::identifier))
+    return "";
+
   // No nested_name_specifier, but with global scope -- this is also a
   // qualified_id production. Follow the second production rule.
   if (global_scope) {
@@ -348,8 +352,15 @@ void DILParser::BailOut(const std::string &error, uint32_t loc,
 //    ? Integer constant ?
 //
 std::optional<int64_t> DILParser::ParseIntegerConstant() {
-  auto spelling = CurToken().GetSpelling();
-  llvm::StringRef spelling_ref = spelling;
+  std::string number_spelling;
+  if (CurToken().GetKind() == Token::minus) {
+    // StringRef::getAsInteger<>() can parse negative numbers.
+    // FIXME: Remove this once unary minus operator is added.
+    number_spelling = "-";
+    m_dil_lexer.Advance();
+  }
+  number_spelling.append(CurToken().GetSpelling());
+  llvm::StringRef spelling_ref = number_spelling;
   int64_t raw_value;
   if (!spelling_ref.getAsInteger<int64_t>(0, raw_value)) {
     m_dil_lexer.Advance();

@@ -417,8 +417,6 @@ private:
     uint64_t MaxStride;
     std::optional<uint64_t> CommonStride;
 
-    bool ShouldRetryWithRuntimeCheck;
-
     /// TypeByteSize is either the common store size of both accesses, or 0 when
     /// store sizes mismatch.
     uint64_t TypeByteSize;
@@ -428,11 +426,9 @@ private:
 
     DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t MaxStride,
                                  std::optional<uint64_t> CommonStride,
-                                 bool ShouldRetryWithRuntimeCheck,
                                  uint64_t TypeByteSize, bool AIsWrite,
                                  bool BIsWrite)
         : Dist(Dist), MaxStride(MaxStride), CommonStride(CommonStride),
-          ShouldRetryWithRuntimeCheck(ShouldRetryWithRuntimeCheck),
           TypeByteSize(TypeByteSize), AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
   };
 
@@ -922,7 +918,10 @@ LLVM_ABI bool sortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy,
 LLVM_ABI bool isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
                                   ScalarEvolution &SE, bool CheckType = true);
 
-/// Calculate Start and End points of memory access.
+/// Calculate Start and End points of memory access using exact backedge taken
+/// count \p BTC if computable or maximum backedge taken count \p MaxBTC
+/// otherwise.
+///
 /// Let's assume A is the first access and B is a memory access on N-th loop
 /// iteration. Then B is calculated as:
 ///   B = A + Step*N .
@@ -936,8 +935,8 @@ LLVM_ABI bool isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
 /// There is no conflict when the intervals are disjoint:
 /// NoConflict = (P2.Start >= P1.End) || (P1.Start >= P2.End)
 LLVM_ABI std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
-    const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *MaxBECount,
-    ScalarEvolution *SE,
+    const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *BTC,
+    const SCEV *MaxBTC, ScalarEvolution *SE,
     DenseMap<std::pair<const SCEV *, Type *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds);
 

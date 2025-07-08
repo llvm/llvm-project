@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenCall.h"
+#include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "CIRGenValue.h"
@@ -31,6 +32,29 @@ static RValue emitLibraryCall(CIRGenFunction &cgf, const FunctionDecl *fd,
                               const CallExpr *e, mlir::Operation *calleeValue) {
   CIRGenCallee callee = CIRGenCallee::forDirect(calleeValue, GlobalDecl(fd));
   return cgf.emitCall(e->getCallee()->getType(), callee, e, ReturnValueSlot());
+}
+
+template <typename Op>
+static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
+                               bool poisonZero = false) {
+  assert(!cir::MissingFeatures::builtinCheckKind());
+
+  mlir::Value arg = cgf.emitScalarExpr(e->getArg(0));
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+
+  Op op;
+  if constexpr (std::is_same_v<Op, cir::BitClzOp> ||
+                std::is_same_v<Op, cir::BitCtzOp>)
+    op = builder.create<Op>(cgf.getLoc(e->getSourceRange()), arg, poisonZero);
+  else
+    op = builder.create<Op>(cgf.getLoc(e->getSourceRange()), arg);
+
+  mlir::Value result = op.getResult();
+  mlir::Type exprTy = cgf.convertType(e->getType());
+  if (exprTy != result.getType())
+    result = builder.createIntCast(result, exprTy);
+
+  return RValue::get(result);
 }
 
 RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
@@ -66,6 +90,108 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return emitLibraryCall(*this, fd, e,
                            cgm.getBuiltinLibFunction(fd, builtinID));
 
+  assert(!cir::MissingFeatures::builtinCallF128());
+
+  // If the builtin has been declared explicitly with an assembler label,
+  // disable the specialized emitting below. Ideally we should communicate the
+  // rename in IR, or at least avoid generating the intrinsic calls that are
+  // likely to get lowered to the renamed library functions.
+  unsigned builtinIDIfNoAsmLabel = fd->hasAttr<AsmLabelAttr>() ? 0 : builtinID;
+
+  assert(!cir::MissingFeatures::builtinCallMathErrno());
+  assert(!cir::MissingFeatures::builtinCall());
+
+  mlir::Location loc = getLoc(e->getExprLoc());
+
+  switch (builtinIDIfNoAsmLabel) {
+  default:
+    break;
+
+  case Builtin::BI__assume:
+  case Builtin::BI__builtin_assume: {
+    if (e->getArg(0)->HasSideEffects(getContext()))
+      return RValue::get(nullptr);
+
+    mlir::Value argValue = emitCheckedArgForAssume(e->getArg(0));
+    builder.create<cir::AssumeOp>(loc, argValue);
+    return RValue::get(nullptr);
+  }
+
+  case Builtin::BI__builtin_complex: {
+    mlir::Value real = emitScalarExpr(e->getArg(0));
+    mlir::Value imag = emitScalarExpr(e->getArg(1));
+    mlir::Value complex = builder.createComplexCreate(loc, real, imag);
+    return RValue::get(complex);
+  }
+
+  case Builtin::BI__builtin_clrsb:
+  case Builtin::BI__builtin_clrsbl:
+  case Builtin::BI__builtin_clrsbll:
+    return emitBuiltinBitOp<cir::BitClrsbOp>(*this, e);
+
+  case Builtin::BI__builtin_ctzs:
+  case Builtin::BI__builtin_ctz:
+  case Builtin::BI__builtin_ctzl:
+  case Builtin::BI__builtin_ctzll:
+  case Builtin::BI__builtin_ctzg:
+    assert(!cir::MissingFeatures::builtinCheckKind());
+    return emitBuiltinBitOp<cir::BitCtzOp>(*this, e, /*poisonZero=*/true);
+
+  case Builtin::BI__builtin_clzs:
+  case Builtin::BI__builtin_clz:
+  case Builtin::BI__builtin_clzl:
+  case Builtin::BI__builtin_clzll:
+  case Builtin::BI__builtin_clzg:
+    assert(!cir::MissingFeatures::builtinCheckKind());
+    return emitBuiltinBitOp<cir::BitClzOp>(*this, e, /*poisonZero=*/true);
+
+  case Builtin::BI__builtin_parity:
+  case Builtin::BI__builtin_parityl:
+  case Builtin::BI__builtin_parityll:
+    return emitBuiltinBitOp<cir::BitParityOp>(*this, e);
+
+  case Builtin::BI__lzcnt16:
+  case Builtin::BI__lzcnt:
+  case Builtin::BI__lzcnt64:
+    assert(!cir::MissingFeatures::builtinCheckKind());
+    return emitBuiltinBitOp<cir::BitClzOp>(*this, e, /*poisonZero=*/false);
+
+  case Builtin::BI__popcnt16:
+  case Builtin::BI__popcnt:
+  case Builtin::BI__popcnt64:
+  case Builtin::BI__builtin_popcount:
+  case Builtin::BI__builtin_popcountl:
+  case Builtin::BI__builtin_popcountll:
+  case Builtin::BI__builtin_popcountg:
+    return emitBuiltinBitOp<cir::BitPopcountOp>(*this, e);
+
+  case Builtin::BI__builtin_expect:
+  case Builtin::BI__builtin_expect_with_probability: {
+    mlir::Value argValue = emitScalarExpr(e->getArg(0));
+    mlir::Value expectedValue = emitScalarExpr(e->getArg(1));
+
+    mlir::FloatAttr probAttr;
+    if (builtinIDIfNoAsmLabel == Builtin::BI__builtin_expect_with_probability) {
+      llvm::APFloat probability(0.0);
+      const Expr *probArg = e->getArg(2);
+      [[maybe_unused]] bool evalSucceeded =
+          probArg->EvaluateAsFloat(probability, cgm.getASTContext());
+      assert(evalSucceeded &&
+             "probability should be able to evaluate as float");
+      bool loseInfo = false; // ignored
+      probability.convert(llvm::APFloat::IEEEdouble(),
+                          llvm::RoundingMode::Dynamic, &loseInfo);
+      probAttr = mlir::FloatAttr::get(mlir::Float64Type::get(&getMLIRContext()),
+                                      probability);
+    }
+
+    auto result = builder.create<cir::ExpectOp>(getLoc(e->getSourceRange()),
+                                                argValue.getType(), argValue,
+                                                expectedValue, probAttr);
+    return RValue::get(result);
+  }
+  }
+
   cgm.errorNYI(e->getSourceRange(), "unimplemented builtin call");
   return getUndefRValue(e->getType());
 }
@@ -87,4 +213,15 @@ cir::FuncOp CIRGenModule::getBuiltinLibFunction(const FunctionDecl *fd,
   GlobalDecl d(fd);
   mlir::Type type = convertType(fd->getType());
   return getOrCreateCIRFunction(name, type, d, /*forVTable=*/false);
+}
+
+mlir::Value CIRGenFunction::emitCheckedArgForAssume(const Expr *e) {
+  mlir::Value argValue = evaluateExprAsBool(e);
+  if (!sanOpts.has(SanitizerKind::Builtin))
+    return argValue;
+
+  assert(!cir::MissingFeatures::sanitizers());
+  cgm.errorNYI(e->getSourceRange(),
+               "emitCheckedArgForAssume: sanitizers are NYI");
+  return {};
 }

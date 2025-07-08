@@ -1081,8 +1081,8 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
           LLVM_DEBUG(dbgs() << "Renamed " << MI);
           return true;
         };
-    forAllMIsUntilDef(MergeForward ? *I : *std::prev(Paired), RegToRename, TRI,
-                      UINT32_MAX, UpdateMIs);
+    forAllMIsUntilDef(MergeForward ? *I : *Paired->getPrevNode(), RegToRename,
+                      TRI, UINT32_MAX, UpdateMIs);
 
 #if !defined(NDEBUG)
     // For forward merging store:
