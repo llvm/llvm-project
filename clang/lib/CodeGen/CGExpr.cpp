@@ -170,7 +170,7 @@ static llvm::StringRef GetUBSanTrapForHandler(SanitizerHandler ID) {
     return "Variable length array bound evaluates to non-positive value";
 
   case SanitizerHandler::BoundsSafety:
-    // Not added as of current, will be added in future patch.
+    // Explicitly not supported because `-fbounds-safety` is not part of UBSan
     return {};
   }
 }
@@ -4144,20 +4144,7 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
   llvm::StringRef TrapMessage = GetUBSanTrapForHandler(CheckHandlerID);
 
-  // Explicitly used to prevent infinite wrapping in cfi-check-fail-debuginfo.c
-  // test
-  auto NeedsAnnotation = [](llvm::DILocation *Loc) {
-    if (!Loc)
-      return false;
-    if (Loc->getLine() != 0)
-      return true;
-    if (auto *SubProgram =
-            llvm::dyn_cast_or_null<llvm::DISubprogram>(Loc->getScope()))
-      return (SubProgram->getFile() != nullptr);
-    return false;
-  };
-
-  if (getDebugInfo() && NeedsAnnotation(TrapLocation) && !TrapMessage.empty()) {
+  if (getDebugInfo() && !TrapMessage.empty()) {
     TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
         TrapLocation, "Undefined Behavior Sanitizer", TrapMessage);
   }
