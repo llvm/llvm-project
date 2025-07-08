@@ -716,10 +716,10 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString("-mrecip=" + Recip));
 
   if (Range != LangOptions::ComplexRangeKind::CX_None) {
-    std::string ComplexRangeStr = RenderComplexRangeOption(Range);
+    std::string ComplexRangeStr = renderComplexRangeOption(Range);
     CmdArgs.push_back(Args.MakeArgString(ComplexRangeStr));
     CmdArgs.push_back(Args.MakeArgString("-fcomplex-arithmetic=" +
-                                         ComplexRangeKindToStr(Range)));
+                                         complexRangeKindToStr(Range)));
   }
 
   if (!HonorINFs && !HonorNaNs && AssociativeMath && ReciprocalMath &&

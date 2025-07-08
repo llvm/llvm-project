@@ -3410,7 +3410,7 @@ StringRef tools::parseMRecipOption(clang::DiagnosticsEngine &Diags,
   return Out;
 }
 
-std::string tools::ComplexRangeKindToStr(LangOptions::ComplexRangeKind Range) {
+std::string tools::complexRangeKindToStr(LangOptions::ComplexRangeKind Range) {
   switch (Range) {
   case LangOptions::ComplexRangeKind::CX_Full:
     return "full";
@@ -3430,8 +3430,8 @@ std::string tools::ComplexRangeKindToStr(LangOptions::ComplexRangeKind Range) {
 }
 
 std::string
-tools::RenderComplexRangeOption(LangOptionsBase::ComplexRangeKind Range) {
-  std::string ComplexRangeStr = ComplexRangeKindToStr(Range);
+tools::renderComplexRangeOption(LangOptionsBase::ComplexRangeKind Range) {
+  std::string ComplexRangeStr = complexRangeKindToStr(Range);
   if (!ComplexRangeStr.empty())
     return "-complex-range=" + ComplexRangeStr;
   return ComplexRangeStr;

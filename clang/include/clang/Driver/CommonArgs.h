@@ -284,10 +284,10 @@ StringRef parseMRecipOption(clang::DiagnosticsEngine &Diags,
                             const llvm::opt::ArgList &Args);
 
 // Convert ComplexRangeKind to a string that can be passed as a frontend option.
-std::string ComplexRangeKindToStr(LangOptions::ComplexRangeKind Range);
+std::string complexRangeKindToStr(LangOptions::ComplexRangeKind Range);
 
 // Render a frontend option corresponding to ComplexRangeKind.
-std::string RenderComplexRangeOption(LangOptions::ComplexRangeKind Range);
+std::string renderComplexRangeOption(LangOptions::ComplexRangeKind Range);
 
 } // end namespace tools
 } // end namespace driver
