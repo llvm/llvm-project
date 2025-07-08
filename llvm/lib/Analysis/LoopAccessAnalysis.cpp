@@ -243,6 +243,9 @@ evaluatePtrAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
     }
   }
 
+  if (DerefBytesSCEV->isZero())
+    return false;
+
   bool IsKnownNonNegative = SE.isKnownNonNegative(Step);
   if (!IsKnownNonNegative && !SE.isKnownNegative(Step))
     return false;
