@@ -2191,7 +2191,9 @@ genCanonicalLoopOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   auto &nestedEval = eval.getFirstNestedEvaluation();
   if (nestedEval.getIf<parser::DoConstruct>()->IsDoConcurrent()) {
-    TODO(loc, "Do Concurrent in unroll construct");
+    // OpenMP specifies DO CONCURRENT only with the `!omp loop` construct. Will
+    // need to add special cases for this combination.
+    TODO(loc, "DO CONCURRENT as canonical loop not supported");
   }
 
   // Get the loop bounds (and increment)
@@ -2211,11 +2213,11 @@ genCanonicalLoopOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     if (bounds->step) {
       return fir::getBase(
           converter.genExprValue(*semantics::GetExpr(bounds->step), stmtCtx));
-    } else {
-      // If `step` is not present, assume it is `1`.
-      return firOpBuilder.createIntegerConstant(loc, firOpBuilder.getI32Type(),
-                                                1);
     }
+
+    // If `step` is not present, assume it is `1`.
+    return firOpBuilder.createIntegerConstant(loc, firOpBuilder.getI32Type(),
+                                              1);
   }();
 
   // Get the integer kind for the loop variable and cast the loop bounds
