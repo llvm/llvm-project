@@ -25,6 +25,7 @@
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
+#include "Plugins/Language/CPlusPlus/Generic.h"
 #include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/lldb-enumerations.h"

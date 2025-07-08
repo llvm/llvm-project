@@ -151,16 +151,3 @@ bool lldb_private::formatters::ContainerSizeSummaryProvider(
   return FormatEntity::FormatStringRef("size=${svar%#}", stream, nullptr,
                                        nullptr, nullptr, &valobj, false, false);
 }
-
-ValueObjectSP lldb_private::formatters::GetCxxSmartPtrElementPointerType(
-    ValueObject &ptr, ValueObject &container) {
-  auto container_type = container.GetCompilerType().GetNonReferenceType();
-  if (!container_type)
-    return nullptr;
-
-  auto arg = container_type.GetTypeTemplateArgument(0);
-  if (!arg)
-    return nullptr;
-
-  return ptr.Cast(arg.GetPointerType());
-}
