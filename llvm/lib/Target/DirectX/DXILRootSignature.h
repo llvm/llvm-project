@@ -73,9 +73,6 @@ public:
   using Result = RootSignatureBindingInfo;
 
   Result run(Module &M, ModuleAnalysisManager &AM);
-
-private:
-  std::unique_ptr<RootSignatureBindingInfo> AnalysisResult;
 };
 
 /// Wrapper pass for the legacy pass manager.
