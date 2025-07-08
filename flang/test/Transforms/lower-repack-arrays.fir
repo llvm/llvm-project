@@ -1091,3 +1091,81 @@ func.func @_QPtest7_stack(%arg0: !fir.class<!fir.array<?x?xnone>> {fir.bindc_nam
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
+
+// Test assumed type array.
+// The temporary allocation requires creating a fir.box with the mold
+// being the !fir.box<!fir.array<?xnone>>. We have to cast it to
+// !fir.class<!fir.array<?xnone>> to make the fir.embox's source_box
+// operand valid.
+// CHECK-LABEL:   func.func @_QPrepack_assumed_type(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.box<!fir.array<?xnone>> {fir.bindc_name = "x"}) {
+// CHECK:           %[[VAL_0:.*]] = arith.constant
+// CHECK:           %[[VAL_1:.*]] = arith.constant
+// CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_3:.*]] = arith.constant false
+// CHECK:           %[[VAL_4:.*]] = fir.alloca !fir.class<!fir.heap<!fir.array<?xnone>>>
+// CHECK:           %[[VAL_5:.*]] = fir.dummy_scope : !fir.dscope
+// CHECK:           %[[VAL_6:.*]] = fir.is_present %[[ARG0]] : (!fir.box<!fir.array<?xnone>>) -> i1
+// CHECK:           %[[VAL_7:.*]] = fir.if %[[VAL_6]] -> (!fir.box<!fir.array<?xnone>>) {
+// CHECK:             %[[VAL_8:.*]] = fir.is_contiguous_box %[[ARG0]] whole : (!fir.box<!fir.array<?xnone>>) -> i1
+// CHECK:             %[[VAL_9:.*]] = arith.cmpi eq, %[[VAL_8]], %[[VAL_3]] : i1
+// CHECK:             %[[VAL_10:.*]] = fir.box_addr %[[ARG0]] : (!fir.box<!fir.array<?xnone>>) -> !fir.ref<!fir.box<!fir.array<?xnone>>>
+// CHECK:             %[[VAL_11:.*]] = fir.is_present %[[VAL_10]] : (!fir.ref<!fir.box<!fir.array<?xnone>>>) -> i1
+// CHECK:             %[[VAL_12:.*]] = arith.andi %[[VAL_9]], %[[VAL_11]] : i1
+// CHECK:             %[[VAL_13:.*]] = fir.if %[[VAL_12]] weights([0, 1]) -> (!fir.box<!fir.array<?xnone>>) {
+// CHECK:               %[[VAL_14:.*]]:3 = fir.box_dims %[[ARG0]], %[[VAL_2]] : (!fir.box<!fir.array<?xnone>>, index) -> (index, index, index)
+// CHECK:               %[[VAL_15:.*]] = fir.shape %[[VAL_14]]#1 : (index) -> !fir.shape<1>
+// CHECK:               %[[VAL_16:.*]] = fir.zero_bits !fir.heap<!fir.array<?xnone>>
+// CHECK:               %[[VAL_17:.*]] = fir.convert %[[ARG0]] : (!fir.box<!fir.array<?xnone>>) -> !fir.class<!fir.array<?xnone>>
+// CHECK:               %[[VAL_18:.*]] = fir.embox %[[VAL_16]](%[[VAL_15]]) source_box %[[VAL_17]] : (!fir.heap<!fir.array<?xnone>>, !fir.shape<1>, !fir.class<!fir.array<?xnone>>) -> !fir.class<!fir.heap<!fir.array<?xnone>>>
+// CHECK:               fir.store %[[VAL_18]] to %[[VAL_4]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>
+// CHECK:               %[[VAL_19:.*]] = fir.zero_bits !fir.ref<none>
+// CHECK:               %[[VAL_20:.*]] = fir.address_of(@{{_QQcl.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
+// CHECK:               %[[VAL_21:.*]] = fir.absent !fir.box<none>
+// CHECK:               %[[VAL_22:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>) -> !fir.ref<!fir.box<none>>
+// CHECK:               %[[VAL_23:.*]] = fir.convert %[[VAL_19]] : (!fir.ref<none>) -> !fir.ref<i64>
+// CHECK:               %[[VAL_24:.*]] = fir.convert %[[VAL_20]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
+// CHECK:               %[[VAL_25:.*]] = fir.call @_FortranAAllocatableAllocate(%[[VAL_22]], %[[VAL_23]], %[[VAL_3]], %[[VAL_21]], %[[VAL_24]], %[[VAL_1]]) : (!fir.ref<!fir.box<none>>, !fir.ref<i64>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+// CHECK:               %[[VAL_26:.*]] = fir.load %[[VAL_4]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>
+// CHECK:               %[[VAL_27:.*]] = fir.declare %[[VAL_26]] {uniq_name = ".repacked"} : (!fir.class<!fir.heap<!fir.array<?xnone>>>) -> !fir.class<!fir.heap<!fir.array<?xnone>>>
+// CHECK:               %[[VAL_28:.*]] = fir.address_of(@{{_QQcl.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
+// CHECK:               %[[VAL_29:.*]] = fir.convert %[[VAL_27]] : (!fir.class<!fir.heap<!fir.array<?xnone>>>) -> !fir.box<none>
+// CHECK:               %[[VAL_30:.*]] = fir.convert %[[ARG0]] : (!fir.box<!fir.array<?xnone>>) -> !fir.box<none>
+// CHECK:               %[[VAL_31:.*]] = fir.convert %[[VAL_28]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
+// CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_29]], %[[VAL_30]], %[[VAL_31]], %[[VAL_1]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
+// CHECK:               %[[VAL_32:.*]] = fir.shift %[[VAL_14]]#0 : (index) -> !fir.shift<1>
+// CHECK:               %[[VAL_33:.*]] = fir.rebox %[[VAL_27]](%[[VAL_32]]) : (!fir.class<!fir.heap<!fir.array<?xnone>>>, !fir.shift<1>) -> !fir.box<!fir.array<?xnone>>
+// CHECK:               fir.result %[[VAL_33]] : !fir.box<!fir.array<?xnone>>
+// CHECK:             } else {
+// CHECK:               fir.result %[[ARG0]] : !fir.box<!fir.array<?xnone>>
+// CHECK:             }
+// CHECK:             fir.result %[[VAL_13]] : !fir.box<!fir.array<?xnone>>
+// CHECK:           } else {
+// CHECK:             fir.result %[[ARG0]] : !fir.box<!fir.array<?xnone>>
+// CHECK:           }
+// CHECK:           %[[VAL_34:.*]] = fir.declare %[[VAL_7]] dummy_scope %[[VAL_5]] {uniq_name = "_QFrepack_assumed_typeEx"} : (!fir.box<!fir.array<?xnone>>, !fir.dscope) -> !fir.box<!fir.array<?xnone>>
+// CHECK:           %[[VAL_35:.*]] = fir.is_present %[[ARG0]] : (!fir.box<!fir.array<?xnone>>) -> i1
+// CHECK:           fir.if %[[VAL_35]] {
+// CHECK:             %[[VAL_36:.*]] = fir.box_addr %[[VAL_7]] : (!fir.box<!fir.array<?xnone>>) -> !fir.heap<!fir.array<?xnone>>
+// CHECK:             %[[VAL_37:.*]] = fir.box_addr %[[ARG0]] : (!fir.box<!fir.array<?xnone>>) -> !fir.heap<!fir.array<?xnone>>
+// CHECK:             %[[VAL_38:.*]] = fir.convert %[[VAL_36]] : (!fir.heap<!fir.array<?xnone>>) -> index
+// CHECK:             %[[VAL_39:.*]] = fir.convert %[[VAL_37]] : (!fir.heap<!fir.array<?xnone>>) -> index
+// CHECK:             %[[VAL_40:.*]] = arith.cmpi ne, %[[VAL_38]], %[[VAL_39]] : index
+// CHECK:             fir.if %[[VAL_40]] weights([0, 1]) {
+// CHECK:               %[[VAL_41:.*]] = fir.address_of(@_QQclX2b7d3b4eb2a9b0772619a406c28937e5) : !fir.ref<!fir.char<1,{{.*}}>>
+// CHECK:               %[[VAL_42:.*]] = fir.convert %[[ARG0]] : (!fir.box<!fir.array<?xnone>>) -> !fir.box<none>
+// CHECK:               %[[VAL_43:.*]] = fir.convert %[[VAL_7]] : (!fir.box<!fir.array<?xnone>>) -> !fir.box<none>
+// CHECK:               %[[VAL_44:.*]] = fir.convert %[[VAL_41]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
+// CHECK:               fir.call @_FortranAShallowCopyDirect(%[[VAL_42]], %[[VAL_43]], %[[VAL_44]], %[[VAL_0]]) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
+// CHECK:               fir.freemem %[[VAL_36]] : !fir.heap<!fir.array<?xnone>>
+// CHECK:             }
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }
+func.func @_QPrepack_assumed_type(%arg0: !fir.box<!fir.array<?xnone>> {fir.bindc_name = "x"}) {
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.pack_array %arg0 heap whole : (!fir.box<!fir.array<?xnone>>) -> !fir.box<!fir.array<?xnone>>
+  %2 = fir.declare %1 dummy_scope %0 {uniq_name = "_QFrepack_assumed_typeEx"} : (!fir.box<!fir.array<?xnone>>, !fir.dscope) -> !fir.box<!fir.array<?xnone>>
+  fir.unpack_array %1 to %arg0 heap : !fir.box<!fir.array<?xnone>>
+  return
+}

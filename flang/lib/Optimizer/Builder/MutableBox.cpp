@@ -987,6 +987,15 @@ mlir::Value fir::factory::getAndEstablishBoxStorage(
   mlir::Value boxStorage = builder.createTemporary(loc, boxTy);
   mlir::Value nullAddr =
       builder.createNullConstant(loc, boxTy.getBaseAddressType());
+  if (polymorphicMold && fir::isAssumedType(polymorphicMold.getType())) {
+    // An assumed-type (!fir.box) entity cannot be used as a mold
+    // in fir.embox, so we have to represent it as an unlimited
+    // polymorphic entity (!fir.class).
+    mlir::Type newMoldType = fir::wrapInClassOrBoxType(
+        mlir::cast<fir::BaseBoxType>(polymorphicMold.getType()).getEleTy(),
+        /*isPolymorphic=*/true);
+    polymorphicMold = builder.createConvert(loc, newMoldType, polymorphicMold);
+  }
   mlir::Value box =
       builder.create<fir::EmboxOp>(loc, boxTy, nullAddr, shape,
                                    /*emptySlice=*/mlir::Value{},
