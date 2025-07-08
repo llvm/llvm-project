@@ -88,6 +88,12 @@ public:
 
   bool GetDescription(lldb::SBStream &description);
 
+  /// Ignore this section when resolving addresses. Some JIT solutions
+  /// will create a large section in the main binary that will get code JIT'ed
+  /// into. Address lookups need to ignore this section and resolve the
+  /// address in another module that gets loaded.
+  void SetIsIgnored(bool ignore);
+
 private:
   friend class SBAddress;
   friend class SBModule;

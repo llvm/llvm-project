@@ -266,6 +266,18 @@ public:
 
   void SetIsRelocated(bool b) { m_relocated = b; }
 
+  /// Check if this section is ignored for address resolution.
+  /// \return
+  ///     Returns \b true if this section is ignored for address resolution, and
+  ///     falls back to JIT Loader resolution.
+  bool IsIgnored() const { return m_ignore; }
+
+  /// Ignore this section when resolving addresses. Some JIT solutions
+  /// will create a large section in the main binary that will get code JIT'ed
+  /// into. Address lookups need to ignore this section and resolve the
+  /// address in another module that gets loaded.
+  void SetIsIgnored(bool b) { m_ignore = b; }
+
   /// Returns true if this section contains debug information. Symbol tables
   /// are not considered debug information since some symbols might contain
   /// debug information (STABS, COFF) but not all symbols do, so to keep this
@@ -300,7 +312,9 @@ protected:
       m_readable : 1,          // If this section has read permissions
       m_writable : 1,          // If this section has write permissions
       m_executable : 1,        // If this section has executable permissions
-      m_relocated : 1;         // If this section has had relocations applied
+      m_relocated : 1,         // If this section has had relocations applied
+      m_ignore : 1;            // If this section is ignored for address
+                               // resolution.
   uint32_t m_target_byte_size; // Some architectures have non-8-bit byte size.
                                // This is specified as
                                // as a multiple number of a host bytes

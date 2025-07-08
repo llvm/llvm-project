@@ -172,7 +172,7 @@ Section::Section(const ModuleSP &module_sp, ObjectFile *obj_file,
       m_file_offset(file_offset), m_file_size(file_size),
       m_log2align(log2align), m_children(), m_fake(false), m_encrypted(false),
       m_thread_specific(false), m_readable(false), m_writable(false),
-      m_executable(false), m_relocated(false),
+      m_executable(false), m_relocated(false), m_ignore(false),
       m_target_byte_size(target_byte_size) {}
 
 Section::Section(const lldb::SectionSP &parent_section_sp,
@@ -187,7 +187,7 @@ Section::Section(const lldb::SectionSP &parent_section_sp,
       m_file_offset(file_offset), m_file_size(file_size),
       m_log2align(log2align), m_children(), m_fake(false), m_encrypted(false),
       m_thread_specific(false), m_readable(false), m_writable(false),
-      m_executable(false), m_relocated(false),
+      m_executable(false), m_relocated(false), m_ignore(false),
       m_target_byte_size(target_byte_size) {
   if (parent_section_sp)
     m_parent_wp = parent_section_sp;

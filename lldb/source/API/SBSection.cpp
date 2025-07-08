@@ -261,3 +261,11 @@ bool SBSection::GetDescription(SBStream &description) {
 
   return true;
 }
+
+void SBSection::SetIsIgnored(bool is_gnore_resolution) {
+  LLDB_INSTRUMENT_VA(this);
+
+  SectionSP section_sp(GetSP());
+  if (section_sp.get())
+    section_sp->SetIsIgnored(is_gnore_resolution);
+}

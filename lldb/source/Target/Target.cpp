@@ -48,6 +48,7 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/JITLoaderList.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/JITLoaderList.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
@@ -3294,8 +3295,14 @@ Status Target::Install(ProcessLaunchInfo *launch_info) {
 
 bool Target::ResolveLoadAddress(addr_t load_addr, Address &so_addr,
                                 uint32_t stop_id, bool allow_section_end) {
-  return m_section_load_history.ResolveLoadAddress(stop_id, load_addr, so_addr,
-                                                   allow_section_end);
+  if (m_section_load_history.ResolveLoadAddress(stop_id, load_addr, so_addr,
+                                                allow_section_end))
+    return true;
+
+  ProcessSP process_sp(GetProcessSP());
+  if (!process_sp)
+    return false;
+  return process_sp->GetJITLoaders().ResolveLoadAddress(load_addr, so_addr);
 }
 
 bool Target::ResolveFileAddress(lldb::addr_t file_addr,
