@@ -1971,15 +1971,8 @@ static bool isKnownToAlwaysThrowCFG(const FunctionDecl *FD, Sema &S) {
   FunctionDecl *NonConstFD = const_cast<FunctionDecl *>(FD);
   AnalysisDeclContext AC(nullptr, NonConstFD);
 
-  switch (CheckFallThrough(AC)) {
-  case NeverFallThrough:
-  case NeverFallThroughOrReturn:
-    return true;
-  case AlwaysFallThrough:
-  case UnknownFallThrough:
-  case MaybeFallThrough:
-    return false;
-  }
+  auto FT = CheckFallThrough(AC);
+  return FT == NeverFallThroughOrReturn;
 }
 
 bool clang::inferNoReturnAttr(Sema &S, const Decl *D, bool FirstPass) {
