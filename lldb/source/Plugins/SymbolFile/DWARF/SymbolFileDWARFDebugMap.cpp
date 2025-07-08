@@ -1312,7 +1312,8 @@ void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s, llvm::StringRef filter) {
 }
 
 bool SymbolFileDWARFDebugMap::GetSeparateDebugInfo(
-    StructuredData::Dictionary &d, bool errors_only) {
+    lldb_private::StructuredData::Dictionary &d, bool errors_only,
+    bool load_all_debug_info) {
   StructuredData::Array separate_debug_info_files;
   const uint32_t cu_count = GetNumCompileUnits();
   for (uint32_t cu_idx = 0; cu_idx < cu_count; ++cu_idx) {

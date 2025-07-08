@@ -4248,7 +4248,8 @@ void SymbolFileDWARF::DumpClangAST(Stream &s, llvm::StringRef filter) {
 }
 
 bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d,
-                                           bool errors_only) {
+                                           bool errors_only,
+                                           bool load_all_debug_info) {
   StructuredData::Array separate_debug_info_files;
   DWARFDebugInfo &info = DebugInfo();
   const size_t num_cus = info.GetNumUnits();
@@ -4291,7 +4292,7 @@ bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d,
 
     // If we have a DWO symbol file, that means we were able to successfully
     // load it.
-    SymbolFile *dwo_symfile = dwarf_cu->GetDwoSymbolFile();
+    SymbolFile *dwo_symfile = dwarf_cu->GetDwoSymbolFile(load_all_debug_info);
     if (dwo_symfile) {
       dwo_data->AddStringItem(
           "resolved_dwo_path",
