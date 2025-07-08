@@ -395,7 +395,7 @@ using BranchSample = std::map<std::pair<uint64_t, uint64_t>, uint64_t>;
 // The counter of range samples for one function indexed by the range,
 // which is represented as the start and end offset pair.
 using RangeSample = std::map<std::pair<uint64_t, uint64_t>, uint64_t>;
-// <<inst-addr, data-addr>, count> map for data access samples.
+// <<inst-addr, vtable-data-symbol>, count> map for data access samples.
 using DataAccessSample = std::map<std::pair<uint64_t, StringRef>, uint64_t>;
 // Wrapper for sample counters including range counter and branch counter
 struct SampleCounter {
@@ -564,16 +564,6 @@ private:
   std::set<uint64_t> UntrackedCallsites;
 };
 
-// For data access profiles.
-struct ProfiledInfo {
-  ProfiledInfo(uint64_t InstructionAddr, StringRef DataSymbol, uint64_t Count)
-      : InstructionAddr(InstructionAddr), DataSymbol(DataSymbol), Count(Count) {
-  }
-  uint64_t InstructionAddr;
-  StringRef DataSymbol;
-  uint64_t Count;
-};
-
 // Read perf trace to parse the events and samples.
 class PerfReaderBase {
 public:
@@ -598,22 +588,6 @@ public:
       StringRef DataAccessPerfFile,
       std::optional<int32_t> PIDFilter = std::nullopt);
 
-  void recordDataAccessCountRef(
-      const DenseMap<uint64_t, DenseMap<StringRef, uint64_t>> &In) {
-    DataAccessProfInfo.clear();
-    for (const auto &[IpAddr, DataCount] : In) {
-      for (const auto [DataAddr, Count] : DataCount) {
-        DataAccessProfInfo[{IpAddr, DataAddr}] += Count;
-      }
-    }
-
-    assert(!SampleCounters.empty() && "Sample counters should not be empty!");
-    SampleCounter &Counter = SampleCounters.begin()->second;
-    for (const auto &[InstDataPair, Count] : DataAccessProfInfo) {
-      Counter.recordDataAccessCount(InstDataPair.first, InstDataPair.second,
-                                    Count);
-    }
-  }
   const ContextSampleCounterMap &getSampleCounters() const {
     return SampleCounters;
   }

@@ -286,15 +286,17 @@ class ProfiledBinary {
   // String table owning function name strings created from the symbolizer.
   std::unordered_set<std::string> NameStrings;
 
+  // MMap events for PT_LOAD segments without 'x' memory protection flag.
   SmallVector<MMapEvent> MMapNonTextEvents;
 
+  // Records the file offset, file size and virtual address of program headers.
   struct PhdrInfo {
     uint64_t FileOffset;
     uint64_t FileSz;
     uint64_t vAddr;
   };
 
-  // first is offset, and second is vaddr
+  // Program header information for non-text PT_LOAD segments.
   SmallVector<PhdrInfo> NonTextPhdrInfo;
 
   // A collection of functions to print disassembly for.

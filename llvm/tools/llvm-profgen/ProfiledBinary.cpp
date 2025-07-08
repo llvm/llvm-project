@@ -335,7 +335,6 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
         // Segments will always be loaded at a page boundary.
         PreferredTextSegmentAddresses.push_back(Phdr.p_vaddr &
                                                 ~(PageSize - 1U));
-
         TextSegmentOffsets.push_back(Phdr.p_offset & ~(PageSize - 1U));
       } else {
         PhdrInfo Info;

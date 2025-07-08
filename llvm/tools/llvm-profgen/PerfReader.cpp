@@ -395,26 +395,18 @@ void PerfReaderBase::parseDataAccessPerfTraces(
   for (; !LineIt.is_at_eof(); ++LineIt) {
     StringRef Line = *LineIt;
 
-    // Parse MMAP event from perf trace.
-    // Parse MMAP event from perf trace.
-    // Construct a binary from the binary file path.
     MMapEvent MMap;
     if (Line.contains("PERF_RECORD_MMAP2")) {
       if (PerfScriptReader::extractMMapEventForBinary(Binary, Line, MMap)) {
         if (!MMap.MemProtectionFlag.contains("x")) {
-          outs() << "PerfReader.cpp:469\tMMap: " << MMap.BinaryPath
-                 << " loaded at " << format("0x%" PRIx64, MMap.Address)
-                 << " with size " << format("0x%" PRIx64, MMap.Size)
-                 << " and offset " << format("0x%" PRIx64, MMap.Offset) << "\t"
-                 << "Protection: " << MMap.MemProtectionFlag << "\n";
           Binary->addMMapNonTextEvent(MMap);
         }
       }
       continue;
     }
 
+    // Skip lines that do not contain "PERF_RECORD_SAMPLE".
     if (!Line.contains("PERF_RECORD_SAMPLE")) {
-      // Skip lines that do not contain "PERF_RECORD_SAMPLE".
       continue;
     }
 
@@ -427,7 +419,7 @@ void PerfReaderBase::parseDataAccessPerfTraces(
 
       uint64_t DataAddress = std::stoull(matches[4].str(), nullptr, 16);
 
-      // Skip addresses out of the specified PT_LOAD section for data.
+      // Skip addresses out of the specified PT_LOAD section for data sections.
       if (!Binary->InRange(DataAddress))
         continue;
 
@@ -438,11 +430,8 @@ void PerfReaderBase::parseDataAccessPerfTraces(
 
       uint64_t IP = std::stoull(matches[3].str(), nullptr, 16);
 
-      uint64_t DataAddressCanonicalized =
-          Binary->CanonicalizeNonTextAddress(DataAddress);
-
-      StringRef DataSymbol =
-          Binary->symbolizeDataAddress(DataAddressCanonicalized);
+      StringRef DataSymbol = Binary->symbolizeDataAddress(
+          Binary->CanonicalizeNonTextAddress(DataAddress));
       if (DataSymbol.starts_with("_ZTV")) {
         Counter.recordDataAccessCount(Binary->canonicalizeVirtualAddress(IP),
                                       DataSymbol, 1);
@@ -559,8 +548,6 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
     // Only update for the first executable segment and assume all other
     // segments are loaded at consecutive memory addresses, which is the case on
     // X64.
-    errs() << "Setting " << Binary->getPath() << " base address to "
-           << format("0x%" PRIx64, Event.Address) << "\n";
     Binary->setBaseAddress(Event.Address);
     Binary->setIsLoadedByMMap(true);
   } else {
@@ -1098,7 +1085,7 @@ bool PerfScriptReader::extractMMapEventForBinary(ProfiledBinary *Binary,
   };
 
   bool R = false;
-  SmallVector<StringRef, 8> Fields;
+  SmallVector<StringRef, 7> Fields;
   if (Line.contains("PERF_RECORD_MMAP2 ")) {
     Regex RegMmap2(MMap2Pattern);
     R = RegMmap2.match(Line, &Fields);

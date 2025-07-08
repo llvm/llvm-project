@@ -542,12 +542,7 @@ void ProfileGenerator::generateLineNumBasedProfile() {
   // Fill in boundary sample counts as well as call site samples for calls
   populateBoundarySamplesForAllFunctions(SC.BranchCounter);
 
-  // populateDataAccessSamples.
-  // If the <line-offset, discriminator> pair is found in both body samples
-  // and call site samples, drop annotation on both. Otherwise, pick one.
-  // This is a simplification.
-  // Or assume the compiler generates disciriminators for such cases already
-  // so it's transparent for llvm-profgen.
+  // Process data access counters.
   const auto &DataAccessCounters = SC.DataAccessCounter;
   for (const auto &Entry : DataAccessCounters) {
     uint64_t InstAddr = Entry.first.first;
