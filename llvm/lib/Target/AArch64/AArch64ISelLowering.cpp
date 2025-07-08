@@ -18186,17 +18186,19 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   // Create the whilelo_x2 intrinsics from each pair of extracts
   EVT ExtVT = Extracts[0]->getValueType(0);
-  for (unsigned I = 0; I < NumUses; I += 2) {
+  auto R =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, {ExtVT, ExtVT}, {ID, Idx, TC});
+  DCI.CombineTo(Extracts[0], R.getValue(0));
+  DCI.CombineTo(Extracts[1], R.getValue(1));
+
+  if (NumUses == 2)
+    return SDValue(N, 0);
+
+  auto Elts = DAG.getElementCount(DL, OpVT, ExtVT.getVectorElementCount() * 2);
+  for (unsigned I = 2; I < NumUses; I += 2) {
     // After the first whilelo_x2, we need to increment the starting value.
-    if (I > 0) {
-      SDValue Elts =
-          DAG.getElementCount(DL, OpVT, ExtVT.getVectorElementCount());
-      Idx = DAG.getNode(ISD::UADDSAT, DL, OpVT, Idx, Elts);
-    }
-
-    auto R =
-        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, {ExtVT, ExtVT}, {ID, Idx, TC});
-
+    Idx = DAG.getNode(ISD::UADDSAT, DL, OpVT, Idx, Elts);
+    R = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, {ExtVT, ExtVT}, {ID, Idx, TC});
     DCI.CombineTo(Extracts[I], R.getValue(0));
     DCI.CombineTo(Extracts[I + 1], R.getValue(1));
   }

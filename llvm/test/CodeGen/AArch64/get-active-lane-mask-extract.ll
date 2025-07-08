@@ -100,7 +100,7 @@ define void @test_legal_4x2bit_mask(i64 %i, i64 %n) #0 {
 ;
 ; CHECK-SVE2p1-SME2-LABEL: test_legal_4x2bit_mask:
 ; CHECK-SVE2p1-SME2:       // %bb.0:
-; CHECK-SVE2p1-SME2-NEXT:    cntd x8
+; CHECK-SVE2p1-SME2-NEXT:    cntw x8
 ; CHECK-SVE2p1-SME2-NEXT:    adds x8, x0, x8
 ; CHECK-SVE2p1-SME2-NEXT:    csinv x8, x8, xzr, lo
 ; CHECK-SVE2p1-SME2-NEXT:    whilelo { p0.d, p1.d }, x0, x1
