@@ -988,8 +988,8 @@ private:
 
             // If it is not safe to hoist/sink all instructions in the
             // pre-header, we cannot fuse these loops.
-            if (!collectMovablePreheaderInsts(*FC0, *FC1, SafeToHoist,
-                                              SafeToSink)) {
+            if (!collectAndFixMovablePreheaderInsts(*FC0, *FC1, SafeToHoist,
+                                                    SafeToSink)) {
               LLVM_DEBUG(dbgs() << "Could not hoist/sink all instructions in "
                                    "Fusion Candidate Pre-header.\n"
                                 << "Not Fusing.\n");
@@ -1033,8 +1033,8 @@ private:
                                                FuseCounter);
 
           FusionCandidate FusedCand(
-              performFusion((Peel ? FC0Copy : *FC0), *FC1), DT, &PDT, ORE,
-              FC0Copy.PP);
+              performFusion((Peel ? FC0Copy : *FC0), *FC1, SafeToSink), DT,
+              &PDT, ORE, FC0Copy.PP);
           FusedCand.verify();
           assert(FusedCand.isEligibleForFusion(SE) &&
                  "Fused candidate should be eligible for fusion!");
@@ -1176,9 +1176,31 @@ private:
     return true;
   }
 
+  void fixPHINodes(SmallVector<Instruction *, 4> &SafeToSink,
+                   const FusionCandidate &FC0,
+                   const FusionCandidate &FC1) const {
+    // Iterate over SafeToSink instructions and update PHI nodes
+    // to take values from the latch block of FC0 if they are taking
+    // from the latch block of FC1.
+    for (Instruction *Inst : SafeToSink) {
+      LLVM_DEBUG(dbgs() << "UPDATING: Instruction: " << *Inst << "\n");
+      // Continue if the instruction is not a PHI node.
+      if (!isa<PHINode>(Inst))
+        continue;
+      PHINode *Phi = dyn_cast<PHINode>(Inst);
+      LLVM_DEBUG(dbgs() << "UPDATING: PHI node: " << *Phi << "\n");
+      for (unsigned I = 0; I < Phi->getNumIncomingValues(); I++) {
+        if (Phi->getIncomingBlock(I) != FC0.Latch)
+          continue;
+        assert(FC1.Latch && "FC1 latch is not set");
+        Phi->setIncomingBlock(I, FC1.Latch);
+      }
+    }
+  }
+
   /// Collect instructions in the \p FC1 Preheader that can be hoisted
   /// to the \p FC0 Preheader or sunk into the \p FC1 Body
-  bool collectMovablePreheaderInsts(
+  bool collectAndFixMovablePreheaderInsts(
       const FusionCandidate &FC0, const FusionCandidate &FC1,
       SmallVector<Instruction *, 4> &SafeToHoist,
       SmallVector<Instruction *, 4> &SafeToSink) const {
@@ -1226,6 +1248,8 @@ private:
     }
     LLVM_DEBUG(
         dbgs() << "All preheader instructions could be sunk or hoisted!\n");
+
+    fixPHINodes(SafeToSink, FC0, FC1);
     return true;
   }
 
