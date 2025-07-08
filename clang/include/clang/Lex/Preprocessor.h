@@ -3190,7 +3190,7 @@ class ModuleNameLoc final
   }
 
   ModuleNameLoc(ModuleIdPath Path) : NumIdentifierLocs(Path.size()) {
-    (void)llvm::copy(Path, getTrailingObjects<IdentifierLoc>());
+    (void)llvm::copy(Path, getTrailingObjectsNonStrict<IdentifierLoc>());
   }
 
 public:
@@ -3199,7 +3199,8 @@ public:
   static Token CreateAnnotToken(Preprocessor &PP, ModuleIdPath Path);
   unsigned getNumIdentifierLocs() const { return NumIdentifierLocs; }
   ModuleIdPath getModuleIdPath() const {
-    return {getTrailingObjects<IdentifierLoc>(), getNumIdentifierLocs()};
+    return {getTrailingObjectsNonStrict<IdentifierLoc>(),
+            getNumIdentifierLocs()};
   }
 
   SourceLocation getBeginLoc() const {
