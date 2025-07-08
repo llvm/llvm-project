@@ -139,7 +139,7 @@ struct InfoTreeNode {
   // * The same key can appear multiple times
   std::unique_ptr<llvm::SmallVector<InfoTreeNode, 8>> Children;
 
-  std::map<DeviceInfo, size_t> DeviceInfoMap;
+  llvm::DenseMap<DeviceInfo, size_t> DeviceInfoMap;
 
   InfoTreeNode() : InfoTreeNode("", std::monostate{}, "") {}
   InfoTreeNode(std::string Key, VariantType Value, std::string Units)
@@ -187,8 +187,9 @@ struct InfoTreeNode {
   }
 
   std::optional<InfoTreeNode *> get(DeviceInfo Info) {
-    if (DeviceInfoMap.count(Info))
-      return &(*Children)[DeviceInfoMap[Info]];
+    auto Result = DeviceInfoMap.find(Info);
+    if (Result != DeviceInfoMap.end())
+      return &(*Children)[Result->second];
     return std::nullopt;
   }
 
