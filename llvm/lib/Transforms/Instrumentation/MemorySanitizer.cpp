@@ -4644,7 +4644,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // by using bitwise NOT before and after the ZExt.
     if (ANumElements != OutputNumElements) {
       Mask = IRB.CreateNot(Mask);
-      Mask = IRB.CreateZExt(Mask, Type::getIntNTy(*MS.C, OutputNumElements), "_ms_widen_mask");
+      Mask = IRB.CreateZExt(Mask, Type::getIntNTy(*MS.C, OutputNumElements),
+                            "_ms_widen_mask");
       Mask = IRB.CreateNot(Mask);
     }
     Mask = IRB.CreateBitCast(
