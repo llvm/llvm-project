@@ -391,6 +391,7 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
   rewriter.replaceOp(forOp, conditionBlock->getArguments().drop_front());
   return success();
 }
+
 LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
                                           PatternRewriter &rewriter) const {
   auto loc = ifOp.getLoc();
