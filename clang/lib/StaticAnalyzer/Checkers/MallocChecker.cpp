@@ -346,10 +346,6 @@ namespace {
   };
 
 BUGTYPE_PROVIDER(DoubleFree, "Double free")
-// TODO: Remove DoubleDelete as a separate bug type and when it would be
-// emitted, emit DoubleFree reports instead. (Note that DoubleFree is already
-// used for all allocation families, not just malloc/free.)
-BUGTYPE_PROVIDER(DoubleDelete, "Double delete")
 
 struct Leak : virtual public CheckerFrontend {
   // Leaks should not be reported if they are post-dominated by a sink:
@@ -410,7 +406,7 @@ public:
   DynMemFrontend<DoubleFree, Leak, UseFree, BadFree, FreeAlloca, OffsetFree,
                  UseZeroAllocated>
       MallocChecker;
-  DynMemFrontend<DoubleFree, DoubleDelete, UseFree, BadFree, OffsetFree,
+  DynMemFrontend<DoubleFree, UseFree, BadFree, OffsetFree,
                  UseZeroAllocated>
       NewDeleteChecker;
   DynMemFrontend<Leak> NewDeleteLeaksChecker;
@@ -847,8 +843,6 @@ private:
 
   void HandleDoubleFree(CheckerContext &C, SourceRange Range, bool Released,
                         SymbolRef Sym, SymbolRef PrevSym) const;
-
-  void HandleDoubleDelete(CheckerContext &C, SymbolRef Sym) const;
 
   void HandleUseZeroAlloc(CheckerContext &C, SourceRange Range,
                           SymbolRef Sym) const;
@@ -2737,30 +2731,11 @@ void MallocChecker::HandleDoubleFree(CheckerContext &C, SourceRange Range,
         (Released ? "Attempt to free released memory"
                   : "Attempt to free non-owned memory"),
         N);
-    R->addRange(Range);
+    if (Range.isValid())
+      R->addRange(Range);
     R->markInteresting(Sym);
     if (PrevSym)
       R->markInteresting(PrevSym);
-    R->addVisitor<MallocBugVisitor>(Sym);
-    C.emitReport(std::move(R));
-  }
-}
-
-void MallocChecker::HandleDoubleDelete(CheckerContext &C, SymbolRef Sym) const {
-  const DoubleDelete *Frontend = getRelevantFrontendAs<DoubleDelete>(C, Sym);
-  if (!Frontend)
-    return;
-  if (!Frontend->isEnabled()) {
-    C.addSink();
-    return;
-  }
-
-  if (ExplodedNode *N = C.generateErrorNode()) {
-
-    auto R = std::make_unique<PathSensitiveBugReport>(
-        Frontend->DoubleDeleteBug, "Attempt to delete released memory", N);
-
-    R->markInteresting(Sym);
     R->addVisitor<MallocBugVisitor>(Sym);
     C.emitReport(std::move(R));
   }
@@ -3324,7 +3299,7 @@ void MallocChecker::checkUseZeroAllocated(SymbolRef Sym, CheckerContext &C,
 bool MallocChecker::checkDoubleDelete(SymbolRef Sym, CheckerContext &C) const {
 
   if (isReleased(Sym, C)) {
-    HandleDoubleDelete(C, Sym);
+    HandleDoubleFree(C, SourceRange(), /*Released=*/true, Sym, nullptr);
     return true;
   }
   return false;
