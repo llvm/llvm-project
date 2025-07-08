@@ -4,9 +4,9 @@
 #include <stdio.h>
 
 int x[10];
+int *p;
 
 void f1() {
-  int *p;
   p = &x[0];
   p[0] = 111;
   p[1] = 222;
@@ -30,7 +30,7 @@ void f1() {
 // p is predetermined firstprivate, so its address will be different from
 // the mapped address for this construct. So, any changes to p within the
 // region will not be visible after the construct.
-#pragma omp target map(p[0]) map(to : p_mappedptr, x0_mappedptr, x0_hostaddr)
+#pragma omp target map(*p) map(to : p_mappedptr, x0_mappedptr, x0_hostaddr)
   {
     printf("%d %d %d %d\n", p[0], p_mappedptr == &p, x0_mappedptr == &p[0],
            x0_hostaddr == &p[0]);
@@ -41,7 +41,7 @@ void f1() {
 // For the remaining constructs, p is not firstprivate, so its address will
 // be the same as the mapped address, and changes to p will be visible to any
 // subsequent regions.
-#pragma omp target map(to : p[0], p)                                           \
+#pragma omp target map(to : *p, p)                                             \
     map(to : p_mappedptr, x0_mappedptr, x0_hostaddr)
   {
     printf("%d %d %d %d\n", p[0], p_mappedptr == &p, x0_mappedptr == &p[0],
@@ -50,7 +50,7 @@ void f1() {
     p++;
   }
 
-#pragma omp target map(to : p, p[0])                                           \
+#pragma omp target map(to : p, *p)                                             \
     map(to : p_mappedptr, x0_mappedptr, x0_hostaddr)
   {
     printf("%d %d %d %d\n", p[0], p_mappedptr == &p, x0_mappedptr == &p[-1],
