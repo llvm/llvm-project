@@ -260,9 +260,9 @@ def _get_modified_projects(modified_files: list[str]) -> Set[str]:
             continue
         # If the file is in the clang/lib/CIR directory, add the CIR project.
         if len(path_parts) > 3 and (
-            path_parts[:3] == ("clang", "lib", "CIR") or
-            path_parts[:3] == ("clang", "test", "CIR") or
-            path_parts[:4] == ("clang", "include", "clang", "CIR")
+            path_parts[:3] == ("clang", "lib", "CIR")
+            or path_parts[:3] == ("clang", "test", "CIR")
+            or path_parts[:4] == ("clang", "include", "clang", "CIR")
         ):
             modified_projects.add("clang")
             modified_projects.add("CIR")
