@@ -45,7 +45,7 @@ def int_wasm_ref_is_null_exn :
 
 def int_wasm_ref_test_func
     : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_vararg_ty],
-                            [IntrNoMem], "llvm.wasm.ref.test.func">;
+                            [IntrNoMem]>;
 
 //===----------------------------------------------------------------------===//
 // Table intrinsics
