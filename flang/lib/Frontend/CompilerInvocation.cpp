@@ -291,13 +291,14 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   opts.AliasAnalysis = opts.OptimizationLevel > 0;
 
-  // -mframe-pointer=none/non-leaf/all option.
+  // -mframe-pointer=none/non-leaf/reserved/all option.
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_mframe_pointer_EQ)) {
     std::optional<llvm::FramePointerKind> val =
         llvm::StringSwitch<std::optional<llvm::FramePointerKind>>(a->getValue())
             .Case("none", llvm::FramePointerKind::None)
             .Case("non-leaf", llvm::FramePointerKind::NonLeaf)
+            .Case("reserved", llvm::FramePointerKind::Reserved)
             .Case("all", llvm::FramePointerKind::All)
             .Default(std::nullopt);
 
