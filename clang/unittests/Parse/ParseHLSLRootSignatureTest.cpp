@@ -1253,7 +1253,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRootElementMissingCommaTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
                                    Signature, *PP);
 
@@ -1280,7 +1280,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidDescriptorTableMissingCommaTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
                                    Signature, *PP);
 
@@ -1307,7 +1307,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRootConstantParamsCommaTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
                                    Signature, *PP);
 
@@ -1334,7 +1334,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRootDescriptorParamsCommaTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
                                    Signature, *PP);
 
@@ -1363,7 +1363,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidDescriptorClauseParamsCommaTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
                                    Signature, *PP);
 
@@ -1390,7 +1390,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidStaticSamplerCommaTest) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
                                    Signature, *PP);
 
