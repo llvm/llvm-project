@@ -226,7 +226,7 @@ void VarLenInst::buildRec(const DagInit *DI) {
 void VarLenCodeEmitterGen::run(raw_ostream &OS) {
   CodeGenTarget Target(Records);
 
-  auto NumberedInstructions = Target.getInstructionsByEnumValue();
+  auto NumberedInstructions = Target.getInstructions();
 
   for (const CodeGenInstruction *CGI : NumberedInstructions) {
     const Record *R = CGI->TheDef;

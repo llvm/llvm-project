@@ -777,6 +777,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::FMAXNUM_IEEE, MVT::f32, Legal);
     setOperationAction(ISD::FMINNUM_IEEE, MVT::f64, Legal);
     setOperationAction(ISD::FMINNUM_IEEE, MVT::f32, Legal);
+    setOperationAction(ISD::FCANONICALIZE, MVT::f64, Legal);
+    setOperationAction(ISD::FCANONICALIZE, MVT::f32, Legal);
   }
 
   if (Subtarget.hasAltivec()) {
@@ -9585,8 +9587,7 @@ static bool isValidSplatLoad(const PPCSubtarget &Subtarget, const SDValue &Op,
 }
 
 bool isValidMtVsrBmi(APInt &BitMask, BuildVectorSDNode &BVN) {
-  unsigned int NumOps = BVN.getNumOperands();
-  assert(NumOps > 0 && "Unexpected 0-size build vector");
+  assert(BVN.getNumOperands() > 0 && "Unexpected 0-size build vector");
 
   BitMask.clearAllBits();
   EVT VT = BVN.getValueType(0);
@@ -17961,9 +17962,6 @@ SDValue PPCTargetLowering::LowerRETURNADDR(SDValue Op,
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MFI.setReturnAddressIsTaken(true);
-
-  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
 
   SDLoc dl(Op);
   unsigned Depth = Op.getConstantOperandVal(0);
