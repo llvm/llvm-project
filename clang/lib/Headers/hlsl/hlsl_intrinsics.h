@@ -524,14 +524,14 @@ _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 const inline __detail::HLSL_FIXED_VECTOR<half, L> refract(
     __detail::HLSL_FIXED_VECTOR<half, L> I,
     __detail::HLSL_FIXED_VECTOR<half, L> N, half eta) {
-  return __detail::refract_vec_impl(I, N, eta);
+  return __detail::refract_impl(I, N, eta);
 }
 
 template <int L>
 const inline __detail::HLSL_FIXED_VECTOR<float, L>
 refract(__detail::HLSL_FIXED_VECTOR<float, L> I,
         __detail::HLSL_FIXED_VECTOR<float, L> N, float eta) {
-  return __detail::refract_vec_impl(I, N, eta);
+  return __detail::refract_impl(I, N, eta);
 }
 
 //===----------------------------------------------------------------------===//

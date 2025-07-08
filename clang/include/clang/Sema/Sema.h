@@ -2791,25 +2791,6 @@ public:
 
   void CheckConstrainedAuto(const AutoType *AutoT, SourceLocation Loc);
 
-  bool CheckAllArgTypesAreCorrect(
-      Sema *S, CallExpr *TheCall,
-      llvm::ArrayRef<
-          llvm::function_ref<bool(Sema *, SourceLocation, int, QualType)>>
-          Checks);
-  bool CheckAllArgTypesAreCorrect(
-      Sema *S, CallExpr *TheCall,
-      llvm::function_ref<bool(Sema *, SourceLocation, int, QualType)> Check);
-
-  static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
-                                             int ArgOrdinal,
-                                             clang::QualType PassedType);
-  static bool CheckFloatOrHalfVectorsRepresentation(Sema *S, SourceLocation Loc,
-                                                    int ArgOrdinal,
-                                                    clang::QualType PassedType);
-
-  static bool CheckFloatOrHalfScalarRepresentation(Sema *S, SourceLocation Loc,
-                                                   int ArgOrdinal,
-                                                   clang::QualType PassedType);
   /// BuiltinConstantArg - Handle a check if argument ArgNum of CallExpr
   /// TheCall is a constant expression.
   bool BuiltinConstantArg(CallExpr *TheCall, int ArgNum, llvm::APSInt &Result);

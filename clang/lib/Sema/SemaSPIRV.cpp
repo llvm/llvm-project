@@ -46,6 +46,59 @@ static bool CheckAllArgsHaveSameType(Sema *S, CallExpr *TheCall) {
   return false;
 }
 
+static bool CheckAllArgTypesAreCorrect(
+    Sema *S, CallExpr *TheCall,
+    llvm::ArrayRef<
+        llvm::function_ref<bool(Sema *, SourceLocation, int, QualType)>>
+        Checks) {
+  unsigned NumArgs = TheCall->getNumArgs();
+  assert(Checks.size() == NumArgs &&
+         "Wrong number of checks for Number of args.");
+  // Apply each check to the corresponding argument
+  for (unsigned I = 0; I < NumArgs; ++I) {
+    Expr *Arg = TheCall->getArg(I);
+    if (Checks[I](S, Arg->getBeginLoc(), I + 1, Arg->getType()))
+      return true;
+  }
+  return false;
+}
+
+static bool CheckAllArgTypesAreCorrect(
+    Sema *S, CallExpr *TheCall,
+    llvm::function_ref<bool(Sema *, SourceLocation, int, QualType)> Check) {
+  return CheckAllArgTypesAreCorrect(
+      S, TheCall,
+      SmallVector<
+          llvm::function_ref<bool(Sema *, SourceLocation, int, QualType)>, 4>(
+          TheCall->getNumArgs(), Check));
+}
+
+static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
+                                           int ArgOrdinal,
+                                           clang::QualType PassedType) {
+  clang::QualType BaseType =
+      PassedType->isVectorType()
+          ? PassedType->castAs<clang::VectorType>()->getElementType()
+          : PassedType;
+  if (!BaseType->isHalfType() && !BaseType->isFloat32Type())
+    return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
+           << ArgOrdinal << /* scalar or vector of */ 5 << /* no int */ 0
+           << /* half or float */ 2 << PassedType;
+  return false;
+}
+
+static bool CheckFloatOrHalfScalarRepresentation(Sema *S, SourceLocation Loc,
+                                                 int ArgOrdinal,
+                                                 clang::QualType PassedType) {
+  const auto *VecTy = PassedType->getAs<VectorType>();
+
+  if (VecTy || (!PassedType->isHalfType() && !PassedType->isFloat32Type()))
+    return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
+           << ArgOrdinal << /* scalar */ 1 << /* no int */ 0
+           << /* half or float */ 2 << PassedType;
+  return false;
+}
+
 static std::optional<int>
 processConstant32BitIntArgument(Sema &SemaRef, CallExpr *Call, int Argument) {
   ExprResult Arg =
@@ -240,11 +293,11 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
       return true;
 
     llvm::function_ref<bool(Sema *, SourceLocation, int, QualType)>
-        ChecksArr[] = {Sema::CheckFloatOrHalfVectorsRepresentation,
-                       Sema::CheckFloatOrHalfVectorsRepresentation,
-                       Sema::CheckFloatOrHalfScalarRepresentation};
-    if (SemaRef.CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
-                                           llvm::ArrayRef(ChecksArr)))
+        ChecksArr[] = {CheckFloatOrHalfRepresentation,
+                       CheckFloatOrHalfRepresentation,
+                       CheckFloatOrHalfScalarRepresentation};
+    if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
+                                   llvm::ArrayRef(ChecksArr)))
       return true;
 
     ExprResult C = TheCall->getArg(2);
