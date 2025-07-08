@@ -5,3 +5,12 @@ void f()
   // CHECK: store i32 0
   int i{};
 }
+
+
+namespace GH116440 {
+void f() {
+  void{};
+  void();
+}
+
+}
