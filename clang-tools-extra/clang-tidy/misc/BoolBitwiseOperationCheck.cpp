@@ -89,45 +89,45 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
         return E->IgnoreImpCasts()->getType().isVolatileQualified();
       });
   if (HasVolatileOperand)
-    return (void)DiagEmitter();
+    return static_cast<void>(DiagEmitter());
 
   const bool HasSideEffects = MatchedExpr->getRHS()->HasSideEffects(
       *Result.Context, /*IncludePossibleEffects=*/!StrictMode);
   if (HasSideEffects)
-    return (void)DiagEmitter();
+    return static_cast<void>(DiagEmitter());
 
   SourceLocation Loc = MatchedExpr->getOperatorLoc();
 
   if (Loc.isInvalid() || Loc.isMacroID())
-    return void(IgnoreMacros || DiagEmitter());
+    return static_cast<void>(IgnoreMacros || DiagEmitter());
 
   Loc = Result.SourceManager->getSpellingLoc(Loc);
   if (Loc.isInvalid() || Loc.isMacroID())
-    return void(IgnoreMacros || DiagEmitter());
+    return static_cast<void>(IgnoreMacros || DiagEmitter());
 
   const CharSourceRange TokenRange = CharSourceRange::getTokenRange(Loc);
   if (TokenRange.isInvalid())
-    return void(IgnoreMacros || DiagEmitter());
+    return static_cast<void>(IgnoreMacros || DiagEmitter());
 
   const StringRef FixSpelling = translate(Lexer::getSourceText(
       TokenRange, *Result.SourceManager, Result.Context->getLangOpts()));
 
   if (FixSpelling.empty())
-    return (void)DiagEmitter();
+    return static_cast<void>(DiagEmitter());
 
   FixItHint InsertEqual;
   if (MatchedExpr->isCompoundAssignmentOp()) {
     const auto *DeclRefLHS =
         dyn_cast<DeclRefExpr>(MatchedExpr->getLHS()->IgnoreImpCasts());
     if (!DeclRefLHS)
-      return (void)DiagEmitter();
+      return static_cast<void>(DiagEmitter());
     const SourceLocation LocLHS = DeclRefLHS->getEndLoc();
     if (LocLHS.isInvalid() || LocLHS.isMacroID())
-      return void(IgnoreMacros || DiagEmitter());
+      return static_cast<void>(IgnoreMacros || DiagEmitter());
     const SourceLocation InsertLoc = clang::Lexer::getLocForEndOfToken(
         LocLHS, 0, *Result.SourceManager, Result.Context->getLangOpts());
     if (InsertLoc.isInvalid() || InsertLoc.isMacroID())
-      return void(IgnoreMacros || DiagEmitter());
+      return static_cast<void>(IgnoreMacros || DiagEmitter());
     InsertEqual = FixItHint::CreateInsertion(
         InsertLoc, " = " + DeclRefLHS->getDecl()->getNameAsString());
   }
@@ -149,7 +149,7 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   if ((MatchedExpr->getOpcode() == BO_Or && ParentOpcode == BO_LAnd) ||
       (MatchedExpr->getOpcode() == BO_And &&
        llvm::is_contained({BO_Xor, BO_Or}, ParentOpcode))) {
-    const auto *Side = Parent->getLHS()->IgnoreParenImpCasts() == MatchedExpr
+    const Expr *Side = Parent->getLHS()->IgnoreParenImpCasts() == MatchedExpr
                            ? Parent->getLHS()
                            : Parent->getRHS();
     SurroundedExpr = Side->IgnoreImpCasts();
@@ -160,7 +160,8 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   if (SurroundedExpr && isa<ParenExpr>(SurroundedExpr))
     SurroundedExpr = nullptr;
 
-  FixItHint InsertBrace1, InsertBrace2;
+  FixItHint InsertBrace1;
+  FixItHint InsertBrace2;
   if (SurroundedExpr) {
     const SourceLocation InsertFirstLoc = SurroundedExpr->getBeginLoc();
     const SourceLocation InsertSecondLoc = clang::Lexer::getLocForEndOfToken(
@@ -168,7 +169,7 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
         Result.Context->getLangOpts());
     if (InsertFirstLoc.isInvalid() || InsertFirstLoc.isMacroID() ||
         InsertSecondLoc.isInvalid() || InsertSecondLoc.isMacroID())
-      return void(IgnoreMacros || DiagEmitter());
+      return static_cast<void>(IgnoreMacros || DiagEmitter());
     InsertBrace1 = FixItHint::CreateInsertion(InsertFirstLoc, "(");
     InsertBrace2 = FixItHint::CreateInsertion(InsertSecondLoc, ")");
   }

@@ -20,8 +20,8 @@ to implicit integer conversions and missed short-circuit evaluation.
     // error handling
   }
 
-These 3 warnings suggest to assign result of logical ``||`` operation instead 
-of using ``|=`` operator:
+These 3 warnings suggest assigning the result of a logical ``||`` operation 
+instead of using the ``|=`` operator:
 
 .. code-block:: c++
 
@@ -57,6 +57,6 @@ Options
 
 .. option:: IgnoreMacros
 
-    Enabling this option hides the warning message in a situation where
-    it is not possible to change a bitwise operator to a logical one due
-    to a macro in the expression body. Default value is `false`.
+    This option disables the warning if a macro inside the expression body 
+    prevents replacing a bitwise operator with a logical one. Default value 
+    is `false`.

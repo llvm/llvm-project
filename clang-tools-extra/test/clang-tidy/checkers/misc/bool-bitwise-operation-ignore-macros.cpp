@@ -2,12 +2,6 @@
 // RUN:   -config="{CheckOptions: { \
 // RUN:     misc-bool-bitwise-operation.IgnoreMacros: true }}"
 
-#define MY_OR |
-#define MY_AND &
-#define MY_OR_ASSIGN |=
-#define MY_AND_ASSIGN &=
-#define MY_LOG_AND &&
-
 #define CAT(a, b) a ## b
 #define IDENT(a) a
 
