@@ -782,7 +782,13 @@ lldb::ModuleSP ModuleList::FindSharedModule(const UUID &uuid) {
 }
 
 size_t ModuleList::RemoveOrphanSharedModules(bool mandatory) {
-  return GetSharedModuleList().RemoveOrphans(mandatory);
+  size_t removed = GetSharedModuleList().RemoveOrphans(mandatory);
+  Log *log = GetLog(LLDBLog::Modules);
+  if (log != nullptr) {
+    LLDB_LOGF(log, "removed %lu shared modules, %lu modules remain", removed,
+              GetSharedModuleList().GetSize());
+  }
+  return removed;
 }
 
 Status

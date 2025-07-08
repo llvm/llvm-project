@@ -1103,8 +1103,6 @@ void Debugger::Clear() {
     StopIOHandlerThread();
     StopEventHandlerThread();
     m_listener_sp->Clear();
-    if (GetClearSharedModules())
-      ModuleList::ClearSharedModules();
     for (TargetSP target_sp : m_target_list.Targets()) {
       if (target_sp) {
         if (ProcessSP process_sp = target_sp->GetProcessSP())
@@ -1112,6 +1110,10 @@ void Debugger::Clear() {
         target_sp->Destroy();
       }
     }
+
+    if (GetClearSharedModules())
+      ModuleList::RemoveOrphanSharedModules(/*mandatory=*/true);
+
     m_broadcaster_manager_sp->Clear();
 
     // Close the input file _before_ we close the input read communications

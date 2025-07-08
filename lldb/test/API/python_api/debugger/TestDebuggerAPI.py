@@ -303,7 +303,9 @@ class DebuggerAPITestCase(TestBase):
         self.dbg.SetLoggingCallback(messages.append)
         self.runCmd("log enable lldb module")
         self.dbg.Destroy(self.dbg)
-        self.assertFalse(any("cleared shared modules cache" in msg for msg in messages))
+        self.assertFalse(
+            any("removed 0 shared modules, 0 modules remain" in msg for msg in messages)
+        )
 
     def test_enable_SetClearSharedModules(self):
         """Check that SetClearSharedModule(true) clears shared module cache."""
@@ -312,7 +314,9 @@ class DebuggerAPITestCase(TestBase):
         self.dbg.SetClearSharedModules(True)
         self.runCmd("log enable lldb module")
         self.dbg.Destroy(self.dbg)
-        self.assertTrue(any("cleared shared modules" in msg for msg in messages))
+        self.assertTrue(
+            any("removed 0 shared modules, 0 modules remain" in msg for msg in messages)
+        )
 
     def test_enable_clear_shared_modules(self):
         """Check that clear-shared-module setting is equivalent
@@ -323,4 +327,6 @@ class DebuggerAPITestCase(TestBase):
         self.runCmd("settings set clear-shared-modules true")
         self.runCmd("log enable lldb module")
         self.dbg.Destroy(self.dbg)
-        self.assertTrue(any("cleared shared modules" in msg for msg in messages))
+        self.assertTrue(
+            any("removed 0 shared modules, 0 modules remain" in msg for msg in messages)
+        )
