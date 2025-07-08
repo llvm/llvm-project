@@ -29,6 +29,19 @@
 // CHECK-MIPS64-CPU: "-target-cpu" "mips3"
 // CHECK-MIPS64EL-CPU: "-target-cpu" "mips3"
 
+// Check that LoongArch passes the correct linker emulation.
+//
+// RUN: %clang --target=loongarch64-unknown-openbsd -### %s %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-LA64-LD %s
+// CHECK-LA64-LD: ld{{.*}}" {{.*}} "-m" "elf64loongarch"
+//
+// Check options passed to the linker on LoongArch
+//
+// RUN: %clang --target=loongarch64-unknown-openbsd -mno-relax -### %s %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-LA64-LD-OPTS %s
+// CHECK-LA64-LD-OPTS: ld{{.*}}" {{.*}} "-X" "--no-relax"
+//
+
 // Check that the new linker flags are passed to OpenBSD
 // RUN: %clang --target=i686-pc-openbsd -r -### %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-R %s

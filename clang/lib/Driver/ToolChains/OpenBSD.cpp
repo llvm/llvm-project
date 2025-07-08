@@ -167,6 +167,12 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("--no-relax");
   }
 
+  if (Triple.isLoongArch64()) {
+    CmdArgs.push_back("-X");
+    if (Args.hasArg(options::OPT_mno_relax))
+      CmdArgs.push_back("--no-relax");
+  }
+  
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
