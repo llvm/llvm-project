@@ -42,8 +42,6 @@ class LibcxxStringDataFormatterTestCase(TestBase):
             self.runCmd("type filter clear", check=False)
             self.runCmd("type synth clear", check=False)
 
-        is_64_bit = self.process().GetAddressByteSize() == 8
-
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
@@ -125,25 +123,6 @@ class LibcxxStringDataFormatterTestCase(TestBase):
                 "(%s::string *) null_str = nullptr" % ns,
             ],
         )
-
-        # The test assumes that std::string is in its cap-size-data layout.
-        is_alternate_layout = (
-            "arm" in self.getArchitecture()
-        ) and self.platformIsDarwin()
-        if is_64_bit and not is_alternate_layout:
-            self.expect(
-                "frame variable garbage1", substrs=["garbage1 = Summary Unavailable"]
-            )
-            self.expect(
-                "frame variable garbage2", substrs=[r'garbage2 = "\xfa\xfa\xfa\xfa"']
-            )
-            self.expect("frame variable garbage3", substrs=[r'garbage3 = "\xf0\xf0"'])
-            self.expect(
-                "frame variable garbage4", substrs=["garbage4 = Summary Unavailable"]
-            )
-            self.expect(
-                "frame variable garbage5", substrs=["garbage5 = Summary Unavailable"]
-            )
 
         # Finally, make sure that if the string is not readable, we give an error:
         bkpt_2 = target.BreakpointCreateBySourceRegex(

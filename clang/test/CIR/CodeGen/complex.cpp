@@ -654,3 +654,21 @@ void foo26(int _Complex* a) {
 // OGCG: %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[COMPLEX_B]], i32 0, i32 1
 // OGCG: store i32 %[[A_REAL]], ptr %[[B_REAL_PTR]], align 4
 // OGCG: store i32 %[[A_IMAG]], ptr %[[B_IMAG_PTR]], align 4
+
+void foo29() {
+  using IntComplex = int _Complex;
+  int _Complex a = IntComplex{};
+}
+
+// CIR: %[[INIT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["a", init]
+// CIR: %[[COMPLEX:.*]] = cir.const #cir.const_complex<#cir.int<0> : !s32i, #cir.int<0> : !s32i> : !cir.complex<!s32i>
+// CIR: cir.store{{.*}} %[[COMPLEX]], %[[INIT]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+
+// LLVM: %[[INIT:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: store { i32, i32 } zeroinitializer, ptr %[[INIT]], align 4
+
+// OGCG: %[[INIT:.*]] = alloca { i32, i32 }, align 4
+// OGCG: %[[INIT_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[INIT]], i32 0, i32 0
+// OGCG: %[[INIT_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[INIT]], i32 0, i32 1
+// OGCG: store i32 0, ptr %[[INIT_REAL_PTR]], align 4
+// OGCG: store i32 0, ptr %[[INIT_IMAG_PTR]], align 4
