@@ -509,9 +509,12 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
     A few examples:
 
     ```mlir
-        !complete = !cir.record<struct "complete" {!cir.int<u, 8>}>
-        !incomplete = !cir.record<struct "incomplete" incomplete>
-        !anonymous = !cir.record<struct {!cir.int<u, 8>}>
+        !rec_complete = !cir.record<struct "complete" {!u8i}>
+        !rec_incomplete = !cir.record<struct "incomplete" incomplete>
+        !anonymous_struct = !cir.record<struct {!u8i}>
+        !rec_p1 = !cir.record<struct "p1" packed {!u8i, !u8i}>
+        !rec_p2 = !cir.record<struct "p2" padded {!u8i, !u8i}>
+        !rec_p3 = !cir.record<struct "p3" packed padded {!s32i, !u8i, !u8i}>
     ```
 
     Incomplete records are mutable, meaning they can be later completed with a
