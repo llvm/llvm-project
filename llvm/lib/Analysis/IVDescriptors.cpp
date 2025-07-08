@@ -664,9 +664,9 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
 //     if (src[i] > 3)
 //       r = i;
 //   }
-// The reduction value (r) is derived from either the values of an increasing
-// induction variable (i) sequence, or from the start value (0).
-// The LLVM IR generated for such loops would be as follows:
+// The reduction value (r) is derived from either the values of an induction
+// variable (i) sequence, or from the start value (0). The LLVM IR generated for
+// such loops would be as follows:
 //   for.body:
 //     %r = phi i32 [ %spec.select, %for.body ], [ 0, %entry ]
 //     %i = phi i32 [ %inc, %for.body ], [ 0, %entry ]
@@ -675,13 +675,13 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
 //     %spec.select = select i1 %cmp, i32 %i, i32 %r
 //     %inc = add nsw i32 %i, 1
 //     ...
-// Since 'i' is an increasing induction variable, the reduction value after the
-// loop will be the maximum value of 'i' that the condition (src[i] > 3) is
-// satisfied, or the start value (0 in the example above). When the start value
-// of the increasing induction variable 'i' is greater than the minimum value of
-// the data type, we can use the minimum value of the data type as a sentinel
-// value to replace the start value. This allows us to perform a single
-// reduction max operation to obtain the final reduction result.
+// Since 'i' is an induction variable, the reduction value after the loop will
+// be the maximum value of 'i' that the condition (src[i] > 3) is satisfied, or
+// the start value (0 in the example above). When the start value of the
+// induction variable 'i' is greater than the minimum value of the data type, we
+// can use the minimum value of the data type as a sentinel value to replace the
+// start value. This allows us to perform a single reduction max operation to
+// obtain the final reduction result.
 // TODO: It is possible to solve the case where the start value is the minimum
 // value of the data type or a non-constant value by using mask and multiple
 // reduction operations.
@@ -696,6 +696,9 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
   if (!OrigPhi->hasOneUse())
     return InstDesc(false, I);
 
+  // We are looking for selects of the form:
+  //   select(cmp(), phi, loop_induction) or
+  //   select(cmp(), loop_induction, phi)
   // TODO: Match selects with multi-use cmp conditions.
   Value *NonRdxPhi = nullptr;
   if (!match(I, m_CombineOr(m_Select(m_OneUse(m_Cmp()), m_Value(NonRdxPhi),
@@ -704,8 +707,8 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
                                      m_Value(NonRdxPhi)))))
     return InstDesc(false, I);
 
-  // Returns a non-nullopt boolean indicating the signedness of the recurrence
-  // when a valid FindLastIV pattern is found.
+  // Returns either FindFirstIV/FindLastIV, if such a pattern is found, or
+  // std::nullopt.
   auto GetRecurKind = [&](Value *V) -> std::optional<RecurKind> {
     Type *Ty = V->getType();
     if (!SE.isSCEVable(Ty))
@@ -775,9 +778,6 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
     return std::nullopt;
   };
 
-  // We are looking for selects of the form:
-  //   select(cmp(), phi, loop_induction) or
-  //   select(cmp(), loop_induction, phi)
   if (auto RK = GetRecurKind(NonRdxPhi))
     return InstDesc(I, *RK);
 
