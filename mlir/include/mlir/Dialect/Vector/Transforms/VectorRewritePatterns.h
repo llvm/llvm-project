@@ -348,12 +348,12 @@ void populateVectorTransferDropUnitDimsPatterns(RewritePatternSet &patterns,
 void populateDropUnitDimWithShapeCastPatterns(RewritePatternSet &patterns,
                                               PatternBenefit benefit = 1);
 
-/// Collect a set of patterns to flatten n-D vector transfers on contiguous
-/// memref.
+/// Collect a set of patterns to flatten/linearize n-D vector transfers on
+/// contiguous memref.
 ///
 /// These patterns insert memref.collapse_shape + vector.shape_cast patterns
-/// to transform multiple small n-D transfers into a larger 1-D transfer where
-/// the memref contiguity properties allow it.
+/// to transform a n-D transfer into a larger 1-D transfer where the memref
+/// contiguity properties allow it.
 ///
 /// Flattening is only applied if the bitwidth of the trailing vector dimension
 /// is smaller or equal to `targetVectorBitwidth`.
@@ -361,6 +361,28 @@ void populateFlattenVectorTransferPatterns(
     RewritePatternSet &patterns,
     unsigned targetVectorBitwidth = std::numeric_limits<unsigned>::max(),
     PatternBenefit benefit = 1);
+
+/// Collect a set of patterns to flatten/linearize operations on vectors.
+///
+/// These patterns insert vector.shape_cast to transform operations to have
+/// lower rank operands and results.
+///
+/// At the start of every pattern's `matchAndRewrite` call, `preCondition`
+/// is called. If it returns failure, the pattern is not applied.
+///
+/// TODO(newling) combine this API with `populateFlattenVectorTransferPatterns`.
+void populateForVectorLinearize(
+    RewritePatternSet &patterns,
+    const std::function<LogicalResult(Operation *)> &preCondition =
+        [](Operation *) { return success(); },
+    PatternBenefit benefit = 1);
+
+/// Collect a set of patterns to rewrite vector.extract_strided_slice and
+/// vector.insert_strided_slice operations to have the lowest possible rank.
+/// This is done by using shape_cast to combine consecutive dimensions whose
+/// memory is contiguous.
+void populateForStridedRankReduction(RewritePatternSet &patterns,
+                                     PatternBenefit benefit = 1);
 
 /// Collect a set of patterns that bubble up/down bitcast ops.
 ///
@@ -407,39 +429,6 @@ void populateVectorNarrowTypeRewritePatterns(RewritePatternSet &patterns,
 /// Appends patterns for emulating a sub-byte vector transpose.
 void populateVectorTransposeNarrowTypeRewritePatterns(
     RewritePatternSet &patterns, PatternBenefit benefit = 1);
-
-/// Initialize `typeConverter` and `conversionTarget` for vector linearization.
-///
-/// Definition: here 'linearization' means converting a single operation with
-/// 1+ vector operand/result of rank>1, into a new single operation whose
-/// vector operands and results are all of rank<=1.
-///
-/// This function registers (1) which operations are legal, and hence should not
-/// be linearized, (2) what the converted types are (rank-1 vectors) and how to
-/// materialze the conversion (with shape_cast)
-///
-/// Note: the set of legal operations can be extended by a user if for example
-/// certain rank>1 vectors are considered valid, by adding additional
-/// dynamically legal ops to `conversionTarget`.
-///
-/// Further note: the choice to use a dialect conversion design for
-/// linearization is to make it easy to reuse generic structural type
-/// conversions for linearizing scf/cf/func operations
-void populateForVectorLinearize(TypeConverter &typeConverter,
-                                ConversionTarget &conversionTarget);
-
-/// Populates `patterns` for ND vector (N >= 2) linearization. This currently
-/// contains patterns for converting ConstantLike, Vectorizable, and
-/// vector::BitCast ops.
-void populateVectorLinearizeBasePatterns(const TypeConverter &,
-                                         const ConversionTarget &,
-                                         RewritePatternSet &patterns);
-
-/// Populates `patterns` for linearizing ND (N >= 2) vector operations
-/// to 1D vector shuffle operations.
-void populateVectorLinearizeShuffleLikeOpsPatterns(const TypeConverter &,
-                                                   const ConversionTarget &,
-                                                   RewritePatternSet &patterns);
 
 } // namespace vector
 } // namespace mlir
