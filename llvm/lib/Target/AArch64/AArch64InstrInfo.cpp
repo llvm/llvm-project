@@ -7462,10 +7462,6 @@ static bool getGatherPattern(MachineInstr &Root,
 /// by loading into 2 Neon registers instead.
 static bool getLoadPatterns(MachineInstr &Root,
                             SmallVectorImpl<unsigned> &Patterns) {
-  // Enable this only on Darwin targets, where it should be profitable. Other
-  // targets can remove this check if it is profitable there as well.
-  if (!Root.getMF()->getTarget().getTargetTriple().isOSDarwin())
-    return false;
 
   // The pattern searches for loads into single lanes.
   switch (Root.getOpcode()) {
