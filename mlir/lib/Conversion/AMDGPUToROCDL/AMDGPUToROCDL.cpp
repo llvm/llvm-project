@@ -1205,7 +1205,7 @@ struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
       return transferType.getIntOrFloatBitWidth() / 8;
     }();
 
-    // Currently only 1, 2, 4, 14 and 16 byte loads are supported.
+    // Currently only 1, 2, 4, 12 and 16 byte loads are supported.
     if (loadWidth != 1 && loadWidth != 2 && loadWidth != 4 && loadWidth != 12 &&
         loadWidth != 16)
       return op.emitOpError("chipset unsupported element size");
