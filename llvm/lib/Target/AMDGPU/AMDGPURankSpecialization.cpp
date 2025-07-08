@@ -193,11 +193,16 @@ void AMDGPURankSpecializationImpl::buildSpecializations(Function &Kernel) {
     // Create a clone function.
     FunctionType *FTy = Kernel.getFunctionType();
     Function *Specialization = Function::Create(
-        FTy, GlobalValue::InternalLinkage, /* AddressSpace= */ 0,
+        FTy, Kernel.getLinkage(), /* AddressSpace= */ 0,
         Kernel.getName() + getRankMaskSuffix(Mask), Kernel.getParent());
 
     Specializations.push_back(Specialization);
 
+    Specialization->copyAttributesFrom(&Kernel);
+    Specialization->copyMetadata(&Kernel, 0);
+    Specialization->setVisibility(GlobalValue::DefaultVisibility);
+    Specialization->setLinkage(GlobalValue::InternalLinkage);
+    Specialization->setDSOLocal(true); // for internal linkage
     Specialization->addFnAttr("amdgpu-wavegroup-enable");
     Specialization->addFnAttr("amdgpu-wavegroup-rank-function");
 
