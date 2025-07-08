@@ -436,12 +436,10 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     SmallVector<PredicateWithCC, 0> SortedPredicates =
         PredicateSorter.takeVector();
 
-    sort(SortedPredicates, [](PredicateWithCC A, PredicateWithCC B) {
-      if (!A.Predicate)
-        return true;
-      if (!B.Predicate)
-        return false;
-      return A.Predicate->getName() < B.Predicate->getName();
+    llvm::sort(SortedPredicates, [](PredicateWithCC A, PredicateWithCC B) {
+      StringRef AName = A.Predicate ? A.Predicate->getName() : "";
+      StringRef BName = B.Predicate ? B.Predicate->getName() : "";
+      return AName < BName;
     });
 
     for (PredicateWithCC Entry : SortedPredicates) {
@@ -472,7 +470,8 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
       // This also makes it annoying to make use of the default set, since the
       // entries from the default set may win over the replacements unless
       // they are explicitly removed.
-      sort(Funcs, [](const RuntimeLibcallImpl *A, const RuntimeLibcallImpl *B) {
+      stable_sort(Funcs, [](const RuntimeLibcallImpl *A,
+                            const RuntimeLibcallImpl *B) {
         return A->getProvides()->getEnumVal() < B->getProvides()->getEnumVal();
       });
 
