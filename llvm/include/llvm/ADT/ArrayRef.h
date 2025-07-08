@@ -158,6 +158,20 @@ namespace llvm {
       return Data[Length-1];
     }
 
+    /// consume_front() - Returns the first element and drops it from ArrayRef.
+    const T &consume_front() {
+      const T &Ret = front();
+      *this = drop_front();
+      return Ret;
+    }
+
+    /// consume_back() - Returns the last element and drops it from ArrayRef.
+    const T &consume_back() {
+      const T &Ret = back();
+      *this = drop_back();
+      return Ret;
+    }
+
     // copy - Allocate copy in Allocator and return ArrayRef<T> to it.
     template <typename Allocator> MutableArrayRef<T> copy(Allocator &A) {
       T *Buff = A.template Allocate<T>(Length);
@@ -352,6 +366,20 @@ namespace llvm {
       return data()[this->size()-1];
     }
 
+    /// consume_front() - Returns the first element and drops it from ArrayRef.
+    T &consume_front() {
+      T &Ret = front();
+      *this = drop_front();
+      return Ret;
+    }
+
+    /// consume_back() - Returns the last element and drops it from ArrayRef.
+    T &consume_back() {
+      T &Ret = back();
+      *this = drop_back();
+      return Ret;
+    }
+
     /// slice(n, m) - Chop off the first N elements of the array, and keep M
     /// elements in the array.
     MutableArrayRef<T> slice(size_t N, size_t M) const {
@@ -535,6 +563,27 @@ namespace llvm {
   template <typename T>
   inline bool operator!=(SmallVectorImpl<T> &LHS, ArrayRef<T> RHS) {
     return !(LHS == RHS);
+  }
+
+  template <typename T>
+  inline bool operator<(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+    return std::lexicographical_compare(LHS.begin(), LHS.end(), RHS.begin(),
+                                        RHS.end());
+  }
+
+  template <typename T>
+  inline bool operator>(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+    return RHS < LHS;
+  }
+
+  template <typename T>
+  inline bool operator<=(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+    return !(LHS > RHS);
+  }
+
+  template <typename T>
+  inline bool operator>=(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+    return !(LHS < RHS);
   }
 
   /// @}

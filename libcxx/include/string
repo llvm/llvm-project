@@ -1126,7 +1126,7 @@ public:
 
   template <class _Tp,
             __enable_if_t<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value &&
-                              !__is_same_uncvref<_Tp, basic_string>::value,
+                              !is_same<__remove_cvref_t<_Tp>, basic_string>::value,
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
   basic_string(const _Tp& __t, size_type __pos, size_type __n, const allocator_type& __a = allocator_type())
@@ -1138,7 +1138,7 @@ public:
 
   template <class _Tp,
             __enable_if_t<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value &&
-                              !__is_same_uncvref<_Tp, basic_string>::value,
+                              !is_same<__remove_cvref_t<_Tp>, basic_string>::value,
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit basic_string(const _Tp& __t) {
     __self_view __sv = __t;
@@ -1147,7 +1147,7 @@ public:
 
   template <class _Tp,
             __enable_if_t<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value &&
-                              !__is_same_uncvref<_Tp, basic_string>::value,
+                              !is_same<__remove_cvref_t<_Tp>, basic_string>::value,
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit basic_string(const _Tp& __t, const allocator_type& __a)
       : __alloc_(__a) {
@@ -1206,7 +1206,7 @@ public:
 
   template <class _Tp,
             __enable_if_t<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value &&
-                              !__is_same_uncvref<_Tp, basic_string>::value,
+                              !is_same<__remove_cvref_t<_Tp>, basic_string>::value,
                           int> = 0>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& operator=(const _Tp& __t) {
     __self_view __sv = __t;
@@ -1343,7 +1343,7 @@ public:
 
   template <class _Tp,
             __enable_if_t<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value &&
-                              !__is_same_uncvref<_Tp, basic_string >::value,
+                              !is_same<__remove_cvref_t<_Tp>, basic_string >::value,
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& operator+=(const _Tp& __t) {
     __self_view __sv = __t;
@@ -1372,7 +1372,7 @@ public:
 
   template <class _Tp,
             __enable_if_t<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value &&
-                              !__is_same_uncvref<_Tp, basic_string>::value,
+                              !is_same<__remove_cvref_t<_Tp>, basic_string>::value,
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& append(const _Tp& __t) {
     __self_view __sv = __t;
@@ -1383,7 +1383,7 @@ public:
 
   template <class _Tp,
             __enable_if_t<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value &&
-                              !__is_same_uncvref<_Tp, basic_string>::value,
+                              !is_same<__remove_cvref_t<_Tp>, basic_string>::value,
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
   append(const _Tp& __t, size_type __pos, size_type __n = npos) {
@@ -1510,7 +1510,7 @@ public:
 
   template <class _Tp,
             __enable_if_t<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value &&
-                              !__is_same_uncvref<_Tp, basic_string>::value,
+                              !is_same<__remove_cvref_t<_Tp>, basic_string>::value,
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
   assign(const _Tp& __t, size_type __pos, size_type __n = npos) {
@@ -1580,7 +1580,7 @@ public:
 
   template <class _Tp,
             __enable_if_t<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value &&
-                              !__is_same_uncvref<_Tp, basic_string>::value,
+                              !is_same<__remove_cvref_t<_Tp>, basic_string>::value,
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
   insert(size_type __pos1, const _Tp& __t, size_type __pos2, size_type __n = npos) {
@@ -1661,7 +1661,7 @@ public:
 
   template <class _Tp,
             __enable_if_t<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value &&
-                              !__is_same_uncvref<_Tp, basic_string>::value,
+                              !is_same<__remove_cvref_t<_Tp>, basic_string>::value,
                           int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
   replace(size_type __pos1, size_type __n1, const _Tp& __t, size_type __pos2, size_type __n2 = npos) {
@@ -2006,7 +2006,7 @@ public:
 
   template <class _Tp,
             __enable_if_t<__can_be_converted_to_string_view<_CharT, _Traits, _Tp>::value &&
-                              !__is_same_uncvref<_Tp, basic_string>::value,
+                              !is_same<__remove_cvref_t<_Tp>, basic_string>::value,
                           int> = 0>
   inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 int
   compare(size_type __pos1, size_type __n1, const _Tp& __t, size_type __pos2, size_type __n2 = npos) const {

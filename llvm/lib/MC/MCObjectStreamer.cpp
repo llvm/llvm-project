@@ -188,7 +188,7 @@ void MCObjectStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
     return;
   }
   DF->addFixup(MCFixup::create(DF->getContents().size(), Value,
-                               MCFixup::getDataKindForSize(Size), Loc));
+                               MCFixup::getDataKindForSize(Size)));
   DF->appendContents(Size, 0);
 }
 
@@ -696,7 +696,7 @@ MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
   if (OffsetVal.isAbsolute()) {
     if (OffsetVal.getConstant() < 0)
       return std::make_pair(false, std::string(".reloc offset is negative"));
-    DF->addFixup(MCFixup::create(OffsetVal.getConstant(), Expr, Kind, Loc));
+    DF->addFixup(MCFixup::create(OffsetVal.getConstant(), Expr, Kind));
     return std::nullopt;
   }
   if (OffsetVal.getSubSym())
@@ -712,13 +712,13 @@ MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
     if (Error != std::nullopt)
       return Error;
 
-    DF->addFixup(MCFixup::create(SymbolOffset + OffsetVal.getConstant(), Expr,
-                                 Kind, Loc));
+    DF->addFixup(
+        MCFixup::create(SymbolOffset + OffsetVal.getConstant(), Expr, Kind));
     return std::nullopt;
   }
 
   PendingFixups.emplace_back(
-      &Symbol, DF, MCFixup::create(OffsetVal.getConstant(), Expr, Kind, Loc));
+      &Symbol, DF, MCFixup::create(OffsetVal.getConstant(), Expr, Kind));
   return std::nullopt;
 }
 
