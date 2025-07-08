@@ -47,6 +47,11 @@ if (isPrBranch) {
         )
     )
 }
+if (postsub) {
+    propsList.add(
+        pipelineTriggers([cron('@midnight')])
+    )
+}
 properties(propsList)
 
 String linuxBasePath = '/usr/sbin:/usr/bin:/bin'
