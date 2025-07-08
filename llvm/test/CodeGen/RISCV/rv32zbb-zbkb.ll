@@ -22,6 +22,22 @@ define i32 @andn_i32(i32 %a, i32 %b) nounwind {
   ret i32 %and
 }
 
+define i32 @andn_i32_from_sub(i32 %a, i32 %b) nounwind {
+; RV32I-LABEL: andn_i32_from_sub:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    not a1, a1
+; RV32I-NEXT:    and a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: andn_i32_from_sub:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    andn a0, a0, a1
+; RV32ZBB-ZBKB-NEXT:    ret
+  %neg = sub i32 -1, %b
+  %and = and i32 %neg, %a
+  ret i32 %and
+}
+
 define i64 @andn_i64(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: andn_i64:
 ; RV32I:       # %bb.0:
@@ -37,6 +53,25 @@ define i64 @andn_i64(i64 %a, i64 %b) nounwind {
 ; RV32ZBB-ZBKB-NEXT:    andn a1, a1, a3
 ; RV32ZBB-ZBKB-NEXT:    ret
   %neg = xor i64 %b, -1
+  %and = and i64 %neg, %a
+  ret i64 %and
+}
+
+define i64 @andn_i64_from_sub(i64 %a, i64 %b) nounwind {
+; RV32I-LABEL: andn_i64_from_sub:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    not a3, a3
+; RV32I-NEXT:    not a2, a2
+; RV32I-NEXT:    and a0, a2, a0
+; RV32I-NEXT:    and a1, a3, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: andn_i64_from_sub:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    andn a0, a0, a2
+; RV32ZBB-ZBKB-NEXT:    andn a1, a1, a3
+; RV32ZBB-ZBKB-NEXT:    ret
+  %neg = sub i64 -1, %b
   %and = and i64 %neg, %a
   ret i64 %and
 }
@@ -141,15 +176,15 @@ define i64 @rol_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    slli a5, a2, 26
 ; CHECK-NEXT:    srli a5, a5, 31
 ; CHECK-NEXT:    mv a3, a1
-; CHECK-NEXT:    bnez a5, .LBB7_2
+; CHECK-NEXT:    bnez a5, .LBB9_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a3, a0
-; CHECK-NEXT:  .LBB7_2:
+; CHECK-NEXT:  .LBB9_2:
 ; CHECK-NEXT:    sll a4, a3, a2
-; CHECK-NEXT:    bnez a5, .LBB7_4
+; CHECK-NEXT:    bnez a5, .LBB9_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:  .LBB7_4:
+; CHECK-NEXT:  .LBB9_4:
 ; CHECK-NEXT:    srli a1, a0, 1
 ; CHECK-NEXT:    not a5, a2
 ; CHECK-NEXT:    sll a2, a0, a2
@@ -192,15 +227,15 @@ define i64 @ror_i64(i64 %a, i64 %b) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a5, a2, 32
 ; CHECK-NEXT:    mv a3, a0
-; CHECK-NEXT:    beqz a5, .LBB9_2
+; CHECK-NEXT:    beqz a5, .LBB11_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a3, a1
-; CHECK-NEXT:  .LBB9_2:
+; CHECK-NEXT:  .LBB11_2:
 ; CHECK-NEXT:    srl a4, a3, a2
-; CHECK-NEXT:    beqz a5, .LBB9_4
+; CHECK-NEXT:    beqz a5, .LBB11_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a1, a0
-; CHECK-NEXT:  .LBB9_4:
+; CHECK-NEXT:  .LBB11_4:
 ; CHECK-NEXT:    slli a0, a1, 1
 ; CHECK-NEXT:    not a5, a2
 ; CHECK-NEXT:    srl a1, a1, a2
