@@ -25,6 +25,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/PatternMatch.h"
 
+#include <cassert>
 #include <numeric>
 
 #define DEBUG_TYPE "lower-contract-to-arm-sve-i8mm"
@@ -169,6 +170,11 @@ protected:
   // Lower-level operation to be emitted.
   MMLA mmlaOp = MMLA::Nop;
 
+  // Indicate if the operands for the ArmSVE dialect operation need to be
+  // swapped. Currently this is needed in order to emulate an "summla"
+  // operation.
+  bool swapOperands = false;
+
   // The operand tiles. These are not necessarily the operends of
   // `vector.contract`, for example they could be operands to `arith.extsi`
   // that is in turn fed into `vector.contract`.
@@ -180,34 +186,6 @@ protected:
   int64_t M = 0;
   int64_t N = 0;
   int64_t K = 0;
-
-  // Single-dimensional vector types for the operands of the ArmSVE dialect
-  // op.
-  VectorType flatLhsType;
-  VectorType flatRhsType;
-  VectorType flatAccType;
-
-  // Single-dimension vector type for the entire RHS tile.
-  VectorType flatRhsTileType;
-
-  // Vector type having the same number of elements as a row in the
-  // accumulator/output tile and the same element type.
-  VectorType accRowTy;
-
-  // Vector type having twice the number of elements as a row in the
-  // accumulator/output tile the same element type.
-  VectorType accRowX2Ty;
-
-  // Vector type having half the number of elements as a row in the
-  // accumulator/output tile and an integer element type with twice the bit
-  // width.
-  VectorType accRow64Ty;
-  VectorType accRowX264Ty;
-
-  // Indicate if the operands for the ArmSVE dialect operation need to be
-  // swapped. Currently this is needed in order to emulate an "summla"
-  // operation.
-  bool swapOperands = false;
 
   // Create the matrix mulitply and accumulate operation according to
   // `mmlaOp`.
@@ -229,18 +207,20 @@ public:
 Value VectorContractRewriter::createMMLA(PatternRewriter &rewriter,
                                          Location loc, Value acc, Value lhs,
                                          Value rhs) {
+
+  Type resTy = acc.getType();
   if (swapOperands)
     std::swap(lhs, rhs);
 
   switch (mmlaOp) {
   case MMLA::SignedInt:
-    return rewriter.create<arm_sve::SmmlaOp>(loc, flatAccType, acc, lhs, rhs);
+    return rewriter.create<arm_sve::SmmlaOp>(loc, resTy, acc, lhs, rhs);
   case MMLA::UnsignedInt:
-    return rewriter.create<arm_sve::UmmlaOp>(loc, flatAccType, acc, lhs, rhs);
+    return rewriter.create<arm_sve::UmmlaOp>(loc, resTy, acc, lhs, rhs);
   case MMLA::MixedInt:
-    return rewriter.create<arm_sve::UsmmlaOp>(loc, flatAccType, acc, lhs, rhs);
+    return rewriter.create<arm_sve::UsmmlaOp>(loc, resTy, acc, lhs, rhs);
   case MMLA::Bfloat:
-    return rewriter.create<arm_sve::BfmmlaOp>(loc, flatAccType, acc, lhs, rhs);
+    return rewriter.create<arm_sve::BfmmlaOp>(loc, resTy, acc, lhs, rhs);
   default:
     llvm_unreachable("Uninitialized operation kind");
   }
@@ -280,6 +260,55 @@ LogicalResult VectorContractRewriter::match(vector::ContractionOp op,
 
 Value VectorContractRewriter::rewrite(vector::ContractionOp op,
                                       PatternRewriter &rewriter) {
+
+  // Initialize some helper types.
+  Type operandEltType = cast<VectorType>(lhs.getType()).getElementType();
+  Type resultEltType = cast<VectorType>(op.getResultType()).getElementType();
+
+  const int64_t numOperandSubTileElts =
+      128 / operandEltType.getIntOrFloatBitWidth();
+
+  assert(resultEltType.getIntOrFloatBitWidth() == 32 &&
+         "Only implemented for i32 or f32 output");
+  const int64_t numResultSubTileElts = 4;
+
+  // Single-dimensional vector types for the operands of the ArmSVE dialect
+  // op.
+  auto flatLhsType =
+      VectorType::get(/*shape=*/numOperandSubTileElts, operandEltType,
+                      /*scalableDims=*/{true});
+  auto flatRhsType =
+      VectorType::get(/*shape=*/numOperandSubTileElts, operandEltType,
+                      /*scalableDims=*/{true});
+  auto flatAccType =
+      VectorType::get(/*shape=*/numResultSubTileElts, resultEltType,
+                      /*scalableDims=*/{true});
+
+  // Single-dimension vector type for the entire RHS tile.
+
+  auto flatRhsTileType = VectorType::get(/*shape=*/K * N, operandEltType,
+                                         /*scalableDims=*/{true});
+
+  // Vector type having the same number of elements as a row in the
+  // accumulator/output tile and the same element type.
+  auto accRowTy = VectorType::get(/*shape=*/N, resultEltType,
+                                  /*scalableDims=*/{true});
+
+  // Vector type having twice the number of elements as a row in the
+  // accumulator/output tile the same element type.
+  auto accRowX2Ty = VectorType::get(/*shape=*/2 * N, resultEltType,
+                                    /*scalableDims=*/{true});
+  // Vector type having half the number of elements as a row in the
+  // accumulator/output tile and an integer element type with twice the bit
+  // width.
+  auto accRow64Ty = VectorType::get(/*shape=*/N / 2, rewriter.getI64Type(),
+                                    /*scalableDims=*/{true});
+  // Vector type having the same the number of elements as a row in the
+  // accumulator/output tile and an integer element type with twice the bit
+  // width.
+  auto accRowX264Ty = VectorType::get(/*shape=*/N, rewriter.getI64Type(),
+                                      /*scalableDims=*/{true});
+
   Location loc = op.getLoc();
 
   // Extract LHS sub-tiles with logical shape <2xK>.
@@ -394,9 +423,9 @@ class VectorContractRewriterI8MM : public VectorContractRewriter {
 public:
   // Check the specific preconditions for the integer case. Initialise
   // parametrisation types and dimensions.
-  LogicalResult match(vector::ContractionOp op, PatternRewriter &rewriter) {
-
-    if (failed(VectorContractRewriter::match(op, rewriter)))
+  LogicalResult matchAndInit(vector::ContractionOp op,
+                             PatternRewriter &rewriter) {
+    if (failed(match(op, rewriter)))
       return failure();
 
     VectorType lhsType = op.getLhsType();
@@ -458,26 +487,6 @@ public:
     rhs = *maybeRhs;
     acc = op.getAcc();
 
-    flatLhsType = VectorType::get(/*shape=*/16, rewriter.getI8Type(),
-                                  /*scalableDims=*/{true});
-    flatRhsType = VectorType::get(/*shape=*/16, rewriter.getI8Type(),
-                                  /*scalableDims=*/{true});
-
-    flatAccType = VectorType::get(/*shape=*/4, rewriter.getI32Type(),
-                                  /*scalableDims=*/{true});
-
-    flatRhsTileType = VectorType::get(/*shape=*/8 * N, rewriter.getI8Type(),
-                                      /*scalableDims=*/{true});
-
-    accRowTy = VectorType::get(/*shape=*/N, rewriter.getI32Type(),
-                               /*scalableDims=*/{true});
-    accRowX2Ty = VectorType::get(/*shape=*/2 * N, rewriter.getI32Type(),
-                                 /*scalableDims=*/{true});
-    accRow64Ty = VectorType::get(/*shape=*/N / 2, rewriter.getI64Type(),
-                                 /*scalableDims=*/{true});
-    accRowX264Ty = VectorType::get(/*shape=*/N, rewriter.getI64Type(),
-                                   /*scalableDims=*/{true});
-
     return success();
   }
 };
@@ -486,9 +495,9 @@ class VectorContractRewriterBfloat : public VectorContractRewriter {
 public:
   // Check the specific preconditions for the bfloat16 case. Initialise
   // parametrisation types and dimensions.
-  LogicalResult match(vector::ContractionOp op, PatternRewriter &rewriter) {
-
-    if (failed(VectorContractRewriter::match(op, rewriter)))
+  LogicalResult matchAndInit(vector::ContractionOp op,
+                             PatternRewriter &rewriter) {
+    if (failed(match(op, rewriter)))
       return failure();
 
     VectorType lhsType = op.getLhsType();
@@ -527,26 +536,6 @@ public:
     rhs = op.getRhs();
     acc = op.getAcc();
 
-    flatLhsType = VectorType::get(/*shape=*/8, rewriter.getBF16Type(),
-                                  /*scalableDims=*/{true});
-    flatRhsType = VectorType::get(/*shape=*/8, rewriter.getBF16Type(),
-                                  /*scalableDims=*/{true});
-
-    flatAccType = VectorType::get(/*shape=*/4, rewriter.getF32Type(),
-                                  /*scalableDims=*/{true});
-
-    flatRhsTileType = VectorType::get(/*shape=*/4 * N, rewriter.getBF16Type(),
-                                      /*scalableDims=*/{true});
-
-    accRowTy = VectorType::get(/*shape=*/N, rewriter.getF32Type(),
-                               /*scalableDims=*/{true});
-    accRowX2Ty = VectorType::get(/*shape=*/2 * N, rewriter.getF32Type(),
-                                 /*scalableDims=*/{true});
-    accRow64Ty = VectorType::get(/*shape=*/N / 2, rewriter.getI64Type(),
-                                 /*scalableDims=*/{true});
-    accRowX264Ty = VectorType::get(/*shape=*/N, rewriter.getI64Type(),
-                                   /*scalableDims=*/{true});
-
     return success();
   }
 };
@@ -560,7 +549,7 @@ public:
 
     // Match i8xi8 -> i32 matrix multiply and accumulate.
     VectorContractRewriterI8MM vcr;
-    if (failed(vcr.match(op, rewriter)))
+    if (failed(vcr.matchAndInit(op, rewriter)))
       return failure();
 
     Value result = vcr.rewrite(op, rewriter);
@@ -579,7 +568,7 @@ public:
 
     // Match bf16xbf16 -> f32 matrix multiply and accumulate.
     VectorContractRewriterBfloat vcr;
-    if (failed(vcr.match(op, rewriter)))
+    if (failed(vcr.matchAndInit(op, rewriter)))
       return failure();
 
     Value result = vcr.rewrite(op, rewriter);

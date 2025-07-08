@@ -58,10 +58,10 @@ func.func private @prepareAccTestData(%in: vector<4x4xf32>) -> memref<4x?xf32> {
   %c4 = arith.constant 4 : index
 
   %vs = vector.vscale
-  %d = arith.muli %c4, %vs : index
-  %mem = memref.alloc(%d) : memref<4x?xf32>
+  %nCols = arith.muli %c4, %vs : index
+  %mem = memref.alloc(%nCols) : memref<4x?xf32>
 
-  scf.for %j = %c0 to %d step %c4 {
+  scf.for %j = %c0 to %nCols step %c4 {
     vector.transfer_write %in, %mem[%c0, %j] {in_bounds = [true, true]} : vector<4x4xf32>, memref<4x?xf32>
   }
 
@@ -95,10 +95,10 @@ func.func private @prepareRHSTestData(%in: vector<4x4xbf16>) -> memref<?xbf16> {
   %c4 = arith.constant 4 : index
 
   %vs = vector.vscale
-  %d = arith.muli %c4, %vs : index
-  %mem = memref.alloc(%d) : memref<?x4xbf16>
+  %nRows = arith.muli %c4, %vs : index
+  %mem = memref.alloc(%nRows) : memref<?x4xbf16>
 
-  scf.for %i = %c0 to %d step %c4 {
+  scf.for %i = %c0 to %nRows step %c4 {
     vector.transfer_write %in, %mem[%i, %c0] {in_bounds = [true, true]} : vector<4x4xbf16>, memref<?x4xbf16>
   }
 
