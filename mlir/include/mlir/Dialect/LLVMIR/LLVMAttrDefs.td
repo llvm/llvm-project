@@ -9,6 +9,7 @@
 #ifndef LLVMIR_ATTRDEFS
 #define LLVMIR_ATTRDEFS
 
+include "mlir/Interfaces/LoopAnnotationAttrInterface.td"
 include "mlir/Dialect/LLVMIR/LLVMDialect.td"
 include "mlir/Dialect/LLVMIR/LLVMInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
@@ -231,7 +232,7 @@ def LoopUnswitchAttr : LLVM_Attr<"LoopUnswitch", "loop_unswitch"> {
   let genMnemonicAlias = 1;
 }
 
-def LoopAnnotationAttr : LLVM_Attr<"LoopAnnotation", "loop_annotation"> {
+def LoopAnnotationAttr : LLVM_Attr<"LoopAnnotation", "loop_annotation", [LoopAnnotationAttrInterface]> {
   let description = [{
     This attributes encapsulates "loop metadata". It is meant to decorate
     branches that are "latches" (loop backedges) and maps to the `!llvm.loop`
