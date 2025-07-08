@@ -2563,9 +2563,9 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
           .buildDefCFA(AArch64::SP, NumBytes);
 
     emitFrameOffset(MBB, MBB.getFirstTerminator(), DL, AArch64::SP, AArch64::SP,
-                    StackOffset::getFixed(NumBytes + (int64_t)AfterCSRPopSize),
-                    TII, MachineInstr::FrameDestroy, false, NeedsWinCFI,
-                    &HasWinCFI, EmitCFI, StackOffset::getFixed(NumBytes));
+                    StackOffset::getFixed(NumBytes + AfterCSRPopSize), TII,
+                    MachineInstr::FrameDestroy, false, NeedsWinCFI, &HasWinCFI,
+                    EmitCFI, StackOffset::getFixed(NumBytes));
     return;
   }
 
