@@ -2272,7 +2272,8 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
     // This gets decoded and converted into the actual type signature in
     // WebAssemblyMCInstLower.cpp.
     auto NParams = Op.getNumOperands() - 2;
-    auto Sig = APInt(NParams * 64, 0);
+    auto BitWidth = (NParams + 1) * 64;
+    auto Sig = APInt(BitWidth, 0);
     // The return type has to be a BlockType since it can be void.
     {
       SDValue Operand = Op.getOperand(2);
@@ -2313,8 +2314,8 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
     }
 
     SmallVector<SDValue, 4> Ops;
-    Ops.push_back(DAG.getTargetConstantAP(
-        Sig, DL, EVT::getIntegerVT(*DAG.getContext(), NParams * 64)));
+    Ops.push_back(DAG.getTargetConstant(
+        Sig, DL, EVT::getIntegerVT(*DAG.getContext(), BitWidth)));
     Ops.push_back(FuncRef);
     return SDValue(
         DAG.getMachineNode(WebAssembly::REF_TEST_FUNCREF, DL, MVT::i32, Ops),

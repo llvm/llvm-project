@@ -968,7 +968,6 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
 
   // Allow illegal target nodes and illegal registers.
   if (Node->getOpcode() == ISD::TargetConstant ||
-      Node->getOpcode() == ISD::TargetConstantAP ||
       Node->getOpcode() == ISD::Register)
     return;
 
@@ -980,11 +979,10 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
 
   for (const SDValue &Op : Node->op_values())
     assert((TLI.getTypeAction(*DAG.getContext(), Op.getValueType()) ==
-                TargetLowering::TypeLegal ||
+              TargetLowering::TypeLegal ||
             Op.getOpcode() == ISD::TargetConstant ||
-            Op->getOpcode() == ISD::TargetConstantAP ||
             Op.getOpcode() == ISD::Register) &&
-           "Unexpected illegal type!");
+            "Unexpected illegal type!");
 #endif
 
   // Figure out the correct action; the way to query this varies by opcode

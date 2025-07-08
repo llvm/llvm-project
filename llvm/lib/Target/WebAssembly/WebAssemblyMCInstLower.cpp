@@ -213,7 +213,7 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
         llvm_unreachable("unexpected CImmediate operand");
       }
       auto CImm = MO.getCImm()->getValue();
-      auto NumWords = CImm.getNumWords();
+      auto NumWords = CImm.getNumWords() - 1;
       // Extract the type data we packed into the CImm in LowerRefTestFuncRef.
       // We need to load the words from most significant to least significant
       // order because of the way we bitshifted them in from the right.

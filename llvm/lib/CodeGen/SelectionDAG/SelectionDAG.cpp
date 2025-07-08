@@ -1664,14 +1664,14 @@ SDValue SelectionDAG::getConstant(uint64_t Val, const SDLoc &DL, EVT VT,
 }
 
 SDValue SelectionDAG::getConstant(const APInt &Val, const SDLoc &DL, EVT VT,
-                                  bool isT, bool isO, bool isAP) {
-  return getConstant(*ConstantInt::get(*Context, Val), DL, VT, isT, isO, isAP);
+                                  bool isT, bool isO) {
+  return getConstant(*ConstantInt::get(*Context, Val), DL, VT, isT, isO);
 }
 
 SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
-                                  EVT VT, bool isT, bool isO, bool isAP) {
+                                  EVT VT, bool isT, bool isO) {
   assert(VT.isInteger() && "Cannot create FP integer constant!");
-  isT |= isAP;
+
   EVT EltVT = VT.getScalarType();
   const ConstantInt *Elt = &Val;
 
@@ -1760,8 +1760,7 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
 
   assert(Elt->getBitWidth() == EltVT.getSizeInBits() &&
          "APInt size does not match type size!");
-  unsigned Opc = isAP ? ISD::TargetConstantAP
-                      : (isT ? ISD::TargetConstant : ISD::Constant);
+  unsigned Opc = isT ? ISD::TargetConstant : ISD::Constant;
   SDVTList VTs = getVTList(EltVT);
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, Opc, VTs, {});
@@ -1774,7 +1773,7 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
       return SDValue(N, 0);
 
   if (!N) {
-    N = newSDNode<ConstantSDNode>(isT, isO, isAP, Elt, VTs);
+    N = newSDNode<ConstantSDNode>(isT, isO, Elt, VTs);
     CSEMap.InsertNode(N, IP);
     InsertNode(N);
     NewSDValueDbgMsg(SDValue(N, 0), "Creating constant: ", this);

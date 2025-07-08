@@ -402,11 +402,11 @@ void InstrEmitter::AddOperand(MachineInstrBuilder &MIB, SDValue Op,
     AddRegisterOperand(MIB, Op, IIOpNum, II, VRBaseMap,
                        IsDebug, IsClone, IsCloned);
   } else if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
-    if (C->getOpcode() == ISD::TargetConstantAP) {
+    if (C->getAPIntValue().getBitWidth() <= 64) {
+      MIB.addImm(C->getSExtValue());
+    } else {
       MIB.addCImm(
           ConstantInt::get(MF->getFunction().getContext(), C->getAPIntValue()));
-    } else {
-      MIB.addImm(C->getSExtValue());
     }
   } else if (ConstantFPSDNode *F = dyn_cast<ConstantFPSDNode>(Op)) {
     MIB.addFPImm(F->getConstantFPValue());
