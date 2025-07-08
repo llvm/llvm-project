@@ -77,7 +77,7 @@ complex libm functions.
 The flang driver option `-fcomplex-arithmetic=` allows you to select whether
 complex number division is lowered to function calls or to the `complex.div`
 operation in the MLIR complex dialect. To avoid the ABI issues mentioned above,
-the selection between function calls and the `complex.div` is made during the
+the choice of function calls or the `complex.div` operation is made during the
 lowering phase. The behavior of this option is as follows:
 
 - `basic`: Lowers to `complex.div` and is converted to algebraic formulas. No
