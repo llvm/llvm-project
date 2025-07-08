@@ -738,39 +738,7 @@ void TextDiagnostic::printDiagnosticMessage(raw_ostream &OS,
 }
 
 void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
-#ifdef _WIN32
-  SmallString<4096> TmpFilename;
-#endif
-  if (DiagOpts.AbsolutePath) {
-    auto File = SM.getFileManager().getOptionalFileRef(Filename);
-    if (File) {
-      // We want to print a simplified absolute path, i. e. without "dots".
-      //
-      // The hardest part here are the paths like "<part1>/<link>/../<part2>".
-      // On Unix-like systems, we cannot just collapse "<link>/..", because
-      // paths are resolved sequentially, and, thereby, the path
-      // "<part1>/<part2>" may point to a different location. That is why
-      // we use FileManager::getCanonicalName(), which expands all indirections
-      // with llvm::sys::fs::real_path() and caches the result.
-      //
-      // On the other hand, it would be better to preserve as much of the
-      // original path as possible, because that helps a user to recognize it.
-      // real_path() expands all links, which sometimes too much. Luckily,
-      // on Windows we can just use llvm::sys::path::remove_dots(), because,
-      // on that system, both aforementioned paths point to the same place.
-#ifdef _WIN32
-      TmpFilename = File->getName();
-      llvm::sys::fs::make_absolute(TmpFilename);
-      llvm::sys::path::native(TmpFilename);
-      llvm::sys::path::remove_dots(TmpFilename, /* remove_dot_dot */ true);
-      Filename = StringRef(TmpFilename.data(), TmpFilename.size());
-#else
-      Filename = SM.getFileManager().getCanonicalName(*File);
-#endif
-    }
-  }
-
-  OS << Filename;
+  OS << SM.getNameForDiagnostic(Filename, DiagOpts);
 }
 
 /// Print out the file/line/column information and include trace.
@@ -1012,7 +980,7 @@ static std::string buildFixItInsertionLine(FileID FID, unsigned LineNo,
 
     // We have an insertion hint. Determine whether the inserted
     // code contains no newlines and is on the same line as the caret.
-    std::pair<FileID, unsigned> HintLocInfo =
+    FileIDAndOffset HintLocInfo =
         SM.getDecomposedExpansionLoc(H.RemoveRange.getBegin());
     if (FID == HintLocInfo.first &&
         LineNo == SM.getLineNumber(HintLocInfo.first, HintLocInfo.second) &&
@@ -1518,8 +1486,8 @@ void TextDiagnostic::emitParseableFixits(ArrayRef<FixItHint> Hints,
     SourceLocation BLoc = H.RemoveRange.getBegin();
     SourceLocation ELoc = H.RemoveRange.getEnd();
 
-    std::pair<FileID, unsigned> BInfo = SM.getDecomposedLoc(BLoc);
-    std::pair<FileID, unsigned> EInfo = SM.getDecomposedLoc(ELoc);
+    FileIDAndOffset BInfo = SM.getDecomposedLoc(BLoc);
+    FileIDAndOffset EInfo = SM.getDecomposedLoc(ELoc);
 
     // Adjust for token ranges.
     if (H.RemoveRange.isTokenRange())

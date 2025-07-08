@@ -99,7 +99,7 @@ struct DAP {
   lldb::SBBroadcaster broadcaster;
   FunctionBreakpointMap function_breakpoints;
   InstructionBreakpointMap instruction_breakpoints;
-  std::optional<std::vector<ExceptionBreakpoint>> exception_breakpoints;
+  std::vector<ExceptionBreakpoint> exception_breakpoints;
   llvm::once_flag init_exception_breakpoints_flag;
 
   /// Map step in target id to list of function targets that user can choose.
@@ -219,7 +219,9 @@ struct DAP {
   void __attribute__((format(printf, 3, 4)))
   SendFormattedOutput(OutputType o, const char *format, ...);
 
-  static int64_t GetNextSourceReference();
+  int32_t CreateSourceReference(lldb::addr_t address);
+
+  std::optional<lldb::addr_t> GetSourceReferenceAddress(int32_t reference);
 
   ExceptionBreakpoint *GetExceptionBPFromStopReason(lldb::SBThread &thread);
 
@@ -251,6 +253,40 @@ struct DAP {
   /// \return the expression mode
   ReplMode DetectReplMode(lldb::SBFrame frame, std::string &expression,
                           bool partial_expression);
+
+  /// Create a `protocol::Source` object as described in the debug adapter
+  /// definition.
+  ///
+  /// \param[in] frame
+  ///     The frame to use when populating the "Source" object.
+  ///
+  /// \return
+  ///     A `protocol::Source` object that follows the formal JSON
+  ///     definition outlined by Microsoft.
+  std::optional<protocol::Source> ResolveSource(const lldb::SBFrame &frame);
+
+  /// Create a "Source" JSON object as described in the debug adapter
+  /// definition.
+  ///
+  /// \param[in] address
+  ///     The address to use when populating out the "Source" object.
+  ///
+  /// \return
+  ///     An optional "Source" JSON object that follows the formal JSON
+  ///     definition outlined by Microsoft.
+  std::optional<protocol::Source> ResolveSource(lldb::SBAddress address);
+
+  /// Create a "Source" JSON object as described in the debug adapter
+  /// definition.
+  ///
+  /// \param[in] address
+  ///     The address to use when populating out the "Source" object.
+  ///
+  /// \return
+  ///     An optional "Source" JSON object that follows the formal JSON
+  ///     definition outlined by Microsoft.
+  std::optional<protocol::Source>
+  ResolveAssemblySource(lldb::SBAddress address);
 
   /// \return
   ///   \b false if a fatal error was found while executing these commands,
@@ -320,7 +356,7 @@ struct DAP {
     });
   }
 
-  /// The set of capablities supported by this adapter.
+  /// The set of capabilities supported by this adapter.
   protocol::Capabilities GetCapabilities();
 
   /// Debuggee will continue from stopped state.
@@ -405,6 +441,10 @@ private:
   std::thread event_thread;
   std::thread progress_event_thread;
   /// @}
+
+  /// List of addresses mapped by sourceReference.
+  std::vector<lldb::addr_t> m_source_references;
+  std::mutex m_source_references_mutex;
 
   /// Queue for all incoming messages.
   std::deque<protocol::Message> m_queue;

@@ -130,7 +130,7 @@ QualType clang::desugarForDiagnostic(ASTContext &Context, QualType QT,
         if (DesugarArgument) {
           ShouldAKA = true;
           QT = Context.getTemplateSpecializationType(
-              TST->getTemplateName(), Args, /*CanonicalArgs=*/std::nullopt, QT);
+              TST->getTemplateName(), Args, /*CanonicalArgs=*/{}, QT);
         }
         break;
       }
@@ -228,7 +228,7 @@ break; \
           desugarForDiagnostic(Context, Ty->getBaseType(), ShouldAKA);
       QT = Context.getObjCObjectType(
           BaseType, Ty->getTypeArgsAsWritten(),
-          llvm::ArrayRef(Ty->qual_begin(), Ty->getNumProtocols()),
+          ArrayRef(Ty->qual_begin(), Ty->getNumProtocols()),
           Ty->isKindOfTypeAsWritten());
     }
   }
@@ -506,7 +506,15 @@ void clang::FormatASTNodeDiagnosticArgument(
     case DiagnosticsEngine::ak_attr: {
       const Attr *At = reinterpret_cast<Attr *>(Val);
       assert(At && "Received null Attr object!");
-      OS << '\'' << At->getSpelling() << '\'';
+
+      OS << '\'';
+      if (At->hasScope()) {
+        OS << At->getNormalizedFullName(At->getScopeName()->getName(),
+                                        At->getSpelling());
+      } else {
+        OS << At->getSpelling();
+      }
+      OS << '\'';
       NeedQuotes = false;
       break;
     }
@@ -514,6 +522,20 @@ void clang::FormatASTNodeDiagnosticArgument(
       const Expr *E = reinterpret_cast<Expr *>(Val);
       assert(E && "Received null Expr!");
       E->printPretty(OS, /*Helper=*/nullptr, Context.getPrintingPolicy());
+      break;
+    }
+    case DiagnosticsEngine::ak_attr_info: {
+      AttributeCommonInfo *AT = reinterpret_cast<AttributeCommonInfo *>(Val);
+      assert(AT && "Received null AttributeCommonInfo object!");
+
+      OS << '\'';
+      if (AT->isStandardAttributeSyntax()) {
+        OS << AT->getNormalizedFullName();
+      } else {
+        OS << AT->getAttrName()->getName();
+      }
+      OS << '\'';
+      NeedQuotes = false;
       break;
     }
   }
@@ -1143,7 +1165,7 @@ class TemplateDiff {
 
     Ty = Context.getTemplateSpecializationType(
         TemplateName(CTSD->getSpecializedTemplate()),
-        CTSD->getTemplateArgs().asArray(), /*CanonicalArgs=*/std::nullopt,
+        CTSD->getTemplateArgs().asArray(), /*CanonicalArgs=*/{},
         Ty.getLocalUnqualifiedType().getCanonicalType());
 
     return Ty->getAs<TemplateSpecializationType>();

@@ -150,8 +150,8 @@ private:
     auto attrTc = TC == Fortran::common::TypeCategory::Logical
                       ? Fortran::common::TypeCategory::Integer
                       : TC;
-    attributeElementType = Fortran::lower::getFIRType(
-        builder.getContext(), attrTc, KIND, std::nullopt);
+    attributeElementType =
+        Fortran::lower::getFIRType(builder.getContext(), attrTc, KIND, {});
     for (auto element : constant.values())
       attributes.push_back(
           convertToAttribute<TC, KIND>(builder, element, attributeElementType));
@@ -230,8 +230,7 @@ static mlir::Value genScalarLit(
                 TC == Fortran::common::TypeCategory::Unsigned) {
     // MLIR requires constants to be signless
     mlir::Type ty = Fortran::lower::getFIRType(
-        builder.getContext(), Fortran::common::TypeCategory::Integer, KIND,
-        std::nullopt);
+        builder.getContext(), Fortran::common::TypeCategory::Integer, KIND, {});
     if (KIND == 16) {
       auto bigInt = llvm::APInt(ty.getIntOrFloatBitWidth(),
                                 TC == Fortran::common::TypeCategory::Unsigned

@@ -79,7 +79,69 @@ TEST_F(MainLoopTest, ReadObject) {
   ASSERT_EQ(1u, callback_count);
 }
 
-TEST_F(MainLoopTest, NoSpuriousReads) {
+TEST_F(MainLoopTest, ReadPipeObject) {
+  Pipe pipe;
+
+  ASSERT_TRUE(pipe.CreateNew().Success());
+
+  MainLoop loop;
+
+  char X = 'X';
+  size_t len = sizeof(X);
+  ASSERT_THAT_EXPECTED(pipe.Write(&X, len), llvm::HasValue(1));
+
+  Status error;
+  auto handle = loop.RegisterReadObject(
+      std::make_shared<NativeFile>(pipe.GetReadFileDescriptor(),
+                                   File::eOpenOptionReadOnly, false),
+      make_callback(), error);
+  ASSERT_TRUE(error.Success());
+  ASSERT_TRUE(handle);
+  ASSERT_TRUE(loop.Run().Success());
+  ASSERT_EQ(1u, callback_count);
+}
+
+TEST_F(MainLoopTest, NoSpuriousPipeReads) {
+  Pipe pipe;
+
+  ASSERT_TRUE(pipe.CreateNew().Success());
+
+  char X = 'X';
+  size_t len = sizeof(X);
+  ASSERT_THAT_EXPECTED(pipe.Write(&X, len), llvm::Succeeded());
+
+  lldb::IOObjectSP r = std::make_shared<NativeFile>(
+      pipe.GetReadFileDescriptor(), File::eOpenOptionReadOnly, false);
+
+  MainLoop loop;
+
+  Status error;
+  auto handle = loop.RegisterReadObject(
+      r,
+      [&](MainLoopBase &) {
+        if (callback_count == 0) {
+          // Read the byte back the first time we're called. After that, the
+          // pipe is empty, and we should not be called anymore.
+          char X;
+          size_t len = sizeof(X);
+          ASSERT_THAT_ERROR(r->Read(&X, len).ToError(), llvm::Succeeded());
+          EXPECT_EQ(len, sizeof(X));
+          EXPECT_EQ(X, 'X');
+        }
+        ++callback_count;
+      },
+      error);
+  ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
+  // Terminate the loop after one second.
+  loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
+                   std::chrono::seconds(1));
+  ASSERT_THAT_ERROR(loop.Run().ToError(), llvm::Succeeded());
+
+  // Make sure the callback was called only once.
+  ASSERT_EQ(1u, callback_count);
+}
+
+TEST_F(MainLoopTest, NoSpuriousSocketReads) {
   // Write one byte into the socket.
   char X = 'X';
   size_t len = sizeof(X);
@@ -99,6 +161,7 @@ TEST_F(MainLoopTest, NoSpuriousReads) {
           EXPECT_THAT_ERROR(socketpair[1]->Read(&X, len).ToError(),
                             llvm::Succeeded());
           EXPECT_EQ(len, sizeof(X));
+          EXPECT_EQ(X, 'X');
         }
         ++callback_count;
       },
@@ -164,9 +227,8 @@ TEST_F(MainLoopTest, PendingCallbackCalledOnlyOnce) {
       [&](MainLoopBase &loop) {
         // Add one pending callback on the first iteration.
         if (callback_count == 0) {
-          loop.AddPendingCallback([&](MainLoopBase &loop) {
-            callback_count++;
-          });
+          loop.AddPendingCallback(
+              [&](MainLoopBase &loop) { callback_count++; });
         }
         // Terminate the loop on second iteration.
         if (callback_count++ >= 1)
@@ -321,7 +383,7 @@ TEST_F(MainLoopTest, UnmonitoredSignal) {
   MainLoop loop;
   Status error;
   struct sigaction sa;
-  sa.sa_sigaction = [](int, siginfo_t *, void *) { };
+  sa.sa_sigaction = [](int, siginfo_t *, void *) {};
   sa.sa_flags = SA_SIGINFO; // important: no SA_RESTART
   sigemptyset(&sa.sa_mask);
   ASSERT_EQ(0, sigaction(SIGUSR2, &sa, nullptr));

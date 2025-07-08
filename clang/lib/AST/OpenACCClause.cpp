@@ -109,7 +109,7 @@ OpenACCSelfClause *OpenACCSelfClause::Create(const ASTContext &C,
 
 OpenACCSelfClause::OpenACCSelfClause(SourceLocation BeginLoc,
                                      SourceLocation LParenLoc,
-                                     llvm::ArrayRef<Expr *> VarList,
+                                     ArrayRef<Expr *> VarList,
                                      SourceLocation EndLoc)
     : OpenACCClauseWithParams(OpenACCClauseKind::Self, BeginLoc, LParenLoc,
                               EndLoc),

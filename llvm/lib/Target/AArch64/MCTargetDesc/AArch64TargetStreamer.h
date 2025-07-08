@@ -9,7 +9,7 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64TARGETSTREAMER_H
 #define LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64TARGETSTREAMER_H
 
-#include "AArch64MCExpr.h"
+#include "AArch64MCAsmInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/MC/MCELFStreamer.h"

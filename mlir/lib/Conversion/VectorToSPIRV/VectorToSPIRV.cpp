@@ -1022,6 +1022,51 @@ struct VectorStepOpConvert final : OpConversionPattern<vector::StepOp> {
   }
 };
 
+struct VectorToElementOpConvert final
+    : OpConversionPattern<vector::ToElementsOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::ToElementsOp toElementsOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    SmallVector<Value> results(toElementsOp->getNumResults());
+    Location loc = toElementsOp.getLoc();
+
+    // Input vectors of size 1 are converted to scalars by the type converter.
+    // We cannot use `spirv::CompositeExtractOp` directly in this case.
+    // For a scalar source, the result is just the scalar itself.
+    if (isa<spirv::ScalarType>(adaptor.getSource().getType())) {
+      results[0] = adaptor.getSource();
+      rewriter.replaceOp(toElementsOp, results);
+      return success();
+    }
+
+    Type srcElementType = toElementsOp.getElements().getType().front();
+    Type elementType = getTypeConverter()->convertType(srcElementType);
+    if (!elementType)
+      return rewriter.notifyMatchFailure(
+          toElementsOp,
+          llvm::formatv("failed to convert element type '{0}' to SPIR-V",
+                        srcElementType));
+
+    for (auto [idx, element] : llvm::enumerate(toElementsOp.getElements())) {
+      // Create an CompositeExtract operation only for results that are not
+      // dead.
+      if (element.use_empty())
+        continue;
+
+      Value result = rewriter.create<spirv::CompositeExtractOp>(
+          loc, elementType, adaptor.getSource(),
+          rewriter.getI32ArrayAttr({static_cast<int32_t>(idx)}));
+      results[idx] = result;
+    }
+
+    rewriter.replaceOp(toElementsOp, results);
+    return success();
+  }
+};
+
 } // namespace
 #define CL_INT_MAX_MIN_OPS                                                     \
   spirv::CLUMaxOp, spirv::CLUMinOp, spirv::CLSMaxOp, spirv::CLSMinOp
@@ -1039,8 +1084,8 @@ void mlir::populateVectorToSPIRVPatterns(
       VectorExtractElementOpConvert, VectorExtractOpConvert,
       VectorExtractStridedSliceOpConvert, VectorFmaOpConvert<spirv::GLFmaOp>,
       VectorFmaOpConvert<spirv::CLFmaOp>, VectorFromElementsOpConvert,
-      VectorInsertElementOpConvert, VectorInsertOpConvert,
-      VectorReductionPattern<GL_INT_MAX_MIN_OPS>,
+      VectorToElementOpConvert, VectorInsertElementOpConvert,
+      VectorInsertOpConvert, VectorReductionPattern<GL_INT_MAX_MIN_OPS>,
       VectorReductionPattern<CL_INT_MAX_MIN_OPS>,
       VectorReductionFloatMinMax<CL_FLOAT_MAX_MIN_OPS>,
       VectorReductionFloatMinMax<GL_FLOAT_MAX_MIN_OPS>, VectorShapeCast,

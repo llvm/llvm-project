@@ -871,9 +871,7 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
     }
     llvm::stable_sort(Bases);
 
-    for (unsigned I = 0, N = Bases.size(); I != N; ++I) {
-      BaseInfo &Base = Bases[I];
-
+    for (const BaseInfo &Base : Bases) {
       bool IsPrimaryBase = Layout.getPrimaryBase() == Base.Decl;
       Build(Val.getStructBase(Base.Index), Base.Decl, IsPrimaryBase,
             VTableClass, Offset + Base.Offset);

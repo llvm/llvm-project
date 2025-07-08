@@ -33,6 +33,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -335,6 +336,7 @@ char AVRAsmPrinter::ID = 0;
 INITIALIZE_PASS(AVRAsmPrinter, "avr-asm-printer", "AVR Assembly Printer", false,
                 false)
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeAVRAsmPrinter() {
   llvm::RegisterAsmPrinter<AVRAsmPrinter> X(getTheAVRTarget());
 }

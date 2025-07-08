@@ -79,17 +79,102 @@ void CIRGenItaniumCXXABI::emitInstanceFunctionProlog(SourceLocation loc,
   }
 }
 
+// Find out how to cirgen the complete destructor and constructor
+namespace {
+enum class StructorCIRGen { Emit, RAUW, Alias, COMDAT };
+}
+
+static StructorCIRGen getCIRGenToUse(CIRGenModule &cgm,
+                                     const CXXMethodDecl *md) {
+  if (!cgm.getCodeGenOpts().CXXCtorDtorAliases)
+    return StructorCIRGen::Emit;
+
+  // The complete and base structors are not equivalent if there are any virtual
+  // bases, so emit separate functions.
+  if (md->getParent()->getNumVBases()) {
+    // The return value is correct here, but other support for this is NYI.
+    cgm.errorNYI(md->getSourceRange(), "getCIRGenToUse: virtual bases");
+    return StructorCIRGen::Emit;
+  }
+
+  GlobalDecl aliasDecl;
+  if (const auto *dd = dyn_cast<CXXDestructorDecl>(md)) {
+    // The assignment is correct here, but other support for this is NYI.
+    cgm.errorNYI(md->getSourceRange(), "getCIRGenToUse: dtor");
+    aliasDecl = GlobalDecl(dd, Dtor_Complete);
+  } else {
+    const auto *cd = cast<CXXConstructorDecl>(md);
+    aliasDecl = GlobalDecl(cd, Ctor_Complete);
+  }
+
+  cir::GlobalLinkageKind linkage = cgm.getFunctionLinkage(aliasDecl);
+
+  if (cir::isDiscardableIfUnused(linkage))
+    return StructorCIRGen::RAUW;
+
+  // FIXME: Should we allow available_externally aliases?
+  if (!cir::isValidLinkage(linkage))
+    return StructorCIRGen::RAUW;
+
+  if (cir::isWeakForLinker(linkage)) {
+    // Only ELF and wasm support COMDATs with arbitrary names (C5/D5).
+    if (cgm.getTarget().getTriple().isOSBinFormatELF() ||
+        cgm.getTarget().getTriple().isOSBinFormatWasm())
+      return StructorCIRGen::COMDAT;
+    return StructorCIRGen::Emit;
+  }
+
+  return StructorCIRGen::Alias;
+}
+
+static void emitConstructorDestructorAlias(CIRGenModule &cgm,
+                                           GlobalDecl aliasDecl,
+                                           GlobalDecl targetDecl) {
+  cir::GlobalLinkageKind linkage = cgm.getFunctionLinkage(aliasDecl);
+
+  // Does this function alias already exists?
+  StringRef mangledName = cgm.getMangledName(aliasDecl);
+  auto globalValue = dyn_cast_or_null<cir::CIRGlobalValueInterface>(
+      cgm.getGlobalValue(mangledName));
+  if (globalValue && !globalValue.isDeclaration())
+    return;
+
+  auto entry = cast_or_null<cir::FuncOp>(cgm.getGlobalValue(mangledName));
+
+  // Retrieve aliasee info.
+  auto aliasee = cast<cir::FuncOp>(cgm.getAddrOfGlobal(targetDecl));
+
+  // Populate actual alias.
+  cgm.emitAliasForGlobal(mangledName, entry, aliasDecl, aliasee, linkage);
+}
+
 void CIRGenItaniumCXXABI::emitCXXStructor(GlobalDecl gd) {
   auto *md = cast<CXXMethodDecl>(gd.getDecl());
   auto *cd = dyn_cast<CXXConstructorDecl>(md);
+
+  StructorCIRGen cirGenType = getCIRGenToUse(cgm, md);
 
   if (!cd) {
     cgm.errorNYI(md->getSourceRange(), "CXCABI emit destructor");
     return;
   }
 
-  if (cgm.getCodeGenOpts().CXXCtorDtorAliases)
-    cgm.errorNYI(md->getSourceRange(), "Ctor/Dtor aliases");
+  if (gd.getCtorType() == Ctor_Complete) {
+    GlobalDecl baseDecl = gd.getWithCtorType(Ctor_Base);
+
+    if (cirGenType == StructorCIRGen::Alias ||
+        cirGenType == StructorCIRGen::COMDAT) {
+      emitConstructorDestructorAlias(cgm, gd, baseDecl);
+      return;
+    }
+
+    if (cirGenType == StructorCIRGen::RAUW) {
+      StringRef mangledName = cgm.getMangledName(gd);
+      mlir::Operation *aliasee = cgm.getAddrOfGlobal(baseDecl);
+      cgm.addReplacement(mangledName, aliasee);
+      return;
+    }
+  }
 
   auto fn = cgm.codegenCXXStructor(gd);
 

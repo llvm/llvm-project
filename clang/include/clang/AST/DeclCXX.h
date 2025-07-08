@@ -365,12 +365,10 @@ private:
       return getVBasesSlowCase();
     }
 
-    ArrayRef<CXXBaseSpecifier> bases() const {
-      return llvm::ArrayRef(getBases(), NumBases);
-    }
+    ArrayRef<CXXBaseSpecifier> bases() const { return {getBases(), NumBases}; }
 
     ArrayRef<CXXBaseSpecifier> vbases() const {
-      return llvm::ArrayRef(getVBases(), NumVBases);
+      return {getVBases(), NumVBases};
     }
 
   private:
@@ -4190,7 +4188,7 @@ public:
   Expr *getBinding() const { return Binding; }
 
   // Get the array of nested BindingDecls when the binding represents a pack.
-  llvm::ArrayRef<BindingDecl *> getBindingPackDecls() const;
+  ArrayRef<BindingDecl *> getBindingPackDecls() const;
 
   /// Get the decomposition declaration that this binding represents a
   /// decomposition of.
@@ -4269,11 +4267,11 @@ public:
 
   // Provide a flattened range to visit each binding.
   auto flat_bindings() const {
-    llvm::ArrayRef<BindingDecl *> Bindings = bindings();
-    llvm::ArrayRef<BindingDecl *> PackBindings;
+    ArrayRef<BindingDecl *> Bindings = bindings();
+    ArrayRef<BindingDecl *> PackBindings;
 
     // Split the bindings into subranges split by the pack.
-    llvm::ArrayRef<BindingDecl *> BeforePackBindings = Bindings.take_until(
+    ArrayRef<BindingDecl *> BeforePackBindings = Bindings.take_until(
         [](BindingDecl *BD) { return BD->isParameterPack(); });
 
     Bindings = Bindings.drop_front(BeforePackBindings.size());

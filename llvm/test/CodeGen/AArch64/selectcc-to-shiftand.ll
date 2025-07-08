@@ -249,9 +249,6 @@ define <16 x i8> @sel_shift_bool_v16i8(<16 x i1> %t) {
 ; CHECK-SD-LABEL: sel_shift_bool_v16i8:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    shl v0.16b, v0.16b, #7
-; CHECK-SD-NEXT:    movi v1.16b, #128
-; CHECK-SD-NEXT:    cmlt v0.16b, v0.16b, #0
-; CHECK-SD-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sel_shift_bool_v16i8:

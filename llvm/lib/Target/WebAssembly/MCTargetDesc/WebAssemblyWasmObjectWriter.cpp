@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyFixupKinds.h"
-#include "MCTargetDesc/WebAssemblyMCExpr.h"
+#include "MCTargetDesc/WebAssemblyMCAsmInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCAsmBackend.h"

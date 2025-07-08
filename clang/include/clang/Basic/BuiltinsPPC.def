@@ -535,6 +535,12 @@ TARGET_BUILTIN(__builtin_ppc_bcdadd_p, "iiV16UcV16Uc", "",
 TARGET_BUILTIN(__builtin_ppc_bcdsub_p, "iiV16UcV16Uc", "",
                "isa-v207-instructions")
 
+// P9 Binary-coded decimal (BCD) builtins.                                                
+TARGET_BUILTIN(__builtin_ppc_national2packed, "V16UcV16UcUc", "t", "power9-vector")
+TARGET_BUILTIN(__builtin_ppc_packed2national, "V16UcV16Uc", "", "power9-vector")
+TARGET_BUILTIN(__builtin_ppc_packed2zoned, "V16UcV16UcUc", "t", "power9-vector")
+TARGET_BUILTIN(__builtin_ppc_zoned2packed, "V16UcV16UcUc", "t", "power9-vector")
+
 TARGET_BUILTIN(__builtin_altivec_vclzlsbb, "SiV16Uc", "", "power9-vector")
 TARGET_BUILTIN(__builtin_altivec_vctzlsbb, "SiV16Uc", "", "power9-vector")
 TARGET_BUILTIN(__builtin_altivec_vprtybw, "V4UiV4Ui", "", "power9-vector")
@@ -1133,6 +1139,18 @@ UNALIASED_CUSTOM_BUILTIN(mma_pmxvbf16ger2pn, "vW512*VVi15i15i3", true,
 UNALIASED_CUSTOM_BUILTIN(mma_pmxvbf16ger2np, "vW512*VVi15i15i3", true,
                          "mma,paired-vector-memops")
 UNALIASED_CUSTOM_BUILTIN(mma_pmxvbf16ger2nn, "vW512*VVi15i15i3", true,
+                         "mma,paired-vector-memops")
+UNALIASED_CUSTOM_BUILTIN(mma_dmxvi8gerx4, "vW1024*W256V", false,
+                         "mma,paired-vector-memops")
+UNALIASED_CUSTOM_BUILTIN(mma_pmdmxvi8gerx4, "vW1024*W256Vi255i15i15", false,
+                         "mma,paired-vector-memops")
+UNALIASED_CUSTOM_BUILTIN(mma_dmxvi8gerx4pp, "vW1024*W256V", true,
+                         "mma,paired-vector-memops")
+UNALIASED_CUSTOM_BUILTIN(mma_pmdmxvi8gerx4pp, "vW1024*W256Vi255i15i15", true,
+                         "mma,paired-vector-memops")
+UNALIASED_CUSTOM_BUILTIN(mma_dmxvi8gerx4spp,  "vW1024*W256V", true,
+                         "mma,paired-vector-memops")
+UNALIASED_CUSTOM_BUILTIN(mma_pmdmxvi8gerx4spp, "vW1024*W256Vi255i15i15", true,
                          "mma,paired-vector-memops")
 
 // FIXME: Obviously incomplete.

@@ -2127,6 +2127,7 @@ cc_library(
         ":PluginProcessUtility",
         "//lldb:Breakpoint",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",

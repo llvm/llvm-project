@@ -17,8 +17,26 @@
 using namespace mlir;
 using namespace llvm;
 
-static std::string ensureSymbolNameIsUnique(ModuleOp moduleOp,
-                                            StringRef symbolName) {
+/// Check if a given symbol name is already in use within the module operation.
+/// If no symbol with such name is present, then the same identifier is
+/// returned. Otherwise, a unique and yet unused identifier is computed starting
+/// from the requested one.
+static std::string
+ensureSymbolNameIsUnique(ModuleOp moduleOp, StringRef symbolName,
+                         SymbolTableCollection *symbolTables = nullptr) {
+  if (symbolTables) {
+    SymbolTable &symbolTable = symbolTables->getSymbolTable(moduleOp);
+    unsigned counter = 0;
+    SmallString<128> uniqueName = symbolTable.generateSymbolName<128>(
+        symbolName,
+        [&](const SmallString<128> &tentativeName) {
+          return symbolTable.lookupSymbolIn(moduleOp, tentativeName) != nullptr;
+        },
+        counter);
+
+    return static_cast<std::string>(uniqueName);
+  }
+
   static int counter = 0;
   std::string uniqueName = std::string(symbolName);
   while (moduleOp.lookupSymbol(uniqueName)) {
@@ -30,7 +48,8 @@ static std::string ensureSymbolNameIsUnique(ModuleOp moduleOp,
 LogicalResult mlir::LLVM::createPrintStrCall(
     OpBuilder &builder, Location loc, ModuleOp moduleOp, StringRef symbolName,
     StringRef string, const LLVMTypeConverter &typeConverter, bool addNewline,
-    std::optional<StringRef> runtimeFunctionName) {
+    std::optional<StringRef> runtimeFunctionName,
+    SymbolTableCollection *symbolTables) {
   auto ip = builder.saveInsertionPoint();
   builder.setInsertionPointToStart(moduleOp.getBody());
   MLIRContext *ctx = builder.getContext();
@@ -49,7 +68,7 @@ LogicalResult mlir::LLVM::createPrintStrCall(
       LLVM::LLVMArrayType::get(IntegerType::get(ctx, 8), elementVals.size());
   auto globalOp = builder.create<LLVM::GlobalOp>(
       loc, arrayTy, /*constant=*/true, LLVM::Linkage::Private,
-      ensureSymbolNameIsUnique(moduleOp, symbolName), dataAttr);
+      ensureSymbolNameIsUnique(moduleOp, symbolName, symbolTables), dataAttr);
 
   auto ptrTy = LLVM::LLVMPointerType::get(builder.getContext());
   // Emit call to `printStr` in runtime library.

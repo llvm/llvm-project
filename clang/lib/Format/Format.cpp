@@ -3582,7 +3582,7 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
       ImportsInBlock.push_back(
           {Identifier, Line, Prev, AssociatedCommentLines, IsStatic});
       AssociatedCommentLines.clear();
-    } else if (Trimmed.size() > 0 && !ImportsInBlock.empty()) {
+    } else if (!Trimmed.empty() && !ImportsInBlock.empty()) {
       // Associating comments within the imports with the nearest import below
       AssociatedCommentLines.push_back(Line);
     }

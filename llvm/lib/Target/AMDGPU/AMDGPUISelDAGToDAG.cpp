@@ -2032,7 +2032,8 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
     int64_t COffsetVal = cast<ConstantSDNode>(RHS)->getSExtValue();
     const SIInstrInfo *TII = Subtarget->getInstrInfo();
 
-    if (TII->isLegalFLATOffset(COffsetVal, AMDGPUAS::PRIVATE_ADDRESS, true)) {
+    if (TII->isLegalFLATOffset(COffsetVal, AMDGPUAS::PRIVATE_ADDRESS,
+                               SIInstrFlags::FlatScratch)) {
       Addr = LHS;
       ImmOffset = COffsetVal;
     } else if (!LHS->isDivergent() && COffsetVal > 0) {
@@ -2040,8 +2041,8 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
       // saddr + large_offset -> saddr + (vaddr = large_offset & ~MaxOffset) +
       //                         (large_offset & MaxOffset);
       int64_t SplitImmOffset, RemainderOffset;
-      std::tie(SplitImmOffset, RemainderOffset)
-        = TII->splitFlatOffset(COffsetVal, AMDGPUAS::PRIVATE_ADDRESS, true);
+      std::tie(SplitImmOffset, RemainderOffset) = TII->splitFlatOffset(
+          COffsetVal, AMDGPUAS::PRIVATE_ADDRESS, SIInstrFlags::FlatScratch);
 
       if (isUInt<32>(RemainderOffset)) {
         SDNode *VMov = CurDAG->getMachineNode(
@@ -3936,7 +3937,7 @@ bool AMDGPUDAGToDAGISel::isUniformLoad(const SDNode *N) const {
   const auto *Ld = cast<LoadSDNode>(N);
 
   const MachineMemOperand *MMO = Ld->getMemOperand();
-  if (N->isDivergent() && !AMDGPUInstrInfo::isUniformMMO(MMO))
+  if (N->isDivergent() && !AMDGPU::isUniformMMO(MMO))
     return false;
 
   return MMO->getSize().hasValue() &&

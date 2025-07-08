@@ -15,7 +15,8 @@ if (NOT ${getrandom_index} EQUAL -1)
   message(STATUS "Using getrandom for hashtable randomness")
   set(randomness_compile_flags -DLIBC_HASHTABLE_USE_GETRANDOM)
   set(randomness_extra_depends
-    libc.src.sys.random.getrandom libc.src.errno.errno)
+    libc.src.__support.OSUtil.linux.getrandom
+    libc.hdr.errno_macros)
 endif()
 
 

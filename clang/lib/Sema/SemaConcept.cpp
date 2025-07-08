@@ -898,7 +898,7 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
     Sema &S, const Sema::TemplateCompareNewDeclInfo &DeclInfo,
     const Expr *ConstrExpr) {
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
-      DeclInfo.getDecl(), DeclInfo.getLexicalDeclContext(), /*Final=*/false,
+      DeclInfo.getDecl(), DeclInfo.getDeclContext(), /*Final=*/false,
       /*Innermost=*/std::nullopt,
       /*RelativeToPrimary=*/true,
       /*Pattern=*/nullptr, /*ForConstraintInstantiation=*/true,
@@ -1081,10 +1081,10 @@ static bool CheckFunctionConstraintsWithoutInstantiation(
   // FIXME: Add TemplateArgs through the 'Innermost' parameter once
   // the refactoring of getTemplateInstantiationArgs() relands.
   MultiLevelTemplateArgumentList MLTAL;
-  MLTAL.addOuterTemplateArguments(Template, std::nullopt, /*Final=*/false);
+  MLTAL.addOuterTemplateArguments(Template, {}, /*Final=*/false);
   SemaRef.getTemplateInstantiationArgs(
       MLTAL, /*D=*/FD, FD,
-      /*Final=*/false, /*Innermost=*/std::nullopt, /*RelativeToPrimary=*/true,
+      /*Final=*/false, /*Innermost=*/{}, /*RelativeToPrimary=*/true,
       /*Pattern=*/nullptr, /*ForConstraintInstantiation=*/true);
   MLTAL.replaceInnermostTemplateArguments(Template, TemplateArgs);
 
@@ -1138,8 +1138,8 @@ bool Sema::CheckFunctionTemplateConstraints(
   }
 
   CXXThisScopeRAII ThisScope(*this, Record, ThisQuals, Record != nullptr);
-  LambdaScopeForCallOperatorInstantiationRAII LambdaScope(
-      *this, const_cast<FunctionDecl *>(Decl), *MLTAL, Scope);
+  LambdaScopeForCallOperatorInstantiationRAII LambdaScope(*this, Decl, *MLTAL,
+                                                          Scope);
 
   return CheckConstraintSatisfaction(Template, TemplateAC, *MLTAL,
                                      PointOfInstantiation, Satisfaction);

@@ -278,8 +278,8 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
         }
         if (HasAbsoluteGVs.has_value()) {
           if (*HasAbsoluteGVs != IsAbsolute) {
-            report_fatal_error(
-                "Module cannot mix absolute and non-absolute LDS GVs");
+            reportFatalUsageError(
+                "module cannot mix absolute and non-absolute LDS GVs");
           }
         } else
           HasAbsoluteGVs = IsAbsolute;

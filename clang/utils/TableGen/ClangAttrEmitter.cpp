@@ -4904,9 +4904,8 @@ void EmitClangAttrParsedAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
   }
 
   OS << "static const ParsedAttrInfo *AttrInfoMap[] = {\n";
-  for (auto I = Attrs.begin(), E = Attrs.end(); I != E; ++I) {
-    OS << "&ParsedAttrInfo" << I->first << "::Instance,\n";
-  }
+  for (const auto &Attr : Attrs)
+    OS << "&ParsedAttrInfo" << Attr.first << "::Instance,\n";
   OS << "};\n\n";
 
   // Generate function for handling attributes with delayed arguments
@@ -5261,10 +5260,9 @@ GetAttributeHeadingAndSpellings(const Record &Documentation,
       Heading = Spellings.begin()->name();
     else {
       std::set<std::string> Uniques;
-      for (auto I = Spellings.begin(), E = Spellings.end();
-           I != E; ++I) {
+      for (const FlattenedSpelling &FS : Spellings) {
         std::string Spelling =
-            NormalizeNameForSpellingComparison(I->name()).str();
+            NormalizeNameForSpellingComparison(FS.name()).str();
         Uniques.insert(Spelling);
       }
       // If the semantic map has only one spelling, that is sufficient for our
@@ -5482,14 +5480,12 @@ void EmitTestPragmaAttributeSupportedAttributes(const RecordKeeper &Records,
     }
     const Record *SubjectObj = I.second->getValueAsDef("Subjects");
     OS << " (";
-    bool PrintComma = false;
+    ListSeparator LS;
     for (const auto &Subject :
          enumerate(SubjectObj->getValueAsListOfDefs("Subjects"))) {
       if (!isSupportedPragmaClangAttributeSubject(*Subject.value()))
         continue;
-      if (PrintComma)
-        OS << ", ";
-      PrintComma = true;
+      OS << LS;
       PragmaClangAttributeSupport::RuleOrAggregateRuleSet &RuleSet =
           Support.SubjectsToRules.find(Subject.value())->getSecond();
       if (RuleSet.isRule()) {

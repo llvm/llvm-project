@@ -16,7 +16,7 @@
 def SpacemitX60Model : SchedMachineModel {
   let IssueWidth        = 2; // dual-issue
   let MicroOpBufferSize = 0; // in-order
-  let LoadLatency       = 5; // worse case: >= 3
+  let LoadLatency       = 3; // worse case: >= 3
   let MispredictPenalty = 9; // nine-stage
 
   let CompleteModel = 0;
@@ -114,7 +114,7 @@ def : WriteRes<WriteBEXT, [SMX60_IEU]>;
 def : WriteRes<WriteBEXTI, [SMX60_IEU]>;
 
 // Memory/Atomic memory
-let Latency = 3 in {
+let Latency = 4 in {
   def : WriteRes<WriteSTB, [SMX60_LS]>;
   def : WriteRes<WriteSTH, [SMX60_LS]>;
   def : WriteRes<WriteSTW, [SMX60_LS]>;
@@ -122,11 +122,7 @@ let Latency = 3 in {
   def : WriteRes<WriteFST16, [SMX60_LS]>;
   def : WriteRes<WriteFST32, [SMX60_LS]>;
   def : WriteRes<WriteFST64, [SMX60_LS]>;
-  def : WriteRes<WriteAtomicSTW, [SMX60_LS]>;
-  def : WriteRes<WriteAtomicSTD, [SMX60_LS]>;
-}
 
-let Latency = 5 in {
   def : WriteRes<WriteLDB, [SMX60_LS]>;
   def : WriteRes<WriteLDH, [SMX60_LS]>;
   def : WriteRes<WriteLDW, [SMX60_LS]>;
@@ -137,9 +133,14 @@ let Latency = 5 in {
 }
 
 // Atomics
-let Latency = 5 in {
+let Latency = 8 in {
+  def : WriteRes<WriteAtomicSTW, [SMX60_LS]>;
+  def : WriteRes<WriteAtomicSTD, [SMX60_LS]>;
   def : WriteRes<WriteAtomicLDW, [SMX60_LS]>;
   def : WriteRes<WriteAtomicLDD, [SMX60_LS]>;
+}
+
+let Latency = 12 in {
   def : WriteRes<WriteAtomicW, [SMX60_LS]>;
   def : WriteRes<WriteAtomicD, [SMX60_LS]>;
 }

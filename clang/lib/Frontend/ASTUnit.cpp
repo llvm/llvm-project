@@ -2466,9 +2466,7 @@ void ASTUnit::addFileLevelDecl(Decl *D) {
 
   SourceLocation FileLoc = SM.getFileLoc(Loc);
   assert(SM.isLocalSourceLocation(FileLoc));
-  FileID FID;
-  unsigned Offset;
-  std::tie(FID, Offset) = SM.getDecomposedLoc(FileLoc);
+  auto [FID, Offset] = SM.getDecomposedLoc(FileLoc);
   if (FID.isInvalid())
     return;
 

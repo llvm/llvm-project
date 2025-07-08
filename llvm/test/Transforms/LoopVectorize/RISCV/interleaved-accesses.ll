@@ -7,16 +7,16 @@ define void @load_store_factor2_i32(ptr %p) {
 ; CHECK-LABEL: @load_store_factor2_i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -103,16 +103,16 @@ define void @load_store_factor2_i32(ptr %p) {
 ; SCALABLE-LABEL: @load_store_factor2_i32(
 ; SCALABLE-NEXT:  entry:
 ; SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; SCALABLE-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; SCALABLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; SCALABLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; SCALABLE:       vector.ph:
 ; SCALABLE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; SCALABLE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; SCALABLE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; SCALABLE-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; SCALABLE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SCALABLE:       vector.body:
 ; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -181,16 +181,16 @@ define void @load_store_factor2_i64(ptr %p) {
 ; CHECK-LABEL: @load_store_factor2_i64(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 2
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -277,16 +277,16 @@ define void @load_store_factor2_i64(ptr %p) {
 ; SCALABLE-LABEL: @load_store_factor2_i64(
 ; SCALABLE-NEXT:  entry:
 ; SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
+; SCALABLE-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 2
 ; SCALABLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; SCALABLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; SCALABLE:       vector.ph:
 ; SCALABLE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
+; SCALABLE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
 ; SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; SCALABLE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 2
+; SCALABLE-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 2
 ; SCALABLE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SCALABLE:       vector.body:
 ; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -355,16 +355,16 @@ define void @load_store_factor3_i32(ptr %p) {
 ; CHECK-LABEL: @load_store_factor3_i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 4
+; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP6]], 4
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP7]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -467,16 +467,16 @@ define void @load_store_factor3_i32(ptr %p) {
 ; SCALABLE-LABEL: @load_store_factor3_i32(
 ; SCALABLE-NEXT:  entry:
 ; SCALABLE-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 4
+; SCALABLE-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP6]], 4
 ; SCALABLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP7]]
 ; SCALABLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; SCALABLE:       vector.ph:
 ; SCALABLE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; SCALABLE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; SCALABLE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; SCALABLE-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; SCALABLE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SCALABLE:       vector.body:
 ; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -558,16 +558,16 @@ define void @load_store_factor3_i64(ptr %p) {
 ; CHECK-LABEL: @load_store_factor3_i64(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP6]], 2
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP7]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 2
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -670,16 +670,16 @@ define void @load_store_factor3_i64(ptr %p) {
 ; SCALABLE-LABEL: @load_store_factor3_i64(
 ; SCALABLE-NEXT:  entry:
 ; SCALABLE-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 2
+; SCALABLE-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP6]], 2
 ; SCALABLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP7]]
 ; SCALABLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; SCALABLE:       vector.ph:
 ; SCALABLE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
+; SCALABLE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
 ; SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; SCALABLE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 2
+; SCALABLE-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 2
 ; SCALABLE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SCALABLE:       vector.body:
 ; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -761,16 +761,16 @@ define void @load_store_factor4(ptr %p) {
 ; CHECK-LABEL: @load_store_factor4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 2
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -887,16 +887,16 @@ define void @load_store_factor4(ptr %p) {
 ; SCALABLE-LABEL: @load_store_factor4(
 ; SCALABLE-NEXT:  entry:
 ; SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
+; SCALABLE-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 2
 ; SCALABLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; SCALABLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; SCALABLE:       vector.ph:
 ; SCALABLE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
+; SCALABLE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
 ; SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; SCALABLE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 2
+; SCALABLE-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 2
 ; SCALABLE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SCALABLE:       vector.body:
 ; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -2171,16 +2171,16 @@ define void @combine_load_factor2_i32(ptr noalias %p, ptr noalias %q) {
 ; CHECK-LABEL: @combine_load_factor2_i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -2273,16 +2273,16 @@ define void @combine_load_factor2_i32(ptr noalias %p, ptr noalias %q) {
 ; SCALABLE-LABEL: @combine_load_factor2_i32(
 ; SCALABLE-NEXT:  entry:
 ; SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; SCALABLE-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; SCALABLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; SCALABLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; SCALABLE:       vector.ph:
 ; SCALABLE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; SCALABLE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; SCALABLE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; SCALABLE-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; SCALABLE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SCALABLE:       vector.body:
 ; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -2351,16 +2351,16 @@ define void @combine_load_factor2_i64(ptr noalias %p, ptr noalias %q) {
 ; CHECK-LABEL: @combine_load_factor2_i64(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 2
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -2453,16 +2453,16 @@ define void @combine_load_factor2_i64(ptr noalias %p, ptr noalias %q) {
 ; SCALABLE-LABEL: @combine_load_factor2_i64(
 ; SCALABLE-NEXT:  entry:
 ; SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 2
+; SCALABLE-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 2
 ; SCALABLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; SCALABLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; SCALABLE:       vector.ph:
 ; SCALABLE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 2
+; SCALABLE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
 ; SCALABLE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; SCALABLE-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; SCALABLE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; SCALABLE-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 2
+; SCALABLE-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 2
 ; SCALABLE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SCALABLE:       vector.body:
 ; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

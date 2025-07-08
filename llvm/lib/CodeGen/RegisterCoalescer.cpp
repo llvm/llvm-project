@@ -4152,10 +4152,8 @@ void RegisterCoalescer::copyCoalesceInMBB(MachineBasicBlock *MBB) {
   if (JoinGlobalCopies) {
     SmallVector<MachineInstr *, 2> LocalTerminals;
     SmallVector<MachineInstr *, 2> GlobalTerminals;
-    // Coalesce copies bottom-up to coalesce local defs before local uses. They
-    // are not inherently easier to resolve, but slightly preferable until we
-    // have local live range splitting. In particular this is required by
-    // cmp+jmp macro fusion.
+    // Coalesce copies top-down to propagate coalescing and rematerialization
+    // forward.
     for (MachineInstr &MI : *MBB) {
       if (!MI.isCopyLike())
         continue;
@@ -4177,6 +4175,8 @@ void RegisterCoalescer::copyCoalesceInMBB(MachineBasicBlock *MBB) {
     WorkList.append(GlobalTerminals.begin(), GlobalTerminals.end());
   } else {
     SmallVector<MachineInstr *, 2> Terminals;
+    // Coalesce copies top-down to propagate coalescing and rematerialization
+    // forward.
     for (MachineInstr &MII : *MBB)
       if (MII.isCopyLike()) {
         if (applyTerminalRule(MII))

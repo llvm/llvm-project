@@ -53,15 +53,12 @@ loop.latch:
 
 define void @test_simplifycompare_rhs_not_constant1() {
 ; CHECK-LABEL: define void @test_simplifycompare_rhs_not_constant1() {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[P:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[P]], %[[ENTRY]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr i8, ptr [[PTR_IV]], i64 -8
-; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
-; CHECK-NEXT:    [[EC:%.*]] = icmp ult ptr [[PTR_IV_NEXT]], [[P]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    call void @use(ptr [[P]])
+; CHECK-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

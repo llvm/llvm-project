@@ -66,8 +66,11 @@ void UnconventionalAssignOperatorCheck::registerMatchers(
                                 hasArgument(0, cxxThisExpr())),
             cxxOperatorCallExpr(
                 hasOverloadedOperatorName("="),
-                hasArgument(
-                    0, unaryOperator(hasOperatorName("*"),
+                hasArgument(0, unaryOperator(hasOperatorName("*"),
+                                             hasUnaryOperand(cxxThisExpr())))),
+            binaryOperator(
+                hasOperatorName("="),
+                hasLHS(unaryOperator(hasOperatorName("*"),
                                      hasUnaryOperand(cxxThisExpr())))))))));
   const auto IsGoodAssign = cxxMethodDecl(IsAssign, HasGoodReturnType);
 

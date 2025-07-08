@@ -63,7 +63,7 @@ enum ProfileInstrKind {
 };
 
 // Default filename used for profile generation.
-std::string getDefaultProfileGenName();
+LLVM_ABI std::string getDefaultProfileGenName();
 } // end namespace llvm::driver
 
 #endif

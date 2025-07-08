@@ -59,7 +59,7 @@ void DeducedTemplateStorage::Profile(llvm::FoldingSetNodeID &ID,
 
 TemplateArgument
 SubstTemplateTemplateParmPackStorage::getArgumentPack() const {
-  return TemplateArgument(llvm::ArrayRef(Arguments, Bits.Data));
+  return TemplateArgument(ArrayRef(Arguments, Bits.Data));
 }
 
 TemplateTemplateParmDecl *

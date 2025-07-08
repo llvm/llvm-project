@@ -267,6 +267,7 @@ struct AccEndCombinedDirective;
 struct OpenACCDeclarativeConstruct;
 struct OpenACCRoutineConstruct;
 struct OpenMPConstruct;
+struct OpenMPLoopConstruct;
 struct OpenMPDeclarativeConstruct;
 struct OmpEndLoopDirective;
 struct OmpMemoryOrderClause;
@@ -4300,6 +4301,12 @@ struct OmpHoldsClause {
   WRAPPER_CLASS_BOILERPLATE(OmpHoldsClause, common::Indirection<Expr>);
 };
 
+// Ref: [5.2: 209]
+struct OmpIndirectClause {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpIndirectClause, std::optional<ScalarLogicalExpr>);
+};
+
 // Ref: [5.2:72-73], in 4.5-5.1 it's scattered over individual directives
 // that allow the IF clause.
 //
@@ -5015,11 +5022,13 @@ struct OpenMPBlockConstruct {
 };
 
 // OpenMP directives enclosing do loop
+using NestedConstruct =
+    std::variant<DoConstruct, common::Indirection<OpenMPLoopConstruct>>;
 struct OpenMPLoopConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPLoopConstruct);
   OpenMPLoopConstruct(OmpBeginLoopDirective &&a)
       : t({std::move(a), std::nullopt, std::nullopt}) {}
-  std::tuple<OmpBeginLoopDirective, std::optional<DoConstruct>,
+  std::tuple<OmpBeginLoopDirective, std::optional<NestedConstruct>,
       std::optional<OmpEndLoopDirective>>
       t;
 };

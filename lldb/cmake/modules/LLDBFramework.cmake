@@ -112,7 +112,8 @@ file(GLOB lldb_framework_header_staging_list ${lldb_framework_header_staging}/*)
 foreach(header ${lldb_framework_header_staging_list})
 
   set(input_header ${header})
-  set(output_header $<TARGET_FILE_DIR:liblldb>/Headers/${input_header})
+  get_filename_component(header_basename ${input_header} NAME)
+  set(output_header $<TARGET_FILE_DIR:liblldb>/Headers/${header_basename})
 
   add_custom_command(TARGET liblldb POST_BUILD
     COMMAND ${LLDB_SOURCE_DIR}/scripts/framework-header-fix.py -f lldb_main -i ${input_header} -o ${output_header} -p ${unifdef_EXECUTABLE} USWIG

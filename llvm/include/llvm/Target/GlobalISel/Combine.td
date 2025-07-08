@@ -211,6 +211,7 @@ def constantfp_matchinfo : GIDefMatchData<"ConstantFP*">;
 def build_fn_matchinfo :
 GIDefMatchData<"std::function<void(MachineIRBuilder &)>">;
 def unsigned_matchinfo: GIDefMatchData<"unsigned">;
+def register_vector_matchinfo : GIDefMatchData<"SmallVector<Register>">;
 
 def copy_prop : GICombineRule<
   (defs root:$d),
@@ -811,9 +812,8 @@ def zext_trunc_fold: GICombineRule <
   (apply [{ Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
 >;
 
-def not_cmp_fold_matchinfo : GIDefMatchData<"SmallVector<Register, 4>">;
 def not_cmp_fold : GICombineRule<
-  (defs root:$d, not_cmp_fold_matchinfo:$info),
+  (defs root:$d, register_vector_matchinfo:$info),
   (match (wip_match_opcode G_XOR): $d,
   [{ return Helper.matchNotCmp(*${d}, ${info}); }]),
   (apply [{ Helper.applyNotCmp(*${d}, ${info}); }])
@@ -828,9 +828,8 @@ def fneg_fneg_fold: GICombineRule <
 >;
 
 // Fold (unmerge(merge x, y, z)) -> z, y, z.
-def unmerge_merge_matchinfo : GIDefMatchData<"SmallVector<Register, 8>">;
 def unmerge_merge : GICombineRule<
-  (defs root:$d, unmerge_merge_matchinfo:$info),
+  (defs root:$d, register_vector_matchinfo:$info),
   (match (wip_match_opcode G_UNMERGE_VALUES): $d,
   [{ return Helper.matchCombineUnmergeMergeToPlainValues(*${d}, ${info}); }]),
   (apply [{ Helper.applyCombineUnmergeMergeToPlainValues(*${d}, ${info}); }])
@@ -955,9 +954,8 @@ def ptr_add_with_zero: GICombineRule<
          [{ return Helper.matchPtrAddZero(*${root}); }]),
   (apply [{ Helper.applyPtrAddZero(*${root}); }])>;
 
-def regs_small_vec : GIDefMatchData<"SmallVector<Register, 4>">;
 def combine_insert_vec_elts_build_vector : GICombineRule<
-  (defs root:$root, regs_small_vec:$info),
+  (defs root:$root, register_vector_matchinfo:$info),
   (match (wip_match_opcode G_INSERT_VECTOR_ELT):$root,
     [{ return Helper.matchCombineInsertVecElts(*${root}, ${info}); }]),
   (apply [{ Helper.applyCombineInsertVecElts(*${root}, ${info}); }])>;
@@ -1134,8 +1132,8 @@ def form_bitfield_extract : GICombineGroup<[bitfield_extract_from_sext_inreg,
 def udiv_by_const : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_UDIV):$root,
-   [{ return Helper.matchUDivByConst(*${root}); }]),
-  (apply [{ Helper.applyUDivByConst(*${root}); }])>;
+   [{ return Helper.matchUDivorURemByConst(*${root}); }]),
+  (apply [{ Helper.applyUDivorURemByConst(*${root}); }])>;
 
 def sdiv_by_const : GICombineRule<
   (defs root:$root),
@@ -1157,6 +1155,14 @@ def udiv_by_pow2 : GICombineRule<
 
 def intdiv_combines : GICombineGroup<[udiv_by_const, sdiv_by_const,
                                       sdiv_by_pow2, udiv_by_pow2]>;
+
+def urem_by_const : GICombineRule<
+  (defs root:$root),
+  (match (G_UREM $dst, $x, $y):$root,
+   [{ return Helper.matchUDivorURemByConst(*${root}); }]),
+  (apply [{ Helper.applyUDivorURemByConst(*${root}); }])>;
+
+def intrem_combines : GICombineGroup<[urem_by_const]>;
 
 def reassoc_ptradd : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
@@ -1553,9 +1559,8 @@ def nneg_zext : GICombineRule<
    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
 
 // Combines concat operations
-def concat_matchinfo : GIDefMatchData<"SmallVector<Register>">;
 def combine_concat_vector : GICombineRule<
-  (defs root:$root, concat_matchinfo:$matchinfo),
+  (defs root:$root, register_vector_matchinfo:$matchinfo),
   (match (wip_match_opcode G_CONCAT_VECTORS):$root,
         [{ return Helper.matchCombineConcatVectors(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineConcatVectors(*${root}, ${matchinfo}); }])>;
@@ -1567,7 +1572,7 @@ def combine_concat_vector : GICombineRule<
 // ===>
 // c = G_CONCAT_VECTORS x, y, z, undef
 def combine_shuffle_concat : GICombineRule<
-  (defs root:$root, concat_matchinfo:$matchinfo),
+  (defs root:$root, register_vector_matchinfo:$matchinfo),
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
         [{ return Helper.matchCombineShuffleConcat(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineShuffleConcat(*${root}, ${matchinfo}); }])>;
@@ -2051,7 +2056,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     constant_fold_cast_op, fabs_fneg_fold,
     intdiv_combines, mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
-    sub_add_reg, select_to_minmax,
+    intrem_combines, sub_add_reg, select_to_minmax,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,

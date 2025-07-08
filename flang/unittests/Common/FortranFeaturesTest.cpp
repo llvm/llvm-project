@@ -558,4 +558,12 @@ TEST(FortranFeaturesTest, CamelCaseToLowerCaseHyphenated) {
       "non-volatile-pointer-to-volatile");
 }
 
+TEST(FortranFeaturesTest, HintLanguageControlFlag) {
+  LanguageFeatureControl control{};
+  EXPECT_EQ(control.getDefaultCliSpelling(LanguageFeature::BenignNameClash),
+      "benign-name-clash");
+  EXPECT_EQ(
+      control.getDefaultCliSpelling(UsageWarning::Portability), "portability");
+}
+
 } // namespace Fortran::common::details

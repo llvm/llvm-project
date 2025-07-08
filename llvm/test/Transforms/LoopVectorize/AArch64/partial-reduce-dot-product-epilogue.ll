@@ -9,7 +9,7 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  iter.check:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; CHECK:       vector.main.loop.iter.check:
 ; CHECK-NEXT:    br i1 false, label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
@@ -36,18 +36,18 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    br i1 true, label [[FOR_EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP13:%.*]] = mul i64 [[TMP12]], 4
+; CHECK-NEXT:    [[TMP13:%.*]] = mul nuw i64 [[TMP12]], 4
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 0, [[TMP13]]
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 1024, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP11]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP15:%.*]] = mul i64 [[TMP14]], 4
+; CHECK-NEXT:    [[TMP15:%.*]] = mul nuw i64 [[TMP14]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP15]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP17:%.*]] = mul i64 [[TMP16]], 4
+; CHECK-NEXT:    [[TMP17:%.*]] = mul nuw i64 [[TMP16]], 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <vscale x 4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:

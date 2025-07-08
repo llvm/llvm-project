@@ -25,16 +25,16 @@ define void @fadd(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; ZVFHMIN-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; ZVFHMIN-NEXT:  [[ENTRY:.*]]:
 ; ZVFHMIN-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; ZVFHMIN-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 8
+; ZVFHMIN-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 8
 ; ZVFHMIN-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP8]]
 ; ZVFHMIN-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; ZVFHMIN:       [[VECTOR_PH]]:
 ; ZVFHMIN-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; ZVFHMIN-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 8
+; ZVFHMIN-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 8
 ; ZVFHMIN-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP10]]
 ; ZVFHMIN-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; ZVFHMIN-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
-; ZVFHMIN-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP12]], 8
+; ZVFHMIN-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP12]], 8
 ; ZVFHMIN-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; ZVFHMIN:       [[VECTOR_BODY]]:
 ; ZVFHMIN-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]

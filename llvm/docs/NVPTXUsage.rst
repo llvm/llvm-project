@@ -147,7 +147,57 @@ Example: 32-bit PTX for CUDA Driver API: ``nvptx-nvidia-cuda``
 
 Example: 64-bit PTX for CUDA Driver API: ``nvptx64-nvidia-cuda``
 
+.. _nvptx_arch_hierarchy:
 
+NVPTX Architecture Hierarchy and Ordering
+=========================================
+
+GPU architectures: sm_2Y/sm_3Y/sm_5Y/sm_6Y/sm_7Y/sm_8Y/sm_9Y/sm_10Y/sm_12Y
+('Y' represents version within the architecture)
+The architectures have name of form ``sm_XYz`` where ``X`` represent the generation
+number, ``Y`` represents the version within the architecture, and ``z`` represents
+the optional feature suffix.
+If ``X1Y1 <= X2Y2``, then GPU capabilities of ``sm_X1Y1`` are included in ``sm_X2Y2``.
+For example, take ``sm_90`` (9 represents ``X``, 0 represents ``Y``, and no feature
+suffix) and ``sm_103`` architectures (10 represents ``X``, 3 represents ``Y``, and no
+feature suffix). Since 90 <= 103, ``sm_90`` is compatible with ``sm_103``.
+
+The family-specific variants have ``f`` feature suffix and they follow
+following order:
+``sm_X{Y2}f > sm_X{Y1}f`` iff ``Y2 > Y1``
+``sm_XY{f} > sm_{XY}{}``
+
+For example, take ``sm_100f`` (10 represents ``X``, 0 represents ``Y``, and ``f``
+represents ``z``) and ``sm_103f`` (10 represents ``X``, 3 represents ``Y``, and ``f``
+represents ``z``) architecture variants. Since ``Y1 < Y2``, ``sm_100f`` is compatible with
+``sm_103f``. Similarly based on the second rule, ``sm_90`` is compatible with ``sm_103f``.
+
+Some counter examples, take ``sm_100f`` and ``sm_120f`` (12 represents ``X``, 0
+represents ``Y``, and ``f`` represents ``z``) architecture variants. Since both
+belongs to different family i.e. ``X1 != X2``, ``sm_100f`` is not compatible with
+``sm_120f``.
+
+The architecture-specific variants have ``a`` feature suffix and they follow
+following order:
+``sm_XY{a} > sm_XY{f} > sm_{XY}{}``
+
+For example, take ``sm_103a`` (10 represents ``X``, 3 represents ``Y``, and ``a``
+represents ``z``), ``sm_103f``, and ``sm_103`` architecture variants. The ``sm_103`` is
+compatible with ``sm_103a`` and ``sm_103f``, and ``sm_103f`` is compatible with ``sm_103a``.
+
+Encoding := Arch * 10 + 2 (for 'f') + 1 (for 'a')
+Arch := X * 10 + Y
+
+For example, ``sm_103f`` is encoded as 1032 (103 * 10 + 2) and ``sm_103a`` is
+encoded as 1033 (103 * 10 + 2 + 1).
+
+This encoding allows simple partial ordering of the architectures.
+
+* Compare Family and Arch by dividing FullSMVersion by 100 and 10
+  respectively before the comparison.
+* Compare within the family by comparing FullSMVersion, given both belongs to
+  the same family.
+* Detect ``a`` variants by checking FullSMVersion & 1.
 
 .. _nvptx_intrinsics:
 

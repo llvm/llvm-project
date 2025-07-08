@@ -1320,10 +1320,7 @@ void SelectionDAGBuilder::visit(const Instruction &I) {
     HandlePHINodesInSuccessorBlocks(I.getParent());
   }
 
-  // Increase the SDNodeOrder if dealing with a non-debug instruction.
-  if (!isa<DbgInfoIntrinsic>(I))
-    ++SDNodeOrder;
-
+  ++SDNodeOrder;
   CurInst = &I;
 
   // Set inserted listener only if required.
@@ -1791,8 +1788,26 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
   if (const Constant *C = dyn_cast<Constant>(V)) {
     EVT VT = TLI.getValueType(DAG.getDataLayout(), V->getType(), true);
 
-    if (const ConstantInt *CI = dyn_cast<ConstantInt>(C))
-      return DAG.getConstant(*CI, getCurSDLoc(), VT);
+    if (const ConstantInt *CI = dyn_cast<ConstantInt>(C)) {
+      SDLoc DL = getCurSDLoc();
+
+      // DAG.getConstant() may attempt to legalise the vector constant which can
+      // significantly change the combines applied to the DAG. To reduce the
+      // divergence when enabling ConstantInt based vectors we try to construct
+      // the DAG in the same way as shufflevector based splats. TODO: The
+      // divergence sometimes leads to better optimisations. Ideally we should
+      // prevent DAG.getConstant() from legalising too early but there are some
+      // degradations preventing this.
+      if (VT.isScalableVector())
+        return DAG.getNode(
+            ISD::SPLAT_VECTOR, DL, VT,
+            DAG.getConstant(CI->getValue(), DL, VT.getVectorElementType()));
+      if (VT.isFixedLengthVector())
+        return DAG.getSplatBuildVector(
+            VT, DL,
+            DAG.getConstant(CI->getValue(), DL, VT.getVectorElementType()));
+      return DAG.getConstant(*CI, DL, VT);
+    }
 
     if (const GlobalValue *GV = dyn_cast<GlobalValue>(C))
       return DAG.getGlobalAddress(GV, getCurSDLoc(), VT);
@@ -4321,18 +4336,12 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
   auto &TLI = DAG.getTargetLoweringInfo();
   GEPNoWrapFlags NW = cast<GEPOperator>(I).getNoWrapFlags();
 
-  // Normalize Vector GEP - all scalar operands should be converted to the
-  // splat vector.
+  // For a vector GEP, keep the prefix scalar as long as possible, then
+  // convert any scalars encountered after the first vector operand to vectors.
   bool IsVectorGEP = I.getType()->isVectorTy();
   ElementCount VectorElementCount =
       IsVectorGEP ? cast<VectorType>(I.getType())->getElementCount()
                   : ElementCount::getFixed(0);
-
-  if (IsVectorGEP && !N.getValueType().isVector()) {
-    LLVMContext &Context = *DAG.getContext();
-    EVT VT = EVT::getVectorVT(Context, N.getValueType(), VectorElementCount);
-    N = DAG.getSplat(VT, dl, N);
-  }
 
   for (gep_type_iterator GTI = gep_type_begin(&I), E = gep_type_end(&I);
        GTI != E; ++GTI) {
@@ -4381,7 +4390,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
         APInt Offs = ElementMul * CI->getValue().sextOrTrunc(IdxSize);
         LLVMContext &Context = *DAG.getContext();
         SDValue OffsVal;
-        if (IsVectorGEP)
+        if (N.getValueType().isVector())
           OffsVal = DAG.getConstant(
               Offs, dl, EVT::getVectorVT(Context, IdxTy, VectorElementCount));
         else
@@ -4403,10 +4412,16 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
       // N = N + Idx * ElementMul;
       SDValue IdxN = getValue(Idx);
 
-      if (!IdxN.getValueType().isVector() && IsVectorGEP) {
-        EVT VT = EVT::getVectorVT(*Context, IdxN.getValueType(),
-                                  VectorElementCount);
-        IdxN = DAG.getSplat(VT, dl, IdxN);
+      if (IdxN.getValueType().isVector() != N.getValueType().isVector()) {
+        if (N.getValueType().isVector()) {
+          EVT VT = EVT::getVectorVT(*Context, IdxN.getValueType(),
+                                    VectorElementCount);
+          IdxN = DAG.getSplat(VT, dl, IdxN);
+        } else {
+          EVT VT =
+              EVT::getVectorVT(*Context, N.getValueType(), VectorElementCount);
+          N = DAG.getSplat(VT, dl, N);
+        }
       }
 
       // If the index is smaller or larger than intptr_t, truncate or extend
@@ -4427,7 +4442,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
         SDValue VScale = DAG.getNode(
             ISD::VSCALE, dl, VScaleTy,
             DAG.getConstant(ElementMul.getZExtValue(), dl, VScaleTy));
-        if (IsVectorGEP)
+        if (N.getValueType().isVector())
           VScale = DAG.getSplatVector(N.getValueType(), dl, VScale);
         IdxN = DAG.getNode(ISD::MUL, dl, N.getValueType(), IdxN, VScale,
                            ScaleFlags);
@@ -4458,6 +4473,11 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
 
       N = DAG.getMemBasePlusOffset(N, IdxN, dl, AddFlags);
     }
+  }
+
+  if (IsVectorGEP && !N.getValueType().isVector()) {
+    EVT VT = EVT::getVectorVT(*Context, N.getValueType(), VectorElementCount);
+    N = DAG.getSplat(VT, dl, N);
   }
 
   MVT PtrTy = TLI.getPointerTy(DAG.getDataLayout(), AS);
@@ -6659,69 +6679,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     DAG.setRoot(Res.getValue(1));
     return;
   }
-  case Intrinsic::dbg_declare: {
-    const auto &DI = cast<DbgDeclareInst>(I);
-    // Debug intrinsics are handled separately in assignment tracking mode.
-    // Some intrinsics are handled right after Argument lowering.
-    if (AssignmentTrackingEnabled ||
-        FuncInfo.PreprocessedDbgDeclares.count(&DI))
-      return;
-    LLVM_DEBUG(dbgs() << "SelectionDAG visiting dbg_declare: " << DI << "\n");
-    DILocalVariable *Variable = DI.getVariable();
-    DIExpression *Expression = DI.getExpression();
-    dropDanglingDebugInfo(Variable, Expression);
-    // Assume dbg.declare can not currently use DIArgList, i.e.
-    // it is non-variadic.
-    assert(!DI.hasArgList() && "Only dbg.value should currently use DIArgList");
-    handleDebugDeclare(DI.getVariableLocationOp(0), Variable, Expression,
-                       DI.getDebugLoc());
-    return;
-  }
-  case Intrinsic::dbg_label: {
-    const DbgLabelInst &DI = cast<DbgLabelInst>(I);
-    DILabel *Label = DI.getLabel();
-    assert(Label && "Missing label");
-
-    SDDbgLabel *SDV;
-    SDV = DAG.getDbgLabel(Label, dl, SDNodeOrder);
-    DAG.AddDbgLabel(SDV);
-    return;
-  }
-  case Intrinsic::dbg_assign: {
-    // Debug intrinsics are handled separately in assignment tracking mode.
-    if (AssignmentTrackingEnabled)
-      return;
-    // If assignment tracking hasn't been enabled then fall through and treat
-    // the dbg.assign as a dbg.value.
-    [[fallthrough]];
-  }
-  case Intrinsic::dbg_value: {
-    // Debug intrinsics are handled separately in assignment tracking mode.
-    if (AssignmentTrackingEnabled)
-      return;
-    const DbgValueInst &DI = cast<DbgValueInst>(I);
-    assert(DI.getVariable() && "Missing variable");
-
-    DILocalVariable *Variable = DI.getVariable();
-    DIExpression *Expression = DI.getExpression();
-    dropDanglingDebugInfo(Variable, Expression);
-
-    if (DI.isKillLocation()) {
-      handleKillDebugValue(Variable, Expression, DI.getDebugLoc(), SDNodeOrder);
-      return;
-    }
-
-    SmallVector<Value *, 4> Values(DI.getValues());
-    if (Values.empty())
-      return;
-
-    bool IsVariadic = DI.hasArgList();
-    if (!handleDebugValue(Values, Variable, Expression, DI.getDebugLoc(),
-                          SDNodeOrder, IsVariadic))
-      addDanglingDebugInfo(Values, Variable, Expression, IsVariadic,
-                           DI.getDebugLoc(), SDNodeOrder);
-    return;
-  }
 
   case Intrinsic::eh_typeid_for: {
     // Find the type id for the given typeinfo.
@@ -7368,13 +7325,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   case Intrinsic::get_dynamic_area_offset: {
     SDValue Op = getRoot();
-    EVT PtrTy = TLI.getFrameIndexTy(DAG.getDataLayout());
     EVT ResTy = TLI.getValueType(DAG.getDataLayout(), I.getType());
-    // Result type for @llvm.get.dynamic.area.offset should match PtrTy for
-    // target.
-    if (PtrTy.getFixedSizeInBits() < ResTy.getFixedSizeInBits())
-      report_fatal_error("Wrong result type for @llvm.get.dynamic.area.offset"
-                         " intrinsic!");
     Res = DAG.getNode(ISD::GET_DYNAMIC_AREA_OFFSET, sdl, DAG.getVTList(ResTy),
                       Op);
     DAG.setRoot(Op);

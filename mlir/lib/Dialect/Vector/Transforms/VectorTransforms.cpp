@@ -2266,11 +2266,6 @@ void mlir::vector::populateVectorMaskMaterializationPatterns(
 
 void mlir::vector::populateDropUnitDimWithShapeCastPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
-  // TODO: Consider either:
-  //  * including DropInnerMostUnitDimsTransferRead and
-  //    DropInnerMostUnitDimsTransferWrite, or
-  //  * better naming to distinguish this and
-  //    populateVectorTransferCollapseInnerMostContiguousDimsPatterns.
   patterns.add<DropUnitDimFromElementwiseOps, DropUnitDimsFromScfForOp,
                DropUnitDimsFromTransposeOp>(patterns.getContext(), benefit);
 }
@@ -2305,9 +2300,8 @@ void mlir::vector::populateVectorReductionToContractPatterns(
       patterns.getContext(), benefit);
 }
 
-void mlir::vector::
-    populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
-        RewritePatternSet &patterns, PatternBenefit benefit) {
+void mlir::vector::populateDropInnerMostUnitDimsXferOpPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<DropInnerMostUnitDimsTransferRead,
                DropInnerMostUnitDimsTransferWrite>(patterns.getContext(),
                                                    benefit);

@@ -68,21 +68,23 @@ define void @v3i8(ptr %p1) {
 ;
 ; CHECK-GI-LABEL: v3i8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldrb w9, [x0]
+; CHECK-GI-NEXT:    ldr w9, [x0]
 ; CHECK-GI-NEXT:    mov w8, #65535 // =0xffff
-; CHECK-GI-NEXT:    ldrb w10, [x0, #1]
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    fmov s1, w9
-; CHECK-GI-NEXT:    ldrb w9, [x0, #2]
-; CHECK-GI-NEXT:    mov v0.h[1], w8
-; CHECK-GI-NEXT:    mov v1.h[1], w10
-; CHECK-GI-NEXT:    mov v0.h[2], w8
+; CHECK-GI-NEXT:    fmov s2, w8
+; CHECK-GI-NEXT:    fmov s0, w9
+; CHECK-GI-NEXT:    mov v2.h[1], w8
+; CHECK-GI-NEXT:    mov b1, v0.b[1]
+; CHECK-GI-NEXT:    mov v2.h[2], w8
 ; CHECK-GI-NEXT:    add x8, x0, #1
-; CHECK-GI-NEXT:    mov v1.h[2], w9
+; CHECK-GI-NEXT:    fmov w9, s1
+; CHECK-GI-NEXT:    mov b1, v0.b[2]
+; CHECK-GI-NEXT:    mov v0.h[1], w9
+; CHECK-GI-NEXT:    fmov w9, s1
+; CHECK-GI-NEXT:    mov v0.h[2], w9
 ; CHECK-GI-NEXT:    add x9, x0, #2
-; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    add v0.4h, v1.4h, v0.4h
-; CHECK-GI-NEXT:    and v0.8b, v2.8b, v0.8b
+; CHECK-GI-NEXT:    eor v1.8b, v0.8b, v2.8b
+; CHECK-GI-NEXT:    add v0.4h, v0.4h, v2.4h
+; CHECK-GI-NEXT:    and v0.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-GI-NEXT:    st1 { v0.b }[0], [x0]
@@ -275,22 +277,20 @@ define void @v3i16(ptr %p1) {
 ; CHECK-GI-LABEL: v3i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov w8, #65535 // =0xffff
-; CHECK-GI-NEXT:    ldr h1, [x0]
-; CHECK-GI-NEXT:    add x9, x0, #2
+; CHECK-GI-NEXT:    ldr d1, [x0]
+; CHECK-GI-NEXT:    add x9, x0, #4
 ; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    add x10, x0, #4
-; CHECK-GI-NEXT:    ld1 { v1.h }[1], [x9]
 ; CHECK-GI-NEXT:    mov v0.h[1], w8
-; CHECK-GI-NEXT:    ld1 { v1.h }[2], [x10]
 ; CHECK-GI-NEXT:    mov v0.h[2], w8
+; CHECK-GI-NEXT:    add x8, x0, #2
 ; CHECK-GI-NEXT:    eor v2.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    add v0.4h, v1.4h, v0.4h
 ; CHECK-GI-NEXT:    and v0.8b, v2.8b, v0.8b
 ; CHECK-GI-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-GI-NEXT:    uaddlp v0.4h, v0.8b
 ; CHECK-GI-NEXT:    str h0, [x0]
-; CHECK-GI-NEXT:    st1 { v0.h }[1], [x9]
-; CHECK-GI-NEXT:    st1 { v0.h }[2], [x10]
+; CHECK-GI-NEXT:    st1 { v0.h }[1], [x8]
+; CHECK-GI-NEXT:    st1 { v0.h }[2], [x9]
 ; CHECK-GI-NEXT:    ret
 entry:
   %d = load <3 x i16>, ptr %p1

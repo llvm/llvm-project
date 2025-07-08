@@ -60,7 +60,7 @@ union purr { float y; int x; }; // c23-error {{type 'union purr' has incompatibl
 
 // The presence of an attribute makes two types not compatible.
 struct [[gnu::packed]] attr_test { // c17-note {{previous definition is here}} \
-                                      c23-note {{attribute 'packed' here}}
+                                      c23-note {{attribute 'gnu::packed' here}}
   int x;
 };
 
@@ -75,26 +75,26 @@ struct attr_test_2 { // c17-note {{previous definition is here}}
 
 struct [[gnu::packed]] attr_test_2 { // c17-error {{redefinition of 'attr_test_2'}} \
                                         c23-error {{type 'struct attr_test_2' has an attribute which currently causes the types to be treated as though they are incompatible}} \
-                                        c23-note {{attribute 'packed' here}}
+                                        c23-note {{attribute 'gnu::packed' here}}
   int x;
 };
 
 // This includes the same attribute on both types.
 struct [[gnu::packed]] attr_test_3 { // c17-note {{previous definition is here}} \
-                                       c23-note {{attribute 'packed' here}}
+                                       c23-note {{attribute 'gnu::packed' here}}
   int x;
 };
 
 struct [[gnu::packed]] attr_test_3 { // c17-error {{redefinition of 'attr_test_3'}} \
                                         c23-error {{type 'struct attr_test_3' has an attribute which currently causes the types to be treated as though they are incompatible}} \
-                                        c23-note {{attribute 'packed' here}}
+                                        c23-note {{attribute 'gnu::packed' here}}
   int x;
 };
 
 // Everything which applies to the tag itself also applies to fields.
 struct field_attr_test_1 { // c17-note {{previous definition is here}}
   int x;
-  [[gnu::packed]] int y; // c23-note {{attribute 'packed' here}}
+  [[gnu::packed]] int y; // c23-note {{attribute 'gnu::packed' here}}
 };
 
 struct field_attr_test_1 { // c17-error {{redefinition of 'field_attr_test_1'}} \
@@ -104,7 +104,7 @@ struct field_attr_test_1 { // c17-error {{redefinition of 'field_attr_test_1'}} 
 };
 
 struct field_attr_test_2 { // c17-note {{previous definition is here}}
-  [[gnu::packed]] int x; // c23-note {{attribute 'packed' here}}
+  [[gnu::packed]] int x; // c23-note {{attribute 'gnu::packed' here}}
   int y;
 };
 
@@ -115,13 +115,13 @@ struct field_attr_test_2 { // c17-error {{redefinition of 'field_attr_test_2'}} 
 };
 
 struct field_attr_test_3 { // c17-note {{previous definition is here}}
-  [[gnu::packed]] int x;   // c23-note {{attribute 'packed' here}}
+  [[gnu::packed]] int x;   // c23-note {{attribute 'gnu::packed' here}}
   int y;
 };
 
 struct field_attr_test_3 { // c17-error {{redefinition of 'field_attr_test_3'}} \
                               c23-error {{type 'struct field_attr_test_3' has a member with an attribute which currently causes the types to be treated as though they are incompatible}}
-  int x [[gnu::packed]];   // c23-note {{attribute 'packed' here}}
+  int x [[gnu::packed]];   // c23-note {{attribute 'gnu::packed' here}}
   int y;
 };
 

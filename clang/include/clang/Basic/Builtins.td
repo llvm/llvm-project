@@ -2588,6 +2588,24 @@ def InterlockedBittestAndReset_rel : MSLangBuiltin {
   let Prototype = "unsigned char(msint32_t volatile*, msint32_t)";
 }
 
+def InterlockedBittestAndReset64_acq : MSLangBuiltin {
+  let Spellings = ["_interlockedbittestandreset64_acq"];
+  let Attributes = [NoThrow];
+  let Prototype = "unsigned char(int64_t volatile*, int64_t)";
+}
+
+def InterlockedBittestAndReset64_nf : MSLangBuiltin {
+  let Spellings = ["_interlockedbittestandreset64_nf"];
+  let Attributes = [NoThrow];
+  let Prototype = "unsigned char(int64_t volatile*, int64_t)";
+}
+
+def InterlockedBittestAndReset64_rel : MSLangBuiltin {
+  let Spellings = ["_interlockedbittestandreset64_rel"];
+  let Attributes = [NoThrow];
+  let Prototype = "unsigned char(int64_t volatile*, int64_t)";
+}
+
 def InterlockedBittestAndSet : MSLangBuiltin, MSInt32_64Template {
   let Spellings = ["_interlockedbittestandset"];
   let Attributes = [NoThrow];
@@ -2610,6 +2628,24 @@ def InterlockedBittestAndSet_rel : MSLangBuiltin {
   let Spellings = ["_interlockedbittestandset_rel"];
   let Attributes = [NoThrow];
   let Prototype = "unsigned char(msint32_t volatile*, msint32_t)";
+}
+
+def InterlockedBittestAndSet64_acq : MSLangBuiltin {
+  let Spellings = ["_interlockedbittestandset64_acq"];
+  let Attributes = [NoThrow];
+  let Prototype = "unsigned char(int64_t volatile*, int64_t)";
+}
+
+def InterlockedBittestAndSet64_nf : MSLangBuiltin {
+  let Spellings = ["_interlockedbittestandset64_nf"];
+  let Attributes = [NoThrow];
+  let Prototype = "unsigned char(int64_t volatile*, int64_t)";
+}
+
+def InterlockedBittestAndSet64_rel : MSLangBuiltin {
+  let Spellings = ["_interlockedbittestandset64_rel"];
+  let Attributes = [NoThrow];
+  let Prototype = "unsigned char(int64_t volatile*, int64_t)";
 }
 
 def IsoVolatileLoad : MSLangBuiltin, Int8_16_32_64Template {
@@ -4278,6 +4314,12 @@ def MoveIfNsoexcept : CxxLibBuiltin<"utility"> {
   let Namespace = "std";
 }
 
+def Invoke : Builtin {
+  let Spellings = ["__builtin_invoke"];
+  let Attributes = [CustomTypeChecking, Constexpr];
+  let Prototype = "void(...)";
+}
+
 def Annotation : Builtin {
   let Spellings = ["__builtin_annotation"];
   let Attributes = [NoThrow, CustomTypeChecking];
@@ -5063,6 +5105,19 @@ def HLSLGroupMemoryBarrierWithGroupSync: LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_group_memory_barrier_with_group_sync"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void()";
+}
+
+class HLSLScalarTemplate
+    : Template<["bool", "char", "short", "int", "long long int",
+                "unsigned short", "unsigned int", "unsigned long long int",
+                "__fp16", "float", "double"],
+               ["_bool", "_char", "_short", "_int", "_longlong", "_ushort",
+                "_uint", "_ulonglong", "_half", "_float", "_double"]>;
+
+def HLSLGetSpirvSpecConstant : LangBuiltin<"HLSL_LANG">, HLSLScalarTemplate {
+  let Spellings = ["__builtin_get_spirv_spec_constant"];
+  let Attributes = [NoThrow, Const, Pure];
+  let Prototype = "T(unsigned int, T)";
 }
 
 // Builtins for XRay.

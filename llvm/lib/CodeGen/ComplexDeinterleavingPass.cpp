@@ -2005,6 +2005,9 @@ ComplexDeinterleavingGraph::identifySplat(Value *R, Value *I) {
     if (isa<ConstantDataVector>(V))
       return true;
 
+    if (isa<ConstantInt>(V) || isa<ConstantFP>(V))
+      return isa<VectorType>(V->getType());
+
     VectorType *VTy;
     ArrayRef<int> Mask;
     // Splats are represented differently depending on whether the repeated

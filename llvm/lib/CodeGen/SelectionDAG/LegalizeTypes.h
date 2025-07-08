@@ -985,6 +985,7 @@ private:
   void SplitVecRes_VECTOR_INTERLEAVE(SDNode *N);
   void SplitVecRes_VAARG(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_FP_TO_XINT_SAT(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_VP_SPLICE(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_PARTIAL_REDUCE_MLA(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_GET_ACTIVE_LANE_MASK(SDNode *N, SDValue &Lo, SDValue &Hi);

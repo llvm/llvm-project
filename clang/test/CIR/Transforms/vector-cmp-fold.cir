@@ -10,7 +10,7 @@ module  {
     cir.return %new_vec : !cir.vector<4 x !s32i>
   }
 
-  // CHECK:  cir.func @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
+  // CHECK:  cir.func{{.*}} @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
   // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<0> : !s32i, #cir.int<0> : !s32i,
   // CHECK-SAME: #cir.int<0> : !s32i, #cir.int<0> : !s32i]> : !cir.vector<4 x !s32i>
   // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s32i>
@@ -28,7 +28,7 @@ module  {
     cir.return %new_vec : !cir.vector<4 x !s32i>
   }
 
-  // CHECK:  cir.func @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
+  // CHECK:  cir.func{{.*}} @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
   // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<1> : !s32i,
   // CHECK-SAME: #cir.int<1> : !s32i, #cir.int<1> : !s32i]> : !cir.vector<4 x !s32i>
   // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s32i>
@@ -46,7 +46,7 @@ module  {
     cir.return %new_vec : !cir.vector<4 x !s32i>
   }
 
-  // CHECK:  cir.func @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
+  // CHECK:  cir.func{{.*}} @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
   // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<1> : !s32i,
   // CHECK-SAME: #cir.int<1> : !s32i, #cir.int<1> : !s32i]> : !cir.vector<4 x !s32i>
   // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s32i>
@@ -64,7 +64,7 @@ module  {
     cir.return %new_vec : !cir.vector<4 x !s32i>
   }
 
-  // CHECK:  cir.func @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
+  // CHECK:  cir.func{{.*}} @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
   // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<1> : !s32i,
   // CHECK-SAME: #cir.int<1> : !s32i, #cir.int<1> : !s32i]> : !cir.vector<4 x !s32i>
   // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s32i>
@@ -82,7 +82,7 @@ module  {
     cir.return %new_vec : !cir.vector<4 x !s32i>
   }
 
-  // CHECK:  cir.func @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
+  // CHECK:  cir.func{{.*}} @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
   // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<0> : !s32i, #cir.int<0> : !s32i,
   // CHECK-SAME: #cir.int<0> : !s32i, #cir.int<0> : !s32i]> : !cir.vector<4 x !s32i>
   // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s32i>
@@ -100,7 +100,7 @@ module  {
     cir.return %new_vec : !cir.vector<4 x !s32i>
   }
 
-  // CHECK:  cir.func @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
+  // CHECK:  cir.func{{.*}} @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
   // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<0> : !s32i, #cir.int<0> : !s32i,
   // CHECK-SAME: #cir.int<0> : !s32i, #cir.int<0> : !s32i]> : !cir.vector<4 x !s32i>
   // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s32i>
@@ -120,7 +120,7 @@ module  {
     cir.return %new_vec : !cir.vector<4 x !s32i>
   }
 
-  // CHECK:  cir.func @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
+  // CHECK:  cir.func{{.*}} @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
   // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<0> : !s32i, #cir.int<0> : !s32i,
   // CHECK-SAME: #cir.int<0> : !s32i, #cir.int<0> : !s32i]> : !cir.vector<4 x !s32i>
   // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s32i>
@@ -140,7 +140,7 @@ module  {
     cir.return %new_vec : !cir.vector<4 x !s32i>
   }
 
-  // CHECK:  cir.func @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
+  // CHECK:  cir.func{{.*}} @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
   // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<1> : !s32i,
   // CHECK-SAME: #cir.int<1> : !s32i, #cir.int<1> : !s32i]> : !cir.vector<4 x !s32i>
   // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s32i>
@@ -160,7 +160,7 @@ module  {
     cir.return %new_vec : !cir.vector<4 x !s32i>
   }
 
-  // CHECK:  cir.func @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
+  // CHECK:  cir.func{{.*}} @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
   // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<1> : !s32i,
   // CHECK-SAME: #cir.int<1> : !s32i, #cir.int<1> : !s32i]> : !cir.vector<4 x !s32i>
   // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s32i>
@@ -180,7 +180,7 @@ module  {
     cir.return %new_vec : !cir.vector<4 x !s32i>
   }
 
-  // CHECK:  cir.func @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
+  // CHECK:  cir.func{{.*}} @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
   // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<1> : !s32i,
   // CHECK-SAME: #cir.int<1> : !s32i, #cir.int<1> : !s32i]> : !cir.vector<4 x !s32i>
   // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s32i>
@@ -200,7 +200,7 @@ module  {
     cir.return %new_vec : !cir.vector<4 x !s32i>
   }
 
-  // CHECK:  cir.func @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
+  // CHECK:  cir.func{{.*}} @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
   // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<0> : !s32i, #cir.int<0> : !s32i,
   // CHECK-SAME: #cir.int<0> : !s32i, #cir.int<0> : !s32i]> : !cir.vector<4 x !s32i>
   // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s32i>
@@ -220,7 +220,7 @@ module  {
     cir.return %new_vec : !cir.vector<4 x !s32i>
   }
 
-  // CHECK:  cir.func @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
+  // CHECK:  cir.func{{.*}} @fold_cmp_vector_op_test() -> !cir.vector<4 x !s32i> {
   // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<0> : !s32i, #cir.int<0> : !s32i,
   // CHECK-SAME: #cir.int<0> : !s32i, #cir.int<0> : !s32i]> : !cir.vector<4 x !s32i>
   // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s32i>

@@ -26,7 +26,7 @@ export class LLDBDapServer implements vscode.Disposable {
     args: string[],
     options?: child_process.SpawnOptionsWithoutStdio,
   ): Promise<{ host: string; port: number } | undefined> {
-    const dapArgs = [...args, "--connection", "connect://localhost:0"];
+    const dapArgs = [...args, "--connection", "listen://localhost:0" ];
     if (!(await this.shouldContinueStartup(dapPath, dapArgs))) {
       return undefined;
     }

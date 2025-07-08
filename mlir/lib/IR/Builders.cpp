@@ -12,11 +12,8 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/IRMapping.h"
-#include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/SmallVectorExtras.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
 

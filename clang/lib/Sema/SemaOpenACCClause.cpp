@@ -231,8 +231,8 @@ class SemaOpenACCClauseVisitor {
     case OpenACCClauseKind::PCopyOut:
     case OpenACCClauseKind::PresentOrCopyOut:
       // COPYOUT: Capture only struct.data & compute
-      return Check(OpenACCModifierKind::Always | OpenACCModifierKind::AlwaysIn |
-                   OpenACCModifierKind::Zero |
+      return Check(OpenACCModifierKind::Always |
+                   OpenACCModifierKind::AlwaysOut | OpenACCModifierKind::Zero |
                    (IsStructuredDataOrCompute ? OpenACCModifierKind::Capture
                                               : OpenACCModifierKind::Invalid));
     case OpenACCClauseKind::Create:

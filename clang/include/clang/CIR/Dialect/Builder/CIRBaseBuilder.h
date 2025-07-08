@@ -63,7 +63,7 @@ public:
 
   mlir::Value getConstAPInt(mlir::Location loc, mlir::Type typ,
                             const llvm::APInt &val) {
-    return create<cir::ConstantOp>(loc, getAttr<cir::IntAttr>(typ, val));
+    return create<cir::ConstantOp>(loc, cir::IntAttr::get(typ, val));
   }
 
   cir::ConstantOp getConstant(mlir::Location loc, mlir::TypedAttr attr) {
@@ -227,22 +227,29 @@ public:
   //===--------------------------------------------------------------------===//
 
   cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee,
-                           mlir::Type returnType, mlir::ValueRange operands) {
-    return create<cir::CallOp>(loc, callee, returnType, operands);
+                           mlir::Type returnType, mlir::ValueRange operands,
+                           llvm::ArrayRef<mlir::NamedAttribute> attrs = {}) {
+    auto op = create<cir::CallOp>(loc, callee, returnType, operands);
+    op->setAttrs(attrs);
+    return op;
   }
 
   cir::CallOp createCallOp(mlir::Location loc, cir::FuncOp callee,
-                           mlir::ValueRange operands) {
+                           mlir::ValueRange operands,
+                           llvm::ArrayRef<mlir::NamedAttribute> attrs = {}) {
     return createCallOp(loc, mlir::SymbolRefAttr::get(callee),
-                        callee.getFunctionType().getReturnType(), operands);
+                        callee.getFunctionType().getReturnType(), operands,
+                        attrs);
   }
 
-  cir::CallOp createIndirectCallOp(mlir::Location loc,
-                                   mlir::Value indirectTarget,
-                                   cir::FuncType funcType,
-                                   mlir::ValueRange operands) {
-    return create<cir::CallOp>(loc, indirectTarget, funcType.getReturnType(),
-                               operands);
+  cir::CallOp
+  createIndirectCallOp(mlir::Location loc, mlir::Value indirectTarget,
+                       cir::FuncType funcType, mlir::ValueRange operands,
+                       llvm::ArrayRef<mlir::NamedAttribute> attrs = {}) {
+    llvm::SmallVector<mlir::Value> resOperands{indirectTarget};
+    resOperands.append(operands.begin(), operands.end());
+    return createCallOp(loc, mlir::SymbolRefAttr(), funcType.getReturnType(),
+                        resOperands, attrs);
   }
 
   //===--------------------------------------------------------------------===//

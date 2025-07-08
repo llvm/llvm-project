@@ -18,6 +18,7 @@ namespace llvm {
 /// A expression in AVR machine code.
 class AVRMCExpr : public MCSpecifierExpr {
 public:
+  friend class AVRMCAsmInfo;
   using Specifier = Spec;
   /// Specifies the type of an expression.
 
@@ -35,10 +36,6 @@ public:
 
   bool isNegated() const { return Negated; }
   void setNegated(bool negated = true) { Negated = negated; }
-
-  void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res,
-                                 const MCAssembler *Asm) const override;
 
 public:
   static Specifier parseSpecifier(StringRef Name);

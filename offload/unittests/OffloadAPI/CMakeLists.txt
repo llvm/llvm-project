@@ -12,6 +12,10 @@ add_offload_unittest("event"
     event/olDestroyEvent.cpp
     event/olWaitEvent.cpp)
 
+add_offload_unittest("init"
+    init/olInit.cpp)
+target_compile_definitions("init.unittests" PRIVATE DISABLE_WRAPPER)
+
 add_offload_unittest("kernel"
     kernel/olGetKernel.cpp
     kernel/olLaunchKernel.cpp)

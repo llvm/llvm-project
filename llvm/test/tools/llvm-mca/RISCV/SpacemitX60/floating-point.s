@@ -148,12 +148,12 @@ fclass.d a3, ft10
 # CHECK-NEXT: [9]: LLVM Opcode Name
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]                                        [9]                        Instructions:
-# CHECK-NEXT:  1      5     0.50    *                    5     SMX60_LS                                   FLH                        flh	ft0, 0(a0)
-# CHECK-NEXT:  1      3     0.50           *             3     SMX60_LS                                   FSH                        fsh	ft0, 0(a0)
-# CHECK-NEXT:  1      5     0.50    *                    5     SMX60_LS                                   FLW                        flw	ft0, 0(a0)
-# CHECK-NEXT:  1      3     0.50           *             3     SMX60_LS                                   FSW                        fsw	ft0, 0(a0)
-# CHECK-NEXT:  1      5     0.50    *                    5     SMX60_LS                                   FLD                        fld	ft0, 0(a0)
-# CHECK-NEXT:  1      3     0.50           *             3     SMX60_LS                                   FSD                        fsd	ft0, 0(a0)
+# CHECK-NEXT:  1      4     0.50    *                    4     SMX60_LS                                   FLH                        flh	ft0, 0(a0)
+# CHECK-NEXT:  1      4     0.50           *             4     SMX60_LS                                   FSH                        fsh	ft0, 0(a0)
+# CHECK-NEXT:  1      4     0.50    *                    4     SMX60_LS                                   FLW                        flw	ft0, 0(a0)
+# CHECK-NEXT:  1      4     0.50           *             4     SMX60_LS                                   FSW                        fsw	ft0, 0(a0)
+# CHECK-NEXT:  1      4     0.50    *                    4     SMX60_LS                                   FLD                        fld	ft0, 0(a0)
+# CHECK-NEXT:  1      4     0.50           *             4     SMX60_LS                                   FSD                        fsd	ft0, 0(a0)
 # CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FADD_H                     fadd.h	fs10, fs11, ft8
 # CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FSUB_H                     fsub.h	ft9, ft10, ft11
 # CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FMUL_H                     fmul.h	ft0, ft1, ft2

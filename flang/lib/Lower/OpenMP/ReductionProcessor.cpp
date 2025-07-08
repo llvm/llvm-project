@@ -149,13 +149,17 @@ std::string ReductionProcessor::getReductionName(
     reductionName = "multiply_reduction";
     break;
   case omp::clause::DefinedOperator::IntrinsicOperator::AND:
-    return "and_reduction";
+    reductionName = "and_reduction";
+    break;
   case omp::clause::DefinedOperator::IntrinsicOperator::EQV:
-    return "eqv_reduction";
+    reductionName = "eqv_reduction";
+    break;
   case omp::clause::DefinedOperator::IntrinsicOperator::OR:
-    return "or_reduction";
+    reductionName = "or_reduction";
+    break;
   case omp::clause::DefinedOperator::IntrinsicOperator::NEQV:
-    return "neqv_reduction";
+    reductionName = "neqv_reduction";
+    break;
   default:
     reductionName = "other_reduction";
     break;
@@ -673,9 +677,6 @@ void ReductionProcessor::processReductionArguments(
     const auto &kindMap = firOpBuilder.getKindMap();
     std::string reductionName;
     ReductionIdentifier redId;
-    mlir::Type redNameTy = redType;
-    if (mlir::isa<fir::LogicalType>(redType.getEleTy()))
-      redNameTy = builder.getI1Type();
 
     if (const auto &redDefinedOp =
             std::get_if<omp::clause::DefinedOperator>(&redOperator.u)) {
@@ -697,8 +698,7 @@ void ReductionProcessor::processReductionArguments(
         break;
       }
 
-      reductionName =
-          getReductionName(intrinsicOp, kindMap, redNameTy, isByRef);
+      reductionName = getReductionName(intrinsicOp, kindMap, redType, isByRef);
     } else if (const auto *reductionIntrinsic =
                    std::get_if<omp::clause::ProcedureDesignator>(
                        &redOperator.u)) {
@@ -709,7 +709,7 @@ void ReductionProcessor::processReductionArguments(
       redId = getReductionType(*reductionIntrinsic);
       reductionName =
           getReductionName(getRealName(*reductionIntrinsic).ToString(), kindMap,
-                           redNameTy, isByRef);
+                           redType, isByRef);
     } else {
       TODO(currentLocation, "Unexpected reduction type");
     }

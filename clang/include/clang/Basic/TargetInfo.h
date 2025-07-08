@@ -1034,9 +1034,15 @@ public:
   /// set of primary and secondary targets.
   virtual llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const = 0;
 
+  enum class ArmStreamingKind {
+    NotStreaming,
+    StreamingCompatible,
+    Streaming,
+  };
+
   /// Returns target-specific min and max values VScale_Range.
   virtual std::optional<std::pair<unsigned, unsigned>>
-  getVScaleRange(const LangOptions &LangOpts, bool IsArmStreamingFunction,
+  getVScaleRange(const LangOptions &LangOpts, ArmStreamingKind Mode,
                  llvm::StringMap<bool> *FeatureMap = nullptr) const {
     return std::nullopt;
   }
@@ -1851,7 +1857,7 @@ public:
 
   /// Returns the version of the darwin target variant SDK which was used during
   /// the compilation if one was specified, or an empty version otherwise.
-  const std::optional<VersionTuple> getDarwinTargetVariantSDKVersion() const {
+  std::optional<VersionTuple> getDarwinTargetVariantSDKVersion() const {
     return !getTargetOpts().DarwinTargetVariantSDKVersion.empty()
                ? getTargetOpts().DarwinTargetVariantSDKVersion
                : std::optional<VersionTuple>();

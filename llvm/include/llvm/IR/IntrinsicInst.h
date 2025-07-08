@@ -779,8 +779,8 @@ public:
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
 
-  Value *getLHS() const { return const_cast<Value *>(getArgOperand(0)); }
-  Value *getRHS() const { return const_cast<Value *>(getArgOperand(1)); }
+  Value *getLHS() const { return getArgOperand(0); }
+  Value *getRHS() const { return getArgOperand(1); }
 
   /// Returns the comparison predicate underlying the intrinsic.
   static ICmpInst::Predicate getPredicate(Intrinsic::ID ID) {
@@ -868,8 +868,8 @@ public:
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
 
-  Value *getLHS() const { return const_cast<Value *>(getArgOperand(0)); }
-  Value *getRHS() const { return const_cast<Value *>(getArgOperand(1)); }
+  Value *getLHS() const { return getArgOperand(0); }
+  Value *getRHS() const { return getArgOperand(1); }
 
   static bool isSigned(Intrinsic::ID ID) { return ID == Intrinsic::scmp; }
   bool isSigned() const { return isSigned(getIntrinsicID()); }
@@ -914,8 +914,8 @@ public:
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
 
-  Value *getLHS() const { return const_cast<Value *>(getArgOperand(0)); }
-  Value *getRHS() const { return const_cast<Value *>(getArgOperand(1)); }
+  Value *getLHS() const { return getArgOperand(0); }
+  Value *getRHS() const { return getArgOperand(1); }
 
   /// Returns the binary operation underlying the intrinsic.
   LLVM_ABI Instruction::BinaryOps getBinaryOp() const;
@@ -1118,7 +1118,7 @@ private:
 
 public:
   ConstantInt *getVolatileCst() const {
-    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(ARG_VOLATILE)));
+    return cast<ConstantInt>(getArgOperand(ARG_VOLATILE));
   }
 
   bool isVolatile() const { return !getVolatileCst()->isZero(); }
@@ -1180,7 +1180,7 @@ private:
 
 public:
   ConstantInt *getVolatileCst() const {
-    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(ARG_VOLATILE)));
+    return cast<ConstantInt>(getArgOperand(ARG_VOLATILE));
   }
 
   bool isVolatile() const { return !getVolatileCst()->isZero(); }
@@ -1288,7 +1288,7 @@ public:
 
   Value *getRawElementSizeInBytes() const {
     assert(isAtomic());
-    return const_cast<Value *>(getArgOperand(ARG_ELEMENTSIZE));
+    return getArgOperand(ARG_ELEMENTSIZE);
   }
 
   uint32_t getElementSizeInBytes() const {
@@ -1388,7 +1388,7 @@ public:
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
 
-  Value *getArgList() const { return const_cast<Value *>(getArgOperand(0)); }
+  Value *getArgList() const { return getArgOperand(0); }
 };
 
 /// This represents the llvm.va_end intrinsic.
@@ -1401,7 +1401,7 @@ public:
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
 
-  Value *getArgList() const { return const_cast<Value *>(getArgOperand(0)); }
+  Value *getArgList() const { return getArgOperand(0); }
 };
 
 /// This represents the llvm.va_copy intrinsic.
@@ -1414,8 +1414,8 @@ public:
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
 
-  Value *getDest() const { return const_cast<Value *>(getArgOperand(0)); }
-  Value *getSrc() const { return const_cast<Value *>(getArgOperand(1)); }
+  Value *getDest() const { return getArgOperand(0); }
+  Value *getSrc() const { return getArgOperand(1); }
 };
 
 /// A base class for all instrprof intrinsics.
@@ -1457,16 +1457,12 @@ public:
   // The "name" operand of the profile instrumentation instruction - this is the
   // operand that can be used to relate the instruction to the function it
   // belonged to at instrumentation time.
-  Value *getNameValue() const {
-    return const_cast<Value *>(getArgOperand(0))->stripPointerCasts();
-  }
+  Value *getNameValue() const { return getArgOperand(0)->stripPointerCasts(); }
 
   void setNameValue(Value *V) { setArgOperand(0, V); }
 
   // The hash of the CFG for the instrumented function.
-  ConstantInt *getHash() const {
-    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(1)));
-  }
+  ConstantInt *getHash() const { return cast<ConstantInt>(getArgOperand(1)); }
 };
 
 /// A base class for all instrprof counter intrinsics.
@@ -1563,18 +1559,14 @@ public:
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
 
-  Value *getTargetValue() const {
-    return cast<Value>(const_cast<Value *>(getArgOperand(2)));
-  }
+  Value *getTargetValue() const { return cast<Value>(getArgOperand(2)); }
 
   ConstantInt *getValueKind() const {
-    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(3)));
+    return cast<ConstantInt>(getArgOperand(3));
   }
 
   // Returns the value site index.
-  ConstantInt *getIndex() const {
-    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(4)));
-  }
+  ConstantInt *getIndex() const { return cast<ConstantInt>(getArgOperand(4)); }
 };
 
 /// A base class for instrprof mcdc intrinsics that require global bitmap bytes.
@@ -1590,7 +1582,7 @@ public:
   /// \return The number of bits used for the MCDC bitmaps for the instrumented
   /// function.
   ConstantInt *getNumBitmapBits() const {
-    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
+    return cast<ConstantInt>(getArgOperand(2));
   }
 
   /// \return The number of bytes used for the MCDC bitmaps for the instrumented
@@ -1624,14 +1616,12 @@ public:
   /// \return The index of the TestVector Bitmap upon which this intrinsic
   /// acts.
   ConstantInt *getBitmapIndex() const {
-    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
+    return cast<ConstantInt>(getArgOperand(2));
   }
 
   /// \return The address of the corresponding condition bitmap containing
   /// the index of the TestVector to update within the TestVector Bitmap.
-  Value *getMCDCCondBitmapAddr() const {
-    return cast<Value>(const_cast<Value *>(getArgOperand(3)));
-  }
+  Value *getMCDCCondBitmapAddr() const { return cast<Value>(getArgOperand(3)); }
 };
 
 class PseudoProbeInst : public IntrinsicInst {
@@ -1645,20 +1635,16 @@ public:
   }
 
   ConstantInt *getFuncGuid() const {
-    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(0)));
+    return cast<ConstantInt>(getArgOperand(0));
   }
 
-  ConstantInt *getIndex() const {
-    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(1)));
-  }
+  ConstantInt *getIndex() const { return cast<ConstantInt>(getArgOperand(1)); }
 
   ConstantInt *getAttributes() const {
-    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
+    return cast<ConstantInt>(getArgOperand(2));
   }
 
-  ConstantInt *getFactor() const {
-    return cast<ConstantInt>(const_cast<Value *>(getArgOperand(3)));
-  }
+  ConstantInt *getFactor() const { return cast<ConstantInt>(getArgOperand(3)); }
 };
 
 class NoAliasScopeDeclInst : public IntrinsicInst {

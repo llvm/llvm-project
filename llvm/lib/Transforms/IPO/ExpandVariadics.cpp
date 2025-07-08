@@ -132,25 +132,6 @@ public:
   virtual ~VariadicABIInfo() = default;
 };
 
-// Module implements getFunction() which returns nullptr on missing declaration
-// and getOrInsertFunction which creates one when absent. Intrinsics.h only
-// implements getDeclaration which creates one when missing. Checking whether
-// an intrinsic exists thus inserts it in the module and it then needs to be
-// deleted again to clean up.
-// The right name for the two functions on intrinsics would match Module::,
-// but doing that in a single change would introduce nullptr dereferences
-// where currently there are none. The minimal collateral damage approach
-// would split the change over a release to help downstream branches. As it
-// is unclear what approach will be preferred, implementing the trivial
-// function here in the meantime to decouple from that discussion.
-Function *getPreexistingDeclaration(Module *M, Intrinsic::ID Id,
-                                    ArrayRef<Type *> Tys = {}) {
-  if (Tys.empty())
-    return Intrinsic::getDeclarationIfExists(M, Id);
-  auto *FT = Intrinsic::getType(M->getContext(), Id, Tys);
-  return Intrinsic::getDeclarationIfExists(M, Id, Tys, FT);
-}
-
 class ExpandVariadics : public ModulePass {
 
   // The pass construction sets the default to optimize when called from middle
@@ -201,7 +182,7 @@ public:
     bool Changed = false;
     const DataLayout &DL = M.getDataLayout();
     if (Function *Intrinsic =
-            getPreexistingDeclaration(&M, ID, {IntrinsicArgType})) {
+            Intrinsic::getDeclarationIfExists(&M, ID, {IntrinsicArgType})) {
       for (User *U : make_early_inc_range(Intrinsic->users()))
         if (auto *I = dyn_cast<InstructionType>(U))
           Changed |= expandVAIntrinsicCall(Builder, DL, I);

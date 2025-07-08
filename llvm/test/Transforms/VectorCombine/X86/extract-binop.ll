@@ -567,3 +567,22 @@ define float @constant_fold_crash_commute(<4 x float> %x) {
   %c = fadd float %b, %a
   ret float %c
 }
+
+; Test case for https://github.com/llvm/llvm-project/issues/147218.
+define i64 @instsimplify_folder_crash(<4 x i64> %in) {
+; CHECK-LABEL: @instsimplify_folder_crash(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHUFFLE_1:%.*]] = shufflevector <4 x i64> [[IN:%.*]], <4 x i64> zeroinitializer, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[E_0:%.*]] = extractelement <4 x i64> zeroinitializer, i64 0
+; CHECK-NEXT:    [[E_1:%.*]] = extractelement <4 x i64> [[SHUFFLE_1]], i64 1
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[E_1]], [[E_0]]
+; CHECK-NEXT:    ret i64 [[OR]]
+;
+entry:
+  %shuffle.1 = shufflevector <4 x i64> %in, <4 x i64> zeroinitializer, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+  %e.0 = extractelement <4 x i64> zeroinitializer, i64 0
+  %e.1 = extractelement <4 x i64> %shuffle.1, i64 1
+  %shift = shufflevector <4 x i64> %shuffle.1, <4 x i64> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+  %or = or i64 %e.1, %e.0
+  ret i64 %or
+}

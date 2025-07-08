@@ -54,7 +54,7 @@ bool RISCVLateBranchOpt::runOnBasicBlock(MachineBasicBlock &MBB) const {
   if (!TBB || Cond.size() != 3)
     return false;
 
-  RISCVCC::CondCode CC = static_cast<RISCVCC::CondCode>(Cond[0].getImm());
+  RISCVCC::CondCode CC = RISCVInstrInfo::getCondFromBranchOpc(Cond[0].getImm());
   assert(CC != RISCVCC::COND_INVALID);
 
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();

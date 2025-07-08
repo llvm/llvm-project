@@ -227,6 +227,8 @@ public:
 
   const char *GetIOHandlerHelpPrologue();
 
+  void RefreshIOHandler();
+
   void ClearIOHandlers();
 
   bool EnableLog(llvm::StringRef channel,
@@ -306,6 +308,10 @@ public:
   llvm::StringRef GetShowProgressAnsiPrefix() const;
 
   llvm::StringRef GetShowProgressAnsiSuffix() const;
+
+  llvm::StringRef GetDisabledAnsiPrefix() const;
+
+  llvm::StringRef GetDisabledAnsiSuffix() const;
 
   bool GetUseAutosuggestion() const;
 

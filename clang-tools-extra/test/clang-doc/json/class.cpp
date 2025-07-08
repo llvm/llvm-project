@@ -23,6 +23,9 @@ struct MyClass {
   typedef int MyTypedef;
   
   class NestedClass;
+  
+  friend struct Foo;
+  template<typename T> friend void friendFunction(int);
 protected:
   int protectedMethod();
 
@@ -86,6 +89,44 @@ protected:
 // CHECK-NEXT:        "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ],
+// CHECK-NEXT:    "Friends": [
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "IsClass": false,
+// CHECK-NEXT:        "Params": [
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "Name": "",
+// CHECK-NEXT:            "Type": "int"
+// CHECK-NEXT:          }
+// CHECK-NEXT:        ],
+// CHECK-NEXT:        "Reference": {
+// CHECK-NEXT:          "Name": "friendFunction",
+// CHECK-NEXT:          "Path": "",
+// CHECK-NEXT:          "QualName": "friendFunction",
+// CHECK-NEXT:          "USR": "{{[0-9A-F]*}}"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "ReturnType": {
+// CHECK-NEXT:          "IsBuiltIn": true,
+// CHECK-NEXT:          "IsTemplate": false,
+// CHECK-NEXT:          "Name": "void",
+// CHECK-NEXT:          "QualName": "void",
+// CHECK-NEXT:          "USR": "0000000000000000000000000000000000000000"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "Template": {
+// CHECK-NEXT:          "Parameters": [
+// CHECK-NEXT:            "typename T"
+// CHECK-NEXT:          ]
+// CHECK-NEXT:        }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      {
+// CHECK-NEXT:        "IsClass": true,
+// CHECK-NEXT:        "Reference": {
+// CHECK-NEXT:          "Name": "Foo",
+// CHECK-NEXT:          "Path": "GlobalNamespace",
+// CHECK-NEXT:          "QualName": "Foo",
+// CHECK-NEXT:          "USR": "{{[0-9A-F]*}}"
+// CHECK-NEXT:        }
+// CHECK-NEXT:      }
+// CHECK-NEXT:    ],
 // COM:           FIXME: FullName is not emitted correctly.
 // CHECK-NEXT:    "FullName": "",
 // CHECK-NEXT:    "IsTypedef": false,
@@ -107,7 +148,7 @@ protected:
 // CHECK-NEXT:         "GlobalNamespace"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "ReturnType": {
-// CHECK-NEXT:         "IsBuiltIn": false,
+// CHECK-NEXT:         "IsBuiltIn": true,
 // CHECK-NEXT:         "IsTemplate": false,
 // CHECK-NEXT:         "Name": "int",
 // CHECK-NEXT:         "QualName": "int",
@@ -137,7 +178,7 @@ protected:
 // CHECK-NEXT:          }
 // CHECK-NEXT:        ],
 // CHECK-NEXT:        "ReturnType": {
-// CHECK-NEXT:          "IsBuiltIn": false,
+// CHECK-NEXT:          "IsBuiltIn": true,
 // CHECK-NEXT:          "IsTemplate": false,
 // CHECK-NEXT:          "Name": "int",
 // CHECK-NEXT:          "QualName": "int",
@@ -184,7 +225,7 @@ protected:
 // CHECK-NEXT:        "TypeDeclaration": "",
 // CHECK-NEXT:        "USR": "{{[0-9A-F]*}}",
 // CHECK-NEXT:        "Underlying": {
-// CHECK-NEXT:          "IsBuiltIn": false,
+// CHECK-NEXT:          "IsBuiltIn": true,
 // CHECK-NEXT:          "IsTemplate": false,
 // CHECK-NEXT:          "Name": "int",
 // CHECK-NEXT:          "QualName": "int",

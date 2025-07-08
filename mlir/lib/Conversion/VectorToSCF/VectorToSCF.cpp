@@ -12,7 +12,6 @@
 
 #include <numeric>
 #include <optional>
-#include <type_traits>
 
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 
@@ -20,7 +19,6 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
@@ -29,7 +27,6 @@
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Transforms/Passes.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTVECTORTOSCF
@@ -1324,6 +1321,8 @@ struct UnrollTransferReadConversion
     for (int64_t i = 0; i < dimSize; ++i) {
       Value iv = rewriter.create<arith::ConstantIndexOp>(loc, i);
 
+      // FIXME: Rename this lambda - it does much more than just
+      // in-bounds-check generation.
       vec = generateInBoundsCheck(
           rewriter, xferOp, iv, unpackedDim(xferOp), TypeRange(vecType),
           /*inBoundsCase=*/
@@ -1338,12 +1337,21 @@ struct UnrollTransferReadConversion
             insertionIndices.push_back(rewriter.getIndexAttr(i));
 
             auto inBoundsAttr = dropFirstElem(b, xferOp.getInBoundsAttr());
+
             auto newXferOp = b.create<vector::TransferReadOp>(
                 loc, newXferVecType, xferOp.getBase(), xferIndices,
                 AffineMapAttr::get(unpackedPermutationMap(b, xferOp)),
                 xferOp.getPadding(), Value(), inBoundsAttr);
             maybeAssignMask(b, xferOp, newXferOp, i);
-            return b.create<vector::InsertOp>(loc, newXferOp, vec,
+
+            Value valToInser = newXferOp.getResult();
+            if (newXferVecType.getRank() == 0) {
+              // vector.insert does not accept rank-0 as the non-indexed
+              // argument. Extract the scalar before inserting.
+              valToInser = b.create<vector::ExtractOp>(loc, valToInser,
+                                                       SmallVector<int64_t>());
+            }
+            return b.create<vector::InsertOp>(loc, valToInser, vec,
                                               insertionIndices);
           },
           /*outOfBoundsCase=*/

@@ -34,6 +34,7 @@
 
 namespace llvm {
 
+class ARMBaseTargetMachine;
 class ARMSubtarget;
 class DataLayout;
 class FastISel;
@@ -414,6 +415,8 @@ class VectorType;
     explicit ARMTargetLowering(const TargetMachine &TM,
                                const ARMSubtarget &STI);
 
+    const ARMBaseTargetMachine &getTM() const;
+
     unsigned getJumpTableEncoding() const override;
     bool useSoftFloat() const override;
 
@@ -606,6 +609,11 @@ class VectorType;
 
     bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
 
+    bool hasAndNotCompare(SDValue V) const override {
+      // We can use bics for any scalar.
+      return V.getValueType().isScalarInteger();
+    }
+
     bool
     isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
@@ -714,6 +722,11 @@ class VectorType;
 
     bool supportSwiftError() const override {
       return true;
+    }
+
+    bool supportSplitCSR(MachineFunction *MF) const override {
+      return MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&
+             MF->getFunction().hasFnAttribute(Attribute::NoUnwind);
     }
 
     bool hasStandaloneRem(EVT VT) const override {
@@ -913,11 +926,6 @@ class VectorType;
                             const SDLoc &dl, SelectionDAG &DAG,
                             SmallVectorImpl<SDValue> &InVals, bool isThisReturn,
                             SDValue ThisVal, bool isCmseNSCall) const;
-
-    bool supportSplitCSR(MachineFunction *MF) const override {
-      return MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&
-          MF->getFunction().hasFnAttribute(Attribute::NoUnwind);
-    }
 
     void initializeSplitCSR(MachineBasicBlock *Entry) const override;
     void insertCopiesSplitCSR(

@@ -51,7 +51,7 @@ namespace llvm {
   /// constructed and destructed, they will add their symbolic frames to a
   /// virtual stack trace.  This gets dumped out if the program crashes.
   class LLVM_ABI PrettyStackTraceEntry {
-    LLVM_ABI_FRIEND friend PrettyStackTraceEntry *
+    LLVM_ABI friend PrettyStackTraceEntry *
     ReverseStackTrace(PrettyStackTraceEntry *);
 
     PrettyStackTraceEntry *NextEntry;

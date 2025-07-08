@@ -881,7 +881,7 @@ bool CodeGenRegisterClass::hasType(const ValueTypeByHwMode &VT) const {
   if (VT.isSimple()) {
     MVT T = VT.getSimple();
     for (const ValueTypeByHwMode &OurVT : VTs) {
-      if (llvm::count_if(OurVT, [T](auto &&P) { return P.second == T; }))
+      if (llvm::is_contained(llvm::make_second_range(OurVT), T))
         return true;
     }
   }

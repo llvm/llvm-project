@@ -268,7 +268,8 @@ Expected<std::string> findProgram(StringRef Name, ArrayRef<StringRef> Paths) {
 bool linkerSupportsLTO(const ArgList &Args) {
   llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
   return Triple.isNVPTX() || Triple.isAMDGPU() ||
-         Args.getLastArgValue(OPT_linker_path_EQ).ends_with("lld");
+         (!Triple.isGPU() &&
+          Args.getLastArgValue(OPT_linker_path_EQ).ends_with("lld"));
 }
 
 /// Returns the hashed value for a constant string.

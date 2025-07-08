@@ -14,7 +14,6 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
@@ -686,15 +685,10 @@ void XCOFFWriter::recordRelocation(const MCFragment &F, const MCFixup &Fixup,
   };
 
   const MCSymbol *const SymA = Target.getAddSym();
-
-  MCAsmBackend &Backend = Asm->getBackend();
-  bool IsPCRel = Backend.getFixupKindInfo(Fixup.getKind()).Flags &
-                 MCFixupKindInfo::FKF_IsPCRel;
-
   uint8_t Type;
   uint8_t SignAndSize;
-  std::tie(Type, SignAndSize) =
-      TargetObjectWriter->getRelocTypeAndSignSize(Target, Fixup, IsPCRel);
+  std::tie(Type, SignAndSize) = TargetObjectWriter->getRelocTypeAndSignSize(
+      Target, Fixup, Fixup.isPCRel());
 
   const MCSectionXCOFF *SymASec = getContainingCsect(cast<MCSymbolXCOFF>(SymA));
   assert(SectionMap.contains(SymASec) &&

@@ -338,7 +338,7 @@ static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
       auto *MCE = MCUnwindV2EpilogTargetExpr::create(*info, Epilog.second,
                                                      EpilogSize, context);
       MCFixup Fixup = MCFixup::create(DF->getContents().size(), MCE, FK_Data_2);
-      DF->getFixups().push_back(Fixup);
+      DF->addFixup(Fixup);
       DF->appendContents(2, 0);
     }
   }

@@ -1915,7 +1915,7 @@ and non-0 as true.
     ``list<int>``. *start* is ``0`` and *step* is ``1`` by default. *step* can
     be negative and cannot be 0. If *start* ``<`` *end* and *step* is negative,
     or *start* ``>`` *end* and *step* is positive, the result is an empty list
-    ``[]<list<int>>``.
+    ``[]<int>``.
 
     For example:
 

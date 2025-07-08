@@ -259,7 +259,7 @@ if(LLVM_INCLUDE_TESTS)
     # dir rather than ${LLVM_INSTALL_DIR}/bin/llvm-lit (which may not exist if
     # LLVM_BINARY_DIR points at an installed LLVM tree rather than a build tree).
     set(LLVM_LIT_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/bin)
-    get_llvm_lit_path(_base_dir _file_name)
+    get_llvm_lit_path(_base_dir _file_name ALLOW_EXTERNAL)
     set(LLVM_EXTERNAL_LIT "${_base_dir}/${_file_name}" CACHE STRING "Command used to spawn lit" FORCE)
     # Avoid warning about missing llvm-lit from runtimes CMake files. This is
     # fine since we call configure_file() to create llvm-lit at the end of this

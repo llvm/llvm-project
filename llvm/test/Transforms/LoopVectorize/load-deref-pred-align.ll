@@ -669,6 +669,8 @@ define void @test_rev_loops_strided_deref_loads(ptr nocapture noundef writeonly 
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [1024 x i32], ptr [[LOCAL_SRC]], i64 0, i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP10]], align 4
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <2 x i32> poison, i32 [[TMP11]], i32 0
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <2 x i32> [[TMP23]], i32 [[TMP12]], i32 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP5]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:

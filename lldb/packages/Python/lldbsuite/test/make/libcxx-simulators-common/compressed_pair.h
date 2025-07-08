@@ -58,7 +58,7 @@ public:
 
   _T1 &first() { return static_cast<_Base1 &>(*this).__get(); }
 };
-#elif COMPRESSED_PAIR_REV == 1
+#elif COMPRESSED_PAIR_REV == 1 || COMPRESSED_PAIR_REV == 2
 // From libc++ datasizeof.h
 template <class _Tp> struct _FirstPaddingByte {
   _LLDB_NO_UNIQUE_ADDRESS _Tp __v_;
@@ -72,6 +72,9 @@ inline const size_t __datasizeof_v =
 template <class _Tp>
 struct __lldb_is_final : public integral_constant<bool, __is_final(_Tp)> {};
 
+// The legacy layout has been patched, see
+// https://github.com/llvm/llvm-project/pull/142516.
+#if COMPRESSED_PAIR_REV == 1
 template <class _ToPad> class __compressed_pair_padding {
   char __padding_[((is_empty<_ToPad>::value &&
                     !__lldb_is_final<_ToPad>::value) ||
@@ -79,6 +82,25 @@ template <class _ToPad> class __compressed_pair_padding {
                       ? 0
                       : sizeof(_ToPad) - __datasizeof_v<_ToPad>];
 };
+#else
+template <class _ToPad>
+inline const bool __is_reference_or_unpadded_object =
+    (std::is_empty<_ToPad>::value && !__lldb_is_final<_ToPad>::value) ||
+    sizeof(_ToPad) == __datasizeof_v<_ToPad>;
+
+template <class _Tp>
+inline const bool __is_reference_or_unpadded_object<_Tp &> = true;
+
+template <class _Tp>
+inline const bool __is_reference_or_unpadded_object<_Tp &&> = true;
+
+template <class _ToPad, bool _Empty = __is_reference_or_unpadded_object<_ToPad>>
+class __compressed_pair_padding {
+  char __padding_[sizeof(_ToPad) - __datasizeof_v<_ToPad>] = {};
+};
+
+template <class _ToPad> class __compressed_pair_padding<_ToPad, true> {};
+#endif
 
 #define _LLDB_COMPRESSED_PAIR(T1, Initializer1, T2, Initializer2)              \
   [[__gnu__::__aligned__(                                                      \
@@ -96,7 +118,7 @@ template <class _ToPad> class __compressed_pair_padding {
   _LLDB_NO_UNIQUE_ADDRESS __compressed_pair_padding<T2> __padding2_;           \
   _LLDB_NO_UNIQUE_ADDRESS T3 Initializer3;                                     \
   _LLDB_NO_UNIQUE_ADDRESS __compressed_pair_padding<T3> __padding3_;
-#elif COMPRESSED_PAIR_REV == 2
+#elif COMPRESSED_PAIR_REV == 3
 #define _LLDB_COMPRESSED_PAIR(T1, Name1, T2, Name2)                            \
   _LLDB_NO_UNIQUE_ADDRESS T1 Name1;                                            \
   _LLDB_NO_UNIQUE_ADDRESS T2 Name2

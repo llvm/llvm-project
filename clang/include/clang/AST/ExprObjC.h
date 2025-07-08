@@ -1421,8 +1421,7 @@ public:
     if (hasStandardSelLocs())
       return getStandardSelectorLoc(
           Index, getSelector(), getSelLocsKind() == SelLoc_StandardWithSpace,
-          llvm::ArrayRef(const_cast<Expr **>(getArgs()), getNumArgs()),
-          RBracLoc);
+          ArrayRef(const_cast<Expr **>(getArgs()), getNumArgs()), RBracLoc);
     return getStoredSelLocs()[Index];
   }
 

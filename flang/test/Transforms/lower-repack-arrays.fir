@@ -22,7 +22,7 @@ func.func @_QPtest1(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"})
 // CHECK:             %[[VAL_11:.*]] = fir.box_addr %[[VAL_0]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.box<!fir.array<?x?xf32>>>
 // CHECK:             %[[VAL_12:.*]] = fir.is_present %[[VAL_11]] : (!fir.ref<!fir.box<!fir.array<?x?xf32>>>) -> i1
 // CHECK:             %[[VAL_13:.*]] = arith.andi %[[VAL_10]], %[[VAL_12]] : i1
-// CHECK:             %[[VAL_14:.*]] = fir.if %[[VAL_13]] -> (!fir.box<!fir.array<?x?xf32>>) {
+// CHECK:             %[[VAL_14:.*]] = fir.if %[[VAL_13]] weights([0, 1]) -> (!fir.box<!fir.array<?x?xf32>>) {
 // CHECK:               %[[VAL_15:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_4]] : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_16:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_3]] : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_17:.*]] = fir.shape %[[VAL_15]]#1, %[[VAL_16]]#1 : (index, index) -> !fir.shape<2>
@@ -52,7 +52,7 @@ func.func @_QPtest1(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"})
 // CHECK:             %[[VAL_30:.*]] = fir.convert %[[VAL_29]] : (!fir.heap<!fir.array<?x?xf32>>) -> index
 // CHECK:             %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (!fir.heap<!fir.array<?x?xf32>>) -> index
 // CHECK:             %[[VAL_33:.*]] = arith.cmpi ne, %[[VAL_30]], %[[VAL_32]] : index
-// CHECK:             fir.if %[[VAL_33]] {
+// CHECK:             fir.if %[[VAL_33]] weights([0, 1]) {
 // CHECK:               %[[VAL_34:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_35:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
 // CHECK:               %[[VAL_36:.*]] = fir.convert %[[VAL_8]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
@@ -87,7 +87,7 @@ func.func @_QPtest1_whole(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name =
 // CHECK:             %[[VAL_11:.*]] = fir.box_addr %[[VAL_0]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.box<!fir.array<?x?xf32>>>
 // CHECK:             %[[VAL_12:.*]] = fir.is_present %[[VAL_11]] : (!fir.ref<!fir.box<!fir.array<?x?xf32>>>) -> i1
 // CHECK:             %[[VAL_13:.*]] = arith.andi %[[VAL_10]], %[[VAL_12]] : i1
-// CHECK:             %[[VAL_14:.*]] = fir.if %[[VAL_13]] -> (!fir.box<!fir.array<?x?xf32>>) {
+// CHECK:             %[[VAL_14:.*]] = fir.if %[[VAL_13]] weights([0, 1]) -> (!fir.box<!fir.array<?x?xf32>>) {
 // CHECK:               %[[VAL_15:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_4]] : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_16:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_3]] : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_17:.*]] = fir.shape %[[VAL_15]]#1, %[[VAL_16]]#1 : (index, index) -> !fir.shape<2>
@@ -117,7 +117,7 @@ func.func @_QPtest1_whole(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name =
 // CHECK:             %[[VAL_30:.*]] = fir.convert %[[VAL_29]] : (!fir.heap<!fir.array<?x?xf32>>) -> index
 // CHECK:             %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (!fir.heap<!fir.array<?x?xf32>>) -> index
 // CHECK:             %[[VAL_33:.*]] = arith.cmpi ne, %[[VAL_30]], %[[VAL_32]] : index
-// CHECK:             fir.if %[[VAL_33]] {
+// CHECK:             fir.if %[[VAL_33]] weights([0, 1]) {
 // CHECK:               %[[VAL_34:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_35:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
 // CHECK:               %[[VAL_36:.*]] = fir.convert %[[VAL_8]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
@@ -150,7 +150,7 @@ func.func @_QPtest1_in(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x
 // CHECK:             %[[VAL_10:.*]] = fir.box_addr %[[VAL_0]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.box<!fir.array<?x?xf32>>>
 // CHECK:             %[[VAL_11:.*]] = fir.is_present %[[VAL_10]] : (!fir.ref<!fir.box<!fir.array<?x?xf32>>>) -> i1
 // CHECK:             %[[VAL_12:.*]] = arith.andi %[[VAL_9]], %[[VAL_11]] : i1
-// CHECK:             %[[VAL_13:.*]] = fir.if %[[VAL_12]] -> (!fir.box<!fir.array<?x?xf32>>) {
+// CHECK:             %[[VAL_13:.*]] = fir.if %[[VAL_12]] weights([0, 1]) -> (!fir.box<!fir.array<?x?xf32>>) {
 // CHECK:               %[[VAL_14:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_3]] : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_15:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_2]] : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_16:.*]] = fir.shape %[[VAL_14]]#1, %[[VAL_15]]#1 : (index, index) -> !fir.shape<2>
@@ -180,7 +180,7 @@ func.func @_QPtest1_in(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x
 // CHECK:             %[[VAL_29:.*]] = fir.convert %[[VAL_28]] : (!fir.heap<!fir.array<?x?xf32>>) -> index
 // CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (!fir.heap<!fir.array<?x?xf32>>) -> index
 // CHECK:             %[[VAL_32:.*]] = arith.cmpi ne, %[[VAL_29]], %[[VAL_31]] : index
-// CHECK:             fir.if %[[VAL_32]] {
+// CHECK:             fir.if %[[VAL_32]] weights([0, 1]) {
 // CHECK:               fir.freemem %[[VAL_28]] : !fir.heap<!fir.array<?x?xf32>>
 // CHECK:             }
 // CHECK:           }
@@ -209,7 +209,7 @@ func.func @_QPtest1_out(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "
 // CHECK:             %[[VAL_10:.*]] = fir.box_addr %[[VAL_0]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.box<!fir.array<?x?xf32>>>
 // CHECK:             %[[VAL_11:.*]] = fir.is_present %[[VAL_10]] : (!fir.ref<!fir.box<!fir.array<?x?xf32>>>) -> i1
 // CHECK:             %[[VAL_12:.*]] = arith.andi %[[VAL_9]], %[[VAL_11]] : i1
-// CHECK:             %[[VAL_13:.*]] = fir.if %[[VAL_12]] -> (!fir.box<!fir.array<?x?xf32>>) {
+// CHECK:             %[[VAL_13:.*]] = fir.if %[[VAL_12]] weights([0, 1]) -> (!fir.box<!fir.array<?x?xf32>>) {
 // CHECK:               %[[VAL_14:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_3]] : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_15:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_2]] : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_16:.*]] = fir.shape %[[VAL_14]]#1, %[[VAL_15]]#1 : (index, index) -> !fir.shape<2>
@@ -234,7 +234,7 @@ func.func @_QPtest1_out(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "
 // CHECK:             %[[VAL_25:.*]] = fir.convert %[[VAL_24]] : (!fir.heap<!fir.array<?x?xf32>>) -> index
 // CHECK:             %[[VAL_27:.*]] = fir.convert %[[VAL_26]] : (!fir.heap<!fir.array<?x?xf32>>) -> index
 // CHECK:             %[[VAL_28:.*]] = arith.cmpi ne, %[[VAL_25]], %[[VAL_27]] : index
-// CHECK:             fir.if %[[VAL_28]] {
+// CHECK:             fir.if %[[VAL_28]] weights([0, 1]) {
 // CHECK:               %[[VAL_29:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_30:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
 // CHECK:               %[[VAL_31:.*]] = fir.convert %[[VAL_7]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
@@ -280,7 +280,7 @@ func.func @_QPtest2(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.box
 // CHECK:             %[[VAL_17:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,?>>>>
 // CHECK:             %[[VAL_18:.*]] = fir.is_present %[[VAL_17]] : (!fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,?>>>>) -> i1
 // CHECK:             %[[VAL_19:.*]] = arith.andi %[[VAL_16]], %[[VAL_18]] : i1
-// CHECK:             %[[VAL_20:.*]] = fir.if %[[VAL_19]] -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) {
+// CHECK:             %[[VAL_20:.*]] = fir.if %[[VAL_19]] weights([0, 1]) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) {
 // CHECK:               %[[VAL_21:.*]]:3 = fir.box_dims %[[VAL_1]], %[[VAL_5]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_22:.*]]:3 = fir.box_dims %[[VAL_1]], %[[VAL_4]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_23:.*]] = fir.shape %[[VAL_21]]#1, %[[VAL_22]]#1 : (index, index) -> !fir.shape<2>
@@ -310,7 +310,7 @@ func.func @_QPtest2(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.box
 // CHECK:             %[[VAL_36:.*]] = fir.convert %[[VAL_35]] : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>) -> index
 // CHECK:             %[[VAL_38:.*]] = fir.convert %[[VAL_37]] : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>) -> index
 // CHECK:             %[[VAL_39:.*]] = arith.cmpi ne, %[[VAL_36]], %[[VAL_38]] : index
-// CHECK:             fir.if %[[VAL_39]] {
+// CHECK:             fir.if %[[VAL_39]] weights([0, 1]) {
 // CHECK:               %[[VAL_40:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_41:.*]] = fir.convert %[[VAL_1]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_42:.*]] = fir.convert %[[VAL_14]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
@@ -356,7 +356,7 @@ func.func @_QPtest2_stack(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !f
 // CHECK:             %[[VAL_17:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,?>>>>
 // CHECK:             %[[VAL_18:.*]] = fir.is_present %[[VAL_17]] : (!fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,?>>>>) -> i1
 // CHECK:             %[[VAL_19:.*]] = arith.andi %[[VAL_16]], %[[VAL_18]] : i1
-// CHECK:             %[[VAL_20:.*]] = fir.if %[[VAL_19]] -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) {
+// CHECK:             %[[VAL_20:.*]] = fir.if %[[VAL_19]] weights([0, 1]) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) {
 // CHECK:               %[[VAL_21:.*]]:3 = fir.box_dims %[[VAL_1]], %[[VAL_5]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_22:.*]]:3 = fir.box_dims %[[VAL_1]], %[[VAL_4]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_23:.*]] = fir.shape %[[VAL_21]]#1, %[[VAL_22]]#1 : (index, index) -> !fir.shape<2>
@@ -386,7 +386,7 @@ func.func @_QPtest2_stack(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !f
 // CHECK:             %[[VAL_36:.*]] = fir.convert %[[VAL_35]] : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>) -> index
 // CHECK:             %[[VAL_38:.*]] = fir.convert %[[VAL_37]] : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>) -> index
 // CHECK:             %[[VAL_39:.*]] = arith.cmpi ne, %[[VAL_36]], %[[VAL_38]] : index
-// CHECK:             fir.if %[[VAL_39]] {
+// CHECK:             fir.if %[[VAL_39]] weights([0, 1]) {
 // CHECK:               %[[VAL_40:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_41:.*]] = fir.convert %[[VAL_1]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_42:.*]] = fir.convert %[[VAL_14]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
@@ -420,7 +420,7 @@ func.func @_QPtest3(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>> {fir.bindc_n
 // CHECK:             %[[VAL_11:.*]] = fir.box_addr %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,?>>>>
 // CHECK:             %[[VAL_12:.*]] = fir.is_present %[[VAL_11]] : (!fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,?>>>>) -> i1
 // CHECK:             %[[VAL_13:.*]] = arith.andi %[[VAL_10]], %[[VAL_12]] : i1
-// CHECK:             %[[VAL_14:.*]] = fir.if %[[VAL_13]] -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) {
+// CHECK:             %[[VAL_14:.*]] = fir.if %[[VAL_13]] weights([0, 1]) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) {
 // CHECK:               %[[VAL_15:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_4]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_16:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_3]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_17:.*]] = fir.box_elesize %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> index
@@ -451,7 +451,7 @@ func.func @_QPtest3(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>> {fir.bindc_n
 // CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>) -> index
 // CHECK:             %[[VAL_33:.*]] = fir.convert %[[VAL_32]] : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>) -> index
 // CHECK:             %[[VAL_34:.*]] = arith.cmpi ne, %[[VAL_31]], %[[VAL_33]] : index
-// CHECK:             fir.if %[[VAL_34]] {
+// CHECK:             fir.if %[[VAL_34]] weights([0, 1]) {
 // CHECK:               %[[VAL_35:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_36:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_37:.*]] = fir.convert %[[VAL_8]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
@@ -486,7 +486,7 @@ func.func @_QPtest3_stack(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>> {fir.b
 // CHECK:             %[[VAL_11:.*]] = fir.box_addr %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,?>>>>
 // CHECK:             %[[VAL_12:.*]] = fir.is_present %[[VAL_11]] : (!fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,?>>>>) -> i1
 // CHECK:             %[[VAL_13:.*]] = arith.andi %[[VAL_10]], %[[VAL_12]] : i1
-// CHECK:             %[[VAL_14:.*]] = fir.if %[[VAL_13]] -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) {
+// CHECK:             %[[VAL_14:.*]] = fir.if %[[VAL_13]] weights([0, 1]) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) {
 // CHECK:               %[[VAL_15:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_4]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_16:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_3]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_17:.*]] = fir.box_elesize %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> index
@@ -517,7 +517,7 @@ func.func @_QPtest3_stack(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,?>>> {fir.b
 // CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>) -> index
 // CHECK:             %[[VAL_33:.*]] = fir.convert %[[VAL_32]] : (!fir.heap<!fir.array<?x?x!fir.char<1,?>>>) -> index
 // CHECK:             %[[VAL_34:.*]] = arith.cmpi ne, %[[VAL_31]], %[[VAL_33]] : index
-// CHECK:             fir.if %[[VAL_34]] {
+// CHECK:             fir.if %[[VAL_34]] weights([0, 1]) {
 // CHECK:               %[[VAL_35:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_36:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_37:.*]] = fir.convert %[[VAL_8]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>) -> !fir.box<none>
@@ -553,7 +553,7 @@ func.func @_QPtest4(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,10>>> {fir.bindc_
 // CHECK:             %[[VAL_12:.*]] = fir.box_addr %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) -> !fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,10>>>>
 // CHECK:             %[[VAL_13:.*]] = fir.is_present %[[VAL_12]] : (!fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,10>>>>) -> i1
 // CHECK:             %[[VAL_14:.*]] = arith.andi %[[VAL_11]], %[[VAL_13]] : i1
-// CHECK:             %[[VAL_15:.*]] = fir.if %[[VAL_14]] -> (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) {
+// CHECK:             %[[VAL_15:.*]] = fir.if %[[VAL_14]] weights([0, 1]) -> (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) {
 // CHECK:               %[[VAL_16:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_4]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_17:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_3]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_18:.*]] = fir.shape %[[VAL_16]]#1, %[[VAL_17]]#1 : (index, index) -> !fir.shape<2>
@@ -583,7 +583,7 @@ func.func @_QPtest4(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,10>>> {fir.bindc_
 // CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (!fir.heap<!fir.array<?x?x!fir.char<1,10>>>) -> index
 // CHECK:             %[[VAL_33:.*]] = fir.convert %[[VAL_32]] : (!fir.heap<!fir.array<?x?x!fir.char<1,10>>>) -> index
 // CHECK:             %[[VAL_34:.*]] = arith.cmpi ne, %[[VAL_31]], %[[VAL_33]] : index
-// CHECK:             fir.if %[[VAL_34]] {
+// CHECK:             fir.if %[[VAL_34]] weights([0, 1]) {
 // CHECK:               %[[VAL_35:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_36:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_37:.*]] = fir.convert %[[VAL_9]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) -> !fir.box<none>
@@ -620,7 +620,7 @@ func.func @_QPtest4_stack(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,10>>> {fir.
 // CHECK:             %[[VAL_12:.*]] = fir.box_addr %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) -> !fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,10>>>>
 // CHECK:             %[[VAL_13:.*]] = fir.is_present %[[VAL_12]] : (!fir.ref<!fir.box<!fir.array<?x?x!fir.char<1,10>>>>) -> i1
 // CHECK:             %[[VAL_14:.*]] = arith.andi %[[VAL_11]], %[[VAL_13]] : i1
-// CHECK:             %[[VAL_15:.*]] = fir.if %[[VAL_14]] -> (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) {
+// CHECK:             %[[VAL_15:.*]] = fir.if %[[VAL_14]] weights([0, 1]) -> (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) {
 // CHECK:               %[[VAL_16:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_4]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_17:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_3]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_18:.*]] = fir.shape %[[VAL_16]]#1, %[[VAL_17]]#1 : (index, index) -> !fir.shape<2>
@@ -650,7 +650,7 @@ func.func @_QPtest4_stack(%arg0: !fir.box<!fir.array<?x?x!fir.char<1,10>>> {fir.
 // CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (!fir.heap<!fir.array<?x?x!fir.char<1,10>>>) -> index
 // CHECK:             %[[VAL_33:.*]] = fir.convert %[[VAL_32]] : (!fir.heap<!fir.array<?x?x!fir.char<1,10>>>) -> index
 // CHECK:             %[[VAL_34:.*]] = arith.cmpi ne, %[[VAL_31]], %[[VAL_33]] : index
-// CHECK:             fir.if %[[VAL_34]] {
+// CHECK:             fir.if %[[VAL_34]] weights([0, 1]) {
 // CHECK:               %[[VAL_35:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_36:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_37:.*]] = fir.convert %[[VAL_9]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>) -> !fir.box<none>
@@ -684,7 +684,7 @@ func.func @_QPtest5(%arg0: !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>> {fir.bind
 // CHECK:             %[[VAL_11:.*]] = fir.box_addr %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.ref<!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>>
 // CHECK:             %[[VAL_12:.*]] = fir.is_present %[[VAL_11]] : (!fir.ref<!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>>) -> i1
 // CHECK:             %[[VAL_13:.*]] = arith.andi %[[VAL_10]], %[[VAL_12]] : i1
-// CHECK:             %[[VAL_14:.*]] = fir.if %[[VAL_13]] -> (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) {
+// CHECK:             %[[VAL_14:.*]] = fir.if %[[VAL_13]] weights([0, 1]) -> (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) {
 // CHECK:               %[[VAL_15:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_4]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_16:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_3]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_17:.*]] = fir.shape %[[VAL_15]]#1, %[[VAL_16]]#1 : (index, index) -> !fir.shape<2>
@@ -714,7 +714,7 @@ func.func @_QPtest5(%arg0: !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>> {fir.bind
 // CHECK:             %[[VAL_30:.*]] = fir.convert %[[VAL_29]] : (!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>) -> index
 // CHECK:             %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>) -> index
 // CHECK:             %[[VAL_33:.*]] = arith.cmpi ne, %[[VAL_30]], %[[VAL_32]] : index
-// CHECK:             fir.if %[[VAL_33]] {
+// CHECK:             fir.if %[[VAL_33]] weights([0, 1]) {
 // CHECK:               %[[VAL_34:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_35:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_36:.*]] = fir.convert %[[VAL_8]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
@@ -749,7 +749,7 @@ func.func @_QPtest5_stack(%arg0: !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>> {fi
 // CHECK:             %[[VAL_11:.*]] = fir.box_addr %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.ref<!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>>
 // CHECK:             %[[VAL_12:.*]] = fir.is_present %[[VAL_11]] : (!fir.ref<!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>>) -> i1
 // CHECK:             %[[VAL_13:.*]] = arith.andi %[[VAL_10]], %[[VAL_12]] : i1
-// CHECK:             %[[VAL_14:.*]] = fir.if %[[VAL_13]] -> (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) {
+// CHECK:             %[[VAL_14:.*]] = fir.if %[[VAL_13]] weights([0, 1]) -> (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) {
 // CHECK:               %[[VAL_15:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_4]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_16:.*]]:3 = fir.box_dims %[[VAL_0]], %[[VAL_3]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_17:.*]] = fir.shape %[[VAL_15]]#1, %[[VAL_16]]#1 : (index, index) -> !fir.shape<2>
@@ -779,7 +779,7 @@ func.func @_QPtest5_stack(%arg0: !fir.box<!fir.array<?x?x!fir.type<_QMmTt>>> {fi
 // CHECK:             %[[VAL_30:.*]] = fir.convert %[[VAL_29]] : (!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>) -> index
 // CHECK:             %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>) -> index
 // CHECK:             %[[VAL_33:.*]] = arith.cmpi ne, %[[VAL_30]], %[[VAL_32]] : index
-// CHECK:             fir.if %[[VAL_33]] {
+// CHECK:             fir.if %[[VAL_33]] weights([0, 1]) {
 // CHECK:               %[[VAL_34:.*]] = fir.address_of(@{{_QQcl.*}}
 // CHECK:               %[[VAL_35:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_36:.*]] = fir.convert %[[VAL_8]] : (!fir.box<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
@@ -814,7 +814,7 @@ func.func @_QPtest6(%arg0: !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>> {fir.bi
 // CHECK:             %[[VAL_11:.*]] = fir.box_addr %[[ARG0]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.ref<!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>>
 // CHECK:             %[[VAL_12:.*]] = fir.is_present %[[VAL_11]] : (!fir.ref<!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>>) -> i1
 // CHECK:             %[[VAL_13:.*]] = arith.andi %[[VAL_10]], %[[VAL_12]] : i1
-// CHECK:             %[[VAL_14:.*]] = fir.if %[[VAL_13]] -> (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) {
+// CHECK:             %[[VAL_14:.*]] = fir.if %[[VAL_13]] weights([0, 1]) -> (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) {
 // CHECK:               %[[VAL_15:.*]]:3 = fir.box_dims %[[ARG0]], %[[VAL_3]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_16:.*]]:3 = fir.box_dims %[[ARG0]], %[[VAL_2]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_17:.*]] = fir.shape %[[VAL_15]]#1, %[[VAL_16]]#1 : (index, index) -> !fir.shape<2>
@@ -853,7 +853,7 @@ func.func @_QPtest6(%arg0: !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>> {fir.bi
 // CHECK:             %[[VAL_39:.*]] = fir.convert %[[VAL_37]] : (!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>) -> index
 // CHECK:             %[[VAL_40:.*]] = fir.convert %[[VAL_38]] : (!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>) -> index
 // CHECK:             %[[VAL_41:.*]] = arith.cmpi ne, %[[VAL_39]], %[[VAL_40]] : index
-// CHECK:             fir.if %[[VAL_41]] {
+// CHECK:             fir.if %[[VAL_41]] weights([0, 1]) {
 // CHECK:               %[[VAL_42:.*]] = fir.address_of(@{{_QQcl.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 // CHECK:               %[[VAL_43:.*]] = fir.convert %[[ARG0]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_44:.*]] = fir.convert %[[VAL_8]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
@@ -890,7 +890,7 @@ func.func @_QPtest6_stack(%arg0: !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>> {
 // CHECK:             %[[VAL_11:.*]] = fir.box_addr %[[ARG0]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.ref<!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>>
 // CHECK:             %[[VAL_12:.*]] = fir.is_present %[[VAL_11]] : (!fir.ref<!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>>) -> i1
 // CHECK:             %[[VAL_13:.*]] = arith.andi %[[VAL_10]], %[[VAL_12]] : i1
-// CHECK:             %[[VAL_14:.*]] = fir.if %[[VAL_13]] -> (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) {
+// CHECK:             %[[VAL_14:.*]] = fir.if %[[VAL_13]] weights([0, 1]) -> (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) {
 // CHECK:               %[[VAL_15:.*]]:3 = fir.box_dims %[[ARG0]], %[[VAL_3]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_16:.*]]:3 = fir.box_dims %[[ARG0]], %[[VAL_2]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_17:.*]] = fir.shape %[[VAL_15]]#1, %[[VAL_16]]#1 : (index, index) -> !fir.shape<2>
@@ -929,7 +929,7 @@ func.func @_QPtest6_stack(%arg0: !fir.class<!fir.array<?x?x!fir.type<_QMmTt>>> {
 // CHECK:             %[[VAL_39:.*]] = fir.convert %[[VAL_37]] : (!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>) -> index
 // CHECK:             %[[VAL_40:.*]] = fir.convert %[[VAL_38]] : (!fir.heap<!fir.array<?x?x!fir.type<_QMmTt>>>) -> index
 // CHECK:             %[[VAL_41:.*]] = arith.cmpi ne, %[[VAL_39]], %[[VAL_40]] : index
-// CHECK:             fir.if %[[VAL_41]] {
+// CHECK:             fir.if %[[VAL_41]] weights([0, 1]) {
 // CHECK:               %[[VAL_42:.*]] = fir.address_of(@{{_QQcl.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 // CHECK:               %[[VAL_43:.*]] = fir.convert %[[ARG0]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
 // CHECK:               %[[VAL_44:.*]] = fir.convert %[[VAL_8]] : (!fir.class<!fir.array<?x?x!fir.type<_QMmTt>>>) -> !fir.box<none>
@@ -965,7 +965,7 @@ func.func @_QPtest7(%arg0: !fir.class<!fir.array<?x?xnone>> {fir.bindc_name = "x
 // CHECK:             %[[VAL_11:.*]] = fir.box_addr %[[ARG0]] : (!fir.class<!fir.array<?x?xnone>>) -> !fir.ref<!fir.class<!fir.array<?x?xnone>>>
 // CHECK:             %[[VAL_12:.*]] = fir.is_present %[[VAL_11]] : (!fir.ref<!fir.class<!fir.array<?x?xnone>>>) -> i1
 // CHECK:             %[[VAL_13:.*]] = arith.andi %[[VAL_10]], %[[VAL_12]] : i1
-// CHECK:             %[[VAL_14:.*]] = fir.if %[[VAL_13]] -> (!fir.class<!fir.array<?x?xnone>>) {
+// CHECK:             %[[VAL_14:.*]] = fir.if %[[VAL_13]] weights([0, 1]) -> (!fir.class<!fir.array<?x?xnone>>) {
 // CHECK:               %[[VAL_15:.*]]:3 = fir.box_dims %[[ARG0]], %[[VAL_3]] : (!fir.class<!fir.array<?x?xnone>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_16:.*]]:3 = fir.box_dims %[[ARG0]], %[[VAL_2]] : (!fir.class<!fir.array<?x?xnone>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_17:.*]] = fir.shape %[[VAL_15]]#1, %[[VAL_16]]#1 : (index, index) -> !fir.shape<2>
@@ -1004,7 +1004,7 @@ func.func @_QPtest7(%arg0: !fir.class<!fir.array<?x?xnone>> {fir.bindc_name = "x
 // CHECK:             %[[VAL_39:.*]] = fir.convert %[[VAL_37]] : (!fir.heap<!fir.array<?x?xnone>>) -> index
 // CHECK:             %[[VAL_40:.*]] = fir.convert %[[VAL_38]] : (!fir.heap<!fir.array<?x?xnone>>) -> index
 // CHECK:             %[[VAL_41:.*]] = arith.cmpi ne, %[[VAL_39]], %[[VAL_40]] : index
-// CHECK:             fir.if %[[VAL_41]] {
+// CHECK:             fir.if %[[VAL_41]] weights([0, 1]) {
 // CHECK:               %[[VAL_42:.*]] = fir.address_of(@{{_QQcl.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 // CHECK:               %[[VAL_43:.*]] = fir.convert %[[ARG0]] : (!fir.class<!fir.array<?x?xnone>>) -> !fir.box<none>
 // CHECK:               %[[VAL_44:.*]] = fir.convert %[[VAL_8]] : (!fir.class<!fir.array<?x?xnone>>) -> !fir.box<none>
@@ -1041,7 +1041,7 @@ func.func @_QPtest7_stack(%arg0: !fir.class<!fir.array<?x?xnone>> {fir.bindc_nam
 // CHECK:             %[[VAL_11:.*]] = fir.box_addr %[[ARG0]] : (!fir.class<!fir.array<?x?xnone>>) -> !fir.ref<!fir.class<!fir.array<?x?xnone>>>
 // CHECK:             %[[VAL_12:.*]] = fir.is_present %[[VAL_11]] : (!fir.ref<!fir.class<!fir.array<?x?xnone>>>) -> i1
 // CHECK:             %[[VAL_13:.*]] = arith.andi %[[VAL_10]], %[[VAL_12]] : i1
-// CHECK:             %[[VAL_14:.*]] = fir.if %[[VAL_13]] -> (!fir.class<!fir.array<?x?xnone>>) {
+// CHECK:             %[[VAL_14:.*]] = fir.if %[[VAL_13]] weights([0, 1]) -> (!fir.class<!fir.array<?x?xnone>>) {
 // CHECK:               %[[VAL_15:.*]]:3 = fir.box_dims %[[ARG0]], %[[VAL_3]] : (!fir.class<!fir.array<?x?xnone>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_16:.*]]:3 = fir.box_dims %[[ARG0]], %[[VAL_2]] : (!fir.class<!fir.array<?x?xnone>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_17:.*]] = fir.shape %[[VAL_15]]#1, %[[VAL_16]]#1 : (index, index) -> !fir.shape<2>
@@ -1080,7 +1080,7 @@ func.func @_QPtest7_stack(%arg0: !fir.class<!fir.array<?x?xnone>> {fir.bindc_nam
 // CHECK:             %[[VAL_39:.*]] = fir.convert %[[VAL_37]] : (!fir.heap<!fir.array<?x?xnone>>) -> index
 // CHECK:             %[[VAL_40:.*]] = fir.convert %[[VAL_38]] : (!fir.heap<!fir.array<?x?xnone>>) -> index
 // CHECK:             %[[VAL_41:.*]] = arith.cmpi ne, %[[VAL_39]], %[[VAL_40]] : index
-// CHECK:             fir.if %[[VAL_41]] {
+// CHECK:             fir.if %[[VAL_41]] weights([0, 1]) {
 // CHECK:               %[[VAL_42:.*]] = fir.address_of(@{{_QQcl.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 // CHECK:               %[[VAL_43:.*]] = fir.convert %[[ARG0]] : (!fir.class<!fir.array<?x?xnone>>) -> !fir.box<none>
 // CHECK:               %[[VAL_44:.*]] = fir.convert %[[VAL_8]] : (!fir.class<!fir.array<?x?xnone>>) -> !fir.box<none>

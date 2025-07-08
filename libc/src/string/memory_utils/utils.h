@@ -101,7 +101,7 @@ LIBC_INLINE void memcpy_inline(void *__restrict dst,
 }
 
 using Ptr = cpp::byte *;        // Pointer to raw data.
-using CPtr = const cpp::byte *; // Const pointer to raw data.
+using CPtr = const cpp::byte *; // Pointer to const raw data.
 
 // This type makes sure that we don't accidentally promote an integral type to
 // another one. It is only constructible from the exact T type.

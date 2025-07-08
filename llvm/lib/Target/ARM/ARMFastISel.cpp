@@ -20,6 +20,7 @@
 #include "ARMISelLowering.h"
 #include "ARMMachineFunctionInfo.h"
 #include "ARMSubtarget.h"
+#include "ARMTargetMachine.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
 #include "Utils/ARMBaseInfo.h"
@@ -134,9 +135,9 @@ class ARMFastISel final : public FastISel {
   /// make the right decision when generating code for different targets.
   const ARMSubtarget *Subtarget;
   Module &M;
-  const TargetMachine &TM;
-  const TargetInstrInfo &TII;
-  const TargetLowering &TLI;
+  const ARMBaseInstrInfo &TII;
+  const ARMTargetLowering &TLI;
+  const ARMBaseTargetMachine &TM;
   ARMFunctionInfo *AFI;
 
   // Convenience variables to avoid some queries.
@@ -149,8 +150,8 @@ class ARMFastISel final : public FastISel {
         : FastISel(funcInfo, libInfo),
           Subtarget(&funcInfo.MF->getSubtarget<ARMSubtarget>()),
           M(const_cast<Module &>(*funcInfo.Fn->getParent())),
-          TM(funcInfo.MF->getTarget()), TII(*Subtarget->getInstrInfo()),
-          TLI(*Subtarget->getTargetLowering()) {
+          TII(*Subtarget->getInstrInfo()), TLI(*Subtarget->getTargetLowering()),
+          TM(TLI.getTM()) {
       AFI = funcInfo.MF->getInfo<ARMFunctionInfo>();
       isThumb2 = AFI->isThumbFunction();
       Context = &funcInfo.Fn->getContext();
@@ -1893,7 +1894,7 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
     report_fatal_error("Unsupported calling convention");
   case CallingConv::Fast:
     if (Subtarget->hasVFP2Base() && !isVarArg) {
-      if (!Subtarget->isAAPCS_ABI())
+      if (!TM.isAAPCS_ABI())
         return (Return ? RetFastCC_ARM_APCS : FastCC_ARM_APCS);
       // For AAPCS ABI targets, just use VFP variant of the calling convention.
       return (Return ? RetCC_ARM_AAPCS_VFP : CC_ARM_AAPCS_VFP);
@@ -1902,7 +1903,7 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::C:
   case CallingConv::CXX_FAST_TLS:
     // Use target triple & subtarget features to do actual dispatch.
-    if (Subtarget->isAAPCS_ABI()) {
+    if (TM.isAAPCS_ABI()) {
       if (Subtarget->hasFPRegs() &&
           TM.Options.FloatABIType == FloatABI::Hard && !isVarArg)
         return (Return ? RetCC_ARM_AAPCS_VFP: CC_ARM_AAPCS_VFP);

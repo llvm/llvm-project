@@ -256,20 +256,6 @@ analysis run method (``run`` for a ``Pass``, ``runOnFunction`` for a
     return false;
   }
 
-Required methods to override
-----------------------------
-
-You must override the ``getAdjustedAnalysisPointer`` method on all subclasses
-of ``AliasAnalysis``. An example implementation of this method would look like:
-
-.. code-block:: c++
-
-  void *getAdjustedAnalysisPointer(const void* ID) override {
-    if (ID == &AliasAnalysis::ID)
-      return (AliasAnalysis*)this;
-    return this;
-  }
-
 Interfaces which may be specified
 ---------------------------------
 
