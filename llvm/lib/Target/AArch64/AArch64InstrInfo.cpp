@@ -1029,6 +1029,13 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
   }
 }
 
+bool AArch64InstrInfo::shouldReMaterializeTrivialRegDef(
+    const MachineInstr *CopyMI, const Register &DestReg,
+    const Register &SrcReg) const {
+  return !Subtarget.canLowerToZeroCycleRegMove(CopyMI, DestReg, SrcReg) &&
+         !Subtarget.canLowerToZeroCycleRegZeroing(CopyMI, DestReg, SrcReg);
+}
+
 bool AArch64InstrInfo::isFalkorShiftExtFast(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
@@ -5025,6 +5032,9 @@ void AArch64InstrInfo::copyGPRRegTuple(MachineBasicBlock &MBB,
   }
 }
 
+/// NOTE: must maintain consistency with
+/// `AArch64Subtarget::canLowerToZeroCycleRegMove` and
+/// `AArch64Subtarget::canLowerToZeroCycleRegZeroing`.
 void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator I,
                                    const DebugLoc &DL, Register DestReg,

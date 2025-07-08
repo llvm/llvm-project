@@ -189,6 +189,10 @@ public:
 
   bool isAsCheapAsAMove(const MachineInstr &MI) const override;
 
+  bool shouldReMaterializeTrivialRegDef(const MachineInstr *CopyMI,
+                                        const Register &DestReg,
+                                        const Register &SrcReg) const override;
+
   bool isCoalescableExtInstr(const MachineInstr &MI, Register &SrcReg,
                              Register &DstReg, unsigned &SubIdx) const override;
 
