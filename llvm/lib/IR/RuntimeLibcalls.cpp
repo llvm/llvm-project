@@ -12,50 +12,15 @@
 using namespace llvm;
 using namespace RTLIB;
 
-#define GET_INIT_RUNTIME_LIBCALL_UTILS
 #define GET_INIT_RUNTIME_LIBCALL_NAMES
+#define GET_SET_TARGET_RUNTIME_LIBCALL_SETS
 #include "llvm/IR/RuntimeLibcalls.inc"
-#undef GET_INIT_RUNTIME_LIBCALL_UTILS
 #undef GET_INIT_RUNTIME_LIBCALL_NAMES
+#undef GET_SET_TARGET_RUNTIME_LIBCALL_SETS
 
 static cl::opt<bool>
     HexagonEnableFastMathRuntimeCalls("hexagon-fast-math", cl::Hidden,
                                       cl::desc("Enable Fast Math processing"));
-
-static void setAArch64LibcallNames(RuntimeLibcallsInfo &Info,
-                                   const Triple &TT) {
-#define LCALLNAMES(A, B, N)                                                    \
-  Info.setLibcallImpl(A##N##_RELAX, B##N##_relax);                             \
-  Info.setLibcallImpl(A##N##_ACQ, B##N##_acq);                                 \
-  Info.setLibcallImpl(A##N##_REL, B##N##_rel);                                 \
-  Info.setLibcallImpl(A##N##_ACQ_REL, B##N##_acq_rel);
-#define LCALLNAME4(A, B)                                                       \
-  LCALLNAMES(A, B, 1)                                                          \
-  LCALLNAMES(A, B, 2) LCALLNAMES(A, B, 4) LCALLNAMES(A, B, 8)
-#define LCALLNAME5(A, B)                                                       \
-  LCALLNAMES(A, B, 1)                                                          \
-  LCALLNAMES(A, B, 2)                                                          \
-  LCALLNAMES(A, B, 4) LCALLNAMES(A, B, 8) LCALLNAMES(A, B, 16)
-
-  if (TT.isWindowsArm64EC()) {
-    LCALLNAME5(RTLIB::OUTLINE_ATOMIC_CAS, RTLIB::arm64ec___aarch64_cas)
-    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_SWP, RTLIB::arm64ec___aarch64_swp)
-    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDADD, RTLIB::arm64ec___aarch64_ldadd)
-    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDSET, RTLIB::arm64ec___aarch64_ldset)
-    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDCLR, RTLIB::arm64ec___aarch64_ldclr)
-    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDEOR, RTLIB::arm64ec___aarch64_ldeor)
-  } else {
-    LCALLNAME5(RTLIB::OUTLINE_ATOMIC_CAS, RTLIB::__aarch64_cas)
-    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_SWP, RTLIB::__aarch64_swp)
-    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDADD, RTLIB::__aarch64_ldadd)
-    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDSET, RTLIB::__aarch64_ldset)
-    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDCLR, RTLIB::__aarch64_ldclr)
-    LCALLNAME4(RTLIB::OUTLINE_ATOMIC_LDEOR, RTLIB::__aarch64_ldeor)
-  }
-#undef LCALLNAMES
-#undef LCALLNAME4
-#undef LCALLNAME5
-}
 
 static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
                                FloatABI::ABIType FloatABIType,
@@ -64,8 +29,8 @@ static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
     CallingConv::ID DefaultCC = FloatABIType == FloatABI::Hard
                                     ? CallingConv::ARM_AAPCS_VFP
                                     : CallingConv::ARM_AAPCS;
-    for (RTLIB::Libcall LC : RTLIB::libcalls())
-      Info.setLibcallCallingConv(LC, DefaultCC);
+    for (RTLIB::LibcallImpl LC : RTLIB::libcall_impls())
+      Info.setLibcallImplCallingConv(LC, DefaultCC);
   }
 
   // Register based DivRem for AEABI (RTABI 4.2)
@@ -85,7 +50,7 @@ static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
 
       for (const auto &LC : LibraryCalls) {
         Info.setLibcallImpl(LC.Op, LC.Impl);
-        Info.setLibcallCallingConv(LC.Op, LC.CC);
+        Info.setLibcallImplCallingConv(LC.Impl, LC.CC);
       }
     } else {
       const struct {
@@ -101,7 +66,7 @@ static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
 
       for (const auto &LC : LibraryCalls) {
         Info.setLibcallImpl(LC.Op, LC.Impl);
-        Info.setLibcallCallingConv(LC.Op, LC.CC);
+        Info.setLibcallImplCallingConv(LC.Impl, LC.CC);
       }
     }
   }
@@ -124,7 +89,7 @@ static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
 
     for (const auto &LC : LibraryCalls) {
       Info.setLibcallImpl(LC.Op, LC.Impl);
-      Info.setLibcallCallingConv(LC.Op, LC.CC);
+      Info.setLibcallImplCallingConv(LC.Impl, LC.CC);
     }
   }
 
@@ -234,20 +199,34 @@ static void setMSP430Libcalls(RuntimeLibcallsInfo &Info, const Triple &TT) {
     Info.setLibcallImpl(LC.Op, LC.Impl);
 
   // Several of the runtime library functions use a special calling conv
-  Info.setLibcallCallingConv(RTLIB::UDIV_I64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::UREM_I64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::SDIV_I64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::SREM_I64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::ADD_F64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::SUB_F64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::MUL_F64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::DIV_F64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::OEQ_F64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::UNE_F64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::OGE_F64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::OLT_F64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::OLE_F64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::OGT_F64, CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_divull,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_remull,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_divlli,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_remlli,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_addd,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_subd,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_mpyd,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_divd,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_cmpd__oeq,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_cmpd__une,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_cmpd__oge,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_cmpd__olt,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_cmpd__ole,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_cmpd__ogt,
+                                 CallingConv::MSP430_BUILTIN);
 
   // TODO: __mspabi_srall, __mspabi_srlll, __mspabi_sllll
 }
@@ -358,6 +337,8 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
                                        ExceptionHandling ExceptionModel,
                                        FloatABI::ABIType FloatABI,
                                        EABI EABIVersion, StringRef ABIName) {
+  setTargetRuntimeLibcallSets(TT);
+
   // Use the f128 variants of math functions on x86
   if (TT.isX86() && TT.isGNUEnvironment())
     setLongDoubleIsF128Libm(*this, /*FiniteOnlyFuncs=*/true);
@@ -365,28 +346,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
   if (TT.isX86() || TT.isVE()) {
     if (ExceptionModel == ExceptionHandling::SjLj)
       setLibcallImpl(RTLIB::UNWIND_RESUME, RTLIB::_Unwind_SjLj_Resume);
-  }
-
-  if (TT.isPPC()) {
-    setPPCLibCallNameOverrides();
-
-    // TODO: Do the finite only functions exist?
-    setLongDoubleIsF128Libm(*this, /*FiniteOnlyFuncs=*/false);
-
-    // TODO: Tablegen predicate support
-    if (TT.isOSAIX()) {
-      if (TT.isPPC64()) {
-        setLibcallImpl(RTLIB::MEMCPY, RTLIB::Unsupported);
-        setLibcallImpl(RTLIB::MEMMOVE, RTLIB::___memmove64);
-        setLibcallImpl(RTLIB::MEMSET, RTLIB::___memset64);
-        setLibcallImpl(RTLIB::BZERO, RTLIB::___bzero64);
-      } else {
-        setLibcallImpl(RTLIB::MEMCPY, RTLIB::Unsupported);
-        setLibcallImpl(RTLIB::MEMMOVE, RTLIB::___memmove);
-        setLibcallImpl(RTLIB::MEMSET, RTLIB::___memset);
-        setLibcallImpl(RTLIB::BZERO, RTLIB::___bzero);
-      }
-    }
   }
 
   // A few names are different on particular architectures or environments.
@@ -401,17 +360,16 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
     if (TT.isX86()) {
       if (TT.isMacOSX() && !TT.isMacOSXVersionLT(10, 6))
         setLibcallImpl(RTLIB::BZERO, RTLIB::__bzero);
-    } else if (TT.isAArch64())
-      setLibcallImpl(RTLIB::BZERO, RTLIB::bzero);
+    }
 
     if (darwinHasSinCosStret(TT)) {
       setLibcallImpl(RTLIB::SINCOS_STRET_F32, RTLIB::__sincosf_stret);
       setLibcallImpl(RTLIB::SINCOS_STRET_F64, RTLIB::__sincos_stret);
       if (TT.isWatchABI()) {
-        setLibcallCallingConv(RTLIB::SINCOS_STRET_F32,
-                              CallingConv::ARM_AAPCS_VFP);
-        setLibcallCallingConv(RTLIB::SINCOS_STRET_F64,
-                              CallingConv::ARM_AAPCS_VFP);
+        setLibcallImplCallingConv(RTLIB::__sincosf_stret,
+                                  CallingConv::ARM_AAPCS_VFP);
+        setLibcallImplCallingConv(RTLIB::__sincos_stret,
+                                  CallingConv::ARM_AAPCS_VFP);
       }
     }
 
@@ -453,14 +411,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
     setLibcallImpl(RTLIB::FREXP_PPCF128, RTLIB::Unsupported);
   }
 
-  // Disable most libcalls on AMDGPU and NVPTX.
-  if (TT.isAMDGPU() || TT.isNVPTX()) {
-    for (RTLIB::Libcall LC : RTLIB::libcalls()) {
-      if (!isAtomicLibCall(LC))
-        setLibcallImpl(LC, RTLIB::Unsupported);
-    }
-  }
-
   if (TT.isOSMSVCRT()) {
     // MSVCRT doesn't have powi; fall back to pow
     setLibcallImpl(RTLIB::POWI_F32, RTLIB::Unsupported);
@@ -484,59 +434,18 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
 
     for (const auto &LC : LibraryCalls) {
       setLibcallImpl(LC.Op, LC.Impl);
-      setLibcallCallingConv(LC.Op, LC.CC);
+      setLibcallImplCallingConv(LC.Impl, LC.CC);
     }
   }
 
-  if (TT.isAArch64()) {
-    if (TT.isWindowsArm64EC()) {
-      setWindowsArm64LibCallNameOverrides();
-      setLibcallImpl(RTLIB::SC_MEMCPY, RTLIB::arm64ec___arm_sc_memcpy);
-      setLibcallImpl(RTLIB::SC_MEMMOVE, RTLIB::arm64ec___arm_sc_memmove);
-      setLibcallImpl(RTLIB::SC_MEMSET, RTLIB::arm64ec___arm_sc_memset);
-    } else {
-      setLibcallImpl(RTLIB::SC_MEMCPY, RTLIB::__arm_sc_memcpy);
-      setLibcallImpl(RTLIB::SC_MEMMOVE, RTLIB::__arm_sc_memmove);
-      setLibcallImpl(RTLIB::SC_MEMSET, RTLIB::__arm_sc_memset);
-    }
-
-    setAArch64LibcallNames(*this, TT);
-  } else if (TT.isARM() || TT.isThumb()) {
+  if (TT.isARM() || TT.isThumb())
     setARMLibcallNames(*this, TT, FloatABI, EABIVersion);
-  } else if (TT.getArch() == Triple::ArchType::avr) {
-    // Division rtlib functions (not supported), use divmod functions instead
-    setLibcallImpl(RTLIB::SDIV_I8, RTLIB::Unsupported);
-    setLibcallImpl(RTLIB::SDIV_I16, RTLIB::Unsupported);
-    setLibcallImpl(RTLIB::SDIV_I32, RTLIB::Unsupported);
-    setLibcallImpl(RTLIB::UDIV_I8, RTLIB::Unsupported);
-    setLibcallImpl(RTLIB::UDIV_I16, RTLIB::Unsupported);
-    setLibcallImpl(RTLIB::UDIV_I32, RTLIB::Unsupported);
-
-    // Modulus rtlib functions (not supported), use divmod functions instead
-    setLibcallImpl(RTLIB::SREM_I8, RTLIB::Unsupported);
-    setLibcallImpl(RTLIB::SREM_I16, RTLIB::Unsupported);
-    setLibcallImpl(RTLIB::SREM_I32, RTLIB::Unsupported);
-    setLibcallImpl(RTLIB::UREM_I8, RTLIB::Unsupported);
-    setLibcallImpl(RTLIB::UREM_I16, RTLIB::Unsupported);
-    setLibcallImpl(RTLIB::UREM_I32, RTLIB::Unsupported);
-
-    // Division and modulus rtlib functions
-    setLibcallImpl(RTLIB::SDIVREM_I8, RTLIB::__divmodqi4);
-    setLibcallImpl(RTLIB::SDIVREM_I16, RTLIB::__divmodhi4);
-    setLibcallImpl(RTLIB::SDIVREM_I32, RTLIB::__divmodsi4);
-    setLibcallImpl(RTLIB::UDIVREM_I8, RTLIB::__udivmodqi4);
-    setLibcallImpl(RTLIB::UDIVREM_I16, RTLIB::__udivmodhi4);
-    setLibcallImpl(RTLIB::UDIVREM_I32, RTLIB::__udivmodsi4);
-
+  else if (TT.getArch() == Triple::ArchType::avr) {
     // Several of the runtime library functions use a special calling conv
-    setLibcallCallingConv(RTLIB::SDIVREM_I8, CallingConv::AVR_BUILTIN);
-    setLibcallCallingConv(RTLIB::SDIVREM_I16, CallingConv::AVR_BUILTIN);
-    setLibcallCallingConv(RTLIB::UDIVREM_I8, CallingConv::AVR_BUILTIN);
-    setLibcallCallingConv(RTLIB::UDIVREM_I16, CallingConv::AVR_BUILTIN);
-
-    // Trigonometric rtlib functions
-    setLibcallImpl(RTLIB::SIN_F32, RTLIB::avr_sin);
-    setLibcallImpl(RTLIB::COS_F32, RTLIB::avr_cos);
+    setLibcallImplCallingConv(RTLIB::__divmodqi4, CallingConv::AVR_BUILTIN);
+    setLibcallImplCallingConv(RTLIB::__divmodhi4, CallingConv::AVR_BUILTIN);
+    setLibcallImplCallingConv(RTLIB::__udivmodqi4, CallingConv::AVR_BUILTIN);
+    setLibcallImplCallingConv(RTLIB::__udivmodhi4, CallingConv::AVR_BUILTIN);
   }
 
   if (!TT.isWasm()) {
@@ -550,11 +459,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
     }
 
     setLibcallImpl(RTLIB::MULO_I128, RTLIB::Unsupported);
-  } else {
-    // Define the emscripten name for return address helper.
-    // TODO: when implementing other Wasm backends, make this generic or only do
-    // this on emscripten depending on what they end up doing.
-    setLibcallImpl(RTLIB::RETURN_ADDRESS, RTLIB::emscripten_return_address);
   }
 
   if (TT.getArch() == Triple::ArchType::hexagon) {
@@ -601,17 +505,9 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
 
   if (TT.getArch() == Triple::ArchType::msp430)
     setMSP430Libcalls(*this, TT);
-
-  if (TT.isSystemZ() && TT.isOSzOS())
-    setZOSLibCallNameOverrides();
-
-  if (TT.getArch() == Triple::ArchType::xcore)
-    setLibcallImpl(RTLIB::MEMCPY_ALIGN_4, RTLIB::__memcpy_4);
 }
 
 bool RuntimeLibcallsInfo::darwinHasExp10(const Triple &TT) {
-  assert(TT.isOSDarwin() && "should be called with darwin triple");
-
   switch (TT.getOS()) {
   case Triple::MacOSX:
     return !TT.isMacOSXVersionLT(10, 9);
