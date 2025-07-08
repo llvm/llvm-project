@@ -1555,10 +1555,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (!SrcLT.first.isValid() || !DstLT.first.isValid())
       return InstructionCost::getInvalid();
 
-    IntrinsicCostAttributes Attrs1(Intrinsic::minnum, SrcTy, {SrcTy, SrcTy});
-    Cost += getIntrinsicInstrCost(Attrs1, CostKind);
-    IntrinsicCostAttributes Attrs2(Intrinsic::maxnum, SrcTy, {SrcTy, SrcTy});
-    Cost += getIntrinsicInstrCost(Attrs2, CostKind);
     Cost +=
         getCastInstrCost(IsSigned ? Instruction::FPToSI : Instruction::FPToUI,
                          RetTy, SrcTy, TTI::CastContextHint::None, CostKind);
