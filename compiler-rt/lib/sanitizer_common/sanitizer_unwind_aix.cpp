@@ -25,7 +25,8 @@ struct UnwindTraceArg {
   u32 max_depth;
 };
 
-static _Unwind_Reason_Code Unwind_Trace(struct _Unwind_Context *ctx, void *param) {
+static _Unwind_Reason_Code Unwind_Trace(struct _Unwind_Context *ctx,
+                                        void *param) {
   UnwindTraceArg *arg = (UnwindTraceArg *)param;
   CHECK_LT(arg->stack->size, arg->max_depth);
   uptr pc = _Unwind_GetIP(ctx);
