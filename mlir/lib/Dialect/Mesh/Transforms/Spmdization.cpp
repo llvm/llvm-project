@@ -453,8 +453,8 @@ tryUpdateHaloInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
   auto srcHaloSizes = sourceSharding.getStaticHaloSizes();
   auto tgtHaloSizes = targetSharding.getStaticHaloSizes();
   assert(srcHaloSizes.empty() || srcHaloSizes.size() == tgtHaloSizes.size());
-  assert(((srcHaloSizes.empty() || !ShapedType::isDynamicShape(srcHaloSizes)) &&
-          !ShapedType::isDynamicShape(tgtHaloSizes) &&
+  assert(((srcHaloSizes.empty() || ShapedType::isStaticShape(srcHaloSizes)) &&
+          ShapedType::isStaticShape(tgtHaloSizes) &&
           sourceShard.getType().hasStaticShape()) &&
          "dynamic shapes/halos are not supported yet for mesh-spmdization");
   auto rank = sourceShard.getType().getRank();

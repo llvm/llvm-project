@@ -162,6 +162,7 @@
 // CHECK-NEXT:     xandesvbfhcvt        5.0       'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension)
 // CHECK-NEXT:     xandesvdot           5.0       'XAndesVDot' (Andes Vector Dot Product Extension)
 // CHECK-NEXT:     xandesvpackfph       5.0       'XAndesVPackFPH' (Andes Vector Packed FP16 Extension)
+// CHECK-NEXT:     xandesvsintload      5.0       'XAndesVSIntLoad' (Andes Vector INT4 Load Extension)
 // CHECK-NEXT:     xcvalu               1.0       'XCValu' (CORE-V ALU Operations)
 // CHECK-NEXT:     xcvbi                1.0       'XCVbi' (CORE-V Immediate Branching)
 // CHECK-NEXT:     xcvbitmanip          1.0       'XCVbitmanip' (CORE-V Bit Manipulation)

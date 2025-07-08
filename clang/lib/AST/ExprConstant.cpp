@@ -202,7 +202,9 @@ namespace {
     assert(!isBaseAnAllocSizeCall(Base) &&
            "Unsized arrays shouldn't appear here");
     unsigned MostDerivedLength = 0;
-    Type = getType(Base);
+    // The type of Base is a reference type if the base is a constexpr-unknown
+    // variable. In that case, look through the reference type.
+    Type = getType(Base).getNonReferenceType();
 
     for (unsigned I = 0, N = Path.size(); I != N; ++I) {
       if (Type->isArrayType()) {
@@ -289,7 +291,7 @@ namespace {
         : Invalid(false), IsOnePastTheEnd(false),
           FirstEntryIsAnUnsizedArray(false), MostDerivedIsArrayElement(false),
           MostDerivedPathLength(0), MostDerivedArraySize(0),
-          MostDerivedType(T) {}
+          MostDerivedType(T.isNull() ? QualType() : T.getNonReferenceType()) {}
 
     SubobjectDesignator(ASTContext &Ctx, const APValue &V)
         : Invalid(!V.isLValue() || !V.hasLValuePath()), IsOnePastTheEnd(false),
@@ -571,7 +573,6 @@ namespace {
     typedef std::map<MapKeyTy, APValue> MapTy;
     /// Temporaries - Temporary lvalues materialized within this stack frame.
     MapTy Temporaries;
-    MapTy ConstexprUnknownAPValues;
 
     /// CallRange - The source range of the call expression for this call.
     SourceRange CallRange;
@@ -645,9 +646,6 @@ namespace {
     template<typename KeyT>
     APValue &createTemporary(const KeyT *Key, QualType T,
                              ScopeKind Scope, LValue &LV);
-
-    APValue &createConstexprUnknownAPValues(const VarDecl *Key,
-                                            APValue::LValueBase Base);
 
     /// Allocate storage for a parameter of a function call made in this frame.
     APValue &createParam(CallRef Args, const ParmVarDecl *PVD, LValue &LV);
@@ -1756,7 +1754,8 @@ namespace {
         return;
       }
       if (checkSubobject(Info, E, CSK_ArrayToPointer)) {
-        assert(getType(Base)->isPointerType() || getType(Base)->isArrayType());
+        assert(getType(Base).getNonReferenceType()->isPointerType() ||
+               getType(Base).getNonReferenceType()->isArrayType());
         Designator.FirstEntryIsAnUnsizedArray = true;
         Designator.addUnsizedArrayUnchecked(ElemTy);
       }
@@ -1953,15 +1952,6 @@ APValue &CallStackFrame::createTemporary(const KeyT *Key, QualType T,
   APValue::LValueBase Base(Key, Index, Version);
   LV.set(Base);
   return createLocal(Base, Key, T, Scope);
-}
-
-APValue &
-CallStackFrame::createConstexprUnknownAPValues(const VarDecl *Key,
-                                               APValue::LValueBase Base) {
-  APValue &Result = ConstexprUnknownAPValues[MapKeyTy(Key, Base.getVersion())];
-  Result = APValue(Base, CharUnits::Zero(), APValue::ConstexprUnknown{});
-
-  return Result;
 }
 
 /// Allocate storage for a parameter of a function call made in this frame.
@@ -3493,7 +3483,7 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   APValue::LValueBase Base(VD, Frame ? Frame->Index : 0, Version);
 
   auto CheckUninitReference = [&](bool IsLocalVariable) {
-    if (!Result->hasValue() && VD->getType()->isReferenceType()) {
+    if (!Result || (!Result->hasValue() && VD->getType()->isReferenceType())) {
       // C++23 [expr.const]p8
       // ... For such an object that is not usable in constant expressions, the
       // dynamic type of the object is constexpr-unknown. For such a reference
@@ -3509,7 +3499,7 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
           Info.FFDiag(E, diag::note_constexpr_use_uninit_reference);
         return false;
       }
-      Result = &Info.CurrentCall->createConstexprUnknownAPValues(VD, Base);
+      Result = nullptr;
     }
     return true;
   };
@@ -3552,7 +3542,7 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   // ... its lifetime began within the evaluation of E;
   if (isa<ParmVarDecl>(VD)) {
     if (AllowConstexprUnknown) {
-      Result = &Info.CurrentCall->createConstexprUnknownAPValues(VD, Base);
+      Result = nullptr;
       return true;
     }
 
@@ -3659,12 +3649,8 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
 
   Result = VD->getEvaluatedValue();
 
-  if (!Result) {
-    if (AllowConstexprUnknown)
-      Result = &Info.CurrentCall->createConstexprUnknownAPValues(VD, Base);
-    else
-      return false;
-  }
+  if (!Result && !AllowConstexprUnknown)
+    return false;
 
   return CheckUninitReference(/*IsLocalVariable=*/false);
 }
@@ -3946,11 +3932,6 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
   QualType ObjType = Obj.Type;
   const FieldDecl *LastField = nullptr;
   const FieldDecl *VolatileField = nullptr;
-
-  // C++23 [expr.const]p8 If we have an unknown reference or pointers and it
-  // does not have a value then bail out.
-  if (O->allowConstexprUnknown() && !O->hasValue())
-    return false;
 
   // Walk the designator's path to find the subobject.
   for (unsigned I = 0, N = Sub.Entries.size(); /**/; ++I) {
@@ -4491,6 +4472,15 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
 
     if (!evaluateVarDeclInit(Info, E, VD, Frame, LVal.getLValueVersion(), BaseVal))
       return CompleteObject();
+    // If evaluateVarDeclInit sees a constexpr-unknown variable, it returns
+    // a null BaseVal. Any constexpr-unknown variable seen here is an error:
+    // we can't access a constexpr-unknown object.
+    if (!BaseVal) {
+      Info.FFDiag(E, diag::note_constexpr_access_unknown_variable, 1)
+          << AK << VD;
+      Info.Note(VD->getLocation(), diag::note_declared_at);
+      return CompleteObject();
+    }
   } else if (DynamicAllocLValue DA = LVal.Base.dyn_cast<DynamicAllocLValue>()) {
     std::optional<DynAlloc *> Alloc = Info.lookupDynamicAlloc(DA);
     if (!Alloc) {
@@ -6057,15 +6047,6 @@ struct CheckDynamicTypeHandler {
 /// dynamic type.
 static bool checkDynamicType(EvalInfo &Info, const Expr *E, const LValue &This,
                              AccessKinds AK, bool Polymorphic) {
-  // We are not allowed to invoke a virtual function whose dynamic type
-  // is constexpr-unknown, so stop early and let this fail later on if we
-  // attempt to do so.
-  // C++23 [expr.const]p5.6
-  // an invocation of a virtual function ([class.virtual]) for an object whose
-  // dynamic type is constexpr-unknown;
-  if (This.allowConstexprUnknown())
-    return true;
-
   if (This.Designator.Invalid)
     return false;
 
@@ -6139,9 +6120,7 @@ static std::optional<DynamicType> ComputeDynamicType(EvalInfo &Info,
   // meaningful dynamic type. (We consider objects of non-class type to have no
   // dynamic type.)
   if (!checkDynamicType(Info, E, This, AK,
-                        (AK == AK_TypeId
-                             ? (E->getType()->isReferenceType() ? true : false)
-                             : true)))
+                        AK != AK_TypeId || This.AllowConstexprUnknown))
     return std::nullopt;
 
   if (This.Designator.Invalid)
@@ -9062,6 +9041,12 @@ bool LValueExprEvaluator::VisitVarDecl(const Expr *E, const VarDecl *VD) {
   APValue *V;
   if (!evaluateVarDeclInit(Info, E, VD, Frame, Version, V))
     return false;
+
+  if (!V) {
+    Result.set(VD);
+    Result.AllowConstexprUnknown = true;
+    return true;
+  }
 
   return Success(*V, E);
 }
