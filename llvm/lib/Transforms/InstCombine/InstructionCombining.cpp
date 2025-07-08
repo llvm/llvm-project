@@ -3145,7 +3145,8 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     return &GEP;
 
   // Canonicalize constant GEPs to i8 type.
-  if (!GEPEltType->isIntegerTy(8) && GEP.hasAllConstantIndices()) {
+  bool isSPIRV = GEP.getModule()->getTargetTriple().isSPIRV();
+  if (!isSPIRV && !GEPEltType->isIntegerTy(8) && GEP.hasAllConstantIndices()) {
     APInt Offset(DL.getIndexTypeSizeInBits(GEPType), 0);
     if (GEP.accumulateConstantOffset(DL, Offset))
       return replaceInstUsesWith(
@@ -3153,7 +3154,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                     GEP.getNoWrapFlags()));
   }
 
-  if (shouldCanonicalizeGEPToPtrAdd(GEP)) {
+  if (!isSPIRV && shouldCanonicalizeGEPToPtrAdd(GEP)) {
     Value *Offset = EmitGEPOffset(cast<GEPOperator>(&GEP));
     Value *NewGEP =
         Builder.CreatePtrAdd(PtrOp, Offset, "", GEP.getNoWrapFlags());
