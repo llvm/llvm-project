@@ -24,11 +24,7 @@ define void @test_simple(i1 %cond, ptr %storage1, ptr %storage2, i64 %a, i64 %b)
 ; GVN-NEXT:  [[ENTRY:.*:]]
 ; GVN-NEXT:    [[STORAGE1_I:%.*]] = ptrtoint ptr [[STORAGE1]] to i64
 ; GVN-NEXT:    [[STORAGE2_I:%.*]] = ptrtoint ptr [[STORAGE2]] to i64
-; GVN-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[ENTRY_EXIT_CRIT_EDGE:.*]]
-; GVN:       [[ENTRY_EXIT_CRIT_EDGE]]:
-; GVN-NEXT:    [[DOTPRE:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[STORAGE1_I]], i64 42)
-; GVN-NEXT:    [[DOTPRE1:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[STORAGE2_I]], i64 42)
-; GVN-NEXT:    br label %[[EXIT:.*]]
+; GVN-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[EXIT:.*]]
 ; GVN:       [[IF_THEN]]:
 ; GVN-NEXT:    [[DISCR1_THEN:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[STORAGE1_I]], i64 42)
 ; GVN-NEXT:    [[DISCR2_THEN:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[STORAGE2_I]], i64 42)
@@ -38,10 +34,10 @@ define void @test_simple(i1 %cond, ptr %storage1, ptr %storage2, i64 %a, i64 %b)
 ; GVN-NEXT:    store volatile i64 [[T2]], ptr [[STORAGE2]], align 8
 ; GVN-NEXT:    br label %[[EXIT]]
 ; GVN:       [[EXIT]]:
-; GVN-NEXT:    [[DISCR2_EXIT_PRE_PHI:%.*]] = phi i64 [ [[DOTPRE1]], %[[ENTRY_EXIT_CRIT_EDGE]] ], [ [[DISCR2_THEN]], %[[IF_THEN]] ]
-; GVN-NEXT:    [[DISCR1_EXIT_PRE_PHI:%.*]] = phi i64 [ [[DOTPRE]], %[[ENTRY_EXIT_CRIT_EDGE]] ], [ [[DISCR1_THEN]], %[[IF_THEN]] ]
-; GVN-NEXT:    [[T3:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[B]], i32 2, i64 [[DISCR1_EXIT_PRE_PHI]])
-; GVN-NEXT:    [[T4:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[B]], i32 2, i64 [[DISCR2_EXIT_PRE_PHI]])
+; GVN-NEXT:    [[DISCR1_EXIT:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[STORAGE1_I]], i64 42)
+; GVN-NEXT:    [[DISCR2_EXIT:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[STORAGE2_I]], i64 42)
+; GVN-NEXT:    [[T3:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[B]], i32 2, i64 [[DISCR1_EXIT]])
+; GVN-NEXT:    [[T4:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[B]], i32 2, i64 [[DISCR2_EXIT]])
 ; GVN-NEXT:    store volatile i64 [[T3]], ptr [[STORAGE1]], align 8
 ; GVN-NEXT:    store volatile i64 [[T4]], ptr [[STORAGE2]], align 8
 ; GVN-NEXT:    ret void
@@ -51,18 +47,20 @@ define void @test_simple(i1 %cond, ptr %storage1, ptr %storage2, i64 %a, i64 %b)
 ; GVN-SCFG-NEXT:  [[ENTRY:.*:]]
 ; GVN-SCFG-NEXT:    [[STORAGE1_I:%.*]] = ptrtoint ptr [[STORAGE1]] to i64
 ; GVN-SCFG-NEXT:    [[STORAGE2_I:%.*]] = ptrtoint ptr [[STORAGE2]] to i64
-; GVN-SCFG-NEXT:    [[DISCR1_THEN:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[STORAGE1_I]], i64 42)
-; GVN-SCFG-NEXT:    [[DISCR2_THEN:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[STORAGE2_I]], i64 42)
 ; GVN-SCFG-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[EXIT:.*]]
 ; GVN-SCFG:       [[IF_THEN]]:
+; GVN-SCFG-NEXT:    [[DISCR1_THEN:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[STORAGE1_I]], i64 42)
+; GVN-SCFG-NEXT:    [[DISCR2_THEN:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[STORAGE2_I]], i64 42)
 ; GVN-SCFG-NEXT:    [[T1:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[A]], i32 2, i64 [[DISCR1_THEN]])
 ; GVN-SCFG-NEXT:    [[T2:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[A]], i32 2, i64 [[DISCR2_THEN]])
 ; GVN-SCFG-NEXT:    store volatile i64 [[T1]], ptr [[STORAGE1]], align 8
 ; GVN-SCFG-NEXT:    store volatile i64 [[T2]], ptr [[STORAGE2]], align 8
 ; GVN-SCFG-NEXT:    br label %[[EXIT]]
 ; GVN-SCFG:       [[EXIT]]:
-; GVN-SCFG-NEXT:    [[T3:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[B]], i32 2, i64 [[DISCR1_THEN]])
-; GVN-SCFG-NEXT:    [[T4:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[B]], i32 2, i64 [[DISCR2_THEN]])
+; GVN-SCFG-NEXT:    [[DISCR1_EXIT:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[STORAGE1_I]], i64 42)
+; GVN-SCFG-NEXT:    [[DISCR2_EXIT:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[STORAGE2_I]], i64 42)
+; GVN-SCFG-NEXT:    [[T3:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[B]], i32 2, i64 [[DISCR1_EXIT]])
+; GVN-SCFG-NEXT:    [[T4:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[B]], i32 2, i64 [[DISCR2_EXIT]])
 ; GVN-SCFG-NEXT:    store volatile i64 [[T3]], ptr [[STORAGE1]], align 8
 ; GVN-SCFG-NEXT:    store volatile i64 [[T4]], ptr [[STORAGE2]], align 8
 ; GVN-SCFG-NEXT:    ret void
@@ -100,11 +98,7 @@ define void @test_interleaved(i1 %cond, ptr %storage1, ptr %storage2, i64 %a, i6
 ; GVN-NEXT:  [[ENTRY:.*:]]
 ; GVN-NEXT:    [[STORAGE1_I:%.*]] = ptrtoint ptr [[STORAGE1]] to i64
 ; GVN-NEXT:    [[STORAGE2_I:%.*]] = ptrtoint ptr [[STORAGE2]] to i64
-; GVN-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[ENTRY_EXIT_CRIT_EDGE:.*]]
-; GVN:       [[ENTRY_EXIT_CRIT_EDGE]]:
-; GVN-NEXT:    [[DOTPRE:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[STORAGE1_I]], i64 42)
-; GVN-NEXT:    [[DOTPRE1:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[STORAGE2_I]], i64 42)
-; GVN-NEXT:    br label %[[EXIT:.*]]
+; GVN-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[EXIT:.*]]
 ; GVN:       [[IF_THEN]]:
 ; GVN-NEXT:    [[DISCR1_THEN:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[STORAGE1_I]], i64 42)
 ; GVN-NEXT:    [[T1:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[A]], i32 2, i64 [[DISCR1_THEN]])
@@ -114,10 +108,10 @@ define void @test_interleaved(i1 %cond, ptr %storage1, ptr %storage2, i64 %a, i6
 ; GVN-NEXT:    store volatile i64 [[T2]], ptr [[STORAGE2]], align 8
 ; GVN-NEXT:    br label %[[EXIT]]
 ; GVN:       [[EXIT]]:
-; GVN-NEXT:    [[DISCR2_EXIT_PRE_PHI:%.*]] = phi i64 [ [[DOTPRE1]], %[[ENTRY_EXIT_CRIT_EDGE]] ], [ [[DISCR2_THEN]], %[[IF_THEN]] ]
-; GVN-NEXT:    [[DISCR1_EXIT_PRE_PHI:%.*]] = phi i64 [ [[DOTPRE]], %[[ENTRY_EXIT_CRIT_EDGE]] ], [ [[DISCR1_THEN]], %[[IF_THEN]] ]
-; GVN-NEXT:    [[T3:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[B]], i32 2, i64 [[DISCR1_EXIT_PRE_PHI]])
-; GVN-NEXT:    [[T4:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[B]], i32 2, i64 [[DISCR2_EXIT_PRE_PHI]])
+; GVN-NEXT:    [[DISCR1_EXIT:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[STORAGE1_I]], i64 42)
+; GVN-NEXT:    [[T3:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[B]], i32 2, i64 [[DISCR1_EXIT]])
+; GVN-NEXT:    [[DISCR2_EXIT:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[STORAGE2_I]], i64 42)
+; GVN-NEXT:    [[T4:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[B]], i32 2, i64 [[DISCR2_EXIT]])
 ; GVN-NEXT:    store volatile i64 [[T3]], ptr [[STORAGE1]], align 8
 ; GVN-NEXT:    store volatile i64 [[T4]], ptr [[STORAGE2]], align 8
 ; GVN-NEXT:    ret void
@@ -127,12 +121,9 @@ define void @test_interleaved(i1 %cond, ptr %storage1, ptr %storage2, i64 %a, i6
 ; GVN-SCFG-NEXT:  [[ENTRY:.*:]]
 ; GVN-SCFG-NEXT:    [[STORAGE1_I:%.*]] = ptrtoint ptr [[STORAGE1]] to i64
 ; GVN-SCFG-NEXT:    [[STORAGE2_I:%.*]] = ptrtoint ptr [[STORAGE2]] to i64
-; GVN-SCFG-NEXT:    [[DISCR1_THEN:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[STORAGE1_I]], i64 42)
-; GVN-SCFG-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[ENTRY_EXIT_CRIT_EDGE:.*]]
-; GVN-SCFG:       [[ENTRY_EXIT_CRIT_EDGE]]:
-; GVN-SCFG-NEXT:    [[DOTPRE1:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[STORAGE2_I]], i64 42)
-; GVN-SCFG-NEXT:    br label %[[EXIT:.*]]
+; GVN-SCFG-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[EXIT:.*]]
 ; GVN-SCFG:       [[IF_THEN]]:
+; GVN-SCFG-NEXT:    [[DISCR1_THEN:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[STORAGE1_I]], i64 42)
 ; GVN-SCFG-NEXT:    [[T1:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[A]], i32 2, i64 [[DISCR1_THEN]])
 ; GVN-SCFG-NEXT:    [[DISCR2_THEN:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[STORAGE2_I]], i64 42)
 ; GVN-SCFG-NEXT:    [[T2:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[A]], i32 2, i64 [[DISCR2_THEN]])
@@ -140,10 +131,10 @@ define void @test_interleaved(i1 %cond, ptr %storage1, ptr %storage2, i64 %a, i6
 ; GVN-SCFG-NEXT:    store volatile i64 [[T2]], ptr [[STORAGE2]], align 8
 ; GVN-SCFG-NEXT:    br label %[[EXIT]]
 ; GVN-SCFG:       [[EXIT]]:
-; GVN-SCFG-NEXT:    [[DISCR2_EXIT_PRE_PHI:%.*]] = phi i64 [ [[DOTPRE1]], %[[ENTRY_EXIT_CRIT_EDGE]] ], [ [[DISCR2_THEN]], %[[IF_THEN]] ]
-; GVN-SCFG-NEXT:    [[DISCR1_EXIT_PRE_PHI:%.*]] = phi i64 [ [[DISCR1_THEN]], %[[ENTRY_EXIT_CRIT_EDGE]] ], [ [[DISCR1_THEN]], %[[IF_THEN]] ]
-; GVN-SCFG-NEXT:    [[T3:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[B]], i32 2, i64 [[DISCR1_EXIT_PRE_PHI]])
-; GVN-SCFG-NEXT:    [[T4:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[B]], i32 2, i64 [[DISCR2_EXIT_PRE_PHI]])
+; GVN-SCFG-NEXT:    [[DISCR1_EXIT:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[STORAGE1_I]], i64 42)
+; GVN-SCFG-NEXT:    [[T3:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[B]], i32 2, i64 [[DISCR1_EXIT]])
+; GVN-SCFG-NEXT:    [[DISCR2_EXIT:%.*]] = call i64 @llvm.ptrauth.blend(i64 [[STORAGE2_I]], i64 42)
+; GVN-SCFG-NEXT:    [[T4:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[B]], i32 2, i64 [[DISCR2_EXIT]])
 ; GVN-SCFG-NEXT:    store volatile i64 [[T3]], ptr [[STORAGE1]], align 8
 ; GVN-SCFG-NEXT:    store volatile i64 [[T4]], ptr [[STORAGE2]], align 8
 ; GVN-SCFG-NEXT:    ret void
