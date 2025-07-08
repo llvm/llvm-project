@@ -743,6 +743,9 @@ void ARMBaseInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Opc = ARM::VMOVSR;
   else if (ARM::DPRRegClass.contains(DestReg, SrcReg) && Subtarget.hasFP64())
     Opc = ARM::VMOVD;
+  else if (ARM::DPRRegClass.contains(DestReg) &&
+           ARM::SPRRegClass.contains(SrcReg) && Subtarget.hasFP64())
+    Opc = ARM::VCVTDS;
   else if (ARM::QPRRegClass.contains(DestReg, SrcReg))
     Opc = Subtarget.hasNEON() ? ARM::VORRq : ARM::MQPRCopy;
 
