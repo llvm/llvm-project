@@ -1497,8 +1497,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       emitLabelDifferenceAsULEB128(MBBSymbol, PrevMBBEndSymbol);
       const MCSymbol *CurrentLabel = MBBSymbol;
       if (HasCalls) {
-        const SmallVectorImpl<MCSymbol *> &CallsiteSymbols =
-            CurrentFnCallsiteSymbols.lookup(&MBB);
+        auto CallsiteSymbols = CurrentFnCallsiteSymbols.lookup(&MBB);
         OutStreamer->AddComment("number of callsites");
         OutStreamer->emitULEB128IntValue(CallsiteSymbols.size());
         for (const MCSymbol *CallsiteSymbol : CallsiteSymbols) {

@@ -135,7 +135,8 @@ public:
   /// default, this is equal to CurrentFnSym.
   MCSymbol *CurrentFnSymForSize = nullptr;
 
-  /// Vector of symbols marking the position of callsites in each basic block.
+  /// Vector of symbols marking the position of callsites in the current
+  /// function, keyed by their containing basic block.
   /// The callsite symbols of each block are stored in the order they appear
   /// in that block.
   DenseMap<const MachineBasicBlock *, SmallVector<MCSymbol *, 1>>
@@ -301,7 +302,7 @@ public:
   /// to emit them as well, return the whole set.
   ArrayRef<MCSymbol *> getAddrLabelSymbolToEmit(const BasicBlock *BB);
 
-  /// Creates a new symbol to be used for the beginning of a callsite at th
+  /// Creates a new symbol to be used for the beginning of a callsite at the
   /// specified basic block.
   MCSymbol *createCallsiteSymbol(const MachineBasicBlock &MBB);
 
