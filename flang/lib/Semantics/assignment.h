@@ -21,7 +21,6 @@ struct MaskedElsewhereStmt;
 struct PointerAssignmentStmt;
 struct WhereConstructStmt;
 struct WhereStmt;
-struct DoConstruct;
 } // namespace Fortran::parser
 
 namespace Fortran::semantics {
