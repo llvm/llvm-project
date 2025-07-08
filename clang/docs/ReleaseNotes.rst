@@ -907,7 +907,7 @@ Bug Fixes to C++ Support
 - Fix a bug where private access specifier of overloaded function not respected. (#GH107629)
 - Correctly handle allocations in the condition of a ``if constexpr``.(#GH120197) (#GH134820)
 - Fixed a crash when handling invalid member using-declaration in C++20+ mode. (#GH63254)
-- Suppress -Wdeprecated-declarations in implicitly generated special-member functions for deprecated data-members; only explicit uses still warn. (PR #147400, Issue #147293)
+- Suppress -Wdeprecated-declarations in implicitly generated special-member functions for deprecated data-members; only explicit uses still warn. (Issue #147293)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
