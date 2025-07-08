@@ -93,7 +93,7 @@
 // CHECK-NEXT:     sve-bitperm         FEAT_SVE_BitPerm                                       Enable bit permutation SVE2 instructions
 // CHECK-NEXT:     sve-f16f32mm        FEAT_SVE_F16F32MM                                      Enable Armv9.6-A FP16 to FP32 Matrix Multiply
 // CHECK-NEXT:     sve-sha3            FEAT_SVE_SHA3                                          Enable SVE SHA3 instructions
-// CHECK-NEXT:     sve-sm4             FEAT_SVE_SM4                                           Enable SM4 SVE instructions
+// CHECK-NEXT:     sve-sm4             FEAT_SVE_SM4                                           Enable SVE SM4 instructions
 // CHECK-NEXT:     sve2                FEAT_SVE2                                              Enable Scalable Vector Extension 2 (SVE2) instructions
 // CHECK-NEXT:     sve2-aes                                                                   Shorthand for +sve2+sve-aes
 // CHECK-NEXT:     sve2-bitperm                                                               Shorthand for +sve2+sve-bitperm
