@@ -2189,7 +2189,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 
   // When unrolling splices may not use VPFirstOrderRecurrencePHIRecipes, so the
   // below transformation will need to be fixed.
-  assert(!Plan.isUnrolled() && "Unrolling not supported with EVL tail folding.");
+  assert(!Plan.isUnrolled() &&
+         "Unrolling not supported with EVL tail folding.");
 
   // Replace FirstOrderRecurrenceSplice with experimental_vp_splice intrinsics.
   VPValue *PrevEVL = nullptr;
