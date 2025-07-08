@@ -19,6 +19,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "gtest/gtest.h"
 
 namespace llvm {
@@ -62,8 +63,12 @@ protected:
     if (!DAG)
       report_fatal_error("DAG?");
     OptimizationRemarkEmitter ORE(F);
+    FunctionAnalysisManager FAM;
+    FAM.registerPass([&] { return TM->getTargetIRAnalysis(); });
+
+    TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(*F);
     DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr, MMI,
-              nullptr);
+              nullptr, TTI.hasBranchDivergence(F));
   }
 
   TargetLoweringBase::LegalizeTypeAction getTypeAction(EVT VT) {

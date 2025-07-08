@@ -84,7 +84,7 @@ protected:
 
     TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(*F);
     DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr, MMI,
-              nullptr, TTI.hasBranchDivergence());
+              nullptr, TTI.hasBranchDivergence(F));
   }
 
   TargetLoweringBase::LegalizeTypeAction getTypeAction(EVT VT) {
