@@ -33,7 +33,7 @@
 using namespace llvm;
 using namespace llvm::orc;
 
-static std::atomic<pid_t> LaunchedExecutorPID{-1};
+static std::vector<pid_t> LaunchedExecutorPID;
 
 Expected<uint64_t> getSlabAllocSize(StringRef SizeString) {
   SizeString = SizeString.trim();
@@ -93,7 +93,8 @@ createSharedMemoryManager(SimpleRemoteEPC &SREPC,
 
 Expected<std::unique_ptr<SimpleRemoteEPC>>
 launchExecutor(StringRef ExecutablePath, bool UseSharedMemory,
-               llvm::StringRef SlabAllocateSizeString, int stdin_fd, int stdout_fd, int stderr_fd) {
+               llvm::StringRef SlabAllocateSizeString, int stdin_fd,
+               int stdout_fd, int stderr_fd) {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add support for Windows.
   return make_error<StringError>("-" + ExecutablePath +
@@ -175,7 +176,7 @@ launchExecutor(StringRef ExecutablePath, bool UseSharedMemory,
       exit(1);
     }
   } else {
-     LaunchedExecutorPID = ChildPID;
+    LaunchedExecutorPID.push_back(ChildPID);
   }
   // else we're the parent...
 
@@ -287,6 +288,12 @@ connectTCPSocket(StringRef NetworkAddress, bool UseSharedMemory,
 #endif
 }
 
-pid_t getLastLaunchedExecutorPID() {
-  return LaunchedExecutorPID;
+pid_t getLastLaunchedExecutorPID() { 
+  if(!LaunchedExecutorPID.size()) return -1;
+  return LaunchedExecutorPID.back(); 
+}
+
+pid_t getNthLaunchedExecutorPID(int n) { 
+  if (n - 1 < 0 || n - 1 >= static_cast<int>(LaunchedExecutorPID.size())) return -1;
+  return LaunchedExecutorPID.at(n - 1); 
 }

@@ -27,7 +27,9 @@
 
 llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
 launchExecutor(llvm::StringRef ExecutablePath, bool UseSharedMemory,
-               llvm::StringRef SlabAllocateSizeString, int stdin_fd = STDIN_FILENO, int stdout_fd = STDOUT_FILENO, int stderr_fd = STDERR_FILENO);
+               llvm::StringRef SlabAllocateSizeString,
+               int stdin_fd = STDIN_FILENO, int stdout_fd = STDOUT_FILENO,
+               int stderr_fd = STDERR_FILENO);
 
 /// Create a JITLinkExecutor that connects to the given network address
 /// through a TCP socket. A valid NetworkAddress provides hostname and port,
@@ -36,8 +38,12 @@ llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
 connectTCPSocket(llvm::StringRef NetworkAddress, bool UseSharedMemory,
                  llvm::StringRef SlabAllocateSizeString);
 
-/// Get the PID of the last launched executor.
-/// This is useful for debugging or for cleanup purposes.
+
+/// Returns PID of last launched executor.
 pid_t getLastLaunchedExecutorPID();
+
+/// Returns PID of nth launched executor.
+/// 1-based indexing.
+pid_t getNthLaunchedExecutorPID(int n);
 
 #endif // LLVM_CLANG_INTERPRETER_REMOTEJITUTILS_H
