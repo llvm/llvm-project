@@ -6,8 +6,9 @@ from lldbsuite.test import lldbutil
 
 class InvalidStdVariantDataFormatterTestCase(TestBase):
     @add_test_categories(["libstdcxx"])
-    def do_test(self):
+    def test(self):
         """Test STL data formatters for std::variant with invalid index."""
+        self.build()
 
         (_, _, thread, _) = lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.cpp", False)
