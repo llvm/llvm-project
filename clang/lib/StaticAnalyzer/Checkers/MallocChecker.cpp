@@ -373,9 +373,8 @@ BUGTYPE_PROVIDER(UseZeroAllocated, "Use of zero allocated")
 template <typename... BT_PROVIDERS>
 struct DynMemFrontend : virtual public CheckerFrontend, public BT_PROVIDERS... {
   template <typename T> const T *getAs() const {
-    if constexpr (std::is_same_v<T, CheckerFrontend>)
-      return static_cast<const T *>(this);
-    if constexpr ((std::is_same_v<T, BT_PROVIDERS> || ...))
+    if constexpr (std::is_same_v<T, CheckerFrontend> ||
+                  (std::is_same_v<T, BT_PROVIDERS> || ...))
       return static_cast<const T *>(this);
     return nullptr;
   }
