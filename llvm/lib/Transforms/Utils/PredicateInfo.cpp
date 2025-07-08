@@ -80,14 +80,13 @@ enum LocalNum {
   LN_Last
 };
 
-// Associate global and local DFS info with defs and uses, so we can sort them
-// into a global domination ordering.
+// Associate global and local DFS info with defs (PInfo set) and uses (U set),
+// so we can sort them into a global domination ordering.
 struct ValueDFS {
   int DFSIn = 0;
   int DFSOut = 0;
   unsigned int LocalNum = LN_Middle;
-  // Only one of Def or Use will be set.
-  Value *Def = nullptr;
+  // Only one of U or PInfo will be set.
   Use *U = nullptr;
   PredicateBase *PInfo = nullptr;
 };
@@ -101,7 +100,6 @@ struct ValueDFS_Compare {
   bool operator()(const ValueDFS &A, const ValueDFS &B) const {
     if (&A == &B)
       return false;
-    assert(!A.Def && !B.Def && "Should not have Def during comparison");
 
     // Order by block first.
     if (A.DFSIn != B.DFSIn)
@@ -133,7 +131,7 @@ struct ValueDFS_Compare {
 
   // For a phi use, or a non-materialized def, return the edge it represents.
   std::pair<BasicBlock *, BasicBlock *> getBlockEdge(const ValueDFS &VD) const {
-    if (!VD.Def && VD.U) {
+    if (VD.U) {
       auto *PHI = cast<PHINode>(VD.U->getUser());
       return std::make_pair(PHI->getIncomingBlock(*VD.U), PHI->getParent());
     }
@@ -216,6 +214,8 @@ class PredicateInfoBuilder {
   // whether it returned a valid result.
   DenseMap<Value *, unsigned int> ValueInfoNums;
 
+  BumpPtrAllocator &Allocator;
+
   ValueInfo &getOrCreateValueInfo(Value *);
   const ValueInfo &getValueInfo(Value *) const;
 
@@ -229,7 +229,14 @@ class PredicateInfoBuilder {
   void addInfoFor(SmallVectorImpl<Value *> &OpsToRename, Value *Op,
                   PredicateBase *PB);
 
-  typedef SmallVectorImpl<ValueDFS> ValueDFSStack;
+  struct StackEntry {
+    const ValueDFS *V;
+    Value *Def = nullptr;
+
+    StackEntry(const ValueDFS *V) : V(V) {}
+  };
+
+  using ValueDFSStack = SmallVectorImpl<StackEntry>;
   void convertUsesToDFSOrdered(Value *, SmallVectorImpl<ValueDFS> &);
   Value *materializeStack(unsigned int &, ValueDFSStack &, Value *);
   bool stackIsInScope(const ValueDFSStack &, const ValueDFS &) const;
@@ -237,8 +244,8 @@ class PredicateInfoBuilder {
 
 public:
   PredicateInfoBuilder(PredicateInfo &PI, Function &F, DominatorTree &DT,
-                       AssumptionCache &AC)
-      : PI(PI), F(F), DT(DT), AC(AC) {
+                       AssumptionCache &AC, BumpPtrAllocator &Allocator)
+      : PI(PI), F(F), DT(DT), AC(AC), Allocator(Allocator) {
     // Push an empty operand info so that we can detect 0 as not finding one
     ValueInfos.resize(1);
   }
@@ -254,7 +261,7 @@ bool PredicateInfoBuilder::stackIsInScope(const ValueDFSStack &Stack,
   // a LN_Last def, we need to pop the stack.  We deliberately sort phi uses
   // next to the defs they must go with so that we can know it's time to pop
   // the stack when we hit the end of the phi uses for a given def.
-  const ValueDFS &Top = Stack.back();
+  const ValueDFS &Top = *Stack.back().V;
   if (Top.LocalNum == LN_Last && Top.PInfo) {
     if (!VDUse.U)
       return false;
@@ -336,7 +343,6 @@ void PredicateInfoBuilder::addInfoFor(SmallVectorImpl<Value *> &OpsToRename,
   auto &OperandInfo = getOrCreateValueInfo(Op);
   if (OperandInfo.Infos.empty())
     OpsToRename.push_back(Op);
-  PI.AllInfos.push_back(PB);
   OperandInfo.Infos.push_back(PB);
 }
 
@@ -368,7 +374,7 @@ void PredicateInfoBuilder::processAssume(
 
     for (Value *V : Values) {
       if (shouldRename(V)) {
-        auto *PA = new PredicateAssume(V, II, Cond);
+        auto *PA = new (Allocator) PredicateAssume(V, II, Cond);
         addInfoFor(OpsToRename, V, PA);
       }
     }
@@ -414,8 +420,8 @@ void PredicateInfoBuilder::processBranch(
 
       for (Value *V : Values) {
         if (shouldRename(V)) {
-          PredicateBase *PB =
-              new PredicateBranch(V, BranchBB, Succ, Cond, TakenEdge);
+          PredicateBase *PB = new (Allocator)
+              PredicateBranch(V, BranchBB, Succ, Cond, TakenEdge);
           addInfoFor(OpsToRename, V, PB);
         }
       }
@@ -440,7 +446,7 @@ void PredicateInfoBuilder::processSwitch(
   for (auto C : SI->cases()) {
     BasicBlock *TargetBlock = C.getCaseSuccessor();
     if (SwitchEdges.lookup(TargetBlock) == 1) {
-      PredicateSwitch *PS = new PredicateSwitch(
+      PredicateSwitch *PS = new (Allocator) PredicateSwitch(
           Op, SI->getParent(), TargetBlock, C.getCaseValue(), SI);
       addInfoFor(OpsToRename, Op, PS);
     }
@@ -453,17 +459,19 @@ void PredicateInfoBuilder::buildPredicateInfo() {
   // Collect operands to rename from all conditional branch terminators, as well
   // as assume statements.
   SmallVector<Value *, 8> OpsToRename;
-  for (auto *DTN : depth_first(DT.getRootNode())) {
-    BasicBlock *BranchBB = DTN->getBlock();
-    if (auto *BI = dyn_cast<BranchInst>(BranchBB->getTerminator())) {
+  for (BasicBlock &BB : F) {
+    if (!DT.isReachableFromEntry(&BB))
+      continue;
+
+    if (auto *BI = dyn_cast<BranchInst>(BB.getTerminator())) {
       if (!BI->isConditional())
         continue;
       // Can't insert conditional information if they all go to the same place.
       if (BI->getSuccessor(0) == BI->getSuccessor(1))
         continue;
-      processBranch(BI, BranchBB, OpsToRename);
-    } else if (auto *SI = dyn_cast<SwitchInst>(BranchBB->getTerminator())) {
-      processSwitch(SI, BranchBB, OpsToRename);
+      processBranch(BI, &BB, OpsToRename);
+    } else if (auto *SI = dyn_cast<SwitchInst>(BB.getTerminator())) {
+      processSwitch(SI, &BB, OpsToRename);
     }
   }
   for (auto &Assume : AC.assumptions()) {
@@ -494,30 +502,38 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
        RenameIter != RenameStack.end(); ++RenameIter) {
     auto *Op =
         RenameIter == RenameStack.begin() ? OrigOp : (RenameIter - 1)->Def;
-    ValueDFS &Result = *RenameIter;
-    auto *ValInfo = Result.PInfo;
+    StackEntry &Result = *RenameIter;
+    auto *ValInfo = Result.V->PInfo;
     ValInfo->RenamedOp = (RenameStack.end() - Start) == RenameStack.begin()
                              ? OrigOp
                              : (RenameStack.end() - Start - 1)->Def;
+    auto CreateSSACopy = [this](IRBuilderBase &B, Value *Op,
+                                const Twine &Name = "") {
+      auto It = PI.DeclarationCache.try_emplace(Op->getType());
+      if (It.second) {
+        // The number of named values is used to detect if a new declaration
+        // was added. If so, that declaration is tracked so that it can be
+        // removed when the analysis is done. The corner case were a new
+        // declaration results in a name clash and the old name being renamed
+        // is not considered as that represents an invalid module.
+        auto NumDecls = F.getParent()->getNumNamedValues();
+        Function *IF = Intrinsic::getOrInsertDeclaration(
+            F.getParent(), Intrinsic::ssa_copy, Op->getType());
+        if (NumDecls != F.getParent()->getNumNamedValues())
+          PI.CreatedDeclarations.insert(IF);
+        It.first->second = IF;
+      }
+      return B.CreateCall(It.first->second, Op, Name);
+    };
     // For edge predicates, we can just place the operand in the block before
     // the terminator. For assume, we have to place it right after the assume
     // to ensure we dominate all uses except assume itself. Always insert
     // right before the terminator or after the assume, so that we insert in
     // proper order in the case of multiple predicateinfo in the same block.
-    // The number of named values is used to detect if a new declaration was
-    // added. If so, that declaration is tracked so that it can be removed when
-    // the analysis is done. The corner case were a new declaration results in
-    // a name clash and the old name being renamed is not considered as that
-    // represents an invalid module.
     if (isa<PredicateWithEdge>(ValInfo)) {
       IRBuilder<> B(getBranchTerminator(ValInfo));
-      auto NumDecls = F.getParent()->getNumNamedValues();
-      Function *IF = Intrinsic::getOrInsertDeclaration(
-          F.getParent(), Intrinsic::ssa_copy, Op->getType());
-      if (NumDecls != F.getParent()->getNumNamedValues())
-        PI.CreatedDeclarations.insert(IF);
       CallInst *PIC =
-          B.CreateCall(IF, Op, Op->getName() + "." + Twine(Counter++));
+          CreateSSACopy(B, Op, Op->getName() + "." + Twine(Counter++));
       PI.PredicateMap.insert({PIC, ValInfo});
       Result.Def = PIC;
     } else {
@@ -527,12 +543,7 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
       // Insert the predicate directly after the assume. While it also holds
       // directly before it, assume(i1 true) is not a useful fact.
       IRBuilder<> B(PAssume->AssumeInst->getNextNode());
-      auto NumDecls = F.getParent()->getNumNamedValues();
-      Function *IF = Intrinsic::getOrInsertDeclaration(
-          F.getParent(), Intrinsic::ssa_copy, Op->getType());
-      if (NumDecls != F.getParent()->getNumNamedValues())
-        PI.CreatedDeclarations.insert(IF);
-      CallInst *PIC = B.CreateCall(IF, Op);
+      CallInst *PIC = CreateSSACopy(B, Op);
       PI.PredicateMap.insert({PIC, ValInfo});
       Result.Def = PIC;
     }
@@ -623,19 +634,18 @@ void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
     // currently and will be considered equal. We could get rid of the
     // stable sort by creating one if we wanted.
     llvm::stable_sort(OrderedUses, Compare);
-    SmallVector<ValueDFS, 8> RenameStack;
+    SmallVector<StackEntry, 8> RenameStack;
     // For each use, sorted into dfs order, push values and replaces uses with
     // top of stack, which will represent the reaching def.
-    for (auto &VD : OrderedUses) {
+    for (const ValueDFS &VD : OrderedUses) {
       // We currently do not materialize copy over copy, but we should decide if
       // we want to.
-      bool PossibleCopy = VD.PInfo != nullptr;
       if (RenameStack.empty()) {
         LLVM_DEBUG(dbgs() << "Rename Stack is empty\n");
       } else {
         LLVM_DEBUG(dbgs() << "Rename Stack Top DFS numbers are ("
-                          << RenameStack.back().DFSIn << ","
-                          << RenameStack.back().DFSOut << ")\n");
+                          << RenameStack.back().V->DFSIn << ","
+                          << RenameStack.back().V->DFSOut << ")\n");
       }
 
       LLVM_DEBUG(dbgs() << "Current DFS numbers are (" << VD.DFSIn << ","
@@ -644,8 +654,8 @@ void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
       // Sync to our current scope.
       popStackUntilDFSScope(RenameStack, VD);
 
-      if (VD.Def || PossibleCopy) {
-        RenameStack.push_back(VD);
+      if (VD.PInfo) {
+        RenameStack.push_back(&VD);
         continue;
       }
 
@@ -657,7 +667,7 @@ void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
         LLVM_DEBUG(dbgs() << "Skipping execution due to debug counter\n");
         continue;
       }
-      ValueDFS &Result = RenameStack.back();
+      StackEntry &Result = RenameStack.back();
 
       // If the possible copy dominates something, materialize our stack up to
       // this point. This ensures every comparison that affects our operation
@@ -695,9 +705,9 @@ PredicateInfoBuilder::getValueInfo(Value *Operand) const {
 }
 
 PredicateInfo::PredicateInfo(Function &F, DominatorTree &DT,
-                             AssumptionCache &AC)
+                             AssumptionCache &AC, BumpPtrAllocator &Allocator)
     : F(F) {
-  PredicateInfoBuilder Builder(*this, F, DT, AC);
+  PredicateInfoBuilder Builder(*this, F, DT, AC, Allocator);
   Builder.buildPredicateInfo();
 }
 
@@ -788,7 +798,8 @@ PreservedAnalyses PredicateInfoPrinterPass::run(Function &F,
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   OS << "PredicateInfo for function: " << F.getName() << "\n";
-  auto PredInfo = std::make_unique<PredicateInfo>(F, DT, AC);
+  BumpPtrAllocator Allocator;
+  auto PredInfo = std::make_unique<PredicateInfo>(F, DT, AC, Allocator);
   PredInfo->print(OS);
 
   replaceCreatedSSACopys(*PredInfo, F);
@@ -850,7 +861,8 @@ PreservedAnalyses PredicateInfoVerifierPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
-  std::make_unique<PredicateInfo>(F, DT, AC)->verifyPredicateInfo();
+  BumpPtrAllocator Allocator;
+  std::make_unique<PredicateInfo>(F, DT, AC, Allocator)->verifyPredicateInfo();
 
   return PreservedAnalyses::all();
 }

@@ -235,6 +235,10 @@ public:
     return ST.getMaxWavesPerEU();
   }
 
+  unsigned getMaxAddrSpace() const override {
+    return AMDGPUAS::MAX_AMDGPU_ADDRESS;
+  }
+
 private:
   /// Check if the ConstantExpr \p CE uses an addrspacecast from private or
   /// local to flat. These casts may require the queue pointer.
@@ -1380,8 +1384,8 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
        &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID,
        &AAAMDMaxNumWorkgroups::ID, &AAAMDWavesPerEU::ID, &AAAMDGPUNoAGPR::ID,
        &AACallEdges::ID, &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
-       &AAUnderlyingObjects::ID, &AAAddressSpace::ID, &AAIndirectCallInfo::ID,
-       &AAInstanceInfo::ID});
+       &AAUnderlyingObjects::ID, &AANoAliasAddrSpace::ID, &AAAddressSpace::ID,
+       &AAIndirectCallInfo::ID, &AAInstanceInfo::ID});
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
@@ -1420,18 +1424,19 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
     }
 
     for (auto &I : instructions(F)) {
-      if (auto *LI = dyn_cast<LoadInst>(&I)) {
-        A.getOrCreateAAFor<AAAddressSpace>(
-            IRPosition::value(*LI->getPointerOperand()));
-      } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
-        A.getOrCreateAAFor<AAAddressSpace>(
-            IRPosition::value(*SI->getPointerOperand()));
-      } else if (auto *RMW = dyn_cast<AtomicRMWInst>(&I)) {
-        A.getOrCreateAAFor<AAAddressSpace>(
-            IRPosition::value(*RMW->getPointerOperand()));
-      } else if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(&I)) {
-        A.getOrCreateAAFor<AAAddressSpace>(
-            IRPosition::value(*CmpX->getPointerOperand()));
+      Value *Ptr = nullptr;
+      if (auto *LI = dyn_cast<LoadInst>(&I))
+        Ptr = LI->getPointerOperand();
+      else if (auto *SI = dyn_cast<StoreInst>(&I))
+        Ptr = SI->getPointerOperand();
+      else if (auto *RMW = dyn_cast<AtomicRMWInst>(&I))
+        Ptr = RMW->getPointerOperand();
+      else if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(&I))
+        Ptr = CmpX->getPointerOperand();
+
+      if (Ptr) {
+        A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(*Ptr));
+        A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(*Ptr));
       }
     }
   }
@@ -1442,36 +1447,6 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
 
   return Changed;
 }
-
-class AMDGPUAttributorLegacy : public ModulePass {
-public:
-  AMDGPUAttributorLegacy() : ModulePass(ID) {}
-
-  /// doInitialization - Virtual method overridden by subclasses to do
-  /// any necessary initialization before any pass is run.
-  bool doInitialization(Module &) override {
-    auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
-    if (!TPC)
-      report_fatal_error("TargetMachine is required");
-
-    TM = &TPC->getTM<TargetMachine>();
-    return false;
-  }
-
-  bool runOnModule(Module &M) override {
-    AnalysisGetter AG(this);
-    return runImpl(M, AG, *TM, /*Options=*/{},
-                   /*LTOPhase=*/ThinOrFullLTOPhase::None);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<CycleInfoWrapperPass>();
-  }
-
-  StringRef getPassName() const override { return "AMDGPU Attributor"; }
-  TargetMachine *TM;
-  static char ID;
-};
 } // namespace
 
 PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
@@ -1485,14 +1460,3 @@ PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
   return runImpl(M, AG, TM, Options, LTOPhase) ? PreservedAnalyses::none()
                                                : PreservedAnalyses::all();
 }
-
-char AMDGPUAttributorLegacy::ID = 0;
-
-Pass *llvm::createAMDGPUAttributorLegacyPass() {
-  return new AMDGPUAttributorLegacy();
-}
-INITIALIZE_PASS_BEGIN(AMDGPUAttributorLegacy, DEBUG_TYPE, "AMDGPU Attributor",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass);
-INITIALIZE_PASS_END(AMDGPUAttributorLegacy, DEBUG_TYPE, "AMDGPU Attributor",
-                    false, false)

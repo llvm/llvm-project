@@ -1031,6 +1031,14 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // s1 _nan: min(s0, s2)
     // s2 _nan: min(s0, s1)
 
+    // med3 behavior with infinity
+    // s0 +inf: max(s1, s2)
+    // s1 +inf: max(s0, s2)
+    // s2 +inf: max(s0, s1)
+    // s0 -inf: min(s1, s2)
+    // s1 -inf: min(s0, s2)
+    // s2 -inf: min(s0, s1)
+
     // Checking for NaN before canonicalization provides better fidelity when
     // mapping other operations onto fmed3 since the order of operands is
     // unchanged.
@@ -1039,51 +1047,64 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     const APFloat *ConstSrc1 = nullptr;
     const APFloat *ConstSrc2 = nullptr;
 
-    // TODO: Also can fold to 2 operands with infinities.
-    if ((match(Src0, m_APFloat(ConstSrc0)) && ConstSrc0->isNaN()) ||
+    if ((match(Src0, m_APFloat(ConstSrc0)) &&
+         (ConstSrc0->isNaN() || ConstSrc0->isInfinity())) ||
         isa<UndefValue>(Src0)) {
+      const bool IsPosInfinity = ConstSrc0 && ConstSrc0->isPosInfinity();
       switch (fpenvIEEEMode(II)) {
       case KnownIEEEMode::On:
         // TODO: If Src2 is snan, does it need quieting?
-        if (ConstSrc0 && ConstSrc0->isSignaling())
-          return IC.replaceInstUsesWith(II, Src2);
-        V = IC.Builder.CreateMinNum(Src1, Src2);
-        break;
-      case KnownIEEEMode::Off:
-        V = IC.Builder.CreateMinimumNum(Src1, Src2);
-        break;
-      case KnownIEEEMode::Unknown:
-        break;
-      }
-    } else if ((match(Src1, m_APFloat(ConstSrc1)) && ConstSrc1->isNaN()) ||
-               isa<UndefValue>(Src1)) {
-      switch (fpenvIEEEMode(II)) {
-      case KnownIEEEMode::On:
-        // TODO: If Src2 is snan, does it need quieting?
-        if (ConstSrc1 && ConstSrc1->isSignaling())
+        if (ConstSrc0 && ConstSrc0->isNaN() && ConstSrc0->isSignaling())
           return IC.replaceInstUsesWith(II, Src2);
 
-        V = IC.Builder.CreateMinNum(Src0, Src2);
+        V = IsPosInfinity ? IC.Builder.CreateMaxNum(Src1, Src2)
+                          : IC.Builder.CreateMinNum(Src1, Src2);
         break;
       case KnownIEEEMode::Off:
-        V = IC.Builder.CreateMinimumNum(Src0, Src2);
+        V = IsPosInfinity ? IC.Builder.CreateMaximumNum(Src1, Src2)
+                          : IC.Builder.CreateMinimumNum(Src1, Src2);
         break;
       case KnownIEEEMode::Unknown:
         break;
       }
-    } else if ((match(Src2, m_APFloat(ConstSrc2)) && ConstSrc2->isNaN()) ||
+    } else if ((match(Src1, m_APFloat(ConstSrc1)) &&
+                (ConstSrc1->isNaN() || ConstSrc1->isInfinity())) ||
+               isa<UndefValue>(Src1)) {
+      const bool IsPosInfinity = ConstSrc1 && ConstSrc1->isPosInfinity();
+      switch (fpenvIEEEMode(II)) {
+      case KnownIEEEMode::On:
+        // TODO: If Src2 is snan, does it need quieting?
+        if (ConstSrc1 && ConstSrc1->isNaN() && ConstSrc1->isSignaling())
+          return IC.replaceInstUsesWith(II, Src2);
+
+        V = IsPosInfinity ? IC.Builder.CreateMaxNum(Src0, Src2)
+                          : IC.Builder.CreateMinNum(Src0, Src2);
+        break;
+      case KnownIEEEMode::Off:
+        V = IsPosInfinity ? IC.Builder.CreateMaximumNum(Src0, Src2)
+                          : IC.Builder.CreateMinimumNum(Src0, Src2);
+        break;
+      case KnownIEEEMode::Unknown:
+        break;
+      }
+    } else if ((match(Src2, m_APFloat(ConstSrc2)) &&
+                (ConstSrc2->isNaN() || ConstSrc2->isInfinity())) ||
                isa<UndefValue>(Src2)) {
       switch (fpenvIEEEMode(II)) {
       case KnownIEEEMode::On:
-        if (ConstSrc2 && ConstSrc2->isSignaling()) {
+        if (ConstSrc2 && ConstSrc2->isNaN() && ConstSrc2->isSignaling()) {
           auto *Quieted = ConstantFP::get(II.getType(), ConstSrc2->makeQuiet());
           return IC.replaceInstUsesWith(II, Quieted);
         }
 
-        V = IC.Builder.CreateMinNum(Src0, Src1);
+        V = (ConstSrc2 && ConstSrc2->isPosInfinity())
+                ? IC.Builder.CreateMaxNum(Src0, Src1)
+                : IC.Builder.CreateMinNum(Src0, Src1);
         break;
       case KnownIEEEMode::Off:
-        V = IC.Builder.CreateMaximumNum(Src0, Src1);
+        V = (ConstSrc2 && ConstSrc2->isNegInfinity())
+                ? IC.Builder.CreateMinimumNum(Src0, Src1)
+                : IC.Builder.CreateMaximumNum(Src0, Src1);
         break;
       case KnownIEEEMode::Unknown:
         break;

@@ -102,8 +102,8 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
 
   if (!Opts.DriverOpts.DylibToVerify.empty()) {
     TargetList Targets;
-    llvm::for_each(Opts.DriverOpts.Targets,
-                   [&](const auto &T) { Targets.push_back(T.first); });
+    for (const auto &T : Opts.DriverOpts.Targets)
+      Targets.push_back(T.first);
     if (!Ctx.Verifier->verifyBinaryAttrs(Targets, Ctx.BA, Ctx.Reexports,
                                          Opts.LinkerOpts.AllowableClients,
                                          Opts.LinkerOpts.RPaths, Ctx.FT))

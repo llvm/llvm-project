@@ -17,12 +17,10 @@
 #include "mlir/IR/Threading.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Support/DebugStringHelper.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "inlining"
@@ -541,7 +539,7 @@ Inliner::Impl::optimizeSCCAsync(MutableArrayRef<CallGraphNode *> nodesToVisit,
 
   // An atomic failure variable for the async executors.
   std::vector<std::atomic<bool>> activePMs(pipelines.size());
-  std::fill(activePMs.begin(), activePMs.end(), false);
+  llvm::fill(activePMs, false);
   return failableParallelForEach(ctx, nodesToVisit, [&](CallGraphNode *node) {
     // Find a pass manager for this operation.
     auto it = llvm::find_if(activePMs, [](std::atomic<bool> &isActive) {

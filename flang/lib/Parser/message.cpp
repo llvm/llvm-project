@@ -273,14 +273,36 @@ static llvm::raw_ostream::Colors PrefixColor(Severity severity) {
   return llvm::raw_ostream::SAVEDCOLOR;
 }
 
+static std::string HintLanguageControlFlag(
+    const common::LanguageFeatureControl *hintFlagPtr,
+    std::optional<common::LanguageFeature> feature,
+    std::optional<common::UsageWarning> warning) {
+  if (hintFlagPtr) {
+    std::string flag;
+    if (warning) {
+      flag = hintFlagPtr->getDefaultCliSpelling(*warning);
+    } else if (feature) {
+      flag = hintFlagPtr->getDefaultCliSpelling(*feature);
+    }
+    if (!flag.empty()) {
+      return " [-W" + flag + "]";
+    }
+  }
+  return "";
+}
+
 static constexpr int MAX_CONTEXTS_EMITTED{2};
 static constexpr bool OMIT_SHARED_CONTEXTS{true};
 
 void Message::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
-    bool echoSourceLine) const {
+    bool echoSourceLine,
+    const common::LanguageFeatureControl *hintFlagPtr) const {
   std::optional<ProvenanceRange> provenanceRange{GetProvenanceRange(allCooked)};
   const AllSources &sources{allCooked.allSources()};
-  sources.EmitMessage(o, provenanceRange, ToString(), Prefix(severity()),
+  const std::string text{ToString()};
+  const std::string hint{
+      HintLanguageControlFlag(hintFlagPtr, languageFeature_, usageWarning_)};
+  sources.EmitMessage(o, provenanceRange, text + hint, Prefix(severity()),
       PrefixColor(severity()), echoSourceLine);
   // Refers to whether the attachment in the loop below is a context, but can't
   // be declared inside the loop because the previous iteration's
@@ -430,7 +452,8 @@ void Messages::ResolveProvenances(const AllCookedSources &allCooked) {
 }
 
 void Messages::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
-    bool echoSourceLines) const {
+    bool echoSourceLines,
+    const common::LanguageFeatureControl *hintFlagPtr) const {
   std::vector<const Message *> sorted;
   for (const auto &msg : messages_) {
     sorted.push_back(&msg);
@@ -443,7 +466,7 @@ void Messages::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
       // Don't emit two identical messages for the same location
       continue;
     }
-    msg->Emit(o, allCooked, echoSourceLines);
+    msg->Emit(o, allCooked, echoSourceLines, hintFlagPtr);
     lastMsg = msg;
   }
 }

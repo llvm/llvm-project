@@ -19,20 +19,16 @@
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
-#include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
@@ -42,7 +38,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -117,8 +112,9 @@ OpFoldResult linalg::createFoldedDimOp(OpBuilder &b, Location loc, Value source,
 // Support for named Linalg ops defined in ods-gen.
 //===----------------------------------------------------------------------===//
 
-using RegionBuilderFn = llvm::function_ref<void(ImplicitLocOpBuilder &, Block &,
-                                                ArrayRef<NamedAttribute>)>;
+using RegionBuilderFn = llvm::function_ref<void(
+    ImplicitLocOpBuilder &, Block &, ArrayRef<NamedAttribute>,
+    function_ref<InFlightDiagnostic()>)>;
 
 /// Fills the region of a structured operation using the provided
 /// `regionBuilder`. The method is used by both named structured ops created by
@@ -128,6 +124,7 @@ using RegionBuilderFn = llvm::function_ref<void(ImplicitLocOpBuilder &, Block &,
 static void fillStructuredOpRegion(OpBuilder &opBuilder, Region &region,
                                    TypeRange inputTypes, TypeRange outputTypes,
                                    ArrayRef<NamedAttribute> attrs,
+                                   function_ref<InFlightDiagnostic()> emitError,
                                    RegionBuilderFn regionBuilder) {
   SmallVector<Type, 8> argTypes;
   SmallVector<Location, 8> argLocs;
@@ -148,7 +145,7 @@ static void fillStructuredOpRegion(OpBuilder &opBuilder, Region &region,
 
   opBuilder.setInsertionPointToStart(body);
   ImplicitLocOpBuilder b(opBuilder.getUnknownLoc(), opBuilder);
-  regionBuilder(b, *body, attrs);
+  regionBuilder(b, *body, attrs, emitError);
 
   // indexing_maps is an auto-generated method.
 
@@ -184,7 +181,8 @@ static void buildStructuredOp(OpBuilder &b, OperationState &state,
   // Create and fill the region of the structured operation.
   Region &region = *state.addRegion();
   fillStructuredOpRegion(b, region, TypeRange(inputs), TypeRange(outputs),
-                         state.attributes.getAttrs(), regionBuilder);
+                         state.attributes.getAttrs(), /*emitError=*/{},
+                         regionBuilder);
 }
 
 static void buildMatmulOp(OpBuilder &b, OperationState &state,
@@ -329,7 +327,7 @@ static void printCommonStructuredOpParts(OpAsmPrinter &p, ValueRange inputs,
 static ParseResult parseNamedStructuredOpRegion(
     OpAsmParser &parser, Region &region, unsigned numRegionArgs,
     TypeRange inputTypes, TypeRange outputTypes, ArrayRef<NamedAttribute> attrs,
-    RegionBuilderFn regionBuilder) {
+    RegionBuilderFn regionBuilder, SMLoc loc) {
   if (numRegionArgs != inputTypes.size() + outputTypes.size()) {
     return parser.emitError(
         parser.getCurrentLocation(),
@@ -339,9 +337,15 @@ static ParseResult parseNamedStructuredOpRegion(
   }
 
   OpBuilder opBuilder(parser.getContext());
-  fillStructuredOpRegion(opBuilder, region, inputTypes, outputTypes, attrs,
-                         regionBuilder);
-  return success();
+  ParseResult result = success();
+  fillStructuredOpRegion(
+      opBuilder, region, inputTypes, outputTypes, attrs,
+      [&]() {
+        result = failure();
+        return parser.emitError(loc);
+      },
+      regionBuilder);
+  return result;
 }
 
 static ParseResult
@@ -358,6 +362,7 @@ static ParseResult parseNamedStructuredOp(OpAsmParser &parser,
                                           RegionBuilderFn regionBuilder) {
   // TODO: Enable when ods-gen supports captures.
   SmallVector<Type, 1> inputTypes, outputTypes;
+  SMLoc loc = parser.getCurrentLocation();
   if (parseCommonStructuredOpParts(parser, result, inputTypes, outputTypes))
     return failure();
 
@@ -375,7 +380,7 @@ static ParseResult parseNamedStructuredOp(OpAsmParser &parser,
   std::unique_ptr<Region> region = std::make_unique<Region>();
   if (parseNamedStructuredOpRegion(parser, *region, numRegionArgs, inputTypes,
                                    outputTypes, result.attributes.getAttrs(),
-                                   regionBuilder))
+                                   regionBuilder, loc))
     return failure();
   result.addRegion(std::move(region));
 
@@ -435,9 +440,15 @@ public:
       : builder(builder), block(block) {}
 
   // Build the unary functions defined by OpDSL.
-  Value buildUnaryFn(UnaryFn unaryFn, Value arg) {
-    if (!isFloatingPoint(arg))
+  Value buildUnaryFn(UnaryFn unaryFn, Value arg,
+                     function_ref<InFlightDiagnostic()> emitError = {}) {
+    if (!isFloatingPoint(arg)) {
+      if (emitError) {
+        emitError() << "unsupported non numeric type";
+        return nullptr;
+      }
       llvm_unreachable("unsupported non numeric type");
+    }
     OpBuilder::InsertionGuard g(builder);
     builder.setInsertionPointToEnd(&block);
     switch (unaryFn) {
@@ -472,18 +483,34 @@ public:
     case UnaryFn::erf:
       return builder.create<math::ErfOp>(arg.getLoc(), arg);
     }
+    if (emitError) {
+      emitError() << "unsupported unary function";
+      return nullptr;
+    }
     llvm_unreachable("unsupported unary function");
   }
 
   // Build the binary functions defined by OpDSL.
-  Value buildBinaryFn(BinaryFn binaryFn, Value arg0, Value arg1) {
+  // If emitError is provided, an error will be emitted if the operation is not
+  // supported and a nullptr will be returned, otherwise an assertion will be
+  // raised.
+  Value buildBinaryFn(BinaryFn binaryFn, Value arg0, Value arg1,
+                      function_ref<InFlightDiagnostic()> emitError = {}) {
     bool allComplex = isComplex(arg0) && isComplex(arg1);
     bool allFloatingPoint = isFloatingPoint(arg0) && isFloatingPoint(arg1);
     bool allInteger = isInteger(arg0) && isInteger(arg1);
     bool allBool = allInteger && arg0.getType().getIntOrFloatBitWidth() == 1 &&
                    arg1.getType().getIntOrFloatBitWidth() == 1;
-    if (!allComplex && !allFloatingPoint && !allInteger)
+    if (!allComplex && !allFloatingPoint && !allInteger) {
+      if (emitError) {
+        emitError()
+            << "Cannot build binary Linalg operation: expects allComplex, "
+               "allFloatingPoint, or allInteger, got "
+            << arg0.getType() << " and " << arg1.getType();
+        return nullptr;
+      }
       llvm_unreachable("unsupported non numeric type");
+    }
     OpBuilder::InsertionGuard g(builder);
     builder.setInsertionPointToEnd(&block);
     switch (binaryFn) {
@@ -500,8 +527,13 @@ public:
         return builder.create<complex::SubOp>(arg0.getLoc(), arg0, arg1);
       if (allFloatingPoint)
         return builder.create<arith::SubFOp>(arg0.getLoc(), arg0, arg1);
-      if (allBool)
+      if (allBool) {
+        if (emitError) {
+          emitError() << "unsupported operation: sub with bools";
+          return nullptr;
+        }
         llvm_unreachable("unsupported operation: sub with bools");
+      }
       return builder.create<arith::SubIOp>(arg0.getLoc(), arg0, arg1);
     case BinaryFn::mul:
       if (allComplex)
@@ -516,12 +548,22 @@ public:
         return builder.create<complex::DivOp>(arg0.getLoc(), arg0, arg1);
       if (allFloatingPoint)
         return builder.create<arith::DivFOp>(arg0.getLoc(), arg0, arg1);
-      if (allBool)
+      if (allBool) {
+        if (emitError) {
+          emitError() << "unsupported operation: div with bools";
+          return nullptr;
+        }
         llvm_unreachable("unsupported operation: div with bools");
+      }
       return builder.create<arith::DivSIOp>(arg0.getLoc(), arg0, arg1);
     case BinaryFn::div_unsigned:
-      if (!allInteger || allBool)
+      if (!allInteger || allBool) {
+        if (emitError) {
+          emitError() << "unsupported operation: unsigned div not on uint";
+          return nullptr;
+        }
         llvm_unreachable("unsupported operation: unsigned div not on uint");
+      }
       return builder.create<arith::DivUIOp>(arg0.getLoc(), arg0, arg1);
     case BinaryFn::max_signed:
       assert(!allComplex);
@@ -547,12 +589,16 @@ public:
       assert(allFloatingPoint);
       return builder.create<math::PowFOp>(arg0.getLoc(), arg0, arg1);
     }
+    if (emitError) {
+      emitError() << "unsupported binary function";
+      return nullptr;
+    }
     llvm_unreachable("unsupported binary function");
   }
 
   // Build the ternary functions defined by OpDSL.
-  Value buildTernaryFn(TernaryFn ternaryFn, Value arg0, Value arg1,
-                       Value arg2) {
+  Value buildTernaryFn(TernaryFn ternaryFn, Value arg0, Value arg1, Value arg2,
+                       function_ref<InFlightDiagnostic()> emitError = {}) {
     bool headBool =
         isInteger(arg0) && arg0.getType().getIntOrFloatBitWidth() == 1;
     bool tailFloatingPoint =
@@ -566,16 +612,25 @@ public:
         llvm_unreachable("unsupported non numeric type");
       return builder.create<arith::SelectOp>(arg0.getLoc(), arg0, arg1, arg2);
     }
+    if (emitError) {
+      emitError() << "unsupported ternary function";
+      return nullptr;
+    }
     llvm_unreachable("unsupported ternary function");
   }
 
   // Build the type functions defined by OpDSL.
-  Value buildTypeFn(TypeFn typeFn, Type toType, Value operand) {
+  Value buildTypeFn(TypeFn typeFn, Type toType, Value operand,
+                    function_ref<InFlightDiagnostic()> emitError = {}) {
     switch (typeFn) {
     case TypeFn::cast_signed:
       return cast(toType, operand, false);
     case TypeFn::cast_unsigned:
       return cast(toType, operand, true);
+    }
+    if (emitError) {
+      emitError() << "unsupported type conversion function";
+      return nullptr;
     }
     llvm_unreachable("unsupported type conversion function");
   }
@@ -617,6 +672,13 @@ private:
     OpBuilder::InsertionGuard g(builder);
     builder.setInsertionPointToEnd(&block);
     auto loc = operand.getLoc();
+    if (isa<UnknownLoc>(loc)) {
+      if (operand.getDefiningOp())
+        loc = operand.getDefiningOp()->getLoc();
+      else if (operand.getParentBlock() &&
+               operand.getParentBlock()->getParentOp())
+        loc = operand.getParentBlock()->getParentOp()->getLoc();
+    }
     return convertScalarToDtype(builder, loc, operand, toType, isUnsignedCast);
   }
 
@@ -2989,8 +3051,9 @@ LogicalResult WinogradFilterTransformOp::verify() {
   ArrayRef<int64_t> filterShape = filterType.getShape();
   int64_t filterH = filterShape[getFilterHDim()];
   int64_t filterW = filterShape[getFilterWDim()];
-  int64_t r = getR();
-  int64_t m = getM();
+  WinogradConv2DFmr fmr = getFmr();
+  int64_t m, r;
+  std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
 
   if (filterH != r && filterH != 1)
     return emitOpError("expect filter height either equals to r or 1");
@@ -3046,8 +3109,9 @@ LogicalResult WinogradFilterTransformOp::getResultTilePosition(
   ArrayRef<int64_t> filterShape = filterType.getShape();
   int64_t filterH = filterShape[getFilterHDim()];
   int64_t filterW = filterShape[getFilterWDim()];
-  int64_t m = getM();
-  int64_t r = getR();
+  WinogradConv2DFmr fmr = getFmr();
+  int64_t m, r;
+  std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
   int64_t alpha = m + r - 1;
   int64_t alphaH = filterH != 1 ? alpha : 1;
   int64_t alphaW = filterW != 1 ? alpha : 1;
@@ -3124,8 +3188,9 @@ LogicalResult WinogradInputTransformOp::verify() {
   ArrayRef<int64_t> inputShape = inputType.getShape();
   int64_t inputH = inputShape[getInputHDim()];
   int64_t inputW = inputShape[getInputWDim()];
-  int m = getM();
-  int r = getR();
+  WinogradConv2DFmr fmr = getFmr();
+  int64_t m, r;
+  std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
   int64_t tileSize = m + r - 1;
 
   auto outputType = cast<ShapedType>(getOutput().getType());
@@ -3194,8 +3259,9 @@ LogicalResult WinogradInputTransformOp::getResultTilePosition(
   int64_t outputAlphaH = outputShape[getOutputAlphaHDim()];
   int64_t outputAlphaW = outputShape[getOutputAlphaWDim()];
 
-  int64_t m = getM();
-  int64_t r = getR();
+  WinogradConv2DFmr fmr = getFmr();
+  int64_t m, r;
+  std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
   int64_t alpha = m + r - 1;
   int64_t alphaH = outputAlphaH != 1 ? alpha : 1;
   int64_t alphaW = outputAlphaW != 1 ? alpha : 1;
@@ -3224,8 +3290,9 @@ WinogradInputTransformOp::getTiledImplementation(OpBuilder &builder,
                                                  ArrayRef<OpFoldResult> offsets,
                                                  ArrayRef<OpFoldResult> sizes) {
   IntegerAttr oneAttr = builder.getI64IntegerAttr(1);
-  int64_t m = getM();
-  int64_t r = getR();
+  WinogradConv2DFmr fmr = getFmr();
+  int64_t m, r;
+  std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
 
   ShapedType outputType = getOutputOperandType();
   ArrayRef<int64_t> outputShape = outputType.getShape();
@@ -3303,8 +3370,9 @@ LogicalResult WinogradOutputTransformOp::verify() {
   int64_t valueW = valueShape[getValueAlphaWDim()];
   int64_t valueTileH = valueShape[getValueTileHDim()];
   int64_t valueTileW = valueShape[getValueTileWDim()];
-  int m = getM();
-  int r = getR();
+  WinogradConv2DFmr fmr = getFmr();
+  int64_t m, r;
+  std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
   bool leftTransform = valueH != 1;
   bool rightTransform = valueW != 1;
 
@@ -3365,7 +3433,9 @@ LogicalResult WinogradOutputTransformOp::getResultTilePosition(
     OpBuilder &builder, unsigned resultNumber, ArrayRef<OpFoldResult> offsets,
     ArrayRef<OpFoldResult> sizes, SmallVector<OpFoldResult> &resultOffsets,
     SmallVector<OpFoldResult> &resultSizes) {
-  int64_t m = getM();
+  WinogradConv2DFmr fmr = getFmr();
+  int64_t m, r;
+  std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
 
   Location loc = getLoc();
   MLIRContext *context = builder.getContext();
@@ -3623,6 +3693,27 @@ verifyExtendedBatchVariantMatmulSemantic(OpTy batchVariantMatmulOp,
 namespace mlir {
 namespace linalg {
 
+std::optional<WinogradConv2DFmr> getWinogradConv2DFmr(int64_t m, int64_t r) {
+  if (m == 2 && r == 3)
+    return WinogradConv2DFmr::F_2_3;
+  if (m == 4 && r == 3)
+    return WinogradConv2DFmr::F_4_3;
+  if (m == 2 && r == 5)
+    return WinogradConv2DFmr::F_2_5;
+  return std::nullopt;
+}
+
+std::pair<int64_t, int64_t> getFmrFromWinogradConv2DFmr(WinogradConv2DFmr fmr) {
+  switch (fmr) {
+  case WinogradConv2DFmr::F_2_3:
+    return {2, 3};
+  case WinogradConv2DFmr::F_4_3:
+    return {4, 3};
+  case WinogradConv2DFmr::F_2_5:
+    return {2, 5};
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // MatMulOp
 //===----------------------------------------------------------------------===//
@@ -3664,9 +3755,15 @@ bool MatmulOp::hasUserDefinedMaps() {
 /// Implements the block region builder for the MatmulOp. This is called by
 /// 'fillStructuredOpRegion'.
 void MatmulOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
-                             ArrayRef<NamedAttribute> attrs) {
-  assert(3 > 0 && block.getNumArguments() == 3 &&
-         "MatmulOp regionBuilder expects 3 (>=0) args");
+                             ArrayRef<NamedAttribute> attrs,
+                             function_ref<InFlightDiagnostic()> emitError) {
+  if (emitError && block.getNumArguments() != 3) {
+    emitError() << "MatmulOp regionBuilder expects 3 args, got "
+                << block.getNumArguments();
+    return;
+  }
+  assert(block.getNumArguments() == 3 &&
+         "MatmulOp regionBuilder expects 3 args");
   RegionBuilderHelper helper(b, block);
   SmallVector<Value> yields;
 
@@ -3683,9 +3780,13 @@ void MatmulOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
                                     block.getArgument(0));
   Value value2 = helper.buildTypeFn(castVal, block.getArgument(2).getType(),
                                     block.getArgument(1));
-  Value value3 = helper.buildBinaryFn(BinaryFn::mul, value1, value2);
-  Value value4 =
-      helper.buildBinaryFn(BinaryFn::add, block.getArgument(2), value3);
+  Value value3 = helper.buildBinaryFn(BinaryFn::mul, value1, value2, emitError);
+  if (!value3)
+    return;
+  Value value4 = helper.buildBinaryFn(BinaryFn::add, block.getArgument(2),
+                                      value3, emitError);
+  if (!value4)
+    return;
   yields.push_back(value4);
   helper.yieldOutputs(yields);
 }
@@ -3813,7 +3914,13 @@ unsigned ContractOp::getNumRegionArgs() { return 3; }
 
 /// Implement block region builder, which is called by 'fillStructuredOpRegion'.
 void ContractOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
-                               ArrayRef<NamedAttribute> attrs) {
+                               ArrayRef<NamedAttribute> attrs,
+                               function_ref<InFlightDiagnostic()> emitError) {
+  if (emitError && block.getNumArguments() != 3) {
+    emitError() << "ContractOp regionBuilder expects 3 args, got "
+                << block.getNumArguments();
+    return;
+  }
   assert(block.getNumArguments() == 3 &&
          "ContractOp regionBuilder expects 3 args");
   RegionBuilderHelper helper(b, block);
@@ -3833,10 +3940,14 @@ void ContractOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
       helper.buildTypeFn(castSignedness, outType, block.getArgument(0));
   Value rhsAtOutType =
       helper.buildTypeFn(castSignedness, outType, block.getArgument(1));
-  Value productAtOutType =
-      helper.buildBinaryFn(BinaryFn::mul, lhsAtOutType, rhsAtOutType);
+  Value productAtOutType = helper.buildBinaryFn(BinaryFn::mul, lhsAtOutType,
+                                                rhsAtOutType, emitError);
+  if (!productAtOutType)
+    return;
   Value result = helper.buildBinaryFn(BinaryFn::add, block.getArgument(2),
-                                      productAtOutType);
+                                      productAtOutType, emitError);
+  if (!result)
+    return;
   helper.yieldOutputs({result});
 }
 
@@ -4028,10 +4139,16 @@ bool BatchMatmulOp::isValidLhsRhsBroadcastMap(AffineMap bcastMap, bool isLHS) {
   return isValid;
 }
 
-void BatchMatmulOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
-                                  ArrayRef<NamedAttribute> attrs) {
+void BatchMatmulOp::regionBuilder(
+    ImplicitLocOpBuilder &b, Block &block, ArrayRef<NamedAttribute> attrs,
+    function_ref<InFlightDiagnostic()> emitError) {
+  if (emitError && block.getNumArguments() != 3) {
+    emitError() << "BatchMatmulOp regionBuilder expects 3 args, got "
+                << block.getNumArguments();
+    return;
+  }
   assert(block.getNumArguments() == 3 &&
-         "BatchMatmulOp regionBuilder expects 3 (>=0) args");
+         "BatchMatmulOp regionBuilder expects 3 args");
   RegionBuilderHelper helper(b, block);
   SmallVector<Value> yields;
 
@@ -4303,8 +4420,9 @@ LogicalResult ElementwiseOp::verify() {
 
 /// Implements the block region builder for the ElementwiseOp. This is called by
 /// 'fillStructuredOpRegion'.
-void ElementwiseOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
-                                  ArrayRef<NamedAttribute> attrs) {
+void ElementwiseOp::regionBuilder(
+    ImplicitLocOpBuilder &b, Block &block, ArrayRef<NamedAttribute> attrs,
+    function_ref<InFlightDiagnostic()> emitError) {
   ElementwiseKind elemwiseKind;
   for (auto attr : attrs) {
     if (attr.getName() == b.getStringAttr("kind")) {
@@ -4318,6 +4436,13 @@ void ElementwiseOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
   ArityGroupAndKind groupAndKind = getArityGroupAndKind(elemwiseKind);
   auto arityGroup = groupAndKind.arityGroup;
   auto kind = groupAndKind.kind;
+  if (emitError && block.getNumArguments() !=
+                       getArityGroupAsUInt(arityGroup) + 1 /*output*/) {
+    emitError() << "Elementwise regionBuilder expects "
+                << (getArityGroupAsUInt(arityGroup) + 1) << " args, got "
+                << block.getNumArguments();
+    return;
+  }
   assert(block.getNumArguments() ==
              getArityGroupAsUInt(arityGroup) + 1 /*output*/
          && "Elementwise regionBuilder number of block args mismatch");
@@ -4439,7 +4564,7 @@ static SmallVector<OpFoldResult> getMixedTilesImpl(OpTy op) {
   SmallVector<OpFoldResult> mixedInnerTiles;
   unsigned dynamicValIndex = 0;
   for (int64_t staticTile : op.getStaticInnerTiles()) {
-    if (!ShapedType::isDynamic(staticTile))
+    if (ShapedType::isStatic(staticTile))
       mixedInnerTiles.push_back(builder.getI64IntegerAttr(staticTile));
     else
       mixedInnerTiles.push_back(op.getInnerTiles()[dynamicValIndex++]);
@@ -4704,7 +4829,7 @@ bool PackOp::requirePaddingValue(ArrayRef<int64_t> inputShape,
     std::optional<int64_t> constantTile = getConstantIntValue(tileSize);
 
     if (!constantTile) {
-      if (!ShapedType::isDynamic(outputTileSizes[pos]) &&
+      if (ShapedType::isStatic(outputTileSizes[pos]) &&
           (inputShape[pos] % outputTileSizes[pos] != 0))
         return true;
     } else if (inputShape[pos] % (*constantTile) != 0) {
@@ -4810,7 +4935,7 @@ SmallVector<OpFoldResult> PackOp::getResultShape(
   // use dispatchIndexOpFoldResults on the result, and rely on exact number of
   // dynamic dims returned by that.
   for (unsigned i = 0; i < resultDims.size(); ++i) {
-    if (!ShapedType::isDynamic(resultTypeShape[i]))
+    if (ShapedType::isStatic(resultTypeShape[i]))
       continue;
     resultDims[i] =
         getValueOrCreateConstantIndexOp(builder, loc, resultDims[i]);
@@ -5501,10 +5626,16 @@ bool BatchReduceMatmulOp::isValidLhsRhsBroadcastMap(AffineMap bcastMap,
   return isValid;
 }
 
-void BatchReduceMatmulOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
-                                        ArrayRef<NamedAttribute> attrs) {
+void BatchReduceMatmulOp::regionBuilder(
+    ImplicitLocOpBuilder &b, Block &block, ArrayRef<NamedAttribute> attrs,
+    function_ref<InFlightDiagnostic()> emitError) {
+  if (emitError && block.getNumArguments() != 3) {
+    emitError() << "BatchReduceMatmulOp regionBuilder expects 3 args, got "
+                << block.getNumArguments();
+    return;
+  }
   assert(block.getNumArguments() == 3 &&
-         "BatchReduceMatmulOp regionBuilder expects 3 (>=0) args");
+         "BatchReduceMatmulOp regionBuilder expects 3 args");
   RegionBuilderHelper helper(b, block);
   SmallVector<Value> yields;
 

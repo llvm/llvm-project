@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_RELATIONAL_ISEQUAL_H__
+#define __CLC_OPENCL_RELATIONAL_ISEQUAL_H__
+
+#include <clc/opencl/opencl-base.h>
+
 #define _CLC_ISEQUAL_DECL(TYPE, RETTYPE)                                       \
   _CLC_OVERLOAD _CLC_DECL RETTYPE isequal(TYPE x, TYPE y);
 
@@ -30,3 +35,5 @@ _CLC_VECTOR_ISEQUAL_DECL(half, short)
 
 #undef _CLC_ISEQUAL_DECL
 #undef _CLC_VECTOR_ISEQUAL_DEC
+
+#endif // __CLC_OPENCL_RELATIONAL_ISEQUAL_H__

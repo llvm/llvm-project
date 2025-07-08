@@ -19,7 +19,7 @@
 #include "AArch64TargetObjectFile.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64InstPrinter.h"
-#include "MCTargetDesc/AArch64MCExpr.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "MCTargetDesc/AArch64TargetStreamer.h"
 #include "TargetInfo/AArch64TargetInfo.h"
@@ -910,15 +910,15 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
       // have a chance to save them.
       EmitToStreamer(MCInstBuilder(AArch64::ADRP)
                          .addReg(AArch64::X16)
-                         .addExpr(AArch64MCExpr::create(
-                             HwasanTagMismatchRef, AArch64MCExpr::VK_GOT_PAGE,
-                             OutContext)));
+                         .addExpr(MCSpecifierExpr::create(HwasanTagMismatchRef,
+                                                          AArch64::S_GOT_PAGE,
+                                                          OutContext)));
       EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
                          .addReg(AArch64::X16)
                          .addReg(AArch64::X16)
-                         .addExpr(AArch64MCExpr::create(
-                             HwasanTagMismatchRef, AArch64MCExpr::VK_GOT_LO12,
-                             OutContext)));
+                         .addExpr(MCSpecifierExpr::create(HwasanTagMismatchRef,
+                                                          AArch64::S_GOT_LO12,
+                                                          OutContext)));
       EmitToStreamer(MCInstBuilder(AArch64::BR).addReg(AArch64::X16));
     }
   }
@@ -2254,15 +2254,19 @@ AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
   uint64_t KeyID = CPA.getKey()->getZExtValue();
   // We later rely on valid KeyID value in AArch64PACKeyIDToString call from
   // AArch64AuthMCExpr::printImpl, so fail fast.
-  if (KeyID > AArch64PACKey::LAST)
-    report_fatal_error("AArch64 PAC Key ID '" + Twine(KeyID) +
-                       "' out of range [0, " +
-                       Twine((unsigned)AArch64PACKey::LAST) + "]");
+  if (KeyID > AArch64PACKey::LAST) {
+    CPA.getContext().emitError("AArch64 PAC Key ID '" + Twine(KeyID) +
+                               "' out of range [0, " +
+                               Twine((unsigned)AArch64PACKey::LAST) + "]");
+    KeyID = 0;
+  }
 
   uint64_t Disc = CPA.getDiscriminator()->getZExtValue();
-  if (!isUInt<16>(Disc))
-    report_fatal_error("AArch64 PAC Discriminator '" + Twine(Disc) +
-                       "' out of range [0, 0xFFFF]");
+  if (!isUInt<16>(Disc)) {
+    CPA.getContext().emitError("AArch64 PAC Discriminator '" + Twine(Disc) +
+                               "' out of range [0, 0xFFFF]");
+    Disc = 0;
+  }
 
   // Finally build the complete @AUTH expr.
   return AArch64AuthMCExpr::create(Sym, Disc, AArch64PACKey::ID(KeyID),

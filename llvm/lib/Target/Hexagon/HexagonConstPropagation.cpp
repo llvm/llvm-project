@@ -105,8 +105,7 @@ namespace {
     };
 
     LatticeCell() : Kind(Top), Size(0), IsSpecial(false) {
-      for (const Constant *&Value : Values)
-        Value = nullptr;
+      llvm::fill(Values, nullptr);
     }
 
     bool meet(const LatticeCell &L);

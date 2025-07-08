@@ -234,6 +234,9 @@ class ApplyAtomGroup {
   uint64_t OriginalAtom = 0;
   CGDebugInfo *DI = nullptr;
 
+  ApplyAtomGroup(const ApplyAtomGroup &) = delete;
+  void operator=(const ApplyAtomGroup &) = delete;
+
 public:
   ApplyAtomGroup(CGDebugInfo *DI);
   ~ApplyAtomGroup();

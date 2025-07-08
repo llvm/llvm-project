@@ -46,8 +46,8 @@ public:
 private:
   unsigned Kind;
   unsigned AddressSpace;
-  LLVM_ABI_FRIEND friend raw_ostream &
-  llvm::operator<<(raw_ostream &OS, const PseudoSourceValue *PSV);
+  LLVM_ABI friend raw_ostream &llvm::operator<<(raw_ostream &OS,
+                                                const PseudoSourceValue *PSV);
 
   friend class MachineMemOperand; // For printCustom().
   friend class MIRFormatter;      // For printCustom().

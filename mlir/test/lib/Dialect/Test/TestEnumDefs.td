@@ -17,9 +17,13 @@ include "mlir/IR/EnumAttr.td"
 
 def I32Case5:  I32EnumAttrCase<"case5", 5>;
 def I32Case10: I32EnumAttrCase<"case10", 10>;
+def I32CaseSignedMaxPlusOne
+    : I32EnumAttrCase<"caseSignedMaxPlusOne", 2147483648>;
+def I32CaseUnsignedMax : I32EnumAttrCase<"caseUnsignedMax", 4294967295>;
 
-def SomeI32Enum: I32EnumAttr<
-  "SomeI32Enum", "", [I32Case5, I32Case10]>;
+def SomeI32Enum : I32EnumAttr<"SomeI32Enum", "",
+                              [I32Case5, I32Case10, I32CaseSignedMaxPlusOne,
+                               I32CaseUnsignedMax]>;
 
 def I64Case5:  I64EnumAttrCase<"case5", 5>;
 def I64Case10: I64EnumAttrCase<"case10", 10>;

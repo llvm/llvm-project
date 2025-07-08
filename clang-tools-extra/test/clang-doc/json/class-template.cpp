@@ -17,7 +17,7 @@ template<typename T> struct MyClass {
 // CHECK-NEXT:    ], 
 // CHECK-NEXT:    "ReturnType": {
 // CHECK-NEXT:      "IsBuiltIn": false,
-// CHECK-NEXT:      "IsTemplate": false,
+// CHECK-NEXT:      "IsTemplate": true,
 // CHECK-NEXT:      "Name": "T",
 // CHECK-NEXT:      "QualName": "T"
 // CHECK-NEXT:      "USR": "0000000000000000000000000000000000000000"

@@ -248,6 +248,36 @@ def libc_header_library(name, hdrs, deps = [], **kwargs):
         **kwargs
     )
 
+def libc_generated_header(name, hdr, yaml_template, other_srcs = []):
+    """Generates a libc header file from YAML template.
+
+    Args:
+      name: Name of the genrule target.
+      hdr: Path of the header file to generate.
+      yaml_template: Path of the YAML template file.
+      other_srcs: Other files required to generate the header, if any.
+    """
+    hdrgen = "//libc:hdrgen"
+    cmd = "$(location {hdrgen}) $(location {yaml}) -o $@".format(
+        hdrgen = hdrgen,
+        yaml = yaml_template,
+    )
+
+    if not hdr.startswith("staging/"):
+        fail(
+            "Generated headers should be placed in a 'staging/' directory " +
+            "so that they can be treated differently from constant source files " +
+            "when bootstrapping builds.",
+        )
+
+    native.genrule(
+        name = name,
+        outs = [hdr],
+        srcs = [yaml_template] + other_srcs,
+        cmd = cmd,
+        tools = [hdrgen],
+    )
+
 def libc_math_function(
         name,
         additional_deps = None):

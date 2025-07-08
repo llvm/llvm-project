@@ -371,7 +371,7 @@ public:
   // ArrayRef access to formal parameters.  This should eventually
   // replace the iterator interface above.
   ArrayRef<ParmVarDecl*> parameters() const {
-    return llvm::ArrayRef(const_cast<ParmVarDecl **>(getParams()), NumParams);
+    return {const_cast<ParmVarDecl **>(getParams()), NumParams};
   }
 
   ParmVarDecl *getParamDecl(unsigned Idx) {

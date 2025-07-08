@@ -80,7 +80,7 @@ protected:
   explicit SmallPtrSetImplBase(const void **SmallStorage, unsigned SmallSize)
       : CurArray(SmallStorage), CurArraySize(SmallSize), NumNonEmpty(0),
         NumTombstones(0), IsSmall(true) {
-    assert(SmallSize && (SmallSize & (SmallSize-1)) == 0 &&
+    assert(llvm::has_single_bit(SmallSize) &&
            "Initial size must be a power of two!");
   }
 

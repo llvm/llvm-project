@@ -525,7 +525,8 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
                     "hipstdpar_lib.hpp"});
   };
 
-  if (DriverArgs.hasArg(options::OPT_nogpuinc)) {
+  if (!DriverArgs.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
+                          true)) {
     if (HasHipStdPar)
       HandleHipStdPar();
 

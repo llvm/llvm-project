@@ -16,6 +16,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
+#include "lldb/Core/ProtocolServer.h"
 #include "lldb/Core/StreamAsynchronousIO.h"
 #include "lldb/Core/Telemetry.h"
 #include "lldb/DataFormatters/DataVisualization.h"
@@ -1442,6 +1443,13 @@ bool Debugger::PopIOHandler(const IOHandlerSP &pop_reader_sp) {
     reader_sp->Activate();
 
   return true;
+}
+
+void Debugger::RefreshIOHandler() {
+  std::lock_guard<std::recursive_mutex> guard(m_io_handler_stack.GetMutex());
+  IOHandlerSP reader_sp(m_io_handler_stack.Top());
+  if (reader_sp)
+    reader_sp->Refresh();
 }
 
 StreamUP Debugger::GetAsyncOutputStream() {

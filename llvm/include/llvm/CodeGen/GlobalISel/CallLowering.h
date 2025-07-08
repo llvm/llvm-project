@@ -609,6 +609,15 @@ public:
   virtual bool isTypeIsValidForThisReturn(EVT Ty) const { return false; }
 };
 
+extern template LLVM_ABI void
+CallLowering::setArgFlags<Function>(CallLowering::ArgInfo &Arg, unsigned OpIdx,
+                                    const DataLayout &DL,
+                                    const Function &FuncInfo) const;
+
+extern template LLVM_ABI void
+CallLowering::setArgFlags<CallBase>(CallLowering::ArgInfo &Arg, unsigned OpIdx,
+                                    const DataLayout &DL,
+                                    const CallBase &FuncInfo) const;
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_GLOBALISEL_CALLLOWERING_H

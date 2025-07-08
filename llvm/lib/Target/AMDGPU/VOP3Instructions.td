@@ -32,6 +32,7 @@ class VOP3b_Profile<ValueType vt> : VOPProfile<[vt, vt, vt, vt]> {
   let HasExtDPP = 0;
 }
 
+let HasExt64BitDPP = 1 in {
 def VOP3b_F32_I1_F32_F32_F32 : VOP3b_Profile<f32>;
 def VOP3b_F64_I1_F64_F64_F64 : VOP3b_Profile<f64>;
 
@@ -48,10 +49,13 @@ class V_MUL_PROF<VOPProfile P> : VOP3_Profile<P> {
   let HasExtDPP = 0;
 }
 
+def V_LSHL_ADD_U64_PROF : VOP3_Profile<VOP_I64_I64_I32_I64>;
+
 def DIV_FIXUP_F32_PROF : VOP3_Profile<VOP_F32_F32_F32_F32> {
   let HasExtVOP3DPP = 0;
   let HasExtDPP = 0;
 }
+} // End HasExt64BitDPP = 1;
 
 //===----------------------------------------------------------------------===//
 // VOP3 INTERP
@@ -722,7 +726,7 @@ defm V_LSHL_OR_B32 : VOP3Inst <"v_lshl_or_b32", VOP3_Profile<VOP_I32_I32_I32_I32
 // V_LSHL_ADD_U64: D0.u64 = (S0.u64 << S1.u[2:0]) + S2.u64
 // src0 is shifted left by 0-4 (use “0” to get ADD_U64).
 let SubtargetPredicate = HasLshlAddU64Inst in
-defm V_LSHL_ADD_U64 : VOP3Inst <"v_lshl_add_u64", VOP3_Profile<VOP_I64_I64_I32_I64>>;
+defm V_LSHL_ADD_U64 : VOP3Inst <"v_lshl_add_u64", V_LSHL_ADD_U64_PROF>;
 
 let OtherPredicates = [HasFP8ConversionInsts], mayRaiseFPException = 0,
     SchedRW = [WriteFloatCvt] in {
@@ -1889,6 +1893,9 @@ let AssemblerPredicate = isGFX11Plus in {
   def : AMDGPUMnemonicAlias<"v_xor_add_u32", "v_xad_u32">;
 }
 
+// These instructions differ from GFX12 variant by supporting DPP:
+defm V_LSHL_ADD_U64                  : VOP3Only_Realtriple_gfx1250<0x252>;
+
 //===----------------------------------------------------------------------===//
 // GFX10.
 //===----------------------------------------------------------------------===//
@@ -2009,16 +2016,14 @@ defm V_DIV_FIXUP_F16 :
 defm V_ADD_NC_U16      : VOP3OpSel_Real_gfx10<0x303>;
 defm V_SUB_NC_U16      : VOP3OpSel_Real_gfx10<0x304>;
 
-// FIXME-GFX10-OPSEL: Need to add "selective" opsel support to some of these
-// (they do not support SDWA or DPP).
-defm V_MUL_LO_U16      : VOP3_Real_gfx10_with_name<0x305, "V_MUL_LO_U16", "v_mul_lo_u16">;
-defm V_LSHRREV_B16     : VOP3_Real_gfx10_with_name<0x307, "V_LSHRREV_B16", "v_lshrrev_b16">;
-defm V_ASHRREV_I16     : VOP3_Real_gfx10_with_name<0x308, "V_ASHRREV_I16", "v_ashrrev_i16">;
-defm V_MAX_U16         : VOP3_Real_gfx10_with_name<0x309, "V_MAX_U16", "v_max_u16">;
-defm V_MAX_I16         : VOP3_Real_gfx10_with_name<0x30a, "V_MAX_I16", "v_max_i16">;
-defm V_MIN_U16         : VOP3_Real_gfx10_with_name<0x30b, "V_MIN_U16", "v_min_u16">;
-defm V_MIN_I16         : VOP3_Real_gfx10_with_name<0x30c, "V_MIN_I16", "v_min_i16">;
-defm V_LSHLREV_B16     : VOP3_Real_gfx10_with_name<0x314, "V_LSHLREV_B16", "v_lshlrev_b16">;
+defm V_MUL_LO_U16      : VOP3OpSel_Real_gfx10_with_name<0x305, "V_MUL_LO_U16_opsel", "v_mul_lo_u16">;
+defm V_LSHRREV_B16     : VOP3OpSel_Real_gfx10_with_name<0x307, "V_LSHRREV_B16_opsel", "v_lshrrev_b16">;
+defm V_ASHRREV_I16     : VOP3OpSel_Real_gfx10_with_name<0x308, "V_ASHRREV_I16_opsel", "v_ashrrev_i16">;
+defm V_MAX_U16         : VOP3OpSel_Real_gfx10_with_name<0x309, "V_MAX_U16_opsel", "v_max_u16">;
+defm V_MAX_I16         : VOP3OpSel_Real_gfx10_with_name<0x30a, "V_MAX_I16_opsel", "v_max_i16">;
+defm V_MIN_U16         : VOP3OpSel_Real_gfx10_with_name<0x30b, "V_MIN_U16_opsel", "v_min_u16">;
+defm V_MIN_I16         : VOP3OpSel_Real_gfx10_with_name<0x30c, "V_MIN_I16_opsel", "v_min_i16">;
+defm V_LSHLREV_B16     : VOP3OpSel_Real_gfx10_with_name<0x314, "V_LSHLREV_B16_opsel", "v_lshlrev_b16">;
 defm V_PERMLANE16_B32  : VOP3OpSel_Real_gfx10<0x377>;
 defm V_PERMLANEX16_B32 : VOP3OpSel_Real_gfx10<0x378>;
 

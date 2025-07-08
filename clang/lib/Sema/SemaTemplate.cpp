@@ -1773,9 +1773,9 @@ Sema::ActOnTemplateParameterList(unsigned Depth,
   for (NamedDecl *P : Params)
     warnOnReservedIdentifier(P);
 
-  return TemplateParameterList::Create(
-      Context, TemplateLoc, LAngleLoc,
-      llvm::ArrayRef(Params.data(), Params.size()), RAngleLoc, RequiresClause);
+  return TemplateParameterList::Create(Context, TemplateLoc, LAngleLoc,
+                                       llvm::ArrayRef(Params), RAngleLoc,
+                                       RequiresClause);
 }
 
 static void SetNestedNameSpecifier(Sema &S, TagDecl *T,

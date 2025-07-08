@@ -985,3 +985,10 @@ namespace ContainerOf {
     return reinterpret_cast<Node*>(reinterpret_cast<char*>(list) - offset);
   }
 }
+
+namespace GH144081 {
+  struct A;
+  template<int A::*> void f() {}
+  template void f<nullptr>();
+  // CHECK-LABEL: define{{.*}} void @"??$f@$0A@@GH144081@@YAXXZ"
+} // namespace GH144081

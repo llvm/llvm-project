@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLDB_TOOLS_LLDB_DAP_DAPERROR_H
+#define LLDB_TOOLS_LLDB_DAP_DAPERROR_H
+
 #include "llvm/Support/Error.h"
 #include <optional>
 #include <string>
@@ -30,7 +33,7 @@ public:
   const std::string &getMessage() const { return m_message; }
   bool getShowUser() const { return m_show_user; }
   const std::optional<std::string> &getURL() const { return m_url; }
-  const std::optional<std::string> &getURLLabel() const { return m_url; }
+  const std::optional<std::string> &getURLLabel() const { return m_url_label; }
 
 private:
   std::string m_message;
@@ -50,3 +53,5 @@ public:
 };
 
 } // namespace lldb_dap
+
+#endif // LLDB_TOOLS_LLDB_DAP_DAPERROR_H

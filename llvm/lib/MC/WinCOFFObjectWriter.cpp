@@ -22,7 +22,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionCOFF.h"
@@ -1071,7 +1070,7 @@ uint64_t WinCOFFWriter::writeObject() {
     auto *Sec = getContext().getCOFFSection(".llvm_addrsig",
                                             COFF::IMAGE_SCN_LNK_REMOVE);
     auto *Frag = cast<MCDataFragment>(Sec->curFragList()->Head);
-    raw_svector_ostream OS(Frag->getContents());
+    raw_svector_ostream OS(Frag->getContentsForAppending());
     for (const MCSymbol *S : OWriter.AddrsigSyms) {
       if (!S->isRegistered())
         continue;
@@ -1086,6 +1085,7 @@ uint64_t WinCOFFWriter::writeObject() {
              "executePostLayoutBinding!");
       encodeULEB128(SectionMap[TargetSection]->Symbol->getIndex(), OS);
     }
+    Frag->doneAppending();
   }
 
   // Create the contents of the .llvm.call-graph-profile section.
@@ -1093,7 +1093,7 @@ uint64_t WinCOFFWriter::writeObject() {
     auto *Sec = getContext().getCOFFSection(".llvm.call-graph-profile",
                                             COFF::IMAGE_SCN_LNK_REMOVE);
     auto *Frag = cast<MCDataFragment>(Sec->curFragList()->Head);
-    raw_svector_ostream OS(Frag->getContents());
+    raw_svector_ostream OS(Frag->getContentsForAppending());
     for (const auto &CGPE : OWriter.getCGProfile()) {
       uint32_t FromIndex = CGPE.From->getSymbol().getIndex();
       uint32_t ToIndex = CGPE.To->getSymbol().getIndex();
@@ -1101,6 +1101,7 @@ uint64_t WinCOFFWriter::writeObject() {
       support::endian::write(OS, ToIndex, W.Endian);
       support::endian::write(OS, CGPE.Count, W.Endian);
     }
+    Frag->doneAppending();
   }
 
   assignFileOffsets();

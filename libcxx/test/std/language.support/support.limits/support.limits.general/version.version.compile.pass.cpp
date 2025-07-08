@@ -164,6 +164,14 @@
 #    error "__cpp_lib_clamp should not be defined before c++17"
 #  endif
 
+#  ifdef __cpp_lib_common_reference
+#    error "__cpp_lib_common_reference should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_common_reference_wrapper
+#    error "__cpp_lib_common_reference_wrapper should not be defined before c++20"
+#  endif
+
 #  ifdef __cpp_lib_complex_udls
 #    error "__cpp_lib_complex_udls should not be defined before c++14"
 #  endif
@@ -1055,6 +1063,14 @@
 
 #  ifdef __cpp_lib_clamp
 #    error "__cpp_lib_clamp should not be defined before c++17"
+#  endif
+
+#  ifdef __cpp_lib_common_reference
+#    error "__cpp_lib_common_reference should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_common_reference_wrapper
+#    error "__cpp_lib_common_reference_wrapper should not be defined before c++20"
 #  endif
 
 #  ifndef __cpp_lib_complex_udls
@@ -2053,6 +2069,14 @@
 #  endif
 #  if __cpp_lib_clamp != 201603L
 #    error "__cpp_lib_clamp should have the value 201603L in c++17"
+#  endif
+
+#  ifdef __cpp_lib_common_reference
+#    error "__cpp_lib_common_reference should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_common_reference_wrapper
+#    error "__cpp_lib_common_reference_wrapper should not be defined before c++20"
 #  endif
 
 #  ifndef __cpp_lib_complex_udls
@@ -3279,6 +3303,20 @@
 #  endif
 #  if __cpp_lib_clamp != 201603L
 #    error "__cpp_lib_clamp should have the value 201603L in c++20"
+#  endif
+
+#  ifndef __cpp_lib_common_reference
+#    error "__cpp_lib_common_reference should be defined in c++20"
+#  endif
+#  if __cpp_lib_common_reference != 202302L
+#    error "__cpp_lib_common_reference should have the value 202302L in c++20"
+#  endif
+
+#  ifndef __cpp_lib_common_reference_wrapper
+#    error "__cpp_lib_common_reference_wrapper should be defined in c++20"
+#  endif
+#  if __cpp_lib_common_reference_wrapper != 202302L
+#    error "__cpp_lib_common_reference_wrapper should have the value 202302L in c++20"
 #  endif
 
 #  ifndef __cpp_lib_complex_udls
@@ -4726,6 +4764,20 @@
 #    error "__cpp_lib_clamp should have the value 201603L in c++23"
 #  endif
 
+#  ifndef __cpp_lib_common_reference
+#    error "__cpp_lib_common_reference should be defined in c++23"
+#  endif
+#  if __cpp_lib_common_reference != 202302L
+#    error "__cpp_lib_common_reference should have the value 202302L in c++23"
+#  endif
+
+#  ifndef __cpp_lib_common_reference_wrapper
+#    error "__cpp_lib_common_reference_wrapper should be defined in c++23"
+#  endif
+#  if __cpp_lib_common_reference_wrapper != 202302L
+#    error "__cpp_lib_common_reference_wrapper should have the value 202302L in c++23"
+#  endif
+
 #  ifndef __cpp_lib_complex_udls
 #    error "__cpp_lib_complex_udls should be defined in c++23"
 #  endif
@@ -5633,17 +5685,11 @@
 #    error "__cpp_lib_ranges_iota should have the value 202202L in c++23"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_join_with
-#      error "__cpp_lib_ranges_join_with should be defined in c++23"
-#    endif
-#    if __cpp_lib_ranges_join_with != 202202L
-#      error "__cpp_lib_ranges_join_with should have the value 202202L in c++23"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_join_with
-#      error "__cpp_lib_ranges_join_with should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_ranges_join_with
+#    error "__cpp_lib_ranges_join_with should be defined in c++23"
+#  endif
+#  if __cpp_lib_ranges_join_with != 202202L
+#    error "__cpp_lib_ranges_join_with should have the value 202202L in c++23"
 #  endif
 
 #  ifndef __cpp_lib_ranges_repeat
@@ -6405,6 +6451,20 @@
 #    error "__cpp_lib_clamp should have the value 201603L in c++26"
 #  endif
 
+#  ifndef __cpp_lib_common_reference
+#    error "__cpp_lib_common_reference should be defined in c++26"
+#  endif
+#  if __cpp_lib_common_reference != 202302L
+#    error "__cpp_lib_common_reference should have the value 202302L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_common_reference_wrapper
+#    error "__cpp_lib_common_reference_wrapper should be defined in c++26"
+#  endif
+#  if __cpp_lib_common_reference_wrapper != 202302L
+#    error "__cpp_lib_common_reference_wrapper should have the value 202302L in c++26"
+#  endif
+
 #  ifndef __cpp_lib_complex_udls
 #    error "__cpp_lib_complex_udls should be defined in c++26"
 #  endif
@@ -6575,8 +6635,8 @@
 #    ifndef __cpp_lib_constrained_equality
 #      error "__cpp_lib_constrained_equality should be defined in c++26"
 #    endif
-#    if __cpp_lib_constrained_equality != 202403L
-#      error "__cpp_lib_constrained_equality should have the value 202403L in c++26"
+#    if __cpp_lib_constrained_equality != 202411L
+#      error "__cpp_lib_constrained_equality should have the value 202411L in c++26"
 #    endif
 #  else
 #    ifdef __cpp_lib_constrained_equality
@@ -7549,17 +7609,11 @@
 #    error "__cpp_lib_ranges_iota should have the value 202202L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_ranges_join_with
-#      error "__cpp_lib_ranges_join_with should be defined in c++26"
-#    endif
-#    if __cpp_lib_ranges_join_with != 202202L
-#      error "__cpp_lib_ranges_join_with should have the value 202202L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_ranges_join_with
-#      error "__cpp_lib_ranges_join_with should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_ranges_join_with
+#    error "__cpp_lib_ranges_join_with should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_join_with != 202202L
+#    error "__cpp_lib_ranges_join_with should have the value 202202L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_repeat

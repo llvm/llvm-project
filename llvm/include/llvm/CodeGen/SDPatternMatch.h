@@ -108,6 +108,23 @@ inline Value_match m_Specific(SDValue N) {
   return Value_match(N);
 }
 
+template <unsigned ResNo, typename Pattern> struct Result_match {
+  Pattern P;
+
+  explicit Result_match(const Pattern &P) : P(P) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    return N.getResNo() == ResNo && P.match(Ctx, N);
+  }
+};
+
+/// Match only if the SDValue is a certain result at ResNo.
+template <unsigned ResNo, typename Pattern>
+inline Result_match<ResNo, Pattern> m_Result(const Pattern &P) {
+  return Result_match<ResNo, Pattern>(P);
+}
+
 struct DeferredValue_match {
   SDValue &MatchVal;
 
@@ -276,6 +293,34 @@ inline auto m_SpecificVT(EVT RefVT) {
 
 inline auto m_Glue() { return m_SpecificVT(MVT::Glue); }
 inline auto m_OtherVT() { return m_SpecificVT(MVT::Other); }
+
+/// Match a scalar ValueType.
+template <typename Pattern>
+inline auto m_SpecificScalarVT(EVT RefVT, const Pattern &P) {
+  return ValueType_match{[=](EVT VT) { return VT.getScalarType() == RefVT; },
+                         P};
+}
+inline auto m_SpecificScalarVT(EVT RefVT) {
+  return ValueType_match{[=](EVT VT) { return VT.getScalarType() == RefVT; },
+                         m_Value()};
+}
+
+/// Match a vector ValueType.
+template <typename Pattern>
+inline auto m_SpecificVectorElementVT(EVT RefVT, const Pattern &P) {
+  return ValueType_match{[=](EVT VT) {
+                           return VT.isVector() &&
+                                  VT.getVectorElementType() == RefVT;
+                         },
+                         P};
+}
+inline auto m_SpecificVectorElementVT(EVT RefVT) {
+  return ValueType_match{[=](EVT VT) {
+                           return VT.isVector() &&
+                                  VT.getVectorElementType() == RefVT;
+                         },
+                         m_Value()};
+}
 
 /// Match any integer ValueTypes.
 template <typename Pattern> inline auto m_IntegerVT(const Pattern &P) {
@@ -511,6 +556,13 @@ template <typename T0_P, typename T1_P, typename T2_P>
 inline TernaryOpc_match<T0_P, T1_P, T2_P>
 m_VSelect(const T0_P &Cond, const T1_P &T, const T2_P &F) {
   return TernaryOpc_match<T0_P, T1_P, T2_P>(ISD::VSELECT, Cond, T, F);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline Result_match<0, TernaryOpc_match<T0_P, T1_P, T2_P>>
+m_Load(const T0_P &Ch, const T1_P &Ptr, const T2_P &Offset) {
+  return m_Result<0>(
+      TernaryOpc_match<T0_P, T1_P, T2_P>(ISD::LOAD, Ch, Ptr, Offset));
 }
 
 template <typename T0_P, typename T1_P, typename T2_P>
@@ -1048,19 +1100,46 @@ inline SpecificInt_match m_SpecificInt(uint64_t V) {
   return SpecificInt_match(APInt(64, V));
 }
 
-inline SpecificInt_match m_Zero() { return m_SpecificInt(0U); }
-inline SpecificInt_match m_One() { return m_SpecificInt(1U); }
+struct Zero_match {
+  bool AllowUndefs;
 
-struct AllOnes_match {
+  explicit Zero_match(bool AllowUndefs) : AllowUndefs(AllowUndefs) {}
 
-  AllOnes_match() = default;
-
-  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
-    return isAllOnesOrAllOnesSplat(N);
+  template <typename MatchContext>
+  bool match(const MatchContext &, SDValue N) const {
+    return isZeroOrZeroSplat(N, AllowUndefs);
   }
 };
 
-inline AllOnes_match m_AllOnes() { return AllOnes_match(); }
+struct Ones_match {
+  bool AllowUndefs;
+
+  Ones_match(bool AllowUndefs) : AllowUndefs(AllowUndefs) {}
+
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+    return isOnesOrOnesSplat(N, AllowUndefs);
+  }
+};
+
+struct AllOnes_match {
+  bool AllowUndefs;
+
+  AllOnes_match(bool AllowUndefs) : AllowUndefs(AllowUndefs) {}
+
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+    return isAllOnesOrAllOnesSplat(N, AllowUndefs);
+  }
+};
+
+inline Ones_match m_One(bool AllowUndefs = false) {
+  return Ones_match(AllowUndefs);
+}
+inline Zero_match m_Zero(bool AllowUndefs = false) {
+  return Zero_match(AllowUndefs);
+}
+inline AllOnes_match m_AllOnes(bool AllowUndefs = false) {
+  return AllOnes_match(AllowUndefs);
+}
 
 /// Match true boolean value based on the information provided by
 /// TargetLowering.
@@ -1137,7 +1216,7 @@ inline CondCode_match m_SpecificCondCode(ISD::CondCode CC) {
 
 /// Match a negate as a sub(0, v)
 template <typename ValTy>
-inline BinaryOpc_match<SpecificInt_match, ValTy> m_Neg(const ValTy &V) {
+inline BinaryOpc_match<Zero_match, ValTy, false> m_Neg(const ValTy &V) {
   return m_Sub(m_Zero(), V);
 }
 

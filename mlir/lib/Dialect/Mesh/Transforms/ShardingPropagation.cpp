@@ -56,10 +56,10 @@ static llvm::raw_ostream &operator<<(llvm::raw_ostream &stream,
 template <typename Stream, typename Range>
 static Stream &printRange(Stream &stream, Range &&range) {
   stream << "[";
-  llvm::for_each(range, [&stream](auto &v) {
+  for (auto &v : range) {
     stream << v;
     stream << ", ";
-  });
+  }
   return stream << "]";
 }
 

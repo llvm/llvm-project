@@ -376,10 +376,12 @@ struct WgToSgElementwiseOp : public ConversionPattern {
       // Copy all attributes, but update "layout_result_0" to drop
       // sgLayout/sgData
       for (auto attr : op->getAttrs()) {
-        if (auto layout = dyn_cast<xegpu::LayoutAttr>(attr.getValue()))
-          state.addAttribute(attr.getName(), layout.dropSgLayoutAndData());
-        else
+        if (auto layout = dyn_cast<xegpu::LayoutAttr>(attr.getValue())) {
+          if (auto newLayout = layout.dropSgLayoutAndData())
+            state.addAttribute(attr.getName(), newLayout);
+        } else {
           state.addAttribute(attr.getName(), attr.getValue());
+        }
       }
       Operation *newOp = rewriter.create(state);
       newResults.push_back(newOp->getResult(0));
@@ -629,8 +631,10 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
       std::string name = xegpu::getLayoutName(result);
       if (auto layout = op->getAttrOfType<xegpu::LayoutAttr>(name)) {
         op->removeAttr(name);
-        if (!isa<scf::IfOp, scf::ForOp, scf::WhileOp, scf::ConditionOp>(op))
-          op->setAttr(name, layout.dropSgLayoutAndData());
+        if (!isa<scf::IfOp, scf::ForOp, scf::WhileOp, scf::ConditionOp>(op)) {
+          if (auto newLayout = layout.dropSgLayoutAndData())
+            op->setAttr(name, newLayout);
+        }
       }
     }
   });

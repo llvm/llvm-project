@@ -15,19 +15,7 @@
 
 #pragma OPENCL EXTENSION cl_clang_storage_class_specifiers : enable
 
-#ifdef cl_khr_fp64
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-#endif
-
-#ifdef cl_khr_fp16
-#pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#endif
-
-/* Function Attributes */
-#include <clc/clcfunc.h>
-
-/* 6.1 Supported Data Types */
-#include <clc/clctypes.h>
+#include <clc/opencl/opencl-base.h>
 
 /* 6.2.3 Explicit Conversions */
 #include <clc/opencl/convert.h>

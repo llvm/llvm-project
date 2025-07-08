@@ -474,9 +474,6 @@ def err_bool_redeclaration : Error<
 def warn_cxx98_compat_static_assert : Warning<
   "'static_assert' declarations are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
-def ext_ms_static_assert : ExtWarn<
-  "use of 'static_assert' without inclusion of <assert.h> is a Microsoft "
-  "extension">, InGroup<MicrosoftStaticAssert>;
 def ext_cxx_static_assert_no_message : ExtWarn<
   "'static_assert' with no message is a C++17 extension">, InGroup<CXX17>;
 def ext_c_static_assert_no_message : ExtWarn<
@@ -1488,6 +1485,9 @@ def err_omp_multiple_step_or_linear_modifier : Error<
   "multiple %select{'step size'|'linear modifier'}0 found in linear clause">;
 def err_omp_deprecate_old_syntax: Error<
   "old syntax '%0' on '%1' clause was deprecated, use new syntax '%2'">;
+def warn_omp_future_directive_spelling: Warning<
+  "directive spelling '%0' is introduced in a later OpenMP version">,
+  InGroup<OpenMPFuture>;
 def warn_pragma_expected_colon_r_paren : Warning<
   "missing ':' or ')' after %0 - ignoring">, InGroup<IgnoredPragmas>;
 def err_omp_unknown_directive : Error<

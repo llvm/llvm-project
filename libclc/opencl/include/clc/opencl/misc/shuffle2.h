@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_FUNCTION shuffle2
+#define FUNCTION shuffle2
 
 // Integer-type decls
 #define __CLC_BODY <clc/misc/shuffle2_decl.inc>
@@ -16,4 +16,4 @@
 #define __CLC_BODY <clc/misc/shuffle2_decl.inc>
 #include <clc/math/gentype.inc>
 
-#undef __CLC_FUNCTION
+#undef FUNCTION

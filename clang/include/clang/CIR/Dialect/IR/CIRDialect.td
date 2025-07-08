@@ -36,6 +36,10 @@ def CIR_Dialect : Dialect {
 
   let extraClassDeclaration = [{
     static llvm::StringRef getTripleAttrName() { return "cir.triple"; }
+    static llvm::StringRef getOptInfoAttrName() { return "cir.opt_info"; }
+    static llvm::StringRef getCalleeAttrName() { return "callee"; }
+    static llvm::StringRef getNoThrowAttrName() { return "nothrow"; }
+    static llvm::StringRef getSideEffectAttrName() { return "side_effect"; }
 
     void registerAttributes();
     void registerTypes();

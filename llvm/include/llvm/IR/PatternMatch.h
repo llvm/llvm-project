@@ -2119,6 +2119,13 @@ m_IntToPtr(const OpTy &Op) {
   return CastOperator_match<OpTy, Instruction::IntToPtr>(Op);
 }
 
+/// Matches any cast or self. Used to ignore casts.
+template <typename OpTy>
+inline match_combine_or<CastInst_match<OpTy, CastInst>, OpTy>
+m_CastOrSelf(const OpTy &Op) {
+  return m_CombineOr(CastInst_match<OpTy, CastInst>(Op), Op);
+}
+
 /// Matches Trunc.
 template <typename OpTy>
 inline CastInst_match<OpTy, TruncInst> m_Trunc(const OpTy &Op) {

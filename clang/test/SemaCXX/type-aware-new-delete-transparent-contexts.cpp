@@ -1,12 +1,22 @@
-// RUN: %clang_cc1  -fsyntax-only -verify %s -std=c++26 -fexceptions -DTRANSPARENT_DECL=0
-// RUN: %clang_cc1  -fsyntax-only -verify %s -std=c++26 -fexceptions -DTRANSPARENT_DECL=1
-// RUN: %clang_cc1  -fsyntax-only -verify %s -std=c++26 -fexceptions -DTRANSPARENT_DECL=2
+// RUN: rm -rf %t
+// RUN: mkdir %t
+// RUN: split-file %s %t
 
+// RUN: %clang_cc1  -fsyntax-only -verify %t/testing.cpp -std=c++26 -fexceptions -DTRANSPARENT_DECL=0
+// RUN: %clang_cc1  -fsyntax-only -verify %t/testing.cpp -std=c++26 -fexceptions -DTRANSPARENT_DECL=1
+// RUN: %clang_cc1  -fsyntax-only -verify %t/module_testing.cppm -std=c++26 -fexceptions -DTRANSPARENT_DECL=2
+
+//--- module_testing.cppm
 // expected-no-diagnostics
-#if TRANSPARENT_DECL==2
 export module Testing;
-#endif
 
+#include "testing.inc"
+
+//--- testing.cpp
+// expected-no-diagnostics
+#include "testing.inc"
+
+//--- testing.inc
 namespace std {
   template <class T> struct type_identity {};
   using size_t = __SIZE_TYPE__;

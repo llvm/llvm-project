@@ -15,6 +15,7 @@
 #include "clang/Tooling/JSONCompilationDatabase.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include <functional>
 #include <optional>
 #include <string>
@@ -55,6 +56,9 @@ struct TranslationUnitDeps {
   /// This may include modules with a different context hash when it can be
   /// determined that the differences are benign for this compilation.
   std::vector<ModuleID> ClangModuleDeps;
+
+  /// A list of the C++20 named modules this translation unit depends on.
+  std::vector<std::string> NamedModuleDeps;
 
   /// The sequence of commands required to build the translation unit. Commands
   /// should be executed in order.
@@ -188,6 +192,14 @@ public:
     ContextHash = std::move(Hash);
   }
 
+  void handleProvidedAndRequiredStdCXXModules(
+      std::optional<P1689ModuleInfo> Provided,
+      std::vector<P1689ModuleInfo> Requires) override {
+    ModuleName = Provided ? Provided->ModuleName : "";
+    llvm::transform(Requires, std::back_inserter(NamedModuleDeps),
+                    [](const auto &Module) { return Module.ModuleName; });
+  }
+
   TranslationUnitDeps takeTranslationUnitDeps();
   ModuleDepsGraph takeModuleGraphDeps();
 
@@ -195,6 +207,8 @@ private:
   std::vector<std::string> Dependencies;
   std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
   llvm::MapVector<ModuleID, ModuleDeps> ClangModuleDeps;
+  std::string ModuleName;
+  std::vector<std::string> NamedModuleDeps;
   std::vector<ModuleID> DirectModuleDeps;
   std::vector<Command> Commands;
   std::string ContextHash;

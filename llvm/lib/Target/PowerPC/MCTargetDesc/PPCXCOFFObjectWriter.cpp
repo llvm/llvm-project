@@ -9,7 +9,7 @@
 
 #include "MCTargetDesc/PPCFixupKinds.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
-#include "PPCMCExpr.h"
+#include "PPCMCAsmInfo.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCValue.h"

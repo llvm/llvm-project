@@ -272,11 +272,30 @@ template <typename T1, typename T2 = T1>
 concept HasOperatorEqual = requires(T1 t1, T2 t2) { t1 == t2; };
 
 template <typename T1, typename T2 = T1>
+concept HasOperatorGreaterThan = requires(T1 t1, T2 t2) { t1 > t2; };
+
+template <typename T1, typename T2 = T1>
+concept HasOperatorGreaterThanEqual = requires(T1 t1, T2 t2) { t1 >= t2; };
+template <typename T1, typename T2 = T1>
+concept HasOperatorLessThan = requires(T1 t1, T2 t2) { t1 < t2; };
+
+template <typename T1, typename T2 = T1>
+concept HasOperatorLessThanEqual = requires(T1 t1, T2 t2) { t1 <= t2; };
+
+template <typename T1, typename T2 = T1>
+concept HasOperatorNotEqual = requires(T1 t1, T2 t2) { t1 != t2; };
+
+template <typename T1, typename T2 = T1>
 concept HasOperatorSpaceship = requires(T1 t1, T2 t2) { t1 <=> t2; };
 
 struct NonComparable {};
 static_assert(!std::equality_comparable<NonComparable>);
 static_assert(!HasOperatorEqual<NonComparable>);
+static_assert(!HasOperatorGreaterThan<NonComparable>);
+static_assert(!HasOperatorGreaterThanEqual<NonComparable>);
+static_assert(!HasOperatorLessThan<NonComparable>);
+static_assert(!HasOperatorLessThanEqual<NonComparable>);
+static_assert(!HasOperatorNotEqual<NonComparable>);
 static_assert(!HasOperatorSpaceship<NonComparable>);
 
 class EqualityComparable {
@@ -290,6 +309,28 @@ private:
 };
 static_assert(std::equality_comparable<EqualityComparable>);
 static_assert(HasOperatorEqual<EqualityComparable>);
+static_assert(HasOperatorNotEqual<EqualityComparable>);
+
+class ThreeWayComparable {
+public:
+  constexpr ThreeWayComparable(int value) : value_{value} {};
+
+  friend constexpr bool operator==(const ThreeWayComparable&, const ThreeWayComparable&) noexcept = default;
+  friend constexpr std::strong_ordering
+  operator<=>(const ThreeWayComparable&, const ThreeWayComparable&) noexcept = default;
+
+private:
+  int value_;
+};
+static_assert(std::equality_comparable<ThreeWayComparable>);
+static_assert(std::three_way_comparable<ThreeWayComparable>);
+static_assert(HasOperatorEqual<ThreeWayComparable>);
+static_assert(HasOperatorGreaterThan<ThreeWayComparable>);
+static_assert(HasOperatorGreaterThanEqual<ThreeWayComparable>);
+static_assert(HasOperatorLessThan<ThreeWayComparable>);
+static_assert(HasOperatorLessThanEqual<ThreeWayComparable>);
+static_assert(HasOperatorNotEqual<ThreeWayComparable>);
+static_assert(HasOperatorSpaceship<ThreeWayComparable>);
 
 #endif // TEST_STD_VER >= 20
 

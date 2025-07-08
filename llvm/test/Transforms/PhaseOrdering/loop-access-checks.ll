@@ -24,7 +24,8 @@ define void @test_fill_with_foreach([2 x i64] %elems.coerce) {
 ; CHECK-NEXT:    [[ELEMS_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [2 x i64] [[ELEMS_COERCE]], 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[ELEMS_COERCE_FCA_0_EXTRACT]] to ptr
 ; CHECK-NEXT:    [[ELEMS_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [2 x i64] [[ELEMS_COERCE]], 1
-; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 [[ELEMS_COERCE_FCA_1_EXTRACT]]
+; CHECK-NEXT:    [[ADD_PTR_I_IDX:%.*]] = shl nsw i64 [[ELEMS_COERCE_FCA_1_EXTRACT]], 2
+; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 [[ADD_PTR_I_IDX]]
 ; CHECK-NEXT:    [[CMP_NOT_I_I_I_I:%.*]] = icmp slt i64 [[ELEMS_COERCE_FCA_1_EXTRACT]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT_I_I_I_I]], label [[ERROR:%.*]], label [[FOR_COND_PREHEADER_SPLIT:%.*]]
 ; CHECK:       for.cond.preheader.split:

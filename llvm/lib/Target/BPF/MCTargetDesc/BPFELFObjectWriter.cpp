@@ -45,12 +45,11 @@ unsigned BPFELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case FK_SecRel_8:
     // LD_imm64 instruction.
     return ELF::R_BPF_64_64;
-  case FK_PCRel_4:
-    // CALL instruction.
-    return ELF::R_BPF_64_32;
   case FK_Data_8:
     return ELF::R_BPF_64_ABS64;
   case FK_Data_4:
+    if (Fixup.isPCRel()) // CALL instruction
+      return ELF::R_BPF_64_32;
     if (const auto *A = Target.getAddSym()) {
       const MCSymbol &Sym = *A;
 

@@ -69,7 +69,7 @@ public:
   // The next section deals with various breakpoint options.
 
   /// If \a enabled is \b true, enable the breakpoint, if \b false disable it.
-  void SetEnabled(bool enabled);
+  bool SetEnabled(bool enabled);
 
   /// Check the Enable/Disable state.
   ///
@@ -235,7 +235,7 @@ public:
   ///     \b true if the target should stop at this breakpoint and \b
   ///     false not.
   bool InvokeCallback(StoppointCallbackContext *context);
-  
+
   /// Report whether the callback for this location is synchronous or not.
   ///
   /// \return
@@ -371,11 +371,8 @@ private:
   ///     The thread for which this breakpoint location is valid, or
   ///     LLDB_INVALID_THREAD_ID if it is valid for all threads.
   ///
-  /// \param[in] hardware
-  ///     \b true if a hardware breakpoint is requested.
-
   BreakpointLocation(lldb::break_id_t bid, Breakpoint &owner,
-                     const Address &addr, lldb::tid_t tid, bool hardware,
+                     const Address &addr, lldb::tid_t tid,
                      bool check_for_resolver = true);
 
   // Data members:

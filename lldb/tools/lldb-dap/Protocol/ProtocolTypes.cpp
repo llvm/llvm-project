@@ -65,7 +65,7 @@ llvm::json::Value toJSON(const Source &S) {
     result.insert({"name", *S.name});
   if (S.path)
     result.insert({"path", *S.path});
-  if (S.sourceReference)
+  if (S.sourceReference && (*S.sourceReference > LLDB_DAP_INVALID_SRC_REF))
     result.insert({"sourceReference", *S.sourceReference});
   if (S.presentationHint)
     result.insert({"presentationHint", *S.presentationHint});

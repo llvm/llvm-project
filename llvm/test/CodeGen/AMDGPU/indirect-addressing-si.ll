@@ -6178,13 +6178,12 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; NOOPT-NEXT:    v_mov_b32_e32 v11, v14
 ; NOOPT-NEXT:    v_mov_b32_e32 v12, v13
 ; NOOPT-NEXT:    buffer_store_dwordx4 v[9:12], off, s[4:7], 0 offset:32
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
+; NOOPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; NOOPT-NEXT:    ; implicit-def: $sgpr1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr1
 ; NOOPT-NEXT:    ; kill: def $vgpr8 killed $vgpr8 def $vgpr8_vgpr9_vgpr10_vgpr11 killed $exec
-; NOOPT-NEXT:    s_waitcnt expcnt(0)
 ; NOOPT-NEXT:    v_mov_b32_e32 v9, v4
 ; NOOPT-NEXT:    v_mov_b32_e32 v10, v3
 ; NOOPT-NEXT:    v_mov_b32_e32 v11, v2
@@ -7297,7 +7296,6 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; NOOPT-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 glc
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    ;;#ASMSTART
 ; NOOPT-NEXT:    ; reg use v[0:3]
 ; NOOPT-NEXT:    ;;#ASMEND
@@ -7320,7 +7318,6 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; NOOPT-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 glc
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    ;;#ASMSTART
 ; NOOPT-NEXT:    ; reg use v[0:3]
 ; NOOPT-NEXT:    ;;#ASMEND
@@ -7541,7 +7538,6 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0_sgpr1_sgpr2_sgpr3
 ; NOOPT-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    ;;#ASMSTART
 ; NOOPT-NEXT:    ; reg use v[0:3]
 ; NOOPT-NEXT:    ;;#ASMEND
@@ -7565,7 +7561,6 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0_sgpr1_sgpr2_sgpr3
 ; NOOPT-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    ;;#ASMSTART
 ; NOOPT-NEXT:    ; reg use v[0:3]
 ; NOOPT-NEXT:    ;;#ASMEND

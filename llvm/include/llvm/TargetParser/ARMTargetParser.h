@@ -27,6 +27,13 @@ class Triple;
 
 namespace ARM {
 
+enum ARMABI {
+  ARM_ABI_UNKNOWN,
+  ARM_ABI_APCS,
+  ARM_ABI_AAPCS, // ARM EABI
+  ARM_ABI_AAPCS16
+};
+
 // Arch extension modifiers for CPUs.
 // Note that this is not the same as the AArch64 list
 enum ArchExtKind : uint64_t {
@@ -264,6 +271,9 @@ LLVM_ABI unsigned parseArchVersion(StringRef Arch);
 
 LLVM_ABI void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values);
 LLVM_ABI StringRef computeDefaultTargetABI(const Triple &TT, StringRef CPU);
+
+LLVM_ABI ARMABI computeTargetABI(const Triple &TT, StringRef CPU,
+                                 StringRef ABIName = "");
 
 /// Get the (LLVM) name of the minimum ARM CPU for the arch we are targeting.
 ///

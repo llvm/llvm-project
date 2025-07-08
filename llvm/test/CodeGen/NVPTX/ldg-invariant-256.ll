@@ -11,7 +11,7 @@ define i8 @ld_global_v32i8(ptr addrspace(1) %ptr) {
 ; SM90-LABEL: ld_global_v32i8(
 ; SM90:       {
 ; SM90-NEXT:    .reg .b16 %rs<16>;
-; SM90-NEXT:    .reg .b32 %r<19>;
+; SM90-NEXT:    .reg .b32 %r<18>;
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
@@ -42,14 +42,13 @@ define i8 @ld_global_v32i8(ptr addrspace(1) %ptr) {
 ; SM90-NEXT:    add.s16 %rs14, %rs11, %rs12;
 ; SM90-NEXT:    add.s16 %rs15, %rs13, %rs14;
 ; SM90-NEXT:    cvt.u32.u16 %r17, %rs15;
-; SM90-NEXT:    and.b32 %r18, %r17, 255;
-; SM90-NEXT:    st.param.b32 [func_retval0], %r18;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r17;
 ; SM90-NEXT:    ret;
 ;
 ; SM100-LABEL: ld_global_v32i8(
 ; SM100:       {
 ; SM100-NEXT:    .reg .b16 %rs<16>;
-; SM100-NEXT:    .reg .b32 %r<19>;
+; SM100-NEXT:    .reg .b32 %r<18>;
 ; SM100-NEXT:    .reg .b64 %rd<2>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
@@ -79,8 +78,7 @@ define i8 @ld_global_v32i8(ptr addrspace(1) %ptr) {
 ; SM100-NEXT:    add.s16 %rs14, %rs11, %rs12;
 ; SM100-NEXT:    add.s16 %rs15, %rs13, %rs14;
 ; SM100-NEXT:    cvt.u32.u16 %r17, %rs15;
-; SM100-NEXT:    and.b32 %r18, %r17, 255;
-; SM100-NEXT:    st.param.b32 [func_retval0], %r18;
+; SM100-NEXT:    st.param.b32 [func_retval0], %r17;
 ; SM100-NEXT:    ret;
   %a = load <32 x i8>, ptr addrspace(1) %ptr, !invariant.load !0
   %v1 = extractelement <32 x i8> %a, i32 0

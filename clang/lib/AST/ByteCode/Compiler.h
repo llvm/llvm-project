@@ -391,6 +391,7 @@ private:
   bool emitRecordDestruction(const Record *R, SourceInfo Loc);
   bool emitDestruction(const Descriptor *Desc, SourceInfo Loc);
   bool emitDummyPtr(const DeclTy &D, const Expr *E);
+  bool emitFloat(const APFloat &F, const Expr *E);
   unsigned collectBaseOffset(const QualType BaseType,
                              const QualType DerivedType);
   bool emitLambdaStaticInvokerBody(const CXXMethodDecl *MD);
@@ -573,17 +574,17 @@ public:
     // Emit destructor calls for local variables of record
     // type with a destructor.
     for (Scope::Local &Local : llvm::reverse(this->Ctx->Descriptors[*Idx])) {
-      if (!Local.Desc->isPrimitive() && !Local.Desc->isPrimitiveArray()) {
-        if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
-          return false;
+      if (Local.Desc->hasTrivialDtor())
+        continue;
+      if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))
+        return false;
 
-        if (!this->Ctx->emitDestruction(Local.Desc, Local.Desc->getLoc()))
-          return false;
+      if (!this->Ctx->emitDestruction(Local.Desc, Local.Desc->getLoc()))
+        return false;
 
-        if (!this->Ctx->emitPopPtr(E))
-          return false;
-        removeIfStoredOpaqueValue(Local);
-      }
+      if (!this->Ctx->emitPopPtr(E))
+        return false;
+      removeIfStoredOpaqueValue(Local);
     }
     return true;
   }

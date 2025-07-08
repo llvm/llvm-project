@@ -29,11 +29,10 @@ public:
 TEST_F(PipeTest, CreateWithUniqueName) {
   Pipe pipe;
   llvm::SmallString<0> name;
-  ASSERT_THAT_ERROR(pipe.CreateWithUniqueName("PipeTest-CreateWithUniqueName",
-                                              /*child_process_inherit=*/false,
-                                              name)
-                        .ToError(),
-                    llvm::Succeeded());
+  ASSERT_THAT_ERROR(
+      pipe.CreateWithUniqueName("PipeTest-CreateWithUniqueName", name)
+          .ToError(),
+      llvm::Succeeded());
 }
 
 // Test broken
@@ -41,19 +40,15 @@ TEST_F(PipeTest, CreateWithUniqueName) {
 TEST_F(PipeTest, OpenAsReader) {
   Pipe pipe;
   llvm::SmallString<0> name;
-  ASSERT_THAT_ERROR(pipe.CreateWithUniqueName("PipeTest-OpenAsReader",
-                                              /*child_process_inherit=*/false,
-                                              name)
-                        .ToError(),
-                    llvm::Succeeded());
+  ASSERT_THAT_ERROR(
+      pipe.CreateWithUniqueName("PipeTest-OpenAsReader", name).ToError(),
+      llvm::Succeeded());
 
   // Ensure name is not null-terminated
   size_t name_len = name.size();
   name += "foobar";
   llvm::StringRef name_ref(name.data(), name_len);
-  ASSERT_THAT_ERROR(
-      pipe.OpenAsReader(name_ref, /*child_process_inherit=*/false).ToError(),
-      llvm::Succeeded());
+  ASSERT_THAT_ERROR(pipe.OpenAsReader(name_ref).ToError(), llvm::Succeeded());
 
   ASSERT_TRUE(pipe.CanRead());
 }
@@ -63,7 +58,7 @@ TEST_F(PipeTest, OpenAsReader) {
 #ifndef _WIN32
 TEST_F(PipeTest, WriteWithTimeout) {
   Pipe pipe;
-  ASSERT_THAT_ERROR(pipe.CreateNew(false).ToError(), llvm::Succeeded());
+  ASSERT_THAT_ERROR(pipe.CreateNew().ToError(), llvm::Succeeded());
 
   // The pipe buffer is 1024 for PipeWindows and at least 512 on Darwin.
   // In Linux versions before 2.6.11, the capacity of a pipe was the same as the
@@ -153,7 +148,7 @@ TEST_F(PipeTest, WriteWithTimeout) {
 
 TEST_F(PipeTest, ReadWithTimeout) {
   Pipe pipe;
-  ASSERT_THAT_ERROR(pipe.CreateNew(false).ToError(), llvm::Succeeded());
+  ASSERT_THAT_ERROR(pipe.CreateNew().ToError(), llvm::Succeeded());
 
   char buf[100];
   // The pipe is initially empty. A polling read returns immediately.

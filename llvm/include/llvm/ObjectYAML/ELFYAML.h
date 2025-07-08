@@ -162,6 +162,7 @@ struct BBAddrMapEntry {
     llvm::yaml::Hex64 AddressOffset;
     llvm::yaml::Hex64 Size;
     llvm::yaml::Hex64 Metadata;
+    std::optional<std::vector<llvm::yaml::Hex64>> CallsiteOffsets;
   };
   uint8_t Version;
   llvm::yaml::Hex8 Feature;
@@ -179,6 +180,20 @@ struct BBAddrMapEntry {
     if (!BBRanges || BBRanges->empty())
       return 0;
     return BBRanges->front().BaseAddress;
+  }
+
+  // Returns if any BB entries have non-empty callsite offsets.
+  bool hasAnyCallsiteOffsets() const {
+    if (!BBRanges)
+      return false;
+    for (const ELFYAML::BBAddrMapEntry::BBRangeEntry &BBR : *BBRanges) {
+      if (!BBR.BBEntries)
+        continue;
+      for (const ELFYAML::BBAddrMapEntry::BBEntry &BBE : *BBR.BBEntries)
+        if (BBE.CallsiteOffsets && !BBE.CallsiteOffsets->empty())
+          return true;
+    }
+    return false;
   }
 };
 

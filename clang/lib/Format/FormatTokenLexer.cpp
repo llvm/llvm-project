@@ -14,6 +14,7 @@
 
 #include "FormatTokenLexer.h"
 #include "FormatToken.h"
+#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
@@ -487,7 +488,7 @@ bool FormatTokenLexer::tryMergeCSharpKeywordVariables() {
 
 // In C# transform identifier foreach into kw_foreach
 bool FormatTokenLexer::tryTransformCSharpForEach() {
-  if (Tokens.size() < 1)
+  if (Tokens.empty())
     return false;
   auto &Identifier = *(Tokens.end() - 1);
   if (Identifier->isNot(tok::identifier))
@@ -947,7 +948,7 @@ void FormatTokenLexer::handleTableGenNumericLikeIdentifier() {
   // 4. The first non-digit character is 'x', and the next is a hex digit.
   // Note that in the case 3 and 4, if the next character does not exists in
   // this token, the token is an identifier.
-  if (Text.size() < 1 || Text[0] == '+' || Text[0] == '-')
+  if (Text.empty() || Text[0] == '+' || Text[0] == '-')
     return;
   const auto NonDigitPos = Text.find_if([](char C) { return !isdigit(C); });
   // All the characters are digits
@@ -1203,16 +1204,22 @@ static size_t countLeadingWhitespace(StringRef Text) {
   const unsigned char *const End = Text.bytes_end();
   const unsigned char *Cur = Begin;
   while (Cur < End) {
-    if (isspace(Cur[0])) {
+    if (isWhitespace(Cur[0])) {
       ++Cur;
-    } else if (Cur[0] == '\\' && (Cur[1] == '\n' || Cur[1] == '\r')) {
-      // A '\' followed by a newline always escapes the newline, regardless
-      // of whether there is another '\' before it.
+    } else if (Cur[0] == '\\') {
+      // A backslash followed by optional horizontal whitespaces (P22232R2) and
+      // then a newline always escapes the newline.
       // The source has a null byte at the end. So the end of the entire input
       // isn't reached yet. Also the lexer doesn't break apart an escaped
       // newline.
-      assert(End - Cur >= 2);
-      Cur += 2;
+      const auto *Lookahead = Cur + 1;
+      while (isHorizontalWhitespace(*Lookahead))
+        ++Lookahead;
+      // No line splice found; the backslash is a token.
+      if (!isVerticalWhitespace(*Lookahead))
+        break;
+      // Splice found, consume it.
+      Cur = Lookahead + 1;
     } else if (Cur[0] == '?' && Cur[1] == '?' && Cur[2] == '/' &&
                (Cur[3] == '\n' || Cur[3] == '\r')) {
       // Newlines can also be escaped by a '?' '?' '/' trigraph. By the way, the
@@ -1295,13 +1302,18 @@ FormatToken *FormatTokenLexer::getNextToken() {
       case '/':
         // The text was entirely whitespace when this loop was entered. Thus
         // this has to be an escape sequence.
-        assert(Text.substr(i, 2) == "\\\r" || Text.substr(i, 2) == "\\\n" ||
-               Text.substr(i, 4) == "\?\?/\r" ||
+        assert(Text.substr(i, 4) == "\?\?/\r" ||
                Text.substr(i, 4) == "\?\?/\n" ||
                (i >= 1 && (Text.substr(i - 1, 4) == "\?\?/\r" ||
                            Text.substr(i - 1, 4) == "\?\?/\n")) ||
                (i >= 2 && (Text.substr(i - 2, 4) == "\?\?/\r" ||
-                           Text.substr(i - 2, 4) == "\?\?/\n")));
+                           Text.substr(i - 2, 4) == "\?\?/\n")) ||
+               (Text[i] == '\\' && [&]() -> bool {
+                 size_t j = i + 1;
+                 while (j < Text.size() && isHorizontalWhitespace(Text[j]))
+                   ++j;
+                 return j < Text.size() && (Text[j] == '\n' || Text[j] == '\r');
+               }()));
         InEscape = true;
         break;
       default:
@@ -1359,8 +1371,7 @@ FormatToken *FormatTokenLexer::getNextToken() {
       } else if (FormatTok->TokenText == "``") {
         FormatTok->Tok.setIdentifierInfo(nullptr);
         FormatTok->Tok.setKind(tok::hashhash);
-      } else if (Tokens.size() > 0 &&
-                 Tokens.back()->is(Keywords.kw_apostrophe) &&
+      } else if (!Tokens.empty() && Tokens.back()->is(Keywords.kw_apostrophe) &&
                  NumberBase.match(FormatTok->TokenText, &Matches)) {
         // In Verilog in a based number literal like `'b10`, there may be
         // whitespace between `'b` and `10`. Therefore we handle the base and
@@ -1408,7 +1419,7 @@ FormatToken *FormatTokenLexer::getNextToken() {
     tryParseJavaTextBlock();
   }
 
-  if (Style.isVerilog() && Tokens.size() > 0 &&
+  if (Style.isVerilog() && !Tokens.empty() &&
       Tokens.back()->is(TT_VerilogNumberBase) &&
       FormatTok->Tok.isOneOf(tok::identifier, tok::question)) {
     // Mark the number following a base like `'h?a0` as a number.
@@ -1442,9 +1453,9 @@ FormatToken *FormatTokenLexer::getNextToken() {
   if (Style.isCpp()) {
     auto *Identifier = FormatTok->Tok.getIdentifierInfo();
     auto it = Macros.find(Identifier);
-    if (!(Tokens.size() > 0 && Tokens.back()->Tok.getIdentifierInfo() &&
-          Tokens.back()->Tok.getIdentifierInfo()->getPPKeywordID() ==
-              tok::pp_define) &&
+    if ((Tokens.empty() || !Tokens.back()->Tok.getIdentifierInfo() ||
+         Tokens.back()->Tok.getIdentifierInfo()->getPPKeywordID() !=
+             tok::pp_define) &&
         it != Macros.end()) {
       FormatTok->setType(it->second);
       if (it->second == TT_IfMacro) {

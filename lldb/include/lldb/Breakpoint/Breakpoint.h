@@ -519,6 +519,8 @@ public:
 
   bool IsHardware() const { return m_hardware; }
 
+  llvm::Error SetIsHardware(bool is_hardware);
+
   lldb::BreakpointResolverSP GetResolver() { return m_resolver_sp; }
 
   lldb::SearchFilterSP GetSearchFilter() { return m_filter_sp; }

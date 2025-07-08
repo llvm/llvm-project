@@ -1827,11 +1827,9 @@ define <4 x i64> @shift32_v4i64(<4 x i64> %a) nounwind {
 define <4 x i64> @shift32_v4i64_concat(<2 x i64> %lo, <2 x i64> %hi) nounwind {
 ; AVX1-LABEL: shift32_v4i64_concat:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX1-NEXT:    vpsllq $32, %xmm0, %xmm0
+; AVX1-NEXT:    vpsllq $32, %xmm1, %xmm1
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm1[0,2],ymm0[0,2],ymm1[4,6],ymm0[4,6]
-; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2,1,3,4,6,5,7]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: shift32_v4i64_concat:
@@ -1843,11 +1841,9 @@ define <4 x i64> @shift32_v4i64_concat(<2 x i64> %lo, <2 x i64> %hi) nounwind {
 ;
 ; XOPAVX1-LABEL: shift32_v4i64_concat:
 ; XOPAVX1:       # %bb.0:
-; XOPAVX1-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; XOPAVX1-NEXT:    vpsllq $32, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpsllq $32, %xmm1, %xmm1
 ; XOPAVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; XOPAVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; XOPAVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm1[0,2],ymm0[0,2],ymm1[4,6],ymm0[4,6]
-; XOPAVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2,1,3,4,6,5,7]
 ; XOPAVX1-NEXT:    retq
 ;
 ; XOPAVX2-LABEL: shift32_v4i64_concat:
@@ -1873,11 +1869,9 @@ define <4 x i64> @shift32_v4i64_concat(<2 x i64> %lo, <2 x i64> %hi) nounwind {
 ;
 ; X86-AVX1-LABEL: shift32_v4i64_concat:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; X86-AVX1-NEXT:    vpsllq $32, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpsllq $32, %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; X86-AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X86-AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm1[0,2],ymm0[0,2],ymm1[4,6],ymm0[4,6]
-; X86-AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2,1,3,4,6,5,7]
 ; X86-AVX1-NEXT:    retl
 ;
 ; X86-AVX2-LABEL: shift32_v4i64_concat:

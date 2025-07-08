@@ -150,7 +150,12 @@ private:
 
   int Compare(const char *that) const {
     std::size_t bytes{size()};
-    if (int cmp{std::strncmp(begin(), that, bytes)}) {
+    // strncmp is undefined if either pointer is null.
+    if (!bytes) {
+      return that == nullptr ? 0 : -1;
+    } else if (!that) {
+      return 1;
+    } else if (int cmp{std::strncmp(begin(), that, bytes)}) {
       return cmp;
     }
     return that[bytes] == '\0' ? 0 : -1;

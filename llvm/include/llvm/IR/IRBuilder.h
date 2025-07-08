@@ -1575,10 +1575,14 @@ public:
     return Accum;
   }
 
-  Value *CreateOr(Value *LHS, Value *RHS, const Twine &Name = "") {
+  Value *CreateOr(Value *LHS, Value *RHS, const Twine &Name = "",
+                  bool IsDisjoint = false) {
     if (auto *V = Folder.FoldBinOp(Instruction::Or, LHS, RHS))
       return V;
-    return Insert(BinaryOperator::CreateOr(LHS, RHS), Name);
+    return Insert(
+        IsDisjoint ? BinaryOperator::CreateDisjoint(Instruction::Or, LHS, RHS)
+                   : BinaryOperator::CreateOr(LHS, RHS),
+        Name);
   }
 
   Value *CreateOr(Value *LHS, const APInt &RHS, const Twine &Name = "") {

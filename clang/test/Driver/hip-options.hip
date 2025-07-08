@@ -118,7 +118,7 @@
 // RUN: not %clang --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
 // RUN:   --offload-arch=gfx906 -fopenmp=libomp -fopenmp-targets=amdgcn %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=OMPTGT %s
-// OMPTGT: unsupported option '-fopenmp-targets=' for language mode 'HIP'
+// OMPTGT: unsupported option '--offload-targets=' for language mode 'HIP'
 
 // Check -Xoffload-linker option is passed to lld.
 

@@ -424,7 +424,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     mlir::Type elemTy = convertTypeForMem(arrTy->getElementType());
     // int X[] -> [0 x int], unless the element type is not sized.  If it is
     // unsized (e.g. an incomplete record) just use [0 x i8].
-    if (!builder.isSized(elemTy)) {
+    if (!cir::isSized(elemTy)) {
       elemTy = cgm.SInt8Ty;
     }
 
@@ -438,7 +438,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
     // TODO(CIR): In LLVM, "lower arrays of undefined struct type to arrays of
     // i8 just to have a concrete type"
-    if (!builder.isSized(elemTy)) {
+    if (!cir::isSized(elemTy)) {
       cgm.errorNYI(SourceLocation(), "arrays of undefined struct type", type);
       resultType = cgm.UInt32Ty;
       break;
