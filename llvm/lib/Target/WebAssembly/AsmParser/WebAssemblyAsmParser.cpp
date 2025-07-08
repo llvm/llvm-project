@@ -669,6 +669,10 @@ public:
       if (parseFunctionTableOperand(&FunctionTable))
         return true;
       ExpectFuncType = true;
+    } else if (Name == "ref.test") {
+      // When we get support for wasm-gc types, this should become
+      // ExpectRefType.
+      ExpectFuncType = true;
     }
 
     // Returns true if the next tokens are a catch clause

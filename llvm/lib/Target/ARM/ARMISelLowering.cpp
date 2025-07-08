@@ -684,7 +684,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
     for (const auto &LC : LibraryCalls) {
       setLibcallImpl(LC.Op, LC.Impl);
-      setLibcallCallingConv(LC.Op, LC.CC);
+      setLibcallImplCallingConv(LC.Impl, LC.CC);
       if (LC.Cond != CmpInst::BAD_ICMP_PREDICATE)
         setCmpLibcallCC(LC.Op, LC.Cond);
     }
@@ -723,7 +723,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
       for (const auto &LC : MemOpsLibraryCalls) {
         setLibcallImpl(LC.Op, LC.Impl);
-        setLibcallCallingConv(LC.Op, LC.CC);
+        setLibcallImplCallingConv(LC.Impl, LC.CC);
       }
     }
   }
@@ -733,13 +733,13 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   // hard-float calling convention by default.
   if (!TT.isWatchABI()) {
     if (TM.isAAPCS_ABI()) {
-      setLibcallCallingConv(RTLIB::FPROUND_F32_F16, CallingConv::ARM_AAPCS);
-      setLibcallCallingConv(RTLIB::FPROUND_F64_F16, CallingConv::ARM_AAPCS);
-      setLibcallCallingConv(RTLIB::FPEXT_F16_F32, CallingConv::ARM_AAPCS);
+      setLibcallImplCallingConv(RTLIB::__truncsfhf2, CallingConv::ARM_AAPCS);
+      setLibcallImplCallingConv(RTLIB::__truncdfhf2, CallingConv::ARM_AAPCS);
+      setLibcallImplCallingConv(RTLIB::__extendhfsf2, CallingConv::ARM_AAPCS);
     } else {
-      setLibcallCallingConv(RTLIB::FPROUND_F32_F16, CallingConv::ARM_APCS);
-      setLibcallCallingConv(RTLIB::FPROUND_F64_F16, CallingConv::ARM_APCS);
-      setLibcallCallingConv(RTLIB::FPEXT_F16_F32, CallingConv::ARM_APCS);
+      setLibcallImplCallingConv(RTLIB::__truncsfhf2, CallingConv::ARM_APCS);
+      setLibcallImplCallingConv(RTLIB::__truncdfhf2, CallingConv::ARM_APCS);
+      setLibcallImplCallingConv(RTLIB::__extendhfsf2, CallingConv::ARM_APCS);
     }
   }
 
@@ -761,7 +761,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
     for (const auto &LC : LibraryCalls) {
       setLibcallImpl(LC.Op, LC.Impl);
-      setLibcallCallingConv(LC.Op, LC.CC);
+      setLibcallImplCallingConv(LC.Impl, LC.CC);
     }
   } else if (!TT.isOSBinFormatMachO()) {
     setLibcallImpl(RTLIB::FPROUND_F32_F16, RTLIB::__gnu_f2h_ieee);
@@ -1400,8 +1400,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   setOperationAction(ISD::EH_SJLJ_SETJMP, MVT::i32, Custom);
   setOperationAction(ISD::EH_SJLJ_LONGJMP, MVT::Other, Custom);
   setOperationAction(ISD::EH_SJLJ_SETUP_DISPATCH, MVT::Other, Custom);
-  if (Subtarget->useSjLjEH())
-    setLibcallImpl(RTLIB::UNWIND_RESUME, RTLIB::_Unwind_SjLj_Resume);
 
   setOperationAction(ISD::SETCC,     MVT::i32, Expand);
   setOperationAction(ISD::SETCC,     MVT::f32, Expand);
@@ -1548,8 +1546,14 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       setOperationAction(ISD::FFLOOR, MVT::v4f32, Legal);
       setOperationAction(ISD::FROUND, MVT::v2f32, Legal);
       setOperationAction(ISD::FROUND, MVT::v4f32, Legal);
+      setOperationAction(ISD::FROUNDEVEN, MVT::v2f32, Legal);
+      setOperationAction(ISD::FROUNDEVEN, MVT::v4f32, Legal);
       setOperationAction(ISD::FCEIL, MVT::v2f32, Legal);
       setOperationAction(ISD::FCEIL, MVT::v4f32, Legal);
+      setOperationAction(ISD::FTRUNC, MVT::v2f32, Legal);
+      setOperationAction(ISD::FTRUNC, MVT::v4f32, Legal);
+      setOperationAction(ISD::FRINT, MVT::v2f32, Legal);
+      setOperationAction(ISD::FRINT, MVT::v4f32, Legal);
     }
 
     if (Subtarget->hasFullFP16()) {
@@ -1567,8 +1571,14 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       setOperationAction(ISD::FFLOOR, MVT::v8f16, Legal);
       setOperationAction(ISD::FROUND, MVT::v4f16, Legal);
       setOperationAction(ISD::FROUND, MVT::v8f16, Legal);
+      setOperationAction(ISD::FROUNDEVEN, MVT::v4f16, Legal);
+      setOperationAction(ISD::FROUNDEVEN, MVT::v8f16, Legal);
       setOperationAction(ISD::FCEIL, MVT::v4f16, Legal);
       setOperationAction(ISD::FCEIL, MVT::v8f16, Legal);
+      setOperationAction(ISD::FTRUNC, MVT::v4f16, Legal);
+      setOperationAction(ISD::FTRUNC, MVT::v8f16, Legal);
+      setOperationAction(ISD::FRINT, MVT::v4f16, Legal);
+      setOperationAction(ISD::FRINT, MVT::v8f16, Legal);
     }
   }
 
@@ -5514,6 +5524,21 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue FalseVal = Op.getOperand(3);
   ConstantSDNode *CFVal = dyn_cast<ConstantSDNode>(FalseVal);
   ConstantSDNode *CTVal = dyn_cast<ConstantSDNode>(TrueVal);
+  ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS);
+  if (Op.getValueType().isInteger()) {
+    // Check for sign pattern (SELECT_CC setgt, iN lhs, -1, 1, -1) and transform
+    // into (OR (ASR lhs, N-1), 1), which requires less instructions for the
+    // supported types.
+    if (CC == ISD::SETGT && RHSC && RHSC->isAllOnes() && CTVal && CFVal &&
+        CTVal->isOne() && CFVal->isAllOnes() &&
+        LHS.getValueType() == TrueVal.getValueType()) {
+      EVT VT = LHS.getValueType();
+      SDValue Shift =
+          DAG.getNode(ISD::SRA, dl, VT, LHS,
+                      DAG.getConstant(VT.getSizeInBits() - 1, dl, VT));
+      return DAG.getNode(ISD::OR, dl, VT, Shift, DAG.getConstant(1, dl, VT));
+    }
+  }
 
   if (Subtarget->hasV8_1MMainlineOps() && CFVal && CTVal &&
       LHS.getValueType() == MVT::i32 && RHS.getValueType() == MVT::i32) {
@@ -6159,9 +6184,6 @@ SDValue ARMTargetLowering::LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const{
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MFI.setReturnAddressIsTaken(true);
-
-  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
 
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
@@ -12334,6 +12356,11 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MachineBasicBlock *SinkBB  = Fn->CreateMachineBasicBlock(LLVM_BB);
     Fn->insert(BBI, RSBBB);
     Fn->insert(BBI, SinkBB);
+
+    // Set the call frame size on entry to the new basic blocks.
+    unsigned CallFrameSize = TII->getCallFrameSizeAt(MI);
+    RSBBB->setCallFrameSize(CallFrameSize);
+    SinkBB->setCallFrameSize(CallFrameSize);
 
     Register ABSSrcReg = MI.getOperand(1).getReg();
     Register ABSDstReg = MI.getOperand(0).getReg();
@@ -21932,14 +21959,16 @@ Register ARMTargetLowering::getExceptionPointerRegister(
     const Constant *PersonalityFn) const {
   // Platforms which do not use SjLj EH may return values in these registers
   // via the personality function.
-  return Subtarget->useSjLjEH() ? Register() : ARM::R0;
+  ExceptionHandling EM = getTargetMachine().getExceptionModel();
+  return EM == ExceptionHandling::SjLj ? Register() : ARM::R0;
 }
 
 Register ARMTargetLowering::getExceptionSelectorRegister(
     const Constant *PersonalityFn) const {
   // Platforms which do not use SjLj EH may return values in these registers
   // via the personality function.
-  return Subtarget->useSjLjEH() ? Register() : ARM::R1;
+  ExceptionHandling EM = getTargetMachine().getExceptionModel();
+  return EM == ExceptionHandling::SjLj ? Register() : ARM::R1;
 }
 
 void ARMTargetLowering::initializeSplitCSR(MachineBasicBlock *Entry) const {

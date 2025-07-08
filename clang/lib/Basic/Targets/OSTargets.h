@@ -1003,6 +1003,7 @@ public:
     // Emscripten's ABI is unstable and we may change this back to 128 to match
     // the WebAssembly default in the future.
     this->LongDoubleAlign = 64;
+    this->Float128Align = 64;
   }
 };
 

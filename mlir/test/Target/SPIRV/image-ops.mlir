@@ -42,7 +42,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, ImageQuery, Link
 
 // -----
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, StorageImageWriteWithoutFormat, Linkage], []> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, StorageImageWriteWithoutFormat, StorageImageReadWithoutFormat, Linkage], []> {
   spirv.func @image_read_write(%arg0 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>, %arg1 : vector<2xsi32>) "None" {
     // CHECK: spirv.ImageRead {{%.*}}, {{%.*}} : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>, vector<2xsi32> -> vector<4xf32>
     %0 = spirv.ImageRead %arg0, %arg1 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>, vector<2xsi32> -> vector<4xf32>

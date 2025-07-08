@@ -150,14 +150,14 @@ template<int> struct BADKN;
 
 struct B1 {
   // Non-static data member declaration.
-  // expected-error@+1 {{'sycl_kernel_entry_point' attribute only applies to functions}}
+  // expected-error@+1 {{'clang::sycl_kernel_entry_point' attribute only applies to functions}}
   [[clang::sycl_kernel_entry_point(BADKN<1>)]]
   int bad1;
 };
 
 struct B2 {
   // Static data member declaration.
-  // expected-error@+1 {{'sycl_kernel_entry_point' attribute only applies to functions}}
+  // expected-error@+1 {{'clang::sycl_kernel_entry_point' attribute only applies to functions}}
   [[clang::sycl_kernel_entry_point(BADKN<2>)]]
   static int bad2;
 };
@@ -169,42 +169,42 @@ struct B3 {
   void bad3();
 };
 
-// expected-error@+1 {{'sycl_kernel_entry_point' attribute only applies to functions}}
+// expected-error@+1 {{'clang::sycl_kernel_entry_point' attribute only applies to functions}}
 namespace [[clang::sycl_kernel_entry_point(BADKN<4>)]] bad4 {}
 
 #if __cplusplus >= 202002L
-// expected-error@+2 {{'sycl_kernel_entry_point' attribute only applies to functions}}
+// expected-error@+2 {{'clang::sycl_kernel_entry_point' attribute only applies to functions}}
 template<typename>
 concept bad5 [[clang::sycl_kernel_entry_point(BADKN<5>)]] = true;
 #endif
 
 // Type alias declarations.
-// expected-error@+1 {{'sycl_kernel_entry_point' attribute only applies to functions}}
+// expected-error@+1 {{'clang::sycl_kernel_entry_point' attribute only applies to functions}}
 typedef void bad6 [[clang::sycl_kernel_entry_point(BADKN<6>)]] ();
-// expected-error@+1 {{'sycl_kernel_entry_point' attribute only applies to functions}}
+// expected-error@+1 {{'clang::sycl_kernel_entry_point' attribute only applies to functions}}
 using bad7 [[clang::sycl_kernel_entry_point(BADKN<7>)]] = void();
-// expected-error@+1 {{'sycl_kernel_entry_point' attribute only applies to functions}}
+// expected-error@+1 {{'clang::sycl_kernel_entry_point' attribute only applies to functions}}
 using bad8 [[clang::sycl_kernel_entry_point(BADKN<8>)]] = int;
-// expected-error@+1 {{'sycl_kernel_entry_point' attribute cannot be applied to types}}
+// expected-error@+1 {{'clang::sycl_kernel_entry_point' attribute cannot be applied to types}}
 using bad9 = int [[clang::sycl_kernel_entry_point(BADKN<9>)]];
-// expected-error@+1 {{'sycl_kernel_entry_point' attribute cannot be applied to types}}
+// expected-error@+1 {{'clang::sycl_kernel_entry_point' attribute cannot be applied to types}}
 using bad10 = int() [[clang::sycl_kernel_entry_point(BADKN<10>)]];
 
 // Variable declaration.
-// expected-error@+1 {{'sycl_kernel_entry_point' attribute only applies to functions}}
+// expected-error@+1 {{'clang::sycl_kernel_entry_point' attribute only applies to functions}}
 [[clang::sycl_kernel_entry_point(BADKN<11>)]]
 int bad11;
 
 // Class declaration.
-// expected-error@+1 {{'sycl_kernel_entry_point' attribute only applies to functions}}
+// expected-error@+1 {{'clang::sycl_kernel_entry_point' attribute only applies to functions}}
 struct [[clang::sycl_kernel_entry_point(BADKN<12>)]] bad12;
 
 // Enumeration declaration.
-// expected-error@+1 {{'sycl_kernel_entry_point' attribute only applies to functions}}
+// expected-error@+1 {{'clang::sycl_kernel_entry_point' attribute only applies to functions}}
 enum [[clang::sycl_kernel_entry_point(BADKN<13>)]] bad13 {};
 
 // Enumerator.
-// expected-error@+2 {{'sycl_kernel_entry_point' attribute only applies to functions}}
+// expected-error@+2 {{'clang::sycl_kernel_entry_point' attribute only applies to functions}}
 enum {
   bad14 [[clang::sycl_kernel_entry_point(BADKN<14>)]]
 };
@@ -222,7 +222,7 @@ void bad15();
 int bad16();
 
 // Function parameters.
-// expected-error@+1 {{'sycl_kernel_entry_point' attribute only applies to functions}}
+// expected-error@+1 {{'clang::sycl_kernel_entry_point' attribute only applies to functions}}
 void bad17(void (fp [[clang::sycl_kernel_entry_point(BADKN<17>)]])());
 
 // Function template parameters.
@@ -276,7 +276,7 @@ consteval void bad25() {}
 [[clang::sycl_kernel_entry_point(BADKN<26>)]]
 [[noreturn]] void bad26();
 
-// expected-error@+3 {{attribute 'target' multiversioning cannot be combined with attribute 'sycl_kernel_entry_point'}}
+// expected-error@+3 {{attribute 'target' multiversioning cannot be combined with attribute 'clang::sycl_kernel_entry_point'}}
 __attribute__((target("avx"))) void bad27();
 [[clang::sycl_kernel_entry_point(BADKN<27>)]]
 __attribute__((target("sse4.2"))) void bad27();

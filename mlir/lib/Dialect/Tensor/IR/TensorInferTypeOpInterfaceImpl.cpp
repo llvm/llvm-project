@@ -23,7 +23,7 @@ using namespace mlir::tensor;
 static OpFoldResult getCollapsedOutputDimFromInputShape(
     OpBuilder &builder, Location loc, int64_t dimIndex, Value src,
     ArrayRef<int64_t> dstStaticShape, ArrayRef<AffineMap> reassociationMap) {
-  if (!ShapedType::isDynamic(dstStaticShape[dimIndex])) {
+  if (ShapedType::isStatic(dstStaticShape[dimIndex])) {
     // Static dimension: return Attribute.
     return builder.getIndexAttr(dstStaticShape[dimIndex]);
   }

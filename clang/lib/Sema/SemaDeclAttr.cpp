@@ -1226,8 +1226,8 @@ static void handlePreferredName(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
   }
 
-  S.Diag(AL.getLoc(), diag::err_attribute_preferred_name_arg_invalid)
-      << T << CTD;
+  S.Diag(AL.getLoc(), diag::err_attribute_not_typedef_for_specialization)
+      << T << AL << CTD;
   if (const auto *TT = T->getAs<TypedefType>())
     S.Diag(TT->getDecl()->getLocation(), diag::note_entity_declared_at)
         << TT->getDecl();
@@ -4194,8 +4194,9 @@ static void handleCallbackAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   if (CalleeFnProtoType->getNumParams() != EncodingIndices.size() - 1) {
-    S.Diag(AL.getLoc(), diag::err_callback_attribute_wrong_arg_count)
-        << QualType{CalleeFnProtoType, 0} << CalleeFnProtoType->getNumParams()
+    S.Diag(AL.getLoc(), diag::err_attribute_wrong_arg_count_for_func)
+        << AL << QualType{CalleeFnProtoType, 0}
+        << CalleeFnProtoType->getNumParams()
         << (unsigned)(EncodingIndices.size() - 1);
     return;
   }
@@ -8020,9 +8021,7 @@ void Sema::checkUnusedDeclAttributes(Declarator &D) {
 }
 
 void Sema::DiagnoseUnknownAttribute(const ParsedAttr &AL) {
-  std::string NormalizedFullName = '\'' + AL.getNormalizedFullName() + '\'';
   SourceRange NR = AL.getNormalizedRange();
-
   StringRef ScopeName = AL.getNormalizedScopeName();
   std::optional<StringRef> CorrectedScopeName =
       AL.tryGetCorrectedScopeName(ScopeName);
@@ -8044,7 +8043,7 @@ void Sema::DiagnoseUnknownAttribute(const ParsedAttr &AL) {
         Diag(CorrectedScopeName ? NR.getBegin() : AL.getRange().getBegin(),
              diag::warn_unknown_attribute_ignored_suggestion);
 
-    D << NormalizedFullName << CorrectedFullName;
+    D << AL << CorrectedFullName;
 
     if (AL.isExplicitScope()) {
       D << FixItHint::CreateReplacement(NR, CorrectedFullName) << NR;
@@ -8058,8 +8057,7 @@ void Sema::DiagnoseUnknownAttribute(const ParsedAttr &AL) {
       }
     }
   } else {
-    Diag(NR.getBegin(), diag::warn_unknown_attribute_ignored)
-        << NormalizedFullName << NR;
+    Diag(NR.getBegin(), diag::warn_unknown_attribute_ignored) << AL << NR;
   }
 }
 

@@ -937,9 +937,6 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
     if (!getLangOpts().CPlusPlus) {
       if (getLangOpts().C23)
         Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
-      else
-        Diag(Tok, diag::ext_ms_static_assert) << FixItHint::CreateReplacement(
-            Tok.getLocation(), "_Static_assert");
     } else
       Diag(Tok, diag::warn_cxx98_compat_static_assert);
   }
@@ -4956,7 +4953,8 @@ void Parser::ParseHLSLRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
     // Invoke the root signature parser to construct the in-memory constructs
     hlsl::RootSignatureLexer Lexer(Signature, SignatureLoc);
     SmallVector<llvm::hlsl::rootsig::RootElement> RootElements;
-    hlsl::RootSignatureParser Parser(RootElements, Lexer, PP);
+    hlsl::RootSignatureParser Parser(getLangOpts().HLSLRootSigVer, RootElements,
+                                     Lexer, PP);
     if (Parser.parse()) {
       T.consumeClose();
       return;

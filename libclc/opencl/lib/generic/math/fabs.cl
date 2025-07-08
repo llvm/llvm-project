@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_fabs.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/fabs.h>
 
 #define FUNCTION fabs
 #define __CLC_BODY <clc/shared/unary_def.inc>
