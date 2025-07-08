@@ -4843,10 +4843,10 @@ AMDGPUTargetLowering::foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
 }
 
 static EVT getFloatVT(EVT VT) {
-  return VT = VT.isVector() ? MVT::getVectorVT(MVT::getFloatingPointVT(
-                                                   VT.getScalarSizeInBits()),
-                                               VT.getVectorNumElements())
-                            : MVT::getFloatingPointVT(VT.getFixedSizeInBits());
+  return VT.isVector() ? MVT::getVectorVT(
+                             MVT::getFloatingPointVT(VT.getScalarSizeInBits()),
+                             VT.getVectorNumElements())
+                       : MVT::getFloatingPointVT(VT.getFixedSizeInBits());
 }
 
 static SDValue getBitwiseToSrcModifierOp(SDValue N,
@@ -4883,7 +4883,7 @@ static SDValue getBitwiseToSrcModifierOp(SDValue N,
   case ISD::OR:
     if ((Mask == 0x80000000u && VT.getFixedSizeInBits() == 32) ||
         (Mask == 0x8000000000000000u && VT.getFixedSizeInBits() == 64)) {
-      SDValue Abs = DAG.getNode(ISD::ABS, SDLoc(N), FVT, BC);
+      SDValue Abs = DAG.getNode(ISD::FABS, SL, FVT, BC);
       return DAG.getNode(ISD::FNEG, SL, FVT, Abs);
     }
     break;
