@@ -8,7 +8,7 @@ RUN: diff -w %p/Inputs/expected-skipped.html %t2.html
 CORRUPTED: Skipped lines: 3
 CORRUPTED: Skipped bugs: 1
 
-RUN: %llvm-original-di-preservation -compress %p/Inputs/sample.json --report-file %t3.html | FileCheck %s -check-prefix=COMPRESSED
+RUN: %llvm-original-di-preservation --compress %p/Inputs/sample.json --report-file %t3.html | FileCheck %s -check-prefix=COMPRESSED
 RUN: diff -w %p/Inputs/expected-compressed.html %t3.html
 COMPRESSED: The {{.+}}.html generated.
 COMPRESSED-NOT: Skipped lines:
