@@ -1,7 +1,8 @@
 // RUN: mlir-opt %s -split-input-file -test-vector-linearize -verify-diagnostics | FileCheck %s
 
 // **--------------------------------------------------------**
-//              Tests of vectoriable ops
+//              Tests of vectorizable ops
+//             [CollapseInnerVectorizable]
 // **--------------------------------------------------------**
 
 // Constant linearization happens here because of the vector.shape_cast folder.
@@ -323,6 +324,7 @@ func.func @linearize_across_for(%arg0 : vector<4xi8>) -> vector<4xi8> {
 
 // **--------------------------------------------------------**
 //              Tests of vector.splat
+//               [CollapseInnerSplat]
 // **--------------------------------------------------------**
 
 // CHECK-LABEL: linearize_vector_splat
@@ -348,9 +350,10 @@ func.func @linearize_scalable_vector_splat(%arg0: i32) -> vector<[8]xi32> {
 }
 
 
-// **--------------------------------------------------------**
-//              Tests of vector.insert
-// **--------------------------------------------------------**
+// **-------------------------------------------------------------------**
+//                     Tests of vector.insert
+//   [ConvertInsertToShuffle, CollapseInnerInsert, CollapseOuterInsert]
+// **-------------------------------------------------------------------**
 
 // -----
 
@@ -453,9 +456,10 @@ func.func @insert_scalable(%arg0: vector<2x8x[4]xf32>, %arg1: vector<8x[4]xf32>)
 
 // -----
 
-// **--------------------------------------------------------**
-//              Tests of vector.extract
-// **--------------------------------------------------------**
+// **--------------------------------------------------------------------------**
+//                             Tests of vector.extract
+//     [ConvertExtractToShuffle, CollapseInnerExtract, CollapseOuterExtract]
+// **--------------------------------------------------------------------------**
 
 // vector.extract where the source is 1D vector is always unchanged.
 
@@ -556,9 +560,10 @@ func.func @extract_scalable(%arg0: vector<2x8x[2]xf32>) -> vector<8x[2]xf32> {
 }
 
 
-// **--------------------------------------------------------**
-//              Tests of vector.insert_strided_slice
-// **--------------------------------------------------------**
+// **------------------------------------------------------------**
+//                 Tests of vector.insert_strided_slice
+//    [ConvertInsertStridedToShuffle, CollapseInnerInsertStride]
+// **------------------------------------------------------------**
 
 // -----
 
@@ -693,9 +698,10 @@ func.func @insert_strided_slice_4D_noncontiguous(%arg0 : vector<1x2x1x1xi8>, %ar
 
 // -----
 
-// **--------------------------------------------------------**
+// **----------------------------------------------------------------**
 //              Tests of vector.extract_strided_slice
-// **--------------------------------------------------------**
+//    [ConvertExtractStridedToShuffle, CollapseInnerExtractStride]
+// **----------------------------------------------------------------**
 
 // CHECK-LABEL: extract_strided_slice_2D
 //  CHECK-SAME: (%[[ORIG_ARG:.*]]: vector<4x8xf32>) -> vector<2x2xf32> {
