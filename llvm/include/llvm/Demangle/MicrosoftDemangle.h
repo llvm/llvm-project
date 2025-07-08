@@ -9,9 +9,9 @@
 #ifndef LLVM_DEMANGLE_MICROSOFTDEMANGLE_H
 #define LLVM_DEMANGLE_MICROSOFTDEMANGLE_H
 
-#include "llvm/Demangle/Visibility.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Demangle/MicrosoftDemangleNodes.h"
+#include "llvm/Demangle/Visibility.h"
 
 #include <cassert>
 #include <string_view>
