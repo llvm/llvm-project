@@ -8,6 +8,7 @@
 
 #include "Breakpoint.h"
 #include "DAP.h"
+#include "LLDBUtils.h"
 #include "Protocol/DAPTypes.h"
 #include "ProtocolUtils.h"
 #include "lldb/API/SBAddress.h"
@@ -35,7 +36,7 @@ GetPersistenceDataForAddress(lldb::SBAddress &addr) {
   if (!file_spec.IsValid())
     return std::nullopt;
 
-  persistence_data.module = file_spec.GetFilename();
+  persistence_data.module = GetSBFileSpecPath(file_spec);
   persistence_data.file_addr = addr.GetFileAddress();
   return persistence_data;
 }
