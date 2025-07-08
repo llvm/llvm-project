@@ -204,7 +204,7 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
       // Cases: a.operator[](i) => f(a, i) and a->operator[](i) => f(*a, i)
       const auto *Callee = dyn_cast<MemberExpr>(MCE->getCallee());
 
-      bool EmptySubscript = MCE->getMethodDecl()->getNumNonObjectParams() == 0;
+      const bool EmptySubscript = MCE->getMethodDecl()->getNumNonObjectParams() == 0;
 
       std::string BeginInsertion =
           (EmptySubscript ? FixFunctionEmptyArgs.str() : FixFunction.str()) +
