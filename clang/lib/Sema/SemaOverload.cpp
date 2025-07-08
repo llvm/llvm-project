@@ -1535,16 +1535,11 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
         return F->getRefQualifier() == RQ_None &&
                !F->isExplicitObjectMemberFunction();
       };
-
-      if ((Old->getRefQualifier() != RQ_None ||
-           Old->isExplicitObjectMemberFunction()) &&
-          IsImplicitWithNoRefQual(New) &&
+      if (!IsImplicitWithNoRefQual(Old) && IsImplicitWithNoRefQual(New) &&
           OldObjectType->isRValueReferenceType())
         NewObjectType =
             SemaRef.getASTContext().getRValueReferenceType(NewObjectType);
-      else if ((New->getRefQualifier() != RQ_None ||
-                New->isExplicitObjectMemberFunction()) &&
-               IsImplicitWithNoRefQual(Old) &&
+      else if (!IsImplicitWithNoRefQual(New) && IsImplicitWithNoRefQual(Old) &&
                NewObjectType->isRValueReferenceType())
         OldObjectType =
             SemaRef.getASTContext().getRValueReferenceType(OldObjectType);
