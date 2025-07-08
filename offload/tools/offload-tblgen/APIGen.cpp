@@ -144,19 +144,13 @@ static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
                   EnumVal.getName(), EtorVal++);
   }
 
-  // Add force uint32 val
-  OS << formatv(TAB_1 "/// @cond\n" TAB_1
+  // Add last_element/force uint32 val
+  OS << formatv(TAB_1 "/// @cond\n" TAB_1 "{0}_LAST = {1},\n" TAB_1
                       "{0}_FORCE_UINT32 = 0x7fffffff\n" TAB_1
                       "/// @endcond\n\n",
-                Enum.getEnumValNamePrefix());
+                Enum.getEnumValNamePrefix(), EtorVal);
 
   OS << formatv("} {0};\n", Enum.getName());
-
-  // Add field for the number of variants
-  OS << formatv(TAB_1
-                "/// @brief Number of variants for the {0} enumeration\n" TAB_1
-                "#define {0}_NUM_VARIANTS {1}\n",
-                Enum.getEnumValNamePrefix(), EtorVal);
 }
 
 static void ProcessStruct(const StructRec &Struct, raw_ostream &OS) {
