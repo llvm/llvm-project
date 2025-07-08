@@ -17,5 +17,6 @@ define void @test_legal_lifetime()  {
   ret void
 }
 
+; Set the validator version to 1.5
 !dx.valver = !{!0}
 !0 = !{i32 1, i32 5}
