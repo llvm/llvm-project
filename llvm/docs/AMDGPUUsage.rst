@@ -1511,20 +1511,24 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    - `v_mov_b32 <dest> <old>`
                                                    - `v_mov_b32 <dest> <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>`
 
-  :ref:`llvm.prefetch`                             Implemented on gfx125x, ignored on earlier targets.
+  :ref:`llvm.prefetch <int_prefetch>`              Implemented on gfx125x, ignored on earlier targets.
                                                    First argument is flat, global, or constant address space pointer.
                                                    Any other address space is not supported.
                                                    On gfx125x generates flat_prefetch_b8 or global_prefetch_b8 and brings data to GL2.
                                                    Second argument is rw and currently ignored. Can be 0 or 1.
                                                    Third argument is locality, 0-3. Translates to memory scope:
-                                                     0 - SCOPE_SYS
-                                                     1 - SCOPE_DEV
-                                                     2 - SCOPE_SE
-                                                     3 - SCOPE_SE
+
+                                                   * 0 - SCOPE_SYS
+                                                   * 1 - SCOPE_DEV
+                                                   * 2 - SCOPE_SE
+                                                   * 3 - SCOPE_SE
+
                                                    Note that SCOPE_CU is not generated and not safe on an invalid address.
                                                    Fourth argument is cache type:
-                                                     0 - Instruction cache, currently ignored and no code is generated.
-                                                     1 - Data cache.
+
+                                                   * 0 - Instruction cache, currently ignored and no code is generated.
+                                                   * 1 - Data cache.
+
                                                    Instruction cache prefetches are unsafe on invalid address.
   ==============================================   ==========================================================
 
@@ -16830,7 +16834,7 @@ the instruction in the code sequence that references the table.
 .. _amdgpu-amdhsa-memory-model-gfx125x-cooperative-atomics:
 
 '``llvm.amdgcn.cooperative.atomic``' Intrinsics
-"""""""""""""""""""""""""""""""""""""""""""""""""
+###############################################
 
 The collection of convergent threads participating in a cooperative atomic must belong
 to the same wave32.
