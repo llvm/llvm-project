@@ -513,6 +513,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMSetBitfieldOpLowering
+    : public mlir::OpConversionPattern<cir::SetBitfieldOp> {
+public:
+  using mlir::OpConversionPattern<cir::SetBitfieldOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::SetBitfieldOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMGetBitfieldOpLowering
     : public mlir::OpConversionPattern<cir::GetBitfieldOp> {
 public:

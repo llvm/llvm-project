@@ -134,3 +134,29 @@ unsigned int load_field_unsigned(A* s) {
 //OGCG:   [[TMP4:%.*]] = lshr i16 [[TMP3]], 3
 //OGCG:   [[TMP5:%.*]] = and i16 [[TMP4]], 15
 //OGCG:   [[TMP6:%.*]] = zext i16 [[TMP5]] to i32
+
+void store_field() {
+  S s;
+  s.e = 3;
+}
+// CIR: cir.func {{.*@store_field}}
+// CIR:   [[TMP0:%.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>
+// CIR:   [[TMP1:%.*]] = cir.const #cir.int<3> : !s32i
+// CIR:   [[TMP2:%.*]] = cir.get_member [[TMP0]][1] {name = "e"} : !cir.ptr<!rec_S> -> !cir.ptr<!u16i>
+// CIR:   cir.set_bitfield(#bfi_e, [[TMP2]] : !cir.ptr<!u16i>, [[TMP1]] : !s32i)
+
+// LLVM: define dso_local void @store_field()
+// LLVM:   [[TMP0:%.*]] = alloca %struct.S, i64 1, align 4
+// LLVM:   [[TMP1:%.*]] = getelementptr %struct.S, ptr [[TMP0]], i32 0, i32 1
+// LLVM:   [[TMP2:%.*]] = load i16, ptr [[TMP1]], align 2
+// LLVM:   [[TMP3:%.*]] = and i16 [[TMP2]], -32768
+// LLVM:   [[TMP4:%.*]] = or i16 [[TMP3]], 3
+// LLVM:   store i16 [[TMP4]], ptr [[TMP1]], align 2
+
+// OGCG: define dso_local void @store_field()
+// OGCG:   [[TMP0:%.*]] = alloca %struct.S, align 4
+// OGCG:   [[TMP1:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[TMP0]], i32 0, i32 1
+// OGCG:   [[TMP2:%.*]] = load i16, ptr [[TMP1]], align 4
+// OGCG:   [[TMP3:%.*]] = and i16 [[TMP2]], -32768
+// OGCG:   [[TMP4:%.*]] = or i16 [[TMP3]], 3
+// OGCG:   store i16 [[TMP4]], ptr [[TMP1]], align 4
