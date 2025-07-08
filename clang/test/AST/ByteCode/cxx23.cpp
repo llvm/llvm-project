@@ -4,6 +4,16 @@
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -verify=expected20,all,all20 %s -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions -verify=expected23,all,all23 %s -fexperimental-new-constant-interpreter
 
+
+#define assert_active(F)   if (!__builtin_is_within_lifetime(&F)) (1/0);
+#define assert_inactive(F) if ( __builtin_is_within_lifetime(&F)) (1/0);
+
+inline constexpr void* operator new(__SIZE_TYPE__, void* p) noexcept { return p; }
+namespace std {
+template<typename T, typename... Args>
+constexpr T* construct_at(T* p, Args&&... args) { return ::new((void*)p) T(static_cast<Args&&>(args)...); }
+}
+
 constexpr int f(int n) {  // all20-error {{constexpr function never produces a constant expression}}
   static const int m = n; // all-note {{control flows through the definition of a static variable}} \
                           // all20-note {{control flows through the definition of a static variable}} \
@@ -328,3 +338,38 @@ namespace VoidCast {
   constexpr int *f = (int*)(void*)b; // all-error {{must be initialized by a constant expression}} \
                                      // all-note {{cast from 'void *' is not allowed in a constant expression}}
 }
+
+#if __cplusplus >= 202302L
+namespace NestedUnions {
+  consteval bool test_nested() {
+    union {
+      union { int i; char c; } u;
+      long l;
+    };
+    std::construct_at(&l);
+    assert_active(l);
+    assert_inactive(u);
+
+    std::construct_at(&u);
+    assert_active(u);
+    assert_inactive(l);
+    assert_active(u.i);
+    assert_inactive(u.c);
+
+    std::construct_at(&u.i);
+    assert_active(u);
+    assert_inactive(u.c);
+
+
+    std::construct_at(&u.c);
+    assert_active(u);
+    assert_inactive(u.i);
+    assert_active(u.c);
+    assert_inactive(l);
+    return true;
+  }
+  static_assert(test_nested());
+
+
+}
+#endif
