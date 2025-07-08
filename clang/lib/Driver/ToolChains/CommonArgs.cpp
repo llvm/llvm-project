@@ -3435,6 +3435,9 @@ std::string tools::complexRangeKindToStr(LangOptions::ComplexRangeKind Range) {
   case LangOptions::ComplexRangeKind::CX_Promoted:
     return "promoted";
     break;
+  case LangOptions::ComplexRangeKind::CX_None:
+    return "none";
+    break;
   default:
     return "";
   }
