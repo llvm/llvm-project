@@ -571,6 +571,12 @@ bool llvm::findFixedSizeArrayDimensions(ScalarEvolution &SE, const SCEV *Expr,
   // the next smaller one, like A[i][3*j].
   llvm::sort(Sizes.rbegin(), Sizes.rend());
   Sizes.erase(llvm::unique(Sizes), Sizes.end());
+
+  // The last element in Sizes should be ElementSize. At this point, all values
+  // in Sizes are assumed to be divided by ElementSize, so replace it with 1.
+  assert(Sizes.back() != 0 && "Unexpected zero size in Sizes.");
+  Sizes.back() = 1;
+
   for (unsigned I = 0; I + 1 < Sizes.size(); I++) {
     unsigned PrevSize = Sizes[I + 1];
     if (Sizes[I] % PrevSize) {
@@ -580,7 +586,7 @@ bool llvm::findFixedSizeArrayDimensions(ScalarEvolution &SE, const SCEV *Expr,
     Sizes[I] /= PrevSize;
   }
 
-  // The last element should be ElementSize.
+  // Finally, the last element in Sizes should be ElementSize.
   Sizes.back() = *ElementSizeConst;
   return true;
 }
