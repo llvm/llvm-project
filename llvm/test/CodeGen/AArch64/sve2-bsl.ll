@@ -330,9 +330,7 @@ define <vscale x 2 x i64> @not(<vscale x 2 x i64> %0) #0 {
 define <vscale x 2 x i64> @nand(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1) #0 {
 ; CHECK-LABEL: nand:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.d, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    and z0.d, z1.d, z0.d
-; CHECK-NEXT:    eor z0.d, z0.d, z2.d
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z1.d
 ; CHECK-NEXT:    ret
   %3 = and <vscale x 2 x i64> %1, %0
   %4 = xor <vscale x 2 x i64> %3, splat (i64 -1)
@@ -343,9 +341,7 @@ define <vscale x 2 x i64> @nand(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1) #0
 define <vscale x 2 x i64> @nor(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1) #0 {
 ; CHECK-LABEL: nor:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.d, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    orr z0.d, z1.d, z0.d
-; CHECK-NEXT:    eor z0.d, z0.d, z2.d
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z0.d
 ; CHECK-NEXT:    ret
   %3 = or <vscale x 2 x i64> %1, %0
   %4 = xor <vscale x 2 x i64> %3, splat (i64 -1)
@@ -356,8 +352,7 @@ define <vscale x 2 x i64> @nor(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1) #0 
 define <vscale x 2 x i64> @eon(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1) #0 {
 ; CHECK-LABEL: eon:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.d, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor3 z0.d, z0.d, z1.d, z2.d
+; CHECK-NEXT:    bsl2n z0.d, z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %3 = xor <vscale x 2 x i64> %0, %1
   %4 = xor <vscale x 2 x i64> %3, splat (i64 -1)
@@ -368,9 +363,7 @@ define <vscale x 2 x i64> @eon(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1) #0 
 define <vscale x 2 x i64> @orn(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1) #0 {
 ; CHECK-LABEL: orn:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.d, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z1.d, z1.d, z2.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
+; CHECK-NEXT:    bsl2n z0.d, z0.d, z1.d, z0.d
 ; CHECK-NEXT:    ret
   %3 = xor <vscale x 2 x i64> %1, splat (i64 -1)
   %4 = or <vscale x 2 x i64> %0, %3

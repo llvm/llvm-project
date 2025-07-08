@@ -259,14 +259,18 @@ define <2 x i64> @eor3_vnot(<2 x i64> %0, <2 x i64> %1) {
 ;
 ; SVE2-LABEL: eor3_vnot:
 ; SVE2:       // %bb.0:
-; SVE2-NEXT:    eor v0.16b, v0.16b, v1.16b
-; SVE2-NEXT:    mvn v0.16b, v0.16b
+; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE2-NEXT:    bsl2n z0.d, z0.d, z0.d, z1.d
+; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SVE2-NEXT:    ret
 ;
 ; SHA3-SVE2-LABEL: eor3_vnot:
 ; SHA3-SVE2:       // %bb.0:
-; SHA3-SVE2-NEXT:    eor v0.16b, v0.16b, v1.16b
-; SHA3-SVE2-NEXT:    mvn v0.16b, v0.16b
+; SHA3-SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SHA3-SVE2-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SHA3-SVE2-NEXT:    bsl2n z0.d, z0.d, z0.d, z1.d
+; SHA3-SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SHA3-SVE2-NEXT:    ret
   %3 = xor <2 x i64> %0, <i64 -1, i64 -1>
   %4 = xor <2 x i64> %3, %1
