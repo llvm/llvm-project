@@ -4660,8 +4660,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // PMOV truncates; PMOVS/PMOVUS uses signed/unsigned saturation.
     // This handler treats them all as truncation, which leads to some rare
     // false positives in the cases where the truncated bytes could
-    // unambiguously saturate the value e.g., if A = 10?????? ????????
-    // (big-endian), the unsigned saturated byte conversion is 1111111 i.e.,
+    // unambiguously saturate the value e.g., if A = ??????10 ????????
+    // (big-endian), the unsigned saturated byte conversion is 11111111 i.e.,
     // fully defined, but the truncated byte is ????????.
     //
     // TODO: use GetMinMaxUnsigned() to handle saturation precisely.
