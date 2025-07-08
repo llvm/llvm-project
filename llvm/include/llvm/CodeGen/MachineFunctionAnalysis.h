@@ -46,7 +46,7 @@ public:
   LLVM_ABI Result run(Function &F, FunctionAnalysisManager &FAM);
 };
 
-class FreeAllAnalysesPass : public PassInfoMixin<FreeAllAnalysesPass> {
+class FreeMachineFunctionPass : public PassInfoMixin<FreeMachineFunctionPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };

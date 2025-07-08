@@ -46,7 +46,7 @@ MachineFunctionAnalysis::run(Function &F, FunctionAnalysisManager &FAM) {
   return Result(std::move(MF));
 }
 
-PreservedAnalyses FreeAllAnalysesPass::run(Function &F,
+PreservedAnalyses FreeMachineFunctionPass::run(Function &F,
                                            FunctionAnalysisManager &FAM) {
   FAM.clearAnalysis<MachineFunctionAnalysis>(F);
   return PreservedAnalyses::all();
