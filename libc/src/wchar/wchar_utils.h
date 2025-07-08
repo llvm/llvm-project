@@ -17,7 +17,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-bool check_span(wchar_t c, const wchar_t *str) {
+// returns true if the character exists in the string
+LIBC_INLINE bool internal_wcschr(wchar_t c, const wchar_t *str) {
   for (int n = 0; str[n]; ++n) {
     if (str[n] == c)
       return true;
@@ -31,7 +32,7 @@ LIBC_INLINE size_t inline_wcsspn(const wchar_t *s1, const wchar_t *s2,
                                  bool invert) {
   size_t i = 0;
   for (; s1[i]; ++i) {
-    bool check = check_span(s1[i], s2);
+    bool check = internal_wcschr(s1[i], s2);
     check = invert ? !check : check;
     if (!check)
       return i;
