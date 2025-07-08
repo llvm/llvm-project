@@ -25,11 +25,11 @@ struct UnwindTraceArg {
   u32 max_depth;
 };
 
-_Unwind_Reason_Code Unwind_Trace(struct _Unwind_Context *ctx, void *param) {
+static _Unwind_Reason_Code Unwind_Trace(struct _Unwind_Context *ctx, void *param) {
   UnwindTraceArg *arg = (UnwindTraceArg *)param;
   CHECK_LT(arg->stack->size, arg->max_depth);
   uptr pc = _Unwind_GetIP(ctx);
-  // On AIX 32-bit and 64-bit, address smaller than 0x0fffffff is for kernel.
+  // On AIX 32-bit and 64-bit, addresses up through 0x0fffffff are for kernel.
   if (pc <= 0x0fffffff)
     return _URC_NORMAL_STOP;
   arg->stack->trace_buffer[arg->stack->size++] = pc;
@@ -59,6 +59,7 @@ void BufferedStackTrace::UnwindSlow(uptr pc, u32 max_depth) {
 }
 
 void BufferedStackTrace::UnwindSlow(uptr pc, void *context, u32 max_depth) {
+  CHECK(context);
   UnwindSlow(pc, max_depth);
 }
 }  // namespace __sanitizer
