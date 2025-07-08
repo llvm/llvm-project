@@ -150,7 +150,7 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
       //
       // Since C++23, the subscript operator may also be called without an
       // argument, which makes the following distinction necessary
-      bool EmptySubscript = MatchedExpr->getDirectCallee()->getNumParams() == 0;
+      const bool EmptySubscript = MatchedExpr->getDirectCallee()->getNumParams() == 0;
 
       if (EmptySubscript) {
         diag(MatchedExpr->getCallee()->getBeginLoc(),
