@@ -52,6 +52,7 @@
 #include "mlir/Dialect/Transform/IRDLExtension/IRDLExtension.h"
 #include "mlir/Dialect/Transform/LoopExtension/LoopExtension.h"
 #include "mlir/Dialect/Transform/PDLExtension/PDLExtension.h"
+#include "mlir/Dialect/Transform/TuneExtension/TuneExtension.h"
 #include "mlir/Dialect/Vector/TransformOps/VectorTransformOps.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
@@ -107,6 +108,7 @@ inline void registerAllExtensions(DialectRegistry &registry) {
   transform::registerIRDLExtension(registry);
   transform::registerLoopExtension(registry);
   transform::registerPDLExtension(registry);
+  transform::registerTuneExtension(registry);
   vector::registerTransformDialectExtension(registry);
   arm_neon::registerTransformDialectExtension(registry);
   arm_sve::registerTransformDialectExtension(registry);
