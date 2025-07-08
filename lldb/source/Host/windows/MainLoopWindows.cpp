@@ -67,7 +67,8 @@ public:
 
   void WillPoll() override {
     if (WaitForSingleObject(m_event, /*dwMilliseconds=*/0) != WAIT_TIMEOUT) {
-      // The thread has already signalled that the data is available. No need for further polling until we consume that event.
+      // The thread has already signalled that the data is available. No need
+      // for further polling until we consume that event.
       return;
     }
     if (WaitForSingleObject(m_ready, /*dwMilliseconds=*/0) != WAIT_TIMEOUT) {
@@ -122,7 +123,8 @@ public:
         continue;
       }
 
-      // Notify that data is available on the pipe. It's important to set this before clearing m_ready to avoid a race with WillPoll.
+      // Notify that data is available on the pipe. It's important to set this
+      // before clearing m_ready to avoid a race with WillPoll.
       SetEvent(m_event);
       // Stop polling until we're told to resume.
       ResetEvent(m_ready);
