@@ -1749,19 +1749,18 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
       : WarpDistributionPattern(ctx, b), distributionMapFn(std::move(fn)) {}
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    auto yield = cast<gpu::YieldOp>(
+    auto newWarpOpYield = cast<gpu::YieldOp>(
         warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
     // Only pick up forOp if it is the last op in the region.
-    Operation *lastNode = yield->getPrevNode();
+    Operation *lastNode = newWarpOpYield->getPrevNode();
     auto forOp = dyn_cast_or_null<scf::ForOp>(lastNode);
     if (!forOp)
       return failure();
     // Collect Values that come from the warp op but are outside the forOp.
-    // Those Value needs to be returned by the original warpOp and passed to
-    // the new op.
+    // Those Value needs to be returned by the new warp op.
     llvm::SmallSetVector<Value, 32> escapingValues;
-    SmallVector<Type> inputTypes;
-    SmallVector<Type> distTypes;
+    SmallVector<Type> escapingValueInputTypes;
+    SmallVector<Type> escapingValuedistTypes;
     mlir::visitUsedValuesDefinedAbove(
         forOp.getBodyRegion(), [&](OpOperand *operand) {
           Operation *parent = operand->get().getParentRegion()->getParentOp();
@@ -1773,183 +1772,155 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
               AffineMap map = distributionMapFn(operand->get());
               distType = getDistributedType(vecType, map, warpOp.getWarpSize());
             }
-            inputTypes.push_back(operand->get().getType());
-            distTypes.push_back(distType);
+            escapingValueInputTypes.push_back(operand->get().getType());
+            escapingValuedistTypes.push_back(distType);
           }
         });
 
-    if (llvm::is_contained(distTypes, Type{}))
+    if (llvm::is_contained(escapingValuedistTypes, Type{}))
       return failure();
-
+    // Warp op can yield two types of values:
+    // 1. Values that are not results of the forOp:
+    //    These values must also be yielded by the new warp op. Also, we need to
+    //    record the index mapping for these values to replace them later.
+    // 2. Values that are results of the forOp:
+    //    In this case, we record the index mapping between the warp op result
+    //    index and matching forOp result index.
     SmallVector<Value> nonForYieldedValues;
-    // SmallVector<Type> nonForYieldedTypes;
     SmallVector<unsigned> nonForResultIndices;
-
-    // record result mapping.
     DenseMap<unsigned, unsigned> forResultMapping;
-    DenseMap<unsigned, unsigned> warpResultMapping;
-    // llvm::SmallDenseMap<unsigned, unsigned> forResultToWarpResultMapping;
-    for (OpOperand &yieldOperand : yield->getOpOperands()) {
+    for (OpOperand &yieldOperand : newWarpOpYield->getOpOperands()) {
+      // Yielded value is not a result of the forOp.
       if (yieldOperand.get().getDefiningOp() != forOp.getOperation()) {
         nonForYieldedValues.push_back(yieldOperand.get());
-        // nonForYieldedTypes.push_back(
-        //     warpOp.getResult(yieldOperand.getOperandNumber()).getType());
         nonForResultIndices.push_back(yieldOperand.getOperandNumber());
         continue;
       }
       OpResult forResult = cast<OpResult>(yieldOperand.get());
       forResultMapping[yieldOperand.getOperandNumber()] =
           forResult.getResultNumber();
-      // forResultToWarpResultMapping[forResult.getResultNumber()] =
-      //     yieldOperand.getOperandNumber();
-      // yieldOperand.set(forOp.getInitArgs()[forResult.getResultNumber()]);
     }
 
-    // llvm::errs() << "non for yielded values size: "
-    //              << nonForYieldedValues.size() << "\n";
-
-    // llvm::errs() << "escpaing values size: " << escapingValues.size() <<
-    // "\n";
-    SmallVector<Value> yieldedValuesFromWarpOp;
-    SmallVector<Type> yieldedTypesFromWarpOp;
-    // All init args of the forOp are yielded from the original warp op.
+    // Newly created warp op will yield values in following order:
+    // 1. All init args of the forOp.
+    // 2. All escaping values.
+    // 3. All non-for yielded values.
+    SmallVector<Value> newWarpOpYieldValues;
+    SmallVector<Type> newWarpOpDistTypes;
     for (auto [i, initArg] : llvm::enumerate(forOp.getInitArgs())) {
-      yieldedValuesFromWarpOp.push_back(initArg);
-      // find distributed type for the init arg.
+      newWarpOpYieldValues.push_back(initArg);
+      // Compute the distributed type for this init arg.
       Type distType = initArg.getType();
       if (auto vecType = dyn_cast<VectorType>(distType)) {
-        // if (forResultToWarpResultMapping.contains(i)) {
-        //   // If the init arg is yielded from the warp op, we need to compute
-        //   the
-        //   // distributed type.
-        //   distType =
-        //       warpOp.getResult(forResultToWarpResultMapping[i]).getType();
-        // } else {
         AffineMap map = distributionMapFn(initArg);
         distType = getDistributedType(vecType, map, warpOp.getWarpSize());
-        // }
       }
-      // llvm::errs() << "distributed type: " << distType << "\n";
-      yieldedTypesFromWarpOp.push_back(distType);
+      newWarpOpDistTypes.push_back(distType);
     }
-    // All escaping values are yielded from the original warp op.
-    yieldedValuesFromWarpOp.insert(yieldedValuesFromWarpOp.end(),
-                                   escapingValues.begin(),
-                                   escapingValues.end());
-    yieldedTypesFromWarpOp.insert(yieldedTypesFromWarpOp.end(),
-                                  distTypes.begin(), distTypes.end());
-
+    // Insert escaping values and their distributed types.
+    newWarpOpYieldValues.insert(newWarpOpYieldValues.end(),
+                                escapingValues.begin(), escapingValues.end());
+    newWarpOpDistTypes.insert(newWarpOpDistTypes.end(),
+                              escapingValuedistTypes.begin(),
+                              escapingValuedistTypes.end());
+    // Next, we insert all non-for yielded values and their distributed types.
+    // We also create a mapping between the non-for yielded value index and the
+    // corresponding new warp op yield value index (needed to update users
+    // later).
+    DenseMap<unsigned, unsigned> warpResultMapping;
     for (auto [i, v] : llvm::enumerate(nonForYieldedValues)) {
-      warpResultMapping[nonForResultIndices[i]] =
-          yieldedValuesFromWarpOp.size();
-      yieldedValuesFromWarpOp.push_back(v);
-      yieldedTypesFromWarpOp.push_back(
+      warpResultMapping[nonForResultIndices[i]] = newWarpOpYieldValues.size();
+      newWarpOpYieldValues.push_back(v);
+      newWarpOpDistTypes.push_back(
           warpOp.getResult(nonForResultIndices[i]).getType());
     }
-
-    // SmallVector<size_t> newRetIndices;
+    // Create the new warp op with the updated yield values and types.
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndReplaceReturns(
-        rewriter, warpOp, yieldedValuesFromWarpOp, yieldedTypesFromWarpOp);
-    yield = cast<gpu::YieldOp>(
+        rewriter, warpOp, newWarpOpYieldValues, newWarpOpDistTypes);
+    newWarpOpYield = cast<gpu::YieldOp>(
         newWarpOp.getBodyRegion().getBlocks().begin()->getTerminator());
 
-    // newWarpOp->print(llvm::outs());
-    // llvm::outs() << "\n";
+    // Next, we create a new for op with the init args yielded by the new
+    // warp op.
+    unsigned escapingValuesStartIdx =
+        forOp.getInitArgs().size(); // ForOp init args are positioned before
+                                    // escaping values in the new warp op.
+    SmallVector<Value> newForOpOperands;
+    for (size_t i = 0; i < escapingValuesStartIdx; ++i)
+      newForOpOperands.push_back(newWarpOp.getResult(i));
 
-    SmallVector<Value> newOperands;
-    // Collect the new init args coming from the new warp op.
-    for (size_t i = 0; i < forOp.getInitArgs().size(); ++i)
-      newOperands.push_back(newWarpOp.getResult(i));
-    // for (OpOperand &yieldOperand : yield->getOpOperands()) {
-    //   if (yieldOperand.get().getDefiningOp() != forOp.getOperation())
-    //     continue;
-    //   OpResult forResult = cast<OpResult>(yieldOperand.get());
-    //   resultIdx.push_back(forResult.getResultNumber());
-    //   yieldOperand.set(forOp.getInitArgs()[forResult.getResultNumber()]);
-    // }
-
+    // Create a new for op outside the new warp op region.
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPointAfter(newWarpOp);
-
-    // Create a new for op outside the region with a WarpExecuteOnLane0Op
-    // region inside.
     auto newForOp = rewriter.create<scf::ForOp>(
         forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
-        forOp.getStep(), newOperands);
+        forOp.getStep(), newForOpOperands);
+    // Next, we insert a new warp op (called inner warp op) inside the
+    // newly created for op. This warp op will contain all ops that were
+    // contained within the original for op body.
     rewriter.setInsertionPointToStart(newForOp.getBody());
 
-    SmallVector<Value> warpInput(newForOp.getRegionIterArgs().begin(),
-                                 newForOp.getRegionIterArgs().end());
-    SmallVector<Type> warpInputType(forOp.getResultTypes().begin(),
-                                    forOp.getResultTypes().end());
+    SmallVector<Value> innerWarpInput(newForOp.getRegionIterArgs().begin(),
+                                      newForOp.getRegionIterArgs().end());
+    SmallVector<Type> innerWarpInputType(forOp.getResultTypes().begin(),
+                                         forOp.getResultTypes().end());
+    // Escaping values are forwarded to the inner warp op as its (additional)
+    // arguments. We keep track of the mapping between these values and their
+    // argument index in the inner warp op (to replcace uses later).
     llvm::SmallDenseMap<Value, int64_t> argIndexMapping;
-    // llvm::errs() << "setting arg index mapping\n";
-    unsigned escapingValuesStartIdx = forOp.getInitArgs().size();
     for (size_t i = escapingValuesStartIdx;
          i < escapingValuesStartIdx + escapingValues.size(); ++i) {
-      warpInput.push_back(newWarpOp.getResult(i));
+      innerWarpInput.push_back(newWarpOp.getResult(i));
       argIndexMapping[escapingValues[i - escapingValuesStartIdx]] =
-          warpInputType.size();
-      warpInputType.push_back(inputTypes[i - escapingValuesStartIdx]);
+          innerWarpInputType.size();
+      innerWarpInputType.push_back(
+          escapingValueInputTypes[i - escapingValuesStartIdx]);
     }
-    // for (auto [i, r] : llvm::enumerate(
-    //          newWarpOp.getResults().drop_front(forOp.getInitArgs().size())))
-    //          {
-    //   warpInput.push_back(r);
-    //   argIndexMapping[escapingValues[i]] = warpInputType.size();
-    //   warpInputType.push_back(inputTypes[i]);
-    // }
-    // llvm::errs() << "go here\n";
+    // Create the inner warp op with the new input values and types.
     auto innerWarp = rewriter.create<WarpExecuteOnLane0Op>(
         newWarpOp.getLoc(), newForOp.getResultTypes(), newWarpOp.getLaneid(),
-        newWarpOp.getWarpSize(), warpInput, warpInputType);
-    // newForOp->getParentOp()->print(llvm::outs());
-    // llvm::outs() << "\n";
+        newWarpOp.getWarpSize(), innerWarpInput, innerWarpInputType);
 
+    // Inline the for op body into the inner warp op body.
     SmallVector<Value> argMapping;
     argMapping.push_back(newForOp.getInductionVar());
-    for (Value args : innerWarp.getBody()->getArguments()) {
+    for (Value args : innerWarp.getBody()->getArguments())
       argMapping.push_back(args);
-    }
-    auto forOpCopy = cast<scf::ForOp>(rewriter.clone(*forOp.getOperation()));
-    argMapping.resize(forOpCopy.getBody()->getNumArguments());
+
+    argMapping.resize(forOp.getBody()->getNumArguments());
     SmallVector<Value> yieldOperands;
-    for (Value operand : forOpCopy.getBody()->getTerminator()->getOperands())
+    for (Value operand : forOp.getBody()->getTerminator()->getOperands())
       yieldOperands.push_back(operand);
 
-    rewriter.eraseOp(forOpCopy.getBody()->getTerminator());
-    rewriter.mergeBlocks(forOpCopy.getBody(), innerWarp.getBody(), argMapping);
+    rewriter.eraseOp(forOp.getBody()->getTerminator());
+    rewriter.mergeBlocks(forOp.getBody(), innerWarp.getBody(), argMapping);
+
+    // Insert a gpu yieldOp at the end of the inner warp op body that yields
+    // original forOp results.
     rewriter.setInsertionPointToEnd(innerWarp.getBody());
     rewriter.create<gpu::YieldOp>(innerWarp.getLoc(), yieldOperands);
     rewriter.setInsertionPointAfter(innerWarp);
+    // Insert a scf.yield op at the end of the new for op body that yields
+    // the inner warp op results.
     if (!innerWarp.getResults().empty())
-      rewriter.create<scf::YieldOp>(forOpCopy.getLoc(), innerWarp.getResults());
-    // forOpCopy->getParentOp()->getParentOp()->print(llvm::outs());
-    // llvm::outs() << "\n";
-    // llvm::errs() << "erasing for op\n";
+      rewriter.create<scf::YieldOp>(forOp.getLoc(), innerWarp.getResults());
 
-    rewriter.eraseOp(forOpCopy);
-    // Replace the warpOp result coming from the original ForOp.
-    // print resultIdx for debugging.
-    // llvm::errs() << "resultIdx: ";
-    // for (auto idx : resultIdx)
-    //   llvm::errs() << idx << " ";
-    // llvm::errs() << "\n";
-    for (auto [origIdx, newIdx] : forResultMapping) {
+    // Update the users of original warp op results that were coming from the
+    // original forOp to the corresponding new forOp result.
+    for (auto [origIdx, newIdx] : forResultMapping)
       rewriter.replaceAllUsesExcept(warpOp.getResult(origIdx),
                                     newForOp.getResult(newIdx), newForOp);
-      // newForOp->setOperand(res.index() + 3,
-      // newWarpOp.getResult(res.value()));
-    }
-
-    for (auto [origIdx, newIdx] : warpResultMapping) {
+    // Similarly, update any users of the warp op results that were not
+    // results of the forOp.
+    for (auto [origIdx, newIdx] : warpResultMapping)
       rewriter.replaceAllUsesWith(warpOp.getResult(origIdx),
                                   newWarpOp.getResult(newIdx));
-      // newForOp->setOperand(res.index() + 3,
-      // newWarpOp.getResult(res.value()));
-    }
+    // Remove the original warp op and for op, they should not have any uses
+    // at this point.
     rewriter.eraseOp(forOp);
     rewriter.eraseOp(warpOp);
+    // Update any users of escaping values that were forwarded to the
+    // inner warp op. These values are now arguments of the inner warp op.
     newForOp.walk([&](Operation *op) {
       for (OpOperand &operand : op->getOpOperands()) {
         auto it = argIndexMapping.find(operand.get());
@@ -1958,8 +1929,6 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
         operand.set(innerWarp.getBodyRegion().getArgument(it->second));
       }
     });
-    // newForOp->getParentOp()->print(llvm::outs());
-    // llvm::outs() << "\n";
 
     // Finally, hoist out any now uniform code from the inner warp op.
     mlir::vector::moveScalarUniformCode(innerWarp);
