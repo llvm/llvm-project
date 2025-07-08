@@ -8457,9 +8457,25 @@ static AttachInfo findAttachComponent(
      llvm::errs() << "DEBUG findAttachComponent: Next component declaration type: ";
      NextType.dump();
    } else if (const auto *NextExpr = NextI->getAssociatedExpression()) {
-     NextType = NextExpr->getType().getNonReferenceType().getCanonicalType();
-     llvm::errs() << "DEBUG findAttachComponent: Next component expression type: ";
-     NextType.dump();
+     // If NextExpr is an array-section, compute the result type using getBaseOriginalType
+     if (const auto *ArraySection = dyn_cast<ArraySectionExpr>(NextExpr)) {
+       // Get the original base type, handling chains of array sections properly
+       QualType BaseType = ArraySectionExpr::getBaseOriginalType(ArraySection->getBase());
+       if (const auto *ATy = BaseType->getAsArrayTypeUnsafe()) {
+         NextType = ATy->getElementType();
+       } else {
+         NextType = BaseType->getPointeeType();
+       }
+       NextType = NextType.getNonReferenceType().getCanonicalType();
+       llvm::errs() << "DEBUG findAttachComponent: Next component array-section result type (base -> result): ";
+       BaseType.dump();
+       llvm::errs() << " -> ";
+       NextType.dump();
+     } else {
+       NextType = NextExpr->getType().getNonReferenceType().getCanonicalType();
+       llvm::errs() << "DEBUG findAttachComponent: Next component expression type: ";
+       NextType.dump();
+     }
    } else {
      llvm::errs() << "DEBUG findAttachComponent: No next component type info, continuing\n";
      break;
