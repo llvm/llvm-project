@@ -322,7 +322,7 @@ define void @test_i32_shift_in_zeros(i32 %x, ptr %p) {
 define void @test_base_ptr_with_offset(i32 %x, ptr %p) {
 ; CHECK-LABEL: define void @test_base_ptr_with_offset(
 ; CHECK-SAME: i32 [[X:%.*]], ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 7
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 7
 ; CHECK-NEXT:    store i32 [[X]], ptr [[TMP1]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -430,9 +430,9 @@ define i8 @test_aliasing_load_partially_mergeable(i32 %x, ptr %p, ptr %p2) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X]] to i16
 ; CHECK-NEXT:    store i16 [[TMP1]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[P2]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[P]], i64 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[X]], 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 2
 ; CHECK-NEXT:    store i16 [[TMP3]], ptr [[TMP4]], align 1
 ; CHECK-NEXT:    ret i8 [[V]]
 ;

@@ -926,11 +926,8 @@ static bool mergePartStores(SmallVectorImpl<PartStore> &Parts,
   if (First.ValOffset != 0)
     Val = Builder.CreateLShr(Val, First.ValOffset);
   Val = Builder.CreateTrunc(Val, NewTy);
-  Value *Ptr = First.PtrBase;
-  if (First.PtrOffset != 0)
-    Ptr = Builder.CreateInBoundsPtrAdd(Ptr, Builder.getInt(First.PtrOffset));
-  StoreInst *Store =
-      Builder.CreateAlignedStore(Val, Ptr, First.Store->getAlign());
+  StoreInst *Store = Builder.CreateAlignedStore(
+      Val, First.Store->getPointerOperand(), First.Store->getAlign());
 
   AAMDNodes AATags = First.Store->getAAMetadata();
   for (const PartStore &Part : drop_begin(Parts))
