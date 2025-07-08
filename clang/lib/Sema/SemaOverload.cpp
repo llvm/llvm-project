@@ -1483,8 +1483,8 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
     if (BS.Ty != DS.Ty)
       return false;
 
-    if (Base->isLValueReferenceType())
-      return D->isLValueReferenceType();
+    if (Base->isLValueReferenceType() || D->isLValueReferenceType())
+      return Base->isLValueReferenceType() == D->isLValueReferenceType();
     return Base->isRValueReferenceType() == D->isRValueReferenceType();
   };
 
@@ -1535,11 +1535,15 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
         return F->getRefQualifier() == RQ_None &&
                !F->isExplicitObjectMemberFunction();
       };
+      if (!IsImplicitWithNoRefQual(Old) && IsImplicitWithNoRefQual(New) &&
+          OldObjectType->isRValueReferenceType())
+        NewObjectType =
+            SemaRef.getASTContext().getRValueReferenceType(NewObjectType);
+      else if (!IsImplicitWithNoRefQual(New) && IsImplicitWithNoRefQual(Old) &&
+               NewObjectType->isRValueReferenceType())
+        OldObjectType =
+            SemaRef.getASTContext().getRValueReferenceType(OldObjectType);
 
-      if (IsImplicitWithNoRefQual(Old) != IsImplicitWithNoRefQual(New) &&
-          CompareType(OldObjectType.getNonReferenceType(),
-                      NewObjectType.getNonReferenceType()))
-        return true;
       return CompareType(OldObjectType, NewObjectType);
     }(OldMethod, NewMethod);
 
@@ -5922,7 +5926,7 @@ static ImplicitConversionSequence TryObjectArgumentInitialization(
   if (Method->isExplicitObjectMemberFunction()) {
     if (ExplicitParameterType.isNull())
       ExplicitParameterType = Method->getFunctionObjectParameterReferenceType();
-    OpaqueValueExpr TmpExpr(Loc, FromType.getNonReferenceType(),
+    OpaqueValueExpr TmpExpr(Loc, FromType,
                             ValueKindFromClassification(FromClassification));
     ImplicitConversionSequence ICS = TryCopyInitialization(
         S, &TmpExpr, ExplicitParameterType, SuppressUserConversion,

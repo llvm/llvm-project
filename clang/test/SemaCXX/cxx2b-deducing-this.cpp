@@ -1168,3 +1168,46 @@ struct S {
   bool g() { return f(); } // expected-error {{no viable conversion from returned value of type 'S' to function return type 'bool'}}
 };
 }
+
+namespace GH99902 {
+struct A {
+    constexpr int f() const { return 1; }
+    constexpr int g() const & { return 1; }
+    constexpr int h() const && { return 1; }
+
+    constexpr int i() { return 1; }
+    constexpr int j() & { return 1; }
+    constexpr int k() && { return 1; }
+
+};
+
+struct B : A {
+    using A::f;
+    using A::g;
+    using A::h;
+    using A::i;
+    using A::j;
+    using A::k;
+    constexpr int f(this A) { return 2; }
+    constexpr int g(this A) { return 2; }
+    constexpr int h(this A) { return 2; }
+    constexpr int i(this A) { return 2; }
+    constexpr int j(this A) { return 2; }
+    constexpr int k(this A) { return 2; }
+};
+
+constexpr B b;
+static_assert(B{}.f() == 1);
+static_assert(B{}.g() == 1);
+static_assert(B{}.h() == 1);
+static_assert(B{}.i() == 1);
+static_assert(B{}.j() == 2);
+static_assert(B{}.k() == 1);
+static_assert(b.f() == 1);
+static_assert(b.g() == 1);
+static_assert(b.h() == 2);
+static_assert(b.i() == 2);
+static_assert(b.j() == 2);
+static_assert(b.k() == 2);
+
+}
