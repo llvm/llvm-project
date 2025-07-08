@@ -6897,6 +6897,29 @@ static void handleVTablePointerAuthentication(Sema &S, Decl *D,
       CustomDiscriminationValue));
 }
 
+static void handleModularFormat(Sema &S, Decl *D, const ParsedAttr &AL) {
+  StringRef ImplName;
+  if (!S.checkStringLiteralArgumentAttr(AL, 1, ImplName))
+    return;
+  SmallVector<StringRef> Aspects;
+  for (unsigned I = 2, E = AL.getNumArgs(); I != E; ++I) {
+    StringRef Aspect;
+    if (!S.checkStringLiteralArgumentAttr(AL, I, Aspect))
+      return;
+    Aspects.push_back(Aspect);
+  }
+
+  // Store aspects sorted and without duplicates.
+  llvm::sort(Aspects);
+  Aspects.erase(llvm::unique(Aspects), Aspects.end());
+
+  // TODO: Type checking on identifier
+  // TODO: Merge attributes
+  D->addAttr(::new (S.Context) ModularFormatAttr(
+      S.Context, AL, AL.getArgAsIdent(0)->getIdentifierInfo(), ImplName,
+      Aspects.data(), Aspects.size()));
+}
+
 //===----------------------------------------------------------------------===//
 // Top Level Sema Entry Points
 //===----------------------------------------------------------------------===//
@@ -7820,6 +7843,10 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_VTablePointerAuthentication:
     handleVTablePointerAuthentication(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_ModularFormat:
+    handleModularFormat(S, D, AL);
     break;
   }
 }
