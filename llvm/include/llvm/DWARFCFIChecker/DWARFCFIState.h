@@ -14,7 +14,7 @@
 #ifndef LLVM_DWARFCFICHECKER_UNWINDINFOSTATE_H
 #define LLVM_DWARFCFICHECKER_UNWINDINFOSTATE_H
 
-#include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFUnwindTable.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include <optional>
