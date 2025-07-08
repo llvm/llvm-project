@@ -582,9 +582,6 @@ def LinalgCopyToMemrefOp :
   let assemblyFormat = "$target attr-dict `:` "
                        "functional-type(operands, results) ";
 
-  let builders = [
-    OpBuilder<(ins "Value":$target)>,
-  ];
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::transform::TransformRewriter &rewriter,
@@ -996,13 +993,6 @@ def PackGreedilyOp : Op<Transform_Dialect, "structured.pack_greedily", [
                    ConfinedAttr<DefaultValuedAttr<DenseI64ArrayAttr, "{}">,
                                  [DenseArrayCount<3>]>:$matmul_inner_dims_order);
   let results = (outs TransformHandleTypeInterface:$packed_op);
-
-  let builders = [
-    OpBuilder<(ins "Value":$target,
-                   "ArrayRef<OpFoldResult>":$mixedMatmulPackedSizes,
-                   "ArrayRef<int64_t>":$matmulPaddededSizesNextMultipleOf,
-                   CArg<"ArrayRef<int64_t>", "{}">:$matmulDimsInnerDimsOrder)>
-  ];
 
   let assemblyFormat = [{
     $target
@@ -2509,10 +2499,6 @@ def HoistRedundantVectorTransfersOp :
 
   let assemblyFormat = "$target attr-dict `:` functional-type(operands, results) ";
 
-  let builders = [
-    OpBuilder<(ins "Value":$target,
-               CArg<"bool", "false">:$verify_non_zero_trip)>,
-  ];
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
          ::mlir::transform::TransformRewriter &rewriter,
@@ -2546,9 +2532,6 @@ def HoistRedundantVectorBroadcastsOp :
 
   let assemblyFormat = "$target attr-dict `:` functional-type(operands, results) ";
 
-  let builders = [
-    OpBuilder<(ins "Value":$target)>,
-  ];
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
          ::mlir::transform::TransformRewriter &rewriter,
@@ -2623,10 +2606,6 @@ def ConvertConv2DToImg2ColOp : Op<Transform_Dialect,
   let assemblyFormat =
     "$target attr-dict `:` functional-type($target, results)";
 
-  let builders = [
-    OpBuilder<(ins "Value":$target)>
-  ];
-
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::transform::TransformRewriter &rewriter,
@@ -2665,10 +2644,6 @@ def FlattenElementwiseLinalgOp : Op<Transform_Dialect,
 
   let assemblyFormat =
     "$target attr-dict `:` functional-type($target, results)";
-
-  let builders = [
-    OpBuilder<(ins "Value":$target)>
-  ];
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
@@ -2715,10 +2690,6 @@ def TransposeConv2DOp : Op<Transform_Dialect,
   let assemblyFormat =
     "$target attr-dict `:` functional-type($target, results)";
 
-  let builders = [
-    OpBuilder<(ins "Value":$target)>
-  ];
-
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::transform::TransformRewriter &rewriter,
@@ -2761,10 +2732,6 @@ def TransposeMatmulOp : Op<Transform_Dialect,
     attr-dict `:` functional-type($target, results)
   }];
 
-  let builders = [
-    OpBuilder<(ins "Value":$target)>
-  ];
-
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::transform::TransformRewriter &rewriter,
@@ -2801,9 +2768,6 @@ def InsertSliceToCopyOp :
 
   let assemblyFormat = "$target attr-dict `:` functional-type(operands, results) ";
 
-  let builders = [
-    OpBuilder<(ins "Value":$target)>,
-  ];
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::transform::TransformRewriter &rewriter,
@@ -2859,9 +2823,6 @@ def MapCopyToThreadsOp :
     `:` functional-type(operands, results)
   }];
 
-  let builders = [
-    OpBuilder<(ins "Value":$target)>,
-  ];
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::transform::TransformRewriter &rewriter,
@@ -2910,10 +2871,6 @@ def WinogradConv2DOp : Op<Transform_Dialect,
   let assemblyFormat =
     "$target attr-dict `:` functional-type($target, results)";
 
-  let builders = [
-    OpBuilder<(ins "Value":$target)>
-  ];
-
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::transform::TransformRewriter &rewriter,
@@ -2946,10 +2903,6 @@ def DecomposeWinogradOp : Op<Transform_Dialect,
 
   let assemblyFormat =
     "$target attr-dict `:` functional-type($target, results)";
-
-  let builders = [
-    OpBuilder<(ins "Value":$target)>
-  ];
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
