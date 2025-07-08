@@ -1206,11 +1206,11 @@ struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
     }();
 
     // Currently only 1, 2, 4, 12 and 16 byte loads are supported.
-    if (loadWidth != 1 && loadWidth != 2 && loadWidth != 4 && loadWidth != 12 &&
-        loadWidth != 16)
+    if (!llvm::is_contained(ArrayRef<size_t>{1, 2, 4, 12, 16}, loadWidth))
       return op.emitOpError("chipset unsupported element size");
 
-    if (chipset != kGfx950 && (loadWidth == 12 || loadWidth == 16))
+    if (chipset != kGfx950 &&
+        llvm::is_contained(ArrayRef<size_t>{12, 16}, loadWidth))
       return op.emitOpError("chipset unsupported element size");
 
     Value srcPtr =

@@ -511,8 +511,7 @@ LogicalResult GatherToLDSOp::verify() {
   } else {
     transferSize = transferType.getIntOrFloatBitWidth();
   }
-  if (transferSize != 8 && transferSize != 16 && transferSize != 32 &&
-      transferSize != 96 && transferSize != 128)
+  if (!llvm::is_contained(ArrayRef<size_t>{8, 16, 32, 96, 128}, transferSize))
     return emitOpError(
         "Transfering type size must be 8, 16, 32, 96 or 128 bits");
 
