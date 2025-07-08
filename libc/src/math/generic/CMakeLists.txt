@@ -1332,7 +1332,7 @@ add_entrypoint_object(
   HDRS
     ../expf16.h
   DEPENDS
-    libc.src.__support.math.expf
+    libc.src.__support.math.expf16
 )
 
 add_entrypoint_object(
