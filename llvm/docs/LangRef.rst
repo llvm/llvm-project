@@ -2755,7 +2755,7 @@ For example:
 
     The compiler also emits relocations to report various aspects of the format
     string and arguments that were present. The compiler reports an aspect by
-    issing a relocation for the symbol `<impl_name>_<aspect>``. This arranges
+    issuing a relocation for the symbol `<impl_name>_<aspect>``. This arranges
     for code and data needed to support the aspect of the implementation to be
     brought into the link to satisfy weak references in the modular
     implemenation function.
