@@ -288,12 +288,14 @@ connectTCPSocket(StringRef NetworkAddress, bool UseSharedMemory,
 #endif
 }
 
-pid_t getLastLaunchedExecutorPID() { 
-  if(!LaunchedExecutorPID.size()) return -1;
-  return LaunchedExecutorPID.back(); 
+pid_t getLastLaunchedExecutorPID() {
+  if (!LaunchedExecutorPID.size())
+    return -1;
+  return LaunchedExecutorPID.back();
 }
 
-pid_t getNthLaunchedExecutorPID(int n) { 
-  if (n - 1 < 0 || n - 1 >= static_cast<int>(LaunchedExecutorPID.size())) return -1;
-  return LaunchedExecutorPID.at(n - 1); 
+pid_t getNthLaunchedExecutorPID(int n) {
+  if (n - 1 < 0 || n - 1 >= static_cast<int>(LaunchedExecutorPID.size()))
+    return -1;
+  return LaunchedExecutorPID.at(n - 1);
 }

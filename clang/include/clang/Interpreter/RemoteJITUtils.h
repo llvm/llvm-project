@@ -38,7 +38,6 @@ llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
 connectTCPSocket(llvm::StringRef NetworkAddress, bool UseSharedMemory,
                  llvm::StringRef SlabAllocateSizeString);
 
-
 /// Returns PID of last launched executor.
 pid_t getLastLaunchedExecutorPID();
 
