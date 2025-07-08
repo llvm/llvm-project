@@ -605,8 +605,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
       // Double-precision floating-point comparison helper functions
       // RTABI chapter 4.1.2, Table 3
-      { RTLIB::OEQ_F64, RTLIB::__aeabi_dcmpeq__ne, CallingConv::ARM_AAPCS },
-      { RTLIB::UNE_F64, RTLIB::__aeabi_dcmpeq__eq, CallingConv::ARM_AAPCS },
+      { RTLIB::OEQ_F64, RTLIB::__aeabi_dcmpeq__oeq, CallingConv::ARM_AAPCS },
+      { RTLIB::UNE_F64, RTLIB::__aeabi_dcmpeq__une, CallingConv::ARM_AAPCS },
       { RTLIB::OLT_F64, RTLIB::__aeabi_dcmplt, CallingConv::ARM_AAPCS },
       { RTLIB::OLE_F64, RTLIB::__aeabi_dcmple, CallingConv::ARM_AAPCS },
       { RTLIB::OGE_F64, RTLIB::__aeabi_dcmpge, CallingConv::ARM_AAPCS },
@@ -622,8 +622,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
       // Single-precision floating-point comparison helper functions
       // RTABI chapter 4.1.2, Table 5
-      { RTLIB::OEQ_F32, RTLIB::__aeabi_fcmpeq__ne, CallingConv::ARM_AAPCS },
-      { RTLIB::UNE_F32, RTLIB::__aeabi_fcmpeq__eq, CallingConv::ARM_AAPCS },
+      { RTLIB::OEQ_F32, RTLIB::__aeabi_fcmpeq__oeq, CallingConv::ARM_AAPCS },
+      { RTLIB::UNE_F32, RTLIB::__aeabi_fcmpeq__une, CallingConv::ARM_AAPCS },
       { RTLIB::OLT_F32, RTLIB::__aeabi_fcmplt, CallingConv::ARM_AAPCS},
       { RTLIB::OLE_F32, RTLIB::__aeabi_fcmple, CallingConv::ARM_AAPCS },
       { RTLIB::OGE_F32, RTLIB::__aeabi_fcmpge, CallingConv::ARM_AAPCS },

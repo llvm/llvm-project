@@ -612,12 +612,12 @@ RTLIB::Libcall RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
 ISD::CondCode TargetLoweringBase::getSoftFloatCmpLibcallPredicate(
     RTLIB::LibcallImpl Impl) const {
   switch (Impl) {
-  case RTLIB::__aeabi_dcmpeq__eq:
-  case RTLIB::__aeabi_fcmpeq__eq:
+  case RTLIB::__aeabi_dcmpeq__une:
+  case RTLIB::__aeabi_fcmpeq__une:
     // Usage in the eq case, so we have to invert the comparison.
     return ISD::SETEQ;
-  case RTLIB::__aeabi_dcmpeq__ne:
-  case RTLIB::__aeabi_fcmpeq__ne:
+  case RTLIB::__aeabi_dcmpeq__oeq:
+  case RTLIB::__aeabi_fcmpeq__oeq:
     // Normal comparison to boolean value.
     return ISD::SETNE;
   case RTLIB::__aeabi_dcmplt:
