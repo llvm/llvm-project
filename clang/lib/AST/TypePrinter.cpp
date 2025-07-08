@@ -2107,7 +2107,8 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     OS << "ext_vector_type";
     break;
   case attr::KCFISalt:
-    OS << "kcfi_salt(\"" << cast<KCFISaltAttr>(T->getAttr())->getSalt() << "\")";
+    OS << "kcfi_salt(\"" << cast<KCFISaltAttr>(T->getAttr())->getSalt()
+       << "\")";
     break;
   }
   OS << "))";
