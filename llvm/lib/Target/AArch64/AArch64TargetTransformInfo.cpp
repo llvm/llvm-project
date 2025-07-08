@@ -4973,12 +4973,6 @@ Value *AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
   switch (Inst->getIntrinsicID()) {
   default:
     return nullptr;
-  case Intrinsic::aarch64_neon_ld2:
-  case Intrinsic::aarch64_neon_ld3:
-  case Intrinsic::aarch64_neon_ld4:
-    if (Inst->getType() == ExpectedType)
-      return Inst;
-    return nullptr;
   case Intrinsic::aarch64_neon_st2:
   case Intrinsic::aarch64_neon_st3:
   case Intrinsic::aarch64_neon_st4: {
@@ -5001,6 +4995,12 @@ Value *AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
     }
     return Res;
   }
+  case Intrinsic::aarch64_neon_ld2:
+  case Intrinsic::aarch64_neon_ld3:
+  case Intrinsic::aarch64_neon_ld4:
+    if (Inst->getType() == ExpectedType)
+      return Inst;
+    return nullptr;
   }
 }
 
