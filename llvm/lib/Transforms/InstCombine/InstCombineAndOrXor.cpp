@@ -4864,6 +4864,68 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
   return nullptr;
 }
 
+/// Try to transform a chain of XORs into a disjoint OR to expose a constant
+/// offset for GEP and other optimizations. This fold transforms:
+///   Current = xor(X, K)
+/// into:
+///   Result = or(xor(X, C), B)
+/// where a dominating `xor(X, C)` exists, K = B|C, B&C=0, and the operands
+/// of the new `or` are proven disjoint. This is beneficial for address
+/// calculations where `or` can be folded into `add`.
+static Instruction *transformChainedXorToOrDisjoint(BinaryOperator &I,
+                                                    InstCombinerImpl &IC) {
+  Value *X;
+  ConstantInt *CurrentC;
+  if (!match(&I, m_Xor(m_Value(X), m_ConstantInt(CurrentC))))
+    return nullptr;
+
+  // Find the best dominating base XOR.
+  BinaryOperator *BestBaseXor = nullptr;
+  APInt SmallestConst = CurrentC->getValue();
+
+  for (User *U : X->users()) {
+    if (U == &I)
+      continue;
+
+    // Look for sibling instruction: xor(X, SiblingC)
+    BinaryOperator *SiblingXor;
+    ConstantInt *SiblingC;
+    if (!match(U, m_CombineAnd(m_BinOp(SiblingXor),
+                               m_Xor(m_Specific(X), m_ConstantInt(SiblingC)))))
+      continue;
+
+    const APInt &SiblingConstVal = SiblingC->getValue();
+
+    // To be a better base, the sibling must have a smaller constant and
+    // must dominate the instruction we are currently trying to transform.
+    if (SiblingConstVal.slt(SmallestConst) &&
+        IC.getDominatorTree().dominates(SiblingXor, &I)) {
+      BestBaseXor = SiblingXor;
+      SmallestConst = SiblingConstVal;
+    }
+  }
+
+  if (!BestBaseXor)
+    return nullptr;
+
+  // We found a suitable base. Validate the transformation via disjointness
+  // checks.
+  const APInt NewConstVal = CurrentC->getValue() - SmallestConst;
+
+  // Check 1: The constant bits must be disjoint. (K = B|C implies B&C=0)
+  if ((NewConstVal & SmallestConst) != 0)
+    return nullptr;
+
+  // Check 2: The base value (xor(X,C)) must be disjoint from the new offset
+  // (B).
+  if (!IC.MaskedValueIsZero(BestBaseXor, NewConstVal, &I))
+    return nullptr;
+
+  // All checks passed. Create the new 'or' instruction.
+  Constant *NewConst = ConstantInt::get(I.getType(), NewConstVal);
+  return BinaryOperator::CreateDisjointOr(BestBaseXor, NewConst);
+}
+
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -5200,6 +5262,9 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
 
   if (Instruction *Res = foldBitwiseLogicWithIntrinsics(I, Builder))
     return Res;
+
+  if (Instruction *Transformed = transformChainedXorToOrDisjoint(I, *this))
+    return Transformed;
 
   return nullptr;
 }
