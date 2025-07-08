@@ -51,7 +51,7 @@ public:
   /// Interface stubs.
   clang::Decl *GetExternalDecl(clang::GlobalDeclID) override { return nullptr; }
   clang::Stmt *GetExternalDeclStmt(uint64_t) override { return nullptr; }
-  clang::Selector GetExternalSelector(uint32_t) override {
+  clang::Selector GetExternalSelector(uint64_t) override {
     return clang::Selector();
   }
   uint32_t GetNumExternalSelectors() override { return 0; }
