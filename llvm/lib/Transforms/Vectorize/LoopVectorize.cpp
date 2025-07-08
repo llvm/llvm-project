@@ -7051,7 +7051,7 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       using namespace VPlanPatternMatch;
       if (match(&R, m_VPInstruction<Instruction::Select>(
                         m_VPValue(), m_VPValue(), m_VPValue())) &&
-          isa_and_nonnull<PHINode>(cast<VPInstruction>(R).getUnderlyingInstr()))
+          isa_and_nonnull<PHINode>(R.getVPSingleValue()->getUnderlyingValue()))
         return true;
 
       /// If a VPlan transform folded a recipe to one producing a single-scalar,
