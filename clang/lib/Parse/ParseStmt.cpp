@@ -81,8 +81,8 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
   assert((CXX11Attrs.empty() || Res.isInvalid() || Res.isUsable()) &&
          "attributes on empty statement");
 
-  if (HasStdAttr && getLangOpts().C23 &&
-      (StmtCtx & ParsedStmtContext::SecondaryBlockInC) != ParsedStmtContext{} &&
+  if (HasStdAttr && getLangOpts().C99 &&
+      (StmtCtx & ParsedStmtContext::AllowDeclarationsInC) == ParsedStmtContext{} &&
       isa_and_present<NullStmt>(Res.get()))
     Diag(CXX11Attrs.Range.getBegin(), diag::warn_attr_in_secondary_block)
         << CXX11Attrs.Range;
@@ -1498,10 +1498,6 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
 
   SourceLocation InnerStatementTrailingElseLoc;
   StmtResult ThenStmt;
-  ParsedStmtContext StmtCtx = getLangOpts().C99
-                                  ? ParsedStmtContext::SecondaryBlockInC
-                                  : ParsedStmtContext::SubStmt;
-
   {
     bool ShouldEnter = ConstexprCondition && !*ConstexprCondition;
     Sema::ExpressionEvaluationContext Context =
@@ -1514,7 +1510,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     EnterExpressionEvaluationContext PotentiallyDiscarded(
         Actions, Context, nullptr,
         Sema::ExpressionEvaluationContextRecord::EK_Other, ShouldEnter);
-    ThenStmt = ParseStatement(&InnerStatementTrailingElseLoc, StmtCtx);
+    ThenStmt = ParseStatement(&InnerStatementTrailingElseLoc);
   }
 
   if (Tok.isNot(tok::kw_else))
@@ -1559,7 +1555,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     EnterExpressionEvaluationContext PotentiallyDiscarded(
         Actions, Context, nullptr,
         Sema::ExpressionEvaluationContextRecord::EK_Other, ShouldEnter);
-    ElseStmt = ParseStatement(/*TrailingElseLoc=*/nullptr, StmtCtx);
+    ElseStmt = ParseStatement();
 
     if (ElseStmt.isUsable())
       MIChecker.Check();
@@ -1695,11 +1691,8 @@ StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc) {
   if (C99orCXX)
     getCurScope()->decrementMSManglingNumber();
 
-  ParsedStmtContext StmtCtx = getLangOpts().C99
-                                  ? ParsedStmtContext::SecondaryBlockInC
-                                  : ParsedStmtContext::SubStmt;
   // Read the body statement.
-  StmtResult Body(ParseStatement(TrailingElseLoc, StmtCtx));
+  StmtResult Body(ParseStatement(TrailingElseLoc));
 
   // Pop the scopes.
   InnerScope.Exit();
@@ -1768,11 +1761,9 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
   ParseScope InnerScope(this, Scope::DeclScope, C99orCXX, Tok.is(tok::l_brace));
 
   MisleadingIndentationChecker MIChecker(*this, MSK_while, WhileLoc);
-  ParsedStmtContext StmtCtx = getLangOpts().C99
-                                  ? ParsedStmtContext::SecondaryBlockInC
-                                  : ParsedStmtContext::SubStmt;
+
   // Read the body statement.
-  StmtResult Body(ParseStatement(TrailingElseLoc, StmtCtx));
+  StmtResult Body(ParseStatement(TrailingElseLoc));
 
   if (Body.isUsable())
     MIChecker.Check();
@@ -1815,11 +1806,9 @@ StmtResult Parser::ParseDoStatement() {
   //
   bool C99orCXX = getLangOpts().C99 || getLangOpts().CPlusPlus;
   ParseScope InnerScope(this, Scope::DeclScope, C99orCXX, Tok.is(tok::l_brace));
-  ParsedStmtContext StmtCtx = getLangOpts().C99
-                                  ? ParsedStmtContext::SecondaryBlockInC
-                                  : ParsedStmtContext::SubStmt;
+
   // Read the body statement.
-  StmtResult Body(ParseStatement(/*TrailingElseLoc=*/nullptr, StmtCtx));
+  StmtResult Body(ParseStatement());
 
   // Pop the body scope if needed.
   InnerScope.Exit();
@@ -2239,11 +2228,9 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
     getCurScope()->decrementMSManglingNumber();
 
   MisleadingIndentationChecker MIChecker(*this, MSK_for, ForLoc);
-  ParsedStmtContext StmtCtx = getLangOpts().C99
-                                  ? ParsedStmtContext::SecondaryBlockInC
-                                  : ParsedStmtContext::SubStmt;
+
   // Read the body statement.
-  StmtResult Body(ParseStatement(TrailingElseLoc, StmtCtx));
+  StmtResult Body(ParseStatement(TrailingElseLoc));
 
   if (Body.isUsable())
     MIChecker.Check();

@@ -159,7 +159,6 @@ def BuiltinRequiresHeader : DiagGroup<"builtin-requires-header">;
 def C99Compat : DiagGroup<"c99-compat">;
 def C23Compat : DiagGroup<"c23-compat">;
 def : DiagGroup<"c2x-compat", [C23Compat]>;
-def CAttributeExtensions : DiagGroup<"c-attribute-extension">;
 
 def CppKeywordInC : DiagGroup<"c++-keyword">;
 def DuplicateDeclSpecifier : DiagGroup<"duplicate-decl-specifier">;
