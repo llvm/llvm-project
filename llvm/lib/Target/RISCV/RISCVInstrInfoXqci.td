@@ -1560,12 +1560,18 @@ def : CompressPat<(QC_E_LI GPRNoX0:$rd, simm20_li:$imm),
 } // Predicates = [HasVendorXqcili, IsRV32]
 
 let isCompressOnly = true, Predicates = [HasVendorXqcilia, IsRV32] in {
+def : CompressPat<(QC_E_ADDAI GPRNoX0:$rd, simm6nonzero:$imm),
+                  (C_ADDI GPRNoX0:$rd, simm6nonzero:$imm)>;
 def : CompressPat<(QC_E_ADDI GPRNoX0:$rs1, GPRNoX0:$rs1, simm6nonzero:$imm),
                   (C_ADDI GPRNoX0:$rs1, simm6nonzero:$imm)>;
+def : CompressPat<(QC_E_ANDAI GPRC:$rd, simm6:$imm),
+                  (C_ANDI GPRC:$rd, simm6:$imm)>;
 def : CompressPat<(QC_E_ANDI GPRC:$rs1, GPRC:$rs1, simm6:$imm),
                   (C_ANDI GPRC:$rs1, simm6:$imm)>;
 def : CompressPat<(QC_E_ADDI GPRNoX0:$rs1, GPRNoX0:$rs2, 0),
                   (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
+def : CompressPat<(QC_E_ADDAI X2, simm10_lsb0000nonzero:$imm),
+                  (C_ADDI16SP X2, simm10_lsb0000nonzero:$imm)>;
 def : CompressPat<(QC_E_ADDI X2, X2, simm10_lsb0000nonzero:$imm),
                   (C_ADDI16SP X2, simm10_lsb0000nonzero:$imm)>;
 } // let isCompressOnly = true, Predicates = [HasVendorXqcilia, IsRV32]

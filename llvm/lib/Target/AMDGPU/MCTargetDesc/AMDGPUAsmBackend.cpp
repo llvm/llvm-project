@@ -15,7 +15,6 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
@@ -178,7 +177,7 @@ MCFixupKindInfo AMDGPUAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   };
 
   if (mc::isRelocation(Kind))
-    return MCAsmBackend::getFixupKindInfo(FK_NONE);
+    return {};
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);

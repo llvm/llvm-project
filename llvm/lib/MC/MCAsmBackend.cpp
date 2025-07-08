@@ -10,7 +10,6 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/MC/MCELFObjectWriter.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -139,21 +138,9 @@ bool MCAsmBackend::isDarwinCanonicalPersonality(const MCSymbol *Sym) const {
 
 const MCSubtargetInfo *MCAsmBackend::getSubtargetInfo(const MCFragment &F) {
   const MCSubtargetInfo *STI = nullptr;
-  switch (F.getKind()) {
-  case MCFragment::FT_Data: {
-    auto &DF = cast<MCDataFragment>(F);
-    STI = DF.getSubtargetInfo();
-    assert(!DF.hasInstructions() || STI != nullptr);
-    break;
-  }
-  case MCFragment::FT_Relaxable: {
-    auto &RF = cast<MCRelaxableFragment>(F);
-    STI = RF.getSubtargetInfo();
-    assert(!RF.hasInstructions() || STI != nullptr);
-    break;
-  }
-  default:
-    break;
+  if (auto *DF = dyn_cast<MCEncodedFragment>(&F)) {
+    STI = DF->getSubtargetInfo();
+    assert(!DF->hasInstructions() || STI != nullptr);
   }
   return STI;
 }

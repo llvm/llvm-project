@@ -11,7 +11,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Debug.h"
@@ -64,7 +63,7 @@ MCFixupKindInfo CSKYAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
          "Not all fixup kinds added to Infos array");
 
   if (mc::isRelocation(Kind))
-    return MCAsmBackend::getFixupKindInfo(FK_NONE);
+    return {};
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
   return Infos[Kind];

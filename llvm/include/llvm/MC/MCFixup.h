@@ -18,7 +18,8 @@ namespace llvm {
 class MCExpr;
 
 /// Extensible enumeration to represent the type of a fixup.
-enum MCFixupKind : uint16_t {
+using MCFixupKind = uint16_t;
+enum {
   // [0, FirstLiteralRelocationKind) encodes raw relocation types.
 
   // [FirstLiteralRelocationKind, FK_NONE) encodes raw relocation types coming
@@ -67,7 +68,7 @@ class MCFixup {
 
   /// The target dependent kind of fixup item this is. The kind is used to
   /// determine how the operand value should be encoded into the instruction.
-  uint16_t Kind = FK_NONE;
+  MCFixupKind Kind = FK_NONE;
 
   /// True if this is a PC-relative fixup. The relocatable expression is
   /// typically resolved When SymB is nullptr and SymA is a local symbol defined
@@ -81,7 +82,7 @@ class MCFixup {
   /// Consider bit fields if we need more flags.
 
 public:
-  static MCFixup create(uint32_t Offset, const MCExpr *Value, uint16_t Kind,
+  static MCFixup create(uint32_t Offset, const MCExpr *Value, MCFixupKind Kind,
                         bool PCRel = false) {
     MCFixup FI;
     FI.Value = Value;
@@ -90,13 +91,8 @@ public:
     FI.PCRel = PCRel;
     return FI;
   }
-  static MCFixup create(uint32_t Offset, const MCExpr *Value,
-                        MCFixupKind Kind) {
-    return create(Offset, Value, unsigned(Kind));
-  }
 
-  MCFixupKind getKind() const { return MCFixupKind(Kind); }
-
+  MCFixupKind getKind() const { return Kind; }
   unsigned getTargetKind() const { return Kind; }
 
   uint32_t getOffset() const { return Offset; }

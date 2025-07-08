@@ -21,7 +21,6 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectStreamer.h"
@@ -423,14 +422,10 @@ static size_t getSizeForInstFragment(const MCFragment *F) {
   if (!F || !F->hasInstructions())
     return 0;
   // MCEncodedFragmentWithContents being templated makes this tricky.
-  switch (F->getKind()) {
-  default:
+  if (auto *DF = dyn_cast<MCEncodedFragment>(F))
+    return DF->getContents().size();
+  else
     llvm_unreachable("Unknown fragment with instructions!");
-  case MCFragment::FT_Data:
-    return cast<MCDataFragment>(*F).getContents().size();
-  case MCFragment::FT_Relaxable:
-    return cast<MCRelaxableFragment>(*F).getContents().size();
-  }
 }
 
 /// Return true if we can insert NOP or prefixes automatically before the
@@ -640,7 +635,7 @@ MCFixupKindInfo X86AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   // Fixup kinds from .reloc directive are like R_386_NONE/R_X86_64_NONE. They
   // do not require any extra processing.
   if (mc::isRelocation(Kind))
-    return MCAsmBackend::getFixupKindInfo(FK_NONE);
+    return {};
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
@@ -683,6 +678,8 @@ static unsigned getFixupKindSize(unsigned Kind) {
   }
 }
 
+constexpr char GotSymName[] = "_GLOBAL_OFFSET_TABLE_";
+
 // Adjust PC-relative fixup offsets, which are calculated from the start of the
 // next instruction.
 std::optional<bool> X86AsmBackend::evaluateFixup(const MCFragment &,
@@ -702,7 +699,7 @@ std::optional<bool> X86AsmBackend::evaluateFixup(const MCFragment &,
       // If this is a pc-relative load off _GLOBAL_OFFSET_TABLE_:
       // leaq _GLOBAL_OFFSET_TABLE_(%rip), %r15
       // this needs to be a GOTPC32 relocation.
-      if (Add && Add->getName() == "_GLOBAL_OFFSET_TABLE_")
+      if (Add && Add->getName() == GotSymName)
         Fixup = MCFixup::create(Fixup.getOffset(), Fixup.getValue(),
                                 X86::reloc_global_offset_table);
     } break;
@@ -784,15 +781,7 @@ void X86AsmBackend::relaxInstruction(MCInst &Inst,
   // The only relaxations X86 does is from a 1byte pcrel to a 4byte pcrel.
   bool Is16BitMode = STI.hasFeature(X86::Is16Bit);
   unsigned RelaxedOp = getRelaxedOpcode(Inst, Is16BitMode);
-
-  if (RelaxedOp == Inst.getOpcode()) {
-    SmallString<256> Tmp;
-    raw_svector_ostream OS(Tmp);
-    Inst.dump_pretty(OS);
-    OS << "\n";
-    report_fatal_error("unexpected instruction to relax: " + OS.str());
-  }
-
+  assert(RelaxedOp != Inst.getOpcode());
   Inst.setOpcode(RelaxedOp);
 }
 
