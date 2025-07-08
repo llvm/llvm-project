@@ -80,7 +80,7 @@ protected:
     FunctionAnalysisManager FAM;
     FAM.registerPass([&] { return TM->getTargetIRAnalysis(); });
 
-    TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(*F);
+    TargetTransformInfo TTI = TM->getTargetIRAnalysis().run(*F, FAM);
     DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr, MMI,
               nullptr, TTI.hasBranchDivergence(F));
   }
