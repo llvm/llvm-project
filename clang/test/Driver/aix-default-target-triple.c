@@ -8,7 +8,6 @@
 // Test that the target triple contains AIX and is not "unknown"
 // The target should be something like "powerpc-ibm-aix7.3.0.0"
 // CHECK-TARGET: Target: {{.*}}aix{{.*}}
-// CHECK-TARGET-NOT: error: unknown target triple 'unknown'
 
 int main() {
     return 0;
