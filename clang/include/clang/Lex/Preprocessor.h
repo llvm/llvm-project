@@ -2740,10 +2740,6 @@ private:
 
   void removeCachedMacroExpandedTokensOfLastLexer();
 
-  /// Peek the next token. If so, return the token, if not, this
-  /// method should have no observable side-effect on the lexed tokens.
-  std::optional<Token> peekNextPPToken();
-
   /// After reading "MACRO(", this method is invoked to read all of the formal
   /// arguments specified for the macro invocation.  Returns null on error.
   MacroArgs *ReadMacroCallArgumentList(Token &MacroName, MacroInfo *MI,

@@ -43,6 +43,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -1252,13 +1253,13 @@ void Preprocessor::HandleDirective(Token &Result) {
   // Save the '#' token in case we need to return it later.
   Token SavedHash = Result;
 
-  bool IsCXX20ImportOrModuleDirective =
+  bool IsCXXImportOrModule =
       getLangOpts().CPlusPlusModules &&
       Result.isModuleContextualKeyword(/*AllowExport=*/false);
 
   // Read the next token, the directive flavor.  This isn't expanded due to
   // C99 6.10.3p8.
-  if (!IsCXX20ImportOrModuleDirective)
+  if (LLVM_LIKELY(!IsCXXImportOrModule))
     LexUnexpandedToken(Result);
 
   // C99 6.10.3p11: Is this preprocessor directive in macro invocation?  e.g.:
@@ -1280,7 +1281,7 @@ void Preprocessor::HandleDirective(Token &Result) {
       case tok::pp_embed:
       case tok::pp_module:
         Diag(Result, diag::err_embedded_directive)
-            << IsCXX20ImportOrModuleDirective << II->getName();
+            << IsCXXImportOrModule << II->getName();
         Diag(*ArgMacro, diag::note_macro_expansion_here)
             << ArgMacro->getIdentifierInfo();
         DiscardUntilEndOfDirective();
@@ -1375,7 +1376,7 @@ void Preprocessor::HandleDirective(Token &Result) {
       return HandleCXXModuleDirective(Result);
     // GNU Extensions.
     case tok::pp_import:
-      if (IsCXX20ImportOrModuleDirective)
+      if (IsCXXImportOrModule)
         return HandleCXXImportDirective(Result);
       return HandleImportDirective(SavedHash.getLocation(), Result);
     case tok::pp_include_next:

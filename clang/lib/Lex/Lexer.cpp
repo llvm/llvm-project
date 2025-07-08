@@ -3748,7 +3748,6 @@ bool Lexer::Lex(Token &Result) {
   bool isRawLex = isLexingRawMode();
   (void) isRawLex;
   bool returnedToken = LexTokenInternal(Result, atPhysicalStartOfLine);
-
   // (After the LexTokenInternal call, the lexer might be destroyed.)
   assert((returnedToken || !isRawLex) && "Raw lex must succeed");
   return returnedToken;
@@ -4046,8 +4045,8 @@ LexStart:
     // Notify MIOpt that we read a non-whitespace/non-comment token.
     MIOpt.ReadToken();
     bool returnedToken = LexIdentifierContinue(Result, CurPtr);
-    if (returnedToken && Result.isModuleContextualKeyword() &&
-        LangOpts.CPlusPlusModules &&
+    if (returnedToken && LangOpts.CPlusPlusModules &&
+        Result.isModuleContextualKeyword() &&
         PP->HandleModuleContextualKeyword(Result, TokAtPhysicalStartOfLine) &&
         !LexingRawMode && !Is_PragmaLexer)
       goto HandleDirective;
@@ -4255,8 +4254,12 @@ LexStart:
         // it's actually the start of a preprocessing directive.  Callback to
         // the preprocessor to handle it.
         // TODO: -fpreprocessed mode??
-        if (TokAtPhysicalStartOfLine && !LexingRawMode && !Is_PragmaLexer)
+        if (TokAtPhysicalStartOfLine && !LexingRawMode && !Is_PragmaLexer) {
+          // We parsed a # character and it's the start of a preprocessing
+          // directive.
+          FormTokenWithChars(Result, CurPtr, tok::hash);
           goto HandleDirective;
+        }
 
         Kind = tok::hash;
       }
@@ -4443,8 +4446,12 @@ LexStart:
       // it's actually the start of a preprocessing directive.  Callback to
       // the preprocessor to handle it.
       // TODO: -fpreprocessed mode??
-      if (TokAtPhysicalStartOfLine && !LexingRawMode && !Is_PragmaLexer)
+      if (TokAtPhysicalStartOfLine && !LexingRawMode && !Is_PragmaLexer) {
+        // We parsed a # character and it's the start of a preprocessing
+        // directive.
+        FormTokenWithChars(Result, CurPtr, tok::hash);
         goto HandleDirective;
+      }
 
       Kind = tok::hash;
     }
@@ -4534,9 +4541,6 @@ LexStart:
   return true;
 
 HandleDirective:
-  // We parsed a # character and it's the start of a preprocessing directive.
-  if (!Result.isOneOf(tok::kw_import, tok::kw_module))
-    FormTokenWithChars(Result, CurPtr, tok::hash);
   PP->HandleDirective(Result);
 
   if (PP->hadModuleLoaderFatalFailure())
@@ -4632,7 +4636,6 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
   }
   if (Result.isLiteral())
     return true;
-
   if (Result.is(tok::colon)) {
     // Convert consecutive colons to 'tok::coloncolon'.
     if (*BufferPtr == ':') {
