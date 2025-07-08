@@ -112,15 +112,6 @@ MCSymbol *MachineBasicBlock::getEndSymbol() const {
   return CachedEndMCSymbol;
 }
 
-MCSymbol *MachineBasicBlock::createCallsiteSymbol() const {
-  const MachineFunction *MF = getParent();
-  MCContext &Ctx = MF->getContext();
-  CallsiteSymbols.push_back(
-      Ctx.createTempSymbol("BB" + Twine(MF->getFunctionNumber()) + "_" +
-                           Twine(getNumber()) + "_CS"));
-  return CallsiteSymbols.back();
-}
-
 raw_ostream &llvm::operator<<(raw_ostream &OS, const MachineBasicBlock &MBB) {
   MBB.print(OS);
   return OS;

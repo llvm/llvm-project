@@ -1428,11 +1428,11 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
           HasCalls};
 }
 
-void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF,
-                                      bool HasCalls) {
+void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   MCSection *BBAddrMapSection =
       getObjFileLowering().getBBAddrMapSection(*MF.getSection());
   assert(BBAddrMapSection && ".llvm_bb_addr_map section is not initialized.");
+  bool HasCalls = !CurrentFnCallsiteSymbols.empty();
 
   const MCSymbol *FunctionSymbol = getFunctionBegin();
 
@@ -1498,7 +1498,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF,
       const MCSymbol *CurrentLabel = MBBSymbol;
       if (HasCalls) {
         const SmallVectorImpl<MCSymbol *> &CallsiteSymbols =
-            MBB.getCallsiteSymbols();
+            CurrentFnCallsiteSymbols.lookup(&MBB);
         OutStreamer->AddComment("number of callsites");
         OutStreamer->emitULEB128IntValue(CallsiteSymbols.size());
         for (const MCSymbol *CallsiteSymbol : CallsiteSymbols) {
@@ -1815,7 +1815,6 @@ void AsmPrinter::emitFunctionBody() {
 
   // Print out code for the function.
   bool HasAnyRealCode = false;
-  bool HasCalls = false;
   int NumInstsInFunction = 0;
   bool IsEHa = MMI->getModule()->getModuleFlag("eh-asynch");
 
@@ -1842,11 +1841,8 @@ void AsmPrinter::emitFunctionBody() {
           !MI.isDebugInstr()) {
         HasAnyRealCode = true;
       }
-      if (MI.isCall()) {
-        HasCalls = true;
-        if (MF->getTarget().Options.BBAddrMap)
-          OutStreamer->emitLabel(MBB.createCallsiteSymbol());
-      }
+      if (MI.isCall() && MF->getTarget().Options.BBAddrMap)
+        OutStreamer->emitLabel(createCallsiteSymbol(MBB));
 
       // If there is a pre-instruction symbol, emit a label for it here.
       if (MCSymbol *S = MI.getPreInstrSymbol())
@@ -2133,7 +2129,7 @@ void AsmPrinter::emitFunctionBody() {
   // BB labels are requested for this function. Skip empty functions.
   if (HasAnyRealCode) {
     if (MF->getTarget().Options.BBAddrMap)
-      emitBBAddrMapSection(*MF, HasCalls);
+      emitBBAddrMapSection(*MF);
     else if (PgoAnalysisMapFeatures.getBits() != 0)
       MF->getContext().reportWarning(
           SMLoc(), "pgo-analysis-map is enabled for function " + MF->getName() +
@@ -2794,6 +2790,14 @@ MCSymbol *AsmPrinter::getMBBExceptionSym(const MachineBasicBlock &MBB) {
   return Res.first->second;
 }
 
+MCSymbol *AsmPrinter::createCallsiteSymbol(const MachineBasicBlock &MBB) {
+  MCContext &Ctx = MF->getContext();
+  MCSymbol *Sym = Ctx.createTempSymbol("BB" + Twine(MF->getFunctionNumber()) +
+                                       "_" + Twine(MBB.getNumber()) + "_CS");
+  CurrentFnCallsiteSymbols[&MBB].push_back(Sym);
+  return Sym;
+}
+
 void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   this->MF = &MF;
   const Function &F = MF.getFunction();
@@ -2828,6 +2832,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   CurrentFnBegin = nullptr;
   CurrentFnBeginLocal = nullptr;
   CurrentSectionBeginSym = nullptr;
+  CurrentFnCallsiteSymbols.clear();
   MBBSectionRanges.clear();
   MBBSectionExceptionSyms.clear();
   bool NeedsLocalForSize = MAI->needsLocalForSize();

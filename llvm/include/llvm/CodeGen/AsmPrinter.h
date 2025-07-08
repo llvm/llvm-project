@@ -135,6 +135,12 @@ public:
   /// default, this is equal to CurrentFnSym.
   MCSymbol *CurrentFnSymForSize = nullptr;
 
+  /// Vector of symbols marking the position of callsites in each basic block.
+  /// The callsite symbols of each block are stored in the order they appear
+  /// in that block.
+  DenseMap<const MachineBasicBlock *, SmallVector<MCSymbol *, 1>>
+      CurrentFnCallsiteSymbols;
+
   /// Provides the profile information for constants.
   const StaticDataProfileInfo *SDPI = nullptr;
 
@@ -295,6 +301,10 @@ public:
   /// to emit them as well, return the whole set.
   ArrayRef<MCSymbol *> getAddrLabelSymbolToEmit(const BasicBlock *BB);
 
+  /// Creates a new symbol to be used for the beginning of a callsite at th
+  /// specified basic block.
+  MCSymbol *createCallsiteSymbol(const MachineBasicBlock &MBB);
+
   /// If the specified function has had any references to address-taken blocks
   /// generated, but the block got deleted, return the symbol now so we can
   /// emit it.  This prevents emitting a reference to a symbol that has no
@@ -426,7 +436,7 @@ public:
 
   void emitStackUsage(const MachineFunction &MF);
 
-  void emitBBAddrMapSection(const MachineFunction &MF, bool HasCalls);
+  void emitBBAddrMapSection(const MachineFunction &MF);
 
   void emitKCFITrapEntry(const MachineFunction &MF, const MCSymbol *Symbol);
   virtual void emitKCFITypeId(const MachineFunction &MF);
