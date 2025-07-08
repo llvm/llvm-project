@@ -234,7 +234,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     }
   };
   auto checkReduction = [&todo](auto op, LogicalResult &result) {
-    if (isa<omp::TeamsOp>(op) || isa<omp::SimdOp>(op))
+    if (isa<omp::TeamsOp>(op))
       if (!op.getReductionVars().empty() || op.getReductionByref() ||
           op.getReductionSyms())
         result = todo("reduction");
@@ -313,10 +313,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         if (!op.getNontemporalVars().empty())
           op.emitWarning()
               << "ignored clause: nontemporal in omp.simd operation";
-
-        if (!op.getReductionVars().empty() || op.getReductionByref() ||
-            op.getReductionSyms())
-          op.emitWarning() << "ignored clause: reduction in omp.simd operation";
       })
       .Case<omp::AtomicReadOp, omp::AtomicWriteOp, omp::AtomicUpdateOp,
             omp::AtomicCaptureOp>([&](auto op) { checkHint(op, result); })
@@ -2693,16 +2689,18 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   if (failed(checkImplementationStatus(opInst)))
     return failure();
 
-  // This is needed to make sure that uses of entry block arguments for the
-  // reduction clause, which is not yet being translated, are mapped to the
-  // outside values. This has the effect of ignoring the clause without causing
-  // a compiler crash.
-  auto blockArgIface = cast<omp::BlockArgOpenMPOpInterface>(*simdOp);
-  for (auto [arg, var] : llvm::zip_equal(blockArgIface.getReductionBlockArgs(),
-                                         simdOp.getReductionVars()))
-    moduleTranslation.mapValue(arg, moduleTranslation.lookupValue(var));
-
   PrivateVarsInfo privateVarsInfo(simdOp);
+
+  MutableArrayRef<BlockArgument> reductionArgs =
+      cast<omp::BlockArgOpenMPOpInterface>(opInst).getReductionBlockArgs();
+  DenseMap<Value, llvm::Value *> reductionVariableMap;
+  SmallVector<llvm::Value *> privateReductionVariables(
+      simdOp.getNumReductionVars());
+  SmallVector<DeferredStore> deferredStores;
+  SmallVector<omp::DeclareReductionOp> reductionDecls;
+  collectReductionDecls(simdOp, reductionDecls);
+  llvm::ArrayRef<bool> isByRef = getIsByRef(simdOp.getReductionByref());
+  assert(isByRef.size() == simdOp.getNumReductionVars());
 
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
@@ -2712,9 +2710,25 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   if (handleError(afterAllocas, opInst).failed())
     return failure();
 
+  if (failed(allocReductionVars(simdOp, reductionArgs, builder,
+                                moduleTranslation, allocaIP, reductionDecls,
+                                privateReductionVariables, reductionVariableMap,
+                                deferredStores, isByRef)))
+    return failure();
+
   if (handleError(initPrivateVars(builder, moduleTranslation, privateVarsInfo),
                   opInst)
           .failed())
+    return failure();
+
+  // TODO: no call to copyFirstPrivateVars?
+
+  assert(afterAllocas.get()->getSinglePredecessor());
+  if (failed(initReductionVars(simdOp, reductionArgs, builder,
+                               moduleTranslation,
+                               afterAllocas.get()->getSinglePredecessor(),
+                               reductionDecls, privateReductionVariables,
+                               reductionVariableMap, isByRef, deferredStores)))
     return failure();
 
   llvm::ConstantInt *simdlen = nullptr;
@@ -2760,6 +2774,50 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                             ? moduleTranslation.lookupValue(simdOp.getIfExpr())
                             : nullptr,
                         order, simdlen, safelen);
+
+  // We now need to reduce the per-simd-lane reduction variable into the
+  // original variable. This works a bit differently to other reductions (e.g.
+  // wsloop) because we don't need to call into the OpenMP runtime to handle
+  // threads: everything happened in this one thread.
+  for (auto [i, tuple] : llvm::enumerate(
+           llvm::zip(reductionDecls, isByRef, simdOp.getReductionVars(),
+                     privateReductionVariables))) {
+    auto [decl, byRef, reductionVar, privateReductionVar] = tuple;
+
+    OwningReductionGen gen = makeReductionGen(decl, builder, moduleTranslation);
+    llvm::Value *originalVariable = moduleTranslation.lookupValue(reductionVar);
+    llvm::Type *reductionType = moduleTranslation.convertType(decl.getType());
+
+    // We have one less load for by-ref case because that load is now inside of
+    // the reduction region.
+    llvm::Value *redValue = originalVariable;
+    if (!byRef)
+      redValue =
+          builder.CreateLoad(reductionType, redValue, "red.value." + Twine(i));
+    llvm::Value *privateRedValue = builder.CreateLoad(
+        reductionType, privateReductionVar, "red.private.value." + Twine(i));
+    llvm::Value *reduced;
+
+    auto res = gen(builder.saveIP(), redValue, privateRedValue, reduced);
+    if (failed(handleError(res, opInst)))
+      return failure();
+    builder.restoreIP(res.get());
+
+    // For by-ref case, the store is inside of the reduction region.
+    if (!byRef)
+      builder.CreateStore(reduced, originalVariable);
+  }
+
+  // After the construct, deallocate private reduction variables.
+  SmallVector<Region *> reductionRegions;
+  llvm::transform(reductionDecls, std::back_inserter(reductionRegions),
+                  [](omp::DeclareReductionOp reductionDecl) {
+                    return &reductionDecl.getCleanupRegion();
+                  });
+  if (failed(inlineOmpRegionCleanup(reductionRegions, privateReductionVariables,
+                                    moduleTranslation, builder,
+                                    "omp.reduction.cleanup")))
+    return failure();
 
   return cleanupPrivateVars(builder, moduleTranslation, simdOp.getLoc(),
                             privateVarsInfo.llvmVars,
