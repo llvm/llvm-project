@@ -338,8 +338,8 @@ public:
                              const MachineOperand &Op) const;
 
   bool counterOutOfOrder(InstCounterType T) const;
-  void simplifyWaitcnt(AMDGPU::Waitcnt &Wait) const;
-  void simplifyWaitcnt(InstCounterType T, unsigned &Count) const;
+  void simplifyWaitcnt(AMDGPU::Waitcnt &Wait, bool OptNone) const;
+  void simplifyWaitcnt(InstCounterType T, unsigned &Count, bool OptNone) const;
 
   void determineWait(InstCounterType T, RegInterval Interval,
                      AMDGPU::Waitcnt &Wait) const;
@@ -1164,22 +1164,33 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
 
 /// Simplify the waitcnt, in the sense of removing redundant counts, and return
 /// whether a waitcnt instruction is needed at all.
-void WaitcntBrackets::simplifyWaitcnt(AMDGPU::Waitcnt &Wait) const {
-  simplifyWaitcnt(LOAD_CNT, Wait.LoadCnt);
-  simplifyWaitcnt(EXP_CNT, Wait.ExpCnt);
-  simplifyWaitcnt(DS_CNT, Wait.DsCnt);
-  simplifyWaitcnt(STORE_CNT, Wait.StoreCnt);
-  simplifyWaitcnt(SAMPLE_CNT, Wait.SampleCnt);
-  simplifyWaitcnt(BVH_CNT, Wait.BvhCnt);
-  simplifyWaitcnt(KM_CNT, Wait.KmCnt);
-  simplifyWaitcnt(X_CNT, Wait.XCnt);
+void WaitcntBrackets::simplifyWaitcnt(AMDGPU::Waitcnt &Wait,
+                                      bool OptNone) const {
+  simplifyWaitcnt(LOAD_CNT, Wait.LoadCnt, OptNone);
+  simplifyWaitcnt(EXP_CNT, Wait.ExpCnt, OptNone);
+  simplifyWaitcnt(DS_CNT, Wait.DsCnt, OptNone);
+  simplifyWaitcnt(STORE_CNT, Wait.StoreCnt, OptNone);
+  simplifyWaitcnt(SAMPLE_CNT, Wait.SampleCnt, OptNone);
+  simplifyWaitcnt(BVH_CNT, Wait.BvhCnt, OptNone);
+  simplifyWaitcnt(KM_CNT, Wait.KmCnt, OptNone);
+  simplifyWaitcnt(X_CNT, Wait.XCnt, OptNone);
 }
 
-void WaitcntBrackets::simplifyWaitcnt(InstCounterType T,
-                                      unsigned &Count) const {
+void WaitcntBrackets::simplifyWaitcnt(InstCounterType T, unsigned &Count,
+                                      bool OptNone) const {
   // The number of outstanding events for this type, T, can be calculated
   // as (UB - LB). If the current Count is greater than or equal to the number
   // of outstanding events, then the wait for this counter is redundant.
+  //
+  // For counts that are at max value or above, try this even when optimizations
+  // are disabled. This helps remove max waitcnt's that are inserted by the
+  // memory legalizer by default, but does not optimize actual waitcnt's that
+  // are otherwise inserted by the memory legalizer or a previous pass of the
+  // inserter. The corner case is when a max waitcnt was optimized away although
+  // it was not just a default, but was deliberately chosen. This only
+  // marginally affects the usefulness of OptNone.
+  if (Count < getWaitCountMax(T) && OptNone)
+    return;
   if (Count >= getScoreRange(T))
     Count = ~0u;
 }
@@ -1363,19 +1374,20 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
     }
 
     unsigned Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(II.getOpcode());
-    bool TrySimplify = Opcode != II.getOpcode() && !OptNone;
+    bool OpcodeIsSoft = Opcode != II.getOpcode();
 
     // Update required wait count. If this is a soft waitcnt (= it was added
     // by an earlier pass), it may be entirely removed.
     if (Opcode == AMDGPU::S_WAITCNT) {
       unsigned IEnc = II.getOperand(0).getImm();
       AMDGPU::Waitcnt OldWait = AMDGPU::decodeWaitcnt(IV, IEnc);
-      if (TrySimplify)
-        ScoreBrackets.simplifyWaitcnt(OldWait);
+      if (OpcodeIsSoft)
+        ScoreBrackets.simplifyWaitcnt(OldWait, OptNone);
       Wait = Wait.combined(OldWait);
 
       // Merge consecutive waitcnt of the same type by erasing multiples.
-      if (WaitcntInstr || (!Wait.hasWaitExceptStoreCnt() && TrySimplify)) {
+      if (WaitcntInstr ||
+          (!Wait.hasWaitExceptStoreCnt() && OpcodeIsSoft && !OptNone)) {
         II.eraseFromParent();
         Modified = true;
       } else
@@ -1386,11 +1398,13 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
 
       unsigned OldVSCnt =
           TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
-      if (TrySimplify)
-        ScoreBrackets.simplifyWaitcnt(InstCounterType::STORE_CNT, OldVSCnt);
+      if (OpcodeIsSoft)
+        ScoreBrackets.simplifyWaitcnt(InstCounterType::STORE_CNT, OldVSCnt,
+                                      OptNone);
       Wait.StoreCnt = std::min(Wait.StoreCnt, OldVSCnt);
 
-      if (WaitcntVsCntInstr || (!Wait.hasWaitStoreCnt() && TrySimplify)) {
+      if (WaitcntVsCntInstr ||
+          (!Wait.hasWaitStoreCnt() && OpcodeIsSoft && !OptNone)) {
         II.eraseFromParent();
         Modified = true;
       } else
@@ -1528,7 +1542,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
     // by an earlier pass), it may be entirely removed.
 
     unsigned Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(II.getOpcode());
-    bool TrySimplify = Opcode != II.getOpcode() && !OptNone;
+    bool OpcodeIsSoft = Opcode != II.getOpcode();
 
     // Don't crash if the programmer used legacy waitcnt intrinsics, but don't
     // attempt to do more than that either.
@@ -1539,16 +1553,16 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       unsigned OldEnc =
           TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
       AMDGPU::Waitcnt OldWait = AMDGPU::decodeLoadcntDscnt(IV, OldEnc);
-      if (TrySimplify)
-        ScoreBrackets.simplifyWaitcnt(OldWait);
+      if (OpcodeIsSoft)
+        ScoreBrackets.simplifyWaitcnt(OldWait, OptNone);
       Wait = Wait.combined(OldWait);
       UpdatableInstr = &CombinedLoadDsCntInstr;
     } else if (Opcode == AMDGPU::S_WAIT_STORECNT_DSCNT) {
       unsigned OldEnc =
           TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
       AMDGPU::Waitcnt OldWait = AMDGPU::decodeStorecntDscnt(IV, OldEnc);
-      if (TrySimplify)
-        ScoreBrackets.simplifyWaitcnt(OldWait);
+      if (OpcodeIsSoft)
+        ScoreBrackets.simplifyWaitcnt(OldWait, OptNone);
       Wait = Wait.combined(OldWait);
       UpdatableInstr = &CombinedStoreDsCntInstr;
     } else {
@@ -1556,8 +1570,8 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       assert(CT.has_value());
       unsigned OldCnt =
           TII->getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
-      if (TrySimplify)
-        ScoreBrackets.simplifyWaitcnt(CT.value(), OldCnt);
+      if (OpcodeIsSoft)
+        ScoreBrackets.simplifyWaitcnt(CT.value(), OldCnt, OptNone);
       addWait(Wait, CT.value(), OldCnt);
       UpdatableInstr = &WaitInstrs[CT.value()];
     }
@@ -2009,7 +2023,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   }
 
   // Verify that the wait is actually needed.
-  ScoreBrackets.simplifyWaitcnt(Wait);
+  ScoreBrackets.simplifyWaitcnt(Wait, /* OptNone = */ false);
 
   // When forcing emit, we need to skip terminators because that would break the
   // terminators of the MBB if we emit a waitcnt between terminators.
@@ -2238,7 +2252,7 @@ bool SIInsertWaitcnts::insertForcedWaitAfter(MachineInstr &Inst,
     NeedsEndPGMCheck = true;
   }
 
-  ScoreBrackets.simplifyWaitcnt(Wait);
+  ScoreBrackets.simplifyWaitcnt(Wait, /* OptNone = */ false);
 
   auto SuccessorIt = std::next(Inst.getIterator());
   bool Result = generateWaitcnt(Wait, SuccessorIt, Block, ScoreBrackets,

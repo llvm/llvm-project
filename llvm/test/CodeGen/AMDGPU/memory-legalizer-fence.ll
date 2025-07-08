@@ -71,12 +71,10 @@ define amdgpu_kernel void @singlethread_acquire_fence() {
 ;
 ; GFX12-WGP-LABEL: singlethread_acquire_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_wait_loadcnt 0x3f
 ; GFX12-WGP-NEXT:    s_endpgm
 ;
 ; GFX12-CU-LABEL: singlethread_acquire_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_loadcnt 0x3f
 ; GFX12-CU-NEXT:    s_endpgm
 entry:
   fence syncscope("singlethread") acquire
@@ -345,12 +343,10 @@ define amdgpu_kernel void @singlethread_one_as_acquire_fence() {
 ;
 ; GFX12-WGP-LABEL: singlethread_one_as_acquire_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_wait_loadcnt 0x3f
 ; GFX12-WGP-NEXT:    s_endpgm
 ;
 ; GFX12-CU-LABEL: singlethread_one_as_acquire_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_loadcnt 0x3f
 ; GFX12-CU-NEXT:    s_endpgm
 entry:
   fence syncscope("singlethread-one-as") acquire
@@ -619,12 +615,10 @@ define amdgpu_kernel void @wavefront_acquire_fence() {
 ;
 ; GFX12-WGP-LABEL: wavefront_acquire_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_wait_loadcnt 0x3f
 ; GFX12-WGP-NEXT:    s_endpgm
 ;
 ; GFX12-CU-LABEL: wavefront_acquire_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_loadcnt 0x3f
 ; GFX12-CU-NEXT:    s_endpgm
 entry:
   fence syncscope("wavefront") acquire
@@ -893,12 +887,10 @@ define amdgpu_kernel void @wavefront_one_as_acquire_fence() {
 ;
 ; GFX12-WGP-LABEL: wavefront_one_as_acquire_fence:
 ; GFX12-WGP:       ; %bb.0: ; %entry
-; GFX12-WGP-NEXT:    s_wait_loadcnt 0x3f
 ; GFX12-WGP-NEXT:    s_endpgm
 ;
 ; GFX12-CU-LABEL: wavefront_one_as_acquire_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_loadcnt 0x3f
 ; GFX12-CU-NEXT:    s_endpgm
 entry:
   fence syncscope("wavefront-one-as") acquire
@@ -1180,7 +1172,7 @@ define amdgpu_kernel void @workgroup_acquire_fence() {
 ;
 ; GFX12-CU-LABEL: workgroup_acquire_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x3f00
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup") acquire
@@ -1255,7 +1247,7 @@ define amdgpu_kernel void @workgroup_release_fence() {
 ;
 ; GFX12-CU-LABEL: workgroup_release_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x3f00
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup") release
@@ -1335,7 +1327,7 @@ define amdgpu_kernel void @workgroup_acq_rel_fence() {
 ;
 ; GFX12-CU-LABEL: workgroup_acq_rel_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x3f00
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup") acq_rel
@@ -1415,7 +1407,7 @@ define amdgpu_kernel void @workgroup_seq_cst_fence() {
 ;
 ; GFX12-CU-LABEL: workgroup_seq_cst_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x3f00
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup") seq_cst
@@ -1493,7 +1485,6 @@ define amdgpu_kernel void @workgroup_one_as_acquire_fence() {
 ;
 ; GFX12-CU-LABEL: workgroup_one_as_acquire_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_loadcnt 0x3f
 ; GFX12-CU-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup-one-as") acquire
@@ -1568,7 +1559,6 @@ define amdgpu_kernel void @workgroup_one_as_release_fence() {
 ;
 ; GFX12-CU-LABEL: workgroup_one_as_release_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_loadcnt 0x3f
 ; GFX12-CU-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup-one-as") release
@@ -1648,7 +1638,6 @@ define amdgpu_kernel void @workgroup_one_as_acq_rel_fence() {
 ;
 ; GFX12-CU-LABEL: workgroup_one_as_acq_rel_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_loadcnt 0x3f
 ; GFX12-CU-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup-one-as") acq_rel
@@ -1728,7 +1717,6 @@ define amdgpu_kernel void @workgroup_one_as_seq_cst_fence() {
 ;
 ; GFX12-CU-LABEL: workgroup_one_as_seq_cst_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_loadcnt 0x3f
 ; GFX12-CU-NEXT:    s_endpgm
 entry:
   fence syncscope("workgroup-one-as") seq_cst

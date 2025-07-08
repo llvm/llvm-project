@@ -977,7 +977,7 @@ define amdgpu_kernel void @local_nontemporal_volatile_load(
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX12-WGP-NEXT:    ds_load_b32 v1, v1
-; GFX12-WGP-NEXT:    s_wait_loadcnt_dscnt 0x3f00
+; GFX12-WGP-NEXT:    s_wait_dscnt 0x0
 ; GFX12-WGP-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-WGP-NEXT:    s_endpgm
 ;
@@ -989,7 +989,7 @@ define amdgpu_kernel void @local_nontemporal_volatile_load(
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX12-CU-NEXT:    ds_load_b32 v1, v1
-; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x3f00
+; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(3) %in, ptr addrspace(1) %out) {
