@@ -22,8 +22,8 @@ namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 template <WriteMode write_mode>
-int printf_main(Writer<write_mode> *writer, const char *__restrict str,
-                internal::ArgList &args) {
+int printf_main_modular(Writer<write_mode> *writer, const char *__restrict str,
+                        internal::ArgList &args) {
   Parser<internal::ArgList> parser(str, args);
   int result = 0;
   for (FormatSection cur_section = parser.get_next_section();
@@ -39,6 +39,15 @@ int printf_main(Writer<write_mode> *writer, const char *__restrict str,
   }
 
   return writer->get_chars_written();
+}
+
+template <WriteMode write_mode>
+int printf_main(Writer<write_mode> *writer, const char *__restrict str,
+                internal::ArgList &args) {
+#ifdef LIBC_COPT_PRINTF_MODULAR
+  __asm__ __volatile__ (".reloc ., BFD_RELOC_NONE, __printf_float");
+#endif
+  return printf_main_modular(writer, str, args);
 }
 
 } // namespace printf_core

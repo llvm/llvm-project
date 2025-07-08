@@ -67,7 +67,7 @@ LIBC_INLINE int file_write_hook(cpp::string_view new_str, void *fp) {
   return WRITE_OK;
 }
 
-LIBC_INLINE int vfprintf_internal(::FILE *__restrict stream,
+LIBC_INLINE int vfprintf_internal_modular(::FILE *__restrict stream,
                                   const char *__restrict format,
                                   internal::ArgList &args) {
   constexpr size_t BUFF_SIZE = 1024;
@@ -76,12 +76,21 @@ LIBC_INLINE int vfprintf_internal(::FILE *__restrict stream,
       buffer, BUFF_SIZE, &file_write_hook, reinterpret_cast<void *>(stream));
   Writer writer(wb);
   internal::flockfile(stream);
-  int retval = printf_main(&writer, format, args);
+  int retval = printf_main_modular(&writer, format, args);
   int flushval = wb.overflow_write("");
   if (flushval != WRITE_OK)
     retval = flushval;
   internal::funlockfile(stream);
   return retval;
+}
+
+LIBC_INLINE int vfprintf_internal(::FILE *__restrict stream,
+                                  const char *__restrict format,
+                                  internal::ArgList &args) {
+#ifdef LIBC_COPT_PRINTF_SPLIT
+  __asm__ __volatile__(".reloc ., BFD_RELOC_NONE, __printf_float");
+#endif
+  return vfprintf_internal_modular(stream, format, args);
 }
 
 } // namespace printf_core

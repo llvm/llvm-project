@@ -236,11 +236,7 @@ public:
       case ('A'):
       case ('g'):
       case ('G'):
-        if (lm != LengthModifier::L) {
-          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, double, conv_index);
-        } else {
-          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long double, conv_index);
-        }
+        write_float_arg_val(section, lm, conv_index);
         break;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
@@ -298,6 +294,12 @@ public:
     section.raw_string = {str + starting_pos, cur_pos - starting_pos};
     return section;
   }
+
+  LIBC_PRINTF_MODULAR_DECL void write_float_arg_val(FormatSection &section,
+                                                  LengthModifier lm,
+                                                  size_t conv_index);
+  LIBC_PRINTF_MODULAR_DECL TypeDesc float_type_desc(LengthModifier lm);
+  LIBC_PRINTF_MODULAR_DECL bool advance_arg_if_float(TypeDesc cur_type_desc);
 
 private:
   // parse_flags parses the flags inside a format string. It assumes that
@@ -474,10 +476,9 @@ private:
         args_cur.template next_var<uint64_t>();
 #ifndef LIBC_COPT_PRINTF_DISABLE_FLOAT
       // Floating point numbers are stored separately from the other arguments.
-      else if (cur_type_desc == type_desc_from_type<double>())
-        args_cur.template next_var<double>();
-      else if (cur_type_desc == type_desc_from_type<long double>())
-        args_cur.template next_var<long double>();
+      else if (&Parser::advance_arg_if_float &&
+               advance_arg_if_float(cur_type_desc))
+        ;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
       // Floating point numbers may be stored separately from the other
@@ -630,10 +631,7 @@ private:
         case ('A'):
         case ('g'):
         case ('G'):
-          if (lm != LengthModifier::L)
-            conv_size = type_desc_from_type<double>();
-          else
-            conv_size = type_desc_from_type<long double>();
+          conv_size = float_type_desc(lm);
           break;
 #endif // LIBC_COPT_PRINTF_DISABLE_FLOAT
 #ifdef LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
@@ -681,6 +679,38 @@ private:
 
 #endif // LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 };
+
+#ifdef LIBC_PRINTF_DEFINE_MODULAR
+template <typename ArgParser>
+void Parser<ArgParser>::write_float_arg_val(FormatSection &section,
+                                            LengthModifier lm,
+                                            size_t conv_index) {
+  if (lm != LengthModifier::L) {
+    WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, double, conv_index);
+  } else {
+    WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, long double, conv_index);
+  }
+}
+
+template <typename ArgParser>
+TypeDesc Parser<ArgParser>::float_type_desc(LengthModifier lm) {
+  if (lm != LengthModifier::L)
+    return type_desc_from_type<double>();
+  else
+    return type_desc_from_type<long double>();
+}
+
+template <typename ArgParser>
+bool Parser<ArgParser>::advance_arg_if_float(TypeDesc cur_type_desc) {
+  if (cur_type_desc == type_desc_from_type<double>())
+    args_cur.template next_var<double>();
+  else if (cur_type_desc == type_desc_from_type<long double>())
+    args_cur.template next_var<long double>();
+  else
+    return false;
+  return true;
+}
+#endif
 
 } // namespace printf_core
 } // namespace LIBC_NAMESPACE_DECL
