@@ -1950,7 +1950,7 @@ GetDemangledBasename(const SymbolContext &sc) {
   auto [demangled_name, info] = *info_or_err;
 
   return demangled_name.substr(info.BasenameRange.first,
-                               info.BasenameRange.second);
+                               info.BasenameRange.second - info.BasenameRange.first);
 }
 
 static llvm::Expected<std::string>
@@ -1966,7 +1966,7 @@ GetDemangledFunctionPrefix(const SymbolContext &sc) {
         "DemangledInfo for '%s does not have suffix range.",
         demangled_name.data());
 
-  return demangled_name.substr(info.PrefixRange.first, info.PrefixRange.second);
+  return demangled_name.substr(info.PrefixRange.first, info.PrefixRange.second - info.PrefixRange.first);
 }
 
 static llvm::Expected<std::string>
@@ -1982,7 +1982,7 @@ GetDemangledFunctionSuffix(const SymbolContext &sc) {
         "DemangledInfo for '%s does not have suffix range.",
         demangled_name.data());
 
-  return demangled_name.substr(info.SuffixRange.first, info.SuffixRange.second);
+  return demangled_name.substr(info.SuffixRange.first, info.SuffixRange.second - info.SuffixRange.first);
 }
 
 static bool PrintDemangledArgumentList(Stream &s, const SymbolContext &sc) {
@@ -2001,7 +2001,7 @@ static bool PrintDemangledArgumentList(Stream &s, const SymbolContext &sc) {
     return false;
 
   s << demangled_name.substr(info.ArgumentsRange.first,
-                             info.ArgumentsRange.second);
+                             info.ArgumentsRange.second - info.ArgumentsRange.first);
 
   return true;
 }
