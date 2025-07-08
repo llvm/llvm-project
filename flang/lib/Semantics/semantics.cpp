@@ -197,11 +197,11 @@ static void WarnUndefinedFunctionResult(
 
 using StatementSemanticsPass1 = ExprChecker;
 using StatementSemanticsPass2 = SemanticsVisitor<AllocateChecker,
-    ArithmeticIfStmtChecker, AssignmentChecker, CaseChecker, CoarrayChecker,
-    DataChecker, DeallocateChecker, DoForallChecker, IfStmtChecker, IoChecker,
-    MiscChecker, NamelistChecker, NullifyChecker, PurityChecker,
-    ReturnStmtChecker, SelectRankConstructChecker, SelectTypeChecker,
-    StopChecker>;
+    ArithmeticIfStmtChecker, CaseChecker, CoarrayChecker, DataChecker,
+    DeallocateChecker, DoForallChecker, IfStmtChecker, IoChecker, MiscChecker,
+    NamelistChecker, NullifyChecker, PurityChecker, ReturnStmtChecker,
+    SelectRankConstructChecker, SelectTypeChecker, StopChecker>;
+using StatementSemanticsPass3 = SemanticsVisitor<AssignmentChecker>;
 
 static bool PerformStatementSemantics(
     SemanticsContext &context, parser::Program &program) {
@@ -212,6 +212,7 @@ static bool PerformStatementSemantics(
   StatementSemanticsPass1{context}.Walk(program);
   StatementSemanticsPass2 pass2{context};
   pass2.Walk(program);
+  StatementSemanticsPass3{context}.Walk(program);
   if (context.languageFeatures().IsEnabled(common::LanguageFeature::OpenACC)) {
     SemanticsVisitor<AccStructureChecker>{context}.Walk(program);
   }

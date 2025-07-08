@@ -223,6 +223,10 @@ static llvm::cl::opt<bool> enableCUDA("fcuda",
                                       llvm::cl::desc("enable CUDA Fortran"),
                                       llvm::cl::init(false));
 
+static llvm::cl::opt<bool> enableStdPar("stdpar",
+                                        llvm::cl::desc("enable stdpar"),
+                                        llvm::cl::init(false));
+
 static llvm::cl::opt<bool>
     disableCUDAWarpFunction("fcuda-disable-warp-function",
                             llvm::cl::desc("Disable CUDA Warp Function"),
@@ -606,6 +610,10 @@ int main(int argc, char **argv) {
   // enable parsing of CUDA Fortran
   if (enableCUDA) {
     options.features.Enable(Fortran::common::LanguageFeature::CUDA);
+  }
+
+  if (enableStdPar) {
+    options.features.Enable(Fortran::common::LanguageFeature::StdPar);
   }
 
   if (disableCUDAWarpFunction) {

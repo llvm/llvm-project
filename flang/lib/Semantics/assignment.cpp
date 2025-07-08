@@ -260,6 +260,20 @@ void AssignmentChecker::Enter(const parser::CUFKernelDoConstruct &x) {
 void AssignmentChecker::Leave(const parser::CUFKernelDoConstruct &) {
   --context_.value().deviceConstructDepth_;
 }
+void AssignmentChecker::Enter(const parser::DoConstruct &x) {
+  if (x.IsDoConcurrent() &&
+      context().foldingContext().languageFeatures().IsEnabled(
+          common::LanguageFeature::StdPar)) {
+    ++context_.value().deviceConstructDepth_;
+  }
+}
+void AssignmentChecker::Leave(const parser::DoConstruct &x) {
+  if (x.IsDoConcurrent() &&
+      context().foldingContext().languageFeatures().IsEnabled(
+          common::LanguageFeature::StdPar)) {
+    --context_.value().deviceConstructDepth_;
+  }
+}
 static bool IsOpenACCComputeConstruct(const parser::OpenACCBlockConstruct &x) {
   const auto &beginBlockDirective =
       std::get<Fortran::parser::AccBeginBlockDirective>(x.t);

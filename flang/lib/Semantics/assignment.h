@@ -21,6 +21,7 @@ struct MaskedElsewhereStmt;
 struct PointerAssignmentStmt;
 struct WhereConstructStmt;
 struct WhereStmt;
+struct DoConstruct;
 } // namespace Fortran::parser
 
 namespace Fortran::semantics {
@@ -54,6 +55,8 @@ public:
   void Leave(const parser::OpenACCCombinedConstruct &);
   void Enter(const parser::OpenACCLoopConstruct &);
   void Leave(const parser::OpenACCLoopConstruct &);
+  void Enter(const parser::DoConstruct &);
+  void Leave(const parser::DoConstruct &);
 
   SemanticsContext &context();
 
