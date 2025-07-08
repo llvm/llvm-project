@@ -166,7 +166,7 @@ MCFixupKindInfo ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   // Fixup kinds from .reloc directive are like R_ARM_NONE. They do not require
   // any extra processing.
   if (mc::isRelocation(Kind))
-    return MCAsmBackend::getFixupKindInfo(FK_NONE);
+    return {};
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
@@ -329,15 +329,7 @@ bool ARMAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
 void ARMAsmBackend::relaxInstruction(MCInst &Inst,
                                      const MCSubtargetInfo &STI) const {
   unsigned RelaxedOp = getRelaxedOpcode(Inst.getOpcode(), STI);
-
-  // Return a diagnostic if we get here w/ a bogus instruction.
-  if (RelaxedOp == Inst.getOpcode()) {
-    SmallString<256> Tmp;
-    raw_svector_ostream OS(Tmp);
-    Inst.dump_pretty(OS);
-    OS << "\n";
-    report_fatal_error("unexpected instruction to relax: " + OS.str());
-  }
+  assert(RelaxedOp != Inst.getOpcode());
 
   // If we are changing Thumb CBZ or CBNZ instruction to a NOP, aka tHINT, we
   // have to change the operands too.

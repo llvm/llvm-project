@@ -41,8 +41,6 @@ public:
                   bool IsResolved) override;
   bool mayNeedRelaxation(const MCInst &Inst,
                          const MCSubtargetInfo &STI) const override;
-  void relaxInstruction(MCInst &Inst,
-                        const MCSubtargetInfo &STI) const override;
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 
@@ -135,7 +133,7 @@ static unsigned getSize(unsigned Kind) {
   switch (Kind) {
   default:
     return 3;
-  case MCFixupKind::FK_Data_4:
+  case FK_Data_4:
     return 4;
   case Xtensa::fixup_xtensa_branch_6:
     return 2;
@@ -184,9 +182,6 @@ bool XtensaAsmBackend::mayNeedRelaxation(const MCInst &Inst,
                                          const MCSubtargetInfo &STI) const {
   return false;
 }
-
-void XtensaAsmBackend::relaxInstruction(MCInst &Inst,
-                                        const MCSubtargetInfo &STI) const {}
 
 bool XtensaAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
                                     const MCSubtargetInfo *STI) const {

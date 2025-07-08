@@ -128,12 +128,6 @@ public:
     }
   }
 
-  void relaxInstruction(MCInst &Inst,
-                        const MCSubtargetInfo &STI) const override {
-    // FIXME.
-    llvm_unreachable("relaxInstruction() unimplemented");
-  }
-
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override {
     uint64_t NumNops = Count / 4;
@@ -178,7 +172,7 @@ MCFixupKindInfo PPCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   // Fixup kinds from .reloc directive are like R_PPC_NONE/R_PPC64_NONE. They
   // do not require any extra processing.
   if (mc::isRelocation(Kind))
-    return MCAsmBackend::getFixupKindInfo(FK_NONE);
+    return {};
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
@@ -288,7 +282,7 @@ ELFPPCAsmBackend::getFixupKind(StringRef Name) const {
 std::optional<MCFixupKind>
 XCOFFPPCAsmBackend::getFixupKind(StringRef Name) const {
   return StringSwitch<std::optional<MCFixupKind>>(Name)
-      .Case("R_REF", (MCFixupKind)PPC::fixup_ppc_nofixup)
+      .Case("R_REF", PPC::fixup_ppc_nofixup)
       .Default(std::nullopt);
 }
 
