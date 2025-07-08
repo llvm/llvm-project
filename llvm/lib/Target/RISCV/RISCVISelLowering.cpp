@@ -24086,6 +24086,12 @@ static const Intrinsic::ID FixedVlsegIntrIds[] = {
     Intrinsic::riscv_seg6_load_mask, Intrinsic::riscv_seg7_load_mask,
     Intrinsic::riscv_seg8_load_mask};
 
+static const Intrinsic::ID ScalableVlsegIntrIds[] = {
+    Intrinsic::riscv_vlseg2_mask, Intrinsic::riscv_vlseg3_mask,
+    Intrinsic::riscv_vlseg4_mask, Intrinsic::riscv_vlseg5_mask,
+    Intrinsic::riscv_vlseg6_mask, Intrinsic::riscv_vlseg7_mask,
+    Intrinsic::riscv_vlseg8_mask};
+
 /// Lower an interleaved load into a vlsegN intrinsic.
 ///
 /// E.g. Lower an interleaved load (Factor = 2):
@@ -24154,6 +24160,12 @@ static const Intrinsic::ID FixedVssegIntrIds[] = {
     Intrinsic::riscv_seg4_store_mask, Intrinsic::riscv_seg5_store_mask,
     Intrinsic::riscv_seg6_store_mask, Intrinsic::riscv_seg7_store_mask,
     Intrinsic::riscv_seg8_store_mask};
+
+static const Intrinsic::ID ScalableVssegIntrIds[] = {
+    Intrinsic::riscv_vsseg2_mask, Intrinsic::riscv_vsseg3_mask,
+    Intrinsic::riscv_vsseg4_mask, Intrinsic::riscv_vsseg5_mask,
+    Intrinsic::riscv_vsseg6_mask, Intrinsic::riscv_vsseg7_mask,
+    Intrinsic::riscv_vsseg8_mask};
 
 /// Lower an interleaved store into a vssegN intrinsic.
 ///
@@ -24465,13 +24477,6 @@ bool RISCVTargetLowering::lowerInterleavedVPLoad(
                                      {FVTy, PtrTy, XLenTy},
                                      {Load->getArgOperand(0), Mask, EVL});
   } else {
-    static const Intrinsic::ID IntrMaskIds[] = {
-        Intrinsic::riscv_vlseg2_mask, Intrinsic::riscv_vlseg3_mask,
-        Intrinsic::riscv_vlseg4_mask, Intrinsic::riscv_vlseg5_mask,
-        Intrinsic::riscv_vlseg6_mask, Intrinsic::riscv_vlseg7_mask,
-        Intrinsic::riscv_vlseg8_mask,
-    };
-
     unsigned SEW = DL.getTypeSizeInBits(VTy->getElementType());
     unsigned NumElts = VTy->getElementCount().getKnownMinValue();
     Type *VecTupTy = TargetExtType::get(
@@ -24483,7 +24488,7 @@ bool RISCVTargetLowering::lowerInterleavedVPLoad(
     Value *PoisonVal = PoisonValue::get(VecTupTy);
 
     Function *VlsegNFunc = Intrinsic::getOrInsertDeclaration(
-        Load->getModule(), IntrMaskIds[Factor - 2],
+        Load->getModule(), ScalableVlsegIntrIds[Factor - 2],
         {VecTupTy, PtrTy, Mask->getType(), EVL->getType()});
 
     Value *Operands[] = {
@@ -24583,13 +24588,6 @@ bool RISCVTargetLowering::lowerInterleavedVPStore(
     return true;
   }
 
-  static const Intrinsic::ID IntrMaskIds[] = {
-      Intrinsic::riscv_vsseg2_mask, Intrinsic::riscv_vsseg3_mask,
-      Intrinsic::riscv_vsseg4_mask, Intrinsic::riscv_vsseg5_mask,
-      Intrinsic::riscv_vsseg6_mask, Intrinsic::riscv_vsseg7_mask,
-      Intrinsic::riscv_vsseg8_mask,
-  };
-
   unsigned SEW = DL.getTypeSizeInBits(VTy->getElementType());
   unsigned NumElts = VTy->getElementCount().getKnownMinValue();
   Type *VecTupTy = TargetExtType::get(
@@ -24606,7 +24604,7 @@ bool RISCVTargetLowering::lowerInterleavedVPStore(
         VecInsertFunc, {StoredVal, InterleaveOperands[i], Builder.getInt32(i)});
 
   Function *VssegNFunc = Intrinsic::getOrInsertDeclaration(
-      Store->getModule(), IntrMaskIds[Factor - 2],
+      Store->getModule(), ScalableVssegIntrIds[Factor - 2],
       {VecTupTy, PtrTy, Mask->getType(), EVL->getType()});
 
   Value *Operands[] = {StoredVal, Store->getArgOperand(1), Mask, EVL,
