@@ -12,24 +12,24 @@
 #include "exp_float16_constants.h"
 
 #include "hdr/errno_macros.h"
-#include "src/math/generic/expxf16.h"
 #include "hdr/fenv_macros.h"
-#include "src/__support/common.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/cast.h"
-#include "src/__support/FPUtil/rounding_mode.h"
-#include "src/__support/macros/optimization.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/FPUtil/except_value_utils.h"
+#include "src/__support/FPUtil/rounding_mode.h"
+#include "src/__support/common.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
+#include "src/math/generic/expxf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
 static constexpr float16 expf16(float16 x) {
-    using FPBits = fputil::FPBits<float16>;
+  using FPBits = fputil::FPBits<float16>;
   FPBits x_bits(x);
 
   uint16_t x_u = x_bits.uintval();
