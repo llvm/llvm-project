@@ -978,6 +978,47 @@ Instruction *InstCombinerImpl::foldLShrOverflowBit(BinaryOperator &I) {
   return new ZExtInst(Overflow, Ty);
 }
 
+/// If the operand of a zext-ed left shift \p V is a logically right-shifted
+/// value, try to fold the opposing shifts.
+static Instruction *foldShrThroughZExtedShl(Type *DestTy, Value *V,
+                                            unsigned ShlAmt,
+                                            InstCombinerImpl &IC,
+                                            const DataLayout &DL) {
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return nullptr;
+
+  // Dig through operations until the first shift.
+  while (!I->isShift())
+    if (!match(I, m_BinOp(m_OneUse(m_Instruction(I)), m_Constant())))
+      return nullptr;
+
+  // Fold only if the inner shift is a logical right-shift.
+  uint64_t InnerShrAmt;
+  if (!match(I, m_LShr(m_Value(), m_ConstantInt(InnerShrAmt))))
+    return nullptr;
+
+  if (InnerShrAmt >= ShlAmt) {
+    const uint64_t ReducedShrAmt = InnerShrAmt - ShlAmt;
+    if (!canEvaluateShifted(V, ReducedShrAmt, /*IsLeftShift=*/false, IC,
+                            nullptr))
+      return nullptr;
+    Value *NewInner =
+        getShiftedValue(V, ReducedShrAmt, /*isLeftShift=*/false, IC, DL);
+    return new ZExtInst(NewInner, DestTy);
+  }
+
+  if (!canEvaluateShifted(V, InnerShrAmt, /*IsLeftShift=*/true, IC, nullptr))
+    return nullptr;
+
+  const uint64_t ReducedShlAmt = ShlAmt - InnerShrAmt;
+  Value *NewInner =
+      getShiftedValue(V, InnerShrAmt, /*isLeftShift=*/true, IC, DL);
+  Value *NewZExt = IC.Builder.CreateZExt(NewInner, DestTy);
+  return BinaryOperator::CreateShl(NewZExt,
+                                   ConstantInt::get(DestTy, ReducedShlAmt));
+}
+
 // Try to set nuw/nsw flags on shl or exact flag on lshr/ashr using knownbits.
 static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
   assert(I.isShift() && "Expected a shift as input");
@@ -1062,14 +1103,18 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
   if (match(Op1, m_APInt(C))) {
     unsigned ShAmtC = C->getZExtValue();
 
-    // shl (zext X), C --> zext (shl X, C)
-    // This is only valid if X would have zeros shifted out.
     Value *X;
     if (match(Op0, m_OneUse(m_ZExt(m_Value(X))))) {
+      // shl (zext X), C --> zext (shl X, C)
+      // This is only valid if X would have zeros shifted out.
       unsigned SrcWidth = X->getType()->getScalarSizeInBits();
       if (ShAmtC < SrcWidth &&
           MaskedValueIsZero(X, APInt::getHighBitsSet(SrcWidth, ShAmtC), &I))
         return new ZExtInst(Builder.CreateShl(X, ShAmtC), Ty);
+
+      // Otherwise, try to cancel the outer shl with a lshr inside the zext.
+      if (Instruction *V = foldShrThroughZExtedShl(Ty, X, ShAmtC, *this, DL))
+        return V;
     }
 
     // (X >> C) << C --> X & (-1 << C)
