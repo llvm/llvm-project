@@ -30991,7 +30991,7 @@ that purpose.
 Arguments:
 """"""""""
 
-The ``llvm.fake.use`` intrinsic takes one argument, which may be any global
+The ``llvm.reloc.none`` intrinsic takes one argument, which may be any global
 value.
 
 Semantics:
