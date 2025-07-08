@@ -27,27 +27,6 @@ getLHSNamedDeclIfCompoundAssign(const BinaryOperator *BO) {
   return nullptr;
 }
 
-static bool hasExplicitParentheses(const Expr *E, const SourceManager &SM,
-                                   const LangOptions &LangOpts) {
-  if (!E)
-    return false;
-
-  const SourceLocation Start = E->getBeginLoc();
-  const SourceLocation End = E->getEndLoc();
-
-  if (Start.isMacroID() || End.isMacroID() || Start.isInvalid() ||
-      End.isInvalid())
-    return false;
-
-  const std::optional<Token> PrevTok =
-      Lexer::findPreviousToken(Start, SM, LangOpts, /*IncludeComments=*/false);
-  const std::optional<Token> NextTok =
-      Lexer::findNextToken(End, SM, LangOpts, /*IncludeComments=*/false);
-
-  return (PrevTok && PrevTok->is(tok::l_paren)) &&
-         (NextTok && NextTok->is(tok::r_paren));
-}
-
 constexpr std::array<std::pair<llvm::StringRef, llvm::StringRef>, 8U>
     OperatorsTransformation{{{"|", "||"},
                              {"|=", "||"},
@@ -155,8 +134,9 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
 
   auto ReplaceOperator = FixItHint::CreateReplacement(TokenRange, FixSpelling);
 
+  const auto *Parent = Result.Nodes.getNodeAs<BinaryOperator>("p");
   std::optional<BinaryOperatorKind> ParentOpcode;
-  if (const auto *Parent = Result.Nodes.getNodeAs<BinaryOperator>("p"); Parent)
+  if (Parent)
     ParentOpcode = Parent->getOpcode();
 
   const auto *RHS =
@@ -165,16 +145,19 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   if (RHS)
     RHSOpcode = RHS->getOpcode();
 
-  const BinaryOperator *SurroundedExpr = nullptr;
+  const Expr *SurroundedExpr = nullptr;
   if ((MatchedExpr->getOpcode() == BO_Or && ParentOpcode == BO_LAnd) ||
       (MatchedExpr->getOpcode() == BO_And &&
-       llvm::is_contained({BO_Xor, BO_Or}, ParentOpcode)))
-    SurroundedExpr = MatchedExpr;
-  else if (MatchedExpr->getOpcode() == BO_AndAssign && RHSOpcode == BO_LOr)
+       llvm::is_contained({BO_Xor, BO_Or}, ParentOpcode))) {
+    const auto *Side = Parent->getLHS()->IgnoreParenImpCasts() == MatchedExpr
+                           ? Parent->getLHS()
+                           : Parent->getRHS();
+    SurroundedExpr = Side->IgnoreImpCasts();
+    assert(SurroundedExpr->IgnoreParens() == MatchedExpr);
+  } else if (MatchedExpr->getOpcode() == BO_AndAssign && RHSOpcode == BO_LOr)
     SurroundedExpr = RHS;
 
-  if (hasExplicitParentheses(SurroundedExpr, *Result.SourceManager,
-                             Result.Context->getLangOpts()))
+  if (SurroundedExpr && isa<ParenExpr>(SurroundedExpr))
     SurroundedExpr = nullptr;
 
   FixItHint InsertBrace1, InsertBrace2;
