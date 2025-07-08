@@ -17,6 +17,49 @@
 using namespace llvm;
 
 namespace {
+// Pair of a RuntimeLibcallPredicate and LibcallCallingConv to use as a map key.
+struct PredicateWithCC {
+  const Record *Predicate = nullptr;
+  const Record *CallingConv = nullptr;
+
+  PredicateWithCC() = default;
+  PredicateWithCC(std::pair<const Record *, const Record *> P)
+      : Predicate(P.first), CallingConv(P.second) {}
+
+  PredicateWithCC(const Record *P, const Record *C)
+      : Predicate(P), CallingConv(C) {}
+};
+
+inline bool operator==(PredicateWithCC LHS, PredicateWithCC RHS) {
+  return LHS.Predicate == RHS.Predicate && LHS.CallingConv == RHS.CallingConv;
+}
+} // namespace
+
+namespace llvm {
+template <> struct DenseMapInfo<PredicateWithCC, void> {
+  static inline PredicateWithCC getEmptyKey() {
+    return DenseMapInfo<
+        std::pair<const Record *, const Record *>>::getEmptyKey();
+  }
+
+  static inline PredicateWithCC getTombstoneKey() {
+    return DenseMapInfo<
+        std::pair<const Record *, const Record *>>::getTombstoneKey();
+  }
+
+  static unsigned getHashValue(const PredicateWithCC Val) {
+    auto Pair = std::make_pair(Val.Predicate, Val.CallingConv);
+    return DenseMapInfo<
+        std::pair<const Record *, const Record *>>::getHashValue(Pair);
+  }
+
+  static bool isEqual(PredicateWithCC LHS, PredicateWithCC RHS) {
+    return LHS == RHS;
+  }
+};
+} // namespace llvm
+
+namespace {
 
 class AvailabilityPredicate {
   const Record *TheDef;
@@ -37,6 +80,11 @@ public:
   }
 
   void emitEndIf(raw_ostream &OS) const { OS << "}\n"; }
+
+  void emitTableVariableNameSuffix(raw_ostream &OS) const {
+    if (TheDef)
+      OS << '_' << TheDef->getName();
+  }
 };
 
 class RuntimeLibcallEmitter;
@@ -45,11 +93,14 @@ class RuntimeLibcallImpl;
 /// Used to apply predicates to nested sets of libcalls.
 struct LibcallPredicateExpander : SetTheory::Expander {
   const RuntimeLibcallEmitter &LibcallEmitter;
-  DenseMap<const Record *, std::vector<const Record *>> &Func2Preds;
+  DenseMap<const RuntimeLibcallImpl *,
+           std::pair<std::vector<const Record *>, const Record *>> &Func2Preds;
 
   LibcallPredicateExpander(
       const RuntimeLibcallEmitter &LibcallEmitter,
-      DenseMap<const Record *, std::vector<const Record *>> &Func2Preds)
+      DenseMap<const RuntimeLibcallImpl *,
+               std::pair<std::vector<const Record *>, const Record *>>
+          &Func2Preds)
       : LibcallEmitter(LibcallEmitter), Func2Preds(Func2Preds) {}
 
   void expand(SetTheory &ST, const Record *Def,
@@ -109,6 +160,10 @@ public:
     return TheDef->getValueAsString("LibCallFuncName");
   }
 
+  const Record *getCallingConv() const {
+    return TheDef->getValueAsOptionalDef("CallingConv");
+  }
+
   void emitQuotedLibcallFuncName(raw_ostream &OS) const {
     OS << '\"' << getLibcallFuncName() << '\"';
   }
@@ -134,6 +189,13 @@ public:
     emitEnumEntry(OS);
     OS << "}, // " << getLibcallFuncName() << '\n';
   }
+
+  void emitSetCallingConv(raw_ostream &OS) const {}
+};
+
+struct LibcallsWithCC {
+  std::vector<const RuntimeLibcallImpl *> LibcallImpls;
+  const Record *CallingConv = nullptr;
 };
 
 class RuntimeLibcallEmitter {
@@ -315,9 +377,25 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
 
     OS << indent(2);
     TopLevelPredicate.emitIf(OS);
+
+    if (const Record *DefaultCCClass =
+            R->getValueAsDef("DefaultLibcallCallingConv")) {
+      StringRef DefaultCC =
+          DefaultCCClass->getValueAsString("CallingConv").trim();
+
+      if (!DefaultCC.empty()) {
+        OS << "    const CallingConv::ID DefaultCC = " << DefaultCC << ";\n"
+           << "    for (CallingConv::ID &Entry : LibcallImplCallingConvs) {\n"
+              "      Entry = DefaultCC;\n"
+              "    }\n\n";
+      }
+    }
+
     SetTheory Sets;
 
-    DenseMap<const Record *, std::vector<const Record *>> Func2Preds;
+    DenseMap<const RuntimeLibcallImpl *,
+             std::pair<std::vector<const Record *>, const Record *>>
+        Func2Preds;
     Sets.addExpander("LibcallImpls", std::make_unique<LibcallPredicateExpander>(
                                          *this, Func2Preds));
 
@@ -325,11 +403,11 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
         Sets.expand(R->getValueAsDef("MemberList"));
 
     // Sort to get deterministic output
-    SetVector<const Record *> PredicateSorter;
-    PredicateSorter.insert(nullptr); // No predicate first.
+    SetVector<PredicateWithCC> PredicateSorter;
+    PredicateSorter.insert(
+        PredicateWithCC()); // No predicate or CC override first.
 
-    DenseMap<const Record *, std::vector<const RuntimeLibcallImpl *>>
-        Pred2Funcs;
+    DenseMap<PredicateWithCC, LibcallsWithCC> Pred2Funcs;
     for (const Record *Elt : *Elements) {
       const RuntimeLibcallImpl *LibCallImpl = getRuntimeLibcallImpl(Elt);
       if (!LibCallImpl) {
@@ -338,34 +416,39 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
         continue;
       }
 
-      auto It = Func2Preds.find(Elt);
+      auto It = Func2Preds.find(LibCallImpl);
       if (It == Func2Preds.end()) {
-        Pred2Funcs[nullptr].push_back(LibCallImpl);
+        Pred2Funcs[PredicateWithCC()].LibcallImpls.push_back(LibCallImpl);
         continue;
       }
 
-      for (const Record *Pred : It->second) {
-        Pred2Funcs[Pred].push_back(LibCallImpl);
-        PredicateSorter.insert(Pred);
+      for (const Record *Pred : It->second.first) {
+        const Record *CC = It->second.second;
+        PredicateWithCC Key(Pred, CC);
+
+        auto &Entry = Pred2Funcs[Key];
+        Entry.LibcallImpls.push_back(LibCallImpl);
+        Entry.CallingConv = It->second.second;
+        PredicateSorter.insert(Key);
       }
     }
 
-    SmallVector<const Record *, 0> SortedPredicates =
+    SmallVector<PredicateWithCC, 0> SortedPredicates =
         PredicateSorter.takeVector();
 
-    sort(SortedPredicates, [](const Record *A, const Record *B) {
-      if (!A)
+    sort(SortedPredicates, [](PredicateWithCC A, PredicateWithCC B) {
+      if (!A.Predicate)
         return true;
-      if (!B)
+      if (!B.Predicate)
         return false;
-      return A->getName() < B->getName();
+      return A.Predicate->getName() < B.Predicate->getName();
     });
 
-    for (const Record *Pred : SortedPredicates) {
-      AvailabilityPredicate SubsetPredicate(Pred);
+    for (PredicateWithCC Entry : SortedPredicates) {
+      AvailabilityPredicate SubsetPredicate(Entry.Predicate);
       unsigned IndentDepth = 2;
 
-      auto It = Pred2Funcs.find(Pred);
+      auto It = Pred2Funcs.find(Entry);
       if (It == Pred2Funcs.end())
         continue;
 
@@ -376,7 +459,9 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
         SubsetPredicate.emitIf(OS);
       }
 
-      std::vector<const RuntimeLibcallImpl *> &Funcs = It->second;
+      LibcallsWithCC &FuncsWithCC = It->second;
+
+      std::vector<const RuntimeLibcallImpl *> &Funcs = FuncsWithCC.LibcallImpls;
 
       // Ensure we only emit a unique implementation per libcall in the
       // selection table.
@@ -408,7 +493,9 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
       Funcs.erase(UniqueI, Funcs.end());
 
       OS << indent(IndentDepth + 2)
-         << "static const LibcallImplPair LibraryCalls[] = {\n";
+         << "static const LibcallImplPair LibraryCalls";
+      SubsetPredicate.emitTableVariableNameSuffix(OS);
+      OS << "[] = {\n";
       for (const RuntimeLibcallImpl *LibCallImpl : Funcs) {
         OS << indent(IndentDepth + 6);
         LibCallImpl->emitTableEntry(OS);
@@ -416,9 +503,20 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
 
       OS << indent(IndentDepth + 2) << "};\n\n"
          << indent(IndentDepth + 2)
-         << "for (const auto [Func, Impl] : LibraryCalls) {\n"
-         << indent(IndentDepth + 2) << "  setLibcallImpl(Func, Impl);\n"
-         << indent(IndentDepth + 2) << "}\n";
+         << "for (const auto [Func, Impl] : LibraryCalls";
+      SubsetPredicate.emitTableVariableNameSuffix(OS);
+      OS << ") {\n"
+         << indent(IndentDepth + 4) << "setLibcallImpl(Func, Impl);\n";
+
+      if (FuncsWithCC.CallingConv) {
+        StringRef CCEnum =
+            FuncsWithCC.CallingConv->getValueAsString("CallingConv");
+        OS << indent(IndentDepth + 4) << "setLibcallImplCallingConv(Impl, "
+           << CCEnum << ");\n";
+      }
+
+      OS << indent(IndentDepth + 2) << "}\n";
+      OS << '\n';
 
       if (!SubsetPredicate.isAlwaysAvailable()) {
         OS << indent(IndentDepth);
@@ -464,16 +562,23 @@ void LibcallPredicateExpander::expand(SetTheory &ST, const Record *Def,
   Elts.insert(TmpElts.begin(), TmpElts.end());
 
   AvailabilityPredicate AP(Def->getValueAsDef("AvailabilityPredicate"));
+  const Record *CCClass = Def->getValueAsOptionalDef("CallingConv");
 
-  for (const Record *LibcallImpl : TmpElts) {
-    if (!AP.isAlwaysAvailable()) {
-      auto [It, Inserted] = Func2Preds.insert({LibcallImpl, {}});
+  // This is assuming we aren't conditionally applying a calling convention to
+  // some subsets, and not another, but this doesn't appear to be used.
+
+  for (const Record *LibcallImplDef : TmpElts) {
+    const RuntimeLibcallImpl *LibcallImpl =
+        LibcallEmitter.getRuntimeLibcallImpl(LibcallImplDef);
+    if (!AP.isAlwaysAvailable() || CCClass) {
+      auto [It, Inserted] = Func2Preds.insert({LibcallImpl, {{}, CCClass}});
       if (!Inserted) {
         PrintError(
             Def, "combining nested libcall set predicates currently unhandled");
       }
 
-      It->second.push_back(AP.getDef());
+      It->second.first.push_back(AP.getDef());
+      It->second.second = CCClass;
     }
   }
 }
