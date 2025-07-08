@@ -66,7 +66,9 @@ dwarf::CFIProgram DWARFCFIState::convert(MCCFIInstruction Directive) {
     // work:
     // CFIP.addInstruction(dwarf::DW_CFA_remember_state);
     // The reason is that `parseRows` expects .cfi_remember_state and
-    // .cfi_restore_state to be in the same CFIProgram.
+    // .cfi_restore_state to be in the same CFIProgram. However, each
+    // instruction creates its own CFI program, which means that states are
+    // forgotten between instructions.
     Context->reportWarning(Directive.getLoc(),
                            "this directive is not supported, ignoring it");
     break;
@@ -75,7 +77,9 @@ dwarf::CFIProgram DWARFCFIState::convert(MCCFIInstruction Directive) {
     // work:
     // CFIP.addInstruction(dwarf::DW_CFA_restore_state);
     // The reason is that `parseRows` expects .cfi_remember_state and
-    // .cfi_restore_state to be in the same CFIProgram.
+    // .cfi_restore_state to be in the same CFIProgram. However, each
+    // instruction creates its own CFI program, which means that states are
+    // forgotten between instructions.
     Context->reportWarning(Directive.getLoc(),
                            "this directive is not supported, ignoring it");
     break;
