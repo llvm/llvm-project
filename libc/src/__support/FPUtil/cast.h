@@ -26,11 +26,9 @@ LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
                                            cpp::is_floating_point_v<InType>,
                                        OutType>
 cast(InType x) {
-
-  //  // Casting to the same type is a no-op.
-  if constexpr (cpp::is_same_v<InType, OutType>) {
+  //  Casting to the same type is a no-op.
+  if constexpr (cpp::is_same_v<InType, OutType>)
     return x;
-  }
 
   // bfloat16 is always defined (for now)
   if constexpr (cpp::is_same_v<OutType, bfloat16> ||
