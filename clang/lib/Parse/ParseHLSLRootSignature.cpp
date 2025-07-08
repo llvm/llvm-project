@@ -199,7 +199,7 @@ std::optional<RootDescriptor> RootSignatureParser::parseRootDescriptor() {
   }
   Descriptor.setDefaultFlags(Version);
 
-  auto Params = parseRootDescriptorParams(DescriptorKind, ExpectedReg);
+  auto Params = parseRootDescriptorParams(ExpectedReg);
   if (!Params.has_value())
     return std::nullopt;
 
@@ -320,7 +320,7 @@ RootSignatureParser::parseDescriptorTableClause() {
   }
   Clause.setDefaultFlags(Version);
 
-  auto Params = parseDescriptorTableClauseParams(ParamKind, ExpectedReg);
+  auto Params = parseDescriptorTableClauseParams(ExpectedReg);
   if (!Params.has_value())
     return std::nullopt;
 
@@ -493,8 +493,7 @@ RootSignatureParser::parseRootConstantParams() {
 }
 
 std::optional<RootSignatureParser::ParsedRootDescriptorParams>
-RootSignatureParser::parseRootDescriptorParams(TokenKind DescType,
-                                               TokenKind RegType) {
+RootSignatureParser::parseRootDescriptorParams(TokenKind RegType) {
   assert(CurToken.TokKind == TokenKind::pu_l_paren &&
          "Expects to only be invoked starting at given token");
 
@@ -563,8 +562,7 @@ RootSignatureParser::parseRootDescriptorParams(TokenKind DescType,
 }
 
 std::optional<RootSignatureParser::ParsedClauseParams>
-RootSignatureParser::parseDescriptorTableClauseParams(TokenKind DescType,
-                                                      TokenKind RegType) {
+RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
   assert(CurToken.TokKind == TokenKind::pu_l_paren &&
          "Expects to only be invoked starting at given token");
 
