@@ -5315,9 +5315,11 @@ InstructionCost AArch64TTIImpl::getExtendedReductionCost(
 }
 
 InstructionCost
-AArch64TTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
-                                       VectorType *VecTy,
+AArch64TTIImpl::getMulAccReductionCost(bool IsUnsigned, bool IsNegated,
+                                       Type *ResTy, VectorType *VecTy,
                                        TTI::TargetCostKind CostKind) const {
+  if (IsNegated)
+    return InstructionCost::getInvalid(CostKind);
   EVT VecVT = TLI->getValueType(DL, VecTy);
   EVT ResVT = TLI->getValueType(DL, ResTy);
 
@@ -5332,7 +5334,8 @@ AArch64TTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
       return LT.first + 2;
   }
 
-  return BaseT::getMulAccReductionCost(IsUnsigned, ResTy, VecTy, CostKind);
+  return BaseT::getMulAccReductionCost(IsUnsigned, IsNegated, ResTy, VecTy,
+                                       CostKind);
 }
 
 InstructionCost
