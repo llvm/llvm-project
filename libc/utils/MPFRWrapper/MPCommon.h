@@ -66,6 +66,10 @@ template <> struct ExtraPrecision<float128> {
 };
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 
+template <> struct ExtraPrecision<bfloat16> {
+  static constexpr unsigned int VALUE = 64;
+};
+
 // If the ulp tolerance is less than or equal to 0.5, we would check that the
 // result is rounded correctly with respect to the rounding mode by using the
 // same precision as the inputs.

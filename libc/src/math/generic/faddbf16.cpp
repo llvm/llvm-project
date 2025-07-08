@@ -8,15 +8,18 @@
 
 #include "src/math/faddbf16.h"
 
-#include "src/__support/FPUtil/bfloat16.h"        // bfloat16
-#include "src/__support/FPUtil/generic/add_sub.h" // fputil::generic::add
-#include "src/__support/macros/config.h"          // LIBC_NAMESPACE_DECL
+#include "src/__support/FPUtil/bfloat16.h"
+#include "src/__support/FPUtil/generic/add_sub.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-// FIXME: 8UL % WORD_SIZE != 0, libc/src/__support/big_int.h:353:29
+// NOTE: this should be removed in lieu of operator overloads
 LLVM_LIBC_FUNCTION(bfloat16, faddbf16, (bfloat16 x, bfloat16 y)) {
-  return fputil::generic::add<bfloat16>(x, y);
+  fputil::DyadicFloat<16> xd(x);
+  fputil::DyadicFloat<16> yd(y);
+  fputil::DyadicFloat<16> zd = fputil::quick_add(xd, yd);
+  return zd.as<bfloat16, /*ShouldSignalExceptions=*/true>();
 }
 
 } // namespace LIBC_NAMESPACE_DECL
