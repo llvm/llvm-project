@@ -4066,6 +4066,10 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
   if (NewCost > OldCost)
     return false;
 
+  LLVM_DEBUG(dbgs() << "Found a phi of mergeable shuffles: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+
   // Create new shuffles and narrowed phi.
   auto Builder = IRBuilder(Shuf);
   Builder.SetCurrentDebugLocation(Shuf->getDebugLoc());
