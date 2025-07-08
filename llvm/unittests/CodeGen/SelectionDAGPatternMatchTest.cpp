@@ -307,6 +307,23 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   SDValue UMinLikeULT = DAG->getSelect(DL, MVT::i32, ICMP_ULT, Op0, Op1);
   SDValue UMinLikeULE = DAG->getSelect(DL, MVT::i32, ICMP_ULE, Op0, Op1);
 
+  SDValue CCSMaxLikeGT = DAG->getSelectCC(DL, Op0, Op1, Op0, Op1, ISD::SETGT);
+  SDValue CCSMaxLikeGE = DAG->getSelectCC(DL, Op0, Op1, Op0, Op1, ISD::SETGE);
+  SDValue CCSMaxLikeLT = DAG->getSelectCC(DL, Op0, Op1, Op1, Op0, ISD::SETLT);
+  SDValue CCSMaxLikeLE = DAG->getSelectCC(DL, Op0, Op1, Op1, Op0, ISD::SETLE);
+  SDValue CCUMaxLikeUGT = DAG->getSelectCC(DL, Op0, Op1, Op0, Op1, ISD::SETUGT);
+  SDValue CCUMaxLikeUGE = DAG->getSelectCC(DL, Op0, Op1, Op0, Op1, ISD::SETUGE);
+  SDValue CCUMaxLikeULT = DAG->getSelectCC(DL, Op0, Op1, Op1, Op0, ISD::SETULT);
+  SDValue CCUMaxLikeULE = DAG->getSelectCC(DL, Op0, Op1, Op1, Op0, ISD::SETULE);
+  SDValue CCSMinLikeLT = DAG->getSelectCC(DL, Op0, Op1, Op0, Op1, ISD::SETLT);
+  SDValue CCSMinLikeGT = DAG->getSelectCC(DL, Op0, Op1, Op1, Op0, ISD::SETGT);
+  SDValue CCSMinLikeLE = DAG->getSelectCC(DL, Op0, Op1, Op0, Op1, ISD::SETLE);
+  SDValue CCSMinLikeGE = DAG->getSelectCC(DL, Op0, Op1, Op1, Op0, ISD::SETGE);
+  SDValue CCUMinLikeULT = DAG->getSelectCC(DL, Op0, Op1, Op0, Op1, ISD::SETULT);
+  SDValue CCUMinLikeUGT = DAG->getSelectCC(DL, Op0, Op1, Op1, Op0, ISD::SETUGT);
+  SDValue CCUMinLikeULE = DAG->getSelectCC(DL, Op0, Op1, Op0, Op1, ISD::SETULE);
+  SDValue CCUMinLikeUGE = DAG->getSelectCC(DL, Op0, Op1, Op1, Op0, ISD::SETUGE);
+
   SDValue SFAdd = DAG->getNode(ISD::STRICT_FADD, DL, {Float32VT, MVT::Other},
                                {DAG->getEntryNode(), Op2, Op2});
 
@@ -357,21 +374,37 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   EXPECT_TRUE(sd_match(SMax, m_SMaxLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMaxLikeGT, m_SMaxLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMaxLikeGE, m_SMaxLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMaxLikeGT, m_SMaxLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMaxLikeGE, m_SMaxLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMaxLikeLT, m_SMaxLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMaxLikeLE, m_SMaxLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMin, m_c_BinOp(ISD::SMIN, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMin, m_SMin(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMin, m_SMinLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMinLikeLT, m_SMinLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(SMinLikeLE, m_SMinLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMinLikeGT, m_SMinLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMinLikeGE, m_SMinLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMinLikeLT, m_SMinLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCSMinLikeLE, m_SMinLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMax, m_c_BinOp(ISD::UMAX, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMax, m_UMax(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMax, m_UMaxLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMaxLikeUGT, m_UMaxLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMaxLikeUGE, m_UMaxLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMaxLikeUGT, m_UMaxLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMaxLikeUGE, m_UMaxLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMaxLikeULT, m_UMaxLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMaxLikeULE, m_UMaxLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMin, m_c_BinOp(ISD::UMIN, m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMin, m_UMin(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMin, m_UMinLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMinLikeULT, m_UMinLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMinLikeULE, m_UMinLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMinLikeUGT, m_UMinLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMinLikeUGE, m_UMinLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMinLikeULT, m_UMinLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(CCUMinLikeULE, m_UMinLike(m_Value(), m_Value())));
 
   // By default, it matches any of the results.
   EXPECT_TRUE(

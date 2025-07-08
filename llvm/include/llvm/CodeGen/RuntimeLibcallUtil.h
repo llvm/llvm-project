@@ -68,6 +68,14 @@ LLVM_ABI Libcall getLDEXP(EVT RetVT);
 /// UNKNOWN_LIBCALL if there is none.
 LLVM_ABI Libcall getFREXP(EVT RetVT);
 
+/// Return the SIN_* value for the given types, or UNKNOWN_LIBCALL if there is
+/// none.
+LLVM_ABI Libcall getSIN(EVT RetVT);
+
+/// Return the COS_* value for the given types, or UNKNOWN_LIBCALL if there is
+/// none.
+LLVM_ABI Libcall getCOS(EVT RetVT);
+
 /// getSINCOS - Return the SINCOS_* value for the given types, or
 /// UNKNOWN_LIBCALL if there is none.
 LLVM_ABI Libcall getSINCOS(EVT RetVT);
