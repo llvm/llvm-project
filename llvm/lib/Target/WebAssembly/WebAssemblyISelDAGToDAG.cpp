@@ -120,6 +120,47 @@ static SDValue getTagSymNode(int Tag, SelectionDAG *DAG) {
   return DAG->getTargetExternalSymbol(SymName, PtrVT);
 }
 
+static APInt encodeFunctionSignature(SelectionDAG *DAG, SDLoc &DL,
+                                     SmallVector<MVT, 4> &Params,
+                                     SmallVector<MVT, 1> &Returns) {
+  auto toWasmValType = [&DAG, &DL](MVT VT) {
+    if (VT == MVT::i32) {
+      return wasm::ValType::I32;
+    }
+    if (VT == MVT::i64) {
+      return wasm::ValType::I64;
+    }
+    if (VT == MVT::f32) {
+      return wasm::ValType::F32;
+    }
+    if (VT == MVT::f64) {
+      return wasm::ValType::F64;
+    }
+    DAG->getContext()->diagnose(
+        DiagnosticInfoUnsupported(DAG->getMachineFunction().getFunction(),
+                                  "Unhandled type!", DL.getDebugLoc()));
+  };
+  auto NParams = Params.size();
+  auto NReturns = Returns.size();
+  auto BitWidth = (NParams + NReturns + 2) * 64;
+  auto Sig = APInt(BitWidth, 0);
+
+  Sig |= NParams;
+  for (auto &Param : Params) {
+    auto V = toWasmValType(Param);
+    Sig <<= 64;
+    Sig |= (int64_t)V;
+  }
+  Sig <<= 64;
+  Sig |= NReturns;
+  for (auto &Return : Returns) {
+    auto V = toWasmValType(Return);
+    Sig <<= 64;
+    Sig |= (int64_t)V;
+  }
+  return Sig;
+}
+
 void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we already have selected!
   if (Node->isMachineOpcode()) {
@@ -218,14 +259,14 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
         MVT VT = Node->getOperand(I).getValueType().getSimpleVT();
         Results.push_back(VT);
       }
-      auto Sig = WebAssembly::encodeFunctionSignature(Params, Results);
+      auto Sig = encodeFunctionSignature(CurDAG, DL, Params, Results);
 
-      SmallVector<SDValue, 4> Ops;
       auto SigOp = CurDAG->getTargetConstant(
           Sig, DL, EVT::getIntegerVT(*CurDAG->getContext(), Sig.getBitWidth()));
       MachineSDNode *RefTestNode = CurDAG->getMachineNode(
           WebAssembly::REF_TEST_FUNCREF, DL, MVT::i32, {SigOp, FuncRef});
       ReplaceNode(Node, RefTestNode);
+      return;
     }
     }
     break;
