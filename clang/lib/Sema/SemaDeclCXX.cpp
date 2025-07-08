@@ -3031,23 +3031,8 @@ void Sema::ActOnBaseSpecifiers(Decl *ClassDecl,
   if (!ClassDecl || Bases.empty())
     return;
 
-  // --- drop any bases already diagnosed invalid ---
-  SmallVector<CXXBaseSpecifier *, 4> ValidBases;
-  ValidBases.reserve(Bases.size());
-  for (auto *BS : Bases)
-       if (BS)
-          ValidBases.push_back(BS);
-  if (ValidBases.empty())
-       return;
-
-  if (ValidBases.empty())
-    return; // nothing valid to attach
-
   AdjustDeclIfTemplate(ClassDecl);
-  // Attach only the valid bases so downstream never ICEs
-  AttachBaseSpecifiers(cast<CXXRecordDecl>(ClassDecl),
-                       llvm::MutableArrayRef<CXXBaseSpecifier *>(
-                       ValidBases.data(), ValidBases.size()));
+  AttachBaseSpecifiers(cast<CXXRecordDecl>(ClassDecl), Bases);
 }
 
 bool Sema::IsDerivedFrom(SourceLocation Loc, CXXRecordDecl *Derived,

@@ -920,6 +920,7 @@ Bug Fixes to C++ Support
 - Correctly handle allocations in the condition of a ``if constexpr``.(#GH120197) (#GH134820)
 - Fixed a crash when handling invalid member using-declaration in C++20+ mode. (#GH63254)
 - Fix a crash when trying to instantiate an ambiguous specialization. (#GH51866)
+- Switch `ParseBaseClause` to use `BaseResult::isUsable()` instead of `isInvalid()`, fixing dropped or mis-parsed base specifiers in C++ classes. (#GH147186)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
