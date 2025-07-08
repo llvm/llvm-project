@@ -6,8 +6,10 @@
 ;; This test case also checks that the debug value of the dead icmp
 ;; instruction is salvaged.
 
-; CHECK:   #dbg_value(i32 %n, ![[META1:[0-9]+]], !DIExpression(DW_OP_lit0, DW_OP_eq, DW_OP_stack_value), ![[META2:[0-9]+]])
-; CHECK: icmp uge i32 %indvar.next, %n, !dbg ![[DBGLOC:[0-9]+]]
+; CHECK-LABEL: bb.nph:
+; CHECK:           #dbg_value(i32 %n, ![[META1:[0-9]+]], !DIExpression(DW_OP_lit0, DW_OP_eq, DW_OP_stack_value), ![[META2:[0-9]+]])
+; CHECK-LABEL: bb:
+; CHECK:         icmp uge i32 %indvar.next, %n, !dbg ![[DBGLOC:[0-9]+]]
 
 ; CHECK: ![[META1]] = !DILocalVariable(name: "1",
 ; CHECK: ![[META2]] = !DILocation(line: 1, column: 1,
