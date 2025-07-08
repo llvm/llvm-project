@@ -929,7 +929,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                       Ctx.CostKind);
   }
   case Instruction::Select: {
-    if (!getUnderlyingValue())
+    if (!getUnderlyingInstr())
       return 0;
     // Handle cases where only the first lane is used the same way as the legacy
     // cost model.
