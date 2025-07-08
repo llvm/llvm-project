@@ -20,7 +20,6 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
@@ -111,8 +110,8 @@ struct CloneOpConversion : public OpConversionPattern<bufferization::CloneOp> {
             rewriter.create<memref::CastOp>(op->getLoc(), memrefType, alloc);
     }
 
-    rewriter.replaceOp(op, alloc);
     rewriter.create<memref::CopyOp>(loc, op.getInput(), alloc);
+    rewriter.replaceOp(op, alloc);
     return success();
   }
 };

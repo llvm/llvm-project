@@ -99,8 +99,8 @@ llvm::Error BreakpointIDList::FindAndReplaceIDRanges(
         new_args.Clear();
         return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                        error.AsCString());
-      } else
-        names_found.insert(std::string(current_arg));
+      }
+      names_found.insert(std::string(current_arg));
     } else if ((i + 2 < old_args.size()) &&
                BreakpointID::IsRangeIdentifier(old_args[i + 1].ref()) &&
                BreakpointID::IsValidIDExpression(current_arg) &&

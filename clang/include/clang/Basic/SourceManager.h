@@ -719,6 +719,8 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// Positive FileIDs are indexes into this table. Entry 0 indicates an invalid
   /// expansion.
   SmallVector<SrcMgr::SLocEntry, 0> LocalSLocEntryTable;
+  /// An in-parallel offset table, merely used for speeding up FileID lookup.
+  SmallVector<SourceLocation::UIntTy> LocalLocOffsetTable;
 
   /// The table of SLocEntries that are loaded from other modules.
   ///
@@ -767,6 +769,8 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// LastFileIDLookup records the last FileID looked up or created, because it
   /// is very common to look up many tokens from the same file.
   mutable FileID LastFileIDLookup;
+  mutable SourceLocation::UIntTy LastLookupStartOffset;
+  mutable SourceLocation::UIntTy LastLookupEndOffset; // exclude
 
   /// Holds information for \#line directives.
   ///
@@ -819,6 +823,12 @@ class SourceManager : public RefCountedBase<SourceManager> {
   mutable std::unique_ptr<SrcMgr::ContentCache> FakeContentCacheForRecovery;
 
   mutable std::unique_ptr<SrcMgr::SLocEntry> FakeSLocEntryForRecovery;
+
+  /// Cache for filenames used in diagnostics. See 'getNameForDiagnostic()'.
+  mutable llvm::StringMap<StringRef> DiagNames;
+
+  /// Allocator for absolute/short names.
+  mutable llvm::BumpPtrAllocator DiagNameAlloc;
 
   /// Lazily computed map of macro argument chunks to their expanded
   /// source location.
@@ -1844,6 +1854,16 @@ public:
   /// \return Location of the top-level macro caller.
   SourceLocation getTopMacroCallerLoc(SourceLocation Loc) const;
 
+  /// Retrieve the name of a file suitable for diagnostics.
+  // FIXME: Passing in the DiagnosticOptions here is a workaround for the
+  // fact that installapi does some weird things with DiagnosticsEngines,
+  // which causes the 'Diag' member of SourceManager (or at least the
+  // DiagnosticsOptions member thereof) to be a dangling reference
+  // sometimes. We should probably fix that or decouple the two classes
+  // to avoid this issue entirely.
+  StringRef getNameForDiagnostic(StringRef Filename,
+                                 const DiagnosticOptions &Opts) const;
+
 private:
   friend class ASTReader;
   friend class ASTWriter;
@@ -1901,9 +1921,8 @@ private:
 
   FileID getFileID(SourceLocation::UIntTy SLocOffset) const {
     // If our one-entry cache covers this offset, just return it.
-    if (isOffsetInFileID(LastFileIDLookup, SLocOffset))
+    if (SLocOffset >= LastLookupStartOffset && SLocOffset < LastLookupEndOffset)
       return LastFileIDLookup;
-
     return getFileIDSlow(SLocOffset);
   }
 

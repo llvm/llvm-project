@@ -9,9 +9,9 @@ struct A {
   [[clang::preferred_type(bool)]] unsigned b4 : 1;
   [[clang::preferred_type(bool)]] unsigned b5 : 2;
   [[clang::preferred_type()]] unsigned b6 : 2;
-  // expected-error@-1 {{'preferred_type' attribute takes one argument}}
+  // expected-error@-1 {{'clang::preferred_type' attribute takes one argument}}
   [[clang::preferred_type]] unsigned b7 : 2;
-  // expected-error@-1 {{'preferred_type' attribute takes one argument}}
+  // expected-error@-1 {{'clang::preferred_type' attribute takes one argument}}
   [[clang::preferred_type(E, int)]] unsigned b8 : 2;
   // expected-error@-1 {{expected ')'}}
   // expected-error@-2 {{expected ','}}
