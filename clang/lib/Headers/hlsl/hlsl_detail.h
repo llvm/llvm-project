@@ -55,7 +55,7 @@ template <typename T, int N> struct is_vector<vector<T, N>> {
 
 template <typename T, int N>
 using HLSL_FIXED_VECTOR =
-    vector<__detail::enable_if_t<(N >= 1 && N <= 4), T>, N>;
+    vector<__detail::enable_if_t<(N > 1 && N <= 4), T>, N>;
 
 } // namespace __detail
 } // namespace hlsl
