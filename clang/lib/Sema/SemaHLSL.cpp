@@ -2452,13 +2452,13 @@ static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
 }
 
 static bool CheckFloatOrHalfVectorsRepresentation(Sema *S, SourceLocation Loc,
-                                           int ArgOrdinal,
-                                           clang::QualType PassedType) {
+                                                  int ArgOrdinal,
+                                                  clang::QualType PassedType) {
   const auto *VecTy = PassedType->getAs<VectorType>();
 
-  clang::QualType BaseType = 
+  clang::QualType BaseType =
       PassedType->isVectorType()
-        ? PassedType->castAs<clang::VectorType>()->getElementType()
+          ? PassedType->castAs<clang::VectorType>()->getElementType()
           : PassedType;
   if (!VecTy || !BaseType->isHalfType() && !BaseType->isFloat32Type())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)

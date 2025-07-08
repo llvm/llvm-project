@@ -92,21 +92,6 @@ constexpr T refract_vec_impl(T I, T N, U Eta) {
 #endif
 }
 
-/*
-template <typename T, int L>
-constexpr vector<T, L> refract_vec_impl(vector<T, L> I, vector<T, L> N, T Eta) {
-#if (__has_builtin(__builtin_spirv_refract) && is_vector<T>))
-  return __builtin_spirv_refract(I, N, Eta);
-#else
-  T Mul = dot(N, I);
-  vector<T, L> K = 1 - Eta * Eta * (1 - Mul * Mul);
-  vector<T, L> Result = (Eta * I - (Eta * Mul + sqrt(K)) * N);
-  return select<vector<T, L>>(K < 0, vector<T, L>(0), Result);
-#endif
-}
-
-*/
-
 template <typename T> constexpr T fmod_impl(T X, T Y) {
 #if !defined(__DIRECTX__)
   return __builtin_elementwise_fmod(X, Y);

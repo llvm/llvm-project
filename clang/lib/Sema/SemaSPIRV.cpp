@@ -157,25 +157,81 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;
 
-    // Use the helper function to check both arguments
-    if (SemaRef.CheckVectorArgs(TheCall))
+    ExprResult A = TheCall->getArg(0);
+    QualType ArgTyA = A.get()->getType();
+    auto *VTyA = ArgTyA->getAs<VectorType>();
+    if (VTyA == nullptr) {
+      SemaRef.Diag(A.get()->getBeginLoc(),
+                   diag::err_typecheck_convert_incompatible)
+          << ArgTyA
+          << SemaRef.Context.getVectorType(ArgTyA, 2, VectorKind::Generic) << 1
+          << 0 << 0;
       return true;
+    }
 
-    QualType RetTy =
-        TheCall->getArg(0)->getType()->getAs<VectorType>()->getElementType();
+    ExprResult B = TheCall->getArg(1);
+    QualType ArgTyB = B.get()->getType();
+    auto *VTyB = ArgTyB->getAs<VectorType>();
+    if (VTyB == nullptr) {
+      SemaRef.Diag(A.get()->getBeginLoc(),
+                   diag::err_typecheck_convert_incompatible)
+          << ArgTyB
+          << SemaRef.Context.getVectorType(ArgTyB, 2, VectorKind::Generic) << 1
+          << 0 << 0;
+      return true;
+    }
+
+    QualType RetTy = VTyA->getElementType();
     TheCall->setType(RetTy);
     break;
   }
   case SPIRV::BI__builtin_spirv_length: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
-
-    // Use the helper function to check the argument
-    if (SemaRef.CheckVectorArgs(TheCall))
+    ExprResult A = TheCall->getArg(0);
+    QualType ArgTyA = A.get()->getType();
+    auto *VTy = ArgTyA->getAs<VectorType>();
+    if (VTy == nullptr) {
+      SemaRef.Diag(A.get()->getBeginLoc(),
+                   diag::err_typecheck_convert_incompatible)
+          << ArgTyA
+          << SemaRef.Context.getVectorType(ArgTyA, 2, VectorKind::Generic) << 1
+          << 0 << 0;
+      return true;
+    }
+    QualType RetTy = VTy->getElementType();
+    TheCall->setType(RetTy);
+    break;
+  }
+  case SPIRV::BI__builtin_spirv_reflect: {
+    if (SemaRef.checkArgCount(TheCall, 2))
       return true;
 
-    QualType RetTy =
-        TheCall->getArg(0)->getType()->getAs<VectorType>()->getElementType();
+    ExprResult A = TheCall->getArg(0);
+    QualType ArgTyA = A.get()->getType();
+    auto *VTyA = ArgTyA->getAs<VectorType>();
+    if (VTyA == nullptr) {
+      SemaRef.Diag(A.get()->getBeginLoc(),
+                   diag::err_typecheck_convert_incompatible)
+          << ArgTyA
+          << SemaRef.Context.getVectorType(ArgTyA, 2, VectorKind::Generic) << 1
+          << 0 << 0;
+      return true;
+    }
+
+    ExprResult B = TheCall->getArg(1);
+    QualType ArgTyB = B.get()->getType();
+    auto *VTyB = ArgTyB->getAs<VectorType>();
+    if (VTyB == nullptr) {
+      SemaRef.Diag(A.get()->getBeginLoc(),
+                   diag::err_typecheck_convert_incompatible)
+          << ArgTyB
+          << SemaRef.Context.getVectorType(ArgTyB, 2, VectorKind::Generic) << 1
+          << 0 << 0;
+      return true;
+    }
+
+    QualType RetTy = ArgTyA;
     TheCall->setType(RetTy);
     break;
   }
@@ -198,18 +254,6 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
           << 3 << /* scalar*/ 5 << /* no int */ 0 << /* fp */ 1 << ArgTyC;
       return true;
     }
-
-    QualType RetTy = TheCall->getArg(0)->getType();
-    TheCall->setType(RetTy);
-    break;
-  }
-  case SPIRV::BI__builtin_spirv_reflect: {
-    if (SemaRef.checkArgCount(TheCall, 2))
-      return true;
-
-    // Use the helper function to check both arguments
-    if (SemaRef.CheckVectorArgs(TheCall))
-      return true;
 
     QualType RetTy = TheCall->getArg(0)->getType();
     TheCall->setType(RetTy);

@@ -16152,28 +16152,6 @@ void Sema::CheckTCBEnforcement(const SourceLocation CallExprLoc,
   }
 }
 
-bool Sema::CheckVectorArgs(CallExpr *TheCall, unsigned NumArgsToCheck) {
-  for (unsigned i = 0; i < NumArgsToCheck; ++i) {
-    ExprResult Arg = TheCall->getArg(i);
-    QualType ArgTy = Arg.get()->getType();
-    auto *VTy = ArgTy->getAs<VectorType>();
-    if (VTy == nullptr) {
-      SemaRef.Diag(Arg.get()->getBeginLoc(),
-                   diag::err_typecheck_convert_incompatible)
-          << ArgTy
-          << SemaRef.Context.getVectorType(ArgTy, 2, VectorKind::Generic) << 1
-          << 0 << 0;
-      return true;
-    }
-  }
-  return false;
-}
-
-bool Sema::CheckVectorArgs(CallExpr *TheCall) {
-  return CheckVectorArgs(TheCall, TheCall->getNumArgs());
-}
-
-
 bool Sema::CheckAllArgTypesAreCorrect(
     Sema *S, CallExpr *TheCall,
     llvm::ArrayRef<
@@ -16211,8 +16189,8 @@ bool Sema::CheckAllArgTypesAreCorrect(
 }
 
 bool Sema::CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
-                                           int ArgOrdinal,
-                                           clang::QualType PassedType) {
+                                          int ArgOrdinal,
+                                          clang::QualType PassedType) {
   clang::QualType BaseType =
       PassedType->isVectorType()
           ? PassedType->castAs<clang::VectorType>()->getElementType()
@@ -16225,8 +16203,8 @@ bool Sema::CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
 }
 
 bool Sema::CheckFloatOrHalfVectorsRepresentation(Sema *S, SourceLocation Loc,
-                                                  int ArgOrdinal,
-                                                  clang::QualType PassedType) {
+                                                 int ArgOrdinal,
+                                                 clang::QualType PassedType) {
   const auto *VecTy = PassedType->getAs<VectorType>();
 
   clang::QualType BaseType =
@@ -16240,19 +16218,14 @@ bool Sema::CheckFloatOrHalfVectorsRepresentation(Sema *S, SourceLocation Loc,
   return false;
 }
 
-bool Sema::CheckFloatOrHalfScalarRepresentation(
-    Sema *S, SourceLocation Loc,
-                                                 int ArgOrdinal,
-                                                 clang::QualType PassedType) {
+bool Sema::CheckFloatOrHalfScalarRepresentation(Sema *S, SourceLocation Loc,
+                                                int ArgOrdinal,
+                                                clang::QualType PassedType) {
   const auto *VecTy = PassedType->getAs<VectorType>();
 
-  clang::QualType BaseType =
-      PassedType->isVectorType()
-          ? PassedType->castAs<clang::VectorType>()->getElementType()
-          : PassedType;
-  if (VecTy || !BaseType->isHalfType() && !BaseType->isFloat32Type())
+  if (VecTy || !PassedType->isHalfType() && !PassedType->isFloat32Type())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
-           << ArgOrdinal << /* scalar or vector of */ 5 << /* no int */ 0
+           << ArgOrdinal << /* scalar */ 1 << /* no int */ 0
            << /* half or float */ 2 << PassedType;
   return false;
 }
