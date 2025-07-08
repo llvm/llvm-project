@@ -22,6 +22,8 @@
 #include "UnwrappedLineFormatter.h"
 #include "UsingDeclarationsSorter.h"
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
+
+#include <limits>
 #include "llvm/ADT/Sequence.h"
 
 #define DEBUG_TYPE "format-formatter"
@@ -777,7 +779,7 @@ template <> struct MappingTraits<FormatStyle::SpacesInLineComment> {
     IO.mapOptional("Maximum", signedMaximum);
     Space.Maximum = static_cast<unsigned>(signedMaximum);
 
-    if (Space.Maximum != -1u)
+    if (Space.Maximum != std::numeric_limits<unsigned>::max())
       Space.Minimum = std::min(Space.Minimum, Space.Maximum);
   }
 };
@@ -1672,7 +1674,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SpacesBeforeTrailingComments = 1;
   LLVMStyle.SpacesInAngles = FormatStyle::SIAS_Never;
   LLVMStyle.SpacesInContainerLiterals = true;
-  LLVMStyle.SpacesInLineCommentPrefix = {/*Minimum=*/1, /*Maximum=*/-1u};
+  LLVMStyle.SpacesInLineCommentPrefix = {/*Minimum=*/1, /*Maximum=*/std::numeric_limits<unsigned>::max()};
   LLVMStyle.SpacesInParens = FormatStyle::SIPO_Never;
   LLVMStyle.SpacesInSquareBrackets = false;
   LLVMStyle.Standard = FormatStyle::LS_Latest;
