@@ -831,43 +831,37 @@ void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI);
 }
 } // namespace clang
 
-ABIArgInfo CodeGenTypes::convertABIArgInfo(const llvm::abi::ABIArgInfo &abiInfo,
+ABIArgInfo CodeGenTypes::convertABIArgInfo(const llvm::abi::ABIArgInfo &AbiInfo,
                                            QualType type) {
   ABIArgInfo result;
 
-  if (abiInfo.isDirect()) {
+  if (AbiInfo.isDirect()) {
     llvm::Type *CoercedType = nullptr;
-    if (abiInfo.getCoerceToType()) {
-      CoercedType = ReverseMapper.convertType(abiInfo.getCoerceToType());
-    }
-    if (!CoercedType) {
+    if (AbiInfo.getCoerceToType())
+      CoercedType = ReverseMapper.convertType(AbiInfo.getCoerceToType());
+    if (!CoercedType)
       CoercedType = ConvertType(type);
-    }
     result = ABIArgInfo::getDirect(CoercedType);
-  } else if (abiInfo.isExtend()) {
+  } else if (AbiInfo.isExtend()) {
     llvm::Type *CoercedType = nullptr;
-    if (abiInfo.getCoerceToType()) {
-      CoercedType = ReverseMapper.convertType(abiInfo.getCoerceToType());
-    }
-    if (!CoercedType) {
+    if (AbiInfo.getCoerceToType())
+      CoercedType = ReverseMapper.convertType(AbiInfo.getCoerceToType());
+    if (!CoercedType)
       CoercedType = ConvertType(type);
-    }
-
-    if (abiInfo.isSignExt()) {
+    if (AbiInfo.isSignExt()) {
       result = ABIArgInfo::getSignExtend(type, CoercedType);
     } else {
       result = ABIArgInfo::getZeroExtend(type, CoercedType);
     }
-  } else if (abiInfo.isIndirect()) {
+  } else if (AbiInfo.isIndirect()) {
     result = ABIArgInfo::getIndirect(
-        CharUnits::fromQuantity(abiInfo.getIndirectAlign()), 0);
-  } else if (abiInfo.isIgnore()) {
+        CharUnits::fromQuantity(AbiInfo.getIndirectAlign()), 0);
+  } else if (AbiInfo.isIgnore()) {
     result = ABIArgInfo::getIgnore();
   }
 
-  if (abiInfo.isInReg()) {
+  if (AbiInfo.isInReg())
     result.setInReg(true);
-  }
 
   return result;
 }
@@ -896,7 +890,6 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
 
   void *insertPos = nullptr;
   CGFunctionInfo *FI = FunctionInfos.FindNodeOrInsertPos(ID, insertPos);
-  llvm::abi::ABIFunctionInfo *tempFI;
   if (FI)
     return *FI;
 
@@ -910,7 +903,7 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
   for (CanQualType ArgType : argTypes) {
     MappedArgTypes.push_back(Mapper.convertType(ArgType));
   }
-  tempFI = llvm::abi::ABIFunctionInfo::create(
+  llvm::abi::ABIFunctionInfo *tempFI = llvm::abi::ABIFunctionInfo::create(
       CC, Mapper.convertType(resultType), MappedArgTypes);
   FunctionInfos.InsertNode(FI, insertPos);
 

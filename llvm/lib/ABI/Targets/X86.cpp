@@ -254,6 +254,58 @@ void X86_64ABIInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
     return;
   }
 
+  if (const auto *MPT = dyn_cast<MemberPointerType>(T)) {
+    if (MPT->isFunctionPointer()) {
+      if (MPT->has64BitPointers()) {
+        Lo = Hi = Integer;
+      } else {
+        uint64_t EB_FuncPtr = OffsetBase / 64;
+        uint64_t EB_ThisAdj = (OffsetBase + 64 - 1) / 64;
+        if (EB_FuncPtr != EB_ThisAdj) {
+          Lo = Hi = Integer;
+        } else {
+          Current = Integer;
+        }
+      }
+    } else {
+      Current = Integer;
+    }
+    return;
+  }
+
+  if (const auto *CT = dyn_cast<ComplexType>(T)) {
+    const Type *ElementType = CT->getElementType();
+    uint64_t Size = T->getSizeInBits().getFixedValue();
+
+    if (const auto *EIT = dyn_cast<IntegerType>(ElementType)) {
+      if (Size <= 64)
+        Current = Integer;
+      else if (Size <= 128)
+        Lo = Hi = Integer;
+    } else if (const auto *EFT = dyn_cast<FloatType>(ElementType)) {
+      const auto *FltSem = EFT->getSemantics();
+      if (FltSem == &llvm::APFloat::IEEEhalf() ||
+          FltSem == &llvm::APFloat::IEEEsingle() ||
+          FltSem == &llvm::APFloat::BFloat()) {
+        Current = SSE;
+      } else if (FltSem == &llvm::APFloat::IEEEdouble()) {
+        Lo = Hi = SSE;
+      } else if (FltSem == &llvm::APFloat::x87DoubleExtended()) {
+        Current = Complex_X87;
+      } else if (FltSem == &llvm::APFloat::IEEEquad()) {
+        Current = Memory;
+      }
+    }
+
+    uint64_t ElementSize = ElementType->getSizeInBits().getFixedValue();
+    uint64_t EB_Real = OffsetBase / 64;
+    uint64_t EB_Imag = (OffsetBase + ElementSize) / 64;
+    if (Hi == NoClass && EB_Real != EB_Imag)
+      Hi = Lo;
+
+    return;
+  }
+
   if (const auto *VT = dyn_cast<VectorType>(T)) {
     auto Size = VT->getSizeInBits().getFixedValue();
     const Type *ElementType = VT->getElementType();
@@ -278,8 +330,6 @@ void X86_64ABIInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
         } else {
           Current = SSE;
         }
-      } else {
-        Current = SSE;
       }
       if (OffsetBase && OffsetBase != 64)
         Hi = Lo;
@@ -333,11 +383,60 @@ void X86_64ABIInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
   if (const auto *ST = dyn_cast<StructType>(T)) {
     uint64_t Size = ST->getSizeInBits().getFixedValue();
 
+    // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger
+    // than eight eightbytes, ..., it has class MEMORY.
     if (Size > 512)
       return;
 
+    // AMD64-ABI 3.2.3p2: Rule 2. If a C++ object has either a non-trivial
+    // copy constructor or a non-trivial destructor, it is passed by invisible
+    // reference.
+    if (ST->isCXXRecord() &&
+        (ST->hasNonTrivialCopyConstructor() || ST->hasNonTrivialDestructor())) {
+      return;
+    }
+
+    // Assume variable sized types are passed in memory.
+    if (ST->hasFlexibleArrayMember()) {
+      return;
+    }
+    // Reset Lo class, this will be recomputed.
     Current = NoClass;
 
+    // If this is a C++ record, classify the bases first.
+    if (ST->isCXXRecord()) {
+      const FieldInfo *BaseClasses = ST->getBaseClasses();
+      for (uint32_t I = 0; I < ST->getNumBaseClasses(); ++I) {
+        const FieldInfo &Base = BaseClasses[I];
+
+        // Classify this field.
+        //
+        // AMD64-ABI 3.2.3p2: Rule 3. If the size of the aggregate exceeds a
+        // single eightbyte, each is classified separately. Each eightbyte gets
+        // initialized to class NO_CLASS.
+        Class FieldLo, FieldHi;
+        uint64_t Offset = OffsetBase + Base.OffsetInBits;
+        classify(Base.FieldType, Offset, FieldLo, FieldHi, IsNamedArg);
+        Lo = merge(Lo, FieldLo);
+        Hi = merge(Hi, FieldHi);
+
+        if (getABICompatInfo().Flags.ReturnCXXRecordGreaterThan128InMem &&
+            (Size > 128 &&
+             (Size != Base.FieldType->getSizeInBits().getFixedValue() ||
+              Size > getNativeVectorSizeForAVXABI(AVXLevel)))) {
+          Lo = Memory;
+          postMerge(Size, Lo, Hi);
+          return;
+        }
+
+        if (Lo == Memory || Hi == Memory) {
+          postMerge(Size, Lo, Hi);
+          return;
+        }
+      }
+    }
+
+    // Classify the fields one at a time, merging the results.
     const FieldInfo *Fields = ST->getFields();
     uint32_t NumFields = ST->getNumFields();
 
