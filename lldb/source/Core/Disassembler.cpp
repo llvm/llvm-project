@@ -49,7 +49,6 @@
 
 #include <cstdint>
 #include <cstring>
-#include <regex>
 #include <utility>
 
 #include <cassert>
@@ -740,27 +739,15 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
               if (auto entryOrErr = expr_list.GetExpressionEntryAtAddress(func_load_addr, current_pc)) {
                 auto entry = *entryOrErr;
 
-                // Translate file-range to load-space start.
-                addr_t file_base = entry.file_range.GetBaseAddress().GetFileAddress();
-                addr_t start_load_addr = file_base + (func_load_addr - expr_list.GetFuncFileAddress());
+                // Check if entry has a file_range, and filter on address if so.
+                if (!entry.file_range || entry.file_range->ContainsFileAddress(
+                        (current_pc - func_load_addr) + expr_list.GetFuncFileAddress())) {
 
-                if (current_pc >= start_load_addr) {
                   StreamString loc_str;
                   ABI *abi = exe_ctx->GetProcessPtr()->GetABI().get();
                   entry.expr->DumpLocation(&loc_str, eDescriptionLevelBrief, abi);
                   
                   std::string loc_output = loc_str.GetString().str();
-
-                  // // Remove ", <decoding error> ..." segments.
-                  // std::regex decoding_err_re(", <decoding error>[^,]*");
-                  // loc_output = std::regex_replace(loc_output, decoding_err_re, "");
-
-                  // llvm::StringRef cleaned_output = llvm::StringRef(loc_output).trim();
-
-                  // // Only keep this annotation if there is still something useful left.
-                  // if (!cleaned_output.empty()) {
-                  //   annotations.push_back(llvm::formatv("{0} = {1}", name, cleaned_output));
-                  // }
 
                   llvm::SmallVector<llvm::StringRef, 4> parts;
                   llvm::StringRef(loc_str.GetString()).split(parts, ", ");
