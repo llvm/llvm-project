@@ -12,6 +12,15 @@ class StdVariantDataFormatterTestCase(TestBase):
     def do_test(self):
         """Test that that file and class static variables display correctly."""
 
+        def cleanup():
+            self.runCmd("type format clear", check=False)
+            self.runCmd("type summary clear", check=False)
+            self.runCmd("type filter clear", check=False)
+            self.runCmd("type synth clear", check=False)
+
+        # Execute the cleanup function during test case tear down.
+        self.addTearDownHook(cleanup)
+
         (self.target, self.process, _, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.cpp", False)
         )
