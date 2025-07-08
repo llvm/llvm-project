@@ -406,8 +406,7 @@ public:
   DynMemFrontend<DoubleFree, Leak, UseFree, BadFree, FreeAlloca, OffsetFree,
                  UseZeroAllocated>
       MallocChecker;
-  DynMemFrontend<DoubleFree, UseFree, BadFree, OffsetFree,
-                 UseZeroAllocated>
+  DynMemFrontend<DoubleFree, UseFree, BadFree, OffsetFree, UseZeroAllocated>
       NewDeleteChecker;
   DynMemFrontend<Leak> NewDeleteLeaksChecker;
   DynMemFrontend<FreeAlloca, MismatchedDealloc> MismatchedDeallocatorChecker;
