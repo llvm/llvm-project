@@ -39,6 +39,7 @@ private:
   // Setting which fix to suggest
   FixModes FixMode;
   llvm::StringRef FixFunction;
+  llvm::StringRef FixFunctionEmptyArgs;
 };
 } // namespace clang::tidy::cppcoreguidelines
 
