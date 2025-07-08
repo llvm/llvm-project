@@ -960,7 +960,7 @@ public:
                                               const Twine &Name = "");
 
   /// Create a call to llvm.vscale.<Ty>().
-  LLVM_ABI Value *CreateVScale(Type *Ty, const Twine &Name = "") {
+  Value *CreateVScale(Type *Ty, const Twine &Name = "") {
     return CreateIntrinsic(Intrinsic::vscale, {Ty}, {}, {}, Name);
   }
 

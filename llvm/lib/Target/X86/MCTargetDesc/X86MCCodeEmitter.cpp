@@ -2009,12 +2009,12 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
     // (SSE4a extrq and insertq) have two trailing immediates.
 
     // Skip two trainling conditional operands encoded in EVEX prefix
-    unsigned RemaningOps = NumOps - CurOp - 2 * HasTwoConditionalOps;
-    while (RemaningOps) {
+    unsigned RemainingOps = NumOps - CurOp - 2 * HasTwoConditionalOps;
+    while (RemainingOps) {
       emitImmediate(MI.getOperand(CurOp++), MI.getLoc(),
-                    getImmFixupKind(TSFlags), X86II::isImmPCRel(TSFlags),
-                    StartByte, CB, Fixups);
-      --RemaningOps;
+                    getImmFixupKind(Desc.TSFlags),
+                    X86II::isImmPCRel(Desc.TSFlags), StartByte, CB, Fixups);
+      --RemainingOps;
     }
     CurOp += 2 * HasTwoConditionalOps;
   }

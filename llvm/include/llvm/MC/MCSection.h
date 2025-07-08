@@ -386,7 +386,7 @@ public:
     getContentsForAppending().append(Num, Elt);
     doneAppending();
   }
-  void setContents(ArrayRef<char> Contents);
+  LLVM_ABI void setContents(ArrayRef<char> Contents);
   MutableArrayRef<char> getContents() {
     return MutableArrayRef(getParent()->ContentStorage)
         .slice(ContentStart, ContentEnd - ContentStart);
@@ -399,9 +399,9 @@ public:
   // Fixup-related functions manage parent's storage using FixupStart and
   // FixupSize.
   void clearFixups() { FixupEnd = FixupStart; }
-  void addFixup(MCFixup Fixup);
-  void appendFixups(ArrayRef<MCFixup> Fixups);
-  void setFixups(ArrayRef<MCFixup> Fixups);
+  LLVM_ABI void addFixup(MCFixup Fixup);
+  LLVM_ABI void appendFixups(ArrayRef<MCFixup> Fixups);
+  LLVM_ABI void setFixups(ArrayRef<MCFixup> Fixups);
   MutableArrayRef<MCFixup> getFixups() {
     return MutableArrayRef(getParent()->FixupStorage)
         .slice(FixupStart, FixupEnd - FixupStart);
