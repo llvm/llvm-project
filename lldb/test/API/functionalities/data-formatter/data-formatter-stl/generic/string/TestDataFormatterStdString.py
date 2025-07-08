@@ -84,10 +84,10 @@ class StdStringDataFormatterTestCase(TestBase):
         )
 
         # Test references and pointers to std::string.
-        var_rq = self.frame().FindVariable("rq")
-        var_rQ = self.frame().FindVariable("rQ")
-        var_pq = self.frame().FindVariable("pq")
-        var_pQ = self.frame().FindVariable("pQ")
+        var_rq = frame.FindVariable("rq")
+        var_rQ = frame.FindVariable("rQ")
+        var_pq = frame.FindVariable("pq")
+        var_pQ = frame.FindVariable("pQ")
 
         self.assertEqual(var_rq.GetSummary(), '"hello world"', "rq summary wrong")
         self.assertEqual(
@@ -158,11 +158,11 @@ class StdStringDataFormatterTestCase(TestBase):
         self.do_test_multibyte()
 
     def do_test_uncapped_summary(self):
-        lldbutil.run_to_source_breakpoint(
+        (_, _, thread, _) = lldbutil.run_to_source_breakpoint(
             self, "Set break point at this line.", self.main_spec
         )
 
-        TheVeryLongOne = frame.FindVariable("TheVeryLongOne")
+        TheVeryLongOne = thread.frames[0].FindVariable("TheVeryLongOne")
         summaryOptions = lldb.SBTypeSummaryOptions()
         summaryOptions.SetCapping(lldb.eTypeSummaryUncapped)
         uncappedSummaryStream = lldb.SBStream()
