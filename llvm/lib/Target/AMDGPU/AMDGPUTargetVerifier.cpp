@@ -46,48 +46,29 @@ public:
   bool run(Function &F) override;
 };
 
-static bool isShader(CallingConv::ID CC) {
-  switch (CC) {
-  case CallingConv::AMDGPU_VS:
-  case CallingConv::AMDGPU_LS:
-  case CallingConv::AMDGPU_HS:
-  case CallingConv::AMDGPU_ES:
-  case CallingConv::AMDGPU_GS:
-  case CallingConv::AMDGPU_PS:
-  case CallingConv::AMDGPU_CS_Chain:
-  case CallingConv::AMDGPU_CS_ChainPreserve:
-  case CallingConv::AMDGPU_CS:
-    return true;
-  default:
-    return false;
-  }
+static bool IsValidInt(const Type *Ty) {
+  return Ty->isIntegerTy(1) ||
+         Ty->isIntegerTy(8) ||
+         Ty->isIntegerTy(16) ||
+         Ty->isIntegerTy(32) ||
+         Ty->isIntegerTy(64) ||
+         Ty->isIntegerTy(128);
 }
 
 bool AMDGPUTargetVerify::run(Function &F) {
-  // Ensure shader calling convention returns void
-  if (isShader(F.getCallingConv()))
-    Check(F.getReturnType() == Type::getVoidTy(F.getContext()),
-          "Shaders must return void");
 
   for (auto &BB : F) {
 
     for (auto &I : BB) {
 
-      if (auto *CI = dyn_cast<CallInst>(&I)) {
-        // Ensure no kernel to kernel calls.
-        CallingConv::ID CalleeCC = CI->getCallingConv();
-        if (CalleeCC == CallingConv::AMDGPU_KERNEL) {
-          CallingConv::ID CallerCC =
-              CI->getParent()->getParent()->getCallingConv();
-          Check(CallerCC != CallingConv::AMDGPU_KERNEL,
-                "A kernel may not call a kernel", CI->getParent()->getParent());
-        }
+      // Ensure integral types are valid: i8, i16, i32, i64, i128
+      if (I.getType()->isIntegerTy())
+        Check(IsValidInt(I.getType()), "Int type is invalid.", &I);
+      for (unsigned i = 0; i < I.getNumOperands(); ++i)
+        if (I.getOperand(i)->getType()->isIntegerTy())
+          Check(IsValidInt(I.getOperand(i)->getType()),
+                "Int type is invalid.", I.getOperand(i));
 
-        // Ensure chain intrinsics are followed by unreachables.
-        if (CI->getIntrinsicID() == Intrinsic::amdgcn_cs_chain)
-          Check(isa_and_present<UnreachableInst>(CI->getNextNode()),
-                "llvm.amdgcn.cs.chain must be followed by unreachable", CI);
-      }
     }
   }
 
