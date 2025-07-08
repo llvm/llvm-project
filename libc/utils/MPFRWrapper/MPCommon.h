@@ -66,6 +66,10 @@ template <> struct ExtraPrecision<float128> {
 };
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 
+template <> struct ExtraPrecision<bfloat16> {
+  static constexpr unsigned int VALUE = 64;
+};
+
 // If the ulp tolerance is less than or equal to 0.5, we would check that the
 // result is rounded correctly with respect to the rounding mode by using the
 // same precision as the inputs.
@@ -113,7 +117,7 @@ public:
 #ifdef LIBC_TYPES_HAS_FLOAT16
                                  || cpp::is_same_v<float16, XType>
 #endif
-                             ,
+                                 || cpp::is_same_v<bfloat16, XType>,
                              int> = 0>
   explicit MPFRNumber(XType x,
                       unsigned int precision = ExtraPrecision<XType>::VALUE,
@@ -168,17 +172,6 @@ public:
         mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
     mpfr_init2(value, mpfr_precision);
     mpfr_set_sj(value, x, mpfr_rounding);
-  }
-
-  // BFloat16
-  template <typename XType,
-            cpp::enable_if_t<cpp::is_same_v<bfloat16, XType>, int> = 0>
-  explicit MPFRNumber(XType x, unsigned int precision = 8,
-                      RoundingMode rounding = RoundingMode::Nearest)
-      : mpfr_precision(precision),
-        mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
-    mpfr_init2(value, mpfr_precision);
-    mpfr_set_flt(value, static_cast<float>(x), mpfr_rounding);
   }
 
   MPFRNumber(const MPFRNumber &other);
