@@ -684,7 +684,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
     for (const auto &LC : LibraryCalls) {
       setLibcallImpl(LC.Op, LC.Impl);
-      setLibcallCallingConv(LC.Op, LC.CC);
+      setLibcallImplCallingConv(LC.Impl, LC.CC);
       if (LC.Cond != CmpInst::BAD_ICMP_PREDICATE)
         setCmpLibcallCC(LC.Op, LC.Cond);
     }
@@ -723,7 +723,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
       for (const auto &LC : MemOpsLibraryCalls) {
         setLibcallImpl(LC.Op, LC.Impl);
-        setLibcallCallingConv(LC.Op, LC.CC);
+        setLibcallImplCallingConv(LC.Impl, LC.CC);
       }
     }
   }
@@ -733,13 +733,13 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   // hard-float calling convention by default.
   if (!TT.isWatchABI()) {
     if (TM.isAAPCS_ABI()) {
-      setLibcallCallingConv(RTLIB::FPROUND_F32_F16, CallingConv::ARM_AAPCS);
-      setLibcallCallingConv(RTLIB::FPROUND_F64_F16, CallingConv::ARM_AAPCS);
-      setLibcallCallingConv(RTLIB::FPEXT_F16_F32, CallingConv::ARM_AAPCS);
+      setLibcallImplCallingConv(RTLIB::__truncsfhf2, CallingConv::ARM_AAPCS);
+      setLibcallImplCallingConv(RTLIB::__truncdfhf2, CallingConv::ARM_AAPCS);
+      setLibcallImplCallingConv(RTLIB::__extendhfsf2, CallingConv::ARM_AAPCS);
     } else {
-      setLibcallCallingConv(RTLIB::FPROUND_F32_F16, CallingConv::ARM_APCS);
-      setLibcallCallingConv(RTLIB::FPROUND_F64_F16, CallingConv::ARM_APCS);
-      setLibcallCallingConv(RTLIB::FPEXT_F16_F32, CallingConv::ARM_APCS);
+      setLibcallImplCallingConv(RTLIB::__truncsfhf2, CallingConv::ARM_APCS);
+      setLibcallImplCallingConv(RTLIB::__truncdfhf2, CallingConv::ARM_APCS);
+      setLibcallImplCallingConv(RTLIB::__extendhfsf2, CallingConv::ARM_APCS);
     }
   }
 
@@ -761,7 +761,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
     for (const auto &LC : LibraryCalls) {
       setLibcallImpl(LC.Op, LC.Impl);
-      setLibcallCallingConv(LC.Op, LC.CC);
+      setLibcallImplCallingConv(LC.Impl, LC.CC);
     }
   } else if (!TT.isOSBinFormatMachO()) {
     setLibcallImpl(RTLIB::FPROUND_F32_F16, RTLIB::__gnu_f2h_ieee);
@@ -1400,7 +1400,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   setOperationAction(ISD::EH_SJLJ_SETJMP, MVT::i32, Custom);
   setOperationAction(ISD::EH_SJLJ_LONGJMP, MVT::Other, Custom);
   setOperationAction(ISD::EH_SJLJ_SETUP_DISPATCH, MVT::Other, Custom);
-  if (Subtarget->useSjLjEH())
+  if (getTargetMachine().getExceptionModel() == ExceptionHandling::SjLj)
     setLibcallImpl(RTLIB::UNWIND_RESUME, RTLIB::_Unwind_SjLj_Resume);
 
   setOperationAction(ISD::SETCC,     MVT::i32, Expand);
@@ -6186,9 +6186,6 @@ SDValue ARMTargetLowering::LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const{
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MFI.setReturnAddressIsTaken(true);
-
-  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
 
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
@@ -12361,6 +12358,11 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MachineBasicBlock *SinkBB  = Fn->CreateMachineBasicBlock(LLVM_BB);
     Fn->insert(BBI, RSBBB);
     Fn->insert(BBI, SinkBB);
+
+    // Set the call frame size on entry to the new basic blocks.
+    unsigned CallFrameSize = TII->getCallFrameSizeAt(MI);
+    RSBBB->setCallFrameSize(CallFrameSize);
+    SinkBB->setCallFrameSize(CallFrameSize);
 
     Register ABSSrcReg = MI.getOperand(1).getReg();
     Register ABSDstReg = MI.getOperand(0).getReg();
@@ -21959,14 +21961,16 @@ Register ARMTargetLowering::getExceptionPointerRegister(
     const Constant *PersonalityFn) const {
   // Platforms which do not use SjLj EH may return values in these registers
   // via the personality function.
-  return Subtarget->useSjLjEH() ? Register() : ARM::R0;
+  ExceptionHandling EM = getTargetMachine().getExceptionModel();
+  return EM == ExceptionHandling::SjLj ? Register() : ARM::R0;
 }
 
 Register ARMTargetLowering::getExceptionSelectorRegister(
     const Constant *PersonalityFn) const {
   // Platforms which do not use SjLj EH may return values in these registers
   // via the personality function.
-  return Subtarget->useSjLjEH() ? Register() : ARM::R1;
+  ExceptionHandling EM = getTargetMachine().getExceptionModel();
+  return EM == ExceptionHandling::SjLj ? Register() : ARM::R1;
 }
 
 void ARMTargetLowering::initializeSplitCSR(MachineBasicBlock *Entry) const {
