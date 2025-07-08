@@ -338,6 +338,8 @@ Changes in existing checks
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
   `AllowedTypes`, that excludes specified types from adding qualifiers.
+  Added the option `RespectOpaqueTypes`, that allows not looking at underlying
+  types of type aliases.
 
 - Improved :doc:`readability-redundant-inline-specifier
   <clang-tidy/checks/readability/redundant-inline-specifier>` check by fixing
@@ -347,10 +349,6 @@ Changes in existing checks
   <clang-tidy/checks/readability/redundant-smartptr-get>` check by fixing
   some false positives involving smart pointers to arrays.
 
-- Improved :doc:`readability-qualified-auto
-  <clang-tidy/checks/readability/qualified-auto>` check by adding the option
-  `RespectOpaqueTypes`, that allows not looking at underlying types of
-  type aliases.
 
 Removed checks
 ^^^^^^^^^^^^^^
