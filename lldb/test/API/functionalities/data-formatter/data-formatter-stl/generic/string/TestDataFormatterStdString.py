@@ -80,6 +80,7 @@ class StdStringDataFormatterTestCase(TestBase):
                 '(%s::string) Q = "quite a long std::strin with lots of info inside it"'
                 % ns,
                 "(%s::string *) null_str = nullptr" % ns,
+                '(std::string) overwritten_zero = "abc"',
             ],
         )
 
@@ -124,6 +125,11 @@ class StdStringDataFormatterTestCase(TestBase):
         self.build(dictionary={"USE_LIBSTDCPP": 1})
         self.do_test()
 
+    @add_test_categories(["msvcstl"])
+    def test_msvc(self):
+        self.build()
+        self.do_test()
+
     def do_test_multibyte(self):
         lldbutil.run_to_source_breakpoint(
             self, "Set break point at this line.", self.main_spec
@@ -157,6 +163,11 @@ class StdStringDataFormatterTestCase(TestBase):
         self.build(dictionary={"USE_LIBSTDCPP": 1})
         self.do_test_multibyte()
 
+    @add_test_categories(["msvcstl"])
+    def test_multibyte_msvc(self):
+        self.build()
+        self.do_test_multibyte()
+
     def do_test_uncapped_summary(self):
         (_, _, thread, _) = lldbutil.run_to_source_breakpoint(
             self, "Set break point at this line.", self.main_spec
@@ -187,6 +198,11 @@ class StdStringDataFormatterTestCase(TestBase):
         self.build(dictionary={"USE_LIBSTDCPP": 1})
         self.do_test_uncapped_summary()
 
+    @add_test_categories(["msvcstl"])
+    def test_uncapped_msvc(self):
+        self.build()
+        self.do_test_uncapped_summary()
+
     def do_test_summary_unavailable(self):
         """
         Make sure that if the string is not readable, we give an error.
@@ -211,4 +227,9 @@ class StdStringDataFormatterTestCase(TestBase):
     @add_test_categories(["libstdcxx"])
     def test_unavailable_summary_libstdcxx(self):
         self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test_summary_unavailable()
+
+    @add_test_categories(["msvcstl"])
+    def test_unavailable_summary_msvc(self):
+        self.build()
         self.do_test_summary_unavailable()
