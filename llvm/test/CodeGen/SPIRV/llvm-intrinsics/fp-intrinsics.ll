@@ -337,3 +337,25 @@ entry:
 }
 
 declare float @llvm.fma.f32(float, float, float)
+
+; CHECK: OpFunction
+; CHECK: %[[#d:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#fracPtr:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#integralPtr:]] = OpFunctionParameter %[[#]]
+; CHECK: %[[#varPtr:]] = OpVariable %[[#]] Function
+; CHECK: %[[#frac:]] = OpExtInst %[[#var2]] %[[#extinst_id]] modf %[[#d]] %[[#varPtr]]
+; CHECK: %[[#integral:]] = OpLoad %[[#var2]] %[[#varPtr]]
+; CHECK: OpStore %[[#fracPtr]] %[[#frac]]
+; CHECK: OpStore %[[#integralPtr]] %[[#integral]]
+; CHECK: OpFunctionEnd
+define void @foo(double %d, ptr addrspace(1) %frac, ptr addrspace(1) %integral) {
+entry:
+  %4 = tail call { double, double } @llvm.modf.f64(double %d)
+  %5 = extractvalue { double, double } %4, 0
+  %6 = extractvalue { double, double } %4, 1
+  store double %5, ptr addrspace(1) %frac, align 8
+  store double %6, ptr addrspace(1) %integral, align 8
+  ret void
+}
+
+declare { double, double } @llvm.modf.f64(double)
