@@ -150,7 +150,8 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
       //
       // Since C++23, the subscript operator may also be called without an
       // argument, which makes the following distinction necessary
-      const bool EmptySubscript = MatchedExpr->getDirectCallee()->getNumParams() == 0;
+      const bool EmptySubscript =
+          MatchedExpr->getDirectCallee()->getNumParams() == 0;
 
       if (EmptySubscript) {
         diag(MatchedExpr->getCallee()->getBeginLoc(),
@@ -204,7 +205,8 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
       // Cases: a.operator[](i) => f(a, i) and a->operator[](i) => f(*a, i)
       const auto *Callee = dyn_cast<MemberExpr>(MCE->getCallee());
 
-      const bool EmptySubscript = MCE->getMethodDecl()->getNumNonObjectParams() == 0;
+      const bool EmptySubscript =
+          MCE->getMethodDecl()->getNumNonObjectParams() == 0;
 
       std::string BeginInsertion =
           (EmptySubscript ? FixFunctionEmptyArgs.str() : FixFunction.str()) +
