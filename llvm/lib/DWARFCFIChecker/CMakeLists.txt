@@ -9,6 +9,6 @@ add_llvm_component_library(LLVMDWARFCFIChecker
 
   LINK_COMPONENTS
   MC
-  DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   Support
   )
