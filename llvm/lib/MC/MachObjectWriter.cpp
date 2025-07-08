@@ -15,8 +15,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -84,12 +82,6 @@ bool MachObjectWriter::doesSymbolRequireExternRelocation(const MCSymbol &S) {
 bool MachObjectWriter::
 MachSymbolData::operator<(const MachSymbolData &RHS) const {
   return Symbol->getName() < RHS.Symbol->getName();
-}
-
-bool MachObjectWriter::isFixupKindPCRel(const MCAssembler &Asm, unsigned Kind) {
-  MCFixupKindInfo FKI = Asm.getBackend().getFixupKindInfo((MCFixupKind)Kind);
-
-  return FKI.Flags & MCFixupKindInfo::FKF_IsPCRel;
 }
 
 uint64_t
@@ -808,8 +800,8 @@ uint64_t MachObjectWriter::writeObject() {
     MCSection *CGProfileSection = getContext().getMachOSection(
         "__LLVM", "__cg_profile", 0, SectionKind::getMetadata());
     auto &Frag = cast<MCDataFragment>(*CGProfileSection->begin());
-    Frag.getContents().clear();
-    raw_svector_ostream OS(Frag.getContents());
+    Frag.clearContents();
+    raw_svector_ostream OS(Frag.getContentsForAppending());
     for (const MCObjectWriter::CGProfileEntry &CGPE : CGProfile) {
       uint32_t FromIndex = CGPE.From->getSymbol().getIndex();
       uint32_t ToIndex = CGPE.To->getSymbol().getIndex();
@@ -817,6 +809,7 @@ uint64_t MachObjectWriter::writeObject() {
       support::endian::write(OS, ToIndex, W.Endian);
       support::endian::write(OS, CGPE.Count, W.Endian);
     }
+    Frag.doneAppending();
   }
 
   unsigned NumSections = Asm.end() - Asm.begin();

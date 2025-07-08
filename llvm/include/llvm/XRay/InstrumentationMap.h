@@ -85,7 +85,7 @@ private:
   FunctionAddressMap FunctionAddresses;
   FunctionAddressReverseMap FunctionIds;
 
-  LLVM_ABI_FRIEND friend Expected<InstrumentationMap>
+  LLVM_ABI friend Expected<InstrumentationMap>
       loadInstrumentationMap(StringRef);
 
 public:
