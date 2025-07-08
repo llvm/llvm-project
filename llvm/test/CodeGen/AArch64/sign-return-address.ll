@@ -5,6 +5,11 @@
 ; v9.5-A is not expected to change codegen without -mbranch-protection=+pc, so reuse V83A.
 ; RUN: llc -mtriple=aarch64 -mattr=v9.5a < %s | FileCheck --check-prefixes=CHECK,V83A %s
 
+; Make sure no errors are detected when emitting SEH opcodes.
+; Errors are only checked for when generating a binary, so emit a dummy object
+; file and make sure llc produces zero exit code.
+; RUN: llc -mtriple=aarch64-windows -o %t.dummy.o --filetype=obj < %s
+
 define i32 @leaf(i32 %x) {
 ; CHECK-LABEL: leaf:
 ; CHECK:       // %bb.0:
