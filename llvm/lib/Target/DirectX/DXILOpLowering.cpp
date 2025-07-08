@@ -318,8 +318,7 @@ public:
   /// model and taking into account binding information from
   /// DXILResourceAnalysis.
   bool lowerHandleFromBinding(Function &F) {
-    const Triple &TT = M.getTargetTriple();
-    if (TT.getDXILVersion() < VersionTuple(1, 6))
+    if (MMDI.DXILVersion < VersionTuple(1, 6))
       return lowerToCreateHandle(F);
     return lowerToBindAndAnnotateHandle(F);
   }
@@ -488,8 +487,6 @@ public:
   }
 
   [[nodiscard]] bool lowerRawBufferLoad(Function &F) {
-    const Triple &TT = M.getTargetTriple();
-    VersionTuple DXILVersion = TT.getDXILVersion();
     const DataLayout &DL = F.getDataLayout();
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
@@ -513,7 +510,7 @@ public:
           ConstantInt::get(Int32Ty, DL.getPrefTypeAlign(ScalarTy).value());
 
       Expected<CallInst *> OpCall =
-          DXILVersion >= VersionTuple(1, 2)
+          MMDI.DXILVersion >= VersionTuple(1, 2)
               ? OpBuilder.tryCreateOp(OpCode::RawBufferLoad,
                                       {Handle, Index0, Index1, Mask, Align},
                                       CI->getName(), NewRetTy)
@@ -588,8 +585,6 @@ public:
   }
 
   [[nodiscard]] bool lowerBufferStore(Function &F, bool IsRaw) {
-    const Triple &TT = M.getTargetTriple();
-    VersionTuple DXILVersion = TT.getDXILVersion();
     const DataLayout &DL = F.getDataLayout();
     IRBuilder<> &IRB = OpBuilder.getIRB();
     Type *Int8Ty = IRB.getInt8Ty();
@@ -656,7 +651,7 @@ public:
       SmallVector<Value *, 9> Args{
           Handle,          Index0,          Index1,          DataElements[0],
           DataElements[1], DataElements[2], DataElements[3], Mask};
-      if (IsRaw && DXILVersion >= VersionTuple(1, 2)) {
+      if (IsRaw && MMDI.DXILVersion >= VersionTuple(1, 2)) {
         Op = OpCode::RawBufferStore;
         // RawBufferStore requires the alignment
         Args.push_back(
