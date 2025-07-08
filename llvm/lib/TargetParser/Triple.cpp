@@ -11,6 +11,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/VersionTuple.h"
@@ -1018,10 +1019,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
 ///
 /// This stores the string representation and parses the various pieces into
 /// enum members.
-Triple::Triple(const Twine &Str)
-    : Data(Str.str()), Arch(UnknownArch), SubArch(NoSubArch),
-      Vendor(UnknownVendor), OS(UnknownOS), Environment(UnknownEnvironment),
-      ObjectFormat(UnknownObjectFormat) {
+Triple::Triple(std::string &&Str) : Data(std::move(Str)) {
   // Do minimal parsing by hand here.
   SmallVector<StringRef, 4> Components;
   StringRef(Data).split(Components, '-', /*MaxSplit*/ 3);
@@ -1051,6 +1049,8 @@ Triple::Triple(const Twine &Str)
   if (ObjectFormat == UnknownObjectFormat)
     ObjectFormat = getDefaultFormat(*this);
 }
+
+Triple::Triple(const Twine &Str) : Triple(Str.str()) {}
 
 /// Construct a triple from string representations of the architecture,
 /// vendor, and OS.
@@ -1636,14 +1636,7 @@ void Triple::setObjectFormat(ObjectFormatType Kind) {
 }
 
 void Triple::setArchName(StringRef Str) {
-  // Work around a miscompilation bug for Twines in gcc 4.0.3.
-  SmallString<64> Triple;
-  Triple += Str;
-  Triple += "-";
-  Triple += getVendorName();
-  Triple += "-";
-  Triple += getOSAndEnvironmentName();
-  setTriple(Triple);
+  setTriple(Str + "-" + getVendorName() + "-" + getOSAndEnvironmentName());
 }
 
 void Triple::setVendorName(StringRef Str) {
@@ -2261,6 +2254,55 @@ bool Triple::isValidVersionForOS(OSType OSKind, const VersionTuple &Version) {
   }
 
   llvm_unreachable("unexpected or invalid os version");
+}
+
+ExceptionHandling Triple::getDefaultExceptionHandling() const {
+  if (isOSBinFormatCOFF()) {
+    if (getArch() == Triple::x86 &&
+        (isOSCygMing() || isWindowsItaniumEnvironment()))
+      return ExceptionHandling::DwarfCFI;
+    return ExceptionHandling::WinEH;
+  }
+
+  if (isOSBinFormatXCOFF())
+    return ExceptionHandling::AIX;
+  if (isOSBinFormatGOFF())
+    return ExceptionHandling::ZOS;
+
+  if (isARM() || isThumb()) {
+    if (isOSBinFormatELF()) {
+      return getOS() == Triple::NetBSD ? ExceptionHandling::DwarfCFI
+                                       : ExceptionHandling::ARM;
+    }
+
+    return isOSDarwin() && !isWatchABI() ? ExceptionHandling::SjLj
+                                         : ExceptionHandling::DwarfCFI;
+  }
+
+  if (isAArch64() || isX86() || isPPC() || isMIPS() || isSPARC() || isBPF() ||
+      isRISCV() || isLoongArch())
+    return ExceptionHandling::DwarfCFI;
+
+  switch (getArch()) {
+  case Triple::arc:
+  case Triple::csky:
+  case Triple::hexagon:
+  case Triple::lanai:
+  case Triple::msp430:
+  case Triple::systemz:
+  case Triple::xcore:
+  case Triple::xtensa:
+    return ExceptionHandling::DwarfCFI;
+  default:
+    break;
+  }
+
+  // Explicitly none targets.
+  if (isWasm() || isAMDGPU() || isNVPTX() || isSPIROrSPIRV())
+    return ExceptionHandling::None;
+
+  // Default to none.
+  return ExceptionHandling::None;
 }
 
 // HLSL triple environment orders are relied on in the front end

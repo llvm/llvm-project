@@ -373,13 +373,6 @@ def HasStdExtZhinx : Predicate<"Subtarget->hasStdExtZhinx()">,
 def NoStdExtZhinx : Predicate<"!Subtarget->hasStdExtZhinx()">;
 
 // Compressed Extensions
-def FeatureNoRVCHints
-    : SubtargetFeature<"no-rvc-hints", "EnableRVCHintInstrs", "false",
-                       "Disable RVC Hint Instructions.">;
-def HasRVCHints : Predicate<"Subtarget->enableRVCHintInstrs()">,
-                  AssemblerPredicate<(all_of(not FeatureNoRVCHints)),
-                                     "RVC Hint Instructions">;
-
 def FeatureStdExtZca
     : RISCVExtension<1, 0,
                      "part of the C extension, excluding compressed "
@@ -1298,12 +1291,12 @@ def HasVendorXSfvqmaccqoq
 
 def FeatureVendorXSfvfwmaccqqq
     : RISCVExtension<1, 0,
-                     "SiFive Matrix Multiply Accumulate Instruction and 4-by-4)",
+                     "SiFive Matrix Multiply Accumulate Instruction (4-by-4)",
                      [FeatureStdExtZvfbfmin]>;
 def HasVendorXSfvfwmaccqqq
     : Predicate<"Subtarget->hasVendorXSfvfwmaccqqq()">,
       AssemblerPredicate<(all_of FeatureVendorXSfvfwmaccqqq),
-                         "'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction and 4-by-4))">;
+                         "'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction (4-by-4))">;
 
 def FeatureVendorXSfvfnrclipxfqf
     : RISCVExtension<1, 0,
@@ -1411,6 +1404,13 @@ def HasVendorXMIPSLSP
     : Predicate<"Subtarget->hasVendorXMIPSLSP()">,
       AssemblerPredicate<(all_of FeatureVendorXMIPSLSP),
                          "'Xmipslsp' (load and store pair instructions)">;
+def FeatureVendorXMIPSCBOP
+    : RISCVExtension<1, 0, "MIPS Software Prefetch">;
+def HasVendorXMIPSCBOP
+    : Predicate<"Subtarget->hasVendorXMIPSCBOP()">,
+      AssemblerPredicate<(all_of FeatureVendorXMIPSCBOP),
+                         "'Xmipscbop' (MIPS hardware prefetch)">;
+def NotHasVendorXMIPSCBOP : Predicate<"!Subtarget->hasVendorXMIPSCBOP()">;
 
 // WCH / Nanjing Qinheng Microelectronics Extension(s)
 
@@ -1607,10 +1607,17 @@ def HasVendorXAndesVBFHCvt
       AssemblerPredicate<(all_of FeatureVendorXAndesVBFHCvt),
                          "'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension)">;
 
+def FeatureVendorXAndesVSIntLoad
+    : RISCVExtension<5, 0, "Andes Vector INT4 Load Extension",
+                     [FeatureStdExtZve32x]>;
+def HasVendorXAndesVSIntLoad
+    : Predicate<"Subtarget->hasVendorXAndesVSIntLoad()">,
+      AssemblerPredicate<(all_of FeatureVendorXAndesVSIntLoad),
+                         "'XAndesVSIntLoad' (Andes Vector INT4 Load Extension)">;
 
 def FeatureVendorXAndesVPackFPH
-    : RISCVExtension<5, 0, "Andes Vector Packed FP16 Extension",
-                     [FeatureStdExtZvfhmin]>;
+    : RISCVExtension<5, 0,
+                     "Andes Vector Packed FP16 Extension", [FeatureStdExtF]>;
 def HasVendorXAndesVPackFPH
     : Predicate<"Subtarget->hasVendorXAndesVPackFPH()">,
       AssemblerPredicate<(all_of FeatureVendorXAndesVPackFPH),

@@ -13,8 +13,6 @@
 #include "mlir/TableGen/Trait.h"
 #include "mlir/TableGen/Interfaces.h"
 #include "mlir/TableGen/Predicate.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 

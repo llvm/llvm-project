@@ -9,7 +9,7 @@
 #ifndef LLVM_TARGETPARSER_TRIPLE_H
 #define LLVM_TARGETPARSER_TRIPLE_H
 
-#include "llvm/ADT/Twine.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/VersionTuple.h"
 
@@ -20,6 +20,8 @@
 #undef sparc
 
 namespace llvm {
+enum class ExceptionHandling;
+class Twine;
 
 /// Triple - Helper class for working with autoconf configuration names. For
 /// historical reasons, we also call these 'triples' (they used to contain
@@ -349,7 +351,12 @@ public:
   /// triple fields unknown.
   Triple() = default;
 
+  LLVM_ABI explicit Triple(std::string &&Str);
+  explicit Triple(StringRef Str) : Triple(Str.str()) {}
+  explicit Triple(const char *Str) : Triple(std::string(Str)) {}
+  explicit Triple(const std::string &Str) : Triple(std::string(Str)) {}
   LLVM_ABI explicit Triple(const Twine &Str);
+
   LLVM_ABI Triple(const Twine &ArchStr, const Twine &VendorStr,
                   const Twine &OSStr);
   LLVM_ABI Triple(const Twine &ArchStr, const Twine &VendorStr,
@@ -581,6 +588,9 @@ public:
   /// Is this an Apple XROS triple.
   bool isXROS() const { return getOS() == Triple::XROS; }
 
+  /// Is this an Apple BridgeOS triple.
+  bool isBridgeOS() const { return getOS() == Triple::BridgeOS; }
+
   /// Is this an Apple DriverKit triple.
   bool isDriverKit() const { return getOS() == Triple::DriverKit; }
 
@@ -591,9 +601,11 @@ public:
     return (getVendor() == Triple::Apple) && isOSBinFormatMachO();
   }
 
-  /// Is this a "Darwin" OS (macOS, iOS, tvOS, watchOS, XROS, or DriverKit).
+  /// Is this a "Darwin" OS (macOS, iOS, tvOS, watchOS, DriverKit, XROS, or
+  /// bridgeOS).
   bool isOSDarwin() const {
-    return isMacOSX() || isiOS() || isWatchOS() || isDriverKit() || isXROS();
+    return isMacOSX() || isiOS() || isWatchOS() || isDriverKit() || isXROS() ||
+           isBridgeOS();
   }
 
   bool isSimulatorEnvironment() const {
@@ -1310,6 +1322,8 @@ public:
   /// Returns whether an OS version is invalid and would not map to an Apple OS.
   LLVM_ABI static bool isValidVersionForOS(OSType OSKind,
                                            const VersionTuple &Version);
+
+  LLVM_ABI ExceptionHandling getDefaultExceptionHandling() const;
 };
 
 } // End llvm namespace
