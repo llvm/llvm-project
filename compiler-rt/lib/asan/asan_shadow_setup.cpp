@@ -19,29 +19,6 @@
 #  include "asan_internal.h"
 #  include "asan_mapping.h"
 
-#  if SANITIZER_AIX == 1 && SANITIZER_WORDSIZE == 64
-#    define HANDLE_SHADOW_GAP()                                    \
-      do {                                                         \
-        if (kMidShadowBeg)                                         \
-          ReserveShadowMemoryRange(kMidShadowBeg, kMidShadowEnd,   \
-                                   "mid shadow");                  \
-        if (kMid2ShadowBeg)                                        \
-          ReserveShadowMemoryRange(kMid2ShadowBeg, kMid2ShadowEnd, \
-                                   "mid2 shadow");                 \
-        if (kMid3ShadowBeg)                                        \
-          ReserveShadowMemoryRange(kMid3ShadowBeg, kMid3ShadowEnd, \
-                                   "mid3 shadow");                 \
-      } while (0)
-#  else
-#    define HANDLE_SHADOW_GAP()                                         \
-      do {                                                              \
-        if (kShadowGapBeg) {                                            \
-          ProtectGap(kShadowGapBeg, kShadowGapEnd - kShadowGapBeg + 1); \
-          CHECK_EQ(kShadowGapEnd, kHighShadowBeg - 1);                  \
-        }                                                               \
-      } while (0)
-#  endif
-
 namespace __asan {
 
 static void ProtectGap(uptr addr, uptr size) {
@@ -63,6 +40,26 @@ static void ProtectGap(uptr addr, uptr size) {
   }
   __sanitizer::ProtectGap(addr, size, kZeroBaseShadowStart,
                           kZeroBaseMaxShadowStart);
+}
+
+static void HandleShadowGap() {
+#if SANITIZER_AIX == 1 && SANITIZER_WORDSIZE == 64
+  // Fox 64-bit AIX, there is a very customized memory layout, we don't have
+  // the ability to protect all the shadow gaps. But we need to reserve
+  // shadow memory for middle memory.
+  if (kMidShadowBeg)
+    ReserveShadowMemoryRange(kMidShadowBeg, kMidShadowEnd, "mid shadow");
+  if (kMid2ShadowBeg)
+    ReserveShadowMemoryRange(kMid2ShadowBeg, kMid2ShadowEnd, "mid2 shadow");
+  if (kMid3ShadowBeg)
+    ReserveShadowMemoryRange(kMid3ShadowBeg, kMid3ShadowEnd, "mid3 shadow");
+#else
+  if (kShadowGapBeg) {
+    // protect the gap.
+    ProtectGap(kShadowGapBeg, kShadowGapEnd - kShadowGapBeg + 1);
+    CHECK_EQ(kShadowGapEnd, kHighShadowBeg - 1);
+  }
+#endif
 }
 
 static void MaybeReportLinuxPIEBug() {
@@ -114,7 +111,7 @@ void InitializeShadowMemory() {
       ReserveShadowMemoryRange(shadow_start, kLowShadowEnd, "low shadow");
     // mmap the high shadow.
     ReserveShadowMemoryRange(kHighShadowBeg, kHighShadowEnd, "high shadow");
-    HANDLE_SHADOW_GAP();
+    HandleShadowGap();
   } else if (kMidMemBeg &&
              MemoryRangeIsAvailable(shadow_start, kMidMemBeg - 1) &&
              MemoryRangeIsAvailable(kMidMemEnd + 1, kHighShadowEnd)) {
