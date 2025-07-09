@@ -875,6 +875,10 @@ void TargetLoweringBase::initActions() {
                       ISD::FATAN2},
                      {MVT::f32, MVT::f64, MVT::f128}, Expand);
 
+  // Insert custom handling default for llvm.canonicalize.*.
+  setOperationAction(ISD::FCANONICALIZE,
+                     {MVT::f16, MVT::f32, MVT::f64, MVT::f128}, Expand);
+
   // FIXME: Query RuntimeLibCalls to make the decision.
   setOperationAction({ISD::LRINT, ISD::LLRINT, ISD::LROUND, ISD::LLROUND},
                      {MVT::f32, MVT::f64, MVT::f128}, LibCall);
