@@ -1339,7 +1339,6 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_as_input",
             "values": {"c++26": 202502},
             "headers": ["ranges"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_as_rvalue",
