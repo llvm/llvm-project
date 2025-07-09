@@ -4409,6 +4409,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     insertCheckShadowOf(Mask, &I);
 
     assert(RoundingMode->getType()->isIntegerTy());
+    // Only four bits of the rounding mode are used, though it's very
+    // unusual to have uninitialized bits there (more commonly, it's a
+    // constant).
     insertCheckShadowOf(RoundingMode, &I);
 
     assert(I.getType() == WriteThrough->getType());
