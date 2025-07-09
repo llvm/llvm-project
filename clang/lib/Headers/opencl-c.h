@@ -17841,6 +17841,72 @@ void        __ovld __conv intel_sub_group_block_write_ul4( __global ulong* p, ul
 void        __ovld __conv intel_sub_group_block_write_ul8( __global ulong* p, ulong8 data);
 #endif // cl_intel_subgroups_long
 
+#if defined(cl_intel_subgroup_local_block_io)
+uint    __ovld __conv intel_sub_group_block_read( const __local uint* p );
+uint2   __ovld __conv intel_sub_group_block_read2( const __local uint* p );
+uint4   __ovld __conv intel_sub_group_block_read4( const __local uint* p );
+uint8   __ovld __conv intel_sub_group_block_read8( const __local uint* p );
+
+void    __ovld __conv intel_sub_group_block_write( __local uint* p, uint data );
+void    __ovld __conv intel_sub_group_block_write2( __local uint* p, uint2 data );
+void    __ovld __conv intel_sub_group_block_write4( __local uint* p, uint4 data );
+void    __ovld __conv intel_sub_group_block_write8( __local uint* p, uint8 data );
+
+#if defined(cl_intel_subgroups_char) || defined(cl_intel_subgroups_short) ||   \
+    defined(cl_intel_subgroups_long)
+uint       __ovld __conv intel_sub_group_block_read_ui( const __local uint* p );
+uint2      __ovld __conv intel_sub_group_block_read_ui2( const __local uint* p );
+uint4      __ovld __conv intel_sub_group_block_read_ui4( const __local uint* p );
+uint8      __ovld __conv intel_sub_group_block_read_ui8( const __local uint* p );
+
+void       __ovld __conv intel_sub_group_block_write_ui( __local uint* p, uint data );
+void       __ovld __conv intel_sub_group_block_write_ui2( __local uint* p, uint2 data );
+void       __ovld __conv intel_sub_group_block_write_ui4( __local uint* p, uint4 data );
+void       __ovld __conv intel_sub_group_block_write_ui8( __local uint* p, uint8 data );
+#endif // defined(cl_intel_subgroups_char) || defined(cl_intel_subgroups_short) ||
+       // defined(cl_intel_subgroups_long)
+
+#if defined(cl_intel_subgroups_char)
+uchar      __ovld __conv intel_sub_group_block_read_uc(   const __local uchar* p );
+uchar2     __ovld __conv intel_sub_group_block_read_uc2(  const __local uchar* p );
+uchar4     __ovld __conv intel_sub_group_block_read_uc4(  const __local uchar* p );
+uchar8     __ovld __conv intel_sub_group_block_read_uc8(  const __local uchar* p );
+uchar16    __ovld __conv intel_sub_group_block_read_uc16( const __local uchar* p );
+
+void        __ovld __conv intel_sub_group_block_write_uc(   __local uchar* p, uchar  data );
+void        __ovld __conv intel_sub_group_block_write_uc2(  __local uchar* p, uchar2 data );
+void        __ovld __conv intel_sub_group_block_write_uc4(  __local uchar* p, uchar4 data );
+void        __ovld __conv intel_sub_group_block_write_uc8(  __local uchar* p, uchar8 data );
+void        __ovld __conv intel_sub_group_block_write_uc16( __local uchar* p, uchar16 data );
+#endif // defined(cl_intel_subgroups_char)
+
+#if defined(cl_intel_subgroups_short)
+ushort      __ovld __conv intel_sub_group_block_read_us(  const __local ushort* p );
+ushort2     __ovld __conv intel_sub_group_block_read_us2( const __local ushort* p );
+ushort4     __ovld __conv intel_sub_group_block_read_us4( const __local ushort* p );
+ushort8     __ovld __conv intel_sub_group_block_read_us8( const __local ushort* p );
+ushort16    __ovld __conv intel_sub_group_block_read_us16( const __local ushort* p );
+
+void        __ovld __conv intel_sub_group_block_write_us(  __local ushort* p, ushort  data );
+void        __ovld __conv intel_sub_group_block_write_us2( __local ushort* p, ushort2 data );
+void        __ovld __conv intel_sub_group_block_write_us4( __local ushort* p, ushort4 data );
+void        __ovld __conv intel_sub_group_block_write_us8( __local ushort* p, ushort8 data );
+void        __ovld __conv intel_sub_group_block_write_us16( __local ushort* p, ushort16 data );
+#endif // defined(cl_intel_subgroups_short)
+
+#if defined(cl_intel_subgroups_long)
+ulong      __ovld __conv intel_sub_group_block_read_ul(  const __local ulong* p );
+ulong2     __ovld __conv intel_sub_group_block_read_ul2( const __local ulong* p );
+ulong4     __ovld __conv intel_sub_group_block_read_ul4( const __local ulong* p );
+ulong8     __ovld __conv intel_sub_group_block_read_ul8( const __local ulong* p );
+
+void        __ovld __conv intel_sub_group_block_write_ul(  __local ulong* p, ulong  data );
+void        __ovld __conv intel_sub_group_block_write_ul2( __local ulong* p, ulong2 data );
+void        __ovld __conv intel_sub_group_block_write_ul4( __local ulong* p, ulong4 data );
+void        __ovld __conv intel_sub_group_block_write_ul8( __local ulong* p, ulong8 data );
+#endif // defined(cl_intel_subgroups_long)
+#endif // cl_intel_subgroup_local_block_io
+
 #ifdef cl_intel_device_side_avc_motion_estimation
 #pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : begin
 
