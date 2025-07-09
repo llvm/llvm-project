@@ -31,6 +31,36 @@ end:
   ret i1 %result
 }
 
+define i1 @test_commuted(i1 %cond, i64 %left, i64 %right) {
+; CHECK-LABEL: define i1 @test_commuted(
+; CHECK-SAME: i1 [[COND:%.*]], i64 [[LEFT:%.*]], i64 [[RIGHT:%.*]]) {
+; CHECK-NEXT:  [[START:.*:]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
+; CHECK:       [[COND_TRUE]]:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[RIGHT]], [[LEFT]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[END:.*]], label %[[COND_FALSE]]
+; CHECK:       [[COND_FALSE]]:
+; CHECK-NEXT:    br label %[[END]]
+; CHECK:       [[END]]:
+; CHECK-NEXT:    ret i1 false
+;
+start:
+  br i1 %cond, label %cond.true, label %cond.false
+
+cond.true:
+  %cmp = icmp sgt i64 %right, %left
+  br i1 %cmp, label %end, label %cond.false
+
+cond.false:
+  %left_or_right = phi i64 [ %left, %start ], [ %right, %cond.true ]
+  %false = icmp slt i64 %left, %left_or_right
+  br label %end
+
+end:
+  %result = phi i1 [ false, %cond.true ], [ %false, %cond.false ]
+  ret i1 %result
+}
+
 define i1 @test_with_wrong_icmp(i1 %cond, i64 %left, i64 %right) {
 ; CHECK-LABEL: define i1 @test_with_wrong_icmp(
 ; CHECK-SAME: i1 [[COND:%.*]], i64 [[LEFT:%.*]], i64 [[RIGHT:%.*]]) {
@@ -85,6 +115,37 @@ start:
 
 cond.true:
   %cmp = icmp slt i64 %right, %left         ; slt instead of sgt here
+  br i1 %cmp, label %end, label %cond.false
+
+cond.false:
+  %left_or_right = phi i64 [ %left, %start ], [ %right, %cond.true ]
+  %false = icmp sgt i64 %left_or_right, %left
+  br label %end
+
+end:
+  %result = phi i1 [ false, %cond.true ], [ %false, %cond.false ]
+  ret i1 %result
+}
+
+define i1 @test_which_optimizes_to_select(i1 %cond, i64 %left, i64 %right) {
+; CHECK-LABEL: define i1 @test_which_folds_to_a_select(
+; CHECK-SAME: i1 [[COND:%.*]], i64 [[LEFT:%.*]], i64 [[RIGHT:%.*]]) {
+; CHECK-NEXT:  [[START:.*:]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
+; CHECK:       [[COND_TRUE]]:
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp sgt i64 [[RIGHT]], [[LEFT]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[COND_FALSE]], label %[[END:.*]]
+; CHECK:       [[COND_FALSE]]:
+; CHECK-NEXT:    br label %[[END]]
+; CHECK:       [[END]]:
+; CHECK-NEXT:    [[RESULT:%.*]] = phi i1 [ false, %[[COND_TRUE]] ], [ [[COND]], %[[COND_FALSE]] ]
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+start:
+  br i1 %cond, label %cond.true, label %cond.false
+
+cond.true:
+  %cmp = icmp sle i64 %right, %left
   br i1 %cmp, label %end, label %cond.false
 
 cond.false:

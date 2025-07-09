@@ -7698,6 +7698,9 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (auto *PN = dyn_cast<PHINode>(Op0))
     if (Instruction *NV = foldOpIntoPhi(I, PN))
       return NV;
+  if (auto *PN = dyn_cast<PHINode>(Op1))
+    if (Instruction *NV = foldOpIntoPhi(I, PN))
+      return NV;
 
   if (Instruction *Res = foldICmpInstWithConstantNotInt(I))
     return Res;
