@@ -87,6 +87,19 @@ struct BuiltinTensorExternalModel
 
     return mlir::success();
   }
+
+  llvm::FailureOr<BufferLikeType> getBufferTypeAtFunctionBoundary(
+      mlir::Type tensor, mlir::func::FuncOp funcOp,
+      const BufferizationOptions &options,
+      llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
+    auto tensorType = cast<TensorType>(tensor);
+    auto memSpace = options.defaultMemorySpaceFn(tensorType);
+    if (!memSpace.has_value())
+      return emitError() << "could not infer memory space";
+
+    return cast<BufferLikeType>(options.functionArgTypeConverterFn(
+        tensorType, *memSpace, funcOp, options));
+  }
 };
 
 template <typename MemRef>

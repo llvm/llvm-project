@@ -13,6 +13,7 @@
 // Bufferization Type Interfaces
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Func/IR/FuncOps.h" // to access mlir::func::FuncOp
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Types.h"
 

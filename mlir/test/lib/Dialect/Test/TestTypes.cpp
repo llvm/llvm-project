@@ -573,3 +573,11 @@ TestTensorType::getBufferType(
                      getElementType() == testMemref.getElementType();
   return mlir::success(valid);
 }
+
+::mlir::FailureOr<::mlir::bufferization::BufferLikeType>
+TestTensorType::getBufferTypeAtFunctionBoundary(
+    mlir::func::FuncOp,
+    const ::mlir::bufferization::BufferizationOptions &options,
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) {
+  return getBufferType(options, emitError);
+}
