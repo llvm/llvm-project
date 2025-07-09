@@ -198,6 +198,14 @@ private:
   bool tryConsumeExpectedToken(RootSignatureToken::Kind Expected);
   bool tryConsumeExpectedToken(ArrayRef<RootSignatureToken::Kind> Expected);
 
+  /// Consume tokens until the expected token has been peeked to be next
+  /// or we have reached the end of the stream. Note that this means the
+  /// expected token will be the next token not CurToken.
+  ///
+  /// Returns true if it found a token of the given type.
+  bool skipUntilExpectedToken(RootSignatureToken::Kind Expected);
+  bool skipUntilExpectedToken(ArrayRef<RootSignatureToken::Kind> Expected);
+
   /// Convert the token's offset in the signature string to its SourceLocation
   ///
   /// This allows to currently retrieve the location for multi-token

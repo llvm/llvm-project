@@ -103,3 +103,41 @@ void bad_root_signature_22() {}
 // expected-error@+1 {{invalid value of RootFlags}}
 [RootSignature("RootFlags(local_root_signature | root_flag_typo)")]
 void bad_root_signature_23() {}
+
+#define DemoMultipleErrorsRootSignature \
+  "CBV(b0, space = invalid)," \
+  "StaticSampler()" \
+  "DescriptorTable(" \
+  "  visibility = SHADER_VISIBILITY_ALL," \
+  "  visibility = SHADER_VISIBILITY_DOMAIN," \
+  ")," \
+  "SRV(t0, space = 28947298374912374098172)" \
+  "UAV(u0, flags = 3)" \
+  "DescriptorTable(Sampler(s0 flags = DATA_VOLATILE))," \
+  "CBV(b0),,"
+
+// expected-error@+7 {{expected integer literal after '='}}
+// expected-error@+6 {{did not specify mandatory parameter 's register'}}
+// expected-error@+5 {{specified the same parameter 'visibility' multiple times}}
+// expected-error@+4 {{integer literal is too large to be represented as a 32-bit signed integer type}}
+// expected-error@+3 {{flag value is neither a literal 0 nor a named value}}
+// expected-error@+2 {{expected ')' or ','}}
+// expected-error@+1 {{invalid parameter of RootSignature}}
+[RootSignature(DemoMultipleErrorsRootSignature)]
+void multiple_errors() {}
+
+#define DemoGranularityRootSignature \
+  "CBV(b0, reported_diag, flags = skipped_diag)," \
+  "DescriptorTable( " \
+  "  UAV(u0, reported_diag), " \
+  "  SRV(t0, skipped_diag), " \
+  ")," \
+  "StaticSampler(s0, reported_diag, SRV(t0, reported_diag)" \
+  ""
+
+// expected-error@+4 {{invalid parameter of CBV}}
+// expected-error@+3 {{invalid parameter of UAV}}
+// expected-error@+2 {{invalid parameter of StaticSampler}}
+// expected-error@+1 {{invalid parameter of SRV}}
+[RootSignature(DemoGranularityRootSignature)]
+void granularity_errors() {}

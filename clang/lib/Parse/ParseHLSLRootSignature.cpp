@@ -17,6 +17,15 @@ namespace hlsl {
 
 using TokenKind = RootSignatureToken::Kind;
 
+static const TokenKind RootElementKeywords[] = {
+    TokenKind::kw_RootFlags,
+    TokenKind::kw_CBV,
+    TokenKind::kw_UAV,
+    TokenKind::kw_SRV,
+    TokenKind::kw_DescriptorTable,
+    TokenKind::kw_StaticSampler,
+};
+
 RootSignatureParser::RootSignatureParser(
     llvm::dxbc::RootSignatureVersion Version,
     SmallVector<RootSignatureElement> &Elements, StringLiteral *Signature,
@@ -27,51 +36,68 @@ RootSignatureParser::RootSignatureParser(
 bool RootSignatureParser::parse() {
   // Iterate as many RootSignatureElements as possible, until we hit the
   // end of the stream
+  bool HadError = false;
   while (!peekExpectedToken(TokenKind::end_of_stream)) {
+    bool HadLocalError = false;
     if (tryConsumeExpectedToken(TokenKind::kw_RootFlags)) {
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Flags = parseRootFlags();
-      if (!Flags.has_value())
-        return true;
-      Elements.emplace_back(ElementLoc, *Flags);
+      if (Flags.has_value())
+        Elements.emplace_back(ElementLoc, *Flags);
+      else
+        HadLocalError = true;
     } else if (tryConsumeExpectedToken(TokenKind::kw_RootConstants)) {
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Constants = parseRootConstants();
-      if (!Constants.has_value())
-        return true;
-      Elements.emplace_back(ElementLoc, *Constants);
+      if (Constants.has_value())
+        Elements.emplace_back(ElementLoc, *Constants);
+      else
+        HadLocalError = true;
     } else if (tryConsumeExpectedToken(TokenKind::kw_DescriptorTable)) {
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Table = parseDescriptorTable();
-      if (!Table.has_value())
-        return true;
-      Elements.emplace_back(ElementLoc, *Table);
+      if (Table.has_value())
+        Elements.emplace_back(ElementLoc, *Table);
+      else {
+        HadLocalError = true;
+        // We are within a DescriptorTable, we will do our best to recover
+        // by skipping until we encounter the expected closing ')'.
+        skipUntilExpectedToken(TokenKind::pu_r_paren);
+        consumeNextToken();
+      }
     } else if (tryConsumeExpectedToken(
                    {TokenKind::kw_CBV, TokenKind::kw_SRV, TokenKind::kw_UAV})) {
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Descriptor = parseRootDescriptor();
-      if (!Descriptor.has_value())
-        return true;
-      Elements.emplace_back(ElementLoc, *Descriptor);
+      if (Descriptor.has_value())
+        Elements.emplace_back(ElementLoc, *Descriptor);
+      else
+        HadLocalError = true;
     } else if (tryConsumeExpectedToken(TokenKind::kw_StaticSampler)) {
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Sampler = parseStaticSampler();
-      if (!Sampler.has_value())
-        return true;
-      Elements.emplace_back(ElementLoc, *Sampler);
+      if (Sampler.has_value())
+        Elements.emplace_back(ElementLoc, *Sampler);
+      else
+        HadLocalError = true;
     } else {
+      HadLocalError = true;
       consumeNextToken(); // let diagnostic be at the start of invalid token
       reportDiag(diag::err_hlsl_invalid_token)
           << /*parameter=*/0 << /*param of*/ TokenKind::kw_RootSignature;
-      return true;
     }
 
-    // ',' denotes another element, otherwise, expected to be at end of stream
-    if (!tryConsumeExpectedToken(TokenKind::pu_comma))
+    if (HadLocalError) {
+      HadError = true;
+      skipUntilExpectedToken(RootElementKeywords);
+    } else if (!tryConsumeExpectedToken(TokenKind::pu_comma)) {
+      // ',' denotes another element, otherwise, expected to be at end of stream
       break;
+    }
   }
 
-  return consumeExpectedToken(TokenKind::end_of_stream,
+  return HadError ||
+         consumeExpectedToken(TokenKind::end_of_stream,
                               diag::err_expected_either, TokenKind::pu_comma);
 }
 
@@ -262,8 +288,13 @@ std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {
       // DescriptorTableClause - CBV, SRV, UAV, or Sampler
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Clause = parseDescriptorTableClause();
-      if (!Clause.has_value())
+      if (!Clause.has_value()) {
+        // We are within a DescriptorTableClause, we will do our best to recover
+        // by skipping until we encounter the expected closing ')'
+        skipUntilExpectedToken(TokenKind::pu_r_paren);
+        consumeNextToken();
         return std::nullopt;
+      }
       Elements.emplace_back(ElementLoc, *Clause);
       Table.NumClauses++;
     } else if (tryConsumeExpectedToken(TokenKind::kw_visibility)) {
@@ -1368,6 +1399,22 @@ bool RootSignatureParser::tryConsumeExpectedToken(
   if (!peekExpectedToken(AnyExpected))
     return false;
   consumeNextToken();
+  return true;
+}
+
+bool RootSignatureParser::skipUntilExpectedToken(TokenKind Expected) {
+  return skipUntilExpectedToken(ArrayRef{Expected});
+}
+
+bool RootSignatureParser::skipUntilExpectedToken(
+    ArrayRef<TokenKind> AnyExpected) {
+
+  while (!peekExpectedToken(AnyExpected)) {
+    if (peekExpectedToken(TokenKind::end_of_stream))
+      return false;
+    consumeNextToken();
+  }
+
   return true;
 }
 
