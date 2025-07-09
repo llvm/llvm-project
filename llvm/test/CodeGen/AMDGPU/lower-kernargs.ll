@@ -1855,6 +1855,209 @@ define amdgpu_kernel void @noundef_v2p0(<2 x ptr> noundef %arg0) {
   ret void
 }
 
+define amdgpu_kernel void @no_alias_mul(ptr addrspace(1) noalias %in, ptr addrspace(1) noalias %out, i32 %idx) {
+; HSA-LABEL: @no_alias_mul(
+; HSA-NEXT:    [[NO_ALIAS_MUL_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(280) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NO_ALIAS_MUL_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NO_ALIAS_MUL_KERNARG_SEGMENT]], i64 8
+; HSA-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
+; HSA-NEXT:    [[IDX_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NO_ALIAS_MUL_KERNARG_SEGMENT]], i64 16
+; HSA-NEXT:    [[IDX_LOAD:%.*]] = load i32, ptr addrspace(4) [[IDX_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
+; HSA-NEXT:    [[GEP1:%.*]] = getelementptr <32 x i32>, ptr addrspace(1) [[IN_LOAD]], i32 [[IDX_LOAD]]
+; HSA-NEXT:    [[LOAD:%.*]] = load <32 x i32>, ptr addrspace(1) [[GEP1]], align 128, !alias.scope [[META12:![0-9]+]], !noalias [[META15:![0-9]+]]
+; HSA-NEXT:    [[MUL:%.*]] = mul <32 x i32> [[LOAD]], [[LOAD]]
+; HSA-NEXT:    [[GEP2:%.*]] = getelementptr <32 x i32>, ptr addrspace(1) [[OUT_LOAD]], i32 [[IDX_LOAD]]
+; HSA-NEXT:    store <32 x i32> [[MUL]], ptr addrspace(1) [[GEP2]], align 128, !alias.scope [[META15]], !noalias [[META12]]
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @no_alias_mul(
+; MESA-NEXT:    [[NO_ALIAS_MUL_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(276) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NO_ALIAS_MUL_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NO_ALIAS_MUL_KERNARG_SEGMENT]], i64 44
+; MESA-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; MESA-NEXT:    [[IDX_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NO_ALIAS_MUL_KERNARG_SEGMENT]], i64 52
+; MESA-NEXT:    [[IDX_LOAD:%.*]] = load i32, ptr addrspace(4) [[IDX_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; MESA-NEXT:    [[GEP1:%.*]] = getelementptr <32 x i32>, ptr addrspace(1) [[IN_LOAD]], i32 [[IDX_LOAD]]
+; MESA-NEXT:    [[LOAD:%.*]] = load <32 x i32>, ptr addrspace(1) [[GEP1]], align 128, !alias.scope [[META12:![0-9]+]], !noalias [[META15:![0-9]+]]
+; MESA-NEXT:    [[MUL:%.*]] = mul <32 x i32> [[LOAD]], [[LOAD]]
+; MESA-NEXT:    [[GEP2:%.*]] = getelementptr <32 x i32>, ptr addrspace(1) [[OUT_LOAD]], i32 [[IDX_LOAD]]
+; MESA-NEXT:    store <32 x i32> [[MUL]], ptr addrspace(1) [[GEP2]], align 128, !alias.scope [[META15]], !noalias [[META12]]
+; MESA-NEXT:    ret void
+;
+  %gep1 = getelementptr <32 x i32>, ptr addrspace(1) %in, i32 %idx
+  %load = load <32 x i32>, ptr addrspace(1) %gep1
+  %mul = mul <32 x i32> %load, %load
+  %gep2 = getelementptr <32 x i32>, ptr addrspace(1) %out, i32 %idx
+  store <32 x i32> %mul, ptr addrspace(1) %gep2
+  ret void
+}
+
+define amdgpu_kernel void @no_alias_i8_to_f32(ptr addrspace(1) noalias %in, ptr addrspace(1) noalias %out, i32 %idx) nounwind {
+; HSA-LABEL: @no_alias_i8_to_f32(
+; HSA-NEXT:    [[NO_ALIAS_I8_TO_F32_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(280) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NO_ALIAS_I8_TO_F32_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NO_ALIAS_I8_TO_F32_KERNARG_SEGMENT]], i64 8
+; HSA-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
+; HSA-NEXT:    [[IDX_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NO_ALIAS_I8_TO_F32_KERNARG_SEGMENT]], i64 16
+; HSA-NEXT:    [[IDX_LOAD:%.*]] = load i32, ptr addrspace(4) [[IDX_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
+; HSA-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr addrspace(1) [[IN_LOAD]], i32 [[IDX_LOAD]]
+; HSA-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(1) [[GEP]], align 1, !alias.scope [[META17:![0-9]+]], !noalias [[META20:![0-9]+]]
+; HSA-NEXT:    [[CVT:%.*]] = uitofp i8 [[LOAD]] to float
+; HSA-NEXT:    store float [[CVT]], ptr addrspace(1) [[OUT_LOAD]], align 4, !alias.scope [[META20]], !noalias [[META17]]
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @no_alias_i8_to_f32(
+; MESA-NEXT:    [[NO_ALIAS_I8_TO_F32_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(276) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NO_ALIAS_I8_TO_F32_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NO_ALIAS_I8_TO_F32_KERNARG_SEGMENT]], i64 44
+; MESA-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; MESA-NEXT:    [[IDX_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NO_ALIAS_I8_TO_F32_KERNARG_SEGMENT]], i64 52
+; MESA-NEXT:    [[IDX_LOAD:%.*]] = load i32, ptr addrspace(4) [[IDX_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; MESA-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr addrspace(1) [[IN_LOAD]], i32 [[IDX_LOAD]]
+; MESA-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(1) [[GEP]], align 1, !alias.scope [[META17:![0-9]+]], !noalias [[META20:![0-9]+]]
+; MESA-NEXT:    [[CVT:%.*]] = uitofp i8 [[LOAD]] to float
+; MESA-NEXT:    store float [[CVT]], ptr addrspace(1) [[OUT_LOAD]], align 4, !alias.scope [[META20]], !noalias [[META17]]
+; MESA-NEXT:    ret void
+;
+  %gep = getelementptr i8, ptr addrspace(1) %in, i32 %idx
+  %load = load i8, ptr addrspace(1) %gep, align 1
+  %cvt = uitofp i8 %load to float
+  store float %cvt, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @no_alias_fmul_buffers(ptr addrspace(8) noalias %in, ptr addrspace(8) noalias %out, i32 %idx) {
+; HSA-LABEL: @no_alias_fmul_buffers(
+; HSA-NEXT:    [[NO_ALIAS_FMUL_BUFFERS_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(296) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NO_ALIAS_FMUL_BUFFERS_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(8), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NO_ALIAS_FMUL_BUFFERS_KERNARG_SEGMENT]], i64 16
+; HSA-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(8), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
+; HSA-NEXT:    [[L0:%.*]] = load float, ptr addrspace(8) [[IN_LOAD]], align 4, !alias.scope [[META22:![0-9]+]], !noalias [[META25:![0-9]+]]
+; HSA-NEXT:    [[S0:%.*]] = fmul float [[L0]], [[L0]]
+; HSA-NEXT:    store float [[S0]], ptr addrspace(8) [[OUT_LOAD]], align 4, !alias.scope [[META25]], !noalias [[META22]]
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @no_alias_fmul_buffers(
+; MESA-NEXT:    [[NO_ALIAS_FMUL_BUFFERS_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(292) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NO_ALIAS_FMUL_BUFFERS_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(8), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NO_ALIAS_FMUL_BUFFERS_KERNARG_SEGMENT]], i64 52
+; MESA-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(8), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; MESA-NEXT:    [[L0:%.*]] = load float, ptr addrspace(8) [[IN_LOAD]], align 4, !alias.scope [[META22:![0-9]+]], !noalias [[META25:![0-9]+]]
+; MESA-NEXT:    [[S0:%.*]] = fmul float [[L0]], [[L0]]
+; MESA-NEXT:    store float [[S0]], ptr addrspace(8) [[OUT_LOAD]], align 4, !alias.scope [[META25]], !noalias [[META22]]
+; MESA-NEXT:    ret void
+;
+  %l0 = load float, ptr addrspace(8) %in
+  %s0 = fmul float %l0, %l0
+  store float %s0, ptr addrspace(8) %out
+  ret void
+}
+
+define amdgpu_kernel void @no_alias_fmul_flat(ptr noalias %in, ptr noalias %out, i32 %idx) {
+; HSA-LABEL: @no_alias_fmul_flat(
+; HSA-NEXT:    [[NO_ALIAS_FMUL_FLAT_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(280) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NO_ALIAS_FMUL_FLAT_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[IN_LOAD:%.*]] = load ptr, ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NO_ALIAS_FMUL_FLAT_KERNARG_SEGMENT]], i64 8
+; HSA-NEXT:    [[OUT_LOAD:%.*]] = load ptr, ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 8, !invariant.load [[META0]]
+; HSA-NEXT:    [[L0:%.*]] = load float, ptr [[IN_LOAD]], align 4, !alias.scope [[META27:![0-9]+]], !noalias [[META30:![0-9]+]]
+; HSA-NEXT:    [[S0:%.*]] = fmul float [[L0]], [[L0]]
+; HSA-NEXT:    store float [[S0]], ptr [[OUT_LOAD]], align 4, !alias.scope [[META30]], !noalias [[META27]]
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @no_alias_fmul_flat(
+; MESA-NEXT:    [[NO_ALIAS_FMUL_FLAT_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(276) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NO_ALIAS_FMUL_FLAT_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[IN_LOAD:%.*]] = load ptr, ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NO_ALIAS_FMUL_FLAT_KERNARG_SEGMENT]], i64 44
+; MESA-NEXT:    [[OUT_LOAD:%.*]] = load ptr, ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; MESA-NEXT:    [[L0:%.*]] = load float, ptr [[IN_LOAD]], align 4, !alias.scope [[META27:![0-9]+]], !noalias [[META30:![0-9]+]]
+; MESA-NEXT:    [[S0:%.*]] = fmul float [[L0]], [[L0]]
+; MESA-NEXT:    store float [[S0]], ptr [[OUT_LOAD]], align 4, !alias.scope [[META30]], !noalias [[META27]]
+; MESA-NEXT:    ret void
+;
+  %l0 = load float, ptr %in
+  %s0 = fmul float %l0, %l0
+  store float %s0, ptr %out
+  ret void
+}
+
+define amdgpu_kernel void @may_alias_fmul(ptr addrspace(8) %in, ptr addrspace(8) %out, i32 %idx) {
+; HSA-LABEL: @may_alias_fmul(
+; HSA-NEXT:    [[MAY_ALIAS_FMUL_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(296) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[MAY_ALIAS_FMUL_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(8), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
+; HSA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[MAY_ALIAS_FMUL_KERNARG_SEGMENT]], i64 16
+; HSA-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(8), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
+; HSA-NEXT:    [[L0:%.*]] = load float, ptr addrspace(8) [[IN_LOAD]], align 4
+; HSA-NEXT:    [[S0:%.*]] = fmul float [[L0]], [[L0]]
+; HSA-NEXT:    store float [[S0]], ptr addrspace(8) [[OUT_LOAD]], align 4
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @may_alias_fmul(
+; MESA-NEXT:    [[MAY_ALIAS_FMUL_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(292) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[MAY_ALIAS_FMUL_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(8), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; MESA-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[MAY_ALIAS_FMUL_KERNARG_SEGMENT]], i64 52
+; MESA-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(8), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; MESA-NEXT:    [[L0:%.*]] = load float, ptr addrspace(8) [[IN_LOAD]], align 4
+; MESA-NEXT:    [[S0:%.*]] = fmul float [[L0]], [[L0]]
+; MESA-NEXT:    store float [[S0]], ptr addrspace(8) [[OUT_LOAD]], align 4
+; MESA-NEXT:    ret void
+;
+  %l0 = load float, ptr addrspace(8) %in
+  %s0 = fmul float %l0, %l0
+  store float %s0, ptr addrspace(8) %out
+  ret void
+}
+
+define amdgpu_kernel void @may_alias_independent(ptr addrspace(8) %buf, i32 %idx) {
+; HSA-LABEL: @may_alias_independent(
+; HSA-NEXT:    [[MAY_ALIAS_INDEPENDENT_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(280) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; HSA-NEXT:    [[BUF_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[MAY_ALIAS_INDEPENDENT_KERNARG_SEGMENT]], i64 0
+; HSA-NEXT:    [[BUF_LOAD:%.*]] = load ptr addrspace(8), ptr addrspace(4) [[BUF_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
+; HSA-NEXT:    [[IDX_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[MAY_ALIAS_INDEPENDENT_KERNARG_SEGMENT]], i64 16
+; HSA-NEXT:    [[IDX_LOAD:%.*]] = load i32, ptr addrspace(4) [[IDX_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
+; HSA-NEXT:    store float 1.000000e+00, ptr addrspace(8) [[BUF_LOAD]], align 4
+; HSA-NEXT:    [[OFFSET1:%.*]] = add i32 [[IDX_LOAD]], 4
+; HSA-NEXT:    [[OFFSET2:%.*]] = add i32 [[IDX_LOAD]], 8
+; HSA-NEXT:    [[GEP1:%.*]] = getelementptr float, ptr addrspace(8) [[BUF_LOAD]], i32 [[OFFSET1]]
+; HSA-NEXT:    [[GEP2:%.*]] = getelementptr float, ptr addrspace(8) [[BUF_LOAD]], i32 [[OFFSET2]]
+; HSA-NEXT:    [[L0:%.*]] = load float, ptr addrspace(8) [[GEP1]], align 4
+; HSA-NEXT:    store float [[L0]], ptr addrspace(8) [[GEP2]], align 4
+; HSA-NEXT:    ret void
+;
+; MESA-LABEL: @may_alias_independent(
+; MESA-NEXT:    [[MAY_ALIAS_INDEPENDENT_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(276) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; MESA-NEXT:    [[BUF_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[MAY_ALIAS_INDEPENDENT_KERNARG_SEGMENT]], i64 36
+; MESA-NEXT:    [[BUF_LOAD:%.*]] = load ptr addrspace(8), ptr addrspace(4) [[BUF_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; MESA-NEXT:    [[IDX_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[MAY_ALIAS_INDEPENDENT_KERNARG_SEGMENT]], i64 52
+; MESA-NEXT:    [[IDX_LOAD:%.*]] = load i32, ptr addrspace(4) [[IDX_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
+; MESA-NEXT:    store float 1.000000e+00, ptr addrspace(8) [[BUF_LOAD]], align 4
+; MESA-NEXT:    [[OFFSET1:%.*]] = add i32 [[IDX_LOAD]], 4
+; MESA-NEXT:    [[OFFSET2:%.*]] = add i32 [[IDX_LOAD]], 8
+; MESA-NEXT:    [[GEP1:%.*]] = getelementptr float, ptr addrspace(8) [[BUF_LOAD]], i32 [[OFFSET1]]
+; MESA-NEXT:    [[GEP2:%.*]] = getelementptr float, ptr addrspace(8) [[BUF_LOAD]], i32 [[OFFSET2]]
+; MESA-NEXT:    [[L0:%.*]] = load float, ptr addrspace(8) [[GEP1]], align 4
+; MESA-NEXT:    store float [[L0]], ptr addrspace(8) [[GEP2]], align 4
+; MESA-NEXT:    ret void
+;
+  store float 1.0, ptr addrspace(8) %buf
+  %offset1 = add i32 %idx, 4
+  %offset2 = add i32 %idx, 8
+  %gep1 = getelementptr float, ptr addrspace(8) %buf, i32 %offset1
+  %gep2 = getelementptr float, ptr addrspace(8) %buf, i32 %offset2
+  %l0 = load float, ptr addrspace(8) %gep1
+  store float %l0, ptr addrspace(8) %gep2
+  ret void
+}
+
 attributes #0 = { nounwind "target-cpu"="kaveri" }
 attributes #1 = { nounwind "target-cpu"="kaveri" "amdgpu-implicitarg-num-bytes"="40" }
 attributes #2 = { nounwind "target-cpu"="tahiti" }
@@ -1865,13 +2068,15 @@ attributes #2 = { nounwind "target-cpu"="tahiti" }
 ; HSA: attributes #[[ATTR1:[0-9]+]] = { nounwind "target-cpu"="kaveri" }
 ; HSA: attributes #[[ATTR2:[0-9]+]] = { nounwind "amdgpu-implicitarg-num-bytes"="40" "target-cpu"="kaveri" }
 ; HSA: attributes #[[ATTR3:[0-9]+]] = { nounwind "target-cpu"="tahiti" }
-; HSA: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; HSA: attributes #[[ATTR4:[0-9]+]] = { nounwind }
+; HSA: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; MESA: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; MESA: attributes #[[ATTR1:[0-9]+]] = { nounwind "target-cpu"="kaveri" }
 ; MESA: attributes #[[ATTR2:[0-9]+]] = { nounwind "amdgpu-implicitarg-num-bytes"="40" "target-cpu"="kaveri" }
 ; MESA: attributes #[[ATTR3:[0-9]+]] = { nounwind "target-cpu"="tahiti" }
-; MESA: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; MESA: attributes #[[ATTR4:[0-9]+]] = { nounwind }
+; MESA: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; HSA: [[META0]] = !{}
 ; HSA: [[RNG1]] = !{i32 0, i32 8}
@@ -1885,6 +2090,26 @@ attributes #2 = { nounwind "target-cpu"="tahiti" }
 ; HSA: [[META9]] = distinct !{[[META9]], [[META10:![0-9]+]], !"kern_noalias_global_ptr_x2: %ptr0"}
 ; HSA: [[META10]] = distinct !{[[META10]], !"kern_noalias_global_ptr_x2"}
 ; HSA: [[META11]] = distinct !{[[META11]], [[META10]], !"kern_noalias_global_ptr_x2: %ptr1"}
+; HSA: [[META12]] = !{[[META13:![0-9]+]]}
+; HSA: [[META13]] = distinct !{[[META13]], [[META14:![0-9]+]], !"no_alias_mul: %in"}
+; HSA: [[META14]] = distinct !{[[META14]], !"no_alias_mul"}
+; HSA: [[META15]] = !{[[META16:![0-9]+]]}
+; HSA: [[META16]] = distinct !{[[META16]], [[META14]], !"no_alias_mul: %out"}
+; HSA: [[META17]] = !{[[META18:![0-9]+]]}
+; HSA: [[META18]] = distinct !{[[META18]], [[META19:![0-9]+]], !"no_alias_i8_to_f32: %in"}
+; HSA: [[META19]] = distinct !{[[META19]], !"no_alias_i8_to_f32"}
+; HSA: [[META20]] = !{[[META21:![0-9]+]]}
+; HSA: [[META21]] = distinct !{[[META21]], [[META19]], !"no_alias_i8_to_f32: %out"}
+; HSA: [[META22]] = !{[[META23:![0-9]+]]}
+; HSA: [[META23]] = distinct !{[[META23]], [[META24:![0-9]+]], !"no_alias_fmul_buffers: %in"}
+; HSA: [[META24]] = distinct !{[[META24]], !"no_alias_fmul_buffers"}
+; HSA: [[META25]] = !{[[META26:![0-9]+]]}
+; HSA: [[META26]] = distinct !{[[META26]], [[META24]], !"no_alias_fmul_buffers: %out"}
+; HSA: [[META27]] = !{[[META28:![0-9]+]]}
+; HSA: [[META28]] = distinct !{[[META28]], [[META29:![0-9]+]], !"no_alias_fmul_flat: %in"}
+; HSA: [[META29]] = distinct !{[[META29]], !"no_alias_fmul_flat"}
+; HSA: [[META30]] = !{[[META31:![0-9]+]]}
+; HSA: [[META31]] = distinct !{[[META31]], [[META29]], !"no_alias_fmul_flat: %out"}
 ;.
 ; MESA: [[META0]] = !{}
 ; MESA: [[RNG1]] = !{i32 0, i32 8}
@@ -1898,4 +2123,24 @@ attributes #2 = { nounwind "target-cpu"="tahiti" }
 ; MESA: [[META9]] = distinct !{[[META9]], [[META10:![0-9]+]], !"kern_noalias_global_ptr_x2: %ptr0"}
 ; MESA: [[META10]] = distinct !{[[META10]], !"kern_noalias_global_ptr_x2"}
 ; MESA: [[META11]] = distinct !{[[META11]], [[META10]], !"kern_noalias_global_ptr_x2: %ptr1"}
+; MESA: [[META12]] = !{[[META13:![0-9]+]]}
+; MESA: [[META13]] = distinct !{[[META13]], [[META14:![0-9]+]], !"no_alias_mul: %in"}
+; MESA: [[META14]] = distinct !{[[META14]], !"no_alias_mul"}
+; MESA: [[META15]] = !{[[META16:![0-9]+]]}
+; MESA: [[META16]] = distinct !{[[META16]], [[META14]], !"no_alias_mul: %out"}
+; MESA: [[META17]] = !{[[META18:![0-9]+]]}
+; MESA: [[META18]] = distinct !{[[META18]], [[META19:![0-9]+]], !"no_alias_i8_to_f32: %in"}
+; MESA: [[META19]] = distinct !{[[META19]], !"no_alias_i8_to_f32"}
+; MESA: [[META20]] = !{[[META21:![0-9]+]]}
+; MESA: [[META21]] = distinct !{[[META21]], [[META19]], !"no_alias_i8_to_f32: %out"}
+; MESA: [[META22]] = !{[[META23:![0-9]+]]}
+; MESA: [[META23]] = distinct !{[[META23]], [[META24:![0-9]+]], !"no_alias_fmul_buffers: %in"}
+; MESA: [[META24]] = distinct !{[[META24]], !"no_alias_fmul_buffers"}
+; MESA: [[META25]] = !{[[META26:![0-9]+]]}
+; MESA: [[META26]] = distinct !{[[META26]], [[META24]], !"no_alias_fmul_buffers: %out"}
+; MESA: [[META27]] = !{[[META28:![0-9]+]]}
+; MESA: [[META28]] = distinct !{[[META28]], [[META29:![0-9]+]], !"no_alias_fmul_flat: %in"}
+; MESA: [[META29]] = distinct !{[[META29]], !"no_alias_fmul_flat"}
+; MESA: [[META30]] = !{[[META31:![0-9]+]]}
+; MESA: [[META31]] = distinct !{[[META31]], [[META29]], !"no_alias_fmul_flat: %out"}
 ;.
