@@ -1566,9 +1566,9 @@ LogicalResult spirv::Deserializer::processConstantCompositeReplicateEXT(
     ArrayRef<uint32_t> operands) {
   if (operands.size() != 3) {
     return emitError(
-        unknownLoc,
-        "OpConstantCompositeReplicateEXT must have type <id> and result <id> "
-        "and only one parameter which is <id> of splat constant");
+               unknownLoc,
+               "OpConstantCompositeReplicateEXT expects 3 operands but found ")
+           << operands.size();
   }
 
   Type resultType = getType(operands[0]);
@@ -1648,10 +1648,9 @@ spirv::Deserializer::processSpecConstantComposite(ArrayRef<uint32_t> operands) {
 LogicalResult spirv::Deserializer::processSpecConstantCompositeReplicateEXT(
     ArrayRef<uint32_t> operands) {
   if (operands.size() != 3) {
-    return emitError(unknownLoc,
-                     "OpSpecConstantCompositeReplicateEXT must have "
-                     "type <id> and result <id> and only one parameter which "
-                     "is <id> of splat constant");
+    return emitError(unknownLoc, "OpSpecConstantCompositeReplicateEXT expects "
+                                 "3 operands but found ")
+           << operands.size();
   }
 
   Type resultType = getType(operands[0]);

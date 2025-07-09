@@ -170,7 +170,7 @@ func.func @coop_matrix_const_wrong_type() -> () {
 //===----------------------------------------------------------------------===//
 
 func.func @ccr_result_not_composite() -> () {
-  // expected-error @+1 {{op result #0 must be vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float or BFloat16 values of length 2/3/4/8/16 or any SPIR-V array type or any SPIR-V runtime array type or any SPIR-V struct type or any SPIR-V cooperative matrix type or any SPIR-V matrix type, but got 'i32'}}
+  // expected-error @+1 {{op result #0 must be vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float or BFloat16 values of length 2/3/4/8/16 or any SPIR-V array type or any SPIR-V runtime array type or any SPIR-V struct type or any SPIR-V cooperative matrix type or any SPIR-V matrix type or any SPIR-V tensorArm type, but got 'i32'}}
   %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : i32
   return
 }
@@ -178,7 +178,7 @@ func.func @ccr_result_not_composite() -> () {
 // -----
 
 func.func @ccr_wrong_splat_type() -> () {
-  // expected-error @+1 {{expected splat element type'f32', but got: 'i32'}}
+  // expected-error @+1 {{expected value attribute type 'f32', but got: 'i32'}}
   %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : vector<2xf32>
   return
 }
@@ -186,8 +186,14 @@ func.func @ccr_wrong_splat_type() -> () {
 // -----
 
 func.func @ccr_wrong_splat_type() -> () {
-  // expected-error @+1 {{expected splat element type'i32', but got: 'vector<2xi32>'}}
+  // expected-error @+1 {{expected value attribute type 'i32', but got: 'vector<2xi32>'}}
   %0 = spirv.EXT.ConstantCompositeReplicate [dense<[1, 2]> : vector<2xi32>] : !spirv.array<2 x !spirv.array<3 x i32>>
+  return
+}
+
+func.func @ccr_wrong_splat_type() -> () {
+  // expected-error @+1 {{expected value attribute type 'f32', but got: 'i32'}}
+  %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : !spirv.arm.tensor<2x3xf32>
   return
 }
 
@@ -906,6 +912,22 @@ spirv.module Logical GLSL450 {
   spirv.SpecConstant @sc_f32_1 = 1.0 : f32
   // expected-error @+1 {{constituent has incorrect type: expected 'i32', but provided 'f32'}}
   spirv.EXT.SpecConstantCompositeReplicate @sccr (@sc_f32_1) : !spirv.array<3 x i32>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @sc_f32_1 = 1.0 : f32
+  // expected-error @+1 {{constituent has incorrect type: expected 'i32', but provided 'f32'}}
+  spirv.EXT.SpecConstantCompositeReplicate @sccr (@sc_f32_1) : !spirv.struct<(i32, i32, i32)>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @sc_f32_1 = 1.0 : f32
+  // expected-error @+1 {{constituent has incorrect type: expected 'i32', but provided 'f32'}}
+  spirv.EXT.SpecConstantCompositeReplicate @sccr (@sc_f32_1) : !spirv.arm.tensor<2x3xi32>
 }
 
 //===----------------------------------------------------------------------===//

@@ -144,7 +144,7 @@ LogicalResult Serializer::processSpecConstantCompositeReplicateOp(
   }
 
   uint32_t resultID = getNextID();
-  SmallVector<uint32_t> operands = {typeID, resultID, constituentID};
+  uint32_t operands[] = {typeID, resultID, constituentID};
 
   encodeInstructionInto(typesGlobalValues,
                         spirv::Opcode::OpSpecConstantCompositeReplicateEXT,

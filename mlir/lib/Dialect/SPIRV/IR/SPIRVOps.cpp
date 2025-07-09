@@ -787,11 +787,6 @@ spirv::EXTConstantCompositeReplicateOp::parse(OpAsmParser &parser,
     if (parser.parseColonType(resultType))
       return failure();
 
-  if (isa<TensorArmType>(resultType))
-    if (parser.parseOptionalColon().succeeded())
-      if (parser.parseType(resultType))
-        return failure();
-
   return parser.addTypeToList(resultType, result.types);
 }
 
@@ -806,11 +801,11 @@ LogicalResult spirv::EXTConstantCompositeReplicateOp::verify() {
   while (compositeElementType != valueType &&
          isa<spirv::CompositeType>(compositeElementType)) {
     compositeElementType =
-        cast<spirv::CompositeType>(compositeElementType).getElementType(0);
+        dyn_cast<spirv::CompositeType>(compositeElementType).getElementType(0);
   }
 
   if (compositeElementType != valueType)
-    return emitError("expected splat element type")
+    return emitError("expected value attribute type ")
            << compositeElementType << ", but got: " << valueType;
 
   return success();
@@ -1924,7 +1919,6 @@ LogicalResult spirv::SpecConstantCompositeOp::verify() {
 ParseResult
 spirv::EXTSpecConstantCompositeReplicateOp::parse(OpAsmParser &parser,
                                                   OperationState &result) {
-
   StringAttr compositeName;
   FlatSymbolRefAttr specConstRef;
   const char *attrName = "spec_const";

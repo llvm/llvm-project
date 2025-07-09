@@ -1112,7 +1112,6 @@ uint32_t Serializer::prepareConstantFp(Location loc, FloatAttr floatAttr,
 uint32_t Serializer::prepareConstantCompositeReplicate(Location loc,
                                                        Type resultType,
                                                        Attribute valueAttr) {
-
   std::pair<Attribute, Type> valueTypePair{valueAttr, resultType};
   if (uint32_t id = getConstantCompositeReplicateID(valueTypePair)) {
     return id;
@@ -1134,7 +1133,7 @@ uint32_t Serializer::prepareConstantCompositeReplicate(Location loc,
   }
 
   uint32_t resultID = getNextID();
-  SmallVector<uint32_t> operands = {typeID, resultID, constandID};
+  uint32_t operands[] = {typeID, resultID, constandID};
 
   encodeInstructionInto(typesGlobalValues,
                         spirv::Opcode::OpConstantCompositeReplicateEXT,

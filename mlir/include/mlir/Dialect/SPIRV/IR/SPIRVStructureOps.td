@@ -151,10 +151,8 @@ def SPIRV_EXTConstantCompositeReplicateOp : SPIRV_ExtVendorOp<"ConstantComposite
 
     ```mlir
     %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : vector<2xi32>
-
-    %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : !spirv.array<2 x vector<2xi32>>
-
-    %0 = spirv.EXT.ConstantCompositeReplicate [dense<[1, 2]> : vector<2xi32>] : !spirv.array<2 x vector<2xi32>>
+    %1 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : !spirv.array<2 x vector<2xi32>>
+    %2 = spirv.EXT.ConstantCompositeReplicate [dense<[1, 2]> : vector<2xi32>] : !spirv.array<2 x vector<2xi32>>
     ```
   }];
 
