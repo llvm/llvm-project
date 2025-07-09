@@ -2,7 +2,7 @@
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -22,7 +22,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -42,7 +42,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -62,7 +62,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -82,7 +82,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -102,7 +102,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -122,7 +122,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -142,7 +142,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -162,7 +162,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -182,7 +182,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -202,7 +202,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -222,7 +222,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -242,7 +242,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -262,7 +262,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -282,7 +282,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -302,7 +302,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -322,7 +322,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -342,7 +342,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -362,7 +362,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -384,7 +384,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -405,7 +405,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -425,7 +425,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -445,7 +445,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -467,7 +467,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -489,7 +489,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -509,7 +509,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -529,7 +529,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -551,7 +551,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -573,7 +573,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -593,7 +593,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -613,7 +613,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -635,7 +635,7 @@ gpu.module @kernels {
 
 module attributes {
   gpu.container_module,
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], [SPV_KHR_uniform_group_instructions]>, #spirv.resource_limits<>>
 } {
 
 gpu.module @kernels {
@@ -825,6 +825,25 @@ gpu.module @kernels {
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
     // expected-error @+1 {{failed to legalize operation 'gpu.subgroup_reduce'}}
     %reduced = gpu.subgroup_reduce add %arg cluster(size = 8, stride = 2) : (f32) -> (f32)
+    gpu.return
+  }
+}
+
+}
+
+// -----
+
+module attributes {
+  gpu.container_module,
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Kernel, Addresses, Groups, GroupNonUniformArithmetic, GroupUniformArithmeticKHR], []>, #spirv.resource_limits<>>
+} {
+
+gpu.module @kernels {
+  // CHECK-NOT:  spirv.func @test_unsupported
+  gpu.func @test_unsupported(%arg : i32) kernel
+    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
+    // expected-error @+1 {{failed to legalize operation 'gpu.subgroup_reduce'}}
+    %reduced = gpu.subgroup_reduce max %arg : (i32) -> (i32)
     gpu.return
   }
 }
