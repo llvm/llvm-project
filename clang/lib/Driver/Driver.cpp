@@ -4458,8 +4458,8 @@ static void skipLine(const char *&Ptr) {
   }
 }
 
-// Returns the length of a line splice sequence (including trailing
-// whitespace), or 0 if no line splice is found.
+// Returns the length of a line splice sequence (including trailing whitespace),
+// or 0 if no line splice is found.
 static unsigned isLineSplice(const char *Start) {
   if (*Start != '\\')
     return 0;
