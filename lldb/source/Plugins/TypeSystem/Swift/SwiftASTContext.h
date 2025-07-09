@@ -275,6 +275,8 @@ public:
 
   bool AddModuleSearchPath(llvm::StringRef path);
 
+  void ConfigureModuleValidation(std::vector<std::string> &extra_args);
+
   /// Add a list of Clang arguments to the ClangImporter options and
   /// apply the working directory to any relative paths.
   void AddExtraClangArgs(
