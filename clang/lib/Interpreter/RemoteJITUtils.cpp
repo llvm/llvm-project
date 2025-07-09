@@ -95,8 +95,8 @@ createSharedMemoryManager(SimpleRemoteEPC &SREPC,
 
 Expected<std::unique_ptr<SimpleRemoteEPC>>
 launchExecutor(StringRef ExecutablePath, bool UseSharedMemory,
-               llvm::StringRef SlabAllocateSizeString, int stdin_fd,
-               int stdout_fd, int stderr_fd) {
+               llvm::StringRef SlabAllocateSizeString,
+               std::function<void()> CustomizeFork) {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add support for Windows.
   return make_error<StringError>("-" + ExecutablePath +
@@ -139,22 +139,8 @@ launchExecutor(StringRef ExecutablePath, bool UseSharedMemory,
     close(ToExecutor[WriteEnd]);
     close(FromExecutor[ReadEnd]);
 
-    if (stdin_fd != STDIN_FILENO) {
-      dup2(stdin_fd, STDIN_FILENO);
-      close(stdin_fd);
-    }
-
-    if (stdout_fd != STDOUT_FILENO) {
-      dup2(stdout_fd, STDOUT_FILENO);
-      close(stdout_fd);
-      setvbuf(stdout, NULL, _IONBF, 0);
-    }
-
-    if (stderr_fd != STDERR_FILENO) {
-      dup2(stderr_fd, STDERR_FILENO);
-      close(stderr_fd);
-      setvbuf(stderr, NULL, _IONBF, 0);
-    }
+    if (CustomizeFork)
+      CustomizeFork();
 
     // Execute the child process.
     std::unique_ptr<char[]> ExecutorPath, FDSpecifier;
