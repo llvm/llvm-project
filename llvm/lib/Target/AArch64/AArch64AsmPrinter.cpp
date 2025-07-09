@@ -178,14 +178,13 @@ public:
 
   // Emit the sequence to compute the discriminator.
   //
-  // ScratchReg should be x16/x17.
-  //
-  // The returned register is either unmodified AddrDisc or x16/x17.
+  // The returned register is either unmodified AddrDisc or ScratchReg.
   //
   // If the expanded pseudo is allowed to clobber AddrDisc register, setting
   // MayUseAddrAsScratch may save one MOV instruction, provided the address
   // is already in x16/x17 (i.e. return x16/x17 which is the *modified* AddrDisc
-  // register at the same time):
+  // register at the same time) or the OS doesn't make it safer to use x16/x17
+  // (see AArch64Subtarget::isX16X17Safer()):
   //
   //   mov   x17, x16
   //   movk  x17, #1234, lsl #48
