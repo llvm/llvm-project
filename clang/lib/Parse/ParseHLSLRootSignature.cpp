@@ -66,9 +66,7 @@ bool RootSignatureParser::parse() {
       break;
   }
 
-  return consumeExpectedToken(TokenKind::end_of_stream,
-                              diag::err_hlsl_unexpected_end_of_params,
-                              /*param of=*/TokenKind::kw_RootSignature);
+  return consumeExpectedToken(TokenKind::end_of_stream);
 }
 
 template <typename FlagType>
@@ -119,9 +117,7 @@ std::optional<llvm::dxbc::RootFlags> RootSignatureParser::parseRootFlags() {
     } while (tryConsumeExpectedToken(TokenKind::pu_or));
   }
 
-  if (consumeExpectedToken(TokenKind::pu_r_paren,
-                           diag::err_hlsl_unexpected_end_of_params,
-                           /*param of=*/TokenKind::kw_RootFlags))
+  if (consumeExpectedToken(TokenKind::pu_r_paren))
     return std::nullopt;
 
   return Flags;
@@ -141,9 +137,7 @@ std::optional<RootConstants> RootSignatureParser::parseRootConstants() {
   if (!Params.has_value())
     return std::nullopt;
 
-  if (consumeExpectedToken(TokenKind::pu_r_paren,
-                           diag::err_hlsl_unexpected_end_of_params,
-                           /*param of=*/TokenKind::kw_RootConstants))
+  if (consumeExpectedToken(TokenKind::pu_r_paren))
     return std::nullopt;
 
   // Check mandatory parameters where provided
@@ -208,9 +202,7 @@ std::optional<RootDescriptor> RootSignatureParser::parseRootDescriptor() {
   if (!Params.has_value())
     return std::nullopt;
 
-  if (consumeExpectedToken(TokenKind::pu_r_paren,
-                           diag::err_hlsl_unexpected_end_of_params,
-                           /*param of=*/DescriptorKind))
+  if (consumeExpectedToken(TokenKind::pu_r_paren))
     return std::nullopt;
 
   // Check mandatory parameters were provided
@@ -276,9 +268,7 @@ std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {
       break;
   }
 
-  if (consumeExpectedToken(TokenKind::pu_r_paren,
-                           diag::err_hlsl_unexpected_end_of_params,
-                           /*param of=*/TokenKind::kw_DescriptorTable))
+  if (consumeExpectedToken(TokenKind::pu_r_paren))
     return std::nullopt;
 
   // Fill in optional visibility
@@ -330,9 +320,7 @@ RootSignatureParser::parseDescriptorTableClause() {
   if (!Params.has_value())
     return std::nullopt;
 
-  if (consumeExpectedToken(TokenKind::pu_r_paren,
-                           diag::err_hlsl_unexpected_end_of_params,
-                           /*param of=*/ParamKind))
+  if (consumeExpectedToken(TokenKind::pu_r_paren))
     return std::nullopt;
 
   // Check mandatory parameters were provided
@@ -373,9 +361,7 @@ std::optional<StaticSampler> RootSignatureParser::parseStaticSampler() {
   if (!Params.has_value())
     return std::nullopt;
 
-  if (consumeExpectedToken(TokenKind::pu_r_paren,
-                           diag::err_hlsl_unexpected_end_of_params,
-                           /*param of=*/TokenKind::kw_StaticSampler))
+  if (consumeExpectedToken(TokenKind::pu_r_paren))
     return std::nullopt;
 
   // Check mandatory parameters were provided
@@ -1282,7 +1268,6 @@ bool RootSignatureParser::consumeExpectedToken(TokenKind Expected,
   case diag::err_expected:
     DB << Expected;
     break;
-  case diag::err_hlsl_unexpected_end_of_params:
   case diag::err_expected_either:
   case diag::err_expected_after:
     DB << Expected << Context;

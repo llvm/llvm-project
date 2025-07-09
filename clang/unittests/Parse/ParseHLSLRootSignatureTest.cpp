@@ -843,7 +843,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedTokenTest) {
                                    Signature, *PP);
 
   // Test correct diagnostic produced
-  Consumer->setExpected(diag::err_hlsl_unexpected_end_of_params);
+  Consumer->setExpected(diag::err_expected);
   ASSERT_TRUE(Parser.parse());
 
   ASSERT_TRUE(Consumer->isSatisfied());
@@ -865,7 +865,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseInvalidTokenTest) {
                                    Signature, *PP);
 
   // Test correct diagnostic produced - invalid token
-  Consumer->setExpected(diag::err_hlsl_unexpected_end_of_params);
+  Consumer->setExpected(diag::err_expected);
   ASSERT_TRUE(Parser.parse());
 
   ASSERT_TRUE(Consumer->isSatisfied());
@@ -1258,7 +1258,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRootElementMissingCommaTest) {
                                    Signature, *PP);
 
   // Test correct diagnostic produced
-  Consumer->setExpected(diag::err_hlsl_unexpected_end_of_params);
+  Consumer->setExpected(diag::err_expected);
   ASSERT_TRUE(Parser.parse());
 
   ASSERT_TRUE(Consumer->isSatisfied());
@@ -1285,7 +1285,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidDescriptorTableMissingCommaTest) {
                                    Signature, *PP);
 
   // Test correct diagnostic produced
-  Consumer->setExpected(diag::err_hlsl_unexpected_end_of_params);
+  Consumer->setExpected(diag::err_expected);
   ASSERT_TRUE(Parser.parse());
 
   ASSERT_TRUE(Consumer->isSatisfied());
@@ -1312,7 +1312,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRootConstantParamsCommaTest) {
                                    Signature, *PP);
 
   // Test correct diagnostic produced
-  Consumer->setExpected(diag::err_hlsl_unexpected_end_of_params);
+  Consumer->setExpected(diag::err_expected);
   ASSERT_TRUE(Parser.parse());
 
   ASSERT_TRUE(Consumer->isSatisfied());
@@ -1339,7 +1339,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRootDescriptorParamsCommaTest) {
                                    Signature, *PP);
 
   // Test correct diagnostic produced
-  Consumer->setExpected(diag::err_hlsl_unexpected_end_of_params);
+  Consumer->setExpected(diag::err_expected);
   ASSERT_TRUE(Parser.parse());
 
   ASSERT_TRUE(Consumer->isSatisfied());
@@ -1368,7 +1368,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidDescriptorClauseParamsCommaTest) {
                                    Signature, *PP);
 
   // Test correct diagnostic produced
-  Consumer->setExpected(diag::err_hlsl_unexpected_end_of_params);
+  Consumer->setExpected(diag::err_expected);
   ASSERT_TRUE(Parser.parse());
 
   ASSERT_TRUE(Consumer->isSatisfied());
@@ -1395,7 +1395,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidStaticSamplerCommaTest) {
                                    Signature, *PP);
 
   // Test correct diagnostic produced
-  Consumer->setExpected(diag::err_hlsl_unexpected_end_of_params);
+  Consumer->setExpected(diag::err_expected);
   ASSERT_TRUE(Parser.parse());
 
   ASSERT_TRUE(Consumer->isSatisfied());
