@@ -245,7 +245,8 @@
 
 #if __STDCPP_BFLOAT16_T__ || __ARM_FEATURE_BF16 || __SSE2__ || __AVX10_2__ ||  \
     (defined(__hexagon__) && __HVX_ARCH__ >= 81)
-#define __has_bf16__ 1
+// Pending backend bf16 patches
+#define __has_bf16__ 0
 #else
 #define __has_bf16__ 0
 #endif

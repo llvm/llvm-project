@@ -982,6 +982,10 @@ public:
   /// @return the set of analysis that are preserved
   PreservedAnalyses run();
 
+  /// @brief Update the function to pad the ripple generated vectors to the
+  /// device's SIMD width.
+  void padToTargetSIMDWidth();
+
   /// @brief Cleans ripple intrinsics from the IR and returns preserved analysis
   ///
   /// This leaves a valid IR with the version of the program assuming a single
