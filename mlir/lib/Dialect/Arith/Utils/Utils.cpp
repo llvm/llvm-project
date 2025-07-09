@@ -380,4 +380,29 @@ std::optional<FloatType> parseFloatType(MLIRContext *ctx, StringRef name) {
       .Default(std::nullopt);
 }
 
+/// Map strings to Int types.
+std::optional<IntegerType> parseIntType(MLIRContext *ctx, StringRef name) {
+  Builder b(ctx);
+  return llvm::StringSwitch<std::optional<IntegerType>>(name)
+      .Case("i1", b.getIntegerType(1))
+      .Case("i2", b.getIntegerType(2))
+      .Case("i4", b.getIntegerType(4))
+      .Case("i6", b.getIntegerType(6))
+      .Case("i8", b.getIntegerType(8))
+      .Case("i16", b.getIntegerType(16))
+      .Case("i32", b.getIntegerType(32))
+      .Case("i64", b.getIntegerType(64))
+      .Case("i80", b.getIntegerType(80))
+      .Case("i128", b.getIntegerType(128))
+      .Default(std::nullopt);
+}
+/// Map strings to Int or Float types.
+std::optional<Type> parseIntOrFloatType(MLIRContext *ctx, StringRef name) {
+  if (auto floatTy = parseFloatType(ctx, name))
+    return *floatTy;
+  if (auto intTy = parseIntType(ctx, name))
+    return *intTy;
+  return std::nullopt;
+}
+
 } // namespace mlir::arith
