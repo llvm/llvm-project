@@ -2847,11 +2847,10 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; GFX11-NEXT:    s_addc_u32 s12, s5, 0
 ; GFX11-NEXT:    s_add_u32 s13, s1, 2
 ; GFX11-NEXT:    s_addc_u32 s14, s5, 0
-; GFX11-NEXT:    v_mov_b32_e32 v2, s13
 ; GFX11-NEXT:    s_cmp_lg_u32 s7, 0
 ; GFX11-NEXT:    v_cmp_le_u32_e32 vcc_lo, s2, v0
 ; GFX11-NEXT:    s_subb_u32 s0, s11, s0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_mov_b32_e32 v2, s13
 ; GFX11-NEXT:    s_cmp_ge_u32 s0, s3
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc_lo
 ; GFX11-NEXT:    s_cselect_b32 s7, -1, 0

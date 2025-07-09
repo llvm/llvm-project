@@ -321,6 +321,24 @@ static LogicalResult checkVarAndAccVar(Op op) {
   return success();
 }
 
+template <typename Op>
+static LogicalResult checkNoModifier(Op op) {
+  if (op.getModifiers() != acc::DataClauseModifier::none)
+    return op.emitError("no data clause modifiers are allowed");
+  return success();
+}
+
+template <typename Op>
+static LogicalResult
+checkValidModifier(Op op, acc::DataClauseModifier validModifiers) {
+  if (acc::bitEnumContainsAny(op.getModifiers(), ~validModifiers))
+    return op.emitError(
+        "invalid data clause modifiers: " +
+        acc::stringifyDataClauseModifier(op.getModifiers() & ~validModifiers));
+
+  return success();
+}
+
 static ParseResult parseVar(mlir::OpAsmParser &parser,
                             OpAsmParser::UnresolvedOperand &var) {
   // Either `var` or `varPtr` keyword is required.
@@ -447,6 +465,8 @@ LogicalResult acc::PrivateOp::verify() {
         "data clause associated with private operation must match its intent");
   if (failed(checkVarAndVarType(*this)))
     return failure();
+  if (failed(checkNoModifier(*this)))
+    return failure();
   return success();
 }
 
@@ -459,6 +479,8 @@ LogicalResult acc::FirstprivateOp::verify() {
                      "match its intent");
   if (failed(checkVarAndVarType(*this)))
     return failure();
+  if (failed(checkNoModifier(*this)))
+    return failure();
   return success();
 }
 
@@ -470,6 +492,8 @@ LogicalResult acc::ReductionOp::verify() {
     return emitError("data clause associated with reduction operation must "
                      "match its intent");
   if (failed(checkVarAndVarType(*this)))
+    return failure();
+  if (failed(checkNoModifier(*this)))
     return failure();
   return success();
 }
@@ -485,6 +509,8 @@ LogicalResult acc::DevicePtrOp::verify() {
     return failure();
   if (failed(checkVarAndAccVar(*this)))
     return failure();
+  if (failed(checkNoModifier(*this)))
+    return failure();
   return success();
 }
 
@@ -498,6 +524,8 @@ LogicalResult acc::PresentOp::verify() {
   if (failed(checkVarAndVarType(*this)))
     return failure();
   if (failed(checkVarAndAccVar(*this)))
+    return failure();
+  if (failed(checkNoModifier(*this)))
     return failure();
   return success();
 }
@@ -518,11 +546,17 @@ LogicalResult acc::CopyinOp::verify() {
     return failure();
   if (failed(checkVarAndAccVar(*this)))
     return failure();
+  if (failed(checkValidModifier(*this, acc::DataClauseModifier::readonly |
+                                           acc::DataClauseModifier::always |
+                                           acc::DataClauseModifier::capture)))
+    return failure();
   return success();
 }
 
 bool acc::CopyinOp::isCopyinReadonly() {
-  return getDataClause() == acc::DataClause::acc_copyin_readonly;
+  return getDataClause() == acc::DataClause::acc_copyin_readonly ||
+         acc::bitEnumContainsAny(getModifiers(),
+                                 acc::DataClauseModifier::readonly);
 }
 
 //===----------------------------------------------------------------------===//
@@ -541,13 +575,20 @@ LogicalResult acc::CreateOp::verify() {
     return failure();
   if (failed(checkVarAndAccVar(*this)))
     return failure();
+  // this op is the entry part of copyout, so it also needs to allow all
+  // modifiers allowed on copyout.
+  if (failed(checkValidModifier(*this, acc::DataClauseModifier::zero |
+                                           acc::DataClauseModifier::always |
+                                           acc::DataClauseModifier::capture)))
+    return failure();
   return success();
 }
 
 bool acc::CreateOp::isCreateZero() {
   // The zero modifier is encoded in the data clause.
   return getDataClause() == acc::DataClause::acc_create_zero ||
-         getDataClause() == acc::DataClause::acc_copyout_zero;
+         getDataClause() == acc::DataClause::acc_copyout_zero ||
+         acc::bitEnumContainsAny(getModifiers(), acc::DataClauseModifier::zero);
 }
 
 //===----------------------------------------------------------------------===//
@@ -560,6 +601,8 @@ LogicalResult acc::NoCreateOp::verify() {
   if (failed(checkVarAndVarType(*this)))
     return failure();
   if (failed(checkVarAndAccVar(*this)))
+    return failure();
+  if (failed(checkNoModifier(*this)))
     return failure();
   return success();
 }
@@ -574,6 +617,8 @@ LogicalResult acc::AttachOp::verify() {
   if (failed(checkVarAndVarType(*this)))
     return failure();
   if (failed(checkVarAndAccVar(*this)))
+    return failure();
+  if (failed(checkNoModifier(*this)))
     return failure();
   return success();
 }
@@ -590,6 +635,8 @@ LogicalResult acc::DeclareDeviceResidentOp::verify() {
     return failure();
   if (failed(checkVarAndAccVar(*this)))
     return failure();
+  if (failed(checkNoModifier(*this)))
+    return failure();
   return success();
 }
 
@@ -604,6 +651,8 @@ LogicalResult acc::DeclareLinkOp::verify() {
   if (failed(checkVarAndVarType(*this)))
     return failure();
   if (failed(checkVarAndAccVar(*this)))
+    return failure();
+  if (failed(checkNoModifier(*this)))
     return failure();
   return success();
 }
@@ -626,11 +675,16 @@ LogicalResult acc::CopyoutOp::verify() {
     return failure();
   if (failed(checkVarAndAccVar(*this)))
     return failure();
+  if (failed(checkValidModifier(*this, acc::DataClauseModifier::zero |
+                                           acc::DataClauseModifier::always |
+                                           acc::DataClauseModifier::capture)))
+    return failure();
   return success();
 }
 
 bool acc::CopyoutOp::isCopyoutZero() {
-  return getDataClause() == acc::DataClause::acc_copyout_zero;
+  return getDataClause() == acc::DataClause::acc_copyout_zero ||
+         acc::bitEnumContainsAny(getModifiers(), acc::DataClauseModifier::zero);
 }
 
 //===----------------------------------------------------------------------===//
@@ -652,6 +706,13 @@ LogicalResult acc::DeleteOp::verify() {
         " or specify original clause this operation was decomposed from");
   if (!getAccVar())
     return emitError("must have device pointer");
+  // This op is the exit part of copyin and create - thus allow all modifiers
+  // allowed on either case.
+  if (failed(checkValidModifier(*this, acc::DataClauseModifier::zero |
+                                           acc::DataClauseModifier::readonly |
+                                           acc::DataClauseModifier::always |
+                                           acc::DataClauseModifier::capture)))
+    return failure();
   return success();
 }
 
@@ -667,6 +728,8 @@ LogicalResult acc::DetachOp::verify() {
         " or specify original clause this operation was decomposed from");
   if (!getAccVar())
     return emitError("must have device pointer");
+  if (failed(checkNoModifier(*this)))
+    return failure();
   return success();
 }
 
@@ -686,6 +749,8 @@ LogicalResult acc::UpdateHostOp::verify() {
     return failure();
   if (failed(checkVarAndAccVar(*this)))
     return failure();
+  if (failed(checkNoModifier(*this)))
+    return failure();
   return success();
 }
 
@@ -702,6 +767,8 @@ LogicalResult acc::UpdateDeviceOp::verify() {
     return failure();
   if (failed(checkVarAndAccVar(*this)))
     return failure();
+  if (failed(checkNoModifier(*this)))
+    return failure();
   return success();
 }
 
@@ -717,6 +784,8 @@ LogicalResult acc::UseDeviceOp::verify() {
   if (failed(checkVarAndVarType(*this)))
     return failure();
   if (failed(checkVarAndAccVar(*this)))
+    return failure();
+  if (failed(checkNoModifier(*this)))
     return failure();
   return success();
 }
@@ -735,7 +804,15 @@ LogicalResult acc::CacheOp::verify() {
     return failure();
   if (failed(checkVarAndAccVar(*this)))
     return failure();
+  if (failed(checkValidModifier(*this, acc::DataClauseModifier::readonly)))
+    return failure();
   return success();
+}
+
+bool acc::CacheOp::isCacheReadonly() {
+  return getDataClause() == acc::DataClause::acc_cache_readonly ||
+         acc::bitEnumContainsAny(getModifiers(),
+                                 acc::DataClauseModifier::readonly);
 }
 
 template <typename StructureOp>
@@ -2461,10 +2538,34 @@ LogicalResult acc::LoopOp::verify() {
   if (hasDuplicateDeviceTypes(getAuto_(), deviceTypes) ||
       hasDuplicateDeviceTypes(getIndependent(), deviceTypes) ||
       hasDuplicateDeviceTypes(getSeq(), deviceTypes)) {
-    return emitError() << "only one of \"" << acc::LoopOp::getAutoAttrStrName()
-                       << "\", " << getIndependentAttrName() << ", "
-                       << getSeqAttrName()
-                       << " can be present at the same time";
+    return emitError() << "only one of auto, independent, seq can be present "
+                          "at the same time";
+  }
+
+  // Check that at least one of auto, independent, or seq is present
+  // for the device-independent default clauses.
+  auto hasDeviceNone = [](mlir::acc::DeviceTypeAttr attr) -> bool {
+    return attr.getValue() == mlir::acc::DeviceType::None;
+  };
+  bool hasDefaultSeq =
+      getSeqAttr()
+          ? llvm::any_of(getSeqAttr().getAsRange<mlir::acc::DeviceTypeAttr>(),
+                         hasDeviceNone)
+          : false;
+  bool hasDefaultIndependent =
+      getIndependentAttr()
+          ? llvm::any_of(
+                getIndependentAttr().getAsRange<mlir::acc::DeviceTypeAttr>(),
+                hasDeviceNone)
+          : false;
+  bool hasDefaultAuto =
+      getAuto_Attr()
+          ? llvm::any_of(getAuto_Attr().getAsRange<mlir::acc::DeviceTypeAttr>(),
+                         hasDeviceNone)
+          : false;
+  if (!hasDefaultSeq && !hasDefaultIndependent && !hasDefaultAuto) {
+    return emitError()
+           << "at least one of auto, independent, seq must be present";
   }
 
   // Gang, worker and vector are incompatible with seq.
@@ -2482,8 +2583,7 @@ LogicalResult acc::LoopOp::verify() {
                        deviceTypeAttr.getValue()) ||
           getGangValue(mlir::acc::GangArgType::Static,
                        deviceTypeAttr.getValue()))
-        return emitError()
-               << "gang, worker or vector cannot appear with the seq attr";
+        return emitError() << "gang, worker or vector cannot appear with seq";
     }
   }
 
@@ -2839,6 +2939,30 @@ void acc::LoopOp::addEmptyGang(
                                                  effectiveDeviceTypes));
 }
 
+bool acc::LoopOp::hasParallelismFlag(DeviceType dt) {
+  auto hasDevice = [=](DeviceTypeAttr attr) -> bool {
+    return attr.getValue() == dt;
+  };
+  auto testFromArr = [=](ArrayAttr arr) -> bool {
+    return llvm::any_of(arr.getAsRange<DeviceTypeAttr>(), hasDevice);
+  };
+
+  if (ArrayAttr arr = getSeqAttr(); arr && testFromArr(arr))
+    return true;
+  if (ArrayAttr arr = getIndependentAttr(); arr && testFromArr(arr))
+    return true;
+  if (ArrayAttr arr = getAuto_Attr(); arr && testFromArr(arr))
+    return true;
+
+  return false;
+}
+
+bool acc::LoopOp::hasDefaultGangWorkerVector() {
+  return hasVector() || getVectorValue() || hasWorker() || getWorkerValue() ||
+         hasGang() || getGangValue(GangArgType::Num) ||
+         getGangValue(GangArgType::Dim) || getGangValue(GangArgType::Static);
+}
+
 void acc::LoopOp::addGangOperands(
     MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
     llvm::ArrayRef<GangArgType> argTypes, mlir::ValueRange values) {
@@ -3045,6 +3169,53 @@ void ExitDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<RemoveConstantIfCondition<ExitDataOp>>(context);
 }
 
+void ExitDataOp::addAsyncOnly(MLIRContext *context,
+                              llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getAsyncAttr());
+  assert(!getAsyncOperand());
+
+  setAsyncAttr(mlir::UnitAttr::get(context));
+}
+
+void ExitDataOp::addAsyncOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getAsyncAttr());
+  assert(!getAsyncOperand());
+
+  getAsyncOperandMutable().append(newValue);
+}
+
+void ExitDataOp::addWaitOnly(MLIRContext *context,
+                             llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getWaitAttr());
+  assert(getWaitOperands().empty());
+  assert(!getWaitDevnum());
+
+  setWaitAttr(mlir::UnitAttr::get(context));
+}
+
+void ExitDataOp::addWaitOperands(
+    MLIRContext *context, bool hasDevnum, mlir::ValueRange newValues,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getWaitAttr());
+  assert(getWaitOperands().empty());
+  assert(!getWaitDevnum());
+
+  // if hasDevnum, the first value is the devnum. The 'rest' go into the
+  // operands list.
+  if (hasDevnum) {
+    getWaitDevnumMutable().append(newValues.front());
+    newValues = newValues.drop_front();
+  }
+
+  getWaitOperandsMutable().append(newValues);
+}
+
 //===----------------------------------------------------------------------===//
 // EnterDataOp
 //===----------------------------------------------------------------------===//
@@ -3092,6 +3263,53 @@ Value EnterDataOp::getDataOperand(unsigned i) {
 void EnterDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
   results.add<RemoveConstantIfCondition<EnterDataOp>>(context);
+}
+
+void EnterDataOp::addAsyncOnly(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getAsyncAttr());
+  assert(!getAsyncOperand());
+
+  setAsyncAttr(mlir::UnitAttr::get(context));
+}
+
+void EnterDataOp::addAsyncOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getAsyncAttr());
+  assert(!getAsyncOperand());
+
+  getAsyncOperandMutable().append(newValue);
+}
+
+void EnterDataOp::addWaitOnly(MLIRContext *context,
+                              llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getWaitAttr());
+  assert(getWaitOperands().empty());
+  assert(!getWaitDevnum());
+
+  setWaitAttr(mlir::UnitAttr::get(context));
+}
+
+void EnterDataOp::addWaitOperands(
+    MLIRContext *context, bool hasDevnum, mlir::ValueRange newValues,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getWaitAttr());
+  assert(getWaitOperands().empty());
+  assert(!getWaitDevnum());
+
+  // if hasDevnum, the first value is the devnum. The 'rest' go into the
+  // operands list.
+  if (hasDevnum) {
+    getWaitDevnumMutable().append(newValues.front());
+    newValues = newValues.drop_front();
+  }
+
+  getWaitOperandsMutable().append(newValues);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3636,6 +3854,49 @@ mlir::Value UpdateOp::getWaitDevnum(mlir::acc::DeviceType deviceType) {
                             deviceType);
 }
 
+void UpdateOp::addAsyncOnly(MLIRContext *context,
+                            llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setAsyncOnlyAttr(addDeviceTypeAffectedOperandHelper(
+      context, getAsyncOnlyAttr(), effectiveDeviceTypes));
+}
+
+void UpdateOp::addAsyncOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setAsyncOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getAsyncOperandsDeviceTypeAttr(), effectiveDeviceTypes, newValue,
+      getAsyncOperandsMutable()));
+}
+
+void UpdateOp::addWaitOnly(MLIRContext *context,
+                           llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setWaitOnlyAttr(addDeviceTypeAffectedOperandHelper(context, getWaitOnlyAttr(),
+                                                     effectiveDeviceTypes));
+}
+
+void UpdateOp::addWaitOperands(
+    MLIRContext *context, bool hasDevnum, mlir::ValueRange newValues,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+
+  llvm::SmallVector<int32_t> segments;
+  if (getWaitOperandsSegments())
+    llvm::copy(*getWaitOperandsSegments(), std::back_inserter(segments));
+
+  setWaitOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getWaitOperandsDeviceTypeAttr(), effectiveDeviceTypes, newValues,
+      getWaitOperandsMutable(), segments));
+  setWaitOperandsSegments(segments);
+
+  llvm::SmallVector<mlir::Attribute> hasDevnums;
+  if (getHasWaitDevnumAttr())
+    llvm::copy(getHasWaitDevnumAttr(), std::back_inserter(hasDevnums));
+  hasDevnums.insert(
+      hasDevnums.end(),
+      std::max(effectiveDeviceTypes.size(), static_cast<size_t>(1)),
+      mlir::BoolAttr::get(context, hasDevnum));
+  setHasWaitDevnumAttr(mlir::ArrayAttr::get(context, hasDevnums));
+}
+
 //===----------------------------------------------------------------------===//
 // WaitOp
 //===----------------------------------------------------------------------===//
@@ -3819,4 +4080,15 @@ mlir::acc::getMutableDataOperands(mlir::Operation *accOp) {
               [&](auto entry) { return entry.getDataClauseOperandsMutable(); })
           .Default([&](mlir::Operation *) { return nullptr; })};
   return dataOperands;
+}
+
+mlir::Operation *mlir::acc::getEnclosingComputeOp(mlir::Region &region) {
+  mlir::Operation *parentOp = region.getParentOp();
+  while (parentOp) {
+    if (mlir::isa<ACC_COMPUTE_CONSTRUCT_OPS>(parentOp)) {
+      return parentOp;
+    }
+    parentOp = parentOp->getParentOp();
+  }
+  return nullptr;
 }

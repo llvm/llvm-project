@@ -16,6 +16,7 @@
 #include <__exception/terminate.h>
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
+#include <__locale>
 #include <__memory/addressof.h>
 #include <__memory/unique_ptr.h>
 #include <__mutex/mutex.h>
@@ -30,7 +31,6 @@
 #include <tuple>
 
 #if _LIBCPP_HAS_LOCALIZATION
-#  include <locale>
 #  include <sstream>
 #endif
 
@@ -42,7 +42,6 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #if _LIBCPP_HAS_THREADS
 
@@ -257,7 +256,6 @@ inline _LIBCPP_HIDE_FROM_ABI void swap(thread& __x, thread& __y) _NOEXCEPT { __x
 
 #endif // _LIBCPP_HAS_THREADS
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

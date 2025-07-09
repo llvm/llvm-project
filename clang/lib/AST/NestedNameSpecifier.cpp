@@ -407,18 +407,6 @@ static void *LoadPointer(void *Data, unsigned Offset) {
   return Result;
 }
 
-SourceRange NestedNameSpecifierLoc::getSourceRange() const {
-  if (!Qualifier)
-    return SourceRange();
-
-  NestedNameSpecifierLoc First = *this;
-  while (NestedNameSpecifierLoc Prefix = First.getPrefix())
-    First = Prefix;
-
-  return SourceRange(First.getLocalSourceRange().getBegin(),
-                     getLocalSourceRange().getEnd());
-}
-
 SourceRange NestedNameSpecifierLoc::getLocalSourceRange() const {
   if (!Qualifier)
     return SourceRange();

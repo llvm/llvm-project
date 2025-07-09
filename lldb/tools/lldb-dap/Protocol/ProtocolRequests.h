@@ -468,7 +468,7 @@ struct SourceArguments {
   /// The reference to the source. This is the same as `source.sourceReference`.
   /// This is provided for backward compatibility since old clients do not
   /// understand the `source` attribute.
-  int64_t sourceReference;
+  int64_t sourceReference = LLDB_DAP_INVALID_SRC_REF;
 };
 bool fromJSON(const llvm::json::Value &, SourceArguments &, llvm::json::Path);
 
@@ -481,6 +481,16 @@ struct SourceResponseBody {
   std::optional<std::string> mimeType;
 };
 llvm::json::Value toJSON(const SourceResponseBody &);
+
+/// Arguments for the `threads` request, no arguments.
+using ThreadsArguments = EmptyArguments;
+
+/// Response to `threads` request.
+struct ThreadsResponseBody {
+  /// All threads.
+  std::vector<Thread> threads;
+};
+llvm::json::Value toJSON(const ThreadsResponseBody &);
 
 /// Arguments for `next` request.
 struct NextArguments {
@@ -522,6 +532,21 @@ bool fromJSON(const llvm::json::Value &, StepInArguments &, llvm::json::Path);
 /// Response to `stepIn` request. This is just an acknowledgement, so no
 /// body field is required.
 using StepInResponse = VoidResponse;
+
+/// Arguments for `stepInTargets` request.
+struct StepInTargetsArguments {
+  /// The stack frame for which to retrieve the possible step-in targets.
+  uint64_t frameId = LLDB_INVALID_FRAME_ID;
+};
+bool fromJSON(const llvm::json::Value &, StepInTargetsArguments &,
+              llvm::json::Path);
+
+/// Response to `stepInTargets` request.
+struct StepInTargetsResponseBody {
+  /// The possible step-in targets of the specified source location.
+  std::vector<StepInTarget> targets;
+};
+llvm::json::Value toJSON(const StepInTargetsResponseBody &);
 
 /// Arguments for `stepOut` request.
 struct StepOutArguments {
@@ -726,6 +751,56 @@ struct SetDataBreakpointsResponseBody {
 };
 llvm::json::Value toJSON(const SetDataBreakpointsResponseBody &);
 
+/// Arguments for `setExceptionBreakpoints` request.
+struct SetExceptionBreakpointsArguments {
+  /// Set of exception filters specified by their ID. The set of all possible
+  /// exception filters is defined by the `exceptionBreakpointFilters`
+  /// capability. The `filter` and `filterOptions` sets are additive.
+  std::vector<std::string> filters;
+
+  /// Set of exception filters and their options. The set of all possible
+  /// exception filters is defined by the `exceptionBreakpointFilters`
+  /// capability. This attribute is only honored by a debug adapter if the
+  /// corresponding capability `supportsExceptionFilterOptions` is true. The
+  /// `filter` and `filterOptions` sets are additive.
+  std::vector<ExceptionFilterOptions> filterOptions;
+
+  // unsupported keys: exceptionOptions
+};
+bool fromJSON(const llvm::json::Value &, SetExceptionBreakpointsArguments &,
+              llvm::json::Path);
+
+/// Response to `setExceptionBreakpoints` request.
+///
+/// The response contains an array of `Breakpoint` objects with information
+/// about each exception breakpoint or filter. The `Breakpoint` objects are in
+/// the same order as the elements of the `filters`, `filterOptions`,
+/// `exceptionOptions` arrays given as arguments. If both `filters` and
+/// `filterOptions` are given, the returned array must start with `filters`
+/// information first, followed by `filterOptions` information.
+///
+/// The `verified` property of a `Breakpoint` object signals whether the
+/// exception breakpoint or filter could be successfully created and whether the
+/// condition is valid. In case of an error the `message` property explains the
+/// problem. The `id` property can be used to introduce a unique ID for the
+/// exception breakpoint or filter so that it can be updated subsequently by
+/// sending breakpoint events.
+///
+/// For backward compatibility both the `breakpoints` array and the enclosing
+/// `body` are optional. If these elements are missing a client is not able to
+/// show problems for individual exception breakpoints or filters.
+struct SetExceptionBreakpointsResponseBody {
+  /// Information about the exception breakpoints or filters.
+  ///
+  /// The breakpoints returned are in the same order as the elements of the
+  /// `filters`, `filterOptions`, `exceptionOptions` arrays in the arguments. If
+  /// both `filters` and `filterOptions` are given, the returned array must
+  /// start with `filters` information first, followed by `filterOptions`
+  /// information.
+  std::vector<Breakpoint> breakpoints;
+};
+llvm::json::Value toJSON(const SetExceptionBreakpointsResponseBody &);
+
 /// Arguments to `disassemble` request.
 struct DisassembleArguments {
   /// Memory reference to the base location containing the instructions to
@@ -763,6 +838,42 @@ struct DisassembleResponseBody {
 bool fromJSON(const llvm::json::Value &, DisassembleResponseBody &,
               llvm::json::Path);
 llvm::json::Value toJSON(const DisassembleResponseBody &);
+
+/// Arguments for `readMemory` request.
+struct ReadMemoryArguments {
+  /// Memory reference to the base location from which data should be read.
+  lldb::addr_t memoryReference;
+
+  /// Offset (in bytes) to be applied to the reference location before reading
+  /// data. Can be negative.
+  int64_t offset = 0;
+
+  /// Number of bytes to read at the specified location and offset.
+  uint64_t count;
+};
+bool fromJSON(const llvm::json::Value &, ReadMemoryArguments &,
+              llvm::json::Path);
+
+/// Response to `readMemory` request.
+struct ReadMemoryResponseBody {
+  /// The address of the first byte of data returned.
+  /// Treated as a hex value if prefixed with `0x`, or as a decimal value
+  /// otherwise.
+  std::string address;
+
+  /// The number of unreadable bytes encountered after the last successfully
+  /// read byte.
+  /// This can be used to determine the number of bytes that should be skipped
+  /// before a subsequent `readMemory` request succeeds.
+  uint64_t unreadableBytes = 0;
+
+  /// The bytes read from memory, encoded using base64. If the decoded length
+  /// of `data` is less than the requested `count` in the original `readMemory`
+  /// request, and `unreadableBytes` is zero or omitted, then the client should
+  /// assume it's reached the end of readable memory.
+  std::vector<std::byte> data;
+};
+llvm::json::Value toJSON(const ReadMemoryResponseBody &);
 
 } // namespace lldb_dap::protocol
 

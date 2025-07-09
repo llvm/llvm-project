@@ -73,6 +73,6 @@ TEST_F(LlvmLibcNanlTest, RandomString) {
 
 #if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
 TEST_F(LlvmLibcNanlTest, InvalidInput) {
-  EXPECT_DEATH([] { LIBC_NAMESPACE::nanl(nullptr); });
+  EXPECT_DEATH([] { LIBC_NAMESPACE::nanl(nullptr); }, WITH_SIGNAL(-1));
 }
 #endif // LIBC_HAS_ADDRESS_SANITIZER
