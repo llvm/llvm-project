@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Function.h"
@@ -3417,25 +3418,40 @@ static SDValue performSETCCCombine(SDNode *N,
   }
   return SDValue();
 }
-
-static SDValue performFAddCombine(SDNode *N, SelectionDAG &DAG) {
-  assert(N->getOpcode() == ISD::FADD);
-  using namespace llvm::SDPatternMatch;
-
+static bool canRelaxSimd(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   EVT VecVT = N->getValueType(0);
 
-  // WebAssembly doesn't have scalar fma yet
+  // INFO: WebAssembly doesn't have scalar fma yet
   // https://github.com/WebAssembly/design/issues/1391
   if (!VecVT.isVector())
-    return SDValue();
+    return false;
 
   // Allows fp fusing
   if (!N->getFlags().hasAllowContract())
+    return false;
+
+  if (N->getValueType(0).bitsGT(MVT::f128))
+    return false;
+
+  return true;
+}
+static SDValue performFAddCombine(SDNode *N,
+                                  TargetLowering::DAGCombinerInfo &DCI) {
+  assert(N->getOpcode() == ISD::FADD);
+  using namespace llvm::SDPatternMatch;
+
+  // INFO: WebAssembly doesn't have scalar fma yet
+  // https://github.com/WebAssembly/design/issues/1391
+  EVT VecVT = N->getValueType(0);
+  if (!VecVT.isVector())
+    return SDValue();
+
+  if (!canRelaxSimd(N, DCI))
     return SDValue();
 
   SDLoc DL(N);
   SDValue A, B, C;
-
+  SelectionDAG &DAG = DCI.DAG;
   if (sd_match(N, m_FAdd(m_Value(A), m_FMul(m_Value(B), m_Value(C)))))
     return DAG.getNode(
         ISD::INTRINSIC_WO_CHAIN, DL, VecVT,
@@ -3444,22 +3460,18 @@ static SDValue performFAddCombine(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
-static SDValue performFMACombine(SDNode *N, SelectionDAG &DAG) {
+static SDValue performFMACombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI) {
   assert(N->getOpcode() == ISD::FMA);
 
-  EVT VecVT = N->getValueType(0);
-  if (!VecVT.isVector())
-    return SDValue();
-
-  // Allows fp fusing
-  if (!N->getFlags().hasAllowContract())
+  if (!canRelaxSimd(N, DCI))
     return SDValue();
 
   SDLoc DL(N);
   SDValue A = N->getOperand(0), B = N->getOperand(1), C = N->getOperand(2);
-
+  SelectionDAG &DAG = DCI.DAG;
   return DAG.getNode(
-      ISD::INTRINSIC_WO_CHAIN, DL, VecVT,
+      ISD::INTRINSIC_WO_CHAIN, DL, N->getValueType(0),
       {DAG.getConstant(Intrinsic::wasm_relaxed_madd, DL, MVT::i32), A, B, C});
 }
 
@@ -3581,9 +3593,9 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
     return performLowerPartialReduction(N, DCI.DAG);
   }
   case ISD::FADD:
-    return performFAddCombine(N, DCI.DAG);
+    return performFAddCombine(N, DCI);
   case ISD::FMA:
-    return performFMACombine(N, DCI.DAG);
+    return performFMACombine(N, DCI);
   case ISD::MUL:
     return performMulCombine(N, DCI.DAG);
   }

@@ -26,6 +26,36 @@ entry:
 }
 
 
+define <8 x float> @fma_vector_8xf32_seperate(<8 x float> %a, <8 x float> %b, <8 x float> %c) {
+; CHECK-LABEL: fma_vector_8xf32_seperate:
+; CHECK:         .functype fma_vector_8xf32_seperate (i32, v128, v128, v128, v128, v128, v128) -> ()
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    f32x4.relaxed_madd $push0=, $6, $4, $2
+; CHECK-NEXT:    v128.store 16($0), $pop0
+; CHECK-NEXT:    f32x4.relaxed_madd $push1=, $5, $3, $1
+; CHECK-NEXT:    v128.store 0($0), $pop1
+; CHECK-NEXT:    return
+entry:
+  %mul.i = fmul fast <8 x float> %b, %a
+  %add.i = fadd fast <8 x float> %mul.i, %c
+  ret <8 x float> %add.i
+}
+
+define <8 x float> @fma_vector_8xf32_llvm(<8 x float> %a, <8 x float> %b, <8 x float> %c) {
+; CHECK-LABEL: fma_vector_8xf32_llvm:
+; CHECK:         .functype fma_vector_8xf32_llvm (i32, v128, v128, v128, v128, v128, v128) -> ()
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    f32x4.relaxed_madd $push0=, $2, $4, $6
+; CHECK-NEXT:    v128.store 16($0), $pop0
+; CHECK-NEXT:    f32x4.relaxed_madd $push1=, $1, $3, $5
+; CHECK-NEXT:    v128.store 0($0), $pop1
+; CHECK-NEXT:    return
+entry:
+  %fma = tail call fast <8 x float> @llvm.fma(<8 x float> %a, <8 x float> %b, <8 x float> %c)
+  ret <8 x float> %fma
+}
+
+
 define <2 x double> @fma_vector_2xf64_seperate(<2 x double> %a, <2 x double> %b, <2 x double> %c) {
 ; CHECK-LABEL: fma_vector_2xf64_seperate:
 ; CHECK:         .functype fma_vector_2xf64_seperate (v128, v128, v128) -> (v128)
