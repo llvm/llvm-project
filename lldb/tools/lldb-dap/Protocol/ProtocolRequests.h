@@ -875,6 +875,27 @@ struct ReadMemoryResponseBody {
 };
 llvm::json::Value toJSON(const ReadMemoryResponseBody &);
 
+/// Arguments for `modules` request.
+struct ModulesArguments {
+  /// The index of the first module to return; if omitted modules start at 0.
+  uint32_t startModule = 0;
+
+  /// The number of modules to return. If `moduleCount` is not specified or 0,
+  /// all modules are returned.
+  uint32_t moduleCount = 0;
+};
+bool fromJSON(const llvm::json::Value &, ModulesArguments &, llvm::json::Path);
+
+/// Response to `modules` request.
+struct ModulesResponseBody {
+  /// All modules or range of modules.
+  std::vector<Module> modules;
+
+  /// The total number of modules available.
+  uint32_t totalModules = 0;
+};
+llvm::json::Value toJSON(const ModulesResponseBody &);
+
 } // namespace lldb_dap::protocol
 
 #endif

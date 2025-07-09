@@ -805,13 +805,12 @@ llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
                                                shape, /*slice=*/mlir::Value{});
     } else {
       // Array references must have fixed shape, when used in assignments.
+      auto refTy = mlir::cast<fir::ReferenceType>(lhs.getType());
+      auto seqTy = mlir::cast<fir::SequenceType>(refTy.getElementType());
+      llvm::ArrayRef<int64_t> fixedShape = seqTy.getShape();
       int64_t flatExtent = 1;
-      for (const mlir::Value &extent : extents) {
-        mlir::Operation *op = extent.getDefiningOp();
-        assert(op && "no defining operation for constant array extent");
-        flatExtent *= fir::toInt(mlir::cast<mlir::arith::ConstantOp>(*op));
-      }
-
+      for (int64_t extent : fixedShape)
+        flatExtent *= extent;
       flatArrayType =
           fir::ReferenceType::get(fir::SequenceType::get({flatExtent}, eleTy));
       flatArray = builder.createConvert(loc, flatArrayType, flatArray);

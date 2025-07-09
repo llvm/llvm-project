@@ -528,7 +528,6 @@ static bool AsanInitInternal() {
   AsanThread *main_thread = CreateMainThread();
   CHECK_EQ(0, main_thread->tid());
   force_interface_symbols();  // no-op.
-  SanitizerInitializeUnwinder();
 
   if (CAN_SANITIZE_LEAKS) {
     __lsan::InitCommonLsan();

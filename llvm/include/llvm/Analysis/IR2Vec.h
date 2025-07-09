@@ -123,7 +123,7 @@ public:
   LLVM_ABI bool approximatelyEquals(const Embedding &RHS,
                                     double Tolerance = 1e-4) const;
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 };
 
 using InstEmbeddingsMap = DenseMap<const Instruction *, Embedding>;
@@ -272,7 +272,7 @@ class IR2VecVocabPrinterPass : public PassInfoMixin<IR2VecVocabPrinterPass> {
 
 public:
   explicit IR2VecVocabPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
   static bool isRequired() { return true; }
 };
 

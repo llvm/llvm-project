@@ -1194,7 +1194,9 @@ Value *InstCombinerImpl::SimplifyAddWithRemainder(BinaryOperator &I) {
   Value *DivOpV;
   APInt DivOpC;
   if (MatchRem(Rem, X, C0, IsSigned) &&
-      MatchDiv(Div, DivOpV, DivOpC, IsSigned) && X == DivOpV && C0 == DivOpC) {
+      MatchDiv(Div, DivOpV, DivOpC, IsSigned) && X == DivOpV && C0 == DivOpC &&
+      // Avoid unprofitable replacement of and with mul.
+      !(C1.isOne() && !IsSigned && DivOpC.isPowerOf2() && DivOpC != 2)) {
     APInt NewC = C1 - C2 * C0;
     if (!NewC.isZero() && !Rem->hasOneUse())
       return nullptr;

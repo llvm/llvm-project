@@ -115,7 +115,7 @@ public:
                   MutableArrayRef<char>, uint64_t Value,
                   bool IsResolved) override;
 
-  bool mayNeedRelaxation(const MCInst &Inst,
+  bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override {
     // Not implemented yet.  For example, if we have a branch with
     // lager than SIMM32 immediate value, we want to relaxation such

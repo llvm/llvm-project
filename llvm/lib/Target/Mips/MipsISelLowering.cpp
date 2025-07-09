@@ -373,6 +373,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
     setOperationAction(ISD::IS_FPCLASS, MVT::f32, Legal);
     setOperationAction(ISD::IS_FPCLASS, MVT::f64, Legal);
+    setOperationAction(ISD::FCANONICALIZE, MVT::f32, Legal);
+    setOperationAction(ISD::FCANONICALIZE, MVT::f64, Legal);
   } else {
     setOperationAction(ISD::FCANONICALIZE, MVT::f32, Custom);
     setOperationAction(ISD::FCANONICALIZE, MVT::f64, Custom);

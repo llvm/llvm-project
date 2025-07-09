@@ -768,6 +768,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(Op, MVT::v8bf16, Expand);
   }
 
+  // Legalize fcanonicalize to circumvent default expansion
+  setOperationAction(ISD::FCANONICALIZE, {MVT::f32, MVT::f64}, Legal);
+  if (Subtarget->hasFullFP16()) {
+    setOperationAction(ISD::FCANONICALIZE, MVT::f16, Legal);
+  }
+
   // fpextend from f16 or bf16 to f32 is legal
   setOperationAction(ISD::FP_EXTEND, MVT::f32, Legal);
   setOperationAction(ISD::FP_EXTEND, MVT::v4f32, Legal);
@@ -18046,6 +18052,15 @@ static SDValue foldVectorXorShiftIntoCmp(SDNode *N, SelectionDAG &DAG,
 //  v16i32 abs(
 //    v16i32 sub(
 //     v16i32 [sign|zero]_extend(v16i8 a), v16i32 [sign|zero]_extend(v16i8 b))))
+//
+//  or
+//
+// i32 vecreduce_add(
+//  v16i32 zext(
+//   v16i16 abs(
+//    v16i16 sub(
+//     v16i16 [sign|zero]_extend(v16i8 a), v16i16 [sign|zero]_extend(v16i8 b))))
+//
 // =================>
 // i32 vecreduce_add(
 //   v4i32 UADDLP(
@@ -18061,23 +18076,35 @@ static SDValue performVecReduceAddCombineWithUADDLP(SDNode *N,
     return SDValue();
 
   SDValue VecReduceOp0 = N->getOperand(0);
+  bool SawTrailingZext = false;
+  // Look through an optional post-ABS ZEXT from v16i16 -> v16i32.
+  if (VecReduceOp0.getOpcode() == ISD::ZERO_EXTEND &&
+      VecReduceOp0->getValueType(0) == MVT::v16i32 &&
+      VecReduceOp0->getOperand(0)->getOpcode() == ISD::ABS &&
+      VecReduceOp0->getOperand(0)->getValueType(0) == MVT::v16i16) {
+    SawTrailingZext = true;
+    VecReduceOp0 = VecReduceOp0.getOperand(0);
+  }
+
+  // Peel off an optional post-ABS extend (v16i16 -> v16i32).
+  MVT AbsInputVT = SawTrailingZext ? MVT::v16i16 : MVT::v16i32;
+  // Assumed v16i16 or v16i32 abs input
   unsigned Opcode = VecReduceOp0.getOpcode();
-  // Assumed v16i32 abs
-  if (Opcode != ISD::ABS || VecReduceOp0->getValueType(0) != MVT::v16i32)
+  if (Opcode != ISD::ABS || VecReduceOp0->getValueType(0) != AbsInputVT)
     return SDValue();
 
   SDValue ABS = VecReduceOp0;
-  // Assumed v16i32 sub
+  // Assumed v16i16 or v16i32 sub
   if (ABS->getOperand(0)->getOpcode() != ISD::SUB ||
-      ABS->getOperand(0)->getValueType(0) != MVT::v16i32)
+      ABS->getOperand(0)->getValueType(0) != AbsInputVT)
     return SDValue();
 
   SDValue SUB = ABS->getOperand(0);
   unsigned Opcode0 = SUB->getOperand(0).getOpcode();
   unsigned Opcode1 = SUB->getOperand(1).getOpcode();
-  // Assumed v16i32 type
-  if (SUB->getOperand(0)->getValueType(0) != MVT::v16i32 ||
-      SUB->getOperand(1)->getValueType(0) != MVT::v16i32)
+  // Assumed v16i16 or v16i32 type
+  if (SUB->getOperand(0)->getValueType(0) != AbsInputVT ||
+      SUB->getOperand(1)->getValueType(0) != AbsInputVT)
     return SDValue();
 
   // Assumed zext or sext
@@ -25523,6 +25550,9 @@ static SDValue performVSelectCombine(SDNode *N, SelectionDAG &DAG) {
     return SwapResult;
 
   SDValue N0 = N->getOperand(0);
+  SDValue IfTrue = N->getOperand(1);
+  SDValue IfFalse = N->getOperand(2);
+  EVT ResVT = N->getValueType(0);
   EVT CCVT = N0.getValueType();
 
   if (isAllActivePredicate(DAG, N0))
@@ -25530,6 +25560,22 @@ static SDValue performVSelectCombine(SDNode *N, SelectionDAG &DAG) {
 
   if (isAllInactivePredicate(N0))
     return N->getOperand(2);
+
+  if (isMergePassthruOpcode(IfTrue.getOpcode()) && IfTrue.hasOneUse()) {
+    // vselect A, (merge_pasthru_op all_active, B,{Bn,} -), C
+    // vselect A, (merge_pasthru_op -, B,{Bn,} undef), C
+    // vselect A, (merge_pasthru_op A, B,{Bn,} -), C
+    //   -> merge_pasthru_op A, B,{Bn,} C
+    if (isAllActivePredicate(DAG, IfTrue->getOperand(0)) ||
+        IfTrue->getOperand(IfTrue.getNumOperands() - 1).isUndef() ||
+        IfTrue->getOperand(0) == N0) {
+      SmallVector<SDValue, 4> Ops(IfTrue->op_values());
+      Ops[0] = N0;
+      Ops[IfTrue.getNumOperands() - 1] = IfFalse;
+
+      return DAG.getNode(IfTrue.getOpcode(), SDLoc(N), ResVT, Ops);
+    }
+  }
 
   // Check for sign pattern (VSELECT setgt, iN lhs, -1, 1, -1) and transform
   // into (OR (ASR lhs, N-1), 1), which requires less instructions for the
@@ -25570,14 +25616,11 @@ static SDValue performVSelectCombine(SDNode *N, SelectionDAG &DAG) {
       CmpVT.getVectorElementType().isFloatingPoint())
     return SDValue();
 
-  EVT ResVT = N->getValueType(0);
   // Only combine when the result type is of the same size as the compared
   // operands.
   if (ResVT.getSizeInBits() != CmpVT.getSizeInBits())
     return SDValue();
 
-  SDValue IfTrue = N->getOperand(1);
-  SDValue IfFalse = N->getOperand(2);
   SetCC = DAG.getSetCC(SDLoc(N), CmpVT.changeVectorElementTypeToInteger(),
                        N0.getOperand(0), N0.getOperand(1),
                        cast<CondCodeSDNode>(N0.getOperand(2))->get());
@@ -28513,9 +28556,7 @@ void AArch64TargetLowering::finalizeLowering(MachineFunction &MF) const {
 }
 
 // Unlike X86, we let frame lowering assign offsets to all catch objects.
-bool AArch64TargetLowering::needsFixedCatchObjects() const {
-  return false;
-}
+bool AArch64TargetLowering::needsFixedCatchObjects() const { return true; }
 
 bool AArch64TargetLowering::shouldLocalize(
     const MachineInstr &MI, const TargetTransformInfo *TTI) const {

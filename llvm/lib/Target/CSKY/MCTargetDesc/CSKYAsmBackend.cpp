@@ -239,9 +239,9 @@ void CSKYAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   }
 }
 
-bool CSKYAsmBackend::mayNeedRelaxation(const MCInst &Inst,
+bool CSKYAsmBackend::mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand>,
                                        const MCSubtargetInfo &STI) const {
-  switch (Inst.getOpcode()) {
+  switch (Opcode) {
   default:
     return false;
   case CSKY::JBR32:

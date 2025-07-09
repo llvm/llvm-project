@@ -2208,7 +2208,7 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
   if (Ptr.isOnePastEnd())
     return Error(1);
 
-  bool Result = true;
+  bool Result = Ptr.getLifetime() != Lifetime::Ended;
   if (!Ptr.isActive()) {
     Result = false;
   } else {
@@ -2216,7 +2216,19 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
       return false;
     if (!CheckMutable(S, OpPC, Ptr))
       return false;
+    if (!CheckDummy(S, OpPC, Ptr, AK_Read))
+      return false;
   }
+
+  // Check if we're currently running an initializer.
+  for (InterpFrame *Frame = S.Current; Frame; Frame = Frame->Caller) {
+    if (const Function *F = Frame->getFunction();
+        F && F->isConstructor() && Frame->getThis().block() == Ptr.block()) {
+      return Error(2);
+    }
+  }
+  if (S.EvaluatingDecl && Ptr.getDeclDesc()->asVarDecl() == S.EvaluatingDecl)
+    return Error(2);
 
   pushInteger(S, Result, Call->getType());
   return true;
