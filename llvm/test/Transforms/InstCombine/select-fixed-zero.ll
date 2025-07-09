@@ -176,9 +176,10 @@ define i64 @sdiv_select(i64 %a, i64 %b) {
 ; FIXED-ZERO-NEXT:    ret i64 [[DIV]]
 ;
 ; CHECK-LABEL: @sdiv_select(
-; CHECK-NEXT:    [[B_FR:%.*]] = freeze i64 [[B:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 [[A:%.*]], [[B_FR]]
-; CHECK-NEXT:    ret i64 [[DIV]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[A:%.*]], 0
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 [[A]], [[B_FR:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i64 0, i64 [[DIV]]
+; CHECK-NEXT:    ret i64 [[SELECT]]
 ;
   %cond = icmp eq i64 %a, 0
   %div = sdiv i64 %a, %b
@@ -194,9 +195,10 @@ define i64 @udiv_select(i64 %a, i64 %b) {
 ; FIXED-ZERO-NEXT:    ret i64 [[DIV]]
 ;
 ; CHECK-LABEL: @udiv_select(
-; CHECK-NEXT:    [[B_FR:%.*]] = freeze i64 [[B:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[A:%.*]], [[B_FR]]
-; CHECK-NEXT:    ret i64 [[DIV]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[A:%.*]], 0
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[A]], [[B_FR:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i64 0, i64 [[DIV]]
+; CHECK-NEXT:    ret i64 [[SELECT]]
 ;
   %cond = icmp eq i64 %a, 0
   %div = udiv i64 %a, %b
