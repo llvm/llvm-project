@@ -2,6 +2,15 @@ add_subdirectory(CPP)
 add_subdirectory(macros)
 
 add_header_library(
+  libc_errno
+  HDRS
+    libc_errno.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   block
   HDRS
     block.h
@@ -381,3 +390,11 @@ add_subdirectory(HashTable)
 add_subdirectory(fixed_point)
 
 add_subdirectory(time)
+
+# Requires access to uchar header which is not on macos
+# Therefore, cannot currently build this on macos in overlay mode
+if(NOT(LIBC_TARGET_OS_IS_DARWIN))
+  add_subdirectory(wchar)
+endif()
+
+add_subdirectory(math)

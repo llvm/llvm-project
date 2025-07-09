@@ -141,7 +141,7 @@ define signext i32 @packh_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 16
 ; RV64I-NEXT:    zext.b a0, a0
-; RV64I-NEXT:    addiw a2, a2, -256
+; RV64I-NEXT:    addi a2, a2, -256
 ; RV64I-NEXT:    slli a1, a1, 8
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    or a0, a1, a0
@@ -151,7 +151,7 @@ define signext i32 @packh_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64ZBKB:       # %bb.0:
 ; RV64ZBKB-NEXT:    lui a2, 16
 ; RV64ZBKB-NEXT:    zext.b a0, a0
-; RV64ZBKB-NEXT:    addiw a2, a2, -256
+; RV64ZBKB-NEXT:    addi a2, a2, -256
 ; RV64ZBKB-NEXT:    slli a1, a1, 8
 ; RV64ZBKB-NEXT:    and a1, a1, a2
 ; RV64ZBKB-NEXT:    or a0, a1, a0
@@ -189,7 +189,7 @@ define i64 @packh_i64(i64 %a, i64 %b) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 16
 ; RV64I-NEXT:    zext.b a0, a0
-; RV64I-NEXT:    addiw a2, a2, -256
+; RV64I-NEXT:    addi a2, a2, -256
 ; RV64I-NEXT:    slli a1, a1, 8
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    or a0, a1, a0
@@ -199,7 +199,7 @@ define i64 @packh_i64(i64 %a, i64 %b) nounwind {
 ; RV64ZBKB:       # %bb.0:
 ; RV64ZBKB-NEXT:    lui a2, 16
 ; RV64ZBKB-NEXT:    zext.b a0, a0
-; RV64ZBKB-NEXT:    addiw a2, a2, -256
+; RV64ZBKB-NEXT:    addi a2, a2, -256
 ; RV64ZBKB-NEXT:    slli a1, a1, 8
 ; RV64ZBKB-NEXT:    and a1, a1, a2
 ; RV64ZBKB-NEXT:    or a0, a1, a0
