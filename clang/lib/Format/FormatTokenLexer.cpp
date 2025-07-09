@@ -1336,16 +1336,18 @@ FormatToken *FormatTokenLexer::getNextToken() {
   // finds comments that contain a backslash followed by a line break, truncates
   // the comment token at the backslash, and resets the lexer to restart behind
   // the backslash.
-  if ((Style.isJavaScript() || Style.isJava()) && FormatTok->is(tok::comment) &&
-      FormatTok->TokenText.starts_with("//")) {
-    size_t BackslashPos = FormatTok->TokenText.find('\\');
-    while (BackslashPos != StringRef::npos) {
-      if (BackslashPos + 1 < FormatTok->TokenText.size() &&
-          FormatTok->TokenText[BackslashPos + 1] == '\n') {
-        truncateToken(BackslashPos + 1);
-        break;
+  if ((Style.isCpp() || Style.isJavaScript() || Style.isJava()) &&
+      FormatTok->is(tok::comment)) {
+    if (const auto Text = FormatTok->TokenText; Text.starts_with("//")) {
+      for (auto Pos = Text.find('\\'); Pos++ != StringRef::npos;
+           Pos = Text.find('\\', Pos)) {
+        if (Pos < Text.size() && Text[Pos] == '\n' &&
+            (!Style.isCpp() ||
+             Text.substr(Pos + 1).ltrim().starts_with("//"))) {
+          truncateToken(Pos);
+          break;
+        }
       }
-      BackslashPos = FormatTok->TokenText.find('\\', BackslashPos + 1);
     }
   }
 
