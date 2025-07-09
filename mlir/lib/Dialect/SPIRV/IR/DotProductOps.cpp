@@ -1,4 +1,4 @@
-//===- DotProductOps.cpp - MLIR SPIR-V Dot Product Ops  ----===//
+//===- DotProductOps.cpp - MLIR SPIR-V Dot Product Ops  -------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -34,7 +34,7 @@ static std::optional<spirv::Version> getDotProductMaxVersion() {
 }
 
 SmallVector<ArrayRef<spirv::Extension>, 1> DotOp::getExtensions() {
-  if (getResult().getType().isBF16()) {
+  if (isa<BFloat16Type>(getType())) {
     static const auto extension = spirv::Extension::SPV_KHR_bfloat16;
     return {extension};
   }
@@ -43,7 +43,7 @@ SmallVector<ArrayRef<spirv::Extension>, 1> DotOp::getExtensions() {
 }
 
 SmallVector<ArrayRef<spirv::Capability>, 1> DotOp::getCapabilities() {
-  if (getResult().getType().isBF16()) {
+  if (isa<BFloat16Type>(getType())) {
     static const auto capability = spirv::Capability::BFloat16DotProductKHR;
     return {capability};
   }
