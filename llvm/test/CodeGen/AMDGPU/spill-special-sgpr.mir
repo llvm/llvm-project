@@ -40,6 +40,8 @@ body:             |
     ; GFX9-LABEL: name: check_vcc
     ; GFX9: liveins: $sgpr8, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr9
     ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; GFX9-NEXT: $sgpr33 = S_MOV_B32 0
     ; GFX9-NEXT: $sgpr12 = S_MOV_B32 &SCRATCH_RSRC_DWORD0, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15
     ; GFX9-NEXT: $sgpr13 = S_MOV_B32 &SCRATCH_RSRC_DWORD1, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15
@@ -77,6 +79,8 @@ body:             |
     ; GFX10-LABEL: name: check_vcc
     ; GFX10: liveins: $sgpr8, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr9
     ; GFX10-NEXT: {{  $}}
+    ; GFX10-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; GFX10-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; GFX10-NEXT: $sgpr33 = S_MOV_B32 0
     ; GFX10-NEXT: $sgpr96 = S_MOV_B32 &SCRATCH_RSRC_DWORD0, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
     ; GFX10-NEXT: $sgpr97 = S_MOV_B32 &SCRATCH_RSRC_DWORD1, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
@@ -114,6 +118,8 @@ body:             |
     ; GFX11-LABEL: name: check_vcc
     ; GFX11: liveins: $sgpr8, $sgpr4_sgpr5, $sgpr6_sgpr7
     ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; GFX11-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; GFX11-NEXT: $sgpr33 = S_MOV_B32 0
     ; GFX11-NEXT: $vcc = IMPLICIT_DEF
     ; GFX11-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
