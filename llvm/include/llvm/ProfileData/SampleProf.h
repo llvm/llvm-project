@@ -61,7 +61,9 @@ enum class sampleprof_error {
   ostream_seek_unsupported,
   uncompress_failed,
   zlib_unavailable,
-  hash_mismatch
+  hash_mismatch,
+  illegal_line_offset,
+  duplicate_vtable_type,
 };
 
 inline std::error_code make_error_code(sampleprof_error E) {
@@ -89,6 +91,8 @@ struct is_error_code_enum<llvm::sampleprof_error> : std::true_type {};
 
 namespace llvm {
 namespace sampleprof {
+
+constexpr char kVTableProfPrefix[] = "vtables ";
 
 enum SampleProfileFormat {
   SPF_None = 0,
@@ -203,6 +207,9 @@ enum class SecProfSummaryFlags : uint32_t {
   /// SecFlagIsPreInlined means this profile contains ShouldBeInlined
   /// contexts thus this is CS preinliner computed.
   SecFlagIsPreInlined = (1 << 4),
+
+  /// SecFlagHasVTableTypeProf means this profile contains vtable type profiles.
+  SecFlagHasVTableTypeProf = (1 << 5),
 };
 
 enum class SecFuncMetadataFlags : uint32_t {
@@ -286,7 +293,7 @@ struct LineLocation {
   LLVM_ABI void dump() const;
 
   // Serialize the line location to the output stream using ULEB128 encoding.
-  LLVM_ABI void serialize(raw_ostream &OS);
+  LLVM_ABI void serialize(raw_ostream &OS) const;
 
   bool operator<(const LineLocation &O) const {
     return std::tie(LineOffset, Discriminator) <
@@ -302,7 +309,7 @@ struct LineLocation {
   }
 
   uint64_t getHashCode() const {
-    return ((uint64_t) Discriminator << 32) | LineOffset;
+    return ((uint64_t)Discriminator << 32) | LineOffset;
   }
 
   uint32_t LineOffset;
@@ -317,16 +324,28 @@ struct LineLocationHash {
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
 
+/// Key represents the id of a vtable and value represents its count.
+/// TODO: Rename class FunctionId to SymbolId in a separate PR.
+using TypeCountMap = std::map<FunctionId, uint64_t>;
+
+/// Write \p Map to the output stream. Keys are linearized using \p NameTable
+/// and written as ULEB128. Values are written as ULEB128 as well.
+std::error_code
+serializeTypeMap(const TypeCountMap &Map,
+                 const MapVector<FunctionId, uint32_t> &NameTable,
+                 raw_ostream &OS);
+
 /// Representation of a single sample record.
 ///
 /// A sample record is represented by a positive integer value, which
 /// indicates how frequently was the associated line location executed.
 ///
 /// Additionally, if the associated location contains a function call,
-/// the record will hold a list of all the possible called targets. For
-/// direct calls, this will be the exact function being invoked. For
-/// indirect calls (function pointers, virtual table dispatch), this
-/// will be a list of one or more functions.
+/// the record will hold a list of all the possible called targets and the types
+/// for virtual table dispatches. For direct calls, this will be the exact
+/// function being invoked. For indirect calls (function pointers, virtual table
+/// dispatch), this will be a list of one or more functions. For virtual table
+/// dispatches, this record will also hold the type of the object.
 class SampleRecord {
 public:
   using CallTarget = std::pair<FunctionId, uint64_t>;
@@ -745,6 +764,7 @@ using BodySampleMap = std::map<LineLocation, SampleRecord>;
 // memory, which is *very* significant for large profiles.
 using FunctionSamplesMap = std::map<FunctionId, FunctionSamples>;
 using CallsiteSampleMap = std::map<LineLocation, FunctionSamplesMap>;
+using CallsiteTypeMap = std::map<LineLocation, TypeCountMap>;
 using LocToLocMap =
     std::unordered_map<LineLocation, LineLocation, LineLocationHash>;
 
@@ -927,6 +947,14 @@ public:
     return &Iter->second;
   }
 
+  /// Returns the TypeCountMap for inlined callsites at the given \p Loc.
+  const TypeCountMap *findCallsiteTypeSamplesAt(const LineLocation &Loc) const {
+    auto Iter = VirtualCallsiteTypeCounts.find(mapIRLocToProfileLoc(Loc));
+    if (Iter == VirtualCallsiteTypeCounts.end())
+      return nullptr;
+    return &Iter->second;
+  }
+
   /// Returns a pointer to FunctionSamples at the given callsite location
   /// \p Loc with callee \p CalleeName. If no callsite can be found, relax
   /// the restriction to return the FunctionSamples at callsite location
@@ -988,6 +1016,42 @@ public:
     return CallsiteSamples;
   }
 
+  /// Return all the callsite type samples collected in the body of the
+  /// function.
+  const CallsiteTypeMap &getCallsiteTypeCounts() const {
+    return VirtualCallsiteTypeCounts;
+  }
+
+  /// Returns the type samples for the un-drifted location of \p Loc.
+  TypeCountMap &getTypeSamplesAt(const LineLocation &Loc) {
+    return VirtualCallsiteTypeCounts[mapIRLocToProfileLoc(Loc)];
+  }
+
+  /// Scale \p Other sample counts by \p Weight and add the scaled result to the
+  /// type samples for the undrifted location of \p Loc.
+  template <typename T>
+  sampleprof_error addCallsiteVTableTypeProfAt(const LineLocation &Loc,
+                                               const T &Other,
+                                               uint64_t Weight = 1) {
+    static_assert((std::is_same_v<typename T::key_type, StringRef> ||
+                   std::is_same_v<typename T::key_type, FunctionId>) &&
+                      std::is_same_v<typename T::mapped_type, uint64_t>,
+                  "T must be a map with StringRef or FunctionId as key and "
+                  "uint64_t as value");
+    TypeCountMap &TypeCounts = getTypeSamplesAt(Loc);
+    bool Overflowed = false;
+
+    for (const auto [Type, Count] : Other) {
+      FunctionId TypeId(Type);
+      bool RowOverflow = false;
+      TypeCounts[TypeId] = SaturatingMultiplyAdd(
+          Count, Weight, TypeCounts[TypeId], &RowOverflow);
+      Overflowed |= RowOverflow;
+    }
+    return Overflowed ? sampleprof_error::counter_overflow
+                      : sampleprof_error::success;
+  }
+
   /// Return the maximum of sample counts in a function body. When SkipCallSite
   /// is false, which is the default, the return count includes samples in the
   /// inlined functions. When SkipCallSite is true, the return count only
@@ -1042,6 +1106,10 @@ public:
         mergeSampleProfErrors(Result,
                               FSMap[Rec.first].merge(Rec.second, Weight));
     }
+    for (const auto &[Loc, OtherTypeMap] : Other.getCallsiteTypeCounts())
+      mergeSampleProfErrors(
+          Result, addCallsiteVTableTypeProfAt(Loc, OtherTypeMap, Weight));
+
     return Result;
   }
 
@@ -1284,6 +1352,23 @@ private:
   /// in the call to bar() at line offset 1, the other for all the samples
   /// collected in the call to baz() at line offset 8.
   CallsiteSampleMap CallsiteSamples;
+
+  /// Map inlined virtual callsites to the vtable from which they are loaded.
+  ///
+  /// Each entry is a mapping from the location to the list of vtables and their
+  /// sampled counts. For example, given:
+  ///
+  ///     void foo() {
+  ///       ...
+  ///  5    inlined_vcall_bar();
+  ///       ...
+  ///  5    inlined_vcall_baz();
+  ///       ...
+  ///  200  inlined_vcall_qux();
+  ///     }
+  /// This map will contain two entries. One with two types for line offset 5
+  /// and one with one type for line offset 200.
+  CallsiteTypeMap VirtualCallsiteTypeCounts;
 
   /// IR to profile location map generated by stale profile matching.
   ///

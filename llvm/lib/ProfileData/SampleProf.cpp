@@ -47,6 +47,24 @@ bool FunctionSamples::ProfileIsPreInlined = false;
 bool FunctionSamples::UseMD5 = false;
 bool FunctionSamples::HasUniqSuffix = true;
 bool FunctionSamples::ProfileIsFS = false;
+
+std::error_code
+serializeTypeMap(const TypeCountMap &Map,
+                 const MapVector<FunctionId, uint32_t> &NameTable,
+                 raw_ostream &OS) {
+  encodeULEB128(Map.size(), OS);
+  for (const auto &[TypeName, SampleCount] : Map) {
+    if (auto NameIndexIter = NameTable.find(TypeName);
+        NameIndexIter != NameTable.end()) {
+      encodeULEB128(NameIndexIter->second, OS);
+    } else {
+      // If the type is not in the name table, we cannot serialize it.
+      return sampleprof_error::truncated_name_table;
+    }
+    encodeULEB128(SampleCount, OS);
+  }
+  return sampleprof_error::success;
+}
 } // namespace sampleprof
 } // namespace llvm
 
@@ -91,6 +109,10 @@ class SampleProfErrorCategoryType : public std::error_category {
       return "Zlib is unavailable";
     case sampleprof_error::hash_mismatch:
       return "Function hash mismatch";
+    case sampleprof_error::illegal_line_offset:
+      return "Illegal line offset in sample profile data";
+    case sampleprof_error::duplicate_vtable_type:
+      return "Duplicate vtable type in one map";
     }
     llvm_unreachable("A value of sampleprof_error has no message.");
   }
@@ -124,6 +146,7 @@ sampleprof_error SampleRecord::merge(const SampleRecord &Other,
   for (const auto &I : Other.getCallTargets()) {
     mergeSampleProfErrors(Result, addCalledTarget(I.first, I.second, Weight));
   }
+
   return Result;
 }
 
@@ -150,7 +173,7 @@ std::error_code SampleRecord::serialize(
 LLVM_DUMP_METHOD void LineLocation::dump() const { print(dbgs()); }
 #endif
 
-void LineLocation::serialize(raw_ostream &OS) {
+void LineLocation::serialize(raw_ostream &OS) const {
   encodeULEB128(LineOffset, OS);
   encodeULEB128(Discriminator, OS);
 }
@@ -176,6 +199,17 @@ raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
   return OS;
 }
 
+static void printTypeCountMap(raw_ostream &OS, LineLocation Loc,
+                              const TypeCountMap &TypeCountMap) {
+  if (TypeCountMap.empty()) {
+    return;
+  }
+  OS << Loc << ": vtables: ";
+  for (const auto &[Type, Count] : TypeCountMap)
+    OS << Type << ":" << Count << " ";
+  OS << "\n";
+}
+
 /// Print the samples collected for a function on stream \p OS.
 void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
   if (getFunctionHash())
@@ -190,7 +224,13 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
     SampleSorter<LineLocation, SampleRecord> SortedBodySamples(BodySamples);
     for (const auto &SI : SortedBodySamples.get()) {
       OS.indent(Indent + 2);
+      const auto &Loc = SI->first;
       OS << SI->first << ": " << SI->second;
+      if (const TypeCountMap *TypeCountMap =
+              this->findCallsiteTypeSamplesAt(Loc)) {
+        OS.indent(Indent + 2);
+        printTypeCountMap(OS, Loc, *TypeCountMap);
+      }
     }
     OS.indent(Indent);
     OS << "}\n";
@@ -204,11 +244,17 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
     SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
         CallsiteSamples);
     for (const auto &CS : SortedCallsiteSamples.get()) {
-      for (const auto &FS : CS->second) {
+      for (const auto &[FuncId, FuncSample] : CS->second) {
         OS.indent(Indent + 2);
-        OS << CS->first << ": inlined callee: " << FS.second.getFunction()
+        OS << CS->first << ": inlined callee: " << FuncSample.getFunction()
            << ": ";
-        FS.second.print(OS, Indent + 4);
+        FuncSample.print(OS, Indent + 4);
+      }
+      const LineLocation &Loc = CS->first;
+      auto TypeSamplesIter = VirtualCallsiteTypeCounts.find(Loc);
+      if (TypeSamplesIter != VirtualCallsiteTypeCounts.end()) {
+        OS.indent(Indent + 2);
+        printTypeCountMap(OS, Loc, TypeSamplesIter->second);
       }
     }
     OS.indent(Indent);
