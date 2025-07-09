@@ -114,8 +114,9 @@ static bool formatStringImpl(ValueObject &valobj, Stream &stream,
 
 bool lldb_private::formatters::IsMsvcStlStringType(ValueObject &valobj) {
   std::vector<uint32_t> indexes;
-  return valobj.GetCompilerType().GetIndexOfChildMemberWithName("_Mypair", true,
-                                                                indexes) > 0;
+  ExecutionContext exe_ctx(valobj.GetExecutionContextRef());
+  return valobj.GetCompilerType().GetIndexOfChildMemberWithName("_Mypair", &exe_ctx,
+                                                                true, indexes) > 0;
 }
 
 bool lldb_private::formatters::MsvcStlWStringSummaryProvider(
