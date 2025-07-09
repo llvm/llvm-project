@@ -128,13 +128,19 @@ define i32 @disjoint_or_xnor_i32(i32 %a, i32 %b) nounwind {
 }
 
 define i64 @disjoint_or_xnor_i64(i64 %a, i64 %b) nounwind {
-; CHECK-LABEL: disjoint_or_xnor_i64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    or a1, a1, a3
-; CHECK-NEXT:    or a0, a0, a2
-; CHECK-NEXT:    not a0, a0
-; CHECK-NEXT:    not a1, a1
-; CHECK-NEXT:    ret
+; RV32I-LABEL: disjoint_or_xnor_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    or a1, a1, a3
+; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    not a1, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: disjoint_or_xnor_i64:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    xnor a0, a0, a2
+; RV32ZBB-ZBKB-NEXT:    xnor a1, a1, a3
+; RV32ZBB-ZBKB-NEXT:    ret
   %or = or disjoint i64 %a, %b
   %not = xor i64 %or, -1
   ret i64 %not
