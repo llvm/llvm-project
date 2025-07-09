@@ -171,7 +171,8 @@ void SerializeMIBInfoToBuffer(MIBMapTy &MIBMap, const Vector<u64> &StackIds,
     // deserialization.
     Ptr = WriteBytes((*h)->mib, Ptr);
     for (u64 j = 0; j < (*h)->mib.AccessHistogramSize; ++j) {
-      u64 HistogramEntry = ((u64 *)((*h)->mib.AccessHistogram))[j];
+      // Read as uint8_t and write as uint8_t
+      uint8_t HistogramEntry = ((uint8_t *)((*h)->mib.AccessHistogram))[j];
       Ptr = WriteBytes(HistogramEntry, Ptr);
     }
     if ((*h)->mib.AccessHistogramSize > 0) {
@@ -249,7 +250,7 @@ u64 SerializeToRawProfile(MIBMapTy &MIBMap, ArrayRef<LoadedModule> Modules,
       },
       reinterpret_cast<void *>(&TotalAccessHistogramEntries));
   const u64 NumHistogramBytes =
-      RoundUpTo(TotalAccessHistogramEntries * sizeof(uint64_t), 8);
+      RoundUpTo(TotalAccessHistogramEntries * sizeof(uint8_t), 8);
 
   const u64 NumStackBytes = RoundUpTo(StackSizeBytes(StackIds), 8);
 

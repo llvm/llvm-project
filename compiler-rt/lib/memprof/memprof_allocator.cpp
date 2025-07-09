@@ -77,7 +77,7 @@ void Print(const MemInfoBlock &M, const u64 id, bool print_terse) {
                              ? MAX_HISTOGRAM_PRINT_SIZE
                              : M.AccessHistogramSize;
     for (size_t i = 0; i < PrintSize; ++i) {
-      Printf("%llu ", ((uint64_t *)M.AccessHistogram)[i]);
+      Printf("%u ", ((uint8_t *)M.AccessHistogram)[i]);
     }
     Printf("\n");
   }
@@ -327,12 +327,13 @@ struct Allocator {
     uint32_t HistogramSize =
         RoundUpTo(user_size, HISTOGRAM_GRANULARITY) / HISTOGRAM_GRANULARITY;
     uintptr_t Histogram =
-        (uintptr_t)InternalAlloc(HistogramSize * sizeof(uint64_t));
-    memset((void *)Histogram, 0, HistogramSize * sizeof(uint64_t));
+        (uintptr_t)InternalAlloc(HistogramSize * sizeof(uint8_t));
+    memset((void *)Histogram, 0, HistogramSize * sizeof(uint8_t));
     for (size_t i = 0; i < HistogramSize; ++i) {
       u8 Counter =
           *((u8 *)HISTOGRAM_MEM_TO_SHADOW(p + HISTOGRAM_GRANULARITY * i));
-      ((uint64_t *)Histogram)[i] = (uint64_t)Counter;
+      // Cap the counter at HISTOGRAM_MAX_COUNTER (255) to prevent overflow
+      ((uint8_t *)Histogram)[i] = (Counter > HISTOGRAM_MAX_COUNTER) ? HISTOGRAM_MAX_COUNTER : Counter;
     }
     MemInfoBlock newMIB(user_size, c, m->timestamp_ms, curtime, m->cpu_id,
                         GetCpuId(), Histogram, HistogramSize);

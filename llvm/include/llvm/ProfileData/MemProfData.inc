@@ -33,11 +33,11 @@
    (uint64_t)'o' << 24 | (uint64_t)'f' << 16 | (uint64_t)'r' << 8 | (uint64_t)129)
 
 // The version number of the raw binary format.
-#define MEMPROF_RAW_VERSION 4ULL
+#define MEMPROF_RAW_VERSION 5ULL
 
 // Currently supported versions.
 #define MEMPROF_RAW_SUPPORTED_VERSIONS                                         \
-  { 3ULL, 4ULL }
+  { 3ULL, 4ULL, 5ULL }
 
 #define MEMPROF_V3_MIB_SIZE 132ULL;
 
@@ -219,7 +219,11 @@ void Merge(const MemInfoBlock &newMIB) {
     ShorterHistogramSize = newMIB.AccessHistogramSize;
   }
   for (size_t i = 0; i < ShorterHistogramSize; ++i) {
-    ((uint64_t *)AccessHistogram)[i] += ((uint64_t *)ShorterHistogram)[i];
+    // Cast to uint8_t* and cap the sum at 255 to prevent overflow
+    uint8_t *CurrentHistPtr = (uint8_t *)AccessHistogram;
+    uint8_t *ShorterHistPtr = (uint8_t *)ShorterHistogram;
+    uint32_t sum = CurrentHistPtr[i] + ShorterHistPtr[i];
+    CurrentHistPtr[i] = (sum > 255) ? 255 : (uint8_t)sum;
   }
 }
 
