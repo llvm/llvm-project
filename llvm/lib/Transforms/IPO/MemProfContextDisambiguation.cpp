@@ -5173,7 +5173,13 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
           CBClone = CB;
         else
           CBClone = cast<CallBase>((*VMaps[J - 1])[CB]);
-        CBClone->setCalledFunction(NewF);
+        // Set the called operand directly instead of calling setCalledFunction,
+        // as the latter mutates the function type on the call. In rare cases
+        // we may have a slightly different type on a callee function
+        // declaration due to it being imported from a different module with
+        // incomplete types. We really just want to change the name of the
+        // function to the clone, and not make any type changes.
+        CBClone->setCalledOperand(NewF.getCallee());
         ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofCall", CBClone)
                  << ore::NV("Call", CBClone) << " in clone "
                  << ore::NV("Caller", CBClone->getFunction())
