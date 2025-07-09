@@ -362,16 +362,28 @@ module m01
     call valueassumedsize(c(::2)) ! ok
     call valueassumedsize(d(::2)) ! ok
     !ERROR: ASYNCHRONOUS or VOLATILE actual argument that is not simply contiguous may not be associated with a contiguous ASYNCHRONOUS or VOLATILE dummy argument 'x='
+    !ERROR: Actual argument associated with VOLATILE dummy argument 'x=' is not definable [-Wundefinable-asynchronous-or-volatile-actual]
+    !BECAUSE: Variable 'b(::2_8)' has array section
     call volatileassumedsize(b(::2))
     !ERROR: ASYNCHRONOUS or VOLATILE actual argument that is not simply contiguous may not be associated with a contiguous ASYNCHRONOUS or VOLATILE dummy argument 'x='
+    !ERROR: Actual argument associated with VOLATILE dummy argument 'x=' is not definable [-Wundefinable-asynchronous-or-volatile-actual]
+    !BECAUSE: Variable 'b(::2_8)' has array section
     call volatilecontiguous(b(::2))
     !ERROR: ASYNCHRONOUS or VOLATILE actual argument that is not simply contiguous may not be associated with a contiguous ASYNCHRONOUS or VOLATILE dummy argument 'x='
+    !ERROR: Actual argument associated with VOLATILE dummy argument 'x=' is not definable [-Wundefinable-asynchronous-or-volatile-actual]
+    !BECAUSE: Variable 'c(::2_8)' has array section
     call volatileassumedsize(c(::2))
     !ERROR: ASYNCHRONOUS or VOLATILE actual argument that is not simply contiguous may not be associated with a contiguous ASYNCHRONOUS or VOLATILE dummy argument 'x='
+    !ERROR: Actual argument associated with VOLATILE dummy argument 'x=' is not definable [-Wundefinable-asynchronous-or-volatile-actual]
+    !BECAUSE: Variable 'c(::2_8)' has array section
     call volatilecontiguous(c(::2))
     !ERROR: ASYNCHRONOUS or VOLATILE actual argument that is not simply contiguous may not be associated with a contiguous ASYNCHRONOUS or VOLATILE dummy argument 'x='
+    !ERROR: Actual argument associated with VOLATILE dummy argument 'x=' is not definable [-Wundefinable-asynchronous-or-volatile-actual]
+    !BECAUSE: Variable 'd(::2_8)' has array section
     call volatileassumedsize(d(::2))
     !ERROR: ASYNCHRONOUS or VOLATILE actual argument that is not simply contiguous may not be associated with a contiguous ASYNCHRONOUS or VOLATILE dummy argument 'x='
+    !ERROR: Actual argument associated with VOLATILE dummy argument 'x=' is not definable [-Wundefinable-asynchronous-or-volatile-actual]
+    !BECAUSE: Variable 'd(::2_8)' has array section
     call volatilecontiguous(d(::2))
     !ERROR: ASYNCHRONOUS or VOLATILE actual argument that is not simply contiguous may not be associated with a contiguous ASYNCHRONOUS or VOLATILE dummy argument 'x='
     call volatilecontiguous(assumedrank)
