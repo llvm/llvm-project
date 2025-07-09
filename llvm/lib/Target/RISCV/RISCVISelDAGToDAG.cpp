@@ -3432,7 +3432,7 @@ bool RISCVDAGToDAGISel::selectSHXADD_UWOp(SDValue N, unsigned ShAmt,
   return false;
 }
 
-bool RISCVDAGToDAGISel::orIsAdd(const SDNode *N) const {
+bool RISCVDAGToDAGISel::orDisjoint(const SDNode *N) const {
   if (N->getFlags().hasDisjoint())
     return true;
   KnownBits Known0 = CurDAG->computeKnownBits(N->getOperand(0), 0);
@@ -3465,7 +3465,7 @@ bool RISCVDAGToDAGISel::selectZExtImm32(SDValue N, SDValue &Val) {
     case ISD::ADD:
       break;
     case ISD::OR:
-      if (orIsAdd(U))
+      if (orDisjoint(U))
         break;
       return false;
     default:
