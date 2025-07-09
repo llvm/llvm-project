@@ -43,7 +43,7 @@ static void ProtectGap(uptr addr, uptr size) {
 }
 
 static void HandleShadowGap() {
-#if SANITIZER_AIX == 1 && SANITIZER_WORDSIZE == 64
+#  if SANITIZER_AIX == 1 && SANITIZER_WORDSIZE == 64
   // Fox 64-bit AIX, there is a very customized memory layout, we don't have
   // the ability to protect all the shadow gaps. But we need to reserve
   // shadow memory for middle memory.
@@ -53,13 +53,13 @@ static void HandleShadowGap() {
     ReserveShadowMemoryRange(kMid2ShadowBeg, kMid2ShadowEnd, "mid2 shadow");
   if (kMid3ShadowBeg)
     ReserveShadowMemoryRange(kMid3ShadowBeg, kMid3ShadowEnd, "mid3 shadow");
-#else
+#  else
   if (kShadowGapBeg) {
     // protect the gap.
     ProtectGap(kShadowGapBeg, kShadowGapEnd - kShadowGapBeg + 1);
     CHECK_EQ(kShadowGapEnd, kHighShadowBeg - 1);
   }
-#endif
+#  endif
 }
 
 static void MaybeReportLinuxPIEBug() {
