@@ -3,13 +3,13 @@
   <ProductDependencies>
   </ProductDependencies>
   <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.25326.3">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="10.0.0-beta.25353.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>0e335649fe2d2f98ea51e55cc1a0899af3617eba</Sha>
+      <Sha>aea743edf7c9345cfdbdf9593756973baadc6b37</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.Build.Tasks.Packaging" Version="10.0.0-beta.25326.3">
+    <Dependency Name="Microsoft.DotNet.Build.Tasks.Packaging" Version="10.0.0-beta.25353.1">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>0e335649fe2d2f98ea51e55cc1a0899af3617eba</Sha>
+      <Sha>aea743edf7c9345cfdbdf9593756973baadc6b37</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>
