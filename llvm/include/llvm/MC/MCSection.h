@@ -39,8 +39,8 @@ class raw_ostream;
 class Triple;
 
 // Represents a contiguous piece of code or data within a section. Its size is
-// determined by MCAssembler::layout. All subclasses (except
-// MCRelaxableFragment, which stores a MCInst) must have trivial destructors.
+// determined by MCAssembler::layout. All subclasses must have trivial
+// destructors.
 //
 // Declaration order: MCFragment, MCSection, then MCFragment's derived classes.
 // This allows MCSection's inline functions to access MCFragment members and
@@ -101,12 +101,6 @@ public:
   MCFragment(const MCFragment &) = delete;
   MCFragment &operator=(const MCFragment &) = delete;
 
-  /// Destroys the current fragment.
-  ///
-  /// This must be used instead of delete as MCFragment is non-virtual.
-  /// This method will dispatch to the appropriate subclass.
-  LLVM_ABI void destroy();
-
   MCFragment *getNext() const { return Next; }
 
   FragmentType getKind() const { return Kind; }
@@ -133,6 +127,7 @@ public:
   friend MCAssembler;
   friend MCObjectStreamer;
   friend class MCEncodedFragment;
+  friend class MCRelaxableFragment;
   static constexpr unsigned NonUniqueID = ~0U;
 
   enum SectionVariant {
@@ -213,6 +208,7 @@ private:
   // Content and fixup storage for fragments
   SmallVector<char, 0> ContentStorage;
   SmallVector<MCFixup, 0> FixupStorage;
+  SmallVector<MCOperand, 0> MCOperandStorage;
 
 protected:
   // TODO Make Name private when possible.
@@ -221,7 +217,8 @@ protected:
 
   MCSection(SectionVariant V, StringRef Name, bool IsText, bool IsVirtual,
             MCSymbol *Begin);
-  ~MCSection();
+  // Protected non-virtual dtor prevents destroy through a base class pointer.
+  ~MCSection() {}
 
 public:
   MCSection(const MCSection &) = delete;
@@ -430,17 +427,41 @@ public:
 /// relaxed during the assembler layout and relaxation stage.
 ///
 class MCRelaxableFragment : public MCEncodedFragment {
-  /// The instruction this is a fragment for.
-  MCInst Inst;
+  uint32_t Opcode = 0;
+  uint32_t Flags = 0;
+  uint32_t OperandStart = 0;
+  uint32_t OperandSize = 0;
 
 public:
-  MCRelaxableFragment(const MCInst &Inst, const MCSubtargetInfo &STI)
-      : MCEncodedFragment(FT_Relaxable, true), Inst(Inst) {
+  MCRelaxableFragment(const MCSubtargetInfo &STI)
+      : MCEncodedFragment(FT_Relaxable, true) {
     this->STI = &STI;
   }
 
-  const MCInst &getInst() const { return Inst; }
-  void setInst(const MCInst &Value) { Inst = Value; }
+  unsigned getOpcode() const { return Opcode; }
+  ArrayRef<MCOperand> getOperands() const {
+    return MutableArrayRef(getParent()->MCOperandStorage)
+        .slice(OperandStart, OperandSize);
+  }
+  MCInst getInst() const {
+    MCInst Inst;
+    Inst.setOpcode(Opcode);
+    Inst.setFlags(Flags);
+    Inst.setOperands(ArrayRef(getParent()->MCOperandStorage)
+                         .slice(OperandStart, OperandSize));
+    return Inst;
+  }
+  void setInst(const MCInst &Inst) {
+    Opcode = Inst.getOpcode();
+    Flags = Inst.getFlags();
+    auto &S = getParent()->MCOperandStorage;
+    if (Inst.getNumOperands() > OperandSize) {
+      OperandStart = S.size();
+      S.resize_for_overwrite(S.size() + Inst.getNumOperands());
+    }
+    OperandSize = Inst.getNumOperands();
+    llvm::copy(Inst, S.begin() + OperandStart);
+  }
 
   bool getAllowAutoPadding() const { return AllowAutoPadding; }
   void setAllowAutoPadding(bool V) { AllowAutoPadding = V; }
