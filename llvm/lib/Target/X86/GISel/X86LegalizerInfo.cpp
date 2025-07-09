@@ -819,8 +819,10 @@ bool X86LegalizerInfo::legalizeGETROUNDING(MachineInstr &MI,
   int MemSize = 2;
   Align Alignment = Align(2);
   MachinePointerInfo PtrInfo;
-  Register StackPtr = Helper.createStackTemporary(TypeSize::getFixed(MemSize),
-                                                  Alignment, PtrInfo).getReg(0);
+  Register StackPtr =
+      Helper
+          .createStackTemporary(TypeSize::getFixed(MemSize), Alignment, PtrInfo)
+          .getReg(0);
 
   auto StoreMMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
                                           MemSize, Alignment);
