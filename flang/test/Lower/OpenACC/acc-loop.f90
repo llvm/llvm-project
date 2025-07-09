@@ -209,9 +209,9 @@ program acc_loop
 
 ! CHECK:      [[TILESIZE1:%.*]] = arith.constant 2 : i32
 ! CHECK:      [[TILESIZE2:%.*]] = arith.constant 2 : i32
-! CHECK:      acc.loop {{.*}} tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:      acc.loop {{.*}} tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) control(%arg0 : i32, %arg1 : i32) = (%{{.*}} : i32, i32) to (%{{.*}} : i32, i32) step (%{{.*}} : i32, i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true, true>, independent = [#acc.device_type<none>]}
 
   !$acc loop tile(tileSize)
   DO i = 1, n
@@ -229,9 +229,9 @@ program acc_loop
     END DO
   END DO
 
-! CHECK:      acc.loop {{.*}} tile({%{{.*}} : i32, %{{.*}} : i32}) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:      acc.loop {{.*}} tile({%{{.*}} : i32, %{{.*}} : i32}) control(%arg0 : i32, %arg1 : i32) = (%{{.*}} : i32, i32) to (%{{.*}} : i32, i32) step (%{{.*}} : i32, i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true, true>, independent = [#acc.device_type<none>]}
 
   !$acc loop collapse(2)
   DO i = 1, n
