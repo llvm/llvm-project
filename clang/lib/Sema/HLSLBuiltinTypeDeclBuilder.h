@@ -52,6 +52,7 @@ private:
   ClassTemplateDecl *PrevTemplate = nullptr;
   NamespaceDecl *HLSLNamespace = nullptr;
   llvm::StringMap<FieldDecl *> Fields;
+  bool IsConstResourceClass = false;
 
 public:
   friend struct TemplateParameterListBuilder;

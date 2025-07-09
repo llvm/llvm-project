@@ -613,6 +613,17 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleMember(
     ResourceClass RC, bool IsROV, bool RawBuffer, AccessSpecifier Access) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
 
+  switch (RC) {
+  case llvm::dxil::ResourceClass::UAV:
+    IsConstResourceClass = false;
+    break;
+  case llvm::dxil::ResourceClass::SRV:
+  case llvm::dxil::ResourceClass::CBuffer:
+  case llvm::dxil::ResourceClass::Sampler:
+    IsConstResourceClass = true;
+    break;
+  };
+
   ASTContext &Ctx = SemaRef.getASTContext();
   TypeSourceInfo *ElementTypeInfo =
       Ctx.getTrivialTypeSourceInfo(getHandleElementType(), SourceLocation());
@@ -697,7 +708,9 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addArraySubscriptOperators() {
       AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
 
   addHandleAccessFunction(Subscript, /*IsConst=*/true, /*IsRef=*/true);
-  addHandleAccessFunction(Subscript, /*IsConst=*/false, /*IsRef=*/true);
+  if (!IsConstResourceClass)
+    addHandleAccessFunction(Subscript, /*IsConst=*/false, /*IsRef=*/true);
+
   return *this;
 }
 
