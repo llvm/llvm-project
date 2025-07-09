@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -target-feature +sve2 -target-feature +sve2p1 -O2 -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sve -target-feature +sve2 -target-feature +sve2p1 -O2 -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64 -target-feature +bf16 -target-feature +sme -target-feature +sme2 -O2 -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +bf16 -target-feature +sve -target-feature +sme -target-feature +sme2 -O2 -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +bf16 -target-feature +sme -target-feature +sve -target-feature +sve2 -target-feature +sve2p1 -O2 -Werror -Wall -emit-llvm -o - %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -triple aarch64 -target-feature +bf16 -target-feature +sme -target-feature +sme2 -O2 -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64 -target-feature +bf16 -target-feature +sme -target-feature +sme2 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
@@ -9,7 +11,9 @@
 
 #include <arm_sve.h>
 
-#if defined __ARM_FEATURE_SME
+#if defined(__ARM_FEATURE_SME) && defined(__ARM_FEATURE_SVE)
+#define MODE_ATTR __arm_streaming_compatible
+#elif defined(__ARM_FEATURE_SME)
 #define MODE_ATTR __arm_streaming
 #else
 #define MODE_ATTR
