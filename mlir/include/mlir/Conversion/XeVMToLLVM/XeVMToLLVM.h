@@ -15,9 +15,7 @@ class DialectRegistry;
 class LLVMTypeConverter;
 class RewritePatternSet;
 class Pass;
-} // namespace mlir
 
-namespace mlir {
 #define GEN_PASS_DECL_CONVERTXEVMTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
 
