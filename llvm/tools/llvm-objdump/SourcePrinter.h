@@ -36,10 +36,8 @@ public:
 
   virtual ~LiveElement() {};
   const char *getName() const { return Name; }
-  DWARFUnit *getDwarfUnit() const { return Unit; }
-  const DWARFDie getFuncDie() const { return FuncDie; }
 
-  virtual bool liveAtAddress(object::SectionedAddress Addr) = 0;
+  virtual bool liveAtAddress(object::SectionedAddress Addr) const = 0;
   virtual void print(raw_ostream &OS, const MCRegisterInfo &MRI) const = 0;
   virtual void dump(raw_ostream &OS) const = 0;
   virtual void printElementLine(raw_ostream &OS,
@@ -48,6 +46,7 @@ public:
 };
 
 class InlinedFunction : public LiveElement {
+private:
   DWARFDie InlinedFuncDie;
   DWARFAddressRange Range;
 
@@ -58,7 +57,7 @@ public:
       : LiveElement(FunctionName, Unit, FuncDie),
         InlinedFuncDie(InlinedFuncDie), Range(Range) {}
 
-  bool liveAtAddress(object::SectionedAddress Addr) override;
+  bool liveAtAddress(object::SectionedAddress Addr) const override;
   void print(raw_ostream &OS, const MCRegisterInfo &MRI) const override;
   void dump(raw_ostream &OS) const override;
   void printElementLine(raw_ostream &OS, object::SectionedAddress Address,
@@ -68,6 +67,7 @@ public:
 /// Stores a single expression representing the location of a source-level
 /// variable, along with the PC range for which that expression is valid.
 class LiveVariable : public LiveElement {
+private:
   DWARFLocationExpression LocExpr;
 
 public:
@@ -75,15 +75,14 @@ public:
                DWARFUnit *Unit, const DWARFDie FuncDie)
       : LiveElement(VarName, Unit, FuncDie), LocExpr(LocExpr) {}
 
-  DWARFLocationExpression getLocationExpression() const { return LocExpr; };
-  bool liveAtAddress(object::SectionedAddress Addr) override;
+  bool liveAtAddress(object::SectionedAddress Addr) const override;
   void print(raw_ostream &OS, const MCRegisterInfo &MRI) const override;
   void dump(raw_ostream &OS) const override;
 };
 
-/// Helper class for printing source locations for variables and inlines
+/// Helper class for printing source locations for variables and inline
 /// subroutines alongside disassembly.
-class LiveVariablePrinter {
+class LiveElementPrinter {
   // Information we want to track about one column in which we are printing an
   // element live range.
   struct Column {
@@ -126,7 +125,7 @@ class LiveVariablePrinter {
   unsigned findFreeColumn();
 
 public:
-  LiveVariablePrinter(const MCRegisterInfo &MRI, const MCSubtargetInfo &STI)
+  LiveElementPrinter(const MCRegisterInfo &MRI, const MCSubtargetInfo &STI)
       : ActiveCols(Column()), MRI(MRI), STI(STI) {}
 
   void dump() const;
@@ -196,11 +195,11 @@ private:
 
   void printLines(formatted_raw_ostream &OS, object::SectionedAddress Address,
                   const DILineInfo &LineInfo, StringRef Delimiter,
-                  LiveVariablePrinter &LVP);
+                  LiveElementPrinter &LEP);
 
   void printSources(formatted_raw_ostream &OS, const DILineInfo &LineInfo,
                     StringRef ObjectFilename, StringRef Delimiter,
-                    LiveVariablePrinter &LVP);
+                    LiveElementPrinter &LEP);
 
   // Returns line source code corresponding to `LineInfo`.
   // Returns empty string if source code cannot be found.
@@ -213,7 +212,7 @@ public:
   virtual void printSourceLine(formatted_raw_ostream &OS,
                                object::SectionedAddress Address,
                                StringRef ObjectFilename,
-                               LiveVariablePrinter &LVP,
+                               LiveElementPrinter &LEP,
                                StringRef Delimiter = "; ");
 };
 

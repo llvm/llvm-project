@@ -40,7 +40,7 @@ class XCOFFObjectFile;
 
 namespace objdump {
 
-enum DebugFormat { DVDisabled, DVUnicode, DVASCII, DVLine, DVInvalid };
+enum DebugFormat { DFDisabled, DFUnicode, DFASCII, DFLine, DFInvalid };
 
 extern bool ArchiveHeaders;
 extern int DbgIndent;
@@ -127,7 +127,7 @@ void printSectionContents(const object::ObjectFile *O);
 void reportWarning(const Twine &Message, StringRef File);
 
 template <typename T, typename... Ts>
-T unwrapOrError(Expected<T> EO, Ts &&... Args) {
+T unwrapOrError(Expected<T> EO, Ts &&...Args) {
   if (EO)
     return std::move(*EO);
   reportError(EO.takeError(), std::forward<Ts>(Args)...);

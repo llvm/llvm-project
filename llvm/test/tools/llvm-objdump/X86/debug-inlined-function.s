@@ -6,6 +6,9 @@
 # RUN: llvm-objdump %t.o -d --debug-inlined-funcs=line | \
 # RUN:     FileCheck %s --check-prefix=LINE
 
+# RUN: llvm-objdump %t.o -d --debug-inlined-funcs | \
+# RUN:     FileCheck %s --check-prefix=DEFAULT --strict-whitespace
+
 # RUN: llvm-objdump %t.o -d --debug-inlined-funcs=unicode | \
 # RUN:     FileCheck %s --check-prefix=UNICODE --strict-whitespace
 
@@ -32,6 +35,20 @@
 # LINE-NEXT: 16: 01 f0                        addl    %esi, %eax
 # LINE-NEXT: debug-inlined-functions.c:8:16: end of bar inlined into foo
 # LINE-NEXT: 18: c3                           retq
+
+# DEFAULT: 0000000000000000 <bar>:
+# DEFAULT-NEXT:        0: 8d 04 3e                     	leal	(%rsi,%rdi), %eax
+# DEFAULT-NEXT:        3: 0f af f7                     	imull	%edi, %esi
+# DEFAULT-NEXT:        6: 01 f0                        	addl	%esi, %eax
+# DEFAULT-NEXT:        8: c3                           	retq
+# DEFAULT-NEXT:        9: 0f 1f 80 00 00 00 00         	nopl	(%rax)
+# DEFAULT-EMPTY:
+# DEFAULT-NEXT: 0000000000000010 <foo>:
+# DEFAULT-NEXT:                                                                                                 ┠─ bar = inlined into foo
+# DEFAULT-NEXT:        10: 8d 04 3e                     	leal	(%rsi,%rdi), %eax                           ┃
+# DEFAULT-NEXT:        13: 0f af f7                     	imull	%edi, %esi                                  ┃
+# DEFAULT-NEXT:        16: 01 f0                        	addl	%esi, %eax                                  ┻
+# DEFAULT-NEXT:        18: c3                           	retq
 
 # UNICODE: 0000000000000000 <bar>:
 # UNICODE-NEXT:        0: 8d 04 3e                     	leal	(%rsi,%rdi), %eax

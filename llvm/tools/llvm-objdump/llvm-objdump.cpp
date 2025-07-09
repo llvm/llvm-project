@@ -348,8 +348,8 @@ static bool Wide;
 std::string objdump::Prefix;
 uint32_t objdump::PrefixStrip;
 
-DebugFormat objdump::DbgVariables = DVDisabled;
-DebugFormat objdump::DbgInlinedFunctions = DVDisabled;
+DebugFormat objdump::DbgVariables = DFDisabled;
+DebugFormat objdump::DbgInlinedFunctions = DFDisabled;
 
 int objdump::DbgIndent = 52;
 
@@ -524,8 +524,8 @@ static const Target *getTarget(const ObjectFile *Obj) {
 
   // Get the target specific parser.
   std::string Error;
-  const Target *TheTarget = TargetRegistry::lookupTarget(ArchName, TheTriple,
-                                                         Error);
+  const Target *TheTarget =
+      TargetRegistry::lookupTarget(ArchName, TheTriple, Error);
   if (!TheTarget)
     reportError(Obj->getFileName(), "can't find target: " + Error);
 
@@ -634,7 +634,7 @@ static bool isCSKYElf(const ObjectFile &Obj) {
 }
 
 static bool hasMappingSymbols(const ObjectFile &Obj) {
-  return isArmElf(Obj) || isAArch64Elf(Obj) || isCSKYElf(Obj) ;
+  return isArmElf(Obj) || isAArch64Elf(Obj) || isCSKYElf(Obj);
 }
 
 static void printRelocation(formatted_raw_ostream &OS, StringRef FileName,
@@ -654,7 +654,7 @@ static void printRelocation(formatted_raw_ostream &OS, StringRef FileName,
 
 static void printBTFRelocation(formatted_raw_ostream &FOS, llvm::BTFParser &BTF,
                                object::SectionedAddress Address,
-                               LiveVariablePrinter &LVP) {
+                               LiveElementPrinter &LEP) {
   const llvm::BTF::BPFFieldReloc *Reloc = BTF.findFieldReloc(Address);
   if (!Reloc)
     return;
@@ -665,7 +665,7 @@ static void printBTFRelocation(formatted_raw_ostream &FOS, llvm::BTFParser &BTF,
   if (LeadingAddr)
     FOS << format("%016" PRIx64 ":  ", Address.Address + AdjustVMA);
   FOS << "CO-RE " << Val;
-  LVP.printAfterOtherLine(FOS, true);
+  LEP.printAfterOtherLine(FOS, true);
 }
 
 class PrettyPrinter {
@@ -676,11 +676,11 @@ public:
             object::SectionedAddress Address, formatted_raw_ostream &OS,
             StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
             StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
-            LiveVariablePrinter &LVP) {
+            LiveElementPrinter &LEP) {
     if (SP && (PrintSource || PrintLines))
-      SP->printSourceLine(OS, Address, ObjectFilename, LVP);
-    LVP.printStartLine(OS, Address);
-    LVP.printBetweenInsts(OS, false);
+      SP->printSourceLine(OS, Address, ObjectFilename, LEP);
+    LEP.printStartLine(OS, Address);
+    LEP.printBetweenInsts(OS, false);
 
     printRawData(Bytes, Address.Address, OS, STI);
 
@@ -720,9 +720,9 @@ public:
                  object::SectionedAddress Address, formatted_raw_ostream &OS,
                  StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
                  StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
-                 LiveVariablePrinter &LVP) override {
+                 LiveElementPrinter &LEP) override {
     if (SP && (PrintSource || PrintLines))
-      SP->printSourceLine(OS, Address, ObjectFilename, LVP, "");
+      SP->printSourceLine(OS, Address, ObjectFilename, LEP, "");
     if (!MI) {
       printLead(Bytes, Address.Address, OS);
       OS << " <unknown>";
@@ -759,7 +759,7 @@ public:
       OS << Separator;
       Separator = "\n";
       if (SP && (PrintSource || PrintLines))
-        SP->printSourceLine(OS, Address, ObjectFilename, LVP, "");
+        SP->printSourceLine(OS, Address, ObjectFilename, LEP, "");
       printLead(Bytes, Address.Address, OS);
       OS << Preamble;
       Preamble = "   ";
@@ -769,8 +769,7 @@ public:
         OS << Duplex.first;
         OS << "; ";
         Inst = Duplex.second;
-      }
-      else
+      } else
         Inst = HeadTail.first;
       OS << Inst;
       HeadTail = HeadTail.second.split('\n');
@@ -790,9 +789,9 @@ public:
                  object::SectionedAddress Address, formatted_raw_ostream &OS,
                  StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
                  StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
-                 LiveVariablePrinter &LVP) override {
+                 LiveElementPrinter &LEP) override {
     if (SP && (PrintSource || PrintLines))
-      SP->printSourceLine(OS, Address, ObjectFilename, LVP);
+      SP->printSourceLine(OS, Address, ObjectFilename, LEP);
 
     if (MI) {
       SmallString<40> InstStr;
@@ -811,10 +810,10 @@ public:
             support::endian::read32<llvm::endianness::little>(Bytes.data()));
         OS.indent(42);
       } else {
-          OS << format("\t.byte 0x%02" PRIx8, Bytes[0]);
-          for (unsigned int i = 1; i < Bytes.size(); i++)
-            OS << format(", 0x%02" PRIx8, Bytes[i]);
-          OS.indent(55 - (6 * Bytes.size()));
+        OS << format("\t.byte 0x%02" PRIx8, Bytes[0]);
+        for (unsigned int i = 1; i < Bytes.size(); i++)
+          OS << format(", 0x%02" PRIx8, Bytes[i]);
+        OS.indent(55 - (6 * Bytes.size()));
       }
     }
 
@@ -825,7 +824,7 @@ public:
       for (uint32_t D :
            ArrayRef(reinterpret_cast<const support::little32_t *>(Bytes.data()),
                     Bytes.size() / 4))
-          OS << format(" %08" PRIX32, D);
+        OS << format(" %08" PRIX32, D);
     } else {
       for (unsigned char B : Bytes)
         OS << format(" %02" PRIX8, B);
@@ -843,9 +842,9 @@ public:
                  object::SectionedAddress Address, formatted_raw_ostream &OS,
                  StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
                  StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
-                 LiveVariablePrinter &LVP) override {
+                 LiveElementPrinter &LEP) override {
     if (SP && (PrintSource || PrintLines))
-      SP->printSourceLine(OS, Address, ObjectFilename, LVP);
+      SP->printSourceLine(OS, Address, ObjectFilename, LEP);
     if (LeadingAddr)
       OS << format("%8" PRId64 ":", Address.Address / 8);
     if (ShowRawInsn) {
@@ -866,11 +865,11 @@ public:
                  object::SectionedAddress Address, formatted_raw_ostream &OS,
                  StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
                  StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
-                 LiveVariablePrinter &LVP) override {
+                 LiveElementPrinter &LEP) override {
     if (SP && (PrintSource || PrintLines))
-      SP->printSourceLine(OS, Address, ObjectFilename, LVP);
-    LVP.printStartLine(OS, Address);
-    LVP.printBetweenInsts(OS, false);
+      SP->printSourceLine(OS, Address, ObjectFilename, LEP);
+    LEP.printStartLine(OS, Address);
+    LEP.printBetweenInsts(OS, false);
 
     size_t Start = OS.tell();
     if (LeadingAddr)
@@ -921,11 +920,11 @@ public:
                  object::SectionedAddress Address, formatted_raw_ostream &OS,
                  StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
                  StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
-                 LiveVariablePrinter &LVP) override {
+                 LiveElementPrinter &LEP) override {
     if (SP && (PrintSource || PrintLines))
-      SP->printSourceLine(OS, Address, ObjectFilename, LVP);
-    LVP.printStartLine(OS, Address);
-    LVP.printBetweenInsts(OS, false);
+      SP->printSourceLine(OS, Address, ObjectFilename, LEP);
+    LEP.printStartLine(OS, Address);
+    LEP.printBetweenInsts(OS, false);
 
     size_t Start = OS.tell();
     if (LeadingAddr)
@@ -960,11 +959,11 @@ public:
                  object::SectionedAddress Address, formatted_raw_ostream &OS,
                  StringRef Annot, MCSubtargetInfo const &STI, SourcePrinter *SP,
                  StringRef ObjectFilename, std::vector<RelocationRef> *Rels,
-                 LiveVariablePrinter &LVP) override {
+                 LiveElementPrinter &LEP) override {
     if (SP && (PrintSource || PrintLines))
-      SP->printSourceLine(OS, Address, ObjectFilename, LVP);
-    LVP.printStartLine(OS, Address);
-    LVP.printBetweenInsts(OS, false);
+      SP->printSourceLine(OS, Address, ObjectFilename, LEP);
+    LEP.printStartLine(OS, Address);
+    LEP.printBetweenInsts(OS, false);
 
     size_t Start = OS.tell();
     if (LeadingAddr)
@@ -1005,7 +1004,7 @@ public:
 RISCVPrettyPrinter RISCVPrettyPrinterInst;
 
 PrettyPrinter &selectPrettyPrinter(Triple const &Triple) {
-  switch(Triple.getArch()) {
+  switch (Triple.getArch()) {
   default:
     return PrettyPrinterInst;
   case Triple::hexagon:
@@ -1056,8 +1055,7 @@ private:
 DisassemblerTarget::DisassemblerTarget(const Target *TheTarget, ObjectFile &Obj,
                                        StringRef TripleName, StringRef MCPU,
                                        SubtargetFeatures &Features)
-    : TheTarget(TheTarget),
-      Printer(&selectPrettyPrinter(Triple(TripleName))),
+    : TheTarget(TheTarget), Printer(&selectPrettyPrinter(Triple(TripleName))),
       RegisterInfo(TheTarget->createMCRegInfo(TripleName)) {
   if (!RegisterInfo)
     reportError(Obj.getFileName(), "no register info for target " + TripleName);
@@ -1336,7 +1334,6 @@ static bool shouldAdjustVA(const SectionRef &Section) {
   return false;
 }
 
-
 typedef std::pair<uint64_t, char> MappingSymbolPair;
 static char getMappingSymbolKind(ArrayRef<MappingSymbolPair> MappingSymbols,
                                  uint64_t Address) {
@@ -1364,8 +1361,7 @@ static uint64_t dumpARMELFData(uint64_t SectionAddr, uint64_t Index,
     dumpBytes(Bytes.slice(Index, 4), OS);
     AlignToInstStartColumn(Start, STI, OS);
     OS << "\t.word\t"
-           << format_hex(support::endian::read32(Bytes.data() + Index, Endian),
-                         10);
+       << format_hex(support::endian::read32(Bytes.data() + Index, Endian), 10);
     return 4;
   }
   if (Index + 2 <= End) {
@@ -1618,7 +1614,7 @@ static void emitPostInstructionInfo(formatted_raw_ostream &FOS,
                                     const MCAsmInfo &MAI,
                                     const MCSubtargetInfo &STI,
                                     StringRef Comments,
-                                    LiveVariablePrinter &LVP) {
+                                    LiveElementPrinter &LEP) {
   do {
     if (!Comments.empty()) {
       // Emit a line of comments.
@@ -1631,7 +1627,6 @@ static void emitPostInstructionInfo(formatted_raw_ostream &FOS,
       FOS.PadToColumn(CommentColumn);
       FOS << MAI.getCommentString() << ' ' << Comment;
     }
-    LVP.printAfterInst(FOS);
     FOS << '\n';
   } while (!Comments.empty());
   FOS.flush();
@@ -1761,9 +1756,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       // STAB symbol's section field refers to a valid section index. Otherwise
       // the symbol may error trying to load a section that does not exist.
       DataRefImpl SymDRI = Symbol.getRawDataRefImpl();
-      uint8_t NType = (MachO->is64Bit() ?
-                       MachO->getSymbol64TableEntry(SymDRI).n_type:
-                       MachO->getSymbolTableEntry(SymDRI).n_type);
+      uint8_t NType =
+          (MachO->is64Bit() ? MachO->getSymbol64TableEntry(SymDRI).n_type
+                            : MachO->getSymbolTableEntry(SymDRI).n_type);
       if (NType & MachO::N_STAB)
         continue;
     }
@@ -1862,15 +1857,15 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
   llvm::stable_sort(AbsoluteSymbols);
 
   std::unique_ptr<DWARFContext> DICtx;
-  LiveVariablePrinter LVP(*DT->Context->getRegisterInfo(), *DT->SubtargetInfo);
+  LiveElementPrinter LEP(*DT->Context->getRegisterInfo(), *DT->SubtargetInfo);
 
-  if (DbgVariables != DVDisabled || DbgInlinedFunctions != DVDisabled) {
+  if (DbgVariables != DFDisabled || DbgInlinedFunctions != DFDisabled) {
     DICtx = DWARFContext::create(DbgObj);
     for (const std::unique_ptr<DWARFUnit> &CU : DICtx->compile_units())
-      LVP.addCompileUnit(CU->getUnitDIE(false));
+      LEP.addCompileUnit(CU->getUnitDIE(false));
   }
 
-  LLVM_DEBUG(LVP.dump());
+  LLVM_DEBUG(LEP.dump());
 
   BBAddrMapInfo FullAddrMap;
   auto ReadBBAddrMap = [&](std::optional<unsigned> SectionIndex =
@@ -2338,7 +2333,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                 ThisBytes.size(),
                 DT->DisAsm->suggestBytesToSkip(ThisBytes, ThisAddr));
 
-          LVP.update({ThisAddr, Section.getIndex()},
+          LEP.update({ThisAddr, Section.getIndex()},
                      {ThisAddr + Size, Section.getIndex()},
                      Index + Size != End);
 
@@ -2348,7 +2343,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
               *DT->InstPrinter, Disassembled ? &Inst : nullptr,
               Bytes.slice(Index, Size),
               {SectionAddr + Index + VMAAdjustment, Section.getIndex()}, FOS,
-              "", *DT->SubtargetInfo, &SP, Obj.getFileName(), &Rels, LVP);
+              "", *DT->SubtargetInfo, &SP, Obj.getFileName(), &Rels, LEP);
 
           DT->InstPrinter->setCommentStream(llvm::nulls());
 
@@ -2532,11 +2527,11 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
 
         assert(DT->Context->getAsmInfo());
         emitPostInstructionInfo(FOS, *DT->Context->getAsmInfo(),
-                                *DT->SubtargetInfo, CommentStream.str(), LVP);
+                                *DT->SubtargetInfo, CommentStream.str(), LEP);
         Comments.clear();
 
         if (BTF)
-          printBTFRelocation(FOS, *BTF, {Index, Section.getIndex()}, LVP);
+          printBTFRelocation(FOS, *BTF, {Index, Section.getIndex()}, LEP);
 
         // Hexagon handles relocs in pretty printer
         if (InlineRelocs && Obj.getArch() != Triple::hexagon) {
@@ -2544,14 +2539,14 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
             // When --adjust-vma is used, update the address printed.
             printRelocation(FOS, Obj.getFileName(), *RelCur,
                             SectionAddr + RelOffset + VMAAdjustment, Is64Bits);
-            LVP.printAfterOtherLine(FOS, true);
+            LEP.printAfterOtherLine(FOS, true);
             ++RelCur;
           }
         }
 
         object::SectionedAddress NextAddr = {
             SectionAddr + Index + VMAAdjustment + Size, Section.getIndex()};
-        LVP.printEndLine(FOS, NextAddr);
+        LEP.printEndLine(FOS, NextAddr);
 
         Index += Size;
       }
@@ -2844,7 +2839,8 @@ void objdump::printSectionContents(const ObjectFile *Obj) {
       continue;
     }
 
-    StringRef Contents = unwrapOrError(Section.getContents(), Obj->getFileName());
+    StringRef Contents =
+        unwrapOrError(Section.getContents(), Obj->getFileName());
 
     // Dump out the content as hex and printable ascii characters.
     for (std::size_t Addr = 0, End = Contents.size(); Addr < End; Addr += 16) {
@@ -3268,8 +3264,8 @@ static bool shouldWarnForInvalidStartStopAddress(ObjectFile *Obj) {
   return false;
 }
 
-static void checkForInvalidStartStopAddress(ObjectFile *Obj,
-                                            uint64_t Start, uint64_t Stop) {
+static void checkForInvalidStartStopAddress(ObjectFile *Obj, uint64_t Start,
+                                            uint64_t Stop) {
   if (!shouldWarnForInvalidStartStopAddress(Obj))
     return;
 
@@ -3593,21 +3589,21 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   parseIntArg(InputArgs, OBJDUMP_prefix_strip, PrefixStrip);
   if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_debug_vars_EQ)) {
     DbgVariables = StringSwitch<DebugFormat>(A->getValue())
-                       .Case("ascii", DVASCII)
-                       .Case("unicode", DVUnicode)
-                       .Default(DVInvalid);
-    if (DbgVariables == DVInvalid)
+                       .Case("ascii", DFASCII)
+                       .Case("unicode", DFUnicode)
+                       .Default(DFInvalid);
+    if (DbgVariables == DFInvalid)
       invalidArgValue(A);
   }
 
   if (const opt::Arg *A =
           InputArgs.getLastArg(OBJDUMP_debug_inlined_funcs_EQ)) {
     DbgInlinedFunctions = StringSwitch<DebugFormat>(A->getValue())
-                              .Case("ascii", DVASCII)
-                              .Case("unicode", DVUnicode)
-                              .Case("line", DVLine)
-                              .Default(DVInvalid);
-    if (DbgInlinedFunctions == DVInvalid)
+                              .Case("ascii", DFASCII)
+                              .Case("unicode", DFUnicode)
+                              .Case("line", DFLine)
+                              .Default(DFInvalid);
+    if (DbgInlinedFunctions == DFInvalid)
       invalidArgValue(A);
   }
 

@@ -267,10 +267,9 @@ Changes to the LLVM tools
 * In llvm-objcopy/llvm-strip's ELF port, `--discard-locals` and `--discard-all` now allow and preserve symbols referenced by relocations.
   ([#47468](https://github.com/llvm/llvm-project/issues/47468))
 * llvm-addr2line now supports a `+` prefix when specifying an address.
-* llvm-objdump now supports the `--debug-inlined-funcs` flag that prints the
-  locations of inlined functions alongside disassembly. It also renames
-  `--debug-vars-indent` flag to `--debug-indent`.
-
+* llvm-objdump now supports the `--debug-inlined-funcs` flag, which prints the
+  locations of inlined functions alongside disassembly. The
+  `--debug-vars-indent` flag has also been renamed to `--debug-indent`.
 
 Changes to LLDB
 ---------------------------------
