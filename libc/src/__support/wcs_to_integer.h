@@ -1,4 +1,4 @@
-//===-- String to integer conversion utils ----------------------*- C++ -*-===//
+//===-- Widechar string to integer conversion utils -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,10 +15,10 @@
 #include "src/__support/CPP/type_traits/make_unsigned.h"
 #include "src/__support/big_int.h"
 #include "src/__support/common.h"
-#include "src/__support/wctype_utils.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/str_to_num_result.h"
 #include "src/__support/uint128.h"
+#include "src/__support/wctype_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -109,7 +109,7 @@ wcstointeger(const wchar_t *__restrict src, int base,
       abs_max / static_cast<ResultType>(base);
 
   while (src_cur < src_len && iswalnum(src[src_cur])) {
-    wint_t cur_digit = b36_wchar_to_int(src[src_cur]);
+    int cur_digit = b36_wchar_to_int(src[src_cur]);
     if (cur_digit >= base)
       break;
 
