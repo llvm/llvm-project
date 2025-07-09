@@ -4407,7 +4407,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *A = I.getOperand(0);
     Value *WriteThrough = I.getOperand(1);
     Value *Mask = I.getOperand(2);
-    [[maybe_unused]] Value *RoundingMode = I.getOperand(3);
+    Value *RoundingMode = I.getOperand(3);
 
     assert(isFixedFPVector(A));
     assert(isFixedIntVector(WriteThrough));
@@ -4419,8 +4419,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     assert(Mask->getType()->isIntegerTy());
     assert(Mask->getType()->getScalarSizeInBits() == ANumElements);
+    insertCheckShadowOf(Mask, &I);
 
     assert(RoundingMode->getType()->isIntegerTy());
+    // Only four bits of the rounding mode are used, though it's very
+    // unusual to have uninitialized bits there (more commonly, it's a
+    // constant).
+    insertCheckShadowOf(RoundingMode, &I);
 
     assert(I.getType() == WriteThrough->getType());
 
