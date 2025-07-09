@@ -82,8 +82,11 @@ struct DenseMapInfo<T*> {
   }
 
   static unsigned getHashValue(const T *PtrVal) {
-    return (unsigned((uintptr_t)PtrVal) >> 4) ^
-           (unsigned((uintptr_t)PtrVal) >> 9);
+    uintptr_t Val = (uintptr_t)PtrVal;
+    uint32_t Rot = static_cast<uint32_t>(Val);
+    Rot = (Rot >> 9) | (Rot << (32 - 9));
+    Val += Rot;
+    return densemap::detail::mix(Val);
   }
 
   static bool isEqual(const T *LHS, const T *RHS) { return LHS == RHS; }
