@@ -2318,7 +2318,7 @@ bool HexagonLoopIdiomRecognize::coverLoop(Loop *L,
   // instructions in it that are not involved in the original set Insts.
   for (auto *B : L->blocks()) {
     for (auto &In : *B) {
-      if (isa<BranchInst>(In) || isa<DbgInfoIntrinsic>(In))
+      if (isa<BranchInst>(In))
         continue;
       if (!Worklist.count(&In) && In.mayHaveSideEffects())
         return false;

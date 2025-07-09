@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Shared/OffloadError.h"
+#include "OffloadError.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -24,7 +24,7 @@ public:
 #define OFFLOAD_ERRC(Name, Desc, Value)                                        \
   case ErrorCode::Name:                                                        \
     return #Desc;
-#include "Shared/OffloadErrcodes.inc"
+#include "OffloadErrcodes.inc"
 #undef OFFLOAD_ERRC
     }
     llvm_unreachable("Unrecognized offload ErrorCode");
