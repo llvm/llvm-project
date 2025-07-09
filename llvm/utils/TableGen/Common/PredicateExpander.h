@@ -25,9 +25,9 @@ namespace llvm {
 class Record;
 
 class PredicateExpander {
-  bool EmitCallsByRef;
-  bool NegatePredicate;
-  bool ExpandForMC;
+  bool EmitCallsByRef = true;
+  bool NegatePredicate = false;
+  bool ExpandForMC = false;
   StringRef TargetName;
 
   PredicateExpander(const PredicateExpander &) = delete;
@@ -38,8 +38,7 @@ protected:
 
 public:
   explicit PredicateExpander(StringRef Target, unsigned Indent = 1)
-      : EmitCallsByRef(true), NegatePredicate(false), ExpandForMC(false),
-        TargetName(Target), Indent(Indent, 2) {}
+      : TargetName(Target), Indent(Indent, 2) {}
   bool isByRef() const { return EmitCallsByRef; }
   bool shouldNegate() const { return NegatePredicate; }
   bool shouldExpandForMC() const { return ExpandForMC; }

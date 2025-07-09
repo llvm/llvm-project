@@ -349,3 +349,10 @@ if platform.system() == "Windows":
     for v in ["SystemDrive"]:
         if v in os.environ:
             config.environment[v] = os.environ[v]
+
+# Some steps required to initialize the tests dynamically link with python.dll
+# and need to know the location of the Python libraries. This ensures that we
+# use the same version of Python that was used to build lldb to run our tests.
+config.environment["PATH"] = os.path.pathsep.join(
+    (config.python_root_dir, config.environment.get("PATH", ""))
+)

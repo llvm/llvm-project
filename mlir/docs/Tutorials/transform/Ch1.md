@@ -19,13 +19,13 @@ func.func @fc_relu(%lhs: tensor<512x512xf32>, %rhs: tensor<512x512xf32>,
                           outs(%output: tensor<512x512xf32>) -> tensor<512x512xf32>
 
   // Elementwise addition.
-  %biased = linalg.elemwise_binary { fun = #linalg.binary_fn<add> }
+  %biased = linalg.elementwise kind=#linalg.elementwise_kind<add>
     ins(%matmul, %bias : tensor<512x512xf32>, tensor<512x512xf32>)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
 
   // Elementwise max with 0 (ReLU).
   %c0f = arith.constant 0.0 : f32
-  %relued = linalg.elemwise_binary { fun = #linalg.binary_fn<max_signed> }
+  %relued = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
     ins(%biased, %c0f : tensor<512x512xf32>, f32)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
   func.return %relued : tensor<512x512xf32>
@@ -41,7 +41,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(
       %arg0: !transform.any_op,
       %arg1: !transform.op<"linalg.matmul">,
-      %arg2: !transform.op<"linalg.elemwise_binary">):
+      %arg2: !transform.op<"linalg.elementwise">):
     transform.yield
   }
 }
@@ -72,11 +72,11 @@ To check or debug a transform sequence, it is possible to print various entities
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op,
      %arg1: !transform.op<"linalg.matmul">,
-     %arg2: !transform.op<"linalg.elemwise_binary">):
+     %arg2: !transform.op<"linalg.elementwise">):
   transform.debug.emit_remark_at %arg1, "matmul"
       : !transform.op<"linalg.matmul">
   transform.debug.emit_remark_at %arg2, "elemwise_binaries"
-      : !transform.op<"linalg.elemwise_binary">
+      : !transform.op<"linalg.elementwise">
   transform.yield
 }
 ```
@@ -89,10 +89,10 @@ Since we don’t want to recompile the compiler every time we change a transform
 ```sh
 $ mlir-opt sequence.mlir --pass-pipeline="
     builtin.module(transform-interpreter{
-        debug-bind-trailing-args=linalg.matmul,linalg.elemwise_binary})"
+        debug-bind-trailing-args=linalg.matmul,linalg.elementwise})"
 ```
 
-The `sequence.mlir` file contains _both_ the payload IR function _and_ the transform IR sequence nested in the same module. The transform interpreter pass will apply the `@__transform_main` named sequence to the anchor operation of the pass. In our case, we also asked the interpreter pass to associate the two extra arguments of the top-level sequence with all `linalg.matmul` and `linalg.elemwise_binary` payload operations through the respective pass options. Running this pass results in the expected remarks:
+The `sequence.mlir` file contains _both_ the payload IR function _and_ the transform IR sequence nested in the same module. The transform interpreter pass will apply the `@__transform_main` named sequence to the anchor operation of the pass. In our case, we also asked the interpreter pass to associate the two extra arguments of the top-level sequence with all `linalg.matmul` and `linalg.elementwise` payload operations through the respective pass options. Running this pass results in the expected remarks:
 
 ```sh
 sequence.mlir:7:13: remark: matmul
@@ -100,13 +100,13 @@ sequence.mlir:7:13: remark: matmul
             ^
 sequence.mlir:7:13: note: see current operation: %0 = linalg.matmul ins(%arg0, %arg1 : tensor<512x512xf32>, tensor<512x512xf32>) outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32>
 sequence.mlir:10:13: remark: elemwise_binaries
-  %biased = linalg.elemwise_binary { fun = #linalg.binary_fn<add> }
+  %biased = linalg.elementwise kind=#linalg.elementwise_kind<add>
             ^
-sequence.mlir:10:13: note: see current operation: %1 = linalg.elemwise_binary {fun = #linalg.binary_fn<add>} ins(%0, %arg2 : tensor<512x512xf32>, tensor<512x512xf32>) outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32>
+sequence.mlir:10:13: note: see current operation: %1 = linalg.elementwise kind=#linalg.elementwise_kind<add>> ins(%0, %arg2 : tensor<512x512xf32>, tensor<512x512xf32>) outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32>
 sequence.mlir:14:13: remark: elemwise_binaries
-  %relued = linalg.elemwise_binary { fun = #linalg.binary_fn<max_signed> }
+  %relued = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
             ^
-sequence.mlir:14:13: note: see current operation: %2 = linalg.elemwise_binary {fun = #linalg.binary_fn<max_signed>} ins(%1, %cst : tensor<512x512xf32>, f32) outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32>
+sequence.mlir:14:13: note: see current operation: %2 = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>> ins(%1, %cst : tensor<512x512xf32>, f32) outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32>
 ```
 
 Note that `%arg2` is associated with both elementwise payload operations. Any handle is associated with a list of entities. Individual transformations may or may not care about the order of elements in that list.
@@ -121,7 +121,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(
        %arg0: !transform.any_op,
        %arg1: !transform.op<"linalg.matmul">,
-       %arg2: !transform.op<"linalg.elemwise_binary">) {
+       %arg2: !transform.op<"linalg.elementwise">) {
     // The actual tiling transformation takes tile sizes as attributes.
     %loop, %tiled = transform.structured.tile_using_forall %arg1
                     tile_sizes [4, 32]
@@ -163,10 +163,10 @@ func.func @fc_relu(%arg0: tensor<512x512xf32>,
           : tensor<4x32xf32> into tensor<512x512xf32>
     }
   }
-  %1 = linalg.elemwise_binary {fun = #linalg.binary_fn<add>}
+  %1 = linalg.elementwise kind=#linalg.elementwise_kind<add>>
     ins(%0, %arg2 : tensor<512x512xf32>, tensor<512x512xf32>)
     outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32>
-  %2 = linalg.elemwise_binary {fun = #linalg.binary_fn<max_signed>}
+  %2 = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>>
     ins(%1, %cst : tensor<512x512xf32>, f32)
     outs(%arg3 : tensor<512x512xf32>) -> tensor<512x512xf32>
   return %2 : tensor<512x512xf32>
@@ -185,7 +185,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(
        %arg0: !transform.any_op,
        %arg1: !transform.op<"linalg.matmul">,
-       %arg2: !transform.op<"linalg.elemwise_binary">) {
+       %arg2: !transform.op<"linalg.elementwise">) {
     // The actual tiling transformation takes tile sizes as attributes.
     %loop, %tiled = transform.structured.tile_using_forall %arg1 tile_sizes [4, 32]
         : (!transform.op<"linalg.matmul">) -> (!transform.any_op, !transform.any_op)
@@ -219,7 +219,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main
        %arg0: !transform.any_op,
        %arg1: !transform.op<"linalg.matmul">,
-       %arg2: !transform.op<"linalg.elemwise_binary">) {
+       %arg2: !transform.op<"linalg.elementwise">) {
     // We can cast one type to another as long as operations are compatible
     // with both types. This creates "aliasing" handles.
     %casted = transform.cast %arg1 : !transform.op<"linalg.matmul">
@@ -248,7 +248,7 @@ sequence.mlir:28:3: error: op uses a handle invalidated by a previously executed
   transform.debug.emit_remark_at %matmul, "elemwise_binaries" : !transform.op<"linalg.matmul">
   ^
 sequence.mlir:21:29: note: handle to invalidated ops
-^bb0(%root: !transform.any_op, %matmul: !transform.op<"linalg.matmul">, %elemwise: !transform.op<"linalg.elemwise_binary">):
+^bb0(%root: !transform.any_op, %matmul: !transform.op<"linalg.matmul">, %elemwise: !transform.op<"linalg.elementwise">):
                             ^
 sequence.mlir:27:19: note: invalidated by this transform op that consumes its operand #0 and invalidates all handles to payload IR entities associated with this operand and entities nested in them
   %loop, %tiled = transform.structured.tile_using_forall %mm tile_sizes [4, 32]
@@ -263,12 +263,12 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(
        %arg0: !transform.any_op,
        %arg1: !transform.op<"linalg.matmul">,
-       %arg2: !transform.op<"linalg.elemwise_binary">) {
+       %arg2: !transform.op<"linalg.elementwise">) {
     // Since the %arg2 handle is associated with both elementwise operations,
     // we need to split it into two handles so we can target only the second
     // elementwise operation.
     %add, %max = transform.split_handle %arg2
-        : (!transform.op<"linalg.elemwise_binary">)
+        : (!transform.op<"linalg.elementwise">)
         -> (!transform.any_op, !transform.any_op)
 
     // The actual tiling transformation takes tile sizes as attributes. It
@@ -308,12 +308,12 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(
        %arg0: !transform.any_op,
        %arg1: !transform.op<"linalg.matmul">,
-       %arg2: !transform.op<"linalg.elemwise_binary">) {
+       %arg2: !transform.op<"linalg.elementwise">) {
     // Since the %arg2 handle is associated with both elementwise operations,
     // we need to split it into two handles so we can target only the second
     // elementwise operation.
     %add, %max = transform.split_handle %arg2
-        : (!transform.op<"linalg.elemwise_binary">)
+        : (!transform.op<"linalg.elementwise">)
           -> (!transform.any_op, !transform.any_op)
 
     // The actual tiling transformation takes tile sizes as attributes. It
@@ -384,7 +384,7 @@ test/Examples/transform/Ch1/invalidation-2.mlir:106:18: note: invalidated by thi
   %func, %call = transform.loop.outline %outline_target {func_name = "outlined"}
                  ^
 test/Examples/transform/Ch1/invalidation-2.mlir:24:13: note: ancestor payload op
-  %biased = linalg.elemwise_binary { fun = #linalg.binary_fn<add> }
+  %biased = linalg.elementwise kind=#linalg.elementwise_kind<add>
             ^
 test/Examples/transform/Ch1/invalidation-2.mlir:24:13: note: nested payload op
   %matmul = linalg.matmul ins(%lhs, %rhs: tensor<512x512xf32>, tensor<512x512xf32>)

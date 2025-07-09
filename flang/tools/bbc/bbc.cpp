@@ -223,6 +223,11 @@ static llvm::cl::opt<bool> enableCUDA("fcuda",
                                       llvm::cl::desc("enable CUDA Fortran"),
                                       llvm::cl::init(false));
 
+static llvm::cl::opt<bool>
+    disableCUDAWarpFunction("fcuda-disable-warp-function",
+                            llvm::cl::desc("Disable CUDA Warp Function"),
+                            llvm::cl::init(false));
+
 static llvm::cl::opt<std::string>
     enableGPUMode("gpu", llvm::cl::desc("Enable GPU Mode managed|unified"),
                   llvm::cl::init(""));
@@ -429,6 +434,9 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setStackRepackArrays(stackRepackArrays);
   loweringOptions.setRepackArrays(repackArrays);
   loweringOptions.setRepackArraysWhole(repackArraysWhole);
+  loweringOptions.setSkipExternalRttiDefinition(skipExternalRttiDefinition);
+  if (enableCUDA)
+    loweringOptions.setCUDARuntimeCheck(true);
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};
   Fortran::frontend::TargetOptions targetOpts;
   Fortran::frontend::CodeGenOptions cgOpts;
@@ -598,6 +606,11 @@ int main(int argc, char **argv) {
   // enable parsing of CUDA Fortran
   if (enableCUDA) {
     options.features.Enable(Fortran::common::LanguageFeature::CUDA);
+  }
+
+  if (disableCUDAWarpFunction) {
+    options.features.Enable(
+        Fortran::common::LanguageFeature::CudaWarpMatchFunction, false);
   }
 
   if (enableGPUMode == "managed") {

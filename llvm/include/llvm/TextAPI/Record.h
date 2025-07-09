@@ -17,6 +17,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TextAPI/Symbol.h"
 #include <string>
 
@@ -104,7 +105,7 @@ public:
   SymbolFlags getFlags() const { return Flags; }
 
 private:
-  SymbolFlags mergeFlags(SymbolFlags Flags, RecordLinkage Linkage);
+  LLVM_ABI SymbolFlags mergeFlags(SymbolFlags Flags, RecordLinkage Linkage);
 
 protected:
   StringRef Name;
@@ -164,9 +165,9 @@ public:
   ObjCContainerRecord(StringRef Name, RecordLinkage Linkage)
       : Record({Name, Linkage, SymbolFlags::Data}) {}
 
-  ObjCIVarRecord *addObjCIVar(StringRef IVar, RecordLinkage Linkage);
-  ObjCIVarRecord *findObjCIVar(StringRef IVar) const;
-  std::vector<ObjCIVarRecord *> getObjCIVars() const;
+  LLVM_ABI ObjCIVarRecord *addObjCIVar(StringRef IVar, RecordLinkage Linkage);
+  LLVM_ABI ObjCIVarRecord *findObjCIVar(StringRef IVar) const;
+  LLVM_ABI std::vector<ObjCIVarRecord *> getObjCIVars() const;
   RecordLinkage getLinkage() const { return Linkage; }
 
 private:
@@ -207,11 +208,12 @@ public:
     return getLinkageForSymbol(CurrType) >= RecordLinkage::Rexported;
   }
 
-  RecordLinkage getLinkageForSymbol(ObjCIFSymbolKind CurrType) const;
-  void updateLinkageForSymbols(ObjCIFSymbolKind SymType, RecordLinkage Link);
+  LLVM_ABI RecordLinkage getLinkageForSymbol(ObjCIFSymbolKind CurrType) const;
+  LLVM_ABI void updateLinkageForSymbols(ObjCIFSymbolKind SymType,
+                                        RecordLinkage Link);
 
-  bool addObjCCategory(ObjCCategoryRecord *Record);
-  std::vector<ObjCCategoryRecord *> getObjCCategories() const;
+  LLVM_ABI bool addObjCCategory(ObjCCategoryRecord *Record);
+  LLVM_ABI std::vector<ObjCCategoryRecord *> getObjCCategories() const;
 
 private:
   /// Linkage level for each symbol represented in ObjCInterfaceRecord.

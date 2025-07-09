@@ -64,11 +64,11 @@
 ; PR15408
 ; ASM: Lcu_begin0:
 ; ASM-NOT: Lcu_begin
-; ASM: .set Lset[[LT:[0-9]+]], Lline_table_start0-Lsection_line ## DW_AT_stmt_list
+; ASM: Lset[[LT:[0-9]+]] = Lline_table_start0-Lsection_line ## DW_AT_stmt_list
 ; ASM-NEXT: .long   Lset[[LT]]
 ; ASM: Lcu_begin1:
 ; ASM-NOT: Lcu_begin
-; ASM: .set Lset[[LT:[0-9]+]], Lline_table_start0-Lsection_line ## DW_AT_stmt_list
+; ASM: Lset[[LT:[0-9]+]] = Lline_table_start0-Lsection_line ## DW_AT_stmt_list
 ; ASM-NEXT: .long   Lset[[LT]]
 define i32 @test(i32 %a) nounwind uwtable ssp !dbg !5 {
 entry:

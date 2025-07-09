@@ -201,6 +201,14 @@ func.func @select_op_float(%arg0: i1) -> () {
   return
 }
 
+func.func @select_op_bfloat16(%arg0: i1) -> () {
+  %0 = spirv.Constant 2.0 : bf16
+  %1 = spirv.Constant 3.0 : bf16
+  // CHECK: spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, bf16
+  %2 = spirv.Select %arg0, %0, %1 : i1, bf16
+  return
+}
+
 func.func @select_op_ptr(%arg0: i1) -> () {
   %0 = spirv.Variable : !spirv.ptr<f32, Function>
   %1 = spirv.Variable : !spirv.ptr<f32, Function>
