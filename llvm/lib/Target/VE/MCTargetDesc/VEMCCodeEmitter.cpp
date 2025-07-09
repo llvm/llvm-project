@@ -12,7 +12,7 @@
 
 #include "MCTargetDesc/VEFixupKinds.h"
 #include "VE.h"
-#include "VEMCExpr.h"
+#include "VEMCAsmInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -76,6 +76,18 @@ public:
 
 } // end anonymous namespace
 
+static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
+                     const MCExpr *Value, uint16_t Kind) {
+  bool PCRel = false;
+  switch (Kind) {
+  case VE::fixup_ve_srel32:
+  case VE::fixup_ve_pc_hi32:
+  case VE::fixup_ve_pc_lo32:
+    PCRel = true;
+  }
+  Fixups.push_back(MCFixup::create(Offset, Value, Kind, PCRel));
+}
+
 void VEMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                         SmallVectorImpl<char> &CB,
                                         SmallVectorImpl<MCFixup> &Fixups,
@@ -98,9 +110,9 @@ unsigned VEMCCodeEmitter::getMachineOpValue(const MCInst &MI,
   assert(MO.isExpr());
 
   const MCExpr *Expr = MO.getExpr();
-  if (const VEMCExpr *SExpr = dyn_cast<VEMCExpr>(Expr)) {
-    MCFixupKind Kind = (MCFixupKind)SExpr->getFixupKind();
-    Fixups.push_back(MCFixup::create(0, Expr, Kind));
+  if (const auto *SExpr = dyn_cast<MCSpecifierExpr>(Expr)) {
+    auto Kind = VE::getFixupKind(SExpr->getSpecifier());
+    addFixup(Fixups, 0, Expr, Kind);
     return 0;
   }
 
@@ -120,8 +132,7 @@ VEMCCodeEmitter::getBranchTargetOpValue(const MCInst &MI, unsigned OpNo,
   if (MO.isReg() || MO.isImm())
     return getMachineOpValue(MI, MO, Fixups, STI);
 
-  Fixups.push_back(
-      MCFixup::create(0, MO.getExpr(), (MCFixupKind)VE::fixup_ve_srel32));
+  addFixup(Fixups, 0, MO.getExpr(), VE::fixup_ve_srel32);
   return 0;
 }
 

@@ -687,10 +687,10 @@ define i64 @test_resign_da_constdisc(i64 %arg, i64 %arg1) {
 ; CHECKED-NEXT:    mov x17, x16
 ; CHECKED-NEXT:    xpacd x17
 ; CHECKED-NEXT:    cmp x16, x17
-; CHECKED-NEXT:    b.eq [[L]]auth_success_[[N1:[0-9]+]]
+; CHECKED-NEXT:    b.eq [[L]]auth_success_7
 ; CHECKED-NEXT:    mov x16, x17
 ; CHECKED-NEXT:    b [[L]]resign_end_6
-; CHECKED-NEXT:  Lauth_success_[[N1]]:
+; CHECKED-NEXT:  Lauth_success_7:
 ; CHECKED-NEXT:    mov x17, #256
 ; CHECKED-NEXT:    pacda x16, x17
 ; CHECKED-NEXT:  Lresign_end_6:
@@ -712,6 +712,46 @@ define i64 @test_resign_da_constdisc(i64 %arg, i64 %arg1) {
 ; TRAP-NEXT:    mov x0, x16
 ; TRAP-NEXT:    ret
   %tmp = call i64 @llvm.ptrauth.resign(i64 %arg, i32 2, i64 %arg1, i32 2, i64 256)
+  ret i64 %tmp
+}
+
+define i64 @test_auth_ia_swapped(i64 %arg, i64 %arg1) {
+; UNCHECKED-LABEL: test_auth_ia_swapped:
+; UNCHECKED:           %bb.0:
+; UNCHECKED-DARWIN-NEXT: mov x16, x1
+; UNCHECKED-DARWIN-NEXT: autia x16, x0
+; UNCHECKED-DARWIN-NEXT: mov x0, x16
+; UNCHECKED-ELF-NEXT:    autia x1, x0
+; UNCHECKED-ELF-NEXT:    mov x0, x1
+; UNCHECKED-NEXT:        ret
+;
+; CHECKED-LABEL: test_auth_ia_swapped:
+; CHECKED:           %bb.0:
+; CHECKED-DARWIN-NEXT: mov x16, x1
+; CHECKED-DARWIN-NEXT: autia x16, x0
+; CHECKED-DARWIN-NEXT: mov x0, x16
+; CHECKED-ELF-NEXT:    autia x1, x0
+; CHECKED-ELF-NEXT:    mov x0, x1
+; CHECKED-NEXT:        ret
+;
+; TRAP-LABEL: test_auth_ia_swapped:
+; TRAP:       %bb.0:
+; TRAP-DARWIN-NEXT:   mov x16, x1
+; TRAP-DARWIN-NEXT:   autia x16, x0
+; TRAP-DARWIN-NEXT:   mov x17, x16
+; TRAP-DARWIN-NEXT:   xpaci x17
+; TRAP-DARWIN-NEXT:   cmp x16, x17
+; TRAP-ELF-NEXT:   autia x1, x0
+; TRAP-ELF-NEXT:   mov x8, x1
+; TRAP-ELF-NEXT:   xpaci x8
+; TRAP-ELF-NEXT:   cmp x1, x8
+; TRAP-NEXT:    b.eq [[L]]auth_success_17
+; TRAP-NEXT:    brk #0xc470
+; TRAP-NEXT:  Lauth_success_17:
+; TRAP-DARWIN-NEXT:    mov x0, x16
+; TRAP-ELF-NEXT:    mov x0, x1
+; TRAP-NEXT:    ret
+  %tmp = call i64 @llvm.ptrauth.auth(i64 %arg1, i32 0, i64 %arg)
   ret i64 %tmp
 }
 

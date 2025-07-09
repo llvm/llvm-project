@@ -77,6 +77,11 @@ struct TestTensorTransforms
       llvm::cl::desc("Test folding of expand_shape/collapse_shape"),
       llvm::cl::init(false)};
 
+  Option<bool> testFoldExtractFromCollapseShape{
+      *this, "test-fold-extract-from-collapse-shape",
+      llvm::cl::desc("Test folding of extract from collapse_shape"),
+      llvm::cl::init(false)};
+
   Option<bool> useForeach{
       *this, "use-foreach",
       llvm::cl::desc(
@@ -129,6 +134,12 @@ static void
 applyDropRedundantInsertSliceRankExpansionPatterns(Operation *rootOp) {
   RewritePatternSet patterns(rootOp->getContext());
   tensor::populateDropRedundantInsertSliceRankExpansionPatterns(patterns);
+  (void)applyPatternsGreedily(rootOp, std::move(patterns));
+}
+
+static void applyFoldExtractFromCollapseShapePatterns(Operation *rootOp) {
+  RewritePatternSet patterns(rootOp->getContext());
+  tensor::populateFoldCollapseExtractPatterns(patterns);
   (void)applyPatternsGreedily(rootOp, std::move(patterns));
 }
 
@@ -380,6 +391,8 @@ void TestTensorTransforms::runOnOperation() {
             applyRewriteExtractFromCollapseShapePatterns(rootOp, useForeach)))
       return signalPassFailure();
   }
+  if (testFoldExtractFromCollapseShape)
+    applyFoldExtractFromCollapseShapePatterns(rootOp);
   if (testTrackingListener)
     if (failed(testTrackingListenerReplacements(rootOp)))
       return signalPassFailure();

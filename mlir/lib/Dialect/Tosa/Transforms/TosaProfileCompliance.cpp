@@ -188,8 +188,8 @@ LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::RFFT2dOp op) {
 
 template <>
 LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::SelectOp op) {
-  addValue(op.getInput2());
-  addValue(op.getInput3());
+  addValue(op.getOnTrue());
+  addValue(op.getOnFalse());
   addValue(op.getOutput());
   return success();
 }
@@ -215,15 +215,8 @@ LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::MatMulOp op) {
 
 template <>
 LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::VariableOp op) {
-  ::mlir::Attribute attr = op.getInitialValueAttr();
-  if (attr == nullptr)
-    return failure();
-
-  if (auto typedAttr = dyn_cast<TypedAttr>(attr)) {
-    addType(getElementTypeOrSelf(typedAttr));
-    return success();
-  }
-  return failure();
+  addType(op.getType());
+  return success();
 }
 
 template <>

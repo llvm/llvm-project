@@ -34,7 +34,6 @@
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
@@ -359,8 +358,27 @@ getFixIt(const tooling::Diagnostic &Diagnostic, bool AnyFix) {
 
 } // namespace clang::tidy
 
+void ClangTidyDiagnosticConsumer::BeginSourceFile(const LangOptions &LangOpts,
+                                                  const Preprocessor *PP) {
+  DiagnosticConsumer::BeginSourceFile(LangOpts, PP);
+
+  assert(!InSourceFile);
+  InSourceFile = true;
+}
+
+void ClangTidyDiagnosticConsumer::EndSourceFile() {
+  assert(InSourceFile);
+  InSourceFile = false;
+
+  DiagnosticConsumer::EndSourceFile();
+}
+
 void ClangTidyDiagnosticConsumer::HandleDiagnostic(
     DiagnosticsEngine::Level DiagLevel, const Diagnostic &Info) {
+  // A diagnostic should not be reported outside of a
+  // BeginSourceFile()/EndSourceFile() pair if it has a source location.
+  assert(InSourceFile || Info.getLocation().isInvalid());
+
   if (LastErrorWasIgnored && DiagLevel == DiagnosticsEngine::Note)
     return;
 
