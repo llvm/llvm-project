@@ -155,8 +155,8 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
 
       if (EmptySubscript) {
         diag(MatchedExpr->getCallee()->getBeginLoc(),
-             "possibly unsafe 'operator[]', use safe function '" +
-                 FixFunctionEmptyArgs.str() + "()' instead")
+             "possibly unsafe 'operator[]', use safe function '%s()' instead")
+            << FixFunctionEmptyArgs.str()
             << MatchedExpr->getCallee()->getSourceRange()
             << FixItHint::CreateInsertion(OCE->getArg(0)->getBeginLoc(),
                                           FixFunctionEmptyArgs.str() + "(")
@@ -164,9 +164,8 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
             << FixItHint::CreateReplacement(RightBracket, ")");
       } else {
         diag(MatchedExpr->getCallee()->getBeginLoc(),
-             "possibly unsafe 'operator[]', use safe function '" +
-                 FixFunction.str() + "()' instead")
-            << MatchedExpr->getCallee()->getSourceRange()
+             "possibly unsafe 'operator[]', use safe function '%s()' instead")
+            << FixFunction.str() << MatchedExpr->getCallee()->getSourceRange()
             << FixItHint::CreateInsertion(OCE->getArg(0)->getBeginLoc(),
                                           FixFunction.str() + "(")
             << FixItHint::CreateReplacement(LeftBracket, ", ")
@@ -219,9 +218,8 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
       // argument, which makes the following distinction necessary
       if (EmptySubscript) {
         diag(Callee->getBeginLoc(),
-             "possibly unsafe 'operator[]', use safe function '" +
-                 FixFunctionEmptyArgs.str() + "()' instead")
-            << Callee->getSourceRange()
+             "possibly unsafe 'operator[]', use safe function '%s()' instead")
+            << FixFunctionEmptyArgs.str() << Callee->getSourceRange()
             << FixItHint::CreateInsertion(MatchedExpr->getBeginLoc(),
                                           BeginInsertion)
             << FixItHint::CreateRemoval(
@@ -229,9 +227,8 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
                                MCE->getRParenLoc().getLocWithOffset(-1)));
       } else {
         diag(Callee->getBeginLoc(),
-             "possibly unsafe 'operator[]', use safe function '" +
-                 FixFunction.str() + "()' instead")
-            << Callee->getSourceRange()
+             "possibly unsafe 'operator[]', use safe function '%s()' instead")
+            << FixFunction.str() << Callee->getSourceRange()
             << FixItHint::CreateInsertion(MatchedExpr->getBeginLoc(),
                                           BeginInsertion)
             << FixItHint::CreateReplacement(
