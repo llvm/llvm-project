@@ -55,3 +55,15 @@ void bad_root_signature_10() {}
 // expected-error@+1 {{invalid parameter of DescriptorTable}}
 [RootSignature("DescriptorTable(invalid))")]
 void bad_root_signature_11() {}
+
+// expected-error@+1 {{expected integer literal after '+'}}
+[RootSignature("CBV(space = +invalid))")]
+void bad_root_signature_12() {}
+
+// expected-error@+1 {{expected integer literal after '='}}
+[RootSignature("CBV(space = invalid))")]
+void bad_root_signature_13() {}
+
+// expected-error@+1 {{expected '(' after UAV}}
+[RootSignature("UAV invalid")]
+void bad_root_signature_14() {}

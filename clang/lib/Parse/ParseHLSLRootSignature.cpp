@@ -1299,8 +1299,10 @@ bool RootSignatureParser::consumeExpectedToken(TokenKind Expected,
     DB << Expected;
     break;
   case diag::err_expected_either:
-  case diag::err_expected_after:
     DB << Expected << Context;
+    break;
+  case diag::err_expected_after:
+    DB << Context << Expected;
     break;
   default:
     break;
