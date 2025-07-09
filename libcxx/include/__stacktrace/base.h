@@ -69,7 +69,7 @@ struct _LIBCPP_HIDE_FROM_ABI alloc final {
 
     template <typename _A2>
     bool operator==(_A2 const& __rhs) const {
-      return &__rhs == this;
+      return std::addressof(__rhs) == this;
     }
   };
 

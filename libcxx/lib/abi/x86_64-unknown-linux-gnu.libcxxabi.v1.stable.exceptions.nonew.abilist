@@ -35,7 +35,6 @@
 {'is_defined': False, 'name': '_ZTVSt13runtime_error', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': False, 'name': '_ZTVSt14overflow_error', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': False, 'name': '_ZTVSt16invalid_argument', 'size': 0, 'type': 'OBJECT'}
-{'is_defined': False, 'name': '_ZTVSt9exception', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': False, 'name': '_ZdaPv', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZdaPvSt11align_val_t', 'type': 'FUNC'}
 {'is_defined': False, 'name': '_ZdlPv', 'type': 'FUNC'}
@@ -226,10 +225,6 @@
 {'is_defined': True, 'name': '_ZNKSt3__115basic_streambufIwNS_11char_traitsIwEEE6getlocEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE3strEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__115error_condition7messageEv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNKSt3__116stacktrace_entry11descriptionEv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNKSt3__116stacktrace_entry11source_fileEv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNKSt3__116stacktrace_entry11source_lineEv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNKSt3__116stacktrace_entry13native_handleEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__117bad_function_call4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__117moneypunct_bynameIcLb0EE11do_groupingEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__117moneypunct_bynameIcLb0EE13do_neg_formatEv', 'type': 'FUNC'}
@@ -1927,9 +1922,6 @@
 {'is_defined': True, 'name': '_ZTTNSt3__19strstreamE', 'size': 80, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt12experimental15fundamentals_v112bad_any_castE', 'size': 40, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt12experimental19bad_optional_accessE', 'size': 40, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTVNSt3__110__function6__baseIFbRKNS_12__stacktrace3elf6SymbolEEEE', 'size': 88, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTVNSt3__110__function6__baseIFbRKNS_12__stacktrace3elf7SectionEEEE', 'size': 88, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTVNSt3__110__function6__baseIFbRKNS_12__stacktrace4toolEEEE', 'size': 88, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__110istrstreamE', 'size': 80, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__110moneypunctIcLb0EEE', 'size': 112, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__110moneypunctIcLb1EEE', 'size': 112, 'type': 'OBJECT'}
@@ -1940,7 +1932,6 @@
 {'is_defined': True, 'name': '_ZTVNSt3__112__stacktrace10fd_istreamE', 'size': 80, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__112__stacktrace15llvm_symbolizerE', 'size': 48, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__112__stacktrace4atosE', 'size': 48, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTVNSt3__112__stacktrace4toolE', 'size': 48, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__112__stacktrace6failedE', 'size': 40, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__112__stacktrace9addr2lineE', 'size': 48, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__112bad_weak_ptrE', 'size': 40, 'type': 'OBJECT'}
@@ -2005,8 +1996,6 @@
 {'is_defined': True, 'name': '_ZTVNSt3__120__codecvt_utf8_utf16IDiEE', 'size': 96, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__120__codecvt_utf8_utf16IDsEE', 'size': 96, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__120__codecvt_utf8_utf16IwEE', 'size': 96, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTVNSt3__120__time_get_c_storageIcEE', 'size': 72, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTVNSt3__120__time_get_c_storageIwEE', 'size': 72, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__13pmr15memory_resourceE', 'size': 56, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__13pmr25monotonic_buffer_resourceE', 'size': 56, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__13pmr26synchronized_pool_resourceE', 'size': 56, 'type': 'OBJECT'}
