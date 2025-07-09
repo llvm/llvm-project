@@ -4264,99 +4264,78 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
     unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
     TTI::OperandValueInfo Op2Info, const Instruction *I) const {
-  // TODO: Handle other cost kinds.
-  if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
-                                     Op1Info, Op2Info, I);
-
-  int ISD = TLI->InstructionOpcodeToISD(Opcode);
-  // We don't lower some vector selects well that are wider than the register
-  // width.
-  if (isa<FixedVectorType>(ValTy) && ISD == ISD::SELECT) {
-    // We would need this many instructions to hide the scalarization happening.
-    const int AmortizationCost = 20;
-
-    // If VecPred is not set, check if we can get a predicate from the context
-    // instruction, if its type matches the requested ValTy.
-    if (VecPred == CmpInst::BAD_ICMP_PREDICATE && I && I->getType() == ValTy) {
-      CmpPredicate CurrentPred;
-      if (match(I, m_Select(m_Cmp(CurrentPred, m_Value(), m_Value()), m_Value(),
-                            m_Value())))
-        VecPred = CurrentPred;
-    }
-    // Check if we have a compare/select chain that can be lowered using
-    // a (F)CMxx & BFI pair.
-    if (CmpInst::isIntPredicate(VecPred) || VecPred == CmpInst::FCMP_OLE ||
-        VecPred == CmpInst::FCMP_OLT || VecPred == CmpInst::FCMP_OGT ||
-        VecPred == CmpInst::FCMP_OGE || VecPred == CmpInst::FCMP_OEQ ||
-        VecPred == CmpInst::FCMP_UNE) {
-      static const auto ValidMinMaxTys = {
-          MVT::v8i8,  MVT::v16i8, MVT::v4i16, MVT::v8i16, MVT::v2i32,
-          MVT::v4i32, MVT::v2i64, MVT::v2f32, MVT::v4f32, MVT::v2f64};
-      static const auto ValidFP16MinMaxTys = {MVT::v4f16, MVT::v8f16};
-
-      auto LT = getTypeLegalizationCost(ValTy);
-      if (any_of(ValidMinMaxTys, [&LT](MVT M) { return M == LT.second; }) ||
-          (ST->hasFullFP16() &&
-           any_of(ValidFP16MinMaxTys, [&LT](MVT M) { return M == LT.second; })))
-        return LT.first;
-    }
-
-    static const TypeConversionCostTblEntry
-    VectorSelectTbl[] = {
-      { ISD::SELECT, MVT::v2i1, MVT::v2f32, 2 },
-      { ISD::SELECT, MVT::v2i1, MVT::v2f64, 2 },
-      { ISD::SELECT, MVT::v4i1, MVT::v4f32, 2 },
-      { ISD::SELECT, MVT::v4i1, MVT::v4f16, 2 },
-      { ISD::SELECT, MVT::v8i1, MVT::v8f16, 2 },
-      { ISD::SELECT, MVT::v16i1, MVT::v16i16, 16 },
-      { ISD::SELECT, MVT::v8i1, MVT::v8i32, 8 },
-      { ISD::SELECT, MVT::v16i1, MVT::v16i32, 16 },
-      { ISD::SELECT, MVT::v4i1, MVT::v4i64, 4 * AmortizationCost },
-      { ISD::SELECT, MVT::v8i1, MVT::v8i64, 8 * AmortizationCost },
-      { ISD::SELECT, MVT::v16i1, MVT::v16i64, 16 * AmortizationCost }
-    };
-
-    EVT SelCondTy = TLI->getValueType(DL, CondTy);
-    EVT SelValTy = TLI->getValueType(DL, ValTy);
-    if (SelCondTy.isSimple() && SelValTy.isSimple()) {
-      if (const auto *Entry = ConvertCostTableLookup(VectorSelectTbl, ISD,
-                                                     SelCondTy.getSimpleVT(),
-                                                     SelValTy.getSimpleVT()))
-        return Entry->Cost;
-    }
-  }
-
-  if (isa<FixedVectorType>(ValTy) && ISD == ISD::SETCC) {
-    Type *ValScalarTy = ValTy->getScalarType();
-    if ((ValScalarTy->isHalfTy() && !ST->hasFullFP16()) ||
-        ValScalarTy->isBFloatTy()) {
-      auto *ValVTy = cast<FixedVectorType>(ValTy);
-
-      // Without dedicated instructions we promote [b]f16 compares to f32.
-      auto *PromotedTy =
-          VectorType::get(Type::getFloatTy(ValTy->getContext()), ValVTy);
-
-      InstructionCost Cost = 0;
-      // Promote operands to float vectors.
-      Cost += 2 * getCastInstrCost(Instruction::FPExt, PromotedTy, ValTy,
-                                   TTI::CastContextHint::None, CostKind);
-      // Compare float vectors.
+  if (Opcode == Instruction::FCmp) {
+    // Without dedicated instructions we promote f16 + bf16 compares to f32.
+    if ((!ST->hasFullFP16() && ValTy->getScalarType()->isHalfTy()) ||
+        ValTy->getScalarType()->isBFloatTy()) {
+      Type *PromotedTy =
+          ValTy->getWithNewType(Type::getFloatTy(ValTy->getContext()));
+      InstructionCost Cost =
+          getCastInstrCost(Instruction::FPExt, PromotedTy, ValTy,
+                           TTI::CastContextHint::None, CostKind);
+      if (!Op1Info.isConstant() && !Op2Info.isConstant())
+        Cost *= 2;
       Cost += getCmpSelInstrCost(Opcode, PromotedTy, CondTy, VecPred, CostKind,
                                  Op1Info, Op2Info);
-      // During codegen we'll truncate the vector result from i32 to i16.
-      Cost +=
-          getCastInstrCost(Instruction::Trunc, VectorType::getInteger(ValVTy),
-                           VectorType::getInteger(PromotedTy),
-                           TTI::CastContextHint::None, CostKind);
+      if (ValTy->isVectorTy())
+        Cost += getCastInstrCost(
+            Instruction::Trunc, VectorType::getInteger(cast<VectorType>(ValTy)),
+            VectorType::getInteger(cast<VectorType>(PromotedTy)),
+            TTI::CastContextHint::None, CostKind);
       return Cost;
     }
+
+    auto LT = getTypeLegalizationCost(ValTy);
+    // Model unknown fp compares as a libcall.
+    if (LT.second.getScalarType() != MVT::f64 &&
+        LT.second.getScalarType() != MVT::f32 &&
+        LT.second.getScalarType() != MVT::f16)
+      return LT.first * getCallInstrCost(/*Function*/ nullptr, ValTy,
+                                         {ValTy, ValTy}, CostKind);
+
+    // Some comparison operators require expanding to multiple compares + or.
+    unsigned Factor = 1;
+    if (!CondTy->isVectorTy() &&
+        (VecPred == FCmpInst::FCMP_ONE || VecPred == FCmpInst::FCMP_UEQ))
+      Factor = 2; // fcmp with 2 selects
+    else if (isa<FixedVectorType>(ValTy) &&
+             (VecPred == FCmpInst::FCMP_ONE || VecPred == FCmpInst::FCMP_UEQ ||
+              VecPred == FCmpInst::FCMP_ORD))
+      Factor = 3; // fcmxx+fcmyy+or
+    else if (isa<ScalableVectorType>(ValTy) &&
+             (VecPred == FCmpInst::FCMP_ONE || VecPred == FCmpInst::FCMP_UEQ))
+      Factor = 3; // fcmxx+fcmyy+or
+
+    if (isa<ScalableVectorType>(ValTy) &&
+        CostKind == TTI::TCK_RecipThroughput && ST->hasHalfSVEFCmpBandwidth())
+      Factor *= 2;
+
+    return Factor * (CostKind == TTI::TCK_Latency ? 2 : LT.first);
+  }
+
+  // We don't lower some vector selects well that are wider than the register
+  // width.
+  if (isa<FixedVectorType>(ValTy) && Opcode == Instruction::Select) {
+    // Check if we have a compare/select chain that can be lowered using
+    // a (F)CMxx & BFI pair. This assumes that the select can use a BIC/BIF/BSL
+    // so has a cost of 1, and the the comparison typesize matches the select
+    // size and no extends/truncates are required.
+    static const auto ValidMinMaxTys = {
+        MVT::v8i8,  MVT::v16i8, MVT::v4i16, MVT::v8i16, MVT::v2i32,
+        MVT::v4i32, MVT::v2i64, MVT::v2f32, MVT::v4f32, MVT::v2f64};
+    static const auto ValidFP16MinMaxTys = {MVT::v4f16, MVT::v8f16};
+
+    auto LT = getTypeLegalizationCost(ValTy);
+    if (any_of(ValidMinMaxTys, [&LT](MVT M) { return M == LT.second; }) ||
+        (ST->hasFullFP16() &&
+         any_of(ValidFP16MinMaxTys, [&LT](MVT M) { return M == LT.second; })))
+      return LT.first;
   }
 
   // Treat the icmp in icmp(and, 0) or icmp(and, -1/1) when it can be folded to
   // icmp(and, 0) as free, as we can make use of ands, but only if the
   // comparison is not unsigned.
-  if (ValTy->isIntegerTy() && ISD == ISD::SETCC && I &&
+  if (ValTy->isIntegerTy() && Opcode == Instruction::ICmp && I &&
       !CmpInst::isUnsigned(VecPred) &&
       TLI->isTypeLegal(TLI->getValueType(DL, ValTy)) &&
       match(I->getOperand(0), m_And(m_Value(), m_Value()))) {
