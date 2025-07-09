@@ -2057,8 +2057,8 @@ def fir_SliceOp : fir_Op<"slice", [NoMemoryEffect, AttrSizedOperandSegments]> {
 
   let builders = [
     OpBuilder<(ins "mlir::ValueRange":$triples,
-      CArg<"mlir::ValueRange", "std::nullopt">:$fields,
-      CArg<"mlir::ValueRange", "std::nullopt">:$substr)>
+      CArg<"mlir::ValueRange", "{}">:$fields,
+      CArg<"mlir::ValueRange", "{}">:$substr)>
   ];
 
   let hasVerifier = 1;
@@ -2253,8 +2253,8 @@ def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
     OpBuilder<(ins "mlir::Value":$lowerBound, "mlir::Value":$upperBound,
       "mlir::Value":$step, CArg<"bool", "false">:$unordered,
       CArg<"bool", "false">:$finalCountValue,
-      CArg<"mlir::ValueRange", "std::nullopt">:$iterArgs,
-      CArg<"mlir::ValueRange", "std::nullopt">:$reduceOperands,
+      CArg<"mlir::ValueRange", "{}">:$iterArgs,
+      CArg<"mlir::ValueRange", "{}">:$reduceOperands,
       CArg<"llvm::ArrayRef<mlir::Attribute>", "{}">:$reduceAttrs,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>
   ];
@@ -2323,9 +2323,13 @@ def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
   }];
 }
 
-def fir_IfOp : region_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
-    "getRegionInvocationBounds", "getEntrySuccessorRegions"]>, RecursiveMemoryEffects,
-    NoRegionArguments]> {
+def fir_IfOp
+    : region_Op<
+          "if", [DeclareOpInterfaceMethods<
+                     RegionBranchOpInterface, ["getRegionInvocationBounds",
+                                               "getEntrySuccessorRegions"]>,
+                 RecursiveMemoryEffects, NoRegionArguments,
+                 WeightedRegionBranchOpInterface]> {
   let summary = "if-then-else conditional operation";
   let description = [{
     Used to conditionally execute operations. This operation is the FIR
@@ -2342,7 +2346,8 @@ def fir_IfOp : region_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterfac
     ```
   }];
 
-  let arguments = (ins I1:$condition);
+  let arguments = (ins I1:$condition,
+      OptionalAttr<DenseI32ArrayAttr>:$region_weights);
   let results = (outs Variadic<AnyType>:$results);
 
   let regions = (region
@@ -2371,6 +2376,21 @@ def fir_IfOp : region_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterfac
 
     void resultToSourceOps(llvm::SmallVectorImpl<mlir::Value> &results,
                            unsigned resultNum);
+
+    /// Returns the display name string for the region_weights attribute.
+    static constexpr llvm::StringRef getWeightsAttrAssemblyName() {
+      return "weights";
+    }
+
+    /// Sets WeightedRegionBranchOpInterface weights to indicate
+    /// that either THEN or ELSE branch is unlikely.
+    /// By default, THEN branch is set to be unlikely.
+    void setUnlikelyIfWeights(bool unlikelyElse = false) {
+      if (unlikelyElse)
+        setWeights({1, 0});
+      else
+        setWeights({0, 1});
+    }
   }];
 }
 
@@ -2421,7 +2441,7 @@ def fir_IterWhileOp : region_Op<"iterate_while",
     OpBuilder<(ins "mlir::Value":$lowerBound, "mlir::Value":$upperBound,
       "mlir::Value":$step, "mlir::Value":$iterate,
       CArg<"bool", "false">:$finalCountValue,
-      CArg<"mlir::ValueRange", "std::nullopt">:$iterArgs,
+      CArg<"mlir::ValueRange", "{}">:$iterArgs,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>
   ];
 
@@ -3240,11 +3260,17 @@ def fir_BoxOffsetOp : fir_Op<"box_offset", [NoMemoryEffect]> {
     descriptor implementation must have, only the base_addr and derived_type
     descriptor fields can be addressed.
 
+    It also accepts the address of a fir.boxchar and returns
+    address of the data pointer encapsulated by the fir.boxchar.
+
     ```
         %addr = fir.box_offset %box base_addr : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
         %tdesc = fir.box_offset %box derived_type : (!fir.ref<!fir.box<!fir.type<t>>>) -> !fir.llvm_ptr<!fir.tdesc<!fir.type<t>>>
 
+        %addr1 = fir.box_offset %boxchar base_addr : (!fir.ref<!fir.boxchar<1>>) -> !fir.llvm_ptr<!fir.ref<fir.char<1,?>>>
     ```
+
+    The derived_type field cannot be used when the input to this op is a reference to a fir.boxchar.
   }];
 
   let arguments = (ins
@@ -3605,6 +3631,21 @@ def fir_LocalitySpecifierOp : fir_Op<"local", [IsolatedFromAbove]> {
   ];
 
   let extraClassDeclaration = [{
+    mlir::BlockArgument getInitMoldArg() {
+      auto &region = getInitRegion();
+      return region.empty() ? nullptr : region.getArgument(0);
+    }
+    mlir::BlockArgument getInitPrivateArg() {
+      auto &region = getInitRegion();
+      return region.empty() ? nullptr : region.getArgument(1);
+    }
+
+    /// Returns true if the init region might read from the mold argument
+    bool initReadsFromMold() {
+      mlir::BlockArgument moldArg = getInitMoldArg();
+      return moldArg && !moldArg.use_empty();
+    }
+
     /// Get the type for arguments to nested regions. This should
     /// generally be either the same as getType() or some pointer
     /// type (pointing to the type allocated by this op).
