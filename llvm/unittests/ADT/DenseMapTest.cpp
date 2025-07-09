@@ -15,6 +15,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <map>
+#include <optional>
 #include <set>
 #include <utility>
 #include <variant>
@@ -117,11 +118,13 @@ typedef ::testing::Types<DenseMap<uint32_t, uint32_t>,
                          DenseMap<uint32_t *, uint32_t *>,
                          DenseMap<CtorTester, CtorTester, CtorTesterMapInfo>,
                          DenseMap<EnumClass, uint32_t>,
+                         DenseMap<std::optional<uint32_t>, uint32_t>,
                          SmallDenseMap<uint32_t, uint32_t>,
                          SmallDenseMap<uint32_t *, uint32_t *>,
                          SmallDenseMap<CtorTester, CtorTester, 4,
                                        CtorTesterMapInfo>,
-                         SmallDenseMap<EnumClass, uint32_t>
+                         SmallDenseMap<EnumClass, uint32_t>,
+                         SmallDenseMap<std::optional<uint32_t>, uint32_t>
                          > DenseMapTestTypes;
 // clang-format on
 
