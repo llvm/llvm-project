@@ -1070,7 +1070,7 @@ protected:
                   result.AppendErrorWithFormatv(
                       "failed to disable breakpoint location: {0}",
                       llvm::fmt_consume(std::move(error)));
-                  ++loc_count;
+                ++loc_count;
               }
             } else {
               breakpoint->SetEnabled(false);
@@ -1519,7 +1519,7 @@ protected:
               result.AppendErrorWithFormatv(
                   "failed to disable breakpoint location: {0}",
                   llvm::fmt_consume(std::move(error)));
-              ++disable_count;
+            ++disable_count;
           }
         } else {
           target.RemoveBreakpointByID(cur_bp_id.GetBreakpointID());

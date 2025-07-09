@@ -579,9 +579,9 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
 
           if (llvm::Error error = break_loc_sp->ResolveBreakpointSite()) {
             LLDB_LOG_ERROR(log, std::move(error),
-                      "could not set breakpoint site for "
-                      "breakpoint location {1} of breakpoint {2}: {0}",
-                      break_loc_sp->GetID(), GetID());
+                           "could not set breakpoint site for "
+                           "breakpoint location {1} of breakpoint {2}: {0}",
+                           break_loc_sp->GetID(), GetID());
           }
         }
       }
