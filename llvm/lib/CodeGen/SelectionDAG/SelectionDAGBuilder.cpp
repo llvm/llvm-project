@@ -9065,15 +9065,8 @@ bool SelectionDAGBuilder::visitMemCmpBCmpCall(const CallInst &I) {
 
   // memcmp(S1,S2,2) != 0 -> (*(short*)LHS != *(short*)RHS)  != 0
   // memcmp(S1,S2,4) != 0 -> (*(int*)LHS != *(int*)RHS)  != 0
-  if (!CSize || !isOnlyUsedInZeroEqualityComparison(&I)) {
-    const Triple& TheTriple = TM.getTargetTriple();
-    if(TheTriple.isOSAIX()) {
-      if (Function *F = I.getCalledFunction()) {
-	F->setName(TheTriple.isArch32Bit() ? "___memcmp" : "___memcmp64");
-      }
-    }
+  if (!CSize || !isOnlyUsedInZeroEqualityComparison(&I))
     return false;
-  }
 
   // If the target has a fast compare for the given size, it will return a
   // preferred load type for that size. Require that the load VT is legal and
