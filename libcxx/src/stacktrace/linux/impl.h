@@ -34,7 +34,8 @@ private:
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD
 
-#include "stacktrace/config.h"
+#include <__config>
+#include <__config_site>
 
 #if defined(__linux__)
 

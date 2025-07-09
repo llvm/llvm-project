@@ -6,12 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "stacktrace/config.h"
+#include <__config>
+#include <__config_site>
 
-#if defined(_LIBCPP_STACKTRACE_CAN_SPAWN_TOOLS)
+#if __has_include(<spawn.h>) && _LIBCPP_STACKTRACE_ALLOW_TOOLS_AT_RUNTIME
 
-#  include <__config>
-#  include <__config_site>
 #  include <cassert>
 #  include <cerrno>
 #  include <csignal>
