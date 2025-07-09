@@ -4036,7 +4036,7 @@ AMDGPUAsmParser::checkVOPDRegBankConstraints(const MCInst &Inst, bool AsVOPD3) {
       int64_t Imm = Op.getImm();
       if (!AMDGPU::isInlinableLiteral32(Imm, hasInv2PiInlineImm()) &&
           !AMDGPU::isInlinableLiteral64(Imm, hasInv2PiInlineImm()))
-        return I;
+        return (unsigned)I;
     }
 
     for (auto OpName : {OpName::vsrc1X, OpName::vsrc1Y, OpName::vsrc2X,
@@ -4046,7 +4046,7 @@ AMDGPUAsmParser::checkVOPDRegBankConstraints(const MCInst &Inst, bool AsVOPD3) {
         continue;
       const MCOperand &Op = Inst.getOperand(I);
       if (Op.isImm())
-        return I;
+        return (unsigned)I;
     }
   }
 
