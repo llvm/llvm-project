@@ -95,7 +95,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "TypedefDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 12,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 1,
 // CHECK-NEXT:   "col": 13,
@@ -106,7 +106,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 0,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 7,
 // CHECK-NEXT:    "includedFrom": {
@@ -114,7 +114,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    }
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 12,
 // CHECK-NEXT:    "col": 13,
 // CHECK-NEXT:    "tokLen": 22,
 // CHECK-NEXT:    "includedFrom": {
@@ -127,13 +127,17 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  },
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:  "typeDetails": [
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "BuiltinType",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "signed",
+// CHECK-NEXT:     "integer"
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
@@ -142,7 +146,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 176,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 5,
 // CHECK-NEXT:   "col": 5,
@@ -150,12 +154,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 172,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 3
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 176,
 // CHECK-NEXT:    "col": 5,
 // CHECK-NEXT:    "tokLen": 12
 // CHECK-NEXT:   }
@@ -164,14 +168,27 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  "mangledName": "TestLocation",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
-// CHECK-NEXT:  }
+// CHECK-NEXT:  },
+// CHECK-NEXT:  "typeDetails": [
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "id": "0x{{.*}}",
+// CHECK-NEXT:    "kind": "BuiltinType",
+// CHECK-NEXT:    "type": {
+// CHECK-NEXT:     "qualType": "int"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "signed",
+// CHECK-NEXT:     "integer"
+// CHECK-NEXT:    ]
+// CHECK-NEXT:   }
+// CHECK-NEXT:  ]
 // CHECK-NEXT: }
 
 
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 214,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 6,
 // CHECK-NEXT:   "col": 24,
@@ -179,12 +196,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 191,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 22
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 214,
 // CHECK-NEXT:    "col": 24,
 // CHECK-NEXT:    "tokLen": 23
 // CHECK-NEXT:   }
@@ -195,14 +212,58 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:   "desugaredQualType": "int",
 // CHECK-NEXT:   "qualType": "TestTypedefFromInclude",
 // CHECK-NEXT:   "typeAliasDeclId": "0x{{.*}}"
-// CHECK-NEXT:  }
+// CHECK-NEXT:  },
+// CHECK-NEXT:  "typeDetails": [
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "id": "0x{{.*}}",
+// CHECK-NEXT:    "kind": "ElaboratedType",
+// CHECK-NEXT:    "type": {
+// CHECK-NEXT:     "qualType": "TestTypedefFromInclude"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "signed",
+// CHECK-NEXT:     "integer"
+// CHECK-NEXT:    ],
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "TypedefType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "TestTypedefFromInclude"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "decl": {
+// CHECK-NEXT:       "id": "0x{{.*}}",
+// CHECK-NEXT:       "kind": "TypedefDecl",
+// CHECK-NEXT:       "name": "TestTypedefFromInclude"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "signed",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ],
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "BuiltinType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "int"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": [
+// CHECK-NEXT:         "signed",
+// CHECK-NEXT:         "integer"
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:   }
+// CHECK-NEXT:  ]
 // CHECK-NEXT: }
 
 
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "RecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 249,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 8,
 // CHECK-NEXT:   "col": 8,
@@ -210,12 +271,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 242,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 273,
 // CHECK-NEXT:    "line": 10,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -229,19 +290,19 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 269,
 // CHECK-NEXT:     "line": 9,
 // CHECK-NEXT:     "col": 7,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 265,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 269,
 // CHECK-NEXT:      "col": 7,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -249,6 +310,18 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "name": "x",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualType": {
+// CHECK-NEXT:     "id": "0x{{.*}}",
+// CHECK-NEXT:     "kind": "QualType",
+// CHECK-NEXT:     "type": {
+// CHECK-NEXT:      "qualType": "int"
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "qualifiers": "",
+// CHECK-NEXT:     "qualDetails": [
+// CHECK-NEXT:      "signed",
+// CHECK-NEXT:      "integer"
+// CHECK-NEXT:     ]
 // CHECK-NEXT:    }
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
@@ -258,7 +331,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "RecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 286,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 12,
 // CHECK-NEXT:   "col": 8,
@@ -266,12 +339,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 279,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 344,
 // CHECK-NEXT:    "line": 17,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -285,19 +358,19 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 308,
 // CHECK-NEXT:     "line": 13,
 // CHECK-NEXT:     "col": 7,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 304,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 308,
 // CHECK-NEXT:      "col": 7,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -305,25 +378,37 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "name": "x",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualType": {
+// CHECK-NEXT:     "id": "0x{{.*}}",
+// CHECK-NEXT:     "kind": "QualType",
+// CHECK-NEXT:     "type": {
+// CHECK-NEXT:      "qualType": "int"
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "qualifiers": "",
+// CHECK-NEXT:     "qualDetails": [
+// CHECK-NEXT:      "signed",
+// CHECK-NEXT:      "integer"
+// CHECK-NEXT:     ]
 // CHECK-NEXT:    }
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "RecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 321,
 // CHECK-NEXT:     "line": 14,
 // CHECK-NEXT:     "col": 10,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 314,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 340,
 // CHECK-NEXT:      "line": 16,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 1
@@ -338,19 +423,19 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "FieldDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": {{[0-9]+}},
+// CHECK-NEXT:       "offset": 334,
 // CHECK-NEXT:       "line": 15,
 // CHECK-NEXT:       "col": 9,
 // CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 330,
 // CHECK-NEXT:        "col": 5,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 334,
 // CHECK-NEXT:        "col": 9,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -358,6 +443,13 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:      "name": "z",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualType": {
+// CHECK-NEXT:       "refId": "0x{{.*}}",
+// CHECK-NEXT:       "qualDetails": [
+// CHECK-NEXT:        "signed",
+// CHECK-NEXT:        "integer"
+// CHECK-NEXT:       ]
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
@@ -369,7 +461,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "LabelDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 390,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 20,
 // CHECK-NEXT:   "col": 13,
@@ -377,12 +469,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 380,
 // CHECK-NEXT:    "col": 3,
 // CHECK-NEXT:    "tokLen": 9
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 390,
 // CHECK-NEXT:    "col": 13,
 // CHECK-NEXT:    "tokLen": 13
 // CHECK-NEXT:   }
@@ -395,7 +487,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "TypedefDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 461,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 24,
 // CHECK-NEXT:   "col": 13,
@@ -403,12 +495,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 449,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 7
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 461,
 // CHECK-NEXT:    "col": 13,
 // CHECK-NEXT:    "tokLen": 15
 // CHECK-NEXT:   }
@@ -417,13 +509,17 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  },
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:  "typeDetails": [
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "BuiltinType",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "signed",
+// CHECK-NEXT:     "integer"
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
@@ -432,7 +528,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "EnumDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 486,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 26,
 // CHECK-NEXT:   "col": 6,
@@ -440,12 +536,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 481,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 518,
 // CHECK-NEXT:    "line": 28,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -457,19 +553,19 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "EnumConstantDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 504,
 // CHECK-NEXT:     "line": 27,
 // CHECK-NEXT:     "col": 3,
 // CHECK-NEXT:     "tokLen": 12
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 504,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 12
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 504,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 12
 // CHECK-NEXT:     }
@@ -486,7 +582,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "RecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 531,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 30,
 // CHECK-NEXT:   "col": 8,
@@ -494,12 +590,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 524,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 591,
 // CHECK-NEXT:    "line": 34,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -513,19 +609,19 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "EnumDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 553,
 // CHECK-NEXT:     "line": 31,
 // CHECK-NEXT:     "col": 3,
 // CHECK-NEXT:     "tokLen": 4
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 553,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 585,
 // CHECK-NEXT:      "line": 33,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 1
@@ -536,19 +632,19 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "EnumConstantDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": {{[0-9]+}},
+// CHECK-NEXT:       "offset": 565,
 // CHECK-NEXT:       "line": 32,
 // CHECK-NEXT:       "col": 5,
 // CHECK-NEXT:       "tokLen": 16
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 565,
 // CHECK-NEXT:        "col": 5,
 // CHECK-NEXT:        "tokLen": 16
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 565,
 // CHECK-NEXT:        "col": 5,
 // CHECK-NEXT:        "tokLen": 16
 // CHECK-NEXT:       }
@@ -564,20 +660,20 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 587,
 // CHECK-NEXT:     "line": 33,
 // CHECK-NEXT:     "col": 5,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 553,
 // CHECK-NEXT:      "line": 31,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 587,
 // CHECK-NEXT:      "line": 33,
 // CHECK-NEXT:      "col": 5,
 // CHECK-NEXT:      "tokLen": 1
@@ -587,6 +683,20 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "desugaredQualType": "enum TestEnumDeclAnon::(unnamed at {{.*}}:31:3)",
 // CHECK-NEXT:     "qualType": "enum (unnamed enum at {{.*}}:31:3)"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualType": {
+// CHECK-NEXT:     "id": "0x{{.*}}",
+// CHECK-NEXT:     "kind": "QualType",
+// CHECK-NEXT:     "type": {
+// CHECK-NEXT:      "desugaredQualType": "enum TestEnumDeclAnon::(unnamed at {{.*}}:31:3)",
+// CHECK-NEXT:      "qualType": "enum (unnamed enum at {{.*}}:31:3)"
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "qualifiers": "",
+// CHECK-NEXT:     "qualDetails": [
+// CHECK-NEXT:      "unsigned",
+// CHECK-NEXT:      "integer",
+// CHECK-NEXT:      "enum"
+// CHECK-NEXT:     ]
 // CHECK-NEXT:    }
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
@@ -596,7 +706,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "EnumDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 602,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 36,
 // CHECK-NEXT:   "col": 6,
@@ -604,12 +714,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 597,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 602,
 // CHECK-NEXT:    "col": 6,
 // CHECK-NEXT:    "tokLen": 19
 // CHECK-NEXT:   }
@@ -621,7 +731,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "RecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 633,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 38,
 // CHECK-NEXT:   "col": 8,
@@ -629,12 +739,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 626,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 661,
 // CHECK-NEXT:    "line": 40,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -648,19 +758,19 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 657,
 // CHECK-NEXT:     "line": 39,
 // CHECK-NEXT:     "col": 7,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 653,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 657,
 // CHECK-NEXT:      "col": 7,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -668,6 +778,18 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "name": "i",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualType": {
+// CHECK-NEXT:     "id": "0x{{.*}}",
+// CHECK-NEXT:     "kind": "QualType",
+// CHECK-NEXT:     "type": {
+// CHECK-NEXT:      "qualType": "int"
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "qualifiers": "",
+// CHECK-NEXT:     "qualDetails": [
+// CHECK-NEXT:      "signed",
+// CHECK-NEXT:      "integer"
+// CHECK-NEXT:     ]
 // CHECK-NEXT:    }
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
@@ -677,7 +799,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "RecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 674,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 42,
 // CHECK-NEXT:   "col": 8,
@@ -685,12 +807,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 667,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 697,
 // CHECK-NEXT:    "line": 43,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -705,7 +827,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "RecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 710,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 45,
 // CHECK-NEXT:   "col": 8,
@@ -713,12 +835,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 703,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 771,
 // CHECK-NEXT:    "line": 48,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -732,19 +854,19 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "RecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 735,
 // CHECK-NEXT:     "line": 46,
 // CHECK-NEXT:     "col": 3,
 // CHECK-NEXT:     "tokLen": 6
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 735,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 747,
 // CHECK-NEXT:      "line": 47,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 1
@@ -757,19 +879,19 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 749,
 // CHECK-NEXT:     "col": 5,
 // CHECK-NEXT:     "tokLen": 19
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 735,
 // CHECK-NEXT:      "line": 46,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 749,
 // CHECK-NEXT:      "line": 47,
 // CHECK-NEXT:      "col": 5,
 // CHECK-NEXT:      "tokLen": 19
@@ -779,6 +901,18 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "desugaredQualType": "struct TestRecordDeclAnon1::(unnamed at {{.*}}:46:3)",
 // CHECK-NEXT:     "qualType": "struct (unnamed struct at {{.*}}:46:3)"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualType": {
+// CHECK-NEXT:     "id": "0x{{.*}}",
+// CHECK-NEXT:     "kind": "QualType",
+// CHECK-NEXT:     "type": {
+// CHECK-NEXT:      "desugaredQualType": "struct TestRecordDeclAnon1::(unnamed at {{.*}}:46:3)",
+// CHECK-NEXT:      "qualType": "struct (unnamed struct at {{.*}}:46:3)"
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "qualifiers": "",
+// CHECK-NEXT:     "qualDetails": [
+// CHECK-NEXT:      "struct"
+// CHECK-NEXT:     ]
 // CHECK-NEXT:    }
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
@@ -788,7 +922,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "RecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 784,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 50,
 // CHECK-NEXT:   "col": 8,
@@ -796,12 +930,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 777,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 825,
 // CHECK-NEXT:    "line": 53,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -815,19 +949,19 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "RecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 809,
 // CHECK-NEXT:     "line": 51,
 // CHECK-NEXT:     "col": 3,
 // CHECK-NEXT:     "tokLen": 6
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 809,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 821,
 // CHECK-NEXT:      "line": 52,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 1
@@ -840,19 +974,19 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 809,
 // CHECK-NEXT:     "line": 51,
 // CHECK-NEXT:     "col": 3,
 // CHECK-NEXT:     "tokLen": 6
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 809,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 809,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     }
@@ -860,6 +994,17 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "struct TestRecordDeclAnon2::(anonymous at {{.*}}:51:3)"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualType": {
+// CHECK-NEXT:     "id": "0x{{.*}}",
+// CHECK-NEXT:     "kind": "QualType",
+// CHECK-NEXT:     "type": {
+// CHECK-NEXT:      "qualType": "struct TestRecordDeclAnon2::(anonymous at {{.*}}:51:3)"
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "qualifiers": "",
+// CHECK-NEXT:     "qualDetails": [
+// CHECK-NEXT:      "struct"
+// CHECK-NEXT:     ]
 // CHECK-NEXT:    }
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
@@ -869,7 +1014,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "RecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 838,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 55,
 // CHECK-NEXT:   "col": 8,
@@ -877,12 +1022,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 831,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 838,
 // CHECK-NEXT:    "col": 8,
 // CHECK-NEXT:    "tokLen": 21
 // CHECK-NEXT:   }
@@ -895,7 +1040,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "EnumConstantDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 895,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 58,
 // CHECK-NEXT:   "col": 3,
@@ -903,12 +1048,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 895,
 // CHECK-NEXT:    "col": 3,
 // CHECK-NEXT:    "tokLen": 20
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 895,
 // CHECK-NEXT:    "col": 3,
 // CHECK-NEXT:    "tokLen": 20
 // CHECK-NEXT:   }
@@ -923,7 +1068,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "EnumConstantDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 920,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 59,
 // CHECK-NEXT:   "col": 3,
@@ -931,12 +1076,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 920,
 // CHECK-NEXT:    "col": 3,
 // CHECK-NEXT:    "tokLen": 24
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 947,
 // CHECK-NEXT:    "col": 30,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -951,12 +1096,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "kind": "ConstantExpr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 947,
 // CHECK-NEXT:      "col": 30,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 947,
 // CHECK-NEXT:      "col": 30,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -972,12 +1117,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:      "kind": "IntegerLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 947,
 // CHECK-NEXT:        "col": 30,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 947,
 // CHECK-NEXT:        "col": 30,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -997,7 +1142,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "RecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 963,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 62,
 // CHECK-NEXT:   "col": 8,
@@ -1005,12 +1150,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 956,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1022,
 // CHECK-NEXT:    "line": 66,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -1024,19 +1169,19 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "RecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 990,
 // CHECK-NEXT:     "line": 63,
 // CHECK-NEXT:     "col": 3,
 // CHECK-NEXT:     "tokLen": 6
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 990,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1018,
 // CHECK-NEXT:      "line": 65,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 1
@@ -1049,19 +1194,19 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "FieldDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": {{[0-9]+}},
+// CHECK-NEXT:       "offset": 1008,
 // CHECK-NEXT:       "line": 64,
 // CHECK-NEXT:       "col": 9,
 // CHECK-NEXT:       "tokLen": 5
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 1004,
 // CHECK-NEXT:        "col": 5,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 1008,
 // CHECK-NEXT:        "col": 9,
 // CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       }
@@ -1069,6 +1214,18 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:      "name": "Field",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualType": {
+// CHECK-NEXT:       "id": "0x{{.*}}",
+// CHECK-NEXT:       "kind": "QualType",
+// CHECK-NEXT:       "type": {
+// CHECK-NEXT:        "qualType": "int"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "qualifiers": "",
+// CHECK-NEXT:       "qualDetails": [
+// CHECK-NEXT:        "signed",
+// CHECK-NEXT:        "integer"
+// CHECK-NEXT:       ]
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
@@ -1077,19 +1234,19 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 990,
 // CHECK-NEXT:     "line": 63,
 // CHECK-NEXT:     "col": 3,
 // CHECK-NEXT:     "tokLen": 6
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 990,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 990,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     }
@@ -1097,25 +1254,36 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "struct TestIndirectFieldDecl::(anonymous at {{.*}}:63:3)"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualType": {
+// CHECK-NEXT:     "id": "0x{{.*}}",
+// CHECK-NEXT:     "kind": "QualType",
+// CHECK-NEXT:     "type": {
+// CHECK-NEXT:      "qualType": "struct TestIndirectFieldDecl::(anonymous at {{.*}}:63:3)"
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "qualifiers": "",
+// CHECK-NEXT:     "qualDetails": [
+// CHECK-NEXT:      "struct"
+// CHECK-NEXT:     ]
 // CHECK-NEXT:    }
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "IndirectFieldDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 1008,
 // CHECK-NEXT:     "line": 64,
 // CHECK-NEXT:     "col": 9,
 // CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1008,
 // CHECK-NEXT:      "col": 9,
 // CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1008,
 // CHECK-NEXT:      "col": 9,
 // CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
@@ -1130,7 +1298,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 1098,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 69,
 // CHECK-NEXT:   "col": 5,
@@ -1138,12 +1306,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1094,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 3
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1152,
 // CHECK-NEXT:    "line": 71,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -1159,19 +1327,19 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 1119,
 // CHECK-NEXT:     "line": 69,
 // CHECK-NEXT:     "col": 26,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1115,
 // CHECK-NEXT:      "col": 22,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1119,
 // CHECK-NEXT:      "col": 26,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -1180,24 +1348,37 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "name": "x",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "BuiltinType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "int"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "signed",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 1133,
 // CHECK-NEXT:     "col": 40,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1122,
 // CHECK-NEXT:      "col": 29,
 // CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1133,
 // CHECK-NEXT:      "col": 40,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -1206,19 +1387,57 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "desugaredQualType": "enum (unnamed at {{.*}}:69:29)",
 // CHECK-NEXT:     "qualType": "enum (unnamed enum at {{.*}}:69:29)"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "ElaboratedType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "enum (unnamed enum at {{.*}}:69:29)"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "ownedTagDecl": {
+// CHECK-NEXT:       "id": "0x{{.*}}",
+// CHECK-NEXT:       "kind": "EnumDecl",
+// CHECK-NEXT:       "name": ""
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "unsigned",
+// CHECK-NEXT:       "integer",
+// CHECK-NEXT:       "enum"
+// CHECK-NEXT:      ],
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "EnumType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "enum (unnamed at {{.*}}:69:29)"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "decl": {
+// CHECK-NEXT:         "id": "0x{{.*}}",
+// CHECK-NEXT:         "kind": "EnumDecl",
+// CHECK-NEXT:         "name": ""
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": [
+// CHECK-NEXT:         "unsigned",
+// CHECK-NEXT:         "integer",
+// CHECK-NEXT:         "enum"
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CompoundStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1136,
 // CHECK-NEXT:      "col": 43,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1152,
 // CHECK-NEXT:      "line": 71,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
@@ -1230,13 +1449,13 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:      "kind": "ReturnStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 1141,
 // CHECK-NEXT:        "line": 70,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 6
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 1148,
 // CHECK-NEXT:        "col": 10,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -1247,12 +1466,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
-// CHECK-NEXT:          "offset": {{[0-9]+}},
+// CHECK-NEXT:          "offset": 1148,
 // CHECK-NEXT:          "col": 10,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
-// CHECK-NEXT:          "offset": {{[0-9]+}},
+// CHECK-NEXT:          "offset": 1148,
 // CHECK-NEXT:          "col": 10,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -1268,12 +1487,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
-// CHECK-NEXT:            "offset": {{[0-9]+}},
+// CHECK-NEXT:            "offset": 1148,
 // CHECK-NEXT:            "col": 10,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:            "offset": {{[0-9]+}},
+// CHECK-NEXT:            "offset": 1148,
 // CHECK-NEXT:            "col": 10,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -1289,6 +1508,13 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:           "type": {
 // CHECK-NEXT:            "qualType": "int"
 // CHECK-NEXT:           }
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "qualType": {
+// CHECK-NEXT:           "refId": "0x{{.*}}",
+// CHECK-NEXT:           "qualDetails": [
+// CHECK-NEXT:            "signed",
+// CHECK-NEXT:            "integer"
+// CHECK-NEXT:           ]
 // CHECK-NEXT:          }
 // CHECK-NEXT:         }
 // CHECK-NEXT:        ]
@@ -1304,7 +1530,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 1213,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 74,
 // CHECK-NEXT:   "col": 5,
@@ -1312,12 +1538,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1209,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 3
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1262,
 // CHECK-NEXT:    "col": 54,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -1332,18 +1558,18 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 1247,
 // CHECK-NEXT:     "col": 39,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1231,
 // CHECK-NEXT:      "col": 23,
 // CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1247,
 // CHECK-NEXT:      "col": 39,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -1352,19 +1578,57 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "name": "x",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "enum Enum"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "ElaboratedType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "enum Enum"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "ownedTagDecl": {
+// CHECK-NEXT:       "id": "0x{{.*}}",
+// CHECK-NEXT:       "kind": "EnumDecl",
+// CHECK-NEXT:       "name": "Enum"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "unsigned",
+// CHECK-NEXT:       "integer",
+// CHECK-NEXT:       "enum"
+// CHECK-NEXT:      ],
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "EnumType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "enum Enum"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "decl": {
+// CHECK-NEXT:         "id": "0x{{.*}}",
+// CHECK-NEXT:         "kind": "EnumDecl",
+// CHECK-NEXT:         "name": "Enum"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": [
+// CHECK-NEXT:         "unsigned",
+// CHECK-NEXT:         "integer",
+// CHECK-NEXT:         "enum"
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CompoundStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1250,
 // CHECK-NEXT:      "col": 42,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1262,
 // CHECK-NEXT:      "col": 54,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -1375,12 +1639,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:      "kind": "ReturnStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 1252,
 // CHECK-NEXT:        "col": 44,
 // CHECK-NEXT:        "tokLen": 6
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 1259,
 // CHECK-NEXT:        "col": 51,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -1391,12 +1655,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
-// CHECK-NEXT:          "offset": {{[0-9]+}},
+// CHECK-NEXT:          "offset": 1259,
 // CHECK-NEXT:          "col": 51,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
-// CHECK-NEXT:          "offset": {{[0-9]+}},
+// CHECK-NEXT:          "offset": 1259,
 // CHECK-NEXT:          "col": 51,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -1412,12 +1676,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:          "kind": "ImplicitCastExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
-// CHECK-NEXT:            "offset": {{[0-9]+}},
+// CHECK-NEXT:            "offset": 1259,
 // CHECK-NEXT:            "col": 51,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:            "offset": {{[0-9]+}},
+// CHECK-NEXT:            "offset": 1259,
 // CHECK-NEXT:            "col": 51,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -1433,12 +1697,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:            "kind": "DeclRefExpr",
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
-// CHECK-NEXT:              "offset": {{[0-9]+}},
+// CHECK-NEXT:              "offset": 1259,
 // CHECK-NEXT:              "col": 51,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
-// CHECK-NEXT:              "offset": {{[0-9]+}},
+// CHECK-NEXT:              "offset": 1259,
 // CHECK-NEXT:              "col": 51,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
@@ -1454,6 +1718,14 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:             "type": {
 // CHECK-NEXT:              "qualType": "enum Enum"
 // CHECK-NEXT:             }
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "qualType": {
+// CHECK-NEXT:             "refId": "0x{{.*}}",
+// CHECK-NEXT:             "qualDetails": [
+// CHECK-NEXT:              "unsigned",
+// CHECK-NEXT:              "integer",
+// CHECK-NEXT:              "enum"
+// CHECK-NEXT:             ]
 // CHECK-NEXT:            }
 // CHECK-NEXT:           }
 // CHECK-NEXT:          ]
@@ -1471,7 +1743,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 1269,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 75,
 // CHECK-NEXT:   "col": 5,
@@ -1479,12 +1751,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1265,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 3
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1296,
 // CHECK-NEXT:    "col": 32,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -1499,18 +1771,18 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 1295,
 // CHECK-NEXT:     "col": 31,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1291,
 // CHECK-NEXT:      "col": 27,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1295,
 // CHECK-NEXT:      "col": 31,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -1518,7 +1790,20 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "name": "x",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "BuiltinType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "int"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "signed",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
@@ -1527,7 +1812,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 1305,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 76,
 // CHECK-NEXT:   "col": 6,
@@ -1535,12 +1820,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1300,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1329,
 // CHECK-NEXT:    "col": 30,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -1556,7 +1841,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 1344,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 77,
 // CHECK-NEXT:   "col": 12,
@@ -1564,12 +1849,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1333,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1367,
 // CHECK-NEXT:    "col": 35,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -1586,7 +1871,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 1382,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 78,
 // CHECK-NEXT:   "col": 12,
@@ -1594,12 +1879,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1371,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1409,
 // CHECK-NEXT:    "col": 39,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -1616,7 +1901,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FieldDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 1445,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 81,
 // CHECK-NEXT:   "col": 7,
@@ -1624,12 +1909,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1441,
 // CHECK-NEXT:    "col": 3,
 // CHECK-NEXT:    "tokLen": 3
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1445,
 // CHECK-NEXT:    "col": 7,
 // CHECK-NEXT:    "tokLen": 13
 // CHECK-NEXT:   }
@@ -1637,6 +1922,18 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  "name": "TestFieldDecl",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
+// CHECK-NEXT:  },
+// CHECK-NEXT:  "qualType": {
+// CHECK-NEXT:   "id": "0x{{.*}}",
+// CHECK-NEXT:   "kind": "QualType",
+// CHECK-NEXT:   "type": {
+// CHECK-NEXT:    "qualType": "int"
+// CHECK-NEXT:   },
+// CHECK-NEXT:   "qualifiers": "",
+// CHECK-NEXT:   "qualDetails": [
+// CHECK-NEXT:    "signed",
+// CHECK-NEXT:    "integer"
+// CHECK-NEXT:   ]
 // CHECK-NEXT:  }
 // CHECK-NEXT: }
 
@@ -1644,7 +1941,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FieldDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 1467,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 82,
 // CHECK-NEXT:   "col": 7,
@@ -1652,12 +1949,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1463,
 // CHECK-NEXT:    "col": 3,
 // CHECK-NEXT:    "tokLen": 3
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1488,
 // CHECK-NEXT:    "col": 28,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -1667,18 +1964,30 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "isBitfield": true,
+// CHECK-NEXT:  "qualType": {
+// CHECK-NEXT:   "id": "0x{{.*}}",
+// CHECK-NEXT:   "kind": "QualType",
+// CHECK-NEXT:   "type": {
+// CHECK-NEXT:    "qualType": "int"
+// CHECK-NEXT:   },
+// CHECK-NEXT:   "qualifiers": "",
+// CHECK-NEXT:   "qualDetails": [
+// CHECK-NEXT:    "signed",
+// CHECK-NEXT:    "integer"
+// CHECK-NEXT:   ]
+// CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ConstantExpr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1488,
 // CHECK-NEXT:      "col": 28,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1488,
 // CHECK-NEXT:      "col": 28,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -1694,12 +2003,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:      "kind": "IntegerLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 1488,
 // CHECK-NEXT:        "col": 28,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 1488,
 // CHECK-NEXT:        "col": 28,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -1719,7 +2028,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 1502,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 85,
 // CHECK-NEXT:   "col": 5,
@@ -1727,12 +2036,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1498,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 3
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1502,
 // CHECK-NEXT:    "col": 5,
 // CHECK-NEXT:    "tokLen": 11
 // CHECK-NEXT:   }
@@ -1741,14 +2050,27 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  "mangledName": "TestVarDecl",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
-// CHECK-NEXT:  }
+// CHECK-NEXT:  },
+// CHECK-NEXT:  "typeDetails": [
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "id": "0x{{.*}}",
+// CHECK-NEXT:    "kind": "BuiltinType",
+// CHECK-NEXT:    "type": {
+// CHECK-NEXT:     "qualType": "int"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "signed",
+// CHECK-NEXT:     "integer"
+// CHECK-NEXT:    ]
+// CHECK-NEXT:   }
+// CHECK-NEXT:  ]
 // CHECK-NEXT: }
 
 
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 1527,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 86,
 // CHECK-NEXT:   "col": 12,
@@ -1756,12 +2078,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1516,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1527,
 // CHECK-NEXT:    "col": 12,
 // CHECK-NEXT:    "tokLen": 13
 // CHECK-NEXT:   }
@@ -1771,14 +2093,27 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  },
-// CHECK-NEXT:  "storageClass": "extern"
+// CHECK-NEXT:  "storageClass": "extern",
+// CHECK-NEXT:  "typeDetails": [
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "id": "0x{{.*}}",
+// CHECK-NEXT:    "kind": "BuiltinType",
+// CHECK-NEXT:    "type": {
+// CHECK-NEXT:     "qualType": "int"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "signed",
+// CHECK-NEXT:     "integer"
+// CHECK-NEXT:    ]
+// CHECK-NEXT:   }
+// CHECK-NEXT:  ]
 // CHECK-NEXT: }
 
 
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 1556,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 87,
 // CHECK-NEXT:   "col": 14,
@@ -1786,12 +2121,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1543,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 8
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1556,
 // CHECK-NEXT:    "col": 14,
 // CHECK-NEXT:    "tokLen": 17
 // CHECK-NEXT:   }
@@ -1801,14 +2136,27 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
 // CHECK-NEXT:  },
-// CHECK-NEXT:  "tls": "static"
+// CHECK-NEXT:  "tls": "static",
+// CHECK-NEXT:  "typeDetails": [
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "id": "0x{{.*}}",
+// CHECK-NEXT:    "kind": "BuiltinType",
+// CHECK-NEXT:    "type": {
+// CHECK-NEXT:     "qualType": "int"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "signed",
+// CHECK-NEXT:     "integer"
+// CHECK-NEXT:    ]
+// CHECK-NEXT:   }
+// CHECK-NEXT:  ]
 // CHECK-NEXT: }
 
 
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 1580,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 88,
 // CHECK-NEXT:   "col": 5,
@@ -1816,12 +2164,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1576,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 3
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1598,
 // CHECK-NEXT:    "col": 23,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -1838,12 +2186,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "kind": "IntegerLiteral",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1598,
 // CHECK-NEXT:      "col": 23,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1598,
 // CHECK-NEXT:      "col": 23,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -1853,6 +2201,17 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "valueCategory": "prvalue",
 // CHECK-NEXT:    "value": "0"
+// CHECK-NEXT:   },
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "id": "0x{{.*}}",
+// CHECK-NEXT:    "kind": "BuiltinType",
+// CHECK-NEXT:    "type": {
+// CHECK-NEXT:     "qualType": "int"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "signed",
+// CHECK-NEXT:     "integer"
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
@@ -1861,7 +2220,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "ParmVarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 1629,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 90,
 // CHECK-NEXT:   "col": 26,
@@ -1869,12 +2228,12 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1625,
 // CHECK-NEXT:    "col": 22,
 // CHECK-NEXT:    "tokLen": 3
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1629,
 // CHECK-NEXT:    "col": 26,
 // CHECK-NEXT:    "tokLen": 15
 // CHECK-NEXT:   }
@@ -1882,5 +2241,18 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  "name": "TestParmVarDecl",
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "qualType": "int"
-// CHECK-NEXT:  }
+// CHECK-NEXT:  },
+// CHECK-NEXT:  "typeDetails": [
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "id": "0x{{.*}}",
+// CHECK-NEXT:    "kind": "BuiltinType",
+// CHECK-NEXT:    "type": {
+// CHECK-NEXT:     "qualType": "int"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "signed",
+// CHECK-NEXT:     "integer"
+// CHECK-NEXT:    ]
+// CHECK-NEXT:   }
+// CHECK-NEXT:  ]
 // CHECK-NEXT: }

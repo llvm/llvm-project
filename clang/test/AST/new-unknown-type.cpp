@@ -22,4 +22,4 @@ namespace b {
 
 static b::Bar bar;
 // CHECK:      `-VarDecl 0x{{[^ ]*}} <line:23:1, col:15> col:15 bar 'b::Bar' static callinit
-// CHECK-NEXT:   `-CXXConstructExpr 0x{{[^ ]*}} <col:15> 'b::Bar' 'void () noexcept'
+// CHECK-NEXT:   |-CXXConstructExpr 0x{{[^ ]*}} <col:15> 'b::Bar' 'void () noexcept'

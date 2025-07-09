@@ -16,9 +16,9 @@
 // ensure the types are target-dependent.
 
 // CHECK: TypedefDecl {{.*}} implicit __vector_quad '__vector_quad'
-// CHECK-NEXT: -BuiltinType {{.*}} '__vector_quad'
+// CHECK-NEXT: -typeDetails: BuiltinType {{.*}} '__vector_quad'
 // CHECK: TypedefDecl {{.*}} implicit __vector_pair '__vector_pair'
-// CHECK-NEXT: -BuiltinType {{.*}} '__vector_pair'
+// CHECK-NEXT: -typeDetails: BuiltinType {{.*}} '__vector_pair'
 
 // CHECK-X86_64-NOT: __vector_quad
 // CHECK-X86_64-NOT: __vector_pair

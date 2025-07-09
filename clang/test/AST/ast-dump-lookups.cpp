@@ -14,10 +14,10 @@ namespace Test {
 // PRAGMA: lookup results for Test:
 // PRAGMA-NEXT: NamespaceDecl {{.*}} Test
 // PRAGMA-NEXT: |-TypedefDecl {{.*}} T 'int'
-// PRAGMA-NEXT: | `-BuiltinType {{.*}} 'int'
+// PRAGMA-NEXT: | `-typeDetails: BuiltinType {{.*}} 'int'
 // PRAGMA-NEXT: |-VarDecl [[EXTERN_A:0x[^ ]*]] {{.*}} a 'int' extern
-// PRAGMA-NEXT: `-VarDecl {{.*}} prev [[EXTERN_A]] {{.*}} a 'int' cinit
-// PRAGMA-NEXT:   `-IntegerLiteral {{.*}} 'int' 0
+// PRAGMA: `-VarDecl {{.*}} prev [[EXTERN_A]] {{.*}} a 'int' cinit
+// PRAGMA:   |-IntegerLiteral {{.*}} 'int' 0
 #endif
 
 namespace Test { }
@@ -25,10 +25,10 @@ namespace Test { }
 // DECLS: Dumping Test:
 // DECLS-NEXT: NamespaceDecl {{.*}} Test
 // DECLS-NEXT: |-TypedefDecl {{.*}} T 'int'
-// DECLS-NEXT: | `-BuiltinType {{.*}} 'int'
+// DECLS-NEXT: | `-typeDetails: BuiltinType {{.*}} 'int'
 // DECLS-NEXT: |-VarDecl [[EXTERN_A:0x[^ ]*]] {{.*}} a 'int' extern
-// DECLS-NEXT: `-VarDecl {{.*}} prev [[EXTERN_A]] {{.*}} a 'int' cinit
-// DECLS-NEXT:   `-IntegerLiteral {{.*}} 'int' 0
+// DECLS:      `-VarDecl {{.*}} prev [[EXTERN_A]] {{.*}} a 'int' cinit
+// DECLS:        |-IntegerLiteral {{.*}} 'int' 0
 //
 // DECLS: Dumping Test:
 // DECLS-NEXT: NamespaceDecl {{.*}} Test
@@ -46,8 +46,8 @@ namespace Test { }
 // DECLS-LOOKUPS:       -DeclarationName 'a'
 // DECLS-LOOKUPS-NEXT:   `-Var [[A:[^ ]*]] 'a' 'int'
 // DECLS-LOOKUPS-NEXT:     |-VarDecl [[EXTERN_A:0x[^ ]*]] {{.*}} a 'int' extern
-// DECLS-LOOKUPS-NEXT:     `-VarDecl [[A]] prev [[EXTERN_A]] {{.*}} a 'int' cinit
-// DECLS-LOOKUPS-NEXT:       `-IntegerLiteral {{.*}} 'int' 0
+// DECLS-LOOKUPS:     `-VarDecl [[A]] prev [[EXTERN_A]] {{.*}} a 'int' cinit
+// DECLS-LOOKUPS-NEXT:       |-IntegerLiteral {{.*}} 'int' 0
 //
 // DECLS-LOOKUPS: Dumping Test:
 // DECLS-LOOKUPS-NEXT: Lookup map is in primary DeclContext

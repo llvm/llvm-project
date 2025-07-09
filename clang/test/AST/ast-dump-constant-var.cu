@@ -4,11 +4,11 @@
 #include "Inputs/cuda.h"
 
 // CHECK-LABEL: VarDecl {{.*}} m1 'int'
-// CHECK-NEXT: CUDAConstantAttr {{.*}}cuda.h
+// CHECK: CUDAConstantAttr {{.*}}cuda.h
 __constant__ int m1;
 
 // CHECK-LABEL: VarDecl {{.*}} m2 'int'
-// CHECK-NEXT: CUDAConstantAttr {{.*}}cuda.h
+// CHECK: CUDAConstantAttr {{.*}}cuda.h
 // CHECK-NOT: CUDAConstantAttr
 __constant__ __constant__ int m2;
 

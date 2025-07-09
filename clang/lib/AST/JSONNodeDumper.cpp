@@ -140,6 +140,10 @@ void JSONNodeDumper::Visit(QualType T) {
   //} );
 }
 
+// SEI: added this as a forwarding function so that the TextNodeDumper
+// SEI: doesn't have this applied when coming from a VarDecl
+void JSONNodeDumper::Visit(QualType T, bool isFromDecl) { Visit(T); }
+
 void JSONNodeDumper::Visit(TypeLoc TL) {
   if (TL.isNull())
     return;

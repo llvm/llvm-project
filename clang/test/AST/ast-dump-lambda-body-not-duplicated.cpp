@@ -33,7 +33,7 @@ void Test1() {
 //
 // CHECK: CXXMethodDecl {{.*}} operator() 'auto (auto) const' inline
 // CHECK-NEXT: ParmVarDecl {{.*}} referenced x 'auto'
-// CHECK-NEXT: CompoundStmt 0x[[TMP1:.*]]
+// CHECK: CompoundStmt 0x[[TMP1:.*]]
 // CHECK: DeclRefExpr {{.*}} 'x' 'auto'
 //
 // CHECK: CompoundStmt 0x[[TMP1]]

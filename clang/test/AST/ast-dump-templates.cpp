@@ -114,7 +114,7 @@ void func() {
   C<Key>;
 // DUMP:      UnresolvedLookupExpr {{.*}} '<dependent type>' lvalue (no ADL) = 'C'
 // DUMP-NEXT: `-TemplateArgument type 'Key'
-// DUMP-NEXT:   `-TemplateTypeParmType {{.*}} 'Key' dependent depth 0 index 0
+// DUMP-NEXT:   `-typeDetails: TemplateTypeParmType {{.*}} 'Key' dependent depth 0 index 0
 // DUMP-NEXT:     `-TemplateTypeParm {{.*}} 'Key'
 }
 }

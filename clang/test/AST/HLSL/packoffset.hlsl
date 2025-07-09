@@ -4,16 +4,16 @@
 // CHECK: HLSLBufferDecl {{.*}} cbuffer A
 cbuffer A
 {
-    // CHECK-NEXT:-HLSLResourceClassAttr {{.*}} <<invalid sloc>> Implicit CBuffer
-    // CHECK-NEXT:-HLSLResourceAttr {{.*}} <<invalid sloc>> Implicit CBuffer
+    // CHECK-NEXT: -attrDetails: HLSLResourceClassAttr {{.*}} <<invalid sloc>> Implicit CBuffer
+    // CHECK-NEXT: -attrDetails: HLSLResourceAttr {{.*}} <<invalid sloc>> Implicit CBuffer
     // CHECK-NEXT: VarDecl {{.*}} A1 'float4'
-    // CHECK-NEXT: HLSLPackOffsetAttr {{.*}} 0 0
+    // CHECK: -attrDetails: HLSLPackOffsetAttr {{.*}} 0 0
     float4 A1 : packoffset(c);
     // CHECK-NEXT: VarDecl {{.*}} col:11 A2 'float'
-    // CHECK-NEXT: HLSLPackOffsetAttr {{.*}} 1 0
+    // CHECK: -attrDetails: HLSLPackOffsetAttr {{.*}} 1 0
     float A2 : packoffset(c1);
     // CHECK-NEXT: VarDecl {{.*}} col:11 A3 'float'
-    // CHECK-NEXT: HLSLPackOffsetAttr {{.*}} 1 1
+    // CHECK: -attrDetails: HLSLPackOffsetAttr {{.*}} 1 1
     float A3 : packoffset(c1.y);
 }
 
@@ -21,13 +21,13 @@ cbuffer A
 cbuffer B
 {
     // CHECK: VarDecl {{.*}} B0 'float'
-    // CHECK-NEXT: HLSLPackOffsetAttr {{.*}} 0 1
+    // CHECK: -attrDetails: HLSLPackOffsetAttr {{.*}} 0 1
     float B0 : packoffset(c0.g);
     // CHECK-NEXT: VarDecl {{.*}} B1 'double'
-    // CHECK-NEXT: HLSLPackOffsetAttr {{.*}} 0 2
+    // CHECK: -attrDetails: HLSLPackOffsetAttr {{.*}} 0 2
 	double B1 : packoffset(c0.b);
     // CHECK-NEXT: VarDecl {{.*}} B2 'half'
-    // CHECK-NEXT: HLSLPackOffsetAttr {{.*}} 0 0
+    // CHECK: -attrDetails: HLSLPackOffsetAttr {{.*}} 0 0
 	half B2 : packoffset(c0.r);
 }
 
@@ -35,13 +35,13 @@ cbuffer B
 cbuffer C
 {
     // CHECK: VarDecl {{.*}} C0 'float'
-    // CHECK-NEXT: HLSLPackOffsetAttr {{.*}} 1
+    // CHECK: -attrDetails: HLSLPackOffsetAttr {{.*}} 1
     float C0 : packoffset(c0.y);
     // CHECK-NEXT: VarDecl {{.*}} C1 'float2'
-    // CHECK-NEXT: HLSLPackOffsetAttr {{.*}} 2
+    // CHECK: -attrDetails: HLSLPackOffsetAttr {{.*}} 2
 	float2 C1 : packoffset(c0.z);
     // CHECK-NEXT: VarDecl {{.*}} C2 'half'
-    // CHECK-NEXT: HLSLPackOffsetAttr {{.*}} 0
+    // CHECK: -attrDetails: HLSLPackOffsetAttr {{.*}} 0
 	half C2 : packoffset(c0.x);
 }
 
@@ -50,16 +50,16 @@ cbuffer C
 cbuffer D
 {
     // CHECK: VarDecl {{.*}} D0 'float'
-    // CHECK-NEXT: HLSLPackOffsetAttr {{.*}} 0 1
+    // CHECK: HLSLPackOffsetAttr {{.*}} 0 1
     float D0 : packoffset(c0.y);
     // CHECK-NEXT: VarDecl {{.*}} D1 'float[2]'
-    // CHECK-NEXT: HLSLPackOffsetAttr {{.*}} 1 0
+    // CHECK: -attrDetails: HLSLPackOffsetAttr {{.*}} 1 0
 	float D1[2] : packoffset(c1.x);
     // CHECK-NEXT: VarDecl {{.*}} D2 'half3'
-    // CHECK-NEXT: HLSLPackOffsetAttr {{.*}} 2 1
+    // CHECK: -attrDetails: HLSLPackOffsetAttr {{.*}} 2 1
 	half3 D2 : packoffset(c2.y);
     // CHECK-NEXT: VarDecl {{.*}} D3 'double'
-    // CHECK-NEXT: HLSLPackOffsetAttr {{.*}} 0 2
+    // CHECK: -attrDetails: HLSLPackOffsetAttr {{.*}} 0 2
 	double D3 : packoffset(c0.z);
 }
 
@@ -72,13 +72,13 @@ struct ST {
 // CHECK: HLSLBufferDecl {{.*}} cbuffer S
 cbuffer S {
     // CHECK: VarDecl {{.*}} S0 'float'
-    // CHECK-NEXT: HLSLPackOffsetAttr {{.*}} 0 1
+    // CHECK: -attrDetails: HLSLPackOffsetAttr {{.*}} 0 1
   float S0 : packoffset(c0.y);
     // CHECK: VarDecl {{.*}} S1 'ST'
-    // CHECK: HLSLPackOffsetAttr {{.*}} 1 0
+    // CHECK: -attrDetails: HLSLPackOffsetAttr {{.*}} 1 0
   ST S1 : packoffset(c1);
     // CHECK: VarDecl {{.*}} S2 'double2'
-    // CHECK-NEXT: HLSLPackOffsetAttr {{.*}} 2 0
+    // CHECK: -attrDetails: HLSLPackOffsetAttr {{.*}} 2 0
   double2 S2 : packoffset(c2);
 }
 
@@ -91,12 +91,12 @@ struct ST2 {
 // CHECK: HLSLBufferDecl {{.*}} cbuffer S2
 cbuffer S2 {
     // CHECK: VarDecl {{.*}} S20 'float'
-    // CHECK-NEXT: HLSLPackOffsetAttr {{.*}} 0 3
+    // CHECK: -attrDetails: HLSLPackOffsetAttr {{.*}} 0 3
   float S20 : packoffset(c0.a);
     // CHECK: VarDecl {{.*}} S21 'ST2'
-    // CHECK: HLSLPackOffsetAttr {{.*}} 1 0
+    // CHECK: -attrDetails: HLSLPackOffsetAttr {{.*}} 1 0
   ST2 S21 : packoffset(c1);
     // CHECK: VarDecl {{.*}} S22 'half'
-    // CHECK-NEXT: HLSLPackOffsetAttr {{.*}} 3 1
+    // CHECK: -attrDetails: HLSLPackOffsetAttr {{.*}} 3 1
   half S22 : packoffset(c3.y);
 }

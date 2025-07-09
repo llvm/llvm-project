@@ -448,6 +448,9 @@ public:
   }
   void VisitVectorType(const VectorType *T) { Visit(T->getElementType()); }
   void VisitFunctionType(const FunctionType *T) {
+
+    Visit(T->getReturnType());
+
     // SEI: add functionDetails, incl. return type
     getNodeDelegate().AddChild("functionDetails", [this, T] {
       getNodeDelegate().VisitFunctionType(T);
@@ -610,7 +613,8 @@ public:
     // SEI: if this is a function pointer, then we need to get the
     // FunctionProtoType and then make add'l visits. if the FP is typedef'd,
     // then this behavior occurs for us outside of Visit(VarDecl *)
-    getNodeDelegate().Visit(D->getType());
+    //getNodeDelegate().Visit(D->getType(), true);
+    Visit(D->getType()); 
   }
 
   void VisitDecompositionDecl(const DecompositionDecl *D) {

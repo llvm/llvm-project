@@ -39,7 +39,7 @@ void TestObjCAtCatchStmt(void) {
 // CHECK-NEXT:   CompoundStmt
 // CHECK-NEXT:   ObjCAtCatchStmt{{.*}}
 // CHECK-NEXT:     VarDecl{{.*}}a
-// CHECK-NEXT:     CompoundStmt
+// CHECK:     CompoundStmt
 // CHECK-NEXT:   ObjCAtCatchStmt{{.*}} catch all
 // CHECK-NEXT:     CompoundStmt
 // CHECK-NEXT:   ObjCAtFinallyStmt

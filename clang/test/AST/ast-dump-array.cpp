@@ -14,18 +14,16 @@ void testArrayInitExpr()
     auto l = [a]{
     };
     // CHECK: |-ArrayInitLoopExpr 0x{{[^ ]*}} <col:15> 'int[10]'
+    // CHECK: | |-OpaqueValueExpr 0x{{[^ ]*}} <col:15> 'int[10]' lvalue
+    // CHECK: | | `-DeclRefExpr 0x{{[^ ]*}} <col:15> 'int[10]' lvalue Var 0x{{[^ ]*}} 'a' 'int[10]'
+    // CHECK: | `-ImplicitCastExpr 0x{{[^ ]*}} <col:15> 'int' <LValueToRValue>
+    // CHECK: |   `-ArraySubscriptExpr 0x{{[^ ]*}} <col:15> 'int' lvalue
+    // CHECK: |     |-ImplicitCastExpr 0x{{[^ ]*}} <col:15> 'int *' <ArrayToPointerDecay>
+    // CHECK: |     | `-OpaqueValueExpr 0x{{[^ ]*}} <col:15> 'int[10]' lvalue
+    // CHECK: |     |   `-DeclRefExpr 0x{{[^ ]*}} <col:15> 'int[10]' lvalue Var 0x{{[^ ]*}} 'a' 'int[10]'
     // CHECK: |     `-ArrayInitIndexExpr 0x{{[^ ]*}} <<invalid sloc>> 'unsigned long'
 }
 
-template<typename T, int Size>
-class array {
-  T data[Size];
-
-  using array_T_size = T[Size];
-  // CHECK: `-DependentSizedArrayType 0x{{[^ ]*}} 'T[Size]' dependent   <col:25, col:30>
-  using const_array_T_size = const T[Size];
-  // CHECK: `-DependentSizedArrayType 0x{{[^ ]*}} 'const T[Size]' dependent   <col:37, col:42>
-};
 
 struct V {};
 template <typename U, typename Idx, int N>

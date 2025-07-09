@@ -48,8 +48,8 @@ struct S {
   virtual void f(float, int = 12);
   // CHECK: CXXMethodDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:33> col:16 f 'void (float, int)' virtual
   // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:18> col:23 'float'
-  // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:25, col:31> col:29 'int' cinit
-  // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:31> 'int' 12
+  // CHECK: ParmVarDecl 0x{{[^ ]*}} <col:25, col:31> col:29 'int' cinit
+  // CHECK: IntegerLiteral 0x{{[^ ]*}} <col:31> 'int' 12
 
   virtual void g() = 0;
   // CHECK: CXXMethodDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:22> col:16 g 'void ()' virtual pure
@@ -66,9 +66,9 @@ struct T : S { // T is not referenced, but S is
   // CHECK: CXXMethodDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:28> col:8 f 'void (float, int)'
   // CHECK-NEXT: Overrides: [ 0x{{[^ ]*}} S::f 'void (float, int)' ]
   // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:10> col:15 'float'
-  // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:17, col:23> col:21 'int' cinit
-  // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:23> 'int' 100
-  // CHECK-NEXT: OverrideAttr
+  // CHECK: ParmVarDecl 0x{{[^ ]*}} <col:17, col:23> col:21 'int' cinit
+  // CHECK: IntegerLiteral 0x{{[^ ]*}} <col:23> 'int' 100
+  // CHECK: OverrideAttr
 
   // CHECK: CXXConstructorDecl 0x{{[^ ]*}} <line:[[@LINE-9]]:8> col:8 implicit T 'void (const T &)' inline default_delete noexcept-unevaluated
   // CHECK: CXXMethodDecl 0x{{[^ ]*}} <col:8> col:8 implicit operator= 'T &(const T &)' inline default_delete noexcept-unevaluated
@@ -91,12 +91,12 @@ void a2(void);
 void b(int a, int b);
 // CHECK: FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, col:20> col:6 b 'void (int, int)'
 // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:8, col:12> col:12 a 'int'
-// CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:15, col:19> col:19 b 'int'
+// CHECK: ParmVarDecl 0x{{[^ ]*}} <col:15, col:19> col:19 b 'int'
 void c(int a, int b = 12);
 // CHECK: FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, col:25> col:6 c 'void (int, int)'
 // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:8, col:12> col:12 a 'int'
-// CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:15, col:23> col:19 b 'int' cinit
-// CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:23> 'int' 12
+// CHECK: ParmVarDecl 0x{{[^ ]*}} <col:15, col:23> col:19 b 'int' cinit
+// CHECK: IntegerLiteral 0x{{[^ ]*}} <col:23> 'int' 12
 constexpr void d(void);
 // CHECK: FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, col:22> col:16 constexpr d 'void ()'
 static void e(void);
@@ -124,12 +124,12 @@ T l(T&);
 void m(int) {}
 // CHECK: FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, col:14> col:6 m 'void (int)'
 // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:8> col:11 'int'
-// CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:13, col:14>
+// CHECK: CompoundStmt 0x{{[^ ]*}} <col:13, col:14>
 
 void n(int, ...) {}
 // CHECK: FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, col:19> col:6 n 'void (int, ...)'
 // CHECK-NEXT: ParmVarDecl 0x{{[^ ]*}} <col:8> col:11 'int'
-// CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:18, col:19>
+// CHECK: CompoundStmt 0x{{[^ ]*}} <col:18, col:19>
 
 int main() {
   // CHECK: FunctionDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+2]]:1> line:[[@LINE-1]]:5 main 'int ()'

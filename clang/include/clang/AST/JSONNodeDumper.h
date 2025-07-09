@@ -231,6 +231,10 @@ public:
   void Visit(const Type *T);
   void Visit(QualType T);
 
+  // SEI: forwarding function to Visit(QualType T); so that it's applied here
+  // from a VarDecl call
+  void Visit(QualType T, bool isFromDecl);
+
   // SEI: get specific details from the qual type
   void VisitQualTypeDetails(QualType T);
 

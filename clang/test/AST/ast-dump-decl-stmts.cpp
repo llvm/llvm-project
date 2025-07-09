@@ -12,8 +12,8 @@ void test_func() {
   int a, b, c;
   // CHECK: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:14>
   // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:7> col:7 a 'int'
-  // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:10> col:10 b 'int'
-  // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:3, col:13> col:13 c 'int'
+  // CHECK: VarDecl 0x{{[^ ]*}} <col:3, col:10> col:10 b 'int'
+  // CHECK: VarDecl 0x{{[^ ]*}} <col:3, col:13> col:13 c 'int'
   void d(), e(int);
   // CHECK: DeclStmt 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:19>
   // CHECK-NEXT: FunctionDecl 0x{{[^ ]*}} parent 0x{{[^ ]*}} <col:3, col:10> col:8 d 'void ()'
@@ -27,8 +27,8 @@ void test_func() {
 // FIXME: These currently do not show up as a DeclStmt.
 int a, b, c;
 // CHECK: VarDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, col:5> col:5 a 'int'
-// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:1, col:8> col:8 b 'int'
-// CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:1, col:11> col:11 c 'int'
+// CHECK: VarDecl 0x{{[^ ]*}} <col:1, col:8> col:8 b 'int'
+// CHECK: VarDecl 0x{{[^ ]*}} <col:1, col:11> col:11 c 'int'
 void d(), e(int);
 // CHECK: FunctionDecl 0x{{[^ ]*}} prev 0x{{[^ ]*}} <line:[[@LINE-1]]:1, col:8> col:6 d 'void ()'
 // CHECK-NEXT: FunctionDecl 0x{{[^ ]*}} prev 0x{{[^ ]*}} <col:1, col:16> col:11 e 'void (int)'

@@ -4,5 +4,5 @@
 void func1();
 #pragma clang attribute pop
 // CHECK: FunctionDecl {{.*}} func1
-// CHECK-NEXT: DLLExportAttr {{.*}}
-// CHECK-NEXT: NoInlineAttr {{.*}}
+// CHECK-NEXT: attrDetails: DLLExportAttr {{.*}}
+// CHECK-NEXT: attrDetails: NoInlineAttr {{.*}}

@@ -197,6 +197,9 @@ public:
 
   void Visit(QualType T);
 
+  // SEI: added to prevent this from being added whenever it comes from VarDecl
+  void Visit(QualType T, bool isFromDecl);
+
   void Visit(TypeLoc);
 
   // SEI: added support for getting ReturnType information

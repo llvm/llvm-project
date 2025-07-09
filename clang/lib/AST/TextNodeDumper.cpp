@@ -241,6 +241,13 @@ void TextNodeDumper::Visit(QualType T) {
   OS << " " << T.split().Quals.getAsString();
 }
 
+// SEI: ignore this from being called whenever it's from a VarDecl
+// SEI: so we don't interfere with the normal text output
+void TextNodeDumper::Visit(QualType T, bool isFromDecl) {
+  if (!isFromDecl)
+    Visit(T);
+}
+
 void TextNodeDumper::VisitReturnType(QualType T) {
   OS << "ReturnType";
   dumpPointer(T.getAsOpaquePtr());

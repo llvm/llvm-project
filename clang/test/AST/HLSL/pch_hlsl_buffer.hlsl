@@ -17,18 +17,18 @@ float foo() {
 }
 // Make sure cbuffer/tbuffer works for PCH.
 // CHECK:HLSLBufferDecl 0x{{[0-9a-f]+}} <{{.*}}:7:1, line:9:1> line:7:9 imported <undeserialized declarations> cbuffer A
-// CHECK-NEXT:HLSLResourceClassAttr {{.*}} <<invalid sloc>> Implicit CBuffer
-// CHECK-NEXT:HLSLResourceAttr {{.*}} <<invalid sloc>> Implicit CBuffer
-// CHECK-NEXT:`-VarDecl 0x[[A:[0-9a-f]+]] <line:8:3, col:9> col:9 imported used a 'float'
-// CHECK-NEXT:HLSLBufferDecl 0x{{[0-9a-f]+}} <line:11:1, line:13:1> line:11:9 imported <undeserialized declarations> tbuffer B
-// CHECK-NEXT:HLSLResourceClassAttr {{.*}} <<invalid sloc>> Implicit SRV
-// CHECK-NEXT:HLSLResourceAttr {{.*}} <<invalid sloc>> Implicit TBuffer
-// CHECK-NEXT:`-VarDecl 0x[[B:[0-9a-f]+]] <line:12:3, col:9> col:9 imported used b 'float'
-// CHECK-NEXT:FunctionDecl 0x{{[0-9a-f]+}} <line:15:1, line:17:1> line:15:7 imported foo 'float ()'
-// CHECK-NEXT:CompoundStmt 0x{{[0-9a-f]+}} <col:13, line:17:1>
-// CHECK-NEXT:ReturnStmt 0x{{[0-9a-f]+}} <line:16:3, col:14>
-// CHECK-NEXT:BinaryOperator 0x{{[0-9a-f]+}} <col:10, col:14> 'float' '+'
-// CHECK-NEXT:ImplicitCastExpr 0x{{[0-9a-f]+}} <col:10> 'float' <LValueToRValue>
-// CHECK-NEXT:`-DeclRefExpr 0x{{[0-9a-f]+}} <col:10> 'float' lvalue Var 0x[[A]] 'a' 'float'
-// CHECK-NEXT:`-ImplicitCastExpr 0x{{[0-9a-f]+}} <col:14> 'float' <LValueToRValue>
-// CHECK-NEXT:`-DeclRefExpr 0x{{[0-9a-f]+}} <col:14> 'float' lvalue Var 0x[[B]] 'b' 'float'
+// CHECK:HLSLResourceClassAttr {{.*}} <<invalid sloc>> Implicit CBuffer
+// CHECK:HLSLResourceAttr {{.*}} <<invalid sloc>> Implicit CBuffer
+// CHECK:`-VarDecl 0x[[A:[0-9a-f]+]] <line:8:3, col:9> col:9 imported used a 'float'
+// CHECK:HLSLBufferDecl 0x{{[0-9a-f]+}} <line:11:1, line:13:1> line:11:9 imported <undeserialized declarations> tbuffer B
+// CHECK:HLSLResourceClassAttr {{.*}} <<invalid sloc>> Implicit SRV
+// CHECK:HLSLResourceAttr {{.*}} <<invalid sloc>> Implicit TBuffer
+// CHECK:`-VarDecl 0x[[B:[0-9a-f]+]] <line:12:3, col:9> col:9 imported used b 'float'
+// CHECK:FunctionDecl 0x{{[0-9a-f]+}} <line:15:1, line:17:1> line:15:7 imported foo 'float ()'
+// CHECK:CompoundStmt 0x{{[0-9a-f]+}} <col:13, line:17:1>
+// CHECK:ReturnStmt 0x{{[0-9a-f]+}} <line:16:3, col:14>
+// CHECK:BinaryOperator 0x{{[0-9a-f]+}} <col:10, col:14> 'float' '+'
+// CHECK:ImplicitCastExpr 0x{{[0-9a-f]+}} <col:10> 'float' <LValueToRValue>
+// CHECK:`-DeclRefExpr 0x{{[0-9a-f]+}} <col:10> 'float' lvalue Var 0x[[A]] 'a' 'float'
+// CHECK:`-ImplicitCastExpr 0x{{[0-9a-f]+}} <col:14> 'float' <LValueToRValue>
+// CHECK:`-DeclRefExpr 0x{{[0-9a-f]+}} <col:14> 'float' lvalue Var 0x[[B]] 'b' 'float'
