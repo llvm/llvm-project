@@ -62,7 +62,7 @@ def create_release(repo, release, tag=None, name=None, message=None):
 * [Intel](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-macOS-X64.tar.xz) (x86-64) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-macOS-X64.tar.xz.jsonl))
 DOWNLOAD_LINKS_END -->
 
-Download links for Linux and macOS will appear here once builds complete. <!-- DOWNLOAD_LINKS_PLACEHOLDER -->
+Download links for Linux and macOS will appear here when all the builds have completed. <!-- DOWNLOAD_LINKS_PLACEHOLDER -->
 
 For Windows, and any other variants of platform and architecture, check the full list of release packages at the bottom of this release page.
 
