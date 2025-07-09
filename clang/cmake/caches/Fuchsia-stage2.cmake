@@ -362,7 +362,6 @@ foreach(target armv6m-none-eabi;armv7m-none-eabi;armv7em-none-eabi;armv8m.main-n
   set(RUNTIMES_${target}_LIBCXX_ENABLE_SHARED OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_STATIC ON CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_SHARED_OUTPUT_NAME "c++-shared" CACHE STRING "")
-  set(RUNTIMES_${target}_LIBCXX_LIBC "llvm-libc" CACHE STRING "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_FILESYSTEM OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_RANDOM_DEVICE OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_LOCALIZATION OFF CACHE BOOL "")
@@ -376,6 +375,7 @@ foreach(target armv6m-none-eabi;armv7m-none-eabi;armv7em-none-eabi;armv8m.main-n
   set(RUNTIMES_${target}_LLVM_INCLUDE_TESTS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_ASSERTIONS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES "libc;libcxx" CACHE STRING "")
+  set(RUNTIMES_${target}_RUNTIMES_USE_LIBC "llvm-libc" CACHE STRING "")
 
   # Enable FatLTO for baremetal runtimes
   set(RUNTIMES_${target}_LLVM_ENABLE_LTO OFF CACHE BOOL "")
@@ -417,7 +417,6 @@ foreach(target riscv32-unknown-elf)
   set(RUNTIMES_${target}_LIBCXX_ENABLE_SHARED OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_STATIC ON CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_SHARED_OUTPUT_NAME "c++-shared" CACHE STRING "")
-  set(RUNTIMES_${target}_LIBCXX_LIBC "llvm-libc" CACHE STRING "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_FILESYSTEM OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_RANDOM_DEVICE OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_LOCALIZATION OFF CACHE BOOL "")
@@ -431,6 +430,7 @@ foreach(target riscv32-unknown-elf)
   set(RUNTIMES_${target}_LLVM_INCLUDE_TESTS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_ASSERTIONS OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES "libc;libcxx" CACHE STRING "")
+  set(RUNTIMES_${target}_RUNTIMES_USE_LIBC "llvm-libc" CACHE STRING "")
 
   # Enable FatLTO for baremetal runtimes
   set(RUNTIMES_${target}_LLVM_ENABLE_LTO OFF CACHE BOOL "")
