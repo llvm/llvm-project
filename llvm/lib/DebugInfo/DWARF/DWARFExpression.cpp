@@ -302,14 +302,16 @@ std::optional<unsigned> DWARFExpression::Operation::getSubCode() const {
 bool DWARFExpression::Operation::print(raw_ostream &OS, DIDumpOptions DumpOpts,
                                        const DWARFExpression *Expr,
                                        DWARFUnit *U) const {
-  if (Error) {
+  if (Error && !DumpOpts.PrintRegisterOnly) {
     OS << "<decoding error>";
     return false;
   }
 
-  StringRef Name = OperationEncodingString(Opcode);
-  assert(!Name.empty() && "DW_OP has no name!");
-  OS << Name;
+  if (!DumpOpts.PrintRegisterOnly) {
+    StringRef Name = OperationEncodingString(Opcode);
+    assert(!Name.empty() && "DW_OP has no name!");
+    OS << Name;
+  }
 
   if ((Opcode >= DW_OP_breg0 && Opcode <= DW_OP_breg31) ||
       (Opcode >= DW_OP_reg0 && Opcode <= DW_OP_reg31) ||
@@ -318,44 +320,46 @@ bool DWARFExpression::Operation::print(raw_ostream &OS, DIDumpOptions DumpOpts,
     if (prettyPrintRegisterOp(U, OS, DumpOpts, Opcode, Operands))
       return true;
 
-  for (unsigned Operand = 0; Operand < Desc.Op.size(); ++Operand) {
-    unsigned Size = Desc.Op[Operand];
-    unsigned Signed = Size & Operation::SignBit;
+  if (!DumpOpts.PrintRegisterOnly) {
+    for (unsigned Operand = 0; Operand < Desc.Op.size(); ++Operand) {
+      unsigned Size = Desc.Op[Operand];
+      unsigned Signed = Size & Operation::SignBit;
 
-    if (Size == Operation::SizeSubOpLEB) {
-      StringRef SubName = SubOperationEncodingString(Opcode, Operands[Operand]);
-      assert(!SubName.empty() && "DW_OP SubOp has no name!");
-      OS << " " << SubName;
-    } else if (Size == Operation::BaseTypeRef && U) {
-      // For DW_OP_convert the operand may be 0 to indicate that conversion to
-      // the generic type should be done. The same holds for DW_OP_reinterpret,
-      // which is currently not supported.
-      if (Opcode == DW_OP_convert && Operands[Operand] == 0)
-        OS << " 0x0";
-      else
-        prettyPrintBaseTypeRef(U, OS, DumpOpts, Operands, Operand);
-    } else if (Size == Operation::WasmLocationArg) {
-      assert(Operand == 1);
-      switch (Operands[0]) {
-      case 0:
-      case 1:
-      case 2:
-      case 3: // global as uint32
-      case 4:
-        OS << format(" 0x%" PRIx64, Operands[Operand]);
-        break;
-      default: assert(false);
+      if (Size == Operation::SizeSubOpLEB) {
+        StringRef SubName = SubOperationEncodingString(Opcode, Operands[Operand]);
+        assert(!SubName.empty() && "DW_OP SubOp has no name!");
+        OS << " " << SubName;
+      } else if (Size == Operation::BaseTypeRef && U) {
+        // For DW_OP_convert the operand may be 0 to indicate that conversion to
+        // the generic type should be done. The same holds for DW_OP_reinterpret,
+        // which is currently not supported.
+        if (Opcode == DW_OP_convert && Operands[Operand] == 0)
+          OS << " 0x0";
+        else
+          prettyPrintBaseTypeRef(U, OS, DumpOpts, Operands, Operand);
+      } else if (Size == Operation::WasmLocationArg) {
+        assert(Operand == 1);
+        switch (Operands[0]) {
+        case 0:
+        case 1:
+        case 2:
+        case 3: // global as uint32
+        case 4:
+          OS << format(" 0x%" PRIx64, Operands[Operand]);
+          break;
+        default: assert(false);
+        }
+      } else if (Size == Operation::SizeBlock) {
+        uint64_t Offset = Operands[Operand];
+        for (unsigned i = 0; i < Operands[Operand - 1]; ++i)
+          OS << format(" 0x%02x", Expr->Data.getU8(&Offset));
+      } else {
+        if (Signed)
+          OS << format(" %+" PRId64, (int64_t)Operands[Operand]);
+        else if (Opcode != DW_OP_entry_value &&
+                Opcode != DW_OP_GNU_entry_value)
+          OS << format(" 0x%" PRIx64, Operands[Operand]);
       }
-    } else if (Size == Operation::SizeBlock) {
-      uint64_t Offset = Operands[Operand];
-      for (unsigned i = 0; i < Operands[Operand - 1]; ++i)
-        OS << format(" 0x%02x", Expr->Data.getU8(&Offset));
-    } else {
-      if (Signed)
-        OS << format(" %+" PRId64, (int64_t)Operands[Operand]);
-      else if (Opcode != DW_OP_entry_value &&
-               Opcode != DW_OP_GNU_entry_value)
-        OS << format(" 0x%" PRIx64, Operands[Operand]);
     }
   }
   return true;
@@ -370,29 +374,31 @@ void DWARFExpression::print(raw_ostream &OS, DIDumpOptions DumpOpts,
 
   for (auto &Op : *this) {
     DumpOpts.IsEH = IsEH;
-    if (!Op.print(OS, DumpOpts, this, U)) {
+    if (!Op.print(OS, DumpOpts, this, U) && !DumpOpts.PrintRegisterOnly) {
       uint64_t FailOffset = Op.getEndOffset();
       while (FailOffset < Data.getData().size())
         OS << format(" %02x", Data.getU8(&FailOffset));
       return;
     }
 
-    if (Op.getCode() == DW_OP_entry_value ||
-        Op.getCode() == DW_OP_GNU_entry_value) {
-      OS << "(";
-      EntryValExprSize = Op.getRawOperand(0);
-      EntryValStartOffset = Op.getEndOffset();
-      continue;
-    }
+    if (!DumpOpts.PrintRegisterOnly){
+      if (Op.getCode() == DW_OP_entry_value ||
+          Op.getCode() == DW_OP_GNU_entry_value) {
+        OS << "(";
+        EntryValExprSize = Op.getRawOperand(0);
+        EntryValStartOffset = Op.getEndOffset();
+        continue;
+      }
 
-    if (EntryValExprSize) {
-      EntryValExprSize -= Op.getEndOffset() - EntryValStartOffset;
-      if (EntryValExprSize == 0)
-        OS << ")";
+      if (EntryValExprSize) {
+        EntryValExprSize -= Op.getEndOffset() - EntryValStartOffset;
+        if (EntryValExprSize == 0)
+          OS << ")";
+      }
+    
+      if (Op.getEndOffset() < Data.getData().size())
+        OS << ", ";
     }
-
-    if (Op.getEndOffset() < Data.getData().size())
-      OS << ", ";
   }
 }
 

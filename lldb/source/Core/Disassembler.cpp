@@ -742,34 +742,19 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
                 // Check if entry has a file_range, and filter on address if so.
                 if (!entry.file_range || entry.file_range->ContainsFileAddress(
                         (current_pc - func_load_addr) + expr_list.GetFuncFileAddress())) {
-
+                  
                   StreamString loc_str;
                   ABI *abi = exe_ctx->GetProcessPtr()->GetABI().get();
-                  entry.expr->DumpLocation(&loc_str, eDescriptionLevelBrief, abi);
-                  
-                  std::string loc_output = loc_str.GetString().str();
+                  llvm::DIDumpOptions opts;
+                  opts.ShowAddresses = false;
+                  opts.PrintRegisterOnly = true; // <-- important: suppress DW_OP_... annotations, etc.
 
-                  llvm::SmallVector<llvm::StringRef, 4> parts;
-                  llvm::StringRef(loc_str.GetString()).split(parts, ", ");
+                  entry.expr->DumpLocationWithOptions(&loc_str, eDescriptionLevelBrief, abi, opts);
 
-                  // Reconstruct the string without the decoding error chunks
-                  std::string cleaned_output;
-                  bool first = true;
-
-                  for (const auto &part : parts) {
-                    if (part.contains("<decoding error>"))
-                      continue;
-
-                    if (!first)
-                      cleaned_output += ", ";
-                    cleaned_output += part.str();
-                    first = false;
-                  }
-
-                  // Only keep this annotation if there is still something useful left.
-                  llvm::StringRef cleaned_ref = llvm::StringRef(cleaned_output).trim();
-                  if (!cleaned_ref.empty()) {
-                    annotations.push_back(llvm::formatv("{0} = {1}", name, cleaned_ref));
+                  // Only include if not empty
+                  llvm::StringRef loc_clean = llvm::StringRef(loc_str.GetString()).trim();
+                  if (!loc_clean.empty()) {
+                    annotations.push_back(llvm::formatv("{0} = {1}", name, loc_clean));
                   }
                 }
               }
