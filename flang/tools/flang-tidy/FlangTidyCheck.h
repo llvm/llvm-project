@@ -427,6 +427,7 @@ public:
   virtual void Enter(const parser::ComputedGotoStmt &) {}
   virtual void Enter(const parser::DataImpliedDo &) {}
   virtual void Enter(const parser::DataStmt &) {}
+  virtual void Enter(const parser::Designator &) {}
   virtual void Enter(const parser::DoConstruct &) {}
   virtual void Enter(const parser::EntityDecl &) {}
   virtual void Enter(const parser::ExecutableConstruct &) {}
@@ -439,6 +440,7 @@ public:
   virtual void Enter(const parser::GotoStmt &) {}
   virtual void Enter(const parser::IfConstruct &) {}
   virtual void Enter(const parser::InputImpliedDo &) {}
+  virtual void Enter(const parser::Name &) {}
   virtual void Enter(const parser::OmpAtomicUpdate &) {}
   virtual void Enter(const parser::OpenMPBlockConstruct &) {}
   virtual void Enter(const parser::OpenMPCriticalConstruct &) {}
@@ -448,6 +450,7 @@ public:
   virtual void Enter(const parser::SelectRankConstruct &) {}
   virtual void Enter(const parser::SelectTypeConstruct &) {}
   virtual void Enter(const parser::SubroutineSubprogram &) {}
+  virtual void Enter(const parser::UseStmt &) {}
   virtual void Leave(const parser::AllocateStmt &) {}
   virtual void Leave(const parser::AssignmentStmt &) {}
   virtual void Leave(const parser::BackspaceStmt &) {}
@@ -473,6 +476,7 @@ public:
   virtual void Leave(const parser::PointerAssignmentStmt &) {}
   virtual void Leave(const parser::PrintStmt &) {}
   virtual void Leave(const parser::Program &) {}
+  virtual void Leave(const parser::ProgramUnit &) {}
   virtual void Leave(const parser::ReadStmt &) {}
   virtual void Leave(const parser::RewindStmt &) {}
   virtual void Leave(const parser::SubroutineSubprogram &) {}

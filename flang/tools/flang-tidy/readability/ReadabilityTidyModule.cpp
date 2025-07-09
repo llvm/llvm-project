@@ -10,6 +10,7 @@
 #include "../FlangTidyModuleRegistry.h"
 #include "FunctionCognitiveComplexityCheck.h"
 #include "FunctionSizeCheck.h"
+#include "UnusedUSECheck.h"
 
 namespace Fortran::tidy {
 namespace readability {
@@ -21,6 +22,7 @@ public:
         "readability-function-cognitive-complexity");
     CheckFactories.registerCheck<FunctionSizeCheck>(
         "readability-function-size");
+    CheckFactories.registerCheck<UnusedUSECheck>("readability-unused-use");
   }
 };
 
