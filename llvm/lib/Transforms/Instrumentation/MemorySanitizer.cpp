@@ -4391,7 +4391,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *A = I.getOperand(0);
     Value *WriteThrough = I.getOperand(1);
     Value *Mask = I.getOperand(2);
-    [[maybe_unused]] Value *RoundingMode = I.getOperand(3);
+    Value *RoundingMode = I.getOperand(3);
 
     assert(isa<FixedVectorType>(A->getType()));
     assert(A->getType()->isFPOrFPVectorTy());
@@ -4406,8 +4406,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     assert(Mask->getType()->isIntegerTy());
     assert(Mask->getType()->getScalarSizeInBits() == ANumElements);
+    insertCheckShadowOf(Mask, &I);
 
     assert(RoundingMode->getType()->isIntegerTy());
+    insertCheckShadowOf(RoundingMode, &I);
 
     assert(I.getType() == WriteThrough->getType());
 
