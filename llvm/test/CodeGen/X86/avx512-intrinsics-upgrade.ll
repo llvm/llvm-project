@@ -10483,7 +10483,7 @@ define <4 x float>@test_int_x86_avx512_maskz_vfmadd_ss_rm(<4 x float> %x0, <4 x 
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vfmadd_ss_rm:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1 ## encoding: [0xc5,0xf0,0x57,0xc9]
-; CHECK-NEXT:    vblendps $1, %xmm1, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x0c,0xc1,0x01]
+; CHECK-NEXT:    vmovss %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xfa,0x10,0xc1]
 ; CHECK-NEXT:    ## xmm0 = xmm1[0],xmm0[1,2,3]
 ; CHECK-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
   %q = load float, ptr %ptr_b

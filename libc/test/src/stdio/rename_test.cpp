@@ -8,18 +8,19 @@
 
 #include "include/llvm-libc-macros/linux/sys-stat-macros.h"
 #include "include/llvm-libc-macros/linux/unistd-macros.h"
-#include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/stdio/rename.h"
 #include "src/unistd/access.h"
 #include "src/unistd/close.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcRenameTest, CreateAndRenameFile) {
+using LlvmLibcRenameTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+
+TEST_F(LlvmLibcRenameTest, CreateAndRenameFile) {
   // The test strategy is to create a file and rename it, and also verify that
   // it was renamed.
-  LIBC_NAMESPACE::libc_errno = 0;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
@@ -40,7 +41,7 @@ TEST(LlvmLibcRenameTest, CreateAndRenameFile) {
   ASSERT_THAT(LIBC_NAMESPACE::access(TEST_FILEPATH0, F_OK), Fails(ENOENT));
 }
 
-TEST(LlvmLibcRenameTest, RenameNonExistent) {
+TEST_F(LlvmLibcRenameTest, RenameNonExistent) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 
   constexpr const char *FILENAME1 = "rename.test.file1";

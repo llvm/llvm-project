@@ -16,7 +16,7 @@ void comma(void) {
     i = 100, 200;
 }
 
-// CIR-LABEL: cir.func @comma() {
+// CIR-LABEL: cir.func{{.*}} @comma() {
 // CIR:         %[[B:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b"]
 // CIR:         %[[C:.*]] = cir.alloca !s8i, !cir.ptr<!s8i>, ["c"]
 // CIR:         %[[F:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["f"]

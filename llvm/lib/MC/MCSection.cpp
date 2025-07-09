@@ -10,8 +10,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -22,9 +22,8 @@ using namespace llvm;
 MCSection::MCSection(SectionVariant V, StringRef Name, bool IsText,
                      bool IsVirtual, MCSymbol *Begin)
     : Begin(Begin), BundleGroupBeforeFirstInst(false), HasInstructions(false),
-      HasLayout(false), IsRegistered(false), IsText(IsText),
-      IsVirtual(IsVirtual), Name(Name), Variant(V) {
-  DummyFragment.setParent(this);
+      IsRegistered(false), IsText(IsText), IsVirtual(IsVirtual),
+      LinkerRelaxable(false), Name(Name), Variant(V) {
   // The initial subsection number is 0. Create a fragment list.
   CurFragList = &Subsections.emplace_back(0u, FragList{}).second;
 }
@@ -38,10 +37,13 @@ MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
 bool MCSection::hasEnded() const { return End && End->isInSection(); }
 
 MCSection::~MCSection() {
+  // If ~MCRelaxableFragment becomes trivial (no longer store a MCInst member),
+  // this dtor can be made empty.
   for (auto &[_, Chain] : Subsections) {
     for (MCFragment *X = Chain.Head, *Y; X; X = Y) {
       Y = X->Next;
-      X->destroy();
+      if (auto *F = dyn_cast<MCRelaxableFragment>(X))
+        F->~MCRelaxableFragment();
     }
   }
 }
@@ -68,19 +70,61 @@ void MCSection::setBundleLockState(BundleLockStateType NewState) {
 StringRef MCSection::getVirtualSectionKind() const { return "virtual"; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void MCSection::dump() const {
+LLVM_DUMP_METHOD void MCSection::dump(
+    DenseMap<const MCFragment *, SmallVector<const MCSymbol *, 0>> *FragToSyms)
+    const {
   raw_ostream &OS = errs();
 
-  OS << "<MCSection Name:" << getName();
-  OS << " Fragments:[\n      ";
-  bool First = true;
+  OS << "MCSection Name:" << getName();
   for (auto &F : *this) {
-    if (First)
-      First = false;
-    else
-      OS << ",\n      ";
+    OS << '\n';
     F.dump();
+    if (!FragToSyms)
+      continue;
+    auto It = FragToSyms->find(&F);
+    if (It == FragToSyms->end())
+      continue;
+    for (auto *Sym : It->second) {
+      OS << "\n  Symbol @" << Sym->getOffset() << ' ' << Sym->getName();
+      if (Sym->isTemporary())
+        OS << " Temporary";
+    }
   }
-  OS << "]>";
 }
 #endif
+
+void MCEncodedFragment::setContents(ArrayRef<char> Contents) {
+  auto &S = getParent()->ContentStorage;
+  if (ContentStart + Contents.size() > ContentEnd) {
+    ContentStart = S.size();
+    S.resize_for_overwrite(S.size() + Contents.size());
+  }
+  ContentEnd = ContentStart + Contents.size();
+  llvm::copy(Contents, S.begin() + ContentStart);
+}
+
+void MCEncodedFragment::addFixup(MCFixup Fixup) { appendFixups({Fixup}); }
+
+void MCEncodedFragment::appendFixups(ArrayRef<MCFixup> Fixups) {
+  auto &S = getParent()->FixupStorage;
+  if (LLVM_UNLIKELY(FixupEnd != S.size())) {
+    // Move the elements to the end. Reserve space to avoid invalidating
+    // S.begin()+I for `append`.
+    auto Size = FixupEnd - FixupStart;
+    auto I = std::exchange(FixupStart, S.size());
+    S.reserve(S.size() + Size);
+    S.append(S.begin() + I, S.begin() + I + Size);
+  }
+  S.append(Fixups.begin(), Fixups.end());
+  FixupEnd = S.size();
+}
+
+void MCEncodedFragment::setFixups(ArrayRef<MCFixup> Fixups) {
+  auto &S = getParent()->FixupStorage;
+  if (FixupStart + Fixups.size() > FixupEnd) {
+    FixupStart = S.size();
+    S.resize_for_overwrite(S.size() + Fixups.size());
+  }
+  FixupEnd = FixupStart + Fixups.size();
+  llvm::copy(Fixups, S.begin() + FixupStart);
+}

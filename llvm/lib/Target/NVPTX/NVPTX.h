@@ -76,6 +76,7 @@ void initializeNVPTXAAWrapperPassPass(PassRegistry &);
 void initializeNVPTXExternalAAWrapperPass(PassRegistry &);
 void initializeNVPTXPeepholePass(PassRegistry &);
 void initializeNVPTXTagInvariantLoadLegacyPassPass(PassRegistry &);
+void initializeNVPTXPrologEpilogPassPass(PassRegistry &);
 
 struct NVVMIntrRangePass : PassInfoMixin<NVVMIntrRangePass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
@@ -258,6 +259,7 @@ enum class DivPrecisionLevel : unsigned {
   Approx = 0,
   Full = 1,
   IEEE754 = 2,
+  IEEE754_NoFTZ = 3,
 };
 
 } // namespace NVPTX

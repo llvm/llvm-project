@@ -61,7 +61,7 @@ void EmitOffloadImplFuncDecls(const RecordKeeper &Records, raw_ostream &OS) {
   OS << GenericHeader;
   for (auto *R : Records.getAllDerivedDefinitions("Function")) {
     FunctionRec F{R};
-    OS << formatv("{0}_impl_result_t {1}_impl(", PrefixLower, F.getName());
+    OS << formatv("Error {0}_impl(", F.getName());
     auto Params = F.getParams();
     for (auto &Param : Params) {
       OS << Param.getType() << " " << Param.getName();
@@ -82,7 +82,7 @@ void EmitOffloadErrcodes(const RecordKeeper &Records, raw_ostream &OS) {
 #endif
 
 // Error codes are shared between PluginInterface and liboffload.
-// To add new error codes, add them to offload/liboffload/API/Common.td and run the GenerateOffload target.
+// To add new error codes, add them to offload/liboffload/API/Common.td.
 
 )";
 

@@ -32,7 +32,7 @@
 
   enum, bind(C)
     !ERROR: Enumerator value could not be computed from the given expression
-    !WARNING: INTEGER(4) division by zero
+    !WARNING: INTEGER(4) division by zero [-Wfolding-exception]
     !ERROR: Must be a constant value
     enumerator :: wrong = 0/0
   end enum
