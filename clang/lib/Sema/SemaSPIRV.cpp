@@ -63,16 +63,6 @@ static bool CheckAllArgTypesAreCorrect(
   return false;
 }
 
-static bool CheckAllArgTypesAreCorrect(
-    Sema *S, CallExpr *TheCall,
-    llvm::function_ref<bool(Sema *, SourceLocation, int, QualType)> Check) {
-  return CheckAllArgTypesAreCorrect(
-      S, TheCall,
-      SmallVector<
-          llvm::function_ref<bool(Sema *, SourceLocation, int, QualType)>, 4>(
-          TheCall->getNumArgs(), Check));
-}
-
 static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
                                            int ArgOrdinal,
                                            clang::QualType PassedType) {
@@ -90,9 +80,7 @@ static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
 static bool CheckFloatOrHalfScalarRepresentation(Sema *S, SourceLocation Loc,
                                                  int ArgOrdinal,
                                                  clang::QualType PassedType) {
-  const auto *VecTy = PassedType->getAs<VectorType>();
-
-  if (VecTy || (!PassedType->isHalfType() && !PassedType->isFloat32Type()))
+  if (!PassedType->isHalfType() && !PassedType->isFloat32Type())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
            << ArgOrdinal << /* scalar */ 1 << /* no int */ 0
            << /* half or float */ 2 << PassedType;
@@ -299,14 +287,6 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
     if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
                                    llvm::ArrayRef(ChecksArr)))
       return true;
-
-    ExprResult C = TheCall->getArg(2);
-    QualType ArgTyC = C.get()->getType();
-    if (!ArgTyC->isFloatingType()) {
-      SemaRef.Diag(C.get()->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << 3 << /* scalar*/ 5 << /* no int */ 0 << /* fp */ 1 << ArgTyC;
-      return true;
-    }
 
     QualType RetTy = TheCall->getArg(0)->getType();
     TheCall->setType(RetTy);
