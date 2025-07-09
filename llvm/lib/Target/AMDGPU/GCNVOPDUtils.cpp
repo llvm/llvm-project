@@ -36,8 +36,7 @@ using namespace llvm;
 
 bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
                                    const MachineInstr &FirstMI,
-                                   const MachineInstr &SecondMI,
-                                   bool IsVOPD3) {
+                                   const MachineInstr &SecondMI, bool IsVOPD3) {
   namespace VOPD = AMDGPU::VOPD;
 
   const MachineFunction *MF = FirstMI.getMF();
@@ -136,9 +135,9 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
 
       // Neg is allowed, other modifiers are not. NB: even though sext has the
       // same value as neg, there are no combinable instructions with sext.
-      for (auto OpName : {AMDGPU::OpName::src0_modifiers,
-                          AMDGPU::OpName::src1_modifiers,
-                          AMDGPU::OpName::src2_modifiers}) {
+      for (auto OpName :
+           {AMDGPU::OpName::src0_modifiers, AMDGPU::OpName::src1_modifiers,
+            AMDGPU::OpName::src2_modifiers}) {
         const MachineOperand *Mods = TII.getNamedOperand(MI, OpName);
         if (Mods && (Mods->getImm() & ~SISrcMods::NEG))
           return false;

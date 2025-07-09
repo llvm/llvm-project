@@ -168,7 +168,8 @@ public:
             return false;
           // checkVOPDRegConstraints cares about program order, but doReplace
           // cares about X-Y order in the constituted VOPD
-          return llvm::checkVOPDRegConstraints(*SII, *FirstMI, *SecondMI, VOPD3);
+          return llvm::checkVOPDRegConstraints(*SII, *FirstMI, *SecondMI,
+                                               VOPD3);
         };
 
         if (checkVOPD(false) || (HasVOPD3 && checkVOPD(true))) {
