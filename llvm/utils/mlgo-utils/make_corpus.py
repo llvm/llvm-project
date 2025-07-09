@@ -14,11 +14,6 @@ PYTHONPATH=$PYTHONPATH:. python3 ./compiler_opt/tools/make_corpus.py \
 
 import argparse
 import logging
-import sys
-import pathlib
-print(pathlib.Path(__file__).parent.parent.parent)
-
-sys.path.insert(0, pathlib.Path(__file__).parent.parent.parent)
 
 from mlgo.corpus import make_corpus_lib
 
