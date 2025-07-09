@@ -944,7 +944,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (Res == CUDA_SUCCESS)
       Info.add("Device Name", TmpChar, "", DeviceInfo::NAME);
 
-    Info.add("Vendor Name", "NVIDIA");
+    Info.add("Vendor Name", "NVIDIA", "", DeviceInfo::VENDOR);
 
     Res = cuDeviceTotalMem(&TmpSt, Device);
     if (Res == CUDA_SUCCESS)
