@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class LibcxxRangesRefViewDataFormatterTestCase(TestBase):
+class StdRangesRefViewDataFormatterTestCase(TestBase):
     def check_string_vec_children(self):
         return [
             ValueCheck(name="[0]", summary='"First"'),
@@ -27,10 +27,7 @@ class LibcxxRangesRefViewDataFormatterTestCase(TestBase):
     def check_foo(self):
         return ValueCheck(name="vec", children=self.check_string_vec_children())
 
-    @add_test_categories(["libc++"])
-    @skipIf(compiler=no_match("clang"))
-    @skipIf(compiler="clang", compiler_version=["<", "16.0"])
-    def test_with_run_command(self):
+    def do_test(self):
         """Test that std::ranges::ref_view is formatted correctly when printed."""
         self.build()
         (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
@@ -69,3 +66,10 @@ class LibcxxRangesRefViewDataFormatterTestCase(TestBase):
                 )
             ],
         )
+
+    @skipIf(compiler=no_match("clang"))
+    @skipIf(compiler="clang", compiler_version=["<", "16.0"])
+    @add_test_categories(["libc++"])
+    def test_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()
