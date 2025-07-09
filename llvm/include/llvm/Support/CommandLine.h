@@ -1518,11 +1518,20 @@ public:
       [](const typename ParserClass::parser_data_type &) {};
 };
 
-extern template class opt<unsigned>;
-extern template class opt<int>;
-extern template class opt<std::string>;
-extern template class opt<char>;
-extern template class opt<bool>;
+#if !defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS) ||                           \
+    !(defined(_MSC_VER) && !defined(__clang__))
+// Only instantiate opt<std::string> when not building a Windows DLL with MSVC.
+// When exporting opt<std::string>, MSVC cl implicitly exports symbols for
+// std::basic_string through transitive inheritance via std::string. These
+// symbols may appear in other TUs with different linkage, leading to duplicate
+// symbol conflicts.
+extern template class LLVM_TEMPLATE_ABI opt<std::string>;
+#endif
+
+extern template class LLVM_TEMPLATE_ABI opt<unsigned>;
+extern template class LLVM_TEMPLATE_ABI opt<int>;
+extern template class LLVM_TEMPLATE_ABI opt<char>;
+extern template class LLVM_TEMPLATE_ABI opt<bool>;
 
 //===----------------------------------------------------------------------===//
 // Default storage class definition: external storage.  This implementation
