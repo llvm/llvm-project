@@ -19,7 +19,7 @@ static constexpr uint16_t POS_STOP = 0x7f80U;
 
 // range: [-0, -inf]
 static constexpr uint16_t NEG_START = 0x8000U;
-static constexpr uint16_t NEG_STOP = 0xff80;
+static constexpr uint16_t NEG_STOP = 0xff80U;
 
 using MPFRNumber = LIBC_NAMESPACE::testing::mpfr::MPFRNumber;
 
@@ -58,14 +58,10 @@ TEST_F(LlvmLibcBfloat16ToFloatTest, NegativeRange) {
 }
 
 TEST_F(LlvmLibcBfloat16ToFloatTest, SpecialIntegers) {
-  auto test_for_int = [&](const int i) {
+  constexpr int RANGE = 100'000;
+  for (int i = -RANGE; i <= RANGE; i++) {
     bfloat16 mpfr_bfloat = MPFRNumber(i).as<bfloat16>();
     bfloat16 libc_bfloat{i};
     EXPECT_FP_EQ_ALL_ROUNDING(mpfr_bfloat, libc_bfloat);
-  };
-
-  constexpr int RANGE = 100'000;
-  for (int i = -RANGE; i <= RANGE; i++) {
-    test_for_int(i);
   }
 }

@@ -567,16 +567,15 @@ template <> float16 MPFRNumber::as<float16>() const {
 }
 #endif
 
-template <> bfloat16 MPFRNumber::as<bfloat16>() const {
-  return fputil::cast<bfloat16>(mpfr_get_flt(value, mpfr_rounding));
-}
-
 #ifdef LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
 template <> float128 MPFRNumber::as<float128>() const {
   return mpfr_get_float128(value, mpfr_rounding);
 }
-
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
+
+template <> bfloat16 MPFRNumber::as<bfloat16>() const {
+  return fputil::cast<bfloat16>(mpfr_get_flt(value, mpfr_rounding));
+}
 
 } // namespace mpfr
 } // namespace testing

@@ -19,7 +19,7 @@
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
-
+namespace fputil {
 struct BFloat16 {
   uint16_t bits;
 
@@ -52,12 +52,12 @@ struct BFloat16 {
   template <cpp::enable_if_t<fputil::get_fp_type<float>() ==
                                  fputil::FPType::IEEE754_Binary32,
                              int> = 0>
-  operator float() const {
+  LIBC_INLINE constexpr operator float() const {
     uint32_t x_bits = static_cast<uint32_t>(bits) << 16U;
     return cpp::bit_cast<float>(x_bits);
   }
 }; // struct BFloat16
-
+} // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_BFLOAT16_H

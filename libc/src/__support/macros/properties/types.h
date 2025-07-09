@@ -62,9 +62,11 @@ using float16 = _Float16;
 // -- bfloat16 support ---------------------------------------------------------
 
 namespace LIBC_NAMESPACE_DECL {
+namespace fputil {
 struct BFloat16;
 }
+} // namespace LIBC_NAMESPACE_DECL
 
-using bfloat16 = LIBC_NAMESPACE::BFloat16;
+using bfloat16 = LIBC_NAMESPACE::fputil::BFloat16;
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_TYPES_H
