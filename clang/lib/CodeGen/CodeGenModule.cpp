@@ -775,6 +775,7 @@ void CodeGenModule::clear() {
   DeferredAnnotations.clear();
   if (OpenMPRuntime)
     OpenMPRuntime->clear();
+  DeferredMaybeInlineFunctions.clear();
 }
 
 void InstrProfStats::reportDiagnostics(DiagnosticsEngine &Diags,
@@ -940,6 +941,7 @@ void CodeGenModule::Release() {
   emitAtAvailableLinkGuard();
   if (Context.getTargetInfo().getTriple().isWasm())
     EmitMainVoidAlias();
+  FixupMaybeInlineFunctions();
 
   if (getTriple().isAMDGPU() ||
       (getTriple().isSPIRV() && getTriple().getVendor() == llvm::Triple::AMD)) {
@@ -6213,6 +6215,10 @@ void CodeGenModule::HandleCXXStaticMemberVarInstantiation(VarDecl *VD) {
   EmitTopLevelDecl(VD);
 }
 
+static bool hasInlineAttr(const FunctionDecl *Decl) {
+  return Decl->hasAttr<AlwaysInlineAttr>() || Decl->hasAttr<GNUInlineAttr>();
+}
+
 void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
                                                  llvm::GlobalValue *GV) {
   const auto *D = cast<FunctionDecl>(GD.getDecl());
@@ -6239,7 +6245,7 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
                 getModule().getNamedValue(II->getName())) {
           GVDef->replaceAllUsesWith(GV);
           GVDef->eraseFromParent();
-        } else if (!D->hasAttr<GNUInlineAttr>()) {
+        } else {
           // Create a GlobalAlias to the original symbol in case it was
           // referenced in the inline assembly
           unsigned AS = GV->getType()->getPointerAddressSpace();
@@ -6294,22 +6300,43 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
   // __attribute__((error)).
   for (auto BB = Fn->begin(); GA && BB != Fn->end(); BB++) {
     for (auto &I : *BB) {
-      if (auto *CI = dyn_cast<llvm::CallInst>(&I)) {
+      bool shouldEraseAlias = false;
+      if (auto *CI = dyn_cast<llvm::CallBase>(&I)) {
         if (auto *Callee = CI->getCalledFunction()) {
-          if (Callee->hasFnAttribute("dontcall-error")) {
-            GA->eraseFromParent();
+          if (MustInlinedFunctions.contains(Callee->getName())) {
+            // Callee is a known always inline, inline assembly
+            if (hasInlineAttr(D))
+              MustInlinedFunctions.insert(Fn->getName());
+            shouldEraseAlias = true;
+          } else if (Callee->hasFnAttribute("dontcall-error")) {
+            // Callee has Error Attribute
+            shouldEraseAlias = true;
+          } else if (Callee->isDeclaration() && !Callee->isIntrinsic() &&
+                     hasInlineAttr(D)) {
+            // Callee has not emitted. Defer this check to a later stage
+            DeferredMaybeInlineFunctions[GD] = Callee;
             GA = nullptr;
             break;
           }
+        } else if (CI->isInlineAsm() && hasInlineAttr(D)) {
+          // Avoid alias towards always inline assembly to allow inlining
+          MustInlinedFunctions.insert(Fn->getName());
+          shouldEraseAlias = true;
         }
+      }
+      if (shouldEraseAlias) {
+        GA->eraseFromParent();
+        GA = nullptr;
+        break;
       }
     }
   }
 
-  // Set Attributes to perserve the internal GlobalAlias
+  // Set Attributes to perserve the internal GlobalValues
   if (GA) {
     SetCommonAttributes(GD, GA);
     addUsedOrCompilerUsedGlobal(GA);
+    addUsedOrCompilerUsedGlobal(GV);
   }
 
   if (const ConstructorAttr *CA = D->getAttr<ConstructorAttr>())
@@ -7589,6 +7616,37 @@ void CodeGenModule::EmitMainVoidAlias() {
       auto *GA = llvm::GlobalAlias::create("__main_void", F);
       GA->setVisibility(llvm::GlobalValue::HiddenVisibility);
     }
+  }
+}
+
+void CodeGenModule::FixupMaybeInlineFunctions() {
+  // Check if GlobalAlias need to be removed
+  unsigned long sz = 0;
+  while (sz != DeferredMaybeInlineFunctions.size()) {
+    sz = DeferredMaybeInlineFunctions.size();
+    for (auto I = DeferredMaybeInlineFunctions.begin(); I != DeferredMaybeInlineFunctions.end();) {
+      const auto *D = cast<FunctionDecl>(I->first.getDecl());
+      auto *GA = GetGlobalValue(D->getName());
+      StringRef MangledName = getMangledName(I->first);
+      if (GA && MustInlinedFunctions.contains(I->second->getName())) {
+        MustInlinedFunctions.insert(MangledName);
+        GA->eraseFromParent();
+        I = DeferredMaybeInlineFunctions.erase(I);
+      } else
+        I++;
+    }
+  }
+  // Fixup attributes
+  for (auto &[Decl, Callee] : DeferredMaybeInlineFunctions) {
+    const auto *D = cast<FunctionDecl>(Decl.getDecl());
+    auto *GA = GetGlobalValue(D->getName());
+    StringRef MangledName = getMangledName(Decl);
+    auto *GV = GetGlobalValue(MangledName);
+    if (!GA || !GV)
+      continue;
+    SetCommonAttributes(Decl, GA);
+    addUsedOrCompilerUsedGlobal(GA);
+    addUsedOrCompilerUsedGlobal(GV);
   }
 }
 
