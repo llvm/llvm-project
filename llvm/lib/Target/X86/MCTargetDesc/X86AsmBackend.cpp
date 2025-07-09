@@ -174,7 +174,7 @@ public:
                   MutableArrayRef<char> Data, uint64_t Value,
                   bool IsResolved) override;
 
-  bool mayNeedRelaxation(const MCInst &Inst,
+  bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override;
 
   bool fixupNeedsRelaxationAdvanced(const MCFixup &, const MCValue &, uint64_t,
@@ -747,13 +747,13 @@ void X86AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
     Data[Fixup.getOffset() + i] = uint8_t(Value >> (i * 8));
 }
 
-bool X86AsmBackend::mayNeedRelaxation(const MCInst &MI,
+bool X86AsmBackend::mayNeedRelaxation(unsigned Opcode,
+                                      ArrayRef<MCOperand> Operands,
                                       const MCSubtargetInfo &STI) const {
-  unsigned Opcode = MI.getOpcode();
   unsigned SkipOperands = X86::isCCMPCC(Opcode) ? 2 : 0;
   return isRelaxableBranch(Opcode) ||
          (X86::getOpcodeForLongImmediateForm(Opcode) != Opcode &&
-          MI.getOperand(MI.getNumOperands() - 1 - SkipOperands).isExpr());
+          Operands[Operands.size() - 1 - SkipOperands].isExpr());
 }
 
 bool X86AsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
@@ -794,7 +794,8 @@ bool X86AsmBackend::padInstructionViaPrefix(MCRelaxableFragment &RF,
   // larger value for one of the fixups then can be encoded.  The outer loop
   // will also catch this before moving to the next instruction, but we need to
   // prevent padding this single instruction as well.
-  if (mayNeedRelaxation(RF.getInst(), *RF.getSubtargetInfo()))
+  if (mayNeedRelaxation(RF.getOpcode(), RF.getOperands(),
+                        *RF.getSubtargetInfo()))
     return false;
 
   const unsigned OldSize = RF.getContents().size();
@@ -841,7 +842,8 @@ bool X86AsmBackend::padInstructionViaPrefix(MCRelaxableFragment &RF,
 bool X86AsmBackend::padInstructionViaRelaxation(MCRelaxableFragment &RF,
                                                 MCCodeEmitter &Emitter,
                                                 unsigned &RemainingSize) const {
-  if (!mayNeedRelaxation(RF.getInst(), *RF.getSubtargetInfo()))
+  if (!mayNeedRelaxation(RF.getOpcode(), RF.getOperands(),
+                         *RF.getSubtargetInfo()))
     // TODO: There are lots of other tricks we could apply for increasing
     // encoding size without impacting performance.
     return false;
@@ -950,7 +952,8 @@ bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
         // We don't need to worry about larger positive offsets as none of the
         // possible offsets between this and our align are visible, and the
         // ones afterwards aren't changing.
-        if (mayNeedRelaxation(RF.getInst(), *RF.getSubtargetInfo()))
+        if (mayNeedRelaxation(RF.getOpcode(), RF.getOperands(),
+                              *RF.getSubtargetInfo()))
           break;
       }
       Relaxable.clear();
