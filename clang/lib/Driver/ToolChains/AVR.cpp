@@ -433,7 +433,6 @@ const StringRef PossibleAVRLibcLocations[] = {
 AVRToolChain::AVRToolChain(const Driver &D, const llvm::Triple &Triple,
                            const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
-
   GCCInstallation.init(Triple, Args);
 
   if (getCPUName(D, Args, Triple).empty())

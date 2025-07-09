@@ -185,6 +185,7 @@ public:
   };
 
   struct GCCInstallCandidate {
+    // FIXME: These might be better as path objects.
     std::string GCCInstallPath;
     std::string GCCParentLibPath;
 
