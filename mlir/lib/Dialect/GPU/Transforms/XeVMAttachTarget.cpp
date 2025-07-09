@@ -1,4 +1,4 @@
-//===-- XeVMAttachTarget.cpp - DESC -----------------------------*- C++ -*-===//
+//===-- XeVMAttachTarget.cpp - Attach an XeVM target ----------------------===//
 //
 // This file is licensed under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -68,21 +68,24 @@ void XeVMAttachTarget::runOnOperation() {
   OpBuilder builder(&getContext());
   ArrayRef<std::string> libs(linkLibs);
   SmallVector<StringRef> filesToLink(libs);
-  auto target = builder.getAttr<mlir::xevm::XeVMTargetAttr>(
+  auto target = builder.getAttr<xevm::XeVMTargetAttr>(
       optLevel, triple, chip, getFlags(builder),
       filesToLink.empty() ? nullptr : builder.getStrArrayAttr(filesToLink));
   llvm::Regex matcher(moduleMatcher);
-  // Check if the name of the module matches.
-  auto gpuModule = cast<gpu::GPUModuleOp>(getOperation());
-  if (!moduleMatcher.empty() && !matcher.match(gpuModule.getName()))
-    return;
-  // Create the target array.
-  SmallVector<Attribute> targets;
-  if (std::optional<ArrayAttr> attrs = gpuModule.getTargets())
-    targets.append(attrs->getValue().begin(), attrs->getValue().end());
-  targets.push_back(target);
-  // Remove any duplicate targets.
-  targets.erase(llvm::unique(targets), targets.end());
-  // Update the target attribute array.
-  gpuModule.setTargetsAttr(builder.getArrayAttr(targets));
+  for (Region &region : getOperation()->getRegions())
+    for (Block &block : region.getBlocks())
+      for (auto module : block.getOps<gpu::GPUModuleOp>()) {
+        // Check if the name of the module matches.
+        if (!moduleMatcher.empty() && !matcher.match(module.getName()))
+          continue;
+        // Create the target array.
+        SmallVector<Attribute> targets;
+        if (std::optional<ArrayAttr> attrs = module.getTargets())
+          targets.append(attrs->getValue().begin(), attrs->getValue().end());
+        targets.push_back(target);
+        // Remove any duplicate targets.
+        targets.erase(llvm::unique(targets), targets.end());
+        // Update the target attribute array.
+        module.setTargetsAttr(builder.getArrayAttr(targets));
+      }
 }

@@ -258,7 +258,7 @@ def GpuSPIRVAttachTarget: Pass<"spirv-attach-target", ""> {
   ];
 }
 
-def GpuXeVMAttachTarget : Pass<"xevm-attach-target", "mlir::gpu::GPUModuleOp"> {
+def GpuXeVMAttachTarget : Pass<"xevm-attach-target", ""> {
   let summary = "Attaches a XeVM target attribute to a GPU Module.";
   let description = [{
     This pass searches for all GPU Modules in the immediate regions and attaches
