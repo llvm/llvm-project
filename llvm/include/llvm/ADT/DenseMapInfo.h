@@ -320,6 +320,35 @@ struct DenseMapInfo<Enum, std::enable_if_t<std::is_enum_v<Enum>>> {
 
   static bool isEqual(const Enum &LHS, const Enum &RHS) { return LHS == RHS; }
 };
+
+template <typename T>
+struct DenseMapInfo<std::optional<T>> {
+  using Optional = std::optional<T>;
+  using Info = DenseMapInfo<T>;
+
+  static inline Optional getEmptyKey() {
+    return std::make_optional(Info::getEmptyKey());
+  }
+
+  static inline Optional getTombstoneKey() {
+    return std::make_optional(Info::getTombstoneKey());
+  }
+
+  static unsigned getHashValue(const Optional &OptionalVal) {
+    return detail::combineHashValue(
+        OptionalVal.has_value(),
+        Info::getHashValue(OptionalVal.value_or(Info::getEmptyKey())));
+  }
+
+  static bool isEqual(const Optional &LHS, const Optional &RHS) {
+    if (LHS.has_value() && RHS.has_value()) {
+      return Info::isEqual(LHS.value(), RHS.value());
+    } else if (!LHS.has_value() && !RHS.has_value()) {
+      return true;
+    }
+    return false;
+  }
+};
 } // end namespace llvm
 
 #endif // LLVM_ADT_DENSEMAPINFO_H
