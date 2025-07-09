@@ -1861,17 +1861,6 @@ void TypePrinter::printAttributedBefore(const AttributedType *T,
   if (T->getAttrKind() == attr::ObjCKindOf)
     OS << "__kindof ";
 
-  if (T->getAttrKind() == attr::PreserveNone) {
-    OS << "__attribute__((preserve_none)) ";
-    spaceBeforePlaceHolder(OS);
-  } else if (T->getAttrKind() == attr::PreserveMost) {
-    OS << "__attribute__((preserve_most)) ";
-    spaceBeforePlaceHolder(OS);
-  } else if (T->getAttrKind() == attr::PreserveAll) {
-    OS << "__attribute__((preserve_all)) ";
-    spaceBeforePlaceHolder(OS);
-  }
-
   if (T->getAttrKind() == attr::AddressSpace)
     printBefore(T->getEquivalentType(), OS);
   else
@@ -1983,13 +1972,6 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     return;
   }
 
-  if (T->getAttrKind() == attr::PreserveAll ||
-      T->getAttrKind() == attr::PreserveMost ||
-      T->getAttrKind() == attr::PreserveNone) {
-    // This has to be printed before the type.
-    return;
-  }
-
   OS << " __attribute__((";
   switch (T->getAttrKind()) {
 #define TYPE_ATTR(NAME)
@@ -2054,9 +2036,6 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::Blocking:
   case attr::Allocating:
   case attr::SwiftAttr:
-  case attr::PreserveAll:
-  case attr::PreserveMost:
-  case attr::PreserveNone:
     llvm_unreachable("This attribute should have been handled already");
 
   case attr::NSReturnsRetained:
@@ -2092,11 +2071,19 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::DeviceKernel:
     OS << T->getAttr()->getSpelling();
     break;
-  case attr::IntelOclBicc:
-    OS << "inteloclbicc";
+  case attr::IntelOclBicc: OS << "inteloclbicc"; break;
+  case attr::PreserveMost:
+    OS << "preserve_most";
+    break;
+
+  case attr::PreserveAll:
+    OS << "preserve_all";
     break;
   case attr::M68kRTD:
     OS << "m68k_rtd";
+    break;
+  case attr::PreserveNone:
+    OS << "preserve_none";
     break;
   case attr::RISCVVectorCC:
     OS << "riscv_vector_cc";
