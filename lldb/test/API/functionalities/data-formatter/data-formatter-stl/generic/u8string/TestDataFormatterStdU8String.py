@@ -22,7 +22,7 @@ class StdU8StringDataFormatterTestCase(TestBase):
                 '(std::u8string) u8_string_small = u8"🍄"',
                 '(std::u8string) u8_string = u8"❤️👍📄📁😃🧑‍🌾"',
                 '(std::u8string) u8_empty = u8""',
-                '(std::u8string) u8_text = u8"ABC"',
+                '(std::u8string) u8_text = u8"ABCd"',
             ],
         )
 
