@@ -8034,12 +8034,15 @@ cc_library(
         ":ArithDialect",
         ":ArithUtils",
         ":ConversionPassIncGen",
+        ":DialectUtils",
         ":IR",
         ":LLVMDialect",
         ":Pass",
         ":ROCDLDialect",
         ":TransformUtils",
         ":VectorDialect",
+        ":VectorTransforms",
+        ":VectorUtils",
     ],
 )
 
