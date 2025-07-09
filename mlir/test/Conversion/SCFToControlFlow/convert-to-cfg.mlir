@@ -683,7 +683,7 @@ func.func @forall(%num_threads: index) {
 
 // CHECK-DAG: #[[FULL_UNROLL:.*]] = #llvm.loop_annotation<unroll = #[[LOOP_UNROLL]]>
 // CHECK-DAG: #[[NO_UNROLL:.*]] = #llvm.loop_annotation<unroll = #[[LOOP_UNROLL_DISABLE]]>
-// CHECK-LABEL: func @simple_std_for_loops_annotation
+// CHECK: func @simple_std_for_loops_annotation
 //      CHECK: ^[[bb1:.*]](%{{.*}}: index):
 //      CHECK:   cf.cond_br %{{.*}}, ^[[bb2:.*]], ^[[bb6:.*]]
 //      CHECK: ^[[bb2]]:
