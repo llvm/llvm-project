@@ -10016,8 +10016,15 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     }
   }
 
+  auto PeekThroughFreeze = [](SDValue N) {
+    if (N->getOpcode() == ISD::FREEZE && N.hasOneUse())
+      return N->getOperand(0);
+    return N;
+  };
+
   // fold (xor x, x) -> 0
-  if (N0 == N1)
+  // FIXME: Refactor this and sub and other similar operations together.
+  if (PeekThroughFreeze(N0) == PeekThroughFreeze(N1))
     return tryFoldToZero(DL, TLI, VT, DAG, LegalOperations);
 
   // fold (xor (shl 1, x), -1) -> (rotl ~1, x)

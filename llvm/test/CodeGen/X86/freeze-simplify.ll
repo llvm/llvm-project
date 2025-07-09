@@ -26,9 +26,6 @@ define i32 @sub_freeze_2(i32 %x, i32 %y) {
 define i32 @xor_freeze(i32 %x, i32 %y) {
 ; X86ASM-LABEL: xor_freeze:
 ; X86ASM:       # %bb.0:
-; X86ASM-NEXT:    movl %edi, %eax
-; X86ASM-NEXT:    xorl %edx, %edx
-; X86ASM-NEXT:    divl %esi
 ; X86ASM-NEXT:    xorl %eax, %eax
 ; X86ASM-NEXT:    retq
   %a = udiv i32 %x, %y
