@@ -239,6 +239,13 @@ public:
       for (size_t Idx = 0, End = F.arg_size(); Idx < End; ++Idx)
         F.removeParamAttrs(Idx, AttrMask);
 
+      // Match FnAttrs of lifetime intrinsics in LLVM 3.7
+      if (F.isIntrinsic())
+        switch (F.getIntrinsicID())
+        case Intrinsic::lifetime_start:
+        case Intrinsic::lifetime_end:
+          F.removeFnAttr(Attribute::Memory);
+
       for (auto &BB : F) {
         IRBuilder<> Builder(&BB);
         for (auto &I : make_early_inc_range(BB)) {
@@ -247,7 +254,7 @@ public:
 
           // Emtting NoOp bitcast instructions allows the ValueEnumerator to be
           // unmodified as it reserves instruction IDs during contruction.
-          if (auto LI = dyn_cast<LoadInst>(&I)) {
+          if (auto *LI = dyn_cast<LoadInst>(&I)) {
             if (Value *NoOpBitcast = maybeGenerateBitcast(
                     Builder, PointerTypes, I, LI->getPointerOperand(),
                     LI->getType())) {
@@ -257,7 +264,7 @@ public:
             }
             continue;
           }
-          if (auto SI = dyn_cast<StoreInst>(&I)) {
+          if (auto *SI = dyn_cast<StoreInst>(&I)) {
             if (Value *NoOpBitcast = maybeGenerateBitcast(
                     Builder, PointerTypes, I, SI->getPointerOperand(),
                     SI->getValueOperand()->getType())) {
@@ -268,7 +275,7 @@ public:
             }
             continue;
           }
-          if (auto GEP = dyn_cast<GetElementPtrInst>(&I)) {
+          if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
             if (Value *NoOpBitcast = maybeGenerateBitcast(
                     Builder, PointerTypes, I, GEP->getPointerOperand(),
                     GEP->getSourceElementType()))
@@ -280,6 +287,17 @@ public:
             CB->removeRetAttrs(AttrMask);
             for (size_t Idx = 0, End = CB->arg_size(); Idx < End; ++Idx)
               CB->removeParamAttrs(Idx, AttrMask);
+            // LLVM 3.7 Lifetime intrinics require an i8* pointer operand, so we
+            // insert a bitcast here to ensure that is the case
+            if (isa<LifetimeIntrinsic>(CB)) {
+              Value *PtrOperand = CB->getArgOperand(1);
+              Builder.SetInsertPoint(CB);
+              PointerType *PtrTy = cast<PointerType>(PtrOperand->getType());
+              Value *NoOpBitcast = Builder.Insert(
+                  CastInst::Create(Instruction::BitCast, PtrOperand,
+                                   Builder.getPtrTy(PtrTy->getAddressSpace())));
+              CB->setArgOperand(1, NoOpBitcast);
+            }
             continue;
           }
         }
