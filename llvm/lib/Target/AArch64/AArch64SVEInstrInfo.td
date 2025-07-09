@@ -2445,13 +2445,22 @@ let Predicates = [HasSVE_or_SME] in {
   defm FCVTZU_ZPmZ_DtoD : sve_fp_2op_p_zd< 0b1111111, "fcvtzu", ZPR64, ZPR64, null_frag,                     AArch64fcvtzu_mt, nxv2i64, nxv2i1, nxv2f64, ElementSizeD>;
 
   //These patterns exist to improve the code quality of conversions on unpacked types.
+  def : Pat<(nxv2f32 (AArch64fcvte_mt nxv2i1:$Pg, nxv2f16:$Zs, nxv2f32:$Zd)),
+            (FCVT_ZPmZ_HtoS ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
   def : Pat<(nxv2f32 (AArch64fcvte_mt (nxv2i1 (SVEAllActive:$Pg)), nxv2f16:$Zs, nxv2f32:$Zd)),
             (FCVT_ZPmZ_HtoS_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
 
   // FP_ROUND has an additional 'precise' flag which indicates the type of rounding.
   // This is ignored by the pattern below where it is matched by (i64 timm0_1)
+  def : Pat<(nxv2f16 (AArch64fcvtr_mt nxv2i1:$Pg, nxv2f32:$Zs, (i64 timm0_1), nxv2f16:$Zd)),
+            (FCVT_ZPmZ_StoH ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
   def : Pat<(nxv2f16 (AArch64fcvtr_mt (nxv2i1 (SVEAllActive:$Pg)), nxv2f32:$Zs, (i64 timm0_1), nxv2f16:$Zd)),
             (FCVT_ZPmZ_StoH_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
+
+  def : Pat<(nxv4f32 (AArch64fcvte_mt nxv4i1:$Pg, nxv4bf16:$Zs, nxv4f32:$Zd)),
+            (SEL_ZPZZ_S $Pg, (LSL_ZZI_S $Zs, (i32 16)), $Zd)>;
+  def : Pat<(nxv2f32 (AArch64fcvte_mt nxv2i1:$Pg, nxv2bf16:$Zs, nxv2f32:$Zd)),
+            (SEL_ZPZZ_D $Pg, (LSL_ZZI_S $Zs, (i32 16)), $Zd)>;
 
   def : Pat<(nxv4f32 (AArch64fcvte_mt (SVEAnyPredicate), nxv4bf16:$op, undef)),
             (LSL_ZZI_S $op, (i32 16))>;
