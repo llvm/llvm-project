@@ -534,6 +534,14 @@ void InterfaceGenerator::forwardDeclareInterface(const Interface &interface) {
   for (StringRef ns : namespaces)
     os << "namespace " << ns << " {\n";
 
+  // Emit a forward declaration of the interface class so that it becomes usable
+  // in the signature of its methods.
+  std::string comments = tblgen::emitSummaryAndDescComments(
+      "", interface.getDescription().value_or(""));
+  if (!comments.empty()) {
+    os << comments << "\n";
+  }
+
   StringRef interfaceName = interface.getName();
   os << "class " << interfaceName << ";\n";
 
@@ -643,9 +651,9 @@ bool InterfaceGenerator::emitInterfaceDecls() {
   for (const Record *def : sortedDefs)
     emitInterfaceDecl(Interface(def));
   for (const Record *def : sortedDefs)
-    emitModelMethodsDef(Interface(def));
-  for (const Record *def : sortedDefs)
     emitInterfaceTraitDecl(Interface(def));
+  for (const Record *def : sortedDefs)
+    emitModelMethodsDef(Interface(def));
 
   return false;
 }
