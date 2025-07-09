@@ -32,9 +32,9 @@ using namespace llvm;
 #define DEBUG_TYPE "searchable-table-emitter"
 
 static int64_t getAsInt(const Init *B) {
-  if (const BitsInit *BI = dyn_cast<BitsInit>(B))
+  if (const auto *BI = dyn_cast<BitsInit>(B))
     return *BI->convertInitializerToInt();
-  if (const IntInit *II = dyn_cast<IntInit>(B))
+  if (const auto *II = dyn_cast<IntInit>(B))
     return II->getValue();
   llvm_unreachable("Unexpected initializer");
 }
@@ -126,20 +126,20 @@ private:
 
   std::string primaryRepresentation(SMLoc Loc, const GenericField &Field,
                                     const Init *I) {
-    if (const StringInit *SI = dyn_cast<StringInit>(I)) {
+    if (const auto *SI = dyn_cast<StringInit>(I)) {
       if (Field.IsCode || SI->hasCodeFormat())
         return SI->getValue().str();
       else
         return SI->getAsString();
-    } else if (const BitsInit *BI = dyn_cast<BitsInit>(I))
+    } else if (const auto *BI = dyn_cast<BitsInit>(I)) {
       return "0x" + utohexstr(getAsInt(BI));
-    else if (const BitInit *BI = dyn_cast<BitInit>(I))
+    } else if (const auto *BI = dyn_cast<BitInit>(I)) {
       return BI->getValue() ? "true" : "false";
-    else if (Field.IsIntrinsic)
+    } else if (Field.IsIntrinsic) {
       return "Intrinsic::" + getIntrinsic(I).EnumName.str();
-    else if (Field.IsInstruction)
+    } else if (Field.IsInstruction) {
       return I->getAsString();
-    else if (Field.Enum) {
+    if (Field.Enum) {
       const GenericEnum::Entry *Entry =
           Field.Enum->getEntry(cast<DefInit>(I)->getDef());
       if (!Entry)
@@ -152,7 +152,7 @@ private:
   }
 
   bool isIntrinsic(const Init *I) {
-    if (const DefInit *DI = dyn_cast<DefInit>(I))
+    if (const auto *DI = dyn_cast<DefInit>(I))
       return DI->getDef()->isSubClassOf("Intrinsic");
     return false;
   }
@@ -174,7 +174,7 @@ private:
       if (Ctx == TypeInTempStruct)
         return "std::string";
       return "StringRef";
-    } else if (const BitsRecTy *BI = dyn_cast<BitsRecTy>(Field.RecType)) {
+    } else if (const auto *BI = dyn_cast<BitsRecTy>(Field.RecType)) {
       unsigned NumBits = BI->getNumBits();
       if (NumBits <= 8)
         return "uint8_t";
@@ -190,8 +190,9 @@ private:
                                      "' of type bits is too large");
     } else if (isa<BitRecTy>(Field.RecType)) {
       return "bool";
-    } else if (Field.Enum || Field.IsIntrinsic || Field.IsInstruction)
+    } else if (Field.Enum || Field.IsIntrinsic || Field.IsInstruction) {
       return "unsigned";
+    }
     PrintFatalError(Index.Loc,
                     Twine("In table '") + Table.Name + "' lookup method '" +
                         Index.Name + "', key field '" + Field.Name +
@@ -359,8 +360,8 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
 
     std::vector<std::pair<const Record *, unsigned>> Entries;
     Entries.reserve(Table.Entries.size());
-    for (unsigned i = 0; i < Table.Entries.size(); ++i)
-      Entries.emplace_back(Table.Entries[i], i);
+    for (auto [Idx, TblEntry] : enumerate(Table.Entries))
+      Entries.emplace_back(TblEntry, Idx);
 
     llvm::stable_sort(Entries,
                       [&](const std::pair<const Record *, unsigned> &LHS,
@@ -369,19 +370,19 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
                       });
 
     IndexRowsStorage.reserve(Entries.size());
-    for (const auto &Entry : Entries) {
-      IndexRowsStorage.push_back(Entry.first);
+    for (const auto &[EntryRec, EntryIndex] : Entries) {
+      IndexRowsStorage.push_back(EntryRec);
 
       OS << "    { ";
       ListSeparator LS;
       for (const auto &Field : Index.Fields) {
         std::string Repr = primaryRepresentation(
-            Index.Loc, Field, Entry.first->getValueInit(Field.Name));
+            Index.Loc, Field, EntryRec->getValueInit(Field.Name));
         if (isa<StringRecTy>(Field.RecType))
           Repr = StringRef(Repr).upper();
         OS << LS << Repr;
       }
-      OS << ", " << Entry.second << " },\n";
+      OS << ", " << EntryIndex << " },\n";
     }
 
     OS << "  };\n\n";
@@ -398,8 +399,8 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
        Index.Fields[0].IsInstruction)) {
     int64_t FirstKeyVal = getNumericKey(Index, IndexRows[0]);
     IsContiguous = true;
-    for (unsigned i = 0; i < IndexRows.size(); ++i) {
-      if (getNumericKey(Index, IndexRows[i]) != (FirstKeyVal + i)) {
+    for (const auto &[Idx, IndexRow] : enumerate(IndexRows)) {
+      if (getNumericKey(Index, IndexRow) != FirstKeyVal + (int64_t)Idx) {
         IsContiguous = false;
         break;
       }
@@ -509,9 +510,9 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
       OS << " ||\n      Key." << Field.Name << " != Idx->" << Field.Name;
   }
 
-  if (ShouldReturnRange)
+  if (ShouldReturnRange) {
     OS << "  return llvm::make_range(It.first, It.second);\n";
-  else if (IsPrimary) {
+  } else if (IsPrimary) {
     OS << ")\n    return nullptr;\n\n";
     OS << "  return &*Idx;\n";
   } else {
@@ -557,8 +558,7 @@ void SearchableTableEmitter::emitGenericTable(const GenericTable &Table,
 
   // The primary data table contains all the fields defined for this map.
   OS << "constexpr " << Table.CppTypeName << " " << Table.Name << "[] = {\n";
-  for (unsigned i = 0; i < Table.Entries.size(); ++i) {
-    const Record *Entry = Table.Entries[i];
+  for (const auto &[Idx, Entry] : enumerate(Table.Entries)) {
     OS << "  { ";
 
     ListSeparator LS;
@@ -567,7 +567,7 @@ void SearchableTableEmitter::emitGenericTable(const GenericTable &Table,
          << primaryRepresentation(Table.Locs[0], Field,
                                   Entry->getValueInit(Field.Name));
 
-    OS << " }, // " << i << "\n";
+    OS << " }, // " << Idx << "\n";
   }
   OS << " };\n";
 
