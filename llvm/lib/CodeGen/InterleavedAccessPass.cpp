@@ -174,6 +174,9 @@ PreservedAnalyses InterleavedAccessPass::run(Function &F,
 char InterleavedAccess::ID = 0;
 
 bool InterleavedAccess::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
   auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
   if (!TPC || !LowerInterleavedAccesses)
     return false;
