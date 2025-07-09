@@ -20,7 +20,7 @@ define i64 @icmp_eq_i64(i64 %a, i64 %b) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [icmp_eq_i64_param_0];
 ; CHECK-NEXT:    ld.param.b64 %rd2, [icmp_eq_i64_param_1];
-; CHECK-NEXT:    setp.eq.s64 %p1, %rd1, %rd2;
+; CHECK-NEXT:    setp.eq.b64 %p1, %rd1, %rd2;
 ; CHECK-NEXT:    selp.b64 %rd3, 1, 0, %p1;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; CHECK-NEXT:    ret;
@@ -38,7 +38,7 @@ define i64 @icmp_ne_i64(i64 %a, i64 %b) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [icmp_ne_i64_param_0];
 ; CHECK-NEXT:    ld.param.b64 %rd2, [icmp_ne_i64_param_1];
-; CHECK-NEXT:    setp.ne.s64 %p1, %rd1, %rd2;
+; CHECK-NEXT:    setp.ne.b64 %p1, %rd1, %rd2;
 ; CHECK-NEXT:    selp.b64 %rd3, 1, 0, %p1;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; CHECK-NEXT:    ret;
@@ -202,7 +202,7 @@ define i32 @icmp_eq_i32(i32 %a, i32 %b) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [icmp_eq_i32_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r2, [icmp_eq_i32_param_1];
-; CHECK-NEXT:    setp.eq.s32 %p1, %r1, %r2;
+; CHECK-NEXT:    setp.eq.b32 %p1, %r1, %r2;
 ; CHECK-NEXT:    selp.b32 %r3, 1, 0, %p1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
@@ -220,7 +220,7 @@ define i32 @icmp_ne_i32(i32 %a, i32 %b) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [icmp_ne_i32_param_0];
 ; CHECK-NEXT:    ld.param.b32 %r2, [icmp_ne_i32_param_1];
-; CHECK-NEXT:    setp.ne.s32 %p1, %r1, %r2;
+; CHECK-NEXT:    setp.ne.b32 %p1, %r1, %r2;
 ; CHECK-NEXT:    selp.b32 %r3, 1, 0, %p1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
@@ -386,7 +386,7 @@ define i16 @icmp_eq_i16(i16 %a, i16 %b) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [icmp_eq_i16_param_0];
 ; CHECK-NEXT:    ld.param.b16 %rs2, [icmp_eq_i16_param_1];
-; CHECK-NEXT:    setp.eq.s16 %p1, %rs1, %rs2;
+; CHECK-NEXT:    setp.eq.b16 %p1, %rs1, %rs2;
 ; CHECK-NEXT:    selp.b32 %r1, 1, 0, %p1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -405,7 +405,7 @@ define i16 @icmp_ne_i16(i16 %a, i16 %b) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [icmp_ne_i16_param_0];
 ; CHECK-NEXT:    ld.param.b16 %rs2, [icmp_ne_i16_param_1];
-; CHECK-NEXT:    setp.ne.s16 %p1, %rs1, %rs2;
+; CHECK-NEXT:    setp.ne.b16 %p1, %rs1, %rs2;
 ; CHECK-NEXT:    selp.b32 %r1, 1, 0, %p1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -580,7 +580,7 @@ define i8 @icmp_eq_i8(i8 %a, i8 %b) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b8 %rs1, [icmp_eq_i8_param_0];
 ; CHECK-NEXT:    ld.param.b8 %rs2, [icmp_eq_i8_param_1];
-; CHECK-NEXT:    setp.eq.s16 %p1, %rs1, %rs2;
+; CHECK-NEXT:    setp.eq.b16 %p1, %rs1, %rs2;
 ; CHECK-NEXT:    selp.b32 %r1, 1, 0, %p1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -600,7 +600,7 @@ define i8 @icmp_ne_i8(i8 %a, i8 %b) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b8 %rs1, [icmp_ne_i8_param_0];
 ; CHECK-NEXT:    ld.param.b8 %rs2, [icmp_ne_i8_param_1];
-; CHECK-NEXT:    setp.ne.s16 %p1, %rs1, %rs2;
+; CHECK-NEXT:    setp.ne.b16 %p1, %rs1, %rs2;
 ; CHECK-NEXT:    selp.b32 %r1, 1, 0, %p1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
