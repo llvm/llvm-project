@@ -145,6 +145,8 @@ C++20 Feature Support
 - Fixed a crash with a defaulted spaceship (``<=>``) operator when the class
   contains a member declaration of vector type. Vector types cannot yet be
   compared directly, so this causes the operator to be deleted. (#GH137452)
+- Implement constant evaluation of lambdas that capture structured bindings.
+  (#GH145956)
 
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -924,6 +926,7 @@ Bug Fixes to C++ Support
 - Fix a bug where private access specifier of overloaded function not respected. (#GH107629)
 - Correctly handle allocations in the condition of a ``if constexpr``.(#GH120197) (#GH134820)
 - Fixed a crash when handling invalid member using-declaration in C++20+ mode. (#GH63254)
+- Fix name lookup in lambda appearing in the body of a requires expression. (#GH147650)
 - Fix a crash when trying to instantiate an ambiguous specialization. (#GH51866)
 - Improved handling of variables with ``consteval`` constructors, to
   consistently treat the initializer as manifestly constant-evaluated.
