@@ -224,6 +224,11 @@ static llvm::cl::opt<bool> enableCUDA("fcuda",
                                       llvm::cl::init(false));
 
 static llvm::cl::opt<bool>
+    enableDoConcurrentOffload("fdoconcurrent-offload",
+                              llvm::cl::desc("enable do concurrent offload"),
+                              llvm::cl::init(false));
+
+static llvm::cl::opt<bool>
     disableCUDAWarpFunction("fcuda-disable-warp-function",
                             llvm::cl::desc("Disable CUDA Warp Function"),
                             llvm::cl::init(false));
@@ -606,6 +611,11 @@ int main(int argc, char **argv) {
   // enable parsing of CUDA Fortran
   if (enableCUDA) {
     options.features.Enable(Fortran::common::LanguageFeature::CUDA);
+  }
+
+  if (enableDoConcurrentOffload) {
+    options.features.Enable(
+        Fortran::common::LanguageFeature::DoConcurrentOffload);
   }
 
   if (disableCUDAWarpFunction) {
