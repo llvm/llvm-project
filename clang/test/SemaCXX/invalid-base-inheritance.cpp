@@ -3,7 +3,7 @@
 
 namespace GH147186 {
 
-class X; // expected-note {{forward declaration of 'X'}} expected-note {{forward declaration of 'X'}}
+class X; // expected-note {{forward declaration of 'GH147186::X'}} expected-note {{forward declaration of 'GH147186::X'}}
 
 class A : X { // expected-error {{base class has incomplete type}}
 };

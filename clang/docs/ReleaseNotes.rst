@@ -145,6 +145,8 @@ C++20 Feature Support
 - Fixed a crash with a defaulted spaceship (``<=>``) operator when the class
   contains a member declaration of vector type. Vector types cannot yet be
   compared directly, so this causes the operator to be deleted. (#GH137452)
+- Implement constant evaluation of lambdas that capture structured bindings.
+  (#GH145956)
 
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -767,6 +769,11 @@ Bug Fixes in This Version
   flag and diagnostic because the macro injection was used to emit this warning.
   Unfortunately there is no other good way to diagnose usage of ``static_assert``
   macro without inclusion of ``<assert.h>``.
+- In C23, something like ``[[/*possible attributes*/]];`` is an attribute
+  declaration, not a statement. So it is not allowed by the syntax in places
+  where a statement is required, specifically as the secondary block of a
+  selection or iteration statement. This differs from C++, since C++ allows 
+  declaration statements. Clang now emits a warning for these patterns. (#GH141659)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
