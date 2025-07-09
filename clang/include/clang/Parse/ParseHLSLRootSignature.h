@@ -147,8 +147,10 @@ private:
   parseComparisonFunc(RootSignatureToken::Kind Context);
   std::optional<llvm::dxbc::StaticBorderColor>
   parseStaticBorderColor(RootSignatureToken::Kind Context);
-  std::optional<llvm::dxbc::RootDescriptorFlags> parseRootDescriptorFlags();
-  std::optional<llvm::dxbc::DescriptorRangeFlags> parseDescriptorRangeFlags();
+  std::optional<llvm::dxbc::RootDescriptorFlags>
+  parseRootDescriptorFlags(RootSignatureToken::Kind Context);
+  std::optional<llvm::dxbc::DescriptorRangeFlags>
+  parseDescriptorRangeFlags(RootSignatureToken::Kind Context);
 
   /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned
   /// 32-bit integer

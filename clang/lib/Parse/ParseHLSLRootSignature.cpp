@@ -555,7 +555,7 @@ RootSignatureParser::parseRootDescriptorParams(TokenKind DescKind,
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto Flags = parseRootDescriptorFlags();
+      auto Flags = parseRootDescriptorFlags(TokenKind::kw_flags);
       if (!Flags.has_value())
         return std::nullopt;
       Params.Flags = Flags;
@@ -656,7 +656,7 @@ RootSignatureParser::parseDescriptorTableClauseParams(TokenKind ClauseKind,
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto Flags = parseDescriptorRangeFlags();
+      auto Flags = parseDescriptorRangeFlags(TokenKind::kw_flags);
       if (!Flags.has_value())
         return std::nullopt;
       Params.Flags = Flags;
@@ -1102,7 +1102,7 @@ RootSignatureParser::parseStaticBorderColor(TokenKind Context) {
 }
 
 std::optional<llvm::dxbc::RootDescriptorFlags>
-RootSignatureParser::parseRootDescriptorFlags() {
+RootSignatureParser::parseRootDescriptorFlags(TokenKind Context) {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
 
@@ -1134,6 +1134,11 @@ RootSignatureParser::parseRootDescriptorFlags() {
       default:
         llvm_unreachable("Switch for consumed enum token was not provided");
       }
+    } else {
+      consumeNextToken(); // consume token to point at invalid token
+      reportDiag(diag::err_hlsl_invalid_token)
+          << /*value=*/1 << /*value of*/ Context;
+      return std::nullopt;
     }
   } while (tryConsumeExpectedToken(TokenKind::pu_or));
 
@@ -1141,7 +1146,7 @@ RootSignatureParser::parseRootDescriptorFlags() {
 }
 
 std::optional<llvm::dxbc::DescriptorRangeFlags>
-RootSignatureParser::parseDescriptorRangeFlags() {
+RootSignatureParser::parseDescriptorRangeFlags(TokenKind Context) {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
 
@@ -1173,6 +1178,11 @@ RootSignatureParser::parseDescriptorRangeFlags() {
       default:
         llvm_unreachable("Switch for consumed enum token was not provided");
       }
+    } else {
+      consumeNextToken(); // consume token to point at invalid token
+      reportDiag(diag::err_hlsl_invalid_token)
+          << /*value=*/1 << /*value of*/ Context;
+      return std::nullopt;
     }
   } while (tryConsumeExpectedToken(TokenKind::pu_or));
 

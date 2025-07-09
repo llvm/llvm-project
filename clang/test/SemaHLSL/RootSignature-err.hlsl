@@ -91,3 +91,11 @@ void bad_root_signature_19() {}
 // expected-error@+1 {{invalid value of borderColor}}
 [RootSignature("StaticSampler(s0, borderColor = borderColor_typo)")]
 void bad_root_signature_20() {}
+
+// expected-error@+1 {{invalid value of flags}}
+[RootSignature("CBV(b0, flags = DATA_VOLATILE | root_descriptor_flag_typo)")]
+void bad_root_signature_21() {}
+
+// expected-error@+1 {{invalid value of flags}}
+[RootSignature("DescriptorTable(SRV(t0, flags = descriptor_range_flag_typo)")]
+void bad_root_signature_22() {}
