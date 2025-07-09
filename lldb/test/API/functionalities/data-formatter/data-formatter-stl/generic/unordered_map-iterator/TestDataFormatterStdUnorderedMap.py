@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class LibcxxUnorderedMapDataFormatterTestCase(TestBase):
+class StdUnorderedMapDataFormatterTestCase(TestBase):
     def check_ptr_or_ref(self, var_name: str):
         var = self.frame().FindVariable(var_name)
         self.assertTrue(var)
@@ -32,12 +32,10 @@ class LibcxxUnorderedMapDataFormatterTestCase(TestBase):
         self.assertEqual(pair.GetChildAtIndex(0).summary, '"Hello"')
         self.assertEqual(pair.GetChildAtIndex(1).summary, '"World"')
 
-    @add_test_categories(["libc++"])
-    def test_iterator_formatters(self):
+    def do_test(self):
         """Test that std::unordered_map related structures are formatted correctly when printed.
         Currently only tests format of std::unordered_map iterators.
         """
-        self.build()
         (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "Break here", lldb.SBFileSpec("main.cpp", False)
         )
@@ -105,13 +103,12 @@ class LibcxxUnorderedMapDataFormatterTestCase(TestBase):
             type="const StringMapT *const &",
         )
 
-    @expectedFailureAll(
-        bugnumber="https://github.com/llvm/llvm-project/issues/146040",
-        compiler="clang",
-        compiler_version=["<", "21"],
-    )
     @add_test_categories(["libc++"])
-    def test_ptr_formatters(self):
+    def test_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()
+
+    def do_test_ptr(self):
         """
         Test that pointers to std::unordered_map are formatted correctly.
         """
@@ -127,3 +124,13 @@ class LibcxxUnorderedMapDataFormatterTestCase(TestBase):
         self.check_ptr_ptr("ptr4")
         self.check_ptr_ptr("ptr5")
         self.check_ptr_ptr("ptr6")
+
+    @expectedFailureAll(
+        bugnumber="https://github.com/llvm/llvm-project/issues/146040",
+        compiler="clang",
+        compiler_version=["<", "21"],
+    )
+    @add_test_categories(["libc++"])
+    def test_ptr_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test_ptr()
