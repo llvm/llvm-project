@@ -4318,7 +4318,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         cast<FixedVectorType>(Idx->getType())->getNumElements();
     assert(isPowerOf2_64(IdxVectorSize));
 
-    Value *Truncated = IRB.CreateTrunc(Idx, FixedVectorType::get(Type::getIntNTy(*MS.C, Log2_64(IdxVectorSize)), IdxVectorSize));
+    Value *Truncated = IRB.CreateTrunc(
+        Idx,
+        FixedVectorType::get(Type::getIntNTy(*MS.C, Log2_64(IdxVectorSize)),
+                             IdxVectorSize));
     insertCheckShadow(Truncated, getOrigin(Idx), I);
   }
 
