@@ -24302,7 +24302,8 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
 }
 
 bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
-    LoadInst *LI, ArrayRef<Value *> DeinterleaveValues, unsigned Factor) const {
+    LoadInst *LI, ArrayRef<Value *> DeinterleaveValues) const {
+  const unsigned Factor = DeinterleaveValues.size();
   if (Factor > 8)
     return false;
 
@@ -24487,8 +24488,9 @@ static bool isMultipleOfN(const Value *V, const DataLayout &DL, unsigned N) {
 /// dealing with factor of 2 (extractvalue is still required for most of other
 /// factors though).
 bool RISCVTargetLowering::lowerInterleavedVPLoad(
-    VPIntrinsic *Load, Value *Mask, ArrayRef<Value *> DeinterleaveResults,
-    unsigned Factor) const {
+    VPIntrinsic *Load, Value *Mask,
+    ArrayRef<Value *> DeinterleaveResults) const {
+  const unsigned Factor = DeinterleaveResults.size();
   assert(Mask && "Expect a valid mask");
   assert(Load->getIntrinsicID() == Intrinsic::vp_load &&
          "Unexpected intrinsic");
