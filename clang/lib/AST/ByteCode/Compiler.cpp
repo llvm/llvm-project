@@ -4912,6 +4912,18 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
   return true;
 }
 
+static const Expr *stripDerivedToBaseCasts(const Expr *E) {
+  if (const auto *PE = dyn_cast<ParenExpr>(E))
+    return stripDerivedToBaseCasts(PE->getSubExpr());
+
+  if (const auto *CE = dyn_cast<CastExpr>(E);
+      CE &&
+      (CE->getCastKind() == CK_DerivedToBase || CE->getCastKind() == CK_NoOp))
+    return stripDerivedToBaseCasts(CE->getSubExpr());
+
+  return E;
+}
+
 template <class Emitter>
 bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
   const FunctionDecl *FuncDecl = E->getDirectCallee();
@@ -4995,6 +5007,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     }
   }
 
+  bool Devirtualized = false;
   std::optional<unsigned> CalleeOffset;
   // Add the (optional, implicit) This pointer.
   if (const auto *MC = dyn_cast<CXXMemberCallExpr>(E)) {
@@ -5013,8 +5026,26 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
         return false;
       if (!this->emitGetMemberPtrBase(E))
         return false;
-    } else if (!this->visit(MC->getImplicitObjectArgument())) {
-      return false;
+    } else {
+      const auto *InstancePtr = MC->getImplicitObjectArgument();
+      if (isa_and_nonnull<CXXDestructorDecl>(CompilingFunction) ||
+          isa_and_nonnull<CXXConstructorDecl>(CompilingFunction)) {
+        const auto *Stripped = stripDerivedToBaseCasts(InstancePtr);
+        if (isa<CXXThisExpr>(Stripped)) {
+          FuncDecl =
+              cast<CXXMethodDecl>(FuncDecl)->getCorrespondingMethodInClass(
+                  Stripped->getType()->getPointeeType()->getAsCXXRecordDecl());
+          Devirtualized = true;
+          if (!this->visit(Stripped))
+            return false;
+        } else {
+          if (!this->visit(InstancePtr))
+            return false;
+        }
+      } else {
+        if (!this->visit(InstancePtr))
+          return false;
+      }
     }
   } else if (const auto *PD =
                  dyn_cast<CXXPseudoDestructorExpr>(E->getCallee())) {
@@ -5060,7 +5091,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
 
     bool IsVirtual = false;
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl))
-      IsVirtual = MD->isVirtual();
+      IsVirtual = !Devirtualized && MD->isVirtual();
 
     // In any case call the function. The return value will end up on the stack
     // and if the function has RVO, we already have the pointer on the stack to
@@ -6026,6 +6057,8 @@ template <class Emitter>
 bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
   // Classify the return type.
   ReturnType = this->classify(F->getReturnType());
+
+  this->CompilingFunction = F;
 
   if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(F))
     return this->compileConstructor(Ctor);

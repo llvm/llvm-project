@@ -759,10 +759,8 @@ namespace CtorDtor {
   static_assert(B.i == 1 && B.j == 1, "");
 
   constexpr Derived D;
-  static_assert(D.i == 1, ""); // expected-error {{static assertion failed}} \
-                               // expected-note {{2 == 1}}
-  static_assert(D.j == 1, ""); // expected-error {{static assertion failed}} \
-                               // expected-note {{2 == 1}}
+  static_assert(D.i == 1, "");
+  static_assert(D.j == 1, "");
 
   constexpr Derived2 D2; // ref-error {{must be initialized by a constant expression}} \
                          // ref-note {{in call to 'Derived2()'}} \
