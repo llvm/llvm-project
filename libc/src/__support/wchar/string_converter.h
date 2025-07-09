@@ -54,7 +54,8 @@ private:
   }
 
 public:
-  StringConverter(const T *s, mbstate *ps, size_t dstlen, size_t srclen=SIZE_MAX)
+  StringConverter(const T *s, mbstate *ps, size_t dstlen,
+                  size_t srclen = SIZE_MAX)
       : cr(ps), src(s), src_len(srclen), src_idx(0), num_to_write(dstlen),
         first_pop(true) {}
 
