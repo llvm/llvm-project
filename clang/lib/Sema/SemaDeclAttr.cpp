@@ -1979,6 +1979,10 @@ void clang::inferNoReturnAttr(Sema &S, const Decl *D) {
   if (!FD->hasAttr<NoReturnAttr>() && !FD->hasAttr<InferredNoReturnAttr>() &&
       isKnownToAlwaysThrow(FD)) {
     NonConstFD->addAttr(InferredNoReturnAttr::CreateImplicit(S.Context));
+
+    // Emit a diagnostic suggesting the function being marked [[noreturn]].
+    S.Diag(FD->getLocation(), diag::warn_suggest_noreturn_function)
+        << /*isFunction=*/0 << FD;
   }
 }
 
