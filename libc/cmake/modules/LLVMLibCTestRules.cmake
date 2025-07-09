@@ -309,6 +309,15 @@ function(create_libc_unittest fq_target_name)
     endif()
   endforeach()
 
+  if(LIBC_TARGET_OS_IS_UEFI)
+    # Linker does not recognize to link libc and crt1
+    list(APPEND link_libraries libc.startup.uefi.crt1 ${LIBC_BUILD_DIR}/lib/libc.a)
+
+    # Needed to make symbols actually link
+    target_link_options(${fq_build_target_name} PRIVATE
+      ${LIBC_COMPILE_OPTIONS_DEFAULT} "-Wl,/lldmingw")
+  endif()
+
   set_target_properties(${fq_build_target_name}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
