@@ -101,6 +101,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPURemoveIncompatibleFunctions.cpp
   AMDGPUReserveWWMRegs.cpp
   AMDGPUResourceUsageAnalysis.cpp
+  AMDGPURewriteAGPRCopyMFMA.cpp
   AMDGPURewriteOutArguments.cpp
   AMDGPURewriteUndefForPHI.cpp
   AMDGPUSelectionDAGInfo.cpp

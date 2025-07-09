@@ -1483,16 +1483,13 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     }
 
     if (!Features.OmitBBEntries) {
-      // TODO: Remove this check when version 1 is deprecated.
-      if (BBAddrMapVersion > 1) {
-        OutStreamer->AddComment("BB id");
-        // Emit the BB ID for this basic block.
-        // We only emit BaseID since CloneID is unset for
-        // -basic-block-adress-map.
-        // TODO: Emit the full BBID when labels and sections can be mixed
-        // together.
-        OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
-      }
+      OutStreamer->AddComment("BB id");
+      // Emit the BB ID for this basic block.
+      // We only emit BaseID since CloneID is unset for
+      // -basic-block-adress-map.
+      // TODO: Emit the full BBID when labels and sections can be mixed
+      // together.
+      OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
       // Emit the basic block offset relative to the end of the previous block.
       // This is zero unless the block is padded due to alignment.
       emitLabelDifferenceAsULEB128(MBBSymbol, PrevMBBEndSymbol);
@@ -4631,12 +4628,10 @@ void AsmPrinter::emitXRayTable() {
 
   // We then emit a single entry in the index per function. We use the symbols
   // that bound the instrumentation map as the range for a specific function.
-  // Each entry here will be 2 * word size aligned, as we're writing down two
-  // pointers. This should work for both 32-bit and 64-bit platforms.
+  // Each entry contains 2 words and needs to be word-aligned.
   if (FnSledIndex) {
     OutStreamer->switchSection(FnSledIndex);
-    OutStreamer->emitCodeAlignment(Align(2 * WordSizeBytes),
-                                   &getSubtargetInfo());
+    OutStreamer->emitValueToAlignment(Align(WordSizeBytes));
     // For Mach-O, use an "l" symbol as the atom of this subsection. The label
     // difference uses a SUBTRACTOR external relocation which references the
     // symbol.

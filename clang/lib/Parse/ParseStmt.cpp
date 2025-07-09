@@ -63,7 +63,8 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
   // at the start of the statement. Thus, we're not using MaybeParseAttributes
   // here because we don't want to allow arbitrary orderings.
   ParsedAttributes CXX11Attrs(AttrFactory);
-  MaybeParseCXX11Attributes(CXX11Attrs, /*MightBeObjCMessageSend*/ true);
+  bool HasStdAttr =
+      MaybeParseCXX11Attributes(CXX11Attrs, /*MightBeObjCMessageSend*/ true);
   ParsedAttributes GNUOrMSAttrs(AttrFactory);
   if (getLangOpts().OpenCL)
     MaybeParseGNUAttributes(GNUOrMSAttrs);
@@ -79,6 +80,13 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
 
   assert((CXX11Attrs.empty() || Res.isInvalid() || Res.isUsable()) &&
          "attributes on empty statement");
+
+  if (HasStdAttr && getLangOpts().C23 &&
+      (StmtCtx & ParsedStmtContext::AllowDeclarationsInC) ==
+          ParsedStmtContext{} &&
+      isa_and_present<NullStmt>(Res.get()))
+    Diag(CXX11Attrs.Range.getBegin(), diag::warn_attr_in_secondary_block)
+        << CXX11Attrs.Range;
 
   if (CXX11Attrs.empty() || Res.isInvalid())
     return Res;
@@ -1327,7 +1335,7 @@ struct MisleadingIndentationChecker {
     if (ColNo == 0 || TabStop == 1)
       return ColNo;
 
-    std::pair<FileID, unsigned> FIDAndOffset = SM.getDecomposedLoc(Loc);
+    FileIDAndOffset FIDAndOffset = SM.getDecomposedLoc(Loc);
 
     bool Invalid;
     StringRef BufData = SM.getBufferData(FIDAndOffset.first, &Invalid);

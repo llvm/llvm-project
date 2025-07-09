@@ -10,10 +10,10 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFDATAEXTRACTOR_H
 
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/DebugInfo/DWARF/DWARFDataExtractorSimple.h"
 #include "llvm/DebugInfo/DWARF/DWARFObject.h"
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFDataExtractorSimple.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -42,8 +42,8 @@ public:
 
   /// Extracts a value and applies a relocation to the result if
   /// one exists for the given offset.
-  LLVM_ABI uint64_t getRelocatedValueImpl(uint32_t Size, uint64_t *Off,
-                                          uint64_t *SecNdx, Error *Err) const {
+  uint64_t getRelocatedValueImpl(uint32_t Size, uint64_t *Off, uint64_t *SecNdx,
+                                 Error *Err) const {
     if (SecNdx)
       *SecNdx = object::SectionedAddress::UndefSection;
     if (!Section)

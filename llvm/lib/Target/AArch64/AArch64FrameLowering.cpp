@@ -335,6 +335,26 @@ static Register findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB,
                                                  bool HasCall = false);
 static bool requiresSaveVG(const MachineFunction &MF);
 
+// Conservatively, returns true if the function is likely to have an SVE vectors
+// on the stack. This function is safe to be called before callee-saves or
+// object offsets have been determined.
+static bool isLikelyToHaveSVEStack(MachineFunction &MF) {
+  auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+  if (AFI->isSVECC())
+    return true;
+
+  if (AFI->hasCalculatedStackSizeSVE())
+    return bool(getSVEStackSize(MF));
+
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  for (int FI = MFI.getObjectIndexBegin(); FI < MFI.getObjectIndexEnd(); FI++) {
+    if (MFI.getStackID(FI) == TargetStackID::ScalableVector)
+      return true;
+  }
+
+  return false;
+}
+
 /// Returns true if a homogeneous prolog or epilog code can be emitted
 /// for the size optimization. If possible, a frame helper call is injected.
 /// When Exit block is given, this check is for epilog.
@@ -350,8 +370,9 @@ bool AArch64FrameLowering::homogeneousPrologEpilog(
   // TODO: Window is supported yet.
   if (needsWinCFI(MF))
     return false;
+
   // TODO: SVE is not supported yet.
-  if (getSVEStackSize(MF))
+  if (isLikelyToHaveSVEStack(MF))
     return false;
 
   // Bail on stack adjustment needed on return for simplicity.
@@ -435,6 +456,8 @@ AArch64FrameLowering::getStackIDForScalableVectors() const {
 static unsigned getFixedObjectSize(const MachineFunction &MF,
                                    const AArch64FunctionInfo *AFI, bool IsWin64,
                                    bool IsFunclet) {
+  assert(AFI->getTailCallReservedStack() % 16 == 0 &&
+         "Tail call reserved stack must be aligned to 16 bytes");
   if (!IsWin64 || IsFunclet) {
     return AFI->getTailCallReservedStack();
   } else {
@@ -442,12 +465,31 @@ static unsigned getFixedObjectSize(const MachineFunction &MF,
         !MF.getFunction().getAttributes().hasAttrSomewhere(
             Attribute::SwiftAsync))
       report_fatal_error("cannot generate ABI-changing tail call for Win64");
+    unsigned FixedObjectSize = AFI->getTailCallReservedStack();
+
     // Var args are stored here in the primary function.
-    const unsigned VarArgsArea = AFI->getVarArgsGPRSize();
-    // To support EH funclets we allocate an UnwindHelp object
-    const unsigned UnwindHelpObject = (MF.hasEHFunclets() ? 8 : 0);
-    return AFI->getTailCallReservedStack() +
-           alignTo(VarArgsArea + UnwindHelpObject, 16);
+    FixedObjectSize += AFI->getVarArgsGPRSize();
+
+    if (MF.hasEHFunclets()) {
+      // Catch objects are stored here in the primary function.
+      const MachineFrameInfo &MFI = MF.getFrameInfo();
+      const WinEHFuncInfo &EHInfo = *MF.getWinEHFuncInfo();
+      SmallSetVector<int, 8> CatchObjFrameIndices;
+      for (const WinEHTryBlockMapEntry &TBME : EHInfo.TryBlockMap) {
+        for (const WinEHHandlerType &H : TBME.HandlerArray) {
+          int FrameIndex = H.CatchObj.FrameIndex;
+          if ((FrameIndex != INT_MAX) &&
+              CatchObjFrameIndices.insert(FrameIndex)) {
+            FixedObjectSize = alignTo(FixedObjectSize,
+                                      MFI.getObjectAlign(FrameIndex).value()) +
+                              MFI.getObjectSize(FrameIndex);
+          }
+        }
+      }
+      // To support EH funclets we allocate an UnwindHelp object
+      FixedObjectSize += 8;
+    }
+    return alignTo(FixedObjectSize, 16);
   }
 }
 
@@ -513,6 +555,27 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   // DefaultSafeSPDisplacement is fine as we only emergency spill GP regs.
   if (!MFI.isMaxCallFrameSizeComputed() ||
       MFI.getMaxCallFrameSize() > DefaultSafeSPDisplacement)
+    return true;
+
+  return false;
+}
+
+/// Should the Frame Pointer be reserved for the current function?
+bool AArch64FrameLowering::isFPReserved(const MachineFunction &MF) const {
+  const TargetMachine &TM = MF.getTarget();
+  const Triple &TT = TM.getTargetTriple();
+
+  // These OSes require the frame chain is valid, even if the current frame does
+  // not use a frame pointer.
+  if (TT.isOSDarwin() || TT.isOSWindows())
+    return true;
+
+  // If the function has a frame pointer, it is reserved.
+  if (hasFP(MF))
+    return true;
+
+  // Frontend has requested to preserve the frame pointer.
+  if (TM.Options.FramePointerIsReserved(MF))
     return true;
 
   return false;
@@ -2521,9 +2584,9 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
           .buildDefCFA(AArch64::SP, NumBytes);
 
     emitFrameOffset(MBB, MBB.getFirstTerminator(), DL, AArch64::SP, AArch64::SP,
-                    StackOffset::getFixed(NumBytes + (int64_t)AfterCSRPopSize),
-                    TII, MachineInstr::FrameDestroy, false, NeedsWinCFI,
-                    &HasWinCFI, EmitCFI, StackOffset::getFixed(NumBytes));
+                    StackOffset::getFixed(NumBytes + AfterCSRPopSize), TII,
+                    MachineInstr::FrameDestroy, false, NeedsWinCFI, &HasWinCFI,
+                    EmitCFI, StackOffset::getFixed(NumBytes));
     return;
   }
 
@@ -2997,7 +3060,7 @@ static bool produceCompactUnwindFrame(MachineFunction &MF) {
          !(Subtarget.getTargetLowering()->supportSwiftError() &&
            Attrs.hasAttrSomewhere(Attribute::SwiftError)) &&
          MF.getFunction().getCallingConv() != CallingConv::SwiftTail &&
-         !requiresSaveVG(MF) && AFI->getSVECalleeSavedStackSize() == 0;
+         !requiresSaveVG(MF) && !AFI->isSVECC();
 }
 
 static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
@@ -3934,6 +3997,11 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
       CSStackSize += SpillSize;
   }
 
+  // Save number of saved regs, so we can easily update CSStackSize later to
+  // account for any additional 64-bit GPR saves. Note: After this point
+  // only 64-bit GPRs can be added to SavedRegs.
+  unsigned NumSavedRegs = SavedRegs.count();
+
   // Increase the callee-saved stack size if the function has streaming mode
   // changes, as we will need to spill the value of the VG register.
   // For locally streaming functions, we spill both the streaming and
@@ -3952,8 +4020,9 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (AFI->hasStackHazardSlotIndex())
     CSStackSize += getStackHazardSize(MF);
 
-  // Save number of saved regs, so we can easily update CSStackSize later.
-  unsigned NumSavedRegs = SavedRegs.count();
+  // If we must call __arm_get_current_vg in the prologue preserve the LR.
+  if (requiresSaveVG(MF) && !Subtarget.hasSVE())
+    SavedRegs.set(AArch64::LR);
 
   // The frame record needs to be created by saving the appropriate registers
   uint64_t EstimatedStackSize = MFI.estimateStackSize(MF);
@@ -4635,22 +4704,38 @@ void AArch64FrameLowering::processFunctionBeforeFrameFinalized(
   // anything.
   if (!MF.hasEHFunclets())
     return;
-  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+
+  // Win64 C++ EH needs to allocate space for the catch objects in the fixed
+  // object area right next to the UnwindHelp object.
   WinEHFuncInfo &EHInfo = *MF.getWinEHFuncInfo();
+  int64_t CurrentOffset =
+      AFI->getVarArgsGPRSize() + AFI->getTailCallReservedStack();
+  for (WinEHTryBlockMapEntry &TBME : EHInfo.TryBlockMap) {
+    for (WinEHHandlerType &H : TBME.HandlerArray) {
+      int FrameIndex = H.CatchObj.FrameIndex;
+      if ((FrameIndex != INT_MAX) && MFI.getObjectOffset(FrameIndex) == 0) {
+        CurrentOffset =
+            alignTo(CurrentOffset, MFI.getObjectAlign(FrameIndex).value());
+        CurrentOffset += MFI.getObjectSize(FrameIndex);
+        MFI.setObjectOffset(FrameIndex, -CurrentOffset);
+      }
+    }
+  }
+
+  // Create an UnwindHelp object.
+  // The UnwindHelp object is allocated at the start of the fixed object area
+  int64_t UnwindHelpOffset = alignTo(CurrentOffset + 8, Align(16));
+  assert(UnwindHelpOffset == getFixedObjectSize(MF, AFI, /*IsWin64*/ true,
+                                                /*IsFunclet*/ false) &&
+         "UnwindHelpOffset must be at the start of the fixed object area");
+  int UnwindHelpFI = MFI.CreateFixedObject(/*Size*/ 8, -UnwindHelpOffset,
+                                           /*IsImmutable=*/false);
+  EHInfo.UnwindHelpFrameIdx = UnwindHelpFI;
 
   MachineBasicBlock &MBB = MF.front();
   auto MBBI = MBB.begin();
   while (MBBI != MBB.end() && MBBI->getFlag(MachineInstr::FrameSetup))
     ++MBBI;
-
-  // Create an UnwindHelp object.
-  // The UnwindHelp object is allocated at the start of the fixed object area
-  int64_t FixedObject =
-      getFixedObjectSize(MF, AFI, /*IsWin64*/ true, /*IsFunclet*/ false);
-  int UnwindHelpFI = MFI.CreateFixedObject(/*Size*/ 8,
-                                           /*SPOffset*/ -FixedObject,
-                                           /*IsImmutable=*/false);
-  EHInfo.UnwindHelpFrameIdx = UnwindHelpFI;
 
   // We need to store -2 into the UnwindHelp object at the start of the
   // function.
@@ -4659,6 +4744,7 @@ void AArch64FrameLowering::processFunctionBeforeFrameFinalized(
   RS->backward(MBBI);
   Register DstReg = RS->FindUnusedReg(&AArch64::GPR64commonRegClass);
   assert(DstReg && "There must be a free register after frame setup");
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   BuildMI(MBB, MBBI, DL, TII.get(AArch64::MOVi64imm), DstReg).addImm(-2);
   BuildMI(MBB, MBBI, DL, TII.get(AArch64::STURXi))
       .addReg(DstReg, getKillRegState(true))

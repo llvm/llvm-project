@@ -185,7 +185,7 @@ Status writeSocketIdToPipe(const char *const named_pipe_path,
                            llvm::StringRef socket_id) {
   Pipe port_name_pipe;
   // Wait for 10 seconds for pipe to be opened.
-  if (llvm::Error err = port_name_pipe.OpenAsWriter(named_pipe_path, false,
+  if (llvm::Error err = port_name_pipe.OpenAsWriter(named_pipe_path,
                                                     std::chrono::seconds{10}))
     return Status::FromError(std::move(err));
 

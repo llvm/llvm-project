@@ -120,7 +120,8 @@ def MIPS_P8700 : RISCVProcessorModel<"mips-p8700",
                                       FeatureStdExtZifencei,
                                       FeatureStdExtZicsr,
                                       FeatureVendorXMIPSCMov,
-                                      FeatureVendorXMIPSLSP],
+                                      FeatureVendorXMIPSLSP,
+                                      FeatureVendorXMIPSCBOP],
                                      [TuneMIPSP8700]>;
 
 def ROCKET_RV32 : RISCVProcessorModel<"rocket-rv32",
@@ -274,7 +275,8 @@ def SIFIVE_U74 : RISCVProcessorModel<"sifive-u74",
 defvar SiFiveIntelligenceTuneFeatures = !listconcat(SiFive7TuneFeatures,
                                                     [TuneDLenFactor2,
                                                      TuneOptimizedZeroStrideLoad,
-                                                     TuneOptimizedNF2SegmentLoadStore]);
+                                                     TuneOptimizedNF2SegmentLoadStore,
+                                                     TuneVLDependentLatency]);
 def SIFIVE_X280 : RISCVProcessorModel<"sifive-x280", SiFive7Model,
                                       [Feature64Bit,
                                        FeatureStdExtI,

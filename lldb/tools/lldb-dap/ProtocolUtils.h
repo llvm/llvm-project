@@ -20,31 +20,40 @@
 
 namespace lldb_dap {
 
+/// Converts a LLDB module to a DAP protocol module for use in `module events or
+/// request.
+///
+/// \param[in] target
+///     The target that has the module
+///
+/// \param[in] module
+///     A LLDB module object to convert into a protocol module
+///
+/// \param[in] id_only
+///     Only initialize the module ID in the return type. This is used when
+///     sending a "removed" module event.
+///
+/// \return
+///     A `protocol::Module` that follows the formal Module
+///     definition outlined by the DAP protocol.
+std::optional<protocol::Module> CreateModule(const lldb::SBTarget &target,
+                                             lldb::SBModule &module,
+                                             bool id_only = false);
+
 /// Create a "Source" JSON object as described in the debug adapter definition.
 ///
 /// \param[in] file
 ///     The SBFileSpec to use when populating out the "Source" object
 ///
 /// \return
-///     A "Source" JSON object that follows the formal JSON
+///     An optional "Source" JSON object that follows the formal JSON
 ///     definition outlined by Microsoft.
-protocol::Source CreateSource(const lldb::SBFileSpec &file);
-
-/// Create a "Source" JSON object as described in the debug adapter definition.
-///
-/// \param[in] address
-///     The address to use when populating out the "Source" object.
-///
-/// \param[in] target
-///     The target that has the address.
-///
-/// \return
-///     A "Source" JSON object that follows the formal JSON
-///     definition outlined by Microsoft.
-protocol::Source CreateSource(lldb::SBAddress address, lldb::SBTarget &target);
+std::optional<protocol::Source> CreateSource(const lldb::SBFileSpec &file);
 
 /// Checks if the given source is for assembly code.
 bool IsAssemblySource(const protocol::Source &source);
+
+bool DisplayAssemblySource(lldb::SBDebugger &debugger, lldb::SBAddress address);
 
 /// Get the address as a 16-digit hex string, e.g. "0x0000000000012345"
 std::string GetLoadAddressString(const lldb::addr_t addr);
@@ -86,6 +95,16 @@ std::vector<protocol::Thread> GetThreads(lldb::SBProcess process,
 ///     the formal JSON definition outlined by Microsoft.
 protocol::ExceptionBreakpointsFilter
 CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp);
+
+/// Converts a size in bytes to a human-readable string format.
+///
+/// \param[in] debug_size
+///     Size of the debug information in bytes (uint64_t).
+///
+/// \return
+///     A string representing the size in a readable format (e.g., "1 KB",
+///     "2 MB").
+std::string ConvertDebugInfoSizeToString(uint64_t debug_size);
 
 } // namespace lldb_dap
 

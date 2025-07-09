@@ -18,11 +18,9 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Affine/Utils.h"
-#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Debug.h"
 
@@ -115,13 +113,16 @@ static bool doubleBuffer(Value oldMemRef, AffineForOp forOp) {
 
   // replaceAllMemRefUsesWith will succeed unless the forOp body has
   // non-dereferencing uses of the memref (dealloc's are fine though).
-  if (failed(replaceAllMemRefUsesWith(
-          oldMemRef, newMemRef,
-          /*extraIndices=*/{ivModTwoOp},
-          /*indexRemap=*/AffineMap(),
-          /*extraOperands=*/{},
-          /*symbolOperands=*/{},
-          /*domOpFilter=*/&*forOp.getBody()->begin()))) {
+  auto userFilterFn = [&](Operation *user) {
+    auto domInfo = std::make_unique<DominanceInfo>(
+        forOp->getParentOfType<FunctionOpInterface>());
+    return domInfo->dominates(&*forOp.getBody()->begin(), user);
+  };
+  if (failed(replaceAllMemRefUsesWith(oldMemRef, newMemRef,
+                                      /*extraIndices=*/{ivModTwoOp},
+                                      /*indexRemap=*/AffineMap(),
+                                      /*extraOperands=*/{},
+                                      /*symbolOperands=*/{}, userFilterFn))) {
     LLVM_DEBUG(
         forOp.emitError("memref replacement for double buffering failed"));
     ivModTwoOp.erase();
