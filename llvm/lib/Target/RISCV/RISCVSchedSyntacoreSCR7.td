@@ -245,6 +245,9 @@ multiclass SCR7_Unsupported {
   defm : UnsupportedSchedSFB;
   defm : UnsupportedSchedV;
   defm : UnsupportedSchedXsfvcp;
+  defm : UnsupportedSchedXSfvfwmaccqqq;
+  defm : UnsupportedSchedXSfvqmaccdod;
+  defm : UnsupportedSchedXSfvqmaccqoq;
   defm : UnsupportedSchedZabha;
   defm : UnsupportedSchedZfa;
   defm : UnsupportedSchedZfhmin;
