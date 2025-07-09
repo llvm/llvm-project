@@ -303,6 +303,12 @@ void populateVectorRankReducingFMAPattern(RewritePatternSet &patterns);
 void populateVectorToFromElementsToShuffleTreePatterns(
     RewritePatternSet &patterns, PatternBenefit benefit = 1);
 
+/// TODO
+void populateVectorContractToMatrixMultiply(RewritePatternSet &patterns);
+
+/// TODO
+void populateVectorTransposeToFlatTranspose(RewritePatternSet &patterns);
+
 } // namespace vector
 } // namespace mlir
 
