@@ -206,7 +206,7 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
     SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
         CallsiteSamples);
     for (const auto &CS : SortedCallsiteSamples.get()) {
-      for (const auto& FuncSample : llvm::make_second_range(CS->second)) {
+      for (const auto &FuncSample : llvm::make_second_range(CS->second)) {
         OS.indent(Indent + 2);
         OS << CS->first << ": inlined callee: " << FuncSample.getFunction()
            << ": ";

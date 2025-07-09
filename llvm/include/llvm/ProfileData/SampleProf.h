@@ -62,7 +62,7 @@ enum class sampleprof_error {
   uncompress_failed,
   zlib_unavailable,
   hash_mismatch,
-  illegal_line_offset,
+  illegal_line_offset
 };
 
 inline std::error_code make_error_code(sampleprof_error E) {
