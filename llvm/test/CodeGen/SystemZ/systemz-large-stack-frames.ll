@@ -1,4 +1,3 @@
-; REQUIRES: asserts
 ; Used to fail with: LLVM ERROR: Error while trying to spill R5D from class ADDR64Bit: Cannot scavenge register without an emergency spill slot!
 
 
