@@ -477,10 +477,7 @@ private:
   template <class _Dp, bool _IC>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 friend __bit_iterator<_Dp, false> __copy_unaligned(
       __bit_iterator<_Dp, _IC> __first, __bit_iterator<_Dp, _IC> __last, __bit_iterator<_Dp, false> __result);
-  template <class _Dp, bool _IC>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 friend pair<__bit_iterator<_Dp, _IC>, __bit_iterator<_Dp, false> >
-  __copy_impl::operator()(
-      __bit_iterator<_Dp, _IC> __first, __bit_iterator<_Dp, _IC> __last, __bit_iterator<_Dp, false> __result) const;
+  friend struct __copy_impl;
   template <class _Dp, bool _IC>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 friend __bit_iterator<_Dp, false> __copy_backward_aligned(
       __bit_iterator<_Dp, _IC> __first, __bit_iterator<_Dp, _IC> __last, __bit_iterator<_Dp, false> __result);
