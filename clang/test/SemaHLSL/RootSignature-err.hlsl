@@ -131,6 +131,11 @@ void basic_validation_3() {}
 [RootSignature("DescriptorTable(UAV(u0, numDescriptors = 0), Sampler(s0, numDescriptors = 0))")]
 void basic_validation_4() {}
 
-// expected-error@+1 {{value must be in the range [0, 16]}}
+// expected-error@+2 {{value must be in the range [0, 16]}}
+// expected-error@+1 {{value must be in the range [-16.000000, 15.990000]}}
 [RootSignature("StaticSampler(s0, maxAnisotropy = 17, mipLODBias = -16.000001)")]
 void basic_validation_5() {}
+
+// expected-error@+1 {{value must be in the range [-16.000000, 15.990000]}}
+[RootSignature("StaticSampler(s0, mipLODBias = 15.990001)")]
+void basic_validation_6() {}

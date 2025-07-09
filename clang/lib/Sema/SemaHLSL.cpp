@@ -1093,6 +1093,14 @@ bool SemaHLSL::handleRootSignatureElements(
         << LowerBound << UpperBound;
   };
 
+  auto ReportFloatError = [this, &HadError](SourceLocation Loc,
+                                            float LowerBound,
+                                            float UpperBound) {
+    HadError = true;
+    this->Diag(Loc, diag::err_hlsl_invalid_rootsig_value)
+        << std::to_string(LowerBound) << std::to_string(UpperBound);
+  };
+
   auto VerifyRegister = [ReportError](SourceLocation Loc, uint32_t Register) {
     if (!llvm::hlsl::rootsig::verifyRegisterValue(Register))
       ReportError(Loc, 0, 0xfffffffe);
@@ -1126,6 +1134,8 @@ bool SemaHLSL::handleRootSignatureElements(
 
       if (16 < Sampler->MaxAnisotropy)
         ReportError(Loc, 0, 16);
+      if (!llvm::hlsl::rootsig::verifyMipLODBias(Sampler->MipLODBias))
+        ReportFloatError(Loc, -16.f, 15.99);
     } else if (const auto *Clause =
                    std::get_if<llvm::hlsl::rootsig::DescriptorTableClause>(
                        &Elem)) {
