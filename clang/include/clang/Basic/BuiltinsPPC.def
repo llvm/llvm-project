@@ -62,6 +62,16 @@
 // corresponding 4 positive/negative multiply and positive/negative accumulate
 // built-in with the same ID concated with posfix [nn|np|pn|pp].
 // This avoids repeating the TYPES and FEATURE in the macro expression.
+// eg.
+//   UNALIASED_CUSTOM_MMA_BUILTIN(mma_xvf16ger2, "vW512*VV",
+//                                "mma,paired-vector-memops")
+// Will generate built-ins:
+//    * __builtin_mma_xvf16ger2()
+//    * __builtin_mma_xvf16ger2nn()
+//    * __builtin_mma_xvf16ger2np()
+//    * __builtin_mma_xvf16ger2pn()
+//    * __builtin_mma_xvf16ger2nn()
+// All with the same TYPES and FEATURE.
 #define UNALIASED_CUSTOM_MMA_BUILTIN(ID, TYPES, FEATURE)                       \
   UNALIASED_CUSTOM_BUILTIN(ID, TYPES, false, FEATURE)                          \
   UNALIASED_CUSTOM_BUILTIN(ID##nn, TYPES, true, FEATURE)                       \
