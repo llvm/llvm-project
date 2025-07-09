@@ -856,7 +856,7 @@ mlir_c_api_cc_library(
         ":TransformDialectTransforms",
     ],
 )
-
+        
 mlir_c_api_cc_library(
     name = "CAPIMLProgram",
     srcs = [
@@ -11546,6 +11546,44 @@ cc_library(
         ":TransformDialect",
         ":TransformDialectInterfaces",
         ":TransformPDLExtensionOpsIncGen",
+        "//llvm:Support",
+    ],
+)
+
+td_library(
+    name = "TransformTuneExtensionTdFiles",
+    srcs = glob(["include/mlir/Dialect/Transform/TuneExtension/*.td"]),
+    deps = [
+        ":BuiltinDialectTdFiles",
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "TransformTuneExtensionOpsIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/Transform/TuneExtension/TuneExtensionOps.h.inc": [
+            "-gen-op-decls",
+        ],
+        "include/mlir/Dialect/Transform/TuneExtension/TuneExtensionOps.cpp.inc": [
+            "-gen-op-defs",
+        ],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Transform/TuneExtension/TuneExtensionOps.td",
+    deps = [":TransformTuneExtensionTdFiles"],
+)
+
+cc_library(
+    name = "TransformTuneExtension",
+    srcs = glob(["lib/Dialect/Transform/TuneExtension/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Transform/TuneExtension/*.h"]),
+    deps = [
+        ":IR",
+        ":TransformDialect",
+        ":TransformDialectInterfaces",
+        ":TransformOpsIncGen",
+        ":TransformTuneExtensionOpsIncGen",
         "//llvm:Support",
     ],
 )
