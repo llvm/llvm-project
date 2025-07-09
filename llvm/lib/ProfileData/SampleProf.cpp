@@ -205,11 +205,13 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
     OS << "Samples collected in inlined callsites {\n";
     SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
         CallsiteSamples);
-    for (const auto &CS : SortedCallsiteSamples.get()) {
-      for (const auto &FuncSample : llvm::make_second_range(CS->second)) {
+    for (const auto *Element : SortedCallsiteSamples.get()) {
+      // Element is a pointer to a pair of LineLocation and FunctionSamplesMap.
+      const auto &[Loc, FunctionSampleMap] = *Element;
+      for (const FunctionSamples &FuncSample :
+           llvm::make_second_range(FunctionSampleMap)) {
         OS.indent(Indent + 2);
-        OS << CS->first << ": inlined callee: " << FuncSample.getFunction()
-           << ": ";
+        OS << Loc << ": inlined callee: " << FuncSample.getFunction() << ": ";
         FuncSample.print(OS, Indent + 4);
       }
     }
