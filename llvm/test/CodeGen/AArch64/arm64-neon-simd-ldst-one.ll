@@ -614,11 +614,16 @@ entry:
 }
 
 define void @test_vst1_lane0_s16(ptr %a, <4 x i16> %b) {
-; CHECK-LABEL: test_vst1_lane0_s16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    str h0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-GI-LABEL: test_vst1_lane0_s16:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    str h0, [x0]
+; CHECK-GI-NEXT:    ret
+;
+; CHECK-SD-LABEL: test_vst1_lane0_s16:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    str h0, [x0]
+; CHECK-SD-NEXT:    ret
 entry:
   %0 = extractelement <4 x i16> %b, i32 0
   store i16 %0, ptr %a, align 2
@@ -638,11 +643,16 @@ entry:
 }
 
 define void @test_vst1_lane0_s32(ptr %a, <2 x i32> %b) {
-; CHECK-LABEL: test_vst1_lane0_s32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    str s0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-GI-LABEL: test_vst1_lane0_s32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    str s0, [x0]
+; CHECK-GI-NEXT:    ret
+;
+; CHECK-SD-LABEL: test_vst1_lane0_s32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    str s0, [x0]
+; CHECK-SD-NEXT:    ret
 entry:
   %0 = extractelement <2 x i32> %b, i32 0
   store i32 %0, ptr %a, align 4
@@ -673,11 +683,16 @@ entry:
 }
 
 define void @test_vst1_lane0_f32(ptr %a, <2 x float> %b) {
-; CHECK-LABEL: test_vst1_lane0_f32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    str s0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-GI-LABEL: test_vst1_lane0_f32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    str s0, [x0]
+; CHECK-GI-NEXT:    ret
+;
+; CHECK-SD-LABEL: test_vst1_lane0_f32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    str s0, [x0]
+; CHECK-SD-NEXT:    ret
 entry:
   %0 = extractelement <2 x float> %b, i32 0
   store float %0, ptr %a, align 4

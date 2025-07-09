@@ -31,7 +31,6 @@ define <1 x i32> @test_signed_v1f32_v1i32(<1 x float> %f) {
 ;
 ; CHECK-GI-LABEL: test_signed_v1f32_v1i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    fcvtzs w8, s0
 ; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    ret

@@ -135,6 +135,10 @@ class Source(object):
         return source_dict
 
 
+class NotSupportedError(KeyError):
+    """Raised if a feature is not supported due to its capabilities."""
+
+
 class DebugCommunication(object):
     def __init__(
         self,
@@ -153,7 +157,7 @@ class DebugCommunication(object):
         self.recv_thread = threading.Thread(target=self._read_packet_thread)
         self.process_event_body = None
         self.exit_status: Optional[int] = None
-        self.initialize_body = None
+        self.capabilities: dict[str, Any] = {}
         self.progress_events: list[Event] = []
         self.reverse_requests = []
         self.sequence = 1
@@ -175,9 +179,13 @@ class DebugCommunication(object):
     @classmethod
     def validate_response(cls, command, response):
         if command["command"] != response["command"]:
-            raise ValueError("command mismatch in response")
+            raise ValueError(
+                f"command mismatch in response {command['command']} != {response['command']}"
+            )
         if command["seq"] != response["request_seq"]:
-            raise ValueError("seq mismatch in response")
+            raise ValueError(
+                f"seq mismatch in response {command['seq']} != {response['request_seq']}"
+            )
 
     def _read_packet_thread(self):
         done = False
@@ -300,6 +308,9 @@ class DebugCommunication(object):
             elif event == "breakpoint":
                 # Breakpoint events are sent when a breakpoint is resolved
                 self._update_verified_breakpoints([body["breakpoint"]])
+            elif event == "capabilities":
+                # Update the capabilities with new ones from the event.
+                self.capabilities.update(body["capabilities"])
 
         elif packet_type == "response":
             if packet["command"] == "disconnect":
@@ -397,8 +408,8 @@ class DebugCommunication(object):
                 self.reverse_requests.append(response_or_request)
                 if response_or_request["command"] == "runInTerminal":
                     subprocess.Popen(
-                        response_or_request["arguments"]["args"],
-                        env=response_or_request["arguments"]["env"],
+                        response_or_request["arguments"].get("args"),
+                        env=response_or_request["arguments"].get("env", {}),
                     )
                     self.send_packet(
                         {
@@ -487,13 +498,13 @@ class DebugCommunication(object):
             raise ValueError("didn't get terminated event")
         return event_dict
 
-    def get_initialize_value(self, key):
+    def get_capability(self, key: str):
         """Get a value for the given key if it there is a key/value pair in
-        the "initialize" request response body.
+        the capabilities reported by the adapter.
         """
-        if self.initialize_body and key in self.initialize_body:
-            return self.initialize_body[key]
-        return None
+        if key in self.capabilities:
+            return self.capabilities[key]
+        raise NotSupportedError(key)
 
     def get_threads(self):
         if self.threads is None:
@@ -759,6 +770,9 @@ class DebugCommunication(object):
         return response
 
     def request_restart(self, restartArguments=None):
+        if self.exit_status is not None:
+            raise ValueError("request_restart called after process exited")
+        self.get_capability("supportsRestartRequest")
         command_dict = {
             "command": "restart",
             "type": "request",
@@ -866,7 +880,7 @@ class DebugCommunication(object):
         response = self.send_recv(command_dict)
         if response:
             if "body" in response:
-                self.initialize_body = response["body"]
+                self.capabilities = response["body"]
         return response
 
     def request_launch(
@@ -971,6 +985,7 @@ class DebugCommunication(object):
     def request_stepInTargets(self, frameId):
         if self.exit_status is not None:
             raise ValueError("request_stepInTargets called after process exited")
+        self.get_capability("supportsStepInTargetsRequest")
         args_dict = {"frameId": frameId}
         command_dict = {
             "command": "stepInTargets",
@@ -1039,8 +1054,12 @@ class DebugCommunication(object):
             self._update_verified_breakpoints(response["body"]["breakpoints"])
         return response
 
-    def request_setExceptionBreakpoints(self, filters):
+    def request_setExceptionBreakpoints(
+        self, *, filters: list[str] = [], filter_options: list[dict] = []
+    ):
         args_dict = {"filters": filters}
+        if filter_options:
+            args_dict["filterOptions"] = filter_options
         command_dict = {
             "command": "setExceptionBreakpoints",
             "type": "request",

@@ -26,6 +26,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/OptimizedStructLayout.h"
 #include "llvm/Transforms/Coroutines/ABI.h"
@@ -687,9 +688,8 @@ static DIType *solveDIType(DIBuilder &Builder, Type *Ty,
 static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
                                 FrameDataInfo &FrameData) {
   DISubprogram *DIS = F.getSubprogram();
-  // If there is no DISubprogram for F, it implies the Function are not compiled
-  // with debug info. So we also don't need to generate debug info for the frame
-  // neither.
+  // If there is no DISubprogram for F, it implies the function is compiled
+  // without debug info. So we also don't generate debug info for the frame.
   if (!DIS || !DIS->getUnit() ||
       !dwarf::isCPlusPlus(
           (dwarf::SourceLanguage)DIS->getUnit()->getSourceLanguage()) ||

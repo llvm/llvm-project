@@ -32,6 +32,7 @@ class VOP3b_Profile<ValueType vt> : VOPProfile<[vt, vt, vt, vt]> {
   let HasExtDPP = 0;
 }
 
+let HasExt64BitDPP = 1 in {
 def VOP3b_F32_I1_F32_F32_F32 : VOP3b_Profile<f32>;
 def VOP3b_F64_I1_F64_F64_F64 : VOP3b_Profile<f64>;
 
@@ -48,10 +49,13 @@ class V_MUL_PROF<VOPProfile P> : VOP3_Profile<P> {
   let HasExtDPP = 0;
 }
 
+def V_LSHL_ADD_U64_PROF : VOP3_Profile<VOP_I64_I64_I32_I64>;
+
 def DIV_FIXUP_F32_PROF : VOP3_Profile<VOP_F32_F32_F32_F32> {
   let HasExtVOP3DPP = 0;
   let HasExtDPP = 0;
 }
+} // End HasExt64BitDPP = 1;
 
 //===----------------------------------------------------------------------===//
 // VOP3 INTERP
@@ -319,9 +323,19 @@ let SchedRW = [Write64Bit] in {
 } // End SchedRW = [Write64Bit]
 } // End isReMaterializable = 1
 
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in
 def : GCNPat<
   (i32 (DivergentUnaryFrag<sext> i16:$src)),
   (i32 (V_BFE_I32_e64 i16:$src, (i32 0), (i32 0x10)))
+>;
+
+let True16Predicate = UseRealTrue16Insts in
+def : GCNPat<
+  (i32 (DivergentUnaryFrag<sext> i16:$src)),
+  (i32 (V_BFE_I32_e64
+       (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (i16 (IMPLICIT_DEF)), hi16),
+       (i32 0), (i32 0x10)))
 >;
 
 let isReMaterializable = 1 in {
@@ -423,10 +437,24 @@ def V_INTERP_P1LV_F16 : VOP3Interp <"v_interp_p1lv_f16", VOP3_INTERP16<[f32, f32
 
 } // End SubtargetPredicate = Has16BitInsts, isCommutable = 1
 
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in
 def : GCNPat<
   (i64 (DivergentUnaryFrag<sext> i16:$src)),
     (REG_SEQUENCE VReg_64,
       (i32 (V_BFE_I32_e64 $src, (S_MOV_B32 (i32 0)), (S_MOV_B32 (i32 0x10)))), sub0,
+      (i32 (COPY_TO_REGCLASS
+         (V_ASHRREV_I32_e32 (S_MOV_B32 (i32 0x1f)), (i32 (V_BFE_I32_e64 $src, (S_MOV_B32 (i32 0)), (S_MOV_B32 (i32 0x10))))
+      ), VGPR_32)), sub1)
+>;
+
+let True16Predicate = UseRealTrue16Insts in
+def : GCNPat<
+  (i64 (DivergentUnaryFrag<sext> i16:$src)),
+    (REG_SEQUENCE VReg_64,
+      (i32 (V_BFE_I32_e64
+            (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (i16 (IMPLICIT_DEF)), hi16),
+            (S_MOV_B32 (i32 0)), (S_MOV_B32 (i32 0x10)))), sub0,
       (i32 (COPY_TO_REGCLASS
          (V_ASHRREV_I32_e32 (S_MOV_B32 (i32 0x1f)), (i32 (V_BFE_I32_e64 $src, (S_MOV_B32 (i32 0)), (S_MOV_B32 (i32 0x10))))
       ), VGPR_32)), sub1)
@@ -626,10 +654,6 @@ def VOP3_CVT_SR_F8_F32_Profile : VOP3_Profile<VOPProfile<[i32, f32, i32, f32]>,
   let HasOpSel = 1;
   let HasFP8DstByteSel = 1;
   let HasFP8ByteSel = 0; // It works as a dst-bytesel, but does not have byte_sel operand.
-  let AsmVOP3OpSel = !subst(", $src2_modifiers", "",
-                            getAsmVOP3OpSel<3, HasClamp, HasOMod,
-                                            HasSrc0FloatMods, HasSrc1FloatMods,
-                                            HasSrc2FloatMods>.ret);
   let AsmVOP3Base = !subst(", $src2_modifiers", "",
                     getAsmVOP3Base<NumSrcArgs, HasDst, HasClamp,
                     HasOpSel, HasOMod, IsVOP3P, HasModifiers, HasModifiers, 0/*Src1Mods*/,
@@ -702,7 +726,7 @@ defm V_LSHL_OR_B32 : VOP3Inst <"v_lshl_or_b32", VOP3_Profile<VOP_I32_I32_I32_I32
 // V_LSHL_ADD_U64: D0.u64 = (S0.u64 << S1.u[2:0]) + S2.u64
 // src0 is shifted left by 0-4 (use “0” to get ADD_U64).
 let SubtargetPredicate = HasLshlAddU64Inst in
-defm V_LSHL_ADD_U64 : VOP3Inst <"v_lshl_add_u64", VOP3_Profile<VOP_I64_I64_I32_I64>>;
+defm V_LSHL_ADD_U64 : VOP3Inst <"v_lshl_add_u64", V_LSHL_ADD_U64_PROF>;
 
 let OtherPredicates = [HasFP8ConversionInsts], mayRaiseFPException = 0,
     SchedRW = [WriteFloatCvt] in {
@@ -810,7 +834,7 @@ def : GCNPat<
  (DivergentBinFrag<mul> i32:$src0, IsPow2Plus1:$src1),
  (V_LSHL_ADD_U32_e64 i32:$src0, (i32 (Log2_32 imm:$src1)), i32:$src0)>;
 
-let SubtargetPredicate = isGFX940Plus in
+let SubtargetPredicate = HasLshlAddU64Inst in
 def : GCNPat<
   (ThreeOpFrag<shl_0_to_4, add> i64:$src0, i32:$src1, i64:$src2),
   (V_LSHL_ADD_U64_e64 VSrc_b64:$src0, VSrc_b32:$src1, VSrc_b64:$src2)
@@ -1066,12 +1090,10 @@ class VOP3_CVT_SCALE_FP4_F16BF16_TiedInput_Profile<VOPProfile P> : VOP3_Profile<
   let HasSrc2 = 0;
   let HasSrc2Mods = 1;
   let HasOpSel = 1;
-  let AsmVOP3OpSel = !subst(", $src2_modifiers", "",
-                            getAsmVOP3OpSel<3, HasClamp, HasOMod,
-                                            HasSrc0FloatMods, HasSrc1FloatMods,
-                                            HasSrc2FloatMods>.ret);
+  let Asm64 = !subst(", $src2_modifiers", "", AsmVOP3Base);
   let HasExtVOP3DPP = 0;
   let HasFP8DstByteSel = 1;
+  let HasFP8ByteSel = 0;
 }
 
 class VOP3_CVT_SCALE_SR_PK_F4_F16BF16_TiedInput_Profile<ValueType Src0Ty> :
@@ -1132,6 +1154,9 @@ class VOP3_CVT_SCALEF32_PK_F864_Profile<VOPProfile P> : VOP3_Profile<P> {
   let HasModifiers = 0;
   let HasSrc0IntMods = 0;
   let HasSrc1IntMods = 0;
+  let HasSrc0FloatMods = 0;
+  let HasSrc1FloatMods = 0;
+  let HasSrc2FloatMods = 0;
   let HasOMod = 0;
   let HasOpSel = 0;
   let HasClamp = 0;
@@ -1568,9 +1593,12 @@ let SubtargetPredicate = HasPseudoScalarTrans in {
   def : PseudoScalarPatF16<any_amdgcn_sqrt, V_S_SQRT_F16_e64>;
 }
 
+let HasModifiers = 1 in
+def ASHR_PK_I8_Profile : VOP3_Profile<VOP_I16_I32_I32_I32, VOP3_OPSEL_ONLY>;
+
 let SubtargetPredicate = HasAshrPkInsts, isReMaterializable = 1 in {
-  defm V_ASHR_PK_I8_I32 : VOP3Inst<"v_ashr_pk_i8_i32", VOP3_Profile<VOP_I16_I32_I32_I32, VOP3_OPSEL_ONLY>, int_amdgcn_ashr_pk_i8_i32>;
-  defm V_ASHR_PK_U8_I32 : VOP3Inst<"v_ashr_pk_u8_i32", VOP3_Profile<VOP_I16_I32_I32_I32, VOP3_OPSEL_ONLY>, int_amdgcn_ashr_pk_u8_i32>;
+  defm V_ASHR_PK_I8_I32 : VOP3Inst<"v_ashr_pk_i8_i32", ASHR_PK_I8_Profile, int_amdgcn_ashr_pk_i8_i32>;
+  defm V_ASHR_PK_U8_I32 : VOP3Inst<"v_ashr_pk_u8_i32", ASHR_PK_I8_Profile, int_amdgcn_ashr_pk_u8_i32>;
 } // End SubtargetPredicate = HasAshrPkInsts, isReMaterializable = 1
 
 class AshrPkI8Pat<VOP3_Pseudo inst, int lo, int hi>: GCNPat<
@@ -1865,6 +1893,9 @@ let AssemblerPredicate = isGFX11Plus in {
   def : AMDGPUMnemonicAlias<"v_xor_add_u32", "v_xad_u32">;
 }
 
+// These instructions differ from GFX12 variant by supporting DPP:
+defm V_LSHL_ADD_U64                  : VOP3Only_Realtriple_gfx1250<0x252>;
+
 //===----------------------------------------------------------------------===//
 // GFX10.
 //===----------------------------------------------------------------------===//
@@ -1985,16 +2016,14 @@ defm V_DIV_FIXUP_F16 :
 defm V_ADD_NC_U16      : VOP3OpSel_Real_gfx10<0x303>;
 defm V_SUB_NC_U16      : VOP3OpSel_Real_gfx10<0x304>;
 
-// FIXME-GFX10-OPSEL: Need to add "selective" opsel support to some of these
-// (they do not support SDWA or DPP).
-defm V_MUL_LO_U16      : VOP3_Real_gfx10_with_name<0x305, "V_MUL_LO_U16", "v_mul_lo_u16">;
-defm V_LSHRREV_B16     : VOP3_Real_gfx10_with_name<0x307, "V_LSHRREV_B16", "v_lshrrev_b16">;
-defm V_ASHRREV_I16     : VOP3_Real_gfx10_with_name<0x308, "V_ASHRREV_I16", "v_ashrrev_i16">;
-defm V_MAX_U16         : VOP3_Real_gfx10_with_name<0x309, "V_MAX_U16", "v_max_u16">;
-defm V_MAX_I16         : VOP3_Real_gfx10_with_name<0x30a, "V_MAX_I16", "v_max_i16">;
-defm V_MIN_U16         : VOP3_Real_gfx10_with_name<0x30b, "V_MIN_U16", "v_min_u16">;
-defm V_MIN_I16         : VOP3_Real_gfx10_with_name<0x30c, "V_MIN_I16", "v_min_i16">;
-defm V_LSHLREV_B16     : VOP3_Real_gfx10_with_name<0x314, "V_LSHLREV_B16", "v_lshlrev_b16">;
+defm V_MUL_LO_U16      : VOP3OpSel_Real_gfx10_with_name<0x305, "V_MUL_LO_U16_opsel", "v_mul_lo_u16">;
+defm V_LSHRREV_B16     : VOP3OpSel_Real_gfx10_with_name<0x307, "V_LSHRREV_B16_opsel", "v_lshrrev_b16">;
+defm V_ASHRREV_I16     : VOP3OpSel_Real_gfx10_with_name<0x308, "V_ASHRREV_I16_opsel", "v_ashrrev_i16">;
+defm V_MAX_U16         : VOP3OpSel_Real_gfx10_with_name<0x309, "V_MAX_U16_opsel", "v_max_u16">;
+defm V_MAX_I16         : VOP3OpSel_Real_gfx10_with_name<0x30a, "V_MAX_I16_opsel", "v_max_i16">;
+defm V_MIN_U16         : VOP3OpSel_Real_gfx10_with_name<0x30b, "V_MIN_U16_opsel", "v_min_u16">;
+defm V_MIN_I16         : VOP3OpSel_Real_gfx10_with_name<0x30c, "V_MIN_I16_opsel", "v_min_i16">;
+defm V_LSHLREV_B16     : VOP3OpSel_Real_gfx10_with_name<0x314, "V_LSHLREV_B16_opsel", "v_lshlrev_b16">;
 defm V_PERMLANE16_B32  : VOP3OpSel_Real_gfx10<0x377>;
 defm V_PERMLANEX16_B32 : VOP3OpSel_Real_gfx10<0x378>;
 

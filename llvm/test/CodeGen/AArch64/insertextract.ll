@@ -1478,11 +1478,16 @@ entry:
 }
 
 define float @extract_v2f32_0(<2 x float> %a, i32 %c) {
-; CHECK-LABEL: extract_v2f32_0:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: extract_v2f32_0:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v2f32_0:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 killed $d0
+; CHECK-GI-NEXT:    ret
 entry:
   %d = extractelement <2 x float> %a, i32 0
   ret float %d
@@ -1681,11 +1686,16 @@ entry:
 }
 
 define half @extract_v4f16_0(<4 x half> %a, i32 %c) {
-; CHECK-LABEL: extract_v4f16_0:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: extract_v4f16_0:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v4f16_0:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $h0 killed $h0 killed $d0
+; CHECK-GI-NEXT:    ret
 entry:
   %d = extractelement <4 x half> %a, i32 0
   ret half %d
@@ -2149,11 +2159,16 @@ entry:
 }
 
 define i32 @extract_v2i32_0(<2 x i32> %a, i32 %c) {
-; CHECK-LABEL: extract_v2i32_0:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    fmov w0, s0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: extract_v2i32_0:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    fmov w0, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v2i32_0:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
 entry:
   %d = extractelement <2 x i32> %a, i32 0
   ret i32 %d

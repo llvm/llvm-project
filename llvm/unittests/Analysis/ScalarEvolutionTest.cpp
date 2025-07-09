@@ -39,7 +39,8 @@ protected:
   std::unique_ptr<DominatorTree> DT;
   std::unique_ptr<LoopInfo> LI;
 
-  ScalarEvolutionsTest() : M("", Context), TLII(), TLI(TLII) {}
+  ScalarEvolutionsTest()
+      : M("", Context), TLII(M.getTargetTriple()), TLI(TLII) {}
 
   ScalarEvolution buildSE(Function &F) {
     AC.reset(new AssumptionCache(F));

@@ -5024,6 +5024,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
     // PowerPC -- Matrix Multiply Assist
     case clang::BuiltinType::VectorPair:
     case clang::BuiltinType::VectorQuad:
+    case clang::BuiltinType::DMR1024:
       break;
 
     // ARM -- Scalable Vector Extension

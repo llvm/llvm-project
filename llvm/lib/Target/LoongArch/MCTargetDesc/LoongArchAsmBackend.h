@@ -18,7 +18,6 @@
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 
@@ -30,13 +29,17 @@ class LoongArchAsmBackend : public MCAsmBackend {
   bool Is64Bit;
   const MCTargetOptions &TargetOptions;
   DenseMap<MCSection *, const MCSymbolRefExpr *> SecToAlignSym;
+  // Temporary symbol used to check whether a PC-relative fixup is resolved.
+  MCSymbol *PCRelTemp = nullptr;
+
+  bool isPCRelFixupResolved(const MCSymbol *SymA, const MCFragment &F);
 
 public:
   LoongArchAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
                       const MCTargetOptions &Options);
 
   bool addReloc(const MCFragment &, const MCFixup &, const MCValue &,
-                uint64_t &FixedValue, bool IsResolved) override;
+                uint64_t &FixedValue, bool IsResolved);
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   MutableArrayRef<char> Data, uint64_t Value,
@@ -50,15 +53,11 @@ public:
   bool shouldInsertFixupForCodeAlign(MCAssembler &Asm,
                                      MCAlignFragment &AF) override;
 
-  bool shouldForceRelocation(const MCFixup &Fixup,
-                             const MCValue &Target) override;
+  bool shouldForceRelocation(const MCFixup &Fixup, const MCValue &Target);
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
-
-  void relaxInstruction(MCInst &Inst,
-                        const MCSubtargetInfo &STI) const override {}
 
   bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
                           bool &WasRelaxed) const override;
