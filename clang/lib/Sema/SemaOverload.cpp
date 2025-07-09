@@ -1535,6 +1535,10 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
         return F->getRefQualifier() == RQ_None &&
                !F->isExplicitObjectMemberFunction();
       };
+
+      // If one of the two function has no ref qualifier and the other one
+      // has a rvalue reference object, we need to adjust their types
+      // so that both functions are rvalue-reference qualified.
       if (!IsImplicitWithNoRefQual(Old) && IsImplicitWithNoRefQual(New) &&
           OldObjectType->isRValueReferenceType())
         NewObjectType =
