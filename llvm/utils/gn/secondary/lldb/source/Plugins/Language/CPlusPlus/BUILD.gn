@@ -39,6 +39,7 @@ static_library("CPlusPlus") {
     "CPlusPlusNameParser.cpp",
     "Coroutines.cpp",
     "CxxStringTypes.cpp",
+    "Generic.cpp",
     "GenericBitset.cpp",
     "GenericOptional.cpp",
     "LibCxx.cpp",
