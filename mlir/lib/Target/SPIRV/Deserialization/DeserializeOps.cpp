@@ -45,12 +45,11 @@ Value spirv::Deserializer::getValue(uint32_t id) {
     return opBuilder.create<spirv::ConstantOp>(unknownLoc, constInfo->second,
                                                constInfo->first);
   }
-  if (std::optional<std::pair<uint32_t, Type>> constCompositeReplicateInfo =
+  if (std::optional<std::pair<Attribute, Type>> constCompositeReplicateInfo =
           getConstantCompositeReplicate(id)) {
-    uint32_t constantId = constCompositeReplicateInfo->first;
-    Value constantValue = getValue(constantId);
     return opBuilder.create<spirv::EXTConstantCompositeReplicateOp>(
-        unknownLoc, constCompositeReplicateInfo->second, constantValue);
+        unknownLoc, constCompositeReplicateInfo->second,
+        constCompositeReplicateInfo->first);
   }
   if (auto varOp = getGlobalVariable(id)) {
     auto addressOfOp = opBuilder.create<spirv::AddressOfOp>(

@@ -1109,43 +1109,38 @@ uint32_t Serializer::prepareConstantFp(Location loc, FloatAttr floatAttr,
   return resultID;
 }
 
-uint32_t Serializer::prepareConstantCompositeReplicate(
-    spirv::EXTConstantCompositeReplicateOp op) {
-  if (uint32_t id = getValueID(op.getResult())) {
+uint32_t Serializer::prepareConstantCompositeReplicate(Location loc,
+                                                       Type resultType,
+                                                       Attribute valueAttr) {
+
+  std::pair<Attribute, Type> valueTypePair{valueAttr, resultType};
+  if (uint32_t id = getConstantCompositeReplicateID(valueTypePair)) {
     return id;
   }
 
   uint32_t typeID = 0;
-  if (failed(processType(op.getLoc(), op.getType(), typeID))) {
+  if (failed(processType(loc, resultType, typeID))) {
     return 0;
   }
 
-  Operation *definingOp = op.getConstant().getDefiningOp();
-  if (!definingOp) {
-    emitError(op.getLoc(), "op defining splat value not found");
-    return 0;
-  }
+  auto elementType = dyn_cast<CompositeType>(resultType).getElementType(0);
+  Type valueType = dyn_cast<TypedAttr>(valueAttr).getType();
 
-  uint32_t operandID;
-  if (auto constantOp = dyn_cast_or_null<spirv::ConstantOp>(definingOp)) {
-    operandID = getConstantID(constantOp.getValue());
-
-  } else if (auto constantCompositeReplicateOp =
-                 dyn_cast_or_null<spirv::EXTConstantCompositeReplicateOp>(
-                     definingOp)) {
-    operandID = prepareConstantCompositeReplicate(constantCompositeReplicateOp);
+  uint32_t constandID;
+  if (elementType == valueType) {
+    constandID = prepareConstant(loc, elementType, valueAttr);
   } else {
-    emitError(op.getLoc(), "operand op type not supported");
-    return 0;
+    constandID = prepareConstantCompositeReplicate(loc, elementType, valueAttr);
   }
 
   uint32_t resultID = getNextID();
-  SmallVector<uint32_t> operands = {typeID, resultID, operandID};
+  SmallVector<uint32_t> operands = {typeID, resultID, constandID};
 
   encodeInstructionInto(typesGlobalValues,
                         spirv::Opcode::OpConstantCompositeReplicateEXT,
                         operands);
 
+  constCompositeReplicateIDMap[valueTypePair] = resultID;
   return resultID;
 }
 

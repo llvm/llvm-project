@@ -68,7 +68,8 @@ LogicalResult Serializer::processConstantOp(spirv::ConstantOp op) {
 
 LogicalResult Serializer::processConstantCompositeReplicateOp(
     spirv::EXTConstantCompositeReplicateOp op) {
-  if (uint32_t resultID = prepareConstantCompositeReplicate(op)) {
+  if (uint32_t resultID = prepareConstantCompositeReplicate(
+          op.getLoc(), op.getType(), op.getValue())) {
     valueIDMap[op.getResult()] = resultID;
     return success();
   }

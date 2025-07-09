@@ -772,60 +772,46 @@ void mlir::spirv::AddressOfOp::getAsmResultNames(
 ParseResult
 spirv::EXTConstantCompositeReplicateOp::parse(OpAsmParser &parser,
                                               OperationState &result) {
-  OpAsmParser::UnresolvedOperand constOperand;
-  Type resultType;
-  if (parser.parseOperand(constOperand) || parser.parseColonType(resultType)) {
-    return failure();
-  }
 
-  if (isa<TensorType>(resultType)) {
+  Attribute value;
+  StringRef valueAttrName =
+      spirv::EXTConstantCompositeReplicateOp::getValueAttrName(result.name);
+  Type resultType;
+
+  if (parser.parseLSquare() ||
+      parser.parseAttribute(value, valueAttrName, result.attributes) ||
+      parser.parseRSquare() || parser.parseColonType(resultType))
+    return failure();
+
+  if (isa<NoneType, TensorType>(resultType))
     if (parser.parseColonType(resultType))
       return failure();
-  }
 
-  auto compositeType = dyn_cast_or_null<spirv::CompositeType>(resultType);
-  if (!compositeType)
-    return parser.emitError(parser.getCurrentLocation(),
-                            "result is not a composite type");
+  if (isa<TensorArmType>(resultType))
+    if (parser.parseOptionalColon().succeeded())
+      if (parser.parseType(resultType))
+        return failure();
 
-  Type constType = compositeType.getElementType(0);
-  while (auto type = dyn_cast<spirv::ArrayType>(constType)) {
-    constType = type.getElementType();
-  }
-
-  if (parser.resolveOperand(constOperand, constType, result.operands))
-    return failure();
-
-  return parser.addTypeToList(compositeType, result.types);
+  return parser.addTypeToList(resultType, result.types);
 }
 
 void spirv::EXTConstantCompositeReplicateOp::print(OpAsmPrinter &printer) {
-  printer << ' ' << getConstant() << " : " << getType();
+  printer << " [" << getValue() << "] : " << getType();
 }
 
 LogicalResult spirv::EXTConstantCompositeReplicateOp::verify() {
-  auto compositeType = dyn_cast<spirv::CompositeType>(getType());
-  if (!compositeType)
-    return emitError("result type must be a composite type, but provided ")
-           << getType();
+  Type valueType = dyn_cast<TypedAttr>(getValue()).getType();
+  Type compositeElementType =
+      dyn_cast<spirv::CompositeType>(getType()).getElementType(0);
+  while (compositeElementType != valueType &&
+         isa<spirv::CompositeType>(compositeElementType)) {
+    compositeElementType =
+        cast<spirv::CompositeType>(compositeElementType).getElementType(0);
+  }
 
-  Operation *constantDefiningOp = getConstant().getDefiningOp();
-  if (!constantDefiningOp)
-    return this->emitOpError("op defining the splat constant not found");
-
-  auto constantOp = dyn_cast_or_null<spirv::ConstantOp>(constantDefiningOp);
-  auto constantCompositeReplicateOp =
-      dyn_cast_or_null<spirv::EXTConstantCompositeReplicateOp>(
-          constantDefiningOp);
-
-  if (!constantOp && !constantCompositeReplicateOp)
-    return this->emitOpError(
-        "op defining the splat constant is not a spirv.Constant or a "
-        "spirv.EXT.ConstantCompositeReplicate");
-
-  if (constantOp)
-    return verifyConstantType(constantOp, constantOp.getValueAttr(),
-                              constantOp.getType());
+  if (compositeElementType != valueType)
+    return emitError("expected splat element type")
+           << compositeElementType << ", but got: " << valueType;
 
   return success();
 }
@@ -1940,8 +1926,8 @@ spirv::EXTSpecConstantCompositeReplicateOp::parse(OpAsmParser &parser,
                                                   OperationState &result) {
 
   StringAttr compositeName;
-  const char *attrName = "spec_const";
   FlatSymbolRefAttr specConstRef;
+  const char *attrName = "spec_const";
   NamedAttrList attrs;
   Type type;
 
@@ -1985,10 +1971,10 @@ LogicalResult spirv::EXTSpecConstantCompositeReplicateOp::verify() {
   auto constituentSpecConstOp = dyn_cast<spirv::SpecConstantOp>(constituentOp);
 
   Type constituentType = constituentSpecConstOp.getDefaultValue().getType();
-  Type compositeElemType = compositeType.getElementType(0);
-  if (constituentType != compositeElemType)
+  Type compositeElementType = compositeType.getElementType(0);
+  if (constituentType != compositeElementType)
     return emitError("constituent has incorrect type: expected ")
-           << compositeElemType << ", but provided " << constituentType;
+           << compositeElementType << ", but provided " << constituentType;
 
   return success();
 }

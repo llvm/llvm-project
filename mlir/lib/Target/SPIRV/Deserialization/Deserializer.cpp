@@ -678,7 +678,7 @@ spirv::Deserializer::getConstant(uint32_t id) {
   return constIt->getSecond();
 }
 
-std::optional<std::pair<uint32_t, Type>>
+std::optional<std::pair<Attribute, Type>>
 spirv::Deserializer::getConstantCompositeReplicate(uint32_t id) {
   if (auto it = constantCompositeReplicateMap.find(id);
       it != constantCompositeReplicateMap.end())
@@ -1589,19 +1589,24 @@ LogicalResult spirv::Deserializer::processConstantCompositeReplicateEXT(
 
   std::optional<std::pair<Attribute, Type>> constantInfo =
       getConstant(constantID);
-  std::optional<std::pair<uint32_t, Type>> replicatedConstantCompositeInfo =
-      getConstantCompositeReplicate(constantID);
-  if (!constantInfo && !replicatedConstantCompositeInfo) {
-    return emitError(unknownLoc,
-                     "OpConstantCompositeReplicateEXT operand <id> ")
-           << constantID
-           << " must come from a normal constant or a "
-              "OpConstantCompositeReplicateEXT";
+  if (constantInfo.has_value()) {
+    constantCompositeReplicateMap.try_emplace(
+        resultID, constantInfo.value().first, resultType);
+    return success();
   }
 
-  constantCompositeReplicateMap.try_emplace(resultID, constantID, resultType);
+  std::optional<std::pair<Attribute, Type>> replicatedConstantCompositeInfo =
+      getConstantCompositeReplicate(constantID);
+  if (replicatedConstantCompositeInfo.has_value()) {
+    constantCompositeReplicateMap.try_emplace(
+        resultID, replicatedConstantCompositeInfo.value().first, resultType);
+    return success();
+  }
 
-  return success();
+  return emitError(unknownLoc, "OpConstantCompositeReplicateEXT operand <id> ")
+         << constantID
+         << " must come from a normal constant or a "
+            "OpConstantCompositeReplicateEXT";
 }
 
 LogicalResult

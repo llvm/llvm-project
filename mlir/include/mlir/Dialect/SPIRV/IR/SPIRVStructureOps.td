@@ -144,21 +144,17 @@ def SPIRV_EXTConstantCompositeReplicateOp : SPIRV_ExtVendorOp<"ConstantComposite
   }];
 
   let description = [{
-    Represents a splat composite constant i.e., all element of composite constant 
-    have the same value. The splat value must come from a non-specialization constant
-    instruction.
+    Represents a splat composite constant i.e., all elements of composite constant
+    have the same value.
 
     #### Example:
 
     ```mlir
-    %0 = spirv.Constant 1 : i32
-    %1 = spirv.EXT.ConstantCompositeReplicate %0 : vector<2xf32>
+    %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : vector<2xi32>
 
-    %2 = spirv.Constant dense<[1, 2]> : vector<2xi32>
-    %3 = spirv.EXT.ConstantCompositeReplicate %2 : !spirv.array<2 x vector<2xi32>>
+    %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : !spirv.array<2 x vector<2xi32>>
 
-    %5 = spirv.EXT.ConstantCompositeReplicate %0 : vector<2xi32>
-    %6 = spirv.EXT.ConstantCompositeReplicate %5 : !spirv.array<2 x vector<2xi32>>
+    %0 = spirv.EXT.ConstantCompositeReplicate [dense<[1, 2]> : vector<2xi32>] : !spirv.array<2 x vector<2xi32>>
     ```
   }];
 
@@ -170,7 +166,7 @@ def SPIRV_EXTConstantCompositeReplicateOp : SPIRV_ExtVendorOp<"ConstantComposite
   ];
 
   let arguments = (ins
-    SPIRV_Type:$constant
+    AnyAttr:$value
   );
 
   let results = (outs
@@ -738,7 +734,7 @@ def SPIRV_EXTSpecConstantCompositeReplicateOp : SPIRV_ExtVendorOp<"SpecConstantC
   let summary = "Declare a new replicated composite specialization constant op.";
 
   let description = [{
-    Represents a splat spec composite constant i.e., all element of spec composite
+    Represents a splat spec composite constant i.e., all elements of spec composite
     constant have the same value. The splat value must come from a symbol reference
     of spec constant instruction.
 

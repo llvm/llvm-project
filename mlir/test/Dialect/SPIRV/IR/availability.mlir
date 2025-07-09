@@ -288,7 +288,6 @@ func.func @constant_composite_replicate() -> () {
   // CHECK: max version: v1.6
   // CHECK: extensions: [ [SPV_EXT_replicated_composites] ]
   // CHECK: capabilities: [ [ReplicatedCompositesEXT] ]
-  %0 = spirv.Constant 1 : i32
-  %1 = spirv.EXT.ConstantCompositeReplicate %0 : vector<2xi32>
+  %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : vector<2xi32>
   spirv.Return
 }

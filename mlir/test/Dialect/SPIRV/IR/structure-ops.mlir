@@ -169,37 +169,26 @@ func.func @coop_matrix_const_wrong_type() -> () {
 // spirv.EXT.ConstantCompositeReplicate
 //===----------------------------------------------------------------------===//
 
-spirv.module Logical GLSL450 {
-  spirv.func @ccr() -> i32 "None" {
-    %0 = spirv.Constant 1 : i32
-    // expected-error @+2 {{result is not a composite type}}
-    %1 = spirv.EXT.ConstantCompositeReplicate %0 : i32
-    spirv.ReturnValue %1: i32
-  }
+func.func @ccr_result_not_composite() -> () {
+  // expected-error @+1 {{op result #0 must be vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float or BFloat16 values of length 2/3/4/8/16 or any SPIR-V array type or any SPIR-V runtime array type or any SPIR-V struct type or any SPIR-V cooperative matrix type or any SPIR-V matrix type, but got 'i32'}}
+  %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : i32
+  return
 }
 
 // -----
 
-spirv.module Logical GLSL450 {
-  spirv.func @ccr() -> vector<2xf32> "None" {
-    %0 = spirv.Constant 1 : i32
-    // expected-note@-1 {{prior use here}}
-    // expected-error @+1 {{use of value '%0' expects different type than prior uses: 'f32' vs 'i32'}}
-    %1 = spirv.EXT.ConstantCompositeReplicate %0 : vector<2xf32>
-    spirv.ReturnValue %1: vector<2xf32>
-  }
+func.func @ccr_wrong_splat_type() -> () {
+  // expected-error @+1 {{expected splat element type'f32', but got: 'i32'}}
+  %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : vector<2xf32>
+  return
 }
 
 // -----
 
-spirv.module Logical GLSL450 {
-  spirv.func @ccr() -> vector<2xi32> "None" {
-    %c1 = spirv.Constant 1 : i32
-    %0 = spirv.IAdd %c1, %c1 : i32
-    // expected-error @+1 {{op defining the splat constant is not a spirv.Constant or a spirv.EXT.ConstantCompositeReplicate}}
-    %1 = spirv.EXT.ConstantCompositeReplicate %0 : vector<2xi32>
-    spirv.ReturnValue %1: vector<2xi32>
-  }
+func.func @ccr_wrong_splat_type() -> () {
+  // expected-error @+1 {{expected splat element type'i32', but got: 'vector<2xi32>'}}
+  %0 = spirv.EXT.ConstantCompositeReplicate [dense<[1, 2]> : vector<2xi32>] : !spirv.array<2 x !spirv.array<3 x i32>>
+  return
 }
 
 // -----

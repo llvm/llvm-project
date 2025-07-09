@@ -190,10 +190,9 @@ private:
   /// Gets the constant's attribute and type associated with the given <id>.
   std::optional<std::pair<Attribute, Type>> getConstant(uint32_t id);
 
-  /// Gets the pair of id of `spirv.Constant` generating a
-  /// replicated composite and the type of resulting
-  /// `spirv.EXT.ConstantCompositeReplicate` given its <id>.
-  std::optional<std::pair<uint32_t, Type>>
+  /// Gets the replicated composite constant's attribute and type associated
+  /// with the given <id>.
+  std::optional<std::pair<Attribute, Type>>
   getConstantCompositeReplicate(uint32_t id);
 
   /// Gets the info needed to materialize the spec constant operation op
@@ -572,7 +571,7 @@ private:
   /// (and type) here. Later when it's used, we materialize the constant.
   DenseMap<uint32_t, std::pair<Attribute, Type>> constantMap;
 
-  // Result <id> to replicated constant id and type mapping.
+  // Result <id> to replicated constant attribute and type mapping.
   ///
   /// In the SPIR-V binary format, OpConstantCompositeReplicateEXT is placed in
   /// the module and shared by instructions at module level and in subsequent
@@ -580,9 +579,9 @@ private:
   /// it's used in the function. So when seeing a
   /// OpConstantCompositeReplicateEXT in the binary format, we don't immediately
   /// emit a `spirv.EXT.ConstantCompositeReplicate` op into the module, we keep
-  /// the id of its operand (the splat constant) and type) here. Later when it's
-  /// used, we materialize the `spirv.EXT.ConstantCompositeReplicate`.
-  DenseMap<uint32_t, std::pair<uint32_t, Type>> constantCompositeReplicateMap;
+  /// the id of its value and type here. Later when it's used, we materialize
+  /// the `spirv.EXT.ConstantCompositeReplicate`.
+  DenseMap<uint32_t, std::pair<Attribute, Type>> constantCompositeReplicateMap;
 
   // Result <id> to spec constant mapping.
   DenseMap<uint32_t, spirv::SpecConstantOp> specConstMap;
