@@ -30,11 +30,6 @@ private:
   // # of pops we are allowed to perform (essentially size of the dest buffer)
   size_t num_to_write;
 
-  // on the very first pop, we need to make sure that we always
-  // pushFullCharacter in case a previous StringConverter pushed part of a
-  // character to the mbstate
-  bool first_pop;
-
   ErrorOr<size_t> pushFullCharacter() {
     size_t num_pushed;
     for (num_pushed = 0; !cr.isFull() && src_idx + num_pushed < src_len;
@@ -56,14 +51,12 @@ private:
 public:
   StringConverter(const T *s, mbstate *ps, size_t dstlen,
                   size_t srclen = SIZE_MAX)
-      : cr(ps), src(s), src_len(srclen), src_idx(0), num_to_write(dstlen),
-        first_pop(true) {}
+      : cr(ps), src(s), src_len(srclen), src_idx(0), num_to_write(dstlen) {}
 
   // TODO: following functions are almost identical
   // look into templating CharacterConverter pop functions
   ErrorOr<char32_t> popUTF32() {
-    if (cr.isEmpty() || first_pop) {
-      first_pop = false;
+    if (cr.isEmpty() || src_idx == 0) {
       auto src_elements_read = pushFullCharacter();
       if (!src_elements_read.has_value())
         return Error(src_elements_read.error());
@@ -86,8 +79,7 @@ public:
   }
 
   ErrorOr<char8_t> popUTF8() {
-    if (cr.isEmpty() || first_pop) {
-      first_pop = false;
+    if (cr.isEmpty() || src_idx == 0) {
       auto src_elements_read = pushFullCharacter();
       if (!src_elements_read.has_value())
         return Error(src_elements_read.error());

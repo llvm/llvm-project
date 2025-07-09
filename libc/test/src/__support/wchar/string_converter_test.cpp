@@ -306,7 +306,7 @@ TEST(LlvmLibcStringConverterTest, DestLimitUTF8To32) {
   const char *src = "\xF0\x9F\xA4\xA1\xF0\x9F\xA4\xA1"; // 2 clown emojis
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char8_t> sc(
-      reinterpret_cast<const char8_t *>(src), &state, 1, SIZE_MAX);
+      reinterpret_cast<const char8_t *>(src), &state, 1);
 
   auto res = sc.popUTF32();
   ASSERT_TRUE(res.has_value());
@@ -320,7 +320,7 @@ TEST(LlvmLibcStringConverterTest, DestLimitUTF32To8) {
   const wchar_t *src = L"\x1f921\x1f921"; // 2 clown emojis
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char32_t> sc(
-      reinterpret_cast<const char32_t *>(src), &state, 5, SIZE_MAX);
+      reinterpret_cast<const char32_t *>(src), &state, 5);
 
   auto res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
