@@ -12,7 +12,7 @@ define <vscale x 1 x i8> @intrinsic_nds_vlnu_v_nxv1i8_nxv1i8(<vscale x 1 x i8>* 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.nds.vlnu.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8>* %0,
     iXLen %1)
 
@@ -43,7 +43,7 @@ define <vscale x 2 x i8> @intrinsic_nds_vlnu_v_nxv2i8_nxv2i8(<vscale x 2 x i8>* 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i8> @llvm.riscv.nds.vlnu.nxv2i8(
-    <vscale x 2 x i8> undef,
+    <vscale x 2 x i8> poison,
     <vscale x 2 x i8>* %0,
     iXLen %1)
 
@@ -74,7 +74,7 @@ define <vscale x 4 x i8> @intrinsic_nds_vlnu_v_nxv4i8_nxv4i8(<vscale x 4 x i8>* 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i8> @llvm.riscv.nds.vlnu.nxv4i8(
-    <vscale x 4 x i8> undef,
+    <vscale x 4 x i8> poison,
     <vscale x 4 x i8>* %0,
     iXLen %1)
 
@@ -105,7 +105,7 @@ define <vscale x 8 x i8> @intrinsic_nds_vlnu_v_nxv8i8_nxv8i8(<vscale x 8 x i8>* 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i8> @llvm.riscv.nds.vlnu.nxv8i8(
-    <vscale x 8 x i8> undef,
+    <vscale x 8 x i8> poison,
     <vscale x 8 x i8>* %0,
     iXLen %1)
 
@@ -136,7 +136,7 @@ define <vscale x 16 x i8> @intrinsic_nds_vlnu_v_nxv16i8_nxv16i8(<vscale x 16 x i
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i8> @llvm.riscv.nds.vlnu.nxv16i8(
-    <vscale x 16 x i8> undef,
+    <vscale x 16 x i8> poison,
     <vscale x 16 x i8>* %0,
     iXLen %1)
 
@@ -167,7 +167,7 @@ define <vscale x 32 x i8> @intrinsic_nds_vlnu_v_nxv32i8_nxv32i8(<vscale x 32 x i
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x i8> @llvm.riscv.nds.vlnu.nxv32i8(
-    <vscale x 32 x i8> undef,
+    <vscale x 32 x i8> poison,
     <vscale x 32 x i8>* %0,
     iXLen %1)
 
@@ -198,7 +198,7 @@ define <vscale x 64 x i8> @intrinsic_nds_vlnu_v_nxv64i8_nxv64i8(<vscale x 64 x i
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 64 x i8> @llvm.riscv.nds.vlnu.nxv64i8(
-    <vscale x 64 x i8> undef,
+    <vscale x 64 x i8> poison,
     <vscale x 64 x i8>* %0,
     iXLen %1)
 
