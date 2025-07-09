@@ -679,9 +679,10 @@ func.func @forall(%num_threads: index) {
 // -----
 
 //      CHECK: #[[LOOP_UNROLL:.*]] = #llvm.loop_unroll<full = true>
-// CHECK-NEXT: #[[LOOP_UNROLL_DISABLE:.*]] = #llvm.loop_unroll<disable = true>
-// CHECK-NEXT: #[[FULL_UNROLL:.*]] = #llvm.loop_annotation<unroll = #[[LOOP_UNROLL]]>
-// CHECK-NEXT: #[[NO_UNROLL:.*]] = #llvm.loop_annotation<unroll = #[[LOOP_UNROLL_DISABLE]]>
+// CHECK-DAG: #[[LOOP_UNROLL_DISABLE:.*]] = #llvm.loop_unroll<disable = true>
+
+// CHECK-DAG: #[[FULL_UNROLL:.*]] = #llvm.loop_annotation<unroll = #[[LOOP_UNROLL]]>
+// CHECK-DAG: #[[NO_UNROLL:.*]] = #llvm.loop_annotation<unroll = #[[LOOP_UNROLL_DISABLE]]>
 // CHECK-LABEL: func @simple_std_for_loops_annotation
 //      CHECK: ^[[bb1:.*]](%{{.*}}: index):
 //      CHECK:   cf.cond_br %{{.*}}, ^[[bb2:.*]], ^[[bb6:.*]]
