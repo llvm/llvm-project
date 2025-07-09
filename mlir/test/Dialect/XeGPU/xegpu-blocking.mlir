@@ -447,70 +447,12 @@ gpu.module @test_kernel   {
 }
 
 // -----
-#l = #xegpu.layout<inst_data = [8,32,16]>
-gpu.module @test_kernel {
-  // CHECK-LABEL: test_3d_block_tensor_desc
-  // CHECK-SAME: [[arg0:%.+]]: memref<1024x1024x1024xf16>, [[arg1:%.+]]: memref<1024x1024x1024xf16>, [[arg2:%.+]]: memref<1024x1024x1024xf16>
-  gpu.func @test_3d_block_tensor_desc(%A: memref<1024x1024x1024xf16>, %B: memref<1024x1024x1024xf16>, %C: memref<1024x1024x1024xf16>) {
-    //CHECK: [[c24:%.*]] = arith.constant 24 : index
-    //CHECK: [[c8:%.*]] = arith.constant 8 : index
-    //CHECK: [[c16:%.*]] = arith.constant 16 : index
-    //CHECK: [[c0:%.*]] = arith.constant 0 : index
-    //CHECK: [[c32:%.*]] = arith.constant 32 : index
-    %c0 = arith.constant 0 : index
-    %c32 = arith.constant 32 : index
-    %c1024 = arith.constant 1024 : index
-
-    //CHECK: [[sgId:%.*]] = gpu.subgroup_id : index
-    //CHECK: [[m:%.*]] = arith.muli [[sgId]], [[c32]] : index
-    %sgId = gpu.subgroup_id: index
-    %m = arith.muli %sgId, %c32 : index
-
-    //CHECK: xegpu.create_nd_tdesc [[arg0]][[[m]], [[m]], [[c0]]] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<8x32x16xf16>
-    //CHECK: xegpu.create_nd_tdesc [[arg0]][[[m]], [[m]], [[c16]]] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<8x32x16xf16>
-    //CHECK: [[off1:%.*]] = arith.addi [[m]], [[c8]] : index
-    //CHECK: xegpu.create_nd_tdesc [[arg0]][[[off1]], [[m]], [[c0]]] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<8x32x16xf16>
-    //CHECK: [[off2:%.*]] = arith.addi [[m]], [[c8]] : index
-    //CHECK: xegpu.create_nd_tdesc [[arg0]][[[off2]], [[m]], [[c16]]] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<8x32x16xf16>
-    //CHECK: [[off3:%.*]] = arith.addi [[m]], [[c16]] : index
-    //CHECK: xegpu.create_nd_tdesc [[arg0]][[[off3]], [[m]], [[c0]]] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<8x32x16xf16>
-    //CHECK: [[off4:%.*]] = arith.addi [[m]], [[c16]] : index
-    //CHECK: xegpu.create_nd_tdesc [[arg0]][[[off4]], [[m]], [[c16]]] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<8x32x16xf16>
-    //CHECK: [[off5:%.*]] = arith.addi [[m]], [[c24]] : index
-    //CHECK: xegpu.create_nd_tdesc [[arg0]][[[off5]], [[m]], [[c0]]] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<8x32x16xf16>
-    //CHECK: [[off6:%.*]] = arith.addi [[m]], [[c24]] : index
-    //CHECK: xegpu.create_nd_tdesc [[arg0]][[[off6]], [[m]], [[c16]]] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<8x32x16xf16>
-
-    %a_tdesc = xegpu.create_nd_tdesc %A[%m, %m, %c0] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<32x32x32xf16, #l>
-    %b_tdesc = xegpu.create_nd_tdesc %B[%m, %m, %c0] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<32x32x32xf16, #l>
-    %c_tdesc = xegpu.create_nd_tdesc %C[%m, %m, %c0] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<32x32x32xf16, #l>
-
-    %out:3 = scf.for %k = %c0 to %c1024 step %c32
-      iter_args(%arg0 = %a_tdesc, %arg1 = %b_tdesc, %arg2 = %c_tdesc)
-      -> (!xegpu.tensor_desc<32x32x32xf16, #l>, !xegpu.tensor_desc<32x32x32xf16, #l>, !xegpu.tensor_desc<32x32x32xf16, #l>) {
-      //CHECK-COUNT-16: xegpu.load_nd {{.*}}  : !xegpu.tensor_desc<8x32x16xf16> -> vector<8x32x16xf16>
-      %a = xegpu.load_nd %arg0 : !xegpu.tensor_desc<32x32x32xf16, #l> -> vector<32x32x32xf16>
-      %b = xegpu.load_nd %arg1 : !xegpu.tensor_desc<32x32x32xf16, #l> -> vector<32x32x32xf16>
-
-      //CHECK-COUNT-8: arith.addf {{.*}} : vector<8x32x16xf16>
-      %c = arith.addf %a, %b {layout_result_0 = #l} : vector<32x32x32xf16>
-
-      //CHECK-COUNT-8: xegpu.store_nd {{.*}} : vector<8x32x16xf16>, !xegpu.tensor_desc<8x32x16xf16>
-      xegpu.store_nd %c, %arg2: vector<32x32x32xf16>, !xegpu.tensor_desc<32x32x32xf16, #l>
-
-      //CHECK-COUNT-24: xegpu.update_nd_offset {{.*}} : !xegpu.tensor_desc<8x32x16xf16>
-      %a_next_tdesc = xegpu.update_nd_offset %arg0, [0, 0, %c32] : !xegpu.tensor_desc<32x32x32xf16, #l>
-      %b_next_tdesc = xegpu.update_nd_offset %arg1, [0, 0, %c32] : !xegpu.tensor_desc<32x32x32xf16, #l>
-      %c_next_tdesc = xegpu.update_nd_offset %arg2, [0, 0, %c32] : !xegpu.tensor_desc<32x32x32xf16, #l>
-      scf.yield %a_next_tdesc, %b_next_tdesc, %c_next_tdesc
-        : !xegpu.tensor_desc<32x32x32xf16, #l>, !xegpu.tensor_desc<32x32x32xf16, #l>, !xegpu.tensor_desc<32x32x32xf16, #l>
-    }
-    gpu.return
-  }
-}
-
-// -----
 #l = #xegpu.layout<inst_data = [2, 8, 2]>
+
+// test the blocking pass on a 3D scattered tensor descriptor,
+// Ops working 4x8x4xf32 scattered tensor_descs will be unrolled
+// into 4 ops working 2x8x2xf32 scattered tensor_descs based on
+// the given layout.
 gpu.module @test_kernel   {
   // CHECK-LABEL: test_3d_scattered_tensor_desc
   // CHECK-SAME: [[arg0:%.+]]: ui64

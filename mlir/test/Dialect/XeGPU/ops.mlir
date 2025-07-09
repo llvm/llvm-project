@@ -228,15 +228,6 @@ gpu.func @simt_load_nd_8(%src: memref<24x32xf32>) {
   gpu.return
 }
 
-// CHECK: func @subgroup_load_nd_9(%[[arg0:.*]]: memref<4x8x16xf16>) {
-gpu.func @subgroup_load_nd_9(%src: memref<4x8x16xf16>) {
-  // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %arg0[0, 0, 0] : memref<4x8x16xf16> -> !xegpu.tensor_desc<4x8x16xf16>
-  %1 = xegpu.create_nd_tdesc %src[0, 0, 0] : memref<4x8x16xf16> -> !xegpu.tensor_desc<4x8x16xf16>
-  // CHECK: %[[R1:.*]] = xegpu.load_nd %[[R0]] <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<4x8x16xf16> -> vector<4x8x16xf16>
-  %2 = xegpu.load_nd %1 <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<4x8x16xf16> -> vector<4x8x16xf16>
-  gpu.return
-}
-
 // CHECK: func @subgroup_store_nd(%[[arg0:.*]]: memref<24x32xf16>) {
 gpu.func @subgroup_store_nd(%dst: memref<24x32xf16>) {
   // CHECK: %[[C:.*]] = arith.constant dense<1.000000e+00> : vector<24x32xf16>
@@ -278,17 +269,6 @@ gpu.func @simt_store_nd_2(%src: memref<24x32xf16>) {
   %2 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf16> -> !xegpu.tensor_desc<32xf16>
   // CHECK: xegpu.store_nd %[[C]], %[[R0]] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}> : vector<2xf16>, !xegpu.tensor_desc<32xf16>
   xegpu.store_nd %1, %2 <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}>: vector<2xf16>, !xegpu.tensor_desc<32xf16>
-  gpu.return
-}
-
-// CHECK: func @subgroup_store_nd_3(%[[arg0:.*]]: memref<8x24x32xf16>) {
-gpu.func @subgroup_store_nd_3(%dst: memref<8x24x32xf16>) {
-  // CHECK: %[[C:.*]] = arith.constant dense<1.000000e+00> : vector<8x24x32xf16>
-  %1 = arith.constant dense<1.0>: vector<8x24x32xf16>
-  // CHECK: %[[R0:.*]] = xegpu.create_nd_tdesc %[[arg0]][0, 0, 0] : memref<8x24x32xf16> -> !xegpu.tensor_desc<8x24x32xf16>
-  %2 = xegpu.create_nd_tdesc %dst[0, 0, 0] : memref<8x24x32xf16> -> !xegpu.tensor_desc<8x24x32xf16>
-  // CHECK: xegpu.store_nd %[[C]], %[[R0]] <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}> : vector<8x24x32xf16>, !xegpu.tensor_desc<8x24x32xf16>
-  xegpu.store_nd %1, %2 <{l1_hint = #xegpu.cache_hint<write_back>, l2_hint = #xegpu.cache_hint<uncached>}>: vector<8x24x32xf16>, !xegpu.tensor_desc<8x24x32xf16>
   gpu.return
 }
 

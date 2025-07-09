@@ -251,6 +251,9 @@ LogicalResult LoadNdOp::verify() {
   if (tdescTy.isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
 
+  if (tdescTy.getRank() > 2)
+    return emitOpError("Expects a 1D or 2D TensorDesc.\n");
+
   if (!valueTy)
     return emitOpError("Invalid result, it should be a VectorType.\n");
 
@@ -334,6 +337,9 @@ LogicalResult StoreNdOp::verify() {
 
   if (dstTy.isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
+
+  if (dstTy.getRank() > 2)
+    return emitOpError("Expects a 1D or 2D TensorDesc.\n");
 
   if (!valTy)
     return emitOpError("Expecting a VectorType result.\n");
