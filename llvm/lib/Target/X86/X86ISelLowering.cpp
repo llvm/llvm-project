@@ -3315,6 +3315,13 @@ bool X86TargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   return true;
 }
 
+// X86 prefers to defer vector FCANONICALIZE to DAG legalization
+// to avoid scalarization during vector legalization.
+bool X86TargetLowering::shouldExpandVectorFCANONICALIZEInVectorLegalizer()
+    const {
+  return false;
+}
+
 bool X86TargetLowering::reduceSelectOfFPConstantLoads(EVT CmpOpVT) const {
   // If we are using XMM registers in the ABI and the condition of the select is
   // a floating-point compare and we have blendv or conditional move, then it is

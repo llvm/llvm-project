@@ -1311,10 +1311,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     }
     break;
   case ISD::FCANONICALIZE: {
-    const Triple &TT = DAG.getTarget().getTargetTriple();
-    if (TT.isX86()) {
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    if (!TLI.shouldExpandVectorFCANONICALIZEInVectorLegalizer())
       return;
-    }
   }
   }
 
