@@ -45,5 +45,7 @@ extern "C" int LLVMFuzzerTestOneInput(double x) {
     __builtin_trap();
 
   mpfr_clear(input);
+  mpfr_clear(sin_x);
+  mpfr_clear(cos_x);
   return 0;
 }
