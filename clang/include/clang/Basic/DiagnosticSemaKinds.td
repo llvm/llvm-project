@@ -12885,6 +12885,8 @@ def err_sycl_attribute_avoid_main : Error<
   "'sycl_external' cannot be applied to the 'main' function">;
 def err_sycl_attribute_avoid_deleted_function : Error<
   "'sycl_external' cannot be applied to an explicitly deleted function">;
+def err_sycl_attribute_missing_on_first_decl
+    : Error<"'sycl_external' must be applied to the first declaration">;
 
 // SYCL kernel entry point diagnostics
 def err_sycl_entry_point_invalid : Error<

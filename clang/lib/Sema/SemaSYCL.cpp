@@ -202,25 +202,6 @@ void SemaSYCL::handleKernelAttr(Decl *D, const ParsedAttr &AL) {
   handleSimpleAttribute<DeviceKernelAttr>(*this, D, AL);
 }
 
-void SemaSYCL::handleExternalAttr(Decl *D, const ParsedAttr &AL) {
-  auto *FD = cast<FunctionDecl>(D);
-  if (!FD->isExternallyVisible()) {
-    Diag(AL.getLoc(), diag::err_sycl_attribute_invalid_linkage);
-    return;
-  }
-  std::string FunctionName = StringRef(FD->getNameInfo().getAsString()).lower();
-  if (FunctionName.find("main") != std::string::npos) {
-    Diag(AL.getLoc(), diag::err_sycl_attribute_avoid_main);
-    return;
-  }
-  if (FD->isDeletedAsWritten()) {
-    Diag(AL.getLoc(), diag::err_sycl_attribute_avoid_deleted_function);
-    return;
-  }
-
-  handleSimpleAttribute<SYCLExternalAttr>(*this, D, AL);
-}
-
 void SemaSYCL::handleKernelEntryPointAttr(Decl *D, const ParsedAttr &AL) {
   ParsedType PT = AL.getTypeArg();
   TypeSourceInfo *TSI = nullptr;
@@ -267,6 +248,19 @@ static bool CheckSYCLKernelName(Sema &S, SourceLocation Loc,
   }
 
   return false;
+}
+void SemaSYCL::CheckSYCLExternalFunctionDecl(FunctionDecl *FD) {
+  for (auto *SEAttr : FD->specific_attrs<SYCLExternalAttr>()) {
+    if (!FD->isExternallyVisible()) {
+      Diag(SEAttr->getLocation(), diag::err_sycl_attribute_invalid_linkage);
+      return;
+    }
+    if (FD->isDeletedAsWritten()) {
+      Diag(SEAttr->getLocation(),
+           diag::err_sycl_attribute_avoid_deleted_function);
+      return;
+    }
+  }
 }
 
 void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {

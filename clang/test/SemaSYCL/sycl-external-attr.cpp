@@ -15,11 +15,17 @@ namespace {
 [[clang::sycl_external]] // expected-error {{'sycl_external' can only be applied to functions with external linkage}}
   void func4(UnnX) {}
 
-// FIXME: The first declaration of a function is required to have the attribute.
-// The attribute may be optionally present on subsequent declarations
-int foo(int c);
+// The first declaration of a SYCL external function is required to have this attribute.
+int foo(); // expected-note {{previous declaration is here}}
 
-[[clang::sycl_external]] void foo();
+[[clang::sycl_external]] int foo(); // expected-error {{'sycl_external' must be applied to the first declaration}}
+
+// Subsequent declrations of a SYCL external function may optionally specify this attribute.
+[[clang::sycl_external]] int boo();
+
+[[clang::sycl_external]] int boo(); // OK
+
+int boo(); // OK
 
 class C {
   [[clang::sycl_external]] void member();
