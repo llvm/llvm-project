@@ -6,13 +6,12 @@ define <4 x i32> @bitselect_splat_first_zero_and_icmp(<4 x i32>  %input) {
 ; CHECK-LABEL: bitselect_splat_first_zero_and_icmp:
 ; CHECK:         .functype bitselect_splat_first_zero_and_icmp (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0: # %start
-; CHECK-NEXT:    v128.const $push5=, 0, 0, 0, 0
-; CHECK-NEXT:    local.tee $push4=, $1=, $pop5
 ; CHECK-NEXT:    v128.const $push0=, 2139095040, 2139095040, 2139095040, 2139095040
 ; CHECK-NEXT:    v128.and $push1=, $0, $pop0
-; CHECK-NEXT:    i32x4.eq $push2=, $1, $pop1
-; CHECK-NEXT:    v128.bitselect $push3=, $pop4, $0, $pop2
-; CHECK-NEXT:    return $pop3
+; CHECK-NEXT:    v128.const $push2=, 0, 0, 0, 0
+; CHECK-NEXT:    i32x4.ne $push3=, $pop1, $pop2
+; CHECK-NEXT:    v128.and $push4=, $pop3, $0
+; CHECK-NEXT:    return $pop4
 start:
   %0 = and <4 x i32> %input, splat (i32 2139095040)
   %1 = icmp eq <4 x i32> %0, zeroinitializer
@@ -25,13 +24,12 @@ define <4 x i32> @bitselect_splat_second_zero_and_icmp(<4 x i32>  %input) {
 ; CHECK-LABEL: bitselect_splat_second_zero_and_icmp:
 ; CHECK:         .functype bitselect_splat_second_zero_and_icmp (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0: # %start
-; CHECK-NEXT:    v128.const $push5=, 0, 0, 0, 0
-; CHECK-NEXT:    local.tee $push4=, $1=, $pop5
 ; CHECK-NEXT:    v128.const $push0=, 2139095040, 2139095040, 2139095040, 2139095040
 ; CHECK-NEXT:    v128.and $push1=, $0, $pop0
-; CHECK-NEXT:    i32x4.eq $push2=, $1, $pop1
-; CHECK-NEXT:    v128.bitselect $push3=, $0, $pop4, $pop2
-; CHECK-NEXT:    return $pop3
+; CHECK-NEXT:    v128.const $push2=, 0, 0, 0, 0
+; CHECK-NEXT:    i32x4.eq $push3=, $pop1, $pop2
+; CHECK-NEXT:    v128.and $push4=, $pop3, $0
+; CHECK-NEXT:    return $pop4
 start:
   %0 = and <4 x i32> %input, splat (i32 2139095040)
   %1 = icmp eq <4 x i32> %0, zeroinitializer
@@ -60,13 +58,12 @@ define <4 x i32> @bitselect_splat_second_zero_cond_input(<4 x i1> %cond, <4 x i3
 ; CHECK-LABEL: bitselect_splat_second_zero_cond_input:
 ; CHECK:         .functype bitselect_splat_second_zero_cond_input (v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0: # %start
-; CHECK-NEXT:    v128.const $push3=, 0, 0, 0, 0
 ; CHECK-NEXT:    i32.const $push0=, 31
 ; CHECK-NEXT:    i32x4.shl $push1=, $0, $pop0
-; CHECK-NEXT:    i32.const $push5=, 31
-; CHECK-NEXT:    i32x4.shr_s $push2=, $pop1, $pop5
-; CHECK-NEXT:    v128.bitselect $push4=, $1, $pop3, $pop2
-; CHECK-NEXT:    return $pop4
+; CHECK-NEXT:    i32.const $push4=, 31
+; CHECK-NEXT:    i32x4.shr_s $push2=, $pop1, $pop4
+; CHECK-NEXT:    v128.and $push3=, $pop2, $1
+; CHECK-NEXT:    return $pop3
 start:
   %2 = select  <4 x i1> %cond, <4 x i32> %input, <4 x i32> zeroinitializer
   ret <4 x i32> %2
