@@ -47,6 +47,7 @@ public:
   mlir::Value VisitCallExpr(const CallExpr *e);
   mlir::Value VisitCastExpr(CastExpr *e);
   mlir::Value VisitChooseExpr(ChooseExpr *e);
+  mlir::Value VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *e);
   mlir::Value VisitDeclRefExpr(DeclRefExpr *e);
   mlir::Value VisitGenericSelectionExpr(GenericSelectionExpr *e);
   mlir::Value VisitImplicitCastExpr(ImplicitCastExpr *e);
@@ -199,6 +200,13 @@ mlir::Value ComplexExprEmitter::VisitCastExpr(CastExpr *e) {
 
 mlir::Value ComplexExprEmitter::VisitChooseExpr(ChooseExpr *e) {
   return Visit(e->getChosenSubExpr());
+}
+
+mlir::Value
+ComplexExprEmitter::VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *e) {
+  mlir::Location loc = cgf.getLoc(e->getExprLoc());
+  mlir::Type complexTy = cgf.convertType(e->getType());
+  return builder.getNullValue(complexTy, loc);
 }
 
 mlir::Value ComplexExprEmitter::VisitDeclRefExpr(DeclRefExpr *e) {
