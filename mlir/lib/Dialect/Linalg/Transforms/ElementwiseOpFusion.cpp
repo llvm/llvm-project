@@ -1717,25 +1717,29 @@ FailureOr<CollapseResult> mlir::linalg::collapseOpIterationDims(
       }))
     return failure();
 
-  bool hasPureBufferSemantics = op.hasPureBufferSemantics();
-  if (hasPureBufferSemantics &&
-      !llvm::all_of(op->getOperands(), [&](Value operand) -> bool {
-        MemRefType memRefToCollapse = dyn_cast<MemRefType>(operand.getType());
-        if (!memRefToCollapse)
-          return true;
-
-        return memref::CollapseShapeOp::isGuaranteedCollapsible(
-            memRefToCollapse, foldedIterationDims);
-      }))
-    return rewriter.notifyMatchFailure(op,
-                                       "memref is not guaranteed collapsible");
-
   CollapsingInfo collapsingInfo;
   if (failed(
           collapsingInfo.initialize(op.getNumLoops(), foldedIterationDims))) {
     return rewriter.notifyMatchFailure(
         op, "illegal to collapse specified dimensions");
   }
+
+  bool hasPureBufferSemantics = op.hasPureBufferSemantics();
+  if (hasPureBufferSemantics &&
+      !llvm::all_of(op->getOpOperands(), [&](OpOperand &opOperand) -> bool {
+        MemRefType memRefToCollapse =
+            dyn_cast<MemRefType>(opOperand.get().getType());
+        if (!memRefToCollapse)
+          return true;
+
+        AffineMap indexingMap = op.getMatchingIndexingMap(&opOperand);
+        SmallVector<ReassociationIndices> operandReassociation =
+            getOperandReassociation(indexingMap, collapsingInfo);
+        return memref::CollapseShapeOp::isGuaranteedCollapsible(
+            memRefToCollapse, operandReassociation);
+      }))
+    return rewriter.notifyMatchFailure(op,
+                                       "memref is not guaranteed collapsible");
 
   // Bail on non-canonical ranges.
   SmallVector<Range> loopRanges = op.createLoopRanges(rewriter, op.getLoc());
