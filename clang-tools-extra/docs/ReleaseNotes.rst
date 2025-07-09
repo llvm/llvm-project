@@ -148,6 +148,11 @@ New checks
   Finds uses of ``std::lock_guard`` and suggests replacing them with C++17's
   alternative ``std::scoped_lock``.
 
+- New :doc:`performance-constexpr-non-static-in-scope
+  <clang-tidy/checks/performance/constexpr-non-static-in-scope>` check.
+
+  FIXME: Write a short description.
+
 - New :doc:`portability-avoid-pragma-once
   <clang-tidy/checks/portability/avoid-pragma-once>` check.
 
