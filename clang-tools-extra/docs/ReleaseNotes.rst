@@ -281,6 +281,10 @@ Changes in existing checks
   excluding variables with ``thread_local`` storage class specifier from being
   matched.
 
+- Improved :doc:`modernize-pass-by-value
+  <clang-tidy/checks/modernize/pass-by-value>` check by fixing false positives
+  when class passed by const-reference had a private move constructor.
+
 - Improved :doc:`modernize-type-traits
   <clang-tidy/checks/modernize/type-traits>` check by detecting more type traits.
 
