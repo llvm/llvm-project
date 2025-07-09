@@ -3421,12 +3421,21 @@ static SDValue performSETCCCombine(SDNode *N,
 static SDValue performFAddCombine(SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == ISD::FADD);
   using namespace llvm::SDPatternMatch;
-  if (!N->getFlags().hasFastMath())
+
+  EVT VecVT = N->getValueType(0);
+
+  // WebAssembly doesn't have scalar fma yet
+  // https://github.com/WebAssembly/design/issues/1391
+  if (!VecVT.isVector())
+    return SDValue();
+
+  // Allows fp fusing
+  if (!N->getFlags().hasAllowContract())
     return SDValue();
 
   SDLoc DL(N);
   SDValue A, B, C;
-  EVT VecVT = N->getValueType(0);
+
   if (sd_match(N, m_FAdd(m_Value(A), m_FMul(m_Value(B), m_Value(C)))))
     return DAG.getNode(
         ISD::INTRINSIC_WO_CHAIN, DL, VecVT,
@@ -3437,12 +3446,17 @@ static SDValue performFAddCombine(SDNode *N, SelectionDAG &DAG) {
 
 static SDValue performFMACombine(SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == ISD::FMA);
-  if (!N->getFlags().hasFastMath())
+
+  EVT VecVT = N->getValueType(0);
+  if (!VecVT.isVector())
+    return SDValue();
+
+  // Allows fp fusing
+  if (!N->getFlags().hasAllowContract())
     return SDValue();
 
   SDLoc DL(N);
   SDValue A = N->getOperand(0), B = N->getOperand(1), C = N->getOperand(2);
-  EVT VecVT = N->getValueType(0);
 
   return DAG.getNode(
       ISD::INTRINSIC_WO_CHAIN, DL, VecVT,
