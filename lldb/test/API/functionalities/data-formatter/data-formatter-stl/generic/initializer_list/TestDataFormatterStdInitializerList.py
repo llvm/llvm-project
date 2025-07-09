@@ -2,7 +2,6 @@
 Test lldb data formatter subsystem.
 """
 
-
 import re
 import lldb
 from lldbsuite.test.decorators import *
@@ -11,10 +10,7 @@ from lldbsuite.test import lldbutil
 
 
 class InitializerListTestCase(TestBase):
-    @add_test_categories(["libc++"])
-    def test(self):
-        """Test that that file and class static variables display correctly."""
-        self.build()
+    def do_test(self):
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         bkpt = self.target().FindBreakpointByID(
@@ -24,8 +20,6 @@ class InitializerListTestCase(TestBase):
         )
 
         self.runCmd("run", RUN_SUCCEEDED)
-
-        lldbutil.skip_if_library_missing(self, self.target(), re.compile(r"libc\+\+"))
 
         # The stop reason of the thread should be breakpoint.
         self.expect(
@@ -39,3 +33,8 @@ class InitializerListTestCase(TestBase):
             "frame variable ils",
             substrs=['[4] = "surprise it is a long string!! yay!!"'],
         )
+
+    @add_test_categories(["libc++"])
+    def test_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()
