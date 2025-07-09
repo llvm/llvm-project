@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -gkey-instructions %s -gno-column-info -debug-info-kind=line-tables-only -emit-llvm -o - \
 // RUN: | FileCheck %s
+// REQUIRES: goodKeys
 
 // g::h can be memcpy'd (in this case emitted as load/stored), check the
 // assignment gets Key Instructions metadata.
