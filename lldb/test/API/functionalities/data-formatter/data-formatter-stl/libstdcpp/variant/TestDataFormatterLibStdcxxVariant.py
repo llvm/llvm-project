@@ -2,7 +2,6 @@
 Test lldb data formatter for LibStdC++ std::variant.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -62,17 +61,13 @@ class LibStdcxxVariantDataFormatterTestCase(TestBase):
             "frame variable v3",
             substrs=["v3 =  Active Type = char  {", "Value = 'A'", "}"],
         )
-        """
-        TODO: temporarily disable No Value tests as they seem to fail on ubuntu/debian
-        bots. Pending reproduce and investigation.
 
-        self.expect("frame variable v_no_value", substrs=["v_no_value =  No Value"])
+        self.expect("frame variable v_valueless", substrs=["v_valueless =  No Value"])
 
         self.expect(
-            "frame variable v_many_types_no_value",
-            substrs=["v_many_types_no_value =  No Value"],
+            "frame variable v_many_types_valueless",
+            substrs=["v_many_types_valueless =  No Value"],
         )
-        """
 
     @add_test_categories(["libstdcxx"])
     def test_invalid_variant_index(self):

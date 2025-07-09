@@ -27,6 +27,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/BinaryStreamWriter.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -49,7 +50,7 @@ class Section;
 
 /// Base class for errors originating in JIT linker, e.g. missing relocation
 /// support.
-class JITLinkError : public ErrorInfo<JITLinkError> {
+class LLVM_ABI JITLinkError : public ErrorInfo<JITLinkError> {
 public:
   static char ID;
 
@@ -105,7 +106,7 @@ private:
 
 /// Returns the string name of the given generic edge kind, or "unknown"
 /// otherwise. Useful for debugging.
-const char *getGenericEdgeKindName(Edge::Kind K);
+LLVM_ABI const char *getGenericEdgeKindName(Edge::Kind K);
 
 /// Base class for Addressable entities (externals, absolutes, blocks).
 class Addressable {
@@ -389,7 +390,7 @@ inline orc::ExecutorAddr alignToBlock(orc::ExecutorAddr Addr, const Block &B) {
 // Returns true if the given blocks contains exactly one valid c-string.
 // Zero-fill blocks of size 1 count as valid empty strings. Content blocks
 // must end with a zero, and contain no zeros before the end.
-bool isCStringBlock(Block &B);
+LLVM_ABI bool isCStringBlock(Block &B);
 
 /// Describes symbol linkage. This can be used to resolve definition clashes.
 enum class Linkage : uint8_t {
@@ -401,7 +402,7 @@ enum class Linkage : uint8_t {
 using TargetFlagsType = uint8_t;
 
 /// For errors and debugging output.
-const char *getLinkageName(Linkage L);
+LLVM_ABI const char *getLinkageName(Linkage L);
 
 /// Defines the scope in which this symbol should be visible:
 ///   Default -- Visible in the public interface of the linkage unit.
@@ -412,9 +413,9 @@ const char *getLinkageName(Linkage L);
 enum class Scope : uint8_t { Default, Hidden, SideEffectsOnly, Local };
 
 /// For debugging output.
-const char *getScopeName(Scope S);
+LLVM_ABI const char *getScopeName(Scope S);
 
-raw_ostream &operator<<(raw_ostream &OS, const Block &B);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const Block &B);
 
 /// Symbol representation.
 ///
@@ -708,10 +709,10 @@ private:
   size_t Size = 0;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const Symbol &A);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const Symbol &A);
 
-void printEdge(raw_ostream &OS, const Block &B, const Edge &E,
-               StringRef EdgeKindName);
+LLVM_ABI void printEdge(raw_ostream &OS, const Block &B, const Edge &E,
+                        StringRef EdgeKindName);
 
 /// Represents an object file section.
 class Section {
@@ -731,7 +732,7 @@ public:
   using block_iterator = BlockSet::iterator;
   using const_block_iterator = BlockSet::const_iterator;
 
-  ~Section();
+  LLVM_ABI ~Section();
 
   // Sections are not movable or copyable.
   Section(const Section &) = delete;
@@ -1039,7 +1040,7 @@ public:
   LinkGraph &operator=(const LinkGraph &) = delete;
   LinkGraph(LinkGraph &&) = delete;
   LinkGraph &operator=(LinkGraph &&) = delete;
-  ~LinkGraph();
+  LLVM_ABI ~LinkGraph();
 
   /// Returns the name of this graph (usually the name of the original
   /// underlying MemoryBuffer).
@@ -1310,11 +1311,11 @@ public:
                             orc::ExecutorAddr Address,
                             orc::ExecutorAddrDiff Size, Linkage L, Scope S,
                             bool IsLive) {
-    assert((S == Scope::Local || llvm::count_if(AbsoluteSymbols,
+    assert((S == Scope::Local || llvm::none_of(AbsoluteSymbols,
                                                [&](const Symbol *Sym) {
                                                  return Sym->getName() == Name;
-                                               }) == 0) &&
-                                    "Duplicate absolute symbol");
+                                               })) &&
+           "Duplicate absolute symbol");
     auto &Sym = Symbol::constructAbsolute(Allocator, createAddressable(Address),
                                           std::move(Name), Size, L, S, IsLive);
     AbsoluteSymbols.insert(&Sym);
@@ -1350,10 +1351,10 @@ public:
                            orc::SymbolStringPtr Name,
                            orc::ExecutorAddrDiff Size, Linkage L, Scope S,
                            bool IsCallable, bool IsLive) {
-    assert((S == Scope::Local || llvm::count_if(defined_symbols(),
-                                                [&](const Symbol *Sym) {
-                                                  return Sym->getName() == Name;
-                                                }) == 0) &&
+    assert((S == Scope::Local || llvm::none_of(defined_symbols(),
+                                               [&](const Symbol *Sym) {
+                                                 return Sym->getName() == Name;
+                                               })) &&
            "Duplicate defined symbol");
     auto &Sym =
         Symbol::constructNamedDef(Allocator, Content, Offset, std::move(Name),
@@ -1658,11 +1659,11 @@ public:
   orc::shared::AllocActions &allocActions() { return AAs; }
 
   /// Dump the graph.
-  void dump(raw_ostream &OS);
+  LLVM_ABI void dump(raw_ostream &OS);
 
 private:
-  std::vector<Block *> splitBlockImpl(std::vector<Block *> Blocks,
-                                      SplitBlockCache *Cache);
+  LLVM_ABI std::vector<Block *> splitBlockImpl(std::vector<Block *> Blocks,
+                                               SplitBlockCache *Cache);
 
   // Put the BumpPtrAllocator first so that we don't free any of the underlying
   // memory until the Symbol/Addressable destructors have been run.
@@ -1894,7 +1895,7 @@ struct PassConfiguration {
 ///        the two types once we have an OrcSupport library.
 enum class SymbolLookupFlags { RequiredSymbol, WeaklyReferencedSymbol };
 
-raw_ostream &operator<<(raw_ostream &OS, const SymbolLookupFlags &LF);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SymbolLookupFlags &LF);
 
 /// A map of symbol names to resolved addresses.
 using AsyncLookupResult =
@@ -1902,7 +1903,7 @@ using AsyncLookupResult =
 
 /// A function object to call with a resolved symbol map (See AsyncLookupResult)
 /// or an error if resolution failed.
-class JITLinkAsyncLookupContinuation {
+class LLVM_ABI JITLinkAsyncLookupContinuation {
 public:
   virtual ~JITLinkAsyncLookupContinuation() = default;
   virtual void run(Expected<AsyncLookupResult> LR) = 0;
@@ -1929,7 +1930,7 @@ createLookupContinuation(Continuation Cont) {
 }
 
 /// Holds context for a single jitLink invocation.
-class JITLinkContext {
+class LLVM_ABI JITLinkContext {
 public:
   using LookupMap = DenseMap<orc::SymbolStringPtr, SymbolLookupFlags>;
 
@@ -1995,14 +1996,14 @@ private:
 
 /// Marks all symbols in a graph live. This can be used as a default,
 /// conservative mark-live implementation.
-Error markAllSymbolsLive(LinkGraph &G);
+LLVM_ABI Error markAllSymbolsLive(LinkGraph &G);
 
 /// Create an out of range error for the given edge in the given block.
-Error makeTargetOutOfRangeError(const LinkGraph &G, const Block &B,
-                                const Edge &E);
+LLVM_ABI Error makeTargetOutOfRangeError(const LinkGraph &G, const Block &B,
+                                         const Edge &E);
 
-Error makeAlignmentError(llvm::orc::ExecutorAddr Loc, uint64_t Value, int N,
-                         const Edge &E);
+LLVM_ABI Error makeAlignmentError(llvm::orc::ExecutorAddr Loc, uint64_t Value,
+                                  int N, const Edge &E);
 
 /// Creates a new pointer block in the given section and returns an
 /// Anonymous symbol pointing to it.
@@ -2016,7 +2017,7 @@ using AnonymousPointerCreator =
                              Symbol *InitialTarget, uint64_t InitialAddend)>;
 
 /// Get target-specific AnonymousPointerCreator
-AnonymousPointerCreator getAnonymousPointerCreator(const Triple &TT);
+LLVM_ABI AnonymousPointerCreator getAnonymousPointerCreator(const Triple &TT);
 
 /// Create a jump stub that jumps via the pointer at the given symbol and
 /// an anonymous symbol pointing to it. Return the anonymous symbol.
@@ -2026,7 +2027,7 @@ using PointerJumpStubCreator = unique_function<Symbol &(
     LinkGraph &G, Section &StubSection, Symbol &PointerSymbol)>;
 
 /// Get target-specific PointerJumpStubCreator
-PointerJumpStubCreator getPointerJumpStubCreator(const Triple &TT);
+LLVM_ABI PointerJumpStubCreator getPointerJumpStubCreator(const Triple &TT);
 
 /// Base case for edge-visitors where the visitor-list is empty.
 inline void visitEdge(LinkGraph &G, Block *B, Edge &E) {}
@@ -2063,17 +2064,18 @@ void visitExistingEdges(LinkGraph &G, VisitorTs &&...Vs) {
 /// Note: The graph does not take ownership of the underlying buffer, nor copy
 /// its contents. The caller is responsible for ensuring that the object buffer
 /// outlives the graph.
-Expected<std::unique_ptr<LinkGraph>>
+LLVM_ABI Expected<std::unique_ptr<LinkGraph>>
 createLinkGraphFromObject(MemoryBufferRef ObjectBuffer,
                           std::shared_ptr<orc::SymbolStringPool> SSP);
 
 /// Create a \c LinkGraph defining the given absolute symbols.
-std::unique_ptr<LinkGraph>
+LLVM_ABI std::unique_ptr<LinkGraph>
 absoluteSymbolsLinkGraph(Triple TT, std::shared_ptr<orc::SymbolStringPool> SSP,
                          orc::SymbolMap Symbols);
 
 /// Link the given graph.
-void link(std::unique_ptr<LinkGraph> G, std::unique_ptr<JITLinkContext> Ctx);
+LLVM_ABI void link(std::unique_ptr<LinkGraph> G,
+                   std::unique_ptr<JITLinkContext> Ctx);
 
 } // end namespace jitlink
 } // end namespace llvm

@@ -16,7 +16,6 @@
 #include <cwchar>  // wide char manipulation
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __locale {
 
 //
@@ -183,5 +182,4 @@ int __asprintf(char** ret, __locale_t loc, const char* format, ...) {
 }
 
 } // namespace __locale
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
