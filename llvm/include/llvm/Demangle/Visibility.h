@@ -16,28 +16,10 @@
 #ifndef LLVM_DEMANGLE_VISIBILITY_H
 #define LLVM_DEMANGLE_VISIBILITY_H
 
-#include "llvm/Config/llvm-config.h"
-#include "llvm/Demangle/DemangleConfig.h"
+#include "llvm/Support/Compiler.h"
 
 /// DEMANGLE_ABI is the export/visibility macro used to mark symbols delcared in
-/// llvm/Demangle as exported when built as a shared library.
-
-#if !defined(LLVM_ABI_GENERATING_ANNOTATIONS)
-#if defined(LLVM_ENABLE_DEMANGLE_EXPORT_ANNOTATIONS) &&                        \
-    !defined(LLVM_BUILD_STATIC)
-#if defined(_WIN32) && !defined(__MINGW32__)
-#if defined(LLVM_EXPORTS)
-#define DEMANGLE_ABI __declspec(dllexport)
-#else
-#define DEMANGLE_ABI __declspec(dllimport)
-#endif
-#elif __has_attribute(visibility)
-#define DEMANGLE_ABI __attribute__((visibility("default")))
-#endif
-#endif
-#if !defined(DEMANGLE_ABI)
-#define DEMANGLE_ABI
-#endif
-#endif
+/// llvm/Demangle as exported when LLVM is built as a shared library.
+#define DEMANGLE_ABI LLVM_ABI
 
 #endif
