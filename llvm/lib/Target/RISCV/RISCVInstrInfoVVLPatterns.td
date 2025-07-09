@@ -653,7 +653,7 @@ let HasOneUse = 1 in {
                                                node:$E),
                                           (riscv_or_vl node:$A, node:$B, node:$C,
                                                        node:$D, node:$E), [{
-    return orIsAdd(N);
+    return orDisjoint(N);
   }]>;
   def riscv_sub_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
                                          node:$E),
