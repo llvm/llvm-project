@@ -18,8 +18,8 @@
 #  include <__ostream/basic_ostream.h>
 #  include <format>
 #  include <ios>
-#  include <locale>
 #  include <print>
+#  include <streambuf>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -82,9 +82,7 @@ _LIBCPP_HIDE_FROM_ABI inline void vprint_nonunicode(ostream& __os, string_view _
 //   native Unicode API;
 // Whether the returned FILE* is "a terminal capable of displaying Unicode"
 // is determined in the same way as the print(FILE*, ...) overloads.
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_EXPORTED_FROM_ABI FILE* __get_ostream_file(ostream& __os);
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 #    if _LIBCPP_HAS_UNICODE
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
