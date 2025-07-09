@@ -15895,6 +15895,13 @@ static SDValue expandMulToNAFSequence(SDNode *N, SelectionDAG &DAG,
 // X * (2^N +/- 2^M) -> (add/sub (shl X, C1), (shl X, C2))
 static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
                                         uint64_t MulAmt) {
+  // Don't do this is if the Xqciac extension is enabled and the MulAmt is
+  // simm12.
+  const RISCVSubtarget &Subtarget =
+      DAG.getMachineFunction().getSubtarget<RISCVSubtarget>();
+  if (Subtarget.hasVendorXqciac() && isInt<12>(MulAmt))
+    return SDValue();
+
   uint64_t MulAmtLowBit = MulAmt & (-MulAmt);
   ISD::NodeType Op;
   uint64_t ShiftAmt1;
@@ -23699,6 +23706,10 @@ bool RISCVTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
 
   auto *ConstNode = cast<ConstantSDNode>(C);
   const APInt &Imm = ConstNode->getAPIntValue();
+
+  // Don't do this if the Xqciac extension is enabled and the Imm in simm12.
+  if (Subtarget.hasVendorXqciac() && Imm.isSignedIntN(12))
+    return false;
 
   // Break the MUL to a SLLI and an ADD/SUB.
   if ((Imm + 1).isPowerOf2() || (Imm - 1).isPowerOf2() ||
