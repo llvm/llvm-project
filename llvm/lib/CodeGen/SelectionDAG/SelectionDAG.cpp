@@ -5677,7 +5677,8 @@ bool SelectionDAG::isADDLike(SDValue Op, bool NoWrap) const {
     return Op->getFlags().hasDisjoint() ||
            haveNoCommonBitsSet(Op.getOperand(0), Op.getOperand(1));
   if (Opcode == ISD::XOR)
-    return !NoWrap && isMinSignedConstant(Op.getOperand(1));
+    return (!NoWrap && isMinSignedConstant(Op.getOperand(1))) ||
+           haveNoCommonBitsSet(Op.getOperand(0), Op.getOperand(1));
   return false;
 }
 
