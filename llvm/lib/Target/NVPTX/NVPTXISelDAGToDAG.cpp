@@ -363,23 +363,29 @@ bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {
 
 // Map ISD:CONDCODE value to appropriate CmpMode expected by
 // NVPTXInstPrinter::printCmpMode()
-static unsigned getPTXCmpMode(const CondCodeSDNode &CondCode, bool FTZ) {
+SDValue NVPTXDAGToDAGISel::getPTXCmpMode(const CondCodeSDNode &CondCode) {
   using NVPTX::PTXCmpMode::CmpMode;
-  unsigned PTXCmpMode = [](ISD::CondCode CC) {
+  const unsigned PTXCmpMode = [](ISD::CondCode CC) {
     switch (CC) {
     default:
       llvm_unreachable("Unexpected condition code.");
     case ISD::SETOEQ:
+    case ISD::SETEQ:
       return CmpMode::EQ;
     case ISD::SETOGT:
+    case ISD::SETGT:
       return CmpMode::GT;
     case ISD::SETOGE:
+    case ISD::SETGE:
       return CmpMode::GE;
     case ISD::SETOLT:
+    case ISD::SETLT:
       return CmpMode::LT;
     case ISD::SETOLE:
+    case ISD::SETLE:
       return CmpMode::LE;
     case ISD::SETONE:
+    case ISD::SETNE:
       return CmpMode::NE;
     case ISD::SETO:
       return CmpMode::NUM;
@@ -397,45 +403,29 @@ static unsigned getPTXCmpMode(const CondCodeSDNode &CondCode, bool FTZ) {
       return CmpMode::LEU;
     case ISD::SETUNE:
       return CmpMode::NEU;
-    case ISD::SETEQ:
-      return CmpMode::EQ;
-    case ISD::SETGT:
-      return CmpMode::GT;
-    case ISD::SETGE:
-      return CmpMode::GE;
-    case ISD::SETLT:
-      return CmpMode::LT;
-    case ISD::SETLE:
-      return CmpMode::LE;
-    case ISD::SETNE:
-      return CmpMode::NE;
     }
   }(CondCode.get());
-
-  if (FTZ)
-    PTXCmpMode |= NVPTX::PTXCmpMode::FTZ_FLAG;
-
-  return PTXCmpMode;
+  return CurDAG->getTargetConstant(PTXCmpMode, SDLoc(), MVT::i32);
 }
 
 bool NVPTXDAGToDAGISel::SelectSETP_F16X2(SDNode *N) {
-  unsigned PTXCmpMode =
-      getPTXCmpMode(*cast<CondCodeSDNode>(N->getOperand(2)), useF32FTZ());
+  SDValue PTXCmpMode = getPTXCmpMode(*cast<CondCodeSDNode>(N->getOperand(2)));
   SDLoc DL(N);
   SDNode *SetP = CurDAG->getMachineNode(
-      NVPTX::SETP_f16x2rr, DL, MVT::i1, MVT::i1, N->getOperand(0),
-      N->getOperand(1), CurDAG->getTargetConstant(PTXCmpMode, DL, MVT::i32));
+      NVPTX::SETP_f16x2rr, DL, MVT::i1, MVT::i1,
+      {N->getOperand(0), N->getOperand(1), PTXCmpMode,
+       CurDAG->getTargetConstant(useF32FTZ() ? 1 : 0, DL, MVT::i1)});
   ReplaceNode(N, SetP);
   return true;
 }
 
 bool NVPTXDAGToDAGISel::SelectSETP_BF16X2(SDNode *N) {
-  unsigned PTXCmpMode =
-      getPTXCmpMode(*cast<CondCodeSDNode>(N->getOperand(2)), useF32FTZ());
+  SDValue PTXCmpMode = getPTXCmpMode(*cast<CondCodeSDNode>(N->getOperand(2)));
   SDLoc DL(N);
   SDNode *SetP = CurDAG->getMachineNode(
-      NVPTX::SETP_bf16x2rr, DL, MVT::i1, MVT::i1, N->getOperand(0),
-      N->getOperand(1), CurDAG->getTargetConstant(PTXCmpMode, DL, MVT::i32));
+      NVPTX::SETP_bf16x2rr, DL, MVT::i1, MVT::i1,
+      {N->getOperand(0), N->getOperand(1), PTXCmpMode,
+       CurDAG->getTargetConstant(useF32FTZ() ? 1 : 0, DL, MVT::i1)});
   ReplaceNode(N, SetP);
   return true;
 }
@@ -1953,7 +1943,7 @@ bool NVPTXDAGToDAGISel::tryBF16ArithToFMA(SDNode *N) {
     llvm_unreachable("Unexpected opcode");
   };
 
-  int Opcode = IsVec ? NVPTX::BFMA16x2rrr : NVPTX::BFMA16rrr;
+  int Opcode = IsVec ? NVPTX::FMA_BF16x2rrr : NVPTX::FMA_BF16rrr;
   MachineSDNode *FMA = CurDAG->getMachineNode(Opcode, DL, VT, Operands);
   ReplaceNode(N, FMA);
   return true;
