@@ -263,7 +263,7 @@ std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      Visibility = parseShaderVisibility();
+      Visibility = parseShaderVisibility(TokenKind::kw_visibility);
       if (!Visibility.has_value())
         return std::nullopt;
     } else {
@@ -480,7 +480,7 @@ RootSignatureParser::parseRootConstantParams() {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto Visibility = parseShaderVisibility();
+      auto Visibility = parseShaderVisibility(TokenKind::kw_visibility);
       if (!Visibility.has_value())
         return std::nullopt;
       Params.Visibility = Visibility;
@@ -541,7 +541,7 @@ RootSignatureParser::parseRootDescriptorParams(TokenKind DescKind,
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto Visibility = parseShaderVisibility();
+      auto Visibility = parseShaderVisibility(TokenKind::kw_visibility);
       if (!Visibility.has_value())
         return std::nullopt;
       Params.Visibility = Visibility;
@@ -702,7 +702,7 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto Filter = parseSamplerFilter();
+      auto Filter = parseSamplerFilter(TokenKind::kw_filter);
       if (!Filter.has_value())
         return std::nullopt;
       Params.Filter = Filter;
@@ -716,7 +716,7 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto AddressU = parseTextureAddressMode();
+      auto AddressU = parseTextureAddressMode(TokenKind::kw_addressU);
       if (!AddressU.has_value())
         return std::nullopt;
       Params.AddressU = AddressU;
@@ -730,7 +730,7 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto AddressV = parseTextureAddressMode();
+      auto AddressV = parseTextureAddressMode(TokenKind::kw_addressV);
       if (!AddressV.has_value())
         return std::nullopt;
       Params.AddressV = AddressV;
@@ -744,7 +744,7 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto AddressW = parseTextureAddressMode();
+      auto AddressW = parseTextureAddressMode(TokenKind::kw_addressW);
       if (!AddressW.has_value())
         return std::nullopt;
       Params.AddressW = AddressW;
@@ -786,7 +786,7 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto CompFunc = parseComparisonFunc();
+      auto CompFunc = parseComparisonFunc(TokenKind::kw_comparisonFunc);
       if (!CompFunc.has_value())
         return std::nullopt;
       Params.CompFunc = CompFunc;
@@ -800,7 +800,7 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto BorderColor = parseStaticBorderColor();
+      auto BorderColor = parseStaticBorderColor(TokenKind::kw_borderColor);
       if (!BorderColor.has_value())
         return std::nullopt;
       Params.BorderColor = BorderColor;
@@ -856,7 +856,7 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto Visibility = parseShaderVisibility();
+      auto Visibility = parseShaderVisibility(TokenKind::kw_visibility);
       if (!Visibility.has_value())
         return std::nullopt;
       Params.Visibility = Visibility;
@@ -952,7 +952,7 @@ std::optional<float> RootSignatureParser::parseFloatParam() {
 }
 
 std::optional<llvm::dxbc::ShaderVisibility>
-RootSignatureParser::parseShaderVisibility() {
+RootSignatureParser::parseShaderVisibility(TokenKind Context) {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
 
@@ -961,8 +961,12 @@ RootSignatureParser::parseShaderVisibility() {
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   };
 
-  if (!tryConsumeExpectedToken(Expected))
+  if (!tryConsumeExpectedToken(Expected)) {
+    consumeNextToken(); // consume token to point at invalid token
+    reportDiag(diag::err_hlsl_invalid_token)
+        << /*value=*/1 << /*value of*/ Context;
     return std::nullopt;
+  }
 
   switch (CurToken.TokKind) {
 #define SHADER_VISIBILITY_ENUM(NAME, LIT)                                      \
@@ -978,7 +982,7 @@ RootSignatureParser::parseShaderVisibility() {
 }
 
 std::optional<llvm::dxbc::SamplerFilter>
-RootSignatureParser::parseSamplerFilter() {
+RootSignatureParser::parseSamplerFilter(TokenKind Context) {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
 
@@ -987,8 +991,12 @@ RootSignatureParser::parseSamplerFilter() {
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   };
 
-  if (!tryConsumeExpectedToken(Expected))
+  if (!tryConsumeExpectedToken(Expected)) {
+    consumeNextToken(); // consume token to point at invalid token
+    reportDiag(diag::err_hlsl_invalid_token)
+        << /*value=*/1 << /*value of*/ Context;
     return std::nullopt;
+  }
 
   switch (CurToken.TokKind) {
 #define FILTER_ENUM(NAME, LIT)                                                 \
@@ -1004,7 +1012,7 @@ RootSignatureParser::parseSamplerFilter() {
 }
 
 std::optional<llvm::dxbc::TextureAddressMode>
-RootSignatureParser::parseTextureAddressMode() {
+RootSignatureParser::parseTextureAddressMode(TokenKind Context) {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
 
@@ -1013,8 +1021,12 @@ RootSignatureParser::parseTextureAddressMode() {
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   };
 
-  if (!tryConsumeExpectedToken(Expected))
+  if (!tryConsumeExpectedToken(Expected)) {
+    consumeNextToken(); // consume token to point at invalid token
+    reportDiag(diag::err_hlsl_invalid_token)
+        << /*value=*/1 << /*value of*/ Context;
     return std::nullopt;
+  }
 
   switch (CurToken.TokKind) {
 #define TEXTURE_ADDRESS_MODE_ENUM(NAME, LIT)                                   \
@@ -1030,7 +1042,7 @@ RootSignatureParser::parseTextureAddressMode() {
 }
 
 std::optional<llvm::dxbc::ComparisonFunc>
-RootSignatureParser::parseComparisonFunc() {
+RootSignatureParser::parseComparisonFunc(TokenKind Context) {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
 
@@ -1039,8 +1051,12 @@ RootSignatureParser::parseComparisonFunc() {
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   };
 
-  if (!tryConsumeExpectedToken(Expected))
+  if (!tryConsumeExpectedToken(Expected)) {
+    consumeNextToken(); // consume token to point at invalid token
+    reportDiag(diag::err_hlsl_invalid_token)
+        << /*value=*/1 << /*value of*/ Context;
     return std::nullopt;
+  }
 
   switch (CurToken.TokKind) {
 #define COMPARISON_FUNC_ENUM(NAME, LIT)                                        \
@@ -1056,7 +1072,7 @@ RootSignatureParser::parseComparisonFunc() {
 }
 
 std::optional<llvm::dxbc::StaticBorderColor>
-RootSignatureParser::parseStaticBorderColor() {
+RootSignatureParser::parseStaticBorderColor(TokenKind Context) {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
 
@@ -1065,8 +1081,12 @@ RootSignatureParser::parseStaticBorderColor() {
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   };
 
-  if (!tryConsumeExpectedToken(Expected))
+  if (!tryConsumeExpectedToken(Expected)) {
+    consumeNextToken(); // consume token to point at invalid token
+    reportDiag(diag::err_hlsl_invalid_token)
+        << /*value=*/1 << /*value of*/ Context;
     return std::nullopt;
+  }
 
   switch (CurToken.TokKind) {
 #define STATIC_BORDER_COLOR_ENUM(NAME, LIT)                                    \

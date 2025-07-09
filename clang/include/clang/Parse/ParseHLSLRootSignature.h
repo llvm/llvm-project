@@ -137,11 +137,16 @@ private:
   std::optional<float> parseFloatParam();
 
   /// Parsing methods of various enums
-  std::optional<llvm::dxbc::ShaderVisibility> parseShaderVisibility();
-  std::optional<llvm::dxbc::SamplerFilter> parseSamplerFilter();
-  std::optional<llvm::dxbc::TextureAddressMode> parseTextureAddressMode();
-  std::optional<llvm::dxbc::ComparisonFunc> parseComparisonFunc();
-  std::optional<llvm::dxbc::StaticBorderColor> parseStaticBorderColor();
+  std::optional<llvm::dxbc::ShaderVisibility>
+  parseShaderVisibility(RootSignatureToken::Kind Context);
+  std::optional<llvm::dxbc::SamplerFilter>
+  parseSamplerFilter(RootSignatureToken::Kind Context);
+  std::optional<llvm::dxbc::TextureAddressMode>
+  parseTextureAddressMode(RootSignatureToken::Kind Context);
+  std::optional<llvm::dxbc::ComparisonFunc>
+  parseComparisonFunc(RootSignatureToken::Kind Context);
+  std::optional<llvm::dxbc::StaticBorderColor>
+  parseStaticBorderColor(RootSignatureToken::Kind Context);
   std::optional<llvm::dxbc::RootDescriptorFlags> parseRootDescriptorFlags();
   std::optional<llvm::dxbc::DescriptorRangeFlags> parseDescriptorRangeFlags();
 

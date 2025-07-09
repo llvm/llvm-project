@@ -67,3 +67,27 @@ void bad_root_signature_13() {}
 // expected-error@+1 {{expected '(' after UAV}}
 [RootSignature("UAV invalid")]
 void bad_root_signature_14() {}
+
+// expected-error@+1 {{invalid value of visibility}}
+[RootSignature("StaticSampler(s0, visibility = visibility_typo)")]
+void bad_root_signature_15() {}
+
+// expected-error@+1 {{invalid value of filter}}
+[RootSignature("StaticSampler(s0, filter = filter_typo)")]
+void bad_root_signature_16() {}
+
+// expected-error@+1 {{invalid value of addressU}}
+[RootSignature("StaticSampler(s0, addressU = addressU_typo)")]
+void bad_root_signature_17() {}
+
+// expected-error@+1 {{invalid value of addressV}}
+[RootSignature("StaticSampler(s0, addressV = addressV_typo)")]
+void bad_root_signature_18() {}
+
+// expected-error@+1 {{invalid value of comparisonFunc}}
+[RootSignature("StaticSampler(s0, comparisonFunc = comparisonFunc_typo)")]
+void bad_root_signature_19() {}
+
+// expected-error@+1 {{invalid value of borderColor}}
+[RootSignature("StaticSampler(s0, borderColor = borderColor_typo)")]
+void bad_root_signature_20() {}
