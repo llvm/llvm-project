@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "stacktrace/config.h"
+#include <__config>
+#include <__config_site>
 
-#if defined(_LIBCPP_STACKTRACE_UNWIND_IMPL)
+#if __has_include(<unwind.h>)
 
 #  include <unwind.h>
 

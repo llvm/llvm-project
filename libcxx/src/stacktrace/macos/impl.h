@@ -14,7 +14,8 @@
 #include <cstddef>
 #include <cstdlib>
 
-#include "stacktrace/config.h"
+#include <__config>
+#include <__config_site>
 #include <__stacktrace/base.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
