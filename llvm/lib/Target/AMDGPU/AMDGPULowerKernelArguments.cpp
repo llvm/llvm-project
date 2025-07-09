@@ -13,6 +13,7 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
+#include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
@@ -20,7 +21,6 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Transforms/Utils/Cloning.h"
 
 #define DEBUG_TYPE "amdgpu-lower-kernel-arguments"
 

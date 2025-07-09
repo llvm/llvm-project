@@ -18,6 +18,8 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <memory>
 
 namespace llvm {
@@ -89,6 +91,17 @@ public:
 // scoped noalias analysis.
 //
 LLVM_ABI ImmutablePass *createScopedNoAliasAAWrapperPass();
+
+/// Adds `!noalias` and `!alias.scope` metadata for `CB`'s called function's
+/// `noalias` argument based memory accesses.
+void addAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
+                           const DataLayout &DL, AAResults *CalleeAAR,
+                           ClonedCodeInfo &InlinedFunctionInfo,
+                           bool UseNoAliasIntrinsic);
+
+/// Adds `!noalias` and `!alias.scope` metadata for `F`'s `noalias` argument
+/// based memory accesses.
+void addAliasScopeMetadata(Function &F);
 
 } // end namespace llvm
 

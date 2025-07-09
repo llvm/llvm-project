@@ -31,6 +31,7 @@
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Argument.h"
