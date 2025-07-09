@@ -281,6 +281,9 @@ Changes in existing checks
   excluding variables with ``thread_local`` storage class specifier from being
   matched.
 
+- Improved :doc:`modernize-type-traits
+  <clang-tidy/checks/modernize/type-traits>` check by detecting more type traits.
+
 - Improved :doc:`modernize-use-default-member-init
   <clang-tidy/checks/modernize/use-default-member-init>` check by matching
   arithmetic operations, ``constexpr`` and ``static`` values, and detecting

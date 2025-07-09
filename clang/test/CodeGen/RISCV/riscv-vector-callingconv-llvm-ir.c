@@ -153,14 +153,14 @@ void __attribute__((riscv_vls_cc)) test_st_i32x4_arr1(struct st_i32x4_arr1 arg) 
 // CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4_arr1_256(<vscale x 1 x i32> %arg)
 void __attribute__((riscv_vls_cc(256))) test_st_i32x4_arr1_256(struct st_i32x4_arr1 arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4_arr4(<vscale x 8 x i32> %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4_arr4(target("riscv.vector.tuple", <vscale x 8 x i8>, 4) %arg)
 void __attribute__((riscv_vls_cc)) test_st_i32x4_arr4(struct st_i32x4_arr4 arg) {}
-// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4_arr4_256(<vscale x 4 x i32> %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4_arr4_256(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) %arg)
 void __attribute__((riscv_vls_cc(256))) test_st_i32x4_arr4_256(struct st_i32x4_arr4 arg) {}
 
-// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4_arr8(<vscale x 16 x i32> %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4_arr8(target("riscv.vector.tuple", <vscale x 8 x i8>, 8) %arg)
 void __attribute__((riscv_vls_cc)) test_st_i32x4_arr8(struct st_i32x4_arr8 arg) {}
-// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4_arr8_256(<vscale x 8 x i32> %arg)
+// CHECK-LLVM: define dso_local riscv_vls_cc(256) void @test_st_i32x4_arr8_256(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) %arg)
 void __attribute__((riscv_vls_cc(256))) test_st_i32x4_arr8_256(struct st_i32x4_arr8 arg) {}
 
 // CHECK-LLVM: define dso_local riscv_vls_cc(128) void @test_st_i32x4x2(target("riscv.vector.tuple", <vscale x 8 x i8>, 2) %arg)

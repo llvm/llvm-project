@@ -4628,12 +4628,10 @@ void AsmPrinter::emitXRayTable() {
 
   // We then emit a single entry in the index per function. We use the symbols
   // that bound the instrumentation map as the range for a specific function.
-  // Each entry here will be 2 * word size aligned, as we're writing down two
-  // pointers. This should work for both 32-bit and 64-bit platforms.
+  // Each entry contains 2 words and needs to be word-aligned.
   if (FnSledIndex) {
     OutStreamer->switchSection(FnSledIndex);
-    OutStreamer->emitCodeAlignment(Align(2 * WordSizeBytes),
-                                   &getSubtargetInfo());
+    OutStreamer->emitValueToAlignment(Align(WordSizeBytes));
     // For Mach-O, use an "l" symbol as the atom of this subsection. The label
     // difference uses a SUBTRACTOR external relocation which references the
     // symbol.

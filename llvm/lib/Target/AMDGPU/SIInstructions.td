@@ -2465,6 +2465,7 @@ def : AMDGPUPat <
 >;
 
 let True16Predicate = NotHasTrue16BitInsts in {
+let SubtargetPredicate = isNotGFX9Plus in {
 def : ROTRPattern <V_ALIGNBIT_B32_e64>;
 
 def : GCNPat<(i32 (trunc (srl i64:$src0, (and i32:$src1, (i32 31))))),
@@ -2474,6 +2475,35 @@ def : GCNPat<(i32 (trunc (srl i64:$src0, (and i32:$src1, (i32 31))))),
 def : GCNPat<(i32 (trunc (srl i64:$src0, (i32 ShiftAmt32Imm:$src1)))),
           (V_ALIGNBIT_B32_e64 (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
                           (i32 (EXTRACT_SUBREG (i64 $src0), sub0)), $src1)>;
+} // isNotGFX9Plus
+
+let SubtargetPredicate = isGFX9GFX10 in {
+def : GCNPat <
+        (rotr i32:$src0, i32:$src1),
+        (V_ALIGNBIT_B32_opsel_e64 /* src0_modifiers */ 0, $src0,
+                                  /* src1_modifiers */ 0, $src0,
+                                  /* src2_modifiers */ 0,
+                                  $src1, /* clamp */ 0, /* op_sel */ 0)
+>;
+
+foreach pat = [(i32 (trunc (srl i64:$src0, (and i32:$src1, (i32 31))))),
+               (i32 (trunc (srl i64:$src0, (i32 ShiftAmt32Imm:$src1))))] in
+def : GCNPat<pat,
+        (V_ALIGNBIT_B32_opsel_e64 0, /* src0_modifiers */
+                                  (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
+                                  0, /* src1_modifiers */
+                                  (i32 (EXTRACT_SUBREG (i64 $src0), sub0)),
+                                  0, /* src2_modifiers */
+                                  $src1, /* clamp */ 0, /* op_sel */ 0)
+>;
+
+def : GCNPat<(fshr i32:$src0, i32:$src1, i32:$src2),
+        (V_ALIGNBIT_B32_opsel_e64 /* src0_modifiers */ 0, $src0,
+                                  /* src1_modifiers */ 0, $src1,
+                                  /* src2_modifiers */ 0,
+                                  $src2, /* clamp */ 0, /* op_sel */ 0)
+>;
+} // isGFX9GFX10
 } // end True16Predicate = NotHasTrue16BitInsts
 
 let True16Predicate = UseRealTrue16Insts in {
@@ -3074,6 +3104,8 @@ def : GCNPat <
                     (i32 (EXTRACT_SUBREG $a, sub0))), (i32 1))
 >;
 
+// This pattern for bswap is used for pre-GFX8. For GFX8+, bswap is mapped
+// to V_PERM_B32.
 let True16Predicate = NotHasTrue16BitInsts in
 def : GCNPat <
   (i32 (bswap i32:$a)),
@@ -3549,15 +3581,20 @@ def : GCNPat <
 
 // Take the upper 16 bits from V[0] and the lower 16 bits from V[1]
 // Special case, can use V_ALIGNBIT (always uses encoded literal)
-let True16Predicate = NotHasTrue16BitInsts in
-def : GCNPat <
+let True16Predicate = NotHasTrue16BitInsts in {
+defvar BuildVectorToAlignBitPat =
   (vecTy (DivergentBinFrag<build_vector>
     (Ty !if(!eq(Ty, i16),
       (Ty (trunc (srl VGPR_32:$a, (i32 16)))),
       (Ty (bitconvert (i16 (trunc (srl VGPR_32:$a, (i32 16)))))))),
-    (Ty VGPR_32:$b))),
-    (V_ALIGNBIT_B32_e64 VGPR_32:$b, VGPR_32:$a, (i32 16))
->;
+    (Ty VGPR_32:$b)));
+
+let SubtargetPredicate = isNotGFX9Plus in
+def : GCNPat<BuildVectorToAlignBitPat, (V_ALIGNBIT_B32_e64 VGPR_32:$b, VGPR_32:$a, (i32 16))>;
+
+let SubtargetPredicate = isGFX9GFX10 in
+def : GCNPat<BuildVectorToAlignBitPat, (V_ALIGNBIT_B32_opsel_e64 0, VGPR_32:$b, 0, VGPR_32:$a, 0, (i32 16), 0, 0)>;
+} //True16Predicate = NotHasTrue16BitInsts
 
 let True16Predicate = UseFakeTrue16Insts in
 def : GCNPat <
