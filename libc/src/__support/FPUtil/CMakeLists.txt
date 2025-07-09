@@ -260,7 +260,7 @@ add_header_library(
   HDRS
     cast.h
   DEPENDS
-    .dyadic_float
+  .dyadic_flfoat
     .fp_bits
     libc.hdr.fenv_macros
     libc.src.__support.CPP.algorithm
