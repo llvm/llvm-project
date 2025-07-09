@@ -75,6 +75,7 @@
 #  define _LIBCPP_ABI_OPTIMIZED_FUNCTION
 #  define _LIBCPP_ABI_REGEX_CONSTANTS_NONZERO
 #  define _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION
+#  define _LIBCPP_ABI_TREE_POINTER_INT_PAIR
 #  define _LIBCPP_ABI_USE_WRAP_ITER_IN_STD_ARRAY
 #  define _LIBCPP_ABI_USE_WRAP_ITER_IN_STD_STRING_VIEW
 #  define _LIBCPP_ABI_VARIANT_INDEX_TYPE_OPTIMIZATION
@@ -97,6 +98,8 @@
 #    define _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
 #  endif
 #endif
+
+#define _LIBCPP_ABI_TREE_POINTER_INT_PAIR
 
 // We had some bugs where we use [[no_unique_address]] together with construct_at,
 // which causes UB as the call on construct_at could write to overlapping subobjects
