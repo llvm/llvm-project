@@ -19,7 +19,7 @@ static constexpr uint16_t POS_STOP = 0x7f80U;
 
 // range: [-0, -inf]
 static constexpr uint16_t NEG_START = 0x8000U;
-static constexpr uint16_t NEG_STOP = 0xff80;
+static constexpr uint16_t NEG_STOP = 0xff80U;
 
 using MPFRNumber = LIBC_NAMESPACE::testing::mpfr::MPFRNumber;
 

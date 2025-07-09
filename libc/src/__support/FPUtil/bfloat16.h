@@ -19,7 +19,7 @@
 #include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
-
+namespace fputil {
 struct BFloat16 {
   uint16_t bits;
 
@@ -57,7 +57,7 @@ struct BFloat16 {
     return cpp::bit_cast<float>(x_bits);
   }
 }; // struct BFloat16
-
+} // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_BFLOAT16_H
