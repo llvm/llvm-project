@@ -71,7 +71,8 @@ bool RootSignatureParser::parse() {
       break;
   }
 
-  return consumeExpectedToken(TokenKind::end_of_stream);
+  return consumeExpectedToken(TokenKind::end_of_stream,
+                              diag::err_expected_either, TokenKind::pu_comma);
 }
 
 template <typename FlagType>
@@ -131,7 +132,8 @@ std::optional<llvm::dxbc::RootFlags> RootSignatureParser::parseRootFlags() {
     } while (tryConsumeExpectedToken(TokenKind::pu_or));
   }
 
-  if (consumeExpectedToken(TokenKind::pu_r_paren))
+  if (consumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_either,
+                           TokenKind::pu_comma))
     return std::nullopt;
 
   return Flags;
@@ -151,7 +153,8 @@ std::optional<RootConstants> RootSignatureParser::parseRootConstants() {
   if (!Params.has_value())
     return std::nullopt;
 
-  if (consumeExpectedToken(TokenKind::pu_r_paren))
+  if (consumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_either,
+                           TokenKind::pu_comma))
     return std::nullopt;
 
   // Check mandatory parameters where provided
@@ -216,7 +219,8 @@ std::optional<RootDescriptor> RootSignatureParser::parseRootDescriptor() {
   if (!Params.has_value())
     return std::nullopt;
 
-  if (consumeExpectedToken(TokenKind::pu_r_paren))
+  if (consumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_either,
+                           TokenKind::pu_comma))
     return std::nullopt;
 
   // Check mandatory parameters were provided
@@ -287,7 +291,8 @@ std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {
       break;
   }
 
-  if (consumeExpectedToken(TokenKind::pu_r_paren))
+  if (consumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_either,
+                           TokenKind::pu_comma))
     return std::nullopt;
 
   // Fill in optional visibility
@@ -339,7 +344,8 @@ RootSignatureParser::parseDescriptorTableClause() {
   if (!Params.has_value())
     return std::nullopt;
 
-  if (consumeExpectedToken(TokenKind::pu_r_paren))
+  if (consumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_either,
+                           TokenKind::pu_comma))
     return std::nullopt;
 
   // Check mandatory parameters were provided
@@ -380,7 +386,8 @@ std::optional<StaticSampler> RootSignatureParser::parseStaticSampler() {
   if (!Params.has_value())
     return std::nullopt;
 
-  if (consumeExpectedToken(TokenKind::pu_r_paren))
+  if (consumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_either,
+                           TokenKind::pu_comma))
     return std::nullopt;
 
   // Check mandatory parameters were provided

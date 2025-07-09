@@ -21,7 +21,7 @@ void bad_root_signature_3() {}
 [RootSignature("DescriptorTable(), invalid")]
 void bad_root_signature_4() {}
 
-// expected-error@+1 {{expected ')'}}
+// expected-error@+1 {{expected ')' or ','}}
 [RootSignature("RootConstants(b0 num32BitConstants = 1)")]
 void bad_root_signature_5() {}
 
@@ -36,7 +36,7 @@ void bad_root_signature_5() {}
 [RootSignature(MultiLineRootSignature)]
 void bad_root_signature_6() {}
 
-// expected-error@+1 {{expected end of stream}}
+// expected-error@+1 {{expected end of stream or ','}}
 [RootSignature("RootFlags() RootConstants(b0, num32BitConstants = 1)")]
 void bad_root_signature_7() {}
 
