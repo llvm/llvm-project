@@ -1525,6 +1525,10 @@ public:
   friend APFloat frexp(const APFloat &X, int &Exp, roundingMode RM);
   friend IEEEFloat;
   friend DoubleAPFloat;
+
+#ifdef LLVM_INTEGRATE_LIBC
+  friend APFloat exp(const APFloat &X, roundingMode RM);
+#endif // LLVM_INTEGRATE_LIBC
 };
 
 static_assert(sizeof(APFloat) == sizeof(detail::IEEEFloat),
@@ -1657,6 +1661,12 @@ inline APFloat maximumnum(const APFloat &A, const APFloat &B) {
     return A.isNegative() ? B : A;
   return A < B ? B : A;
 }
+
+#ifdef LLVM_INTEGRATE_LIBC
+/// Implement IEEE 754-2019 exp functions.
+LLVM_READONLY
+APFloat exp(const APFloat &X, RoundingMode RM = APFloat::rmNearestTiesToEven);
+#endif // LLVM_INTEGRATE_LIBC
 
 inline raw_ostream &operator<<(raw_ostream &OS, const APFloat &V) {
   V.print(OS);

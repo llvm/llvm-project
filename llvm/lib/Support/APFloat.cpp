@@ -28,6 +28,11 @@
 #include <cstring>
 #include <limits.h>
 
+#ifdef LLVM_INTEGRATE_LIBC
+// Shared headers from LLVM libc
+#include "shared/math.h"
+#endif // LLVM_INTEGRATE_LIBC
+
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
   do {                                                                         \
     if (usesLayout<IEEEFloat>(getSemantics()))                                 \
@@ -5600,6 +5605,33 @@ float APFloat::convertToFloat() const {
   (void)St;
   return Temp.getIEEE().convertToFloat();
 }
+
+#ifdef LLVM_INTEGRATE_LIBC
+static constexpr int getFEnvRoundingMode(llvm::RoundingMode rm) {
+  switch (rm) {
+  case APFloat::rmTowardPositive:
+    return FE_UPWARD;
+  case APFloat::rmTowardNegative:
+    return FE_DOWNWARD;
+  case APFloat::rmTowardZero:
+    return FE_TOWARDZERO;
+  default:
+    // TODO: fix rmNearestTiesToAway for platform without FE_TONEARESTFROMZERO.
+    return FE_TONEAREST;
+  };
+}
+
+APFloat exp(const APFloat &X, RoundingMode rounding_mode) {
+  assert((&X.getSemantics() == (const llvm::fltSemantics *)&semIEEEsingle) &&
+         "Float semantics is not IEEEsingle");
+  if (&X.getSemantics() == (const llvm::fltSemantics *)&semIEEEsingle) {
+    float result = LIBC_NAMESPACE::shared::expf(
+        X.convertToFloat(), getFEnvRoundingMode(rounding_mode));
+    return APFloat(result);
+  }
+  llvm_unreachable("Unexpected semantics");
+}
+#endif // LLVM_INTEGRATE_LIBC
 
 } // namespace llvm
 
