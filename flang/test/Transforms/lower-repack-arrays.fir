@@ -1152,7 +1152,7 @@ func.func @_QPtest7_stack(%arg0: !fir.class<!fir.array<?x?xnone>> {fir.bindc_nam
 // CHECK:             %[[VAL_39:.*]] = fir.convert %[[VAL_37]] : (!fir.heap<!fir.array<?xnone>>) -> index
 // CHECK:             %[[VAL_40:.*]] = arith.cmpi ne, %[[VAL_38]], %[[VAL_39]] : index
 // CHECK:             fir.if %[[VAL_40]] weights([0, 1]) {
-// CHECK:               %[[VAL_41:.*]] = fir.address_of(@_QQclX2b7d3b4eb2a9b0772619a406c28937e5) : !fir.ref<!fir.char<1,{{.*}}>>
+// CHECK:               %[[VAL_41:.*]] = fir.address_of(@{{_QQcl.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 // CHECK:               %[[VAL_42:.*]] = fir.convert %[[ARG0]] : (!fir.box<!fir.array<?xnone>>) -> !fir.box<none>
 // CHECK:               %[[VAL_43:.*]] = fir.convert %[[VAL_7]] : (!fir.box<!fir.array<?xnone>>) -> !fir.box<none>
 // CHECK:               %[[VAL_44:.*]] = fir.convert %[[VAL_41]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
