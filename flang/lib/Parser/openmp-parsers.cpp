@@ -126,8 +126,8 @@ private:
   using NameWithId = std::pair<std::string, llvm::omp::Directive>;
   using ConstIterator = std::vector<NameWithId>::const_iterator;
 
-  llvm::iterator_range<ConstIterator>
-  directives_starting_with(char initial) const;
+  llvm::iterator_range<ConstIterator> directives_starting_with(
+      char initial) const;
   void initTokens(std::vector<NameWithId>[]) const;
 };
 
@@ -161,9 +161,8 @@ void OmpDirectiveNameParser::initTokens(std::vector<NameWithId> table[]) const {
   // order. This is to make sure that longer names are tried first, before
   // any potential prefix (e.g. "target update" before "target").
   for (int initial{'a'}; initial != 'z' + 1; ++initial) {
-    llvm::stable_sort(table[initial - 'a'], [](auto &a, auto &b) {
-      return a.first.size() > b.first.size();
-    });
+    llvm::stable_sort(table[initial - 'a'],
+        [](auto &a, auto &b) { return a.first.size() > b.first.size(); });
   }
 }
 
