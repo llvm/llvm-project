@@ -1156,7 +1156,7 @@ GCNTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
     else if (PostRADirectionStr == "bidirectional")
       PostRADirection = MISched::Bidirectional;
     else
-      report_fatal_error(
+      reportFatalUsageError(
           Twine("invalid value for 'misched-postra-direction' attribute: ") +
           PostRADirectionStr);
   }
