@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Core/AddressRange.h"
 #include "lldb/Expression/DWARFExpressionList.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Target/RegisterContext.h"
@@ -51,6 +52,37 @@ bool DWARFExpressionList::ContainsAddress(lldb::addr_t func_load_addr,
   if (IsAlwaysValidSingleExpr())
     return true;
   return GetExpressionAtAddress(func_load_addr, addr) != nullptr;
+}
+
+std::optional<DWARFExpressionList::DWARFExpressionEntry>
+DWARFExpressionList::GetExpressionEntryAtAddress(lldb::addr_t func_load_addr,
+                                                lldb::addr_t load_addr) const {
+  if (const DWARFExpression *always = GetAlwaysValidExpr()) {
+    return DWARFExpressionEntry{std::nullopt, always};
+  }
+
+  if (func_load_addr == LLDB_INVALID_ADDRESS)
+    func_load_addr = m_func_file_addr;
+
+  // Guard against underflow when translating a load address back into file space.
+  if (load_addr < func_load_addr)
+      return std::nullopt;
+
+  // Guard against overflow.
+  lldb::addr_t delta = load_addr - func_load_addr;
+  if (delta > std::numeric_limits<lldb::addr_t>::max() - m_func_file_addr)
+    return std::nullopt;
+
+  lldb::addr_t file_pc = (load_addr - func_load_addr) + m_func_file_addr;
+  
+  if (const auto *entry = m_exprs.FindEntryThatContains(file_pc)) {
+    AddressRange range_in_file(entry->GetRangeBase(),
+                              entry->GetRangeEnd() - entry->GetRangeBase());
+    return DWARFExpressionEntry{range_in_file, &entry->data};
+  }
+
+  // No entry covers this PC:
+  return std::nullopt;
 }
 
 const DWARFExpression *

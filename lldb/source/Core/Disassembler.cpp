@@ -26,7 +26,10 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/Variable.h"
+#include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -701,6 +704,93 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
   ss.PutCString(opcode_name);
   ss.FillLastLineToColumn(opcode_pos + opcode_column_width, ' ');
   ss.PutCString(mnemonics);
+
+  const size_t annotation_column = 150;
+
+  if (exe_ctx && exe_ctx->GetFramePtr()) {
+    StackFrame *frame = exe_ctx->GetFramePtr();
+    TargetSP target_sp = exe_ctx->GetTargetSP();
+    if (frame && target_sp) {
+      addr_t current_pc = m_address.GetLoadAddress(target_sp.get());
+      addr_t original_pc = frame->GetFrameCodeAddress().GetLoadAddress(target_sp.get());
+      if (frame->ChangePC(current_pc)) {
+        VariableListSP var_list_sp = frame->GetInScopeVariableList(true);
+        SymbolContext sc = frame->GetSymbolContext(eSymbolContextFunction);
+        addr_t func_load_addr = LLDB_INVALID_ADDRESS;
+        if (sc.function)
+          func_load_addr = sc.function->GetAddress().GetLoadAddress(target_sp.get());
+
+        
+        if(ss.GetSizeOfLastLine() < annotation_column) {
+
+          std::vector<std::string> annotations;
+
+          if (var_list_sp) {
+            for (size_t i = 0; i < var_list_sp->GetSize(); ++i) {
+              VariableSP var_sp = var_list_sp->GetVariableAtIndex(i);
+              if (!var_sp)
+                continue;
+
+              const char *name = var_sp->GetName().AsCString();
+              auto &expr_list = var_sp->LocationExpressionList();
+              if (!expr_list.IsValid())
+                continue;
+              // Handle std::optional<DWARFExpressionEntry>.
+              if (auto entryOrErr = expr_list.GetExpressionEntryAtAddress(func_load_addr, current_pc)) {
+                auto entry = *entryOrErr;
+
+                // Check if entry has a file_range, and filter on address if so.
+                if (!entry.file_range || entry.file_range->ContainsFileAddress(
+                        (current_pc - func_load_addr) + expr_list.GetFuncFileAddress())) {
+
+                  StreamString loc_str;
+                  ABI *abi = exe_ctx->GetProcessPtr()->GetABI().get();
+                  entry.expr->DumpLocation(&loc_str, eDescriptionLevelBrief, abi);
+                  
+                  std::string loc_output = loc_str.GetString().str();
+
+                  llvm::SmallVector<llvm::StringRef, 4> parts;
+                  llvm::StringRef(loc_str.GetString()).split(parts, ", ");
+
+                  // Reconstruct the string without the decoding error chunks
+                  std::string cleaned_output;
+                  bool first = true;
+
+                  for (const auto &part : parts) {
+                    if (part.contains("<decoding error>"))
+                      continue;
+
+                    if (!first)
+                      cleaned_output += ", ";
+                    cleaned_output += part.str();
+                    first = false;
+                  }
+
+                  // Only keep this annotation if there is still something useful left.
+                  llvm::StringRef cleaned_ref = llvm::StringRef(cleaned_output).trim();
+                  if (!cleaned_ref.empty()) {
+                    annotations.push_back(llvm::formatv("{0} = {1}", name, cleaned_ref));
+                  }
+                }
+              }
+            }
+
+            if (!annotations.empty()) {
+              ss.FillLastLineToColumn(annotation_column, ' ');
+              ss.PutCString(" ; ");
+              for (size_t i = 0; i < annotations.size(); ++i) {
+                if (i > 0)
+                  ss.PutCString(", ");
+                ss.PutCString(annotations[i]);
+              }
+            }
+          }
+        }
+
+        frame->ChangePC(original_pc);
+      }
+    }
+  }
 
   if (!m_comment.empty()) {
     ss.FillLastLineToColumn(
