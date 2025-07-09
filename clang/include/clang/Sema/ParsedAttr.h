@@ -1110,45 +1110,6 @@ enum AttributeDeclKind {
   ExpectedTypedef,
 };
 
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                             const ParsedAttr &At) {
-  const IdentifierInfo *AttrName =
-      At.printMacroName() ? At.getMacroIdentifier() : At.getAttrName();
-  DB.AddTaggedVal(reinterpret_cast<uint64_t>(AttrName),
-                  DiagnosticsEngine::ak_identifierinfo);
-  return DB;
-}
-
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                             const ParsedAttr *At) {
-  return DB << *At;
-}
-
-/// AttributeCommonInfo has a non-explicit constructor which takes an
-/// SourceRange as its only argument, this constructor has many uses so making
-/// it explicit is hard. This constructor causes ambiguity with
-/// DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB, SourceRange R).
-/// We use SFINAE to disable any conversion and remove any ambiguity.
-template <
-    typename ACI,
-    std::enable_if_t<std::is_same<ACI, AttributeCommonInfo>::value, int> = 0>
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                             const ACI &CI) {
-  DB.AddTaggedVal(reinterpret_cast<uint64_t>(CI.getAttrName()),
-                  DiagnosticsEngine::ak_identifierinfo);
-  return DB;
-}
-
-template <
-    typename ACI,
-    std::enable_if_t<std::is_same<ACI, AttributeCommonInfo>::value, int> = 0>
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                             const ACI *CI) {
-  DB.AddTaggedVal(reinterpret_cast<uint64_t>(CI->getAttrName()),
-                  DiagnosticsEngine::ak_identifierinfo);
-  return DB;
-}
-
 } // namespace clang
 
 #endif // LLVM_CLANG_SEMA_PARSEDATTR_H
