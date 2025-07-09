@@ -88,3 +88,12 @@ add_libc_fuzzer(
   DEPENDS
     libc.src.math.tan
 )
+
+add_libc_fuzzer(
+  sincos_fuzz
+  NEED_MPFR
+  SRCS
+    sincos_fuzz.cpp
+  DEPENDS
+    libc.src.math.sincos
+)
