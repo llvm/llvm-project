@@ -13,9 +13,7 @@
 #include "shared/libc_common.h"
 #include "src/__support/math/expf16.h"
 
-#ifndef LIBC_TYPES_HAS_FLOAT16
-#error unsupported
-#else
+#ifdef LIBC_TYPES_HAS_FLOAT16
 
 namespace LIBC_NAMESPACE_DECL {
 namespace shared {

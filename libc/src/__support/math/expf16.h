@@ -11,9 +11,7 @@
 
 #include "include/llvm-libc-macros/float16-macros.h"
 
-#ifndef LIBC_TYPES_HAS_FLOAT16
-#error unsupported
-#else
+#ifdef LIBC_TYPES_HAS_FLOAT16
 
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
