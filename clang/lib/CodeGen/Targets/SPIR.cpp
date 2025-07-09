@@ -421,14 +421,12 @@ static llvm::Type *getInlineSpirvType(CodeGenModule &CGM,
     case SpirvOperandKind::ConstantId: {
       llvm::Type *IntegralType =
           CGM.getTypes().ConvertType(Operand.getResultType());
-      llvm::APInt Value = Operand.getValue();
 
-      Result = getInlineSpirvConstant(CGM, IntegralType, Value);
+      Result = getInlineSpirvConstant(CGM, IntegralType, Operand.getValue());
       break;
     }
     case SpirvOperandKind::Literal: {
-      llvm::APInt Value = Operand.getValue();
-      Result = getInlineSpirvConstant(CGM, nullptr, Value);
+      Result = getInlineSpirvConstant(CGM, nullptr, Operand.getValue());
       break;
     }
     case SpirvOperandKind::TypeId: {

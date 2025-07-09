@@ -68,12 +68,6 @@ class VPBuilder {
     return tryInsertInstruction(new VPInstruction(Opcode, Operands, DL, Name));
   }
 
-  VPInstruction *createInstruction(unsigned Opcode,
-                                   std::initializer_list<VPValue *> Operands,
-                                   DebugLoc DL, const Twine &Name = "") {
-    return createInstruction(Opcode, ArrayRef<VPValue *>(Operands), DL, Name);
-  }
-
 public:
   VPBuilder() = default;
   VPBuilder(VPBasicBlock *InsertBB) { setInsertPoint(InsertBB); }

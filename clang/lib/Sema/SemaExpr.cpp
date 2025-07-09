@@ -17934,6 +17934,25 @@ HandleImmediateInvocations(Sema &SemaRef,
       Rec.isImmediateFunctionContext() || SemaRef.RebuildingImmediateInvocation)
     return;
 
+  // An expression or conversion is 'manifestly constant-evaluated' if it is:
+  // [...]
+  // - the initializer of a variable that is usable in constant expressions or
+  //   has constant initialization.
+  if (SemaRef.getLangOpts().CPlusPlus23 &&
+      Rec.ExprContext ==
+          Sema::ExpressionEvaluationContextRecord::EK_VariableInit) {
+    auto *VD = cast<VarDecl>(Rec.ManglingContextDecl);
+    if (VD->isUsableInConstantExpressions(SemaRef.Context) ||
+        VD->hasConstantInitialization()) {
+      // An expression or conversion is in an 'immediate function context' if it
+      // is potentially evaluated and either:
+      // [...]
+      // - it is a subexpression of a manifestly constant-evaluated expression
+      //   or conversion.
+      return;
+    }
+  }
+
   /// When we have more than 1 ImmediateInvocationCandidates or previously
   /// failed immediate invocations, we need to check for nested
   /// ImmediateInvocationCandidates in order to avoid duplicate diagnostics.
