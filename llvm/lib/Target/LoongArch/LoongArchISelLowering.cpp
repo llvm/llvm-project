@@ -195,6 +195,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
     setOperationAction(ISD::FMAXNUM_IEEE, MVT::f32, Legal);
     setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
+    setOperationAction(ISD::FCANONICALIZE, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FSETCC, MVT::f32, Legal);
     setOperationAction(ISD::IS_FPCLASS, MVT::f32, Legal);
@@ -242,6 +243,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FMINNUM_IEEE, MVT::f64, Legal);
     setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
     setOperationAction(ISD::FMAXNUM_IEEE, MVT::f64, Legal);
+    setOperationAction(ISD::FCANONICALIZE, MVT::f64, Legal);
     setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
     setOperationAction(ISD::IS_FPCLASS, MVT::f64, Legal);
     setOperationAction(ISD::FSIN, MVT::f64, Expand);
