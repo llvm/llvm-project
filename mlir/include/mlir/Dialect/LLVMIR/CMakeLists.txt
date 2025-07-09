@@ -7,16 +7,21 @@ mlir_tablegen(LLVMOpsDialect.h.inc -gen-dialect-decls)
 mlir_tablegen(LLVMOpsDialect.cpp.inc -gen-dialect-defs)
 mlir_tablegen(LLVMOpsEnums.h.inc -gen-enum-decls)
 mlir_tablegen(LLVMOpsEnums.cpp.inc -gen-enum-defs)
+#For LLVMOpsAttrDefs.h.inc, see below.
 mlir_tablegen(LLVMOpsAttrDefs.cpp.inc -gen-attrdef-defs
               -attrdefs-dialect=llvm)
 add_public_tablegen_target(MLIRLLVMOpsIncGen)
 
-# FIXME: explain how this solves generated header recursive dependency
+# NB: Separate out LLVMOpsAttrDefs.h.inc generation as generating it
+#     through LLVMOps.td ends up defining LLVMTargetFeaturesAttr even
+#     though LLVMTargetFeaturesAttrDefs.* is responsible for that.
 set(LLVM_TARGET_DEFINITIONS LLVMAttrAndEnumDefs.td)
 mlir_tablegen(LLVMOpsAttrDefs.h.inc -gen-attrdef-decls -attrdefs-dialect=llvm)
 add_public_tablegen_target(MLIRLLVMAttrsIncGen)
 
-# FIXME: explain how this solves generated header recursive dependency
+# NB: LLVMTargetFeaturesAttr is split out into its own file
+#     to break a recursive dependency: LLVMInterfaces depends
+#     on it, and other LLVMAttrs depending on LLVMInterfaces.
 set(LLVM_TARGET_DEFINITIONS LLVMTargetFeaturesAttrDefs.td)
 mlir_tablegen(LLVMTargetFeaturesAttrDefs.h.inc -gen-attrdef-decls)
 mlir_tablegen(LLVMTargetFeaturesAttrDefs.cpp.inc -gen-attrdef-defs)
