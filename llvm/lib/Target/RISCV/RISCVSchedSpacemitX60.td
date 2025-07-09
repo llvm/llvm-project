@@ -485,7 +485,7 @@ def : WriteRes<WriteVMov8V, [SMX60_VIEU]> { let Latency = 16; }
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
-  let Latency = SMX60GetArithmeticLatency<mx>.c in {
+  let Latency = SMX60GetArithmeticLatency<mx>.c, ReleaseAtCycles = [SMX60GetLMulCycles<mx>.c] in {
     defm "" : LMULWriteResMX<"WriteVIMinMaxV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMinMaxX", [SMX60_VIEU], mx, IsWorstCase>;
   }
@@ -544,10 +544,13 @@ foreach mx = SchedMxList in {
 foreach mx = SchedMxListW in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxListW>.c;
 
-  let Latency = SMX60GetWideningLatency<mx>.c in {
+  defvar WideningLat = SMX60GetWideningLatency<mx>.c;
+  let Latency = WideningLat, ReleaseAtCycles = [SMX60GetLMulCycles<mx>.c] in {
     defm "" : LMULWriteResMX<"WriteVIWALUV",    [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIWALUX",    [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIWALUI",    [SMX60_VIEU], mx, IsWorstCase>;
+  }
+  let Latency = WideningLat in {
     defm "" : LMULWriteResMX<"WriteVIWMulV",    [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIWMulX",    [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIWMulAddV", [SMX60_VIEU], mx, IsWorstCase>;
@@ -607,7 +610,7 @@ foreach mx = ["M2", "M4"] in {
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
-  let Latency = SMX60GetArithmeticLatency<mx>.c in {
+  let Latency = SMX60GetArithmeticLatency<mx>.c, ReleaseAtCycles = [SMX60GetLMulCycles<mx>.c] in {
     defm "" : LMULWriteResMX<"WriteVSALUV",   [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSALUX",   [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSALUI",   [SMX60_VIEU], mx, IsWorstCase>;
@@ -663,7 +666,7 @@ foreach mx = ["M1", "M2", "M4", "M8"] in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, isF=1>.c;
 
     defvar ArithLat = SMX60GetArithmeticLatency<mx>.c;
-    let Latency = ArithLat in {
+    let Latency = ArithLat, ReleaseAtCycles = [SMX60GetLMulCycles<mx>.c] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFALUV",  [SMX60_VFP], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFALUF",  [SMX60_VFP], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMinMaxV", [SMX60_VFP], mx, sew, IsWorstCase>;
