@@ -33430,24 +33430,6 @@ static SDValue LowerPREFETCH(SDValue Op, const X86Subtarget &Subtarget,
   return Op;
 }
 
-static SDValue LowerFCanonicalize(SDValue Op, SelectionDAG &DAG) {
-  SDNode *N = Op.getNode();
-  SDValue Operand = N->getOperand(0);
-  EVT VT = Operand.getValueType();
-  SDLoc dl(N);
-
-  SDValue One = DAG.getConstantFP(1.0, dl, VT);
-
-  // TODO: Fix Crash for bf16 when generating strict_fmul as it
-  // leads to a error : SoftPromoteHalfResult #0: t11: bf16,ch = strict_fmul t0,
-  // ConstantFP:bf16<APFloat(16256)>, t5 LLVM ERROR: Do not know how to soft
-  // promote this operator's result!
-  SDValue Chain = DAG.getEntryNode();
-  SDValue StrictFmul = DAG.getNode(ISD::STRICT_FMUL, dl, {VT, MVT::Other},
-                                   {Chain, Operand, One});
-  return StrictFmul;
-}
-
 static StringRef getInstrStrFromOpNo(const SmallVectorImpl<StringRef> &AsmStrs,
                                      unsigned OpNo) {
   const APInt Operand(32, OpNo);
@@ -33587,7 +33569,6 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SRL_PARTS:          return LowerShiftParts(Op, DAG);
   case ISD::FSHL:
   case ISD::FSHR:               return LowerFunnelShift(Op, Subtarget, DAG);
-  case ISD::FCANONICALIZE:      return LowerFCanonicalize(Op, DAG);
   case ISD::STRICT_SINT_TO_FP:
   case ISD::SINT_TO_FP:         return LowerSINT_TO_FP(Op, DAG);
   case ISD::STRICT_UINT_TO_FP:
