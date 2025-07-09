@@ -317,6 +317,9 @@ let Class = FunctionProtoType in {
   def : Property<"trailingReturn", Bool> {
     let Read = [{ node->hasTrailingReturn() }];
   }
+  def : Property<"cfiUncheckedCallee", Bool> {
+    let Read = [{ node->hasCFIUncheckedCallee() }];
+  }
   def : Property<"methodQualifiers", Qualifiers> {
     let Read = [{ node->getMethodQuals() }];
   }
@@ -332,7 +335,7 @@ let Class = FunctionProtoType in {
   def : Property<"extParameterInfo", Array<ExtParameterInfo>> {
     let Read = [{ node->hasExtParameterInfos()
                     ? node->getExtParameterInfos()
-                    : llvm::ArrayRef<FunctionProtoType::ExtParameterInfo>() }];
+                    : ArrayRef<FunctionProtoType::ExtParameterInfo>() }];
   }
   def : Property<"AArch64SMEAttributes", UInt32> {
     let Read = [{ node->getAArch64SMEAttributes() }];
@@ -353,6 +356,7 @@ let Class = FunctionProtoType in {
     epi.ExtInfo = extInfo;
     epi.Variadic = variadic;
     epi.HasTrailingReturn = trailingReturn;
+    epi.CFIUncheckedCallee = cfiUncheckedCallee;
     epi.TypeQuals = methodQualifiers;
     epi.RefQualifier = refQualifier;
     epi.ExceptionSpec = exceptionSpecifier;
@@ -701,6 +705,24 @@ let Class = HLSLAttributedResourceType in {
   }]>;
 }
 
+let Class = HLSLInlineSpirvType in {
+  def : Property<"opcode", UInt32> {
+    let Read = [{ node->getOpcode() }];
+  }
+  def : Property<"size", UInt32> {
+    let Read = [{ node->getSize() }];
+  }
+  def : Property<"alignment", UInt32> {
+    let Read = [{ node->getAlignment() }];
+  }
+  def : Property<"operands", Array<HLSLSpirvOperand>> {
+    let Read = [{ node->getOperands() }];
+  }
+  def : Creator<[{
+    return ctx.getHLSLInlineSpirvType(opcode, size, alignment, operands);
+  }]>;
+}
+
 let Class = DependentAddressSpaceType in {
   def : Property<"pointeeType", QualType> {
     let Read = [{ node->getPointeeType() }];
@@ -731,7 +753,7 @@ let Class = TemplateSpecializationType in {
   }
 
   def : Creator<[{
-    return ctx.getTemplateSpecializationType(templateName, args, std::nullopt, UnderlyingType);
+    return ctx.getTemplateSpecializationType(templateName, args, {}, UnderlyingType);
   }]>;
 }
 
@@ -863,7 +885,7 @@ let Class = BuiltinType in {
 
 #define SVE_TYPE(NAME, ID, SINGLETON_ID) \
       case BuiltinType::ID: return ctx.SINGLETON_ID;
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 
 #define PPC_VECTOR_TYPE(NAME, ID, SIZE) \
       case BuiltinType::ID: return ctx.ID##Ty;

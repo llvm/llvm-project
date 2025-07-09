@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyMCInstLower.h"
-#include "MCTargetDesc/WebAssemblyMCExpr.h"
+#include "MCTargetDesc/WebAssemblyMCAsmInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
@@ -77,9 +77,7 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
   auto Signature = signatureFromMVTs(Ctx, ResultMVTs, ParamMVTs);
 
   bool InvokeDetected = false;
-  auto *WasmSym = Printer.getMCSymbolForFunction(
-      F, WebAssembly::WasmEnableEmEH || WebAssembly::WasmEnableEmSjLj,
-      Signature, InvokeDetected);
+  auto *WasmSym = Printer.getMCSymbolForFunction(F, Signature, InvokeDetected);
   WasmSym->setSignature(Signature);
   WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
   return WasmSym;

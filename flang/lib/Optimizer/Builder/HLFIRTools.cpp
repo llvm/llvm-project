@@ -21,6 +21,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <mlir/Dialect/LLVMIR/LLVMAttrs.h>
 #include <mlir/Dialect/OpenMP/OpenMPDialect.h>
 #include <optional>
 
@@ -932,7 +933,8 @@ mlir::Value hlfir::inlineElementalOp(
 hlfir::LoopNest hlfir::genLoopNest(mlir::Location loc,
                                    fir::FirOpBuilder &builder,
                                    mlir::ValueRange extents, bool isUnordered,
-                                   bool emitWorkshareLoop) {
+                                   bool emitWorkshareLoop,
+                                   bool couldVectorize) {
   emitWorkshareLoop = emitWorkshareLoop && isUnordered;
   hlfir::LoopNest loopNest;
   assert(!extents.empty() && "must have at least one extent");
@@ -967,6 +969,15 @@ hlfir::LoopNest hlfir::genLoopNest(mlir::Location loc,
       auto ub = builder.createConvert(loc, indexType, extent);
       auto doLoop =
           builder.create<fir::DoLoopOp>(loc, one, ub, one, isUnordered);
+      if (!couldVectorize) {
+        mlir::LLVM::LoopVectorizeAttr va{mlir::LLVM::LoopVectorizeAttr::get(
+            builder.getContext(),
+            /*disable=*/builder.getBoolAttr(true), {}, {}, {}, {}, {}, {})};
+        mlir::LLVM::LoopAnnotationAttr la = mlir::LLVM::LoopAnnotationAttr::get(
+            builder.getContext(), {}, /*vectorize=*/va, {}, /*unroll*/ {},
+            /*unroll_and_jam*/ {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+        doLoop.setLoopAnnotationAttr(la);
+      }
       loopNest.body = doLoop.getBody();
       builder.setInsertionPointToStart(loopNest.body);
       // Reverse the indices so they are in column-major order.
@@ -1331,63 +1342,36 @@ bool hlfir::elementalOpMustProduceTemp(hlfir::ElementalOp elemental) {
 std::pair<hlfir::Entity, mlir::Value>
 hlfir::createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
                           hlfir::Entity mold) {
+  assert(!mold.isAssumedRank() &&
+         "cannot create temporary from assumed-rank mold");
   llvm::SmallVector<mlir::Value> lenParams;
   hlfir::genLengthParameters(loc, builder, mold, lenParams);
   llvm::StringRef tmpName{".tmp"};
-  mlir::Value alloc;
-  mlir::Value isHeapAlloc;
+
   mlir::Value shape{};
-  fir::FortranVariableFlagsAttr declAttrs;
-
-  if (mold.isPolymorphic()) {
-    // Create unallocated polymorphic temporary using the dynamic type
-    // of the mold. The static type of the temporary matches
-    // the static type of the mold, but then the dynamic type
-    // of the mold is applied to the temporary's descriptor.
-
-    if (mold.isArray())
-      hlfir::genShape(loc, builder, mold);
-
-    // Create polymorphic allocatable box on the stack.
-    mlir::Type boxHeapType = fir::HeapType::get(fir::unwrapRefType(
-        mlir::cast<fir::BaseBoxType>(mold.getType()).getEleTy()));
-    // The box must be initialized, because AllocatableApplyMold
-    // may read its contents (e.g. for checking whether it is allocated).
-    alloc = fir::factory::genNullBoxStorage(builder, loc,
-                                            fir::ClassType::get(boxHeapType));
-    // The temporary is unallocated even after AllocatableApplyMold below.
-    // If the temporary is used as assignment LHS it will be automatically
-    // allocated on the heap, as long as we use Assign family
-    // runtime functions. So set MustFree to true.
-    isHeapAlloc = builder.createBool(loc, true);
-    declAttrs = fir::FortranVariableFlagsAttr::get(
-        builder.getContext(), fir::FortranVariableFlagsEnum::allocatable);
-  } else if (mold.isArray()) {
-    mlir::Type sequenceType =
-        hlfir::getFortranElementOrSequenceType(mold.getType());
+  llvm::SmallVector<mlir::Value> extents;
+  if (mold.isArray()) {
     shape = hlfir::genShape(loc, builder, mold);
-    auto extents = hlfir::getIndexExtents(loc, builder, shape);
-    alloc = builder.createHeapTemporary(loc, sequenceType, tmpName, extents,
-                                        lenParams);
-    isHeapAlloc = builder.createBool(loc, true);
-  } else {
-    alloc = builder.createTemporary(loc, mold.getFortranElementType(), tmpName,
-                                    /*shape=*/std::nullopt, lenParams);
-    isHeapAlloc = builder.createBool(loc, false);
-  }
-  auto declareOp =
-      builder.create<hlfir::DeclareOp>(loc, alloc, tmpName, shape, lenParams,
-                                       /*dummy_scope=*/nullptr, declAttrs);
-  if (mold.isPolymorphic()) {
-    int rank = mold.getRank();
-    // TODO: should probably read rank from the mold.
-    if (rank < 0)
-      TODO(loc, "create temporary for assumed rank polymorphic");
-    fir::runtime::genAllocatableApplyMold(builder, loc, alloc,
-                                          mold.getFirBase(), rank);
+    extents = hlfir::getExplicitExtentsFromShape(shape, builder);
   }
 
-  return {hlfir::Entity{declareOp.getBase()}, isHeapAlloc};
+  bool useStack = !mold.isArray() && !mold.isPolymorphic();
+  auto genTempDeclareOp =
+      [](fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value memref,
+         llvm::StringRef name, mlir::Value shape,
+         llvm::ArrayRef<mlir::Value> typeParams,
+         fir::FortranVariableFlagsAttr attrs) -> mlir::Value {
+    auto declareOp =
+        builder.create<hlfir::DeclareOp>(loc, memref, name, shape, typeParams,
+                                         /*dummy_scope=*/nullptr, attrs);
+    return declareOp.getBase();
+  };
+
+  auto [base, isHeapAlloc] = builder.createAndDeclareTemp(
+      loc, mold.getElementOrSequenceType(), shape, extents, lenParams,
+      genTempDeclareOp, mold.isPolymorphic() ? mold.getBase() : nullptr,
+      useStack, tmpName);
+  return {hlfir::Entity{base}, builder.createBool(loc, isHeapAlloc)};
 }
 
 hlfir::Entity hlfir::createStackTempFromMold(mlir::Location loc,
