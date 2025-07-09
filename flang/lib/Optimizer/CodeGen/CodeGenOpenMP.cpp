@@ -142,8 +142,8 @@ static mlir::LLVM::LLVMFuncOp getOmpTargetAlloc(mlir::Operation *op) {
           /*isVarArg=*/false));
 }
 
-static mlir::Type
-convertObjectType(const fir::LLVMTypeConverter &converter, mlir::Type firType) {
+static mlir::Type convertObjectType(const fir::LLVMTypeConverter &converter,
+                                    mlir::Type firType) {
   if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(firType))
     return converter.convertBoxTypeAsStruct(boxTy);
   return converter.convertType(firType);
@@ -189,8 +189,9 @@ computeElementDistance(mlir::Location loc, mlir::Type llvmObjectType,
 }
 
 static mlir::Value genTypeSizeInBytes(mlir::Location loc, mlir::Type idxTy,
-                                 mlir::ConversionPatternRewriter &rewriter,
-                                 mlir::Type llTy, const mlir::DataLayout &dataLayout) {
+                                      mlir::ConversionPatternRewriter &rewriter,
+                                      mlir::Type llTy,
+                                      const mlir::DataLayout &dataLayout) {
   return computeElementDistance(loc, llTy, idxTy, rewriter, dataLayout);
 }
 
@@ -224,8 +225,10 @@ genAllocationScaleSize(OP op, mlir::Type ity,
 }
 
 static mlir::Value integerCast(const fir::LLVMTypeConverter &converter,
-    mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
-    mlir::Type ty, mlir::Value val, bool fold = false) {
+                               mlir::Location loc,
+                               mlir::ConversionPatternRewriter &rewriter,
+                               mlir::Type ty, mlir::Value val,
+                               bool fold = false) {
   auto valTy = val.getType();
   // If the value was not yet lowered, lower its type so that it can
   // be used in getPrimitiveTypeSizeInBits.
@@ -261,11 +264,13 @@ struct TargetAllocMemOpConversion
     auto ity = lowerTy().indexType();
     mlir::Type dataTy = fir::unwrapRefType(heapTy);
     mlir::Type llvmObjectTy = convertObjectType(lowerTy(), dataTy);
-    mlir::Type llvmPtrTy = mlir::LLVM::LLVMPointerType::get(allocmemOp.getContext(), 0);
+    mlir::Type llvmPtrTy =
+        mlir::LLVM::LLVMPointerType::get(allocmemOp.getContext(), 0);
     if (fir::isRecordWithTypeParameters(fir::unwrapSequenceType(dataTy)))
       TODO(loc, "omp.target_allocmem codegen of derived type with length "
                 "parameters");
-    mlir::Value size = genTypeSizeInBytes(loc, ity, rewriter, llvmObjectTy, lowerTy().getDataLayout());
+    mlir::Value size = genTypeSizeInBytes(loc, ity, rewriter, llvmObjectTy,
+                                          lowerTy().getDataLayout());
     if (auto scaleSize = genAllocationScaleSize(allocmemOp, ity, rewriter))
       size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, scaleSize);
     for (mlir::Value opnd : adaptor.getOperands().drop_front())
@@ -281,7 +286,8 @@ struct TargetAllocMemOpConversion
         loc, llvmPtrTy,
         mlir::SmallVector<mlir::Value, 2>({size, allocmemOp.getDevice()}),
         addLLVMOpBundleAttrs(rewriter, allocmemOp->getAttrs(), 2));
-    rewriter.replaceOpWithNewOp<mlir::LLVM::PtrToIntOp>(allocmemOp, rewriter.getIntegerType(64), callOp.getResult());
+    rewriter.replaceOpWithNewOp<mlir::LLVM::PtrToIntOp>(
+        allocmemOp, rewriter.getIntegerType(64), callOp.getResult());
     return mlir::success();
   }
 };
