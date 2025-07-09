@@ -779,9 +779,6 @@ private:
   void checkUseZeroAllocated(SymbolRef Sym, CheckerContext &C,
                              const Stmt *S) const;
 
-  /// If in \p S \p Sym is being freed, check whether \p Sym was already freed.
-  bool checkDoubleDelete(SymbolRef Sym, CheckerContext &C) const;
-
   /// Check if the function is known to free memory, or if it is
   /// "interesting" and should be modeled explicitly.
   ///
@@ -3110,10 +3107,22 @@ void MallocChecker::checkPreCall(const CallEvent &Call,
     return;
   }
 
+  // If we see a `CXXDestructorCall` (that is, an _implicit_ destructor call)
+  // to a region that's symbolic and known to be already freed, then it must be
+  // implicitly triggered by a `delete` expression. In this situation we should
+  // emit a `DoubleFree` report _now_ (before entering the call to the
+  // destructor) because otherwise the destructor call can trigger a
+  // use-after-free bug (by accessing any member variable) and that would be
+  // (technically valid, but) less user-friendly report than the `DoubleFree`.
   if (const auto *DC = dyn_cast<CXXDestructorCall>(&Call)) {
     SymbolRef Sym = DC->getCXXThisVal().getAsSymbol();
-    if (!Sym || checkDoubleDelete(Sym, C))
+    if (!Sym)
       return;
+    if (isReleased(Sym, C)) {
+      HandleDoubleFree(C, SourceRange(), /*Released=*/true, Sym,
+                       /*PrevSym=*/nullptr);
+      return;
+    }
   }
 
   // We need to handle getline pre-conditions here before the pointed region
@@ -3293,16 +3302,6 @@ void MallocChecker::checkUseZeroAllocated(SymbolRef Sym, CheckerContext &C,
   else if (C.getState()->contains<ReallocSizeZeroSymbols>(Sym)) {
     HandleUseZeroAlloc(C, S->getSourceRange(), Sym);
   }
-}
-
-bool MallocChecker::checkDoubleDelete(SymbolRef Sym, CheckerContext &C) const {
-
-  if (isReleased(Sym, C)) {
-    HandleDoubleFree(C, SourceRange(), /*Released=*/true, Sym,
-                     /*PrevSym=*/nullptr);
-    return true;
-  }
-  return false;
 }
 
 // Check if the location is a freed symbolic region.
