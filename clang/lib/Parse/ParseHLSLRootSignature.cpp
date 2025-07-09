@@ -61,8 +61,8 @@ bool RootSignatureParser::parse() {
       Elements.emplace_back(ElementLoc, *Sampler);
     } else {
       consumeNextToken(); // let diagnostic be at the start of invalid token
-      reportDiag(diag::err_hlsl_invalid_param)
-          << /*param of*/ TokenKind::kw_RootSignature;
+      reportDiag(diag::err_hlsl_invalid_token)
+          << /*parameter=*/0 << /*param of*/ TokenKind::kw_RootSignature;
       return true;
     }
 
@@ -268,8 +268,8 @@ std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {
         return std::nullopt;
     } else {
       consumeNextToken(); // let diagnostic be at the start of invalid token
-      reportDiag(diag::err_hlsl_invalid_param)
-          << /*param of*/ TokenKind::kw_DescriptorTable;
+      reportDiag(diag::err_hlsl_invalid_token)
+          << /*parameter=*/0 << /*param of*/ TokenKind::kw_DescriptorTable;
       return std::nullopt;
     }
 
@@ -486,8 +486,8 @@ RootSignatureParser::parseRootConstantParams() {
       Params.Visibility = Visibility;
     } else {
       consumeNextToken(); // let diagnostic be at the start of invalid token
-      reportDiag(diag::err_hlsl_invalid_param)
-          << /*param of*/ TokenKind::kw_RootConstants;
+      reportDiag(diag::err_hlsl_invalid_token)
+          << /*parameter=*/0 << /*param of*/ TokenKind::kw_RootConstants;
       return std::nullopt;
     }
 
@@ -561,7 +561,8 @@ RootSignatureParser::parseRootDescriptorParams(TokenKind DescKind,
       Params.Flags = Flags;
     } else {
       consumeNextToken(); // let diagnostic be at the start of invalid token
-      reportDiag(diag::err_hlsl_invalid_param) << /*param of*/ DescKind;
+      reportDiag(diag::err_hlsl_invalid_token)
+          << /*parameter=*/0 << /*param of*/ DescKind;
       return std::nullopt;
     }
 
@@ -661,7 +662,8 @@ RootSignatureParser::parseDescriptorTableClauseParams(TokenKind ClauseKind,
       Params.Flags = Flags;
     } else {
       consumeNextToken(); // let diagnostic be at the start of invalid token
-      reportDiag(diag::err_hlsl_invalid_param) << /*param of*/ ClauseKind;
+      reportDiag(diag::err_hlsl_invalid_token)
+          << /*parameter=*/0 << /*param of*/ ClauseKind;
       return std::nullopt;
     }
 
@@ -860,8 +862,8 @@ RootSignatureParser::parseStaticSamplerParams() {
       Params.Visibility = Visibility;
     } else {
       consumeNextToken(); // let diagnostic be at the start of invalid token
-      reportDiag(diag::err_hlsl_invalid_param)
-          << /*param of*/ TokenKind::kw_StaticSampler;
+      reportDiag(diag::err_hlsl_invalid_token)
+          << /*parameter=*/0 << /*param of*/ TokenKind::kw_StaticSampler;
       return std::nullopt;
     }
 

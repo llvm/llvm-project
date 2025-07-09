@@ -865,7 +865,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseInvalidTokenTest) {
                                    Signature, *PP);
 
   // Test correct diagnostic produced - invalid token
-  Consumer->setExpected(diag::err_hlsl_invalid_param);
+  Consumer->setExpected(diag::err_hlsl_invalid_token);
   ASSERT_TRUE(Parser.parse());
 
   ASSERT_TRUE(Consumer->isSatisfied());
