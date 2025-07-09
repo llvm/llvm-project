@@ -2852,11 +2852,10 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   auto simdOp = cast<omp::SimdOp>(opInst);
 
-  // TODO: Replace this with proper composite translation support.
-  // Currently, simd information on composite constructs is ignored, so e.g.
-  // 'do/for simd' will be treated the same as a standalone 'do/for'. This is
-  // allowed by the spec, since it's equivalent to using a SIMD length of 1.
-  if (simdOp.isComposite()) {
+  // Ignore simd in composite constructs with unsupported clauses
+  // TODO: Replace this once simd + clause combinations are properly supported
+  if (simdOp.isComposite() &&
+      (simdOp.getReductionByref().has_value() || simdOp.getIfExpr())) {
     if (failed(convertIgnoredWrapper(simdOp, moduleTranslation)))
       return failure();
 
