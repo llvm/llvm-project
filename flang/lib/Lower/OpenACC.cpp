@@ -2442,7 +2442,8 @@ static mlir::acc::LoopOp createLoopOp(
       inclusiveBounds.push_back(true);
     }
   } else {
-    int64_t collapseValue = Fortran::lower::getCollapseValue(accClauseList);
+    int64_t collapseValue =
+        Fortran::lower::getLoopCountForCollapseAndTile(accClauseList);
     for (unsigned i = 0; i < collapseValue; ++i) {
       const Fortran::parser::LoopControl *loopControl;
       if (i == 0) {
@@ -4940,7 +4941,7 @@ void Fortran::lower::genEarlyReturnInOpenACCLoop(fir::FirOpBuilder &builder,
   builder.create<mlir::acc::YieldOp>(loc, yieldValue);
 }
 
-int64_t Fortran::lower::getCollapseValue(
+int64_t Fortran::lower::getLoopCountForCollapseAndTile(
     const Fortran::parser::AccClauseList &clauseList) {
   int64_t collapseLoopCount = 1;
   int64_t tileLoopCount = 1;
