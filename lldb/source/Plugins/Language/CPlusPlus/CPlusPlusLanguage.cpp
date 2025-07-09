@@ -1623,33 +1623,17 @@ static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
           },
           "MSVC STL/libstdc++ std::wstring summary provider"));
 
-  auto smart_ptr_creator =
-      [](CXXSyntheticChildren *children,
-         ValueObjectSP valobj_sp) -> SyntheticChildrenFrontEnd * {
-    if (!valobj_sp)
-      return nullptr;
-
-    if (auto *msvc = MsvcStlSmartPointerSyntheticFrontEndCreator(valobj_sp))
-      return msvc;
-
-    return LibStdcppSharedPtrSyntheticFrontEndCreator(children, valobj_sp);
-  };
-  AddCXXSynthetic(cpp_category_sp, smart_ptr_creator,
+  AddCXXSynthetic(cpp_category_sp, GenericSmartPointerSyntheticFrontEndCreator,
                   "std::shared_ptr synthetic children",
                   "^std::shared_ptr<.+>(( )?&)?$", stl_synth_flags, true);
-  AddCXXSynthetic(cpp_category_sp, smart_ptr_creator,
+  AddCXXSynthetic(cpp_category_sp, GenericSmartPointerSyntheticFrontEndCreator,
                   "std::weak_ptr synthetic children",
                   "^std::weak_ptr<.+>(( )?&)?$", stl_synth_flags, true);
 
-  auto smart_ptr_summary = [](ValueObject &valobj, Stream &stream,
-                              const TypeSummaryOptions &options) {
-    return MsvcStlSmartPointerSummaryProvider(valobj, stream, options) ||
-           LibStdcppSmartPointerSummaryProvider(valobj, stream, options);
-  };
-  AddCXXSummary(cpp_category_sp, smart_ptr_summary,
+  AddCXXSummary(cpp_category_sp, GenericSmartPointerSummaryProvider,
                 "MSVC STL/libstdc++ std::shared_ptr summary provider",
                 "^std::shared_ptr<.+>(( )?&)?$", stl_summary_flags, true);
-  AddCXXSummary(cpp_category_sp, smart_ptr_summary,
+  AddCXXSummary(cpp_category_sp, GenericSmartPointerSummaryProvider,
                 "MSVC STL/libstdc++ std::weak_ptr summary provider",
                 "^std::weak_ptr<.+>(( )?&)?$", stl_summary_flags, true);
 }

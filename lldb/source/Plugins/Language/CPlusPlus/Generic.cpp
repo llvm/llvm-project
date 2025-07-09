@@ -7,6 +7,8 @@
 //===---------------------------------------------------------------------===//
 
 #include "Generic.h"
+#include "LibStdcpp.h"
+#include "MsvcStl.h"
 
 lldb::ValueObjectSP lldb_private::formatters::GetDesugaredSmartPointerValue(
     ValueObject &ptr, ValueObject &container) {
@@ -20,4 +22,19 @@ lldb::ValueObjectSP lldb_private::formatters::GetDesugaredSmartPointerValue(
     return ptr.GetSP();
 
   return ptr.Cast(arg.GetPointerType());
+}
+
+lldb_private::SyntheticChildrenFrontEnd *
+lldb_private::formatters::GenericSmartPointerSyntheticFrontEndCreator(
+    CXXSyntheticChildren *children, lldb::ValueObjectSP valobj_sp) {
+  if (auto *msvc = MsvcStlSmartPointerSyntheticFrontEndCreator(valobj_sp))
+    return msvc;
+
+  return LibStdcppSharedPtrSyntheticFrontEndCreator(children, valobj_sp);
+}
+
+bool lldb_private::formatters::GenericSmartPointerSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  return MsvcStlSmartPointerSummaryProvider(valobj, stream, options) ||
+         LibStdcppSmartPointerSummaryProvider(valobj, stream, options);
 }
