@@ -47260,57 +47260,6 @@ static SDValue combineToExtendBoolVectorInReg(
                      DAG.getConstant(EltSizeInBits - 1, DL, VT));
 }
 
-/// If a vector select has an left operand that is 0, try to simplify the
-/// select to a bitwise logic operation.
-/// TODO: Move to DAGCombiner.combineVSelectWithAllOnesOrZeros, possibly using
-/// TargetLowering::hasAndNot()?
-static SDValue combineVSelectWithLastZeros(SDNode *N, SelectionDAG &DAG,
-                                           const SDLoc &DL,
-                                           TargetLowering::DAGCombinerInfo &DCI,
-                                           const X86Subtarget &Subtarget) {
-  SDValue Cond = N->getOperand(0);
-  SDValue LHS = N->getOperand(1);
-  SDValue RHS = N->getOperand(2);
-  EVT VT = LHS.getValueType();
-  EVT CondVT = Cond.getValueType();
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-
-  if (N->getOpcode() != ISD::VSELECT)
-    return SDValue();
-
-  assert(CondVT.isVector() && "Vector select expects a vector selector!");
-
-  // To use the condition operand as a bitwise mask, it must have elements that
-  // are the same size as the select elements. Ie, the condition operand must
-  // have already been promoted from the IR select condition type <N x i1>.
-  // Don't check if the types themselves are equal because that excludes
-  // vector floating-point selects.
-  if (CondVT.getScalarSizeInBits() != VT.getScalarSizeInBits())
-    return SDValue();
-
-  // Cond value must be 'sign splat' to be converted to a logical op.
-  if (DAG.ComputeNumSignBits(Cond) != CondVT.getScalarSizeInBits())
-    return SDValue();
-
-  if (!TLI.isTypeLegal(CondVT))
-    return SDValue();
-
-  // vselect Cond, 000..., X -> andn Cond, X
-  if (ISD::isBuildVectorAllZeros(LHS.getNode())) {
-    SDValue CastRHS = DAG.getBitcast(CondVT, RHS);
-    SDValue AndN;
-    // The canonical form differs for i1 vectors - x86andnp is not used
-    if (CondVT.getScalarType() == MVT::i1)
-      AndN = DAG.getNode(ISD::AND, DL, CondVT, DAG.getNOT(DL, Cond, CondVT),
-                         CastRHS);
-    else
-      AndN = DAG.getNode(X86ISD::ANDNP, DL, CondVT, Cond, CastRHS);
-    return DAG.getBitcast(VT, AndN);
-  }
-
-  return SDValue();
-}
-
 /// If both arms of a vector select are concatenated vectors, split the select,
 /// and concatenate the result to eliminate a wide (256-bit) vector instruction:
 ///   vselect Cond, (concat T0, T1), (concat F0, F1) -->
@@ -48051,9 +48000,6 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // Early exit check
   if (!TLI.isTypeLegal(VT) || isSoftF16(VT, Subtarget))
     return SDValue();
-
-  if (SDValue V = combineVSelectWithLastZeros(N, DAG, DL, DCI, Subtarget))
-    return V;
 
   if (SDValue V = combineVSelectToBLENDV(N, DAG, DL, DCI, Subtarget))
     return V;

@@ -99,6 +99,10 @@ class TestCase(TestBase):
             "wie", type="std::weak_ptr<int>", summary="nullptr strong=2 weak=2"
         )
 
+        self.expect_var_path("si.pointer", type="int *")
+        self.expect_var_path("*si.pointer", type="int", value="47")
+        self.expect_var_path("si.object", type="int", value="47")
+
         self.runCmd("settings set target.experimental.use-DIL true")
         self.expect_var_path("ptr_node->value", value="1")
         self.expect_var_path("ptr_node->next->value", value="2")
