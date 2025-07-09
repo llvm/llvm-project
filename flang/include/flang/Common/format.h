@@ -12,6 +12,7 @@
 #include "Fortran-consts.h"
 #include "enum-set.h"
 #include <cstring>
+#include <limits>
 
 // Define a FormatValidator class template to validate a format expression
 // of a given CHAR type.  To enable use in runtime library code as well as
@@ -27,6 +28,68 @@
 // checks are also done.
 
 namespace Fortran::common {
+
+// AddOverflow and MulOverflow are copied from
+// llvm/include/llvm/Support/MathExtras.h. It is ok to include llvm headers in
+// flang, but this flang header is also used in flang-rt, which cannot use llvm
+// headers.
+
+/// Add two signed integers, computing the two's complement truncated result,
+/// returning true if overflow occurred.
+template <typename T>
+std::enable_if_t<std::is_signed_v<T>, T> AddOverflow(T X, T Y, T &Result) {
+#if __has_builtin(__builtin_add_overflow)
+  return __builtin_add_overflow(X, Y, &Result);
+#else
+  // Perform the unsigned addition.
+  using U = std::make_unsigned_t<T>;
+  const U UX = static_cast<U>(X);
+  const U UY = static_cast<U>(Y);
+  const U UResult = UX + UY;
+
+  // Convert to signed.
+  Result = static_cast<T>(UResult);
+
+  // Adding two positive numbers should result in a positive number.
+  if (X > 0 && Y > 0)
+    return Result <= 0;
+  // Adding two negatives should result in a negative number.
+  if (X < 0 && Y < 0)
+    return Result >= 0;
+  return false;
+#endif
+}
+
+/// Multiply two signed integers, computing the two's complement truncated
+/// result, returning true if an overflow occurred.
+template <typename T>
+std::enable_if_t<std::is_signed_v<T>, T> MulOverflow(T X, T Y, T &Result) {
+#if __has_builtin(__builtin_mul_overflow)
+  return __builtin_mul_overflow(X, Y, &Result);
+#else
+  // Perform the unsigned multiplication on absolute values.
+  using U = std::make_unsigned_t<T>;
+  const U UX = X < 0 ? (0 - static_cast<U>(X)) : static_cast<U>(X);
+  const U UY = Y < 0 ? (0 - static_cast<U>(Y)) : static_cast<U>(Y);
+  const U UResult = UX * UY;
+
+  // Convert to signed.
+  const bool IsNegative = (X < 0) ^ (Y < 0);
+  Result = IsNegative ? (0 - UResult) : UResult;
+
+  // If any of the args was 0, result is 0 and no overflow occurs.
+  if (UX == 0 || UY == 0)
+    return false;
+
+  // UX and UY are in [1, 2^n], where n is the number of digits.
+  // Check how the max allowed absolute value (2^n for negative, 2^(n-1) for
+  // positive) divided by an argument compares to the other.
+  if (IsNegative)
+    return UX > (static_cast<U>(std::numeric_limits<T>::max()) + U(1)) / UY;
+  else
+    return UX > (static_cast<U>(std::numeric_limits<T>::max())) / UY;
+#endif
+}
 
 struct FormatMessage {
   const char *text; // message text; may have one %s argument
@@ -214,16 +277,18 @@ template <typename CHAR> void FormatValidator<CHAR>::NextToken() {
   case '7':
   case '8':
   case '9': {
-    int64_t lastValue;
     const CHAR *lastCursor;
     integerValue_ = 0;
     bool overflow{false};
     do {
-      lastValue = integerValue_;
       lastCursor = cursor_;
-      integerValue_ = 10 * integerValue_ + c - '0';
-      if (lastValue > integerValue_) {
-        overflow = true;
+      if (!overflow) {
+        overflow =
+            MulOverflow(static_cast<int64_t>(10), integerValue_, integerValue_);
+      }
+      if (!overflow) {
+        overflow = AddOverflow(
+            integerValue_, static_cast<int64_t>(c - '0'), integerValue_);
       }
       c = NextChar();
     } while (c >= '0' && c <= '9');
