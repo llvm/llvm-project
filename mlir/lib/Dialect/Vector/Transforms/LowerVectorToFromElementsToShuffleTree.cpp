@@ -146,7 +146,7 @@ private:
   // Shuffle tree configuration.
   unsigned numLevels;
   SmallVector<unsigned> vectorSizePerLevel;
-  /// Holds the range of positions each vector in the tree contributes to the
+  /// Holds the range of positions each vector in the tree contributes to in the
   /// final output vector.
   SmallVector<SmallVector<Interval>> intervalsPerLevel;
 
@@ -180,8 +180,8 @@ static void duplicateLastIfOdd(SmallVectorImpl<T> &values) {
 // ===---------------------------------------------------------------------===//
 
 /// Compute the intervals for all the vectors in the shuffle tree. The interval
-/// interval of a vector is the range of positions that the vector contributes
-/// to the final output vector.
+/// of a vector is the range of positions that the vector contributes to in the
+/// final output vector.
 ///
 /// Example: Arbitrary shuffling of 3x vector<5xf32> to vector<9xf32>:
 ///
@@ -245,8 +245,6 @@ void VectorShuffleTreeBuilder::computeShuffleTreeIntervals() {
   intervalsPerLevel.push_back(std::move(firstLevelIntervals));
 
   // Compute intervals for the remaining levels.
-  unsigned outputNumElements =
-      cast<VectorType>(fromElemsOp.getResult().getType()).getNumElements();
   for (unsigned level = 1; level < numLevels; ++level) {
     bool isLastLevel = level == numLevels - 1;
     const auto &prevLevelIntervals = intervalsPerLevel[level - 1];
@@ -569,12 +567,11 @@ static SmallVector<int64_t> computePropagationShuffleMask(
 ///
 /// The code generation consists of combining pairs of vectors at each level of
 /// the tree, using the pre-computed tree intervals and vector sizes. The
-/// algorithm generates two kinds of shuffle masks: permutation masks and
-/// permutation masks and propagation masks:
-///   * Permutation masks are computed for the first level of the tree and
-///     permute the input vector elements to their relative position in the
-///     final output.
-///   * Propagation masks are computed for subsequent levels and propagate the
+/// algorithm generates two kinds of shuffle masks:
+///   * Permutation masks: computed for the first level of the tree and permute
+///     the input vector elements to their relative position in the final
+///     output.
+///   * Propagation masks: computed for subsequent levels and propagate the
 ///     elements to the next level without permutation.
 ///
 /// For further details on the shuffle mask computation, please, take a look at
