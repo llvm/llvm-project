@@ -68,7 +68,7 @@ private:
   void handleFailure(Instruction &FailedInst, const Twine &Msg) const {
     LLVMContext &Ctx = FailedInst.getContext();
 
-    // TODO: Do not use generic error type
+    // TODO: Do not use generic error type.
     Ctx.emitError(&FailedInst, Msg);
 
     if (!FailedInst.getType()->isVoidTy())
