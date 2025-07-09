@@ -17,6 +17,7 @@
 #include "Common/CodeGenTarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/TableGen/Error.h"
@@ -47,23 +48,19 @@ struct GenericEnum {
   struct Entry {
     StringRef Name;
     int64_t Value;
-    const Record *Def;
-    Entry(StringRef N, int64_t V, const Record *D)
-        : Name(N), Value(V), Def(D) {}
+    Entry(StringRef N, int64_t V) : Name(N), Value(V) {}
   };
 
   std::string Name;
   const Record *Class = nullptr;
   std::string PreprocessorGuard;
-  std::vector<Entry> Entries;
-  // Map from a Record to an index into the `Entries` vector.
-  DenseMap<const Record *, uint32_t> EntryMap;
+  MapVector<const Record *, Entry> Entries;
 
   const Entry *getEntry(const Record *Def) const {
-    auto II = EntryMap.find(Def);
-    if (II == EntryMap.end())
+    auto II = Entries.find(Def);
+    if (II == Entries.end())
       return nullptr;
-    return &Entries[II->second];
+    return &II->second;
   }
 };
 
@@ -323,8 +320,8 @@ void SearchableTableEmitter::emitGenericEnum(const GenericEnum &Enum,
   emitIfdef((Twine("GET_") + Enum.PreprocessorGuard + "_DECL").str(), OS);
 
   OS << "enum " << Enum.Name << " {\n";
-  for (const auto &[Name, Value, _] : Enum.Entries)
-    OS << "  " << Name << " = " << Value << ",\n";
+  for (const auto &[_, Entry] : Enum.Entries.getArrayRef())
+    OS << "  " << Entry.Name << " = " << Entry.Value << ",\n";
   OS << "};\n";
 
   OS << "#endif\n\n";
@@ -645,24 +642,25 @@ void SearchableTableEmitter::collectEnumEntries(
     StringRef Name = NameField.empty() ? EntryRec->getName()
                                        : EntryRec->getValueAsString(NameField);
     int64_t Value = ValueField.empty() ? 0 : getInt(EntryRec, ValueField);
-    Enum.Entries.emplace_back(Name, Value, EntryRec);
+    Enum.Entries.try_emplace(EntryRec, Name, Value);
   }
 
   // If no values are provided for enums, assign values in the order of sorted
   // enum names.
   if (ValueField.empty()) {
-    llvm::stable_sort(Enum.Entries, [](const GenericEnum::Entry &LHS,
-                                       const GenericEnum::Entry &RHS) {
-      return LHS.Name < RHS.Name;
-    });
+    // Copy the map entries for sorting and clear the map.
+    auto SavedEntries = Enum.Entries.takeVector();
+    llvm::stable_sort(
+        SavedEntries,
+        [](const std::pair<const Record *, GenericEnum::Entry> &LHS,
+           const std::pair<const Record *, GenericEnum::Entry> &RHS) {
+          return LHS.second.Name < RHS.second.Name;
+        });
 
-    for (auto [Idx, Entry] : enumerate(Enum.Entries))
-      Entry.Value = Idx;
+    // Repopulate entries using the new sorted order.
+    for (auto [Idx, Entry] : enumerate(SavedEntries))
+      Enum.Entries.try_emplace(Entry.first, Entry.second.Name, Idx);
   }
-
-  // Populate the entry map after the `Entries` vector is finalized.
-  for (auto [Idx, Entry] : enumerate(Enum.Entries))
-    Enum.EntryMap.try_emplace(Entry.Def, Idx);
 }
 
 void SearchableTableEmitter::collectTableEntries(
