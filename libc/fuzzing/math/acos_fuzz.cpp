@@ -36,4 +36,3 @@ extern "C" int LLVMFuzzerTestOneInput(double x) {
   mpfr_clear(input);
   return 0;
 }
-
