@@ -303,7 +303,7 @@ public:
     // Extract/insert on a lower ranked extract strided slice op.
     Value zero = rewriter.create<arith::ConstantOp>(
         loc, elemType, rewriter.getZeroAttr(elemType));
-    Value res = rewriter.create<SplatOp>(loc, dstType, zero);
+    Value res = rewriter.create<BroadcastOp>(loc, dstType, zero);
     for (int64_t off = offset, e = offset + size * stride, idx = 0; off < e;
          off += stride, ++idx) {
       Value one = rewriter.create<ExtractOp>(loc, op.getVector(), off);
