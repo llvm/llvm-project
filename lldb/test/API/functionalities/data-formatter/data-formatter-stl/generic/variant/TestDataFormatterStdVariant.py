@@ -1,5 +1,5 @@
 """
-Test lldb data formatter for LibStdC++ std::variant.
+Test lldb data formatter subsystem.
 """
 
 import lldb
@@ -8,17 +8,22 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class LibStdcxxVariantDataFormatterTestCase(TestBase):
-    @add_test_categories(["libstdcxx"])
-    def test_with_run_command(self):
-        """Test LibStdC++ std::variant data formatter works correctly."""
-        self.build()
+class StdVariantDataFormatterTestCase(TestBase):
+    def do_test(self):
+        """Test that that file and class static variables display correctly."""
+
+        def cleanup():
+            self.runCmd("type format clear", check=False)
+            self.runCmd("type summary clear", check=False)
+            self.runCmd("type filter clear", check=False)
+            self.runCmd("type synth clear", check=False)
+
+        # Execute the cleanup function during test case tear down.
+        self.addTearDownHook(cleanup)
 
         (self.target, self.process, _, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.cpp", False)
         )
-
-        lldbutil.continue_to_breakpoint(self.process, bkpt)
 
         for name in ["v1", "v1_typedef"]:
             self.expect(
@@ -65,32 +70,16 @@ class LibStdcxxVariantDataFormatterTestCase(TestBase):
         self.expect("frame variable v_valueless", substrs=["v_valueless =  No Value"])
 
         self.expect(
-            "frame variable v_many_types_valueless",
-            substrs=["v_many_types_valueless =  No Value"],
+            "frame variable v_300_types_valueless",
+            substrs=["v_300_types_valueless =  No Value"],
         )
+
+    @add_test_categories(["libc++"])
+    def test_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()
 
     @add_test_categories(["libstdcxx"])
-    def test_invalid_variant_index(self):
-        """Test LibStdC++ data formatter for std::variant with invalid index."""
-        self.build()
-
-        (self.target, self.process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.cpp", False)
-        )
-
-        lldbutil.continue_to_breakpoint(self.process, bkpt)
-
-        self.expect(
-            "frame variable v1",
-            substrs=["v1 =  Active Type = int  {", "Value = 12", "}"],
-        )
-
-        var_v1 = thread.frames[0].FindVariable("v1")
-        var_v1_raw_obj = var_v1.GetNonSyntheticValue()
-        index_obj = var_v1_raw_obj.GetChildMemberWithName("_M_index")
-        self.assertTrue(index_obj and index_obj.IsValid())
-
-        INVALID_INDEX = "100"
-        index_obj.SetValueFromCString(INVALID_INDEX)
-
-        self.expect("frame variable v1", substrs=["v1 =  <Invalid>"])
+    def test_libstdcxx(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test()
