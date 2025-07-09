@@ -13,8 +13,7 @@
 #include "test/UnitTest/Test.h"
 
 // This file is for testing the src_len argument and other internal interface
-// features. Primary testing is done in stdlib/StrolTest.cpp through the public
-// interface.
+// features. Primary testing is done through the public interface.
 
 TEST(LlvmLibcStrToIntegerTest, SimpleLength) {
   auto result = LIBC_NAMESPACE::internal::wcstointeger<int>(L"12345", 10, 10);
