@@ -346,12 +346,10 @@ define void @pr76986_trunc_sext_interleaving_only(i16 %arg, ptr noalias %src, pt
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr %src, i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP3]], align 1
-; CHECK-NEXT:    [[TMP6:%.*]] = sext i8 [[TMP4]] to i32
-; CHECK-NEXT:    [[TMP7:%.*]] = sext i8 [[TMP5]] to i32
-; CHECK-NEXT:    [[TMP8:%.*]] = trunc i32 [[TMP6]] to i16
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[TMP7]] to i16
-; CHECK-NEXT:    [[TMP10:%.*]] = sdiv i16 [[TMP8]], %arg
-; CHECK-NEXT:    [[TMP11:%.*]] = sdiv i16 [[TMP9]], %arg
+; CHECK-NEXT:    [[TMP6:%.*]] = sext i8 [[TMP4]] to i16
+; CHECK-NEXT:    [[TMP7:%.*]] = sext i8 [[TMP5]] to i16
+; CHECK-NEXT:    [[TMP10:%.*]] = sdiv i16 [[TMP6]], %arg
+; CHECK-NEXT:    [[TMP11:%.*]] = sdiv i16 [[TMP7]], %arg
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr %dst, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i16, ptr %dst, i64 [[TMP1]]
 ; CHECK-NEXT:    store i16 [[TMP10]], ptr [[TMP12]], align 2

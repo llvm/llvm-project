@@ -11,18 +11,19 @@ loop:
   %arrayidx = getelementptr inbounds i64, ptr %ascast, i64 %next
   store i64 %next, ptr %arrayidx, align 4
 
-; check that we find the two interleaved blocks with ascast, gep and store:
+; check that we find the loop-invariant ascast followed by two interleaved
+; blocks with gep and store:
+; CHECK: [[AS1:%.*]] = addrspacecast ptr addrspace(1) %in to ptr
+; CHECK: vector.body:
 ; CHECK: pred.store.if:
 ; CHECK: [[ID1:%.*]] = add i64 %{{.*}}, 1
-; CHECK: [[AS1:%.*]] = addrspacecast ptr addrspace(1) %{{.*}} to ptr
 ; CHECK: [[GEP1:%.*]] = getelementptr inbounds i64, ptr [[AS1]], i64 [[ID1]]
 ; CHECK: store i64 [[ID1]], ptr [[GEP1]]
 
 ; CHECK: pred.store.if1:
 ; CHECK: [[ID2:%.*]] = add i64 %{{.*}}, 1
-; CHECK: [[AS2:%.*]] = addrspacecast ptr addrspace(1) %in to ptr
-; CHECK: [[GEP2:%.*]] = getelementptr inbounds i64, ptr [[AS2]], i64 [[ID2]]
-; CHECK: store i64 [[ID2]], ptr %9, align 4
+; CHECK: [[GEP2:%.*]] = getelementptr inbounds i64, ptr [[AS1]], i64 [[ID2]]
+; CHECK: store i64 [[ID2]], ptr [[GEP2]], align 4
 
   %cmp = icmp eq i64 %next, 7
   br i1 %cmp, label %exit, label %loop
