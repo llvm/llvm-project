@@ -2441,6 +2441,7 @@ public:
 
     assert(FKI.TargetOffset == 0 && "0-bit relocation offset expected");
     const uint64_t RelOffset = Fixup.getOffset();
+    auto [RelSymbol, RelAddend] = extractFixupExpr(Fixup);
 
     uint32_t RelType;
     if (Fixup.isPCRel()) {
@@ -2452,6 +2453,9 @@ public:
       case 32: RelType = ELF::R_X86_64_PC32; break;
       case 64: RelType = ELF::R_X86_64_PC64; break;
       }
+      // Adjust PC-relative fixup offsets, which are calculated from the start
+      // of the next instruction.
+      RelAddend -= FKI.TargetSize / 8;
     } else {
       switch (FKI.TargetSize) {
       default:
@@ -2462,8 +2466,6 @@ public:
       case 64: RelType = ELF::R_X86_64_64; break;
       }
     }
-
-    auto [RelSymbol, RelAddend] = extractFixupExpr(Fixup);
 
     return Relocation({RelOffset, RelSymbol, RelType, RelAddend, 0});
   }

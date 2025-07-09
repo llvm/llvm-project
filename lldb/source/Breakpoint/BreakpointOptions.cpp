@@ -99,8 +99,8 @@ BreakpointOptions::CommandData::CreateFromStructuredData(
 
 const char *BreakpointOptions::g_option_names[(
     size_t)BreakpointOptions::OptionNames::LastOptionName]{
-    "ConditionText", "IgnoreCount", 
-    "EnabledState", "OneShotState", "AutoContinue"};
+    "ConditionText", "IgnoreCount", "EnabledState", "OneShotState",
+    "AutoContinue"};
 
 // BreakpointOptions constructor
 BreakpointOptions::BreakpointOptions(bool all_flags_set)
@@ -113,7 +113,7 @@ BreakpointOptions::BreakpointOptions(bool all_flags_set)
 }
 
 BreakpointOptions::BreakpointOptions(const char *condition, bool enabled,
-                                     int32_t ignore, bool one_shot, 
+                                     int32_t ignore, bool one_shot,
                                      bool auto_continue)
     : m_callback(nullptr), m_baton_is_command_baton(false),
       m_callback_is_synchronous(false), m_enabled(enabled),
@@ -247,7 +247,7 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
       }
       set_options.Set(eOneShot);
   }
-  
+
   key = GetKey(OptionNames::AutoContinue);
   if (key && options_dict.HasKey(key)) {
     success = options_dict.GetValueForKeyAsBoolean(key, auto_continue);
@@ -258,7 +258,7 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
       }
       set_options.Set(eAutoContinue);
   }
-  
+
   key = GetKey(OptionNames::IgnoreCount);
   if (key && options_dict.HasKey(key)) {
     success = options_dict.GetValueForKeyAsInteger(key, ignore_count);
@@ -297,8 +297,8 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
   }
 
   auto bp_options = std::make_unique<BreakpointOptions>(
-      condition_ref.str().c_str(), enabled, 
-      ignore_count, one_shot, auto_continue);
+      condition_ref.str().c_str(), enabled, ignore_count, one_shot,
+      auto_continue);
   if (cmd_data_up) {
     if (cmd_data_up->interpreter == eScriptLanguageNone)
       bp_options->SetCommandDataCallback(cmd_data_up);
@@ -364,7 +364,7 @@ StructuredData::ObjectSP BreakpointOptions::SerializeToStructuredData() {
   if (m_set_flags.Test(eCondition))
     options_dict_sp->AddStringItem(GetKey(OptionNames::ConditionText),
                                    m_condition_text);
-         
+
   if (m_set_flags.Test(eCallback) && m_baton_is_command_baton) {
     auto cmd_baton =
         std::static_pointer_cast<CommandBaton>(m_callback_baton_sp);

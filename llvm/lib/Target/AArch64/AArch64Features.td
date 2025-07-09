@@ -370,8 +370,11 @@ def FeatureSVEAES : ExtensionWithMArch<"sve-aes", "SVEAES",
 def FeatureAliasSVE2AES : ExtensionWithMArch<"sve2-aes", "SVE2AES",
   "", "Shorthand for +sve2+sve-aes", [FeatureSVE2, FeatureSVEAES]>;
 
-def FeatureSVE2SM4 : ExtensionWithMArch<"sve2-sm4", "SVE2SM4", "FEAT_SVE_SM4",
-  "Enable SM4 SVE2 instructions", [FeatureSVE2, FeatureSM4]>;
+def FeatureSVESM4 : ExtensionWithMArch<"sve-sm4", "SVESM4", "FEAT_SVE_SM4",
+  "Enable SVE SM4 instructions", [FeatureSM4]>;
+
+def FeatureAliasSVE2SM4 : ExtensionWithMArch<"sve2-sm4", "SVE2SM4",
+  "", "Shorthand for +sve2+sve-sm4", [FeatureSVE2, FeatureSVESM4]>;
 
 def FeatureSVESHA3 : ExtensionWithMArch<"sve-sha3", "SVESHA3", "FEAT_SVE_SHA3",
   "Enable SVE SHA3 instructions", [FeatureSHA3]>;

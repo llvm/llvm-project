@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_subnormal_config.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/opencl-base.h>
 
 _CLC_DEF bool __clc_fp16_subnormals_supported() { return false; }
 

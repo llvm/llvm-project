@@ -139,17 +139,6 @@ TEST(JSONUtilsTest, GetInteger_DifferentTypes) {
   EXPECT_EQ(result.value(), static_cast<int16_t>(789));
 }
 
-TEST(JSONUtilsTest, CreateModule) {
-  SBTarget target;
-  SBModule module;
-
-  json::Value value = CreateModule(target, module);
-  json::Object *object = value.getAsObject();
-
-  ASSERT_NE(object, nullptr);
-  EXPECT_EQ(object->size(), 0UL);
-}
-
 TEST(JSONUtilsTest, GetStrings_EmptyArray) {
   llvm::json::Object obj;
   obj.try_emplace("key", llvm::json::Array());

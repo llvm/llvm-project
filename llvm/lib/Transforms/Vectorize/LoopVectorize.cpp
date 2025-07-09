@@ -6555,7 +6555,7 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
   }
 
   for (const auto &[_, Ops] : DeadInvariantStoreOps)
-    llvm::append_range(DeadOps, ArrayRef(Ops).drop_back());
+    llvm::append_range(DeadOps, drop_end(Ops));
 
   // Mark ops that would be trivially dead and are only used by ignored
   // instructions as free.
@@ -9097,7 +9097,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // get folded to their non-phi operand, as the reduction recipe handles the
     // condition directly.
     VPSingleDefRecipe *PreviousLink = PhiR; // Aka Worklist[0].
-    for (VPSingleDefRecipe *CurrentLink : Worklist.getArrayRef().drop_front()) {
+    for (VPSingleDefRecipe *CurrentLink : drop_begin(Worklist)) {
       if (auto *Blend = dyn_cast<VPBlendRecipe>(CurrentLink)) {
         assert(Blend->getNumIncomingValues() == 2 &&
                "Blend must have 2 incoming values");

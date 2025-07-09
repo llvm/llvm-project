@@ -10,24 +10,24 @@ namespace usage_invalid {
     static int *static_class_member() [[clang::lifetimebound]]; // expected-error {{static member function has no implicit object parameter}}
     int *explicit_object(this A&) [[clang::lifetimebound]]; // expected-error {{explicit object member function has no implicit object parameter}}
     int attr_on_var [[clang::lifetimebound]]; // expected-error {{only applies to parameters and implicit object parameters}}
-    int [[clang::lifetimebound]] attr_on_int; // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
-    int * [[clang::lifetimebound]] attr_on_int_ptr; // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
-    int * [[clang::lifetimebound]] * attr_on_int_ptr_ptr; // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
-    int (* [[clang::lifetimebound]] attr_on_func_ptr)(); // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+    int [[clang::lifetimebound]] attr_on_int; // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
+    int * [[clang::lifetimebound]] attr_on_int_ptr; // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
+    int * [[clang::lifetimebound]] * attr_on_int_ptr_ptr; // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
+    int (* [[clang::lifetimebound]] attr_on_func_ptr)(); // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
     void void_return_member() [[clang::lifetimebound]]; // expected-error {{'lifetimebound' attribute cannot be applied to an implicit object parameter of a function that returns void; did you mean 'lifetime_capture_by(X)'}}
   };
   int *attr_with_param(int &param [[clang::lifetimebound(42)]]); // expected-error {{takes no arguments}}
 
-  void attr_on_ptr_arg(int * [[clang::lifetimebound]] ptr); // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
-  static_assert((int [[clang::lifetimebound]]) 12); // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
-  int* attr_on_unnamed_arg(const int& [[clang::lifetimebound]]); // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  void attr_on_ptr_arg(int * [[clang::lifetimebound]] ptr); // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  static_assert((int [[clang::lifetimebound]]) 12); // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  int* attr_on_unnamed_arg(const int& [[clang::lifetimebound]]); // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
   template <typename T>
-  int* attr_on_template_ptr_arg(T * [[clang::lifetimebound]] ptr); // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  int* attr_on_template_ptr_arg(T * [[clang::lifetimebound]] ptr); // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
 
-  int (*func_ptr)(int) [[clang::lifetimebound]]; // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
-  int (*(*func_ptr_ptr)(int) [[clang::lifetimebound]])(int); // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  int (*func_ptr)(int) [[clang::lifetimebound]]; // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  int (*(*func_ptr_ptr)(int) [[clang::lifetimebound]])(int); // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
   struct X {};
-  int (X::*member_func_ptr)(int) [[clang::lifetimebound]]; // expected-error {{'lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  int (X::*member_func_ptr)(int) [[clang::lifetimebound]]; // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
 }
 
 namespace usage_ok {

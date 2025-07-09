@@ -8,7 +8,7 @@ define i32 @atomic_global() nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    lock btsq %rax, a(%rip) # encoding: [0xf0,0x48,0x0f,0xab,0x05,A,A,A,A]
-; CHECK-NEXT:    # fixup A - offset: 5, value: a-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    # fixup A - offset: 5, value: a, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:

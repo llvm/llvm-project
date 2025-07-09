@@ -517,4 +517,18 @@ json::Value toJSON(const ReadMemoryResponseBody &RMR) {
   return result;
 }
 
+bool fromJSON(const json::Value &Params, ModulesArguments &MA, json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.mapOptional("startModule", MA.startModule) &&
+         O.mapOptional("moduleCount", MA.moduleCount);
+}
+
+json::Value toJSON(const ModulesResponseBody &MR) {
+  json::Object result{{"modules", MR.modules}};
+  if (MR.totalModules != 0)
+    result.insert({"totalModules", MR.totalModules});
+
+  return result;
+}
+
 } // namespace lldb_dap::protocol

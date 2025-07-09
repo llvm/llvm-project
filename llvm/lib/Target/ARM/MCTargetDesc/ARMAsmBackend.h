@@ -45,7 +45,7 @@ public:
 
   unsigned getRelaxedOpcode(unsigned Op, const MCSubtargetInfo &STI) const;
 
-  bool mayNeedRelaxation(const MCInst &Inst,
+  bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override;
 
   const char *reasonForFixupRelaxation(const MCFixup &Fixup,

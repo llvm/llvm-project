@@ -5446,3 +5446,17 @@ ConvertVectorExpr *ConvertVectorExpr::Create(
   return new (Mem) ConvertVectorExpr(SrcExpr, TI, DstType, VK, OK, BuiltinLoc,
                                      RParenLoc, FPFeatures);
 }
+
+APValue &CompoundLiteralExpr::getOrCreateStaticValue(ASTContext &Ctx) const {
+  assert(hasStaticStorage());
+  if (!StaticValue) {
+    StaticValue = new (Ctx) APValue;
+    Ctx.addDestruction(StaticValue);
+  }
+  return *StaticValue;
+}
+
+APValue &CompoundLiteralExpr::getStaticValue() const {
+  assert(StaticValue);
+  return *StaticValue;
+}

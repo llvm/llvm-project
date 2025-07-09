@@ -231,6 +231,27 @@ TEST(ArrayRefTest, EmptyEquals) {
   EXPECT_TRUE(ArrayRef<unsigned>() == ArrayRef<unsigned>());
 }
 
+TEST(ArrayRefTest, Compare) {
+  ArrayRef<char> Ban("Ban");
+  ArrayRef<char> Banana("Banana");
+  ArrayRef<char> Band("Band");
+
+  EXPECT_TRUE(Ban < Banana);
+  EXPECT_TRUE(Ban <= Banana);
+  EXPECT_FALSE(Ban > Banana);
+  EXPECT_FALSE(Ban >= Banana);
+
+  EXPECT_FALSE(Banana < Banana);
+  EXPECT_TRUE(Banana <= Banana);
+  EXPECT_FALSE(Banana > Banana);
+  EXPECT_TRUE(Banana >= Banana);
+
+  EXPECT_TRUE(Banana < Band);
+  EXPECT_TRUE(Banana <= Band);
+  EXPECT_FALSE(Banana > Band);
+  EXPECT_FALSE(Banana >= Band);
+}
+
 TEST(ArrayRefTest, ConstConvert) {
   int buf[4];
   for (int i = 0; i < 4; ++i)

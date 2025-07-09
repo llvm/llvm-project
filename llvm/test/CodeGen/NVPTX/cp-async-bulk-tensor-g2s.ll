@@ -55,11 +55,11 @@ define void @cp_async_bulk_tensor_g2s_tile_1d(ptr addrspace(7) %d, ptr addrspace
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.1d.shared::cluster.global.tile.mbarrier::complete_tx::bytes.multicast::cluster [%r1], [%rd1, {%r3}], [%r2], %rs1;
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.1d.shared::cluster.global.tile.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint [%r1], [%rd1, {%r3}], [%r2], %rs1, %rd2;
 ; CHECK-PTX-SHARED32-NEXT:    ret;
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i16 undef, i64 undef, i1 0, i1 0)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i16 %mc, i64 %ch, i1 0, i1 0)
 
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i16 undef, i64 %ch, i1 0, i1 1)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i16 %mc, i64 %ch, i1 0, i1 1)
 
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i16 %mc, i64 undef, i1 1, i1 0)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i16 %mc, i64 %ch, i1 1, i1 0)
 
   tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i16 %mc, i64 %ch, i1 1, i1 1)
   ret void
@@ -106,11 +106,11 @@ define void @cp_async_bulk_tensor_g2s_tile_2d(ptr addrspace(7) %d, ptr addrspace
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.2d.shared::cluster.global.tile.mbarrier::complete_tx::bytes.multicast::cluster [%r1], [%rd1, {%r3, %r4}], [%r2], %rs1;
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.2d.shared::cluster.global.tile.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint [%r1], [%rd1, {%r3, %r4}], [%r2], %rs1, %rd2;
 ; CHECK-PTX-SHARED32-NEXT:    ret;
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i16 undef, i64 undef, i1 0, i1 0)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i16 %mc, i64 %ch, i1 0, i1 0)
 
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i16 undef, i64 %ch, i1 0, i1 1)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i16 %mc, i64 %ch, i1 0, i1 1)
 
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i16 %mc, i64 undef, i1 1, i1 0)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i16 %mc, i64 %ch, i1 1, i1 0)
 
   tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i16 %mc, i64 %ch, i1 1, i1 1)
   ret void
@@ -159,9 +159,9 @@ define void @cp_async_bulk_tensor_g2s_tile_3d(ptr addrspace(7) %d, ptr addrspace
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.3d.shared::cluster.global.tile.mbarrier::complete_tx::bytes.multicast::cluster [%r1], [%rd1, {%r3, %r4, %r5}], [%r2], %rs1;
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.3d.shared::cluster.global.tile.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint [%r1], [%rd1, {%r3, %r4, %r5}], [%r2], %rs1, %rd2;
 ; CHECK-PTX-SHARED32-NEXT:    ret;
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 undef, i64 undef, i1 0, i1 0)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %mc, i64 %ch, i1 0, i1 0)
 
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 undef, i64 %ch, i1 0, i1 1)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %mc, i64 %ch, i1 0, i1 1)
 
   tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %mc, i64 %ch, i1 1, i1 0)
 
@@ -214,9 +214,9 @@ define void @cp_async_bulk_tensor_g2s_tile_4d(ptr addrspace(7) %d, ptr addrspace
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.4d.shared::cluster.global.tile.mbarrier::complete_tx::bytes.multicast::cluster [%r1], [%rd1, {%r3, %r4, %r5, %r6}], [%r2], %rs1;
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.4d.shared::cluster.global.tile.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint [%r1], [%rd1, {%r3, %r4, %r5, %r6}], [%r2], %rs1, %rd2;
 ; CHECK-PTX-SHARED32-NEXT:    ret;
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 undef, i64 undef, i1 0, i1 0)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %mc, i64 %ch, i1 0, i1 0)
 
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 undef, i64 %ch, i1 0, i1 1)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %mc, i64 %ch, i1 0, i1 1)
 
   tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %mc, i64 %ch, i1 1, i1 0)
 
@@ -271,9 +271,9 @@ define void @cp_async_bulk_tensor_g2s_tile_5d(ptr addrspace(7) %d, ptr addrspace
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.5d.shared::cluster.global.tile.mbarrier::complete_tx::bytes.multicast::cluster [%r1], [%rd1, {%r3, %r4, %r5, %r6, %r7}], [%r2], %rs1;
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.5d.shared::cluster.global.tile.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint [%r1], [%rd1, {%r3, %r4, %r5, %r6, %r7}], [%r2], %rs1, %rd2;
 ; CHECK-PTX-SHARED32-NEXT:    ret;
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.5d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 undef, i64 undef, i1 0, i1 0)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.5d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %mc, i64 %ch, i1 0, i1 0)
 
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.5d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 undef, i64 %ch, i1 0, i1 1)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.5d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %mc, i64 %ch, i1 0, i1 1)
 
   tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.5d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %mc, i64 %ch, i1 1, i1 0)
 
@@ -326,9 +326,9 @@ define void @cp_async_bulk_tensor_g2s_im2col_3d(ptr addrspace(7) %d, ptr addrspa
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.3d.shared::cluster.global.im2col.mbarrier::complete_tx::bytes.multicast::cluster [%r1], [%rd1, {%r3, %r4, %r5}], [%r2], {%rs1}, %rs2;
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.3d.shared::cluster.global.im2col.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint [%r1], [%rd1, {%r3, %r4, %r5}], [%r2], {%rs1}, %rs2, %rd2;
 ; CHECK-PTX-SHARED32-NEXT:    ret;
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 undef, i64 undef, i1 0, i1 0)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 %mc, i64 %ch, i1 0, i1 0)
 
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 undef, i64 %ch, i1 0, i1 1)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 %mc, i64 %ch, i1 0, i1 1)
 
   tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 %mc, i64 %ch, i1 1, i1 0)
 
@@ -385,9 +385,9 @@ define void @cp_async_bulk_tensor_g2s_im2col_4d(ptr addrspace(7) %d, ptr addrspa
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.4d.shared::cluster.global.im2col.mbarrier::complete_tx::bytes.multicast::cluster [%r1], [%rd1, {%r3, %r4, %r5, %r6}], [%r2], {%rs1, %rs2}, %rs3;
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.4d.shared::cluster.global.im2col.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint [%r1], [%rd1, {%r3, %r4, %r5, %r6}], [%r2], {%rs1, %rs2}, %rs3, %rd2;
 ; CHECK-PTX-SHARED32-NEXT:    ret;
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.4d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, i16 undef, i64 undef, i1 0, i1 0)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.4d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, i16 %mc, i64 %ch, i1 0, i1 0)
 
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.4d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, i16 undef, i64 %ch, i1 0, i1 1)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.4d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, i16 %mc, i64 %ch, i1 0, i1 1)
 
   tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.4d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, i16 %mc, i64 %ch, i1 1, i1 0)
 
@@ -448,9 +448,9 @@ define void @cp_async_bulk_tensor_g2s_im2col_5d(ptr addrspace(7) %d, ptr addrspa
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.5d.shared::cluster.global.im2col.mbarrier::complete_tx::bytes.multicast::cluster [%r1], [%rd1, {%r3, %r4, %r5, %r6, %r7}], [%r2], {%rs1, %rs2, %rs3}, %rs4;
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.5d.shared::cluster.global.im2col.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint [%r1], [%rd1, {%r3, %r4, %r5, %r6, %r7}], [%r2], {%rs1, %rs2, %rs3}, %rs4, %rd2;
 ; CHECK-PTX-SHARED32-NEXT:    ret;
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.5d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, i16 undef, i64 undef, i1 0, i1 0)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.5d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, i16 %mc, i64 %ch, i1 0, i1 0)
 
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.5d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, i16 undef, i64 %ch, i1 0, i1 1)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.5d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, i16 %mc, i64 %ch, i1 0, i1 1)
 
   tail call void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.5d(ptr addrspace(7) %d, ptr addrspace(3) %bar, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, i16 %mc, i64 %ch, i1 1, i1 0)
 

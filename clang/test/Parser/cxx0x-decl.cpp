@@ -147,7 +147,7 @@ namespace UsingDeclAttrs {
   static_assert(alignof(T) == 1, "");
 
   using [[gnu::aligned(1)]] T = int; // expected-error {{an attribute list cannot appear here}}
-  using T = int [[gnu::aligned(1)]]; // expected-error {{'aligned' attribute cannot be applied to types}}
+  using T = int [[gnu::aligned(1)]]; // expected-error {{'gnu::aligned' attribute cannot be applied to types}}
 }
 
 namespace DuplicateSpecifier {

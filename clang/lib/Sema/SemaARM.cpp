@@ -569,34 +569,39 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
   // * When compiling for SVE only, the caller must be in non-streaming mode.
   // * When compiling for both SVE and SME, the caller can be in either mode.
   if (BuiltinType == SemaARM::VerifyRuntimeMode) {
-    llvm::StringMap<bool> CallerFeatureMapWithoutSVE;
-    S.Context.getFunctionFeatureMap(CallerFeatureMapWithoutSVE, FD);
-    CallerFeatureMapWithoutSVE["sve"] = false;
+    llvm::StringMap<bool> CallerFeatures;
+    S.Context.getFunctionFeatureMap(CallerFeatures, FD);
 
     // Avoid emitting diagnostics for a function that can never compile.
-    if (FnType == SemaARM::ArmStreaming && !CallerFeatureMapWithoutSVE["sme"])
+    if (FnType == SemaARM::ArmStreaming && !CallerFeatures["sme"])
       return false;
 
-    llvm::StringMap<bool> CallerFeatureMapWithoutSME;
-    S.Context.getFunctionFeatureMap(CallerFeatureMapWithoutSME, FD);
-    CallerFeatureMapWithoutSME["sme"] = false;
+    const auto FindTopLevelPipe = [](const char *S) {
+      unsigned Depth = 0;
+      unsigned I = 0, E = strlen(S);
+      for (; I < E; ++I) {
+        if (S[I] == '|' && Depth == 0)
+          break;
+        if (S[I] == '(')
+          ++Depth;
+        else if (S[I] == ')')
+          --Depth;
+      }
+      return I;
+    };
 
-    // We know the builtin requires either some combination of SVE flags, or
-    // some combination of SME flags, but we need to figure out which part
-    // of the required features is satisfied by the target features.
-    //
-    // For a builtin with target guard 'sve2p1|sme2', if we compile with
-    // '+sve2p1,+sme', then we know that it satisfies the 'sve2p1' part if we
-    // evaluate the features for '+sve2p1,+sme,+nosme'.
-    //
-    // Similarly, if we compile with '+sve2,+sme2', then we know it satisfies
-    // the 'sme2' part if we evaluate the features for '+sve2,+sme2,+nosve'.
-    StringRef BuiltinTargetGuards(
-        S.Context.BuiltinInfo.getRequiredFeatures(BuiltinID));
+    const char *RequiredFeatures =
+        S.Context.BuiltinInfo.getRequiredFeatures(BuiltinID);
+    unsigned PipeIdx = FindTopLevelPipe(RequiredFeatures);
+    assert(PipeIdx != 0 && PipeIdx != strlen(RequiredFeatures) &&
+           "Expected feature string of the form 'SVE-EXPR|SME-EXPR'");
+    StringRef NonStreamingBuiltinGuard = StringRef(RequiredFeatures, PipeIdx);
+    StringRef StreamingBuiltinGuard = StringRef(RequiredFeatures + PipeIdx + 1);
+
     bool SatisfiesSVE = Builtin::evaluateRequiredTargetFeatures(
-        BuiltinTargetGuards, CallerFeatureMapWithoutSME);
+        NonStreamingBuiltinGuard, CallerFeatures);
     bool SatisfiesSME = Builtin::evaluateRequiredTargetFeatures(
-        BuiltinTargetGuards, CallerFeatureMapWithoutSVE);
+        StreamingBuiltinGuard, CallerFeatures);
 
     if ((SatisfiesSVE && SatisfiesSME) ||
         (SatisfiesSVE && FnType == SemaARM::ArmStreamingCompatible))

@@ -42,8 +42,8 @@ public:
 
   /// Extracts a value and applies a relocation to the result if
   /// one exists for the given offset.
-  LLVM_ABI uint64_t getRelocatedValueImpl(uint32_t Size, uint64_t *Off,
-                                          uint64_t *SecNdx, Error *Err) const {
+  uint64_t getRelocatedValueImpl(uint32_t Size, uint64_t *Off, uint64_t *SecNdx,
+                                 Error *Err) const {
     if (SecNdx)
       *SecNdx = object::SectionedAddress::UndefSection;
     if (!Section)

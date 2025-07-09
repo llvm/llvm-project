@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_PARSE_PARSEHLSLROOTSIGNATURE_H
 #define LLVM_CLANG_PARSE_PARSEHLSLROOTSIGNATURE_H
 
+#include "clang/AST/Expr.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Lex/LexHLSLRootSignature.h"
 #include "clang/Lex/Preprocessor.h"
@@ -29,7 +30,7 @@ class RootSignatureParser {
 public:
   RootSignatureParser(llvm::dxbc::RootSignatureVersion Version,
                       SmallVector<llvm::hlsl::rootsig::RootElement> &Elements,
-                      RootSignatureLexer &Lexer, clang::Preprocessor &PP);
+                      StringLiteral *Signature, Preprocessor &PP);
 
   /// Consumes tokens from the Lexer and constructs the in-memory
   /// representations of the RootElements. Tokens are consumed until an
@@ -187,12 +188,23 @@ private:
   bool tryConsumeExpectedToken(RootSignatureToken::Kind Expected);
   bool tryConsumeExpectedToken(ArrayRef<RootSignatureToken::Kind> Expected);
 
+  /// Convert the token's offset in the signature string to its SourceLocation
+  ///
+  /// This allows to currently retrieve the location for multi-token
+  /// StringLiterals
+  SourceLocation getTokenLocation(RootSignatureToken Tok);
+
+  /// Construct a diagnostics at the location of the current token
+  DiagnosticBuilder reportDiag(unsigned DiagID) {
+    return getDiags().Report(getTokenLocation(CurToken), DiagID);
+  }
+
 private:
   llvm::dxbc::RootSignatureVersion Version;
   SmallVector<llvm::hlsl::rootsig::RootElement> &Elements;
-  RootSignatureLexer &Lexer;
-
-  clang::Preprocessor &PP;
+  StringLiteral *Signature;
+  RootSignatureLexer Lexer;
+  Preprocessor &PP;
 
   RootSignatureToken CurToken;
 };

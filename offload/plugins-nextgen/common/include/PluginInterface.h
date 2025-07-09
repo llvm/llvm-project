@@ -1198,6 +1198,8 @@ struct GenericPluginTy {
     return reinterpret_cast<Ty *>(Allocator.Allocate(sizeof(Ty), alignof(Ty)));
   }
 
+  template <typename Ty> void free(Ty *Mem) { Allocator.Deallocate(Mem); }
+
   /// Get the reference to the global handler of this plugin.
   GenericGlobalHandlerTy &getGlobalHandler() {
     assert(GlobalHandler && "Global handler not initialized");

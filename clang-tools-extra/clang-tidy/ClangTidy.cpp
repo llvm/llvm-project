@@ -55,7 +55,8 @@ namespace clang::tidy {
 
 namespace {
 #if CLANG_TIDY_ENABLE_STATIC_ANALYZER
-static const char *AnalyzerCheckNamePrefix = "clang-analyzer-";
+static constexpr llvm::StringLiteral AnalyzerCheckNamePrefix =
+    "clang-analyzer-";
 
 class AnalyzerDiagnosticConsumer : public ento::PathDiagnosticConsumer {
 public:
@@ -351,10 +352,9 @@ ClangTidyASTConsumerFactory::ClangTidyASTConsumerFactory(
 static void
 setStaticAnalyzerCheckerOpts(const ClangTidyOptions &Opts,
                              clang::AnalyzerOptions &AnalyzerOptions) {
-  StringRef AnalyzerPrefix(AnalyzerCheckNamePrefix);
   for (const auto &Opt : Opts.CheckOptions) {
     StringRef OptName(Opt.getKey());
-    if (!OptName.consume_front(AnalyzerPrefix))
+    if (!OptName.consume_front(AnalyzerCheckNamePrefix))
       continue;
     // Analyzer options are always local options so we can ignore priority.
     AnalyzerOptions.Config[OptName] = Opt.getValue().Value;
@@ -476,7 +476,8 @@ std::vector<std::string> ClangTidyASTConsumerFactory::getCheckNames() {
 #if CLANG_TIDY_ENABLE_STATIC_ANALYZER
   for (const auto &AnalyzerCheck : getAnalyzerCheckersAndPackages(
            Context, Context.canEnableAnalyzerAlphaCheckers()))
-    CheckNames.push_back(AnalyzerCheckNamePrefix + AnalyzerCheck.first);
+    CheckNames.emplace_back(
+        (AnalyzerCheckNamePrefix + AnalyzerCheck.first).str());
 #endif // CLANG_TIDY_ENABLE_STATIC_ANALYZER
 
   llvm::sort(CheckNames);

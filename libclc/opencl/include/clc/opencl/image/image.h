@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_IMAGE_H__
+#define __CLC_OPENCL_IMAGE_H__
+
+#include <clc/opencl/opencl-base.h>
+
 #if defined(__opencl_c_images)
 
 _CLC_OVERLOAD _CLC_DECL int get_image_width(image2d_t image);
@@ -46,3 +51,5 @@ _CLC_OVERLOAD _CLC_DECL uint4 read_imageui(image2d_t image, sampler_t sampler,
                                            float2 coord);
 
 #endif
+
+#endif // __CLC_OPENCL_IMAGE_H__

@@ -34,7 +34,7 @@ namespace scudo {
 // predictable address pattern (the predictability increases with the block
 // size).
 //
-// Regions for size class 0 are special and used to hold TransferBatches, which
+// Regions for size class 0 are special and used to hold Batches, which
 // allow to transfer arrays of pointers from the global size class freelist to
 // the thread specific freelist for said class, and back.
 //
@@ -56,12 +56,21 @@ public:
       typename Conditional<Config::getEnableBlockCache(),
                            SizeClassAllocatorLocalCache<ThisT>,
                            SizeClassAllocatorNoCache<ThisT>>::type;
-  typedef TransferBatch<ThisT> TransferBatchT;
+  typedef Batch<ThisT> BatchT;
   typedef BatchGroup<ThisT> BatchGroupT;
+  static const u16 MaxNumBlocksInBatch = SizeClassMap::MaxNumCachedHint;
+
+  static constexpr uptr getSizeOfBatchClass() {
+    const uptr HeaderSize = sizeof(BatchT);
+    return HeaderSize + sizeof(CompactPtrT) * MaxNumBlocksInBatch;
+  }
+
+  static_assert(sizeof(BatchGroupT) <= getSizeOfBatchClass(),
+                "BatchGroupT also uses BatchClass");
 
   static uptr getSizeByClassId(uptr ClassId) {
     return (ClassId == SizeClassMap::BatchClassId)
-               ? Max(sizeof(BatchGroupT), sizeof(TransferBatchT))
+               ? getSizeOfBatchClass()
                : SizeClassMap::getSizeByClassId(ClassId);
   }
 
@@ -124,7 +133,7 @@ public:
 
   // When all blocks are freed, it has to be the same size as `AllocatedUser`.
   void verifyAllBlocksAreReleasedTestOnly() {
-    // `BatchGroup` and `TransferBatch` also use the blocks from BatchClass.
+    // `BatchGroup` and `Batch` also use the blocks from BatchClass.
     uptr BatchClassUsedInFreeLists = 0;
     for (uptr I = 0; I < NumClasses; I++) {
       // We have to count BatchClassUsedInFreeLists in other regions first.
@@ -134,7 +143,7 @@ public:
       ScopedLock L1(Sci->Mutex);
       uptr TotalBlocks = 0;
       for (BatchGroupT &BG : Sci->FreeListInfo.BlockList) {
-        // `BG::Batches` are `TransferBatches`. +1 for `BatchGroup`.
+        // `BG::Batches` are `Batches`. +1 for `BatchGroup`.
         BatchClassUsedInFreeLists += BG.Batches.size() + 1;
         for (const auto &It : BG.Batches)
           TotalBlocks += It.getCount();
@@ -153,7 +162,7 @@ public:
         for (const auto &It : BG.Batches)
           TotalBlocks += It.getCount();
       } else {
-        // `BatchGroup` with empty freelist doesn't have `TransferBatch` record
+        // `BatchGroup` with empty freelist doesn't have `Batch` record
         // itself.
         ++TotalBlocks;
       }
@@ -487,13 +496,13 @@ private:
       REQUIRES(Sci->Mutex) {
     DCHECK_EQ(Sci, getSizeClassInfo(SizeClassMap::BatchClassId));
 
-    // Free blocks are recorded by TransferBatch in freelist for all
-    // size-classes. In addition, TransferBatch is allocated from BatchClassId.
+    // Free blocks are recorded by Batch in freelist for all
+    // size-classes. In addition, Batch is allocated from BatchClassId.
     // In order not to use additional block to record the free blocks in
-    // BatchClassId, they are self-contained. I.e., A TransferBatch records the
+    // BatchClassId, they are self-contained. I.e., A Batch records the
     // block address of itself. See the figure below:
     //
-    // TransferBatch at 0xABCD
+    // Batch at 0xABCD
     // +----------------------------+
     // | Free blocks' addr          |
     // | +------+------+------+     |
@@ -501,25 +510,25 @@ private:
     // | +------+------+------+     |
     // +----------------------------+
     //
-    // When we allocate all the free blocks in the TransferBatch, the block used
-    // by TransferBatch is also free for use. We don't need to recycle the
-    // TransferBatch. Note that the correctness is maintained by the invariant,
+    // When we allocate all the free blocks in the Batch, the block used
+    // by Batch is also free for use. We don't need to recycle the
+    // Batch. Note that the correctness is maintained by the invariant,
     //
-    //   Each popBlocks() request returns the entire TransferBatch. Returning
-    //   part of the blocks in a TransferBatch is invalid.
+    //   Each popBlocks() request returns the entire Batch. Returning
+    //   part of the blocks in a Batch is invalid.
     //
-    // This ensures that TransferBatch won't leak the address itself while it's
+    // This ensures that Batch won't leak the address itself while it's
     // still holding other valid data.
     //
     // Besides, BatchGroup is also allocated from BatchClassId and has its
-    // address recorded in the TransferBatch too. To maintain the correctness,
+    // address recorded in the Batch too. To maintain the correctness,
     //
-    //   The address of BatchGroup is always recorded in the last TransferBatch
+    //   The address of BatchGroup is always recorded in the last Batch
     //   in the freelist (also imply that the freelist should only be
-    //   updated with push_front). Once the last TransferBatch is popped,
+    //   updated with push_front). Once the last Batch is popped,
     //   the block used by BatchGroup is also free for use.
     //
-    // With this approach, the blocks used by BatchGroup and TransferBatch are
+    // With this approach, the blocks used by BatchGroup and Batch are
     // reusable and don't need additional space for them.
 
     Sci->FreeListInfo.PushedBlocks += Size;
@@ -548,12 +557,12 @@ private:
     //   1. just allocated a new `BatchGroup`.
     //   2. Only 1 block is pushed when the freelist is empty.
     if (BG->Batches.empty()) {
-      // Construct the `TransferBatch` on the last element.
-      TransferBatchT *TB = reinterpret_cast<TransferBatchT *>(
+      // Construct the `Batch` on the last element.
+      BatchT *TB = reinterpret_cast<BatchT *>(
           decompactPtr(SizeClassMap::BatchClassId, Array[Size - 1]));
       TB->clear();
-      // As mentioned above, addresses of `TransferBatch` and `BatchGroup` are
-      // recorded in the TransferBatch.
+      // As mentioned above, addresses of `Batch` and `BatchGroup` are
+      // recorded in the Batch.
       TB->add(Array[Size - 1]);
       TB->add(
           compactPtr(SizeClassMap::BatchClassId, reinterpret_cast<uptr>(BG)));
@@ -561,14 +570,14 @@ private:
       BG->Batches.push_front(TB);
     }
 
-    TransferBatchT *CurBatch = BG->Batches.front();
+    BatchT *CurBatch = BG->Batches.front();
     DCHECK_NE(CurBatch, nullptr);
 
     for (u32 I = 0; I < Size;) {
       u16 UnusedSlots =
           static_cast<u16>(BG->MaxCachedPerBatch - CurBatch->getCount());
       if (UnusedSlots == 0) {
-        CurBatch = reinterpret_cast<TransferBatchT *>(
+        CurBatch = reinterpret_cast<BatchT *>(
             decompactPtr(SizeClassMap::BatchClassId, Array[I]));
         CurBatch->clear();
         // Self-contained
@@ -596,7 +605,7 @@ private:
   //                            TB
   //
   // Each BlockGroup(BG) will associate with unique group id and the free blocks
-  // are managed by a list of TransferBatch(TB). To reduce the time of inserting
+  // are managed by a list of Batch(TB). To reduce the time of inserting
   // blocks, BGs are sorted and the input `Array` are supposed to be sorted so
   // that we can get better performance of maintaining sorted property.
   // Use `SameGroup=true` to indicate that all blocks in the array are from the
@@ -613,21 +622,21 @@ private:
       BatchGroupT *BG = reinterpret_cast<BatchGroupT *>(
           SizeClassAllocator->getBatchClassBlock());
       BG->Batches.clear();
-      TransferBatchT *TB = reinterpret_cast<TransferBatchT *>(
-          SizeClassAllocator->getBatchClassBlock());
+      BatchT *TB =
+          reinterpret_cast<BatchT *>(SizeClassAllocator->getBatchClassBlock());
       TB->clear();
 
       BG->CompactPtrGroupBase = CompactPtrGroupBase;
       BG->Batches.push_front(TB);
       BG->BytesInBGAtLastCheckpoint = 0;
-      BG->MaxCachedPerBatch = TransferBatchT::MaxNumCached;
+      BG->MaxCachedPerBatch = MaxNumBlocksInBatch;
 
       return BG;
     };
 
     auto InsertBlocks = [&](BatchGroupT *BG, CompactPtrT *Array, u32 Size) {
-      SinglyLinkedList<TransferBatchT> &Batches = BG->Batches;
-      TransferBatchT *CurBatch = Batches.front();
+      SinglyLinkedList<BatchT> &Batches = BG->Batches;
+      BatchT *CurBatch = Batches.front();
       DCHECK_NE(CurBatch, nullptr);
 
       for (u32 I = 0; I < Size;) {
@@ -635,7 +644,7 @@ private:
         u16 UnusedSlots =
             static_cast<u16>(BG->MaxCachedPerBatch - CurBatch->getCount());
         if (UnusedSlots == 0) {
-          CurBatch = reinterpret_cast<TransferBatchT *>(
+          CurBatch = reinterpret_cast<BatchT *>(
               SizeClassAllocator->getBatchClassBlock());
           CurBatch->clear();
           Batches.push_front(CurBatch);
@@ -716,7 +725,7 @@ private:
     if (Sci->FreeListInfo.BlockList.empty())
       return 0U;
 
-    SinglyLinkedList<TransferBatchT> &Batches =
+    SinglyLinkedList<BatchT> &Batches =
         Sci->FreeListInfo.BlockList.front()->Batches;
 
     if (Batches.empty()) {
@@ -725,8 +734,8 @@ private:
       Sci->FreeListInfo.BlockList.pop_front();
 
       // Block used by `BatchGroup` is from BatchClassId. Turn the block into
-      // `TransferBatch` with single block.
-      TransferBatchT *TB = reinterpret_cast<TransferBatchT *>(BG);
+      // `Batch` with single block.
+      BatchT *TB = reinterpret_cast<BatchT *>(BG);
       ToArray[0] =
           compactPtr(SizeClassMap::BatchClassId, reinterpret_cast<uptr>(TB));
       Sci->FreeListInfo.PoppedBlocks += 1;
@@ -734,18 +743,18 @@ private:
     }
 
     // So far, instead of always filling the blocks to `MaxBlockCount`, we only
-    // examine single `TransferBatch` to minimize the time spent on the primary
-    // allocator. Besides, the sizes of `TransferBatch` and
+    // examine single `Batch` to minimize the time spent on the primary
+    // allocator. Besides, the sizes of `Batch` and
     // `SizeClassAllocatorT::getMaxCached()` may also impact the time spent on
     // accessing the primary allocator.
     // TODO(chiahungduan): Evaluate if we want to always prepare `MaxBlockCount`
-    // blocks and/or adjust the size of `TransferBatch` according to
+    // blocks and/or adjust the size of `Batch` according to
     // `SizeClassAllocatorT::getMaxCached()`.
-    TransferBatchT *B = Batches.front();
+    BatchT *B = Batches.front();
     DCHECK_NE(B, nullptr);
     DCHECK_GT(B->getCount(), 0U);
 
-    // BachClassId should always take all blocks in the TransferBatch. Read the
+    // BachClassId should always take all blocks in the Batch. Read the
     // comment in `pushBatchClassBlocks()` for more details.
     const u16 PopCount = ClassId == SizeClassMap::BatchClassId
                              ? B->getCount()
@@ -756,7 +765,7 @@ private:
     // done without holding `Mutex`.
     if (B->empty()) {
       Batches.pop_front();
-      // `TransferBatch` of BatchClassId is self-contained, no need to
+      // `Batch` of BatchClassId is self-contained, no need to
       // deallocate. Read the comment in `pushBatchClassBlocks()` for more
       // details.
       if (ClassId != SizeClassMap::BatchClassId)
@@ -769,7 +778,7 @@ private:
         // We don't keep BatchGroup with zero blocks to avoid empty-checking
         // while allocating. Note that block used for constructing BatchGroup is
         // recorded as free blocks in the last element of BatchGroup::Batches.
-        // Which means, once we pop the last TransferBatch, the block is
+        // Which means, once we pop the last Batch, the block is
         // implicitly deallocated.
         if (ClassId != SizeClassMap::BatchClassId)
           SizeClassAllocator->deallocate(SizeClassMap::BatchClassId, BG);
@@ -816,8 +825,7 @@ private:
             static_cast<u32>((RegionSize - Offset) / Size));
     DCHECK_GT(NumberOfBlocks, 0U);
 
-    constexpr u32 ShuffleArraySize =
-        MaxNumBatches * TransferBatchT::MaxNumCached;
+    constexpr u32 ShuffleArraySize = MaxNumBatches * MaxNumBlocksInBatch;
     // Fill the transfer batches and put them in the size-class freelist. We
     // need to randomize the blocks for security purposes, so we first fill a
     // local array that we then shuffle before populating the batches.
@@ -1102,7 +1110,7 @@ private:
       if (AllocatedGroupSize == 0)
         continue;
 
-      // TransferBatches are pushed in front of BG.Batches. The first one may
+      // Batches are pushed in front of BG.Batches. The first one may
       // not have all caches used.
       const uptr NumBlocks = (BG.Batches.size() - 1) * BG.MaxCachedPerBatch +
                              BG.Batches.front()->getCount();

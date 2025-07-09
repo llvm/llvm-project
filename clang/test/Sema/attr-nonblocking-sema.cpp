@@ -8,8 +8,8 @@
 // --- ATTRIBUTE SYNTAX: SUBJECTS ---
 
 int nl_var [[clang::nonblocking]]; // expected-warning {{'nonblocking' only applies to function types; type here is 'int'}}
-struct nl_struct {} [[clang::nonblocking]]; // expected-warning {{attribute 'nonblocking' is ignored, place it after "struct" to apply attribute to type declaration}}
-struct [[clang::nonblocking]] nl_struct2 {}; // expected-error {{'nonblocking' attribute cannot be applied to a declaration}}
+struct nl_struct {} [[clang::nonblocking]]; // expected-warning {{attribute 'clang::nonblocking' is ignored, place it after "struct" to apply attribute to type declaration}}
+struct [[clang::nonblocking]] nl_struct2 {}; // expected-error {{'clang::nonblocking' attribute cannot be applied to a declaration}}
 
 // Positive case
 typedef void (*fo)() [[clang::nonblocking]];
@@ -19,10 +19,10 @@ void (*read_me_and_weep(
   [[clang::nonblocking]];
 
 // --- ATTRIBUTE SYNTAX: ARGUMENT COUNT ---
-void nargs_1() [[clang::nonblocking(1, 2)]];  // expected-error {{'nonblocking' attribute takes no more than 1 argument}}
-void nargs_2() [[clang::nonallocating(1, 2)]]; // expected-error {{'nonallocating' attribute takes no more than 1 argument}}
-void nargs_3() [[clang::blocking(1)]]; // expected-error {{'blocking' attribute takes no arguments}}
-void nargs_4() [[clang::allocating(1)]]; // expected-error {{'allocating' attribute takes no arguments}}
+void nargs_1() [[clang::nonblocking(1, 2)]];  // expected-error {{'clang::nonblocking' attribute takes no more than 1 argument}}
+void nargs_2() [[clang::nonallocating(1, 2)]]; // expected-error {{'clang::nonallocating' attribute takes no more than 1 argument}}
+void nargs_3() [[clang::blocking(1)]]; // expected-error {{'clang::blocking' attribute takes no arguments}}
+void nargs_4() [[clang::allocating(1)]]; // expected-error {{'clang::allocating' attribute takes no arguments}}
 
 // --- ATTRIBUTE SYNTAX: COMBINATIONS ---
 // Check invalid combinations of nonblocking/nonallocating attributes

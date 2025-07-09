@@ -943,6 +943,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (Res == CUDA_SUCCESS)
       Info.add("Device Name", TmpChar);
 
+    Info.add("Vendor Name", "NVIDIA");
+
     Res = cuDeviceTotalMem(&TmpSt, Device);
     if (Res == CUDA_SUCCESS)
       Info.add("Global Memory Size", TmpSt, "bytes");

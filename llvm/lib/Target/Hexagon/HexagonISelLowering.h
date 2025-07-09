@@ -183,6 +183,9 @@ public:
                           SelectionDAG &DAG) const override;
 
   const char *getTargetNodeName(unsigned Opcode) const override;
+  std::pair<MVT, unsigned>
+  handleMaskRegisterForCallingConv(const HexagonSubtarget &Subtarget,
+                                   EVT VT) const;
 
   SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
@@ -263,6 +266,14 @@ public:
   Register getRegisterByName(const char* RegName, LLT VT,
                              const MachineFunction &MF) const override;
 
+  unsigned getVectorTypeBreakdownForCallingConv(LLVMContext &Context,
+                                                CallingConv::ID CC, EVT VT,
+                                                EVT &IntermediateVT,
+                                                unsigned &NumIntermediates,
+                                                MVT &RegisterVT) const override;
+
+  MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
+                                    EVT VT) const override;
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
   Register

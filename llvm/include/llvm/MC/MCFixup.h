@@ -9,6 +9,7 @@
 #ifndef LLVM_MC_MCFIXUP_H
 #define LLVM_MC_MCFIXUP_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SMLoc.h"
@@ -121,7 +122,7 @@ public:
     }
   }
 
-  SMLoc getLoc() const;
+  LLVM_ABI SMLoc getLoc() const;
 };
 
 namespace mc {

@@ -6,9 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_MATH_LGAMMA_H__
+#define __CLC_OPENCL_MATH_LGAMMA_H__
+
 #define __CLC_BODY <clc/math/unary_decl.inc>
 #define FUNCTION lgamma
 
 #include <clc/math/gentype.inc>
 
 #undef FUNCTION
+
+#endif // __CLC_OPENCL_MATH_LGAMMA_H__

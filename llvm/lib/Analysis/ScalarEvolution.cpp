@@ -1559,9 +1559,8 @@ ScalarEvolution::getZeroExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
   Ty = getEffectiveSCEVType(Ty);
 
   FoldID ID(scZeroExtend, Op, Ty);
-  auto Iter = FoldCache.find(ID);
-  if (Iter != FoldCache.end())
-    return Iter->second;
+  if (const SCEV *S = FoldCache.lookup(ID))
+    return S;
 
   const SCEV *S = getZeroExtendExprImpl(Op, Ty, Depth);
   if (!isa<SCEVZeroExtendExpr>(S))
@@ -1894,9 +1893,8 @@ ScalarEvolution::getSignExtendExpr(const SCEV *Op, Type *Ty, unsigned Depth) {
   Ty = getEffectiveSCEVType(Ty);
 
   FoldID ID(scSignExtend, Op, Ty);
-  auto Iter = FoldCache.find(ID);
-  if (Iter != FoldCache.end())
-    return Iter->second;
+  if (const SCEV *S = FoldCache.lookup(ID))
+    return S;
 
   const SCEV *S = getSignExtendExprImpl(Op, Ty, Depth);
   if (!isa<SCEVSignExtendExpr>(S))
@@ -14498,15 +14496,15 @@ void ScalarEvolution::verify() const {
 
   for (const auto &KV : ExprValueMap) {
     for (Value *V : KV.second) {
-      auto It = ValueExprMap.find_as(V);
-      if (It == ValueExprMap.end()) {
+      const SCEV *S = ValueExprMap.lookup(V);
+      if (!S) {
         dbgs() << "Value " << *V
                << " is in ExprValueMap but not in ValueExprMap\n";
         std::abort();
       }
-      if (It->second != KV.first) {
-        dbgs() << "Value " << *V << " mapped to " << *It->second
-               << " rather than " << *KV.first << "\n";
+      if (S != KV.first) {
+        dbgs() << "Value " << *V << " mapped to " << *S << " rather than "
+               << *KV.first << "\n";
         std::abort();
       }
     }
@@ -14625,15 +14623,15 @@ void ScalarEvolution::verify() const {
   }
   for (auto [Expr, IDs] : FoldCacheUser) {
     for (auto &FoldID : IDs) {
-      auto I = FoldCache.find(FoldID);
-      if (I == FoldCache.end()) {
+      const SCEV *S = FoldCache.lookup(FoldID);
+      if (!S) {
         dbgs() << "Missing entry in FoldCache for expression " << *Expr
                << "!\n";
         std::abort();
       }
-      if (I->second != Expr) {
-        dbgs() << "Entry in FoldCache doesn't match FoldCacheUser: "
-               << *I->second << " != " << *Expr << "!\n";
+      if (S != Expr) {
+        dbgs() << "Entry in FoldCache doesn't match FoldCacheUser: " << *S
+               << " != " << *Expr << "!\n";
         std::abort();
       }
     }
@@ -15601,8 +15599,7 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     // existing rewrite because we want to chain further rewrites onto the
     // already rewritten value. Otherwise returns \p S.
     auto GetMaybeRewritten = [&](const SCEV *S) {
-      auto I = RewriteMap.find(S);
-      return I != RewriteMap.end() ? I->second : S;
+      return RewriteMap.lookup_or(S, S);
     };
 
     // Check for the SCEV expression (A /u B) * B while B is a constant, inside
@@ -15905,9 +15902,8 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
              Bitwidth > Op->getType()->getScalarSizeInBits()) {
         Type *NarrowTy = IntegerType::get(SE.getContext(), Bitwidth);
         auto *NarrowExt = SE.getZeroExtendExpr(Op, NarrowTy);
-        auto I = Map.find(NarrowExt);
-        if (I != Map.end())
-          return SE.getZeroExtendExpr(I->second, Ty);
+        if (const SCEV *S = Map.lookup(NarrowExt))
+          return SE.getZeroExtendExpr(S, Ty);
         Bitwidth = Bitwidth / 2;
       }
 

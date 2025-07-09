@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_ATOMIC_ATOM_INC_H__
+#define __CLC_OPENCL_ATOMIC_ATOM_INC_H__
+
+#include <clc/opencl/opencl-base.h>
+
 #include <clc/clcfunc.h>
 #include <clc/clctypes.h>
 
@@ -26,3 +31,5 @@ atom_inc(volatile global unsigned long *p);
 _CLC_OVERLOAD _CLC_DECL long atom_inc(volatile local long *p);
 _CLC_OVERLOAD _CLC_DECL unsigned long atom_inc(volatile local unsigned long *p);
 #endif // cl_khr_int64_base_atomics
+
+#endif // __CLC_OPENCL_ATOMIC_ATOM_INC_H__

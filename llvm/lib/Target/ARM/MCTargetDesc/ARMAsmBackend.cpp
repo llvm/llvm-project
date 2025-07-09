@@ -201,11 +201,9 @@ unsigned ARMAsmBackend::getRelaxedOpcode(unsigned Op,
   }
 }
 
-bool ARMAsmBackend::mayNeedRelaxation(const MCInst &Inst,
+bool ARMAsmBackend::mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand>,
                                       const MCSubtargetInfo &STI) const {
-  if (getRelaxedOpcode(Inst.getOpcode(), STI) != Inst.getOpcode())
-    return true;
-  return false;
+  return getRelaxedOpcode(Opcode, STI) != Opcode;
 }
 
 static const char *checkPCRelOffset(uint64_t Value, int64_t Min, int64_t Max) {

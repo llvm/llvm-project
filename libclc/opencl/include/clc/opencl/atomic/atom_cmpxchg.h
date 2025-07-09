@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_ATOMIC_ATOM_CMPXCHG_H__
+#define __CLC_OPENCL_ATOMIC_ATOM_CMPXCHG_H__
+
+#include <clc/opencl/opencl-base.h>
+
 #include <clc/clcfunc.h>
 #include <clc/clctypes.h>
 
@@ -37,3 +42,5 @@ _CLC_OVERLOAD _CLC_DECL unsigned long
 atom_cmpxchg(volatile local unsigned long *p, unsigned long cmp,
              unsigned long val);
 #endif // cl_khr_int64_base_atomics
+
+#endif // __CLC_OPENCL_ATOMIC_ATOM_CMPXCHG_H__

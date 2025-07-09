@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_acos.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/acos.h>
 
 #define FUNCTION acos
 #define __CLC_BODY <clc/shared/unary_def.inc>

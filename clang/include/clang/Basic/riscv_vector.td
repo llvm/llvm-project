@@ -2313,7 +2313,7 @@ defm vrgather : RVVOutBuiltinSet<"vrgather_vv", "csilxfdy",
                                  [["vv", "v", "vvUv"]]>;
 defm vrgather : RVVOutBuiltinSet<"vrgather_vx", "csilxfdy",
                                  [["vx", "v", "vvz"]]>;
-defm vrgatherei16 : RVVOutBuiltinSet<"vrgatherei16_vv", "csilxfd",
+defm vrgatherei16 : RVVOutBuiltinSet<"vrgatherei16_vv", "csilxfdy",
                                      [["vv", "v", "vv(Log2EEW:4)Uv"]]>;
 // unsigned type
 defm vrgather : RVVOutBuiltinSet<"vrgather_vv", "csil",

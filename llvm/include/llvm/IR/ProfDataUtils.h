@@ -22,12 +22,12 @@
 
 namespace llvm {
 struct MDProfLabels {
-  static const char *BranchWeights;
-  static const char *ValueProfile;
-  static const char *FunctionEntryCount;
-  static const char *SyntheticFunctionEntryCount;
-  static const char *ExpectedBranchWeights;
-  static const char *UnknownBranchWeightsMarker;
+  LLVM_ABI static const char *BranchWeights;
+  LLVM_ABI static const char *ValueProfile;
+  LLVM_ABI static const char *FunctionEntryCount;
+  LLVM_ABI static const char *SyntheticFunctionEntryCount;
+  LLVM_ABI static const char *ExpectedBranchWeights;
+  LLVM_ABI static const char *UnknownBranchWeightsMarker;
 };
 
 /// Checks if an Instruction has MD_prof Metadata

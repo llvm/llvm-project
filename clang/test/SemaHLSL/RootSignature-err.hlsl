@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - %s -verify
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -fsyntax-only %s -verify
+// RUN: not %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -fsyntax-only %s 2>&1 | FileCheck %s
 
 // Attr test
 
@@ -22,3 +23,14 @@ void bad_root_signature_4() {}
 // expected-error@+1 {{expected ')' to denote end of parameters, or, another valid parameter of RootConstants}}
 [RootSignature("RootConstants(b0, num32BitConstants = 1, invalid)")]
 void bad_root_signature_5() {}
+
+#define MultiLineRootSignature \
+ "CBV(b0)," \
+ "RootConstants(num32BitConstants = 3, b0, invalid)"
+
+// CHECK: [[@LINE-2]]:42: note: expanded from macro 'MultiLineRootSignature'
+// CHECK-NEXT: [[@LINE-3]] | "RootConstants(num32BitConstants = 3, b0, invalid)"
+// CHECK-NEXT:             |                                         ^
+// expected-error@+1 {{expected ')' to denote end of parameters, or, another valid parameter of RootConstants}}
+[RootSignature(MultiLineRootSignature)]
+void bad_root_signature_6() {}

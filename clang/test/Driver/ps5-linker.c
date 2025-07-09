@@ -165,7 +165,7 @@
 // CHECK-SHARED-CRT-SAME: "-l:crtendS.o" "-l:crtn.o"
 // CHECK-STATIC-CRT-SAME: "-l:crtend.o" "-l:crtn.o"
 
-// CHECK-NO-CRT-NOT: crt{{[^"]*}}.o"
+// CHECK-NO-CRT-NOT: "-l:crt
 // CHECK-NO-LIBS-NOT: "-l{{[^"]*}}"
 
 // Test the driver's control over the -fcrash-diagnostics-dir behavior with linker flags.

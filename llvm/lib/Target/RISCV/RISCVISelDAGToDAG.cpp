@@ -681,6 +681,43 @@ bool RISCVDAGToDAGISel::trySignedBitfieldExtract(SDNode *Node) {
   return false;
 }
 
+bool RISCVDAGToDAGISel::trySignedBitfieldInsertInMask(SDNode *Node) {
+  // Supported only in Xqcibm for now.
+  if (!Subtarget->hasVendorXqcibm())
+    return false;
+
+  auto *N1C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
+  if (!N1C)
+    return false;
+
+  int32_t C1 = N1C->getSExtValue();
+  if (!isShiftedMask_32(C1) || isInt<12>(C1))
+    return false;
+
+  // If C1 is a shifted mask (but can't be formed as an ORI),
+  // use a bitfield insert of -1.
+  // Transform (or x, C1)
+  //        -> (qc.insbi x, width, shift)
+  const unsigned Leading = llvm::countl_zero((uint32_t)C1);
+  const unsigned Trailing = llvm::countr_zero((uint32_t)C1);
+  const unsigned Width = 32 - Leading - Trailing;
+
+  // If Zbs is enabled and it is a single bit set we can use BSETI which
+  // can be compressed to C_BSETI when Xqcibm in enabled.
+  if (Width == 1 && Subtarget->hasStdExtZbs())
+    return false;
+
+  SDLoc DL(Node);
+  MVT VT = Node->getSimpleValueType(0);
+
+  SDValue Ops[] = {CurDAG->getSignedTargetConstant(-1, DL, VT),
+                   CurDAG->getTargetConstant(Width, DL, VT),
+                   CurDAG->getTargetConstant(Trailing, DL, VT)};
+  SDNode *BitIns = CurDAG->getMachineNode(RISCV::QC_INSBI, DL, VT, Ops);
+  ReplaceNode(Node, BitIns);
+  return true;
+}
+
 bool RISCVDAGToDAGISel::trySignedBitfieldInsertInSign(SDNode *Node) {
   // Only supported with XAndesPerf at the moment.
   if (!Subtarget->hasVendorXAndesPerf())
@@ -1298,7 +1335,15 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, SRAI);
     return;
   }
-  case ISD::OR:
+  case ISD::OR: {
+    if (trySignedBitfieldInsertInMask(Node))
+      return;
+
+    if (tryShrinkShlLogicImm(Node))
+      return;
+
+    break;
+  }
   case ISD::XOR:
     if (tryShrinkShlLogicImm(Node))
       return;

@@ -1738,6 +1738,26 @@ namespace WithinLifetime {
                                            // both-note {{'__builtin_is_within_lifetime' cannot be called with a one-past-the-end pointer}} \
                                            // both-warning {{expression result unused}}
   }
+
+
+  constexpr bool self = __builtin_is_within_lifetime(&self); // both-error {{must be initialized by a constant expression}} \
+                                                             // both-note {{'__builtin_is_within_lifetime' cannot be called with a pointer to an object whose lifetime has not yet begun}} \
+                                                             // ref-error {{call to consteval function '__builtin_is_within_lifetime' is not a constant expression}} \
+                                                             // ref-note {{initializer of 'self' is not a constant expression}} \
+                                                             // ref-note {{declared here}}
+
+  int nontCE(int p) { // both-note {{declared here}}
+    return __builtin_is_within_lifetime(&p); // both-error {{call to consteval function}} \
+                                             // both-note {{function parameter 'p' with unknown value cannot be used in a constant expression}}
+  }
+
+
+  struct XStd {
+    consteval XStd() {
+      __builtin_is_within_lifetime(this); // both-note {{cannot be called with a pointer to an object whose lifetime has not yet begun}}
+    }
+  } xstd; // both-error {{is not a constant expression}} \
+          // both-note {{in call to}}
 }
 
 #ifdef __SIZEOF_INT128__

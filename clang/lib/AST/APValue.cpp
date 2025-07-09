@@ -821,7 +821,7 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
     else if (isLValueOnePastTheEnd())
       Out << "*(&";
 
-    QualType ElemTy = Base.getType();
+    QualType ElemTy = Base.getType().getNonReferenceType();
     if (const ValueDecl *VD = Base.dyn_cast<const ValueDecl*>()) {
       Out << *VD;
     } else if (TypeInfoLValue TI = Base.dyn_cast<TypeInfoLValue>()) {

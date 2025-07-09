@@ -8,6 +8,7 @@
 
 #include "Protocol/ProtocolTypes.h"
 #include "JSONUtils.h"
+#include "ProtocolUtils.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -922,6 +923,32 @@ llvm::json::Value toJSON(const DisassembledInstruction &DI) {
     result.insert({"endColumn", *DI.endColumn});
   if (DI.presentationHint)
     result.insert({"presentationHint", *DI.presentationHint});
+
+  return result;
+}
+
+json::Value toJSON(const Module &M) {
+  json::Object result{{"id", M.id}, {"name", M.name}};
+
+  if (!M.path.empty())
+    result.insert({"path", M.path});
+  if (M.isOptimized)
+    result.insert({"isOptimized", M.isOptimized});
+  if (M.isUserCode)
+    result.insert({"isUserCode", M.isUserCode});
+  if (!M.version.empty())
+    result.insert({"version", M.version});
+  if (!M.symbolStatus.empty())
+    result.insert({"symbolStatus", M.symbolStatus});
+  if (!M.symbolFilePath.empty())
+    result.insert({"symbolFilePath", M.symbolFilePath});
+  if (!M.dateTimeStamp.empty())
+    result.insert({"dateTimeStamp", M.dateTimeStamp});
+  if (!M.addressRange.empty())
+    result.insert({"addressRange", M.addressRange});
+  if (M.debugInfoSizeBytes != 0)
+    result.insert(
+        {"debugInfoSize", ConvertDebugInfoSizeToString(M.debugInfoSizeBytes)});
 
   return result;
 }
