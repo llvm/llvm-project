@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: no-filesystem
-// REQUIRES: locale.en_US.UTF-8
+
+// setrlimit(RLIMIT_FSIZE) seems to only work as intended on Apple platforms
+// REQUIRES: target={{.+}}-apple-{{.+}}
 
 // <fstream>
 
