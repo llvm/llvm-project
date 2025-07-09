@@ -3009,6 +3009,15 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
             getLLVMContext(), llvm::AttributeSet::get(getLLVMContext(), Attrs));
     }
   }
+
+  if (TargetDecl) {
+    if (const auto *Returns = TargetDecl->getAttr<ReturnsArgumentAttr>()) {
+      llvm::AttributeSet &Attrs =
+          ArgAttrs[Returns->getReturnedVal().getLLVMIndex()];
+      Attrs = Attrs.addAttribute(getLLVMContext(), llvm::Attribute::Returned);
+    }
+  }
+
   assert(ArgNo == FI.arg_size());
 
   ArgNo = 0;

@@ -287,6 +287,22 @@ applies to copies of the block. For example:
   }];
 }
 
+def ReturnsArgumentDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``returns_argument`` attribute can be placed on a function to indicate when
+an argument is returned identically. This allows the compiler to use the
+returned value instead of the argument, potentially decreasing register
+pressure. This attribute can currently only be applied to arguments that are
+pointers or references to the same type as the returned pointer or reference.
+
+Sample usage:
+.. code-block:: c
+
+  [[clang::returns_argument(1)]] void* memcpy(void*, const void*, size_t);
+  }];
+}
+
 def MaybeUndefDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
