@@ -124,6 +124,11 @@ class StdStringDataFormatterTestCase(TestBase):
         self.build(dictionary={"USE_LIBSTDCPP": 1})
         self.do_test()
 
+    @add_test_categories(["msvcstl"])
+    def test_msvc(self):
+        self.build()
+        self.do_test()
+
     def do_test_multibyte(self):
         lldbutil.run_to_source_breakpoint(
             self, "Set break point at this line.", self.main_spec
@@ -134,9 +139,6 @@ class StdStringDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable",
             substrs=[
-                '(%s::string) IHaveEmbeddedZeros = "a\\0b\\0c\\0d"' % ns,
-                '(%s::wstring) IHaveEmbeddedZerosToo = L"hello world!\\0てざ ル゜䋨ミ㠧槊 きゅへ狦穤襩 じゃ馩リョ 䤦監"'
-                % ns,
                 '(%s::u16string) u16_string = u"ß水氶"' % ns,
                 '(%s::u16string) u16_empty = u""' % ns,
                 '(%s::u32string) u32_string = U"🍄🍅🍆🍌"' % ns,
@@ -155,6 +157,11 @@ class StdStringDataFormatterTestCase(TestBase):
     @add_test_categories(["libstdcxx"])
     def test_multibyte_libstdcxx(self):
         self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test_multibyte()
+
+    @add_test_categories(["msvcstl"])
+    def test_multibyte_msvc(self):
+        self.build()
         self.do_test_multibyte()
 
     def do_test_uncapped_summary(self):
@@ -187,6 +194,11 @@ class StdStringDataFormatterTestCase(TestBase):
         self.build(dictionary={"USE_LIBSTDCPP": 1})
         self.do_test_uncapped_summary()
 
+    @add_test_categories(["msvcstl"])
+    def test_uncapped_msvc(self):
+        self.build()
+        self.do_test_uncapped_summary()
+
     def do_test_summary_unavailable(self):
         """
         Make sure that if the string is not readable, we give an error.
@@ -212,3 +224,67 @@ class StdStringDataFormatterTestCase(TestBase):
     def test_unavailable_summary_libstdcxx(self):
         self.build(dictionary={"USE_LIBSTDCPP": 1})
         self.do_test_summary_unavailable()
+
+    @add_test_categories(["msvcstl"])
+    def test_unavailable_summary_msvc(self):
+        self.build()
+        self.do_test_summary_unavailable()
+
+    def do_test_overwritten(self):
+        lldbutil.run_to_source_breakpoint(
+            self, "Set break point at this line.", self.main_spec
+        )
+
+        self.expect_var_path("overwritten_zero", summary='"abc"')
+
+    @add_test_categories(["libc++"])
+    def test_overwritten_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test_overwritten()
+
+    @expectedFailureAll(
+        bugnumber="libstdc++ format for non-null terminated std::string currently diverges from MSVC and libc++ formatter."
+    )
+    @add_test_categories(["libstdcxx"])
+    def test_overwritten_libstdcxx(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test_overwritten()
+
+    @add_test_categories(["msvcstl"])
+    def test_overwritten_msvc(self):
+        self.build()
+        self.do_test_overwritten()
+
+    def do_test_embedded_null(self):
+        lldbutil.run_to_source_breakpoint(
+            self, "Set break point at this line.", self.main_spec
+        )
+
+        ns = self.namespace
+
+        self.expect(
+            "frame variable",
+            substrs=[
+                '(%s::string) IHaveEmbeddedZeros = "a\\0b\\0c\\0d"' % ns,
+                '(%s::wstring) IHaveEmbeddedZerosToo = L"hello world!\\0てざ ル゜䋨ミ㠧槊 きゅへ狦穤襩 じゃ馩リョ 䤦監"'
+                % ns,
+            ],
+        )
+
+    @add_test_categories(["libc++"])
+    def test_embedded_null_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test_embedded_null()
+
+    @expectedFailureAll(
+        bugnumber="libstdc++ formatters incorrectly format std::string with embedded '\0' characters."
+    )
+    @add_test_categories(["libstdcxx"])
+    def test_embedded_null_libstdcxx(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test_embedded_null()
+
+    @add_test_categories(["msvcstl"])
+    def test_embedded_null_msvc(self):
+        self.build()
+        self.do_test_embedded_null()

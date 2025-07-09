@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class LibcxxSpanDataFormatterTestCase(TestBase):
+class StdSpanDataFormatterTestCase(TestBase):
     def findVariable(self, name):
         var = self.frame().FindVariable(name)
         self.assertTrue(var.IsValid())
@@ -44,11 +44,8 @@ class LibcxxSpanDataFormatterTestCase(TestBase):
         self.expect_var_path(f"{var_name}[3]", type="int", value="1234")
         self.expect_var_path(f"{var_name}[4]", type="int", value="12345")
 
-    @add_test_categories(["libc++"])
-    @skipIf(compiler="clang", compiler_version=["<", "11.0"])
-    def test_with_run_command(self):
+    def do_test(self):
         """Test that std::span variables are formatted correctly when printed."""
-        self.build()
         (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.cpp", False)
         )
@@ -158,11 +155,14 @@ class LibcxxSpanDataFormatterTestCase(TestBase):
         )
         self.check_size("nested", 2)
 
-    @add_test_categories(["libc++"])
     @skipIf(compiler="clang", compiler_version=["<", "11.0"])
-    def test_ref_and_ptr(self):
+    @add_test_categories(["libc++"])
+    def test_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()
+
+    def do_test_ref_and_ptr(self):
         """Test that std::span is correctly formatted when passed by ref and ptr"""
-        self.build()
         (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "Stop here to check by ref", lldb.SBFileSpec("main.cpp", False)
         )
@@ -173,3 +173,9 @@ class LibcxxSpanDataFormatterTestCase(TestBase):
         # The pointer should just show the right number of elements:
 
         self.expect("frame variable ptr", patterns=["ptr = 0x[0-9a-f]+ size=5"])
+
+    @skipIf(compiler="clang", compiler_version=["<", "11.0"])
+    @add_test_categories(["libc++"])
+    def test_ref_and_ptr_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test_ref_and_ptr()
