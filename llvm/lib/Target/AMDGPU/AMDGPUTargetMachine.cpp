@@ -2099,6 +2099,8 @@ void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
   // being run on them, which causes crashes in the resource usage analysis).
   addPass(AMDGPULowerBufferFatPointersPass(TM));
 
+  addPass.requireCGSCCOrder();
+
   Base::addCodeGenPrepare(addPass);
 
   if (isPassEnabled(EnableLoadStoreVectorizer))
