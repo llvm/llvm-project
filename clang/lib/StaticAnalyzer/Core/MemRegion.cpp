@@ -1054,10 +1054,24 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
     assert(!Ty.isNull());
     if (Ty.isConstQualified()) {
       sReg = getGlobalsRegion(MemRegion::GlobalImmutableSpaceRegionKind);
-    } else if (Ctx.getSourceManager().isInSystemHeader(D->getLocation())) {
-      sReg = getGlobalsRegion(MemRegion::GlobalSystemSpaceRegionKind);
     } else {
-      sReg = getGlobalsRegion(MemRegion::GlobalInternalSpaceRegionKind);
+      StringRef N = D->getNameAsString();
+      QualType FILETy = D->getASTContext().getFILEType();
+      if (!FILETy.isNull())
+        FILETy = FILETy.getCanonicalType();
+      Ty = Ty.getCanonicalType();
+      bool IsStdStreamVar = Ty->isPointerType() &&
+                            Ty->getPointeeType() == FILETy &&
+                            (N == "stdin" || N == "stdout" || N == "stderr");
+      // Pointer value of C standard streams is usually not modified by system
+      // calls. This means they should not get invalidated at system calls and
+      // can not belong to the system memory space.
+      if (Ctx.getSourceManager().isInSystemHeader(D->getLocation()) &&
+          !IsStdStreamVar) {
+        sReg = getGlobalsRegion(MemRegion::GlobalSystemSpaceRegionKind);
+      } else {
+        sReg = getGlobalsRegion(MemRegion::GlobalInternalSpaceRegionKind);
+      }
     }
 
   // Finally handle static locals.
