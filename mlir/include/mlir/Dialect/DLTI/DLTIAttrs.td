@@ -95,6 +95,9 @@ def DLTI_DataLayoutSpecAttr :
     /// Returns the function pointer alignment identifier.
     StringAttr getFunctionPointerAlignmentIdentifier(MLIRContext *context) const;
 
+    /// Returns the legal int widths identifier.
+    StringAttr getLegalIntWidthsIdentifier(MLIRContext *context) const;
+
     /// Returns the attribute associated with the key.
     FailureOr<Attribute> query(DataLayoutEntryKey key) {
       return ::llvm::cast<mlir::DataLayoutSpecInterface>(*this).queryHelper(key);

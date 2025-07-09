@@ -18,6 +18,72 @@ include "mlir/Interfaces/ViewLikeInterface.td"
 include "mlir/IR/OpAsmInterface.td"
 
 //===----------------------------------------------------------------------===//
+// FromPtrOp
+//===----------------------------------------------------------------------===//
+
+def Ptr_FromPtrOp : Pointer_Op<"from_ptr", [
+    Pure, OptionalTypesMatchWith<"metadata type", "result", "metadata",
+            "PtrMetadataType::get(cast<PtrLikeTypeInterface>($_self))">
+  ]> {
+  let summary = "Casts a `!ptr.ptr` value to a ptr-like value.";
+  let description = [{
+    The `from_ptr` operation casts a `ptr` value to a ptr-like object. It's
+    important to note that:
+    - The ptr-like object cannot be a `!ptr.ptr`.
+    - The memory-space of both the `ptr` and ptr-like object must match.
+    - The cast is Pure (no UB and side-effect free).
+
+    The optional `metadata` operand exists to provide any ptr-like metadata
+    that might be required to perform the cast.
+
+    Example:
+
+    ```mlir
+    %typed_ptr = ptr.from_ptr %ptr : !ptr.ptr<#ptr.generic_space> -> !my.ptr<f32, #ptr.generic_space>
+    %memref = ptr.from_ptr %ptr metadata %md : !ptr.ptr<#ptr.generic_space> -> memref<f32, #ptr.generic_space>
+  
+    // Cast the `%ptr` to a memref without utilizing metadata.
+    %memref = ptr.from_ptr %ptr : !ptr.ptr<#ptr.generic_space> -> memref<f32, #ptr.generic_space>
+    ```
+  }];
+
+  let arguments = (ins Ptr_PtrType:$ptr, Optional<Ptr_PtrMetadata>:$metadata);
+  let results = (outs PtrLikeTypeInterface:$result);
+  let assemblyFormat = [{
+    $ptr (`metadata` $metadata^)? attr-dict `:` type($ptr) `->` type($result)
+  }];
+  let hasFolder = 1;
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// GetMetadataOp
+//===----------------------------------------------------------------------===//
+
+def Ptr_GetMetadataOp : Pointer_Op<"get_metadata", [
+    Pure, TypesMatchWith<"metadata type", "ptr", "result",
+            "PtrMetadataType::get(cast<PtrLikeTypeInterface>($_self))">
+  ]> {
+  let summary = "SSA value representing pointer metadata.";
+  let description = [{
+    The `get_metadata` operation produces an opaque value that encodes the
+    metadata of the ptr-like type.
+
+    Example:
+
+    ```mlir
+    %metadata = ptr.get_metadata %memref : memref<?x?xf32>
+    ```
+  }];
+
+  let arguments = (ins PtrLikeTypeInterface:$ptr);
+  let results = (outs Ptr_PtrMetadata:$result);
+  let assemblyFormat = [{
+    $ptr attr-dict `:` type($ptr)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // PtrAddOp
 //===----------------------------------------------------------------------===//
 
@@ -32,8 +98,8 @@ def Ptr_PtrAddOp : Pointer_Op<"ptr_add", [
     Example:
 
     ```mlir
-    %x_off  = ptr.ptr_add %x, %off : !ptr.ptr<0>, i32
-    %x_off0 = ptr.ptr_add nusw %x, %off : !ptr.ptr<0>, i32
+    %x_off  = ptr.ptr_add %x, %off : !ptr.ptr<#ptr.generic_space>, i32
+    %x_off0 = ptr.ptr_add nusw %x, %off : !ptr.ptr<#ptr.generic_space>, i32
     ```
   }];
 
@@ -50,6 +116,36 @@ def Ptr_PtrAddOp : Pointer_Op<"ptr_add", [
     /// `ViewLikeOp::getViewSource` method. 
     Value getViewSource() { return getBase(); }
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// ToPtrOp
+//===----------------------------------------------------------------------===//
+
+def Ptr_ToPtrOp : Pointer_Op<"to_ptr", [Pure]> {
+  let summary = "Casts a ptr-like value to a `!ptr.ptr` value.";
+  let description = [{
+    The `to_ptr` operation casts a ptr-like object to a `!ptr.ptr`. It's
+    important to note that:
+    - The ptr-like object cannot be a `!ptr.ptr`.
+    - The memory-space of both the `ptr` and ptr-like object must match.
+    - The cast is side-effect free.
+
+    Example:
+
+    ```mlir
+    %ptr0 = ptr.to_ptr %my_ptr : !my.ptr<f32, #ptr.generic_space> -> !ptr.ptr<#ptr.generic_space>
+    %ptr1 = ptr.to_ptr %memref : memref<f32, #ptr.generic_space> -> !ptr.ptr<#ptr.generic_space>
+    ```
+  }];
+
+  let arguments = (ins PtrLikeTypeInterface:$ptr);
+  let results = (outs Ptr_PtrType:$result);
+  let assemblyFormat = [{
+    $ptr attr-dict `:` type($ptr) `->` type($result)
+  }];
+  let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -8,7 +8,7 @@
 
 #include "SystemZSubtarget.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
-#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -83,9 +83,9 @@ bool SystemZSubtarget::isAddressedViaADA(const GlobalValue *GV) const {
     // least two byte alignment, then generated code can use relative
     // instructions to address the variable. Otherwise, use the ADA to address
     // the variable.
-    if (GO->getAlignment() & 0x1) {
-      return true;
-    }
+    if (auto *GV = dyn_cast<GlobalVariable>(GO))
+      if (GV->getAlign() && (*GV->getAlign()).value() & 0x1)
+        return true;
 
     // getKindForGlobal only works with definitions
     if (GO->isDeclaration()) {

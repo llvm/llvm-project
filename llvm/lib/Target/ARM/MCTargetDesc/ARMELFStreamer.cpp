@@ -14,7 +14,7 @@
 
 #include "ARMMCTargetDesc.h"
 #include "ARMUnwindOpAsm.h"
-#include "MCTargetDesc/ARMMCExpr.h"
+#include "MCTargetDesc/ARMMCAsmInfo.h"
 #include "Utils/ARMBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
@@ -32,7 +32,6 @@
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
@@ -288,7 +287,7 @@ void ARMTargetAsmStreamer::emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) {
   OS << "\t.thumb_set\t";
   Symbol->print(OS, MAI);
   OS << ", ";
-  Value->print(OS, MAI);
+  MAI->printExpr(OS, *Value);
   OS << '\n';
 }
 
@@ -590,7 +589,7 @@ public:
   /// necessary.
   void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override {
     if (const MCSymbolRefExpr *SRE = dyn_cast_or_null<MCSymbolRefExpr>(Value)) {
-      if (getSpecifier(SRE) == ARMMCExpr::VK_SBREL && !(Size == 4)) {
+      if (SRE->getSpecifier() == ARM::S_SBREL && !(Size == 4)) {
         getContext().reportError(Loc, "relocated expression must be 32-bit");
         return;
       }
@@ -1210,8 +1209,7 @@ inline void ARMELFStreamer::SwitchToExIdxSection(const MCSymbol &FnStart) {
 
 void ARMELFStreamer::EmitFixup(const MCExpr *Expr, MCFixupKind Kind) {
   MCDataFragment *Frag = getOrCreateDataFragment();
-  Frag->getFixups().push_back(MCFixup::create(Frag->getContents().size(), Expr,
-                                              Kind));
+  Frag->addFixup(MCFixup::create(Frag->getContents().size(), Expr, Kind));
 }
 
 void ARMELFStreamer::EHReset() {
@@ -1255,7 +1253,7 @@ void ARMELFStreamer::emitFnEnd() {
     EmitPersonalityFixup(GetAEABIUnwindPersonalityName(PersonalityIndex));
 
   const MCSymbolRefExpr *FnStartRef =
-      MCSymbolRefExpr::create(FnStart, ARMMCExpr::VK_PREL31, getContext());
+      MCSymbolRefExpr::create(FnStart, ARM::S_PREL31, getContext());
 
   emitValue(FnStartRef, 4);
 
@@ -1264,7 +1262,7 @@ void ARMELFStreamer::emitFnEnd() {
   } else if (ExTab) {
     // Emit a reference to the unwind opcodes in the ".ARM.extab" section.
     const MCSymbolRefExpr *ExTabEntryRef =
-        MCSymbolRefExpr::create(ExTab, ARMMCExpr::VK_PREL31, getContext());
+        MCSymbolRefExpr::create(ExTab, ARM::S_PREL31, getContext());
     emitValue(ExTabEntryRef, 4);
   } else {
     // For the __aeabi_unwind_cpp_pr0, we have to emit the unwind opcodes in
@@ -1294,14 +1292,13 @@ void ARMELFStreamer::emitCantUnwind() { CantUnwind = true; }
 void ARMELFStreamer::EmitPersonalityFixup(StringRef Name) {
   const MCSymbol *PersonalitySym = getContext().getOrCreateSymbol(Name);
 
-  const MCSymbolRefExpr *PersonalityRef = MCSymbolRefExpr::create(
-      PersonalitySym, ARMMCExpr::VK_ARM_NONE, getContext());
+  const MCSymbolRefExpr *PersonalityRef =
+      MCSymbolRefExpr::create(PersonalitySym, ARM::S_ARM_NONE, getContext());
 
   visitUsedExpr(*PersonalityRef);
   MCDataFragment *DF = getOrCreateDataFragment();
-  DF->getFixups().push_back(MCFixup::create(DF->getContents().size(),
-                                            PersonalityRef,
-                                            MCFixup::getKindForSize(4, false)));
+  DF->addFixup(
+      MCFixup::create(DF->getContents().size(), PersonalityRef, FK_Data_4));
 }
 
 void ARMELFStreamer::FlushPendingOffset() {
@@ -1342,7 +1339,7 @@ void ARMELFStreamer::FlushUnwindOpcodes(bool NoHandlerData) {
   // Emit personality
   if (Personality) {
     const MCSymbolRefExpr *PersonalityRef = MCSymbolRefExpr::create(
-        Personality, uint16_t(ARMMCExpr::VK_PREL31), getContext());
+        Personality, uint16_t(ARM::S_PREL31), getContext());
 
     emitValue(PersonalityRef, 4);
   }
