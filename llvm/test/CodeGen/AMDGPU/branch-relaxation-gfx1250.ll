@@ -559,12 +559,12 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:    s_add_pc_i64 .LBB10_7-.Lpost_addpc13
 ; GCN-NEXT:  .Lpost_addpc13:
 ; GCN-NEXT:  .LBB10_4: ; %bb13
-; GCN-NEXT:    s_mov_b32 s0, s8
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_sleep 0
+; GCN-NEXT:    s_mov_b32 s0, s8
 ; GCN-NEXT:    s_sleep 0
 ; GCN-NEXT:    s_cbranch_execz .LBB10_5
 ; GCN-NEXT:  ; %bb.16: ; %bb13

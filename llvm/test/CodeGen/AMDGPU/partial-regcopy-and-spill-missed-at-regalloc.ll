@@ -6,6 +6,7 @@
 
 ; Partial reg copy and spill missed during regalloc handled later at frame lowering.
 define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
+
   ; REGALLOC-GFX908-LABEL: name: partial_copy
   ; REGALLOC-GFX908: bb.0 (%ir-block.0):
   ; REGALLOC-GFX908-NEXT:   liveins: $sgpr4_sgpr5

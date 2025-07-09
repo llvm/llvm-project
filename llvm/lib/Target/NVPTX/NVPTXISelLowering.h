@@ -25,10 +25,15 @@ enum NodeType : unsigned {
   // Start the numbering from where ISD NodeType finishes.
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
   RET_GLUE,
-  DeclareParam,
+
+  /// These nodes represent a parameter declaration. In PTX this will look like:
+  ///   .param .align 16 .b8 param0[1024];
+  ///   .param .b32 retval0;
+  ///
+  /// DeclareArrayParam(Chain, Externalsym, Align, Size, Glue)
+  /// DeclareScalarParam(Chain, Externalsym, Size, Glue)
   DeclareScalarParam,
-  DeclareRetParam,
-  DeclareRet,
+  DeclareArrayParam,
 
   /// This node represents a PTX call instruction. It's operands are as follows:
   ///
@@ -174,7 +179,6 @@ public:
 
   std::string getPrototype(const DataLayout &DL, Type *, const ArgListTy &,
                            const SmallVectorImpl<ISD::OutputArg> &,
-                           MaybeAlign RetAlign,
                            std::optional<unsigned> FirstVAArg,
                            const CallBase &CB, unsigned UniqueCallSite) const;
 
@@ -272,8 +276,8 @@ private:
   const NVPTXSubtarget &STI; // cache the subtarget here
   mutable unsigned GlobalUniqueCallSite;
 
-  SDValue getParamSymbol(SelectionDAG &DAG, int idx, EVT) const;
-
+  SDValue getParamSymbol(SelectionDAG &DAG, int I, EVT T) const;
+  SDValue getCallParamSymbol(SelectionDAG &DAG, int I, EVT T) const;
   SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
 

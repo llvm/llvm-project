@@ -216,6 +216,12 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by adding a
   flag to specify the function used for forwarding instead of ``std::forward``.
    
+- Improved :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check by
+  fixing false positives when calling indexing operators that do not perform
+  pointer arithmetic in template, for example ``std::map::operator[]`` and
+  when pointer arithmetic was used through type aliases.
+
 - Improved :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
   <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
   by adding a flag to specify the function used for moving instead of
