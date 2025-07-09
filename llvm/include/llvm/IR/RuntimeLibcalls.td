@@ -1096,9 +1096,8 @@ def WindowsARM64ECSystemLibrary
 
 def isAMDGPU : RuntimeLibcallPredicate<"TT.isAMDGPU()">;
 
-// No calls, except for dummy atomic calls to avoid crashes.
-def AMDGPUSystemLibrary
-    : SystemRuntimeLibrary<isAMDGPU, (add DefaultRuntimeLibcallImpls_atomic)>;
+// No calls.
+def AMDGPUSystemLibrary : SystemRuntimeLibrary<isAMDGPU, (add)>;
 
 //===----------------------------------------------------------------------===//
 // ARM Runtime Libcalls
@@ -1699,9 +1698,8 @@ def MSP430SystemLibrary
 
 def isNVPTX : RuntimeLibcallPredicate<"TT.isNVPTX()">;
 
-// No calls, except for dummy atomic calls to avoid crashes.
-def NVPTXSystemLibrary
-    : SystemRuntimeLibrary<isNVPTX, (add DefaultRuntimeLibcallImpls_atomic)>;
+// No calls.
+def NVPTXSystemLibrary : SystemRuntimeLibrary<isNVPTX, (add)>;
 
 //===----------------------------------------------------------------------===//
 // PPC Runtime Libcalls
