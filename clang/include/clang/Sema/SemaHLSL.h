@@ -153,7 +153,8 @@ public:
   ActOnFinishRootSignatureDecl(SourceLocation Loc, IdentifierInfo *DeclIdent,
                                ArrayRef<hlsl::RootSignatureElement> Elements);
 
-  // Returns true when D is invalid and a diagnostic was produced
+  // Returns true if any RootSignatureElement is invalid and a diagnostic was
+  // produced
   bool
   handleRootSignatureElements(ArrayRef<hlsl::RootSignatureElement> Elements);
   void handleRootSignatureAttr(Decl *D, const ParsedAttr &AL);
