@@ -422,8 +422,8 @@ static Constant *getMemSetPatternValue(Value *V, const DataLayout *DL) {
     return nullptr;
 
   // For now, don't handle types that aren't int, floats, or pointers.
-  if (!isa<ConstantInt>(C) && !isa<ConstantFP>(C) &&
-      !isa<PointerType>(C->getType()))
+  Type *CTy = C->getType();
+  if (!CTy->isIntOrPtrTy() && !CTy->isFloatingPointTy())
     return nullptr;
 
   return C;
