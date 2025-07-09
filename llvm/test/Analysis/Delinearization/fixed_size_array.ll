@@ -198,8 +198,57 @@ exit:
   ret void
 }
 
-; Fail to delinearize because the step recurrence of the j-loop is not
-; divisible by that of the k-loop.
+; Fail to delinearize because the step recurrence value of the i-loop is not
+; divisible by that of the j-loop.
+;
+; void f(int A[][8][32]) {
+;   for (i = 0; i < 42; i++)
+;    for (j = 0; j < 2; j++)
+;     for (k = 0; k < 42; k++)
+;       A[i][3*j][k] = 1;
+; }
+
+; CHECK:      Delinearization on function a_i_3j_k:
+; CHECK:      AccessFunction: {{...}}0,+,1024}<nuw><nsw><%for.i.header>,+,384}<nw><%for.j.header>,+,4}<nw><%for.k>
+; CHECK-NEXT: failed to delinearize
+define void @a_i_3j_k(ptr %a) {
+entry:
+  br label %for.i.header
+
+for.i.header:
+  %i = phi i32 [ 0, %entry ], [ %i.inc, %for.i.latch ]
+  br label %for.j.header
+
+for.j.header:
+  %j = phi i32 [ 0, %for.i.header ], [ %j.inc, %for.j.latch ]
+  %j.subscript = mul i32 %j, 3
+  br label %for.k
+
+for.k:
+  %k = phi i32 [ 0, %for.j.header ], [ %k.inc, %for.k ]
+  %idx = getelementptr [8 x [32 x i32]], ptr %a, i32 %i, i32 %j.subscript, i32 %k
+  store i32 1, ptr %idx
+  %k.inc = add i32 %k, 1
+  %cmp.k = icmp slt i32 %k.inc, 42
+  br i1 %cmp.k, label %for.k, label %for.j.latch
+
+for.j.latch:
+  %j.inc = add i32 %j, 1
+  %cmp.j = icmp slt i32 %j.inc, 2
+  br i1 %cmp.j, label %for.j.header, label %for.i.latch
+
+for.i.latch:
+  %i.inc = add i32 %i, 1
+  %cmp.i = icmp slt i32 %i.inc, 42
+  br i1 %cmp.i, label %for.i.header, label %exit
+
+exit:
+  ret void
+}
+
+; Although the step recurrence value of j-loop is not divisible by that of the
+; k-loop, delinearization is possible because we know that the "actual" stride
+; width for the last dimension is 4 instead of 12.
 ;
 ; void f(int A[][8][32]) {
 ;   for (i = 0; i < 42; i++)
@@ -209,8 +258,9 @@ exit:
 ; }
 
 ; CHECK:      Delinearization on function a_i_j_3k:
-; CHECK:      AccessFunction: {{...}}0,+,1024}<nuw><nsw><%for.i.header>,+,128}<nw><%for.j.header>,+,12}<nw><%for.k>
-; CHECK-NEXT: failed to delinearize
+; CHECK:      Base offset: %a
+; CHECK-NEXT: ArrayDecl[UnknownSize][8][32] with elements of 4 bytes.
+; CHECK-NEXT: ArrayRef[{0,+,1}<nuw><nsw><%for.i.header>][{0,+,1}<nuw><nsw><%for.j.header>][{0,+,3}<nuw><nsw><%for.k>]
 define void @a_i_j_3k(ptr %a) {
 entry:
   br label %for.i.header
@@ -250,15 +300,15 @@ exit:
 ;
 ; void f(int A[][8][32]) {
 ;   for (i = 0; i < 32; i++)
-;    for (j = 0; j < 4; j++)
+;    for (j = 0; j < 2; j++)
 ;     for (k = 0; k < 4; k++)
-;       A[i][j+k][i] = 1;
+;       A[i][2*j+k][i] = 1;
 ; }
 
-; CHECK:      Delinearization on function a_i_jk_i:
-; CHECK:      AccessFunction: {{...}}0,+,1028}<%for.i.header>,+,128}<nw><%for.j.header>,+,128}<nw><%for.k>
+; CHECK:      Delinearization on function a_i_j2k_i:
+; CHECK:      AccessFunction: {{...}}0,+,1028}<%for.i.header>,+,256}<nw><%for.j.header>,+,128}<nw><%for.k>
 ; CHECK-NEXT: failed to delinearize
-define void @a_i_jk_i(ptr %a) {
+define void @a_i_j2k_i(ptr %a) {
 entry:
   br label %for.i.header
 
@@ -272,8 +322,9 @@ for.j.header:
 
 for.k:
   %k = phi i32 [ 0, %for.j.header ], [ %k.inc, %for.k ]
-  %jk = add i32 %j, %k
-  %idx = getelementptr [8 x [32 x i32]], ptr %a, i32 %i, i32 %jk, i32 %i
+  %j2 = shl i32 %j, 1
+  %j2.k = add i32 %j2, %k
+  %idx = getelementptr [8 x [32 x i32]], ptr %a, i32 %i, i32 %j2.k, i32 %i
   store i32 1, ptr %idx
   %k.inc = add i32 %k, 1
   %cmp.k = icmp slt i32 %k.inc, 4
@@ -281,7 +332,7 @@ for.k:
 
 for.j.latch:
   %j.inc = add i32 %j, 1
-  %cmp.j = icmp slt i32 %j.inc, 4
+  %cmp.j = icmp slt i32 %j.inc, 2
   br i1 %cmp.j, label %for.j.header, label %for.i.latch
 
 for.i.latch:
