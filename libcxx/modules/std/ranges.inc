@@ -351,6 +351,16 @@ export namespace std {
       using std::ranges::views::cartesian_product;
     }
 #endif
+
+#if _LIBCPP_STD_VER >= 26
+    // [range.to.input], to input view
+    using std::ranges::to_input_view;
+
+    namespace views {
+      using std::ranges::views::to_input;
+    }
+#endif
+
   } // namespace ranges
 
   namespace views = ranges::views;

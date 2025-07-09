@@ -1929,6 +1929,9 @@ module std [system] {
       header "__ranges/to.h"
       export std.functional.bind_back
     }
+    module to_input_view {
+      header "__ranges/to_input_view.h"
+    }
     module transform_view {
       header "__ranges/transform_view.h"
       export std.functional.bind_back

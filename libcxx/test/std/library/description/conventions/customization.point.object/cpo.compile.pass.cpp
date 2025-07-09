@@ -134,5 +134,5 @@ static_assert(test(std::views::zip, a, a));
 #if TEST_STD_VER >= 26
 // static_assert(test(std::views::cache_latest, a));
 // static_assert(test(std::views::concat, a, a));
-// static_assert(test(std::views::to_input, a));
+static_assert(test(std::views::to_input, a));
 #endif

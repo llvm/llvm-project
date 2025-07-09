@@ -1145,6 +1145,11 @@ feature_test_macros = [
             "headers": ["ranges"],
         },
         {
+            "name": "__cpp_lib_ranges_to_input",
+            "values": {"c++26": 202502},
+            "headers": ["ranges"],
+        },
+        {
             "name": "__cpp_lib_ranges_zip",
             "values": {"c++23": 202110},
             "headers": ["ranges", "tuple", "utility"],
