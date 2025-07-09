@@ -341,12 +341,10 @@ struct DenseMapInfo<std::optional<T>> {
   }
 
   static bool isEqual(const Optional &LHS, const Optional &RHS) {
-    if (LHS.has_value() && RHS.has_value()) {
+    if (LHS && RHS) {
       return Info::isEqual(LHS.value(), RHS.value());
-    } else if (!LHS.has_value() && !RHS.has_value()) {
-      return true;
     }
-    return false;
+    return !LHS && !RHS;
   }
 };
 } // end namespace llvm
