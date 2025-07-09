@@ -1496,9 +1496,9 @@ SystemZTargetLowering::getConstraintType(StringRef Constraint) const {
   return TargetLowering::getConstraintType(Constraint);
 }
 
-TargetLowering::ConstraintWeight SystemZTargetLowering::
-getSingleConstraintMatchWeight(AsmOperandInfo &Info,
-                               const char *Constraint) const {
+TargetLowering::ConstraintWeight
+SystemZTargetLowering::getSingleConstraintMatchWeight(
+    AsmOperandInfo &Info, const char *Constraint) const {
   ConstraintWeight Weight = CW_Invalid;
   Value *CallOperandVal = Info.CallOperandVal;
   // If we don't have a value, we can't do a match,
@@ -1516,7 +1516,8 @@ getSingleConstraintMatchWeight(AsmOperandInfo &Info,
   case 'd': // Data register (equivalent to 'r')
   case 'h': // High-part register
   case 'r': // General-purpose register
-    Weight = CallOperandVal->getType()->isIntegerTy() ? CW_Register : CW_Default;
+    Weight =
+        CallOperandVal->getType()->isIntegerTy() ? CW_Register : CW_Default;
     break;
 
   case 'f': // Floating-point register
@@ -2472,12 +2473,10 @@ std::pair<SDValue, SDValue> SystemZTargetLowering::makeExternalCall(
   return LowerCallTo(CLI);
 }
 
-bool SystemZTargetLowering::
-CanLowerReturn(CallingConv::ID CallConv,
-               MachineFunction &MF, bool IsVarArg,
-               const SmallVectorImpl<ISD::OutputArg> &Outs,
-               LLVMContext &Context,
-               const Type *RetTy) const {
+bool SystemZTargetLowering::CanLowerReturn(
+    CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   // Special case that we cannot easily detect in RetCC_SystemZ since
   // i128 may not be a legal type.
   for (auto &Out : Outs)
@@ -9504,7 +9503,7 @@ static bool checkCCKill(MachineInstr &MI, MachineBasicBlock *MBB) {
   // Scan forward through BB for a use/def of CC.
   MachineBasicBlock::iterator miI(std::next(MachineBasicBlock::iterator(MI)));
   for (MachineBasicBlock::iterator miE = MBB->end(); miI != miE; ++miI) {
-    const MachineInstr& MI = *miI;
+    const MachineInstr &MI = *miI;
     if (MI.readsRegister(SystemZ::CC, /*TRI=*/nullptr))
       return false;
     if (MI.definesRegister(SystemZ::CC, /*TRI=*/nullptr))
