@@ -780,7 +780,7 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
   // their corresponding stores.
   if (Worklist.size() > 0) {
     bool MILoads = MI->mayLoad();
-    assert(!MI->mayStore() || MILoads &&
+    assert((!MI->mayStore() || MILoads) &&
                                   "Unexpected MI which produces a values and "
                                   "stores but does not load");
     if (MILoads) {
