@@ -15,6 +15,8 @@
 #  include <unistd.h>
 
 #  include "stacktrace/config.h"
+#  include "stacktrace/linux/elf.h"
+#  include "stacktrace/linux/images.h"
 #  include "stacktrace/linux/impl.h"
 #  include "stacktrace/utils/fd.h"
 #  include "stacktrace/utils/image.h"
@@ -23,7 +25,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
 void linux::ident_modules() {
-  auto& images = images::get();
+  auto& images = images::instance;
 
   // Aside from the left/right sentinels in the array (hence the 2),
   // are there any other real images?
@@ -100,7 +102,7 @@ void linux::symbolize() {
   // Symbols might be missing, because both (1) Linux's `dladdr` won't try to resolve non-exported symbols,
   // which can be the case for the main program executable; and (2) debug info was not preserved.
   // As a last resort, this function (see `linux-elf.cpp`) can still access symbol table directly.
-  image* mainELF = images::get().mainProg();
+  image* mainELF = images::instance.mainProg();
   if (mainELF && !mainELF->name_.empty()) {
     resolve_main_elf_syms(mainELF->name_);
   }

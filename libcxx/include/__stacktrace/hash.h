@@ -12,6 +12,7 @@
 
 #include <__config>
 #include <__functional/hash.h>
+#include <cstddef>
 #include <cstdint>
 
 #include <__stacktrace/base.h>
