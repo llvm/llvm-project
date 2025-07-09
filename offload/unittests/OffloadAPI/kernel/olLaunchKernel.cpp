@@ -58,6 +58,7 @@ KERNEL_TEST(LocalMem, localmem)
 KERNEL_TEST(LocalMemReduction, localmem_reduction)
 KERNEL_TEST(LocalMemStatic, localmem_static)
 KERNEL_TEST(GlobalCtor, global_ctor)
+KERNEL_TEST(GlobalDtor, global_dtor)
 
 struct LaunchMultipleKernelTestBase : LaunchKernelTestBase {
   void SetUpKernels(const char *program, std::vector<const char *> kernels) {
@@ -240,4 +241,13 @@ TEST_P(olLaunchKernelGlobalCtorTest, Success) {
   }
 
   ASSERT_SUCCESS(olMemFree(Mem));
+}
+
+TEST_P(olLaunchKernelGlobalDtorTest, Success) {
+  // TODO: We can't inspect the result of a destructor yet, once we
+  // find/implement a way, update this test. For now we just check that nothing
+  // crashes
+  ASSERT_SUCCESS(
+      olLaunchKernel(Queue, Device, Kernel, nullptr, 0, &LaunchArgs, nullptr));
+  ASSERT_SUCCESS(olWaitQueue(Queue));
 }
