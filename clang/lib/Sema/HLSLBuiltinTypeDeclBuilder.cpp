@@ -613,16 +613,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleMember(
     ResourceClass RC, bool IsROV, bool RawBuffer, AccessSpecifier Access) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
 
-  switch (RC) {
-  case llvm::dxil::ResourceClass::UAV:
-    IsConstResourceClass = false;
-    break;
-  case llvm::dxil::ResourceClass::SRV:
-  case llvm::dxil::ResourceClass::CBuffer:
-  case llvm::dxil::ResourceClass::Sampler:
-    IsConstResourceClass = true;
-    break;
-  };
+  RClass = RC;
 
   ASTContext &Ctx = SemaRef.getASTContext();
   TypeSourceInfo *ElementTypeInfo =
@@ -631,7 +622,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleMember(
   // add handle member with resource type attributes
   QualType AttributedResTy = QualType();
   SmallVector<const Attr *> Attrs = {
-      HLSLResourceClassAttr::CreateImplicit(Ctx, RC),
+      HLSLResourceClassAttr::CreateImplicit(Ctx, RClass),
       IsROV ? HLSLROVAttr::CreateImplicit(Ctx) : nullptr,
       RawBuffer ? HLSLRawBufferAttr::CreateImplicit(Ctx) : nullptr,
       ElementTypeInfo
@@ -708,7 +699,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addArraySubscriptOperators() {
       AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
 
   addHandleAccessFunction(Subscript, /*IsConst=*/true, /*IsRef=*/true);
-  if (!IsConstResourceClass)
+  if (RClass == llvm::dxil::ResourceClass::UAV)
     addHandleAccessFunction(Subscript, /*IsConst=*/false, /*IsRef=*/true);
 
   return *this;
