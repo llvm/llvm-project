@@ -5497,7 +5497,7 @@ void LSRInstance::SolveRecurse(SmallVectorImpl<const Formula *> &Solution,
             dbgs() << ".\nRegs:\n";
             for (const SCEV *S : NewRegs)
               dbgs() << "- " << *S << "\n";
-            dbgs() << '\n'
+            dbgs() << '\n';
           });
           SolutionCost = NewCost;
           Solution = Workspace;
