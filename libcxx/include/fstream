@@ -833,40 +833,59 @@ typename basic_filebuf<_CharT, _Traits>::int_type basic_filebuf<_CharT, _Traits>
     *this->pptr() = traits_type::to_char_type(__c);
     this->pbump(1);
   }
-  if (this->pptr() != this->pbase()) {
-    if (__always_noconv_) {
-      size_t __nmemb = static_cast<size_t>(this->pptr() - this->pbase());
-      if (std::fwrite(this->pbase(), sizeof(char_type), __nmemb, __file_) != __nmemb)
-        return traits_type::eof();
-    } else {
-      char* __extbe = __extbuf_;
-      codecvt_base::result __r;
-      do {
-        if (!__cv_)
-          std::__throw_bad_cast();
 
-        const char_type* __e;
-        __r = __cv_->out(__st_, this->pbase(), this->pptr(), __e, __extbuf_, __extbuf_ + __ebs_, __extbe);
-        if (__e == this->pbase())
-          return traits_type::eof();
-        if (__r == codecvt_base::noconv) {
-          size_t __nmemb = static_cast<size_t>(this->pptr() - this->pbase());
-          if (std::fwrite(this->pbase(), 1, __nmemb, __file_) != __nmemb)
-            return traits_type::eof();
-        } else if (__r == codecvt_base::ok || __r == codecvt_base::partial) {
-          size_t __nmemb = static_cast<size_t>(__extbe - __extbuf_);
-          if (std::fwrite(__extbuf_, 1, __nmemb, __file_) != __nmemb)
-            return traits_type::eof();
-          if (__r == codecvt_base::partial) {
-            this->setp(const_cast<char_type*>(__e), this->pptr());
-            this->__pbump(this->epptr() - this->pbase());
-          }
-        } else
-          return traits_type::eof();
-      } while (__r == codecvt_base::partial);
-    }
-    this->setp(__pb_save, __epb_save);
+  // There is nothing to write, early return
+  if (this->pptr() == this->pbase()) {
+    return traits_type::not_eof(__c);
   }
+
+  if (__always_noconv_) {
+    size_t __n = static_cast<size_t>(this->pptr() - this->pbase());
+    if (std::fwrite(this->pbase(), sizeof(char_type), __n, __file_) != __n)
+      return traits_type::eof();
+  } else {
+    if (!__cv_)
+      std::__throw_bad_cast();
+
+    // See [filebuf.virtuals]
+    char_type* __b = this->pbase();
+    char_type* __p = this->pptr();
+    const char_type* __end;
+    char* __extbuf_end = __extbuf_;
+    do {
+      codecvt_base::result __r = __cv_->out(__st_, __b, __p, __end, __extbuf_, __extbuf_ + __ebs_, __extbuf_end);
+      if (__end == __b)
+        return traits_type::eof();
+
+      // No conversion needed: output characters directly to the file, done.
+      if (__r == codecvt_base::noconv) {
+        size_t __n = static_cast<size_t>(__p - __b);
+        if (std::fwrite(__b, 1, __n, __file_) != __n)
+          return traits_type::eof();
+        break;
+
+        // Conversion successful: output the converted characters to the file, done.
+      } else if (__r == codecvt_base::ok) {
+        size_t __n = static_cast<size_t>(__extbuf_end - __extbuf_);
+        if (std::fwrite(__extbuf_, 1, __n, __file_) != __n)
+          return traits_type::eof();
+        break;
+
+        // Conversion partially successful: output converted characters to the file and repeat with the
+        // remaining characters.
+      } else if (__r == codecvt_base::partial) {
+        size_t __n = static_cast<size_t>(__extbuf_end - __extbuf_);
+        if (std::fwrite(__extbuf_, 1, __n, __file_) != __n)
+          return traits_type::eof();
+        __b = const_cast<char_type*>(__end);
+        continue;
+
+      } else {
+        return traits_type::eof();
+      }
+    } while (true);
+  }
+  this->setp(__pb_save, __epb_save);
   return traits_type::not_eof(__c);
 }
 

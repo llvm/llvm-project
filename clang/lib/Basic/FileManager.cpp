@@ -141,7 +141,7 @@ FileManager::getDirectoryRef(StringRef DirName, bool CacheFailure) {
   if (DirName.size() > 1 &&
       DirName != llvm::sys::path::root_path(DirName) &&
       llvm::sys::path::is_separator(DirName.back()))
-    DirName = DirName.substr(0, DirName.size()-1);
+    DirName = DirName.drop_back();
   std::optional<std::string> DirNameStr;
   if (is_style_windows(llvm::sys::path::Style::native)) {
     // Fixing a problem with "clang C:test.c" on Windows.

@@ -165,6 +165,7 @@ protected:
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
+  bool HasFP8E5M3Insts = false;
   bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
   bool HasAtomicFMinFMaxF32GlobalInsts = false;
@@ -231,6 +232,7 @@ protected:
   bool HasPseudoScalarTrans = false;
   bool HasRestrictedSOffset = false;
   bool HasBitOp3Insts = false;
+  bool HasTransposeLoadF4F6Insts = false;
   bool HasPrngInst = false;
   bool HasBVHDualAndBVH8Insts = false;
   bool HasPermlane16Swap = false;
@@ -257,11 +259,13 @@ protected:
   bool HasRequiredExportPriority = false;
   bool HasVmemWriteVgprInOrder = false;
   bool HasAshrPkInsts = false;
+  bool HasIEEEMinimumMaximumInsts = false;
   bool HasMinimum3Maximum3F32 = false;
   bool HasMinimum3Maximum3F16 = false;
   bool HasMinimum3Maximum3PKF16 = false;
   bool HasLshlAddU64Inst = false;
   bool HasPointSampleAccel = false;
+  bool HasLdsBarrierArriveAtomic = false;
   bool HasSetPrioIncWgInst = false;
 
   bool RequiresCOV6 = false;
@@ -689,13 +693,15 @@ public:
     return GFX10_BEncoding;
   }
 
+  bool hasMTBUFInsts() const { return !hasGFX1250Insts(); }
+
+  bool hasFormattedMUBUFInsts() const { return !hasGFX1250Insts(); }
+
   bool hasExportInsts() const {
-    return !hasGFX940Insts();
+    return !hasGFX940Insts() && !hasGFX1250Insts();
   }
 
-  bool hasVINTERPEncoding() const {
-    return GFX11Insts;
-  }
+  bool hasVINTERPEncoding() const { return GFX11Insts && !hasGFX1250Insts(); }
 
   // DS_ADD_F64/DS_ADD_RTN_F64
   bool hasLdsAtomicAddF64() const { return hasGFX90AInsts(); }
@@ -856,6 +862,8 @@ public:
   }
 
   bool hasFP8ConversionInsts() const { return HasFP8ConversionInsts; }
+
+  bool hasFP8E5M3Insts() const { return HasFP8E5M3Insts; }
 
   bool hasPkFmacF16Inst() const {
     return HasPkFmacF16Inst;
@@ -1288,7 +1296,7 @@ public:
   bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
 
   /// Return if operations acting on VGPR tuples require even alignment.
-  bool needsAlignedVGPRs() const { return GFX90AInsts; }
+  bool needsAlignedVGPRs() const { return GFX90AInsts || GFX1250Insts; }
 
   /// Return true if the target has the S_PACK_HL_B32_B16 instruction.
   bool hasSPackHL() const { return GFX11Insts; }
@@ -1370,11 +1378,15 @@ public:
     return HasMinimum3Maximum3PKF16;
   }
 
+  bool hasTransposeLoadF4F6Insts() const { return HasTransposeLoadF4F6Insts; }
+
   /// \returns true if the target has s_wait_xcnt insertion. Supported for
   /// GFX1250.
   bool hasWaitXCnt() const { return HasWaitXcnt; }
 
   bool hasPointSampleAccel() const { return HasPointSampleAccel; }
+
+  bool hasLdsBarrierArriveAtomic() const { return HasLdsBarrierArriveAtomic; }
 
   /// \returns The maximum number of instructions that can be enclosed in an
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that
@@ -1455,10 +1467,7 @@ public:
   bool hasIEEEMode() const { return getGeneration() < GFX12; }
 
   // \returns true if the target has IEEE fminimum/fmaximum instructions
-  bool hasIEEEMinMax() const { return getGeneration() >= GFX12; }
-
-  // \returns true if the target has IEEE fminimum3/fmaximum3 instructions
-  bool hasIEEEMinMax3() const { return hasIEEEMinMax(); }
+  bool hasIEEEMinimumMaximumInsts() const { return HasIEEEMinimumMaximumInsts; }
 
   // \returns true if the target has WG_RR_MODE kernel descriptor mode bit
   bool hasRrWGMode() const { return getGeneration() >= GFX12; }

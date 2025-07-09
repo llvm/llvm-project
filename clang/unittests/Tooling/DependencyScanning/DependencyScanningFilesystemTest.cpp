@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
@@ -20,10 +19,9 @@ TEST(DependencyScanningWorkerFilesystem, CacheStatusFailures) {
   auto InstrumentingFS =
       llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(InMemoryFS);
 
-  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
-                                    ScanningOutputFormat::Make);
-  DependencyScanningWorkerFilesystem DepFS(Service, InstrumentingFS);
-  DependencyScanningWorkerFilesystem DepFS2(Service, InstrumentingFS);
+  DependencyScanningFilesystemSharedCache SharedCache;
+  DependencyScanningWorkerFilesystem DepFS(SharedCache, InstrumentingFS);
+  DependencyScanningWorkerFilesystem DepFS2(SharedCache, InstrumentingFS);
 
   DepFS.status("/foo.c");
   EXPECT_EQ(InstrumentingFS->NumStatusCalls, 1u);
@@ -47,10 +45,9 @@ TEST(DependencyScanningFilesystem, CacheGetRealPath) {
   auto InstrumentingFS =
       llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(InMemoryFS);
 
-  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
-                                    ScanningOutputFormat::Make);
-  DependencyScanningWorkerFilesystem DepFS(Service, InstrumentingFS);
-  DependencyScanningWorkerFilesystem DepFS2(Service, InstrumentingFS);
+  DependencyScanningFilesystemSharedCache SharedCache;
+  DependencyScanningWorkerFilesystem DepFS(SharedCache, InstrumentingFS);
+  DependencyScanningWorkerFilesystem DepFS2(SharedCache, InstrumentingFS);
 
   {
     llvm::SmallString<128> Result;
@@ -83,9 +80,8 @@ TEST(DependencyScanningFilesystem, RealPathAndStatusInvariants) {
   InMemoryFS->addFile("/foo.c", 0, llvm::MemoryBuffer::getMemBuffer(""));
   InMemoryFS->addFile("/bar.c", 0, llvm::MemoryBuffer::getMemBuffer(""));
 
-  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
-                                    ScanningOutputFormat::Make);
-  DependencyScanningWorkerFilesystem DepFS(Service, InMemoryFS);
+  DependencyScanningFilesystemSharedCache SharedCache;
+  DependencyScanningWorkerFilesystem DepFS(SharedCache, InMemoryFS);
 
   // Success.
   {
@@ -137,9 +133,8 @@ TEST(DependencyScanningFilesystem, CacheStatOnExists) {
   InMemoryFS->setCurrentWorkingDirectory("/");
   InMemoryFS->addFile("/foo", 0, llvm::MemoryBuffer::getMemBuffer(""));
   InMemoryFS->addFile("/bar", 0, llvm::MemoryBuffer::getMemBuffer(""));
-  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
-                                    ScanningOutputFormat::Make);
-  DependencyScanningWorkerFilesystem DepFS(Service, InstrumentingFS);
+  DependencyScanningFilesystemSharedCache SharedCache;
+  DependencyScanningWorkerFilesystem DepFS(SharedCache, InstrumentingFS);
 
   DepFS.status("/foo");
   DepFS.status("/foo");
@@ -161,9 +156,8 @@ TEST(DependencyScanningFilesystem, CacheStatFailures) {
   auto InstrumentingFS =
       llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(InMemoryFS);
 
-  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
-                                    ScanningOutputFormat::Make);
-  DependencyScanningWorkerFilesystem DepFS(Service, InstrumentingFS);
+  DependencyScanningFilesystemSharedCache SharedCache;
+  DependencyScanningWorkerFilesystem DepFS(SharedCache, InstrumentingFS);
 
   DepFS.status("/dir");
   DepFS.status("/dir");
@@ -189,23 +183,53 @@ TEST(DependencyScanningFilesystem, DiagnoseStaleStatFailures) {
   auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   InMemoryFS->setCurrentWorkingDirectory("/");
 
-  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
-                                    ScanningOutputFormat::Make);
-  DependencyScanningWorkerFilesystem DepFS(Service, InMemoryFS);
+  DependencyScanningFilesystemSharedCache SharedCache;
+  DependencyScanningWorkerFilesystem DepFS(SharedCache, InMemoryFS);
 
   bool Path1Exists = DepFS.exists("/path1.suffix");
-  EXPECT_EQ(Path1Exists, false);
+  ASSERT_EQ(Path1Exists, false);
 
   // Adding a file that has been stat-ed,
   InMemoryFS->addFile("/path1.suffix", 0, llvm::MemoryBuffer::getMemBuffer(""));
   Path1Exists = DepFS.exists("/path1.suffix");
   // Due to caching in SharedCache, path1 should not exist in
   // DepFS's eyes.
-  EXPECT_EQ(Path1Exists, false);
+  ASSERT_EQ(Path1Exists, false);
 
-  std::vector<llvm::StringRef> InvalidPaths =
-      Service.getSharedCache().getInvalidNegativeStatCachedPaths(*InMemoryFS);
+  auto InvalidEntries = SharedCache.getOutOfDateEntries(*InMemoryFS);
 
-  EXPECT_EQ(InvalidPaths.size(), 1u);
-  ASSERT_STREQ("/path1.suffix", InvalidPaths[0].str().c_str());
+  EXPECT_EQ(InvalidEntries.size(), 1u);
+  ASSERT_STREQ("/path1.suffix", InvalidEntries[0].Path);
+}
+
+TEST(DependencyScanningFilesystem, DiagnoseCachedFileSizeChange) {
+  auto InMemoryFS1 = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  auto InMemoryFS2 = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  InMemoryFS1->setCurrentWorkingDirectory("/");
+  InMemoryFS2->setCurrentWorkingDirectory("/");
+
+  DependencyScanningFilesystemSharedCache SharedCache;
+  DependencyScanningWorkerFilesystem DepFS(SharedCache, InMemoryFS1);
+
+  InMemoryFS1->addFile("/path1.suffix", 0,
+                       llvm::MemoryBuffer::getMemBuffer(""));
+  bool Path1Exists = DepFS.exists("/path1.suffix");
+  ASSERT_EQ(Path1Exists, true);
+
+  // Add a file to a new FS that has the same path but different content.
+  InMemoryFS2->addFile("/path1.suffix", 1,
+                       llvm::MemoryBuffer::getMemBuffer("        "));
+
+  // Check against the new file system. InMemoryFS2 could be the underlying
+  // physical system in the real world.
+  auto InvalidEntries = SharedCache.getOutOfDateEntries(*InMemoryFS2);
+
+  ASSERT_EQ(InvalidEntries.size(), 1u);
+  ASSERT_STREQ("/path1.suffix", InvalidEntries[0].Path);
+  auto SizeInfo = std::get_if<
+      DependencyScanningFilesystemSharedCache::OutOfDateEntry::SizeChangedInfo>(
+      &InvalidEntries[0].Info);
+  ASSERT_TRUE(SizeInfo);
+  ASSERT_EQ(SizeInfo->CachedSize, 0u);
+  ASSERT_EQ(SizeInfo->ActualSize, 8u);
 }

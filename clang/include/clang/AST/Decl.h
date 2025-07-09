@@ -41,6 +41,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -887,13 +888,17 @@ struct EvaluatedStmt {
   bool HasICEInit : 1;
   bool CheckedForICEInit : 1;
 
+  bool HasSideEffects : 1;
+  bool CheckedForSideEffects : 1;
+
   LazyDeclStmtPtr Value;
   APValue Evaluated;
 
   EvaluatedStmt()
       : WasEvaluated(false), IsEvaluating(false),
         HasConstantInitialization(false), HasConstantDestruction(false),
-        HasICEInit(false), CheckedForICEInit(false) {}
+        HasICEInit(false), CheckedForICEInit(false), HasSideEffects(false),
+        CheckedForSideEffects(false) {}
 };
 
 /// Represents a variable declaration or definition.
@@ -1357,9 +1362,11 @@ public:
     return const_cast<VarDecl *>(this)->getInitializingDeclaration();
   }
 
-  /// Checks whether this declaration has an initializer with side effects,
-  /// without triggering deserialization if the initializer is not yet
-  /// deserialized.
+  /// Checks whether this declaration has an initializer with side effects.
+  /// The result is cached. If the result hasn't been computed this can trigger
+  /// deserialization and constant evaluation. By running this during
+  /// serialization and serializing the result all clients can safely call this
+  /// without triggering further deserialization.
   bool hasInitWithSideEffects() const;
 
   /// Determine whether this variable's value might be usable in a
@@ -5199,6 +5206,8 @@ class HLSLRootSignatureDecl final
                                     llvm::hlsl::rootsig::RootElement> {
   friend TrailingObjects;
 
+  llvm::dxbc::RootSignatureVersion Version;
+
   unsigned NumElems;
 
   llvm::hlsl::rootsig::RootElement *getElems() { return getTrailingObjects(); }
@@ -5208,15 +5217,19 @@ class HLSLRootSignatureDecl final
   }
 
   HLSLRootSignatureDecl(DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
+                        llvm::dxbc::RootSignatureVersion Version,
                         unsigned NumElems);
 
 public:
   static HLSLRootSignatureDecl *
   Create(ASTContext &C, DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
+         llvm::dxbc::RootSignatureVersion Version,
          ArrayRef<llvm::hlsl::rootsig::RootElement> RootElements);
 
   static HLSLRootSignatureDecl *CreateDeserialized(ASTContext &C,
                                                    GlobalDeclID ID);
+
+  llvm::dxbc::RootSignatureVersion getVersion() const { return Version; }
 
   ArrayRef<llvm::hlsl::rootsig::RootElement> getRootElements() const {
     return {getElems(), NumElems};

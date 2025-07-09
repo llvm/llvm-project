@@ -6,6 +6,7 @@
 
 ; Partial reg copy and spill missed during regalloc handled later at frame lowering.
 define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
+
   ; REGALLOC-GFX908-LABEL: name: partial_copy
   ; REGALLOC-GFX908: bb.0 (%ir-block.0):
   ; REGALLOC-GFX908-NEXT:   liveins: $sgpr4_sgpr5
@@ -13,7 +14,6 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; REGALLOC-GFX908-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2162697 /* reguse:AGPR_32 */, undef %6:agpr_32
   ; REGALLOC-GFX908-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 6094858 /* regdef:VReg_128 */, def %7
   ; REGALLOC-GFX908-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 3538954 /* regdef:VReg_64 */, def %8
-
   ; REGALLOC-GFX908-NEXT:   GLOBAL_STORE_DWORDX4 undef %15:vreg_64, %7, 0, 0, implicit $exec :: (volatile store (s128) into `ptr addrspace(1) poison`, addrspace 1)
   ; REGALLOC-GFX908-NEXT:   renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM killed renamable $sgpr4_sgpr5, 0, 0 :: (dereferenceable invariant load (s128) from %ir.arg.kernarg.offset1, addrspace 4)
   ; REGALLOC-GFX908-NEXT:   [[COPY:%[0-9]+]]:areg_128 = COPY killed renamable $sgpr0_sgpr1_sgpr2_sgpr3
@@ -21,8 +21,8 @@ define amdgpu_kernel void @partial_copy(<4 x i32> %arg) #0 {
   ; REGALLOC-GFX908-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
   ; REGALLOC-GFX908-NEXT:   [[V_MFMA_I32_4X4X4I8_e64_:%[0-9]+]]:areg_128 = V_MFMA_I32_4X4X4I8_e64 [[V_MOV_B32_e32_]], [[V_MOV_B32_e32_1]], [[COPY]], 0, 0, 0, implicit $mode, implicit $exec
   ; REGALLOC-GFX908-NEXT:   GLOBAL_STORE_DWORDX2 undef %17:vreg_64, %8, 0, 0, implicit $exec :: (volatile store (s64) into `ptr addrspace(1) poison`, addrspace 1)
-  ; REGALLOC-GFX908-NEXT:   [[COPY3:%[0-9]+]]:vreg_128 = COPY [[V_MFMA_I32_4X4X4I8_e64_]]
-  ; REGALLOC-GFX908-NEXT:   GLOBAL_STORE_DWORDX4 undef %19:vreg_64, [[COPY3]], 0, 0, implicit $exec :: (volatile store (s128) into `ptr addrspace(1) poison`, addrspace 1)
+  ; REGALLOC-GFX908-NEXT:   [[COPY1:%[0-9]+]]:vreg_128 = COPY [[V_MFMA_I32_4X4X4I8_e64_]]
+  ; REGALLOC-GFX908-NEXT:   GLOBAL_STORE_DWORDX4 undef %19:vreg_64, [[COPY1]], 0, 0, implicit $exec :: (volatile store (s128) into `ptr addrspace(1) poison`, addrspace 1)
   ; REGALLOC-GFX908-NEXT:   S_ENDPGM 0
   ;
   ; PEI-GFX908-LABEL: name: partial_copy

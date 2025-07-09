@@ -7,19 +7,16 @@ define <2 x i16> @sext_setcc_v2i1_to_v2i16(ptr %p) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.b64 %rd1, [sext_setcc_v2i1_to_v2i16_param_0];
-; CHECK-NEXT:    ld.b32 %r1, [%rd1];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
+; CHECK-NEXT:    ld.v2.b16 {%rs1, %rs2}, [%rd1];
 ; CHECK-NEXT:    setp.eq.s16 %p1, %rs1, 0;
 ; CHECK-NEXT:    setp.eq.s16 %p2, %rs2, 0;
 ; CHECK-NEXT:    selp.b16 %rs3, -1, 0, %p2;
 ; CHECK-NEXT:    selp.b16 %rs4, -1, 0, %p1;
-; CHECK-NEXT:    mov.b32 %r2, {%rs4, %rs3};
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    st.param.v2.b16 [func_retval0], {%rs4, %rs3};
 ; CHECK-NEXT:    ret;
 entry:
   %v = load <2 x i16>, ptr %p, align 4

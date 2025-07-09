@@ -211,10 +211,10 @@ bool GetStackAddressInformation(uptr addr, uptr access_size,
   descr->frame_pc = access.frame_pc;
   descr->frame_descr = access.frame_descr;
 
-#if SANITIZER_PPC64V1
-  // On PowerPC64 ELFv1, the address of a function actually points to a
-  // three-doubleword data structure with the first field containing
-  // the address of the function's code.
+#if SANITIZER_PPC64V1 || SANITIZER_AIX
+  // On PowerPC64 ELFv1 or AIX, the address of a function actually points to a
+  // three-doubleword (or three-word for 32-bit AIX) data structure with
+  // the first field containing the address of the function's code.
   descr->frame_pc = *reinterpret_cast<uptr *>(descr->frame_pc);
 #endif
   descr->frame_pc += 16;
@@ -444,6 +444,16 @@ AddressDescription::AddressDescription(uptr addr, uptr access_size,
     data.kind = kAddressKindShadow;
     return;
   }
+
+  // Check global first. On AIX, some global data defined in shared libraries
+  // are put to the STACK region for unknown reasons. Check global first can
+  // workaround this issue.
+  // TODO: Look into whether there's a different solution to this problem.
+  if (GetGlobalAddressInformation(addr, access_size, &data.global)) {
+    data.kind = kAddressKindGlobal;
+    return;
+  }
+
   if (GetHeapAddressInformation(addr, access_size, &data.heap)) {
     data.kind = kAddressKindHeap;
     return;
@@ -461,10 +471,6 @@ AddressDescription::AddressDescription(uptr addr, uptr access_size,
     return;
   }
 
-  if (GetGlobalAddressInformation(addr, access_size, &data.global)) {
-    data.kind = kAddressKindGlobal;
-    return;
-  }
   data.kind = kAddressKindWild;
   data.wild.addr = addr;
   data.wild.access_size = access_size;
