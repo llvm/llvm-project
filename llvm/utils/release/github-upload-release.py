@@ -46,8 +46,8 @@ def create_release(repo, release, tag=None, name=None, message=None):
         # assumes that should be how it is laid out on the page. We want GitHub to
         # do the reflowing for us instead.
         #
-        # Once all binaries are built, the HTML comments in the text below will be
-        # used to swap the placeholder text with the now valid download links.
+        # Once all the atuomatic binary builds have completed, the HTML comments
+        # in the text below will be removed to reveal the download links.
         message = dedent(
             """\
 ## LLVM {release} Release
