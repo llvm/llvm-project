@@ -235,7 +235,6 @@ private:
                                 MemMapT MemMap, bool EnableRandomOffset)
       REQUIRES(Region->MMLock);
 
-  // Push the blocks to their batch group. The layout will be like,
   void pushBlocksImpl(SizeClassAllocatorT *SizeClassAllocator, uptr ClassId,
                       RegionInfo *Region, CompactPtrT *Array, u32 Size,
                       bool SameGroup = false) REQUIRES(Region->FLLock);
@@ -779,6 +778,7 @@ u16 SizeClassAllocator64<Config>::populateFreeListAndPopBlocks(
 
   return PopCount;
 }
+
 template <typename Config>
 void SizeClassAllocator64<Config>::pushBlocks(
     SizeClassAllocatorT *SizeClassAllocator, uptr ClassId, CompactPtrT *Array,
@@ -823,6 +823,8 @@ void SizeClassAllocator64<Config>::pushBlocks(
   }
 }
 
+// Push the blocks to their batch group. The layout will be like,
+//
 // FreeListInfo.BlockList - > BG -> BG -> BG
 //                            |     |     |
 //                            v     v     v

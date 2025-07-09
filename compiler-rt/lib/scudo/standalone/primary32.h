@@ -194,7 +194,6 @@ private:
   void pushBatchClassBlocks(SizeClassInfo *Sci, CompactPtrT *Array, u32 Size)
       REQUIRES(Sci->Mutex);
 
-  // Push the blocks to their batch group. The layout will be like,
   void pushBlocksImpl(SizeClassAllocatorT *SizeClassAllocator, uptr ClassId,
                       SizeClassInfo *Sci, CompactPtrT *Array, u32 Size,
                       bool SameGroup = false) REQUIRES(Sci->Mutex);
@@ -291,6 +290,7 @@ template <typename Config> void SizeClassAllocator32<Config>::unmapTestOnly() {
       unmap(reinterpret_cast<void *>(I * RegionSize), RegionSize);
   PossibleRegions.unmapTestOnly();
 }
+
 template <typename Config>
 void SizeClassAllocator32<Config>::verifyAllBlocksAreReleasedTestOnly() {
   // `BatchGroup` and `Batch` also use the blocks from BatchClass.
@@ -684,6 +684,8 @@ void SizeClassAllocator32<Config>::pushBatchClassBlocks(SizeClassInfo *Sci,
   }
 }
 
+// Push the blocks to their batch group. The layout will be like,
+//
 // FreeListInfo.BlockList - > BG -> BG -> BG
 //                            |     |     |
 //                            v     v     v
@@ -950,8 +952,8 @@ bool SizeClassAllocator32<Config>::populateFreeList(
     pushBatchClassBlocks(Sci, ShuffleArray, NumberOfBlocks);
   }
 
-  // Note that `PushedBlocks` and `PoppedBlocks` are supposed to only record
-  // the requests from `PushBlocks` and `PopBatch` which are external
+  // Note that `pushedBlocks` and `poppedBlocks` are supposed to only record
+  // the requests from `pushBlocks` and `PopBatch` which are external
   // interfaces. `populateFreeList` is the internal interface so we should set
   // the values back to avoid incorrectly setting the stats.
   Sci->FreeListInfo.PushedBlocks -= NumberOfBlocks;
