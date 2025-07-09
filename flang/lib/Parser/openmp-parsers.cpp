@@ -1533,10 +1533,9 @@ TYPE_PARSER(construct<OmpInitializerClause>(
     construct<OmpInitializerClause>(Parser<OmpInitializerProc>{})))
 
 // OpenMP 5.2: 7.5.4 Declare Variant directive
-TYPE_PARSER(sourced(
-    construct<OmpDeclareVariantDirective>(
-        verbatim("DECLARE VARIANT"_tok) || verbatim("DECLARE_VARIANT"_tok),
-        "(" >> maybe(name / ":"), name / ")", Parser<OmpClauseList>{})))
+TYPE_PARSER(sourced(construct<OmpDeclareVariantDirective>(
+    verbatim("DECLARE VARIANT"_tok) || verbatim("DECLARE_VARIANT"_tok),
+    "(" >> maybe(name / ":"), name / ")", Parser<OmpClauseList>{})))
 
 // 2.16 Declare Reduction Construct
 TYPE_PARSER(sourced(construct<OpenMPDeclareReductionConstruct>(
@@ -1587,10 +1586,9 @@ TYPE_PARSER(applyFunction<OmpMapperSpecifier>(ConstructOmpMapperSpecifier,
     maybe(name / ":" / !":"_tok), typeSpec / "::", name))
 
 // OpenMP 5.2: 5.8.8 Declare Mapper Construct
-TYPE_PARSER(sourced(
-    construct<OpenMPDeclareMapperConstruct>(
-        verbatim("DECLARE MAPPER"_tok) || verbatim("DECLARE_MAPPER"_tok),
-        parenthesized(Parser<OmpMapperSpecifier>{}), Parser<OmpClauseList>{})))
+TYPE_PARSER(sourced(construct<OpenMPDeclareMapperConstruct>(
+    verbatim("DECLARE MAPPER"_tok) || verbatim("DECLARE_MAPPER"_tok),
+    parenthesized(Parser<OmpMapperSpecifier>{}), Parser<OmpClauseList>{})))
 
 TYPE_PARSER(construct<OmpReductionCombiner>(Parser<AssignmentStmt>{}) ||
     construct<OmpReductionCombiner>(Parser<FunctionReference>{}))
@@ -1635,10 +1633,9 @@ TYPE_PARSER(sourced(construct<OpenMPAllocatorsConstruct>(
 TYPE_PARSER(construct<OmpEndAllocators>(startOmpLine >> "END ALLOCATORS"_tok))
 
 // 2.8.2 Declare Simd construct
-TYPE_PARSER(
-    sourced(construct<OpenMPDeclareSimdConstruct>(
-        verbatim("DECLARE SIMD"_tok) || verbatim("DECLARE_SIMD"_tok),
-        maybe(parenthesized(name)), Parser<OmpClauseList>{})))
+TYPE_PARSER(sourced(construct<OpenMPDeclareSimdConstruct>(
+    verbatim("DECLARE SIMD"_tok) || verbatim("DECLARE_SIMD"_tok),
+    maybe(parenthesized(name)), Parser<OmpClauseList>{})))
 
 // 2.4 Requires construct
 TYPE_PARSER(sourced(construct<OpenMPRequiresConstruct>(
