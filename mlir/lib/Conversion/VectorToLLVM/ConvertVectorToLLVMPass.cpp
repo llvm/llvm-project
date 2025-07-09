@@ -70,9 +70,16 @@ void ConvertVectorToLLVMPass::runOnOperation() {
     populateVectorBitCastLoweringPatterns(patterns);
     populateVectorBroadcastLoweringPatterns(patterns);
     populateVectorContractLoweringPatterns(patterns, vectorContractLowering);
+    if (vectorContractLowering == vector::VectorContractLowering::Matmul) {
+      populateVectorContractToMatrixMultiply(patterns);
+    }
     populateVectorMaskOpLoweringPatterns(patterns);
     populateVectorShapeCastLoweringPatterns(patterns);
     populateVectorInterleaveLoweringPatterns(patterns);
+    populateVectorTransposeLoweringPatterns(patterns, vectorTransposeLowering);
+    if (vectorTransposeLowering == vector::VectorTransposeLowering::Flat) {
+      populateVectorTransposeToFlatTranspose(patterns);
+    }
     populateVectorTransposeLoweringPatterns(patterns, vectorTransposeLowering);
     // Vector transfer ops with rank > 1 should be lowered with VectorToSCF.
     populateVectorTransferLoweringPatterns(patterns, /*maxTransferRank=*/1);
@@ -96,11 +103,9 @@ void ConvertVectorToLLVMPass::runOnOperation() {
   LLVMTypeConverter converter(&getContext(), options);
   RewritePatternSet patterns(&getContext());
   populateVectorTransferLoweringPatterns(patterns);
-  populateVectorToLLVMMatrixConversionPatterns(converter, patterns);
   populateVectorToLLVMConversionPatterns(
       converter, patterns, reassociateFPReductions, force32BitVectorIndices,
       useVectorAlignment);
-  populateVectorToLLVMMatrixConversionPatterns(converter, patterns);
 
   // Architecture specific augmentations.
   LLVMConversionTarget target(getContext());

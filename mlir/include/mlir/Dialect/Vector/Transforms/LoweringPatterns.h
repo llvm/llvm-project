@@ -297,6 +297,12 @@ void populateVectorBitCastLoweringPatterns(RewritePatternSet &patterns,
 /// n > 1.
 void populateVectorRankReducingFMAPattern(RewritePatternSet &patterns);
 
+/// TODO
+void populateVectorContractToMatrixMultiply(RewritePatternSet &patterns);
+
+/// TODO
+void populateVectorTransposeToFlatTranspose(RewritePatternSet &patterns);
+
 } // namespace vector
 } // namespace mlir
 #endif // MLIR_DIALECT_VECTOR_TRANSFORMS_LOWERINGPATTERNS_H
