@@ -856,7 +856,7 @@ mlir_c_api_cc_library(
         ":TransformDialectTransforms",
     ],
 )
-        
+
 mlir_c_api_cc_library(
     name = "CAPIMLProgram",
     srcs = [
@@ -4634,6 +4634,7 @@ cc_library(
         ":TransformIRDLExtension",
         ":TransformLoopExtension",
         ":TransformPDLExtension",
+        ":TransformTuneExtension",
         ":UBToLLVM",
         ":VCIXToLLVMIRTranslation",
         ":VectorToLLVM",
