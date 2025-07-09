@@ -326,7 +326,7 @@ LLVM_ABI void initializeTargetTransformInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeTwoAddressInstructionLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeTypeBasedAAWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeTypePromotionLegacyPass(PassRegistry &);
-LLVM_ABI void initializeInitUndefPass(PassRegistry &);
+LLVM_ABI void initializeInitUndefLegacyPass(PassRegistry &);
 LLVM_ABI void initializeUniformityInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeUnifyLoopExitsLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeUnpackMachineBundlesPass(PassRegistry &);

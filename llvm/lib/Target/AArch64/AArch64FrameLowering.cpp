@@ -335,6 +335,26 @@ static Register findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB,
                                                  bool HasCall = false);
 static bool requiresSaveVG(const MachineFunction &MF);
 
+// Conservatively, returns true if the function is likely to have an SVE vectors
+// on the stack. This function is safe to be called before callee-saves or
+// object offsets have been determined.
+static bool isLikelyToHaveSVEStack(MachineFunction &MF) {
+  auto *AFI = MF.getInfo<AArch64FunctionInfo>();
+  if (AFI->isSVECC())
+    return true;
+
+  if (AFI->hasCalculatedStackSizeSVE())
+    return bool(getSVEStackSize(MF));
+
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  for (int FI = MFI.getObjectIndexBegin(); FI < MFI.getObjectIndexEnd(); FI++) {
+    if (MFI.getStackID(FI) == TargetStackID::ScalableVector)
+      return true;
+  }
+
+  return false;
+}
+
 /// Returns true if a homogeneous prolog or epilog code can be emitted
 /// for the size optimization. If possible, a frame helper call is injected.
 /// When Exit block is given, this check is for epilog.
@@ -350,8 +370,9 @@ bool AArch64FrameLowering::homogeneousPrologEpilog(
   // TODO: Window is supported yet.
   if (needsWinCFI(MF))
     return false;
+
   // TODO: SVE is not supported yet.
-  if (getSVEStackSize(MF))
+  if (isLikelyToHaveSVEStack(MF))
     return false;
 
   // Bail on stack adjustment needed on return for simplicity.
@@ -3039,7 +3060,7 @@ static bool produceCompactUnwindFrame(MachineFunction &MF) {
          !(Subtarget.getTargetLowering()->supportSwiftError() &&
            Attrs.hasAttrSomewhere(Attribute::SwiftError)) &&
          MF.getFunction().getCallingConv() != CallingConv::SwiftTail &&
-         !requiresSaveVG(MF) && AFI->getSVECalleeSavedStackSize() == 0;
+         !requiresSaveVG(MF) && !AFI->isSVECC();
 }
 
 static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
