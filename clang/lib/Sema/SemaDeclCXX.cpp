@@ -18892,7 +18892,8 @@ void Sema::ActOnCXXEnterDeclInitializer(Scope *S, Decl *D) {
     EnterDeclaratorContext(S, D->getDeclContext());
 
   PushExpressionEvaluationContext(
-      ExpressionEvaluationContext::PotentiallyEvaluated, D);
+      ExpressionEvaluationContext::PotentiallyEvaluated, D,
+      ExpressionEvaluationContextRecord::EK_VariableInit);
 }
 
 void Sema::ActOnCXXExitDeclInitializer(Scope *S, Decl *D) {
@@ -18901,29 +18902,6 @@ void Sema::ActOnCXXExitDeclInitializer(Scope *S, Decl *D) {
   if (S && D->isOutOfLine())
     ExitDeclaratorContext(S);
 
-  if (getLangOpts().CPlusPlus23) {
-    // An expression or conversion is 'manifestly constant-evaluated' if it is:
-    // [...]
-    // - the initializer of a variable that is usable in constant expressions or
-    //   has constant initialization.
-    if (auto *VD = dyn_cast<VarDecl>(D);
-        VD && (VD->isUsableInConstantExpressions(Context) ||
-               VD->hasConstantInitialization())) {
-      // An expression or conversion is in an 'immediate function context' if it
-      // is potentially evaluated and either:
-      // [...]
-      // - it is a subexpression of a manifestly constant-evaluated expression
-      //   or conversion.
-      ExprEvalContexts.back().InImmediateFunctionContext = true;
-    }
-  }
-
-  // Unless the initializer is in an immediate function context (as determined
-  // above), this will evaluate all contained immediate function calls as
-  // constant expressions. If the initializer IS an immediate function context,
-  // the initializer has been determined to be a constant expression, and all
-  // such evaluations will be elided (i.e., as if we "knew the whole time" that
-  // it was a constant expression).
   PopExpressionEvaluationContext();
 }
 

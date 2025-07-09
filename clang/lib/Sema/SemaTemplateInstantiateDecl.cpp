@@ -6164,7 +6164,8 @@ void Sema::InstantiateVariableInitializer(
   ContextRAII SwitchContext(*this, Var->getDeclContext());
 
   EnterExpressionEvaluationContext Evaluated(
-      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var);
+      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var,
+      ExpressionEvaluationContextRecord::EK_VariableInit);
   currentEvaluationContext().InLifetimeExtendingContext =
       parentEvaluationContext().InLifetimeExtendingContext;
   currentEvaluationContext().RebuildDefaultArgOrDefaultInit =

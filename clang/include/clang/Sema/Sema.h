@@ -7181,6 +7181,7 @@ public:
       EK_Decltype,
       EK_TemplateArgument,
       EK_AttrArgument,
+      EK_VariableInit,
       EK_Other
     } ExprContext;
 
