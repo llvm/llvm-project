@@ -2,14 +2,13 @@
 Test lldb data formatter subsystem.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class LibCxxFunctionTestCase(TestBase):
+class StdFunctionTestCase(TestBase):
     # Run frame var for a variable twice. Verify we do not hit the cache
     # the first time but do the second time.
     def run_frame_var_check_cache_use(
@@ -34,10 +33,8 @@ class LibCxxFunctionTestCase(TestBase):
             substrs=["lldb_private::CompileUnit::FindFunction"],
         )
 
-    @add_test_categories(["libc++"])
-    def test(self):
-        """Test that std::function as defined by libc++ is correctly printed by LLDB"""
-        self.build()
+    def do_test(self):
+        """Test that std::function is correctly printed by LLDB"""
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         bkpt = self.target().FindBreakpointByID(
@@ -82,3 +79,8 @@ class LibCxxFunctionTestCase(TestBase):
         self.expect(
             "frame variable f5", substrs=["f5 =  Function = Bar::add_num(int) const"]
         )
+
+    @add_test_categories(["libc++"])
+    def test_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()
