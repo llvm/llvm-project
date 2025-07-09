@@ -2511,7 +2511,8 @@ namespace {
 struct CSEDenseMapInfo {
   static bool canHandle(const Instruction *I) {
     return isa<InsertElementInst>(I) || isa<ExtractElementInst>(I) ||
-           isa<ShuffleVectorInst>(I) || isa<GetElementPtrInst>(I);
+           isa<ShuffleVectorInst>(I) || isa<GetElementPtrInst>(I) ||
+           isa<CastInst>(I) || isa<SelectInst>(I);
   }
 
   static inline Instruction *getEmptyKey() {

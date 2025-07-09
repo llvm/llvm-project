@@ -563,13 +563,12 @@ define void @recurrence_3(ptr readonly noalias %a, ptr noalias %b, i32 %n, float
 ; UNROLL-NO-VF-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[TMP4]]
 ; UNROLL-NO-VF-NEXT:    [[TMP7:%.*]] = load i16, ptr [[TMP5]], align 2
 ; UNROLL-NO-VF-NEXT:    [[TMP8]] = load i16, ptr [[TMP6]], align 2
-; UNROLL-NO-VF-NEXT:    [[TMP9:%.*]] = sitofp i16 [[TMP7]] to double
+; UNROLL-NO-VF-NEXT:    [[TMP12:%.*]] = sitofp i16 [[TMP7]] to double
 ; UNROLL-NO-VF-NEXT:    [[TMP10:%.*]] = sitofp i16 [[TMP8]] to double
 ; UNROLL-NO-VF-NEXT:    [[TMP11:%.*]] = sitofp i16 [[VECTOR_RECUR]] to double
-; UNROLL-NO-VF-NEXT:    [[TMP12:%.*]] = sitofp i16 [[TMP7]] to double
 ; UNROLL-NO-VF-NEXT:    [[TMP13:%.*]] = fmul fast double [[TMP11]], [[CONV1]]
 ; UNROLL-NO-VF-NEXT:    [[TMP14:%.*]] = fmul fast double [[TMP12]], [[CONV1]]
-; UNROLL-NO-VF-NEXT:    [[TMP15:%.*]] = fsub fast double [[TMP9]], [[TMP13]]
+; UNROLL-NO-VF-NEXT:    [[TMP15:%.*]] = fsub fast double [[TMP12]], [[TMP13]]
 ; UNROLL-NO-VF-NEXT:    [[TMP16:%.*]] = fsub fast double [[TMP10]], [[TMP14]]
 ; UNROLL-NO-VF-NEXT:    [[TMP17:%.*]] = getelementptr inbounds double, ptr [[B]], i64 [[OFFSET_IDX]]
 ; UNROLL-NO-VF-NEXT:    [[TMP18:%.*]] = getelementptr inbounds double, ptr [[B]], i64 [[TMP4]]
@@ -1792,11 +1791,10 @@ define void @sink_after(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; UNROLL-NO-VF-NEXT:    [[TMP6:%.*]] = load i16, ptr [[TMP4]], align 2
 ; UNROLL-NO-VF-NEXT:    [[TMP7]] = load i16, ptr [[TMP5]], align 2
 ; UNROLL-NO-VF-NEXT:    [[TMP8:%.*]] = sext i16 [[VECTOR_RECUR]] to i32
-; UNROLL-NO-VF-NEXT:    [[TMP9:%.*]] = sext i16 [[TMP6]] to i32
 ; UNROLL-NO-VF-NEXT:    [[TMP10:%.*]] = sext i16 [[TMP6]] to i32
 ; UNROLL-NO-VF-NEXT:    [[TMP11:%.*]] = sext i16 [[TMP7]] to i32
 ; UNROLL-NO-VF-NEXT:    [[TMP12:%.*]] = mul nsw i32 [[TMP10]], [[TMP8]]
-; UNROLL-NO-VF-NEXT:    [[TMP13:%.*]] = mul nsw i32 [[TMP11]], [[TMP9]]
+; UNROLL-NO-VF-NEXT:    [[TMP13:%.*]] = mul nsw i32 [[TMP11]], [[TMP10]]
 ; UNROLL-NO-VF-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDEX]]
 ; UNROLL-NO-VF-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP1]]
 ; UNROLL-NO-VF-NEXT:    store i32 [[TMP12]], ptr [[TMP14]], align 4
@@ -2026,11 +2024,10 @@ define void @PR34711(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %n) {
 ; UNROLL-NO-VF-NEXT:    [[TMP6:%.*]] = load i16, ptr [[TMP4]], align 2
 ; UNROLL-NO-VF-NEXT:    [[TMP7]] = load i16, ptr [[TMP5]], align 2
 ; UNROLL-NO-VF-NEXT:    [[TMP8:%.*]] = sext i16 [[VECTOR_RECUR]] to i32
-; UNROLL-NO-VF-NEXT:    [[TMP9:%.*]] = sext i16 [[TMP6]] to i32
 ; UNROLL-NO-VF-NEXT:    [[TMP10:%.*]] = sext i16 [[TMP6]] to i32
 ; UNROLL-NO-VF-NEXT:    [[TMP11:%.*]] = sext i16 [[TMP7]] to i32
 ; UNROLL-NO-VF-NEXT:    [[TMP12:%.*]] = mul nsw i32 [[TMP10]], [[TMP8]]
-; UNROLL-NO-VF-NEXT:    [[TMP13:%.*]] = mul nsw i32 [[TMP11]], [[TMP9]]
+; UNROLL-NO-VF-NEXT:    [[TMP13:%.*]] = mul nsw i32 [[TMP11]], [[TMP10]]
 ; UNROLL-NO-VF-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDEX]]
 ; UNROLL-NO-VF-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP1]]
 ; UNROLL-NO-VF-NEXT:    store i32 [[TMP12]], ptr [[TMP14]], align 4
@@ -2244,9 +2241,8 @@ define void @sink_after_with_multiple_users(ptr noalias %a, ptr noalias %b, i64 
 ; UNROLL-NO-VF-NEXT:    [[TMP9:%.*]] = sext i16 [[TMP6]] to i32
 ; UNROLL-NO-VF-NEXT:    [[TMP10:%.*]] = add nsw i32 [[TMP8]], 2
 ; UNROLL-NO-VF-NEXT:    [[TMP11:%.*]] = add nsw i32 [[TMP9]], 2
-; UNROLL-NO-VF-NEXT:    [[TMP12:%.*]] = sext i16 [[TMP6]] to i32
 ; UNROLL-NO-VF-NEXT:    [[TMP13:%.*]] = sext i16 [[TMP7]] to i32
-; UNROLL-NO-VF-NEXT:    [[TMP14:%.*]] = mul nsw i32 [[TMP10]], [[TMP12]]
+; UNROLL-NO-VF-NEXT:    [[TMP14:%.*]] = mul nsw i32 [[TMP10]], [[TMP9]]
 ; UNROLL-NO-VF-NEXT:    [[TMP15:%.*]] = mul nsw i32 [[TMP11]], [[TMP13]]
 ; UNROLL-NO-VF-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDEX]]
 ; UNROLL-NO-VF-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP1]]
