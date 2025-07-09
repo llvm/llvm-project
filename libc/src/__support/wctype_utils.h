@@ -25,7 +25,8 @@ namespace internal {
 // optimized into a form that is almost always the same as or better than
 // versions written by hand (see https://godbolt.org/z/qvrebqvvr). Also this
 // form makes these functions encoding independent. If you want to rewrite these
-// functions, make sure you have benchSCII character encodings.
+// functions, make sure you have benchmarks to show your new solution is faster,
+// as well as a way to support non-ASCII character encodings.
 
 // Similarly, do not change these fumarks to show your new solution is faster,
 // as well as a way to support non-Anctions to use case ranges. e.g.
