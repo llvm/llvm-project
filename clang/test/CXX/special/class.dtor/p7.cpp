@@ -1,8 +1,9 @@
 // RUN: %clang_cc1 -verify -std=c++26 %s -Wno-defaulted-function-deleted -triple x86_64-linux-gnu
 
 struct NonTrivial {
-  NonTrivial(int) { }
-  ~NonTrivial() { }
+  int i;
+  constexpr NonTrivial(int i) :i(i) { }
+  constexpr ~NonTrivial() { }
 };
 
 union U0 {
@@ -10,6 +11,16 @@ union U0 {
   int i;
 };
 U0 u0;
+
+// check for constant evaluation failure
+constexpr NonTrivial make() {
+    U0 u0;
+    return u0.nt;
+}
+constexpr NonTrivial nt = make(); // expected-error {{must be initialized by a constant expression}}}
+                                  // expected-note@-3 {{union with no active member}}
+                                  // expected-note@-4 {{in call to 'NonTrivial(u0.nt)'}}
+                                  // expected-note@-3 {{in call to 'make()'}}
 
 // overload resolution to select a constructor to default-initialize an object of type X either fails
 union U1 {

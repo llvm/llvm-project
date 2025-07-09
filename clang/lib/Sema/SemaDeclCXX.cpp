@@ -9543,7 +9543,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
   if (DiagKind == -1)
     return false;
 
-  if (this->S.Context.getLangOpts().CPlusPlus26 && inUnion() &&
+  if (S.Context.getLangOpts().CPlusPlus26 && inUnion() &&
       CSM == CXXSpecialMemberKind::Destructor) {
     // [class.dtor]/7 In C++26, a destructor for a union X is only deleted under
     // the additional conditions that:
@@ -9559,11 +9559,10 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
     while (Parent &&
            (Parent->isAnonymousStructOrUnion() ||
             (Parent->isUnion() && Parent->getIdentifier() == nullptr))) {
-      if (auto RD = dyn_cast_or_null<RecordDecl>(Parent->getParent())) {
+      if (auto RD = dyn_cast_or_null<RecordDecl>(Parent->getParent()))
         Parent = RD;
-      } else {
+      else
         break;
-      }
     }
 
     auto ParentDecl = dyn_cast<CXXRecordDecl>(Parent);
@@ -9574,13 +9573,11 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
       if (SMOR.getKind() == Sema::SpecialMemberOverloadResult::Success) {
         CXXConstructorDecl *Ctor =
             dyn_cast<CXXConstructorDecl>(SMOR.getMethod());
-        if (Ctor->isTrivial()) {
+        if (Ctor->isTrivial())
           return false;
-        }
 
-        if (!Ctor->isUserProvided() && !Field->hasInClassInitializer()) {
+        if (!Ctor->isUserProvided() && !Field->hasInClassInitializer())
           return false;
-        }
       }
     }
   }
