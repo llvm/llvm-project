@@ -99,3 +99,7 @@ void bad_root_signature_21() {}
 // expected-error@+1 {{invalid value of flags}}
 [RootSignature("DescriptorTable(SRV(t0, flags = descriptor_range_flag_typo)")]
 void bad_root_signature_22() {}
+
+// expected-error@+1 {{invalid value of RootFlags}}
+[RootSignature("RootFlags(local_root_signature | root_flag_typo)")]
+void bad_root_signature_23() {}

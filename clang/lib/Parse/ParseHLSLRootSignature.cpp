@@ -93,6 +93,10 @@ std::optional<llvm::dxbc::RootFlags> RootSignatureParser::parseRootFlags() {
 
   std::optional<llvm::dxbc::RootFlags> Flags = llvm::dxbc::RootFlags::None;
 
+  // Handle valid empty case
+  if (tryConsumeExpectedToken(TokenKind::pu_r_paren))
+    return Flags;
+
   // Handle the edge-case of '0' to specify no flags set
   if (tryConsumeExpectedToken(TokenKind::int_literal)) {
     if (!verifyZeroFlag()) {
@@ -118,6 +122,11 @@ std::optional<llvm::dxbc::RootFlags> RootSignatureParser::parseRootFlags() {
         default:
           llvm_unreachable("Switch for consumed enum token was not provided");
         }
+      } else {
+        consumeNextToken(); // consume token to point at invalid token
+        reportDiag(diag::err_hlsl_invalid_token)
+            << /*value=*/1 << /*value of*/ TokenKind::kw_RootFlags;
+        return std::nullopt;
       }
     } while (tryConsumeExpectedToken(TokenKind::pu_or));
   }
