@@ -151,7 +151,7 @@ G_EXTRACT for scalar types, but acts elementwise on vectors.
 G_TRUNC_SSAT_S
 ^^^^^^^^^^^^^^
 
-Truncate a saturated signed input to a signed result.
+Truncate a signed input to a signed result with saturation.
 
 .. code-block:: none
 
@@ -160,7 +160,7 @@ Truncate a saturated signed input to a signed result.
 G_TRUNC_SSAT_U
 ^^^^^^^^^^^^^^
 
-Truncate a saturated signed input to an unsigned result.
+Truncate a signed input to an unsigned result with saturation.
 
 .. code-block:: none
 
@@ -169,7 +169,7 @@ Truncate a saturated signed input to an unsigned result.
 G_TRUNC_USAT_U
 ^^^^^^^^^^^^^^
 
-Truncate a saturated unsigned input to an unsigned result.
+Truncate a unsigned input to an unsigned result with saturation.
 
 .. code-block:: none
 

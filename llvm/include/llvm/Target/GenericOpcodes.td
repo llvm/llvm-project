@@ -86,21 +86,21 @@ def G_TRUNC : GenericInstruction {
   let hasSideEffects = false;
 }
 
-// Truncate the signed saturated operand to a signed result.
+// Truncate the signed saturated operand to a signed result with saturation.
 def G_TRUNC_SSAT_S : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
   let hasSideEffects = false;
 }
 
-// Truncate the signed saturated operand to an unsigned result.
+// Truncate the signed saturated operand to an unsigned result with saturation.
 def G_TRUNC_SSAT_U : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
   let hasSideEffects = false;
 }
 
-// Truncate the unsigned saturated operand to an unsigned result.
+// Truncate the unsigned saturated operand to an unsigned result with saturation.
 def G_TRUNC_USAT_U : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);

@@ -811,8 +811,8 @@ public:
 
   /// Build and insert \p Res = \p G_TRUNC_SSAT_S \p Op
   ///
-  /// G_TRUNC_SSAT_S truncates the saturated signed input, \p Op, to a signed
-  /// result.
+  /// G_TRUNC_SSAT_S truncates the signed input, \p Op, to a signed result with
+  /// saturation.
   ///
   /// \pre setBasicBlock or setMI must have been called.
   /// \pre \p Res must be a generic virtual register with scalar or vector type.
@@ -825,8 +825,8 @@ public:
 
   /// Build and insert \p Res = \p G_TRUNC_SSAT_U \p Op
   ///
-  /// G_TRUNC_SSAT_U truncates the saturated signed input, \p Op, to a unsigned
-  /// result.
+  /// G_TRUNC_SSAT_U truncates the signed input, \p Op, to an unsigned result
+  /// with saturation.
   ///
   /// \pre setBasicBlock or setMI must have been called.
   /// \pre \p Res must be a generic virtual register with scalar or vector type.
@@ -839,8 +839,8 @@ public:
 
   /// Build and insert \p Res = \p G_TRUNC_USAT_U \p Op
   ///
-  /// G_TRUNC_USAT_U truncates the saturated unsigned input, \p Op, to a
-  /// unsigned result.
+  /// G_TRUNC_USAT_U truncates the unsigned input, \p Op, to an unsigned result
+  /// with saturation.
   ///
   /// \pre setBasicBlock or setMI must have been called.
   /// \pre \p Res must be a generic virtual register with scalar or vector type.
