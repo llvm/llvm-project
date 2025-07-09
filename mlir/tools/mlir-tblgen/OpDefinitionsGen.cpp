@@ -238,6 +238,10 @@ static const char *const inlineCreateBody = R"(
   return __res__;
 )";
 
+static const char *const inlineCreateBodyImplicitLoc = R"(
+  return create(builder, builder.getLoc(){0});
+)";
+
 //===----------------------------------------------------------------------===//
 // Utility structs and functions
 //===----------------------------------------------------------------------===//
@@ -2579,35 +2583,47 @@ static bool canInferType(const Operator &op) {
 
 void OpEmitter::genInlineCreateBody(
     const SmallVector<MethodParameter> &paramList) {
-  SmallVector<MethodParameter> createParamList;
+  SmallVector<MethodParameter> createParamListOpBuilder;
+  SmallVector<MethodParameter> createParamListImplicitLocOpBuilder;
   SmallVector<llvm::StringRef, 4> nonBuilderStateArgsList;
-  createParamList.emplace_back("::mlir::OpBuilder &", "builder");
+  createParamListOpBuilder.emplace_back("::mlir::OpBuilder &", "builder");
+  createParamListImplicitLocOpBuilder.emplace_back(
+      "::mlir::ImplicitLocOpBuilder &", "builder");
   std::string locParamName = "location";
   while (llvm::find_if(paramList, [&locParamName](const MethodParameter &p) {
            return p.getName() == locParamName;
          }) != paramList.end()) {
     locParamName += "_";
   }
-  createParamList.emplace_back("::mlir::Location", locParamName);
+  createParamListOpBuilder.emplace_back("::mlir::Location", locParamName);
 
   for (auto &param : paramList) {
     if (param.getType() == "::mlir::OpBuilder &" ||
         param.getType() == "::mlir::OperationState &")
       continue;
-    createParamList.emplace_back(param.getType(), param.getName(),
-                                 param.getDefaultValue(), param.isOptional());
+    createParamListOpBuilder.emplace_back(param.getType(), param.getName(),
+                                          param.getDefaultValue(),
+                                          param.isOptional());
+    createParamListImplicitLocOpBuilder.emplace_back(
+        param.getType(), param.getName(), param.getDefaultValue(),
+        param.isOptional());
     nonBuilderStateArgsList.push_back(param.getName());
   }
-  auto *c = opClass.addStaticMethod(opClass.getClassName(), "create",
-                                    createParamList);
+  auto *cWithLoc = opClass.addStaticMethod(opClass.getClassName(), "create",
+                                           createParamListOpBuilder);
+  auto *cImplicitLoc = opClass.addStaticMethod(
+      opClass.getClassName(), "create", createParamListImplicitLocOpBuilder);
   std::string nonBuilderStateArgs = "";
   if (!nonBuilderStateArgsList.empty()) {
     llvm::raw_string_ostream nonBuilderStateArgsOS(nonBuilderStateArgs);
     interleaveComma(nonBuilderStateArgsList, nonBuilderStateArgsOS);
     nonBuilderStateArgs = ", " + nonBuilderStateArgs;
   }
-  c->body() << llvm::formatv(inlineCreateBody, locParamName,
-                             nonBuilderStateArgs, opClass.getClassName());
+  cWithLoc->body() << llvm::formatv(inlineCreateBody, locParamName,
+                                    nonBuilderStateArgs,
+                                    opClass.getClassName());
+  cImplicitLoc->body() << llvm::formatv(inlineCreateBodyImplicitLoc,
+                                        nonBuilderStateArgs);
 }
 
 void OpEmitter::genSeparateArgParamBuilder() {
@@ -3087,8 +3103,7 @@ void OpEmitter::genBuilder() {
 
     std::optional<StringRef> body = builder.getBody();
     auto properties = body ? Method::Static : Method::StaticDeclaration;
-    auto *method =
-        opClass.addMethod("void", "build", properties, std::move(arguments));
+    auto *method = opClass.addMethod("void", "build", properties, arguments);
     if (body)
       ERROR_IF_PRUNED(method, "build", op);
 
