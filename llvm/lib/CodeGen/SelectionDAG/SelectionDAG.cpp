@@ -8820,6 +8820,45 @@ static void checkAddrSpaceIsValidForLibcall(const TargetLowering *TLI,
                        Twine(AS));
   }
 }
+std::pair<SDValue, SDValue>
+SelectionDAG::getMemcmp(SDValue Chain, const SDLoc &dl, SDValue Mem0,
+                        SDValue Mem1, SDValue Size, const CallInst *CI) {
+
+  const char *LibCallName = TLI->getLibcallName(RTLIB::MEMCMP);
+  if (LibCallName == nullptr)
+    return std::make_pair(SDValue(), SDValue());
+  // Emit a library call.
+  TargetLowering::ArgListTy Args;
+  TargetLowering::ArgListEntry Entry;
+  Entry.Ty = PointerType::getUnqual(*getContext());
+  Entry.Node = Mem0;
+  Args.push_back(Entry);
+  Entry.Node = Mem1;
+  Args.push_back(Entry);
+
+  Entry.Ty = getDataLayout().getIntPtrType(*getContext());
+  Entry.Node = Size;
+  Args.push_back(Entry);
+
+  // FIXME: pass in SDLoc
+  TargetLowering::CallLoweringInfo CLI(*this);
+  bool IsTailCall = false;
+  bool ReturnsFirstArg = CI && funcReturnsFirstArgOfCall(*CI);
+  IsTailCall = CI && CI->isTailCall() &&
+               isInTailCallPosition(*CI, getTarget(), ReturnsFirstArg);
+
+  CLI.setDebugLoc(dl)
+      .setChain(Chain)
+      .setLibCallee(
+          TLI->getLibcallCallingConv(RTLIB::MEMCMP),
+          Type::getInt32Ty(*getContext()),
+          getExternalSymbol(LibCallName, TLI->getPointerTy(getDataLayout())),
+          std::move(Args))
+      .setTailCall(IsTailCall);
+
+  std::pair<SDValue, SDValue> CallResult = TLI->LowerCallTo(CLI);
+  return CallResult;
+}
 
 SDValue SelectionDAG::getMemcpy(
     SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src, SDValue Size,
