@@ -1214,6 +1214,12 @@ void __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
   // Reset for next parallel region
   this_thr->th.th_set_proc_bind = proc_bind_default;
 
+  // OpenMP 6.0 12.1.2 requires the num_threads 'strict' modifier to also have
+  // effect when parallel execution is disabled by a corresponding if clause
+  // attached to the parallel directive.
+  if (this_thr->th.th_nt_strict && this_thr->th.th_set_nproc > 1)
+    __kmpc_error(this_thr->th.th_nt_loc, this_thr->th.th_nt_sev,
+                 this_thr->th.th_nt_msg);
   // Reset num_threads for next parallel region
   this_thr->th.th_set_nproc = 0;
 

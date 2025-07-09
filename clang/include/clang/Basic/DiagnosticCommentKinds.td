@@ -90,8 +90,10 @@ def warn_doc_api_container_decl_mismatch : Warning<
   InGroup<Documentation>, DefaultIgnore;
 
 def warn_doc_container_decl_mismatch : Warning<
-  "'%select{\\|@}0%select{classdesign|coclass|dependency|helper"
-  "|helperclass|helps|instancesize|ownership|performance|security|superclass}1' "
+  "'%select{\\|@}0%enum_select<DocCommandKind>{%ClassDesign{classdesign}|"
+  "%CoClass{coclass}|%Dependency{dependency}|%Helper{helper}|%HelperClass{helperclass}|"
+  "%Helps{helps}|%InstanceSize{instancesize}|%Ownership{ownership}|"
+  "%Performance{performance}|%Security{security}|%Superclass{superclass}}1' "
   "command should not be used in a comment attached to a non-container declaration">,
   InGroup<Documentation>, DefaultIgnore;
 

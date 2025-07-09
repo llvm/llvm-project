@@ -792,3 +792,94 @@ TEST(ProtocolTypesTest, ReadMemoryResponseBody) {
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
   EXPECT_EQ(pp(*expected), pp(response));
 }
+
+TEST(ProtocolTypesTest, Modules) {
+  Module module;
+  module.id = "AC805E8E-B6A4-CD92-4B05-5CFA7CE24AE8-8926C776";
+  module.name = "libm.so.6";
+  module.path = "/some/path/to/libm.so.6";
+  module.isOptimized = true;
+  module.isUserCode = true;
+  module.version = "0.0.1";
+  module.symbolStatus = "Symbol not found.";
+  module.symbolFilePath = "/some/file/path/to/the/symbol/module";
+  module.dateTimeStamp = "2020-12-09T16:09:53+00:00";
+  module.addressRange = "0xcafeface";
+  module.debugInfoSizeBytes = 1572864;
+
+  Expected<json::Value> expected = json::parse(
+      R"({
+                  "id" : "AC805E8E-B6A4-CD92-4B05-5CFA7CE24AE8-8926C776",
+                  "name": "libm.so.6",
+                  "path": "/some/path/to/libm.so.6",
+                  "isOptimized": true,
+                  "isUserCode": true,
+                  "version": "0.0.1",
+                  "symbolStatus": "Symbol not found.",
+                  "symbolFilePath": "/some/file/path/to/the/symbol/module",
+                  "dateTimeStamp": "2020-12-09T16:09:53+00:00",
+                  "addressRange": "0xcafeface",
+                  "debugInfoSize": "1.5MB" })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected), pp(module));
+
+  // Test without optional values.
+  module.path.clear();
+  module.isOptimized = false;
+  module.isUserCode = false;
+  module.version.clear();
+  module.symbolStatus.clear();
+  module.symbolFilePath.clear();
+  module.dateTimeStamp.clear();
+  module.addressRange.clear();
+  module.debugInfoSizeBytes = 0;
+  EXPECT_NE(pp(*expected), pp(module));
+
+  Expected<json::Value> expected_no_opt = json::parse(
+      R"({
+                  "id" : "AC805E8E-B6A4-CD92-4B05-5CFA7CE24AE8-8926C776",
+                  "name": "libm.so.6"})");
+  ASSERT_THAT_EXPECTED(expected_no_opt, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected_no_opt), pp(module));
+}
+
+TEST(ProtocolTypesTest, ModulesArguments) {
+  ModulesArguments args;
+
+  llvm::Expected<ModulesArguments> expected = parse<ModulesArguments>(R"({})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(args.startModule, expected->startModule);
+  EXPECT_EQ(args.moduleCount, expected->moduleCount);
+
+  // Non Default values.
+  args.startModule = 1;
+  args.moduleCount = 2;
+  llvm::Expected<ModulesArguments> expected_no_default =
+      parse<ModulesArguments>(R"({ "startModule": 1, "moduleCount": 2})");
+  ASSERT_THAT_EXPECTED(expected_no_default, llvm::Succeeded());
+  EXPECT_EQ(args.startModule, expected_no_default->startModule);
+  EXPECT_EQ(args.moduleCount, expected_no_default->moduleCount);
+}
+
+TEST(ProtocolTypesTest, ModulesResponseBody) {
+  ModulesResponseBody response;
+  Module module1;
+  module1.id = "first id";
+  module1.name = "first name";
+
+  Module module2;
+  module2.id = "second id";
+  module2.name = "second name";
+  response.modules = {std::move(module1), std::move(module2)};
+  response.totalModules = 2;
+
+  Expected<json::Value> expected = json::parse(
+      R"({
+                  "modules": [
+                    { "id": "first id", "name": "first name"},
+                    { "id": "second id", "name": "second name"}
+                  ],
+                  "totalModules": 2 })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected), pp(response));
+}
