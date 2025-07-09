@@ -497,7 +497,8 @@ def invLogicImm : ComplexPattern<XLenVT, 1, "selectInvLogicImm", [], [], 0>;
 let Predicates = [HasStdExtZbbOrZbkb] in {
 def : Pat<(XLenVT (and GPR:$rs1, (not GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
 def : Pat<(XLenVT (or  GPR:$rs1, (not GPR:$rs2))), (ORN  GPR:$rs1, GPR:$rs2)>;
-def : Pat<(XLenVT (xor GPR:$rs1, (not GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
+def : Pat<(XLenVT (not (riscv_xor_like GPR:$rs1, GPR:$rs2))),
+          (XNOR GPR:$rs1, GPR:$rs2)>;
 
 def : Pat<(XLenVT (and GPR:$rs1, invLogicImm:$rs2)), (ANDN GPR:$rs1, invLogicImm:$rs2)>;
 def : Pat<(XLenVT (or  GPR:$rs1, invLogicImm:$rs2)), (ORN  GPR:$rs1, invLogicImm:$rs2)>;

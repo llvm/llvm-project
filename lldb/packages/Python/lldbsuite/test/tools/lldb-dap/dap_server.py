@@ -199,8 +199,8 @@ class DebugCommunication(object):
         finally:
             dump_dap_log(self.log_file)
 
-    def get_modules(self):
-        module_list = self.request_modules()["body"]["modules"]
+    def get_modules(self, startModule: int = 0, moduleCount: int = 0):
+        module_list = self.request_modules(startModule, moduleCount)["body"]["modules"]
         modules = {}
         for module in module_list:
             modules[module["name"]] = module
@@ -1143,8 +1143,14 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
-    def request_modules(self):
-        return self.send_recv({"command": "modules", "type": "request"})
+    def request_modules(self, startModule: int, moduleCount: int):
+        return self.send_recv(
+            {
+                "command": "modules",
+                "type": "request",
+                "arguments": {"startModule": startModule, "moduleCount": moduleCount},
+            }
+        )
 
     def request_stackTrace(
         self, threadId=None, startFrame=None, levels=None, format=None, dump=False
