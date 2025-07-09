@@ -349,3 +349,16 @@ enum class B;
 A a;
 B b{a}; // expected-error {{cannot initialize}}
 }
+
+namespace GH147736 {
+template <typename Ty>
+struct S {
+  enum OhBoy : Ty {
+    Unimportant
+  } e;
+};
+
+// Okay, was previously rejected. The underlying type is int.
+S<_Atomic(int)> s; // expected-warning {{'_Atomic' is a C11 extension}}
+static_assert(__is_same(__underlying_type(S<_Atomic(long long)>::OhBoy), long long), ""); // expected-warning {{'_Atomic' is a C11 extension}}
+}

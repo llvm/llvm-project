@@ -17152,6 +17152,13 @@ bool Sema::CheckEnumUnderlyingType(TypeSourceInfo *TI) {
   SourceLocation UnderlyingLoc = TI->getTypeLoc().getBeginLoc();
   QualType T = TI->getType();
 
+  // C++0x 7.2p2: The type-specifier-seq of an enum-base shall name an
+  // integral type; any cv-qualification is ignored.
+  // C23 6.7.3.3p5: The underlying type of the enumeration is the unqualified,
+  // non-atomic version of the type specified by the type specifiers in the
+  // specifier qualifier list.
+  T = T.getAtomicUnqualifiedType();
+
   if (T->isDependentType())
     return false;
 
@@ -17551,6 +17558,9 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
     } else if (UnderlyingType.get()) {
       // C++0x 7.2p2: The type-specifier-seq of an enum-base shall name an
       // integral type; any cv-qualification is ignored.
+      // C23 6.7.3.3p5: The underlying type of the enumeration is the
+      // unqualified, non-atomic version of the type specified by the type
+      // specifiers in the specifier qualifier list.
       TypeSourceInfo *TI = nullptr;
       GetTypeFromParser(UnderlyingType.get(), &TI);
       EnumUnderlying = TI;
@@ -17562,6 +17572,16 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
       if (DiagnoseUnexpandedParameterPack(TI->getTypeLoc().getBeginLoc(), TI,
                                           UPPC_FixedUnderlyingType))
         EnumUnderlying = Context.IntTy.getTypePtr();
+
+      // If the underlying type is atomic, we need to adjust the type before
+      // continuing. This only happens in the case we stored a TypeSourceInfo
+      // into EnumUnderlying because the other cases are error recovery up to
+      // this point. But because it's not possible to gin up a TypeSourceInfo
+      // for a non-atomic type from an atomic one, we'll store into the Type
+      // field instead.
+      if (TypeSourceInfo *TI = dyn_cast<TypeSourceInfo *>(EnumUnderlying);
+          TI && TI->getType()->isAtomicType())
+        EnumUnderlying = TI->getType().getAtomicUnqualifiedType().getTypePtr();
 
     } else if (Context.getTargetInfo().getTriple().isWindowsMSVCEnvironment()) {
       // For MSVC ABI compatibility, unfixed enums must use an underlying type
