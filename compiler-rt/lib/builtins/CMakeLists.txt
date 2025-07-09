@@ -64,6 +64,8 @@ include(CMakePushCheckState)
 option(COMPILER_RT_BUILTINS_HIDE_SYMBOLS
   "Do not export any symbols from the static library." ON)
 
+include_directories(${COMPILER_RT_BINARY_DIR}/include/config)
+
 # TODO: Need to add a mechanism for logging errors when builtin source files are
 # added to a sub-directory and not this CMakeLists file.
 set(GENERIC_SOURCES
