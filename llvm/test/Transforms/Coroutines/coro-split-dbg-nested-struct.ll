@@ -2,10 +2,9 @@
 
 ; Test that nested structs in coroutine frames have correct debug info scoping.
 
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
-
-; Minimal nested struct types that trigger the scoping issue
+; Minimal nested struct types that used to trigger a scoping issue:
+; we used to set the wrong `scope` for the `DIDerivedType` member entries of the `DICompositeType`
+; as well as the `scope` for `DICompositeType` for the inner struct itself.
 %"struct.Inner" = type { i32, ptr }
 %"struct.Outer" = type { %"struct.Inner", i64 }
 %"class.Promise" = type { %"struct.Outer" }
@@ -19,7 +18,6 @@ entry:
   ret void
 }
 
-; The test passes if the debug info is generated without crashing
 ; CHECK: define void @test_coro_function()
 
 ; Check that frame debug info is generated
@@ -29,11 +27,24 @@ entry:
 ; 1. Promise should be scoped to the frame
 ; CHECK: ![[PROMISE:[0-9]+]] = !DICompositeType(tag: DW_TAG_structure_type, name: "class_Promise", scope: ![[FRAME_TYPE]]
 
-; 2. Outer should be scoped to Promise (not the frame!)
+; 2. Members of Promise should be scoped to Promise (check this before Outer since it comes first in output)
+; CHECK: !DIDerivedType(tag: DW_TAG_member, name: "struct_Outer", scope: ![[PROMISE]]
+
+; 3. Outer should be scoped to Promise (not the frame!)
 ; CHECK: ![[OUTER:[0-9]+]] = !DICompositeType(tag: DW_TAG_structure_type, name: "struct_Outer", scope: ![[PROMISE]]
 
-; 3. Inner should be scoped to Outer (proper nesting)
-; CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "struct_Inner", scope: ![[OUTER]]
+; 4. First Outer member should be scoped to Outer
+; CHECK: !DIDerivedType(tag: DW_TAG_member, name: "struct_Inner", scope: ![[OUTER]]
+
+; 5. Inner should be scoped to Outer (proper nesting)
+; CHECK: ![[INNER:[0-9]+]] = !DICompositeType(tag: DW_TAG_structure_type, name: "struct_Inner", scope: ![[OUTER]]
+
+; 6. Members of Inner should be scoped to Inner
+; CHECK: !DIDerivedType(tag: DW_TAG_member, name: "__int_32", scope: ![[INNER]]
+; CHECK: !DIDerivedType(tag: DW_TAG_member, name: "PointerType", scope: ![[INNER]]
+
+; 7. Second Outer member comes after Inner (due to output order)
+; CHECK: !DIDerivedType(tag: DW_TAG_member, name: "__int_64", scope: ![[OUTER]]
 
 declare token @llvm.coro.id(i32, ptr readnone, ptr readonly, ptr)
 declare ptr @llvm.coro.begin(token, ptr writeonly)
