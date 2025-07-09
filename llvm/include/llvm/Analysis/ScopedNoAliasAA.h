@@ -94,14 +94,19 @@ LLVM_ABI ImmutablePass *createScopedNoAliasAAWrapperPass();
 
 /// Adds `!noalias` and `!alias.scope` metadata for `CB`'s called function's
 /// `noalias` argument based memory accesses.
-void addAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
-                           const DataLayout &DL, AAResults *CalleeAAR,
-                           ClonedCodeInfo &InlinedFunctionInfo,
-                           bool UseNoAliasIntrinsic);
+void addAliasScopeMetadataForCalledFunction(
+    CallBase &CB, DataLayout const &DL, ValueToValueMapTy *VMap = nullptr,
+    AAResults *CalleeAAR = nullptr,
+    ClonedCodeInfo *InlinedFunctionInfo = nullptr,
+    bool UseNoAliasIntrinsic = false);
 
 /// Adds `!noalias` and `!alias.scope` metadata for `F`'s `noalias` argument
 /// based memory accesses.
-void addAliasScopeMetadata(Function &F);
+void addAliasScopeMetadataForFunction(
+    Function &F, DataLayout const &DL, ValueToValueMapTy *VMap = nullptr,
+    AAResults *CalleeAAR = nullptr,
+    ClonedCodeInfo *InlinedFunctionInfo = nullptr,
+    bool UseNoAliasIntrinsic = false);
 
 } // end namespace llvm
 

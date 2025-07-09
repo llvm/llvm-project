@@ -1390,20 +1390,21 @@ static void addAliasScopeMetadataImpl(CallBase *CB, Function *F,
   }
 }
 
-void llvm::addAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
-                                 const DataLayout &DL, AAResults *CalleeAAR,
-                                 ClonedCodeInfo &InlinedFunctionInfo,
-                                 bool UseNoAliasIntrinsic) {
-  addAliasScopeMetadataImpl(&CB, /* F */ nullptr, &VMap, DL, CalleeAAR,
-                            &InlinedFunctionInfo, UseNoAliasIntrinsic);
+void llvm::addAliasScopeMetadataForCalledFunction(
+    CallBase &CB, DataLayout const &DL, ValueToValueMapTy *VMap,
+    AAResults *CalleeAAR, ClonedCodeInfo *InlinedFunctionInfo,
+    bool UseNoAliasIntrinsic) {
+  addAliasScopeMetadataImpl(&CB, /*F=*/nullptr, VMap, DL, CalleeAAR,
+                            InlinedFunctionInfo, UseNoAliasIntrinsic);
 }
 
-void llvm::addAliasScopeMetadata(Function &F) {
-  addAliasScopeMetadataImpl(/*CB=*/nullptr, &F, /*VMap=*/nullptr,
-                            F.getParent()->getDataLayout(),
-                            /*CalleeAAR=*/nullptr,
-                            /*InlinedFunctionInfo=*/nullptr,
-                            /*UseNoAliasIntrinsic=*/false);
+void llvm::addAliasScopeMetadataForFunction(Function &F, DataLayout const &DL,
+                                            ValueToValueMapTy *VMap,
+                                            AAResults *CalleeAAR,
+                                            ClonedCodeInfo *InlinedFunctionInfo,
+                                            bool UseNoAliasIntrinsic) {
+  addAliasScopeMetadataImpl(/*CB=*/nullptr, &F, VMap, DL, CalleeAAR,
+                            InlinedFunctionInfo, UseNoAliasIntrinsic);
 }
 
 static bool MayContainThrowingOrExitingCallAfterCB(CallBase *Begin,
@@ -2845,8 +2846,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
     // Add noalias metadata if necessary.
     if (EnableNoAliasConversion)
-      addAliasScopeMetadata(CB, VMap, DL, CalleeAAR, InlinedFunctionInfo,
-                            UseNoAliasIntrinsic);
+      addAliasScopeMetadataForCalledFunction(
+          CB, DL, &VMap, CalleeAAR, &InlinedFunctionInfo, UseNoAliasIntrinsic);
 
     // Clone return attributes on the callsite into the calls within the inlined
     // function which feed into its return value.

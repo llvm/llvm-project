@@ -88,7 +88,7 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
 
   uint64_t ExplicitArgOffset = 0;
 
-  addAliasScopeMetadata(F);
+  addAliasScopeMetadataForFunction(F, F.getParent()->getDataLayout());
 
   for (Argument &Arg : F.args()) {
     const bool IsByRef = Arg.hasByRefAttr();
