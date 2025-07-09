@@ -210,6 +210,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    IR %8 = or i1 %7, %mul.overflow
 ; CHECK-NEXT:    IR %9 = icmp ugt i64 %3, 4294967295
 ; CHECK-NEXT:    IR %10 = or i1 %8, %9
+; CHECK-NEXT:    EMIT branch-on-cond ir<%10>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.memcheck>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.memcheck>:
@@ -218,6 +219,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    IR %13 = mul i64 %12, 4
 ; CHECK-NEXT:    IR %14 = sub i64 %B1, %A2
 ; CHECK-NEXT:    IR %diff.check = icmp ult i64 %14, %13
+; CHECK-NEXT:    EMIT branch-on-cond ir<%diff.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.ph>:
@@ -227,22 +229,22 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    IR %n.vec = sub i64 %0, %n.mod.vf
 ; CHECK-NEXT:    IR %17 = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    IR %18 = mul nuw i64 %17, 4
-; CHECK-NEXT:    vp<%1> = DERIVED-IV ir<%0> + ir<%n.vec> * ir<-1>
-; CHECK-NEXT:    vp<%2> = DERIVED-IV ir<%n> + ir<%n.vec> * ir<-1>
+; CHECK-NEXT:    vp<%3> = DERIVED-IV ir<%0> + ir<%n.vec> * ir<-1>
+; CHECK-NEXT:    vp<%4> = DERIVED-IV ir<%n> + ir<%n.vec> * ir<-1>
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<%index.next>, vector.body ]
-; CHECK-NEXT:    vp<%3> = DERIVED-IV ir<%n> + vp<%index> * ir<-1>
-; CHECK-NEXT:    CLONE ir<%i.0> = add nsw vp<%3>, ir<-1>
+; CHECK-NEXT:    vp<%5> = DERIVED-IV ir<%n> + vp<%index> * ir<-1>
+; CHECK-NEXT:    CLONE ir<%i.0> = add nsw vp<%5>, ir<-1>
 ; CHECK-NEXT:    CLONE ir<%idxprom> = zext ir<%i.0>
 ; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
-; CHECK-NEXT:    vp<%4> = vector-end-pointer inbounds ir<%arrayidx>, ir<%18>
-; CHECK-NEXT:    WIDEN ir<%19> = load vp<%4>
+; CHECK-NEXT:    vp<%6> = vector-end-pointer inbounds ir<%arrayidx>, ir<%18>
+; CHECK-NEXT:    WIDEN ir<%19> = load vp<%6>
 ; CHECK-NEXT:    WIDEN ir<%add9> = add ir<%19>, ir<1>
 ; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:    vp<%5> = vector-end-pointer inbounds ir<%arrayidx3>, ir<%18>
-; CHECK-NEXT:    WIDEN store vp<%5>, ir<%add9>
+; CHECK-NEXT:    vp<%7> = vector-end-pointer inbounds ir<%arrayidx3>, ir<%18>
+; CHECK-NEXT:    WIDEN store vp<%7>, ir<%add9>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<%18>.1
 ; CHECK-NEXT:    EMIT branch-on-count vp<%index.next>, ir<%n.vec>
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
@@ -256,8 +258,8 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<scalar.ph>:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<%1>, middle.block ], [ ir<%0>, ir-bb<for.body.preheader> ], [ ir<%0>, ir-bb<vector.scevcheck> ], [ ir<%0>, ir-bb<vector.memcheck> ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val>.1 = phi [ vp<%2>, middle.block ], [ ir<%n>, ir-bb<for.body.preheader> ], [ ir<%n>, ir-bb<vector.scevcheck> ], [ ir<%n>, ir-bb<vector.memcheck> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<%3>, middle.block ], [ ir<%0>, ir-bb<for.body.preheader> ], [ ir<%0>, ir-bb<vector.scevcheck> ], [ ir<%0>, ir-bb<vector.memcheck> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val>.1 = phi [ vp<%4>, middle.block ], [ ir<%n>, ir-bb<for.body.preheader> ], [ ir<%n>, ir-bb<vector.scevcheck> ], [ ir<%n>, ir-bb<vector.memcheck> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
@@ -281,10 +283,10 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    %1 = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    %2 = mul nuw i64 %1, 4
 ; CHECK-NEXT:    %min.iters.check = icmp ult i64 %0, %2
-; CHECK-NEXT:    br i1 %min.iters.check, label %scalar.ph, label %vector.scevcheck
+; CHECK-NEXT:    br i1 %min.iters.check, label %scalar.ph, label %vector.ph
 ; CHECK-NEXT:  LV: vectorizing VPBB: ir-bb<vector.scevcheck> in BB: vector.scevcheck
 ; CHECK-NEXT:  LV: filled BB:
-; CHECK-NEXT:  vector.scevcheck: ; preds = %for.body.preheader
+; CHECK-NEXT:  vector.scevcheck: ; No predecessors!
 ; CHECK-NEXT:    %3 = add nsw i64 %0, -1
 ; CHECK-NEXT:    %4 = add i32 %n, -1
 ; CHECK-NEXT:    %5 = trunc i64 %3 to i32
@@ -296,21 +298,21 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    %8 = or i1 %7, %mul.overflow
 ; CHECK-NEXT:    %9 = icmp ugt i64 %3, 4294967295
 ; CHECK-NEXT:    %10 = or i1 %8, %9
-; CHECK-NEXT:    br i1 %10, label %scalar.ph, label %vector.memcheck
+; CHECK-NEXT:    br i1 %10, <null operand!>, <null operand!>
 ; CHECK-NEXT:  LV: draw edge from for.body.preheader
 ; CHECK-NEXT:  LV: vectorizing VPBB: ir-bb<vector.memcheck> in BB: vector.memcheck
 ; CHECK-NEXT:  LV: filled BB:
-; CHECK-NEXT:  vector.memcheck: ; preds = %vector.scevcheck
+; CHECK-NEXT:  vector.memcheck: ; No predecessors!
 ; CHECK-NEXT:    %11 = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    %12 = mul nuw i64 %11, 4
 ; CHECK-NEXT:    %13 = mul i64 %12, 4
 ; CHECK-NEXT:    %14 = sub i64 %B1, %A2
 ; CHECK-NEXT:    %diff.check = icmp ult i64 %14, %13
-; CHECK-NEXT:    br i1 %diff.check, label %scalar.ph, label %vector.ph
+; CHECK-NEXT:    br i1 %diff.check, <null operand!>, <null operand!>
 ; CHECK-NEXT:  LV: draw edge from vector.scevcheck
 ; CHECK-NEXT:  LV: vectorizing VPBB: ir-bb<vector.ph> in BB: vector.ph
 ; CHECK-NEXT:  LV: filled BB:
-; CHECK-NEXT:  vector.ph: ; preds = %vector.memcheck
+; CHECK-NEXT:  vector.ph: ; No predecessors!
 ; CHECK-NEXT:    %15 = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    %16 = mul nuw i64 %15, 4
 ; CHECK-NEXT:    %n.mod.vf = urem i64 %0, %16
@@ -366,7 +368,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: draw edge from middle.block
 ; CHECK-NEXT:  LV: vectorizing VPBB: ir-bb<scalar.ph> in BB: scalar.ph
 ; CHECK-NEXT:  LV: filled BB:
-; CHECK-NEXT:  scalar.ph: ; preds = %vector.memcheck, %vector.scevcheck, %for.body.preheader
+; CHECK-NEXT:  scalar.ph: ; preds = %for.body.preheader
 ; CHECK-NEXT:    %bc.resume.val = phi i64 [ %19, %middle.block ], [ %0, %for.body.preheader ], [ %0, %vector.scevcheck ], [ %0, %vector.memcheck ]
 ; CHECK-NEXT:    %bc.resume.val5 = phi i32 [ %20, %middle.block ], [ %n, %for.body.preheader ], [ %n, %vector.scevcheck ], [ %n, %vector.memcheck ]
 ; CHECK-NEXT:    br label %for.body
@@ -621,6 +623,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    IR %8 = or i1 %7, %mul.overflow
 ; CHECK-NEXT:    IR %9 = icmp ugt i64 %3, 4294967295
 ; CHECK-NEXT:    IR %10 = or i1 %8, %9
+; CHECK-NEXT:    EMIT branch-on-cond ir<%10>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.memcheck>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.memcheck>:
@@ -629,6 +632,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    IR %13 = mul i64 %12, 4
 ; CHECK-NEXT:    IR %14 = sub i64 %B1, %A2
 ; CHECK-NEXT:    IR %diff.check = icmp ult i64 %14, %13
+; CHECK-NEXT:    EMIT branch-on-cond ir<%diff.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<vector.ph>:
@@ -638,22 +642,22 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    IR %n.vec = sub i64 %0, %n.mod.vf
 ; CHECK-NEXT:    IR %17 = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    IR %18 = mul nuw i64 %17, 4
-; CHECK-NEXT:    vp<%1> = DERIVED-IV ir<%0> + ir<%n.vec> * ir<-1>
-; CHECK-NEXT:    vp<%2> = DERIVED-IV ir<%n> + ir<%n.vec> * ir<-1>
+; CHECK-NEXT:    vp<%3> = DERIVED-IV ir<%0> + ir<%n.vec> * ir<-1>
+; CHECK-NEXT:    vp<%4> = DERIVED-IV ir<%n> + ir<%n.vec> * ir<-1>
 ; CHECK-NEXT:  Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.body:
 ; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, ir-bb<vector.ph> ], [ vp<%index.next>, vector.body ]
-; CHECK-NEXT:    vp<%3> = DERIVED-IV ir<%n> + vp<%index> * ir<-1>
-; CHECK-NEXT:    CLONE ir<%i.0> = add nsw vp<%3>, ir<-1>
+; CHECK-NEXT:    vp<%5> = DERIVED-IV ir<%n> + vp<%index> * ir<-1>
+; CHECK-NEXT:    CLONE ir<%i.0> = add nsw vp<%5>, ir<-1>
 ; CHECK-NEXT:    CLONE ir<%idxprom> = zext ir<%i.0>
 ; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
-; CHECK-NEXT:    vp<%4> = vector-end-pointer inbounds ir<%arrayidx>, ir<%18>
-; CHECK-NEXT:    WIDEN ir<%19> = load vp<%4>
+; CHECK-NEXT:    vp<%6> = vector-end-pointer inbounds ir<%arrayidx>, ir<%18>
+; CHECK-NEXT:    WIDEN ir<%19> = load vp<%6>
 ; CHECK-NEXT:    WIDEN ir<%conv1> = fadd ir<%19>, ir<1.000000e+00>
 ; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:    vp<%5> = vector-end-pointer inbounds ir<%arrayidx3>, ir<%18>
-; CHECK-NEXT:    WIDEN store vp<%5>, ir<%conv1>
+; CHECK-NEXT:    vp<%7> = vector-end-pointer inbounds ir<%arrayidx3>, ir<%18>
+; CHECK-NEXT:    WIDEN store vp<%7>, ir<%conv1>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<%18>.1
 ; CHECK-NEXT:    EMIT branch-on-count vp<%index.next>, ir<%n.vec>
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
@@ -667,8 +671,8 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<scalar.ph>:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<%1>, middle.block ], [ ir<%0>, ir-bb<for.body.preheader> ], [ ir<%0>, ir-bb<vector.scevcheck> ], [ ir<%0>, ir-bb<vector.memcheck> ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val>.1 = phi [ vp<%2>, middle.block ], [ ir<%n>, ir-bb<for.body.preheader> ], [ ir<%n>, ir-bb<vector.scevcheck> ], [ ir<%n>, ir-bb<vector.memcheck> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<%3>, middle.block ], [ ir<%0>, ir-bb<for.body.preheader> ], [ ir<%0>, ir-bb<vector.scevcheck> ], [ ir<%0>, ir-bb<vector.memcheck> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val>.1 = phi [ vp<%4>, middle.block ], [ ir<%n>, ir-bb<for.body.preheader> ], [ ir<%n>, ir-bb<vector.scevcheck> ], [ ir<%n>, ir-bb<vector.memcheck> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<for.body>:
@@ -692,10 +696,10 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    %1 = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    %2 = mul nuw i64 %1, 4
 ; CHECK-NEXT:    %min.iters.check = icmp ult i64 %0, %2
-; CHECK-NEXT:    br i1 %min.iters.check, label %scalar.ph, label %vector.scevcheck
+; CHECK-NEXT:    br i1 %min.iters.check, label %scalar.ph, label %vector.ph
 ; CHECK-NEXT:  LV: vectorizing VPBB: ir-bb<vector.scevcheck> in BB: vector.scevcheck
 ; CHECK-NEXT:  LV: filled BB:
-; CHECK-NEXT:  vector.scevcheck: ; preds = %for.body.preheader
+; CHECK-NEXT:  vector.scevcheck: ; No predecessors!
 ; CHECK-NEXT:    %3 = add nsw i64 %0, -1
 ; CHECK-NEXT:    %4 = add i32 %n, -1
 ; CHECK-NEXT:    %5 = trunc i64 %3 to i32
@@ -707,21 +711,21 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    %8 = or i1 %7, %mul.overflow
 ; CHECK-NEXT:    %9 = icmp ugt i64 %3, 4294967295
 ; CHECK-NEXT:    %10 = or i1 %8, %9
-; CHECK-NEXT:    br i1 %10, label %scalar.ph, label %vector.memcheck
+; CHECK-NEXT:    br i1 %10, <null operand!>, <null operand!>
 ; CHECK-NEXT:  LV: draw edge from for.body.preheader
 ; CHECK-NEXT:  LV: vectorizing VPBB: ir-bb<vector.memcheck> in BB: vector.memcheck
 ; CHECK-NEXT:  LV: filled BB:
-; CHECK-NEXT:  vector.memcheck: ; preds = %vector.scevcheck
+; CHECK-NEXT:  vector.memcheck: ; No predecessors!
 ; CHECK-NEXT:    %11 = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    %12 = mul nuw i64 %11, 4
 ; CHECK-NEXT:    %13 = mul i64 %12, 4
 ; CHECK-NEXT:    %14 = sub i64 %B1, %A2
 ; CHECK-NEXT:    %diff.check = icmp ult i64 %14, %13
-; CHECK-NEXT:    br i1 %diff.check, label %scalar.ph, label %vector.ph
+; CHECK-NEXT:    br i1 %diff.check, <null operand!>, <null operand!>
 ; CHECK-NEXT:  LV: draw edge from vector.scevcheck
 ; CHECK-NEXT:  LV: vectorizing VPBB: ir-bb<vector.ph> in BB: vector.ph
 ; CHECK-NEXT:  LV: filled BB:
-; CHECK-NEXT:  vector.ph: ; preds = %vector.memcheck
+; CHECK-NEXT:  vector.ph: ; No predecessors!
 ; CHECK-NEXT:    %15 = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    %16 = mul nuw i64 %15, 4
 ; CHECK-NEXT:    %n.mod.vf = urem i64 %0, %16
@@ -777,7 +781,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: draw edge from middle.block
 ; CHECK-NEXT:  LV: vectorizing VPBB: ir-bb<scalar.ph> in BB: scalar.ph
 ; CHECK-NEXT:  LV: filled BB:
-; CHECK-NEXT:  scalar.ph: ; preds = %vector.memcheck, %vector.scevcheck, %for.body.preheader
+; CHECK-NEXT:  scalar.ph: ; preds = %for.body.preheader
 ; CHECK-NEXT:    %bc.resume.val = phi i64 [ %19, %middle.block ], [ %0, %for.body.preheader ], [ %0, %vector.scevcheck ], [ %0, %vector.memcheck ]
 ; CHECK-NEXT:    %bc.resume.val5 = phi i32 [ %20, %middle.block ], [ %n, %for.body.preheader ], [ %n, %vector.scevcheck ], [ %n, %vector.memcheck ]
 ; CHECK-NEXT:    br label %for.body

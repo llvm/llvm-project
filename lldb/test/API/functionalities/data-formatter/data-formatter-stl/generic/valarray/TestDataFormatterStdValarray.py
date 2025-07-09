@@ -2,18 +2,14 @@
 Test lldb data formatter subsystem.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class LibcxxChronoDataFormatterTestCase(TestBase):
-    @add_test_categories(["libc++"])
-    def test_with_run_command(self):
-        """Test that that file and class static variables display correctly."""
-        self.build()
+class StdValarrayDataFormatterTestCase(TestBase):
+    def do_test(self):
         (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.cpp", False)
         )
@@ -179,3 +175,8 @@ class LibcxxChronoDataFormatterTestCase(TestBase):
             error=True,
             substrs=['array index 3 is not valid for "(indirect_array<int>) ia"'],
         )
+
+    @add_test_categories(["libc++"])
+    def test_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()
