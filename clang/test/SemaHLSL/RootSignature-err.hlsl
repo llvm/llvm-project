@@ -36,5 +36,5 @@ void bad_root_signature_5() {}
 void bad_root_signature_6() {}
 
 // expected-error@+1 {{expected end of stream to denote end of parameters, or, another valid parameter of RootSignature}}
-[RootSignature("RootFlags() RootConstants(b0, num32BitConstants = 1))")]
+[RootSignature("RootFlags() RootConstants(b0, num32BitConstants = 1)")]
 void bad_root_signature_7() {}
