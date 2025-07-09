@@ -58,7 +58,7 @@
 #define UNALIASED_CUSTOM_BUILTIN(ID, TYPES, ACCUMULATE, FEATURE)               \
   CUSTOM_BUILTIN(ID, ID, TYPES, ACCUMULATE, FEATURE)
 
-// UNALIASED_CUSTOM_MMA_BUILTIN macro is used for MMA built-ins and it's
+// UNALIASED_CUSTOM_MMA_BUILTIN macro is used for MMA built-ins and its
 // corresponding 4 positive/negative multiply and positive/negative accumulate
 // built-in with the same ID concated with posfix [nn|np|pn|pp].
 // This avoids repeating the TYPES and FEATURE in the macro expression.
