@@ -485,6 +485,21 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   }
 
   parseDoConcurrentMapping(opts, args, diags);
+
+  if (const llvm::opt::Arg *arg =
+          args.getLastArg(clang::driver::options::OPT_complex_range_EQ)) {
+    llvm::StringRef argValue = llvm::StringRef(arg->getValue());
+    if (argValue == "full") {
+      opts.setComplexRange(CodeGenOptions::ComplexRangeKind::CX_Full);
+    } else if (argValue == "improved") {
+      opts.setComplexRange(CodeGenOptions::ComplexRangeKind::CX_Improved);
+    } else if (argValue == "basic") {
+      opts.setComplexRange(CodeGenOptions::ComplexRangeKind::CX_Basic);
+    } else {
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << arg->getAsString(args) << arg->getValue();
+    }
+  }
 }
 
 /// Parses all target input arguments and populates the target
@@ -1812,4 +1827,10 @@ void CompilerInvocation::setLoweringOptions() {
       .setNoSignedZeros(langOptions.NoSignedZeros)
       .setAssociativeMath(langOptions.AssociativeMath)
       .setReciprocalMath(langOptions.ReciprocalMath);
+
+  if (codegenOpts.getComplexRange() ==
+          CodeGenOptions::ComplexRangeKind::CX_Improved ||
+      codegenOpts.getComplexRange() ==
+          CodeGenOptions::ComplexRangeKind::CX_Basic)
+    loweringOpts.setComplexDivisionToRuntime(false);
 }
