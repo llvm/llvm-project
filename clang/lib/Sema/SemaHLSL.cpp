@@ -1111,6 +1111,14 @@ bool SemaHLSL::handleRootSignatureElements(
       ReportError(Loc, 0, 0xffffffef);
   };
 
+  const uint32_t Version =
+      llvm::to_underlying(SemaRef.getLangOpts().HLSLRootSigVer);
+  const uint32_t VersionEnum = Version - 1;
+  auto ReportFlagError = [this, &HadError, VersionEnum](SourceLocation Loc) {
+    HadError = true;
+    this->Diag(Loc, diag::err_hlsl_invalid_rootsig_flag) << VersionEnum;
+  };
+
   // Iterate through the elements and do basic validations
   for (const hlsl::RootSignatureElement &RootSigElem : Elements) {
     SourceLocation Loc = RootSigElem.getLocation();
@@ -1119,6 +1127,10 @@ bool SemaHLSL::handleRootSignatureElements(
             std::get_if<llvm::hlsl::rootsig::RootDescriptor>(&Elem)) {
       VerifyRegister(Loc, Descriptor->Reg.Number);
       VerifySpace(Loc, Descriptor->Space);
+
+      if (!llvm::hlsl::rootsig::verifyRootDescriptorFlag(
+              Version, llvm::to_underlying(Descriptor->Flags)))
+        ReportFlagError(Loc);
     } else if (const auto *Constants =
                    std::get_if<llvm::hlsl::rootsig::RootConstants>(&Elem)) {
       VerifyRegister(Loc, Constants->Reg.Number);
@@ -1148,6 +1160,11 @@ bool SemaHLSL::handleRootSignatureElements(
         // value
         ReportError(Loc, 1, 0xfffffffe);
       }
+
+      if (!llvm::hlsl::rootsig::verifyDescriptorRangeFlag(
+              Version, llvm::to_underlying(Clause->Type),
+              llvm::to_underlying(Clause->Flags)))
+        ReportFlagError(Loc);
     }
   }
 
