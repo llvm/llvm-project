@@ -28,7 +28,7 @@ define void @cp_async_bulk_tensor_prefetch_tile_1d(ptr %tmap, i32 %d0, i64 %ch) 
 ; CHECK-PTX-NEXT:    ld.param.b64 %rd2, [cp_async_bulk_tensor_prefetch_tile_1d_param_2];
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.1d.L2.global.tile.L2::cache_hint [%rd1, {%r1}], %rd2;
 ; CHECK-PTX-NEXT:    ret;
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.1d(ptr %tmap, i32 %d0, i64 undef, i1 0)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.1d(ptr %tmap, i32 %d0, i64 %ch, i1 0)
   tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.1d(ptr %tmap, i32 %d0, i64 %ch, i1 1)
   ret void
 }
@@ -48,7 +48,7 @@ define void @cp_async_bulk_tensor_prefetch_tile_2d(i32 %flag, ptr %tmap, i32 %d0
 ; CHECK-PTX-NEXT:    ld.param.b64 %rd2, [cp_async_bulk_tensor_prefetch_tile_2d_param_4];
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.2d.L2.global.tile.L2::cache_hint [%rd1, {%r1, %r2}], %rd2;
 ; CHECK-PTX-NEXT:    ret;
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.2d(ptr %tmap, i32 %d0, i32 %d1, i64 undef, i1 0)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.2d(ptr %tmap, i32 %d0, i32 %d1, i64 %ch, i1 0)
   tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.2d(ptr %tmap, i32 %d0, i32 %d1, i64 %ch, i1 1)
   ret void
 }
@@ -73,10 +73,10 @@ define void @cp_async_bulk_tensor_prefetch_3d(i32 %flag, ptr %tmap, i32 %d0, i32
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.3d.L2.global.im2col [%rd1, {%r1, %r2, %r3}], {%rs1};
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.3d.L2.global.im2col.L2::cache_hint [%rd1, {%r1, %r2, %r3}], {%rs1}, %rd2;
 ; CHECK-PTX-NEXT:    ret;
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.3d(ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 undef, i1 0)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.3d(ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 0)
   tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.3d(ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i64 %ch, i1 1)
 
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.3d(ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i64 undef, i1 0)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.3d(ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i64 %ch, i1 0)
   tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.3d(ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i64 %ch, i1 1)
   ret void
 }
@@ -103,10 +103,10 @@ define void @cp_async_bulk_tensor_prefetch_4d(i32 %flag, ptr %tmap, i32 %d0, i32
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.4d.L2.global.im2col [%rd1, {%r1, %r2, %r3, %r4}], {%rs1, %rs2};
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.4d.L2.global.im2col.L2::cache_hint [%rd1, {%r1, %r2, %r3, %r4}], {%rs1, %rs2}, %rd2;
 ; CHECK-PTX-NEXT:    ret;
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.4d(ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i64 undef, i1 0)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.4d(ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i64 %ch, i1 0)
   tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.4d(ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i64 %ch, i1 1)
 
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.4d(ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, i64 undef, i1 0)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.4d(ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, i64 %ch, i1 0)
   tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.4d(ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, i64 %ch, i1 1)
   ret void
 }
@@ -135,10 +135,10 @@ define void @cp_async_bulk_tensor_prefetch_5d(i32 %flag, ptr %tmap, i32 %d0, i32
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.5d.L2.global.im2col [%rd1, {%r1, %r2, %r3, %r4, %r5}], {%rs1, %rs2, %rs3};
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.5d.L2.global.im2col.L2::cache_hint [%rd1, {%r1, %r2, %r3, %r4, %r5}], {%rs1, %rs2, %rs3}, %rd2;
 ; CHECK-PTX-NEXT:    ret;
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.5d(ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 undef, i1 0)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.5d(ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch, i1 0)
   tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.5d(ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch, i1 1)
 
-  tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.5d(ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, i64 undef, i1 0)
+  tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.5d(ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, i64 %ch, i1 0)
   tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.5d(ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, i64 %ch, i1 1)
   ret void
 }

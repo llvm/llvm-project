@@ -1812,7 +1812,10 @@ def note_unsatisfied_trait_reason
            "%DeletedAssign{has a deleted %select{copy|move}1 "
            "assignment operator}|"
            "%UnionWithUserDeclaredSMF{is a union with a user-declared "
-           "%sub{select_special_member_kind}1}"
+           "%sub{select_special_member_kind}1}|"
+           "%FunctionType{is a function type}|"
+           "%CVVoidType{is a cv void type}|"
+           "%IncompleteArrayType{is an incomplete array type}"
            "}0">;
 
 def warn_consteval_if_always_true : Warning<
@@ -2476,7 +2479,8 @@ def note_uninit_reference_member : Note<
   "uninitialized reference member is here">;
 def warn_field_requires_explicit_init : Warning<
   "field %select{%1|in %1}0 requires explicit initialization but is not "
-   "explicitly initialized">, InGroup<UninitializedExplicitInit>;
+   "explicitly initialized">, InGroup<UninitializedExplicitInit>,
+   ShowInSystemHeader;
 def warn_field_is_uninit : Warning<"field %0 is uninitialized when used here">,
   InGroup<Uninitialized>;
 def warn_base_class_is_uninit : Warning<
@@ -3290,10 +3294,11 @@ def err_attribute_wrong_number_arguments : Error<
 def err_attribute_wrong_number_arguments_for : Error <
   "%0 attribute references function %1, which %plural{0:takes no arguments|1:takes one argument|"
   ":takes exactly %2 arguments}2">;
-def err_callback_attribute_wrong_arg_count : Error<
-  "'callback' attribute references function of type %0 which expects %1 "
-  "%plural{1:argument|:arguments}1 but attribute specifies %2 parameter index "
-  "%plural{1:argument|:arguments}2">;
+def err_attribute_wrong_arg_count_for_func
+    : Error<"%0 attribute references function of type %1 which expects %2 "
+            "%plural{1:argument|:arguments}2 but attribute specifies %3 "
+            "parameter index "
+            "%plural{1:argument|:arguments}3">;
 def err_attribute_bounds_for_function : Error<
   "%0 attribute references parameter %1, but the function %2 has only %3 parameters">;
 def err_attribute_no_member_function : Error<
@@ -4712,9 +4717,9 @@ def note_protocol_decl : Note<
   "protocol is declared here">;
 def note_protocol_decl_undefined : Note<
   "protocol %0 has no definition">;
-def err_attribute_preferred_name_arg_invalid : Error<
-  "argument %0 to 'preferred_name' attribute is not a typedef for "
-  "a specialization of %1">;
+def err_attribute_not_typedef_for_specialization
+    : Error<"argument %0 to %1 attribute is not a typedef for "
+            "a specialization of %2">;
 def err_attribute_builtin_alias : Error<
   "%0 attribute can only be applied to a ARM, HLSL, SPIR-V or RISC-V builtin">;
 
