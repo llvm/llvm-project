@@ -53,20 +53,20 @@ class StdFunctionTestCase(TestBase):
         )
 
         self.run_frame_var_check_cache_use(
-            "foo2_f", "Lambda in File main.cpp at Line 22"
+            "foo2_f", "Lambda in File main.cpp at Line 16"
         )
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
         self.run_frame_var_check_cache_use(
-            "add_num2_f", "Lambda in File main.cpp at Line 13"
+            "add_num2_f", "Lambda in File main.cpp at Line 9"
         )
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
-        self.run_frame_var_check_cache_use("f2", "Lambda in File main.cpp at Line 35")
+        self.run_frame_var_check_cache_use("f2", "Lambda in File main.cpp at Line 26")
         self.run_frame_var_check_cache_use(
-            "f3", "Lambda in File main.cpp at Line 39", True
+            "f3", "Lambda in File main.cpp at Line 30", True
         )
         # TODO reenable this case when std::function formatter supports
         # general callable object case.
