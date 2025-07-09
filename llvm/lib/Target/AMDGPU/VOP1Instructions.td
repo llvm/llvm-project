@@ -1108,6 +1108,7 @@ defm V_CVT_F32_FP8      : VOP1_Real_FULL_with_name<GFX12Not12_50Gen, 0x06c, "V_C
 defm V_CVT_F32_FP8      : VOP1_Real_FULL_with_name<GFX1250Gen, 0x06c, "V_CVT_F32_FP8_gfx1250", "v_cvt_f32_fp8">;
 
 defm V_CVT_F32_BF8           : VOP1_Real_FULL_with_name_gfx11_gfx12<0x06d, "V_CVT_F32_BF8_OP_SEL", "v_cvt_f32_bf8">;
+
 defm V_CVT_PK_F32_FP8_fake16 : VOP1_Real_e32_with_name_gfx11_gfx12<0x06e, "V_CVT_PK_F32_FP8_fake16", "v_cvt_pk_f32_fp8">;
 defm V_CVT_PK_F32_FP8_t16    : VOP1_Real_e32_with_name_gfx11_gfx12<0x06e, "V_CVT_PK_F32_FP8_t16", "v_cvt_pk_f32_fp8">;
 defm V_CVT_PK_F32_FP8_fake16 : VOP3_Real_with_name_gfx11_gfx12<0x1ee, "V_CVT_PK_F32_FP8_fake16", "v_cvt_pk_f32_fp8">;
