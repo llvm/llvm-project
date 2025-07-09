@@ -4062,12 +4062,12 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
   auto NewCost = TTI.getShuffleCost(Kind, InputVT, InputVT, NewMask, CostKind) +
                  TTI.getShuffleCost(Kind, ResultVT, InputVT, Mask1, CostKind);
 
-  if (NewCost > OldCost)
-    return false;
-
   LLVM_DEBUG(dbgs() << "Found a phi of mergeable shuffles: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
                     << "\n");
+
+  if (NewCost > OldCost)
+    return false;
 
   // Create new shuffles and narrowed phi.
   auto Builder = IRBuilder(Shuf);
