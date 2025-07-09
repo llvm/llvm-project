@@ -17152,15 +17152,15 @@ bool Sema::CheckEnumUnderlyingType(TypeSourceInfo *TI) {
   SourceLocation UnderlyingLoc = TI->getTypeLoc().getBeginLoc();
   QualType T = TI->getType();
 
+  if (T->isDependentType())
+    return false;
+
   // C++0x 7.2p2: The type-specifier-seq of an enum-base shall name an
   // integral type; any cv-qualification is ignored.
   // C23 6.7.3.3p5: The underlying type of the enumeration is the unqualified,
   // non-atomic version of the type specified by the type specifiers in the
   // specifier qualifier list.
   T = T.getAtomicUnqualifiedType();
-
-  if (T->isDependentType())
-    return false;
 
   // This doesn't use 'isIntegralType' despite the error message mentioning
   // integral type because isIntegralType would also allow enum types in C.
