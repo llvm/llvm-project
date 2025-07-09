@@ -170,7 +170,7 @@ public:
     /// Is the argument INTENT(OUT)
     bool isIntentOut() const;
     /// Does the argument have the CONTIGUOUS attribute or have explicit shape?
-    bool mustBeMadeContiguous(const bool argHasTriplet = false) const;
+    bool mustBeMadeContiguous(bool argHasTriplet = false) const;
     /// Does the dummy argument have the VALUE attribute?
     bool hasValueAttribute() const;
     /// Does the dummy argument have the ALLOCATABLE attribute?
