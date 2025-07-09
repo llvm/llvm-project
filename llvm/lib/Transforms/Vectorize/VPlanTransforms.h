@@ -74,7 +74,7 @@ struct VPlanTransforms {
   /// flat CFG into a hierarchical CFG.
   static void createLoopRegions(VPlan &Plan);
 
-  /// Wrap runtime check block \p CHeckBlock in a VPIRBB and \p Cond in a
+  /// Wrap runtime check block \p CheckBlock in a VPIRBB and \p Cond in a
   /// VPValue and connect the block to \p Plan, using the VPValue as branch
   /// condition.
   static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,

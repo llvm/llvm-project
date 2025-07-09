@@ -7509,9 +7509,7 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton() {
   EPI.EpilogueIterationCountCheck->getTerminator()->replaceUsesOfWith(
       VecEpilogueIterationCountCheck, LoopScalarPreHeader);
 
-  // Retrieve blocks with SCEV and memory runtime checks, if they have been
-  // connected to the CFG, otherwise they are unused and will be deleted. Their
-  // terminators and phis using them need adjusting below.
+  // Adjust the terminators of runtime check blocks and phis using them.
   BasicBlock *SCEVCheckBlock = RTChecks.getSCEVChecks().second;
   BasicBlock *MemCheckBlock = RTChecks.getMemRuntimeChecks().second;
   if (SCEVCheckBlock)
@@ -9285,7 +9283,6 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
 
 void LoopVectorizationPlanner::attachRuntimeChecks(
     VPlan &Plan, GeneratedRTChecks &RTChecks, bool HasBranchWeights) const {
-  SmallVector<std::pair<VPValue *, VPIRBasicBlock *>> Checks;
   const auto &[SCEVCheckCond, SCEVCheckBlock] = RTChecks.getSCEVChecks();
   if (SCEVCheckBlock) {
     assert((!CM.OptForSize ||
