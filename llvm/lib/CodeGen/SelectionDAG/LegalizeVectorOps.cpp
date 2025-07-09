@@ -41,6 +41,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Target/TargetMachine.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -1309,6 +1310,12 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
+  case ISD::FCANONICALIZE: {
+    const Triple &TT = DAG.getTarget().getTargetTriple();
+    if (TT.isX86()) {
+      return;
+    }
+  }
   }
 
   SDValue Unrolled = DAG.UnrollVectorOp(Node);

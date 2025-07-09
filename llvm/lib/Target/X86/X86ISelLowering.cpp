@@ -316,8 +316,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
       setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
     }
-    setOperationAction(ISD::FCANONICALIZE, MVT::f32, Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::f64, Custom);
     if (Subtarget.is64Bit()) {
       setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Custom);
       setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Custom);
@@ -348,9 +346,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // TODO: when we have SSE, these could be more efficient, by using movd/movq.
   if (!Subtarget.hasSSE2()) {
     setOperationAction(ISD::BITCAST        , MVT::f32  , Expand);
-    setOperationAction(ISD::BITCAST        , MVT::i32  , Expand);
-    setOperationAction(ISD::FCANONICALIZE, MVT::f32, Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::f64, Custom);
+    setOperationAction(ISD::BITCAST, MVT::i32, Expand);
     if (Subtarget.is64Bit()) {
       setOperationAction(ISD::BITCAST      , MVT::f64  , Expand);
       // Without SSE, i64->f64 goes through memory.
@@ -716,7 +712,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FROUNDEVEN, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FTRUNC, MVT::f16, Promote);
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Custom);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Custom);
     setOperationAction(ISD::LRINT, MVT::f16, Expand);
@@ -871,7 +866,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::STRICT_FMUL     , MVT::f80, Legal);
     setOperationAction(ISD::STRICT_FDIV     , MVT::f80, Legal);
     setOperationAction(ISD::STRICT_FSQRT    , MVT::f80, Legal);
-    setOperationAction(ISD::FCANONICALIZE   , MVT::f80, Custom);
+    setOperationAction(ISD::FCANONICALIZE, MVT::f80, Expand);
     if (isTypeLegal(MVT::f16)) {
       setOperationAction(ISD::FP_EXTEND, MVT::f80, Custom);
       setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f80, Custom);
@@ -934,7 +929,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     if (isTypeLegal(MVT::f80)) {
       setOperationAction(ISD::FP_ROUND, MVT::f80, Custom);
       setOperationAction(ISD::STRICT_FP_ROUND, MVT::f80, Custom);
-      setOperationAction(ISD::FCANONICALIZE, MVT::f80, Custom);
+      setOperationAction(ISD::FCANONICALIZE, MVT::f80, Expand);
     }
 
     setOperationAction(ISD::SETCC, MVT::f128, Custom);
@@ -1070,11 +1065,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::VSELECT,            MVT::v4f32, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v4f32, Custom);
     setOperationAction(ISD::SELECT,             MVT::v4f32, Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::v4f32, Custom);
+    setOperationAction(ISD::FCANONICALIZE, MVT::v4f32, Expand);
 
     setOperationAction(ISD::LOAD,               MVT::v2f32, Custom);
     setOperationAction(ISD::STORE,              MVT::v2f32, Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::v2f32, Custom);
+    setOperationAction(ISD::FCANONICALIZE, MVT::v2f32, Expand);
 
     setOperationAction(ISD::STRICT_FADD,        MVT::v4f32, Legal);
     setOperationAction(ISD::STRICT_FSUB,        MVT::v4f32, Legal);
@@ -1137,7 +1132,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::UMULO,              MVT::v2i32, Custom);
 
     setOperationAction(ISD::FNEG,               MVT::v2f64, Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::v2f64, Custom);
+    // woruyu
+    setOperationAction(ISD::FCANONICALIZE, MVT::v2f64, Expand);
     setOperationAction(ISD::FABS,               MVT::v2f64, Custom);
     setOperationAction(ISD::FCOPYSIGN,          MVT::v2f64, Custom);
 
@@ -1473,7 +1469,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FMINIMUM,          VT, Custom);
       setOperationAction(ISD::FMAXIMUMNUM,       VT, Custom);
       setOperationAction(ISD::FMINIMUMNUM,       VT, Custom);
-      setOperationAction(ISD::FCANONICALIZE, VT, Custom);
+      // woruyu
+      setOperationAction(ISD::FCANONICALIZE, VT, Expand);
     }
 
     setOperationAction(ISD::LRINT, MVT::v8f32, Custom);
@@ -1741,9 +1738,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FP_TO_UINT,                MVT::v2i1,  Custom);
     setOperationAction(ISD::STRICT_FP_TO_SINT,         MVT::v2i1,  Custom);
     setOperationAction(ISD::STRICT_FP_TO_UINT,         MVT::v2i1,  Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::v8f16, Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::v16f16, Custom);
-    setOperationAction(ISD::FCANONICALIZE, MVT::v32f16, Custom);
+    setOperationAction(ISD::FCANONICALIZE, MVT::v8f16, Expand);
+    setOperationAction(ISD::FCANONICALIZE, MVT::v16f16, Expand);
+    setOperationAction(ISD::FCANONICALIZE, MVT::v32f16, Expand);
 
     // There is no byte sized k-register load or store without AVX512DQ.
     if (!Subtarget.hasDQI()) {
@@ -1825,7 +1822,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FMA,   VT, Legal);
       setOperationAction(ISD::STRICT_FMA, VT, Legal);
       setOperationAction(ISD::FCOPYSIGN, VT, Custom);
-      setOperationAction(ISD::FCANONICALIZE, VT, Custom);
+      setOperationAction(ISD::FCANONICALIZE, VT, Expand);
     }
     setOperationAction(ISD::LRINT, MVT::v16f32,
                        Subtarget.hasDQI() ? Legal : Custom);
