@@ -792,7 +792,7 @@ createNonLdMatrixLoads(RewriterBase &rewriter, vector::TransferReadOp op,
       op.getLoc(), vectorType.getElementType(),
       rewriter.getZeroAttr(vectorType.getElementType()));
   Value result =
-      rewriter.create<vector::SplatOp>(op.getLoc(), fill, vectorType);
+      rewriter.create<vector::BroadcastOp>(op.getLoc(), vectorType, fill);
 
   bool isTransposeLoad = !op.getPermutationMap().isMinorIdentity();
 

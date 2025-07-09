@@ -198,7 +198,28 @@ func.func @splat(%f : f32) -> vector<4xf32> {
 //  CHECK-SAME: (%[[A:.+]]: f32)
 //       CHECK:   spirv.ReturnValue %[[A]] : f32
 func.func @splat_size1_vector(%f : f32) -> vector<1xf32> {
-  %splat = vector.splat %f : vector<1xf32>
+  %bc = vector.broadcast %f : f32 to vector<1xf32>
+  return %bc : vector<1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @scalar_broadcast
+//  CHECK-SAME: (%[[A:.+]]: f32)
+//       CHECK:   %[[VAL:.+]] = spirv.CompositeConstruct %[[A]], %[[A]], %[[A]], %[[A]]
+//       CHECK:   spirv.ReturnValue %[[VAL]] : vector<4xf32>
+func.func @scalar_broadcast(%f : f32) -> vector<4xf32> {
+  %bc = vector.broadcast %f : f32 to vector<4xf32>
+  return %bc : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @scalar_broadcast_size1_vector
+//  CHECK-SAME: (%[[A:.+]]: f32)
+//       CHECK:   spirv.ReturnValue %[[A]] : f32
+func.func @scalar_broadcast_size1_vector(%f : f32) -> vector<1xf32> {
+  %splat = vector.broadcast %f : f32 to vector<1xf32>
   return %splat : vector<1xf32>
 }
 

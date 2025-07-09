@@ -444,7 +444,7 @@ struct Strategy<TransferReadOp> {
     Location loc = xferOp.getLoc();
     auto bufferType = dyn_cast<ShapedType>(buffer.getType());
     auto vecType = dyn_cast<VectorType>(bufferType.getElementType());
-    auto vec = b.create<vector::SplatOp>(loc, vecType, xferOp.getPadding());
+    auto vec = b.create<vector::BroadcastOp>(loc, vecType, xferOp.getPadding());
     b.create<memref::StoreOp>(loc, vec, buffer, storeIndices);
 
     return Value();
@@ -1261,7 +1261,7 @@ struct UnrollTransferReadConversion
     if (auto insertOp = getInsertOp(xferOp))
       return insertOp.getDest();
     Location loc = xferOp.getLoc();
-    return rewriter.create<vector::SplatOp>(loc, xferOp.getVectorType(),
+    return rewriter.create<vector::BroadcastOp>(loc, xferOp.getVectorType(),
                                             xferOp.getPadding());
   }
 
@@ -1583,7 +1583,7 @@ struct Strategy1d<TransferReadOp> {
   static Value initialLoopState(OpBuilder &b, TransferReadOp xferOp) {
     // Inititalize vector with padding value.
     Location loc = xferOp.getLoc();
-    return b.create<vector::SplatOp>(loc, xferOp.getVectorType(),
+    return b.create<vector::BroadcastOp>(loc, xferOp.getVectorType(),
                                      xferOp.getPadding());
   }
 };
