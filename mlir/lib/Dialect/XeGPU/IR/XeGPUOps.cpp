@@ -616,7 +616,8 @@ LogicalResult ConvertLayoutOp::verify() {
   if (!resLayout)
     return emitOpError("expected target layout.");
 
-  // both input and target layouts should be WgLayout or SgLayout at the same time.
+  // both input and target layouts should be WgLayout or SgLayout at the same
+  // time.
   if ((!srcLayout.isWgLayout() || !resLayout.isWgLayout()) &&
       (!srcLayout.isSgLayout() || !resLayout.isSgLayout()))
     return emitOpError("expected input layout and target layout be WgLayout or "

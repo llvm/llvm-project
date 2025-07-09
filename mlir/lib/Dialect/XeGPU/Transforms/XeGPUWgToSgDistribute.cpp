@@ -128,8 +128,8 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
           rewriter.create<arith::ConstantIndexOp>(loc, distUnitShape[i]);
       Value offsetMod =
           rewriter.createOrFold<index::RemUOp>(loc, offset, modValue);
-      Value origOffset =
-          getValueOrCreateConstantIndexOp(rewriter, loc, originalOffsets[dimIdx]);
+      Value origOffset = getValueOrCreateConstantIndexOp(
+          rewriter, loc, originalOffsets[dimIdx]);
       Value globalOffset =
           rewriter.createOrFold<index::AddOp>(loc, origOffset, offsetMod);
       globalOffsets[dimIdx] = globalOffset;
