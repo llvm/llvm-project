@@ -3,6 +3,7 @@
 ; RUN: llc -aarch64-sve-vector-bits-min=256  < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_256
 ; RUN: llc -aarch64-sve-vector-bits-min=512  < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512
 ; RUN: llc -aarch64-sve-vector-bits-min=2048 < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512
+; RUN: llc -aarch64-sve-vector-bits-min=128 -use-constant-int-for-fixed-length-splat < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_128
 
 target triple = "aarch64-unknown-linux-gnu"
 

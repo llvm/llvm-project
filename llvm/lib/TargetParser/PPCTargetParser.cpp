@@ -15,6 +15,10 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/Host.h"
 
+#define GET_SUBTARGETFEATURES_ENUM
+#define GET_SUBTARGETFEATURES_KV
+#include "llvm/TargetParser/PPCGenTargetFeatures.inc"
+
 namespace llvm {
 namespace PPC {
 
@@ -117,5 +121,26 @@ StringRef getNormalizedPPCTuneCPU(const Triple &T, StringRef CPUName) {
   return getNormalizedPPCTargetCPU(T, CPUName);
 }
 
+std::optional<StringMap<bool>> getPPCDefaultTargetFeatures(const Triple &T,
+                                                           StringRef CPU) {
+  std::optional<StringMap<bool>> FeaturesOpt =
+      getCPUDefaultTargetFeatures(CPU, BasicPPCSubTypeKV, BasicPPCFeatureKV);
+
+  if (!FeaturesOpt.has_value())
+    return std::nullopt;
+
+  StringMap<bool> Features = FeaturesOpt.value();
+  // FIXME: We need to check for the processor model 8548, since the backend
+  // does not support this processor. When this processor model is implemented
+  // within the backend, the following code can be removed.
+  if (CPU == "8548")
+    Features["spe"] = true;
+
+  // The target feature `quadword-atomics` is only supported for 64-bit
+  // POWER8 and above.
+  if (Features.find("quadword-atomics") != Features.end() && !T.isArch64Bit())
+    Features["quadword-atomics"] = false;
+  return Features;
+}
 } // namespace PPC
 } // namespace llvm
