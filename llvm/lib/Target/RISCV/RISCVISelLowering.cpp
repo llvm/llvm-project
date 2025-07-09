@@ -15897,8 +15897,7 @@ static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
                                         uint64_t MulAmt) {
   // Don't do this is if the Xqciac extension is enabled and the MulAmt is
   // simm12.
-  const RISCVSubtarget &Subtarget =
-      DAG.getMachineFunction().getSubtarget<RISCVSubtarget>();
+  auto &Subtarget = DAG.getSubtarget<RISCVSubtarget>();
   if (Subtarget.hasVendorXqciac() && isInt<12>(MulAmt))
     return SDValue();
 
