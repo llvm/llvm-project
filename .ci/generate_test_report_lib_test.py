@@ -93,12 +93,6 @@ class TestReports(unittest.TestCase):
                         )
                     )
                 ],
-                buildkite_info={
-                    "BUILDKITE_ORGANIZATION_SLUG": "organization_slug",
-                    "BUILDKITE_PIPELINE_SLUG": "pipeline_slug",
-                    "BUILDKITE_BUILD_NUMBER": "build_number",
-                    "BUILDKITE_JOB_ID": "job_id",
-                },
             ),
             (
                 dedent(
@@ -109,7 +103,7 @@ class TestReports(unittest.TestCase):
 
               All tests passed but another part of the build **failed**.
 
-              [Download](https://buildkite.com/organizations/organization_slug/pipelines/pipeline_slug/builds/build_number/jobs/job_id/download.txt) the build's log file to see the details.
+              Download the build's log file to see the details.
               
               If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
                 ),
@@ -346,12 +340,6 @@ class TestReports(unittest.TestCase):
                     )
                 ],
                 list_failures=False,
-                buildkite_info={
-                    "BUILDKITE_ORGANIZATION_SLUG": "organization_slug",
-                    "BUILDKITE_PIPELINE_SLUG": "pipeline_slug",
-                    "BUILDKITE_BUILD_NUMBER": "build_number",
-                    "BUILDKITE_JOB_ID": "job_id",
-                },
             ),
             (
                 dedent(
@@ -360,7 +348,7 @@ class TestReports(unittest.TestCase):
 
           * 1 test failed
 
-          Failed tests and their output was too large to report. [Download](https://buildkite.com/organizations/organization_slug/pipelines/pipeline_slug/builds/build_number/jobs/job_id/download.txt) the build's log file to see the details.
+          Failed tests and their output was too large to report. Download the build's log file to see the details.
           
           If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
                 ),
