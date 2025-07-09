@@ -21742,13 +21742,18 @@ class HorizontalReduction {
   }
 
   /// Checks if instruction is associative and can be vectorized.
-  static bool isVectorizable(RecurKind Kind, Instruction *I) {
+  static bool isVectorizable(RecurKind Kind, Instruction *I,
+                             bool TwoElementReduction = false) {
     if (Kind == RecurKind::None)
       return false;
 
     // Integer ops that map to select instructions or intrinsics are fine.
     if (RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind) ||
         isBoolLogicOp(I))
+      return true;
+
+    // No need to check for associativity, if 2 reduced values.
+    if (TwoElementReduction)
       return true;
 
     if (Kind == RecurKind::FMax || Kind == RecurKind::FMin) {
@@ -22035,7 +22040,10 @@ public:
     // Analyze "regular" integer/FP types for reductions - no target-specific
     // types or pointers.
     assert(ReductionRoot && "Reduction root is not set!");
-    if (!isVectorizable(RdxKind, cast<Instruction>(ReductionRoot)))
+    if (!isVectorizable(RdxKind, cast<Instruction>(ReductionRoot),
+                        all_of(ReducedVals, [](ArrayRef<Value *> Ops) {
+                          return Ops.size() == 2;
+                        })))
       return false;
 
     return true;
@@ -23152,6 +23160,7 @@ private:
         case RecurKind::FMulAdd:
         case RecurKind::AnyOf:
         case RecurKind::FindFirstIVSMin:
+        case RecurKind::FindFirstIVUMin:
         case RecurKind::FindLastIVSMax:
         case RecurKind::FindLastIVUMax:
         case RecurKind::FMaximumNum:
@@ -23288,6 +23297,7 @@ private:
     case RecurKind::FMulAdd:
     case RecurKind::AnyOf:
     case RecurKind::FindFirstIVSMin:
+    case RecurKind::FindFirstIVUMin:
     case RecurKind::FindLastIVSMax:
     case RecurKind::FindLastIVUMax:
     case RecurKind::FMaximumNum:
@@ -23389,6 +23399,7 @@ private:
     case RecurKind::FMulAdd:
     case RecurKind::AnyOf:
     case RecurKind::FindFirstIVSMin:
+    case RecurKind::FindFirstIVUMin:
     case RecurKind::FindLastIVSMax:
     case RecurKind::FindLastIVUMax:
     case RecurKind::FMaximumNum:
