@@ -504,14 +504,14 @@ LogicalResult GatherToLDSOp::verify() {
 
   // copy type sizes should be 1, 2, 4, 12 or 16 bytes.
   auto transferType = getTransferType();
-  size_t transferSize;
+  int transferSize;
   if (auto vectorTransfer = dyn_cast<VectorType>(transferType)) {
     transferSize = vectorTransfer.getNumElements() *
                    vectorTransfer.getElementTypeBitWidth();
   } else {
     transferSize = transferType.getIntOrFloatBitWidth();
   }
-  if (!llvm::is_contained(ArrayRef<size_t>{8, 16, 32, 96, 128}, transferSize))
+  if (!llvm::is_contained({8, 16, 32, 96, 128}, transferSize))
     return emitOpError(
         "Transfering type size must be 8, 16, 32, 96 or 128 bits");
 

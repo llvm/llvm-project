@@ -38,7 +38,7 @@ func.func @fat_buffer_load_to_rocdl_f96(%global : memref<128x72xf32, #amdgpu_fat
 
   // GFX950: %[[LDS_PTR:.*]] = llvm.getelementptr %[[LDS_BASE]][%[[DST_OFFSET]]]
   // GFX950: rocdl.load.to.lds %[[GLOBAL_PTR]], %[[LDS_PTR]], 12
-  // GFX942: error: 'amdgpu.gather_to_lds' op chipset unsupported element size
+  // GFX942: error: 'amdgpu.gather_to_lds' op Gather to LDS instructions with 12-byte and 16-byte load widths are only supported on gfx950
   amdgpu.gather_to_lds %global[%c12, %c0], %alloc[%c32, %c0]
     : vector<16xf6E3M2FN>, memref<128x72xf32, #amdgpu_fat_buffer_addrspace>, memref<64x64xf32, #gpu_lds_addrspace>
   func.return
@@ -83,7 +83,7 @@ func.func @fat_buffer_load_to_rocdl_f128(%global : memref<128x72xf32, #amdgpu_fa
 
   // GFX950: %[[LDS_PTR:.*]] = llvm.getelementptr %[[LDS_BASE]][%[[DST_OFFSET]]]
   // GFX950: rocdl.load.to.lds %[[GLOBAL_PTR]], %[[LDS_PTR]], 16
-  // GFX942: error: 'amdgpu.gather_to_lds' op chipset unsupported element size
+  // GFX942: error: 'amdgpu.gather_to_lds' op Gather to LDS instructions with 12-byte and 16-byte load widths are only supported on gfx950
   amdgpu.gather_to_lds %global[%c12, %c0], %alloc[%c32, %c0]
     : f128, memref<128x72xf32, #amdgpu_fat_buffer_addrspace>, memref<64x64xf32, #gpu_lds_addrspace>
   func.return
