@@ -9,6 +9,7 @@
 #include "LibStdcpp.h"
 #include "LibCxx.h"
 
+#include "Plugins/Language/CPlusPlus/Generic.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
@@ -273,11 +274,7 @@ LibStdcppSharedPtrSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
       return nullptr;
 
     Status status;
-    auto value_type_sp = valobj_sp->GetCompilerType()
-                             .GetTypeTemplateArgument(0)
-                             .GetPointerType();
-    ValueObjectSP cast_ptr_sp = m_ptr_obj->Cast(value_type_sp);
-    ValueObjectSP value_sp = cast_ptr_sp->Dereference(status);
+    ValueObjectSP value_sp = m_ptr_obj->Dereference(status);
     if (status.Success())
       return value_sp;
   }
@@ -297,7 +294,11 @@ lldb::ChildCacheState LibStdcppSharedPtrSyntheticFrontEnd::Update() {
   if (!ptr_obj_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  m_ptr_obj = ptr_obj_sp->Clone(ConstString("pointer")).get();
+  auto cast_ptr_sp = GetDesugaredSmartPointerValue(*ptr_obj_sp, *valobj_sp);
+  if (!cast_ptr_sp)
+    return lldb::ChildCacheState::eRefetch;
+
+  m_ptr_obj = cast_ptr_sp->Clone(ConstString("pointer")).get();
 
   return lldb::ChildCacheState::eRefetch;
 }

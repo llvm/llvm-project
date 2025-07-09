@@ -150,10 +150,6 @@ LanaiTargetLowering::LanaiTargetLowering(const TargetMachine &TM,
   // statements. Re-evaluate this on new benchmarks.
   setMinimumJumpTableEntries(100);
 
-  // Use fast calling convention for library functions.
-  for (RTLIB::Libcall LC : RTLIB::libcalls())
-    setLibcallCallingConv(LC, CallingConv::Fast);
-
   MaxStoresPerMemset = 16; // For @llvm.memset -> sequence of stores
   MaxStoresPerMemsetOptSize = 8;
   MaxStoresPerMemcpy = 16; // For @llvm.memcpy -> sequence of stores
