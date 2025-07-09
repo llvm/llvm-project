@@ -347,7 +347,20 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
   SmallVector<Value, 8> loopCarried;
   loopCarried.push_back(stepped);
   loopCarried.append(terminator->operand_begin(), terminator->operand_end());
-  rewriter.create<cf::BranchOp>(loc, conditionBlock, loopCarried);
+  auto branchOp =
+      rewriter.create<cf::BranchOp>(loc, conditionBlock, loopCarried);
+
+  // Let the CondBranchOp carry the LLVM attributes from the ForOp, such as the
+  // llvm.loop_annotation attribute.
+  // LLVM requires the loop metadata to be attached on the "latch" block. Which
+  // is the back-edge to the header block (conditionBlock)
+  SmallVector<NamedAttribute> llvmAttrs;
+  llvm::copy_if(forOp->getAttrs(), std::back_inserter(llvmAttrs),
+                [](auto attr) {
+                  return isa<LLVM::LLVMDialect>(attr.getValue().getDialect());
+                });
+  branchOp->setDiscardableAttrs(llvmAttrs);
+
   rewriter.eraseOp(terminator);
 
   // Compute loop bounds before branching to the condition.
@@ -369,18 +382,10 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
   auto comparison = rewriter.create<arith::CmpIOp>(
       loc, arith::CmpIPredicate::slt, iv, upperBound);
 
-  auto condBranchOp = rewriter.create<cf::CondBranchOp>(
-      loc, comparison, firstBodyBlock, ArrayRef<Value>(), endBlock,
-      ArrayRef<Value>());
+  rewriter.create<cf::CondBranchOp>(loc, comparison, firstBodyBlock,
+                                    ArrayRef<Value>(), endBlock,
+                                    ArrayRef<Value>());
 
-  // Let the CondBranchOp carry the LLVM attributes from the ForOp, such as the
-  // llvm.loop_annotation attribute.
-  SmallVector<NamedAttribute> llvmAttrs;
-  llvm::copy_if(forOp->getAttrs(), std::back_inserter(llvmAttrs),
-                [](auto attr) {
-                  return isa<LLVM::LLVMDialect>(attr.getValue().getDialect());
-                });
-  condBranchOp->setDiscardableAttrs(llvmAttrs);
   // The result of the loop operation is the values of the condition block
   // arguments except the induction variable on the last iteration.
   rewriter.replaceOp(forOp, conditionBlock->getArguments().drop_front());
