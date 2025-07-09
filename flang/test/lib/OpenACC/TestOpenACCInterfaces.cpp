@@ -64,8 +64,8 @@ struct TestFIROpenACCInterfaces
         } else if (mlir::isa<acc::PointerLikeType>(typeOfVar)) {
           llvm::errs() << "\tPointer-like: " << typeOfVar << "\n";
         } else {
-          assert(mlir::isa<acc::MappableType>(typeOfVar) &&
-                 "expected mappable");
+          assert(
+              mlir::isa<acc::MappableType>(typeOfVar) && "expected mappable");
           llvm::errs() << "\tMappable: " << typeOfVar << "\n";
         }
 
