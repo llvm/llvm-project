@@ -1,0 +1,174 @@
+# RUN: llc -o - -mtriple=arm64-linux-gnu -run-pass=register-coalescer -verify-coalescing %s | FileCheck %s -check-prefixes=NOTCPU-LINUX
+# RUN: llc -o - -mtriple=arm64-apple-macosx -mcpu=generic -run-pass=register-coalescer -verify-coalescing %s | FileCheck %s -check-prefixes=NOTCPU-APPLE
+# RUN: llc -o - -mtriple=arm64-apple-macosx -mcpu=apple-m1 -run-pass=register-coalescer -verify-coalescing %s | FileCheck %s -check-prefixes=CPU
+# RUN: llc -o - -mtriple=arm64-apple-macosx -mcpu=apple-m1 -mattr=-zcm-fpr64 -mattr=-zcm-fpr128 -run-pass=register-coalescer -verify-coalescing %s | FileCheck %s -check-prefixes=NOTATTR
+# RUN: llc -o - -mtriple=arm64-apple-macosx -mattr=+zcm-fpr64 -mattr=+zcm-fpr128 -run-pass=register-coalescer -verify-coalescing %s | FileCheck %s -check-prefixes=ATTR
+
+--- |
+  define void @remat_FPR128() {
+    ret void
+  }
+  declare void @foo_v4i32(<4 x float>, <4 x float>)
+
+  define void @remat_FPR64() {
+    ret void
+  }
+  declare void @foo_double(double, double)
+
+  define void @remat_FPR32() {
+    ret void
+  }
+  declare void @foo_float(float, float)
+
+  define void @remat_FPR16() {
+    ret void
+  }
+  declare void @foo_half(half, half)
+...
+---
+name:            remat_FPR128
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: remat_FPR128
+
+    ; NOTCPU-LINUX: %0:fpr128 = MOVIv2d_ns 64
+    ; NOTCPU-LINUX-NEXT: %1:fpr128 = MOVIv2d_ns 64
+    ; NOTCPU-LINUX: BL @foo_v4i32
+
+    ; NOTCPU-APPLE: %0:fpr128 = MOVIv2d_ns 64
+    ; NOTCPU-APPLE-NEXT: %1:fpr128 = MOVIv2d_ns 64
+    ; NOTCPU-APPLE: BL @foo_v4i32
+
+    ; CPU: %0:fpr128 = MOVIv2d_ns 64
+    ; CPU-NEXT: %1:fpr128 = COPY %0
+    ; CPU: BL @foo_v4i32
+
+    ; NOTATTR: %0:fpr128 = MOVIv2d_ns 64
+    ; NOTATTR-NEXT: %1:fpr128 = MOVIv2d_ns 64
+    ; NOTATTR: BL @foo_v4i32
+
+    ; ATTR: %0:fpr128 = MOVIv2d_ns 64
+    ; ATTR-NEXT: %1:fpr128 = COPY %0
+    ; ATTR: BL @foo_v4i32
+
+    %0:fpr128 = MOVIv2d_ns 64
+    %1:fpr128 = COPY %0
+
+    ; Creates a live range interference to prevent coalescing and force
+    ; trying to rematerialize the previous COPY.
+    %1 = ADDv4i32 %1, %1
+    
+    BL @foo_v4i32, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit %0, implicit %1
+    RET_ReallyLR
+
+---
+name:            remat_FPR64
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: remat_FPR64
+
+    ; NOTCPU-LINUX: %0:fpr64 = FMOVDi 64
+    ; NOTCPU-LINUX-NEXT: %1:fpr64 = FMOVDi 64
+    ; NOTCPU-LINUX: BL @foo_double
+
+    ; NOTCPU-APPLE: %0:fpr64 = FMOVDi 64
+    ; NOTCPU-APPLE-NEXT: %1:fpr64 = FMOVDi 64
+    ; NOTCPU-APPLE: BL @foo_double
+
+    ; CPU: %0:fpr64 = FMOVDi 64
+    ; CPU-NEXT: %1:fpr64 = COPY %0
+    ; CPU: BL @foo_double
+
+    ; NOTATTR: %0:fpr64 = FMOVDi 64
+    ; NOTATTR-NEXT: %1:fpr64 = FMOVDi 64
+    ; NOTATTR: BL @foo_double
+
+    ; ATTR: %0:fpr64 = FMOVDi 64
+    ; ATTR-NEXT: %1:fpr64 = COPY %0
+    ; ATTR: BL @foo_double
+
+    %0:fpr64 = FMOVDi 64
+    %1:fpr64 = COPY %0
+
+    ; Creates a live range interference to prevent coalescing and force
+    ; trying to rematerialize the previous COPY.
+    %1 = FADDDrr %1, %1, implicit $fpcr
+    
+    BL @foo_double, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit %0, implicit %1
+    RET_ReallyLR
+
+---
+name:            remat_FPR32
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: remat_FPR32
+
+    ; NOTCPU-LINUX: %0:fpr32 = FMOVSi 64
+    ; NOTCPU-LINUX-NEXT: %1:fpr32 = FMOVSi 64
+    ; NOTCPU-LINUX: BL @foo_float
+
+    ; NOTCPU-APPLE: %0:fpr32 = FMOVSi 64
+    ; NOTCPU-APPLE-NEXT: %1:fpr32 = FMOVSi 64
+    ; NOTCPU-APPLE: BL @foo_float
+
+    ; CPU: %0:fpr32 = FMOVSi 64
+    ; CPU-NEXT: %1:fpr32 = COPY %0
+    ; CPU: BL @foo_float
+
+    ; NOTATTR: %0:fpr32 = FMOVSi 64
+    ; NOTATTR-NEXT: %1:fpr32 = FMOVSi 64
+    ; NOTATTR: BL @foo_float
+
+    ; ATTR: %0:fpr32 = FMOVSi 64
+    ; ATTR-NEXT: %1:fpr32 = COPY %0
+    ; ATTR: BL @foo_float
+
+    %0:fpr32 = FMOVSi 64
+    %1:fpr32 = COPY %0
+
+    ; Creates a live range interference to prevent coalescing and force
+    ; trying to rematerialize the previous COPY.
+    %1 = FADDSrr %1, %1, implicit $fpcr
+    
+    BL @foo_float, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit %0, implicit %1
+    RET_ReallyLR
+
+---
+name:            remat_FPR16
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: remat_FPR16
+
+    ; NOTCPU-LINUX: %0:fpr16 = FMOVHi 64
+    ; NOTCPU-LINUX-NEXT: %1:fpr16 = FMOVHi 64
+    ; NOTCPU-LINUX: BL @foo_half
+
+    ; NOTCPU-APPLE: %0:fpr16 = FMOVHi 64
+    ; NOTCPU-APPLE-NEXT: %1:fpr16 = FMOVHi 64
+    ; NOTCPU-APPLE: BL @foo_half
+
+    ; CPU: %0:fpr16 = FMOVHi 64
+    ; CPU-NEXT: %1:fpr16 = COPY %0
+    ; CPU: BL @foo_half
+
+    ; NOTATTR: %0:fpr16 = FMOVHi 64
+    ; NOTATTR-NEXT: %1:fpr16 = FMOVHi 64
+    ; NOTATTR: BL @foo_half
+
+    ; ATTR: %0:fpr16 = FMOVHi 64
+    ; ATTR-NEXT: %1:fpr16 = COPY %0
+    ; ATTR: BL @foo_half
+
+    %0:fpr16 = FMOVHi 64
+    %1:fpr16 = COPY %0
+
+    ; Creates a live range interference to prevent coalescing and force
+    ; trying to rematerialize the previous COPY.
+    %1 = FADDHrr %1, %1, implicit $fpcr
+    
+    BL @foo_half, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit %0, implicit %1
+    RET_ReallyLR

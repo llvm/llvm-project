@@ -13,16 +13,17 @@ define void @_ZN38SanitizerCommonInterceptors_Scanf_Test8TestBodyEv(ptr %.str.40
 ; CHECK-NEXT:    stp x22, x21, [sp, #80] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #96] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x29, x30, [sp, #112] ; 16-byte Folded Spill
-; CHECK-NEXT:    mov x24, x6
-; CHECK-NEXT:    mov x19, x5
-; CHECK-NEXT:    mov x20, x4
-; CHECK-NEXT:    mov x21, x3
-; CHECK-NEXT:    mov x22, x2
-; CHECK-NEXT:    mov x23, x1
-; CHECK-NEXT:    mov x25, x0
+; CHECK-NEXT:    mov x25, x6
+; CHECK-NEXT:    str x5, [sp, #24] ; 8-byte Folded Spill
+; CHECK-NEXT:    mov x21, x4
+; CHECK-NEXT:    mov x22, x3
+; CHECK-NEXT:    mov x23, x2
+; CHECK-NEXT:    mov x24, x1
+; CHECK-NEXT:    mov x26, x0
 ; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    mov w19, #1 ; =0x1
 ; CHECK-NEXT:    mov x0, #0 ; =0x0
-; CHECK-NEXT:    mov w1, #1 ; =0x1
+; CHECK-NEXT:    mov x1, x19
 ; CHECK-NEXT:    bl __ZL9testScanfPKcjz
 ; CHECK-NEXT:    mov w28, #4 ; =0x4
 ; CHECK-NEXT:    stp x28, x28, [sp, #8]
@@ -34,31 +35,34 @@ define void @_ZN38SanitizerCommonInterceptors_Scanf_Test8TestBodyEv(ptr %.str.40
 ; CHECK-NEXT:    mov x0, #0 ; =0x0
 ; CHECK-NEXT:    mov w1, #0 ; =0x0
 ; CHECK-NEXT:    bl __ZL9testScanfPKcjz
-; CHECK-NEXT:    mov w27, #8 ; =0x8
-; CHECK-NEXT:    str x27, [sp]
+; CHECK-NEXT:    mov w20, #8 ; =0x8
+; CHECK-NEXT:    str x20, [sp]
 ; CHECK-NEXT:    mov x0, #0 ; =0x0
 ; CHECK-NEXT:    mov w1, #0 ; =0x0
 ; CHECK-NEXT:    bl __ZL9testScanfPKcjz
-; CHECK-NEXT:    mov w26, #1 ; =0x1
-; CHECK-NEXT:    stp xzr, x26, [sp]
+; CHECK-NEXT:    stp xzr, x19, [sp]
 ; CHECK-NEXT:    mov x0, #0 ; =0x0
 ; CHECK-NEXT:    mov w1, #0 ; =0x0
 ; CHECK-NEXT:    bl __ZL9testScanfPKcjz
-; CHECK-NEXT:    str x26, [sp]
+; CHECK-NEXT:    str x19, [sp]
 ; CHECK-NEXT:    mov x0, #0 ; =0x0
 ; CHECK-NEXT:    mov w1, #0 ; =0x0
 ; CHECK-NEXT:    bl __ZL9testScanfPKcjz
 ; CHECK-NEXT:    str x28, [sp]
 ; CHECK-NEXT:  Lloh0:
-; CHECK-NEXT:    adrp x26, _.str@GOTPAGE
+; CHECK-NEXT:    adrp x27, _.str@GOTPAGE
 ; CHECK-NEXT:  Lloh1:
-; CHECK-NEXT:    ldr x26, [x26, _.str@GOTPAGEOFF]
-; CHECK-NEXT:    mov x0, x26
+; CHECK-NEXT:    ldr x27, [x27, _.str@GOTPAGEOFF]
+; CHECK-NEXT:    mov x0, x27
 ; CHECK-NEXT:    mov w1, #0 ; =0x0
 ; CHECK-NEXT:    bl __ZL9testScanfPKcjz
-; CHECK-NEXT:    str wzr, [x24]
-; CHECK-NEXT:    str x27, [sp]
-; CHECK-NEXT:    mov x0, x25
+; CHECK-NEXT:    str wzr, [x25]
+; CHECK-NEXT:    str x20, [sp]
+; CHECK-NEXT:    mov x0, x26
+; CHECK-NEXT:    mov w1, #0 ; =0x0
+; CHECK-NEXT:    bl __ZL20testScanfNoGnuMallocPKcjz
+; CHECK-NEXT:    str x28, [sp]
+; CHECK-NEXT:    mov x0, x24
 ; CHECK-NEXT:    mov w1, #0 ; =0x0
 ; CHECK-NEXT:    bl __ZL20testScanfNoGnuMallocPKcjz
 ; CHECK-NEXT:    str x28, [sp]
@@ -73,20 +77,15 @@ define void @_ZN38SanitizerCommonInterceptors_Scanf_Test8TestBodyEv(ptr %.str.40
 ; CHECK-NEXT:    mov x0, x21
 ; CHECK-NEXT:    mov w1, #0 ; =0x0
 ; CHECK-NEXT:    bl __ZL20testScanfNoGnuMallocPKcjz
-; CHECK-NEXT:    str x28, [sp]
-; CHECK-NEXT:    mov x0, x20
+; CHECK-NEXT:    str xzr, [sp]
+; CHECK-NEXT:    ldr x0, [sp, #24] ; 8-byte Folded Reload
 ; CHECK-NEXT:    mov w1, #0 ; =0x0
 ; CHECK-NEXT:    bl __ZL20testScanfNoGnuMallocPKcjz
 ; CHECK-NEXT:    str xzr, [sp]
-; CHECK-NEXT:    mov x0, x19
+; CHECK-NEXT:    mov x0, x27
 ; CHECK-NEXT:    mov w1, #0 ; =0x0
 ; CHECK-NEXT:    bl __ZL20testScanfNoGnuMallocPKcjz
-; CHECK-NEXT:    str xzr, [sp]
-; CHECK-NEXT:    mov x0, x26
-; CHECK-NEXT:    mov w1, #0 ; =0x0
-; CHECK-NEXT:    bl __ZL20testScanfNoGnuMallocPKcjz
-; CHECK-NEXT:    mov w8, #1 ; =0x1
-; CHECK-NEXT:    stp x8, xzr, [sp, #8]
+; CHECK-NEXT:    stp x19, xzr, [sp, #8]
 ; CHECK-NEXT:    str xzr, [sp]
 ; CHECK-NEXT:    mov x0, #0 ; =0x0
 ; CHECK-NEXT:    mov w1, #0 ; =0x0

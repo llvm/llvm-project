@@ -4,6 +4,7 @@ define <8 x i1> @test1() {
 ; CHECK-LABEL: test1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    movi.16b v0, #0
+; CHECK-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %Shuff = shufflevector <8 x i1> <i1 0, i1 1, i1 2, i1 3, i1 4, i1 5, i1 6,
@@ -58,9 +59,14 @@ bb:
 ; CHECK:         .byte   0                       ; 0x0
 ; CHECK:         .byte   0                       ; 0x0
 define <16 x i1> @test4(ptr %ptr, i32 %v) {
-; CHECK-LABEL: _test4:
-; CHECK:         adrp    x[[REG3:[0-9]+]], lCPI3_0@PAGE
-; CHECK:         ldr     q[[REG2:[0-9]+]], [x[[REG3]], lCPI3_0@PAGEOFF]
+; CHECK-LABEL: test4:
+; CHECK:       ; %bb.0: ; %bb
+; CHECK-NEXT:  Lloh0:
+; CHECK-NEXT:    adrp x8, lCPI3_0@PAGE
+; CHECK-NEXT:  Lloh1:
+; CHECK-NEXT:    ldr q0, [x8, lCPI3_0@PAGEOFF]
+; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh0, Lloh1
 bb:
   %Shuff = shufflevector <16 x i1> zeroinitializer,
      <16 x i1> <i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 0, i1 0, i1 0, i1 1,
