@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -194,18 +195,21 @@ unsigned AMDGPUAsmBackend::getMinimumNopSize() const {
 
 bool AMDGPUAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
                                     const MCSubtargetInfo *STI) const {
-  // If the count is not 4-byte aligned, we must be writing data into the text
-  // section (otherwise we have unaligned instructions, and thus have far
-  // bigger problems), so just write zeros instead.
-  OS.write_zeros(Count % 4);
+  // If the count is not aligned to the minimum instruction alignment, we must
+  // be writing data into the text section (otherwise we have unaligned
+  // instructions, and thus have far bigger problems), so just write zeros
+  // instead.
+  unsigned MinInstAlignment = getContext().getAsmInfo()->getMinInstAlignment();
+  OS.write_zeros(Count % MinInstAlignment);
 
   // We are properly aligned, so write NOPs as requested.
-  Count /= 4;
+  Count /= MinInstAlignment;
 
   // FIXME: R600 support.
   // s_nop 0
   const uint32_t Encoded_S_NOP_0 = 0xbf800000;
 
+  assert(MinInstAlignment == sizeof(Encoded_S_NOP_0));
   for (uint64_t I = 0; I != Count; ++I)
     support::endian::write<uint32_t>(OS, Encoded_S_NOP_0, Endian);
 
