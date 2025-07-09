@@ -46,7 +46,7 @@ llvm::Error SourceBreakpoint::SetBreakpoint(const protocol::Source &source) {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Invalid line number.");
 
-  if (IsAssemblySource(source)) {
+  if (source.sourceReference) {
     // Breakpoint set by assembly source.
     if (source.adapterData && source.adapterData->persistence_data) {
       // Prefer use the adapter persitence data, because this could be a
