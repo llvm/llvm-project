@@ -5789,8 +5789,8 @@ static SDValue sinkProxyReg(SDValue R, SDValue Chain,
       return SDValue();
 
     if (SDValue V = sinkProxyReg(R.getOperand(0), Chain, DCI))
-      return DCI.DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(R), R.getValueType(),
-                             V, R.getOperand(1));
+      return DCI.DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(R),
+                             R.getValueType(), V, R.getOperand(1));
     return SDValue();
   }
   default:
