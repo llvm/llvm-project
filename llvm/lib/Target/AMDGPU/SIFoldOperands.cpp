@@ -2230,13 +2230,15 @@ bool SIFoldOperandsImpl::tryFoldImmRegSequence(MachineInstr &MI) {
   SmallVector<uint64_t, 8> ImmVals;
   uint64_t ImmVal = 0;
   uint64_t ImmSize = 0;
+  uint64_t RemainderSize = TRI->getRegSizeInBits(*DefRC);
+  SmallVector<std::pair<MachineOperand *, unsigned>, 4> Remainders;
   for (auto &[Op, SubIdx] : Defs) {
     unsigned SubRegSize = TRI->getSubRegIdxSize(SubIdx);
     unsigned Shift = (TRI->getChannelFromSubReg(SubIdx) % 2) * SubRegSize;
     ImmSize += SubRegSize;
     ImmVal |= Op->getImm() << Shift;
 
-    if (ImmSize > 64 || SubRegSize == 64)
+    if (SubRegSize == 64)
       return false;
 
     if (ImmSize == 64) {
@@ -2246,6 +2248,10 @@ bool SIFoldOperandsImpl::tryFoldImmRegSequence(MachineInstr &MI) {
       ImmVals.push_back(ImmVal);
       ImmVal = 0;
       ImmSize = 0;
+      RemainderSize -= 64;
+    } else if ((RemainderSize / 64) == 0 && (RemainderSize % 64)) {
+      // There's some remainder to consider.
+      Remainders.push_back({Op, SubRegSize});
     }
   }
 
@@ -2257,7 +2263,7 @@ bool SIFoldOperandsImpl::tryFoldImmRegSequence(MachineInstr &MI) {
     return true;
   }
 
-  if (ImmVals.size() == 1)
+  if (ImmVals.size() == 1 && RemainderSize == 0)
     return false;
 
   // Can't bail from here on out: modifying the MI.
@@ -2281,6 +2287,14 @@ bool SIFoldOperandsImpl::tryFoldImmRegSequence(MachineInstr &MI) {
 
     MI.addOperand(MachineOperand::CreateReg(MovReg, /*isDef=*/false));
     MI.addOperand(MachineOperand::CreateImm(SubReg64B));
+    ++Ch;
+  }
+  Ch *= 2;
+  for (auto &[Op, Size] : Remainders) {
+    unsigned SubReg = SIRegisterInfo::getSubRegFromChannel(/*Channel=*/Ch);
+    MachineOperand &Mov = Op->getParent()->getOperand(0);
+    MI.addOperand(MachineOperand::CreateReg(Mov.getReg(), /*isDef=*/false));
+    MI.addOperand(MachineOperand::CreateImm(SubReg));
     ++Ch;
   }
 

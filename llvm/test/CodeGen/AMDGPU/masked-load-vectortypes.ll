@@ -24,32 +24,31 @@ entry:
   ret <2 x i32> %result
 }
 
-define <4 x i32> @uniform_masked_load_ptr1_mask_v4i32(ptr addrspace(1) inreg nocapture readonly %ptr, i1 %mask) {
-; GFX942-LABEL: uniform_masked_load_ptr1_mask_v4i32:
+define <3 x i32> @uniform_masked_load_ptr1_mask_v3i32(ptr addrspace(1) inreg nocapture readonly %ptr, i1 %mask) {
+; GFX942-LABEL: uniform_masked_load_ptr1_mask_v3i32:
 ; GFX942:       ; %bb.0: ; %entry
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX942-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX942-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-NEXT:    v_mov_b64_e32 v[0:1], 0
-; GFX942-NEXT:    v_mov_b32_e32 v4, 0
-; GFX942-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
 ; GFX942-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX942-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX942-NEXT:  ; %bb.1: ; %cond.load
-; GFX942-NEXT:    global_load_dwordx4 v[0:3], v4, s[0:1]
+; GFX942-NEXT:    global_load_dwordx3 v[0:2], v2, s[0:1]
 ; GFX942-NEXT:  .LBB1_2:
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 entry:
-  %partialmaskvec = insertelement <4 x i1> poison, i1 %mask, i64 0
-  %maskvec = shufflevector <4 x i1> %partialmaskvec, <4 x i1> poison, <4 x i32> zeroinitializer
-  %result = tail call <4 x i32> @llvm.masked.load.v4i32.p1(ptr addrspace(1) %ptr, i32 4, <4 x i1> %maskvec, <4 x i32> zeroinitializer)
-  ret <4 x i32> %result
+  %partialmaskvec = insertelement <3 x i1> poison, i1 %mask, i64 0
+  %maskvec = shufflevector <3 x i1> %partialmaskvec, <3 x i1> poison, <3 x i32> zeroinitializer
+  %result = tail call <3 x i32> @llvm.masked.load.v3i32.p1(ptr addrspace(1) %ptr, i32 2, <3 x i1> %maskvec, <3 x i32> zeroinitializer)
+  ret <3 x i32> %result
 }
 
-define <4 x float> @uniform_masked_load_ptr1_mask_v4f32(ptr addrspace(1) inreg nocapture readonly %ptr, i1 %mask) {
-; GFX942-LABEL: uniform_masked_load_ptr1_mask_v4f32:
+define <4 x i32> @uniform_masked_load_ptr1_mask_v4i32(ptr addrspace(1) inreg nocapture readonly %ptr, i1 %mask) {
+; GFX942-LABEL: uniform_masked_load_ptr1_mask_v4i32:
 ; GFX942:       ; %bb.0: ; %entry
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    v_and_b32_e32 v0, 1, v0
@@ -68,8 +67,88 @@ define <4 x float> @uniform_masked_load_ptr1_mask_v4f32(ptr addrspace(1) inreg n
 entry:
   %partialmaskvec = insertelement <4 x i1> poison, i1 %mask, i64 0
   %maskvec = shufflevector <4 x i1> %partialmaskvec, <4 x i1> poison, <4 x i32> zeroinitializer
+  %result = tail call <4 x i32> @llvm.masked.load.v4i32.p1(ptr addrspace(1) %ptr, i32 4, <4 x i1> %maskvec, <4 x i32> zeroinitializer)
+  ret <4 x i32> %result
+}
+
+define <5 x i32> @uniform_masked_load_ptr1_mask_v5i32(ptr addrspace(1) inreg nocapture readonly %ptr, i1 %mask) {
+; GFX942-LABEL: uniform_masked_load_ptr1_mask_v5i32:
+; GFX942:       ; %bb.0: ; %entry
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX942-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], 0
+; GFX942-NEXT:    v_mov_b32_e32 v4, 0
+; GFX942-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
+; GFX942-NEXT:    s_and_saveexec_b64 s[2:3], vcc
+; GFX942-NEXT:    s_cbranch_execz .LBB3_2
+; GFX942-NEXT:  ; %bb.1: ; %cond.load
+; GFX942-NEXT:    global_load_dword v10, v4, s[0:1] offset:16
+; GFX942-NEXT:    global_load_dwordx4 v[6:9], v4, s[0:1]
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    v_mov_b32_e32 v0, v6
+; GFX942-NEXT:    v_mov_b32_e32 v1, v7
+; GFX942-NEXT:    v_mov_b32_e32 v2, v8
+; GFX942-NEXT:    v_mov_b32_e32 v3, v9
+; GFX942-NEXT:    v_mov_b32_e32 v4, v10
+; GFX942-NEXT:  .LBB3_2:
+; GFX942-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %partialmaskvec = insertelement <5 x i1> poison, i1 %mask, i64 0
+  %maskvec = shufflevector <5 x i1> %partialmaskvec, <5 x i1> poison, <5 x i32> zeroinitializer
+  %result = tail call <5 x i32> @llvm.masked.load.v5i32.p1(ptr addrspace(1) %ptr, i32 2, <5 x i1> %maskvec, <5 x i32> zeroinitializer)
+  ret <5 x i32> %result
+}
+
+define <4 x float> @uniform_masked_load_ptr1_mask_v4f32(ptr addrspace(1) inreg nocapture readonly %ptr, i1 %mask) {
+; GFX942-LABEL: uniform_masked_load_ptr1_mask_v4f32:
+; GFX942:       ; %bb.0: ; %entry
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX942-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], 0
+; GFX942-NEXT:    v_mov_b32_e32 v4, 0
+; GFX942-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
+; GFX942-NEXT:    s_and_saveexec_b64 s[2:3], vcc
+; GFX942-NEXT:    s_cbranch_execz .LBB4_2
+; GFX942-NEXT:  ; %bb.1: ; %cond.load
+; GFX942-NEXT:    global_load_dwordx4 v[0:3], v4, s[0:1]
+; GFX942-NEXT:  .LBB4_2:
+; GFX942-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %partialmaskvec = insertelement <4 x i1> poison, i1 %mask, i64 0
+  %maskvec = shufflevector <4 x i1> %partialmaskvec, <4 x i1> poison, <4 x i32> zeroinitializer
   %result = tail call <4 x float> @llvm.masked.load.v4f32.p1(ptr addrspace(1) %ptr, i32 4, <4 x i1> %maskvec, <4 x float> zeroinitializer)
   ret <4 x float> %result
+}
+
+define <6 x i32> @uniform_masked_load_ptr1_mask_v6i32(ptr addrspace(1) inreg nocapture readonly %ptr, i1 %mask) {
+; GFX942-LABEL: uniform_masked_load_ptr1_mask_v6i32:
+; GFX942:       ; %bb.0: ; %entry
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX942-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], 0
+; GFX942-NEXT:    v_mov_b32_e32 v6, 0
+; GFX942-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
+; GFX942-NEXT:    v_mov_b64_e32 v[4:5], v[0:1]
+; GFX942-NEXT:    s_and_saveexec_b64 s[2:3], vcc
+; GFX942-NEXT:    s_cbranch_execz .LBB5_2
+; GFX942-NEXT:  ; %bb.1: ; %cond.load
+; GFX942-NEXT:    global_load_dwordx2 v[4:5], v6, s[0:1] offset:16
+; GFX942-NEXT:    global_load_dwordx4 v[0:3], v6, s[0:1]
+; GFX942-NEXT:  .LBB5_2:
+; GFX942-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %partialmaskvec = insertelement <6 x i1> poison, i1 %mask, i64 0
+  %maskvec = shufflevector <6 x i1> %partialmaskvec, <6 x i1> poison, <6 x i32> zeroinitializer
+  %result = tail call <6 x i32> @llvm.masked.load.v6i32.p1(ptr addrspace(1) %ptr, i32 2, <6 x i1> %maskvec, <6 x i32> zeroinitializer)
+  ret <6 x i32> %result
 }
 
 define <8 x i32> @uniform_masked_load_ptr1_mask_v8i32(ptr addrspace(1) inreg nocapture readonly %ptr, i1 %mask) {
@@ -84,11 +163,11 @@ define <8 x i32> @uniform_masked_load_ptr1_mask_v8i32(ptr addrspace(1) inreg noc
 ; GFX942-NEXT:    v_mov_b64_e32 v[4:5], v[0:1]
 ; GFX942-NEXT:    v_mov_b64_e32 v[6:7], v[0:1]
 ; GFX942-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX942-NEXT:    s_cbranch_execz .LBB3_2
+; GFX942-NEXT:    s_cbranch_execz .LBB6_2
 ; GFX942-NEXT:  ; %bb.1: ; %cond.load
 ; GFX942-NEXT:    global_load_dwordx4 v[4:7], v8, s[0:1] offset:16
 ; GFX942-NEXT:    global_load_dwordx4 v[0:3], v8, s[0:1]
-; GFX942-NEXT:  .LBB3_2:
+; GFX942-NEXT:  .LBB6_2:
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
@@ -111,11 +190,11 @@ define <8 x float> @uniform_masked_load_ptr1_mask_v8f32(ptr addrspace(1) inreg n
 ; GFX942-NEXT:    v_mov_b64_e32 v[4:5], v[0:1]
 ; GFX942-NEXT:    v_mov_b64_e32 v[6:7], v[0:1]
 ; GFX942-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX942-NEXT:    s_cbranch_execz .LBB4_2
+; GFX942-NEXT:    s_cbranch_execz .LBB7_2
 ; GFX942-NEXT:  ; %bb.1: ; %cond.load
 ; GFX942-NEXT:    global_load_dwordx4 v[4:7], v8, s[0:1] offset:16
 ; GFX942-NEXT:    global_load_dwordx4 v[0:3], v8, s[0:1]
-; GFX942-NEXT:  .LBB4_2:
+; GFX942-NEXT:  .LBB7_2:
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
@@ -136,10 +215,10 @@ define <8 x i16> @uniform_masked_load_ptr1_mask_v8i16(ptr addrspace(1) inreg noc
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
 ; GFX942-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX942-NEXT:    s_cbranch_execz .LBB5_2
+; GFX942-NEXT:    s_cbranch_execz .LBB8_2
 ; GFX942-NEXT:  ; %bb.1: ; %cond.load
 ; GFX942-NEXT:    global_load_dwordx4 v[0:3], v4, s[0:1]
-; GFX942-NEXT:  .LBB5_2:
+; GFX942-NEXT:  .LBB8_2:
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
@@ -148,6 +227,34 @@ entry:
   %maskvec = shufflevector <8 x i1> %partialmaskvec, <8 x i1> poison, <8 x i32> zeroinitializer
   %result = tail call <8 x i16> @llvm.masked.load.v8i16.p1(ptr addrspace(1) %ptr, i32 4, <8 x i1> %maskvec, <8 x i16> zeroinitializer)
   ret <8 x i16> %result
+}
+
+define <10 x i16> @uniform_masked_load_ptr1_mask_v10i16(ptr addrspace(1) inreg nocapture readonly %ptr, i1 %mask) {
+; GFX942-LABEL: uniform_masked_load_ptr1_mask_v10i16:
+; GFX942:       ; %bb.0: ; %entry
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX942-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GFX942-NEXT:    v_mov_b32_e32 v0, 0
+; GFX942-NEXT:    v_mov_b32_e32 v1, v0
+; GFX942-NEXT:    v_mov_b32_e32 v2, v0
+; GFX942-NEXT:    v_mov_b32_e32 v3, v0
+; GFX942-NEXT:    v_mov_b32_e32 v4, v0
+; GFX942-NEXT:    s_and_saveexec_b64 s[2:3], vcc
+; GFX942-NEXT:    s_cbranch_execz .LBB9_2
+; GFX942-NEXT:  ; %bb.1: ; %cond.load
+; GFX942-NEXT:    global_load_dword v4, v0, s[0:1] offset:16
+; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
+; GFX942-NEXT:  .LBB9_2:
+; GFX942-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %partialmaskvec = insertelement <10 x i1> poison, i1 %mask, i16 0
+  %maskvec = shufflevector <10 x i1> %partialmaskvec, <10 x i1> poison, <10 x i32> zeroinitializer
+  %result = tail call <10 x i16> @llvm.masked.load.v10i16.p1(ptr addrspace(1) %ptr, i32 4, <10 x i1> %maskvec, <10 x i16> zeroinitializer)
+  ret <10 x i16> %result
 }
 
 define <8 x half> @uniform_masked_load_ptr1_mask_v8f16(ptr addrspace(1) inreg nocapture readonly %ptr, i1 %mask) {
@@ -160,10 +267,10 @@ define <8 x half> @uniform_masked_load_ptr1_mask_v8f16(ptr addrspace(1) inreg no
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
 ; GFX942-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX942-NEXT:    s_cbranch_execz .LBB6_2
+; GFX942-NEXT:    s_cbranch_execz .LBB10_2
 ; GFX942-NEXT:  ; %bb.1: ; %cond.load
 ; GFX942-NEXT:    global_load_dwordx4 v[0:3], v4, s[0:1]
-; GFX942-NEXT:  .LBB6_2:
+; GFX942-NEXT:  .LBB10_2:
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
@@ -184,10 +291,10 @@ define <8 x bfloat> @uniform_masked_load_ptr1_mask_v8bf16(ptr addrspace(1) inreg
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
 ; GFX942-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX942-NEXT:    s_cbranch_execz .LBB7_2
+; GFX942-NEXT:    s_cbranch_execz .LBB11_2
 ; GFX942-NEXT:  ; %bb.1: ; %cond.load
 ; GFX942-NEXT:    global_load_dwordx4 v[0:3], v4, s[0:1]
-; GFX942-NEXT:  .LBB7_2:
+; GFX942-NEXT:  .LBB11_2:
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
@@ -221,7 +328,7 @@ define <16 x i8> @uniform_masked_load_ptr1_mask_v16i8(ptr addrspace(1) inreg noc
 ; GFX942-NEXT:    v_mov_b32_e32 v13, 0
 ; GFX942-NEXT:    v_mov_b32_e32 v14, 0
 ; GFX942-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX942-NEXT:    s_cbranch_execz .LBB8_2
+; GFX942-NEXT:    s_cbranch_execz .LBB12_2
 ; GFX942-NEXT:  ; %bb.1: ; %cond.load
 ; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    global_load_dwordx4 v[16:19], v0, s[0:1]
@@ -238,7 +345,7 @@ define <16 x i8> @uniform_masked_load_ptr1_mask_v16i8(ptr addrspace(1) inreg noc
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v3, 24, v16
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v2, 16, v16
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v1, 8, v16
-; GFX942-NEXT:  .LBB8_2:
+; GFX942-NEXT:  .LBB12_2:
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v16
 ; GFX942-NEXT:    v_mov_b32_e32 v4, v17
