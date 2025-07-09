@@ -155,7 +155,7 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
 
       if (EmptySubscript) {
         diag(MatchedExpr->getCallee()->getBeginLoc(),
-             "possibly unsafe 'operator[]', use safe function '%s()' instead")
+             "possibly unsafe 'operator[]', use safe function '%0()' instead")
             << FixFunctionEmptyArgs.str()
             << MatchedExpr->getCallee()->getSourceRange()
             << FixItHint::CreateInsertion(OCE->getArg(0)->getBeginLoc(),
@@ -164,7 +164,7 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
             << FixItHint::CreateReplacement(RightBracket, ")");
       } else {
         diag(MatchedExpr->getCallee()->getBeginLoc(),
-             "possibly unsafe 'operator[]', use safe function '%s()' instead")
+             "possibly unsafe 'operator[]', use safe function '%0()' instead")
             << FixFunction.str() << MatchedExpr->getCallee()->getSourceRange()
             << FixItHint::CreateInsertion(OCE->getArg(0)->getBeginLoc(),
                                           FixFunction.str() + "(")
@@ -218,7 +218,7 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
       // argument, which makes the following distinction necessary
       if (EmptySubscript) {
         diag(Callee->getBeginLoc(),
-             "possibly unsafe 'operator[]', use safe function '%s()' instead")
+             "possibly unsafe 'operator[]', use safe function '%0()' instead")
             << FixFunctionEmptyArgs.str() << Callee->getSourceRange()
             << FixItHint::CreateInsertion(MatchedExpr->getBeginLoc(),
                                           BeginInsertion)
@@ -227,7 +227,7 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
                                MCE->getRParenLoc().getLocWithOffset(-1)));
       } else {
         diag(Callee->getBeginLoc(),
-             "possibly unsafe 'operator[]', use safe function '%s()' instead")
+             "possibly unsafe 'operator[]', use safe function '%0()' instead")
             << FixFunction.str() << Callee->getSourceRange()
             << FixItHint::CreateInsertion(MatchedExpr->getBeginLoc(),
                                           BeginInsertion)
