@@ -33,14 +33,14 @@ for.i.header:
 for.j.body:
   %j = phi i64 [ 1, %for.i.header ], [ %j.next, %for.j.body ]
   %j.dec = add nsw i64 %j, -1
-  %a.load.index = getelementptr nuw inbounds [256 x [256 x float]], ptr @A, i64 %i, i64 %j.dec
-  %b.index = getelementptr nuw inbounds [256 x [256 x float]], ptr @B, i64 %i, i64 %j
-  %c.index = getelementptr nuw inbounds [256 x [256 x float]], ptr @C, i64 %i, i64 %j
+  %a.load.index = getelementptr nuw inbounds [256 x [256 x float]], ptr @A, i64 0, i64 %i, i64 %j.dec
+  %b.index = getelementptr nuw inbounds [256 x [256 x float]], ptr @B, i64 0, i64 %i, i64 %j
+  %c.index = getelementptr nuw inbounds [256 x [256 x float]], ptr @C, i64 0, i64 %i, i64 %j
   %a = load float, ptr %a.load.index, align 4
   %b = load float, ptr %b.index, align 4
   %c = load float, ptr %c.index, align 4
   %add.0 = fadd float %a, %b
-  %a.store.index = getelementptr nuw inbounds [256 x [256 x float]], ptr @A, i64 %i, i64 %j
+  %a.store.index = getelementptr nuw inbounds [256 x [256 x float]], ptr @A, i64 0, i64 %i, i64 %j
   store float %add.0, ptr %a.store.index, align 4
   %add.1 = fadd float %c, 1.0
   store float %add.1, ptr %c.index, align 4
@@ -84,12 +84,12 @@ for.i.header:
 for.j.body:
   %j = phi i64 [ 1, %for.i.header ], [ %j.next, %for.j.body ]
   %j.dec = add nsw i64 %j, -1
-  %a.load.index = getelementptr nuw inbounds [256 x [256 x float]], ptr @A, i64 %i, i64 %j
-  %b.index = getelementptr nuw inbounds [256 x [256 x float]], ptr @B, i64 %i, i64 %j
+  %a.load.index = getelementptr nuw inbounds [256 x [256 x float]], ptr @A, i64 0, i64 %i, i64 %j
+  %b.index = getelementptr nuw inbounds [256 x [256 x float]], ptr @B, i64 0, i64 %i, i64 %j
   %a = load float, ptr %a.load.index, align 4
   %b = load float, ptr %b.index, align 4
   %add = fadd float %a, %b
-  %a.store.index = getelementptr nuw inbounds [256 x [256 x float]], ptr @A, i64 %i, i64 %j.dec
+  %a.store.index = getelementptr nuw inbounds [256 x [256 x float]], ptr @A, i64 0, i64 %i, i64 %j.dec
   store float %add, ptr %a.store.index, align 4
   %j.next = add nuw nsw i64 %j, 1
   %cmp.j = icmp eq i64 %j.next, 256
