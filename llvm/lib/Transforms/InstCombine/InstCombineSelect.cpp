@@ -907,6 +907,19 @@ static Instruction *foldSelectZeroOrFixedOp(SelectInst &SI,
   if (TrueValC == nullptr || !isa<Instruction>(FalseVal))
     return nullptr;
 
+  if (!(match(FalseVal, m_c_Mul(m_Specific(X), m_Value(Y))) ||
+        match(FalseVal, m_c_And(m_Specific(X), m_Value(Y))) ||
+        match(FalseVal, m_Shl(m_Specific(X), m_Value(Y))) ||
+        match(FalseVal, m_AShr(m_Specific(X), m_Value(Y))) ||
+        match(FalseVal, m_LShr(m_Specific(X), m_Value(Y))) ||
+        match(FalseVal, m_FShl(m_Specific(X), m_Specific(X), m_Value(Y))) ||
+        match(FalseVal, m_FShr(m_Specific(X), m_Specific(X), m_Value(Y))) ||
+        match(FalseVal, m_SDiv(m_Specific(X), m_Value(Y))) ||
+        match(FalseVal, m_UDiv(m_Specific(X), m_Value(Y))) ||
+        match(FalseVal, m_c_UMin(m_Specific(X), m_Value(Y))))) {
+    return nullptr;
+  }
+
   auto *ZeroC = cast<Constant>(cast<Instruction>(CondVal)->getOperand(1));
   auto *MergedC = Constant::mergeUndefsWith(TrueValC, ZeroC);
   // If X is compared with 0 then TrueVal could be either zero or undef.
@@ -915,28 +928,15 @@ static Instruction *foldSelectZeroOrFixedOp(SelectInst &SI,
   if (!match(MergedC, m_Zero()) && !match(MergedC, m_Undef()))
     return nullptr;
 
-  if (match(FalseVal, m_c_Mul(m_Specific(X), m_Value(Y))) ||
-      match(FalseVal, m_c_And(m_Specific(X), m_Value(Y))) ||
-      match(FalseVal, m_Shl(m_Specific(X), m_Value(Y))) ||
-      match(FalseVal, m_AShr(m_Specific(X), m_Value(Y))) ||
-      match(FalseVal, m_LShr(m_Specific(X), m_Value(Y))) ||
-      match(FalseVal, m_FShl(m_Specific(X), m_Specific(X), m_Value(Y))) ||
-      match(FalseVal, m_FShr(m_Specific(X), m_Specific(X), m_Value(Y))) ||
-      match(FalseVal, m_SDiv(m_Specific(X), m_Value(Y))) ||
-      match(FalseVal, m_UDiv(m_Specific(X), m_Value(Y))) ||
-      match(FalseVal, m_c_UMin(m_Specific(X), m_Value(Y)))) {
-    auto *FalseValI = cast<Instruction>(FalseVal);
-    auto *FrY = IC.InsertNewInstBefore(new FreezeInst(Y, Y->getName() + ".fr"),
-                                       FalseValI->getIterator());
-    IC.replaceOperand(*FalseValI,
-                      FalseValI->getOperand(0) == Y
-                          ? 0
-                          : (FalseValI->getOperand(1) == Y ? 1 : 2),
-                      FrY);
-    return IC.replaceInstUsesWith(SI, FalseValI);
-  }
-
-  return nullptr;
+  auto *FalseValI = cast<Instruction>(FalseVal);
+  auto *FrY = IC.InsertNewInstBefore(new FreezeInst(Y, Y->getName() + ".fr"),
+                                     FalseValI->getIterator());
+  IC.replaceOperand(*FalseValI,
+                    FalseValI->getOperand(0) == Y
+                        ? 0
+                        : (FalseValI->getOperand(1) == Y ? 1 : 2),
+                    FrY);
+  return IC.replaceInstUsesWith(SI, FalseValI);
 }
 
 /// Transform patterns such as (a > b) ? a - b : 0 into usub.sat(a, b).
