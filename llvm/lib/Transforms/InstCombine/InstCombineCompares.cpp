@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -21,8 +22,10 @@
 #include "llvm/Analysis/Utils/Local.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
@@ -8031,10 +8034,16 @@ static Instruction *foldFCmpReciprocalAndZero(FCmpInst &I, Instruction *LHSI,
   return new FCmpInst(Pred, LHSI->getOperand(1), RHSC, "", &I);
 }
 
-
-// Fold fptrunc(x) < constant --> x < constant if possible.
-static Instruction *foldFCmpFpTrunc(FCmpInst &I, Instruction *LHSI,
-                                    Constant *RHSC) {
+// Transform 'fptrunc(x) cmp C' to 'x cmp ext(C)' if possible.
+// Patterns include:
+//    fptrunc(x) <  C  -->  x <  ext(C)
+//    fptrunc(x) <= C  -->  x <= ext(C)
+//    fptrunc(x) >  C  -->  x >  ext(C)
+//    fptrunc(x) >= C  -->  x >= ext(C)
+// where 'ext(C)' is the extension of 'C' to the type of 'x' with a small bias
+// due to precision loss.
+static Instruction *foldFCmpFpTrunc(FCmpInst &I, const Instruction &FPTrunc,
+                                    const Constant &C) {
   FCmpInst::Predicate Pred = I.getPredicate();
   bool RoundDown = false;
 
@@ -8047,83 +8056,74 @@ static Instruction *foldFCmpFpTrunc(FCmpInst &I, Instruction *LHSI,
   else
     return nullptr;
 
-  const APFloat *RValue;
-  if (!match(RHSC, m_APFloat(RValue)))
+  const APFloat *CValue;
+  if (!match(&C, m_APFloat(CValue)))
     return nullptr;
 
-  // RHSC should not be nan or infinity.
-  if (RValue->isNaN() || RValue->isInfinity())
+  if (CValue->isNaN() || CValue->isInfinity())
     return nullptr;
 
-  Type *LType = LHSI->getOperand(0)->getType();
-  Type *RType = RHSC->getType();
-  Type *LEleType = LType->getScalarType();
-  Type *REleType = RType->getScalarType();
-
-  APFloat NextRValue = *RValue;
-  NextRValue.next(RoundDown);
-
-  // Promote 'RValue' and 'NextRValue' to 'LType'.
-  APFloat ExtRValue = *RValue;
-  APFloat ExtNextRValue = NextRValue;
-  bool lossInfo;
-  ExtRValue.convert(LEleType->getFltSemantics(), APFloat::rmNearestTiesToEven,
-                    &lossInfo);
-  ExtNextRValue.convert(LEleType->getFltSemantics(),
-                        APFloat::rmNearestTiesToEven, &lossInfo);
-
-  // The (negative) maximum of 'RValue' may become infinity when rounded up
-  // (down). Set the limit of 'ExtNextRValue'.
-  if (NextRValue.isInfinity())
-    ExtNextRValue = scalbn(ExtRValue, 1, APFloat::rmNearestTiesToEven);
-
-  // Binary search to find the maximal (or minimal) value after 'RValue'
-  // promotion. 'RValue' should obey normal comparison rules, which means nan or
-  // inf is not allowed here.
-  APFloat RoundValue{LEleType->getFltSemantics()};
-
-  APFloat LowBound = RoundDown ? ExtNextRValue : ExtRValue;
-  APFloat UpBound = RoundDown ? ExtRValue : ExtNextRValue;
-
-  auto IsRoundingFound = [](const APFloat &LowBound, const APFloat &UpBound) {
-    APFloat UpBoundNext = UpBound;
-    UpBoundNext.next(true);
-    return LowBound == UpBoundNext;
+  auto ConvertFltSema = [](const APFloat &Src, const fltSemantics &Sema) {
+    bool LosesInfo;
+    APFloat Dest = Src;
+    Dest.convert(Sema, APFloat::rmNearestTiesToEven, &LosesInfo);
+    return Dest;
   };
 
-  auto EqualRValueAfterTrunc = [&](const APFloat &ExtValue) {
-    APFloat TruncValue = ExtValue;
-    TruncValue.convert(REleType->getFltSemantics(),
-                       APFloat::rmNearestTiesToEven, &lossInfo);
-    return TruncValue == *RValue;
+  auto NextValue = [](const APFloat &Value, bool RoundDown) {
+    APFloat NextValue = Value;
+    NextValue.next(RoundDown);
+    return NextValue;
   };
 
-  while (true) {
-    // Finish searching when 'LowBound' is next to 'UpBound'.
-    if (IsRoundingFound(LowBound, UpBound)) {
-      RoundValue = RoundDown ? UpBound : LowBound;
-      break;
-    }
+  APFloat NextCValue = NextValue(*CValue, RoundDown);
 
-    APFloat Mid = scalbn(LowBound + UpBound, -1, APFloat::rmNearestTiesToEven);
-    bool EqualRValue = EqualRValueAfterTrunc(Mid);
+  Type *DestType = FPTrunc.getOperand(0)->getType();
+  const fltSemantics &DestFltSema =
+      DestType->getScalarType()->getFltSemantics();
 
-    // 'EqualRValue' indicates whether Mid is qualified to be the final round
-    // value. if 'EqualRValue' == true, 'Mid' might be the final round value
-    //     if 'RoundDown' == true, 'UpBound' can't be the final round value
-    //     if 'RoudnDown' == false, 'DownBound' can't be the final round value
-    // if 'EqualRValue' == false, 'Mid' can't be the final round value
-    //     if 'RoundDown' == true, 'DownBound' can't be the final round value
-    //     if 'RoundDown' == false, 'UpBound' can't be the final round value
-    if (EqualRValue == RoundDown) {
-      UpBound = Mid;
-    } else {
-      LowBound = Mid;
-    }
+  APFloat ExtCValue = ConvertFltSema(*CValue, DestFltSema);
+  APFloat ExtNextCValue = ConvertFltSema(NextCValue, DestFltSema);
+
+  // When 'NextCValue' is infinity, use an imaged 'NextCValue' that equals
+  // 'CValue + bias' to avoid the infinity after conversion. The bias is
+  // estimated as 'CValue - PrevCValue', where 'PrevCValue' is the previous
+  // value of 'CValue'.
+  if (NextCValue.isInfinity()) {
+    APFloat PrevCValue = NextValue(*CValue, !RoundDown);
+    APFloat Bias = ConvertFltSema(*CValue - PrevCValue, DestFltSema);
+
+    ExtNextCValue = ExtCValue + Bias;
   }
 
-  return new FCmpInst(Pred, LHSI->getOperand(0),
-                      ConstantFP::get(LType, RoundValue), "", &I);
+  APFloat ExtMidValue =
+      scalbn(ExtCValue + ExtNextCValue, -1, APFloat::rmNearestTiesToEven);
+
+  const fltSemantics &SrcFltSema =
+      C.getType()->getScalarType()->getFltSemantics();
+
+  // 'MidValue' might be rounded to 'NextCValue'. Correct it here.
+  APFloat MidValue = ConvertFltSema(ExtMidValue, SrcFltSema);
+  if (MidValue != *CValue)
+    ExtMidValue.next(!RoundDown);
+
+  // Check whether 'ExtMidValue' is a valid result since the assumption on
+  // imaged 'NextCValue' might not hold for new float types.
+  // ppc_fp128 can't pass here when converting from max float because of 
+  // APFloat implementation.
+  if (NextCValue.isInfinity()) {
+    // ExtMidValue --- narrowed ---> Finite
+    if (ConvertFltSema(ExtMidValue, SrcFltSema).isInfinity())
+      return nullptr;
+
+    // NextExtMidValue --- narrowed ---> Infinity
+    APFloat NextExtMidValue = NextValue(ExtMidValue, RoundDown);
+    if (ConvertFltSema(NextExtMidValue, SrcFltSema).isFinite())
+      return nullptr;
+  }
+
+  return new FCmpInst(Pred, FPTrunc.getOperand(0),
+                      ConstantFP::get(DestType, ExtMidValue), "", &I);
 }
 
 /// Optimize fabs(X) compared with zero.
@@ -8618,7 +8618,7 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
             return Res;
       break;
     case Instruction::FPTrunc:
-      if (Instruction *NV = foldFCmpFpTrunc(I, LHSI, RHSC))
+      if (Instruction *NV = foldFCmpFpTrunc(I, *LHSI, *RHSC))
         return NV;
       break;
     }

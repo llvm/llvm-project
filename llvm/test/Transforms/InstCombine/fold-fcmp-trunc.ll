@@ -159,7 +159,7 @@ define i1 @fcmp_trunc_x86_fp80(x86_fp80 %0) {
 define i1 @fcmp_trunc_ppc_fp128(ppc_fp128 %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_ppc_fp128(
 ; CHECK-SAME: ppc_fp128 [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = fcmp fast oge ppc_fp128 [[TMP0]], 0xM4058FFFFF0000000BD00000000000000
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp fast oge ppc_fp128 [[TMP0]], 0xM4058FFFFF00000000000000000000000
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
   %trunc = fptrunc ppc_fp128 %0 to float
@@ -288,7 +288,7 @@ define i1 @fcmp_trunc_mx(double %0) {
   ret i1 %result
 }
 
-; min representable
+; negative max representable
 define i1 @fcmp_trunc_mn(double %0) {
 ; CHECK-LABEL: define i1 @fcmp_trunc_mn(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
@@ -593,4 +593,82 @@ define i1 @fcmp_trunc_neg_fast_ult(double %0) {
   ret i1 %result
 }
 
+
+; max representable float to fp128
+define i1 @fcmp_trunc_mx_fp128(fp128 %0) {
+; CHECK-LABEL: define i1 @fcmp_trunc_mx_fp128(
+; CHECK-SAME: fp128 [[TMP0:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ole fp128 [[TMP0]], 0xLFFFFFFFFFFFFFFFF407EFFFFFEFFFFFF
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+  %trunc = fptrunc fp128 %0 to float
+  %result = fcmp ole float %trunc, 0x47EFFFFFE0000000
+  ret i1 %result
+}
+
+
+; max representable float to x86_fp80
+define i1 @fcmp_trunc_mx_x86_fp80(x86_fp80 %0) {
+; CHECK-LABEL: define i1 @fcmp_trunc_mx_x86_fp80(
+; CHECK-SAME: x86_fp80 [[TMP0:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ule x86_fp80 [[TMP0]], 0xK407EFFFFFF7FFFFFFFFF
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+  %trunc = fptrunc x86_fp80 %0 to float
+  %result = fcmp ule float %trunc, 0x47EFFFFFE0000000
+  ret i1 %result
+}
+
+
+; max representable float to ppc_fp128
+define i1 @fcmp_trunc_mx_ppc_fp128(ppc_fp128 %0) {
+; CHECK-LABEL: define i1 @fcmp_trunc_mx_ppc_fp128(
+; CHECK-SAME: ppc_fp128 [[TMP0:%.*]]) {
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc ppc_fp128 [[TMP0]] to float
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp ole float [[TRUNC]], 0x47EFFFFFE0000000
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+  %trunc = fptrunc ppc_fp128 %0 to float
+  %result = fcmp ole float %trunc, 0x47EFFFFFE0000000
+  ret i1 %result
+}
+
+
+; negative max representable float to fp128
+define i1 @fcmp_trunc_mn_fp128(fp128 %0) {
+; CHECK-LABEL: define i1 @fcmp_trunc_mn_fp128(
+; CHECK-SAME: fp128 [[TMP0:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp olt fp128 [[TMP0]], 0xL0000000000000000C07EFFFFF1000000
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+  %trunc = fptrunc fp128 %0 to float
+  %result = fcmp olt float %trunc, 0xC7EFFFFF00000000
+  ret i1 %result
+}
+
+
+; negative max representable float to x86_fp80
+define i1 @fcmp_trunc_mn_x86_fp80(x86_fp80 %0) {
+; CHECK-LABEL: define i1 @fcmp_trunc_mn_x86_fp80(
+; CHECK-SAME: x86_fp80 [[TMP0:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp oge x86_fp80 [[TMP0]], 0xKC07EFFFFF88000000000
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+  %trunc = fptrunc x86_fp80 %0 to float
+  %result = fcmp oge float %trunc, 0xC7EFFFFF00000000
+  ret i1 %result
+}
+
+
+; negative max representable float to ppc_fp128
+define i1 @fcmp_trunc_mn_ppc_fp128(ppc_fp128 %0) {
+; CHECK-LABEL: define i1 @fcmp_trunc_mn_ppc_fp128(
+; CHECK-SAME: ppc_fp128 [[TMP0:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = fcmp uge ppc_fp128 [[TMP0]], 0xMC7EFFFFF100000000000000000000000
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+  %trunc = fptrunc ppc_fp128 %0 to float
+  %result = fcmp uge float %trunc, 0xC7EFFFFF00000000
+  ret i1 %result
+}
 
