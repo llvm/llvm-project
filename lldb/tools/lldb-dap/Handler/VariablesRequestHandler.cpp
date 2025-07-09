@@ -28,7 +28,7 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
   uint64_t start = arguments.start;
   bool hex = false;
   if (arguments.format)
-    hex = arguments.format->hex.value_or(false);
+    hex = arguments.format->hex;
 
   std::vector<Variable> variables;
 

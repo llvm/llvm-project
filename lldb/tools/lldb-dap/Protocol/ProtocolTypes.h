@@ -475,7 +475,7 @@ llvm::json::Value toJSON(const Thread &);
 /// Provides formatting information for a value.
 struct ValueFormat {
   /// Display the value in hex.
-  std::optional<bool> hex;
+  bool hex = false;
 };
 bool fromJSON(const llvm::json::Value &, ValueFormat &, llvm::json::Path);
 
