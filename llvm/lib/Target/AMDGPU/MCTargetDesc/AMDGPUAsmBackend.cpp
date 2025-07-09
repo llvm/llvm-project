@@ -40,7 +40,7 @@ public:
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
 
-  bool mayNeedRelaxation(const MCInst &Inst,
+  bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override;
 
   unsigned getMinimumNopSize() const override;
@@ -70,12 +70,13 @@ bool AMDGPUAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
   return (((int64_t(Value)/4)-1) == 0x3f);
 }
 
-bool AMDGPUAsmBackend::mayNeedRelaxation(const MCInst &Inst,
-                       const MCSubtargetInfo &STI) const {
+bool AMDGPUAsmBackend::mayNeedRelaxation(unsigned Opcode,
+                                         ArrayRef<MCOperand> Operands,
+                                         const MCSubtargetInfo &STI) const {
   if (!STI.hasFeature(AMDGPU::FeatureOffset3fBug))
     return false;
 
-  if (AMDGPU::getSOPPWithRelaxation(Inst.getOpcode()) >= 0)
+  if (AMDGPU::getSOPPWithRelaxation(Opcode) >= 0)
     return true;
 
   return false;

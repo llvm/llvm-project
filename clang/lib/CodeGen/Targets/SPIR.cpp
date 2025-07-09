@@ -322,9 +322,9 @@ static llvm::Type *getSPIRVImageType(llvm::LLVMContext &Ctx, StringRef BaseType,
   // Choose the dimension of the image--this corresponds to the Dim enum in
   // SPIR-V (first integer parameter of OpTypeImage).
   if (OpenCLName.starts_with("image2d"))
-    IntParams[0] = 1; // 1D
+    IntParams[0] = 1;
   else if (OpenCLName.starts_with("image3d"))
-    IntParams[0] = 2; // 2D
+    IntParams[0] = 2;
   else if (OpenCLName == "image1d_buffer")
     IntParams[0] = 5; // Buffer
   else

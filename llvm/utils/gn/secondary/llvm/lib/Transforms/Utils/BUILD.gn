@@ -29,6 +29,7 @@ static_library("Utils") {
     "CtorUtils.cpp",
     "DXILUpgrade.cpp",
     "Debugify.cpp",
+    "DeclareRuntimeLibcalls.cpp",
     "DemoteRegToStack.cpp",
     "EntryExitInstrumenter.cpp",
     "EscapeEnumerator.cpp",
