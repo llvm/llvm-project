@@ -9,8 +9,8 @@
 #include "exhaustive_test.h"
 #include "src/__support/FPUtil/bfloat16.h"
 #include "utils/MPFRWrapper/MPCommon.h"
-#include "utils/MPFRWrapper/MPFRUtils.h"
 
+using BFloat16 = LIBC_NAMESPACE::fputil::BFloat16;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 using MPFRNumber = LIBC_NAMESPACE::testing::mpfr::MPFRNumber;
 
@@ -34,8 +34,8 @@ struct Bfloat16ConversionChecker
       FPBits x_bits(bits);
       FloatType x = x_bits.get_val();
 
-      const bfloat16 libc_bfloat{x};
-      const bfloat16 mpfr_bfloat = MPFRNumber(x).as<bfloat16>();
+      const BFloat16 libc_bfloat{x};
+      const BFloat16 mpfr_bfloat = MPFRNumber(x).as<BFloat16>();
 
       const bool correct =
           LIBC_NAMESPACE::testing::getMatcher<
