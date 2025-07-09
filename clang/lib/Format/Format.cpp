@@ -779,7 +779,7 @@ template <> struct MappingTraits<FormatStyle::SpacesInLineComment> {
     IO.mapOptional("Maximum", signedMaximum);
     Space.Maximum = static_cast<unsigned>(signedMaximum);
 
-    if (Space.Maximum != std::numeric_limits<unsigned>::max())
+    if (Space.Maximum < UINT_MAX)
       Space.Minimum = std::min(Space.Minimum, Space.Maximum);
   }
 };
