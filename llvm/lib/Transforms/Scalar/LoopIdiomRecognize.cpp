@@ -388,11 +388,13 @@ static APInt getStoreStride(const SCEVAddRecExpr *StoreEv) {
 }
 
 /// getMemSetPatternValue - If a strided store of the specified value is safe to
-/// turn into a memset_pattern16, return a ConstantArray of 16 bytes that should
-/// be passed in.  Otherwise, return null.
+/// turn into a memset.patternn intrinsic, return the Constant that should
+/// be passed in. Otherwise, return null.
 ///
-/// Note that we don't ever attempt to use memset_pattern8 or 4, because these
-/// just replicate their input array and then pass on to memset_pattern16.
+/// TODO this function could allow more constants than it does today (e.g.
+/// those over 16 bytes) now it has transitioned to being used for the
+/// memset.pattern intrinsic rather than directly the memset_pattern16
+/// libcall.
 static Constant *getMemSetPatternValue(Value *V, const DataLayout *DL) {
   // FIXME: This could check for UndefValue because it can be merged into any
   // other valid pattern.
