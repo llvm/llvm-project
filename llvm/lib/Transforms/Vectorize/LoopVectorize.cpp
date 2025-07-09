@@ -7020,6 +7020,7 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
   };
 
   DenseSet<Instruction *> SeenInstrs;
+  SmallDenseMap<PHINode *, unsigned> BlendPhis;
   auto Iter = vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
     for (VPRecipeBase &R : *VPBB) {
@@ -7048,11 +7049,13 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
         return true;
 
       // VPBlendRecipes are converted to selects and may have been simplified.
+      // Keep track of how many selects each phi has been converted to.
       using namespace VPlanPatternMatch;
       if (match(&R, m_VPInstruction<Instruction::Select>(
-                        m_VPValue(), m_VPValue(), m_VPValue())) &&
-          isa_and_nonnull<PHINode>(R.getVPSingleValue()->getUnderlyingValue()))
-        return true;
+                        m_VPValue(), m_VPValue(), m_VPValue())))
+        if (auto *Phi = dyn_cast_if_present<PHINode>(
+                R.getVPSingleValue()->getUnderlyingValue()))
+          BlendPhis[Phi]++;
 
       /// If a VPlan transform folded a recipe to one producing a single-scalar,
       /// but the original instruction wasn't uniform-after-vectorization in the
@@ -7076,6 +7079,12 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       }
     }
   }
+
+  // If a phi has been simplified then it will have less selects than the number
+  // of incoming values.
+  for (auto [Phi, NumSelects] : BlendPhis)
+    if (NumSelects != Phi->getNumIncomingValues() - 1)
+      return true;
 
   // Return true if the loop contains any instructions that are not also part of
   // the VPlan or are skipped for VPlan-based cost computations. This indicates
