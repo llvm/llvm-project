@@ -156,7 +156,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       return MemorySpace::Global;
     }
 
-    // get the ChunkSize for blocked TensorDesc
+    // get the ArrayLength for blocked TensorDesc
     int getArrayLength() {
       auto attr = getEncoding();
       auto block_attr = mlir::dyn_cast_if_present<BlockTensorDescAttr>(attr);

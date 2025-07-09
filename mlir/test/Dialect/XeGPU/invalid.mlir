@@ -315,6 +315,19 @@ func.func @load_gather_vc_2(%src: ui64) {
 }
 
 // -----
+func.func @load_gather_vc_3(%src: ui64) {
+  %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %0 = arith.constant dense<1>: vector<8xi1>
+  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex>
+        -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>>
+  // expected-error@+1 {{Mask should match TensorDesc except the chunk size dim}}
+  %2 = xegpu.load %1, %0
+        : !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>>, vector<8xi1>
+          -> vector<4x2xf32>
+  return
+}
+
+// -----
 func.func @store_scatter_vc_1(%src: memref<24x32xf32>) {
   %0 = arith.constant dense<1>: vector<4xi1>
   %1 = arith.constant dense<2.9>: vector<4x2xf32>
@@ -335,6 +348,19 @@ func.func @store_scatter_vc_2(%src: ui64) {
   // expected-error@+1 {{invalid l1_hint: #xegpu.cache_hint<streaming>}}
   xegpu.store %1, %2, %0 <{l1_hint = #xegpu.cache_hint<streaming>}> : vector<4x2xf32>,
           !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>>, vector<4xi1>
+  return
+}
+
+// -----
+func.func @store_scatter_vc_3(%src: ui64) {
+  %cst = arith.constant dense<[0, 8, 16, 24]>: vector<4xindex>
+  %0 = arith.constant dense<1>: vector<8xi1>
+  %1 = arith.constant dense<2.9>: vector<4x2xf32>
+  %2 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex>
+              -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>>
+  // expected-error@+1 {{Mask should match TensorDesc except the chunk size dim}}
+  xegpu.store %1, %2, %0 : vector<4x2xf32>,
+          !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>>, vector<8xi1>
   return
 }
 
