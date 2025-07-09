@@ -76,6 +76,10 @@ void checkElementProperties(LVReader *Reader) {
   EXPECT_EQ(CompileUnit->getBaseAddress(), 0u);
   EXPECT_TRUE(CompileUnit->getProducer().starts_with("clang"));
   EXPECT_EQ(CompileUnit->getName(), "test.cpp");
+  LVSourceLanguage Language = CompileUnit->getSourceLanguage();
+  EXPECT_TRUE(Language.isValid());
+  EXPECT_EQ(Language, LVSourceLanguage::DW_LANG_C_plus_plus_14);
+  EXPECT_EQ(Language.getName(), "DW_LANG_C_plus_plus_14");
 
   EXPECT_EQ(CompileUnit->lineCount(), 0u);
   EXPECT_EQ(CompileUnit->scopeCount(), 1u);
@@ -132,15 +136,11 @@ void checkElementProperties(LVReader *Reader) {
   ASSERT_NE(Types, nullptr);
   EXPECT_EQ(Types->size(), 7u);
 
-  const auto BoolType =
-      std::find_if(Types->begin(), Types->end(), [](const LVElement *elt) {
-        return elt->getName() == "bool";
-      });
+  const auto BoolType = llvm::find_if(
+      *Types, [](const LVElement *elt) { return elt->getName() == "bool"; });
   ASSERT_NE(BoolType, Types->end());
-  const auto IntType =
-      std::find_if(Types->begin(), Types->end(), [](const LVElement *elt) {
-        return elt->getName() == "int";
-      });
+  const auto IntType = llvm::find_if(
+      *Types, [](const LVElement *elt) { return elt->getName() == "int"; });
   ASSERT_NE(IntType, Types->end());
   EXPECT_EQ(static_cast<LVType *>(*BoolType)->getBitSize(), 8u);
   EXPECT_EQ(static_cast<LVType *>(*BoolType)->getStorageSizeInBytes(), 1u);
@@ -169,13 +169,10 @@ void checkUnspecifiedParameters(LVReader *Reader) {
   // `int foo_printf(const char *, ...)`, where the '...' is represented by a
   // DW_TAG_unspecified_parameters, i.e. we expect to find at least one child
   // for which getIsUnspecified() returns true.
-  EXPECT_EQ(std::any_of(
-                Elements->begin(), Elements->end(),
-                [](const LVElement *elt) {
-                  return elt->getIsSymbol() &&
-                         static_cast<const LVSymbol *>(elt)->getIsUnspecified();
-                }),
-            true);
+  EXPECT_TRUE(llvm::any_of(*Elements, [](const LVElement *elt) {
+    return elt->getIsSymbol() &&
+           static_cast<const LVSymbol *>(elt)->getIsUnspecified();
+  }));
 }
 
 // Check the basic properties on parsed DW_TAG_module.
@@ -322,6 +319,7 @@ void elementProperties(SmallString<128> &InputsDir) {
   ReaderOptions.setAttributeProducer();
   ReaderOptions.setAttributePublics();
   ReaderOptions.setAttributeRange();
+  ReaderOptions.setAttributeLanguage();
   ReaderOptions.setAttributeLocation();
   ReaderOptions.setAttributeInserted();
   ReaderOptions.setAttributeSize();
