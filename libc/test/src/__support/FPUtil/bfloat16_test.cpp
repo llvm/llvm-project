@@ -12,7 +12,8 @@
 #include "utils/MPFRWrapper/MPCommon.h"
 
 using BFloat16 = LIBC_NAMESPACE::fputil::BFloat16;
-using LlvmLibcBfloat16ToFloatTest = LIBC_NAMESPACE::testing::FPTest<BFloat16>;
+using LlvmLibcBfloat16ConversionTest =
+    LIBC_NAMESPACE::testing::FPTest<BFloat16>;
 
 // range: [0, inf]
 static constexpr uint16_t POS_START = 0x0000U;
@@ -24,7 +25,7 @@ static constexpr uint16_t NEG_STOP = 0xff80U;
 
 using MPFRNumber = LIBC_NAMESPACE::testing::mpfr::MPFRNumber;
 
-TEST_F(LlvmLibcBfloat16ToFloatTest, PositiveRange) {
+TEST_F(LlvmLibcBfloat16ConversionTest, ToFloatPositiveRange) {
   for (uint16_t bits = POS_START; bits <= POS_STOP; bits++) {
     BFloat16 bf16_num{bits};
     MPFRNumber mpfr_num{bf16_num};
@@ -41,7 +42,7 @@ TEST_F(LlvmLibcBfloat16ToFloatTest, PositiveRange) {
   }
 }
 
-TEST_F(LlvmLibcBfloat16ToFloatTest, NegativeRange) {
+TEST_F(LlvmLibcBfloat16ConversionTest, ToFloatNegativeRange) {
   for (uint16_t bits = NEG_START; bits <= NEG_STOP; bits++) {
     BFloat16 bf16_num{bits};
     MPFRNumber mpfr_num{bf16_num};
@@ -58,7 +59,7 @@ TEST_F(LlvmLibcBfloat16ToFloatTest, NegativeRange) {
   }
 }
 
-TEST_F(LlvmLibcBfloat16ToFloatTest, SpecialIntegers) {
+TEST_F(LlvmLibcBfloat16ConversionTest, FromInteger) {
   constexpr int RANGE = 100'000;
   for (int i = -RANGE; i <= RANGE; i++) {
     BFloat16 mpfr_bfloat = MPFRNumber(i).as<BFloat16>();
