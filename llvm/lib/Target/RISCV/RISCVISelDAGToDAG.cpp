@@ -2322,7 +2322,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
       Operands.push_back(Node->getOperand(CurOp++));
       addVectorLoadStoreOperands(Node, Log2SEW, DL, CurOp, IsMasked,
-                                 /*IsStrided=*/true, Operands,
+                                 /*IsStridedOrIndexed=*/false, Operands,
                                  /*IsLoad=*/true);
 
       RISCVVType::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
