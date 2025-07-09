@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_native_divide.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/native_divide.h>
 
 #define __FLOAT_ONLY
 #define FUNCTION native_divide

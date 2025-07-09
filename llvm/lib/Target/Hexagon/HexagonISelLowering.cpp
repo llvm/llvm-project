@@ -157,6 +157,81 @@ static bool CC_SkipOdd(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
 
 #include "HexagonGenCallingConv.inc"
 
+unsigned HexagonTargetLowering::getVectorTypeBreakdownForCallingConv(
+    LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
+    unsigned &NumIntermediates, MVT &RegisterVT) const {
+
+  bool isBoolVector = VT.getVectorElementType() == MVT::i1;
+  bool isPowerOf2 = VT.isPow2VectorType();
+  unsigned NumElts = VT.getVectorNumElements();
+
+  // Split vectors of type vXi1 into (X/8) vectors of type v8i1,
+  // where X is divisible by 8.
+  if (isBoolVector && !Subtarget.useHVXOps() && isPowerOf2 && NumElts >= 8) {
+    RegisterVT = MVT::v8i8;
+    IntermediateVT = MVT::v8i1;
+    NumIntermediates = NumElts / 8;
+    return NumIntermediates;
+  }
+
+  // In HVX 64-byte mode, vectors of type vXi1 are split into (X / 64) vectors
+  // of type v64i1, provided that X is divisible by 64.
+  if (isBoolVector && Subtarget.useHVX64BOps() && isPowerOf2 && NumElts >= 64) {
+    RegisterVT = MVT::v64i8;
+    IntermediateVT = MVT::v64i1;
+    NumIntermediates = NumElts / 64;
+    return NumIntermediates;
+  }
+
+  // In HVX 128-byte mode, vectors of type vXi1 are split into (X / 128) vectors
+  // of type v128i1, provided that X is divisible by 128.
+  if (isBoolVector && Subtarget.useHVX128BOps() && isPowerOf2 &&
+      NumElts >= 128) {
+    RegisterVT = MVT::v128i8;
+    IntermediateVT = MVT::v128i1;
+    NumIntermediates = NumElts / 128;
+    return NumIntermediates;
+  }
+
+  return TargetLowering::getVectorTypeBreakdownForCallingConv(
+      Context, CC, VT, IntermediateVT, NumIntermediates, RegisterVT);
+}
+
+std::pair<MVT, unsigned>
+HexagonTargetLowering::handleMaskRegisterForCallingConv(
+    const HexagonSubtarget &Subtarget, EVT VT) const {
+  assert(VT.getVectorElementType() == MVT::i1);
+
+  const unsigned NumElems = VT.getVectorNumElements();
+
+  if (!VT.isPow2VectorType())
+    return {MVT::INVALID_SIMPLE_VALUE_TYPE, 0};
+
+  if (!Subtarget.useHVXOps() && NumElems >= 8)
+    return {MVT::v8i8, NumElems / 8};
+
+  if (Subtarget.useHVX64BOps() && NumElems >= 64)
+    return {MVT::v64i8, NumElems / 64};
+
+  if (Subtarget.useHVX128BOps() && NumElems >= 128)
+    return {MVT::v128i8, NumElems / 128};
+
+  return {MVT::INVALID_SIMPLE_VALUE_TYPE, 0};
+}
+
+MVT HexagonTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
+                                                         CallingConv::ID CC,
+                                                         EVT VT) const {
+
+  if (VT.isVector() && VT.getVectorElementType() == MVT::i1) {
+    auto [RegisterVT, NumRegisters] =
+        handleMaskRegisterForCallingConv(Subtarget, VT);
+    if (RegisterVT != MVT::INVALID_SIMPLE_VALUE_TYPE)
+      return RegisterVT;
+  }
+
+  return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
+}
 
 SDValue
 HexagonTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG)

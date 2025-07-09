@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/explicit_fence/explicit_memory_fence.h>
+#include <clc/opencl/synchronization/barrier.h>
 
 _CLC_DEF _CLC_OVERLOAD void barrier(cl_mem_fence_flags flags) {
   mem_fence(flags);
