@@ -1147,11 +1147,11 @@ UNALIASED_CUSTOM_BUILTIN(mma_dmxvi8gerx4spp,  "vW1024*W256V", true,
 UNALIASED_CUSTOM_BUILTIN(mma_pmdmxvi8gerx4spp, "vW1024*W256Vi255i15i15", true,
                          "mma,paired-vector-memops")
 UNALIASED_CUSTOM_BUILTIN(mma_dmsetdmrz, "vW1024*", false,
-                         "mma,paired-vector-memops")
+                         "mma,isa-future-instructions")
 UNALIASED_CUSTOM_BUILTIN(mma_dmmr, "vW1024*W1024*", false,
-                         "mma,paired-vector-memops")
+                         "mma,isa-future-instructions")
 UNALIASED_CUSTOM_BUILTIN(mma_dmxor, "vW1024*W1024*", true,
-                         "mma,paired-vector-memops")
+                         "mma,isa-future-instructions")
 
 // FIXME: Obviously incomplete.
 
