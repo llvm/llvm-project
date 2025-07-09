@@ -520,39 +520,21 @@ void Pointer::activate() const {
     }
   };
 
-  // Unions might be nested etc., so find the topmost Pointer that's
-  // not in a union anymore.
-  Pointer UnionPtr = getBase();
-  while (!UnionPtr.isRoot() && UnionPtr.inUnion())
-    UnionPtr = UnionPtr.getBase();
-
-  assert(UnionPtr.getFieldDesc()->isUnion());
-  const Record *UnionRecord = UnionPtr.getRecord();
-
-  // The direct child pointer of the union that's on the path from
-  // this pointer to the union.
-  Pointer ChildPtr = *this;
-  assert(ChildPtr != UnionPtr);
-  while (true) {
-    if (ChildPtr.getBase() == UnionPtr)
-      break;
-    ChildPtr = ChildPtr.getBase();
-  }
-  assert(ChildPtr.getBase() == UnionPtr);
-
-  for (const Record::Field &F : UnionRecord->fields()) {
-    Pointer FieldPtr = UnionPtr.atField(F.Offset);
-    if (FieldPtr == ChildPtr) {
-      // No need to deactivate, will be activated in the next loop.
-    } else {
-      deactivate(FieldPtr);
-    }
-  }
-
   Pointer B = *this;
-  while (B != UnionPtr) {
+  while (!B.isRoot() && B.inUnion()) {
     activate(B);
+
+    // When walking up the pointer chain, deactivate
+    // all union child pointers that aren't on our path.
+    Pointer Cur = B;
     B = B.getBase();
+    if (const Record *BR = B.getRecord(); BR && BR->isUnion()) {
+      for (const Record::Field &F : BR->fields()) {
+        Pointer FieldPtr = B.atField(F.Offset);
+        if (FieldPtr != Cur)
+          deactivate(FieldPtr);
+      }
+    }
   }
 }
 

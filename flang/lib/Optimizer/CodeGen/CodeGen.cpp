@@ -4162,7 +4162,20 @@ public:
     mathToFuncsOptions.minWidthOfFPowIExponent = 33;
     mathConvertionPM.addPass(
         mlir::createConvertMathToFuncs(mathToFuncsOptions));
-    mathConvertionPM.addPass(mlir::createConvertComplexToStandardPass());
+
+    mlir::ConvertComplexToStandardPassOptions complexToStandardOptions{};
+    if (options.ComplexRange ==
+        Fortran::frontend::CodeGenOptions::ComplexRangeKind::CX_Basic) {
+      complexToStandardOptions.complexRange =
+          mlir::complex::ComplexRangeFlags::basic;
+    } else if (options.ComplexRange == Fortran::frontend::CodeGenOptions::
+                                           ComplexRangeKind::CX_Improved) {
+      complexToStandardOptions.complexRange =
+          mlir::complex::ComplexRangeFlags::improved;
+    }
+    mathConvertionPM.addPass(
+        mlir::createConvertComplexToStandardPass(complexToStandardOptions));
+
     // Convert Math dialect operations into LLVM dialect operations.
     // There is no way to prefer MathToLLVM patterns over MathToLibm
     // patterns (applied below), so we have to run MathToLLVM conversion here.

@@ -133,20 +133,129 @@ define i32 @non_leaf_sign_non_leaf(i32 %x) "sign-return-address"="non-leaf"  {
 define i32 @non_leaf_scs(i32 %x) "sign-return-address"="non-leaf" shadowcallstack "target-features"="+v8.3a,+reserve-x18"  {
 ; CHECK-LABEL: non_leaf_scs:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [x18], #8
-; CHECK-NEXT:    .cfi_escape 0x16, 0x12, 0x02, 0x82, 0x78 //
 ; CHECK-NEXT:    paciasp
 ; CHECK-NEXT:    .cfi_negate_ra_state
+; CHECK-NEXT:    str x30, [x18], #8
+; CHECK-NEXT:    .cfi_escape 0x16, 0x12, 0x02, 0x82, 0x78 //
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl foo
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    autiasp
 ; CHECK-NEXT:    ldr x30, [x18, #-8]!
+; CHECK-NEXT:    autiasp
 ; CHECK-NEXT:    ret
   %call = call i32 @foo(i32 %x)
   ret i32 %call
+}
+
+@var = dso_local global i64 0
+
+; By default, pac-ret hardening respects shrink-wrapping optimization.
+define void @shrink_wrap_sign_non_leaf(i32 %x, i32 %cond) "sign-return-address"="non-leaf" uwtable(async) {
+; COMPAT-LABEL: shrink_wrap_sign_non_leaf:
+; COMPAT:       // %bb.0: // %entry
+; COMPAT-NEXT:    cbnz w1, .LBB8_2
+; COMPAT-NEXT:  // %bb.1: // %if.then
+; COMPAT-NEXT:    hint #25
+; COMPAT-NEXT:    .cfi_negate_ra_state
+; COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; COMPAT-NEXT:    .cfi_def_cfa_offset 16
+; COMPAT-NEXT:    .cfi_offset w30, -16
+; COMPAT-NEXT:    bl foo
+; COMPAT-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; COMPAT-NEXT:    .cfi_def_cfa_offset 0
+; COMPAT-NEXT:    .cfi_restore w30
+; COMPAT-NEXT:    hint #29
+; COMPAT-NEXT:    .cfi_negate_ra_state
+; COMPAT-NEXT:  .LBB8_2: // %exit
+; COMPAT-NEXT:    adrp x8, var
+; COMPAT-NEXT:    mov w9, #42 // =0x2a
+; COMPAT-NEXT:    str x9, [x8, :lo12:var]
+; COMPAT-NEXT:    ret
+;
+; V83A-LABEL: shrink_wrap_sign_non_leaf:
+; V83A:       // %bb.0: // %entry
+; V83A-NEXT:    cbnz w1, .LBB8_2
+; V83A-NEXT:  // %bb.1: // %if.then
+; V83A-NEXT:    paciasp
+; V83A-NEXT:    .cfi_negate_ra_state
+; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; V83A-NEXT:    .cfi_def_cfa_offset 16
+; V83A-NEXT:    .cfi_offset w30, -16
+; V83A-NEXT:    bl foo
+; V83A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; V83A-NEXT:    .cfi_def_cfa_offset 0
+; V83A-NEXT:    .cfi_restore w30
+; V83A-NEXT:    autiasp
+; V83A-NEXT:    .cfi_negate_ra_state
+; V83A-NEXT:  .LBB8_2: // %exit
+; V83A-NEXT:    adrp x8, var
+; V83A-NEXT:    mov w9, #42 // =0x2a
+; V83A-NEXT:    str x9, [x8, :lo12:var]
+; V83A-NEXT:    ret
+entry:
+  %cond.bool = icmp eq i32 %cond, 0
+  br i1 %cond.bool, label %if.then, label %exit
+if.then:
+  %call = call i32 @foo(i32 %x)
+  br label %exit
+exit:
+  store i64 42, ptr @var
+  ret void
+}
+
+; When "+leaf" is specified to harden everything, pac-ret hardens the entire
+; function, ignoring shrink-wrapping.
+define void @shrink_wrap_sign_all(i32 %x, i32 %cond) "sign-return-address"="all" uwtable(async) {
+; COMPAT-LABEL: shrink_wrap_sign_all:
+; COMPAT:       // %bb.0: // %entry
+; COMPAT-NEXT:    hint #25
+; COMPAT-NEXT:    .cfi_negate_ra_state
+; COMPAT-NEXT:    cbnz w1, .LBB9_2
+; COMPAT-NEXT:  // %bb.1: // %if.then
+; COMPAT-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; COMPAT-NEXT:    .cfi_def_cfa_offset 16
+; COMPAT-NEXT:    .cfi_offset w30, -16
+; COMPAT-NEXT:    bl foo
+; COMPAT-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; COMPAT-NEXT:    .cfi_def_cfa_offset 0
+; COMPAT-NEXT:    .cfi_restore w30
+; COMPAT-NEXT:  .LBB9_2: // %exit
+; COMPAT-NEXT:    adrp x8, var
+; COMPAT-NEXT:    mov w9, #42 // =0x2a
+; COMPAT-NEXT:    str x9, [x8, :lo12:var]
+; COMPAT-NEXT:    hint #29
+; COMPAT-NEXT:    .cfi_negate_ra_state
+; COMPAT-NEXT:    ret
+;
+; V83A-LABEL: shrink_wrap_sign_all:
+; V83A:       // %bb.0: // %entry
+; V83A-NEXT:    paciasp
+; V83A-NEXT:    .cfi_negate_ra_state
+; V83A-NEXT:    cbnz w1, .LBB9_2
+; V83A-NEXT:  // %bb.1: // %if.then
+; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; V83A-NEXT:    .cfi_def_cfa_offset 16
+; V83A-NEXT:    .cfi_offset w30, -16
+; V83A-NEXT:    bl foo
+; V83A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; V83A-NEXT:    .cfi_def_cfa_offset 0
+; V83A-NEXT:    .cfi_restore w30
+; V83A-NEXT:  .LBB9_2: // %exit
+; V83A-NEXT:    adrp x8, var
+; V83A-NEXT:    mov w9, #42 // =0x2a
+; V83A-NEXT:    str x9, [x8, :lo12:var]
+; V83A-NEXT:    retaa
+entry:
+  %cond.bool = icmp eq i32 %cond, 0
+  br i1 %cond.bool, label %if.then, label %exit
+if.then:
+  %call = call i32 @foo(i32 %x)
+  br label %exit
+exit:
+  store i64 42, ptr @var
+  ret void
 }
 
 define i32 @leaf_sign_all_v83(i32 %x) "sign-return-address"="all" "target-features"="+v8.3a" {
