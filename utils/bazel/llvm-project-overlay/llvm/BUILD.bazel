@@ -269,6 +269,7 @@ cc_library(
         "include/llvm-c/ExternC.h",
         "include/llvm-c/Support.h",
         "include/llvm-c/Types.h",
+        "include/llvm-c/Visibility.h",
         "include/llvm-c/blake3.h",
         "include/llvm/ExecutionEngine/JITSymbol.h",
         "include/llvm/Support/Extension.def",
@@ -541,6 +542,20 @@ cc_library(
         ":Object",
         ":Support",
         ":Symbolize",
+    ],
+)
+
+cc_library(
+    name = "DWARFCFIChecker",
+    srcs = glob(["lib/DWARFCFIChecker/*.cpp",
+                 "lib/DWARFCFIChecker/*.h",]),
+    hdrs = glob(["include/llvm/DWARFCFIChecker/*.h"]),
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":DebugInfoDWARFLowLevel",
+        ":MC",
+        ":Support",
     ],
 )
 
@@ -4372,6 +4387,7 @@ cc_binary(
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
         ":AllTargetsDisassemblers",
+        ":DWARFCFIChecker",
         ":MC",
         ":MCDisassembler",
         ":MCParser",
