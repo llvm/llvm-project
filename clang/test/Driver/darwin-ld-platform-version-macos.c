@@ -48,3 +48,8 @@
 // RUN:   -### %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=NOSDK %s
 // NOSDK: "-platform_version" "macos" "10.13.0" "10.13.0"
+
+// RUN: %clang -target arm64-apple-macos26 -mlinker-version=520 \
+// RUN:   -### %t.o 2>&1 \
+// RUN:   | FileCheck --check-prefix=VERSION_BUMP %s
+// VERSION_BUMP: "-platform_version" "macos" "26.0.0" "26.0.0"

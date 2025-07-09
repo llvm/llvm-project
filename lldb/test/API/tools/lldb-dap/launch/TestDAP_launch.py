@@ -330,7 +330,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
             )
 
     @skipIf(
-        archs=["arm", "aarch64"]
+        archs=["arm$", "aarch64"]
     )  # failed run https://lab.llvm.org/buildbot/#/builders/96/builds/6933
     def test_commands(self):
         """
@@ -519,7 +519,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.assertRegex(output, re.escape(bad_path) + r".*does not exist")
 
     @skipIfNetBSD  # Hangs on NetBSD as well
-    @skipIf(archs=["arm", "aarch64"], oslist=["linux"])
+    @skipIf(archs=["arm$", "aarch64"], oslist=["linux"])
     def test_terminate_commands(self):
         """
         Tests that the "terminateCommands", that can be passed during
@@ -566,7 +566,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         )
         version_eval_output = version_eval_response["body"]["result"]
 
-        version_string = self.dap_server.get_initialize_value("$__lldb_version")
+        version_string = self.dap_server.get_capability("$__lldb_version")
         self.assertEqual(
             version_eval_output.splitlines(),
             version_string.splitlines(),
