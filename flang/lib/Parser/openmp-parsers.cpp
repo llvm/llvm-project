@@ -19,6 +19,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 
 // OpenMP Directives and Clauses
@@ -104,8 +105,13 @@ struct OmpDirectiveNameParser {
   using Token = TokenStringMatch<false, false>;
 
   std::optional<resultType> Parse(ParseState &state) const {
+    if (state.BytesRemaining() == 0) {
+      return std::nullopt;
+    }
     auto begin{state.GetLocation()};
-    for (const NameWithId &nid : directives()) {
+    char next{static_cast<char>(std::tolower(*begin))};
+
+    for (const NameWithId &nid : directives_starting_with(next)) {
       if (attempt(Token(nid.first.data())).Parse(state)) {
         OmpDirectiveName n;
         n.v = nid.second;
@@ -118,30 +124,46 @@ struct OmpDirectiveNameParser {
 
 private:
   using NameWithId = std::pair<std::string, llvm::omp::Directive>;
+  using ConstIterator = std::vector<NameWithId>::const_iterator;
 
-  llvm::iterator_range<const NameWithId *> directives() const;
-  void initTokens(NameWithId *) const;
+  llvm::iterator_range<ConstIterator> directives_starting_with(
+      char initial) const;
+  void initTokens(std::vector<NameWithId>[]) const;
 };
 
-llvm::iterator_range<const OmpDirectiveNameParser::NameWithId *>
-OmpDirectiveNameParser::directives() const {
-  static NameWithId table[llvm::omp::Directive_enumSize];
+llvm::iterator_range<OmpDirectiveNameParser::ConstIterator>
+OmpDirectiveNameParser::directives_starting_with(char initial) const {
+  static const std::vector<NameWithId> empty{};
+  if (initial < 'a' || initial > 'z') {
+    return llvm::make_range(std::cbegin(empty), std::cend(empty));
+  }
+
+  static std::vector<NameWithId> table['z' - 'a' + 1];
   [[maybe_unused]] static bool init = (initTokens(table), true);
-  return llvm::make_range(std::cbegin(table), std::cend(table));
+
+  int index = initial - 'a';
+  return llvm::make_range(std::cbegin(table[index]), std::cend(table[index]));
 }
 
-void OmpDirectiveNameParser::initTokens(NameWithId *table) const {
+void OmpDirectiveNameParser::initTokens(std::vector<NameWithId> table[]) const {
   for (size_t i{0}, e{llvm::omp::Directive_enumSize}; i != e; ++i) {
+    llvm::StringSet spellings;
     auto id{static_cast<llvm::omp::Directive>(i)};
-    llvm::StringRef name{
-        llvm::omp::getOpenMPDirectiveName(id, llvm::omp::FallbackVersion)};
-    table[i] = std::make_pair(name.str(), id);
+    for (unsigned version : llvm::omp::getOpenMPVersions()) {
+      spellings.insert(llvm::omp::getOpenMPDirectiveName(id, version));
+    }
+    for (auto &[name, _] : spellings) {
+      char initial{static_cast<char>(std::tolower(name.front()))};
+      table[initial - 'a'].emplace_back(name.str(), id);
+    }
   }
   // Sort the table with respect to the directive name length in a descending
   // order. This is to make sure that longer names are tried first, before
   // any potential prefix (e.g. "target update" before "target").
-  std::sort(table, table + llvm::omp::Directive_enumSize,
-      [](auto &a, auto &b) { return a.first.size() > b.first.size(); });
+  for (int initial{'a'}; initial != 'z' + 1; ++initial) {
+    llvm::stable_sort(table[initial - 'a'],
+        [](auto &a, auto &b) { return a.first.size() > b.first.size(); });
+  }
 }
 
 // --- Modifier helpers -----------------------------------------------
