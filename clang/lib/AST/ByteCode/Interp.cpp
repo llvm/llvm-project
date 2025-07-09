@@ -1093,8 +1093,18 @@ bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   const Descriptor *Desc = Ptr.getDeclDesc();
   const ValueDecl *D = Desc->asValueDecl();
+
   if (!D)
     return false;
+
+  // Diagnose constexpr-unknown values as differently.
+  if (S.getLangOpts().CPlusPlus23 && isConstexprUnknown(Ptr)) {
+    S.FFDiag(S.Current->getExpr(OpPC),
+             diag::note_constexpr_access_unknown_variable, 1)
+        << AK << D;
+    S.Note(D->getLocation(), diag::note_declared_at);
+    return false;
+  }
 
   if (AK == AK_Read || AK == AK_Increment || AK == AK_Decrement)
     return diagnoseUnknownDecl(S, OpPC, D);
