@@ -28,8 +28,7 @@
 ; CHECK: %[[AAddr:.*]] = getelementptr inbounds [8 x i32], ptr @arr2, i64 0, <4 x i64> %[[VecInd]]
 ; CHECK: %[[VecIndTr:.*]] = trunc <4 x i64> %[[VecInd]] to <4 x i32>
 ; CHECK: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %[[VecIndTr]], <4 x ptr> %[[AAddr]], i32 4, <4 x i1> splat (i1 true))
-; CHECK: %[[VecIndTr2:.*]] = trunc <4 x i64> %[[VecInd]] to <4 x i32>
-; CHECK: %[[StoreVal:.*]] = add nsw <4 x i32> %[[VecIndTr2]], %[[Splat]]
+; CHECK: %[[StoreVal:.*]] = add nsw <4 x i32> %[[VecIndTr]], %[[Splat]]
 ; CHECK: br label %[[InnerLoop:.+]]
 
 ; CHECK: [[InnerLoop]]:
@@ -57,8 +56,7 @@
 ; AVX: %[[AAddr:.*]] = getelementptr inbounds [8 x i32], ptr @arr2, i64 0, <8 x i64> %[[VecInd]]
 ; AVX: %[[VecIndTr:.*]] = trunc <8 x i64> %[[VecInd]] to <8 x i32>
 ; AVX: call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %[[VecIndTr]], <8 x ptr> %[[AAddr]], i32 4, <8 x i1> splat (i1 true))
-; AVX: %[[VecIndTr2:.*]] = trunc <8 x i64> %[[VecInd]] to <8 x i32>
-; AVX: %[[StoreVal:.*]] = add nsw <8 x i32> %[[VecIndTr2]], %[[Splat]]
+; AVX: %[[StoreVal:.*]] = add nsw <8 x i32> %[[VecIndTr]], %[[Splat]]
 ; AVX: br label %[[InnerLoop:.+]]
 
 ; AVX: [[InnerLoop]]:

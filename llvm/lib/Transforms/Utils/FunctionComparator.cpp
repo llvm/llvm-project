@@ -804,6 +804,10 @@ int FunctionComparator::cmpOperations(const Instruction *L,
         return Res;
     }
   }
+  if (const CastInst *Cast = dyn_cast<CastInst>(L)) {
+    const CastInst *CastR = cast<CastInst>(R);
+    return cmpTypes(Cast->getDestTy(), CastR->getDestTy());
+  }
   return 0;
 }
 
