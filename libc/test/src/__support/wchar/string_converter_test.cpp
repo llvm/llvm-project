@@ -22,7 +22,7 @@ TEST(LlvmLibcStringConverterTest, UTF8To32) {
   const char *src = "\xF0\x9F\xA4\xA1\xE2\x88\x91\xC3\xBF\x41";
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char8_t> sc(
-      reinterpret_cast<const char8_t *>(src), SIZE_MAX, &state);
+      reinterpret_cast<const char8_t *>(src), &state, SIZE_MAX);
 
   auto res = sc.popUTF32();
   ASSERT_TRUE(res.has_value());
@@ -60,22 +60,22 @@ TEST(LlvmLibcStringConverterTest, UTF32To8) {
   const wchar_t *src = L"\x1f921\x2211\xff\x41";
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char32_t> sc(
-      reinterpret_cast<const char32_t *>(src), SIZE_MAX, &state);
+      reinterpret_cast<const char32_t *>(src), &state, SIZE_MAX);
 
   auto res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0xF0);
-  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 0);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 1);
 
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0x9F);
-  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 0);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 1);
 
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0xA4);
-  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 0);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 1);
 
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
@@ -86,12 +86,12 @@ TEST(LlvmLibcStringConverterTest, UTF32To8) {
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0xE2);
-  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 1);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 2);
 
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0x88);
-  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 1);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 2);
 
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
@@ -102,7 +102,7 @@ TEST(LlvmLibcStringConverterTest, UTF32To8) {
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0xC3);
-  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 2);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 3);
 
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
@@ -131,22 +131,22 @@ TEST(LlvmLibcStringConverterTest, UTF32To8PartialRead) {
   const wchar_t *src = L"\x1f921\x2211"; // clown emoji, sigma symbol
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char32_t> sc(
-      reinterpret_cast<const char32_t *>(src), 1, SIZE_MAX, &state);
+      reinterpret_cast<const char32_t *>(src), &state, SIZE_MAX, 1);
 
   auto res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0xF0);
-  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 0);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 1);
 
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0x9F);
-  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 0);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 1);
 
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0xA4);
-  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 0);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 1);
 
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
@@ -164,7 +164,7 @@ TEST(LlvmLibcStringConverterTest, UTF8To32PartialRead) {
   const char *src = "\xF0\x9F\xA4\xA1\xE2\x88\x91";
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char8_t> sc(
-      reinterpret_cast<const char8_t *>(src), 5, SIZE_MAX, &state);
+      reinterpret_cast<const char8_t *>(src), &state, SIZE_MAX, 5);
 
   auto res = sc.popUTF32();
   ASSERT_TRUE(res.has_value());
@@ -181,22 +181,22 @@ TEST(LlvmLibcStringConverterTest, UTF32To8ErrorHandling) {
   const wchar_t *src = L"\x1f921\xffffff"; // clown emoji, invalid utf32
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char32_t> sc(
-      reinterpret_cast<const char32_t *>(src), SIZE_MAX, &state);
+      reinterpret_cast<const char32_t *>(src), &state, SIZE_MAX);
 
   auto res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0xF0);
-  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 0);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 1);
 
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0x9F);
-  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 0);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 1);
 
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0xA4);
-  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 0);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 1);
 
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
@@ -215,7 +215,7 @@ TEST(LlvmLibcStringConverterTest, UTF8To32ErrorHandling) {
   const char *src = "\xF0\x9F\xA4\xA1\x90\x88\x30";
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char8_t> sc(
-      reinterpret_cast<const char8_t *>(src), SIZE_MAX, &state);
+      reinterpret_cast<const char8_t *>(src), &state, SIZE_MAX);
 
   auto res = sc.popUTF32();
   ASSERT_TRUE(res.has_value());
@@ -237,22 +237,22 @@ TEST(LlvmLibcStringConverterTest, MultipleStringConverters32To8) {
   const wchar_t *src = L"\x1f921\xff"; // clown emoji, y with diaeresis (ÿ)
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char32_t> sc1(
-      reinterpret_cast<const char32_t *>(src), 1, SIZE_MAX, &state);
+      reinterpret_cast<const char32_t *>(src), &state, SIZE_MAX, 1);
 
   auto res = sc1.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0xF0);
-  ASSERT_EQ(static_cast<int>(sc1.getSourceIndex()), 0);
+  ASSERT_EQ(static_cast<int>(sc1.getSourceIndex()), 1);
 
   res = sc1.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0x9F);
-  ASSERT_EQ(static_cast<int>(sc1.getSourceIndex()), 0);
+  ASSERT_EQ(static_cast<int>(sc1.getSourceIndex()), 1);
 
   res = sc1.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0xA4);
-  ASSERT_EQ(static_cast<int>(sc1.getSourceIndex()), 0);
+  ASSERT_EQ(static_cast<int>(sc1.getSourceIndex()), 1);
 
   res = sc1.popUTF8();
   ASSERT_TRUE(res.has_value());
@@ -261,13 +261,13 @@ TEST(LlvmLibcStringConverterTest, MultipleStringConverters32To8) {
 
   // sc2 should pick up where sc1 left off and continue the conversion
   LIBC_NAMESPACE::internal::StringConverter<char32_t> sc2(
-      reinterpret_cast<const char32_t *>(src) + sc1.getSourceIndex(), 1,
-      SIZE_MAX, &state);
+      reinterpret_cast<const char32_t *>(src) + sc1.getSourceIndex(), &state,
+      SIZE_MAX, 1);
 
   res = sc2.popUTF8();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0xC3);
-  ASSERT_EQ(static_cast<int>(sc2.getSourceIndex()), 0);
+  ASSERT_EQ(static_cast<int>(sc2.getSourceIndex()), 1);
 
   res = sc2.popUTF8();
   ASSERT_TRUE(res.has_value());
@@ -279,7 +279,7 @@ TEST(LlvmLibcStringConverterTest, MultipleStringConverters8To32) {
   const char *src = "\xF0\x9F\xA4\xA1"; // clown emoji
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char8_t> sc1(
-      reinterpret_cast<const char8_t *>(src), 2, SIZE_MAX, &state);
+      reinterpret_cast<const char8_t *>(src), &state, SIZE_MAX, 2);
 
   auto res = sc1.popUTF32();
   ASSERT_FALSE(res.has_value());
@@ -288,8 +288,8 @@ TEST(LlvmLibcStringConverterTest, MultipleStringConverters8To32) {
 
   // sc2 should pick up where sc1 left off and continue the conversion
   LIBC_NAMESPACE::internal::StringConverter<char8_t> sc2(
-      reinterpret_cast<const char8_t *>(src) + sc1.getSourceIndex(), 3,
-      SIZE_MAX, &state);
+      reinterpret_cast<const char8_t *>(src) + sc1.getSourceIndex(), &state,
+      SIZE_MAX, 3);
 
   res = sc2.popUTF32();
   ASSERT_TRUE(res.has_value());
@@ -306,7 +306,7 @@ TEST(LlvmLibcStringConverterTest, DestLimitUTF8To32) {
   const char *src = "\xF0\x9F\xA4\xA1\xF0\x9F\xA4\xA1"; // 2 clown emojis
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char8_t> sc(
-      reinterpret_cast<const char8_t *>(src), SIZE_MAX, 1, &state);
+      reinterpret_cast<const char8_t *>(src), &state, 1, SIZE_MAX);
 
   auto res = sc.popUTF32();
   ASSERT_TRUE(res.has_value());
@@ -320,19 +320,19 @@ TEST(LlvmLibcStringConverterTest, DestLimitUTF32To8) {
   const wchar_t *src = L"\x1f921\x1f921"; // 2 clown emojis
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char32_t> sc(
-      reinterpret_cast<const char32_t *>(src), SIZE_MAX, 5, &state);
+      reinterpret_cast<const char32_t *>(src), &state, 5, SIZE_MAX);
 
   auto res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
-  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 0);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 1);
 
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
-  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 0);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 1);
 
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());
-  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 0);
+  ASSERT_EQ(static_cast<int>(sc.getSourceIndex()), 1);
 
   res = sc.popUTF8();
   ASSERT_TRUE(res.has_value());

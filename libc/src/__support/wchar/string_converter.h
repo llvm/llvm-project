@@ -27,57 +27,55 @@ private:
   size_t src_len;
   size_t src_idx;
 
-  // # of src elements pushed to cr needed to represent the current character
-  size_t num_pushed;
-
   // # of pops we are allowed to perform (essentially size of the dest buffer)
   size_t num_to_write;
 
-  int pushFullCharacter() {
+  // on the very first pop, we need to make sure that we always
+  // pushFullCharacter in case a previous StringConverter pushed part of a
+  // character to the mbstate
+  bool first_pop;
+
+  ErrorOr<size_t> pushFullCharacter() {
+    size_t num_pushed;
     for (num_pushed = 0; !cr.isFull() && src_idx + num_pushed < src_len;
          ++num_pushed) {
       int err = cr.push(src[src_idx + num_pushed]);
       if (err != 0)
-        return err;
+        return Error(err);
     }
 
     // if we aren't able to read a full character from the source string
     if (src_idx + num_pushed == src_len && !cr.isFull()) {
       src_idx += num_pushed;
-      return -1;
+      return Error(-1);
     }
 
-    return 0;
+    return num_pushed;
   }
 
 public:
-  StringConverter(const T *s, size_t srclen, size_t dstlen, mbstate *ps)
-      : cr(ps), src(s), src_len(srclen), src_idx(0), num_pushed(0),
-        num_to_write(dstlen) {
-    pushFullCharacter();
-  }
-
-  StringConverter(const T *s, size_t dstlen, mbstate *ps)
-      : StringConverter(s, SIZE_MAX, dstlen, ps) {}
+  StringConverter(const T *s, mbstate *ps, size_t dstlen, size_t srclen=SIZE_MAX)
+      : cr(ps), src(s), src_len(srclen), src_idx(0), num_to_write(dstlen),
+        first_pop(true) {}
 
   // TODO: following functions are almost identical
   // look into templating CharacterConverter pop functions
   ErrorOr<char32_t> popUTF32() {
-    if (cr.isEmpty()) {
-      int err = pushFullCharacter();
-      if (err != 0)
-        return Error(err);
+    if (cr.isEmpty() || first_pop) {
+      first_pop = false;
+      auto src_elements_read = pushFullCharacter();
+      if (!src_elements_read.has_value())
+        return Error(src_elements_read.error());
 
       if (cr.sizeAsUTF32() > num_to_write) {
         cr.clear();
         return Error(-1);
       }
+
+      src_idx += src_elements_read.value();
     }
 
     auto out = cr.pop_utf32();
-    if (cr.isEmpty())
-      src_idx += num_pushed;
-
     if (out.has_value() && out.value() == L'\0')
       src_len = src_idx;
 
@@ -87,21 +85,21 @@ public:
   }
 
   ErrorOr<char8_t> popUTF8() {
-    if (cr.isEmpty()) {
-      int err = pushFullCharacter();
-      if (err != 0)
-        return Error(err);
+    if (cr.isEmpty() || first_pop) {
+      first_pop = false;
+      auto src_elements_read = pushFullCharacter();
+      if (!src_elements_read.has_value())
+        return Error(src_elements_read.error());
 
       if (cr.sizeAsUTF8() > num_to_write) {
         cr.clear();
         return Error(-1);
       }
+
+      src_idx += src_elements_read.value();
     }
 
     auto out = cr.pop_utf8();
-    if (cr.isEmpty())
-      src_idx += num_pushed;
-
     if (out.has_value() && out.value() == '\0')
       src_len = src_idx;
 
