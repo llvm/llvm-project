@@ -37,33 +37,22 @@ using namespace llvm::object;
 /// Common abstraction for globals that live on the host and device.
 /// It simply encapsulates the symbol name, symbol size, and symbol address
 /// (which might be host or device depending on the context).
-/// Both size and address may be absent, and can be populated with
-// getGlobalMetadataFromDevice/Image.
+/// Both size and address may be absent (signified by 0/nullptr), and can be
+/// populated with getGlobalMetadataFromDevice/Image.
 class GlobalTy {
   // NOTE: Maybe we can have a pointer to the offload entry name instead of
   // holding a private copy of the name as a std::string.
   std::string Name;
-  std::optional<uint32_t> Size;
-  std::optional<void *> Ptr;
+  uint32_t Size;
+  void *Ptr;
 
 public:
-  GlobalTy(const std::string &Name) : Name(Name) {}
-  GlobalTy(const std::string &Name, uint32_t Size) : Name(Name), Size(Size) {}
-  GlobalTy(const std::string &Name, uint32_t Size, void *Ptr)
+  GlobalTy(const std::string &Name, uint32_t Size = 0, void *Ptr = nullptr)
       : Name(Name), Size(Size), Ptr(Ptr) {}
 
   const std::string &getName() const { return Name; }
-  uint32_t getSize() const {
-    assert(hasSize() && "Size not initialised");
-    return *Size;
-  }
-  void *getPtr() const {
-    assert(hasPtr() && "Ptr not initialised");
-    return *Ptr;
-  }
-
-  bool hasSize() const { return Size.has_value(); }
-  bool hasPtr() const { return Ptr.has_value(); }
+  uint32_t getSize() const { return Size; }
+  void *getPtr() const { return Ptr; }
 
   void setSize(int32_t S) { Size = S; }
   void setPtr(void *P) { Ptr = P; }

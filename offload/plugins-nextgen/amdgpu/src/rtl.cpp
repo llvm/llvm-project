@@ -3089,7 +3089,7 @@ struct AMDGPUGlobalHandlerTy final : public GenericGlobalHandlerTy {
     }
 
     // Check the size of the symbol.
-    if (DeviceGlobal.hasSize() && SymbolSize != DeviceGlobal.getSize())
+    if (DeviceGlobal.getSize() && SymbolSize != DeviceGlobal.getSize())
       return Plugin::error(
           ErrorCode::INVALID_BINARY,
           "failed to load global '%s' due to size mismatch (%zu != %zu)",

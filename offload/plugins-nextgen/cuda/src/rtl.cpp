@@ -1355,7 +1355,7 @@ public:
                                  GlobalName))
       return Err;
 
-    if (DeviceGlobal.hasSize() && CUSize != DeviceGlobal.getSize())
+    if (DeviceGlobal.getSize() && CUSize != DeviceGlobal.getSize())
       return Plugin::error(
           ErrorCode::INVALID_BINARY,
           "failed to load global '%s' due to size mismatch (%zu != %zu)",
