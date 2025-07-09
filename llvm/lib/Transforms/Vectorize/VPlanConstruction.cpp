@@ -709,15 +709,20 @@ bool VPlanTransforms::handleFMaxReductionsWithoutFastMath(VPlan &Plan) {
   // Find the first index of with the maximum value. This is used to extract the
   // lane with the final max value and is needed to handle signed zeros and NaNs
   // in the input.
-  auto *MiddleVPBB = Plan.getMiddleBlock();
-  auto *OrigRdxResult = cast<VPSingleDefRecipe>(&MiddleVPBB->front());
-  VPBuilder Builder(OrigRdxResult->getParent(),
-                    std::next(OrigRdxResult->getIterator()));
+  auto *MaxResult = find_singleton<VPSingleDefRecipe>(
+      RedPhiR->users(), [](VPUser *U, bool) -> VPSingleDefRecipe * {
+        auto *VPI = dyn_cast<VPInstruction>(U);
+        if (VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult)
+          return VPI;
+        return nullptr;
+      });
+  VPBuilder Builder(MaxResult->getParent(),
+                    std::next(MaxResult->getIterator()));
 
   // Create mask for lanes that have the max value and use it to mask out
   // indices that don't contain maximum values.
   auto *MaskFinalMaxValue = Builder.createNaryOp(
-      Instruction::FCmp, {OrigRdxResult->getOperand(1), OrigRdxResult},
+      Instruction::FCmp, {MaxResult->getOperand(1), MaxResult},
       VPIRFlags(CmpInst::FCMP_OEQ));
   auto *IndicesWithMaxValue = Builder.createNaryOp(
       Instruction::Select, {MaskFinalMaxValue, MinIdxSel, UMinSentinel});
@@ -731,11 +736,10 @@ bool VPlanTransforms::handleFMaxReductionsWithoutFastMath(VPlan &Plan) {
       Builder.createNaryOp(Instruction::URem, {FirstMaxIdx, &Plan.getVFxUF()});
 
   // Extract the final max value and update the users.
-  auto *Res = Builder.createNaryOp(
-      VPInstruction::ExtractLane, {FirstMaxLane, OrigRdxResult->getOperand(1)});
-  OrigRdxResult->replaceUsesWithIf(Res,
-                                   [MaskFinalMaxValue](VPUser &U, unsigned) {
-                                     return &U != MaskFinalMaxValue;
-                                   });
+  auto *Res = Builder.createNaryOp(VPInstruction::ExtractLane,
+                                   {FirstMaxLane, MaxResult->getOperand(1)});
+  MaxResult->replaceUsesWithIf(Res, [MaskFinalMaxValue](VPUser &U, unsigned) {
+    return &U != MaskFinalMaxValue;
+  });
   return true;
 }

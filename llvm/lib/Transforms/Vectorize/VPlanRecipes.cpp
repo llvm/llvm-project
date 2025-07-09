@@ -505,6 +505,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
     return true;
   switch (Opcode) {
   case Instruction::Freeze:
+  case Instruction::FCmp:
   case Instruction::ICmp:
   case Instruction::PHI:
   case Instruction::Select:
