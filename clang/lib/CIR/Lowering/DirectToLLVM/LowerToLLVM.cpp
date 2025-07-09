@@ -2385,6 +2385,8 @@ mlir::LogicalResult CIRToLLVMComplexAddOpLowering::matchAndRewrite(
     newImag = rewriter.create<mlir::LLVM::AddOp>(loc, complexElemTy, lhsImag,
                                                  rhsImag);
   } else {
+    assert(!cir::MissingFeatures::fastMathFlags());
+    assert(!cir::MissingFeatures::fpConstraints());
     newReal = rewriter.create<mlir::LLVM::FAddOp>(loc, complexElemTy, lhsReal,
                                                   rhsReal);
     newImag = rewriter.create<mlir::LLVM::FAddOp>(loc, complexElemTy, lhsImag,

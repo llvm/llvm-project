@@ -389,6 +389,8 @@ ComplexExprEmitter::emitBinOps(const BinaryOperator *e, QualType promotionTy) {
 }
 
 mlir::Value ComplexExprEmitter::emitBinAdd(const BinOpInfo &op) {
+  assert(!cir::MissingFeatures::fastMathFlags());
+  assert(!cir::MissingFeatures::cgFPOptionsRAII());
   return builder.create<cir::ComplexAddOp>(op.loc, op.lhs, op.rhs);
 }
 
