@@ -1,11 +1,9 @@
 """
-Test lldb-dap setBreakpoints request
+Test lldb-dap module request
 """
 
-import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 import lldbdap_testcase
 import re
 
@@ -55,7 +53,7 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
 
         if expect_debug_info_size:
             self.assertTrue(
-                self.waitUntil(check_symbols_loaded_with_size),
+                self.wait_until(check_symbols_loaded_with_size),
                 "expect has debug info size",
             )
 

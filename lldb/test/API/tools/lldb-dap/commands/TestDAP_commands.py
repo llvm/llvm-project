@@ -1,8 +1,8 @@
-import os
+"""
+Test lldb-dap command hooks
+"""
 
-import dap_server
 import lldbdap_testcase
-from lldbsuite.test import lldbtest, lldbutil
 from lldbsuite.test.decorators import *
 
 
@@ -23,7 +23,7 @@ class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
             exitCommands=["?" + command_quiet, command_not_quiet],
         )
         full_output = self.collect_console(
-            timeout_secs=1.0,
+            timeout=1.0,
             pattern=command_not_quiet,
         )
         self.assertNotIn(command_quiet, full_output)
@@ -51,7 +51,7 @@ class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
             expectFailure=True,
         )
         full_output = self.collect_console(
-            timeout_secs=1.0,
+            timeout=1.0,
             pattern=command_abort_on_error,
         )
         self.assertNotIn(command_quiet, full_output)
@@ -81,9 +81,6 @@ class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
             expectFailure=True,
         )
         self.assertFalse(resp["success"], "expected 'attach' failure")
-        full_output = self.collect_console(
-            timeout_secs=1.0,
-            pattern=command_abort_on_error,
-        )
+        full_output = self.collect_console(pattern=command_abort_on_error)
         self.assertNotIn(command_quiet, full_output)
         self.assertIn(command_abort_on_error, full_output)
