@@ -224,7 +224,7 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
       return;
     }
 
-    assert(dst.isBitField() && "NIY LValue type");
+    assert(dst.isBitField() && "Unknown LValue type");
     emitStoreThroughBitfieldLValue(src, dst);
     return;
 
@@ -332,6 +332,7 @@ mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
   mlir::Type resLTy = convertTypeForMem(dst.getType());
   Address ptr = dst.getBitFieldAddress();
 
+  assert(!cir::MissingFeatures::armComputeVolatileBitfields());
   const bool useVolatile = false;
 
   mlir::Value dstAddr = dst.getAddress().getPointer();
@@ -1077,11 +1078,10 @@ LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
     LValue lv = emitLValue(e->getLHS());
 
     SourceLocRAIIObject loc{*this, getLoc(e->getSourceRange())};
-    if (lv.isBitField()) {
+    if (lv.isBitField())
       emitStoreThroughBitfieldLValue(rv, lv);
-    } else {
+    else
       emitStoreThroughLValue(rv, lv);
-    }
 
     if (getLangOpts().OpenMP) {
       cgm.errorNYI(e->getSourceRange(), "openmp");

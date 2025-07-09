@@ -2385,6 +2385,24 @@ mlir::LogicalResult CIRToLLVMComplexImagOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::IntegerType computeBitfieldIntType(mlir::Type storageType,
+                                         mlir::MLIRContext *context,
+                                         unsigned &storageSize) {
+  return TypeSwitch<mlir::Type, mlir::IntegerType>(storageType)
+      .Case<cir::ArrayType>([&](cir::ArrayType atTy) {
+        storageSize = atTy.getSize() * 8;
+        return mlir::IntegerType::get(context, storageSize);
+      })
+      .Case<cir::IntType>([&](cir::IntType intTy) {
+        storageSize = intTy.getWidth();
+        return mlir::IntegerType::get(context, storageSize);
+      })
+      .Default([](mlir::Type) -> mlir::IntegerType {
+        llvm_unreachable(
+            "Either ArrayType or IntType expected for bitfields storage");
+      });
+}
+
 mlir::LogicalResult CIRToLLVMSetBitfieldOpLowering::matchAndRewrite(
     cir::SetBitfieldOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -2400,19 +2418,7 @@ mlir::LogicalResult CIRToLLVMSetBitfieldOpLowering::matchAndRewrite(
   unsigned storageSize = 0;
 
   mlir::IntegerType intType =
-      TypeSwitch<mlir::Type, mlir::IntegerType>(storageType)
-          .Case<cir::ArrayType>([&](cir::ArrayType atTy) {
-            storageSize = atTy.getSize() * 8;
-            return mlir::IntegerType::get(context, storageSize);
-          })
-          .Case<cir::IntType>([&](cir::IntType intTy) {
-            storageSize = intTy.getWidth();
-            return mlir::IntegerType::get(context, storageSize);
-          })
-          .Default([](mlir::Type) -> mlir::IntegerType {
-            llvm_unreachable(
-                "Either ArrayType or IntType expected for bitfields storage");
-          });
+      computeBitfieldIntType(storageType, context, storageSize);
 
   mlir::Value srcVal = createIntCast(rewriter, adaptor.getSrc(), intType);
   unsigned srcWidth = storageSize;
@@ -2476,19 +2482,7 @@ mlir::LogicalResult CIRToLLVMGetBitfieldOpLowering::matchAndRewrite(
   unsigned storageSize = 0;
 
   mlir::IntegerType intType =
-      TypeSwitch<mlir::Type, mlir::IntegerType>(storageType)
-          .Case<cir::ArrayType>([&](cir::ArrayType atTy) {
-            storageSize = atTy.getSize() * 8;
-            return mlir::IntegerType::get(context, storageSize);
-          })
-          .Case<cir::IntType>([&](cir::IntType intTy) {
-            storageSize = intTy.getWidth();
-            return mlir::IntegerType::get(context, storageSize);
-          })
-          .Default([](mlir::Type) -> mlir::IntegerType {
-            llvm_unreachable(
-                "Either ArrayType or IntType expected for bitfields storage");
-          });
+      computeBitfieldIntType(storageType, context, storageSize);
 
   mlir::Value val = rewriter.create<mlir::LLVM::LoadOp>(
       op.getLoc(), intType, adaptor.getAddr(), 0, op.getIsVolatile());

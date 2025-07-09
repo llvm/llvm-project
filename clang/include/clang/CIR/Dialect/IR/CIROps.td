@@ -1684,8 +1684,12 @@ def SetBitfieldOp : CIR_Op<"set_bitfield"> {
     base record, a size of the storage, a size the bit field, an offset
     of the bit field and a sign. Returns a value being stored.
 
-    A unit attribute `volatile` can be used to indicate a volatile load of the
+    A unit attribute `volatile` can be used to indicate a volatile store of the
     bitfield.
+      ```mlir
+        cir.set_bitfield(#bfi, %0 : !cir.ptr<!u32i>, %1 : !s32i) {is_volatile}
+                                                                       -> !s32i
+      ```
 
     Example.
     Suppose we have a struct with multiple bitfields stored in
