@@ -146,7 +146,7 @@ public:
 
         const FunctionType *Signature = CB->getFunctionType();
         GlobalSet &PotentialCallees = FuncTypeToFuncsMap[Signature];
-        Graph.emplace_or_assign(&F, std::move(PotentialCallees));
+        Graph[&F].insert(PotentialCallees.begin(), PotentialCallees.end());
       }
     }
 
