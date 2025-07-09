@@ -10,7 +10,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class LibcxxStringViewDataFormatterTestCase(TestBase):
+class StdStringViewDataFormatterTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -20,16 +20,8 @@ class LibcxxStringViewDataFormatterTestCase(TestBase):
             "main.cpp", "// Break here to look at bad string view."
         )
 
-    @add_test_categories(["libc++"])
-    @expectedFailureAll(
-        bugnumber="llvm.org/pr36109", debug_info="gmodules", triple=".*-android"
-    )
-    # Inline namespace is randomly ignored as Clang due to broken lookup inside
-    # the std namespace.
-    @expectedFailureAll(debug_info="gmodules")
-    def test_with_run_command(self):
+    def do_test(self):
         """Test that that file and class static variables display correctly."""
-        self.build()
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         lldbutil.run_break_set_by_file_and_line(
@@ -160,3 +152,14 @@ class LibcxxStringViewDataFormatterTestCase(TestBase):
 
         broken_obj = self.frame().GetValueForVariablePath("in_str_view")
         self.assertEqual(broken_obj.GetSummary(), "Summary Unavailable")
+
+    @expectedFailureAll(
+        bugnumber="llvm.org/pr36109", debug_info="gmodules", triple=".*-android"
+    )
+    # Inline namespace is randomly ignored as Clang due to broken lookup inside
+    # the std namespace.
+    @expectedFailureAll(debug_info="gmodules")
+    @add_test_categories(["libc++"])
+    def test_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()
