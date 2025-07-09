@@ -949,7 +949,7 @@ Expr *buildIsDeducibleConstraint(Sema &SemaRef,
     ReturnType = SemaRef.SubstType(
         ReturnType, Args, AliasTemplate->getLocation(),
         Context.DeclarationNames.getCXXDeductionGuideName(AliasTemplate));
-  };
+  }
 
   SmallVector<TypeSourceInfo *> IsDeducibleTypeTraitArgs = {
       Context.getTrivialTypeSourceInfo(
@@ -969,11 +969,14 @@ Expr *buildIsDeducibleConstraint(Sema &SemaRef,
 }
 
 std::pair<TemplateDecl *, llvm::ArrayRef<TemplateArgument>>
-getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate) {
+getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate,
+                          bool Desugar) {
   // Unwrap the sugared ElaboratedType.
   auto RhsType = AliasTemplate->getTemplatedDecl()
                      ->getUnderlyingType()
                      .getSingleStepDesugaredType(SemaRef.Context);
+  if (Desugar)
+    RhsType = RhsType.getDesugaredType(SemaRef.Context);
   TemplateDecl *Template = nullptr;
   llvm::ArrayRef<TemplateArgument> AliasRhsTemplateArgs;
   if (const auto *TST = RhsType->getAs<TemplateSpecializationType>()) {
@@ -1023,8 +1026,26 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
 
   auto &Context = SemaRef.Context;
   auto [Template, AliasRhsTemplateArgs] =
-      getRHSTemplateDeclAndArgs(SemaRef, AliasTemplate);
+      getRHSTemplateDeclAndArgs(SemaRef, AliasTemplate, /*Desugar=*/true);
 
+  // We need both types desugared, before we continue to perform type deduction.
+  // The intent is to get the template argument list 'matched', e.g. in the
+  // following case:
+  //
+  //
+  //  template <class T>
+  //  struct A {};
+  //  template <class T>
+  //  using Foo = A<A<T>>;
+  //  template <class U = int>
+  //  using Bar = Foo<U>;
+  //
+  // In terms of Bar, we want U (which has the default argument) to appear in
+  // the synthesized deduction guide, but U would remain undeduced if we deduced
+  // A<A<T>> using Foo<U> directly.
+  //
+  // Instead, we need to canonicalize both against A, i.e. A<A<T>> and A<A<U>>,
+  // such that T can be deduced as U.
   auto RType = F->getTemplatedDecl()->getReturnType();
   // The (trailing) return type of the deduction guide.
   const TemplateSpecializationType *FReturnType =
@@ -1034,7 +1055,7 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
     FReturnType = InjectedCNT->getInjectedTST();
   else if (const auto *ET = RType->getAs<ElaboratedType>())
     // explicit deduction guide.
-    FReturnType = ET->getNamedType()->getAs<TemplateSpecializationType>();
+    FReturnType = ET->getNamedType()->getAsNonAliasTemplateSpecializationType();
   assert(FReturnType && "expected to see a return type");
   // Deduce template arguments of the deduction guide f from the RHS of
   // the alias.
@@ -1223,7 +1244,7 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
     return;
   auto &Context = SemaRef.Context;
   auto [Template, AliasRhsTemplateArgs] =
-      getRHSTemplateDeclAndArgs(SemaRef, AliasTemplate);
+      getRHSTemplateDeclAndArgs(SemaRef, AliasTemplate, /*Desugar=*/false);
   if (!Template)
     return;
   auto SourceDeductionGuides = getSourceDeductionGuides(
@@ -1303,7 +1324,8 @@ FunctionTemplateDecl *DeclareAggregateDeductionGuideForTypeAlias(
     Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate,
     MutableArrayRef<QualType> ParamTypes, SourceLocation Loc) {
   TemplateDecl *RHSTemplate =
-      getRHSTemplateDeclAndArgs(SemaRef, AliasTemplate).first;
+      getRHSTemplateDeclAndArgs(SemaRef, AliasTemplate, /*Desugar=*/false)
+          .first;
   if (!RHSTemplate)
     return nullptr;
 
