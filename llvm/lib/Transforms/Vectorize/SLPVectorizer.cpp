@@ -21680,58 +21680,6 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   return Changed;
 }
 
-bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
-  if (!I)
-    return false;
-
-  if (!isa<BinaryOperator, CmpInst>(I) || isa<VectorType>(I->getType()))
-    return false;
-
-  Value *P = I->getParent();
-
-  // Vectorize in current basic block only.
-  auto *Op0 = dyn_cast<Instruction>(I->getOperand(0));
-  auto *Op1 = dyn_cast<Instruction>(I->getOperand(1));
-  if (!Op0 || !Op1 || Op0->getParent() != P || Op1->getParent() != P ||
-      R.isDeleted(Op0) || R.isDeleted(Op1))
-    return false;
-
-  // First collect all possible candidates
-  SmallVector<std::pair<Value *, Value *>, 4> Candidates;
-  Candidates.emplace_back(Op0, Op1);
-
-  auto *A = dyn_cast<BinaryOperator>(Op0);
-  auto *B = dyn_cast<BinaryOperator>(Op1);
-  // Try to skip B.
-  if (A && B && B->hasOneUse()) {
-    auto *B0 = dyn_cast<BinaryOperator>(B->getOperand(0));
-    auto *B1 = dyn_cast<BinaryOperator>(B->getOperand(1));
-    if (B0 && B0->getParent() == P && !R.isDeleted(B0))
-      Candidates.emplace_back(A, B0);
-    if (B1 && B1->getParent() == P && !R.isDeleted(B1))
-      Candidates.emplace_back(A, B1);
-  }
-  // Try to skip A.
-  if (B && A && A->hasOneUse()) {
-    auto *A0 = dyn_cast<BinaryOperator>(A->getOperand(0));
-    auto *A1 = dyn_cast<BinaryOperator>(A->getOperand(1));
-    if (A0 && A0->getParent() == P && !R.isDeleted(A0))
-      Candidates.emplace_back(A0, B);
-    if (A1 && A1->getParent() == P && !R.isDeleted(A1))
-      Candidates.emplace_back(A1, B);
-  }
-
-  if (Candidates.size() == 1)
-    return tryToVectorizeList({Op0, Op1}, R);
-
-  // We have multiple options. Try to pick the single best.
-  std::optional<int> BestCandidate = R.findBestRootPair(Candidates);
-  if (!BestCandidate)
-    return false;
-  return tryToVectorizeList(
-      {Candidates[*BestCandidate].first, Candidates[*BestCandidate].second}, R);
-}
-
 namespace {
 
 /// Model horizontal reductions.
@@ -23742,6 +23690,58 @@ bool SLPVectorizerPass::vectorizeHorReduction(
               Stack.emplace(I, Level);
   }
   return Res;
+}
+
+bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
+  if (!I)
+    return false;
+
+  if (!isa<BinaryOperator, CmpInst>(I) || isa<VectorType>(I->getType()))
+    return false;
+
+  Value *P = I->getParent();
+
+  // Vectorize in current basic block only.
+  auto *Op0 = dyn_cast<Instruction>(I->getOperand(0));
+  auto *Op1 = dyn_cast<Instruction>(I->getOperand(1));
+  if (!Op0 || !Op1 || Op0->getParent() != P || Op1->getParent() != P ||
+      R.isDeleted(Op0) || R.isDeleted(Op1))
+    return false;
+
+  // First collect all possible candidates
+  SmallVector<std::pair<Value *, Value *>, 4> Candidates;
+  Candidates.emplace_back(Op0, Op1);
+
+  auto *A = dyn_cast<BinaryOperator>(Op0);
+  auto *B = dyn_cast<BinaryOperator>(Op1);
+  // Try to skip B.
+  if (A && B && B->hasOneUse()) {
+    auto *B0 = dyn_cast<BinaryOperator>(B->getOperand(0));
+    auto *B1 = dyn_cast<BinaryOperator>(B->getOperand(1));
+    if (B0 && B0->getParent() == P && !R.isDeleted(B0))
+      Candidates.emplace_back(A, B0);
+    if (B1 && B1->getParent() == P && !R.isDeleted(B1))
+      Candidates.emplace_back(A, B1);
+  }
+  // Try to skip A.
+  if (B && A && A->hasOneUse()) {
+    auto *A0 = dyn_cast<BinaryOperator>(A->getOperand(0));
+    auto *A1 = dyn_cast<BinaryOperator>(A->getOperand(1));
+    if (A0 && A0->getParent() == P && !R.isDeleted(A0))
+      Candidates.emplace_back(A0, B);
+    if (A1 && A1->getParent() == P && !R.isDeleted(A1))
+      Candidates.emplace_back(A1, B);
+  }
+
+  if (Candidates.size() == 1)
+    return tryToVectorizeList({Op0, Op1}, R);
+
+  // We have multiple options. Try to pick the single best.
+  std::optional<int> BestCandidate = R.findBestRootPair(Candidates);
+  if (!BestCandidate)
+    return false;
+  return tryToVectorizeList(
+      {Candidates[*BestCandidate].first, Candidates[*BestCandidate].second}, R);
 }
 
 bool SLPVectorizerPass::vectorizeRootInstruction(PHINode *P, Instruction *Root,
