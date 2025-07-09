@@ -21,8 +21,8 @@ void bad_root_signature_3() {}
 [RootSignature("DescriptorTable(), invalid")]
 void bad_root_signature_4() {}
 
-// expected-error@+1 {{invalid parameter of RootConstants}}
-[RootSignature("RootConstants(b0, num32BitConstants = 1, invalid)")]
+// expected-error@+1 {{expected ')'}}
+[RootSignature("RootConstants(b0 num32BitConstants = 1)")]
 void bad_root_signature_5() {}
 
 #define MultiLineRootSignature \
