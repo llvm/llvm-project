@@ -168,8 +168,8 @@ public:
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
-  bool shouldForceRelocation(const MCFixup &, const MCValue &);
-
+  std::optional<bool> evaluateFixup(const MCFragment &, MCFixup &, MCValue &,
+                                    uint64_t &) override;
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   MutableArrayRef<char> Data, uint64_t Value,
                   bool IsResolved) override;
@@ -676,6 +676,37 @@ static unsigned getFixupKindSize(unsigned Kind) {
   case FK_Data_8:
     return 8;
   }
+}
+
+constexpr char GotSymName[] = "_GLOBAL_OFFSET_TABLE_";
+
+// Adjust PC-relative fixup offsets, which are calculated from the start of the
+// next instruction.
+std::optional<bool> X86AsmBackend::evaluateFixup(const MCFragment &,
+                                                 MCFixup &Fixup,
+                                                 MCValue &Target, uint64_t &) {
+  if (Fixup.isPCRel()) {
+    switch (Fixup.getTargetKind()) {
+    case FK_Data_1:
+      Target.setConstant(Target.getConstant() - 1);
+      break;
+    case FK_Data_2:
+      Target.setConstant(Target.getConstant() - 2);
+      break;
+    default: {
+      Target.setConstant(Target.getConstant() - 4);
+      auto *Add = Target.getAddSym();
+      // If this is a pc-relative load off _GLOBAL_OFFSET_TABLE_:
+      // leaq _GLOBAL_OFFSET_TABLE_(%rip), %r15
+      // this needs to be a GOTPC32 relocation.
+      if (Add && Add->getName() == GotSymName)
+        Fixup = MCFixup::create(Fixup.getOffset(), Fixup.getValue(),
+                                X86::reloc_global_offset_table);
+    } break;
+    }
+  }
+  // Use default handling for `Value` and `IsResolved`.
+  return {};
 }
 
 void X86AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
