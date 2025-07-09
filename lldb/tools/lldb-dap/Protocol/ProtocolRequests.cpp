@@ -528,6 +528,9 @@ json::Value toJSON(const ModulesResponseBody &MR) {
   if (MR.totalModules != 0)
     result.insert({"totalModules", MR.totalModules});
 
+  return result;
+}
+
 bool fromJSON(const json::Value &Params, WriteMemoryArguments &WMA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
