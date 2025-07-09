@@ -12379,12 +12379,6 @@ define <8 x i32> @combine_vpermi2d_vpermps(<16 x i32> noundef %a) #0 {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = shufflevector <16 x i32> [[TMP5]], <16 x i32> splat (i32 -1), <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i32> [[A]], <16 x i32> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <8 x i32> @llvm.x86.avx512.vpermi2var.d.256(<8 x i32> [[_MSPROP]], <8 x i32> <i32 14, i32 13, i32 6, i32 3, i32 5, i32 15, i32 0, i32 1>, <8 x i32> [[_MSPROP1]])
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i24 bitcast (<8 x i3> <i3 -2, i3 -3, i3 -2, i3 3, i3 -3, i3 -1, i3 0, i3 1> to i24), 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
-; CHECK:       [[BB5]]:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB6]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call <8 x i32> @llvm.x86.avx512.vpermi2var.d.256(<8 x i32> [[TMP1]], <8 x i32> <i32 14, i32 13, i32 6, i32 3, i32 5, i32 15, i32 0, i32 1>, <8 x i32> [[TMP2]])
 ; CHECK-NEXT:    store <8 x i32> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i32> [[TMP3]]

@@ -4318,6 +4318,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         cast<FixedVectorType>(Idx->getType())->getNumElements();
     assert(isPowerOf2_64(IdxVectorSize));
 
+    // Compiler isn't smart enough, let's help it
+    if (auto *ConstantIdx = dyn_cast<Constant>(Idx))
+      return;
+
     Value *Truncated = IRB.CreateTrunc(
         Idx,
         FixedVectorType::get(Type::getIntNTy(*MS.C, Log2_64(IdxVectorSize)),

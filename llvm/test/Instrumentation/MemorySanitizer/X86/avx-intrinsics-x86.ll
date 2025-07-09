@@ -1001,12 +1001,6 @@ define <4 x double> @test_x86_avx_vpermilvar_pd_256_2(<4 x double> %a0) #0 {
 ; CHECK-NEXT:    [[A0:%.*]] = bitcast <4 x i64> [[TMP1]] to <4 x double>
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> [[A0]], <4 x i64> <i64 2, i64 0, i64 0, i64 2>)
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x double> [[RES]] to <4 x i64>
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i8 bitcast (<4 x i2> <i2 -2, i2 0, i2 0, i2 -2> to i8), 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
-; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn()
-; CHECK-NEXT:    unreachable
-; CHECK:       6:
 ; CHECK-NEXT:    [[RES1:%.*]] = call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> [[A1:%.*]], <4 x i64> <i64 2, i64 0, i64 0, i64 2>)
 ; CHECK-NEXT:    store <4 x i64> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x double> [[RES1]]

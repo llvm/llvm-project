@@ -8674,12 +8674,6 @@ define <16 x float>@test_int_x86_avx512_vpermilvar_ps_512_constant_pool(<16 x fl
 ; CHECK-NEXT:    [[X0:%.*]] = bitcast <16 x i32> [[TMP1]] to <16 x float>
 ; CHECK-NEXT:    [[RES:%.*]] = call <16 x float> @llvm.x86.avx512.vpermilvar.ps.512(<16 x float> [[X0]], <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 1, i32 0>)
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <16 x float> [[RES]] to <16 x i32>
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 bitcast (<16 x i4> <i4 1, i4 0, i4 3, i4 2, i4 0, i4 1, i4 2, i4 3, i4 2, i4 3, i4 0, i4 1, i4 2, i4 3, i4 1, i4 0> to i64), 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
-; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
-; CHECK-NEXT:    unreachable
-; CHECK:       6:
 ; CHECK-NEXT:    [[RES1:%.*]] = call <16 x float> @llvm.x86.avx512.vpermilvar.ps.512(<16 x float> [[X1:%.*]], <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 1, i32 0>)
 ; CHECK-NEXT:    store <16 x i32> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <16 x float> [[RES1]]
@@ -8697,12 +8691,6 @@ define <16 x float>@test_int_x86_avx512_vpermilvar_ps_512_constant_pool_mask(<16
 ; CHECK-NEXT:    [[X0:%.*]] = bitcast <16 x i32> [[TMP1]] to <16 x float>
 ; CHECK-NEXT:    [[RES:%.*]] = call <16 x float> @llvm.x86.avx512.vpermilvar.ps.512(<16 x float> [[X0]], <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 1, i32 0>)
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <16 x float> [[RES]] to <16 x i32>
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 bitcast (<16 x i4> <i4 1, i4 0, i4 3, i4 2, i4 0, i4 1, i4 2, i4 3, i4 2, i4 3, i4 0, i4 1, i4 2, i4 3, i4 1, i4 0> to i64), 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF1]]
-; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
-; CHECK-NEXT:    unreachable
-; CHECK:       8:
 ; CHECK-NEXT:    [[RES1:%.*]] = call <16 x float> @llvm.x86.avx512.vpermilvar.ps.512(<16 x float> [[X1:%.*]], <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 1, i32 0>)
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i16 [[TMP2]] to <16 x i1>
 ; CHECK-NEXT:    [[MASK_CAST:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
@@ -8731,12 +8719,6 @@ define <16 x float>@test_int_x86_avx512_vpermilvar_ps_512_constant_pool_maskz(<1
 ; CHECK-NEXT:    [[X0:%.*]] = bitcast <16 x i32> [[TMP1]] to <16 x float>
 ; CHECK-NEXT:    [[RES:%.*]] = call <16 x float> @llvm.x86.avx512.vpermilvar.ps.512(<16 x float> [[X0]], <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 1, i32 0>)
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <16 x float> [[RES]] to <16 x i32>
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 bitcast (<16 x i4> <i4 1, i4 0, i4 3, i4 2, i4 0, i4 1, i4 2, i4 3, i4 2, i4 3, i4 0, i4 1, i4 2, i4 3, i4 1, i4 0> to i64), 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF1]]
-; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR10]]
-; CHECK-NEXT:    unreachable
-; CHECK:       7:
 ; CHECK-NEXT:    [[RES1:%.*]] = call <16 x float> @llvm.x86.avx512.vpermilvar.ps.512(<16 x float> [[X1:%.*]], <16 x i32> <i32 1, i32 0, i32 3, i32 2, i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 1, i32 0>)
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i16 [[TMP2]] to <16 x i1>
 ; CHECK-NEXT:    [[MASK_CAST:%.*]] = bitcast i16 [[MASK:%.*]] to <16 x i1>
