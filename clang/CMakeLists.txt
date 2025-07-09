@@ -536,6 +536,7 @@ if( CLANG_INCLUDE_TESTS )
     clang_unit_site_config=${CMAKE_CURRENT_BINARY_DIR}/test/Unit/lit.site.cfg
   )
   add_subdirectory(test)
+  add_subdirectory(bindings/python/tests)
 
   if(CLANG_BUILT_STANDALONE)
     umbrella_lit_testsuite_end(check-all)

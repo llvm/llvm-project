@@ -2572,7 +2572,7 @@ namespace {
   if (HwModeNames.empty())
     HwModeNames.push_back("");
 
-  const auto &NumberedInstructions = Target.getInstructionsByEnumValue();
+  const auto &NumberedInstructions = Target.getInstructions();
   NumberedEncodings.reserve(NumberedInstructions.size());
   for (const auto &NumberedInstruction : NumberedInstructions) {
     const Record *InstDef = NumberedInstruction->TheDef;

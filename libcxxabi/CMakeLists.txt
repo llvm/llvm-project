@@ -192,6 +192,8 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBCXXABI_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LIBCXXABI_TARGET_SUBDIR})
   set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBCXXABI_TARGET_SUBDIR} CACHE STRING
       "Path where built libc++abi libraries should be installed.")
+  set(LIBCXXABI_INSTALL_INCLUDE_TARGET_DIR "${CMAKE_INSTALL_INCLUDEDIR}/${LIBCXXABI_TARGET_SUBDIR}/c++/v1" CACHE STRING
+      "Path where target-specific libc++abi headers should be installed.")
   unset(LIBCXXABI_TARGET_SUBDIR)
 else()
   if(LLVM_LIBRARY_OUTPUT_INTDIR)
@@ -203,6 +205,8 @@ else()
   endif()
   set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LIBCXXABI_LIBDIR_SUFFIX} CACHE STRING
       "Path where built libc++abi libraries should be installed.")
+  set(LIBCXXABI_INSTALL_INCLUDE_TARGET_DIR "${LIBCXXABI_INSTALL_INCLUDE_DIR}" CACHE STRING
+      "Path where target-specific libc++abi headers should be installed.")
 endif()
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBCXXABI_LIBRARY_DIR})

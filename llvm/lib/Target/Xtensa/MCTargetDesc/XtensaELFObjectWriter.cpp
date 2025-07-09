@@ -8,7 +8,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/XtensaMCExpr.h"
+#include "MCTargetDesc/XtensaMCAsmInfo.h"
 #include "MCTargetDesc/XtensaMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/ELF.h"

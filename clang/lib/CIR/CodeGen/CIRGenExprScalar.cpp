@@ -371,6 +371,11 @@ public:
     return builder.create<cir::CastOp>(src.getLoc(), fullDstTy, *castKind, src);
   }
 
+  mlir::Value
+  VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *e) {
+    return Visit(e->getReplacement());
+  }
+
   mlir::Value VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *e);
   mlir::Value
   VisitAbstractConditionalOperator(const AbstractConditionalOperator *e);
@@ -907,14 +912,7 @@ public:
       assert(e->getOpcode() == BO_EQ || e->getOpcode() == BO_NE);
 
       BinOpInfo boInfo = emitBinOps(e);
-      if (e->getOpcode() == BO_EQ) {
-        result =
-            builder.create<cir::ComplexEqualOp>(loc, boInfo.lhs, boInfo.rhs);
-      } else {
-        assert(!cir::MissingFeatures::complexType());
-        cgf.cgm.errorNYI(loc, "complex not equal");
-        result = builder.getBool(false, loc);
-      }
+      result = builder.create<cir::CmpOp>(loc, kind, boInfo.lhs, boInfo.rhs);
     }
 
     return emitScalarConversion(result, cgf.getContext().BoolTy, e->getType(),

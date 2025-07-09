@@ -196,24 +196,6 @@ GetStringMap(const llvm::json::Object &obj, llvm::StringRef key);
 void FillResponse(const llvm::json::Object &request,
                   llvm::json::Object &response);
 
-/// Converts a LLDB module to a VS Code DAP module for use in "modules" events.
-///
-/// \param[in] target
-///     A LLDB target object to convert into a JSON value.
-///
-/// \param[in] module
-///     A LLDB module object to convert into a JSON value
-///
-/// \param[in] id_only
-///     Only include the module ID in the JSON value. This is used when sending
-///     a "removed" module event.
-///
-/// \return
-///     A "Module" JSON object with that follows the formal JSON
-///     definition outlined by Microsoft.
-llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module,
-                               bool id_only = false);
-
 /// Create a "Event" JSON object using \a event_name as the event name
 ///
 /// \param[in] event_name

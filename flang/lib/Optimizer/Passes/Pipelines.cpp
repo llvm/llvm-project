@@ -358,6 +358,8 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
     framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::NonLeaf;
   else if (config.FramePointerKind == llvm::FramePointerKind::All)
     framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::All;
+  else if (config.FramePointerKind == llvm::FramePointerKind::Reserved)
+    framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::Reserved;
   else
     framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::None;
 

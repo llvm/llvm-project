@@ -396,6 +396,10 @@ RTLIB::Libcall RTLIB::getPOWI(EVT RetVT) {
                       POWI_PPCF128);
 }
 
+RTLIB::Libcall RTLIB::getPOW(EVT RetVT) {
+  return getFPLibCall(RetVT, POW_F32, POW_F64, POW_F80, POW_F128, POW_PPCF128);
+}
+
 RTLIB::Libcall RTLIB::getLDEXP(EVT RetVT) {
   return getFPLibCall(RetVT, LDEXP_F32, LDEXP_F64, LDEXP_F80, LDEXP_F128,
                       LDEXP_PPCF128);
@@ -404,6 +408,14 @@ RTLIB::Libcall RTLIB::getLDEXP(EVT RetVT) {
 RTLIB::Libcall RTLIB::getFREXP(EVT RetVT) {
   return getFPLibCall(RetVT, FREXP_F32, FREXP_F64, FREXP_F80, FREXP_F128,
                       FREXP_PPCF128);
+}
+
+RTLIB::Libcall RTLIB::getSIN(EVT RetVT) {
+  return getFPLibCall(RetVT, SIN_F32, SIN_F64, SIN_F80, SIN_F128, SIN_PPCF128);
+}
+
+RTLIB::Libcall RTLIB::getCOS(EVT RetVT) {
+  return getFPLibCall(RetVT, COS_F32, COS_F64, COS_F80, COS_F128, COS_PPCF128);
 }
 
 RTLIB::Libcall RTLIB::getSINCOS(EVT RetVT) {
@@ -681,9 +693,8 @@ void TargetLoweringBase::initActions() {
   memset(TruncStoreActions, 0, sizeof(TruncStoreActions));
   memset(IndexedModeActions, 0, sizeof(IndexedModeActions));
   memset(CondCodeActions, 0, sizeof(CondCodeActions));
-  std::fill(std::begin(RegClassForVT), std::end(RegClassForVT), nullptr);
-  std::fill(std::begin(TargetDAGCombineArray),
-            std::end(TargetDAGCombineArray), 0);
+  llvm::fill(RegClassForVT, nullptr);
+  llvm::fill(TargetDAGCombineArray, 0);
 
   // Let extending atomic loads be unsupported by default.
   for (MVT ValVT : MVT::all_valuetypes())
@@ -871,6 +882,10 @@ void TargetLoweringBase::initActions() {
                       ISD::FATAN,      ISD::FCOSH, ISD::FSINH,  ISD::FTANH,
                       ISD::FATAN2},
                      {MVT::f32, MVT::f64, MVT::f128}, Expand);
+
+  // Insert custom handling default for llvm.canonicalize.*.
+  setOperationAction(ISD::FCANONICALIZE,
+                     {MVT::f16, MVT::f32, MVT::f64, MVT::f128}, Expand);
 
   // FIXME: Query RuntimeLibCalls to make the decision.
   setOperationAction({ISD::LRINT, ISD::LLRINT, ISD::LROUND, ISD::LLROUND},

@@ -2886,7 +2886,20 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
 template <class Emitter>
 bool Compiler<Emitter>::VisitCXXBindTemporaryExpr(
     const CXXBindTemporaryExpr *E) {
-  return this->delegate(E->getSubExpr());
+  const Expr *SubExpr = E->getSubExpr();
+
+  if (Initializing)
+    return this->delegate(SubExpr);
+
+  // Make sure we create a temporary even if we're discarding, since that will
+  // make sure we will also call the destructor.
+
+  if (!this->visit(SubExpr))
+    return false;
+
+  if (DiscardResult)
+    return this->emitPopPtr(E);
+  return true;
 }
 
 template <class Emitter>
@@ -5545,7 +5558,6 @@ bool Compiler<Emitter>::visitCXXForRangeStmt(const CXXForRangeStmt *S) {
   const Stmt *BeginStmt = S->getBeginStmt();
   const Stmt *RangeStmt = S->getRangeStmt();
   const Stmt *EndStmt = S->getEndStmt();
-  const VarDecl *LoopVar = S->getLoopVariable();
 
   LabelTy EndLabel = this->getLabel();
   LabelTy CondLabel = this->getLabel();
@@ -5570,7 +5582,7 @@ bool Compiler<Emitter>::visitCXXForRangeStmt(const CXXForRangeStmt *S) {
   if (!this->jumpFalse(EndLabel))
     return false;
 
-  if (!this->visitVarDecl(LoopVar))
+  if (!this->visitDeclStmt(S->getLoopVarStmt(), /*EvaluateConditionDecl=*/true))
     return false;
 
   // Body.
@@ -5617,6 +5629,9 @@ bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
 template <class Emitter>
 bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
   const Expr *Cond = S->getCond();
+  if (Cond->containsErrors())
+    return false;
+
   PrimType CondT = this->classifyPrim(Cond->getType());
   LocalScope<Emitter> LS(this);
 
@@ -5836,6 +5851,8 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
     return false;
 
   if (R->isUnion() && Ctor->isCopyOrMoveConstructor()) {
+    if (R->getNumFields() == 0)
+      return this->emitRetVoid(Ctor);
     // union copy and move ctors are special.
     assert(cast<CompoundStmt>(Ctor->getBody())->body_empty());
     if (!this->emitThis(Ctor))

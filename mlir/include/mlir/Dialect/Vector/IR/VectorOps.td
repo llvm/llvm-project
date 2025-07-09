@@ -2492,6 +2492,7 @@ def Vector_ConstantMaskOp :
 
   let assemblyFormat = "$mask_dim_sizes attr-dict `:` type(results)";
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 def Vector_CreateMaskOp :

@@ -101,7 +101,7 @@ private:
   /// out.
   /// \param RecordReloc Record relocation if needed.
   /// relocation.
-  bool evaluateFixup(const MCFragment &F, const MCFixup &Fixup, MCValue &Target,
+  bool evaluateFixup(const MCFragment &F, MCFixup &Fixup, MCValue &Target,
                      uint64_t &Value, bool RecordReloc,
                      MutableArrayRef<char> Contents) const;
 
@@ -109,13 +109,10 @@ private:
   /// (increased in size, in order to hold its value correctly).
   bool fixupNeedsRelaxation(const MCRelaxableFragment &, const MCFixup &) const;
 
-  /// Check whether the given fragment needs relaxation.
-  bool fragmentNeedsRelaxation(const MCRelaxableFragment &) const;
-
   void layoutSection(MCSection &Sec);
-  /// Perform one layout iteration and return true if any offsets
-  /// were adjusted.
-  bool relaxOnce();
+  /// Perform one layout iteration and return the index of the first stable
+  /// section for subsequent optimization.
+  unsigned relaxOnce(unsigned FirstStable);
 
   /// Perform relaxation on a single fragment.
   bool relaxFragment(MCFragment &F);

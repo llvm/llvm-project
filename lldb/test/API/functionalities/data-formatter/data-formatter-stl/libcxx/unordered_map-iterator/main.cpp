@@ -16,7 +16,7 @@ static void check_references(const StringMapT &ref1, StringMapT &ref2,
 static void check_pointer(const StringMapT *ptr1, StringMapT *ptr2,
                           StringMapTPtr ptr3, StringMapTPtr *ptr4,
                           const StringMapT *const *ptr5, StringMapT **ptr6) {
-  std::printf("Break here");
+  std::printf("Stop here");
 }
 
 int main() {

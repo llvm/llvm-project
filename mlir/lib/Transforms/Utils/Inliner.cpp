@@ -539,7 +539,7 @@ Inliner::Impl::optimizeSCCAsync(MutableArrayRef<CallGraphNode *> nodesToVisit,
 
   // An atomic failure variable for the async executors.
   std::vector<std::atomic<bool>> activePMs(pipelines.size());
-  std::fill(activePMs.begin(), activePMs.end(), false);
+  llvm::fill(activePMs, false);
   return failableParallelForEach(ctx, nodesToVisit, [&](CallGraphNode *node) {
     // Find a pass manager for this operation.
     auto it = llvm::find_if(activePMs, [](std::atomic<bool> &isActive) {

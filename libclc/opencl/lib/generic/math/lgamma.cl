@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_lgamma.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/lgamma.h>
 
 #define FUNCTION lgamma
 #define __CLC_BODY <clc/shared/unary_def.inc>

@@ -4252,9 +4252,6 @@ SDValue SystemZTargetLowering::lowerRETURNADDR(SDValue Op,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MFI.setReturnAddressIsTaken(true);
 
-  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
-
   SDLoc DL(Op);
   unsigned Depth = Op.getConstantOperandVal(0);
   EVT PtrVT = getPointerTy(DAG.getDataLayout());

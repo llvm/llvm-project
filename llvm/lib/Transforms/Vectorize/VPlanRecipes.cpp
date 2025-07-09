@@ -751,8 +751,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // and will be removed by breaking up the recipe further.
     auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
     // Get its reduction variable descriptor.
-    const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
-    RecurKind RK = RdxDesc.getRecurrenceKind();
+    RecurKind RK = PhiR->getRecurrenceKind();
     assert(RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
            "Unexpected reduction kind");
     assert(!PhiR->isInLoop() &&
@@ -786,9 +785,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // and will be removed by breaking up the recipe further.
     auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
     // Get its reduction variable descriptor.
-    const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
 
-    RecurKind RK = RdxDesc.getRecurrenceKind();
+    RecurKind RK = PhiR->getRecurrenceKind();
     assert(!RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
            "should be handled by ComputeFindIVResult");
 
@@ -814,9 +812,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
         if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
           ReducedPartRdx = createMinMaxOp(Builder, RK, ReducedPartRdx, RdxPart);
         else
-          ReducedPartRdx =
-              Builder.CreateBinOp((Instruction::BinaryOps)RdxDesc.getOpcode(),
-                                  RdxPart, ReducedPartRdx, "bin.rdx");
+          ReducedPartRdx = Builder.CreateBinOp(
+              (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK),
+              RdxPart, ReducedPartRdx, "bin.rdx");
       }
     }
 
@@ -3439,17 +3437,9 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
   unsigned InterleaveFactor = Group->getFactor();
   auto *VecTy = VectorType::get(ScalarTy, State.VF * InterleaveFactor);
 
-  // TODO: extend the masked interleaved-group support to reversed access.
   VPValue *BlockInMask = getMask();
-  assert((!BlockInMask || !Group->isReverse()) &&
-         "Reversed masked interleave-group not supported.");
-
   VPValue *Addr = getAddr();
   Value *ResAddr = State.get(Addr, VPLane(0));
-  if (auto *I = dyn_cast<Instruction>(ResAddr))
-    State.setDebugLocFrom(I->getDebugLoc());
-
-  State.setDebugLocFrom(getDebugLoc());
   Value *PoisonVec = PoisonValue::get(VecTy);
 
   auto CreateGroupMask = [&BlockInMask, &State,

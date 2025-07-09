@@ -10,7 +10,7 @@ TEST_MAIN(int, char **, char **) {
   // aligned_alloc with valid alignment and size
   void *ptr = LIBC_NAMESPACE::aligned_alloc(32, 16);
   EXPECT_NE(ptr, nullptr);
-  EXPECT_EQ(__builtin_is_aligned(ptr, 32), 0U);
+  EXPECT_TRUE(__builtin_is_aligned(ptr, 32));
 
   LIBC_NAMESPACE::free(ptr);
 
@@ -23,7 +23,7 @@ TEST_MAIN(int, char **, char **) {
   void *div =
       LIBC_NAMESPACE::aligned_alloc(alignment, (gpu::get_thread_id() + 1) * 4);
   EXPECT_NE(div, nullptr);
-  EXPECT_EQ(__builtin_is_aligned(div, alignment), 0U);
+  EXPECT_TRUE(__builtin_is_aligned(div, alignment));
 
   return 0;
 }

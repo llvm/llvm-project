@@ -291,13 +291,14 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   opts.AliasAnalysis = opts.OptimizationLevel > 0;
 
-  // -mframe-pointer=none/non-leaf/all option.
+  // -mframe-pointer=none/non-leaf/reserved/all option.
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_mframe_pointer_EQ)) {
     std::optional<llvm::FramePointerKind> val =
         llvm::StringSwitch<std::optional<llvm::FramePointerKind>>(a->getValue())
             .Case("none", llvm::FramePointerKind::None)
             .Case("non-leaf", llvm::FramePointerKind::NonLeaf)
+            .Case("reserved", llvm::FramePointerKind::Reserved)
             .Case("all", llvm::FramePointerKind::All)
             .Default(std::nullopt);
 
@@ -1248,7 +1249,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 
   // Get the OpenMP target triples if any.
   if (auto *arg =
-          args.getLastArg(clang::driver::options::OPT_fopenmp_targets_EQ)) {
+          args.getLastArg(clang::driver::options::OPT_offload_targets_EQ)) {
     enum ArchPtrSize { Arch16Bit, Arch32Bit, Arch64Bit };
     auto getArchPtrSize = [](const llvm::Triple &triple) {
       if (triple.isArch16Bit())

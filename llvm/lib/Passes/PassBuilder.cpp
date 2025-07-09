@@ -339,6 +339,7 @@
 #include "llvm/Transforms/Utils/CountVisits.h"
 #include "llvm/Transforms/Utils/DXILUpgrade.h"
 #include "llvm/Transforms/Utils/Debugify.h"
+#include "llvm/Transforms/Utils/DeclareRuntimeLibcalls.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/FixIrreducible.h"
 #include "llvm/Transforms/Utils/HelloWorld.h"
@@ -2218,9 +2219,18 @@ Error PassBuilder::parseLoopPass(LoopPassManager &LPM,
 Error PassBuilder::parseMachinePass(MachineFunctionPassManager &MFPM,
                                     const PipelineElement &E) {
   StringRef Name = E.Name;
-  if (!E.InnerPipeline.empty())
+  // Handle any nested pass managers.
+  if (!E.InnerPipeline.empty()) {
+    if (E.Name == "machine-function") {
+      MachineFunctionPassManager NestedPM;
+      if (auto Err = parseMachinePassPipeline(NestedPM, E.InnerPipeline))
+        return Err;
+      MFPM.addPass(std::move(NestedPM));
+      return Error::success();
+    }
     return make_error<StringError>("invalid pipeline",
                                    inconvertibleErrorCode());
+  }
 
 #define MACHINE_MODULE_PASS(NAME, CREATE_PASS)                                 \
   if (Name == NAME) {                                                          \

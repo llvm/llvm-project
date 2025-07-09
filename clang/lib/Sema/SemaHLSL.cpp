@@ -39,7 +39,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Frontend/HLSL/HLSLRootSignatureUtils.h"
+#include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1200,10 +1200,9 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
   auto ReportOverlap = [this, Loc, &HadOverlap](const RangeInfo *Info,
                                                 const RangeInfo *OInfo) {
     HadOverlap = true;
-    auto CommonVis =
-        Info->Visibility == llvm::hlsl::rootsig::ShaderVisibility::All
-            ? OInfo->Visibility
-            : Info->Visibility;
+    auto CommonVis = Info->Visibility == llvm::dxbc::ShaderVisibility::All
+                         ? OInfo->Visibility
+                         : Info->Visibility;
     this->Diag(Loc, diag::err_hlsl_resource_range_overlap)
         << llvm::to_underlying(Info->Class) << Info->LowerBound
         << /*unbounded=*/(Info->UpperBound == RangeInfo::Unbounded)
@@ -1238,7 +1237,7 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
     // ResourceRanges in the former case and it will be an ArrayRef to just the
     // all visiblity ResourceRange in the latter case.
     ArrayRef<ResourceRange> OverlapRanges =
-        Info.Visibility == llvm::hlsl::rootsig::ShaderVisibility::All
+        Info.Visibility == llvm::dxbc::ShaderVisibility::All
             ? ArrayRef<ResourceRange>{Ranges}.drop_front()
             : ArrayRef<ResourceRange>{Ranges}.take_front();
 
@@ -1641,6 +1640,15 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
     return false;
 
   Attr *A = nullptr;
+
+  AttributeCommonInfo ACI(
+      AL.getLoc(), AttributeScopeInfo(AL.getScopeName(), AL.getScopeLoc()),
+      AttributeCommonInfo::NoSemaHandlerAttribute,
+      {
+          AttributeCommonInfo::AS_CXX11, 0, false /*IsAlignas*/,
+          false /*IsRegularKeywordAttribute*/
+      });
+
   switch (AL.getKind()) {
   case ParsedAttr::AT_HLSLResourceClass: {
     if (!AL.isArgIdent(0)) {
@@ -1660,16 +1668,16 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
           << "ResourceClass" << Identifier;
       return false;
     }
-    A = HLSLResourceClassAttr::Create(getASTContext(), RC, AL.getLoc());
+    A = HLSLResourceClassAttr::Create(getASTContext(), RC, ACI);
     break;
   }
 
   case ParsedAttr::AT_HLSLROV:
-    A = HLSLROVAttr::Create(getASTContext(), AL.getLoc());
+    A = HLSLROVAttr::Create(getASTContext(), ACI);
     break;
 
   case ParsedAttr::AT_HLSLRawBuffer:
-    A = HLSLRawBufferAttr::Create(getASTContext(), AL.getLoc());
+    A = HLSLRawBufferAttr::Create(getASTContext(), ACI);
     break;
 
   case ParsedAttr::AT_HLSLContainedType: {
@@ -1684,7 +1692,7 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
     if (SemaRef.RequireCompleteType(TSI->getTypeLoc().getBeginLoc(), QT,
                                     diag::err_incomplete_type))
       return false;
-    A = HLSLContainedTypeAttr::Create(getASTContext(), TSI, AL.getLoc());
+    A = HLSLContainedTypeAttr::Create(getASTContext(), TSI, ACI);
     break;
   }
 
