@@ -352,7 +352,7 @@ void MCObjectStreamer::emitInstructionImpl(const MCInst &Inst,
   // If this instruction doesn't need relaxation, just emit it as data.
   MCAssembler &Assembler = getAssembler();
   MCAsmBackend &Backend = Assembler.getBackend();
-  if (!(Backend.mayNeedRelaxation(Inst, STI) ||
+  if (!(Backend.mayNeedRelaxation(Inst.getOpcode(), Inst.getOperands(), STI) ||
         Backend.allowEnhancedRelaxation())) {
     emitInstToData(Inst, STI);
     return;
@@ -366,7 +366,8 @@ void MCObjectStreamer::emitInstructionImpl(const MCInst &Inst,
   if (Assembler.getRelaxAll() ||
       (Assembler.isBundlingEnabled() && Sec->isBundleLocked())) {
     MCInst Relaxed = Inst;
-    while (Backend.mayNeedRelaxation(Relaxed, STI))
+    while (Backend.mayNeedRelaxation(Relaxed.getOpcode(), Relaxed.getOperands(),
+                                     STI))
       Backend.relaxInstruction(Relaxed, STI);
     emitInstToData(Relaxed, STI);
     return;
@@ -397,8 +398,9 @@ void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
   // Always create a new, separate fragment here, because its size can change
   // during relaxation.
   MCRelaxableFragment *IF =
-      getContext().allocFragment<MCRelaxableFragment>(Inst, STI);
+      getContext().allocFragment<MCRelaxableFragment>(STI);
   insert(IF);
+  IF->setInst(Inst);
 
   SmallVector<MCFixup, 1> Fixups;
   getAssembler().getEmitter().encodeInstruction(
