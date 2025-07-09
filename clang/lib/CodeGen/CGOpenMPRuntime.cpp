@@ -6840,6 +6840,11 @@ public:
     Address LB = Address::invalid();
     bool IsArraySection = false;
     bool HasCompleteRecord = false;
+    // ATTACH information for delayed processing
+    Address AttachBaseAddr = Address::invalid();
+    Address AttachFirstElemAddr = Address::invalid();
+    const ValueDecl *AttachBaseDecl = nullptr;
+    const Expr *AttachMapExpr = nullptr;
   };
 
 private:
@@ -8136,9 +8141,16 @@ private:
     if (!EncounteredME)
       PartialStruct.HasCompleteRecord = true;
 
-    // Don't do this yet for member-exprs, like map(s.p[0:10])
+    // Handle ATTACH entries: delay if PartialStruct is being populated, otherwise add immediately
     if (AttachBaseAddr.isValid() && AttachFirstElemAddr.isValid()) {
-      if (IsMappingWholeStruct) {
+      if (PartialStruct.Base.isValid()) {
+        // We're populating PartialStruct, delay ATTACH entry addition until after emitCombinedEntry
+        llvm::errs() << "DEBUG generateInfoForComponentList: Saving ATTACH info for delayed processing\n";
+        PartialStruct.AttachBaseAddr = AttachBaseAddr;
+        PartialStruct.AttachFirstElemAddr = AttachFirstElemAddr;
+        PartialStruct.AttachBaseDecl = BaseDecl;
+        PartialStruct.AttachMapExpr = MapExpr;
+      } else if (IsMappingWholeStruct) {
         llvm::errs() << "DEBUG generateInfoForComponentList: Adding ATTACH to StructBaseCombinedInfo\n";
         addAttachEntry(CGF, StructBaseCombinedInfo, AttachBaseAddr, AttachFirstElemAddr, BaseDecl, MapExpr);
       } else {
@@ -8905,18 +8917,21 @@ static AttachInfo findAttachComponent(
 
       // If there is an entry in PartialStruct it means we have a struct with
       // individual members mapped. Emit an extra combined entry.
+      MapCombinedInfoTy AttachCombinedInfo;
       if (PartialStruct.Base.isValid()) {
         UnionCurInfo.NonContigInfo.Dims.push_back(0);
         llvm::errs() << "DEBUG CALLER: Emitting combined entry for PartialStruct\n";
         // Emit a combined entry:
-        emitCombinedEntry(CombinedInfo, UnionCurInfo.Types, PartialStruct,
-                          /*IsMapThis*/ !VD, OMPBuilder, VD);
+        emitCombinedEntry(CombinedInfo, AttachCombinedInfo, UnionCurInfo.Types, PartialStruct,
+                          /*IsMapThis*/ !VD, OMPBuilder, VD, 0, true);
       }
 
       llvm::errs() << "DEBUG CALLER: Before final append - CombinedInfo.BasePointers.size(): " << CombinedInfo.BasePointers.size() << "\n";
       // We need to append the results of this capture to what we already have.
       CombinedInfo.append(UnionCurInfo);
       llvm::errs() << "DEBUG CALLER: After final append - CombinedInfo.BasePointers.size(): " << CombinedInfo.BasePointers.size() << "\n";
+      // Append AttachCombinedInfo after UnionCurInfo
+      CombinedInfo.append(AttachCombinedInfo);
     }
     // Append data for use_device_ptr clauses.
     CombinedInfo.append(UseDeviceDataCombinedInfo);
@@ -8975,18 +8990,27 @@ public:
   /// Generate code for the combined entry if we have a partially mapped struct
   /// and take care of the mapping flags of the arguments corresponding to
   /// individual struct members.
+  /// AttachCombinedInfo will be populated with ATTACH entries if needed.
   void emitCombinedEntry(MapCombinedInfoTy &CombinedInfo,
+                         MapCombinedInfoTy &AttachCombinedInfo,
                          MapFlagsArrayTy &CurTypes,
                          const StructRangeInfoTy &PartialStruct, bool IsMapThis,
                          llvm::OpenMPIRBuilder &OMPBuilder,
-                         const ValueDecl *VD = nullptr,
-                         unsigned OffsetForMemberOfFlag = 0,
-                         bool NotTargetParams = true) const {
+                         const ValueDecl *VD,
+                         unsigned OffsetForMemberOfFlag,
+                         bool NotTargetParams) const {
     if (CurTypes.size() == 1 &&
         ((CurTypes.back() & OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF) !=
          OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF) &&
-        !PartialStruct.IsArraySection)
+        !PartialStruct.IsArraySection) {
+      // Process delayed ATTACH entries if available - no combined entry case
+      if (PartialStruct.AttachBaseAddr.isValid() && PartialStruct.AttachFirstElemAddr.isValid()) {
+        llvm::errs() << "DEBUG emitCombinedEntry: Early return path - adding ATTACH with saved pointee\n";
+        addAttachEntry(CGF, AttachCombinedInfo, PartialStruct.AttachBaseAddr, PartialStruct.AttachFirstElemAddr,
+                       PartialStruct.AttachBaseDecl, PartialStruct.AttachMapExpr);
+      }
       return;
+    }
     Address LBAddr = PartialStruct.LowestElem.second;
     Address HBAddr = PartialStruct.HighestElem.second;
     if (PartialStruct.HasCompleteRecord) {
@@ -9072,6 +9096,13 @@ public:
         OffsetForMemberOfFlag + CombinedInfo.BasePointers.size() - 1);
     for (auto &M : CurTypes)
       OMPBuilder.setCorrectMemberOfFlag(M, MemberOfFlag);
+    
+    // Process delayed ATTACH entries if available - combined entry case  
+    if (PartialStruct.AttachBaseAddr.isValid() && PartialStruct.AttachFirstElemAddr.isValid()) {
+      llvm::errs() << "DEBUG emitCombinedEntry: Combined entry path - using PartialStruct\n";
+      addAttachEntry(CGF, AttachCombinedInfo, PartialStruct.AttachBaseAddr, PartialStruct.Base,
+                     PartialStruct.AttachBaseDecl, PartialStruct.AttachMapExpr);
+    }
   }
 
   /// Generate all the base pointers, section pointers, sizes, map types, and
@@ -9318,20 +9349,19 @@ public:
           // If there is an entry in PartialStruct it means we have a
           // struct with individual members mapped. Emit an extra combined
           // entry.
+          MapCombinedInfoTy AttachCombinedInfo;
           if (PartialStruct.Base.isValid()) {
             CurCaptureVarInfo.append(PartialStruct.PreliminaryMapData);
             emitCombinedEntry(
-                CurCaptureVarInfo, CurInfoForComponentLists.Types,
+                CurCaptureVarInfo, AttachCombinedInfo, CurInfoForComponentLists.Types,
                 PartialStruct, Cap->capturesThis(), OMPBuilder, nullptr,
                 OffsetForMemberOfFlag,
                 /*NotTargetParams*/ !IsEligibleForTargetParamFlag);
           }
 
-          // Return if we didn't add any entries.
-          if (CurInfoForComponentLists.BasePointers.empty())
-            return;
-
+          // Append in order: combined-entry -> curinfo (individual fields) -> attachinfo
           CurCaptureVarInfo.append(CurInfoForComponentLists);
+          CurCaptureVarInfo.append(AttachCombinedInfo);
         };
 
     // Next, we break-down the lists of components into lists that should be
