@@ -482,7 +482,10 @@ void SelectionDAGISel::initializeAnalysisResults(
   MachineModuleInfo &MMI =
       MAMP.getCachedResult<MachineModuleAnalysis>(*Fn.getParent())->getMMI();
 
-  CurDAG->init(*MF, *ORE, MFAM, LibInfo, UA, PSI, BFI, MMI, FnVarLocs);
+  TTI = &FAM.getResult<TargetIRAnalysis>(Fn);
+
+  CurDAG->init(*MF, *ORE, MFAM, LibInfo, UA, PSI, BFI, MMI, FnVarLocs,
+               TTI->hasBranchDivergence(&Fn));
 
   // Now get the optional analyzes if we want to.
   // This is based on the possibly changed OptLevel (after optnone is taken
@@ -500,10 +503,6 @@ void SelectionDAGISel::initializeAnalysisResults(
     BatchAA = std::nullopt;
 
   SP = &FAM.getResult<SSPLayoutAnalysis>(Fn);
-
-#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
-  TTI = &FAM.getResult<TargetIRAnalysis>(Fn);
-#endif
 }
 
 void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
@@ -539,7 +538,10 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
   MachineModuleInfo &MMI =
       MFP.getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
 
-  CurDAG->init(*MF, *ORE, &MFP, LibInfo, UA, PSI, BFI, MMI, FnVarLocs);
+  TTI = &MFP.getAnalysis<TargetTransformInfoWrapperPass>().getTTI(Fn);
+
+  CurDAG->init(*MF, *ORE, &MFP, LibInfo, UA, PSI, BFI, MMI, FnVarLocs,
+               TTI->hasBranchDivergence(&Fn));
 
   // Now get the optional analyzes if we want to.
   // This is based on the possibly changed OptLevel (after optnone is taken
@@ -558,10 +560,6 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
     BatchAA = std::nullopt;
 
   SP = &MFP.getAnalysis<StackProtector>().getLayoutInfo();
-
-#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
-  TTI = &MFP.getAnalysis<TargetTransformInfoWrapperPass>().getTTI(Fn);
-#endif
 }
 
 bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
