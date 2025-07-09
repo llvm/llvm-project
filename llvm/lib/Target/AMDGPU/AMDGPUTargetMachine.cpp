@@ -2194,7 +2194,44 @@ void AMDGPUCodeGenPassBuilder::addMachineSSAOptimization(
   addPass(SIShrinkInstructionsPass());
 }
 
+void AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(
+    AddMachinePass &addPass) const {
+  if (EnableDCEInRA)
+    insertPass<DetectDeadLanesPass>(DeadMachineInstructionElimPass());
 
+  // FIXME: when an instruction has a Killed operand, and the instruction is
+  // inside a bundle, seems only the BUNDLE instruction appears as the Kills of
+  // the register in LiveVariables, this would trigger a failure in verifier,
+  // we should fix it and enable the verifier.
+  if (OptVGPRLiveRange)
+    insertPass<RequireAnalysisPass<LiveVariablesAnalysis, MachineFunction>>(
+        SIOptimizeVGPRLiveRangePass());
+
+  // This must be run immediately after phi elimination and before
+  // TwoAddressInstructions, otherwise the processing of the tied operand of
+  // SI_ELSE will introduce a copy of the tied operand source after the else.
+  insertPass<PHIEliminationPass>(SILowerControlFlowPass());
+
+  if (EnableRewritePartialRegUses)
+    insertPass<RenameIndependentSubregsPass>(GCNRewritePartialRegUsesPass());
+
+  if (isPassEnabled(EnablePreRAOptimizations))
+    insertPass<MachineSchedulerPass>(GCNPreRAOptimizationsPass());
+
+  // Allow the scheduler to run before SIWholeQuadMode inserts exec manipulation
+  // instructions that cause scheduling barriers.
+  insertPass<MachineSchedulerPass>(SIWholeQuadModePass());
+
+  if (OptExecMaskPreRA)
+    insertPass<MachineSchedulerPass>(SIOptimizeExecMaskingPreRAPass());
+
+  // This is not an essential optimization and it has a noticeable impact on
+  // compilation time, so we only enable it from O2.
+  if (TM.getOptLevel() > CodeGenOptLevel::Less)
+    insertPass<MachineSchedulerPass>(SIFormMemoryClausesPass());
+
+  Base::addOptimizedRegAlloc(addPass);
+}
 
 Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
     AddMachinePass &addPass) const {
@@ -2222,21 +2259,19 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
   addPass(SIPreAllocateWWMRegsPass());
 
   // For allocating other wwm register operands.
-  // addRegAlloc<RAGreedyPass>(addPass, RegAllocPhase::WWM);
   addPass(RAGreedyPass({onlyAllocateWWMRegs, "wwm"}));
   addPass(SILowerWWMCopiesPass());
   addPass(VirtRegRewriterPass(false));
   addPass(AMDGPUReserveWWMRegsPass());
 
   // For allocating per-thread VGPRs.
-  // addRegAlloc<RAGreedyPass>(addPass, RegAllocPhase::VGPR);
   addPass(RAGreedyPass({onlyAllocateVGPRs, "vgpr"}));
 
 
   addPreRewrite(addPass);
   addPass(VirtRegRewriterPass(true));
 
-  // TODO: addPass(AMDGPUMarkLastScratchLoadPass());
+  addPass(AMDGPUMarkLastScratchLoadPass());
   return Error::success();
 }
 
