@@ -1154,6 +1154,14 @@ DEF_TRAVERSE_TYPE(BTFTagAttributedType,
 DEF_TRAVERSE_TYPE(HLSLAttributedResourceType,
                   { TRY_TO(TraverseType(T->getWrappedType())); })
 
+DEF_TRAVERSE_TYPE(HLSLInlineSpirvType, {
+  for (auto &Operand : T->getOperands()) {
+    if (Operand.isConstant() || Operand.isType()) {
+      TRY_TO(TraverseType(Operand.getResultType()));
+    }
+  }
+})
+
 DEF_TRAVERSE_TYPE(ParenType, { TRY_TO(TraverseType(T->getInnerType())); })
 
 DEF_TRAVERSE_TYPE(MacroQualifiedType,
@@ -1457,6 +1465,9 @@ DEF_TRAVERSE_TYPELOC(BTFTagAttributedType,
 DEF_TRAVERSE_TYPELOC(HLSLAttributedResourceType,
                      { TRY_TO(TraverseTypeLoc(TL.getWrappedLoc())); })
 
+DEF_TRAVERSE_TYPELOC(HLSLInlineSpirvType,
+                     { TRY_TO(TraverseType(TL.getType())); })
+
 DEF_TRAVERSE_TYPELOC(ElaboratedType, {
   if (TL.getQualifierLoc()) {
     TRY_TO(TraverseNestedNameSpecifierLoc(TL.getQualifierLoc()));
@@ -1606,7 +1617,7 @@ DEF_TRAVERSE_DECL(LifetimeExtendedTemporaryDecl, {
 })
 
 DEF_TRAVERSE_DECL(FileScopeAsmDecl,
-                  { TRY_TO(TraverseStmt(D->getAsmString())); })
+                  { TRY_TO(TraverseStmt(D->getAsmStringExpr())); })
 
 DEF_TRAVERSE_DECL(TopLevelStmtDecl, { TRY_TO(TraverseStmt(D->getStmt())); })
 
@@ -2945,7 +2956,6 @@ DEF_TRAVERSE_STMT(CXXRewrittenBinaryOperator, {
   }
 })
 DEF_TRAVERSE_STMT(OpaqueValueExpr, {})
-DEF_TRAVERSE_STMT(TypoExpr, {})
 DEF_TRAVERSE_STMT(RecoveryExpr, {})
 DEF_TRAVERSE_STMT(CUDAKernelCallExpr, {})
 

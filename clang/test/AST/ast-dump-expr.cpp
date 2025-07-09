@@ -589,3 +589,13 @@ void leakNewFn() { new struct Sock; }
 // CHECK: CXXNewExpr {{.*}} <col:20, col:31> 'struct Sock *'
 }
 
+namespace GH143711 {
+struct S {
+  S(int, int);
+};
+
+void f() {
+  S(S(0, 1));
+}
+// CHECK: CXXTemporaryObjectExpr {{.*}} <col:5, col:11> 'S':'GH143711::S' 'void (int, int)'
+}

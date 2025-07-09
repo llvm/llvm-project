@@ -128,6 +128,7 @@ public:
   bool processIsDevicePtr(
       mlir::omp::IsDevicePtrClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const;
+  bool processLinear(mlir::omp::LinearClauseOps &result) const;
   bool
   processLink(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
 
@@ -138,6 +139,7 @@ public:
   bool processMap(mlir::Location currentLocation,
                   lower::StatementContext &stmtCtx,
                   mlir::omp::MapClauseOps &result,
+                  llvm::omp::Directive directive = llvm::omp::OMPD_unknown,
                   llvm::SmallVectorImpl<const semantics::Symbol *> *mapSyms =
                       nullptr) const;
   bool processMotionClauses(lower::StatementContext &stmtCtx,

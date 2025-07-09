@@ -353,32 +353,16 @@ static auto toJSONStrings(llvm::json::OStream &JOS, Container &&Strings) {
   };
 }
 
-static auto toJSONModuleID(llvm::json::OStream &JOS, StringRef ContextHash,
-                           StringRef ModuleName, bool Exported) {
-  return JOS.object([&] {
-    JOS.attribute("context-hash", StringRef(ContextHash));
-    JOS.attribute("module-name", StringRef(ModuleName));
-    if (Exported)
-      JOS.attribute("exported", StringRef("true"));
-  });
-}
-
 // Technically, we don't need to sort the dependency list to get determinism.
 // Leaving these be will simply preserve the import order.
 static auto toJSONSorted(llvm::json::OStream &JOS, std::vector<ModuleID> V) {
   llvm::sort(V);
   return [&JOS, V = std::move(V)] {
-    for (const auto &MID : V)
-      toJSONModuleID(JOS, MID.ContextHash, MID.ModuleName, false);
-  };
-}
-
-static auto toJSONSorted(llvm::json::OStream &JOS,
-                         std::vector<ModuleDeps::DepInfo> V) {
-  llvm::sort(V);
-  return [&JOS, V = std::move(V)] {
-    for (const ModuleDeps::DepInfo &MID : V)
-      toJSONModuleID(JOS, MID.ID.ContextHash, MID.ID.ModuleName, MID.Exported);
+    for (const ModuleID &MID : V)
+      JOS.object([&] {
+        JOS.attribute("context-hash", StringRef(MID.ContextHash));
+        JOS.attribute("module-name", StringRef(MID.ModuleName));
+      });
   };
 }
 
@@ -409,7 +393,9 @@ public:
     ID.FileName = std::string(Input);
     ID.ContextHash = std::move(TUDeps.ID.ContextHash);
     ID.FileDeps = std::move(TUDeps.FileDeps);
-    ID.ModuleDeps = std::move(TUDeps.ClangModuleDeps);
+    ID.NamedModule = std::move(TUDeps.ID.ModuleName);
+    ID.NamedModuleDeps = std::move(TUDeps.NamedModuleDeps);
+    ID.ClangModuleDeps = std::move(TUDeps.ClangModuleDeps);
     ID.DriverCommandLine = std::move(TUDeps.DriverCommandLine);
     ID.Commands = std::move(TUDeps.Commands);
 
@@ -452,11 +438,11 @@ public:
   // Returns \c true if any command lines fail to round-trip. We expect
   // commands already be canonical when output by the scanner.
   bool roundTripCommands(raw_ostream &ErrOS) {
-    IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions{};
-    TextDiagnosticPrinter DiagConsumer(ErrOS, &*DiagOpts);
+    DiagnosticOptions DiagOpts;
+    TextDiagnosticPrinter DiagConsumer(ErrOS, DiagOpts);
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
         CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                            &*DiagOpts, &DiagConsumer,
+                                            DiagOpts, &DiagConsumer,
                                             /*ShouldOwnClient=*/false);
 
     for (auto &&M : Modules)
@@ -524,8 +510,15 @@ public:
                   JOS.object([&] {
                     JOS.attribute("clang-context-hash",
                                   StringRef(I.ContextHash));
+                    if (!I.NamedModule.empty())
+                      JOS.attribute("named-module", (I.NamedModule));
+                    if (!I.NamedModuleDeps.empty())
+                      JOS.attributeArray("named-module-deps", [&] {
+                        for (const auto &Dep : I.NamedModuleDeps)
+                          JOS.value(Dep);
+                      });
                     JOS.attributeArray("clang-module-deps",
-                                       toJSONSorted(JOS, I.ModuleDeps));
+                                       toJSONSorted(JOS, I.ClangModuleDeps));
                     JOS.attributeArray("command-line",
                                        toJSONStrings(JOS, Cmd.Arguments));
                     JOS.attribute("executable", StringRef(Cmd.Executable));
@@ -537,8 +530,15 @@ public:
               } else {
                 JOS.object([&] {
                   JOS.attribute("clang-context-hash", StringRef(I.ContextHash));
+                  if (!I.NamedModule.empty())
+                    JOS.attribute("named-module", (I.NamedModule));
+                  if (!I.NamedModuleDeps.empty())
+                    JOS.attributeArray("named-module-deps", [&] {
+                      for (const auto &Dep : I.NamedModuleDeps)
+                        JOS.value(Dep);
+                    });
                   JOS.attributeArray("clang-module-deps",
-                                     toJSONSorted(JOS, I.ModuleDeps));
+                                     toJSONSorted(JOS, I.ClangModuleDeps));
                   JOS.attributeArray("command-line",
                                      toJSONStrings(JOS, I.DriverCommandLine));
                   JOS.attribute("executable", "clang");
@@ -593,7 +593,9 @@ private:
     std::string FileName;
     std::string ContextHash;
     std::vector<std::string> FileDeps;
-    std::vector<ModuleID> ModuleDeps;
+    std::string NamedModule;
+    std::vector<std::string> NamedModuleDeps;
+    std::vector<ModuleID> ClangModuleDeps;
     std::vector<std::string> DriverCommandLine;
     std::vector<Command> Commands;
   };
@@ -779,9 +781,10 @@ getCompilationDatabase(int argc, char **argv, std::string &ErrorMessage) {
         CompilationDB, ErrorMessage,
         tooling::JSONCommandLineSyntax::AutoDetect);
 
+  DiagnosticOptions DiagOpts;
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
       CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
-                                          new DiagnosticOptions);
+                                          DiagOpts);
   driver::Driver TheDriver(CommandLine[0], llvm::sys::getDefaultTargetTriple(),
                            *Diags);
   TheDriver.setCheckInputsExist(false);

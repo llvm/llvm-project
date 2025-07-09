@@ -6,6 +6,7 @@
 ; CHECK-NEXT:   32bit                            - Implements RV32.
 ; CHECK-NEXT:   64bit                            - Implements RV64.
 ; CHECK-NEXT:   a                                - 'A' (Atomic Instructions).
+; CHECK-NEXT:   andes45                          - Andes 45-Series processors.
 ; CHECK-NEXT:   auipc-addi-fusion                - Enable AUIPC+ADDI macrofusion.
 ; CHECK-NEXT:   b                                - 'B' (the collection of the Zba, Zbb, Zbs extensions).
 ; CHECK-NEXT:   c                                - 'C' (Compressed Instructions).
@@ -60,7 +61,6 @@
 ; CHECK-NEXT:   m                                - 'M' (Integer Multiplication and Division).
 ; CHECK-NEXT:   mips-p8700                       - MIPS p8700 processor.
 ; CHECK-NEXT:   no-default-unroll                - Disable default unroll preference..
-; CHECK-NEXT:   no-rvc-hints                     - Disable RVC Hint Instructions..
 ; CHECK-NEXT:   no-sink-splat-operands           - Disable sink splat operands to enable .vx, .vf,.wx, and .wf instructions.
 ; CHECK-NEXT:   no-trailing-seq-cst-fence        - Disable trailing fence for seq-cst store..
 ; CHECK-NEXT:   optimized-nf2-segment-load-store - vlseg2eN.v and vsseg2eN.v are implemented as a wide memory op and shuffle.
@@ -124,6 +124,7 @@
 ; CHECK-NEXT:   shcounterenw                     - 'Shcounterenw' (Support writeable hcounteren enable bit for any hpmcounter that is not read-only zero).
 ; CHECK-NEXT:   shgatpa                          - 'Shgatpa' (SvNNx4 mode supported for all modes supported by satp, as well as Bare).
 ; CHECK-NEXT:   shifted-zextw-fusion             - Enable SLLI+SRLI to be fused when computing (shifted) word zero extension.
+; CHECK-NEXT:   shlcofideleg                     - 'Shlcofideleg' (Delegating LCOFI Interrupts to VS-mode).
 ; CHECK-NEXT:   short-forward-branch-opt         - Enable short forward branch optimization.
 ; CHECK-NEXT:   shtvala                          - 'Shtvala' (htval provides all needed values).
 ; CHECK-NEXT:   shvsatpa                         - 'Shvsatpa' (vsatp supports all modes supported by satp).
@@ -170,10 +171,13 @@
 ; CHECK-NEXT:   use-postra-scheduler             - Schedule again after register allocation.
 ; CHECK-NEXT:   v                                - 'V' (Vector Extension for Application Processors).
 ; CHECK-NEXT:   ventana-veyron                   - Ventana Veyron-Series processors.
+; CHECK-NEXT:   vl-dependent-latency             - Latency of vector instructions is dependent on the dynamic value of vl.
 ; CHECK-NEXT:   vxrm-pipeline-flush              - VXRM writes causes pipeline flush.
 ; CHECK-NEXT:   xandesperf                       - 'XAndesPerf' (Andes Performance Extension).
+; CHECK-NEXT:   xandesvbfhcvt                    - 'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension).
 ; CHECK-NEXT:   xandesvdot                       - 'XAndesVDot' (Andes Vector Dot Product Extension).
 ; CHECK-NEXT:   xandesvpackfph                   - 'XAndesVPackFPH' (Andes Vector Packed FP16 Extension).
+; CHECK-NEXT:   xandesvsintload                  - 'XAndesVSIntLoad' (Andes Vector INT4 Load Extension).
 ; CHECK-NEXT:   xcvalu                           - 'XCValu' (CORE-V ALU Operations).
 ; CHECK-NEXT:   xcvbi                            - 'XCVbi' (CORE-V Immediate Branching).
 ; CHECK-NEXT:   xcvbitmanip                      - 'XCVbitmanip' (CORE-V Bit Manipulation).
@@ -181,12 +185,23 @@
 ; CHECK-NEXT:   xcvmac                           - 'XCVmac' (CORE-V Multiply-Accumulate).
 ; CHECK-NEXT:   xcvmem                           - 'XCVmem' (CORE-V Post-incrementing Load & Store).
 ; CHECK-NEXT:   xcvsimd                          - 'XCVsimd' (CORE-V SIMD ALU).
+; CHECK-NEXT:   xmipscbop                        - 'XMIPSCBOP' (MIPS Software Prefetch).
 ; CHECK-NEXT:   xmipscmov                        - 'XMIPSCMov' (MIPS conditional move instruction (mips.ccmov)).
 ; CHECK-NEXT:   xmipslsp                         - 'XMIPSLSP' (MIPS optimization for hardware load-store bonding).
 ; CHECK-NEXT:   xsfcease                         - 'XSfcease' (SiFive sf.cease Instruction).
+; CHECK-NEXT:   xsfmm128t                        - 'XSfmm128t' (TE=128 configuration).
+; CHECK-NEXT:   xsfmm16t                         - 'XSfmm16t' (TE=16 configuration).
+; CHECK-NEXT:   xsfmm32a16f                      - 'XSfmm32a16f' (TEW=32-bit accumulation, operands - float: 16b, widen=2 (IEEE, BF)). 
+; CHECK-NEXT:   xsfmm32a32f                      - 'XSfmm32a32f' (TEW=32-bit accumulation, operands - float: 32b). 
+; CHECK-NEXT:   xsfmm32a8f                       - 'XSfmm32a8f' (TEW=32-bit accumulation, operands - float: fp8). 
+; CHECK-NEXT:   xsfmm32a8i                       - 'XSfmm32a8i' (TEW=32-bit accumulation, operands - int: 8b). 
+; CHECK-NEXT:   xsfmm32t                         - 'XSfmm32t' (TE=32 configuration). 
+; CHECK-NEXT:   xsfmm64a64f                      - 'XSfmm64a64f' (TEW=64-bit accumulation, operands - float: fp64). 
+; CHECK-NEXT:   xsfmm64t                         - 'XSfmm64t' (TE=64 configuration). 
+; CHECK-NEXT:   xsfmmbase                        - 'XSfmmbase' (All non arithmetic instructions for all TEWs and sf.vtzero).
 ; CHECK-NEXT:   xsfvcp                           - 'XSfvcp' (SiFive Custom Vector Coprocessor Interface Instructions).
 ; CHECK-NEXT:   xsfvfnrclipxfqf                  - 'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions).
-; CHECK-NEXT:   xsfvfwmaccqqq                    - 'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction and 4-by-4)).
+; CHECK-NEXT:   xsfvfwmaccqqq                    - 'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction (4-by-4)).
 ; CHECK-NEXT:   xsfvqmaccdod                     - 'XSfvqmaccdod' (SiFive Int8 Matrix Multiplication Instructions (2-by-8 and 8-by-2)).
 ; CHECK-NEXT:   xsfvqmaccqoq                     - 'XSfvqmaccqoq' (SiFive Int8 Matrix Multiplication Instructions (4-by-8 and 8-by-4)).
 ; CHECK-NEXT:   xsifivecdiscarddlone             - 'XSiFivecdiscarddlone' (SiFive sf.cdiscard.d.l1 Instruction).

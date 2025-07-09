@@ -12,7 +12,6 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Filesystem.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
@@ -1318,11 +1317,11 @@ void elf::processArmCmseSymbols(Ctx &ctx) {
   // with its corresponding special symbol __acle_se_<sym>.
   parallelForEach(ctx.objectFiles, [&](InputFile *file) {
     MutableArrayRef<Symbol *> syms = file->getMutableSymbols();
-    for (size_t i = 0, e = syms.size(); i != e; ++i) {
-      StringRef symName = syms[i]->getName();
+    for (Symbol *&sym : syms) {
+      StringRef symName = sym->getName();
       auto it = ctx.symtab->cmseSymMap.find(symName);
       if (it != ctx.symtab->cmseSymMap.end())
-        syms[i] = it->second.acleSeSym;
+        sym = it->second.acleSeSym;
     }
   });
 }

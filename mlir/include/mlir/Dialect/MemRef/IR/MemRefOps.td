@@ -174,6 +174,7 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [
   }];
 
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -338,7 +339,7 @@ def MemRef_AllocaOp : AllocLikeOp<"alloca", AutomaticAllocationScopeResource,[
     The `alloca` operation allocates memory on the stack, to be automatically
     released when control transfers back from the region of its closest
     surrounding operation with an
-    [`AutomaticAllocationScope`](../Traits.md/#automaticallocationscope) trait.
+    [`AutomaticAllocationScope`](../Traits/#automaticallocationscope) trait.
     The amount of memory allocated is specified by its memref and additional
     operands. For example:
 
@@ -1077,8 +1078,7 @@ def GenericAtomicRMWOp : MemRef_Op<"generic_atomic_rmw", [
 
 def AtomicYieldOp : MemRef_Op<"atomic_yield", [
       HasParent<"GenericAtomicRMWOp">,
-      Pure,
-      Terminator
+      Pure, Terminator, ReturnLike
     ]> {
   let summary = "yield operation for GenericAtomicRMWOp";
   let description = [{
@@ -1202,7 +1202,12 @@ def LoadOp : MemRef_Op<"load",
     The `load` op reads an element from a memref at the specified indices.
 
     The number of indices must match the rank of the memref. The indices must
-    be in-bounds: `0 <= idx < dim_size`
+    be in-bounds: `0 <= idx < dim_size`.
+
+    Lowerings of `memref.load` may emit attributes, e.g. `inbouds` + `nuw`
+    when converting to LLVM's `llvm.getelementptr`, that would cause undefined
+    behavior if indices are out of bounds or if computing the offset in the
+    memref would cause signed overflow of the `index` type.
 
     The single result of `memref.load` is a value with the same type as the
     element type of the memref.
@@ -1896,7 +1901,12 @@ def MemRef_StoreOp : MemRef_Op<"store",
     The `store` op stores an element into a memref at the specified indices.
 
     The number of indices must match the rank of the memref. The indices must
-    be in-bounds: `0 <= idx < dim_size`
+    be in-bounds: `0 <= idx < dim_size`.
+
+    Lowerings of `memref.store` may emit attributes, e.g. `inbouds` + `nuw`
+    when converting to LLVM's `llvm.getelementptr`, that would cause undefined
+    behavior if indices are out of bounds or if computing the offset in the
+    memref would cause signed overflow of the `index` type.
 
     A set `nontemporal` attribute indicates that this store is not expected to
     be reused in the cache. For details, refer to the
@@ -2323,6 +2333,7 @@ def MemRef_ViewOp : MemRef_Op<"view", [
 
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

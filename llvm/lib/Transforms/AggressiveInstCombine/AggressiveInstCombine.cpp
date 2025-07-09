@@ -328,15 +328,33 @@ static bool tryToRecognizePopCount(Instruction &I) {
                               m_SpecificInt(Mask33))))) {
         Value *Root, *SubOp1;
         // Matching "i - ((i >> 1) & 0x55555555...)".
+        const APInt *AndMask;
         if (match(AndOp0, m_Sub(m_Value(Root), m_Value(SubOp1))) &&
             match(SubOp1, m_And(m_LShr(m_Specific(Root), m_SpecificInt(1)),
-                                m_SpecificInt(Mask55)))) {
-          LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
-          IRBuilder<> Builder(&I);
-          I.replaceAllUsesWith(
-              Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {Root}));
-          ++NumPopCountRecognized;
-          return true;
+                                m_APInt(AndMask)))) {
+          auto CheckAndMask = [&]() {
+            if (*AndMask == Mask55)
+              return true;
+
+            // Exact match failed, see if any bits are known to be 0 where we
+            // expect a 1 in the mask.
+            if (!AndMask->isSubsetOf(Mask55))
+              return false;
+
+            APInt NeededMask = Mask55 & ~*AndMask;
+            return MaskedValueIsZero(cast<Instruction>(SubOp1)->getOperand(0),
+                                     NeededMask,
+                                     SimplifyQuery(I.getDataLayout()));
+          };
+
+          if (CheckAndMask()) {
+            LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
+            IRBuilder<> Builder(&I);
+            I.replaceAllUsesWith(
+                Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {Root}));
+            ++NumPopCountRecognized;
+            return true;
+          }
         }
       }
     }
@@ -422,8 +440,7 @@ static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
   if (TTI.haveFastSqrt(Ty) &&
       (Call->hasNoNaNs() ||
        cannotBeOrderedLessThanZero(
-           Arg, 0,
-           SimplifyQuery(Call->getDataLayout(), &TLI, &DT, &AC, Call)))) {
+           Arg, SimplifyQuery(Call->getDataLayout(), &TLI, &DT, &AC, Call)))) {
     IRBuilder<> Builder(Call);
     Value *NewSqrt =
         Builder.CreateIntrinsic(Intrinsic::sqrt, Ty, Arg, Call, "sqrt");
@@ -530,7 +547,7 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I) {
     return false;
 
   GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand());
-  if (!GEP || !GEP->isInBounds() || GEP->getNumIndices() != 2)
+  if (!GEP || !GEP->hasNoUnsignedSignedWrap() || GEP->getNumIndices() != 2)
     return false;
 
   if (!GEP->getSourceElementType()->isArrayTy())
@@ -702,9 +719,7 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
     if (Inst.mayWriteToMemory() && isModSet(AA.getModRefInfo(&Inst, Loc)))
       return false;
 
-    // Ignore debug info so that's not counted against MaxInstrsToScan.
-    // Otherwise debug info could affect codegen.
-    if (!isa<DbgInfoIntrinsic>(Inst) && ++NumScanned > MaxInstrsToScan)
+    if (++NumScanned > MaxInstrsToScan)
       return false;
   }
 
@@ -899,7 +914,7 @@ getStrideAndModOffsetOfGEP(Value *PtrOp, const DataLayout &DL) {
 
     for (auto [V, Scale] : VarOffsets) {
       // Only keep a power of two factor for non-inbounds
-      if (!GEP->isInBounds())
+      if (!GEP->hasNoUnsignedSignedWrap())
         Scale = APInt::getOneBitSet(Scale.getBitWidth(), Scale.countr_zero());
 
       if (!Stride)

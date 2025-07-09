@@ -368,7 +368,7 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
                        bool IsTemporary, bool IsConst, UnknownSize)
     : Source(D), ElemSize(primSize(Type)), Size(UnknownSizeMark),
       MDSize(MD.value_or(0)),
-      AllocSize(MDSize + sizeof(InitMapPtr) + alignof(void *)),
+      AllocSize(MDSize + sizeof(InitMapPtr) + alignof(void *)), PrimT(Type),
       IsConst(IsConst), IsMutable(false), IsTemporary(IsTemporary),
       IsArray(true), CtorFn(getCtorArrayPrim(Type)),
       DtorFn(getDtorArrayPrim(Type)), MoveFn(getMoveArrayPrim(Type)) {
@@ -500,6 +500,21 @@ SourceInfo Descriptor::getLoc() const {
   if (const auto *E = dyn_cast<const Expr *>(Source))
     return SourceInfo(E);
   llvm_unreachable("Invalid descriptor type");
+}
+
+bool Descriptor::hasTrivialDtor() const {
+  if (isPrimitive() || isPrimitiveArray() || isDummy())
+    return true;
+
+  if (isRecord()) {
+    assert(ElemRecord);
+    const CXXDestructorDecl *Dtor = ElemRecord->getDestructor();
+    return !Dtor || Dtor->isTrivial();
+  }
+
+  // Composite arrays.
+  assert(ElemDesc);
+  return ElemDesc->hasTrivialDtor();
 }
 
 bool Descriptor::isUnion() const { return isRecord() && ElemRecord->isUnion(); }

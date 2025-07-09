@@ -551,8 +551,8 @@ let Predicates = [MMA, IsISAFuture], isCodeGenOnly = 1 in {
               RegConstraint<"$ATi = $AT">, NoEncode<"$ATi">;
 
   let isAsCheapAsAMove = 1, isReMaterializable = 1 in {
-    def XXSETACCZW :
-      XForm_AT3<31, 3, 177, (outs wacc:$AT), (ins), "xxsetaccz $AT",
+    def DMXXSETACCZ :
+      XForm_AT3<31, 3, 177, (outs wacc:$AT), (ins), "dmxxsetaccz $AT",
                 IIC_VecGeneral, [(set v512i1:$AT, (int_ppc_mma_xxsetaccz))]>;
   }
 
@@ -565,11 +565,25 @@ let Predicates = [MMA, IsISAFuture], isCodeGenOnly = 1 in {
   let mayStore = 1 in {
     def SPILL_WACC: PPCEmitTimePseudo<(outs), (ins wacc:$AT, memrix16:$dst),
                                       "#SPILL_WACC", []>;
+    def SPILL_DMRP: PPCEmitTimePseudo<(outs), (ins dmrp:$AT, memrix16:$dst),
+                                      "#SPILL_DMRP", []>;
+    def SPILL_DMR: PPCEmitTimePseudo<(outs), (ins dmr:$AT, memrix16:$dst),
+                                      "#SPILL_DMR", []>;
   }
   let mayLoad = 1, hasSideEffects = 0 in {
     def RESTORE_WACC: PPCEmitTimePseudo<(outs wacc:$AT), (ins memrix16:$src),
                                         "#RESTORE_WACC", []>;
+    def RESTORE_DMRP: PPCEmitTimePseudo<(outs dmrp:$AT), (ins memrix16:$src),
+                                        "#RESTORE_DMRP", []>;
+    def RESTORE_DMR: PPCEmitTimePseudo<(outs dmr:$AT), (ins memrix16:$src),
+                                        "#RESTORE_DMR", []>;
   }
+}
+
+let Predicates = [MMA, IsISAFuture] in {
+  def : InstAlias<"dmxxmmfacc $AT ", (XXMFACC acc:$AT)>;
+  def : InstAlias<"dmxxmmtacc $AT ", (XXMTACC acc:$AT)>;
+  def : InstAlias<"dmxxsetaccz $AT ", (XXSETACCZ acc:$AT)>;
 }
 
 let Predicates = [MMA, PrefixInstrs, IsNotISAFuture] in {
@@ -1093,5 +1107,5 @@ let Predicates = [MMA, IsISAFuture] in {
   def : Pat<(v512i1 (int_ppc_mma_assemble_acc v16i8:$vs1, v16i8:$vs0,
                                               v16i8:$vs3, v16i8:$vs2)),
             (DMXXINSTDMR512 ConcatsMMA.VecsToVecPair0, ConcatsMMA.VecsToVecPair1)>;
-  def : Pat<(v512i1 immAllZerosV), (XXSETACCZW)>;
+  def : Pat<(v512i1 immAllZerosV), (DMXXSETACCZ)>;
 }

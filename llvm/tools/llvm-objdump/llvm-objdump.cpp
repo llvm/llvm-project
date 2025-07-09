@@ -65,8 +65,6 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -702,14 +700,18 @@ class HexagonPrettyPrinter : public PrettyPrinter {
 public:
   void printLead(ArrayRef<uint8_t> Bytes, uint64_t Address,
                  formatted_raw_ostream &OS) {
-    uint32_t opcode =
-      (Bytes[3] << 24) | (Bytes[2] << 16) | (Bytes[1] << 8) | Bytes[0];
     if (LeadingAddr)
       OS << format("%8" PRIx64 ":", Address);
     if (ShowRawInsn) {
       OS << "\t";
-      dumpBytes(Bytes.slice(0, 4), OS);
-      OS << format("\t%08" PRIx32, opcode);
+      if (Bytes.size() >= 4) {
+        dumpBytes(Bytes.slice(0, 4), OS);
+        uint32_t opcode =
+            (Bytes[3] << 24) | (Bytes[2] << 16) | (Bytes[1] << 8) | Bytes[0];
+        OS << format("\t%08" PRIx32, opcode);
+      } else {
+        dumpBytes(Bytes, OS);
+      }
     }
   }
   void printInst(MCInstPrinter &IP, const MCInst *MI, ArrayRef<uint8_t> Bytes,
@@ -1493,8 +1495,9 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
   // Supported by certain targets.
   const bool isPPC = STI->getTargetTriple().isPPC();
   const bool isX86 = STI->getTargetTriple().isX86();
+  const bool isAArch64 = STI->getTargetTriple().isAArch64();
   const bool isBPF = STI->getTargetTriple().isBPF();
-  if (!isPPC && !isX86 && !isBPF)
+  if (!isPPC && !isX86 && !isAArch64 && !isBPF)
     return;
 
   if (MIA)
@@ -2323,7 +2326,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           // provided
           MCInst Inst;
           ArrayRef<uint8_t> ThisBytes = Bytes.slice(Index);
-          uint64_t ThisAddr = SectionAddr + Index;
+          uint64_t ThisAddr = SectionAddr + Index + VMAAdjustment;
           bool Disassembled = DT->DisAsm->getInstruction(
               Inst, Size, ThisBytes, ThisAddr, CommentStream);
           if (Size == 0)
@@ -3361,7 +3364,7 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
   if (FaultMapSection)
     printFaultMaps(O);
   if (Offloading)
-    dumpOffloadBinary(*O);
+    dumpOffloadBinary(*O, StringRef(ArchName));
 }
 
 static void dumpObject(const COFFImportFile *I, const Archive *A,

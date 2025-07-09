@@ -97,14 +97,19 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
          SPIRV::Extension::Extension::
              SPV_INTEL_subgroup_matrix_multiply_accumulate},
         {"SPV_INTEL_ternary_bitwise_function",
-         SPIRV::Extension::Extension::SPV_INTEL_ternary_bitwise_function}};
+         SPIRV::Extension::Extension::SPV_INTEL_ternary_bitwise_function},
+        {"SPV_INTEL_2d_block_io",
+         SPIRV::Extension::Extension::SPV_INTEL_2d_block_io},
+        {"SPV_INTEL_int4", SPIRV::Extension::Extension::SPV_INTEL_int4},
+        {"SPV_KHR_float_controls2",
+         SPIRV::Extension::Extension::SPV_KHR_float_controls2}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue,
                                   std::set<SPIRV::Extension::Extension> &Vals) {
   SmallVector<StringRef, 10> Tokens;
   ArgValue.split(Tokens, ",", -1, false);
-  llvm::sort(Tokens);
+  std::sort(Tokens.begin(), Tokens.end());
 
   std::set<SPIRV::Extension::Extension> EnabledExtensions;
 
@@ -113,6 +118,13 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
       for (const auto &[ExtensionName, ExtensionEnum] : SPIRVExtensionMap)
         EnabledExtensions.insert(ExtensionEnum);
 
+      continue;
+    }
+
+    if (Token.size() == 3 && Token.upper() == "KHR") {
+      for (const auto &[ExtensionName, ExtensionEnum] : SPIRVExtensionMap)
+        if (StringRef(ExtensionName).starts_with("SPV_KHR_"))
+          EnabledExtensions.insert(ExtensionEnum);
       continue;
     }
 

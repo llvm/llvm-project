@@ -491,28 +491,28 @@ void OpOrAdaptorHelper::computeAttrMetadata() {
   }
 
   auto makeProperty = [&](StringRef storageType, StringRef parserCall) {
-    return Property(
-        /*summary=*/"",
-        /*description=*/"",
-        /*storageType=*/storageType,
-        /*interfaceType=*/"::llvm::ArrayRef<int32_t>",
-        /*convertFromStorageCall=*/"$_storage",
-        /*assignToStorageCall=*/
-        "::llvm::copy($_value, $_storage.begin())",
-        /*convertToAttributeCall=*/
-        "return ::mlir::DenseI32ArrayAttr::get($_ctxt, $_storage);",
-        /*convertFromAttributeCall=*/
-        "return convertFromAttribute($_storage, $_attr, $_diag);",
-        /*parserCall=*/parserCall,
-        /*optionalParserCall=*/"",
-        /*printerCall=*/printTextualSegmentSize,
-        /*readFromMlirBytecodeCall=*/readBytecodeSegmentSizeNative,
-        /*writeToMlirBytecodeCall=*/writeBytecodeSegmentSizeNative,
-        /*hashPropertyCall=*/
-        "::llvm::hash_combine_range(std::begin($_storage), "
-        "std::end($_storage));",
-        /*StringRef defaultValue=*/"",
-        /*storageTypeValueOverride=*/"");
+    return Property(/*maybeDef=*/nullptr,
+                    /*summary=*/"",
+                    /*description=*/"",
+                    /*storageType=*/storageType,
+                    /*interfaceType=*/"::llvm::ArrayRef<int32_t>",
+                    /*convertFromStorageCall=*/"$_storage",
+                    /*assignToStorageCall=*/
+                    "::llvm::copy($_value, $_storage.begin())",
+                    /*convertToAttributeCall=*/
+                    "return ::mlir::DenseI32ArrayAttr::get($_ctxt, $_storage);",
+                    /*convertFromAttributeCall=*/
+                    "return convertFromAttribute($_storage, $_attr, $_diag);",
+                    /*parserCall=*/parserCall,
+                    /*optionalParserCall=*/"",
+                    /*printerCall=*/printTextualSegmentSize,
+                    /*readFromMlirBytecodeCall=*/readBytecodeSegmentSizeNative,
+                    /*writeToMlirBytecodeCall=*/writeBytecodeSegmentSizeNative,
+                    /*hashPropertyCall=*/
+                    "::llvm::hash_combine_range(std::begin($_storage), "
+                    "std::end($_storage));",
+                    /*StringRef defaultValue=*/"",
+                    /*storageTypeValueOverride=*/"");
   };
   // Include key attributes from several traits as implicitly registered.
   if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
@@ -1052,8 +1052,9 @@ while (true) {{
       emitVerifier(namedAttr.attr, namedAttr.name, getVarName(namedAttr.name));
 }
 
-static void genPropertyVerifier(const OpOrAdaptorHelper &emitHelper,
-                                FmtContext &ctx, MethodBody &body) {
+static void genPropertyVerifier(
+    const OpOrAdaptorHelper &emitHelper, FmtContext &ctx, MethodBody &body,
+    const StaticVerifierFunctionEmitter &staticVerifierEmitter) {
 
   // Code to get a reference to a property into a variable to avoid multiple
   // evaluations while verifying a property.
@@ -1070,9 +1071,20 @@ static void genPropertyVerifier(const OpOrAdaptorHelper &emitHelper,
   // {1}: Emit error prefix.
   // {2}: Property name.
   // {3}: Property description.
-  const char *const verifyProperty = R"(
+  const char *const verifyPropertyInline = R"(
   if (!({0}))
     return {1}"property '{2}' failed to satisfy constraint: {3}");
+)";
+
+  // Verify the property using a uniqued constraint. Can only be used
+  // within the context of an op.
+  //
+  // {0}: Unique constraint name.
+  // {1}: Property variable name in interface type.
+  // {2}: Property name.
+  const char *const verifyPropertyUniqued = R"(
+    if (::mlir::failed({0}(*this, {1}, "{2}")))
+      return ::mlir::failure();
 )";
 
   // Prefix variables with `tblgen_` to avoid hiding the attribute accessor.
@@ -1101,9 +1113,13 @@ static void genPropertyVerifier(const OpOrAdaptorHelper &emitHelper,
         convertToCamelFromSnakeCase(prop.name, /*capitalizeFirst=*/true);
     body << formatv(fetchProperty, varName, getterName,
                     prop.prop.getInterfaceType());
-    body << formatv(verifyProperty, tgfmt(rawCondition, &ctx.withSelf(varName)),
-                    emitHelper.emitErrorPrefix(), prop.name,
-                    prop.prop.getSummary());
+    auto uniquedFn = staticVerifierEmitter.getPropConstraintFn(prop.prop);
+    if (uniquedFn.has_value())
+      body << formatv(verifyPropertyUniqued, *uniquedFn, varName, prop.name);
+    else
+      body << formatv(
+          verifyPropertyInline, tgfmt(rawCondition, &ctx.withSelf(varName)),
+          emitHelper.emitErrorPrefix(), prop.name, prop.prop.getSummary());
   }
 }
 
@@ -1588,6 +1604,7 @@ void OpEmitter::genPropertiesSupport() {
 
   const char *propHashFmt = R"decl(
   auto hash_{0} = [] (const auto &propStorage) -> llvm::hash_code {
+    using ::llvm::hash_value;
     return {1};
   };
 )decl";
@@ -1605,6 +1622,7 @@ void OpEmitter::genPropertiesSupport() {
       }
     }
   }
+  hashMethod << "  using llvm::hash_value;\n";
   hashMethod << "  return llvm::hash_combine(";
   llvm::interleaveComma(
       attrOrProperties, hashMethod, [&](const ConstArgument &attrOrProp) {
@@ -1614,8 +1632,8 @@ void OpEmitter::genPropertiesSupport() {
             hashMethod << "\n    hash_" << namedProperty->name << "(prop."
                        << namedProperty->name << ")";
           } else {
-            hashMethod << "\n    ::llvm::hash_value(prop."
-                       << namedProperty->name << ")";
+            hashMethod << "\n    hash_value(prop." << namedProperty->name
+                       << ")";
           }
           return;
         }
@@ -2203,6 +2221,17 @@ generateNamedOperandGetters(const Operator &op, Class &opClass,
     PrintFatalError(op.getLoc(),
                     "op cannot have both 'AttrSizedOperandSegments' and "
                     "'SameVariadicOperandSize' traits");
+  }
+
+  // Print the ods names so they don't need to be hardcoded in the source.
+  for (int i = 0; i != numOperands; ++i) {
+    const auto &operand = op.getOperand(i);
+    if (operand.name.empty())
+      continue;
+
+    opClass.declare<Field>("static constexpr int", Twine("odsIndex_") +
+                                                       operand.name + " = " +
+                                                       Twine(i));
   }
 
   // First emit a few "sink" getter methods upon which we layer all nicer named
@@ -3871,7 +3900,7 @@ void OpEmitter::genVerifier() {
   bool useProperties = emitHelper.hasProperties();
 
   populateSubstitutions(emitHelper, verifyCtx);
-  genPropertyVerifier(emitHelper, verifyCtx, implBody);
+  genPropertyVerifier(emitHelper, verifyCtx, implBody, staticVerifierEmitter);
   genAttributeVerifier(emitHelper, verifyCtx, implBody, staticVerifierEmitter,
                        useProperties);
   genOperandResultVerifier(implBody, op.getOperands(), "operand");

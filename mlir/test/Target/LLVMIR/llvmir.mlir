@@ -1906,32 +1906,6 @@ llvm.func @cond_br_weights(%cond : i1, %arg0 : i32,  %arg1 : i32) -> i32 {
 
 // -----
 
-llvm.func @fn()
-
-// CHECK-LABEL: @call_branch_weights
-llvm.func @call_branch_weights() {
-  // CHECK: !prof ![[NODE:[0-9]+]]
-  llvm.call @fn() {branch_weights = array<i32 : 42>} : () -> ()
-  llvm.return
-}
-
-// CHECK: ![[NODE]] = !{!"branch_weights", i32 42}
-
-// -----
-
-llvm.func @fn() -> i32
-
-// CHECK-LABEL: @call_branch_weights
-llvm.func @call_branch_weights() {
-  // CHECK: !prof ![[NODE:[0-9]+]]
-  %res = llvm.call @fn() {branch_weights = array<i32 : 42>} : () -> i32
-  llvm.return
-}
-
-// CHECK: ![[NODE]] = !{!"branch_weights", i32 42}
-
-// -----
-
 llvm.func @foo()
 llvm.func @__gxx_personality_v0(...) -> i32
 
@@ -2081,8 +2055,14 @@ llvm.func @useInlineAsm(%arg0: i32, %arg1 : !llvm.ptr) {
   // CHECK-NEXT:  call { i8, i8 } asm "foo", "=r,=r,r"(i32 {{.*}})
   %5 = llvm.inline_asm "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
 
-  // CHECK-NEXT:  call void asm sideeffect "", "*m,~{memory}"(ptr elementtype(ptr) %1)
-  %6 = llvm.inline_asm has_side_effects operand_attrs = [{elementtype = !llvm.ptr}] "", "*m,~{memory}" %arg1 : (!llvm.ptr) -> !llvm.void
+  // CHECK-NEXT:  tail call void asm sideeffect "", "*m,~{memory}"(ptr elementtype(ptr) %1)
+  %6 = llvm.inline_asm has_side_effects tail_call_kind = <tail> operand_attrs = [{elementtype = !llvm.ptr}] "", "*m,~{memory}" %arg1 : (!llvm.ptr) -> !llvm.void
+
+  // CHECK-NEXT:  = call { i8, i8 } asm "foo", "=r,=r,r"(i32 {{.*}})
+  %7 = llvm.inline_asm tail_call_kind = <none> "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
+
+  // CHECK-NEXT:  notail call { i8, i8 } asm "foo", "=r,=r,r"(i32 {{.*}})
+  %8 = llvm.inline_asm tail_call_kind = <notail> "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
 
   llvm.return
 }
@@ -3021,4 +3001,30 @@ llvm.func internal @i(%arg0: i32) attributes {dso_local} {
   // CHECK: call void @testfn3(i32 alignstack(8) %0)
   llvm.call @testfn3(%arg0) : (i32 {llvm.alignstack = 8 : i64}) -> ()
   llvm.return
+}
+
+// -----
+
+// CHECK: @test_array_attr_2 = global [2 x { i32, float }] [{ i32, float } { i32 42, float 1.000000e+00 }, { i32, float } { i32 42, float 1.000000e+00 }]
+llvm.mlir.global @test_array_attr_2() : !llvm.array<2 x !llvm.struct<(i32, f32)>> {
+  %0 = llvm.mlir.constant([[42 : i32, 1.000000e+00 : f32],[42 : i32, 1.000000e+00 : f32]]) : !llvm.array<2 x !llvm.struct<(i32, f32)>>
+  llvm.return %0 : !llvm.array<2 x !llvm.struct<(i32, f32)>>
+}
+
+// CHECK: @test_array_attr_3 = global [2 x [3 x { i32, float }]{{.*}}[3 x { i32, float }] [{ i32, float } { i32 1, float 1.000000e+00 }, { i32, float } { i32 2, float 1.000000e+00 }, { i32, float } { i32 3, float 1.000000e+00 }], [3 x { i32, float }] [{ i32, float } { i32 4, float 1.000000e+00 }, { i32, float } { i32 5, float 1.000000e+00 }, { i32, float } { i32 6, float 1.000000e+00 }
+llvm.mlir.global @test_array_attr_3() : !llvm.array<2 x !llvm.array<3 x !llvm.struct<(i32, f32)>>> {
+  %0 = llvm.mlir.constant([[[1 : i32, 1.000000e+00 : f32], [2 : i32, 1.000000e+00 : f32], [3 : i32, 1.000000e+00 : f32]], [[4 : i32, 1.000000e+00 : f32], [5 : i32, 1.000000e+00 : f32], [6 : i32, 1.000000e+00 : f32]]]) : !llvm.array<2 x !llvm.array<3 x !llvm.struct<(i32, f32)>>>
+  llvm.return %0 : !llvm.array<2 x !llvm.array<3 x !llvm.struct<(i32, f32)>>>
+}
+
+// CHECK: @test_array_attr_struct_with_ptr = internal constant [2 x { ptr }] [{ ptr } zeroinitializer, { ptr } undef]
+llvm.mlir.global internal constant @test_array_attr_struct_with_ptr() : !llvm.array<2 x struct<(ptr)>> {
+  %0 = llvm.mlir.constant([[#llvm.zero], [#llvm.undef]]) : !llvm.array<2 x struct<(ptr)>>
+  llvm.return %0 : !llvm.array<2 x struct<(ptr)>>
+}
+
+// CHECK: @test_array_attr_struct_with_struct = internal constant [3 x { i32, float }] [{ i32, float } zeroinitializer, { i32, float } { i32 2, float 1.000000e+00 }, { i32, float } undef]
+llvm.mlir.global internal constant @test_array_attr_struct_with_struct() : !llvm.array<3 x struct<(i32, f32)>> {
+  %0 = llvm.mlir.constant([#llvm.zero, [2 : i32, 1.0 : f32], #llvm.undef]) : !llvm.array<3 x struct<(i32, f32)>>
+  llvm.return %0 : !llvm.array<3 x struct<(i32, f32)>>
 }

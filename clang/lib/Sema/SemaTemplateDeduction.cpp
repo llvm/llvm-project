@@ -2127,7 +2127,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
         TA = S.Context.getTypeDeclType(MPA->getMostRecentCXXRecordDecl());
       } else {
         NestedNameSpecifier *QA = MPA->getQualifier();
-        TA = QualType(QA->translateToType(S.Context), 0);
+        TA = QualType(QA->translateToType(S.Context), 0).getUnqualifiedType();
       }
       assert(!TA.isNull() && "member pointer with non-type class");
       return DeduceTemplateArgumentsByTypeMatch(
@@ -2474,6 +2474,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     case Type::Pipe:
     case Type::ArrayParameter:
     case Type::HLSLAttributedResource:
+    case Type::HLSLInlineSpirv:
       // No template argument deduction for these types
       return TemplateDeductionResult::Success;
 
@@ -2946,6 +2947,7 @@ ConvertDeducedTemplateArgument(Sema &S, NamedDecl *Param,
       LocalInstantiationScope Scope(S);
       MultiLevelTemplateArgumentList Args(Template, CTAI.SugaredConverted,
                                           /*Final=*/true);
+      Sema::ArgPackSubstIndexRAII OnlySubstNonPackExpansion(S, std::nullopt);
 
       if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
         Sema::InstantiatingTemplate Inst(S, Template->getLocation(), Template,
@@ -3883,7 +3885,7 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     TemplateDeductionInfo &Info,
     SmallVectorImpl<OriginalCallArg> const *OriginalCallArgs,
     bool PartialOverloading, bool PartialOrdering,
-    llvm::function_ref<bool()> CheckNonDependent) {
+    llvm::function_ref<bool(bool)> CheckNonDependent) {
   // Unevaluated SFINAE context.
   EnterExpressionEvaluationContext Unevaluated(
       *this, Sema::ExpressionEvaluationContext::Unevaluated);
@@ -3912,18 +3914,6 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
       Result != TemplateDeductionResult::Success)
     return Result;
 
-  // C++ [temp.deduct.call]p10: [DR1391]
-  //   If deduction succeeds for all parameters that contain
-  //   template-parameters that participate in template argument deduction,
-  //   and all template arguments are explicitly specified, deduced, or
-  //   obtained from default template arguments, remaining parameters are then
-  //   compared with the corresponding arguments. For each remaining parameter
-  //   P with a type that was non-dependent before substitution of any
-  //   explicitly-specified template arguments, if the corresponding argument
-  //   A cannot be implicitly converted to P, deduction fails.
-  if (CheckNonDependent())
-    return TemplateDeductionResult::NonDependentConversionFailure;
-
   // Form the template argument list from the deduced template arguments.
   TemplateArgumentList *SugaredDeducedArgumentList =
       TemplateArgumentList::CreateCopy(Context, CTAI.SugaredConverted);
@@ -3937,6 +3927,42 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   if (FunctionTemplate->getFriendObjectKind())
     Owner = FunctionTemplate->getLexicalDeclContext();
   FunctionDecl *FD = FunctionTemplate->getTemplatedDecl();
+
+  if (CheckNonDependent(/*OnlyInitializeNonUserDefinedConversions=*/true))
+    return TemplateDeductionResult::NonDependentConversionFailure;
+
+  // C++20 [temp.deduct.general]p5: [CWG2369]
+  //   If the function template has associated constraints, those constraints
+  //   are checked for satisfaction. If the constraints are not satisfied, type
+  //   deduction fails.
+  //
+  // FIXME: We haven't implemented CWG2369 for lambdas yet, because we need
+  // to figure out how to instantiate lambda captures to the scope without
+  // first instantiating the lambda.
+  bool IsLambda = isLambdaCallOperator(FD) || isLambdaConversionOperator(FD);
+  if (!IsLambda && !IsIncomplete) {
+    if (CheckFunctionTemplateConstraints(
+            Info.getLocation(),
+            FunctionTemplate->getCanonicalDecl()->getTemplatedDecl(),
+            CTAI.CanonicalConverted, Info.AssociatedConstraintsSatisfaction))
+      return TemplateDeductionResult::MiscellaneousDeductionFailure;
+    if (!Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
+      Info.reset(Info.takeSugared(), TemplateArgumentList::CreateCopy(
+                                         Context, CTAI.CanonicalConverted));
+      return TemplateDeductionResult::ConstraintsNotSatisfied;
+    }
+  }
+  // C++ [temp.deduct.call]p10: [CWG1391]
+  //   If deduction succeeds for all parameters that contain
+  //   template-parameters that participate in template argument deduction,
+  //   and all template arguments are explicitly specified, deduced, or
+  //   obtained from default template arguments, remaining parameters are then
+  //   compared with the corresponding arguments. For each remaining parameter
+  //   P with a type that was non-dependent before substitution of any
+  //   explicitly-specified template arguments, if the corresponding argument
+  //   A cannot be implicitly converted to P, deduction fails.
+  if (CheckNonDependent(/*OnlyInitializeNonUserDefinedConversions=*/false))
+    return TemplateDeductionResult::NonDependentConversionFailure;
 
   MultiLevelTemplateArgumentList SubstArgs(
       FunctionTemplate, CanonicalDeducedArgumentList->asArray(),
@@ -3972,8 +3998,8 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
   //   ([temp.constr.decl]), those constraints are checked for satisfaction
   //   ([temp.constr.constr]). If the constraints are not satisfied, type
   //   deduction fails.
-  if (!IsIncomplete) {
-    if (CheckInstantiatedFunctionTemplateConstraints(
+  if (IsLambda && !IsIncomplete) {
+    if (CheckFunctionTemplateConstraints(
             Info.getLocation(), Specialization, CTAI.CanonicalConverted,
             Info.AssociatedConstraintsSatisfaction))
       return TemplateDeductionResult::MiscellaneousDeductionFailure;
@@ -4433,7 +4459,7 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
     bool PartialOrdering, QualType ObjectType,
     Expr::Classification ObjectClassification,
     bool ForOverloadSetAddressResolution,
-    llvm::function_ref<bool(ArrayRef<QualType>)> CheckNonDependent) {
+    llvm::function_ref<bool(ArrayRef<QualType>, bool)> CheckNonDependent) {
   if (FunctionTemplate->isInvalidDecl())
     return TemplateDeductionResult::Invalid;
 
@@ -4655,9 +4681,10 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
     Result = FinishTemplateArgumentDeduction(
         FunctionTemplate, Deduced, NumExplicitlySpecified, Specialization, Info,
         &OriginalCallArgs, PartialOverloading, PartialOrdering,
-        [&, CallingCtx]() {
+        [&, CallingCtx](bool OnlyInitializeNonUserDefinedConversions) {
           ContextRAII SavedContext(*this, CallingCtx);
-          return CheckNonDependent(ParamTypesForArgChecking);
+          return CheckNonDependent(ParamTypesForArgChecking,
+                                   OnlyInitializeNonUserDefinedConversions);
         });
   });
   return Result;
@@ -4738,8 +4765,8 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
                                           /*AdjustExceptionSpec*/false);
 
   // Unevaluated SFINAE context.
-  EnterExpressionEvaluationContext Unevaluated(
-      *this, Sema::ExpressionEvaluationContext::Unevaluated);
+  std::optional<EnterExpressionEvaluationContext> Unevaluated(
+      std::in_place, *this, Sema::ExpressionEvaluationContext::Unevaluated);
   SFINAETrap Trap(*this);
 
   Deduced.resize(TemplateParams->size());
@@ -4782,13 +4809,14 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
       DeduceReturnType(Specialization, Info.getLocation(), false))
     return TemplateDeductionResult::MiscellaneousDeductionFailure;
 
+  Unevaluated = std::nullopt;
   // [C++26][expr.const]/p17
   // An expression or conversion is immediate-escalating if it is not initially
   // in an immediate function context and it is [...]
   // a potentially-evaluated id-expression that denotes an immediate function.
   if (IsAddressOfFunction && getLangOpts().CPlusPlus20 &&
       Specialization->isImmediateEscalating() &&
-      parentEvaluationContext().isPotentiallyEvaluated() &&
+      currentEvaluationContext().isPotentiallyEvaluated() &&
       CheckIfFunctionSpecializationIsImmediate(Specialization,
                                                Info.getLocation()))
     return TemplateDeductionResult::MiscellaneousDeductionFailure;
@@ -6992,6 +7020,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
   case Type::UnresolvedUsing:
   case Type::Pipe:
   case Type::BitInt:
+  case Type::HLSLInlineSpirv:
 #define TYPE(Class, Base)
 #define ABSTRACT_TYPE(Class, Base)
 #define DEPENDENT_TYPE(Class, Base)

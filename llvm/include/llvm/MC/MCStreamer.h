@@ -19,10 +19,11 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCPseudoProbe.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCWinEH.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/SMLoc.h"
@@ -44,11 +45,9 @@ class MCAsmBackend;
 class MCAssembler;
 class MCContext;
 class MCExpr;
-class MCFragment;
 class MCInst;
 class MCInstPrinter;
 class MCRegister;
-class MCSection;
 class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;
@@ -91,7 +90,7 @@ using MCSectionSubPair = std::pair<MCSection *, uint32_t>;
 /// The base classes FooTargetAsmStreamer and FooTargetELFStreamer should
 /// *never* be treated differently. Callers should always talk to a
 /// FooTargetStreamer.
-class MCTargetStreamer {
+class LLVM_ABI MCTargetStreamer {
 protected:
   MCStreamer &Streamer;
 
@@ -134,7 +133,7 @@ public:
 
 // FIXME: declared here because it is used from
 // lib/CodeGen/AsmPrinter/ARMException.cpp.
-class ARMTargetStreamer : public MCTargetStreamer {
+class LLVM_ABI ARMTargetStreamer : public MCTargetStreamer {
 public:
   ARMTargetStreamer(MCStreamer &S);
   ~ARMTargetStreamer() override;
@@ -218,7 +217,7 @@ private:
 /// There are multiple implementations of this interface: one for writing out
 /// a .s file, and implementations that write out .o files of various formats.
 ///
-class MCStreamer {
+class LLVM_ABI MCStreamer {
   MCContext &Context;
   std::unique_ptr<MCTargetStreamer> TargetStreamer;
 
@@ -1129,7 +1128,7 @@ inline MCContext &MCTargetStreamer::getContext() {
 
 /// Create a dummy machine code streamer, which does nothing. This is useful for
 /// timing the assembler front end.
-MCStreamer *createNullStreamer(MCContext &Ctx);
+LLVM_ABI MCStreamer *createNullStreamer(MCContext &Ctx);
 
 } // end namespace llvm
 

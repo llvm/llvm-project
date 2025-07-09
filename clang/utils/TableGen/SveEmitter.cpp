@@ -252,9 +252,7 @@ public:
   /// a short form without the type-specifiers, e.g. 'svld1(..)' instead of
   /// 'svld1_u32(..)'.
   static bool isOverloadedIntrinsic(StringRef Name) {
-    auto BrOpen = Name.find('[');
-    auto BrClose = Name.find(']');
-    return BrOpen != std::string::npos && BrClose != std::string::npos;
+    return Name.contains('[') && Name.contains(']');
   }
 
   /// Return true if the intrinsic takes a splat operand.
@@ -1903,6 +1901,9 @@ void SVEEmitter::createStreamingAttrs(raw_ostream &OS, ACLEKind Kind) {
     if (!Def->isFlagSet(VerifyRuntimeMode) && !Def->getSVEGuard().empty() &&
         !Def->getSMEGuard().empty())
       report_fatal_error("Missing VerifyRuntimeMode flag");
+    if (Def->isFlagSet(VerifyRuntimeMode) &&
+        (Def->getSVEGuard().empty() || Def->getSMEGuard().empty()))
+      report_fatal_error("VerifyRuntimeMode requires SVE and SME guards");
 
     if (Def->isFlagSet(IsStreamingFlag))
       StreamingMap["ArmStreaming"].insert(Def->getMangledName());

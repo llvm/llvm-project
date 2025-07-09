@@ -50,7 +50,6 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #ifdef __linux__
 
@@ -152,7 +151,10 @@ __libcpp_contention_monitor_for_wait(__cxx_atomic_contention_t volatile* /*__con
 static void __libcpp_contention_wait(__cxx_atomic_contention_t volatile* __contention_state,
                                      __cxx_atomic_contention_t const volatile* __platform_state,
                                      __cxx_contention_t __old_value) {
-  __cxx_atomic_fetch_add(__contention_state, __cxx_contention_t(1), memory_order_seq_cst);
+  __cxx_atomic_fetch_add(__contention_state, __cxx_contention_t(1), memory_order_relaxed);
+  // https://github.com/llvm/llvm-project/issues/109290
+  // There are no platform guarantees of a memory barrier in the platform wait implementation
+  __cxx_atomic_thread_fence(memory_order_seq_cst);
   // We sleep as long as the monitored value hasn't changed.
   __libcpp_platform_wait_on_address(__platform_state, __old_value);
   __cxx_atomic_fetch_sub(__contention_state, __cxx_contention_t(1), memory_order_release);
@@ -164,7 +166,7 @@ static void __libcpp_contention_wait(__cxx_atomic_contention_t volatile* __conte
 static void __libcpp_atomic_notify(void const volatile* __location) {
   auto const __entry = __libcpp_contention_state(__location);
   // The value sequence laundering happens on the next line below.
-  __cxx_atomic_fetch_add(&__entry->__platform_state, __cxx_contention_t(1), memory_order_release);
+  __cxx_atomic_fetch_add(&__entry->__platform_state, __cxx_contention_t(1), memory_order_seq_cst);
   __libcpp_contention_notify(
       &__entry->__contention_state,
       &__entry->__platform_state,
@@ -205,5 +207,4 @@ __libcpp_atomic_wait(__cxx_atomic_contention_t const volatile* __location, __cxx
   __libcpp_contention_wait(&__libcpp_contention_state(__location)->__contention_state, __location, __old_value);
 }
 
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

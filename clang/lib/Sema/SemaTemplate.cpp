@@ -1773,9 +1773,9 @@ Sema::ActOnTemplateParameterList(unsigned Depth,
   for (NamedDecl *P : Params)
     warnOnReservedIdentifier(P);
 
-  return TemplateParameterList::Create(
-      Context, TemplateLoc, LAngleLoc,
-      llvm::ArrayRef(Params.data(), Params.size()), RAngleLoc, RequiresClause);
+  return TemplateParameterList::Create(Context, TemplateLoc, LAngleLoc,
+                                       llvm::ArrayRef(Params), RAngleLoc,
+                                       RequiresClause);
 }
 
 static void SetNestedNameSpecifier(Sema &S, TagDecl *T,
@@ -3118,7 +3118,7 @@ static QualType builtinCommonTypeImpl(Sema &S, TemplateName BaseTemplate,
 
     EnterExpressionEvaluationContext UnevaluatedContext(
         S, Sema::ExpressionEvaluationContext::Unevaluated);
-    Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/true);
+    Sema::SFINAETrap SFINAE(S, /*ForValidityCheck=*/true);
     Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
 
     QualType BaseTemplateInst =
@@ -3164,7 +3164,7 @@ static QualType builtinCommonTypeImpl(Sema &S, TemplateName BaseTemplate,
       auto CheckConditionalOperands = [&](bool ConstRefQual) -> QualType {
         EnterExpressionEvaluationContext UnevaluatedContext(
             S, Sema::ExpressionEvaluationContext::Unevaluated);
-        Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/true);
+        Sema::SFINAETrap SFINAE(S, /*ForValidityCheck=*/true);
         Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
 
         // false
@@ -3232,6 +3232,59 @@ static QualType builtinCommonTypeImpl(Sema &S, TemplateName BaseTemplate,
     return Result;
   }
   }
+}
+
+static bool isInVkNamespace(const RecordType *RT) {
+  DeclContext *DC = RT->getDecl()->getDeclContext();
+  if (!DC)
+    return false;
+
+  NamespaceDecl *ND = dyn_cast<NamespaceDecl>(DC);
+  if (!ND)
+    return false;
+
+  return ND->getQualifiedNameAsString() == "hlsl::vk";
+}
+
+static SpirvOperand checkHLSLSpirvTypeOperand(Sema &SemaRef,
+                                              QualType OperandArg,
+                                              SourceLocation Loc) {
+  if (auto *RT = OperandArg->getAs<RecordType>()) {
+    bool Literal = false;
+    SourceLocation LiteralLoc;
+    if (isInVkNamespace(RT) && RT->getDecl()->getName() == "Literal") {
+      auto SpecDecl = dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl());
+      assert(SpecDecl);
+
+      const TemplateArgumentList &LiteralArgs = SpecDecl->getTemplateArgs();
+      QualType ConstantType = LiteralArgs[0].getAsType();
+      RT = ConstantType->getAs<RecordType>();
+      Literal = true;
+      LiteralLoc = SpecDecl->getSourceRange().getBegin();
+    }
+
+    if (RT && isInVkNamespace(RT) &&
+        RT->getDecl()->getName() == "integral_constant") {
+      auto SpecDecl = dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl());
+      assert(SpecDecl);
+
+      const TemplateArgumentList &ConstantArgs = SpecDecl->getTemplateArgs();
+
+      QualType ConstantType = ConstantArgs[0].getAsType();
+      llvm::APInt Value = ConstantArgs[1].getAsIntegral();
+
+      if (Literal)
+        return SpirvOperand::createLiteral(Value);
+      return SpirvOperand::createConstant(ConstantType, Value);
+    } else if (Literal) {
+      SemaRef.Diag(LiteralLoc, diag::err_hlsl_vk_literal_must_contain_constant);
+      return SpirvOperand();
+    }
+  }
+  if (SemaRef.RequireCompleteType(Loc, OperandArg,
+                                  diag::err_call_incomplete_argument))
+    return SpirvOperand();
+  return SpirvOperand::createType(OperandArg);
 }
 
 static QualType
@@ -3333,6 +3386,36 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
     }
     QualType HasNoTypeMember = Converted[2].getAsType();
     return HasNoTypeMember;
+  }
+
+  case BTK__hlsl_spirv_type: {
+    assert(Converted.size() == 4);
+
+    if (!Context.getTargetInfo().getTriple().isSPIRV()) {
+      SemaRef.Diag(TemplateLoc, diag::err_hlsl_spirv_only) << BTD;
+    }
+
+    if (llvm::any_of(Converted, [](auto &C) { return C.isDependent(); }))
+      return QualType();
+
+    uint64_t Opcode = Converted[0].getAsIntegral().getZExtValue();
+    uint64_t Size = Converted[1].getAsIntegral().getZExtValue();
+    uint64_t Alignment = Converted[2].getAsIntegral().getZExtValue();
+
+    ArrayRef<TemplateArgument> OperandArgs = Converted[3].getPackAsArray();
+
+    llvm::SmallVector<SpirvOperand> Operands;
+
+    for (auto &OperandTA : OperandArgs) {
+      QualType OperandArg = OperandTA.getAsType();
+      auto Operand = checkHLSLSpirvTypeOperand(SemaRef, OperandArg,
+                                               TemplateArgs[3].getLocation());
+      if (!Operand.isValid())
+        return QualType();
+      Operands.push_back(Operand);
+    }
+
+    return Context.getHLSLInlineSpirvType(Opcode, Size, Alignment, Operands);
   }
   }
   llvm_unreachable("unexpected BuiltinTemplateDecl!");
@@ -4361,29 +4444,16 @@ static bool IsLibstdcxxStdFormatKind(Preprocessor &PP, VarDecl *Var) {
       !Var->getDeclContext()->isStdNamespace())
     return false;
 
-  MacroInfo *MacroGLIBCXX =
-      PP.getMacroInfo(PP.getIdentifierInfo("__GLIBCXX__"));
-
-  if (!MacroGLIBCXX || MacroGLIBCXX->getNumTokens() != 1)
-    return false;
-
-  const Token &RevisionDateTok = MacroGLIBCXX->getReplacementToken(0);
-  bool Invalid = false;
-  std::string RevisionDate = PP.getSpelling(RevisionDateTok, &Invalid);
-  StringRef FixDate = "30251231";
-
-  if (Invalid)
-    return false;
-
-  // The format of the revision date is in compressed ISO date format.
-  // See https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_macros.html
-  // So we can use string comparison.
-  //
   // Checking old versions of libstdc++ is not needed because 15.1 is the first
   // release in which users can access std::format_kind.
-  //
-  // FIXME: Correct FixDate once the issue is fixed.
-  return RevisionDate.size() == 8 && RevisionDate <= FixDate;
+  // We can use 20250520 as the final date, see the following commits.
+  // GCC releases/gcc-15 branch:
+  // https://gcc.gnu.org/g:fedf81ef7b98e5c9ac899b8641bb670746c51205
+  // https://gcc.gnu.org/g:53680c1aa92d9f78e8255fbf696c0ed36f160650
+  // GCC master branch:
+  // https://gcc.gnu.org/g:9361966d80f625c5accc25cbb439f0278dd8b278
+  // https://gcc.gnu.org/g:c65725eccbabf3b9b5965f27fff2d3b9f6c75930
+  return PP.NeedsStdLibCxxWorkaroundBefore(2025'05'20);
 }
 } // end anonymous namespace
 
@@ -4679,6 +4749,8 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
   EnterExpressionEvaluationContext EECtx{
       *this, ExpressionEvaluationContext::Unevaluated, CSD};
 
+  ContextRAII CurContext(*this, CSD->getDeclContext(),
+                         /*NewThisContext=*/false);
   if (!AreArgsDependent &&
       CheckConstraintSatisfaction(
           NamedConcept, AssociatedConstraint(NamedConcept->getConstraintExpr()),
@@ -6243,6 +6315,15 @@ bool UnnamedLocalNoLinkageFinder::VisitHLSLAttributedResourceType(
   if (T->hasContainedType() && Visit(T->getContainedType()))
     return true;
   return Visit(T->getWrappedType());
+}
+
+bool UnnamedLocalNoLinkageFinder::VisitHLSLInlineSpirvType(
+    const HLSLInlineSpirvType *T) {
+  for (auto &Operand : T->getOperands())
+    if (Operand.isConstant() && Operand.isLiteral())
+      if (Visit(Operand.getResultType()))
+        return true;
+  return false;
 }
 
 bool Sema::CheckTemplateArgument(TypeSourceInfo *ArgInfo) {
