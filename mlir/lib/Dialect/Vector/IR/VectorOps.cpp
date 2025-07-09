@@ -7138,14 +7138,15 @@ OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
   return SplatElementsAttr::get(getType(), {constOperand});
 }
 
-// Canonicalizer for vector.splat. It always gets canonicalized to a vector.broadcast.
+// Canonicalizer for vector.splat. It always gets canonicalized to a
+// vector.broadcast.
 class SplatToBroadcastPattern : public OpRewritePattern<SplatOp> {
-  public:
+public:
   using OpRewritePattern<SplatOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(SplatOp splatOp,
                                 PatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
-        splatOp, splatOp.getType(), splatOp.getOperand());
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(splatOp, splatOp.getType(),
+                                                     splatOp.getOperand());
     return success();
   }
 };
@@ -7153,7 +7154,6 @@ void SplatOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {
   results.add<SplatToBroadcastPattern>(context);
 }
-
 
 void SplatOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                 SetIntRangeFn setResultRanges) {

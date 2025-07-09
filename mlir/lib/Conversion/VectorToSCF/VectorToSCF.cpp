@@ -1262,7 +1262,7 @@ struct UnrollTransferReadConversion
       return insertOp.getDest();
     Location loc = xferOp.getLoc();
     return rewriter.create<vector::BroadcastOp>(loc, xferOp.getVectorType(),
-                                            xferOp.getPadding());
+                                                xferOp.getPadding());
   }
 
   /// If the result of the TransferReadOp has exactly one user, which is a
@@ -1584,7 +1584,7 @@ struct Strategy1d<TransferReadOp> {
     // Inititalize vector with padding value.
     Location loc = xferOp.getLoc();
     return b.create<vector::BroadcastOp>(loc, xferOp.getVectorType(),
-                                     xferOp.getPadding());
+                                         xferOp.getPadding());
   }
 };
 
