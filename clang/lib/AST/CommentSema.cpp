@@ -171,50 +171,49 @@ void Sema::checkContainerDecl(const BlockCommandComment *Comment) {
   const CommandInfo *Info = Traits.getCommandInfo(Comment->getCommandID());
   if (!Info->IsRecordLikeDetailCommand || isRecordLikeDecl())
     return;
-  unsigned DiagSelect;
+  std::optional<unsigned> DiagSelect;
   switch (Comment->getCommandID()) {
     case CommandTraits::KCI_classdesign:
-      DiagSelect = 1;
+      DiagSelect = diag::DocCommandKind::ClassDesign;
       break;
     case CommandTraits::KCI_coclass:
-      DiagSelect = 2;
+      DiagSelect = diag::DocCommandKind::CoClass;
       break;
     case CommandTraits::KCI_dependency:
-      DiagSelect = 3;
+      DiagSelect = diag::DocCommandKind::Dependency;
       break;
     case CommandTraits::KCI_helper:
-      DiagSelect = 4;
+      DiagSelect = diag::DocCommandKind::Helper;
       break;
     case CommandTraits::KCI_helperclass:
-      DiagSelect = 5;
+      DiagSelect = diag::DocCommandKind::HelperClass;
       break;
     case CommandTraits::KCI_helps:
-      DiagSelect = 6;
+      DiagSelect = diag::DocCommandKind::Helps;
       break;
     case CommandTraits::KCI_instancesize:
-      DiagSelect = 7;
+      DiagSelect = diag::DocCommandKind::InstanceSize;
       break;
     case CommandTraits::KCI_ownership:
-      DiagSelect = 8;
+      DiagSelect = diag::DocCommandKind::Ownership;
       break;
     case CommandTraits::KCI_performance:
-      DiagSelect = 9;
+      DiagSelect = diag::DocCommandKind::Performance;
       break;
     case CommandTraits::KCI_security:
-      DiagSelect = 10;
+      DiagSelect = diag::DocCommandKind::Security;
       break;
     case CommandTraits::KCI_superclass:
-      DiagSelect = 11;
+      DiagSelect = diag::DocCommandKind::Superclass;
       break;
     default:
-      DiagSelect = 0;
+      DiagSelect = std::nullopt;
       break;
   }
   if (DiagSelect)
     Diag(Comment->getLocation(), diag::warn_doc_container_decl_mismatch)
-    << Comment->getCommandMarker()
-    << (DiagSelect-1)
-    << Comment->getSourceRange();
+        << Comment->getCommandMarker() << (*DiagSelect)
+        << Comment->getSourceRange();
 }
 
 /// Turn a string into the corresponding PassDirection or -1 if it's not
@@ -268,7 +267,7 @@ void Sema::actOnParamCommandParamNameArg(ParamCommandComment *Command,
   }
   auto *A = new (Allocator)
       Comment::Argument{SourceRange(ArgLocBegin, ArgLocEnd), Arg};
-  Command->setArgs(llvm::ArrayRef(A, 1));
+  Command->setArgs(ArrayRef(A, 1));
 }
 
 void Sema::actOnParamCommandFinish(ParamCommandComment *Command,
@@ -304,7 +303,7 @@ void Sema::actOnTParamCommandParamNameArg(TParamCommandComment *Command,
 
   auto *A = new (Allocator)
       Comment::Argument{SourceRange(ArgLocBegin, ArgLocEnd), Arg};
-  Command->setArgs(llvm::ArrayRef(A, 1));
+  Command->setArgs(ArrayRef(A, 1));
 
   if (!isTemplateOrSpecialization()) {
     // We already warned that this \\tparam is not attached to a template decl.
@@ -315,7 +314,7 @@ void Sema::actOnTParamCommandParamNameArg(TParamCommandComment *Command,
       ThisDeclInfo->TemplateParameters;
   SmallVector<unsigned, 2> Position;
   if (resolveTParamReference(Arg, TemplateParameters, &Position)) {
-    Command->setPosition(copyArray(llvm::ArrayRef(Position)));
+    Command->setPosition(copyArray(ArrayRef(Position)));
     TParamCommandComment *&PrevCommand = TemplateParameterDocs[Arg];
     if (PrevCommand) {
       SourceRange ArgRange(ArgLocBegin, ArgLocEnd);

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_sqrt.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/sqrt.h>
 
 #define FUNCTION sqrt
 #define __CLC_BODY <clc/shared/unary_def.inc>

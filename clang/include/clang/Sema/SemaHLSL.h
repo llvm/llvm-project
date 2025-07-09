@@ -98,6 +98,8 @@ public:
   HLSLWaveSizeAttr *mergeWaveSizeAttr(Decl *D, const AttributeCommonInfo &AL,
                                       int Min, int Max, int Preferred,
                                       int SpelledArgsCount);
+  HLSLVkConstantIdAttr *
+  mergeVkConstantIdAttr(Decl *D, const AttributeCommonInfo &AL, int Id);
   HLSLShaderAttr *mergeShaderAttr(Decl *D, const AttributeCommonInfo &AL,
                                   llvm::Triple::EnvironmentType ShaderType);
   HLSLParamModifierAttr *
@@ -132,9 +134,12 @@ public:
       SourceLocation Loc, IdentifierInfo *DeclIdent,
       SmallVector<llvm::hlsl::rootsig::RootElement> &Elements);
 
+  // Returns true when D is invalid and a diagnostic was produced
+  bool handleRootSignatureDecl(HLSLRootSignatureDecl *D, SourceLocation Loc);
   void handleRootSignatureAttr(Decl *D, const ParsedAttr &AL);
   void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
+  void handleVkConstantIdAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_GroupThreadIDAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_GroupIDAttr(Decl *D, const ParsedAttr &AL);
@@ -171,7 +176,7 @@ public:
   QualType getInoutParameterType(QualType Ty);
 
   bool transformInitList(const InitializedEntity &Entity, InitListExpr *Init);
-
+  bool handleInitialization(VarDecl *VDecl, Expr *&Init);
   void deduceAddressSpace(VarDecl *Decl);
 
 private:

@@ -9,6 +9,7 @@
 #include "Protocol/ProtocolTypes.h"
 #include "Protocol/ProtocolEvents.h"
 #include "Protocol/ProtocolRequests.h"
+#include "TestingSupport/TestUtilities.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Testing/Support/Error.h"
@@ -20,21 +21,13 @@ using namespace llvm;
 using namespace lldb;
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
+using lldb_private::roundtripJSON;
 using llvm::json::parse;
 using llvm::json::Value;
 
 /// Returns a pretty printed json string of a `llvm::json::Value`.
 static std::string pp(const json::Value &E) {
   return formatv("{0:2}", E).str();
-}
-
-template <typename T> static llvm::Expected<T> roundtrip(const T &input) {
-  llvm::json::Value value = toJSON(input);
-  llvm::json::Path::Root root;
-  T output;
-  if (!fromJSON(value, output, root))
-    return root.getError();
-  return output;
 }
 
 TEST(ProtocolTypesTest, ExceptionBreakpointsFilter) {
@@ -47,7 +40,7 @@ TEST(ProtocolTypesTest, ExceptionBreakpointsFilter) {
   filter.conditionDescription = "Condition for test filter";
 
   llvm::Expected<ExceptionBreakpointsFilter> deserialized_filter =
-      roundtrip(filter);
+      roundtripJSON(filter);
   ASSERT_THAT_EXPECTED(deserialized_filter, llvm::Succeeded());
 
   EXPECT_EQ(filter.filter, deserialized_filter->filter);
@@ -66,7 +59,7 @@ TEST(ProtocolTypesTest, Source) {
   source.sourceReference = 12345;
   source.presentationHint = Source::eSourcePresentationHintEmphasize;
 
-  llvm::Expected<Source> deserialized_source = roundtrip(source);
+  llvm::Expected<Source> deserialized_source = roundtripJSON(source);
   ASSERT_THAT_EXPECTED(deserialized_source, llvm::Succeeded());
 
   EXPECT_EQ(source.name, deserialized_source->name);
@@ -83,7 +76,7 @@ TEST(ProtocolTypesTest, ColumnDescriptor) {
   column.type = eColumnTypeString;
   column.width = 20;
 
-  llvm::Expected<ColumnDescriptor> deserialized_column = roundtrip(column);
+  llvm::Expected<ColumnDescriptor> deserialized_column = roundtripJSON(column);
   ASSERT_THAT_EXPECTED(deserialized_column, llvm::Succeeded());
 
   EXPECT_EQ(column.attributeName, deserialized_column->attributeName);
@@ -101,7 +94,7 @@ TEST(ProtocolTypesTest, BreakpointMode) {
   mode.appliesTo = {eBreakpointModeApplicabilitySource,
                     eBreakpointModeApplicabilityException};
 
-  llvm::Expected<BreakpointMode> deserialized_mode = roundtrip(mode);
+  llvm::Expected<BreakpointMode> deserialized_mode = roundtripJSON(mode);
   ASSERT_THAT_EXPECTED(deserialized_mode, llvm::Succeeded());
 
   EXPECT_EQ(mode.mode, deserialized_mode->mode);
@@ -125,7 +118,8 @@ TEST(ProtocolTypesTest, Breakpoint) {
   breakpoint.offset = 4;
   breakpoint.reason = BreakpointReason::eBreakpointReasonPending;
 
-  llvm::Expected<Breakpoint> deserialized_breakpoint = roundtrip(breakpoint);
+  llvm::Expected<Breakpoint> deserialized_breakpoint =
+      roundtripJSON(breakpoint);
   ASSERT_THAT_EXPECTED(deserialized_breakpoint, llvm::Succeeded());
 
   EXPECT_EQ(breakpoint.id, deserialized_breakpoint->id);
@@ -157,7 +151,7 @@ TEST(ProtocolTypesTest, SourceBreakpoint) {
   source_breakpoint.mode = "hardware";
 
   llvm::Expected<SourceBreakpoint> deserialized_source_breakpoint =
-      roundtrip(source_breakpoint);
+      roundtripJSON(source_breakpoint);
   ASSERT_THAT_EXPECTED(deserialized_source_breakpoint, llvm::Succeeded());
 
   EXPECT_EQ(source_breakpoint.line, deserialized_source_breakpoint->line);
@@ -178,7 +172,7 @@ TEST(ProtocolTypesTest, FunctionBreakpoint) {
   function_breakpoint.hitCondition = "3";
 
   llvm::Expected<FunctionBreakpoint> deserialized_function_breakpoint =
-      roundtrip(function_breakpoint);
+      roundtripJSON(function_breakpoint);
   ASSERT_THAT_EXPECTED(deserialized_function_breakpoint, llvm::Succeeded());
 
   EXPECT_EQ(function_breakpoint.name, deserialized_function_breakpoint->name);
@@ -196,7 +190,7 @@ TEST(ProtocolTypesTest, DataBreakpoint) {
   data_breakpoint_info.hitCondition = "10";
 
   llvm::Expected<DataBreakpoint> deserialized_data_breakpoint_info =
-      roundtrip(data_breakpoint_info);
+      roundtripJSON(data_breakpoint_info);
   ASSERT_THAT_EXPECTED(deserialized_data_breakpoint_info, llvm::Succeeded());
 
   EXPECT_EQ(data_breakpoint_info.dataId,
@@ -233,9 +227,9 @@ TEST(ProtocolTypesTest, Capabilities) {
                                    {eBreakpointModeApplicabilitySource}}};
   capabilities.lldbExtVersion = "1.0.0";
 
-  // Perform roundtrip serialization and deserialization.
+  // Perform roundtripJSON serialization and deserialization.
   llvm::Expected<Capabilities> deserialized_capabilities =
-      roundtrip(capabilities);
+      roundtripJSON(capabilities);
   ASSERT_THAT_EXPECTED(deserialized_capabilities, llvm::Succeeded());
 
   // Verify supported features.
@@ -316,7 +310,7 @@ TEST(ProtocolTypesTest, Scope) {
   source.presentationHint = Source::eSourcePresentationHintNormal;
   scope.source = source;
 
-  llvm::Expected<Scope> deserialized_scope = roundtrip(scope);
+  llvm::Expected<Scope> deserialized_scope = roundtripJSON(scope);
   ASSERT_THAT_EXPECTED(deserialized_scope, llvm::Succeeded());
   EXPECT_EQ(scope.name, deserialized_scope->name);
   EXPECT_EQ(scope.presentationHint, deserialized_scope->presentationHint);
@@ -755,7 +749,7 @@ TEST(ProtocolTypesTest, StepInTarget) {
   target.endLine = 32;
   target.endColumn = 23;
 
-  llvm::Expected<StepInTarget> deserialized_target = roundtrip(target);
+  llvm::Expected<StepInTarget> deserialized_target = roundtripJSON(target);
   ASSERT_THAT_EXPECTED(deserialized_target, llvm::Succeeded());
 
   EXPECT_EQ(target.id, deserialized_target->id);
@@ -795,6 +789,97 @@ TEST(ProtocolTypesTest, ReadMemoryResponseBody) {
 
   Expected<Value> expected = json::parse(
       R"({ "address": "0xdeadbeef", "data": "aGVsbG8gd29ybGQh", "unreadableBytes": 1})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected), pp(response));
+}
+
+TEST(ProtocolTypesTest, Modules) {
+  Module module;
+  module.id = "AC805E8E-B6A4-CD92-4B05-5CFA7CE24AE8-8926C776";
+  module.name = "libm.so.6";
+  module.path = "/some/path/to/libm.so.6";
+  module.isOptimized = true;
+  module.isUserCode = true;
+  module.version = "0.0.1";
+  module.symbolStatus = "Symbol not found.";
+  module.symbolFilePath = "/some/file/path/to/the/symbol/module";
+  module.dateTimeStamp = "2020-12-09T16:09:53+00:00";
+  module.addressRange = "0xcafeface";
+  module.debugInfoSizeBytes = 1572864;
+
+  Expected<json::Value> expected = json::parse(
+      R"({
+                  "id" : "AC805E8E-B6A4-CD92-4B05-5CFA7CE24AE8-8926C776",
+                  "name": "libm.so.6",
+                  "path": "/some/path/to/libm.so.6",
+                  "isOptimized": true,
+                  "isUserCode": true,
+                  "version": "0.0.1",
+                  "symbolStatus": "Symbol not found.",
+                  "symbolFilePath": "/some/file/path/to/the/symbol/module",
+                  "dateTimeStamp": "2020-12-09T16:09:53+00:00",
+                  "addressRange": "0xcafeface",
+                  "debugInfoSize": "1.5MB" })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected), pp(module));
+
+  // Test without optional values.
+  module.path.clear();
+  module.isOptimized = false;
+  module.isUserCode = false;
+  module.version.clear();
+  module.symbolStatus.clear();
+  module.symbolFilePath.clear();
+  module.dateTimeStamp.clear();
+  module.addressRange.clear();
+  module.debugInfoSizeBytes = 0;
+  EXPECT_NE(pp(*expected), pp(module));
+
+  Expected<json::Value> expected_no_opt = json::parse(
+      R"({
+                  "id" : "AC805E8E-B6A4-CD92-4B05-5CFA7CE24AE8-8926C776",
+                  "name": "libm.so.6"})");
+  ASSERT_THAT_EXPECTED(expected_no_opt, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected_no_opt), pp(module));
+}
+
+TEST(ProtocolTypesTest, ModulesArguments) {
+  ModulesArguments args;
+
+  llvm::Expected<ModulesArguments> expected = parse<ModulesArguments>(R"({})");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(args.startModule, expected->startModule);
+  EXPECT_EQ(args.moduleCount, expected->moduleCount);
+
+  // Non Default values.
+  args.startModule = 1;
+  args.moduleCount = 2;
+  llvm::Expected<ModulesArguments> expected_no_default =
+      parse<ModulesArguments>(R"({ "startModule": 1, "moduleCount": 2})");
+  ASSERT_THAT_EXPECTED(expected_no_default, llvm::Succeeded());
+  EXPECT_EQ(args.startModule, expected_no_default->startModule);
+  EXPECT_EQ(args.moduleCount, expected_no_default->moduleCount);
+}
+
+TEST(ProtocolTypesTest, ModulesResponseBody) {
+  ModulesResponseBody response;
+  Module module1;
+  module1.id = "first id";
+  module1.name = "first name";
+
+  Module module2;
+  module2.id = "second id";
+  module2.name = "second name";
+  response.modules = {std::move(module1), std::move(module2)};
+  response.totalModules = 2;
+
+  Expected<json::Value> expected = json::parse(
+      R"({
+                  "modules": [
+                    { "id": "first id", "name": "first name"},
+                    { "id": "second id", "name": "second name"}
+                  ],
+                  "totalModules": 2 })");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
   EXPECT_EQ(pp(*expected), pp(response));
 }

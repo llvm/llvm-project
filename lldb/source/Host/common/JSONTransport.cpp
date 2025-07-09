@@ -42,7 +42,8 @@ ReadFull(IOObject &descriptor, size_t length,
   if (timeout && timeout_supported) {
     SelectHelper sh;
     sh.SetTimeout(*timeout);
-    sh.FDSetRead(descriptor.GetWaitableHandle());
+    sh.FDSetRead(
+        reinterpret_cast<lldb::socket_t>(descriptor.GetWaitableHandle()));
     Status status = sh.Select();
     if (status.Fail()) {
       // Convert timeouts into a specific error.

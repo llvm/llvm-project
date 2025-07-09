@@ -102,6 +102,8 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   if (IsThinLTO) {
     LldArgs.push_back(Args.MakeArgString("-plugin-opt=-force-import-all"));
     LldArgs.push_back(Args.MakeArgString("-plugin-opt=-avail-extern-to-local"));
+    LldArgs.push_back(Args.MakeArgString(
+        "-plugin-opt=-avail-extern-gv-in-addrspace-to-local=3"));
   }
 
   for (const Arg *A : Args.filtered(options::OPT_mllvm)) {
@@ -370,19 +372,22 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
   // Maintain compatability with --hip-device-lib.
   auto BCLibArgs = DriverArgs.getAllArgValues(options::OPT_hip_device_lib_EQ);
   if (!BCLibArgs.empty()) {
-    llvm::for_each(BCLibArgs, [&](StringRef BCName) {
+    for (StringRef BCName : BCLibArgs) {
       StringRef FullName;
+      bool Found = false;
       for (StringRef LibraryPath : LibraryPaths) {
         SmallString<128> Path(LibraryPath);
         llvm::sys::path::append(Path, BCName);
         FullName = Path;
         if (llvm::sys::fs::exists(FullName)) {
           BCLibs.emplace_back(FullName);
-          return;
+          Found = true;
+          break;
         }
       }
-      getDriver().Diag(diag::err_drv_no_such_file) << BCName;
-    });
+      if (!Found)
+        getDriver().Diag(diag::err_drv_no_such_file) << BCName;
+    }
   } else {
     if (!RocmInstallation->hasDeviceLibrary()) {
       getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 0;

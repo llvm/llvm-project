@@ -62,7 +62,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -2890,6 +2889,8 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
     NewAttr = S.HLSL().mergeWaveSizeAttr(D, *WS, WS->getMin(), WS->getMax(),
                                          WS->getPreferred(),
                                          WS->getSpelledArgsCount());
+  else if (const auto *CI = dyn_cast<HLSLVkConstantIdAttr>(Attr))
+    NewAttr = S.HLSL().mergeVkConstantIdAttr(D, *CI, CI->getId());
   else if (const auto *SA = dyn_cast<HLSLShaderAttr>(Attr))
     NewAttr = S.HLSL().mergeShaderAttr(D, *SA, SA->getType());
   else if (isa<SuppressAttr>(Attr))
@@ -12399,12 +12400,9 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
 
 void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
   // [basic.start.main]p3
-  //    The main function shall not be declared with a linkage-specification.
-  if (FD->isExternCContext() ||
-      (FD->isExternCXXContext() &&
-       FD->getDeclContext()->getRedeclContext()->isTranslationUnit()))
-    Diag(FD->getLocation(), diag::ext_main_invalid_linkage_specification)
-        << FD->getLanguageLinkage();
+  //    The main function shall not be declared with C linkage-specification.
+  if (FD->isExternCContext())
+    Diag(FD->getLocation(), diag::ext_main_invalid_linkage_specification);
 
   // C++11 [basic.start.main]p3:
   //   A program that [...] declares main to be inline, static or
@@ -12487,6 +12485,15 @@ void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
           << (RTRange.isValid() ? FixItHint::CreateReplacement(RTRange, "int")
                                 : FixItHint());
       FD->setInvalidDecl(true);
+    }
+
+    // [basic.start.main]p3:
+    // A program that declares a function main that belongs to the global scope
+    // and is attached to a named module is ill-formed.
+    if (FD->isInNamedModule()) {
+      const SourceLocation start = FD->getTypeSpecStartLoc();
+      Diag(start, diag::warn_main_in_named_module)
+          << FixItHint::CreateInsertion(start, "extern \"C++\" ", true);
     }
   }
 
@@ -13522,21 +13529,19 @@ bool Sema::GloballyUniqueObjectMightBeAccidentallyDuplicated(
 
   // The target is "hidden" (from the dynamic linker) if:
   // 1. On posix, it has hidden visibility, or
-  // 2. On windows, it has no import/export annotation
+  // 2. On windows, it has no import/export annotation, and neither does the
+  // class which directly contains it.
   if (Context.getTargetInfo().shouldDLLImportComdatSymbols()) {
     if (Target->hasAttr<DLLExportAttr>() || Target->hasAttr<DLLImportAttr>())
       return false;
 
     // If the variable isn't directly annotated, check to see if it's a member
     // of an annotated class.
-    const VarDecl *VD = dyn_cast<VarDecl>(Target);
+    const CXXRecordDecl *Ctx =
+        dyn_cast<CXXRecordDecl>(Target->getDeclContext());
+    if (Ctx && (Ctx->hasAttr<DLLExportAttr>() || Ctx->hasAttr<DLLImportAttr>()))
+      return false;
 
-    if (VD && VD->isStaticDataMember()) {
-      const CXXRecordDecl *Ctx = dyn_cast<CXXRecordDecl>(VD->getDeclContext());
-      if (Ctx &&
-          (Ctx->hasAttr<DLLExportAttr>() || Ctx->hasAttr<DLLImportAttr>()))
-        return false;
-    }
   } else if (Lnk.getVisibility() != HiddenVisibility) {
     // Posix case
     return false;
@@ -13756,6 +13761,10 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     VDecl->setInvalidDecl();
     return;
   }
+
+  if (getLangOpts().HLSL)
+    if (!HLSL().handleInitialization(VDecl, Init))
+      return;
 
   // Get the decls type and save a reference for later, since
   // CheckInitializerTypes may change it.
@@ -14177,6 +14186,13 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
         Var->setInvalidDecl();
         return;
       }
+    }
+
+    // HLSL variable with the `vk::constant_id` attribute must be initialized.
+    if (!Var->isInvalidDecl() && Var->hasAttr<HLSLVkConstantIdAttr>()) {
+      Diag(Var->getLocation(), diag::err_specialization_const);
+      Var->setInvalidDecl();
+      return;
     }
 
     if (!Var->isInvalidDecl() && RealDecl->hasAttr<LoaderUninitializedAttr>()) {
@@ -16378,7 +16394,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
           // Returns true if the token beginning at this Loc is `const`.
           auto isLocAtConst = [&](SourceLocation Loc, const SourceManager &SM,
                                   const LangOptions &LangOpts) {
-            std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
+            FileIDAndOffset LocInfo = SM.getDecomposedLoc(Loc);
             if (LocInfo.first.isInvalid())
               return false;
 
@@ -18620,8 +18636,7 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
         << FieldName << FieldTy << BitWidth->getSourceRange();
     return Diag(FieldLoc, diag::err_not_integral_type_anon_bitfield)
       << FieldTy << BitWidth->getSourceRange();
-  } else if (DiagnoseUnexpandedParameterPack(const_cast<Expr *>(BitWidth),
-                                             UPPC_BitFieldWidth))
+  } else if (DiagnoseUnexpandedParameterPack(BitWidth, UPPC_BitFieldWidth))
     return ExprError();
 
   // If the bit-width is type- or value-dependent, don't try to check

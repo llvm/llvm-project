@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetMachine.h"
 #include <bitset>
 
@@ -168,7 +169,8 @@ public:
   bool GETTER() const { return ATTRIBUTE; }
 #include "RISCVGenSubtargetInfo.inc"
 
-  bool hasStdExtCOrZca() const { return HasStdExtC || HasStdExtZca; }
+  LLVM_DEPRECATED("Now Equivalent to hasStdExtZca", "hasStdExtZca")
+  bool hasStdExtCOrZca() const { return HasStdExtZca; }
   bool hasStdExtCOrZcd() const { return HasStdExtC || HasStdExtZcd; }
   bool hasStdExtCOrZcfOrZce() const {
     return HasStdExtC || HasStdExtZcf || HasStdExtZce;
@@ -186,7 +188,7 @@ public:
 
   bool hasConditionalMoveFusion() const {
     // Do we support fusing a branch+mv or branch+c.mv as a conditional move.
-    return (hasConditionalCompressedMoveFusion() && hasStdExtCOrZca()) ||
+    return (hasConditionalCompressedMoveFusion() && hasStdExtZca()) ||
            hasShortForwardBranchOpt();
   }
 

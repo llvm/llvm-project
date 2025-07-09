@@ -664,6 +664,7 @@ enum CommandArgumentType {
   eArgTypeCPUName,
   eArgTypeCPUFeatures,
   eArgTypeManagedPlugin,
+  eArgTypeProtocol,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };

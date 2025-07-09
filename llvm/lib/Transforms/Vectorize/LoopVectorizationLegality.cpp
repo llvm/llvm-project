@@ -1491,10 +1491,51 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
     SmallVector<const SCEVPredicate *, 4> Predicates;
     for (Instruction &I : *BB) {
       LoadInst *LI = dyn_cast<LoadInst>(&I);
+
+      // Make sure we can execute all computations feeding into Ptr in the loop
+      // w/o triggering UB and that none of the out-of-loop operands are poison.
+      // We do not need to check if operations inside the loop can produce
+      // poison due to flags (e.g. due to an inbounds GEP going out of bounds),
+      // because flags will be dropped when executing them unconditionally.
+      // TODO: Results could be improved by considering poison-propagation
+      // properties of visited ops.
+      auto CanSpeculatePointerOp = [this](Value *Ptr) {
+        SmallVector<Value *> Worklist = {Ptr};
+        SmallPtrSet<Value *, 4> Visited;
+        while (!Worklist.empty()) {
+          Value *CurrV = Worklist.pop_back_val();
+          if (!Visited.insert(CurrV).second)
+            continue;
+
+          auto *CurrI = dyn_cast<Instruction>(CurrV);
+          if (!CurrI || !TheLoop->contains(CurrI)) {
+            // If operands from outside the loop may be poison then Ptr may also
+            // be poison.
+            if (!isGuaranteedNotToBePoison(CurrV, AC,
+                                           TheLoop->getLoopPredecessor()
+                                               ->getTerminator()
+                                               ->getIterator()))
+              return false;
+            continue;
+          }
+
+          // A loaded value may be poison, independent of any flags.
+          if (isa<LoadInst>(CurrI) && !isGuaranteedNotToBePoison(CurrV, AC))
+            return false;
+
+          // For other ops, assume poison can only be introduced via flags,
+          // which can be dropped.
+          if (!isa<PHINode>(CurrI) && !isSafeToSpeculativelyExecute(CurrI))
+            return false;
+          append_range(Worklist, CurrI->operands());
+        }
+        return true;
+      };
       // Pass the Predicates pointer to isDereferenceableAndAlignedInLoop so
       // that it will consider loops that need guarding by SCEV checks. The
       // vectoriser will generate these checks if we decide to vectorise.
       if (LI && !LI->getType()->isVectorTy() && !mustSuppressSpeculation(*LI) &&
+          CanSpeculatePointerOp(LI->getPointerOperand()) &&
           isDereferenceableAndAlignedInLoop(LI, TheLoop, SE, *DT, AC,
                                             &Predicates))
         SafePointers.insert(LI->getPointerOperand());

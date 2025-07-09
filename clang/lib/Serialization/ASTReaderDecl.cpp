@@ -664,22 +664,21 @@ void ASTDeclReader::VisitPragmaCommentDecl(PragmaCommentDecl *D) {
   D->setLocation(readSourceLocation());
   D->CommentKind = (PragmaMSCommentKind)Record.readInt();
   std::string Arg = readString();
-  memcpy(D->getTrailingObjects<char>(), Arg.data(), Arg.size());
-  D->getTrailingObjects<char>()[Arg.size()] = '\0';
+  memcpy(D->getTrailingObjects(), Arg.data(), Arg.size());
+  D->getTrailingObjects()[Arg.size()] = '\0';
 }
 
 void ASTDeclReader::VisitPragmaDetectMismatchDecl(PragmaDetectMismatchDecl *D) {
   VisitDecl(D);
   D->setLocation(readSourceLocation());
   std::string Name = readString();
-  memcpy(D->getTrailingObjects<char>(), Name.data(), Name.size());
-  D->getTrailingObjects<char>()[Name.size()] = '\0';
+  memcpy(D->getTrailingObjects(), Name.data(), Name.size());
+  D->getTrailingObjects()[Name.size()] = '\0';
 
   D->ValueStart = Name.size() + 1;
   std::string Value = readString();
-  memcpy(D->getTrailingObjects<char>() + D->ValueStart, Value.data(),
-         Value.size());
-  D->getTrailingObjects<char>()[D->ValueStart + Value.size()] = '\0';
+  memcpy(D->getTrailingObjects() + D->ValueStart, Value.data(), Value.size());
+  D->getTrailingObjects()[D->ValueStart + Value.size()] = '\0';
 }
 
 void ASTDeclReader::VisitTranslationUnitDecl(TranslationUnitDecl *TU) {
@@ -1699,6 +1698,8 @@ void ASTDeclReader::ReadVarDeclInit(VarDecl *VD) {
     Eval->HasConstantInitialization = (Val & 2) != 0;
     Eval->HasConstantDestruction = (Val & 4) != 0;
     Eval->WasEvaluated = (Val & 8) != 0;
+    Eval->HasSideEffects = (Val & 16) != 0;
+    Eval->CheckedForSideEffects = true;
     if (Eval->WasEvaluated) {
       Eval->Evaluated = Record.readAPValue();
       if (Eval->Evaluated.needsCleanup())
@@ -1746,7 +1747,7 @@ void ASTDeclReader::VisitParmVarDecl(ParmVarDecl *PD) {
 
 void ASTDeclReader::VisitDecompositionDecl(DecompositionDecl *DD) {
   VisitVarDecl(DD);
-  auto **BDs = DD->getTrailingObjects<BindingDecl *>();
+  auto **BDs = DD->getTrailingObjects();
   for (unsigned I = 0; I != DD->NumBindings; ++I) {
     BDs[I] = readDeclAs<BindingDecl>();
     BDs[I]->setDecomposedDecl(DD);
@@ -1917,7 +1918,7 @@ void ASTDeclReader::VisitUsingEnumDecl(UsingEnumDecl *D) {
 void ASTDeclReader::VisitUsingPackDecl(UsingPackDecl *D) {
   VisitNamedDecl(D);
   D->InstantiatedFrom = readDeclAs<NamedDecl>();
-  auto **Expansions = D->getTrailingObjects<NamedDecl *>();
+  auto **Expansions = D->getTrailingObjects();
   for (unsigned I = 0; I != D->NumExpansions; ++I)
     Expansions[I] = readDeclAs<NamedDecl>();
   mergeMergeable(D);
@@ -2358,7 +2359,7 @@ void ASTDeclReader::VisitImportDecl(ImportDecl *D) {
   VisitDecl(D);
   D->ImportedModule = readModule();
   D->setImportComplete(Record.readInt());
-  auto *StoredLocs = D->getTrailingObjects<SourceLocation>();
+  auto *StoredLocs = D->getTrailingObjects();
   for (unsigned I = 0, N = Record.back(); I != N; ++I)
     StoredLocs[I] = readSourceLocation();
   Record.skipInts(1); // The number of stored source locations.
@@ -2376,8 +2377,7 @@ void ASTDeclReader::VisitFriendDecl(FriendDecl *D) {
   else
     D->Friend = readTypeSourceInfo();
   for (unsigned i = 0; i != D->NumTPLists; ++i)
-    D->getTrailingObjects<TemplateParameterList *>()[i] =
-        Record.readTemplateParameterList();
+    D->getTrailingObjects()[i] = Record.readTemplateParameterList();
   D->NextFriend = readDeclID().getRawValue();
   D->UnsupportedFriend = (Record.readInt() != 0);
   D->FriendLoc = readSourceLocation();
@@ -2745,7 +2745,7 @@ void ASTDeclReader::VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
   D->setDepth(Record.readInt());
   D->setPosition(Record.readInt());
   if (D->isExpandedParameterPack()) {
-    auto **Data = D->getTrailingObjects<TemplateParameterList *>();
+    auto **Data = D->getTrailingObjects();
     for (unsigned I = 0, N = D->getNumExpansionTemplateParameters();
          I != N; ++I)
       Data[I] = Record.readTemplateParameterList();

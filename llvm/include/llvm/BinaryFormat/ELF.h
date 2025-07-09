@@ -835,7 +835,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX1101         = 0x046,
   EF_AMDGPU_MACH_AMDGCN_GFX1102         = 0x047,
   EF_AMDGPU_MACH_AMDGCN_GFX1200         = 0x048,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X49   = 0x049,
+  EF_AMDGPU_MACH_AMDGCN_GFX1250         = 0x049,
   EF_AMDGPU_MACH_AMDGCN_GFX1151         = 0x04a,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4B   = 0x04b,
   EF_AMDGPU_MACH_AMDGCN_GFX942          = 0x04c,
@@ -1153,9 +1153,7 @@ enum : unsigned {
   SHT_LLVM_SYMPART = 0x6fff4c05,   // Symbol partition specification.
   SHT_LLVM_PART_EHDR = 0x6fff4c06, // ELF header for loadable partition.
   SHT_LLVM_PART_PHDR = 0x6fff4c07, // Phdrs for loadable partition.
-  SHT_LLVM_BB_ADDR_MAP_V0 =
-      0x6fff4c08, // LLVM Basic Block Address Map (old version kept for
-                  // backward-compatibility).
+  // SHT_LLVM_BB_ADDR_MAP_V0 = 0x6fff4c08,  // Do not use.
   SHT_LLVM_CALL_GRAPH_PROFILE = 0x6fff4c09, // LLVM Call Graph Profile.
   SHT_LLVM_BB_ADDR_MAP = 0x6fff4c0a,        // LLVM Basic Block Address Map.
   SHT_LLVM_OFFLOADING = 0x6fff4c0b,         // LLVM device offloading data.

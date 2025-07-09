@@ -630,7 +630,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   });
 
   Predicate isUniMMO([](const MachineInstr &MI) -> bool {
-    return AMDGPUInstrInfo::isUniformMMO(*MI.memoperands_begin());
+    return AMDGPU::isUniformMMO(*MI.memoperands_begin());
   });
 
   Predicate isConst([](const MachineInstr &MI) -> bool {
