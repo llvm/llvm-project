@@ -916,7 +916,8 @@ static Instruction *foldSelectZeroOrFixedOp(SelectInst &SI,
         match(FalseVal, m_FShr(m_Specific(X), m_Specific(X), m_Value(Y))) ||
         match(FalseVal, m_SDiv(m_Specific(X), m_Value(Y))) ||
         match(FalseVal, m_UDiv(m_Specific(X), m_Value(Y))) ||
-        match(FalseVal, m_c_UMin(m_Specific(X), m_Value(Y))))) {
+        match(FalseVal,
+              m_c_Intrinsic<Intrinsic::umin>(m_Specific(X), m_Value(Y))))) {
     return nullptr;
   }
 
