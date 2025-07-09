@@ -117,9 +117,6 @@ LLVM_ABI Libcall getMEMMOVE_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize);
 /// UNKNOW_LIBCALL if there is none.
 LLVM_ABI Libcall getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize);
 
-/// Initialize the default condition code on the libcalls.
-LLVM_ABI void initCmpLibcallCCs(ISD::CondCode *CmpLibcallCCs);
-
 } // namespace RTLIB
 } // namespace llvm
 
