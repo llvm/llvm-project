@@ -2534,7 +2534,7 @@ def ComplexAddOp : CIR_Op<"complex.add", [Pure, SameOperandsAndResultType]> {
     Example:
 
     ```mlir
-    %2 = cir.complex.add %0, %1 -> !cir.complex<!cir.float>
+    %2 = cir.complex.add %0, %1 : !cir.complex<!cir.float>
     ```
   }];
 
@@ -2543,7 +2543,7 @@ def ComplexAddOp : CIR_Op<"complex.add", [Pure, SameOperandsAndResultType]> {
   let results = (outs CIR_ComplexType:$result);
 
   let assemblyFormat = [{
-    $lhs `,` $rhs `->` qualified(type($result)) attr-dict
+    $lhs `,` $rhs `:` qualified(type($result)) attr-dict
   }];
 }
 

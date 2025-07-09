@@ -2394,7 +2394,7 @@ mlir::LogicalResult CIRToLLVMComplexAddOpLowering::matchAndRewrite(
   mlir::Type complexLLVMTy =
       getTypeConverter()->convertType(op.getResult().getType());
   auto initialComplex =
-      rewriter.create<mlir::LLVM::UndefOp>(op->getLoc(), complexLLVMTy);
+      rewriter.create<mlir::LLVM::PoisonOp>(op->getLoc(), complexLLVMTy);
 
   auto realComplex = rewriter.create<mlir::LLVM::InsertValueOp>(
       op->getLoc(), initialComplex, newReal, 0);
