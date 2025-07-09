@@ -2023,7 +2023,9 @@ module std [system] {
     // TODO: Workaround for https://github.com/llvm/llvm-project/issues/120108
     export std.cstddef.byte
     export std.cstddef.size_t
+    export std.format.escaped_output_table
     export std.format.formatter
+    export std.format.width_estimation_table
     export std.functional.function
     export std.functional.hash
     export std.iterator.iterator
