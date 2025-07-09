@@ -38,5 +38,5 @@ void test(void) {
 #include "non-existing-header.h"
 
 //--- script-expectations.txt
-CHECK: clang-executable
+CHECK: CLANG:-clang-executable
 CHECK: -fmodule-file=Test=reproducer.cache/explicitly-built-modules/Test-{{.*}}.pcm

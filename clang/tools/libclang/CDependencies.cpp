@@ -788,7 +788,10 @@ enum CXErrorCode clang_experimental_DependencyScanner_generateReproducer(
   ScriptOS << "\n\n";
 
   ScriptOS << "# Dependencies:\n";
-  std::string ReproExecutable = Opts.BuildArgs.front();
+  // Output the executable as an environment variable with a default value, so
+  // it is easier to run the reproducer with a different compiler and to
+  // simplify running an individual command manually.
+  std::string ReproExecutable = "\"${CLANG:-" + Opts.BuildArgs.front() + "}\"";
   auto PrintArguments = [&ReproExecutable,
                          &FileCacheName](llvm::raw_fd_ostream &OS,
                                          ArrayRef<std::string> Arguments) {
