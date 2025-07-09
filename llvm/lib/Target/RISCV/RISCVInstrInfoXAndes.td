@@ -65,6 +65,26 @@ def Log2 : SDNodeXForm<imm, [{
 }]>;
 
 //===----------------------------------------------------------------------===//
+// Pseudo table
+//===----------------------------------------------------------------------===//
+
+class RISCVNDSVLN<bit M, bit U, bits<3> S, bits<3> L> {
+  bits<1> Masked = M;
+  bits<1> Unsigned = U;
+  bits<3> Log2SEW = S;
+  bits<3> LMUL = L;
+  Pseudo Pseudo = !cast<Pseudo>(NAME);
+}
+
+def RISCVNDSVLNTable : GenericTable {
+  let FilterClass = "RISCVNDSVLN";
+  let CppTypeName = "NDSVLNPseudo";
+  let Fields = ["Masked", "Unsigned", "Log2SEW", "LMUL", "Pseudo"];
+  let PrimaryKey = ["Masked", "Unsigned", "Log2SEW", "LMUL"];
+  let PrimaryKeyName = "getNDSVLNPseudo";
+}
+
+//===----------------------------------------------------------------------===//
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
 
@@ -416,6 +436,39 @@ class NDSRVInstVLN<bits<5> funct5, string opcodestr>
   let RVVConstraint = VMConstraint;
 }
 
+class VPseudoVLN8NoMask<VReg RetClass, bit U> :
+      Pseudo<(outs RetClass:$rd),
+             (ins RetClass:$dest,
+                  GPRMemZeroOffset:$rs1,
+                  AVL:$vl, sew:$sew, vec_policy:$policy), []>,
+      RISCVVPseudo,
+      RISCVNDSVLN</*Masked*/0, /*Unsigned*/U, !logtwo(8), VLMul> {
+  let mayLoad = 1;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let HasVLOp = 1;
+  let HasSEWOp = 1;
+  let HasVecPolicyOp = 1;
+  let Constraints = "$rd = $dest";
+}
+
+class VPseudoVLN8Mask<VReg RetClass, bit U> :
+      Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
+             (ins GetVRegNoV0<RetClass>.R:$passthru,
+                  GPRMemZeroOffset:$rs1,
+                  VMaskOp:$vm, AVL:$vl, sew:$sew, vec_policy:$policy), []>,
+      RISCVVPseudo,
+      RISCVNDSVLN</*Masked*/1, /*Unsigned*/U, !logtwo(8), VLMul> {
+  let mayLoad = 1;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let HasVLOp = 1;
+  let HasSEWOp = 1;
+  let HasVecPolicyOp = 1;
+  let UsesMaskPolicy = 1;
+  let Constraints = "$rd = $passthru";
+}
+
 //===----------------------------------------------------------------------===//
 // Multiclass
 //===----------------------------------------------------------------------===//
@@ -462,6 +515,22 @@ multiclass VPatConversionBF16_S<string intrinsic, string instruction> {
                                       fvti.Vector, fwti.Vector,
                                       fvti.Log2SEW, fvti.LMul,
                                       fvti.RegClass, fwti.RegClass>;
+  }
+}
+
+multiclass VPseudoVLN8<bit U> {
+  foreach lmul = MxSet<8>.m in {
+    defvar LInfo = lmul.MX;
+    defvar vreg = lmul.vrclass;
+    let VLMul = lmul.value in {
+      def "_V_" # LInfo :
+        VPseudoVLN8NoMask<vreg, U>,
+        VLESched<LInfo>;
+      def "_V_" # LInfo # "_MASK" :
+        VPseudoVLN8Mask<vreg, U>,
+        RISCVMaskedPseudo<MaskIdx=2>,
+        VLESched<LInfo>;
+    }
   }
 }
 
@@ -683,6 +752,11 @@ defm : VPatConversionS_BF16<"int_riscv_nds_vfwcvt_s_bf16",
                             "PseudoNDS_VFWCVT_S">;
 defm : VPatConversionBF16_S<"int_riscv_nds_vfncvt_bf16_s",
                             "PseudoNDS_VFNCVT_BF16">;
+
+let Predicates = [HasVendorXAndesVSIntLoad] in {
+defm PseudoNDS_VLN8  : VPseudoVLN8<0>;
+defm PseudoNDS_VLNU8 : VPseudoVLN8<1>;
+} // Predicates = [HasVendorXAndesVSIntLoad]
 
 let Predicates = [HasVendorXAndesVPackFPH],
     mayRaiseFPException = true in {
