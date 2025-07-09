@@ -319,17 +319,22 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   const SCEV *MaxBECount =
       Predicates ? SE.getPredicatedConstantMaxBackedgeTakenCount(L, *Predicates)
                  : SE.getConstantMaxBackedgeTakenCount(L);
+  const SCEV *BECount = Predicates
+                            ? SE.getPredicatedBackedgeTakenCount(L, *Predicates)
+                            : SE.getBackedgeTakenCount(L);
   if (isa<SCEVCouldNotCompute>(MaxBECount))
     return false;
 
   const auto &[AccessStart, AccessEnd] = getStartAndEndForAccess(
-      L, PtrScev, LI->getType(), MaxBECount, &SE, nullptr);
+      L, PtrScev, LI->getType(), BECount, MaxBECount, &SE, nullptr);
   if (isa<SCEVCouldNotCompute>(AccessStart) ||
       isa<SCEVCouldNotCompute>(AccessEnd))
     return false;
 
   // Try to get the access size.
   const SCEV *PtrDiff = SE.getMinusSCEV(AccessEnd, AccessStart);
+  if (isa<SCEVCouldNotCompute>(PtrDiff))
+    return false;
   APInt MaxPtrDiff = SE.getUnsignedRangeMax(PtrDiff);
 
   Value *Base = nullptr;
@@ -434,7 +439,7 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, const APInt &S
     // If we see a free or a call which may write to memory (i.e. which might do
     // a free) the pointer could be marked invalid.
     if (isa<CallInst>(BBI) && BBI->mayWriteToMemory() &&
-        !isa<LifetimeIntrinsic>(BBI) && !isa<DbgInfoIntrinsic>(BBI))
+        !isa<LifetimeIntrinsic>(BBI))
       return false;
 
     Value *AccessedPtr;
