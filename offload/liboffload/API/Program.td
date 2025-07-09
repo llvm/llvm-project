@@ -34,3 +34,18 @@ def : Function {
     ];
     let returns = [];
 }
+
+def : Function {
+    let name = "olGetProgramGlobal";
+    let desc = "Return the device address and/or size for the global variable specified by `GlobalName` in the given program.";
+    let details = [
+        "This pointer may be used by olMemcpy to copy memory to and from that global."
+    ];
+    let params = [
+        Param<"ol_program_handle_t", "Program", "handle of the program", PARAM_IN>,
+        Param<"const char*", "GlobalName", "null-terminated name of the global variable in the program", PARAM_IN>,
+        Param<"void **", "Address", "output pointer for the resolved address", PARAM_OUT_OPTIONAL>,
+        Param<"size_t*", "Size", "output pointer for the resolved size in bytes", PARAM_OUT_OPTIONAL>
+    ];
+    let returns = [];
+}

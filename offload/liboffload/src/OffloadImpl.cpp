@@ -597,6 +597,23 @@ Error olDestroyProgram_impl(ol_program_handle_t Program) {
   return olDestroy(Program);
 }
 
+Error olGetProgramGlobal_impl(ol_program_handle_t Program,
+                              const char *GlobalName, void **Address,
+                              size_t *Size) {
+  auto &Device = Program->Image->getDevice();
+  GlobalTy Global{GlobalName};
+  if (auto Res = Device.Plugin.getGlobalHandler().getGlobalMetadataFromDevice(
+          Device, *Program->Image, Global))
+    return Res;
+
+  if (Address)
+    *Address = Global.getPtr();
+  if (Size)
+    *Size = Global.getSize();
+
+  return Error::success();
+}
+
 Error olGetKernel_impl(ol_program_handle_t Program, const char *KernelName,
                        ol_kernel_handle_t *Kernel) {
 
