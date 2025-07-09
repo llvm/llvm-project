@@ -140,6 +140,8 @@ public:
     return static_cast<const Stmt *>(Data1.getPointer());
   }
 
+  Stmt *getStmt() { return static_cast<Stmt *>(Data1.getPointer()); }
+
 private:
   friend class CFGElement;
 
