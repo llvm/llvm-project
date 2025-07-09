@@ -17,9 +17,6 @@
 #include <memory>
 #include <unordered_set>
 
-using namespace llvm;
-using namespace sampleprof;
-
 namespace llvm {
 namespace sampleprof {
 

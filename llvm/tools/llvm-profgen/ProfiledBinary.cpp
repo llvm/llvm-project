@@ -25,6 +25,7 @@
 #define DEBUG_TYPE "load-binary"
 
 using namespace llvm;
+using namespace llvm::object;
 using namespace sampleprof;
 
 cl::opt<bool> ShowDisassemblyOnly("show-disassembly-only",

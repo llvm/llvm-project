@@ -42,15 +42,10 @@
 #include <vector>
 
 namespace llvm {
+
 extern cl::opt<bool> EnableCSPreInliner;
 extern cl::opt<bool> UseContextCostForPreInliner;
-} // namespace llvm
 
-using namespace llvm;
-using namespace sampleprof;
-using namespace llvm::object;
-
-namespace llvm {
 namespace sampleprof {
 
 class ProfiledBinary;
@@ -303,34 +298,34 @@ class ProfiledBinary {
 
   bool IsCOFF = false;
 
-  void setPreferredTextSegmentAddresses(const ObjectFile *O);
+  void setPreferredTextSegmentAddresses(const object::ObjectFile *O);
 
   template <class ELFT>
-  void setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
+  void setPreferredTextSegmentAddresses(const object::ELFFile<ELFT> &Obj,
                                         StringRef FileName);
-  void setPreferredTextSegmentAddresses(const COFFObjectFile *Obj,
+  void setPreferredTextSegmentAddresses(const object::COFFObjectFile *Obj,
                                         StringRef FileName);
 
-  void checkPseudoProbe(const ELFObjectFileBase *Obj);
+  void checkPseudoProbe(const object::ELFObjectFileBase *Obj);
 
-  void decodePseudoProbe(const ELFObjectFileBase *Obj);
+  void decodePseudoProbe(const object::ELFObjectFileBase *Obj);
 
-  void
-  checkUseFSDiscriminator(const ObjectFile *Obj,
-                          std::map<SectionRef, SectionSymbolsTy> &AllSymbols);
+  void checkUseFSDiscriminator(
+      const object::ObjectFile *Obj,
+      std::map<object::SectionRef, SectionSymbolsTy> &AllSymbols);
 
   // Set up disassembler and related components.
-  void setUpDisassembler(const ObjectFile *Obj);
+  void setUpDisassembler(const object::ObjectFile *Obj);
   symbolize::LLVMSymbolizer::Options getSymbolizerOpts() const;
 
   // Load debug info of subprograms from DWARF section.
-  void loadSymbolsFromDWARF(ObjectFile &Obj);
+  void loadSymbolsFromDWARF(object::ObjectFile &Obj);
 
   // Load debug info from DWARF unit.
   void loadSymbolsFromDWARFUnit(DWARFUnit &CompilationUnit);
 
   // Create elf symbol to its start address mapping.
-  void populateElfSymbolAddressList(const ELFObjectFileBase *O);
+  void populateElfSymbolAddressList(const object::ELFObjectFileBase *O);
 
   // A function may be spilt into multiple non-continuous address ranges. We use
   // this to set whether start a function range is the real entry of the
@@ -341,11 +336,12 @@ class ProfiledBinary {
   void warnNoFuncEntry();
 
   /// Dissassemble the text section and build various address maps.
-  void disassemble(const ObjectFile *O);
+  void disassemble(const object::ObjectFile *O);
 
   /// Helper function to dissassemble the symbol and extract info for unwinding
   bool dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
-                          SectionSymbolsTy &Symbols, const SectionRef &Section);
+                          SectionSymbolsTy &Symbols,
+                          const object::SectionRef &Section);
   /// Symbolize a given instruction pointer and return a full call context.
   SampleContextFrameVector symbolize(const InstructionPointer &IP,
                                      bool UseCanonicalFnName = false,
