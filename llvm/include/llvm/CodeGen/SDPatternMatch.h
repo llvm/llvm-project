@@ -294,6 +294,34 @@ inline auto m_SpecificVT(EVT RefVT) {
 inline auto m_Glue() { return m_SpecificVT(MVT::Glue); }
 inline auto m_OtherVT() { return m_SpecificVT(MVT::Other); }
 
+/// Match a scalar ValueType.
+template <typename Pattern>
+inline auto m_SpecificScalarVT(EVT RefVT, const Pattern &P) {
+  return ValueType_match{[=](EVT VT) { return VT.getScalarType() == RefVT; },
+                         P};
+}
+inline auto m_SpecificScalarVT(EVT RefVT) {
+  return ValueType_match{[=](EVT VT) { return VT.getScalarType() == RefVT; },
+                         m_Value()};
+}
+
+/// Match a vector ValueType.
+template <typename Pattern>
+inline auto m_SpecificVectorElementVT(EVT RefVT, const Pattern &P) {
+  return ValueType_match{[=](EVT VT) {
+                           return VT.isVector() &&
+                                  VT.getVectorElementType() == RefVT;
+                         },
+                         P};
+}
+inline auto m_SpecificVectorElementVT(EVT RefVT) {
+  return ValueType_match{[=](EVT VT) {
+                           return VT.isVector() &&
+                                  VT.getVectorElementType() == RefVT;
+                         },
+                         m_Value()};
+}
+
 /// Match any integer ValueTypes.
 template <typename Pattern> inline auto m_IntegerVT(const Pattern &P) {
   return ValueType_match{[](EVT VT) { return VT.isInteger(); }, P};
@@ -1072,19 +1100,46 @@ inline SpecificInt_match m_SpecificInt(uint64_t V) {
   return SpecificInt_match(APInt(64, V));
 }
 
-inline SpecificInt_match m_Zero() { return m_SpecificInt(0U); }
-inline SpecificInt_match m_One() { return m_SpecificInt(1U); }
+struct Zero_match {
+  bool AllowUndefs;
 
-struct AllOnes_match {
+  explicit Zero_match(bool AllowUndefs) : AllowUndefs(AllowUndefs) {}
 
-  AllOnes_match() = default;
-
-  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
-    return isAllOnesOrAllOnesSplat(N);
+  template <typename MatchContext>
+  bool match(const MatchContext &, SDValue N) const {
+    return isZeroOrZeroSplat(N, AllowUndefs);
   }
 };
 
-inline AllOnes_match m_AllOnes() { return AllOnes_match(); }
+struct Ones_match {
+  bool AllowUndefs;
+
+  Ones_match(bool AllowUndefs) : AllowUndefs(AllowUndefs) {}
+
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+    return isOnesOrOnesSplat(N, AllowUndefs);
+  }
+};
+
+struct AllOnes_match {
+  bool AllowUndefs;
+
+  AllOnes_match(bool AllowUndefs) : AllowUndefs(AllowUndefs) {}
+
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+    return isAllOnesOrAllOnesSplat(N, AllowUndefs);
+  }
+};
+
+inline Ones_match m_One(bool AllowUndefs = false) {
+  return Ones_match(AllowUndefs);
+}
+inline Zero_match m_Zero(bool AllowUndefs = false) {
+  return Zero_match(AllowUndefs);
+}
+inline AllOnes_match m_AllOnes(bool AllowUndefs = false) {
+  return AllOnes_match(AllowUndefs);
+}
 
 /// Match true boolean value based on the information provided by
 /// TargetLowering.
@@ -1161,7 +1216,7 @@ inline CondCode_match m_SpecificCondCode(ISD::CondCode CC) {
 
 /// Match a negate as a sub(0, v)
 template <typename ValTy>
-inline BinaryOpc_match<SpecificInt_match, ValTy> m_Neg(const ValTy &V) {
+inline BinaryOpc_match<Zero_match, ValTy, false> m_Neg(const ValTy &V) {
   return m_Sub(m_Zero(), V);
 }
 

@@ -142,6 +142,12 @@ New checks
   Finds unscoped (non-class) ``enum`` declarations and suggests using
   ``enum class`` instead.
 
+- New :doc:`modernize-use-scoped-lock
+  <clang-tidy/checks/modernize/use-scoped-lock>` check.
+
+  Finds uses of ``std::lock_guard`` and suggests replacing them with C++17's
+  alternative ``std::scoped_lock``.
+
 - New :doc:`portability-avoid-pragma-once
   <clang-tidy/checks/portability/avoid-pragma-once>` check.
 
@@ -206,6 +212,21 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/avoid-goto>` check by adding the option
   `IgnoreMacros` to ignore ``goto`` labels defined in macros.
 
+- Improved :doc:`cppcoreguidelines-missing-std-forward
+  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by adding a
+  flag to specify the function used for forwarding instead of ``std::forward``.
+   
+- Improved :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check by
+  fixing false positives when calling indexing operators that do not perform
+  pointer arithmetic in template, for example ``std::map::operator[]`` and
+  when pointer arithmetic was used through type aliases.
+
+- Improved :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
+  <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
+  by adding a flag to specify the function used for moving instead of
+  ``std::move``.
+
 - Improved :doc:`cppcoreguidelines-special-member-functions
   <clang-tidy/checks/cppcoreguidelines/special-member-functions>` check by
   adding the option `IgnoreMacros` to ignore classes defined in macros.
@@ -244,6 +265,11 @@ Changes in existing checks
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` check by providing additional
   examples and fixing some macro related false positives.
+
+- Improved :doc:`misc-unconventional-assign-operator
+  <clang-tidy/checks/misc/unconventional-assign-operator>` check by fixing
+  false positives when copy assignment operator function in a template class
+  returns the result of another assignment to ``*this`` (``return *this=...``).
 
 - Improved :doc:`misc-unused-using-decls
   <clang-tidy/checks/misc/unused-using-decls>` check by fixing false positives

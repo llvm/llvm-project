@@ -121,7 +121,7 @@ def SVLD1UW_GATHER_INDEX_S   : MInst<"svld1uw_gather[_{2}base]_index_{d}", "dPul
 
 
 // First-faulting load one vector (scalar base)
-def SVLDFF1   : MInst<"svldff1[_{2}]", "dPc", "csilUcUsUiUlhfd", [IsLoad],               MemEltTyDefault, "aarch64_sve_ldff1">;
+def SVLDFF1   : MInst<"svldff1[_{2}]", "dPc", "csilUcUsUiUlhfdm", [IsLoad],               MemEltTyDefault, "aarch64_sve_ldff1">;
 def SVLDFF1SB : MInst<"svldff1sb_{d}", "dPS", "silUsUiUl",       [IsLoad],               MemEltTyInt8,    "aarch64_sve_ldff1">;
 def SVLDFF1UB : MInst<"svldff1ub_{d}", "dPW", "silUsUiUl",       [IsLoad, IsZExtReturn], MemEltTyInt8,    "aarch64_sve_ldff1">;
 def SVLDFF1SH : MInst<"svldff1sh_{d}", "dPT", "ilUiUl",          [IsLoad],               MemEltTyInt16,   "aarch64_sve_ldff1">;
@@ -130,7 +130,7 @@ def SVLDFF1SW : MInst<"svldff1sw_{d}", "dPU", "lUl",             [IsLoad],      
 def SVLDFF1UW : MInst<"svldff1uw_{d}", "dPY", "lUl",             [IsLoad, IsZExtReturn], MemEltTyInt32,   "aarch64_sve_ldff1">;
 
 // First-faulting load one vector (scalar base, VL displacement)
-def SVLDFF1_VNUM   : MInst<"svldff1_vnum[_{2}]", "dPcl", "csilUcUsUiUlhfd", [IsLoad],               MemEltTyDefault, "aarch64_sve_ldff1">;
+def SVLDFF1_VNUM   : MInst<"svldff1_vnum[_{2}]", "dPcl", "csilUcUsUiUlhfdm", [IsLoad],               MemEltTyDefault, "aarch64_sve_ldff1">;
 def SVLDFF1SB_VNUM : MInst<"svldff1sb_vnum_{d}", "dPSl", "silUsUiUl",       [IsLoad],               MemEltTyInt8,    "aarch64_sve_ldff1">;
 def SVLDFF1UB_VNUM : MInst<"svldff1ub_vnum_{d}", "dPWl", "silUsUiUl",       [IsLoad, IsZExtReturn], MemEltTyInt8,    "aarch64_sve_ldff1">;
 def SVLDFF1SH_VNUM : MInst<"svldff1sh_vnum_{d}", "dPTl", "ilUiUl",          [IsLoad],               MemEltTyInt16,   "aarch64_sve_ldff1">;
@@ -223,7 +223,7 @@ def SVLDFF1SW_GATHER_INDEX_S : MInst<"svldff1sw_gather[_{2}base]_index_{d}", "dP
 def SVLDFF1UW_GATHER_INDEX_S : MInst<"svldff1uw_gather[_{2}base]_index_{d}", "dPul", "lUl",      [IsGatherLoad, IsZExtReturn], MemEltTyInt32,   "aarch64_sve_ldff1_gather_scalar_offset">;
 
 // Non-faulting load one vector (scalar base)
-def SVLDNF1   : MInst<"svldnf1[_{2}]", "dPc", "csilUcUsUiUlhfd", [IsLoad],               MemEltTyDefault, "aarch64_sve_ldnf1">;
+def SVLDNF1   : MInst<"svldnf1[_{2}]", "dPc", "csilUcUsUiUlhfdm", [IsLoad],               MemEltTyDefault, "aarch64_sve_ldnf1">;
 def SVLDNF1SB : MInst<"svldnf1sb_{d}", "dPS", "silUsUiUl",       [IsLoad],               MemEltTyInt8,    "aarch64_sve_ldnf1">;
 def SVLDNF1UB : MInst<"svldnf1ub_{d}", "dPW", "silUsUiUl",       [IsLoad, IsZExtReturn], MemEltTyInt8,    "aarch64_sve_ldnf1">;
 def SVLDNF1SH : MInst<"svldnf1sh_{d}", "dPT", "ilUiUl",          [IsLoad],               MemEltTyInt16,   "aarch64_sve_ldnf1">;
@@ -232,7 +232,7 @@ def SVLDNF1SW : MInst<"svldnf1sw_{d}", "dPU", "lUl",             [IsLoad],      
 def SVLDNF1UW : MInst<"svldnf1uw_{d}", "dPY", "lUl",             [IsLoad, IsZExtReturn], MemEltTyInt32,   "aarch64_sve_ldnf1">;
 
 // Non-faulting load one vector (scalar base, VL displacement)
-def SVLDNF1_VNUM   : MInst<"svldnf1_vnum[_{2}]", "dPcl", "csilUcUsUiUlhfd", [IsLoad],               MemEltTyDefault, "aarch64_sve_ldnf1">;
+def SVLDNF1_VNUM   : MInst<"svldnf1_vnum[_{2}]", "dPcl", "csilUcUsUiUlhfdm", [IsLoad],               MemEltTyDefault, "aarch64_sve_ldnf1">;
 def SVLDNF1SB_VNUM : MInst<"svldnf1sb_vnum_{d}", "dPSl", "silUsUiUl",       [IsLoad],               MemEltTyInt8,    "aarch64_sve_ldnf1">;
 def SVLDNF1UB_VNUM : MInst<"svldnf1ub_vnum_{d}", "dPWl", "silUsUiUl",       [IsLoad, IsZExtReturn], MemEltTyInt8,    "aarch64_sve_ldnf1">;
 def SVLDNF1SH_VNUM : MInst<"svldnf1sh_vnum_{d}", "dPTl", "ilUiUl",          [IsLoad],               MemEltTyInt16,   "aarch64_sve_ldnf1">;
@@ -258,32 +258,32 @@ let SVETargetGuard = "sve,bf16", SMETargetGuard = "sme,bf16" in {
 }
 
 // Load one quadword and replicate (scalar base)
-def SVLD1RQ : SInst<"svld1rq[_{2}]", "dPc", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ld1rq", [VerifyRuntimeMode]>;
+def SVLD1RQ : SInst<"svld1rq[_{2}]", "dPc", "csilUcUsUiUlhfdm", MergeNone, "aarch64_sve_ld1rq", [VerifyRuntimeMode]>;
 
 let SVETargetGuard = "sve,bf16", SMETargetGuard = "sme,bf16" in {
   def SVLD1RQ_BF : SInst<"svld1rq[_{2}]", "dPc",  "b", MergeNone, "aarch64_sve_ld1rq", [VerifyRuntimeMode]>;
 }
 
-multiclass StructLoad<string name, string proto, string i> {
-  def : SInst<name, proto, "csilUcUsUiUlhfdm", MergeNone, i, [IsStructLoad, VerifyRuntimeMode]>;
+multiclass StructLoad<string name, string proto, string i, list<FlagType> f = []> {
+  def : SInst<name, proto, "csilUcUsUiUlhfdm", MergeNone, i, !listconcat(f, [IsStructLoad])>;
   let SVETargetGuard = "sve,bf16", SMETargetGuard = "sme,bf16" in {
-    def: SInst<name, proto, "b", MergeNone, i, [IsStructLoad, VerifyRuntimeMode]>;
+    def: SInst<name, proto, "b", MergeNone, i, !listconcat(f, [IsStructLoad])>;
   }
 }
 
 // Load N-element structure into N vectors (scalar base)
-defm SVLD2 : StructLoad<"svld2[_{2}]", "2Pc", "aarch64_sve_ld2_sret">;
-defm SVLD3 : StructLoad<"svld3[_{2}]", "3Pc", "aarch64_sve_ld3_sret">;
-defm SVLD4 : StructLoad<"svld4[_{2}]", "4Pc", "aarch64_sve_ld4_sret">;
+defm SVLD2 : StructLoad<"svld2[_{2}]", "2Pc", "aarch64_sve_ld2_sret", [VerifyRuntimeMode]>;
+defm SVLD3 : StructLoad<"svld3[_{2}]", "3Pc", "aarch64_sve_ld3_sret", [VerifyRuntimeMode]>;
+defm SVLD4 : StructLoad<"svld4[_{2}]", "4Pc", "aarch64_sve_ld4_sret", [VerifyRuntimeMode]>;
 
 // Load N-element structure into N vectors (scalar base, VL displacement)
-defm SVLD2_VNUM : StructLoad<"svld2_vnum[_{2}]", "2Pcl", "aarch64_sve_ld2_sret">;
-defm SVLD3_VNUM : StructLoad<"svld3_vnum[_{2}]", "3Pcl", "aarch64_sve_ld3_sret">;
-defm SVLD4_VNUM : StructLoad<"svld4_vnum[_{2}]", "4Pcl", "aarch64_sve_ld4_sret">;
+defm SVLD2_VNUM : StructLoad<"svld2_vnum[_{2}]", "2Pcl", "aarch64_sve_ld2_sret", [VerifyRuntimeMode]>;
+defm SVLD3_VNUM : StructLoad<"svld3_vnum[_{2}]", "3Pcl", "aarch64_sve_ld3_sret", [VerifyRuntimeMode]>;
+defm SVLD4_VNUM : StructLoad<"svld4_vnum[_{2}]", "4Pcl", "aarch64_sve_ld4_sret", [VerifyRuntimeMode]>;
 
 // Load one octoword and replicate (scalar base)
 let SVETargetGuard = "sve,f64mm", SMETargetGuard = InvalidMode in {
-  def SVLD1RO : SInst<"svld1ro[_{2}]", "dPc", "csilUcUsUiUlhfd", MergeNone, "aarch64_sve_ld1ro">;
+  def SVLD1RO : SInst<"svld1ro[_{2}]", "dPc", "csilUcUsUiUlhfdm", MergeNone, "aarch64_sve_ld1ro">;
 }
 let SVETargetGuard = "sve,f64mm,bf16", SMETargetGuard = InvalidMode in {
   def SVLD1RO_BF16 : SInst<"svld1ro[_{2}]", "dPc", "b", MergeNone, "aarch64_sve_ld1ro">;
@@ -434,21 +434,21 @@ def SVST1H_SCATTER_INDEX_S    : MInst<"svst1h_scatter[_{2}base]_index[_{d}]", "v
 def SVST1W_SCATTER_INDEX_S    : MInst<"svst1w_scatter[_{2}base]_index[_{d}]", "vPuld", "lUl",      [IsScatterStore], MemEltTyInt32,   "aarch64_sve_st1_scatter_scalar_offset">;
 } // let SVETargetGuard = "sve"
 
-multiclass StructStore<string name, string proto, string i> {
-  def : SInst<name, proto, "csilUcUsUiUlhfdm", MergeNone, i, [IsStructStore, VerifyRuntimeMode]>;
+multiclass StructStore<string name, string proto, string i, list<FlagType> f = []> {
+  def : SInst<name, proto, "csilUcUsUiUlhfdm", MergeNone, i, !listconcat(f, [IsStructStore])>;
   let SVETargetGuard = "sve,bf16", SMETargetGuard = "sme,bf16" in {
-    def: SInst<name, proto, "b", MergeNone, i, [IsStructStore, VerifyRuntimeMode]>;
+    def: SInst<name, proto, "b", MergeNone, i, !listconcat(f, [IsStructStore])>;
   }
 }
 // Store N vectors into N-element structure (scalar base)
-defm SVST2 : StructStore<"svst2[_{d}]", "vPp2", "aarch64_sve_st2">;
-defm SVST3 : StructStore<"svst3[_{d}]", "vPp3", "aarch64_sve_st3">;
-defm SVST4 : StructStore<"svst4[_{d}]", "vPp4", "aarch64_sve_st4">;
+defm SVST2 : StructStore<"svst2[_{d}]", "vPp2", "aarch64_sve_st2", [VerifyRuntimeMode]>;
+defm SVST3 : StructStore<"svst3[_{d}]", "vPp3", "aarch64_sve_st3", [VerifyRuntimeMode]>;
+defm SVST4 : StructStore<"svst4[_{d}]", "vPp4", "aarch64_sve_st4", [VerifyRuntimeMode]>;
 
 // Store N vectors into N-element structure (scalar base, VL displacement)
-defm SVST2_VNUM : StructStore<"svst2_vnum[_{d}]", "vPpl2", "aarch64_sve_st2">;
-defm SVST3_VNUM : StructStore<"svst3_vnum[_{d}]", "vPpl3", "aarch64_sve_st3">;
-defm SVST4_VNUM : StructStore<"svst4_vnum[_{d}]", "vPpl4", "aarch64_sve_st4">;
+defm SVST2_VNUM : StructStore<"svst2_vnum[_{d}]", "vPpl2", "aarch64_sve_st2", [VerifyRuntimeMode]>;
+defm SVST3_VNUM : StructStore<"svst3_vnum[_{d}]", "vPpl3", "aarch64_sve_st3", [VerifyRuntimeMode]>;
+defm SVST4_VNUM : StructStore<"svst4_vnum[_{d}]", "vPpl4", "aarch64_sve_st4", [VerifyRuntimeMode]>;
 
 // Store one vector, with no truncation, non-temporal (scalar base)
 def SVSTNT1 : MInst<"svstnt1[_{d}]", "vPpd", "csilUcUsUiUlhfdm", [IsStore, VerifyRuntimeMode], MemEltTyDefault, "aarch64_sve_stnt1">;

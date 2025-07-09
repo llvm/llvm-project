@@ -79,21 +79,7 @@ define <4 x half> @frinta_4h(<4 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: frinta_4h:
 ; CHECK-FP16:       @ %bb.0:
-; CHECK-FP16-NEXT:    vmovx.f16 s2, s0
-; CHECK-FP16-NEXT:    vrinta.f16 s2, s2
-; CHECK-FP16-NEXT:    vmov r0, s2
-; CHECK-FP16-NEXT:    vrinta.f16 s2, s0
-; CHECK-FP16-NEXT:    vmov r1, s2
-; CHECK-FP16-NEXT:    vrinta.f16 s2, s1
-; CHECK-FP16-NEXT:    vmovx.f16 s0, s1
-; CHECK-FP16-NEXT:    vrinta.f16 s0, s0
-; CHECK-FP16-NEXT:    vmov.16 d16[0], r1
-; CHECK-FP16-NEXT:    vmov.16 d16[1], r0
-; CHECK-FP16-NEXT:    vmov r0, s2
-; CHECK-FP16-NEXT:    vmov.16 d16[2], r0
-; CHECK-FP16-NEXT:    vmov r0, s0
-; CHECK-FP16-NEXT:    vmov.16 d16[3], r0
-; CHECK-FP16-NEXT:    vorr d0, d16, d16
+; CHECK-FP16-NEXT:    vrinta.f16 d0, d0
 ; CHECK-FP16-NEXT:    bx lr
   %tmp3 = call <4 x half> @llvm.round.v4f16(<4 x half> %A)
   ret <4 x half> %tmp3
@@ -243,35 +229,7 @@ define <8 x half> @frinta_8h(<8 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: frinta_8h:
 ; CHECK-FP16:       @ %bb.0:
-; CHECK-FP16-NEXT:    vmovx.f16 s4, s2
-; CHECK-FP16-NEXT:    vrinta.f16 s4, s4
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vrinta.f16 s4, s2
-; CHECK-FP16-NEXT:    vmov r1, s4
-; CHECK-FP16-NEXT:    vrinta.f16 s4, s3
-; CHECK-FP16-NEXT:    vmov.16 d17[0], r1
-; CHECK-FP16-NEXT:    vmov.16 d17[1], r0
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vmovx.f16 s4, s3
-; CHECK-FP16-NEXT:    vrinta.f16 s4, s4
-; CHECK-FP16-NEXT:    vmov.16 d17[2], r0
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vmovx.f16 s4, s0
-; CHECK-FP16-NEXT:    vrinta.f16 s4, s4
-; CHECK-FP16-NEXT:    vmov.16 d17[3], r0
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vrinta.f16 s4, s0
-; CHECK-FP16-NEXT:    vmovx.f16 s0, s1
-; CHECK-FP16-NEXT:    vmov r1, s4
-; CHECK-FP16-NEXT:    vrinta.f16 s4, s1
-; CHECK-FP16-NEXT:    vrinta.f16 s0, s0
-; CHECK-FP16-NEXT:    vmov.16 d16[0], r1
-; CHECK-FP16-NEXT:    vmov.16 d16[1], r0
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vmov.16 d16[2], r0
-; CHECK-FP16-NEXT:    vmov r0, s0
-; CHECK-FP16-NEXT:    vmov.16 d16[3], r0
-; CHECK-FP16-NEXT:    vorr q0, q8, q8
+; CHECK-FP16-NEXT:    vrinta.f16 q0, q0
 ; CHECK-FP16-NEXT:    bx lr
   %tmp3 = call <8 x half> @llvm.round.v8f16(<8 x half> %A)
   ret <8 x half> %tmp3
@@ -297,9 +255,7 @@ define <2 x float> @frinta_2s(<2 x float> %A) nounwind {
 ;
 ; CHECK-LABEL: frinta_2s:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vrinta.f32 s3, s1
-; CHECK-NEXT:    vrinta.f32 s2, s0
-; CHECK-NEXT:    vmov.f64 d0, d1
+; CHECK-NEXT:    vrinta.f32 d0, d0
 ; CHECK-NEXT:    bx lr
   %tmp3 = call <2 x float> @llvm.round.v2f32(<2 x float> %A)
   ret <2 x float> %tmp3
@@ -331,11 +287,7 @@ define <4 x float> @frinta_4s(<4 x float> %A) nounwind {
 ;
 ; CHECK-LABEL: frinta_4s:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vrinta.f32 s7, s3
-; CHECK-NEXT:    vrinta.f32 s6, s2
-; CHECK-NEXT:    vrinta.f32 s5, s1
-; CHECK-NEXT:    vrinta.f32 s4, s0
-; CHECK-NEXT:    vorr q0, q1, q1
+; CHECK-NEXT:    vrinta.f32 q0, q0
 ; CHECK-NEXT:    bx lr
   %tmp3 = call <4 x float> @llvm.round.v4f32(<4 x float> %A)
   ret <4 x float> %tmp3
@@ -1132,21 +1084,7 @@ define <4 x half> @frintn_4h(<4 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: frintn_4h:
 ; CHECK-FP16:       @ %bb.0:
-; CHECK-FP16-NEXT:    vmovx.f16 s2, s0
-; CHECK-FP16-NEXT:    vrintn.f16 s2, s2
-; CHECK-FP16-NEXT:    vmov r0, s2
-; CHECK-FP16-NEXT:    vrintn.f16 s2, s0
-; CHECK-FP16-NEXT:    vmov r1, s2
-; CHECK-FP16-NEXT:    vrintn.f16 s2, s1
-; CHECK-FP16-NEXT:    vmovx.f16 s0, s1
-; CHECK-FP16-NEXT:    vrintn.f16 s0, s0
-; CHECK-FP16-NEXT:    vmov.16 d16[0], r1
-; CHECK-FP16-NEXT:    vmov.16 d16[1], r0
-; CHECK-FP16-NEXT:    vmov r0, s2
-; CHECK-FP16-NEXT:    vmov.16 d16[2], r0
-; CHECK-FP16-NEXT:    vmov r0, s0
-; CHECK-FP16-NEXT:    vmov.16 d16[3], r0
-; CHECK-FP16-NEXT:    vorr d0, d16, d16
+; CHECK-FP16-NEXT:    vrintn.f16 d0, d0
 ; CHECK-FP16-NEXT:    bx lr
   %tmp3 = call <4 x half> @llvm.roundeven.v4f16(<4 x half> %A)
   ret <4 x half> %tmp3
@@ -1296,35 +1234,7 @@ define <8 x half> @frintn_8h(<8 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: frintn_8h:
 ; CHECK-FP16:       @ %bb.0:
-; CHECK-FP16-NEXT:    vmovx.f16 s4, s2
-; CHECK-FP16-NEXT:    vrintn.f16 s4, s4
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vrintn.f16 s4, s2
-; CHECK-FP16-NEXT:    vmov r1, s4
-; CHECK-FP16-NEXT:    vrintn.f16 s4, s3
-; CHECK-FP16-NEXT:    vmov.16 d17[0], r1
-; CHECK-FP16-NEXT:    vmov.16 d17[1], r0
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vmovx.f16 s4, s3
-; CHECK-FP16-NEXT:    vrintn.f16 s4, s4
-; CHECK-FP16-NEXT:    vmov.16 d17[2], r0
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vmovx.f16 s4, s0
-; CHECK-FP16-NEXT:    vrintn.f16 s4, s4
-; CHECK-FP16-NEXT:    vmov.16 d17[3], r0
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vrintn.f16 s4, s0
-; CHECK-FP16-NEXT:    vmovx.f16 s0, s1
-; CHECK-FP16-NEXT:    vmov r1, s4
-; CHECK-FP16-NEXT:    vrintn.f16 s4, s1
-; CHECK-FP16-NEXT:    vrintn.f16 s0, s0
-; CHECK-FP16-NEXT:    vmov.16 d16[0], r1
-; CHECK-FP16-NEXT:    vmov.16 d16[1], r0
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vmov.16 d16[2], r0
-; CHECK-FP16-NEXT:    vmov r0, s0
-; CHECK-FP16-NEXT:    vmov.16 d16[3], r0
-; CHECK-FP16-NEXT:    vorr q0, q8, q8
+; CHECK-FP16-NEXT:    vrintn.f16 q0, q0
 ; CHECK-FP16-NEXT:    bx lr
   %tmp3 = call <8 x half> @llvm.roundeven.v8f16(<8 x half> %A)
   ret <8 x half> %tmp3
@@ -1350,9 +1260,7 @@ define <2 x float> @frintn_2s(<2 x float> %A) nounwind {
 ;
 ; CHECK-LABEL: frintn_2s:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vrintn.f32 s3, s1
-; CHECK-NEXT:    vrintn.f32 s2, s0
-; CHECK-NEXT:    vmov.f64 d0, d1
+; CHECK-NEXT:    vrintn.f32 d0, d0
 ; CHECK-NEXT:    bx lr
   %tmp3 = call <2 x float> @llvm.roundeven.v2f32(<2 x float> %A)
   ret <2 x float> %tmp3
@@ -1384,11 +1292,7 @@ define <4 x float> @frintn_4s(<4 x float> %A) nounwind {
 ;
 ; CHECK-LABEL: frintn_4s:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vrintn.f32 s7, s3
-; CHECK-NEXT:    vrintn.f32 s6, s2
-; CHECK-NEXT:    vrintn.f32 s5, s1
-; CHECK-NEXT:    vrintn.f32 s4, s0
-; CHECK-NEXT:    vorr q0, q1, q1
+; CHECK-NEXT:    vrintn.f32 q0, q0
 ; CHECK-NEXT:    bx lr
   %tmp3 = call <4 x float> @llvm.roundeven.v4f32(<4 x float> %A)
   ret <4 x float> %tmp3
@@ -1499,21 +1403,7 @@ define <4 x half> @frintp_4h(<4 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: frintp_4h:
 ; CHECK-FP16:       @ %bb.0:
-; CHECK-FP16-NEXT:    vmovx.f16 s2, s0
-; CHECK-FP16-NEXT:    vrintp.f16 s2, s2
-; CHECK-FP16-NEXT:    vmov r0, s2
-; CHECK-FP16-NEXT:    vrintp.f16 s2, s0
-; CHECK-FP16-NEXT:    vmov r1, s2
-; CHECK-FP16-NEXT:    vrintp.f16 s2, s1
-; CHECK-FP16-NEXT:    vmovx.f16 s0, s1
-; CHECK-FP16-NEXT:    vrintp.f16 s0, s0
-; CHECK-FP16-NEXT:    vmov.16 d16[0], r1
-; CHECK-FP16-NEXT:    vmov.16 d16[1], r0
-; CHECK-FP16-NEXT:    vmov r0, s2
-; CHECK-FP16-NEXT:    vmov.16 d16[2], r0
-; CHECK-FP16-NEXT:    vmov r0, s0
-; CHECK-FP16-NEXT:    vmov.16 d16[3], r0
-; CHECK-FP16-NEXT:    vorr d0, d16, d16
+; CHECK-FP16-NEXT:    vrintp.f16 d0, d0
 ; CHECK-FP16-NEXT:    bx lr
   %tmp3 = call <4 x half> @llvm.ceil.v4f16(<4 x half> %A)
   ret <4 x half> %tmp3
@@ -1663,35 +1553,7 @@ define <8 x half> @frintp_8h(<8 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: frintp_8h:
 ; CHECK-FP16:       @ %bb.0:
-; CHECK-FP16-NEXT:    vmovx.f16 s4, s2
-; CHECK-FP16-NEXT:    vrintp.f16 s4, s4
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vrintp.f16 s4, s2
-; CHECK-FP16-NEXT:    vmov r1, s4
-; CHECK-FP16-NEXT:    vrintp.f16 s4, s3
-; CHECK-FP16-NEXT:    vmov.16 d17[0], r1
-; CHECK-FP16-NEXT:    vmov.16 d17[1], r0
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vmovx.f16 s4, s3
-; CHECK-FP16-NEXT:    vrintp.f16 s4, s4
-; CHECK-FP16-NEXT:    vmov.16 d17[2], r0
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vmovx.f16 s4, s0
-; CHECK-FP16-NEXT:    vrintp.f16 s4, s4
-; CHECK-FP16-NEXT:    vmov.16 d17[3], r0
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vrintp.f16 s4, s0
-; CHECK-FP16-NEXT:    vmovx.f16 s0, s1
-; CHECK-FP16-NEXT:    vmov r1, s4
-; CHECK-FP16-NEXT:    vrintp.f16 s4, s1
-; CHECK-FP16-NEXT:    vrintp.f16 s0, s0
-; CHECK-FP16-NEXT:    vmov.16 d16[0], r1
-; CHECK-FP16-NEXT:    vmov.16 d16[1], r0
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vmov.16 d16[2], r0
-; CHECK-FP16-NEXT:    vmov r0, s0
-; CHECK-FP16-NEXT:    vmov.16 d16[3], r0
-; CHECK-FP16-NEXT:    vorr q0, q8, q8
+; CHECK-FP16-NEXT:    vrintp.f16 q0, q0
 ; CHECK-FP16-NEXT:    bx lr
   %tmp3 = call <8 x half> @llvm.ceil.v8f16(<8 x half> %A)
   ret <8 x half> %tmp3
@@ -1717,9 +1579,7 @@ define <2 x float> @frintp_2s(<2 x float> %A) nounwind {
 ;
 ; CHECK-LABEL: frintp_2s:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vrintp.f32 s3, s1
-; CHECK-NEXT:    vrintp.f32 s2, s0
-; CHECK-NEXT:    vmov.f64 d0, d1
+; CHECK-NEXT:    vrintp.f32 d0, d0
 ; CHECK-NEXT:    bx lr
   %tmp3 = call <2 x float> @llvm.ceil.v2f32(<2 x float> %A)
   ret <2 x float> %tmp3
@@ -1751,11 +1611,7 @@ define <4 x float> @frintp_4s(<4 x float> %A) nounwind {
 ;
 ; CHECK-LABEL: frintp_4s:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vrintp.f32 s7, s3
-; CHECK-NEXT:    vrintp.f32 s6, s2
-; CHECK-NEXT:    vrintp.f32 s5, s1
-; CHECK-NEXT:    vrintp.f32 s4, s0
-; CHECK-NEXT:    vorr q0, q1, q1
+; CHECK-NEXT:    vrintp.f32 q0, q0
 ; CHECK-NEXT:    bx lr
   %tmp3 = call <4 x float> @llvm.ceil.v4f32(<4 x float> %A)
   ret <4 x float> %tmp3
@@ -1866,21 +1722,7 @@ define <4 x half> @frintx_4h(<4 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: frintx_4h:
 ; CHECK-FP16:       @ %bb.0:
-; CHECK-FP16-NEXT:    vmovx.f16 s2, s0
-; CHECK-FP16-NEXT:    vrintx.f16 s2, s2
-; CHECK-FP16-NEXT:    vmov r0, s2
-; CHECK-FP16-NEXT:    vrintx.f16 s2, s0
-; CHECK-FP16-NEXT:    vmov r1, s2
-; CHECK-FP16-NEXT:    vrintx.f16 s2, s1
-; CHECK-FP16-NEXT:    vmovx.f16 s0, s1
-; CHECK-FP16-NEXT:    vrintx.f16 s0, s0
-; CHECK-FP16-NEXT:    vmov.16 d16[0], r1
-; CHECK-FP16-NEXT:    vmov.16 d16[1], r0
-; CHECK-FP16-NEXT:    vmov r0, s2
-; CHECK-FP16-NEXT:    vmov.16 d16[2], r0
-; CHECK-FP16-NEXT:    vmov r0, s0
-; CHECK-FP16-NEXT:    vmov.16 d16[3], r0
-; CHECK-FP16-NEXT:    vorr d0, d16, d16
+; CHECK-FP16-NEXT:    vrintx.f16 d0, d0
 ; CHECK-FP16-NEXT:    bx lr
   %tmp3 = call <4 x half> @llvm.rint.v4f16(<4 x half> %A)
   ret <4 x half> %tmp3
@@ -2030,35 +1872,7 @@ define <8 x half> @frintx_8h(<8 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: frintx_8h:
 ; CHECK-FP16:       @ %bb.0:
-; CHECK-FP16-NEXT:    vmovx.f16 s4, s2
-; CHECK-FP16-NEXT:    vrintx.f16 s4, s4
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vrintx.f16 s4, s2
-; CHECK-FP16-NEXT:    vmov r1, s4
-; CHECK-FP16-NEXT:    vrintx.f16 s4, s3
-; CHECK-FP16-NEXT:    vmov.16 d17[0], r1
-; CHECK-FP16-NEXT:    vmov.16 d17[1], r0
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vmovx.f16 s4, s3
-; CHECK-FP16-NEXT:    vrintx.f16 s4, s4
-; CHECK-FP16-NEXT:    vmov.16 d17[2], r0
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vmovx.f16 s4, s0
-; CHECK-FP16-NEXT:    vrintx.f16 s4, s4
-; CHECK-FP16-NEXT:    vmov.16 d17[3], r0
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vrintx.f16 s4, s0
-; CHECK-FP16-NEXT:    vmovx.f16 s0, s1
-; CHECK-FP16-NEXT:    vmov r1, s4
-; CHECK-FP16-NEXT:    vrintx.f16 s4, s1
-; CHECK-FP16-NEXT:    vrintx.f16 s0, s0
-; CHECK-FP16-NEXT:    vmov.16 d16[0], r1
-; CHECK-FP16-NEXT:    vmov.16 d16[1], r0
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vmov.16 d16[2], r0
-; CHECK-FP16-NEXT:    vmov r0, s0
-; CHECK-FP16-NEXT:    vmov.16 d16[3], r0
-; CHECK-FP16-NEXT:    vorr q0, q8, q8
+; CHECK-FP16-NEXT:    vrintx.f16 q0, q0
 ; CHECK-FP16-NEXT:    bx lr
   %tmp3 = call <8 x half> @llvm.rint.v8f16(<8 x half> %A)
   ret <8 x half> %tmp3
@@ -2084,9 +1898,7 @@ define <2 x float> @frintx_2s(<2 x float> %A) nounwind {
 ;
 ; CHECK-LABEL: frintx_2s:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vrintx.f32 s3, s1
-; CHECK-NEXT:    vrintx.f32 s2, s0
-; CHECK-NEXT:    vmov.f64 d0, d1
+; CHECK-NEXT:    vrintx.f32 d0, d0
 ; CHECK-NEXT:    bx lr
   %tmp3 = call <2 x float> @llvm.rint.v2f32(<2 x float> %A)
   ret <2 x float> %tmp3
@@ -2118,11 +1930,7 @@ define <4 x float> @frintx_4s(<4 x float> %A) nounwind {
 ;
 ; CHECK-LABEL: frintx_4s:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vrintx.f32 s7, s3
-; CHECK-NEXT:    vrintx.f32 s6, s2
-; CHECK-NEXT:    vrintx.f32 s5, s1
-; CHECK-NEXT:    vrintx.f32 s4, s0
-; CHECK-NEXT:    vorr q0, q1, q1
+; CHECK-NEXT:    vrintx.f32 q0, q0
 ; CHECK-NEXT:    bx lr
   %tmp3 = call <4 x float> @llvm.rint.v4f32(<4 x float> %A)
   ret <4 x float> %tmp3
@@ -2233,21 +2041,7 @@ define <4 x half> @frintz_4h(<4 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: frintz_4h:
 ; CHECK-FP16:       @ %bb.0:
-; CHECK-FP16-NEXT:    vmovx.f16 s2, s0
-; CHECK-FP16-NEXT:    vrintz.f16 s2, s2
-; CHECK-FP16-NEXT:    vmov r0, s2
-; CHECK-FP16-NEXT:    vrintz.f16 s2, s0
-; CHECK-FP16-NEXT:    vmov r1, s2
-; CHECK-FP16-NEXT:    vrintz.f16 s2, s1
-; CHECK-FP16-NEXT:    vmovx.f16 s0, s1
-; CHECK-FP16-NEXT:    vrintz.f16 s0, s0
-; CHECK-FP16-NEXT:    vmov.16 d16[0], r1
-; CHECK-FP16-NEXT:    vmov.16 d16[1], r0
-; CHECK-FP16-NEXT:    vmov r0, s2
-; CHECK-FP16-NEXT:    vmov.16 d16[2], r0
-; CHECK-FP16-NEXT:    vmov r0, s0
-; CHECK-FP16-NEXT:    vmov.16 d16[3], r0
-; CHECK-FP16-NEXT:    vorr d0, d16, d16
+; CHECK-FP16-NEXT:    vrintz.f16 d0, d0
 ; CHECK-FP16-NEXT:    bx lr
   %tmp3 = call <4 x half> @llvm.trunc.v4f16(<4 x half> %A)
   ret <4 x half> %tmp3
@@ -2397,35 +2191,7 @@ define <8 x half> @frintz_8h(<8 x half> %A) nounwind {
 ;
 ; CHECK-FP16-LABEL: frintz_8h:
 ; CHECK-FP16:       @ %bb.0:
-; CHECK-FP16-NEXT:    vmovx.f16 s4, s2
-; CHECK-FP16-NEXT:    vrintz.f16 s4, s4
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vrintz.f16 s4, s2
-; CHECK-FP16-NEXT:    vmov r1, s4
-; CHECK-FP16-NEXT:    vrintz.f16 s4, s3
-; CHECK-FP16-NEXT:    vmov.16 d17[0], r1
-; CHECK-FP16-NEXT:    vmov.16 d17[1], r0
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vmovx.f16 s4, s3
-; CHECK-FP16-NEXT:    vrintz.f16 s4, s4
-; CHECK-FP16-NEXT:    vmov.16 d17[2], r0
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vmovx.f16 s4, s0
-; CHECK-FP16-NEXT:    vrintz.f16 s4, s4
-; CHECK-FP16-NEXT:    vmov.16 d17[3], r0
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vrintz.f16 s4, s0
-; CHECK-FP16-NEXT:    vmovx.f16 s0, s1
-; CHECK-FP16-NEXT:    vmov r1, s4
-; CHECK-FP16-NEXT:    vrintz.f16 s4, s1
-; CHECK-FP16-NEXT:    vrintz.f16 s0, s0
-; CHECK-FP16-NEXT:    vmov.16 d16[0], r1
-; CHECK-FP16-NEXT:    vmov.16 d16[1], r0
-; CHECK-FP16-NEXT:    vmov r0, s4
-; CHECK-FP16-NEXT:    vmov.16 d16[2], r0
-; CHECK-FP16-NEXT:    vmov r0, s0
-; CHECK-FP16-NEXT:    vmov.16 d16[3], r0
-; CHECK-FP16-NEXT:    vorr q0, q8, q8
+; CHECK-FP16-NEXT:    vrintz.f16 q0, q0
 ; CHECK-FP16-NEXT:    bx lr
   %tmp3 = call <8 x half> @llvm.trunc.v8f16(<8 x half> %A)
   ret <8 x half> %tmp3
@@ -2451,9 +2217,7 @@ define <2 x float> @frintz_2s(<2 x float> %A) nounwind {
 ;
 ; CHECK-LABEL: frintz_2s:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vrintz.f32 s3, s1
-; CHECK-NEXT:    vrintz.f32 s2, s0
-; CHECK-NEXT:    vmov.f64 d0, d1
+; CHECK-NEXT:    vrintz.f32 d0, d0
 ; CHECK-NEXT:    bx lr
   %tmp3 = call <2 x float> @llvm.trunc.v2f32(<2 x float> %A)
   ret <2 x float> %tmp3
@@ -2485,11 +2249,7 @@ define <4 x float> @frintz_4s(<4 x float> %A) nounwind {
 ;
 ; CHECK-LABEL: frintz_4s:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vrintz.f32 s7, s3
-; CHECK-NEXT:    vrintz.f32 s6, s2
-; CHECK-NEXT:    vrintz.f32 s5, s1
-; CHECK-NEXT:    vrintz.f32 s4, s0
-; CHECK-NEXT:    vorr q0, q1, q1
+; CHECK-NEXT:    vrintz.f32 q0, q0
 ; CHECK-NEXT:    bx lr
   %tmp3 = call <4 x float> @llvm.trunc.v4f32(<4 x float> %A)
   ret <4 x float> %tmp3

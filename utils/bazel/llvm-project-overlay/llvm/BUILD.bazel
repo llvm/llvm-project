@@ -780,7 +780,10 @@ gentbl_cc_library(
     tbl_outs = {"include/llvm/IR/RuntimeLibcalls.inc": ["-gen-runtime-libcalls"]},
     tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/IR/RuntimeLibcalls.td",
-    deps = [":IRTdFiles"],
+    deps = [
+        ":IRTdFiles",
+        ":TableGenTdFiles",
+    ],
 )
 
 gentbl_cc_library(
@@ -985,6 +988,8 @@ cc_library(
         "include/llvm/Analysis/SimplifyQuery.h",
         "include/llvm/Analysis/ValueTracking.h",
         "include/llvm/Analysis/WithCache.h",
+        "include/llvm/ProfileData/InstrProf.h",
+        "include/llvm/ProfileData/InstrProfData.inc",
     ] + [":llvm_intrinsics_headers"],
     copts = llvm_copts,
     textual_hdrs = glob([
@@ -1339,6 +1344,12 @@ td_library(
 td_library(
     name = "IRTdFiles",
     srcs = glob(["include/llvm/IR/*.td"]),
+    includes = ["include"],
+)
+
+td_library(
+    name = "TableGenTdFiles",
+    srcs = glob(["include/llvm/TableGen/*.td"]),
     includes = ["include"],
 )
 
@@ -1708,6 +1719,7 @@ cc_library(
     ]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
         ":Core",
         ":Support",
     ],
@@ -5158,6 +5170,11 @@ cc_binary(
     deps = [
         ":Support",
     ],
+)
+
+filegroup(
+    name = "gdb-scripts",
+    srcs = glob(["utils/gdb-scripts/*"]),
 )
 
 ################################################################################

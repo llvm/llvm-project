@@ -39,8 +39,7 @@ static void serializeArray(const Container &Records, Object &Obj,
 static auto SerializeInfoLambda = [](const auto &Info, Object &Object) {
   serializeInfo(Info, Object);
 };
-static auto SerializeReferenceLambda = [](const Reference &Ref,
-                                          Object &Object) {
+static auto SerializeReferenceLambda = [](const auto &Ref, Object &Object) {
   serializeReference(Ref, Object);
 };
 
@@ -365,6 +364,22 @@ static void serializeInfo(const BaseRecordInfo &I, Object &Obj,
   Obj["IsParent"] = I.IsParent;
 }
 
+static void serializeInfo(const FriendInfo &I, Object &Obj) {
+  auto FriendRef = Object();
+  serializeReference(I.Ref, FriendRef);
+  Obj["Reference"] = std::move(FriendRef);
+  Obj["IsClass"] = I.IsClass;
+  if (I.Template)
+    serializeInfo(I.Template.value(), Obj);
+  if (I.Params)
+    serializeArray(I.Params.value(), Obj, "Params", SerializeInfoLambda);
+  if (I.ReturnType) {
+    auto ReturnTypeObj = Object();
+    serializeInfo(I.ReturnType.value(), ReturnTypeObj);
+    Obj["ReturnType"] = std::move(ReturnTypeObj);
+  }
+}
+
 static void serializeInfo(const RecordInfo &I, json::Object &Obj,
                           const std::optional<StringRef> &RepositoryUrl) {
   serializeCommonAttributes(I, Obj, RepositoryUrl);
@@ -435,6 +450,9 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
 
   if (I.Template)
     serializeInfo(I.Template.value(), Obj);
+
+  if (!I.Friends.empty())
+    serializeArray(I.Friends, Obj, "Friends", SerializeInfoLambda);
 
   serializeCommonChildren(I.Children, Obj, RepositoryUrl);
 }
@@ -525,6 +543,7 @@ Error JSONGenerator::generateDocForInfo(Info *I, raw_ostream &OS,
   case InfoType::IT_function:
   case InfoType::IT_typedef:
   case InfoType::IT_variable:
+  case InfoType::IT_friend:
     break;
   case InfoType::IT_default:
     return createStringError(inconvertibleErrorCode(), "unexpected info type");

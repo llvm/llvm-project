@@ -1755,7 +1755,6 @@ def F32_FP8BF8_SWMMAC_w64 : VOP3PWMMA_Profile<[v4f32,   i32, v2i32, v4f32], 1,  
 //                       for matrix A, index is i16; Matrix B uses all lanes
 
 def F64_F64X4_WMMA_w32           : VOP3PWMMA_Profile<[v8f64, v2f64, v2f64, v8f64], 0, 0, 0, 0, 1>;
-def F64_F64X8_WMMA_w32           : VOP3PWMMA_Profile<[v8f64, v4f64, v4f64, v8f64], 0, 0, 0, 0, 1>;
 def F32_F32_WMMA_w32             : VOP3PWMMA_Profile<[v8f32, v2f32, v2f32, v8f32], 0, 0, 0, 0, 1, 0, 0, 0, 1>;
 def F32_BF16X32_WMMA_w32         : VOP3PWMMA_Profile<[v8f32, v16bf16, v16bf16, v8f32], 0, 0, 0, 0, 1, 0, 0, 0, 1>;
 def F32_F16X32_WMMA_w32          : VOP3PWMMA_Profile<[v8f32, v16f16, v16f16, v8f32], 0, 0, 0, 0, 1, 0, 0, 0, 1>;
@@ -1870,7 +1869,6 @@ defm V_WMMA_LD_SCALE16_PAIRED_B64 : VOP3PInst<"v_wmma_ld_scale16_paired_b64", VO
 
 let SubtargetPredicate = HasGFX1251GEMMInsts in {
 defm V_WMMA_F64_16X16X4_F64_w32      : WMMAInstGFX12<"v_wmma_f64_16x16x4_f64",       F64_F64X4_WMMA_w32, "_w32">;
-defm V_WMMA_F64_16X16X8_F64_w32      : WMMAInstGFX12<"v_wmma_f64_16x16x8_f64",       F64_F64X8_WMMA_w32, "_w32">;
 } // End SubtargetPredicate = HasGFX1251GEMMInsts
 } // End WaveSizePredicate = isWave32
 
@@ -2052,7 +2050,6 @@ let SubtargetPredicate = isGFX125xOnly in {
 
 let SubtargetPredicate = HasGFX1251GEMMInsts in {
   defm : WMMAPat<"V_WMMA_F64_16X16X4_F64_w32",  int_amdgcn_wmma_f64_16x16x4_f64,  F64_F64X4_WMMA_w32>;
-  defm : WMMAPat<"V_WMMA_F64_16X16X8_F64_w32",  int_amdgcn_wmma_f64_16x16x8_f64,  F64_F64X8_WMMA_w32>;
 } // End SubtargetPredicate = HasGFX1251GEMMInsts
 } // End WaveSizePredicate = isWave32
 
@@ -2315,7 +2312,6 @@ defm V_SWMMAC_F32_16X16X32_BF8_FP8_w64 : VOP3P_Real_WMMA_gfx1170_gfx12w64 <0x059
 defm V_SWMMAC_F32_16X16X32_BF8_BF8_w64 : VOP3P_Real_WMMA_gfx1170_gfx12w64 <0x05a, F32_FP8BF8_SWMMAC_w64>;
 
 defm V_WMMA_F64_16X16X4_F64_w32       : VOP3P_Real_WMMA_gfx1250 <0x05b, F64_F64X4_WMMA_w32>;
-defm V_WMMA_F64_16X16X8_F64_w32       : VOP3P_Real_WMMA_gfx1250 <0x05c, F64_F64X8_WMMA_w32>;
 defm V_WMMA_F32_16X16X4_F32_w32       : VOP3P_Real_WMMA_gfx1250 <0x05d, F32_F32_WMMA_w32>;
 defm V_WMMA_F32_16X16X32_BF16_w32     : VOP3P_Real_WMMA_gfx1250 <0x062, F32_BF16X32_WMMA_w32>;
 defm V_WMMA_F32_16X16X32_F16_w32      : VOP3P_Real_WMMA_gfx1250 <0x060, F32_F16X32_WMMA_w32>;

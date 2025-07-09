@@ -375,9 +375,7 @@ public:
     return isRegOrInline(AMDGPU::VS_64RegClassID, MVT::f64);
   }
 
-  bool isVRegWithInputMods(unsigned RCID) const {
-    return isRegClass(RCID);
-  }
+  bool isVRegWithInputMods(unsigned RCID) const { return isRegClass(RCID); }
 
   bool isVRegWithFP32InputMods() const {
     return isVRegWithInputMods(AMDGPU::VGPR_32RegClassID);
@@ -701,15 +699,11 @@ public:
 
   bool isVSrc_v2b16() const { return isVSrc_b16() || isLiteralImm(MVT::v2i16); }
 
-  bool isVCSrcV2FP32() const {
-    return isVCSrc_f64();
-  }
+  bool isVCSrcV2FP32() const { return isVCSrc_f64(); }
 
   bool isVSrc_v2f32() const { return isVSrc_f64() || isLiteralImm(MVT::v2f32); }
 
-  bool isVCSrcV2INT32() const {
-    return isVCSrc_b64();
-  }
+  bool isVCSrcV2INT32() const { return isVCSrc_b64(); }
 
   bool isVSrc_v2b32() const { return isVSrc_b64() || isLiteralImm(MVT::v2i32); }
 
@@ -1947,8 +1941,8 @@ private:
   bool validateSMEMOffset(const MCInst &Inst, const OperandVector &Operands);
   bool validateSOPLiteral(const MCInst &Inst) const;
   bool validateConstantBusLimitations(const MCInst &Inst, const OperandVector &Operands);
-  std::optional<unsigned>
-  checkVOPDRegBankConstraints(const MCInst &Inst, bool AsVOPD3);
+  std::optional<unsigned> checkVOPDRegBankConstraints(const MCInst &Inst,
+                                                      bool AsVOPD3);
   bool validateVOPD(const MCInst &Inst, const OperandVector &Operands);
   bool validateVOPM(const MCInst &Inst, const OperandVector &Operands);
   bool tryVOPD(const MCInst &Inst);
@@ -4148,8 +4142,9 @@ bool AMDGPUAsmParser::validateConstantBusLimitations(
   return false;
 }
 
-std::optional<unsigned> AMDGPUAsmParser::checkVOPDRegBankConstraints(
-    const MCInst &Inst, bool AsVOPD3) {
+std::optional<unsigned>
+AMDGPUAsmParser::checkVOPDRegBankConstraints(const MCInst &Inst, bool AsVOPD3) {
+
   const unsigned Opcode = Inst.getOpcode();
   if (!isVOPD(Opcode))
     return {};
@@ -4186,9 +4181,8 @@ std::optional<unsigned> AMDGPUAsmParser::checkVOPDRegBankConstraints(
         return I;
     }
 
-    for (auto OpName : {OpName::vsrc1X, OpName::vsrc1Y,
-                        OpName::vsrc2X, OpName::vsrc2Y,
-                        OpName::imm}) {
+    for (auto OpName : {OpName::vsrc1X, OpName::vsrc1Y, OpName::vsrc2X,
+                        OpName::vsrc2Y, OpName::imm}) {
       int I = getNamedOperandIdx(Opcode, OpName);
       if (I == -1)
         continue;
@@ -4199,15 +4193,14 @@ std::optional<unsigned> AMDGPUAsmParser::checkVOPDRegBankConstraints(
   }
 
   const auto &InstInfo = getVOPDInstInfo(Opcode, &MII);
-  auto InvalidCompOprIdx =
-      InstInfo.getInvalidCompOperandIndex(getVRegIdx, *TRI, SkipSrc,
-                                          AllowSameVGPR, AsVOPD3);
+  auto InvalidCompOprIdx = InstInfo.getInvalidCompOperandIndex(
+      getVRegIdx, *TRI, SkipSrc, AllowSameVGPR, AsVOPD3);
 
   return InvalidCompOprIdx;
 }
 
-bool AMDGPUAsmParser::validateVOPD(
-    const MCInst &Inst, const OperandVector &Operands) {
+bool AMDGPUAsmParser::validateVOPD(const MCInst &Inst,
+                                   const OperandVector &Operands) {
 
   unsigned Opcode = Inst.getOpcode();
   bool AsVOPD3 = MII.get(Opcode).TSFlags & SIInstrFlags::VOPD3;
@@ -10248,8 +10241,8 @@ void AMDGPUAsmParser::cvtVOPD(MCInst &Inst, const OperandVector &Operands) {
       addOp(CInfo.getIndexOfDstInParsedOperands());
   }
 
-  int BitOp3Idx = AMDGPU::getNamedOperandIdx(Inst.getOpcode(),
-                                             AMDGPU::OpName::bitop3);
+  int BitOp3Idx =
+      AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::bitop3);
   if (BitOp3Idx != -1) {
     OptionalImmIndexMap OptIdx;
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands.back());

@@ -679,7 +679,7 @@ unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
 
 CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
   bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(Opc) : 0;
-  Opc = IsConvertibleToBitOp ? AMDGPU::V_BITOP3_B32_e64 : Opc;
+  Opc = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : Opc;
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   if (Info) {
     // Check that Opc can be used as VOPDY for this encoding. V_MOV_B32 as a
@@ -697,7 +697,7 @@ CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
 
 unsigned getVOPDOpcode(unsigned Opc, bool VOPD3) {
   bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(Opc) : 0;
-  Opc = IsConvertibleToBitOp ? AMDGPU::V_BITOP3_B32_e64 : Opc;
+  Opc = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : Opc;
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   return Info ? Info->VOPDOp : ~0u;
 }
@@ -894,7 +894,7 @@ unsigned getBitOp2(unsigned Opc) {
 int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily,
                 bool VOPD3) {
   bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(OpY) : 0;
-  OpY = IsConvertibleToBitOp ? AMDGPU::V_BITOP3_B32_e64 : OpY;
+  OpY = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : OpY;
   const VOPDInfo *Info =
       getVOPDInfoFromComponentOpcodes(OpX, OpY, EncodingFamily, VOPD3);
   return Info ? Info->Opcode : -1;
@@ -3841,6 +3841,8 @@ std::string ClusterDimsAttr::to_string() const {
     OS << Dims[0] << ',' << Dims[1] << ',' << Dims[2];
     return Buffer.c_str();
   }
+  default:
+    llvm_unreachable("Unknown ClusterDimsAttr kind");
   }
 }
 

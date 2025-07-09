@@ -174,7 +174,13 @@ static bool mustUseNonLeafFramePointerForTarget(const llvm::Triple &Triple) {
 // even if new frame records are not created.
 static bool mustMaintainValidFrameChain(const llvm::opt::ArgList &Args,
                                         const llvm::Triple &Triple) {
-  if (Triple.isARM() || Triple.isThumb()) {
+  switch (Triple.getArch()) {
+  default:
+    return false;
+  case llvm::Triple::arm:
+  case llvm::Triple::armeb:
+  case llvm::Triple::thumb:
+  case llvm::Triple::thumbeb:
     // For 32-bit Arm, the -mframe-chain=aapcs and -mframe-chain=aapcs+leaf
     // options require the frame pointer register to be reserved (or point to a
     // new AAPCS-compilant frame record), even with	-fno-omit-frame-pointer.
@@ -183,8 +189,13 @@ static bool mustMaintainValidFrameChain(const llvm::opt::ArgList &Args,
       return V != "none";
     }
     return false;
+
+  case llvm::Triple::aarch64:
+    // Arm64 Windows requires that the frame chain is valid, as there is no
+    // way to indicate during a stack walk that a frame has used the frame
+    // pointer as a general purpose register.
+    return Triple.isOSWindows();
   }
-  return false;
 }
 
 // True if a target-specific option causes -fno-omit-frame-pointer to also
@@ -524,6 +535,78 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
         CmdArgs.push_back(Args.MakeArgString("--pop-state"));
       addArchSpecificRPath(TC, Args, CmdArgs);
     }
+  }
+}
+
+const char *tools::getLDMOption(const llvm::Triple &T, const ArgList &Args) {
+  switch (T.getArch()) {
+  case llvm::Triple::x86:
+    if (T.isOSIAMCU())
+      return "elf_iamcu";
+    return "elf_i386";
+  case llvm::Triple::aarch64:
+    if (T.isOSManagarm())
+      return "aarch64managarm";
+    return "aarch64linux";
+  case llvm::Triple::aarch64_be:
+    return "aarch64linuxb";
+  case llvm::Triple::arm:
+  case llvm::Triple::thumb:
+  case llvm::Triple::armeb:
+  case llvm::Triple::thumbeb:
+    return tools::arm::isARMBigEndian(T, Args) ? "armelfb_linux_eabi"
+                                               : "armelf_linux_eabi";
+  case llvm::Triple::m68k:
+    return "m68kelf";
+  case llvm::Triple::ppc:
+    if (T.isOSLinux())
+      return "elf32ppclinux";
+    return "elf32ppc";
+  case llvm::Triple::ppcle:
+    if (T.isOSLinux())
+      return "elf32lppclinux";
+    return "elf32lppc";
+  case llvm::Triple::ppc64:
+    return "elf64ppc";
+  case llvm::Triple::ppc64le:
+    return "elf64lppc";
+  case llvm::Triple::riscv32:
+    return "elf32lriscv";
+  case llvm::Triple::riscv64:
+    return "elf64lriscv";
+  case llvm::Triple::sparc:
+  case llvm::Triple::sparcel:
+    return "elf32_sparc";
+  case llvm::Triple::sparcv9:
+    return "elf64_sparc";
+  case llvm::Triple::loongarch32:
+    return "elf32loongarch";
+  case llvm::Triple::loongarch64:
+    return "elf64loongarch";
+  case llvm::Triple::mips:
+    return "elf32btsmip";
+  case llvm::Triple::mipsel:
+    return "elf32ltsmip";
+  case llvm::Triple::mips64:
+    if (tools::mips::hasMipsAbiArg(Args, "n32") || T.isABIN32())
+      return "elf32btsmipn32";
+    return "elf64btsmip";
+  case llvm::Triple::mips64el:
+    if (tools::mips::hasMipsAbiArg(Args, "n32") || T.isABIN32())
+      return "elf32ltsmipn32";
+    return "elf64ltsmip";
+  case llvm::Triple::systemz:
+    return "elf64_s390";
+  case llvm::Triple::x86_64:
+    if (T.isX32())
+      return "elf32_x86_64";
+    return "elf_x86_64";
+  case llvm::Triple::ve:
+    return "elf64ve";
+  case llvm::Triple::csky:
+    return "cskyelf_linux";
+  default:
+    return nullptr;
   }
 }
 
@@ -1332,7 +1415,7 @@ void tools::addOpenMPHostOffloadingArgs(const Compilation &C,
 
   // For all the host OpenMP offloading compile jobs we need to pass the targets
   // information using -fopenmp-targets= option.
-  constexpr llvm::StringLiteral Targets("-fopenmp-targets=");
+  constexpr llvm::StringLiteral Targets("--offload-targets=");
 
   SmallVector<std::string> Triples;
   auto TCRange = C.getOffloadToolChains<Action::OFK_OpenMP>();

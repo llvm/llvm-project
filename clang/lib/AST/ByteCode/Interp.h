@@ -552,11 +552,6 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
     HandleComplexComplexDiv(A, B, C, D, ResR, ResI);
 
     // Copy into the result.
-    // Result.atIndex(0).deref<Floating>() = Floating(ResR);
-    // Result.atIndex(0).initialize();
-    // Result.atIndex(1).deref<Floating>() = Floating(ResI);
-    // Result.atIndex(1).initialize();
-
     Floating RA = S.allocFloat(A.getSemantics());
     RA.copy(ResR);
     Result.atIndex(0).deref<Floating>() = RA; // Floating(ResR);
@@ -565,6 +560,7 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
     Floating RI = S.allocFloat(A.getSemantics());
     RI.copy(ResI);
     Result.atIndex(1).deref<Floating>() = RI; // Floating(ResI);
+    Result.atIndex(1).initialize();
 
     Result.initialize();
   } else {
@@ -1143,30 +1139,12 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   }
 
   if (Pointer::hasSameBase(LHS, RHS)) {
-    if (LHS.inUnion() && RHS.inUnion()) {
-      // If the pointers point into a union, things are a little more
-      // complicated since the offset we save in interp::Pointer can't be used
-      // to compare the pointers directly.
-      size_t A = LHS.computeOffsetForComparison();
-      size_t B = RHS.computeOffsetForComparison();
-      S.Stk.push<BoolT>(BoolT::from(Fn(Compare(A, B))));
-      return true;
-    }
-
-    unsigned VL = LHS.getByteOffset();
-    unsigned VR = RHS.getByteOffset();
-    // In our Pointer class, a pointer to an array and a pointer to the first
-    // element in the same array are NOT equal. They have the same Base value,
-    // but a different Offset. This is a pretty rare case, so we fix this here
-    // by comparing pointers to the first elements.
-    if (!LHS.isZero() && LHS.isArrayRoot())
-      VL = LHS.atIndex(0).getByteOffset();
-    if (!RHS.isZero() && RHS.isArrayRoot())
-      VR = RHS.atIndex(0).getByteOffset();
-
-    S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));
+    size_t A = LHS.computeOffsetForComparison();
+    size_t B = RHS.computeOffsetForComparison();
+    S.Stk.push<BoolT>(BoolT::from(Fn(Compare(A, B))));
     return true;
   }
+
   // Otherwise we need to do a bunch of extra checks before returning Unordered.
   if (LHS.isOnePastEnd() && !RHS.isOnePastEnd() && !RHS.isZero() &&
       RHS.getOffset() == 0) {
@@ -1330,20 +1308,6 @@ bool GE(InterpState &S, CodePtr OpPC) {
     return R == ComparisonCategoryResult::Greater ||
            R == ComparisonCategoryResult::Equal;
   });
-}
-
-//===----------------------------------------------------------------------===//
-// InRange
-//===----------------------------------------------------------------------===//
-
-template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool InRange(InterpState &S, CodePtr OpPC) {
-  const T RHS = S.Stk.pop<T>();
-  const T LHS = S.Stk.pop<T>();
-  const T Value = S.Stk.pop<T>();
-
-  S.Stk.push<bool>(LHS <= Value && Value <= RHS);
-  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1966,8 +1930,10 @@ bool StoreBitField(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
-  if (Ptr.canBeInitialized())
+  if (Ptr.canBeInitialized()) {
     Ptr.initialize();
+    Ptr.activate();
+  }
   if (const auto *FD = Ptr.getField())
     Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue());
   else
@@ -1981,8 +1947,10 @@ bool StoreBitFieldPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
-  if (Ptr.canBeInitialized())
+  if (Ptr.canBeInitialized()) {
     Ptr.initialize();
+    Ptr.activate();
+  }
   if (const auto *FD = Ptr.getField())
     Ptr.deref<T>() = Value.truncate(FD->getBitWidthValue());
   else

@@ -596,7 +596,7 @@ class VOP3PXe <bits<7> op, VOPProfile MFMAPfl, bit acc_cd = 0> : Enc128, VOP3Pe_
   bits<9> scale_src1;
 
   //MFMALdScaleModifierOp transforms 2 bit opsel input to 4 bit value
-  //where opsel and opselHi are in 3rd and 4th bit. 
+  //where opsel and opselHi are in 3rd and 4th bit.
   bits<4> src0_modifiers;
   bits<4> src1_modifiers;
 

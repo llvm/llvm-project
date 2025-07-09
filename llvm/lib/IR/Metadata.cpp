@@ -699,7 +699,7 @@ MDNode::Header::~Header() {
   }
   MDOperand *O = reinterpret_cast<MDOperand *>(this);
   for (MDOperand *E = O - SmallSize; O != E; --O)
-    (void)(O - 1)->~MDOperand();
+    (O - 1)->~MDOperand();
 }
 
 void *MDNode::Header::getSmallPtr() {

@@ -836,7 +836,7 @@ Expected<SmallVector<std::string>>
 AMDGPUToolChain::getSystemGPUArchs(const ArgList &Args) const {
   // Detect AMD GPUs availible on the system.
   std::string Program;
-  if (Arg *A = Args.getLastArg(options::OPT_amdgpu_arch_tool_EQ))
+  if (Arg *A = Args.getLastArg(options::OPT_offload_arch_tool_EQ))
     Program = A->getValue();
   else
     Program = GetProgramPath("amdgpu-arch");

@@ -376,7 +376,7 @@ bool DebugInfoFinder::addType(DIType *DT) {
   if (!NodesSeen.insert(DT).second)
     return false;
 
-  TYs.push_back(const_cast<DIType *>(DT));
+  TYs.push_back(DT);
   return true;
 }
 
@@ -1837,7 +1837,8 @@ LLVMMetadataRef LLVMDIBuilderCreateLabel(LLVMDIBuilderRef Builder,
                                          LLVMBool AlwaysPreserve) {
   return wrap(unwrap(Builder)->createLabel(
       unwrapDI<DIScope>(Context), StringRef(Name, NameLen),
-      unwrapDI<DIFile>(File), LineNo, AlwaysPreserve));
+      unwrapDI<DIFile>(File), LineNo, /*Column*/ 0, /*IsArtificial*/ false,
+      /*CoroSuspendIdx*/ std::nullopt, AlwaysPreserve));
 }
 
 LLVMDbgRecordRef LLVMDIBuilderInsertLabelBefore(LLVMDIBuilderRef Builder,

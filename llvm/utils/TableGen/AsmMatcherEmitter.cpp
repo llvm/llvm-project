@@ -1541,7 +1541,7 @@ void AsmMatcherInfo::buildInfo() {
     Variant.Name = AsmVariant->getValueAsString("Name");
     Variant.AsmVariantNo = AsmVariant->getValueAsInt("Variant");
 
-    for (const CodeGenInstruction *CGI : Target.getInstructionsByEnumValue()) {
+    for (const CodeGenInstruction *CGI : Target.getInstructions()) {
 
       // If the tblgen -match-prefix option is specified (for tblgen hackers),
       // filter the set of instructions we consider.

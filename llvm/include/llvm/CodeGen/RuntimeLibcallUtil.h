@@ -56,6 +56,10 @@ LLVM_ABI Libcall getUINTTOFP(EVT OpVT, EVT RetVT);
 /// UNKNOWN_LIBCALL if there is none.
 LLVM_ABI Libcall getPOWI(EVT RetVT);
 
+/// getPOW - Return the POW_* value for the given types, or
+/// UNKNOWN_LIBCALL if there is none.
+LLVM_ABI Libcall getPOW(EVT RetVT);
+
 /// getLDEXP - Return the LDEXP_* value for the given types, or
 /// UNKNOWN_LIBCALL if there is none.
 LLVM_ABI Libcall getLDEXP(EVT RetVT);
@@ -63,6 +67,14 @@ LLVM_ABI Libcall getLDEXP(EVT RetVT);
 /// getFREXP - Return the FREXP_* value for the given types, or
 /// UNKNOWN_LIBCALL if there is none.
 LLVM_ABI Libcall getFREXP(EVT RetVT);
+
+/// Return the SIN_* value for the given types, or UNKNOWN_LIBCALL if there is
+/// none.
+LLVM_ABI Libcall getSIN(EVT RetVT);
+
+/// Return the COS_* value for the given types, or UNKNOWN_LIBCALL if there is
+/// none.
+LLVM_ABI Libcall getCOS(EVT RetVT);
 
 /// getSINCOS - Return the SINCOS_* value for the given types, or
 /// UNKNOWN_LIBCALL if there is none.

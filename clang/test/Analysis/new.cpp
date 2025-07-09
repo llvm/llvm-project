@@ -327,39 +327,7 @@ void testArrayDestr() {
   clang_analyzer_warnIfReached(); // no-warning
 }
 
-// Invalidate Region even in case of default destructor
-class InvalidateDestTest {
-public:
-  int x;
-  int *y;
-  ~InvalidateDestTest();
-};
-
-int test_member_invalidation() {
-
-  //test invalidation of member variable
-  InvalidateDestTest *test = new InvalidateDestTest();
-  test->x = 5;
-  int *k = &(test->x);
-  clang_analyzer_eval(*k == 5); // expected-warning{{TRUE}}
-  delete test;
-  clang_analyzer_eval(*k == 5); // expected-warning{{UNKNOWN}}
-
-  //test invalidation of member pointer
-  int localVar = 5;
-  test = new InvalidateDestTest();
-  test->y = &localVar;
-  delete test;
-  clang_analyzer_eval(localVar == 5); // expected-warning{{UNKNOWN}}
-
-  // Test aray elements are invalidated.
-  int Var1 = 5;
-  int Var2 = 5;
-  InvalidateDestTest *a = new InvalidateDestTest[2];
-  a[0].y = &Var1;
-  a[1].y = &Var2;
-  delete[] a;
-  clang_analyzer_eval(Var1 == 5); // expected-warning{{UNKNOWN}}
-  clang_analyzer_eval(Var2 == 5); // expected-warning{{UNKNOWN}}
-  return 0;
-}
+// See also test-member-invalidation.cpp which validates that calling an
+// unknown destructor invalidates the members of an object. This behavior
+// cannot be tested in this file because here `MallocChecker.cpp` sinks
+// execution paths that refer to members of a deleted object.

@@ -4180,67 +4180,65 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
     }
   }
 
-  if (Coupled.count()) {
-    // test coupled subscript groups
-    SmallVector<Constraint, 4> Constraints(MaxLevels + 1);
-    for (unsigned II = 0; II <= MaxLevels; ++II)
-      Constraints[II].setAny(SE);
-    for (unsigned SI : Coupled.set_bits()) {
-      SmallBitVector Group(Pair[SI].Group);
-      SmallBitVector Sivs(Pairs);
-      SmallBitVector Mivs(Pairs);
-      SmallBitVector ConstrainedLevels(MaxLevels + 1);
-      for (unsigned SJ : Group.set_bits()) {
-        if (Pair[SJ].Classification == Subscript::SIV)
-          Sivs.set(SJ);
-        else
-          Mivs.set(SJ);
+  assert(!Coupled.empty() && "coupled expected non-empty");
+
+  // test coupled subscript groups
+  SmallVector<Constraint, 4> Constraints(MaxLevels + 1);
+  for (unsigned II = 0; II <= MaxLevels; ++II)
+    Constraints[II].setAny(SE);
+  for (unsigned SI : Coupled.set_bits()) {
+    SmallBitVector Group(Pair[SI].Group);
+    SmallBitVector Sivs(Pairs);
+    SmallBitVector Mivs(Pairs);
+    SmallBitVector ConstrainedLevels(MaxLevels + 1);
+    for (unsigned SJ : Group.set_bits()) {
+      if (Pair[SJ].Classification == Subscript::SIV)
+        Sivs.set(SJ);
+      else
+        Mivs.set(SJ);
+    }
+    while (Sivs.any()) {
+      bool Changed = false;
+      for (unsigned SJ : Sivs.set_bits()) {
+        // SJ is an SIV subscript that's part of the current coupled group
+        unsigned Level;
+        const SCEV *SplitIter = nullptr;
+        (void)testSIV(Pair[SJ].Src, Pair[SJ].Dst, Level, Result, NewConstraint,
+                      SplitIter);
+        if (Level == SplitLevel && SplitIter)
+          return SplitIter;
+        ConstrainedLevels.set(Level);
+        if (intersectConstraints(&Constraints[Level], &NewConstraint))
+          Changed = true;
+        Sivs.reset(SJ);
       }
-      while (Sivs.any()) {
-        bool Changed = false;
-        for (unsigned SJ : Sivs.set_bits()) {
-          // SJ is an SIV subscript that's part of the current coupled group
-          unsigned Level;
-          const SCEV *SplitIter = nullptr;
-          (void) testSIV(Pair[SJ].Src, Pair[SJ].Dst, Level,
-                         Result, NewConstraint, SplitIter);
-          if (Level == SplitLevel && SplitIter)
-            return SplitIter;
-          ConstrainedLevels.set(Level);
-          if (intersectConstraints(&Constraints[Level], &NewConstraint))
-            Changed = true;
-          Sivs.reset(SJ);
-        }
-        if (Changed) {
-          // propagate, possibly creating new SIVs and ZIVs
-          for (unsigned SJ : Mivs.set_bits()) {
-            // SJ is an MIV subscript that's part of the current coupled group
-            if (propagate(Pair[SJ].Src, Pair[SJ].Dst,
-                          Pair[SJ].Loops, Constraints, Result.Consistent)) {
-              Pair[SJ].Classification =
-                classifyPair(Pair[SJ].Src, LI->getLoopFor(Src->getParent()),
-                             Pair[SJ].Dst, LI->getLoopFor(Dst->getParent()),
-                             Pair[SJ].Loops);
-              switch (Pair[SJ].Classification) {
-              case Subscript::ZIV:
-                Mivs.reset(SJ);
-                break;
-              case Subscript::SIV:
-                Sivs.set(SJ);
-                Mivs.reset(SJ);
-                break;
-              case Subscript::RDIV:
-              case Subscript::MIV:
-                break;
-              default:
-                llvm_unreachable("bad subscript classification");
-              }
-            }
-          }
+      if (!Changed)
+        continue;
+      // propagate, possibly creating new SIVs and ZIVs
+      for (unsigned SJ : Mivs.set_bits()) {
+        // SJ is an MIV subscript that's part of the current coupled group
+        if (!propagate(Pair[SJ].Src, Pair[SJ].Dst, Pair[SJ].Loops, Constraints,
+                       Result.Consistent))
+          continue;
+        Pair[SJ].Classification = classifyPair(
+            Pair[SJ].Src, LI->getLoopFor(Src->getParent()), Pair[SJ].Dst,
+            LI->getLoopFor(Dst->getParent()), Pair[SJ].Loops);
+        switch (Pair[SJ].Classification) {
+        case Subscript::ZIV:
+          Mivs.reset(SJ);
+          break;
+        case Subscript::SIV:
+          Sivs.set(SJ);
+          Mivs.reset(SJ);
+          break;
+        case Subscript::RDIV:
+        case Subscript::MIV:
+          break;
+        default:
+          llvm_unreachable("bad subscript classification");
         }
       }
     }
   }
   llvm_unreachable("somehow reached end of routine");
-  return nullptr;
 }

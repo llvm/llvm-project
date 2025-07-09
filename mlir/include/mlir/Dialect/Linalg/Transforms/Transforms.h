@@ -422,6 +422,13 @@ struct LinalgPromotionOptions {
     useFullTileBuffersDefault = use;
     return *this;
   }
+  /// If true, buffers will be allocated with the original subview size. This
+  /// may result in more dynamic allocations, in case of dynamic sizes.
+  bool useOriginalSubviewSize = false;
+  LinalgPromotionOptions &setUseOriginalSubviewSize(bool originalSize) {
+    useOriginalSubviewSize = originalSize;
+    return *this;
+  }
   /// Alignment of promoted buffer. If `std::nullopt` do not specify alignment.
   std::optional<unsigned> alignment;
   LinalgPromotionOptions &setAlignment(unsigned align) {
@@ -796,7 +803,8 @@ FailureOr<LinalgOp> specializeGenericOp(RewriterBase &rewriter,
                                         GenericOp genericOp);
 
 /// Create a new buffer using the `allocationFn` provided. The size of this
-/// buffer is the smallest constant bounding size along each dimension that
+/// buffer is either the original subview size when 'useOriginalSubviewSize' is
+/// set to true or the smallest constant bounding size along each dimension that
 /// can be computed for the size of the result of `subView`. Returns the
 /// allocated buffer as `fullLocalView` and the view that matches the size of
 /// the result of subview operation as `partialLocalView`.
@@ -806,6 +814,7 @@ struct PromotionInfo {
 };
 FailureOr<PromotionInfo>
 promoteSubviewAsNewBuffer(OpBuilder &b, Location loc, memref::SubViewOp subView,
+                          bool useOriginalSubviewSize,
                           const AllocBufferCallbackFn &allocationFn,
                           DataLayout &layout);
 
@@ -1984,10 +1993,15 @@ void populateDecomposeWinogradOpsPatterns(RewritePatternSet &patterns);
 /// convert to a `linalg.dot`.
 void populateContractionOpRankReducingPatterns(RewritePatternSet &patterns);
 
+/// Function type which is used to control folding operations like `tensor.pad`
+/// and `tensor.extract_slice` into linalg.pack/unpack ops.
+using ControlFoldIntoPackUnpackFn = std::function<bool(OpOperand *opOperand)>;
 /// Populates `patterns` with patterns that fold operations like `tensor.pad`
 /// and `tensor.extract_slice` into `tensor.pack` and `tensor.unpack` operations
 /// respectively.
-void populateFoldIntoPackAndUnpackPatterns(RewritePatternSet &patterns);
+void populateFoldIntoPackAndUnpackPatterns(
+    RewritePatternSet &patterns,
+    const ControlFoldIntoPackUnpackFn &controlFn = nullptr);
 
 /// Populates `patterns` with patterns that fold operations like `linalg.pack`
 /// and `linalg.unpack` into `tensor.empty`.
