@@ -78,6 +78,10 @@
 #include <__le_cwi.h>
 #endif
 
+#if defined(__linux__)
+#include <sys/syscall.h>
+#endif
+
 using namespace llvm;
 
 static void SignalHandler(int Sig, siginfo_t *Info, void *);
