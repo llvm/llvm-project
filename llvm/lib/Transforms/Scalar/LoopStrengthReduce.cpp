@@ -5379,25 +5379,24 @@ void LSRInstance::NarrowSearchSpaceUsingHeuristics() {
 /// unsolvable.
 bool LSRInstance::SortLSRUses() {
   SmallVector<LSRUse *, 16> NewOrder;
-  for (auto &LU : Uses) {
-    if (!LU.Formulae.size()) {
+  for (LSRUse &LU : Uses) {
+    if (LU.Formulae.empty()) {
       return false;
     }
     NewOrder.push_back(&LU);
   }
 
-  std::stable_sort(
-      NewOrder.begin(), NewOrder.end(), [](const LSRUse *L, const LSRUse *R) {
-        auto CalcKey = [](const LSRUse *LU) {
-          // LSRUses w/ many registers and formulae go first avoid too big
-          // reduction of considered solutions count
-          return std::tuple(LU->Regs.size(), LU->Formulae.size(), LU->Kind,
-                            LU->MinOffset.getKnownMinValue(),
-                            LU->MaxOffset.getKnownMinValue(),
-                            LU->AllFixupsOutsideLoop, LU->RigidFormula);
-        };
-        return CalcKey(L) > CalcKey(R);
-      });
+  stable_sort(NewOrder, [](const LSRUse *L, const LSRUse *R) {
+    auto CalcKey = [](const LSRUse *LU) {
+      // LSRUses w/ many registers and formulae go first avoid too big
+      // reduction of considered solutions count
+      return std::tuple(LU->Regs.size(), LU->Formulae.size(), LU->Kind,
+                        LU->MinOffset.getKnownMinValue(),
+                        LU->MaxOffset.getKnownMinValue(),
+                        LU->AllFixupsOutsideLoop, LU->RigidFormula);
+    };
+    return CalcKey(L) > CalcKey(R);
+  });
 
   SmallVector<LSRUse, 4> NewUses;
   for (LSRUse *LU : NewOrder)
@@ -5428,7 +5427,7 @@ void LSRInstance::SolveRecurse(SmallVectorImpl<const Formula *> &Solution,
 
   const LSRUse &LU = Uses[Workspace.size()];
 
-  assert(LU.Formulae.size() &&
+  assert(!LU.Formulae.empty() &&
          "LSRUse w/o formulae leads to unsolvable situation so it"
          "shouldn't be here");
 
@@ -5461,7 +5460,7 @@ void LSRInstance::SolveRecurse(SmallVectorImpl<const Formula *> &Solution,
       // This can sometimes (notably when trying to favour postinc) lead to
       // sub-optimal decisions. There it is best left to the cost modeling to
       // get correct.
-      if (ReqRegs.size() &&
+      if (!ReqRegs.empty() &&
           (AMK != TTI::AMK_PostIndexed || LU.Kind != LSRUse::Address)) {
         unsigned NumReqRegsToFind = std::min(F.getNumRegs(), ReqRegs.size());
         bool ReqRegsFound = false;
@@ -5492,10 +5491,14 @@ void LSRInstance::SolveRecurse(SmallVectorImpl<const Formula *> &Solution,
           if (F.getNumRegs() == 1 && Workspace.size() == 1)
             VisitedRegs.insert(F.ScaledReg ? F.ScaledReg : F.BaseRegs[0]);
         } else {
-          LLVM_DEBUG(dbgs() << "New best at "; NewCost.print(dbgs());
-                     dbgs() << ".\nRegs:\n";
-                     for (const SCEV *S : NewRegs) dbgs() << "- " << *S << "\n";
-                     dbgs() << '\n');
+          LLVM_DEBUG({
+            dbgs() << "New best at ";
+            NewCost.print(dbgs());
+            dbgs() << ".\nRegs:\n";
+            for (const SCEV *S : NewRegs)
+              dbgs() << "- " << *S << "\n";
+            dbgs() << '\n'
+          });
           SolutionCost = NewCost;
           Solution = Workspace;
         }
