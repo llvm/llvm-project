@@ -79,7 +79,6 @@ class StdStringDataFormatterTestCase(TestBase):
                 '(%s::string) q = "hello world"' % ns,
                 '(%s::string) Q = "quite a long std::strin with lots of info inside it"'
                 % ns,
-                '(std::string) overwritten_zero = "abc"',
                 "(%s::string *) null_str = nullptr" % ns,
             ],
         )
@@ -233,3 +232,28 @@ class StdStringDataFormatterTestCase(TestBase):
     def test_unavailable_summary_msvc(self):
         self.build()
         self.do_test_summary_unavailable()
+
+    def do_test_overwritten(self):
+        lldbutil.run_to_source_breakpoint(
+            self, "Set break point at this line.", self.main_spec
+        )
+
+        self.expect_var_path("overwritten_zero", summary='"abc"')
+
+    @add_test_categories(["libc++"])
+    def test_overwritten_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test_overwritten()
+
+    @expectedFailureAll(
+        bugnumber="libstdc++ format for non-null terminated std::string currently diverges from MSVC and libc++ formatter."
+    )
+    @add_test_categories(["libstdcxx"])
+    def test_overwritten_libstdcxx(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test_overwritten()
+
+    @add_test_categories(["msvcstl"])
+    def test_overwritten_msvc(self):
+        self.build()
+        self.do_test_overwritten()
