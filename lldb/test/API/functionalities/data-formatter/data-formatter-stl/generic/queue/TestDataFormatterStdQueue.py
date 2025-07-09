@@ -2,14 +2,13 @@
 Test lldb data formatter subsystem.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class TestDataFormatterLibcxxQueue(TestBase):
+class TestDataFormatterStdQueue(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.namespace = "std"
@@ -30,9 +29,9 @@ class TestDataFormatterLibcxxQueue(TestBase):
         bugnumber="llvm.org/pr36109", debug_info="gmodules", triple=".*-android"
     )
     @add_test_categories(["libc++"])
-    def test(self):
+    def test_libcxx(self):
         """Test that std::queue is displayed correctly"""
-        self.build()
+        self.build(dictionary={"USE_LIBCPP": 1})
         lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.cpp", False)
         )
