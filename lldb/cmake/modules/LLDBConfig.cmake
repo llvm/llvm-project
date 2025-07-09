@@ -323,6 +323,4 @@ else()
     set(LLDB_CAN_USE_DEBUGSERVER OFF)
 endif()
 
-set(LLDB_BUILD_LLDBRPC ON CACHE BOOL "")
-
 include(LLDBGenerateConfig)
