@@ -616,7 +616,7 @@ LogicalResult ConvertLayoutOp::verify() {
   if (!resLayout)
     return emitOpError("expected target layout.");
 
-  // both srcMap and resMap should be WgLayout or SgLayout at the same time.
+  // both input and target layouts should be WgLayout or SgLayout at the same time.
   if ((!srcLayout.isWgLayout() || !resLayout.isWgLayout()) &&
       (!srcLayout.isSgLayout() || !resLayout.isSgLayout()))
     return emitOpError("expected input layout and target layout be WgLayout or "
@@ -644,10 +644,11 @@ struct FoldConvertLayoutOp : public OpRewritePattern<xegpu::ConvertLayoutOp> {
   using OpRewritePattern<xegpu::ConvertLayoutOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op,
                                 PatternRewriter &rewriter) const override {
-    if (op.getInputLayout() != op.getTargetLayout())
-      return failure();
-    rewriter.replaceOp(op, op.getSource());
-    return success();
+    if (op.getInputLayout() == op.getTargetLayout()) {
+      rewriter.replaceOp(op, op.getSource());
+      return success();
+    }
+    return failure();
   }
 };
 

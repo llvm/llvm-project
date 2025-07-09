@@ -313,13 +313,13 @@ LogicalResult TensorDescType::verify(
   if (rank != 1 && rank != 2)
     return emitError() << "expected 1D or 2D tensor";
 
-  // auto blockAttr = mlir::dyn_cast_if_present<BlockTensorDescAttr>(encoding);
-  // if (blockAttr) {
-  //   MemorySpaceAttr memorySpaceAttr = blockAttr.getMemorySpace();
-  //   if (rank == 2 && memorySpaceAttr &&
-  //       memorySpaceAttr.getValue() == MemorySpace::SLM)
-  //     return emitError() << "SLM is not supported for 2D block tensor";
-  // }
+  auto blockAttr = mlir::dyn_cast_if_present<BlockTensorDescAttr>(encoding);
+  if (blockAttr) {
+    MemorySpaceAttr memorySpaceAttr = blockAttr.getMemorySpace();
+    if (rank == 2 && memorySpaceAttr &&
+        memorySpaceAttr.getValue() == MemorySpace::SLM)
+      return emitError() << "SLM is not supported for 2D block tensor";
+  }
 
   // for gather and scatter ops, Low-precision types are packed in 32-bit units.
   unsigned bitWidth = elementType.getIntOrFloatBitWidth();
