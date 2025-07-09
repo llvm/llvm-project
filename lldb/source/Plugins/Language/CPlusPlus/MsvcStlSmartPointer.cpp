@@ -15,9 +15,7 @@
 using namespace lldb;
 
 bool lldb_private::formatters::IsMsvcStlSmartPointer(ValueObject &valobj) {
-  std::vector<uint32_t> indexes;
-  return valobj.GetCompilerType().GetIndexOfChildMemberWithName("_Ptr", true,
-                                                                indexes) > 0;
+  return valobj.GetChildMemberWithName("_Ptr") != nullptr;
 }
 
 bool lldb_private::formatters::MsvcStlSmartPointerSummaryProvider(
