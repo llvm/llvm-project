@@ -12341,9 +12341,10 @@ SDValue RISCVTargetLowering::lowerVECTOR_SPLICE(SDValue Op,
 
   SDValue TrueMask = getAllOnesMask(VecVT, VLMax, DL, DAG);
 
-  SDValue SlideDown =
-      getVSlidedown(DAG, Subtarget, DL, VecVT, DAG.getUNDEF(VecVT), V1,
-                    DownOffset, TrueMask, UpOffset);
+  SDValue SlideDown = getVSlidedown(
+      DAG, Subtarget, DL, VecVT, DAG.getUNDEF(VecVT), V1, DownOffset, TrueMask,
+      Subtarget.hasVLDependentLatency() ? UpOffset
+                                        : DAG.getRegister(RISCV::X0, XLenVT));
   return getVSlideup(DAG, Subtarget, DL, VecVT, SlideDown, V2, UpOffset,
                      TrueMask, DAG.getRegister(RISCV::X0, XLenVT),
                      RISCVVType::TAIL_AGNOSTIC);
@@ -13367,7 +13368,7 @@ RISCVTargetLowering::lowerVPSpliceExperimental(SDValue Op,
   if (ImmValue != 0)
     Op1 = getVSlidedown(DAG, Subtarget, DL, ContainerVT,
                         DAG.getUNDEF(ContainerVT), Op1, DownOffset, Mask,
-                        UpOffset);
+                        Subtarget.hasVLDependentLatency() ? UpOffset : EVL2);
   SDValue Result = getVSlideup(DAG, Subtarget, DL, ContainerVT, Op1, Op2,
                                UpOffset, Mask, EVL2, RISCVVType::TAIL_AGNOSTIC);
 
@@ -24111,10 +24112,11 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
 
   IRBuilder<> Builder(LI);
 
+  const DataLayout &DL = LI->getDataLayout();
+
   auto *VTy = cast<FixedVectorType>(Shuffles[0]->getType());
   if (!isLegalInterleavedAccessType(VTy, Factor, LI->getAlign(),
-                                    LI->getPointerAddressSpace(),
-                                    LI->getDataLayout()))
+                                    LI->getPointerAddressSpace(), DL))
     return false;
 
   auto *PtrTy = LI->getPointerOperandType();
@@ -24124,7 +24126,7 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
   // and there's only one element used, use a strided load instead.  This
   // will be equally fast, and create less vector register pressure.
   if (Indices.size() == 1 && !Subtarget.hasOptimizedSegmentLoadStore(Factor)) {
-    unsigned ScalarSizeInBytes = VTy->getScalarSizeInBits() / 8;
+    unsigned ScalarSizeInBytes = DL.getTypeStoreSize(VTy->getElementType());
     Value *Stride = ConstantInt::get(XLenTy, Factor * ScalarSizeInBytes);
     Value *Offset = ConstantInt::get(XLenTy, Indices[0] * ScalarSizeInBytes);
     Value *BasePtr = Builder.CreatePtrAdd(LI->getPointerOperand(), Offset);
@@ -24187,14 +24189,14 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
                                                 ShuffleVectorInst *SVI,
                                                 unsigned Factor) const {
   IRBuilder<> Builder(SI);
+  const DataLayout &DL = SI->getDataLayout();
   auto Mask = SVI->getShuffleMask();
   auto *ShuffleVTy = cast<FixedVectorType>(SVI->getType());
   // Given SVI : <n*factor x ty>, then VTy : <n x ty>
   auto *VTy = FixedVectorType::get(ShuffleVTy->getElementType(),
                                    ShuffleVTy->getNumElements() / Factor);
   if (!isLegalInterleavedAccessType(VTy, Factor, SI->getAlign(),
-                                    SI->getPointerAddressSpace(),
-                                    SI->getDataLayout()))
+                                    SI->getPointerAddressSpace(), DL))
     return false;
 
   auto *PtrTy = SI->getPointerOperandType();
@@ -24206,7 +24208,8 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
   // be equally fast, and create less vector register pressure.
   if (!Subtarget.hasOptimizedSegmentLoadStore(Factor) &&
       isSpreadMask(Mask, Factor, Index)) {
-    unsigned ScalarSizeInBytes = ShuffleVTy->getScalarSizeInBits() / 8;
+    unsigned ScalarSizeInBytes =
+        DL.getTypeStoreSize(ShuffleVTy->getElementType());
     Value *Data = SVI->getOperand(0);
     auto *DataVTy = cast<FixedVectorType>(Data->getType());
     Value *Stride = ConstantInt::get(XLenTy, Factor * ScalarSizeInBytes);
