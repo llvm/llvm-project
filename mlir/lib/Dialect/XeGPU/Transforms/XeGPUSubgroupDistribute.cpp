@@ -136,19 +136,6 @@ static Value resolveDistributedTy(Value orig, T expected,
   return orig;
 }
 
-/// Helper function to filter out the temporary layout attributes attached
-/// during the layout assignment process. These are not needed after going to
-/// SIMT.
-static SmallVector<NamedAttribute>
-removeTemporaryLayoutAttributes(ArrayRef<NamedAttribute> attrs) {
-  SmallVector<NamedAttribute> newAttrs;
-  for (NamedAttribute attr : attrs) {
-    if (!isa<xegpu::LayoutAttr>(attr.getValue()))
-      newAttrs.push_back(attr);
-  }
-  return newAttrs;
-}
-
 /// Helper function to check if the layout is packed. Layout is packed if it is
 /// 2D and lane_data[0] != 1 (data packed from col dimension).
 static bool hasPackedLayout(xegpu::LayoutAttr layout) {
@@ -412,9 +399,9 @@ struct StoreNdDistribution final : public gpu::WarpDistributionPattern {
         resolveDistributedTy(newWarpOp.getResult(newRetIndices[1]),
                              distributedTensorDescTy, rewriter));
 
-    rewriter.create<xegpu::StoreNdOp>(
-        newWarpOp.getLoc(), TypeRange{}, newStoreOperands,
-        removeTemporaryLayoutAttributes(storeOp->getAttrs()));
+    auto newStoreOp = rewriter.create<xegpu::StoreNdOp>(
+        newWarpOp.getLoc(), TypeRange{}, newStoreOperands, storeOp->getAttrs());
+    xegpu::removeLayoutAttrs(newStoreOp);
     rewriter.eraseOp(storeOp);
     return success();
   }
@@ -508,7 +495,8 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
         newWarpOp.getLoc(), loadNdDistValueTyOrFailure.value(),
         resolveDistributedTy(newWarpOp->getResult(newRetIndices[0]),
                              distributedTensorDescTy, rewriter),
-        removeTemporaryLayoutAttributes(loadOp->getAttrs()));
+        loadOp->getAttrs());
+    xegpu::removeLayoutAttrs(newLoadOp);
     // Set the packed attribute if the layout requires it.
     newLoadOp.setPacked(hasPackedLayout(layout));
     Value distributedVal = newWarpOp.getResult(operandIdx);
@@ -639,14 +627,16 @@ struct DpasDistribution final : public gpu::WarpDistributionPattern {
           resolveDistributedTy(newWarpOp.getResult(newRetIndices[i]),
                                newDpasOperandExpectedTypes[i], rewriter));
     }
-    Value newDpasOp = rewriter.create<xegpu::DpasOp>(
-        newWarpOp->getLoc(), distributedResultTy, newDpasOperands,
-        removeTemporaryLayoutAttributes(dpasOp->getAttrs()));
+    auto newDpasOp =
+        rewriter.create<xegpu::DpasOp>(newWarpOp->getLoc(), distributedResultTy,
+                                       newDpasOperands, dpasOp->getAttrs());
+    xegpu::removeLayoutAttrs(newDpasOp);
     Value distributedVal = newWarpOp.getResult(operandIdx);
     // Resolve the output type.
-    newDpasOp = resolveDistributedTy(
-        newDpasOp, distResultTypeByWarpOpOrFailure.value(), rewriter);
-    rewriter.replaceAllUsesWith(distributedVal, newDpasOp);
+    Value typeResolved =
+        resolveDistributedTy(newDpasOp.getResult(),
+                             distResultTypeByWarpOpOrFailure.value(), rewriter);
+    rewriter.replaceAllUsesWith(distributedVal, typeResolved);
     return success();
   }
 };
@@ -726,14 +716,15 @@ struct UpdateNdOffsetDistribution final : public gpu::WarpDistributionPattern {
       }
     }
     // Create a new update op outside the warp op.
-    Value newUpdateOp = rewriter.create<xegpu::UpdateNdOffsetOp>(
+    auto newUpdateOp = rewriter.create<xegpu::UpdateNdOffsetOp>(
         newWarpOp.getLoc(), newTensorDescTy, newUpdateOperands,
-        removeTemporaryLayoutAttributes(updateOp->getAttrs()));
+        updateOp->getAttrs());
+    xegpu::removeLayoutAttrs(newUpdateOp);
     Value distributedVal = newWarpOp.getResult(operandIdx);
     // Resolve the distributed type with the original type.
-    newUpdateOp =
-        resolveDistributedTy(newUpdateOp, distributedVal.getType(), rewriter);
-    rewriter.replaceAllUsesWith(distributedVal, newUpdateOp);
+    Value typeResolved = resolveDistributedTy(
+        newUpdateOp.getResult(), distributedVal.getType(), rewriter);
+    rewriter.replaceAllUsesWith(distributedVal, typeResolved);
     return success();
   }
 };
@@ -792,9 +783,10 @@ struct PrefetchNdDistribution final : public gpu::WarpDistributionPattern {
     rewriter.setInsertionPointAfter(newWarpOp);
     SmallVector<Value> newPrefetchOperands = {resolveDistributedTy(
         newWarpOp.getResult(newRetIndices[0]), newTensorDescTy, rewriter)};
-    rewriter.create<xegpu::PrefetchNdOp>(
-        newWarpOp.getLoc(), TypeRange{}, newPrefetchOperands,
-        removeTemporaryLayoutAttributes(prefetchOp->getAttrs()));
+    rewriter.create<xegpu::PrefetchNdOp>(newWarpOp.getLoc(), TypeRange{},
+                                         newPrefetchOperands,
+                                         prefetchOp->getAttrs());
+    xegpu::removeLayoutAttrs(prefetchOp);
     rewriter.eraseOp(prefetchOp);
     return success();
   }
