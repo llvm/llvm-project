@@ -318,7 +318,7 @@
 #  endif
 #endif
 
-// The beginning of mmap range of addresses.
+// The first address that can be returned by mmap.
 #define SANITIZER_MMAP_BEGIN 0
 
 // The range of addresses which can be returned my mmap.
