@@ -45,12 +45,12 @@ llvm.func @_QPfoo(%arg0: !llvm.ptr {fir.bindc_name = "array", llvm.nocapture}, %
 // CHECK:         br i1 %[[VAL_25]], label %[[OMP_LOOP_BODY:.*]], label %[[OMP_LOOP_EXIT:.*]]
 // CHECK:       omp_loop.body:                                    ; preds = %[[OMP_LOOP_COND]]
 // CHECK:         %[[VAL_28:.*]] = add i32 %[[IV]], %[[LB]]
-// CHECK:         %[[VAL_29:.*]] = mul i32 %[[VAL_28]], 1
-// CHECK:         %[[VAL_30:.*]] = add i32 %[[VAL_29]], 1
 // This is the IF clause:
 // CHECK:         br i1 %{{.*}}, label %[[SIMD_IF_THEN:.*]], label %[[SIMD_IF_ELSE:.*]]
 
 // CHECK:       simd.if.then:                                     ; preds = %[[OMP_LOOP_BODY]]
+// CHECK:         %[[VAL_29:.*]] = mul i32 %[[VAL_28]], 1
+// CHECK:         %[[VAL_30:.*]] = add i32 %[[VAL_29]], 1
 // CHECK:         br label %[[VAL_33:.*]]
 // CHECK:       omp.loop_nest.region:                             ; preds = %[[SIMD_IF_THEN]]
 // This version contains !llvm.access.group metadata for SIMD
@@ -70,16 +70,20 @@ llvm.func @_QPfoo(%arg0: !llvm.ptr {fir.bindc_name = "array", llvm.nocapture}, %
 // CHECK:         br label %[[OMP_LOOP_HEADER]], !llvm.loop !2
 
 // CHECK:       simd.if.else:                                     ; preds = %[[OMP_LOOP_BODY]]
-// CHECK:         br label %[[VAL_41:.*]]
-// CHECK:       omp.loop_nest.region4:                            ; preds = %[[SIMD_IF_ELSE]]
+// CHECK:         br label %[[SIMD_IF_ELSE2:.*]]
+// CHECK:       simd.if.else5:
+// CHECK:         %[[MUL:.*]] = mul i32 %[[VAL_28]], 1
+// CHECK:         %[[ADD:.*]] = add i32 %[[MUL]], 1
+// CHECK:         br label %[[LOOP_NEST_REGION:.*]]
+// CHECK:       omp.loop_nest.region6:                            ; preds = %[[SIMD_IF_ELSE2]]
 // No llvm.access.group metadata for else clause
-// CHECK:         store i32 %[[VAL_30]], ptr %{{.*}}, align 4
+// CHECK:         store i32 %[[ADD]], ptr %{{.*}}, align 4
 // CHECK:         %[[VAL_42:.*]] = load i32, ptr %{{.*}}, align 4
 // CHECK:         %[[VAL_43:.*]] = sext i32 %[[VAL_42]] to i64
 // CHECK:         %[[VAL_44:.*]] = getelementptr i32, ptr %[[VAL_37]], i64 %[[VAL_43]]
 // CHECK:         store i32 %[[VAL_42]], ptr %[[VAL_44]], align 4
 // CHECK:         br label %[[OMP_REGION_CONT35]]
-// CHECK:       omp.region.cont35:                                ; preds = %[[VAL_41]]
+// CHECK:       omp.region.cont37:                                ; preds = %[[LOOP_NEST_REGION]]
 // CHECK:         br label %[[SIMD_PRE_LATCH]]
 
 // CHECK:       omp_loop.exit:                                    ; preds = %[[OMP_LOOP_COND]]

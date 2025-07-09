@@ -5370,6 +5370,7 @@ void OpenMPIRBuilder::unrollLoopHeuristic(DebugLoc, CanonicalLoopInfo *Loop) {
 
 void OpenMPIRBuilder::createIfVersion(CanonicalLoopInfo *CanonicalLoop,
                                       Value *IfCond, ValueToValueMapTy &VMap,
+                                      LoopAnalysis &LIA, LoopInfo &LI, Loop *L,
                                       const Twine &NamePrefix) {
   Function *F = CanonicalLoop->getFunction();
 
@@ -5395,23 +5396,8 @@ void OpenMPIRBuilder::createIfVersion(CanonicalLoopInfo *CanonicalLoop,
   // Define where if branch should be inserted
   auto SplitBeforeIt = CanonicalLoop->getBody()->getFirstNonPHIIt();
 
-  // TODO: We should not rely on pass manager. Currently we use pass manager
-  // only for getting llvm::Loop which corresponds to given CanonicalLoopInfo
-  // object. We should have a method  which returns all blocks between
-  // CanonicalLoopInfo::getHeader() and CanonicalLoopInfo::getAfter()
-  FunctionAnalysisManager FAM;
-  FAM.registerPass([]() { return DominatorTreeAnalysis(); });
-  FAM.registerPass([]() { return LoopAnalysis(); });
-  FAM.registerPass([]() { return PassInstrumentationAnalysis(); });
-
-  // Get the loop which needs to be cloned
-  LoopAnalysis LIA;
-  LoopInfo &&LI = LIA.run(*F, FAM);
-  Loop *L = LI.getLoopFor(CanonicalLoop->getHeader());
-
   // Create additional blocks for the if statement
   BasicBlock *Cond = SplitBeforeIt->getParent();
-  Instruction *CondOldTerm = Cond->getTerminator();
   llvm::LLVMContext &C = Cond->getContext();
   llvm::BasicBlock *ThenBlock = llvm::BasicBlock::Create(
       C, NamePrefix + ".if.then", Cond->getParent(), Cond->getNextNode());
@@ -5419,7 +5405,7 @@ void OpenMPIRBuilder::createIfVersion(CanonicalLoopInfo *CanonicalLoop,
       C, NamePrefix + ".if.else", Cond->getParent(), CanonicalLoop->getExit());
 
   // Create if condition branch.
-  Builder.SetInsertPoint(CondOldTerm);
+  Builder.SetInsertPoint(SplitBeforeIt);
   Instruction *BrInstr =
       Builder.CreateCondBr(IfCond, ThenBlock, /*ifFalse*/ ElseBlock);
   InsertPointTy IP{BrInstr->getParent(), ++BrInstr->getIterator()};
@@ -5432,18 +5418,27 @@ void OpenMPIRBuilder::createIfVersion(CanonicalLoopInfo *CanonicalLoop,
   // Clone loop for the else branch
   SmallVector<BasicBlock *, 8> NewBlocks;
 
+  SmallVector<BasicBlock *, 8> ExistingBlocks;
+  ExistingBlocks.reserve(L->getNumBlocks() + 1);
+  ExistingBlocks.push_back(ThenBlock);
+  ExistingBlocks.append(L->block_begin(), L->block_end());
   // Cond is the block that has the if clause condition
   // LoopCond is omp_loop.cond
   // LoopHeader is omp_loop.header
   BasicBlock *LoopCond = Cond->getUniquePredecessor();
   BasicBlock *LoopHeader = LoopCond->getUniquePredecessor();
   assert(LoopCond && LoopHeader && "Invalid loop structure");
-  for (BasicBlock *Block : L->getBlocks()) {
+  for (BasicBlock *Block : ExistingBlocks) {
     if (Block == L->getLoopPreheader() || Block == L->getLoopLatch() ||
         Block == LoopHeader || Block == LoopCond || Block == Cond) {
       continue;
     }
     BasicBlock *NewBB = CloneBasicBlock(Block, VMap, "", F);
+
+    // fix name not to be omp.if.then
+    if (Block == ThenBlock)
+      NewBB->setName(NamePrefix + ".if.else");
+
     NewBB->moveBefore(CanonicalLoop->getExit());
     VMap[Block] = NewBB;
     NewBlocks.push_back(NewBB);
@@ -5455,6 +5450,10 @@ void OpenMPIRBuilder::createIfVersion(CanonicalLoopInfo *CanonicalLoop,
   // from both the 'then' and 'else' branches.
   L->getLoopLatch()->splitBasicBlock(
       L->getLoopLatch()->begin(), NamePrefix + ".pre_latch", /*Before=*/true);
+
+  // Ensure that the then block is added to the loop so we add the attributes in
+  // the next step
+  L->addBasicBlockToLoop(ThenBlock, LI);
 }
 
 unsigned
@@ -5510,7 +5509,7 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
 
   if (IfCond) {
     ValueToValueMapTy VMap;
-    createIfVersion(CanonicalLoop, IfCond, VMap, "simd");
+    createIfVersion(CanonicalLoop, IfCond, VMap, LIA, LI, L, "simd");
   }
 
   SmallSet<BasicBlock *, 8> Reachable;
