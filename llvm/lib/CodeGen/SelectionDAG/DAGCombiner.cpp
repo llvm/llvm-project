@@ -2524,11 +2524,10 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
 
   // Don't do this unless the old select is going away. We want to eliminate the
   // binary operator, not replace a binop with a select.
-  // TODO: Handle ISD::SELECT_CC.
   unsigned SelOpNo = 0;
   SDValue Sel = BO->getOperand(0);
   auto BinOpcode = BO->getOpcode();
-  if (Sel.getOpcode() != ISD::SELECT || !Sel.hasOneUse()) {
+  if ((Sel.getOpcode() != ISD::SELECT && Sel.getOpcode() != ISD::SELECT_CC) || !Sel.hasOneUse()) {
     SelOpNo = 1;
     Sel = BO->getOperand(1);
 
@@ -2544,15 +2543,24 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
     }
   }
 
-  if (Sel.getOpcode() != ISD::SELECT || !Sel.hasOneUse())
+  if ((Sel.getOpcode() != ISD::SELECT && Sel.getOpcode() != ISD::SELECT_CC) || !Sel.hasOneUse())
     return SDValue();
 
-  SDValue CT = Sel.getOperand(1);
+  // Extract true value and false value from SELECT or SELECT_CC
+  SDValue CT, CF;
+  bool IsSelectCC = (Sel.getOpcode() == ISD::SELECT_CC);
+  if (IsSelectCC) {
+    CT = Sel.getOperand(2);
+    CF = Sel.getOperand(3);
+  } else { // ISD::SELECT
+    CT = Sel.getOperand(1);
+    CF = Sel.getOperand(2);
+  }
+
   if (!isConstantOrConstantVector(CT, true) &&
       !DAG.isConstantFPBuildVectorOrConstantFP(CT))
     return SDValue();
 
-  SDValue CF = Sel.getOperand(2);
   if (!isConstantOrConstantVector(CF, true) &&
       !DAG.isConstantFPBuildVectorOrConstantFP(CF))
     return SDValue();
@@ -2606,7 +2614,17 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
       return SDValue();
   }
 
-  SDValue SelectOp = DAG.getSelect(DL, VT, Sel.getOperand(0), NewCT, NewCF);
+  SDValue SelectOp;
+  if (IsSelectCC) {
+    // Preserve SELECT_CC form
+    SelectOp = DAG.getNode(ISD::SELECT_CC, DL, VT, 
+                           Sel.getOperand(0), Sel.getOperand(1), // LHS, RHS
+                           NewCT, NewCF, 
+                           Sel.getOperand(4)); // CC
+  } else {
+    // Use SELECT form  
+    SelectOp = DAG.getSelect(DL, VT, Sel.getOperand(0), NewCT, NewCF);
+  }
   SelectOp->setFlags(BO->getFlags());
   return SelectOp;
 }
