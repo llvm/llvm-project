@@ -24302,15 +24302,16 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
 }
 
 bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
-    LoadInst *LI, ArrayRef<Value *> DeinterleaveValues) const {
-  unsigned Factor = DeinterleaveValues.size();
+    LoadInst *LI, ArrayRef<Value *> DeinterleaveValues, unsigned Factor) const {
   if (Factor > 8)
     return false;
 
   assert(LI->isSimple());
   IRBuilder<> Builder(LI);
 
-  auto *ResVTy = cast<VectorType>(DeinterleaveValues[0]->getType());
+  Value *FirstActive =
+      *llvm::find_if(DeinterleaveValues, [](Value *V) { return V != nullptr; });
+  VectorType *ResVTy = cast<VectorType>(FirstActive->getType());
 
   const DataLayout &DL = LI->getDataLayout();
 
@@ -24361,6 +24362,8 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
   }
 
   for (auto [Idx, DIV] : enumerate(DeinterleaveValues)) {
+    if (!DIV)
+      continue;
     // We have to create a brand new ExtractValue to replace each
     // of these old ExtractValue instructions.
     Value *NewEV =
@@ -24484,17 +24487,15 @@ static bool isMultipleOfN(const Value *V, const DataLayout &DL, unsigned N) {
 /// dealing with factor of 2 (extractvalue is still required for most of other
 /// factors though).
 bool RISCVTargetLowering::lowerInterleavedVPLoad(
-    VPIntrinsic *Load, Value *Mask,
-    ArrayRef<Value *> DeinterleaveResults) const {
+    VPIntrinsic *Load, Value *Mask, ArrayRef<Value *> DeinterleaveResults,
+    unsigned Factor) const {
   assert(Mask && "Expect a valid mask");
   assert(Load->getIntrinsicID() == Intrinsic::vp_load &&
          "Unexpected intrinsic");
 
-  const unsigned Factor = DeinterleaveResults.size();
-
-  auto *VTy = dyn_cast<VectorType>(DeinterleaveResults[0]->getType());
-  if (!VTy)
-    return false;
+  Value *FirstActive = *llvm::find_if(DeinterleaveResults,
+                                      [](Value *V) { return V != nullptr; });
+  VectorType *VTy = cast<VectorType>(FirstActive->getType());
 
   auto &DL = Load->getModule()->getDataLayout();
   Align Alignment = Load->getParamAlign(0).value_or(
