@@ -676,12 +676,15 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
 //     %inc = add nsw i32 %i, 1
 //     ...
 // Since 'i' is an induction variable, the reduction value after the loop will
-// be the maximum value of 'i' that the condition (src[i] > 3) is satisfied, or
-// the start value (0 in the example above). When the start value of the
-// induction variable 'i' is greater than the minimum value of the data type, we
-// can use the minimum value of the data type as a sentinel value to replace the
-// start value. This allows us to perform a single reduction max operation to
-// obtain the final reduction result.
+// be the maximum (increasing induction) or minimum (decreasing induction) value
+// of 'i' that the condition (src[i] > 3) is satisfied, or the start value (0 in
+// the example above). When the start value of the induction variable 'i' is
+// greater than the minimum (increasing induction) or maximum (decreasing
+// induction) value of the data type, we can use the minimum (increasing
+// induction) or maximum (decreasing induction) value of the data type as a
+// sentinel value to replace the start value. This allows us to perform a single
+// reduction max (increasing induction) or min (decreasing induction) operation
+// to obtain the final reduction result.
 // TODO: It is possible to solve the case where the start value is the minimum
 // value of the data type or a non-constant value by using mask and multiple
 // reduction operations.
@@ -723,12 +726,12 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
         (isFindLastIVRecurrenceKind(Kind) && !SE.isKnownPositive(Step)))
       return std::nullopt;
 
-    // Keep the minimum (FindLast) or maximum (FindFirst) value of the
-    // recurrence type as the sentinel value. The maximum acceptable range for
-    // the induction variable, called the valid range will exclude <sentinel
-    // value>, where <sentinel value> is [Signed|Unsigned]Min(<recurrence type>)
-    // for FindLastIV or [Signed|Unsigned]Max(<recurrence type>) for
-    // FindFirstIV.
+    // Check if the minimum (FindLast) or maximum (FindFirst) value of the
+    // recurrence type can be used as a sentinel value. The maximum acceptable
+    // range for the induction variable, called the valid range will exclude
+    // <sentinel value>, where <sentinel value> is
+    // [Signed|Unsigned]Min(<recurrence type>) for FindLastIV or
+    // [Signed|Unsigned]Max(<recurrence type>) for FindFirstIV.
     // TODO: This range restriction can be lifted by adding an additional
     // virtual OR reduction.
     auto CheckRange = [&](bool IsSigned) {

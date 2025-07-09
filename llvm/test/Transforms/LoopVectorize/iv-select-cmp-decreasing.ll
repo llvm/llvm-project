@@ -1142,7 +1142,8 @@ exit:                                             ; preds = %loop
 
 ; The unsigned sentinel value for decreasing-IV vectorization is ULONG_MAX,
 ; and since the IV hits this value, it is impossible to vectorize this case.
-; This test includes both signed and unsigned sentinel values.
+; In this test, %iv's range will include both signed and unsigned
+; maximum (sentinel) values.
 define i64 @not_vectorized_select_decreasing_induction_icmp_iv_out_of_bound(ptr %a, ptr %b, i64 %rdx.start) {
 ; CHECK-LABEL: define i64 @not_vectorized_select_decreasing_induction_icmp_iv_out_of_bound(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[RDX_START:%.*]]) {
