@@ -413,7 +413,7 @@ static void SignalHandler(int Sig, siginfo_t *Info, void *) {
     raise(Sig);
 #endif
 
-#if defined(__linux__) || defined(__ANDROID__)
+#if defined(__linux__)
   // Re-raising a signal via `raise` loses the original siginfo. Recent
   // versions of linux (>= 3.9) support processes sending a signal to itself
   // with arbitrary signal information using a syscall. If this syscall is
