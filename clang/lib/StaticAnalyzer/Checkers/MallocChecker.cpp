@@ -3298,7 +3298,8 @@ void MallocChecker::checkUseZeroAllocated(SymbolRef Sym, CheckerContext &C,
 bool MallocChecker::checkDoubleDelete(SymbolRef Sym, CheckerContext &C) const {
 
   if (isReleased(Sym, C)) {
-    HandleDoubleFree(C, SourceRange(), /*Released=*/true, Sym, nullptr);
+    HandleDoubleFree(C, SourceRange(), /*Released=*/true, Sym,
+                     /*PrevSym=*/nullptr);
     return true;
   }
   return false;
