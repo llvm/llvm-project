@@ -909,9 +909,6 @@ static Instruction *foldSelectZeroOrFixedOp(SelectInst &SI,
 
   if (!(match(FalseVal, m_c_Mul(m_Specific(X), m_Value(Y))) ||
         match(FalseVal, m_c_And(m_Specific(X), m_Value(Y))) ||
-        match(FalseVal, m_Shl(m_Specific(X), m_Value(Y))) ||
-        match(FalseVal, m_AShr(m_Specific(X), m_Value(Y))) ||
-        match(FalseVal, m_LShr(m_Specific(X), m_Value(Y))) ||
         match(FalseVal, m_FShl(m_Specific(X), m_Specific(X), m_Value(Y))) ||
         match(FalseVal, m_FShr(m_Specific(X), m_Specific(X), m_Value(Y))) ||
         match(FalseVal, m_SDiv(m_Specific(X), m_Value(Y))) ||
