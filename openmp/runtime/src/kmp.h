@@ -2725,11 +2725,12 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
 #if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
   /* Same fields as in the #else branch, but in reverse order */
 #if OMPX_TASKGRAPH
-  unsigned reserved31 : 5;
+  unsigned reserved31 : 4;
   unsigned onced : 1;
 #else
-  unsigned reserved31 : 6;
+  unsigned reserved31 : 5;
 #endif
+  unsigned hidden_helper : 1;
   unsigned target : 1;
   unsigned native : 1;
   unsigned freed : 1;
@@ -2741,7 +2742,7 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned task_serial : 1;
   unsigned tasktype : 1;
   unsigned reserved : 8;
-  unsigned hidden_helper : 1;
+  unsigned free_agent_eligible : 1;
   unsigned detachable : 1;
   unsigned priority_specified : 1;
   unsigned proxy : 1;
@@ -2762,7 +2763,8 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned priority_specified : 1; /* set if the compiler provides priority
                                       setting for the task */
   unsigned detachable : 1; /* 1 == can detach */
-  unsigned hidden_helper : 1; /* 1 == hidden helper task */
+  unsigned free_agent_eligible : 1; /* set if task can be executed by a
+                                       free-agent thread */
   unsigned reserved : 8; /* reserved for compiler use */
 
   /* Library flags */ /* Total library flags must be 16 bits */
@@ -2780,11 +2782,12 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned freed : 1; /* 1==freed, 0==allocated        */
   unsigned native : 1; /* 1==gcc-compiled task, 0==intel */
   unsigned target : 1;
+  unsigned hidden_helper : 1; /* 1 == hidden helper task */
 #if OMPX_TASKGRAPH
   unsigned onced : 1; /* 1==ran once already, 0==never ran, record & replay purposes */
-  unsigned reserved31 : 5; /* reserved for library use */
+  unsigned reserved31 : 4; /* reserved for library use */
 #else
-  unsigned reserved31 : 6; /* reserved for library use */
+  unsigned reserved31 : 5; /* reserved for library use */
 #endif
 #endif
 } kmp_tasking_flags_t;

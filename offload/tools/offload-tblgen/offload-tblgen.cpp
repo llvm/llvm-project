@@ -32,6 +32,7 @@ enum ActionType {
   GenPrintHeader,
   GenExports,
   GenErrcodes,
+  GenInfo,
 };
 
 namespace {
@@ -55,7 +56,8 @@ cl::opt<ActionType> Action(
         clEnumValN(GenExports, "gen-exports",
                    "Generate export file for the Offload library"),
         clEnumValN(GenErrcodes, "gen-errcodes",
-                   "Generate Offload Error Code enum")));
+                   "Generate Offload Error Code enum"),
+        clEnumValN(GenInfo, "gen-info", "Generate Offload Info enum")));
 }
 
 static bool OffloadTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
@@ -86,6 +88,9 @@ static bool OffloadTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     break;
   case GenErrcodes:
     EmitOffloadErrcodes(Records, OS);
+    break;
+  case GenInfo:
+    EmitOffloadInfo(Records, OS);
     break;
   }
 

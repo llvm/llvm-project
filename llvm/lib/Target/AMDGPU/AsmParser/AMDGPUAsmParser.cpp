@@ -9566,13 +9566,13 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
     }
   }
 
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::clamp) && !IsVOP3CvtSrDpp)
+    addOptionalImmOperand(Inst, Operands, OptionalIdx,
+                          AMDGPUOperand::ImmTyClamp);
+
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::byte_sel))
     addOptionalImmOperand(Inst, Operands, OptionalIdx,
                           AMDGPUOperand::ImmTyByteSel);
-
-  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::clamp))
-    addOptionalImmOperand(Inst, Operands, OptionalIdx,
-                          AMDGPUOperand::ImmTyClamp);
 
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::omod))
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOModSI);

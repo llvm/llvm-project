@@ -21,7 +21,6 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectStreamer.h"
@@ -169,13 +168,13 @@ public:
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
-  bool shouldForceRelocation(const MCFixup &, const MCValue &);
-
+  std::optional<bool> evaluateFixup(const MCFragment &, MCFixup &, MCValue &,
+                                    uint64_t &) override;
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   MutableArrayRef<char> Data, uint64_t Value,
                   bool IsResolved) override;
 
-  bool mayNeedRelaxation(const MCInst &Inst,
+  bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override;
 
   bool fixupNeedsRelaxationAdvanced(const MCFixup &, const MCValue &, uint64_t,
@@ -423,14 +422,10 @@ static size_t getSizeForInstFragment(const MCFragment *F) {
   if (!F || !F->hasInstructions())
     return 0;
   // MCEncodedFragmentWithContents being templated makes this tricky.
-  switch (F->getKind()) {
-  default:
+  if (auto *DF = dyn_cast<MCEncodedFragment>(F))
+    return DF->getContents().size();
+  else
     llvm_unreachable("Unknown fragment with instructions!");
-  case MCFragment::FT_Data:
-    return cast<MCDataFragment>(*F).getContents().size();
-  case MCFragment::FT_Relaxable:
-    return cast<MCRelaxableFragment>(*F).getContents().size();
-  }
 }
 
 /// Return true if we can insert NOP or prefixes automatically before the
@@ -640,7 +635,7 @@ MCFixupKindInfo X86AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   // Fixup kinds from .reloc directive are like R_386_NONE/R_X86_64_NONE. They
   // do not require any extra processing.
   if (mc::isRelocation(Kind))
-    return MCAsmBackend::getFixupKindInfo(FK_NONE);
+    return {};
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
@@ -683,6 +678,37 @@ static unsigned getFixupKindSize(unsigned Kind) {
   }
 }
 
+constexpr char GotSymName[] = "_GLOBAL_OFFSET_TABLE_";
+
+// Adjust PC-relative fixup offsets, which are calculated from the start of the
+// next instruction.
+std::optional<bool> X86AsmBackend::evaluateFixup(const MCFragment &,
+                                                 MCFixup &Fixup,
+                                                 MCValue &Target, uint64_t &) {
+  if (Fixup.isPCRel()) {
+    switch (Fixup.getTargetKind()) {
+    case FK_Data_1:
+      Target.setConstant(Target.getConstant() - 1);
+      break;
+    case FK_Data_2:
+      Target.setConstant(Target.getConstant() - 2);
+      break;
+    default: {
+      Target.setConstant(Target.getConstant() - 4);
+      auto *Add = Target.getAddSym();
+      // If this is a pc-relative load off _GLOBAL_OFFSET_TABLE_:
+      // leaq _GLOBAL_OFFSET_TABLE_(%rip), %r15
+      // this needs to be a GOTPC32 relocation.
+      if (Add && Add->getName() == GotSymName)
+        Fixup = MCFixup::create(Fixup.getOffset(), Fixup.getValue(),
+                                X86::reloc_global_offset_table);
+    } break;
+    }
+  }
+  // Use default handling for `Value` and `IsResolved`.
+  return {};
+}
+
 void X86AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                const MCValue &Target,
                                MutableArrayRef<char> Data, uint64_t Value,
@@ -721,13 +747,13 @@ void X86AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
     Data[Fixup.getOffset() + i] = uint8_t(Value >> (i * 8));
 }
 
-bool X86AsmBackend::mayNeedRelaxation(const MCInst &MI,
+bool X86AsmBackend::mayNeedRelaxation(unsigned Opcode,
+                                      ArrayRef<MCOperand> Operands,
                                       const MCSubtargetInfo &STI) const {
-  unsigned Opcode = MI.getOpcode();
   unsigned SkipOperands = X86::isCCMPCC(Opcode) ? 2 : 0;
   return isRelaxableBranch(Opcode) ||
          (X86::getOpcodeForLongImmediateForm(Opcode) != Opcode &&
-          MI.getOperand(MI.getNumOperands() - 1 - SkipOperands).isExpr());
+          Operands[Operands.size() - 1 - SkipOperands].isExpr());
 }
 
 bool X86AsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
@@ -755,15 +781,7 @@ void X86AsmBackend::relaxInstruction(MCInst &Inst,
   // The only relaxations X86 does is from a 1byte pcrel to a 4byte pcrel.
   bool Is16BitMode = STI.hasFeature(X86::Is16Bit);
   unsigned RelaxedOp = getRelaxedOpcode(Inst, Is16BitMode);
-
-  if (RelaxedOp == Inst.getOpcode()) {
-    SmallString<256> Tmp;
-    raw_svector_ostream OS(Tmp);
-    Inst.dump_pretty(OS);
-    OS << "\n";
-    report_fatal_error("unexpected instruction to relax: " + OS.str());
-  }
-
+  assert(RelaxedOp != Inst.getOpcode());
   Inst.setOpcode(RelaxedOp);
 }
 
@@ -776,7 +794,8 @@ bool X86AsmBackend::padInstructionViaPrefix(MCRelaxableFragment &RF,
   // larger value for one of the fixups then can be encoded.  The outer loop
   // will also catch this before moving to the next instruction, but we need to
   // prevent padding this single instruction as well.
-  if (mayNeedRelaxation(RF.getInst(), *RF.getSubtargetInfo()))
+  if (mayNeedRelaxation(RF.getOpcode(), RF.getOperands(),
+                        *RF.getSubtargetInfo()))
     return false;
 
   const unsigned OldSize = RF.getContents().size();
@@ -823,7 +842,8 @@ bool X86AsmBackend::padInstructionViaPrefix(MCRelaxableFragment &RF,
 bool X86AsmBackend::padInstructionViaRelaxation(MCRelaxableFragment &RF,
                                                 MCCodeEmitter &Emitter,
                                                 unsigned &RemainingSize) const {
-  if (!mayNeedRelaxation(RF.getInst(), *RF.getSubtargetInfo()))
+  if (!mayNeedRelaxation(RF.getOpcode(), RF.getOperands(),
+                         *RF.getSubtargetInfo()))
     // TODO: There are lots of other tricks we could apply for increasing
     // encoding size without impacting performance.
     return false;
@@ -932,7 +952,8 @@ bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
         // We don't need to worry about larger positive offsets as none of the
         // possible offsets between this and our align are visible, and the
         // ones afterwards aren't changing.
-        if (mayNeedRelaxation(RF.getInst(), *RF.getSubtargetInfo()))
+        if (mayNeedRelaxation(RF.getOpcode(), RF.getOperands(),
+                              *RF.getSubtargetInfo()))
           break;
       }
       Relaxable.clear();

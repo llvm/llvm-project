@@ -291,13 +291,14 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   opts.AliasAnalysis = opts.OptimizationLevel > 0;
 
-  // -mframe-pointer=none/non-leaf/all option.
+  // -mframe-pointer=none/non-leaf/reserved/all option.
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_mframe_pointer_EQ)) {
     std::optional<llvm::FramePointerKind> val =
         llvm::StringSwitch<std::optional<llvm::FramePointerKind>>(a->getValue())
             .Case("none", llvm::FramePointerKind::None)
             .Case("non-leaf", llvm::FramePointerKind::NonLeaf)
+            .Case("reserved", llvm::FramePointerKind::Reserved)
             .Case("all", llvm::FramePointerKind::All)
             .Default(std::nullopt);
 
@@ -484,6 +485,21 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   }
 
   parseDoConcurrentMapping(opts, args, diags);
+
+  if (const llvm::opt::Arg *arg =
+          args.getLastArg(clang::driver::options::OPT_complex_range_EQ)) {
+    llvm::StringRef argValue = llvm::StringRef(arg->getValue());
+    if (argValue == "full") {
+      opts.setComplexRange(CodeGenOptions::ComplexRangeKind::CX_Full);
+    } else if (argValue == "improved") {
+      opts.setComplexRange(CodeGenOptions::ComplexRangeKind::CX_Improved);
+    } else if (argValue == "basic") {
+      opts.setComplexRange(CodeGenOptions::ComplexRangeKind::CX_Basic);
+    } else {
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << arg->getAsString(args) << arg->getValue();
+    }
+  }
 }
 
 /// Parses all target input arguments and populates the target
@@ -1013,7 +1029,10 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     for (const auto &wArg : wArgs) {
       if (wArg == "error") {
         res.setWarnAsErr(true);
-        // -W(no-)<feature>
+        // -Wfatal-errors
+      } else if (wArg == "fatal-errors") {
+        res.setMaxErrors(1);
+        // -W[no-]<feature>
       } else if (!features.EnableWarning(wArg)) {
         const unsigned diagID = diags.getCustomDiagID(
             clang::DiagnosticsEngine::Error, "Unknown diagnostic option: -W%0");
@@ -1774,6 +1793,7 @@ CompilerInvocation::getSemanticsCtx(
   semanticsContext->set_moduleDirectory(getModuleDir())
       .set_searchDirectories(fortranOptions.searchDirectories)
       .set_intrinsicModuleDirectories(fortranOptions.intrinsicModuleDirectories)
+      .set_maxErrors(getMaxErrors())
       .set_warningsAreErrors(getWarnAsErr())
       .set_moduleFileSuffix(getModuleFileSuffix())
       .set_underscoring(getCodeGenOpts().Underscoring);
@@ -1811,4 +1831,10 @@ void CompilerInvocation::setLoweringOptions() {
       .setNoSignedZeros(langOptions.NoSignedZeros)
       .setAssociativeMath(langOptions.AssociativeMath)
       .setReciprocalMath(langOptions.ReciprocalMath);
+
+  if (codegenOpts.getComplexRange() ==
+          CodeGenOptions::ComplexRangeKind::CX_Improved ||
+      codegenOpts.getComplexRange() ==
+          CodeGenOptions::ComplexRangeKind::CX_Basic)
+    loweringOpts.setComplexDivisionToRuntime(false);
 }

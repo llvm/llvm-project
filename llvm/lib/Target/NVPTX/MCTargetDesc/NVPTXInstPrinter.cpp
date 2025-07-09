@@ -154,73 +154,114 @@ void NVPTXInstPrinter::printCvtMode(const MCInst *MI, int OpNum, raw_ostream &O,
   llvm_unreachable("Invalid conversion modifier");
 }
 
+void NVPTXInstPrinter::printFTZFlag(const MCInst *MI, int OpNum,
+                                    raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  const int Imm = MO.getImm();
+  if (Imm)
+    O << ".ftz";
+}
+
 void NVPTXInstPrinter::printCmpMode(const MCInst *MI, int OpNum, raw_ostream &O,
                                     StringRef Modifier) {
   const MCOperand &MO = MI->getOperand(OpNum);
   int64_t Imm = MO.getImm();
 
-  if (Modifier == "ftz") {
-    // FTZ flag
-    if (Imm & NVPTX::PTXCmpMode::FTZ_FLAG)
-      O << ".ftz";
-    return;
-  } else if (Modifier == "base") {
-    switch (Imm & NVPTX::PTXCmpMode::BASE_MASK) {
+  if (Modifier == "FCmp") {
+    switch (Imm) {
     default:
       return;
     case NVPTX::PTXCmpMode::EQ:
-      O << ".eq";
+      O << "eq";
       return;
     case NVPTX::PTXCmpMode::NE:
-      O << ".ne";
+      O << "ne";
       return;
     case NVPTX::PTXCmpMode::LT:
-      O << ".lt";
+      O << "lt";
       return;
     case NVPTX::PTXCmpMode::LE:
-      O << ".le";
+      O << "le";
       return;
     case NVPTX::PTXCmpMode::GT:
-      O << ".gt";
+      O << "gt";
       return;
     case NVPTX::PTXCmpMode::GE:
-      O << ".ge";
-      return;
-    case NVPTX::PTXCmpMode::LO:
-      O << ".lo";
-      return;
-    case NVPTX::PTXCmpMode::LS:
-      O << ".ls";
-      return;
-    case NVPTX::PTXCmpMode::HI:
-      O << ".hi";
-      return;
-    case NVPTX::PTXCmpMode::HS:
-      O << ".hs";
+      O << "ge";
       return;
     case NVPTX::PTXCmpMode::EQU:
-      O << ".equ";
+      O << "equ";
       return;
     case NVPTX::PTXCmpMode::NEU:
-      O << ".neu";
+      O << "neu";
       return;
     case NVPTX::PTXCmpMode::LTU:
-      O << ".ltu";
+      O << "ltu";
       return;
     case NVPTX::PTXCmpMode::LEU:
-      O << ".leu";
+      O << "leu";
       return;
     case NVPTX::PTXCmpMode::GTU:
-      O << ".gtu";
+      O << "gtu";
       return;
     case NVPTX::PTXCmpMode::GEU:
-      O << ".geu";
+      O << "geu";
       return;
     case NVPTX::PTXCmpMode::NUM:
-      O << ".num";
+      O << "num";
       return;
     case NVPTX::PTXCmpMode::NotANumber:
-      O << ".nan";
+      O << "nan";
+      return;
+    }
+  }
+  if (Modifier == "ICmp") {
+    switch (Imm) {
+    default:
+      llvm_unreachable("Invalid ICmp mode");
+    case NVPTX::PTXCmpMode::EQ:
+      O << "eq";
+      return;
+    case NVPTX::PTXCmpMode::NE:
+      O << "ne";
+      return;
+    case NVPTX::PTXCmpMode::LT:
+    case NVPTX::PTXCmpMode::LTU:
+      O << "lt";
+      return;
+    case NVPTX::PTXCmpMode::LE:
+    case NVPTX::PTXCmpMode::LEU:
+      O << "le";
+      return;
+    case NVPTX::PTXCmpMode::GT:
+    case NVPTX::PTXCmpMode::GTU:
+      O << "gt";
+      return;
+    case NVPTX::PTXCmpMode::GE:
+    case NVPTX::PTXCmpMode::GEU:
+      O << "ge";
+      return;
+    }
+  }
+  if (Modifier == "IType") {
+    switch (Imm) {
+    default:
+      llvm_unreachable("Invalid IType");
+    case NVPTX::PTXCmpMode::EQ:
+    case NVPTX::PTXCmpMode::NE:
+      O << "b";
+      return;
+    case NVPTX::PTXCmpMode::LT:
+    case NVPTX::PTXCmpMode::LE:
+    case NVPTX::PTXCmpMode::GT:
+    case NVPTX::PTXCmpMode::GE:
+      O << "s";
+      return;
+    case NVPTX::PTXCmpMode::LTU:
+    case NVPTX::PTXCmpMode::LEU:
+    case NVPTX::PTXCmpMode::GTU:
+    case NVPTX::PTXCmpMode::GEU:
+      O << "u";
       return;
     }
   }

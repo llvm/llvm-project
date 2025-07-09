@@ -9,11 +9,11 @@
 #ifndef __CLC_GEOMETRIC_CLC_DISTANCE_H__
 #define __CLC_GEOMETRIC_CLC_DISTANCE_H__
 
-#define __CLC_FUNCTION __clc_distance
+#define FUNCTION __clc_distance
 #define __CLC_BODY <clc/geometric/binary_decl.inc>
 
 #include <clc/math/gentype.inc>
 
-#undef __CLC_FUNCTION
+#undef FUNCTION
 
 #endif // __CLC_GEOMETRIC_CLC_DISTANCE_H__

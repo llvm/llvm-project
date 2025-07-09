@@ -906,7 +906,7 @@ def ProcessorFeatures {
   list<SubtargetFeature> MONAKA = [HasV9_3aOps, FeaturePerfMon, FeatureCCIDX,
                                    FeatureFPAC, FeatureFP16FML, FeatureRandGen,
                                    FeatureSSBS, FeatureLS64, FeatureCLRBHB,
-                                   FeatureSPECRES2, FeatureSVEAES, FeatureSVE2SM4,
+                                   FeatureSPECRES2, FeatureSVEAES, FeatureSVESM4,
                                    FeatureSVESHA3, FeatureSVE2, FeatureSVEBitPerm, FeatureETE,
                                    FeatureMEC, FeatureFAMINMAX, FeatureFP8DOT2, FeatureFP8DOT4,
                                    FeatureFP8FMA, FeatureLUT];
@@ -921,7 +921,7 @@ def ProcessorFeatures {
                                     FeatureMTE, FeaturePerfMon, FeatureRandGen,
                                     FeatureSPE, FeatureSPE_EEF, FeatureSSBS,
                                     FeatureSVEBitPerm, FeatureSVESHA3,
-                                    FeatureSVE2SM4, FeatureSVEAES];
+                                    FeatureSVESM4, FeatureSVEAES, FeatureSVE2];
   list<SubtargetFeature> AppleA7  = [HasV8_0aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                      FeatureNEON,FeaturePerfMon];
   list<SubtargetFeature> AppleA10 = [HasV8_0aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
@@ -1117,7 +1117,8 @@ def ProcessorFeatures {
                                      FeatureDotProd, FeatureFPARMv8, FeatureMatMulInt8,
                                      FeatureSSBS, FeatureCCIDX,
                                      FeatureJS, FeatureLSE, FeatureRAS, FeatureRCPC, FeatureRDM];
-  list<SubtargetFeature> Grace = !listconcat(NeoverseV2, [FeatureSVE2SM4, FeatureSVEAES, FeatureSVESHA3]);
+  list<SubtargetFeature> GB10 = !listconcat(X925, [FeatureSVEAES, FeatureSVESHA3, FeatureSVESM4]);
+  list<SubtargetFeature> Grace = !listconcat(NeoverseV2, [FeatureSVESM4, FeatureSVEAES, FeatureSVESHA3]);
 
   // ETE and TRBE are future architecture extensions. We temporarily enable them
   // by default for users targeting generic AArch64. The extensions do not
@@ -1202,6 +1203,8 @@ def : ProcessorModel<"cortex-x3", NeoverseV2Model, ProcessorFeatures.X3,
 def : ProcessorModel<"cortex-x4", NeoverseV2Model, ProcessorFeatures.X4,
                      [TuneX4]>;
 def : ProcessorModel<"cortex-x925", NeoverseV2Model, ProcessorFeatures.X925,
+                     [TuneX925]>;
+def : ProcessorModel<"gb10", NeoverseV2Model, ProcessorFeatures.GB10,
                      [TuneX925]>;
 def : ProcessorModel<"grace", NeoverseV2Model, ProcessorFeatures.Grace,
                      [TuneNeoverseV2]>;

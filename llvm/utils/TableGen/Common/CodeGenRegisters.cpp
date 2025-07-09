@@ -200,62 +200,6 @@ void CodeGenRegister::buildObjectGraph(CodeGenRegBank &RegBank) {
   }
 }
 
-namespace {
-
-// Iterate over all register units in a set of registers.
-class RegUnitIterator {
-  CodeGenRegister::Vec::const_iterator RegI, RegE;
-  CodeGenRegister::RegUnitList::iterator UnitI, UnitE;
-  static CodeGenRegister::RegUnitList Sentinel;
-
-public:
-  RegUnitIterator(const CodeGenRegister::Vec &Regs)
-      : RegI(Regs.begin()), RegE(Regs.end()) {
-
-    if (RegI == RegE) {
-      UnitI = Sentinel.end();
-      UnitE = Sentinel.end();
-    } else {
-      UnitI = (*RegI)->getRegUnits().begin();
-      UnitE = (*RegI)->getRegUnits().end();
-      advance();
-    }
-  }
-
-  bool isValid() const { return UnitI != UnitE; }
-
-  unsigned operator*() const {
-    assert(isValid());
-    return *UnitI;
-  }
-
-  const CodeGenRegister *getReg() const {
-    assert(isValid());
-    return *RegI;
-  }
-
-  /// Preincrement.  Move to the next unit.
-  void operator++() {
-    assert(isValid() && "Cannot advance beyond the last operand");
-    ++UnitI;
-    advance();
-  }
-
-protected:
-  void advance() {
-    while (UnitI == UnitE) {
-      if (++RegI == RegE)
-        break;
-      UnitI = (*RegI)->getRegUnits().begin();
-      UnitE = (*RegI)->getRegUnits().end();
-    }
-  }
-};
-
-CodeGenRegister::RegUnitList RegUnitIterator::Sentinel;
-
-} // end anonymous namespace
-
 // Inherit register units from subregisters.
 // Return true if the RegUnits changed.
 bool CodeGenRegister::inheritRegUnits(CodeGenRegBank &RegBank) {
@@ -1131,10 +1075,12 @@ void CodeGenRegisterClass::getSuperRegClasses(const CodeGenSubRegIndex *SubIdx,
 void CodeGenRegisterClass::buildRegUnitSet(
     const CodeGenRegBank &RegBank, std::vector<unsigned> &RegUnits) const {
   std::vector<unsigned> TmpUnits;
-  for (RegUnitIterator UnitI(Members); UnitI.isValid(); ++UnitI) {
-    const RegUnit &RU = RegBank.getRegUnit(*UnitI);
-    if (!RU.Artificial)
-      TmpUnits.push_back(*UnitI);
+  for (const CodeGenRegister *Reg : Members) {
+    for (unsigned UnitI : Reg->getRegUnits()) {
+      const RegUnit &RU = RegBank.getRegUnit(UnitI);
+      if (!RU.Artificial)
+        TmpUnits.push_back(UnitI);
+    }
   }
   llvm::sort(TmpUnits);
   std::unique_copy(TmpUnits.begin(), TmpUnits.end(),

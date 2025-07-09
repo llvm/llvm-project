@@ -140,7 +140,7 @@ RT_API_ATTRS void Component::CreatePointerDescriptor(Descriptor &descriptor,
     const SubscriptValue *subscripts) const {
   RUNTIME_CHECK(terminator, genre_ == Genre::Data);
   EstablishDescriptor(descriptor, container, terminator);
-  std::size_t offset{offset_};
+  std::size_t offset{static_cast<std::size_t>(offset_)};
   if (subscripts) {
     offset += container.SubscriptsToByteOffset(subscripts);
   }

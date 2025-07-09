@@ -175,9 +175,9 @@ for.j:
 
 for.k:
   %k = phi i64 [ 0, %for.j ], [ %k.inc, %for.k.inc ]
-  %idx0 = getelementptr inbounds [256 x [256 x [256 x i64]]], ptr %A, i64 %i, i64 %j, i64 %k
+  %idx0 = getelementptr inbounds [256 x [256 x [256 x i64]]], ptr %A, i64 0, i64 %i, i64 %j, i64 %k
   store i32 1, ptr %idx0
-  %idx1 = getelementptr inbounds [256 x [256 x [256 x i32]]], ptr %A, i64 %i, i64 %j, i64 %k
+  %idx1 = getelementptr inbounds [256 x [256 x [256 x i32]]], ptr %A, i64 0, i64 %i, i64 %j, i64 %k
   store i32 1, ptr %idx1
   br label %for.k.inc
 

@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-// On Windows Clang bugs out when both __declspec and __attribute__ are present,
-// the processing goes awry preventing the definition of the types.
-// XFAIL: msvc
-
 // UNSUPPORTED: no-threads
-// REQUIRES: thread-safety
 
 // <mutex>
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS
+// GCC doesn't have thread safety attributes
+// UNSUPPORTED: gcc
+
+// ADDITIONAL_COMPILE_FLAGS: -Wthread-safety
+
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 #include <mutex>
 

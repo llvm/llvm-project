@@ -12,6 +12,9 @@
 #ifndef LLVM_ABI_BREAKING_CHECKS_H
 #define LLVM_ABI_BREAKING_CHECKS_H
 
+// Compiler.h is required for LLVM_ABI definition.
+#include "llvm/Support/Compiler.h"
+
 /* Define to enable checks that alter the LLVM C++ ABI */
 #cmakedefine01 LLVM_ENABLE_ABI_BREAKING_CHECKS
 
@@ -43,12 +46,12 @@
 #endif
 namespace llvm {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-extern int EnableABIBreakingChecks;
+LLVM_ABI extern int EnableABIBreakingChecks;
 LLVM_HIDDEN_VISIBILITY
 __attribute__((weak)) int *VerifyEnableABIBreakingChecks =
     &EnableABIBreakingChecks;
 #else
-extern int DisableABIBreakingChecks;
+LLVM_ABI extern int DisableABIBreakingChecks;
 LLVM_HIDDEN_VISIBILITY
 __attribute__((weak)) int *VerifyDisableABIBreakingChecks =
     &DisableABIBreakingChecks;

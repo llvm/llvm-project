@@ -22,7 +22,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MatrixBuilder.h"
-#include "llvm/IR/Operator.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;

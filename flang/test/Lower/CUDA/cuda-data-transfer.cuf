@@ -403,3 +403,19 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPsub20()
 ! CHECK-NOT: cuf.data_transfer
 ! CHECK: hlfir.assign
+
+subroutine sub21()
+  real, allocatable,device:: a(:,:), b(:,:)
+  real:: s
+  integer:: i,j,N=16
+  allocate(a(N,N),b(N,N))
+  do concurrent(i=1:N, j=1:N) reduce(+:s)
+    b(i,j)=a(i,j)**2
+    s=s+b(i,j)
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub21()
+! CHECK: fir.do_concurrent.loop
+! CHECK-NOT: cuf.data_transfer
+! CHECK: hlfir.assign

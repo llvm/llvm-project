@@ -1472,8 +1472,8 @@ bool Fortran::lower::definedInCommonBlock(const semantics::Symbol &sym) {
 
 /// Is the symbol `sym` a global?
 bool Fortran::lower::symbolIsGlobal(const semantics::Symbol &sym) {
-  return semantics::IsSaved(sym) || lower::definedInCommonBlock(sym) ||
-         semantics::IsNamedConstant(sym);
+  return (semantics::IsSaved(sym) && semantics::CanCUDASymbolBeGlobal(sym)) ||
+         lower::definedInCommonBlock(sym) || semantics::IsNamedConstant(sym);
 }
 
 namespace {

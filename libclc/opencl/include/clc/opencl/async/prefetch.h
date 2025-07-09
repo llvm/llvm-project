@@ -6,8 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_ASYNC_PREFETCH_H__
+#define __CLC_OPENCL_ASYNC_PREFETCH_H__
+
 #define __CLC_BODY <clc/opencl/async/prefetch.inc>
 #include <clc/integer/gentype.inc>
 
 #define __CLC_BODY <clc/opencl/async/prefetch.inc>
 #include <clc/math/gentype.inc>
+
+#endif // __CLC_OPENCL_ASYNC_PREFETCH_H__

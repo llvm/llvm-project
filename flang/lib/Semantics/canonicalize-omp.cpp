@@ -151,11 +151,13 @@ private:
               std::move(*doCons);
           nextIt = block.erase(nextIt);
           // try to match OmpEndLoopDirective
-          if (auto *endDir{
-                  GetConstructIf<parser::OmpEndLoopDirective>(*nextIt)}) {
-            std::get<std::optional<parser::OmpEndLoopDirective>>(x.t) =
-                std::move(*endDir);
-            nextIt = block.erase(nextIt);
+          if (nextIt != block.end()) {
+            if (auto *endDir{
+                    GetConstructIf<parser::OmpEndLoopDirective>(*nextIt)}) {
+              std::get<std::optional<parser::OmpEndLoopDirective>>(x.t) =
+                  std::move(*endDir);
+              nextIt = block.erase(nextIt);
+            }
           }
         } else {
           messages_.Say(dir.source,

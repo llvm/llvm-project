@@ -6,5 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_MATH_NAN_H__
+#define __CLC_OPENCL_MATH_NAN_H__
+
 #define __CLC_BODY <clc/opencl/math/nan.inc>
 #include <clc/math/gentype.inc>
+
+#endif // __CLC_OPENCL_MATH_NAN_H__

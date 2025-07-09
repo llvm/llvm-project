@@ -475,6 +475,15 @@ HANDLE_TARGET_OPCODE(G_ANYEXT)
 /// elements of the vector.
 HANDLE_TARGET_OPCODE(G_TRUNC)
 
+/// Generic instruction to truncate a signed operand to a signed result with saturation.
+HANDLE_TARGET_OPCODE(G_TRUNC_SSAT_S)
+
+/// Generic instruction to truncate a signed operand to an unsigned result with saturation.
+HANDLE_TARGET_OPCODE(G_TRUNC_SSAT_U)
+
+/// Generic instruction to truncate a unsigned operand to an unsigned result with saturation.
+HANDLE_TARGET_OPCODE(G_TRUNC_USAT_U)
+
 /// Generic integer constant.
 HANDLE_TARGET_OPCODE(G_CONSTANT)
 
