@@ -450,7 +450,7 @@ define i256 @callee_large_scalar_ret() nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    li a1, -1
 ; RV64I-NEXT:    lui a2, 1018435
-; RV64I-NEXT:    addiw a2, a2, 747
+; RV64I-NEXT:    addi a2, a2, 747
 ; RV64I-NEXT:    sd a2, 0(a0)
 ; RV64I-NEXT:    sd a1, 8(a0)
 ; RV64I-NEXT:    sd a1, 16(a0)

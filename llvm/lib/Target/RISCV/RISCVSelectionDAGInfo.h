@@ -31,6 +31,9 @@ public:
 
   ~RISCVSelectionDAGInfo() override;
 
+  void verifyTargetNode(const SelectionDAG &DAG,
+                        const SDNode *N) const override;
+
   bool hasPassthruOp(unsigned Opcode) const {
     return GenNodeInfo.getDesc(Opcode).TSFlags & RISCVISD::HasPassthruOpMask;
   }

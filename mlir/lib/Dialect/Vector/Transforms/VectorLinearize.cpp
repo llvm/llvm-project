@@ -445,16 +445,36 @@ struct LinearizeVectorExtract final
   }
 };
 
-/// This pattern converts the InsertOp to a ShuffleOp that works on a
-/// linearized vector.
-/// Following,
-///   vector.insert %source %destination [ position ]
-/// is converted to :
-///   %source_1d = vector.shape_cast %source
-///   %destination_1d = vector.shape_cast %destination
-///   %out_1d = vector.shuffle %destination_1d, %source_1d [ shuffle_indices_1d
-///   ] %out_nd = vector.shape_cast %out_1d
-/// `shuffle_indices_1d` is computed using the position of the original insert.
+/// This pattern linearizes `vector.insert` operations. It generates a 1-D
+/// version of the `vector.insert` operation when inserting a scalar into a
+/// vector. It generates a 1-D `vector.shuffle` operation when inserting a
+/// vector into another vector.
+///
+/// Example #1:
+///
+///     %0 = vector.insert %source, %destination[0] :
+///       vector<2x4xf32> into vector<2x2x4xf32>
+///
+///   is converted to:
+///
+///     %0 = vector.shape_cast %source : vector<2x4xf32> to vector<8xf32>
+///     %1 = vector.shape_cast %destination :
+///            vector<2x2x4xf32> to vector<16xf32>
+///     %2 = vector.shuffle %1, %0 [16, 17, 18, 19, 20, 21, 22, 23
+///                                  8, 9, 10, 11, 12, 13, 14, 15] :
+///            vector<16xf32>, vector<8xf32>
+///     %3 = vector.shape_cast %2 : vector<16xf32> to vector<2x2x4xf32>
+///
+/// Example #2:
+///
+///     %0 = vector.insert %source, %destination[1, 2]: f32 into vector<2x4xf32>
+///
+///   is converted to:
+///
+///     %0 = vector.shape_cast %destination : vector<2x4xf32> to vector<8xf32>
+///     %1 = vector.insert %source, %0[6]: f32 into vector<8xf32>
+///     %2 = vector.shape_cast %1 : vector<8xf32> to vector<2x4xf32>
+///
 struct LinearizeVectorInsert final
     : public OpConversionPattern<vector::InsertOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -468,25 +488,19 @@ struct LinearizeVectorInsert final
         insertOp.getDestVectorType());
     assert(dstTy && "vector type destination expected.");
 
-    // dynamic position is not supported
+    // Dynamic position is not supported.
     if (insertOp.hasDynamicPosition())
       return rewriter.notifyMatchFailure(insertOp,
                                          "dynamic position is not supported.");
     auto srcTy = insertOp.getValueToStoreType();
     auto srcAsVec = dyn_cast<VectorType>(srcTy);
-    uint64_t srcSize = 0;
-    if (srcAsVec) {
-      srcSize = srcAsVec.getNumElements();
-    } else {
-      return rewriter.notifyMatchFailure(insertOp,
-                                         "scalars are not supported.");
-    }
+    uint64_t srcSize = srcAsVec ? srcAsVec.getNumElements() : 1;
 
     auto dstShape = insertOp.getDestVectorType().getShape();
     const auto dstSize = insertOp.getDestVectorType().getNumElements();
     auto dstSizeForOffsets = dstSize;
 
-    // compute linearized offset
+    // Compute linearized offset.
     int64_t linearizedOffset = 0;
     auto offsetsNd = insertOp.getStaticPosition();
     for (auto [dim, offset] : llvm::enumerate(offsetsNd)) {
@@ -494,22 +508,35 @@ struct LinearizeVectorInsert final
       linearizedOffset += offset * dstSizeForOffsets;
     }
 
+    Location loc = insertOp.getLoc();
+    Value valueToStore = adaptor.getValueToStore();
+
+    if (!isa<VectorType>(valueToStore.getType())) {
+      // Scalar case: generate a 1-D insert.
+      Value result = rewriter.createOrFold<vector::InsertOp>(
+          loc, valueToStore, adaptor.getDest(), linearizedOffset);
+      rewriter.replaceOp(insertOp, result);
+      return success();
+    }
+
+    // Vector case: generate a shuffle.
     llvm::SmallVector<int64_t, 2> indices(dstSize);
     auto *origValsUntil = indices.begin();
     std::advance(origValsUntil, linearizedOffset);
-    std::iota(indices.begin(), origValsUntil,
-              0); // original values that remain [0, offset)
+
+    // Original values that remain [0, offset).
+    std::iota(indices.begin(), origValsUntil, 0);
     auto *newValsUntil = origValsUntil;
     std::advance(newValsUntil, srcSize);
-    std::iota(origValsUntil, newValsUntil,
-              dstSize); // new values [offset, offset+srcNumElements)
-    std::iota(newValsUntil, indices.end(),
-              linearizedOffset + srcSize); // the rest of original values
-                                           // [offset+srcNumElements, end)
+    // New values [offset, offset+srcNumElements).
+    std::iota(origValsUntil, newValsUntil, dstSize);
+    // The rest of original values [offset+srcNumElements, end);
+    std::iota(newValsUntil, indices.end(), linearizedOffset + srcSize);
 
-    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
-        insertOp, dstTy, adaptor.getDest(), adaptor.getValueToStore(), indices);
+    Value result = rewriter.createOrFold<vector::ShuffleOp>(
+        loc, dstTy, adaptor.getDest(), valueToStore, indices);
 
+    rewriter.replaceOp(insertOp, result);
     return success();
   }
 };

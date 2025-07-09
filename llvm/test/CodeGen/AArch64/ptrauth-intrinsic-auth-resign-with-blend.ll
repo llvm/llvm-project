@@ -165,10 +165,10 @@ define i64 @test_resign_blend_and_const(i64 %arg, i64 %arg1) {
 ; CHECKED-NEXT:    mov x17, x16
 ; CHECKED-NEXT:    xpacd x17
 ; CHECKED-NEXT:    cmp x16, x17
-; CHECKED-NEXT:    b.eq [[L]]auth_success_[[N2:[0-9]+]]
+; CHECKED-NEXT:    b.eq [[L]]auth_success_1
 ; CHECKED-NEXT:    mov x16, x17
 ; CHECKED-NEXT:    b [[L]]resign_end_1
-; CHECKED-NEXT:  Lauth_success_[[N2]]:
+; CHECKED-NEXT:  Lauth_success_1:
 ; CHECKED-NEXT:    mov x17, #56789
 ; CHECKED-NEXT:    pacdb x16, x17
 ; CHECKED-NEXT:  Lresign_end_1:

@@ -53,8 +53,7 @@ public:
   const_iterator end() const { return Vector.end(); }
 
   ValueT &operator[](const KeyT &Arg) {
-    std::pair<typename MapTy::iterator, bool> Pair =
-        Map.insert(std::make_pair(Arg, size_t(0)));
+    std::pair<typename MapTy::iterator, bool> Pair = Map.try_emplace(Arg);
     if (Pair.second) {
       size_t Num = Vector.size();
       Pair.first->second = Num;

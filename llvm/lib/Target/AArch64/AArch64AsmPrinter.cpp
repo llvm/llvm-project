@@ -19,7 +19,7 @@
 #include "AArch64TargetObjectFile.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64InstPrinter.h"
-#include "MCTargetDesc/AArch64MCExpr.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "MCTargetDesc/AArch64TargetStreamer.h"
 #include "TargetInfo/AArch64TargetInfo.h"
@@ -60,6 +60,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -176,7 +177,7 @@ public:
                              const MachineOperand *AUTAddrDisc,
                              Register Scratch,
                              std::optional<AArch64PACKey::ID> PACKey,
-                             uint64_t PACDisc, unsigned PACAddrDisc, Value *DS);
+                             uint64_t PACDisc, Register PACAddrDisc, Value *DS);
 
   // Emit R_AARCH64_INST32, the deactivation symbol relocation. Returns true if
   // no instruction should be emitted because the deactivation symbol is defined
@@ -484,7 +485,7 @@ void AArch64AsmPrinter::emitAttributes(unsigned Flags,
   PAuthABIVersion = (uint64_t(-1) == PAuthABIVersion) ? 0 : PAuthABIVersion;
 
   if (PAuthABIPlatform || PAuthABIVersion) {
-    TS->emitAtributesSubsection(
+    TS->emitAttributesSubsection(
         AArch64BuildAttributes::getVendorName(
             AArch64BuildAttributes::AEABI_PAUTHABI),
         AArch64BuildAttributes::SubsectionOptional::REQUIRED,
@@ -507,7 +508,7 @@ void AArch64AsmPrinter::emitAttributes(unsigned Flags,
       (Flags & AArch64BuildAttributes::Feature_GCS_Flag) ? 1 : 0;
 
   if (BTIValue || PACValue || GCSValue) {
-    TS->emitAtributesSubsection(
+    TS->emitAttributesSubsection(
         AArch64BuildAttributes::getVendorName(
             AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
         AArch64BuildAttributes::SubsectionOptional::OPTIONAL,
@@ -926,15 +927,15 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
       // have a chance to save them.
       EmitToStreamer(MCInstBuilder(AArch64::ADRP)
                          .addReg(AArch64::X16)
-                         .addExpr(AArch64MCExpr::create(
-                             HwasanTagMismatchRef, AArch64MCExpr::VK_GOT_PAGE,
-                             OutContext)));
+                         .addExpr(MCSpecifierExpr::create(HwasanTagMismatchRef,
+                                                          AArch64::S_GOT_PAGE,
+                                                          OutContext)));
       EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
                          .addReg(AArch64::X16)
                          .addReg(AArch64::X16)
-                         .addExpr(AArch64MCExpr::create(
-                             HwasanTagMismatchRef, AArch64MCExpr::VK_GOT_LO12,
-                             OutContext)));
+                         .addExpr(MCSpecifierExpr::create(HwasanTagMismatchRef,
+                                                          AArch64::S_GOT_LO12,
+                                                          OutContext)));
       EmitToStreamer(MCInstBuilder(AArch64::BR).addReg(AArch64::X16));
     }
   }
@@ -1883,6 +1884,8 @@ Register AArch64AsmPrinter::emitPtrauthDiscriminator(uint16_t Disc,
                                                      Register AddrDisc,
                                                      Register ScratchReg,
                                                      bool MayUseAddrAsScratch) {
+  assert(ScratchReg == AArch64::X16 || ScratchReg == AArch64::X17 ||
+         !STI->isX16X17Safer());
   // So far we've used NoRegister in pseudos.  Now we need real encodings.
   if (AddrDisc == AArch64::NoRegister)
     AddrDisc = AArch64::XZR;
@@ -2104,7 +2107,7 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
     Register AUTVal, AArch64PACKey::ID AUTKey, uint64_t AUTDisc,
     const MachineOperand *AUTAddrDisc, Register Scratch,
     std::optional<AArch64PACKey::ID> PACKey, uint64_t PACDisc,
-    unsigned PACAddrDisc, Value *DS) {
+    Register PACAddrDisc, Value *DS) {
   const bool IsAUTPAC = PACKey.has_value();
 
   // We expand AUT/AUTPAC into a sequence of the form
@@ -2144,7 +2147,7 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
     break;
   }
 
-  // Compute aut discriminator into x17
+  // Compute aut discriminator
   assert(isUInt<16>(AUTDisc));
   Register AUTDiscReg = emitPtrauthDiscriminator(
       AUTDisc, AUTAddrDisc->getReg(), Scratch, AUTAddrDisc->isKill());
@@ -2184,7 +2187,7 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
   if (!IsAUTPAC)
     return;
 
-  // Compute pac discriminator into x17
+  // Compute pac discriminator
   assert(isUInt<16>(PACDisc));
   Register PACDiscReg =
       emitPtrauthDiscriminator(PACDisc, PACAddrDisc, Scratch);
@@ -2266,15 +2269,15 @@ static void emitAddress(MCStreamer &Streamer, MCRegister Reg,
     Streamer.emitInstruction(
         MCInstBuilder(AArch64::ADRP)
             .addReg(Reg)
-            .addExpr(AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS_PAGE,
-                                           Streamer.getContext())),
+            .addExpr(MCSpecifierExpr::create(Expr, AArch64::S_ABS_PAGE,
+                                             Streamer.getContext())),
         STI);
     Streamer.emitInstruction(
         MCInstBuilder(AArch64::ADDXri)
             .addReg(Reg)
             .addReg(Reg)
-            .addExpr(AArch64MCExpr::create(Expr, AArch64MCExpr::VK_LO12,
-                                           Streamer.getContext()))
+            .addExpr(MCSpecifierExpr::create(Expr, AArch64::S_LO12,
+                                             Streamer.getContext()))
             .addImm(0),
         STI);
   } else {
@@ -2282,15 +2285,15 @@ static void emitAddress(MCStreamer &Streamer, MCRegister Reg,
     Streamer.emitInstruction(
         MCInstBuilder(AArch64::ADRP)
             .addReg(Reg)
-            .addExpr(AArch64MCExpr::create(SymRef, AArch64MCExpr::VK_GOT_PAGE,
-                                           Streamer.getContext())),
+            .addExpr(MCSpecifierExpr::create(SymRef, AArch64::S_GOT_PAGE,
+                                             Streamer.getContext())),
         STI);
     Streamer.emitInstruction(
         MCInstBuilder(AArch64::LDRXui)
             .addReg(Reg)
             .addReg(Reg)
-            .addExpr(AArch64MCExpr::create(SymRef, AArch64MCExpr::VK_GOT_LO12,
-                                           Streamer.getContext())),
+            .addExpr(MCSpecifierExpr::create(SymRef, AArch64::S_GOT_LO12,
+                                             Streamer.getContext())),
         STI);
     if (Val.getConstant())
       Streamer.emitInstruction(MCInstBuilder(AArch64::ADDXri)
@@ -2406,7 +2409,7 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
                                *STI);
   OutStreamer->popSection();
 
-  return MCSymbolRefExpr::create(IRelativeSym, AArch64MCExpr::VK_FUNCINIT,
+  return MCSpecifierExpr::create(IRelativeSym, AArch64::S_FUNCINIT,
                                  OutStreamer->getContext());
 }
 
@@ -3497,6 +3500,32 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
                                      -MI->getOperand(2).getImm());
     return;
 
+  case AArch64::SEH_AllocZ:
+    assert(MI->getOperand(0).getImm() >= 0 &&
+           "AllocZ SEH opcode offset must be non-negative");
+    assert(MI->getOperand(0).getImm() <= 255 &&
+           "AllocZ SEH opcode offset must fit into 8 bits");
+    TS->emitARM64WinCFIAllocZ(MI->getOperand(0).getImm());
+    return;
+
+  case AArch64::SEH_SaveZReg:
+    assert(MI->getOperand(1).getImm() >= 0 &&
+           "SaveZReg SEH opcode offset must be non-negative");
+    assert(MI->getOperand(1).getImm() <= 255 &&
+           "SaveZReg SEH opcode offset must fit into 8 bits");
+    TS->emitARM64WinCFISaveZReg(MI->getOperand(0).getImm(),
+                                MI->getOperand(1).getImm());
+    return;
+
+  case AArch64::SEH_SavePReg:
+    assert(MI->getOperand(1).getImm() >= 0 &&
+           "SavePReg SEH opcode offset must be non-negative");
+    assert(MI->getOperand(1).getImm() <= 255 &&
+           "SavePReg SEH opcode offset must fit into 8 bits");
+    TS->emitARM64WinCFISavePReg(MI->getOperand(0).getImm(),
+                                MI->getOperand(1).getImm());
+    return;
+
   case AArch64::BLR:
   case AArch64::BR: {
     recordIfImportCall(MI);
@@ -3729,10 +3758,11 @@ const MCExpr *AArch64AsmPrinter::lowerConstant(const Constant *CV,
 char AArch64AsmPrinter::ID = 0;
 
 INITIALIZE_PASS(AArch64AsmPrinter, "aarch64-asm-printer",
-                "AArch64 Assmebly Printer", false, false)
+                "AArch64 Assembly Printer", false, false)
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64AsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeAArch64AsmPrinter() {
   RegisterAsmPrinter<AArch64AsmPrinter> X(getTheAArch64leTarget());
   RegisterAsmPrinter<AArch64AsmPrinter> Y(getTheAArch64beTarget());
   RegisterAsmPrinter<AArch64AsmPrinter> Z(getTheARM64Target());

@@ -39,7 +39,7 @@ TEST_F(LlvmLibcAtanTest, InDoubleRange) {
       double x = FPBits(v).get_val();
       if (FPBits(v).is_nan() || FPBits(v).is_inf())
         continue;
-      LIBC_NAMESPACE::libc_errno = 0;
+      libc_errno = 0;
       double result = LIBC_NAMESPACE::atan(x);
       ++cc;
       if (FPBits(result).is_nan() || FPBits(result).is_inf())
