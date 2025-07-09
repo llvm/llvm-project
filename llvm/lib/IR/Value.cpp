@@ -957,30 +957,27 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
 
 Align Value::getPointerAlignment(const DataLayout &DL) const {
   assert(getType()->isPointerTy() && "must be pointer");
-  if (auto *GO = dyn_cast<GlobalObject>(this)) {
-    if (isa<Function>(GO)) {
-      Align FunctionPtrAlign = DL.getFunctionPtrAlign().valueOrOne();
-      switch (DL.getFunctionPtrAlignType()) {
-      case DataLayout::FunctionPtrAlignType::Independent:
-        return FunctionPtrAlign;
-      case DataLayout::FunctionPtrAlignType::MultipleOfFunctionAlign:
-        return std::max(FunctionPtrAlign, GO->getAlign().valueOrOne());
-      }
-      llvm_unreachable("Unhandled FunctionPtrAlignType");
+  if (const Function *F = dyn_cast<Function>(this)) {
+    Align FunctionPtrAlign = DL.getFunctionPtrAlign().valueOrOne();
+    switch (DL.getFunctionPtrAlignType()) {
+    case DataLayout::FunctionPtrAlignType::Independent:
+      return FunctionPtrAlign;
+    case DataLayout::FunctionPtrAlignType::MultipleOfFunctionAlign:
+      return std::max(FunctionPtrAlign, F->getAlign().valueOrOne());
     }
-    const MaybeAlign Alignment(GO->getAlign());
+    llvm_unreachable("Unhandled FunctionPtrAlignType");
+  } else if (auto *GVar = dyn_cast<GlobalVariable>(this)) {
+    const MaybeAlign Alignment(GVar->getAlign());
     if (!Alignment) {
-      if (auto *GVar = dyn_cast<GlobalVariable>(GO)) {
-        Type *ObjectType = GVar->getValueType();
-        if (ObjectType->isSized()) {
-          // If the object is defined in the current Module, we'll be giving
-          // it the preferred alignment. Otherwise, we have to assume that it
-          // may only have the minimum ABI alignment.
-          if (GVar->isStrongDefinitionForLinker())
-            return DL.getPreferredAlign(GVar);
-          else
-            return DL.getABITypeAlign(ObjectType);
-        }
+      Type *ObjectType = GVar->getValueType();
+      if (ObjectType->isSized()) {
+        // If the object is defined in the current Module, we'll be giving
+        // it the preferred alignment. Otherwise, we have to assume that it
+        // may only have the minimum ABI alignment.
+        if (GVar->isStrongDefinitionForLinker())
+          return DL.getPreferredAlign(GVar);
+        else
+          return DL.getABITypeAlign(ObjectType);
       }
     }
     return Alignment.valueOrOne();

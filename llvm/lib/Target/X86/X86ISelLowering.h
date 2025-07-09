@@ -1467,8 +1467,9 @@ namespace llvm {
     /// from i32 to i16.
     bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const override;
 
-    bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
-                                              EVT VT) const override;
+    bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
+                                              unsigned SelectOpcode, SDValue X,
+                                              SDValue Y) const override;
 
     /// Given an intrinsic, checks if on the target the intrinsic will need to map
     /// to a MemIntrinsicNode (touches memory). If this is the case, it returns

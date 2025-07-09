@@ -16,7 +16,6 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/DWARF.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/STLExtras.h"
@@ -27,7 +26,6 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -950,7 +948,7 @@ static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
     } else if (ctx.arg.emachine == EM_AARCH64 &&
                type == GNU_PROPERTY_AARCH64_FEATURE_PAUTH) {
       ArrayRef<uint8_t> contents = data ? *data : desc;
-      if (!f.aarch64PauthAbiCoreInfo.empty()) {
+      if (f.aarch64PauthAbiCoreInfo) {
         return void(
             err(contents.data())
             << "multiple GNU_PROPERTY_AARCH64_FEATURE_PAUTH entries are "
@@ -961,7 +959,9 @@ static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
                        "is invalid: expected 16 bytes, but got "
                     << size);
       }
-      f.aarch64PauthAbiCoreInfo = desc;
+      f.aarch64PauthAbiCoreInfo = {
+          support::endian::read64<ELFT::Endianness>(&desc[0]),
+          support::endian::read64<ELFT::Endianness>(&desc[8])};
     }
 
     // Padding is present in the note descriptor, if necessary.
@@ -970,7 +970,7 @@ static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
 }
 // Read the following info from the .note.gnu.property section and write it to
 // the corresponding fields in `ObjFile`:
-// - Feature flags (32 bits) representing x86 or AArch64 features for
+// - Feature flags (32 bits) representing x86, AArch64 or RISC-V features for
 //   hardware-assisted call flow control;
 // - AArch64 PAuth ABI core info (16 bytes).
 template <class ELFT>
@@ -978,6 +978,22 @@ static void readGnuProperty(Ctx &ctx, const InputSection &sec,
                             ObjFile<ELFT> &f) {
   using Elf_Nhdr = typename ELFT::Nhdr;
   using Elf_Note = typename ELFT::Note;
+
+  uint32_t featureAndType;
+  switch (ctx.arg.emachine) {
+  case EM_386:
+  case EM_X86_64:
+    featureAndType = GNU_PROPERTY_X86_FEATURE_1_AND;
+    break;
+  case EM_AARCH64:
+    featureAndType = GNU_PROPERTY_AARCH64_FEATURE_1_AND;
+    break;
+  case EM_RISCV:
+    featureAndType = GNU_PROPERTY_RISCV_FEATURE_1_AND;
+    break;
+  default:
+    return;
+  }
 
   ArrayRef<uint8_t> data = sec.content();
   auto err = [&](const uint8_t *place) -> ELFSyncStream {
@@ -998,10 +1014,6 @@ static void readGnuProperty(Ctx &ctx, const InputSection &sec,
       data = data.slice(nhdr->getSize(sec.addralign));
       continue;
     }
-
-    uint32_t featureAndType = ctx.arg.emachine == EM_AARCH64
-                                  ? GNU_PROPERTY_AARCH64_FEATURE_1_AND
-                                  : GNU_PROPERTY_X86_FEATURE_1_AND;
 
     // Read a body of a NOTE record, which consists of type-length-value fields.
     ArrayRef<uint8_t> desc = note.getDesc(sec.addralign);
@@ -1066,9 +1078,9 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
     }
 
     // Object files that use processor features such as Intel Control-Flow
-    // Enforcement (CET) or AArch64 Branch Target Identification BTI, use a
-    // .note.gnu.property section containing a bitfield of feature bits like the
-    // GNU_PROPERTY_X86_FEATURE_1_IBT flag. Read a bitmap containing the flag.
+    // Enforcement (CET), AArch64 Branch Target Identification BTI or RISC-V
+    // Zicfilp/Zicfiss extensions, use a .note.gnu.property section containing
+    // a bitfield of feature bits like the GNU_PROPERTY_X86_FEATURE_1_IBT flag.
     //
     // Since we merge bitmaps from multiple object files to create a new
     // .note.gnu.property containing a single AND'ed bitmap, we discard an input
