@@ -55,7 +55,7 @@ class _LIBCPP_EXPORTED_FROM_ABI basic_stacktrace {
 
   [[no_unique_address]] _Allocator __alloc_;
 
-  using __entry_vec = vector<stacktrace_entry, _Allocator>;
+  using __entry_vec _LIBCPP_NODEBUG = vector<stacktrace_entry, _Allocator>;
   __entry_vec __entries_;
 
 public:

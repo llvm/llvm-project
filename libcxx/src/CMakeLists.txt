@@ -41,6 +41,8 @@ set(LIBCXX_SOURCES
   ryu/d2s.cpp
   ryu/f2s.cpp
   stacktrace/builder.cpp
+  stacktrace/linux/elf.cpp
+  stacktrace/linux/images.cpp
   stacktrace/linux/impl.cpp
   stacktrace/macos/impl.cpp
   stacktrace/to_string.cpp
