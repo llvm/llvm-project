@@ -3230,7 +3230,8 @@ public:
   /// \p Mask is a mask value
   /// \p DeinterleaveRes is a list of deinterleaved results.
   virtual bool lowerInterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
-                                      ArrayRef<Value *> DeinterleaveRes) const {
+                                      ArrayRef<Value *> DeinterleaveRes,
+                                      unsigned Factor) const {
     return false;
   }
 
@@ -3253,7 +3254,8 @@ public:
   /// \p DeinterleaveValues contains the deinterleaved values.
   virtual bool
   lowerDeinterleaveIntrinsicToLoad(LoadInst *LI,
-                                   ArrayRef<Value *> DeinterleaveValues) const {
+                                   ArrayRef<Value *> DeinterleaveValues,
+                                   unsigned Factor) const {
     return false;
   }
 
@@ -3571,19 +3573,10 @@ public:
 
   const char *getMemcpyName() const { return Libcalls.getMemcpyName(); }
 
-  /// Override the default CondCode to be used to test the result of the
-  /// comparison libcall against zero.
-  /// FIXME: This should be removed
-  void setCmpLibcallCC(RTLIB::Libcall Call, CmpInst::Predicate Pred) {
-    Libcalls.setSoftFloatCmpLibcallPredicate(Call, Pred);
-  }
-
-  /// Get the CondCode that's to be used to test the result of the comparison
-  /// libcall against zero.
-  CmpInst::Predicate
-  getSoftFloatCmpLibcallPredicate(RTLIB::Libcall Call) const {
-    return Libcalls.getSoftFloatCmpLibcallPredicate(Call);
-  }
+  /// Get the comparison predicate that's to be used to test the result of the
+  /// comparison libcall against zero. This should only be used with
+  /// floating-point compare libcalls.
+  ISD::CondCode getSoftFloatCmpLibcallPredicate(RTLIB::LibcallImpl Call) const;
 
   /// Set the CallingConv that should be used for the specified libcall.
   void setLibcallImplCallingConv(RTLIB::LibcallImpl Call, CallingConv::ID CC) {
