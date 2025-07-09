@@ -326,8 +326,3 @@ void testArrayDestr() {
   delete[] p;
   clang_analyzer_warnIfReached(); // no-warning
 }
-
-// See also test-member-invalidation.cpp which validates that calling an
-// unknown destructor invalidates the members of an object. This behavior
-// cannot be tested in this file because here `MallocChecker.cpp` sinks
-// execution paths that refer to members of a deleted object.

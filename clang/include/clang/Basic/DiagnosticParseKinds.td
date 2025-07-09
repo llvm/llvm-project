@@ -276,6 +276,9 @@ def err_expected_while : Error<"expected 'while' in do/while loop">;
 
 def err_expected_semi_after_stmt : Error<"expected ';' after %0 statement">;
 def err_expected_semi_after_expr : Error<"expected ';' after expression">;
+def warn_attr_in_secondary_block : ExtWarn<
+  "ISO C does not allow an attribute list to appear here">,
+  InGroup<DiagGroup<"c-attribute-extension">>;
 def err_extraneous_token_before_semi : Error<"extraneous '%0' before ';'">;
 
 def err_expected_semi_after_method_proto : Error<
