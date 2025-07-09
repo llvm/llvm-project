@@ -716,10 +716,12 @@ def get_tbaa_records(version, raw_output_tools):
         parent_ty = md_nodes.get(access_ty)
         assert parent_ty, f"Couldn't find metadata for access type {access_ty}."
 
+        # First operand should be a MDString. If not, likely dealing with
+        # `new-struct-path-tbaa`.
+        # TODO: Support `new-struct-path-tbaa` TBAA format.
         ty_name_field = parent_ty.split(",")[0]
-        assert ty_name_field.startswith('!"') and ty_name_field.endswith(
-            '"'
-        ), "First operand should be a MDString."
+        if not (ty_name_field.startswith('!"') and ty_name_field.endswith('"')):
+            return {}
         ty_name = ty_name_field[2:-1]
 
         if ty_name.startswith("p"):
