@@ -13,8 +13,8 @@
 // CHECK: [[PID1:[0-9]*]] {{[0-9]*}}: mmap '{{.*}}v9.index'
 // CHECK: [[PID1]] {{[0-9]*}}: create subtrie
 
-// CHECK: [[PID2:[0-9]*]] {{[0-9]*}}: mmap '{{.*}}v9.index'
 // Even a minimal compilation involves at least 9 records for the cache key.
-// CHECK-COUNT-9: [[PID2]] {{[0-9]*}}: create record
+// CHECK-COUNT-9: [[PID1]] {{[0-9]*}}: create record
 
-// CHECK: [[PID1]] {{[0-9]*}}: close mmap '{{.*}}v9.index'
+// CHECK: [[PID2:[0-9]*]] {{[0-9]*}}: mmap '{{.*}}v9.index'
+// CHECK: [[PID2]] {{[0-9]*}}: close mmap '{{.*}}v9.index'

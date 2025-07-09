@@ -355,13 +355,14 @@ makeDepscanDaemonPath(StringRef Mode, const DepscanSharing &Sharing) {
   return std::nullopt;
 }
 
-static Expected<llvm::cas::CASID> scanAndUpdateCC1Inline(
-    const char *Exec, ArrayRef<const char *> InputArgs,
-    StringRef WorkingDirectory, SmallVectorImpl<const char *> &OutputArgs,
-    bool ProduceIncludeTree, bool &DiagnosticErrorOccurred,
-    llvm::function_ref<const char *(const Twine &)> SaveArg,
-    const CASOptions &CASOpts, std::shared_ptr<llvm::cas::ObjectStore> DB,
-    std::shared_ptr<llvm::cas::ActionCache> Cache);
+static int
+scanAndUpdateCC1Inline(const char *Exec, ArrayRef<const char *> InputArgs,
+                       StringRef WorkingDirectory,
+                       SmallVectorImpl<const char *> &OutputArgs,
+                       bool ProduceIncludeTree,
+                       llvm::function_ref<const char *(const Twine &)> SaveArg,
+                       const CASOptions &CASOpts, DiagnosticsEngine &Diag,
+                       std::optional<llvm::cas::CASID> &RootID);
 
 static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
     tooling::dependencies::DependencyScanningTool &Tool,
@@ -370,14 +371,17 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
     SmallVectorImpl<const char *> &OutputArgs, llvm::cas::ObjectStore &DB,
     llvm::function_ref<const char *(const Twine &)> SaveArg);
 
-static llvm::Expected<llvm::cas::CASID> scanAndUpdateCC1UsingDaemon(
+static int scanAndUpdateCC1UsingDaemon(
     const char *Exec, ArrayRef<const char *> OldArgs,
     StringRef WorkingDirectory, SmallVectorImpl<const char *> &NewArgs,
-    std::string &DiagnosticOutput, StringRef Path,
-    const DepscanSharing &Sharing,
+    StringRef Path, const DepscanSharing &Sharing, DiagnosticsEngine &Diag,
     llvm::function_ref<const char *(const Twine &)> SaveArg,
-    llvm::cas::ObjectStore &CAS) {
+    const CASOptions &CASOpts, std::optional<llvm::cas::CASID> &Root) {
   using namespace clang::cc1depscand;
+  auto reportScanFailure = [&](Error E) {
+    Diag.Report(diag::err_cas_depscan_failed) << std::move(E);
+    return 1;
+  };
 
   // FIXME: Skip some of this if -fcas-fs has been passed.
 
@@ -387,12 +391,12 @@ static llvm::Expected<llvm::cas::CASID> scanAndUpdateCC1UsingDaemon(
                     ? ScanDaemon::connectToDaemonAndShakeHands(Path)
                     : ScanDaemon::constructAndShakeHands(Path, Exec, Sharing);
   if (!Daemon)
-    return Daemon.takeError();
+    return reportScanFailure(Daemon.takeError());
   CC1DepScanDProtocol Comms(*Daemon);
 
   // llvm::dbgs() << "sending request...\n";
   if (auto E = Comms.putCommand(WorkingDirectory, OldArgs))
-    return std::move(E);
+    return reportScanFailure(std::move(E));
 
   llvm::BumpPtrAllocator Alloc;
   llvm::StringSaver Saver(Alloc);
@@ -401,23 +405,32 @@ static llvm::Expected<llvm::cas::CASID> scanAndUpdateCC1UsingDaemon(
   StringRef FailedReason;
   StringRef RootID;
   StringRef DiagOut;
-  if (auto E = Comms.getScanResult(Saver, Result, FailedReason, RootID,
-                                   RawNewArgs, DiagOut)) {
-    DiagnosticOutput = DiagOut;
-    return std::move(E);
-  }
-  DiagnosticOutput = DiagOut;
+  auto E = Comms.getScanResult(Saver, Result, FailedReason, RootID, RawNewArgs,
+                               DiagOut);
+  // Send the diagnostics to std::err.
+  llvm::errs() << DiagOut;
+  if (E)
+    return reportScanFailure(std::move(E));
 
   if (Result != CC1DepScanDProtocol::SuccessResult)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "depscan daemon failed: " + FailedReason);
+    return reportScanFailure(
+        llvm::createStringError("depscan daemon failed: " + FailedReason));
 
   // FIXME: Avoid this duplication.
   NewArgs.resize(RawNewArgs.size());
   for (int I = 0, E = RawNewArgs.size(); I != E; ++I)
     NewArgs[I] = SaveArg(RawNewArgs[I]);
 
-  return CAS.parseID(RootID);
+  // Create CAS after daemon returns the result so daemon can perform corrupted
+  // CAS recovery.
+  auto [CAS, _] = CASOpts.getOrCreateDatabases(Diag);
+  if (!CAS)
+    return 1;
+
+  if (auto E = CAS->parseID(RootID).moveInto(Root))
+    return reportScanFailure(std::move(E));
+
+  return 0;
 }
 
 // FIXME: This is a copy of Command::writeResponseFile. Command is too deeply
@@ -444,8 +457,6 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
                             DiagnosticsEngine &Diag,
                             const llvm::opt::ArgList &Args,
                             const CASOptions &CASOpts,
-                            std::shared_ptr<llvm::cas::ObjectStore> DB,
-                            std::shared_ptr<llvm::cas::ActionCache> Cache,
                             std::optional<llvm::cas::CASID> &RootID) {
   using namespace clang::driver;
 
@@ -511,25 +522,14 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
   if (ProduceIncludeTree)
     Sharing.CASArgs.push_back("-fdepscan-include-tree");
 
-  std::string DiagnosticOutput;
-  bool DiagnosticErrorOccurred = false;
-  auto ScanAndUpdate = [&]() {
-    if (std::optional<std::string> DaemonPath =
-            makeDepscanDaemonPath(Mode, Sharing))
-      return scanAndUpdateCC1UsingDaemon(Exec, OldArgs, WorkingDirectory,
-                                         NewArgs, DiagnosticOutput, *DaemonPath,
-                                         Sharing, SaveArg, *DB);
-    return scanAndUpdateCC1Inline(Exec, OldArgs, WorkingDirectory, NewArgs,
-                                  ProduceIncludeTree, DiagnosticErrorOccurred,
-                                  SaveArg, CASOpts, DB, Cache);
-  };
-  if (llvm::Error E = ScanAndUpdate().moveInto(RootID)) {
-    Diag.Report(diag::err_cas_depscan_failed) << std::move(E);
-    if (!DiagnosticOutput.empty())
-      llvm::errs() << DiagnosticOutput;
-    return 1;
-  }
-  return DiagnosticErrorOccurred;
+  if (auto DaemonPath = makeDepscanDaemonPath(Mode, Sharing))
+    return scanAndUpdateCC1UsingDaemon(Exec, OldArgs, WorkingDirectory, NewArgs,
+                                       *DaemonPath, Sharing, Diag, SaveArg,
+                                       CASOpts, RootID);
+
+  return scanAndUpdateCC1Inline(Exec, OldArgs, WorkingDirectory, NewArgs,
+                                ProduceIncludeTree, SaveArg, CASOpts, Diag,
+                                RootID);
 }
 
 int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
@@ -590,12 +590,8 @@ int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
   CompilerInvocation::ParseCASArgs(CASOpts, ParsedCC1Args, Diags);
   CASOpts.ensurePersistentCAS();
 
-  auto [CAS, Cache] = CASOpts.getOrCreateDatabases(Diags);
-  if (!CAS || !Cache)
-    return 1;
-
   if (int Ret = scanAndUpdateCC1(Argv0, CC1Args->getValues(), NewArgs, Diags,
-                                 Args, CASOpts, CAS, Cache, RootID))
+                                 Args, CASOpts, RootID))
     return Ret;
 
   // FIXME: Use OutputBackend to OnDisk only now.
@@ -841,7 +837,8 @@ void ScanServer::start(bool Exclusive, ArrayRef<const char *> CASArgs) {
     ExitOnErr(llvm::cas::validateOnDiskUnifiedCASDatabasesIfNeeded(
         CASPath, /*CheckHash=*/true,
         /*AllowRecovery=*/true,
-        /*Force=*/false, findLLVMCasBinary(Argv0, LLVMCasStorage)));
+        /*Force=*/getenv("LLVM_CAS_FORCE_VALIDATION"),
+        findLLVMCasBinary(Argv0, LLVMCasStorage)));
   });
 
   // Check the pidfile.
@@ -1108,13 +1105,18 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
   return *Root;
 }
 
-static Expected<llvm::cas::CASID> scanAndUpdateCC1Inline(
-    const char *Exec, ArrayRef<const char *> InputArgs,
-    StringRef WorkingDirectory, SmallVectorImpl<const char *> &OutputArgs,
-    bool ProduceIncludeTree, bool &DiagnosticErrorOccurred,
-    llvm::function_ref<const char *(const Twine &)> SaveArg,
-    const CASOptions &CASOpts, std::shared_ptr<llvm::cas::ObjectStore> DB,
-    std::shared_ptr<llvm::cas::ActionCache> Cache) {
+static int
+scanAndUpdateCC1Inline(const char *Exec, ArrayRef<const char *> InputArgs,
+                       StringRef WorkingDirectory,
+                       SmallVectorImpl<const char *> &OutputArgs,
+                       bool ProduceIncludeTree,
+                       llvm::function_ref<const char *(const Twine &)> SaveArg,
+                       const CASOptions &CASOpts, DiagnosticsEngine &Diag,
+                       std::optional<llvm::cas::CASID> &RootID) {
+  auto [DB, Cache] = CASOpts.getOrCreateDatabases(Diag);
+  if (!DB || !Cache)
+    return 1;
+
   IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
   if (!ProduceIncludeTree)
     FS = llvm::cantFail(llvm::cas::createCachingOnDiskFileSystem(*DB));
@@ -1138,10 +1140,15 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1Inline(
   auto DiagsConsumer =
       std::make_unique<TextDiagnosticPrinter>(llvm::errs(), *DiagOpts, false);
 
-  auto Result = scanAndUpdateCC1InlineWithTool(
-      Tool, *DiagsConsumer, /*VerboseOS*/ nullptr, Exec, InputArgs,
-      WorkingDirectory, OutputArgs, *DB, SaveArg);
-  DiagnosticErrorOccurred = DiagsConsumer->getNumErrors() != 0;
-  return Result;
+  auto E = scanAndUpdateCC1InlineWithTool(
+               Tool, *DiagsConsumer, /*VerboseOS*/ nullptr, Exec, InputArgs,
+               WorkingDirectory, OutputArgs, *DB, SaveArg)
+               .moveInto(RootID);
+  if (E) {
+    Diag.Report(diag::err_cas_depscan_failed) << std::move(E);
+    return 1;
+  }
+
+  return DiagsConsumer->getNumErrors() != 0;
 }
 #endif /* LLVM_ON_UNIX */
