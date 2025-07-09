@@ -44,7 +44,7 @@ static cl::opt<bool> OptBisectVerbose(
 
 static cl::list<std::string> OptDisablePasses(
     "opt-disable", cl::Hidden, cl::CommaSeparated, cl::Optional,
-    cl::cb<void, std::string>([](std::string Pass) {
+    cl::cb<void, std::string>([](const std::string &Pass) {
       getOptDisabler().setDisabled(Pass);
     }),
     cl::desc("Optimization pass(es) to disable (comma-separated list)"));
