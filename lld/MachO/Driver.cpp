@@ -47,6 +47,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TextAPI/Architecture.h"
@@ -283,95 +284,75 @@ static void saveThinArchiveToRepro(ArchiveFile const *file) {
           ": Archive::children failed: " + toString(std::move(e)));
 }
 
-typedef struct {
+class DeferredFile {
+public:
   StringRef path;
   bool isLazy;
   std::optional<MemoryBufferRef> buffer;
   const char *start;
   size_t size;
-} DeferredFile;
-typedef std::vector<DeferredFile> DeferredFiles;
+};
+using DeferredFiles = std::vector<DeferredFile>;
 
-#ifndef _WIN32
-typedef struct {
+class PageInState {
   DeferredFiles deferred;
-  size_t counter, total, pageSize;
-  pthread_mutex_t mutex;
-} PageInState;
+  size_t counter = 0, total = 0, pageSize;
+  std::mutex mutex, *busy;
 
-// Most input files have been mapped but not yet paged in.
-// This code forces the page-ins on multiple threads so
-// the process is not stalled waiting on disk buffer i/o.
-static void multiThreadedPageInBackground(PageInState *state) {
-#define MaxReadThreads 200
-  static size_t totalBytes;
+public:
+  PageInState(DeferredFiles &deferred, std::mutex *busy) {
+    this->deferred = deferred;
+    this->busy = busy;
+    pageSize = llvm::sys::Process::getPageSizeEstimate();
+  }
 
-  pthread_t running[MaxReadThreads];
-  if (config->readThreads > MaxReadThreads)
-    config->readThreads = MaxReadThreads;
-  pthread_mutex_init(&state->mutex, nullptr);
+  // Most input files have been mapped but not yet paged in.
+  // This code forces the page-ins on multiple threads so
+  // the process is not stalled waiting on disk buffer i/o.
+  void multiThreadedPageInBackground() {
+    static size_t totalBytes;
 
-  for (int t = 0; t < config->readThreads; t++)
-    pthread_create(
-        &running[t], nullptr,
-        [](void *ptr) -> void * {
-          PageInState &state = *(PageInState *)ptr;
-          while (true) {
-            pthread_mutex_lock(&state.mutex);
-            if (state.counter >= state.deferred.size()) {
-              pthread_mutex_unlock(&state.mutex);
-              return nullptr;
-            }
-            DeferredFile &file = state.deferred[state.counter];
-            state.counter += 1;
-            pthread_mutex_unlock(&state.mutex);
+    parallelFor(0, config->readThreads, [&](size_t I) {
+      while (true) {
+        mutex.lock();
+        if (counter >= deferred.size()) {
+          mutex.unlock();
+          return;
+        }
+        DeferredFile &file = deferred[counter];
+        totalBytes += file.size;
+        counter += 1;
+        mutex.unlock();
 
-            const char *page = file.start, *end = page + file.size;
-            totalBytes += end - page;
+        int t = 0; // Reference each page to load it into memory.
+        for (const char *page = file.start, *end = page + file.size; page < end;
+             page += pageSize)
+          t += *page;
+        total += t; // Avoids the loop being optimised out.
+      }
+    });
 
-            int t = 0; // Reference each page to load it into memory.
-            for (; page < end; page += state.pageSize)
-              t += *page;
-            state.total += t; // Avoids the loop being optimised out.
-          }
-        },
-        state);
+    if (getenv("LLD_MULTI_THREAD_PAGE"))
+      llvm::dbgs() << "multiThreadedPageIn " << totalBytes << "/"
+                   << deferred.size() << "\n";
 
-  for (int t = 0; t < config->readThreads; t++)
-    pthread_join(running[t], nullptr);
-
-  pthread_mutex_destroy(&state->mutex);
-  if (getenv("LLD_MULTI_THREAD_PAGE"))
-    printf("multiThreadedPageIn %ld/%ld\n", totalBytes, state->deferred.size());
-}
-#endif
+    busy->unlock();
+    delete this;
+  }
+};
 
 static void multiThreadedPageIn(DeferredFiles deferred) {
-#ifndef _WIN32
-  static pthread_t running;
-  static pthread_mutex_t busy;
+  static std::thread *running;
+  static std::mutex busy;
 
-  if (running)
-    pthread_join(running, nullptr);
-  else
-    pthread_mutex_init(&busy, nullptr);
+  busy.lock();
+  if (running) {
+    running->join();
+    delete running;
+  }
 
-  PageInState *state =
-      new PageInState{deferred, 0, 0, llvm::sys::Process::getPageSizeEstimate(),
-                      pthread_mutex_t()};
-
-  pthread_mutex_lock(&busy);
-  pthread_create(
-      &running, nullptr,
-      [](void *ptr) -> void * {
-        PageInState *state = (PageInState *)ptr;
-        multiThreadedPageInBackground(state);
-        pthread_mutex_unlock(&busy);
-        delete state;
-        return nullptr;
-      },
-      state);
-#endif
+  running = new std::thread(&PageInState::multiThreadedPageInBackground,
+                            new PageInState(deferred, &busy));
 }
 
 static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
@@ -1432,8 +1413,7 @@ static void createFiles(const InputArgList &args) {
     }
 
     // flush threads
-    deferredFiles.clear();
-    multiThreadedPageIn(deferredFiles);
+    multiThreadedPageIn(DeferredFiles());
   }
 }
 
