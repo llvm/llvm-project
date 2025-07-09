@@ -14,7 +14,7 @@
 #include "utils/MPFRWrapper/mpfr_inc.h"
 #include <math.h>
 
-extern "C" int LLVMFuzzerTestOneInput(const double x) {
+extern "C" int LLVMFuzzerTestOneInput(double x) {
   // remove NaN and inf and values outside accepted range
   if (isnan(x) || isinf(x) || x > 1 || x < -1)
     return 0;
