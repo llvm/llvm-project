@@ -1329,6 +1329,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
   if (FormatTok->is(tok::unknown))
     FormatTok->setType(TT_ImplicitStringLiteral);
 
+  const bool IsCpp = Style.isCpp();
+
   // JavaScript and Java do not allow to escape the end of the line with a
   // backslash. Backslashes are syntax errors in plain source, but can occur in
   // comments. When a single line comment ends with a \, it'll cause the next
@@ -1336,17 +1338,16 @@ FormatToken *FormatTokenLexer::getNextToken() {
   // finds comments that contain a backslash followed by a line break, truncates
   // the comment token at the backslash, and resets the lexer to restart behind
   // the backslash.
-  if ((Style.isCpp() || Style.isJavaScript() || Style.isJava()) &&
-      FormatTok->is(tok::comment)) {
-    if (const auto Text = FormatTok->TokenText; Text.starts_with("//")) {
-      for (auto Pos = Text.find('\\'); Pos++ != StringRef::npos;
-           Pos = Text.find('\\', Pos)) {
-        if (Pos < Text.size() && Text[Pos] == '\n' &&
-            (!Style.isCpp() ||
-             Text.substr(Pos + 1).ltrim().starts_with("//"))) {
-          truncateToken(Pos);
-          break;
-        }
+  if (const auto Text = FormatTok->TokenText;
+      Text.starts_with("//") &&
+      (IsCpp || Style.isJavaScript() || Style.isJava())) {
+    assert(FormatTok->is(tok::comment));
+    for (auto Pos = Text.find('\\'); Pos++ != StringRef::npos;
+         Pos = Text.find('\\', Pos)) {
+      if (Pos < Text.size() && Text[Pos] == '\n' &&
+          (!IsCpp || Text.substr(Pos + 1).ltrim().starts_with("//"))) {
+        truncateToken(Pos);
+        break;
       }
     }
   }
@@ -1452,7 +1453,7 @@ FormatToken *FormatTokenLexer::getNextToken() {
     Column = FormatTok->LastLineColumnWidth;
   }
 
-  if (Style.isCpp()) {
+  if (IsCpp) {
     auto *Identifier = FormatTok->Tok.getIdentifierInfo();
     auto it = Macros.find(Identifier);
     if ((Tokens.empty() || !Tokens.back()->Tok.getIdentifierInfo() ||
