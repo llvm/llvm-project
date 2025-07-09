@@ -3256,9 +3256,8 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
           var, ConvertTypeForMem(VD->getType()), getContext().getDeclAlign(VD));
 
     // No other cases for now.
-    } else {
+    } else
       llvm_unreachable("DeclRefExpr for Decl not entered in LocalDeclMap?");
-    }
 
     // Handle threadlocal function locals.
     if (VD->getTLSKind() != VarDecl::TLS_None)
