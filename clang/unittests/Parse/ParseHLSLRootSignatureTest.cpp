@@ -865,7 +865,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseInvalidTokenTest) {
                                    Signature, *PP);
 
   // Test correct diagnostic produced - invalid token
-  Consumer->setExpected(diag::err_expected);
+  Consumer->setExpected(diag::err_hlsl_invalid_param);
   ASSERT_TRUE(Parser.parse());
 
   ASSERT_TRUE(Consumer->isSatisfied());
@@ -886,7 +886,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedEndOfStreamTest) {
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
                                    Signature, *PP);
 
-  // Test correct diagnostic produced - end of stream
+  // Test correct diagnostic produced - expected '(' after DescriptorTable
   Consumer->setExpected(diag::err_expected_after);
 
   ASSERT_TRUE(Parser.parse());

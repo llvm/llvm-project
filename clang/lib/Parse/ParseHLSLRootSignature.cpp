@@ -59,6 +59,11 @@ bool RootSignatureParser::parse() {
       if (!Sampler.has_value())
         return true;
       Elements.emplace_back(ElementLoc, *Sampler);
+    } else {
+      consumeNextToken(); // let diagnostic be at the start of invalid token
+      reportDiag(diag::err_hlsl_invalid_param)
+          << /*param of*/ TokenKind::kw_RootSignature;
+      return true;
     }
 
     // ',' denotes another element, otherwise, expected to be at end of stream
@@ -198,7 +203,7 @@ std::optional<RootDescriptor> RootSignatureParser::parseRootDescriptor() {
   }
   Descriptor.setDefaultFlags(Version);
 
-  auto Params = parseRootDescriptorParams(ExpectedReg);
+  auto Params = parseRootDescriptorParams(DescriptorKind, ExpectedReg);
   if (!Params.has_value())
     return std::nullopt;
 
@@ -261,6 +266,11 @@ std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {
       Visibility = parseShaderVisibility();
       if (!Visibility.has_value())
         return std::nullopt;
+    } else {
+      consumeNextToken(); // let diagnostic be at the start of invalid token
+      reportDiag(diag::err_hlsl_invalid_param)
+          << /*param of*/ TokenKind::kw_DescriptorTable;
+      return std::nullopt;
     }
 
     // ',' denotes another element, otherwise, expected to be at ')'
@@ -316,7 +326,7 @@ RootSignatureParser::parseDescriptorTableClause() {
   }
   Clause.setDefaultFlags(Version);
 
-  auto Params = parseDescriptorTableClauseParams(ExpectedReg);
+  auto Params = parseDescriptorTableClauseParams(ParamKind, ExpectedReg);
   if (!Params.has_value())
     return std::nullopt;
 
@@ -474,6 +484,11 @@ RootSignatureParser::parseRootConstantParams() {
       if (!Visibility.has_value())
         return std::nullopt;
       Params.Visibility = Visibility;
+    } else {
+      consumeNextToken(); // let diagnostic be at the start of invalid token
+      reportDiag(diag::err_hlsl_invalid_param)
+          << /*param of*/ TokenKind::kw_RootConstants;
+      return std::nullopt;
     }
 
     // ',' denotes another element, otherwise, expected to be at ')'
@@ -485,7 +500,8 @@ RootSignatureParser::parseRootConstantParams() {
 }
 
 std::optional<RootSignatureParser::ParsedRootDescriptorParams>
-RootSignatureParser::parseRootDescriptorParams(TokenKind RegType) {
+RootSignatureParser::parseRootDescriptorParams(TokenKind DescKind,
+                                               TokenKind RegType) {
   assert(CurToken.TokKind == TokenKind::pu_l_paren &&
          "Expects to only be invoked starting at given token");
 
@@ -543,6 +559,10 @@ RootSignatureParser::parseRootDescriptorParams(TokenKind RegType) {
       if (!Flags.has_value())
         return std::nullopt;
       Params.Flags = Flags;
+    } else {
+      consumeNextToken(); // let diagnostic be at the start of invalid token
+      reportDiag(diag::err_hlsl_invalid_param) << /*param of*/ DescKind;
+      return std::nullopt;
     }
 
     // ',' denotes another element, otherwise, expected to be at ')'
@@ -554,7 +574,8 @@ RootSignatureParser::parseRootDescriptorParams(TokenKind RegType) {
 }
 
 std::optional<RootSignatureParser::ParsedClauseParams>
-RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
+RootSignatureParser::parseDescriptorTableClauseParams(TokenKind ClauseKind,
+                                                      TokenKind RegType) {
   assert(CurToken.TokKind == TokenKind::pu_l_paren &&
          "Expects to only be invoked starting at given token");
 
@@ -638,6 +659,10 @@ RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
       if (!Flags.has_value())
         return std::nullopt;
       Params.Flags = Flags;
+    } else {
+      consumeNextToken(); // let diagnostic be at the start of invalid token
+      reportDiag(diag::err_hlsl_invalid_param) << /*param of*/ ClauseKind;
+      return std::nullopt;
     }
 
     // ',' denotes another element, otherwise, expected to be at ')'
@@ -833,6 +858,11 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (!Visibility.has_value())
         return std::nullopt;
       Params.Visibility = Visibility;
+    } else {
+      consumeNextToken(); // let diagnostic be at the start of invalid token
+      reportDiag(diag::err_hlsl_invalid_param)
+          << /*param of*/ TokenKind::kw_StaticSampler;
+      return std::nullopt;
     }
 
     // ',' denotes another element, otherwise, expected to be at ')'

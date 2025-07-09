@@ -100,7 +100,8 @@ private:
     std::optional<llvm::dxbc::RootDescriptorFlags> Flags;
   };
   std::optional<ParsedRootDescriptorParams>
-  parseRootDescriptorParams(RootSignatureToken::Kind RegType);
+  parseRootDescriptorParams(RootSignatureToken::Kind DescKind,
+                            RootSignatureToken::Kind RegType);
 
   struct ParsedClauseParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
@@ -110,7 +111,8 @@ private:
     std::optional<llvm::dxbc::DescriptorRangeFlags> Flags;
   };
   std::optional<ParsedClauseParams>
-  parseDescriptorTableClauseParams(RootSignatureToken::Kind RegType);
+  parseDescriptorTableClauseParams(RootSignatureToken::Kind ClauseKind,
+                                   RootSignatureToken::Kind RegType);
 
   struct ParsedStaticSamplerParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
