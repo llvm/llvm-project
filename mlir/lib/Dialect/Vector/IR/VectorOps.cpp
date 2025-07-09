@@ -4103,8 +4103,8 @@ public:
     Location loc = extractStridedSliceOp.getLoc();
     // Return if 'extractStridedSliceOp' operand is not defined by a
     // CreateMaskOp.
-    auto *defOp = extractStridedSliceOp.getVector().getDefiningOp();
-    auto createMaskOp = dyn_cast_or_null<CreateMaskOp>(defOp);
+    auto createMaskOp =
+        extractStridedSliceOp.getVector().getDefiningOp<CreateMaskOp>();
     if (!createMaskOp)
       return failure();
     // Return if 'extractStridedSliceOp' has non-unit strides.
@@ -4122,6 +4122,9 @@ public:
     // Compute slice of vector mask region.
     SmallVector<Value> sliceMaskDimSizes;
     sliceMaskDimSizes.reserve(maskDimSizes.size());
+    // sliceOffsets.size() <= maskDimSizes.size(), so we use llvm::zip and
+    // only iterate on the leading dim sizes. The tail accounts for the
+    // remaining dim sizes.
     for (auto [maskDimSize, sliceOffset, sliceSize] :
          llvm::zip(maskDimSizes, sliceOffsets, sliceSizes)) {
       // No need to clamp on min/max values, because create_mask has clamping
@@ -4135,12 +4138,9 @@ public:
       sliceMaskDimSizes.push_back(sliceMaskDimSize);
     }
     // Add unchanged dimensions.
-    if (sliceMaskDimSizes.size() < maskDimSizes.size()) {
-      for (size_t i = sliceMaskDimSizes.size(), e = maskDimSizes.size(); i < e;
-           ++i) {
-        sliceMaskDimSizes.push_back(maskDimSizes[i]);
-      }
-    }
+    llvm::append_range(
+        sliceMaskDimSizes,
+        llvm::drop_begin(maskDimSizes, sliceMaskDimSizes.size()));
     // Replace 'extractStridedSliceOp' with CreateMaskOp with sliced mask
     // region.
     rewriter.replaceOpWithNewOp<CreateMaskOp>(
