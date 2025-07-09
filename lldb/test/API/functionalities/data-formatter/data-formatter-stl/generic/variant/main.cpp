@@ -10,12 +10,9 @@ struct S {
 };
 
 int main() {
-  bool has_variant = true;
-
-  printf("%d\n", has_variant); // break here
-
   std::variant<int, double, char> v1;
   std::variant<int, double, char> &v1_ref = v1;
+
   using V1_typedef = std::variant<int, double, char>;
   V1_typedef v1_typedef;
   V1_typedef &v1_typedef_ref = v1_typedef;
@@ -24,7 +21,7 @@ int main() {
   std::variant<int, double, char> v3;
   std::variant<std::variant<int, double, char>> v_v1;
   std::variant<int, char, S> v_valueless = 5;
-  // The next variant has many types, meaning the type index does not fit in
+  // The next variant has 300 types, meaning the type index does not fit in
   // a byte and must be `unsigned short` instead of `unsigned char` when
   // using the unstable libc++ ABI. With stable libc++ ABI, the type index
   // is always just `unsigned int`.
@@ -45,11 +42,15 @@ int main() {
       int, int, int, int, int, int, int, int, int, int, int, int, int, int, int,
       int, int, int, int, int, int, int, int, int, int, int, int, int, int, int,
       int, int, int, int, int, int, int, int, int, int, int, int, int, int, int,
-      int, int, int, int, int, int, int, int, int, int, int, int, S>
-      v_many_types_valueless;
+      int, int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+      int, int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+      int, int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+      int, int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+      S>
+      v_300_types_valueless;
 
   v_valueless = 5;
-  v_many_types_valueless.emplace<0>(10);
+  v_300_types_valueless.emplace<0>(10);
 
   v1 = 12; // v contains int
   v1_typedef = v1;
@@ -83,11 +84,11 @@ int main() {
   try {
     // Exception in move-assignment is guaranteed to put std::variant into a
     // valueless state.
-    v_many_types_valueless = S();
+    v_300_types_valueless = S();
   } catch (...) {
   }
 
-  printf("%d\n", v_many_types_valueless.valueless_by_exception());
+  printf("%d\n", v_300_types_valueless.valueless_by_exception());
 
   return 0; // break here
 }
