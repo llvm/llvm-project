@@ -29,15 +29,12 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
-#include "mlir/Interfaces/TilingInterface.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include <iterator>
 #include <numeric>
 #include <optional>
-#include <utility>
 
 namespace mlir::linalg {
 

@@ -2886,7 +2886,20 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
 template <class Emitter>
 bool Compiler<Emitter>::VisitCXXBindTemporaryExpr(
     const CXXBindTemporaryExpr *E) {
-  return this->delegate(E->getSubExpr());
+  const Expr *SubExpr = E->getSubExpr();
+
+  if (Initializing)
+    return this->delegate(SubExpr);
+
+  // Make sure we create a temporary even if we're discarding, since that will
+  // make sure we will also call the destructor.
+
+  if (!this->visit(SubExpr))
+    return false;
+
+  if (DiscardResult)
+    return this->emitPopPtr(E);
+  return true;
 }
 
 template <class Emitter>
@@ -5616,6 +5629,9 @@ bool Compiler<Emitter>::visitContinueStmt(const ContinueStmt *S) {
 template <class Emitter>
 bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
   const Expr *Cond = S->getCond();
+  if (Cond->containsErrors())
+    return false;
+
   PrimType CondT = this->classifyPrim(Cond->getType());
   LocalScope<Emitter> LS(this);
 

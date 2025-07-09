@@ -475,7 +475,7 @@ void CodeEmitterGen::run(raw_ostream &O) {
   Target.reverseBitsForLittleEndianEncoding();
 
   ArrayRef<const CodeGenInstruction *> NumberedInstructions =
-      Target.getInstructionsByEnumValue();
+      Target.getInstructions();
 
   if (Target.hasVariableLengthEncodings()) {
     emitVarLenCodeEmitter(Records, O);
