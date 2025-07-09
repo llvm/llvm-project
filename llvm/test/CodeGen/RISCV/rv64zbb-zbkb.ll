@@ -186,8 +186,7 @@ define signext i32 @inverted_masked_merge_i32(i32 signext %x, i32 signext %y, i3
 ; RV64ZBB-ZBKB:       # %bb.0:
 ; RV64ZBB-ZBKB-NEXT:    and a1, a0, a1
 ; RV64ZBB-ZBKB-NEXT:    andn a0, a2, a0
-; RV64ZBB-ZBKB-NEXT:    or a0, a1, a0
-; RV64ZBB-ZBKB-NEXT:    not a0, a0
+; RV64ZBB-ZBKB-NEXT:    xnor a0, a1, a0
 ; RV64ZBB-ZBKB-NEXT:    ret
   %a = and i32 %x, %y
   %notx = xor i32 %x, -1
@@ -210,8 +209,7 @@ define i64 @inverted_masked_merge_i64(i64 %x, i64 %y, i64 %z) nounwind {
 ; RV64ZBB-ZBKB:       # %bb.0:
 ; RV64ZBB-ZBKB-NEXT:    and a1, a0, a1
 ; RV64ZBB-ZBKB-NEXT:    andn a0, a2, a0
-; RV64ZBB-ZBKB-NEXT:    or a0, a1, a0
-; RV64ZBB-ZBKB-NEXT:    not a0, a0
+; RV64ZBB-ZBKB-NEXT:    xnor a0, a1, a0
 ; RV64ZBB-ZBKB-NEXT:    ret
   %a = and i64 %x, %y
   %notx = xor i64 %x, -1
