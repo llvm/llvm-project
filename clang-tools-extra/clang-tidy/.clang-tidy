@@ -1,0 +1,11 @@
+InheritParentConfig: true
+Checks: [
+  bugprone-*,
+  -bugprone-assignment-in-if-condition,
+  -bugprone-branch-clone,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
+  -bugprone-suspicious-stringview-data-usage,
+  -bugprone-unchecked-optional-access,
+  -bugprone-unused-return-value
+]
