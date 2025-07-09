@@ -489,28 +489,28 @@ def BitfieldInfoAttr : CIR_Attr<"BitfieldInfo", "bitfield_info"> {
       is 4 bits wide, starts at offset 0, and is signed.
   }];
   let parameters = (ins "mlir::StringAttr":$name,
-                        "mlir::Type":$storageType,
+                        "mlir::Type":$storage_type,
                         "uint64_t":$size,
                         "uint64_t":$offset,
-                        "bool":$isSigned);
+                        "bool":$is_signed);
 
   let assemblyFormat = [{`<` struct($name,
-                                    $storageType,
+                                    $storage_type,
                                     $size,
                                     $offset,
-                                    $isSigned)
+                                    $is_signed)
                          `>`
                         }];
 
   let builders = [
     AttrBuilder<(ins "llvm::StringRef":$name,
-                     "mlir::Type":$storageType,
+                     "mlir::Type":$storage_type,
                      "uint64_t":$size,
                      "uint64_t":$offset,
-                     "bool":$isSigned
+                     "bool":$is_signed
                      ), [{
-      return $_get($_ctxt, mlir::StringAttr::get($_ctxt, name), storageType,
-                   size, offset, isSigned);
+      return $_get($_ctxt, mlir::StringAttr::get($_ctxt, name), storage_type,
+                   size, offset, is_signed);
     }]>
   ];
 }
