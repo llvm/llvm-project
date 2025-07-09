@@ -546,6 +546,20 @@ cc_library(
 )
 
 cc_library(
+    name = "DWARFCFIChecker",
+    srcs = glob(["lib/DWARFCFIChecker/*.cpp",
+                 "lib/DWARFCFIChecker/*.h",]),
+    hdrs = glob(["include/llvm/DWARFCFIChecker/*.h"]),
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":DebugInfoDWARFLowLevel",
+        ":MC",
+        ":Support",
+    ],
+)
+
+cc_library(
     name = "MC",
     srcs = glob([
         "lib/MC/*.cpp",
@@ -4373,6 +4387,7 @@ cc_binary(
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
         ":AllTargetsDisassemblers",
+        ":DWARFCFIChecker",
         ":MC",
         ":MCDisassembler",
         ":MCParser",
