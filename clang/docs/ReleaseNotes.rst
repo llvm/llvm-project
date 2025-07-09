@@ -920,6 +920,9 @@ Bug Fixes to C++ Support
 - Correctly handle allocations in the condition of a ``if constexpr``.(#GH120197) (#GH134820)
 - Fixed a crash when handling invalid member using-declaration in C++20+ mode. (#GH63254)
 - Fix a crash when trying to instantiate an ambiguous specialization. (#GH51866)
+- Improved handling of variables with ``consteval`` constructors, to
+  consistently treat the initializer as manifestly constant-evaluated.
+  (#GH135281)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
