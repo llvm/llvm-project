@@ -734,8 +734,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
               characteristics::DummyDataObject::Attr::Asynchronous)) {
         undefinableMessage =
             "Actual argument associated with ASYNCHRONOUS %s is not definable"_warn_en_US;
-      } else if (dummy.attrs.test(
-                     characteristics::DummyDataObject::Attr::Volatile)) {
+      } else if (dummyIsVolatile) {
+        flags.set(DefinabilityFlag::VolatileNotDefinable);
         undefinableMessage =
             "Actual argument associated with VOLATILE %s is not definable"_warn_en_US;
       }
