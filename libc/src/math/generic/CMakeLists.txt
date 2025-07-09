@@ -1333,6 +1333,7 @@ add_entrypoint_object(
     ../expf16.h
   DEPENDS
     libc.src.__support.math.expf16
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(

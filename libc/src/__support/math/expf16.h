@@ -9,6 +9,12 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXPF16_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXPF16_H
 
+#include "include/llvm-libc-macros/float16-macros.h"
+
+#ifndef LIBC_TYPES_HAS_FLOAT16
+#error unsupported
+#else
+
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -130,5 +136,7 @@ static constexpr float16 expf16(float16 x) {
 } // namespace math
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT16
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_EXPF16_H

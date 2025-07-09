@@ -11,6 +11,11 @@
 
 #include "shared/libc_common.h"
 #include "src/__support/math/expf16.h"
+#include "include/llvm-libc-macros/float16-macros.h"
+
+#ifndef LIBC_TYPES_HAS_FLOAT16
+#error unsupported
+#else
 
 namespace LIBC_NAMESPACE_DECL {
 namespace shared {
@@ -19,5 +24,7 @@ using math::expf16;
 
 } // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT16
 
 #endif // LLVM_LIBC_SHARED_MATH_EXPF16_H

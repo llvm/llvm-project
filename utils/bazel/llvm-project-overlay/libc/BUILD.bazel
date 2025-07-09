@@ -2101,8 +2101,7 @@ libc_support_library(
     hdrs = ["src/__support/math/expf16.h"],
     deps = [
         ":__support_common",
-        ":hdr_errno_macros",
-        ":hdr_fenv_macros",
+        ":__support_libc_errno",
         ":__support_cpp_array",
         ":__support_fputil_cast",
         ":__support_fputil_except_value_utils",
