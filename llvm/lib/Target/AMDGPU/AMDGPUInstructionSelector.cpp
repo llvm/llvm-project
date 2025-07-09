@@ -5591,7 +5591,8 @@ AMDGPUInstructionSelector::selectScratchSVAddr(MachineOperand &Root) const {
 
   Register OrigAddr = Addr;
   if (ConstOffset != 0 &&
-      TII.isLegalFLATOffset(ConstOffset, AMDGPUAS::PRIVATE_ADDRESS, true)) {
+      TII.isLegalFLATOffset(ConstOffset, AMDGPUAS::PRIVATE_ADDRESS,
+                            SIInstrFlags::FlatScratch)) {
     Addr = PtrBase;
     ImmOffset = ConstOffset;
   }
