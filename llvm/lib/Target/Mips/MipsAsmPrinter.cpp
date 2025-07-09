@@ -15,6 +15,7 @@
 #include "MCTargetDesc/MipsABIInfo.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "MCTargetDesc/MipsInstPrinter.h"
+#include "MCTargetDesc/MipsMCAsmInfo.h"
 #include "MCTargetDesc/MipsMCNaCl.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "MCTargetDesc/MipsTargetStreamer.h"
@@ -54,6 +55,7 @@
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -1243,8 +1245,8 @@ void MipsAsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
 // Emit .dtprelword or .dtpreldword directive
 // and value for debug thread local expression.
 void MipsAsmPrinter::emitDebugValue(const MCExpr *Value, unsigned Size) const {
-  if (auto *MipsExpr = dyn_cast<MipsMCExpr>(Value)) {
-    if (MipsExpr && MipsExpr->getSpecifier() == MipsMCExpr::MEK_DTPREL) {
+  if (auto *MipsExpr = dyn_cast<MCSpecifierExpr>(Value)) {
+    if (MipsExpr && MipsExpr->getSpecifier() == Mips::S_DTPREL) {
       switch (Size) {
       case 4:
         getTargetStreamer().emitDTPRel32Value(MipsExpr->getSubExpr());
@@ -1298,7 +1300,8 @@ INITIALIZE_PASS(MipsAsmPrinter, "mips-asm-printer", "Mips Assembly Printer",
                 false, false)
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeMipsAsmPrinter() {
   RegisterAsmPrinter<MipsAsmPrinter> X(getTheMipsTarget());
   RegisterAsmPrinter<MipsAsmPrinter> Y(getTheMipselTarget());
   RegisterAsmPrinter<MipsAsmPrinter> A(getTheMips64Target());

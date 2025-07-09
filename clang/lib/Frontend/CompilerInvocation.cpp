@@ -24,24 +24,20 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Basic/Version.h"
-#include "clang/Basic/Visibility.h"
 #include "clang/Basic/XRayInstr.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "clang/Frontend/CommandLineSourceLoc.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendOptions.h"
-#include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/MigratorOptions.h"
 #include "clang/Frontend/PreprocessorOutputOptions.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/PreprocessorOptions.h"
-#include "clang/Sema/CodeCompleteOptions.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ModuleFileExtension.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
@@ -49,9 +45,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/FloatingPointMode.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -87,7 +81,6 @@
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
-#include <atomic>
 #include <cassert>
 #include <cstddef>
 #include <cstring>
@@ -125,21 +118,14 @@ static Expected<std::optional<uint32_t>> parseToleranceOption(StringRef Arg) {
 // Initialization.
 //===----------------------------------------------------------------------===//
 
-namespace {
 template <class T> std::shared_ptr<T> make_shared_copy(const T &X) {
   return std::make_shared<T>(X);
 }
 
-template <class T>
-llvm::IntrusiveRefCntPtr<T> makeIntrusiveRefCntCopy(const T &X) {
-  return llvm::makeIntrusiveRefCnt<T>(X);
-}
-} // namespace
-
 CompilerInvocationBase::CompilerInvocationBase()
     : LangOpts(std::make_shared<LangOptions>()),
       TargetOpts(std::make_shared<TargetOptions>()),
-      DiagnosticOpts(llvm::makeIntrusiveRefCnt<DiagnosticOptions>()),
+      DiagnosticOpts(std::make_shared<DiagnosticOptions>()),
       HSOpts(std::make_shared<HeaderSearchOptions>()),
       PPOpts(std::make_shared<PreprocessorOptions>()),
       AnalyzerOpts(std::make_shared<AnalyzerOptions>()),
@@ -156,7 +142,7 @@ CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
   if (this != &X) {
     LangOpts = make_shared_copy(X.getLangOpts());
     TargetOpts = make_shared_copy(X.getTargetOpts());
-    DiagnosticOpts = makeIntrusiveRefCntCopy(X.getDiagnosticOpts());
+    DiagnosticOpts = make_shared_copy(X.getDiagnosticOpts());
     HSOpts = make_shared_copy(X.getHeaderSearchOpts());
     PPOpts = make_shared_copy(X.getPreprocessorOpts());
     AnalyzerOpts = make_shared_copy(X.getAnalyzerOpts());
@@ -202,21 +188,12 @@ CompilerInvocation::operator=(const CowCompilerInvocation &X) {
   return *this;
 }
 
-namespace {
 template <typename T>
 T &ensureOwned(std::shared_ptr<T> &Storage) {
   if (Storage.use_count() > 1)
     Storage = std::make_shared<T>(*Storage);
   return *Storage;
 }
-
-template <typename T>
-T &ensureOwned(llvm::IntrusiveRefCntPtr<T> &Storage) {
-  if (Storage.useCount() > 1)
-    Storage = llvm::makeIntrusiveRefCnt<T>(*Storage);
-  return *Storage;
-}
-} // namespace
 
 LangOptions &CowCompilerInvocation::getMutLangOpts() {
   return ensureOwned(LangOpts);
@@ -659,6 +636,10 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     Diags.Report(diag::err_drv_argument_not_allowed_with)
         << "-hlsl-entry" << GetInputKindName(IK);
 
+  if (Args.hasArg(OPT_fdx_rootsignature_version) && !LangOpts.HLSL)
+    Diags.Report(diag::err_drv_argument_not_allowed_with)
+        << "-fdx-rootsignature-version" << GetInputKindName(IK);
+
   if (Args.hasArg(OPT_fgpu_allow_device_init) && !LangOpts.HIP)
     Diags.Report(diag::warn_ignored_hip_only_option)
         << Args.getLastArg(OPT_fgpu_allow_device_init)->getAsString(Args);
@@ -844,7 +825,8 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
   };
 
   // Setup a dummy DiagnosticsEngine.
-  DiagnosticsEngine DummyDiags(new DiagnosticIDs(), new DiagnosticOptions());
+  DiagnosticOptions DummyDiagOpts;
+  DiagnosticsEngine DummyDiags(new DiagnosticIDs(), DummyDiagOpts);
   DummyDiags.setClient(new TextDiagnosticBuffer());
 
   // Run the first parse on the original arguments with the dummy invocation and
@@ -1514,11 +1496,11 @@ static void setPGOUseInstrumentor(CodeGenOptions &Opts,
   // which is available (might be one or both).
   if (PGOReader->isIRLevelProfile() || PGOReader->hasMemoryProfile()) {
     if (PGOReader->hasCSIRLevelProfile())
-      Opts.setProfileUse(CodeGenOptions::ProfileCSIRInstr);
+      Opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileCSIRInstr);
     else
-      Opts.setProfileUse(CodeGenOptions::ProfileIRInstr);
+      Opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileIRInstr);
   } else
-    Opts.setProfileUse(CodeGenOptions::ProfileClangInstr);
+    Opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileClangInstr);
 }
 
 void CompilerInvocation::setDefaultPointerAuthOptions(
@@ -1838,6 +1820,11 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   for (std::string Sanitizer : Values)
     GenerateArg(Consumer, OPT_fsanitize_skip_hot_cutoff_EQ, Sanitizer);
 
+  if (Opts.AllowRuntimeCheckSkipHotCutoff) {
+    GenerateArg(Consumer, OPT_fallow_runtime_check_skip_hot_cutoff_EQ,
+                std::to_string(*Opts.AllowRuntimeCheckSkipHotCutoff));
+  }
+
   for (StringRef Sanitizer :
        serializeSanitizerKinds(Opts.SanitizeAnnotateDebugInfo))
     GenerateArg(Consumer, OPT_fsanitize_annotate_debug_info_EQ, Sanitizer);
@@ -2055,8 +2042,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   // The memory profile runtime appends the pid to make this name more unique.
   const char *MemProfileBasename = "memprof.profraw";
   if (Args.hasArg(OPT_fmemory_profile_EQ)) {
-    SmallString<128> Path(
-        std::string(Args.getLastArgValue(OPT_fmemory_profile_EQ)));
+    SmallString<128> Path(Args.getLastArgValue(OPT_fmemory_profile_EQ));
     llvm::sys::path::append(Path, MemProfileBasename);
     Opts.MemoryProfileOutput = std::string(Path);
   } else if (Args.hasArg(OPT_fmemory_profile))
@@ -2340,6 +2326,18 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       "-fsanitize-annotate-debug-info=",
       Args.getAllArgValues(OPT_fsanitize_annotate_debug_info_EQ), Diags,
       Opts.SanitizeAnnotateDebugInfo);
+
+  if (StringRef V =
+          Args.getLastArgValue(OPT_fallow_runtime_check_skip_hot_cutoff_EQ);
+      !V.empty()) {
+    double A;
+    if (V.getAsDouble(A) || A < 0.0 || A > 1.0) {
+      Diags.Report(diag::err_drv_invalid_value)
+          << "-fallow-runtime-check-skip-hot-cutoff=" << V;
+    } else {
+      Opts.AllowRuntimeCheckSkipHotCutoff = A;
+    }
+  }
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 
@@ -2664,9 +2662,11 @@ clang::CreateAndPopulateDiagOpts(ArrayRef<const char *> Argv) {
 bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
                                 DiagnosticsEngine *Diags,
                                 bool DefaultDiagColor) {
+  std::optional<DiagnosticOptions> IgnoringDiagOpts;
   std::optional<DiagnosticsEngine> IgnoringDiags;
   if (!Diags) {
-    IgnoringDiags.emplace(new DiagnosticIDs(), new DiagnosticOptions(),
+    IgnoringDiagOpts.emplace();
+    IgnoringDiags.emplace(new DiagnosticIDs(), *IgnoringDiagOpts,
                           new IgnoringDiagConsumer());
     Diags = &*IgnoringDiags;
   }
@@ -3112,9 +3112,11 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (const Arg *A = Args.getLastArg(OPT_code_completion_at)) {
     Opts.CodeCompletionAt =
       ParsedSourceLocation::FromString(A->getValue());
-    if (Opts.CodeCompletionAt.FileName.empty())
+    if (Opts.CodeCompletionAt.FileName.empty()) {
       Diags.Report(diag::err_drv_invalid_value)
-        << A->getAsString(Args) << A->getValue();
+          << A->getAsString(Args) << A->getValue();
+      Diags.Report(diag::note_command_line_code_loc_requirement);
+    }
   }
 
   Opts.Plugins = Args.getAllArgValues(OPT_load);
@@ -3677,6 +3679,23 @@ static StringRef GetInputKindName(InputKind IK) {
   llvm_unreachable("unknown input language");
 }
 
+static StringRef getExceptionHandlingName(unsigned EHK) {
+  switch (static_cast<LangOptions::ExceptionHandlingKind>(EHK)) {
+  case LangOptions::ExceptionHandlingKind::None:
+    return "none";
+  case LangOptions::ExceptionHandlingKind::DwarfCFI:
+    return "dwarf";
+  case LangOptions::ExceptionHandlingKind::SjLj:
+    return "sjlj";
+  case LangOptions::ExceptionHandlingKind::WinEH:
+    return "seh";
+  case LangOptions::ExceptionHandlingKind::Wasm:
+    return "wasm";
+  }
+
+  llvm_unreachable("covered switch");
+}
+
 void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
                                               ArgumentConsumer Consumer,
                                               const llvm::Triple &T,
@@ -3692,6 +3711,10 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
       GenerateArg(Consumer, OPT_pic_is_pie);
     for (StringRef Sanitizer : serializeSanitizerKinds(Opts.Sanitize))
       GenerateArg(Consumer, OPT_fsanitize_EQ, Sanitizer);
+    if (Opts.ExceptionHandling) {
+      GenerateArg(Consumer, OPT_exception_model,
+                  getExceptionHandlingName(Opts.ExceptionHandling));
+    }
 
     return;
   }
@@ -3868,7 +3891,7 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     llvm::interleave(
         Opts.OMPTargetTriples, OS,
         [&OS](const llvm::Triple &T) { OS << T.str(); }, ",");
-    GenerateArg(Consumer, OPT_fopenmp_targets_EQ, Targets);
+    GenerateArg(Consumer, OPT_offload_targets_EQ, Targets);
   }
 
   if (!Opts.OMPHostIRFile.empty())
@@ -3999,6 +4022,24 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     Opts.PIE = Args.hasArg(OPT_pic_is_pie);
     parseSanitizerKinds("-fsanitize=", Args.getAllArgValues(OPT_fsanitize_EQ),
                         Diags, Opts.Sanitize);
+
+    if (const Arg *A = Args.getLastArg(options::OPT_exception_model)) {
+      std::optional<LangOptions::ExceptionHandlingKind> EMValue =
+          llvm::StringSwitch<std::optional<LangOptions::ExceptionHandlingKind>>(
+              A->getValue())
+              .Case("dwarf", LangOptions::ExceptionHandlingKind::DwarfCFI)
+              .Case("sjlj", LangOptions::ExceptionHandlingKind::SjLj)
+              .Case("seh", LangOptions::ExceptionHandlingKind::WinEH)
+              .Case("wasm", LangOptions::ExceptionHandlingKind::Wasm)
+              .Case("none", LangOptions::ExceptionHandlingKind::None)
+              .Default(std::nullopt);
+      if (EMValue) {
+        Opts.ExceptionHandling = static_cast<unsigned>(*EMValue);
+      } else {
+        Diags.Report(diag::err_drv_invalid_value)
+            << A->getAsString(Args) << A->getValue();
+      }
+    }
 
     return Diags.getNumErrors() == NumErrorsBefore;
   }
@@ -4281,7 +4322,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   Opts.OpenMPIRBuilder =
       Opts.OpenMP && Args.hasArg(options::OPT_fopenmp_enable_irbuilder);
   bool IsTargetSpecified =
-      Opts.OpenMPIsTargetDevice || Args.hasArg(options::OPT_fopenmp_targets_EQ);
+      Opts.OpenMPIsTargetDevice || Args.hasArg(options::OPT_offload_targets_EQ);
 
   if (Opts.OpenMP || Opts.OpenMPSimd) {
     if (int Version = getLastArgIntValue(
@@ -4341,7 +4382,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   }
 
   // Get the OpenMP target triples if any.
-  if (Arg *A = Args.getLastArg(options::OPT_fopenmp_targets_EQ)) {
+  if (Arg *A = Args.getLastArg(options::OPT_offload_targets_EQ)) {
     enum ArchPtrSize { Arch16Bit, Arch32Bit, Arch64Bit };
     auto getArchPtrSize = [](const llvm::Triple &T) {
       if (T.isArch16Bit())
@@ -4494,6 +4535,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         Opts.setClangABICompat(LangOptions::ClangABI::Ver18);
       else if (Major <= 19)
         Opts.setClangABICompat(LangOptions::ClangABI::Ver19);
+      else if (Major <= 20)
+        Opts.setClangABICompat(LangOptions::ClangABI::Ver20);
     } else if (Ver != "latest") {
       Diags.Report(diag::err_drv_invalid_value)
           << A->getAsString(Args) << A->getValue();
@@ -4573,6 +4616,11 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
   // Error if -mvscale-min is unbounded.
   if (Arg *A = Args.getLastArg(options::OPT_mvscale_min_EQ)) {
+    unsigned VScaleMin;
+    if (StringRef(A->getValue()).getAsInteger(10, VScaleMin) || VScaleMin == 0)
+      Diags.Report(diag::err_cc1_unbounded_vscale_min);
+  }
+  if (Arg *A = Args.getLastArg(options::OPT_mvscale_streaming_min_EQ)) {
     unsigned VScaleMin;
     if (StringRef(A->getValue()).getAsInteger(10, VScaleMin) || VScaleMin == 0)
       Diags.Report(diag::err_cc1_unbounded_vscale_min);
@@ -5174,11 +5222,14 @@ std::string CompilerInvocation::getModuleHash() const {
   HBuilder.add(serialization::VERSION_MAJOR, serialization::VERSION_MINOR);
 
   // Extend the signature with the language options
-#define LANGOPT(Name, Bits, Default, Description) HBuilder.add(LangOpts->Name);
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description)                   \
-  HBuilder.add(static_cast<unsigned>(LangOpts->get##Name()));
-#define BENIGN_LANGOPT(Name, Bits, Default, Description)
-#define BENIGN_ENUM_LANGOPT(Name, Type, Bits, Default, Description)
+  // FIXME: Replace with C++20 `using enum LangOptions::CompatibilityKind`.
+  using CK = LangOptions::CompatibilityKind;
+#define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
+  if constexpr (CK::Compatibility != CK::Benign)                               \
+    HBuilder.add(LangOpts->Name);
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
+  if constexpr (CK::Compatibility != CK::Benign)                               \
+    HBuilder.add(static_cast<unsigned>(LangOpts->get##Name()));
 #include "clang/Basic/LangOptions.def"
 
   HBuilder.addRange(getLangOpts().ModuleFeatures);
@@ -5257,13 +5308,17 @@ std::string CompilerInvocation::getModuleHash() const {
 
   // Extend the signature with the affecting debug options.
   if (getHeaderSearchOpts().ModuleFormat == "obj") {
-#define DEBUGOPT(Name, Bits, Default) HBuilder.add(CodeGenOpts->Name);
-#define VALUE_DEBUGOPT(Name, Bits, Default) HBuilder.add(CodeGenOpts->Name);
-#define ENUM_DEBUGOPT(Name, Type, Bits, Default)                               \
-  HBuilder.add(static_cast<unsigned>(CodeGenOpts->get##Name()));
-#define BENIGN_DEBUGOPT(Name, Bits, Default)
-#define BENIGN_VALUE_DEBUGOPT(Name, Bits, Default)
-#define BENIGN_ENUM_DEBUGOPT(Name, Type, Bits, Default)
+    // FIXME: Replace with C++20 `using enum CodeGenOptions::CompatibilityKind`.
+    using CK = CodeGenOptions::CompatibilityKind;
+#define DEBUGOPT(Name, Bits, Default, Compatibility)                           \
+  if constexpr (CK::Compatibility == CK::Affecting)                            \
+    HBuilder.add(CodeGenOpts->Name);
+#define VALUE_DEBUGOPT(Name, Bits, Default, Compatibility)                     \
+  if constexpr (CK::Compatibility == CK::Affecting)                            \
+    HBuilder.add(CodeGenOpts->Name);
+#define ENUM_DEBUGOPT(Name, Type, Bits, Default, Compatibility)                \
+  if constexpr (CK::Compatibility == CK::Affecting)                            \
+    HBuilder.add(static_cast<unsigned>(CodeGenOpts->get##Name()));
 #include "clang/Basic/DebugOptions.def"
   }
 

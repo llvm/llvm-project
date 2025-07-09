@@ -651,9 +651,9 @@ struct FormatStyle {
   /// \version 3.7
   TrailingCommentsAlignmentStyle AlignTrailingComments;
 
-  /// \brief If a function call or braced initializer list doesn't fit on a
-  /// line, allow putting all arguments onto the next line, even if
-  /// ``BinPackArguments`` is ``false``.
+  /// If a function call or braced initializer list doesn't fit on a line, allow
+  /// putting all arguments onto the next line, even if ``BinPackArguments`` is
+  /// ``false``.
   /// \code
   ///   true:
   ///   callFunction(
@@ -3956,7 +3956,7 @@ struct FormatStyle {
   /// \version 6
   std::vector<RawStringFormat> RawStringFormats;
 
-  /// \brief The ``&`` and ``&&`` alignment style.
+  /// The ``&`` and ``&&`` alignment style.
   enum ReferenceAlignmentStyle : int8_t {
     /// Align reference like ``PointerAlignment``.
     RAS_Pointer,
@@ -3977,13 +3977,12 @@ struct FormatStyle {
     RAS_Middle
   };
 
-  /// \brief Reference alignment style (overrides ``PointerAlignment`` for
-  /// references).
+  /// Reference alignment style (overrides ``PointerAlignment`` for references).
   /// \version 13
   ReferenceAlignmentStyle ReferenceAlignment;
 
   // clang-format off
-  /// \brief Types of comment reflow style.
+  /// Types of comment reflow style.
   enum ReflowCommentsStyle : int8_t {
     /// Leave comments untouched.
     /// \code
@@ -4016,7 +4015,7 @@ struct FormatStyle {
   };
   // clang-format on
 
-  /// \brief Comment reformatting style.
+  /// Comment reformatting style.
   /// \version 3.8
   ReflowCommentsStyle ReflowComments;
 
@@ -4151,9 +4150,8 @@ struct FormatStyle {
   /// \version 16
   bool RemoveSemicolon;
 
-  /// \brief The possible positions for the requires clause. The
-  /// ``IndentRequires`` option is only used if the ``requires`` is put on the
-  /// start of a line.
+  /// The possible positions for the requires clause. The ``IndentRequires``
+  /// option is only used if the ``requires`` is put on the start of a line.
   enum RequiresClausePositionStyle : int8_t {
     /// Always put the ``requires`` clause on its own line (possibly followed by
     /// a semicolon).
@@ -4251,7 +4249,7 @@ struct FormatStyle {
     RCPS_SingleLine,
   };
 
-  /// \brief The position of the ``requires`` clause.
+  /// The position of the ``requires`` clause.
   /// \version 15
   RequiresClausePositionStyle RequiresClausePosition;
 
@@ -4281,7 +4279,7 @@ struct FormatStyle {
   /// \version 16
   RequiresExpressionIndentationKind RequiresExpressionIndentation;
 
-  /// \brief The style if definition blocks should be separated.
+  /// The style if definition blocks should be separated.
   enum SeparateDefinitionStyle : int8_t {
     /// Leave definition blocks as they are.
     SDS_Leave,
@@ -4365,35 +4363,29 @@ struct FormatStyle {
   /// \version 18
   bool SkipMacroDefinitionBody;
 
-  /// Include sorting options.
-  enum SortIncludesOptions : int8_t {
-    /// Includes are never sorted.
+  /// Includes sorting options.
+  struct SortIncludesOptions {
+    /// If ``true``, includes are sorted based on the other suboptions below.
+    /// (``Never`` is deprecated by ``Enabled: false``.)
+    bool Enabled;
+    /// Whether or not includes are sorted in a case-insensitive fashion.
+    /// (``CaseSensitive`` and ``CaseInsensitive`` are deprecated by
+    /// ``IgnoreCase: false`` and ``IgnoreCase: true``, respectively.)
     /// \code
-    ///    #include "B/A.h"
-    ///    #include "A/B.h"
-    ///    #include "a/b.h"
-    ///    #include "A/b.h"
-    ///    #include "B/a.h"
+    ///    true:                      false:
+    ///    #include "A/B.h"    vs.    #include "A/B.h"
+    ///    #include "A/b.h"           #include "A/b.h"
+    ///    #include "a/b.h"           #include "B/A.h"
+    ///    #include "B/A.h"           #include "B/a.h"
+    ///    #include "B/a.h"           #include "a/b.h"
     /// \endcode
-    SI_Never,
-    /// Includes are sorted in an ASCIIbetical or case sensitive fashion.
-    /// \code
-    ///    #include "A/B.h"
-    ///    #include "A/b.h"
-    ///    #include "B/A.h"
-    ///    #include "B/a.h"
-    ///    #include "a/b.h"
-    /// \endcode
-    SI_CaseSensitive,
-    /// Includes are sorted in an alphabetical or case insensitive fashion.
-    /// \code
-    ///    #include "A/B.h"
-    ///    #include "A/b.h"
-    ///    #include "a/b.h"
-    ///    #include "B/A.h"
-    ///    #include "B/a.h"
-    /// \endcode
-    SI_CaseInsensitive,
+    bool IgnoreCase;
+    bool operator==(const SortIncludesOptions &R) const {
+      return Enabled == R.Enabled && IgnoreCase == R.IgnoreCase;
+    }
+    bool operator!=(const SortIncludesOptions &R) const {
+      return !(*this == R);
+    }
   };
 
   /// Controls if and how clang-format will sort ``#includes``.
@@ -5194,8 +5186,8 @@ struct FormatStyle {
   /// \version 17
   std::vector<std::string> TypeNames;
 
-  /// \brief A vector of macros that should be interpreted as type declarations
-  /// instead of as function calls.
+  /// A vector of macros that should be interpreted as type declarations instead
+  /// of as function calls.
   ///
   /// These are expected to be macros of the form:
   /// \code
@@ -5281,7 +5273,7 @@ struct FormatStyle {
     /// Remove all empty lines at the beginning and the end of namespace body.
     /// \code
     ///   namespace N1 {
-    ///   namespace N2
+    ///   namespace N2 {
     ///   function();
     ///   }
     ///   }
@@ -5542,7 +5534,7 @@ private:
   parseConfiguration(llvm::MemoryBufferRef Config, FormatStyle *Style,
                      bool AllowUnknownOptions,
                      llvm::SourceMgr::DiagHandlerTy DiagHandler,
-                     void *DiagHandlerCtxt);
+                     void *DiagHandlerCtxt, bool IsDotHFile);
 };
 
 /// Returns a format style complying with the LLVM coding standards:
@@ -5608,13 +5600,15 @@ std::error_code
 parseConfiguration(llvm::MemoryBufferRef Config, FormatStyle *Style,
                    bool AllowUnknownOptions = false,
                    llvm::SourceMgr::DiagHandlerTy DiagHandler = nullptr,
-                   void *DiagHandlerCtx = nullptr);
+                   void *DiagHandlerCtx = nullptr, bool IsDotHFile = false);
 
 /// Like above but accepts an unnamed buffer.
 inline std::error_code parseConfiguration(StringRef Config, FormatStyle *Style,
-                                          bool AllowUnknownOptions = false) {
+                                          bool AllowUnknownOptions = false,
+                                          bool IsDotHFile = false) {
   return parseConfiguration(llvm::MemoryBufferRef(Config, "YAML"), Style,
-                            AllowUnknownOptions);
+                            AllowUnknownOptions, /*DiagHandler=*/nullptr,
+                            /*DiagHandlerCtx=*/nullptr, IsDotHFile);
 }
 
 /// Gets configuration in a YAML string.

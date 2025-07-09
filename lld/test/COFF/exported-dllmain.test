@@ -1,0 +1,57 @@
+REQUIRES: x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows a.s -o a.obj
+
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows b1.s -o b1.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows b2.s -o b2.obj
+
+### This is the line where our problem occurs. Here, we export the DllMain symbol which shouldn't happen normally.
+RUN: lld-link b1.obj b2.obj -out:b.dll -dll -implib:b.lib -entry:DllMain -export:bar -export:DllMain
+
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows c.s -o c.obj
+RUN: lld-link -lib c.obj -out:c.lib
+
+### Later, if b.lib is provided before other libs/objs that export DllMain statically, we previously were using the dllimported DllMain from b.lib, which is wrong.
+RUN: lld-link a.obj b.lib c.lib -dll -out:out.dll -entry:DllMain 2>&1 | FileCheck -check-prefix=WARN %s
+RUN: lld-link a.obj b.lib c.lib -dll -out:out.dll -entry:DllMain -ignore:exporteddllmain 2>&1 | FileCheck -check-prefix=IGNORED --allow-empty %s
+RUN: llvm-objdump --private-headers -d out.dll | FileCheck -check-prefix=DISASM %s
+
+WARN: lld-link: warning: b.lib: skipping exported DllMain symbol [exporteddllmain]
+IGNORED-NOT: lld-link: warning: b.lib: skipping exported DllMain symbol [exporteddllmain]
+
+DISASM: The Import Tables:
+DISASM: DLL Name: b.dll
+DISASM-NOT: DllMain
+DISASM: bar
+DISASM: Disassembly of section .text:
+DISASM-EMPTY:
+DISASM:      b8 01 00 00 00               movl    $0x1, %eax
+DISASM-NEXT: c3                           retq
+
+#--- a.s
+        .text
+        .globl foo
+foo:
+        call *__imp_bar(%rip)
+        ret
+
+#--- b1.s
+        .text
+        .globl bar
+bar:
+        ret
+
+#--- b2.s
+        .text
+        .globl DllMain
+DllMain:
+        xor %eax, %eax
+        ret
+
+#--- c.s
+        .text
+        .globl DllMain
+DllMain:
+        movl $1, %eax
+        ret

@@ -19,7 +19,6 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include <algorithm>
@@ -192,7 +191,7 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
 
     xegpu::CreateNdDescOp ndDesc =
         createNdDescriptor(rewriter, loc, descType,
-                           dyn_cast<TypedValue<MemRefType>>(readOp.getSource()),
+                           dyn_cast<TypedValue<MemRefType>>(readOp.getBase()),
                            readOp.getIndices());
 
     DenseI64ArrayAttr transposeAttr =
@@ -231,10 +230,10 @@ struct TransferWriteLowering
         vecTy.getShape(), vecTy.getElementType(),
         /*array_length=*/1, /*boundary_check=*/writeOp.hasOutOfBoundsDim(),
         xegpu::MemorySpace::Global);
-    xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
-        rewriter, loc, descType,
-        dyn_cast<TypedValue<MemRefType>>(writeOp.getSource()),
-        writeOp.getIndices());
+    xegpu::CreateNdDescOp ndDesc =
+        createNdDescriptor(rewriter, loc, descType,
+                           dyn_cast<TypedValue<MemRefType>>(writeOp.getBase()),
+                           writeOp.getIndices());
 
     // By default, no specific caching policy is assigned.
     xegpu::CachePolicyAttr hint = nullptr;

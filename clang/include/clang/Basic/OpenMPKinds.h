@@ -223,6 +223,12 @@ enum OpenMPNumTasksClauseModifier {
   OMPC_NUMTASKS_unknown
 };
 
+enum OpenMPNumThreadsClauseModifier {
+#define OPENMP_NUMTHREADS_MODIFIER(Name) OMPC_NUMTHREADS_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_NUMTHREADS_unknown
+};
+
 /// OpenMP dependence types for 'doacross' clause.
 enum OpenMPDoacrossClauseModifier {
 #define OPENMP_DOACROSS_MODIFIER(Name) OMPC_DOACROSS_##Name,

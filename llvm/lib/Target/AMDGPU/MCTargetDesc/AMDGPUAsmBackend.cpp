@@ -15,9 +15,9 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/TargetParser/TargetParser.h"
@@ -31,18 +31,16 @@ class AMDGPUAsmBackend : public MCAsmBackend {
 public:
   AMDGPUAsmBackend(const Target &T) : MCAsmBackend(llvm::endianness::little) {}
 
-
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  MutableArrayRef<char> Data, uint64_t Value,
+                  bool IsResolved) override;
   bool fixupNeedsRelaxation(const MCFixup &Fixup,
                             uint64_t Value) const override;
 
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
 
-  bool mayNeedRelaxation(const MCInst &Inst,
+  bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override;
 
   unsigned getMinimumNopSize() const override;
@@ -72,12 +70,13 @@ bool AMDGPUAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
   return (((int64_t(Value)/4)-1) == 0x3f);
 }
 
-bool AMDGPUAsmBackend::mayNeedRelaxation(const MCInst &Inst,
-                       const MCSubtargetInfo &STI) const {
+bool AMDGPUAsmBackend::mayNeedRelaxation(unsigned Opcode,
+                                         ArrayRef<MCOperand> Operands,
+                                         const MCSubtargetInfo &STI) const {
   if (!STI.hasFeature(AMDGPU::FeatureOffset3fBug))
     return false;
 
-  if (AMDGPU::getSOPPWithRelaxation(Inst.getOpcode()) >= 0)
+  if (AMDGPU::getSOPPWithRelaxation(Opcode) >= 0)
     return true;
 
   return false;
@@ -95,7 +94,6 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
     return 2;
   case FK_SecRel_4:
   case FK_Data_4:
-  case FK_PCRel_4:
     return 4;
   case FK_SecRel_8:
   case FK_Data_8:
@@ -122,7 +120,6 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case FK_Data_2:
   case FK_Data_4:
   case FK_Data_8:
-  case FK_PCRel_4:
   case FK_SecRel_4:
     return Value;
   default:
@@ -130,15 +127,17 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
 }
 
-void AMDGPUAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+void AMDGPUAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                   const MCValue &Target,
                                   MutableArrayRef<char> Data, uint64_t Value,
-                                  bool IsResolved,
-                                  const MCSubtargetInfo *STI) const {
+                                  bool IsResolved) {
+  if (Target.getSpecifier())
+    IsResolved = false;
+  maybeAddReloc(F, Fixup, Target, Value, IsResolved);
   if (mc::isRelocation(Fixup.getKind()))
     return;
 
-  Value = adjustFixupValue(Fixup, Value, &Asm.getContext());
+  Value = adjustFixupValue(Fixup, Value, &getContext());
   if (!Value)
     return; // Doesn't change encoding.
 
@@ -174,12 +173,12 @@ AMDGPUAsmBackend::getFixupKind(StringRef Name) const {
 
 MCFixupKindInfo AMDGPUAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[AMDGPU::NumTargetFixupKinds] = {
-    // name                   offset bits  flags
-    { "fixup_si_sopp_br",     0,     16,   MCFixupKindInfo::FKF_IsPCRel },
+      // name                   offset bits  flags
+      {"fixup_si_sopp_br", 0, 16, 0},
   };
 
   if (mc::isRelocation(Kind))
-    return MCAsmBackend::getFixupKindInfo(FK_NONE);
+    return {};
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);

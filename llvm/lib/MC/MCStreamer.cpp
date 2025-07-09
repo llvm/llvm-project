@@ -72,7 +72,7 @@ void MCTargetStreamer::emitValue(const MCExpr *Value) {
   SmallString<128> Str;
   raw_svector_ostream OS(Str);
 
-  Value->print(OS, Streamer.getContext().getAsmInfo());
+  Streamer.getContext().getAsmInfo()->printExpr(OS, *Value);
   Streamer.emitRawText(OS.str());
 }
 
@@ -1186,6 +1186,10 @@ void MCStreamer::visitUsedExpr(const MCExpr &Expr) {
   case MCExpr::Unary:
     visitUsedExpr(*cast<MCUnaryExpr>(Expr).getSubExpr());
     break;
+
+  case MCExpr::Specifier:
+    visitUsedExpr(*cast<MCSpecifierExpr>(Expr).getSubExpr());
+    break;
   }
 }
 
@@ -1245,7 +1249,10 @@ void MCStreamer::emitAbsoluteSymbolDiffAsULEB128(const MCSymbol *Hi,
   emitULEB128Value(Diff);
 }
 
-void MCStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {}
+void MCStreamer::emitSubsectionsViaSymbols() {
+  llvm_unreachable(
+      "emitSubsectionsViaSymbols only supported on Mach-O targets");
+}
 void MCStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {}
 void MCStreamer::beginCOFFSymbolDef(const MCSymbol *Symbol) {
   llvm_unreachable("this directive only supported on COFF targets");
@@ -1446,10 +1453,9 @@ static VersionTuple getMachoBuildVersionSupportedOS(const Triple &Target) {
   case Triple::WatchOS:
     return VersionTuple(5);
   case Triple::DriverKit:
-    // DriverKit always uses the build version load command.
-    return VersionTuple();
+  case Triple::BridgeOS:
   case Triple::XROS:
-    // XROS always uses the build version load command.
+    // DriverKit/BridgeOS/XROS always use the build version load command.
     return VersionTuple();
   default:
     break;
@@ -1480,6 +1486,8 @@ getMachoBuildVersionPlatformType(const Triple &Target) {
   case Triple::XROS:
     return Target.isSimulatorEnvironment() ? MachO::PLATFORM_XROS_SIMULATOR
                                            : MachO::PLATFORM_XROS;
+  case Triple::BridgeOS:
+    return MachO::PLATFORM_BRIDGEOS;
   default:
     break;
   }
@@ -1513,6 +1521,7 @@ void MCStreamer::emitVersionForTarget(
     Version = Target.getDriverKitVersion();
     break;
   case Triple::XROS:
+  case Triple::BridgeOS:
     Version = Target.getOSVersion();
     break;
   default:

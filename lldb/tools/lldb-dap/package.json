@@ -1,7 +1,7 @@
 {
   "name": "lldb-dap",
   "displayName": "LLDB DAP",
-  "version": "0.2.13",
+  "version": "0.2.15",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://lldb.llvm.org",
   "description": "Debugging with LLDB in Visual Studio Code",
@@ -244,7 +244,30 @@
         }
       }
     ],
+    "commands": [
+      {
+        "command": "lldb-dap.modules.copyProperty",
+        "title": "Copy Value"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "lldb-dap.modules.copyProperty",
+          "when": "false"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "lldb-dap.modules.copyProperty",
+          "when": "view == lldb-dap.modules && viewItem == property"
+        }
+      ]
+    },
     "breakpoints": [
+      {
+        "language": "lldb.disassembly"
+      },
       {
         "language": "ada"
       },
@@ -267,7 +290,7 @@
         "language": "d"
       },
       {
-        "language": "fortan"
+        "language": "fortran"
       },
       {
         "language": "fortran-modern"
@@ -295,6 +318,22 @@
       {
         "type": "lldb-dap",
         "label": "LLDB DAP Debugger",
+        "languages": [
+          "ada",
+          "arm",
+          "c",
+          "cpp",
+          "crystal",
+          "d",
+          "fortran",
+          "fortran-modern",
+          "nim",
+          "objective-c",
+          "objectpascal",
+          "pascal",
+          "rust",
+          "swift"
+        ],
         "configurationAttributes": {
           "launch": {
             "required": [
@@ -767,7 +806,7 @@
         {
           "id": "lldb-dap.modules",
           "name": "Modules",
-          "when": "inDebugMode && debugType == 'lldb-dap'",
+          "when": "inDebugMode && debugType == 'lldb-dap' && lldb-dap.showModules",
           "icon": "$(symbol-module)"
         }
       ]

@@ -19,7 +19,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX17 _LIBCPP_NO_CFI _LIBCPP_HIDE_FROM_ABI _Tp* addressof(_Tp& __x) _NOEXCEPT {
+inline _LIBCPP_NO_CFI _LIBCPP_HIDE_FROM_ABI _Tp* addressof(_Tp& __x) _NOEXCEPT {
   return __builtin_addressof(__x);
 }
 

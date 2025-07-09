@@ -271,6 +271,9 @@ if is_configured("lldb_libs_dir"):
 if is_configured("lldb_framework_dir"):
     dotest_cmd += ["--framework", config.lldb_framework_dir]
 
+if is_configured("cmake_build_type"):
+    dotest_cmd += ["--cmake-build-type", config.cmake_build_type]
+
 if "lldb-simulator-ios" in config.available_features:
     dotest_cmd += ["--apple-sdk", "iphonesimulator", "--platform-name", "ios-simulator"]
 elif "lldb-simulator-watchos" in config.available_features:
@@ -346,3 +349,10 @@ if platform.system() == "Windows":
     for v in ["SystemDrive"]:
         if v in os.environ:
             config.environment[v] = os.environ[v]
+
+# Some steps required to initialize the tests dynamically link with python.dll
+# and need to know the location of the Python libraries. This ensures that we
+# use the same version of Python that was used to build lldb to run our tests.
+config.environment["PATH"] = os.path.pathsep.join(
+    (config.python_root_dir, config.environment.get("PATH", ""))
+)

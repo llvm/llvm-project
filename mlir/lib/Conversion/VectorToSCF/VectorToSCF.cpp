@@ -12,7 +12,6 @@
 
 #include <numeric>
 #include <optional>
-#include <type_traits>
 
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 
@@ -20,7 +19,6 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
@@ -29,7 +27,6 @@
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Transforms/Passes.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTVECTORTOSCF
@@ -198,8 +195,7 @@ static Value generateInBoundsCheck(
   Location loc = xferOp.getLoc();
   ImplicitLocOpBuilder lb(xferOp.getLoc(), b);
   if (!xferOp.isDimInBounds(0) && !isBroadcast) {
-    Value memrefDim =
-        vector::createOrFoldDimOp(b, loc, xferOp.getSource(), *dim);
+    Value memrefDim = vector::createOrFoldDimOp(b, loc, xferOp.getBase(), *dim);
     AffineExpr d0, d1;
     bindDims(xferOp.getContext(), d0, d1);
     Value base = xferOp.getIndices()[*dim];
@@ -426,7 +422,7 @@ struct Strategy<TransferReadOp> {
     auto vecType = dyn_cast<VectorType>(bufferType.getElementType());
     auto inBoundsAttr = dropFirstElem(b, xferOp.getInBoundsAttr());
     auto newXferOp = b.create<vector::TransferReadOp>(
-        loc, vecType, xferOp.getSource(), xferIndices,
+        loc, vecType, xferOp.getBase(), xferIndices,
         AffineMapAttr::get(unpackedPermutationMap(b, xferOp)),
         xferOp.getPadding(), Value(), inBoundsAttr);
 
@@ -512,7 +508,7 @@ struct Strategy<TransferWriteOp> {
     Location loc = xferOp.getLoc();
     auto vec = b.create<memref::LoadOp>(loc, buffer, loadIndices);
     auto inBoundsAttr = dropFirstElem(b, xferOp.getInBoundsAttr());
-    auto source = loopState.empty() ? xferOp.getSource() : loopState[0];
+    auto source = loopState.empty() ? xferOp.getBase() : loopState[0];
     Type type = isTensorOp(xferOp) ? xferOp.getShapedType() : Type();
     auto newXferOp = b.create<vector::TransferWriteOp>(
         loc, type, vec, source, xferIndices,
@@ -544,7 +540,7 @@ struct Strategy<TransferWriteOp> {
 
   /// Return the initial loop state for the generated scf.for loop.
   static Value initialLoopState(TransferWriteOp xferOp) {
-    return isTensorOp(xferOp) ? xferOp.getSource() : Value();
+    return isTensorOp(xferOp) ? xferOp.getBase() : Value();
   }
 };
 
@@ -1145,7 +1141,7 @@ struct ScalableTransposeTransferWriteConversion
           ArrayRef<OpFoldResult>(*maskDims).drop_front());
     }
 
-    Value initDest = isTensorOp(writeOp) ? writeOp.getSource() : Value{};
+    Value initDest = isTensorOp(writeOp) ? writeOp.getBase() : Value{};
     ValueRange initLoopArgs = initDest ? initDest : ValueRange{};
     auto result = rewriter.create<scf::ForOp>(
         loc, lb, ub, step, initLoopArgs,
@@ -1165,7 +1161,7 @@ struct ScalableTransposeTransferWriteConversion
 
           // Create the transfer_write for the slice.
           Value dest =
-              loopIterArgs.empty() ? writeOp.getSource() : loopIterArgs.front();
+              loopIterArgs.empty() ? writeOp.getBase() : loopIterArgs.front();
           auto newWriteOp = b.create<vector::TransferWriteOp>(
               loc, sliceVec, dest, xferIndices,
               ArrayRef<bool>(writeOp.getInBoundsValues()).drop_front());
@@ -1325,6 +1321,8 @@ struct UnrollTransferReadConversion
     for (int64_t i = 0; i < dimSize; ++i) {
       Value iv = rewriter.create<arith::ConstantIndexOp>(loc, i);
 
+      // FIXME: Rename this lambda - it does much more than just
+      // in-bounds-check generation.
       vec = generateInBoundsCheck(
           rewriter, xferOp, iv, unpackedDim(xferOp), TypeRange(vecType),
           /*inBoundsCase=*/
@@ -1339,12 +1337,21 @@ struct UnrollTransferReadConversion
             insertionIndices.push_back(rewriter.getIndexAttr(i));
 
             auto inBoundsAttr = dropFirstElem(b, xferOp.getInBoundsAttr());
+
             auto newXferOp = b.create<vector::TransferReadOp>(
-                loc, newXferVecType, xferOp.getSource(), xferIndices,
+                loc, newXferVecType, xferOp.getBase(), xferIndices,
                 AffineMapAttr::get(unpackedPermutationMap(b, xferOp)),
                 xferOp.getPadding(), Value(), inBoundsAttr);
             maybeAssignMask(b, xferOp, newXferOp, i);
-            return b.create<vector::InsertOp>(loc, newXferOp, vec,
+
+            Value valToInser = newXferOp.getResult();
+            if (newXferVecType.getRank() == 0) {
+              // vector.insert does not accept rank-0 as the non-indexed
+              // argument. Extract the scalar before inserting.
+              valToInser = b.create<vector::ExtractOp>(loc, valToInser,
+                                                       SmallVector<int64_t>());
+            }
+            return b.create<vector::InsertOp>(loc, valToInser, vec,
                                               insertionIndices);
           },
           /*outOfBoundsCase=*/
@@ -1449,7 +1456,7 @@ struct UnrollTransferWriteConversion
     }
 
     int64_t dimSize = inputVectorTy.getShape()[0];
-    Value source = xferOp.getSource(); // memref or tensor to be written to.
+    Value source = xferOp.getBase(); // memref or tensor to be written to.
     auto sourceType = isTensorOp(xferOp) ? xferOp.getShapedType() : Type();
 
     // Generate fully unrolled loop of transfer ops.
@@ -1567,8 +1574,7 @@ struct Strategy1d<TransferReadOp> {
         b, xferOp, iv, dim, TypeRange(xferOp.getVectorType()),
         /*inBoundsCase=*/
         [&](OpBuilder &b, Location loc) {
-          Value val =
-              b.create<memref::LoadOp>(loc, xferOp.getSource(), indices);
+          Value val = b.create<memref::LoadOp>(loc, xferOp.getBase(), indices);
           return b.create<vector::InsertElementOp>(loc, val, vec, iv);
         },
         /*outOfBoundsCase=*/
@@ -1599,7 +1605,7 @@ struct Strategy1d<TransferWriteOp> {
         /*inBoundsCase=*/[&](OpBuilder &b, Location loc) {
           auto val =
               b.create<vector::ExtractElementOp>(loc, xferOp.getVector(), iv);
-          b.create<memref::StoreOp>(loc, val, xferOp.getSource(), indices);
+          b.create<memref::StoreOp>(loc, val, xferOp.getBase(), indices);
         });
     b.create<scf::YieldOp>(loc);
   }

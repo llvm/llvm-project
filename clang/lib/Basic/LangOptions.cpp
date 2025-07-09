@@ -11,22 +11,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/LangOptions.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Path.h"
 
 using namespace clang;
 
 LangOptions::LangOptions() : LangStd(LangStandard::lang_unspecified) {
-#define LANGOPT(Name, Bits, Default, Description) Name = Default;
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description) set##Name(Default);
+#define LANGOPT(Name, Bits, Default, Compatibility, Description) Name = Default;
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
+  set##Name(Default);
 #include "clang/Basic/LangOptions.def"
 }
 
 void LangOptions::resetNonModularOptions() {
-#define LANGOPT(Name, Bits, Default, Description)
-#define BENIGN_LANGOPT(Name, Bits, Default, Description) Name = Default;
-#define BENIGN_ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
-  Name = static_cast<unsigned>(Default);
+#define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
+  if constexpr (CompatibilityKind::Compatibility == CompatibilityKind::Benign) \
+    Name = Default;
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
+  if constexpr (CompatibilityKind::Compatibility == CompatibilityKind::Benign) \
+    Name = static_cast<unsigned>(Default);
 #include "clang/Basic/LangOptions.def"
 
   // Reset "benign" options with implied values (Options.td ImpliedBy relations)

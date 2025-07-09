@@ -71,7 +71,7 @@ struct Section {
   }
 
   bool hasValidOffset() const {
-    return !(isVirtualSection() || (OriginalOffset && *OriginalOffset == 0));
+    return !(isVirtualSection() || OriginalOffset == 0);
   }
 };
 
@@ -341,9 +341,6 @@ struct Object {
   /// The index of the LC_SEGMENT or LC_SEGMENT_64 load command
   /// corresponding to the __TEXT segment.
   std::optional<size_t> TextSegmentCommandIndex;
-  /// The index of the LC_ENCRYPTION_INFO or LC_ENCRYPTION_INFO_64 load command
-  /// if present.
-  std::optional<size_t> EncryptionInfoCommandIndex;
 
   BumpPtrAllocator Alloc;
   StringSaver NewSectionsContents;

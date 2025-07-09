@@ -66,7 +66,6 @@
 #include <cassert>
 #include <cstddef>
 #include <cstring>
-#include <memory>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -2110,7 +2109,7 @@ void QualifierInfo::setTemplateParameterListsInfo(
   if (!TPLists.empty()) {
     TemplParamLists = new (Context) TemplateParameterList *[TPLists.size()];
     NumTemplParamLists = TPLists.size();
-    std::copy(TPLists.begin(), TPLists.end(), TemplParamLists);
+    llvm::copy(TPLists, TemplParamLists);
   }
 }
 
@@ -2439,6 +2438,23 @@ VarDecl *VarDecl::getInitializingDeclaration() {
     }
   }
   return Def;
+}
+
+bool VarDecl::hasInitWithSideEffects() const {
+  if (!hasInit())
+    return false;
+
+  EvaluatedStmt *ES = ensureEvaluatedStmt();
+  if (!ES->CheckedForSideEffects) {
+    const Expr *E = getInit();
+    ES->HasSideEffects =
+        E->HasSideEffects(getASTContext()) &&
+        // We can get a value-dependent initializer during error recovery.
+        (E->isValueDependent() || getType()->isDependentType() ||
+         !evaluateValue());
+    ES->CheckedForSideEffects = true;
+  }
+  return ES->HasSideEffects;
 }
 
 bool VarDecl::isOutOfLine() const {
@@ -3541,7 +3557,7 @@ bool FunctionDecl::isExternC() const {
 }
 
 bool FunctionDecl::isInExternCContext() const {
-  if (hasAttr<OpenCLKernelAttr>())
+  if (DeviceKernelAttr::isOpenCLSpelling(getAttr<DeviceKernelAttr>()))
     return true;
   return getLexicalDeclContext()->isExternCContext();
 }
@@ -3753,7 +3769,7 @@ void FunctionDecl::setParams(ASTContext &C,
   // Zero params -> null pointer.
   if (!NewParamInfo.empty()) {
     ParamInfo = new (C) ParmVarDecl*[NewParamInfo.size()];
-    std::copy(NewParamInfo.begin(), NewParamInfo.end(), ParamInfo);
+    llvm::copy(NewParamInfo, ParamInfo);
   }
 }
 
@@ -4325,8 +4341,7 @@ DependentFunctionTemplateSpecializationInfo::
         const ASTTemplateArgumentListInfo *TemplateArgsWritten)
     : NumCandidates(Candidates.size()),
       TemplateArgumentsAsWritten(TemplateArgsWritten) {
-  std::transform(Candidates.begin(), Candidates.end(),
-                 getTrailingObjects<FunctionTemplateDecl *>(),
+  std::transform(Candidates.begin(), Candidates.end(), getTrailingObjects(),
                  [](NamedDecl *ND) {
                    return cast<FunctionTemplateDecl>(ND->getUnderlyingDecl());
                  });
@@ -5323,7 +5338,7 @@ void BlockDecl::setParams(ArrayRef<ParmVarDecl *> NewParamInfo) {
   if (!NewParamInfo.empty()) {
     NumParams = NewParamInfo.size();
     ParamInfo = new (getASTContext()) ParmVarDecl*[NewParamInfo.size()];
-    std::copy(NewParamInfo.begin(), NewParamInfo.end(), ParamInfo);
+    llvm::copy(NewParamInfo, ParamInfo);
   }
 }
 
@@ -5380,8 +5395,8 @@ PragmaCommentDecl *PragmaCommentDecl::Create(const ASTContext &C,
   PragmaCommentDecl *PCD =
       new (C, DC, additionalSizeToAlloc<char>(Arg.size() + 1))
           PragmaCommentDecl(DC, CommentLoc, CommentKind);
-  memcpy(PCD->getTrailingObjects<char>(), Arg.data(), Arg.size());
-  PCD->getTrailingObjects<char>()[Arg.size()] = '\0';
+  llvm::copy(Arg, PCD->getTrailingObjects());
+  PCD->getTrailingObjects()[Arg.size()] = '\0';
   return PCD;
 }
 
@@ -5402,11 +5417,10 @@ PragmaDetectMismatchDecl::Create(const ASTContext &C, TranslationUnitDecl *DC,
   PragmaDetectMismatchDecl *PDMD =
       new (C, DC, additionalSizeToAlloc<char>(ValueStart + Value.size() + 1))
           PragmaDetectMismatchDecl(DC, Loc, ValueStart);
-  memcpy(PDMD->getTrailingObjects<char>(), Name.data(), Name.size());
-  PDMD->getTrailingObjects<char>()[Name.size()] = '\0';
-  memcpy(PDMD->getTrailingObjects<char>() + ValueStart, Value.data(),
-         Value.size());
-  PDMD->getTrailingObjects<char>()[ValueStart + Value.size()] = '\0';
+  llvm::copy(Name, PDMD->getTrailingObjects());
+  PDMD->getTrailingObjects()[Name.size()] = '\0';
+  llvm::copy(Value, PDMD->getTrailingObjects() + ValueStart);
+  PDMD->getTrailingObjects()[ValueStart + Value.size()] = '\0';
   return PDMD;
 }
 
@@ -5445,9 +5459,9 @@ LabelDecl *LabelDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
 
 void LabelDecl::setMSAsmLabel(StringRef Name) {
 char *Buffer = new (getASTContext(), 1) char[Name.size() + 1];
-  memcpy(Buffer, Name.data(), Name.size());
-  Buffer[Name.size()] = '\0';
-  MSAsmName = Buffer;
+llvm::copy(Name, Buffer);
+Buffer[Name.size()] = '\0';
+MSAsmName = Buffer;
 }
 
 void ValueDecl::anchor() {}
@@ -5512,7 +5526,8 @@ FunctionDecl *FunctionDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
 }
 
 bool FunctionDecl::isReferenceableKernel() const {
-  return hasAttr<CUDAGlobalAttr>() || hasAttr<OpenCLKernelAttr>();
+  return hasAttr<CUDAGlobalAttr>() ||
+         DeviceKernelAttr::isOpenCLSpelling(getAttr<DeviceKernelAttr>());
 }
 
 BlockDecl *BlockDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L) {
@@ -5608,10 +5623,11 @@ IndirectFieldDecl::IndirectFieldDecl(ASTContext &C, DeclContext *DC,
     IdentifierNamespace |= IDNS_Tag;
 }
 
-IndirectFieldDecl *
-IndirectFieldDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L,
-                          const IdentifierInfo *Id, QualType T,
-                          llvm::MutableArrayRef<NamedDecl *> CH) {
+IndirectFieldDecl *IndirectFieldDecl::Create(ASTContext &C, DeclContext *DC,
+                                             SourceLocation L,
+                                             const IdentifierInfo *Id,
+                                             QualType T,
+                                             MutableArrayRef<NamedDecl *> CH) {
   return new (C, DC) IndirectFieldDecl(C, DC, L, Id, T, CH);
 }
 
@@ -5714,8 +5730,7 @@ SourceRange TypeAliasDecl::getSourceRange() const {
 void FileScopeAsmDecl::anchor() {}
 
 FileScopeAsmDecl *FileScopeAsmDecl::Create(ASTContext &C, DeclContext *DC,
-                                           StringLiteral *Str,
-                                           SourceLocation AsmLoc,
+                                           Expr *Str, SourceLocation AsmLoc,
                                            SourceLocation RParenLoc) {
   return new (C, DC) FileScopeAsmDecl(DC, Str, AsmLoc, RParenLoc);
 }
@@ -5724,6 +5739,10 @@ FileScopeAsmDecl *FileScopeAsmDecl::CreateDeserialized(ASTContext &C,
                                                        GlobalDeclID ID) {
   return new (C, ID) FileScopeAsmDecl(nullptr, nullptr, SourceLocation(),
                                       SourceLocation());
+}
+
+std::string FileScopeAsmDecl::getAsmString() const {
+  return GCCAsmStmt::ExtractStringFromGCCAsmStmtComponent(getAsmStringExpr());
 }
 
 void TopLevelStmtDecl::anchor() {}
@@ -5826,7 +5845,7 @@ void HLSLBufferDecl::setDefaultBufferDecls(ArrayRef<Decl *> Decls) {
 
   // allocate array for default decls with ASTContext allocator
   Decl **DeclsArray = new (getASTContext()) Decl *[Decls.size()];
-  std::copy(Decls.begin(), Decls.end(), DeclsArray);
+  llvm::copy(Decls, DeclsArray);
   DefaultBufferDecls = ArrayRef<Decl *>(DeclsArray, Decls.size());
 }
 
@@ -5845,6 +5864,39 @@ HLSLBufferDecl::buffer_decl_iterator HLSLBufferDecl::buffer_decls_end() const {
 
 bool HLSLBufferDecl::buffer_decls_empty() {
   return DefaultBufferDecls.empty() && decls_empty();
+}
+
+//===----------------------------------------------------------------------===//
+// HLSLRootSignatureDecl Implementation
+//===----------------------------------------------------------------------===//
+
+HLSLRootSignatureDecl::HLSLRootSignatureDecl(
+    DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
+    llvm::dxbc::RootSignatureVersion Version, unsigned NumElems)
+    : NamedDecl(Decl::Kind::HLSLRootSignature, DC, Loc, DeclarationName(ID)),
+      Version(Version), NumElems(NumElems) {}
+
+HLSLRootSignatureDecl *HLSLRootSignatureDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
+    llvm::dxbc::RootSignatureVersion Version,
+    ArrayRef<llvm::hlsl::rootsig::RootElement> RootElements) {
+  HLSLRootSignatureDecl *RSDecl =
+      new (C, DC,
+           additionalSizeToAlloc<llvm::hlsl::rootsig::RootElement>(
+               RootElements.size()))
+          HLSLRootSignatureDecl(DC, Loc, ID, Version, RootElements.size());
+  auto *StoredElems = RSDecl->getElems();
+  llvm::uninitialized_copy(RootElements, StoredElems);
+  return RSDecl;
+}
+
+HLSLRootSignatureDecl *
+HLSLRootSignatureDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
+  HLSLRootSignatureDecl *Result = new (C, ID)
+      HLSLRootSignatureDecl(nullptr, SourceLocation(), nullptr,
+                            /*Version*/ llvm::dxbc::RootSignatureVersion::V1_1,
+                            /*NumElems=*/0);
+  return Result;
 }
 
 //===----------------------------------------------------------------------===//
@@ -5868,7 +5920,7 @@ ImportDecl::ImportDecl(DeclContext *DC, SourceLocation StartLoc,
     : Decl(Import, DC, StartLoc), ImportedModule(Imported),
       NextLocalImportAndComplete(nullptr, true) {
   assert(getNumModuleIdentifiers(Imported) == IdentifierLocs.size());
-  auto *StoredLocs = getTrailingObjects<SourceLocation>();
+  auto *StoredLocs = getTrailingObjects();
   llvm::uninitialized_copy(IdentifierLocs, StoredLocs);
 }
 
@@ -5876,7 +5928,7 @@ ImportDecl::ImportDecl(DeclContext *DC, SourceLocation StartLoc,
                        Module *Imported, SourceLocation EndLoc)
     : Decl(Import, DC, StartLoc), ImportedModule(Imported),
       NextLocalImportAndComplete(nullptr, false) {
-  *getTrailingObjects<SourceLocation>() = EndLoc;
+  *getTrailingObjects() = EndLoc;
 }
 
 ImportDecl *ImportDecl::Create(ASTContext &C, DeclContext *DC,
@@ -5907,14 +5959,12 @@ ArrayRef<SourceLocation> ImportDecl::getIdentifierLocs() const {
   if (!isImportComplete())
     return {};
 
-  const auto *StoredLocs = getTrailingObjects<SourceLocation>();
-  return llvm::ArrayRef(StoredLocs,
-                        getNumModuleIdentifiers(getImportedModule()));
+  return getTrailingObjects(getNumModuleIdentifiers(getImportedModule()));
 }
 
 SourceRange ImportDecl::getSourceRange() const {
   if (!isImportComplete())
-    return SourceRange(getLocation(), *getTrailingObjects<SourceLocation>());
+    return SourceRange(getLocation(), *getTrailingObjects());
 
   return SourceRange(getLocation(), getIdentifierLocs().back());
 }
