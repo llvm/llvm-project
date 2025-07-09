@@ -8047,6 +8047,12 @@ private:
                llvm::errs() << "  MemberExpr case for AttachFirstElemAddr\n";
                AttachFirstElemAddr = CGF.EmitMemberExpr(ME).getAddress();
                llvm::errs() << "  AttachFirstElemAddr = "; AttachFirstElemAddr.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
+            } else if (auto *UO = dyn_cast<UnaryOperator>(I->getAssociatedExpression())) {
+              if (UO->getOpcode() == UO_Deref) {
+                llvm::errs() << "  UnaryOperator (dereference) case for AttachFirstElemAddr\n";
+                AttachFirstElemAddr = CGF.EmitLValue(UO).getAddress();
+                llvm::errs() << "  AttachFirstElemAddr = "; AttachFirstElemAddr.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
+              }
             }
           }
         }

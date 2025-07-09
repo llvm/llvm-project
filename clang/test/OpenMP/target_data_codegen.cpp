@@ -625,8 +625,8 @@ void test_present_modifier(int arg) {
 
   // Make sure the struct picks up present even if another element of the struct
   // doesn't have present.
-  // CK8: private unnamed_addr constant [11 x i64] [i64 0, i64 {{4|8}}, i64 {{4|8}}, i64 4, i64 4, i64 4, i64 0, i64 4, i64 {{4|8}}, i64 {{4|8}}, i64 4]
-  // CK8: private unnamed_addr constant [11 x i64]
+  // CK8: private unnamed_addr constant [13 x i64] [i64 0, i64 {{4|8}}, i64 {{4|8}}, i64 4, i64 4, i64 {{4|8}}, i64 4, i64 0, i64 4, i64 {{4|8}}, i64 {{4|8}}, i64 {{4|8}}, i64 4]
+  // CK8: private unnamed_addr constant [13 x i64]
 
 // ps1
 //
@@ -635,9 +635,11 @@ void test_present_modifier(int arg) {
 // PRESENT=0x1000 | PTR_AND_OBJ=0x10 = 0x1010
 // PRESENT=0x1000 | PTR_AND_OBJ=0x10 | FROM=0x2 | TO=0x1 = 0x1013
 // MEMBER_OF_1=0x1000000000000 | FROM=0x2 | TO=0x1 = 0x1000000000003
+// ATTACH=0x4000
 //
 // CK8-SAME: {{^}} [i64 [[#0x1000]], i64 [[#0x1000000001010]],
 // CK8-SAME: {{^}} i64 [[#0x1010]], i64 [[#0x1013]], i64 [[#0x1000000000003]],
+// CK8-SAME: {{^}} i64 [[#0x4000]],
 
 // arg
 //
@@ -648,13 +650,15 @@ void test_present_modifier(int arg) {
 // ps2
 //
 // PRESENT=0x1000 = 0x1000
-// MEMBER_OF_7=0x7000000000000 | PRESENT=0x1000 | FROM=0x2 | TO=0x1 = 0x7000000001003
-// MEMBER_OF_7=0x7000000000000 | PTR_AND_OBJ=0x10 = 0x7000000000010
+// MEMBER_OF_8=0x8000000000000 | PRESENT=0x1000 | FROM=0x2 | TO=0x1 = 0x8000000001003
+// ATTACH=0x4000
+// MEMBER_OF_8=0x8000000000000 | PTR_AND_OBJ=0x10 = 0x8000000000010
 // PTR_AND_OBJ=0x10 = 0x10
 // PTR_AND_OBJ=0x10 | FROM=0x2 | TO=0x1 = 0x13
 //
-// CK8-SAME: {{^}} i64 [[#0x1000]], i64 [[#0x7000000001003]],
-// CK8-SAME: {{^}} i64 [[#0x7000000000010]], i64 [[#0x10]], i64 [[#0x13]]]
+// CK8-SAME: {{^}} i64 [[#0x1000]], i64 [[#0x8000000001003]],
+// CK8-SAME: {{^}} i64 [[#0x4000]],
+// CK8-SAME: {{^}} i64 [[#0x8000000000010]], i64 [[#0x10]], i64 [[#0x13]]]
 #pragma omp target data map(tofrom         \
                             : ps1->s)      \
     map(present, tofrom                    \

@@ -11,9 +11,9 @@
 #ifndef HEADER
 #define HEADER
 
-// CHECK-DAG: [[SIZES1:@.+]] = private unnamed_addr constant [8 x i64] [i64 4, i64 16, i64 4, i64 8, i64 8, i64 4, i64 0, i64 4]
+// CHECK-DAG: [[SIZES1:@.+]] = private unnamed_addr constant [8 x i64] [i64 4, i64 16, i64 8, i64 4, i64 8, i64 4, i64 0, i64 4]
 // 64 = 0x40 = OMP_MAP_RETURN_PARAM
-// CHECK-DAG: [[MAPTYPES1:@.+]] = private unnamed_addr constant [8 x i64] [i64 67, i64 67, i64 3, i64 16384, i64 16384, i64 67, i64 67, i64 67]
+// CHECK-DAG: [[MAPTYPES1:@.+]] = private unnamed_addr constant [8 x i64] [i64 67, i64 67, i64 16384, i64 3, i64 16384, i64 67, i64 67, i64 67]
 // CHECK-DAG: [[SIZES2:@.+]] = private unnamed_addr constant [6 x i64] [i64 0, i64 4, i64 16, i64 4, i64 4, i64 0]
 // 0 = OMP_MAP_NONE
 // 281474976710720 = 0x1000000000040 = OMP_MAP_MEMBER_OF | OMP_MAP_RETURN_PARAM
@@ -46,10 +46,10 @@ int main() {
 // CHECK-LABEL: @main()
 //
 //  &a, &a, TO | FROM | RETURN_PARAM
-//  &p[0], &p[3], TO | FROM | RETURN_PARAM
-//  &p[0], &p[0], TO | FROM | RETURN_PARAM
-//  &p, &p[3], ATTACH
-//  &p, &p[0], ATTACH
+//  &ptr[0], &ptr[3], TO | FROM | RETURN_PARAM
+//  &ptr, &ptr[3], ATTACH
+//  &ptr[0], &ptr[0], TO | FROM | RETURN_PARAM
+//  &ptr, &ptr[0], ATTACH
 //  &ref_ptee(ref), &ref_ptee(ref), TO | FROM | RETURN_PARAM
 //  &arr, &arr[0], TO | FROM | ATTACH | RETURN_PARAM
 //
@@ -87,13 +87,13 @@ int main() {
 // CHECK: [[PTR1:%.+]] = getelementptr inbounds [8 x ptr], ptr [[PTRS]], i32 0, i32 1
 // CHECK: store ptr [[ARR_IDX]], ptr [[PTR1]],
 // CHECK: [[BPTR2:%.+]] = getelementptr inbounds [8 x ptr], ptr [[BPTRS]], i32 0, i32 2
-// CHECK: store ptr [[P3]], ptr [[BPTR2]],
+// CHECK: store ptr [[PTR_ADDR]], ptr [[BPTR2]],
 // CHECK: [[PTR2:%.+]] = getelementptr inbounds [8 x ptr], ptr [[PTRS]], i32 0, i32 2
-// CHECK: store ptr [[ARR_IDX2]], ptr [[PTR2]],
+// CHECK: store ptr [[ARR_IDX1]], ptr [[PTR2]],
 // CHECK: [[BPTR3:%.+]] = getelementptr inbounds [8 x ptr], ptr [[BPTRS]], i32 0, i32 3
-// CHECK: store ptr [[PTR_ADDR]], ptr [[BPTR3]],
+// CHECK: store ptr [[P3]], ptr [[BPTR3]],
 // CHECK: [[PTR3:%.+]] = getelementptr inbounds [8 x ptr], ptr [[PTRS]], i32 0, i32 3
-// CHECK: store ptr [[ARR_IDX1]], ptr [[PTR3]],
+// CHECK: store ptr [[ARR_IDX2]], ptr [[PTR3]],
 // CHECK: [[BPTR4:%.+]] = getelementptr inbounds [8 x ptr], ptr [[BPTRS]], i32 0, i32 4
 // CHECK: store ptr [[PTR_ADDR]], ptr [[BPTR4]], align
 // CHECK: [[PTR4:%.+]] = getelementptr inbounds [8 x ptr], ptr [[PTRS]], i32 0, i32 4

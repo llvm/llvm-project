@@ -45,7 +45,6 @@ void foo(float *&lr, T *&tr) {
   // &g, &g[/*lb=*/0], sizeof(g), ATTACH
   //
   // CK1:     [[T:%.+]] = load ptr, ptr [[DECL:@g]],
-  // CK1:     [[T:%.+]] = load ptr, ptr [[DECL]],
   // CK1:     [[BP:%.+]] = getelementptr inbounds [2 x ptr], ptr %{{.+}}, i32 0, i32 0
   // CK1:     store ptr [[T]], ptr [[BP]],
   // CK1:     call void @__tgt_target_data_begin{{.+}}[[MTYPE00]]
