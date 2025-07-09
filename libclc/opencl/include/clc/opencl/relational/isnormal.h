@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#undef isnormal
+#ifndef __CLC_OPENCL_RELATIONAL_ISNORMAL_H__
+#define __CLC_OPENCL_RELATIONAL_ISNORMAL_H__
+
+#include <clc/opencl/opencl-base.h>
 
 #define FUNCTION isnormal
 #define __CLC_BODY <clc/relational/unary_decl.inc>
@@ -14,3 +17,5 @@
 #include <clc/relational/floatn.inc>
 
 #undef FUNCTION
+
+#endif // __CLC_OPENCL_RELATIONAL_ISNORMAL_H__
