@@ -2442,9 +2442,9 @@ static mlir::acc::LoopOp createLoopOp(
       inclusiveBounds.push_back(true);
     }
   } else {
-    int64_t collapseValue =
+    int64_t loopCount =
         Fortran::lower::getLoopCountForCollapseAndTile(accClauseList);
-    for (unsigned i = 0; i < collapseValue; ++i) {
+    for (unsigned i = 0; i < loopCount; ++i) {
       const Fortran::parser::LoopControl *loopControl;
       if (i == 0) {
         loopControl = &*outerDoConstruct.GetLoopControl();
@@ -2479,7 +2479,7 @@ static mlir::acc::LoopOp createLoopOp(
 
       inclusiveBounds.push_back(true);
 
-      if (i < collapseValue - 1)
+      if (i < loopCount - 1)
         crtEval = &*std::next(crtEval->getNestedEvaluations().begin());
     }
   }
