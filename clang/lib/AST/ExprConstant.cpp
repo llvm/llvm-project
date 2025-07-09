@@ -8951,7 +8951,7 @@ static bool EvaluateLValue(const Expr *E, LValue &Result, EvalInfo &Info,
 }
 
 bool LValueExprEvaluator::VisitDeclRefExpr(const DeclRefExpr *E) {
-  const NamedDecl *D = E->getDecl();
+  const ValueDecl *D = E->getDecl();
 
   // If we are within a lambda's call operator, check whether the 'VD' referred
   // to within 'E' actually represents a lambda-capture that maps to a
@@ -8966,8 +8966,7 @@ bool LValueExprEvaluator::VisitDeclRefExpr(const DeclRefExpr *E) {
     if (Info.checkingPotentialConstantExpression())
       return false;
 
-    if (auto *FD =
-            Info.CurrentCall->LambdaCaptureFields.lookup(cast<ValueDecl>(D))) {
+    if (auto *FD = Info.CurrentCall->LambdaCaptureFields.lookup(D)) {
       const auto *MD = cast<CXXMethodDecl>(Info.CurrentCall->Callee);
       return HandleLambdaCapture(Info, E, Result, MD, FD,
                                  FD->getType()->isReferenceType());
