@@ -113,7 +113,7 @@
 "","","","","",""
 "`LWG3578 <https://wg21.link/3578>`__","Iterator SCARYness in the context of associative container merging","2025-02 (Hagenberg)","","",""
 "`LWG3956 <https://wg21.link/3956>`__","``chrono::parse`` uses ``from_stream`` as a customization point","2025-02 (Hagenberg)","","",""
-"`LWG4172 <https://wg21.link/4172>`__","``unique_lock`` self-move-assignment is broken","2025-02 (Hagenberg)","","",""
+"`LWG4172 <https://wg21.link/4172>`__","``unique_lock`` self-move-assignment is broken","2025-02 (Hagenberg)","|Complete|","21",""
 "`LWG4175 <https://wg21.link/4175>`__","``get_env()`` specified in terms of ``as_const()`` but this doesn't work with rvalue senders","2025-02 (Hagenberg)","","",""
 "`LWG4179 <https://wg21.link/4179>`__","Wrong range in ``[alg.search]``","2025-02 (Hagenberg)","","",""
 "`LWG4186 <https://wg21.link/4186>`__","``regex_traits::transform_primary`` mistakenly detects ``typeid`` of a function","2025-02 (Hagenberg)","","",""
