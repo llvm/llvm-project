@@ -114,7 +114,7 @@ private:
 
   /// Adds a checker to the registry. This private, most general variant is
   /// intended for loading the checker definitions from `Checkers.td`.
-  /// FIXME: The checker registr should not bother with loading `DocsUri`
+  /// FIXME: The checker registry should not bother with loading `DocsUri`
   /// becaus it is (as of now) never queried from the checker registry.
   void addChecker(RegisterCheckerFn Fn, ShouldRegisterFunction Sfn,
                   StringRef FullName, StringRef Desc, StringRef DocsUri,
