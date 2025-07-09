@@ -4376,6 +4376,22 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  [[maybe_unused]] static bool isFixedIntVectorTy(const Type *T) {
+    return isa<FixedVectorType>(T) && T->isIntOrIntVectorTy();
+  }
+
+  [[maybe_unused]] static bool isFixedFPVectorTy(const Type *T) {
+    return isa<FixedVectorType>(T) && T->isFPOrFPVectorTy();
+  }
+
+  [[maybe_unused]] static bool isFixedIntVector(const Value *V) {
+    return isFixedIntVectorTy(V->getType());
+  }
+
+  [[maybe_unused]] static bool isFixedFPVector(const Value *V) {
+    return isFixedFPVectorTy(V->getType());
+  }
+
   // e.g., call <16 x i32> @llvm.x86.avx512.mask.cvtps2dq.512
   //                           (<16 x float> a, <16 x i32> writethru, i16 mask,
   //                           i32 rounding)
@@ -4393,11 +4409,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *Mask = I.getOperand(2);
     [[maybe_unused]] Value *RoundingMode = I.getOperand(3);
 
-    assert(isa<FixedVectorType>(A->getType()));
-    assert(A->getType()->isFPOrFPVectorTy());
-
-    assert(isa<FixedVectorType>(WriteThrough->getType()));
-    assert(WriteThrough->getType()->isIntOrIntVectorTy());
+    assert(isFixedFPVector(A));
+    assert(isFixedIntVector(WriteThrough));
 
     unsigned ANumElements =
         cast<FixedVectorType>(A->getType())->getNumElements();
@@ -4617,11 +4630,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *WriteThrough = I.getOperand(1);
     Value *Mask = I.getOperand(2);
 
-    assert(isa<FixedVectorType>(A->getType()));
-    assert(A->getType()->isIntOrIntVectorTy());
-
-    assert(isa<FixedVectorType>(WriteThrough->getType()));
-    assert(WriteThrough->getType()->isIntOrIntVectorTy());
+    assert(isFixedIntVector(A));
+    assert(isFixedIntVector(WriteThrough));
 
     unsigned ANumElements =
         cast<FixedVectorType>(A->getType())->getNumElements();

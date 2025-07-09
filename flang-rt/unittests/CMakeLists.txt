@@ -6,31 +6,37 @@
 #
 #===------------------------------------------------------------------------===#
 
-# LLVM uses a modified version of GTest that uses LLVMSupport for console
-# output. Therefore it also needs to include files from LLVM. Unfortunately,
-# LLVM/GTest doesn't add the include search path itself. Limiting the scope
-# using target_include_directories does not work because with
-# LLVM_INSTALL_GTEST=ON, as llvm_gtest is an IMPORT library.
-include_directories("${LLVM_INCLUDE_DIR}" "${LLVM_MAIN_INCLUDE_DIR}")
+# Target that depends on all unittests
+add_custom_target(FlangRTUnitTests)
+set_target_properties(FlangRTUnitTests PROPERTIES FOLDER "Flang-RT/Meta")
 
-# Add GTest if not already present.
-# Using a function so LLVM_SUBPROJECT_TITLE does not propagate.
-function (build_gtest)
-  set(LLVM_SUBPROJECT_TITLE "Third-Party/Google Test")
-  add_subdirectory("${LLVM_THIRD_PARTY_DIR}/unittest" "${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest")
-endfunction ()
-if (NOT TARGET llvm_gtest)
-  build_gtest()
+# LLVM uses a modified version of GTest that uses LLVMSupport for console
+# output. We are using the pre-compiled GTest library from the LLVM build,
+# if available. Otherwise, do nothing.
+
+if (CMAKE_CROSSCOMPILING)
+  # TODO: It is possible that LLVM_GTEST_RUN_UNDER defines an emulator or
+  #       ssh remote command invocation; for this case provide an option to
+  #       enable unittests.
+  message(STATUS "Flang-RT unittests disabled because we are cross-compiling")
+  return ()
 endif ()
+
+if (NOT TARGET llvm_gtest)
+  message(WARNING "Flang-RT unittests disabled due to GTest being unavailable; "
+                  "Try LLVM_INSTALL_GTEST=ON for the LLVM build")
+  return ()
+endif ()
+
+
+add_dependencies(flang-rt-test-depends
+  FlangRTUnitTests
+  flang_rt.runtime.unittest
+)
 
 if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
   add_compile_options("-Wno-suggest-override")
 endif()
-
-
-# Target that depends on all unittests
-add_custom_target(FlangRTUnitTests)
-set_target_properties(FlangRTUnitTests PROPERTIES FOLDER "Flang-RT/Meta")
 
 
 function(add_flangrt_unittest_offload_properties target)
