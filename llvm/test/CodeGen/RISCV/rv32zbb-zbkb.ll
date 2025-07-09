@@ -112,11 +112,16 @@ define i64 @xnor_i64(i64 %a, i64 %b) nounwind {
 }
 
 define i32 @disjoint_or_xnor_i32(i32 %a, i32 %b) nounwind {
-; CHECK-LABEL: disjoint_or_xnor_i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    not a0, a0
-; CHECK-NEXT:    ret
+; RV32I-LABEL: disjoint_or_xnor_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: disjoint_or_xnor_i32:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    xnor a0, a0, a1
+; RV32ZBB-ZBKB-NEXT:    ret
   %or = or disjoint i32 %a, %b
   %not = xor i32 %or, -1
   ret i32 %not
@@ -136,13 +141,20 @@ define i64 @disjoint_or_xnor_i64(i64 %a, i64 %b) nounwind {
 }
 
 define i32 @disjoint_or_xnor_knownbits_i32(i32 %x, i32 %y, i32 %z) nounwind {
-; CHECK-LABEL: disjoint_or_xnor_knownbits_i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi a0, a0, 126
-; CHECK-NEXT:    andi a1, a1, -127
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    not a0, a0
-; CHECK-NEXT:    ret
+; RV32I-LABEL: disjoint_or_xnor_knownbits_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, 126
+; RV32I-NEXT:    andi a1, a1, -127
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: disjoint_or_xnor_knownbits_i32:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    andi a0, a0, 126
+; RV32ZBB-ZBKB-NEXT:    andi a1, a1, -127
+; RV32ZBB-ZBKB-NEXT:    xnor a0, a0, a1
+; RV32ZBB-ZBKB-NEXT:    ret
   %a = and i32 %x, 126
   %b = and i32 %y, -127
   %or = or i32 %a, %b
@@ -151,14 +163,22 @@ define i32 @disjoint_or_xnor_knownbits_i32(i32 %x, i32 %y, i32 %z) nounwind {
 }
 
 define i64 @disjoint_or_xnor_knownbits_i64(i64 %x, i64 %y, i64 %z) nounwind {
-; CHECK-LABEL: disjoint_or_xnor_knownbits_i64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi a0, a0, 126
-; CHECK-NEXT:    andi a1, a2, -127
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    not a0, a0
-; CHECK-NEXT:    not a1, a3
-; CHECK-NEXT:    ret
+; RV32I-LABEL: disjoint_or_xnor_knownbits_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, 126
+; RV32I-NEXT:    andi a1, a2, -127
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    not a1, a3
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-ZBKB-LABEL: disjoint_or_xnor_knownbits_i64:
+; RV32ZBB-ZBKB:       # %bb.0:
+; RV32ZBB-ZBKB-NEXT:    andi a0, a0, 126
+; RV32ZBB-ZBKB-NEXT:    andi a1, a2, -127
+; RV32ZBB-ZBKB-NEXT:    xnor a0, a0, a1
+; RV32ZBB-ZBKB-NEXT:    not a1, a3
+; RV32ZBB-ZBKB-NEXT:    ret
   %a = and i64 %x, 126
   %b = and i64 %y, -127
   %or = or i64 %a, %b

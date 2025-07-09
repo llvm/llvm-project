@@ -1459,6 +1459,10 @@ def add_like : PatFrags<(ops node:$lhs, node:$rhs),
                         [(or_is_add node:$lhs, node:$rhs),
                          (add  node:$lhs, node:$rhs)]>;
 
+def riscv_xor_like : PatFrags<(ops node:$lhs, node:$rhs),
+                              [(or_is_add node:$lhs, node:$rhs),
+                               (xor  node:$lhs, node:$rhs)]>;
+
 // negate of low bit can be done via two (compressible) shifts.  The negate
 // is never compressible since rs1 and rd can't be the same register.
 def : Pat<(i32 (sub 0, (and_oneuse GPR:$rs, 1))),
