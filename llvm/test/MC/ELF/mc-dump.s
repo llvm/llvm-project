@@ -12,7 +12,7 @@
 # CHECK-NEXT:0 Data Size:0 []
 # CHECK-NEXT:  Symbol @0 _start
 # CHECK-NEXT:0 Org Offset:3 Value:0
-# CHECK-NEXT:3 Relaxable Size:2 <MCInst #1996 <MCOperand Expr:.Ltmp0>>
+# CHECK-NEXT:3 Relaxable Size:2 <MCInst #1999 <MCOperand Expr:.Ltmp0>>
 # CHECK-NEXT:  Fixup @1 Value:.Ltmp0 Kind:4001
 # CHECK-NEXT:5 Data Size:16 [48,8b,04,25,00,00,00,00,48,8b,04,25,00,00,00,00]
 # CHECK-NEXT:  Fixup @4 Value:f0@<variant 11> Kind:4017
