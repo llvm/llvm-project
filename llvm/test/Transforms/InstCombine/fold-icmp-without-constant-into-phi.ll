@@ -128,7 +128,7 @@ end:
 }
 
 define i1 @test_which_optimizes_to_select(i1 %cond, i64 %left, i64 %right) {
-; CHECK-LABEL: define i1 @test_which_folds_to_a_select(
+; CHECK-LABEL: define i1 @test_which_optimizes_to_select(
 ; CHECK-SAME: i1 [[COND:%.*]], i64 [[LEFT:%.*]], i64 [[RIGHT:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
