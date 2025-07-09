@@ -113,8 +113,16 @@ public:
       return signalPassFailure();
     mlir::SymbolTable gpuSymTable(gpuMod);
     for (auto globalOp : mod.getOps<fir::GlobalOp>()) {
-      if (cuf::isRegisteredDeviceGlobal(globalOp))
+      if (cuf::isRegisteredDeviceGlobal(globalOp)) {
         candidates.insert(globalOp);
+      } else if (globalOp.getConstant() &&
+                 mlir::isa<fir::SequenceType>(
+                     fir::unwrapRefType(globalOp.resultType()))) {
+        mlir::Attribute initAttr =
+            globalOp.getInitVal().value_or(mlir::Attribute());
+        if (initAttr && mlir::dyn_cast<mlir::DenseElementsAttr>(initAttr))
+          candidates.insert(globalOp);
+      }
     }
     for (auto globalOp : candidates) {
       auto globalName{globalOp.getSymbol().getValue()};

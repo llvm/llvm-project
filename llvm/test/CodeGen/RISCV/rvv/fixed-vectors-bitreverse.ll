@@ -188,7 +188,7 @@ define void @bitreverse_v2i64(ptr %x, ptr %y) {
 ; RV64-NEXT:    lui a3, 16
 ; RV64-NEXT:    lui a4, 4080
 ; RV64-NEXT:    li a5, 255
-; RV64-NEXT:    addiw a3, a3, -256
+; RV64-NEXT:    addi a3, a3, -256
 ; RV64-NEXT:    slli a5, a5, 24
 ; RV64-NEXT:    vsrl.vx v9, v8, a1
 ; RV64-NEXT:    vsrl.vx v10, v8, a2
@@ -211,9 +211,9 @@ define void @bitreverse_v2i64(ptr %x, ptr %y) {
 ; RV64-NEXT:    lui a1, 61681
 ; RV64-NEXT:    lui a2, 209715
 ; RV64-NEXT:    lui a3, 349525
-; RV64-NEXT:    addiw a1, a1, -241
-; RV64-NEXT:    addiw a2, a2, 819
-; RV64-NEXT:    addiw a3, a3, 1365
+; RV64-NEXT:    addi a1, a1, -241
+; RV64-NEXT:    addi a2, a2, 819
+; RV64-NEXT:    addi a3, a3, 1365
 ; RV64-NEXT:    slli a4, a1, 32
 ; RV64-NEXT:    slli a5, a2, 32
 ; RV64-NEXT:    add a1, a1, a4
@@ -440,7 +440,7 @@ define void @bitreverse_v4i64(ptr %x, ptr %y) {
 ; RV64-NEXT:    lui a3, 16
 ; RV64-NEXT:    lui a4, 4080
 ; RV64-NEXT:    li a5, 255
-; RV64-NEXT:    addiw a3, a3, -256
+; RV64-NEXT:    addi a3, a3, -256
 ; RV64-NEXT:    slli a5, a5, 24
 ; RV64-NEXT:    vsrl.vx v8, v14, a1
 ; RV64-NEXT:    vsrl.vx v10, v14, a2
@@ -463,9 +463,9 @@ define void @bitreverse_v4i64(ptr %x, ptr %y) {
 ; RV64-NEXT:    lui a1, 61681
 ; RV64-NEXT:    lui a2, 209715
 ; RV64-NEXT:    lui a3, 349525
-; RV64-NEXT:    addiw a1, a1, -241
-; RV64-NEXT:    addiw a2, a2, 819
-; RV64-NEXT:    addiw a3, a3, 1365
+; RV64-NEXT:    addi a1, a1, -241
+; RV64-NEXT:    addi a2, a2, 819
+; RV64-NEXT:    addi a3, a3, 1365
 ; RV64-NEXT:    slli a4, a1, 32
 ; RV64-NEXT:    slli a5, a2, 32
 ; RV64-NEXT:    add a1, a1, a4

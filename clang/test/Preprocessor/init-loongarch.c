@@ -946,6 +946,10 @@
 // RUN:   | FileCheck --match-full-lines --check-prefix=MNO-LSX %s
 // RUN: %clang --target=loongarch64 -mno-lasx -mno-lsx -x c -E -dM %s -o - \
 // RUN:   | FileCheck --match-full-lines --check-prefix=MNO-LSX %s
+// RUN: %clang --target=loongarch64 -march=la464 -mno-lsx -x c -E -dM %s -o - \
+// RUN:   | FileCheck --match-full-lines --check-prefix=MNO-LSX %s
+// RUN: %clang --target=loongarch64 -mno-lsx -march=la464 -x c -E -dM %s -o - \
+// RUN:   | FileCheck --match-full-lines --check-prefix=MNO-LSX %s
 // MNO-LSX-NOT: #define __loongarch_asx
 // MNO-LSX-NOT: #define __loongarch_simd_width
 // MNO-LSX-NOT: #define __loongarch_sx

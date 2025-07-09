@@ -329,7 +329,7 @@ struct AAAMDAttributes
                                             Attributor &A);
 
   /// See AbstractAttribute::getName().
-  const std::string getName() const override { return "AAAMDAttributes"; }
+  StringRef getName() const override { return "AAAMDAttributes"; }
 
   /// See AbstractAttribute::getIdAddr().
   const char *getIdAddr() const override { return &ID; }
@@ -355,9 +355,7 @@ struct AAUniformWorkGroupSize
                                                    Attributor &A);
 
   /// See AbstractAttribute::getName().
-  const std::string getName() const override {
-    return "AAUniformWorkGroupSize";
-  }
+  StringRef getName() const override { return "AAUniformWorkGroupSize"; }
 
   /// See AbstractAttribute::getIdAddr().
   const char *getIdAddr() const override { return &ID; }
@@ -937,9 +935,7 @@ struct AAAMDFlatWorkGroupSize : public AAAMDSizeRangeAttribute {
   }
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override {
-    return "AAAMDFlatWorkGroupSize";
-  }
+  StringRef getName() const override { return "AAAMDFlatWorkGroupSize"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -1071,7 +1067,7 @@ struct AAAMDMaxNumWorkgroups
         /* ForceReplace= */ true);
   }
 
-  const std::string getName() const override { return "AAAMDMaxNumWorkgroups"; }
+  StringRef getName() const override { return "AAAMDMaxNumWorkgroups"; }
 
   const std::string getAsStr(Attributor *) const override {
     std::string Buffer = "AAAMDMaxNumWorkgroupsState[";
@@ -1179,7 +1175,7 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
   }
 
   /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAAMDWavesPerEU"; }
+  StringRef getName() const override { return "AAAMDWavesPerEU"; }
 
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
@@ -1285,7 +1281,7 @@ struct AAAMDGPUNoAGPR
                            {Attribute::get(Ctx, "amdgpu-agpr-alloc", "0")});
   }
 
-  const std::string getName() const override { return "AAAMDGPUNoAGPR"; }
+  StringRef getName() const override { return "AAAMDGPUNoAGPR"; }
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
@@ -1446,36 +1442,6 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
 
   return Changed;
 }
-
-class AMDGPUAttributorLegacy : public ModulePass {
-public:
-  AMDGPUAttributorLegacy() : ModulePass(ID) {}
-
-  /// doInitialization - Virtual method overridden by subclasses to do
-  /// any necessary initialization before any pass is run.
-  bool doInitialization(Module &) override {
-    auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
-    if (!TPC)
-      report_fatal_error("TargetMachine is required");
-
-    TM = &TPC->getTM<TargetMachine>();
-    return false;
-  }
-
-  bool runOnModule(Module &M) override {
-    AnalysisGetter AG(this);
-    return runImpl(M, AG, *TM, /*Options=*/{},
-                   /*LTOPhase=*/ThinOrFullLTOPhase::None);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<CycleInfoWrapperPass>();
-  }
-
-  StringRef getPassName() const override { return "AMDGPU Attributor"; }
-  TargetMachine *TM;
-  static char ID;
-};
 } // namespace
 
 PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
@@ -1489,14 +1455,3 @@ PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
   return runImpl(M, AG, TM, Options, LTOPhase) ? PreservedAnalyses::none()
                                                : PreservedAnalyses::all();
 }
-
-char AMDGPUAttributorLegacy::ID = 0;
-
-Pass *llvm::createAMDGPUAttributorLegacyPass() {
-  return new AMDGPUAttributorLegacy();
-}
-INITIALIZE_PASS_BEGIN(AMDGPUAttributorLegacy, DEBUG_TYPE, "AMDGPU Attributor",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass);
-INITIALIZE_PASS_END(AMDGPUAttributorLegacy, DEBUG_TYPE, "AMDGPU Attributor",
-                    false, false)
