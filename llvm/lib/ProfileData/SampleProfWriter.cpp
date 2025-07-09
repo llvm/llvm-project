@@ -592,9 +592,9 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
   SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
       S.getCallsiteSamples());
   Indent += 1;
-  for (const auto &I : SortedCallsiteSamples.get())
+  for (const auto &I : SortedCallsiteSamples.get()) {
+    LineLocation Loc = I->first;
     for (const auto &FS : I->second) {
-      LineLocation Loc = I->first;
       const FunctionSamples &CalleeSamples = FS.second;
       OS.indent(Indent);
       Loc.print(OS);
@@ -602,6 +602,7 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
       if (std::error_code EC = writeSample(CalleeSamples))
         return EC;
     }
+  }
   Indent -= 1;
 
   if (FunctionSamples::ProfileIsProbeBased) {
@@ -836,12 +837,11 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
   for (const auto &J : S.getCallsiteSamples())
     NumCallsites += J.second.size();
   encodeULEB128(NumCallsites, OS);
-  for (const auto &J : S.getCallsiteSamples())
-    for (const auto &FS : J.second) {
-      LineLocation Loc = J.first;
-      const FunctionSamples &CalleeSamples = FS.second;
+  for (const auto &[Loc, CalleeFunctionSampleMap] : S.getCallsiteSamples())
+    for (const auto &FunctionSample :
+         llvm::make_second_range(CalleeFunctionSampleMap)) {
       Loc.serialize(OS);
-      if (std::error_code EC = writeBody(CalleeSamples))
+      if (std::error_code EC = writeBody(FunctionSample))
         return EC;
     }
 

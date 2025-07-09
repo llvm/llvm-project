@@ -91,6 +91,8 @@ class SampleProfErrorCategoryType : public std::error_category {
       return "Zlib is unavailable";
     case sampleprof_error::hash_mismatch:
       return "Function hash mismatch";
+    case sampleprof_error::illegal_line_offset:
+      return "Illegal line offset in sample profile data";
     }
     llvm_unreachable("A value of sampleprof_error has no message.");
   }
@@ -150,7 +152,7 @@ std::error_code SampleRecord::serialize(
 LLVM_DUMP_METHOD void LineLocation::dump() const { print(dbgs()); }
 #endif
 
-void LineLocation::serialize(raw_ostream &OS) {
+void LineLocation::serialize(raw_ostream &OS) const {
   encodeULEB128(LineOffset, OS);
   encodeULEB128(Discriminator, OS);
 }
@@ -204,11 +206,11 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
     SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
         CallsiteSamples);
     for (const auto &CS : SortedCallsiteSamples.get()) {
-      for (const auto &FS : CS->second) {
+      for (const auto& FuncSample : llvm::make_second_range(CS->second)) {
         OS.indent(Indent + 2);
-        OS << CS->first << ": inlined callee: " << FS.second.getFunction()
+        OS << CS->first << ": inlined callee: " << FuncSample.getFunction()
            << ": ";
-        FS.second.print(OS, Indent + 4);
+        FuncSample.print(OS, Indent + 4);
       }
     }
     OS.indent(Indent);
