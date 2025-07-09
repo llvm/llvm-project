@@ -11,19 +11,21 @@
 #define _LIBCPP_BASIC_STACKTRACE_HASH
 
 #include <__config>
-#include <__functional/hash.h>
-#include <cstddef>
-#include <cstdint>
+#if _LIBCPP_STD_VER >= 23
 
-#include <__stacktrace/base.h>
-#include <__stacktrace/to_string.h>
+#  include <__functional/hash.h>
+#  include <cstddef>
+#  include <cstdint>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
+#  include <__stacktrace/base.h>
+#  include <__stacktrace/to_string.h>
+
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -45,4 +47,5 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
+#endif // _LIBCPP_STD_VER >= 23
 #endif // _LIBCPP_BASIC_STACKTRACE_HASH

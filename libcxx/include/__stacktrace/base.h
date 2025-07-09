@@ -7,31 +7,33 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STACKTRACE_BUILDER
-#define _LIBCPP_STACKTRACE_BUILDER
+#ifndef _LIBCPP_STACKTRACE_BASE
+#define _LIBCPP_STACKTRACE_BASE
 
 #include <__config>
-#include <__cstddef/byte.h>
-#include <__cstddef/size_t.h>
-#include <__functional/function.h>
-#include <__fwd/format.h>
-#include <__fwd/ostream.h>
-#include <__memory/allocator.h>
-#include <__memory/allocator_traits.h>
-#include <__new/allocate.h>
-#include <__vector/vector.h>
-#include <cstddef>
-#include <cstdint>
-#include <list>
-#include <optional>
-#include <string>
+#if _LIBCPP_STD_VER >= 23
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
+#  include <__cstddef/byte.h>
+#  include <__cstddef/size_t.h>
+#  include <__functional/function.h>
+#  include <__fwd/format.h>
+#  include <__fwd/ostream.h>
+#  include <__memory/allocator.h>
+#  include <__memory/allocator_traits.h>
+#  include <__new/allocate.h>
+#  include <__vector/vector.h>
+#  include <cstddef>
+#  include <cstdint>
+#  include <list>
+#  include <optional>
+#  include <string>
+
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -130,4 +132,5 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_STACKTRACE_BUILDER
+#endif // _LIBCPP_STD_VER >= 23
+#endif // _LIBCPP_STACKTRACE_BASE
