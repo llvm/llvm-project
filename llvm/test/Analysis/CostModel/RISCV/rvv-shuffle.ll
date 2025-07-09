@@ -71,10 +71,6 @@ define void @vector_insert_extract(<vscale x 4 x i32> %v0, <vscale x 16 x i32> %
   %insert_scalable_into_scalable = call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> %v1, <vscale x 4 x i32> %v0, i64 0)
   ret void
 }
-declare <16 x i32> @llvm.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32>, i64)
-declare <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32>, <16 x i32>, i64)
-declare <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32>, i64)
-declare <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32>, <vscale x 4 x i32>, i64)
 
 define void @vector_reverse() {
 ; CHECK-LABEL: 'vector_reverse'
@@ -143,25 +139,6 @@ define void @vector_reverse() {
   ret void
 }
 
-declare <vscale x 16 x i8> @llvm.vector.reverse.nxv16i8(<vscale x 16 x i8>)
-declare <vscale x 32 x i8> @llvm.vector.reverse.nxv32i8(<vscale x 32 x i8>)
-declare <vscale x 2 x i16> @llvm.vector.reverse.nxv2i16(<vscale x 2 x i16>)
-declare <vscale x 4 x i16> @llvm.vector.reverse.nxv4i16(<vscale x 4 x i16>)
-declare <vscale x 8 x i16> @llvm.vector.reverse.nxv8i16(<vscale x 8 x i16>)
-declare <vscale x 16 x i16> @llvm.vector.reverse.nxv16i16(<vscale x 16 x i16>)
-declare <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32>)
-declare <vscale x 8 x i32> @llvm.vector.reverse.nxv8i32(<vscale x 8 x i32>)
-declare <vscale x 2 x i64> @llvm.vector.reverse.nxv2i64(<vscale x 2 x i64>)
-declare <vscale x 4 x i64> @llvm.vector.reverse.nxv4i64(<vscale x 4 x i64>)
-declare <vscale x 8 x i64> @llvm.vector.reverse.nxv8i64(<vscale x 8 x i64>)
-declare <vscale x 16 x i64> @llvm.vector.reverse.nxv16i64(<vscale x 16 x i64>)
-declare <vscale x 32 x i64> @llvm.vector.reverse.nxv32i64(<vscale x 32 x i64>)
-declare <vscale x 16 x i1> @llvm.vector.reverse.nxv16i1(<vscale x 16 x i1>)
-declare <vscale x 8 x i1> @llvm.vector.reverse.nxv8i1(<vscale x 8 x i1>)
-declare <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1>)
-declare <vscale x 2 x i1> @llvm.vector.reverse.nxv2i1(<vscale x 2 x i1>)
-
-
 define void @vector_splice() {
 ; CHECK-LABEL: 'vector_splice'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %splice_nxv16i8 = call <vscale x 16 x i8> @llvm.vector.splice.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i8> zeroinitializer, i32 1)
@@ -213,19 +190,3 @@ define void @vector_splice() {
   %splice_nxv2i1 = call <vscale x 2 x i1> @llvm.vector.splice.nxv2i1(<vscale x 2 x i1> zeroinitializer, <vscale x 2 x i1> zeroinitializer, i32 1)
   ret void
 }
-
-declare <vscale x 2 x i1> @llvm.vector.splice.nxv2i1(<vscale x 2 x i1>, <vscale x 2 x i1>, i32)
-declare <vscale x 4 x i1> @llvm.vector.splice.nxv4i1(<vscale x 4 x i1>, <vscale x 4 x i1>, i32)
-declare <vscale x 8 x i1> @llvm.vector.splice.nxv8i1(<vscale x 8 x i1>, <vscale x 8 x i1>, i32)
-declare <vscale x 16 x i1> @llvm.vector.splice.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, i32)
-declare <vscale x 2 x i8> @llvm.vector.splice.nxv2i8(<vscale x 2 x i8>, <vscale x 2 x i8>, i32)
-declare <vscale x 16 x i8> @llvm.vector.splice.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>, i32)
-declare <vscale x 32 x i8> @llvm.vector.splice.nxv32i8(<vscale x 32 x i8>, <vscale x 32 x i8>, i32)
-declare <vscale x 2 x i16> @llvm.vector.splice.nxv2i16(<vscale x 2 x i16>, <vscale x 2 x i16>, i32)
-declare <vscale x 4 x i16> @llvm.vector.splice.nxv4i16(<vscale x 4 x i16>, <vscale x 4 x i16>, i32)
-declare <vscale x 8 x i16> @llvm.vector.splice.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>, i32)
-declare <vscale x 16 x i16> @llvm.vector.splice.nxv16i16(<vscale x 16 x i16>, <vscale x 16 x i16>, i32)
-declare <vscale x 4 x i32> @llvm.vector.splice.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, i32)
-declare <vscale x 8 x i32> @llvm.vector.splice.nxv8i32(<vscale x 8 x i32>, <vscale x 8 x i32>, i32)
-declare <vscale x 2 x i64> @llvm.vector.splice.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>, i32)
-declare <vscale x 4 x i64> @llvm.vector.splice.nxv4i64(<vscale x 4 x i64>, <vscale x 4 x i64>, i32)
