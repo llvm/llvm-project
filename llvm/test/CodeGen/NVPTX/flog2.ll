@@ -97,19 +97,18 @@ define <2 x half> @log2_f16_test_v(<2 x half> %in) {
 ; CHECK-LABEL: log2_f16_test_v(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b32 %r<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [log2_f16_test_v_param_0];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; CHECK-NEXT:    cvt.f32.f16 %r2, %rs2;
-; CHECK-NEXT:    lg2.approx.f32 %r3, %r2;
-; CHECK-NEXT:    cvt.rn.f16.f32 %rs3, %r3;
-; CHECK-NEXT:    cvt.f32.f16 %r4, %rs1;
-; CHECK-NEXT:    lg2.approx.f32 %r5, %r4;
-; CHECK-NEXT:    cvt.rn.f16.f32 %rs4, %r5;
-; CHECK-NEXT:    mov.b32 %r6, {%rs4, %rs3};
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
+; CHECK-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [log2_f16_test_v_param_0];
+; CHECK-NEXT:    cvt.f32.f16 %r1, %rs2;
+; CHECK-NEXT:    lg2.approx.f32 %r2, %r1;
+; CHECK-NEXT:    cvt.rn.f16.f32 %rs3, %r2;
+; CHECK-NEXT:    cvt.f32.f16 %r3, %rs1;
+; CHECK-NEXT:    lg2.approx.f32 %r4, %r3;
+; CHECK-NEXT:    cvt.rn.f16.f32 %rs4, %r4;
+; CHECK-NEXT:    mov.b32 %r5, {%rs4, %rs3};
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-NEXT:    ret;
 entry:
   %log2 = call <2 x half> @llvm.log2.v2f16(<2 x half> %in)
@@ -123,21 +122,20 @@ define bfloat @log2_bf16_test(bfloat %in) {
 ; CHECK-LABEL: log2_bf16_test(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .b32 %r<13>;
+; CHECK-NEXT:    .reg .b32 %r<10>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.b16 %r1, [log2_bf16_test_param_0];
-; CHECK-NEXT:    shl.b32 %r11, %r1, 16;
-; CHECK-NEXT:    lg2.approx.f32 %r12, %r11;
-; CHECK-NEXT:    bfe.u32 %r6, %r12, 16, 1;
-; CHECK-NEXT:    add.s32 %r7, %r6, %r12;
-; CHECK-NEXT:    add.s32 %r8, %r7, 32767;
-; CHECK-NEXT:    setp.nan.f32 %p1, %r12, %r12;
-; CHECK-NEXT:    or.b32 %r9, %r12, 4194304;
-; CHECK-NEXT:    selp.b32 %r10, %r9, %r8, %p1;
-; CHECK-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r10; }
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    shl.b32 %r2, %r1, 16;
+; CHECK-NEXT:    lg2.approx.f32 %r3, %r2;
+; CHECK-NEXT:    bfe.u32 %r4, %r3, 16, 1;
+; CHECK-NEXT:    add.s32 %r5, %r4, %r3;
+; CHECK-NEXT:    add.s32 %r6, %r5, 32767;
+; CHECK-NEXT:    setp.nan.f32 %p1, %r3, %r3;
+; CHECK-NEXT:    or.b32 %r7, %r3, 4194304;
+; CHECK-NEXT:    selp.b32 %r8, %r7, %r6, %p1;
+; CHECK-NEXT:    shr.u32 %r9, %r8, 16;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %r9;
 ; CHECK-NEXT:    ret;
 entry:
   %log2 = call bfloat @llvm.log2.bf16(bfloat %in)
@@ -149,21 +147,20 @@ define bfloat @log2_bf16_ftz_test(bfloat %in) #0 {
 ; CHECK-LABEL: log2_bf16_ftz_test(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .b32 %r<13>;
+; CHECK-NEXT:    .reg .b32 %r<10>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.b16 %r1, [log2_bf16_ftz_test_param_0];
-; CHECK-NEXT:    shl.b32 %r11, %r1, 16;
-; CHECK-NEXT:    lg2.approx.ftz.f32 %r12, %r11;
-; CHECK-NEXT:    bfe.u32 %r6, %r12, 16, 1;
-; CHECK-NEXT:    add.s32 %r7, %r6, %r12;
-; CHECK-NEXT:    add.s32 %r8, %r7, 32767;
-; CHECK-NEXT:    setp.nan.ftz.f32 %p1, %r12, %r12;
-; CHECK-NEXT:    or.b32 %r9, %r12, 4194304;
-; CHECK-NEXT:    selp.b32 %r10, %r9, %r8, %p1;
-; CHECK-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r10; }
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    shl.b32 %r2, %r1, 16;
+; CHECK-NEXT:    lg2.approx.ftz.f32 %r3, %r2;
+; CHECK-NEXT:    bfe.u32 %r4, %r3, 16, 1;
+; CHECK-NEXT:    add.s32 %r5, %r4, %r3;
+; CHECK-NEXT:    add.s32 %r6, %r5, 32767;
+; CHECK-NEXT:    setp.nan.ftz.f32 %p1, %r3, %r3;
+; CHECK-NEXT:    or.b32 %r7, %r3, 4194304;
+; CHECK-NEXT:    selp.b32 %r8, %r7, %r6, %p1;
+; CHECK-NEXT:    shr.u32 %r9, %r8, 16;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %r9;
 ; CHECK-NEXT:    ret;
 entry:
   %log2 = call bfloat @llvm.log2.bf16(bfloat %in)
@@ -176,31 +173,30 @@ define <2 x bfloat> @log2_bf16_test_v(<2 x bfloat> %in) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<3>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
-; CHECK-NEXT:    .reg .b32 %r<27>;
+; CHECK-NEXT:    .reg .b32 %r<18>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.b32 %r1, [log2_bf16_test_v_param_0];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; CHECK-NEXT:    cvt.u32.u16 %r2, %rs2;
-; CHECK-NEXT:    shl.b32 %r23, %r2, 16;
-; CHECK-NEXT:    lg2.approx.f32 %r24, %r23;
-; CHECK-NEXT:    bfe.u32 %r7, %r24, 16, 1;
-; CHECK-NEXT:    add.s32 %r8, %r7, %r24;
-; CHECK-NEXT:    add.s32 %r9, %r8, 32767;
-; CHECK-NEXT:    setp.nan.f32 %p1, %r24, %r24;
-; CHECK-NEXT:    or.b32 %r10, %r24, 4194304;
-; CHECK-NEXT:    selp.b32 %r11, %r10, %r9, %p1;
-; CHECK-NEXT:    cvt.u32.u16 %r12, %rs1;
-; CHECK-NEXT:    shl.b32 %r25, %r12, 16;
-; CHECK-NEXT:    lg2.approx.f32 %r26, %r25;
-; CHECK-NEXT:    bfe.u32 %r17, %r26, 16, 1;
-; CHECK-NEXT:    add.s32 %r18, %r17, %r26;
-; CHECK-NEXT:    add.s32 %r19, %r18, 32767;
-; CHECK-NEXT:    setp.nan.f32 %p2, %r26, %r26;
-; CHECK-NEXT:    or.b32 %r20, %r26, 4194304;
-; CHECK-NEXT:    selp.b32 %r21, %r20, %r19, %p2;
-; CHECK-NEXT:    prmt.b32 %r22, %r21, %r11, 0x7632U;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r22;
+; CHECK-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [log2_bf16_test_v_param_0];
+; CHECK-NEXT:    cvt.u32.u16 %r1, %rs2;
+; CHECK-NEXT:    shl.b32 %r2, %r1, 16;
+; CHECK-NEXT:    lg2.approx.f32 %r3, %r2;
+; CHECK-NEXT:    bfe.u32 %r4, %r3, 16, 1;
+; CHECK-NEXT:    add.s32 %r5, %r4, %r3;
+; CHECK-NEXT:    add.s32 %r6, %r5, 32767;
+; CHECK-NEXT:    setp.nan.f32 %p1, %r3, %r3;
+; CHECK-NEXT:    or.b32 %r7, %r3, 4194304;
+; CHECK-NEXT:    selp.b32 %r8, %r7, %r6, %p1;
+; CHECK-NEXT:    cvt.u32.u16 %r9, %rs1;
+; CHECK-NEXT:    shl.b32 %r10, %r9, 16;
+; CHECK-NEXT:    lg2.approx.f32 %r11, %r10;
+; CHECK-NEXT:    bfe.u32 %r12, %r11, 16, 1;
+; CHECK-NEXT:    add.s32 %r13, %r12, %r11;
+; CHECK-NEXT:    add.s32 %r14, %r13, 32767;
+; CHECK-NEXT:    setp.nan.f32 %p2, %r11, %r11;
+; CHECK-NEXT:    or.b32 %r15, %r11, 4194304;
+; CHECK-NEXT:    selp.b32 %r16, %r15, %r14, %p2;
+; CHECK-NEXT:    prmt.b32 %r17, %r16, %r8, 0x7632U;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r17;
 ; CHECK-NEXT:    ret;
 entry:
   %log2 = call <2 x bfloat> @llvm.log2.v2bf16(<2 x bfloat> %in)

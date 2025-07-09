@@ -62,7 +62,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
-#include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -6368,7 +6367,7 @@ APInt ScalarEvolution::getConstantMultipleImpl(const SCEV *S) {
     // ask ValueTracking for known bits
     const SCEVUnknown *U = cast<SCEVUnknown>(S);
     unsigned Known =
-        computeKnownBits(U->getValue(), getDataLayout(), 0, &AC, nullptr, &DT)
+        computeKnownBits(U->getValue(), getDataLayout(), &AC, nullptr, &DT)
             .countMinTrailingZeros();
     return GetShiftedByZeros(Known);
   }
@@ -6486,8 +6485,8 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
   if (!TC || TC >= BitWidth)
     return FullSet;
 
-  auto KnownStart = computeKnownBits(Start, DL, 0, &AC, nullptr, &DT);
-  auto KnownStep = computeKnownBits(Step, DL, 0, &AC, nullptr, &DT);
+  auto KnownStart = computeKnownBits(Start, DL, &AC, nullptr, &DT);
+  auto KnownStep = computeKnownBits(Step, DL, &AC, nullptr, &DT);
   assert(KnownStart.getBitWidth() == BitWidth &&
          KnownStep.getBitWidth() == BitWidth);
 
@@ -6864,13 +6863,13 @@ const ConstantRange &ScalarEvolution::getRangeRef(
 
     // See if ValueTracking can give us a useful range.
     const DataLayout &DL = getDataLayout();
-    KnownBits Known = computeKnownBits(V, DL, 0, &AC, nullptr, &DT);
+    KnownBits Known = computeKnownBits(V, DL, &AC, nullptr, &DT);
     if (Known.getBitWidth() != BitWidth)
       Known = Known.zextOrTrunc(BitWidth);
 
     // ValueTracking may be able to compute a tighter result for the number of
     // sign bits than for the value of those sign bits.
-    unsigned NS = ComputeNumSignBits(V, DL, 0, &AC, nullptr, &DT);
+    unsigned NS = ComputeNumSignBits(V, DL, &AC, nullptr, &DT);
     if (U->getType()->isPointerTy()) {
       // If the pointer size is larger than the index size type, this can cause
       // NS to be larger than BitWidth. So compensate for this.
@@ -7819,8 +7818,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
         unsigned TZ = A.countr_zero();
         unsigned BitWidth = A.getBitWidth();
         KnownBits Known(BitWidth);
-        computeKnownBits(BO->LHS, Known, getDataLayout(),
-                         0, &AC, nullptr, &DT);
+        computeKnownBits(BO->LHS, Known, getDataLayout(), &AC, nullptr, &DT);
 
         APInt EffectiveMask =
             APInt::getLowBitsSet(BitWidth, BitWidth - LZ - TZ).shl(TZ);
@@ -9486,7 +9484,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeShiftCompareExitLimit(
     // {K,ashr,<positive-constant>} stabilizes to signum(K) in at most
     // bitwidth(K) iterations.
     Value *FirstValue = PN->getIncomingValueForBlock(Predecessor);
-    KnownBits Known = computeKnownBits(FirstValue, DL, 0, &AC,
+    KnownBits Known = computeKnownBits(FirstValue, DL, &AC,
                                        Predecessor->getTerminator(), &DT);
     auto *Ty = cast<IntegerType>(RHS->getType());
     if (Known.isNonNegative())
@@ -10894,13 +10892,22 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, const SCEV *&LHS,
     }
     break;
   case ICmpInst::ICMP_UGE:
-    if (!getUnsignedRangeMin(RHS).isMinValue()) {
+    // If RHS is an op we can fold the -1, try that first.
+    // Otherwise prefer LHS to preserve the nuw flag.
+    if ((isa<SCEVConstant>(RHS) ||
+         (isa<SCEVAddExpr, SCEVAddRecExpr>(RHS) &&
+          isa<SCEVConstant>(cast<SCEVNAryExpr>(RHS)->getOperand(0)))) &&
+        !getUnsignedRangeMin(RHS).isMinValue()) {
       RHS = getAddExpr(getConstant(RHS->getType(), (uint64_t)-1, true), RHS);
       Pred = ICmpInst::ICMP_UGT;
       Changed = true;
     } else if (!getUnsignedRangeMax(LHS).isMaxValue()) {
       LHS = getAddExpr(getConstant(RHS->getType(), 1, true), LHS,
                        SCEV::FlagNUW);
+      Pred = ICmpInst::ICMP_UGT;
+      Changed = true;
+    } else if (!getUnsignedRangeMin(RHS).isMinValue()) {
+      RHS = getAddExpr(getConstant(RHS->getType(), (uint64_t)-1, true), RHS);
       Pred = ICmpInst::ICMP_UGT;
       Changed = true;
     }
@@ -11369,11 +11376,9 @@ bool ScalarEvolution::isKnownPredicateViaConstantRanges(CmpPredicate Pred,
   if (HasSameValue(LHS, RHS))
     return ICmpInst::isTrueWhenEqual(Pred);
 
-  // This code is split out from isKnownPredicate because it is called from
-  // within isLoopEntryGuardedByCond.
-
-  auto CheckRanges = [&](const ConstantRange &RangeLHS,
-                         const ConstantRange &RangeRHS) {
+  auto CheckRange = [&](bool IsSigned) {
+    auto RangeLHS = IsSigned ? getSignedRange(LHS) : getUnsignedRange(LHS);
+    auto RangeRHS = IsSigned ? getSignedRange(RHS) : getUnsignedRange(RHS);
     return RangeLHS.icmp(Pred, RangeRHS);
   };
 
@@ -11383,27 +11388,13 @@ bool ScalarEvolution::isKnownPredicateViaConstantRanges(CmpPredicate Pred,
     return false;
 
   if (Pred == CmpInst::ICMP_NE) {
-    auto SL = getSignedRange(LHS);
-    auto SR = getSignedRange(RHS);
-    if (CheckRanges(SL, SR))
-      return true;
-    auto UL = getUnsignedRange(LHS);
-    auto UR = getUnsignedRange(RHS);
-    if (CheckRanges(UL, UR))
+    if (CheckRange(true) || CheckRange(false))
       return true;
     auto *Diff = getMinusSCEV(LHS, RHS);
     return !isa<SCEVCouldNotCompute>(Diff) && isKnownNonZero(Diff);
   }
 
-  if (CmpInst::isSigned(Pred)) {
-    auto SL = getSignedRange(LHS);
-    auto SR = getSignedRange(RHS);
-    return CheckRanges(SL, SR);
-  }
-
-  auto UL = getUnsignedRange(LHS);
-  auto UR = getUnsignedRange(RHS);
-  return CheckRanges(UL, UR);
+  return CheckRange(CmpInst::isSigned(Pred));
 }
 
 bool ScalarEvolution::isKnownPredicateViaNoOverflow(CmpPredicate Pred,
@@ -12492,21 +12483,14 @@ bool ScalarEvolution::isImpliedCondOperands(CmpPredicate Pred, const SCEV *LHS,
                                             const SCEV *FoundLHS,
                                             const SCEV *FoundRHS,
                                             const Instruction *CtxI) {
-  if (isImpliedCondOperandsViaRanges(Pred, LHS, RHS, Pred, FoundLHS, FoundRHS))
-    return true;
-
-  if (isImpliedCondOperandsViaNoOverflow(Pred, LHS, RHS, FoundLHS, FoundRHS))
-    return true;
-
-  if (isImpliedCondOperandsViaShift(Pred, LHS, RHS, FoundLHS, FoundRHS))
-    return true;
-
-  if (isImpliedCondOperandsViaAddRecStart(Pred, LHS, RHS, FoundLHS, FoundRHS,
-                                          CtxI))
-    return true;
-
-  return isImpliedCondOperandsHelper(Pred, LHS, RHS,
-                                     FoundLHS, FoundRHS);
+  return isImpliedCondOperandsViaRanges(Pred, LHS, RHS, Pred, FoundLHS,
+                                        FoundRHS) ||
+         isImpliedCondOperandsViaNoOverflow(Pred, LHS, RHS, FoundLHS,
+                                            FoundRHS) ||
+         isImpliedCondOperandsViaShift(Pred, LHS, RHS, FoundLHS, FoundRHS) ||
+         isImpliedCondOperandsViaAddRecStart(Pred, LHS, RHS, FoundLHS, FoundRHS,
+                                             CtxI) ||
+         isImpliedCondOperandsHelper(Pred, LHS, RHS, FoundLHS, FoundRHS);
 }
 
 /// Is MaybeMinMaxExpr an (U|S)(Min|Max) of Candidate and some other values?
@@ -12531,14 +12515,14 @@ static bool IsKnownPredicateViaAddRecStart(ScalarEvolution &SE,
     return false;
 
   const SCEV *LStart, *RStart, *Step;
-  if (!match(LHS, m_scev_AffineAddRec(m_SCEV(LStart), m_SCEV(Step))) ||
-      !match(RHS, m_scev_AffineAddRec(m_SCEV(RStart), m_scev_Specific(Step))))
+  const Loop *L;
+  if (!match(LHS,
+             m_scev_AffineAddRec(m_SCEV(LStart), m_SCEV(Step), m_Loop(L))) ||
+      !match(RHS, m_scev_AffineAddRec(m_SCEV(RStart), m_scev_Specific(Step),
+                                      m_SpecificLoop(L))))
     return false;
   const SCEVAddRecExpr *LAR = cast<SCEVAddRecExpr>(LHS);
   const SCEVAddRecExpr *RAR = cast<SCEVAddRecExpr>(RHS);
-  if (LAR->getLoop() != RAR->getLoop())
-    return false;
-
   SCEV::NoWrapFlags NW = ICmpInst::isSigned(Pred) ?
                          SCEV::FlagNSW : SCEV::FlagNUW;
   if (!LAR->getNoWrapFlags(NW) || !RAR->getNoWrapFlags(NW))
@@ -15905,10 +15889,7 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
     const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) { return Expr; }
 
     const SCEV *visitUnknown(const SCEVUnknown *Expr) {
-      auto I = Map.find(Expr);
-      if (I == Map.end())
-        return Expr;
-      return I->second;
+      return Map.lookup_or(Expr, Expr);
     }
 
     const SCEV *visitZeroExtendExpr(const SCEVZeroExtendExpr *Expr) {

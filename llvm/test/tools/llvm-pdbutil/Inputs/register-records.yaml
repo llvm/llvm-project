@@ -1,0 +1,21 @@
+---
+DbiStream:
+  VerHeader:       V70
+  Age:             1
+  BuildNumber:     36363
+  PdbDllVersion:   0
+  PdbDllRbld:      0
+  Flags:           0
+  MachineType:     Amd64
+  Modules:
+    - Module:          '/tmp/test.obj'
+      Modi:
+        Signature:       4
+        Records:
+          - Kind:            S_REGREL32
+            RegRelativeSym:
+              Offset:          56
+              Type:            4494
+              Register:        RSP
+              VarName:         this
+...

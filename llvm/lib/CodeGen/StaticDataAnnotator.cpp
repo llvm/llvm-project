@@ -35,7 +35,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "static-data-annotator"
 

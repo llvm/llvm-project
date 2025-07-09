@@ -7,21 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "Cuda.h"
-#include "CommonArgs.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Distro.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_HOST_TRIPLE
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FormatAdapters.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
@@ -305,7 +302,8 @@ void CudaInstallationDetector::AddCudaIncludeArgs(
     CC1Args.push_back(DriverArgs.MakeArgString(P));
   }
 
-  if (DriverArgs.hasArg(options::OPT_nogpuinc))
+  if (!DriverArgs.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
+                          true))
     return;
 
   if (!isValid()) {
@@ -630,7 +628,7 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
   if (C.getDriver().isUsingLTO())
-    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
+    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs,
                   C.getDriver().getLTOMode() == LTOK_Thin);
 
   // Forward the PTX features if the nvlink-wrapper needs it.
@@ -931,7 +929,8 @@ llvm::DenormalMode CudaToolChain::getDefaultDenormalModeForType(
 void CudaToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
                                        ArgStringList &CC1Args) const {
   // Check our CUDA version if we're going to include the CUDA headers.
-  if (!DriverArgs.hasArg(options::OPT_nogpuinc) &&
+  if (DriverArgs.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
+                         true) &&
       !DriverArgs.hasArg(options::OPT_no_cuda_version_check)) {
     StringRef Arch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
     assert(!Arch.empty() && "Must have an explicit GPU arch.");
@@ -1004,7 +1003,9 @@ void CudaToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                               ArgStringList &CC1Args) const {
   HostTC.AddClangSystemIncludeArgs(DriverArgs, CC1Args);
 
-  if (!DriverArgs.hasArg(options::OPT_nogpuinc) && CudaInstallation.isValid())
+  if (DriverArgs.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
+                         true) &&
+      CudaInstallation.isValid())
     CC1Args.append(
         {"-internal-isystem",
          DriverArgs.MakeArgString(CudaInstallation.getIncludePath())});
