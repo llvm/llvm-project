@@ -11578,12 +11578,14 @@ cc_library(
     name = "TransformTuneExtension",
     srcs = glob(["lib/Dialect/Transform/TuneExtension/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/TuneExtension/*.h"]),
-    deps =[":IR",
-           ":TransformDialect",
-           ":TransformDialectInterfaces",
-           ":TransformOpsIncGen",
-           ":TransformTuneExtensionOpsIncGen",
-           "//llvm:Support"]
+    deps = [
+        ":IR",
+        ":TransformDialect",
+        ":TransformDialectInterfaces",
+        ":TransformOpsIncGen",
+        ":TransformTuneExtensionOpsIncGen",
+        "//llvm:Support",
+    ],
 )
 
 gentbl_cc_library(
