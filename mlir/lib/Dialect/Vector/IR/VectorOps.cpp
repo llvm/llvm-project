@@ -5922,10 +5922,13 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
       return bcastOp.getSource();
   }
 
-  // shape_cast(constant) -> constant
+  // shape_cast(constant) -> constant,
+  // if element type of the source and result are the same
   if (auto splatAttr =
-          llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource()))
-    return splatAttr.reshape(getType());
+          llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource())) {
+    if (splatAttr.getElementType() == resultType.getElementType())
+      return splatAttr.reshape(getType());
+  }
 
   // shape_cast(poison) -> poison
   if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getSource())) {
