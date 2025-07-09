@@ -1153,6 +1153,23 @@ GCNTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
 
 ScheduleDAGInstrs *
 GCNTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
+  Attribute PostRADirectionAttr =
+      C->MF->getFunction().getFnAttribute("misched-postra-direction");
+
+  if (PostRADirectionAttr.isValid()) {
+    StringRef PostRADirectionStr = PostRADirectionAttr.getValueAsString();
+    if (PostRADirectionStr == "topdown")
+      PostRADirection = MISched::TopDown;
+    else if (PostRADirectionStr == "bottomup")
+      PostRADirection = MISched::BottomUp;
+    else if (PostRADirectionStr == "bidirectional")
+      PostRADirection = MISched::Bidirectional;
+    else
+      report_fatal_error(
+          Twine("invalid value for 'misched-postra-direction' attribute: ") +
+          PostRADirectionStr);
+  }
+
   ScheduleDAGMI *DAG =
       new GCNPostScheduleDAGMILive(C, std::make_unique<PostGenericScheduler>(C),
                                    /*RemoveKillFlags=*/true);

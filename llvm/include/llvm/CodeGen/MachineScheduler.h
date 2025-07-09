@@ -116,6 +116,7 @@ enum Direction {
 } // namespace MISched
 
 LLVM_ABI extern cl::opt<MISched::Direction> PreRADirection;
+LLVM_ABI extern cl::opt<MISched::Direction> PostRADirection;
 LLVM_ABI extern cl::opt<bool> VerifyScheduling;
 #ifndef NDEBUG
 extern cl::opt<bool> ViewMISchedDAGs;
