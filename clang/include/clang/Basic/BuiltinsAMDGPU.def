@@ -1205,9 +1205,9 @@ TARGET_BUILTIN(__builtin_amdgcn_global_tiled_store_half_vst2_b128, "vV3iV3i*1", 
 TARGET_BUILTIN(__builtin_amdgcn_global_tiled_store_b128, "vV4iV4i*1", "nc", "gfx13-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_global_tiled_store_vst2_b128, "vV7iV7i*1", "nc", "gfx13-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_s_inst_auto_prefetch_mode,  "vIs", "n", "gfx13-insts")
-TARGET_BUILTIN(__builtin_amdgcn_load_mcast_b32, "vi*10i*Iii", "n", "gfx13-insts,wavefrontsize32")
-TARGET_BUILTIN(__builtin_amdgcn_load_mcast_b64, "vV2i*10V2i*Iii", "n", "gfx13-insts,wavefrontsize32")
-TARGET_BUILTIN(__builtin_amdgcn_load_mcast_b128, "vV4i*10V4i*Iii", "n", "gfx13-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_load_mcast_b32, "vi*10iC*Iii", "n", "gfx13-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_load_mcast_b64, "vV2i*10V2iC*Iii", "n", "gfx13-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_load_mcast_b128, "vV4i*10V4iC*Iii", "n", "gfx13-insts,wavefrontsize32")
 
 TARGET_BUILTIN(__builtin_amdgcn_map_shared_rank, "v*11v*3i", "n", "gfx13-insts")
 TARGET_BUILTIN(__builtin_amdgcn_query_shared_rank, "ivC*11", "n", "gfx13-insts")
