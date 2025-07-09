@@ -7118,6 +7118,37 @@ private:
     return result;
   }
 
+  /// Utility function to add an ATTACH entry to the CombinedInfo structure.
+  /// Generates an ATTACH entry: &pointer, &pointer[idx], sizeof(pointer), ATTACH
+  void addAttachEntry(CodeGenFunction &CGF, MapCombinedInfoTy &CombinedInfo,
+                      Address AttachBaseAddr, Address AttachFirstElemAddr,
+                      const ValueDecl *BaseDecl, const Expr *MapExpr) const {
+    llvm::errs() << "DEBUG addAttachEntry: Adding ATTACH entry\n";
+    llvm::errs() << "  AttachBaseAddr = "; AttachBaseAddr.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
+    llvm::errs() << "  AttachFirstElemAddr = "; AttachFirstElemAddr.emitRawPointer(CGF)->printAsOperand(llvm::errs()); llvm::errs() << "\n";
+    
+    // Size is the size of the pointer itself - use pointer size, not BaseDecl size
+    llvm::Value *PointerSize = CGF.Builder.CreateIntCast(
+        llvm::ConstantInt::get(
+            CGF.CGM.SizeTy,
+            CGF.getContext().getTypeSize(
+                CGF.getContext().getPointerType(CGF.getContext().VoidTy)) /
+                8),
+        CGF.Int64Ty, /*isSigned=*/true);
+
+    CombinedInfo.Exprs.emplace_back(BaseDecl, MapExpr);
+    CombinedInfo.BasePointers.push_back(AttachBaseAddr.emitRawPointer(CGF));
+    CombinedInfo.DevicePtrDecls.push_back(nullptr);
+    CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
+    CombinedInfo.Pointers.push_back(AttachFirstElemAddr.emitRawPointer(CGF));
+    CombinedInfo.Sizes.push_back(PointerSize);
+    CombinedInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
+    CombinedInfo.Mappers.push_back(nullptr);
+    CombinedInfo.NonContigInfo.Dims.push_back(1);
+    
+    llvm::errs() << "DEBUG addAttachEntry: ATTACH entry added successfully\n";
+  }
+
   /// Generate the base pointers, section pointers, sizes, map type bits, and
   /// user-defined mappers (all included in \a CombinedInfo) for the provided
   /// map type, map or motion modifiers, and expression components.
@@ -8107,40 +8138,12 @@ private:
 
     // Don't do this yet for member-exprs, like map(s.p[0:10])
     if (AttachBaseAddr.isValid() && AttachFirstElemAddr.isValid()) {
-      // Generate ATTACH entry: &pointer, &pointer[idx], sizeof(pointer), ATTACH
-      // Use StructBaseCombinedInfo if mapping whole struct, otherwise use CombinedInfo
-      
-      // Size is the size of the pointer itself - use pointer size, not BaseDecl size
-      llvm::Value *PointerSize = CGF.Builder.CreateIntCast(
-          llvm::ConstantInt::get(
-              CGF.CGM.SizeTy,
-              CGF.getContext().getTypeSize(
-                  CGF.getContext().getPointerType(CGF.getContext().VoidTy)) /
-                  8),
-          CGF.Int64Ty, /*isSigned=*/true);
-
       if (IsMappingWholeStruct) {
         llvm::errs() << "DEBUG generateInfoForComponentList: Adding ATTACH to StructBaseCombinedInfo\n";
-        StructBaseCombinedInfo.Exprs.emplace_back(BaseDecl, MapExpr);
-        StructBaseCombinedInfo.BasePointers.push_back(AttachBaseAddr.emitRawPointer(CGF));
-        StructBaseCombinedInfo.DevicePtrDecls.push_back(nullptr);
-        StructBaseCombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
-        StructBaseCombinedInfo.Pointers.push_back(AttachFirstElemAddr.emitRawPointer(CGF));
-        StructBaseCombinedInfo.Sizes.push_back(PointerSize);
-        StructBaseCombinedInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
-        StructBaseCombinedInfo.Mappers.push_back(nullptr);
-        StructBaseCombinedInfo.NonContigInfo.Dims.push_back(1);
+        addAttachEntry(CGF, StructBaseCombinedInfo, AttachBaseAddr, AttachFirstElemAddr, BaseDecl, MapExpr);
       } else {
         llvm::errs() << "DEBUG generateInfoForComponentList: Adding ATTACH to CombinedInfo\n";
-        CombinedInfo.Exprs.emplace_back(BaseDecl, MapExpr);
-        CombinedInfo.BasePointers.push_back(AttachBaseAddr.emitRawPointer(CGF));
-        CombinedInfo.DevicePtrDecls.push_back(nullptr);
-        CombinedInfo.DevicePointers.push_back(DeviceInfoTy::None);
-        CombinedInfo.Pointers.push_back(AttachFirstElemAddr.emitRawPointer(CGF));
-        CombinedInfo.Sizes.push_back(PointerSize);
-        CombinedInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
-        CombinedInfo.Mappers.push_back(nullptr);
-        CombinedInfo.NonContigInfo.Dims.push_back(1);
+        addAttachEntry(CGF, CombinedInfo, AttachBaseAddr, AttachFirstElemAddr, BaseDecl, MapExpr);
       }
     }
 
