@@ -140,7 +140,7 @@ static const Type *getFullyQualifiedTemplateType(const ASTContext &Ctx,
     if (MightHaveChanged) {
       QualType QT = Ctx.getTemplateSpecializationType(
           TST->getTemplateName(), FQArgs,
-          /*CanonicalArgs=*/std::nullopt, TST->desugar());
+          /*CanonicalArgs=*/{}, TST->desugar());
       // getTemplateSpecializationType returns a fully qualified
       // version of the specialization itself, so no need to qualify
       // it.
@@ -172,8 +172,7 @@ static const Type *getFullyQualifiedTemplateType(const ASTContext &Ctx,
         TemplateName TN(TSTDecl->getSpecializedTemplate());
         QualType QT = Ctx.getTemplateSpecializationType(
             TN, FQArgs,
-            /*CanonicalArgs=*/std::nullopt,
-            TSTRecord->getCanonicalTypeInternal());
+            /*CanonicalArgs=*/{}, TSTRecord->getCanonicalTypeInternal());
         // getTemplateSpecializationType returns a fully qualified
         // version of the specialization itself, so no need to qualify
         // it.

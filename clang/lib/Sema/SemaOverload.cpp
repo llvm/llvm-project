@@ -30,6 +30,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Overload.h"
+#include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/Template.h"
@@ -1490,7 +1491,7 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
   // If the function is a class member, its signature includes the
   // cv-qualifiers (if any) and ref-qualifier (if any) on the function itself.
   auto DiagnoseInconsistentRefQualifiers = [&]() {
-    if (SemaRef.LangOpts.CPlusPlus23)
+    if (SemaRef.LangOpts.CPlusPlus23 && !UseOverrideRules)
       return false;
     if (OldMethod->getRefQualifier() == NewMethod->getRefQualifier())
       return false;
@@ -1889,7 +1890,14 @@ bool Sema::TryFunctionConversion(QualType FromType, QualType ToType,
   return Changed;
 }
 
-bool Sema::IsFunctionConversion(QualType FromType, QualType ToType) const {
+bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
+                                bool *DiscardingCFIUncheckedCallee,
+                                bool *AddingCFIUncheckedCallee) const {
+  if (DiscardingCFIUncheckedCallee)
+    *DiscardingCFIUncheckedCallee = false;
+  if (AddingCFIUncheckedCallee)
+    *AddingCFIUncheckedCallee = false;
+
   if (Context.hasSameUnqualifiedType(FromType, ToType))
     return false;
 
@@ -1944,9 +1952,34 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType) const {
     Changed = true;
   }
 
+  const auto *FromFPT = dyn_cast<FunctionProtoType>(FromFn);
+  const auto *ToFPT = dyn_cast<FunctionProtoType>(ToFn);
+
+  if (FromFPT && ToFPT) {
+    if (FromFPT->hasCFIUncheckedCallee() && !ToFPT->hasCFIUncheckedCallee()) {
+      QualType NewTy = Context.getFunctionType(
+          FromFPT->getReturnType(), FromFPT->getParamTypes(),
+          FromFPT->getExtProtoInfo().withCFIUncheckedCallee(false));
+      FromFPT = cast<FunctionProtoType>(NewTy.getTypePtr());
+      FromFn = FromFPT;
+      Changed = true;
+      if (DiscardingCFIUncheckedCallee)
+        *DiscardingCFIUncheckedCallee = true;
+    } else if (!FromFPT->hasCFIUncheckedCallee() &&
+               ToFPT->hasCFIUncheckedCallee()) {
+      QualType NewTy = Context.getFunctionType(
+          FromFPT->getReturnType(), FromFPT->getParamTypes(),
+          FromFPT->getExtProtoInfo().withCFIUncheckedCallee(true));
+      FromFPT = cast<FunctionProtoType>(NewTy.getTypePtr());
+      FromFn = FromFPT;
+      Changed = true;
+      if (AddingCFIUncheckedCallee)
+        *AddingCFIUncheckedCallee = true;
+    }
+  }
+
   // Drop 'noexcept' if not present in target type.
-  if (const auto *FromFPT = dyn_cast<FunctionProtoType>(FromFn)) {
-    const auto *ToFPT = cast<FunctionProtoType>(ToFn);
+  if (FromFPT) {
     if (FromFPT->isNothrow() && !ToFPT->isNothrow()) {
       FromFn = cast<FunctionType>(
           Context.getFunctionTypeWithExceptionSpec(QualType(FromFPT, 0),
@@ -2148,8 +2181,8 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
 
   if (ToType->isSVESizelessBuiltinType() ||
       FromType->isSVESizelessBuiltinType())
-    if (S.Context.areCompatibleSveTypes(FromType, ToType) ||
-        S.Context.areLaxCompatibleSveTypes(FromType, ToType)) {
+    if (S.ARM().areCompatibleSveTypes(FromType, ToType) ||
+        S.ARM().areLaxCompatibleSveTypes(FromType, ToType)) {
       ICK = ICK_SVE_Vector_Conversion;
       return true;
     }
@@ -2510,12 +2543,15 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
 
   SCS.setToType(2, FromType);
 
-  if (CanonFrom == CanonTo)
-    return true;
-
   // If we have not converted the argument type to the parameter type,
   // this is a bad conversion sequence, unless we're resolving an overload in C.
-  if (S.getLangOpts().CPlusPlus || !InOverloadResolution)
+  //
+  // Permit conversions from a function without `cfi_unchecked_callee` to a
+  // function with `cfi_unchecked_callee`.
+  if (CanonFrom == CanonTo || S.AddingCFIUncheckedCallee(CanonFrom, CanonTo))
+    return true;
+
+  if ((S.getLangOpts().CPlusPlus || !InOverloadResolution))
     return false;
 
   ExprResult ER = ExprResult{From};
@@ -3577,18 +3613,18 @@ Sema::MemberPointerConversionResult Sema::CheckMemberPointerConversion(
     QualType FromType, const MemberPointerType *ToPtrType, CastKind &Kind,
     CXXCastPath &BasePath, SourceLocation CheckLoc, SourceRange OpRange,
     bool IgnoreBaseAccess, MemberPointerConversionDirection Direction) {
-  const MemberPointerType *FromPtrType = FromType->getAs<MemberPointerType>();
-  if (!FromPtrType) {
-    // This must be a null pointer to member pointer conversion
-    Kind = CK_NullToMemberPointer;
-    return MemberPointerConversionResult::Success;
-  }
-
   // Lock down the inheritance model right now in MS ABI, whether or not the
   // pointee types are the same.
   if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
     (void)isCompleteType(CheckLoc, FromType);
     (void)isCompleteType(CheckLoc, QualType(ToPtrType, 0));
+  }
+
+  const MemberPointerType *FromPtrType = FromType->getAs<MemberPointerType>();
+  if (!FromPtrType) {
+    // This must be a null pointer to member pointer conversion
+    Kind = CK_NullToMemberPointer;
+    return MemberPointerConversionResult::Success;
   }
 
   // T == T, modulo cv
@@ -4700,9 +4736,9 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
   if (SCS1.Second == ICK_SVE_Vector_Conversion &&
       SCS2.Second == ICK_SVE_Vector_Conversion) {
     bool SCS1IsCompatibleSVEVectorConversion =
-        S.Context.areCompatibleSveTypes(SCS1.getFromType(), SCS1.getToType(2));
+        S.ARM().areCompatibleSveTypes(SCS1.getFromType(), SCS1.getToType(2));
     bool SCS2IsCompatibleSVEVectorConversion =
-        S.Context.areCompatibleSveTypes(SCS2.getFromType(), SCS2.getToType(2));
+        S.ARM().areCompatibleSveTypes(SCS2.getFromType(), SCS2.getToType(2));
 
     if (SCS1IsCompatibleSVEVectorConversion !=
         SCS2IsCompatibleSVEVectorConversion)
@@ -7848,11 +7884,14 @@ static void AddMethodTemplateCandidateImmediately(
           /*PartialOrdering=*/false, ObjectType, ObjectClassification,
           CandidateSet.getKind() ==
               clang::OverloadCandidateSet::CSK_AddressOfOverloadSet,
-          [&](ArrayRef<QualType> ParamTypes) {
+          [&](ArrayRef<QualType> ParamTypes,
+              bool OnlyInitializeNonUserDefinedConversions) {
             return S.CheckNonDependentConversions(
                 MethodTmpl, ParamTypes, Args, CandidateSet, Conversions,
-                SuppressUserConversions, ActingContext, ObjectType,
-                ObjectClassification, PO);
+                Sema::CheckNonDependentConversionsFlag(
+                    SuppressUserConversions,
+                    OnlyInitializeNonUserDefinedConversions),
+                ActingContext, ObjectType, ObjectClassification, PO);
           });
       Result != TemplateDeductionResult::Success) {
     OverloadCandidate &Candidate =
@@ -7964,10 +8003,14 @@ static void AddTemplateOverloadCandidateImmediately(
           /*ObjectClassification=*/Expr::Classification(),
           CandidateSet.getKind() ==
               OverloadCandidateSet::CSK_AddressOfOverloadSet,
-          [&](ArrayRef<QualType> ParamTypes) {
+          [&](ArrayRef<QualType> ParamTypes,
+              bool OnlyInitializeNonUserDefinedConversions) {
             return S.CheckNonDependentConversions(
                 FunctionTemplate, ParamTypes, Args, CandidateSet, Conversions,
-                SuppressUserConversions, nullptr, QualType(), {}, PO);
+                Sema::CheckNonDependentConversionsFlag(
+                    SuppressUserConversions,
+                    OnlyInitializeNonUserDefinedConversions),
+                nullptr, QualType(), {}, PO);
           });
       Result != TemplateDeductionResult::Success) {
     OverloadCandidate &Candidate =
@@ -8041,7 +8084,8 @@ void Sema::AddTemplateOverloadCandidate(
 bool Sema::CheckNonDependentConversions(
     FunctionTemplateDecl *FunctionTemplate, ArrayRef<QualType> ParamTypes,
     ArrayRef<Expr *> Args, OverloadCandidateSet &CandidateSet,
-    ConversionSequenceList &Conversions, bool SuppressUserConversions,
+    ConversionSequenceList &Conversions,
+    CheckNonDependentConversionsFlag UserConversionFlag,
     CXXRecordDecl *ActingContext, QualType ObjectType,
     Expr::Classification ObjectClassification, OverloadCandidateParamOrder PO) {
   // FIXME: The cases in which we allow explicit conversions for constructor
@@ -8054,8 +8098,9 @@ bool Sema::CheckNonDependentConversions(
   bool HasThisConversion = Method && !isa<CXXConstructorDecl>(Method);
   unsigned ThisConversions = HasThisConversion ? 1 : 0;
 
-  Conversions =
-      CandidateSet.allocateConversionSequences(ThisConversions + Args.size());
+  if (Conversions.empty())
+    Conversions =
+        CandidateSet.allocateConversionSequences(ThisConversions + Args.size());
 
   // Overload resolution is always an unevaluated context.
   EnterExpressionEvaluationContext Unevaluated(
@@ -8079,6 +8124,46 @@ bool Sema::CheckNonDependentConversions(
     }
   }
 
+  // A speculative workaround for self-dependent constraint bugs that manifest
+  // after CWG2369.
+  // FIXME: Add references to the standard once P3606 is adopted.
+  auto MaybeInvolveUserDefinedConversion = [&](QualType ParamType,
+                                               QualType ArgType) {
+    ParamType = ParamType.getNonReferenceType();
+    ArgType = ArgType.getNonReferenceType();
+    bool PointerConv = ParamType->isPointerType() && ArgType->isPointerType();
+    if (PointerConv) {
+      ParamType = ParamType->getPointeeType();
+      ArgType = ArgType->getPointeeType();
+    }
+
+    if (auto *RT = ParamType->getAs<RecordType>())
+      if (auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
+          RD && RD->hasDefinition()) {
+        if (llvm::any_of(LookupConstructors(RD), [](NamedDecl *ND) {
+              auto Info = getConstructorInfo(ND);
+              if (!Info)
+                return false;
+              CXXConstructorDecl *Ctor = Info.Constructor;
+              /// isConvertingConstructor takes copy/move constructors into
+              /// account!
+              return !Ctor->isCopyOrMoveConstructor() &&
+                     Ctor->isConvertingConstructor(
+                         /*AllowExplicit=*/true);
+            }))
+          return true;
+      }
+
+    if (auto *RT = ArgType->getAs<RecordType>())
+      if (auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
+          RD && RD->hasDefinition() &&
+          !RD->getVisibleConversionFunctions().empty()) {
+        return true;
+      }
+
+    return false;
+  };
+
   unsigned Offset =
       Method && Method->hasCXXExplicitFunctionObjectParameter() ? 1 : 0;
 
@@ -8099,13 +8184,16 @@ bool Sema::CheckNonDependentConversions(
         // For members, 'this' got ConvIdx = 0 previously.
         ConvIdx = ThisConversions + I;
       }
-      Conversions[ConvIdx]
-        = TryCopyInitialization(*this, Args[I], ParamType,
-                                SuppressUserConversions,
-                                /*InOverloadResolution=*/true,
-                                /*AllowObjCWritebackConversion=*/
-                                  getLangOpts().ObjCAutoRefCount,
-                                AllowExplicit);
+      if (Conversions[ConvIdx].isInitialized())
+        continue;
+      if (UserConversionFlag.OnlyInitializeNonUserDefinedConversions &&
+          MaybeInvolveUserDefinedConversion(ParamType, Args[I]->getType()))
+        continue;
+      Conversions[ConvIdx] = TryCopyInitialization(
+          *this, Args[I], ParamType, UserConversionFlag.SuppressUserConversions,
+          /*InOverloadResolution=*/true,
+          /*AllowObjCWritebackConversion=*/
+          getLangOpts().ObjCAutoRefCount, AllowExplicit);
       if (Conversions[ConvIdx].isBad())
         return true;
     }
@@ -9185,11 +9273,10 @@ class BuiltinOperatorOverloadBuilder {
     /// the candidates into a unique set, then move from that set into the list
     /// of arithmetic types.
     llvm::SmallSetVector<CanQualType, 2> BitIntCandidates;
-    llvm::for_each(CandidateTypes, [&BitIntCandidates](
-                                       BuiltinCandidateTypeSet &Candidate) {
+    for (BuiltinCandidateTypeSet &Candidate : CandidateTypes) {
       for (QualType BitTy : Candidate.bitint_types())
         BitIntCandidates.insert(CanQualType::CreateUnsafe(BitTy));
-    });
+    }
     llvm::move(BitIntCandidates, std::back_inserter(ArithmeticTypes));
     LastPromotedIntegralType = ArithmeticTypes.size();
     LastPromotedArithmeticType = ArithmeticTypes.size();
@@ -11235,9 +11322,9 @@ OverloadingResult OverloadCandidateSet::BestViableFunction(Sema &S,
                                                            SourceLocation Loc,
                                                            iterator &Best) {
 
-  assert(shouldDeferTemplateArgumentDeduction(S.getLangOpts()) ||
-         DeferredCandidatesCount == 0 &&
-             "Unexpected deferred template candidates");
+  assert((shouldDeferTemplateArgumentDeduction(S.getLangOpts()) ||
+          DeferredCandidatesCount == 0) &&
+         "Unexpected deferred template candidates");
 
   bool TwoPhaseResolution =
       DeferredCandidatesCount != 0 && !ResolutionByPerfectCandidateIsDisabled;
@@ -13968,8 +14055,10 @@ FunctionDecl *Sema::ResolveSingleFunctionTemplateSpecialization(
     //   specified and it, along with any default template arguments,
     //   identifies a single function template specialization, then the
     //   template-id is an lvalue for the function template specialization.
-    FunctionTemplateDecl *FunctionTemplate
-      = cast<FunctionTemplateDecl>((*I)->getUnderlyingDecl());
+    FunctionTemplateDecl *FunctionTemplate =
+        dyn_cast<FunctionTemplateDecl>((*I)->getUnderlyingDecl());
+    if (!FunctionTemplate)
+      continue;
 
     // C++ [over.over]p2:
     //   If the name is a function template, template argument deduction is
@@ -14832,6 +14921,7 @@ ExprResult Sema::BuildCXXMemberCallExpr(Expr *E, NamedDecl *FoundDecl,
     CE = CallExpr::Create(Context, FnExpr.get(), MultiExprArg(&ObjectParam, 1),
                           ResultType, VK, Exp.get()->getEndLoc(),
                           CurFPFeatureOverrides());
+    CE->setUsesMemberSyntax(true);
   } else {
     MemberExpr *ME =
         BuildMemberExpr(Exp.get(), /*IsArrow=*/false, SourceLocation(),
@@ -16159,6 +16249,7 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
     TheCall =
         CallExpr::Create(Context, FnExpr.get(), Args, ResultType, VK, RParenLoc,
                          CurFPFeatureOverrides(), Proto->getNumParams());
+    TheCall->setUsesMemberSyntax(true);
   } else {
     // Convert the object argument (for a non-static member function call).
     ExprResult ObjectArg = PerformImplicitObjectArgumentInitialization(
@@ -16892,6 +16983,9 @@ ExprResult Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
   }
 
   if (UnresolvedLookupExpr *ULE = dyn_cast<UnresolvedLookupExpr>(E)) {
+    if (Found.getAccess() == AS_none) {
+      CheckUnresolvedLookupAccess(ULE, Found);
+    }
     // FIXME: avoid copy.
     TemplateArgumentListInfo TemplateArgsBuffer, *TemplateArgs = nullptr;
     if (ULE->hasExplicitTemplateArgs()) {

@@ -1094,7 +1094,6 @@ public:
             interpreter, "breakpoint list",
             "List some or all breakpoints at configurable levels of detail.",
             nullptr) {
-    CommandArgumentEntry arg;
     CommandArgumentData bp_id_arg;
 
     // Define the first (and only) variant of this arg.
@@ -2486,8 +2485,9 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(
     Breakpoint *breakpoint =
         target.GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
     if (breakpoint != nullptr) {
-      const size_t num_locations = breakpoint->GetNumLocations();
-      if (static_cast<size_t>(cur_bp_id.GetLocationID()) > num_locations) {
+      lldb::break_id_t cur_loc_id = cur_bp_id.GetLocationID();
+      // GetLocationID returns 0 when the location isn't specified.
+      if (cur_loc_id != 0 && !breakpoint->FindLocationByID(cur_loc_id)) {
         StreamString id_str;
         BreakpointID::GetCanonicalReference(
             &id_str, cur_bp_id.GetBreakpointID(), cur_bp_id.GetLocationID());

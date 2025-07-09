@@ -17,7 +17,6 @@
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Pass/Pass.h"
 #include <type_traits>
 
 namespace mlir {
@@ -163,7 +162,8 @@ using ConstrainedTruncFOpLowering = ConstrainedVectorConvertToLLVMPattern<
     arith::TruncFOp, LLVM::ConstrainedFPTruncIntr, true,
     arith::AttrConverterConstrainedFPToLLVM>;
 using TruncIOpLowering =
-    VectorConvertToLLVMPattern<arith::TruncIOp, LLVM::TruncOp>;
+    VectorConvertToLLVMPattern<arith::TruncIOp, LLVM::TruncOp,
+                               arith::AttrConvertOverflowToLLVM>;
 using UIToFPOpLowering =
     VectorConvertToLLVMPattern<arith::UIToFPOp, LLVM::UIToFPOp>;
 using XOrIOpLowering = VectorConvertToLLVMPattern<arith::XOrIOp, LLVM::XOrOp>;

@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/AutoUpgrade.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalObject.h"

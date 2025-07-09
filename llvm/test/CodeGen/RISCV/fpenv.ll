@@ -18,7 +18,7 @@ define i32 @func_01() {
 ; RV64IF-NEXT:    frrm a0
 ; RV64IF-NEXT:    lui a1, 66
 ; RV64IF-NEXT:    slli a0, a0, 2
-; RV64IF-NEXT:    addiw a1, a1, 769
+; RV64IF-NEXT:    addi a1, a1, 769
 ; RV64IF-NEXT:    srl a0, a1, a0
 ; RV64IF-NEXT:    andi a0, a0, 7
 ; RV64IF-NEXT:    ret
@@ -77,7 +77,7 @@ define i1 @test_get_rounding_sideeffect() #0 {
 ; RV64IF-NEXT:    frrm a0
 ; RV64IF-NEXT:    lui a1, 66
 ; RV64IF-NEXT:    slli a0, a0, 2
-; RV64IF-NEXT:    addiw s0, a1, 769
+; RV64IF-NEXT:    addi s0, a1, 769
 ; RV64IF-NEXT:    srl a0, s0, a0
 ; RV64IF-NEXT:    andi a0, a0, 7
 ; RV64IF-NEXT:    beqz a0, .LBB1_2
@@ -133,7 +133,7 @@ define void @func_02(i32 %rm) {
 ; RV64IF-NEXT:    slli a0, a0, 32
 ; RV64IF-NEXT:    lui a1, 66
 ; RV64IF-NEXT:    srli a0, a0, 30
-; RV64IF-NEXT:    addiw a1, a1, 769
+; RV64IF-NEXT:    addi a1, a1, 769
 ; RV64IF-NEXT:    srl a0, a1, a0
 ; RV64IF-NEXT:    andi a0, a0, 7
 ; RV64IF-NEXT:    fsrm a0
