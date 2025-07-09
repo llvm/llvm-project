@@ -3790,6 +3790,11 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
                                NewLoadTy, NewMask, CostKind);
       }
 
+      LLVM_DEBUG(
+          dbgs() << "Found a load used only by shufflevector instructions: "
+                 << I << "\n  OldCost: " << OldCost
+                 << " vs NewCost: " << NewCost << "\n");
+
       if (OldCost < NewCost || !NewCost.isValid())
         return false;
 
