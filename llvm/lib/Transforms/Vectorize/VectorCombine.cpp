@@ -4059,9 +4059,8 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
   auto OldCost =
       std::max(TTI.getShuffleCost(Kind, ResultVT, InputVT, Mask0, CostKind),
                TTI.getShuffleCost(Kind, ResultVT, InputVT, Mask1, CostKind));
-  auto NewCost =
-      TTI.getShuffleCost(Kind, InputVT, InputVT, NewMask, CostKind) +
-      TTI.getShuffleCost(Kind, ResultVT, InputVT, Mask1, CostKind);
+  auto NewCost = TTI.getShuffleCost(Kind, InputVT, InputVT, NewMask, CostKind) +
+                 TTI.getShuffleCost(Kind, ResultVT, InputVT, Mask1, CostKind);
 
   if (NewCost > OldCost)
     return false;
