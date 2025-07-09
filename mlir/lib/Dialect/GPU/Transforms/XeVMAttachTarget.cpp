@@ -37,7 +37,7 @@ struct XeVMAttachTarget
   void runOnOperation() override;
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<mlir::xevm::XeVMDialect>();
+    registry.insert<xevm::XeVMDialect>();
   }
 };
 } // namespace
@@ -46,7 +46,8 @@ DictionaryAttr XeVMAttachTarget::getFlags(OpBuilder &builder) const {
   SmallVector<NamedAttribute, 3> flags;
   // Tokenize and set the optional command line options.
   if (!cmdOptions.empty()) {
-    auto options = gpu::TargetOptions::tokenizeCmdOptions(cmdOptions);
+    std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>> options =
+        gpu::TargetOptions::tokenizeCmdOptions(cmdOptions);
     if (!options.second.empty()) {
       llvm::SmallVector<mlir::Attribute> xevmOptionAttrs;
       for (const char *opt : options.second) {
