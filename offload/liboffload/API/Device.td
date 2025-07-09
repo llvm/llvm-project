@@ -22,7 +22,7 @@ def : Enum {
   ];
 }
 
-def : Enum {
+def DeviceInfo : Enum {
   let name = "ol_device_info_t";
   let desc = "Supported device info.";
   let is_typed = 1;

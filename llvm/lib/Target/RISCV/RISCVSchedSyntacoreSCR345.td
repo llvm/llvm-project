@@ -183,6 +183,7 @@ multiclass SCR_Unsupported :
   UnsupportedSchedSFB,
   UnsupportedSchedV,
   UnsupportedSchedXsfvcp,
+  UnsupportedSchedXSfvfnrclipxfqf,
   UnsupportedSchedXSfvfwmaccqqq,
   UnsupportedSchedXSfvqmaccdod,
   UnsupportedSchedXSfvqmaccqoq,

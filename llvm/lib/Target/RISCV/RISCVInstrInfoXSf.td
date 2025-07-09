@@ -192,7 +192,8 @@ class CustomSiFiveVMACC<bits<6> funct6, RISCVVFormat opv, string opcodestr>
 }
 
 class CustomSiFiveVFNRCLIP<bits<6> funct6, RISCVVFormat opv, string opcodestr>
-    : VALUVF<funct6, opv, opcodestr> {
+    : VALUVF<funct6, opv, opcodestr>,
+      SchedBinaryMC<"WriteSF_VFNRClipV", "ReadSF_VFNRClipV", "ReadSF_VFNRClipF"> {
   let Inst{6-0} = OPC_CUSTOM_2.Value;
 }
 
@@ -422,7 +423,10 @@ multiclass VPseudoSiFiveVFNRCLIP<string Constraint = "@earlyclobber $rd"> {
                                                        MxListVF4[i].vrclass,
                                                        FPR32, MxListW[i],
                                                        Constraint, /*sew*/0,
-                                                       UsesVXRM=0>;
+                                                       UsesVXRM=0>,
+                             SchedBinary<"WriteSF_VFNRClipV", "ReadSF_VFNRClipV",
+                                         "ReadSF_VFNRClipF",
+                                         MxListW[i].MX>;
 }
 
 let Predicates = [HasVendorXSfvcp] in {
