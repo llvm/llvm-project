@@ -4513,6 +4513,7 @@ bool AMDGPULegalizerInfo::legalizeFDIV(MachineInstr &MI,
   LLT S32 = LLT::scalar(32);
   LLT S64 = LLT::scalar(64);
 
+  // TODO: Adapt the f16 logic to work for bf16 too as we do in SDAG.
   if (DstTy == S16)
     return legalizeFDIV16(MI, MRI, B);
   if (DstTy == S32)
