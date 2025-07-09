@@ -424,7 +424,13 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
   NewLHS = Call.first;
   NewRHS = DAG.getConstant(0, dl, RetVT);
 
-  CCCode = getICmpCondCode(getSoftFloatCmpLibcallPredicate(LC1));
+  RTLIB::LibcallImpl LC1Impl = getLibcallImpl(LC1);
+  if (LC1Impl == RTLIB::Unsupported) {
+    reportFatalUsageError(
+        "no libcall available to soften floating-point compare");
+  }
+
+  CCCode = getSoftFloatCmpLibcallPredicate(LC1Impl);
   if (ShouldInvertCC) {
     assert(RetVT.isInteger());
     CCCode = getSetCCInverse(CCCode, RetVT);
@@ -434,6 +440,12 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
     // Update Chain.
     Chain = Call.second;
   } else {
+    RTLIB::LibcallImpl LC2Impl = getLibcallImpl(LC2);
+    if (LC2Impl == RTLIB::Unsupported) {
+      reportFatalUsageError(
+          "no libcall available to soften floating-point compare");
+    }
+
     assert(CCCode == (ShouldInvertCC ? ISD::SETEQ : ISD::SETNE) &&
            "unordered call should be simple boolean");
 
@@ -446,7 +458,7 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
 
     SDValue Tmp = DAG.getSetCC(dl, SetCCVT, NewLHS, NewRHS, CCCode);
     auto Call2 = makeLibCall(DAG, LC2, RetVT, Ops, CallOptions, dl, Chain);
-    CCCode = getICmpCondCode(getSoftFloatCmpLibcallPredicate(LC2));
+    CCCode = getSoftFloatCmpLibcallPredicate(LC2Impl);
     if (ShouldInvertCC)
       CCCode = getSetCCInverse(CCCode, RetVT);
     NewLHS = DAG.getSetCC(dl, SetCCVT, Call2.first, NewRHS, CCCode);
@@ -4247,7 +4259,7 @@ SDValue TargetLowering::foldSetCCWithOr(EVT VT, SDValue N0, SDValue N1,
   // (X | Y) == Y
   // (X | Y) != Y
   SDValue X;
-  if (sd_match(N0, m_Or(m_Value(X), m_Specific(N1))) && hasAndNotCompare(N1)) {
+  if (sd_match(N0, m_Or(m_Value(X), m_Specific(N1))) && hasAndNotCompare(X)) {
     // If the target supports an 'and-not' or 'and-complement' logic operation,
     // try to use that to make a comparison operation more efficient.
 
@@ -7410,17 +7422,6 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
                                 MaskedIsZero, Fold);
 
   return Blended;
-}
-
-bool TargetLowering::
-verifyReturnAddressArgumentIsConstant(SDValue Op, SelectionDAG &DAG) const {
-  if (!isa<ConstantSDNode>(Op.getOperand(0))) {
-    DAG.getContext()->emitError("argument to '__builtin_return_address' must "
-                                "be a constant integer");
-    return true;
-  }
-
-  return false;
 }
 
 SDValue TargetLowering::getSqrtInputTest(SDValue Op, SelectionDAG &DAG,

@@ -752,6 +752,7 @@ libc_support_library(
     name = "__support_blockstore",
     hdrs = ["src/__support/blockstore.h"],
     deps = [
+        ":__support_cpp_array",
         ":__support_cpp_new",
         ":__support_libc_assert",
     ],
@@ -1681,6 +1682,7 @@ libc_support_library(
         ":__support_cpp_optional",
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":types_wint_t",
     ],
 )
 
@@ -5831,6 +5833,19 @@ libc_function(
     name = "wcslcat",
     srcs = ["src/wchar/wcslcat.cpp"],
     hdrs = ["src/wchar/wcslcat.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":string_utils",
+        ":types_size_t",
+        ":types_wchar_t",
+    ],
+)
+
+libc_function(
+    name = "wcslcpy",
+    srcs = ["src/wchar/wcslcpy.cpp"],
+    hdrs = ["src/wchar/wcslcpy.h"],
     deps = [
         ":__support_common",
         ":__support_macros_config",

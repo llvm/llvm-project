@@ -9,11 +9,35 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfo.h"
+
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+#include "llvm/Support/Signals.h"
+
+namespace llvm {
+DbgLocOrigin::DbgLocOrigin(bool ShouldCollectTrace) {
+  if (!ShouldCollectTrace)
+    return;
+  auto &[Depth, StackTrace] = StackTraces.emplace_back();
+  Depth = sys::getStackTrace(StackTrace);
+}
+void DbgLocOrigin::addTrace() {
+  // We only want to add new stacktraces if we already have one: addTrace exists
+  // to provide more context to how missing DebugLocs have propagated through
+  // the program, but by design if there is no existing stacktrace then we have
+  // decided not to track this DebugLoc as being "missing".
+  if (StackTraces.empty())
+    return;
+  auto &[Depth, StackTrace] = StackTraces.emplace_back();
+  Depth = sys::getStackTrace(StackTrace);
+}
+} // namespace llvm
+#endif
+
 using namespace llvm;
 
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
 DILocAndCoverageTracking::DILocAndCoverageTracking(const DILocation *L)
-    : TrackingMDNodeRef(const_cast<DILocation *>(L)),
+    : TrackingMDNodeRef(const_cast<DILocation *>(L)), DbgLocOrigin(!L),
       Kind(DebugLocKind::Normal) {}
 #endif // LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
 

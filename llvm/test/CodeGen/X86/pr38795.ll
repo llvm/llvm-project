@@ -33,7 +33,6 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_15: # %for.inc
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    movb %dl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; CHECK-NEXT:  .LBB0_1: # %for.cond
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
@@ -70,6 +69,7 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %dh # 1-byte Reload
 ; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %dl # 1-byte Reload
 ; CHECK-NEXT:    testb %bl, %bl
+; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    # implicit-def: $eax
 ; CHECK-NEXT:    movb %dh, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
 ; CHECK-NEXT:    jne .LBB0_15
@@ -119,7 +119,7 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    jne .LBB0_9
 ; CHECK-NEXT:  # %bb.12: # %if.end26
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    xorl %esi, %esi
+; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testb %dh, %dh
 ; CHECK-NEXT:    je .LBB0_15
 ; CHECK-NEXT:  # %bb.13: # %if.end26
@@ -128,7 +128,7 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    jne .LBB0_15
 ; CHECK-NEXT:  # %bb.14: # %if.then31
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    xorl %esi, %esi
+; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    xorl %ebp, %ebp
 ; CHECK-NEXT:    jmp .LBB0_15
 ; CHECK-NEXT:    .p2align 4
@@ -279,34 +279,31 @@ define void @verifier_error_reduced_issue38788(i1 %cmp11) {
 ; CHECK-NEXT:    je .LBB1_3
 ; CHECK-NEXT:  # %bb.2: # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    movl %ebx, %edx
 ; CHECK-NEXT:    jmp .LBB1_5
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_3: # %if.end
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    je .LBB1_4
 ; CHECK-NEXT:  # %bb.9: # %if.then13
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    movl $0, %ebx
 ; CHECK-NEXT:    jne .LBB1_8
-; CHECK-NEXT:  # %bb.10: # %for.cond35
-; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    movl %ebx, %edx
 ; CHECK-NEXT:    jmp .LBB1_5
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_4: # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    movl %ebx, %eax
+; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:  .LBB1_5: # %if.end26
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    je .LBB1_7
 ; CHECK-NEXT:  # %bb.6: # %if.end26
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    movl %edx, %ecx
+; CHECK-NEXT:    movl %ebx, %ecx
 ; CHECK-NEXT:    jmp .LBB1_7
 entry:
   br label %for.cond

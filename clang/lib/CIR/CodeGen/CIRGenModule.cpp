@@ -104,6 +104,12 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
 
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
+
+  if (cgo.OptimizationLevel > 0 || cgo.OptimizeSize > 0)
+    theModule->setAttr(cir::CIRDialect::getOptInfoAttrName(),
+                       cir::OptInfoAttr::get(&mlirContext,
+                                             cgo.OptimizationLevel,
+                                             cgo.OptimizeSize));
 }
 
 CIRGenModule::~CIRGenModule() = default;

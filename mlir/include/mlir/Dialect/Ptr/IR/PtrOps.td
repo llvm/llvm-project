@@ -171,9 +171,6 @@ def Ptr_TypeOffsetOp : Pointer_Op<"type_offset", [Pure]> {
 
   let arguments = (ins TypeAttr:$elementType);
   let results = (outs AnySignlessIntegerOrIndex:$result);
-  let builders = [
-    OpBuilder<(ins "Type":$elementType)>
-  ];
   let assemblyFormat = [{
     $elementType attr-dict `:` type($result)
   }];

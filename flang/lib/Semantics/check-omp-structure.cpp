@@ -1744,7 +1744,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPFlushConstruct &x) {
 void OmpStructureChecker::Leave(const parser::OpenMPFlushConstruct &x) {
   auto &flushList{std::get<std::optional<parser::OmpArgumentList>>(x.v.t)};
 
-  auto isVariableListItemOrCommonBlock{[this](const Symbol &sym) {
+  auto isVariableListItemOrCommonBlock{[](const Symbol &sym) {
     return IsVariableListItem(sym) ||
         sym.detailsIf<semantics::CommonBlockDetails>();
   }};
