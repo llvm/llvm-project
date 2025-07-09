@@ -557,6 +557,7 @@ public:
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPInterleaveSC:
     case VPRecipeBase::VPIRInstructionSC:
+    case VPRecipeBase::VPWidenStridedLoadSC:
     case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
     case VPRecipeBase::VPWidenStoreEVLSC:
@@ -1724,6 +1725,8 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPVectorEndPointerSC)
 
+  VPValue *getPtr() const { return getOperand(0); }
+
   VPValue *getVFValue() { return getOperand(1); }
   const VPValue *getVFValue() const { return getOperand(1); }
 
@@ -1763,19 +1766,22 @@ public:
 #endif
 };
 
-/// A recipe to compute the pointers for widened memory accesses of IndexTy.
+/// A recipe to compute the pointers for widened memory accesses of IndexedTy,
+/// with the Stride expressed in units of IndexedTy.
 class VPVectorPointerRecipe : public VPRecipeWithIRFlags,
-                              public VPUnrollPartAccessor<1> {
+                              public VPUnrollPartAccessor<2> {
   Type *IndexedTy;
 
 public:
-  VPVectorPointerRecipe(VPValue *Ptr, Type *IndexedTy, GEPNoWrapFlags GEPFlags,
-                        DebugLoc DL)
-      : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC, ArrayRef<VPValue *>(Ptr),
-                            GEPFlags, DL),
+  VPVectorPointerRecipe(VPValue *Ptr, Type *IndexedTy, VPValue *Stride,
+                        GEPNoWrapFlags GEPFlags, DebugLoc DL)
+      : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC,
+                            ArrayRef<VPValue *>({Ptr, Stride}), GEPFlags, DL),
         IndexedTy(IndexedTy) {}
 
   VP_CLASSOF_IMPL(VPDef::VPVectorPointerSC)
+
+  VPValue *getStride() const { return getOperand(1); }
 
   void execute(VPTransformState &State) override;
 
@@ -1794,7 +1800,7 @@ public:
   }
 
   VPVectorPointerRecipe *clone() override {
-    return new VPVectorPointerRecipe(getOperand(0), IndexedTy,
+    return new VPVectorPointerRecipe(getOperand(0), IndexedTy, getOperand(1),
                                      getGEPNoWrapFlags(), getDebugLoc());
   }
 
@@ -2928,7 +2934,8 @@ public:
     return R->getVPDefID() == VPRecipeBase::VPWidenLoadSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenStoreSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenLoadEVLSC ||
-           R->getVPDefID() == VPRecipeBase::VPWidenStoreEVLSC;
+           R->getVPDefID() == VPRecipeBase::VPWidenStoreEVLSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenStridedLoadSC;
   }
 
   static inline bool classof(const VPUser *U) {
@@ -3044,6 +3051,52 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
     // Widened loads only demand the first lane of EVL and consecutive loads
     // only demand the first lane of their address.
     return Op == getEVL() || (Op == getAddr() && isConsecutive());
+  }
+};
+
+/// A recipe for strided load operations, using the base address, stride, and an
+/// optional mask. This recipe will generate an vp.strided.load intrinsic call
+/// to represent memory accesses with a fixed stride.
+struct VPWidenStridedLoadRecipe final : public VPWidenMemoryRecipe,
+                                        public VPValue {
+  VPWidenStridedLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Stride,
+                           VPValue *VF, VPValue *Mask,
+                           const VPIRMetadata &Metadata, DebugLoc DL)
+      : VPWidenMemoryRecipe(
+            VPDef::VPWidenStridedLoadSC, Load, {Addr, Stride, VF},
+            /*Consecutive=*/false, /*Reverse=*/false, Metadata, DL),
+        VPValue(this, &Load) {
+    setMask(Mask);
+  }
+
+  VPWidenStridedLoadRecipe *clone() override {
+    return new VPWidenStridedLoadRecipe(cast<LoadInst>(Ingredient), getAddr(),
+                                        getStride(), getVF(), getMask(), *this,
+                                        getDebugLoc());
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPWidenStridedLoadSC);
+
+  /// Return the stride operand.
+  VPValue *getStride() const { return getOperand(1); }
+
+  /// Return the VF operand.
+  VPValue *getVF() const { return getOperand(2); }
+
+  /// Generate a strided load.
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return Op == getAddr() || Op == getStride() || Op == getVF();
   }
 };
 
