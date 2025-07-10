@@ -8,6 +8,13 @@
 ; RUN:   < %s | FileCheck %s --check-prefix=POWERPC_32
 
 define i32 @test_Greater_than(ptr %colauths, i32 signext %ncols) {
+; This testcase is manually reduced to isolate the critical code blocks.
+; It is designed to check for vector comparison specifically for zero vectors.
+; In the vector.body section, we are expecting a comparison instruction (vcmpequh), 
+; merge instructions (vmrghh and vmrglh) which use exactly 2 vectors. 
+; The output of the merge instruction is being used by xxland and finally 
+; accumulated by vadduwm instruction.
+
 ; POWERPC_64LE-LABEL: test_Greater_than:
 ; POWERPC_64LE:  .LBB0_6: # %vector.body
 ; POWERPC_64LE-NEXT:    #
