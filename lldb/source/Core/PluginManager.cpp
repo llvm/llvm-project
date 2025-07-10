@@ -2496,12 +2496,11 @@ void PluginManager::AutoCompletePluginName(llvm::StringRef name,
           request.AddCompletion(
               (plugin_ns.name + "." + plugin.name).toStringRef(buf));
       }
-    }
-    // Otherwise check if the namespace is a prefix of the full name.
-    // Use a partial completion here so that we can either operate on the full
-    // namespace or tab-complete to the next level.
-    else if (plugin_ns.name.starts_with(name) &&
-             !plugin_ns.get_info().empty()) {
+    } else if (plugin_ns.name.starts_with(name) &&
+               !plugin_ns.get_info().empty()) {
+      // Otherwise check if the namespace is a prefix of the full name.
+      // Use a partial completion here so that we can either operate on the full
+      // namespace or tab-complete to the next level.
       request.AddCompletion(plugin_ns.name, "", CompletionMode::Partial);
     }
   }
