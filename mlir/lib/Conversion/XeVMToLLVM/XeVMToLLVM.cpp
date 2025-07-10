@@ -265,6 +265,28 @@ class MMAToOCLPattern : public OpConversionPattern<xevm::MMAOp> {
     if (!op.getC()) {
       return rewriter.notifyMatchFailure(op, "OCL requires C operand");
     }
+    auto precisionA = op.getTypes().getA();
+    auto precisionB = op.getTypes().getB();
+    auto precisionC = op.getTypes().getC();
+    auto precisionD = op.getTypes().getD();
+    if (precisionC != precisionD) {
+      return rewriter.notifyMatchFailure(op, "type of C and D need to match");
+    }
+    if (precisionC != xevm::ElemType::S32 &&
+        precisionC != xevm::ElemType::F32 &&
+        precisionC != xevm::ElemType::F16 &&
+        precisionC != xevm::ElemType::BF16) {
+      return rewriter.notifyMatchFailure(
+          op, "type of C and D must be S32, F32, F16 or BF16");
+    }
+    if (precisionA == xevm::ElemType::S32 ||
+        precisionA == xevm::ElemType::F32) {
+      return rewriter.notifyMatchFailure(op, "type of A cannot be S32 or F32");
+    }
+    if (precisionB == xevm::ElemType::S32 ||
+        precisionB == xevm::ElemType::F32) {
+      return rewriter.notifyMatchFailure(op, "type of B cannot be S32 or F32");
+    }
     constexpr uint32_t bitWidthPackedA{16};
     constexpr uint32_t bitWidthPackedB{32};
     auto loc = op.getLoc();
