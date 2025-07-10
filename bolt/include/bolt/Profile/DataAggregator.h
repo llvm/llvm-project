@@ -138,6 +138,8 @@ private:
   /// Pre-populated addresses of returns, coming from pre-aggregated data or
   /// disassembly. Used to disambiguate call-continuation fall-throughs.
   std::unordered_map<uint64_t, bool> Returns;
+  // Helper map with whether the instruction is a call/ret/unconditional branch
+  std::unordered_map<uint64_t, bool> UncondJumps;
   std::unordered_map<uint64_t, uint64_t> BasicSamples;
   std::vector<PerfMemSample> MemSamples;
 
@@ -329,7 +331,7 @@ private:
   ErrorOr<LBREntry> parseLBREntry();
 
   /// Parse LBR sample.
-  void parseLBRSample(const PerfBranchSample &Sample, bool NeedsSkylakeFix);
+  void parseLBRSample(const PerfBranchSample &Sample);
 
   /// Parse and pre-aggregate branch events.
   std::error_code parseBranchEvents();
@@ -501,6 +503,10 @@ private:
   /// Infer missing fall-throughs for branch-only traces (LBR top-of-stack
   /// entries).
   void imputeFallThroughs();
+
+  /// Check and drop invalid (duplicate) LBR entries resulting from SKL LBR
+  /// erratum.
+  void checkLBRTOSErratum();
 
   /// Debugging dump methods
   void dump() const;

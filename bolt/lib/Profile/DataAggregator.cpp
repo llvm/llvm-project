@@ -45,6 +45,12 @@ using namespace bolt;
 namespace opts {
 
 static cl::opt<bool>
+    CheckLBRTOSErratum("check-lbr-tos",
+                       cl::desc("Check traces for LBR erratum resulting in a "
+                                "duplicate top-of-stack entry (Intel SKL)"),
+                       cl::init(true), cl::cat(AggregatorCategory));
+
+static cl::opt<bool>
     BasicAggregation("nl",
                      cl::desc("aggregate basic samples (without LBR info)"),
                      cl::cat(AggregatorCategory));
@@ -518,6 +524,83 @@ void DataAggregator::parsePerfData(BinaryContext &BC) {
   deleteTempFiles();
 }
 
+void DataAggregator::checkLBRTOSErratum() {
+  uint64_t NumDroppedTraces = 0;
+  /// Mapping from an address to instruction size or 0 if the instruction is an
+  /// unconditional jump.
+  std::map<uint64_t, uint32_t> UJmpOrSize;
+  /// Filter out traces with Trace.Branch == Trace.To and invalid fall-throughs:
+  /// - forward branch: backwards fall-through
+  /// - backward branch: fall-through crossing function boundary or uncond jump
+  for (auto II = Traces.begin(), IE = Traces.end(); II != IE;) {
+    const Trace &T = II->first;
+    // Skip traces that can't be duplicates
+    if (T.Branch != T.To) {
+      ++II;
+      continue;
+    }
+    // Forward branch with backwards fall-through (Branch == To) => drop trace.
+    if (T.Branch < T.From) {
+      II = Traces.erase(II);
+      NumDroppedTraces += II->second.TakenCount;
+      continue;
+    }
+    // Backward branch
+    const BinaryFunction *BF = BC->getBinaryFunctionContainingAddress(T.Branch);
+    if (!BF)
+      continue;
+    // Check if fall-through spans function boundary
+    if (T.To > BF->getAddress() + BF->getSize()) {
+      II = Traces.erase(II);
+      NumDroppedTraces += II->second.TakenCount;
+      continue;
+    }
+    // Function-local fall-through: check uncond jumps inside fall-through range
+    // Check memoized values within fall-through range first.
+    auto Range = llvm::make_range(UJmpOrSize.lower_bound(T.From),
+                                  UJmpOrSize.lower_bound(T.To));
+    bool FoundUJmp = llvm::any_of(Range, [](auto UII) { return !UII.second; });
+    if (FoundUJmp) {
+      II = Traces.erase(II);
+      NumDroppedTraces += II->second.TakenCount;
+      break;
+    }
+    // Disassemble instructions in [From, To] (no CFG is available yet)
+    for (uint64_t Addr = T.From; Addr < T.To;) {
+      // Since we checked the range first, there should be no unconditional jump
+      // in the map. We can use entries as size hints to avoid disassembling.
+      auto UII = UJmpOrSize.find(Addr);
+      if (UII != UJmpOrSize.end()) {
+        assert(UII->second && "Must not have unconditional jump in the range");
+        Addr += UII->second;
+        continue;
+      }
+      uint64_t InstrSize = 0;
+      const uint64_t FuncOffset = Addr - BF->getAddress();
+      std::optional<MCInst> MI =
+          BF->disassembleInstructionAtOffset(FuncOffset, &InstrSize);
+      if (!MI)
+        break;
+      if (!BC->MIB->IsUnconditionalJump(*MI))
+        continue;
+      FoundUJmp = true;
+      break;
+    }
+    if (FoundUJmp) {
+      II = Traces.erase(II);
+      NumDroppedTraces += II->second.TakenCount;
+    } else {
+      ++II;
+    }
+  }
+  if (NumDroppedTraces)
+    outs() << "PERF2BOLT: dropped " << NumDroppedTraces
+           << " traces likely affected by LBR top-of-stack erratum\n";
+  // Reuse UJmpOrSize for uncond jump check in impute-trace-fall-throughs.
+  for (const auto [Addr, Size] : UJmpOrSize)
+    UncondJumps.emplace(Addr, Size == 0);
+}
+
 void DataAggregator::imputeFallThroughs() {
   if (Traces.empty())
     return;
@@ -527,13 +610,11 @@ void DataAggregator::imputeFallThroughs() {
   uint64_t AggregateFallthroughSize = 0;
   uint64_t InferredTraces = 0;
 
-  // Helper map with whether the instruction is a call/ret/unconditional branch
-  std::unordered_map<uint64_t, bool> IsUncondJumpMap;
   auto checkUncondJump = [&](const uint64_t Addr) {
     auto isUncondJump = [&](const MCInst &MI) -> bool {
       return BC->MIB->IsUnconditionalJump(MI);
     };
-    return testAndSet<bool>(Addr, isUncondJump, IsUncondJumpMap).value_or(true);
+    return testAndSet<bool>(Addr, isUncondJump, UncondJumps).value_or(true);
   };
 
   for (auto &[Trace, Info] : Traces) {
@@ -573,8 +654,13 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   // Sort parsed traces for faster processing.
   llvm::sort(Traces, llvm::less_first());
 
+  if (opts::CheckLBRTOSErratum)
+    checkLBRTOSErratum();
+
   if (opts::ImputeTraceFallthrough)
     imputeFallThroughs();
+
+  clear(UncondJumps);
 
   if (opts::HeatmapMode) {
     if (std::error_code EC = printLBRHeatMap())
@@ -1458,22 +1544,11 @@ std::error_code DataAggregator::printLBRHeatMap() {
   return std::error_code();
 }
 
-void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
-                                    bool NeedsSkylakeFix) {
+void DataAggregator::parseLBRSample(const PerfBranchSample &Sample) {
   // LBRs are stored in reverse execution order. NextLBR refers to the next
   // executed branch record.
   const LBREntry *NextLBR = nullptr;
-  uint32_t NumEntry = 0;
   for (const LBREntry &LBR : Sample.LBR) {
-    ++NumEntry;
-    // Hardware bug workaround: Intel Skylake (which has 32 LBR entries)
-    // sometimes record entry 32 as an exact copy of entry 31. This will cause
-    // us to likely record an invalid trace and generate a stale function for
-    // BAT mode (non BAT disassembles the function and is able to ignore this
-    // trace at aggregation time). Drop first 2 entries (last two, in
-    // chronological order)
-    if (NeedsSkylakeFix && NumEntry <= 2)
-      continue;
     uint64_t TraceTo = NextLBR ? NextLBR->From : Trace::BR_ONLY;
     NextLBR = &LBR;
 
@@ -1561,7 +1636,6 @@ std::error_code DataAggregator::parseBranchEvents() {
   uint64_t NumEntries = 0;
   uint64_t NumSamples = 0;
   uint64_t NumSamplesNoLBR = 0;
-  bool NeedsSkylakeFix = false;
 
   while (hasData() && NumTotalSamples < opts::MaxSamples) {
     ++NumTotalSamples;
@@ -1582,13 +1656,7 @@ std::error_code DataAggregator::parseBranchEvents() {
     }
 
     NumEntries += Sample.LBR.size();
-    if (this->BC->isX86() && BAT && Sample.LBR.size() == 32 &&
-        !NeedsSkylakeFix) {
-      errs() << "PERF2BOLT-WARNING: using Intel Skylake bug workaround\n";
-      NeedsSkylakeFix = true;
-    }
-
-    parseLBRSample(Sample, NeedsSkylakeFix);
+    parseLBRSample(Sample);
   }
 
   Traces.reserve(TraceMap.size());
