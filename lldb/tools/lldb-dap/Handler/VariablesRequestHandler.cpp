@@ -23,9 +23,9 @@ namespace lldb_dap {
 /// indexed children.
 Expected<VariablesResponseBody>
 VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
-  uint64_t var_ref = arguments.variablesReference;
-  uint64_t count = arguments.count;
-  uint64_t start = arguments.start;
+  const uint64_t var_ref = arguments.variablesReference;
+  const uint64_t count = arguments.count;
+  const uint64_t start = arguments.start;
   bool hex = false;
   if (arguments.format)
     hex = arguments.format->hex;
@@ -135,16 +135,18 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
     // children.
     lldb::SBValue variable = dap.variables.GetVariable(var_ref);
     if (variable.IsValid()) {
+      bool is_permanent = dap.variables.IsPermanentVariableReference(var_ref);
       auto addChild = [&](lldb::SBValue child,
                           std::optional<std::string> custom_name = {}) {
         if (!child.IsValid())
           return;
-        bool is_permanent = dap.variables.IsPermanentVariableReference(var_ref);
-        int64_t var_ref = dap.variables.InsertVariable(child, is_permanent);
-        variables.emplace_back(CreateVariable(
-            child, var_ref, hex, dap.configuration.enableAutoVariableSummaries,
-            dap.configuration.enableSyntheticChildDebugging,
-            /*is_name_duplicated=*/false, custom_name));
+        int64_t child_var_ref =
+            dap.variables.InsertVariable(child, is_permanent);
+        variables.emplace_back(
+            CreateVariable(child, child_var_ref, hex,
+                           dap.configuration.enableAutoVariableSummaries,
+                           dap.configuration.enableSyntheticChildDebugging,
+                           /*is_name_duplicated=*/false, custom_name));
       };
       const int64_t num_children = variable.GetNumChildren();
       int64_t end_idx = start + ((count == 0) ? num_children : count);
