@@ -85,6 +85,8 @@ Improvements and New Features
 - The ``flat_map::insert`` and ``flat_set::insert_range`` have been optimized, resulting in a performance improvement of up
   to 10x for inserting elements into a ``flat_map`` when the input range is a ``flat_map`` or a ``zip_view``.
 
+- ``ctype::tolower`` and ``ctype::toupper`` have been optimized, resulting in a 2x performane improvement.
+
 Deprecations and Removals
 -------------------------
 
