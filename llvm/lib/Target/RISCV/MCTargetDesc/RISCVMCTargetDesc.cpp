@@ -44,6 +44,13 @@
 
 using namespace llvm;
 
+namespace {
+class RISCVWinCOFFTargetStreamer : public RISCVTargetStreamer {
+public:
+  RISCVWinCOFFTargetStreamer(MCStreamer &S) : RISCVTargetStreamer(S) {}
+};
+} // end namespace
+
 static MCInstrInfo *createRISCVMCInstrInfo() {
   MCInstrInfo *X = new MCInstrInfo();
   InitRISCVMCInstrInfo(X);
@@ -59,7 +66,13 @@ static MCRegisterInfo *createRISCVMCRegisterInfo(const Triple &TT) {
 static MCAsmInfo *createRISCVMCAsmInfo(const MCRegisterInfo &MRI,
                                        const Triple &TT,
                                        const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new RISCVMCAsmInfo(TT);
+  MCAsmInfo *MAI;
+
+  if(TT.isOSWindows()){
+	  MAI = new RISCVCOFFMCAsmInfo();
+  } else {
+	  MAI = new RISCVMCAsmInfo(TT);
+  }
 
   unsigned SP = MRI.getDwarfRegNum(RISCV::X2, true);
   MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(nullptr, SP, 0);
@@ -110,6 +123,8 @@ static MCInstPrinter *createRISCVMCInstPrinter(const Triple &T,
 static MCTargetStreamer *
 createRISCVObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
   const Triple &TT = STI.getTargetTriple();
+  if(TT.isOSBinFormatCOFF())
+	return new RISCVWinCOFFTargetStreamer(S);
   if (TT.isOSBinFormatELF())
     return new RISCVTargetELFStreamer(S, STI);
   return nullptr;
@@ -344,6 +359,7 @@ LLVMInitializeRISCVTargetMC() {
     TargetRegistry::RegisterMCInstPrinter(*T, createRISCVMCInstPrinter);
     TargetRegistry::RegisterMCSubtargetInfo(*T, createRISCVMCSubtargetInfo);
     TargetRegistry::RegisterELFStreamer(*T, createRISCVELFStreamer);
+	TargetRegistry::RegisterCOFFStreamer(*T, createRISCVWinCOFFStreamer);
     TargetRegistry::RegisterObjectTargetStreamer(
         *T, createRISCVObjectTargetStreamer);
     TargetRegistry::RegisterMCInstrAnalysis(*T, createRISCVInstrAnalysis);
