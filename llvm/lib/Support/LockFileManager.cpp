@@ -14,6 +14,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/ExponentialBackoff.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
@@ -51,6 +52,8 @@ using namespace llvm;
 /// \returns The process ID of the process that owns this lock file
 std::optional<LockFileManager::OwnedByAnother>
 LockFileManager::readLockFile(StringRef LockFileName) {
+  auto SandboxBypass = sys::sandbox_scoped_disable();
+
   // Read the owning host and PID out of the lock file. If it appears that the
   // owning process is dead, the lock file is invalid.
   ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
@@ -246,6 +249,8 @@ Expected<bool> LockFileManager::tryLock() {
 }
 
 LockFileManager::~LockFileManager() {
+  auto SandboxBypass = sys::sandbox_scoped_disable();
+
   if (!std::holds_alternative<OwnedByUs>(Owner))
     return;
 
