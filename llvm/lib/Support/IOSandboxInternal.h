@@ -3,6 +3,13 @@
 
 #include "llvm/Support/IOSandbox.h"
 
+#include <stdio.h>
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
+extern thread_local bool IOSandboxEnabled;
+
 namespace llvm {
 namespace detail {
 template <class FnTy> struct Interposed;
@@ -31,6 +38,9 @@ template <class FnTy> constexpr auto interpose(FnTy Fn) {
   return Interposed<FnTy>{Fn};
 }
 } // namespace detail
+
+static constexpr auto read = detail::interpose(::read);
+static constexpr auto pread = detail::interpose(::pread);
 } // namespace llvm
 
 #endif
