@@ -6,17 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
 #include "src/sys/mman/mlock.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/msync.h"
 #include "src/sys/mman/munlock.h"
 #include "src/sys/mman/munmap.h"
 #include "src/unistd/sysconf.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
+using LlvmLibcMsyncTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 struct PageHolder {
   size_t size;
@@ -36,12 +37,12 @@ struct PageHolder {
   bool is_valid() { return addr != MAP_FAILED; }
 };
 
-TEST(LlvmLibcMsyncTest, UnMappedMemory) {
+TEST_F(LlvmLibcMsyncTest, UnMappedMemory) {
   EXPECT_THAT(LIBC_NAMESPACE::msync(nullptr, 1024, MS_SYNC), Fails(ENOMEM));
   EXPECT_THAT(LIBC_NAMESPACE::msync(nullptr, 1024, MS_ASYNC), Fails(ENOMEM));
 }
 
-TEST(LlvmLibcMsyncTest, LockedPage) {
+TEST_F(LlvmLibcMsyncTest, LockedPage) {
   PageHolder page;
   ASSERT_TRUE(page.is_valid());
   ASSERT_THAT(LIBC_NAMESPACE::mlock(page.addr, page.size), Succeeds());
@@ -52,14 +53,14 @@ TEST(LlvmLibcMsyncTest, LockedPage) {
   EXPECT_THAT(LIBC_NAMESPACE::msync(page.addr, page.size, MS_SYNC), Succeeds());
 }
 
-TEST(LlvmLibcMsyncTest, UnalignedAddress) {
+TEST_F(LlvmLibcMsyncTest, UnalignedAddress) {
   PageHolder page;
   ASSERT_TRUE(page.is_valid());
   EXPECT_THAT(LIBC_NAMESPACE::msync(&page[1], page.size - 1, MS_SYNC),
               Fails(EINVAL));
 }
 
-TEST(LlvmLibcMsyncTest, InvalidFlag) {
+TEST_F(LlvmLibcMsyncTest, InvalidFlag) {
   PageHolder page;
   ASSERT_TRUE(page.is_valid());
   EXPECT_THAT(LIBC_NAMESPACE::msync(page.addr, page.size, MS_SYNC | MS_ASYNC),

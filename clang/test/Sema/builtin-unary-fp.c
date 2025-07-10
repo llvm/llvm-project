@@ -17,5 +17,4 @@ void a(void) {
 
   check(__builtin_fpclassify(0,0,0,0,0, (invalid))); // expected-error{{use of undeclared identifier 'invalid'}}
   check(__builtin_fpclassify(0,0,0,0,0, (inf))); // expected-error{{use of undeclared identifier 'inf'}}
-                                                // expected-error@-1{{reference to overloaded function could not be resolved}}
 }

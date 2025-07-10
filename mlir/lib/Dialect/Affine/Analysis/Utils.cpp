@@ -18,12 +18,9 @@
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/IntegerSet.h"
-#include "mlir/Interfaces/CallInterfaces.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -1356,12 +1353,6 @@ std::optional<int64_t> MemRefRegion::getRegionSize() {
     return false;
   }
 
-  // Indices to use for the DmaStart op.
-  // Indices for the original memref being DMAed from/to.
-  SmallVector<Value, 4> memIndices;
-  // Indices for the faster buffer being DMAed into/from.
-  SmallVector<Value, 4> bufIndices;
-
   // Compute the extents of the buffer.
   std::optional<int64_t> numElements = getConstantBoundingSizeAndShape();
   if (!numElements) {
@@ -1438,7 +1429,7 @@ LogicalResult mlir::affine::boundCheckLoadOrStoreOp(LoadOrStoreOp loadOrStoreOp,
 
     // Check for a negative index.
     FlatAffineValueConstraints lcst(*region.getConstraints());
-    std::fill(ineq.begin(), ineq.end(), 0);
+    llvm::fill(ineq, 0);
     // d_i <= -1;
     lcst.addBound(BoundType::UB, r, -1);
     outOfBounds = !lcst.isEmpty();

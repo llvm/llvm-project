@@ -9,13 +9,14 @@
 #ifndef LLVM_SUPPORT_AARCH64ATTRIBUTEPARSER_H
 #define LLVM_SUPPORT_AARCH64ATTRIBUTEPARSER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ELFAttrParserExtended.h"
 #include "llvm/Support/ELFAttributes.h"
 
 namespace llvm {
 
 class AArch64AttributeParser : public ELFExtendedAttrParser {
-  static std::vector<SubsectionAndTagToTagName> &returnTagsNamesMap();
+  LLVM_ABI static std::vector<SubsectionAndTagToTagName> &returnTagsNamesMap();
 
 public:
   AArch64AttributeParser(ScopedPrinter *Sw)

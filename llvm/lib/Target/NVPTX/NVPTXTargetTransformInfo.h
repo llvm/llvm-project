@@ -26,7 +26,7 @@
 
 namespace llvm {
 
-class NVPTXTTIImpl : public BasicTTIImplBase<NVPTXTTIImpl> {
+class NVPTXTTIImpl final : public BasicTTIImplBase<NVPTXTTIImpl> {
   typedef BasicTTIImplBase<NVPTXTTIImpl> BaseT;
   typedef TargetTransformInfo TTI;
   friend BaseT;
@@ -172,6 +172,8 @@ public:
 
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                   Intrinsic::ID IID) const override;
+
+  unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const override;
 
   Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
                                           Value *NewV) const override;

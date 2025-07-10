@@ -650,9 +650,10 @@ std::optional<DecodeResult> EmulateInstructionRISCV::Decode(uint32_t inst) {
   for (const InstrPattern &pat : PATTERNS) {
     if ((inst & pat.type_mask) == pat.eigen &&
         (inst_type & pat.inst_type) != 0) {
-      LLDB_LOGF(
-          log, "EmulateInstructionRISCV::%s: inst(%x at %" PRIx64 ") was decoded to %s",
-          __FUNCTION__, inst, m_addr, pat.name);
+      LLDB_LOGF(log,
+                "EmulateInstructionRISCV::%s: inst(%x at %" PRIx64
+                ") was decoded to %s",
+                __FUNCTION__, inst, m_addr, pat.name);
       auto decoded = is_16b ? pat.decode(try_rvc) : pat.decode(inst);
       return DecodeResult{decoded, inst, is_16b, pat};
     }
@@ -1649,21 +1650,6 @@ bool EmulateInstructionRISCV::ReadInstruction() {
   return true;
 }
 
-std::optional<addr_t> EmulateInstructionRISCV::ReadPC() {
-  bool success = false;
-  auto addr = ReadRegisterUnsigned(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC,
-                                   LLDB_INVALID_ADDRESS, &success);
-  return success ? std::optional<addr_t>(addr) : std::nullopt;
-}
-
-bool EmulateInstructionRISCV::WritePC(addr_t pc) {
-  EmulateInstruction::Context ctx;
-  ctx.type = eContextAdvancePC;
-  ctx.SetNoArgs();
-  return WriteRegisterUnsigned(ctx, eRegisterKindGeneric,
-                               LLDB_REGNUM_GENERIC_PC, pc);
-}
-
 RoundingMode EmulateInstructionRISCV::GetRoundingMode() {
   bool success = false;
   auto fcsr = ReadRegisterUnsigned(eRegisterKindLLDB, fpr_fcsr_riscv,
@@ -1790,6 +1776,127 @@ EmulateInstructionRISCV::CreateInstance(const ArchSpec &arch,
 
 bool EmulateInstructionRISCV::SupportsThisArch(const ArchSpec &arch) {
   return arch.GetTriple().isRISCV();
+}
+
+BreakpointLocations
+RISCVSingleStepBreakpointLocationsPredictor::GetBreakpointLocations(
+    Status &status) {
+  EmulateInstructionRISCV *riscv_emulator =
+      static_cast<EmulateInstructionRISCV *>(m_emulator_up.get());
+
+  auto pc = riscv_emulator->ReadPC();
+  if (!pc) {
+    status = Status("Can't read PC");
+    return {};
+  }
+
+  auto inst = riscv_emulator->ReadInstructionAt(*pc);
+  if (!inst) {
+    // Can't read instruction. Try default handler.
+    return SingleStepBreakpointLocationsPredictor::GetBreakpointLocations(
+        status);
+  }
+
+  if (FoundLoadReserve(inst->decoded))
+    return HandleAtomicSequence(*pc, status);
+
+  if (FoundStoreConditional(inst->decoded)) {
+    // Ill-formed atomic sequence (SC doesn't have corresponding LR
+    // instruction). Consider SC instruction like a non-atomic store and set a
+    // breakpoint at the next instruction.
+    Log *log = GetLog(LLDBLog::Unwind);
+    LLDB_LOGF(log,
+              "RISCVSingleStepBreakpointLocationsPredictor::%s: can't find "
+              "corresponding load reserve insturuction",
+              __FUNCTION__);
+    return {*pc + (inst->is_rvc ? 2u : 4u)};
+  }
+
+  return SingleStepBreakpointLocationsPredictor::GetBreakpointLocations(status);
+}
+
+llvm::Expected<unsigned>
+RISCVSingleStepBreakpointLocationsPredictor::GetBreakpointSize(
+    lldb::addr_t bp_addr) {
+  EmulateInstructionRISCV *riscv_emulator =
+      static_cast<EmulateInstructionRISCV *>(m_emulator_up.get());
+
+  if (auto inst = riscv_emulator->ReadInstructionAt(bp_addr); inst)
+    return inst->is_rvc ? 2 : 4;
+
+  // Try last instruction size.
+  if (auto last_instr_size = riscv_emulator->GetLastInstrSize();
+      last_instr_size)
+    return *last_instr_size;
+
+  // Just place non-compressed software trap.
+  return 4;
+}
+
+BreakpointLocations
+RISCVSingleStepBreakpointLocationsPredictor::HandleAtomicSequence(
+    lldb::addr_t pc, Status &error) {
+  EmulateInstructionRISCV *riscv_emulator =
+      static_cast<EmulateInstructionRISCV *>(m_emulator_up.get());
+
+  // Handle instructions between LR and SC. According to unprivilleged
+  // RISC-V ISA there can be at most 16 instructions in the sequence.
+
+  lldb::addr_t entry_pc = pc; // LR instruction address
+  auto lr_inst = riscv_emulator->ReadInstructionAt(entry_pc);
+  pc += lr_inst->is_rvc ? 2 : 4;
+
+  size_t atomic_length = 0;
+  std::optional<DecodeResult> inst;
+  std::vector<lldb::addr_t> bp_addrs;
+  do {
+    inst = riscv_emulator->ReadInstructionAt(pc);
+    if (!inst) {
+      error = Status("Can't read instruction");
+      return {};
+    }
+
+    if (B *branch = std::get_if<B>(&inst->decoded))
+      bp_addrs.push_back(pc + SignExt(branch->imm));
+
+    unsigned addent = inst->is_rvc ? 2 : 4;
+    pc += addent;
+    atomic_length += addent;
+  } while ((atomic_length < s_max_atomic_sequence_length) &&
+           !FoundStoreConditional(inst->decoded));
+
+  if (atomic_length >= s_max_atomic_sequence_length) {
+    // Ill-formed atomic sequence (LR doesn't have corresponding SC
+    // instruction). In this case consider LR like a non-atomic load instruction
+    // and set a breakpoint at the next after LR instruction.
+    Log *log = GetLog(LLDBLog::Unwind);
+    LLDB_LOGF(log,
+              "RISCVSingleStepBreakpointLocationsPredictor::%s: can't find "
+              "corresponding store conditional insturuction",
+              __FUNCTION__);
+    return {entry_pc + (lr_inst->is_rvc ? 2u : 4u)};
+  }
+
+  lldb::addr_t exit_pc = pc;
+
+  // Check if we have a branch to the start of the atomic sequence after SC
+  // instruction. If we have such branch, consider it as a part of the atomic
+  // sequence.
+  inst = riscv_emulator->ReadInstructionAt(exit_pc);
+  if (inst) {
+    B *branch = std::get_if<B>(&inst->decoded);
+    if (branch && (exit_pc + SignExt(branch->imm)) == entry_pc)
+      exit_pc += inst->is_rvc ? 2 : 4;
+  }
+
+  // Set breakpoints at the jump addresses of the forward branches that points
+  // after the end of the atomic sequence.
+  llvm::erase_if(
+      bp_addrs, [exit_pc](lldb::addr_t bp_addr) { return exit_pc >= bp_addr; });
+
+  // Set breakpoint at the end of atomic sequence.
+  bp_addrs.push_back(exit_pc);
+  return bp_addrs;
 }
 
 } // namespace lldb_private

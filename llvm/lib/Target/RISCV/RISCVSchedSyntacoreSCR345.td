@@ -183,6 +183,10 @@ multiclass SCR_Unsupported :
   UnsupportedSchedSFB,
   UnsupportedSchedV,
   UnsupportedSchedXsfvcp,
+  UnsupportedSchedXSfvfnrclipxfqf,
+  UnsupportedSchedXSfvfwmaccqqq,
+  UnsupportedSchedXSfvqmaccdod,
+  UnsupportedSchedXSfvqmaccqoq,
   UnsupportedSchedZabha,
   UnsupportedSchedZba,
   UnsupportedSchedZbb,
@@ -199,6 +203,7 @@ multiclass SCR3_Unsupported :
 
 multiclass SCR4_SCR5_Unsupported :
   SCR_Unsupported,
+  UnsupportedSchedQ,
   UnsupportedSchedZfhmin;
 
 // Bypasses (none)
