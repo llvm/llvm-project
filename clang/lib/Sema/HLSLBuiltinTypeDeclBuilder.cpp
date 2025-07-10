@@ -613,7 +613,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleMember(
     ResourceClass RC, bool IsROV, bool RawBuffer, AccessSpecifier Access) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
 
-  RClass = RC;
+  ResClass = RC;
 
   ASTContext &Ctx = SemaRef.getASTContext();
   TypeSourceInfo *ElementTypeInfo =
@@ -622,7 +622,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleMember(
   // add handle member with resource type attributes
   QualType AttributedResTy = QualType();
   SmallVector<const Attr *> Attrs = {
-      HLSLResourceClassAttr::CreateImplicit(Ctx, RClass),
+      HLSLResourceClassAttr::CreateImplicit(Ctx, ResClass),
       IsROV ? HLSLROVAttr::CreateImplicit(Ctx) : nullptr,
       RawBuffer ? HLSLRawBufferAttr::CreateImplicit(Ctx) : nullptr,
       ElementTypeInfo
@@ -699,7 +699,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addArraySubscriptOperators() {
       AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
 
   addHandleAccessFunction(Subscript, /*IsConst=*/true, /*IsRef=*/true);
-  if (RClass == llvm::dxil::ResourceClass::UAV)
+  if (ResClass == llvm::dxil::ResourceClass::UAV)
     addHandleAccessFunction(Subscript, /*IsConst=*/false, /*IsRef=*/true);
 
   return *this;
