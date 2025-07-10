@@ -4894,25 +4894,6 @@ void AArch64TTIImpl::getUnrollingPreferences(
   // Disable partial & runtime unrolling on -Os.
   UP.PartialOptSizeThreshold = 0;
 
-  // Scan the loop: don't unroll loops with calls as this could prevent
-  // inlining. Don't unroll vector loops either, as they don't benefit much from
-  // unrolling.
-  for (auto *BB : L->getBlocks()) {
-    for (auto &I : *BB) {
-      // Don't unroll vectorised loop.
-      if (I.getType()->isVectorTy())
-        return;
-
-      if (isa<CallBase>(I)) {
-        if (isa<CallInst>(I) || isa<InvokeInst>(I))
-          if (const Function *F = cast<CallBase>(I).getCalledFunction())
-            if (!isLoweredToCall(F))
-              continue;
-        return;
-      }
-    }
-  }
-
   // Apply subtarget-specific unrolling preferences.
   switch (ST->getProcFamily()) {
   case AArch64Subtarget::AppleA14:

@@ -2565,20 +2565,11 @@ void RISCVTTIImpl::getUnrollingPreferences(
   if (L->getNumBlocks() > 4)
     return;
 
-  // Don't unroll vectorized loops, including the remainder loop
-  if (getBooleanLoopAttribute(L, "llvm.loop.isvectorized"))
-    return;
-
   // Scan the loop: don't unroll loops with calls as this could prevent
   // inlining.
   InstructionCost Cost = 0;
   for (auto *BB : L->getBlocks()) {
     for (auto &I : *BB) {
-      // Initial setting - Don't unroll loops containing vectorized
-      // instructions.
-      if (I.getType()->isVectorTy())
-        return;
-
       if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
         if (const Function *F = cast<CallBase>(I).getCalledFunction()) {
           if (!isLoweredToCall(F))
