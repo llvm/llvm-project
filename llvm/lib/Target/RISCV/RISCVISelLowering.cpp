@@ -1150,6 +1150,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::STRICT_FP_ROUND, ISD::STRICT_FP_EXTEND}, VT,
                          Custom);
       setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
+      setOperationAction({ISD::LRINT, ISD::LLRINT}, VT, Custom);
       setOperationAction({ISD::VP_MERGE, ISD::VP_SELECT, ISD::SELECT}, VT,
                          Custom);
       setOperationAction(ISD::SELECT_CC, VT, Expand);
@@ -1451,6 +1452,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
               Custom);
           setOperationAction({ISD::VP_SINT_TO_FP, ISD::VP_UINT_TO_FP}, VT,
                              Custom);
+          setOperationAction({ISD::LRINT, ISD::LLRINT}, VT, Custom);
           if (Subtarget.hasStdExtZfhmin()) {
             setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
           } else {
@@ -1475,6 +1477,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         if (VT.getVectorElementType() == MVT::bf16) {
           setOperationAction(ISD::BITCAST, VT, Custom);
           setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
+          setOperationAction({ISD::LRINT, ISD::LLRINT}, VT, Custom);
           if (Subtarget.hasStdExtZfbfmin()) {
             setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
           } else {
@@ -3487,6 +3490,14 @@ static SDValue lowerVectorXRINT(SDValue Op, SelectionDAG &DAG,
   }
 
   auto [Mask, VL] = getDefaultVLOps(SrcVT, SrcContainerVT, DL, DAG, Subtarget);
+
+  // [b]f16 -> f32
+  MVT SrcElemType = SrcVT.getVectorElementType();
+  if (SrcElemType == MVT::f16 || SrcElemType == MVT::bf16) {
+    MVT F32VT = SrcContainerVT.changeVectorElementType(MVT::f32);
+    Src = DAG.getNode(RISCVISD::FP_EXTEND_VL, DL, F32VT, Src, Mask, VL);
+  }
+
   SDValue Res =
       DAG.getNode(RISCVISD::VFCVT_RM_X_F_VL, DL, DstContainerVT, Src, Mask,
                   DAG.getTargetConstant(matchRoundingOp(Op.getOpcode()), DL,
@@ -9064,18 +9075,51 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     if (isNullConstant(TrueV))
       return DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, CondV);
 
+    // Check to see if a given operation is a 'NOT', if so return the negated
+    // operand
+    auto getNotOperand = [](const SDValue &Op) -> std::optional<const SDValue> {
+      using namespace llvm::SDPatternMatch;
+      SDValue Xor;
+      if (sd_match(Op, m_OneUse(m_Not(m_Value(Xor))))) {
+        return Xor;
+      }
+      return std::nullopt;
+    };
     // (select c, (and f, x), f) -> (or (and f, x), (czero_nez f, c))
+    // (select c, (and f, ~x), f) -> (andn f, (czero_eqz x, c))
     if (TrueV.getOpcode() == ISD::AND &&
-        (TrueV.getOperand(0) == FalseV || TrueV.getOperand(1) == FalseV))
+        (TrueV.getOperand(0) == FalseV || TrueV.getOperand(1) == FalseV)) {
+      auto NotOperand = (TrueV.getOperand(0) == FalseV)
+                            ? getNotOperand(TrueV.getOperand(1))
+                            : getNotOperand(TrueV.getOperand(0));
+      if (NotOperand) {
+        SDValue CMOV =
+            DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, *NotOperand, CondV);
+        SDValue NOT = DAG.getNOT(DL, CMOV, VT);
+        return DAG.getNode(ISD::AND, DL, VT, FalseV, NOT);
+      }
       return DAG.getNode(
           ISD::OR, DL, VT, TrueV,
           DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, CondV));
+    }
+
     // (select c, t, (and t, x)) -> (or (czero_eqz t, c), (and t, x))
+    // (select c, t, (and t, ~x)) -> (andn t, (czero_nez x, c))
     if (FalseV.getOpcode() == ISD::AND &&
-        (FalseV.getOperand(0) == TrueV || FalseV.getOperand(1) == TrueV))
+        (FalseV.getOperand(0) == TrueV || FalseV.getOperand(1) == TrueV)) {
+      auto NotOperand = (FalseV.getOperand(0) == TrueV)
+                            ? getNotOperand(FalseV.getOperand(1))
+                            : getNotOperand(FalseV.getOperand(0));
+      if (NotOperand) {
+        SDValue CMOV =
+            DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, *NotOperand, CondV);
+        SDValue NOT = DAG.getNOT(DL, CMOV, VT);
+        return DAG.getNode(ISD::AND, DL, VT, TrueV, NOT);
+      }
       return DAG.getNode(
           ISD::OR, DL, VT, FalseV,
           DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV));
+    }
 
     // Try some other optimizations before falling back to generic lowering.
     if (SDValue V = combineSelectToBinOp(Op.getNode(), DAG, Subtarget))
@@ -23773,9 +23817,9 @@ bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
   return Subtarget.enableUnalignedVectorMem();
 }
 
-
-EVT RISCVTargetLowering::getOptimalMemOpType(const MemOp &Op,
-                                             const AttributeList &FuncAttributes) const {
+EVT RISCVTargetLowering::getOptimalMemOpType(
+    LLVMContext &Context, const MemOp &Op,
+    const AttributeList &FuncAttributes) const {
   if (!Subtarget.hasVInstructions())
     return MVT::Other;
 
@@ -24259,14 +24303,16 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
 
 bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
     LoadInst *LI, ArrayRef<Value *> DeinterleaveValues) const {
-  unsigned Factor = DeinterleaveValues.size();
+  const unsigned Factor = DeinterleaveValues.size();
   if (Factor > 8)
     return false;
 
   assert(LI->isSimple());
   IRBuilder<> Builder(LI);
 
-  auto *ResVTy = cast<VectorType>(DeinterleaveValues[0]->getType());
+  Value *FirstActive =
+      *llvm::find_if(DeinterleaveValues, [](Value *V) { return V != nullptr; });
+  VectorType *ResVTy = cast<VectorType>(FirstActive->getType());
 
   const DataLayout &DL = LI->getDataLayout();
 
@@ -24317,6 +24363,8 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
   }
 
   for (auto [Idx, DIV] : enumerate(DeinterleaveValues)) {
+    if (!DIV)
+      continue;
     // We have to create a brand new ExtractValue to replace each
     // of these old ExtractValue instructions.
     Value *NewEV =
@@ -24442,15 +24490,14 @@ static bool isMultipleOfN(const Value *V, const DataLayout &DL, unsigned N) {
 bool RISCVTargetLowering::lowerInterleavedVPLoad(
     VPIntrinsic *Load, Value *Mask,
     ArrayRef<Value *> DeinterleaveResults) const {
+  const unsigned Factor = DeinterleaveResults.size();
   assert(Mask && "Expect a valid mask");
   assert(Load->getIntrinsicID() == Intrinsic::vp_load &&
          "Unexpected intrinsic");
 
-  const unsigned Factor = DeinterleaveResults.size();
-
-  auto *VTy = dyn_cast<VectorType>(DeinterleaveResults[0]->getType());
-  if (!VTy)
-    return false;
+  Value *FirstActive = *llvm::find_if(DeinterleaveResults,
+                                      [](Value *V) { return V != nullptr; });
+  VectorType *VTy = cast<VectorType>(FirstActive->getType());
 
   auto &DL = Load->getModule()->getDataLayout();
   Align Alignment = Load->getParamAlign(0).value_or(
