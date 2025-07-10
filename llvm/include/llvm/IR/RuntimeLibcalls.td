@@ -387,6 +387,34 @@ def HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES : RuntimeLibcall;
 // XCore calls
 def MEMCPY_ALIGN_4 : RuntimeLibcall;
 
+// Objective-C calls
+def OBJC_AUTORELEASE : RuntimeLibcall;
+def OBJC_AUTORELEASEPOOLPOP : RuntimeLibcall;
+def OBJC_AUTORELEASEPOOLPUSH : RuntimeLibcall;
+def OBJC_AUTORELEASERETURNVALUE : RuntimeLibcall;
+def OBJC_COPYWEAK : RuntimeLibcall;
+def OBJC_DESTROYWEAK : RuntimeLibcall;
+def OBJC_INITWEAK : RuntimeLibcall;
+def OBJC_LOADWEAK : RuntimeLibcall;
+def OBJC_LOADWEAKRETAINED : RuntimeLibcall;
+def OBJC_MOVEWEAK : RuntimeLibcall;
+def OBJC_RELEASE : RuntimeLibcall;
+def OBJC_RETAIN : RuntimeLibcall;
+def OBJC_RETAINAUTORELEASE : RuntimeLibcall;
+def OBJC_RETAINAUTORELEASERETURNVALUE : RuntimeLibcall;
+def OBJC_RETAINAUTORELEASEDRETURNVALUE : RuntimeLibcall;
+def OBJC_CLAIMAUTORELEASEDRETURNVALUE : RuntimeLibcall;
+def OBJC_RETAINBLOCK : RuntimeLibcall;
+def OBJC_STORESTRONG : RuntimeLibcall;
+def OBJC_STOREWEAK : RuntimeLibcall;
+def OBJC_UNSAFECLAIMAUTORELEASEDRETURNVALUE : RuntimeLibcall;
+def OBJC_RETAINEDOBJECT : RuntimeLibcall;
+def OBJC_UNRETAINEDOBJECT : RuntimeLibcall;
+def OBJC_UNRETAINEDPOINTER : RuntimeLibcall;
+def OBJC_RETAIN_AUTORELEASE : RuntimeLibcall;
+def OBJC_SYNC_ENTER : RuntimeLibcall;
+def OBJC_SYNC_EXIT : RuntimeLibcall;
+
 //--------------------------------------------------------------------
 // Define implementation default libcalls
 //--------------------------------------------------------------------
@@ -1031,6 +1059,37 @@ defvar LibmHasSinCosF64 =  LibcallImpls<(add sincos), hasSinCos>;
 defvar LibmHasSinCosF80 = LibcallImpls<(add sincos_f80), hasSinCos>;
 defvar LibmHasSinCosF128 = LibcallImpls<(add sincos_f128), hasSinCos>;
 defvar LibmHasSinCosPPCF128 = LibcallImpls<(add sincos_ppcf128), hasSinCos>;
+
+//===----------------------------------------------------------------------===//
+// Objective-C Runtime Libcalls
+//===----------------------------------------------------------------------===//
+
+def objc_autorelease : RuntimeLibcallImpl<OBJC_AUTORELEASE>;
+def objc_autoreleasePoolPop : RuntimeLibcallImpl<OBJC_AUTORELEASEPOOLPOP>;
+def objc_autoreleasePoolPush : RuntimeLibcallImpl<OBJC_AUTORELEASEPOOLPUSH>;
+def objc_autoreleaseReturnValue : RuntimeLibcallImpl<OBJC_AUTORELEASERETURNVALUE>;
+def objc_copyWeak : RuntimeLibcallImpl<OBJC_COPYWEAK>;
+def objc_destroyWeak : RuntimeLibcallImpl<OBJC_DESTROYWEAK>;
+def objc_initWeak : RuntimeLibcallImpl<OBJC_INITWEAK>;
+def objc_loadWeak : RuntimeLibcallImpl<OBJC_LOADWEAK>;
+def objc_loadWeakRetained : RuntimeLibcallImpl<OBJC_LOADWEAKRETAINED>;
+def objc_moveWeak : RuntimeLibcallImpl<OBJC_MOVEWEAK>;
+def objc_release : RuntimeLibcallImpl<OBJC_RELEASE>;
+def objc_retain : RuntimeLibcallImpl<OBJC_RETAIN>;
+def objc_retainAutorelease : RuntimeLibcallImpl<OBJC_RETAINAUTORELEASE>;
+def objc_retainAutoreleaseReturnValue : RuntimeLibcallImpl<OBJC_RETAINAUTORELEASERETURNVALUE>;
+def objc_retainAutoreleasedReturnValue : RuntimeLibcallImpl<OBJC_RETAINAUTORELEASEDRETURNVALUE>;
+def objc_claimAutoreleasedReturnValue : RuntimeLibcallImpl<OBJC_CLAIMAUTORELEASEDRETURNVALUE>;
+def objc_retainBlock : RuntimeLibcallImpl<OBJC_RETAINBLOCK>;
+def objc_storeStrong : RuntimeLibcallImpl<OBJC_STORESTRONG>;
+def objc_storeWeak : RuntimeLibcallImpl<OBJC_STOREWEAK>;
+def objc_unsafeClaimAutoreleasedReturnValue : RuntimeLibcallImpl<OBJC_UNSAFECLAIMAUTORELEASEDRETURNVALUE>;
+def objc_retainedObject : RuntimeLibcallImpl<OBJC_RETAINEDOBJECT>;
+def objc_unretainedObject : RuntimeLibcallImpl<OBJC_UNRETAINEDOBJECT>;
+def objc_unretainedPointer : RuntimeLibcallImpl<OBJC_UNRETAINEDPOINTER>;
+def objc_retain_autorelease : RuntimeLibcallImpl<OBJC_RETAIN_AUTORELEASE>;
+def objc_sync_enter : RuntimeLibcallImpl<OBJC_SYNC_ENTER>;
+def objc_sync_exit : RuntimeLibcallImpl<OBJC_SYNC_EXIT>;
 
 //===----------------------------------------------------------------------===//
 // AArch64 Runtime Libcalls
