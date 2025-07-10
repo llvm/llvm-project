@@ -21,7 +21,7 @@
 namespace llvm {
 
 class AMDGPUMachineFunction;
-struct AMDGPUResourceUsageAnalysis;
+class AMDGPUResourceUsageAnalysis;
 class AMDGPUTargetStreamer;
 class MCCodeEmitter;
 class MCOperand;

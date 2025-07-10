@@ -263,8 +263,6 @@ static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI,
                  (!isInt<32>(Val) || !isUInt<32>(Val))
              ? 254
              : 255;
-
-  return 255;
 }
 
 std::optional<uint32_t>
