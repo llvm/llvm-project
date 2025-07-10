@@ -1244,17 +1244,6 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::vp_cttz, MVT::i64, 25},
 };
 
-static unsigned getISDForVPIntrinsicID(Intrinsic::ID ID) {
-  switch (ID) {
-#define HELPER_MAP_VPID_TO_VPSD(VPID, VPSD)                                    \
-  case Intrinsic::VPID:                                                        \
-    return ISD::VPSD;
-#include "llvm/IR/VPIntrinsics.def"
-#undef HELPER_MAP_VPID_TO_VPSD
-  }
-  return ISD::DELETED_NODE;
-}
-
 InstructionCost
 RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                     TTI::TargetCostKind CostKind) const {
@@ -1481,36 +1470,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                  CmpInst::BAD_ICMP_PREDICATE, CostKind);
 
     return Cost;
-  }
-  case Intrinsic::vp_rint: {
-    // RISC-V target uses at least 5 instructions to lower rounding intrinsics.
-    unsigned Cost = 5;
-    auto LT = getTypeLegalizationCost(RetTy);
-    if (TLI->isOperationCustom(ISD::VP_FRINT, LT.second))
-      return Cost * LT.first;
-    break;
-  }
-  case Intrinsic::vp_nearbyint: {
-    // More one read and one write for fflags than vp_rint.
-    unsigned Cost = 7;
-    auto LT = getTypeLegalizationCost(RetTy);
-    if (TLI->isOperationCustom(ISD::VP_FRINT, LT.second))
-      return Cost * LT.first;
-    break;
-  }
-  case Intrinsic::vp_ceil:
-  case Intrinsic::vp_floor:
-  case Intrinsic::vp_round:
-  case Intrinsic::vp_roundeven:
-  case Intrinsic::vp_roundtozero: {
-    // Rounding with static rounding mode needs two more instructions to
-    // swap/write FRM than vp_rint.
-    unsigned Cost = 7;
-    auto LT = getTypeLegalizationCost(RetTy);
-    unsigned VPISD = getISDForVPIntrinsicID(ICA.getID());
-    if (TLI->isOperationCustom(VPISD, LT.second))
-      return Cost * LT.first;
-    break;
   }
   case Intrinsic::experimental_vp_splat: {
     auto LT = getTypeLegalizationCost(RetTy);
