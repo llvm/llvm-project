@@ -909,12 +909,10 @@ static bool areExprsSameMacroOrLiteral(const BinaryOperator *BinOp,
     // Left is macro so right macro too
     if (Rsr.getBegin().isMacroID()) {
       // Both sides are macros so they are same macro or literal
-      const llvm::StringRef L =
-          Lexer::getSourceText(CharSourceRange::getTokenRange(Lsr), SM,
-                               Context->getLangOpts(), nullptr);
-      const llvm::StringRef R =
-          Lexer::getSourceText(CharSourceRange::getTokenRange(Rsr), SM,
-                               Context->getLangOpts(), nullptr);
+      const llvm::StringRef L = Lexer::getSourceText(
+          CharSourceRange::getTokenRange(Lsr), SM, Context->getLangOpts());
+      const llvm::StringRef R = Lexer::getSourceText(
+          CharSourceRange::getTokenRange(Rsr), SM, Context->getLangOpts());
       return areStringsSameIgnoreSpaces(L, R);
     }
     // Left is macro but right is not so they are not same macro or literal
