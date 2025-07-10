@@ -423,7 +423,8 @@ class MemfenceToOCLPattern : public OpConversionPattern<MemfenceOp> {
       break;
     default:
       // GENERIC is not supported in OpenCL
-      llvm_unreachable("Fence only supports global and shared address spaces.");
+      return rewriter.notifyMatchFailure(
+          op, "Fence only supports global and shared address spaces.");
     }
     switch (op.getScope()) {
     case xevm::MemScope::WORKGROUP:
@@ -434,7 +435,8 @@ class MemfenceToOCLPattern : public OpConversionPattern<MemfenceOp> {
       break;
     default:
       // CLUSTER and SYSTEM are not supported in OpenCL
-      llvm_unreachable("unsupported xevm::MemoryScope");
+      return rewriter.notifyMatchFailure(
+          op, "Fence only supports workgroup and device memory scopes.");
     }
     Type i32Type = rewriter.getI32Type();
     Value acqRel = rewriter.create<LLVM::ConstantOp>(loc, i32Type, 4);
