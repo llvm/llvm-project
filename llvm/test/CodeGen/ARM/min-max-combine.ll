@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=armv7a < %s | FileCheck %s --check-prefix=ARM
 ; RUN: llc -mtriple=armv6m < %s | FileCheck %s --check-prefix=THUMB
 ; RUN: llc -mtriple=armv7m < %s | FileCheck %s --check-prefix=THUMB2
+; RUN: llc -mtriple=thumbv8.1m.main < %s | FileCheck %s --check-prefix=THUMBV8
 
 declare i8 @llvm.smax.i8(i8 %a, i8 %b) readnone
 
@@ -24,6 +25,12 @@ define i8 @smaxi8_zero(i8 %a) {
 ; THUMB2-NEXT:    sxtb r0, r0
 ; THUMB2-NEXT:    bic.w r0, r0, r0, asr #31
 ; THUMB2-NEXT:    bx lr
+;
+; THUMBV8-LABEL: smaxi8_zero:
+; THUMBV8:       @ %bb.0:
+; THUMBV8-NEXT:    sxtb r0, r0
+; THUMBV8-NEXT:    bic.w r0, r0, r0, asr #31
+; THUMBV8-NEXT:    bx lr
   %c = call i8 @llvm.smax.i8(i8 %a, i8 0)
   ret i8 %c
 }
@@ -49,6 +56,12 @@ define i16 @smaxi16_zero(i16 %a) {
 ; THUMB2-NEXT:    sxth r0, r0
 ; THUMB2-NEXT:    bic.w r0, r0, r0, asr #31
 ; THUMB2-NEXT:    bx lr
+;
+; THUMBV8-LABEL: smaxi16_zero:
+; THUMBV8:       @ %bb.0:
+; THUMBV8-NEXT:    sxth r0, r0
+; THUMBV8-NEXT:    bic.w r0, r0, r0, asr #31
+; THUMBV8-NEXT:    bx lr
   %c = call i16 @llvm.smax.i16(i16 %a, i16 0)
   ret i16 %c
 }
@@ -71,6 +84,11 @@ define i32 @smaxi32_zero(i32 %a) {
 ; THUMB2:       @ %bb.0:
 ; THUMB2-NEXT:    bic.w r0, r0, r0, asr #31
 ; THUMB2-NEXT:    bx lr
+;
+; THUMBV8-LABEL: smaxi32_zero:
+; THUMBV8:       @ %bb.0:
+; THUMBV8-NEXT:    bic.w r0, r0, r0, asr #31
+; THUMBV8-NEXT:    bx lr
   %c = call i32 @llvm.smax.i32(i32 %a, i32 0)
   ret i32 %c
 }
@@ -98,6 +116,12 @@ define i8 @smini8_zero(i8 %a) {
 ; THUMB2-NEXT:    sxtb r0, r0
 ; THUMB2-NEXT:    and.w r0, r0, r0, asr #31
 ; THUMB2-NEXT:    bx lr
+;
+; THUMBV8-LABEL: smini8_zero:
+; THUMBV8:       @ %bb.0:
+; THUMBV8-NEXT:    sxtb r0, r0
+; THUMBV8-NEXT:    and.w r0, r0, r0, asr #31
+; THUMBV8-NEXT:    bx lr
   %c = call i8 @llvm.smin.i8(i8 %a, i8 0)
   ret i8 %c
 }
@@ -123,6 +147,12 @@ define i16 @smini16_zero(i16 %a) {
 ; THUMB2-NEXT:    sxth r0, r0
 ; THUMB2-NEXT:    and.w r0, r0, r0, asr #31
 ; THUMB2-NEXT:    bx lr
+;
+; THUMBV8-LABEL: smini16_zero:
+; THUMBV8:       @ %bb.0:
+; THUMBV8-NEXT:    sxth r0, r0
+; THUMBV8-NEXT:    and.w r0, r0, r0, asr #31
+; THUMBV8-NEXT:    bx lr
   %c = call i16 @llvm.smin.i16(i16 %a, i16 0)
   ret i16 %c
 }
@@ -145,6 +175,11 @@ define i32 @smini32_zero(i32 %a) {
 ; THUMB2:       @ %bb.0:
 ; THUMB2-NEXT:    and.w r0, r0, r0, asr #31
 ; THUMB2-NEXT:    bx lr
+;
+; THUMBV8-LABEL: smini32_zero:
+; THUMBV8:       @ %bb.0:
+; THUMBV8-NEXT:    and.w r0, r0, r0, asr #31
+; THUMBV8-NEXT:    bx lr
   %c = call i32 @llvm.smin.i32(i32 %a, i32 0)
   ret i32 %c
 }
