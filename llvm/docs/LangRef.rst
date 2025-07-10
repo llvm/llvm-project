@@ -8159,6 +8159,11 @@ change in the future.
 
 See :doc:`TypeMetadata`.
 
+'``callee_type``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+See :doc:`CalleeTypeMetadata`.
+
 '``associated``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 

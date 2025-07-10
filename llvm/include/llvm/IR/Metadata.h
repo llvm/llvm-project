@@ -1467,6 +1467,8 @@ public:
                                                 const Instruction *BInstr);
   LLVM_ABI static MDNode *getMergedMemProfMetadata(MDNode *A, MDNode *B);
   LLVM_ABI static MDNode *getMergedCallsiteMetadata(MDNode *A, MDNode *B);
+  LLVM_ABI static MDNode *getMergedCalleeTypeMetadata(LLVMContext &Ctx,
+                                                      MDNode *A, MDNode *B);
 };
 
 /// Tuple of metadata.
@@ -1839,6 +1841,15 @@ public:
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
 DEFINE_ISA_CONVERSION_FUNCTIONS(NamedMDNode, LLVMNamedMDNodeRef)
+
+// Check if a given MDNode is a valid genaralized type metadata node.
+inline bool hasGeneralizedMDString(const MDNode *MD) {
+  if (MD->getNumOperands() < 2 || !isa<MDString>(MD->getOperand(1)))
+    return false;
+  return cast<MDString>(MD->getOperand(1))
+      ->getString()
+      .ends_with(".generalized");
+}
 
 } // end namespace llvm
 

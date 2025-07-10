@@ -3351,6 +3351,7 @@ static void combineMetadata(Instruction *K, const Instruction *J,
       case LLVMContext::MD_mmra:
       case LLVMContext::MD_memprof:
       case LLVMContext::MD_callsite:
+      case LLVMContext::MD_callee_type:
         break;
       case LLVMContext::MD_align:
         if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
@@ -3421,6 +3422,17 @@ static void combineMetadata(Instruction *K, const Instruction *J,
   if (!AAOnly && (JCallSite || KCallSite)) {
     K->setMetadata(LLVMContext::MD_callsite,
                    MDNode::getMergedCallsiteMetadata(KCallSite, JCallSite));
+  }
+
+  // Merge callee_type metadata.
+  // Handle separately to support cases where only one instruction has the
+  // metadata.
+  auto *JCalleeType = J->getMetadata(LLVMContext::MD_callee_type);
+  auto *KCalleeType = K->getMetadata(LLVMContext::MD_callee_type);
+  if (!AAOnly && (JCalleeType || KCalleeType)) {
+    K->setMetadata(LLVMContext::MD_callee_type,
+                   MDNode::getMergedCalleeTypeMetadata(
+                       K->getContext(), KCalleeType, JCalleeType));
   }
 
   // Merge prof metadata.
