@@ -339,7 +339,7 @@ private:
                                           const LoadStoreChunk &To);
 
   /// Add a loop-carried order dependency between \p Src and \p Dst if we
-  /// cannot prove tye are independent. When \p PerformCheapCheck is true, a
+  /// cannot prove they are independent. When \p PerformCheapCheck is true, a
   /// lightweight dependency test (referred to as "cheap check" below) is
   /// performed at first. Note that the cheap check is retained to maintain the
   /// existing behavior and not expected to be used anymore.
