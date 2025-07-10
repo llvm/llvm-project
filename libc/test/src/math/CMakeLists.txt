@@ -2275,7 +2275,7 @@ add_fp_unittest(
   SRCS
     asinpif16_test.cpp
   DEPENDS
-  libc.src.math.asinpif16  
+    libc.src.math.asinpif16
 )
 
 add_fp_unittest(
