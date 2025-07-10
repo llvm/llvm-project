@@ -15,6 +15,7 @@
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
@@ -52,42 +53,24 @@ static LogicalResult baseInBufferAddrSpace(PatternRewriter &rewriter,
 }
 
 static Value createVectorLoadForMaskedLoad(OpBuilder &builder, Location loc,
-                                           vector::MaskedLoadOp maskedOp) {
+                                           vector::MaskedLoadOp maskedOp,
+                                           bool passthru) {
   VectorType vectorType = maskedOp.getVectorType();
   Value load = builder.create<vector::LoadOp>(
       loc, vectorType, maskedOp.getBase(), maskedOp.getIndices());
-  Value res = builder.create<arith::SelectOp>(
-      loc, vectorType, maskedOp.getMask(), load, maskedOp.getPassThru());
-  return res;
+  if (passthru)
+    load = builder.create<arith::SelectOp>(loc, vectorType, maskedOp.getMask(),
+                                           load, maskedOp.getPassThru());
+  return load;
 }
 
-/// Check if the given value comes from a:
-///
-/// arith.select %cond, TRUE/FALSE, TRUE/FALSE
-///
-/// i.e the condition is either always true or it's always false.
-///
-/// Returns the condition to use for scf.if (condition) { true } else { false }.
-static FailureOr<Value> matchFullSelect(OpBuilder &b, Value val) {
-  auto selectOp = val.getDefiningOp<arith::SelectOp>();
-  if (!selectOp)
+/// Check if the given value comes from a broadcasted i1 condition.
+static FailureOr<Value> matchFullMask(OpBuilder &b, Value val) {
+  auto broadcastOp = val.getDefiningOp<vector::BroadcastOp>();
+  if (!broadcastOp)
     return failure();
-  std::optional<int64_t> trueInt = getConstantIntValue(selectOp.getTrueValue());
-  std::optional<int64_t> falseInt =
-      getConstantIntValue(selectOp.getFalseValue());
-  if (!trueInt || !falseInt)
-    return failure();
-  // getConstantIntValue returns -1 for "true" for bools.
-  if (trueInt.value() == -1 && falseInt.value() == 0)
-    return selectOp.getCondition();
-
-  if (trueInt.value() == 0 && falseInt.value() == -1) {
-    Value cond = selectOp.getCondition();
-    Value one = b.create<arith::ConstantIntOp>(cond.getLoc(), /*value=*/true,
-                                               /*width=*/1);
-    Value inverse = b.create<arith::XOrIOp>(cond.getLoc(), cond, one);
-    return inverse;
-  }
+  if (!isa<VectorType>(broadcastOp.getSourceType()))
+    return broadcastOp.getSource();
   return failure();
 }
 
@@ -109,11 +92,11 @@ struct MaskedLoadLowering final : OpRewritePattern<vector::MaskedLoadOp> {
     }
 
     // Check if this is either a full inbounds load or an empty, oob load. If
-    // so, take the fast path and don't generate a if condition, because we know
-    // doing the oob load is always safe.
-    if (succeeded(matchFullSelect(rewriter, maskedOp.getMask()))) {
-      Value load =
-          createVectorLoadForMaskedLoad(rewriter, maskedOp.getLoc(), maskedOp);
+    // so, take the fast path and don't generate an if condition, because we
+    // know doing the oob load is always safe.
+    if (succeeded(matchFullMask(rewriter, maskedOp.getMask()))) {
+      Value load = createVectorLoadForMaskedLoad(rewriter, maskedOp.getLoc(),
+                                                 maskedOp, /*passthru=*/true);
       rewriter.replaceOp(maskedOp, load);
       return success();
     }
@@ -175,7 +158,8 @@ struct MaskedLoadLowering final : OpRewritePattern<vector::MaskedLoadOp> {
     };
 
     auto elseBuilder = [&](OpBuilder &builder, Location loc) {
-      Value res = createVectorLoadForMaskedLoad(builder, loc, maskedOp);
+      Value res = createVectorLoadForMaskedLoad(builder, loc, maskedOp,
+                                                /*passthru=*/true);
       rewriter.create<scf::YieldOp>(loc, res);
     };
 
@@ -192,17 +176,17 @@ struct FullMaskedLoadToConditionalLoad
     : OpRewritePattern<vector::MaskedLoadOp> {
   using OpRewritePattern::OpRewritePattern;
 
-public:
   LogicalResult matchAndRewrite(vector::MaskedLoadOp loadOp,
                                 PatternRewriter &rewriter) const override {
-    FailureOr<Value> maybeCond = matchFullSelect(rewriter, loadOp.getMask());
+    FailureOr<Value> maybeCond = matchFullMask(rewriter, loadOp.getMask());
     if (failed(maybeCond)) {
       return failure();
     }
 
     Value cond = maybeCond.value();
     auto trueBuilder = [&](OpBuilder &builder, Location loc) {
-      Value res = createVectorLoadForMaskedLoad(builder, loc, loadOp);
+      Value res = createVectorLoadForMaskedLoad(builder, loc, loadOp,
+                                                /*passthru=*/false);
       rewriter.create<scf::YieldOp>(loc, res);
     };
     auto falseBuilder = [&](OpBuilder &builder, Location loc) {
@@ -219,10 +203,9 @@ struct FullMaskedStoreToConditionalStore
     : OpRewritePattern<vector::MaskedStoreOp> {
   using OpRewritePattern::OpRewritePattern;
 
-public:
   LogicalResult matchAndRewrite(vector::MaskedStoreOp storeOp,
                                 PatternRewriter &rewriter) const override {
-    FailureOr<Value> maybeCond = matchFullSelect(rewriter, storeOp.getMask());
+    FailureOr<Value> maybeCond = matchFullMask(rewriter, storeOp.getMask());
     if (failed(maybeCond)) {
       return failure();
     }
