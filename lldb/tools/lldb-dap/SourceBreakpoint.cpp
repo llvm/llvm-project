@@ -48,12 +48,12 @@ llvm::Error SourceBreakpoint::SetBreakpoint(const protocol::Source &source) {
 
   if (source.sourceReference) {
     // Breakpoint set by assembly source.
-    if (source.adapterData && source.adapterData->persistence_data) {
+    if (source.adapterData && source.adapterData->persistenceData) {
       // Prefer use the adapter persitence data, because this could be a
       // breakpoint from a previous session where the `sourceReference` is not
       // valid anymore.
       if (llvm::Error error = CreateAssemblyBreakpointWithPersistenceData(
-              *source.adapterData->persistence_data))
+              *source.adapterData->persistenceData))
         return error;
     } else {
       if (llvm::Error error = CreateAssemblyBreakpointWithSourceReference(
@@ -123,7 +123,7 @@ llvm::Error SourceBreakpoint::CreateAssemblyBreakpointWithPersistenceData(
     const protocol::PersistenceData &persistence_data) {
   lldb::SBFileSpec file_spec(persistence_data.module.c_str());
   m_bp = m_dap.target.BreakpointCreateByFileAddress(
-      file_spec, persistence_data.file_addr, 0, m_line - 1);
+      file_spec, persistence_data.fileAddress, 0, m_line - 1);
   return llvm::Error::success();
 }
 
