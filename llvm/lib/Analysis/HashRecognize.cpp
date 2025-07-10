@@ -102,10 +102,9 @@ class ValueEvolution {
 
 public:
   // ValueEvolution is meant to be constructed with the TripCount of the loop,
-  // whether the polynomial algorithm is big-endian for the significant-bit
-  // check, and an initial value for the Visited set.
-  ValueEvolution(unsigned TripCount, bool ByteOrderSwapped,
-                 ArrayRef<const Instruction *> InitVisited);
+  // and a boolean indicating whether the polynomial algorithm is big-endian
+  // (for the significant-bit check).
+  ValueEvolution(unsigned TripCount, bool ByteOrderSwapped);
 
   // Given a list of PHI nodes along with their incoming value from within the
   // loop, computeEvolutions computes the KnownBits of each of the PHI nodes on
@@ -116,8 +115,8 @@ public:
   // precise error message.
   StringRef getError() const { return ErrStr; }
 
-  // A set of instructions visited by ValueEvolution. Anything that's not in the
-  // use-def chain of the PHIs' evolution will not be visited.
+  // A set of Instructions visited by ValueEvolution. The only unvisited
+  // instructions will be ones not on the use-def chain of the PHIs' evolutions.
   SmallPtrSet<const Instruction *, 16> Visited;
 
   // The computed KnownBits for each PHI node, which is populated after
@@ -125,10 +124,8 @@ public:
   KnownPhiMap KnownPhis;
 };
 
-ValueEvolution::ValueEvolution(unsigned TripCount, bool ByteOrderSwapped,
-                               ArrayRef<const Instruction *> InitVisited)
-    : TripCount(TripCount), ByteOrderSwapped(ByteOrderSwapped),
-      Visited(InitVisited.begin(), InitVisited.end()) {}
+ValueEvolution::ValueEvolution(unsigned TripCount, bool ByteOrderSwapped)
+    : TripCount(TripCount), ByteOrderSwapped(ByteOrderSwapped) {}
 
 KnownBits ValueEvolution::computeBinOp(const BinaryOperator *I) {
   KnownBits KnownL(compute(I->getOperand(0)));
@@ -647,21 +644,22 @@ HashRecognize::recognizeCRC() const {
   if (SimpleRecurrence)
     PhiEvolutions.emplace_back(SimpleRecurrence.Phi, SimpleRecurrence.BO);
 
-  // Initialize the Visited set in ValueEvolution with the IndVar-related
-  // instructions.
-  std::initializer_list<const Instruction *> InitVisited = {
-      IndVar, Latch->getTerminator(), L.getLatchCmpInst(),
-      cast<Instruction>(IndVar->getIncomingValueForBlock(Latch))};
-
-  ValueEvolution VE(TC, *ByteOrderSwapped, InitVisited);
+  ValueEvolution VE(TC, *ByteOrderSwapped);
   if (!VE.computeEvolutions(PhiEvolutions))
     return VE.getError();
   KnownBits ResultBits = VE.KnownPhis.at(ConditionalRecurrence.Phi);
 
-  // Any unvisited instructions from the KnownBits propagation can complicate
-  // the optimization, which would just replace the entire loop with the
-  // table-lookup version of the hash algorithm.
-  if (std::distance(Latch->begin(), Latch->end()) != VE.Visited.size())
+  // There must be exactly four unvisited instructions, corresponding to the
+  // IndVar PHI:
+  //   IndVar
+  //   Latch->getTerminator()
+  //   L.getLatchCmpInst(),
+  //   IndVar->getIncomingValueForBlock(Latch))
+  //
+  // Any other unvisited instructions from the KnownBits propagation can
+  // complicate the optimization, which would just replace the entire loop with
+  // the table-lookup version of the hash algorithm.
+  if (std::distance(Latch->begin(), Latch->end()) != VE.Visited.size() + 4)
     return "Found stray unvisited instructions";
 
   unsigned N = std::min(TC, ResultBits.getBitWidth());
