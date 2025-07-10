@@ -34,7 +34,14 @@ public:
 
   using DeviceIDList = std::list<std::string>;
 
-  static Status CreateByDeviceID(const std::string &device_id, AdbClient &adb);
+  /// Resolves a device identifier to its canonical form.
+  ///
+  /// \param device_id the device identifier to resolve (may be empty).
+  /// \param [out] resolved_device_id filled with the canonical device ID.
+  ///
+  /// \returns Status object indicating success or failure. Returns error if
+  ///          the device ID cannot be resolved or is ambiguous.
+  static Status ResolveDeviceID(const std::string &device_id, std::string &resolved_device_id);
 
   AdbClient();
   explicit AdbClient(const std::string &device_id);
@@ -42,8 +49,6 @@ public:
   virtual ~AdbClient();
 
   const std::string &GetDeviceID() const;
-
-  Status GetDevices(DeviceIDList &device_list);
 
   Status SetPortForwarding(const uint16_t local_port,
                            const uint16_t remote_port);
@@ -64,7 +69,14 @@ public:
   Status Connect();
 
 private:
-  void SetDeviceID(const std::string &device_id);
+  /// Retrieves a list of all connected Android devices.
+  ///
+  /// Queries the ADB server for all currently connected devices and populates
+  /// the provided list with their device IDs. Note that ADB closes the connection
+  /// after this operation, making this AdbClient instance invalid for further use.
+  ///
+  /// \param [out] device_list filled with device IDs of all connected devices.
+  Status GetDevices(DeviceIDList &device_list);
 
   Status SendDeviceMessage(const std::string &packet);
 

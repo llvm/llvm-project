@@ -190,8 +190,8 @@ bool AdbSyncService::IsConnected() const {
   return m_conn && m_conn->IsConnected();
 }
 
-AdbSyncService::AdbSyncService(std::string device_id)
-    : m_device_id(std::move(device_id)) {
+AdbSyncService::AdbSyncService(const std::string device_id)
+    : m_device_id(device_id) {
   m_conn = std::make_unique<ConnectionFileDescriptor>();
   Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log, "AdbSyncService::AdbSyncService() - Creating AdbSyncService for device: %s", 
@@ -281,9 +281,8 @@ Status AdbSyncService::SetupSyncConnection() {
     return error;
 
   error = SelectTargetDevice(*m_conn, m_device_id);
-  if (error.Fail()) {
+  if (error.Fail())
     return error;
-  }
   
   error = EnterSyncMode(*m_conn);
   return error;

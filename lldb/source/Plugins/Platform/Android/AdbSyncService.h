@@ -30,7 +30,6 @@ public:
   virtual bool IsConnected() const;
   
   const std::string &GetDeviceId() const { return m_device_id; }
-  Connection &GetConnection() const { return *m_conn; }
 private:
   Status SendSyncRequest(const char *request_id, const uint32_t data_len, const void *data);
   Status ReadSyncHeader(std::string &response_id, uint32_t &data_len);

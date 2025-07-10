@@ -29,18 +29,24 @@ using namespace adb_client_utils;
 const static char *kSocketNamespaceAbstract = "localabstract";
 const static char *kSocketNamespaceFileSystem = "localfilesystem";
 
-Status AdbClient::CreateByDeviceID(const std::string &device_id,
-                                   AdbClient &adb) {
+Status AdbClient::ResolveDeviceID(const std::string &device_id,
+                                  std::string &resolved_device_id) {
   Status error;
-  std::string preferred_android_serial;
-  if (!device_id.empty())
-    preferred_android_serial = device_id;
-  else if (const char *env_serial = std::getenv("ANDROID_SERIAL"))
-    preferred_android_serial = env_serial;
+  llvm::StringRef preferred_serial;
+  if (!device_id.empty()) {
+    preferred_serial = device_id;
+  } else if (const char *env_serial = std::getenv("ANDROID_SERIAL")) {
+    preferred_serial = env_serial;
+  }
 
-  if (preferred_android_serial.empty()) {
+  if (preferred_serial.empty()) {
     DeviceIDList connected_devices;
-    error = adb.GetDevices(connected_devices);
+    {
+      AdbClient temp_adb;
+      error = temp_adb.GetDevices(connected_devices);
+      // temp_adb's connection is closed after the GetDevices() call.
+      // Make it go out of scope to avoid accidental reuse.
+    }
     if (error.Fail())
       return error;
 
@@ -49,10 +55,15 @@ Status AdbClient::CreateByDeviceID(const std::string &device_id,
           "Expected a single connected device, got instead %zu - try "
           "setting 'ANDROID_SERIAL'",
           connected_devices.size());
-    adb.SetDeviceID(connected_devices.front());
+    
+    resolved_device_id = std::move(connected_devices.front());
   } else {
-    adb.SetDeviceID(preferred_android_serial);
+    resolved_device_id = preferred_serial.str();
   }
+  
+  Log *log = GetLog(LLDBLog::Platform);
+  LLDB_LOGF(log, "AdbClient::ResolveDeviceID Resolved device ID: %s", 
+            resolved_device_id.c_str());
   return error;
 }
 
@@ -78,10 +89,6 @@ AdbClient::~AdbClient() {
               m_device_id.c_str());
 }
 
-void AdbClient::SetDeviceID(const std::string &device_id) {
-  m_device_id = device_id;
-}
-
 const std::string &AdbClient::GetDeviceID() const { return m_device_id; }
 
 Status AdbClient::Connect() {
@@ -97,25 +104,24 @@ Status AdbClient::GetDevices(DeviceIDList &device_list) {
   auto error = SendAdbMessage(*m_conn, "host:devices");
   if (error.Fail())
     return error;
-
+  
   error = ReadResponseStatus(*m_conn);
   if (error.Fail())
-    return error;
+  return error;
 
-  std::vector<char> in_buffer;
-  error = ReadAdbMessage(*m_conn, in_buffer);
+std::vector<char> in_buffer;
+error = ReadAdbMessage(*m_conn, in_buffer);
 
-  llvm::StringRef response(&in_buffer[0], in_buffer.size());
-  llvm::SmallVector<llvm::StringRef, 4> devices;
-  response.split(devices, "\n", -1, false);
+llvm::StringRef response(&in_buffer[0], in_buffer.size());
+llvm::SmallVector<llvm::StringRef, 4> devices;
+response.split(devices, "\n", -1, false);
 
-  for (const auto &device : devices)
-    device_list.push_back(std::string(device.split('\t').first));
+for (const auto &device : devices)
+device_list.push_back(std::string(device.split('\t').first));
 
-  Log *log = GetLog(LLDBLog::Platform);
-  LLDB_LOGF(log, "Force reconnect since ADB closes connection after host:devices response");
-  m_conn = std::make_unique<ConnectionFileDescriptor>();
-  error = Connect();
+// WARNING: ADB closes the connection after host:devices response.
+// This AdbClient instance is now INVALID and should not be used for any further operations.
+// This method should ONLY be called from ResolveDeviceID() which uses a temporary AdbClient.
   return error;
 }
 

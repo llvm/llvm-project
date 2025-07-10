@@ -196,12 +196,9 @@ Status PlatformAndroid::ConnectRemote(Args &args) {
 
   auto error = PlatformLinux::ConnectRemote(args);
   if (error.Success()) {
-    AdbClient adb;
-    error = AdbClient::CreateByDeviceID(m_device_id, adb);
+    error = AdbClient::ResolveDeviceID(m_device_id, m_device_id);
     if (error.Fail())
       return error;
-
-    m_device_id = adb.GetDeviceID();
   }
   return error;
 }
