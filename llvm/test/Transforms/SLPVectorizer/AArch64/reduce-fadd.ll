@@ -3,19 +3,13 @@
 ; RUN: opt < %s -S -passes=slp-vectorizer -mtriple=aarch64-unknown-linux -mattr=+fullfp16 | FileCheck %s --check-prefixes=CHECK,FULLFP16
 
 define half @reduce_fast_half2(<2 x half> %vec2) {
-; NOFP16-LABEL: define half @reduce_fast_half2(
-; NOFP16-SAME: <2 x half> [[VEC2:%.*]]) #[[ATTR0:[0-9]+]] {
-; NOFP16-NEXT:  [[ENTRY:.*:]]
-; NOFP16-NEXT:    [[ELT0:%.*]] = extractelement <2 x half> [[VEC2]], i64 0
-; NOFP16-NEXT:    [[ELT1:%.*]] = extractelement <2 x half> [[VEC2]], i64 1
-; NOFP16-NEXT:    [[ADD1:%.*]] = fadd fast half [[ELT1]], [[ELT0]]
-; NOFP16-NEXT:    ret half [[ADD1]]
-;
-; FULLFP16-LABEL: define half @reduce_fast_half2(
-; FULLFP16-SAME: <2 x half> [[VEC2:%.*]]) #[[ATTR0:[0-9]+]] {
-; FULLFP16-NEXT:  [[ENTRY:.*:]]
-; FULLFP16-NEXT:    [[TMP0:%.*]] = call fast half @llvm.vector.reduce.fadd.v2f16(half 0xH0000, <2 x half> [[VEC2]])
-; FULLFP16-NEXT:    ret half [[TMP0]]
+; CHECK-LABEL: define half @reduce_fast_half2(
+; CHECK-SAME: <2 x half> [[VEC2:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <2 x half> [[VEC2]], i64 0
+; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x half> [[VEC2]], i64 1
+; CHECK-NEXT:    [[ADD1:%.*]] = fadd fast half [[ELT1]], [[ELT0]]
+; CHECK-NEXT:    ret half [[ADD1]]
 ;
 entry:
   %elt0 = extractelement <2 x half> %vec2, i64 0
@@ -26,7 +20,7 @@ entry:
 
 define half @reduce_half2(<2 x half> %vec2) {
 ; CHECK-LABEL: define half @reduce_half2(
-; CHECK-SAME: <2 x half> [[VEC2:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: <2 x half> [[VEC2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <2 x half> [[VEC2]], i64 0
 ; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x half> [[VEC2]], i64 1
@@ -275,7 +269,9 @@ define float @reduce_fast_float2(<2 x float> %vec2) {
 ; CHECK-LABEL: define float @reduce_fast_float2(
 ; CHECK-SAME: <2 x float> [[VEC2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ADD1:%.*]] = call fast float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> [[VEC2]])
+; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <2 x float> [[VEC2]], i64 0
+; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x float> [[VEC2]], i64 1
+; CHECK-NEXT:    [[ADD1:%.*]] = fadd fast float [[ELT1]], [[ELT0]]
 ; CHECK-NEXT:    ret float [[ADD1]]
 ;
 entry:
@@ -413,7 +409,9 @@ define double @reduce_fast_double2(<2 x double> %vec2) {
 ; CHECK-LABEL: define double @reduce_fast_double2(
 ; CHECK-SAME: <2 x double> [[VEC2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ADD1:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[VEC2]])
+; CHECK-NEXT:    [[ELT0:%.*]] = extractelement <2 x double> [[VEC2]], i64 0
+; CHECK-NEXT:    [[ELT1:%.*]] = extractelement <2 x double> [[VEC2]], i64 1
+; CHECK-NEXT:    [[ADD1:%.*]] = fadd fast double [[ELT1]], [[ELT0]]
 ; CHECK-NEXT:    ret double [[ADD1]]
 ;
 entry:

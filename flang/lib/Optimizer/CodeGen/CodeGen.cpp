@@ -2299,6 +2299,7 @@ private:
     return finalizeRebox(rebox, adaptor, destBoxTy, dest, base,
                          /*lbounds*/ {}, slicedExtents, slicedStrides,
                          rewriter);
+
   }
 
   /// Apply a new shape to the data described by a box given the base address,
