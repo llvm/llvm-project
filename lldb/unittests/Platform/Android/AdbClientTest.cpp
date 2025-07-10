@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/Platform/Android/AdbClient.h"
+#include "Plugins/Platform/Android/AdbSyncService.h"
 #include "gtest/gtest.h"
 #include <cstdlib>
 
@@ -48,16 +49,11 @@ TEST_F(AdbClientTest, CreateByDeviceId_ByEnvVar) {
 }
 
 TEST_F(AdbClientTest, SyncServiceCreation) {
-  AdbClient adb_client("test_device");
+  AdbSyncService sync_service("test_device");
   
-  std::unique_ptr<Connection> conn = std::make_unique<ConnectionFileDescriptor>();
-  auto sync_service = std::make_unique<AdbClient::SyncService>(
-      std::move(conn), adb_client.GetDeviceID());
+  EXPECT_EQ(sync_service.GetDeviceId(), "test_device");
   
-  EXPECT_NE(sync_service, nullptr);
-  EXPECT_EQ(sync_service->GetDeviceId(), "test_device");
-  
-  EXPECT_FALSE(sync_service->IsConnected());
+  EXPECT_FALSE(sync_service.IsConnected());
 }
 
 } // end namespace platform_android

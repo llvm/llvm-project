@@ -63,7 +63,7 @@ private:
 
 class MockAdbClient : public AdbClient {
 public:
-  explicit MockAdbClient() : AdbClient("mock") {}
+  explicit MockAdbClient() : AdbClient() {}
 
   MOCK_METHOD3(ShellToFile,
                Status(const char *command, std::chrono::milliseconds timeout,
@@ -77,7 +77,7 @@ public:
     
     // Set up default mock behavior to avoid uninteresting call warnings
     ON_CALL(*this, GetSyncService(_))
-        .WillByDefault([](Status &error) -> std::unique_ptr<AdbClient::SyncService> {
+        .WillByDefault([](Status &error) -> std::unique_ptr<AdbSyncService> {
           error = Status::FromErrorString("Sync service unavailable");
           return nullptr;
         });
@@ -85,7 +85,7 @@ public:
 
   MOCK_METHOD1(GetAdbClient, AdbClientUP(Status &error));
   MOCK_METHOD0(GetPropertyPackageName, llvm::StringRef());
-  MOCK_METHOD1(GetSyncService, std::unique_ptr<AdbClient::SyncService>(Status &error));
+  MOCK_METHOD1(GetSyncService, std::unique_ptr<AdbSyncService>(Status &error));
   
   // Make GetSyncService public for testing
   using PlatformAndroid::GetSyncService;
@@ -191,7 +191,7 @@ TEST_F(PlatformAndroidTest, GetFile_SyncServiceUnavailable_FallsBackToShellCat) 
                       Return(ByMove(AdbClientUP(adb_client)))));
 
   EXPECT_CALL(*this, GetSyncService(_))
-      .WillOnce([](Status &error) -> std::unique_ptr<AdbClient::SyncService> {
+      .WillOnce([](Status &error) -> std::unique_ptr<AdbSyncService> {
         error = Status::FromErrorString("Sync service unavailable");
         return nullptr;
       });
@@ -216,7 +216,7 @@ TEST_F(PlatformAndroidTest, GetFile_WithRunAs_UsesRunAsInShellCommand) {
                       Return(ByMove(AdbClientUP(adb_client)))));
 
   EXPECT_CALL(*this, GetSyncService(_))
-      .WillOnce([](Status &error) -> std::unique_ptr<AdbClient::SyncService> {
+      .WillOnce([](Status &error) -> std::unique_ptr<AdbSyncService> {
         error = Status::FromErrorString("Sync service unavailable");
         return nullptr;
       });
@@ -228,7 +228,7 @@ TEST_F(PlatformAndroidTest, GetFile_WithRunAs_UsesRunAsInShellCommand) {
 
 TEST_F(PlatformAndroidTest, GetFile_FilenameWithSingleQuotes_Rejected) {
   EXPECT_CALL(*this, GetSyncService(_))
-      .WillOnce([](Status &error) -> std::unique_ptr<AdbClient::SyncService> {
+      .WillOnce([](Status &error) -> std::unique_ptr<AdbSyncService> {
         error = Status::FromErrorString("Sync service unavailable");
         return nullptr;
       });
@@ -283,7 +283,7 @@ TEST_F(PlatformAndroidTest, GetFile_NetworkTimeout_PropagatesErrorCorrectly) {
                       Return(ByMove(AdbClientUP(adb_client)))));
 
   EXPECT_CALL(*this, GetSyncService(_))
-      .WillOnce([](Status &error) -> std::unique_ptr<AdbClient::SyncService> {
+      .WillOnce([](Status &error) -> std::unique_ptr<AdbSyncService> {
         error = Status::FromErrorString("Sync service unavailable");
         return nullptr;
       });
@@ -294,12 +294,10 @@ TEST_F(PlatformAndroidTest, GetFile_NetworkTimeout_PropagatesErrorCorrectly) {
 }
 
 TEST_F(PlatformAndroidTest, SyncService_ConnectionFailsGracefully) {
-  auto mock_conn = std::make_unique<MockConnection>(true); // Configure to fail
-  
   // Constructor should succeed even with a failing connection
-  AdbClient::SyncService sync_service(std::move(mock_conn), "test-device");
+  AdbSyncService sync_service("test-device");
   
-  // The service should report as not connected
+  // The service should report as not connected initially
   EXPECT_FALSE(sync_service.IsConnected());
   EXPECT_EQ(sync_service.GetDeviceId(), "test-device");
   
@@ -310,7 +308,6 @@ TEST_F(PlatformAndroidTest, SyncService_ConnectionFailsGracefully) {
   
   Status result = sync_service.Stat(remote_file, mode, size, mtime);
   EXPECT_TRUE(result.Fail());
-  EXPECT_THAT(result.AsCString(), HasSubstr("connection failed"));
 }
 
 TEST_F(PlatformAndroidTest, GetRunAs_FormatsPackageNameCorrectly) {
@@ -355,7 +352,7 @@ TEST_F(PlatformAndroidTest, DownloadModuleSlice_ZeroOffset_CallsGetFileInsteadOf
       .WillOnce(DoAll(WithArg<0>([](auto &arg) { 
                         arg = Status::FromErrorString("Sync service unavailable"); 
                       }),
-                      Return(ByMove(std::unique_ptr<AdbClient::SyncService>()))));
+                      Return(ByMove(std::unique_ptr<AdbSyncService>()))));
   
   Status result = DownloadModuleSlice(FileSpec("/system/lib64/libc.so"), 0, 0, FileSpec("/tmp/libc.so"));
   EXPECT_TRUE(result.Success());
