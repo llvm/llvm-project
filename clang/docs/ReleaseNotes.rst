@@ -776,8 +776,10 @@ Bug Fixes in This Version
 - In C23, something like ``[[/*possible attributes*/]];`` is an attribute
   declaration, not a statement. So it is not allowed by the syntax in places
   where a statement is required, specifically as the secondary block of a
-  selection or iteration statement. This differs from C++, since C++ allows 
+  selection or iteration statement. This differs from C++, since C++ allows
   declaration statements. Clang now emits a warning for these patterns. (#GH141659)
+- Fixed false positives for redeclaration errors of using enum in
+  nested scopes. (#GH147495)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
