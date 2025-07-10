@@ -17,7 +17,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     report, _ = generate_test_report_lib.generate_report_from_files(
-        args.title, args.return_code, args.junit_files, None
+        args.title, args.return_code, args.junit_files
     )
 
     print(report)

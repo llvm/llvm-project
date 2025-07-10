@@ -18,7 +18,6 @@ def generate_report(
     junit_objects,
     size_limit=1024 * 1024,
     list_failures=True,
-    buildkite_info=None,
 ):
     if not junit_objects:
         # Note that we do not post an empty report, therefore we can ignore a
@@ -73,22 +72,12 @@ def generate_report(
     if tests_failed:
         report.append(f"* {tests_failed} {plural(tests_failed)} failed")
 
-    if buildkite_info is not None:
-        log_url = (
-            "https://buildkite.com/organizations/{BUILDKITE_ORGANIZATION_SLUG}/"
-            "pipelines/{BUILDKITE_PIPELINE_SLUG}/builds/{BUILDKITE_BUILD_NUMBER}/"
-            "jobs/{BUILDKITE_JOB_ID}/download.txt".format(**buildkite_info)
-        )
-        download_text = f"[Download]({log_url})"
-    else:
-        download_text = "Download"
-
     if not list_failures:
         report.extend(
             [
                 "",
                 "Failed tests and their output was too large to report. "
-                f"{download_text} the build's log file to see the details.",
+                "Download the build's log file to see the details.",
             ]
         )
     elif failures:
@@ -118,7 +107,7 @@ def generate_report(
                 "",
                 "All tests passed but another part of the build **failed**.",
                 "",
-                f"{download_text} the build's log file to see the details.",
+                "Download the build's log file to see the details.",
             ]
         )
 
@@ -141,16 +130,14 @@ def generate_report(
             junit_objects,
             size_limit,
             list_failures=False,
-            buildkite_info=buildkite_info,
         )
 
     return report, style
 
 
-def generate_report_from_files(title, return_code, junit_files, buildkite_info):
+def generate_report_from_files(title, return_code, junit_files):
     return generate_report(
         title,
         return_code,
         [JUnitXml.fromfile(p) for p in junit_files],
-        buildkite_info=buildkite_info,
     )
