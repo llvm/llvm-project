@@ -30,3 +30,77 @@ bb:
 declare void @use(ptr)
 
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
+
+
+; No unions or overlaps in the tbaa.struct. So we can rely on the types
+define void @test2(i3 %x) {
+; CHECK-LABEL: define void @test2(
+; CHECK-SAME: i3 [[X:%.*]]) {
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[RES:%.*]] = alloca [[B:%.*]], align 8
+; CHECK-NEXT:    store i1 true, ptr [[RES]], align 1, !tbaa.struct [[TBAA_STRUCT0:![0-9]+]]
+; CHECK-NEXT:    [[TMP_SROA_2_0_RES_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[RES]], i64 1
+; CHECK-NEXT:    store i3 [[X]], ptr [[TMP_SROA_2_0_RES_SROA_IDX]], align 1, !tbaa.struct [[TBAA_STRUCT7:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8 @use(ptr [[RES]])
+; CHECK-NEXT:    ret void
+;
+bb:
+  %res = alloca %B
+  %tmp = alloca %B
+  %tmp.1 = getelementptr i8, ptr %tmp, i64 1
+  store i1 1, ptr %tmp
+  store i3 %x, ptr %tmp.1
+  call void @llvm.memcpy.p0.p0.i64(ptr %res, ptr %tmp, i64 2, i1 false), !tbaa.struct !6
+  call i8 @use(ptr %res)
+  ret void
+}
+
+; Union preventing SROA from removing the memcpy for the first byte.
+define void @test3(i3 %x) {
+; CHECK-LABEL: define void @test3(
+; CHECK-SAME: i3 [[X:%.*]]) {
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[RES:%.*]] = alloca [[B:%.*]], align 8
+; CHECK-NEXT:    [[TMP_SROA_0:%.*]] = alloca i1, align 8
+; CHECK-NEXT:    store i1 true, ptr [[TMP_SROA_0]], align 8
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[RES]], ptr align 8 [[TMP_SROA_0]], i64 1, i1 false), !tbaa.struct [[TBAA_STRUCT8:![0-9]+]]
+; CHECK-NEXT:    [[TMP_SROA_2_0_RES_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[RES]], i64 1
+; CHECK-NEXT:    store i3 [[X]], ptr [[TMP_SROA_2_0_RES_SROA_IDX]], align 1, !tbaa.struct [[TBAA_STRUCT7]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8 @use(ptr [[RES]])
+; CHECK-NEXT:    ret void
+;
+bb:
+  %res = alloca %B
+  %tmp = alloca %B
+  %tmp.1 = getelementptr i8, ptr %tmp, i64 1
+  store i1 1, ptr %tmp
+  store i3 %x, ptr %tmp.1
+  call void @llvm.memcpy.p0.p0.i64(ptr %res, ptr %tmp, i64 2, i1 false), !tbaa.struct !9
+  call i8 @use(ptr %res)
+  ret void
+}
+
+!1 = !{!"_BitInt(7)", !4, i64 0}
+!2 = !{!"_BitInt(1)", !4, i64 0}
+!3 = !{!"_BitInt(3)", !4, i64 0}
+!4 = !{!"omnipotent char", !5, i64 0}
+!5 = !{!"Simple C++ TBAA"}
+!6 = !{i64 0, i64 1, !7, i64 1, i64 1, !8}
+!7 = !{!2, !2, i64 0}
+!8 = !{!3, !3, i64 0}
+!9 = !{i64 0, i64 1, !10, i64 0, i64 1, !7, i64 1, i64 1, !8}
+!10 = !{!1, !1, i64 0}
+
+;.
+; CHECK: [[TBAA_STRUCT0]] = !{i64 0, i64 1, [[META1:![0-9]+]], i64 1, i64 1, [[META5:![0-9]+]]}
+; CHECK: [[META1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
+; CHECK: [[META2]] = !{!"_BitInt(1)", [[META3:![0-9]+]], i64 0}
+; CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
+; CHECK: [[META4]] = !{!"Simple C++ TBAA"}
+; CHECK: [[META5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
+; CHECK: [[META6]] = !{!"_BitInt(3)", [[META3]], i64 0}
+; CHECK: [[TBAA_STRUCT7]] = !{i64 0, i64 1, [[META5]]}
+; CHECK: [[TBAA_STRUCT8]] = !{i64 0, i64 1, [[META9:![0-9]+]], i64 0, i64 1, [[META1]], i64 1, i64 1, [[META5]]}
+; CHECK: [[META9]] = !{[[META10:![0-9]+]], [[META10]], i64 0}
+; CHECK: [[META10]] = !{!"_BitInt(7)", [[META3]], i64 0}
+;.
