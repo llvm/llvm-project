@@ -30,6 +30,11 @@ v_mov_b64 v[4:5], v[2:3] quad_perm:[1,1,1,1]
 // GFX1250-ERR: v_mov_b64 v[4:5], v[2:3] quad_perm:[1,1,1,1]
 // GFX1250-ERR:                          ^
 
+v_mov_b64 v[4:5], v[2:3] dpp8:[7,6,5,4,3,2,1,0]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1250-ERR: v_mov_b64 v[4:5], v[2:3] dpp8:[7,6,5,4,3,2,1,0]
+// GFX1250-ERR:                          ^
+
 // For v_dual_cndmask_b32 use of the explicit src2 forces VOPD3 form even if it is vcc_lo.
 // If src2 is omitted then it forces VOPD form. As a result a proper form of the instruction
 // has to be used if the other component of the dual instruction cannot be used if that
