@@ -1682,7 +1682,7 @@ def SetBitfieldOp : CIR_Op<"set_bitfield"> {
     A bitfield info attribute must be provided to describe the location of
     the bitfield within the memory referenced by the $addr argument.
     The $src argument is inserted at the appropriate place in the memory and
-    the value that was stored. Returns a value being stored.
+    the value that was stored. Returns the value being stored.
 
     A unit attribute `volatile` can be used to indicate a volatile store of the
     bitfield.
