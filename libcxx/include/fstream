@@ -821,7 +821,7 @@ typename basic_filebuf<_CharT, _Traits>::int_type basic_filebuf<_CharT, _Traits>
 
 template <class _CharT, class _Traits>
 typename basic_filebuf<_CharT, _Traits>::int_type basic_filebuf<_CharT, _Traits>::overflow(int_type __c) {
-  auto __failure = [this] {
+  auto __failure = [this]() {
     if (this->pptr() == this->epptr() + 1) {
       this->pbump(-1); // lose the character we overflowed above -- we don't really have a
                        // choice since we couldn't commit the contents of the put area
