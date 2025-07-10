@@ -44,21 +44,6 @@ def : Macro {
   let alt_value = "";
 }
 
-def : Macro {
-  let name = "OL_DLLEXPORT";
-  let desc = "Microsoft-specific dllexport storage-class attribute";
-  let condition = "defined(_WIN32)";
-  let value = "__declspec(dllexport)";
-}
-
-def : Macro {
-  let name = "OL_DLLEXPORT";
-  let desc = "GCC-specific dllexport storage-class attribute";
-  let condition = "__GNUC__ >= 4";
-  let value = "__attribute__ ((visibility (\"default\")))";
-  let alt_value = "";
-}
-
 def : Handle {
   let name = "ol_platform_handle_t";
   let desc = "Handle of a platform instance";
