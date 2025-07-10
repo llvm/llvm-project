@@ -72,12 +72,30 @@ add_libc_fuzzer(
 )
 
 add_libc_fuzzer(
+  acos_fuzz
+  NEED_MPFR
+  SRCS
+    acos_fuzz.cpp
+  DEPENDS
+    libc.src.math.acos
+)
+
+add_libc_fuzzer(
   cos_fuzz
   NEED_MPFR
   SRCS
     cos_fuzz.cpp
   DEPENDS
     libc.src.math.cos
+)
+
+add_libc_fuzzer(
+  atan_fuzz
+  NEED_MPFR
+  SRCS
+    atan_fuzz.cpp
+  DEPENDS
+    libc.src.math.atan
 )
 
 add_libc_fuzzer(
