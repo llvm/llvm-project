@@ -272,11 +272,12 @@ static LogicalResult checkWaitAndAsyncConflict(Op op) {
        ++dtypeInt) {
     auto dtype = static_cast<acc::DeviceType>(dtypeInt);
 
-    // The async attribute represent the async clause without value. Therefore
-    // the attribute and operand cannot appear at the same time.
+    // The asyncOnly attribute represent the async clause without value.
+    // Therefore the attribute and operand cannot appear at the same time.
     if (hasDeviceType(op.getAsyncOperandsDeviceType(), dtype) &&
         op.hasAsyncOnly(dtype))
-      return op.emitError("async attribute cannot appear with asyncOperand");
+      return op.emitError(
+          "asyncOnly attribute cannot appear with asyncOperand");
 
     // The wait attribute represent the wait clause without values. Therefore
     // the attribute and operands cannot appear at the same time.
@@ -316,6 +317,24 @@ template <typename Op>
 static LogicalResult checkVarAndAccVar(Op op) {
   if (op.getVar().getType() != op.getAccVar().getType())
     return op.emitError("input and output types must match");
+
+  return success();
+}
+
+template <typename Op>
+static LogicalResult checkNoModifier(Op op) {
+  if (op.getModifiers() != acc::DataClauseModifier::none)
+    return op.emitError("no data clause modifiers are allowed");
+  return success();
+}
+
+template <typename Op>
+static LogicalResult
+checkValidModifier(Op op, acc::DataClauseModifier validModifiers) {
+  if (acc::bitEnumContainsAny(op.getModifiers(), ~validModifiers))
+    return op.emitError(
+        "invalid data clause modifiers: " +
+        acc::stringifyDataClauseModifier(op.getModifiers() & ~validModifiers));
 
   return success();
 }
@@ -446,6 +465,8 @@ LogicalResult acc::PrivateOp::verify() {
         "data clause associated with private operation must match its intent");
   if (failed(checkVarAndVarType(*this)))
     return failure();
+  if (failed(checkNoModifier(*this)))
+    return failure();
   return success();
 }
 
@@ -458,6 +479,8 @@ LogicalResult acc::FirstprivateOp::verify() {
                      "match its intent");
   if (failed(checkVarAndVarType(*this)))
     return failure();
+  if (failed(checkNoModifier(*this)))
+    return failure();
   return success();
 }
 
@@ -469,6 +492,8 @@ LogicalResult acc::ReductionOp::verify() {
     return emitError("data clause associated with reduction operation must "
                      "match its intent");
   if (failed(checkVarAndVarType(*this)))
+    return failure();
+  if (failed(checkNoModifier(*this)))
     return failure();
   return success();
 }
@@ -484,6 +509,8 @@ LogicalResult acc::DevicePtrOp::verify() {
     return failure();
   if (failed(checkVarAndAccVar(*this)))
     return failure();
+  if (failed(checkNoModifier(*this)))
+    return failure();
   return success();
 }
 
@@ -497,6 +524,8 @@ LogicalResult acc::PresentOp::verify() {
   if (failed(checkVarAndVarType(*this)))
     return failure();
   if (failed(checkVarAndAccVar(*this)))
+    return failure();
+  if (failed(checkNoModifier(*this)))
     return failure();
   return success();
 }
@@ -517,11 +546,17 @@ LogicalResult acc::CopyinOp::verify() {
     return failure();
   if (failed(checkVarAndAccVar(*this)))
     return failure();
+  if (failed(checkValidModifier(*this, acc::DataClauseModifier::readonly |
+                                           acc::DataClauseModifier::always |
+                                           acc::DataClauseModifier::capture)))
+    return failure();
   return success();
 }
 
 bool acc::CopyinOp::isCopyinReadonly() {
-  return getDataClause() == acc::DataClause::acc_copyin_readonly;
+  return getDataClause() == acc::DataClause::acc_copyin_readonly ||
+         acc::bitEnumContainsAny(getModifiers(),
+                                 acc::DataClauseModifier::readonly);
 }
 
 //===----------------------------------------------------------------------===//
@@ -540,13 +575,20 @@ LogicalResult acc::CreateOp::verify() {
     return failure();
   if (failed(checkVarAndAccVar(*this)))
     return failure();
+  // this op is the entry part of copyout, so it also needs to allow all
+  // modifiers allowed on copyout.
+  if (failed(checkValidModifier(*this, acc::DataClauseModifier::zero |
+                                           acc::DataClauseModifier::always |
+                                           acc::DataClauseModifier::capture)))
+    return failure();
   return success();
 }
 
 bool acc::CreateOp::isCreateZero() {
   // The zero modifier is encoded in the data clause.
   return getDataClause() == acc::DataClause::acc_create_zero ||
-         getDataClause() == acc::DataClause::acc_copyout_zero;
+         getDataClause() == acc::DataClause::acc_copyout_zero ||
+         acc::bitEnumContainsAny(getModifiers(), acc::DataClauseModifier::zero);
 }
 
 //===----------------------------------------------------------------------===//
@@ -559,6 +601,8 @@ LogicalResult acc::NoCreateOp::verify() {
   if (failed(checkVarAndVarType(*this)))
     return failure();
   if (failed(checkVarAndAccVar(*this)))
+    return failure();
+  if (failed(checkNoModifier(*this)))
     return failure();
   return success();
 }
@@ -573,6 +617,8 @@ LogicalResult acc::AttachOp::verify() {
   if (failed(checkVarAndVarType(*this)))
     return failure();
   if (failed(checkVarAndAccVar(*this)))
+    return failure();
+  if (failed(checkNoModifier(*this)))
     return failure();
   return success();
 }
@@ -589,6 +635,8 @@ LogicalResult acc::DeclareDeviceResidentOp::verify() {
     return failure();
   if (failed(checkVarAndAccVar(*this)))
     return failure();
+  if (failed(checkNoModifier(*this)))
+    return failure();
   return success();
 }
 
@@ -603,6 +651,8 @@ LogicalResult acc::DeclareLinkOp::verify() {
   if (failed(checkVarAndVarType(*this)))
     return failure();
   if (failed(checkVarAndAccVar(*this)))
+    return failure();
+  if (failed(checkNoModifier(*this)))
     return failure();
   return success();
 }
@@ -625,11 +675,16 @@ LogicalResult acc::CopyoutOp::verify() {
     return failure();
   if (failed(checkVarAndAccVar(*this)))
     return failure();
+  if (failed(checkValidModifier(*this, acc::DataClauseModifier::zero |
+                                           acc::DataClauseModifier::always |
+                                           acc::DataClauseModifier::capture)))
+    return failure();
   return success();
 }
 
 bool acc::CopyoutOp::isCopyoutZero() {
-  return getDataClause() == acc::DataClause::acc_copyout_zero;
+  return getDataClause() == acc::DataClause::acc_copyout_zero ||
+         acc::bitEnumContainsAny(getModifiers(), acc::DataClauseModifier::zero);
 }
 
 //===----------------------------------------------------------------------===//
@@ -651,6 +706,13 @@ LogicalResult acc::DeleteOp::verify() {
         " or specify original clause this operation was decomposed from");
   if (!getAccVar())
     return emitError("must have device pointer");
+  // This op is the exit part of copyin and create - thus allow all modifiers
+  // allowed on either case.
+  if (failed(checkValidModifier(*this, acc::DataClauseModifier::zero |
+                                           acc::DataClauseModifier::readonly |
+                                           acc::DataClauseModifier::always |
+                                           acc::DataClauseModifier::capture)))
+    return failure();
   return success();
 }
 
@@ -666,6 +728,8 @@ LogicalResult acc::DetachOp::verify() {
         " or specify original clause this operation was decomposed from");
   if (!getAccVar())
     return emitError("must have device pointer");
+  if (failed(checkNoModifier(*this)))
+    return failure();
   return success();
 }
 
@@ -685,6 +749,8 @@ LogicalResult acc::UpdateHostOp::verify() {
     return failure();
   if (failed(checkVarAndAccVar(*this)))
     return failure();
+  if (failed(checkNoModifier(*this)))
+    return failure();
   return success();
 }
 
@@ -701,6 +767,8 @@ LogicalResult acc::UpdateDeviceOp::verify() {
     return failure();
   if (failed(checkVarAndAccVar(*this)))
     return failure();
+  if (failed(checkNoModifier(*this)))
+    return failure();
   return success();
 }
 
@@ -716,6 +784,8 @@ LogicalResult acc::UseDeviceOp::verify() {
   if (failed(checkVarAndVarType(*this)))
     return failure();
   if (failed(checkVarAndAccVar(*this)))
+    return failure();
+  if (failed(checkNoModifier(*this)))
     return failure();
   return success();
 }
@@ -734,7 +804,15 @@ LogicalResult acc::CacheOp::verify() {
     return failure();
   if (failed(checkVarAndAccVar(*this)))
     return failure();
+  if (failed(checkValidModifier(*this, acc::DataClauseModifier::readonly)))
+    return failure();
   return success();
+}
+
+bool acc::CacheOp::isCacheReadonly() {
+  return getDataClause() == acc::DataClause::acc_cache_readonly ||
+         acc::bitEnumContainsAny(getModifiers(),
+                                 acc::DataClauseModifier::readonly);
 }
 
 template <typename StructureOp>
@@ -1078,11 +1156,11 @@ static LogicalResult verifyDeviceTypeAndSegmentCountMatch(
 
 LogicalResult acc::ParallelOp::verify() {
   if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
-          *this, getPrivatizations(), getPrivateOperands(), "private",
+          *this, getPrivatizationRecipes(), getPrivateOperands(), "private",
           "privatizations", /*checkOperandType=*/false)))
     return failure();
   if (failed(checkSymOperandList<mlir::acc::FirstprivateRecipeOp>(
-          *this, getFirstprivatizations(), getFirstprivateOperands(),
+          *this, getFirstprivatizationRecipes(), getFirstprivateOperands(),
           "firstprivate", "firstprivatizations", /*checkOperandType=*/false)))
     return failure();
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
@@ -1683,6 +1761,90 @@ static void printDeviceTypeOperandsWithKeywordOnly(
   p << ")";
 }
 
+static ParseResult parseOperandWithKeywordOnly(
+    mlir::OpAsmParser &parser,
+    std::optional<OpAsmParser::UnresolvedOperand> &operand,
+    mlir::Type &operandType, mlir::UnitAttr &attr) {
+  // Keyword only
+  if (failed(parser.parseOptionalLParen())) {
+    attr = mlir::UnitAttr::get(parser.getContext());
+    return success();
+  }
+
+  OpAsmParser::UnresolvedOperand op;
+  if (failed(parser.parseOperand(op)))
+    return failure();
+  operand = op;
+  if (failed(parser.parseColon()))
+    return failure();
+  if (failed(parser.parseType(operandType)))
+    return failure();
+  if (failed(parser.parseRParen()))
+    return failure();
+
+  return success();
+}
+
+static void printOperandWithKeywordOnly(mlir::OpAsmPrinter &p,
+                                        mlir::Operation *op,
+                                        std::optional<mlir::Value> operand,
+                                        mlir::Type operandType,
+                                        mlir::UnitAttr attr) {
+  if (attr)
+    return;
+
+  p << "(";
+  p.printOperand(*operand);
+  p << " : ";
+  p.printType(operandType);
+  p << ")";
+}
+
+static ParseResult parseOperandsWithKeywordOnly(
+    mlir::OpAsmParser &parser,
+    llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &operands,
+    llvm::SmallVectorImpl<Type> &types, mlir::UnitAttr &attr) {
+  // Keyword only
+  if (failed(parser.parseOptionalLParen())) {
+    attr = mlir::UnitAttr::get(parser.getContext());
+    return success();
+  }
+
+  if (failed(parser.parseCommaSeparatedList([&]() {
+        if (parser.parseOperand(operands.emplace_back()))
+          return failure();
+        return success();
+      })))
+    return failure();
+  if (failed(parser.parseColon()))
+    return failure();
+  if (failed(parser.parseCommaSeparatedList([&]() {
+        if (parser.parseType(types.emplace_back()))
+          return failure();
+        return success();
+      })))
+    return failure();
+  if (failed(parser.parseRParen()))
+    return failure();
+
+  return success();
+}
+
+static void printOperandsWithKeywordOnly(mlir::OpAsmPrinter &p,
+                                         mlir::Operation *op,
+                                         mlir::OperandRange operands,
+                                         mlir::TypeRange types,
+                                         mlir::UnitAttr attr) {
+  if (attr)
+    return;
+
+  p << "(";
+  llvm::interleaveComma(operands, p, [&](auto it) { p << it; });
+  p << " : ";
+  llvm::interleaveComma(types, p, [&](auto it) { p << it; });
+  p << ")";
+}
+
 static ParseResult
 parseCombinedConstructsLoop(mlir::OpAsmParser &parser,
                             mlir::acc::CombinedConstructsTypeAttr &attr) {
@@ -1785,11 +1947,11 @@ mlir::Value SerialOp::getWaitDevnum(mlir::acc::DeviceType deviceType) {
 
 LogicalResult acc::SerialOp::verify() {
   if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
-          *this, getPrivatizations(), getPrivateOperands(), "private",
+          *this, getPrivatizationRecipes(), getPrivateOperands(), "private",
           "privatizations", /*checkOperandType=*/false)))
     return failure();
   if (failed(checkSymOperandList<mlir::acc::FirstprivateRecipeOp>(
-          *this, getFirstprivatizations(), getFirstprivateOperands(),
+          *this, getFirstprivatizationRecipes(), getFirstprivateOperands(),
           "firstprivate", "firstprivatizations", /*checkOperandType=*/false)))
     return failure();
   if (failed(checkSymOperandList<mlir::acc::ReductionRecipeOp>(
@@ -2298,6 +2460,14 @@ LogicalResult checkDeviceTypes(mlir::ArrayAttr deviceTypes) {
 }
 
 LogicalResult acc::LoopOp::verify() {
+  if (getUpperbound().size() != getStep().size())
+    return emitError() << "number of upperbounds expected to be the same as "
+                          "number of steps";
+
+  if (getUpperbound().size() != getLowerbound().size())
+    return emitError() << "number of upperbounds expected to be the same as "
+                          "number of lowerbounds";
+
   if (!getUpperbound().empty() && getInclusiveUpperbound() &&
       (getUpperbound().size() != getInclusiveUpperbound()->size()))
     return emitError() << "inclusiveUpperbound size is expected to be the same"
@@ -2368,10 +2538,34 @@ LogicalResult acc::LoopOp::verify() {
   if (hasDuplicateDeviceTypes(getAuto_(), deviceTypes) ||
       hasDuplicateDeviceTypes(getIndependent(), deviceTypes) ||
       hasDuplicateDeviceTypes(getSeq(), deviceTypes)) {
-    return emitError() << "only one of \"" << acc::LoopOp::getAutoAttrStrName()
-                       << "\", " << getIndependentAttrName() << ", "
-                       << getSeqAttrName()
-                       << " can be present at the same time";
+    return emitError() << "only one of auto, independent, seq can be present "
+                          "at the same time";
+  }
+
+  // Check that at least one of auto, independent, or seq is present
+  // for the device-independent default clauses.
+  auto hasDeviceNone = [](mlir::acc::DeviceTypeAttr attr) -> bool {
+    return attr.getValue() == mlir::acc::DeviceType::None;
+  };
+  bool hasDefaultSeq =
+      getSeqAttr()
+          ? llvm::any_of(getSeqAttr().getAsRange<mlir::acc::DeviceTypeAttr>(),
+                         hasDeviceNone)
+          : false;
+  bool hasDefaultIndependent =
+      getIndependentAttr()
+          ? llvm::any_of(
+                getIndependentAttr().getAsRange<mlir::acc::DeviceTypeAttr>(),
+                hasDeviceNone)
+          : false;
+  bool hasDefaultAuto =
+      getAuto_Attr()
+          ? llvm::any_of(getAuto_Attr().getAsRange<mlir::acc::DeviceTypeAttr>(),
+                         hasDeviceNone)
+          : false;
+  if (!hasDefaultSeq && !hasDefaultIndependent && !hasDefaultAuto) {
+    return emitError()
+           << "at least one of auto, independent, seq must be present";
   }
 
   // Gang, worker and vector are incompatible with seq.
@@ -2389,13 +2583,12 @@ LogicalResult acc::LoopOp::verify() {
                        deviceTypeAttr.getValue()) ||
           getGangValue(mlir::acc::GangArgType::Static,
                        deviceTypeAttr.getValue()))
-        return emitError()
-               << "gang, worker or vector cannot appear with the seq attr";
+        return emitError() << "gang, worker or vector cannot appear with seq";
     }
   }
 
   if (failed(checkSymOperandList<mlir::acc::PrivateRecipeOp>(
-          *this, getPrivatizations(), getPrivateOperands(), "private",
+          *this, getPrivatizationRecipes(), getPrivateOperands(), "private",
           "privatizations", false)))
     return failure();
 
@@ -2414,6 +2607,49 @@ LogicalResult acc::LoopOp::verify() {
   // Check non-empty body().
   if (getRegion().empty())
     return emitError("expected non-empty body.");
+
+  // When it is container-like - it is expected to hold a loop-like operation.
+  if (isContainerLike()) {
+    // Obtain the maximum collapse count - we use this to check that there
+    // are enough loops contained.
+    uint64_t collapseCount = getCollapseValue().value_or(1);
+    if (getCollapseAttr()) {
+      for (auto collapseEntry : getCollapseAttr()) {
+        auto intAttr = mlir::dyn_cast<IntegerAttr>(collapseEntry);
+        if (intAttr.getValue().getZExtValue() > collapseCount)
+          collapseCount = intAttr.getValue().getZExtValue();
+      }
+    }
+
+    // We want to check that we find enough loop-like operations inside.
+    // PreOrder walk allows us to walk in a breadth-first manner at each nesting
+    // level.
+    mlir::Operation *expectedParent = this->getOperation();
+    bool foundSibling = false;
+    getRegion().walk<WalkOrder::PreOrder>([&](mlir::Operation *op) {
+      if (mlir::isa<mlir::LoopLikeOpInterface>(op)) {
+        // This effectively checks that we are not looking at a sibling loop.
+        if (op->getParentOfType<mlir::LoopLikeOpInterface>() !=
+            expectedParent) {
+          foundSibling = true;
+          return mlir::WalkResult::interrupt();
+        }
+
+        collapseCount--;
+        expectedParent = op;
+      }
+      // We found enough contained loops.
+      if (collapseCount == 0)
+        return mlir::WalkResult::interrupt();
+      return mlir::WalkResult::advance();
+    });
+
+    if (foundSibling)
+      return emitError("found sibling loops inside container-like acc.loop");
+    if (collapseCount != 0)
+      return emitError("failed to find enough loop-like operations inside "
+                       "container-like acc.loop");
+  }
 
   return success();
 }
@@ -2600,6 +2836,173 @@ void printLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
   p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
 
+void acc::LoopOp::addSeq(MLIRContext *context,
+                         llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setSeqAttr(addDeviceTypeAffectedOperandHelper(context, getSeqAttr(),
+                                                effectiveDeviceTypes));
+}
+
+void acc::LoopOp::addIndependent(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setIndependentAttr(addDeviceTypeAffectedOperandHelper(
+      context, getIndependentAttr(), effectiveDeviceTypes));
+}
+
+void acc::LoopOp::addAuto(MLIRContext *context,
+                          llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setAuto_Attr(addDeviceTypeAffectedOperandHelper(context, getAuto_Attr(),
+                                                  effectiveDeviceTypes));
+}
+
+void acc::LoopOp::setCollapseForDeviceTypes(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
+    llvm::APInt value) {
+  llvm::SmallVector<mlir::Attribute> newValues;
+  llvm::SmallVector<mlir::Attribute> newDeviceTypes;
+
+  assert((getCollapseAttr() == nullptr) ==
+         (getCollapseDeviceTypeAttr() == nullptr));
+  assert(value.getBitWidth() == 64);
+
+  if (getCollapseAttr()) {
+    for (const auto &existing :
+         llvm::zip_equal(getCollapseAttr(), getCollapseDeviceTypeAttr())) {
+      newValues.push_back(std::get<0>(existing));
+      newDeviceTypes.push_back(std::get<1>(existing));
+    }
+  }
+
+  if (effectiveDeviceTypes.empty()) {
+    // If the effective device-types list is empty, this is before there are any
+    // being applied by device_type, so this should be added as a 'none'.
+    newValues.push_back(
+        mlir::IntegerAttr::get(mlir::IntegerType::get(context, 64), value));
+    newDeviceTypes.push_back(
+        acc::DeviceTypeAttr::get(context, DeviceType::None));
+  } else {
+    for (DeviceType DT : effectiveDeviceTypes) {
+      newValues.push_back(
+          mlir::IntegerAttr::get(mlir::IntegerType::get(context, 64), value));
+      newDeviceTypes.push_back(acc::DeviceTypeAttr::get(context, DT));
+    }
+  }
+
+  setCollapseAttr(ArrayAttr::get(context, newValues));
+  setCollapseDeviceTypeAttr(ArrayAttr::get(context, newDeviceTypes));
+}
+
+void acc::LoopOp::setTileForDeviceTypes(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
+    ValueRange values) {
+  llvm::SmallVector<int32_t> segments;
+  if (getTileOperandsSegments())
+    llvm::copy(*getTileOperandsSegments(), std::back_inserter(segments));
+
+  setTileOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getTileOperandsDeviceTypeAttr(), effectiveDeviceTypes, values,
+      getTileOperandsMutable(), segments));
+
+  setTileOperandsSegments(segments);
+}
+
+void acc::LoopOp::addVectorOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setVectorOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getVectorOperandsDeviceTypeAttr(), effectiveDeviceTypes,
+      newValue, getVectorOperandsMutable()));
+}
+
+void acc::LoopOp::addEmptyVector(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setVectorAttr(addDeviceTypeAffectedOperandHelper(context, getVectorAttr(),
+                                                   effectiveDeviceTypes));
+}
+
+void acc::LoopOp::addWorkerNumOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setWorkerNumOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getWorkerNumOperandsDeviceTypeAttr(), effectiveDeviceTypes,
+      newValue, getWorkerNumOperandsMutable()));
+}
+
+void acc::LoopOp::addEmptyWorker(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setWorkerAttr(addDeviceTypeAffectedOperandHelper(context, getWorkerAttr(),
+                                                   effectiveDeviceTypes));
+}
+
+void acc::LoopOp::addEmptyGang(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setGangAttr(addDeviceTypeAffectedOperandHelper(context, getGangAttr(),
+                                                 effectiveDeviceTypes));
+}
+
+bool acc::LoopOp::hasParallelismFlag(DeviceType dt) {
+  auto hasDevice = [=](DeviceTypeAttr attr) -> bool {
+    return attr.getValue() == dt;
+  };
+  auto testFromArr = [=](ArrayAttr arr) -> bool {
+    return llvm::any_of(arr.getAsRange<DeviceTypeAttr>(), hasDevice);
+  };
+
+  if (ArrayAttr arr = getSeqAttr(); arr && testFromArr(arr))
+    return true;
+  if (ArrayAttr arr = getIndependentAttr(); arr && testFromArr(arr))
+    return true;
+  if (ArrayAttr arr = getAuto_Attr(); arr && testFromArr(arr))
+    return true;
+
+  return false;
+}
+
+bool acc::LoopOp::hasDefaultGangWorkerVector() {
+  return hasVector() || getVectorValue() || hasWorker() || getWorkerValue() ||
+         hasGang() || getGangValue(GangArgType::Num) ||
+         getGangValue(GangArgType::Dim) || getGangValue(GangArgType::Static);
+}
+
+void acc::LoopOp::addGangOperands(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
+    llvm::ArrayRef<GangArgType> argTypes, mlir::ValueRange values) {
+  llvm::SmallVector<int32_t> segments;
+  if (std::optional<ArrayRef<int32_t>> existingSegments =
+          getGangOperandsSegments())
+    llvm::copy(*existingSegments, std::back_inserter(segments));
+
+  unsigned beforeCount = segments.size();
+
+  setGangOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getGangOperandsDeviceTypeAttr(), effectiveDeviceTypes, values,
+      getGangOperandsMutable(), segments));
+
+  setGangOperandsSegments(segments);
+
+  // This is a bit of extra work to make sure we update the 'types' correctly by
+  // adding to the types collection the correct number of times. We could
+  // potentially add something similar to the
+  // addDeviceTypeAffectedOperandHelper, but it seems that would be pretty
+  // excessive for a one-off case.
+  unsigned numAdded = segments.size() - beforeCount;
+
+  if (numAdded > 0) {
+    llvm::SmallVector<mlir::Attribute> gangTypes;
+    if (getGangOperandsArgTypeAttr())
+      llvm::copy(getGangOperandsArgTypeAttr(), std::back_inserter(gangTypes));
+
+    for (auto i : llvm::index_range(0u, numAdded)) {
+      llvm::transform(argTypes, std::back_inserter(gangTypes),
+                      [=](mlir::acc::GangArgType gangTy) {
+                        return mlir::acc::GangArgTypeAttr::get(context, gangTy);
+                      });
+      (void)i;
+    }
+
+    setGangOperandsArgTypeAttr(mlir::ArrayAttr::get(context, gangTypes));
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // DataOp
 //===----------------------------------------------------------------------===//
@@ -2766,6 +3169,53 @@ void ExitDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<RemoveConstantIfCondition<ExitDataOp>>(context);
 }
 
+void ExitDataOp::addAsyncOnly(MLIRContext *context,
+                              llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getAsyncAttr());
+  assert(!getAsyncOperand());
+
+  setAsyncAttr(mlir::UnitAttr::get(context));
+}
+
+void ExitDataOp::addAsyncOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getAsyncAttr());
+  assert(!getAsyncOperand());
+
+  getAsyncOperandMutable().append(newValue);
+}
+
+void ExitDataOp::addWaitOnly(MLIRContext *context,
+                             llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getWaitAttr());
+  assert(getWaitOperands().empty());
+  assert(!getWaitDevnum());
+
+  setWaitAttr(mlir::UnitAttr::get(context));
+}
+
+void ExitDataOp::addWaitOperands(
+    MLIRContext *context, bool hasDevnum, mlir::ValueRange newValues,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getWaitAttr());
+  assert(getWaitOperands().empty());
+  assert(!getWaitDevnum());
+
+  // if hasDevnum, the first value is the devnum. The 'rest' go into the
+  // operands list.
+  if (hasDevnum) {
+    getWaitDevnumMutable().append(newValues.front());
+    newValues = newValues.drop_front();
+  }
+
+  getWaitOperandsMutable().append(newValues);
+}
+
 //===----------------------------------------------------------------------===//
 // EnterDataOp
 //===----------------------------------------------------------------------===//
@@ -2813,6 +3263,53 @@ Value EnterDataOp::getDataOperand(unsigned i) {
 void EnterDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
   results.add<RemoveConstantIfCondition<EnterDataOp>>(context);
+}
+
+void EnterDataOp::addAsyncOnly(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getAsyncAttr());
+  assert(!getAsyncOperand());
+
+  setAsyncAttr(mlir::UnitAttr::get(context));
+}
+
+void EnterDataOp::addAsyncOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getAsyncAttr());
+  assert(!getAsyncOperand());
+
+  getAsyncOperandMutable().append(newValue);
+}
+
+void EnterDataOp::addWaitOnly(MLIRContext *context,
+                              llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getWaitAttr());
+  assert(getWaitOperands().empty());
+  assert(!getWaitDevnum());
+
+  setWaitAttr(mlir::UnitAttr::get(context));
+}
+
+void EnterDataOp::addWaitOperands(
+    MLIRContext *context, bool hasDevnum, mlir::ValueRange newValues,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getWaitAttr());
+  assert(getWaitOperands().empty());
+  assert(!getWaitDevnum());
+
+  // if hasDevnum, the first value is the devnum. The 'rest' go into the
+  // operands list.
+  if (hasDevnum) {
+    getWaitDevnumMutable().append(newValues.front());
+    newValues = newValues.drop_front();
+  }
+
+  getWaitOperandsMutable().append(newValues);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3311,7 +3808,7 @@ bool UpdateOp::hasAsyncOnly() {
 }
 
 bool UpdateOp::hasAsyncOnly(mlir::acc::DeviceType deviceType) {
-  return hasDeviceType(getAsync(), deviceType);
+  return hasDeviceType(getAsyncOnly(), deviceType);
 }
 
 mlir::Value UpdateOp::getAsyncValue() {
@@ -3355,6 +3852,49 @@ mlir::Value UpdateOp::getWaitDevnum(mlir::acc::DeviceType deviceType) {
   return getWaitDevnumValue(getWaitOperandsDeviceType(), getWaitOperands(),
                             getWaitOperandsSegments(), getHasWaitDevnum(),
                             deviceType);
+}
+
+void UpdateOp::addAsyncOnly(MLIRContext *context,
+                            llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setAsyncOnlyAttr(addDeviceTypeAffectedOperandHelper(
+      context, getAsyncOnlyAttr(), effectiveDeviceTypes));
+}
+
+void UpdateOp::addAsyncOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setAsyncOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getAsyncOperandsDeviceTypeAttr(), effectiveDeviceTypes, newValue,
+      getAsyncOperandsMutable()));
+}
+
+void UpdateOp::addWaitOnly(MLIRContext *context,
+                           llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setWaitOnlyAttr(addDeviceTypeAffectedOperandHelper(context, getWaitOnlyAttr(),
+                                                     effectiveDeviceTypes));
+}
+
+void UpdateOp::addWaitOperands(
+    MLIRContext *context, bool hasDevnum, mlir::ValueRange newValues,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+
+  llvm::SmallVector<int32_t> segments;
+  if (getWaitOperandsSegments())
+    llvm::copy(*getWaitOperandsSegments(), std::back_inserter(segments));
+
+  setWaitOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getWaitOperandsDeviceTypeAttr(), effectiveDeviceTypes, newValues,
+      getWaitOperandsMutable(), segments));
+  setWaitOperandsSegments(segments);
+
+  llvm::SmallVector<mlir::Attribute> hasDevnums;
+  if (getHasWaitDevnumAttr())
+    llvm::copy(getHasWaitDevnumAttr(), std::back_inserter(hasDevnums));
+  hasDevnums.insert(
+      hasDevnums.end(),
+      std::max(effectiveDeviceTypes.size(), static_cast<size_t>(1)),
+      mlir::BoolAttr::get(context, hasDevnum));
+  setHasWaitDevnumAttr(mlir::ArrayAttr::get(context, hasDevnums));
 }
 
 //===----------------------------------------------------------------------===//
@@ -3540,4 +4080,15 @@ mlir::acc::getMutableDataOperands(mlir::Operation *accOp) {
               [&](auto entry) { return entry.getDataClauseOperandsMutable(); })
           .Default([&](mlir::Operation *) { return nullptr; })};
   return dataOperands;
+}
+
+mlir::Operation *mlir::acc::getEnclosingComputeOp(mlir::Region &region) {
+  mlir::Operation *parentOp = region.getParentOp();
+  while (parentOp) {
+    if (mlir::isa<ACC_COMPUTE_CONSTRUCT_OPS>(parentOp)) {
+      return parentOp;
+    }
+    parentOp = parentOp->getParentOp();
+  }
+  return nullptr;
 }

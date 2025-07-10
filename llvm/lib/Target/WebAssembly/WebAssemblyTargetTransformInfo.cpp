@@ -184,7 +184,7 @@ InstructionCost WebAssemblyTTIImpl::getMemoryOpCost(
 
 InstructionCost WebAssemblyTTIImpl::getVectorInstrCost(
     unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
-    Value *Op0, Value *Op1) const {
+    const Value *Op0, const Value *Op1) const {
   InstructionCost Cost = BasicTTIImplBase::getVectorInstrCost(
       Opcode, Val, CostKind, Index, Op0, Op1);
 
@@ -198,10 +198,13 @@ InstructionCost WebAssemblyTTIImpl::getVectorInstrCost(
 InstructionCost WebAssemblyTTIImpl::getPartialReductionCost(
     unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
     ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
-    TTI::PartialReductionExtendKind OpBExtend,
-    std::optional<unsigned> BinOp) const {
+    TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+    TTI::TargetCostKind CostKind) const {
   InstructionCost Invalid = InstructionCost::getInvalid();
   if (!VF.isFixed() || !ST->hasSIMD128())
+    return Invalid;
+
+  if (CostKind != TTI::TCK_RecipThroughput)
     return Invalid;
 
   InstructionCost Cost(TTI::TCC_Basic);
@@ -294,7 +297,7 @@ bool WebAssemblyTTIImpl::isProfitableToSinkOperands(
 
   Value *V = I->getOperand(1);
   // We dont need to sink constant splat.
-  if (dyn_cast<Constant>(V))
+  if (isa<Constant>(V))
     return false;
 
   if (match(V, m_Shuffle(m_InsertElt(m_Value(), m_Value(), m_ZeroInt()),

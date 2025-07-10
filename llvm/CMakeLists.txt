@@ -76,14 +76,7 @@ endif()
 
 set(CMAKE_CXX_STANDARD ${LLVM_REQUIRED_CXX_STANDARD} CACHE STRING "C++ standard to conform to")
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
-
-if (CYGWIN)
-  # Cygwin is a bit stricter and lack things like 'strdup', 'stricmp', etc in
-  # c++xx mode.
-  set(CMAKE_CXX_EXTENSIONS YES)
-else()
-  set(CMAKE_CXX_EXTENSIONS NO)
-endif()
+set(CMAKE_CXX_EXTENSIONS NO)
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(FATAL_ERROR "
@@ -115,15 +108,20 @@ endif()
 # LLVM_EXTERNAL_${project}_SOURCE_DIR using LLVM_ALL_PROJECTS
 # This allows an easy way of setting up a build directory for llvm and another
 # one for llvm+clang+... using the same sources.
-set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;mlir;openmp;polly;pstl")
+# These projects will be included when "all" is included in LLVM_ENABLE_PROJECTS.
+set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libclc;lld;lldb;mlir;openmp;polly")
 if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
   # Disallow 'openmp' as a LLVM PROJECT on AIX as the supported way is to use
   # LLVM_ENABLE_RUNTIMES.
   list(REMOVE_ITEM LLVM_ALL_PROJECTS openmp)
 endif()
 
-# The flang project is not yet part of "all" projects (see C++ requirements)
-set(LLVM_EXTRA_PROJECTS "flang")
+# The "libc" project, which is not part of "all" projects, could be included in
+# LLVM_ENABLE_PROJECTS.  It is preferred to include "libc" in
+# LLVM_ENABLE_RUNTIMES instead of LLVM_ENABLE_PROJECTS.
+#
+# The flang project is not yet part of "all" projects (see C++ requirements).
+set(LLVM_EXTRA_PROJECTS "flang" "libc")
 # List of all known projects in the mono repo
 set(LLVM_KNOWN_PROJECTS "${LLVM_ALL_PROJECTS};${LLVM_EXTRA_PROJECTS}")
 set(LLVM_ENABLE_PROJECTS "" CACHE STRING
@@ -132,9 +130,34 @@ set(LLVM_ENABLE_PROJECTS "" CACHE STRING
 if( LLVM_ENABLE_PROJECTS STREQUAL "all" )
   set( LLVM_ENABLE_PROJECTS ${LLVM_ALL_PROJECTS})
 endif()
+
+# The pstl project was removed. Ignore it to pacify certain buildbots.
+list(FIND LLVM_ENABLE_PROJECTS "pstl" FOUND_INDEX)
+if(NOT "${FOUND_INDEX}" STREQUAL "-1")
+  message(WARNING "The pstl project has been removed and will not be built")
+  list(REMOVE_ITEM LLVM_ENABLE_PROJECTS "pstl")
+endif()
+
 foreach(proj ${LLVM_ENABLE_PROJECTS})
   if (NOT proj STREQUAL "llvm" AND NOT "${proj}" IN_LIST LLVM_KNOWN_PROJECTS)
      MESSAGE(FATAL_ERROR "${proj} isn't a known project: ${LLVM_KNOWN_PROJECTS}. Did you mean to enable it as a runtime in LLVM_ENABLE_RUNTIMES?")
+  endif()
+endforeach()
+
+# Select the runtimes to build
+#
+# As we migrate runtimes to using the bootstrapping build, the set of default runtimes
+# should grow as we remove those runtimes from LLVM_ENABLE_PROJECTS above.
+set(LLVM_DEFAULT_RUNTIMES "libcxx;libcxxabi;libunwind")
+set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;openmp;llvm-libgcc;offload;flang-rt;libclc")
+set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
+  "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
+if(LLVM_ENABLE_RUNTIMES STREQUAL "all")
+  set(LLVM_ENABLE_RUNTIMES ${LLVM_DEFAULT_RUNTIMES})
+endif()
+foreach(proj IN LISTS LLVM_ENABLE_RUNTIMES)
+  if (NOT "${proj}" IN_LIST LLVM_SUPPORTED_RUNTIMES)
+    message(FATAL_ERROR "Runtime \"${proj}\" is not a supported runtime. Supported runtimes are: ${LLVM_SUPPORTED_RUNTIMES}")
   endif()
 endforeach()
 
@@ -148,11 +171,16 @@ if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
     message(STATUS "Enabling clang as a dependency to flang")
     list(APPEND LLVM_ENABLE_PROJECTS "clang")
   endif()
+
+  option(FLANG_ENABLE_FLANG_RT "Implicitly add LLVM_ENABLE_RUNTIMES=flang-rt when compiling Flang" ON)
+  if (FLANG_ENABLE_FLANG_RT AND NOT "flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+    message(STATUS "Enabling Flang-RT as a dependency of Flang")
+    list(APPEND LLVM_ENABLE_RUNTIMES "flang-rt")
+  endif ()
 endif()
 
 if ("libc" IN_LIST LLVM_ENABLE_PROJECTS)
-  message(WARNING "Using LLVM_ENABLE_PROJECTS=libc is deprecated now, and will "
-    "become a fatal error in the LLVM 21 release.  Please use "
+  message(WARNING "Using LLVM_ENABLE_PROJECTS=libc is deprecated.  Please use "
     "-DLLVM_ENABLE_RUNTIMES=libc or see the instructions at "
     "https://libc.llvm.org/ for building the runtimes.")
 endif()
@@ -184,22 +212,12 @@ if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
   endif ()
 endif ()
 
-# Select the runtimes to build
-#
-# As we migrate runtimes to using the bootstrapping build, the set of default runtimes
-# should grow as we remove those runtimes from LLVM_ENABLE_PROJECTS above.
-set(LLVM_DEFAULT_RUNTIMES "libcxx;libcxxabi;libunwind")
-set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc;offload;flang-rt")
-set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
-  "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
-if(LLVM_ENABLE_RUNTIMES STREQUAL "all")
-  set(LLVM_ENABLE_RUNTIMES ${LLVM_DEFAULT_RUNTIMES})
+if ("libclc" IN_LIST LLVM_ENABLE_PROJECTS)
+  message(WARNING "Using LLVM_ENABLE_PROJECTS=libclc is deprecated now, and will "
+    "become a fatal error in the LLVM 21 release.  Please use "
+    "-DLLVM_ENABLE_RUNTIMES=libclc or see the instructions at "
+    "https://libclc.llvm.org/ for building the runtimes.")
 endif()
-foreach(proj IN LISTS LLVM_ENABLE_RUNTIMES)
-  if (NOT "${proj}" IN_LIST LLVM_SUPPORTED_RUNTIMES)
-    message(FATAL_ERROR "Runtime \"${proj}\" is not a supported runtime. Supported runtimes are: ${LLVM_SUPPORTED_RUNTIMES}")
-  endif()
-endforeach()
 
 # Set a shorthand option to enable the GPU build of the 'libc' project.
 option(LIBC_GPU_BUILD "Enable the 'libc' project targeting the GPU" OFF)
@@ -300,6 +318,13 @@ if(LLVM_CCACHE_BUILD)
       endif()
       set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${CCACHE_PROGRAM})
     else()
+      # Until a way to reliably configure ccache on Windows is found,
+      # disable precompiled headers for Windows + ccache builds
+      if(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+        message(WARNING "Using ccache with precompiled headers on Windows is currently not supported.
+          CMAKE_DISABLE_PRECOMPILE_HEADERS will be set to ON.")
+        set(CMAKE_DISABLE_PRECOMPILE_HEADERS "ON")
+      endif()
       if(LLVM_CCACHE_MAXSIZE OR LLVM_CCACHE_DIR OR
          NOT LLVM_CCACHE_PARAMS MATCHES "CCACHE_CPP2=yes CCACHE_HASHDIR=yes CCACHE_SLOPPINESS=pch_defines,time_macros")
         message(FATAL_ERROR "Ccache configuration through CMake is not supported on Windows. Please use environment variables.")
@@ -552,11 +577,11 @@ endif()
 option(LLVM_ENABLE_CRASH_DUMPS "Turn on memory dumps on crashes. Currently only implemented on Windows." OFF)
 
 set(LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING "DISABLED" CACHE STRING
-  "Enhance Debugify's line number coverage tracking; enabling this is ABI-breaking. Can be DISABLED, or COVERAGE.")
-set_property(CACHE LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING PROPERTY STRINGS DISABLED COVERAGE)
+  "Enhance Debugify's line number coverage tracking; enabling this is ABI-breaking. Can be DISABLED, COVERAGE, or COVERAGE_AND_ORIGIN.")
+set_property(CACHE LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING PROPERTY STRINGS DISABLED COVERAGE COVERAGE_AND_ORIGIN)
 
 option(LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS
-  "Add additional fields to DILocations to support Key Instructions" OFF)
+  "Add additional fields to DILocations to support Key Instructions" ON)
 
 set(WINDOWS_PREFER_FORWARD_SLASH_DEFAULT OFF)
 if (MINGW)
@@ -585,6 +610,10 @@ if (CMAKE_SYSTEM_NAME MATCHES "OS390")
 else()
   option(LLVM_ENABLE_THREADS "Use threads if available." ON)
 endif()
+
+set(LLVM_ENABLE_ICU "OFF" CACHE STRING "Use ICU for text encoding conversion support if available. Can be ON, OFF, or FORCE_ON")
+
+set(LLVM_ENABLE_ICONV "OFF" CACHE STRING "Use iconv for text encoding conversion support if available. Can be ON, OFF, or FORCE_ON")
 
 set(LLVM_ENABLE_ZLIB "ON" CACHE STRING "Use zlib for compression/decompression if available. Can be ON, OFF, or FORCE_ON")
 
@@ -630,6 +659,13 @@ endif()
 
 if(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD STREQUAL "all")
   set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD ${LLVM_ALL_EXPERIMENTAL_TARGETS})
+endif()
+
+if("flang" IN_LIST LLVM_ENABLE_PROJECTS AND 
+   "AArch64" IN_LIST LLVM_TARGETS_TO_BUILD AND
+   NOT ("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES OR "compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS))
+  message(STATUS "Enabling compiler-rt as a dependency of Flang")
+  list(APPEND LLVM_ENABLE_RUNTIMES "compiler-rt")
 endif()
 
 set(LLVM_TARGETS_TO_BUILD
@@ -970,7 +1006,7 @@ endif()
 set(LLVM_TARGET_TRIPLE_ENV CACHE STRING "The name of environment variable to override default target. Disabled by blank.")
 mark_as_advanced(LLVM_TARGET_TRIPLE_ENV)
 
-if(CMAKE_SYSTEM_NAME MATCHES "BSD|Linux|OS390")
+if(CMAKE_SYSTEM_NAME MATCHES "BSD|Linux|OS390|AIX")
   set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default ON)
 else()
   set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default OFF)
@@ -1027,6 +1063,17 @@ else()
   set(LLVM_ENABLE_PLUGINS_default ${LLVM_ENABLE_PIC})
 endif()
 option(LLVM_ENABLE_PLUGINS "Enable plugin support" ${LLVM_ENABLE_PLUGINS_default})
+
+set(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS OFF)
+if (LLVM_BUILD_LLVM_DYLIB OR LLVM_BUILD_SHARED_LIBS OR LLVM_ENABLE_PLUGINS)
+  # Export annotations for LLVM must be enabled if building as a shared lib or
+  # enabling plugins.
+  set(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS ON)
+endif()
+
+# Because LLVM-C is built into the LLVM library, for now export its symbols
+# whenever LLVM symbols are exported.
+set(LLVM_ENABLE_LLVM_C_EXPORT_ANNOTATIONS ${LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS})
 
 set(LLVM_ENABLE_NEW_PASS_MANAGER TRUE CACHE BOOL
   "Enable the new pass manager by default.")
@@ -1292,6 +1339,7 @@ if( LLVM_INCLUDE_UTILS )
   add_subdirectory(utils/yaml-bench)
   add_subdirectory(utils/split-file)
   add_subdirectory(utils/mlgo-utils)
+  add_subdirectory(utils/llvm-test-mustache-spec)
   if( LLVM_INCLUDE_TESTS )
     set(LLVM_SUBPROJECT_TITLE "Third-Party/Google Test")
     add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest)

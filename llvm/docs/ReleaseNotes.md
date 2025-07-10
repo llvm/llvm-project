@@ -56,6 +56,10 @@ Makes programs 10x faster by doing Special New Thing.
 Changes to the LLVM IR
 ----------------------
 
+* It is no longer permitted to inspect the uses of ConstantData. Use
+  count APIs will behave as if they have no uses (i.e. use_empty() is
+  always true).
+
 * The `nocapture` attribute has been replaced by `captures(none)`.
 * The constant expression variants of the following instructions have been
   removed:
@@ -66,6 +70,12 @@ Changes to the LLVM IR
   `llvm.load.relative`.
 * Inline asm calls no longer accept ``label`` arguments. Use ``callbr`` instead.
 
+* Updated semantics of the `callbr` instruction to clarify that its
+  'indirect labels' are not expected to be reached by indirect (as in
+  register-controlled) branch instructions, and therefore are not
+  guaranteed to start with a `bti` or `endbr64` instruction, where
+  those exist.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -73,6 +83,9 @@ Changes to LLVM infrastructure
   themselves (i.e., the `TargetIntrinsicInfo` class).
 * Fix Microsoft demangling of string literals to be stricter
   (#GH129970))
+* Added the support for ``fmaximum`` and ``fminimum`` in ``atomicrmw`` instruction. The
+  comparison is expected to match the behavior of ``llvm.maximum.*`` and
+  ``llvm.minimum.*`` respectively.
 
 Changes to building LLVM
 ------------------------
@@ -103,6 +116,14 @@ Changes to the AMDGPU Backend
 
 * Bump the default `.amdhsa_code_object_version` to 6. ROCm 6.3 is required to run any program compiled with COV6.
 
+* Add a new `amdgcn.load.to.lds` intrinsic that wraps the existing global.load.lds
+intrinsic and has the same semantics. This intrinsic allows using buffer fat pointers
+(`ptr addrspace(7)`) as arguments, allowing loads to LDS from these pointers to be
+represented in the IR without needing to use buffer resource intrinsics directly.
+This intrinsic is exposed to Clang as `__builtin_amdgcn_load_to_lds`, though
+buffer fat pointers are not yet enabled in Clang. Migration to this intrinsic is
+optional, and there are no plans to deprecate `amdgcn.global.load.lds`.
+
 Changes to the ARM Backend
 --------------------------
 
@@ -123,6 +144,7 @@ Changes to the LoongArch Backend
 --------------------------------
 
 * Changing the default code model from `small` to `medium` for 64-bit.
+* Added inline asm support for the `q` constraint.
 
 Changes to the MIPS Backend
 ---------------------------
@@ -177,6 +199,21 @@ Changes to the RISC-V Backend
 * Adds Support for SiFive CLIC interrupt attributes, which automate writing CLIC
   interrupt handlers without using inline assembly.
 * Adds assembler support for the Andes `XAndesperf` (Andes Performance extension).
+* `-mcpu=sifive-p870` was added.
+* Adds assembler support for the Andes `XAndesvpackfph` (Andes Vector Packed FP16 extension).
+* Adds assembler support for the Andes `XAndesvdot` (Andes Vector Dot Product extension).
+* Adds assembler support for the standard `Q` (Quad-Precision Floating Point) 
+  extension.
+* Adds experimental assembler support for the SiFive Xsfmm* Attached Matrix
+  Extensions.
+* `-mcpu=andes-a25` and `-mcpu=andes-ax25` were added.
+* The `Shlcofideleg` extension was added.
+* `-mcpu=sifive-x390` was added.
+* `-mtune=andes-45-series` was added.
+* Adds assembler support for the Andes `XAndesvbfhcvt` (Andes Vector BFLOAT16 Conversion extension).
+* `-mcpu=andes-ax45mpv` was added.
+* Removed -mattr=+no-rvc-hints that could be used to disable parsing and generation of RVC hints.
+* Adds assembler support for the Andes `XAndesvsintload` (Andes Vector INT4 Load extension).
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -189,6 +226,8 @@ Changes to the Windows Target
 
 Changes to the X86 Backend
 --------------------------
+
+* `fp128` will now use `*f128` libcalls on 32-bit GNU targets as well.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -215,6 +254,9 @@ Changes to the C API
 * Added ``LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision`` for creating
   debugging metadata of enumerators larger than 64 bits.
 
+* Added ``LLVMGetICmpSameSign`` and ``LLVMSetICmpSameSign`` for the `samesign`
+  flag on `icmp` instructions.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
@@ -231,6 +273,8 @@ Changes to the LLVM tools
 * llvm-strip now supports continuing to process files on encountering an error.
 * In llvm-objcopy/llvm-strip's ELF port, `--discard-locals` and `--discard-all` now allow and preserve symbols referenced by relocations.
   ([#47468](https://github.com/llvm/llvm-project/issues/47468))
+* llvm-addr2line now supports a `+` prefix when specifying an address.
+* Support for `SHT_LLVM_BB_ADDR_MAP` versions 0 and 1 has been dropped.
 
 Changes to LLDB
 ---------------------------------
@@ -246,7 +290,8 @@ Changes to LLDB
 * A statusline was added to command-line LLDB to show progress events and
   information about the current state of the debugger at the bottom of the
   terminal. This is on by default and can be configured using the
-  `show-statusline` and `statusline-format` settings.
+  `show-statusline` and `statusline-format` settings. It is not currently
+  supported on Windows.
 * The `min-gdbserver-port` and `max-gdbserver-port` options have been removed
   from `lldb-server`'s platform mode. Since the changes to `lldb-server`'s port
   handling in LLDB 20, these options have had no effect.
@@ -254,6 +299,13 @@ Changes to LLDB
   supporting reverse execution, such as [rr](https://rr-project.org).
   When using reverse execution, `process continue --forward` returns to the
   forward execution.
+* LLDB now supports RISC-V 32-bit ELF core files.
+* LLDB now supports siginfo descriptions for Linux user-space signals. User space
+  signals will now have descriptions describing the method and sender.
+  ```
+    stop reason = SIGSEGV: sent by tkill system call (sender pid=649752, uid=2667987)
+  ```
+* ELF Cores can now have their siginfo structures inspected using `thread siginfo`.
 
 ### Changes to lldb-dap
 

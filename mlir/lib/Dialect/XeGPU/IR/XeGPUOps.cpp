@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Builders.h"
@@ -18,13 +19,6 @@
 
 namespace mlir {
 namespace xegpu {
-
-static void transpose(llvm::ArrayRef<int64_t> trans,
-                      SmallVector<int64_t> &shape) {
-  SmallVector<int64_t> old = shape;
-  for (size_t i = 0; i < trans.size(); i++)
-    shape[i] = old[trans[i]];
-}
 
 template <typename T>
 static std::string makeString(T array, bool breakline = false) {
@@ -75,7 +69,7 @@ static bool isWriteHintOrNone(const CachePolicyAttr &attr) {
 
 static LogicalResult
 isValidGatherScatterParams(Type maskTy, VectorType valueTy,
-                           TensorDescType tdescTy, UnitAttr transposeAttr,
+                           TensorDescType tdescTy,
                            function_ref<InFlightDiagnostic()> emitError) {
 
   if (!tdescTy.isScattered())
@@ -87,29 +81,24 @@ isValidGatherScatterParams(Type maskTy, VectorType valueTy,
   auto maskShape = getShapeOf(maskTy);
   auto valueShape = getShapeOf(valueTy);
   auto tdescShape = getShapeOf(tdescTy);
-  auto chunkSize = tdescTy.getChunkSize();
+  auto chunkSize = tdescTy.getChunkSizeAsInt();
 
   if (valueTy.getElementType() != tdescTy.getElementType())
     return emitError()
            << "Value should have the same element type as TensorDesc.";
 
-  if (tdescShape[0] != maskShape[0])
+  llvm::SmallVector<int64_t> expectedMaskShape(tdescShape);
+  if (chunkSize > 1)
+    expectedMaskShape.pop_back();
+  if (expectedMaskShape != maskShape)
     return emitError()
-           << "dim-0 of the Mask and TensorDesc should be the same.";
+           << "Mask should match TensorDesc except the chunk size dim.";
 
   // a valid shape for SIMT case
   if (valueTy.getRank() == 1 && valueTy.getNumElements() == chunkSize) {
     if (tdescTy.getLayoutAttr())
       return emitError() << "TensorDesc doesn't need LayoutAttr for SIMT code";
-    if (transposeAttr)
-      return emitError() << "doesn't need TransposeAttr for SIMT code";
     return success();
-  }
-
-  if (tdescTy.getRank() == 2 && valueTy.getRank() == 2) {
-    if (!transposeAttr)
-      return emitError() << "rank-2 tensor has to be transposed.";
-    transpose({1, 0}, tdescShape);
   }
 
   if (tdescShape != valueShape)
@@ -141,19 +130,24 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
 }
 
 void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
-                           Type tdesc, TypedValue<MemRefType> source,
+                           Type tdesc, Value source,
                            llvm::ArrayRef<OpFoldResult> offsets,
                            llvm::ArrayRef<OpFoldResult> shape,
                            llvm::ArrayRef<OpFoldResult> strides) {
   assert(shape.size() && offsets.size() && strides.size() &&
          shape.size() == strides.size() && shape.size() == offsets.size());
 
-  llvm::SmallVector<int64_t> staticOffsets;
-  llvm::SmallVector<int64_t> staticShape;
-  llvm::SmallVector<int64_t> staticStrides;
+  Type srcTy = source.getType();
+  assert((isa<IntegerType, MemRefType>(srcTy)) &&
+         "Source has to be either int or memref.");
+
   llvm::SmallVector<Value> dynamicOffsets;
   llvm::SmallVector<Value> dynamicShape;
   llvm::SmallVector<Value> dynamicStrides;
+
+  llvm::SmallVector<int64_t> staticOffsets;
+  llvm::SmallVector<int64_t> staticShape;
+  llvm::SmallVector<int64_t> staticStrides;
 
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   dispatchIndexOpFoldResults(shape, dynamicShape, staticShape);
@@ -163,32 +157,17 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
   auto staticShapeAttr = builder.getDenseI64ArrayAttr(staticShape);
   auto staticStridesAttr = builder.getDenseI64ArrayAttr(staticStrides);
 
-  build(builder, state, tdesc, source, dynamicOffsets, dynamicShape,
-        dynamicStrides, staticOffsetsAttr, staticShapeAttr, staticStridesAttr);
-}
+  if (auto memrefTy = dyn_cast<MemRefType>(srcTy)) {
+    auto memrefShape = memrefTy.getShape();
+    auto [memrefStrides, _] = memrefTy.getStridesAndOffset();
 
-void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
-                           Type tdesc, TypedValue<IntegerType> source,
-                           llvm::ArrayRef<OpFoldResult> offsets,
-                           llvm::ArrayRef<OpFoldResult> shape,
-                           llvm::ArrayRef<OpFoldResult> strides) {
-  assert(shape.size() && offsets.size() && strides.size() &&
-         shape.size() == strides.size() && shape.size() == offsets.size());
-
-  llvm::SmallVector<int64_t> staticOffsets;
-  llvm::SmallVector<int64_t> staticShape;
-  llvm::SmallVector<int64_t> staticStrides;
-  llvm::SmallVector<Value> dynamicOffsets;
-  llvm::SmallVector<Value> dynamicShape;
-  llvm::SmallVector<Value> dynamicStrides;
-
-  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
-  dispatchIndexOpFoldResults(shape, dynamicShape, staticShape);
-  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
-
-  auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
-  auto staticShapeAttr = builder.getDenseI64ArrayAttr(staticShape);
-  auto staticStridesAttr = builder.getDenseI64ArrayAttr(staticStrides);
+    // if shape and strides are from Memref, we don't need attributes for them
+    // to keep the IR print clean.
+    if (staticShape == memrefShape && staticStrides == memrefStrides) {
+      staticShapeAttr = DenseI64ArrayAttr();
+      staticStridesAttr = DenseI64ArrayAttr();
+    }
+  }
 
   build(builder, state, tdesc, source, dynamicOffsets, dynamicShape,
         dynamicStrides, staticOffsetsAttr, staticShapeAttr, staticStridesAttr);
@@ -227,11 +206,9 @@ LogicalResult CreateNdDescOp::verify() {
         "is a memref) should match with each other.");
 
   // check result TensorDesc rank
-  invalidRank = (getType().getRank() > 2 || getType().getRank() > rank);
-
-  if (invalidRank)
+  if (getType().getRank() > rank)
     return emitOpError(
-        "Expecting the TensorDesc rank is up to 2 and not greater than the "
+        "Expecting the TensorDesc rank is not greater than the "
         "ranks of shape, strides, offsets or the memref source.");
 
   if (invalidElemTy)
@@ -271,11 +248,11 @@ LogicalResult LoadNdOp::verify() {
   auto tdescTy = getTensorDescType();
   auto valueTy = getType();
 
-  if (tdescTy.getRank() > 2)
-    return emitOpError("Expecting a 1D/2D TensorDesc.\n");
-
   if (tdescTy.isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
+
+  if (tdescTy.getRank() > 2)
+    return emitOpError("Expects a 1D or 2D TensorDesc.\n");
 
   if (!valueTy)
     return emitOpError("Invalid result, it should be a VectorType.\n");
@@ -319,14 +296,9 @@ LogicalResult LoadNdOp::verify() {
 
   if (getTranspose()) {
     auto trans = getTranspose().value();
-
-    // Make sure the transpose value is valid.
-    bool valid = std::all_of(trans.begin(), trans.end(), [&](int t) {
-      return t >= 0 && t < tdescTy.getRank();
-    });
-
-    if (valid)
-      transpose(trans, tdescShape);
+    // Make sure the transpose value is valid, and apply it
+    if (llvm::all_of(trans, [&](size_t s) { return s < tdescShape.size(); }))
+      tdescShape = applyPermutation(tdescShape, trans);
     else
       mlir::emitWarning(getLoc()) << "Invalid transpose attr. It is ignored.";
   }
@@ -345,15 +317,13 @@ LogicalResult LoadNdOp::verify() {
   }
 
   auto array_len = tdescTy.getArrayLength();
-  if (array_len > 1) {
+  if (array_len > 1)
     tdescShape.insert(tdescShape.begin(), array_len);
-  }
 
-  if (tdescShape != valueShape) {
+  if (tdescShape != valueShape)
     return emitOpError() << "Result shape " << makeString(valueShape)
                          << " is not consistent with tensor descriptor "
                          << tdescTy;
-  }
 
   return success();
 }
@@ -365,11 +335,11 @@ LogicalResult StoreNdOp::verify() {
   auto dstTy = getTensorDescType(); // Tile
   auto valTy = getValueType();      // Vector
 
-  if (dstTy.getRank() > 2)
-    return emitOpError("Expecting a 1D/2D TensorDesc.\n");
-
   if (dstTy.isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
+
+  if (dstTy.getRank() > 2)
+    return emitOpError("Expects a 1D or 2D TensorDesc.\n");
 
   if (!valTy)
     return emitOpError("Expecting a VectorType result.\n");
@@ -399,22 +369,21 @@ LogicalResult StoreNdOp::verify() {
       return emitOpError()
              << "TensorDesc doesn't need LayoutAttr for SIMT code";
 
-    if (tdescElems % valueElems) {
+    if (tdescElems % valueElems)
       return emitOpError()
              << "Value shape " << makeString(getShapeOf(valTy))
              << " is not a valid distribution for tensor descriptor " << dstTy;
-    }
+
     return success();
   }
 
   // SIMD code should have the same shape as the tensor descriptor.
   auto tdescShape = getShapeOf(dstTy);
   auto valueShape = getShapeOf(valTy);
-  if (tdescShape != valueShape) {
+  if (tdescShape != valueShape)
     return emitOpError() << "Value shape " << makeString(valueShape)
                          << " is not consistent with tensor descriptor "
                          << dstTy;
-  }
 
   return success();
 }
@@ -478,25 +447,8 @@ LogicalResult CreateDescOp::verify() {
            << ", TensorDesc: " << tdescMemorySpace;
 
   // check total size
-  auto chunkSize = tdescTy.getChunkSize();
-  auto elemBits = tdescTy.getElementType().getIntOrFloatBitWidth();
-  auto bitsPerLane = elemBits * chunkSize;
-  if (chunkSize > 1 && bitsPerLane % 32) {
-    // For 8-bit and 16-bit data, the hardware only supports chunk size of 1.
-    // For 32-bit data, the hardware can support larger larger chunk size. So
-    // we can bitcast 8-bit/16-bit data to 32-bit data for better performance.
-    // But this requires the total size is 32 bit aligned to make the
-    // optimization work.
-    return emitOpError(
-        "access size (chunk_size * sizeof(elemTy)) should be 32-bit aligned.");
-  }
-
-  auto lscConstraints = 512 * 8; // each access is upto 512 bytes.
-  if (elemBits * tdescTy.getNumElements() > lscConstraints)
-    return emitOpError("total access size (simd_lanes * chunk_size * "
-                       "sizeof(elemTy)) is upto 512 bytes.");
-
-  SmallVector<int64_t> shape({(int64_t)getNumOffsets()});
+  auto chunkSize = tdescTy.getChunkSizeAsInt();
+  SmallVector<int64_t> shape(getOffsetsType().getShape());
   if (chunkSize != 1)
     shape.push_back(chunkSize);
 
@@ -546,7 +498,6 @@ LogicalResult LoadGatherOp::verify() {
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   return isValidGatherScatterParams(maskTy, valueTy, tdescTy,
-                                    getTransposeAttr(),
                                     [&]() { return emitOpError(); });
 }
 
@@ -568,7 +519,6 @@ LogicalResult StoreScatterOp::verify() {
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   return isValidGatherScatterParams(maskTy, valueTy, tdescTy,
-                                    getTransposeAttr(),
                                     [&]() { return emitOpError(); });
 }
 
@@ -592,6 +542,23 @@ void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
                            Value tensorDesc, llvm::ArrayRef<int64_t> offsets) {
   auto ofrs = getAsIndexOpFoldResult(builder.getContext(), offsets);
   build(builder, state, tensorDesc, ofrs);
+}
+
+LogicalResult UpdateOffsetOp::verify() {
+  auto tdescTy = getTensorDescType();
+  if (!tdescTy.isScattered())
+    return emitOpError("Expects a scattered TensorDesc.\n");
+
+  SmallVector<int64_t> expectedOffsetShape = getShapeOf(tdescTy);
+  SmallVector<int64_t> offsetShape = getShapeOf(getOffsetsType());
+  if (tdescTy.getChunkSizeAsInt() > 1)
+    expectedOffsetShape.pop_back();
+
+  if (expectedOffsetShape != offsetShape)
+    return emitOpError(
+        "Offsets should match TensorDesc except the chunk size dim.");
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

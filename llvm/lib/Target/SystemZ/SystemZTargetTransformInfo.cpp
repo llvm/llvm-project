@@ -497,7 +497,7 @@ bool SystemZTTIImpl::hasDivRemOp(Type *DataType, bool IsSigned) const {
   return (VT.isScalarInteger() && TLI->isTypeLegal(VT));
 }
 
-static bool isFreeEltLoad(Value *Op) {
+static bool isFreeEltLoad(const Value *Op) {
   if (isa<LoadInst>(Op) && Op->hasOneUse()) {
     const Instruction *UserI = cast<Instruction>(*Op->user_begin());
     return !isa<StoreInst>(UserI); // Prefer MVC
@@ -507,7 +507,8 @@ static bool isFreeEltLoad(Value *Op) {
 
 InstructionCost SystemZTTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) const {
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc,
+    ArrayRef<Value *> VL) const {
   unsigned NumElts = cast<FixedVectorType>(Ty)->getNumElements();
   InstructionCost Cost = 0;
 
@@ -529,7 +530,7 @@ InstructionCost SystemZTTIImpl::getScalarizationOverhead(
   }
 
   Cost += BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
-                                          CostKind, VL);
+                                          CostKind, ForPoisonSrc, VL);
   return Cost;
 }
 
@@ -737,20 +738,22 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
                                        Args, CxtI);
 }
 
-InstructionCost SystemZTTIImpl::getShuffleCost(
-    TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
-    TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
-  Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
+InstructionCost
+SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
+                               VectorType *SrcTy, ArrayRef<int> Mask,
+                               TTI::TargetCostKind CostKind, int Index,
+                               VectorType *SubTp, ArrayRef<const Value *> Args,
+                               const Instruction *CxtI) const {
+  Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
   if (ST->hasVector()) {
-    unsigned NumVectors = getNumVectorRegs(Tp);
+    unsigned NumVectors = getNumVectorRegs(SrcTy);
 
     // TODO: Since fp32 is expanded, the shuffle cost should always be 0.
 
     // FP128 values are always in scalar registers, so there is no work
     // involved with a shuffle, except for broadcast. In that case register
     // moves are done with a single instruction per element.
-    if (Tp->getScalarType()->isFP128Ty())
+    if (SrcTy->getScalarType()->isFP128Ty())
       return (Kind == TargetTransformInfo::SK_Broadcast ? NumVectors - 1 : 0);
 
     switch (Kind) {
@@ -774,7 +777,8 @@ InstructionCost SystemZTTIImpl::getShuffleCost(
     }
   }
 
-  return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+                               SubTp);
 }
 
 // Return the log2 difference of the element sizes of the two vector types.
@@ -1193,8 +1197,9 @@ InstructionCost SystemZTTIImpl::getCmpSelInstrCost(
 
 InstructionCost SystemZTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                    TTI::TargetCostKind CostKind,
-                                                   unsigned Index, Value *Op0,
-                                                   Value *Op1) const {
+                                                   unsigned Index,
+                                                   const Value *Op0,
+                                                   const Value *Op1) const {
   if (Opcode == Instruction::InsertElement) {
     // Vector Element Load.
     if (Op1 != nullptr && isFreeEltLoad(Op1))

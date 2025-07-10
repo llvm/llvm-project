@@ -125,7 +125,9 @@ createArrayTemp(mlir::Location loc, fir::FirOpBuilder &builder,
   auto [base, isHeapAlloc] = builder.createArrayTemp(
       loc, sequenceType, shape, extents, lenParams, genTempDeclareOp,
       polymorphicMold ? polymorphicMold->getFirBase() : nullptr);
-  return {hlfir::Entity{base}, builder.createBool(loc, isHeapAlloc)};
+  hlfir::Entity temp = hlfir::Entity{base};
+  assert(!temp.isAllocatable() && "temp must have been allocated");
+  return {temp, builder.createBool(loc, isHeapAlloc)};
 }
 
 /// Copy \p source into a new temporary and package the temporary into a
@@ -134,13 +136,10 @@ static mlir::Value copyInTempAndPackage(mlir::Location loc,
                                         fir::FirOpBuilder &builder,
                                         hlfir::Entity source) {
   auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, source);
-  builder.create<hlfir::AssignOp>(loc, source, temp, temp.isAllocatable(),
+  assert(!temp.isAllocatable() && "expect temp to already be allocated");
+  builder.create<hlfir::AssignOp>(loc, source, temp, /*realloc=*/false,
                                   /*keep_lhs_length_if_realloc=*/false,
                                   /*temporary_lhs=*/true);
-  // Dereference allocatable temporary directly to simplify processing
-  // of its uses.
-  if (temp.isAllocatable())
-    temp = hlfir::derefPointersAndAllocatables(loc, builder, temp);
   return packageBufferizedExpr(loc, builder, temp, cleanup);
 }
 
@@ -442,18 +441,10 @@ struct AssociateOpConversion
       // !fir.box<!fir.heap<!fir.type<_T{y:i32}>>> value must be
       // propagated as the box address !fir.ref<!fir.type<_T{y:i32}>>.
       auto adjustVar = [&](mlir::Value sourceVar, mlir::Type assocType) {
-        if (mlir::isa<fir::ReferenceType>(sourceVar.getType()) &&
-            mlir::isa<fir::ClassType>(
-                fir::unwrapRefType(sourceVar.getType()))) {
-          // Association of a polymorphic value.
-          sourceVar = builder.create<fir::LoadOp>(loc, sourceVar);
-          assert(mlir::isa<fir::ClassType>(sourceVar.getType()) &&
-                 fir::isAllocatableType(sourceVar.getType()));
-          assert(sourceVar.getType() == assocType);
-        } else if ((mlir::isa<fir::BaseBoxType>(sourceVar.getType()) &&
-                    !mlir::isa<fir::BaseBoxType>(assocType)) ||
-                   ((mlir::isa<fir::BoxCharType>(sourceVar.getType()) &&
-                     !mlir::isa<fir::BoxCharType>(assocType)))) {
+        if ((mlir::isa<fir::BaseBoxType>(sourceVar.getType()) &&
+             !mlir::isa<fir::BaseBoxType>(assocType)) ||
+            ((mlir::isa<fir::BoxCharType>(sourceVar.getType()) &&
+              !mlir::isa<fir::BoxCharType>(assocType)))) {
           sourceVar = builder.create<fir::BoxAddrOp>(loc, assocType, sourceVar);
         } else {
           sourceVar = builder.createConvert(loc, assocType, sourceVar);
@@ -549,23 +540,7 @@ static void genBufferDestruction(mlir::Location loc, fir::FirOpBuilder &builder,
     // fir::FreeMemOp operand type must be a fir::HeapType.
     mlir::Type heapType = fir::HeapType::get(
         hlfir::getFortranElementOrSequenceType(var.getType()));
-    if (mlir::isa<fir::ReferenceType>(var.getType()) &&
-        mlir::isa<fir::ClassType>(fir::unwrapRefType(var.getType()))) {
-      // A temporary for a polymorphic expression is represented
-      // via an allocatable. Variable type in this case
-      // is !fir.ref<!fir.class<!fir.heap<!fir.type<>>>>.
-      // We need to free the allocatable data, not the box
-      // that is allocated on the stack.
-      var = builder.create<fir::LoadOp>(loc, var);
-      assert(mlir::isa<fir::ClassType>(var.getType()) &&
-             fir::isAllocatableType(var.getType()));
-      addr = builder.create<fir::BoxAddrOp>(loc, heapType, var);
-      // Lowering currently does not produce DestroyOp with 'finalize'
-      // for polymorphic temporaries. It will have to do so, for example,
-      // for MERGE with polymorphic results.
-      if (mustFinalize)
-        TODO(loc, "finalizing polymorphic temporary in HLFIR");
-    } else if (mlir::isa<fir::BaseBoxType, fir::BoxCharType>(var.getType())) {
+    if (mlir::isa<fir::BaseBoxType, fir::BoxCharType>(var.getType())) {
       if (mustFinalize && !mlir::isa<fir::BaseBoxType>(var.getType()))
         fir::emitFatalError(loc, "non-finalizable variable");
 
@@ -757,9 +732,6 @@ struct ElementalOpConversion
                                               adaptor.getTypeparams().end());
     auto [temp, cleanup] = createArrayTemp(loc, builder, elemental.getType(),
                                            shape, extents, typeParams, mold);
-    // If the box load is needed, we'd better place it outside
-    // of the loop nest.
-    temp = derefPointersAndAllocatables(loc, builder, temp);
 
     if (optimizeEmptyElementals)
       extents = fir::factory::updateRuntimeExtentsForEmptyArrays(builder, loc,

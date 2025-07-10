@@ -92,8 +92,6 @@ STATISTIC(NumInternalFunc, "Number of internal functions");
 STATISTIC(NumColdCC, "Number of functions marked coldcc");
 STATISTIC(NumIFuncsResolved, "Number of statically resolved IFuncs");
 STATISTIC(NumIFuncsDeleted, "Number of IFuncs removed");
-STATISTIC(NumGlobalArraysPadded,
-          "Number of global arrays padded to alignment boundary");
 
 static cl::opt<bool>
     OptimizeNonFMVCallers("optimize-non-fmv-callers",
@@ -250,10 +248,10 @@ CleanupPointerRootUsers(GlobalVariable *GV,
     }
   }
 
-  for (int i = 0, e = Dead.size(); i != e; ++i) {
-    if (IsSafeComputationToRemove(Dead[i].first, GetTLI)) {
-      Dead[i].second->eraseFromParent();
-      Instruction *I = Dead[i].first;
+  for (const auto &[Inst, Store] : Dead) {
+    if (IsSafeComputationToRemove(Inst, GetTLI)) {
+      Store->eraseFromParent();
+      Instruction *I = Inst;
       do {
         if (isAllocationFn(I, GetTLI))
           break;
@@ -1494,8 +1492,14 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
     // FIXME: Pass Global's alignment when globals have alignment
     AllocaInst *Alloca = new AllocaInst(ElemTy, DL.getAllocaAddrSpace(),
                                         nullptr, GV->getName(), FirstI);
-    if (!isa<UndefValue>(GV->getInitializer()))
-      new StoreInst(GV->getInitializer(), Alloca, FirstI);
+    Alloca->setDebugLoc(DebugLoc::getCompilerGenerated());
+    if (!isa<UndefValue>(GV->getInitializer())) {
+      auto *SI = new StoreInst(GV->getInitializer(), Alloca, FirstI);
+      // FIXME: We're localizing a global and creating a store instruction for
+      // the initial value of that global. Could we logically use the global
+      // variable's (if one exists) line for this?
+      SI->setDebugLoc(DebugLoc::getCompilerGenerated());
+    }
 
     GV->replaceAllUsesWith(Alloca);
     GV->eraseFromParent();
@@ -1678,11 +1682,8 @@ processGlobal(GlobalValue &GV,
 /// Walk all of the direct calls of the specified function, changing them to
 /// FastCC.
 static void ChangeCalleesToFastCall(Function *F) {
-  for (User *U : F->users()) {
-    if (isa<BlockAddress>(U))
-      continue;
+  for (User *U : F->users())
     cast<CallBase>(U)->setCallingConv(CallingConv::Fast);
-  }
 }
 
 static AttributeList StripAttr(LLVMContext &C, AttributeList Attrs,
@@ -1696,8 +1697,6 @@ static AttributeList StripAttr(LLVMContext &C, AttributeList Attrs,
 static void RemoveAttribute(Function *F, Attribute::AttrKind A) {
   F->setAttributes(StripAttr(F->getContext(), F->getAttributes(), A));
   for (User *U : F->users()) {
-    if (isa<BlockAddress>(U))
-      continue;
     CallBase *CB = cast<CallBase>(U);
     CB->setAttributes(StripAttr(F->getContext(), CB->getAttributes(), A));
   }
@@ -1722,8 +1721,6 @@ static bool hasChangeableCCImpl(Function *F) {
   // Can't change CC of the function that either has musttail calls, or is a
   // musttail callee itself
   for (User *U : F->users()) {
-    if (isa<BlockAddress>(U))
-      continue;
     CallInst* CI = dyn_cast<CallInst>(U);
     if (!CI)
       continue;
@@ -1772,9 +1769,6 @@ isValidCandidateForColdCC(Function &F,
     return false;
 
   for (User *U : F.users()) {
-    if (isa<BlockAddress>(U))
-      continue;
-
     CallBase &CB = cast<CallBase>(*U);
     Function *CallerFunc = CB.getParent()->getParent();
     BlockFrequencyInfo &CallerBFI = GetBFI(*CallerFunc);
@@ -1787,11 +1781,8 @@ isValidCandidateForColdCC(Function &F,
 }
 
 static void changeCallSitesToColdCC(Function *F) {
-  for (User *U : F->users()) {
-    if (isa<BlockAddress>(U))
-      continue;
+  for (User *U : F->users())
     cast<CallBase>(U)->setCallingConv(CallingConv::Cold);
-  }
 }
 
 // This function iterates over all the call instructions in the input Function
@@ -1832,12 +1823,7 @@ hasOnlyColdCalls(Function &F,
 
 static bool hasMustTailCallers(Function *F) {
   for (User *U : F->users()) {
-    CallBase *CB = dyn_cast<CallBase>(U);
-    if (!CB) {
-      assert(isa<BlockAddress>(U) &&
-             "Expected either CallBase or BlockAddress");
-      continue;
-    }
+    CallBase *CB = cast<CallBase>(U);
     if (CB->isMustTailCall())
       return true;
   }
@@ -2049,165 +2035,6 @@ OptimizeFunctions(Module &M,
   return Changed;
 }
 
-static bool callInstIsMemcpy(CallInst *CI) {
-  if (!CI)
-    return false;
-
-  Function *F = CI->getCalledFunction();
-  if (!F || !F->isIntrinsic() || F->getIntrinsicID() != Intrinsic::memcpy)
-    return false;
-
-  return true;
-}
-
-static bool destArrayCanBeWidened(CallInst *CI) {
-  auto *IsVolatile = dyn_cast<ConstantInt>(CI->getArgOperand(3));
-  auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
-
-  if (!Alloca || !IsVolatile || IsVolatile->isOne())
-    return false;
-
-  if (!Alloca->isStaticAlloca())
-    return false;
-
-  if (!Alloca->getAllocatedType()->isArrayTy())
-    return false;
-
-  return true;
-}
-
-static GlobalVariable *widenGlobalVariable(GlobalVariable *OldVar,
-                                           unsigned NumBytesToPad,
-                                           unsigned NumBytesToCopy) {
-  if (!OldVar->hasInitializer())
-    return nullptr;
-
-  ConstantDataArray *DataArray =
-      dyn_cast<ConstantDataArray>(OldVar->getInitializer());
-  if (!DataArray)
-    return nullptr;
-
-  // Update to be word aligned (memcpy(...,X,...))
-  // create replacement with padded null bytes.
-  StringRef Data = DataArray->getRawDataValues();
-  std::vector<uint8_t> StrData(Data.begin(), Data.end());
-  for (unsigned int p = 0; p < NumBytesToPad; p++)
-    StrData.push_back('\0');
-  auto Arr = ArrayRef(StrData.data(), NumBytesToCopy + NumBytesToPad);
-  // Create new padded version of global variable.
-  Constant *SourceReplace = ConstantDataArray::get(OldVar->getContext(), Arr);
-  GlobalVariable *NewGV = new GlobalVariable(
-      *(OldVar->getParent()), SourceReplace->getType(), true,
-      OldVar->getLinkage(), SourceReplace, SourceReplace->getName());
-  // Copy any other attributes from original global variable
-  // e.g. unamed_addr
-  NewGV->copyAttributesFrom(OldVar);
-  NewGV->takeName(OldVar);
-  return NewGV;
-}
-
-static void widenDestArray(CallInst *CI, const unsigned NumBytesToPad,
-                           const unsigned NumBytesToCopy,
-                           ConstantDataArray *SourceDataArray) {
-
-  auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
-  if (Alloca) {
-    unsigned ElementByteWidth = SourceDataArray->getElementByteSize();
-    unsigned int TotalBytes = NumBytesToCopy + NumBytesToPad;
-    unsigned NumElementsToCopy = divideCeil(TotalBytes, ElementByteWidth);
-    // Update destination array to be word aligned (memcpy(X,...,...))
-    IRBuilder<> BuildAlloca(Alloca);
-    AllocaInst *NewAlloca = BuildAlloca.CreateAlloca(ArrayType::get(
-        Alloca->getAllocatedType()->getArrayElementType(), NumElementsToCopy));
-    NewAlloca->takeName(Alloca);
-    NewAlloca->setAlignment(Alloca->getAlign());
-    Alloca->replaceAllUsesWith(NewAlloca);
-    Alloca->eraseFromParent();
-  }
-}
-
-static bool tryWidenGlobalArrayAndDests(GlobalVariable *SourceVar,
-                                        const unsigned NumBytesToPad,
-                                        const unsigned NumBytesToCopy,
-                                        ConstantInt *BytesToCopyOp,
-                                        ConstantDataArray *SourceDataArray) {
-  auto *NewSourceGV =
-      widenGlobalVariable(SourceVar, NumBytesToPad, NumBytesToCopy);
-  if (!NewSourceGV)
-    return false;
-
-  // Update arguments of remaining uses  that
-  // are memcpys.
-  for (auto *User : SourceVar->users()) {
-    auto *CI = dyn_cast<CallInst>(User);
-    if (!callInstIsMemcpy(CI) || !destArrayCanBeWidened(CI))
-      continue;
-
-    if (CI->getArgOperand(1) != SourceVar)
-      continue;
-
-    widenDestArray(CI, NumBytesToPad, NumBytesToCopy, SourceDataArray);
-
-    CI->setArgOperand(2, ConstantInt::get(BytesToCopyOp->getType(),
-                                          NumBytesToCopy + NumBytesToPad));
-  }
-  SourceVar->replaceAllUsesWith(NewSourceGV);
-
-  NumGlobalArraysPadded++;
-  return true;
-}
-
-static bool tryWidenGlobalArraysUsedByMemcpy(
-    GlobalVariable *GV,
-    function_ref<TargetTransformInfo &(Function &)> GetTTI) {
-
-  if (!GV->hasInitializer() || !GV->isConstant() || !GV->hasLocalLinkage() ||
-      !GV->hasGlobalUnnamedAddr())
-    return false;
-
-  for (auto *User : GV->users()) {
-    CallInst *CI = dyn_cast<CallInst>(User);
-    if (!callInstIsMemcpy(CI) || !destArrayCanBeWidened(CI))
-      continue;
-
-    auto *BytesToCopyOp = dyn_cast<ConstantInt>(CI->getArgOperand(2));
-    if (!BytesToCopyOp)
-      continue;
-
-    ConstantDataArray *SourceDataArray =
-        dyn_cast<ConstantDataArray>(GV->getInitializer());
-    if (!SourceDataArray)
-      continue;
-
-    unsigned NumBytesToCopy = BytesToCopyOp->getZExtValue();
-
-    auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
-    uint64_t DZSize = Alloca->getAllocatedType()->getArrayNumElements();
-    uint64_t SZSize = SourceDataArray->getType()->getNumElements();
-    unsigned ElementByteWidth = SourceDataArray->getElementByteSize();
-    // Calculate the number of elements to copy while avoiding floored
-    // division of integers returning wrong values i.e. copying one byte
-    // from an array of i16 would yield 0 elements to copy as supposed to 1.
-    unsigned NumElementsToCopy = divideCeil(NumBytesToCopy, ElementByteWidth);
-
-    // For safety purposes lets add a constraint and only pad when
-    // NumElementsToCopy == destination array size ==
-    // source which is a constant
-    if (NumElementsToCopy != DZSize || DZSize != SZSize)
-      continue;
-
-    unsigned NumBytesToPad =
-        GetTTI(*CI->getFunction())
-            .getNumBytesToPadGlobalArray(NumBytesToCopy,
-                                         SourceDataArray->getType());
-    if (NumBytesToPad) {
-      return tryWidenGlobalArrayAndDests(GV, NumBytesToPad, NumBytesToCopy,
-                                         BytesToCopyOp, SourceDataArray);
-    }
-  }
-  return false;
-}
-
 static bool
 OptimizeGlobalVars(Module &M,
                    function_ref<TargetTransformInfo &(Function &)> GetTTI,
@@ -2236,10 +2063,6 @@ OptimizeGlobalVars(Module &M,
       Changed = true;
       continue;
     }
-
-    // For global variable arrays called in a memcpy
-    // we try to pad to nearest valid alignment boundary
-    Changed |= tryWidenGlobalArraysUsedByMemcpy(&GV, GetTTI);
 
     Changed |= processGlobal(GV, GetTTI, GetTLI, LookupDomTree);
   }

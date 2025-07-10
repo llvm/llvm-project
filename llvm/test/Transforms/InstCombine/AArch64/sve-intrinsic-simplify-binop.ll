@@ -107,7 +107,8 @@ define <vscale x 4 x i32> @constant_mul_u_after_striping_inactive_lanes(<vscale 
 define <vscale x 4 x i32> @dont_propagate_poison(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @dont_propagate_poison(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    ret <vscale x 4 x i32> poison
+; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.and.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> poison, <vscale x 4 x i32> splat (i32 1))
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
 ;
   %r = call <vscale x 4 x i32> @llvm.aarch64.sve.and.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> poison, <vscale x 4 x i32> splat (i32 1))
   ret <vscale x 4 x i32> %r
@@ -311,7 +312,7 @@ define <vscale x 4 x i32> @constant_orr_u(<vscale x 4 x i1> %pg) #0 {
 define <vscale x 4 x i32> @constant_sdiv(<vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @constant_sdiv(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 -7), <vscale x 4 x i32> splat (i32 3))
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 -2), <vscale x 4 x i32> splat (i32 -7)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
 ;
   %r = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> splat (i32 -7), <vscale x 4 x i32> splat (i32 3))
@@ -343,8 +344,7 @@ define <vscale x 4 x i32> @constant_sdiv_with_overflow(<vscale x 4 x i1> %pg) #0
 define <vscale x 4 x i32> @constant_sdiv_u(<vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @constant_sdiv_u(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 -7), <vscale x 4 x i32> splat (i32 -3))
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> splat (i32 2)
 ;
   %r = call <vscale x 4 x i32> @llvm.aarch64.sve.sdiv.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> splat (i32 -7), <vscale x 4 x i32> splat (i32 -3))
   ret <vscale x 4 x i32> %r
@@ -436,7 +436,7 @@ define <vscale x 4 x i32> @constant_subr(<vscale x 4 x i1> %pg) #0 {
 define <vscale x 4 x i32> @constant_udiv(<vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @constant_udiv(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.udiv.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 7), <vscale x 4 x i32> splat (i32 3))
+; CHECK-NEXT:    [[R:%.*]] = select <vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 2), <vscale x 4 x i32> splat (i32 7)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
 ;
   %r = call <vscale x 4 x i32> @llvm.aarch64.sve.udiv.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> splat (i32 7), <vscale x 4 x i32> splat (i32 3))
@@ -457,8 +457,7 @@ define <vscale x 4 x i32> @constant_udiv_by_zero(<vscale x 4 x i1> %pg) #0 {
 define <vscale x 4 x i32> @constant_udiv_u(<vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @constant_udiv_u(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.udiv.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 9), <vscale x 4 x i32> splat (i32 3))
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> splat (i32 3)
 ;
   %r = call <vscale x 4 x i32> @llvm.aarch64.sve.udiv.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> splat (i32 9), <vscale x 4 x i32> splat (i32 3))
   ret <vscale x 4 x i32> %r

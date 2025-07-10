@@ -519,8 +519,31 @@ bool SemaOpenACC::CheckVarIsPointerType(OpenACCClauseKind ClauseKind,
   return false;
 }
 
+void SemaOpenACC::ActOnStartParseVar(OpenACCDirectiveKind DK,
+                                     OpenACCClauseKind CK) {
+  if (DK == OpenACCDirectiveKind::Cache) {
+    CacheInfo.ParsingCacheVarList = true;
+    CacheInfo.IsInvalidCacheRef = false;
+  }
+}
+
+void SemaOpenACC::ActOnInvalidParseVar() {
+  CacheInfo.ParsingCacheVarList = false;
+  CacheInfo.IsInvalidCacheRef = false;
+}
+
 ExprResult SemaOpenACC::ActOnCacheVar(Expr *VarExpr) {
   Expr *CurVarExpr = VarExpr->IgnoreParenImpCasts();
+  // Clear this here, so we can do the returns based on the invalid cache ref
+  // here.  Note all return statements in this function must return ExprError if
+  // IsInvalidCacheRef. However, instead of doing an 'early return' in that
+  // case, we can let the rest of the diagnostics happen, as the invalid decl
+  // ref is a warning.
+  bool WasParsingInvalidCacheRef =
+      CacheInfo.ParsingCacheVarList && CacheInfo.IsInvalidCacheRef;
+  CacheInfo.ParsingCacheVarList = false;
+  CacheInfo.IsInvalidCacheRef = false;
+
   if (!isa<ArraySectionExpr, ArraySubscriptExpr>(CurVarExpr)) {
     Diag(VarExpr->getExprLoc(), diag::err_acc_not_a_var_ref_cache);
     return ExprError();
@@ -540,19 +563,19 @@ ExprResult SemaOpenACC::ActOnCacheVar(Expr *VarExpr) {
   if (const auto *DRE = dyn_cast<DeclRefExpr>(CurVarExpr)) {
     if (isa<VarDecl, NonTypeTemplateParmDecl>(
             DRE->getFoundDecl()->getCanonicalDecl()))
-      return VarExpr;
+      return WasParsingInvalidCacheRef ? ExprEmpty() : VarExpr;
   }
 
   if (const auto *ME = dyn_cast<MemberExpr>(CurVarExpr)) {
     if (isa<FieldDecl>(ME->getMemberDecl()->getCanonicalDecl())) {
-      return VarExpr;
+      return WasParsingInvalidCacheRef ? ExprEmpty() : VarExpr;
     }
   }
 
   // Nothing really we can do here, as these are dependent.  So just return they
   // are valid.
   if (isa<DependentScopeDeclRefExpr, CXXDependentScopeMemberExpr>(CurVarExpr))
-    return VarExpr;
+    return WasParsingInvalidCacheRef ? ExprEmpty() : VarExpr;
 
   // There isn't really anything we can do in the case of a recovery expr, so
   // skip the diagnostic rather than produce a confusing diagnostic.
@@ -562,6 +585,45 @@ ExprResult SemaOpenACC::ActOnCacheVar(Expr *VarExpr) {
   Diag(VarExpr->getExprLoc(), diag::err_acc_not_a_var_ref_cache);
   return ExprError();
 }
+
+void SemaOpenACC::CheckDeclReference(SourceLocation Loc, Expr *E, Decl *D) {
+  if (!getLangOpts().OpenACC || !CacheInfo.ParsingCacheVarList || !D ||
+      D->isInvalidDecl())
+    return;
+  // A 'cache' variable reference MUST be declared before the 'acc.loop' we
+  // generate in codegen, so we have to mark it invalid here in some way.  We do
+  // so in a bit of a convoluted way as there is no good way to put this into
+  // the AST, so we store it in SemaOpenACC State.  We can check the Scope
+  // during parsing to make sure there is a 'loop' before the decl is
+  // declared(and skip during instantiation).
+  // We only diagnose this as a warning, as this isn't required by the standard
+  // (unless you take a VERY awkward reading of some awkward prose).
+
+  Scope *CurScope = SemaRef.getCurScope();
+
+  // if we are at TU level, we are either doing some EXTRA wacky, or are in a
+  // template instantiation, so just give up.
+  if (CurScope->getDepth() == 0)
+    return;
+
+  while (CurScope) {
+    // If we run into a loop construct scope, than this is 'correct' in that the
+    // declaration is outside of the loop.
+    if (CurScope->isOpenACCLoopConstructScope())
+      return;
+
+    if (CurScope->isDeclScope(D)) {
+      Diag(Loc, diag::warn_acc_cache_var_not_outside_loop);
+
+      CacheInfo.IsInvalidCacheRef = true;
+    }
+
+    CurScope = CurScope->getParent();
+  }
+  // If we don't find the decl at all, we assume that it must be outside of the
+  // loop (or we aren't in a loop!) so skip the diagnostic.
+}
+
 ExprResult SemaOpenACC::ActOnVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                                  Expr *VarExpr) {
   // This has unique enough restrictions that we should split it to a separate
@@ -757,11 +819,12 @@ ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
                    !OriginalBaseTy->isConstantArrayType() &&
                    !OriginalBaseTy->isDependentSizedArrayType()))) {
     bool IsArray = !OriginalBaseTy.isNull() && OriginalBaseTy->isArrayType();
-    Diag(ColonLoc, diag::err_acc_subarray_no_length) << IsArray;
+    SourceLocation DiagLoc = ColonLoc.isInvalid() ? LBLoc : ColonLoc;
+    Diag(DiagLoc, diag::err_acc_subarray_no_length) << IsArray;
     // Fill in a dummy 'length' so that when we instantiate this we don't
     // double-diagnose here.
     ExprResult Recovery = SemaRef.CreateRecoveryExpr(
-        ColonLoc, SourceLocation(), ArrayRef<Expr *>(), Context.IntTy);
+        DiagLoc, SourceLocation(), ArrayRef<Expr *>(), Context.IntTy);
     Length = Recovery.isUsable() ? Recovery.get() : nullptr;
   }
 
@@ -1275,11 +1338,8 @@ bool SemaOpenACC::ForStmtBeginChecker::checkForCond(const Stmt *CondStmt,
          CondVar->getCanonicalDecl() != InitVar->getCanonicalDecl() &&
          CE->getNumArgs() > 1))
       CondVar = getDeclFromExpr(CE->getArg(1));
-  } else if (const auto *ME = dyn_cast<CXXMemberCallExpr>(CondStmt)) {
-    // Here there isn't much we can do besides hope it is the right variable.
-    // Codegen might have to just give up on figuring out trip count in this
-    // case?
-    CondVar = getDeclFromExpr(ME->getImplicitObjectArgument());
+  } else {
+    return DiagCondVar();
   }
 
   if (!CondVar)
@@ -1292,6 +1352,59 @@ bool SemaOpenACC::ForStmtBeginChecker::checkForCond(const Stmt *CondStmt,
 
   return false;
 }
+
+namespace {
+// Helper to check the RHS of an assignment during for's step. We can allow
+// InitVar = InitVar + N, InitVar = N + InitVar, and Initvar = Initvar - N,
+// where N is an integer.
+bool isValidForIncRHSAssign(const ValueDecl *InitVar, const Expr *RHS) {
+
+  auto isValid = [](const ValueDecl *InitVar, const Expr *InnerLHS,
+                    const Expr *InnerRHS, bool IsAddition) {
+    // ONE of the sides has to be an integer type.
+    if (!InnerLHS->getType()->isIntegerType() &&
+        !InnerRHS->getType()->isIntegerType())
+      return false;
+
+    // If the init var is already an error, don't bother trying to check for
+    // it.
+    if (!InitVar)
+      return true;
+
+    const ValueDecl *LHSDecl = getDeclFromExpr(InnerLHS);
+    const ValueDecl *RHSDecl = getDeclFromExpr(InnerRHS);
+    // If we can't get a declaration, this is probably an error, so give up.
+    if (!LHSDecl || !RHSDecl)
+      return true;
+
+    // If the LHS is the InitVar, the other must be int, so this is valid.
+    if (LHSDecl->getCanonicalDecl() ==
+        InitVar->getCanonicalDecl())
+      return true;
+
+    // Subtraction doesn't allow the RHS to be init var, so this is invalid.
+    if (!IsAddition)
+      return false;
+
+    return RHSDecl->getCanonicalDecl() ==
+           InitVar->getCanonicalDecl();
+  };
+
+  if (const auto *BO = dyn_cast<BinaryOperator>(RHS)) {
+    BinaryOperatorKind OpC = BO->getOpcode();
+    if (OpC != BO_Add && OpC != BO_Sub)
+      return false;
+    return isValid(InitVar, BO->getLHS(), BO->getRHS(), OpC == BO_Add);
+  } else if (const auto *CE = dyn_cast<CXXOperatorCallExpr>(RHS)) {
+    OverloadedOperatorKind Op = CE->getOperator();
+    if (Op != OO_Plus && Op != OO_Minus)
+      return false;
+    return isValid(InitVar, CE->getArg(0), CE->getArg(1), Op == OO_Plus);
+  }
+
+  return false;
+}
+} // namespace
 
 bool SemaOpenACC::ForStmtBeginChecker::checkForInc(const Stmt *IncStmt,
                                                    const ValueDecl *InitVar,
@@ -1335,14 +1448,12 @@ bool SemaOpenACC::ForStmtBeginChecker::checkForInc(const Stmt *IncStmt,
       return DiagIncVar();
     case BO_AddAssign:
     case BO_SubAssign:
-    case BO_MulAssign:
-    case BO_DivAssign:
+      break;
     case BO_Assign:
-      // += -= *= /= should all be fine here, this should be all of the
-      // 'monotonical' compound-assign ops.
-      // Assignment we just give up on, we could do better, and ensure that it
-      // is a binary/operator expr doing more work, but that seems like a lot
-      // of work for an error prone check.
+      // For assignment we also allow InitVar = InitVar + N, InitVar = N +
+      // InitVar, and InitVar = InitVar - N;  BUT only if 'N' is integral.
+      if (!isValidForIncRHSAssign(InitVar, BO->getRHS()))
+        return DiagIncVar();
       break;
     }
     IncVar = getDeclFromExpr(BO->getLHS());
@@ -1354,23 +1465,18 @@ bool SemaOpenACC::ForStmtBeginChecker::checkForInc(const Stmt *IncStmt,
     case OO_MinusMinus:
     case OO_PlusEqual:
     case OO_MinusEqual:
-    case OO_StarEqual:
-    case OO_SlashEqual:
+      break;
     case OO_Equal:
-      // += -= *= /= should all be fine here, this should be all of the
-      // 'monotonical' compound-assign ops.
-      // Assignment we just give up on, we could do better, and ensure that it
-      // is a binary/operator expr doing more work, but that seems like a
-      // lot of work for an error prone check.
+      // For assignment we also allow InitVar = InitVar + N, InitVar = N +
+      // InitVar, and InitVar = InitVar - N;  BUT only if 'N' is integral.
+      if (!isValidForIncRHSAssign(InitVar, CE->getArg(1)))
+        return DiagIncVar();
       break;
     }
 
     IncVar = getDeclFromExpr(CE->getArg(0));
-
-  } else if (const auto *ME = dyn_cast<CXXMemberCallExpr>(IncStmt)) {
-    IncVar = getDeclFromExpr(ME->getImplicitObjectArgument());
-    // We can't really do much for member expressions, other than hope they are
-    // doing the right thing, so give up here.
+  } else {
+    return DiagIncVar();
   }
 
   if (!IncVar)
@@ -1517,7 +1623,7 @@ void SemaOpenACC::ActOnForStmtBegin(SourceLocation ForLoc, const Stmt *First,
 void SemaOpenACC::ActOnRangeForStmtBegin(SourceLocation ForLoc,
                                          const Stmt *OldRangeFor,
                                          const Stmt *RangeFor) {
-  if (!getLangOpts().OpenACC)
+  if (!getLangOpts().OpenACC || OldRangeFor == nullptr || RangeFor == nullptr)
     return;
 
   ForStmtBeginChecker FSBC{*this, ForLoc,
@@ -1533,7 +1639,7 @@ void SemaOpenACC::ActOnRangeForStmtBegin(SourceLocation ForLoc,
 
 void SemaOpenACC::ActOnRangeForStmtBegin(SourceLocation ForLoc,
                                          const Stmt *RangeFor) {
-  if (!getLangOpts().OpenACC)
+  if (!getLangOpts().OpenACC || RangeFor == nullptr)
     return;
 
   ForStmtBeginChecker FSBC = {*this, ForLoc,
@@ -1712,7 +1818,7 @@ ExprResult SemaOpenACC::ActOnRoutineName(Expr *RoutineName) {
   return ExprError();
 }
 void SemaOpenACC::ActOnVariableDeclarator(VarDecl *VD) {
-  if (!VD->isStaticLocal() || !getLangOpts().OpenACC)
+  if (!getLangOpts().OpenACC || VD->isInvalidDecl() || !VD->isStaticLocal())
     return;
 
   // This cast should be safe, since a static-local can only happen in a
@@ -2216,7 +2322,8 @@ void SemaOpenACC::CheckRoutineDecl(SourceLocation DirLoc,
           (*cast<OpenACCBindClause>(*BindItr)) !=
               (*cast<OpenACCBindClause>(*OtherBindItr))) {
         Diag((*BindItr)->getBeginLoc(), diag::err_acc_duplicate_unnamed_bind);
-        Diag((*OtherBindItr)->getEndLoc(), diag::note_acc_previous_clause_here);
+        Diag((*OtherBindItr)->getEndLoc(), diag::note_acc_previous_clause_here)
+            << (*BindItr)->getClauseKind();
         return;
       }
     }
@@ -2230,7 +2337,8 @@ void SemaOpenACC::CheckRoutineDecl(SourceLocation DirLoc,
     if (auto *RA = dyn_cast<OpenACCRoutineAnnotAttr>(A);
         RA && RA->getRange().getEnd().isValid()) {
       Diag((*BindItr)->getBeginLoc(), diag::err_acc_duplicate_bind);
-      Diag(RA->getRange().getEnd(), diag::note_acc_previous_clause_here);
+      Diag(RA->getRange().getEnd(), diag::note_acc_previous_clause_here)
+          << "bind";
       return;
     }
   }
@@ -2275,7 +2383,8 @@ OpenACCRoutineDecl *SemaOpenACC::CheckRoutineDecl(
           if (OtherBindItr != RA->Clauses.end()) {
             Diag((*BindItr)->getBeginLoc(), diag::err_acc_duplicate_bind);
             Diag((*OtherBindItr)->getEndLoc(),
-                 diag::note_acc_previous_clause_here);
+                 diag::note_acc_previous_clause_here)
+                << (*BindItr)->getClauseKind();
             return nullptr;
           }
         }
@@ -2283,7 +2392,8 @@ OpenACCRoutineDecl *SemaOpenACC::CheckRoutineDecl(
         if (auto *RA = dyn_cast<OpenACCRoutineAnnotAttr>(A);
             RA && RA->getRange().getEnd().isValid()) {
           Diag((*BindItr)->getBeginLoc(), diag::err_acc_duplicate_bind);
-          Diag(RA->getRange().getEnd(), diag::note_acc_previous_clause_here);
+          Diag(RA->getRange().getEnd(), diag::note_acc_previous_clause_here)
+              << (*BindItr)->getClauseKind();
           return nullptr;
         }
       }

@@ -2502,6 +2502,7 @@ define i64 @test_vector_reduce_add_v3i64(<3 x i64> %v) {
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
 ; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v5, vcc_lo
@@ -2639,6 +2640,7 @@ define i64 @test_vector_reduce_add_v4i64(<4 x i64> %v) {
 ; GFX12-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xfffd
 ; GFX12-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v5, vcc_lo
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xfffd
 ; GFX12-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
@@ -2657,6 +2659,7 @@ define i64 @test_vector_reduce_add_v4i64(<4 x i64> %v) {
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v6
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, v3, v7, vcc_lo
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
@@ -2892,6 +2895,7 @@ define i64 @test_vector_reduce_add_v8i64(<8 x i64> %v) {
 ; GFX12-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xfffd
 ; GFX12-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v5, vcc_lo
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xfffd
 ; GFX12-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
@@ -2922,6 +2926,7 @@ define i64 @test_vector_reduce_add_v8i64(<8 x i64> %v) {
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v6
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, v3, v7, vcc_lo
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
@@ -3371,6 +3376,7 @@ define i64 @test_vector_reduce_add_v16i64(<16 x i64> %v) {
 ; GFX12-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xfffd
 ; GFX12-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v5, vcc_lo
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xfffd
 ; GFX12-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
@@ -3427,6 +3433,7 @@ define i64 @test_vector_reduce_add_v16i64(<16 x i64> %v) {
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v6
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, v3, v7, vcc_lo
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo

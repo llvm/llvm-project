@@ -18,10 +18,11 @@ def : Enum {
     Etor<"ALL", "Devices of all types">,
     Etor<"GPU", "GPU device type">,
     Etor<"CPU", "CPU device type">,
+    Etor<"Host", "Host device type">,
   ];
 }
 
-def : Enum {
+def DeviceInfo : Enum {
   let name = "ol_device_info_t";
   let desc = "Supported device info.";
   let is_typed = 1;
@@ -30,7 +31,8 @@ def : Enum {
     TaggedEtor<"PLATFORM", "ol_platform_handle_t", "the platform associated with the device">,
     TaggedEtor<"NAME", "char[]", "Device name">,
     TaggedEtor<"VENDOR", "char[]", "Device vendor">,
-    TaggedEtor<"DRIVER_VERSION", "char[]", "Driver version">
+    TaggedEtor<"DRIVER_VERSION", "char[]", "Driver version">,
+    TaggedEtor<"MAX_WORK_GROUP_SIZE", "ol_dimensions_t", "Maximum work group size in each dimension">,
   ];
 }
 

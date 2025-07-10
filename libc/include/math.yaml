@@ -8,6 +8,12 @@ types:
 enums: []
 objects: []
 functions:
+  - name: acos
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: double
   - name: acosf
     standards:
       - stdc
@@ -114,6 +120,13 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: atanf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: atanhf
     standards:
       - stdc
@@ -721,7 +734,7 @@ functions:
       - type: float128
       - type: float128
       - type: float128
-    guards: LIBC_TYPES_HAS_FLOAT128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: ffmal
     standards:
       - stdc

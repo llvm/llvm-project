@@ -127,8 +127,8 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::FADD,              T, Legal);
       setOperationAction(ISD::FSUB,              T, Legal);
       setOperationAction(ISD::FMUL,              T, Legal);
-      setOperationAction(ISD::FMINNUM,           T, Legal);
-      setOperationAction(ISD::FMAXNUM,           T, Legal);
+      setOperationAction(ISD::FMINIMUMNUM, T, Legal);
+      setOperationAction(ISD::FMAXIMUMNUM, T, Legal);
 
       setOperationAction(ISD::INSERT_SUBVECTOR,  T, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, T, Custom);
@@ -164,8 +164,8 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::FADD,           P, Custom);
       setOperationAction(ISD::FSUB,           P, Custom);
       setOperationAction(ISD::FMUL,           P, Custom);
-      setOperationAction(ISD::FMINNUM,        P, Custom);
-      setOperationAction(ISD::FMAXNUM,        P, Custom);
+      setOperationAction(ISD::FMINIMUMNUM, P, Custom);
+      setOperationAction(ISD::FMAXIMUMNUM, P, Custom);
       setOperationAction(ISD::SETCC,          P, Custom);
       setOperationAction(ISD::VSELECT,        P, Custom);
 
@@ -1687,28 +1687,27 @@ HexagonTargetLowering::LowerHvxConcatVectors(SDValue Op, SelectionDAG &DAG)
     // all operations are expected to be type-legalized, and i16 is not
     // a legal type. If any of the extracted elements is not of a valid
     // type, sign-extend it to a valid one.
-    for (unsigned i = 0, e = Elems.size(); i != e; ++i) {
-      SDValue V = Elems[i];
+    for (SDValue &V : Elems) {
       MVT Ty = ty(V);
       if (!isTypeLegal(Ty)) {
         MVT NTy = typeLegalize(Ty, DAG);
         if (V.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-          Elems[i] = DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, NTy,
-                                 DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, NTy,
-                                             V.getOperand(0), V.getOperand(1)),
-                                 DAG.getValueType(Ty));
+          V = DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, NTy,
+                          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, NTy,
+                                      V.getOperand(0), V.getOperand(1)),
+                          DAG.getValueType(Ty));
           continue;
         }
         // A few less complicated cases.
         switch (V.getOpcode()) {
           case ISD::Constant:
-            Elems[i] = DAG.getSExtOrTrunc(V, dl, NTy);
+            V = DAG.getSExtOrTrunc(V, dl, NTy);
             break;
           case ISD::UNDEF:
-            Elems[i] = DAG.getUNDEF(NTy);
+            V = DAG.getUNDEF(NTy);
             break;
           case ISD::TRUNCATE:
-            Elems[i] = V.getOperand(0);
+            V = V.getOperand(0);
             break;
           default:
             llvm_unreachable("Unexpected vector element");
@@ -3172,8 +3171,8 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
       case ISD::FADD:
       case ISD::FSUB:
       case ISD::FMUL:
-      case ISD::FMINNUM:
-      case ISD::FMAXNUM:
+      case ISD::FMINIMUMNUM:
+      case ISD::FMAXIMUMNUM:
       case ISD::MULHS:
       case ISD::MULHU:
       case ISD::AND:

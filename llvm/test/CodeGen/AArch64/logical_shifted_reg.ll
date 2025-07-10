@@ -257,9 +257,8 @@ define void @flag_setting() {
 ; CHECK-NEXT:    tst x9, x10, lsl #63
 ; CHECK-NEXT:    b.lt .LBB2_4
 ; CHECK-NEXT:  // %bb.2: // %test3
-; CHECK-NEXT:    and x10, x9, x10, asr #12
-; CHECK-NEXT:    cmp x10, #1
-; CHECK-NEXT:    b.ge .LBB2_4
+; CHECK-NEXT:    tst x9, x10, asr #12
+; CHECK-NEXT:    b.gt .LBB2_4
 ; CHECK-NEXT:  // %bb.3: // %other_exit
 ; CHECK-NEXT:    str x9, [x8]
 ; CHECK-NEXT:  .LBB2_4: // %common.ret

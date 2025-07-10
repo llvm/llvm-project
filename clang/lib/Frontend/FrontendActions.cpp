@@ -30,7 +30,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
@@ -364,7 +363,7 @@ void VerifyPCHAction::ExecuteAction() {
       DisableValidationForModuleKind::None,
       /*AllowASTWithCompilerErrors*/ false,
       /*AllowConfigurationMismatch*/ true,
-      /*ValidateSystemInputs*/ true));
+      /*ValidateSystemInputs*/ true, /*ForceValidateUserInputs*/ true));
 
   Reader->ReadAST(getCurrentFile(),
                   Preamble ? serialization::MK_Preamble
@@ -644,16 +643,20 @@ namespace {
     bool ReadLanguageOptions(const LangOptions &LangOpts,
                              StringRef ModuleFilename, bool Complain,
                              bool AllowCompatibleDifferences) override {
+      // FIXME: Replace with C++20 `using enum LangOptions::CompatibilityKind`.
+      using CK = LangOptions::CompatibilityKind;
+
       Out.indent(2) << "Language options:\n";
-#define LANGOPT(Name, Bits, Default, Description) \
+#define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
+    if constexpr (CK::Compatibility != CK::Benign)                             \
       DUMP_BOOLEAN(LangOpts.Name, Description);
-#define ENUM_LANGOPT(Name, Type, Bits, Default, Description) \
-      Out.indent(4) << Description << ": "                   \
+#define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
+    if constexpr (CK::Compatibility != CK::Benign)                             \
+      Out.indent(4) << Description << ": "                                     \
                     << static_cast<unsigned>(LangOpts.get##Name()) << "\n";
-#define VALUE_LANGOPT(Name, Bits, Default, Description) \
+#define VALUE_LANGOPT(Name, Bits, Default, Compatibility, Description)         \
+    if constexpr (CK::Compatibility != CK::Benign)                             \
       Out.indent(4) << Description << ": " << LangOpts.Name << "\n";
-#define BENIGN_LANGOPT(Name, Bits, Default, Description)
-#define BENIGN_ENUM_LANGOPT(Name, Type, Bits, Default, Description)
 #include "clang/Basic/LangOptions.def"
 
       if (!LangOpts.ModuleFeatures.empty()) {
@@ -685,21 +688,21 @@ namespace {
       return false;
     }
 
-    bool ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
+    bool ReadDiagnosticOptions(DiagnosticOptions &DiagOpts,
                                StringRef ModuleFilename,
                                bool Complain) override {
       Out.indent(2) << "Diagnostic options:\n";
-#define DIAGOPT(Name, Bits, Default) DUMP_BOOLEAN(DiagOpts->Name, #Name);
-#define ENUM_DIAGOPT(Name, Type, Bits, Default) \
-      Out.indent(4) << #Name << ": " << DiagOpts->get##Name() << "\n";
-#define VALUE_DIAGOPT(Name, Bits, Default) \
-      Out.indent(4) << #Name << ": " << DiagOpts->Name << "\n";
+#define DIAGOPT(Name, Bits, Default) DUMP_BOOLEAN(DiagOpts.Name, #Name);
+#define ENUM_DIAGOPT(Name, Type, Bits, Default)                              \
+    Out.indent(4) << #Name << ": " << DiagOpts.get##Name() << "\n";
+#define VALUE_DIAGOPT(Name, Bits, Default)                                   \
+    Out.indent(4) << #Name << ": " << DiagOpts.Name << "\n";
 #include "clang/Basic/DiagnosticOptions.def"
 
       Out.indent(4) << "Diagnostic flags:\n";
-      for (const std::string &Warning : DiagOpts->Warnings)
+      for (const std::string &Warning : DiagOpts.Warnings)
         Out.indent(6) << "-W" << Warning << "\n";
-      for (const std::string &Remark : DiagOpts->Remarks)
+      for (const std::string &Remark : DiagOpts.Remarks)
         Out.indent(6) << "-R" << Remark << "\n";
 
       return false;
