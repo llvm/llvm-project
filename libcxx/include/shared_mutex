@@ -129,6 +129,7 @@ template <class Mutex>
 
 #  if _LIBCPP_HAS_THREADS
 
+#    include <__assert>
 #    include <__chrono/duration.h>
 #    include <__chrono/steady_clock.h>
 #    include <__chrono/time_point.h>
@@ -138,6 +139,7 @@ template <class Mutex>
 #    include <__mutex/tag_types.h>
 #    include <__mutex/unique_lock.h>
 #    include <__system_error/throw_system_error.h>
+#    include <__thread/support.h>
 #    include <__utility/swap.h>
 #    include <cerrno>
 #    include <version>
@@ -152,6 +154,33 @@ _LIBCPP_PUSH_MACROS
 #      endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+#      if _LIBCPP_HAS_NATIVE_RW_MUTEX
+class __native_shared_mutex {
+  __libcpp_rw_mutex_t __mut_;
+
+public:
+  _LIBCPP_HIDE_FROM_ABI __native_shared_mutex() : __mut_(_LIBCPP_RW_MUTEX_INITIALIZER) {}
+  _LIBCPP_HIDE_FROM_ABI ~__native_shared_mutex() {
+    int __ec = std::__libcpp_rw_mutex_destroy(&__mut_);
+    (void)__ec;
+    _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(__ec == 0, "destroying a read/write mutex failed");
+  }
+
+  __native_shared_mutex(const __native_shared_mutex&)            = delete;
+  __native_shared_mutex& operator=(const __native_shared_mutex&) = delete;
+
+  // Exclusive ownership
+  _LIBCPP_HIDE_FROM_ABI void lock();
+  _LIBCPP_HIDE_FROM_ABI bool try_lock();
+  _LIBCPP_HIDE_FROM_ABI void unlock();
+
+  // Shared ownership
+  _LIBCPP_HIDE_FROM_ABI void lock_shared();
+  _LIBCPP_HIDE_FROM_ABI bool try_lock_shared();
+  _LIBCPP_HIDE_FROM_ABI void unlock_shared();
+};
+#      endif // _LIBCPP_HAS_NATIVE_RW_MUTEX
 
 struct __dual_cv_shared_mutex {
   mutex __mut_;
@@ -204,7 +233,11 @@ struct _LIBCPP_EXPORTED_FROM_ABI __shared_mutex_base {
 
 #      if _LIBCPP_STD_VER >= 17
 class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_CAPABILITY("shared_mutex") shared_mutex {
+#        if defined(_LIBCPP_ABI_USE_NATIVE_SHARED_MUTEX) && _LIBCPP_HAS_NATIVE_RW_MUTEX
+  __native_shared_mutex __base_;
+#        else
   __shared_mutex_base __base_;
+#        endif
 
 public:
   _LIBCPP_HIDE_FROM_ABI shared_mutex() : __base_() {}

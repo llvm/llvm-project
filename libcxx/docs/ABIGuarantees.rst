@@ -80,6 +80,11 @@ flag removes that artificial padding.
 ``char_traits<char_type>::eq_int_type()`` cannot distinguish between ``WEOF`` and ``WCHAR_MAX``. This flag changes
 ``basic_ios`` to instead track whether the fill value has been initialized using a separate boolean.
 
+``_LIBCPP_ABI_USE_NATIVE_SHARED_MUTEX``
+---------------------------------------
+This macro switches ``std::shared_mutex`` to use a native read/write lock if one is provided by the system. This is an
+ABI break because it changes the representation of ``std::shared_mutex`` in a backwards incompatible way.
+
 
 Linking TUs which have been compiled against different releases of libc++
 =========================================================================

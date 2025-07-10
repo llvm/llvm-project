@@ -83,6 +83,45 @@ _LIBCPP_HIDE_FROM_ABI void __dual_cv_shared_mutex::unlock_shared() {
   }
 }
 
+// Native implementation of shared_mutex
+//
+// Similarly, those are not part of the dylib's ABI but they are defined here because they
+// are only used from within the dylib.
+#if _LIBCPP_HAS_NATIVE_RW_MUTEX
+_LIBCPP_HIDE_FROM_ABI void __native_shared_mutex::lock() {
+  int __ec = std::__libcpp_rw_mutex_lock(&__mut_);
+  if (__ec != 0)
+    std::__throw_system_error(__ec, "shared_mutex::lock failed");
+}
+
+_LIBCPP_HIDE_FROM_ABI bool __native_shared_mutex::try_lock() { return std::__libcpp_rw_mutex_trylock(&__mut_); }
+
+_LIBCPP_HIDE_FROM_ABI void __native_shared_mutex::unlock() {
+  int __ec = std::__libcpp_rw_mutex_unlock(&__mut_);
+  (void)__ec;
+  _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(
+      __ec == 0, "call to shared_mutex::unlock failed. A possible reason is that the mutex wasn't locked");
+}
+
+// Shared ownership
+_LIBCPP_HIDE_FROM_ABI void __native_shared_mutex::lock_shared() {
+  int __ec = std::__libcpp_rw_mutex_lock_shared(&__mut_);
+  if (__ec != 0)
+    std::__throw_system_error(__ec, "shared_mutex::lock_shared failed");
+}
+
+_LIBCPP_HIDE_FROM_ABI bool __native_shared_mutex::try_lock_shared() {
+  return std::__libcpp_rw_mutex_trylock_shared(&__mut_);
+}
+
+_LIBCPP_HIDE_FROM_ABI void __native_shared_mutex::unlock_shared() {
+  int __ec = std::__libcpp_rw_mutex_unlock(&__mut_);
+  (void)__ec;
+  _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(
+      __ec == 0, "call to shared_mutex::unlock_shared failed. A possible reason is that the mutex wasn't locked");
+}
+#endif // _LIBCPP_HAS_NATIVE_RW_MUTEX
+
 // Shared Mutex Base
 __shared_mutex_base::__shared_mutex_base() {}
 

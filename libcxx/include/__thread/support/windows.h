@@ -58,6 +58,11 @@ _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int __libcpp_mutex_u
 _LIBCPP_EXPORTED_FROM_ABI int __libcpp_mutex_destroy(__libcpp_mutex_t* __m);
 
 //
+// Shared mutex (TODO: Does Windows provide a native read/write mutex?)
+//
+#define _LIBCPP_HAS_NATIVE_RW_MUTEX 0
+
+//
 // Condition variable
 //
 typedef void* __libcpp_condvar_t;
