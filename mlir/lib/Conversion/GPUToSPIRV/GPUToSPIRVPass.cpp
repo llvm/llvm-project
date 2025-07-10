@@ -56,8 +56,7 @@ private:
 spirv::TargetEnvAttr
 GPUToSPIRVPass::lookupTargetEnvInTargets(gpu::GPUModuleOp moduleOp) {
   for (auto &targetAttr : moduleOp.getTargetsAttr())
-    if (auto spirvTargetEnvAttr =
-            llvm::dyn_cast<spirv::TargetEnvAttr>(targetAttr))
+    if (auto spirvTargetEnvAttr = dyn_cast<spirv::TargetEnvAttr>(targetAttr))
       return spirvTargetEnvAttr;
 
   return {};
@@ -105,7 +104,7 @@ void GPUToSPIRVPass::runOnOperation() {
   // TargetEnv attributes.
   for (Operation *gpuModule : gpuModules) {
     spirv::TargetEnvAttr targetAttr =
-        lookupTargetEnvOrDefault(llvm::cast<gpu::GPUModuleOp>(gpuModule));
+        lookupTargetEnvOrDefault(cast<gpu::GPUModuleOp>(gpuModule));
 
     // Map MemRef memory space to SPIR-V storage class first if requested.
     if (mapMemorySpace) {
