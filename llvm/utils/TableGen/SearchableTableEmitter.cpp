@@ -320,8 +320,9 @@ void SearchableTableEmitter::emitGenericEnum(const GenericEnum &Enum,
   emitIfdef((Twine("GET_") + Enum.PreprocessorGuard + "_DECL").str(), OS);
 
   OS << "enum " << Enum.Name << " {\n";
-  for (const auto &[_, Entry] : Enum.Entries.getArrayRef())
-    OS << "  " << Entry.Name << " = " << Entry.Value << ",\n";
+  for (const auto &[Name, Value] :
+       make_second_range(Enum.Entries.getArrayRef()))
+    OS << "  " << Name << " = " << Value << ",\n";
   OS << "};\n";
 
   OS << "#endif\n\n";
