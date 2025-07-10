@@ -1078,19 +1078,23 @@ static bool CheckFunctionConstraintsWithoutInstantiation(
   // template. We need the entire list, since the constraint is completely
   // uninstantiated at this point.
 
-  // getTemplateInstantiationArgs uses this instantiation context to find out
-  // template arguments for uninstantiated functions.
-  std::optional<Sema::InstantiatingTemplate> Inst(
-      std::in_place, SemaRef, PointOfInstantiation,
-      Sema::InstantiatingTemplate::ConstraintsCheck{}, Template, TemplateArgs,
-      PointOfInstantiation);
-  if (Inst->isInvalid())
-    return true;
-  MultiLevelTemplateArgumentList MLTAL = SemaRef.getTemplateInstantiationArgs(
-      /*D=*/FD, FD,
-      /*Final=*/false, /*Innermost=*/{}, /*RelativeToPrimary=*/true,
-      /*Pattern=*/nullptr, /*ForConstraintInstantiation=*/true);
-  Inst = std::nullopt;
+  MultiLevelTemplateArgumentList MLTAL;
+  {
+    // getTemplateInstantiationArgs uses this instantiation context to find out
+    // template arguments for uninstantiated functions.
+    // We don't want this RAII object to persist, because there would be
+    // otherwise duplicate diagnostic notes.
+    Sema::InstantiatingTemplate Inst(
+        SemaRef, PointOfInstantiation,
+        Sema::InstantiatingTemplate::ConstraintsCheck{}, Template, TemplateArgs,
+        PointOfInstantiation);
+    if (Inst.isInvalid())
+      return true;
+    MLTAL = SemaRef.getTemplateInstantiationArgs(
+        /*D=*/FD, FD,
+        /*Final=*/false, /*Innermost=*/{}, /*RelativeToPrimary=*/true,
+        /*Pattern=*/nullptr, /*ForConstraintInstantiation=*/true);
+  }
 
   Sema::ContextRAII SavedContext(SemaRef, FD);
   std::optional<Sema::CXXThisScopeRAII> ThisScope;
