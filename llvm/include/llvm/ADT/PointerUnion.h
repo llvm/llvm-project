@@ -286,19 +286,13 @@ struct PointerLikeTypeTraits<PointerUnion<PTs...>> {
 // Teach DenseMap how to use PointerUnions as keys.
 template <typename ...PTs> struct DenseMapInfo<PointerUnion<PTs...>> {
   using Union = PointerUnion<PTs...>;
-  using FirstTypeTraits = PointerLikeTypeTraits<
-      typename pointer_union_detail::GetFirstType<PTs...>::type>;
+  using FirstInfo =
+      DenseMapInfo<typename pointer_union_detail::GetFirstType<PTs...>::type>;
 
-  static inline Union getEmptyKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-1);
-    Val <<= FirstTypeTraits::NumLowBitsAvailable;
-    return FirstTypeTraits::getFromVoidPointer(reinterpret_cast<void *>(Val));
-  }
+  static inline Union getEmptyKey() { return Union(FirstInfo::getEmptyKey()); }
 
   static inline Union getTombstoneKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-2);
-    Val <<= FirstTypeTraits::NumLowBitsAvailable;
-    return FirstTypeTraits::getFromVoidPointer(reinterpret_cast<void *>(Val));
+    return Union(FirstInfo::getTombstoneKey());
   }
 
   static unsigned getHashValue(const Union &UnionVal) {

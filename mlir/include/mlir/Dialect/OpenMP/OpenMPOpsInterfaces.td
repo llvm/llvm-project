@@ -573,7 +573,7 @@ def LoopTransformationInterface : OpInterface<"LoopTransformationInterface"> {
     InterfaceMethod<
       /*description=*/[{
         Get the indices for the arguments that represent CanonicalLoopInfo
-        generatees, i.e. loops that created by this operation.
+        generatees, i.e. loops that are emitted by this operation.
       }],
       /*returnType=*/ "std::pair<unsigned, unsigned>",
       /*methodName=*/ "getGenerateesODSOperandIndexAndLength",
@@ -589,7 +589,7 @@ def LoopTransformationInterface : OpInterface<"LoopTransformationInterface"> {
       /*args=*/       (ins),
       /*methodBody=*/ "",
       /*defaultImpl=*/[{
-        return  $_op.getApplyeesODSOperandIndexAndLength().second;
+        return $_op.getApplyeesODSOperandIndexAndLength().second;
       }]
     >,
 
@@ -602,13 +602,13 @@ def LoopTransformationInterface : OpInterface<"LoopTransformationInterface"> {
       /*args=*/       (ins),
       /*methodBody=*/ "",
       /*defaultImpl=*/[{
-        return  $_op.getGenerateesODSOperandIndexAndLength().second;
+        return $_op.getGenerateesODSOperandIndexAndLength().second;
       }]
     >,
 
     InterfaceMethod<
       /*description=*/[{
-        Return whether the provided operand is a generatee of this operation.
+        Return whether the provided operand is an applyee of this operation.
       }],
       /*returnType=*/ "unsigned",
       /*methodName=*/ "isApplyee",

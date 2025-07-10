@@ -2256,22 +2256,6 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     return Dependence::Backward;
   }
 
-  // Positive distance bigger than max vectorization factor.
-  // FIXME: Should use max factor instead of max distance in bytes, which could
-  // not handle different types.
-  // E.g. Assume one char is 1 byte in memory and one int is 4 bytes.
-  //      void foo (int *A, char *B) {
-  //        for (unsigned i = 0; i < 1024; i++) {
-  //          A[i+2] = A[i] + 1;
-  //          B[i+2] = B[i] + 1;
-  //        }
-  //      }
-  //
-  // This case is currently unsafe according to the max safe distance. If we
-  // analyze the two accesses on array B, the max safe dependence distance
-  // is 2. Then we analyze the accesses on array A, the minimum distance needed
-  // is 8, which is less than 2 and forbidden vectorization, But actually
-  // both A and B could be vectorized by 2 iterations.
   MinDepDistBytes =
       std::min(static_cast<uint64_t>(MinDistance), MinDepDistBytes);
 

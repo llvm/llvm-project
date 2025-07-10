@@ -1196,6 +1196,8 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
   if (!CheckDynamicMemoryAllocation(S, OpPC))
     return false;
 
+  DynamicAllocator &Allocator = S.getAllocator();
+
   const Expr *Source = nullptr;
   const Block *BlockToDelete = nullptr;
   {
@@ -1211,6 +1213,21 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
     QualType InitialType = Ptr.getType();
     while (Ptr.isBaseClass())
       Ptr = Ptr.getBase();
+
+    Source = Ptr.getDeclDesc()->asExpr();
+    BlockToDelete = Ptr.block();
+
+    // Check that new[]/delete[] or new/delete were used, not a mixture.
+    const Descriptor *BlockDesc = BlockToDelete->getDescriptor();
+    if (std::optional<DynamicAllocator::Form> AllocForm =
+            Allocator.getAllocationForm(Source)) {
+      DynamicAllocator::Form DeleteForm =
+          DeleteIsArrayForm ? DynamicAllocator::Form::Array
+                            : DynamicAllocator::Form::NonArray;
+      if (!CheckNewDeleteForms(S, OpPC, *AllocForm, DeleteForm, BlockDesc,
+                               Source))
+        return false;
+    }
 
     // For the non-array case, the types must match if the static type
     // does not have a virtual destructor.
@@ -1229,9 +1246,6 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
           << Ptr.toDiagnosticString(S.getASTContext()) << Ptr.isOnePastEnd();
       return false;
     }
-
-    Source = Ptr.getDeclDesc()->asExpr();
-    BlockToDelete = Ptr.block();
 
     if (!CheckDeleteSource(S, OpPC, Source, Ptr))
       return false;
@@ -1266,11 +1280,6 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
   if (!RunDestructors(S, OpPC, BlockToDelete))
     return false;
 
-  DynamicAllocator &Allocator = S.getAllocator();
-  const Descriptor *BlockDesc = BlockToDelete->getDescriptor();
-  std::optional<DynamicAllocator::Form> AllocForm =
-      Allocator.getAllocationForm(Source);
-
   if (!Allocator.deallocate(Source, BlockToDelete, S)) {
     // Nothing has been deallocated, this must be a double-delete.
     const SourceInfo &Loc = S.Current->getSource(OpPC);
@@ -1278,12 +1287,7 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
     return false;
   }
 
-  assert(AllocForm);
-  DynamicAllocator::Form DeleteForm = DeleteIsArrayForm
-                                          ? DynamicAllocator::Form::Array
-                                          : DynamicAllocator::Form::NonArray;
-  return CheckNewDeleteForms(S, OpPC, *AllocForm, DeleteForm, BlockDesc,
-                             Source);
+  return true;
 }
 
 void diagnoseEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED,

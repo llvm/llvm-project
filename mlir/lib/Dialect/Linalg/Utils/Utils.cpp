@@ -694,7 +694,7 @@ computeSliceParameters(OpBuilder &builder, Location loc, Value valueToTile,
     int64_t shapeSize = shape[r];
     std::optional<int64_t> sizeCst = getConstantIntValue(size);
     auto hasTileSizeOne = sizeCst == 1;
-    auto dividesEvenly = sizeCst && !ShapedType::isDynamic(shapeSize) &&
+    auto dividesEvenly = sizeCst && ShapedType::isStatic(shapeSize) &&
                          ((shapeSize % *sizeCst) == 0);
     if (!hasTileSizeOne && !dividesEvenly) {
       LLVM_DEBUG(llvm::dbgs() << "makeTiledShape: shapeSize=" << shapeSize

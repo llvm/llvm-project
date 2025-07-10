@@ -1107,7 +1107,7 @@ Type ContractionOp::getExpectedMaskType() {
         rhsType.getScalableDims()[dimIdx];
   }
 
-  assert(!ShapedType::isDynamicShape(maskShape) &&
+  assert(ShapedType::isStaticShape(maskShape) &&
          "Mask shape couldn't be computed");
 
   return VectorType::get(maskShape,
@@ -2061,7 +2061,7 @@ static Value extractInsertFoldConstantOp(OpType op, AdaptorType adaptor,
   // `opChange` is a flag. If it is true, it means to update `op` in place.
   bool opChange = false;
   for (unsigned i = 0, e = staticPosition.size(); i < e; ++i) {
-    if (!ShapedType::isDynamic(staticPosition[i]))
+    if (ShapedType::isStatic(staticPosition[i]))
       continue;
     Attribute positionAttr = dynamicPositionAttr[index];
     Value position = dynamicPosition[index++];
@@ -3334,7 +3334,6 @@ public:
     return success();
   }
 };
-
 } // namespace
 
 static Attribute
@@ -3387,12 +3386,26 @@ foldDenseElementsAttrDestInsertOp(InsertOp insertOp, Attribute srcAttr,
   return newAttr;
 }
 
+/// Folder to replace the `dest` operand of the insert op with the root dest of
+/// the insert op use chain.
+static Value foldInsertUseChain(InsertOp insertOp) {
+  auto destInsert = insertOp.getDest().getDefiningOp<InsertOp>();
+  if (!destInsert)
+    return {};
+
+  if (insertOp.getMixedPosition() != destInsert.getMixedPosition())
+    return {};
+
+  insertOp.setOperand(1, destInsert.getDest());
+  return insertOp.getResult();
+}
+
 void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
   results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat>(context);
 }
 
-OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
+OpFoldResult InsertOp::fold(FoldAdaptor adaptor) {
   // Do not create constants with more than `vectorSizeFoldThreashold` elements,
   // unless the source vector constant has a single use.
   constexpr int64_t vectorSizeFoldThreshold = 256;
@@ -3407,6 +3420,8 @@ OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
   SmallVector<Value> operands = {getValueToStore(), getDest()};
   auto inplaceFolded = extractInsertFoldConstantOp(*this, adaptor, operands);
 
+  if (auto res = foldInsertUseChain(*this))
+    return res;
   if (auto res = foldPoisonIndexInsertExtractOp(
           getContext(), adaptor.getStaticPosition(), kPoisonIndex))
     return res;
