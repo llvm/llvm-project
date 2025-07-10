@@ -564,7 +564,8 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
       Changed |= lowerObjCCall(F, RTLIB::objc_storeWeak);
       break;
     case Intrinsic::objc_unsafeClaimAutoreleasedReturnValue:
-      Changed |= lowerObjCCall(F, RTLIB::objc_unsafeClaimAutoreleasedReturnValue);
+      Changed |=
+          lowerObjCCall(F, RTLIB::objc_unsafeClaimAutoreleasedReturnValue);
       break;
     case Intrinsic::objc_retainedObject:
       Changed |= lowerObjCCall(F, RTLIB::objc_retainedObject);
