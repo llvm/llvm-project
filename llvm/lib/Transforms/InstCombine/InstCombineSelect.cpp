@@ -920,6 +920,12 @@ static Instruction *foldSelectZeroOrFixedOp(SelectInst &SI,
              match(FalseVal, m_SRem(m_Specific(X), m_Value(Y))) ||
              match(FalseVal, m_URem(m_Specific(X), m_Value(Y)))) {
     FreezeY = false;
+  } else if ((match(FalseVal, m_Shl(m_Specific(X), m_Value(Y))) ||
+              match(FalseVal, m_AShr(m_Specific(X), m_Value(Y))) ||
+              match(FalseVal, m_LShr(m_Specific(X), m_Value(Y)))) &&
+             !canCreateUndefOrPoison(dyn_cast<Operator>(FalseVal)) &&
+             isGuaranteedNotToBePoison(Y)) {
+    FreezeY = false;
   } else {
     return nullptr;
   }
