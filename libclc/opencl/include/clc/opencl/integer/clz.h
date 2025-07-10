@@ -6,9 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_FUNCTION clz
+#ifndef __CLC_OPENCL_INTEGER_CLZ_H__
+#define __CLC_OPENCL_INTEGER_CLZ_H__
+
+#include <clc/opencl/opencl-base.h>
+
+#define FUNCTION clz
 #define __CLC_BODY <clc/shared/unary_decl.inc>
 
 #include <clc/integer/gentype.inc>
 
-#undef __CLC_FUNCTION
+#undef FUNCTION
+
+#endif // __CLC_OPENCL_INTEGER_CLZ_H__
