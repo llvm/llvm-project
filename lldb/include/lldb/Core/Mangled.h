@@ -39,6 +39,11 @@ public:
     ePreferDemangledWithoutArguments
   };
 
+  enum NameFormatPreference {
+    eCompactName,
+    eFullName,
+  };
+
   enum ManglingScheme {
     eManglingSchemeNone = 0,
     eManglingSchemeMSVC,
@@ -125,7 +130,9 @@ public:
   ///
   /// \return
   ///     A const reference to the demangled name string object.
-  ConstString GetDemangledName(const SymbolContext *sc = nullptr) const;
+  ConstString
+  GetDemangledName(const SymbolContext *sc = nullptr,
+                   NameFormatPreference preference = eFullName) const;
 
   /// Display demangled name get accessor.
   ///
@@ -291,7 +298,9 @@ private:
   /// demangled name (if any). If \c force is \c true (or the mangled name
   /// on this object was not previously demangled), demangle and cache the
   /// name.
-  ConstString GetDemangledNameImpl(bool force, const SymbolContext *sc = nullptr) const;
+  ConstString
+  GetDemangledNameImpl(bool force, const SymbolContext *sc = nullptr,
+                       NameFormatPreference preference = eFullName) const;
 
   /// The mangled version of the name.
   ConstString m_mangled;
