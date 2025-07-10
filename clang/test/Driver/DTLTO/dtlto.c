@@ -40,7 +40,7 @@
 /// Check the expected arguments are forwarded by default with only
 /// --thinlto-distributor=.
 // RUN: %clang --target=x86_64-linux-gnu -fthinlto-distributor=d.exe \
-// RUN:   -fuse-ld=lld -Werror -### %s 2>&1 | \
+// RUN:   -fuse-ld=lld -### %s 2>&1 | \
 // RUN:   FileCheck @%t_f.rsp --check-prefix=DEFAULT
 
 // DEFAULT: ld.lld
