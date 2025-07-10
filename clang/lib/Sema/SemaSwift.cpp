@@ -72,6 +72,15 @@ static bool isValidSwiftErrorResultType(QualType Ty) {
   return isValidSwiftContextType(Ty);
 }
 
+static bool isValidSwiftContextName(StringRef ContextName) {
+  // ContextName might be qualified, e.g. 'MyNamespace.MyStruct'.
+  SmallVector<StringRef, 1> ContextNameComponents;
+  ContextName.split(ContextNameComponents, '.');
+  return all_of(ContextNameComponents, [&](StringRef Component) {
+    return isValidAsciiIdentifier(Component);
+  });
+}
+
 void SemaSwift::handleAttrAttr(Decl *D, const ParsedAttr &AL) {
   if (AL.isInvalid() || AL.isUsedAsTypeAttr())
     return;
@@ -356,11 +365,11 @@ static bool validateSwiftFunctionName(Sema &S, const ParsedAttr &AL,
 
   // Split at the first '.', if it exists, which separates the context name
   // from the base name.
-  std::tie(ContextName, BaseName) = BaseName.split('.');
+  std::tie(ContextName, BaseName) = BaseName.rsplit('.');
   if (BaseName.empty()) {
     BaseName = ContextName;
     ContextName = StringRef();
-  } else if (ContextName.empty() || !isValidAsciiIdentifier(ContextName)) {
+  } else if (ContextName.empty() || !isValidSwiftContextName(ContextName)) {
     S.Diag(Loc, diag::warn_attr_swift_name_invalid_identifier)
         << AL << /*context*/ 1;
     return false;
@@ -584,11 +593,11 @@ bool SemaSwift::DiagnoseName(Decl *D, StringRef Name, SourceLocation Loc,
              !IsAsync) {
     StringRef ContextName, BaseName;
 
-    std::tie(ContextName, BaseName) = Name.split('.');
+    std::tie(ContextName, BaseName) = Name.rsplit('.');
     if (BaseName.empty()) {
       BaseName = ContextName;
       ContextName = StringRef();
-    } else if (!isValidAsciiIdentifier(ContextName)) {
+    } else if (!isValidSwiftContextName(ContextName)) {
       Diag(Loc, diag::warn_attr_swift_name_invalid_identifier)
           << AL << /*context*/ 1;
       return false;

@@ -60,6 +60,7 @@ public:
     SuitableAlign = 128;
     WCharType = SignedInt;
     WIntType = UnsignedInt;
+    BitIntMaxAlign = 128;
   }
 
   bool setCPU(const std::string &Name) override {

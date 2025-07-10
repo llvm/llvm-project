@@ -39,6 +39,10 @@ static std::string writeInfo(Info *I) {
     return writeInfo(*static_cast<TypedefInfo *>(I));
   case InfoType::IT_concept:
     return writeInfo(*static_cast<ConceptInfo *>(I));
+  case InfoType::IT_variable:
+    return writeInfo(*static_cast<VarInfo *>(I));
+  case InfoType::IT_friend:
+    return writeInfo(*static_cast<FriendInfo *>(I));
   case InfoType::IT_default:
     return "";
   }

@@ -2099,21 +2099,19 @@ define <4 x float> @uitofp_4i64_to_4f32_undef(<2 x i64> %a) {
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
 ; SSE41-NEXT:    psrlq $1, %xmm2
 ; SSE41-NEXT:    por %xmm1, %xmm2
-; SSE41-NEXT:    movdqa %xmm0, %xmm1
-; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm1
-; SSE41-NEXT:    pextrq $1, %xmm1, %rax
+; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,3,2,3]
+; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm0
+; SSE41-NEXT:    pextrq $1, %xmm0, %rax
+; SSE41-NEXT:    cvtsi2ss %rax, %xmm3
+; SSE41-NEXT:    movq %xmm0, %rax
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    cvtsi2ss %rax, %xmm2
-; SSE41-NEXT:    movq %xmm1, %rax
-; SSE41-NEXT:    xorps %xmm1, %xmm1
-; SSE41-NEXT:    cvtsi2ss %rax, %xmm1
-; SSE41-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],zero,zero
-; SSE41-NEXT:    movaps %xmm1, %xmm2
-; SSE41-NEXT:    addps %xmm1, %xmm2
-; SSE41-NEXT:    xorps %xmm3, %xmm3
-; SSE41-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm3[2,3]
-; SSE41-NEXT:    blendvps %xmm0, %xmm2, %xmm1
-; SSE41-NEXT:    movaps %xmm1, %xmm0
+; SSE41-NEXT:    insertps {{.*#+}} xmm2 = xmm2[0],xmm3[0],zero,zero
+; SSE41-NEXT:    movaps %xmm2, %xmm3
+; SSE41-NEXT:    addps %xmm2, %xmm3
+; SSE41-NEXT:    movdqa %xmm1, %xmm0
+; SSE41-NEXT:    blendvps %xmm0, %xmm3, %xmm2
+; SSE41-NEXT:    movaps %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: uitofp_4i64_to_4f32_undef:

@@ -247,7 +247,7 @@ class Builder:
     def _getDebugInfoArgs(self, debug_info):
         if debug_info is None:
             return []
-        
+
         debug_options = debug_info if isinstance(debug_info, list) else [debug_info]
         option_flags = {
             "dwarf": {"MAKE_DSYM": "NO"},
@@ -256,15 +256,15 @@ class Builder:
             "debug_names": {"MAKE_DEBUG_NAMES": "YES"},
             "dwp": {"MAKE_DSYM": "NO", "MAKE_DWP": "YES"},
         }
-        
+
         # Collect all flags, with later options overriding earlier ones
         flags = {}
-        
+
         for option in debug_options:
             if not option or option not in option_flags:
-                return None # Invalid options
+                return None  # Invalid options
             flags.update(option_flags[option])
-        
+
         return [f"{key}={value}" for key, value in flags.items()]
 
     def getBuildCommand(

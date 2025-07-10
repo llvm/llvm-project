@@ -810,8 +810,7 @@ public:
   RewritePatternSet &add(ConstructorArg &&arg, ConstructorArgs &&...args) {
     // The following expands a call to emplace_back for each of the pattern
     // types 'Ts'.
-    (addImpl<Ts>(/*debugLabels=*/std::nullopt,
-                 std::forward<ConstructorArg>(arg),
+    (addImpl<Ts>(/*debugLabels=*/{}, std::forward<ConstructorArg>(arg),
                  std::forward<ConstructorArgs>(args)...),
      ...);
     return *this;
@@ -894,7 +893,7 @@ public:
   RewritePatternSet &insert(ConstructorArg &&arg, ConstructorArgs &&...args) {
     // The following expands a call to emplace_back for each of the pattern
     // types 'Ts'.
-    (addImpl<Ts>(/*debugLabels=*/std::nullopt, arg, args...), ...);
+    (addImpl<Ts>(/*debugLabels=*/{}, arg, args...), ...);
     return *this;
   }
 
