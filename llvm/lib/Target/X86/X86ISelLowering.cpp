@@ -46047,23 +46047,22 @@ static SDValue createVPDPBUSD(SelectionDAG &DAG, SDValue LHS, SDValue RHS,
                           DpBuilder, false);
 }
 
-// Given two zexts of <k x i8> to <k x i32>, create a PSADBW of the inputs
-// to these zexts.
-static SDValue createPSADBW(SelectionDAG &DAG, const SDValue &Zext0,
-                            const SDValue &Zext1, const SDLoc &DL,
-                            const X86Subtarget &Subtarget) {
+// Create a PSADBW given two sources representable as zexts of vXi8.
+static SDValue createPSADBW(SelectionDAG &DAG, SDValue N0, SDValue N1,
+                            const SDLoc &DL, const X86Subtarget &Subtarget) {
   // Find the appropriate width for the PSADBW.
-  EVT InVT = Zext0.getOperand(0).getValueType();
-  unsigned RegSize = std::max(128u, (unsigned)InVT.getSizeInBits());
+  EVT DstVT = N0.getValueType();
+  EVT SrcVT = EVT::getVectorVT(*DAG.getContext(), MVT::i8,
+                               DstVT.getVectorElementCount());
+  unsigned RegSize = std::max(128u, (unsigned)SrcVT.getSizeInBits());
 
-  // "Zero-extend" the i8 vectors. This is not a per-element zext, rather we
-  // fill in the missing vector elements with 0.
-  unsigned NumConcat = RegSize / InVT.getSizeInBits();
-  SmallVector<SDValue, 16> Ops(NumConcat, DAG.getConstant(0, DL, InVT));
-  Ops[0] = Zext0.getOperand(0);
+  // Widen the vXi8 vectors, padding with zero vector elements.
+  unsigned NumConcat = RegSize / SrcVT.getSizeInBits();
+  SmallVector<SDValue, 16> Ops(NumConcat, DAG.getConstant(0, DL, SrcVT));
+  Ops[0] = DAG.getZExtOrTrunc(N0, DL, SrcVT);
   MVT ExtendedVT = MVT::getVectorVT(MVT::i8, RegSize / 8);
   SDValue SadOp0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, ExtendedVT, Ops);
-  Ops[0] = Zext1.getOperand(0);
+  Ops[0] = DAG.getZExtOrTrunc(N1, DL, SrcVT);
   SDValue SadOp1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, ExtendedVT, Ops);
 
   // Actually build the SAD, split as 128/256/512 bits for SSE/AVX2/AVX512BW.
@@ -46073,7 +46072,7 @@ static SDValue createPSADBW(SelectionDAG &DAG, const SDValue &Zext0,
     return DAG.getNode(X86ISD::PSADBW, DL, VT, Ops);
   };
   MVT SadVT = MVT::getVectorVT(MVT::i64, RegSize / 64);
-  return SplitOpsAndApply(DAG, Subtarget, DL, SadVT, { SadOp0, SadOp1 },
+  return SplitOpsAndApply(DAG, Subtarget, DL, SadVT, {SadOp0, SadOp1},
                           PSADBWBuilder);
 }
 
@@ -46372,9 +46371,8 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
     return SDValue();
 
   EVT ExtractVT = Extract->getValueType(0);
-  // Verify the type we're extracting is either i32 or i64.
-  // FIXME: Could support other types, but this is what we have coverage for.
-  if (ExtractVT != MVT::i32 && ExtractVT != MVT::i64)
+  if (ExtractVT != MVT::i8 && ExtractVT != MVT::i16 && ExtractVT != MVT::i32 &&
+      ExtractVT != MVT::i64)
     return SDValue();
 
   EVT VT = Extract->getOperand(0).getValueType();
@@ -46399,20 +46397,27 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
       Root.getOpcode() == ISD::ANY_EXTEND)
     Root = Root.getOperand(0);
 
-  // Check whether we have an abdu pattern.
-  // TODO: Add handling for ISD::ABDU.
-  SDValue Zext0, Zext1;
+  // Check whether we have an vXi8 abdu pattern.
+  // TODO: Just match ISD::ABDU once the DAG is topological sorted.
+  SDValue Src0, Src1;
   if (!sd_match(
           Root,
-          m_Abs(m_Sub(m_AllOf(m_Value(Zext0),
-                              m_ZExt(m_SpecificVectorElementVT(MVT::i8))),
-                      m_AllOf(m_Value(Zext1),
-                              m_ZExt(m_SpecificVectorElementVT(MVT::i8)))))))
+          m_AnyOf(
+              m_SpecificVectorElementVT(
+                  MVT::i8, m_c_BinOp(ISD::ABDU, m_Value(Src0), m_Value(Src1))),
+              m_SpecificVectorElementVT(
+                  MVT::i8, m_Sub(m_UMax(m_Value(Src0), m_Value(Src1)),
+                                 m_UMin(m_Deferred(Src0), m_Deferred(Src1)))),
+              m_Abs(
+                  m_Sub(m_AllOf(m_Value(Src0),
+                                m_ZExt(m_SpecificVectorElementVT(MVT::i8))),
+                        m_AllOf(m_Value(Src1),
+                                m_ZExt(m_SpecificVectorElementVT(MVT::i8))))))))
     return SDValue();
 
   // Create the SAD instruction.
   SDLoc DL(Extract);
-  SDValue SAD = createPSADBW(DAG, Zext0, Zext1, DL, Subtarget);
+  SDValue SAD = createPSADBW(DAG, Src0, Src1, DL, Subtarget);
 
   // If the original vector was wider than 8 elements, sum over the results
   // in the SAD vector.
