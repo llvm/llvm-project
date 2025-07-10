@@ -181,6 +181,12 @@ static cl::opt<bool> AllowRecursiveContexts(
     "memprof-allow-recursive-contexts", cl::init(true), cl::Hidden,
     cl::desc("Allow cloning of contexts having recursive cycles"));
 
+// Set the minimum absolute count threshold for inlining of indirect calls
+// promoted during cloning.
+static cl::opt<unsigned> ICPInlineMinimumCountThreshold(
+    "memprof-icp-inline-minimum-count-threshold", cl::init(0), cl::Hidden,
+    cl::desc("Minimum absolute count for promoted target to be inlinable"));
+
 namespace llvm {
 cl::opt<bool> EnableMemProfContextDisambiguation(
     "enable-memprof-context-disambiguation", cl::init(false), cl::Hidden,
@@ -5573,6 +5579,9 @@ void MemProfContextDisambiguation::performICP(
                                  .getCallee());
         }
         DirectCall.setCalledFunction(TargetToUse);
+        if (ICPInlineMinimumCountThreshold &&
+            Candidate.Count < ICPInlineMinimumCountThreshold)
+          DirectCall.setIsNoInline();
         ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofCall", CBClone)
                  << ore::NV("Call", CBClone) << " in clone "
                  << ore::NV("Caller", CBClone->getFunction())
