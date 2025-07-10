@@ -935,6 +935,7 @@ Bug Fixes to C++ Support
 - Improved handling of variables with ``consteval`` constructors, to
   consistently treat the initializer as manifestly constant-evaluated.
   (#GH135281)
+- Fix a crash in the presence of invalid base classes. (#GH147186)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
