@@ -87,28 +87,13 @@ struct ConvertCopy final : public OpConversionPattern<memref::CopyOp> {
   }
 };
 
-static Type convertGlobalMemrefTypeToEmitc(MemRefType type,
-                                           const TypeConverter &typeConverter) {
-  Type elementType = typeConverter.convertType(type.getElementType());
-  Type arrayTy = elementType;
-  // Shape has the outermost dim at index 0, so need to walk it backwards
-  auto shape = type.getShape();
-  if (shape.empty()) {
-    arrayTy = emitc::ArrayType::get({1}, arrayTy);
-  } else {
-    // For non-zero dimensions, use the original shape
-    arrayTy = emitc::ArrayType::get(shape, arrayTy);
-  }
-  return arrayTy;
-}
-
 struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(memref::GlobalOp op, OpAdaptor operands,
                   ConversionPatternRewriter &rewriter) const override {
-
+    auto type = op.getType();
     if (!op.getType().hasStaticShape()) {
       return rewriter.notifyMatchFailure(
           op.getLoc(), "cannot transform global with dynamic shape");
@@ -120,8 +105,23 @@ struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
           op.getLoc(), "global variable with alignment requirement is "
                        "currently not supported");
     }
-    auto resultTy =
-        convertGlobalMemrefTypeToEmitc(op.getType(), *getTypeConverter());
+    // auto resultTy =
+    //     convertGlobalMemrefTypeToEmitc(op.getType(), *getTypeConverter());
+    Type resultTy;
+    Type elementType = getTypeConverter()->convertType(type.getElementType());
+    auto shape = type.getShape();
+
+    if (shape.empty()) {
+      if (emitc::isSupportedFloatType(elementType)) {
+        resultTy = rewriter.getF32Type();
+      }
+      if (emitc::isSupportedIntegerType(elementType)) {
+        resultTy = rewriter.getIntegerType(elementType.getIntOrFloatBitWidth());
+      }
+    } else {
+      resultTy = emitc::ArrayType::get(shape, elementType);
+    }
+
     if (!resultTy) {
       return rewriter.notifyMatchFailure(op.getLoc(),
                                          "cannot convert result type");
@@ -142,12 +142,7 @@ struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
     Attribute initialValue = operands.getInitialValueAttr();
     if (op.getType().getRank() == 0) {
       auto elementsAttr = llvm::cast<ElementsAttr>(*op.getInitialValue());
-      auto scalarValue = elementsAttr.getSplatValue<Attribute>();
-
-      // Convert scalar value to single-element array
-      initialValue = DenseElementsAttr::get(
-          RankedTensorType::get({1}, elementsAttr.getElementType()),
-          {scalarValue});
+      initialValue = elementsAttr.getSplatValue<Attribute>();
     }
     if (isa_and_present<UnitAttr>(initialValue))
       initialValue = {};
