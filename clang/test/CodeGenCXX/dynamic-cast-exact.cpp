@@ -9,6 +9,7 @@ struct E : A { int e; };
 struct F : virtual A { int f; };
 struct G : virtual A { int g; };
 struct H final : C, D, E, F, G { int h; };
+struct H1 final: C, private D { int h1; };
 
 // CHECK-LABEL: @_Z7inexactP1A
 C *inexact(A *a) {
@@ -75,6 +76,23 @@ H *exact_multi(A *a) {
   // CHECK: [[LABEL_END]]:
   // CHECK: phi ptr [ %[[RESULT]], %[[LABEL_NOTNULL]] ], [ null, %[[LABEL_FAILED]] ]
   return dynamic_cast<H*>(a);
+}
+
+// CHECK-LABEL: @_Z19exact_invalid_multiP1D
+H1 *exact_invalid_multi(D* d) {
+  // CHECK: dynamic_cast.end:
+  // CHECK-NEXT: ret ptr null
+  return dynamic_cast<H1*>(d);
+}
+
+// CHECK-LABEL: @_Z19exact_invalid_multiR1D
+H1 &exact_invalid_multi(D& d) {
+  // CHECK: dynamic_cast.notnull:
+  // CHECK-NEXT: br label %dynamic_cast.null
+  // CHECK: dynamic_cast.null:
+  // CHECK-NEXT: call void @__cxa_bad_cast()
+  // CHECK-NEXT: unreachable
+  return dynamic_cast<H1&>(d);
 }
 
 namespace GH64088 {

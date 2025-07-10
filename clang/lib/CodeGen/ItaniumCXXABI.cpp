@@ -231,11 +231,11 @@ public:
                                    QualType DestRecordTy,
                                    llvm::BasicBlock *CastEnd) override;
 
-  llvm::Value *emitExactDynamicCast(CodeGenFunction &CGF, Address ThisAddr,
-                                    QualType SrcRecordTy, QualType DestTy,
-                                    QualType DestRecordTy,
-                                    llvm::BasicBlock *CastSuccess,
-                                    llvm::BasicBlock *CastFail) override;
+  std::optional<llvm::Value *>
+  emitExactDynamicCast(CodeGenFunction &CGF, Address ThisAddr,
+                       QualType SrcRecordTy, QualType DestTy,
+                       QualType DestRecordTy, llvm::BasicBlock *CastSuccess,
+                       llvm::BasicBlock *CastFail) override;
 
   llvm::Value *emitDynamicCastToVoid(CodeGenFunction &CGF, Address Value,
                                      QualType SrcRecordTy) override;
@@ -1681,7 +1681,7 @@ llvm::Value *ItaniumCXXABI::emitDynamicCastCall(
   return Value;
 }
 
-llvm::Value *ItaniumCXXABI::emitExactDynamicCast(
+std::optional<llvm::Value *> ItaniumCXXABI::emitExactDynamicCast(
     CodeGenFunction &CGF, Address ThisAddr, QualType SrcRecordTy,
     QualType DestTy, QualType DestRecordTy, llvm::BasicBlock *CastSuccess,
     llvm::BasicBlock *CastFail) {
@@ -1736,8 +1736,7 @@ llvm::Value *ItaniumCXXABI::emitExactDynamicCast(
 
   if (!Offset) {
     // If there are no public inheritance paths, the cast always fails.
-    CGF.EmitBranch(CastFail);
-    return llvm::PoisonValue::get(CGF.VoidPtrTy);
+    return std::nullopt;
   }
 
   // Compare the vptr against the expected vptr for the destination type at

@@ -296,12 +296,11 @@ public:
 
   /// Emit a dynamic_cast from SrcRecordTy to DestRecordTy. The cast fails if
   /// the dynamic type of Value is not exactly DestRecordTy.
-  virtual llvm::Value *emitExactDynamicCast(CodeGenFunction &CGF, Address Value,
-                                            QualType SrcRecordTy,
-                                            QualType DestTy,
-                                            QualType DestRecordTy,
-                                            llvm::BasicBlock *CastSuccess,
-                                            llvm::BasicBlock *CastFail) = 0;
+  virtual std::optional<llvm::Value *>
+  emitExactDynamicCast(CodeGenFunction &CGF, Address Value,
+                       QualType SrcRecordTy, QualType DestTy,
+                       QualType DestRecordTy, llvm::BasicBlock *CastSuccess,
+                       llvm::BasicBlock *CastFail) = 0;
 
   virtual bool EmitBadCastCall(CodeGenFunction &CGF) = 0;
 
