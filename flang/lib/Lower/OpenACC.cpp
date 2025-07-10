@@ -724,7 +724,7 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
             /*treatIndexAsSection=*/true, /*unwrapFirBox=*/unwrapFirBox,
             /*genDefaultBounds=*/generateDefaultBounds,
             /*strideIncludeLowerExtent=*/strideIncludeLowerExtent);
-    LLVM_DEBUG(llvm::dbgs() << __func__ << "Here \n"; info.dump(llvm::dbgs()));
+    LLVM_DEBUG(llvm::dbgs() << __func__ << "\n"; info.dump(llvm::dbgs()));
 
     // If the input value is optional and is not a descriptor, we use the
     // rawInput directly.
