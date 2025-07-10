@@ -2462,8 +2462,10 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     ScopeImm = AMDGPU::CPol::SCOPE_SYS;
     break;
   case SIAtomicScope::AGENT:
-  case SIAtomicScope::CLUSTER:
     ScopeImm = AMDGPU::CPol::SCOPE_DEV;
+    break;
+  case SIAtomicScope::CLUSTER:
+    ScopeImm = AMDGPU::CPol::SCOPE_SE;
     break;
   case SIAtomicScope::WORKGROUP:
     // GFX12:
@@ -2525,20 +2527,23 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
   //   for performance.
   //
   // gfx125x:
-  //    stores can also report completion from CU$ so we must emit
-  //    global_wb at device scope as well to ensure stores reached
-  //    the right cache level.
+  //    stores can also report completion from WGP$ so we must emit
+  //    global_wb at cluster & device scope as well to ensure stores
+  //    reached the right cache level.
   switch (Scope) {
   case SIAtomicScope::SYSTEM:
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
         .addImm(AMDGPU::CPol::SCOPE_SYS);
     break;
   case SIAtomicScope::AGENT:
-  case SIAtomicScope::CLUSTER:
     if (ST.hasGFX1250Insts()) {
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
-        .addImm(AMDGPU::CPol::SCOPE_DEV);
+          .addImm(AMDGPU::CPol::SCOPE_DEV);
     }
+    break;
+  case SIAtomicScope::CLUSTER:
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
+        .addImm(AMDGPU::CPol::SCOPE_SE);
     break;
   case SIAtomicScope::WORKGROUP:
     // No WB necessary, but we still have to wait.
@@ -2656,8 +2661,10 @@ bool SIGfx12CacheControl::setAtomicScope(const MachineBasicBlock::iterator &MI,
       Changed |= setScope(MI, AMDGPU::CPol::SCOPE_SYS);
       break;
     case SIAtomicScope::AGENT:
-    case SIAtomicScope::CLUSTER:
       Changed |= setScope(MI, AMDGPU::CPol::SCOPE_DEV);
+      break;
+    case SIAtomicScope::CLUSTER:
+      Changed |= setScope(MI, AMDGPU::CPol::SCOPE_SE);
       break;
     case SIAtomicScope::WORKGROUP:
       // In workgroup mode, SCOPE_SE is needed as waves can executes on
