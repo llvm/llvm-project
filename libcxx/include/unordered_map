@@ -1136,7 +1136,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI const_iterator cbegin() const _NOEXCEPT { return __table_.begin(); }
   _LIBCPP_HIDE_FROM_ABI const_iterator cend() const _NOEXCEPT { return __table_.end(); }
 
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(const value_type& __x) { return __table_.__insert_unique(__x); }
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(const value_type& __x) { return __table_.__emplace_unique(__x); }
 
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator, const value_type& __x) { return insert(__x).first; }
 
@@ -1147,7 +1147,7 @@ public:
   template <_ContainerCompatibleRange<value_type> _Range>
   _LIBCPP_HIDE_FROM_ABI void insert_range(_Range&& __range) {
     for (auto&& __element : __range) {
-      __table_.__insert_unique(std::forward<decltype(__element)>(__element));
+      __table_.__emplace_unique(std::forward<decltype(__element)>(__element));
     }
   }
 #  endif
@@ -1156,16 +1156,16 @@ public:
   _LIBCPP_HIDE_FROM_ABI void insert(initializer_list<value_type> __il) { insert(__il.begin(), __il.end()); }
 
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(value_type&& __x) {
-    return __table_.__insert_unique(std::move(__x));
+    return __table_.__emplace_unique(std::move(__x));
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator, value_type&& __x) {
-    return __table_.__insert_unique(std::move(__x)).first;
+    return __table_.__emplace_unique(std::move(__x)).first;
   }
 
   template <class _Pp, __enable_if_t<is_constructible<value_type, _Pp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(_Pp&& __x) {
-    return __table_.__insert_unique(std::forward<_Pp>(__x));
+    return __table_.__emplace_unique(std::forward<_Pp>(__x));
   }
 
   template <class _Pp, __enable_if_t<is_constructible<value_type, _Pp>::value, int> = 0>
@@ -1640,7 +1640,7 @@ template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 template <class _InputIterator>
 inline void unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::insert(_InputIterator __first, _InputIterator __last) {
   for (; __first != __last; ++__first)
-    __table_.__insert_unique(*__first);
+    __table_.__emplace_unique(*__first);
 }
 
 #  ifndef _LIBCPP_CXX03_LANG
@@ -1944,10 +1944,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI const_iterator cbegin() const _NOEXCEPT { return __table_.begin(); }
   _LIBCPP_HIDE_FROM_ABI const_iterator cend() const _NOEXCEPT { return __table_.end(); }
 
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const value_type& __x) { return __table_.__insert_multi(__x); }
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const value_type& __x) { return __table_.__emplace_multi(__x); }
 
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, const value_type& __x) {
-    return __table_.__insert_multi(__p.__i_, __x);
+    return __table_.__emplace_hint_multi(__p.__i_, __x);
   }
 
   template <class _InputIterator>
@@ -1957,27 +1957,27 @@ public:
   template <_ContainerCompatibleRange<value_type> _Range>
   _LIBCPP_HIDE_FROM_ABI void insert_range(_Range&& __range) {
     for (auto&& __element : __range) {
-      __table_.__insert_multi(std::forward<decltype(__element)>(__element));
+      __table_.__emplace_multi(std::forward<decltype(__element)>(__element));
     }
   }
 #  endif
 
 #  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI void insert(initializer_list<value_type> __il) { insert(__il.begin(), __il.end()); }
-  _LIBCPP_HIDE_FROM_ABI iterator insert(value_type&& __x) { return __table_.__insert_multi(std::move(__x)); }
+  _LIBCPP_HIDE_FROM_ABI iterator insert(value_type&& __x) { return __table_.__emplace_multi(std::move(__x)); }
 
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, value_type&& __x) {
-    return __table_.__insert_multi(__p.__i_, std::move(__x));
+    return __table_.__emplace_hint_multi(__p.__i_, std::move(__x));
   }
 
   template <class _Pp, __enable_if_t<is_constructible<value_type, _Pp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI iterator insert(_Pp&& __x) {
-    return __table_.__insert_multi(std::forward<_Pp>(__x));
+    return __table_.__emplace_multi(std::forward<_Pp>(__x));
   }
 
   template <class _Pp, __enable_if_t<is_constructible<value_type, _Pp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, _Pp&& __x) {
-    return __table_.__insert_multi(__p.__i_, std::forward<_Pp>(__x));
+    return __table_.__emplace_hint_multi(__p.__i_, std::forward<_Pp>(__x));
   }
 
   template <class... _Args>
@@ -2396,7 +2396,7 @@ template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 template <class _InputIterator>
 inline void unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::insert(_InputIterator __first, _InputIterator __last) {
   for (; __first != __last; ++__first)
-    __table_.__insert_multi(*__first);
+    __table_.__emplace_multi(*__first);
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
