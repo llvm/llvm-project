@@ -49,9 +49,8 @@ define i32 @test_ptrauth_call_blend(i32 %a0) {
 
 define i64 @test_ptrauth_call_cast(i32 %a0) {
 ; CHECK-LABEL: @test_ptrauth_call_cast(
-; CHECK-NEXT:    [[V0:%.*]] = call ptr @f2(i32 [[A0:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[V0]] to i64
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    [[V0:%.*]] = call i64 @f2(i32 [[A0:%.*]])
+; CHECK-NEXT:    ret i64 [[V0]]
 ;
   %v0 = call i64 ptrauth(ptr @f2, i32 0)(i32 %a0) [ "ptrauth"(i32 0, i64 0) ]
   ret i64 %v0
