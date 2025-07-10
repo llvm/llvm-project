@@ -9,6 +9,8 @@
 #include "llvm/ExecutionEngine/Orc/TargetProcess/DynamicLoader.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/LibraryScanner.h"
 
+#include "llvm/ADT/StringSet.h"
+
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ELF.h"
@@ -16,6 +18,9 @@
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
+
+#include <mutex>
+#include <thread>
 
 #define DEBUG_TYPE "orc"
 
@@ -90,7 +95,7 @@ bool SymbolEnumerator::enumerateSymbols(StringRef Path, OnEachSymbolFn OnEach,
       if (Name.empty())
         continue;
 
-      EnumerateResult Res = OnEach(Name.str());
+      EnumerateResult Res = OnEach(Name);
       if (Res != EnumerateResult::Continue)
         return Res;
     }
@@ -117,7 +122,7 @@ bool SymbolEnumerator::enumerateSymbols(StringRef Path, OnEachSymbolFn OnEach,
       if (Name.empty())
         continue;
 
-      if (OnEach(Name.str()) != EnumerateResult::Continue)
+      if (OnEach(Name) != EnumerateResult::Continue)
         return false;
     }
   } else if (Obj->isMachO()) {
@@ -147,16 +152,14 @@ void DynamicLoader::resolveSymbolsInLibrary(LibraryInfo &lib,
     // );
     SymbolEnumerator::enumerateSymbols(
         lib.getFullPath(),
-        [&](const std::string &sym) {
-          discoveredSymbols.insert(sym);
+        [&](StringRef sym) {
+          discoveredSymbols.insert(sym.str());
           return SymbolEnumerator::Result::Continue;
         },
         opts);
   };
 
-  const auto &unresolved = unresolvedSymbols.getUnresolvedSymbols();
-
-  if (unresolved.empty()) {
+  if (!unresolvedSymbols.hasUnresolved()) {
     // LLVM_DEBUG(
     dbgs() << "Skipping library: " << lib.getFullPath()
            << " — unresolved symbols exist.\n";
@@ -174,12 +177,13 @@ void DynamicLoader::resolveSymbolsInLibrary(LibraryInfo &lib,
       dbgs() << "discoveredSymbols : " << sym << "\n";
   }
 
+  const auto &unresolved = unresolvedSymbols.getUnresolvedSymbols();
   for (const auto &symbol : unresolved) {
     if (lib.mayContain(symbol)) {
       // LLVM_DEBUG(
       dbgs() << "Checking symbol '" << symbol
              << "' in library: " << lib.getFullPath() << "\n"; //);
-      if (discoveredSymbols.count(symbol) > 0) {
+      if (discoveredSymbols.count(symbol.str()) > 0) {
         // LLVM_DEBUG(
         dbgs() << "  Resolved symbol: " << symbol
                << " in library: " << lib.getFullPath() << "\n"; //);
@@ -225,43 +229,22 @@ void DynamicLoader::searchSymbolsInLibraries(
   }
 
 done:
-  // LLVM_DEBUG(
-  dbgs() << "Search complete.\n"; //);
+  // LLVM_DEBUG({
+  dbgs() << "Search complete.\n";
+  for (const auto &r : query.getAllResults())
+    dbgs() << "Resolved Symbol:" << r->Name << " -> " << r->ResolvedLibPath
+           << "\n";
+  //});
+
   // ProcessLib(query.getResolvedPath());
   onComplete(query);
 }
 
-// void DynamicLoader::searchSymbolsInLibraries(
-//     std::vector<std::string> &symbolList, OnSearchComplete onComplete) {
-//   SymbolQuery query(symbolList);
-
-//   auto tryResolveFrom = [&](const LibraryCollection &libraries,
-//                             bool isUserLib) {
-//     scanLibrariesIfNeeded(libraries, isUserLib);
-//     for (const auto &lib : libraries) {
-//       // can use Async here?
-//       tryToResolveSymbols(lib, query);
-//       if (query.allResolved())
-//         break;
-//     }
-//   };
-
-//   tryResolveFrom(loadedLibs, /*isUserLib=*/false);
-
-//   if (!query.allResolved())
-//     tryResolveFrom(usrLibs, /*isUserLib=*/true);
-
-//   if (!query.allResolved() && includesys)
-//     tryResolveFrom(sysLibs, /*isUserLib=*/false);
-
-//   onComplete(query);
-// }
-
 void DynamicLoader::scanLibrariesIfNeeded(LibraryManager::Kind PK) {
   // LLVM_DEBUG(
-  llvm::dbgs() << "DynamicLoader::scanLibrariesIfNeeded: Scanning for "
-               << (PK == LibraryManager::Kind::User ? "User" : "System")
-               << " libraries\n"; //);
+  dbgs() << "DynamicLoader::scanLibrariesIfNeeded: Scanning for "
+         << (PK == LibraryManager::Kind::User ? "User" : "System")
+         << " libraries\n"; //);
   LibraryScanner Scanner(ScanH, LibMgr, m_shouldScan);
   Scanner.scanNext(PK == LibraryManager::Kind::User ? PathKind::User
                                                     : PathKind::System);
@@ -284,9 +267,9 @@ bool DynamicLoader::symbolExistsInLibrary(
 
   SymbolEnumerator::enumerateSymbols(
       lib.getFullPath(),
-      [&](const std::string &sym) {
+      [&](StringRef sym) {
         if (allSymbols)
-          allSymbols->emplace_back(sym);
+          allSymbols->emplace_back(sym.str());
 
         if (sym == symbolName) {
           found = true;
