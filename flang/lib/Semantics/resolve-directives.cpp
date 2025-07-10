@@ -495,6 +495,12 @@ public:
   bool Pre(const parser::OpenMPAllocatorsConstruct &);
   void Post(const parser::OpenMPAllocatorsConstruct &);
 
+  bool Pre(const parser::OmpDeclareVariantDirective &x) {
+    PushContext(x.source, llvm::omp::Directive::OMPD_declare_variant);
+    return true;
+  }
+  void Post(const parser::OmpDeclareVariantDirective &) { PopContext(); };
+
   void Post(const parser::OmpObjectList &x) {
     // The objects from OMP clauses should have already been resolved,
     // except common blocks (the ResolveNamesVisitor does not visit

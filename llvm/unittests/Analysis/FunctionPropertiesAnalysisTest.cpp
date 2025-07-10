@@ -79,7 +79,6 @@ private:
 
     for (auto &Name : SampleEntities)
       addEntry(Name);
-    return;
   }
 
 protected:
