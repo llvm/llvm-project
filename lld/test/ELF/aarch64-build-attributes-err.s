@@ -3,8 +3,8 @@
 // RUN: llvm-mc -triple=aarch64 %s -filetype=obj -o %t.o
 // RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
 
-// ERR: Pauth Data mismatch: file contains both GNU properties and AArch64 build attributes sections with different Pauth data
-// ERR-NEXT: Features Data mismatch: file contains both GNU properties and AArch64 build attributes sections with different And Features data
+// ERR: GNU properties and build attributes have conflicting AArch64 PAuth data
+// ERR-NEXT: GNU properties and build attributes have conflicting AArch64 PAuth data
 
 .aeabi_subsection aeabi_pauthabi, required, uleb128
 .aeabi_attribute Tag_PAuth_Platform, 5
