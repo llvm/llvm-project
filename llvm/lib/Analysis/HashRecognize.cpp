@@ -91,10 +91,6 @@ class ValueEvolution {
   APInt GenPoly;
   StringRef ErrStr;
 
-  // A set of instructions visited by ValueEvolution. Anything that's not in the
-  // use-def chain of the PHIs' evolution will be reported as unvisited.
-  SmallPtrSet<const Instruction *, 16> Visited;
-
   // Compute the KnownBits of a BinaryOperator.
   KnownBits computeBinOp(const BinaryOperator *I);
 
@@ -116,12 +112,13 @@ public:
   // the final iteration. Returns true on success and false on error.
   bool computeEvolutions(ArrayRef<PhiStepPair> PhiEvolutions);
 
-  // Query the Visited set.
-  bool isVisited(const Instruction *I) const { return Visited.contains(I); }
-
   // In case ValueEvolution encounters an error, this is meant to be used for a
   // precise error message.
   StringRef getError() const { return ErrStr; }
+
+  // A set of instructions visited by ValueEvolution. Anything that's not in the
+  // use-def chain of the PHIs' evolution will not be visited.
+  SmallPtrSet<const Instruction *, 16> Visited;
 
   // The computed KnownBits for each PHI node, which is populated after
   // computeEvolutions is called.
@@ -130,9 +127,8 @@ public:
 
 ValueEvolution::ValueEvolution(unsigned TripCount, bool ByteOrderSwapped,
                                ArrayRef<const Instruction *> InitVisited)
-    : TripCount(TripCount), ByteOrderSwapped(ByteOrderSwapped) {
-  Visited.insert_range(InitVisited);
-}
+    : TripCount(TripCount), ByteOrderSwapped(ByteOrderSwapped),
+      Visited(InitVisited.begin(), InitVisited.end()) {}
 
 KnownBits ValueEvolution::computeBinOp(const BinaryOperator *I) {
   KnownBits KnownL(compute(I->getOperand(0)));
@@ -665,7 +661,7 @@ HashRecognize::recognizeCRC() const {
   // Any unvisited instructions from the KnownBits propagation can complicate
   // the optimization, which would just replace the entire loop with the
   // table-lookup version of the hash algorithm.
-  if (any_of(*Latch, [VE](const Instruction &I) { return !VE.isVisited(&I); }))
+  if (std::distance(Latch->begin(), Latch->end()) != VE.Visited.size())
     return "Found stray unvisited instructions";
 
   unsigned N = std::min(TC, ResultBits.getBitWidth());
