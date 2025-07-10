@@ -2401,10 +2401,9 @@ mlir::LogicalResult CIRToLLVMComplexAddOpLowering::matchAndRewrite(
   auto realComplex = rewriter.create<mlir::LLVM::InsertValueOp>(
       op->getLoc(), initialComplex, newReal, 0);
 
-  auto complex = rewriter.create<mlir::LLVM::InsertValueOp>(
-      op->getLoc(), realComplex, newImag, 1);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(op, realComplex,
+                                                         newImag, 1);
 
-  rewriter.replaceOp(op, complex);
   return mlir::success();
 }
 
