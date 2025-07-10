@@ -23,17 +23,16 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-// Returns a pointer to the first character in src that is not a whitespace
+// Returns the idx of the first character in src that is not a whitespace
 // character (as determined by iswspace())
-// TODO: Change from returning a pointer to returning a length.
-LIBC_INLINE const wchar_t *
+LIBC_INLINE size_t
 first_non_whitespace(const wchar_t *__restrict src,
                      size_t src_len = cpp::numeric_limits<size_t>::max()) {
   size_t src_cur = 0;
   while (src_cur < src_len && internal::iswspace(src[src_cur])) {
     ++src_cur;
   }
-  return src + src_cur;
+  return src_cur;
 }
 
 // checks if the next 3 characters of the string pointer are the start of a
@@ -83,7 +82,7 @@ wcstointeger(const wchar_t *__restrict src, int base,
   if (base < 0 || base == 1 || base > 36)
     return {0, 0, EINVAL};
 
-  src_cur = static_cast<size_t>(first_non_whitespace(src, src_len) - src);
+  src_cur = first_non_whitespace(src, src_len);
 
   wchar_t result_sign = L'+';
   if (src[src_cur] == L'+' || src[src_cur] == L'-') {
