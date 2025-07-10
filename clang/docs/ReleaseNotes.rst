@@ -662,6 +662,10 @@ Improvements to Clang's diagnostics
   #GH142457, #GH139913, #GH138850, #GH137867, #GH137860, #GH107840, #GH93308,
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
+  
+- Clang no longer emits a spurious -Wdangling-gsl warning in C++23 when
+  iterating over an element of a temporary container in a range-based
+  for loop.(#GH109793, #GH145164)
 
 - Fixed false positives in ``-Wformat-truncation`` and ``-Wformat-overflow``
   diagnostics when floating-point numbers had both width field and plus or space
@@ -1231,6 +1235,7 @@ OpenMP Support
 - Fixed mapping of arrays of structs containing nested structs with user defined
   mappers, by using compiler-generated default mappers for the outer structs for
   such maps.
+- Deprecation warning has been emitted for deprecated delimited form of ``declare target``.
 
 Improvements
 ^^^^^^^^^^^^

@@ -852,15 +852,6 @@ public:
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI iterator __emplace_hint_multi(const_iterator __p, _Args&&... __args);
 
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __insert_unique(__container_value_type&& __x) {
-    return __emplace_unique_key_args(_NodeTypes::__get_key(__x), std::move(__x));
-  }
-
-  template <class _Pp, __enable_if_t<!is_same<__remove_cvref_t<_Pp>, __container_value_type>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __insert_unique(_Pp&& __x) {
-    return __emplace_unique(std::forward<_Pp>(__x));
-  }
-
   template <class _ValueT = _Tp, __enable_if_t<__is_hash_value_type<_ValueT>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void __insert_unique_from_orphaned_node(value_type&& __value) {
     using __key_type = typename _NodeTypes::key_type;
@@ -877,16 +868,6 @@ public:
     __h.release();
   }
 
-  template <class _Pp>
-  _LIBCPP_HIDE_FROM_ABI iterator __insert_multi(_Pp&& __x) {
-    return __emplace_multi(std::forward<_Pp>(__x));
-  }
-
-  template <class _Pp>
-  _LIBCPP_HIDE_FROM_ABI iterator __insert_multi(const_iterator __p, _Pp&& __x) {
-    return __emplace_hint_multi(__p, std::forward<_Pp>(__x));
-  }
-
   template <class _ValueT = _Tp, __enable_if_t<__is_hash_value_type<_ValueT>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void __insert_multi_from_orphaned_node(value_type&& __value) {
     using __key_type = typename _NodeTypes::key_type;
@@ -901,10 +882,6 @@ public:
     __node_holder __h = __construct_node(std::move(__value));
     __node_insert_multi(__h.get());
     __h.release();
-  }
-
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __insert_unique(const __container_value_type& __x) {
-    return __emplace_unique_key_args(_NodeTypes::__get_key(__x), __x);
   }
 
 #if _LIBCPP_STD_VER >= 17
@@ -1336,7 +1313,7 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_unique(_InputIterator __
     __deallocate_node(__cache);
   }
   for (; __first != __last; ++__first)
-    __insert_unique(*__first);
+    __emplace_unique(*__first);
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -1368,7 +1345,7 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_multi(_InputIterator __f
     __deallocate_node(__cache);
   }
   for (; __first != __last; ++__first)
-    __insert_multi(_NodeTypes::__get_value(*__first));
+    __emplace_multi(_NodeTypes::__get_value(*__first));
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
