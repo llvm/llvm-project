@@ -184,13 +184,6 @@ spirv::TargetEnvAttr spirv::lookupTargetEnv(Operation *op) {
     if (!op)
       break;
 
-    if (auto arrAttr = op->getAttrOfType<ArrayAttr>("targets")) {
-      for (auto attr : arrAttr)
-        if (auto spirvTargetEnvAttr =
-                llvm::dyn_cast<spirv::TargetEnvAttr>(attr))
-          return spirvTargetEnvAttr;
-    }
-
     if (auto attr = op->getAttrOfType<spirv::TargetEnvAttr>(
             spirv::getTargetEnvAttrName()))
       return attr;

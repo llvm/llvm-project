@@ -48,8 +48,28 @@ struct GPUToSPIRVPass final : impl::ConvertGPUToSPIRVBase<GPUToSPIRVPass> {
   void runOnOperation() override;
 
 private:
+  spirv::TargetEnvAttr lookupTargetEnvInTargets(gpu::GPUModuleOp moduleOp);
+  spirv::TargetEnvAttr lookupTargetEnvOrDefault(gpu::GPUModuleOp moduleOp);
   bool mapMemorySpace;
 };
+
+spirv::TargetEnvAttr
+GPUToSPIRVPass::lookupTargetEnvInTargets(gpu::GPUModuleOp moduleOp) {
+  for (auto &targetAttr : moduleOp.getTargetsAttr())
+    if (auto spirvTargetEnvAttr =
+            llvm::dyn_cast<spirv::TargetEnvAttr>(targetAttr))
+      return spirvTargetEnvAttr;
+
+  return {};
+}
+
+spirv::TargetEnvAttr
+GPUToSPIRVPass::lookupTargetEnvOrDefault(gpu::GPUModuleOp moduleOp) {
+  if (auto targetEnvAttr = lookupTargetEnvInTargets(moduleOp))
+    return targetEnvAttr;
+
+  return spirv::lookupTargetEnvOrDefault(moduleOp);
+}
 
 void GPUToSPIRVPass::runOnOperation() {
   MLIRContext *context = &getContext();
@@ -58,9 +78,8 @@ void GPUToSPIRVPass::runOnOperation() {
   SmallVector<Operation *, 1> gpuModules;
   OpBuilder builder(context);
 
-  auto targetEnvSupportsKernelCapability = [](gpu::GPUModuleOp moduleOp) {
-    Operation *gpuModule = moduleOp.getOperation();
-    auto targetAttr = spirv::lookupTargetEnvOrDefault(gpuModule);
+  auto targetEnvSupportsKernelCapability = [this](gpu::GPUModuleOp moduleOp) {
+    auto targetAttr = lookupTargetEnvOrDefault(moduleOp);
     spirv::TargetEnv targetEnv(targetAttr);
     return targetEnv.allows(spirv::Capability::Kernel);
   };
@@ -86,7 +105,7 @@ void GPUToSPIRVPass::runOnOperation() {
   // TargetEnv attributes.
   for (Operation *gpuModule : gpuModules) {
     spirv::TargetEnvAttr targetAttr =
-        spirv::lookupTargetEnvOrDefault(gpuModule);
+        lookupTargetEnvOrDefault(llvm::cast<gpu::GPUModuleOp>(gpuModule));
 
     // Map MemRef memory space to SPIR-V storage class first if requested.
     if (mapMemorySpace) {
