@@ -87,7 +87,7 @@ bool OptDisable::shouldRunPass(StringRef PassName,
                                StringRef IRDescription) const {
   assert(isEnabled());
 
-  const bool ShouldRun = !DisabledPasses.contains(PassName.lower());
+  const bool ShouldRun = !DisabledPasses.contains(PassName);
   if (OptDisableVerbose)
     printDisablePassMessage(PassName, IRDescription, ShouldRun);
   return ShouldRun;

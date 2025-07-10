@@ -114,7 +114,7 @@ public:
   /// Registration templates, but can be overloaded directly.
   virtual StringRef getPassName() const;
 
-  /// getPassArgument - Return a nice clean name for a pass
+  /// Return a nice clean name for a pass
   /// corresponding to that used to enable the pass in opt
   virtual StringRef getPassArgument() const;
 

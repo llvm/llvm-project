@@ -63,7 +63,7 @@ static std::string getDescription(const Module &M) {
 bool ModulePass::skipModule(const Module &M) const {
   const OptPassGate &Gate = M.getContext().getOptPassGate();
 
-  StringRef PassName = this->getPassArgument();
+  StringRef PassName = getPassArgument();
   if (PassName.empty())
     PassName = this->getPassName();
 
@@ -95,7 +95,7 @@ StringRef Pass::getPassName() const {
 /// corresponding to that used to enable the pass in opt
 StringRef Pass::getPassArgument() const {
   AnalysisID AID = getPassID();
-  const PassInfo *PI = PassRegistry::getPassRegistry()->getPassInfo(AID);
+  const PassInfo *PI = Pass::lookupPassInfo(AID);
   if (PI)
     return PI->getPassArgument();
   return "";
