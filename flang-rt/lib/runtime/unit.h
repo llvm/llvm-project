@@ -46,6 +46,8 @@ extern RT_VAR_ATTRS ExternalFileUnit *defaultOutput; // unit 6
 extern RT_VAR_ATTRS ExternalFileUnit *errorOutput; // unit 0 extension
 RT_OFFLOAD_VAR_GROUP_END
 
+RT_OFFLOAD_API_GROUP_BEGIN
+
 #if defined(RT_USE_PSEUDO_FILE_UNIT)
 // A flavor of OpenFile class that pretends to be a terminal,
 // and only provides basic buffering of the output
@@ -297,6 +299,8 @@ private:
       u_;
   Fortran::common::optional<IoStatementState> io_;
 };
+
+RT_OFFLOAD_API_GROUP_END
 
 } // namespace Fortran::runtime::io
 #endif // FLANG_RT_RUNTIME_UNIT_H_

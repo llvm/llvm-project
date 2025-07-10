@@ -28,6 +28,8 @@
 
 namespace Fortran::runtime::io {
 
+RT_OFFLOAD_API_GROUP_BEGIN
+
 class ExternalFileUnit;
 class ChildIo;
 
@@ -879,6 +881,8 @@ private:
   ConnectionState connection_;
   ExternalFileUnit *unit_{nullptr};
 };
+
+RT_OFFLOAD_API_GROUP_END
 
 } // namespace Fortran::runtime::io
 #endif // FLANG_RT_RUNTIME_IO_STMT_H_
