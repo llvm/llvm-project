@@ -14,7 +14,7 @@ typedef struct {
   unsigned f; // type other than int above, not a bitfield
 } S;
 // CIR-DAG:  !rec_S = !cir.record<struct "S" {!u64i, !u16i, !u32i}>
-// CIR-DAG:  #bfi_c = #cir.bitfield_info<name = "c", storageType = !u64i, size = 17, offset = 32, isSigned = true>
+// CIR-DAG:  #bfi_c = #cir.bitfield_info<name = "c", storage_type = !u64i, size = 17, offset = 32, is_signed = true>
 // LLVM-DAG: %struct.S = type { i64, i16, i32 }
 // OGCG-DAG: %struct.S = type { i64, i16, i32 }
 
