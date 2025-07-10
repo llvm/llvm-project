@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsycl-is-device -fsyntax-only -verify %s
-
+// RUN: %clang_cc1 -fsycl-is-device -std=c++20 -fsyntax-only -verify -DCPP20 %s
 // Semantic tests for sycl_external attribute
 
 [[clang::sycl_external]] // expected-error {{'sycl_external' can only be applied to functions with external linkage}}
@@ -63,3 +63,8 @@ public:
 
 [[clang::sycl_external]] void func2(int *) {}
 
+[[clang::sycl_external]] constexpr int square(int x);
+
+#ifdef CPP20
+[[clang::sycl_external]] consteval int func();
+#endif
