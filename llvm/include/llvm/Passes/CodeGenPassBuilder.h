@@ -574,7 +574,7 @@ protected:
   /// Insert InsertedPass pass after TargetPass pass.
   /// Only machine function passes are supported.
   template <typename TargetPassT, typename InsertedPassT>
-  void insertPass(InsertedPassT &&Pass) {
+  void insertPass(InsertedPassT &&Pass) const {
     AfterCallbacks.emplace_back(
         [&](StringRef Name, MachineFunctionPassManager &MFPM) mutable {
           if (Name == TargetPassT::name())
