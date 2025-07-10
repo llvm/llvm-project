@@ -247,9 +247,9 @@ int64_t SearchableTableEmitter::getNumericKey(const SearchIndex &Index,
 bool SearchableTableEmitter::compareBy(const Record *LHS, const Record *RHS,
                                        const SearchIndex &Index) {
   // Compare two values and return:
-  // true if LHS < RHS
-  // false if  LHS > RHS
-  // std::nullopt if LHS == RHS
+  // - true if LHS < RHS.
+  // - false if  LHS > RHS.
+  // - std::nullopt if LHS == RHS.
   auto CmpLTValue = [](const auto &LHS,
                        const auto &RHS) -> std::optional<bool> {
     if (LHS < RHS)
@@ -259,11 +259,21 @@ bool SearchableTableEmitter::compareBy(const Record *LHS, const Record *RHS,
     return std::nullopt;
   };
 
+  // Specialized form of `CmpLTValue` for string-like types that uses compare()
+  // to do the comparison of the 2 strings once (instead if 2 comparisons if we
+  // use `CmpLTValue`).
+  auto CmpLTString = [](StringRef LHS, StringRef RHS) -> std::optional<bool> {
+    int Cmp = LHS.compare(RHS);
+    if (Cmp == 0)
+      return std::nullopt;
+    return Cmp < 0;
+  };
+
   // Compare two fields and returns:
-  // true if LHS < RHS
-  // false if  LHS > RHS
-  // std::nullopt if LHS == RHS
-  auto CmpLTField = [this, &Index, CmpLTValue](
+  // - true if LHS < RHS.
+  // - false if  LHS > RHS.
+  // - std::nullopt if LHS == RHS.
+  auto CmpLTField = [this, &Index, &CmpLTValue, &CmpLTString](
                         const Init *LHSI, const Init *RHSI,
                         const GenericField &Field) -> std::optional<bool> {
     if (isa<BitsRecTy>(Field.RecType) || isa<IntRecTy>(Field.RecType)) {
@@ -275,8 +285,10 @@ bool SearchableTableEmitter::compareBy(const Record *LHS, const Record *RHS,
     if (Field.IsIntrinsic) {
       const CodeGenIntrinsic &LHSi = getIntrinsic(LHSI);
       const CodeGenIntrinsic &RHSi = getIntrinsic(RHSI);
-      return CmpLTValue(std::tie(LHSi.TargetPrefix, LHSi.Name),
-                        std::tie(RHSi.TargetPrefix, RHSi.Name));
+      if (std::optional<bool> Cmp =
+              CmpLTString(LHSi.TargetPrefix, RHSi.TargetPrefix))
+        return *Cmp;
+      return CmpLTString(LHSi.Name, RHSi.Name);
     }
 
     if (Field.IsInstruction) {
@@ -287,8 +299,9 @@ bool SearchableTableEmitter::compareBy(const Record *LHS, const Record *RHS,
       // Order pseudo instructions before non-pseudo ones.
       bool LHSNotPseudo = !LHSr->getValueAsBit("isPseudo");
       bool RHSNotPseudo = !RHSr->getValueAsBit("isPseudo");
-      return CmpLTValue(std::tuple(LHSNotPseudo, LHSr->getName()),
-                        std::tuple(RHSNotPseudo, RHSr->getName()));
+      if (std::optional<bool> Cmp = CmpLTValue(LHSNotPseudo, RHSNotPseudo))
+        return *Cmp;
+      return CmpLTString(LHSr->getName(), RHSr->getName());
     }
 
     if (Field.Enum) {
@@ -301,12 +314,11 @@ bool SearchableTableEmitter::compareBy(const Record *LHS, const Record *RHS,
 
     std::string LHSs = primaryRepresentation(Index.Loc, Field, LHSI);
     std::string RHSs = primaryRepresentation(Index.Loc, Field, RHSI);
-
     if (isa<StringRecTy>(Field.RecType)) {
       LHSs = StringRef(LHSs).upper();
       RHSs = StringRef(RHSs).upper();
     }
-    return CmpLTValue(LHSs, RHSs);
+    return CmpLTString(LHSs, RHSs);
   };
 
   for (const GenericField &Field : Index.Fields) {
