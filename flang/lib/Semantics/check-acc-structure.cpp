@@ -89,28 +89,29 @@ bool AccStructureChecker::CheckAllowedModifier(llvm::acc::Clause clause) {
   return false;
 }
 
-bool AccStructureChecker::IsComputeConstruct(
-    llvm::acc::Directive directive) const {
-  return directive == llvm::acc::ACCD_parallel ||
-      directive == llvm::acc::ACCD_parallel_loop ||
-      directive == llvm::acc::ACCD_serial ||
-      directive == llvm::acc::ACCD_serial_loop ||
-      directive == llvm::acc::ACCD_kernels ||
-      directive == llvm::acc::ACCD_kernels_loop;
-}
-
-bool AccStructureChecker::IsInsideComputeConstruct() const {
-  if (dirContext_.size() <= 1) {
+bool AccStructureChecker::IsInsideDirectiveContext(
+    std::function<bool(llvm::acc::Directive)> pred, bool skipFirst) const {
+  std::size_t contextSize{dirContext_.size()};
+  std::size_t skipFirstOffset{skipFirst ? 1u : 0u};
+  // Short circuit if there are no contexts to check.
+  if (contextSize <= skipFirstOffset) {
     return false;
   }
-
-  // Check all nested context skipping the first one.
-  for (std::size_t i = dirContext_.size() - 1; i > 0; --i) {
-    if (IsComputeConstruct(dirContext_[i - 1].directive)) {
+  // Check contexts from innermost to outermost.
+  for (std::size_t i{contextSize - skipFirstOffset}; i > 0u; --i) {
+    if (pred(dirContext_[i - 1].directive)) {
       return true;
     }
   }
   return false;
+}
+
+bool AccStructureChecker::IsInsideComputeConstruct() const {
+  return IsInsideDirectiveContext(IsComputeConstruct, /*skipFirst=*/true);
+}
+
+bool AccStructureChecker::IsInsideLoopConstruct() const {
+  return IsInsideDirectiveContext(IsLoopConstruct);
 }
 
 void AccStructureChecker::CheckNotInComputeConstruct() {
@@ -363,9 +364,27 @@ void AccStructureChecker::Enter(const parser::OpenACCCacheConstruct &x) {
   const auto &verbatim = std::get<parser::Verbatim>(x.t);
   PushContextAndClauseSets(verbatim.source, llvm::acc::Directive::ACCD_cache);
   SetContextDirectiveSource(verbatim.source);
-  if (loopNestLevel == 0) {
+  if (loopNests.size() == 0) {
     context_.Say(verbatim.source,
           "The CACHE directive must be inside a loop"_err_en_US);
+  }
+
+  for (std::size_t i{0}; i < loopNests.size(); i++) {
+    if (const parser::DoConstruct *doConstruct{loopNests[i]}) {
+      if (!doConstruct->GetLoopControl()) {
+        context_
+            .Say(std::get<parser::Statement<parser::NonLabelDoStmt>>(
+                     doConstruct->t)
+                     .source,
+                "DO loop with CACHE directive must have loop control"_err_en_US)
+            .Attach(verbatim.source,
+                "This CACHE directive implies a LOOP directive"_because_en_US);
+      }
+      // Remove the do construct from the loopNests vector after checking so
+      // that if there are multiple cache directives the loop isn't checked
+      // again.
+      loopNests[i] = nullptr;
+    }
   }
 }
 void AccStructureChecker::Leave(const parser::OpenACCCacheConstruct &x) {
@@ -814,12 +833,19 @@ void AccStructureChecker::Enter(const parser::SeparateModuleSubprogram &) {
   declareSymbols.clear();
 }
 
-void AccStructureChecker::Enter(const parser::DoConstruct &) {
-  ++loopNestLevel;
+void AccStructureChecker::Enter(const parser::DoConstruct &x) {
+  // If the current context is alread is an loop construct it has already been
+  // checked. Otherwise if there is a cache directive in the loop we will check
+  // to make sure it has a loop control clause.
+  if (IsInsideLoopConstruct()) {
+    loopNests.push_back(nullptr);
+  } else {
+    loopNests.push_back(&x);
+  }
 }
 
-void AccStructureChecker::Leave(const parser::DoConstruct &) {
-  --loopNestLevel;
+void AccStructureChecker::Leave(const parser::DoConstruct &x) {
+  loopNests.pop_back();
 }
 
 llvm::StringRef AccStructureChecker::getDirectiveName(
