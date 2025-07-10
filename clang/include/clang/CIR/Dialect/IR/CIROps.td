@@ -1773,6 +1773,9 @@ def GetBitfieldOp : CIR_Op<"get_bitfield"> {
 
     A unit attribute `volatile` can be used to indicate a volatile load of the
     bitfield.
+    ```mlir
+      cir.get_bitfield(#bfi, %0 {is_volatile} : !cir.ptr<!u64i>) -> !s32i
+    ```
 
     Example:
     Suppose we have a struct with multiple bitfields stored in
