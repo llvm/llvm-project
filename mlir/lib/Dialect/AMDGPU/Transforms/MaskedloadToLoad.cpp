@@ -69,9 +69,9 @@ static FailureOr<Value> matchFullMask(OpBuilder &b, Value val) {
   auto broadcastOp = val.getDefiningOp<vector::BroadcastOp>();
   if (!broadcastOp)
     return failure();
-  if (!isa<VectorType>(broadcastOp.getSourceType()))
-    return broadcastOp.getSource();
-  return failure();
+  if (isa<VectorType>(broadcastOp.getSourceType()))
+    return failure();
+  return broadcastOp.getSource();
 }
 
 static constexpr char kMaskedloadNeedsMask[] =
