@@ -268,7 +268,7 @@ If ``-fthinlto-distributor=`` is specified, Clang supplies the path to a
 compiler to be executed remotely to perform the ThinLTO backend
 compilations. Currently, this is Clang itself.
 
-Note that currently, DTLTO is only supported in some LLD flavors. Support will
+Note that currently, DTLTO is only supported in some LLD flavors. Support can
 be added to other LLD flavours in the future.
 See `DTLTO <https://lld.llvm.org/dtlto.html>`_ for more information.
 
