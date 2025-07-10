@@ -4307,23 +4307,26 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, PtrSrcOrigin);
   }
 
+  // Test whether the mask indices are initialized, only checking the bits that
+  // are actually used.
+  //
+  // e.g., if Idx is <32 x i16>, only (log2(32) == 5) bits of each index are
+  //       used/checked.
   void maskedCheckAVXIndexShadow(IRBuilder<> &IRB, Value *Idx, Instruction *I) {
+    assert(isFixedIntVector(Idx));
     auto IdxVectorSize =
         cast<FixedVectorType>(Idx->getType())->getNumElements();
     assert(isPowerOf2_64(IdxVectorSize));
-    auto *IdxVectorElemType =
-        cast<FixedVectorType>(Idx->getType())->getElementType();
-    Constant *IndexBits =
-        ConstantInt::get(IdxVectorElemType, IdxVectorSize - 1);
-    auto *IdxShadow = getShadow(Idx);
-    // Only the low bits of Idx are used.
-    Value *V = nullptr;
-    for (size_t i = 0; i < IdxVectorSize; ++i) {
-      V = IRB.CreateExtractElement(IdxShadow, i);
-      assert(V->getType() == IndexBits->getType());
-      V = IRB.CreateOr(V, IRB.CreateAnd(V, IndexBits));
-    }
-    insertCheckShadow(V, getOrigin(Idx), I);
+
+    // Compiler isn't smart enough, let's help it
+    if (isa<Constant>(Idx))
+      return;
+
+    Value *Truncated = IRB.CreateTrunc(
+        Idx,
+        FixedVectorType::get(Type::getIntNTy(*MS.C, Log2_64(IdxVectorSize)),
+                             IdxVectorSize));
+    insertCheckShadow(Truncated, getOrigin(Idx), I);
   }
 
   // Instrument AVX permutation intrinsic.
@@ -4376,6 +4379,22 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  [[maybe_unused]] static bool isFixedIntVectorTy(const Type *T) {
+    return isa<FixedVectorType>(T) && T->isIntOrIntVectorTy();
+  }
+
+  [[maybe_unused]] static bool isFixedFPVectorTy(const Type *T) {
+    return isa<FixedVectorType>(T) && T->isFPOrFPVectorTy();
+  }
+
+  [[maybe_unused]] static bool isFixedIntVector(const Value *V) {
+    return isFixedIntVectorTy(V->getType());
+  }
+
+  [[maybe_unused]] static bool isFixedFPVector(const Value *V) {
+    return isFixedFPVectorTy(V->getType());
+  }
+
   // e.g., call <16 x i32> @llvm.x86.avx512.mask.cvtps2dq.512
   //                           (<16 x float> a, <16 x i32> writethru, i16 mask,
   //                           i32 rounding)
@@ -4391,13 +4410,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *A = I.getOperand(0);
     Value *WriteThrough = I.getOperand(1);
     Value *Mask = I.getOperand(2);
-    [[maybe_unused]] Value *RoundingMode = I.getOperand(3);
+    Value *RoundingMode = I.getOperand(3);
 
-    assert(isa<FixedVectorType>(A->getType()));
-    assert(A->getType()->isFPOrFPVectorTy());
-
-    assert(isa<FixedVectorType>(WriteThrough->getType()));
-    assert(WriteThrough->getType()->isIntOrIntVectorTy());
+    assert(isFixedFPVector(A));
+    assert(isFixedIntVector(WriteThrough));
 
     unsigned ANumElements =
         cast<FixedVectorType>(A->getType())->getNumElements();
@@ -4406,8 +4422,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     assert(Mask->getType()->isIntegerTy());
     assert(Mask->getType()->getScalarSizeInBits() == ANumElements);
+    insertCheckShadowOf(Mask, &I);
 
     assert(RoundingMode->getType()->isIntegerTy());
+    // Only four bits of the rounding mode are used, though it's very
+    // unusual to have uninitialized bits there (more commonly, it's a
+    // constant).
+    insertCheckShadowOf(RoundingMode, &I);
 
     assert(I.getType() == WriteThrough->getType());
 
@@ -4590,6 +4611,87 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *Shadow = getShadow(V);
     return IRB.CreateExtractElement(Shadow,
                                     ConstantInt::get(IRB.getInt32Ty(), 0));
+  }
+
+  // Handle llvm.x86.avx512.mask.pmov{,s,us}.*.512
+  //
+  // e.g., call <16 x i8> @llvm.x86.avx512.mask.pmov.qb.512
+  //         (<8 x i64>, <16 x i8>, i8)
+  //          A           WriteThru  Mask
+  //
+  //       call <16 x i8> @llvm.x86.avx512.mask.pmovs.db.512
+  //         (<16 x i32>, <16 x i8>, i16)
+  //
+  // Dst[i]        = Mask[i] ? truncate_or_saturate(A[i]) : WriteThru[i]
+  // Dst_shadow[i] = Mask[i] ? truncate(A_shadow[i])      : WriteThru_shadow[i]
+  //
+  // If Dst has more elements than A, the excess elements are zeroed (and the
+  // corresponding shadow is initialized).
+  //
+  // Note: for PMOV (truncation), handleIntrinsicByApplyingToShadow is precise
+  //       and is much faster than this handler.
+  void handleAVX512VectorDownConvert(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+
+    assert(I.arg_size() == 3);
+    Value *A = I.getOperand(0);
+    Value *WriteThrough = I.getOperand(1);
+    Value *Mask = I.getOperand(2);
+
+    assert(isFixedIntVector(A));
+    assert(isFixedIntVector(WriteThrough));
+
+    unsigned ANumElements =
+        cast<FixedVectorType>(A->getType())->getNumElements();
+    unsigned OutputNumElements =
+        cast<FixedVectorType>(WriteThrough->getType())->getNumElements();
+    assert(ANumElements == OutputNumElements ||
+           ANumElements * 2 == OutputNumElements);
+
+    assert(Mask->getType()->isIntegerTy());
+    assert(Mask->getType()->getScalarSizeInBits() == ANumElements);
+    insertCheckShadowOf(Mask, &I);
+
+    assert(I.getType() == WriteThrough->getType());
+
+    // Widen the mask, if necessary, to have one bit per element of the output
+    // vector.
+    // We want the extra bits to have '1's, so that the CreateSelect will
+    // select the values from AShadow instead of WriteThroughShadow ("maskless"
+    // versions of the intrinsics are sometimes implemented using an all-1's
+    // mask and an undefined value for WriteThroughShadow). We accomplish this
+    // by using bitwise NOT before and after the ZExt.
+    if (ANumElements != OutputNumElements) {
+      Mask = IRB.CreateNot(Mask);
+      Mask = IRB.CreateZExt(Mask, Type::getIntNTy(*MS.C, OutputNumElements),
+                            "_ms_widen_mask");
+      Mask = IRB.CreateNot(Mask);
+    }
+    Mask = IRB.CreateBitCast(
+        Mask, FixedVectorType::get(IRB.getInt1Ty(), OutputNumElements));
+
+    Value *AShadow = getShadow(A);
+
+    // The return type might have more elements than the input.
+    // Temporarily shrink the return type's number of elements.
+    VectorType *ShadowType = maybeShrinkVectorShadowType(A, I);
+
+    // PMOV truncates; PMOVS/PMOVUS uses signed/unsigned saturation.
+    // This handler treats them all as truncation, which leads to some rare
+    // false positives in the cases where the truncated bytes could
+    // unambiguously saturate the value e.g., if A = ??????10 ????????
+    // (big-endian), the unsigned saturated byte conversion is 11111111 i.e.,
+    // fully defined, but the truncated byte is ????????.
+    //
+    // TODO: use GetMinMaxUnsigned() to handle saturation precisely.
+    AShadow = IRB.CreateTrunc(AShadow, ShadowType, "_ms_trunc_shadow");
+    AShadow = maybeExtendVectorShadowWithZeros(AShadow, I);
+
+    Value *WriteThroughShadow = getShadow(WriteThrough);
+
+    Value *Shadow = IRB.CreateSelect(Mask, AShadow, WriteThroughShadow);
+    setShadow(&I, Shadow);
+    setOriginForNaryOp(I);
   }
 
   // For sh.* compiler intrinsics:
@@ -5412,6 +5514,66 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     }
 
+    // AVX512 PMOV: Packed MOV, with truncation
+    // Precisely handled by applying the same intrinsic to the shadow
+    case Intrinsic::x86_avx512_mask_pmov_dw_512:
+    case Intrinsic::x86_avx512_mask_pmov_db_512:
+    case Intrinsic::x86_avx512_mask_pmov_qb_512:
+    case Intrinsic::x86_avx512_mask_pmov_qw_512: {
+      // Intrinsic::x86_avx512_mask_pmov_{qd,wb}_512 were removed in
+      // f608dc1f5775ee880e8ea30e2d06ab5a4a935c22
+      handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
+                                        /*trailingVerbatimArgs=*/1);
+      break;
+    }
+
+    // AVX512 PMVOV{S,US}: Packed MOV, with signed/unsigned saturation
+    // Approximately handled using the corresponding truncation intrinsic
+    // TODO: improve handleAVX512VectorDownConvert to precisely model saturation
+    case Intrinsic::x86_avx512_mask_pmovs_dw_512:
+    case Intrinsic::x86_avx512_mask_pmovus_dw_512: {
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_dw_512,
+                                        /* trailingVerbatimArgs=*/1);
+      break;
+    }
+
+    case Intrinsic::x86_avx512_mask_pmovs_db_512:
+    case Intrinsic::x86_avx512_mask_pmovus_db_512: {
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_db_512,
+                                        /* trailingVerbatimArgs=*/1);
+      break;
+    }
+
+    case Intrinsic::x86_avx512_mask_pmovs_qb_512:
+    case Intrinsic::x86_avx512_mask_pmovus_qb_512: {
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_qb_512,
+                                        /* trailingVerbatimArgs=*/1);
+      break;
+    }
+
+    case Intrinsic::x86_avx512_mask_pmovs_qw_512:
+    case Intrinsic::x86_avx512_mask_pmovus_qw_512: {
+      handleIntrinsicByApplyingToShadow(I,
+                                        Intrinsic::x86_avx512_mask_pmov_qw_512,
+                                        /* trailingVerbatimArgs=*/1);
+      break;
+    }
+
+    case Intrinsic::x86_avx512_mask_pmovs_qd_512:
+    case Intrinsic::x86_avx512_mask_pmovus_qd_512:
+    case Intrinsic::x86_avx512_mask_pmovs_wb_512:
+    case Intrinsic::x86_avx512_mask_pmovus_wb_512: {
+      // Since Intrinsic::x86_avx512_mask_pmov_{qd,wb}_512 do not exist, we
+      // cannot use handleIntrinsicByApplyingToShadow. Instead, we call the
+      // slow-path handler.
+      handleAVX512VectorDownConvert(I);
+      break;
+    }
+
+    // AVX512 FP16 Arithmetic
     case Intrinsic::x86_avx512fp16_mask_add_sh_round:
     case Intrinsic::x86_avx512fp16_mask_sub_sh_round:
     case Intrinsic::x86_avx512fp16_mask_mul_sh_round:

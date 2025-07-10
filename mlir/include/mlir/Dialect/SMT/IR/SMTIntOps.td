@@ -52,12 +52,6 @@ class VariadicIntOp<string mnemonic> : SMTIntOp<mnemonic, [Pure, Commutative]> {
   let arguments = (ins Variadic<IntType>:$inputs);
   let results = (outs IntType:$result);
   let assemblyFormat = "$inputs attr-dict";
-
-  let builders = [
-    OpBuilder<(ins "mlir::ValueRange":$inputs), [{
-      build($_builder, $_state, $_builder.getType<smt::IntType>(), inputs);
-    }]>,
-  ];
 }
 
 class BinaryIntOp<string mnemonic> : SMTIntOp<mnemonic, [Pure]> {

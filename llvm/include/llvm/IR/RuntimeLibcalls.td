@@ -17,6 +17,7 @@ class DuplicateLibcallImplWithPrefix<RuntimeLibcallImpl Impl, string prefix>
 
 /// Libcall Predicates
 def isOSDarwin : RuntimeLibcallPredicate<"TT.isOSDarwin()">;
+def isOSWindows : RuntimeLibcallPredicate<"TT.isOSWindows()">;
 
 def darwinHasSinCosStret : RuntimeLibcallPredicate<"darwinHasSinCosStret(TT)">;
 def darwinHasExp10 : RuntimeLibcallPredicate<"darwinHasExp10(TT)">;
@@ -1096,9 +1097,8 @@ def WindowsARM64ECSystemLibrary
 
 def isAMDGPU : RuntimeLibcallPredicate<"TT.isAMDGPU()">;
 
-// No calls, except for dummy atomic calls to avoid crashes.
-def AMDGPUSystemLibrary
-    : SystemRuntimeLibrary<isAMDGPU, (add DefaultRuntimeLibcallImpls_atomic)>;
+// No calls.
+def AMDGPUSystemLibrary : SystemRuntimeLibrary<isAMDGPU, (add)>;
 
 //===----------------------------------------------------------------------===//
 // ARM Runtime Libcalls
@@ -1177,8 +1177,8 @@ def __aeabi_dsub : RuntimeLibcallImpl<SUB_F64>; // CallingConv::ARM_AAPCS
 
 // Double-precision floating-point comparison helper functions
 // RTABI chapter 4.1.2, Table 3
-def __aeabi_dcmpeq__ne : RuntimeLibcallImpl<OEQ_F64, "__aeabi_dcmpeq">; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
-def __aeabi_dcmpeq__eq : RuntimeLibcallImpl<UNE_F64, "__aeabi_dcmpeq">; // CallingConv::ARM_AAPCS, CmpInst::ICMP_EQ
+def __aeabi_dcmpeq__oeq : RuntimeLibcallImpl<OEQ_F64, "__aeabi_dcmpeq">; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
+def __aeabi_dcmpeq__une : RuntimeLibcallImpl<UNE_F64, "__aeabi_dcmpeq">; // CallingConv::ARM_AAPCS, CmpInst::ICMP_EQ
 def __aeabi_dcmplt : RuntimeLibcallImpl<OLT_F64>; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
 def __aeabi_dcmple : RuntimeLibcallImpl<OLE_F64>; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
 def __aeabi_dcmpge : RuntimeLibcallImpl<OGE_F64>; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
@@ -1194,8 +1194,8 @@ def __aeabi_fsub : RuntimeLibcallImpl<SUB_F32>; // CallingConv::ARM_AAPCS
 
 // Single-precision floating-point comparison helper functions
 // RTABI chapter 4.1.2, Table 5
-def __aeabi_fcmpeq__ne : RuntimeLibcallImpl<OEQ_F32, "__aeabi_fcmpeq">; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
-def __aeabi_fcmpeq__eq : RuntimeLibcallImpl<UNE_F32, "__aeabi_fcmpeq">; // CallingConv::ARM_AAPCS, CmpInst::ICMP_EQ
+def __aeabi_fcmpeq__oeq : RuntimeLibcallImpl<OEQ_F32, "__aeabi_fcmpeq">; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
+def __aeabi_fcmpeq__une : RuntimeLibcallImpl<UNE_F32, "__aeabi_fcmpeq">; // CallingConv::ARM_AAPCS, CmpInst::ICMP_EQ
 def __aeabi_fcmplt : RuntimeLibcallImpl<OLT_F32>; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
 def __aeabi_fcmple : RuntimeLibcallImpl<OLE_F32>; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
 def __aeabi_fcmpge : RuntimeLibcallImpl<OGE_F32>; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
@@ -1272,6 +1272,7 @@ def __aeabi_memclr4 : RuntimeLibcallImpl<AEABI_MEMCLR4>;
 def __aeabi_memclr8 : RuntimeLibcallImpl<AEABI_MEMCLR8>;
 
 // isTargetWindows()
+defset list<RuntimeLibcallImpl> WindowsFPIntCastLibcalls = {
 def __stoi64 : RuntimeLibcallImpl<FPTOSINT_F32_I64>; // CallingConv::ARM_AAPCS_VFP
 def __dtoi64 : RuntimeLibcallImpl<FPTOSINT_F64_I64>; // CallingConv::ARM_AAPCS_VFP
 def __stou64 : RuntimeLibcallImpl<FPTOUINT_F32_I64>; // CallingConv::ARM_AAPCS_VFP
@@ -1280,6 +1281,7 @@ def __i64tos : RuntimeLibcallImpl<SINTTOFP_I64_F32>; // CallingConv::ARM_AAPCS_V
 def __i64tod : RuntimeLibcallImpl<SINTTOFP_I64_F64>; // CallingConv::ARM_AAPCS_VFP
 def __u64tos : RuntimeLibcallImpl<UINTTOFP_I64_F32>; // CallingConv::ARM_AAPCS_VFP
 def __u64tod : RuntimeLibcallImpl<UINTTOFP_I64_F64>; // CallingConv::ARM_AAPCS_VFP
+}
 
 def __rt_sdiv : RuntimeLibcallImpl<SDIVREM_I32>; // CallingConv::ARM_AAPCS
 def __rt_sdiv64 : RuntimeLibcallImpl<SDIVREM_I64>; // CallingConv::ARM_AAPCS
@@ -1305,6 +1307,51 @@ def __aeabi_h2f : RuntimeLibcallImpl<FPEXT_F16_F32>; // CallingConv::ARM_AAPCS
 // !isTargetMachO()
 def __gnu_f2h_ieee : RuntimeLibcallImpl<FPROUND_F32_F16>;
 def __gnu_h2f_ieee : RuntimeLibcallImpl<FPEXT_F16_F32>;
+
+
+def WindowARMDivRemCalls : LibcallImpls<
+  (add __rt_sdiv, __rt_sdiv64, __rt_udiv, __rt_udiv64),
+  isOSWindows> {
+  let CallingConv = ARM_AAPCS;
+}
+
+def WindowARMFPIntCasts : LibcallImpls<
+  (add WindowsFPIntCastLibcalls),
+  isOSWindows> {
+  let CallingConv = ARM_AAPCS_VFP;
+}
+
+
+// Register based DivRem for AEABI (RTABI 4.2)
+def AEABIDivRemCalls : LibcallImpls<
+  (add __aeabi_idivmod, __aeabi_ldivmod,
+       __aeabi_uidivmod, __aeabi_uldivmod),
+  RuntimeLibcallPredicate<[{TT.isTargetAEABI() || TT.isAndroid() || TT.isTargetGNUAEABI() ||
+    TT.isTargetMuslAEABI()}]>> {
+  let CallingConv = ARM_AAPCS;
+}
+
+def isARMOrThumb : RuntimeLibcallPredicate<"TT.isARM() || TT.isThumb()">;
+
+def ARMSystemLibrary
+    : SystemRuntimeLibrary<isARMOrThumb,
+      (add DefaultLibcallImpls32,
+           WindowARMDivRemCalls,
+           WindowARMFPIntCasts,
+           AEABIDivRemCalls,
+           DarwinSinCosStret, DarwinExp10,
+
+           // Use divmod compiler-rt calls for iOS 5.0 and later.
+           LibcallImpls<(add __divmodsi4, __udivmodsi4),
+                        RuntimeLibcallPredicate<[{TT.isOSBinFormatMachO() &&
+                                                  (!TT.isiOS() || !TT.isOSVersionLT(5, 0))}]>>)> {
+  let DefaultLibcallCallingConv = LibcallCallingConv<[{
+     (!TT.isOSDarwin() && !TT.isiOS() && !TT.isWatchOS() && !TT.isDriverKit()) ?
+        (FloatABI == FloatABI::Hard ? CallingConv::ARM_AAPCS_VFP
+                                    : CallingConv::ARM_AAPCS) :
+                                      CallingConv::C
+  }]>;
+}
 
 //===----------------------------------------------------------------------===//
 // AVR Runtime Libcalls
@@ -1699,9 +1746,8 @@ def MSP430SystemLibrary
 
 def isNVPTX : RuntimeLibcallPredicate<"TT.isNVPTX()">;
 
-// No calls, except for dummy atomic calls to avoid crashes.
-def NVPTXSystemLibrary
-    : SystemRuntimeLibrary<isNVPTX, (add DefaultRuntimeLibcallImpls_atomic)>;
+// No calls.
+def NVPTXSystemLibrary : SystemRuntimeLibrary<isNVPTX, (add)>;
 
 //===----------------------------------------------------------------------===//
 // PPC Runtime Libcalls
