@@ -192,8 +192,7 @@ bool FunctionPass::skipFunction(const Function &F) const {
   if (PassName.empty())
     PassName = this->getPassName();
 
-  if (Gate.isEnabled() &&
-      !Gate.shouldRunPass(PassName, getDescription(F)))
+  if (Gate.isEnabled() && !Gate.shouldRunPass(PassName, getDescription(F)))
     return true;
 
   if (F.hasOptNone()) {
