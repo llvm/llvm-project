@@ -40,7 +40,7 @@ struct EntryPointGroup {
 
   EntryPointGroup() = default;
 
-  EntryPointGroup(int ID, EntryPointSet Functions = EntryPointSet())
+  EntryPointGroup(int ID, EntryPointSet &&Functions = EntryPointSet())
       : ID(ID), Functions(std::move(Functions)) {}
 
   void clear() { Functions.clear(); }
@@ -67,7 +67,7 @@ class ModuleDesc {
 
 public:
   ModuleDesc(std::unique_ptr<Module> M,
-             EntryPointGroup EntryPoints = EntryPointGroup())
+             EntryPointGroup &&EntryPoints = EntryPointGroup())
       : M(std::move(M)), EntryPoints(std::move(EntryPoints)) {
     assert(this->M && "Module should be non-null");
   }
@@ -111,7 +111,7 @@ bool isKernel(const Function &F) {
 // - Function FA stores address of a function FB somewhere
 //
 // The following cases are treated as dependencies between global objects:
-// 1. Global object A is used within by a global object B in any way (store,
+// 1. Global object A is used by a global object B in any way (store,
 //    bitcast, phi node, call, etc.): "A" -> "B" edge will be added to the
 //    graph;
 // 2. function A performs an indirect call of a function with signature S and
@@ -223,7 +223,7 @@ void collectFunctionsAndGlobalVariablesToExtract(
 
 ModuleDesc extractSubModule(const Module &M,
                             const SetVector<const GlobalValue *> &GVs,
-                            EntryPointGroup ModuleEntryPoints) {
+                            EntryPointGroup &&ModuleEntryPoints) {
   ValueToValueMapTy VMap;
   // Clone definitions only for needed globals. Others will be added as
   // declarations and removed later.
@@ -241,7 +241,7 @@ ModuleDesc extractSubModule(const Module &M,
 // The function produces a copy of input LLVM IR module M with only those
 // functions and globals that can be called from entry points that are specified
 // in ModuleEntryPoints vector, in addition to the entry point functions.
-ModuleDesc extractCallGraph(const Module &M, EntryPointGroup ModuleEntryPoints,
+ModuleDesc extractCallGraph(const Module &M, EntryPointGroup &&ModuleEntryPoints,
                             const DependencyGraph &DG) {
   SetVector<const GlobalValue *> GVs;
   collectFunctionsAndGlobalVariablesToExtract(GVs, M, ModuleEntryPoints, DG);
@@ -272,7 +272,7 @@ private:
   }
 
 public:
-  ModuleSplitter(std::unique_ptr<Module> Module, EntryPointGroupVec GroupVec)
+  ModuleSplitter(std::unique_ptr<Module> Module, EntryPointGroupVec &&GroupVec)
       : M(std::move(Module)), Groups(std::move(GroupVec)), DG(*M) {
     assert(!Groups.empty() && "Entry points groups collection is empty!");
   }
