@@ -32,11 +32,6 @@ bool LLDBMemoryReader::queryDataLayout(DataLayoutQueryType type, void *inBuffer,
       return false;
     // The mask returned by the process masks out the non-addressable bits.
     uint64_t mask_pattern = ~ptrauth_mask;
-    // LLDBMemoryReader sets LLDB_FILE_ADDRESS_BIT to distinguish process
-    // addresses and file addresses that point into a reflection section on
-    // disk. Setting the bit in the mask ensures it isn't accidentally cleared
-    // by ptrauth stripping.
-    mask_pattern |= LLDB_FILE_ADDRESS_BIT;
     memcpy(outBuffer, &mask_pattern, m_process.GetAddressByteSize());
     return true;
   }
@@ -181,8 +176,7 @@ LLDBMemoryReader::resolvePointerAsSymbol(swift::remote::RemoteAddress address) {
   if (!target.GetSwiftUseReflectionSymbols())
     return {};
 
-  std::optional<Address> maybeAddr =
-      resolveRemoteAddress(address.getRawAddress());
+  std::optional<Address> maybeAddr = remoteAddressToLLDBAddress(address);
   // This is not an assert, but should never happen.
   if (!maybeAddr)
     return {};
@@ -231,11 +225,14 @@ LLDBMemoryReader::resolvePointer(swift::remote::RemoteAddress address,
   // to a tagged address so further memory reads originating from it benefit
   // from the file-cache optimization.
   swift::remote::RemoteAbsolutePointer process_pointer{
-      swift::remote::RemoteAddress{
-          readValue, swift::remote::RemoteAddress::DefaultAddressSpace}};
+      swift::remote::RemoteAddress{readValue, address.getAddressSpace()}};
 
-  if (!readMetadataFromFileCacheEnabled())
+  if (!readMetadataFromFileCacheEnabled()) {
+    assert(address.getAddressSpace() ==
+               swift::remote::RemoteAddress::DefaultAddressSpace &&
+           "Unexpected address space!");
     return process_pointer;
+  }
 
   // Try to strip the pointer before checking if we have it mapped.
   auto strippedPointer = signedPointerStripper(process_pointer);
@@ -271,10 +268,10 @@ LLDBMemoryReader::resolvePointer(swift::remote::RemoteAddress address,
   }
 
   // If the containing image is the first registered one, the image's tagged
-  // start address for it is the first tagged address. Otherwise, the previous
-  // pair's address is the start tagged address.
+  // start address for it is zero. Otherwise, the previous pair's address is the
+  // start of the new address.
   uint64_t start_tagged_address = pair_iterator == m_range_module_map.begin()
-                                      ? LLDB_FILE_ADDRESS_BIT
+                                      ? 0
                                       : std::prev(pair_iterator)->first;
 
   auto *section_list = module_containing_pointer->GetSectionList();
@@ -298,8 +295,7 @@ LLDBMemoryReader::resolvePointer(swift::remote::RemoteAddress address,
   }
 
   swift::remote::RemoteAbsolutePointer tagged_pointer{
-      swift::remote::RemoteAddress{
-          tagged_address, swift::remote::RemoteAddress::DefaultAddressSpace}};
+      swift::remote::RemoteAddress{tagged_address, LLDBAddressSpace}};
 
   if (tagged_address != (uint64_t)signedPointerStripper(tagged_pointer)
                             .getResolvedAddress()
@@ -341,10 +337,10 @@ bool LLDBMemoryReader::readBytes(swift::remote::RemoteAddress address,
   LLDB_LOGV(log, "[MemoryReader] asked to read {0} bytes at address {1:x}",
             size, address.getRawAddress());
   std::optional<Address> maybeAddr =
-      resolveRemoteAddressFromSymbolObjectFile(address.getRawAddress());
+      resolveRemoteAddressFromSymbolObjectFile(address);
 
   if (!maybeAddr)
-    maybeAddr = resolveRemoteAddress(address.getRawAddress());
+    maybeAddr = remoteAddressToLLDBAddress(address);
 
   if (!maybeAddr) {
     LLDB_LOGV(log, "[MemoryReader] could not resolve address {0:x}",
@@ -418,10 +414,10 @@ bool LLDBMemoryReader::readString(swift::remote::RemoteAddress address,
             address.getRawAddress());
 
   std::optional<Address> maybeAddr =
-      resolveRemoteAddressFromSymbolObjectFile(address.getRawAddress());
+      resolveRemoteAddressFromSymbolObjectFile(address);
 
   if (!maybeAddr)
-    maybeAddr = resolveRemoteAddress(address.getRawAddress());
+    maybeAddr = remoteAddressToLLDBAddress(address);
 
   if (!maybeAddr) {
     LLDB_LOGV(log, "[MemoryReader] could not resolve address {0:x}",
@@ -461,7 +457,7 @@ bool LLDBMemoryReader::readString(swift::remote::RemoteAddress address,
 
 MemoryReaderLocalBufferHolder::~MemoryReaderLocalBufferHolder() {
   if (m_memory_reader)
-  m_memory_reader->popLocalBuffer();
+    m_memory_reader->popLocalBuffer();
 }
 
 MemoryReaderLocalBufferHolder
@@ -490,12 +486,9 @@ LLDBMemoryReader::addModuleToAddressMap(ModuleSP module,
          "Trying to register symbol object file, but reading from it is "
          "disabled!");
 
-  // The first available address is the mask, since subsequent images are mapped
-  // in ascending order, all of them will contain this mask.
-  uint64_t module_start_address = LLDB_FILE_ADDRESS_BIT;
+  uint64_t module_start_address = 0;
   if (!m_range_module_map.empty())
-    // We map the images contiguously one after the other, all with the tag bit
-    // set.
+    // We map the images contiguously one after the other.
     // The address that maps the last module is exactly the address the new
     // module should start at.
     module_start_address = m_range_module_map.back().first;
@@ -541,18 +534,6 @@ LLDBMemoryReader::addModuleToAddressMap(ModuleSP module,
   auto size = end_file_address - start_file_address;
   auto module_end_address = module_start_address + size;
 
-  if (module_end_address !=
-      signedPointerStripper(
-          swift::remote::RemoteAbsolutePointer{swift::remote::RemoteAddress{
-              module_end_address,
-              swift::reflection::RemoteAddress::DefaultAddressSpace}})
-          .getResolvedAddress()
-          .getRawAddress()) {
-    LLDB_LOG(GetLog(LLDBLog::Types),
-             "[MemoryReader] module to address map ran into pointer "
-             "authentication mask!");
-    return {};
-  }
   // The address for the next image is the next pointer aligned address
   // available after the end of the current image.
   uint64_t next_module_start_address = llvm::alignTo(module_end_address, 8);
@@ -566,18 +547,18 @@ LLDBMemoryReader::addModuleToAddressMap(ModuleSP module,
 
 std::optional<std::pair<uint64_t, lldb::ModuleSP>>
 LLDBMemoryReader::getFileAddressAndModuleForTaggedAddress(
-    uint64_t tagged_address) const {
+    swift::remote::RemoteAddress tagged_address) const {
   Log *log(GetLog(LLDBLog::Types));
 
   if (!readMetadataFromFileCacheEnabled())
     return {};
 
-  // If the address contains our mask, this is an image we registered.
-  if (!(tagged_address & LLDB_FILE_ADDRESS_BIT))
+  if (tagged_address.getAddressSpace() != LLDBAddressSpace)
     return {};
 
   // Dummy pair with the address we're looking for.
-  auto comparison_pair = std::make_pair(tagged_address, ModuleSP());
+  auto comparison_pair =
+      std::make_pair(tagged_address.getRawAddress(), ModuleSP());
 
   // Explicitly compare only the addresses, never the modules in the pairs.
   auto pair_iterator = std::lower_bound(
@@ -589,7 +570,7 @@ LLDBMemoryReader::getFileAddressAndModuleForTaggedAddress(
     LLDB_LOG(log,
              "[MemoryReader] Address {0:x} is larger than the upper bound "
              "address of the mapped in modules",
-             tagged_address);
+             tagged_address.getRawAddress());
     return {};
   }
 
@@ -601,14 +582,13 @@ LLDBMemoryReader::getFileAddressAndModuleForTaggedAddress(
   }
   uint64_t file_address;
   if (pair_iterator == m_range_module_map.begin())
-    // Since this is the first registered module,
-    // clearing the tag bit will give the virtual file address.
-    file_address = tagged_address & ~LLDB_FILE_ADDRESS_BIT;
+    file_address = tagged_address.getRawAddress();
   else
     // The end of the previous section is the start of the current one.
     // We also need to add the first section's file address since we remove it
     // when constructing the range to module map.
-    file_address = tagged_address - std::prev(pair_iterator)->first;
+    file_address =
+        (tagged_address - std::prev(pair_iterator)->first).getRawAddress();
 
   // We also need to add the module's file address, since we subtract it when
   // building the range to module map.
@@ -620,27 +600,28 @@ std::optional<swift::reflection::RemoteAddress>
 LLDBMemoryReader::resolveRemoteAddress(
     swift::reflection::RemoteAddress address) const {
   std::optional<Address> lldb_address =
-      LLDBMemoryReader::resolveRemoteAddress(address.getRawAddress());
+      LLDBMemoryReader::remoteAddressToLLDBAddress(address);
   if (!lldb_address)
     return {};
   lldb::addr_t addr = lldb_address->GetLoadAddress(&m_process.GetTarget());
   if (addr != LLDB_INVALID_ADDRESS)
-    return swift::reflection::RemoteAddress(addr, swift::reflection::RemoteAddress::DefaultAddressSpace);
+    return swift::reflection::RemoteAddress(
+        addr, swift::reflection::RemoteAddress::DefaultAddressSpace);
   return {};
 }
 
-std::optional<Address>
-LLDBMemoryReader::resolveRemoteAddress(uint64_t address) const {
+std::optional<Address> LLDBMemoryReader::remoteAddressToLLDBAddress(
+    swift::remote::RemoteAddress address) const {
   Log *log(GetLog(LLDBLog::Types));
   auto maybe_pair = getFileAddressAndModuleForTaggedAddress(address);
   if (!maybe_pair)
-    return Address(address);
+    return Address(address.getRawAddress());
 
   uint64_t file_address = maybe_pair->first;
   ModuleSP module = maybe_pair->second;
 
   if (m_modules_with_metadata_in_symbol_obj_file.count(module))
-    return Address(address);
+    return Address(address.getRawAddress());
 
   auto *object_file = module->GetObjectFile();
   if (!object_file)
@@ -656,7 +637,7 @@ LLDBMemoryReader::resolveRemoteAddress(uint64_t address) const {
     LLDB_LOGV(log,
               "[MemoryReader] Successfully resolved mapped address {0:x} into "
               "file address {1:x}",
-              address, resolved.GetFileAddress());
+              address.getRawAddress(), resolved.GetFileAddress());
     return resolved;
   }
   auto *sec_list = module->GetSectionList();
@@ -700,7 +681,7 @@ LLDBMemoryReader::resolveRemoteAddress(uint64_t address) const {
 
 std::optional<Address>
 LLDBMemoryReader::resolveRemoteAddressFromSymbolObjectFile(
-    uint64_t address) const {
+    swift::remote::RemoteAddress address) const {
   Log *log(GetLog(LLDBLog::Types));
 
   if (!m_process.GetTarget().GetSwiftReadMetadataFromDSYM())
@@ -744,7 +725,7 @@ LLDBMemoryReader::resolveRemoteAddressFromSymbolObjectFile(
   LLDB_LOGV(log,
             "[MemoryReader] Successfully resolved mapped address {0:x} into "
             "file address {1:x} from symbol object file.",
-            address, file_address);
+            address.getRawAddress(), file_address);
   return resolved;
 }
 

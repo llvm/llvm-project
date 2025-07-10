@@ -727,8 +727,8 @@ std::optional<uint32_t> SwiftLanguageRuntime::AddObjectFileToReflectionContext(
         assert(address <= end_address && "Address outside of range!");
 
         swift::remote::RemoteRef<void> remote_ref(
-            swift::remote::RemoteAddress(
-                address, swift::remote::RemoteAddress::DefaultAddressSpace),
+            swift::remote::RemoteAddress(address,
+                                         LLDBMemoryReader::LLDBAddressSpace),
             Buf);
         return {remote_ref, size};
       }
