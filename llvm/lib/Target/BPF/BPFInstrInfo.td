@@ -308,7 +308,7 @@ defm JSLE : J<BPF_JSLE, "s<=", BPF_CC_LE, BPF_CC_LE_32>;
 defm JSET : J<BPF_JSET, "&", NoCond, NoCond>;
 def JCOND : JMP_JCOND<BPF_JCOND, "may_goto", []>;
 
-let isIndirectBranch = 1 in {
+let isIndirectBranch = 1, isBarrier = 1, isNotDuplicable = 1 in {
   def JX : JMP_IND<BPF_JA, "gotox", [(BPFBrJt tjumptable:$jt, i64:$dst)]>;
 }
 }
