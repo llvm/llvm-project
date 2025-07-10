@@ -176,6 +176,15 @@ static ConstString GetSwiftDemangledStr(ConstString m_mangled,
   const char *mangled_name = m_mangled.AsCString("");
   Log *log = GetLog(LLDBLog::Demangle);
   LLDB_LOGF(log, "demangle swift: %s", mangled_name);
+  SwiftLanguageRuntime::DemangleMode demangle_mode;
+  switch (preference) {
+  case Mangled::eFullName:
+    demangle_mode = SwiftLanguageRuntime::DemangleMode::eTypeName;
+    break;
+  case Mangled::eCompactName:
+    demangle_mode = SwiftLanguageRuntime::DemangleMode::eSimplified;
+    break;
+  }
   auto [demangled, info] = SwiftLanguageRuntime::TrackedDemangleSymbolAsString(
       mangled_name, SwiftLanguageRuntime::eSimplified, sc);
 >>>>>>> d2c3aeda7c2e ([lldb] add function name syntax highlighting in Swift backtraces)
