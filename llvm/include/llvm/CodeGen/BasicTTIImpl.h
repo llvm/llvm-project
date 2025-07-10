@@ -1773,6 +1773,18 @@ public:
         }
       }
 
+      if (ICA.getID() == Intrinsic::vp_select ||
+          ICA.getID() == Intrinsic::vp_merge) {
+        TTI::OperandValueInfo OpInfoX, OpInfoY;
+        if (!ICA.isTypeBasedOnly()) {
+          OpInfoX = TTI::getOperandInfo(ICA.getArgs()[0]);
+          OpInfoY = TTI::getOperandInfo(ICA.getArgs()[1]);
+        }
+        return getCmpSelInstrCost(
+            Instruction::Select, ICA.getReturnType(), ICA.getArgTypes()[0],
+            CmpInst::BAD_ICMP_PREDICATE, CostKind, OpInfoX, OpInfoY);
+      }
+
       std::optional<Intrinsic::ID> FID =
           VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID());
       if (FID) {
