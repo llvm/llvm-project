@@ -6,7 +6,7 @@
 #
 # ===----------------------------------------------------------------------===##
 
-# Test that all headers define the _LIBCPP_VERSION macro.
+# Test that all public headers define the _LIBCPP_VERSION macro.
 
 # RUN: %{python} %s %{libcxx-dir}/utils
 
