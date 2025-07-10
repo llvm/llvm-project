@@ -23,10 +23,10 @@ namespace LIBC_NAMESPACE_DECL {
 static constexpr float16 ONE_OVER_TWO = 0.5f16;
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-static constexpr size_t N_ASINFPI_EXCEPTS = 3;
+static constexpr size_t N_ASINPIF16_EXCEPTS = 3;
 
-static constexpr fputil::ExceptValues<float16, N_ASINFPI_EXCEPTS>
-    ASINFPI_EXCEPTS{{
+static constexpr fputil::ExceptValues<float16, N_ASINPIF16_EXCEPTS>
+    ASINPIF16_EXCEPTS{{
         // (input_hex, RZ_output_hex, RU_offset, RD_offset, RN_offset)
         // x = 0.0, asinfpi(0.0) = 0.0
         {0x0000, 0x0000, 0, 0, 0},
@@ -70,7 +70,7 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   // exceptional values
-  if (auto r = ASINFPI_EXCEPTS.lookup(x_uint); LIBC_UNLIKELY(r.has_value()))
+  if (auto r = ASINPIF16_EXCEPTS.lookup(x_uint); LIBC_UNLIKELY(r.has_value()))
     return r.value();
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
