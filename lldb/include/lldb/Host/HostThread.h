@@ -9,7 +9,6 @@
 #ifndef LLDB_HOST_HOSTTHREAD_H
 #define LLDB_HOST_HOSTTHREAD_H
 
-#include "lldb/Host/HostNativeThreadBase.h"
 #include "lldb/Host/HostNativeThreadForward.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-types.h"
@@ -44,11 +43,7 @@ public:
 
   bool EqualsThread(lldb::thread_t thread) const;
 
-  bool HasThread() const {
-    if (!m_native_thread)
-      return false;
-    return m_native_thread->GetSystemHandle() != LLDB_INVALID_HOST_THREAD;
-  }
+  bool HasThread() const;
 
 private:
   std::shared_ptr<HostNativeThreadBase> m_native_thread;
