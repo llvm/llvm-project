@@ -10,7 +10,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "src/math/sqrt.h"
+#include "src/__support/FPUtil/generic/sqrt.h"
 #include "utils/MPFRWrapper/mpfr_inc.h"
 #include <math.h>
 
@@ -28,7 +28,7 @@ extern "C" int LLVMFuzzerTestOneInput(double x) {
   mpfr_subnormalize(input, output, MPFR_RNDN);
   double to_compare = mpfr_get_d(input, MPFR_RNDN);
 
-  double result = LIBC_NAMESPACE::sqrt(x);
+  double result = LIBC_NAMESPACE::fputil::sqrt<double>(x);
 
   if (result != to_compare)
     __builtin_trap();
