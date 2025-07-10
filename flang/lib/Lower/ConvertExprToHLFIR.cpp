@@ -30,6 +30,7 @@
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/Pointer.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/IR/IRMapping.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -124,6 +125,19 @@ public:
   /// an hlfir::ElementalAddrOp.
   hlfir::ElementalAddrOp convertVectorSubscriptedExprToElementalAddr(
       const Fortran::lower::SomeExpr &designatorExpr);
+
+  std::tuple<mlir::Type, fir::FortranVariableFlagsEnum>
+  genComponentDesignatorTypeAndAttributes(
+      const Fortran::semantics::Symbol &componentSym, mlir::Type fieldType,
+      bool isVolatile) {
+    if (mayHaveNonDefaultLowerBounds(componentSym)) {
+      mlir::Type boxType = fir::BoxType::get(fieldType, isVolatile);
+      return std::make_tuple(boxType,
+                             fir::FortranVariableFlagsEnum::contiguous);
+    }
+    auto refType = fir::ReferenceType::get(fieldType, isVolatile);
+    return std::make_tuple(refType, fir::FortranVariableFlagsEnum{});
+  }
 
   mlir::Value genComponentShape(const Fortran::semantics::Symbol &componentSym,
                                 mlir::Type fieldType) {
@@ -227,6 +241,12 @@ private:
         isVolatile = true;
     }
 
+    // Check if the base type is volatile
+    if (partInfo.base.has_value()) {
+      mlir::Type baseType = partInfo.base.value().getType();
+      isVolatile = isVolatile || fir::isa_volatile_type(baseType);
+    }
+
     // Dynamic type of polymorphic base must be kept if the designator is
     // polymorphic.
     if (isPolymorphic(designatorNode))
@@ -237,12 +257,6 @@ private:
     auto charType = mlir::dyn_cast<fir::CharacterType>(resultValueType);
     if (charType && charType.hasDynamicLen())
       return fir::BoxCharType::get(charType.getContext(), charType.getFKind());
-
-    // Check if the base type is volatile
-    if (partInfo.base.has_value()) {
-      mlir::Type baseType = partInfo.base.value().getType();
-      isVolatile = isVolatile || fir::isa_volatile_type(baseType);
-    }
 
     // Arrays with non default lower bounds or dynamic length or dynamic extent
     // need a fir.box to hold the dynamic or lower bound information.
@@ -1051,9 +1065,18 @@ struct BinaryOp<Fortran::evaluate::Divide<
                                          hlfir::Entity lhs, hlfir::Entity rhs) {
     mlir::Type ty = Fortran::lower::getFIRType(
         builder.getContext(), Fortran::common::TypeCategory::Complex, KIND,
-        /*params=*/std::nullopt);
-    return hlfir::EntityWithAttributes{
-        fir::genDivC(builder, loc, ty, lhs, rhs)};
+        /*params=*/{});
+
+    // TODO: Ideally, complex number division operations should always be
+    // lowered to MLIR. However, converting them to the runtime via MLIR causes
+    // ABI issues.
+    if (builder.getComplexDivisionToRuntimeFlag()) {
+      return hlfir::EntityWithAttributes{
+          fir::genDivC(builder, loc, ty, lhs, rhs)};
+    } else {
+      return hlfir::EntityWithAttributes{
+          builder.create<mlir::complex::DivOp>(loc, lhs, rhs)};
+    }
   }
 };
 
@@ -1064,7 +1087,7 @@ struct BinaryOp<Fortran::evaluate::Power<Fortran::evaluate::Type<TC, KIND>>> {
                                          fir::FirOpBuilder &builder, const Op &,
                                          hlfir::Entity lhs, hlfir::Entity rhs) {
     mlir::Type ty = Fortran::lower::getFIRType(builder.getContext(), TC, KIND,
-                                               /*params=*/std::nullopt);
+                                               /*params=*/{});
     return hlfir::EntityWithAttributes{fir::genPow(builder, loc, ty, lhs, rhs)};
   }
 };
@@ -1078,7 +1101,7 @@ struct BinaryOp<
                                          fir::FirOpBuilder &builder, const Op &,
                                          hlfir::Entity lhs, hlfir::Entity rhs) {
     mlir::Type ty = Fortran::lower::getFIRType(builder.getContext(), TC, KIND,
-                                               /*params=*/std::nullopt);
+                                               /*params=*/{});
     return hlfir::EntityWithAttributes{fir::genPow(builder, loc, ty, lhs, rhs)};
   }
 };
@@ -1402,7 +1425,7 @@ struct UnaryOp<Fortran::evaluate::Negate<
     // Like LLVM, integer negation is the binary op "0 - value"
     mlir::Type type = Fortran::lower::getFIRType(
         builder.getContext(), Fortran::common::TypeCategory::Integer, KIND,
-        /*params=*/std::nullopt);
+        /*params=*/{});
     mlir::Value zero = builder.createIntegerConstant(loc, type, 0);
     return hlfir::EntityWithAttributes{
         builder.create<mlir::arith::SubIOp>(loc, zero, lhs)};
@@ -1503,7 +1526,7 @@ struct UnaryOp<
       return hlfir::convertCharacterKind(loc, builder, lhs, KIND);
     }
     mlir::Type type = Fortran::lower::getFIRType(builder.getContext(), TC1,
-                                                 KIND, /*params=*/std::nullopt);
+                                                 KIND, /*params=*/{});
     mlir::Value res = builder.convertWithSemantics(loc, type, lhs);
     return hlfir::EntityWithAttributes{res};
   }
@@ -1647,7 +1670,7 @@ private:
     } else {
       elementType =
           Fortran::lower::getFIRType(builder.getContext(), R::category, R::kind,
-                                     /*params=*/std::nullopt);
+                                     /*params=*/{});
     }
     mlir::Value shape = hlfir::genShape(loc, builder, left);
     auto genKernel = [&op, &left, &unaryOp](
@@ -1685,7 +1708,7 @@ private:
     // Elemental expression.
     mlir::Type elementType =
         Fortran::lower::getFIRType(builder.getContext(), R::category, R::kind,
-                                   /*params=*/std::nullopt);
+                                   /*params=*/{});
     // TODO: "merge" shape, get cst shape from front-end if possible.
     mlir::Value shape;
     if (left.isArray()) {
@@ -1863,8 +1886,9 @@ private:
           designatorBuilder.genComponentShape(sym, compType);
       const bool isDesignatorVolatile =
           fir::isa_volatile_type(baseOp.getType());
-      mlir::Type designatorType =
-          builder.getRefType(compType, isDesignatorVolatile);
+      auto [designatorType, extraAttributeFlags] =
+          designatorBuilder.genComponentDesignatorTypeAndAttributes(
+              sym, compType, isDesignatorVolatile);
 
       mlir::Type fieldElemType = hlfir::getFortranElementType(compType);
       llvm::SmallVector<mlir::Value, 1> typeParams;
@@ -1884,7 +1908,8 @@ private:
 
       // Convert component symbol attributes to variable attributes.
       fir::FortranVariableFlagsAttr attrs =
-          Fortran::lower::translateSymbolAttributes(builder.getContext(), sym);
+          Fortran::lower::translateSymbolAttributes(builder.getContext(), sym,
+                                                    extraAttributeFlags);
 
       // Get the component designator.
       auto lhs = builder.create<hlfir::DesignateOp>(

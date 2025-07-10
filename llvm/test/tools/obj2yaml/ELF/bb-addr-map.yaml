@@ -14,7 +14,7 @@
 # VALID-NEXT:   - Name: .llvm_bb_addr_map
 # VALID-NEXT:     Type: SHT_LLVM_BB_ADDR_MAP
 # VALID-NEXT:     Entries:
-# VALID-NEXT:       - Version: 2
+# VALID-NEXT:       - Version: 3
 # VALID-NEXT:         BBRanges:
 ## The 'BaseAddress' field is omitted when it's zero.
 # VALID-NEXT:           - BBEntries:
@@ -30,15 +30,16 @@
 # VALID-NEXT:               AddressOffset: 0xFFFFFFFFFFFFFFF7
 # VALID-NEXT:               Size:          0xFFFFFFFFFFFFFFF8
 # VALID-NEXT:               Metadata:      0xFFFFFFFFFFFFFFF9
-# VALID-NEXT:       - Version: 2
-# VALID-NEXT:         Feature: 0x8
+# VALID-NEXT:       - Version: 3
+# VALID-NEXT:         Feature: 0x28
 # VALID-NEXT:         BBRanges:
 # VALID-NEXT:           - BaseAddress: 0xFFFFFFFFFFFFFF20
 # VALID-NEXT:             BBEntries:
-# VALID-NEXT:               - ID:            6
-# VALID-NEXT:                 AddressOffset: 0xA
-# VALID-NEXT:                 Size:          0xB
-# VALID-NEXT:                 Metadata:      0xC
+# VALID-NEXT:               - ID:              6
+# VALID-NEXT:                 AddressOffset:   0xA
+# VALID-NEXT:                 Size:            0xB
+# VALID-NEXT:                 Metadata:        0xC
+# VALID-NEXT:                 CallsiteOffsets: [ 0x1, 0x2 ]
 
 --- !ELF
 FileHeader:
@@ -50,7 +51,7 @@ Sections:
     Type:   SHT_LLVM_BB_ADDR_MAP
     ShSize: [[SIZE=<none>]]
     Entries:
-      - Version: 2
+      - Version: 3
         Feature: 0x0
         BBRanges:
           - BaseAddress: 0x0
@@ -67,17 +68,18 @@ Sections:
                 AddressOffset: 0xFFFFFFFFFFFFFFF7
                 Size:          0xFFFFFFFFFFFFFFF8
                 Metadata:      0xFFFFFFFFFFFFFFF9
-      - Version:   2
-        Feature:   0x8
+      - Version:   3
+        Feature:   0x28
         NumBBRanges: [[NUMBBRANGES=<none>]]
         BBRanges:
           - BaseAddress:   0xFFFFFFFFFFFFFF20
             NumBlocks: [[NUMBLOCKS=<none>]]
             BBEntries:
-             - ID:            6
-               AddressOffset: 0xA
-               Size:          0xB
-               Metadata:      0xC
+             - ID:              6
+               AddressOffset:   0xA
+               Size:            0xB
+               Metadata:        0xC
+               CallsiteOffsets: [ 0x1, 0x2 ]
 
 ## Check obj2yaml can dump empty .llvm_bb_addr_map sections.
 

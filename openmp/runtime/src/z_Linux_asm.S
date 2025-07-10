@@ -2482,7 +2482,7 @@ __kmp_invoke_microtask:
 KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
     .4byte .gomp_critical_user_
 #ifdef __ELF__
-    .type KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr),@object
+    .type KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr),%object
     .size KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr),4
 #endif
 #endif /* KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_AARCH64_32 || KMP_ARCH_SPARC32 */
@@ -2501,7 +2501,7 @@ KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
 KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
     .8byte .gomp_critical_user_
 #ifdef __ELF__
-    .type KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr),@object
+    .type KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr),%object
     .size KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr),8
 #endif
 #endif /* KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS64 ||

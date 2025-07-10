@@ -675,6 +675,32 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# Debug dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "DebugTransformOpsPyGen",
+    tbl_outs = {"mlir/dialects/_transform_debug_extension_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=transform",
+        "-dialect-extension=transform_debug_extension",
+    ]},
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/TransformDebugExtensionOps.td",
+    deps = [
+        "//mlir:TransformDebugExtensionTdFiles",
+    ],
+)
+
+filegroup(
+    name = "DebugPyFiles",
+    srcs = [
+        "mlir/dialects/transform/debug.py",
+        ":DebugTransformOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
 # PythonTest dialect.
 ##---------------------------------------------------------------------------##
 
@@ -983,8 +1009,8 @@ td_library(
     srcs = [],
     includes = ["../include"],
     deps = [
-        "//mlir:SMTTdFiles",
         "//mlir:OpBaseTdFiles",
+        "//mlir:SMTTdFiles",
     ],
 )
 

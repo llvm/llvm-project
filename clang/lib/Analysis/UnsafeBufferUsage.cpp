@@ -30,14 +30,12 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include <cstddef>
 #include <optional>
 #include <queue>
 #include <set>
 #include <sstream>
 
-using namespace llvm;
 using namespace clang;
 
 #ifndef NDEBUG
@@ -116,6 +114,10 @@ private:
   llvm::StringMap<DynTypedNode> Nodes;
 };
 } // namespace
+
+#define SIZED_CONTAINER_OR_VIEW_LIST                                           \
+  "span", "array", "vector", "basic_string_view", "basic_string",              \
+      "initializer_list",
 
 // A `RecursiveASTVisitor` that traverses all descendants of a given node "n"
 // except for those belonging to a different callable of "n".
@@ -465,6 +467,8 @@ static bool areEqualIntegers(const Expr *E1, const Expr *E2, ASTContext &Ctx) {
 //       `N, M` are parameter indexes to the allocating element number and size.
 //        Sometimes, there is only one parameter index representing the total
 //        size.
+//   7. `std::span<T>{x.begin(), x.end()}` where `x` is an object in the
+//      SIZED_CONTAINER_OR_VIEW_LIST.
 static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
                                         ASTContext &Ctx) {
   assert(Node.getNumArgs() == 2 &&
@@ -474,7 +478,7 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
   auto HaveEqualConstantValues = [&Ctx](const Expr *E0, const Expr *E1) {
     if (auto E0CV = E0->getIntegerConstantExpr(Ctx))
       if (auto E1CV = E1->getIntegerConstantExpr(Ctx)) {
-        return APSInt::compareValues(*E0CV, *E1CV) == 0;
+        return llvm::APSInt::compareValues(*E0CV, *E1CV) == 0;
       }
     return false;
   };
@@ -485,7 +489,7 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
       }
     return false;
   };
-  std::optional<APSInt> Arg1CV = Arg1->getIntegerConstantExpr(Ctx);
+  std::optional<llvm::APSInt> Arg1CV = Arg1->getIntegerConstantExpr(Ctx);
 
   if (Arg1CV && Arg1CV->isZero())
     // Check form 5:
@@ -528,10 +532,10 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
   QualType Arg0Ty = Arg0->IgnoreImplicit()->getType();
 
   if (auto *ConstArrTy = Ctx.getAsConstantArrayType(Arg0Ty)) {
-    const APSInt ConstArrSize = APSInt(ConstArrTy->getSize());
+    const llvm::APSInt ConstArrSize = llvm::APSInt(ConstArrTy->getSize());
 
     // Check form 4:
-    return Arg1CV && APSInt::compareValues(ConstArrSize, *Arg1CV) == 0;
+    return Arg1CV && llvm::APSInt::compareValues(ConstArrSize, *Arg1CV) == 0;
   }
   // Check form 6:
   if (auto CCast = dyn_cast<CStyleCastExpr>(Arg0)) {
@@ -562,6 +566,32 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
         }
     }
   }
+  // Check form 7:
+  auto IsMethodCallToSizedObject = [](const Stmt *Node, StringRef MethodName) {
+    if (const auto *MC = dyn_cast<CXXMemberCallExpr>(Node)) {
+      const auto *MD = MC->getMethodDecl();
+      const auto *RD = MC->getRecordDecl();
+
+      if (RD && MD)
+        if (auto *II = RD->getDeclName().getAsIdentifierInfo();
+            II && RD->isInStdNamespace())
+          return llvm::is_contained({SIZED_CONTAINER_OR_VIEW_LIST},
+                                    II->getName()) &&
+                 MD->getName() == MethodName;
+    }
+    return false;
+  };
+
+  if (IsMethodCallToSizedObject(Arg0, "begin") &&
+      IsMethodCallToSizedObject(Arg1, "end"))
+    return AreSameDRE(
+        // We know Arg0 and Arg1 are `CXXMemberCallExpr`s:
+        cast<CXXMemberCallExpr>(Arg0)
+            ->getImplicitObjectArgument()
+            ->IgnoreParenImpCasts(),
+        cast<CXXMemberCallExpr>(Arg1)
+            ->getImplicitObjectArgument()
+            ->IgnoreParenImpCasts());
   return false;
 }
 
@@ -600,11 +630,26 @@ static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
   } else if (const auto *BE = dyn_cast<BinaryOperator>(IndexExpr)) {
     // For an integer expression `e` and an integer constant `n`, `e & n` and
     // `n & e` are bounded by `n`:
-    if (BE->getOpcode() != BO_And)
+    if (BE->getOpcode() != BO_And && BE->getOpcode() != BO_Rem)
       return false;
 
     const Expr *LHS = BE->getLHS();
     const Expr *RHS = BE->getRHS();
+
+    if (BE->getOpcode() == BO_Rem) {
+      // If n is a negative number, then n % const can be greater than const
+      if (!LHS->getType()->isUnsignedIntegerType()) {
+        return false;
+      }
+
+      if (!RHS->isValueDependent() && RHS->EvaluateAsInt(EVResult, Ctx)) {
+        llvm::APSInt result = EVResult.Val.getInt();
+        if (result.isNonNegative() && result.getLimitedValue() <= limit)
+          return true;
+      }
+
+      return false;
+    }
 
     if ((!LHS->isValueDependent() &&
          LHS->EvaluateAsInt(EVResult, Ctx)) || // case: `n & e`
@@ -1045,8 +1090,7 @@ static bool hasUnsafeSnprintfBuffer(const CallExpr &Node,
     return false; // not an snprintf call
 
   // Pattern 1:
-  static StringRef SizedObjs[] = {"span", "array", "vector",
-                                  "basic_string_view", "basic_string"};
+  static StringRef SizedObjs[] = {SIZED_CONTAINER_OR_VIEW_LIST};
   Buf = Buf->IgnoreParenImpCasts();
   Size = Size->IgnoreParenImpCasts();
   if (auto *MCEPtr = dyn_cast<CXXMemberCallExpr>(Buf))
@@ -1084,9 +1128,10 @@ static bool hasUnsafeSnprintfBuffer(const CallExpr &Node,
       // explicit cast will be needed, which will make this check unreachable.
       // Therefore, the array extent is same as its' bytewise size.
       if (Size->EvaluateAsInt(ER, Ctx)) {
-        APSInt EVal = ER.Val.getInt(); // Size must have integer type
+        llvm::APSInt EVal = ER.Val.getInt(); // Size must have integer type
 
-        return APSInt::compareValues(EVal, APSInt(CAT->getSize(), true)) != 0;
+        return llvm::APSInt::compareValues(
+                   EVal, llvm::APSInt(CAT->getSize(), true)) != 0;
       }
     }
   }
@@ -1812,9 +1857,8 @@ private:
     auto *method = cast<CXXMethodDecl>(callee);
     if (method->getNameAsString() == "data" &&
         method->getParent()->isInStdNamespace() &&
-        (method->getParent()->getName() == "span" ||
-         method->getParent()->getName() == "array" ||
-         method->getParent()->getName() == "vector"))
+        llvm::is_contained({SIZED_CONTAINER_OR_VIEW_LIST},
+                           method->getParent()->getName()))
       return true;
     return false;
   }
@@ -2133,8 +2177,8 @@ namespace {
 // declarations to its uses and make sure we've covered all uses with our
 // analysis before we try to fix the declaration.
 class DeclUseTracker {
-  using UseSetTy = SmallSet<const DeclRefExpr *, 16>;
-  using DefMapTy = DenseMap<const VarDecl *, const DeclStmt *>;
+  using UseSetTy = llvm::SmallSet<const DeclRefExpr *, 16>;
+  using DefMapTy = llvm::DenseMap<const VarDecl *, const DeclStmt *>;
 
   // Allocate on the heap for easier move.
   std::unique_ptr<UseSetTy> Uses{std::make_unique<UseSetTy>()};
@@ -3625,7 +3669,7 @@ static FixItList fixVarDeclWithArray(const VarDecl *D, const ASTContext &Ctx,
     }
 
     SmallString<32> Replacement;
-    raw_svector_ostream OS(Replacement);
+    llvm::raw_svector_ostream OS(Replacement);
     OS << "std::array<" << ElemTypeTxt << ", " << ArraySizeTxt << "> "
        << IdentText->str();
 
@@ -4049,7 +4093,8 @@ static void applyGadgets(const Decl *D, FixableGadgetList FixableGadgets,
 #endif
 
   // Fixpoint iteration for pointer assignments
-  using DepMapTy = DenseMap<const VarDecl *, llvm::SetVector<const VarDecl *>>;
+  using DepMapTy =
+      llvm::DenseMap<const VarDecl *, llvm::SetVector<const VarDecl *>>;
   DepMapTy DependenciesMap{};
   DepMapTy PtrAssignmentGraph{};
 

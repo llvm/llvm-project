@@ -20,6 +20,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/IR/MDBuilder.h"
 
 #define DEBUG_TYPE "vplan"
 
@@ -65,9 +66,8 @@ public:
   PlainCFGBuilder(Loop *Lp, LoopInfo *LI)
       : TheLoop(Lp), LI(LI), Plan(std::make_unique<VPlan>(Lp)) {}
 
-  /// Build plain CFG for TheLoop  and connects it to Plan's entry.
-  std::unique_ptr<VPlan>
-  buildPlainCFG(DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB);
+  /// Build plain CFG for TheLoop and connect it to Plan's entry.
+  std::unique_ptr<VPlan> buildPlainCFG();
 };
 } // anonymous namespace
 
@@ -182,11 +182,6 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
            "Instruction shouldn't have been visited.");
 
     if (auto *Br = dyn_cast<BranchInst>(Inst)) {
-      if (TheLoop->getLoopLatch() == BB ||
-          any_of(successors(BB),
-                 [this](BasicBlock *Succ) { return !TheLoop->contains(Succ); }))
-        continue;
-
       // Conditional branch instruction are represented using BranchOnCond
       // recipes.
       if (Br->isConditional()) {
@@ -247,10 +242,11 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
 }
 
 // Main interface to build the plain CFG.
-std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG(
-    DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB) {
+std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG() {
   VPIRBasicBlock *Entry = cast<VPIRBasicBlock>(Plan->getEntry());
   BB2VPBB[Entry->getIRBasicBlock()] = Entry;
+  for (VPIRBasicBlock *ExitVPBB : Plan->getExitBlocks())
+    BB2VPBB[ExitVPBB->getIRBasicBlock()] = ExitVPBB;
 
   // 1. Scan the body of the loop in a topological order to visit each basic
   // block after having visited its predecessor basic blocks. Create a VPBB for
@@ -276,7 +272,6 @@ std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG(
   for (BasicBlock *BB : RPO) {
     // Create or retrieve the VPBasicBlock for this BB.
     VPBasicBlock *VPBB = getOrCreateVPBB(BB);
-    Loop *LoopForBB = LI->getLoopFor(BB);
     // Set VPBB predecessors in the same order as they are in the incoming BB.
     setVPBBPredsFromBB(VPBB, BB);
 
@@ -307,23 +302,11 @@ std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG(
     BasicBlock *IRSucc1 = BI->getSuccessor(1);
     VPBasicBlock *Successor0 = getOrCreateVPBB(IRSucc0);
     VPBasicBlock *Successor1 = getOrCreateVPBB(IRSucc1);
-
-    // Don't connect any blocks outside the current loop except the latches for
-    // inner loops.
-    // TODO: Also connect exit blocks during initial VPlan construction.
-    if (LoopForBB == TheLoop || BB != LoopForBB->getLoopLatch()) {
-      if (!LoopForBB->contains(IRSucc0)) {
-        VPBB->setOneSuccessor(Successor1);
-        continue;
-      }
-      if (!LoopForBB->contains(IRSucc1)) {
-        VPBB->setOneSuccessor(Successor0);
-        continue;
-      }
-    }
-
     VPBB->setTwoSuccessors(Successor0, Successor1);
   }
+
+  for (auto *EB : Plan->getExitBlocks())
+    setVPBBPredsFromBB(EB, EB->getIRBasicBlock());
 
   // 2. The whole CFG has been built at this point so all the input Values must
   // have a VPlan counterpart. Fix VPlan header phi by adding their
@@ -350,18 +333,14 @@ std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG(
     }
   }
 
-  for (const auto &[IRBB, VPB] : BB2VPBB)
-    VPB2IRBB[VPB] = IRBB;
-
   LLVM_DEBUG(Plan->setName("Plain CFG\n"); dbgs() << *Plan);
   return std::move(Plan);
 }
 
-std::unique_ptr<VPlan> VPlanTransforms::buildPlainCFG(
-    Loop *TheLoop, LoopInfo &LI,
-    DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB) {
+std::unique_ptr<VPlan> VPlanTransforms::buildPlainCFG(Loop *TheLoop,
+                                                      LoopInfo &LI) {
   PlainCFGBuilder Builder(TheLoop, &LI);
-  return Builder.buildPlainCFG(VPB2IRBB);
+  return Builder.buildPlainCFG();
 }
 
 /// Checks if \p HeaderVPB is a loop header block in the plain CFG; that is, it
@@ -424,22 +403,23 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
 
   VPBlockUtils::disconnectBlocks(PreheaderVPBB, HeaderVPB);
   VPBlockUtils::disconnectBlocks(LatchVPBB, HeaderVPB);
-  VPBlockBase *Succ = LatchVPBB->getSingleSuccessor();
-  assert(LatchVPBB->getNumSuccessors() <= 1 &&
-         "Latch has more than one successor");
-  if (Succ)
-    VPBlockUtils::disconnectBlocks(LatchVPBB, Succ);
+  VPBlockBase *LatchExitVPB = LatchVPBB->getSingleSuccessor();
+  assert(LatchExitVPB && "Latch expected to be left with a single successor");
 
-  auto *R = Plan.createVPRegionBlock(HeaderVPB, LatchVPBB, "",
-                                     false /*isReplicator*/);
-  // All VPBB's reachable shallowly from HeaderVPB belong to top level loop,
-  // because VPlan is expected to end at top level latch disconnected above.
+  // Create an empty region first and insert it between PreheaderVPBB and
+  // LatchExitVPB, taking care to preserve the original predecessor & successor
+  // order of blocks. Set region entry and exiting after both HeaderVPB and
+  // LatchVPBB have been disconnected from their predecessors/successors.
+  auto *R = Plan.createVPRegionBlock("", false /*isReplicator*/);
+  VPBlockUtils::insertOnEdge(LatchVPBB, LatchExitVPB, R);
+  VPBlockUtils::disconnectBlocks(LatchVPBB, R);
+  VPBlockUtils::connectBlocks(PreheaderVPBB, R);
+  R->setEntry(HeaderVPB);
+  R->setExiting(LatchVPBB);
+
+  // All VPBB's reachable shallowly from HeaderVPB belong to the current region.
   for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPB))
     VPBB->setParent(R);
-
-  VPBlockUtils::insertBlockAfter(R, PreheaderVPBB);
-  if (Succ)
-    VPBlockUtils::connectBlocks(R, Succ);
 }
 
 // Add the necessary canonical IV and branch recipes required to control the
@@ -475,11 +455,10 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
                        {CanonicalIVIncrement, &Plan.getVectorTripCount()}, DL);
 }
 
-void VPlanTransforms::prepareForVectorization(VPlan &Plan, Type *InductionTy,
-                                              PredicatedScalarEvolution &PSE,
-                                              bool RequiresScalarEpilogueCheck,
-                                              bool TailFolded, Loop *TheLoop,
-                                              DebugLoc IVDL) {
+void VPlanTransforms::prepareForVectorization(
+    VPlan &Plan, Type *InductionTy, PredicatedScalarEvolution &PSE,
+    bool RequiresScalarEpilogueCheck, bool TailFolded, Loop *TheLoop,
+    DebugLoc IVDL, bool HasUncountableEarlyExit, VFRange &Range) {
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
 
@@ -491,11 +470,49 @@ void VPlanTransforms::prepareForVectorization(VPlan &Plan, Type *InductionTy,
   VPBlockUtils::insertBlockAfter(VecPreheader, Plan.getEntry());
 
   VPBasicBlock *MiddleVPBB = Plan.createVPBasicBlock("middle.block");
-  VPBlockUtils::connectBlocks(LatchVPB, MiddleVPBB);
-  LatchVPB->swapSuccessors();
+  // The canonical LatchVPB has the header block as last successor. If it has
+  // another successor, this successor is an exit block - insert middle block on
+  // its edge. Otherwise, add middle block as another successor retaining header
+  // as last.
+  if (LatchVPB->getNumSuccessors() == 2) {
+    VPBlockBase *LatchExitVPB = LatchVPB->getSuccessors()[0];
+    VPBlockUtils::insertOnEdge(LatchVPB, LatchExitVPB, MiddleVPBB);
+  } else {
+    VPBlockUtils::connectBlocks(LatchVPB, MiddleVPBB);
+    LatchVPB->swapSuccessors();
+  }
 
   addCanonicalIVRecipes(Plan, cast<VPBasicBlock>(HeaderVPB),
                         cast<VPBasicBlock>(LatchVPB), InductionTy, IVDL);
+
+  [[maybe_unused]] bool HandledUncountableEarlyExit = false;
+  // Disconnect all early exits from the loop leaving it with a single exit from
+  // the latch. Early exits that are countable are left for a scalar epilog. The
+  // condition of uncountable early exits (currently at most one is supported)
+  // is fused into the latch exit, and used to branch from middle block to the
+  // early exit destination.
+  for (VPIRBasicBlock *EB : Plan.getExitBlocks()) {
+    for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
+      if (Pred == MiddleVPBB)
+        continue;
+      if (HasUncountableEarlyExit) {
+        assert(!HandledUncountableEarlyExit &&
+               "can handle exactly one uncountable early exit");
+        handleUncountableEarlyExit(cast<VPBasicBlock>(Pred), EB, Plan,
+                                   cast<VPBasicBlock>(HeaderVPB),
+                                   cast<VPBasicBlock>(LatchVPB), Range);
+        HandledUncountableEarlyExit = true;
+      } else {
+        for (VPRecipeBase &R : EB->phis())
+          cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
+      }
+      cast<VPBasicBlock>(Pred)->getTerminator()->eraseFromParent();
+      VPBlockUtils::disconnectBlocks(Pred, EB);
+    }
+  }
+
+  assert((!HasUncountableEarlyExit || HandledUncountableEarlyExit) &&
+         "missed an uncountable exit that must be handled");
 
   // Create SCEV and VPValue for the trip count.
   // We use the symbolic max backedge-taken-count, which works also when
@@ -512,48 +529,54 @@ void VPlanTransforms::prepareForVectorization(VPlan &Plan, Type *InductionTy,
   VPBasicBlock *ScalarPH = Plan.createVPBasicBlock("scalar.ph");
   VPBlockUtils::connectBlocks(ScalarPH, Plan.getScalarHeader());
 
-  // If needed, add a check in the middle block to see if we have completed
-  // all of the iterations in the first vector loop.  Three cases:
-  // 1) If we require a scalar epilogue, there is no conditional branch as
-  //    we unconditionally branch to the scalar preheader.  Remove the recipes
-  //    from the exit blocks.
-  // 2) If (N - N%VF) == N, then we *don't* need to run the remainder.
-  //    Thus if tail is to be folded, we know we don't need to run the
-  //    remainder and we can set the condition to true.
-  // 3) Otherwise, construct a runtime check.
+  // The connection order corresponds to the operands of the conditional branch,
+  // with the middle block already connected to the exit block.
+  VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
+  // Also connect the entry block to the scalar preheader.
+  // TODO: Also introduce a branch recipe together with the minimum trip count
+  // check.
+  VPBlockUtils::connectBlocks(Plan.getEntry(), ScalarPH);
+  Plan.getEntry()->swapSuccessors();
 
-  if (!RequiresScalarEpilogueCheck) {
-    VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
-    // The exit blocks are unreachable, remove their recipes to make sure no
-    // users remain that may pessimize transforms.
-    for (auto *EB : Plan.getExitBlocks()) {
-      for (VPRecipeBase &R : make_early_inc_range(*EB))
-        R.eraseFromParent();
-    }
+  // If MiddleVPBB has a single successor then the original loop does not exit
+  // via the latch and the single successor must be the scalar preheader.
+  // There's no need to add a runtime check to MiddleVPBB.
+  if (MiddleVPBB->getNumSuccessors() == 1) {
+    assert(MiddleVPBB->getSingleSuccessor() == ScalarPH &&
+           "must have ScalarPH as single successor");
     return;
   }
 
-  // The connection order corresponds to the operands of the conditional branch.
-  BasicBlock *IRExitBlock = TheLoop->getUniqueLatchExitBlock();
-  auto *VPExitBlock = Plan.getExitBlock(IRExitBlock);
-  VPBlockUtils::connectBlocks(MiddleVPBB, VPExitBlock);
-  VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
+  assert(MiddleVPBB->getNumSuccessors() == 2 && "must have 2 successors");
 
-  auto *ScalarLatchTerm = TheLoop->getLoopLatch()->getTerminator();
-  // Here we use the same DebugLoc as the scalar loop latch terminator instead
-  // of the corresponding compare because they may have ended up with
-  // different line numbers and we want to avoid awkward line stepping while
-  // debugging. Eg. if the compare has got a line number inside the loop.
+  // Add a check in the middle block to see if we have completed all of the
+  // iterations in the first vector loop.
+  //
+  // Three cases:
+  // 1) If we require a scalar epilogue, the scalar ph must execute. Set the
+  //    condition to false.
+  // 2) If (N - N%VF) == N, then we *don't* need to run the
+  //    remainder. Thus if tail is to be folded, we know we don't need to run
+  //    the remainder and we can set the condition to true.
+  // 3) Otherwise, construct a runtime check.
+
+  // We use the same DebugLoc as the scalar loop latch terminator instead of
+  // the corresponding compare because they may have ended up with different
+  // line numbers and we want to avoid awkward line stepping while debugging.
+  // E.g., if the compare has got a line number inside the loop.
+  DebugLoc LatchDL = TheLoop->getLoopLatch()->getTerminator()->getDebugLoc();
   VPBuilder Builder(MiddleVPBB);
-  VPValue *Cmp =
-      TailFolded
-          ? Plan.getOrAddLiveIn(ConstantInt::getTrue(
-                IntegerType::getInt1Ty(TripCount->getType()->getContext())))
-          : Builder.createICmp(CmpInst::ICMP_EQ, Plan.getTripCount(),
-                               &Plan.getVectorTripCount(),
-                               ScalarLatchTerm->getDebugLoc(), "cmp.n");
-  Builder.createNaryOp(VPInstruction::BranchOnCond, {Cmp},
-                       ScalarLatchTerm->getDebugLoc());
+  VPValue *Cmp;
+  if (!RequiresScalarEpilogueCheck)
+    Cmp = Plan.getOrAddLiveIn(ConstantInt::getFalse(
+        IntegerType::getInt1Ty(TripCount->getType()->getContext())));
+  else if (TailFolded)
+    Cmp = Plan.getOrAddLiveIn(ConstantInt::getTrue(
+        IntegerType::getInt1Ty(TripCount->getType()->getContext())));
+  else
+    Cmp = Builder.createICmp(CmpInst::ICMP_EQ, Plan.getTripCount(),
+                             &Plan.getVectorTripCount(), LatchDL, "cmp.n");
+  Builder.createNaryOp(VPInstruction::BranchOnCond, {Cmp}, LatchDL);
 }
 
 void VPlanTransforms::createLoopRegions(VPlan &Plan) {
@@ -566,4 +589,42 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan) {
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   TopRegion->setName("vector loop");
   TopRegion->getEntryBasicBlock()->setName("vector.body");
+}
+
+// Likelyhood of bypassing the vectorized loop due to a runtime check block,
+// including memory overlap checks block and wrapping/unit-stride checks block.
+static constexpr uint32_t CheckBypassWeights[] = {1, 127};
+
+void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
+                                       BasicBlock *CheckBlock,
+                                       bool AddBranchWeights) {
+  VPValue *CondVPV = Plan.getOrAddLiveIn(Cond);
+  VPBasicBlock *CheckBlockVPBB = Plan.createVPIRBasicBlock(CheckBlock);
+  VPBlockBase *VectorPH = Plan.getVectorPreheader();
+  VPBlockBase *ScalarPH = Plan.getScalarPreheader();
+  VPBlockBase *PreVectorPH = VectorPH->getSinglePredecessor();
+  VPBlockUtils::insertOnEdge(PreVectorPH, VectorPH, CheckBlockVPBB);
+  VPBlockUtils::connectBlocks(CheckBlockVPBB, ScalarPH);
+  CheckBlockVPBB->swapSuccessors();
+
+  // We just connected a new block to the scalar preheader. Update all
+  // VPPhis by adding an incoming value for it, replicating the last value.
+  unsigned NumPredecessors = ScalarPH->getNumPredecessors();
+  for (VPRecipeBase &R : cast<VPBasicBlock>(ScalarPH)->phis()) {
+    assert(isa<VPPhi>(&R) && "Phi expected to be VPPhi");
+    assert(cast<VPPhi>(&R)->getNumIncoming() == NumPredecessors - 1 &&
+           "must have incoming values for all operands");
+    R.addOperand(R.getOperand(NumPredecessors - 2));
+  }
+
+  VPIRMetadata VPBranchWeights;
+  auto *Term = VPBuilder(CheckBlockVPBB)
+                   .createNaryOp(VPInstruction::BranchOnCond, {CondVPV},
+                                 Plan.getCanonicalIV()->getDebugLoc());
+  if (AddBranchWeights) {
+    MDBuilder MDB(Plan.getScalarHeader()->getIRBasicBlock()->getContext());
+    MDNode *BranchWeights =
+        MDB.createBranchWeights(CheckBypassWeights, /*IsExpected=*/false);
+    Term->addMetadata(LLVMContext::MD_prof, BranchWeights);
+  }
 }

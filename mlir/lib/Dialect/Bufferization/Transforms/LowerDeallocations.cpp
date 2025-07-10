@@ -18,7 +18,6 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
@@ -460,14 +459,14 @@ func::FuncOp mlir::bufferization::buildDeallocationLibraryFunction(
   Value toRetainSize = builder.create<memref::DimOp>(loc, toRetainMemref, c0);
 
   builder.create<scf::ForOp>(
-      loc, c0, toRetainSize, c1, std::nullopt,
+      loc, c0, toRetainSize, c1, ValueRange(),
       [&](OpBuilder &builder, Location loc, Value i, ValueRange iterArgs) {
         builder.create<memref::StoreOp>(loc, falseValue, retainCondsMemref, i);
         builder.create<scf::YieldOp>(loc);
       });
 
   builder.create<scf::ForOp>(
-      loc, c0, toDeallocSize, c1, std::nullopt,
+      loc, c0, toDeallocSize, c1, ValueRange(),
       [&](OpBuilder &builder, Location loc, Value outerIter,
           ValueRange iterArgs) {
         Value toDealloc =

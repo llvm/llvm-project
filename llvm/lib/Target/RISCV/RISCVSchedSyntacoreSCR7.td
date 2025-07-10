@@ -241,9 +241,14 @@ multiclass SCR7_Other {
 
 // Unsupported scheduling classes for SCR7.
 multiclass SCR7_Unsupported {
+  defm : UnsupportedSchedQ;
   defm : UnsupportedSchedSFB;
   defm : UnsupportedSchedV;
   defm : UnsupportedSchedXsfvcp;
+  defm : UnsupportedSchedXSfvfnrclipxfqf;
+  defm : UnsupportedSchedXSfvfwmaccqqq;
+  defm : UnsupportedSchedXSfvqmaccdod;
+  defm : UnsupportedSchedXSfvqmaccqoq;
   defm : UnsupportedSchedZabha;
   defm : UnsupportedSchedZfa;
   defm : UnsupportedSchedZfhmin;

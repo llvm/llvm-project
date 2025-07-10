@@ -1828,7 +1828,7 @@ CXXRecordDecl::getLambdaExplicitTemplateParameters() const {
 
   const auto ExplicitEnd = llvm::partition_point(
       *List, [](const NamedDecl *D) { return !D->isImplicit(); });
-  return llvm::ArrayRef(List->begin(), ExplicitEnd);
+  return ArrayRef(List->begin(), ExplicitEnd);
 }
 
 Decl *CXXRecordDecl::getLambdaContextDecl() const {
@@ -3449,9 +3449,8 @@ UsingPackDecl *UsingPackDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
   size_t Extra = additionalSizeToAlloc<NamedDecl *>(NumExpansions);
   auto *Result = new (C, ID, Extra) UsingPackDecl(nullptr, nullptr, {});
   Result->NumExpansions = NumExpansions;
-  auto *Trail = Result->getTrailingObjects<NamedDecl *>();
-  for (unsigned I = 0; I != NumExpansions; ++I)
-    new (Trail + I) NamedDecl*(nullptr);
+  auto *Trail = Result->getTrailingObjects();
+  std::uninitialized_fill_n(Trail, NumExpansions, nullptr);
   return Result;
 }
 
@@ -3579,13 +3578,13 @@ VarDecl *BindingDecl::getHoldingVar() const {
   return VD;
 }
 
-llvm::ArrayRef<BindingDecl *> BindingDecl::getBindingPackDecls() const {
+ArrayRef<BindingDecl *> BindingDecl::getBindingPackDecls() const {
   assert(Binding && "expecting a pack expr");
   auto *FP = cast<FunctionParmPackExpr>(Binding);
   ValueDecl *const *First = FP->getNumExpansions() > 0 ? FP->begin() : nullptr;
   assert((!First || isa<BindingDecl>(*First)) && "expecting a BindingDecl");
-  return llvm::ArrayRef<BindingDecl *>(
-      reinterpret_cast<BindingDecl *const *>(First), FP->getNumExpansions());
+  return ArrayRef<BindingDecl *>(reinterpret_cast<BindingDecl *const *>(First),
+                                 FP->getNumExpansions());
 }
 
 void DecompositionDecl::anchor() {}
@@ -3610,9 +3609,8 @@ DecompositionDecl *DecompositionDecl::CreateDeserialized(ASTContext &C,
                         QualType(), nullptr, StorageClass(), {});
   // Set up and clean out the bindings array.
   Result->NumBindings = NumBindings;
-  auto *Trail = Result->getTrailingObjects<BindingDecl *>();
-  for (unsigned I = 0; I != NumBindings; ++I)
-    new (Trail + I) BindingDecl*(nullptr);
+  auto *Trail = Result->getTrailingObjects();
+  std::uninitialized_fill_n(Trail, NumBindings, nullptr);
   return Result;
 }
 

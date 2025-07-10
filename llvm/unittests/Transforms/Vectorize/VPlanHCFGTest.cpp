@@ -44,14 +44,13 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   auto Plan = buildVPlan(LoopHeader);
 
   VPBasicBlock *Entry = Plan->getEntry()->getEntryBasicBlock();
-  EXPECT_NE(nullptr, Entry->getSingleSuccessor());
   EXPECT_EQ(0u, Entry->getNumPredecessors());
-  EXPECT_EQ(1u, Entry->getNumSuccessors());
+  EXPECT_EQ(2u, Entry->getNumSuccessors());
 
   // Check that the region following the preheader consists of a block for the
   // original header and a separate latch.
   VPBasicBlock *VecBB = Plan->getVectorLoopRegion()->getEntryBasicBlock();
-  EXPECT_EQ(10u, VecBB->size());
+  EXPECT_EQ(11u, VecBB->size());
   EXPECT_EQ(0u, VecBB->getNumPredecessors());
   EXPECT_EQ(0u, VecBB->getNumSuccessors());
   EXPECT_EQ(VecBB->getParent()->getEntryBasicBlock(), VecBB);
@@ -108,51 +107,16 @@ edge [fontname=Courier, fontsize=30]
 compound=true
   N0 [label =
     "ir-bb\<entry\>:\l" +
-    "Successor(s): vector.ph\l"
+    "Successor(s): scalar.ph, vector.ph\l"
   ]
-  N0 -> N1 [ label=""]
+  N0 -> N1 [ label="T"]
+  N0 -> N2 [ label="F"]
   N1 [label =
-    "vector.ph:\l" +
-    "Successor(s): vector loop\l"
-  ]
-  N1 -> N2 [ label="" lhead=cluster_N3]
-  subgraph cluster_N3 {
-    fontname=Courier
-    label="\<x1\> vector loop"
-    N2 [label =
-      "vector.body:\l" +
-      "  EMIT vp\<%2\> = CANONICAL-INDUCTION ir\<0\>, vp\<%index.next\>\l" +
-      "  WIDEN-PHI ir\<%indvars.iv\> = phi ir\<0\>, ir\<%indvars.iv.next\>\l" +
-      "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\>, ir\<%indvars.iv\>\l" +
-      "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
-      "  EMIT ir\<%res\> = add ir\<%l1\>, ir\<10\>\l" +
-      "  EMIT store ir\<%res\>, ir\<%arr.idx\>\l" +
-      "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\>, ir\<1\>\l" +
-      "  EMIT ir\<%exitcond\> = icmp ir\<%indvars.iv.next\>, ir\<%N\>\l" +
-      "  EMIT vp\<%index.next\> = add nuw vp\<%2\>, vp\<%0\>\l" +
-      "  EMIT branch-on-count vp\<%index.next\>, vp\<%1\>\l" +
-      "No successors\l"
-    ]
-  }
-  N2 -> N4 [ label="" ltail=cluster_N3]
-  N4 [label =
-    "middle.block:\l" +
-    "  EMIT vp\<%cmp.n\> = icmp eq ir\<%N\>, vp\<%1\>\l" +
-    "  EMIT branch-on-cond vp\<%cmp.n\>\l" +
-    "Successor(s): ir-bb\<for.end\>, scalar.ph\l"
-  ]
-  N4 -> N5 [ label="T"]
-  N4 -> N6 [ label="F"]
-  N5 [label =
-    "ir-bb\<for.end\>:\l" +
-    "No successors\l"
-  ]
-  N6 [label =
     "scalar.ph:\l" +
     "Successor(s): ir-bb\<for.body\>\l"
   ]
-  N6 -> N7 [ label=""]
-  N7 [label =
+  N1 -> N3 [ label=""]
+  N3 [label =
     "ir-bb\<for.body\>:\l" +
     "  IR   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]\l" +
     "  IR   %arr.idx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv\l" +
@@ -161,6 +125,43 @@ compound=true
     "  IR   store i32 %res, ptr %arr.idx, align 4\l" +
     "  IR   %indvars.iv.next = add i64 %indvars.iv, 1\l" +
     "  IR   %exitcond = icmp ne i64 %indvars.iv.next, %N\l" +
+    "No successors\l"
+  ]
+  N2 [label =
+    "vector.ph:\l" +
+    "Successor(s): vector loop\l"
+  ]
+  N2 -> N4 [ label="" lhead=cluster_N5]
+  subgraph cluster_N5 {
+    fontname=Courier
+    label="\<x1\> vector loop"
+    N4 [label =
+      "vector.body:\l" +
+      "  EMIT vp\<%2\> = CANONICAL-INDUCTION ir\<0\>, vp\<%index.next\>\l" +
+      "  WIDEN-PHI ir\<%indvars.iv\> = phi [ ir\<0\>, vector.ph ], [ ir\<%indvars.iv.next\>, vector.body ]\l" +
+      "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\>, ir\<%indvars.iv\>\l" +
+      "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
+      "  EMIT ir\<%res\> = add ir\<%l1\>, ir\<10\>\l" +
+      "  EMIT store ir\<%res\>, ir\<%arr.idx\>\l" +
+      "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\>, ir\<1\>\l" +
+      "  EMIT ir\<%exitcond\> = icmp ir\<%indvars.iv.next\>, ir\<%N\>\l" +
+      "  EMIT vp\<%3\> = not ir\<%exitcond\>\l" +
+      "  EMIT vp\<%index.next\> = add nuw vp\<%2\>, vp\<%0\>\l" +
+      "  EMIT branch-on-count vp\<%index.next\>, vp\<%1\>\l" +
+      "No successors\l"
+    ]
+  }
+  N4 -> N6 [ label="" ltail=cluster_N5]
+  N6 [label =
+    "middle.block:\l" +
+    "  EMIT vp\<%cmp.n\> = icmp eq ir\<%N\>, vp\<%1\>\l" +
+    "  EMIT branch-on-cond vp\<%cmp.n\>\l" +
+    "Successor(s): ir-bb\<for.end\>, scalar.ph\l"
+  ]
+  N6 -> N7 [ label="T"]
+  N6 -> N1 [ label="F"]
+  N7 [label =
+    "ir-bb\<for.end\>:\l" +
     "No successors\l"
   ]
 }
@@ -205,14 +206,13 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
       Plan, [](PHINode *P) { return nullptr; }, *SE, TLI);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
-  EXPECT_NE(nullptr, Entry->getSingleSuccessor());
   EXPECT_EQ(0u, Entry->getNumPredecessors());
-  EXPECT_EQ(1u, Entry->getNumSuccessors());
+  EXPECT_EQ(2u, Entry->getNumSuccessors());
 
   // Check that the region following the preheader consists of a block for the
   // original header and a separate latch.
   VPBasicBlock *VecBB = Plan->getVectorLoopRegion()->getEntryBasicBlock();
-  EXPECT_EQ(11u, VecBB->size());
+  EXPECT_EQ(12u, VecBB->size());
   EXPECT_EQ(0u, VecBB->getNumPredecessors());
   EXPECT_EQ(0u, VecBB->getNumSuccessors());
   EXPECT_EQ(VecBB->getParent()->getEntryBasicBlock(), VecBB);
@@ -226,6 +226,7 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   EXPECT_NE(nullptr, dyn_cast<VPWidenMemoryRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPWidenRecipe>(&*Iter++));
+  EXPECT_NE(nullptr, dyn_cast<VPInstruction>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPInstruction>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPInstruction>(&*Iter++));
   EXPECT_NE(nullptr, dyn_cast<VPInstruction>(&*Iter++));
@@ -275,62 +276,64 @@ edge [fontname=Courier, fontsize=30]
 compound=true
   N0 [label =
     "ir-bb\<entry\>:\l" +
-    "Successor(s): vector.ph\l"
+    "Successor(s): scalar.ph, vector.ph\l"
   ]
-  N0 -> N1 [ label=""]
+  N0 -> N1 [ label="T"]
+  N0 -> N2 [ label="F"]
   N1 [label =
-    "vector.ph:\l" +
-    "Successor(s): vector loop\l"
-  ]
-  N1 -> N2 [ label="" lhead=cluster_N3]
-  subgraph cluster_N3 {
-    fontname=Courier
-    label="\<x1\> vector loop"
-    N2 [label =
-      "vector.body:\l" +
-      "  EMIT vp\<%2\> = CANONICAL-INDUCTION ir\<0\>, vp\<%index.next\>\l" +
-      "  WIDEN-PHI ir\<%iv\> = phi ir\<0\>, ir\<%iv.next\>\l" +
-      "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\>, ir\<%iv\>\l" +
-      "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
-      "  EMIT ir\<%c\> = icmp ir\<%l1\>, ir\<0\>\l" +
-      "Successor(s): loop.latch\l"
-    ]
-    N2 -> N4 [ label=""]
-    N4 [label =
-      "loop.latch:\l" +
-      "  EMIT ir\<%res\> = add ir\<%l1\>, ir\<10\>\l" +
-      "  EMIT store ir\<%res\>, ir\<%arr.idx\>\l" +
-      "  EMIT ir\<%iv.next\> = add ir\<%iv\>, ir\<1\>\l" +
-      "  EMIT ir\<%exitcond\> = icmp ir\<%iv.next\>, ir\<%N\>\l" +
-      "  EMIT vp\<%index.next\> = add nuw vp\<%2\>, vp\<%0\>\l" +
-      "  EMIT branch-on-count vp\<%index.next\>, vp\<%1\>\l" +
-      "No successors\l"
-    ]
-  }
-  N4 -> N5 [ label="" ltail=cluster_N3]
-  N5 [label =
-    "middle.block:\l" +
-    "  EMIT vp\<%cmp.n\> = icmp eq ir\<%N\>, vp\<%1\>\l" +
-    "  EMIT branch-on-cond vp\<%cmp.n\>\l" +
-    "Successor(s): ir-bb\<exit.2\>, scalar.ph\l"
-  ]
-  N5 -> N6 [ label="T"]
-  N5 -> N7 [ label="F"]
-  N6 [label =
-    "ir-bb\<exit.2\>:\l" +
-    "No successors\l"
-  ]
-  N7 [label =
     "scalar.ph:\l" +
     "Successor(s): ir-bb\<loop.header\>\l"
   ]
-  N7 -> N8 [ label=""]
-  N8 [label =
+  N1 -> N3 [ label=""]
+  N3 [label =
     "ir-bb\<loop.header\>:\l" +
     "  IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]\l" +
     "  IR   %arr.idx = getelementptr inbounds i32, ptr %A, i64 %iv\l" +
     "  IR   %l1 = load i32, ptr %arr.idx, align 4\l" +
     "  IR   %c = icmp eq i32 %l1, 0\l" +
+    "No successors\l"
+  ]
+  N2 [label =
+    "vector.ph:\l" +
+    "Successor(s): vector loop\l"
+  ]
+  N2 -> N4 [ label="" lhead=cluster_N5]
+  subgraph cluster_N5 {
+    fontname=Courier
+    label="\<x1\> vector loop"
+    N4 [label =
+      "vector.body:\l" +
+      "  EMIT vp\<%2\> = CANONICAL-INDUCTION ir\<0\>, vp\<%index.next\>\l" +
+      "  WIDEN-PHI ir\<%iv\> = phi [ ir\<0\>, vector.ph ], [ ir\<%iv.next\>, loop.latch ]\l" +
+      "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\>, ir\<%iv\>\l" +
+      "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
+      "  EMIT ir\<%c\> = icmp ir\<%l1\>, ir\<0\>\l" +
+      "Successor(s): loop.latch\l"
+    ]
+    N4 -> N6 [ label=""]
+    N6 [label =
+      "loop.latch:\l" +
+      "  EMIT ir\<%res\> = add ir\<%l1\>, ir\<10\>\l" +
+      "  EMIT store ir\<%res\>, ir\<%arr.idx\>\l" +
+      "  EMIT ir\<%iv.next\> = add ir\<%iv\>, ir\<1\>\l" +
+      "  EMIT ir\<%exitcond\> = icmp ir\<%iv.next\>, ir\<%N\>\l" +
+      "  EMIT vp\<%3\> = not ir\<%exitcond\>\l" +
+      "  EMIT vp\<%index.next\> = add nuw vp\<%2\>, vp\<%0\>\l" +
+      "  EMIT branch-on-count vp\<%index.next\>, vp\<%1\>\l" +
+      "No successors\l"
+    ]
+  }
+  N6 -> N7 [ label="" ltail=cluster_N5]
+  N7 [label =
+    "middle.block:\l" +
+    "  EMIT vp\<%cmp.n\> = icmp eq ir\<%N\>, vp\<%1\>\l" +
+    "  EMIT branch-on-cond vp\<%cmp.n\>\l" +
+    "Successor(s): ir-bb\<exit.2\>, scalar.ph\l"
+  ]
+  N7 -> N8 [ label="T"]
+  N7 -> N1 [ label="F"]
+  N8 [label =
+    "ir-bb\<exit.2\>:\l" +
     "No successors\l"
   ]
 }
