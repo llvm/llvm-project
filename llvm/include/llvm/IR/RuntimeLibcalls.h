@@ -81,7 +81,7 @@ struct RuntimeLibcallsInfo {
   }
 
   /// Get the libcall routine name for the specified libcall implementation.
-  const char *getLibcallImplName(RTLIB::LibcallImpl CallImpl) const {
+  static const char *getLibcallImplName(RTLIB::LibcallImpl CallImpl) {
     return LibCallImplNames[CallImpl];
   }
 
