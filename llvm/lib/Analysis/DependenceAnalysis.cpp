@@ -188,6 +188,7 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
           if (auto D = DA->depends(&*SrcI, &*DstI,
                                    /*UnderRuntimeAssumptions=*/true)) {
 
+#ifndef NDEBUG
             // Verify that the distance begin zero is equivalent to the
             // direction being EQ.
             for (unsigned Level = 1; Level <= D->getLevels(); Level++) {
@@ -198,6 +199,7 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
               assert(IsDistanceZero == IsDirectionEQ &&
                      "Inconsistent distance and direction.");
             }
+#endif
 
             // Normalize negative direction vectors if required by clients.
             if (NormalizeResults && D->normalize(&SE))
@@ -4010,14 +4012,14 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     if (Result.getDirection(II) == Dependence::DVEntry::EQ)
       Result.DV[II - 1].Distance = SE->getZero(SrcSCEV->getType());
 
-    LLVM_DEBUG({
+#ifndef NDEBUG
       // Check that the converse (i.e., if the distance is zero, then the
       // direction is EQ) holds.
       const SCEV *Distance = Result.getDistance(II);
       if (Distance && Distance->isZero())
         assert(Result.getDirection(II) == Dependence::DVEntry::EQ &&
                "Distance is zero, but direction is not EQ");
-    });
+#endif
   }
 
   if (PossiblyLoopIndependent) {
