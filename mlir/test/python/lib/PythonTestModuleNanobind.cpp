@@ -115,7 +115,7 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
           nanobind::cpp_function([valueCls](const nb::object &valueObj) {
             std::optional<nb::object> capsule =
                 mlirApiObjectToCapsule(valueObj);
-            // TODO(nicholasjng): Can this capsule be std::nullopt?
+            assert(capsule.has_value() && "capsule is not null");
             MlirValue v = mlirPythonCapsuleToValue(capsule.value().ptr());
             MlirType t = mlirValueGetType(v);
             // This is hyper-specific in order to exercise/test registering a
