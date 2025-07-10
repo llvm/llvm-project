@@ -112,8 +112,8 @@ Status AdbClient::GetDevices(DeviceIDList &device_list) {
   for (const auto &device : devices)
     device_list.push_back(std::string(device.split('\t').first));
 
-  // Force disconnect since ADB closes connection after host:devices response
-  // is sent.
+  Log *log = GetLog(LLDBLog::Platform);
+  LLDB_LOGF(log, "Force reconnect since ADB closes connection after host:devices response");
   m_conn = std::make_unique<ConnectionFileDescriptor>();
   error = Connect();
   return error;
