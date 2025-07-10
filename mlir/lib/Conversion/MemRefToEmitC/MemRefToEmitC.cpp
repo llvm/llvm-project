@@ -16,7 +16,9 @@
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/TypeRange.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
@@ -77,23 +79,13 @@ struct ConvertAlloca final : public OpConversionPattern<memref::AllocaOp> {
   }
 };
 
-struct ConvertCopy final : public OpConversionPattern<memref::CopyOp> {
-  using OpConversionPattern::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(memref::CopyOp op, OpAdaptor operands,
-                  ConversionPatternRewriter &rewriter) const override {
-    return failure();
-  }
-};
-
 struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(memref::GlobalOp op, OpAdaptor operands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto type = op.getType();
+    MemRefType type = op.getType();
     if (!op.getType().hasStaticShape()) {
       return rewriter.notifyMatchFailure(
           op.getLoc(), "cannot transform global with dynamic shape");
@@ -105,22 +97,12 @@ struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
           op.getLoc(), "global variable with alignment requirement is "
                        "currently not supported");
     }
-    // auto resultTy =
-    //     convertGlobalMemrefTypeToEmitc(op.getType(), *getTypeConverter());
-    Type resultTy;
-    Type elementType = getTypeConverter()->convertType(type.getElementType());
-    auto shape = type.getShape();
 
-    if (shape.empty()) {
-      if (emitc::isSupportedFloatType(elementType)) {
-        resultTy = rewriter.getF32Type();
-      }
-      if (emitc::isSupportedIntegerType(elementType)) {
-        resultTy = rewriter.getIntegerType(elementType.getIntOrFloatBitWidth());
-      }
-    } else {
-      resultTy = emitc::ArrayType::get(shape, elementType);
-    }
+    Type resultTy;
+    if (type.getRank() == 0)
+      resultTy = getTypeConverter()->convertType(type.getElementType());
+    else
+      resultTy = getTypeConverter()->convertType(type);
 
     if (!resultTy) {
       return rewriter.notifyMatchFailure(op.getLoc(),
@@ -140,7 +122,7 @@ struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
     bool externSpecifier = !staticSpecifier;
 
     Attribute initialValue = operands.getInitialValueAttr();
-    if (op.getType().getRank() == 0) {
+    if (type.getRank() == 0) {
       auto elementsAttr = llvm::cast<ElementsAttr>(*op.getInitialValue());
       initialValue = elementsAttr.getSplatValue<Attribute>();
     }
@@ -162,7 +144,17 @@ struct ConvertGetGlobal final
   matchAndRewrite(memref::GetGlobalOp op, OpAdaptor operands,
                   ConversionPatternRewriter &rewriter) const override {
 
-    auto resultTy = getTypeConverter()->convertType(op.getType());
+    MemRefType type = op.getType();
+    Type resultTy;
+    if (type.getRank() == 0)
+      resultTy = emitc::LValueType::get(
+          getTypeConverter()->convertType(type.getElementType()));
+    else
+      resultTy = getTypeConverter()->convertType(type);
+
+    if (!resultTy)
+      return rewriter.notifyMatchFailure(op.getLoc(), "cannot convert type");
+
     if (!resultTy) {
       return rewriter.notifyMatchFailure(op.getLoc(),
                                          "cannot convert result type");
