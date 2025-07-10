@@ -56,18 +56,15 @@ static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
       const struct {
         const RTLIB::Libcall Op;
         const RTLIB::LibcallImpl Impl;
-        const CallingConv::ID CC;
       } LibraryCalls[] = {
-          {RTLIB::SDIVREM_I32, RTLIB::__aeabi_idivmod, CallingConv::ARM_AAPCS},
-          {RTLIB::SDIVREM_I64, RTLIB::__aeabi_ldivmod, CallingConv::ARM_AAPCS},
-          {RTLIB::UDIVREM_I32, RTLIB::__aeabi_uidivmod, CallingConv::ARM_AAPCS},
-          {RTLIB::UDIVREM_I64, RTLIB::__aeabi_uldivmod, CallingConv::ARM_AAPCS},
+          {RTLIB::SDIVREM_I32, RTLIB::__aeabi_idivmod},
+          {RTLIB::SDIVREM_I64, RTLIB::__aeabi_ldivmod},
+          {RTLIB::UDIVREM_I32, RTLIB::__aeabi_uidivmod},
+          {RTLIB::UDIVREM_I64, RTLIB::__aeabi_uldivmod},
       };
 
-      for (const auto &LC : LibraryCalls) {
+      for (const auto &LC : LibraryCalls)
         Info.setLibcallImpl(LC.Op, LC.Impl);
-        Info.setLibcallImplCallingConv(LC.Impl, LC.CC);
-      }
     }
   }
 
@@ -98,6 +95,46 @@ static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
     Info.setLibcallImpl(RTLIB::SDIVREM_I32, RTLIB::__divmodsi4);
     Info.setLibcallImpl(RTLIB::UDIVREM_I32, RTLIB::__udivmodsi4);
   }
+
+  static const RTLIB::LibcallImpl AAPCS_Libcalls[] = {
+      RTLIB::__aeabi_dadd,        RTLIB::__aeabi_ddiv,
+      RTLIB::__aeabi_dmul,        RTLIB::__aeabi_dsub,
+      RTLIB::__aeabi_dcmpeq__oeq, RTLIB::__aeabi_dcmpeq__une,
+      RTLIB::__aeabi_dcmplt,      RTLIB::__aeabi_dcmple,
+      RTLIB::__aeabi_dcmpge,      RTLIB::__aeabi_dcmpgt,
+      RTLIB::__aeabi_dcmpun,      RTLIB::__aeabi_fadd,
+      RTLIB::__aeabi_fdiv,        RTLIB::__aeabi_fmul,
+      RTLIB::__aeabi_fsub,        RTLIB::__aeabi_fcmpeq__oeq,
+      RTLIB::__aeabi_fcmpeq__une, RTLIB::__aeabi_fcmplt,
+      RTLIB::__aeabi_fcmple,      RTLIB::__aeabi_fcmpge,
+      RTLIB::__aeabi_fcmpgt,      RTLIB::__aeabi_fcmpun,
+      RTLIB::__aeabi_d2iz,        RTLIB::__aeabi_d2uiz,
+      RTLIB::__aeabi_d2lz,        RTLIB::__aeabi_d2ulz,
+      RTLIB::__aeabi_f2iz,        RTLIB::__aeabi_f2uiz,
+      RTLIB::__aeabi_f2lz,        RTLIB::__aeabi_f2ulz,
+      RTLIB::__aeabi_d2f,         RTLIB::__aeabi_d2h,
+      RTLIB::__aeabi_f2d,         RTLIB::__aeabi_i2d,
+      RTLIB::__aeabi_ui2d,        RTLIB::__aeabi_l2d,
+      RTLIB::__aeabi_ul2d,        RTLIB::__aeabi_i2f,
+      RTLIB::__aeabi_ui2f,        RTLIB::__aeabi_l2f,
+      RTLIB::__aeabi_ul2f,        RTLIB::__aeabi_lmul,
+      RTLIB::__aeabi_llsl,        RTLIB::__aeabi_llsr,
+      RTLIB::__aeabi_lasr,        RTLIB::__aeabi_idiv__i8,
+      RTLIB::__aeabi_idiv__i16,   RTLIB::__aeabi_idiv__i32,
+      RTLIB::__aeabi_idivmod,     RTLIB::__aeabi_uidivmod,
+      RTLIB::__aeabi_ldivmod,     RTLIB::__aeabi_uidiv__i8,
+      RTLIB::__aeabi_uidiv__i16,  RTLIB::__aeabi_uidiv__i32,
+      RTLIB::__aeabi_uldivmod,    RTLIB::__aeabi_f2h,
+      RTLIB::__aeabi_d2h,         RTLIB::__aeabi_h2f,
+      RTLIB::__aeabi_memcpy,      RTLIB::__aeabi_memmove,
+      RTLIB::__aeabi_memset,      RTLIB::__aeabi_memcpy4,
+      RTLIB::__aeabi_memcpy8,     RTLIB::__aeabi_memmove4,
+      RTLIB::__aeabi_memmove8,    RTLIB::__aeabi_memset4,
+      RTLIB::__aeabi_memset8,     RTLIB::__aeabi_memclr,
+      RTLIB::__aeabi_memclr4,     RTLIB::__aeabi_memclr8};
+
+  for (RTLIB::LibcallImpl Impl : AAPCS_Libcalls)
+    Info.setLibcallImplCallingConv(Impl, CallingConv::ARM_AAPCS);
 }
 
 static void setLongDoubleIsF128Libm(RuntimeLibcallsInfo &Info,
