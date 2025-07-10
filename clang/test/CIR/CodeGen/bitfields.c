@@ -213,6 +213,34 @@ typedef struct {
   int c;
 } V;
 
+void get_volatile(V* v) {
+  v->b = 3;
+}
+
+// CIR: cir.func dso_local @get_volatile
+// CIR:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!rec_V>, !cir.ptr<!cir.ptr<!rec_V>>, ["v", init] {alignment = 8 : i64}
+// CIR:   [[TMP1:%.*]] = cir.const #cir.int<3> : !s32i
+// CIR:   [[TMP2:%.*]] = cir.load align(8) [[TMP0]] : !cir.ptr<!cir.ptr<!rec_V>>, !cir.ptr<!rec_V>
+// CIR:   [[TMP3:%.*]] = cir.get_member [[TMP2]][0] {name = "b"} : !cir.ptr<!rec_V> -> !cir.ptr<!u64i>
+// CIR:   [[TMP4:%.*]] = cir.set_bitfield(#bfi_b, [[TMP3]] : !cir.ptr<!u64i>, [[TMP1]] : !s32i) {is_volatile} -> !s32i
+
+// LLVM: define dso_local void @get_volatile
+// LLVM:   [[TMP0:%.*]] = alloca ptr, i64 1, align 8
+// LLVM:   [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
+// LLVM:   [[TMP2:%.*]] = getelementptr %struct.V, ptr [[TMP1]], i32 0, i32 0
+// LLVM:   [[TMP3:%.*]] = load volatile i64, ptr [[TMP2]], align 8
+// LLVM:   [[TMP4:%.*]] = and i64 [[TMP3]], -1095216660481
+// LLVM:   [[TMP5:%.*]] = or i64 [[TMP4]], 12884901888
+// LLVM:   store volatile i64 [[TMP5]], ptr [[TMP2]], align 8
+
+// OCGC: define dso_local void @get_volatile
+// OCGC:   [[TMP0:%.*]] = alloca ptr, align 8
+// OCGC:   [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
+// OCGC:   [[TMP2:%.*]] = load volatile i64, ptr [[TMP1]], align 4
+// OCGC:   [[TMP3:%.*]] = and i64 [[TMP2]], -1095216660481
+// OCGC:   [[TMP4:%.*]] = or i64 [[TMP3]], 12884901888
+// OCGC:   store volatile i64 [[TMP4]], ptr [[TMP1]], align 4
+
 void set_volatile(V* v) {
   v->b = 3;
 }
