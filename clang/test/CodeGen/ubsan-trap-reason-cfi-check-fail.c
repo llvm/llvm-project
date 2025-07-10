@@ -24,4 +24,4 @@ int cfi_trigger(int a) {
 
 // CHECK: call void @llvm.ubsantrap(i8 2) {{.*}}!dbg [[LOC:![0-9]+]]
 // CHECK: [[LOC]] = !DILocation(line: 0, scope: [[MSG:![0-9]+]], {{.+}})
-// CHECK: distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Control flow integrity check failed"
+// CHECK: [[MSG]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Control flow integrity check failed"

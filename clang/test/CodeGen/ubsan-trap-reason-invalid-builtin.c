@@ -8,4 +8,4 @@ unsigned invalid_builtin(unsigned x)
 
 // CHECK: call void @llvm.ubsantrap(i8 8) {{.*}}!dbg [[LOC:![0-9]+]]
 // CHECK: [[LOC]] = !DILocation(line: 0, scope: [[MSG:![0-9]+]], {{.+}})
-// CHECK: distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Invalid use of builtin function"
+// CHECK: [[MSG]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Invalid use of builtin function"

@@ -11,4 +11,4 @@ int vla_bound_not_positive()
 
 // CHECK: call void @llvm.ubsantrap(i8 24) {{.*}}!dbg [[LOC:![0-9]+]]
 // CHECK: [[LOC]] = !DILocation(line: 0, scope: [[MSG:![0-9]+]], {{.+}})
-// CHECK: distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Variable length array bound evaluates to non-positive value"
+// CHECK: [[MSG]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Variable length array bound evaluates to non-positive value"
