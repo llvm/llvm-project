@@ -128,7 +128,7 @@ public:
   /// Set the breakpoint location's condition.
   ///
   /// \param[in] condition
-  ///    The condition expression to evaluate when the breakpoint is hit.
+  ///    The condition to evaluate when the breakpoint is hit.
   void SetCondition(StopCondition condition);
 
   /// Return the breakpoint condition.
