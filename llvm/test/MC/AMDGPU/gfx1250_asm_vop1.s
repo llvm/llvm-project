@@ -49,6 +49,36 @@ v_cvt_f32_bf16 v127, 0x8000
 v_cvt_f32_bf16 v5, v1.h
 // GFX1250: v_cvt_f32_bf16_e32 v5, v1.h             ; encoding: [0x81,0xe5,0x0a,0x7e]
 
+v_cvt_f16_bf8 v1.l, v2
+// GFX1250: v_cvt_f16_bf8_e32 v1.l, v2              ; encoding: [0x02,0xf1,0x02,0x7e]
+
+v_cvt_f16_bf8 v1.l, s2
+// GFX1250: v_cvt_f16_bf8_e32 v1.l, s2              ; encoding: [0x02,0xf0,0x02,0x7e]
+
+v_cvt_f16_bf8 v1.l, 2
+// GFX1250: v_cvt_f16_bf8_e32 v1.l, 2               ; encoding: [0x82,0xf0,0x02,0x7e]
+
+v_cvt_f16_bf8 v1.l, 0x1234
+// GFX1250: v_cvt_f16_bf8_e32 v1.l, 0x1234          ; encoding: [0xff,0xf0,0x02,0x7e,0x34,0x12,0x00,0x00]
+
+v_cvt_f16_bf8 v1.h, v2
+// GFX1250: v_cvt_f16_bf8_e32 v1.h, v2              ; encoding: [0x02,0xf1,0x02,0x7f]
+
+v_cvt_f16_fp8 v1.l, v2
+// GFX1250: v_cvt_f16_fp8_e32 v1.l, v2              ; encoding: [0x02,0xef,0x02,0x7e]
+
+v_cvt_f16_fp8 v1.l, s2
+// GFX1250: v_cvt_f16_fp8_e32 v1.l, s2              ; encoding: [0x02,0xee,0x02,0x7e]
+
+v_cvt_f16_fp8 v1.l, 2
+// GFX1250: v_cvt_f16_fp8_e32 v1.l, 2               ; encoding: [0x82,0xee,0x02,0x7e]
+
+v_cvt_f16_fp8 v1.l, 0x1234
+// GFX1250: v_cvt_f16_fp8_e32 v1.l, 0x1234          ; encoding: [0xff,0xee,0x02,0x7e,0x34,0x12,0x00,0x00]
+
+v_cvt_f16_fp8 v1.h, v2
+// GFX1250: v_cvt_f16_fp8_e32 v1.h, v2              ; encoding: [0x02,0xef,0x02,0x7f]
+
 v_cvt_pk_f16_bf8 v1, v2
 // GFX1250: v_cvt_pk_f16_bf8 v1, v2                 ; encoding: [0x02,0xed,0x02,0x7e]
 
@@ -66,3 +96,21 @@ v_cvt_pk_f16_fp8 v1, s2
 
 v_cvt_pk_f16_fp8 v1, 100
 // GFX1250: v_cvt_pk_f16_fp8 v1, 0x64               ; encoding: [0xff,0xea,0x02,0x7e,0x64,0x00,0x00,0x00]
+
+v_cvt_f32_bf8_e32 v1, s3
+// GFX1250: v_cvt_f32_bf8_e32 v1, s3                ; encoding: [0x03,0xda,0x02,0x7e]
+
+v_cvt_f32_bf8_e32 v1, 3
+// GFX1250: v_cvt_f32_bf8_e32 v1, 3                 ; encoding: [0x83,0xda,0x02,0x7e]
+
+v_cvt_f32_bf8_e32 v1, v3
+// GFX1250: v_cvt_f32_bf8_e32 v1, v3                ; encoding: [0x03,0xdb,0x02,0x7e]
+
+v_cvt_f32_fp8_e32 v1, s3
+// GFX1250: v_cvt_f32_fp8_e32 v1, s3                ; encoding: [0x03,0xd8,0x02,0x7e]
+
+v_cvt_f32_fp8_e32 v1, 3
+// GFX1250: v_cvt_f32_fp8_e32 v1, 3                 ; encoding: [0x83,0xd8,0x02,0x7e]
+
+v_cvt_f32_fp8_e32 v1, v3
+// GFX1250: v_cvt_f32_fp8_e32 v1, v3                ; encoding: [0x03,0xd9,0x02,0x7e]

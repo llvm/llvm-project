@@ -237,6 +237,10 @@ public:
     return isSGPRClass(getPhysRegBaseClass(Reg));
   }
 
+  bool isVGPRPhysReg(Register Reg) const {
+    return isVGPRClass(getPhysRegBaseClass(Reg));
+  }
+
   /// \returns true if this class contains only VGPR registers
   static bool isVGPRClass(const TargetRegisterClass *RC) {
     return hasVGPRs(RC) && !hasAGPRs(RC) && !hasSGPRs(RC);

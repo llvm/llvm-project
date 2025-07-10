@@ -44,7 +44,6 @@
 #include <optional>
 #include <string>
 #include <tuple>
-#include <utility>
 
 #ifdef __SSE4_2__
 #include <nmmintrin.h>
@@ -930,9 +929,7 @@ static CharSourceRange makeRangeFromFileLocs(CharSourceRange Range,
   }
 
   // Break down the source locations.
-  FileID FID;
-  unsigned BeginOffs;
-  std::tie(FID, BeginOffs) = SM.getDecomposedLoc(Begin);
+  auto [FID, BeginOffs] = SM.getDecomposedLoc(Begin);
   if (FID.isInvalid())
     return {};
 
@@ -4590,6 +4587,9 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
 
   if (Result.is(tok::hash) && Result.isAtStartOfLine()) {
     PP->HandleDirective(Result);
+    if (PP->hadModuleLoaderFatalFailure())
+      // With a fatal failure in the module loader, we abort parsing.
+      return true;
     return false;
   }
   if (Result.is(tok::raw_identifier)) {

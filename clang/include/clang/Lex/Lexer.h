@@ -585,6 +585,11 @@ public:
   /// sequence.
   static bool isNewLineEscaped(const char *BufferStart, const char *Str);
 
+  /// getEscapedNewLineSize - Return the size of the specified escaped newline,
+  /// or 0 if it is not an escaped newline. P[-1] is known to be a "\" on entry
+  /// to this function.
+  static unsigned getEscapedNewLineSize(const char *P);
+
   /// Diagnose use of a delimited or named escape sequence.
   static void DiagnoseDelimitedOrNamedEscapeSequence(SourceLocation Loc,
                                                      bool Named,
@@ -724,11 +729,6 @@ private:
   /// getCharAndSizeSlow - Handle the slow/uncommon case of the getCharAndSize
   /// method.
   SizedChar getCharAndSizeSlow(const char *Ptr, Token *Tok = nullptr);
-
-  /// getEscapedNewLineSize - Return the size of the specified escaped newline,
-  /// or 0 if it is not an escaped newline. P[-1] is known to be a "\" on entry
-  /// to this function.
-  static unsigned getEscapedNewLineSize(const char *P);
 
   /// SkipEscapedNewLines - If P points to an escaped newline (or a series of
   /// them), skip over them and return the first non-escaped-newline found,

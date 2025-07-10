@@ -173,8 +173,8 @@ define internal fastcc [3 x i32] @callee_St4x3(ptr nocapture noundef readonly by
   ; CHECK-NEXT:  .param .align 16 .b8 callee_St4x3_param_0[12]
   ; CHECK:       ld.param.v2.b32 {[[R1:%r[0-9]+]], [[R2:%r[0-9]+]]}, [callee_St4x3_param_0];
   ; CHECK:       ld.param.b32    [[R3:%r[0-9]+]],  [callee_St4x3_param_0+8];
-  ; CHECK:       st.param.v2.b32 [func_retval0], {[[R1]], [[R2]]};
-  ; CHECK:       st.param.b32    [func_retval0+8], [[R3]];
+  ; CHECK-DAG:   st.param.v2.b32 [func_retval0], {[[R1]], [[R2]]};
+  ; CHECK-DAG:   st.param.b32    [func_retval0+8], [[R3]];
   ; CHECK-NEXT:  ret;
   %1 = load i32, ptr %in, align 4
   %arrayidx.1 = getelementptr inbounds [3 x i32], ptr %in, i64 0, i64 1
@@ -269,8 +269,8 @@ define internal fastcc [5 x i32] @callee_St4x5(ptr nocapture noundef readonly by
   ; CHECK-NEXT:  .param .align 16 .b8 callee_St4x5_param_0[20]
   ; CHECK:       ld.param.v4.b32 {[[R1:%r[0-9]+]], [[R2:%r[0-9]+]], [[R3:%r[0-9]+]], [[R4:%r[0-9]+]]}, [callee_St4x5_param_0];
   ; CHECK:       ld.param.b32    [[R5:%r[0-9]+]],   [callee_St4x5_param_0+16];
-  ; CHECK:       st.param.v4.b32 [func_retval0],  {[[R1]], [[R2]], [[R3]], [[R4]]};
-  ; CHECK:       st.param.b32    [func_retval0+16], [[R5]];
+  ; CHECK-DAG:   st.param.v4.b32 [func_retval0],  {[[R1]], [[R2]], [[R3]], [[R4]]};
+  ; CHECK-DAG:   st.param.b32    [func_retval0+16], [[R5]];
   ; CHECK-NEXT:  ret;
   %1 = load i32, ptr %in, align 4
   %arrayidx.1 = getelementptr inbounds [5 x i32], ptr %in, i64 0, i64 1
@@ -328,8 +328,8 @@ define internal fastcc [6 x i32] @callee_St4x6(ptr nocapture noundef readonly by
   ; CHECK-NEXT:  .param .align 16 .b8 callee_St4x6_param_0[24]
   ; CHECK:       ld.param.v4.b32 {[[R1:%r[0-9]+]], [[R2:%r[0-9]+]], [[R3:%r[0-9]+]], [[R4:%r[0-9]+]]}, [callee_St4x6_param_0];
   ; CHECK:       ld.param.v2.b32 {[[R5:%r[0-9]+]],  [[R6:%r[0-9]+]]}, [callee_St4x6_param_0+16];
-  ; CHECK:       st.param.v4.b32 [func_retval0],  {[[R1]], [[R2]], [[R3]], [[R4]]};
-  ; CHECK:       st.param.v2.b32 [func_retval0+16], {[[R5]], [[R6]]};
+  ; CHECK-DAG:   st.param.v4.b32 [func_retval0],  {[[R1]], [[R2]], [[R3]], [[R4]]};
+  ; CHECK-DAG:   st.param.v2.b32 [func_retval0+16], {[[R5]], [[R6]]};
   ; CHECK-NEXT:  ret;
   %1 = load i32, ptr %in, align 4
   %arrayidx.1 = getelementptr inbounds [6 x i32], ptr %in, i64 0, i64 1
@@ -396,9 +396,9 @@ define internal fastcc [7 x i32] @callee_St4x7(ptr nocapture noundef readonly by
   ; CHECK:       ld.param.v4.b32 {[[R1:%r[0-9]+]], [[R2:%r[0-9]+]], [[R3:%r[0-9]+]], [[R4:%r[0-9]+]]}, [callee_St4x7_param_0];
   ; CHECK:       ld.param.v2.b32 {[[R5:%r[0-9]+]],  [[R6:%r[0-9]+]]}, [callee_St4x7_param_0+16];
   ; CHECK:       ld.param.b32    [[R7:%r[0-9]+]],   [callee_St4x7_param_0+24];
-  ; CHECK:       st.param.v4.b32 [func_retval0],  {[[R1]], [[R2]], [[R3]], [[R4]]};
-  ; CHECK:       st.param.v2.b32 [func_retval0+16], {[[R5]], [[R6]]};
-  ; CHECK:       st.param.b32    [func_retval0+24], [[R7]];
+  ; CHECK-DAG:   st.param.v4.b32 [func_retval0],  {[[R1]], [[R2]], [[R3]], [[R4]]};
+  ; CHECK-DAG:   st.param.v2.b32 [func_retval0+16], {[[R5]], [[R6]]};
+  ; CHECK-DAG:   st.param.b32    [func_retval0+24], [[R7]];
   ; CHECK-NEXT:  ret;
   %1 = load i32, ptr %in, align 4
   %arrayidx.1 = getelementptr inbounds [7 x i32], ptr %in, i64 0, i64 1
@@ -468,8 +468,8 @@ define internal fastcc [8 x i32] @callee_St4x8(ptr nocapture noundef readonly by
   ; CHECK-NEXT:  .param .align 16 .b8 callee_St4x8_param_0[32]
   ; CHECK:       ld.param.v4.b32 {[[R1:%r[0-9]+]], [[R2:%r[0-9]+]], [[R3:%r[0-9]+]], [[R4:%r[0-9]+]]}, [callee_St4x8_param_0];
   ; CHECK:       ld.param.v4.b32 {[[R5:%r[0-9]+]], [[R6:%r[0-9]+]], [[R7:%r[0-9]+]], [[R8:%r[0-9]+]]}, [callee_St4x8_param_0+16];
-  ; CHECK:       st.param.v4.b32 [func_retval0],  {[[R1]], [[R2]], [[R3]], [[R4]]};
-  ; CHECK:       st.param.v4.b32 [func_retval0+16], {[[R5]], [[R6]], [[R7]], [[R8]]};
+  ; CHECK-DAG:   st.param.v4.b32 [func_retval0],  {[[R1]], [[R2]], [[R3]], [[R4]]};
+  ; CHECK-DAG:   st.param.v4.b32 [func_retval0+16], {[[R5]], [[R6]], [[R7]], [[R8]]};
   ; CHECK-NEXT:  ret;
   %1 = load i32, ptr %in, align 4
   %arrayidx.1 = getelementptr inbounds [8 x i32], ptr %in, i64 0, i64 1
@@ -589,8 +589,8 @@ define internal fastcc [3 x i64] @callee_St8x3(ptr nocapture noundef readonly by
   ; CHECK-NEXT:  .param .align 16 .b8 callee_St8x3_param_0[24]
   ; CHECK:       ld.param.v2.b64 {[[RD1:%rd[0-9]+]], [[RD2:%rd[0-9]+]]}, [callee_St8x3_param_0];
   ; CHECK:       ld.param.b64    [[RD3:%rd[0-9]+]],  [callee_St8x3_param_0+16];
-  ; CHECK:       st.param.v2.b64 [func_retval0],   {[[RD1]], [[RD2]]};
-  ; CHECK:       st.param.b64    [func_retval0+16],  [[RD3]];
+  ; CHECK-DAG:   st.param.v2.b64 [func_retval0],   {[[RD1]], [[RD2]]};
+  ; CHECK-DAG:   st.param.b64    [func_retval0+16],  [[RD3]];
   ; CHECK-NEXT:  ret;
   %1 = load i64, ptr %in, align 8
   %arrayidx.1 = getelementptr inbounds [3 x i64], ptr %in, i64 0, i64 1
@@ -636,8 +636,8 @@ define internal fastcc [4 x i64] @callee_St8x4(ptr nocapture noundef readonly by
   ; CHECK-NEXT:  .param .align 16 .b8 callee_St8x4_param_0[32]
   ; CHECK:       ld.param.v2.b64 {[[RD1:%rd[0-9]+]], [[RD2:%rd[0-9]+]]}, [callee_St8x4_param_0];
   ; CHECK:       ld.param.v2.b64 {[[RD3:%rd[0-9]+]], [[RD4:%rd[0-9]+]]}, [callee_St8x4_param_0+16];
-  ; CHECK:       st.param.v2.b64 [func_retval0],  {[[RD1]], [[RD2]]};
-  ; CHECK:       st.param.v2.b64 [func_retval0+16], {[[RD3]], [[RD4]]};
+  ; CHECK-DAG:   st.param.v2.b64 [func_retval0],  {[[RD1]], [[RD2]]};
+  ; CHECK-DAG:   st.param.v2.b64 [func_retval0+16], {[[RD3]], [[RD4]]};
   ; CHECK-NEXT:  ret;
   %1 = load i64, ptr %in, align 8
   %arrayidx.1 = getelementptr inbounds [4 x i64], ptr %in, i64 0, i64 1
@@ -687,10 +687,10 @@ define external fastcc [4 x i32] @callee_St4x4_external(ptr nocapture noundef re
   ; CHECK:       ld.param.b32 [[R2:%r[0-9]+]],   [callee_St4x4_external_param_0+4];
   ; CHECK:       ld.param.b32 [[R3:%r[0-9]+]],   [callee_St4x4_external_param_0+8];
   ; CHECK:       ld.param.b32 [[R4:%r[0-9]+]],   [callee_St4x4_external_param_0+12];
-  ; CHECK:       st.param.b32 [func_retval0],  [[R1]];
-  ; CHECK:       st.param.b32 [func_retval0+4],  [[R2]];
-  ; CHECK:       st.param.b32 [func_retval0+8],  [[R3]];
-  ; CHECK:       st.param.b32 [func_retval0+12], [[R4]];
+  ; CHECK-DAG:   st.param.b32 [func_retval0],  [[R1]];
+  ; CHECK-DAG:   st.param.b32 [func_retval0+4],  [[R2]];
+  ; CHECK-DAG:   st.param.b32 [func_retval0+8],  [[R3]];
+  ; CHECK-DAG:   st.param.b32 [func_retval0+12], [[R4]];
   ; CHECK-NEXT:  ret;
   %1 = load i32, ptr %in, align 4
   %arrayidx.1 = getelementptr inbounds [4 x i32], ptr %in, i64 0, i64 1

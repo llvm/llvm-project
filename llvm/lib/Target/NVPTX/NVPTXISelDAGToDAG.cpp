@@ -151,12 +151,6 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     if (tryLoadParam(N))
       return;
     break;
-  case NVPTXISD::StoreRetval:
-  case NVPTXISD::StoreRetvalV2:
-  case NVPTXISD::StoreRetvalV4:
-    if (tryStoreRetval(N))
-      return;
-    break;
   case NVPTXISD::StoreParam:
   case NVPTXISD::StoreParamV2:
   case NVPTXISD::StoreParamV4:
@@ -369,23 +363,29 @@ bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {
 
 // Map ISD:CONDCODE value to appropriate CmpMode expected by
 // NVPTXInstPrinter::printCmpMode()
-static unsigned getPTXCmpMode(const CondCodeSDNode &CondCode, bool FTZ) {
+SDValue NVPTXDAGToDAGISel::getPTXCmpMode(const CondCodeSDNode &CondCode) {
   using NVPTX::PTXCmpMode::CmpMode;
-  unsigned PTXCmpMode = [](ISD::CondCode CC) {
+  const unsigned PTXCmpMode = [](ISD::CondCode CC) {
     switch (CC) {
     default:
       llvm_unreachable("Unexpected condition code.");
     case ISD::SETOEQ:
+    case ISD::SETEQ:
       return CmpMode::EQ;
     case ISD::SETOGT:
+    case ISD::SETGT:
       return CmpMode::GT;
     case ISD::SETOGE:
+    case ISD::SETGE:
       return CmpMode::GE;
     case ISD::SETOLT:
+    case ISD::SETLT:
       return CmpMode::LT;
     case ISD::SETOLE:
+    case ISD::SETLE:
       return CmpMode::LE;
     case ISD::SETONE:
+    case ISD::SETNE:
       return CmpMode::NE;
     case ISD::SETO:
       return CmpMode::NUM;
@@ -403,45 +403,29 @@ static unsigned getPTXCmpMode(const CondCodeSDNode &CondCode, bool FTZ) {
       return CmpMode::LEU;
     case ISD::SETUNE:
       return CmpMode::NEU;
-    case ISD::SETEQ:
-      return CmpMode::EQ;
-    case ISD::SETGT:
-      return CmpMode::GT;
-    case ISD::SETGE:
-      return CmpMode::GE;
-    case ISD::SETLT:
-      return CmpMode::LT;
-    case ISD::SETLE:
-      return CmpMode::LE;
-    case ISD::SETNE:
-      return CmpMode::NE;
     }
   }(CondCode.get());
-
-  if (FTZ)
-    PTXCmpMode |= NVPTX::PTXCmpMode::FTZ_FLAG;
-
-  return PTXCmpMode;
+  return CurDAG->getTargetConstant(PTXCmpMode, SDLoc(), MVT::i32);
 }
 
 bool NVPTXDAGToDAGISel::SelectSETP_F16X2(SDNode *N) {
-  unsigned PTXCmpMode =
-      getPTXCmpMode(*cast<CondCodeSDNode>(N->getOperand(2)), useF32FTZ());
+  SDValue PTXCmpMode = getPTXCmpMode(*cast<CondCodeSDNode>(N->getOperand(2)));
   SDLoc DL(N);
   SDNode *SetP = CurDAG->getMachineNode(
-      NVPTX::SETP_f16x2rr, DL, MVT::i1, MVT::i1, N->getOperand(0),
-      N->getOperand(1), CurDAG->getTargetConstant(PTXCmpMode, DL, MVT::i32));
+      NVPTX::SETP_f16x2rr, DL, MVT::i1, MVT::i1,
+      {N->getOperand(0), N->getOperand(1), PTXCmpMode,
+       CurDAG->getTargetConstant(useF32FTZ() ? 1 : 0, DL, MVT::i1)});
   ReplaceNode(N, SetP);
   return true;
 }
 
 bool NVPTXDAGToDAGISel::SelectSETP_BF16X2(SDNode *N) {
-  unsigned PTXCmpMode =
-      getPTXCmpMode(*cast<CondCodeSDNode>(N->getOperand(2)), useF32FTZ());
+  SDValue PTXCmpMode = getPTXCmpMode(*cast<CondCodeSDNode>(N->getOperand(2)));
   SDLoc DL(N);
   SDNode *SetP = CurDAG->getMachineNode(
-      NVPTX::SETP_bf16x2rr, DL, MVT::i1, MVT::i1, N->getOperand(0),
-      N->getOperand(1), CurDAG->getTargetConstant(PTXCmpMode, DL, MVT::i32));
+      NVPTX::SETP_bf16x2rr, DL, MVT::i1, MVT::i1,
+      {N->getOperand(0), N->getOperand(1), PTXCmpMode,
+       CurDAG->getTargetConstant(useF32FTZ() ? 1 : 0, DL, MVT::i1)});
   ReplaceNode(N, SetP);
   return true;
 }
@@ -1504,84 +1488,6 @@ bool NVPTXDAGToDAGISel::tryLoadParam(SDNode *Node) {
   return true;
 }
 
-bool NVPTXDAGToDAGISel::tryStoreRetval(SDNode *N) {
-  SDLoc DL(N);
-  SDValue Chain = N->getOperand(0);
-  SDValue Offset = N->getOperand(1);
-  unsigned OffsetVal = Offset->getAsZExtVal();
-  MemSDNode *Mem = cast<MemSDNode>(N);
-
-  // How many elements do we have?
-  unsigned NumElts = 1;
-  switch (N->getOpcode()) {
-  default:
-    return false;
-  case NVPTXISD::StoreRetval:
-    NumElts = 1;
-    break;
-  case NVPTXISD::StoreRetvalV2:
-    NumElts = 2;
-    break;
-  case NVPTXISD::StoreRetvalV4:
-    NumElts = 4;
-    break;
-  }
-
-  // Build vector of operands
-  SmallVector<SDValue, 6> Ops;
-  for (unsigned i = 0; i < NumElts; ++i)
-    Ops.push_back(N->getOperand(i + 2));
-  Ops.append({CurDAG->getTargetConstant(OffsetVal, DL, MVT::i32), Chain});
-
-  // Determine target opcode
-  // If we have an i1, use an 8-bit store. The lowering code in
-  // NVPTXISelLowering will have already emitted an upcast.
-  std::optional<unsigned> Opcode = 0;
-  switch (NumElts) {
-  default:
-    return false;
-  case 1:
-    Opcode = pickOpcodeForVT(Mem->getMemoryVT().getSimpleVT().SimpleTy,
-                             NVPTX::StoreRetvalI8, NVPTX::StoreRetvalI16,
-                             NVPTX::StoreRetvalI32, NVPTX::StoreRetvalI64);
-    if (Opcode == NVPTX::StoreRetvalI8) {
-      // Fine tune the opcode depending on the size of the operand.
-      // This helps to avoid creating redundant COPY instructions in
-      // InstrEmitter::AddRegisterOperand().
-      switch (Ops[0].getSimpleValueType().SimpleTy) {
-      default:
-        break;
-      case MVT::i32:
-        Opcode = NVPTX::StoreRetvalI8TruncI32;
-        break;
-      case MVT::i64:
-        Opcode = NVPTX::StoreRetvalI8TruncI64;
-        break;
-      }
-    }
-    break;
-  case 2:
-    Opcode = pickOpcodeForVT(Mem->getMemoryVT().getSimpleVT().SimpleTy,
-                             NVPTX::StoreRetvalV2I8, NVPTX::StoreRetvalV2I16,
-                             NVPTX::StoreRetvalV2I32, NVPTX::StoreRetvalV2I64);
-    break;
-  case 4:
-    Opcode = pickOpcodeForVT(Mem->getMemoryVT().getSimpleVT().SimpleTy,
-                             NVPTX::StoreRetvalV4I8, NVPTX::StoreRetvalV4I16,
-                             NVPTX::StoreRetvalV4I32, {/* no v4i64 */});
-    break;
-  }
-  if (!Opcode)
-    return false;
-
-  SDNode *Ret = CurDAG->getMachineNode(*Opcode, DL, MVT::Other, Ops);
-  MachineMemOperand *MemRef = cast<MemSDNode>(N)->getMemOperand();
-  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Ret), {MemRef});
-
-  ReplaceNode(N, Ret);
-  return true;
-}
-
 // Helpers for constructing opcode (ex: NVPTX::StoreParamV4F32_iiri)
 #define getOpcV2H(ty, opKind0, opKind1)                                        \
   NVPTX::StoreParamV2##ty##_##opKind0##opKind1
@@ -2037,7 +1943,7 @@ bool NVPTXDAGToDAGISel::tryBF16ArithToFMA(SDNode *N) {
     llvm_unreachable("Unexpected opcode");
   };
 
-  int Opcode = IsVec ? NVPTX::BFMA16x2rrr : NVPTX::BFMA16rrr;
+  int Opcode = IsVec ? NVPTX::FMA_BF16x2rrr : NVPTX::FMA_BF16rrr;
   MachineSDNode *FMA = CurDAG->getMachineNode(Opcode, DL, VT, Operands);
   ReplaceNode(N, FMA);
   return true;

@@ -34,11 +34,10 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 define <2 x half> @test_ret_const() #0 {
 ; CHECK-LABEL: test_ret_const(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.b32 %r1, 1073757184;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], 1073757184;
 ; CHECK-NEXT:    ret;
   ret <2 x half> <half 1.0, half 2.0>
 }
@@ -84,7 +83,7 @@ define half @test_extract_i(<2 x half> %a, i64 %idx) #0 {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_extract_i_param_1];
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_extract_i_param_0];
-; CHECK-NEXT:    setp.eq.s64 %p1, %rd1, 0;
+; CHECK-NEXT:    setp.eq.b64 %p1, %rd1, 0;
 ; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; CHECK-NEXT:    selp.b16 %rs3, %rs1, %rs2, %p1;
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs3;

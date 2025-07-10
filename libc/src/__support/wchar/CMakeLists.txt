@@ -13,6 +13,7 @@ add_object_library(
   SRCS 
     character_converter.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.types.char8_t
     libc.hdr.types.char32_t
     libc.src.__support.error_or

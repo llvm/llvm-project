@@ -108,6 +108,9 @@ public:
                                 const llvm::ArrayRef<ParserValue> args,
                                 Diagnostics *error) const = 0;
 
+  // If the matcher is variadic, it can take any number of arguments.
+  virtual bool isVariadic() const = 0;
+
   // Returns the number of arguments accepted by the matcher.
   virtual unsigned getNumArgs() const = 0;
 
@@ -140,6 +143,8 @@ public:
     return marshaller(matcherFunc, matcherName, nameRange, args, error);
   }
 
+  bool isVariadic() const override { return false; }
+
   unsigned getNumArgs() const override { return argKinds.size(); }
 
   void getArgKinds(unsigned argNo, std::vector<ArgKind> &kinds) const override {
@@ -151,6 +156,54 @@ private:
   void (*const matcherFunc)();
   const llvm::StringRef matcherName;
   const std::vector<ArgKind> argKinds;
+};
+
+class VariadicOperatorMatcherDescriptor : public MatcherDescriptor {
+public:
+  using VarOp = DynMatcher::VariadicOperator;
+  VariadicOperatorMatcherDescriptor(unsigned minCount, unsigned maxCount,
+                                    VarOp varOp, StringRef matcherName)
+      : minCount(minCount), maxCount(maxCount), varOp(varOp),
+        matcherName(matcherName) {}
+
+  VariantMatcher create(SourceRange nameRange, ArrayRef<ParserValue> args,
+                        Diagnostics *error) const override {
+    if (args.size() < minCount || maxCount < args.size()) {
+      addError(error, nameRange, ErrorType::RegistryWrongArgCount,
+               {llvm::Twine("requires between "), llvm::Twine(minCount),
+                llvm::Twine(" and "), llvm::Twine(maxCount),
+                llvm::Twine(" args, got "), llvm::Twine(args.size())});
+      return VariantMatcher();
+    }
+
+    std::vector<VariantMatcher> innerArgs;
+    for (int64_t i = 0, e = args.size(); i != e; ++i) {
+      const ParserValue &arg = args[i];
+      const VariantValue &value = arg.value;
+      if (!value.isMatcher()) {
+        addError(error, arg.range, ErrorType::RegistryWrongArgType,
+                 {llvm::Twine(i + 1), llvm::Twine("matcher: "),
+                  llvm::Twine(value.getTypeAsString())});
+        return VariantMatcher();
+      }
+      innerArgs.push_back(value.getMatcher());
+    }
+    return VariantMatcher::VariadicOperatorMatcher(varOp, std::move(innerArgs));
+  }
+
+  bool isVariadic() const override { return true; }
+
+  unsigned getNumArgs() const override { return 0; }
+
+  void getArgKinds(unsigned argNo, std::vector<ArgKind> &kinds) const override {
+    kinds.push_back(ArgKind(ArgKind::Matcher));
+  }
+
+private:
+  const unsigned minCount;
+  const unsigned maxCount;
+  const VarOp varOp;
+  const StringRef matcherName;
 };
 
 // Helper function to check if argument count matches expected count
@@ -224,6 +277,14 @@ makeMatcherAutoMarshall(ReturnType (*matcherFunc)(ArgTypes...),
       reinterpret_cast<void (*)()>(matcherFunc), matcherName, argKinds);
 }
 
+// Variadic operator overload.
+template <unsigned MinCount, unsigned MaxCount>
+std::unique_ptr<MatcherDescriptor>
+makeMatcherAutoMarshall(VariadicOperatorMatcherFunc<MinCount, MaxCount> func,
+                        StringRef matcherName) {
+  return std::make_unique<VariadicOperatorMatcherDescriptor>(
+      MinCount, MaxCount, func.varOp, matcherName);
+}
 } // namespace mlir::query::matcher::internal
 
 #endif // MLIR_TOOLS_MLIRQUERY_MATCHER_MARSHALLERS_H

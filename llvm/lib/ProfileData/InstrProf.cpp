@@ -617,28 +617,24 @@ Error readAndDecodeStrings(StringRef NameStrings,
 }
 
 Error InstrProfSymtab::create(StringRef NameStrings) {
-  return readAndDecodeStrings(
-      NameStrings,
-      std::bind(&InstrProfSymtab::addFuncName, this, std::placeholders::_1));
+  return readAndDecodeStrings(NameStrings,
+                              [&](StringRef S) { return addFuncName(S); });
 }
 
 Error InstrProfSymtab::create(StringRef FuncNameStrings,
                               StringRef VTableNameStrings) {
-  if (Error E = readAndDecodeStrings(FuncNameStrings,
-                                     std::bind(&InstrProfSymtab::addFuncName,
-                                               this, std::placeholders::_1)))
+  if (Error E = readAndDecodeStrings(
+          FuncNameStrings, [&](StringRef S) { return addFuncName(S); }))
     return E;
 
-  return readAndDecodeStrings(
-      VTableNameStrings,
-      std::bind(&InstrProfSymtab::addVTableName, this, std::placeholders::_1));
+  return readAndDecodeStrings(VTableNameStrings,
+                              [&](StringRef S) { return addVTableName(S); });
 }
 
 Error InstrProfSymtab::initVTableNamesFromCompressedStrings(
     StringRef CompressedVTableStrings) {
-  return readAndDecodeStrings(
-      CompressedVTableStrings,
-      std::bind(&InstrProfSymtab::addVTableName, this, std::placeholders::_1));
+  return readAndDecodeStrings(CompressedVTableStrings,
+                              [&](StringRef S) { return addVTableName(S); });
 }
 
 StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {

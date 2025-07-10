@@ -117,19 +117,23 @@ DataScalarizerVisitor::lookupReplacementGlobal(Value *CurrOperand) {
   return nullptr; // Not found
 }
 
-static bool isArrayOfVectors(Type *T) {
+// Helper function to check if a type is a vector or an array of vectors
+static bool isVectorOrArrayOfVectors(Type *T) {
+  if (isa<VectorType>(T))
+    return true;
   if (ArrayType *ArrType = dyn_cast<ArrayType>(T))
-    return isa<VectorType>(ArrType->getElementType());
+    return isa<VectorType>(ArrType->getElementType()) ||
+           isVectorOrArrayOfVectors(ArrType->getElementType());
   return false;
 }
 
 bool DataScalarizerVisitor::visitAllocaInst(AllocaInst &AI) {
-  if (!isArrayOfVectors(AI.getAllocatedType()))
+  Type *AllocatedType = AI.getAllocatedType();
+  if (!isVectorOrArrayOfVectors(AllocatedType))
     return false;
 
-  ArrayType *ArrType = cast<ArrayType>(AI.getAllocatedType());
   IRBuilder<> Builder(&AI);
-  Type *NewType = equivalentArrayTypeFromVector(ArrType);
+  Type *NewType = equivalentArrayTypeFromVector(AllocatedType);
   AllocaInst *ArrAlloca =
       Builder.CreateAlloca(NewType, nullptr, AI.getName() + ".scalarize");
   ArrAlloca->setAlignment(AI.getAlign());

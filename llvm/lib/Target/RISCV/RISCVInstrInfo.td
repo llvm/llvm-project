@@ -321,7 +321,7 @@ def uimm6 : RISCVUImmLeafOp<6>;
 def uimm7_opcode : RISCVUImmOp<7> {
   let ParserMatchClass = InsnDirectiveOpcode;
 }
-def uimm7 : RISCVUImmOp<7>;
+def uimm7 : RISCVUImmLeafOp<7>;
 def uimm8 : RISCVUImmOp<8>;
 def uimm16 : RISCVUImmOp<16>;
 def uimm32 : RISCVUImmOp<32>;
@@ -1450,14 +1450,18 @@ def : PatGprUimmLog2XLen<sra, SRAI>;
 
 // Select 'or' as ADDI if the immediate bits are known to be 0 in $rs1. This
 // can improve compressibility.
-def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
-  return orIsAdd(N);
+def riscv_or_disjoint : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
+  return orDisjoint(N);
 }]>;
-def : PatGprSimm12<or_is_add, ADDI>;
+def : PatGprSimm12<riscv_or_disjoint, ADDI>;
 
 def add_like : PatFrags<(ops node:$lhs, node:$rhs),
-                        [(or_is_add node:$lhs, node:$rhs),
+                        [(riscv_or_disjoint node:$lhs, node:$rhs),
                          (add  node:$lhs, node:$rhs)]>;
+
+def riscv_xor_like : PatFrags<(ops node:$lhs, node:$rhs),
+                              [(riscv_or_disjoint node:$lhs, node:$rhs),
+                               (xor  node:$lhs, node:$rhs)]>;
 
 // negate of low bit can be done via two (compressible) shifts.  The negate
 // is never compressible since rs1 and rd can't be the same register.
@@ -1615,6 +1619,10 @@ def riscv_seteq : ComplexPattern<XLenVT, 1, "selectSETEQ", [setcc]>;
 def : Pat<(riscv_seteq (XLenVT GPR:$rs1)), (SLTIU GPR:$rs1, 1)>;
 def : Pat<(riscv_setne (XLenVT GPR:$rs1)), (SLTU (XLenVT X0), GPR:$rs1)>;
 def : Pat<(XLenVT (setne (XLenVT GPR:$rs1), -1)), (SLTIU GPR:$rs1, -1)>;
+def : Pat<(XLenVT (seteq (XLenVT (and GPR:$rs, immop_oneuse<TrailingOnesMask>:$mask)), 0)),
+          (SLTIU (XLenVT (SLLI GPR:$rs, (XLenSubTrailingOnes imm:$mask))), 1)>;
+def : Pat<(XLenVT (setne (XLenVT (and GPR:$rs, immop_oneuse<TrailingOnesMask>:$mask)), 0)),
+          (SLTU (XLenVT X0), (XLenVT (SLLI GPR:$rs, (XLenSubTrailingOnes imm:$mask))))>;
 
 def IntCCtoRISCVCC : SDNodeXForm<riscv_selectcc, [{
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
@@ -2156,7 +2164,7 @@ def : PatGprImm<binop_allwusers<xor>, XORI, u32simm12>;
 // Select 'or' as ADDIW if the immediate bits are known to be 0 in $rs1 and
 // $rs1 is sign extended. This can improve compressibility. Using ADDIW gives
 // more power to RISCVOptWInstrs.
-def : Pat<(or_is_add 33signbits_node:$rs1, simm12:$imm),
+def : Pat<(riscv_or_disjoint 33signbits_node:$rs1, simm12:$imm),
           (ADDIW $rs1, simm12:$imm)>;
 
 /// Loads
@@ -2272,6 +2280,9 @@ include "RISCVInstrInfoZk.td"
 include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvk.td"
 include "RISCVInstrInfoZvqdotq.td"
+
+// Packed SIMD
+include "RISCVInstrInfoP.td"
 
 // Compressed
 include "RISCVInstrInfoC.td"

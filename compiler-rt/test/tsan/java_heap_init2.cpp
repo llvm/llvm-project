@@ -1,5 +1,4 @@
 // RUN: %clangxx_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
-// XFAIL: *
 
 #include "java.h"
 #include <errno.h>

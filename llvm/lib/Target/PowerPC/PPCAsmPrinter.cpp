@@ -144,12 +144,12 @@ enum {
 class PPCAsmPrinter : public AsmPrinter {
 protected:
   // For TLS on AIX, we need to be able to identify TOC entries of specific
-  // VariantKind so we can add the right relocations when we generate the
+  // specifier so we can add the right relocations when we generate the
   // entries. So each entry is represented by a pair of MCSymbol and
   // VariantKind. For example, we need to be able to identify the following
   // entry as a TLSGD entry so we can add the @m relocation:
   //   .tc .i[TC],i[TL]@m
-  // By default, VK_None is used for the VariantKind.
+  // By default, 0 is used for the specifier.
   MapVector<std::pair<const MCSymbol *, PPCMCExpr::Specifier>, MCSymbol *> TOC;
   const PPCSubtarget *Subtarget = nullptr;
 
@@ -732,8 +732,7 @@ void PPCAsmPrinter::emitTlsCall(const MachineInstr *MI,
   if (Subtarget->is32BitELFABI() && isPositionIndependent())
     Kind = PPC::S_PLT;
 
-  const MCExpr *TlsRef = MCSymbolRefExpr::create(
-      TlsGetAddr, MCSymbolRefExpr::VariantKind(Kind), OutContext);
+  const MCExpr *TlsRef = MCSymbolRefExpr::create(TlsGetAddr, Kind, OutContext);
 
   // Add 32768 offset to the symbol so we follow up the latest GOT/PLT ABI.
   if (Kind == PPC::S_PLT && Subtarget->isSecurePlt() &&
@@ -743,8 +742,7 @@ void PPCAsmPrinter::emitTlsCall(const MachineInstr *MI,
   const MachineOperand &MO = MI->getOperand(2);
   const GlobalValue *GValue = MO.getGlobal();
   MCSymbol *MOSymbol = getSymbol(GValue);
-  const MCExpr *SymVar = MCSymbolRefExpr::create(
-      MOSymbol, MCSymbolRefExpr::VariantKind(VK), OutContext);
+  const MCExpr *SymVar = MCSymbolRefExpr::create(MOSymbol, VK, OutContext);
   EmitToStreamer(*OutStreamer,
                  MCInstBuilder(Subtarget->isPPC64() ? Opcode
                                                     : (unsigned)PPC::BL_TLS)
@@ -801,8 +799,7 @@ getTOCEntryTypeForMO(const MachineOperand &MO) {
 
 const MCExpr *PPCAsmPrinter::symbolWithSpecifier(const MCSymbol *S,
                                                  PPCMCExpr::Specifier Spec) {
-  return MCSymbolRefExpr::create(S, MCSymbolRefExpr::VariantKind(Spec),
-                                 OutContext);
+  return MCSymbolRefExpr::create(S, Spec, OutContext);
 }
 
 /// EmitInstruction -- Print out a single PowerPC MI in Darwin syntax to
@@ -954,8 +951,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     MCSymbol *GOTSymbol =
       OutContext.getOrCreateSymbol(StringRef("_GLOBAL_OFFSET_TABLE_"));
     const MCExpr *OffsExpr = MCBinaryExpr::createSub(
-        MCSymbolRefExpr::create(
-            GOTSymbol, MCSymbolRefExpr::VariantKind(PPC::S_LOCAL), OutContext),
+        MCSymbolRefExpr::create(GOTSymbol, PPC::S_LOCAL, OutContext),
         MCConstantExpr::create(4, OutContext), OutContext);
 
     // Emit the 'bl'.
@@ -1331,9 +1327,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     const MCSymbol *const MOSymbol = getMCSymbolForTOCPseudoMO(MO, *this);
 
     const MCExpr *Exp = MCSymbolRefExpr::create(
-        MOSymbol,
-        MCSymbolRefExpr::VariantKind(IsAIX ? PPC::S_L : PPC::S_TOC_LO),
-        OutContext);
+        MOSymbol, IsAIX ? PPC::S_L : PPC::S_TOC_LO, OutContext);
 
     TmpInst.getOperand(2) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
@@ -1728,8 +1722,7 @@ PPCAsmPrinter::getAdjustedFasterLocalExpr(const MachineOperand &MO,
   // assume that the address of extern TLS variables are zero.
   const MCExpr *Expr = MCSymbolRefExpr::create(
       getSymbol(GValue),
-      MCSymbolRefExpr::VariantKind(
-          Model == TLSModel::LocalExec ? PPC::S_AIX_TLSLE : PPC::S_AIX_TLSLD),
+      (Model == TLSModel::LocalExec ? PPC::S_AIX_TLSLE : PPC::S_AIX_TLSLD),
       OutContext);
   Expr = MCBinaryExpr::createAdd(
       Expr, MCConstantExpr::create(Offset, OutContext), OutContext);
@@ -2017,9 +2010,7 @@ void PPCLinuxAsmPrinter::emitFunctionEntryLabel() {
   MCSymbol *Symbol2 = OutContext.getOrCreateSymbol(StringRef(".TOC."));
   // Generates a R_PPC64_TOC relocation for TOC base insertion.
   OutStreamer->emitValue(
-      MCSymbolRefExpr::create(
-          Symbol2, MCSymbolRefExpr::VariantKind(PPC::S_TOCBASE), OutContext),
-      8 /*size*/);
+      MCSymbolRefExpr::create(Symbol2, PPC::S_TOCBASE, OutContext), 8 /*size*/);
   // Emit a null environment pointer.
   OutStreamer->emitIntValue(0, 8 /* size */);
   OutStreamer->switchSection(Current.first, Current.second);
