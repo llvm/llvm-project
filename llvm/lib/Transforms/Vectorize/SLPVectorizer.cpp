@@ -21722,8 +21722,6 @@ class HorizontalReduction {
   /// Checks if the optimization of original scalar identity operations on
   /// matched horizontal reductions is enabled and allowed.
   bool IsSupportedHorRdxIdentityOp = false;
-  /// The minimum number of the reduced values.
-  const unsigned ReductionLimit = VectorizeNonPowerOf2 ? 3 : 4;
   /// Contains vector values for reduction including their scale factor and
   /// signedness.
   SmallVector<std::tuple<Value *, unsigned, bool>> VectorValuesAndScales;
@@ -21742,18 +21740,13 @@ class HorizontalReduction {
   }
 
   /// Checks if instruction is associative and can be vectorized.
-  static bool isVectorizable(RecurKind Kind, Instruction *I,
-                             bool TwoElementReduction = false) {
+  static bool isVectorizable(RecurKind Kind, Instruction *I) {
     if (Kind == RecurKind::None)
       return false;
 
     // Integer ops that map to select instructions or intrinsics are fine.
     if (RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind) ||
         isBoolLogicOp(I))
-      return true;
-
-    // No need to check for associativity, if 2 reduced values.
-    if (TwoElementReduction)
       return true;
 
     if (Kind == RecurKind::FMax || Kind == RecurKind::FMin) {
@@ -22027,27 +22020,6 @@ private:
 
 public:
   HorizontalReduction() = default;
-  HorizontalReduction(Instruction *I, ArrayRef<Value *> Ops)
-      : ReductionRoot(I), ReductionLimit(2) {
-    RdxKind = HorizontalReduction::getRdxKind(I);
-    ReductionOps.emplace_back().push_back(I);
-    ReducedVals.emplace_back().assign(Ops.begin(), Ops.end());
-    for (Value *V : Ops)
-      ReducedValsToOps[V].push_back(I);
-  }
-
-  bool matchReductionForOperands() const {
-    // Analyze "regular" integer/FP types for reductions - no target-specific
-    // types or pointers.
-    assert(ReductionRoot && "Reduction root is not set!");
-    if (!isVectorizable(RdxKind, cast<Instruction>(ReductionRoot),
-                        all_of(ReducedVals, [](ArrayRef<Value *> Ops) {
-                          return Ops.size() == 2;
-                        })))
-      return false;
-
-    return true;
-  }
 
   /// Try to find a reduction tree.
   bool matchAssociativeReduction(BoUpSLP &R, Instruction *Root,
@@ -22215,6 +22187,7 @@ public:
   /// Attempt to vectorize the tree found by matchAssociativeReduction.
   Value *tryToReduce(BoUpSLP &V, const DataLayout &DL, TargetTransformInfo *TTI,
                      const TargetLibraryInfo &TLI, AssumptionCache *AC) {
+    const unsigned ReductionLimit = VectorizeNonPowerOf2 ? 3 : 4;
     constexpr unsigned RegMaxNumber = 4;
     constexpr unsigned RedValsMaxNumber = 128;
     // If there are a sufficient number of reduction values, reduce
@@ -23763,60 +23736,15 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
       Candidates.emplace_back(A1, B);
   }
 
-  auto TryToReduce = [this, &R, &TTI = *TTI](Instruction *Inst,
-                                             ArrayRef<Value *> Ops) {
-    if (!isReductionCandidate(Inst))
-      return false;
-    Type *Ty = Inst->getType();
-    if (!isValidElementType(Ty) || Ty->isPointerTy())
-      return false;
-    HorizontalReduction HorRdx(Inst, Ops);
-    if (!HorRdx.matchReductionForOperands())
-      return false;
-    // Check the cost of operations.
-    VectorType *VecTy = getWidenedType(Ty, Ops.size());
-    constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-    InstructionCost ScalarCost =
-        TTI.getScalarizationOverhead(
-            VecTy, APInt::getAllOnes(getNumElements(VecTy)), /*Insert=*/false,
-            /*Extract=*/true, CostKind) +
-        TTI.getInstructionCost(Inst, CostKind);
-    InstructionCost RedCost;
-    switch (::getRdxKind(Inst)) {
-    case RecurKind::Add:
-    case RecurKind::Mul:
-    case RecurKind::Or:
-    case RecurKind::And:
-    case RecurKind::Xor:
-    case RecurKind::FAdd:
-    case RecurKind::FMul: {
-      FastMathFlags FMF;
-      if (auto *FPCI = dyn_cast<FPMathOperator>(Inst))
-        FMF = FPCI->getFastMathFlags();
-      RedCost = TTI.getArithmeticReductionCost(Inst->getOpcode(), VecTy, FMF,
-                                               CostKind);
-      break;
-    }
-    default:
-      return false;
-    }
-    if (RedCost >= ScalarCost)
-      return false;
-
-    return HorRdx.tryToReduce(R, *DL, &TTI, *TLI, AC) != nullptr;
-  };
   if (Candidates.size() == 1)
-    return TryToReduce(I, {Op0, Op1}) || tryToVectorizeList({Op0, Op1}, R);
+    return tryToVectorizeList({Op0, Op1}, R);
 
   // We have multiple options. Try to pick the single best.
   std::optional<int> BestCandidate = R.findBestRootPair(Candidates);
   if (!BestCandidate)
     return false;
-  return TryToReduce(I, {Candidates[*BestCandidate].first,
-                         Candidates[*BestCandidate].second}) ||
-         tryToVectorizeList({Candidates[*BestCandidate].first,
-                             Candidates[*BestCandidate].second},
-                            R);
+  return tryToVectorizeList(
+      {Candidates[*BestCandidate].first, Candidates[*BestCandidate].second}, R);
 }
 
 bool SLPVectorizerPass::vectorizeRootInstruction(PHINode *P, Instruction *Root,
