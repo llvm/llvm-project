@@ -590,12 +590,8 @@ Value *NVPTXTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   }
   case Intrinsic::nvvm_prefetch_tensormap: {
     IRBuilder<> Builder(II);
-    Module *M = II->getModule();
-    Function *NewIntrinsic = Intrinsic::getDeclaration(
-        M, Intrinsic::nvvm_prefetch_tensormap, {NewV->getType()});
-    CallInst *NewCall = Builder.CreateCall(NewIntrinsic, {NewV});
-    NewCall->setAttributes(II->getAttributes());
-    return NewCall;
+    return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_prefetch_tensormap,
+                                        NewV);
   }
   }
   return nullptr;
