@@ -24,6 +24,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -54,7 +55,6 @@
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -74,10 +74,6 @@ using namespace llvm;
 
 #define GET_INSTRINFO_CTOR_DTOR
 #include "ARMGenInstrInfo.inc"
-
-static cl::opt<bool>
-EnableARM3Addr("enable-arm-3-addr-conv", cl::Hidden,
-               cl::desc("Enable ARM 2-addr to 3-addr conv"));
 
 /// ARM_MLxEntry - Record information about MLA / MLS instructions.
 struct ARM_MLxEntry {
@@ -172,175 +168,6 @@ CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
   if (BHR)
     MHR->AddHazardRecognizer(std::unique_ptr<ScheduleHazardRecognizer>(BHR));
   return MHR;
-}
-
-MachineInstr *
-ARMBaseInstrInfo::convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
-                                        LiveIntervals *LIS) const {
-  // FIXME: Thumb2 support.
-
-  if (!EnableARM3Addr)
-    return nullptr;
-
-  MachineFunction &MF = *MI.getParent()->getParent();
-  uint64_t TSFlags = MI.getDesc().TSFlags;
-  bool isPre = false;
-  switch ((TSFlags & ARMII::IndexModeMask) >> ARMII::IndexModeShift) {
-  default: return nullptr;
-  case ARMII::IndexModePre:
-    isPre = true;
-    break;
-  case ARMII::IndexModePost:
-    break;
-  }
-
-  // Try splitting an indexed load/store to an un-indexed one plus an add/sub
-  // operation.
-  unsigned MemOpc = getUnindexedOpcode(MI.getOpcode());
-  if (MemOpc == 0)
-    return nullptr;
-
-  MachineInstr *UpdateMI = nullptr;
-  MachineInstr *MemMI = nullptr;
-  unsigned AddrMode = (TSFlags & ARMII::AddrModeMask);
-  const MCInstrDesc &MCID = MI.getDesc();
-  unsigned NumOps = MCID.getNumOperands();
-  bool isLoad = !MI.mayStore();
-  const MachineOperand &WB = isLoad ? MI.getOperand(1) : MI.getOperand(0);
-  const MachineOperand &Base = MI.getOperand(2);
-  const MachineOperand &Offset = MI.getOperand(NumOps - 3);
-  Register WBReg = WB.getReg();
-  Register BaseReg = Base.getReg();
-  Register OffReg = Offset.getReg();
-  unsigned OffImm = MI.getOperand(NumOps - 2).getImm();
-  ARMCC::CondCodes Pred = (ARMCC::CondCodes)MI.getOperand(NumOps - 1).getImm();
-  switch (AddrMode) {
-  default: llvm_unreachable("Unknown indexed op!");
-  case ARMII::AddrMode2: {
-    bool isSub = ARM_AM::getAM2Op(OffImm) == ARM_AM::sub;
-    unsigned Amt = ARM_AM::getAM2Offset(OffImm);
-    if (OffReg == 0) {
-      if (ARM_AM::getSOImmVal(Amt) == -1)
-        // Can't encode it in a so_imm operand. This transformation will
-        // add more than 1 instruction. Abandon!
-        return nullptr;
-      UpdateMI = BuildMI(MF, MI.getDebugLoc(),
-                         get(isSub ? ARM::SUBri : ARM::ADDri), WBReg)
-                     .addReg(BaseReg)
-                     .addImm(Amt)
-                     .add(predOps(Pred))
-                     .add(condCodeOp());
-    } else if (Amt != 0) {
-      ARM_AM::ShiftOpc ShOpc = ARM_AM::getAM2ShiftOpc(OffImm);
-      unsigned SOOpc = ARM_AM::getSORegOpc(ShOpc, Amt);
-      UpdateMI = BuildMI(MF, MI.getDebugLoc(),
-                         get(isSub ? ARM::SUBrsi : ARM::ADDrsi), WBReg)
-                     .addReg(BaseReg)
-                     .addReg(OffReg)
-                     .addReg(0)
-                     .addImm(SOOpc)
-                     .add(predOps(Pred))
-                     .add(condCodeOp());
-    } else
-      UpdateMI = BuildMI(MF, MI.getDebugLoc(),
-                         get(isSub ? ARM::SUBrr : ARM::ADDrr), WBReg)
-                     .addReg(BaseReg)
-                     .addReg(OffReg)
-                     .add(predOps(Pred))
-                     .add(condCodeOp());
-    break;
-  }
-  case ARMII::AddrMode3 : {
-    bool isSub = ARM_AM::getAM3Op(OffImm) == ARM_AM::sub;
-    unsigned Amt = ARM_AM::getAM3Offset(OffImm);
-    if (OffReg == 0)
-      // Immediate is 8-bits. It's guaranteed to fit in a so_imm operand.
-      UpdateMI = BuildMI(MF, MI.getDebugLoc(),
-                         get(isSub ? ARM::SUBri : ARM::ADDri), WBReg)
-                     .addReg(BaseReg)
-                     .addImm(Amt)
-                     .add(predOps(Pred))
-                     .add(condCodeOp());
-    else
-      UpdateMI = BuildMI(MF, MI.getDebugLoc(),
-                         get(isSub ? ARM::SUBrr : ARM::ADDrr), WBReg)
-                     .addReg(BaseReg)
-                     .addReg(OffReg)
-                     .add(predOps(Pred))
-                     .add(condCodeOp());
-    break;
-  }
-  }
-
-  std::vector<MachineInstr*> NewMIs;
-  if (isPre) {
-    if (isLoad)
-      MemMI =
-          BuildMI(MF, MI.getDebugLoc(), get(MemOpc), MI.getOperand(0).getReg())
-              .addReg(WBReg)
-              .addImm(0)
-              .addImm(Pred);
-    else
-      MemMI = BuildMI(MF, MI.getDebugLoc(), get(MemOpc))
-                  .addReg(MI.getOperand(1).getReg())
-                  .addReg(WBReg)
-                  .addReg(0)
-                  .addImm(0)
-                  .addImm(Pred);
-    NewMIs.push_back(MemMI);
-    NewMIs.push_back(UpdateMI);
-  } else {
-    if (isLoad)
-      MemMI =
-          BuildMI(MF, MI.getDebugLoc(), get(MemOpc), MI.getOperand(0).getReg())
-              .addReg(BaseReg)
-              .addImm(0)
-              .addImm(Pred);
-    else
-      MemMI = BuildMI(MF, MI.getDebugLoc(), get(MemOpc))
-                  .addReg(MI.getOperand(1).getReg())
-                  .addReg(BaseReg)
-                  .addReg(0)
-                  .addImm(0)
-                  .addImm(Pred);
-    if (WB.isDead())
-      UpdateMI->getOperand(0).setIsDead();
-    NewMIs.push_back(UpdateMI);
-    NewMIs.push_back(MemMI);
-  }
-
-  // Transfer LiveVariables states, kill / dead info.
-  if (LV) {
-    for (const MachineOperand &MO : MI.operands()) {
-      if (MO.isReg() && MO.getReg().isVirtual()) {
-        Register Reg = MO.getReg();
-
-        LiveVariables::VarInfo &VI = LV->getVarInfo(Reg);
-        if (MO.isDef()) {
-          MachineInstr *NewMI = (Reg == WBReg) ? UpdateMI : MemMI;
-          if (MO.isDead())
-            LV->addVirtualRegisterDead(Reg, *NewMI);
-        }
-        if (MO.isUse() && MO.isKill()) {
-          for (unsigned j = 0; j < 2; ++j) {
-            // Look at the two new MI's in reverse order.
-            MachineInstr *NewMI = NewMIs[j];
-            if (!NewMI->readsRegister(Reg, /*TRI=*/nullptr))
-              continue;
-            LV->addVirtualRegisterKilled(Reg, *NewMI);
-            if (VI.removeKill(MI))
-              VI.Kills.push_back(NewMI);
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  MachineBasicBlock &MBB = *MI.getParent();
-  MBB.insert(MI, NewMIs[1]);
-  MBB.insert(MI, NewMIs[0]);
-  return NewMIs[0];
 }
 
 // Branch analysis.
@@ -3299,8 +3126,8 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
   // Modify the condition code of operands in OperandsToUpdate.
   // Since we have SUB(r1, r2) and CMP(r2, r1), the condition code needs to
   // be changed from r2 > r1 to r1 < r2, from r2 < r1 to r1 > r2, etc.
-  for (unsigned i = 0, e = OperandsToUpdate.size(); i < e; i++)
-    OperandsToUpdate[i].first->setImm(OperandsToUpdate[i].second);
+  for (auto &[MO, Cond] : OperandsToUpdate)
+    MO->setImm(Cond);
 
   MI->clearRegisterDeads(ARM::CPSR);
 
@@ -6485,49 +6312,18 @@ void ARMBaseInstrInfo::saveLROnStack(MachineBasicBlock &MBB,
   if (!CFI)
     return;
 
-  MachineFunction &MF = *MBB.getParent();
-
   // Add a CFI, saying CFA is offset by Align bytes from SP.
-  int64_t StackPosEntry =
-      MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, Align));
-  BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
-      .addCFIIndex(StackPosEntry)
-      .setMIFlags(MachineInstr::FrameSetup);
+  CFIInstBuilder CFIBuilder(MBB, It, MachineInstr::FrameSetup);
+  CFIBuilder.buildDefCFAOffset(Align);
 
   // Add a CFI saying that the LR that we want to find is now higher than
   // before.
   int LROffset = Auth ? Align - 4 : Align;
-  const MCRegisterInfo *MRI = Subtarget.getRegisterInfo();
-  unsigned DwarfLR = MRI->getDwarfRegNum(ARM::LR, true);
-  int64_t LRPosEntry = MF.addFrameInst(
-      MCCFIInstruction::createOffset(nullptr, DwarfLR, -LROffset));
-  BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
-      .addCFIIndex(LRPosEntry)
-      .setMIFlags(MachineInstr::FrameSetup);
+  CFIBuilder.buildOffset(ARM::LR, -LROffset);
   if (Auth) {
     // Add a CFI for the location of the return adddress PAC.
-    unsigned DwarfRAC = MRI->getDwarfRegNum(ARM::RA_AUTH_CODE, true);
-    int64_t RACPosEntry = MF.addFrameInst(
-        MCCFIInstruction::createOffset(nullptr, DwarfRAC, -Align));
-    BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
-        .addCFIIndex(RACPosEntry)
-        .setMIFlags(MachineInstr::FrameSetup);
+    CFIBuilder.buildOffset(ARM::RA_AUTH_CODE, -Align);
   }
-}
-
-void ARMBaseInstrInfo::emitCFIForLRSaveToReg(MachineBasicBlock &MBB,
-                                             MachineBasicBlock::iterator It,
-                                             Register Reg) const {
-  MachineFunction &MF = *MBB.getParent();
-  const MCRegisterInfo *MRI = Subtarget.getRegisterInfo();
-  unsigned DwarfLR = MRI->getDwarfRegNum(ARM::LR, true);
-  unsigned DwarfReg = MRI->getDwarfRegNum(Reg, true);
-
-  int64_t LRPosEntry = MF.addFrameInst(
-      MCCFIInstruction::createRegister(nullptr, DwarfLR, DwarfReg));
-  BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
-      .addCFIIndex(LRPosEntry)
-      .setMIFlags(MachineInstr::FrameSetup);
 }
 
 void ARMBaseInstrInfo::restoreLRFromStack(MachineBasicBlock &MBB,
@@ -6560,48 +6356,16 @@ void ARMBaseInstrInfo::restoreLRFromStack(MachineBasicBlock &MBB,
   }
 
   if (CFI) {
-    // Now stack has moved back up...
-    MachineFunction &MF = *MBB.getParent();
-    const MCRegisterInfo *MRI = Subtarget.getRegisterInfo();
-    unsigned DwarfLR = MRI->getDwarfRegNum(ARM::LR, true);
-    int64_t StackPosEntry =
-        MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, 0));
-    BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
-        .addCFIIndex(StackPosEntry)
-        .setMIFlags(MachineInstr::FrameDestroy);
-
-    // ... and we have restored LR.
-    int64_t LRPosEntry =
-        MF.addFrameInst(MCCFIInstruction::createRestore(nullptr, DwarfLR));
-    BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
-        .addCFIIndex(LRPosEntry)
-        .setMIFlags(MachineInstr::FrameDestroy);
-
-    if (Auth) {
-      unsigned DwarfRAC = MRI->getDwarfRegNum(ARM::RA_AUTH_CODE, true);
-      int64_t Entry =
-          MF.addFrameInst(MCCFIInstruction::createUndefined(nullptr, DwarfRAC));
-      BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
-          .addCFIIndex(Entry)
-          .setMIFlags(MachineInstr::FrameDestroy);
-    }
+    // Now stack has moved back up and we have restored LR.
+    CFIInstBuilder CFIBuilder(MBB, It, MachineInstr::FrameDestroy);
+    CFIBuilder.buildDefCFAOffset(0);
+    CFIBuilder.buildRestore(ARM::LR);
+    if (Auth)
+      CFIBuilder.buildUndefined(ARM::RA_AUTH_CODE);
   }
 
   if (Auth)
     BuildMI(MBB, It, DebugLoc(), get(ARM::t2AUT));
-}
-
-void ARMBaseInstrInfo::emitCFIForLRRestoreFromReg(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator It) const {
-  MachineFunction &MF = *MBB.getParent();
-  const MCRegisterInfo *MRI = Subtarget.getRegisterInfo();
-  unsigned DwarfLR = MRI->getDwarfRegNum(ARM::LR, true);
-
-  int64_t LRPosEntry =
-      MF.addFrameInst(MCCFIInstruction::createRestore(nullptr, DwarfLR));
-  BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
-      .addCFIIndex(LRPosEntry)
-      .setMIFlags(MachineInstr::FrameDestroy);
 }
 
 void ARMBaseInstrInfo::buildOutlinedFrame(
@@ -6722,11 +6486,12 @@ MachineBasicBlock::iterator ARMBaseInstrInfo::insertOutlinedCall(
     // Save and restore LR from that register.
     copyPhysReg(MBB, It, DebugLoc(), Reg, ARM::LR, true);
     if (!AFI.isLRSpilled())
-      emitCFIForLRSaveToReg(MBB, It, Reg);
+      CFIInstBuilder(MBB, It, MachineInstr::FrameSetup)
+          .buildRegister(ARM::LR, Reg);
     CallPt = MBB.insert(It, CallMIB);
     copyPhysReg(MBB, It, DebugLoc(), ARM::LR, Reg, true);
     if (!AFI.isLRSpilled())
-      emitCFIForLRRestoreFromReg(MBB, It);
+      CFIInstBuilder(MBB, It, MachineInstr::FrameDestroy).buildRestore(ARM::LR);
     It--;
     return CallPt;
   }
@@ -6907,8 +6672,7 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
           SMS.getInstructions(Cycle + Stage * SMS.getInitiationInterval());
       std::sort(Instrs.begin(), Instrs.end(),
                 [](SUnit *A, SUnit *B) { return A->NodeNum > B->NodeNum; });
-      for (SUnit *SU : Instrs)
-        ProposedSchedule.push_back(SU);
+      llvm::append_range(ProposedSchedule, Instrs);
     }
 
   // Learn whether the last use/def of each cross-iteration register is a use or

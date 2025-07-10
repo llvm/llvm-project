@@ -12,9 +12,11 @@
 
 #include "CIRGenFunction.h"
 
+#include "CIRGenCXXABI.h"
 #include "CIRGenCall.h"
 #include "CIRGenValue.h"
 #include "mlir/IR/Location.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/MissingFeatures.h"
 
@@ -41,10 +43,6 @@ cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
 #include "clang/AST/TypeNodes.inc"
       llvm_unreachable("non-canonical or dependent type in IR-generation");
 
-    case Type::ArrayParameter:
-    case Type::HLSLAttributedResource:
-      llvm_unreachable("NYI");
-
     case Type::Auto:
     case Type::DeducedTemplateSpecialization:
       llvm_unreachable("undeduced type in IR-generation");
@@ -65,6 +63,8 @@ cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
     case Type::ObjCObjectPointer:
     case Type::Pipe:
     case Type::BitInt:
+    case Type::HLSLAttributedResource:
+    case Type::HLSLInlineSpirv:
       return cir::TEK_Scalar;
 
     // Complexes.
@@ -78,6 +78,7 @@ cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
     case Type::Record:
     case Type::ObjCObject:
     case Type::ObjCInterface:
+    case Type::ArrayParameter:
       return cir::TEK_Aggregate;
 
     // We operate on atomic values according to their underlying type.
@@ -135,10 +136,76 @@ mlir::Location CIRGenFunction::getLoc(mlir::Location lhs, mlir::Location rhs) {
   return mlir::FusedLoc::get(locs, metadata, &getMLIRContext());
 }
 
+bool CIRGenFunction::containsLabel(const Stmt *s, bool ignoreCaseStmts) {
+  // Null statement, not a label!
+  if (!s)
+    return false;
+
+  // If this is a label, we have to emit the code, consider something like:
+  // if (0) {  ...  foo:  bar(); }  goto foo;
+  //
+  // TODO: If anyone cared, we could track __label__'s, since we know that you
+  // can't jump to one from outside their declared region.
+  if (isa<LabelStmt>(s))
+    return true;
+
+  // If this is a case/default statement, and we haven't seen a switch, we
+  // have to emit the code.
+  if (isa<SwitchCase>(s) && !ignoreCaseStmts)
+    return true;
+
+  // If this is a switch statement, we want to ignore case statements when we
+  // recursively process the sub-statements of the switch. If we haven't
+  // encountered a switch statement, we treat case statements like labels, but
+  // if we are processing a switch statement, case statements are expected.
+  if (isa<SwitchStmt>(s))
+    ignoreCaseStmts = true;
+
+  // Scan subexpressions for verboten labels.
+  return std::any_of(s->child_begin(), s->child_end(),
+                     [=](const Stmt *subStmt) {
+                       return containsLabel(subStmt, ignoreCaseStmts);
+                     });
+}
+
+/// If the specified expression does not fold to a constant, or if it does but
+/// contains a label, return false.  If it constant folds return true and set
+/// the boolean result in Result.
+bool CIRGenFunction::constantFoldsToBool(const Expr *cond, bool &resultBool,
+                                         bool allowLabels) {
+  llvm::APSInt resultInt;
+  if (!constantFoldsToSimpleInteger(cond, resultInt, allowLabels))
+    return false;
+
+  resultBool = resultInt.getBoolValue();
+  return true;
+}
+
+/// If the specified expression does not fold to a constant, or if it does
+/// fold but contains a label, return false. If it constant folds, return
+/// true and set the folded value.
+bool CIRGenFunction::constantFoldsToSimpleInteger(const Expr *cond,
+                                                  llvm::APSInt &resultInt,
+                                                  bool allowLabels) {
+  // FIXME: Rename and handle conversion of other evaluatable things
+  // to bool.
+  Expr::EvalResult result;
+  if (!cond->EvaluateAsInt(result, getContext()))
+    return false; // Not foldable, not integer or not fully evaluatable.
+
+  llvm::APSInt intValue = result.Val.getInt();
+  if (!allowLabels && containsLabel(cond))
+    return false; // Contains a label.
+
+  resultInt = intValue;
+  return true;
+}
+
 void CIRGenFunction::emitAndUpdateRetAlloca(QualType type, mlir::Location loc,
                                             CharUnits alignment) {
   if (!type->isVoidType()) {
-    fnRetAlloca = emitAlloca("__retval", convertType(type), loc, alignment);
+    fnRetAlloca = emitAlloca("__retval", convertType(type), loc, alignment,
+                             /*insertIntoFnEntryBlock=*/false);
   }
 }
 
@@ -277,7 +344,9 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
 
   curFn = fn;
 
-  const auto *fd = dyn_cast_or_null<FunctionDecl>(gd.getDecl());
+  const Decl *d = gd.getDecl();
+  const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
+  curFuncDecl = d->getNonClosureContext();
 
   mlir::Block *entryBB = &fn.getBlocks().front();
   builder.setInsertionPointToStart(entryBB);
@@ -293,7 +362,8 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
 
     mlir::Value addrVal =
         emitAlloca(cast<NamedDecl>(paramVar)->getName(),
-                   convertType(paramVar->getType()), paramLoc, alignment);
+                   convertType(paramVar->getType()), paramLoc, alignment,
+                   /*insertIntoFnEntryBlock=*/true);
 
     declare(addrVal, paramVar, paramVar->getType(), paramLoc, alignment,
             /*isParam=*/true);
@@ -318,6 +388,24 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   if (!returnType->isVoidType())
     emitAndUpdateRetAlloca(returnType, getLoc(fd->getBody()->getEndLoc()),
                            getContext().getTypeAlignInChars(returnType));
+
+  if (isa_and_nonnull<CXXMethodDecl>(d) &&
+      cast<CXXMethodDecl>(d)->isInstance()) {
+    cgm.getCXXABI().emitInstanceFunctionProlog(loc, *this);
+
+    const auto *md = cast<CXXMethodDecl>(d);
+    if (md->getParent()->isLambda() && md->getOverloadedOperator() == OO_Call) {
+      cgm.errorNYI(loc, "lambda call operator");
+    } else {
+      // Not in a lambda; just use 'this' from the method.
+      // FIXME: Should we generate a new load for each use of 'this'? The fast
+      // register allocator would be happier...
+      cxxThisValue = cxxabiThisValue;
+    }
+
+    assert(!cir::MissingFeatures::sanitizers());
+    assert(!cir::MissingFeatures::emitTypeCheck());
+  }
 }
 
 void CIRGenFunction::finishFunction(SourceLocation endLoc) {}
@@ -374,21 +462,23 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
 
     startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
 
-    if (isa<CXXDestructorDecl>(funcDecl))
+    if (isa<CXXDestructorDecl>(funcDecl)) {
       getCIRGenModule().errorNYI(bodyRange, "C++ destructor definition");
-    else if (isa<CXXConstructorDecl>(funcDecl))
-      getCIRGenModule().errorNYI(bodyRange, "C++ constructor definition");
-    else if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice &&
-             funcDecl->hasAttr<CUDAGlobalAttr>())
+    } else if (isa<CXXConstructorDecl>(funcDecl)) {
+      emitConstructorBody(args);
+    } else if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice &&
+               funcDecl->hasAttr<CUDAGlobalAttr>()) {
       getCIRGenModule().errorNYI(bodyRange, "CUDA kernel");
-    else if (isa<CXXMethodDecl>(funcDecl) &&
-             cast<CXXMethodDecl>(funcDecl)->isLambdaStaticInvoker())
+    } else if (isa<CXXMethodDecl>(funcDecl) &&
+               cast<CXXMethodDecl>(funcDecl)->isLambdaStaticInvoker()) {
       getCIRGenModule().errorNYI(bodyRange, "Lambda static invoker");
-    else if (funcDecl->isDefaulted() && isa<CXXMethodDecl>(funcDecl) &&
-             (cast<CXXMethodDecl>(funcDecl)->isCopyAssignmentOperator() ||
-              cast<CXXMethodDecl>(funcDecl)->isMoveAssignmentOperator()))
-      getCIRGenModule().errorNYI(bodyRange, "Default assignment operator");
-    else if (body) {
+    } else if (funcDecl->isDefaulted() && isa<CXXMethodDecl>(funcDecl) &&
+               (cast<CXXMethodDecl>(funcDecl)->isCopyAssignmentOperator() ||
+                cast<CXXMethodDecl>(funcDecl)->isMoveAssignmentOperator())) {
+      // Implicit copy-assignment gets the same special treatment as implicit
+      // copy-constructors.
+      emitImplicitAssignmentOperatorBody(args);
+    } else if (body) {
       if (mlir::failed(emitFunctionBody(body))) {
         fn.erase();
         return nullptr;
@@ -408,25 +498,93 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
   return fn;
 }
 
+void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
+  assert(!cir::MissingFeatures::sanitizers());
+  const auto *ctor = cast<CXXConstructorDecl>(curGD.getDecl());
+  CXXCtorType ctorType = curGD.getCtorType();
+
+  assert((cgm.getTarget().getCXXABI().hasConstructorVariants() ||
+          ctorType == Ctor_Complete) &&
+         "can only generate complete ctor for this ABI");
+
+  if (ctorType == Ctor_Complete && isConstructorDelegationValid(ctor) &&
+      cgm.getTarget().getCXXABI().hasConstructorVariants()) {
+    emitDelegateCXXConstructorCall(ctor, Ctor_Base, args, ctor->getEndLoc());
+    return;
+  }
+
+  const FunctionDecl *definition = nullptr;
+  Stmt *body = ctor->getBody(definition);
+  assert(definition == ctor && "emitting wrong constructor body");
+
+  if (isa_and_nonnull<CXXTryStmt>(body)) {
+    cgm.errorNYI(ctor->getSourceRange(), "emitConstructorBody: try body");
+    return;
+  }
+
+  assert(!cir::MissingFeatures::incrementProfileCounter());
+  assert(!cir::MissingFeatures::runCleanupsScope());
+
+  // TODO: in restricted cases, we can emit the vbase initializers of a
+  // complete ctor and then delegate to the base ctor.
+
+  // Emit the constructor prologue, i.e. the base and member initializers.
+  emitCtorPrologue(ctor, ctorType, args);
+
+  // TODO(cir): propagate this result via mlir::logical result. Just unreachable
+  // now just to have it handled.
+  if (mlir::failed(emitStmt(body, true))) {
+    cgm.errorNYI(ctor->getSourceRange(),
+                 "emitConstructorBody: emit body statement failed.");
+    return;
+  }
+}
+
+/// Given a value of type T* that may not be to a complete object, construct
+/// an l-vlaue withi the natural pointee alignment of T.
+LValue CIRGenFunction::makeNaturalAlignPointeeAddrLValue(mlir::Value val,
+                                                         QualType ty) {
+  // FIXME(cir): is it safe to assume Op->getResult(0) is valid? Perhaps
+  // assert on the result type first.
+  LValueBaseInfo baseInfo;
+  assert(!cir::MissingFeatures::opTBAA());
+  CharUnits align = cgm.getNaturalTypeAlignment(ty, &baseInfo);
+  return makeAddrLValue(Address(val, align), ty, baseInfo);
+}
+
+LValue CIRGenFunction::makeNaturalAlignAddrLValue(mlir::Value val,
+                                                  QualType ty) {
+  LValueBaseInfo baseInfo;
+  CharUnits alignment = cgm.getNaturalTypeAlignment(ty, &baseInfo);
+  Address addr(val, convertTypeForMem(ty), alignment);
+  assert(!cir::MissingFeatures::opTBAA());
+  return makeAddrLValue(addr, ty, baseInfo);
+}
+
 clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
                                                      FunctionArgList &args) {
   const auto *fd = cast<FunctionDecl>(gd.getDecl());
   QualType retTy = fd->getReturnType();
 
   const auto *md = dyn_cast<CXXMethodDecl>(fd);
-  if (md && md->isInstance())
-    cgm.errorNYI(fd->getSourceRange(), "buildFunctionArgList: CXXMethodDecl");
+  if (md && md->isInstance()) {
+    if (cgm.getCXXABI().hasThisReturn(gd))
+      cgm.errorNYI(fd->getSourceRange(), "this return");
+    else if (cgm.getCXXABI().hasMostDerivedReturn(gd))
+      cgm.errorNYI(fd->getSourceRange(), "most derived return");
+    cgm.getCXXABI().buildThisParam(*this, args);
+  }
 
-  if (isa<CXXConstructorDecl>(fd))
-    cgm.errorNYI(fd->getSourceRange(),
-                 "buildFunctionArgList: CXXConstructorDecl");
+  if (const auto *cd = dyn_cast<CXXConstructorDecl>(fd))
+    if (cd->getInheritedConstructor())
+      cgm.errorNYI(fd->getSourceRange(),
+                   "buildFunctionArgList: inherited constructor");
 
   for (auto *param : fd->parameters())
     args.push_back(param);
 
   if (md && (isa<CXXConstructorDecl>(md) || isa<CXXDestructorDecl>(md)))
-    cgm.errorNYI(fd->getSourceRange(),
-                 "buildFunctionArgList: implicit structor params");
+    assert(!cir::MissingFeatures::cxxabiStructorImplicitParam());
 
   return retTy;
 }
@@ -442,11 +600,119 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
                                std::string("l-value not implemented for '") +
                                    e->getStmtClassName() + "'");
     return LValue();
+  case Expr::ArraySubscriptExprClass:
+    return emitArraySubscriptExpr(cast<ArraySubscriptExpr>(e));
   case Expr::UnaryOperatorClass:
     return emitUnaryOpLValue(cast<UnaryOperator>(e));
+  case Expr::StringLiteralClass:
+    return emitStringLiteralLValue(cast<StringLiteral>(e));
+  case Expr::MemberExprClass:
+    return emitMemberExpr(cast<MemberExpr>(e));
+  case Expr::BinaryOperatorClass:
+    return emitBinaryOperatorLValue(cast<BinaryOperator>(e));
+  case Expr::CompoundAssignOperatorClass: {
+    QualType ty = e->getType();
+    if (ty->getAs<AtomicType>()) {
+      cgm.errorNYI(e->getSourceRange(),
+                   "CompoundAssignOperator with AtomicType");
+      return LValue();
+    }
+    if (!ty->isAnyComplexType())
+      return emitCompoundAssignmentLValue(cast<CompoundAssignOperator>(e));
+    cgm.errorNYI(e->getSourceRange(),
+                 "CompoundAssignOperator with ComplexType");
+    return LValue();
+  }
+  case Expr::CallExprClass:
+  case Expr::CXXMemberCallExprClass:
+  case Expr::CXXOperatorCallExprClass:
+  case Expr::UserDefinedLiteralClass:
+    return emitCallExprLValue(cast<CallExpr>(e));
+  case Expr::ParenExprClass:
+    return emitLValue(cast<ParenExpr>(e)->getSubExpr());
   case Expr::DeclRefExprClass:
     return emitDeclRefLValue(cast<DeclRefExpr>(e));
+  case Expr::CStyleCastExprClass:
+  case Expr::CXXStaticCastExprClass:
+  case Expr::CXXDynamicCastExprClass:
+  case Expr::ImplicitCastExprClass:
+    return emitCastLValue(cast<CastExpr>(e));
   }
+}
+
+static std::string getVersionedTmpName(llvm::StringRef name, unsigned cnt) {
+  SmallString<256> buffer;
+  llvm::raw_svector_ostream out(buffer);
+  out << name << cnt;
+  return std::string(out.str());
+}
+
+std::string CIRGenFunction::getCounterAggTmpAsString() {
+  return getVersionedTmpName("agg.tmp", counterAggTmp++);
+}
+
+void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
+                                            QualType ty) {
+  // Ignore empty classes in C++.
+  if (getLangOpts().CPlusPlus) {
+    if (const RecordType *rt = ty->getAs<RecordType>()) {
+      if (cast<CXXRecordDecl>(rt->getDecl())->isEmpty())
+        return;
+    }
+  }
+
+  // Cast the dest ptr to the appropriate i8 pointer type.
+  if (builder.isInt8Ty(destPtr.getElementType())) {
+    cgm.errorNYI(loc, "Cast the dest ptr to the appropriate i8 pointer type");
+  }
+
+  // Get size and alignment info for this aggregate.
+  const CharUnits size = getContext().getTypeSizeInChars(ty);
+  if (size.isZero()) {
+    // But note that getTypeInfo returns 0 for a VLA.
+    if (isa<VariableArrayType>(getContext().getAsArrayType(ty))) {
+      cgm.errorNYI(loc,
+                   "emitNullInitialization for zero size VariableArrayType");
+    } else {
+      return;
+    }
+  }
+
+  // If the type contains a pointer to data member we can't memset it to zero.
+  // Instead, create a null constant and copy it to the destination.
+  // TODO: there are other patterns besides zero that we can usefully memset,
+  // like -1, which happens to be the pattern used by member-pointers.
+  if (!cgm.getTypes().isZeroInitializable(ty)) {
+    cgm.errorNYI(loc, "type is not zero initializable");
+  }
+
+  // In LLVM Codegen: otherwise, just memset the whole thing to zero using
+  // Builder.CreateMemSet. In CIR just emit a store of #cir.zero to the
+  // respective address.
+  // Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
+  const mlir::Value zeroValue = builder.getNullValue(convertType(ty), loc);
+  builder.createStore(loc, zeroValue, destPtr);
+}
+
+// TODO(cir): should be shared with LLVM codegen.
+bool CIRGenFunction::shouldNullCheckClassCastValue(const CastExpr *ce) {
+  const Expr *e = ce->getSubExpr();
+
+  if (ce->getCastKind() == CK_UncheckedDerivedToBase)
+    return false;
+
+  if (isa<CXXThisExpr>(e->IgnoreParens())) {
+    // We always assume that 'this' is never null.
+    return false;
+  }
+
+  if (const ImplicitCastExpr *ice = dyn_cast<ImplicitCastExpr>(ce)) {
+    // And that glvalue casts are never null.
+    if (ice->isGLValue())
+      return false;
+  }
+
+  return true;
 }
 
 } // namespace clang::CIRGen

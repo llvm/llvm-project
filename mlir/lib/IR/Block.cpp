@@ -10,8 +10,6 @@
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
-#include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
 
@@ -119,7 +117,7 @@ bool Block::verifyOpOrder() {
   if (!isOpOrderValid())
     return false;
   // The order is valid if there are less than 2 operations.
-  if (operations.empty() || std::next(operations.begin()) == operations.end())
+  if (operations.empty() || llvm::hasSingleElement(operations))
     return false;
 
   Operation *prev = nullptr;

@@ -20,11 +20,11 @@ define internal i32 @foo() {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    mov.u64 %SPL, __local_depot0;
+; CHECK-NEXT:    mov.b64 %SPL, __local_depot0;
 ; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.global.u64 %rd1, [ptr];
+; CHECK-NEXT:    ld.global.b64 %rd1, [ptr];
 ; CHECK-NEXT:    add.u64 %rd3, %SPL, 1;
-; CHECK-NEXT:    ld.local.u8 %rs1, [%rd3];
+; CHECK-NEXT:    ld.local.b8 %rs1, [%rd3];
 ; CHECK-NEXT:    add.u64 %rd4, %SP, 0;
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .align 1 .b8 param0[1];
@@ -33,13 +33,7 @@ define internal i32 @foo() {
 ; CHECK-NEXT:    st.param.b64 [param1], %rd4;
 ; CHECK-NEXT:    .param .b32 retval0;
 ; CHECK-NEXT:    prototype_0 : .callprototype (.param .b32 _) _ (.param .align 1 .b8 _[1], .param .b64 _);
-; CHECK-NEXT:    call (retval0),
-; CHECK-NEXT:    %rd1,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0,
-; CHECK-NEXT:    param1
-; CHECK-NEXT:    )
-; CHECK-NEXT:    , prototype_0;
+; CHECK-NEXT:    call (retval0), %rd1, (param0, param1), prototype_0;
 ; CHECK-NEXT:    ld.param.b32 %r1, [retval0];
 ; CHECK-NEXT:    } // callseq 0
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -63,11 +57,11 @@ define internal i32 @bar() {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    mov.u64 %SPL, __local_depot1;
+; CHECK-NEXT:    mov.b64 %SPL, __local_depot1;
 ; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.global.u64 %rd1, [ptr];
+; CHECK-NEXT:    ld.global.b64 %rd1, [ptr];
 ; CHECK-NEXT:    add.u64 %rd3, %SPL, 8;
-; CHECK-NEXT:    ld.local.u64 %rd4, [%rd3];
+; CHECK-NEXT:    ld.local.b64 %rd4, [%rd3];
 ; CHECK-NEXT:    add.u64 %rd5, %SP, 0;
 ; CHECK-NEXT:    { // callseq 1, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
@@ -76,13 +70,7 @@ define internal i32 @bar() {
 ; CHECK-NEXT:    st.param.b64 [param1], %rd5;
 ; CHECK-NEXT:    .param .b32 retval0;
 ; CHECK-NEXT:    prototype_1 : .callprototype (.param .b32 _) _ (.param .align 8 .b8 _[8], .param .b64 _);
-; CHECK-NEXT:    call (retval0),
-; CHECK-NEXT:    %rd1,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0,
-; CHECK-NEXT:    param1
-; CHECK-NEXT:    )
-; CHECK-NEXT:    , prototype_1;
+; CHECK-NEXT:    call (retval0), %rd1, (param0, param1), prototype_1;
 ; CHECK-NEXT:    ld.param.b32 %r1, [retval0];
 ; CHECK-NEXT:    } // callseq 1
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;

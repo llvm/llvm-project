@@ -64,7 +64,7 @@ profileComplianceMap = {
     {"tosa.bitwise_xor",
      {{{Profile::pro_int},
        {{i8T, i8T, i8T}, {i16T, i16T, i16T}, {i32T, i32T, i32T}}}}},
-    {"tosa.int_div",
+    {"tosa.intdiv",
      {{{Profile::pro_int, Profile::pro_fp}, {{i32T, i32T, i32T}}, anyOf}}},
     {"tosa.logical_and",
      {{{Profile::pro_int, Profile::pro_fp}, {{boolT, boolT, boolT}}, anyOf}}},

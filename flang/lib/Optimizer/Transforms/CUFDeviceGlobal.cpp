@@ -32,6 +32,15 @@ static void processAddrOfOp(fir::AddrOfOp addrOfOp,
                             mlir::SymbolTable &symbolTable,
                             llvm::DenseSet<fir::GlobalOp> &candidates,
                             bool recurseInGlobal) {
+
+  // Check if there is a real use of the global.
+  if (addrOfOp.getOperation()->hasOneUse()) {
+    mlir::OpOperand &addrUse = *addrOfOp.getOperation()->getUses().begin();
+    if (mlir::isa<fir::DeclareOp>(addrUse.getOwner()) &&
+        addrUse.getOwner()->use_empty())
+      return;
+  }
+
   if (auto globalOp = symbolTable.lookup<fir::GlobalOp>(
           addrOfOp.getSymbol().getRootReference().getValue())) {
     // TO DO: limit candidates to non-scalars. Scalars appear to have been
@@ -104,8 +113,16 @@ public:
       return signalPassFailure();
     mlir::SymbolTable gpuSymTable(gpuMod);
     for (auto globalOp : mod.getOps<fir::GlobalOp>()) {
-      if (cuf::isRegisteredDeviceGlobal(globalOp))
+      if (cuf::isRegisteredDeviceGlobal(globalOp)) {
         candidates.insert(globalOp);
+      } else if (globalOp.getConstant() &&
+                 mlir::isa<fir::SequenceType>(
+                     fir::unwrapRefType(globalOp.resultType()))) {
+        mlir::Attribute initAttr =
+            globalOp.getInitVal().value_or(mlir::Attribute());
+        if (initAttr && mlir::dyn_cast<mlir::DenseElementsAttr>(initAttr))
+          candidates.insert(globalOp);
+      }
     }
     for (auto globalOp : candidates) {
       auto globalName{globalOp.getSymbol().getValue()};

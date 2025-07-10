@@ -23,10 +23,10 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
@@ -2311,8 +2311,13 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
           uint64_t OrigStmtSeq = StmtSeq.get();
           // 1. Get the original row index from the stmt list offset.
           auto OrigRowIter = SeqOffToOrigRow.find(OrigStmtSeq);
-          assert(OrigRowIter != SeqOffToOrigRow.end() &&
-                 "Stmt list offset not found in sequence offsets map");
+          // Check whether we have an output sequence for the StmtSeq offset.
+          // Some sequences are discarded by the DWARFLinker if they are invalid
+          // (empty).
+          if (OrigRowIter == SeqOffToOrigRow.end()) {
+            StmtSeq.set(UINT64_MAX);
+            continue;
+          }
           size_t OrigRowIndex = OrigRowIter->second;
 
           // 2. Get the new row index from the original row index.

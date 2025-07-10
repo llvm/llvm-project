@@ -31,21 +31,12 @@ private:
   explicit X86MCExpr(MCRegister R) : Reg(R) {}
 
 public:
-  /// @name Construction
-  /// @{
-
   static const X86MCExpr *create(MCRegister Reg, MCContext &Ctx) {
     return new (Ctx) X86MCExpr(Reg);
   }
 
-  /// @}
-  /// @name Accessors
-  /// @{
-
   /// getSubExpr - Get the child of this expression.
   MCRegister getReg() const { return Reg; }
-
-  /// @}
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override {
     if (!MAI || MAI->getAssemblerDialect() == 0)
@@ -71,7 +62,6 @@ public:
     return E->getKind() == MCExpr::Target;
   }
 };
-
 } // end namespace llvm
 
 #endif

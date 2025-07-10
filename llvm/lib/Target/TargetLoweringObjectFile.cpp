@@ -104,14 +104,14 @@ static bool isSuitableForBSS(const GlobalVariable *GV) {
 static bool IsNullTerminatedString(const Constant *C) {
   // First check: is we have constant array terminated with zero
   if (const ConstantDataSequential *CDS = dyn_cast<ConstantDataSequential>(C)) {
-    unsigned NumElts = CDS->getNumElements();
+    uint64_t NumElts = CDS->getNumElements();
     assert(NumElts != 0 && "Can't have an empty CDS");
 
     if (CDS->getElementAsInteger(NumElts-1) != 0)
       return false; // Not null terminated.
 
     // Verify that the null doesn't occur anywhere else in the string.
-    for (unsigned i = 0; i != NumElts-1; ++i)
+    for (uint64_t i = 0; i != NumElts - 1; ++i)
       if (CDS->getElementAsInteger(i) == 0)
         return false;
     return true;
@@ -383,6 +383,18 @@ MCSection *TargetLoweringObjectFile::getSectionForConstant(
     return ReadOnlySection;
 
   return DataSection;
+}
+
+MCSection *TargetLoweringObjectFile::getSectionForConstant(
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    StringRef SectionPrefix) const {
+  // Fallback to `getSectionForConstant` without `SectionPrefix` parameter if it
+  // is empty.
+  if (SectionPrefix.empty())
+    return getSectionForConstant(DL, Kind, C, Alignment);
+  report_fatal_error(
+      "TargetLoweringObjectFile::getSectionForConstant that "
+      "accepts SectionPrefix is not implemented for the object file format");
 }
 
 MCSection *TargetLoweringObjectFile::getSectionForMachineBasicBlock(

@@ -17,8 +17,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_LLDB_DAP_PROTOCOL_H
-#define LLDB_TOOLS_LLDB_DAP_PROTOCOL_H
+#ifndef LLDB_TOOLS_LLDB_DAP_PROTOCOL_PROTOCOL_BASE_H
+#define LLDB_TOOLS_LLDB_DAP_PROTOCOL_PROTOCOL_BASE_H
 
 #include "llvm/Support/JSON.h"
 #include <cstdint>
@@ -64,15 +64,15 @@ struct Event {
 llvm::json::Value toJSON(const Event &);
 bool fromJSON(const llvm::json::Value &, Event &, llvm::json::Path);
 
+enum ResponseMessage : unsigned {
+  /// The request was cancelled
+  eResponseMessageCancelled,
+  /// The request may be retried once the adapter is in a 'stopped' state
+  eResponseMessageNotStopped,
+};
+
 /// Response for a request.
 struct Response {
-  enum class Message {
-    /// The request was cancelled
-    cancelled,
-    /// The request may be retried once the adapter is in a 'stopped' state
-    notStopped,
-  };
-
   /// Sequence number of the corresponding request.
   int64_t request_seq;
 
@@ -90,7 +90,7 @@ struct Response {
   /// Contains the raw error in short form if `success` is false. This raw error
   /// might be interpreted by the client and is not shown in the UI. Some
   /// predefined values exist.
-  std::optional<std::variant<Message, std::string>> message;
+  std::optional<std::variant<ResponseMessage, std::string>> message;
 
   /// Contains request result if success is true and error details if success is
   /// false.
@@ -109,7 +109,7 @@ struct ErrorMessage {
   /// requirement that every user visible error message needs a corresponding
   /// error number, so that users or customer support can find information about
   /// the specific error more easily.
-  uint64_t id;
+  uint64_t id = 0;
 
   /// A format string for the message. Embedded variables have the form
   /// `{name}`. If variable name starts with an underscore character, the
@@ -122,10 +122,10 @@ struct ErrorMessage {
   std::optional<std::map<std::string, std::string>> variables;
 
   /// If true send to telemetry.
-  bool sendTelemetry;
+  bool sendTelemetry = false;
 
   /// If true show user.
-  bool showUser;
+  bool showUser = false;
 
   /// A url where additional information about this message can be found.
   std::optional<std::string> url;
@@ -141,8 +141,23 @@ using Message = std::variant<Request, Response, Event>;
 bool fromJSON(const llvm::json::Value &, Message &, llvm::json::Path);
 llvm::json::Value toJSON(const Message &);
 
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Message &V) {
+  OS << toJSON(V);
+  return OS;
+}
+
+/// On error (whenever `success` is false), the body can provide more details.
+struct ErrorResponseBody {
+  /// A structured error message.
+  std::optional<ErrorMessage> error;
+};
+llvm::json::Value toJSON(const ErrorResponseBody &);
+
+/// This is a placehold for requests with an empty, null or undefined arguments.
+using EmptyArguments = std::optional<std::monostate>;
+
 /// This is just an acknowledgement, so no body field is required.
-using VoidResponse = std::monostate;
+using VoidResponse = llvm::Error;
 
 } // namespace lldb_dap::protocol
 

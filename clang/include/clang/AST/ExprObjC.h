@@ -217,12 +217,10 @@ public:
   SourceRange getSourceRange() const LLVM_READONLY { return Range; }
 
   /// Retrieve elements of array of literals.
-  Expr **getElements() { return getTrailingObjects<Expr *>(); }
+  Expr **getElements() { return getTrailingObjects(); }
 
   /// Retrieve elements of array of literals.
-  const Expr * const *getElements() const {
-    return getTrailingObjects<Expr *>();
-  }
+  const Expr *const *getElements() const { return getTrailingObjects(); }
 
   /// getNumElements - Return number of elements of objective-c array literal.
   unsigned getNumElements() const { return NumElements; }
@@ -271,7 +269,7 @@ struct ObjCDictionaryElement {
 
   /// The number of elements this pack expansion will expand to, if
   /// this is a pack expansion and is known.
-  std::optional<unsigned> NumExpansions;
+  UnsignedOrNone NumExpansions;
 
   /// Determines whether this dictionary element is a pack expansion.
   bool isPackExpansion() const { return EllipsisLoc.isValid(); }
@@ -1423,8 +1421,7 @@ public:
     if (hasStandardSelLocs())
       return getStandardSelectorLoc(
           Index, getSelector(), getSelLocsKind() == SelLoc_StandardWithSpace,
-          llvm::ArrayRef(const_cast<Expr **>(getArgs()), getNumArgs()),
-          RBracLoc);
+          ArrayRef(const_cast<Expr **>(getArgs()), getNumArgs()), RBracLoc);
     return getStoredSelLocs()[Index];
   }
 

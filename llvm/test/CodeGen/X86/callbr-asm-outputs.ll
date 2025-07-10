@@ -14,7 +14,7 @@ define i32 @test1(i32 %x) {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  # %bb.1: # %normal
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB0_2: # Block address taken
+; CHECK-NEXT:  .LBB0_2: # Inline asm indirect target
 ; CHECK-NEXT:    # %abnormal
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    movl $1, %eax
@@ -47,7 +47,7 @@ define i32 @test2(i32 %out1, i32 %out2) nounwind {
 ; CHECK-NEXT:    jne .LBB1_2
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    jmp .LBB1_4
-; CHECK-NEXT:  .LBB1_2: # Block address taken
+; CHECK-NEXT:  .LBB1_2: # Inline asm indirect target
 ; CHECK-NEXT:    # %if.then.label_true_crit_edge
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    jmp .LBB1_9
@@ -64,15 +64,15 @@ define i32 @test2(i32 %out1, i32 %out2) nounwind {
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB1_6: # Block address taken
+; CHECK-NEXT:  .LBB1_6: # Inline asm indirect target
 ; CHECK-NEXT:    # %if.then.return_crit_edge
 ; CHECK-NEXT:    # Label of block must be emitted
-; CHECK-NEXT:  .LBB1_7: # Block address taken
+; CHECK-NEXT:  .LBB1_7: # Inline asm indirect target
 ; CHECK-NEXT:    # %if.else.return_crit_edge
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    jmp .LBB1_5
-; CHECK-NEXT:  .LBB1_8: # Block address taken
+; CHECK-NEXT:  .LBB1_8: # Inline asm indirect target
 ; CHECK-NEXT:    # %if.else.label_true_crit_edge
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:  .LBB1_9: # %label_true
@@ -130,10 +130,10 @@ define i32 @test3(i1 %cmp) nounwind {
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB2_5: # Block address taken
+; CHECK-NEXT:  .LBB2_5: # Inline asm indirect target
 ; CHECK-NEXT:    # %true.indirect_crit_edge
 ; CHECK-NEXT:    # Label of block must be emitted
-; CHECK-NEXT:  .LBB2_6: # Block address taken
+; CHECK-NEXT:  .LBB2_6: # Inline asm indirect target
 ; CHECK-NEXT:    # %false.indirect_crit_edge
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    movl $42, %eax
@@ -175,18 +175,18 @@ define i32 @test4(i32 %out1, i32 %out2) {
 ; CHECK-NEXT:  # %bb.2: # %asm.fallthrough2
 ; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB3_3: # Block address taken
+; CHECK-NEXT:  .LBB3_3: # Inline asm indirect target
 ; CHECK-NEXT:    # %entry.return_crit_edge
 ; CHECK-NEXT:    # Label of block must be emitted
-; CHECK-NEXT:  .LBB3_4: # Block address taken
+; CHECK-NEXT:  .LBB3_4: # Inline asm indirect target
 ; CHECK-NEXT:    # %asm.fallthrough.return_crit_edge
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB3_5: # Block address taken
+; CHECK-NEXT:  .LBB3_5: # Inline asm indirect target
 ; CHECK-NEXT:    # %entry.label_true_crit_edge
 ; CHECK-NEXT:    # Label of block must be emitted
-; CHECK-NEXT:  .LBB3_6: # Block address taken
+; CHECK-NEXT:  .LBB3_6: # Inline asm indirect target
 ; CHECK-NEXT:    # %asm.fallthrough.label_true_crit_edge
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    movl $-2, %eax
@@ -226,7 +226,7 @@ define dso_local void @test5() {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    retl
-; CHECK-NEXT:  .LBB4_2: # Block address taken
+; CHECK-NEXT:  .LBB4_2: # Inline asm indirect target
 ; CHECK-NEXT:    # %._crit_edge
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    retl

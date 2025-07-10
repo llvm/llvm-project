@@ -12,10 +12,8 @@
 
 #include "mlir/Conversion/SCFToSPIRV/SCFToSPIRV.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -225,6 +223,18 @@ struct IfOpConversion : SCFToSPIRVPattern<scf::IfOp> {
     // subsequently converges.
     auto loc = ifOp.getLoc();
 
+    // Compute return types.
+    SmallVector<Type, 8> returnTypes;
+    for (auto result : ifOp.getResults()) {
+      auto convertedType = typeConverter.convertType(result.getType());
+      if (!convertedType)
+        return rewriter.notifyMatchFailure(
+            loc,
+            llvm::formatv("failed to convert type '{0}'", result.getType()));
+
+      returnTypes.push_back(convertedType);
+    }
+
     // Create `spirv.selection` operation, selection header block and merge
     // block.
     auto selectionOp =
@@ -261,16 +271,6 @@ struct IfOpConversion : SCFToSPIRVPattern<scf::IfOp> {
                                                 thenBlock, ArrayRef<Value>(),
                                                 elseBlock, ArrayRef<Value>());
 
-    SmallVector<Type, 8> returnTypes;
-    for (auto result : ifOp.getResults()) {
-      auto convertedType = typeConverter.convertType(result.getType());
-      if (!convertedType)
-        return rewriter.notifyMatchFailure(
-            loc,
-            llvm::formatv("failed to convert type '{0}'", result.getType()));
-
-      returnTypes.push_back(convertedType);
-    }
     replaceSCFOutputValue(ifOp, selectionOp, rewriter, scfToSPIRVContext,
                           returnTypes);
     return success();
@@ -419,7 +419,7 @@ struct WhileOpConversion final : SCFToSPIRVPattern<scf::WhileOp> {
 
     rewriter.setInsertionPointToEnd(&beforeBlock);
     rewriter.replaceOpWithNewOp<spirv::BranchConditionalOp>(
-        cond, conditionVal, &afterBlock, condArgs, &mergeBlock, std::nullopt);
+        cond, conditionVal, &afterBlock, condArgs, &mergeBlock, ValueRange());
 
     // Convert the scf.yield op to a branch back to the header block.
     rewriter.setInsertionPointToEnd(&afterBlock);

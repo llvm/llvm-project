@@ -24,17 +24,17 @@ syn match   llvmType /\<i\d\+\>/
 " much more common for these tokens to be used for boolean constants.
 syn keyword llvmStatement add addrspacecast alloca and arcp ashr atomicrmw
 syn keyword llvmStatement bitcast br catchpad catchswitch catchret call callbr
-syn keyword llvmStatement cleanuppad cleanupret cmpxchg eq exact extractelement
-syn keyword llvmStatement extractvalue fadd fast fcmp fdiv fence fmul fneg fpext
-syn keyword llvmStatement fptosi fptoui fptrunc free freeze frem fsub
-syn keyword llvmStatement getelementptr icmp inbounds indirectbr insertelement
-syn keyword llvmStatement insertvalue inttoptr invoke landingpad load lshr
-syn keyword llvmStatement malloc max min mul nand ne ninf nnan nsw nsz nuw oeq
-syn keyword llvmStatement oge ogt ole olt one or ord phi ptrtoint resume ret
-syn keyword llvmStatement sdiv select sext sge sgt shl shufflevector sitofp
-syn keyword llvmStatement sle slt srem store sub switch trunc udiv ueq uge ugt
-syn keyword llvmStatement uitofp ule ult umax umin une uno unreachable unwind
-syn keyword llvmStatement urem va_arg xchg xor zext
+syn keyword llvmStatement cleanuppad cleanupret cmpxchg disjoint eq exact
+syn keyword llvmStatement extractelement extractvalue fadd fast fcmp fdiv fence
+syn keyword llvmStatement fmul fneg fpext fptosi fptoui fptrunc free freeze
+syn keyword llvmStatement frem fsub getelementptr icmp inbounds indirectbr
+syn keyword llvmStatement insertelement insertvalue inttoptr invoke landingpad
+syn keyword llvmStatement load lshr malloc max min mul nand ne ninf nnan nsw
+syn keyword llvmStatement nsz nuw oeq oge ogt ole olt one or ord phi ptrtoint
+syn keyword llvmStatement resume ret sdiv select sext sge sgt shl shufflevector
+syn keyword llvmStatement sitofp sle slt srem store sub switch trunc udiv ueq
+syn keyword llvmStatement uge ugt uitofp ule ult umax umin une uno unreachable
+syn keyword llvmStatement unwind urem va_arg xchg xor zext
 
 " Debug records.
 syn match llvmStatement /\v#dbg_(assign|declare|label|value)/

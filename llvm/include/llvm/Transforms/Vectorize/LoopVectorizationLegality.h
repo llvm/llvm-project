@@ -301,6 +301,14 @@ public:
   /// Returns the reduction variables found in the loop.
   const ReductionList &getReductionVars() const { return Reductions; }
 
+  /// Returns the recurrence descriptor associated with a given phi node \p PN,
+  /// expecting one to exist.
+  const RecurrenceDescriptor &getRecurrenceDescriptor(PHINode *PN) const {
+    assert(isReductionVariable(PN) &&
+           "only reductions have recurrence descriptors");
+    return Reductions.find(PN)->second;
+  }
+
   /// Returns the induction variables found in the loop.
   const InductionList &getInductionVars() const { return Inductions; }
 
@@ -382,7 +390,8 @@ public:
   const LoopAccessInfo *getLAI() const { return LAI; }
 
   bool isSafeForAnyVectorWidth() const {
-    return LAI->getDepChecker().isSafeForAnyVectorWidth();
+    return LAI->getDepChecker().isSafeForAnyVectorWidth() &&
+           LAI->getDepChecker().isSafeForAnyStoreLoadForwardDistances();
   }
 
   uint64_t getMaxSafeVectorWidthInBits() const {
@@ -404,6 +413,17 @@ public:
   /// is exactly one.
   BasicBlock *getUncountableEarlyExitBlock() const {
     return hasUncountableEarlyExit() ? getUncountableEdge()->second : nullptr;
+  }
+
+  /// Return true if there is store-load forwarding dependencies.
+  bool isSafeForAnyStoreLoadForwardDistances() const {
+    return LAI->getDepChecker().isSafeForAnyStoreLoadForwardDistances();
+  }
+
+  /// Return safe power-of-2 number of elements, which do not prevent store-load
+  /// forwarding and safe to operate simultaneously.
+  uint64_t getMaxStoreLoadForwardSafeDistanceInBits() const {
+    return LAI->getDepChecker().getStoreLoadForwardSafeDistanceInBits();
   }
 
   /// Returns true if vector representation of the instruction \p I

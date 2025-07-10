@@ -34,9 +34,7 @@ class AVRExpandPseudo : public MachineFunctionPass {
 public:
   static char ID;
 
-  AVRExpandPseudo() : MachineFunctionPass(ID) {
-    initializeAVRExpandPseudoPass(*PassRegistry::getPassRegistry());
-  }
+  AVRExpandPseudo() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -2643,8 +2641,7 @@ bool AVRExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
 
 INITIALIZE_PASS(AVRExpandPseudo, "avr-expand-pseudo", AVR_EXPAND_PSEUDO_NAME,
                 false, false)
-namespace llvm {
 
-FunctionPass *createAVRExpandPseudoPass() { return new AVRExpandPseudo(); }
-
-} // end of namespace llvm
+FunctionPass *llvm::createAVRExpandPseudoPass() {
+  return new AVRExpandPseudo();
+}

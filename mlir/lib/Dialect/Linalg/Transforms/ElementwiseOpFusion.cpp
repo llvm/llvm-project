@@ -231,8 +231,7 @@ static void generateFusedElementwiseOpRegion(
   // `consumerToProducerLoopsMap` to map the producer indices.
   if (producer.hasIndexSemantics()) {
     // Add an index operation for every fused loop dimension.
-    unsigned numFusedOpLoops =
-        std::max(producer.getNumLoops(), consumer.getNumLoops());
+    unsigned numFusedOpLoops = fusedOp.getNumLoops();
     SmallVector<Value> fusedIndices;
     fusedIndices.reserve(numFusedOpLoops);
     llvm::transform(llvm::seq<uint64_t>(0, numFusedOpLoops),
@@ -869,7 +868,7 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, Operation *reshapeOp,
          "preconditions for fuse operation failed");
 
   Location loc = linalgOp.getLoc();
-  SmallVector<OpFoldResult> expandedShape, collapsedShape;
+  SmallVector<OpFoldResult> expandedShape;
   SmallVector<AffineMap, 4> reassociationIndices;
   Value src;
   if (auto expandingReshapeOp = dyn_cast<tensor::ExpandShapeOp>(reshapeOp)) {
@@ -1205,7 +1204,7 @@ bool mlir::linalg::isDimSequencePreserved(AffineMap indexingMap,
          "expected indexing map to be projected permutation");
 
   llvm::SmallDenseSet<unsigned, 4> sequenceElements;
-  sequenceElements.insert(dimSequence.begin(), dimSequence.end());
+  sequenceElements.insert_range(dimSequence);
 
   unsigned dimSequenceStart = dimSequence[0];
   for (const auto &expr : enumerate(indexingMap.getResults())) {
@@ -1381,8 +1380,7 @@ getCollapsableIterationSpaceDims(GenericOp genericOp, OpOperand *fusableOperand,
                      }))
       continue;
 
-    processedIterationDims.insert(foldedIterationSpaceDims.begin(),
-                                  foldedIterationSpaceDims.end());
+    processedIterationDims.insert_range(foldedIterationSpaceDims);
     iterationSpaceReassociation.emplace_back(
         std::move(foldedIterationSpaceDims));
   }
@@ -1719,25 +1717,29 @@ FailureOr<CollapseResult> mlir::linalg::collapseOpIterationDims(
       }))
     return failure();
 
-  bool hasPureBufferSemantics = op.hasPureBufferSemantics();
-  if (hasPureBufferSemantics &&
-      !llvm::all_of(op->getOperands(), [&](Value operand) -> bool {
-        MemRefType memRefToCollapse = dyn_cast<MemRefType>(operand.getType());
-        if (!memRefToCollapse)
-          return true;
-
-        return memref::CollapseShapeOp::isGuaranteedCollapsible(
-            memRefToCollapse, foldedIterationDims);
-      }))
-    return rewriter.notifyMatchFailure(op,
-                                       "memref is not guaranteed collapsible");
-
   CollapsingInfo collapsingInfo;
   if (failed(
           collapsingInfo.initialize(op.getNumLoops(), foldedIterationDims))) {
     return rewriter.notifyMatchFailure(
         op, "illegal to collapse specified dimensions");
   }
+
+  bool hasPureBufferSemantics = op.hasPureBufferSemantics();
+  if (hasPureBufferSemantics &&
+      !llvm::all_of(op->getOpOperands(), [&](OpOperand &opOperand) -> bool {
+        MemRefType memRefToCollapse =
+            dyn_cast<MemRefType>(opOperand.get().getType());
+        if (!memRefToCollapse)
+          return true;
+
+        AffineMap indexingMap = op.getMatchingIndexingMap(&opOperand);
+        SmallVector<ReassociationIndices> operandReassociation =
+            getOperandReassociation(indexingMap, collapsingInfo);
+        return memref::CollapseShapeOp::isGuaranteedCollapsible(
+            memRefToCollapse, operandReassociation);
+      }))
+    return rewriter.notifyMatchFailure(op,
+                                       "memref is not guaranteed collapsible");
 
   // Bail on non-canonical ranges.
   SmallVector<Range> loopRanges = op.createLoopRanges(rewriter, op.getLoc());
@@ -1898,6 +1900,9 @@ struct FoldReshapeWithGenericOpByCollapsing
                                          "fusion blocked by control function");
     }
 
+    // Set the insertion point after `producer` because there could be uses
+    // of `producer` between it and the `tensor.collapse_shape` op.
+    rewriter.setInsertionPointAfter(producer);
     std::optional<CollapseResult> collapseResult =
         collapseOpIterationDims(producer, collapsableIterationDims, rewriter);
     if (!collapseResult) {
@@ -1905,23 +1910,6 @@ struct FoldReshapeWithGenericOpByCollapsing
           producer, "failed to do the fusion by collapsing transformation");
     }
 
-    if (!collapseResult) {
-      return rewriter.notifyMatchFailure(reshapeOp,
-                                         "fusion by expansion failed");
-    }
-
-    // Find the replacement for the reshape op. Since the replacements have the
-    // same type as the returns of the original generic op, the consumer reshape
-    // op can be replaced by the source of the expand_shape op that defines
-    // the replacement.
-    Value reshapeReplacement =
-        (collapseResult
-             ->results)[cast<OpResult>(reshapeOp.getSrc()).getResultNumber()];
-    if (auto expandOp =
-            reshapeReplacement.getDefiningOp<tensor::ExpandShapeOp>()) {
-      reshapeReplacement = expandOp.getSrc();
-    }
-    rewriter.replaceOp(reshapeOp, reshapeReplacement);
     rewriter.replaceOp(producer, collapseResult->results);
     return success();
   }
@@ -2325,10 +2313,9 @@ struct LinalgElementwiseOpFusionPass
     // Add constant folding patterns.
     populateConstantFoldLinalgOperations(patterns, defaultControlFn);
 
-    // Use TopDownTraversal for compile time reasons
-    GreedyRewriteConfig grc;
-    grc.useTopDownTraversal = true;
-    (void)applyPatternsGreedily(op, std::move(patterns), grc);
+    // Use TopDownTraversal for compile time reasons.
+    (void)applyPatternsGreedily(op, std::move(patterns),
+                                GreedyRewriteConfig().setUseTopDownTraversal());
   }
 };
 

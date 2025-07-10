@@ -12,9 +12,6 @@
 ;   }
 ; }
 ;
-; FIXME: Currently unrolling is not applied. This is because the new Loop ID
-; created after vectorization does not directly contain unroll metadata.
-; Unexpected nests have been created.
 define void @f(ptr noundef captures(none) %a, float noundef %x) {
 ; CHECK-LABEL: define void @f(
 ; CHECK-SAME: ptr noundef captures(none) [[A:%.*]], float noundef [[X:%.*]]) {
@@ -25,14 +22,47 @@ define void @f(ptr noundef captures(none) %a, float noundef %x) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDEX_NEXT_6:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[INDEX_NEXT_6:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDEX_NEXT_6]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[TMP14]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD_7:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD_7:%.*]] = load <4 x float>, ptr [[TMP14]], align 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = fmul <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD_7]]
-; CHECK-NEXT:    store <4 x float> [[TMP15]], ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    store <4 x float> [[TMP15]], ptr [[TMP14]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT1:%.*]] = add nuw nsw i64 [[INDEX_NEXT_6]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDEX_NEXT1]]
+; CHECK-NEXT:    [[WIDE_LOAD_1:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD_1]]
+; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT_1:%.*]] = add nuw nsw i64 [[INDEX_NEXT_6]], 8
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDEX_NEXT_1]]
+; CHECK-NEXT:    [[WIDE_LOAD_2:%.*]] = load <4 x float>, ptr [[TMP16]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD_2]]
+; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr [[TMP16]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT_2:%.*]] = add nuw nsw i64 [[INDEX_NEXT_6]], 12
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDEX_NEXT_2]]
+; CHECK-NEXT:    [[WIDE_LOAD_3:%.*]] = load <4 x float>, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD_3]]
+; CHECK-NEXT:    store <4 x float> [[TMP7]], ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT_3:%.*]] = add nuw nsw i64 [[INDEX_NEXT_6]], 16
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDEX_NEXT_3]]
+; CHECK-NEXT:    [[WIDE_LOAD_4:%.*]] = load <4 x float>, ptr [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD_4]]
+; CHECK-NEXT:    store <4 x float> [[TMP9]], ptr [[TMP8]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT_4:%.*]] = add nuw nsw i64 [[INDEX_NEXT_6]], 20
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDEX_NEXT_4]]
+; CHECK-NEXT:    [[WIDE_LOAD_5:%.*]] = load <4 x float>, ptr [[TMP10]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD_5]]
+; CHECK-NEXT:    store <4 x float> [[TMP11]], ptr [[TMP10]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT_5:%.*]] = add nuw nsw i64 [[INDEX_NEXT_6]], 24
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDEX_NEXT_5]]
+; CHECK-NEXT:    [[WIDE_LOAD_6:%.*]] = load <4 x float>, ptr [[TMP12]], align 4
+; CHECK-NEXT:    [[TMP13:%.*]] = fmul <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD_6]]
+; CHECK-NEXT:    store <4 x float> [[TMP13]], ptr [[TMP12]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT_7:%.*]] = add nuw nsw i64 [[INDEX_NEXT_6]], 28
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDEX_NEXT_7]]
+; CHECK-NEXT:    [[WIDE_LOAD_8:%.*]] = load <4 x float>, ptr [[TMP17]], align 4
+; CHECK-NEXT:    [[TMP18:%.*]] = fmul <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD_8]]
+; CHECK-NEXT:    store <4 x float> [[TMP18]], ptr [[TMP17]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw nsw i64 [[INDEX_NEXT_6]], 32
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -41,14 +71,49 @@ define void @f(ptr noundef captures(none) %a, float noundef %x) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT_7:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[LOAD]]
 ; CHECK-NEXT:    store float [[MUL]], ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[COMP:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[COMP]], label %[[EXIT_LOOPEXIT:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[LOAD_1:%.*]] = load float, ptr [[ARRAYIDX_1]], align 4
+; CHECK-NEXT:    [[MUL_1:%.*]] = fmul float [[X]], [[LOAD_1]]
+; CHECK-NEXT:    store float [[MUL_1]], ptr [[ARRAYIDX_1]], align 4
+; CHECK-NEXT:    [[IV_NEXT_1:%.*]] = add nuw nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[IV_NEXT_1]]
+; CHECK-NEXT:    [[LOAD_2:%.*]] = load float, ptr [[ARRAYIDX_2]], align 4
+; CHECK-NEXT:    [[MUL_2:%.*]] = fmul float [[X]], [[LOAD_2]]
+; CHECK-NEXT:    store float [[MUL_2]], ptr [[ARRAYIDX_2]], align 4
+; CHECK-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV]], 3
+; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[IV_NEXT_2]]
+; CHECK-NEXT:    [[LOAD_3:%.*]] = load float, ptr [[ARRAYIDX_3]], align 4
+; CHECK-NEXT:    [[MUL_3:%.*]] = fmul float [[X]], [[LOAD_3]]
+; CHECK-NEXT:    store float [[MUL_3]], ptr [[ARRAYIDX_3]], align 4
+; CHECK-NEXT:    [[IV_NEXT_3:%.*]] = add nuw nsw i64 [[IV]], 4
+; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[IV_NEXT_3]]
+; CHECK-NEXT:    [[LOAD_4:%.*]] = load float, ptr [[ARRAYIDX_4]], align 4
+; CHECK-NEXT:    [[MUL_4:%.*]] = fmul float [[X]], [[LOAD_4]]
+; CHECK-NEXT:    store float [[MUL_4]], ptr [[ARRAYIDX_4]], align 4
+; CHECK-NEXT:    [[IV_NEXT_4:%.*]] = add nuw nsw i64 [[IV]], 5
+; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[IV_NEXT_4]]
+; CHECK-NEXT:    [[LOAD_5:%.*]] = load float, ptr [[ARRAYIDX_5]], align 4
+; CHECK-NEXT:    [[MUL_5:%.*]] = fmul float [[X]], [[LOAD_5]]
+; CHECK-NEXT:    store float [[MUL_5]], ptr [[ARRAYIDX_5]], align 4
+; CHECK-NEXT:    [[IV_NEXT_5:%.*]] = add nuw nsw i64 [[IV]], 6
+; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[IV_NEXT_5]]
+; CHECK-NEXT:    [[LOAD_6:%.*]] = load float, ptr [[ARRAYIDX_6]], align 4
+; CHECK-NEXT:    [[MUL_6:%.*]] = fmul float [[X]], [[LOAD_6]]
+; CHECK-NEXT:    store float [[MUL_6]], ptr [[ARRAYIDX_6]], align 4
+; CHECK-NEXT:    [[IV_NEXT_6:%.*]] = add nuw nsw i64 [[IV]], 7
+; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[IV_NEXT_6]]
+; CHECK-NEXT:    [[LOAD_7:%.*]] = load float, ptr [[ARRAYIDX_7]], align 4
+; CHECK-NEXT:    [[MUL_7:%.*]] = fmul float [[X]], [[LOAD_7]]
+; CHECK-NEXT:    store float [[MUL_7]], ptr [[ARRAYIDX_7]], align 4
+; CHECK-NEXT:    [[IV_NEXT_7]] = add nuw nsw i64 [[IV]], 8
+; CHECK-NEXT:    [[COMP_7:%.*]] = icmp eq i64 [[IV_NEXT_7]], 1024
+; CHECK-NEXT:    br i1 [[COMP_7]], label %[[EXIT_LOOPEXIT:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
@@ -73,15 +138,12 @@ exit:
 
 !0 = distinct !{!0, !1, !2}
 !1 = !{!"llvm.loop.vectorize.enable", i1 true}
-!2 = !{!"llvm.loop.vectorize.followup_all", !3}
-!3 = distinct !{!3, !4, !5}
-!4 = !{!"llvm.loop.isvectorized"}
-!5 = !{!"llvm.loop.unroll.count", i32 8}
+!2 = !{!"llvm.loop.vectorize.followup_all", !3, !4}
+!3 = !{!"llvm.loop.isvectorized"}
+!4 = !{!"llvm.loop.unroll.count", i32 8}
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META4:![0-9]+]]}
-; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
-; CHECK: [[META2]] = !{!"llvm.loop.isvectorized"}
-; CHECK: [[META3]] = !{!"llvm.loop.unroll.count", i32 8}
-; CHECK: [[META4]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.isvectorized"}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.disable"}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
 ;.

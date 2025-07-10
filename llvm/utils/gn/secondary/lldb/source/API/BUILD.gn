@@ -80,6 +80,7 @@ target(liblldb_type, "liblldb") {
     "SBMemoryRegionInfoList.cpp",
     "SBModule.cpp",
     "SBModuleSpec.cpp",
+    "SBMutex.cpp",
     "SBPlatform.cpp",
     "SBProcess.cpp",
     "SBProcessInfo.cpp",

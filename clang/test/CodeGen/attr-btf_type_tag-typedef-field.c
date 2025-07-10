@@ -1,7 +1,13 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -debug-info-kind=limited -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -DDOUBLE_BRACKET_ATTRS=1 -debug-info-kind=limited -emit-llvm -o - %s | FileCheck %s
 
+#if DOUBLE_BRACKET_ATTRS
+#define __tag1 [[clang::btf_type_tag("tag1")]]
+#define __tag2 [[clang::btf_type_tag("tag2")]]
+#else
 #define __tag1 __attribute__((btf_type_tag("tag1")))
 #define __tag2 __attribute__((btf_type_tag("tag2")))
+#endif
 
 typedef void __fn_t(int);
 typedef __fn_t __tag1 __tag2 *__fn2_t;
@@ -31,5 +37,5 @@ int *foo1(struct t *a1) {
 // CHECK: ![[L28]] = !DISubroutineType(types: ![[L29:[0-9]+]])
 // CHECK: ![[L29]] = !{null, ![[L4]]}
 // CHECK: ![[L30]] = !{![[L21]], ![[L23]]}
-// CHECK: ![[L31]] = !DIDerivedType(tag: DW_TAG_member, name: "c", scope: ![[#]], file: ![[#]], line: [[#]]1, baseType: ![[L32:[0-9]+]]
+// CHECK: ![[L31]] = !DIDerivedType(tag: DW_TAG_member, name: "c", scope: ![[#]], file: ![[#]], line: [[#]], baseType: ![[L32:[0-9]+]]
 // CHECK: ![[L32]] = !DIBasicType(name: "long", size: [[#]], encoding: DW_ATE_signed)

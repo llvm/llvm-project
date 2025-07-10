@@ -18,6 +18,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Support/StateStack.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
@@ -136,6 +137,28 @@ public:
     return callMapping.lookup(op);
   }
 
+  /// Maps a blockaddress operation to its corresponding placeholder LLVM
+  /// value.
+  void mapUnresolvedBlockAddress(BlockAddressOp op, llvm::Value *cst) {
+    auto result = unresolvedBlockAddressMapping.try_emplace(op, cst);
+    (void)result;
+    assert(result.second &&
+           "attempting to map a blockaddress operation that is already mapped");
+  }
+
+  /// Maps a BlockAddressAttr to its corresponding LLVM basic block.
+  void mapBlockAddress(BlockAddressAttr attr, llvm::BasicBlock *block) {
+    auto result = blockAddressToLLVMMapping.try_emplace(attr, block);
+    (void)result;
+    assert(result.second &&
+           "attempting to map a blockaddress attribute that is already mapped");
+  }
+
+  /// Finds the LLVM basic block that corresponds to the given BlockAddressAttr.
+  llvm::BasicBlock *lookupBlockAddress(BlockAddressAttr attr) const {
+    return blockAddressToLLVMMapping.lookup(attr);
+  }
+
   /// Removes the mapping for blocks contained in the region and values defined
   /// in these blocks.
   void forgetMapping(Region &region);
@@ -167,7 +190,7 @@ public:
                                   llvm::Instruction *inst);
 
   /// Sets LLVM profiling metadata for operations that have branch weights.
-  void setBranchWeightsMetadata(BranchWeightOpInterface op);
+  void setBranchWeightsMetadata(WeightedBranchOpInterface op);
 
   /// Sets LLVM loop metadata for branch operations that have a loop annotation
   /// attribute.
@@ -249,33 +272,6 @@ public:
   /// it if it does not exist.
   llvm::NamedMDNode *getOrInsertNamedModuleMetadata(StringRef name);
 
-  /// Common CRTP base class for ModuleTranslation stack frames.
-  class StackFrame {
-  public:
-    virtual ~StackFrame() = default;
-    TypeID getTypeID() const { return typeID; }
-
-  protected:
-    explicit StackFrame(TypeID typeID) : typeID(typeID) {}
-
-  private:
-    const TypeID typeID;
-    virtual void anchor();
-  };
-
-  /// Concrete CRTP base class for ModuleTranslation stack frames. When
-  /// translating operations with regions, users of ModuleTranslation can store
-  /// state on ModuleTranslation stack before entering the region and inspect
-  /// it when converting operations nested within that region. Users are
-  /// expected to derive this class and put any relevant information into fields
-  /// of the derived class. The usual isa/dyn_cast functionality is available
-  /// for instances of derived classes.
-  template <typename Derived>
-  class StackFrameBase : public StackFrame {
-  public:
-    explicit StackFrameBase() : StackFrame(TypeID::get<Derived>()) {}
-  };
-
   /// Creates a stack frame of type `T` on ModuleTranslation stack. `T` must
   /// be derived from `StackFrameBase<T>` and constructible from the provided
   /// arguments. Doing this before entering the region of the op being
@@ -283,46 +279,22 @@ public:
   /// region.
   template <typename T, typename... Args>
   void stackPush(Args &&...args) {
-    static_assert(
-        std::is_base_of<StackFrame, T>::value,
-        "can only push instances of StackFrame on ModuleTranslation stack");
-    stack.push_back(std::make_unique<T>(std::forward<Args>(args)...));
+    stack.stackPush<T>(std::forward<Args>(args)...);
   }
 
   /// Pops the last element from the ModuleTranslation stack.
-  void stackPop() { stack.pop_back(); }
+  void stackPop() { stack.stackPop(); }
 
   /// Calls `callback` for every ModuleTranslation stack frame of type `T`
   /// starting from the top of the stack.
   template <typename T>
   WalkResult stackWalk(llvm::function_ref<WalkResult(T &)> callback) {
-    static_assert(std::is_base_of<StackFrame, T>::value,
-                  "expected T derived from StackFrame");
-    if (!callback)
-      return WalkResult::skip();
-    for (std::unique_ptr<StackFrame> &frame : llvm::reverse(stack)) {
-      if (T *ptr = dyn_cast_or_null<T>(frame.get())) {
-        WalkResult result = callback(*ptr);
-        if (result.wasInterrupted())
-          return result;
-      }
-    }
-    return WalkResult::advance();
+    return stack.stackWalk(callback);
   }
 
   /// RAII object calling stackPush/stackPop on construction/destruction.
   template <typename T>
-  struct SaveStack {
-    template <typename... Args>
-    explicit SaveStack(ModuleTranslation &m, Args &&...args)
-        : moduleTranslation(m) {
-      moduleTranslation.stackPush<T>(std::forward<Args>(args)...);
-    }
-    ~SaveStack() { moduleTranslation.stackPop(); }
-
-  private:
-    ModuleTranslation &moduleTranslation;
-  };
+  using SaveStack = SaveStateStack<T, ModuleTranslation>;
 
   SymbolTableCollection &symbolTable() { return symbolTableCollection; }
 
@@ -337,6 +309,8 @@ private:
   LogicalResult convertFunctionSignatures();
   LogicalResult convertFunctions();
   LogicalResult convertComdats();
+
+  LogicalResult convertUnresolvedBlockAddress();
 
   /// Handle conversion for both globals and global aliases.
   ///
@@ -362,6 +336,9 @@ private:
 
   /// Process the llvm.commandline LLVM Metadata, if it exists.
   LogicalResult createCommandlineMetadata();
+
+  /// Process the llvm.dependent_libraries LLVM Metadata, if it exists.
+  LogicalResult createDependentLibrariesMetadata();
 
   /// Translates dialect attributes attached to the given operation.
   LogicalResult
@@ -430,9 +407,18 @@ private:
   /// This map is populated on module entry.
   DenseMap<ComdatSelectorOp, llvm::Comdat *> comdatMapping;
 
+  /// Mapping from llvm.blockaddress operations to their corresponding LLVM
+  /// constant placeholders. After all basic blocks are translated, this
+  /// mapping is used to replace the placeholders with the LLVM block addresses.
+  DenseMap<BlockAddressOp, llvm::Value *> unresolvedBlockAddressMapping;
+
+  /// Mapping from a BlockAddressAttr attribute to it's matching LLVM basic
+  /// block.
+  DenseMap<BlockAddressAttr, llvm::BasicBlock *> blockAddressToLLVMMapping;
+
   /// Stack of user-specified state elements, useful when translating operations
   /// with regions.
-  SmallVector<std::unique_ptr<StackFrame>> stack;
+  StateStack stack;
 
   /// A cache for the symbol tables constructed during symbols lookup.
   SymbolTableCollection symbolTableCollection;
@@ -473,15 +459,5 @@ llvm::CallInst *createIntrinsicCall(
 
 } // namespace LLVM
 } // namespace mlir
-
-namespace llvm {
-template <typename T>
-struct isa_impl<T, ::mlir::LLVM::ModuleTranslation::StackFrame> {
-  static inline bool
-  doit(const ::mlir::LLVM::ModuleTranslation::StackFrame &frame) {
-    return frame.getTypeID() == ::mlir::TypeID::get<T>();
-  }
-};
-} // namespace llvm
 
 #endif // MLIR_TARGET_LLVMIR_MODULETRANSLATION_H

@@ -21,12 +21,12 @@ if (LIBPGMATH_DIR)
   endif()
 endif()
 
-check_include_file(quadmath.h FOUND_QUADMATH_HEADER)
 check_library_exists(quadmath sinq "" FOUND_QUADMATH_LIB)
-if(FOUND_QUADMATH_HEADER AND FOUND_QUADMATH_LIB)
+if (FLANG_INCLUDE_QUADMATH_H AND FOUND_QUADMATH_LIB)
+  configure_file("${FLANG_SOURCE_DIR}/cmake/quadmath_wrapper.h.in" "${CMAKE_CURRENT_BINARY_DIR}/quadmath_wrapper.h")
   add_compile_definitions(HAS_QUADMATHLIB)
   set(QUADMATHLIB quadmath)
-endif()
+endif ()
 
 add_flang_library(FortranEvaluate
   call.cpp
@@ -72,4 +72,18 @@ add_flang_library(FortranEvaluate
   DEPENDS
   acc_gen
   omp_gen
+)
+
+target_precompile_headers(FortranEvaluate PRIVATE
+  [["flang/Evaluate/common.h"]]
+  [["flang/Evaluate/call.h"]]
+  [["flang/Evaluate/traverse.h"]]
+  [["flang/Evaluate/shape.h"]]
+  [["flang/Evaluate/characteristics.h"]]
+  [["flang/Evaluate/variable.h"]]
+  [["flang/Evaluate/real.h"]]
+  [["flang/Evaluate/type.h"]]
+  [["flang/Evaluate/integer.h"]]
+  [["flang/Evaluate/expression.h"]]
+  [["flang/Evaluate/tools.h"]]
 )

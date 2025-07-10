@@ -67,12 +67,12 @@ static void EmitInstrDocs(const RecordKeeper &RK, raw_ostream &OS) {
   unsigned VariantCount = Target.getAsmParserVariantCount();
 
   // Page title.
-  std::string Title = std::string(Target.getName());
+  std::string Title = Target.getName().str();
   Title += " Instructions";
   writeTitle(Title, OS);
   OS << "\n";
 
-  for (const CodeGenInstruction *II : Target.getInstructionsByEnumValue()) {
+  for (const CodeGenInstruction *II : Target.getInstructions()) {
     const Record *Inst = II->TheDef;
 
     // Don't print the target-independent instructions.
