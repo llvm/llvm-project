@@ -1011,7 +1011,17 @@ Arm and AArch64 Support
 - When a feature that depends on NEON (``simd``) is used, NEON is now automatically enabled.
 - When NEON is disabled (``+nosimd``), all features that depend on NEON will now be disabled.
 
--  Support for __ptrauth type qualifier has been added.
+- Pointer authentication
+  - Support for __ptrauth type qualifier has been added.
+  - Objective-C hardening
+    - isa and super pointers are protected with address diversity and separate
+      usage specific discriminators.
+    - methodlist pointers and content are protected with address diversity and
+      methodlist pointers have a usage specific discriminator.
+    - class_ro_t pointers are protected with address diversity and usage
+      specific discriminators.
+    - SEL typed ivars are protected with address diversity and usage specific
+      discriminators.
 
 - For AArch64, added support for generating executable-only code sections by using the
   ``-mexecute-only`` or ``-mpure-code`` compiler flags. (#GH125688)
