@@ -495,7 +495,8 @@ static void InsertChild(ScopeChildren &Scope, const NamespaceInfo &Info) {
 
 static void InsertChild(ScopeChildren &Scope, const RecordInfo &Info) {
   Scope.Records.emplace_back(Info.USR, Info.Name, InfoType::IT_record,
-                             Info.Name, getInfoRelativePath(Info.Namespace));
+                             Info.Name, getInfoRelativePath(Info.Namespace),
+                             Info.MangledName);
 }
 
 static void InsertChild(ScopeChildren &Scope, EnumInfo Info) {
@@ -777,7 +778,10 @@ static void populateSymbolInfo(SymbolInfo &I, const T *D, const FullComment *C,
     Mangler->mangleCXXVTable(CXXD, MangledStream);
   else
     MangledStream << D->getNameAsString();
-  I.MangledName = MangledName;
+  if (MangledName.size() > 255)
+    I.MangledName = llvm::toStringRef(llvm::toHex(I.USR));
+  else
+    I.MangledName = MangledName;
   delete Mangler;
 }
 
