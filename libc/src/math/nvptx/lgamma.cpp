@@ -9,11 +9,10 @@
 #include "src/math/lgamma.h"
 #include "src/__support/common.h"
 
-#include "declarations.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(double, lgamma, (double x)) { return __nv_lgamma(x); }
+LLVM_LIBC_FUNCTION(double, lgamma, (double)) { return 0.0; }
 
 } // namespace LIBC_NAMESPACE_DECL

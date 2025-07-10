@@ -190,12 +190,10 @@ mlir::Value PackArrayConversion::allocateTempBuffer(
   if (useStack && canAllocateTempOnStack(origBox))
     assert(!isHeapAllocation && "temp must have been allocated on the stack");
 
-  if (isHeapAllocation)
-    if (auto baseType = mlir::dyn_cast<fir::ReferenceType>(base.getType()))
-      if (mlir::isa<fir::BaseBoxType>(baseType.getEleTy()))
-        return builder.create<fir::LoadOp>(loc, base);
-
   mlir::Type ptrType = base.getType();
+  if (llvm::isa<fir::BaseBoxType>(ptrType))
+    return base;
+
   mlir::Type tempBoxType = fir::BoxType::get(mlir::isa<fir::HeapType>(ptrType)
                                                  ? ptrType
                                                  : fir::unwrapRefType(ptrType));
@@ -252,6 +250,8 @@ PackArrayConversion::genRepackedBox(fir::FirOpBuilder &builder,
 
   fir::IfOp ifOp =
       builder.create<fir::IfOp>(loc, boxType, doPack, /*withElseRegion=*/true);
+  // Assume that the repacking is unlikely.
+  ifOp.setUnlikelyIfWeights();
 
   // Return original box.
   builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
@@ -324,20 +324,24 @@ UnpackArrayConversion::matchAndRewrite(fir::UnpackArrayOp op,
 
     auto isNotSame = builder.genPtrCompare(loc, mlir::arith::CmpIPredicate::ne,
                                            tempAddr, originalAddr);
-    builder.genIfThen(loc, isNotSame).genThen([&]() {});
-    // Copy from temporary to the original.
-    if (!op.getNoCopy())
-      fir::runtime::genShallowCopy(builder, loc, originalBox, tempBox,
-                                   /*resultIsAllocated=*/true);
+    builder.genIfThen(loc, isNotSame)
+        .genThen([&]() {
+          // Copy from temporary to the original.
+          if (!op.getNoCopy())
+            fir::runtime::genShallowCopy(builder, loc, originalBox, tempBox,
+                                         /*resultIsAllocated=*/true);
 
-    // Deallocate, if it was allocated in heap.
-    // Note that the stack attribute does not always mean
-    // that the allocation was actually done in stack memory.
-    // There are currently cases where we delegate the allocation
-    // to the runtime that uses heap memory, even when the stack
-    // attribute is set on fir.pack_array.
-    if (!op.getStack() || !canAllocateTempOnStack(originalBox))
-      builder.create<fir::FreeMemOp>(loc, tempAddr);
+          // Deallocate, if it was allocated in heap.
+          // Note that the stack attribute does not always mean
+          // that the allocation was actually done in stack memory.
+          // There are currently cases where we delegate the allocation
+          // to the runtime that uses heap memory, even when the stack
+          // attribute is set on fir.pack_array.
+          if (!op.getStack() || !canAllocateTempOnStack(originalBox))
+            builder.create<fir::FreeMemOp>(loc, tempAddr);
+        })
+        .getIfOp()
+        .setUnlikelyIfWeights();
   });
   rewriter.eraseOp(op);
   return mlir::success();

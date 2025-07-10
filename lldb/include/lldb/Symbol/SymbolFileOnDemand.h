@@ -127,7 +127,7 @@ public:
       lldb_private::SymbolContextList &sc_list) override;
 
   void Dump(lldb_private::Stream &s) override;
-  void DumpClangAST(lldb_private::Stream &s) override;
+  void DumpClangAST(lldb_private::Stream &s, llvm::StringRef filter) override;
 
   void
   FindGlobalVariables(lldb_private::ConstString name,
@@ -223,9 +223,10 @@ public:
     return m_sym_file_impl->SetDebugInfoHadFrameVariableErrors();
   }
 
-  bool GetSeparateDebugInfo(StructuredData::Dictionary &d,
-                            bool errors_only) override {
-    return m_sym_file_impl->GetSeparateDebugInfo(d, errors_only);
+  bool GetSeparateDebugInfo(StructuredData::Dictionary &d, bool errors_only,
+                            bool load_all_debug_info = false) override {
+    return m_sym_file_impl->GetSeparateDebugInfo(d, errors_only,
+                                                 load_all_debug_info);
   }
 
   lldb::TypeSP MakeType(lldb::user_id_t uid, ConstString name,

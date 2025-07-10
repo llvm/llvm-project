@@ -1,0 +1,99 @@
+# RUN: llc -mtriple=aarch64 -run-pass=pipeliner -debug-only=pipeliner -aarch64-enable-pipeliner -pipeliner-mve-cg %s -o /dev/null 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Test a case where fenv is enabled, there are instructions that may raise a
+# floatin-point exception, but there is no instruction for barrier event. In
+# this case no loop-carried dependencies are necessary.
+
+# CHECK:      ===== Loop Carried Edges Begin =====
+# CHECK-NEXT: ===== Loop Carried Edges End =====
+
+--- |
+  define dso_local float @f(ptr nocapture noundef writeonly %a, float noundef %y, i32 noundef %n) local_unnamed_addr {
+  entry:
+    %conv = tail call float @llvm.experimental.constrained.fptrunc.f32.f64(double 1.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict")
+    %cmp8 = icmp sgt i32 %n, 0
+    br i1 %cmp8, label %for.body.preheader, label %for.cond.cleanup
+
+  for.body.preheader:
+    %wide.trip.count = zext nneg i32 %n to i64
+    br label %for.body
+
+  for.cond.cleanup:
+    %acc.0.lcssa = phi float [ %conv, %entry ], [ %mul, %for.body ]
+    ret float %acc.0.lcssa
+
+  for.body:
+    %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
+    %acc.010 = phi float [ %conv, %for.body.preheader ], [ %mul, %for.body ]
+    %tmp = trunc i64 %indvars.iv to i32
+    %conv2 = tail call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %tmp, metadata !"round.dynamic", metadata !"fpexcept.strict")
+    %add = tail call float @llvm.experimental.constrained.fadd.f32(float %conv2, float %y, metadata !"round.dynamic", metadata !"fpexcept.strict")
+    %mul = tail call float @llvm.experimental.constrained.fmul.f32(float %acc.010, float %add, metadata !"round.dynamic", metadata !"fpexcept.strict")
+    %0 = shl nuw nsw i64 %indvars.iv, 2
+    %scevgep = getelementptr i8, ptr %a, i64 %0
+    store float %add, ptr %scevgep, align 4, !tbaa !6
+    %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+    %exitcond.not = icmp eq i64 %wide.trip.count, %indvars.iv.next
+    br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  }
+
+  declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
+
+  declare float @llvm.experimental.constrained.sitofp.f32.i32(i32, metadata, metadata)
+
+  declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
+
+  declare float @llvm.experimental.constrained.fmul.f32(float, float, metadata, metadata)
+
+  !6 = !{!7, !7, i64 0}
+  !7 = !{!"float", !8, i64 0}
+  !8 = !{!"omnipotent char", !9, i64 0}
+  !9 = !{!"Simple C/C++ TBAA"}
+
+...
+---
+name:            f
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: $x0, $s0, $w1
+  
+    %9:gpr32common = COPY $w1
+    %8:fpr32 = COPY $s0
+    %7:gpr64common = COPY $x0
+    %10:fpr64 = FMOVDi 112
+    %0:fpr32 = FCVTSDr killed %10, implicit $fpcr
+    dead $wzr = SUBSWri %9, 1, 0, implicit-def $nzcv
+    Bcc 11, %bb.2, implicit $nzcv
+    B %bb.1
+  
+  bb.1.for.body.preheader:
+    %13:gpr32 = ORRWrs $wzr, %9, 0
+    %1:gpr64 = SUBREG_TO_REG 0, killed %13, %subreg.sub_32
+    %14:gpr64all = COPY $xzr
+    %12:gpr64all = COPY %14
+    B %bb.3
+  
+  bb.2.for.cond.cleanup:
+    %2:fpr32 = PHI %0, %bb.0, %5, %bb.3
+    $s0 = COPY %2
+    RET_ReallyLR implicit $s0
+  
+  bb.3.for.body:
+    successors: %bb.2, %bb.3
+  
+    %3:gpr64common = PHI %12, %bb.1, %6, %bb.3
+    %4:fpr32 = PHI %0, %bb.1, %5, %bb.3
+    %15:gpr32 = COPY %3.sub_32
+    %16:fpr32 = SCVTFUWSri killed %15, implicit $fpcr
+    %17:fpr32 = FADDSrr killed %16, %8, implicit $fpcr
+    %5:fpr32 = FMULSrr %4, %17, implicit $fpcr
+    STRSroX %17, %7, %3, 0, 1 :: (store (s32) into %ir.scevgep, !tbaa !6)
+    %18:gpr64common = nuw nsw ADDXri %3, 1, 0
+    %6:gpr64all = COPY %18
+    dead $xzr = SUBSXrr %1, %18, implicit-def $nzcv
+    Bcc 0, %bb.2, implicit $nzcv
+    B %bb.3
+...
