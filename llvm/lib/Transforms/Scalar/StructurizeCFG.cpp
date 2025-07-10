@@ -281,7 +281,7 @@ class StructurizeCFG {
   ConstantInt *BoolTrue;
   ConstantInt *BoolFalse;
   Value *BoolPoison;
-  TargetTransformInfo *TTI;
+  const TargetTransformInfo *TTI;
   Function *Func;
   Region *ParentRegion;
 
@@ -367,7 +367,7 @@ class StructurizeCFG {
 
 public:
   void init(Region *R);
-  bool run(Region *R, DominatorTree *DT, TargetTransformInfo *TTI);
+  bool run(Region *R, DominatorTree *DT, const TargetTransformInfo *TTI);
   bool makeUniformRegion(Region *R, UniformityInfo &UA);
 };
 
@@ -394,7 +394,7 @@ public:
         return false;
     }
     Function *F = R->getEntry()->getParent();
-    TargetTransformInfo *TTI =
+    const TargetTransformInfo *TTI =
         &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(*F);
     DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     return SCFG.run(R, DT, TTI);
@@ -420,7 +420,7 @@ public:
 /// operands are from different BB. If so, this instruction can be coalesced
 /// if its hoisted to predecessor block. So, this returns true.
 static bool isHoistableInstruction(Instruction *I, BasicBlock *BB,
-                                   TargetTransformInfo *TTI) {
+                                   const TargetTransformInfo *TTI) {
   if (I->getParent() != BB)
     return false;
 
@@ -1396,7 +1396,7 @@ bool StructurizeCFG::makeUniformRegion(Region *R, UniformityInfo &UA) {
 
 /// Run the transformation for each region found
 bool StructurizeCFG::run(Region *R, DominatorTree *DT,
-                         TargetTransformInfo *TTI) {
+                         const TargetTransformInfo *TTI) {
   if (R->isTopLevelRegion())
     return false;
 
