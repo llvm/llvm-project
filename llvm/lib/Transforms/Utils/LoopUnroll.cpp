@@ -487,11 +487,14 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   LoopUnrollResult Result = LoopUnrollResult::Unmodified;
 
-  if (ULO.Runtime && SE) {
+  // Rotate loop if it makes the exit count from the latch computable (for
+  // later unrolling).
+  // The check for LoopSimplify form is done so that after the rotation this
+  // check does not fail in UnrollRuntimeLoopRemainder and the rotation is not
+  // redundant.
+  if (ULO.Runtime && SE && L->isLoopSimplifyForm()) {
     BasicBlock *OrigHeader = L->getHeader();
     BranchInst *BI = dyn_cast<BranchInst>(OrigHeader->getTerminator());
-    // Rotate loop if it makes the exit count from the latch computable (for
-    // later unrolling).
     if (BI && !BI->isUnconditional() &&
         isa<SCEVCouldNotCompute>(SE->getExitCount(L, L->getLoopLatch())) &&
         !isa<SCEVCouldNotCompute>(SE->getExitCount(L, OrigHeader))) {
