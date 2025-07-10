@@ -29,6 +29,6 @@ Options
 
 .. option:: InsertPlainNamesInForwardDecls
 
-   When `true`, the check will insert parameter names without comments for
-   forward declarations only. When `false` (default), parameter names are
-   always inserted as comments (e.g., ``/*param*/``).
+   If set to `true`, the check will insert parameter names without comments for
+   forward declarations only. Otherwise, the check will insert parameter names
+   as comments (e.g., ``/*param*/``). Default is `false`.

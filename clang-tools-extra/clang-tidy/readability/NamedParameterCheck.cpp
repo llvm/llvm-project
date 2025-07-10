@@ -125,7 +125,7 @@ void NamedParameterCheck::check(const MatchFinder::MatchResult &Result) {
       // The fix depends on the InsertPlainNamesInForwardDecls option,
       // whether this is a forward declaration and whether the parameter has
       // a real name.
-      bool IsForwardDeclaration = (!Definition || Function != Definition);
+      const bool IsForwardDeclaration = (!Definition || Function != Definition);
       if (InsertPlainNamesInForwardDecls && IsForwardDeclaration &&
           NewName != FallbackName) {
         // For forward declarations with InsertPlainNamesInForwardDecls enabled,
