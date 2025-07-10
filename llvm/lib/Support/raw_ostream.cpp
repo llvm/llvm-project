@@ -20,6 +20,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/Process.h"
@@ -617,6 +618,9 @@ raw_fd_ostream::raw_fd_ostream(StringRef Filename, std::error_code &EC,
 raw_fd_ostream::raw_fd_ostream(int fd, bool shouldClose, bool unbuffered,
                                OStreamKind K)
     : raw_pwrite_stream(unbuffered, K), FD(fd), ShouldClose(shouldClose) {
+  // FIXME(sandboxing): Remove this by adopting `llvm::vfs::OutputBackend`.
+  auto BypassSandbox = sys::sandbox_scoped_disable();
+
   if (FD < 0 ) {
     ShouldClose = false;
     return;

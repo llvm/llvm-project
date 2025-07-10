@@ -18,6 +18,7 @@
 #include "llvm/Support/VirtualOutputBackends.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/LockFileManager.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -553,6 +554,8 @@ Error OnDiskOutputFile::keep() {
 }
 
 Error OnDiskOutputFile::discard() {
+  auto BypassSandbox = sys::sandbox_scoped_disable();
+
   // Destroy the streams to flush them.
   if (auto E = reset())
     return E;
@@ -582,6 +585,8 @@ Error OnDiskOutputBackend::makeAbsolute(SmallVectorImpl<char> &Path) const {
 Expected<std::unique_ptr<OutputFileImpl>>
 OnDiskOutputBackend::createFileImpl(StringRef Path,
                                     std::optional<OutputConfig> Config) {
+  auto BypassSandbox = sys::sandbox_scoped_disable();
+
   SmallString<256> AbsPath;
   if (Path != "-") {
     AbsPath = Path;

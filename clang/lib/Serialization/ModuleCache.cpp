@@ -119,6 +119,8 @@ public:
   }
 
   std::time_t getModuleTimestamp(StringRef ModuleFilename) override {
+    // This is a compiler-internal input/output, let's bypass the sandbox.
+    auto SandboxBypass = llvm::sys::sandbox_scoped_disable();
     std::string TimestampFilename =
         serialization::ModuleFile::getTimestampFilename(ModuleFilename);
     llvm::sys::fs::file_status Status;
