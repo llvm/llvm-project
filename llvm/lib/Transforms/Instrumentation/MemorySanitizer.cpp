@@ -4589,13 +4589,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *SrcShadow = getShadow(Src);
 
     APInt MinVal =
-          APInt::getSignedMinValue(Src->getType()->getScalarSizeInBits());
+        APInt::getSignedMinValue(Src->getType()->getScalarSizeInBits());
     Value *MinValVec = ConstantInt::get(Src->getType(), MinVal);
     Value *SrcIsMin = IRB.CreateICmp(CmpInst::ICMP_EQ, Src, MinValVec);
 
     Value *PoisonedShadow = getPoisonedShadow(Src);
-    Value *PoisonedIfIntMinShadow = IRB.CreateSelect(SrcIsMin, PoisonedShadow, SrcShadow);
-    Value *Shadow = IRB.CreateSelect(IsIntMinPoison, PoisonedIfIntMinShadow, SrcShadow);
+    Value *PoisonedIfIntMinShadow =
+        IRB.CreateSelect(SrcIsMin, PoisonedShadow, SrcShadow);
+    Value *Shadow =
+        IRB.CreateSelect(IsIntMinPoison, PoisonedIfIntMinShadow, SrcShadow);
 
     setShadow(&I, Shadow);
     setOrigin(&I, getOrigin(&I, 0));
