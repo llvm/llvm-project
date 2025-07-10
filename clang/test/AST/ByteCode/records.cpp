@@ -759,10 +759,8 @@ namespace CtorDtor {
   static_assert(B.i == 1 && B.j == 1, "");
 
   constexpr Derived D;
-  static_assert(D.i == 1, ""); // expected-error {{static assertion failed}} \
-                               // expected-note {{2 == 1}}
-  static_assert(D.j == 1, ""); // expected-error {{static assertion failed}} \
-                               // expected-note {{2 == 1}}
+  static_assert(D.i == 1, "");
+  static_assert(D.j == 1, "");
 
   constexpr Derived2 D2; // ref-error {{must be initialized by a constant expression}} \
                          // ref-note {{in call to 'Derived2()'}} \
@@ -1829,4 +1827,16 @@ namespace NullDtor {
   }
   static_assert(foo() == 10, ""); // both-error {{not an integral constant expression}} \
                                   // both-note {{in call to}}
+}
+
+namespace DiamondDowncast {
+  struct Top {};
+  struct Middle1 : Top {};
+  struct Middle2 : Top {};
+  struct Bottom : Middle1, Middle2 {};
+
+  constexpr Bottom bottom;
+  constexpr Top &top1 = (Middle1&)bottom;
+  constexpr Middle2 &fail = (Middle2&)top1; // both-error {{must be initialized by a constant expression}} \
+                                            // both-note {{cannot cast object of dynamic type 'const Bottom' to type 'Middle2'}}
 }

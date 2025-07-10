@@ -112,22 +112,22 @@ tuple<int, int, bool> func_with_tuple_param(tuple<int, int, bool> t) { return t;
 // YAML-NEXT:   - USR:             '{{([0-9A-F]{40})}}'
 // YAML-NEXT:    Name:            'func_with_tuple_param'
 // YAML-NEXT:    Description:
-// YAML-NEXT:      - Kind:            'FullComment'
+// YAML-NEXT:      - Kind:            FullComment
 // YAML-NEXT:        Children:
-// YAML-NEXT:          - Kind:            'ParagraphComment'
+// YAML-NEXT:          - Kind:            ParagraphComment
 // YAML-NEXT:            Children:
-// YAML-NEXT:              - Kind:            'TextComment'
+// YAML-NEXT:              - Kind:            TextComment
 // YAML-NEXT:                Text:            ' A function with a tuple parameter'
-// YAML-NEXT:          - Kind:            'ParagraphComment'
+// YAML-NEXT:          - Kind:            ParagraphComment
 // YAML-NEXT:            Children:
-// YAML-NEXT:              - Kind:            'TextComment'
-// YAML-NEXT:          - Kind:            'ParamCommandComment'
+// YAML-NEXT:              - Kind:            TextComment
+// YAML-NEXT:          - Kind:            ParamCommandComment
 // YAML-NEXT:            Direction:       '[in]'
 // YAML-NEXT:            ParamName:       't'
 // YAML-NEXT:            Children:
-// YAML-NEXT:              - Kind:            'ParagraphComment'
+// YAML-NEXT:              - Kind:            ParagraphComment
 // YAML-NEXT:                Children:
-// YAML-NEXT:                  - Kind:            'TextComment'
+// YAML-NEXT:                  - Kind:            TextComment
 // YAML-NEXT:                    Text:            ' The input to func_with_tuple_param'
 // YAML-NEXT:    DefLocation:
 // YAML-NEXT:      LineNumber:      [[# @LINE - 23]]

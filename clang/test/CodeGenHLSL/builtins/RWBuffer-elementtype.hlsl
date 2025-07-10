@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=DXIL
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple spirv-pc-vulkan-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=SPIRV
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=DXIL
+// RUN: %clang_cc1 -triple spirv-pc-vulkan-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=SPIRV
 
 // DXIL: %"class.hlsl::RWBuffer" = type { target("dx.TypedBuffer", i16, 1, 0, 1) }
 // DXIL: %"class.hlsl::RWBuffer.0" = type { target("dx.TypedBuffer", i16, 1, 0, 0) }
@@ -16,20 +16,20 @@
 // DXIL: %"class.hlsl::RWBuffer.11" = type { target("dx.TypedBuffer", <3 x float>, 1, 0, 0) }
 // DXIL: %"class.hlsl::RWBuffer.12" = type { target("dx.TypedBuffer", <4 x i32>, 1, 0, 1) }
 
-// SPIRV: %"class.hlsl::RWBuffer" = type { target("spirv.Image", i16, 5, 2, 0, 0, 2, 0) }
+// SPIRV: %"class.hlsl::RWBuffer" = type { target("spirv.SignedImage", i16, 5, 2, 0, 0, 2, 0) }
 // SPIRV: %"class.hlsl::RWBuffer.0" = type { target("spirv.Image", i16, 5, 2, 0, 0, 2, 0) }
-// SPIRV: %"class.hlsl::RWBuffer.1" = type { target("spirv.Image", i32, 5, 2, 0, 0, 2, 0) }
+// SPIRV: %"class.hlsl::RWBuffer.1" = type { target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) }
 // SPIRV: %"class.hlsl::RWBuffer.2" = type { target("spirv.Image", i32, 5, 2, 0, 0, 2, 0) }
-// SPIRV: %"class.hlsl::RWBuffer.3" = type { target("spirv.Image", i64, 5, 2, 0, 0, 2, 0) }
+// SPIRV: %"class.hlsl::RWBuffer.3" = type { target("spirv.SignedImage", i64, 5, 2, 0, 0, 2, 0) }
 // SPIRV: %"class.hlsl::RWBuffer.4" = type { target("spirv.Image", i64, 5, 2, 0, 0, 2, 0) }
 // SPIRV: %"class.hlsl::RWBuffer.5" = type { target("spirv.Image", half, 5, 2, 0, 0, 2, 0) }
 // SPIRV: %"class.hlsl::RWBuffer.6" = type { target("spirv.Image", float, 5, 2, 0, 0, 2, 0) }
 // SPIRV: %"class.hlsl::RWBuffer.7" = type { target("spirv.Image", double, 5, 2, 0, 0, 2, 0) }
-// SPIRV: %"class.hlsl::RWBuffer.8" = type { target("spirv.Image", i16, 5, 2, 0, 0, 2, 0) }
+// SPIRV: %"class.hlsl::RWBuffer.8" = type { target("spirv.SignedImage", i16, 5, 2, 0, 0, 2, 0) }
 // SPIRV: %"class.hlsl::RWBuffer.9" = type { target("spirv.Image", i32, 5, 2, 0, 0, 2, 0) }
 // SPIRV: %"class.hlsl::RWBuffer.10" = type { target("spirv.Image", half, 5, 2, 0, 0, 2, 0) }
 // SPIRV: %"class.hlsl::RWBuffer.11" = type { target("spirv.Image", float, 5, 2, 0, 0, 2, 0) }
-// SPIRV: %"class.hlsl::RWBuffer.12" = type { target("spirv.Image", i32, 5, 2, 0, 0, 2, 0) }
+// SPIRV: %"class.hlsl::RWBuffer.12" = type { target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) }
 
 RWBuffer<int16_t> BufI16;
 RWBuffer<uint16_t> BufU16;
