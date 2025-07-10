@@ -380,7 +380,7 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
     SmallVector<Value *, 4> ShuffleValues(Factor, nullptr);
     for (auto [Idx, ShuffleMaskIdx] : enumerate(Indices))
       ShuffleValues[ShuffleMaskIdx] = Shuffles[Idx];
-    if (!TLI->lowerInterleavedVPLoad(VPLoad, LaneMask, ShuffleValues, Factor))
+    if (!TLI->lowerInterleavedVPLoad(VPLoad, LaneMask, ShuffleValues))
       // If Extracts is not empty, tryReplaceExtracts made changes earlier.
       return !Extracts.empty() || BinOpShuffleChanged;
   } else {
@@ -704,7 +704,7 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
 
     // Since lowerInterleaveLoad expects Shuffles and LoadInst, use special
     // TLI function to emit target-specific interleaved instruction.
-    if (!TLI->lowerInterleavedVPLoad(VPLoad, Mask, DeinterleaveValues, Factor))
+    if (!TLI->lowerInterleavedVPLoad(VPLoad, Mask, DeinterleaveValues))
       return false;
 
   } else {
@@ -716,7 +716,7 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
                       << " and factor = " << Factor << "\n");
 
     // Try and match this with target specific intrinsics.
-    if (!TLI->lowerDeinterleaveIntrinsicToLoad(LI, DeinterleaveValues, Factor))
+    if (!TLI->lowerDeinterleaveIntrinsicToLoad(LI, DeinterleaveValues))
       return false;
   }
 
