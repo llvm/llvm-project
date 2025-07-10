@@ -1012,6 +1012,10 @@ defvar CompilerRTOnlyInt128Libcalls = [
   __mulodi4
 ];
 
+defvar DefaultRuntimeLibcallImpls_f80 =
+    !filter(entry, AllDefaultRuntimeLibcallImpls,
+            !match(!cast<string>(entry.Provides), "F80"));
+
 defvar DefaultRuntimeLibcallImpls_ppcf128 =
     !filter(entry, AllDefaultRuntimeLibcallImpls,
             !match(!cast<string>(entry.Provides), "PPCF128"));
@@ -1021,10 +1025,12 @@ defvar DefaultRuntimeLibcallImpls_f128 =
             !match(!cast<string>(entry.Provides), "_F128"));
 
 defvar DefaultRuntimeLibcallImpls =
+!listremove(
   !listremove(
     !listremove(
         !listremove(AllDefaultRuntimeLibcallImpls, Int128RTLibcalls),
                     CompilerRTOnlyInt128Libcalls),
+                    DefaultRuntimeLibcallImpls_f80),
                     DefaultRuntimeLibcallImpls_ppcf128);
 
 defvar DefaultRuntimeLibcallImpls_atomic =
@@ -1926,6 +1932,21 @@ def _aulldiv : RuntimeLibcallImpl<UDIV_I64>;
 def _allrem : RuntimeLibcallImpl<SREM_I64>;
 def _aullrem : RuntimeLibcallImpl<UREM_I64>;
 def _allmul : RuntimeLibcallImpl<MUL_I64>;
+
+//===----------------------------------------------------------------------===//
+// X86 Runtime Libcalls
+//===----------------------------------------------------------------------===//
+
+def isX86_32 : RuntimeLibcallPredicate<"TT.getArch() == Triple::x86">;
+def isX86_64 : RuntimeLibcallPredicate<"TT.getArch() == Triple::x86_64">;
+
+def X86_32SystemLibrary
+    : SystemRuntimeLibrary<isX86_32,
+      (add DefaultLibcallImpls32, DefaultRuntimeLibcallImpls_f80)>;
+
+def X86_64SystemLibrary
+    : SystemRuntimeLibrary<isX86_64,
+      (add DefaultLibcallImpls64, DefaultRuntimeLibcallImpls_f80)>;
 
 //===----------------------------------------------------------------------===//
 // XCore Runtime Libcalls
