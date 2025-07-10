@@ -4,24 +4,21 @@
 define void @reverse(ptr %dst, ptr %src, i64 %len) {
 ; APPLE-LABEL: define void @reverse(
 ; APPLE-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN:%.*]]) #[[ATTR0:[0-9]+]] {
-; APPLE-NEXT:  [[ENTRY:.*:]]
-; APPLE-NEXT:    [[CMP7:%.*]] = icmp sgt i64 [[LEN]], 0
-; APPLE-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
-; APPLE:       [[FOR_BODY_PREHEADER]]:
+; APPLE-NEXT:  [[FOR_BODY_PREHEADER:.*]]:
 ; APPLE-NEXT:    [[TMP5:%.*]] = add i64 [[LEN]], -1
 ; APPLE-NEXT:    [[XTRAITER:%.*]] = and i64 [[LEN]], 7
 ; APPLE-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP5]], 7
-; APPLE-NEXT:    br i1 [[TMP6]], label %[[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA:.*]], label %[[FOR_BODY_PREHEADER_NEW:.*]]
+; APPLE-NEXT:    br i1 [[TMP6]], label %[[FOR_COND_CLEANUP_UNR_LCSSA:.*]], label %[[FOR_BODY_PREHEADER_NEW:.*]]
 ; APPLE:       [[FOR_BODY_PREHEADER_NEW]]:
 ; APPLE-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[LEN]], [[XTRAITER]]
 ; APPLE-NEXT:    br label %[[FOR_BODY:.*]]
-; APPLE:       [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT:.*]]:
+; APPLE:       [[FOR_COND_CLEANUP_UNR_LCSSA_LOOPEXIT:.*]]:
 ; APPLE-NEXT:    [[IV_UNR_PH:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_7:%.*]], %[[FOR_BODY]] ]
-; APPLE-NEXT:    br label %[[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]]
-; APPLE:       [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]]:
-; APPLE-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, %[[FOR_BODY_PREHEADER]] ], [ [[IV_UNR_PH]], %[[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
+; APPLE-NEXT:    br label %[[FOR_COND_CLEANUP_UNR_LCSSA]]
+; APPLE:       [[FOR_COND_CLEANUP_UNR_LCSSA]]:
+; APPLE-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, %[[FOR_BODY_PREHEADER]] ], [ [[IV_UNR_PH]], %[[FOR_COND_CLEANUP_UNR_LCSSA_LOOPEXIT]] ]
 ; APPLE-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; APPLE-NEXT:    br i1 [[LCMP_MOD]], label %[[FOR_BODY_EPIL_PREHEADER:.*]], label %[[FOR_COND_CLEANUP_LOOPEXIT:.*]]
+; APPLE-NEXT:    br i1 [[LCMP_MOD]], label %[[FOR_BODY_EPIL_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
 ; APPLE:       [[FOR_BODY_EPIL_PREHEADER]]:
 ; APPLE-NEXT:    br label %[[FOR_BODY_EPIL:.*]]
 ; APPLE:       [[FOR_BODY_EPIL]]:
@@ -36,10 +33,8 @@ define void @reverse(ptr %dst, ptr %src, i64 %len) {
 ; APPLE-NEXT:    [[EXITCOND_NOT_EPIL:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_EPIL]], [[LEN]]
 ; APPLE-NEXT:    [[EPIL_ITER_NEXT]] = add i64 [[EPIL_ITER]], 1
 ; APPLE-NEXT:    [[EPIL_ITER_CMP:%.*]] = icmp ne i64 [[EPIL_ITER_NEXT]], [[XTRAITER]]
-; APPLE-NEXT:    br i1 [[EPIL_ITER_CMP]], label %[[FOR_BODY_EPIL]], label %[[FOR_COND_CLEANUP_LOOPEXIT_EPILOG_LCSSA:.*]], !llvm.loop [[LOOP0:![0-9]+]]
-; APPLE:       [[FOR_COND_CLEANUP_LOOPEXIT_EPILOG_LCSSA]]:
-; APPLE-NEXT:    br label %[[FOR_COND_CLEANUP_LOOPEXIT]]
-; APPLE:       [[FOR_COND_CLEANUP_LOOPEXIT]]:
+; APPLE-NEXT:    br i1 [[EPIL_ITER_CMP]], label %[[FOR_BODY_EPIL]], label %[[FOR_COND_CLEANUP_EPILOG_LCSSA:.*]], !llvm.loop [[LOOP0:![0-9]+]]
+; APPLE:       [[FOR_COND_CLEANUP_EPILOG_LCSSA]]:
 ; APPLE-NEXT:    br label %[[FOR_COND_CLEANUP]]
 ; APPLE:       [[FOR_COND_CLEANUP]]:
 ; APPLE-NEXT:    ret void
@@ -96,18 +91,13 @@ define void @reverse(ptr %dst, ptr %src, i64 %len) {
 ; APPLE-NEXT:    [[INDVARS_IV_NEXT_7]] = add nuw nsw i64 [[INDVARS_IV]], 8
 ; APPLE-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
 ; APPLE-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
-; APPLE-NEXT:    br i1 [[NITER_NCMP_7]], label %[[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT]], label %[[FOR_BODY]]
+; APPLE-NEXT:    br i1 [[NITER_NCMP_7]], label %[[FOR_COND_CLEANUP_UNR_LCSSA_LOOPEXIT]], label %[[FOR_BODY]]
 ;
 ; GENERIC-LABEL: define void @reverse(
 ; GENERIC-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN:%.*]]) {
-; GENERIC-NEXT:  [[ENTRY:.*:]]
-; GENERIC-NEXT:    [[CMP7:%.*]] = icmp sgt i64 [[LEN]], 0
-; GENERIC-NEXT:    br i1 [[CMP7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]
-; GENERIC:       [[FOR_BODY_PREHEADER]]:
+; GENERIC-NEXT:  [[FOR_BODY_PREHEADER:.*]]:
 ; GENERIC-NEXT:    br label %[[FOR_BODY:.*]]
-; GENERIC:       [[FOR_COND_CLEANUP_LOOPEXIT:.*]]:
-; GENERIC-NEXT:    br label %[[FOR_COND_CLEANUP]]
-; GENERIC:       [[FOR_COND_CLEANUP]]:
+; GENERIC:       [[FOR_COND_CLEANUP:.*]]:
 ; GENERIC-NEXT:    ret void
 ; GENERIC:       [[FOR_BODY]]:
 ; GENERIC-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
@@ -118,12 +108,8 @@ define void @reverse(ptr %dst, ptr %src, i64 %len) {
 ; GENERIC-NEXT:    store <4 x float> [[TMP1]], ptr [[ARRAYIDX2]], align 16
 ; GENERIC-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; GENERIC-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[LEN]]
-; GENERIC-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], label %[[FOR_BODY]]
+; GENERIC-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
 ;
-entry:
-  %cmp7 = icmp sgt i64 %len, 0
-  br i1 %cmp7, label %for.body.preheader, label %for.cond.cleanup
-
 for.body.preheader:                               ; preds = %entry
   br label %for.body
 
@@ -142,7 +128,131 @@ for.body:                                         ; preds = %for.body.preheader,
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
+
+; RUN: opt -p loop-unroll -mtriple=arm64-apple-macosx -mcpu=apple-m1 -S %s | FileCheck --check-prefix=APPLE %s
+; RUN: opt -p loop-unroll -S %s -mtriple aarch64 | FileCheck %s -check-prefix=GENERIC
+; *** IR Dump Before LoopUnrollPass on _Z21saxpy_tripcount1K_av1PfPKff ***
+define void @saxpy_tripcount1K_av1(ptr %dst, ptr %src, float %a) {
+; APPLE-LABEL: define void @saxpy_tripcount1K_av1(
+; APPLE-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], float [[A:%.*]]) #[[ATTR0]] {
+; APPLE-NEXT:  [[ENTRY:.*]]:
+; APPLE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[A]], i64 0
+; APPLE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
+; APPLE-NEXT:    br label %[[VECTOR_BODY:.*]]
+; APPLE:       [[VECTOR_BODY]]:
+; APPLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; APPLE-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw float, ptr [[SRC]], i64 [[INDEX]]
+; APPLE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 16
+; APPLE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 32
+; APPLE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 48
+; APPLE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
+; APPLE-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
+; APPLE-NEXT:    [[WIDE_LOAD13:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
+; APPLE-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
+; APPLE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw float, ptr [[DST]], i64 [[INDEX]]
+; APPLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP4]], i64 16
+; APPLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP4]], i64 32
+; APPLE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP4]], i64 48
+; APPLE-NEXT:    [[WIDE_LOAD15:%.*]] = load <4 x float>, ptr [[TMP4]], align 4
+; APPLE-NEXT:    [[WIDE_LOAD16:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
+; APPLE-NEXT:    [[WIDE_LOAD17:%.*]] = load <4 x float>, ptr [[TMP6]], align 4
+; APPLE-NEXT:    [[WIDE_LOAD18:%.*]] = load <4 x float>, ptr [[TMP7]], align 4
+; APPLE-NEXT:    [[TMP8:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[BROADCAST_SPLAT]], <4 x float> [[WIDE_LOAD]], <4 x float> [[WIDE_LOAD15]])
+; APPLE-NEXT:    [[TMP9:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[BROADCAST_SPLAT]], <4 x float> [[WIDE_LOAD12]], <4 x float> [[WIDE_LOAD16]])
+; APPLE-NEXT:    [[TMP10:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[BROADCAST_SPLAT]], <4 x float> [[WIDE_LOAD13]], <4 x float> [[WIDE_LOAD17]])
+; APPLE-NEXT:    [[TMP11:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[BROADCAST_SPLAT]], <4 x float> [[WIDE_LOAD14]], <4 x float> [[WIDE_LOAD18]])
+; APPLE-NEXT:    store <4 x float> [[TMP8]], ptr [[TMP4]], align 4
+; APPLE-NEXT:    store <4 x float> [[TMP9]], ptr [[TMP5]], align 4
+; APPLE-NEXT:    store <4 x float> [[TMP10]], ptr [[TMP6]], align 4
+; APPLE-NEXT:    store <4 x float> [[TMP11]], ptr [[TMP7]], align 4
+; APPLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; APPLE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; APPLE-NEXT:    br i1 [[TMP12]], label %[[FOR_COND_CLEANUP:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; APPLE:       [[FOR_COND_CLEANUP]]:
+; APPLE-NEXT:    ret void
+;
+; GENERIC-LABEL: define void @saxpy_tripcount1K_av1(
+; GENERIC-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], float [[A:%.*]]) {
+; GENERIC-NEXT:  [[ENTRY:.*]]:
+; GENERIC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[A]], i64 0
+; GENERIC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
+; GENERIC-NEXT:    br label %[[VECTOR_BODY:.*]]
+; GENERIC:       [[VECTOR_BODY]]:
+; GENERIC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; GENERIC-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw float, ptr [[SRC]], i64 [[INDEX]]
+; GENERIC-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 16
+; GENERIC-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 32
+; GENERIC-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 48
+; GENERIC-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
+; GENERIC-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
+; GENERIC-NEXT:    [[WIDE_LOAD13:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
+; GENERIC-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
+; GENERIC-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw float, ptr [[DST]], i64 [[INDEX]]
+; GENERIC-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP4]], i64 16
+; GENERIC-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP4]], i64 32
+; GENERIC-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP4]], i64 48
+; GENERIC-NEXT:    [[WIDE_LOAD15:%.*]] = load <4 x float>, ptr [[TMP4]], align 4
+; GENERIC-NEXT:    [[WIDE_LOAD16:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
+; GENERIC-NEXT:    [[WIDE_LOAD17:%.*]] = load <4 x float>, ptr [[TMP6]], align 4
+; GENERIC-NEXT:    [[WIDE_LOAD18:%.*]] = load <4 x float>, ptr [[TMP7]], align 4
+; GENERIC-NEXT:    [[TMP8:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[BROADCAST_SPLAT]], <4 x float> [[WIDE_LOAD]], <4 x float> [[WIDE_LOAD15]])
+; GENERIC-NEXT:    [[TMP9:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[BROADCAST_SPLAT]], <4 x float> [[WIDE_LOAD12]], <4 x float> [[WIDE_LOAD16]])
+; GENERIC-NEXT:    [[TMP10:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[BROADCAST_SPLAT]], <4 x float> [[WIDE_LOAD13]], <4 x float> [[WIDE_LOAD17]])
+; GENERIC-NEXT:    [[TMP11:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[BROADCAST_SPLAT]], <4 x float> [[WIDE_LOAD14]], <4 x float> [[WIDE_LOAD18]])
+; GENERIC-NEXT:    store <4 x float> [[TMP8]], ptr [[TMP4]], align 4
+; GENERIC-NEXT:    store <4 x float> [[TMP9]], ptr [[TMP5]], align 4
+; GENERIC-NEXT:    store <4 x float> [[TMP10]], ptr [[TMP6]], align 4
+; GENERIC-NEXT:    store <4 x float> [[TMP11]], ptr [[TMP7]], align 4
+; GENERIC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; GENERIC-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; GENERIC-NEXT:    br i1 [[TMP12]], label %[[FOR_COND_CLEANUP:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; GENERIC:       [[FOR_COND_CLEANUP]]:
+; GENERIC-NEXT:    ret void
+;
+entry:
+  %broadcast.splatinsert = insertelement <4 x float> poison, float %a, i64 0
+  %broadcast.splat = shufflevector <4 x float> %broadcast.splatinsert, <4 x float> poison, <4 x i32> zeroinitializer
+  br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %0 = getelementptr inbounds nuw float, ptr %src, i64 %index
+  %1 = getelementptr inbounds nuw i8, ptr %0, i64 16
+  %2 = getelementptr inbounds nuw i8, ptr %0, i64 32
+  %3 = getelementptr inbounds nuw i8, ptr %0, i64 48
+  %wide.load = load <4 x float>, ptr %0, align 4
+  %wide.load12 = load <4 x float>, ptr %1, align 4
+  %wide.load13 = load <4 x float>, ptr %2, align 4
+  %wide.load14 = load <4 x float>, ptr %3, align 4
+  %4 = getelementptr inbounds nuw float, ptr %dst, i64 %index
+  %5 = getelementptr inbounds nuw i8, ptr %4, i64 16
+  %6 = getelementptr inbounds nuw i8, ptr %4, i64 32
+  %7 = getelementptr inbounds nuw i8, ptr %4, i64 48
+  %wide.load15 = load <4 x float>, ptr %4, align 4
+  %wide.load16 = load <4 x float>, ptr %5, align 4
+  %wide.load17 = load <4 x float>, ptr %6, align 4
+  %wide.load18 = load <4 x float>, ptr %7, align 4
+  %8 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %broadcast.splat, <4 x float> %wide.load, <4 x float> %wide.load15)
+  %9 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %broadcast.splat, <4 x float> %wide.load12, <4 x float> %wide.load16)
+  %10 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %broadcast.splat, <4 x float> %wide.load13, <4 x float> %wide.load17)
+  %11 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %broadcast.splat, <4 x float> %wide.load14, <4 x float> %wide.load18)
+  store <4 x float> %8, ptr %4, align 4
+  store <4 x float> %9, ptr %5, align 4
+  store <4 x float> %10, ptr %6, align 4
+  store <4 x float> %11, ptr %7, align 4
+  %index.next = add nuw i64 %index, 16
+  %12 = icmp eq i64 %index.next, 1024
+  br i1 %12, label %for.cond.cleanup, label %vector.body, !llvm.loop !22
+
+for.cond.cleanup:                                 ; preds = %vector.body
+  ret void
+}
+!22 = !{!"llvm.loop.isvectorized", i32 1}
+
 ;.
 ; APPLE: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
 ; APPLE: [[META1]] = !{!"llvm.loop.unroll.disable"}
+; APPLE: [[LOOP2]] = !{!"llvm.loop.isvectorized", i32 1}
+;.
+; GENERIC: [[LOOP0]] = !{!"llvm.loop.isvectorized", i32 1}
 ;.
