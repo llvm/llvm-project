@@ -17583,7 +17583,9 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
       // into EnumUnderlying because the other cases are error recovery up to
       // this point. But because it's not possible to gin up a TypeSourceInfo
       // for a non-atomic type from an atomic one, we'll store into the Type
-      // field instead.
+      // field instead. FIXME: it would be nice to have an easy way to get a
+      // derived TypeSourceInfo which strips qualifiers including the weird
+      // ones like _Atomic where it forms a different type.
       if (TypeSourceInfo *TI = dyn_cast<TypeSourceInfo *>(EnumUnderlying);
           TI && TI->getType()->isAtomicType())
         EnumUnderlying = TI->getType().getAtomicUnqualifiedType().getTypePtr();

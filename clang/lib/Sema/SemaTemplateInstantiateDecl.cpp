@@ -2024,7 +2024,10 @@ Decl *TemplateDeclInstantiator::VisitEnumDecl(EnumDecl *D) {
         Enum->setIntegerType(SemaRef.Context.IntTy);
       else {
         // If the underlying type is atomic, we need to adjust the type before
-        // continuing. See C23 6.7.3.3p5 and Sema::ActOnTag().
+        // continuing. See C23 6.7.3.3p5 and Sema::ActOnTag(). FIXME: same as
+        // within ActOnTag(), it would be nice to have an easy way to get a
+        // derived TypeSourceInfo which strips qualifiers including the weird
+        // ones like _Atomic where it forms a different type.
         if (NewTI->getType()->isAtomicType())
           Enum->setIntegerType(NewTI->getType().getAtomicUnqualifiedType());
         else
