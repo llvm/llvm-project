@@ -3047,8 +3047,7 @@ mlir::omp ::decodeCli(Value cli) {
   if (!cli)
     return {{}, nullptr, nullptr};
 
-  MLIRContext *ctx = cli.getContext();
-  assert(cli.getType() == CanonicalLoopInfoType::get(ctx) &&
+  assert(cli.getType() == CanonicalLoopInfoType::get(cli.getContext()) &&
          "Unexpected type of cli");
 
   NewCliOp create = cast<NewCliOp>(cli.getDefiningOp());
@@ -3160,7 +3159,7 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
               llvm_unreachable("heuristic unrolling does not generate a loop");
             })
             .Default([&](Operation *op) {
-              assert(!"TODO: Custom name for this operation");
+              assert(false && "TODO: Custom name for this operation");
               return "transformed";
             });
   }
@@ -3171,8 +3170,7 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
 LogicalResult NewCliOp::verify() {
   Value cli = getResult();
 
-  MLIRContext *ctx = cli.getContext();
-  assert(cli.getType() == CanonicalLoopInfoType::get(ctx) &&
+  assert(cli.getType() == CanonicalLoopInfoType::get(cli.getContext()) &&
          "Unexpected type of cli");
 
   // Check that the CLI is used in at most generator and one consumer
