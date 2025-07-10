@@ -883,14 +883,6 @@ if(LIBC_TYPES_HAS_FLOAT128)
   )
 endif()
 
-list(APPEND TARGET_LIBM_ENTRYPOINTS
-  # Bfloat16 entrypoints
-  libc.src.math.faddbf16
-  # libc.src.math.fsubbf16
-  # libc.src.math.fmulbf16
-  # libc.src.math.fdivbf16
-)
-
 if(LIBC_COMPILER_HAS_FIXED_POINT)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # stdfix.h _Fract and _Accum entrypoints

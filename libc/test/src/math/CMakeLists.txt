@@ -269,19 +269,6 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  faddbf16_test
-  NEED_MPFR
-  SUITE
-  libc-math-unittests
-  SRCS
-  faddbf16_test.cpp
-  HDRS
-  AddTest.h
-  DEPENDS
-  libc.src.math.faddbf16
-)
-
-add_fp_unittest(
   faddl_test
   NEED_MPFR
   SUITE
