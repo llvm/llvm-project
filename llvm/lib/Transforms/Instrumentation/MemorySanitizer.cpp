@@ -4307,23 +4307,26 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, PtrSrcOrigin);
   }
 
+  // Test whether the mask indices are initialized, only checking the bits that
+  // are actually used.
+  //
+  // e.g., if Idx is <32 x i16>, only (log2(32) == 5) bits of each index are
+  //       used/checked.
   void maskedCheckAVXIndexShadow(IRBuilder<> &IRB, Value *Idx, Instruction *I) {
+    assert(isFixedIntVector(Idx));
     auto IdxVectorSize =
         cast<FixedVectorType>(Idx->getType())->getNumElements();
     assert(isPowerOf2_64(IdxVectorSize));
-    auto *IdxVectorElemType =
-        cast<FixedVectorType>(Idx->getType())->getElementType();
-    Constant *IndexBits =
-        ConstantInt::get(IdxVectorElemType, IdxVectorSize - 1);
-    auto *IdxShadow = getShadow(Idx);
-    // Only the low bits of Idx are used.
-    Value *V = nullptr;
-    for (size_t i = 0; i < IdxVectorSize; ++i) {
-      V = IRB.CreateExtractElement(IdxShadow, i);
-      assert(V->getType() == IndexBits->getType());
-      V = IRB.CreateOr(V, IRB.CreateAnd(V, IndexBits));
-    }
-    insertCheckShadow(V, getOrigin(Idx), I);
+
+    // Compiler isn't smart enough, let's help it
+    if (auto *ConstantIdx = dyn_cast<Constant>(Idx))
+      return;
+
+    Value *Truncated = IRB.CreateTrunc(
+        Idx,
+        FixedVectorType::get(Type::getIntNTy(*MS.C, Log2_64(IdxVectorSize)),
+                             IdxVectorSize));
+    insertCheckShadow(Truncated, getOrigin(Idx), I);
   }
 
   // Instrument AVX permutation intrinsic.
