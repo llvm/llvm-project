@@ -2289,17 +2289,15 @@ TargetLoweringBase::getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
 
 Value *TargetLoweringBase::getSafeStackPointerLocation(
     IRBuilderBase &IRB, const LibcallLoweringInfo &Libcalls) const {
-  // FIXME: Can this triple check be replaced with SAFESTACK_POINTER_ADDRESS
-  // being available?
-  if (!TM.getTargetTriple().isAndroid())
-    return getDefaultSafeStackPointerLocation(IRB, true);
-
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
   auto *PtrTy = PointerType::getUnqual(M->getContext());
 
   RTLIB::LibcallImpl SafestackPointerAddressImpl =
       Libcalls.getLibcallImpl(RTLIB::SAFESTACK_POINTER_ADDRESS);
   if (SafestackPointerAddressImpl == RTLIB::Unsupported) {
+
+    return getDefaultSafeStackPointerLocation(IRB, true);
+
     M->getContext().emitError(
         "no libcall available for safestack pointer address");
     return PoisonValue::get(PtrTy);

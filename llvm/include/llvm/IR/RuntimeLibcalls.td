@@ -27,6 +27,7 @@ def isPS : RuntimeLibcallPredicate<"TT.isPS()">;
 def isMacOSX : RuntimeLibcallPredicate<[{TT.isMacOSX()}]>;
 def isNotOSWindowsOrIsCygwinMinGW
   : RuntimeLibcallPredicate<"!TT.isOSWindows() || TT.isOSCygMing()">;
+
 def isWindowsMSVCEnvironment : RuntimeLibcallPredicate<
   [{TT.isWindowsMSVCEnvironment()}]>;
 
@@ -47,6 +48,8 @@ def hasStackChkFail : RuntimeLibcallPredicate<
 
 def isWindowsMSVCOrItaniumEnvironment : RuntimeLibcallPredicate<
   [{TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()}]>;
+
+def isAndroid : RuntimeLibcallPredicate<"TT.isAndroid()">;
 
 def isGNUEnvironment : RuntimeLibcallPredicate<"TT.isGNUEnvironment()">;
 def darwinHasSinCosStret : RuntimeLibcallPredicate<"darwinHasSinCosStret(TT)">;
@@ -2051,6 +2054,9 @@ defvar has___guard_local = LibcallImpls<(add __guard_local), isOSOpenBSD>;
 defvar DefaultStackProtector = (add has__stack_chk_fail, has__stack_chk_guard,
     has__stack_smash_handler, has___guard_local);
 
+defvar LibcSafestackPointerAddress =
+    LibcallImpls<(add __safestack_pointer_address), isAndroid>;
+
 //===----------------------------------------------------------------------===//
 // Objective-C Runtime Libcalls
 //===----------------------------------------------------------------------===//
@@ -2161,7 +2167,8 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        LibcallImpls<(add __chkstk), isOSWindows>,
        SMEABI_LibCalls_PreserveMost_From_X0,
        SMEABI_LibCalls_PreserveMost_From_X1,
-       SMEABI_LibCalls_PreserveMost_From_X2)
+       SMEABI_LibCalls_PreserveMost_From_X2,
+       LibcSafestackPointerAddress)
 >;
 
 // Prepend a # to every name
@@ -2629,6 +2636,7 @@ def ARMSystemLibrary
            DarwinSinCosStret, DarwinExp10, DarwinMemsetPattern,
            LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
            DefaultLibmExp10,
+           LibcSafestackPointerAddress,
 
            AEABICalls,
            AEABI45MemCalls,
@@ -3352,7 +3360,8 @@ defvar X86CommonLibcalls =
        LibcallImpls<(add ___chkstk_ms), isCygwinMinGW64>,
        LibcallImpls<(add __chkstk), isWin64NotCygMing>,
        LibcallImpls<(add _alloca), isCygwinMinGW32>,
-       LibcallImpls<(add _chkstk), isWin32NotCygMing>
+       LibcallImpls<(add _chkstk), isWin32NotCygMing>,
+       LibcSafestackPointerAddress
 );
 
 defvar Windows32DivRemMulCalls =
