@@ -35,7 +35,7 @@ class ClangIndexRecordWriter {
   llvm::DenseMap<const void *, StringRef> USRByDecl;
 
 public:
-  ClangIndexRecordWriter(ASTContext &Ctx, RecordingOptions Opts);
+  ClangIndexRecordWriter(ASTContext &Ctx, bool Compress, RecordingOptions Opts);
   ~ClangIndexRecordWriter();
 
   ASTContext &getASTContext() { return Ctx; }

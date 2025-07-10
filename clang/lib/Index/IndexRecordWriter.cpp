@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -234,8 +235,8 @@ static void writeDecls(BitstreamWriter &Stream, ArrayRef<DeclInfo> Decls,
   Stream.ExitBlock();
 }
 
-IndexRecordWriter::IndexRecordWriter(StringRef IndexPath)
-    : RecordsPath(IndexPath) {
+IndexRecordWriter::IndexRecordWriter(StringRef IndexPath, bool Compress)
+    : Compress(Compress), RecordsPath(IndexPath) {
   store::appendRecordSubDir(RecordsPath);
 }
 
@@ -319,7 +320,44 @@ IndexRecordWriter::endRecord(std::string &Error,
   }
 
   raw_fd_ostream OS(TempFD, /*shouldClose=*/true);
-  OS.write(State.Buffer.data(), State.Buffer.size());
+  if (Compress) {
+    if (!llvm::compression::zlib::isAvailable()) {
+      Error = "Zlib not available to compress record file";
+      return Result::Failure;
+    }
+
+    // Higher compression levels add marginal improvements to the compressed
+    // size while having a a measurable impact on compile time. An analysis on a
+    // mixed clang / Swift project showed the following results:
+    //  - BestSpeed: Compresses the index store by 66% while increasing the
+    //  index-while-building overhead by 15% (from 1.07% to 1.23%)
+    //  - Default: Compression of 68.1%, increases index-while-building overhead
+    //  by 23%
+    //  - BestSize: Compression of 68.2%, increases index-while-building
+    //  overhead by 37%
+    // Based on those numbers, BestSpeed seems like the best choice. If clients
+    // need to compress the index store further, they should run a compression
+    // algorithm across all files in the index store.
+    auto compressionLevel = compression::zlib::BestSpeedCompression;
+    ArrayRef<uint8_t> bufferRef = llvm::arrayRefFromStringRef(State.Buffer);
+    llvm::SmallVector<uint8_t, 0> compressed;
+    llvm::compression::zlib::compress(bufferRef, compressed, compressionLevel);
+
+    // Write the `CIDXR` (compressed index record) marker to indicate that this
+    // is a compressed record file.
+    OS << "CIDXR";
+
+    // Write the size of the uncompressed record so that we can allocate a
+    // buffer of the corresponding size when decompressing it.
+    char Buf[4];
+    llvm::support::endian::write32le(Buf, bufferRef.size());
+    OS.write(Buf, sizeof(Buf));
+
+    // Write the acutal compressed data
+    OS << llvm::toStringRef(compressed);
+  } else {
+    OS << State.Buffer;
+  }
   OS.close();
 
   if (OS.has_error()) {

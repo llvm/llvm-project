@@ -215,7 +215,8 @@ std::unique_ptr<RecordInfo> Aggregator::processRecord(StringRef recordFile) {
   std::string error;
   auto recordReader = IndexRecordReader(Store, recordFile, error);
   if (!recordReader) {
-    errs() << "failed reading record file: " << recordFile << '\n';
+    errs() << "failed reading record file: " << recordFile << ": " << error
+           << '\n';
     ::exit(1);
   }
   auto record = std::make_unique<RecordInfo>();

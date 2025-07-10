@@ -477,6 +477,9 @@ public:
   std::string IndexStorePath;
   std::string IndexUnitOutputPath;
 
+  /// Whether to compress the unit and record files in the index store.
+  bool IndexStoreCompress = false;
+
   /// The input kind, either specified via -x argument or deduced from the input
   /// file name.
   InputKind DashX;

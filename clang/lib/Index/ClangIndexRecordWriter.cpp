@@ -61,9 +61,9 @@ StringRef ClangIndexRecordWriter::getUSRNonCached(const IdentifierInfo *Name,
   return StringRef(Ptr, USR.size());
 }
 
-ClangIndexRecordWriter::ClangIndexRecordWriter(ASTContext &Ctx,
+ClangIndexRecordWriter::ClangIndexRecordWriter(ASTContext &Ctx, bool Compress,
                                                RecordingOptions Opts)
-    : Impl(Opts.DataDirPath), Ctx(Ctx), RecordOpts(std::move(Opts)) {
+    : Impl(Opts.DataDirPath, Compress), Ctx(Ctx), RecordOpts(std::move(Opts)) {
   if (Opts.RecordSymbolCodeGenName)
     ASTNameGen.reset(new ASTNameGenerator(Ctx));
 }

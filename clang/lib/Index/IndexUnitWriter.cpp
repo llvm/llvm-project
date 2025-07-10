@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -116,21 +117,14 @@ private:
   }
 };
 
-IndexUnitWriter::IndexUnitWriter(FileManager &FileMgr,
-                                 StringRef StorePath,
-                                 StringRef ProviderIdentifier,
-                                 StringRef ProviderVersion,
-                                 StringRef OutputFile,
-                                 StringRef ModuleName,
-                                 OptionalFileEntryRef MainFile,
-                                 bool IsSystem,
-                                 bool IsModuleUnit,
-                                 bool IsDebugCompilation,
-                                 StringRef TargetTriple,
-                                 StringRef SysrootPath,
-                                 const PathRemapper &Remapper,
-                                 writer::ModuleInfoWriterCallback GetInfoForModule)
-: FileMgr(FileMgr), Remapper(Remapper) {
+IndexUnitWriter::IndexUnitWriter(
+    FileManager &FileMgr, StringRef StorePath, StringRef ProviderIdentifier,
+    StringRef ProviderVersion, bool Compress, StringRef OutputFile,
+    StringRef ModuleName, OptionalFileEntryRef MainFile, bool IsSystem,
+    bool IsModuleUnit, bool IsDebugCompilation, StringRef TargetTriple,
+    StringRef SysrootPath, const PathRemapper &Remapper,
+    writer::ModuleInfoWriterCallback GetInfoForModule)
+    : FileMgr(FileMgr), Compress(Compress), Remapper(Remapper) {
   this->UnitsPath = StorePath;
   store::appendUnitSubDir(this->UnitsPath);
   this->ProviderIdentifier = std::string(ProviderIdentifier);
@@ -393,7 +387,34 @@ bool IndexUnitWriter::write(std::string &Error) {
   }
 
   raw_fd_ostream OS(TempFD, /*shouldClose=*/true);
-  OS.write(Buffer.data(), Buffer.size());
+  if (Compress) {
+    if (!llvm::compression::zlib::isAvailable()) {
+      Error = "Zlib not available to compress record file";
+      return true;
+    }
+
+    // See comment in `IndexRecordWriter::endRecord` for a rational why we use
+    // `BestSpeed`.
+    auto compressionLevel = compression::zlib::BestSpeedCompression;
+    ArrayRef<uint8_t> bufferRef = llvm::arrayRefFromStringRef(Buffer);
+    llvm::SmallVector<uint8_t, 0> compressed;
+    llvm::compression::zlib::compress(bufferRef, compressed, compressionLevel);
+
+    // Write the `CIDXU` (compressed index unit) marker to indicate that this
+    // is a compressed unit file.
+    OS << "CIDXU";
+
+    // Write the size of the uncompressed unit so that we can allocate a
+    // buffer of the corresponding size when decompressing it.
+    char Buf[4];
+    llvm::support::endian::write32le(Buf, bufferRef.size());
+    OS.write(Buf, sizeof(Buf));
+
+    // Write the acutal compressed data
+    OS << llvm::toStringRef(compressed);
+  } else {
+    OS << Buffer;
+  }
   OS.close();
 
   if (OS.has_error()) {

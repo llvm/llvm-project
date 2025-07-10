@@ -50,6 +50,8 @@ class IndexUnitWriter {
   SmallString<64> UnitsPath;
   std::string ProviderIdentifier;
   std::string ProviderVersion;
+  /// Whether to compress the index unit using zlib.
+  bool Compress;
   std::string OutputFile;
   std::string ModuleName;
   OptionalFileEntryRef MainFile;
@@ -92,17 +94,12 @@ public:
   /// \param IsSystem true for system module units, false otherwise.
   /// \param Remapper Remapper to use to standardize file paths to make them
   /// hermetic/reproducible. This applies to all paths emitted in the unit file.
-  IndexUnitWriter(FileManager &FileMgr,
-                  StringRef StorePath,
+  IndexUnitWriter(FileManager &FileMgr, StringRef StorePath,
                   StringRef ProviderIdentifier, StringRef ProviderVersion,
-                  StringRef OutputFile,
-                  StringRef ModuleName,
-                  OptionalFileEntryRef MainFile,
-                  bool IsSystem,
-                  bool IsModuleUnit,
-                  bool IsDebugCompilation,
-                  StringRef TargetTriple,
-                  StringRef SysrootPath,
+                  bool Compress, StringRef OutputFile, StringRef ModuleName,
+                  OptionalFileEntryRef MainFile, bool IsSystem,
+                  bool IsModuleUnit, bool IsDebugCompilation,
+                  StringRef TargetTriple, StringRef SysrootPath,
                   const PathRemapper &Remapper,
                   writer::ModuleInfoWriterCallback GetInfoForModule);
   ~IndexUnitWriter();

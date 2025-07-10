@@ -838,9 +838,10 @@ static void writeUnitData(const CompilerInstance &CI,
     Remapper.addMapping(It->first, It->second);
 
   IndexUnitWriter UnitWriter(
-      CI.getFileManager(), DataPath, "clang", getClangVersion(), OutputFile,
-      ModuleName, RootFile, IsSystemUnit, IsModuleUnit, IsDebugCompilation,
-      CI.getTargetOpts().Triple, SysrootPath, Remapper, getModuleInfo);
+      CI.getFileManager(), DataPath, "clang", getClangVersion(),
+      CI.getFrontendOpts().IndexStoreCompress, OutputFile, ModuleName, RootFile,
+      IsSystemUnit, IsModuleUnit, IsDebugCompilation, CI.getTargetOpts().Triple,
+      SysrootPath, Remapper, getModuleInfo);
 
   DepProvider.visitFileDependencies(
       CI, [&](FileEntryRef FE, bool isSystemFile) {
@@ -863,7 +864,8 @@ static void writeUnitData(const CompilerInstance &CI,
     }
   });
 
-  ClangIndexRecordWriter RecordWriter(CI.getASTContext(), RecordOpts);
+  ClangIndexRecordWriter RecordWriter(
+      CI.getASTContext(), CI.getFrontendOpts().IndexStoreCompress, RecordOpts);
   for (auto I = Recorder.record_begin(), E = Recorder.record_end(); I != E;
        ++I) {
     FileID FID = I->first;
