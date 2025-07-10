@@ -17166,7 +17166,7 @@ bool Sema::CheckEnumUnderlyingType(TypeSourceInfo *TI) {
     Diag(UnderlyingLoc, diag::warn_atomic_stripped_in_enum);
 
   Qualifiers Q = T.getQualifiers();
-  std::optional<diag::CVQualList> QualSelect;
+  std::optional<unsigned> QualSelect;
   if (Q.hasConst() && Q.hasVolatile())
     QualSelect = diag::CVQualList::Both;
   else if (Q.hasConst())
