@@ -13,7 +13,7 @@ define void @test_lifetimes()  {
 ; CHECK-NEXT: ret void
 ;
   %a = alloca [2 x i32], align 4
-  %gep = getelementptr i32, ptr %a, i32 0
+  %gep = getelementptr [2 x i32], ptr %a, i32 0, i32 0
   call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %a)
   store i32 0, ptr %gep, align 4
   call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %a)
