@@ -6809,7 +6809,7 @@ void SIInstrInfo::legalizeGenericOperand(MachineBasicBlock &InsertMBB,
 static void emitLoadScalarOpsFromVGPRLoop(
     const SIInstrInfo &TII, MachineRegisterInfo &MRI, MachineBasicBlock &LoopBB,
     MachineBasicBlock &BodyBB, const DebugLoc &DL,
-    ArrayRef<MachineOperand *> ScalarOps, SmallVector<Register> PhySGPRs = {}) {
+    ArrayRef<MachineOperand *> ScalarOps, ArrayRef<Register> PhySGPRs = {}) {
   MachineFunction &MF = *LoopBB.getParent();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
@@ -6971,7 +6971,7 @@ MachineBasicBlock *llvm::loadMBUFScalarOperandsFromVGPR(
     const SIInstrInfo &TII, MachineInstr &MI,
     ArrayRef<MachineOperand *> ScalarOps, MachineDominatorTree *MDT,
     MachineBasicBlock::iterator Begin, MachineBasicBlock::iterator End,
-    SmallVector<Register> PhySGPRs) {
+    ArrayRef<Register> PhySGPRs) {
   assert((PhySGPRs.empty() || PhySGPRs.size() == ScalarOps.size()) &&
          "Physical SGPRs must be empty or match the number of scalar operands");
   MachineBasicBlock &MBB = *MI.getParent();

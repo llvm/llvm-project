@@ -124,12 +124,14 @@ class SIFixSGPRCopies {
   SmallVector<MachineInstr*, 4> RegSequences;
   SmallVector<MachineInstr*, 4> PHINodes;
   SmallVector<MachineInstr*, 4> S2VCopies;
-  struct V2PysSCopyInfo {
+  struct V2PhysSCopyInfo {
+    // Operands that need to replaced by waterfall
     SmallVector<MachineOperand *> MOs;
+    // Target physical registers replacing the MOs
     SmallVector<Register> SGPRs;
   };
-  DenseMap<MachineInstr *, struct V2PysSCopyInfo> WaterFalls;
-  DenseSet<MachineInstr *> V2PhySCopies;
+  DenseMap<MachineInstr *, V2PhysSCopyInfo> WaterFalls;
+  DenseSet<MachineInstr *> V2PhySCopiesToErase;
   unsigned NextVGPRToSGPRCopyID = 0;
   MapVector<unsigned, V2SCopyInfo> V2SCopies;
   DenseMap<MachineInstr *, SetVector<unsigned>> SiblingPenalty;
@@ -821,7 +823,7 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
   S2VCopies.clear();
   PHISources.clear();
   WaterFalls.clear();
-  V2PhySCopies.clear();
+  V2PhySCopiesToErase.clear();
 
   return true;
 }
@@ -940,8 +942,9 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
                 UseMI->getOperand(i).getReg() == DstReg) {
               MachineOperand *MO = &UseMI->getOperand(i);
               MO->setReg(SrcReg);
-              WaterFalls[UseMI].MOs.push_back(MO);
-              WaterFalls[UseMI].SGPRs.push_back(DstReg);
+              V2PhysSCopyInfo &V2SCopyInfo = WaterFalls[UseMI];
+              V2SCopyInfo.MOs.push_back(MO);
+              V2SCopyInfo.SGPRs.push_back(DstReg);
             }
           }
         } else if (I->readsRegister(DstReg, TRI))
@@ -950,7 +953,7 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
           break;
       }
       if (CanErase)
-        V2PhySCopies.insert(&MI);
+        V2PhySCopiesToErase.insert(&MI);
     }
     return true;
   }
@@ -1185,9 +1188,9 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
 void SIFixSGPRCopies::lowerPysicalSGPRInsts(MachineFunction &MF) {
   for (auto &Entry : WaterFalls) {
     MachineInstr *MI = Entry.first;
-    struct V2PysSCopyInfo Info = Entry.second;
-    if (Info.MOs.size() == 0 || Info.SGPRs.size() != Info.MOs.size())
-      continue;
+    const V2PhysSCopyInfo &Info = Entry.second;
+    assert((Info.MOs.size() != 0 && Info.SGPRs.size() == Info.MOs.size()) &&
+           "Error in MOs or SGPRs size.");
 
     if (MI->getOpcode() == AMDGPU::SI_CALL_ISEL) {
       // Move everything between ADJCALLSTACKUP and ADJCALLSTACKDOWN and
@@ -1217,7 +1220,7 @@ void SIFixSGPRCopies::lowerPysicalSGPRInsts(MachineFunction &MF) {
   }
   // Avoid some O0 tests where no use of COPY to SGPR
   if (!WaterFalls.empty())
-    for (auto &Entry : V2PhySCopies)
+    for (auto &Entry : V2PhySCopiesToErase)
       Entry->eraseFromParent();
 }
 
