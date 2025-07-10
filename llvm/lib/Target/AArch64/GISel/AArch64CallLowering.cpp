@@ -1169,15 +1169,9 @@ bool AArch64CallLowering::lowerTailCall(
             Info.PAI->Key == AArch64PACKey::IB) &&
            "Invalid auth call key");
     MIB.addImm(Info.PAI->Key);
-
-    Register AddrDisc = 0;
-    uint16_t IntDisc = 0;
-    std::tie(IntDisc, AddrDisc) =
-        extractPtrauthBlendDiscriminators(Info.PAI->Discriminator, MRI);
-
-    MIB.addImm(IntDisc);
-    MIB.addUse(AddrDisc);
-    if (AddrDisc != AArch64::NoRegister) {
+    MIB.addImm(/*IntDisc=*/0);
+    MIB.addUse(Info.PAI->Discriminator);
+    if (Info.PAI->Discriminator != AArch64::NoRegister) {
       MIB->getOperand(4).setReg(constrainOperandRegClass(
           MF, *TRI, MRI, *MF.getSubtarget().getInstrInfo(),
           *MF.getSubtarget().getRegBankInfo(), *MIB, MIB->getDesc(),
@@ -1443,15 +1437,9 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
             Info.PAI->Key == AArch64PACKey::IB) &&
            "Invalid auth call key");
     MIB.addImm(Info.PAI->Key);
-
-    Register AddrDisc = 0;
-    uint16_t IntDisc = 0;
-    std::tie(IntDisc, AddrDisc) =
-        extractPtrauthBlendDiscriminators(Info.PAI->Discriminator, MRI);
-
-    MIB.addImm(IntDisc);
-    MIB.addUse(AddrDisc);
-    if (AddrDisc != AArch64::NoRegister) {
+    MIB.addImm(/*IntDisc=*/0);
+    MIB.addUse(Info.PAI->Discriminator);
+    if (Info.PAI->Discriminator != AArch64::NoRegister) {
       constrainOperandRegClass(MF, *TRI, MRI, *MF.getSubtarget().getInstrInfo(),
                                *MF.getSubtarget().getRegBankInfo(), *MIB,
                                MIB->getDesc(), MIB->getOperand(CalleeOpNo + 3),

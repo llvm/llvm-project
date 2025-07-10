@@ -2086,6 +2086,7 @@ let Predicates = [HasPAuth] in {
     let Size = 12; // 4 fixed + 8 variable, to compute discriminator.
     let Defs = [X16,X17,LR];
     let Uses = [SP];
+    let usesCustomInserter = 1;
   }
 
   def BLRA_RVMARKER : Pseudo<
@@ -2098,6 +2099,7 @@ let Predicates = [HasPAuth] in {
     let isCall = 1;
     let Defs = [X16,X17,LR];
     let Uses = [SP];
+    let usesCustomInserter = 1;
   }
 
   // BRA pseudo, generalized version of BRAA/BRAB/Z.
@@ -2242,7 +2244,7 @@ let Predicates = [HasPAuth] in {
   // make sure at least one register is usable as a scratch one - for that
   // purpose, use tcGPRnotx16x17 register class for one of the operands.
   let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Size = 16,
-      Defs = [X16,X17], Uses = [SP] in {
+      usesCustomInserter = 1, Defs = [X16,X17], Uses = [SP] in {
     def AUTH_TCRETURN
       : Pseudo<(outs), (ins tcGPRnotx16x17:$dst, i32imm:$FPDiff, i32imm:$Key,
                             i64imm:$Disc, tcGPR64:$AddrDisc),
