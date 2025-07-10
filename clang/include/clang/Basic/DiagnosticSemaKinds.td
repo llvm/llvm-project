@@ -9364,6 +9364,10 @@ def warn_atomic_implicit_seq_cst : Warning<
   InGroup<DiagGroup<"atomic-implicit-seq-cst">>, DefaultIgnore;
 def err_atomic_unsupported : Error<
   "atomic types are not supported in '%0'">;
+def warn_atomic_stripped_in_enum : Warning<
+  "'_Atomic' qualifier ignored; operations involving the enumeration type will "
+  "be non-atomic">,
+  InGroup<DiagGroup<"atomic-qualifier-ignored">>;
 
 def err_overflow_builtin_must_be_int : Error<
   "operand argument to %select{overflow builtin|checked integer operation}0 "

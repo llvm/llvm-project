@@ -312,7 +312,9 @@ C23 Feature Support
   to specify a fixed underlying type for an enumeration. #GH146351
 - Fixed a rejects-valid bug where Clang would reject an enumeration with an
   ``_Atomic`` underlying type. The underlying type is the non-atomic,
-  unqualified version of the specified type. (#GH147736)
+  unqualified version of the specified type. Due to the perhaps surprising lack
+  of atomic behavior, this is diagnosed under ``-Watomic-qualifier-ignored``.
+  (#GH147736)
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^

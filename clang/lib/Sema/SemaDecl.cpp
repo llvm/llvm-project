@@ -17160,6 +17160,11 @@ bool Sema::CheckEnumUnderlyingType(TypeSourceInfo *TI) {
   // C23 6.7.3.3p5: The underlying type of the enumeration is the unqualified,
   // non-atomic version of the type specified by the type specifiers in the
   // specifier qualifier list.
+  // Because of how odd C's rule is, we'll let the user know that operations
+  // involving the enumeration type will be non-atomic.
+  if (T->isAtomicType())
+    Diag(UnderlyingLoc, diag::warn_atomic_stripped_in_enum);
+
   T = T.getAtomicUnqualifiedType();
 
   // This doesn't use 'isIntegralType' despite the error message mentioning

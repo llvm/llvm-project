@@ -91,3 +91,7 @@ enum e : short f = 0; // expected-error {{non-defining declaration of enumeratio
 enum g : short { yyy } h = yyy;
 
 enum ee2 : typeof ((enum ee3 : short { A })0, (short)0);
+
+enum not_actually_atomic : _Atomic(short) { // expected-warning {{'_Atomic' qualifier ignored; operations involving the enumeration type will be non-atomic}}
+  Surprise
+};
