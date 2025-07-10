@@ -23,8 +23,8 @@ struct S1 {
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_S1:.*]], align
 // CHECK: %[[AGG_TMP_1:.*]] = alloca %[[STRUCT_S0:.*]], align
 // CHECK: call void @_ZN2S0C1Ev(ptr {{[^,]*}} %[[AGG_TMP_1]])
-// CHECK: call void @_ZN2S1C1E2S0(ptr {{[^,]*}} %[[AGG_TMP]], ptr noundef %[[AGG_TMP_1]])
-// CHECK: call void @objc_msgSend(ptr noundef %{{.*}}, ptr noundef %{{.*}}, ptr noundef %[[AGG_TMP]])
+// CHECK: call void @_ZN2S1C1E2S0(ptr {{[^,]*}} %[[AGG_TMP]], ptr dead_on_return noundef %[[AGG_TMP_1]])
+// CHECK: call void @objc_msgSend(ptr noundef %{{.*}}, ptr noundef %{{.*}}, ptr dead_on_return noundef %[[AGG_TMP]])
 
 void test0(C *c) {
   c.f = S0();
@@ -34,7 +34,7 @@ void test0(C *c) {
 // CHECK: %{{.*}} = alloca ptr
 // CHECK: %[[TEMP_LVALUE:.*]] = alloca %[[STRUCT_S1:.*]], align
 // CHECK: call void @_ZN2S1C1Ev(ptr {{[^,]*}} %[[TEMP_LVALUE]])
-// CHECK: call void @objc_msgSend(ptr noundef %{{.*}}, ptr noundef %{{.*}}, ptr noundef %[[TEMP_LVALUE]])
+// CHECK: call void @objc_msgSend(ptr noundef %{{.*}}, ptr noundef %{{.*}}, ptr dead_on_return noundef %[[TEMP_LVALUE]])
 
 void test1(C *c) {
   c.f = S1();

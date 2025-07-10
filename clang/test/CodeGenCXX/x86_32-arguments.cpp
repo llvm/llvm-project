@@ -8,7 +8,7 @@ struct S {
 
 // CHECK-LABEL: define{{.*}} void @_Z1fv(ptr dead_on_unwind noalias writable sret(%struct.S) align 2 %
 S f() { return S(); }
-// CHECK-LABEL: define{{.*}} void @_Z1f1S(ptr noundef %0)
+// CHECK-LABEL: define{{.*}} void @_Z1f1S(ptr dead_on_return noundef %0)
 void f(S) { }
 
 // Non-trivial dtors, should both be passed indirectly.
@@ -21,7 +21,7 @@ public:
 // CHECK-LABEL: define{{.*}} void @_Z1gv(ptr dead_on_unwind noalias writable sret(%class.C) align 4 %
 C g() { return C(); }
 
-// CHECK-LABEL: define{{.*}} void @_Z1f1C(ptr noundef %0)
+// CHECK-LABEL: define{{.*}} void @_Z1f1C(ptr dead_on_return noundef %0)
 void f(C) { }
 
 

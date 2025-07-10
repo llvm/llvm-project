@@ -122,7 +122,7 @@ namespace test4 {
   // CHECK: [[TMP:%.*]] = alloca [[A:%.*]], align 1
   // CHECK-NEXT: store ptr [[BLOCKDESC:%.*]], ptr {{.*}}, align 8
   // CHECK:      call void @_ZN5test41AC1Ev(ptr {{[^,]*}} [[TMP]])
-  // CHECK-NEXT: call void @_ZN5test43fooENS_1AE(ptr noundef [[TMP]])
+  // CHECK-NEXT: call void @_ZN5test43fooENS_1AE(ptr dead_on_return noundef [[TMP]])
   // CHECK-NEXT: call void @_ZN5test41AD1Ev(ptr {{[^,]*}} [[TMP]])
   // CHECK-NEXT: ret void
 }

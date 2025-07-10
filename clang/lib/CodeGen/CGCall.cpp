@@ -2852,8 +2852,12 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       if (AI.getInReg())
         Attrs.addAttribute(llvm::Attribute::InReg);
 
+      // Depending on the ABI, this is either a byval or a dead_on_return
+      // argument.
       if (AI.getIndirectByVal())
         Attrs.addByValAttr(getTypes().ConvertTypeForMem(ParamType));
+      else
+        Attrs.addAttribute(llvm::Attribute::DeadOnReturn);
 
       auto *Decl = ParamType->getAsRecordDecl();
       if (CodeGenOpts.PassByValueIsNoAlias && Decl &&

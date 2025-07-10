@@ -112,7 +112,7 @@ TEST(struct_indirect_1)
 // CHECK-LABEL: define {{.*}} void @return_struct_indirect_1({{.*}} dead_on_unwind noalias writable sret
 
 // Should not be byval.
-// CHECK-LABEL: define {{.*}} void @take_struct_indirect_1(ptr noundef{{( %.*)?}})
+// CHECK-LABEL: define {{.*}} void @take_struct_indirect_1(ptr dead_on_return noundef{{( %.*)?}})
 
 // Do a simple standalone test here of a function definition to ensure that
 // we don't have problems due to failure to eagerly synthesize a copy
