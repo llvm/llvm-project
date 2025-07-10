@@ -798,15 +798,21 @@ LogicalResult spirv::EXTConstantCompositeReplicateOp::verify() {
   Type valueType = dyn_cast<TypedAttr>(getValue()).getType();
   Type compositeElementType =
       dyn_cast<spirv::CompositeType>(getType()).getElementType(0);
-  while (compositeElementType != valueType &&
-         isa<spirv::CompositeType>(compositeElementType)) {
-    compositeElementType =
-        dyn_cast<spirv::CompositeType>(compositeElementType).getElementType(0);
+  SmallVector<Type, 3> possibleTypes = {compositeElementType};
+  while (auto type = dyn_cast<spirv::CompositeType>(compositeElementType)) {
+    compositeElementType = type.getElementType(0);
+    possibleTypes.push_back(compositeElementType);
   }
 
-  if (compositeElementType != valueType)
+  if (!is_contained(possibleTypes, valueType)) {
+    std::string strTypes;
+    llvm::raw_string_ostream os(strTypes);
+    interleave(
+        possibleTypes, os, [&](Type type) { os << "'" << type << "'"; },
+        " or ");
     return emitError("expected value attribute type ")
-           << compositeElementType << ", but got: " << valueType;
+           << strTypes << ", but got: " << valueType;
+  }
 
   return success();
 }

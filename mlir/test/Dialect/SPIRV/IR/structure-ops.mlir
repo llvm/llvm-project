@@ -186,16 +186,27 @@ func.func @ccr_wrong_splat_type() -> () {
 // -----
 
 func.func @ccr_wrong_splat_type() -> () {
-  // expected-error @+1 {{expected value attribute type 'i32', but got: 'vector<2xi32>'}}
+  // expected-error @+1 {{expected value attribute type '!spirv.array<3 x i32>' or 'i32', but got: 'vector<2xi32>'}}
   %0 = spirv.EXT.ConstantCompositeReplicate [dense<[1, 2]> : vector<2xi32>] : !spirv.array<2 x !spirv.array<3 x i32>>
   return
 }
+
+// -----
 
 func.func @ccr_wrong_splat_type() -> () {
   // expected-error @+1 {{expected value attribute type 'f32', but got: 'i32'}}
   %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : !spirv.arm.tensor<2x3xf32>
   return
 }
+
+// -----
+
+func.func @ccr_wrong_splat_type() -> () {
+  // expected-error @+1 {{expected value attribute type 'vector<3xi32>' or 'i32', but got: 'vector<2xi32>'}}
+  %0 = spirv.EXT.ConstantCompositeReplicate [dense<[1, 2]> : vector<2xi32>] : !spirv.array<2 x vector<3xi32>>
+  return
+}
+
 
 // -----
 
