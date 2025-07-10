@@ -3885,6 +3885,7 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     TemplateDeductionInfo &Info,
     SmallVectorImpl<OriginalCallArg> const *OriginalCallArgs,
     bool PartialOverloading, bool PartialOrdering,
+    bool ForOverloadSetAddressResolution,
     llvm::function_ref<bool(bool)> CheckNonDependent) {
   // Unevaluated SFINAE context.
   EnterExpressionEvaluationContext Unevaluated(
@@ -4034,7 +4035,10 @@ TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
 
       auto ParamIdx = OriginalArg.ArgIdx;
       unsigned ExplicitOffset =
-          Specialization->hasCXXExplicitFunctionObjectParameter() ? 1 : 0;
+          (Specialization->hasCXXExplicitFunctionObjectParameter() &&
+           !ForOverloadSetAddressResolution)
+              ? 1
+              : 0;
       if (ParamIdx >= Specialization->getNumParams() - ExplicitOffset)
         // FIXME: This presumably means a pack ended up smaller than we
         // expected while deducing. Should this not result in deduction
@@ -4681,6 +4685,7 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
     Result = FinishTemplateArgumentDeduction(
         FunctionTemplate, Deduced, NumExplicitlySpecified, Specialization, Info,
         &OriginalCallArgs, PartialOverloading, PartialOrdering,
+        ForOverloadSetAddressResolution,
         [&, CallingCtx](bool OnlyInitializeNonUserDefinedConversions) {
           ContextRAII SavedContext(*this, CallingCtx);
           return CheckNonDependent(ParamTypesForArgChecking,
@@ -4797,7 +4802,7 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
     Result = FinishTemplateArgumentDeduction(
         FunctionTemplate, Deduced, NumExplicitlySpecified, Specialization, Info,
         /*OriginalCallArgs=*/nullptr, /*PartialOverloading=*/false,
-        /*PartialOrdering=*/true);
+        /*PartialOrdering=*/true, IsAddressOfFunction);
   });
   if (Result != TemplateDeductionResult::Success)
     return Result;
@@ -4981,7 +4986,7 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
     Result = FinishTemplateArgumentDeduction(
         ConversionTemplate, Deduced, 0, ConversionSpecialized, Info,
         &OriginalCallArgs, /*PartialOverloading=*/false,
-        /*PartialOrdering=*/false);
+        /*PartialOrdering=*/false, /*ForOverloadSetAddressResolution*/ false);
   });
   Specialization = cast_or_null<CXXConversionDecl>(ConversionSpecialized);
   return Result;

@@ -1391,7 +1391,8 @@ static uint32_t getBBAddrMapMetadata(const MachineBasicBlock &MBB) {
 }
 
 static llvm::object::BBAddrMap::Features
-getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
+getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
+                    bool HasCalls) {
   // Ensure that the user has not passed in additional options while also
   // specifying all or none.
   if ((PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::None) ||
@@ -1424,13 +1425,14 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
           BrProbEnabled,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
           static_cast<bool>(BBAddrMapSkipEmitBBEntries),
-          false};
+          HasCalls};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   MCSection *BBAddrMapSection =
       getObjFileLowering().getBBAddrMapSection(*MF.getSection());
   assert(BBAddrMapSection && ".llvm_bb_addr_map section is not initialized.");
+  bool HasCalls = !CurrentFnCallsiteSymbols.empty();
 
   const MCSymbol *FunctionSymbol = getFunctionBegin();
 
@@ -1440,7 +1442,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   uint8_t BBAddrMapVersion = OutStreamer->getContext().getBBAddrMapVersion();
   OutStreamer->emitInt8(BBAddrMapVersion);
   OutStreamer->AddComment("feature");
-  auto Features = getBBAddrMapFeature(MF, MBBSectionRanges.size());
+  auto Features = getBBAddrMapFeature(MF, MBBSectionRanges.size(), HasCalls);
   OutStreamer->emitInt8(Features.encode());
   // Emit BB Information for each basic block in the function.
   if (Features.MultiBBRange) {
@@ -1493,13 +1495,23 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       // Emit the basic block offset relative to the end of the previous block.
       // This is zero unless the block is padded due to alignment.
       emitLabelDifferenceAsULEB128(MBBSymbol, PrevMBBEndSymbol);
-      // Emit the basic block size. When BBs have alignments, their size cannot
-      // always be computed from their offsets.
-      emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), MBBSymbol);
+      const MCSymbol *CurrentLabel = MBBSymbol;
+      if (HasCalls) {
+        auto CallsiteSymbols = CurrentFnCallsiteSymbols.lookup(&MBB);
+        OutStreamer->AddComment("number of callsites");
+        OutStreamer->emitULEB128IntValue(CallsiteSymbols.size());
+        for (const MCSymbol *CallsiteSymbol : CallsiteSymbols) {
+          // Emit the callsite offset.
+          emitLabelDifferenceAsULEB128(CallsiteSymbol, CurrentLabel);
+          CurrentLabel = CallsiteSymbol;
+        }
+      }
+      // Emit the offset to the end of the block, which can be used to compute
+      // the total block size.
+      emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), CurrentLabel);
       // Emit the Metadata.
       OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
     }
-
     PrevMBBEndSymbol = MBB.getEndSymbol();
   }
 
@@ -1828,6 +1840,8 @@ void AsmPrinter::emitFunctionBody() {
           !MI.isDebugInstr()) {
         HasAnyRealCode = true;
       }
+      if (MI.isCall() && MF->getTarget().Options.BBAddrMap)
+        OutStreamer->emitLabel(createCallsiteSymbol(MBB));
 
       // If there is a pre-instruction symbol, emit a label for it here.
       if (MCSymbol *S = MI.getPreInstrSymbol())
@@ -2775,6 +2789,14 @@ MCSymbol *AsmPrinter::getMBBExceptionSym(const MachineBasicBlock &MBB) {
   return Res.first->second;
 }
 
+MCSymbol *AsmPrinter::createCallsiteSymbol(const MachineBasicBlock &MBB) {
+  MCContext &Ctx = MF->getContext();
+  MCSymbol *Sym = Ctx.createTempSymbol("BB" + Twine(MF->getFunctionNumber()) +
+                                       "_" + Twine(MBB.getNumber()) + "_CS");
+  CurrentFnCallsiteSymbols[&MBB].push_back(Sym);
+  return Sym;
+}
+
 void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   this->MF = &MF;
   const Function &F = MF.getFunction();
@@ -2809,6 +2831,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   CurrentFnBegin = nullptr;
   CurrentFnBeginLocal = nullptr;
   CurrentSectionBeginSym = nullptr;
+  CurrentFnCallsiteSymbols.clear();
   MBBSectionRanges.clear();
   MBBSectionExceptionSyms.clear();
   bool NeedsLocalForSize = MAI->needsLocalForSize();
