@@ -303,13 +303,14 @@ class MMAToOCLPattern : public OpConversionPattern<xevm::MMAOp> {
 
     Value c = op.getC();
     VectorType cOrigTy = cast<VectorType>(c.getType());
-    assert(cOrigTy == op->getResultTypes()[0] &&
-           "Accumulator and result type mismatch");
+    VectorType resOrigTy = cast<VectorType>(op->getResultTypes()[0]);
+    assert(cOrigTy == resOrigTy && "Accumulator and result type mismatch");
     // OCL builtins encode bfloat16 as int16
     VectorType cTy =
         cOrigTy.getElementType().isBF16()
             ? VectorType::get(cOrigTy.getShape(), rewriter.getIntegerType(16))
             : cOrigTy;
+    VectorType resTy = cTy;
     if (cOrigTy != cTy)
       c = rewriter.create<LLVM::BitcastOp>(loc, cTy, c);
 
@@ -332,12 +333,12 @@ class MMAToOCLPattern : public OpConversionPattern<xevm::MMAOp> {
     auto funcAttrs = convergentNoUnwindWillReturnAttrs;
     funcAttrs.memEffectsAttr = memAttr;
     Value result =
-        createDeviceFunctionCall(rewriter, fnName, cTy, argTypes, args, {},
+        createDeviceFunctionCall(rewriter, fnName, resTy, argTypes, args, {},
                                  funcAttrs, op.getOperation())
             ->getResult(0);
 
-    if (cOrigTy != cTy)
-      result = rewriter.create<LLVM::BitcastOp>(loc, cOrigTy, result);
+    if (resOrigTy != resTy)
+      result = rewriter.create<LLVM::BitcastOp>(loc, resOrigTy, result);
 
     rewriter.replaceOp(op, result);
     return success();
