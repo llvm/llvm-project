@@ -5236,8 +5236,8 @@ py_binary(
 py_binary(
     name = "extract_ir",
     srcs = [
+        "utils/mlgo-utils/extract_ir.py",
         "utils/mlgo-utils/mlgo/__init__.py",
-        "utils/mlgo-utils/mlgo/corpus/extract_ir.py",
         "utils/mlgo-utils/mlgo/corpus/extract_ir_lib.py",
         "utils/mlgo-utils/mlgo/corpus/flags.py",
     ],
@@ -5247,8 +5247,8 @@ py_binary(
 py_binary(
     name = "combine_training_corpus",
     srcs = [
+        "utils/mlgo-utils/combine_training_corpus.py",
         "utils/mlgo-utils/mlgo/__init__.py",
-        "utils/mlgo-utils/mlgo/corpus/combine_training_corpus.py",
         "utils/mlgo-utils/mlgo/corpus/combine_training_corpus_lib.py",
         "utils/mlgo-utils/mlgo/corpus/flags.py",
     ],
@@ -5258,8 +5258,8 @@ py_binary(
 py_binary(
     name = "make_corpus",
     srcs = [
+        "utils/mlgo-utils/make_corpus.py",
         "utils/mlgo-utils/mlgo/__init__.py",
-        "utils/mlgo-utils/mlgo/corpus/make_corpus.py",
         "utils/mlgo-utils/mlgo/corpus/make_corpus_lib.py",
     ],
     imports = ["utils/mlgo-utils"],
