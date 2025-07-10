@@ -1262,13 +1262,13 @@ def FeaturePointSampleAccel : SubtargetFeature<"point-sample-accel",
   "Has point sample acceleration feature"
 >;
 
-#ifdef LLPC_BUILD_NPI
 def Feature64BitLiterals : SubtargetFeature<"64-bit-literals",
   "Has64BitLiterals",
   "true",
   "Can use 64-bit literals with single DWORD instructions"
 >;
 
+#ifdef LLPC_BUILD_NPI
 def Feature1024AddressableVGPRs : SubtargetFeature<"1024-addressable-vgprs",
   "Has1024AddressableVGPRs",
   "true",
@@ -2209,8 +2209,8 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureCuMode,
 #ifdef LLPC_BUILD_NPI
    Feature1024AddressableVGPRs,
-   Feature64BitLiterals,
 #endif /* LLPC_BUILD_NPI */
+   Feature64BitLiterals,
    FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureFmacF64Inst,
@@ -2751,17 +2751,19 @@ def isNotGFX1250Plus :
   Predicate<"!Subtarget->hasGFX1250Insts()">,
   AssemblerPredicate<(all_of (not FeatureGFX1250Insts))>;
 
-#ifdef LLPC_BUILD_NPI
 def isGFX940orGFX1250 :
+#ifdef LLPC_BUILD_NPI
   Predicate<"Subtarget->hasGFX940Insts() || (Subtarget->hasGFX1250Insts() && "
             "!Subtarget->hasGFX13Insts())">,
   AssemblerPredicate<(any_of FeatureGFX940Insts, (all_of FeatureGFX1250Insts,
                              (not FeatureGFX13Insts)))>;
 
 def isGFX940orGFX1250orGFX13Plus :
+#endif /* LLPC_BUILD_NPI */
   Predicate<"Subtarget->hasGFX940Insts() || Subtarget->hasGFX1250Insts()">,
   AssemblerPredicate<(any_of FeatureGFX940Insts, FeatureGFX1250Insts)>;
 
+#ifdef LLPC_BUILD_NPI
 def isGFX13Only :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX13">,
   AssemblerPredicate<(all_of FeatureGFX13Insts)>;
@@ -3238,10 +3240,10 @@ def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
 def HasBVHDualAndBVH8Insts : Predicate<"Subtarget->hasBVHDualAndBVH8Insts()">,
   AssemblerPredicate<(all_of FeatureBVHDualAndBVH8Insts)>;
 
-#ifdef LLPC_BUILD_NPI
 def Has64BitLiterals : Predicate<"Subtarget->has64BitLiterals()">,
   AssemblerPredicate<(all_of Feature64BitLiterals)>;
 
+#ifdef LLPC_BUILD_NPI
 def Has1024AddressableVGPRs : Predicate<"Subtarget->has1024AddressableVGPRs()">,
   AssemblerPredicate<(all_of Feature1024AddressableVGPRs)>;
 

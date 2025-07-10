@@ -249,12 +249,8 @@ static uint32_t getLit16IntEncoding(uint32_t Val, const MCSubtargetInfo &STI) {
   return getLit32Encoding(Val, STI);
 }
 
-#if LLPC_BUILD_NPI
 static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI,
                                  bool IsFP) {
-#else /* LLPC_BUILD_NPI */
-static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI) {
-#endif /* LLPC_BUILD_NPI */
   uint32_t IntImm = getIntInlineImmEncoding(static_cast<int64_t>(Val));
   if (IntImm != 0)
     return IntImm;
@@ -287,7 +283,6 @@ static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI) {
       STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
     return 248;
 
-#if LLPC_BUILD_NPI
   // The rest part needs to align with AMDGPUInstPrinter::printImmediate64.
 
   if (IsFP) {
@@ -299,9 +294,6 @@ static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI) {
                  (!isInt<32>(Val) || !isUInt<32>(Val))
              ? 254
              : 255;
-#else /* LLPC_BUILD_NPI */
-  return 255;
-#endif /* LLPC_BUILD_NPI */
 }
 
 #if LLPC_BUILD_NPI
@@ -320,14 +312,10 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
   int64_t Imm;
   if (MO.isExpr()) {
     if (!MO.getExpr()->evaluateAsAbsolute(Imm))
-#if LLPC_BUILD_NPI
       return (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
               OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_INT64)
                  ? 254
                  : 255;
-#else /* LLPC_BUILD_NPI */
-      return 255;
-#endif /* LLPC_BUILD_NPI */
   } else {
     assert(!MO.isDFPImm());
 
@@ -350,28 +338,24 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
     return getLit32Encoding(static_cast<uint32_t>(Imm), STI);
 
   case AMDGPU::OPERAND_REG_IMM_INT64:
+  case AMDGPU::OPERAND_REG_INLINE_C_INT64:
+    return getLit64Encoding(static_cast<uint64_t>(Imm), STI, false);
+
+  case AMDGPU::OPERAND_REG_INLINE_C_FP64:
+  case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
 #if LLPC_BUILD_NPI
 #else /* LLPC_BUILD_NPI */
   case AMDGPU::OPERAND_REG_IMM_FP64:
 #endif /* LLPC_BUILD_NPI */
-  case AMDGPU::OPERAND_REG_INLINE_C_INT64:
-#if LLPC_BUILD_NPI
-     return getLit64Encoding(static_cast<uint64_t>(Imm), STI, false);
-
-#endif /* LLPC_BUILD_NPI */
-  case AMDGPU::OPERAND_REG_INLINE_C_FP64:
-  case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-#if LLPC_BUILD_NPI
     return getLit64Encoding(static_cast<uint64_t>(Imm), STI, true);
 
+#if LLPC_BUILD_NPI
   case AMDGPU::OPERAND_REG_IMM_FP64: {
     auto Enc = getLit64Encoding(static_cast<uint64_t>(Imm), STI, true);
     return (HasMandatoryLiteral && Enc == 255) ? 254 : Enc;
   }
-#else /* LLPC_BUILD_NPI */
-    return getLit64Encoding(static_cast<uint64_t>(Imm), STI);
-#endif /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
   case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
     return getLit16IntEncoding(static_cast<uint32_t>(Imm), STI);
@@ -527,11 +511,7 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
     // Is this operand a literal immediate?
     const MCOperand &Op = MI.getOperand(i);
     auto Enc = getLitEncoding(Op, Desc.operands()[i], STI);
-#if LLPC_BUILD_NPI
     if (!Enc || (*Enc != 255 && *Enc != 254))
-#else /* LLPC_BUILD_NPI */
-    if (!Enc || *Enc != 255)
-#endif /* LLPC_BUILD_NPI */
       continue;
 
     // Yes! Encode it
@@ -545,7 +525,6 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
     } else // Exprs will be replaced with a fixup value.
       llvm_unreachable("Must be immediate or expr");
 
-#if LLPC_BUILD_NPI
     if (*Enc == 254) {
       assert(STI.hasFeature(AMDGPU::Feature64BitLiterals));
       support::endian::write<uint64_t>(CB, Imm, llvm::endianness::little);
@@ -554,12 +533,6 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
         Imm = Hi_32(Imm);
       support::endian::write<uint32_t>(CB, Imm, llvm::endianness::little);
     }
-#else /* LLPC_BUILD_NPI */
-    if (Desc.operands()[i].OperandType == AMDGPU::OPERAND_REG_IMM_FP64)
-      Imm = Hi_32(Imm);
-
-    support::endian::write<uint32_t>(CB, Imm, llvm::endianness::little);
-#endif /* LLPC_BUILD_NPI */
 
     // Only one literal value allowed
     break;

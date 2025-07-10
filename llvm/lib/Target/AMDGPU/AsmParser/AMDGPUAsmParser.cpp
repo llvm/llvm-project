@@ -93,9 +93,7 @@ public:
     bool Neg = false;
     bool Sext = false;
     bool Lit = false;
-#if LLPC_BUILD_NPI
     bool Lit64 = false;
-#endif /* LLPC_BUILD_NPI */
 
     bool hasFPModifiers() const { return Abs || Neg; }
     bool hasIntModifiers() const { return Sext; }
@@ -530,6 +528,10 @@ public:
 #if LLPC_BUILD_NPI
   bool isSCSrc_bf16() const {
     return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::bf16);
+  }
+
+  bool isSCSrc_f16() const {
+    return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::f16);
 #else /* LLPC_BUILD_NPI */
   bool isSCSrcV2B16() const {
     return isSCSrcB16();
@@ -537,10 +539,6 @@ public:
   }
 
 #if LLPC_BUILD_NPI
-  bool isSCSrc_f16() const {
-    return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::f16);
-  }
-
   bool isSCSrcV2B16() const { return isSCSrc_b16(); }
 
 #endif /* LLPC_BUILD_NPI */
@@ -592,14 +590,10 @@ public:
   bool isSSrc_b64() const {
     // TODO: Find out how SALU supports extension of 32-bit literals to 64 bits.
     // See isVSrc64().
-#if LLPC_BUILD_NPI
     return isSCSrc_b64() || isLiteralImm(MVT::i64) ||
            (((const MCTargetAsmParser *)AsmParser)
                 ->getAvailableFeatures()[AMDGPU::Feature64BitLiterals] &&
             isExpr());
-#else /* LLPC_BUILD_NPI */
-    return isSCSrc_b64() || isLiteralImm(MVT::i64);
-#endif /* LLPC_BUILD_NPI */
   }
 
   bool isSSrc_f32() const {
@@ -1790,12 +1784,10 @@ public:
     return getFeatureBits()[AMDGPU::FeatureInv2PiInlineImm];
   }
 
-#if LLPC_BUILD_NPI
   bool has64BitLiterals() const {
     return getFeatureBits()[AMDGPU::Feature64BitLiterals];
   }
 
-#endif /* LLPC_BUILD_NPI */
   bool hasFlatOffsets() const {
     return getFeatureBits()[AMDGPU::FeatureFlatInstOffsets];
   }
@@ -1931,18 +1923,10 @@ public:
   bool isOpcodeModifierWithVal(const AsmToken &Token, const AsmToken &NextToken) const;
   bool parseSP3NegModifier();
   ParseStatus parseImm(OperandVector &Operands, bool HasSP3AbsModifier = false,
-#if LLPC_BUILD_NPI
                        bool HasLit = false, bool HasLit64 = false);
-#else /* LLPC_BUILD_NPI */
-                       bool HasLit = false);
-#endif /* LLPC_BUILD_NPI */
   ParseStatus parseReg(OperandVector &Operands);
   ParseStatus parseRegOrImm(OperandVector &Operands, bool HasSP3AbsMod = false,
-#if LLPC_BUILD_NPI
                             bool HasLit = false, bool HasLit64 = false);
-#else /* LLPC_BUILD_NPI */
-                            bool HasLit = false);
-#endif /* LLPC_BUILD_NPI */
   ParseStatus parseRegOrImmWithFPInputMods(OperandVector &Operands,
                                            bool AllowImm = true);
   ParseStatus parseRegOrImmWithIntInputMods(OperandVector &Operands,
@@ -2456,11 +2440,9 @@ bool AMDGPUOperand::isLiteralImm(MVT type) const {
     return false;
   }
 
-#if LLPC_BUILD_NPI
-  bool Allow64Bit = (type == MVT::i64 || type == MVT::f64) &&
-                    AsmParser->has64BitLiterals();
+  bool Allow64Bit =
+      (type == MVT::i64 || type == MVT::f64) && AsmParser->has64BitLiterals();
 
-#endif /* LLPC_BUILD_NPI */
   if (!Imm.IsFPImm) {
     // We got int literal token.
 
@@ -2472,17 +2454,11 @@ bool AMDGPUOperand::isLiteralImm(MVT type) const {
     }
 
     unsigned Size = type.getSizeInBits();
-#if LLPC_BUILD_NPI
     if (Size == 64) {
       if (Allow64Bit && !AMDGPU::isValid32BitLiteral(Imm.Val, false))
         return true;
-#else /* LLPC_BUILD_NPI */
-    if (Size == 64)
-#endif /* LLPC_BUILD_NPI */
       Size = 32;
-#if LLPC_BUILD_NPI
     }
-#endif /* LLPC_BUILD_NPI */
 
     // FIXME: 64-bit operands can zero extend, sign extend, or pad zeroes for FP
     // types.
@@ -2634,16 +2610,11 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
       }
 
       // Non-inlineable
-#if LLPC_BUILD_NPI
       if (AMDGPU::isSISrcFPOperand(InstDesc,
                                    OpNum)) { // Expected 64-bit fp operand
         bool HasMandatoryLiteral =
             AMDGPU::hasNamedOperand(Inst.getOpcode(), AMDGPU::OpName::imm);
-#else /* LLPC_BUILD_NPI */
-      if (AMDGPU::isSISrcFPOperand(InstDesc, OpNum)) { // Expected 64-bit fp operand
-#endif /* LLPC_BUILD_NPI */
         // For fp operands we check if low 32 bits are zeros
-#if LLPC_BUILD_NPI
         if (Literal.getLoBits(32) != 0 &&
             (InstDesc.getSize() != 4 || !AsmParser->has64BitLiterals()) &&
             !HasMandatoryLiteral) {
@@ -2651,12 +2622,6 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
               Inst.getLoc(),
               "Can't encode literal as exact 64-bit floating-point operand. "
               "Low 32-bits will be set to zero");
-#else /* LLPC_BUILD_NPI */
-        if (Literal.getLoBits(32) != 0) {
-          const_cast<AMDGPUAsmParser *>(AsmParser)->Warning(Inst.getLoc(),
-          "Can't encode literal as exact 64-bit floating-point operand. "
-          "Low 32-bits will be set to zero");
-#endif /* LLPC_BUILD_NPI */
           Val &= 0xffffffff00000000u;
         }
 
@@ -2772,12 +2737,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     return;
 
   case AMDGPU::OPERAND_REG_IMM_INT64:
-#if LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
-  case AMDGPU::OPERAND_REG_IMM_FP64:
-#endif /* LLPC_BUILD_NPI */
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
-#if LLPC_BUILD_NPI
     if (AMDGPU::isInlinableLiteral64(Val, AsmParser->hasInv2PiInlineImm())) {
       Inst.addOperand(MCOperand::createImm(Val));
       setImmKindConst();
@@ -2796,7 +2756,6 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     return;
 
   case AMDGPU::OPERAND_REG_IMM_FP64:
-#endif /* LLPC_BUILD_NPI */
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
     if (AMDGPU::isInlinableLiteral64(Val, AsmParser->hasInv2PiInlineImm())) {
@@ -2805,7 +2764,6 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
       return;
     }
 
-#if LLPC_BUILD_NPI
     // If the target doesn't support 64-bit literals, we need to use the
     // constant as the high 32 MSBs of a double-precision floating point value.
     if (!AsmParser->has64BitLiterals()) {
@@ -2820,10 +2778,6 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
           (!getModifiers().Lit64 && (isInt<32>(Val) || isUInt<32>(Val))))
         Val = static_cast<uint64_t>(Val) << 32;
     }
-#else /* LLPC_BUILD_NPI */
-    Val = AMDGPU::isSISrcFPOperand(InstDesc, OpNum) ? (uint64_t)Val << 32
-                                                    : Lo_32(Val);
-#endif /* LLPC_BUILD_NPI */
 
     Inst.addOperand(MCOperand::createImm(Val));
     setImmKindLiteral();
@@ -3638,42 +3592,20 @@ AMDGPUAsmParser::parseRegister(bool RestoreOnFailure) {
 }
 
 ParseStatus AMDGPUAsmParser::parseImm(OperandVector &Operands,
-#if LLPC_BUILD_NPI
                                       bool HasSP3AbsModifier, bool HasLit,
                                       bool HasLit64) {
-#else /* LLPC_BUILD_NPI */
-                                      bool HasSP3AbsModifier, bool HasLit) {
-#endif /* LLPC_BUILD_NPI */
   // TODO: add syntactic sugar for 1/(2*PI)
 
-#if LLPC_BUILD_NPI
   if (isRegister() || isModifier())
-#else /* LLPC_BUILD_NPI */
-  if (isRegister())
-#endif /* LLPC_BUILD_NPI */
     return ParseStatus::NoMatch;
-#if LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
-  assert(!isModifier());
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
   if (!HasLit && !HasLit64) {
     HasLit64 = trySkipId("lit64");
     HasLit = !HasLit64 && trySkipId("lit");
     if (HasLit || HasLit64) {
-#else /* LLPC_BUILD_NPI */
-  if (!HasLit) {
-    HasLit = trySkipId("lit");
-    if (HasLit) {
-#endif /* LLPC_BUILD_NPI */
       if (!skipToken(AsmToken::LParen, "expected left paren after lit"))
         return ParseStatus::Failure;
-#if LLPC_BUILD_NPI
       ParseStatus S = parseImm(Operands, HasSP3AbsModifier, HasLit, HasLit64);
-#else /* LLPC_BUILD_NPI */
-      ParseStatus S = parseImm(Operands, HasSP3AbsModifier, HasLit);
-#endif /* LLPC_BUILD_NPI */
       if (S.isSuccess() &&
           !skipToken(AsmToken::RParen, "expected closing parentheses"))
         return ParseStatus::Failure;
@@ -3695,9 +3627,7 @@ ParseStatus AMDGPUAsmParser::parseImm(OperandVector &Operands,
 
   AMDGPUOperand::Modifiers Mods;
   Mods.Lit = HasLit;
-#if LLPC_BUILD_NPI
   Mods.Lit64 = HasLit64;
-#endif /* LLPC_BUILD_NPI */
 
   if (IsReal) {
     // Floating-point expressions are not supported.
@@ -3748,11 +3678,7 @@ ParseStatus AMDGPUAsmParser::parseImm(OperandVector &Operands,
       AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands.back());
       Op.setModifiers(Mods);
     } else {
-#if LLPC_BUILD_NPI
       if (HasLit || HasLit64)
-#else /* LLPC_BUILD_NPI */
-      if (HasLit)
-#endif /* LLPC_BUILD_NPI */
         return ParseStatus::NoMatch;
       Operands.push_back(AMDGPUOperand::CreateExpr(this, Expr, S));
     }
@@ -3776,22 +3702,14 @@ ParseStatus AMDGPUAsmParser::parseReg(OperandVector &Operands) {
 }
 
 ParseStatus AMDGPUAsmParser::parseRegOrImm(OperandVector &Operands,
-#if LLPC_BUILD_NPI
                                            bool HasSP3AbsMod, bool HasLit,
                                            bool HasLit64) {
-#else /* LLPC_BUILD_NPI */
-                                           bool HasSP3AbsMod, bool HasLit) {
-#endif /* LLPC_BUILD_NPI */
   ParseStatus Res = parseReg(Operands);
   if (!Res.isNoMatch())
     return Res;
   if (isModifier())
     return ParseStatus::NoMatch;
-#if LLPC_BUILD_NPI
   return parseImm(Operands, HasSP3AbsMod, HasLit, HasLit64);
-#else /* LLPC_BUILD_NPI */
-  return parseImm(Operands, HasSP3AbsMod, HasLit);
-#endif /* LLPC_BUILD_NPI */
 }
 
 bool
@@ -3887,11 +3805,7 @@ AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands,
                                               bool AllowImm) {
   bool Neg, SP3Neg;
   bool Abs, SP3Abs;
-#if LLPC_BUILD_NPI
   bool Lit64, Lit;
-#else /* LLPC_BUILD_NPI */
-  bool Lit;
-#endif /* LLPC_BUILD_NPI */
   SMLoc Loc;
 
   // Disable ambiguous constructs like '--1' etc. Should use neg(-1) instead.
@@ -3911,7 +3825,6 @@ AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands,
   if (Abs && !skipToken(AsmToken::LParen, "expected left paren after abs"))
     return ParseStatus::Failure;
 
-#if LLPC_BUILD_NPI
   Lit64 = trySkipId("lit64");
   if (Lit64) {
     if (!skipToken(AsmToken::LParen, "expected left paren after lit64"))
@@ -3921,9 +3834,6 @@ AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands,
   }
 
   Lit = !Lit64 && trySkipId("lit");
-#else /* LLPC_BUILD_NPI */
-  Lit = trySkipId("lit");
-#endif /* LLPC_BUILD_NPI */
   if (Lit && !skipToken(AsmToken::LParen, "expected left paren after lit"))
     return ParseStatus::Failure;
 
@@ -3934,27 +3844,16 @@ AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands,
 
   ParseStatus Res;
   if (AllowImm) {
-#if LLPC_BUILD_NPI
     Res = parseRegOrImm(Operands, SP3Abs, Lit, Lit64);
-#else /* LLPC_BUILD_NPI */
-    Res = parseRegOrImm(Operands, SP3Abs, Lit);
-#endif /* LLPC_BUILD_NPI */
   } else {
     Res = parseReg(Operands);
   }
   if (!Res.isSuccess())
-#if LLPC_BUILD_NPI
-    return (SP3Neg || Neg || SP3Abs || Abs || Lit || Lit64) ?
-               ParseStatus::Failure : Res;
-#else /* LLPC_BUILD_NPI */
-    return (SP3Neg || Neg || SP3Abs || Abs || Lit) ? ParseStatus::Failure : Res;
-#endif /* LLPC_BUILD_NPI */
+    return (SP3Neg || Neg || SP3Abs || Abs || Lit || Lit64)
+               ? ParseStatus::Failure
+               : Res;
 
-#if LLPC_BUILD_NPI
   if ((Lit || Lit64) && !Operands.back()->isImm())
-#else /* LLPC_BUILD_NPI */
-  if (Lit && !Operands.back()->isImm())
-#endif /* LLPC_BUILD_NPI */
     Error(Loc, "expected immediate with lit modifier");
 
   if (SP3Abs && !skipToken(AsmToken::Pipe, "expected vertical bar"))
@@ -3963,27 +3862,17 @@ AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands,
     return ParseStatus::Failure;
   if (Neg && !skipToken(AsmToken::RParen, "expected closing parentheses"))
     return ParseStatus::Failure;
-#if LLPC_BUILD_NPI
   if ((Lit || Lit64) &&
       !skipToken(AsmToken::RParen, "expected closing parentheses"))
-#else /* LLPC_BUILD_NPI */
-  if (Lit && !skipToken(AsmToken::RParen, "expected closing parentheses"))
-#endif /* LLPC_BUILD_NPI */
     return ParseStatus::Failure;
 
   AMDGPUOperand::Modifiers Mods;
   Mods.Abs = Abs || SP3Abs;
   Mods.Neg = Neg || SP3Neg;
   Mods.Lit = Lit;
-#if LLPC_BUILD_NPI
   Mods.Lit64 = Lit64;
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
   if (Mods.hasFPModifiers() || Lit || Lit64) {
-#else /* LLPC_BUILD_NPI */
-  if (Mods.hasFPModifiers() || Lit) {
-#endif /* LLPC_BUILD_NPI */
     AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands.back());
     if (Op.isExpr())
       return Error(Op.getStartLoc(), "expected an absolute expression");
@@ -4498,7 +4387,7 @@ bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
       int64_t Imm = Op.getImm();
       if (!AMDGPU::isInlinableLiteral32(Imm, hasInv2PiInlineImm()) &&
           !AMDGPU::isInlinableLiteral64(Imm, hasInv2PiInlineImm()))
-        return I;
+        return (unsigned)I;
     }
 
     for (auto OpName : {OpName::vsrc1X, OpName::vsrc1Y, OpName::vsrc2X,
@@ -4508,7 +4397,7 @@ bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
         continue;
       const MCOperand &Op = Inst.getOperand(I);
       if (Op.isImm())
-        return I;
+        return (unsigned)I;
     }
   }
 #else /* LLPC_BUILD_NPI */
@@ -5440,11 +5329,7 @@ bool AMDGPUAsmParser::validateSOPLiteral(const MCInst &Inst) const {
 
   unsigned NumExprs = 0;
   unsigned NumLiterals = 0;
-#if LLPC_BUILD_NPI
   uint64_t LiteralValue;
-#else /* LLPC_BUILD_NPI */
-  uint32_t LiteralValue;
-#endif /* LLPC_BUILD_NPI */
 
   for (int OpIdx : OpIndices) {
     if (OpIdx == -1) break;
@@ -5453,11 +5338,7 @@ bool AMDGPUAsmParser::validateSOPLiteral(const MCInst &Inst) const {
     // Exclude special imm operands (like that used by s_set_gpr_idx_on)
     if (AMDGPU::isSISrcOperand(Desc, OpIdx)) {
       if (MO.isImm() && !isInlineConstant(Inst, OpIdx)) {
-#if LLPC_BUILD_NPI
         uint64_t Value = static_cast<uint64_t>(MO.getImm());
-#else /* LLPC_BUILD_NPI */
-        uint32_t Value = static_cast<uint32_t>(MO.getImm());
-#endif /* LLPC_BUILD_NPI */
         if (NumLiterals == 0 || LiteralValue != Value) {
           LiteralValue = Value;
           ++NumLiterals;

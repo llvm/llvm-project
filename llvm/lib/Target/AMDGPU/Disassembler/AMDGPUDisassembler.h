@@ -185,9 +185,7 @@ public:
   MCOperand decodeMandatoryLiteral64Constant(uint64_t Imm) const;
 #endif /* LLPC_BUILD_NPI */
   MCOperand decodeLiteralConstant(bool ExtendFP64) const;
-#if LLPC_BUILD_NPI
   MCOperand decodeLiteral64Constant() const;
-#endif /* LLPC_BUILD_NPI */
 
   MCOperand decodeSrcOp(unsigned Width, unsigned Val) const;
 

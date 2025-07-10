@@ -384,3 +384,15 @@ v_sub_nc_u64 v[0:1], v[2:3], v[4:5]
 
 v_lshl_add_u64 v[2:3], s[4:5], v7, v[8:9]
 // CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_mfma_f32_16x16x8_xf32 a[0:3], v[2:3], v[4:5], a[2:5]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_mfma_f32_16x16x8xf32 a[0:3], v[2:3], v[4:5], a[2:5]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_mfma_f32_32x32x4_xf32 a[0:15], v[2:3], v[4:5], a[18:33]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+v_mfma_f32_32x32x4xf32 a[0:15], v[2:3], v[4:5], a[18:33]
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU

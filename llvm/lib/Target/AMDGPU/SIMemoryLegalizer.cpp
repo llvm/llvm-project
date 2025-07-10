@@ -2725,11 +2725,13 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
     ScopeImm = AMDGPU::CPol::SCOPE_SYS;
     break;
   case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-  case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
     ScopeImm = AMDGPU::CPol::SCOPE_DEV;
     break;
+#if LLPC_BUILD_NPI
+  case SIAtomicScope::CLUSTER:
+    ScopeImm = AMDGPU::CPol::SCOPE_SE;
+    break;
+#endif /* LLPC_BUILD_NPI */
   case SIAtomicScope::WORKGROUP:
 #if LLPC_BUILD_NPI
     // GFX12:
@@ -2803,9 +2805,9 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
   //
 #if LLPC_BUILD_NPI
   // gfx125x:
-  //    stores can also report completion from CU$ so we must emit
-  //    global_wb at device scope as well to ensure stores reached
-  //    the right cache level.
+  //    stores can also report completion from WGP$ so we must emit
+  //    global_wb at cluster & device scope as well to ensure stores
+  //    reached the right cache level.
 #else /* LLPC_BUILD_NPI */
   // Emitting it for lower scopes is a slow no-op, so we omit it
   // for performance.
@@ -2817,11 +2819,14 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
     break;
   case SIAtomicScope::AGENT:
 #if LLPC_BUILD_NPI
-  case SIAtomicScope::CLUSTER:
     if (ST.hasGFX1250Insts()) {
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
-        .addImm(AMDGPU::CPol::SCOPE_DEV);
+          .addImm(AMDGPU::CPol::SCOPE_DEV);
     }
+    break;
+  case SIAtomicScope::CLUSTER:
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
+        .addImm(AMDGPU::CPol::SCOPE_SE);
     break;
 #endif /* LLPC_BUILD_NPI */
   case SIAtomicScope::WORKGROUP:
@@ -2910,12 +2915,7 @@ bool SIGfx12CacheControl::expandSystemScopeStore(
 #if LLPC_BUILD_NPI
   if (!CPol)
     return false;
-#else /* LLPC_BUILD_NPI */
-  if (CPol && ((CPol->getImm() & CPol::SCOPE) == CPol::SCOPE_SYS))
-    return insertWaitsBeforeSystemScopeStore(MI);
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
   // No scope operand means SCOPE_CU.
   const unsigned Scope = CPol->getImm() & CPol::SCOPE;
 
@@ -2933,10 +2933,15 @@ bool SIGfx12CacheControl::expandSystemScopeStore(
 
   if (!ST.hasCUStores() || TII->mayAccessScratchThroughFlat(*MI))
     return setScope(MI, CPol::SCOPE_SE);
+#else /* LLPC_BUILD_NPI */
+  if (CPol && ((CPol->getImm() & CPol::SCOPE) == CPol::SCOPE_SYS))
+    return insertWaitsBeforeSystemScopeStore(MI);
+#endif /* LLPC_BUILD_NPI */
 
   return false;
 }
 
+#if LLPC_BUILD_NPI
 bool SIGfx12CacheControl::handleCooperativeAtomic(MachineInstr &MI) const {
   if (!ST.hasGFX1250Insts())
     return false;
@@ -2947,10 +2952,10 @@ bool SIGfx12CacheControl::handleCooperativeAtomic(MachineInstr &MI) const {
   const unsigned Scope = CPol->getImm() & CPol::SCOPE;
   if (Scope < CPol::SCOPE_DEV)
     return setScope(MI, CPol::SCOPE_DEV);
-#endif /* LLPC_BUILD_NPI */
   return false;
 }
 
+#endif /* LLPC_BUILD_NPI */
 bool SIGfx12CacheControl::setAtomicScope(const MachineBasicBlock::iterator &MI,
                                          SIAtomicScope Scope,
                                          SIAtomicAddrSpace AddrSpace) const {
@@ -2962,11 +2967,13 @@ bool SIGfx12CacheControl::setAtomicScope(const MachineBasicBlock::iterator &MI,
       Changed |= setScope(MI, AMDGPU::CPol::SCOPE_SYS);
       break;
     case SIAtomicScope::AGENT:
-#if LLPC_BUILD_NPI
-    case SIAtomicScope::CLUSTER:
-#endif /* LLPC_BUILD_NPI */
       Changed |= setScope(MI, AMDGPU::CPol::SCOPE_DEV);
       break;
+#if LLPC_BUILD_NPI
+    case SIAtomicScope::CLUSTER:
+      Changed |= setScope(MI, AMDGPU::CPol::SCOPE_SE);
+      break;
+#endif /* LLPC_BUILD_NPI */
     case SIAtomicScope::WORKGROUP:
       // In workgroup mode, SCOPE_SE is needed as waves can executes on
       // different CUs that access different L0s.

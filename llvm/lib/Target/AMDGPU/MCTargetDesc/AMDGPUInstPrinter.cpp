@@ -848,7 +848,6 @@ void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
   else if (Imm == 0x3fc45f306dc9c882 &&
            STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
     O << "0.15915494309189532";
-#if LLPC_BUILD_NPI
   else {
     // This part needs to align with AMDGPUOperand::addLiteralImmOperand.
     if (IsFP) {
@@ -858,25 +857,12 @@ void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
         O << formatHex(static_cast<uint64_t>(Hi_32(Imm)));
       return;
     }
-#else /* LLPC_BUILD_NPI */
-  else if (IsFP) {
-    assert(AMDGPU::isValid32BitLiteral(Imm, true));
-    O << formatHex(static_cast<uint64_t>(Hi_32(Imm)));
-  } else {
-    assert(isUInt<32>(Imm) || isInt<32>(Imm));
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
     if (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
         (!isInt<32>(Imm) || !isUInt<32>(Imm)))
       O << "lit64(" << formatHex(static_cast<uint64_t>(Imm)) << ')';
     else
       O << formatHex(static_cast<uint64_t>(Imm));
-#else /* LLPC_BUILD_NPI */
-    // In rare situations, we will have a 32-bit literal in a 64-bit
-    // operand. This is technically allowed for the encoding of s_mov_b64.
-    O << formatHex(static_cast<uint64_t>(Imm));
-#endif /* LLPC_BUILD_NPI */
   }
 }
 
