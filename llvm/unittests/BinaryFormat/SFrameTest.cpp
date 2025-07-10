@@ -8,32 +8,52 @@
 
 #include "llvm/BinaryFormat/SFrame.h"
 #include "gtest/gtest.h"
+#include <type_traits>
 
 using namespace llvm;
 using namespace llvm::sframe;
 
 namespace {
-// Test structure sizes and triviality.
-static_assert(std::is_trivial_v<Preamble>);
-static_assert(sizeof(Preamble) == 4);
 
-static_assert(std::is_trivial_v<Header>);
-static_assert(sizeof(Header) == 28);
+template <typename EndianT> class SFrameTest : public testing::Test {
+protected:
+  static constexpr endianness Endian = EndianT::value;
 
-static_assert(std::is_trivial_v<FuncDescEntry>);
-static_assert(sizeof(FuncDescEntry) == 20);
+  // Test structure sizes and triviality.
+  static_assert(std::is_trivial_v<Preamble<Endian>>);
+  static_assert(sizeof(Preamble<Endian>) == 4);
 
-static_assert(std::is_trivial_v<FrameRowEntryAddr1>);
-static_assert(sizeof(FrameRowEntryAddr1) == 2);
+  static_assert(std::is_trivial_v<Header<Endian>>);
+  static_assert(sizeof(Header<Endian>) == 28);
 
-static_assert(std::is_trivial_v<FrameRowEntryAddr2>);
-static_assert(sizeof(FrameRowEntryAddr2) == 3);
+  static_assert(std::is_trivial_v<FuncDescEntry<Endian>>);
+  static_assert(sizeof(FuncDescEntry<Endian>) == 20);
 
-static_assert(std::is_trivial_v<FrameRowEntryAddr4>);
-static_assert(sizeof(FrameRowEntryAddr4) == 5);
+  static_assert(std::is_trivial_v<FrameRowEntryAddr1<Endian>>);
+  static_assert(sizeof(FrameRowEntryAddr1<Endian>) == 2);
 
-TEST(SFrameTest, FDEFlags) {
-  FuncDescEntry FDE = {};
+  static_assert(std::is_trivial_v<FrameRowEntryAddr2<Endian>>);
+  static_assert(sizeof(FrameRowEntryAddr2<Endian>) == 3);
+
+  static_assert(std::is_trivial_v<FrameRowEntryAddr4<Endian>>);
+  static_assert(sizeof(FrameRowEntryAddr4<Endian>) == 5);
+};
+
+struct NameGenerator {
+  template <typename T> static constexpr const char *GetName(int) {
+    if constexpr (T::value == endianness::little)
+      return "little";
+    if constexpr (T::value == endianness::big)
+      return "big";
+  }
+};
+using Types =
+    testing::Types<std::integral_constant<endianness, endianness::little>,
+                   std::integral_constant<endianness, endianness::big>>;
+TYPED_TEST_SUITE(SFrameTest, Types, NameGenerator);
+
+TYPED_TEST(SFrameTest, FDEFlags) {
+  FuncDescEntry<TestFixture::Endian> FDE = {};
   EXPECT_EQ(FDE.Info, 0u);
   EXPECT_EQ(FDE.getPAuthKey(), 0);
   EXPECT_EQ(FDE.getFDEType(), FDEType::PCInc);
@@ -58,8 +78,8 @@ TEST(SFrameTest, FDEFlags) {
   EXPECT_EQ(FDE.getFREType(), FREType::Addr4);
 }
 
-TEST(SFrameTest, FREFlags) {
-  FREInfo Info = {};
+TYPED_TEST(SFrameTest, FREFlags) {
+  FREInfo<TestFixture::Endian> Info = {};
   EXPECT_EQ(Info.Info, 0u);
   EXPECT_FALSE(Info.isReturnAddressSigned());
   EXPECT_EQ(Info.getOffsetSize(), FREOffset::B1);
