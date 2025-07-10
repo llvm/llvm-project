@@ -283,6 +283,9 @@ mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
   if (auto doConcurentOp = getRegion().getParentOfType<fir::DoConcurrentOp>())
     return doConcurentOp.getBody();
 
+  if (auto firLocalOp = getRegion().getParentOfType<fir::LocalitySpecifierOp>())
+    return &getRegion().front();
+
   return getEntryBlock();
 }
 
@@ -1862,6 +1865,20 @@ fir::factory::deduceOptimalExtents(mlir::ValueRange extents1,
       extents.push_back(extent1);
   }
   return extents;
+}
+
+uint64_t fir::factory::getGlobalAddressSpace(mlir::DataLayout *dataLayout) {
+  if (dataLayout)
+    if (mlir::Attribute addrSpace = dataLayout->getGlobalMemorySpace())
+      return mlir::cast<mlir::IntegerAttr>(addrSpace).getUInt();
+  return 0;
+}
+
+uint64_t fir::factory::getProgramAddressSpace(mlir::DataLayout *dataLayout) {
+  if (dataLayout)
+    if (mlir::Attribute addrSpace = dataLayout->getProgramMemorySpace())
+      return mlir::cast<mlir::IntegerAttr>(addrSpace).getUInt();
+  return 0;
 }
 
 llvm::SmallVector<mlir::Value> fir::factory::updateRuntimeExtentsForEmptyArrays(

@@ -7,9 +7,12 @@ import re
 import shutil
 import site
 import subprocess
+import sys
 
-import lit.util
+import lit.formats
 from lit.llvm import llvm_config
+from lit.llvm.subst import FindTool
+from lit.llvm.subst import ToolSubst
 
 site.addsitedir(os.path.dirname(__file__))
 from helper import toolchain
@@ -200,3 +203,6 @@ if platform.system() == "Darwin":
 # location of the Python libraries. This ensures that we use the same
 # version of Python that was used to build lldb to run our tests.
 config.environment["PYTHONHOME"] = config.python_root_dir
+config.environment["PATH"] = os.path.pathsep.join(
+    (config.python_root_dir, config.environment.get("PATH", ""))
+)

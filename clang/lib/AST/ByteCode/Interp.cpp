@@ -1108,7 +1108,7 @@ bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 bool CheckNonNullArgs(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *CE, unsigned ArgSize) {
-  auto Args = llvm::ArrayRef(CE->getArgs(), CE->getNumArgs());
+  auto Args = ArrayRef(CE->getArgs(), CE->getNumArgs());
   auto NonNullArgs = collectNonNullArgs(F->getDecl(), Args);
   unsigned Offset = 0;
   unsigned Index = 0;
@@ -1196,6 +1196,8 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
   if (!CheckDynamicMemoryAllocation(S, OpPC))
     return false;
 
+  DynamicAllocator &Allocator = S.getAllocator();
+
   const Expr *Source = nullptr;
   const Block *BlockToDelete = nullptr;
   {
@@ -1211,6 +1213,21 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
     QualType InitialType = Ptr.getType();
     while (Ptr.isBaseClass())
       Ptr = Ptr.getBase();
+
+    Source = Ptr.getDeclDesc()->asExpr();
+    BlockToDelete = Ptr.block();
+
+    // Check that new[]/delete[] or new/delete were used, not a mixture.
+    const Descriptor *BlockDesc = BlockToDelete->getDescriptor();
+    if (std::optional<DynamicAllocator::Form> AllocForm =
+            Allocator.getAllocationForm(Source)) {
+      DynamicAllocator::Form DeleteForm =
+          DeleteIsArrayForm ? DynamicAllocator::Form::Array
+                            : DynamicAllocator::Form::NonArray;
+      if (!CheckNewDeleteForms(S, OpPC, *AllocForm, DeleteForm, BlockDesc,
+                               Source))
+        return false;
+    }
 
     // For the non-array case, the types must match if the static type
     // does not have a virtual destructor.
@@ -1229,9 +1246,6 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
           << Ptr.toDiagnosticString(S.getASTContext()) << Ptr.isOnePastEnd();
       return false;
     }
-
-    Source = Ptr.getDeclDesc()->asExpr();
-    BlockToDelete = Ptr.block();
 
     if (!CheckDeleteSource(S, OpPC, Source, Ptr))
       return false;
@@ -1266,11 +1280,6 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
   if (!RunDestructors(S, OpPC, BlockToDelete))
     return false;
 
-  DynamicAllocator &Allocator = S.getAllocator();
-  const Descriptor *BlockDesc = BlockToDelete->getDescriptor();
-  std::optional<DynamicAllocator::Form> AllocForm =
-      Allocator.getAllocationForm(Source);
-
   if (!Allocator.deallocate(Source, BlockToDelete, S)) {
     // Nothing has been deallocated, this must be a double-delete.
     const SourceInfo &Loc = S.Current->getSource(OpPC);
@@ -1278,12 +1287,7 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
     return false;
   }
 
-  assert(AllocForm);
-  DynamicAllocator::Form DeleteForm = DeleteIsArrayForm
-                                          ? DynamicAllocator::Form::Array
-                                          : DynamicAllocator::Form::NonArray;
-  return CheckNewDeleteForms(S, OpPC, *AllocForm, DeleteForm, BlockDesc,
-                             Source);
+  return true;
 }
 
 void diagnoseEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED,
@@ -1935,8 +1939,10 @@ bool CastPointerIntegralAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
   if (!CheckPointerToIntegralCast(S, OpPC, Ptr, BitWidth))
     return false;
 
-  S.Stk.push<IntegralAP<false>>(
-      IntegralAP<false>::from(Ptr.getIntegerRepresentation(), BitWidth));
+  auto Result = S.allocAP<IntegralAP<false>>(BitWidth);
+  Result.copy(APInt(BitWidth, Ptr.getIntegerRepresentation()));
+
+  S.Stk.push<IntegralAP<false>>(Result);
   return true;
 }
 
@@ -1946,8 +1952,10 @@ bool CastPointerIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
   if (!CheckPointerToIntegralCast(S, OpPC, Ptr, BitWidth))
     return false;
 
-  S.Stk.push<IntegralAP<true>>(
-      IntegralAP<true>::from(Ptr.getIntegerRepresentation(), BitWidth));
+  auto Result = S.allocAP<IntegralAP<true>>(BitWidth);
+  Result.copy(APInt(BitWidth, Ptr.getIntegerRepresentation()));
+
+  S.Stk.push<IntegralAP<true>>(Result);
   return true;
 }
 
@@ -2051,6 +2059,100 @@ bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
       return false;
   }
   return Shorter == Longer.take_front(Shorter.size());
+}
+
+static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr,
+                                PrimType T) {
+
+  if (T == PT_IntAPS) {
+    auto &Val = Ptr.deref<IntegralAP<true>>();
+    if (!Val.singleWord()) {
+      uint64_t *NewMemory = new (S.P) uint64_t[Val.numWords()];
+      Val.take(NewMemory);
+    }
+  } else if (T == PT_IntAP) {
+    auto &Val = Ptr.deref<IntegralAP<false>>();
+    if (!Val.singleWord()) {
+      uint64_t *NewMemory = new (S.P) uint64_t[Val.numWords()];
+      Val.take(NewMemory);
+    }
+  } else if (T == PT_Float) {
+    auto &Val = Ptr.deref<Floating>();
+    if (!Val.singleWord()) {
+      uint64_t *NewMemory = new (S.P) uint64_t[Val.numWords()];
+      Val.take(NewMemory);
+    }
+  }
+}
+
+template <typename T>
+static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr) {
+  assert(needsAlloc<T>());
+  auto &Val = Ptr.deref<T>();
+  if (!Val.singleWord()) {
+    uint64_t *NewMemory = new (S.P) uint64_t[Val.numWords()];
+    Val.take(NewMemory);
+  }
+}
+
+static void finishGlobalRecurse(InterpState &S, const Pointer &Ptr) {
+  if (const Record *R = Ptr.getRecord()) {
+    for (const Record::Field &Fi : R->fields()) {
+      if (Fi.Desc->isPrimitive()) {
+        TYPE_SWITCH_ALLOC(Fi.Desc->getPrimType(), {
+          copyPrimitiveMemory<T>(S, Ptr.atField(Fi.Offset));
+        });
+        copyPrimitiveMemory(S, Ptr.atField(Fi.Offset), Fi.Desc->getPrimType());
+      } else
+        finishGlobalRecurse(S, Ptr.atField(Fi.Offset));
+    }
+    return;
+  }
+
+  if (const Descriptor *D = Ptr.getFieldDesc(); D && D->isArray()) {
+    unsigned NumElems = D->getNumElems();
+    if (NumElems == 0)
+      return;
+
+    if (D->isPrimitiveArray()) {
+      PrimType PT = D->getPrimType();
+      if (!needsAlloc(PT))
+        return;
+      assert(NumElems >= 1);
+      const Pointer EP = Ptr.atIndex(0);
+      bool AllSingleWord = true;
+      TYPE_SWITCH_ALLOC(PT, {
+        if (!EP.deref<T>().singleWord()) {
+          copyPrimitiveMemory<T>(S, EP);
+          AllSingleWord = false;
+        }
+      });
+      if (AllSingleWord)
+        return;
+      for (unsigned I = 1; I != D->getNumElems(); ++I) {
+        const Pointer EP = Ptr.atIndex(I);
+        copyPrimitiveMemory(S, EP, PT);
+      }
+    } else {
+      assert(D->isCompositeArray());
+      for (unsigned I = 0; I != D->getNumElems(); ++I) {
+        const Pointer EP = Ptr.atIndex(I).narrow();
+        finishGlobalRecurse(S, EP);
+      }
+    }
+  }
+}
+
+bool FinishInitGlobal(InterpState &S, CodePtr OpPC) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  finishGlobalRecurse(S, Ptr);
+  if (Ptr.canBeInitialized()) {
+    Ptr.initialize();
+    Ptr.activate();
+  }
+
+  return true;
 }
 
 // https://github.com/llvm/llvm-project/issues/102513

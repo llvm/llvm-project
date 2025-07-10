@@ -341,101 +341,6 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
   return llvm::json::Value(std::move(object));
 }
 
-static uint64_t GetDebugInfoSizeInSection(lldb::SBSection section) {
-  uint64_t debug_info_size = 0;
-  llvm::StringRef section_name(section.GetName());
-  if (section_name.starts_with(".debug") ||
-      section_name.starts_with("__debug") ||
-      section_name.starts_with(".apple") || section_name.starts_with("__apple"))
-    debug_info_size += section.GetFileByteSize();
-  size_t num_sub_sections = section.GetNumSubSections();
-  for (size_t i = 0; i < num_sub_sections; i++) {
-    debug_info_size +=
-        GetDebugInfoSizeInSection(section.GetSubSectionAtIndex(i));
-  }
-  return debug_info_size;
-}
-
-static uint64_t GetDebugInfoSize(lldb::SBModule module) {
-  uint64_t debug_info_size = 0;
-  size_t num_sections = module.GetNumSections();
-  for (size_t i = 0; i < num_sections; i++) {
-    debug_info_size += GetDebugInfoSizeInSection(module.GetSectionAtIndex(i));
-  }
-  return debug_info_size;
-}
-
-static std::string ConvertDebugInfoSizeToString(uint64_t debug_info) {
-  std::ostringstream oss;
-  oss << std::fixed << std::setprecision(1);
-  if (debug_info < 1024) {
-    oss << debug_info << "B";
-  } else if (debug_info < 1024 * 1024) {
-    double kb = double(debug_info) / 1024.0;
-    oss << kb << "KB";
-  } else if (debug_info < 1024 * 1024 * 1024) {
-    double mb = double(debug_info) / (1024.0 * 1024.0);
-    oss << mb << "MB";
-  } else {
-    double gb = double(debug_info) / (1024.0 * 1024.0 * 1024.0);
-    oss << gb << "GB";
-  }
-  return oss.str();
-}
-
-llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module,
-                               bool id_only) {
-  llvm::json::Object object;
-  if (!target.IsValid() || !module.IsValid())
-    return llvm::json::Value(std::move(object));
-
-  const char *uuid = module.GetUUIDString();
-  object.try_emplace("id", uuid ? std::string(uuid) : std::string(""));
-
-  if (id_only)
-    return llvm::json::Value(std::move(object));
-
-  object.try_emplace("name", std::string(module.GetFileSpec().GetFilename()));
-  char module_path_arr[PATH_MAX];
-  module.GetFileSpec().GetPath(module_path_arr, sizeof(module_path_arr));
-  std::string module_path(module_path_arr);
-  object.try_emplace("path", module_path);
-  if (module.GetNumCompileUnits() > 0) {
-    std::string symbol_str = "Symbols loaded.";
-    std::string debug_info_size;
-    uint64_t debug_info = GetDebugInfoSize(module);
-    if (debug_info > 0) {
-      debug_info_size = ConvertDebugInfoSizeToString(debug_info);
-    }
-    object.try_emplace("symbolStatus", symbol_str);
-    object.try_emplace("debugInfoSize", debug_info_size);
-    char symbol_path_arr[PATH_MAX];
-    module.GetSymbolFileSpec().GetPath(symbol_path_arr,
-                                       sizeof(symbol_path_arr));
-    std::string symbol_path(symbol_path_arr);
-    object.try_emplace("symbolFilePath", symbol_path);
-  } else {
-    object.try_emplace("symbolStatus", "Symbols not found.");
-  }
-  std::string load_address =
-      llvm::formatv("{0:x}",
-                    module.GetObjectFileHeaderAddress().GetLoadAddress(target))
-          .str();
-  object.try_emplace("addressRange", load_address);
-  std::string version_str;
-  uint32_t version_nums[3];
-  uint32_t num_versions =
-      module.GetVersion(version_nums, sizeof(version_nums) / sizeof(uint32_t));
-  for (uint32_t i = 0; i < num_versions; ++i) {
-    if (!version_str.empty())
-      version_str += ".";
-    version_str += std::to_string(version_nums[i]);
-  }
-  if (!version_str.empty())
-    object.try_emplace("version", version_str);
-  return llvm::json::Value(std::move(object));
-}
-
 // "Event": {
 //   "allOf": [ { "$ref": "#/definitions/ProtocolMessage" }, {
 //     "type": "object",
@@ -480,15 +385,6 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
   event.try_emplace("type", "event");
   EmplaceSafeString(event, "event", event_name);
   return event;
-}
-
-protocol::ExceptionBreakpointsFilter
-CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
-  protocol::ExceptionBreakpointsFilter filter;
-  filter.filter = bp.GetFilter();
-  filter.label = bp.GetLabel();
-  filter.defaultState = ExceptionBreakpoint::kDefaultValue;
-  return filter;
 }
 
 // "StackFrame": {
@@ -552,7 +448,7 @@ CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
 //   },
 //   "required": [ "id", "name", "line", "column" ]
 // }
-llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
+llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
                                    lldb::SBFormat &format) {
   llvm::json::Object object;
   int64_t frame_id = MakeDAPFrameID(frame);
@@ -581,9 +477,9 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
 
   EmplaceSafeString(object, "name", frame_name);
 
-  auto target = frame.GetThread().GetProcess().GetTarget();
-  auto source = CreateSource(frame.GetPCAddress(), target);
-  if (!IsAssemblySource(source)) {
+  std::optional<protocol::Source> source = dap.ResolveSource(frame);
+
+  if (source && !IsAssemblySource(*source)) {
     // This is a normal source with a valid line entry.
     auto line_entry = frame.GetLineEntry();
     object.try_emplace("line", line_entry.GetLine());
@@ -593,8 +489,7 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
     // This is a source where the disassembly is used, but there is a valid
     // symbol. Calculate the line of the current PC from the start of the
     // current symbol.
-    lldb::SBTarget target = frame.GetThread().GetProcess().GetTarget();
-    lldb::SBInstructionList inst_list = target.ReadInstructions(
+    lldb::SBInstructionList inst_list = dap.target.ReadInstructions(
         frame.GetSymbol().GetStartAddress(), frame.GetPCAddress(), nullptr);
     size_t inst_line = inst_list.GetSize();
 
@@ -607,7 +502,8 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
     object.try_emplace("column", 1);
   }
 
-  object.try_emplace("source", std::move(source));
+  if (source)
+    object.try_emplace("source", std::move(source).value());
 
   const auto pc = frame.GetPC();
   if (pc != LLDB_INVALID_ADDRESS) {

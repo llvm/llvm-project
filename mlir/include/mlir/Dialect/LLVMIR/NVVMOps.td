@@ -965,19 +965,21 @@ def NVVM_ElectSyncOp : NVVM_Op<"elect.sync">
   let summary = "Elect one leader thread";
   let description = [{
     The `elect.sync` instruction elects one predicated active leader
-    thread from among a set of threads specified in membermask.
-    The membermask is set to `0xFFFFFFFF` for the current version
-    of this Op. The predicate result is set to `True` for the
-    leader thread, and `False` for all other threads.
+    thread from among a set of threads specified in the `membermask`.
+    When the `membermask` is not provided explicitly, a default value
+    of `0xFFFFFFFF` is used. The predicate result is set to `True` for
+    the leader thread, and `False` for all other threads.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-elect-sync)
   }];
 
+  let arguments = (ins Optional<I32>:$membermask);
   let results = (outs I1:$pred);
-  let assemblyFormat = "attr-dict `->` type(results)";  
+  let assemblyFormat = "($membermask^)? attr-dict `->` type(results)";
   string llvmBuilder = [{
     auto *resultTuple = createIntrinsicCall(builder,
-        llvm::Intrinsic::nvvm_elect_sync, {builder.getInt32(0xFFFFFFFF)});
+        llvm::Intrinsic::nvvm_elect_sync,
+        {$membermask ? $membermask : builder.getInt32(0xFFFFFFFF)});
     // Extract the second value into $pred
     $pred = builder.CreateExtractValue(resultTuple, 1);
   }];
@@ -3455,6 +3457,7 @@ def NVVM_Tcgen05MmaSmemDescOp : NVVM_Op<"tcgen05.mma_smem_desc", []> {
     properties of multiplicand matrix in shared memory including its location
     in the shared memory of the current CTA.
 
+    ```
     +-----------+------+------------------------------------------------------+
     | Bit-field | Size | Description                                          |
     +-----------+------+------------------------------------------------------+
@@ -3477,6 +3480,7 @@ def NVVM_Tcgen05MmaSmemDescOp : NVVM_Op<"tcgen05.mma_smem_desc", []> {
     |           |      |   6: 32-Byte swizzling                               |
     |           |      |   (Values 3, 5 and 7 are invalid)                    |
     +-----------+------+------------------------------------------------------+    
+    ```
 
     Example:
     ```mlir
@@ -3578,7 +3582,8 @@ def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMa<[100, 101]>]> {
     elements from adjacent columns into a single 32-bit element during the load.
 
     The following table describes the size of the vector for various combinations
-    of `num` and `shape` attributes
+    of `num` and `shape` attributes:
+    ```
     |=====================================================================|
     | num/shape      |     16x32bx2/16x64b/32x32b |  16x128b   | 16x256b  |
     |=====================================================================|
@@ -3591,6 +3596,7 @@ def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMa<[100, 101]>]> {
     | x64            |          64                |    128     |    NA    |
     | x128           |          128               |    NA      |    NA    |
     |=====================================================================|
+    ```
 
     Example:
     ```mlir
@@ -3666,7 +3672,8 @@ def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMa<[100, 101]>]> {
     in the register into two 16-bit elements and store them in adjacent columns.
 
     The following table describes the size of the vector for various combinations
-    of `num` and `shape` attributes
+    of `num` and `shape` attributes:
+    ```
     |=====================================================================|
     | num/shape      |     16x32bx2/16x64b/32x32b |  16x128b   | 16x256b  |
     |=====================================================================|
@@ -3679,6 +3686,7 @@ def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMa<[100, 101]>]> {
     | x64            |          64                |    128     |    NA    |
     | x128           |          128               |    NA      |    NA    |
     |=====================================================================|
+    ```
 
     Example:
     ```mlir
@@ -3835,7 +3843,7 @@ def NVVM_DotAccumulate2WayOp : NVVM_Op<"dot.accumulate.2way"> {
 // NVVM target attribute.
 //===----------------------------------------------------------------------===//
 
-def NVVM_TargettAttr : NVVM_Attr<"NVVMTarget", "target", 
+def NVVM_TargetAttr : NVVM_Attr<"NVVMTarget", "target", 
   [DeclareAttrInterfaceMethods<GPUTargetAttrVerifyInterface>]> {
   let description = [{
     GPU target attribute for controlling compilation of NVIDIA targets. All

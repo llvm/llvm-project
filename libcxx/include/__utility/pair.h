@@ -209,21 +209,12 @@ struct pair
 #  endif
 
 #  if _LIBCPP_STD_VER >= 23
-  // TODO: Remove this workaround in LLVM 20. The bug got fixed in Clang 18.
-  // This is a workaround for http://llvm.org/PR60710. We should be able to remove it once Clang is fixed.
-  template <class _PairLike>
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool __pair_like_explicit_wknd() {
-    if constexpr (__pair_like_no_subrange<_PairLike>) {
-      return !is_convertible_v<decltype(std::get<0>(std::declval<_PairLike&&>())), first_type> ||
-             !is_convertible_v<decltype(std::get<1>(std::declval<_PairLike&&>())), second_type>;
-    }
-    return false;
-  }
-
   template <__pair_like_no_subrange _PairLike>
     requires(is_constructible_v<first_type, decltype(std::get<0>(std::declval<_PairLike &&>()))> &&
              is_constructible_v<second_type, decltype(std::get<1>(std::declval<_PairLike &&>()))>)
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit(__pair_like_explicit_wknd<_PairLike>()) pair(_PairLike&& __p)
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit(
+      !is_convertible_v<decltype(std::get<0>(std::declval<_PairLike&&>())), first_type> ||
+      !is_convertible_v<decltype(std::get<1>(std::declval<_PairLike&&>())), second_type>) pair(_PairLike&& __p)
       : first(std::get<0>(std::forward<_PairLike>(__p))), second(std::get<1>(std::forward<_PairLike>(__p))) {}
 #  endif
 

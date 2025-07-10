@@ -118,6 +118,10 @@ public:
 
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateResourceGetPointer,
                                    resource_getpointer)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromBinding,
+                                   resource_handlefrombinding)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromImplicitBinding,
+                                   resource_handlefromimplicitbinding)
   GENERATE_HLSL_INTRINSIC_FUNCTION(BufferUpdateCounter, resource_updatecounter)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrierWithGroupSync,
                                    group_memory_barrier_with_group_sync)
@@ -125,15 +129,6 @@ public:
   //===----------------------------------------------------------------------===//
   // End of reserved area for HLSL intrinsic getters.
   //===----------------------------------------------------------------------===//
-
-  // Returns ID of the intrinsic that initializes resource handle from binding
-  // and a bool value indicating whether the last argument of the intrinsic is
-  // the resource name (not all targets need that).
-  std::pair<llvm::Intrinsic::ID, bool> getCreateHandleFromBindingIntrinsic();
-
-  // Same as above but for implicit binding.
-  std::pair<llvm::Intrinsic::ID, bool>
-  getCreateHandleFromImplicitBindingIntrinsic();
 
 protected:
   CodeGenModule &CGM;

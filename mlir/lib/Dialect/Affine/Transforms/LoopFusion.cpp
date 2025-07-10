@@ -22,9 +22,7 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -445,10 +443,15 @@ static Value createPrivateMemRef(AffineForOp forOp,
   // Replace all users of 'oldMemRef' with 'newMemRef'.
   Operation *domFilter =
       getDominanceFilterForPrivateMemRefRepl(sliceInsertionBlock, storeOps);
+  auto userFilterFn = [&](Operation *user) {
+    auto domInfo = std::make_unique<DominanceInfo>(
+        domFilter->getParentOfType<FunctionOpInterface>());
+    return domInfo->dominates(domFilter, user);
+  };
   LogicalResult res = replaceAllMemRefUsesWith(
       oldMemRef, newMemRef, /*extraIndices=*/{}, indexRemap,
       /*extraOperands=*/outerIVs,
-      /*symbolOperands=*/{}, domFilter);
+      /*symbolOperands=*/{}, userFilterFn);
   assert(succeeded(res) &&
          "replaceAllMemrefUsesWith should always succeed here");
   (void)res;
@@ -997,6 +1000,8 @@ public:
           if (producerConsumerMemrefs.count(
                   cast<AffineWriteOpInterface>(op).getMemRef()))
             dstMemrefOps.push_back(op);
+        if (dstMemrefOps.empty())
+          continue;
         unsigned dstLoopDepthTest =
             getInnermostCommonLoopDepth(dstMemrefOps) - numSurroundingLoops;
 

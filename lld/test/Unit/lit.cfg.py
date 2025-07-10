@@ -3,6 +3,7 @@
 # Configuration file for the 'lit' test runner.
 
 import os
+import subprocess
 
 import lit.formats
 

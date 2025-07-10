@@ -1393,3 +1393,31 @@ fir.local {type = local_init} @x.localizer : f32 init {
 ^bb0(%arg0: f32, %arg1: f32):
   fir.yield(%arg0 : f32)
 }
+
+// -----
+
+func.func @wrong_weights_number_in_if_then(%cond: i1) {
+// expected-error @below {{expects number of region weights to match number of regions: 1 vs 2}}
+  fir.if %cond weights([50]) {
+  }
+  return
+}
+
+// -----
+
+func.func @wrong_weights_number_in_if_then_else(%cond: i1) {
+// expected-error @below {{expects number of region weights to match number of regions: 3 vs 2}}
+  fir.if %cond weights([50, 40, 10]) {
+  } else {
+  }
+  return
+}
+
+// -----
+
+func.func @negative_weight_in_if_then(%cond: i1) {
+// expected-error @below {{weight #0 must be non-negative}}
+  fir.if %cond weights([-1, 101]) {
+  }
+  return
+}

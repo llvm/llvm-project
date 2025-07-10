@@ -19,11 +19,13 @@ add_clang_library(clangCIR
   CIRGenDeclOpenACC.cpp
   CIRGenExpr.cpp
   CIRGenExprAggregate.cpp
+  CIRGenExprComplex.cpp
   CIRGenExprConstant.cpp
   CIRGenExprScalar.cpp
   CIRGenFunction.cpp
   CIRGenItaniumCXXABI.cpp
   CIRGenModule.cpp
+  CIRGenOpenACC.cpp
   CIRGenOpenACCClause.cpp
   CIRGenRecordLayoutBuilder.cpp
   CIRGenStmt.cpp
