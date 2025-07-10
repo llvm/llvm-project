@@ -2423,6 +2423,7 @@ VarDecl *BuildForRangeVarDecl(Sema &SemaRef, SourceLocation Loc,
   VarDecl *Decl = VarDecl::Create(SemaRef.Context, DC, Loc, Loc, II, Type,
                                   TInfo, SC_None);
   Decl->setImplicit();
+  Decl->setCXXForRangeImplicitVar(true);
   return Decl;
 }
 

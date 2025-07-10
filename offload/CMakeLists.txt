@@ -35,6 +35,8 @@ elseif(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
   return()
 endif()
 
+set(OFFLOAD_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+
 if(OPENMP_STANDALONE_BUILD)
   set(OFFLOAD_LIBDIR_SUFFIX "" CACHE STRING
     "Suffix of lib installation directory, e.g. 64 => lib64")
@@ -454,6 +456,7 @@ add_subdirectory(plugins-nextgen)
 
 add_subdirectory(tools)
 add_subdirectory(DeviceRTL)
+add_subdirectory(docs)
 
 # Build target agnostic offloading library.
 add_subdirectory(libomptarget)
