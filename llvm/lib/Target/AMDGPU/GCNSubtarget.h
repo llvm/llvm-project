@@ -231,6 +231,7 @@ protected:
   bool HasSALUFloatInsts = false;
   bool HasPseudoScalarTrans = false;
   bool HasRestrictedSOffset = false;
+  bool Has64BitLiterals = false;
   bool HasBitOp3Insts = false;
   bool HasTransposeLoadF4F6Insts = false;
   bool HasPrngInst = false;
@@ -1383,6 +1384,9 @@ public:
   /// \returns true if the target has s_wait_xcnt insertion. Supported for
   /// GFX1250.
   bool hasWaitXCnt() const { return HasWaitXcnt; }
+
+  // A single DWORD instructions can use a 64-bit literal.
+  bool has64BitLiterals() const { return Has64BitLiterals; }
 
   bool hasPointSampleAccel() const { return HasPointSampleAccel; }
 
