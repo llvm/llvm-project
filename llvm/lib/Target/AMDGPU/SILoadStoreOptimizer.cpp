@@ -1054,12 +1054,13 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
     return false;
 
   if (CI.InstClass == TBUFFER_LOAD || CI.InstClass == TBUFFER_STORE) {
+
     const llvm::AMDGPU::GcnBufferFormatInfo *Info0 =
-        AMDGPU::getGcnBufferFormatInfo(CI.Format, STI);
+        llvm::AMDGPU::getGcnBufferFormatInfo(CI.Format, STI);
     if (!Info0)
       return false;
     const llvm::AMDGPU::GcnBufferFormatInfo *Info1 =
-        AMDGPU::getGcnBufferFormatInfo(Paired.Format, STI);
+        llvm::AMDGPU::getGcnBufferFormatInfo(Paired.Format, STI);
     if (!Info1)
       return false;
 
