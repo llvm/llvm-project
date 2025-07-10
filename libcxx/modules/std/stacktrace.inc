@@ -33,5 +33,8 @@ export namespace std {
   // [stacktrace.basic.hash], hash support
   using std::hash;
 
+  // [stacktrace.format], formatting support
+  using std::formatter;
+
 #endif // _LIBCPP_STD_VER >= 23
 } // namespace std

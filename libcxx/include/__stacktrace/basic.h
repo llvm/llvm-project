@@ -7,10 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_BASIC_STACKTRACE
-#define _LIBCPP_BASIC_STACKTRACE
+#ifndef _LIBCPP_STACKTRACE_BASIC
+#define _LIBCPP_STACKTRACE_BASIC
 
 #include <__config>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 23
 
 #  include <__functional/hash.h>
@@ -26,13 +34,6 @@
 #  include <__stacktrace/base.h>
 #  include <__stacktrace/entry.h>
 #  include <__stacktrace/to_string.h>
-
-#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#    pragma GCC system_header
-#  endif
-
-_LIBCPP_PUSH_MACROS
-#  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -244,7 +245,8 @@ using stacktrace = basic_stacktrace<polymorphic_allocator<stacktrace_entry>>;
 
 _LIBCPP_END_NAMESPACE_STD
 
+#endif // _LIBCPP_STD_VER >= 23
+
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_STD_VER >= 23
-#endif // _LIBCPP_BASIC_STACKTRACE
+#endif // _LIBCPP_STACKTRACE_BASIC
