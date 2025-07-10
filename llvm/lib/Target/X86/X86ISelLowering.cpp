@@ -53574,6 +53574,10 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
 
     SDLoc LdDL(Ld);
     SDLoc StDL(N);
+
+    // Remove any range metadata as we're converting to f64 load/store.
+    Ld->getMemOperand()->clearRanges();
+
     // Lower to a single movq load/store pair.
     SDValue NewLd = DAG.getLoad(MVT::f64, LdDL, Ld->getChain(),
                                 Ld->getBasePtr(), Ld->getMemOperand());
