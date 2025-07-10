@@ -18,6 +18,7 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/VersionTuple.h"
 #include <cstdint>
@@ -29,7 +30,7 @@ namespace llvm {
 
 class MachObjectWriter;
 
-class MCMachObjectTargetWriter : public MCObjectTargetWriter {
+class LLVM_ABI MCMachObjectTargetWriter : public MCObjectTargetWriter {
   const unsigned Is64Bit : 1;
   const uint32_t CPUType;
 protected:
@@ -83,7 +84,7 @@ public:
   /// @}
 };
 
-class MachObjectWriter final : public MCObjectWriter {
+class LLVM_ABI MachObjectWriter final : public MCObjectWriter {
 public:
   struct DataRegionData {
     MachO::DataRegionType Kind;
@@ -114,7 +115,7 @@ private:
     uint8_t SectionIndex;
 
     // Support lexicographic sorting.
-    bool operator<(const MachSymbolData &RHS) const;
+    LLVM_ABI bool operator<(const MachSymbolData &RHS) const;
   };
 
   struct IndirectSymbolData {
@@ -141,7 +142,7 @@ private:
 
   std::vector<DataRegionData> DataRegions;
 
-  SectionAddrMap SectionAddress;
+  DenseMap<const MCSection *, uint64_t> SectionAddress;
 
   // List of sections in layout order. Virtual sections are after non-virtual
   // sections.
@@ -184,17 +185,11 @@ public:
 
   const MCSymbol &findAliasedSymbol(const MCSymbol &Sym) const;
 
-  /// \name Lifetime management Methods
-  /// @{
-
   void reset() override;
-
-  /// @}
+  void setAssembler(MCAssembler *Asm) override;
 
   /// \name Utility Methods
   /// @{
-
-  bool isFixupKindPCRel(const MCAssembler &Asm, unsigned Kind);
 
   std::vector<IndirectSymbolData> &getIndirectSymbols() {
     return IndirectSymbols;
@@ -203,13 +198,12 @@ public:
   const llvm::SmallVectorImpl<MCSection *> &getSectionOrder() const {
     return SectionOrder;
   }
-  SectionAddrMap &getSectionAddressMap() { return SectionAddress; }
   MCLOHContainer &getLOHContainer() { return LOHContainer; }
 
   uint64_t getSectionAddress(const MCSection *Sec) const {
     return SectionAddress.lookup(Sec);
   }
-  uint64_t getSymbolAddress(const MCSymbol &S, const MCAssembler &Asm) const;
+  uint64_t getSymbolAddress(const MCSymbol &S) const;
 
   uint64_t getFragmentAddress(const MCAssembler &Asm,
                               const MCFragment *Fragment) const;
@@ -328,9 +322,8 @@ public:
     Relocations[Sec].push_back(P);
   }
 
-  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
-                        const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue) override;
+  void recordRelocation(const MCFragment &F, const MCFixup &Fixup,
+                        MCValue Target, uint64_t &FixedValue) override;
 
   void bindIndirectSymbols(MCAssembler &Asm);
 
@@ -342,16 +335,15 @@ public:
 
   void computeSectionAddresses(const MCAssembler &Asm);
 
-  void executePostLayoutBinding(MCAssembler &Asm) override;
+  void executePostLayoutBinding() override;
 
-  bool isSymbolRefDifferenceFullyResolvedImpl(const MCAssembler &Asm,
-                                              const MCSymbol &SymA,
+  bool isSymbolRefDifferenceFullyResolvedImpl(const MCSymbol &SymA,
                                               const MCFragment &FB, bool InSet,
                                               bool IsPCRel) const override;
 
   void populateAddrSigSection(MCAssembler &Asm);
 
-  uint64_t writeObject(MCAssembler &Asm) override;
+  uint64_t writeObject() override;
 };
 } // end namespace llvm
 

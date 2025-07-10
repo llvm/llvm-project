@@ -74,25 +74,19 @@ SourcePosition OpenMPCounterVisitor::getLocation(const OpenMPConstruct &c) {
           // the directive field.
           [&](const auto &c) -> SourcePosition {
             const CharBlock &source{std::get<0>(c.t).source};
-            return (parsing->allCooked().GetSourcePositionRange(source))->first;
+            return parsing->allCooked().GetSourcePositionRange(source)->first;
           },
           [&](const OpenMPAtomicConstruct &c) -> SourcePosition {
-            return std::visit(
-                [&](const auto &o) -> SourcePosition {
-                  const CharBlock &source{std::get<Verbatim>(o.t).source};
-                  return parsing->allCooked()
-                      .GetSourcePositionRange(source)
-                      ->first;
-                },
-                c.u);
+            const CharBlock &source{c.source};
+            return parsing->allCooked().GetSourcePositionRange(source)->first;
           },
           [&](const OpenMPSectionConstruct &c) -> SourcePosition {
             const CharBlock &source{c.source};
-            return (parsing->allCooked().GetSourcePositionRange(source))->first;
+            return parsing->allCooked().GetSourcePositionRange(source)->first;
           },
           [&](const OpenMPUtilityConstruct &c) -> SourcePosition {
             const CharBlock &source{c.source};
-            return (parsing->allCooked().GetSourcePositionRange(source))->first;
+            return parsing->allCooked().GetSourcePositionRange(source)->first;
           },
       },
       c.u);
@@ -127,11 +121,16 @@ std::string OpenMPCounterVisitor::getName(const OpenMPConstruct &c) {
   return std::visit(
       Fortran::common::visitors{
           [&](const OpenMPStandaloneConstruct &c) -> std::string {
-            return std::visit(
-                [&](const auto &c) {
-                  // Get source from the directive or verbatim fields
-                  const CharBlock &source{std::get<0>(c.t).source};
-                  return normalize_construct_name(source.ToString());
+            return common::visit(
+                common::visitors{
+                    [&](const OmpMetadirectiveDirective &d) {
+                      return normalize_construct_name(d.source.ToString());
+                    },
+                    [&](auto &&d) {
+                      const CharBlock &source{
+                          std::get<OmpDirectiveName>(d.v.t).source};
+                      return normalize_construct_name(source.ToString());
+                    },
                 },
                 c.u);
           },
@@ -152,14 +151,9 @@ std::string OpenMPCounterVisitor::getName(const OpenMPConstruct &c) {
             return normalize_construct_name(source.ToString());
           },
           [&](const OpenMPAtomicConstruct &c) -> std::string {
-            return std::visit(
-                [&](const auto &c) {
-                  // Get source from the verbatim fields
-                  const CharBlock &source{std::get<Verbatim>(c.t).source};
-                  return "atomic-" +
-                      normalize_construct_name(source.ToString());
-                },
-                c.u);
+            auto &dirSpec = std::get<OmpDirectiveSpecification>(c.t);
+            auto &dirName = std::get<OmpDirectiveName>(dirSpec.t);
+            return normalize_construct_name(dirName.source.ToString());
           },
           [&](const OpenMPUtilityConstruct &c) -> std::string {
             const CharBlock &source{c.source};
@@ -262,8 +256,9 @@ void OpenMPCounterVisitor::Post(const OmpScheduleClause::Kind &c) {
       "type=" + std::string{OmpScheduleClause::EnumToString(c)} + ";";
 }
 void OpenMPCounterVisitor::Post(const OmpDirectiveNameModifier &c) {
-  clauseDetails +=
-      "name_modifier=" + llvm::omp::getOpenMPDirectiveName(c.v).str() + ";";
+  clauseDetails += "name_modifier=" +
+      llvm::omp::getOpenMPDirectiveName(c.v, llvm::omp::FallbackVersion).str() +
+      ";";
 }
 void OpenMPCounterVisitor::Post(const OmpClause &c) {
   PostClauseCommon(normalize_clause_name(c.source.ToString()));

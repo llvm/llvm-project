@@ -41,7 +41,7 @@
 STATISTIC(NumFrameLoopProbe, "Number of loop stack probes used in prologue");
 STATISTIC(NumFrameExtraProbe,
           "Number of extra stack probes generated in prologue");
-STATISTIC(NumFunctionUsingPush2Pop2, "Number of funtions using push2/pop2");
+STATISTIC(NumFunctionUsingPush2Pop2, "Number of functions using push2/pop2");
 
 using namespace llvm;
 
@@ -1304,7 +1304,7 @@ X86FrameLowering::calculateMaxStackAlign(const MachineFunction &MF) const {
 
 void X86FrameLowering::BuildStackAlignAND(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator MBBI,
-                                          const DebugLoc &DL, unsigned Reg,
+                                          const DebugLoc &DL, Register Reg,
                                           uint64_t MaxAlign) const {
   uint64_t Val = -MaxAlign;
   unsigned AndOp = getANDriOpcode(Uses64BitFramePtr, Val);
@@ -1768,7 +1768,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   int stackGrowth = -SlotSize;
 
   // Find the funclet establisher parameter
-  Register Establisher = X86::NoRegister;
+  MCRegister Establisher;
   if (IsClrFunclet)
     Establisher = Uses64BitFramePtr ? X86::RCX : X86::ECX;
   else if (IsFunclet)
@@ -2081,7 +2081,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   int SEHFrameOffset = 0;
-  unsigned SPOrEstablisher;
+  Register SPOrEstablisher;
   if (IsFunclet) {
     if (IsClrFunclet) {
       // The establisher parameter passed to a CLR funclet is actually a pointer
@@ -2399,7 +2399,8 @@ X86FrameLowering::getWinEHFuncletFrameSize(const MachineFunction &MF) const {
 static bool isTailCallOpcode(unsigned Opc) {
   return Opc == X86::TCRETURNri || Opc == X86::TCRETURNdi ||
          Opc == X86::TCRETURNmi || Opc == X86::TCRETURNri64 ||
-         Opc == X86::TCRETURNdi64 || Opc == X86::TCRETURNmi64;
+         Opc == X86::TCRETURNri64_ImpCall || Opc == X86::TCRETURNdi64 ||
+         Opc == X86::TCRETURNmi64;
 }
 
 void X86FrameLowering::emitEpilogue(MachineFunction &MF,
@@ -2431,7 +2432,8 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   uint64_t NumBytes = 0;
 
   bool NeedsDwarfCFI = (!MF.getTarget().getTargetTriple().isOSDarwin() &&
-                        !MF.getTarget().getTargetTriple().isOSWindows()) &&
+                        !MF.getTarget().getTargetTriple().isOSWindows() &&
+                        !MF.getTarget().getTargetTriple().isUEFI()) &&
                        MF.needsFrameMoves();
 
   Register ArgBaseReg;
@@ -2913,13 +2915,14 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
   // 1. Use push2 when
   //       a) number of CSR > 1 if no need padding
   //       b) number of CSR > 2 if need padding
+  //       c) stack alignment >= 16 bytes
   // 2. When the number of CSR push is odd
   //    a. Start to use push2 from the 1st push if stack is 16B aligned.
   //    b. Start to use push2 from the 2nd push if stack is not 16B aligned.
   // 3. When the number of CSR push is even, start to use push2 from the 1st
   //    push and make the stack 16B aligned before the push
   unsigned NumRegsForPush2 = 0;
-  if (STI.hasPush2Pop2()) {
+  if (STI.hasPush2Pop2() && getStackAlignment() >= 16) {
     unsigned NumCSGPR = llvm::count_if(CSI, [](const CalleeSavedInfo &I) {
       return X86::GR64RegClass.contains(I.getReg());
     });
@@ -3018,8 +3021,12 @@ bool X86FrameLowering::spillCalleeSavedRegisters(
   // Push GPRs. It increases frame size.
   const MachineFunction &MF = *MBB.getParent();
   const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
-  if (X86FI->padForPush2Pop2())
-    emitSPUpdate(MBB, MI, DL, -(int64_t)SlotSize, /*InEpilogue=*/false);
+  if (X86FI->padForPush2Pop2()) {
+    assert(SlotSize == 8 && "Unexpected slot size for padding!");
+    BuildMI(MBB, MI, DL, TII.get(X86::PUSH64r))
+        .addReg(X86::RAX, RegState::Undef)
+        .setMIFlag(MachineInstr::FrameSetup);
+  }
 
   // Update LiveIn of the basic block and decide whether we can add a kill flag
   // to the use.
@@ -4447,7 +4454,7 @@ bool X86FrameLowering::skipSpillFPBP(
     // And later LCMPXCHG16B_SAVE_RBX is expanded to restore RBX from SaveRbx.
     // We should skip this instruction sequence.
     int FI;
-    unsigned Reg;
+    Register Reg;
     while (!(MI->getOpcode() == TargetOpcode::COPY &&
              MI->getOperand(1).getReg() == X86::RBX) &&
            !((Reg = TII.isStoreToStackSlot(*MI, FI)) && Reg == X86::RBX))

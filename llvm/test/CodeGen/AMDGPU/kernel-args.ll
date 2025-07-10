@@ -1664,8 +1664,8 @@ entry:
 define amdgpu_kernel void @v5i16_arg(ptr addrspace(1) nocapture %out, <5 x i16> %in) nounwind {
 ; SI-LABEL: v5i16_arg:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dword s6, s[4:5], 0xf
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; SI-NEXT:    s_load_dword s6, s[4:5], 0xf
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0xd
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
@@ -5158,8 +5158,8 @@ define amdgpu_kernel void @array_3xi32(i16 %arg0, [3 x i32] %arg1) {
 ; CM-NEXT:     MOV * T3.X, KC0[3].X,
 ; CM-NEXT:     MOV * T4.X, literal.x,
 ; CM-NEXT:    0(0.000000e+00), 0(0.000000e+00)
-  store volatile i16 %arg0, ptr addrspace(1) undef
-  store volatile [3 x i32] %arg1, ptr addrspace(1) undef
+  store volatile i16 %arg0, ptr addrspace(1) poison
+  store volatile [3 x i32] %arg1, ptr addrspace(1) poison
   ret void
 }
 
@@ -5191,16 +5191,16 @@ define amdgpu_kernel void @array_3xi16(i8 %arg0, [3 x i16] %arg1) {
 ; VI-NEXT:    s_addc_u32 s1, s5, 0
 ; VI-NEXT:    s_add_u32 s2, s0, 2
 ; VI-NEXT:    s_addc_u32 s3, s1, 0
-; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    s_add_u32 s0, s4, 42
-; VI-NEXT:    s_addc_u32 s1, s5, 0
 ; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
-; VI-NEXT:    flat_load_ushort v4, v[0:1]
-; VI-NEXT:    flat_load_ushort v2, v[2:3]
+; VI-NEXT:    s_add_u32 s0, s4, 42
+; VI-NEXT:    s_addc_u32 s1, s5, 0
+; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
+; VI-NEXT:    v_mov_b32_e32 v4, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
+; VI-NEXT:    flat_load_ushort v4, v[4:5]
+; VI-NEXT:    flat_load_ushort v2, v[2:3]
 ; VI-NEXT:    flat_load_ushort v0, v[0:1]
 ; VI-NEXT:    s_load_dword s0, s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -5208,9 +5208,9 @@ define amdgpu_kernel void @array_3xi16(i8 %arg0, [3 x i16] %arg1) {
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    flat_store_byte v[0:1], v1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    flat_store_short v[0:1], v2
-; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    flat_store_short v[0:1], v4
+; VI-NEXT:    s_waitcnt vmcnt(0)
+; VI-NEXT:    flat_store_short v[0:1], v2
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    flat_store_short v[0:1], v0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -5329,8 +5329,8 @@ define amdgpu_kernel void @array_3xi16(i8 %arg0, [3 x i16] %arg1) {
 ; CM-NEXT:     MOV T2.Y, 0.0,
 ; CM-NEXT:     MOV * T2.Z, 0.0,
 ; CM-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-  store volatile i8 %arg0, ptr addrspace(1) undef
-  store volatile [3 x i16] %arg1, ptr addrspace(1) undef
+  store volatile i8 %arg0, ptr addrspace(1) poison
+  store volatile [3 x i16] %arg1, ptr addrspace(1) poison
   ret void
 }
 
@@ -5387,7 +5387,7 @@ define amdgpu_kernel void @small_array_round_down_offset(i8, [1 x i8] %arg) {
 ; EGCM-NEXT:     MOV * T1.X, literal.x,
 ; EGCM-NEXT:    0(0.000000e+00), 0(0.000000e+00)
   %val = extractvalue [1 x i8] %arg, 0
-  store volatile i8 %val, ptr addrspace(1) undef
+  store volatile i8 %val, ptr addrspace(1) poison
   ret void
 }
 

@@ -180,7 +180,7 @@ void PathMappingList::Dump(Stream *s, int pair_index) {
   }
 }
 
-llvm::json::Value PathMappingList::ToJSON() {
+llvm::json::Value PathMappingList::ToJSON() const {
   llvm::json::Array entries;
   std::lock_guard<std::mutex> lock(m_pairs_mutex);
   for (const auto &pair : m_pairs) {

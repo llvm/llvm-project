@@ -10,12 +10,7 @@
 #include "COFFLinkerContext.h"
 #include "InputFiles.h"
 #include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Memory.h"
-#include "lld/Common/Strings.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Demangle/Demangle.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -58,10 +53,6 @@ coff::operator<<(const COFFSyncStream &s,
                  const llvm::object::Archive::Symbol *sym) {
   s << maybeDemangleSymbol(s.ctx, sym->getName());
   return s;
-}
-
-const COFFSyncStream &coff::operator<<(const COFFSyncStream &s, Symbol *sym) {
-  return s << maybeDemangleSymbol(s.ctx, sym->getName());
 }
 
 namespace coff {

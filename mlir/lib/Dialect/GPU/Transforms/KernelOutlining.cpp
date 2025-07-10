@@ -16,7 +16,6 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Utils/GPUUtils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -266,8 +265,8 @@ gpu::GPUFuncOp mlir::outlineKernelFunc(gpu::LaunchOp launchOp,
                                        StringRef kernelFnName,
                                        llvm::SmallVectorImpl<Value> &operands) {
   DenseSet<Value> inputOperandSet;
-  inputOperandSet.insert(operands.begin(), operands.end());
-  SetVector<Value> operandSet(operands.begin(), operands.end());
+  inputOperandSet.insert_range(operands);
+  SetVector<Value> operandSet(llvm::from_range, operands);
   auto funcOp = outlineKernelFuncImpl(launchOp, kernelFnName, operandSet);
   for (auto operand : operandSet) {
     if (!inputOperandSet.count(operand))

@@ -15,6 +15,7 @@
 
 #include "shared/rpc.h"
 #include "shared/rpc_opcodes.h"
+#include "shared/rpc_server.h"
 
 using namespace llvm;
 using namespace omp;
@@ -88,10 +89,9 @@ static rpc::Status runServer(plugin::GenericDeviceTy &Device, void *Buffer) {
       handleOffloadOpcodes(Device, *Port, Device.getWarpSize());
 
   // Let the `libc` library handle any other unhandled opcodes.
-#ifdef LIBOMPTARGET_RPC_SUPPORT
   if (Status == rpc::RPC_UNHANDLED_OPCODE)
-    Status = handle_libc_opcodes(*Port, Device.getWarpSize());
-#endif
+    Status = LIBC_NAMESPACE::shared::handle_libc_opcodes(*Port,
+                                                         Device.getWarpSize());
 
   Port->close();
 
@@ -176,7 +176,8 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
       TARGET_ALLOC_HOST);
   if (!RPCBuffer)
     return plugin::Plugin::error(
-        "Failed to initialize RPC server for device %d", Device.getDeviceId());
+        error::ErrorCode::UNKNOWN,
+        "failed to initialize RPC server for device %d", Device.getDeviceId());
 
   // Get the address of the RPC client from the device.
   plugin::GlobalTy ClientGlobal("__llvm_rpc_client", sizeof(rpc::Client));

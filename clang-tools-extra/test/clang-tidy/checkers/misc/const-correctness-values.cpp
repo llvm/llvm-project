@@ -1,7 +1,8 @@
-// RUN: %check_clang_tidy %s misc-const-correctness %t -- \
+// RUN: %check_clang_tidy --match-partial-fixes %s misc-const-correctness %t -- \
 // RUN:   -config="{CheckOptions: {\
 // RUN:     misc-const-correctness.TransformValues: true, \
 // RUN:     misc-const-correctness.WarnPointersAsValues: false, \
+// RUN:     misc-const-correctness.WarnPointersAsPointers: false, \
 // RUN:     misc-const-correctness.TransformPointersAsValues: false \
 // RUN:   }}" -- -fno-delayed-template-parsing -fexceptions
 
@@ -1006,3 +1007,11 @@ template <typename T> void f() {
   x[T{}] = 3;
 }
 } // namespace gh127776_false_positive
+
+namespace gh132931_false_positive {
+using T = const int;
+void valid(int i) {
+  const int arr0[] = {1, 2, 3};
+  T arr1[] = {1, 2, 3};
+}
+} // namespace gh132931_false_positive

@@ -1543,7 +1543,7 @@ define amdgpu_kernel void @test_div_scale_f32_val_undef_val(ptr addrspace(1) %ou
 ; GFX11-NEXT:    v_div_scale_f32 v0, null, s0, s0, 0x41000000
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_endpgm
-  %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float 8.0, float undef, i1 false)
+  %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float 8.0, float poison, i1 false)
   %result0 = extractvalue { float, i1 } %result, 0
   store float %result0, ptr addrspace(1) %out, align 4
   ret void
@@ -1589,7 +1589,7 @@ define amdgpu_kernel void @test_div_scale_f32_undef_val_val(ptr addrspace(1) %ou
 ; GFX11-NEXT:    v_div_scale_f32 v0, null, 0x41000000, 0x41000000, s0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_endpgm
-  %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float undef, float 8.0, i1 false)
+  %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float poison, float 8.0, i1 false)
   %result0 = extractvalue { float, i1 } %result, 0
   store float %result0, ptr addrspace(1) %out, align 4
   ret void
@@ -1633,7 +1633,7 @@ define amdgpu_kernel void @test_div_scale_f32_undef_undef_val(ptr addrspace(1) %
 ; GFX11-NEXT:    v_div_scale_f32 v0, null, s0, s0, s0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_endpgm
-  %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float undef, float undef, i1 false)
+  %result = call { float, i1 } @llvm.amdgcn.div.scale.f32(float poison, float poison, i1 false)
   %result0 = extractvalue { float, i1 } %result, 0
   store float %result0, ptr addrspace(1) %out, align 4
   ret void
@@ -1681,7 +1681,7 @@ define amdgpu_kernel void @test_div_scale_f64_val_undef_val(ptr addrspace(1) %ou
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
-  %result = call { double, i1 } @llvm.amdgcn.div.scale.f64(double 8.0, double undef, i1 false)
+  %result = call { double, i1 } @llvm.amdgcn.div.scale.f64(double 8.0, double poison, i1 false)
   %result0 = extractvalue { double, i1 } %result, 0
   store double %result0, ptr addrspace(1) %out, align 8
   ret void

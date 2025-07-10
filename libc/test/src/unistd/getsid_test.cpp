@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
 #include "src/unistd/getsid.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcGetPidTest, GetCurrSID) {
+using LlvmLibcGetSidTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+
+TEST_F(LlvmLibcGetSidTest, GetCurrSID) {
   pid_t sid = LIBC_NAMESPACE::getsid(0);
   ASSERT_NE(sid, -1);
   ASSERT_ERRNO_SUCCESS();

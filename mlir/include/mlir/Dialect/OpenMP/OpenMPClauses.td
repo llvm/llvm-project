@@ -606,7 +606,7 @@ class OpenMP_InReductionClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let traits = [
-    BlockArgOpenMPOpInterface, ReductionClauseInterface
+    BlockArgOpenMPOpInterface
   ];
 
   let arguments = (ins
@@ -614,14 +614,6 @@ class OpenMP_InReductionClauseSkip<
     OptionalAttr<DenseBoolArrayAttr>:$in_reduction_byref,
     OptionalAttr<SymbolRefArrayAttr>:$in_reduction_syms
   );
-
-  let extraClassDeclaration = [{
-    /// Returns the reduction variables.
-    SmallVector<Value> getAllReductionVars() {
-      return SmallVector<Value>(getInReductionVars().begin(),
-                                getInReductionVars().end());
-    }
-  }];
 
   // Description varies depending on the operation. Assembly format not defined
   // because this clause must be processed together with the first region of the
@@ -1110,7 +1102,10 @@ class OpenMP_PrivateClauseSkip<
 
   let arguments = (ins
     Variadic<AnyType>:$private_vars,
-    OptionalAttr<SymbolRefArrayAttr>:$private_syms
+    OptionalAttr<SymbolRefArrayAttr>:$private_syms,
+    // Set this attribute if a barrier is needed after initialization and
+    // copying of lastprivate variables.
+    UnitAttr:$private_needs_barrier
   );
 
   // TODO: Add description.
@@ -1156,7 +1151,7 @@ class OpenMP_ReductionClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let traits = [
-    BlockArgOpenMPOpInterface, ReductionClauseInterface
+    BlockArgOpenMPOpInterface
   ];
 
   let arguments = (ins
@@ -1287,7 +1282,7 @@ class OpenMP_TaskReductionClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let traits = [
-    BlockArgOpenMPOpInterface, ReductionClauseInterface
+    BlockArgOpenMPOpInterface
   ];
 
   let arguments = (ins
@@ -1295,14 +1290,6 @@ class OpenMP_TaskReductionClauseSkip<
     OptionalAttr<DenseBoolArrayAttr>:$task_reduction_byref,
     OptionalAttr<SymbolRefArrayAttr>:$task_reduction_syms
   );
-
-  let extraClassDeclaration = [{
-    /// Returns the reduction variables.
-    SmallVector<Value> getAllReductionVars() {
-      return SmallVector<Value>(getTaskReductionVars().begin(),
-                                getTaskReductionVars().end());
-    }
-  }];
 
   let description = [{
     The `task_reduction` clause specifies a reduction among tasks. For each list

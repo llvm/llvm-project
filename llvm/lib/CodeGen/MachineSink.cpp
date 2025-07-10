@@ -1611,8 +1611,8 @@ static void performSink(MachineInstr &MI, MachineBasicBlock &SuccToSinkTo,
   // location to prevent debug-info driven tools from potentially reporting
   // wrong location information.
   if (!SuccToSinkTo.empty() && InsertPos != SuccToSinkTo.end())
-    MI.setDebugLoc(DILocation::getMergedLocation(MI.getDebugLoc(),
-                                                 InsertPos->getDebugLoc()));
+    MI.setDebugLoc(DebugLoc::getMergedLocation(MI.getDebugLoc(),
+                                               InsertPos->getDebugLoc()));
   else
     MI.setDebugLoc(DebugLoc());
 
@@ -2082,8 +2082,7 @@ public:
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
 private:
@@ -2326,8 +2325,7 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
       for (MCRegUnit Unit : TRI->regunits(MO.getReg())) {
         for (const auto &MIRegs : SeenDbgInstrs.lookup(Unit)) {
           auto &Regs = DbgValsToSinkMap[MIRegs.first];
-          for (Register Reg : MIRegs.second)
-            Regs.push_back(Reg);
+          llvm::append_range(Regs, MIRegs.second);
         }
       }
     }

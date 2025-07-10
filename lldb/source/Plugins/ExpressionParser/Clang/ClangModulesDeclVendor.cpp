@@ -8,6 +8,7 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -65,6 +66,7 @@ private:
   typedef std::pair<clang::DiagnosticsEngine::Level, std::string>
       IDAndDiagnostic;
   std::vector<IDAndDiagnostic> m_diagnostics;
+  std::unique_ptr<clang::DiagnosticOptions> m_diag_opts;
   /// The DiagnosticPrinter used for creating the full diagnostic messages
   /// that are stored in m_diagnostics.
   std::unique_ptr<clang::TextDiagnosticPrinter> m_diag_printer;
@@ -82,6 +84,7 @@ private:
 class ClangModulesDeclVendorImpl : public ClangModulesDeclVendor {
 public:
   ClangModulesDeclVendorImpl(
+      std::unique_ptr<clang::DiagnosticOptions> diagnostic_options,
       llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diagnostics_engine,
       std::shared_ptr<clang::CompilerInvocation> compiler_invocation,
       std::unique_ptr<clang::CompilerInstance> compiler_instance,
@@ -114,6 +117,7 @@ private:
 
   bool m_enabled = false;
 
+  std::unique_ptr<clang::DiagnosticOptions> m_diagnostic_options;
   llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> m_diagnostics_engine;
   std::shared_ptr<clang::CompilerInvocation> m_compiler_invocation;
   std::unique_ptr<clang::CompilerInstance> m_compiler_instance;
@@ -133,10 +137,10 @@ private:
 } // anonymous namespace
 
 StoringDiagnosticConsumer::StoringDiagnosticConsumer() {
-  auto *options = new clang::DiagnosticOptions();
+  m_diag_opts = std::make_unique<clang::DiagnosticOptions>();
   m_os = std::make_unique<llvm::raw_string_ostream>(m_output);
   m_diag_printer =
-      std::make_unique<clang::TextDiagnosticPrinter>(*m_os, options);
+      std::make_unique<clang::TextDiagnosticPrinter>(*m_os, *m_diag_opts);
 }
 
 void StoringDiagnosticConsumer::HandleDiagnostic(
@@ -227,11 +231,13 @@ ClangModulesDeclVendor::ClangModulesDeclVendor()
 ClangModulesDeclVendor::~ClangModulesDeclVendor() = default;
 
 ClangModulesDeclVendorImpl::ClangModulesDeclVendorImpl(
+    std::unique_ptr<clang::DiagnosticOptions> diagnostic_options,
     llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diagnostics_engine,
     std::shared_ptr<clang::CompilerInvocation> compiler_invocation,
     std::unique_ptr<clang::CompilerInstance> compiler_instance,
     std::unique_ptr<clang::Parser> parser)
-    : m_diagnostics_engine(std::move(diagnostics_engine)),
+    : m_diagnostic_options(std::move(diagnostic_options)),
+      m_diagnostics_engine(std::move(diagnostics_engine)),
       m_compiler_invocation(std::move(compiler_invocation)),
       m_compiler_instance(std::move(compiler_instance)),
       m_parser(std::move(parser)) {
@@ -324,30 +330,28 @@ bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
       auto file = HS.lookupModuleMapFile(*dir, is_framework);
       if (!file)
         return error();
-      if (!HS.loadModuleMapFile(*file, is_system))
+      if (HS.parseAndLoadModuleMapFile(*file, is_system))
         return error();
     }
   }
   if (!HS.lookupModule(module.path.front().GetStringRef())) {
-    error_stream.Printf("error: Header search couldn't locate module %s\n",
+    error_stream.Printf("error: Header search couldn't locate module '%s'\n",
                         module.path.front().AsCString());
     return false;
   }
 
-  llvm::SmallVector<std::pair<clang::IdentifierInfo *, clang::SourceLocation>,
-                    4>
-      clang_path;
+  llvm::SmallVector<clang::IdentifierLoc, 4> clang_path;
 
   {
     clang::SourceManager &source_manager =
         m_compiler_instance->getASTContext().getSourceManager();
 
     for (ConstString path_component : module.path) {
-      clang_path.push_back(std::make_pair(
-          &m_compiler_instance->getASTContext().Idents.get(
-              path_component.GetStringRef()),
+      clang_path.emplace_back(
           source_manager.getLocForStartOfFile(source_manager.getMainFileID())
-              .getLocWithOffset(m_source_location_index++)));
+              .getLocWithOffset(m_source_location_index++),
+          &m_compiler_instance->getASTContext().Idents.get(
+              path_component.GetStringRef()));
     }
   }
 
@@ -377,6 +381,13 @@ bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
       return false;
     }
   }
+
+  // If we didn't make the submodule visible here, Clang wouldn't allow LLDB to
+  // pick any of the decls in the submodules during C++ name lookup.
+  if (submodule)
+    m_compiler_instance->makeModuleVisible(
+        submodule, clang::Module::NameVisibilityKind::AllVisible,
+        /*ImportLoc=*/{});
 
   clang::Module *requested_module = DoGetModule(clang_path, true);
 
@@ -629,8 +640,8 @@ ClangModulesDeclVendorImpl::DoGetModule(clang::ModuleIdPath path,
 
   const bool is_inclusion_directive = false;
 
-  return m_compiler_instance->loadModule(path.front().second, path, visibility,
-                                         is_inclusion_directive);
+  return m_compiler_instance->loadModule(path.front().getLoc(), path,
+                                         visibility, is_inclusion_directive);
 }
 
 static const char *ModuleImportBufferName = "LLDBModulesMemoryBuffer";
@@ -707,8 +718,8 @@ ClangModulesDeclVendor::Create(Target &target) {
       clang::CreateAndPopulateDiagOpts(compiler_invocation_argument_cstrs);
   llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diagnostics_engine =
       clang::CompilerInstance::createDiagnostics(
-          *FileSystem::Instance().GetVirtualFileSystem(),
-          diag_options_up.release(), new StoringDiagnosticConsumer);
+          *FileSystem::Instance().GetVirtualFileSystem(), *diag_options_up,
+          new StoringDiagnosticConsumer);
 
   Log *log = GetLog(LLDBLog::Expressions);
   LLDB_LOG(log, "ClangModulesDeclVendor's compiler flags {0:$[ ]}",
@@ -732,23 +743,22 @@ ClangModulesDeclVendor::Create(Target &target) {
   invocation->getPreprocessorOpts().addRemappedFile(ModuleImportBufferName,
                                                     source_buffer.release());
 
-  std::unique_ptr<clang::CompilerInstance> instance(
-      new clang::CompilerInstance);
+  auto instance = std::make_unique<clang::CompilerInstance>(invocation);
 
   // Make sure clang uses the same VFS as LLDB.
   instance->createFileManager(FileSystem::Instance().GetVirtualFileSystem());
   instance->setDiagnostics(diagnostics_engine.get());
-  instance->setInvocation(invocation);
 
   std::unique_ptr<clang::FrontendAction> action(new clang::SyntaxOnlyAction);
 
   instance->setTarget(clang::TargetInfo::CreateTargetInfo(
-      *diagnostics_engine, instance->getInvocation().TargetOpts));
+      *diagnostics_engine, instance->getInvocation().getTargetOpts()));
 
   if (!instance->hasTarget())
     return nullptr;
 
-  instance->getTarget().adjust(*diagnostics_engine, instance->getLangOpts());
+  instance->getTarget().adjust(*diagnostics_engine, instance->getLangOpts(),
+                               /*AuxTarget=*/nullptr);
 
   if (!action->BeginSourceFile(*instance,
                                instance->getFrontendOpts().Inputs[0]))
@@ -770,7 +780,7 @@ ClangModulesDeclVendor::Create(Target &target) {
   while (!parser->ParseTopLevelDecl(parsed, ImportState))
     ;
 
-  return new ClangModulesDeclVendorImpl(std::move(diagnostics_engine),
-                                        std::move(invocation),
-                                        std::move(instance), std::move(parser));
+  return new ClangModulesDeclVendorImpl(
+      std::move(diag_options_up), std::move(diagnostics_engine),
+      std::move(invocation), std::move(instance), std::move(parser));
 }

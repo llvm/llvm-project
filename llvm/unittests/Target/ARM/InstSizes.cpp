@@ -73,7 +73,7 @@ TEST(InstSizes, PseudoInst) {
   LLVMInitializeARMTarget();
   LLVMInitializeARMTargetMC();
 
-  auto TT(Triple::normalize("thumbv8.1m.main-none-none-eabi"));
+  Triple TT("thumbv8.1m.main-none-none-eabi");
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {

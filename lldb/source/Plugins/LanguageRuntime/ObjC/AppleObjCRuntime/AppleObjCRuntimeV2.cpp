@@ -801,7 +801,7 @@ bool AppleObjCRuntimeV2::GetDynamicTypeAndAddress(
     // be the ISA pointer.
     ClassDescriptorSP objc_class_sp(GetNonKVOClassDescriptor(in_value));
     if (objc_class_sp) {
-      const addr_t object_ptr = in_value.GetPointerValue();
+      const addr_t object_ptr = in_value.GetPointerValue().address;
       address.SetRawAddress(object_ptr);
 
       ConstString class_name(objc_class_sp->GetClassName());
@@ -1047,7 +1047,7 @@ protected:
         continue;
 
       Status error;
-      lldb::addr_t arg_addr = OptionArgParser::ToAddress(
+      lldb::addr_t arg_addr = OptionArgParser::ToRawAddress(
           &exe_ctx, arg_str, LLDB_INVALID_ADDRESS, &error);
       if (arg_addr == 0 || arg_addr == LLDB_INVALID_ADDRESS || error.Fail()) {
         result.AppendErrorWithFormatv(
@@ -1112,7 +1112,7 @@ public:
       : CommandObjectMultiword(
             interpreter, "tagged-pointer",
             "Commands for operating on Objective-C tagged pointers.",
-            "class-table <subcommand> [<subcommand-options>]") {
+            "tagged-pointer <subcommand> [<subcommand-options>]") {
     LoadSubCommand(
         "info",
         CommandObjectSP(
@@ -1505,15 +1505,24 @@ AppleObjCRuntimeV2::GetClassDescriptorFromISA(ObjCISA isa) {
 
 ObjCLanguageRuntime::ClassDescriptorSP
 AppleObjCRuntimeV2::GetClassDescriptor(ValueObject &valobj) {
+  ValueObjectSet seen;
+  return GetClassDescriptorImpl(valobj, seen);
+}
+
+ObjCLanguageRuntime::ClassDescriptorSP
+AppleObjCRuntimeV2::GetClassDescriptorImpl(ValueObject &valobj,
+                                           ValueObjectSet &seen) {
+  seen.insert(&valobj);
+
   ClassDescriptorSP objc_class_sp;
   if (valobj.IsBaseClass()) {
     ValueObject *parent = valobj.GetParent();
-    // if I am my own parent, bail out of here fast..
-    if (parent && parent != &valobj) {
-      ClassDescriptorSP parent_descriptor_sp = GetClassDescriptor(*parent);
-      if (parent_descriptor_sp)
-        return parent_descriptor_sp->GetSuperclass();
-    }
+    // Fail if there's a cycle in our parent chain.
+    if (!parent || seen.count(parent))
+      return nullptr;
+    if (ClassDescriptorSP parent_descriptor_sp =
+            GetClassDescriptorImpl(*parent, seen))
+      return parent_descriptor_sp->GetSuperclass();
     return nullptr;
   }
   // if we get an invalid VO (which might still happen when playing around with
@@ -1521,7 +1530,7 @@ AppleObjCRuntimeV2::GetClassDescriptor(ValueObject &valobj) {
   // ObjC object)
   if (!valobj.GetCompilerType().IsValid())
     return objc_class_sp;
-  addr_t isa_pointer = valobj.GetPointerValue();
+  addr_t isa_pointer = valobj.GetPointerValue().address;
 
   // tagged pointer
   if (IsTaggedPointer(isa_pointer))

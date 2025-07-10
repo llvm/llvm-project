@@ -16,9 +16,9 @@ define amdgpu_kernel void @s_bfi_def_i32(ptr addrspace(1) %out, i32 %x, i32 %y, 
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s6, -1
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    s_andn2_b32 s2, s2, s0
+; GFX7-NEXT:    s_xor_b32 s1, s1, s2
 ; GFX7-NEXT:    s_and_b32 s0, s1, s0
-; GFX7-NEXT:    s_or_b32 s0, s2, s0
+; GFX7-NEXT:    s_xor_b32 s0, s0, s2
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GFX7-NEXT:    s_endpgm
@@ -28,9 +28,9 @@ define amdgpu_kernel void @s_bfi_def_i32(ptr addrspace(1) %out, i32 %x, i32 %y, 
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
 ; GFX8-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    s_andn2_b32 s2, s2, s0
+; GFX8-NEXT:    s_xor_b32 s1, s1, s2
 ; GFX8-NEXT:    s_and_b32 s0, s1, s0
-; GFX8-NEXT:    s_or_b32 s0, s2, s0
+; GFX8-NEXT:    s_xor_b32 s0, s0, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s0
@@ -44,9 +44,9 @@ define amdgpu_kernel void @s_bfi_def_i32(ptr addrspace(1) %out, i32 %x, i32 %y, 
 ; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_andn2_b32 s2, s2, s0
+; GFX10-NEXT:    s_xor_b32 s1, s1, s2
 ; GFX10-NEXT:    s_and_b32 s0, s1, s0
-; GFX10-NEXT:    s_or_b32 s0, s2, s0
+; GFX10-NEXT:    s_xor_b32 s0, s0, s2
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX10-NEXT:    global_store_dword v0, v1, s[4:5]
 ; GFX10-NEXT:    s_endpgm
@@ -1407,9 +1407,9 @@ define amdgpu_kernel void @s_bitselect_i64_pat_0(i64 %a, i64 %b, i64 %mask) {
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s6, -1
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    s_and_b64 s[2:3], s[0:1], s[2:3]
-; GFX7-NEXT:    s_andn2_b64 s[0:1], s[4:5], s[0:1]
-; GFX7-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
+; GFX7-NEXT:    s_xor_b64 s[2:3], s[2:3], s[4:5]
+; GFX7-NEXT:    s_and_b64 s[0:1], s[2:3], s[0:1]
+; GFX7-NEXT:    s_xor_b64 s[0:1], s[0:1], s[4:5]
 ; GFX7-NEXT:    s_add_u32 s0, s0, 10
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
@@ -1422,9 +1422,9 @@ define amdgpu_kernel void @s_bitselect_i64_pat_0(i64 %a, i64 %b, i64 %mask) {
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX8-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    s_and_b64 s[2:3], s[0:1], s[2:3]
-; GFX8-NEXT:    s_andn2_b64 s[0:1], s[4:5], s[0:1]
-; GFX8-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
+; GFX8-NEXT:    s_xor_b64 s[2:3], s[2:3], s[4:5]
+; GFX8-NEXT:    s_and_b64 s[0:1], s[2:3], s[0:1]
+; GFX8-NEXT:    s_xor_b64 s[0:1], s[0:1], s[4:5]
 ; GFX8-NEXT:    s_add_u32 s0, s0, 10
 ; GFX8-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
@@ -1438,9 +1438,9 @@ define amdgpu_kernel void @s_bitselect_i64_pat_0(i64 %a, i64 %b, i64 %mask) {
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_and_b64 s[2:3], s[0:1], s[2:3]
-; GFX10-NEXT:    s_andn2_b64 s[0:1], s[4:5], s[0:1]
-; GFX10-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
+; GFX10-NEXT:    s_xor_b64 s[2:3], s[2:3], s[4:5]
+; GFX10-NEXT:    s_and_b64 s[0:1], s[2:3], s[0:1]
+; GFX10-NEXT:    s_xor_b64 s[0:1], s[0:1], s[4:5]
 ; GFX10-NEXT:    s_add_u32 s0, s0, 10
 ; GFX10-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s0
@@ -1483,7 +1483,7 @@ define amdgpu_kernel void @s_bitselect_i64_pat_0(i64 %a, i64 %b, i64 %mask) {
   %and1 = and i64 %not.a, %mask
   %bitselect = or i64 %and0, %and1
   %scalar.use = add i64 %bitselect, 10
-  store i64 %scalar.use, ptr addrspace(1) undef
+  store i64 %scalar.use, ptr addrspace(1) poison
   ret void
 }
 
@@ -1571,7 +1571,7 @@ define amdgpu_kernel void @s_bitselect_i64_pat_1(i64 %a, i64 %b, i64 %mask) {
   %bitselect = xor i64 %and, %mask
 
   %scalar.use = add i64 %bitselect, 10
-  store i64 %scalar.use, ptr addrspace(1) undef
+  store i64 %scalar.use, ptr addrspace(1) poison
   ret void
 }
 
@@ -1659,7 +1659,7 @@ define amdgpu_kernel void @s_bitselect_i64_pat_2(i64 %a, i64 %b, i64 %mask) {
   %bitselect = xor i64 %and, %mask
 
   %scalar.use = add i64 %bitselect, 10
-  store i64 %scalar.use, ptr addrspace(1) undef
+  store i64 %scalar.use, ptr addrspace(1) poison
   ret void
 }
 
@@ -1754,6 +1754,6 @@ entry:
   %or1 = or i64 %and0, %and1
 
   %scalar.use = add i64 %or1, 10
-  store i64 %scalar.use, ptr addrspace(1) undef
+  store i64 %scalar.use, ptr addrspace(1) poison
   ret void
 }

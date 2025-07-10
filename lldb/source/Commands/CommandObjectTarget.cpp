@@ -649,8 +649,6 @@ protected:
     result.GetOutputStream().Printf("%u targets deleted.\n",
                                     (uint32_t)num_targets_to_delete);
     result.SetStatus(eReturnStatusSuccessFinishResult);
-
-    return;
   }
 
   OptionGroupOptions m_option_group;
@@ -1414,11 +1412,13 @@ static bool DumpModuleSymbolFile(Stream &strm, Module *module) {
 }
 
 static bool GetSeparateDebugInfoList(StructuredData::Array &list,
-                                     Module *module, bool errors_only) {
+                                     Module *module, bool errors_only,
+                                     bool load_all_debug_info) {
   if (module) {
     if (SymbolFile *symbol_file = module->GetSymbolFile(/*can_create=*/true)) {
       StructuredData::Dictionary d;
-      if (symbol_file->GetSeparateDebugInfo(d, errors_only)) {
+      if (symbol_file->GetSeparateDebugInfo(d, errors_only,
+                                            load_all_debug_info)) {
         list.AddItem(
             std::make_shared<StructuredData::Dictionary>(std::move(d)));
         return true;
@@ -2208,11 +2208,9 @@ protected:
       return;
     }
 
-    clang::CompilerInstance compiler;
-    compiler.createDiagnostics(*FileSystem::Instance().GetVirtualFileSystem());
-
     const char *clang_args[] = {"clang", pcm_path};
-    compiler.setInvocation(clang::createInvocation(clang_args));
+    clang::CompilerInstance compiler(clang::createInvocation(clang_args));
+    compiler.createDiagnostics(*FileSystem::Instance().GetVirtualFileSystem());
 
     // Pass empty deleter to not attempt to free memory that was allocated
     // outside of the current scope, possibly statically.
@@ -2239,10 +2237,22 @@ public:
       : CommandObjectTargetModulesModuleAutoComplete(
             interpreter, "target modules dump ast",
             "Dump the clang ast for a given module's symbol file.",
-            //"target modules dump ast [<file1> ...]")
-            nullptr, eCommandRequiresTarget) {}
+            "target modules dump ast [--filter <name>] [<file1> ...]",
+            eCommandRequiresTarget),
+        m_filter(LLDB_OPT_SET_1, false, "filter", 'f', 0, eArgTypeName,
+                 "Dump only the decls whose names contain the specified filter "
+                 "string.",
+                 /*default_value=*/"") {
+    m_option_group.Append(&m_filter, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
+    m_option_group.Finalize();
+  }
+
+  Options *GetOptions() override { return &m_option_group; }
 
   ~CommandObjectTargetModulesDumpClangAST() override = default;
+
+  OptionGroupOptions m_option_group;
+  OptionGroupString m_filter;
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
@@ -2255,6 +2265,8 @@ protected:
       return;
     }
 
+    llvm::StringRef filter = m_filter.GetOptionValue().GetCurrentValueAsRef();
+
     if (command.GetArgumentCount() == 0) {
       // Dump all ASTs for all modules images
       result.GetOutputStream().Format("Dumping clang ast for {0} modules.\n",
@@ -2263,7 +2275,7 @@ protected:
         if (INTERRUPT_REQUESTED(GetDebugger(), "Interrupted dumping clang ast"))
           break;
         if (SymbolFile *sf = module_sp->GetSymbolFile())
-          sf->DumpClangAST(result.GetOutputStream());
+          sf->DumpClangAST(result.GetOutputStream(), filter);
       }
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return;
@@ -2292,7 +2304,7 @@ protected:
 
         Module *m = module_list.GetModulePointerAtIndex(i);
         if (SymbolFile *sf = m->GetSymbolFile())
-          sf->DumpClangAST(result.GetOutputStream());
+          sf->DumpClangAST(result.GetOutputStream(), filter);
       }
     }
     result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -2512,6 +2524,10 @@ public:
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
+      case 'f':
+        m_load_all_debug_info.SetCurrentValue(true);
+        m_load_all_debug_info.SetOptionWasSet();
+        break;
       case 'j':
         m_json.SetCurrentValue(true);
         m_json.SetOptionWasSet();
@@ -2529,6 +2545,7 @@ public:
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_json.Clear();
       m_errors_only.Clear();
+      m_load_all_debug_info.Clear();
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -2537,6 +2554,7 @@ public:
 
     OptionValueBoolean m_json = false;
     OptionValueBoolean m_errors_only = false;
+    OptionValueBoolean m_load_all_debug_info = false;
   };
 
 protected:
@@ -2568,7 +2586,8 @@ protected:
 
         if (GetSeparateDebugInfoList(separate_debug_info_lists_by_module,
                                      module_sp.get(),
-                                     bool(m_options.m_errors_only)))
+                                     bool(m_options.m_errors_only),
+                                     bool(m_options.m_load_all_debug_info)))
           num_dumped++;
       }
     } else {
@@ -2589,7 +2608,8 @@ protected:
               break;
             Module *module = module_list.GetModulePointerAtIndex(i);
             if (GetSeparateDebugInfoList(separate_debug_info_lists_by_module,
-                                         module, bool(m_options.m_errors_only)))
+                                         module, bool(m_options.m_errors_only),
+                                         bool(m_options.m_load_all_debug_info)))
               num_dumped++;
           }
         } else
@@ -3641,77 +3661,70 @@ protected:
 
       result.GetOutputStream().Printf("\n");
 
-      UnwindPlanSP non_callsite_unwind_plan =
-          func_unwinders_sp->GetUnwindPlanAtNonCallSite(*target, *thread);
-      if (non_callsite_unwind_plan) {
+      if (std::shared_ptr<const UnwindPlan> plan_sp =
+              func_unwinders_sp->GetUnwindPlanAtNonCallSite(*target, *thread)) {
         result.GetOutputStream().Printf(
             "Asynchronous (not restricted to call-sites) UnwindPlan is '%s'\n",
-            non_callsite_unwind_plan->GetSourceName().AsCString());
+            plan_sp->GetSourceName().AsCString());
       }
-      UnwindPlanSP callsite_unwind_plan =
-          func_unwinders_sp->GetUnwindPlanAtCallSite(*target, *thread);
-      if (callsite_unwind_plan) {
+      if (std::shared_ptr<const UnwindPlan> plan_sp =
+              func_unwinders_sp->GetUnwindPlanAtCallSite(*target, *thread)) {
         result.GetOutputStream().Printf(
             "Synchronous (restricted to call-sites) UnwindPlan is '%s'\n",
-            callsite_unwind_plan->GetSourceName().AsCString());
+            plan_sp->GetSourceName().AsCString());
       }
-      UnwindPlanSP fast_unwind_plan =
-          func_unwinders_sp->GetUnwindPlanFastUnwind(*target, *thread);
-      if (fast_unwind_plan) {
-        result.GetOutputStream().Printf(
-            "Fast UnwindPlan is '%s'\n",
-            fast_unwind_plan->GetSourceName().AsCString());
+      if (std::shared_ptr<const UnwindPlan> plan_sp =
+              func_unwinders_sp->GetUnwindPlanFastUnwind(*target, *thread)) {
+        result.GetOutputStream().Printf("Fast UnwindPlan is '%s'\n",
+                                        plan_sp->GetSourceName().AsCString());
       }
 
       result.GetOutputStream().Printf("\n");
 
-      UnwindPlanSP assembly_sp =
-          func_unwinders_sp->GetAssemblyUnwindPlan(*target, *thread);
-      if (assembly_sp) {
+      if (std::shared_ptr<const UnwindPlan> plan_sp =
+              func_unwinders_sp->GetAssemblyUnwindPlan(*target, *thread)) {
         result.GetOutputStream().Printf(
             "Assembly language inspection UnwindPlan:\n");
-        assembly_sp->Dump(result.GetOutputStream(), thread.get(),
-                          LLDB_INVALID_ADDRESS);
+        plan_sp->Dump(result.GetOutputStream(), thread.get(),
+                      LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      UnwindPlanSP of_unwind_sp =
-          func_unwinders_sp->GetObjectFileUnwindPlan(*target);
-      if (of_unwind_sp) {
+      if (std::shared_ptr<const UnwindPlan> plan_sp =
+              func_unwinders_sp->GetObjectFileUnwindPlan(*target)) {
         result.GetOutputStream().Printf("object file UnwindPlan:\n");
-        of_unwind_sp->Dump(result.GetOutputStream(), thread.get(),
-                           LLDB_INVALID_ADDRESS);
+        plan_sp->Dump(result.GetOutputStream(), thread.get(),
+                      LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      UnwindPlanSP of_unwind_augmented_sp =
-          func_unwinders_sp->GetObjectFileAugmentedUnwindPlan(*target, *thread);
-      if (of_unwind_augmented_sp) {
+      if (std::shared_ptr<const UnwindPlan> plan_sp =
+              func_unwinders_sp->GetObjectFileAugmentedUnwindPlan(*target,
+                                                                  *thread)) {
         result.GetOutputStream().Printf("object file augmented UnwindPlan:\n");
-        of_unwind_augmented_sp->Dump(result.GetOutputStream(), thread.get(),
-                                     LLDB_INVALID_ADDRESS);
+        plan_sp->Dump(result.GetOutputStream(), thread.get(),
+                      LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      UnwindPlanSP ehframe_sp =
-          func_unwinders_sp->GetEHFrameUnwindPlan(*target);
-      if (ehframe_sp) {
+      if (std::shared_ptr<const UnwindPlan> plan_sp =
+              func_unwinders_sp->GetEHFrameUnwindPlan(*target)) {
         result.GetOutputStream().Printf("eh_frame UnwindPlan:\n");
-        ehframe_sp->Dump(result.GetOutputStream(), thread.get(),
-                         LLDB_INVALID_ADDRESS);
+        plan_sp->Dump(result.GetOutputStream(), thread.get(),
+                      LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      UnwindPlanSP ehframe_augmented_sp =
-          func_unwinders_sp->GetEHFrameAugmentedUnwindPlan(*target, *thread);
-      if (ehframe_augmented_sp) {
+      if (std::shared_ptr<const UnwindPlan> plan_sp =
+              func_unwinders_sp->GetEHFrameAugmentedUnwindPlan(*target,
+                                                               *thread)) {
         result.GetOutputStream().Printf("eh_frame augmented UnwindPlan:\n");
-        ehframe_augmented_sp->Dump(result.GetOutputStream(), thread.get(),
-                                   LLDB_INVALID_ADDRESS);
+        plan_sp->Dump(result.GetOutputStream(), thread.get(),
+                      LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      if (UnwindPlanSP plan_sp =
+      if (std::shared_ptr<const UnwindPlan> plan_sp =
               func_unwinders_sp->GetDebugFrameUnwindPlan(*target)) {
         result.GetOutputStream().Printf("debug_frame UnwindPlan:\n");
         plan_sp->Dump(result.GetOutputStream(), thread.get(),
@@ -3719,7 +3732,7 @@ protected:
         result.GetOutputStream().Printf("\n");
       }
 
-      if (UnwindPlanSP plan_sp =
+      if (std::shared_ptr<const UnwindPlan> plan_sp =
               func_unwinders_sp->GetDebugFrameAugmentedUnwindPlan(*target,
                                                                   *thread)) {
         result.GetOutputStream().Printf("debug_frame augmented UnwindPlan:\n");
@@ -3728,36 +3741,35 @@ protected:
         result.GetOutputStream().Printf("\n");
       }
 
-      UnwindPlanSP arm_unwind_sp =
-          func_unwinders_sp->GetArmUnwindUnwindPlan(*target);
-      if (arm_unwind_sp) {
+      if (std::shared_ptr<const UnwindPlan> plan_sp =
+              func_unwinders_sp->GetArmUnwindUnwindPlan(*target)) {
         result.GetOutputStream().Printf("ARM.exidx unwind UnwindPlan:\n");
-        arm_unwind_sp->Dump(result.GetOutputStream(), thread.get(),
-                            LLDB_INVALID_ADDRESS);
+        plan_sp->Dump(result.GetOutputStream(), thread.get(),
+                      LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      if (UnwindPlanSP symfile_plan_sp =
+      if (std::shared_ptr<const UnwindPlan> plan_sp =
               func_unwinders_sp->GetSymbolFileUnwindPlan(*thread)) {
         result.GetOutputStream().Printf("Symbol file UnwindPlan:\n");
-        symfile_plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                              LLDB_INVALID_ADDRESS);
+        plan_sp->Dump(result.GetOutputStream(), thread.get(),
+                      LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      UnwindPlanSP compact_unwind_sp =
-          func_unwinders_sp->GetCompactUnwindUnwindPlan(*target);
-      if (compact_unwind_sp) {
+      if (std::shared_ptr<const UnwindPlan> plan_sp =
+              func_unwinders_sp->GetCompactUnwindUnwindPlan(*target)) {
         result.GetOutputStream().Printf("Compact unwind UnwindPlan:\n");
-        compact_unwind_sp->Dump(result.GetOutputStream(), thread.get(),
-                                LLDB_INVALID_ADDRESS);
+        plan_sp->Dump(result.GetOutputStream(), thread.get(),
+                      LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      if (fast_unwind_plan) {
+      if (std::shared_ptr<const UnwindPlan> plan_sp =
+              func_unwinders_sp->GetUnwindPlanFastUnwind(*target, *thread)) {
         result.GetOutputStream().Printf("Fast UnwindPlan:\n");
-        fast_unwind_plan->Dump(result.GetOutputStream(), thread.get(),
-                               LLDB_INVALID_ADDRESS);
+        plan_sp->Dump(result.GetOutputStream(), thread.get(),
+                      LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
@@ -4084,8 +4096,6 @@ protected:
     // Dump all sections for all modules images
 
     if (command.GetArgumentCount() == 0) {
-      ModuleSP current_module;
-
       // Where it is possible to look in the current symbol context first,
       // try that.  If this search was successful and --all was not passed,
       // don't print anything else.
@@ -4108,8 +4118,7 @@ protected:
       }
 
       for (ModuleSP module_sp : target_modules.ModulesNoLocking()) {
-        if (module_sp != current_module &&
-            LookupInModule(m_interpreter, module_sp.get(), result,
+        if (LookupInModule(m_interpreter, module_sp.get(), result,
                            syntax_error)) {
           result.GetOutputStream().EOL();
           num_successful_lookups++;
@@ -4804,6 +4813,17 @@ public:
         m_one_liner.push_back(std::string(option_arg));
         break;
 
+      case 'I': {
+        bool value, success;
+        value = OptionArgParser::ToBoolean(option_arg, false, &success);
+        if (success)
+          m_at_initial_stop = value;
+        else
+          error = Status::FromErrorStringWithFormat(
+              "invalid boolean value '%s' passed for -F option",
+              option_arg.str().c_str());
+      } break;
+
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -4830,6 +4850,7 @@ public:
       m_use_one_liner = false;
       m_one_liner.clear();
       m_auto_continue = false;
+      m_at_initial_stop = true;
     }
 
     std::string m_class_name;
@@ -4850,6 +4871,7 @@ public:
     // Instance variables to hold the values for one_liner options.
     bool m_use_one_liner = false;
     std::vector<std::string> m_one_liner;
+    bool m_at_initial_stop;
 
     bool m_auto_continue = false;
   };
@@ -4870,9 +4892,9 @@ public:
 Command Based stop-hooks:
 -------------------------
   Stop hooks can run a list of lldb commands by providing one or more
-  --one-line-command options.  The commands will get run in the order they are
-  added.  Or you can provide no commands, in which case you will enter a
-  command editor where you can enter the commands to be run.
+  --one-liner options.  The commands will get run in the order they are added.
+  Or you can provide no commands, in which case you will enter a command editor
+  where you can enter the commands to be run.
 
 Python Based Stop Hooks:
 ------------------------
@@ -5014,6 +5036,9 @@ protected:
 
     if (specifier_up)
       new_hook_sp->SetSpecifier(specifier_up.release());
+
+    // Should we run at the initial stop:
+    new_hook_sp->SetRunAtInitialStop(m_options.m_at_initial_stop);
 
     // Next see if any of the thread options have been entered:
 
@@ -5268,7 +5293,7 @@ protected:
     // Go over every scratch TypeSystem and dump to the command output.
     for (lldb::TypeSystemSP ts : GetTarget().GetScratchTypeSystems())
       if (ts)
-        ts->Dump(result.GetOutputStream().AsRawOstream());
+        ts->Dump(result.GetOutputStream().AsRawOstream(), "");
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }

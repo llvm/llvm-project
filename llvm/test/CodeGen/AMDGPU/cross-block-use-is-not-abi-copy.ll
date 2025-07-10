@@ -220,7 +220,7 @@ if.else:                                          ; preds = %entry
 
 if.end:                                           ; preds = %if.else, %if.then
   %call6.sink = phi <3 x i16> [ %call6, %if.else ], [ zeroinitializer, %if.then ]
-  store <3 x i16> %call6.sink, ptr addrspace(1) undef
+  store <3 x i16> %call6.sink, ptr addrspace(1) poison
   ret void
 }
 
@@ -271,7 +271,7 @@ if.else:                                          ; preds = %entry
 
 if.end:                                           ; preds = %if.else, %if.then
   %call6.sink = phi <3 x half> [ %call6, %if.else ], [ zeroinitializer, %if.then ]
-  store <3 x half> %call6.sink, ptr addrspace(1) undef
+  store <3 x half> %call6.sink, ptr addrspace(1) poison
   ret void
 }
 
@@ -286,5 +286,3 @@ declare hidden { <4 x i32>, <4 x half> } @func_struct() #0
 
 attributes #0 = { nounwind}
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

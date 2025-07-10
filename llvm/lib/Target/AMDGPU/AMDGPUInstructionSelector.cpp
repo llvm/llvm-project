@@ -20,7 +20,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -56,14 +56,15 @@ AMDGPUInstructionSelector::AMDGPUInstructionSelector(
 
 const char *AMDGPUInstructionSelector::getName() { return DEBUG_TYPE; }
 
-void AMDGPUInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits *KB,
+void AMDGPUInstructionSelector::setupMF(MachineFunction &MF,
+                                        GISelValueTracking *VT,
                                         CodeGenCoverage *CoverageInfo,
                                         ProfileSummaryInfo *PSI,
                                         BlockFrequencyInfo *BFI) {
   MRI = &MF.getRegInfo();
   Subtarget = &MF.getSubtarget<GCNSubtarget>();
   Subtarget->checkSubtargetFeatures(MF.getFunction());
-  InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);
+  InstructionSelector::setupMF(MF, VT, CoverageInfo, PSI, BFI);
 }
 
 // Return the wave level SGPR base address if this is a wave address.
@@ -1190,12 +1191,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
   case Intrinsic::amdgcn_permlane16_swap:
   case Intrinsic::amdgcn_permlane32_swap:
     return selectPermlaneSwapIntrin(I, IntrinsicID);
-  case Intrinsic::amdgcn_dead: {
-    I.setDesc(TII.get(TargetOpcode::IMPLICIT_DEF));
-    I.removeOperand(1); // drop intrinsic ID
-    return RBI.constrainGenericRegister(I.getOperand(0).getReg(),
-                                        AMDGPU::VGPR_32RegClass, *MRI);
-  }
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -1478,10 +1473,21 @@ bool AMDGPUInstructionSelector::selectG_ICMP_or_FCMP(MachineInstr &I) const {
   if (Opcode == -1)
     return false;
 
-  MachineInstr *ICmp = BuildMI(*BB, &I, DL, TII.get(Opcode),
-            I.getOperand(0).getReg())
-            .add(I.getOperand(2))
-            .add(I.getOperand(3));
+  MachineInstrBuilder ICmp;
+  // t16 instructions
+  if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src0_modifiers)) {
+    ICmp = BuildMI(*BB, &I, DL, TII.get(Opcode), I.getOperand(0).getReg())
+               .addImm(0)
+               .add(I.getOperand(2))
+               .addImm(0)
+               .add(I.getOperand(3))
+               .addImm(0); // op_sel
+  } else {
+    ICmp = BuildMI(*BB, &I, DL, TII.get(Opcode), I.getOperand(0).getReg())
+               .add(I.getOperand(2))
+               .add(I.getOperand(3));
+  }
+
   RBI.constrainGenericRegister(ICmp->getOperand(0).getReg(),
                                *TRI.getBoolRC(), *MRI);
   bool Ret = constrainSelectedInstRegOperands(*ICmp, TII, TRI, RBI);
@@ -1761,8 +1767,12 @@ bool AMDGPUInstructionSelector::selectDSOrderedIntrinsic(
   bool WaveRelease = MI.getOperand(8).getImm() != 0;
   bool WaveDone = MI.getOperand(9).getImm() != 0;
 
-  if (WaveDone && !WaveRelease)
-    report_fatal_error("ds_ordered_count: wave_done requires wave_release");
+  if (WaveDone && !WaveRelease) {
+    // TODO: Move this to IR verifier
+    const Function &Fn = MF->getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "ds_ordered_count: wave_done requires wave_release", DL));
+  }
 
   unsigned OrderedCountIndex = IndexOperand & 0x3f;
   IndexOperand &= ~0x3f;
@@ -1773,13 +1783,18 @@ bool AMDGPUInstructionSelector::selectDSOrderedIntrinsic(
     IndexOperand &= ~(0xf << 24);
 
     if (CountDw < 1 || CountDw > 4) {
-      report_fatal_error(
-        "ds_ordered_count: dword count must be between 1 and 4");
+      const Function &Fn = MF->getFunction();
+      Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+          Fn, "ds_ordered_count: dword count must be between 1 and 4", DL));
+      CountDw = 1;
     }
   }
 
-  if (IndexOperand)
-    report_fatal_error("ds_ordered_count: bad index operand");
+  if (IndexOperand) {
+    const Function &Fn = MF->getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "ds_ordered_count: bad index operand", DL));
+  }
 
   unsigned Instruction = IntrID == Intrinsic::amdgcn_ds_ordered_add ? 0 : 1;
   unsigned ShaderType = SIInstrInfo::getDSShaderTypeValue(*MF);
@@ -1877,7 +1892,7 @@ bool AMDGPUInstructionSelector::selectDSGWSIntrinsic(MachineInstr &MI,
       .addImm(0);
   } else {
     std::tie(BaseOffset, ImmOffset) =
-        AMDGPU::getBaseWithConstantOffset(*MRI, BaseOffset, KB);
+        AMDGPU::getBaseWithConstantOffset(*MRI, BaseOffset, VT);
 
     if (Readfirstlane) {
       // We have the constant offset now, so put the readfirstlane back on the
@@ -2266,7 +2281,21 @@ bool AMDGPUInstructionSelector::selectDSBvhStackIntrinsic(
   Register Data1 = MI.getOperand(5).getReg();
   unsigned Offset = MI.getOperand(6).getImm();
 
-  auto MIB = BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::DS_BVH_STACK_RTN_B32), Dst0)
+  unsigned Opc;
+  switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
+  case Intrinsic::amdgcn_ds_bvh_stack_rtn:
+  case Intrinsic::amdgcn_ds_bvh_stack_push4_pop1_rtn:
+    Opc = AMDGPU::DS_BVH_STACK_RTN_B32;
+    break;
+  case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
+    Opc = AMDGPU::DS_BVH_STACK_PUSH8_POP1_RTN_B32;
+    break;
+  case Intrinsic::amdgcn_ds_bvh_stack_push8_pop2_rtn:
+    Opc = AMDGPU::DS_BVH_STACK_PUSH8_POP2_RTN_B64;
+    break;
+  }
+
+  auto MIB = BuildMI(*MBB, &MI, DL, TII.get(Opc), Dst0)
                  .addDef(Dst1)
                  .addUse(Addr)
                  .addUse(Data0)
@@ -2309,18 +2338,26 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_struct_buffer_load_lds:
   case Intrinsic::amdgcn_struct_ptr_buffer_load_lds:
     return selectBufferLoadLds(I);
+  // Until we can store both the address space of the global and the LDS
+  // arguments by having tto MachineMemOperands on an intrinsic, we just trust
+  // that the argument is a global pointer (buffer pointers have been handled by
+  // a LLVM IR-level lowering).
+  case Intrinsic::amdgcn_load_to_lds:
   case Intrinsic::amdgcn_global_load_lds:
     return selectGlobalLoadLds(I);
   case Intrinsic::amdgcn_exp_compr:
     if (!STI.hasCompressedExport()) {
       Function &F = I.getMF()->getFunction();
-      DiagnosticInfoUnsupported NoFpRet(
-          F, "intrinsic not supported on subtarget", I.getDebugLoc(), DS_Error);
-      F.getContext().diagnose(NoFpRet);
+      F.getContext().diagnose(
+          DiagnosticInfoUnsupported(F, "intrinsic not supported on subtarget",
+                                    I.getDebugLoc(), DS_Error));
       return false;
     }
     break;
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
+  case Intrinsic::amdgcn_ds_bvh_stack_push4_pop1_rtn:
+  case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
+  case Intrinsic::amdgcn_ds_bvh_stack_push8_pop2_rtn:
     return selectDSBvhStackIntrinsic(I);
   case Intrinsic::amdgcn_s_barrier_signal_var:
     return selectNamedBarrierInit(I, IntrinsicID);
@@ -2498,8 +2535,9 @@ bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
     return false;
 
   if (SrcSize > 32) {
-    unsigned SubRegIdx =
-        DstSize < 32 ? AMDGPU::sub0 : TRI.getSubRegFromChannel(0, DstSize / 32);
+    unsigned SubRegIdx = DstSize < 32
+                             ? static_cast<unsigned>(AMDGPU::sub0)
+                             : TRI.getSubRegFromChannel(0, DstSize / 32);
     if (SubRegIdx == AMDGPU::NoSubRegister)
       return false;
 
@@ -2917,8 +2955,7 @@ bool AMDGPUInstructionSelector::isInstrUniform(const MachineInstr &MI) const {
   // Sometimes LDS instructions have constant pointers.
   // If Ptr is null, then that means this mem operand contains a
   // PseudoSourceValue like GOT.
-  if (!Ptr || isa<UndefValue>(Ptr) || isa<Argument>(Ptr) ||
-      isa<Constant>(Ptr) || isa<GlobalValue>(Ptr))
+  if (!Ptr || isa<UndefValue, Argument, Constant, GlobalValue>(Ptr))
     return true;
 
   if (MMO->getAddrSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
@@ -3068,7 +3105,7 @@ bool AMDGPUInstructionSelector::selectG_PTRMASK(MachineInstr &I) const {
 
   // Try to avoid emitting a bit operation when we only need to touch half of
   // the 64-bit pointer.
-  APInt MaskOnes = KB->getKnownOnes(MaskReg).zext(64);
+  APInt MaskOnes = VT->getKnownOnes(MaskReg).zext(64);
   const APInt MaskHi32 = APInt::getHighBitsSet(64, 32);
   const APInt MaskLo32 = APInt::getLowBitsSet(64, 32);
 
@@ -3167,12 +3204,12 @@ bool AMDGPUInstructionSelector::selectG_PTRMASK(MachineInstr &I) const {
 static std::pair<Register, unsigned>
 computeIndirectRegIndex(MachineRegisterInfo &MRI, const SIRegisterInfo &TRI,
                         const TargetRegisterClass *SuperRC, Register IdxReg,
-                        unsigned EltSize, GISelKnownBits &KnownBits) {
+                        unsigned EltSize, GISelValueTracking &ValueTracking) {
   Register IdxBaseReg;
   int Offset;
 
   std::tie(IdxBaseReg, Offset) =
-      AMDGPU::getBaseWithConstantOffset(MRI, IdxReg, &KnownBits);
+      AMDGPU::getBaseWithConstantOffset(MRI, IdxReg, &ValueTracking);
   if (IdxBaseReg == AMDGPU::NoRegister) {
     // This will happen if the index is a known constant. This should ordinarily
     // be legalized out, but handle it as a register just in case.
@@ -3224,7 +3261,7 @@ bool AMDGPUInstructionSelector::selectG_EXTRACT_VECTOR_ELT(
 
   unsigned SubReg;
   std::tie(IdxReg, SubReg) = computeIndirectRegIndex(
-      *MRI, TRI, SrcRC, IdxReg, DstTy.getSizeInBits() / 8, *KB);
+      *MRI, TRI, SrcRC, IdxReg, DstTy.getSizeInBits() / 8, *VT);
 
   if (SrcRB->getID() == AMDGPU::SGPRRegBankID) {
     if (DstTy.getSizeInBits() != 32 && !Is64)
@@ -3305,7 +3342,7 @@ bool AMDGPUInstructionSelector::selectG_INSERT_VECTOR_ELT(
 
   unsigned SubReg;
   std::tie(IdxReg, SubReg) =
-      computeIndirectRegIndex(*MRI, TRI, VecRC, IdxReg, ValSize / 8, *KB);
+      computeIndirectRegIndex(*MRI, TRI, VecRC, IdxReg, ValSize / 8, *VT);
 
   const bool IndexMode = VecRB->getID() == AMDGPU::VGPRRegBankID &&
                          STI.useVGPRIndexMode();
@@ -3340,7 +3377,8 @@ bool AMDGPUInstructionSelector::selectG_INSERT_VECTOR_ELT(
 }
 
 bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
-  assert(!AMDGPU::isGFX12Plus(STI));
+  if (!Subtarget->hasVMemToLDSLoad())
+    return false;
   unsigned Opc;
   unsigned Size = MI.getOperand(3).getImm();
 
@@ -3476,6 +3514,9 @@ static Register matchZeroExtendFromS32(MachineRegisterInfo &MRI, Register Reg) {
 }
 
 bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
+  if (!Subtarget->hasVMemToLDSLoad())
+    return false;
+
   unsigned Opc;
   unsigned Size = MI.getOperand(3).getImm();
 
@@ -3569,10 +3610,12 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
 
 bool AMDGPUInstructionSelector::selectBVHIntersectRayIntrinsic(
     MachineInstr &MI) const {
-  MI.setDesc(TII.get(MI.getOperand(1).getImm()));
-  MI.removeOperand(1);
+  unsigned OpcodeOpIdx =
+      MI.getOpcode() == AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY ? 1 : 3;
+  MI.setDesc(TII.get(MI.getOperand(OpcodeOpIdx).getImm()));
+  MI.removeOperand(OpcodeOpIdx);
   MI.addImplicitDefUseOperands(*MI.getParent()->getParent());
-  return true;
+  return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
 }
 
 // FIXME: This should be removed and let the patterns select. We just need the
@@ -4086,7 +4129,9 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     assert(Intr && "not an image intrinsic with image pseudo");
     return selectImageIntrinsic(I, Intr);
   }
+  case AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY:
   case AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY:
+  case AMDGPU::G_AMDGPU_BVH8_INTERSECT_RAY:
     return selectBVHIntersectRayIntrinsic(I);
   case AMDGPU::G_SBFX:
   case AMDGPU::G_UBFX:
@@ -4282,60 +4327,581 @@ AMDGPUInstructionSelector::selectVOP3NoMods(MachineOperand &Root) const {
   }};
 }
 
-std::pair<Register, unsigned>
-AMDGPUInstructionSelector::selectVOP3PModsImpl(
-  Register Src, const MachineRegisterInfo &MRI, bool IsDOT) const {
-  unsigned Mods = 0;
-  MachineInstr *MI = MRI.getVRegDef(Src);
+enum class SrcStatus {
+  IS_SAME,
+  IS_UPPER_HALF,
+  IS_LOWER_HALF,
+  IS_UPPER_HALF_NEG,
+  // This means current op = [op_upper, op_lower] and src = -op_lower.
+  IS_LOWER_HALF_NEG,
+  IS_HI_NEG,
+  // This means current op = [op_upper, op_lower] and src = [op_upper,
+  // -op_lower].
+  IS_LO_NEG,
+  IS_BOTH_NEG,
+  INVALID,
+  NEG_START = IS_UPPER_HALF_NEG,
+  NEG_END = IS_BOTH_NEG,
+  HALF_START = IS_UPPER_HALF,
+  HALF_END = IS_LOWER_HALF_NEG
+};
+/// Test if the MI is truncating to half, such as `%reg0:n = G_TRUNC %reg1:2n`
+static bool isTruncHalf(const MachineInstr *MI,
+                        const MachineRegisterInfo &MRI) {
+  if (MI->getOpcode() != AMDGPU::G_TRUNC)
+    return false;
 
-  if (MI->getOpcode() == AMDGPU::G_FNEG &&
-      // It's possible to see an f32 fneg here, but unlikely.
-      // TODO: Treat f32 fneg as only high bit.
-      MRI.getType(Src) == LLT::fixed_vector(2, 16)) {
-    Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
-    Src = MI->getOperand(1).getReg();
-    MI = MRI.getVRegDef(Src);
+  unsigned DstSize = MRI.getType(MI->getOperand(0).getReg()).getSizeInBits();
+  unsigned SrcSize = MRI.getType(MI->getOperand(1).getReg()).getSizeInBits();
+  return DstSize * 2 == SrcSize;
+}
+
+/// Test if the MI is logic shift right with half bits,
+/// such as `%reg0:2n =G_LSHR %reg1:2n, CONST(n)`
+static bool isLshrHalf(const MachineInstr *MI, const MachineRegisterInfo &MRI) {
+  if (MI->getOpcode() != AMDGPU::G_LSHR)
+    return false;
+
+  Register ShiftSrc;
+  std::optional<ValueAndVReg> ShiftAmt;
+  if (mi_match(MI->getOperand(0).getReg(), MRI,
+               m_GLShr(m_Reg(ShiftSrc), m_GCst(ShiftAmt)))) {
+    unsigned SrcSize = MRI.getType(MI->getOperand(1).getReg()).getSizeInBits();
+    unsigned Shift = ShiftAmt->Value.getZExtValue();
+    return Shift * 2 == SrcSize;
+  }
+  return false;
+}
+
+/// Test if the MI is shift left with half bits,
+/// such as `%reg0:2n =G_SHL %reg1:2n, CONST(n)`
+static bool isShlHalf(const MachineInstr *MI, const MachineRegisterInfo &MRI) {
+  if (MI->getOpcode() != AMDGPU::G_SHL)
+    return false;
+
+  Register ShiftSrc;
+  std::optional<ValueAndVReg> ShiftAmt;
+  if (mi_match(MI->getOperand(0).getReg(), MRI,
+               m_GShl(m_Reg(ShiftSrc), m_GCst(ShiftAmt)))) {
+    unsigned SrcSize = MRI.getType(MI->getOperand(1).getReg()).getSizeInBits();
+    unsigned Shift = ShiftAmt->Value.getZExtValue();
+    return Shift * 2 == SrcSize;
+  }
+  return false;
+}
+
+/// Test function, if the MI is `%reg0:n, %reg1:n = G_UNMERGE_VALUES %reg2:2n`
+static bool isUnmergeHalf(const MachineInstr *MI,
+                          const MachineRegisterInfo &MRI) {
+  if (MI->getOpcode() != AMDGPU::G_UNMERGE_VALUES)
+    return false;
+  return MI->getNumOperands() == 3 && MI->getOperand(0).isDef() &&
+         MI->getOperand(1).isDef() && !MI->getOperand(2).isDef();
+}
+
+enum class TypeClass { VECTOR_OF_TWO, SCALAR, NONE_OF_LISTED };
+
+static TypeClass isVectorOfTwoOrScalar(Register Reg,
+                                       const MachineRegisterInfo &MRI) {
+  LLT OpTy = MRI.getType(Reg);
+  if (OpTy.isScalar())
+    return TypeClass::SCALAR;
+  if (OpTy.isVector() && OpTy.getNumElements() == 2)
+    return TypeClass::VECTOR_OF_TWO;
+  return TypeClass::NONE_OF_LISTED;
+}
+
+static SrcStatus getNegStatus(Register Reg, SrcStatus S,
+                              const MachineRegisterInfo &MRI) {
+  TypeClass NegType = isVectorOfTwoOrScalar(Reg, MRI);
+  if (NegType != TypeClass::VECTOR_OF_TWO && NegType != TypeClass::SCALAR)
+    return SrcStatus::INVALID;
+
+  switch (S) {
+  case SrcStatus::IS_SAME:
+    if (NegType == TypeClass::VECTOR_OF_TWO) {
+      // Vector of 2:
+      // [SrcHi, SrcLo]   = [CurrHi, CurrLo]
+      // [CurrHi, CurrLo] = neg [OpHi, OpLo](2 x Type)
+      // [CurrHi, CurrLo] = [-OpHi, -OpLo](2 x Type)
+      // [SrcHi, SrcLo]   = [-OpHi, -OpLo]
+      return SrcStatus::IS_BOTH_NEG;
+    }
+    if (NegType == TypeClass::SCALAR) {
+      // Scalar:
+      // [SrcHi, SrcLo]   = [CurrHi, CurrLo]
+      // [CurrHi, CurrLo] = neg [OpHi, OpLo](Type)
+      // [CurrHi, CurrLo] = [-OpHi, OpLo](Type)
+      // [SrcHi, SrcLo]   = [-OpHi, OpLo]
+      return SrcStatus::IS_HI_NEG;
+    }
+    break;
+  case SrcStatus::IS_HI_NEG:
+    if (NegType == TypeClass::VECTOR_OF_TWO) {
+      // Vector of 2:
+      // [SrcHi, SrcLo]   = [-CurrHi, CurrLo]
+      // [CurrHi, CurrLo] = neg [OpHi, OpLo](2 x Type)
+      // [CurrHi, CurrLo] = [-OpHi, -OpLo](2 x Type)
+      // [SrcHi, SrcLo]   = [-(-OpHi), -OpLo] = [OpHi, -OpLo]
+      return SrcStatus::IS_LO_NEG;
+    }
+    if (NegType == TypeClass::SCALAR) {
+      // Scalar:
+      // [SrcHi, SrcLo]   = [-CurrHi, CurrLo]
+      // [CurrHi, CurrLo] = neg [OpHi, OpLo](Type)
+      // [CurrHi, CurrLo] = [-OpHi, OpLo](Type)
+      // [SrcHi, SrcLo]   = [-(-OpHi), OpLo] = [OpHi, OpLo]
+      return SrcStatus::IS_SAME;
+    }
+    break;
+  case SrcStatus::IS_LO_NEG:
+    if (NegType == TypeClass::VECTOR_OF_TWO) {
+      // Vector of 2:
+      // [SrcHi, SrcLo]   = [CurrHi, -CurrLo]
+      // [CurrHi, CurrLo] = fneg [OpHi, OpLo](2 x Type)
+      // [CurrHi, CurrLo] = [-OpHi, -OpLo](2 x Type)
+      // [SrcHi, SrcLo]   = [-OpHi, -(-OpLo)] = [-OpHi, OpLo]
+      return SrcStatus::IS_HI_NEG;
+    }
+    if (NegType == TypeClass::SCALAR) {
+      // Scalar:
+      // [SrcHi, SrcLo]   = [CurrHi, -CurrLo]
+      // [CurrHi, CurrLo] = fneg [OpHi, OpLo](Type)
+      // [CurrHi, CurrLo] = [-OpHi, OpLo](Type)
+      // [SrcHi, SrcLo]   = [-OpHi, -OpLo]
+      return SrcStatus::IS_BOTH_NEG;
+    }
+    break;
+  case SrcStatus::IS_BOTH_NEG:
+    if (NegType == TypeClass::VECTOR_OF_TWO) {
+      // Vector of 2:
+      // [SrcHi, SrcLo]   = [-CurrHi, -CurrLo]
+      // [CurrHi, CurrLo] = fneg [OpHi, OpLo](2 x Type)
+      // [CurrHi, CurrLo] = [-OpHi, -OpLo](2 x Type)
+      // [SrcHi, SrcLo]   = [OpHi, OpLo]
+      return SrcStatus::IS_SAME;
+    }
+    if (NegType == TypeClass::SCALAR) {
+      // Scalar:
+      // [SrcHi, SrcLo]   = [-CurrHi, -CurrLo]
+      // [CurrHi, CurrLo] = fneg [OpHi, OpLo](Type)
+      // [CurrHi, CurrLo] = [-OpHi, OpLo](Type)
+      // [SrcHi, SrcLo]   = [OpHi, -OpLo]
+      return SrcStatus::IS_LO_NEG;
+    }
+    break;
+  case SrcStatus::IS_UPPER_HALF:
+    // Vector of 2:
+    // Src = CurrUpper
+    // Curr = [CurrUpper, CurrLower]
+    // [CurrUpper, CurrLower] = fneg [OpUpper, OpLower](2 x Type)
+    // [CurrUpper, CurrLower] = [-OpUpper, -OpLower](2 x Type)
+    // Src = -OpUpper
+    //
+    // Scalar:
+    // Src = CurrUpper
+    // Curr = [CurrUpper, CurrLower]
+    // [CurrUpper, CurrLower] = fneg [OpUpper, OpLower](Type)
+    // [CurrUpper, CurrLower] = [-OpUpper, OpLower](Type)
+    // Src = -OpUpper
+    return SrcStatus::IS_UPPER_HALF_NEG;
+  case SrcStatus::IS_LOWER_HALF:
+    if (NegType == TypeClass::VECTOR_OF_TWO) {
+      // Vector of 2:
+      // Src = CurrLower
+      // Curr = [CurrUpper, CurrLower]
+      // [CurrUpper, CurrLower] = fneg [OpUpper, OpLower](2 x Type)
+      // [CurrUpper, CurrLower] = [-OpUpper, -OpLower](2 x Type)
+      // Src = -OpLower
+      return SrcStatus::IS_LOWER_HALF_NEG;
+    }
+    if (NegType == TypeClass::SCALAR) {
+      // Scalar:
+      // Src = CurrLower
+      // Curr = [CurrUpper, CurrLower]
+      // [CurrUpper, CurrLower] = fneg [OpUpper, OpLower](Type)
+      // [CurrUpper, CurrLower] = [-OpUpper, OpLower](Type)
+      // Src = OpLower
+      return SrcStatus::IS_LOWER_HALF;
+    }
+    break;
+  case SrcStatus::IS_UPPER_HALF_NEG:
+    // Vector of 2:
+    // Src = -CurrUpper
+    // Curr = [CurrUpper, CurrLower]
+    // [CurrUpper, CurrLower] = fneg [OpUpper, OpLower](2 x Type)
+    // [CurrUpper, CurrLower] = [-OpUpper, -OpLower](2 x Type)
+    // Src = -(-OpUpper) = OpUpper
+    //
+    // Scalar:
+    // Src = -CurrUpper
+    // Curr = [CurrUpper, CurrLower]
+    // [CurrUpper, CurrLower] = fneg [OpUpper, OpLower](Type)
+    // [CurrUpper, CurrLower] = [-OpUpper, OpLower](Type)
+    // Src = -(-OpUpper) = OpUpper
+    return SrcStatus::IS_UPPER_HALF;
+  case SrcStatus::IS_LOWER_HALF_NEG:
+    if (NegType == TypeClass::VECTOR_OF_TWO) {
+      // Vector of 2:
+      // Src = -CurrLower
+      // Curr = [CurrUpper, CurrLower]
+      // [CurrUpper, CurrLower] = fneg [OpUpper, OpLower](2 x Type)
+      // [CurrUpper, CurrLower] = [-OpUpper, -OpLower](2 x Type)
+      // Src = -(-OpLower) = OpLower
+      return SrcStatus::IS_LOWER_HALF;
+    }
+    if (NegType == TypeClass::SCALAR) {
+      // Scalar:
+      // Src = -CurrLower
+      // Curr = [CurrUpper, CurrLower]
+      // [CurrUpper, CurrLower] = fneg [OpUpper, OpLower](Type)
+      // [CurrUpper, CurrLower] = [-OpUpper, OpLower](Type)
+      // Src = -OpLower
+      return SrcStatus::IS_LOWER_HALF_NEG;
+    }
+    break;
+  default:
+    break;
+  }
+  llvm_unreachable("unexpected SrcStatus & NegType combination");
+}
+
+static std::optional<std::pair<Register, SrcStatus>>
+calcNextStatus(std::pair<Register, SrcStatus> Curr,
+               const MachineRegisterInfo &MRI) {
+  const MachineInstr *MI = MRI.getVRegDef(Curr.first);
+
+  unsigned Opc = MI->getOpcode();
+
+  // Handle general Opc cases.
+  switch (Opc) {
+  case AMDGPU::G_BITCAST:
+    return std::optional<std::pair<Register, SrcStatus>>(
+        {MI->getOperand(1).getReg(), Curr.second});
+  case AMDGPU::COPY:
+    if (MI->getOperand(1).getReg().isPhysical())
+      return std::nullopt;
+    return std::optional<std::pair<Register, SrcStatus>>(
+        {MI->getOperand(1).getReg(), Curr.second});
+  case AMDGPU::G_FNEG: {
+    SrcStatus Stat = getNegStatus(Curr.first, Curr.second, MRI);
+    if (Stat == SrcStatus::INVALID)
+      return std::nullopt;
+    return std::optional<std::pair<Register, SrcStatus>>(
+        {MI->getOperand(1).getReg(), Stat});
+  }
+  default:
+    break;
   }
 
-  // TODO: Handle G_FSUB 0 as fneg
+  // Calc next Stat from current Stat.
+  switch (Curr.second) {
+  case SrcStatus::IS_SAME:
+    if (isTruncHalf(MI, MRI))
+      return std::optional<std::pair<Register, SrcStatus>>(
+          {MI->getOperand(1).getReg(), SrcStatus::IS_LOWER_HALF});
+    else if (isUnmergeHalf(MI, MRI)) {
+      if (Curr.first == MI->getOperand(0).getReg())
+        return std::optional<std::pair<Register, SrcStatus>>(
+            {MI->getOperand(2).getReg(), SrcStatus::IS_LOWER_HALF});
+      return std::optional<std::pair<Register, SrcStatus>>(
+          {MI->getOperand(2).getReg(), SrcStatus::IS_UPPER_HALF});
+    }
+    break;
+  case SrcStatus::IS_HI_NEG:
+    if (isTruncHalf(MI, MRI)) {
+      // [SrcHi, SrcLo]   = [-CurrHi, CurrLo]
+      // [CurrHi, CurrLo] = trunc [OpUpper, OpLower] = OpLower
+      //                  = [OpLowerHi, OpLowerLo]
+      // Src = [SrcHi, SrcLo] = [-CurrHi, CurrLo]
+      //     = [-OpLowerHi, OpLowerLo]
+      //     = -OpLower
+      return std::optional<std::pair<Register, SrcStatus>>(
+          {MI->getOperand(1).getReg(), SrcStatus::IS_LOWER_HALF_NEG});
+    }
+    if (isUnmergeHalf(MI, MRI)) {
+      if (Curr.first == MI->getOperand(0).getReg())
+        return std::optional<std::pair<Register, SrcStatus>>(
+            {MI->getOperand(2).getReg(), SrcStatus::IS_LOWER_HALF_NEG});
+      return std::optional<std::pair<Register, SrcStatus>>(
+          {MI->getOperand(2).getReg(), SrcStatus::IS_UPPER_HALF_NEG});
+    }
+    break;
+  case SrcStatus::IS_UPPER_HALF:
+    if (isShlHalf(MI, MRI))
+      return std::optional<std::pair<Register, SrcStatus>>(
+          {MI->getOperand(1).getReg(), SrcStatus::IS_LOWER_HALF});
+    break;
+  case SrcStatus::IS_LOWER_HALF:
+    if (isLshrHalf(MI, MRI))
+      return std::optional<std::pair<Register, SrcStatus>>(
+          {MI->getOperand(1).getReg(), SrcStatus::IS_UPPER_HALF});
+    break;
+  case SrcStatus::IS_UPPER_HALF_NEG:
+    if (isShlHalf(MI, MRI))
+      return std::optional<std::pair<Register, SrcStatus>>(
+          {MI->getOperand(1).getReg(), SrcStatus::IS_LOWER_HALF_NEG});
+    break;
+  case SrcStatus::IS_LOWER_HALF_NEG:
+    if (isLshrHalf(MI, MRI))
+      return std::optional<std::pair<Register, SrcStatus>>(
+          {MI->getOperand(1).getReg(), SrcStatus::IS_UPPER_HALF_NEG});
+    break;
+  default:
+    break;
+  }
+  return std::nullopt;
+}
 
-  // TODO: Match op_sel through g_build_vector_trunc and g_shuffle_vector.
-  (void)IsDOT; // DOTs do not use OPSEL on gfx942+, check ST.hasDOTOpSelHazard()
+/// This is used to control valid status that current MI supports. For example,
+/// non floating point intrinsic such as @llvm.amdgcn.sdot2 does not support NEG
+/// bit on VOP3P.
+/// The class can be further extended to recognize support on SEL, NEG, ABS bit
+/// for different MI on different arch
+class SearchOptions {
+private:
+  bool HasNeg = false;
+  // Assume all complex pattern of VOP3P have opsel.
+  bool HasOpsel = true;
 
+public:
+  SearchOptions(Register Reg, const MachineRegisterInfo &MRI) {
+    const MachineInstr *MI = MRI.getVRegDef(Reg);
+    unsigned Opc = MI->getOpcode();
+
+    if (Opc < TargetOpcode::GENERIC_OP_END) {
+      // Keep same for generic op.
+      HasNeg = true;
+    } else if (Opc == TargetOpcode::G_INTRINSIC) {
+      Intrinsic::ID IntrinsicID = cast<GIntrinsic>(*MI).getIntrinsicID();
+      // Only float point intrinsic has neg & neg_hi bits.
+      if (IntrinsicID == Intrinsic::amdgcn_fdot2)
+        HasNeg = true;
+    }
+  }
+  bool checkOptions(SrcStatus Stat) const {
+    if (!HasNeg &&
+        (Stat >= SrcStatus::NEG_START && Stat <= SrcStatus::NEG_END)) {
+      return false;
+    }
+    if (!HasOpsel &&
+        (Stat >= SrcStatus::HALF_START && Stat <= SrcStatus::HALF_END)) {
+      return false;
+    }
+    return true;
+  }
+};
+
+static SmallVector<std::pair<Register, SrcStatus>>
+getSrcStats(Register Reg, const MachineRegisterInfo &MRI, SearchOptions SO,
+            int MaxDepth = 3) {
+  int Depth = 0;
+  auto Curr = calcNextStatus({Reg, SrcStatus::IS_SAME}, MRI);
+  SmallVector<std::pair<Register, SrcStatus>> Statlist;
+
+  while (Depth <= MaxDepth && Curr.has_value()) {
+    Depth++;
+    if (SO.checkOptions(Curr.value().second))
+      Statlist.push_back(Curr.value());
+    Curr = calcNextStatus(Curr.value(), MRI);
+  }
+
+  return Statlist;
+}
+
+static std::pair<Register, SrcStatus>
+getLastSameOrNeg(Register Reg, const MachineRegisterInfo &MRI, SearchOptions SO,
+                 int MaxDepth = 3) {
+  int Depth = 0;
+  std::pair<Register, SrcStatus> LastSameOrNeg = {Reg, SrcStatus::IS_SAME};
+  auto Curr = calcNextStatus(LastSameOrNeg, MRI);
+
+  while (Depth <= MaxDepth && Curr.has_value()) {
+    Depth++;
+    SrcStatus Stat = Curr.value().second;
+    if (SO.checkOptions(Stat)) {
+      if (Stat == SrcStatus::IS_SAME || Stat == SrcStatus::IS_HI_NEG ||
+          Stat == SrcStatus::IS_LO_NEG || Stat == SrcStatus::IS_BOTH_NEG)
+        LastSameOrNeg = Curr.value();
+    }
+    Curr = calcNextStatus(Curr.value(), MRI);
+  }
+
+  return LastSameOrNeg;
+}
+
+static bool isSameBitWidth(Register Reg1, Register Reg2,
+                           const MachineRegisterInfo &MRI) {
+  unsigned Width1 = MRI.getType(Reg1).getSizeInBits();
+  unsigned Width2 = MRI.getType(Reg2).getSizeInBits();
+  return Width1 == Width2;
+}
+
+static unsigned updateMods(SrcStatus HiStat, SrcStatus LoStat, unsigned Mods) {
+  // SrcStatus::IS_LOWER_HALF remain 0.
+  if (HiStat == SrcStatus::IS_UPPER_HALF_NEG) {
+    Mods ^= SISrcMods::NEG_HI;
+    Mods |= SISrcMods::OP_SEL_1;
+  } else if (HiStat == SrcStatus::IS_UPPER_HALF)
+    Mods |= SISrcMods::OP_SEL_1;
+  else if (HiStat == SrcStatus::IS_LOWER_HALF_NEG)
+    Mods ^= SISrcMods::NEG_HI;
+  else if (HiStat == SrcStatus::IS_HI_NEG)
+    Mods ^= SISrcMods::NEG_HI;
+
+  if (LoStat == SrcStatus::IS_UPPER_HALF_NEG) {
+    Mods ^= SISrcMods::NEG;
+    Mods |= SISrcMods::OP_SEL_0;
+  } else if (LoStat == SrcStatus::IS_UPPER_HALF)
+    Mods |= SISrcMods::OP_SEL_0;
+  else if (LoStat == SrcStatus::IS_LOWER_HALF_NEG)
+    Mods |= SISrcMods::NEG;
+  else if (LoStat == SrcStatus::IS_HI_NEG)
+    Mods ^= SISrcMods::NEG;
+
+  return Mods;
+}
+
+static bool isValidToPack(SrcStatus HiStat, SrcStatus LoStat, Register NewReg,
+                          Register RootReg, const SIInstrInfo &TII,
+                          const MachineRegisterInfo &MRI) {
+  auto IsHalfState = [](SrcStatus S) {
+    return S == SrcStatus::IS_UPPER_HALF || S == SrcStatus::IS_UPPER_HALF_NEG ||
+           S == SrcStatus::IS_LOWER_HALF || S == SrcStatus::IS_LOWER_HALF_NEG;
+  };
+  return isSameBitWidth(NewReg, RootReg, MRI) && IsHalfState(LoStat) &&
+         IsHalfState(HiStat);
+}
+
+std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3PModsImpl(
+    Register RootReg, const MachineRegisterInfo &MRI, bool IsDOT) const {
+  unsigned Mods = 0;
+  // No modification if Root type is not form of <2 x Type>.
+  if (isVectorOfTwoOrScalar(RootReg, MRI) != TypeClass::VECTOR_OF_TWO) {
+    Mods |= SISrcMods::OP_SEL_1;
+    return {RootReg, Mods};
+  }
+
+  SearchOptions SO(RootReg, MRI);
+
+  std::pair<Register, SrcStatus> Stat = getLastSameOrNeg(RootReg, MRI, SO);
+
+  if (Stat.second == SrcStatus::IS_BOTH_NEG)
+    Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
+  else if (Stat.second == SrcStatus::IS_HI_NEG)
+    Mods ^= SISrcMods::NEG_HI;
+  else if (Stat.second == SrcStatus::IS_LO_NEG)
+    Mods ^= SISrcMods::NEG;
+
+  MachineInstr *MI = MRI.getVRegDef(Stat.first);
+
+  if (MI->getOpcode() != AMDGPU::G_BUILD_VECTOR || MI->getNumOperands() != 3 ||
+      (IsDOT && Subtarget->hasDOTOpSelHazard())) {
+    Mods |= SISrcMods::OP_SEL_1;
+    return {Stat.first, Mods};
+  }
+
+  SmallVector<std::pair<Register, SrcStatus>> StatlistHi =
+      getSrcStats(MI->getOperand(2).getReg(), MRI, SO);
+
+  if (StatlistHi.empty()) {
+    Mods |= SISrcMods::OP_SEL_1;
+    return {Stat.first, Mods};
+  }
+
+  SmallVector<std::pair<Register, SrcStatus>> StatlistLo =
+      getSrcStats(MI->getOperand(1).getReg(), MRI, SO);
+
+  if (StatlistLo.empty()) {
+    Mods |= SISrcMods::OP_SEL_1;
+    return {Stat.first, Mods};
+  }
+
+  for (int I = StatlistHi.size() - 1; I >= 0; I--) {
+    for (int J = StatlistLo.size() - 1; J >= 0; J--) {
+      if (StatlistHi[I].first == StatlistLo[J].first &&
+          isValidToPack(StatlistHi[I].second, StatlistLo[J].second,
+                        StatlistHi[I].first, RootReg, TII, MRI))
+        return {StatlistHi[I].first,
+                updateMods(StatlistHi[I].second, StatlistLo[J].second, Mods)};
+    }
+  }
   // Packed instructions do not have abs modifiers.
   Mods |= SISrcMods::OP_SEL_1;
 
-  return std::pair(Src, Mods);
+  return {Stat.first, Mods};
+}
+
+// Removed unused function `getAllKindImm` to eliminate dead code.
+
+static bool checkRB(Register Reg, unsigned int RBNo,
+                    const AMDGPURegisterBankInfo &RBI,
+                    const MachineRegisterInfo &MRI,
+                    const TargetRegisterInfo &TRI) {
+  const RegisterBank *RB = RBI.getRegBank(Reg, MRI, TRI);
+  return RB->getID() == RBNo;
+}
+
+// This function is used to get the correct register bank for returned reg.
+// Assume:
+// 1. VOP3P is always legal for VGPR.
+// 2. RootOp's regbank is legal.
+// Thus
+// 1. If RootOp is SGPR, then NewOp can be SGPR or VGPR.
+// 2. If RootOp is VGPR, then NewOp must be VGPR.
+static Register getLegalRegBank(Register NewReg, Register RootReg,
+                                const AMDGPURegisterBankInfo &RBI,
+                                MachineRegisterInfo &MRI,
+                                const TargetRegisterInfo &TRI,
+                                const SIInstrInfo &TII) {
+  // RootOp can only be VGPR or SGPR (some hand written cases such as.
+  // inst-select-ashr.v2s16.mir::ashr_v2s16_vs).
+  if (checkRB(RootReg, AMDGPU::SGPRRegBankID, RBI, MRI, TRI) ||
+      checkRB(NewReg, AMDGPU::VGPRRegBankID, RBI, MRI, TRI))
+    return NewReg;
+
+  MachineInstr *MI = MRI.getVRegDef(RootReg);
+  if (MI->getOpcode() == AMDGPU::COPY && NewReg == MI->getOperand(1).getReg()) {
+    // RootOp is VGPR, NewOp is not VGPR, but RootOp = COPY NewOp.
+    return RootReg;
+  }
+
+  MachineBasicBlock *BB = MI->getParent();
+  Register DstReg = MRI.cloneVirtualRegister(RootReg);
+
+  MachineInstrBuilder MIB =
+      BuildMI(*BB, MI, MI->getDebugLoc(), TII.get(AMDGPU::COPY), DstReg)
+          .addReg(NewReg);
+
+  // Only accept VGPR.
+  return MIB->getOperand(0).getReg();
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVOP3PRetHelper(MachineOperand &Root,
+                                                bool IsDOT) const {
+  MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
+  Register Reg;
+  unsigned Mods;
+  std::tie(Reg, Mods) = selectVOP3PModsImpl(Root.getReg(), MRI, IsDOT);
+
+  Reg = getLegalRegBank(Reg, Root.getReg(), RBI, MRI, TRI, TII);
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(Reg); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
+  }};
 }
 
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3PMods(MachineOperand &Root) const {
-  MachineRegisterInfo &MRI
-    = Root.getParent()->getParent()->getParent()->getRegInfo();
 
-  Register Src;
-  unsigned Mods;
-  std::tie(Src, Mods) = selectVOP3PModsImpl(Root.getReg(), MRI);
-
-  return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); }  // src_mods
-  }};
+  return selectVOP3PRetHelper(Root);
 }
 
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3PModsDOT(MachineOperand &Root) const {
-  MachineRegisterInfo &MRI
-    = Root.getParent()->getParent()->getParent()->getRegInfo();
 
-  Register Src;
-  unsigned Mods;
-  std::tie(Src, Mods) = selectVOP3PModsImpl(Root.getReg(), MRI, true);
-
-  return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); }  // src_mods
-  }};
+  return selectVOP3PRetHelper(Root, true);
 }
 
 InstructionSelector::ComplexRendererFns
@@ -4596,6 +5162,7 @@ AMDGPUInstructionSelector::selectVOP3OpSelMods(MachineOperand &Root) const {
   }};
 }
 
+// FIXME-TRUE16 remove when fake16 is removed
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVINTERPMods(MachineOperand &Root) const {
   Register Src;
@@ -4669,7 +5236,7 @@ bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
           // to be negative if the resulting (Offset + (M0 or SOffset or zero)
           // is negative. Handle the case where the Immediate Offset + SOffset
           // is negative.
-          auto SKnown = KB->getKnownBits(*SOffset);
+          auto SKnown = VT->getKnownBits(*SOffset);
           if (*Offset + SKnown.getMinValue().getSExtValue() < 0)
             return false;
 
@@ -5003,8 +5570,8 @@ bool AMDGPUInstructionSelector::checkFlatScratchSVSSwizzleBug(
   // The bug affects the swizzling of SVS accesses if there is any carry out
   // from the two low order bits (i.e. from bit 1 into bit 2) when adding
   // voffset to (soffset + inst_offset).
-  auto VKnown = KB->getKnownBits(VAddr);
-  auto SKnown = KnownBits::add(KB->getKnownBits(SAddr),
+  auto VKnown = VT->getKnownBits(VAddr);
+  auto SKnown = KnownBits::add(VT->getKnownBits(SAddr),
                                KnownBits::makeConstant(APInt(32, ImmOffset)));
   uint64_t VMax = VKnown.getMaxValue().getZExtValue();
   uint64_t SMax = SKnown.getMaxValue().getZExtValue();
@@ -5024,7 +5591,8 @@ AMDGPUInstructionSelector::selectScratchSVAddr(MachineOperand &Root) const {
 
   Register OrigAddr = Addr;
   if (ConstOffset != 0 &&
-      TII.isLegalFLATOffset(ConstOffset, AMDGPUAS::PRIVATE_ADDRESS, true)) {
+      TII.isLegalFLATOffset(ConstOffset, AMDGPUAS::PRIVATE_ADDRESS,
+                            SIInstrFlags::FlatScratch)) {
     Addr = PtrBase;
     ImmOffset = ConstOffset;
   }
@@ -5119,7 +5687,7 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
   if (ConstOffset != 0) {
     if (TII.isLegalMUBUFImmOffset(ConstOffset) &&
         (!STI.privateMemoryResourceIsRangeChecked() ||
-         KB->signBitIsZero(PtrBase))) {
+         VT->signBitIsZero(PtrBase))) {
       const MachineInstr *PtrBaseDef = MRI->getVRegDef(PtrBase);
       if (PtrBaseDef->getOpcode() == AMDGPU::G_FRAME_INDEX)
         FI = PtrBaseDef->getOperand(1).getIndex();
@@ -5160,7 +5728,7 @@ bool AMDGPUInstructionSelector::isDSOffsetLegal(Register Base,
 
   // On Southern Islands instruction with a negative base value and an offset
   // don't seem to work.
-  return KB->signBitIsZero(Base);
+  return VT->signBitIsZero(Base);
 }
 
 bool AMDGPUInstructionSelector::isDSOffset2Legal(Register Base, int64_t Offset0,
@@ -5176,7 +5744,7 @@ bool AMDGPUInstructionSelector::isDSOffset2Legal(Register Base, int64_t Offset0,
 
   // On Southern Islands instruction with a negative base value and an offset
   // don't seem to work.
-  return KB->signBitIsZero(Base);
+  return VT->signBitIsZero(Base);
 }
 
 // Return whether the operation has NoUnsignedWrap property.
@@ -5215,7 +5783,7 @@ bool AMDGPUInstructionSelector::isFlatScratchBaseLegal(Register Addr) const {
       return true;
   }
 
-  return KB->signBitIsZero(LHS);
+  return VT->signBitIsZero(LHS);
 }
 
 // Check address value in SGPR/VGPR are legal for flat scratch in the form
@@ -5233,7 +5801,7 @@ bool AMDGPUInstructionSelector::isFlatScratchBaseLegalSV(Register Addr) const {
 
   Register LHS = AddrMI->getOperand(1).getReg();
   Register RHS = AddrMI->getOperand(2).getReg();
-  return KB->signBitIsZero(RHS) && KB->signBitIsZero(LHS);
+  return VT->signBitIsZero(RHS) && VT->signBitIsZero(LHS);
 }
 
 // Check address value in SGPR/VGPR are legal for flat scratch in the form
@@ -5265,7 +5833,7 @@ bool AMDGPUInstructionSelector::isFlatScratchBaseLegalSVImm(
 
   Register LHS = BaseDef->MI->getOperand(1).getReg();
   Register RHS = BaseDef->MI->getOperand(2).getReg();
-  return KB->signBitIsZero(RHS) && KB->signBitIsZero(LHS);
+  return VT->signBitIsZero(RHS) && VT->signBitIsZero(LHS);
 }
 
 bool AMDGPUInstructionSelector::isUnneededShiftMask(const MachineInstr &MI,
@@ -5280,7 +5848,7 @@ bool AMDGPUInstructionSelector::isUnneededShiftMask(const MachineInstr &MI,
   if (RHS->countr_one() >= ShAmtBits)
     return true;
 
-  const APInt &LHSKnownZeros = KB->getKnownZeroes(MI.getOperand(1).getReg());
+  const APInt &LHSKnownZeros = VT->getKnownZeroes(MI.getOperand(1).getReg());
   return (LHSKnownZeros | *RHS).countr_one() >= ShAmtBits;
 }
 
@@ -5780,7 +6348,7 @@ AMDGPUInstructionSelector::selectSMRDBufferSgprImm(MachineOperand &Root) const {
   Register SOffset;
   unsigned Offset;
   std::tie(SOffset, Offset) = AMDGPU::getBaseWithConstantOffset(
-      *MRI, Root.getReg(), KB, /*CheckNUW*/ true);
+      *MRI, Root.getReg(), VT, /*CheckNUW*/ true);
   if (!SOffset)
     return std::nullopt;
 
@@ -5880,6 +6448,9 @@ bool AMDGPUInstructionSelector::selectSBarrierSignalIsfirst(
   MachineBasicBlock *MBB = I.getParent();
   const DebugLoc &DL = I.getDebugLoc();
   Register CCReg = I.getOperand(0).getReg();
+
+  // Set SCC to true, in case the barrier instruction gets converted to a NOP.
+  BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_CMP_EQ_U32)).addImm(0).addImm(0);
 
   BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM))
       .addImm(I.getOperand(2).getImm());

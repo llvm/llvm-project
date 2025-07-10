@@ -11,6 +11,7 @@
 #include "flang/Common/indirection.h"
 #include "flang/Parser/tools.h"
 #include "flang/Parser/user-state.h"
+#include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 
@@ -305,7 +306,9 @@ std::string OmpTraitSelectorName::ToString() const {
             return std::string(EnumToString(v));
           },
           [&](llvm::omp::Directive d) {
-            return llvm::omp::getOpenMPDirectiveName(d).str();
+            return llvm::omp::getOpenMPDirectiveName(
+                d, llvm::omp::FallbackVersion)
+                .str();
           },
           [&](const std::string &s) { //
             return s;
@@ -318,6 +321,34 @@ std::string OmpTraitSetSelectorName::ToString() const {
   return std::string(EnumToString(v));
 }
 
+llvm::omp::Clause OpenMPAtomicConstruct::GetKind() const {
+  auto &dirSpec{std::get<OmpDirectiveSpecification>(t)};
+  for (auto &clause : dirSpec.Clauses().v) {
+    switch (clause.Id()) {
+    case llvm::omp::Clause::OMPC_read:
+    case llvm::omp::Clause::OMPC_write:
+    case llvm::omp::Clause::OMPC_update:
+      return clause.Id();
+    default:
+      break;
+    }
+  }
+  return llvm::omp::Clause::OMPC_update;
+}
+
+bool OpenMPAtomicConstruct::IsCapture() const {
+  auto &dirSpec{std::get<OmpDirectiveSpecification>(t)};
+  return llvm::any_of(dirSpec.Clauses().v, [](auto &clause) {
+    return clause.Id() == llvm::omp::Clause::OMPC_capture;
+  });
+}
+
+bool OpenMPAtomicConstruct::IsCompare() const {
+  auto &dirSpec{std::get<OmpDirectiveSpecification>(t)};
+  return llvm::any_of(dirSpec.Clauses().v, [](auto &clause) {
+    return clause.Id() == llvm::omp::Clause::OMPC_compare;
+  });
+}
 } // namespace Fortran::parser
 
 template <typename C> static llvm::omp::Clause getClauseIdForClass(C &&) {
@@ -335,6 +366,14 @@ template <typename C> static llvm::omp::Clause getClauseIdForClass(C &&) {
 namespace Fortran::parser {
 llvm::omp::Clause OmpClause::Id() const {
   return std::visit([](auto &&s) { return getClauseIdForClass(s); }, u);
+}
+
+const OmpArgumentList &OmpDirectiveSpecification::Arguments() const {
+  static OmpArgumentList empty{decltype(OmpArgumentList::v){}};
+  if (auto &arguments = std::get<std::optional<OmpArgumentList>>(t)) {
+    return *arguments;
+  }
+  return empty;
 }
 
 const OmpClauseList &OmpDirectiveSpecification::Clauses() const {

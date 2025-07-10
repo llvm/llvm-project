@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGOpenMPRuntimeGPU.h"
+#include "CGDebugInfo.h"
 #include "CodeGenFunction.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclOpenMP.h"
@@ -128,8 +129,8 @@ static RecordDecl *buildRecordForGlobalizedVars(
   //       };
   RecordDecl *GlobalizedRD = C.buildImplicitRecord("_globalized_locals_ty");
   GlobalizedRD->startDefinition();
-  llvm::SmallPtrSet<const ValueDecl *, 16> SingleEscaped(
-      EscapedDeclsForTeams.begin(), EscapedDeclsForTeams.end());
+  llvm::SmallPtrSet<const ValueDecl *, 16> SingleEscaped(llvm::from_range,
+                                                         EscapedDeclsForTeams);
   for (const auto &Pair : GlobalizedVars) {
     const ValueDecl *VD = Pair.second;
     QualType Type = VD->getType();
@@ -321,9 +322,8 @@ class CheckVarsEscapingDeclContext final
 public:
   CheckVarsEscapingDeclContext(CodeGenFunction &CGF,
                                ArrayRef<const ValueDecl *> TeamsReductions)
-      : CGF(CGF), EscapedDecls(TeamsReductions.begin(), TeamsReductions.end()) {
-  }
-  virtual ~CheckVarsEscapingDeclContext() = default;
+      : CGF(CGF), EscapedDecls(llvm::from_range, TeamsReductions) {}
+  ~CheckVarsEscapingDeclContext() = default;
   void VisitDeclStmt(const DeclStmt *S) {
     if (!S)
       return;
@@ -1020,7 +1020,7 @@ llvm::Function *CGOpenMPRuntimeGPU::emitTeamsOutlinedFunction(
         for (const auto &Pair : MappedDeclsFields) {
           assert(Pair.getFirst()->isCanonicalDecl() &&
                  "Expected canonical declaration");
-          Data.insert(std::make_pair(Pair.getFirst(), MappedVarData()));
+          Data.try_emplace(Pair.getFirst());
         }
       }
       Rt.emitGenericVarsProlog(CGF, Loc);
@@ -1257,9 +1257,9 @@ void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,
     if (!NumThreadsVal)
       NumThreadsVal = llvm::ConstantInt::get(CGF.Int32Ty, -1);
     else
-      NumThreadsVal = Bld.CreateZExtOrTrunc(NumThreadsVal, CGF.Int32Ty),
+      NumThreadsVal = Bld.CreateZExtOrTrunc(NumThreadsVal, CGF.Int32Ty);
 
-      assert(IfCondVal && "Expected a value");
+    assert(IfCondVal && "Expected a value");
     llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
     llvm::Value *Args[] = {
         RTLoc,
@@ -1659,7 +1659,6 @@ void CGOpenMPRuntimeGPU::emitReduction(
     return;
 
   bool ParallelReduction = isOpenMPParallelDirective(Options.ReductionKind);
-  bool DistributeReduction = isOpenMPDistributeDirective(Options.ReductionKind);
   bool TeamsReduction = isOpenMPTeamsDirective(Options.ReductionKind);
 
   ASTContext &C = CGM.getContext();
@@ -1756,11 +1755,10 @@ void CGOpenMPRuntimeGPU::emitReduction(
   llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
       cantFail(OMPBuilder.createReductionsGPU(
           OmpLoc, AllocaIP, CodeGenIP, ReductionInfos, false, TeamsReduction,
-          DistributeReduction, llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
+          llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
           CGF.getTarget().getGridValue(),
           C.getLangOpts().OpenMPCUDAReductionBufNum, RTLoc));
   CGF.Builder.restoreIP(AfterIP);
-  return;
 }
 
 const VarDecl *
@@ -2027,7 +2025,7 @@ void CGOpenMPRuntimeGPU::emitFunctionProlog(CodeGenFunction &CGF,
   DeclToAddrMapTy &Data = I->getSecond().LocalVarData;
   for (const ValueDecl *VD : VarChecker.getEscapedDecls()) {
     assert(VD->isCanonicalDecl() && "Expected canonical declaration");
-    Data.insert(std::make_pair(VD, MappedVarData()));
+    Data.try_emplace(VD);
   }
   if (!NeedToDelayGlobalization) {
     emitGenericVarsProlog(CGF, D->getBeginLoc());
@@ -2333,8 +2331,11 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::GFX12_GENERIC:
       case OffloadArch::GFX1200:
       case OffloadArch::GFX1201:
+      case OffloadArch::GFX1250:
       case OffloadArch::AMDGCNSPIRV:
       case OffloadArch::Generic:
+      case OffloadArch::GRANITERAPIDS:
+      case OffloadArch::BMG_G21:
       case OffloadArch::UNUSED:
       case OffloadArch::UNKNOWN:
         break;

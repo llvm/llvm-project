@@ -118,7 +118,7 @@ llvm::Expected<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
   class P1689ActionController : public DependencyActionController {
   public:
     // The lookupModuleOutput is for clang modules. P1689 format don't need it.
-    std::string lookupModuleOutput(const ModuleID &,
+    std::string lookupModuleOutput(const ModuleDeps &,
                                    ModuleOutputKind Kind) override {
       return "";
     }
@@ -171,6 +171,8 @@ TranslationUnitDeps FullDependencyConsumer::takeTranslationUnitDeps() {
   TranslationUnitDeps TU;
 
   TU.ID.ContextHash = std::move(ContextHash);
+  TU.ID.ModuleName = std::move(ModuleName);
+  TU.NamedModuleDeps = std::move(NamedModuleDeps);
   TU.FileDeps = std::move(Dependencies);
   TU.PrebuiltModuleDeps = std::move(PrebuiltModuleDeps);
   TU.Commands = std::move(Commands);

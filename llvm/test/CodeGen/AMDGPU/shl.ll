@@ -878,19 +878,19 @@ define amdgpu_kernel void @shl_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s8, s2
 ; SI-NEXT:    s_mov_b32 s9, s3
-; SI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0 offset:16
-; SI-NEXT:    buffer_load_dwordx4 v[4:7], off, s[8:11], 0 offset:48
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0 offset:48
+; SI-NEXT:    buffer_load_dwordx4 v[3:6], off, s[8:11], 0 offset:16
 ; SI-NEXT:    buffer_load_dwordx4 v[7:10], off, s[8:11], 0
 ; SI-NEXT:    buffer_load_dwordx4 v[11:14], off, s[8:11], 0 offset:32
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(2)
-; SI-NEXT:    v_lshl_b64 v[2:3], v[2:3], v6
-; SI-NEXT:    v_lshl_b64 v[0:1], v[0:1], v4
+; SI-NEXT:    v_lshl_b64 v[5:6], v[5:6], v2
+; SI-NEXT:    v_lshl_b64 v[3:4], v[3:4], v0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_lshl_b64 v[9:10], v[9:10], v13
 ; SI-NEXT:    v_lshl_b64 v[7:8], v[7:8], v11
-; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0 offset:16
+; SI-NEXT:    buffer_store_dwordx4 v[3:6], off, s[4:7], 0 offset:16
 ; SI-NEXT:    buffer_store_dwordx4 v[7:10], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -2084,7 +2084,7 @@ define amdgpu_kernel void @test_mul2(i32 %p) {
 ; EG-NEXT:     LSHL * T1.X, KC0[2].Y, 1,
 ; EG-NEXT:    0(0.000000e+00), 0(0.000000e+00)
    %i = mul i32 %p, 2
-   store volatile i32 %i, ptr addrspace(1) undef
+   store volatile i32 %i, ptr addrspace(1) poison
    ret void
 }
 

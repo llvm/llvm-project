@@ -2,7 +2,6 @@
 ; RUN: opt -S -mcpu=gfx900 -amdgpu-lower-buffer-fat-pointers -check-debugify < %s | FileCheck %s
 ; RUN: opt -S -mcpu=gfx900 -passes=amdgpu-lower-buffer-fat-pointers,check-debugify < %s | FileCheck %s
 
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8"
 target triple = "amdgcn--"
 
 define float @debug_stash_pointer(ptr addrspace(8) %buf, i32 %idx, ptr addrspace(8) %aux) !dbg !5 {
@@ -14,52 +13,46 @@ define float @debug_stash_pointer(ptr addrspace(8) %buf, i32 %idx, ptr addrspace
 ; CHECK-NEXT:      #dbg_value(ptr addrspace(5) [[AUX_PTR_VAR]], [[META12:![0-9]+]], !DIExpression(), [[DBG22]])
 ; CHECK-NEXT:      #dbg_value({ ptr addrspace(8), i32 } poison, [[META13:![0-9]+]], !DIExpression(), [[META23:![0-9]+]])
 ; CHECK-NEXT:    [[BUF_PTR_INT_RSRC:%.*]] = ptrtoint ptr addrspace(8) [[BUF]] to i160, !dbg [[DBG24:![0-9]+]]
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i160 [[BUF_PTR_INT_RSRC]], 32, !dbg [[DBG24]]
-; CHECK-NEXT:    [[BUF_PTR_INT:%.*]] = or i160 [[TMP1]], 0, !dbg [[DBG24]]
+; CHECK-NEXT:    [[BUF_PTR_INT:%.*]] = shl nuw i160 [[BUF_PTR_INT_RSRC]], 32, !dbg [[DBG24]]
 ; CHECK-NEXT:    store i160 [[BUF_PTR_INT]], ptr addrspace(5) [[BUF_PTR_VAR]], align 32, !dbg [[DBG24]]
 ; CHECK-NEXT:      #dbg_value({ ptr addrspace(8), i32 } poison, [[META15:![0-9]+]], !DIExpression(), [[META25:![0-9]+]])
 ; CHECK-NEXT:    [[AUX_PTR_INT_RSRC:%.*]] = ptrtoint ptr addrspace(8) [[AUX]] to i160, !dbg [[DBG26:![0-9]+]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i160 [[AUX_PTR_INT_RSRC]], 32, !dbg [[DBG26]]
-; CHECK-NEXT:    [[AUX_PTR_INT:%.*]] = or i160 [[TMP2]], 0, !dbg [[DBG26]]
+; CHECK-NEXT:    [[AUX_PTR_INT:%.*]] = shl nuw i160 [[AUX_PTR_INT_RSRC]], 32, !dbg [[DBG26]]
 ; CHECK-NEXT:    store i160 [[AUX_PTR_INT]], ptr addrspace(5) [[AUX_PTR_VAR]], align 32, !dbg [[DBG26]]
 ; CHECK-NEXT:    [[BUF_PTR_2:%.*]] = load i160, ptr addrspace(5) [[BUF_PTR_VAR]], align 32, !dbg [[DBG27:![0-9]+]]
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i160 [[BUF_PTR_2]], 32, !dbg [[DBG27]]
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i160 [[TMP3]] to i128, !dbg [[DBG27]]
-; CHECK-NEXT:    [[BUF_PTR_2_PTR_RSRC:%.*]] = inttoptr i128 [[TMP4]] to ptr addrspace(8), !dbg [[DBG27]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i160 [[BUF_PTR_2]], 32, !dbg [[DBG27]]
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i160 [[TMP1]] to i128, !dbg [[DBG27]]
+; CHECK-NEXT:    [[BUF_PTR_2_PTR_RSRC:%.*]] = inttoptr i128 [[TMP2]] to ptr addrspace(8), !dbg [[DBG27]]
 ; CHECK-NEXT:    [[BUF_PTR_2_PTR_OFF:%.*]] = trunc i160 [[BUF_PTR_2]] to i32, !dbg [[DBG27]]
 ; CHECK-NEXT:      #dbg_value({ ptr addrspace(8), i32 } poison, [[META16:![0-9]+]], !DIExpression(), [[DBG27]])
 ; CHECK-NEXT:    [[BUF_PTR_3_IDX:%.*]] = mul i32 [[IDX]], 4, !dbg [[DBG28:![0-9]+]]
 ; CHECK-NEXT:    [[BUF_PTR_3:%.*]] = add i32 [[BUF_PTR_2_PTR_OFF]], [[BUF_PTR_3_IDX]], !dbg [[DBG28]]
 ; CHECK-NEXT:      #dbg_value({ ptr addrspace(8), i32 } poison, [[META17:![0-9]+]], !DIExpression(), [[DBG28]])
 ; CHECK-NEXT:    [[BUF_PTR_3_INT_RSRC:%.*]] = ptrtoint ptr addrspace(8) [[BUF_PTR_2_PTR_RSRC]] to i160, !dbg [[DBG29:![0-9]+]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i160 [[BUF_PTR_3_INT_RSRC]], 32, !dbg [[DBG29]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i160 [[BUF_PTR_3_INT_RSRC]], 32, !dbg [[DBG29]]
 ; CHECK-NEXT:    [[BUF_PTR_3_INT_OFF:%.*]] = zext i32 [[BUF_PTR_3]] to i160, !dbg [[DBG29]]
-; CHECK-NEXT:    [[BUF_PTR_3_INT:%.*]] = or i160 [[TMP5]], [[BUF_PTR_3_INT_OFF]], !dbg [[DBG29]]
+; CHECK-NEXT:    [[BUF_PTR_3_INT:%.*]] = or i160 [[TMP3]], [[BUF_PTR_3_INT_OFF]], !dbg [[DBG29]]
 ; CHECK-NEXT:    store i160 [[BUF_PTR_3_INT]], ptr addrspace(5) [[BUF_PTR_VAR]], align 32, !dbg [[DBG29]]
 ; CHECK-NEXT:    [[BUF_PTR_4:%.*]] = load i160, ptr addrspace(5) [[BUF_PTR_VAR]], align 32, !dbg [[DBG30:![0-9]+]]
-; CHECK-NEXT:    [[TMP6:%.*]] = lshr i160 [[BUF_PTR_4]], 32, !dbg [[DBG30]]
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc i160 [[TMP6]] to i128, !dbg [[DBG30]]
-; CHECK-NEXT:    [[BUF_PTR_4_PTR_RSRC:%.*]] = inttoptr i128 [[TMP7]] to ptr addrspace(8), !dbg [[DBG30]]
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i160 [[BUF_PTR_4]], 32, !dbg [[DBG30]]
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i160 [[TMP4]] to i128, !dbg [[DBG30]]
+; CHECK-NEXT:    [[BUF_PTR_4_PTR_RSRC:%.*]] = inttoptr i128 [[TMP5]] to ptr addrspace(8), !dbg [[DBG30]]
 ; CHECK-NEXT:    [[BUF_PTR_4_PTR_OFF:%.*]] = trunc i160 [[BUF_PTR_4]] to i32, !dbg [[DBG30]]
 ; CHECK-NEXT:      #dbg_value({ ptr addrspace(8), i32 } poison, [[META18:![0-9]+]], !DIExpression(), [[DBG30]])
 ; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) align 4 [[BUF_PTR_4_PTR_RSRC]], i32 [[BUF_PTR_4_PTR_OFF]], i32 0, i32 0), !dbg [[DBG31:![0-9]+]]
 ; CHECK-NEXT:      #dbg_value(float [[RET]], [[META19:![0-9]+]], !DIExpression(), [[DBG31]])
 ; CHECK-NEXT:    [[AUX_PTR_2:%.*]] = load i160, ptr addrspace(5) [[AUX_PTR_VAR]], align 32, !dbg [[DBG32:![0-9]+]]
-; CHECK-NEXT:    [[TMP8:%.*]] = lshr i160 [[AUX_PTR_2]], 32, !dbg [[DBG32]]
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc i160 [[TMP8]] to i128, !dbg [[DBG32]]
-; CHECK-NEXT:    [[AUX_PTR_2_PTR_RSRC:%.*]] = inttoptr i128 [[TMP9]] to ptr addrspace(8), !dbg [[DBG32]]
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i160 [[AUX_PTR_2]], 32, !dbg [[DBG32]]
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i160 [[TMP6]] to i128, !dbg [[DBG32]]
+; CHECK-NEXT:    [[AUX_PTR_2_PTR_RSRC:%.*]] = inttoptr i128 [[TMP7]] to ptr addrspace(8), !dbg [[DBG32]]
 ; CHECK-NEXT:    [[AUX_PTR_2_PTR_OFF:%.*]] = trunc i160 [[AUX_PTR_2]] to i32, !dbg [[DBG32]]
 ; CHECK-NEXT:      #dbg_value({ ptr addrspace(8), i32 } poison, [[META20:![0-9]+]], !DIExpression(), [[DBG32]])
-; CHECK-NEXT:    [[BUF_PTR_4_PTR_INT_RSRC:%.*]] = ptrtoint ptr addrspace(8) [[BUF_PTR_4_PTR_RSRC]] to i160, !dbg [[DBG33:![0-9]+]]
-; CHECK-NEXT:    [[TMP10:%.*]] = shl nuw i160 [[BUF_PTR_4_PTR_INT_RSRC]], 32, !dbg [[DBG33]]
-; CHECK-NEXT:    [[BUF_PTR_4_PTR_INT_OFF:%.*]] = zext i32 [[BUF_PTR_4_PTR_OFF]] to i160, !dbg [[DBG33]]
-; CHECK-NEXT:    [[BUF_PTR_4_PTR_INT:%.*]] = or i160 [[TMP10]], [[BUF_PTR_4_PTR_INT_OFF]], !dbg [[DBG33]]
-; CHECK-NEXT:    [[BUF_PTR_4_PTR_INT_LEGAL:%.*]] = bitcast i160 [[BUF_PTR_4_PTR_INT]] to <5 x i32>, !dbg [[DBG33]]
-; CHECK-NEXT:    [[BUF_PTR_4_PTR_INT_SLICE_0:%.*]] = shufflevector <5 x i32> [[BUF_PTR_4_PTR_INT_LEGAL]], <5 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>, !dbg [[DBG33]]
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[BUF_PTR_4_PTR_INT_SLICE_0]], ptr addrspace(8) align 32 [[AUX_PTR_2_PTR_RSRC]], i32 [[AUX_PTR_2_PTR_OFF]], i32 0, i32 0), !dbg [[DBG33]]
+; CHECK-NEXT:    [[BUF_PTR_4_LEGAL:%.*]] = bitcast i160 [[BUF_PTR_4]] to <5 x i32>, !dbg [[DBG33:![0-9]+]]
+; CHECK-NEXT:    [[BUF_PTR_4_SLICE_0:%.*]] = shufflevector <5 x i32> [[BUF_PTR_4_LEGAL]], <5 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>, !dbg [[DBG33]]
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[BUF_PTR_4_SLICE_0]], ptr addrspace(8) align 32 [[AUX_PTR_2_PTR_RSRC]], i32 [[AUX_PTR_2_PTR_OFF]], i32 0, i32 0), !dbg [[DBG33]]
 ; CHECK-NEXT:    [[AUX_PTR_2_PTR_PART_4:%.*]] = add nuw i32 [[AUX_PTR_2_PTR_OFF]], 16, !dbg [[DBG33]]
-; CHECK-NEXT:    [[BUF_PTR_4_PTR_INT_SLICE_4:%.*]] = extractelement <5 x i32> [[BUF_PTR_4_PTR_INT_LEGAL]], i64 4, !dbg [[DBG33]]
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[BUF_PTR_4_PTR_INT_SLICE_4]], ptr addrspace(8) align 16 [[AUX_PTR_2_PTR_RSRC]], i32 [[AUX_PTR_2_PTR_PART_4]], i32 0, i32 0), !dbg [[DBG33]]
+; CHECK-NEXT:    [[BUF_PTR_4_SLICE_4:%.*]] = extractelement <5 x i32> [[BUF_PTR_4_LEGAL]], i64 4, !dbg [[DBG33]]
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[BUF_PTR_4_SLICE_4]], ptr addrspace(8) align 16 [[AUX_PTR_2_PTR_RSRC]], i32 [[AUX_PTR_2_PTR_PART_4]], i32 0, i32 0), !dbg [[DBG33]]
 ; CHECK-NEXT:    ret float [[RET]], !dbg [[DBG34:![0-9]+]]
 ;
   %buf.ptr.var = alloca ptr addrspace(7), align 32, addrspace(5), !dbg !20

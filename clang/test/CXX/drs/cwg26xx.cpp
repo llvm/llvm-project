@@ -142,8 +142,8 @@ struct foo {
 
 void f() {
   foo fooable; // #cwg2628-fooable
-  // since-cxx20-error@#cwg2628-fooable {{call to deleted}} 
-  //   since-cxx20-note@#cwg2628-ctor {{marked deleted here}} 
+  // since-cxx20-error@#cwg2628-fooable {{call to deleted}}
+  //   since-cxx20-note@#cwg2628-ctor {{marked deleted here}}
 }
 #endif
 } // namespace cwg2628
@@ -220,7 +220,6 @@ int x = cwg2640_a\N{abc});
 int y = cwg2640_a\N{LOTUS});
 // expected-error@-1 {{character <U+1FAB7> not allowed in an identifier}}
 // expected-error@-2 {{use of undeclared identifier 'cwg2640_a🪷'}}
-// expected-error@-3 {{extraneous ')' before ';'}}
 } // namespace cwg2640
 
 // cwg2642: na
@@ -310,7 +309,7 @@ void f(T) requires requires { []() { T::invalid; } (); };
 //   since-cxx20-note@-3 {{in instantiation of requirement here}}
 //   since-cxx20-note@-4 {{while substituting template arguments into constraint expression here}}
 //   since-cxx20-note@#cwg2672-f-0 {{while checking constraint satisfaction for template 'f<int>' required here}}
-//   since-cxx20-note@#cwg2672-f-0 {{in instantiation of function template specialization 'cwg2672::f<int>' requested here}}
+//   since-cxx20-note@#cwg2672-f-0 {{while substituting deduced template arguments into function template 'f' [with T = int]}}
 void f(...);
 
 template <class T>
@@ -336,7 +335,7 @@ struct S{
 
 void test() {
     (&S::f)(1);
-    // since-cxx23-error@-1 {{called object type 'void (cwg2687::S::*)(int)' is not a function or function pointer}}
+    // since-cxx23-error@-1 {{called object type 'void (S::*)(int)' is not a function or function pointer}}
     (&S::g)(1);
     (&S::h)(S(), 1);
 }

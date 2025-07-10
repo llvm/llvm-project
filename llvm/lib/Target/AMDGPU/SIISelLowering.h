@@ -145,10 +145,13 @@ private:
 
   /// Custom lowering for ISD::FP_ROUND for MVT::f16.
   SDValue lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
+  SDValue splitFP_ROUNDVectorOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFMINNUM_FMAXNUM(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFMINIMUMNUM_FMAXIMUMNUM(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFMINIMUM_FMAXIMUM(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFLDEXP(SDValue Op, SelectionDAG &DAG) const;
   SDValue promoteUniformOpToI32(SDValue Op, DAGCombinerInfo &DCI) const;
+  SDValue lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerMUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerXMULO(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerXMUL_LOHI(SDValue Op, SelectionDAG &DAG) const;
@@ -217,6 +220,7 @@ private:
                                           DAGCombinerInfo &DCI) const;
 
   SDValue performAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performPtrAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performAddCarrySubCarryCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSubCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -257,6 +261,8 @@ public:
                                        const GCNSubtarget *Subtarget);
 
   bool shouldExpandVectorDynExt(SDNode *N) const;
+
+  bool shouldPreservePtrArith(const Function &F, EVT PtrVT) const override;
 
 private:
   // Analyze a combined offset from an amdgcn_s_buffer_load intrinsic and store
@@ -351,7 +357,7 @@ public:
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       unsigned *IsFast = nullptr) const override;
 
-  EVT getOptimalMemOpType(const MemOp &Op,
+  EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
 
   bool isMemOpHasNoClobberedMemOperand(const SDNode *N) const;
@@ -463,7 +469,6 @@ public:
                                   EVT VT) const override;
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   const LLT Ty) const override;
-  bool isFMAFasterThanFMulAndFAdd(const Function &F, Type *Ty) const override;
   bool isFMADLegal(const SelectionDAG &DAG, const SDNode *N) const override;
   bool isFMADLegal(const MachineInstr &MI, const LLT Ty) const override;
 
@@ -511,13 +516,14 @@ public:
   void computeKnownBitsForFrameIndex(int FrameIdx,
                                      KnownBits &Known,
                                      const MachineFunction &MF) const override;
-  void computeKnownBitsForTargetInstr(GISelKnownBits &Analysis, Register R,
+  void computeKnownBitsForTargetInstr(GISelValueTracking &Analysis, Register R,
                                       KnownBits &Known,
                                       const APInt &DemandedElts,
                                       const MachineRegisterInfo &MRI,
                                       unsigned Depth = 0) const override;
 
-  Align computeKnownAlignForTargetInstr(GISelKnownBits &Analysis, Register R,
+  Align computeKnownAlignForTargetInstr(GISelValueTracking &Analysis,
+                                        Register R,
                                         const MachineRegisterInfo &MRI,
                                         unsigned Depth = 0) const override;
   bool isSDNodeSourceOfDivergence(const SDNode *N, FunctionLoweringInfo *FLI,
@@ -543,11 +549,8 @@ public:
                                  const TargetInstrInfo *TII,
                                  MCRegister &PhysReg, int &Cost) const override;
 
-  bool isProfitableToHoist(Instruction *I) const override;
-
-  bool isKnownNeverNaNForTargetNode(SDValue Op,
-                                    const SelectionDAG &DAG,
-                                    bool SNaN = false,
+  bool isKnownNeverNaNForTargetNode(SDValue Op, const APInt &DemandedElts,
+                                    const SelectionDAG &DAG, bool SNaN = false,
                                     unsigned Depth = 0) const override;
   AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
   AtomicExpansionKind shouldExpandAtomicLoadInIR(LoadInst *LI) const override;

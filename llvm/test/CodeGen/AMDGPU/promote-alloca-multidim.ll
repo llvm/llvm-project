@@ -4,6 +4,13 @@
 define amdgpu_kernel void @i32_2d_load_store(ptr %out) {
 ; CHECK-LABEL: define amdgpu_kernel void @i32_2d_load_store(
 ; CHECK-SAME: ptr [[OUT:%.*]]) {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <6 x i32> poison
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <6 x i32> [[ALLOCA]], i32 0, i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <6 x i32> [[TMP1]], i32 1, i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <6 x i32> [[TMP2]], i32 2, i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <6 x i32> [[TMP3]], i32 3, i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <6 x i32> [[TMP4]], i32 4, i32 4
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <6 x i32> [[TMP5]], i32 5, i32 5
 ; CHECK-NEXT:    store i32 3, ptr [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -29,6 +36,13 @@ define amdgpu_kernel void @i32_2d_load_store(ptr %out) {
 define amdgpu_kernel void @i64_2d_load_store(ptr %out) {
 ; CHECK-LABEL: define amdgpu_kernel void @i64_2d_load_store(
 ; CHECK-SAME: ptr [[OUT:%.*]]) {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <6 x i64> poison
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <6 x i64> [[ALLOCA]], i64 0, i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <6 x i64> [[TMP1]], i64 1, i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <6 x i64> [[TMP2]], i64 2, i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <6 x i64> [[TMP3]], i64 3, i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <6 x i64> [[TMP4]], i64 4, i32 4
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <6 x i64> [[TMP5]], i64 5, i32 5
 ; CHECK-NEXT:    store i64 3, ptr [[OUT]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -61,7 +75,12 @@ define amdgpu_kernel void @i32_2d_alloca_store_partial(ptr addrspace(1) %out, pt
 ; CHECK-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
 ; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 {{.*}}, i32 {{.*}}, i32 {{.*}}, i32 {{.*}}>, i32 [[SEL2]]
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <8 x i32> poison
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[ALLOCA]], i32 1, i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP4]], i32 2, i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> [[TMP5]], i32 3, i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 4, i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <8 x i32> [[TMP3]], i32 [[SEL2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[TMP0]] to float
 ; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
@@ -91,7 +110,14 @@ define amdgpu_kernel void @i64_2d_load_store_cast(ptr %out) {
 ; CHECK-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
 ; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <6 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5>, i32 [[SEL2]]
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <6 x i64> poison
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <6 x i64> [[ALLOCA]], i64 0, i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <6 x i64> [[TMP7]], i64 1, i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <6 x i64> [[TMP2]], i64 2, i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <6 x i64> [[TMP3]], i64 3, i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <6 x i64> [[TMP4]], i64 4, i32 4
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <6 x i64> [[TMP5]], i64 5, i32 5
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <6 x i64> [[TMP6]], i32 [[SEL2]]
 ; CHECK-NEXT:    store i64 [[TMP1]], ptr [[OUT]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -123,6 +149,13 @@ define amdgpu_kernel void @i64_2d_load_store_cast(ptr %out) {
 define amdgpu_kernel void @i64_2d_load_store_subvec_1(ptr %out) {
 ; CHECK-LABEL: define amdgpu_kernel void @i64_2d_load_store_subvec_1(
 ; CHECK-SAME: ptr [[OUT:%.*]]) {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <6 x i64> poison
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <6 x i64> [[ALLOCA]], i64 0, i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <6 x i64> [[TMP1]], i64 1, i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <6 x i64> [[TMP2]], i64 2, i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <6 x i64> [[TMP3]], i64 3, i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <6 x i64> [[TMP4]], i64 4, i32 4
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <6 x i64> [[TMP5]], i64 5, i32 5
 ; CHECK-NEXT:    [[ELEM:%.*]] = extractelement <3 x i64> <i64 3, i64 4, i64 5>, i32 2
 ; CHECK-NEXT:    store i64 [[ELEM]], ptr [[OUT]], align 8
 ; CHECK-NEXT:    ret void
@@ -142,6 +175,13 @@ define amdgpu_kernel void @i64_2d_load_store_subvec_1(ptr %out) {
 define amdgpu_kernel void @i64_2d_load_store_subvec_2(ptr %out) {
 ; CHECK-LABEL: define amdgpu_kernel void @i64_2d_load_store_subvec_2(
 ; CHECK-SAME: ptr [[OUT:%.*]]) {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <8 x i64> poison
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i64> [[ALLOCA]], i64 0, i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i64> [[TMP1]], i64 1, i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i64> [[TMP2]], i64 2, i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i64> [[TMP3]], i64 3, i32 4
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i64> [[TMP4]], i64 4, i32 5
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i64> [[TMP5]], i64 5, i32 6
 ; CHECK-NEXT:    [[ELEM:%.*]] = extractelement <3 x i64> <i64 3, i64 4, i64 5>, i32 2
 ; CHECK-NEXT:    store i64 [[ELEM]], ptr [[OUT]], align 8
 ; CHECK-NEXT:    ret void
@@ -167,14 +207,21 @@ define amdgpu_kernel void @i64_2d_load_store_subvec_3(ptr %out) {
 ; CHECK-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
 ; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <6 x i64> poison
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <6 x i64> [[ALLOCA]], i64 0, i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <6 x i64> [[TMP10]], i64 1, i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <6 x i64> [[TMP11]], i64 2, i32 2
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <6 x i64> [[TMP12]], i64 3, i32 3
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <6 x i64> [[TMP13]], i64 4, i32 4
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <6 x i64> [[TMP14]], i64 5, i32 5
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[SEL2]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <6 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5>, i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <6 x i64> [[TMP15]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <3 x i64> poison, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <6 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5>, i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <6 x i64> [[TMP15]], i32 [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <3 x i64> [[TMP3]], i64 [[TMP5]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <6 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5>, i32 [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <6 x i64> [[TMP15]], i32 [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <3 x i64> [[TMP6]], i64 [[TMP8]], i64 2
 ; CHECK-NEXT:    [[ELEM:%.*]] = extractelement <3 x i64> [[TMP9]], i32 2
 ; CHECK-NEXT:    store i64 [[ELEM]], ptr [[OUT]], align 8
@@ -208,14 +255,21 @@ define amdgpu_kernel void @i64_2d_load_store_subvec_3_i64_offset(ptr %out) {
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
 ; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
 ; CHECK-NEXT:    [[SEL3:%.*]] = zext i32 [[SEL2]] to i64
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <6 x i64> poison
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <6 x i64> [[ALLOCA]], i64 0, i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <6 x i64> [[TMP10]], i64 1, i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <6 x i64> [[TMP11]], i64 2, i32 2
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <6 x i64> [[TMP12]], i64 3, i32 3
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <6 x i64> [[TMP13]], i64 4, i32 4
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <6 x i64> [[TMP14]], i64 5, i32 5
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[SEL3]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <6 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5>, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <6 x i64> [[TMP15]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <3 x i64> poison, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <6 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5>, i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <6 x i64> [[TMP15]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <3 x i64> [[TMP3]], i64 [[TMP5]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <6 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5>, i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <6 x i64> [[TMP15]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <3 x i64> [[TMP6]], i64 [[TMP8]], i64 2
 ; CHECK-NEXT:    [[ELEM:%.*]] = extractelement <3 x i64> [[TMP9]], i32 2
 ; CHECK-NEXT:    store i64 [[ELEM]], ptr [[OUT]], align 8
@@ -240,6 +294,56 @@ define amdgpu_kernel void @i64_2d_load_store_subvec_3_i64_offset(ptr %out) {
   ret void
 }
 
+define amdgpu_kernel void @i64_2d_load_store_subvec_3_i64_offset_index(ptr %out) {
+; CHECK-LABEL: define amdgpu_kernel void @i64_2d_load_store_subvec_3_i64_offset_index(
+; CHECK-SAME: ptr [[OUT:%.*]]) {
+; CHECK-NEXT:    [[X:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[Y:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.y()
+; CHECK-NEXT:    [[C1:%.*]] = icmp uge i32 [[X]], 3
+; CHECK-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
+; CHECK-NEXT:    [[SEL3:%.*]] = zext i32 [[SEL2]] to i64
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <6 x i64> poison
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <6 x i64> [[ALLOCA]], i64 0, i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <6 x i64> [[TMP11]], i64 1, i32 1
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <6 x i64> [[TMP12]], i64 2, i32 2
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <6 x i64> [[TMP13]], i64 3, i32 3
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <6 x i64> [[TMP14]], i64 4, i32 4
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <6 x i64> [[TMP15]], i64 5, i32 5
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[SEL3]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 6, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <6 x i64> [[TMP16]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <3 x i64> poison, i64 [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <6 x i64> [[TMP16]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <3 x i64> [[TMP4]], i64 [[TMP6]], i64 1
+; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <6 x i64> [[TMP16]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <3 x i64> [[TMP7]], i64 [[TMP9]], i64 2
+; CHECK-NEXT:    [[ELEM:%.*]] = extractelement <3 x i64> [[TMP10]], i32 2
+; CHECK-NEXT:    store i64 [[ELEM]], ptr [[OUT]], align 8
+; CHECK-NEXT:    ret void
+;
+  %x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %y = tail call i32 @llvm.amdgcn.workitem.id.y()
+  %c1 = icmp uge i32 %x, 3
+  %c2 = icmp uge i32 %y, 3
+  %sel1 = select i1 %c1, i32 1, i32 2
+  %sel2 = select i1 %c2, i32 0, i32 %sel1
+  %sel3 = zext i32 %sel2 to i64
+  %alloca = alloca [2 x [3 x i64]], align 16, addrspace(5)
+  %gep.00 = getelementptr inbounds [2 x [3 x i64]], ptr addrspace(5) %alloca, i32 0
+  %gep.01 = getelementptr inbounds [2 x [3 x i64]], ptr addrspace(5) %alloca, i32 0, i32 1, i32 0
+  store <3 x i64> <i64 0, i64 1, i64 2>, ptr addrspace(5) %gep.00
+  store <3 x i64> <i64 3, i64 4, i64 5>, ptr addrspace(5) %gep.01
+  %gep = getelementptr inbounds [2 x [3 x i64]], ptr addrspace(5) %alloca, i64 1, i64 %sel3
+  %load = load <3 x i64>, ptr addrspace(5) %gep
+  %elem = extractelement <3 x i64> %load, i32 2
+  store i64 %elem, ptr %out
+  ret void
+}
+
 define amdgpu_kernel void @i64_2d_load_store_subvec_4(ptr %out) {
 ; CHECK-LABEL: define amdgpu_kernel void @i64_2d_load_store_subvec_4(
 ; CHECK-SAME: ptr [[OUT:%.*]]) {
@@ -249,14 +353,21 @@ define amdgpu_kernel void @i64_2d_load_store_subvec_4(ptr %out) {
 ; CHECK-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
 ; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <8 x i64> poison
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x i64> [[ALLOCA]], i64 0, i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x i64> [[TMP10]], i64 1, i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <8 x i64> [[TMP11]], i64 2, i32 2
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x i64> [[TMP12]], i64 3, i32 4
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x i64> [[TMP13]], i64 4, i32 5
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x i64> [[TMP14]], i64 5, i32 6
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[SEL2]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x i64> <i64 0, i64 1, i64 2, i64 {{.*}}, i64 3, i64 4, i64 5, i64 {{.*}}>, i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x i64> [[TMP15]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <3 x i64> poison, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i64> <i64 0, i64 1, i64 2, i64 {{.*}}, i64 3, i64 4, i64 5, i64 {{.*}}>, i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i64> [[TMP15]], i32 [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <3 x i64> [[TMP3]], i64 [[TMP5]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i64> <i64 0, i64 1, i64 2, i64 {{.*}}, i64 3, i64 4, i64 5, i64 {{.*}}>, i32 [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i64> [[TMP15]], i32 [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <3 x i64> [[TMP6]], i64 [[TMP8]], i64 2
 ; CHECK-NEXT:    [[ELEM:%.*]] = extractelement <3 x i64> [[TMP9]], i32 2
 ; CHECK-NEXT:    store i64 [[ELEM]], ptr [[OUT]], align 8
@@ -289,7 +400,20 @@ define amdgpu_kernel void @i32_3d_load_store(ptr %out) {
 ; CHECK-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
 ; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>, i32 [[SEL2]]
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <12 x i32> poison
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <12 x i32> [[ALLOCA]], i32 0, i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <12 x i32> [[TMP13]], i32 1, i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <12 x i32> [[TMP2]], i32 2, i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <12 x i32> [[TMP3]], i32 3, i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <12 x i32> [[TMP4]], i32 4, i32 4
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <12 x i32> [[TMP5]], i32 5, i32 5
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <12 x i32> [[TMP6]], i32 6, i32 6
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <12 x i32> [[TMP7]], i32 7, i32 7
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <12 x i32> [[TMP8]], i32 8, i32 8
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <12 x i32> [[TMP9]], i32 9, i32 9
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <12 x i32> [[TMP10]], i32 10, i32 10
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <12 x i32> [[TMP11]], i32 11, i32 11
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <12 x i32> [[TMP12]], i32 [[SEL2]]
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -333,8 +457,15 @@ define amdgpu_kernel void @i32_3d_load_store(ptr %out) {
 define amdgpu_kernel void @i16_2d_load_store(ptr %out, i32 %sel) {
 ; CHECK-LABEL: define amdgpu_kernel void @i16_2d_load_store(
 ; CHECK-SAME: ptr [[OUT:%.*]], i32 [[SEL:%.*]]) {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <6 x i16> poison
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <6 x i16> [[ALLOCA]], i16 0, i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <6 x i16> [[TMP7]], i16 1, i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <6 x i16> [[TMP8]], i16 2, i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <6 x i16> [[TMP3]], i16 3, i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <6 x i16> [[TMP4]], i16 4, i32 4
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <6 x i16> [[TMP5]], i16 5, i32 5
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 3, [[SEL]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <6 x i16> <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5>, i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <6 x i16> [[TMP6]], i32 [[TMP1]]
 ; CHECK-NEXT:    store i16 [[TMP2]], ptr [[OUT]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -360,8 +491,15 @@ define amdgpu_kernel void @i16_2d_load_store(ptr %out, i32 %sel) {
 define amdgpu_kernel void @float_2d_load_store(ptr %out, i32 %sel) {
 ; CHECK-LABEL: define amdgpu_kernel void @float_2d_load_store(
 ; CHECK-SAME: ptr [[OUT:%.*]], i32 [[SEL:%.*]]) {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <6 x float> poison
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <6 x float> [[ALLOCA]], float 0.000000e+00, i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <6 x float> [[TMP7]], float 1.000000e+00, i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <6 x float> [[TMP8]], float 2.000000e+00, i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <6 x float> [[TMP3]], float 3.000000e+00, i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <6 x float> [[TMP4]], float 4.000000e+00, i32 4
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <6 x float> [[TMP5]], float 5.000000e+00, i32 5
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 3, [[SEL]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <6 x float> <float 0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00, float 5.000000e+00>, i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <6 x float> [[TMP6]], i32 [[TMP1]]
 ; CHECK-NEXT:    store float [[TMP2]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -387,13 +525,14 @@ define amdgpu_kernel void @float_2d_load_store(ptr %out, i32 %sel) {
 define amdgpu_kernel void @ptr_2d_load_store(ptr %out, i32 %sel) {
 ; CHECK-LABEL: define amdgpu_kernel void @ptr_2d_load_store(
 ; CHECK-SAME: ptr [[OUT:%.*]], i32 [[SEL:%.*]]) {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <6 x ptr> poison
 ; CHECK-NEXT:    [[PTR_0:%.*]] = getelementptr inbounds ptr, ptr [[OUT]], i32 0
 ; CHECK-NEXT:    [[PTR_1:%.*]] = getelementptr inbounds ptr, ptr [[OUT]], i32 1
 ; CHECK-NEXT:    [[PTR_2:%.*]] = getelementptr inbounds ptr, ptr [[OUT]], i32 2
 ; CHECK-NEXT:    [[PTR_3:%.*]] = getelementptr inbounds ptr, ptr [[OUT]], i32 3
 ; CHECK-NEXT:    [[PTR_4:%.*]] = getelementptr inbounds ptr, ptr [[OUT]], i32 4
 ; CHECK-NEXT:    [[PTR_5:%.*]] = getelementptr inbounds ptr, ptr [[OUT]], i32 5
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <6 x ptr> {{.*}}, ptr [[PTR_0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <6 x ptr> [[ALLOCA]], ptr [[PTR_0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <6 x ptr> [[TMP1]], ptr [[PTR_1]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <6 x ptr> [[TMP2]], ptr [[PTR_2]], i32 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <6 x ptr> [[TMP3]], ptr [[PTR_3]], i32 3

@@ -175,7 +175,10 @@ namespace ZeroInit {
   static_assert(a.f == 0.0f, "");
 
   constexpr A<double> b{12};
-  static_assert(a.f == 0.0, "");
+  static_assert(b.f == 0.0, "");
+
+  constexpr A<_Atomic(float)> c{12};
+  static_assert(c.f == 0.0, "");
 };
 
 namespace LongDouble {

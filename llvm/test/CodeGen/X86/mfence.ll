@@ -36,11 +36,6 @@ define i32 @fence(ptr %ptr) {
 }
 
 define void @mfence() nounwind {
-; X32-LABEL: mfence:
-; X32:       # %bb.0:
-; X32-NEXT:    mfence
-; X32-NEXT:    retl
-;
 ; CHECK-LABEL: mfence:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mfence

@@ -4,7 +4,6 @@ import github
 import logging
 import os
 import requests
-import sys
 import time
 
 from dataclasses import dataclass
@@ -19,7 +18,7 @@ SCRAPE_INTERVAL_SECONDS = 5 * 60
 # Lists the Github workflows we want to track. Maps the Github job name to
 # the metric name prefix in grafana.
 # This metric name is also used as a key in the job->name map.
-GITHUB_WORKFLOW_TO_TRACK = {"LLVM Premerge Checks": "github_llvm_premerge_checks"}
+GITHUB_WORKFLOW_TO_TRACK = {"CI Checks": "github_llvm_premerge_checks"}
 
 # Lists the Github jobs to track for a given workflow. The key is the stable
 # name (metric name) of the workflow (see GITHUB_WORKFLOW_TO_TRACK).
@@ -27,8 +26,8 @@ GITHUB_WORKFLOW_TO_TRACK = {"LLVM Premerge Checks": "github_llvm_premerge_checks
 # name.
 GITHUB_JOB_TO_TRACK = {
     "github_llvm_premerge_checks": {
-        "Linux Premerge Checks (Test Only - Please Ignore Results)": "premerge_linux",
-        "Windows Premerge Checks (Test Only - Please Ignore Results)": "premerge_windows",
+        "Build and Test Linux": "premerge_linux",
+        "Build and Test Windows": "premerge_windows",
     }
 }
 
@@ -41,7 +40,7 @@ GITHUB_JOB_TO_TRACK = {
 # This means we essentially have a list of workflows sorted by creation date,
 # and that's all we can deduce from it. So for each iteration, we'll blindly
 # process the last N workflows.
-GITHUB_WORKFLOWS_MAX_PROCESS_COUNT = 1000
+GITHUB_WORKFLOWS_MAX_PROCESS_COUNT = 2000
 # Second reason for the cut: reaching a workflow older than X.
 # This means we will miss long-tails (exceptional jobs running for more than
 # X hours), but that's also the case with the count cutoff above.
@@ -53,6 +52,7 @@ GITHUB_WORKFLOW_MAX_CREATED_AGE_HOURS = 8
 # by trial and error).
 GRAFANA_METRIC_MAX_AGE_MN = 120
 
+
 @dataclass
 class JobMetrics:
     job_name: str
@@ -62,6 +62,7 @@ class JobMetrics:
     completed_at_ns: int
     workflow_id: int
     workflow_name: str
+
 
 @dataclass
 class GaugeMetric:
@@ -93,6 +94,13 @@ def github_get_metrics(
     workflow_metrics = []
     queued_count = collections.Counter()
     running_count = collections.Counter()
+
+    # Initialize all the counters to 0 so we report 0 when no job is queued
+    # or running.
+    for wf_name, wf_metric_name in GITHUB_WORKFLOW_TO_TRACK.items():
+        for job_name, job_metric_name in GITHUB_JOB_TO_TRACK[wf_metric_name].items():
+            queued_count[wf_metric_name + "_" + job_metric_name] = 0
+            running_count[wf_metric_name + "_" + job_metric_name] = 0
 
     # The list of workflows this iteration will process.
     # MaxSize = GITHUB_WORKFLOWS_MAX_PROCESS_COUNT
@@ -151,25 +159,29 @@ def github_get_metrics(
                     running_count[metric_name] += 1
                 continue
 
-            job_result = int(job.conclusion == "success")
-            if job_result:
-                # We still might want to mark the job as a failure if one of the steps
-                # failed. This is required due to use setting continue-on-error in
-                # the premerge pipeline to prevent sending emails while we are
-                # testing the infrastructure.
-                # TODO(boomanaiden154): Remove this once the premerge pipeline is no
-                # longer in a testing state and we can directly assert the workflow
-                # result.
-                for step in job.steps:
-                    if step.conclusion != "success" and step.conclusion != "skipped":
-                        job_result = 0
-                        break
+            job_result = int(job.conclusion == "success" or job.conclusion == "skipped")
 
             created_at = job.created_at
             started_at = job.started_at
             completed_at = job.completed_at
-            queue_time = started_at - created_at
-            run_time = completed_at - started_at
+
+            # GitHub API can return results where the started_at is slightly
+            # later then the created_at (or completed earlier than started).
+            # This would cause a -23h59mn delta, which will show up as +24h
+            # queue/run time on grafana.
+            if started_at < created_at:
+                logging.info(
+                    "Workflow {} started before being created.".format(task.id)
+                )
+                queue_time = datetime.timedelta(seconds=0)
+            else:
+                queue_time = started_at - created_at
+            if completed_at < started_at:
+                logging.info("Workflow {} finished before starting.".format(task.id))
+                run_time = datetime.timedelta(seconds=0)
+            else:
+                run_time = completed_at - started_at
+
             if run_time.seconds == 0:
                 continue
 
@@ -179,7 +191,7 @@ def github_get_metrics(
                 datetime.datetime.now(datetime.timezone.utc) - completed_at
             ).total_seconds() / 60
             if metric_age_mn > GRAFANA_METRIC_MAX_AGE_MN:
-                logging.info(
+                logging.warning(
                     f"Job {job.id} from workflow {task.id} dropped due"
                     + f" to staleness: {metric_age_mn}mn old."
                 )
@@ -290,11 +302,12 @@ def main():
         github_object = Github(auth=github_auth)
         github_repo = github_object.get_repo("llvm/llvm-project")
 
-        metrics, gh_last_workflows_seen_as_completed = github_get_metrics(
+        gh_metrics, gh_last_workflows_seen_as_completed = github_get_metrics(
             github_repo, gh_last_workflows_seen_as_completed
         )
-        upload_metrics(metrics, grafana_metrics_userid, grafana_api_key)
-        logging.info(f"Uploaded {len(metrics)} metrics")
+
+        upload_metrics(gh_metrics, grafana_metrics_userid, grafana_api_key)
+        logging.info(f"Uploaded {len(gh_metrics)} metrics")
 
         time.sleep(SCRAPE_INTERVAL_SECONDS)
 

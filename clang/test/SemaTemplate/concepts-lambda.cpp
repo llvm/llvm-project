@@ -325,3 +325,28 @@ template <class> void f() {
 template void f<int>();
 
 }
+
+namespace GH133719 {
+
+template <class T>
+constexpr auto f{[] (auto arg) {
+  return [a{arg}] {
+      [] () requires true {}();
+  };
+}};
+
+void foo() {
+  f<int>(0);
+}
+
+}
+
+namespace GH147650 {
+template <int> int b;
+template <int b>
+void f()
+    requires requires { [] { (void)b; static_assert(b == 42); }; } {}
+void test() {
+    f<42>();
+}
+}

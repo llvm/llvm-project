@@ -38,9 +38,9 @@ subroutine acc_kernels
   !$acc kernels async
   !$acc end kernels
 
-! CHECK:      acc.kernels  {
+! CHECK:      acc.kernels async {
 ! CHECK:        acc.terminator
-! CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<none>]} 
+! CHECK-NEXT: }
 
   !$acc kernels async(1)
   !$acc end kernels
@@ -174,7 +174,7 @@ subroutine acc_kernels
   !$acc kernels self(ifCondition)
   !$acc end kernels
 
-! CHECK:      %[[SELF2:.*]] = fir.convert %[[DECLIFCONDITION]]#1 : (!fir.ref<!fir.logical<4>>) -> i1
+! CHECK:      %[[SELF2:.*]] = fir.convert %[[DECLIFCONDITION]]#0 : (!fir.ref<!fir.logical<4>>) -> i1
 ! CHECK:      acc.kernels self(%[[SELF2]]) {
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}

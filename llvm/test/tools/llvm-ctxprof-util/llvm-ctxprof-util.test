@@ -23,6 +23,11 @@
 ; RUN: llvm-ctxprof-util toYAML -input %t/valid-flat-first.bitstream -output %t/valid-flat-first.yaml
 ; RUN: diff %t/valid-flat-first.yaml %S/Inputs/valid.yaml
 
+; A variant with unhandled contexts:
+; RUN: llvm-ctxprof-util fromYAML -input %S/Inputs/valid-with-unhandled.yaml -output %t/valid-with-unhandled.bitstream
+; RUN: llvm-ctxprof-util toYAML -input %t/valid-with-unhandled.bitstream -output %t/valid-with-unhandled.yaml
+; RUN: diff %t/valid-with-unhandled.yaml %S/Inputs/valid-with-unhandled.yaml
+
 ; For the valid case, check against a reference output.
 ; Note that uint64_t are printed as signed values by llvm-bcanalyzer:
 ;  * 18446744073709551613 in yaml is -3 in the output
@@ -33,16 +38,19 @@
 
 ; EMPTY: <BLOCKINFO_BLOCK/>
 ; EMPTY-NEXT: <Metadata NumWords=1 BlockCodeSize=2>
-; EMPTY-NEXT:   <Version op0=2/>
+; EMPTY-NEXT:   <Version op0=4/>
 ; EMPTY-NEXT: </Metadata>
 
 ; VALID:      <BLOCKINFO_BLOCK/>
-; VALID-NEXT: <Metadata NumWords=45 BlockCodeSize=2>
-; VALID-NEXT:   <Version op0=2/>
-; VALID-NEXT:   <Contexts NumWords=29 BlockCodeSize=2>
-; VALID-NEXT:     <Root NumWords=20 BlockCodeSize=2>
+; VALID-NEXT: <Metadata NumWords=53 BlockCodeSize=2>
+; VALID-NEXT:   <Version op0=4/>
+; VALID-NEXT:   <Contexts NumWords=37 BlockCodeSize=2>
+; VALID-NEXT:     <Root NumWords=23 BlockCodeSize=2>
 ; VALID-NEXT:       <GUID op0=1000/>
+; VALID-NEXT:       <TotalRootEntryCount op0=5/>
 ; VALID-NEXT:       <Counters op0=1 op1=2 op2=3/>
+; VALID-NEXT:       <Unhandled NumWords=1 BlockCodeSize=2>
+; VALID-NEXT:       </Unhandled>
 ; VALID-NEXT:       <Context NumWords=5 BlockCodeSize=2>
 ; VALID-NEXT:         <GUID op0=-3/>
 ; VALID-NEXT:         <CalleeIndex op0=1/>
@@ -59,9 +67,12 @@
 ; VALID-NEXT:         <Counters op0=40 op1=50/>
 ; VALID-NEXT:       </Context>
 ; VALID-NEXT:     </Root>
-; VALID-NEXT:     <Root NumWords=4 BlockCodeSize=2>
+; VALID-NEXT:     <Root NumWords=9 BlockCodeSize=2>
 ; VALID-NEXT:       <GUID op0=-4/>
+; VALID-NEXT:       <TotalRootEntryCount op0=45/>
 ; VALID-NEXT:       <Counters op0=5 op1=9 op2=10/>
+; VALID-NEXT:       <Unhandled NumWords=1 BlockCodeSize=2>
+; VALID-NEXT:       </Unhandled>
 ; VALID-NEXT:     </Root>
 ; VALID-NEXT:   </Contexts>
 ; VALID-NEXT:   <FlatProfiles NumWords=10 BlockCodeSize=2>

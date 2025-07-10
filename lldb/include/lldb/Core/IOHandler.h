@@ -90,6 +90,8 @@ public:
 
   virtual void TerminalSizeChanged() {}
 
+  virtual void Refresh() {}
+
   virtual const char *GetPrompt() {
     // Prompt support isn't mandatory
     return nullptr;
@@ -99,6 +101,12 @@ public:
     // Prompt support isn't mandatory
     return false;
   }
+
+  virtual bool SetUseColor(bool use_color) {
+    // Color support isn't mandatory.
+    return false;
+  };
+
   bool SetPrompt(const char *) = delete;
 
   virtual llvm::StringRef GetControlSequence(char ch) { return {}; }
@@ -375,6 +383,8 @@ public:
   bool SetPrompt(llvm::StringRef prompt) override;
   bool SetPrompt(const char *prompt) = delete;
 
+  bool SetUseColor(bool use_color) override;
+
   const char *GetContinuationPrompt();
 
   void SetContinuationPrompt(llvm::StringRef prompt);
@@ -396,6 +406,8 @@ public:
 
   void PrintAsync(const char *s, size_t len, bool is_stdout) override;
 
+  void Refresh() override;
+
 private:
 #if LLDB_ENABLE_LIBEDIT
   bool IsInputCompleteCallback(Editline *editline, StringList &lines);
@@ -406,6 +418,8 @@ private:
   std::optional<std::string> SuggestionCallback(llvm::StringRef line);
 
   void AutoCompleteCallback(CompletionRequest &request);
+
+  void RedrawCallback();
 #endif
 
 protected:

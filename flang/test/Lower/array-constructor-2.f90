@@ -78,12 +78,12 @@ subroutine test3(a)
   ! CHECK-DAG: %[[rep:.*]] = fir.convert %{{.*}} : (!fir.heap<f32>) -> !fir.ref<i8>
   ! CHECK-DAG: %[[res:.*]] = fir.convert %{{.*}} : (index) -> i64
   ! CHECK: %{{.*}} = fir.call @realloc(%[[rep]], %[[res]]) {{.*}}: (!fir.ref<i8>, i64) -> !fir.ref<i8>
-  ! CHECK: fir.call @llvm.memcpy.p0.p0.i64(%{{.*}}, %{{.*}}, %{{.*}}, %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %{{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
   ! CHECK: fir.call @_QPtest3c
   ! CHECK: fir.save_result
   ! CHECK: %[[tmp2:.*]] = fir.allocmem !fir.array<?xf32>, %{{.*}}#1 {uniq_name = ".array.expr"}
   ! CHECK: fir.call @realloc
-  ! CHECK: fir.call @llvm.memcpy.p0.p0.i64(%
+  ! CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %{{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
   ! CHECK: fir.array_coor %[[tmp:.*]](%{{.*}}) %{{.*}} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
   ! CHECK-NEXT: fir.load
   ! CHECK-NEXT: fir.array_coor %arg0 %{{.*}} : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
@@ -130,11 +130,11 @@ subroutine test5(a, array2)
   ! CHECK: %[[res:.*]] = fir.allocmem !fir.array<4xf32>
   ! CHECK: fir.address_of(@_QQro.2xr4.2) : !fir.ref<!fir.array<2xf32>>
   ! CHECK: %[[tmp1:.*]] = fir.allocmem !fir.array<2xf32>
-  ! CHECK: fir.call @llvm.memcpy.p0.p0.i64(%{{.*}}, %{{.*}}, %{{.*}}, %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %{{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
   ! CHECK: %[[tmp2:.*]] = fir.allocmem !fir.array<2xf32>
   ! CHECK: = fir.array_coor %[[array2]](%{{.*}}) %{{.*}} : (!fir.ref<!fir.array<2xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
   ! CHECK: = fir.array_coor %[[tmp2]](%{{.*}}) %{{.*}} : (!fir.heap<!fir.array<2xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
-  ! CHECK: fir.call @llvm.memcpy.p0.p0.i64(%{{.*}}, %{{.*}}, %{{.*}}, %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %{{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
   ! CHECK: = fir.array_coor %{{.*}}(%{{.*}}) %{{.*}} : (!fir.heap<!fir.array<4xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
   ! CHECK: = fir.array_coor %[[a]] %{{.*}} : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
   ! CHECK-DAG: fir.freemem %{{.*}} : !fir.heap<!fir.array<4xf32>>
@@ -151,12 +151,12 @@ subroutine test6(c, d, e)
   ! CHECK: = fir.allocmem !fir.array<2x!fir.char<1,5>>
   ! CHECK: fir.call @realloc
   ! CHECK: %[[t:.*]] = fir.coordinate_of %{{.*}}, %{{.*}} : (!fir.heap<!fir.array<2x!fir.char<1,5>>>, index) -> !fir.ref<!fir.char<1,5>>
-  ! CHECK: %[[to:.*]] = fir.convert %[[t]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-  ! CHECK: fir.call @llvm.memcpy.p0.p0.i64(%[[to]], %{{.*}}, %{{.*}}, %false) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK: %[[to:.*]] = fir.convert %[[t]] : (!fir.ref<!fir.char<1,5>>) -> !llvm.ptr
+  ! CHECK: "llvm.intr.memcpy"(%[[to]], %{{.*}}, %{{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
   ! CHECK: fir.call @realloc
   ! CHECK: %[[t:.*]] = fir.coordinate_of %{{.*}}, %{{.*}} : (!fir.heap<!fir.array<2x!fir.char<1,5>>>, index) -> !fir.ref<!fir.char<1,5>>
-  ! CHECK: %[[to:.*]] = fir.convert %[[t]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-  ! CHECK: fir.call @llvm.memcpy.p0.p0.i64(%[[to]], %{{.*}}, %{{.*}}, %false) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK: %[[to:.*]] = fir.convert %[[t]] : (!fir.ref<!fir.char<1,5>>) -> !llvm.ptr
+  ! CHECK: "llvm.intr.memcpy"(%[[to]], %{{.*}}, %{{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
   ! CHECK: fir.freemem %{{.*}} : !fir.heap<!fir.array<2x!fir.char<1,5>>>
   c = (/ d, e /)
 end subroutine test6

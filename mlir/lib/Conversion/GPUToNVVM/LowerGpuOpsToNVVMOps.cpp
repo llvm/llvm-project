@@ -19,7 +19,6 @@
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -429,10 +428,10 @@ void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
   target.addLegalDialect<::mlir::NVVM::NVVMDialect>();
   target.addIllegalDialect<gpu::GPUDialect>();
   target.addIllegalOp<LLVM::CopySignOp, LLVM::CosOp, LLVM::ExpOp, LLVM::Exp2Op,
-                      LLVM::FAbsOp, LLVM::FCeilOp, LLVM::FFloorOp, LLVM::FMAOp,
-                      LLVM::FRemOp, LLVM::LogOp, LLVM::Log10Op, LLVM::Log2Op,
-                      LLVM::PowOp, LLVM::RoundEvenOp, LLVM::RoundOp,
-                      LLVM::SinOp, LLVM::SqrtOp>();
+                      LLVM::FAbsOp, LLVM::FCeilOp, LLVM::FFloorOp, LLVM::FRemOp,
+                      LLVM::LogOp, LLVM::Log10Op, LLVM::Log2Op, LLVM::PowOp,
+                      LLVM::RoundEvenOp, LLVM::RoundOp, LLVM::SinOp,
+                      LLVM::SqrtOp>();
 
   // TODO: Remove once we support replacing non-root ops.
   target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp>();
@@ -552,9 +551,9 @@ void mlir::populateLibDeviceConversionPatterns(
                                     "__nv_floor");
   populateOpPatterns<math::FmaOp>(converter, patterns, benefit, "__nv_fmaf",
                                   "__nv_fma");
-  // Note: libdevice does not provide `__nv_isfinitef` as of moment of writing.
-  populateOpPatterns<math::IsFiniteOp>(converter, patterns, benefit, "",
-                                       "__nv_isfinited");
+  // Note: libdevice uses a different name for 32-bit finite checking
+  populateOpPatterns<math::IsFiniteOp>(converter, patterns, benefit,
+                                       "__nv_finitef", "__nv_isfinited");
   populateOpPatterns<math::IsInfOp>(converter, patterns, benefit, "__nv_isinff",
                                     "__nv_isinfd");
   populateOpPatterns<math::IsNaNOp>(converter, patterns, benefit, "__nv_isnanf",

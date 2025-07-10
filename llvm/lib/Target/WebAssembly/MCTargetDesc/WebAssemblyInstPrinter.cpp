@@ -12,11 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyInstPrinter.h"
+#include "MCTargetDesc/WebAssemblyMCAsmInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -339,11 +341,11 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     // as a signature here, such that the assembler can recover this
     // information.
     auto SRE = static_cast<const MCSymbolRefExpr *>(Op.getExpr());
-    if (SRE->getKind() == MCSymbolRefExpr::VK_WASM_TYPEINDEX) {
+    if (SRE->getSpecifier() == WebAssembly::S_TYPEINDEX) {
       auto &Sym = static_cast<const MCSymbolWasm &>(SRE->getSymbol());
       O << WebAssembly::signatureToString(Sym.getSignature());
     } else {
-      Op.getExpr()->print(O, &MAI);
+      MAI.printExpr(O, *Op.getExpr());
     }
   }
 }

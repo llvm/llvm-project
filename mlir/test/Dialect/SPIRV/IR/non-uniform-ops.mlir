@@ -184,6 +184,14 @@ func.func @group_non_uniform_fmul_clustered_reduce(%val: vector<2xf32>) -> vecto
 
 // -----
 
+func.func @group_non_uniform_bf16_fmul_reduce(%val: bf16) -> bf16 {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values of length 2/3/4/8/16, but got 'bf16'}}
+  %0 = spirv.GroupNonUniformFMul <Workgroup> <Reduce> %val : bf16 -> bf16
+  return %0: bf16
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.GroupNonUniformFMax
 //===----------------------------------------------------------------------===//
@@ -193,6 +201,14 @@ func.func @group_non_uniform_fmax_reduce(%val: f32) -> f32 {
   // CHECK: %{{.+}} = spirv.GroupNonUniformFMax <Workgroup> <Reduce> %{{.+}} : f32 -> f32
   %0 = spirv.GroupNonUniformFMax <Workgroup> <Reduce> %val : f32 -> f32
   return %0: f32
+}
+
+// -----
+
+func.func @group_non_uniform_bf16_fmax_reduce(%val: bf16) -> bf16 {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values of length 2/3/4/8/16, but got 'bf16'}}
+  %0 = spirv.GroupNonUniformFMax <Workgroup> <Reduce> %val : bf16 -> bf16
+  return %0: bf16
 }
 
 // -----
@@ -603,4 +619,144 @@ func.func @group_non_uniform_logical_xor(%val: i32) -> i32 {
   // expected-error @+1 {{operand #0 must be bool or vector of bool values of length 2/3/4/8/16, but got 'i32'}}
   %0 = spirv.GroupNonUniformLogicalXor <Workgroup> <Reduce> %val : i32 -> i32
   return %0: i32
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformRotateKHR
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @group_non_uniform_rotate_khr
+func.func @group_non_uniform_rotate_khr(%val: f32, %delta: i32) -> f32 {
+  // CHECK: %{{.+}} = spirv.GroupNonUniformRotateKHR <Subgroup> %{{.+}} : f32, i32 -> f32
+  %0 = spirv.GroupNonUniformRotateKHR <Subgroup> %val, %delta : f32, i32 -> f32
+  return %0: f32
+}
+
+// -----
+
+// CHECK-LABEL: @group_non_uniform_rotate_khr
+func.func @group_non_uniform_rotate_khr(%val: f32, %delta: i32) -> f32 {
+  // CHECK: %{{.+}} = spirv.GroupNonUniformRotateKHR <Workgroup> %{{.+}} : f32, i32, i32 -> f32
+  %four = spirv.Constant 4 : i32
+  %0 = spirv.GroupNonUniformRotateKHR <Workgroup> %val, %delta, cluster_size(%four) : f32, i32, i32 -> f32
+  return %0: f32
+}
+
+// -----
+
+func.func @group_non_uniform_rotate_khr(%val: f32, %delta: i32) -> f32 {
+  %four = spirv.Constant 4 : i32
+  // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
+  %0 = spirv.GroupNonUniformRotateKHR <Device> %val, %delta, cluster_size(%four) : f32, i32, i32 -> f32
+  return %0: f32
+}
+
+// -----
+
+func.func @group_non_uniform_rotate_khr(%val: f32, %delta: si32) -> f32 {
+  %four = spirv.Constant 4 : i32
+  // expected-error @+1 {{op operand #1 must be 8/16/32/64-bit signless/unsigned integer, but got 'si32'}}
+  %0 = spirv.GroupNonUniformRotateKHR <Subgroup> %val, %delta, cluster_size(%four) : f32, si32, i32 -> f32
+  return %0: f32
+}
+
+// -----
+
+func.func @group_non_uniform_rotate_khr(%val: f32, %delta: i32) -> f32 {
+  %four = spirv.Constant 4 : si32
+  // expected-error @+1 {{op operand #2 must be 8/16/32/64-bit signless/unsigned integer, but got 'si32'}}
+  %0 = spirv.GroupNonUniformRotateKHR <Subgroup> %val, %delta, cluster_size(%four) : f32, i32, si32 -> f32
+  return %0: f32
+}
+
+// -----
+
+func.func @group_non_uniform_rotate_khr(%val: f32, %delta: i32, %four: i32) -> f32 {
+  // expected-error @+1 {{cluster size operand must come from a constant op}}
+  %0 = spirv.GroupNonUniformRotateKHR <Subgroup> %val, %delta, cluster_size(%four) : f32, i32, i32 -> f32
+  return %0: f32
+}
+
+// -----
+
+func.func @group_non_uniform_rotate_khr(%val: f32, %delta: i32) -> f32 {
+  %five = spirv.Constant 5 : i32
+  // expected-error @+1 {{cluster size operand must be a power of two}}
+  %0 = spirv.GroupNonUniformRotateKHR <Subgroup> %val, %delta, cluster_size(%five) : f32, i32, i32 -> f32
+  return %0: f32
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformAll
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @group_non_uniform_all
+func.func @group_non_uniform_all(%predicate: i1) -> i1 {
+  // CHECK: %{{.+}} = spirv.GroupNonUniformAll <Subgroup> %{{.+}} : i1
+  %0 = spirv.GroupNonUniformAll <Subgroup> %predicate : i1
+  return %0: i1
+}
+
+// -----
+
+func.func @group_non_uniform_all(%predicate: i1) -> i1 {
+  // expected-error @+1 {{execution_scope must be Scope of value Subgroup}}
+  %0 = spirv.GroupNonUniformAll <Device> %predicate : i1
+  return %0: i1
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformAny
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @group_non_uniform_any
+func.func @group_non_uniform_any(%predicate: i1) -> i1 {
+  // CHECK: %{{.+}} = spirv.GroupNonUniformAny <Subgroup> %{{.+}} : i1
+  %0 = spirv.GroupNonUniformAny <Subgroup> %predicate : i1
+  return %0: i1
+}
+
+// -----
+
+func.func @group_non_uniform_any(%predicate: i1) -> i1 {
+  // expected-error @+1 {{execution_scope must be Scope of value Subgroup}}
+  %0 = spirv.GroupNonUniformAny <Device> %predicate : i1
+  return %0: i1
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GroupNonUniformAllEqual
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @group_non_uniform_all_equal
+func.func @group_non_uniform_all_equal(%value: f32) -> i1 {
+  // CHECK: %{{.+}} = spirv.GroupNonUniformAllEqual <Subgroup> %{{.+}} : f32, i1
+  %0 = spirv.GroupNonUniformAllEqual <Subgroup> %value : f32, i1
+  return %0: i1
+}
+
+// -----
+
+// CHECK-LABEL: @group_non_uniform_all_equal
+func.func @group_non_uniform_all_equal(%value: vector<4xi32>) -> i1 {
+  // CHECK: %{{.+}} = spirv.GroupNonUniformAllEqual <Subgroup> %{{.+}} : vector<4xi32>, i1
+  %0 = spirv.GroupNonUniformAllEqual <Subgroup> %value : vector<4xi32>, i1
+  return %0: i1
+}
+
+
+// -----
+
+func.func @group_non_uniform_all_equal(%value: f32) -> i1 {
+  // expected-error @+1 {{execution_scope must be Scope of value Subgroup}}
+  %0 = spirv.GroupNonUniformAllEqual <Device> %value : f32, i1
+  return %0: i1
 }

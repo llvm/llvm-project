@@ -58,7 +58,7 @@ define amdgpu_ps void @raw_buffer_atomic_add_rtn_f64(<4 x i32> inreg %rsrc, doub
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.buffer.atomic.fadd.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0)
-  store double %ret, ptr undef
+  store double %ret, ptr poison
   ret void
 }
 
@@ -141,7 +141,7 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_add_rtn_f64(ptr addrspace(8) inreg 
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 0)
-  store double %ret, ptr undef
+  store double %ret, ptr poison
   ret void
 }
 
@@ -224,7 +224,7 @@ define amdgpu_ps void @struct_buffer_atomic_add_rtn_f64(<4 x i32> inreg %rsrc, d
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.buffer.atomic.fadd.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0, i32 0)
-  store double %ret, ptr undef
+  store double %ret, ptr poison
   ret void
 }
 
@@ -307,7 +307,7 @@ define amdgpu_ps void @struct_ptr_buffer_atomic_add_rtn_f64(ptr addrspace(8) inr
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.ptr.buffer.atomic.fadd.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 0, i32 0)
-  store double %ret, ptr undef
+  store double %ret, ptr poison
   ret void
 }
 
@@ -390,7 +390,7 @@ define amdgpu_ps void @raw_buffer_atomic_min_rtn_f64(<4 x i32> inreg %rsrc, doub
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.buffer.atomic.fmin.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0)
-  store double %ret, ptr undef
+  store double %ret, ptr poison
   ret void
 }
 
@@ -473,7 +473,7 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_min_rtn_f64(ptr addrspace(8) inreg 
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.ptr.buffer.atomic.fmin.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 0)
-  store double %ret, ptr undef
+  store double %ret, ptr poison
   ret void
 }
 
@@ -556,7 +556,7 @@ define amdgpu_ps void @struct_buffer_atomic_min_rtn_f64(<4 x i32> inreg %rsrc, d
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.buffer.atomic.fmin.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0, i32 0)
-  store double %ret, ptr undef
+  store double %ret, ptr poison
   ret void
 }
 
@@ -639,7 +639,7 @@ define amdgpu_ps void @struct_ptr_buffer_atomic_min_rtn_f64(ptr addrspace(8) inr
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.ptr.buffer.atomic.fmin.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 0, i32 0)
-  store double %ret, ptr undef
+  store double %ret, ptr poison
   ret void
 }
 
@@ -722,7 +722,7 @@ define amdgpu_ps void @raw_buffer_atomic_max_rtn_f64(<4 x i32> inreg %rsrc, doub
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.buffer.atomic.fmax.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0)
-  store double %ret, ptr undef
+  store double %ret, ptr poison
   ret void
 }
 
@@ -805,7 +805,7 @@ define amdgpu_ps void @raw_ptr_buffer_atomic_max_rtn_f64(ptr addrspace(8) inreg 
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.raw.ptr.buffer.atomic.fmax.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 0)
-  store double %ret, ptr undef
+  store double %ret, ptr poison
   ret void
 }
 
@@ -888,7 +888,7 @@ define amdgpu_ps void @struct_buffer_atomic_max_rtn_f64(<4 x i32> inreg %rsrc, d
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.buffer.atomic.fmax.f64(double %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0, i32 0)
-  store double %ret, ptr undef
+  store double %ret, ptr poison
   ret void
 }
 
@@ -971,7 +971,7 @@ define amdgpu_ps void @struct_ptr_buffer_atomic_max_rtn_f64(ptr addrspace(8) inr
 ; GFX942-NEXT:    s_endpgm
 main_body:
   %ret = call double @llvm.amdgcn.struct.ptr.buffer.atomic.fmax.f64(double %data, ptr addrspace(8) %rsrc, i32 %vindex, i32 0, i32 0, i32 0)
-  store double %ret, ptr undef
+  store double %ret, ptr poison
   ret void
 }
 

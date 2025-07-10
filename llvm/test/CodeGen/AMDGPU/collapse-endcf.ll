@@ -1360,12 +1360,12 @@ bb2:                                              ; preds = %bb1
   br i1 %tmp3, label %bb4, label %bb10
 
 bb4:                                              ; preds = %bb2
-  %tmp6 = load float, ptr addrspace(5) undef
+  %tmp6 = load float, ptr addrspace(5) poison
   %tmp7 = fcmp olt float %tmp6, 0.0
   br i1 %tmp7, label %bb8, label %Flow
 
 bb8:                                              ; preds = %bb4
-  %tmp9 = insertelement <4 x float> undef, float 0.0, i32 1
+  %tmp9 = insertelement <4 x float> poison, float 0.0, i32 1
   br label %Flow
 
 Flow:                                             ; preds = %bb8, %bb4
@@ -1380,7 +1380,7 @@ Flow1:                                            ; preds = %bb10
   br label %bb1
 
 bb12:                                             ; preds = %bb10
-  store volatile <4 x float> %tmp11, ptr addrspace(5) undef, align 16
+  store volatile <4 x float> %tmp11, ptr addrspace(5) poison, align 16
   ret void
 }
 
@@ -1391,5 +1391,3 @@ attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind convergent }
 attributes #2 = { nounwind }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}
