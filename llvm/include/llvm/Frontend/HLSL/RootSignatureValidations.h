@@ -52,8 +52,8 @@ struct RangeInfo {
   uint32_t Space;
   llvm::dxbc::ShaderVisibility Visibility;
 
-  // The index retains its original position before being sorted by group.
-  size_t Index;
+  // Retain information for diagnostic reporting
+  void *Cookie;
 };
 
 class ResourceRange {
