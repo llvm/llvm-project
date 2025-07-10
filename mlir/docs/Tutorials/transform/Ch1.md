@@ -12,7 +12,7 @@ Let us illustrate this with a simple sequence of transformations on the common â
 
 ```mlir
 #map0 = affine_map<(d0, d1) -> (d0, d1)>
-#map1 = affine_map<(do, d1) -> ()>
+#map1 = affine_map<(d0, d1) -> ()>
 
 func.func @fc_relu(%lhs: tensor<512x512xf32>, %rhs: tensor<512x512xf32>,
                    %bias: tensor<512x512xf32>, %output: tensor<512x512xf32>)
