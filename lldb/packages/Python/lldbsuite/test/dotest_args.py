@@ -300,6 +300,12 @@ def create_parser():
         metavar="platform-available-ports",
         help="Ports available for connection to a lldb server on the remote platform",
     )
+    group.add_argument(
+        "--cmake-build-type",
+        dest="cmake_build_type",
+        metavar="cmake-build-type",
+        help="Specifies the build type on single-configuration",
+    )
 
     # Test-suite behaviour
     group = parser.add_argument_group("Runtime behaviour options")

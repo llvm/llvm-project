@@ -7,103 +7,220 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/RuntimeLibcalls.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 using namespace RTLIB;
 
-/// Set default libcall names. If a target wants to opt-out of a libcall it
-/// should be placed here.
-void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
-  std::fill(std::begin(LibcallRoutineNames), std::end(LibcallRoutineNames),
-            nullptr);
+#define GET_INIT_RUNTIME_LIBCALL_NAMES
+#define GET_SET_TARGET_RUNTIME_LIBCALL_SETS
+#include "llvm/IR/RuntimeLibcalls.inc"
+#undef GET_INIT_RUNTIME_LIBCALL_NAMES
+#undef GET_SET_TARGET_RUNTIME_LIBCALL_SETS
 
-#define HANDLE_LIBCALL(code, name) setLibcallName(RTLIB::code, name);
-#include "llvm/IR/RuntimeLibcalls.def"
-#undef HANDLE_LIBCALL
+static cl::opt<bool>
+    HexagonEnableFastMathRuntimeCalls("hexagon-fast-math", cl::Hidden,
+                                      cl::desc("Enable Fast Math processing"));
 
-  // Initialize calling conventions to their default.
-  for (int LC = 0; LC < RTLIB::UNKNOWN_LIBCALL; ++LC)
-    setLibcallCallingConv((RTLIB::Libcall)LC, CallingConv::C);
-
-  // Use the f128 variants of math functions on x86_64
-  if (TT.getArch() == Triple::ArchType::x86_64 && TT.isGNUEnvironment()) {
-    setLibcallName(RTLIB::REM_F128, "fmodf128");
-    setLibcallName(RTLIB::FMA_F128, "fmaf128");
-    setLibcallName(RTLIB::SQRT_F128, "sqrtf128");
-    setLibcallName(RTLIB::CBRT_F128, "cbrtf128");
-    setLibcallName(RTLIB::LOG_F128, "logf128");
-    setLibcallName(RTLIB::LOG_FINITE_F128, "__logf128_finite");
-    setLibcallName(RTLIB::LOG2_F128, "log2f128");
-    setLibcallName(RTLIB::LOG2_FINITE_F128, "__log2f128_finite");
-    setLibcallName(RTLIB::LOG10_F128, "log10f128");
-    setLibcallName(RTLIB::LOG10_FINITE_F128, "__log10f128_finite");
-    setLibcallName(RTLIB::EXP_F128, "expf128");
-    setLibcallName(RTLIB::EXP_FINITE_F128, "__expf128_finite");
-    setLibcallName(RTLIB::EXP2_F128, "exp2f128");
-    setLibcallName(RTLIB::EXP2_FINITE_F128, "__exp2f128_finite");
-    setLibcallName(RTLIB::EXP10_F128, "exp10f128");
-    setLibcallName(RTLIB::SIN_F128, "sinf128");
-    setLibcallName(RTLIB::COS_F128, "cosf128");
-    setLibcallName(RTLIB::TAN_F128, "tanf128");
-    setLibcallName(RTLIB::SINCOS_F128, "sincosf128");
-    setLibcallName(RTLIB::ASIN_F128, "asinf128");
-    setLibcallName(RTLIB::ACOS_F128, "acosf128");
-    setLibcallName(RTLIB::ATAN_F128, "atanf128");
-    setLibcallName(RTLIB::ATAN2_F128, "atan2f128");
-    setLibcallName(RTLIB::SINH_F128, "sinhf128");
-    setLibcallName(RTLIB::COSH_F128, "coshf128");
-    setLibcallName(RTLIB::TANH_F128, "tanhf128");
-    setLibcallName(RTLIB::POW_F128, "powf128");
-    setLibcallName(RTLIB::POW_FINITE_F128, "__powf128_finite");
-    setLibcallName(RTLIB::CEIL_F128, "ceilf128");
-    setLibcallName(RTLIB::TRUNC_F128, "truncf128");
-    setLibcallName(RTLIB::RINT_F128, "rintf128");
-    setLibcallName(RTLIB::NEARBYINT_F128, "nearbyintf128");
-    setLibcallName(RTLIB::ROUND_F128, "roundf128");
-    setLibcallName(RTLIB::ROUNDEVEN_F128, "roundevenf128");
-    setLibcallName(RTLIB::FLOOR_F128, "floorf128");
-    setLibcallName(RTLIB::COPYSIGN_F128, "copysignf128");
-    setLibcallName(RTLIB::FMIN_F128, "fminf128");
-    setLibcallName(RTLIB::FMAX_F128, "fmaxf128");
-    setLibcallName(RTLIB::LROUND_F128, "lroundf128");
-    setLibcallName(RTLIB::LLROUND_F128, "llroundf128");
-    setLibcallName(RTLIB::LRINT_F128, "lrintf128");
-    setLibcallName(RTLIB::LLRINT_F128, "llrintf128");
-    setLibcallName(RTLIB::LDEXP_F128, "ldexpf128");
-    setLibcallName(RTLIB::FREXP_F128, "frexpf128");
+static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
+                               FloatABI::ABIType FloatABIType,
+                               EABI EABIVersion) {
+  if (!TT.isOSDarwin() && !TT.isiOS() && !TT.isWatchOS() && !TT.isDriverKit()) {
+    CallingConv::ID DefaultCC = FloatABIType == FloatABI::Hard
+                                    ? CallingConv::ARM_AAPCS_VFP
+                                    : CallingConv::ARM_AAPCS;
+    for (RTLIB::LibcallImpl LC : RTLIB::libcall_impls())
+      Info.setLibcallImplCallingConv(LC, DefaultCC);
   }
 
-  // For IEEE quad-precision libcall names, PPC uses "kf" instead of "tf".
-  if (TT.isPPC()) {
-    setLibcallName(RTLIB::ADD_F128, "__addkf3");
-    setLibcallName(RTLIB::SUB_F128, "__subkf3");
-    setLibcallName(RTLIB::MUL_F128, "__mulkf3");
-    setLibcallName(RTLIB::DIV_F128, "__divkf3");
-    setLibcallName(RTLIB::POWI_F128, "__powikf2");
-    setLibcallName(RTLIB::FPEXT_F32_F128, "__extendsfkf2");
-    setLibcallName(RTLIB::FPEXT_F64_F128, "__extenddfkf2");
-    setLibcallName(RTLIB::FPROUND_F128_F16, "__trunckfhf2");
-    setLibcallName(RTLIB::FPROUND_F128_F32, "__trunckfsf2");
-    setLibcallName(RTLIB::FPROUND_F128_F64, "__trunckfdf2");
-    setLibcallName(RTLIB::FPTOSINT_F128_I32, "__fixkfsi");
-    setLibcallName(RTLIB::FPTOSINT_F128_I64, "__fixkfdi");
-    setLibcallName(RTLIB::FPTOSINT_F128_I128, "__fixkfti");
-    setLibcallName(RTLIB::FPTOUINT_F128_I32, "__fixunskfsi");
-    setLibcallName(RTLIB::FPTOUINT_F128_I64, "__fixunskfdi");
-    setLibcallName(RTLIB::FPTOUINT_F128_I128, "__fixunskfti");
-    setLibcallName(RTLIB::SINTTOFP_I32_F128, "__floatsikf");
-    setLibcallName(RTLIB::SINTTOFP_I64_F128, "__floatdikf");
-    setLibcallName(RTLIB::SINTTOFP_I128_F128, "__floattikf");
-    setLibcallName(RTLIB::UINTTOFP_I32_F128, "__floatunsikf");
-    setLibcallName(RTLIB::UINTTOFP_I64_F128, "__floatundikf");
-    setLibcallName(RTLIB::UINTTOFP_I128_F128, "__floatuntikf");
-    setLibcallName(RTLIB::OEQ_F128, "__eqkf2");
-    setLibcallName(RTLIB::UNE_F128, "__nekf2");
-    setLibcallName(RTLIB::OGE_F128, "__gekf2");
-    setLibcallName(RTLIB::OLT_F128, "__ltkf2");
-    setLibcallName(RTLIB::OLE_F128, "__lekf2");
-    setLibcallName(RTLIB::OGT_F128, "__gtkf2");
-    setLibcallName(RTLIB::UO_F128, "__unordkf2");
+  // Register based DivRem for AEABI (RTABI 4.2)
+  if (TT.isTargetAEABI() || TT.isAndroid() || TT.isTargetGNUAEABI() ||
+      TT.isTargetMuslAEABI() || TT.isOSWindows()) {
+    if (TT.isOSWindows()) {
+      const struct {
+        const RTLIB::Libcall Op;
+        const RTLIB::LibcallImpl Impl;
+        const CallingConv::ID CC;
+      } LibraryCalls[] = {
+          {RTLIB::SDIVREM_I32, RTLIB::__rt_sdiv, CallingConv::ARM_AAPCS},
+          {RTLIB::SDIVREM_I64, RTLIB::__rt_sdiv64, CallingConv::ARM_AAPCS},
+          {RTLIB::UDIVREM_I32, RTLIB::__rt_udiv, CallingConv::ARM_AAPCS},
+          {RTLIB::UDIVREM_I64, RTLIB::__rt_udiv64, CallingConv::ARM_AAPCS},
+      };
+
+      for (const auto &LC : LibraryCalls) {
+        Info.setLibcallImpl(LC.Op, LC.Impl);
+        Info.setLibcallImplCallingConv(LC.Impl, LC.CC);
+      }
+    } else {
+      const struct {
+        const RTLIB::Libcall Op;
+        const RTLIB::LibcallImpl Impl;
+      } LibraryCalls[] = {
+          {RTLIB::SDIVREM_I32, RTLIB::__aeabi_idivmod},
+          {RTLIB::SDIVREM_I64, RTLIB::__aeabi_ldivmod},
+          {RTLIB::UDIVREM_I32, RTLIB::__aeabi_uidivmod},
+          {RTLIB::UDIVREM_I64, RTLIB::__aeabi_uldivmod},
+      };
+
+      for (const auto &LC : LibraryCalls)
+        Info.setLibcallImpl(LC.Op, LC.Impl);
+    }
+  }
+
+  if (TT.isOSWindows()) {
+    static const struct {
+      const RTLIB::Libcall Op;
+      const RTLIB::LibcallImpl Impl;
+      const CallingConv::ID CC;
+    } LibraryCalls[] = {
+        {RTLIB::FPTOSINT_F32_I64, RTLIB::__stoi64, CallingConv::ARM_AAPCS_VFP},
+        {RTLIB::FPTOSINT_F64_I64, RTLIB::__dtoi64, CallingConv::ARM_AAPCS_VFP},
+        {RTLIB::FPTOUINT_F32_I64, RTLIB::__stou64, CallingConv::ARM_AAPCS_VFP},
+        {RTLIB::FPTOUINT_F64_I64, RTLIB::__dtou64, CallingConv::ARM_AAPCS_VFP},
+        {RTLIB::SINTTOFP_I64_F32, RTLIB::__i64tos, CallingConv::ARM_AAPCS_VFP},
+        {RTLIB::SINTTOFP_I64_F64, RTLIB::__i64tod, CallingConv::ARM_AAPCS_VFP},
+        {RTLIB::UINTTOFP_I64_F32, RTLIB::__u64tos, CallingConv::ARM_AAPCS_VFP},
+        {RTLIB::UINTTOFP_I64_F64, RTLIB::__u64tod, CallingConv::ARM_AAPCS_VFP},
+    };
+
+    for (const auto &LC : LibraryCalls) {
+      Info.setLibcallImpl(LC.Op, LC.Impl);
+      Info.setLibcallImplCallingConv(LC.Impl, LC.CC);
+    }
+  }
+
+  // Use divmod compiler-rt calls for iOS 5.0 and later.
+  if (TT.isOSBinFormatMachO() && (!TT.isiOS() || !TT.isOSVersionLT(5, 0))) {
+    Info.setLibcallImpl(RTLIB::SDIVREM_I32, RTLIB::__divmodsi4);
+    Info.setLibcallImpl(RTLIB::UDIVREM_I32, RTLIB::__udivmodsi4);
+  }
+
+  static const RTLIB::LibcallImpl AAPCS_Libcalls[] = {
+      RTLIB::__aeabi_dadd,        RTLIB::__aeabi_ddiv,
+      RTLIB::__aeabi_dmul,        RTLIB::__aeabi_dsub,
+      RTLIB::__aeabi_dcmpeq__oeq, RTLIB::__aeabi_dcmpeq__une,
+      RTLIB::__aeabi_dcmplt,      RTLIB::__aeabi_dcmple,
+      RTLIB::__aeabi_dcmpge,      RTLIB::__aeabi_dcmpgt,
+      RTLIB::__aeabi_dcmpun,      RTLIB::__aeabi_fadd,
+      RTLIB::__aeabi_fdiv,        RTLIB::__aeabi_fmul,
+      RTLIB::__aeabi_fsub,        RTLIB::__aeabi_fcmpeq__oeq,
+      RTLIB::__aeabi_fcmpeq__une, RTLIB::__aeabi_fcmplt,
+      RTLIB::__aeabi_fcmple,      RTLIB::__aeabi_fcmpge,
+      RTLIB::__aeabi_fcmpgt,      RTLIB::__aeabi_fcmpun,
+      RTLIB::__aeabi_d2iz,        RTLIB::__aeabi_d2uiz,
+      RTLIB::__aeabi_d2lz,        RTLIB::__aeabi_d2ulz,
+      RTLIB::__aeabi_f2iz,        RTLIB::__aeabi_f2uiz,
+      RTLIB::__aeabi_f2lz,        RTLIB::__aeabi_f2ulz,
+      RTLIB::__aeabi_d2f,         RTLIB::__aeabi_d2h,
+      RTLIB::__aeabi_f2d,         RTLIB::__aeabi_i2d,
+      RTLIB::__aeabi_ui2d,        RTLIB::__aeabi_l2d,
+      RTLIB::__aeabi_ul2d,        RTLIB::__aeabi_i2f,
+      RTLIB::__aeabi_ui2f,        RTLIB::__aeabi_l2f,
+      RTLIB::__aeabi_ul2f,        RTLIB::__aeabi_lmul,
+      RTLIB::__aeabi_llsl,        RTLIB::__aeabi_llsr,
+      RTLIB::__aeabi_lasr,        RTLIB::__aeabi_idiv__i8,
+      RTLIB::__aeabi_idiv__i16,   RTLIB::__aeabi_idiv__i32,
+      RTLIB::__aeabi_idivmod,     RTLIB::__aeabi_uidivmod,
+      RTLIB::__aeabi_ldivmod,     RTLIB::__aeabi_uidiv__i8,
+      RTLIB::__aeabi_uidiv__i16,  RTLIB::__aeabi_uidiv__i32,
+      RTLIB::__aeabi_uldivmod,    RTLIB::__aeabi_f2h,
+      RTLIB::__aeabi_d2h,         RTLIB::__aeabi_h2f,
+      RTLIB::__aeabi_memcpy,      RTLIB::__aeabi_memmove,
+      RTLIB::__aeabi_memset,      RTLIB::__aeabi_memcpy4,
+      RTLIB::__aeabi_memcpy8,     RTLIB::__aeabi_memmove4,
+      RTLIB::__aeabi_memmove8,    RTLIB::__aeabi_memset4,
+      RTLIB::__aeabi_memset8,     RTLIB::__aeabi_memclr,
+      RTLIB::__aeabi_memclr4,     RTLIB::__aeabi_memclr8};
+
+  for (RTLIB::LibcallImpl Impl : AAPCS_Libcalls)
+    Info.setLibcallImplCallingConv(Impl, CallingConv::ARM_AAPCS);
+}
+
+static void setLongDoubleIsF128Libm(RuntimeLibcallsInfo &Info,
+                                    bool FiniteOnlyFuncs = false) {
+  Info.setLibcallImpl(RTLIB::REM_F128, RTLIB::fmodf128);
+  Info.setLibcallImpl(RTLIB::FMA_F128, RTLIB::fmaf128);
+  Info.setLibcallImpl(RTLIB::SQRT_F128, RTLIB::sqrtf128);
+  Info.setLibcallImpl(RTLIB::CBRT_F128, RTLIB::cbrtf128);
+  Info.setLibcallImpl(RTLIB::LOG_F128, RTLIB::logf128);
+  Info.setLibcallImpl(RTLIB::LOG2_F128, RTLIB::log2f128);
+  Info.setLibcallImpl(RTLIB::LOG10_F128, RTLIB::log10f128);
+  Info.setLibcallImpl(RTLIB::EXP_F128, RTLIB::expf128);
+  Info.setLibcallImpl(RTLIB::EXP2_F128, RTLIB::exp2f128);
+  Info.setLibcallImpl(RTLIB::EXP10_F128, RTLIB::exp10f128);
+  Info.setLibcallImpl(RTLIB::SIN_F128, RTLIB::sinf128);
+  Info.setLibcallImpl(RTLIB::COS_F128, RTLIB::cosf128);
+  Info.setLibcallImpl(RTLIB::TAN_F128, RTLIB::tanf128);
+  Info.setLibcallImpl(RTLIB::SINCOS_F128, RTLIB::sincosf128);
+  Info.setLibcallImpl(RTLIB::ASIN_F128, RTLIB::asinf128);
+  Info.setLibcallImpl(RTLIB::ACOS_F128, RTLIB::acosf128);
+  Info.setLibcallImpl(RTLIB::ATAN_F128, RTLIB::atanf128);
+  Info.setLibcallImpl(RTLIB::ATAN2_F128, RTLIB::atan2f128);
+  Info.setLibcallImpl(RTLIB::SINH_F128, RTLIB::sinhf128);
+  Info.setLibcallImpl(RTLIB::COSH_F128, RTLIB::coshf128);
+  Info.setLibcallImpl(RTLIB::TANH_F128, RTLIB::tanhf128);
+  Info.setLibcallImpl(RTLIB::POW_F128, RTLIB::powf128);
+  Info.setLibcallImpl(RTLIB::CEIL_F128, RTLIB::ceilf128);
+  Info.setLibcallImpl(RTLIB::TRUNC_F128, RTLIB::truncf128);
+  Info.setLibcallImpl(RTLIB::RINT_F128, RTLIB::rintf128);
+  Info.setLibcallImpl(RTLIB::NEARBYINT_F128, RTLIB::nearbyintf128);
+  Info.setLibcallImpl(RTLIB::ROUND_F128, RTLIB::roundf128);
+  Info.setLibcallImpl(RTLIB::ROUNDEVEN_F128, RTLIB::roundevenf128);
+  Info.setLibcallImpl(RTLIB::FLOOR_F128, RTLIB::floorf128);
+  Info.setLibcallImpl(RTLIB::COPYSIGN_F128, RTLIB::copysignf128);
+  Info.setLibcallImpl(RTLIB::FMIN_F128, RTLIB::fminf128);
+  Info.setLibcallImpl(RTLIB::FMAX_F128, RTLIB::fmaxf128);
+  Info.setLibcallImpl(RTLIB::FMINIMUM_F128, RTLIB::fminimumf128);
+  Info.setLibcallImpl(RTLIB::FMAXIMUM_F128, RTLIB::fmaximumf128);
+  Info.setLibcallImpl(RTLIB::FMINIMUM_NUM_F128, RTLIB::fminimum_numf128);
+  Info.setLibcallImpl(RTLIB::FMAXIMUM_NUM_F128, RTLIB::fmaximum_numf128);
+  Info.setLibcallImpl(RTLIB::LROUND_F128, RTLIB::lroundf128);
+  Info.setLibcallImpl(RTLIB::LLROUND_F128, RTLIB::llroundf128);
+  Info.setLibcallImpl(RTLIB::LRINT_F128, RTLIB::lrintf128);
+  Info.setLibcallImpl(RTLIB::LLRINT_F128, RTLIB::llrintf128);
+  Info.setLibcallImpl(RTLIB::LDEXP_F128, RTLIB::ldexpf128);
+  Info.setLibcallImpl(RTLIB::FREXP_F128, RTLIB::frexpf128);
+  Info.setLibcallImpl(RTLIB::MODF_F128, RTLIB::modff128);
+
+  if (FiniteOnlyFuncs) {
+    Info.setLibcallImpl(RTLIB::LOG_FINITE_F128, RTLIB::__logf128_finite);
+    Info.setLibcallImpl(RTLIB::LOG2_FINITE_F128, RTLIB::__log2f128_finite);
+    Info.setLibcallImpl(RTLIB::LOG10_FINITE_F128, RTLIB::__log10f128_finite);
+    Info.setLibcallImpl(RTLIB::EXP_FINITE_F128, RTLIB::__expf128_finite);
+    Info.setLibcallImpl(RTLIB::EXP2_FINITE_F128, RTLIB::__exp2f128_finite);
+    Info.setLibcallImpl(RTLIB::POW_FINITE_F128, RTLIB::__powf128_finite);
+  } else {
+    Info.setLibcallImpl(RTLIB::LOG_FINITE_F128, RTLIB::Unsupported);
+    Info.setLibcallImpl(RTLIB::LOG2_FINITE_F128, RTLIB::Unsupported);
+    Info.setLibcallImpl(RTLIB::LOG10_FINITE_F128, RTLIB::Unsupported);
+    Info.setLibcallImpl(RTLIB::EXP_FINITE_F128, RTLIB::Unsupported);
+    Info.setLibcallImpl(RTLIB::EXP2_FINITE_F128, RTLIB::Unsupported);
+    Info.setLibcallImpl(RTLIB::POW_FINITE_F128, RTLIB::Unsupported);
+  }
+}
+
+void RTLIB::RuntimeLibcallsInfo::initDefaultLibCallImpls() {
+  std::memcpy(LibcallImpls, DefaultLibcallImpls, sizeof(LibcallImpls));
+  static_assert(sizeof(LibcallImpls) == sizeof(DefaultLibcallImpls),
+                "libcall array size should match");
+}
+
+/// Set default libcall names. If a target wants to opt-out of a libcall it
+/// should be placed here.
+void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
+                                       ExceptionHandling ExceptionModel,
+                                       FloatABI::ABIType FloatABI,
+                                       EABI EABIVersion, StringRef ABIName) {
+  setTargetRuntimeLibcallSets(TT);
+
+  // Use the f128 variants of math functions on x86
+  if (TT.isX86() && TT.isGNUEnvironment())
+    setLongDoubleIsF128Libm(*this, /*FiniteOnlyFuncs=*/true);
+
+  if (TT.isX86() || TT.isVE() || TT.isARM() || TT.isThumb()) {
+    if (ExceptionModel == ExceptionHandling::SjLj)
+      setLibcallImpl(RTLIB::UNWIND_RESUME, RTLIB::_Unwind_SjLj_Resume);
   }
 
   // A few names are different on particular architectures or environments.
@@ -111,146 +228,168 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT) {
     // For f16/f32 conversions, Darwin uses the standard naming scheme,
     // instead of the gnueabi-style __gnu_*_ieee.
     // FIXME: What about other targets?
-    setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");
-    setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
+    setLibcallImpl(RTLIB::FPEXT_F16_F32, RTLIB::__extendhfsf2);
+    setLibcallImpl(RTLIB::FPROUND_F32_F16, RTLIB::__truncsfhf2);
 
     // Some darwins have an optimized __bzero/bzero function.
-    switch (TT.getArch()) {
-    case Triple::x86:
-    case Triple::x86_64:
+    if (TT.isX86()) {
       if (TT.isMacOSX() && !TT.isMacOSXVersionLT(10, 6))
-        setLibcallName(RTLIB::BZERO, "__bzero");
-      break;
-    case Triple::aarch64:
-    case Triple::aarch64_32:
-      setLibcallName(RTLIB::BZERO, "bzero");
-      break;
-    default:
-      break;
+        setLibcallImpl(RTLIB::BZERO, RTLIB::__bzero);
     }
 
-    if (darwinHasSinCos(TT)) {
-      setLibcallName(RTLIB::SINCOS_STRET_F32, "__sincosf_stret");
-      setLibcallName(RTLIB::SINCOS_STRET_F64, "__sincos_stret");
+    if (darwinHasSinCosStret(TT)) {
+      setLibcallImpl(RTLIB::SINCOS_STRET_F32, RTLIB::__sincosf_stret);
+      setLibcallImpl(RTLIB::SINCOS_STRET_F64, RTLIB::__sincos_stret);
       if (TT.isWatchABI()) {
-        setLibcallCallingConv(RTLIB::SINCOS_STRET_F32,
-                              CallingConv::ARM_AAPCS_VFP);
-        setLibcallCallingConv(RTLIB::SINCOS_STRET_F64,
-                              CallingConv::ARM_AAPCS_VFP);
+        setLibcallImplCallingConv(RTLIB::__sincosf_stret,
+                                  CallingConv::ARM_AAPCS_VFP);
+        setLibcallImplCallingConv(RTLIB::__sincos_stret,
+                                  CallingConv::ARM_AAPCS_VFP);
       }
     }
 
-    switch (TT.getOS()) {
-    case Triple::MacOSX:
-      if (TT.isMacOSXVersionLT(10, 9)) {
-        setLibcallName(RTLIB::EXP10_F32, nullptr);
-        setLibcallName(RTLIB::EXP10_F64, nullptr);
-      } else {
-        setLibcallName(RTLIB::EXP10_F32, "__exp10f");
-        setLibcallName(RTLIB::EXP10_F64, "__exp10");
-      }
-      break;
-    case Triple::IOS:
-      if (TT.isOSVersionLT(7, 0)) {
-        setLibcallName(RTLIB::EXP10_F32, nullptr);
-        setLibcallName(RTLIB::EXP10_F64, nullptr);
-        break;
-      }
-      [[fallthrough]];
-    case Triple::DriverKit:
-    case Triple::TvOS:
-    case Triple::WatchOS:
-    case Triple::XROS:
-      setLibcallName(RTLIB::EXP10_F32, "__exp10f");
-      setLibcallName(RTLIB::EXP10_F64, "__exp10");
-      break;
-    default:
-      break;
+    if (darwinHasExp10(TT)) {
+      setLibcallImpl(RTLIB::EXP10_F32, RTLIB::__exp10f);
+      setLibcallImpl(RTLIB::EXP10_F64, RTLIB::__exp10);
+    } else {
+      setLibcallImpl(RTLIB::EXP10_F32, RTLIB::Unsupported);
+      setLibcallImpl(RTLIB::EXP10_F64, RTLIB::Unsupported);
     }
-  } else if (TT.getOS() == Triple::BridgeOS) {
-    // TODO: BridgeOS should be included in isOSDarwin.
-    setLibcallName(RTLIB::EXP10_F32, "__exp10f");
-    setLibcallName(RTLIB::EXP10_F64, "__exp10");
   }
 
-  if (TT.isGNUEnvironment() || TT.isOSFuchsia() ||
-      (TT.isAndroid() && !TT.isAndroidVersionLT(9))) {
-    setLibcallName(RTLIB::SINCOS_F32, "sincosf");
-    setLibcallName(RTLIB::SINCOS_F64, "sincos");
-    setLibcallName(RTLIB::SINCOS_F80, "sincosl");
-    setLibcallName(RTLIB::SINCOS_F128, "sincosl");
-    setLibcallName(RTLIB::SINCOS_PPCF128, "sincosl");
+  if (hasSinCos(TT)) {
+    setLibcallImpl(RTLIB::SINCOS_F32, RTLIB::sincosf);
+    setLibcallImpl(RTLIB::SINCOS_F64, RTLIB::sincos);
+    setLibcallImpl(RTLIB::SINCOS_F80, RTLIB::sincos_f80);
+    setLibcallImpl(RTLIB::SINCOS_F128, RTLIB::sincos_f128);
+    setLibcallImpl(RTLIB::SINCOS_PPCF128, RTLIB::sincos_ppcf128);
   }
 
   if (TT.isPS()) {
-    setLibcallName(RTLIB::SINCOS_F32, "sincosf");
-    setLibcallName(RTLIB::SINCOS_F64, "sincos");
+    setLibcallImpl(RTLIB::SINCOS_F32, RTLIB::sincosf);
+    setLibcallImpl(RTLIB::SINCOS_F64, RTLIB::sincos);
   }
 
   if (TT.isOSOpenBSD()) {
-    setLibcallName(RTLIB::STACKPROTECTOR_CHECK_FAIL, nullptr);
+    setLibcallImpl(RTLIB::STACKPROTECTOR_CHECK_FAIL, RTLIB::Unsupported);
   }
 
   if (TT.isOSWindows() && !TT.isOSCygMing()) {
-    setLibcallName(RTLIB::LDEXP_F32, nullptr);
-    setLibcallName(RTLIB::LDEXP_F80, nullptr);
-    setLibcallName(RTLIB::LDEXP_F128, nullptr);
-    setLibcallName(RTLIB::LDEXP_PPCF128, nullptr);
+    setLibcallImpl(RTLIB::LDEXP_F32, RTLIB::Unsupported);
+    setLibcallImpl(RTLIB::LDEXP_F80, RTLIB::Unsupported);
+    setLibcallImpl(RTLIB::LDEXP_F128, RTLIB::Unsupported);
+    setLibcallImpl(RTLIB::LDEXP_PPCF128, RTLIB::Unsupported);
 
-    setLibcallName(RTLIB::FREXP_F32, nullptr);
-    setLibcallName(RTLIB::FREXP_F80, nullptr);
-    setLibcallName(RTLIB::FREXP_F128, nullptr);
-    setLibcallName(RTLIB::FREXP_PPCF128, nullptr);
-  }
-
-  // Disable most libcalls on AMDGPU.
-  if (TT.isAMDGPU()) {
-    for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I) {
-      if (I < RTLIB::ATOMIC_LOAD || I > RTLIB::ATOMIC_FETCH_NAND_16)
-        setLibcallName(static_cast<RTLIB::Libcall>(I), nullptr);
-    }
-  }
-
-  // Disable most libcalls on NVPTX.
-  if (TT.isNVPTX()) {
-    for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I)
-      if (I < RTLIB::ATOMIC_LOAD || I > RTLIB::ATOMIC_FETCH_NAND_16)
-        setLibcallName(static_cast<RTLIB::Libcall>(I), nullptr);
+    setLibcallImpl(RTLIB::FREXP_F32, RTLIB::Unsupported);
+    setLibcallImpl(RTLIB::FREXP_F80, RTLIB::Unsupported);
+    setLibcallImpl(RTLIB::FREXP_F128, RTLIB::Unsupported);
+    setLibcallImpl(RTLIB::FREXP_PPCF128, RTLIB::Unsupported);
   }
 
   if (TT.isOSMSVCRT()) {
     // MSVCRT doesn't have powi; fall back to pow
-    setLibcallName(RTLIB::POWI_F32, nullptr);
-    setLibcallName(RTLIB::POWI_F64, nullptr);
+    setLibcallImpl(RTLIB::POWI_F32, RTLIB::Unsupported);
+    setLibcallImpl(RTLIB::POWI_F64, RTLIB::Unsupported);
   }
 
-  if (TT.getArch() == Triple::ArchType::avr) {
-    // Division rtlib functions (not supported), use divmod functions instead
-    setLibcallName(RTLIB::SDIV_I8, nullptr);
-    setLibcallName(RTLIB::SDIV_I16, nullptr);
-    setLibcallName(RTLIB::SDIV_I32, nullptr);
-    setLibcallName(RTLIB::UDIV_I8, nullptr);
-    setLibcallName(RTLIB::UDIV_I16, nullptr);
-    setLibcallName(RTLIB::UDIV_I32, nullptr);
+  // Setup Windows compiler runtime calls.
+  if (TT.getArch() == Triple::x86 &&
+      (TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment())) {
+    static const struct {
+      const RTLIB::Libcall Op;
+      const RTLIB::LibcallImpl Impl;
+      const CallingConv::ID CC;
+    } LibraryCalls[] = {
+        {RTLIB::SDIV_I64, RTLIB::_alldiv, CallingConv::X86_StdCall},
+        {RTLIB::UDIV_I64, RTLIB::_aulldiv, CallingConv::X86_StdCall},
+        {RTLIB::SREM_I64, RTLIB::_allrem, CallingConv::X86_StdCall},
+        {RTLIB::UREM_I64, RTLIB::_aullrem, CallingConv::X86_StdCall},
+        {RTLIB::MUL_I64, RTLIB::_allmul, CallingConv::X86_StdCall},
+    };
 
-    // Modulus rtlib functions (not supported), use divmod functions instead
-    setLibcallName(RTLIB::SREM_I8, nullptr);
-    setLibcallName(RTLIB::SREM_I16, nullptr);
-    setLibcallName(RTLIB::SREM_I32, nullptr);
-    setLibcallName(RTLIB::UREM_I8, nullptr);
-    setLibcallName(RTLIB::UREM_I16, nullptr);
-    setLibcallName(RTLIB::UREM_I32, nullptr);
+    for (const auto &LC : LibraryCalls) {
+      setLibcallImpl(LC.Op, LC.Impl);
+      setLibcallImplCallingConv(LC.Impl, LC.CC);
+    }
   }
+
+  if (TT.isARM() || TT.isThumb())
+    setARMLibcallNames(*this, TT, FloatABI, EABIVersion);
 
   if (!TT.isWasm()) {
     // These libcalls are only available in compiler-rt, not libgcc.
     if (TT.isArch32Bit()) {
-      setLibcallName(RTLIB::SHL_I128, nullptr);
-      setLibcallName(RTLIB::SRL_I128, nullptr);
-      setLibcallName(RTLIB::SRA_I128, nullptr);
-      setLibcallName(RTLIB::MUL_I128, nullptr);
-      setLibcallName(RTLIB::MULO_I64, nullptr);
+      setLibcallImpl(RTLIB::SHL_I128, RTLIB::Unsupported);
+      setLibcallImpl(RTLIB::SRL_I128, RTLIB::Unsupported);
+      setLibcallImpl(RTLIB::SRA_I128, RTLIB::Unsupported);
+      setLibcallImpl(RTLIB::MUL_I128, RTLIB::Unsupported);
+      setLibcallImpl(RTLIB::MULO_I64, RTLIB::Unsupported);
     }
-    setLibcallName(RTLIB::MULO_I128, nullptr);
+
+    setLibcallImpl(RTLIB::MULO_I128, RTLIB::Unsupported);
+  }
+
+  if (TT.getArch() == Triple::ArchType::hexagon) {
+    setLibcallImpl(RTLIB::SDIV_I32, RTLIB::__hexagon_divsi3);
+    setLibcallImpl(RTLIB::SDIV_I64, RTLIB::__hexagon_divdi3);
+    setLibcallImpl(RTLIB::UDIV_I32, RTLIB::__hexagon_udivsi3);
+    setLibcallImpl(RTLIB::UDIV_I64, RTLIB::__hexagon_udivdi3);
+    setLibcallImpl(RTLIB::SREM_I32, RTLIB::__hexagon_modsi3);
+    setLibcallImpl(RTLIB::SREM_I64, RTLIB::__hexagon_moddi3);
+    setLibcallImpl(RTLIB::UREM_I32, RTLIB::__hexagon_umodsi3);
+    setLibcallImpl(RTLIB::UREM_I64, RTLIB::__hexagon_umoddi3);
+
+    const bool FastMath = HexagonEnableFastMathRuntimeCalls;
+    // This is the only fast library function for sqrtd.
+    if (FastMath)
+      setLibcallImpl(RTLIB::SQRT_F64, RTLIB::__hexagon_fast2_sqrtdf2);
+
+    // Prefix is: nothing  for "slow-math",
+    //            "fast2_" for V5+ fast-math double-precision
+    // (actually, keep fast-math and fast-math2 separate for now)
+    if (FastMath) {
+      setLibcallImpl(RTLIB::ADD_F64, RTLIB::__hexagon_fast_adddf3);
+      setLibcallImpl(RTLIB::SUB_F64, RTLIB::__hexagon_fast_subdf3);
+      setLibcallImpl(RTLIB::MUL_F64, RTLIB::__hexagon_fast_muldf3);
+      setLibcallImpl(RTLIB::DIV_F64, RTLIB::__hexagon_fast_divdf3);
+      setLibcallImpl(RTLIB::DIV_F32, RTLIB::__hexagon_fast_divsf3);
+    } else {
+      setLibcallImpl(RTLIB::ADD_F64, RTLIB::__hexagon_adddf3);
+      setLibcallImpl(RTLIB::SUB_F64, RTLIB::__hexagon_subdf3);
+      setLibcallImpl(RTLIB::MUL_F64, RTLIB::__hexagon_muldf3);
+      setLibcallImpl(RTLIB::DIV_F64, RTLIB::__hexagon_divdf3);
+      setLibcallImpl(RTLIB::DIV_F32, RTLIB::__hexagon_divsf3);
+    }
+
+    if (FastMath)
+      setLibcallImpl(RTLIB::SQRT_F32, RTLIB::__hexagon_fast2_sqrtf);
+    else
+      setLibcallImpl(RTLIB::SQRT_F32, RTLIB::__hexagon_sqrtf);
+
+    setLibcallImpl(
+        RTLIB::HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES,
+        RTLIB::__hexagon_memcpy_likely_aligned_min32bytes_mult8bytes);
+  }
+
+  if (TT.getArch() == Triple::ArchType::msp430) {
+    setLibcallImplCallingConv(RTLIB::__mspabi_mpyll,
+                              CallingConv::MSP430_BUILTIN);
+  }
+}
+
+bool RuntimeLibcallsInfo::darwinHasExp10(const Triple &TT) {
+  switch (TT.getOS()) {
+  case Triple::MacOSX:
+    return !TT.isMacOSXVersionLT(10, 9);
+  case Triple::IOS:
+    return !TT.isOSVersionLT(7, 0);
+  case Triple::DriverKit:
+  case Triple::TvOS:
+  case Triple::WatchOS:
+  case Triple::XROS:
+  case Triple::BridgeOS:
+    return true;
+  default:
+    return false;
   }
 }

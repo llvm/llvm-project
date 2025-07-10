@@ -1818,9 +1818,7 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   // VFTablesMap, thus a simple zero check is not sufficient.
 
   VFTableIdTy ID(RD, VPtrOffset);
-  VTablesMapTy::iterator I;
-  bool Inserted;
-  std::tie(I, Inserted) = VTablesMap.insert(std::make_pair(ID, nullptr));
+  auto [I, Inserted] = VTablesMap.try_emplace(ID);
   if (!Inserted)
     return I->second;
 
@@ -1838,9 +1836,9 @@ llvm::GlobalVariable *MicrosoftCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
     // Create all the vftables at once in order to make sure each vftable has
     // a unique mangled name.
     llvm::StringSet<> ObservedMangledNames;
-    for (size_t J = 0, F = VFPtrs.size(); J != F; ++J) {
+    for (const auto &VFPtr : VFPtrs) {
       SmallString<256> Name;
-      mangleVFTableName(getMangleContext(), RD, *VFPtrs[J], Name);
+      mangleVFTableName(getMangleContext(), RD, *VFPtr, Name);
       if (!ObservedMangledNames.insert(Name.str()).second)
         llvm_unreachable("Already saw this mangling before?");
     }
@@ -2036,10 +2034,7 @@ const VBTableGlobals &
 MicrosoftCXXABI::enumerateVBTables(const CXXRecordDecl *RD) {
   // At this layer, we can key the cache off of a single class, which is much
   // easier than caching each vbtable individually.
-  llvm::DenseMap<const CXXRecordDecl*, VBTableGlobals>::iterator Entry;
-  bool Added;
-  std::tie(Entry, Added) =
-      VBTablesMap.insert(std::make_pair(RD, VBTableGlobals()));
+  auto [Entry, Added] = VBTablesMap.try_emplace(RD);
   VBTableGlobals &VBGlobals = Entry->second;
   if (!Added)
     return VBGlobals;

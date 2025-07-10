@@ -1,4 +1,4 @@
-// RUN: tco --target=i386-unknown-linux-gnu %s | FileCheck %s --check-prefix=I32
+// RUN: tco --target=i386-unknown-linux-gnu --force-no-alias %s | FileCheck %s --check-prefix=I32
 // RUN: tco --target=x86_64-unknown-linux-gnu %s | FileCheck %s --check-prefix=X64
 // RUN: tco --target=aarch64-unknown-linux-gnu %s | FileCheck %s --check-prefix=AARCH64
 // RUN: tco --target=powerpc64le-unknown-linux-gnu %s | FileCheck %s --check-prefix=PPC
@@ -26,7 +26,7 @@ func.func @gen4() -> complex<f32> {
   return %6 : complex<f32>
 }
 
-// I32-LABEL: define void @gen8(ptr sret({ double, double }) align 4 captures(none) %
+// I32-LABEL: define void @gen8(ptr noalias sret({ double, double }) align 4 captures(none) %
 // X64-LABEL: define { double, double } @gen8()
 // AARCH64-LABEL: define { double, double } @gen8()
 // PPC-LABEL: define { double, double } @gen8()
@@ -93,9 +93,9 @@ func.func @call8() {
   return
 }
 
-// I32-LABEL: define i64 @char1lensum(ptr captures(none) %0, ptr captures(none) %1, i32 %2, i32 %3)
-// X64-LABEL: define i64 @char1lensum(ptr captures(none) %0, ptr captures(none) %1, i64 %2, i64 %3)
-// PPC-LABEL: define i64 @char1lensum(ptr captures(none) %0, ptr captures(none) %1, i64 %2, i64 %3)
+// I32-LABEL: define i64 @char1lensum(ptr {{[^%]*}}%0, ptr {{[^%]*}}%1, i32 %2, i32 %3)
+// X64-LABEL: define i64 @char1lensum(ptr {{[^%]*}}%0, ptr {{[^%]*}}%1, i64 %2, i64 %3)
+// PPC-LABEL: define i64 @char1lensum(ptr {{[^%]*}}%0, ptr {{[^%]*}}%1, i64 %2, i64 %3)
 func.func @char1lensum(%arg0 : !fir.boxchar<1>, %arg1 : !fir.boxchar<1>) -> i64 {
   // X64-DAG: %[[p0:.*]] = insertvalue { ptr, i64 } undef, ptr %1, 0
   // X64-DAG: = insertvalue { ptr, i64 } %[[p0]], i64 %3, 1

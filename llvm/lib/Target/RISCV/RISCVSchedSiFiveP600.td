@@ -1487,6 +1487,7 @@ defm "" : LMULReadAdvance<"ReadVSM3MEV", 0>;
 
 //===----------------------------------------------------------------------===//
 // Unsupported extensions
+defm : UnsupportedSchedQ;
 defm : UnsupportedSchedZabha;
 defm : UnsupportedSchedZbc;
 defm : UnsupportedSchedZbkb;
@@ -1494,4 +1495,8 @@ defm : UnsupportedSchedZbkx;
 defm : UnsupportedSchedSFB;
 defm : UnsupportedSchedZfa;
 defm : UnsupportedSchedXsfvcp;
+defm : UnsupportedSchedXSfvfnrclipxfqf;
+defm : UnsupportedSchedXSfvfwmaccqqq;
+defm : UnsupportedSchedXSfvqmaccdod;
+defm : UnsupportedSchedXSfvqmaccqoq;
 }

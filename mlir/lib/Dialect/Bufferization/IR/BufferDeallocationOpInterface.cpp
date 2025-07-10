@@ -10,7 +10,6 @@
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AsmState.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
@@ -94,7 +93,9 @@ void Ownership::combine(Ownership other) { *this = getCombined(other); }
 // DeallocationState
 //===----------------------------------------------------------------------===//
 
-DeallocationState::DeallocationState(Operation *op) : liveness(op) {}
+DeallocationState::DeallocationState(Operation *op,
+                                     SymbolTableCollection &symbolTables)
+    : symbolTable(symbolTables), liveness(op) {}
 
 void DeallocationState::updateOwnership(Value memref, Ownership ownership,
                                         Block *block) {
@@ -177,8 +178,7 @@ void DeallocationState::getMemrefsToRetain(
   // liveOut has non-deterministic order because it was constructed by iterating
   // over a hash-set.
   SmallVector<Value> retainedByLiveness(liveOut.begin(), liveOut.end());
-  std::sort(retainedByLiveness.begin(), retainedByLiveness.end(),
-            ValueComparator());
+  llvm::sort(retainedByLiveness, ValueComparator());
   toRetain.append(retainedByLiveness);
 }
 
