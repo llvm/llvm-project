@@ -300,8 +300,7 @@ void RISCVDAGToDAGISel::selectVLSEG(SDNode *Node, unsigned NF, bool IsMasked,
   MachineSDNode *Load =
       CurDAG->getMachineNode(P->Pseudo, DL, MVT::Untyped, MVT::Other, Operands);
 
-  if (auto *MemOp = dyn_cast<MemSDNode>(Node))
-    CurDAG->setNodeMemRefs(Load, {MemOp->getMemOperand()});
+  CurDAG->setNodeMemRefs(Load, {cast<MemSDNode>(Node)->getMemOperand()});
 
   ReplaceUses(SDValue(Node, 0), SDValue(Load, 0));
   ReplaceUses(SDValue(Node, 1), SDValue(Load, 1));
@@ -331,8 +330,7 @@ void RISCVDAGToDAGISel::selectVLSEGFF(SDNode *Node, unsigned NF,
   MachineSDNode *Load = CurDAG->getMachineNode(P->Pseudo, DL, MVT::Untyped,
                                                XLenVT, MVT::Other, Operands);
 
-  if (auto *MemOp = dyn_cast<MemSDNode>(Node))
-    CurDAG->setNodeMemRefs(Load, {MemOp->getMemOperand()});
+  CurDAG->setNodeMemRefs(Load, {cast<MemSDNode>(Node)->getMemOperand()});
 
   ReplaceUses(SDValue(Node, 0), SDValue(Load, 0)); // Result
   ReplaceUses(SDValue(Node, 1), SDValue(Load, 1)); // VL
@@ -381,8 +379,7 @@ void RISCVDAGToDAGISel::selectVLXSEG(SDNode *Node, unsigned NF, bool IsMasked,
   MachineSDNode *Load =
       CurDAG->getMachineNode(P->Pseudo, DL, MVT::Untyped, MVT::Other, Operands);
 
-  if (auto *MemOp = dyn_cast<MemSDNode>(Node))
-    CurDAG->setNodeMemRefs(Load, {MemOp->getMemOperand()});
+  CurDAG->setNodeMemRefs(Load, {cast<MemSDNode>(Node)->getMemOperand()});
 
   ReplaceUses(SDValue(Node, 0), SDValue(Load, 0));
   ReplaceUses(SDValue(Node, 1), SDValue(Load, 1));
@@ -409,8 +406,7 @@ void RISCVDAGToDAGISel::selectVSSEG(SDNode *Node, unsigned NF, bool IsMasked,
   MachineSDNode *Store =
       CurDAG->getMachineNode(P->Pseudo, DL, Node->getValueType(0), Operands);
 
-  if (auto *MemOp = dyn_cast<MemSDNode>(Node))
-    CurDAG->setNodeMemRefs(Store, {MemOp->getMemOperand()});
+  CurDAG->setNodeMemRefs(Store, {cast<MemSDNode>(Node)->getMemOperand()});
 
   ReplaceNode(Node, Store);
 }
@@ -456,8 +452,7 @@ void RISCVDAGToDAGISel::selectVSXSEG(SDNode *Node, unsigned NF, bool IsMasked,
   MachineSDNode *Store =
       CurDAG->getMachineNode(P->Pseudo, DL, Node->getValueType(0), Operands);
 
-  if (auto *MemOp = dyn_cast<MemSDNode>(Node))
-    CurDAG->setNodeMemRefs(Store, {MemOp->getMemOperand()});
+  CurDAG->setNodeMemRefs(Store, {cast<MemSDNode>(Node)->getMemOperand()});
 
   ReplaceNode(Node, Store);
 }
@@ -2227,8 +2222,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       MachineSDNode *Load =
           CurDAG->getMachineNode(P->Pseudo, DL, Node->getVTList(), Operands);
 
-      if (auto *MemOp = dyn_cast<MemSDNode>(Node))
-        CurDAG->setNodeMemRefs(Load, {MemOp->getMemOperand()});
+      CurDAG->setNodeMemRefs(Load, {cast<MemSDNode>(Node)->getMemOperand()});
 
       ReplaceNode(Node, Load);
       return;
@@ -2300,8 +2294,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
                               Log2SEW, static_cast<unsigned>(LMUL));
       MachineSDNode *Load = CurDAG->getMachineNode(
           P->Pseudo, DL, Node->getVTList(), Operands);
-      if (auto *MemOp = dyn_cast<MemSDNode>(Node))
-        CurDAG->setNodeMemRefs(Load, {MemOp->getMemOperand()});
+      CurDAG->setNodeMemRefs(Load, {cast<MemSDNode>(Node)->getMemOperand()});
 
       ReplaceNode(Node, Load);
       return;
@@ -2433,8 +2426,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       MachineSDNode *Store =
           CurDAG->getMachineNode(P->Pseudo, DL, Node->getVTList(), Operands);
 
-      if (auto *MemOp = dyn_cast<MemSDNode>(Node))
-        CurDAG->setNodeMemRefs(Store, {MemOp->getMemOperand()});
+      CurDAG->setNodeMemRefs(Store, {cast<MemSDNode>(Node)->getMemOperand()});
 
       ReplaceNode(Node, Store);
       return;
@@ -2675,30 +2667,29 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (Locality > 2)
       break;
 
-    if (auto *LoadStoreMem = dyn_cast<MemSDNode>(Node)) {
-      MachineMemOperand *MMO = LoadStoreMem->getMemOperand();
-      MMO->setFlags(MachineMemOperand::MONonTemporal);
+    auto *LoadStoreMem = cast<MemSDNode>(Node);
+    MachineMemOperand *MMO = LoadStoreMem->getMemOperand();
+    MMO->setFlags(MachineMemOperand::MONonTemporal);
 
-      int NontemporalLevel = 0;
-      switch (Locality) {
-      case 0:
-        NontemporalLevel = 3; // NTL.ALL
-        break;
-      case 1:
-        NontemporalLevel = 1; // NTL.PALL
-        break;
-      case 2:
-        NontemporalLevel = 0; // NTL.P1
-        break;
-      default:
-        llvm_unreachable("unexpected locality value.");
-      }
-
-      if (NontemporalLevel & 0b1)
-        MMO->setFlags(MONontemporalBit0);
-      if (NontemporalLevel & 0b10)
-        MMO->setFlags(MONontemporalBit1);
+    int NontemporalLevel = 0;
+    switch (Locality) {
+    case 0:
+      NontemporalLevel = 3; // NTL.ALL
+      break;
+    case 1:
+      NontemporalLevel = 1; // NTL.PALL
+      break;
+    case 2:
+      NontemporalLevel = 0; // NTL.P1
+      break;
+    default:
+      llvm_unreachable("unexpected locality value.");
     }
+
+    if (NontemporalLevel & 0b1)
+      MMO->setFlags(MONontemporalBit0);
+    if (NontemporalLevel & 0b10)
+      MMO->setFlags(MONontemporalBit1);
     break;
   }
 
