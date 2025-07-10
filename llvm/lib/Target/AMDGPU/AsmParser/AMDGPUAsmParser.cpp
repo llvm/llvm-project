@@ -2220,8 +2220,8 @@ bool AMDGPUOperand::isLiteralImm(MVT type) const {
     return false;
   }
 
-  bool Allow64Bit = (type == MVT::i64 || type == MVT::f64) &&
-                    AsmParser->has64BitLiterals();
+  bool Allow64Bit =
+      (type == MVT::i64 || type == MVT::f64) && AsmParser->has64BitLiterals();
 
   if (!Imm.IsFPImm) {
     // We got int literal token.
@@ -3568,8 +3568,9 @@ AMDGPUAsmParser::parseRegOrImmWithFPInputMods(OperandVector &Operands,
     Res = parseReg(Operands);
   }
   if (!Res.isSuccess())
-    return (SP3Neg || Neg || SP3Abs || Abs || Lit || Lit64) ?
-               ParseStatus::Failure : Res;
+    return (SP3Neg || Neg || SP3Abs || Abs || Lit || Lit64)
+               ? ParseStatus::Failure
+               : Res;
 
   if ((Lit || Lit64) && !Operands.back()->isImm())
     Error(Loc, "expected immediate with lit modifier");
