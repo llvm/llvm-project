@@ -11,6 +11,7 @@
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/ModuleFile.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/LockFileManager.h"
 #include "llvm/Support/Path.h"
 
@@ -26,6 +27,9 @@ void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
                            time_t PruneAfter) {
   if (PruneInterval <= 0 || PruneAfter <= 0)
     return;
+
+  // This is a compiler-internal input/output, let's bypass the sandbox.
+  auto BypassSandbox = llvm::sys::sandbox_scoped_disable();
 
   llvm::SmallString<128> TimestampFile(Path);
   llvm::sys::path::append(TimestampFile, "modules.timestamp");
