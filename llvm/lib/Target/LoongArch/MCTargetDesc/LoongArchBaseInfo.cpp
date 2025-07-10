@@ -60,10 +60,11 @@ static ABI getTripleABI(const Triple &TT) {
   case llvm::Triple::EnvironmentType::MuslF32:
     TripleABI = Is64Bit ? ABI_LP64F : ABI_ILP32F;
     break;
-  // Let the fallback case behave like {ILP32,LP64}D.
   case llvm::Triple::EnvironmentType::GNUF64:
-  default:
     TripleABI = Is64Bit ? ABI_LP64D : ABI_ILP32D;
+    break;
+  default:
+    TripleABI = ABI_Unknown;
     break;
   }
   return TripleABI;
@@ -96,7 +97,7 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
 
   // 1. If the '-target-abi' is valid, use it.
   if (IsABIValidForFeature(ArgProvidedABI)) {
-    if (TT.hasEnvironment() && ArgProvidedABI != TripleABI)
+    if (IsABIValidForFeature(TripleABI) && ArgProvidedABI != TripleABI)
       errs()
           << "warning: triple-implied ABI conflicts with provided target-abi '"
           << ABIName << "', using target-abi\n";
