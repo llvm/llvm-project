@@ -562,6 +562,19 @@ public:
   }
   Address loadCXXThisAddress();
 
+  /// Convert the given pointer to a complete class to the given direct base.
+  Address getAddressOfDirectBaseInCompleteClass(mlir::Location loc,
+                                                Address value,
+                                                const CXXRecordDecl *derived,
+                                                const CXXRecordDecl *base,
+                                                bool baseIsVirtual);
+
+  /// Determine whether a base class initialization may overlap some other
+  /// object.
+  AggValueSlot::Overlap_t getOverlapForBaseInit(const CXXRecordDecl *rd,
+                                                const CXXRecordDecl *baseRD,
+                                                bool isVirtual);
+
   /// Get an appropriate 'undef' rvalue for the given type.
   /// TODO: What's the equivalent for MLIR? Currently we're only using this for
   /// void types so it just returns RValue::get(nullptr) but it'll need
@@ -761,6 +774,9 @@ public:
 
   void emitAutoVarCleanups(const AutoVarEmission &emission);
   void emitAutoVarInit(const AutoVarEmission &emission);
+
+  void emitBaseInitializer(mlir::Location loc, const CXXRecordDecl *classDecl,
+                           CXXCtorInitializer *baseInit);
 
   LValue emitBinaryOperatorLValue(const BinaryOperator *e);
 
