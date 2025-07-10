@@ -1562,17 +1562,17 @@ static bool isFormalAccess(AccessKinds AK) {
          AK != AK_IsWithinLifetime && AK != AK_Dereference;
 }
 
-/// Is this kind of axcess valid on an indeterminate object value?
+/// Is this kind of access valid on an indeterminate object value?
 static bool isValidIndeterminateAccess(AccessKinds AK) {
   switch (AK) {
   case AK_Read:
   case AK_Increment:
   case AK_Decrement:
+  case AK_Dereference:
     // These need the object's value.
     return false;
 
   case AK_IsWithinLifetime:
-  case AK_Dereference:
   case AK_ReadObjectRepresentation:
   case AK_Assign:
   case AK_Construct:
@@ -5216,7 +5216,7 @@ static bool EvaluateInitForDeclOfReferenceType(EvalInfo &Info,
                                                const Expr *Init, LValue &Result,
                                                APValue &Val) {
   assert(Init->isGLValue() && D->getType()->isReferenceType());
-  // A reference is an lvalue
+  // A reference is an lvalue.
   if (!EvaluateLValue(Init, Result, Info))
     return false;
   // [C++26][decl.ref]
@@ -5229,7 +5229,7 @@ static bool EvaluateInitForDeclOfReferenceType(EvalInfo &Info,
     return false;
   }
 
-  // save the result
+  // Save the result.
   Result.moveInto(Val);
   return true;
 }
