@@ -206,6 +206,34 @@ define i64 @udiv_select(i64 %a, i64 %b) {
   ret i64 %select
 }
 
+; (select (icmp x, 0, eq), 0, (srem x, y)) -> (srem x, y)
+define i64 @srem_select(i64 %a, i64 %b) {
+; CHECK-LABEL: @srem_select(
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[A:%.*]], 0
+; CHECK-NEXT:    [[REM:%.*]] = srem i64 [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i64 0, i64 [[REM]]
+; CHECK-NEXT:    ret i64 [[SELECT]]
+;
+  %cond = icmp eq i64 %a, 0
+  %rem = srem i64 %a, %b
+  %select = select i1 %cond, i64 0, i64 %rem
+  ret i64 %select
+}
+
+; (select (icmp x, 0, eq), 0, (urem x, y)) -> (urem x, y)
+define i64 @urem_select(i64 %a, i64 %b) {
+; CHECK-LABEL: @urem_select(
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[A:%.*]], 0
+; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i64 0, i64 [[REM]]
+; CHECK-NEXT:    ret i64 [[SELECT]]
+;
+  %cond = icmp eq i64 %a, 0
+  %rem = urem i64 %a, %b
+  %select = select i1 %cond, i64 0, i64 %rem
+  ret i64 %select
+}
+
 ; (select (icmp x, 0, eq), 0, (icmp x, 0, slt)) -> (icmp x, 0, slt)
 define i1 @icmp_slt_select(i64 %a) {
 ; FIXED-ZERO-LABEL: @icmp_slt_select(
