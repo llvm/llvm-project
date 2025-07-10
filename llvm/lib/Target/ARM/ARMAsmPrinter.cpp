@@ -859,7 +859,7 @@ static uint8_t getModifierSpecifier(ARMCP::ARMCPModifier Modifier) {
   case ARMCP::GOT_PREL:
     return ARM::S_GOT_PREL;
   case ARMCP::SECREL:
-    return MCSymbolRefExpr::VK_SECREL;
+    return ARM::S_COFF_SECREL;
   }
   llvm_unreachable("Invalid ARMCPModifier!");
 }

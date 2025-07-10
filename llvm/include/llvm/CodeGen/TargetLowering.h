@@ -1116,10 +1116,7 @@ public:
     LegalizeTypeAction ValueTypeActions[MVT::VALUETYPE_SIZE];
 
   public:
-    ValueTypeActionImpl() {
-      std::fill(std::begin(ValueTypeActions), std::end(ValueTypeActions),
-                TypeLegal);
-    }
+    ValueTypeActionImpl() { llvm::fill(ValueTypeActions, TypeLegal); }
 
     LegalizeTypeAction getTypeAction(MVT VT) const {
       return ValueTypeActions[VT.SimpleTy];
@@ -2020,7 +2017,7 @@ public:
   /// It returns EVT::Other if the type should be determined using generic
   /// target-independent logic.
   virtual EVT
-  getOptimalMemOpType(const MemOp &Op,
+  getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                       const AttributeList & /*FuncAttributes*/) const {
     return MVT::Other;
   }
@@ -3558,13 +3555,13 @@ public:
     return nullptr;
   }
 
-  /// Rename the default libcall routine name for the specified libcall.
-  void setLibcallName(RTLIB::Libcall Call, const char *Name) {
-    Libcalls.setLibcallName(Call, Name);
+  void setLibcallImpl(RTLIB::Libcall Call, RTLIB::LibcallImpl Impl) {
+    Libcalls.setLibcallImpl(Call, Impl);
   }
 
-  void setLibcallName(ArrayRef<RTLIB::Libcall> Calls, const char *Name) {
-    Libcalls.setLibcallName(Calls, Name);
+  /// Get the libcall impl routine name for the specified libcall.
+  RTLIB::LibcallImpl getLibcallImpl(RTLIB::Libcall Call) const {
+    return Libcalls.getLibcallImpl(Call);
   }
 
   /// Get the libcall routine name for the specified libcall.
@@ -3574,26 +3571,24 @@ public:
 
   const char *getMemcpyName() const { return Libcalls.getMemcpyName(); }
 
-  /// Override the default CondCode to be used to test the result of the
-  /// comparison libcall against zero.
-  /// FIXME: This should be removed
-  void setCmpLibcallCC(RTLIB::Libcall Call, CmpInst::Predicate Pred) {
-    Libcalls.setSoftFloatCmpLibcallPredicate(Call, Pred);
-  }
-
-  /// Get the CondCode that's to be used to test the result of the comparison
-  /// libcall against zero.
-  CmpInst::Predicate
-  getSoftFloatCmpLibcallPredicate(RTLIB::Libcall Call) const {
-    return Libcalls.getSoftFloatCmpLibcallPredicate(Call);
-  }
+  /// Get the comparison predicate that's to be used to test the result of the
+  /// comparison libcall against zero. This should only be used with
+  /// floating-point compare libcalls.
+  ISD::CondCode getSoftFloatCmpLibcallPredicate(RTLIB::LibcallImpl Call) const;
 
   /// Set the CallingConv that should be used for the specified libcall.
-  void setLibcallCallingConv(RTLIB::Libcall Call, CallingConv::ID CC) {
-    Libcalls.setLibcallCallingConv(Call, CC);
+  void setLibcallImplCallingConv(RTLIB::LibcallImpl Call, CallingConv::ID CC) {
+    Libcalls.setLibcallImplCallingConv(Call, CC);
+  }
+
+  /// Get the CallingConv that should be used for the specified libcall
+  /// implementation.
+  CallingConv::ID getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
+    return Libcalls.getLibcallImplCallingConv(Call);
   }
 
   /// Get the CallingConv that should be used for the specified libcall.
+  // FIXME: Remove this wrapper and directly use the used LibcallImpl
   CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
     return Libcalls.getLibcallCallingConv(Call);
   }
@@ -4114,8 +4109,9 @@ public:
   /// It returns the types of the sequence of memory ops to perform
   /// memset / memcpy by reference.
   virtual bool
-  findOptimalMemOpLowering(std::vector<EVT> &MemOps, unsigned Limit,
-                           const MemOp &Op, unsigned DstAS, unsigned SrcAS,
+  findOptimalMemOpLowering(LLVMContext &Context, std::vector<EVT> &MemOps,
+                           unsigned Limit, const MemOp &Op, unsigned DstAS,
+                           unsigned SrcAS,
                            const AttributeList &FuncAttributes) const;
 
   /// Check to see if the specified operand of the specified instruction is a
@@ -5091,9 +5087,6 @@ public:
     return nullptr;
   }
 
-  bool verifyReturnAddressArgumentIsConstant(SDValue Op,
-                                             SelectionDAG &DAG) const;
-
   //===--------------------------------------------------------------------===//
   // Inline Asm Support hooks
   //
@@ -5800,6 +5793,8 @@ public:
 private:
   SDValue foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
                            const SDLoc &DL, DAGCombinerInfo &DCI) const;
+  SDValue foldSetCCWithOr(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
+                          const SDLoc &DL, DAGCombinerInfo &DCI) const;
   SDValue foldSetCCWithBinOp(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
                              const SDLoc &DL, DAGCombinerInfo &DCI) const;
 

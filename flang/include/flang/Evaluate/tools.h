@@ -1286,17 +1286,6 @@ bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::optional<ActualArgument> &, const std::string &procName,
     const std::string &argName);
 
-inline bool CanCUDASymbolHaveSaveAttr(const Symbol &sym) {
-  if (const auto *details =
-          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
-    if (details->cudaDataAttr() &&
-        *details->cudaDataAttr() != common::CUDADataAttr::Unified) {
-      return false;
-    }
-  }
-  return true;
-}
-
 inline bool IsCUDADeviceSymbol(const Symbol &sym) {
   if (const auto *details =
           sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
@@ -1370,24 +1359,7 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
 
 /// Check if the expression is a mix of host and device variables that require
 /// implicit data transfer.
-inline bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
-  unsigned hostSymbols{0};
-  unsigned deviceSymbols{0};
-  for (const Symbol &sym : CollectCudaSymbols(expr)) {
-    if (IsCUDADeviceSymbol(sym)) {
-      ++deviceSymbols;
-    } else {
-      if (sym.owner().IsDerivedType()) {
-        if (IsCUDADeviceSymbol(sym.owner().GetSymbol()->GetUltimate())) {
-          ++deviceSymbols;
-        }
-      }
-      ++hostSymbols;
-    }
-  }
-  bool hasConstant{HasConstant(expr)};
-  return (hasConstant || (hostSymbols > 0)) && deviceSymbols > 0;
-}
+bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr);
 
 // Checks whether the symbol on the LHS is present in the RHS expression.
 bool CheckForSymbolMatch(const Expr<SomeType> *lhs, const Expr<SomeType> *rhs);
@@ -1510,6 +1482,16 @@ Operator OperationCode(
   }
 }
 
+template <typename T, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Extremum<T>, Ts...> &op) {
+  if (op.derived().ordering == evaluate::Ordering::Greater) {
+    return Operator::Max;
+  } else {
+    return Operator::Min;
+  }
+}
+
 template <typename T> Operator OperationCode(const evaluate::Constant<T> &x) {
   return Operator::Constant;
 }
@@ -1575,6 +1557,7 @@ bool IsExtensibleType(const DerivedTypeSpec *);
 bool IsSequenceOrBindCType(const DerivedTypeSpec *);
 bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name);
 bool IsBuiltinCPtr(const Symbol &);
+bool IsFromBuiltinModule(const Symbol &);
 bool IsEventType(const DerivedTypeSpec *);
 bool IsLockType(const DerivedTypeSpec *);
 bool IsNotifyType(const DerivedTypeSpec *);

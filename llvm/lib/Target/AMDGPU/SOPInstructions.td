@@ -1589,8 +1589,10 @@ def S_WAKEUP : SOPP_Pseudo <"s_wakeup", (ins) > {
   let mayStore = 1;
 }
 
+let SubtargetPredicate = isNotGFX1250Plus in {
 def S_WAITCNT : SOPP_Pseudo <"s_waitcnt" , (ins SWaitCnt:$simm16), "$simm16",
     [(int_amdgcn_s_waitcnt timm:$simm16)]>;
+}
 
 // "_soft" waitcnts are waitcnts that are either relaxed into their non-soft
 // counterpart, or completely removed.
@@ -1678,6 +1680,12 @@ def S_SET_GPR_IDX_OFF : SOPP_Pseudo<"s_set_gpr_idx_off", (ins) > {
   let Uses = [MODE];
 }
 }
+
+def S_MONITOR_SLEEP : SOPP_Pseudo <"s_monitor_sleep", (ins i16imm:$simm16), "$simm16",
+  [(int_amdgcn_s_monitor_sleep timm:$simm16)]> {
+  let SubtargetPredicate = isGFX1250Plus;
+}
+
 } // End hasSideEffects
 
 let SubtargetPredicate = HasVGPRIndexMode in {
@@ -2689,6 +2697,12 @@ defm S_TTRACEDATA_IMM             : SOPP_Real_32_gfx11_gfx12<0x03b>;
 defm S_ICACHE_INV                 : SOPP_Real_32_gfx11_gfx12<0x03c>;
 
 defm S_BARRIER                    : SOPP_Real_32_gfx11<0x03d>;
+
+//===----------------------------------------------------------------------===//
+// SOPP - GFX1250.
+//===----------------------------------------------------------------------===//
+
+defm S_MONITOR_SLEEP              : SOPP_Real_32_gfx12<0x004>;
 
 //===----------------------------------------------------------------------===//
 // SOPP - GFX6, GFX7, GFX8, GFX9, GFX10

@@ -714,9 +714,8 @@ void ModuleDepCollectorPP::EndOfMainFile() {
 
   MDC.Consumer.handleDependencyOutputOpts(*MDC.Opts);
 
-  if (MDC.Service.getFormat() == ScanningOutputFormat::P1689)
-    MDC.Consumer.handleProvidedAndRequiredStdCXXModules(
-        MDC.ProvidedStdCXXModule, MDC.RequiredStdCXXModules);
+  MDC.Consumer.handleProvidedAndRequiredStdCXXModules(
+      MDC.ProvidedStdCXXModule, MDC.RequiredStdCXXModules);
 
   for (auto &&I : MDC.ModularDeps)
     MDC.Consumer.handleModuleDependency(*I.second);

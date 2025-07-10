@@ -267,6 +267,7 @@ struct AccEndCombinedDirective;
 struct OpenACCDeclarativeConstruct;
 struct OpenACCRoutineConstruct;
 struct OpenMPConstruct;
+struct OpenMPLoopConstruct;
 struct OpenMPDeclarativeConstruct;
 struct OmpEndLoopDirective;
 struct OmpMemoryOrderClause;
@@ -4611,7 +4612,7 @@ struct OmpDirectiveSpecification {
 
 struct OmpMetadirectiveDirective {
   TUPLE_CLASS_BOILERPLATE(OmpMetadirectiveDirective);
-  std::tuple<OmpClauseList> t;
+  std::tuple<Verbatim, OmpClauseList> t;
   CharBlock source;
 };
 
@@ -5021,11 +5022,13 @@ struct OpenMPBlockConstruct {
 };
 
 // OpenMP directives enclosing do loop
+using NestedConstruct =
+    std::variant<DoConstruct, common::Indirection<OpenMPLoopConstruct>>;
 struct OpenMPLoopConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPLoopConstruct);
   OpenMPLoopConstruct(OmpBeginLoopDirective &&a)
       : t({std::move(a), std::nullopt, std::nullopt}) {}
-  std::tuple<OmpBeginLoopDirective, std::optional<DoConstruct>,
+  std::tuple<OmpBeginLoopDirective, std::optional<NestedConstruct>,
       std::optional<OmpEndLoopDirective>>
       t;
 };
