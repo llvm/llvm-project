@@ -252,7 +252,7 @@ class SwingSchedulerDDG {
   SmallVector<SwingSchedulerDDGEdge, 8> ValidationOnlyEdges;
 
   /// Adds a NON-validation-only edge to the DDG. Assumes to be called only by
-  /// the cotr.
+  /// the ctor.
   void addEdge(const SUnit *SU, const SwingSchedulerDDGEdge &Edge);
 
   SwingSchedulerDDGEdges &getEdges(const SUnit *SU);
