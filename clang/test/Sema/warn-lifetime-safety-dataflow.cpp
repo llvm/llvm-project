@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -mllvm -debug-only=LifetimeFacts,LifetimeDataflow -Wexperimental-lifetime-safety %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -mllvm -debug-only=LifetimeFacts -Wexperimental-lifetime-safety %s 2>&1 | FileCheck %s
 
 struct MyObj {
   int id;
