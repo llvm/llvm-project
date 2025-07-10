@@ -29,6 +29,7 @@ define <4 x half> @test_1(i1 %arg) {
 ; GFX13-NEXT:    v_dual_mov_b32 v13, v0 :: v_dual_mov_b32 v14, v0
 ; GFX13-NEXT:    v_dual_mov_b32 v15, v0 :: v_dual_mov_b32 v16, v0
 ; GFX13-NEXT:    v_mov_b32_e32 v17, v0
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_convolve_f16_f16 v[0:1], 0, v[0:17], v[18:20], v[18:20], v[18:20]
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
 bb:
@@ -58,6 +59,7 @@ define <8 x half> @test_2(i1 %arg) {
 ; GFX13-NEXT:    v_dual_mov_b32 v5, s0 :: v_dual_mov_b32 v1, v0
 ; GFX13-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v3, v0
 ; GFX13-NEXT:    v_mov_b32_e32 v4, v0
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_convolve_f16_f16 v[0:3], v[5:8], v[0:4], v[5:8], v[5:8], v[5:8]
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
 bb:
