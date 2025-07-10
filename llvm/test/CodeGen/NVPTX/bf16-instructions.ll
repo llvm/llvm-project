@@ -1339,9 +1339,9 @@ define bfloat @test_maximum(bfloat %a, bfloat %b) {
 ; SM70-NEXT:    selp.b16 %rs3, %rs1, %rs2, %p1;
 ; SM70-NEXT:    setp.nan.f32 %p2, %r4, %r2;
 ; SM70-NEXT:    selp.b16 %rs4, 0x7FC0, %rs3, %p2;
-; SM70-NEXT:    setp.eq.s16 %p3, %rs1, 0;
+; SM70-NEXT:    setp.eq.b16 %p3, %rs1, 0;
 ; SM70-NEXT:    selp.b16 %rs5, %rs1, %rs4, %p3;
-; SM70-NEXT:    setp.eq.s16 %p4, %rs2, 0;
+; SM70-NEXT:    setp.eq.b16 %p4, %rs2, 0;
 ; SM70-NEXT:    selp.b16 %rs6, %rs2, %rs5, %p4;
 ; SM70-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM70-NEXT:    shl.b32 %r6, %r5, 16;
@@ -1462,9 +1462,9 @@ define <2 x bfloat> @test_maximum_v2(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; SM70-NEXT:    selp.b16 %rs5, %rs2, %rs4, %p1;
 ; SM70-NEXT:    setp.nan.f32 %p2, %r4, %r2;
 ; SM70-NEXT:    selp.b16 %rs6, 0x7FC0, %rs5, %p2;
-; SM70-NEXT:    setp.eq.s16 %p3, %rs2, 0;
+; SM70-NEXT:    setp.eq.b16 %p3, %rs2, 0;
 ; SM70-NEXT:    selp.b16 %rs7, %rs2, %rs6, %p3;
-; SM70-NEXT:    setp.eq.s16 %p4, %rs4, 0;
+; SM70-NEXT:    setp.eq.b16 %p4, %rs4, 0;
 ; SM70-NEXT:    selp.b16 %rs8, %rs4, %rs7, %p4;
 ; SM70-NEXT:    cvt.u32.u16 %r5, %rs6;
 ; SM70-NEXT:    shl.b32 %r6, %r5, 16;
@@ -1478,9 +1478,9 @@ define <2 x bfloat> @test_maximum_v2(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; SM70-NEXT:    selp.b16 %rs10, %rs1, %rs3, %p6;
 ; SM70-NEXT:    setp.nan.f32 %p7, %r10, %r8;
 ; SM70-NEXT:    selp.b16 %rs11, 0x7FC0, %rs10, %p7;
-; SM70-NEXT:    setp.eq.s16 %p8, %rs1, 0;
+; SM70-NEXT:    setp.eq.b16 %p8, %rs1, 0;
 ; SM70-NEXT:    selp.b16 %rs12, %rs1, %rs11, %p8;
-; SM70-NEXT:    setp.eq.s16 %p9, %rs3, 0;
+; SM70-NEXT:    setp.eq.b16 %p9, %rs3, 0;
 ; SM70-NEXT:    selp.b16 %rs13, %rs3, %rs12, %p9;
 ; SM70-NEXT:    cvt.u32.u16 %r11, %rs11;
 ; SM70-NEXT:    shl.b32 %r12, %r11, 16;

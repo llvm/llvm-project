@@ -255,6 +255,8 @@ llvm::Error Breakpoint::SetIsHardware(bool is_hardware) {
   if (is_hardware == m_hardware)
     return llvm::Error::success();
 
+  Log *log = GetLog(LLDBLog::Breakpoints);
+
   // Disable all non-hardware breakpoint locations.
   std::vector<BreakpointLocationSP> locations;
   for (BreakpointLocationSP location_sp : m_locations.BreakpointLocations()) {
@@ -268,7 +270,9 @@ llvm::Error Breakpoint::SetIsHardware(bool is_hardware) {
       continue;
 
     locations.push_back(location_sp);
-    location_sp->SetEnabled(false);
+    if (llvm::Error error = location_sp->SetEnabled(false))
+      LLDB_LOG_ERROR(log, std::move(error),
+                     "Failed to disable breakpoint location: {0}");
   }
 
   // Toggle the hardware mode.
@@ -277,8 +281,11 @@ llvm::Error Breakpoint::SetIsHardware(bool is_hardware) {
   // Re-enable all breakpoint locations.
   size_t num_failures = 0;
   for (BreakpointLocationSP location_sp : locations) {
-    if (!location_sp->SetEnabled(true))
+    if (llvm::Error error = location_sp->SetEnabled(true)) {
+      LLDB_LOG_ERROR(log, std::move(error),
+                     "Failed to re-enable breakpoint location: {0}");
       num_failures++;
+    }
   }
 
   if (num_failures != 0)
@@ -570,11 +577,11 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
           if (!seen)
             seen = true;
 
-          if (!break_loc_sp->ResolveBreakpointSite()) {
-            LLDB_LOGF(log,
-                      "Warning: could not set breakpoint site for "
-                      "breakpoint location %d of breakpoint %d.\n",
-                      break_loc_sp->GetID(), GetID());
+          if (llvm::Error error = break_loc_sp->ResolveBreakpointSite()) {
+            LLDB_LOG_ERROR(log, std::move(error),
+                           "could not set breakpoint site for "
+                           "breakpoint location {1} of breakpoint {2}: {0}",
+                           break_loc_sp->GetID(), GetID());
           }
         }
       }
@@ -613,7 +620,10 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
             // Remove this breakpoint since the shared library is unloaded, but
             // keep the breakpoint location around so we always get complete
             // hit count and breakpoint lifetime info
-            break_loc_sp->ClearBreakpointSite();
+            if (llvm::Error error = break_loc_sp->ClearBreakpointSite())
+              LLDB_LOG_ERROR(log, std::move(error),
+                             "Failed to clear breakpoint locations on library "
+                             "unload: {0}");
             if (removed_locations_event) {
               removed_locations_event->GetBreakpointLocationCollection().Add(
                   break_loc_sp);

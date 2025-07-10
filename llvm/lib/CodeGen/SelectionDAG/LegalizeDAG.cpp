@@ -155,7 +155,6 @@ private:
                                    RTLIB::Libcall CallI64,
                                    RTLIB::Libcall CallI128);
   void ExpandDivRemLibCall(SDNode *Node, SmallVectorImpl<SDValue> &Results);
-  void ExpandSinCosLibCall(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
   SDValue EmitStackConvert(SDValue SrcOp, EVT SlotVT, EVT DestVT,
                            const SDLoc &dl);

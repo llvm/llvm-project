@@ -1006,12 +1006,14 @@ def INT_PM_EVENT_MASK : BasicNVPTXInst<(outs),
 // Min Max
 //
 
-def INT_NVVM_FMIN_F : F_MATH_2<"min.f32", B32, B32, B32, int_nvvm_fmin_f>;
-def INT_NVVM_FMIN_FTZ_F : F_MATH_2<"min.ftz.f32", B32, B32, B32, int_nvvm_fmin_ftz_f>;
-def INT_NVVM_FMIN_NAN_F : F_MATH_2<"min.NaN.f32", B32, B32, B32, int_nvvm_fmin_nan_f,
-  [hasPTX<70>, hasSM<80>]>;
-def INT_NVVM_FMIN_FTZ_NAN_F : F_MATH_2<"min.ftz.NaN.f32", B32, B32, B32, int_nvvm_fmin_ftz_nan_f,
-  [hasPTX<70>, hasSM<80>]>;
+def : Pat<(int_nvvm_fmin_f f32:$a, f32:$b), (MIN_f32_rr $a, $b, NoFTZ)>;
+def : Pat<(int_nvvm_fmin_ftz_f f32:$a, f32:$b), (MIN_f32_rr $a, $b, FTZ)>;
+
+let Predicates = [hasPTX<70>, hasSM<80>] in {
+  def : Pat<(int_nvvm_fmin_nan_f f32:$a, f32:$b), (MIN_NAN_f32_rr $a, $b, NoFTZ)>;
+  def : Pat<(int_nvvm_fmin_ftz_nan_f f32:$a, f32:$b), (MIN_NAN_f32_rr $a, $b, FTZ)>;
+}
+
 def INT_NVVM_FMIN_XORSIGN_ABS_F :
  F_MATH_2<"min.xorsign.abs.f32", B32, B32, B32, int_nvvm_fmin_xorsign_abs_f,
     [hasPTX<72>, hasSM<86>]>;
@@ -1025,12 +1027,15 @@ def INT_NVVM_FMIN_FTZ_NAN_XORSIGN_ABS_F :
   F_MATH_2<"min.ftz.NaN.xorsign.abs.f32", B32, B32, B32, int_nvvm_fmin_ftz_nan_xorsign_abs_f,
     [hasPTX<72>, hasSM<86>]>;
 
-def INT_NVVM_FMAX_F : F_MATH_2<"max.f32", B32, B32, B32, int_nvvm_fmax_f>;
-def INT_NVVM_FMAX_FTZ_F : F_MATH_2<"max.ftz.f32", B32, B32, B32, int_nvvm_fmax_ftz_f>;
-def INT_NVVM_FMAX_NAN_F : F_MATH_2<"max.NaN.f32", B32, B32, B32, int_nvvm_fmax_nan_f,
-  [hasPTX<70>, hasSM<80>]>;
-def INT_NVVM_FMAX_FTZ_NAN_F : F_MATH_2<"max.ftz.NaN.f32", B32, B32, B32, int_nvvm_fmax_ftz_nan_f,
-  [hasPTX<70>, hasSM<80>]>;
+
+def : Pat<(int_nvvm_fmax_f f32:$a, f32:$b), (MAX_f32_rr $a, $b, NoFTZ)>;
+def : Pat<(int_nvvm_fmax_ftz_f f32:$a, f32:$b), (MAX_f32_rr $a, $b, FTZ)>;
+
+let Predicates = [hasPTX<70>, hasSM<80>] in {
+  def : Pat<(int_nvvm_fmax_nan_f f32:$a, f32:$b), (MAX_NAN_f32_rr $a, $b, NoFTZ)>;
+  def : Pat<(int_nvvm_fmax_ftz_nan_f f32:$a, f32:$b), (MAX_NAN_f32_rr $a, $b, FTZ)>;
+}
+
 def INT_NVVM_FMAX_XORSIGN_ABS_F :
   F_MATH_2<"max.xorsign.abs.f32", B32, B32, B32, int_nvvm_fmax_xorsign_abs_f,
     [hasPTX<72>, hasSM<86>]>;
@@ -1044,8 +1049,8 @@ def INT_NVVM_FMAX_FTZ_NAN_XORSIGN_ABS_F :
   F_MATH_2<"max.ftz.NaN.xorsign.abs.f32", B32, B32, B32, int_nvvm_fmax_ftz_nan_xorsign_abs_f,
     [hasPTX<72>, hasSM<86>]>;
 
-def INT_NVVM_FMIN_D : F_MATH_2<"min.f64", B64, B64, B64, int_nvvm_fmin_d>;
-def INT_NVVM_FMAX_D : F_MATH_2<"max.f64", B64, B64, B64, int_nvvm_fmax_d>;
+def : Pat<(int_nvvm_fmin_d f64:$a, f64:$b), (MIN_f64_rr $a, $b)>;
+def : Pat<(int_nvvm_fmax_d f64:$a, f64:$b), (MAX_f64_rr $a, $b)>;
 
 //
 // Min Max f16, f16x2, bf16, bf16x2
@@ -1181,17 +1186,10 @@ def INT_NVVM_DIV_RZ_D : F_MATH_2<"div.rz.f64", B64, B64, B64, int_nvvm_div_rz_d>
 def INT_NVVM_DIV_RM_D : F_MATH_2<"div.rm.f64", B64, B64, B64, int_nvvm_div_rm_d>;
 def INT_NVVM_DIV_RP_D : F_MATH_2<"div.rp.f64", B64, B64, B64, int_nvvm_div_rp_d>;
 
-def : Pat<(int_nvvm_div_full f32:$a, f32:$b),
-          (FDIV32rr $a, $b)>;
-
-def : Pat<(int_nvvm_div_full f32:$a, fpimm:$b),
-          (FDIV32ri $a, f32imm:$b)>;
-
-def : Pat<(int_nvvm_div_full_ftz f32:$a, f32:$b),
-          (FDIV32rr_ftz $a, $b)>;
-
-def : Pat<(int_nvvm_div_full_ftz f32:$a, fpimm:$b),
-          (FDIV32ri_ftz $a, f32imm:$b)>;
+def : Pat<(int_nvvm_div_full f32:$a, f32:$b), (FDIV32rr $a, $b, NoFTZ)>;
+def : Pat<(int_nvvm_div_full f32:$a, fpimm:$b), (FDIV32ri $a, f32imm:$b, NoFTZ)>;
+def : Pat<(int_nvvm_div_full_ftz f32:$a, f32:$b), (FDIV32rr $a, $b, FTZ)>;
+def : Pat<(int_nvvm_div_full_ftz f32:$a, fpimm:$b), (FDIV32ri $a, f32imm:$b, FTZ)>;
 
 //
 // Sad
@@ -1288,48 +1286,36 @@ def : Pat<(int_nvvm_saturate_d f64:$a),     (CVT_f64_f64 $a, CvtSAT)>;
 // Exp2  Log2
 //
 
-def INT_NVVM_EX2_APPROX_FTZ_F : F_MATH_1<"ex2.approx.ftz.f32",
-  F32RT, F32RT, int_nvvm_ex2_approx_ftz_f>;
-def INT_NVVM_EX2_APPROX_F : F_MATH_1<"ex2.approx.f32",
-  F32RT, F32RT, int_nvvm_ex2_approx_f>;
-def INT_NVVM_EX2_APPROX_D : F_MATH_1<"ex2.approx.f64",
-  F64RT, F64RT, int_nvvm_ex2_approx_d>;
+def : Pat<(int_nvvm_ex2_approx_ftz_f f32:$a), (EX2_APPROX_f32 $a, FTZ)>;
+def : Pat<(int_nvvm_ex2_approx_f f32:$a), (EX2_APPROX_f32 $a, NoFTZ)>;
 
-def INT_NVVM_EX2_APPROX_F16 : F_MATH_1<"ex2.approx.f16",
-  F16RT, F16RT, int_nvvm_ex2_approx_f16, [hasPTX<70>, hasSM<75>]>;
-def INT_NVVM_EX2_APPROX_F16X2 : F_MATH_1<"ex2.approx.f16x2",
-  F16X2RT, F16X2RT, int_nvvm_ex2_approx_f16x2, [hasPTX<70>, hasSM<75>]>;
+let Predicates = [hasPTX<70>, hasSM<75>] in {
+  def : Pat<(int_nvvm_ex2_approx_f16 f16:$a), (EX2_APPROX_f16 $a)>;
+  def : Pat<(int_nvvm_ex2_approx_f16x2 v2f16:$a), (EX2_APPROX_f16x2 $a)>;
+}
 
-def : Pat<(fexp2 f32:$a), (INT_NVVM_EX2_APPROX_FTZ_F $a)>, Requires<[doF32FTZ]>;
-def : Pat<(fexp2 f32:$a), (INT_NVVM_EX2_APPROX_F $a)>;
-def : Pat<(fexp2 f16:$a), (INT_NVVM_EX2_APPROX_F16 $a)>, Requires<[useFP16Math]>;
-def : Pat<(fexp2 v2f16:$a), (INT_NVVM_EX2_APPROX_F16X2 $a)>, Requires<[useFP16Math]>;
+def LG2_APPROX_f32 :
+  BasicFlagsNVPTXInst<(outs B32:$dst), (ins B32:$src), (ins FTZFlag:$ftz),
+    "lg2.approx$ftz.f32",
+    [(set f32:$dst, (flog2 f32:$src))]>;
 
-def INT_NVVM_LG2_APPROX_FTZ_F : F_MATH_1<"lg2.approx.ftz.f32",
-  F32RT, F32RT, int_nvvm_lg2_approx_ftz_f>;
-def INT_NVVM_LG2_APPROX_F : F_MATH_1<"lg2.approx.f32",
-  F32RT, F32RT, int_nvvm_lg2_approx_f>;
-def INT_NVVM_LG2_APPROX_D : F_MATH_1<"lg2.approx.f64",
-  F64RT, F64RT, int_nvvm_lg2_approx_d>;
+def LG2_APPROX_f64 :
+  BasicNVPTXInst<(outs B64:$dst), (ins B64:$src),
+    "lg2.approx.f64",
+    [(set f64:$dst, (flog2 f64:$src))]>;
 
-def : Pat<(flog2 f32:$a), (INT_NVVM_LG2_APPROX_FTZ_F $a)>,
-          Requires<[doF32FTZ]>;
-def : Pat<(flog2 f32:$a), (INT_NVVM_LG2_APPROX_F $a)>,
-          Requires<[doNoF32FTZ]>;
+def : Pat<(int_nvvm_lg2_approx_ftz_f f32:$a), (LG2_APPROX_f32 $a, FTZ)>;
+def : Pat<(int_nvvm_lg2_approx_f f32:$a), (LG2_APPROX_f32 $a, NoFTZ)>;
+def : Pat<(int_nvvm_lg2_approx_d f64:$a), (LG2_APPROX_f64 $a)>;
 
 //
 // Sin  Cos
 //
 
-def INT_NVVM_SIN_APPROX_FTZ_F : F_MATH_1<"sin.approx.ftz.f32",
-  F32RT, F32RT, int_nvvm_sin_approx_ftz_f>;
-def INT_NVVM_SIN_APPROX_F : F_MATH_1<"sin.approx.f32",
-  F32RT, F32RT, int_nvvm_sin_approx_f>;
-
-def INT_NVVM_COS_APPROX_FTZ_F : F_MATH_1<"cos.approx.ftz.f32",
-  F32RT, F32RT, int_nvvm_cos_approx_ftz_f>;
-def INT_NVVM_COS_APPROX_F : F_MATH_1<"cos.approx.f32",
-  F32RT, F32RT, int_nvvm_cos_approx_f>;
+def : Pat<(int_nvvm_sin_approx_ftz_f f32:$a), (SIN_APPROX_f32 $a, FTZ)>;
+def : Pat<(int_nvvm_sin_approx_f f32:$a), (SIN_APPROX_f32 $a, NoFTZ)>;
+def : Pat<(int_nvvm_cos_approx_ftz_f f32:$a), (COS_APPROX_f32 $a, FTZ)>;
+def : Pat<(int_nvvm_cos_approx_f f32:$a), (COS_APPROX_f32 $a, NoFTZ)>;
 
 //
 // Fma
@@ -1478,31 +1464,30 @@ def : Pat<(fsqrt_approx f32:$a), (INT_NVVM_SQRT_APPROX_F $a)>;
 // Rsqrt
 //
 
-def INT_NVVM_RSQRT_APPROX_FTZ_F
-  : F_MATH_1<"rsqrt.approx.ftz.f32", F32RT, F32RT, int_nvvm_rsqrt_approx_ftz_f>;
-def INT_NVVM_RSQRT_APPROX_FTZ_D
-  : F_MATH_1<"rsqrt.approx.ftz.f64", F64RT, F64RT, int_nvvm_rsqrt_approx_ftz_d>;
+foreach t = [F32RT, F64RT] in {
+  def RSQRT_APPROX_ # t.Ty :
+    BasicFlagsNVPTXInst<(outs t.RC:$dst),
+                        (ins t.RC:$a), (ins FTZFlag:$ftz),
+                        "rsqrt.approx$ftz.f" # t.Size>;
+}
 
-def INT_NVVM_RSQRT_APPROX_F : F_MATH_1<"rsqrt.approx.f32",
-  F32RT, F32RT, int_nvvm_rsqrt_approx_f>;
-def INT_NVVM_RSQRT_APPROX_D : F_MATH_1<"rsqrt.approx.f64",
-  F64RT, F64RT, int_nvvm_rsqrt_approx_d>;
+def : Pat<(int_nvvm_rsqrt_approx_ftz_f f32:$a), (RSQRT_APPROX_f32 $a, FTZ)>;
+def : Pat<(int_nvvm_rsqrt_approx_ftz_d f64:$a), (RSQRT_APPROX_f64 $a, FTZ)>;
+def : Pat<(int_nvvm_rsqrt_approx_f f32:$a), (RSQRT_APPROX_f32 $a, NoFTZ)>;
+def : Pat<(int_nvvm_rsqrt_approx_d f64:$a), (RSQRT_APPROX_f64 $a, NoFTZ)>;
+
 
 // 1.0f / sqrt_approx -> rsqrt_approx
-def: Pat<(fdiv f32imm_1, (int_nvvm_sqrt_approx_f f32:$a)),
-         (INT_NVVM_RSQRT_APPROX_F $a)>,
-         Requires<[doRsqrtOpt]>;
-def: Pat<(fdiv f32imm_1, (int_nvvm_sqrt_approx_ftz_f f32:$a)),
-         (INT_NVVM_RSQRT_APPROX_FTZ_F $a)>,
-         Requires<[doRsqrtOpt]>;
+let Predicates = [doRsqrtOpt] in {
+  def : Pat<(fdiv f32imm_1, (int_nvvm_sqrt_approx_f f32:$a)),
+          (RSQRT_APPROX_f32 $a, NoFTZ)>;
+  def : Pat<(fdiv f32imm_1, (int_nvvm_sqrt_approx_ftz_f f32:$a)),
+          (RSQRT_APPROX_f32 $a, FTZ)>;
 
-// same for int_nvvm_sqrt_f when non-precision sqrt is requested
-def: Pat<(fdiv f32imm_1, (fsqrt_approx f32:$a)),
-         (INT_NVVM_RSQRT_APPROX_F $a)>,
-         Requires<[doRsqrtOpt, doNoF32FTZ]>;
-def: Pat<(fdiv f32imm_1, (fsqrt_approx f32:$a)),
-         (INT_NVVM_RSQRT_APPROX_FTZ_F $a)>,
-         Requires<[doRsqrtOpt, doF32FTZ]>;
+  // same for int_nvvm_sqrt_f when non-precision sqrt is requested
+  def : Pat<(fdiv f32imm_1, (fsqrt_approx f32:$a)),
+          (RSQRT_APPROX_f32 $a)>;
+}
 //
 // Add
 //

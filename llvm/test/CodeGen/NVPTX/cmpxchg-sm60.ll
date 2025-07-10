@@ -32,12 +32,12 @@ define i8 @monotonic_monotonic_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB0_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB0_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB0_1;
 ; SM60-NEXT:  $L__BB0_3: // %partword.cmpxchg.end
@@ -77,12 +77,12 @@ define i8 @monotonic_monotonic_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB1_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB1_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB1_1;
 ; SM60-NEXT:  $L__BB1_3: // %partword.cmpxchg.end
@@ -122,12 +122,12 @@ define i8 @monotonic_monotonic_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB2_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB2_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB2_1;
 ; SM60-NEXT:  $L__BB2_3: // %partword.cmpxchg.end
@@ -167,12 +167,12 @@ define i8 @monotonic_acquire_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB3_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB3_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB3_1;
 ; SM60-NEXT:  $L__BB3_3: // %partword.cmpxchg.end
@@ -213,12 +213,12 @@ define i8 @monotonic_acquire_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB4_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB4_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB4_1;
 ; SM60-NEXT:  $L__BB4_3: // %partword.cmpxchg.end
@@ -259,12 +259,12 @@ define i8 @monotonic_acquire_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB5_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB5_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB5_1;
 ; SM60-NEXT:  $L__BB5_3: // %partword.cmpxchg.end
@@ -306,12 +306,12 @@ define i8 @monotonic_seq_cst_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB6_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB6_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB6_1;
 ; SM60-NEXT:  $L__BB6_3: // %partword.cmpxchg.end
@@ -353,12 +353,12 @@ define i8 @monotonic_seq_cst_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB7_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB7_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB7_1;
 ; SM60-NEXT:  $L__BB7_3: // %partword.cmpxchg.end
@@ -400,12 +400,12 @@ define i8 @monotonic_seq_cst_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB8_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB8_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB8_1;
 ; SM60-NEXT:  $L__BB8_3: // %partword.cmpxchg.end
@@ -446,12 +446,12 @@ define i8 @acquire_monotonic_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB9_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB9_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB9_1;
 ; SM60-NEXT:  $L__BB9_3: // %partword.cmpxchg.end
@@ -492,12 +492,12 @@ define i8 @acquire_monotonic_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB10_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB10_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB10_1;
 ; SM60-NEXT:  $L__BB10_3: // %partword.cmpxchg.end
@@ -538,12 +538,12 @@ define i8 @acquire_monotonic_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB11_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB11_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB11_1;
 ; SM60-NEXT:  $L__BB11_3: // %partword.cmpxchg.end
@@ -584,12 +584,12 @@ define i8 @acquire_acquire_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB12_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB12_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB12_1;
 ; SM60-NEXT:  $L__BB12_3: // %partword.cmpxchg.end
@@ -630,12 +630,12 @@ define i8 @acquire_acquire_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB13_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB13_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB13_1;
 ; SM60-NEXT:  $L__BB13_3: // %partword.cmpxchg.end
@@ -676,12 +676,12 @@ define i8 @acquire_acquire_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB14_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB14_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB14_1;
 ; SM60-NEXT:  $L__BB14_3: // %partword.cmpxchg.end
@@ -723,12 +723,12 @@ define i8 @acquire_seq_cst_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB15_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB15_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB15_1;
 ; SM60-NEXT:  $L__BB15_3: // %partword.cmpxchg.end
@@ -770,12 +770,12 @@ define i8 @acquire_seq_cst_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB16_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB16_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB16_1;
 ; SM60-NEXT:  $L__BB16_3: // %partword.cmpxchg.end
@@ -817,12 +817,12 @@ define i8 @acquire_seq_cst_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB17_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB17_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB17_1;
 ; SM60-NEXT:  $L__BB17_3: // %partword.cmpxchg.end
@@ -864,12 +864,12 @@ define i8 @release_monotonic_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB18_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB18_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB18_1;
 ; SM60-NEXT:  $L__BB18_3: // %partword.cmpxchg.end
@@ -910,12 +910,12 @@ define i8 @release_monotonic_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB19_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB19_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB19_1;
 ; SM60-NEXT:  $L__BB19_3: // %partword.cmpxchg.end
@@ -956,12 +956,12 @@ define i8 @release_monotonic_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB20_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB20_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB20_1;
 ; SM60-NEXT:  $L__BB20_3: // %partword.cmpxchg.end
@@ -1002,12 +1002,12 @@ define i8 @release_acquire_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB21_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB21_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB21_1;
 ; SM60-NEXT:  $L__BB21_3: // %partword.cmpxchg.end
@@ -1049,12 +1049,12 @@ define i8 @release_acquire_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB22_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB22_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB22_1;
 ; SM60-NEXT:  $L__BB22_3: // %partword.cmpxchg.end
@@ -1096,12 +1096,12 @@ define i8 @release_acquire_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB23_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB23_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB23_1;
 ; SM60-NEXT:  $L__BB23_3: // %partword.cmpxchg.end
@@ -1143,12 +1143,12 @@ define i8 @release_seq_cst_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB24_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB24_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB24_1;
 ; SM60-NEXT:  $L__BB24_3: // %partword.cmpxchg.end
@@ -1190,12 +1190,12 @@ define i8 @release_seq_cst_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB25_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB25_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB25_1;
 ; SM60-NEXT:  $L__BB25_3: // %partword.cmpxchg.end
@@ -1237,12 +1237,12 @@ define i8 @release_seq_cst_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB26_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB26_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB26_1;
 ; SM60-NEXT:  $L__BB26_3: // %partword.cmpxchg.end
@@ -1284,12 +1284,12 @@ define i8 @acq_rel_monotonic_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB27_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB27_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB27_1;
 ; SM60-NEXT:  $L__BB27_3: // %partword.cmpxchg.end
@@ -1331,12 +1331,12 @@ define i8 @acq_rel_monotonic_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB28_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB28_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB28_1;
 ; SM60-NEXT:  $L__BB28_3: // %partword.cmpxchg.end
@@ -1378,12 +1378,12 @@ define i8 @acq_rel_monotonic_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB29_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB29_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB29_1;
 ; SM60-NEXT:  $L__BB29_3: // %partword.cmpxchg.end
@@ -1425,12 +1425,12 @@ define i8 @acq_rel_acquire_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB30_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB30_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB30_1;
 ; SM60-NEXT:  $L__BB30_3: // %partword.cmpxchg.end
@@ -1472,12 +1472,12 @@ define i8 @acq_rel_acquire_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB31_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB31_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB31_1;
 ; SM60-NEXT:  $L__BB31_3: // %partword.cmpxchg.end
@@ -1519,12 +1519,12 @@ define i8 @acq_rel_acquire_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB32_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB32_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB32_1;
 ; SM60-NEXT:  $L__BB32_3: // %partword.cmpxchg.end
@@ -1566,12 +1566,12 @@ define i8 @acq_rel_seq_cst_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB33_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB33_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB33_1;
 ; SM60-NEXT:  $L__BB33_3: // %partword.cmpxchg.end
@@ -1613,12 +1613,12 @@ define i8 @acq_rel_seq_cst_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB34_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB34_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB34_1;
 ; SM60-NEXT:  $L__BB34_3: // %partword.cmpxchg.end
@@ -1660,12 +1660,12 @@ define i8 @acq_rel_seq_cst_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB35_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB35_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB35_1;
 ; SM60-NEXT:  $L__BB35_3: // %partword.cmpxchg.end
@@ -1707,12 +1707,12 @@ define i8 @seq_cst_monotonic_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB36_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB36_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB36_1;
 ; SM60-NEXT:  $L__BB36_3: // %partword.cmpxchg.end
@@ -1754,12 +1754,12 @@ define i8 @seq_cst_monotonic_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB37_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB37_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB37_1;
 ; SM60-NEXT:  $L__BB37_3: // %partword.cmpxchg.end
@@ -1801,12 +1801,12 @@ define i8 @seq_cst_monotonic_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB38_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB38_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB38_1;
 ; SM60-NEXT:  $L__BB38_3: // %partword.cmpxchg.end
@@ -1848,12 +1848,12 @@ define i8 @seq_cst_acquire_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB39_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB39_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB39_1;
 ; SM60-NEXT:  $L__BB39_3: // %partword.cmpxchg.end
@@ -1895,12 +1895,12 @@ define i8 @seq_cst_acquire_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB40_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB40_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB40_1;
 ; SM60-NEXT:  $L__BB40_3: // %partword.cmpxchg.end
@@ -1942,12 +1942,12 @@ define i8 @seq_cst_acquire_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB41_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB41_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB41_1;
 ; SM60-NEXT:  $L__BB41_3: // %partword.cmpxchg.end
@@ -1989,12 +1989,12 @@ define i8 @seq_cst_seq_cst_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB42_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB42_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB42_1;
 ; SM60-NEXT:  $L__BB42_3: // %partword.cmpxchg.end
@@ -2036,12 +2036,12 @@ define i8 @seq_cst_seq_cst_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB43_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB43_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB43_1;
 ; SM60-NEXT:  $L__BB43_3: // %partword.cmpxchg.end
@@ -2083,12 +2083,12 @@ define i8 @seq_cst_seq_cst_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    or.b32 %r17, %r20, %r3;
 ; SM60-NEXT:    or.b32 %r18, %r20, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r18, %r17;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r18;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r18;
 ; SM60-NEXT:    @%p1 bra $L__BB44_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB44_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r20, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r20, %r8;
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB44_1;
 ; SM60-NEXT:  $L__BB44_3: // %partword.cmpxchg.end
@@ -2128,12 +2128,12 @@ define i16 @monotonic_monotonic_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB45_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB45_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB45_1;
 ; SM60-NEXT:  $L__BB45_3: // %partword.cmpxchg.end
@@ -2172,12 +2172,12 @@ define i16 @monotonic_monotonic_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB46_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB46_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB46_1;
 ; SM60-NEXT:  $L__BB46_3: // %partword.cmpxchg.end
@@ -2216,12 +2216,12 @@ define i16 @monotonic_monotonic_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB47_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB47_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB47_1;
 ; SM60-NEXT:  $L__BB47_3: // %partword.cmpxchg.end
@@ -2260,12 +2260,12 @@ define i16 @monotonic_acquire_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB48_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB48_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB48_1;
 ; SM60-NEXT:  $L__BB48_3: // %partword.cmpxchg.end
@@ -2305,12 +2305,12 @@ define i16 @monotonic_acquire_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB49_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB49_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB49_1;
 ; SM60-NEXT:  $L__BB49_3: // %partword.cmpxchg.end
@@ -2350,12 +2350,12 @@ define i16 @monotonic_acquire_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB50_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB50_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB50_1;
 ; SM60-NEXT:  $L__BB50_3: // %partword.cmpxchg.end
@@ -2396,12 +2396,12 @@ define i16 @monotonic_seq_cst_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB51_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB51_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB51_1;
 ; SM60-NEXT:  $L__BB51_3: // %partword.cmpxchg.end
@@ -2442,12 +2442,12 @@ define i16 @monotonic_seq_cst_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB52_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB52_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB52_1;
 ; SM60-NEXT:  $L__BB52_3: // %partword.cmpxchg.end
@@ -2488,12 +2488,12 @@ define i16 @monotonic_seq_cst_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB53_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB53_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB53_1;
 ; SM60-NEXT:  $L__BB53_3: // %partword.cmpxchg.end
@@ -2533,12 +2533,12 @@ define i16 @acquire_monotonic_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB54_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB54_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB54_1;
 ; SM60-NEXT:  $L__BB54_3: // %partword.cmpxchg.end
@@ -2578,12 +2578,12 @@ define i16 @acquire_monotonic_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB55_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB55_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB55_1;
 ; SM60-NEXT:  $L__BB55_3: // %partword.cmpxchg.end
@@ -2623,12 +2623,12 @@ define i16 @acquire_monotonic_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB56_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB56_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB56_1;
 ; SM60-NEXT:  $L__BB56_3: // %partword.cmpxchg.end
@@ -2668,12 +2668,12 @@ define i16 @acquire_acquire_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB57_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB57_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB57_1;
 ; SM60-NEXT:  $L__BB57_3: // %partword.cmpxchg.end
@@ -2713,12 +2713,12 @@ define i16 @acquire_acquire_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %ne
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB58_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB58_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB58_1;
 ; SM60-NEXT:  $L__BB58_3: // %partword.cmpxchg.end
@@ -2758,12 +2758,12 @@ define i16 @acquire_acquire_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %ne
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB59_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB59_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB59_1;
 ; SM60-NEXT:  $L__BB59_3: // %partword.cmpxchg.end
@@ -2804,12 +2804,12 @@ define i16 @acquire_seq_cst_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB60_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB60_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB60_1;
 ; SM60-NEXT:  $L__BB60_3: // %partword.cmpxchg.end
@@ -2850,12 +2850,12 @@ define i16 @acquire_seq_cst_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %ne
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB61_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB61_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB61_1;
 ; SM60-NEXT:  $L__BB61_3: // %partword.cmpxchg.end
@@ -2896,12 +2896,12 @@ define i16 @acquire_seq_cst_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %ne
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB62_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB62_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB62_1;
 ; SM60-NEXT:  $L__BB62_3: // %partword.cmpxchg.end
@@ -2942,12 +2942,12 @@ define i16 @release_monotonic_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB63_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB63_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB63_1;
 ; SM60-NEXT:  $L__BB63_3: // %partword.cmpxchg.end
@@ -2987,12 +2987,12 @@ define i16 @release_monotonic_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB64_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB64_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB64_1;
 ; SM60-NEXT:  $L__BB64_3: // %partword.cmpxchg.end
@@ -3032,12 +3032,12 @@ define i16 @release_monotonic_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB65_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB65_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB65_1;
 ; SM60-NEXT:  $L__BB65_3: // %partword.cmpxchg.end
@@ -3077,12 +3077,12 @@ define i16 @release_acquire_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB66_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB66_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB66_1;
 ; SM60-NEXT:  $L__BB66_3: // %partword.cmpxchg.end
@@ -3123,12 +3123,12 @@ define i16 @release_acquire_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %ne
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB67_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB67_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB67_1;
 ; SM60-NEXT:  $L__BB67_3: // %partword.cmpxchg.end
@@ -3169,12 +3169,12 @@ define i16 @release_acquire_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %ne
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB68_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB68_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB68_1;
 ; SM60-NEXT:  $L__BB68_3: // %partword.cmpxchg.end
@@ -3215,12 +3215,12 @@ define i16 @release_seq_cst_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB69_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB69_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB69_1;
 ; SM60-NEXT:  $L__BB69_3: // %partword.cmpxchg.end
@@ -3261,12 +3261,12 @@ define i16 @release_seq_cst_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %ne
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB70_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB70_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB70_1;
 ; SM60-NEXT:  $L__BB70_3: // %partword.cmpxchg.end
@@ -3307,12 +3307,12 @@ define i16 @release_seq_cst_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %ne
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB71_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB71_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB71_1;
 ; SM60-NEXT:  $L__BB71_3: // %partword.cmpxchg.end
@@ -3353,12 +3353,12 @@ define i16 @acq_rel_monotonic_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB72_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB72_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB72_1;
 ; SM60-NEXT:  $L__BB72_3: // %partword.cmpxchg.end
@@ -3399,12 +3399,12 @@ define i16 @acq_rel_monotonic_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB73_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB73_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB73_1;
 ; SM60-NEXT:  $L__BB73_3: // %partword.cmpxchg.end
@@ -3445,12 +3445,12 @@ define i16 @acq_rel_monotonic_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB74_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB74_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB74_1;
 ; SM60-NEXT:  $L__BB74_3: // %partword.cmpxchg.end
@@ -3491,12 +3491,12 @@ define i16 @acq_rel_acquire_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB75_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB75_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB75_1;
 ; SM60-NEXT:  $L__BB75_3: // %partword.cmpxchg.end
@@ -3537,12 +3537,12 @@ define i16 @acq_rel_acquire_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %ne
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB76_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB76_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB76_1;
 ; SM60-NEXT:  $L__BB76_3: // %partword.cmpxchg.end
@@ -3583,12 +3583,12 @@ define i16 @acq_rel_acquire_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %ne
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB77_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB77_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB77_1;
 ; SM60-NEXT:  $L__BB77_3: // %partword.cmpxchg.end
@@ -3629,12 +3629,12 @@ define i16 @acq_rel_seq_cst_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB78_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB78_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB78_1;
 ; SM60-NEXT:  $L__BB78_3: // %partword.cmpxchg.end
@@ -3675,12 +3675,12 @@ define i16 @acq_rel_seq_cst_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %ne
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB79_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB79_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB79_1;
 ; SM60-NEXT:  $L__BB79_3: // %partword.cmpxchg.end
@@ -3721,12 +3721,12 @@ define i16 @acq_rel_seq_cst_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %ne
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB80_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB80_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB80_1;
 ; SM60-NEXT:  $L__BB80_3: // %partword.cmpxchg.end
@@ -3767,12 +3767,12 @@ define i16 @seq_cst_monotonic_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB81_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB81_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB81_1;
 ; SM60-NEXT:  $L__BB81_3: // %partword.cmpxchg.end
@@ -3813,12 +3813,12 @@ define i16 @seq_cst_monotonic_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB82_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB82_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB82_1;
 ; SM60-NEXT:  $L__BB82_3: // %partword.cmpxchg.end
@@ -3859,12 +3859,12 @@ define i16 @seq_cst_monotonic_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB83_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB83_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB83_1;
 ; SM60-NEXT:  $L__BB83_3: // %partword.cmpxchg.end
@@ -3905,12 +3905,12 @@ define i16 @seq_cst_acquire_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB84_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB84_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB84_1;
 ; SM60-NEXT:  $L__BB84_3: // %partword.cmpxchg.end
@@ -3951,12 +3951,12 @@ define i16 @seq_cst_acquire_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %ne
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB85_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB85_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB85_1;
 ; SM60-NEXT:  $L__BB85_3: // %partword.cmpxchg.end
@@ -3997,12 +3997,12 @@ define i16 @seq_cst_acquire_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %ne
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB86_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB86_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB86_1;
 ; SM60-NEXT:  $L__BB86_3: // %partword.cmpxchg.end
@@ -4043,12 +4043,12 @@ define i16 @seq_cst_seq_cst_i16_generic(ptr %addr, i16 %cmp, i16 %new) {
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB87_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB87_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB87_1;
 ; SM60-NEXT:  $L__BB87_3: // %partword.cmpxchg.end
@@ -4089,12 +4089,12 @@ define i16 @seq_cst_seq_cst_i16_global(ptr addrspace(1) %addr, i16 %cmp, i16 %ne
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.global.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB88_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB88_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB88_1;
 ; SM60-NEXT:  $L__BB88_3: // %partword.cmpxchg.end
@@ -4135,12 +4135,12 @@ define i16 @seq_cst_seq_cst_i16_shared(ptr addrspace(3) %addr, i16 %cmp, i16 %ne
 ; SM60-NEXT:    or.b32 %r16, %r19, %r3;
 ; SM60-NEXT:    or.b32 %r17, %r19, %r4;
 ; SM60-NEXT:    atom.shared.cas.b32 %r7, [%rd1], %r17, %r16;
-; SM60-NEXT:    setp.eq.s32 %p1, %r7, %r17;
+; SM60-NEXT:    setp.eq.b32 %p1, %r7, %r17;
 ; SM60-NEXT:    @%p1 bra $L__BB89_3;
 ; SM60-NEXT:  // %bb.2: // %partword.cmpxchg.failure
 ; SM60-NEXT:    // in Loop: Header=BB89_1 Depth=1
 ; SM60-NEXT:    and.b32 %r8, %r7, %r2;
-; SM60-NEXT:    setp.ne.s32 %p2, %r19, %r8;
+; SM60-NEXT:    setp.ne.b32 %p2, %r19, %r8;
 ; SM60-NEXT:    mov.b32 %r19, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB89_1;
 ; SM60-NEXT:  $L__BB89_3: // %partword.cmpxchg.end

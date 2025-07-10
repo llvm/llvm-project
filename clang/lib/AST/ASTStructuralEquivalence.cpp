@@ -1609,6 +1609,11 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      CXXMethodDecl *Method1,
                                      CXXMethodDecl *Method2) {
+  if (!Method1 && !Method2)
+    return true;
+  if (!Method1 || !Method2)
+    return false;
+
   bool PropertiesEqual =
       Method1->getDeclKind() == Method2->getDeclKind() &&
       Method1->getRefQualifier() == Method2->getRefQualifier() &&

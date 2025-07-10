@@ -11,9 +11,6 @@ target triple = "x86_64-apple-darwin10.0.0"
 ;    f[i+1] = 0;
 ;  }
 ;}
-;.
-; CHECK: @.memset_pattern = private unnamed_addr constant [4 x i32] [i32 2, i32 2, i32 2, i32 2], align 16
-;.
 define void @test(ptr %f, i32 %n) nounwind ssp {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
@@ -84,9 +81,9 @@ define void @test_pattern(ptr %f, i32 %n) nounwind ssp {
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[MUL]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[TMP0]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], 8
-; CHECK-NEXT:    call void @memset_pattern16(ptr [[F:%.*]], ptr @.memset_pattern, i64 [[TMP4]])
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 2
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.i32.i64(ptr align 4 [[F:%.*]], i32 2, i64 [[TMP4]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -130,5 +127,4 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind ssp }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 ;.

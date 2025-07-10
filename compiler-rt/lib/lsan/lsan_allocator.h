@@ -53,7 +53,7 @@ struct ChunkMetadata {
 #if !SANITIZER_CAN_USE_ALLOCATOR64
 template <typename AddressSpaceViewTy>
 struct AP32 {
-  static const uptr kSpaceBeg = 0;
+  static const uptr kSpaceBeg = SANITIZER_MMAP_BEGIN;
   static const u64 kSpaceSize = SANITIZER_MMAP_RANGE_SIZE;
   static const uptr kMetadataSize = sizeof(ChunkMetadata);
   typedef __sanitizer::CompactSizeClassMap SizeClassMap;

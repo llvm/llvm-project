@@ -15,9 +15,7 @@
 // Test the transfer_read with vector type with a non-trailing scalable
 // dimension as transformed by the pattern LegalizeTransferRead.
 
-func.func @transfer_read_scalable_non_trailing(%vs : i32, %M : memref<?x8xi8>) {
-  func.call @setArmVLBits(%vs) : (i32) -> ()
-
+func.func @transfer_read_scalable_non_trailing(%M : memref<?x8xi8>) attributes {no_inline} {
   // Read an LLVM-illegal vector
   %c0 = arith.constant 0 : index
   %c0_i8 = arith.constant 0 : i8
@@ -56,14 +54,16 @@ func.func @main() {
 // CHECK:( 31, 32, 33, 34, 35, 36, 37, 38, 41, 42, 43, 44, 45, 46, 47, 48 )
   vector.print str "Result(VL128):\n"
   %c128 = arith.constant 128 : i32
-  func.call @transfer_read_scalable_non_trailing(%c128, %MM) : (i32, memref<?x8xi8>) -> ()
+  func.call @setArmVLBits(%c128) : (i32) -> ()
+  func.call @transfer_read_scalable_non_trailing(%MM) : (memref<?x8xi8>) -> ()
 
 // CHECK-LABEL: Result(VL256):
 // CHECK: ( 11, 12, 13, 14, 15, 16, 17, 18, 21, 22, 23, 24, 25, 26, 27, 28, 31, 32, 33, 34, 35, 36, 37, 38, 41, 42, 43, 44, 45, 46, 47, 48 )
 // CHECK: ( 51, 52, 53, 54, 55, 56, 57, 58, 61, 62, 63, 64, 65, 66, 67, 68, 71, 72, 73, 74, 75, 76, 77, 78, 81, 82, 83, 84, 85, 86, 87, 88 )
   vector.print str "Result(VL256):\n"
   %c256 = arith.constant 256 : i32
-  func.call @transfer_read_scalable_non_trailing(%c256, %MM) : (i32, memref<?x8xi8>) -> ()
+  func.call @setArmVLBits(%c256) : (i32) -> ()
+  func.call @transfer_read_scalable_non_trailing(%MM) : (memref<?x8xi8>) -> ()
 
   return
 }

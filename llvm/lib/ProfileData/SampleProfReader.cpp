@@ -609,7 +609,7 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
       return EC;
 
     if (!isOffsetLegal(*LineOffset)) {
-      return std::error_code();
+      return sampleprof_error::illegal_line_offset;
     }
 
     auto Discriminator = readNumber<uint64_t>();
@@ -1236,7 +1236,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readCSNameTableSec() {
         return EC;
 
       if (!isOffsetLegal(*LineOffset))
-        return std::error_code();
+        return sampleprof_error::illegal_line_offset;
 
       auto Discriminator = readNumber<uint64_t>();
       if (std::error_code EC = Discriminator.getError())

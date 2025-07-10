@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -std=c++11 %s -fsyntax-only -fcxx-exceptions
+// RUN: %clang_cc1 -std=c++11 %s -fsyntax-only -fcxx-exceptions -verify
+
+// expected-no-diagnostics
 
 template<typename T> struct remove_reference { typedef T type; };
 template<typename T> struct remove_reference<T&> { typedef T type; };
@@ -46,8 +48,8 @@ namespace detail {
         val.~T();
     }
 
-    constexpr const T &get(select<0>) { return val; }
-    template<unsigned N> constexpr const decltype(static_cast<const rest_t&>(rest).get(select<N-1>{})) get(select<N>) {
+    constexpr const T &get(select<0>) const { return val; }
+    template<unsigned N> constexpr const decltype(static_cast<const rest_t&>(rest).get(select<N-1>{})) get(select<N>) const {
       return rest.get(select<N-1>{});
     }
   };
@@ -79,13 +81,13 @@ public:
   // FIXME: declare a destructor iff any element has a nontrivial destructor
   //~either() { impl.destroy(elem); }
 
-  constexpr unsigned index() noexcept { return elem; }
+  constexpr unsigned index() const noexcept { return elem; }
 
   template<unsigned N> using const_get_result =
     decltype(static_cast<const impl_t&>(impl).get(detail::select<N>{}));
 
   template<unsigned N>
-  constexpr const_get_result<N> get() {
+  constexpr const_get_result<N> get() const {
     // Can't just use throw here, since that makes the conditional a prvalue,
     // which means we return a reference to a temporary.
     return (elem != N ? throw_<const_get_result<N>>("bad_either_get")
@@ -93,7 +95,7 @@ public:
   }
 
   template<typename U>
-  constexpr const U &get() {
+  constexpr const U &get() const {
     return get<impl_t::index(detail::type<U>())>();
   }
 };

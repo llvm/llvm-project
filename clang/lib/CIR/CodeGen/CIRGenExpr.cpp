@@ -1094,8 +1094,7 @@ RValue CIRGenFunction::emitAnyExpr(const Expr *e, AggValueSlot aggSlot) {
   case cir::TEK_Scalar:
     return RValue::get(emitScalarExpr(e));
   case cir::TEK_Complex:
-    cgm.errorNYI(e->getSourceRange(), "emitAnyExpr: complex type");
-    return RValue::get(nullptr);
+    return RValue::getComplex(emitComplexExpr(e));
   case cir::TEK_Aggregate: {
     if (aggSlot.isIgnored())
       aggSlot = createAggTemp(e->getType(), getLoc(e->getSourceRange()),

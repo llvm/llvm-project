@@ -663,7 +663,7 @@ func.func @vector_reduction(%laneid: index, %m0: memref<4x2x32xf32>, %m1: memref
   gpu.warp_execute_on_lane_0(%laneid)[32] {
     %0 = vector.transfer_read %m0[%c0, %c0, %c0], %f0 {in_bounds = [true]} : memref<4x2x32xf32>, vector<32xf32>
     %1 = vector.transfer_read %m1[], %f0 : memref<f32>, vector<f32>
-    %2 = vector.extractelement %1[] : vector<f32>
+    %2 = vector.extract %1[] : f32 from vector<f32>
     %3 = vector.reduction <add>, %0 : vector<32xf32> into f32
     %4 = arith.addf %3, %2 : f32
     %5 = vector.broadcast %4 : f32 to vector<f32>
@@ -868,17 +868,17 @@ func.func @vector_extract_3d(%laneid: index) -> (vector<4x96xf32>) {
 
 // -----
 
-// CHECK-PROP-LABEL: func.func @vector_extractelement_0d(
+// CHECK-PROP-LABEL: func.func @vector_extract_0d(
 //       CHECK-PROP:   %[[R:.*]] = gpu.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<f32>) {
 //       CHECK-PROP:     %[[V:.*]] = "some_def"() : () -> vector<f32>
 //       CHECK-PROP:     gpu.yield %[[V]] : vector<f32>
 //       CHECK-PROP:   }
 //       CHECK-PROP:   %[[E:.*]] = vector.extract %[[R]][] : f32 from vector<f32>
 //       CHECK-PROP:   return %[[E]] : f32
-func.func @vector_extractelement_0d(%laneid: index) -> (f32) {
+func.func @vector_extract_0d(%laneid: index) -> (f32) {
   %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (f32) {
     %0 = "some_def"() : () -> (vector<f32>)
-    %1 = vector.extractelement %0[] : vector<f32>
+    %1 = vector.extract %0[] : f32 from vector<f32>
     gpu.yield %1 : f32
   }
   return %r : f32
@@ -886,18 +886,18 @@ func.func @vector_extractelement_0d(%laneid: index) -> (f32) {
 
 // -----
 
-// CHECK-PROP-LABEL: func.func @vector_extractelement_1element(
+// CHECK-PROP-LABEL: func.func @vector_extract_1element(
 //       CHECK-PROP:   %[[R:.*]] = gpu.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<1xf32>) {
 //       CHECK-PROP:     %[[V:.*]] = "some_def"() : () -> vector<1xf32>
 //       CHECK-PROP:     gpu.yield %[[V]] : vector<1xf32>
 //       CHECK-PROP:   }
 //       CHECK-PROP:   %[[E:.*]] = vector.extract %[[R]][0] : f32 from vector<1xf32>
 //       CHECK-PROP:   return %[[E]] : f32
-func.func @vector_extractelement_1element(%laneid: index) -> (f32) {
+func.func @vector_extract_1element(%laneid: index) -> (f32) {
   %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (f32) {
     %0 = "some_def"() : () -> (vector<1xf32>)
     %c0 = arith.constant 0 : index
-    %1 = vector.extractelement %0[%c0 : index] : vector<1xf32>
+    %1 = vector.extract %0[%c0] : f32 from vector<1xf32>
     gpu.yield %1 : f32
   }
   return %r : f32
@@ -907,7 +907,7 @@ func.func @vector_extractelement_1element(%laneid: index) -> (f32) {
 
 //       CHECK-PROP: #[[$map:.*]] = affine_map<()[s0] -> (s0 ceildiv 3)>
 //       CHECK-PROP: #[[$map1:.*]] = affine_map<()[s0] -> (s0 mod 3)>
-// CHECK-PROP-LABEL: func.func @vector_extractelement_1d(
+// CHECK-PROP-LABEL: func.func @vector_extract_1d(
 //  CHECK-PROP-SAME:     %[[LANEID:.*]]: index, %[[POS:.*]]: index
 //   CHECK-PROP-DAG:   %[[C32:.*]] = arith.constant 32 : i32
 //       CHECK-PROP:   %[[W:.*]] = gpu.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<3xf32>) {
@@ -920,10 +920,10 @@ func.func @vector_extractelement_1element(%laneid: index) -> (f32) {
 //       CHECK-PROP:   %[[FROM_LANE_I32:.*]] = arith.index_cast %[[FROM_LANE]] : index to i32
 //       CHECK-PROP:   %[[SHUFFLED:.*]], %{{.*}} = gpu.shuffle  idx %[[EXTRACTED]], %[[FROM_LANE_I32]], %[[C32]] : f32
 //       CHECK-PROP:   return %[[SHUFFLED]]
-func.func @vector_extractelement_1d(%laneid: index, %pos: index) -> (f32) {
+func.func @vector_extract_1d(%laneid: index, %pos: index) -> (f32) {
   %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (f32) {
     %0 = "some_def"() : () -> (vector<96xf32>)
-    %1 = vector.extractelement %0[%pos : index] : vector<96xf32>
+    %1 = vector.extract %0[%pos] : f32 from vector<96xf32>
     gpu.yield %1 : f32
   }
   return %r : f32
@@ -933,16 +933,16 @@ func.func @vector_extractelement_1d(%laneid: index, %pos: index) -> (f32) {
 
 // Index-typed values cannot be shuffled at the moment.
 
-// CHECK-PROP-LABEL: func.func @vector_extractelement_1d_index(
+// CHECK-PROP-LABEL: func.func @vector_extract_1d_index(
 //       CHECK-PROP:   gpu.warp_execute_on_lane_0(%{{.*}})[32] -> (index) {
 //       CHECK-PROP:     "some_def"
 //       CHECK-PROP:     vector.extract
 //       CHECK-PROP:     gpu.yield {{.*}} : index
 //       CHECK-PROP:   }
-func.func @vector_extractelement_1d_index(%laneid: index, %pos: index) -> (index) {
+func.func @vector_extract_1d_index(%laneid: index, %pos: index) -> (index) {
   %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (index) {
     %0 = "some_def"() : () -> (vector<96xindex>)
-    %1 = vector.extractelement %0[%pos : index] : vector<96xindex>
+    %1 = vector.extract %0[%pos] : index from vector<96xindex>
     gpu.yield %1 : index
   }
   return %r : index
@@ -1142,7 +1142,7 @@ func.func @warp_execute_nd_distribute(%laneid: index, %v0: vector<1x64x1xf32>, %
 
 //       CHECK-PROP:   #[[$MAP:.*]] = affine_map<()[s0] -> (s0 ceildiv 3)>
 //       CHECK-PROP:   #[[$MAP1:.*]] = affine_map<()[s0] -> (s0 mod 3)>
-// CHECK-PROP-LABEL: func @vector_insertelement_1d(
+// CHECK-PROP-LABEL: func @vector_insert_1d(
 //  CHECK-PROP-SAME:     %[[LANEID:.*]]: index, %[[POS:.*]]: index
 //       CHECK-PROP:   %[[W:.*]]:2 = gpu.warp_execute_on_lane_0{{.*}} -> (vector<3xf32>, f32)
 //       CHECK-PROP:   %[[INSERTING_LANE:.*]] = affine.apply #[[$MAP]]()[%[[POS]]]
@@ -1155,11 +1155,11 @@ func.func @warp_execute_nd_distribute(%laneid: index, %v0: vector<1x64x1xf32>, %
 //       CHECK-PROP:     scf.yield %[[W]]#0
 //       CHECK-PROP:   }
 //       CHECK-PROP:   return %[[R]]
-func.func @vector_insertelement_1d(%laneid: index, %pos: index) -> (vector<3xf32>) {
+func.func @vector_insert_1d(%laneid: index, %pos: index) -> (vector<3xf32>) {
   %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<3xf32>) {
     %0 = "some_def"() : () -> (vector<96xf32>)
     %f = "another_def"() : () -> (f32)
-    %1 = vector.insertelement %f, %0[%pos : index] : vector<96xf32>
+    %1 = vector.insert %f, %0[%pos] : f32 into vector<96xf32>
     gpu.yield %1 : vector<96xf32>
   }
   return %r : vector<3xf32>
@@ -1167,18 +1167,18 @@ func.func @vector_insertelement_1d(%laneid: index, %pos: index) -> (vector<3xf32
 
 // -----
 
-// CHECK-PROP-LABEL: func @vector_insertelement_1d_broadcast(
+// CHECK-PROP-LABEL: func @vector_insert_1d_broadcast(
 //  CHECK-PROP-SAME:     %[[LANEID:.*]]: index, %[[POS:.*]]: index
 //       CHECK-PROP:   %[[W:.*]]:2 = gpu.warp_execute_on_lane_0{{.*}} -> (vector<96xf32>, f32)
 //       CHECK-PROP:     %[[VEC:.*]] = "some_def"
 //       CHECK-PROP:     %[[VAL:.*]] = "another_def"
 //       CHECK-PROP:     gpu.yield %[[VEC]], %[[VAL]]
 //       CHECK-PROP:   vector.insert %[[W]]#1, %[[W]]#0 [%[[POS]]] : f32 into vector<96xf32>
-func.func @vector_insertelement_1d_broadcast(%laneid: index, %pos: index) -> (vector<96xf32>) {
+func.func @vector_insert_1d_broadcast(%laneid: index, %pos: index) -> (vector<96xf32>) {
   %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<96xf32>) {
     %0 = "some_def"() : () -> (vector<96xf32>)
     %f = "another_def"() : () -> (f32)
-    %1 = vector.insertelement %f, %0[%pos : index] : vector<96xf32>
+    %1 = vector.insert %f, %0[%pos] : f32 into vector<96xf32>
     gpu.yield %1 : vector<96xf32>
   }
   return %r : vector<96xf32>
@@ -1186,17 +1186,17 @@ func.func @vector_insertelement_1d_broadcast(%laneid: index, %pos: index) -> (ve
 
 // -----
 
-// CHECK-PROP-LABEL: func @vector_insertelement_0d(
+// CHECK-PROP-LABEL: func @vector_insert_0d(
 //       CHECK-PROP:   %[[W:.*]]:2 = gpu.warp_execute_on_lane_0{{.*}} -> (vector<f32>, f32)
 //       CHECK-PROP:     %[[VEC:.*]] = "some_def"
 //       CHECK-PROP:     %[[VAL:.*]] = "another_def"
 //       CHECK-PROP:     gpu.yield %[[VEC]], %[[VAL]]
 //       CHECK-PROP:   vector.insert %[[W]]#1, %[[W]]#0 [] : f32 into vector<f32>
-func.func @vector_insertelement_0d(%laneid: index) -> (vector<f32>) {
+func.func @vector_insert_0d(%laneid: index) -> (vector<f32>) {
   %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<f32>) {
     %0 = "some_def"() : () -> (vector<f32>)
     %f = "another_def"() : () -> (f32)
-    %1 = vector.insertelement %f, %0[] : vector<f32>
+    %1 = vector.insert %f, %0[] : f32 into vector<f32>
     gpu.yield %1 : vector<f32>
   }
   return %r : vector<f32>
@@ -1379,7 +1379,7 @@ func.func @vector_insert_strided_slice_2d_to_2d(%laneid: index) -> (vector<64x1x
 // -----
 
 // Make sure that all operands of the transfer_read op are properly propagated.
-// The vector.extractelement op cannot be propagated because index-typed
+// The vector.extract op cannot be propagated because index-typed
 // shuffles are not supported at the moment.
 
 // CHECK-PROP: #[[$MAP:.*]] = affine_map<()[s0] -> (s0 * 2)>
@@ -1413,7 +1413,7 @@ func.func @transfer_read_prop_operands(%in2: vector<1x2xindex>, %ar1 :  memref<1
     %28 = vector.gather %ar1[%c0, %c0, %c0] [%arg4], %cst_0, %cst : memref<1x4x2xi32>, vector<1x64xindex>, vector<1x64xi1>, vector<1x64xi32> into vector<1x64xi32>
     %29 = vector.extract %28[0] : vector<64xi32> from vector<1x64xi32>
     %30 = arith.index_cast %29 : vector<64xi32> to vector<64xindex>
-    %36 = vector.extractelement %30[%c0_i32 : index] : vector<64xindex>
+    %36 = vector.extract %30[%c0_i32] : index from vector<64xindex>
     %37 = vector.transfer_read %ar2[%c0, %36, %c0], %cst_6 {in_bounds = [true]} : memref<1x4x1024xf32>, vector<64xf32>
     gpu.yield %37 : vector<64xf32>
   }

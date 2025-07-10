@@ -3624,12 +3624,6 @@ def fir_LocalitySpecifierOp : fir_Op<"local", [IsolatedFromAbove]> {
       attr-dict
   }];
 
-  let builders = [
-    OpBuilder<(ins CArg<"mlir::TypeRange">:$result,
-                   CArg<"mlir::StringAttr">:$sym_name,
-                   CArg<"mlir::TypeAttr">:$type)>
-  ];
-
   let extraClassDeclaration = [{
     mlir::BlockArgument getInitMoldArg() {
       auto &region = getInitRegion();

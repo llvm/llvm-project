@@ -631,7 +631,7 @@ private:
     //
     // FIXME: We shouldn't need to do this, the target should be immutable once
     // created. This complexity should be lifted elsewhere.
-    Target->adjust(PP.getDiagnostics(), LangOpt);
+    Target->adjust(PP.getDiagnostics(), LangOpt, /*AuxTarget=*/nullptr);
 
     // Initialize the preprocessor.
     PP.Initialize(*Target);

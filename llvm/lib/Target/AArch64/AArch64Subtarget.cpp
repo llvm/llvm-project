@@ -664,6 +664,12 @@ AArch64Subtarget::getPtrAuthBlockAddressDiscriminatorIfEnabled(
       (Twine(ParentFn.getName()) + " blockaddress").str());
 }
 
+bool AArch64Subtarget::isX16X17Safer() const {
+  // The Darwin kernel implements special protections for x16 and x17 so we
+  // should prefer to use those registers on that platform.
+  return isTargetDarwin();
+}
+
 bool AArch64Subtarget::enableMachinePipeliner() const {
   return getSchedModel().hasInstrSchedModel();
 }

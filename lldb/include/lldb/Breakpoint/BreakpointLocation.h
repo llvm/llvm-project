@@ -69,7 +69,7 @@ public:
   // The next section deals with various breakpoint options.
 
   /// If \a enabled is \b true, enable the breakpoint, if \b false disable it.
-  bool SetEnabled(bool enabled);
+  llvm::Error SetEnabled(bool enabled);
 
   /// Check the Enable/Disable state.
   ///
@@ -163,19 +163,11 @@ public:
   // The next section deals with this location's breakpoint sites.
 
   /// Try to resolve the breakpoint site for this location.
-  ///
-  /// \return
-  ///     \b true if we were successful at setting a breakpoint site,
-  ///     \b false otherwise.
-  bool ResolveBreakpointSite();
+  llvm::Error ResolveBreakpointSite();
 
   /// Clear this breakpoint location's breakpoint site - for instance when
   /// disabling the breakpoint.
-  ///
-  /// \return
-  ///     \b true if there was a breakpoint site to be cleared, \b false
-  ///     otherwise.
-  bool ClearBreakpointSite();
+  llvm::Error ClearBreakpointSite();
 
   /// Return whether this breakpoint location has a breakpoint site. \return
   ///     \b true if there was a breakpoint site for this breakpoint

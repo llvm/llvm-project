@@ -9,9 +9,9 @@ define void @test() {
 ; CHECK:       body:
 ; CHECK-NEXT:    [[PHI1:%.*]] = phi double [ 0.000000e+00, [[ENTRY:%.*]] ], [ 0.000000e+00, [[BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x double> [ zeroinitializer, [[ENTRY]] ], [ zeroinitializer, [[BODY]] ]
-; CHECK-NEXT:    [[MUL_I478_I:%.*]] = fmul fast double [[PHI1]], 0.000000e+00
-; CHECK-NEXT:    [[MUL7_I485_I:%.*]] = fmul fast double undef, 0.000000e+00
-; CHECK-NEXT:    [[ADD8_I_I:%.*]] = fadd fast double [[MUL_I478_I]], [[MUL7_I485_I]]
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[PHI1]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast <2 x double> <double 0.000000e+00, double undef>, [[TMP8]]
+; CHECK-NEXT:    [[ADD8_I_I:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP9]])
 ; CHECK-NEXT:    [[CMP42_I:%.*]] = fcmp fast ole double [[ADD8_I_I]], 0.000000e+00
 ; CHECK-NEXT:    br i1 false, label [[BODY]], label [[EXIT:%.*]]
 ; CHECK:       exit:

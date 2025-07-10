@@ -253,6 +253,8 @@ add_library_flags("${LIBCXXABI_ADDITIONAL_LIBRARIES}")
 # Configure compiler. Must happen after setting the target flags.
 include(config-ix)
 
+include(HandleLibC) # Setup the C library flags
+
 if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
   list(APPEND LIBCXXABI_COMPILE_FLAGS -nostdinc++)
   # cmake 3.14 and above remove system include paths that are explicitly

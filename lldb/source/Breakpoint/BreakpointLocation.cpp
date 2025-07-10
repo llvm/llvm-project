@@ -45,7 +45,9 @@ BreakpointLocation::BreakpointLocation(break_id_t loc_id, Breakpoint &owner,
   SetThreadIDInternal(tid);
 }
 
-BreakpointLocation::~BreakpointLocation() { ClearBreakpointSite(); }
+BreakpointLocation::~BreakpointLocation() {
+  llvm::consumeError(ClearBreakpointSite());
+}
 
 lldb::addr_t BreakpointLocation::GetLoadAddress() const {
   return m_address.GetOpcodeLoadAddress(&m_owner.GetTarget());
@@ -72,13 +74,12 @@ bool BreakpointLocation::IsEnabled() const {
   return true;
 }
 
-bool BreakpointLocation::SetEnabled(bool enabled) {
+llvm::Error BreakpointLocation::SetEnabled(bool enabled) {
   GetLocationOptions().SetEnabled(enabled);
-  const bool success =
-      enabled ? ResolveBreakpointSite() : ClearBreakpointSite();
+  llvm::Error error = enabled ? ResolveBreakpointSite() : ClearBreakpointSite();
   SendBreakpointLocationChangedEvent(enabled ? eBreakpointEventTypeEnabled
                                              : eBreakpointEventTypeDisabled);
-  return success;
+  return error;
 }
 
 bool BreakpointLocation::IsAutoContinue() const {
@@ -422,25 +423,27 @@ lldb::BreakpointSiteSP BreakpointLocation::GetBreakpointSite() const {
   return m_bp_site_sp;
 }
 
-bool BreakpointLocation::ResolveBreakpointSite() {
+llvm::Error BreakpointLocation::ResolveBreakpointSite() {
   if (m_bp_site_sp)
-    return true;
+    return llvm::Error::success();
 
   Process *process = m_owner.GetTarget().GetProcessSP().get();
   if (process == nullptr)
-    return false;
+    return llvm::createStringError("no process");
 
   lldb::break_id_t new_id =
       process->CreateBreakpointSite(shared_from_this(), m_owner.IsHardware());
 
-  if (new_id == LLDB_INVALID_BREAK_ID) {
-    LLDB_LOGF(GetLog(LLDBLog::Breakpoints),
-              "Failed to add breakpoint site at 0x%" PRIx64 "(resolved=%s)",
-              m_address.GetOpcodeLoadAddress(&m_owner.GetTarget()),
-              IsResolved() ? "yes" : "no");
-  }
+  if (new_id == LLDB_INVALID_BREAK_ID)
+    return llvm::createStringError(
+        llvm::formatv("Failed to add breakpoint site at {0:x}",
+                      m_address.GetOpcodeLoadAddress(&m_owner.GetTarget())));
 
-  return IsResolved();
+  if (!IsResolved())
+    return llvm::createStringError(
+        "breakpoint site created but location is still unresolved");
+
+  return llvm::Error::success();
 }
 
 bool BreakpointLocation::SetBreakpointSite(BreakpointSiteSP &bp_site_sp) {
@@ -449,22 +452,21 @@ bool BreakpointLocation::SetBreakpointSite(BreakpointSiteSP &bp_site_sp) {
   return true;
 }
 
-bool BreakpointLocation::ClearBreakpointSite() {
-  if (m_bp_site_sp.get()) {
-    ProcessSP process_sp(m_owner.GetTarget().GetProcessSP());
-    // If the process exists, get it to remove the owner, it will remove the
-    // physical implementation of the breakpoint as well if there are no more
-    // owners.  Otherwise just remove this owner.
-    if (process_sp)
-      process_sp->RemoveConstituentFromBreakpointSite(GetBreakpoint().GetID(),
-                                                      GetID(), m_bp_site_sp);
-    else
-      m_bp_site_sp->RemoveConstituent(GetBreakpoint().GetID(), GetID());
+llvm::Error BreakpointLocation::ClearBreakpointSite() {
+  if (!m_bp_site_sp)
+    return llvm::createStringError("no breakpoint site to clear");
 
-    m_bp_site_sp.reset();
-    return true;
-  }
-  return false;
+  // If the process exists, get it to remove the owner, it will remove the
+  // physical implementation of the breakpoint as well if there are no more
+  // owners.  Otherwise just remove this owner.
+  if (ProcessSP process_sp = m_owner.GetTarget().GetProcessSP())
+    process_sp->RemoveConstituentFromBreakpointSite(GetBreakpoint().GetID(),
+                                                    GetID(), m_bp_site_sp);
+  else
+    m_bp_site_sp->RemoveConstituent(GetBreakpoint().GetID(), GetID());
+
+  m_bp_site_sp.reset();
+  return llvm::Error::success();
 }
 
 void BreakpointLocation::GetDescription(Stream *s,

@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/TilingInterface.h"
@@ -60,8 +61,7 @@ template <typename Range>
 static LogicalResult
 applyTileAndFuseToAll(RewriterBase &rewriter, Operation *transformOp,
                       Range &&payloadOps, unsigned numLoops,
-                      ArrayRef<OpFoldResult> tileSizes,
-                      ArrayRef<int64_t> interchange, bool useForall,
+                      scf::SCFTilingOptions tilingOptions,
                       TransformResults &transformResults) {
   SmallVector<Operation *> tiledOps;
   SmallVector<SmallVector<Operation *>> loopOps(numLoops);
@@ -81,12 +81,6 @@ applyTileAndFuseToAll(RewriterBase &rewriter, Operation *transformOp,
           })) {
         yieldReplacementsFor.insert(op);
       }
-    }
-
-    scf::SCFTilingOptions tilingOptions;
-    tilingOptions.setTileSizes(tileSizes).setInterchange(interchange);
-    if (useForall) {
-      tilingOptions.setLoopType(scf::SCFTilingOptions::LoopType::ForallOp);
     }
 
     scf::SCFTileAndFuseOptions tileAndFuseOptions;
@@ -157,10 +151,16 @@ transform::TestFuseAndYieldOp::apply(TransformRewriter &rewriter,
   SmallVector<OpFoldResult> tileSizesOfr =
       getAsIndexOpFoldResult(rewriter.getContext(), tileSizes);
 
+  scf::SCFTilingOptions tilingOptions;
+  tilingOptions.setTileSizes(tileSizesOfr).setInterchange(tileInterchange);
+  if (getUseForall()) {
+    tilingOptions.setLoopType(scf::SCFTilingOptions::LoopType::ForallOp);
+  }
+
   LogicalResult result = applyTileAndFuseToAll(
       rewriter, getOperation(), state.getPayloadOps(getTarget()),
-      tileSizes.size() - llvm::count(tileSizes, 0), tileSizesOfr,
-      tileInterchange, getUseForall(), transformResults);
+      tileSizes.size() - llvm::count(tileSizes, 0), tilingOptions,
+      transformResults);
   return failed(result) ? DiagnosedSilenceableFailure::definiteFailure()
                         : DiagnosedSilenceableFailure::success();
 }
@@ -397,6 +397,75 @@ void transform::TestFuseUsingForallOp::getEffects(
   consumesHandle(getRootOpMutable(), effects);
   producesHandle(getOperation()->getOpResults(), effects);
   modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
+// TestTileAndFuseOuterParallelPartialReduction
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::TestTileAndFuseOuterParallelPartialReductionOp::apply(
+    TransformRewriter &rewriter, TransformResults &transformResults,
+    TransformState &state) {
+  auto target =
+      dyn_cast<TilingInterface>(*state.getPayloadOps(getRootOp()).begin());
+  if (!target) {
+    emitOpError("expected root operation to implement `TilingInterface`");
+    return DiagnosedSilenceableFailure::definiteFailure();
+  }
+
+  SmallVector<unsigned> reductionDims =
+      extractFromIntegerArrayAttr<unsigned>(getReductionDims());
+  if (reductionDims.empty()) {
+    for (auto [index, iterator] :
+         llvm::enumerate(target.getLoopIteratorTypes()))
+      if (iterator == utils::IteratorType::reduction)
+        reductionDims.push_back(index);
+  }
+
+  if (reductionDims.empty()) {
+    emitOpError(
+        "no reduction dimension specified or found in the target operation");
+    return DiagnosedSilenceableFailure::definiteFailure();
+  }
+
+  SmallVector<int64_t> reductionTileSizes =
+      extractFromIntegerArrayAttr<int64_t>(getTileSizes());
+  if (reductionTileSizes.size() != reductionDims.size()) {
+    emitOpError(
+        "missing tile sizes for reduction dimensions that are to be tiled");
+    return DiagnosedSilenceableFailure::definiteFailure();
+  }
+
+  // Adjust tile sizes so that it corresponds to the reduction iterator types.
+  SmallVector<OpFoldResult> tileSizes;
+  int reductionTileSizeNum = 0;
+  OpFoldResult zero = rewriter.getIndexAttr(0);
+  for (auto iterator : target.getLoopIteratorTypes()) {
+    if (iterator == utils::IteratorType::parallel) {
+      tileSizes.push_back(zero);
+      continue;
+    }
+    tileSizes.push_back(
+        rewriter.getIndexAttr(reductionTileSizes[reductionTileSizeNum++]));
+  }
+
+  scf::SCFTilingOptions tilingOptions;
+  tilingOptions.setTileSizes(tileSizes)
+      .setLoopType(scf::SCFTilingOptions::LoopType::ForallOp)
+      .setReductionTilingStrategy(
+          ReductionTilingStrategy::PartialReductionOuterParallel)
+      .setReductionDims(reductionDims);
+  if (auto mapping = getMapping()) {
+    tilingOptions.setMapping(getMapping().value());
+  }
+
+  LogicalResult result = applyTileAndFuseToAll(
+      rewriter, getOperation(), state.getPayloadOps(getRootOp()),
+      /*numLoops =*/1, tilingOptions, transformResults);
+
+  return failed(result) ? DiagnosedSilenceableFailure::definiteFailure()
+                        : DiagnosedSilenceableFailure::success();
 }
 
 #define GET_OP_CLASSES

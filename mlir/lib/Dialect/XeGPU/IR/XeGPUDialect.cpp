@@ -129,9 +129,7 @@ LogicalResult ScatterTensorDescAttr::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
     MemorySpaceAttr memory_space, IntegerAttr chunk_size) {
   int64_t chunkSize = chunk_size.getInt();
-  SmallVector<int64_t> supportedChunkSizes = {1,  2,  3,  4,   8,
-                                              16, 32, 64, 128, 256};
-  if (!llvm::is_contained(supportedChunkSizes, chunkSize))
+  if (chunkSize <= 0)
     return emitError() << "invalid chunk size";
 
   return success();
@@ -310,15 +308,16 @@ LogicalResult TensorDescType::verify(
     llvm::ArrayRef<int64_t> shape, mlir::Type elementType,
     mlir::Attribute encoding, mlir::Attribute layout) {
   size_t rank = shape.size();
-  if (rank != 1 && rank != 2)
-    return emitError() << "expected 1D or 2D tensor";
+
+  if (rank == 0)
+    return emitError() << "expected non-zero rank tensor";
 
   auto blockAttr = mlir::dyn_cast_if_present<BlockTensorDescAttr>(encoding);
   if (blockAttr) {
     MemorySpaceAttr memorySpaceAttr = blockAttr.getMemorySpace();
-    if (rank == 2 && memorySpaceAttr &&
+    if (rank > 1 && memorySpaceAttr &&
         memorySpaceAttr.getValue() == MemorySpace::SLM)
-      return emitError() << "SLM is not supported for 2D block tensor";
+      return emitError() << "SLM is only supported for 1D block tensor";
   }
 
   // for gather and scatter ops, Low-precision types are packed in 32-bit units.
@@ -329,22 +328,18 @@ LogicalResult TensorDescType::verify(
           : 1;
   auto scatterAttr = mlir::dyn_cast_if_present<ScatterTensorDescAttr>(encoding);
   if (scatterAttr) {
-    // Expected tensor ranks for scattered data:
-    //   - 1D tensor for fully non-contiguous elements (chunk size == 1)
-    //   - 2D tensor for scattered blocks (chunk size > 1)
-    unsigned chunkSize = scatterAttr.getChunkSize().getInt();
+    int64_t chunkSize = scatterAttr.getChunkSizeAsInt();
     if (rank == 1 && chunkSize != 1)
       return emitError() << "expected non-contiguous elements for 1D tensor";
-    if (rank == 2 && chunkSize < 2)
-      return emitError() << "expected chunk blocks for 2D tensor";
+
     // If chunk size > 1, the second dimension of the tensor shape must be
-    // equal to chunk size and it must be a multiple of the packing factor.
+    // equal to chunk size and it must be a multiple of the
+    // chunkAlignmentFactor.
     if (chunkSize > 1) {
       if (shape.back() != chunkSize)
-        return emitError() << "expected tensor shape[1] to match chunk size";
+        return emitError() << "expected last dim of tensor to match chunk size";
       if (shape.back() % chunkAlignmentFactor != 0)
-        return emitError() << "expected tensor shape[1] to be a multiple of "
-                              "chunk alignment factor "
+        return emitError() << "expected last dim of tensor to be a multiple of "
                            << chunkAlignmentFactor;
     }
   }
@@ -357,17 +352,13 @@ LogicalResult TensorDescType::verify(
     auto laneData = layoutAttr.getLaneData();
     if (scatterAttr && laneData) {
       // Validate subgroup mapping rules for scattered tensors.
-      // A work-item's slice of the tensor with shape [sg_size] or
-      // [sg_size, chunk_size] will be [1] or [1, 32/element_ty_bit_width]
-      // respectively, the mapping should reflect that. This is because each
-      // work item access data in 32 bit granularity.
-
-      if (rank > 1 && laneData[0] != 1)
+      // if chunkSize > 1, the last dimension of the tensor should
+      // be distributed in the units divisible by chunkAlignmentFactor.
+      int64_t chunkSize = scatterAttr.getChunkSizeAsInt();
+      if (chunkSize > 1 && laneData[rank - 1] % chunkAlignmentFactor)
         return emitError()
-               << "cannot map over non-contiguous scattered row elements";
-      if (laneData[rank - 1] != chunkAlignmentFactor)
-        return emitError() << "work item data mapping must match the number of "
-                              "contiguous elements";
+               << "expected last dim of lane_data to be a multiple of: "
+               << chunkAlignmentFactor;
     }
 
     if (!XeGPUDialect::isEvenlyDistributable(shape, layoutAttr)) {

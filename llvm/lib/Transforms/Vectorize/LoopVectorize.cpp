@@ -399,12 +399,6 @@ static cl::opt<bool> EnableEarlyExitVectorization(
     cl::desc(
         "Enable vectorization of early exit loops with uncountable exits."));
 
-// Likelyhood of bypassing the vectorized loop because assumptions about SCEV
-// variables not overflowing do not hold. See `emitSCEVChecks`.
-static constexpr uint32_t SCEVCheckBypassWeights[] = {1, 127};
-// Likelyhood of bypassing the vectorized loop because pointers overlap. See
-// `emitMemRuntimeChecks`.
-static constexpr uint32_t MemCheckBypassWeights[] = {1, 127};
 // Likelyhood of bypassing the vectorized loop because there are zero trips left
 // after prolog. See `emitIterationCountCheck`.
 static constexpr uint32_t MinItersBypassWeights[] = {1, 127};
@@ -544,16 +538,6 @@ protected:
   /// it overflows.
   void emitIterationCountCheck(BasicBlock *Bypass);
 
-  /// Emit a bypass check to see if all of the SCEV assumptions we've
-  /// had to make are correct. Returns the block containing the checks or
-  /// nullptr if no checks have been added.
-  BasicBlock *emitSCEVChecks(BasicBlock *Bypass);
-
-  /// Emit bypass checks to check any memory assumptions we may have made.
-  /// Returns the block containing the checks or nullptr if no checks have been
-  /// added.
-  BasicBlock *emitMemRuntimeChecks(BasicBlock *Bypass);
-
   /// Emit basic blocks (prefixed with \p Prefix) for the iteration check,
   /// vector loop preheader, middle block and scalar preheader.
   void createVectorLoopSkeleton(StringRef Prefix);
@@ -657,8 +641,6 @@ struct EpilogueLoopVectorizationInfo {
   unsigned EpilogueUF = 0;
   BasicBlock *MainLoopIterationCountCheck = nullptr;
   BasicBlock *EpilogueIterationCountCheck = nullptr;
-  BasicBlock *SCEVSafetyCheck = nullptr;
-  BasicBlock *MemSafetyCheck = nullptr;
   Value *TripCount = nullptr;
   Value *VectorTripCount = nullptr;
   VPlan &EpiloguePlan;
@@ -1786,7 +1768,6 @@ class GeneratedRTChecks {
   SCEVExpander MemCheckExp;
 
   bool CostTooHigh = false;
-  const bool AddBranchWeights;
 
   Loop *OuterLoop = nullptr;
 
@@ -1798,11 +1779,10 @@ class GeneratedRTChecks {
 public:
   GeneratedRTChecks(PredicatedScalarEvolution &PSE, DominatorTree *DT,
                     LoopInfo *LI, TargetTransformInfo *TTI,
-                    const DataLayout &DL, bool AddBranchWeights,
-                    TTI::TargetCostKind CostKind)
+                    const DataLayout &DL, TTI::TargetCostKind CostKind)
       : DT(DT), LI(LI), TTI(TTI), SCEVExp(*PSE.getSE(), DL, "scev.check"),
-        MemCheckExp(*PSE.getSE(), DL, "scev.check"),
-        AddBranchWeights(AddBranchWeights), PSE(PSE), CostKind(CostKind) {}
+        MemCheckExp(*PSE.getSE(), DL, "scev.check"), PSE(PSE),
+        CostKind(CostKind) {}
 
   /// Generate runtime checks in SCEVCheckBlock and MemCheckBlock, so we can
   /// accurately estimate the cost of the runtime checks. The blocks are
@@ -2019,56 +1999,20 @@ public:
       MemCheckBlock->eraseFromParent();
   }
 
-  /// Adds the generated SCEVCheckBlock before \p LoopVectorPreHeader and
-  /// adjusts the branches to branch to the vector preheader or \p Bypass,
-  /// depending on the generated condition.
-  BasicBlock *emitSCEVChecks(BasicBlock *Bypass,
-                             BasicBlock *LoopVectorPreHeader) {
+  /// Retrieves the SCEVCheckCond and SCEVCheckBlock that were generated as IR
+  /// outside VPlan.
+  std::pair<Value *, BasicBlock *> getSCEVChecks() {
     using namespace llvm::PatternMatch;
     if (!SCEVCheckCond || match(SCEVCheckCond, m_ZeroInt()))
-      return nullptr;
+      return {nullptr, nullptr};
 
-    auto *Pred = LoopVectorPreHeader->getSinglePredecessor();
-    BranchInst::Create(LoopVectorPreHeader, SCEVCheckBlock);
-
-    SCEVCheckBlock->getTerminator()->eraseFromParent();
-    SCEVCheckBlock->moveBefore(LoopVectorPreHeader);
-    Pred->getTerminator()->replaceSuccessorWith(LoopVectorPreHeader,
-                                                SCEVCheckBlock);
-
-    BranchInst &BI =
-        *BranchInst::Create(Bypass, LoopVectorPreHeader, SCEVCheckCond);
-    if (AddBranchWeights)
-      setBranchWeights(BI, SCEVCheckBypassWeights, /*IsExpected=*/false);
-    ReplaceInstWithInst(SCEVCheckBlock->getTerminator(), &BI);
-    return SCEVCheckBlock;
+    return {SCEVCheckCond, SCEVCheckBlock};
   }
 
-  /// Adds the generated MemCheckBlock before \p LoopVectorPreHeader and adjusts
-  /// the branches to branch to the vector preheader or \p Bypass, depending on
-  /// the generated condition.
-  BasicBlock *emitMemRuntimeChecks(BasicBlock *Bypass,
-                                   BasicBlock *LoopVectorPreHeader) {
-    // Check if we generated code that checks in runtime if arrays overlap.
-    if (!MemRuntimeCheckCond)
-      return nullptr;
-
-    auto *Pred = LoopVectorPreHeader->getSinglePredecessor();
-    Pred->getTerminator()->replaceSuccessorWith(LoopVectorPreHeader,
-                                                MemCheckBlock);
-
-    MemCheckBlock->moveBefore(LoopVectorPreHeader);
-
-    BranchInst &BI =
-        *BranchInst::Create(Bypass, LoopVectorPreHeader, MemRuntimeCheckCond);
-    if (AddBranchWeights) {
-      setBranchWeights(BI, MemCheckBypassWeights, /*IsExpected=*/false);
-    }
-    ReplaceInstWithInst(MemCheckBlock->getTerminator(), &BI);
-    MemCheckBlock->getTerminator()->setDebugLoc(
-        Pred->getTerminator()->getDebugLoc());
-
-    return MemCheckBlock;
+  /// Retrieves the MemCheckCond and MemCheckBlock that were generated as IR
+  /// outside VPlan.
+  std::pair<Value *, BasicBlock *> getMemRuntimeChecks() {
+    return {MemRuntimeCheckCond, MemCheckBlock};
   }
 
   /// Return true if any runtime checks have been added
@@ -2461,53 +2405,6 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
          "Plan's entry must be TCCCheckBlock");
 }
 
-BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
-  BasicBlock *const SCEVCheckBlock =
-      RTChecks.emitSCEVChecks(Bypass, LoopVectorPreHeader);
-  if (!SCEVCheckBlock)
-    return nullptr;
-
-  assert((!Cost->OptForSize ||
-          Cost->Hints->getForce() == LoopVectorizeHints::FK_Enabled) &&
-         "Cannot SCEV check stride or overflow when optimizing for size");
-
-  introduceCheckBlockInVPlan(SCEVCheckBlock);
-  return SCEVCheckBlock;
-}
-
-BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(BasicBlock *Bypass) {
-  BasicBlock *const MemCheckBlock =
-      RTChecks.emitMemRuntimeChecks(Bypass, LoopVectorPreHeader);
-
-  // Check if we generated code that checks in runtime if arrays overlap. We put
-  // the checks into a separate block to make the more common case of few
-  // elements faster.
-  if (!MemCheckBlock)
-    return nullptr;
-
-  // VPlan-native path does not do any analysis for runtime checks currently.
-  assert((!EnableVPlanNativePath || OrigLoop->begin() == OrigLoop->end()) &&
-         "Runtime checks are not supported for outer loops yet");
-
-  if (Cost->OptForSize) {
-    assert(Cost->Hints->getForce() == LoopVectorizeHints::FK_Enabled &&
-           "Cannot emit memory checks when optimizing for size, unless forced "
-           "to vectorize.");
-    ORE->emit([&]() {
-      return OptimizationRemarkAnalysis(DEBUG_TYPE, "VectorizationCodeSize",
-                                        OrigLoop->getStartLoc(),
-                                        OrigLoop->getHeader())
-             << "Code-size may be reduced by not forcing "
-                "vectorization, or by source-code modifications "
-                "eliminating the need for runtime checks "
-                "(e.g., adding 'restrict').";
-    });
-  }
-
-  introduceCheckBlockInVPlan(MemCheckBlock);
-  return MemCheckBlock;
-}
-
 /// Replace \p VPBB with a VPIRBasicBlock wrapping \p IRBB. All recipes from \p
 /// VPBB are moved to the end of the newly created VPIRBasicBlock. VPBB must
 /// have a single predecessor, which is rewired to the new VPIRBasicBlock. All
@@ -2623,15 +2520,6 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   // to an incorrect trip count of zero. In this (rare) case we will also jump
   // to the scalar loop.
   emitIterationCountCheck(LoopScalarPreHeader);
-
-  // Generate the code to check any assumptions that we've made for SCEV
-  // expressions.
-  emitSCEVChecks(LoopScalarPreHeader);
-
-  // Generate the code that checks in runtime if arrays overlap. We put the
-  // checks into a separate block to make the more common case of few elements
-  // faster.
-  emitMemRuntimeChecks(LoopScalarPreHeader);
 
   replaceVPBBWithIRVPBB(Plan.getScalarPreheader(), LoopScalarPreHeader);
   return LoopVectorPreHeader;
@@ -7323,11 +7211,22 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
                            OrigLoop->getHeader()->getContext());
   VPlanTransforms::runPass(VPlanTransforms::replicateByVF, BestVPlan, BestVF);
   VPlanTransforms::runPass(VPlanTransforms::materializeBroadcasts, BestVPlan);
-  if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())) {
+  bool HasBranchWeights =
+      hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator());
+  if (HasBranchWeights) {
     std::optional<unsigned> VScale = CM.getVScaleForTuning();
     VPlanTransforms::runPass(VPlanTransforms::addBranchWeightToMiddleTerminator,
                              BestVPlan, BestVF, VScale);
   }
+
+  if (!VectorizingEpilogue) {
+    // Checks are the same for all VPlans, added to BestVPlan only for
+    // compactness.
+    attachRuntimeChecks(BestVPlan, ILV.RTChecks, HasBranchWeights);
+  }
+
+  // Retrieving VectorPH now when it's easier while VPlan still has Regions.
+  VPBasicBlock *VectorPH = cast<VPBasicBlock>(BestVPlan.getVectorPreheader());
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
   VPlanTransforms::simplifyRecipes(BestVPlan, *Legal->getWidestInductionType());
   VPlanTransforms::narrowInterleaveGroups(
@@ -7375,7 +7274,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // 1. Set up the skeleton for vectorization, including vector pre-header and
   // middle block. The vector loop is created during VPlan execution.
-  VPBasicBlock *VectorPH = cast<VPBasicBlock>(Entry->getSuccessors()[1]);
+  BasicBlock *EntryBB =
+      cast<VPIRBasicBlock>(BestVPlan.getEntry())->getIRBasicBlock();
   State.CFG.PrevBB = ILV.createVectorizedLoopSkeleton();
   if (VectorizingEpilogue)
     VPlanTransforms::removeDeadRecipes(BestVPlan);
@@ -7398,6 +7298,13 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       ILV.getTripCount(),
       ILV.getOrCreateVectorTripCount(ILV.LoopVectorPreHeader), State);
   replaceVPBBWithIRVPBB(VectorPH, State.CFG.PrevBB);
+
+  // Move check blocks to their final position.
+  // TODO: Move as part of VPIRBB execute and update impacted tests.
+  if (BasicBlock *MemCheckBlock = ILV.RTChecks.getMemRuntimeChecks().second)
+    MemCheckBlock->moveAfter(EntryBB);
+  if (BasicBlock *SCEVCheckBlock = ILV.RTChecks.getSCEVChecks().second)
+    SCEVCheckBlock->moveAfter(EntryBB);
 
   BestVPlan.execute(&State);
 
@@ -7498,15 +7405,6 @@ BasicBlock *EpilogueVectorizerMainLoop::createEpilogueVectorizedLoopSkeleton() {
   EPI.EpilogueIterationCountCheck =
       emitIterationCountCheck(LoopScalarPreHeader, true);
   EPI.EpilogueIterationCountCheck->setName("iter.check");
-
-  // Generate the code to check any assumptions that we've made for SCEV
-  // expressions.
-  EPI.SCEVSafetyCheck = emitSCEVChecks(LoopScalarPreHeader);
-
-  // Generate the code that checks at runtime if arrays overlap. We put the
-  // checks into a separate block to make the more common case of few elements
-  // faster.
-  EPI.MemSafetyCheck = emitMemRuntimeChecks(LoopScalarPreHeader);
 
   // Generate the iteration count check for the main loop, *after* the check
   // for the epilogue loop, so that the path-length is shorter for the case
@@ -7611,11 +7509,14 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton() {
   EPI.EpilogueIterationCountCheck->getTerminator()->replaceUsesOfWith(
       VecEpilogueIterationCountCheck, LoopScalarPreHeader);
 
-  if (EPI.SCEVSafetyCheck)
-    EPI.SCEVSafetyCheck->getTerminator()->replaceUsesOfWith(
+  // Adjust the terminators of runtime check blocks and phis using them.
+  BasicBlock *SCEVCheckBlock = RTChecks.getSCEVChecks().second;
+  BasicBlock *MemCheckBlock = RTChecks.getMemRuntimeChecks().second;
+  if (SCEVCheckBlock)
+    SCEVCheckBlock->getTerminator()->replaceUsesOfWith(
         VecEpilogueIterationCountCheck, LoopScalarPreHeader);
-  if (EPI.MemSafetyCheck)
-    EPI.MemSafetyCheck->getTerminator()->replaceUsesOfWith(
+  if (MemCheckBlock)
+    MemCheckBlock->getTerminator()->replaceUsesOfWith(
         VecEpilogueIterationCountCheck, LoopScalarPreHeader);
 
   DT->changeImmediateDominator(LoopScalarPreHeader,
@@ -7642,10 +7543,10 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton() {
         }))
       continue;
     Phi->removeIncomingValue(EPI.EpilogueIterationCountCheck);
-    if (EPI.SCEVSafetyCheck)
-      Phi->removeIncomingValue(EPI.SCEVSafetyCheck);
-    if (EPI.MemSafetyCheck)
-      Phi->removeIncomingValue(EPI.MemSafetyCheck);
+    if (SCEVCheckBlock)
+      Phi->removeIncomingValue(SCEVCheckBlock);
+    if (MemCheckBlock)
+      Phi->removeIncomingValue(MemCheckBlock);
   }
 
   replaceVPBBWithIRVPBB(Plan.getScalarPreheader(), LoopScalarPreHeader);
@@ -9380,6 +9281,43 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
   VPlanTransforms::runPass(VPlanTransforms::clearReductionWrapFlags, *Plan);
 }
 
+void LoopVectorizationPlanner::attachRuntimeChecks(
+    VPlan &Plan, GeneratedRTChecks &RTChecks, bool HasBranchWeights) const {
+  const auto &[SCEVCheckCond, SCEVCheckBlock] = RTChecks.getSCEVChecks();
+  if (SCEVCheckBlock) {
+    assert((!CM.OptForSize ||
+            CM.Hints->getForce() == LoopVectorizeHints::FK_Enabled) &&
+           "Cannot SCEV check stride or overflow when optimizing for size");
+    VPlanTransforms::attachCheckBlock(Plan, SCEVCheckCond, SCEVCheckBlock,
+                                      HasBranchWeights);
+  }
+  const auto &[MemCheckCond, MemCheckBlock] = RTChecks.getMemRuntimeChecks();
+  if (MemCheckBlock) {
+    // VPlan-native path does not do any analysis for runtime checks
+    // currently.
+    assert((!EnableVPlanNativePath || OrigLoop->isInnermost()) &&
+           "Runtime checks are not supported for outer loops yet");
+
+    if (CM.OptForSize) {
+      assert(
+          CM.Hints->getForce() == LoopVectorizeHints::FK_Enabled &&
+          "Cannot emit memory checks when optimizing for size, unless forced "
+          "to vectorize.");
+      ORE->emit([&]() {
+        return OptimizationRemarkAnalysis(DEBUG_TYPE, "VectorizationCodeSize",
+                                          OrigLoop->getStartLoc(),
+                                          OrigLoop->getHeader())
+               << "Code-size may be reduced by not forcing "
+                  "vectorization, or by source-code modifications "
+                  "eliminating the need for runtime checks "
+                  "(e.g., adding 'restrict').";
+      });
+    }
+    VPlanTransforms::attachCheckBlock(Plan, MemCheckCond, MemCheckBlock,
+                                      HasBranchWeights);
+  }
+}
+
 void VPDerivedIVRecipe::execute(VPTransformState &State) {
   assert(!State.Lane && "VPDerivedIVRecipe being replicated.");
 
@@ -9501,10 +9439,7 @@ static bool processLoopInVPlanNativePath(
   VPlan &BestPlan = LVP.getPlanFor(VF.Width);
 
   {
-    bool AddBranchWeights =
-        hasBranchWeightMD(*L->getLoopLatch()->getTerminator());
-    GeneratedRTChecks Checks(PSE, DT, LI, TTI, F->getDataLayout(),
-                             AddBranchWeights, CM.CostKind);
+    GeneratedRTChecks Checks(PSE, DT, LI, TTI, F->getDataLayout(), CM.CostKind);
     InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width,
                            VF.Width, 1, &CM, BFI, PSI, Checks, BestPlan);
     LLVM_DEBUG(dbgs() << "Vectorizing outer loop in \""
@@ -10142,10 +10077,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (ORE->allowExtraAnalysis(LV_NAME))
     LVP.emitInvalidCostRemarks(ORE);
 
-  bool AddBranchWeights =
-      hasBranchWeightMD(*L->getLoopLatch()->getTerminator());
-  GeneratedRTChecks Checks(PSE, DT, LI, TTI, F->getDataLayout(),
-                           AddBranchWeights, CM.CostKind);
+  GeneratedRTChecks Checks(PSE, DT, LI, TTI, F->getDataLayout(), CM.CostKind);
   if (LVP.hasPlanWithVF(VF.Width)) {
     // Select the interleave count.
     IC = CM.selectInterleaveCount(LVP.getPlanFor(VF.Width), VF.Width, VF.Cost);

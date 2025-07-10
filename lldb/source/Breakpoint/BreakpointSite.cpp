@@ -33,9 +33,8 @@ BreakpointSite::BreakpointSite(const BreakpointLocationSP &constituent,
 BreakpointSite::~BreakpointSite() {
   BreakpointLocationSP bp_loc_sp;
   const size_t constituent_count = m_constituents.GetSize();
-  for (size_t i = 0; i < constituent_count; i++) {
-    m_constituents.GetByIndex(i)->ClearBreakpointSite();
-  }
+  for (size_t i = 0; i < constituent_count; i++)
+    llvm::consumeError(m_constituents.GetByIndex(i)->ClearBreakpointSite());
 }
 
 break_id_t BreakpointSite::GetNextID() {

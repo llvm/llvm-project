@@ -27,10 +27,11 @@ bool verifyRootFlag(uint32_t Flags);
 bool verifyVersion(uint32_t Version);
 bool verifyRegisterValue(uint32_t RegisterValue);
 bool verifyRegisterSpace(uint32_t RegisterSpace);
-bool verifyDescriptorFlag(uint32_t Flags);
+bool verifyRootDescriptorFlag(uint32_t Version, uint32_t FlagsVal);
 bool verifyRangeType(uint32_t Type);
 bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
                                uint32_t FlagsVal);
+bool verifyNumDescriptors(uint32_t NumDescriptors);
 bool verifySamplerFilter(uint32_t Value);
 bool verifyAddress(uint32_t Address);
 bool verifyMipLODBias(float MipLODBias);

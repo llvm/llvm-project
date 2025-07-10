@@ -15,6 +15,7 @@
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -826,6 +827,9 @@ const internal::VariadicDynCastAllOfMatcher<Decl, CXXMethodDecl> cxxMethodDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, CXXConversionDecl>
     cxxConversionDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, ConceptDecl> conceptDecl;
+const internal::VariadicDynCastAllOfMatcher<Expr, RequiresExpr> requiresExpr;
+const internal::VariadicDynCastAllOfMatcher<Decl, RequiresExprBodyDecl>
+    requiresExprBodyDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, VarDecl> varDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, FieldDecl> fieldDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, IndirectFieldDecl>

@@ -502,17 +502,18 @@ LogicalResult GatherToLDSOp::verify() {
   if (elemType != dstType.getElementType())
     return emitOpError("source and destination element types must match");
 
-  // copy type sizes should be 1, 2, or 4 bytes.
+  // copy type sizes should be 1, 2, 4, 12 or 16 bytes.
   auto transferType = getTransferType();
-  size_t transferSize;
+  int transferSize;
   if (auto vectorTransfer = dyn_cast<VectorType>(transferType)) {
     transferSize = vectorTransfer.getNumElements() *
                    vectorTransfer.getElementTypeBitWidth();
   } else {
     transferSize = transferType.getIntOrFloatBitWidth();
   }
-  if (transferSize != 8 && transferSize != 16 && transferSize != 32)
-    return emitOpError("Transfering type size must be 8, 16, or 32 bits");
+  if (!llvm::is_contained({8, 16, 32, 96, 128}, transferSize))
+    return emitOpError(
+        "Transfering type size must be 8, 16, 32, 96 or 128 bits");
 
   if (!hasGlobalMemorySpace(srcType.getMemorySpace()) &&
       !hasFatRawBufferMemorySpace(srcType.getMemorySpace()))

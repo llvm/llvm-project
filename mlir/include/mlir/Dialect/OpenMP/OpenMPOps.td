@@ -1751,10 +1751,6 @@ def DeclareMapperInfoOp : OpenMP_Op<"declare_mapper.info", [
     parent DeclareMapperOp.
   }] # clausesDescription;
 
-  let builders = [
-    OpBuilder<(ins CArg<"const DeclareMapperInfoOperands &">:$clauses)>
-  ];
-
   let extraClassDeclaration = [{
     // Override BlockArgOpenMPOpInterface method because `map` clauses have no
     // associated entry block arguments in this operation.

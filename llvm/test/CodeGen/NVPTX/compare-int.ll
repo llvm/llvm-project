@@ -11,7 +11,7 @@
 ;;; i64
 
 define i64 @icmp_eq_i64(i64 %a, i64 %b) {
-; CHECK: setp.eq.s64 %p[[P0:[0-9]+]], %rd{{[0-9]+}}, %rd{{[0-9]+}}
+; CHECK: setp.eq.b64 %p[[P0:[0-9]+]], %rd{{[0-9]+}}, %rd{{[0-9]+}}
 ; CHECK: selp.b64 %rd{{[0-9]+}}, 1, 0, %p[[P0]]
 ; CHECK: ret
   %cmp = icmp eq i64 %a, %b
@@ -20,7 +20,7 @@ define i64 @icmp_eq_i64(i64 %a, i64 %b) {
 }
 
 define i64 @icmp_ne_i64(i64 %a, i64 %b) {
-; CHECK: setp.ne.s64 %p[[P0:[0-9]+]], %rd{{[0-9]+}}, %rd{{[0-9]+}}
+; CHECK: setp.ne.b64 %p[[P0:[0-9]+]], %rd{{[0-9]+}}, %rd{{[0-9]+}}
 ; CHECK: selp.b64 %rd{{[0-9]+}}, 1, 0, %p[[P0]]
 ; CHECK: ret
   %cmp = icmp ne i64 %a, %b
@@ -103,7 +103,7 @@ define i64 @icmp_sle_i64(i64 %a, i64 %b) {
 ;;; i32
 
 define i32 @icmp_eq_i32(i32 %a, i32 %b) {
-; CHECK: setp.eq.s32 %p[[P0:[0-9]+]], %r{{[0-9]+}}, %r{{[0-9]+}}
+; CHECK: setp.eq.b32 %p[[P0:[0-9]+]], %r{{[0-9]+}}, %r{{[0-9]+}}
 ; CHECK: selp.b32 %r{{[0-9]+}}, 1, 0, %p[[P0]]
 ; CHECK: ret
   %cmp = icmp eq i32 %a, %b
@@ -112,7 +112,7 @@ define i32 @icmp_eq_i32(i32 %a, i32 %b) {
 }
 
 define i32 @icmp_ne_i32(i32 %a, i32 %b) {
-; CHECK: setp.ne.s32 %p[[P0:[0-9]+]], %r{{[0-9]+}}, %r{{[0-9]+}}
+; CHECK: setp.ne.b32 %p[[P0:[0-9]+]], %r{{[0-9]+}}, %r{{[0-9]+}}
 ; CHECK: selp.b32 %r{{[0-9]+}}, 1, 0, %p[[P0]]
 ; CHECK: ret
   %cmp = icmp ne i32 %a, %b
@@ -196,7 +196,7 @@ define i32 @icmp_sle_i32(i32 %a, i32 %b) {
 ;;; i16
 
 define i16 @icmp_eq_i16(i16 %a, i16 %b) {
-; CHECK: setp.eq.s16 %p[[P0:[0-9]+]], %rs{{[0-9]+}}, %rs{{[0-9]+}}
+; CHECK: setp.eq.b16 %p[[P0:[0-9]+]], %rs{{[0-9]+}}, %rs{{[0-9]+}}
 ; CHECK: selp.b32 %r{{[0-9]+}}, 1, 0, %p[[P0]]
 ; CHECK: ret
   %cmp = icmp eq i16 %a, %b
@@ -205,7 +205,7 @@ define i16 @icmp_eq_i16(i16 %a, i16 %b) {
 }
 
 define i16 @icmp_ne_i16(i16 %a, i16 %b) {
-; CHECK: setp.ne.s16 %p[[P0:[0-9]+]], %rs{{[0-9]+}}, %rs{{[0-9]+}}
+; CHECK: setp.ne.b16 %p[[P0:[0-9]+]], %rs{{[0-9]+}}, %rs{{[0-9]+}}
 ; CHECK: selp.b32 %r{{[0-9]+}}, 1, 0, %p[[P0]]
 ; CHECK: ret
   %cmp = icmp ne i16 %a, %b
@@ -290,7 +290,7 @@ define i16 @icmp_sle_i16(i16 %a, i16 %b) {
 
 define i8 @icmp_eq_i8(i8 %a, i8 %b) {
 ; Comparison happens in 16-bit
-; CHECK: setp.eq.s16 %p[[P0:[0-9]+]], %rs{{[0-9]+}}, %rs{{[0-9]+}}
+; CHECK: setp.eq.b16 %p[[P0:[0-9]+]], %rs{{[0-9]+}}, %rs{{[0-9]+}}
 ; CHECK: selp.b32 %r{{[0-9]+}}, 1, 0, %p[[P0]]
 ; CHECK: ret
   %cmp = icmp eq i8 %a, %b
@@ -300,7 +300,7 @@ define i8 @icmp_eq_i8(i8 %a, i8 %b) {
 
 define i8 @icmp_ne_i8(i8 %a, i8 %b) {
 ; Comparison happens in 16-bit
-; CHECK: setp.ne.s16 %p[[P0:[0-9]+]], %rs{{[0-9]+}}, %rs{{[0-9]+}}
+; CHECK: setp.ne.b16 %p[[P0:[0-9]+]], %rs{{[0-9]+}}, %rs{{[0-9]+}}
 ; CHECK: selp.b32 %r{{[0-9]+}}, 1, 0, %p[[P0]]
 ; CHECK: ret
   %cmp = icmp ne i8 %a, %b

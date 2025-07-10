@@ -1,0 +1,136 @@
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+
+target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
+target triple = "spirv32-unknown-unknown"
+
+; CHECK: OpDecorate [[NumWorkgroups:%[0-9]*]] BuiltIn NumWorkgroups
+; CHECK: OpDecorate [[WorkgroupSize:%[0-9]*]] BuiltIn WorkgroupSize
+; CHECK: OpDecorate [[WorkgroupId:%[0-9]*]] BuiltIn WorkgroupId
+; CHECK: OpDecorate [[LocalInvocationId:%[0-9]*]] BuiltIn LocalInvocationId
+; CHECK: OpDecorate [[GlobalInvocationId:%[0-9]*]] BuiltIn GlobalInvocationId
+; CHECK: OpDecorate [[GlobalSize:%[0-9]*]] BuiltIn GlobalSize
+; CHECK: OpDecorate [[GlobalOffset:%[0-9]*]] BuiltIn GlobalOffset
+; CHECK: OpDecorate [[SubgroupSize:%[0-9]*]] BuiltIn SubgroupSize
+; CHECK: OpDecorate [[SubgroupMaxSize:%[0-9]*]] BuiltIn SubgroupMaxSize
+; CHECK: OpDecorate [[NumSubgroups:%[0-9]*]] BuiltIn NumSubgroups
+; CHECK: OpDecorate [[SubgroupId:%[0-9]*]] BuiltIn SubgroupId
+; CHECK: OpDecorate [[SubgroupLocalInvocationId:%[0-9]*]] BuiltIn SubgroupLocalInvocationId
+; CHECK: [[I32:%[0-9]*]] = OpTypeInt 32 0
+; CHECK: [[I32PTR:%[0-9]*]] = OpTypePointer Input [[I32]]
+; CHECK: [[I32V3:%[0-9]*]] = OpTypeVector [[I32]] 3
+; CHECK: [[I32V3PTR:%[0-9]*]] = OpTypePointer Input [[I32V3]]
+; CHECK: [[NumWorkgroups]] = OpVariable [[I32V3PTR]] Input
+; CHECK: [[WorkgroupSize]] = OpVariable [[I32V3PTR]] Input
+; CHECK: [[WorkgroupId]] = OpVariable [[I32V3PTR]] Input
+; CHECK: [[LocalInvocationId]] = OpVariable [[I32V3PTR]] Input
+; CHECK: [[GlobalInvocationId]] = OpVariable [[I32V3PTR]] Input
+; CHECK: [[GlobalSize]] = OpVariable [[I32V3PTR]] Input
+; CHECK: [[GlobalOffset]] = OpVariable [[I32V3PTR]] Input
+; CHECK: [[SubgroupSize]] = OpVariable [[I32PTR]] Input
+; CHECK: [[SubgroupMaxSize]] = OpVariable [[I32PTR]] Input
+; CHECK: [[NumSubgroups]] = OpVariable [[I32PTR]] Input
+; CHECK: [[SubgroupId]] = OpVariable [[I32PTR]] Input
+; CHECK: [[SubgroupLocalInvocationId]] = OpVariable [[I32PTR]] Input
+
+; Function Attrs: convergent noinline norecurse nounwind optnone
+define spir_func void @test_id_and_range() {
+entry:
+  %ssize = alloca i32, align 4
+  %smax = alloca i32, align 4
+  %snum = alloca i32, align 4
+  %sid = alloca i32, align 4
+  %sinvocid = alloca i32, align 4
+; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[NumWorkgroups]]
+; CHECK: OpCompositeExtract [[I32]] [[LD]] 0
+  %spv.num.workgroups = call i32 @llvm.spv.num.workgroups.i32(i32 0)
+; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[NumWorkgroups]]
+; CHECK: OpCompositeExtract [[I32]] [[LD]] 1
+  %spv.num.workgroups1 = call i32 @llvm.spv.num.workgroups.i32(i32 1)
+; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[NumWorkgroups]]
+; CHECK: OpCompositeExtract [[I32]] [[LD]] 2
+  %spv.num.workgroups2 = call i32 @llvm.spv.num.workgroups.i32(i32 2)
+; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[WorkgroupSize]]
+; CHECK: OpCompositeExtract [[I32]] [[LD]] 0
+  %spv.workgroup.size = call i32 @llvm.spv.workgroup.size.i32(i32 0)
+; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[WorkgroupSize]]
+; CHECK: OpCompositeExtract [[I32]] [[LD]] 1
+  %spv.workgroup.size3 = call i32 @llvm.spv.workgroup.size.i32(i32 1)
+; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[WorkgroupSize]]
+; CHECK: OpCompositeExtract [[I32]] [[LD]] 2
+  %spv.workgroup.size4 = call i32 @llvm.spv.workgroup.size.i32(i32 2)
+; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[WorkgroupId]]
+; CHECK: OpCompositeExtract [[I32]] [[LD]] 0
+  %spv.group.id = call i32 @llvm.spv.group.id.i32(i32 0)
+; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[WorkgroupId]]
+; CHECK: OpCompositeExtract [[I32]] [[LD]] 1
+  %spv.group.id5 = call i32 @llvm.spv.group.id.i32(i32 1)
+; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[WorkgroupId]]
+; CHECK: OpCompositeExtract [[I32]] [[LD]] 2
+  %spv.group.id6 = call i32 @llvm.spv.group.id.i32(i32 2)
+; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[LocalInvocationId]]
+; CHECK: OpCompositeExtract [[I32]] [[LD]] 0
+  %spv.thread.id.in.group = call i32 @llvm.spv.thread.id.in.group.i32(i32 0)
+; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[LocalInvocationId]]
+; CHECK: OpCompositeExtract [[I32]] [[LD]] 1
+  %spv.thread.id.in.group7 = call i32 @llvm.spv.thread.id.in.group.i32(i32 1)
+; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[LocalInvocationId]]
+; CHECK: OpCompositeExtract [[I32]] [[LD]] 2
+  %spv.thread.id.in.group8 = call i32 @llvm.spv.thread.id.in.group.i32(i32 2)
+; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[GlobalInvocationId]]
+; CHECK: OpCompositeExtract [[I32]] [[LD]] 0
+  %spv.thread.id = call i32 @llvm.spv.thread.id.i32(i32 0)
+; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[GlobalInvocationId]]
+; CHECK: OpCompositeExtract [[I32]] [[LD]] 1
+  %spv.thread.id9 = call i32 @llvm.spv.thread.id.i32(i32 1)
+; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[GlobalInvocationId]]
+; CHECK: OpCompositeExtract [[I32]] [[LD]] 2
+  %spv.thread.id10 = call i32 @llvm.spv.thread.id.i32(i32 2)
+; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[GlobalSize]]
+; CHECK: OpCompositeExtract [[I32]] [[LD]] 0
+  %spv.num.workgroups11 = call i32 @llvm.spv.global.size.i32(i32 0)
+; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[GlobalSize]]
+; CHECK: OpCompositeExtract [[I32]] [[LD]] 1
+  %spv.num.workgroups12 = call i32 @llvm.spv.global.size.i32(i32 1)
+; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[GlobalSize]]
+; CHECK: OpCompositeExtract [[I32]] [[LD]] 2
+  %spv.num.workgroups13 = call i32 @llvm.spv.global.size.i32(i32 2)
+; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[GlobalOffset]]
+; CHECK: OpCompositeExtract [[I32]] [[LD]] 0
+  %spv.global.offset = call i32 @llvm.spv.global.offset.i32(i32 0)
+; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[GlobalOffset]]
+; CHECK: OpCompositeExtract [[I32]] [[LD]] 1
+  %spv.global.offset14 = call i32 @llvm.spv.global.offset.i32(i32 1)
+; CHECK: [[LD:%[0-9]*]] = OpLoad [[I32V3]] [[GlobalOffset]]
+; CHECK: OpCompositeExtract [[I32]] [[LD]] 2
+  %spv.global.offset15 = call i32 @llvm.spv.global.offset.i32(i32 2)
+; CHECK: OpLoad %5 [[SubgroupSize]]
+  %0 = call i32 @llvm.spv.subgroup.size()
+  store i32 %0, ptr %ssize, align 4
+; CHECK: OpLoad %5 [[SubgroupMaxSize]]
+  %1 = call i32 @llvm.spv.subgroup.max.size()
+  store i32 %1, ptr %smax, align 4
+; CHECK: OpLoad %5 [[NumSubgroups]]
+  %2 = call i32 @llvm.spv.num.subgroups()
+  store i32 %2, ptr %snum, align 4
+; CHECK: OpLoad %5 [[SubgroupId]]
+  %3 = call i32 @llvm.spv.subgroup.id()
+  store i32 %3, ptr %sid, align 4
+; CHECK: OpLoad %5 [[SubgroupLocalInvocationId]]
+  %4 = call i32 @llvm.spv.subgroup.local.invocation.id()
+  store i32 %4, ptr %sinvocid, align 4
+  ret void
+}
+
+declare i32 @llvm.spv.num.workgroups.i32(i32)
+declare i32 @llvm.spv.workgroup.size.i32(i32)
+declare i32 @llvm.spv.group.id.i32(i32)
+declare i32 @llvm.spv.thread.id.in.group.i32(i32)
+declare i32 @llvm.spv.thread.id.i32(i32)
+declare i32 @llvm.spv.global.size.i32(i32)
+declare i32 @llvm.spv.global.offset.i32(i32)
+declare noundef i32 @llvm.spv.subgroup.size()
+declare noundef i32 @llvm.spv.subgroup.max.size()
+declare noundef i32 @llvm.spv.num.subgroups()
+declare noundef i32 @llvm.spv.subgroup.id()
+declare noundef i32 @llvm.spv.subgroup.local.invocation.id()

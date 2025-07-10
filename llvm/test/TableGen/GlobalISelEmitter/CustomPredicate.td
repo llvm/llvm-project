@@ -6,6 +6,7 @@
 // CHECK-NEXT: enum {
 // CHECK-NEXT:   GICXXPred_MI_Predicate_and_or_pat = GICXXPred_Invalid + 1,
 // CHECK-NEXT:   GICXXPred_MI_Predicate_mul_pat,
+// CHECK-NEXT:   GICXXPred_MI_Predicate_or_disjoint,
 // CHECK-NEXT:   GICXXPred_MI_Predicate_or_oneuse,
 // CHECK-NEXT:   GICXXPred_MI_Predicate_patfrags_test_pat,
 // CHECK-NEXT:   GICXXPred_MI_Predicate_sub3_pat,
