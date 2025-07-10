@@ -16,16 +16,16 @@ define void @reverse(ptr %dst, ptr %src, i64 %len) {
 ; APPLE-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[LEN]], [[XTRAITER]]
 ; APPLE-NEXT:    br label %[[FOR_BODY:.*]]
 ; APPLE:       [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT:.*]]:
-; APPLE-NEXT:    [[INDVARS_IV_UNR_PH:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_7:%.*]], %[[FOR_BODY]] ]
+; APPLE-NEXT:    [[IV_UNR_PH:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_7:%.*]], %[[FOR_BODY]] ]
 ; APPLE-NEXT:    br label %[[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]]
 ; APPLE:       [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]]:
-; APPLE-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, %[[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_UNR_PH]], %[[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
+; APPLE-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, %[[FOR_BODY_PREHEADER]] ], [ [[IV_UNR_PH]], %[[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; APPLE-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
 ; APPLE-NEXT:    br i1 [[LCMP_MOD]], label %[[FOR_BODY_EPIL_PREHEADER:.*]], label %[[FOR_COND_CLEANUP_LOOPEXIT:.*]]
 ; APPLE:       [[FOR_BODY_EPIL_PREHEADER]]:
 ; APPLE-NEXT:    br label %[[FOR_BODY_EPIL:.*]]
 ; APPLE:       [[FOR_BODY_EPIL]]:
-; APPLE-NEXT:    [[INDVARS_IV_EPIL:%.*]] = phi i64 [ [[INDVARS_IV_UNR]], %[[FOR_BODY_EPIL_PREHEADER]] ], [ [[INDVARS_IV_NEXT_EPIL:%.*]], %[[FOR_BODY_EPIL]] ]
+; APPLE-NEXT:    [[INDVARS_IV_EPIL:%.*]] = phi i64 [ [[IV_UNR]], %[[FOR_BODY_EPIL_PREHEADER]] ], [ [[INDVARS_IV_NEXT_EPIL:%.*]], %[[FOR_BODY_EPIL]] ]
 ; APPLE-NEXT:    [[EPIL_ITER:%.*]] = phi i64 [ 0, %[[FOR_BODY_EPIL_PREHEADER]] ], [ [[EPIL_ITER_NEXT:%.*]], %[[FOR_BODY_EPIL]] ]
 ; APPLE-NEXT:    [[TMP3:%.*]] = sub nsw i64 [[LEN]], [[INDVARS_IV_EPIL]]
 ; APPLE-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds <4 x float>, ptr [[SRC]], i64 [[TMP3]]
@@ -131,14 +131,14 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
   ret void
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
-  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
-  %1 = sub nsw i64 %len, %indvars.iv
+  %iv = phi i64 [ 0, %for.body.preheader ], [ %iv.next, %for.body ]
+  %1 = sub nsw i64 %len, %iv
   %arrayidx = getelementptr inbounds <4 x float>, ptr %src, i64 %1
   %2 = load <4 x float>, ptr %arrayidx, align 16
-  %arrayidx2 = getelementptr inbounds nuw <4 x float>, ptr %dst, i64 %indvars.iv
+  %arrayidx2 = getelementptr inbounds nuw <4 x float>, ptr %dst, i64 %iv
   store <4 x float> %2, ptr %arrayidx2, align 16
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, %len
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %len
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
