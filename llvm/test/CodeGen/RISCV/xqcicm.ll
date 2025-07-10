@@ -677,3 +677,26 @@ entry:
   %sel = select i1 %cmp, i32 %x, i32 %y
   ret i32 %sel
 }
+
+define i32 @select_cc_example_ule_neg(i32 %a, i32 %b, i32 %x, i32 %y) {
+; RV32I-LABEL: select_cc_example_ule_neg:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    li a1, -10
+; RV32I-NEXT:    bltu a0, a1, .LBB31_2
+; RV32I-NEXT:  # %bb.1: # %entry
+; RV32I-NEXT:    mv a2, a3
+; RV32I-NEXT:  .LBB31_2: # %entry
+; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    ret
+;
+; RV32IXQCICM-LABEL: select_cc_example_ule_neg:
+; RV32IXQCICM:       # %bb.0: # %entry
+; RV32IXQCICM-NEXT:    li a1, -10
+; RV32IXQCICM-NEXT:    qc.mvltu a3, a0, a1, a2
+; RV32IXQCICM-NEXT:    mv a0, a3
+; RV32IXQCICM-NEXT:    ret
+entry:
+  %cmp = icmp ule i32 %a, -11
+  %sel = select i1 %cmp, i32 %x, i32 %y
+  ret i32 %sel
+}

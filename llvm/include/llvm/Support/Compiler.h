@@ -171,10 +171,6 @@
 /// for both functions and classes. On windows its turned in to dllimport for
 /// library consumers, for other platforms its a default visibility attribute.
 ///
-/// LLVM_C_ABI is used to annotated functions and data that need to be exported
-/// for the libllvm-c API. This used both for the llvm-c headers and for the
-/// functions declared in the different Target's c++ source files that don't
-/// include the header forward declaring them.
 #ifndef LLVM_ABI_GENERATING_ANNOTATIONS
 // Marker to add to classes or functions in public headers that should not have
 // export macros added to them by the clang tool
@@ -214,7 +210,6 @@
 #define LLVM_EXPORT_TEMPLATE
 #define LLVM_ABI_EXPORT
 #endif
-#define LLVM_C_ABI LLVM_ABI
 #endif
 
 #if defined(__GNUC__)

@@ -91,7 +91,7 @@ static const uint8_t emu_da_key[16] = {0xb5, 0xd4, 0xc9, 0xeb, 0x79, 0x10,
                                        0x4a, 0x79, 0x6f, 0xec, 0x8b, 0x1b,
                                        0x42, 0x87, 0x81, 0xd4};
 
-extern "C" __attribute__((flatten)) uint64_t
+extern "C" [[gnu::flatten]] uint64_t
 __emupac_pacda_impl(uint64_t ptr, uint64_t disc) {
   if (pac_supported()) {
     __asm__ __volatile__(".arch_extension pauth\npacda %0, %1"
@@ -117,7 +117,7 @@ __emupac_pacda_impl(uint64_t ptr, uint64_t disc) {
 __asm__(".globl __emupac_pacda\n"
         "__emupac_pacda:\n" FRAME_POINTER_WRAP(__emupac_pacda_impl));
 
-extern "C" __attribute__((flatten)) uint64_t
+extern "C" [[gnu::flatten]] uint64_t
 __emupac_autda_impl(uint64_t ptr, uint64_t disc) {
   if (pac_supported()) {
     __asm__ __volatile__(".arch_extension pauth\nautda %0, %1"
