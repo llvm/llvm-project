@@ -203,14 +203,13 @@ void BreakpointLocation::ClearCallback() {
   GetLocationOptions().ClearCallback();
 }
 
-void BreakpointLocation::SetCondition(const char *condition) {
-  GetLocationOptions().SetCondition(condition);
+void BreakpointLocation::SetCondition(StopCondition condition) {
+  GetLocationOptions().SetCondition(std::move(condition));
   SendBreakpointLocationChangedEvent(eBreakpointEventTypeConditionChanged);
 }
 
-const char *BreakpointLocation::GetConditionText(size_t *hash) const {
-  return GetOptionsSpecifyingKind(BreakpointOptions::eCondition)
-      .GetConditionText(hash);
+const StopCondition &BreakpointLocation::GetCondition() const {
+  return GetOptionsSpecifyingKind(BreakpointOptions::eCondition).GetCondition();
 }
 
 bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
@@ -219,10 +218,9 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
 
   std::lock_guard<std::mutex> guard(m_condition_mutex);
 
-  size_t condition_hash;
-  const char *condition_text = GetConditionText(&condition_hash);
+  StopCondition condition = GetCondition();
 
-  if (!condition_text) {
+  if (!condition) {
     m_user_expression_sp.reset();
     return false;
   }
@@ -231,19 +229,22 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
 
   DiagnosticManager diagnostics;
 
-  if (condition_hash != m_condition_hash || !m_user_expression_sp ||
+  if (condition.GetHash() != m_condition_hash || !m_user_expression_sp ||
       !m_user_expression_sp->IsParseCacheable() ||
       !m_user_expression_sp->MatchesContext(exe_ctx)) {
-    LanguageType language = eLanguageTypeUnknown;
-    // See if we can figure out the language from the frame, otherwise use the
-    // default language:
-    CompileUnit *comp_unit = m_address.CalculateSymbolContextCompileUnit();
-    if (comp_unit)
-      language = comp_unit->GetLanguage();
+    LanguageType language = condition.GetLanguage();
+    if (language == lldb::eLanguageTypeUnknown) {
+      // See if we can figure out the language from the frame, otherwise use the
+      // default language:
+      if (CompileUnit *comp_unit =
+              m_address.CalculateSymbolContextCompileUnit())
+        language = comp_unit->GetLanguage();
+    }
 
     m_user_expression_sp.reset(GetTarget().GetUserExpressionForLanguage(
-        condition_text, llvm::StringRef(), language, Expression::eResultTypeAny,
-        EvaluateExpressionOptions(), nullptr, error));
+        condition.GetText(), llvm::StringRef(), language,
+        Expression::eResultTypeAny, EvaluateExpressionOptions(), nullptr,
+        error));
     if (error.Fail()) {
       LLDB_LOGF(log, "Error getting condition expression: %s.",
                 error.AsCString());
@@ -262,7 +263,7 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
       return true;
     }
 
-    m_condition_hash = condition_hash;
+    m_condition_hash = condition.GetHash();
   }
 
   // We need to make sure the user sees any parse errors in their condition, so
