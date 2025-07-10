@@ -137,8 +137,8 @@ struct OverlappingRanges {
 ///   - RangeInfo will retain the interval, ResourceClass, Space and Visibility
 ///   - It will also contain an index so that it can be associated to
 /// additional diagnostic information
-/// 2. Sort the RangeInfo's such that they are grouped together by
-///  ResourceClass and Space
+/// 2. The user is required to sort the RangeInfo's such that they are grouped
+/// together by ResourceClass and Space
 /// 3. Iterate through the collected RangeInfos by their groups
 ///   - For each group we will have a ResourceRange for each visibility
 ///   - As we iterate through we will:

@@ -1155,10 +1155,9 @@ bool SemaHLSL::handleRootSignatureElements(
     }
   }
 
-  // Sort as specified
-  auto ComparePairs = [](InfoPair A, InfoPair B) { return A.first < B.first; };
-
-  std::sort(InfoPairs.begin(), InfoPairs.end(), ComparePairs);
+  // 2. Sort with the RangeInfo <operator to prepare it for findOverlapping
+  std::sort(InfoPairs.begin(), InfoPairs.end(),
+            [](InfoPair A, InfoPair B) { return A.first < B.first; });
 
   llvm::SmallVector<RangeInfo> Infos;
   for (const InfoPair &Pair : InfoPairs)
@@ -1170,12 +1169,22 @@ bool SemaHLSL::handleRootSignatureElements(
                              const hlsl::RootSignatureElement *>;
   auto GetElemPair = [&Infos, &InfoPairs, &DuplicateCounter](
                          OverlappingRanges Overlap) -> ElemPair {
+    // Given we sorted the InfoPairs (and by implication) Infos, and,
+    // that Overlap.B is the item retrieved from the ResourceRange. Then it is
+    // guarenteed that Overlap.B <= Overlap.A.
+    //
+    // So we will find Overlap.B first and then continue to find Overlap.A
+    // after
     auto InfoB = std::lower_bound(Infos.begin(), Infos.end(), *Overlap.B);
     auto DistB = std::distance(Infos.begin(), InfoB);
     auto PairB = InfoPairs.begin();
     std::advance(PairB, DistB);
 
     auto InfoA = std::lower_bound(InfoB, Infos.end(), *Overlap.A);
+    // Similarily, from the property that we have sorted the RangeInfos,
+    // all duplicates will be processed one after the other. So
+    // DuplicateCounter can be re-used for each set of duplicates we
+    // encounter as we handle incoming errors
     DuplicateCounter = InfoA == InfoB ? DuplicateCounter + 1 : 0;
     auto DistA = std::distance(InfoB, InfoA) + DuplicateCounter;
     auto PairA = PairB;
@@ -1205,6 +1214,7 @@ bool SemaHLSL::handleRootSignatureElements(
     this->Diag(OElem->getLocation(), diag::note_hlsl_resource_range_here);
   };
 
+  // 3. Invoke find overlapping ranges
   llvm::SmallVector<OverlappingRanges> Overlaps =
       llvm::hlsl::rootsig::findOverlappingRanges(Infos);
   for (OverlappingRanges Overlap : Overlaps)

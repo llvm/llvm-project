@@ -245,7 +245,8 @@ std::optional<const RangeInfo *> ResourceRange::insert(const RangeInfo &Info) {
 
 llvm::SmallVector<OverlappingRanges>
 findOverlappingRanges(ArrayRef<RangeInfo> Infos) {
-  // 1. The user has provided the corresponding range information
+  // It is expected that Infos is filled with valid RangeInfos and that
+  // they are sorted with respect to the RangeInfo <operator
   llvm::SmallVector<OverlappingRanges> Overlaps;
   using GroupT = std::pair<dxil::ResourceClass, /*Space*/ uint32_t>;
 
