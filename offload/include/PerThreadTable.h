@@ -103,7 +103,7 @@ public:
     std::lock_guard<std::mutex> Lock(Mtx);
     for (auto ThData : ThreadDataList) {
       if (!ThData->ThEntry || ThData->NElements == 0)
-	continue;
+        continue;
       ThData->ThEntry->clear(f);
       ThData->NElements = 0;
     }

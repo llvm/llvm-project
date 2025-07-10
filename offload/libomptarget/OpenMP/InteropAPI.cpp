@@ -292,8 +292,8 @@ int __tgt_interop_use(ident_t *LocRef, omp_interop_val_t *Interop,
   if (Interop->interop_type == kmp_interop_type_targetsync) {
     if (Deps) {
       if (nowait) {
-        DP("Warning: nowait flag on interop use with dependences not supported yet. "
-           "Ignored\n");
+        DP("Warning: nowait flag on interop use with dependences not supported 
+	   "yet. Ignored\n");
         nowait = false;
       }
 
