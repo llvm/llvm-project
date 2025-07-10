@@ -293,6 +293,11 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
     setLibcallImpl(RTLIB::POWI_F64, RTLIB::Unsupported);
   }
 
+  if (TT.isAndroid()) {
+    setLibcallImpl(RTLIB::SAFESTACK_POINTER_ADDRESS,
+                   RTLIB::__safestack_pointer_address);
+  }
+
   // Setup Windows compiler runtime calls.
   if (TT.getArch() == Triple::x86 &&
       (TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment())) {
