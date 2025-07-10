@@ -269,6 +269,7 @@ cc_library(
         "include/llvm-c/ExternC.h",
         "include/llvm-c/Support.h",
         "include/llvm-c/Types.h",
+        "include/llvm-c/Visibility.h",
         "include/llvm-c/blake3.h",
         "include/llvm/ExecutionEngine/JITSymbol.h",
         "include/llvm/Support/Extension.def",
@@ -319,6 +320,7 @@ cc_library(
     deps = [
         ":config",
         ":Demangle",
+        "//third-party/siphash",
         # We unconditionally depend on the custom LLVM zlib wrapper. This will
         # be an empty library unless zlib is enabled, in which case it will
         # both provide the necessary dependencies and configuration defines.
@@ -541,6 +543,20 @@ cc_library(
         ":Object",
         ":Support",
         ":Symbolize",
+    ],
+)
+
+cc_library(
+    name = "DWARFCFIChecker",
+    srcs = glob(["lib/DWARFCFIChecker/*.cpp",
+                 "lib/DWARFCFIChecker/*.h",]),
+    hdrs = glob(["include/llvm/DWARFCFIChecker/*.h"]),
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":DebugInfoDWARFLowLevel",
+        ":MC",
+        ":Support",
     ],
 )
 
@@ -780,7 +796,10 @@ gentbl_cc_library(
     tbl_outs = {"include/llvm/IR/RuntimeLibcalls.inc": ["-gen-runtime-libcalls"]},
     tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/IR/RuntimeLibcalls.td",
-    deps = [":IRTdFiles"],
+    deps = [
+        ":IRTdFiles",
+        ":TableGenTdFiles",
+    ],
 )
 
 gentbl_cc_library(
@@ -1341,6 +1360,12 @@ td_library(
 td_library(
     name = "IRTdFiles",
     srcs = glob(["include/llvm/IR/*.td"]),
+    includes = ["include"],
+)
+
+td_library(
+    name = "TableGenTdFiles",
+    srcs = glob(["include/llvm/TableGen/*.td"]),
     includes = ["include"],
 )
 
@@ -4363,6 +4388,7 @@ cc_binary(
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
         ":AllTargetsDisassemblers",
+        ":DWARFCFIChecker",
         ":MC",
         ":MCDisassembler",
         ":MCParser",
@@ -5211,8 +5237,8 @@ py_binary(
 py_binary(
     name = "extract_ir",
     srcs = [
+        "utils/mlgo-utils/extract_ir.py",
         "utils/mlgo-utils/mlgo/__init__.py",
-        "utils/mlgo-utils/mlgo/corpus/extract_ir.py",
         "utils/mlgo-utils/mlgo/corpus/extract_ir_lib.py",
         "utils/mlgo-utils/mlgo/corpus/flags.py",
     ],
@@ -5222,8 +5248,8 @@ py_binary(
 py_binary(
     name = "combine_training_corpus",
     srcs = [
+        "utils/mlgo-utils/combine_training_corpus.py",
         "utils/mlgo-utils/mlgo/__init__.py",
-        "utils/mlgo-utils/mlgo/corpus/combine_training_corpus.py",
         "utils/mlgo-utils/mlgo/corpus/combine_training_corpus_lib.py",
         "utils/mlgo-utils/mlgo/corpus/flags.py",
     ],
@@ -5233,8 +5259,8 @@ py_binary(
 py_binary(
     name = "make_corpus",
     srcs = [
+        "utils/mlgo-utils/make_corpus.py",
         "utils/mlgo-utils/mlgo/__init__.py",
-        "utils/mlgo-utils/mlgo/corpus/make_corpus.py",
         "utils/mlgo-utils/mlgo/corpus/make_corpus_lib.py",
     ],
     imports = ["utils/mlgo-utils"],
