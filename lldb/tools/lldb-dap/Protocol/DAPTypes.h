@@ -32,7 +32,7 @@ struct PersistenceData {
   std::string module;
 
   /// The file address of the function.
-  lldb::addr_t file_addr;
+  lldb::addr_t fileAddress;
 };
 bool fromJSON(const llvm::json::Value &, PersistenceData &, llvm::json::Path);
 llvm::json::Value toJSON(const PersistenceData &);
@@ -43,7 +43,7 @@ llvm::json::Value toJSON(const PersistenceData &);
 struct SourceLLDBData {
   /// Data that helps lldb resolve this source persistently across different
   /// sessions.
-  std::optional<PersistenceData> persistence_data;
+  std::optional<PersistenceData> persistenceData;
 };
 bool fromJSON(const llvm::json::Value &, SourceLLDBData &, llvm::json::Path);
 llvm::json::Value toJSON(const SourceLLDBData &);

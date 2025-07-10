@@ -9,13 +9,13 @@ bool fromJSON(const llvm::json::Value &Params, PersistenceData &PD,
               llvm::json::Path P) {
   json::ObjectMapper O(Params, P);
   return O && O.mapOptional("module", PD.module) &&
-         O.mapOptional("file_addr", PD.file_addr);
+         O.mapOptional("fileAddress", PD.fileAddress);
 }
 
 llvm::json::Value toJSON(const PersistenceData &PD) {
   json::Object result{
       {"module", PD.module},
-      {"file_addr", PD.file_addr},
+      {"fileAddress", PD.fileAddress},
   };
 
   return result;
@@ -24,13 +24,13 @@ llvm::json::Value toJSON(const PersistenceData &PD) {
 bool fromJSON(const llvm::json::Value &Params, SourceLLDBData &SLD,
               llvm::json::Path P) {
   json::ObjectMapper O(Params, P);
-  return O && O.mapOptional("persistence_data", SLD.persistence_data);
+  return O && O.mapOptional("persistenceData", SLD.persistenceData);
 }
 
 llvm::json::Value toJSON(const SourceLLDBData &SLD) {
   json::Object result;
-  if (SLD.persistence_data)
-    result.insert({"persistence_data", SLD.persistence_data});
+  if (SLD.persistenceData)
+    result.insert({"persistenceData", SLD.persistenceData});
   return result;
 }
 

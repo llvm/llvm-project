@@ -37,7 +37,7 @@ GetPersistenceDataForAddress(lldb::SBAddress &addr) {
     return std::nullopt;
 
   persistence_data.module = GetSBFileSpecPath(file_spec);
-  persistence_data.file_addr = addr.GetFileAddress();
+  persistence_data.fileAddress = addr.GetFileAddress();
   return persistence_data;
 }
 

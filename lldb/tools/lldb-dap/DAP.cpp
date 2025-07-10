@@ -1497,8 +1497,9 @@ std::vector<protocol::Breakpoint> DAP::SetSourceBreakpoints(
 
       protocol::Breakpoint response_breakpoint =
           iv->second.ToProtocolBreakpoint();
-      response_breakpoint.source = source;
 
+      if (!response_breakpoint.source)
+        response_breakpoint.source = source;
       if (!response_breakpoint.line &&
           src_bp.GetLine() != LLDB_INVALID_LINE_NUMBER)
         response_breakpoint.line = src_bp.GetLine();
