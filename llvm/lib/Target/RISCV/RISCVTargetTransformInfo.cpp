@@ -1247,11 +1247,44 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   auto *RetTy = ICA.getReturnType();
   switch (ICA.getID()) {
   case Intrinsic::lrint:
-  case Intrinsic::llrint: {
+  case Intrinsic::llrint:
+  case Intrinsic::lround:
+  case Intrinsic::llround: {
     auto LT = getTypeLegalizationCost(RetTy);
-    if (ST->hasVInstructions() && LT.second.isVector())
-      return LT.first *
-             getRISCVInstructionCost(RISCV::VFCVT_X_F_V, LT.second, CostKind);
+    if (ST->hasVInstructions() && LT.second.isVector()) {
+      ArrayRef<unsigned> Ops;
+      unsigned DstEltSz =
+          DL.getTypeSizeInBits(cast<VectorType>(RetTy)->getElementType());
+      if (LT.second.getVectorElementType() == MVT::bf16) {
+        if (DstEltSz == 64 && ST->is64Bit())
+          // vfwcvtbf16.f.f.v v9, v8
+          // vfcvt.x.f.v v8, v9
+          Ops = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFCVT_X_F_V};
+        else
+          // vfwcvtbf16.f.f.v v9, v8
+          // vfwcvt.x.f.v v8, v9
+          Ops = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFWCVT_X_F_V};
+      } else if (LT.second.getVectorElementType() == MVT::f16 &&
+                 !ST->hasVInstructionsF16()) {
+        if (DstEltSz == 64 && ST->is64Bit())
+          // vfwcvt.f.f.v v9, v8
+          // vfwcvt.x.f.v v8, v9
+          Ops = {RISCV::VFWCVT_F_F_V, RISCV::VFWCVT_X_F_V};
+        else
+          // vfwcvt.f.f.v v9, v8
+          // vfcvt.x.f.v v8, v9
+          Ops = {RISCV::VFWCVT_F_F_V, RISCV::VFCVT_X_F_V};
+
+      } else if (DstEltSz == 32 && ST->is64Bit()) {
+        // vfncvt.x.f.w v10, v8
+        // vmv.v.v v8, v10
+        Ops = {RISCV::VFNCVT_X_F_W, RISCV::VMV_V_V};
+      } else {
+        // vfcvt.x.f.v v8, v8
+        Ops = {RISCV::VFCVT_X_F_V};
+      }
+      return LT.first * getRISCVInstructionCost(Ops, LT.second, CostKind);
+    }
     break;
   }
   case Intrinsic::ceil:
