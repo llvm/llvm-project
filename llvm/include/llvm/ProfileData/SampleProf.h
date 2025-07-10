@@ -63,7 +63,7 @@ enum class sampleprof_error {
   zlib_unavailable,
   hash_mismatch,
   illegal_line_offset,
-  duplicate_vtable_type,
+  duplicate_vtable_type
 };
 
 inline std::error_code make_error_code(sampleprof_error E) {
@@ -309,7 +309,7 @@ struct LineLocation {
   }
 
   uint64_t getHashCode() const {
-    return ((uint64_t)Discriminator << 32) | LineOffset;
+    return ((uint64_t) Discriminator << 32) | LineOffset;
   }
 
   uint32_t LineOffset;
@@ -1353,7 +1353,7 @@ private:
   /// collected in the call to baz() at line offset 8.
   CallsiteSampleMap CallsiteSamples;
 
-  /// Map inlined virtual callsites to the vtable from which they are loaded.
+  /// Map virtual callsites to the vtable from which they are loaded.
   ///
   /// Each entry is a mapping from the location to the list of vtables and their
   /// sampled counts. For example, given:

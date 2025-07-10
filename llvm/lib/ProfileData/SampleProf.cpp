@@ -229,7 +229,7 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
       if (const TypeCountMap *TypeCountMap =
               this->findCallsiteTypeSamplesAt(Loc)) {
         OS.indent(Indent + 2);
-        printTypeCountMap(OS, Loc, *TypeCountMap);
+        printTypeCountMap(OS, Loc, *TypeCountMap); 
       }
     }
     OS.indent(Indent);
@@ -241,16 +241,18 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
   OS.indent(Indent);
   if (!CallsiteSamples.empty()) {
     OS << "Samples collected in inlined callsites {\n";
-    SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
+   SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
         CallsiteSamples);
-    for (const auto &CS : SortedCallsiteSamples.get()) {
-      for (const auto &[FuncId, FuncSample] : CS->second) {
+    for (const auto *Element : SortedCallsiteSamples.get()) {
+      // Element is a pointer to a pair of LineLocation and FunctionSamplesMap.
+      const auto &[Loc, FunctionSampleMap] = *Element;
+      for (const FunctionSamples &FuncSample :
+           llvm::make_second_range(FunctionSampleMap)) {
         OS.indent(Indent + 2);
-        OS << CS->first << ": inlined callee: " << FuncSample.getFunction()
+        OS << Loc << ": inlined callee: " << FuncSample.getFunction()
            << ": ";
         FuncSample.print(OS, Indent + 4);
       }
-      const LineLocation &Loc = CS->first;
       auto TypeSamplesIter = VirtualCallsiteTypeCounts.find(Loc);
       if (TypeSamplesIter != VirtualCallsiteTypeCounts.end()) {
         OS.indent(Indent + 2);

@@ -4380,8 +4380,13 @@ void DAGTypeLegalizer::ExpandIntRes_Logical(SDNode *N,
   SDValue LL, LH, RL, RH;
   GetExpandedInteger(N->getOperand(0), LL, LH);
   GetExpandedInteger(N->getOperand(1), RL, RH);
-  Lo = DAG.getNode(N->getOpcode(), dl, LL.getValueType(), LL, RL);
-  Hi = DAG.getNode(N->getOpcode(), dl, LL.getValueType(), LH, RH);
+
+  SDNodeFlags Flags;
+  if (N->getOpcode() == ISD::OR)
+    Flags.setDisjoint(N->getFlags().hasDisjoint());
+
+  Lo = DAG.getNode(N->getOpcode(), dl, LL.getValueType(), LL, RL, Flags);
+  Hi = DAG.getNode(N->getOpcode(), dl, LL.getValueType(), LH, RH, Flags);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_MUL(SDNode *N,

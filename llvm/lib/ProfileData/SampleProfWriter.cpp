@@ -619,10 +619,10 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
   SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
       S.getCallsiteSamples());
   Indent += 1;
-  for (const auto &I : SortedCallsiteSamples.get()) {
-    LineLocation Loc = I->first;
-    for (const auto &FS : I->second) {
-      const FunctionSamples &CalleeSamples = FS.second;
+  for (const auto* Element : SortedCallsiteSamples.get()) {
+    // Element is a pointer to a pair of LineLocation and FunctionSamplesMap.
+    const auto &[Loc, FunctionSamplesMap] = *Element;
+    for (const FunctionSamples &CalleeSamples : make_second_range(FunctionSamplesMap)) {
       OS.indent(Indent);
       Loc.print(OS);
       OS << ": ";
@@ -709,7 +709,7 @@ void SampleProfileWriterBinary::addNames(const FunctionSamples &S) {
   // Add all the vtable names to NameTable.
   for (const auto &VTableAccessCountMap :
        llvm::make_second_range(S.getCallsiteTypeCounts())) {
-    // Add type name to TypeNameTable.
+    // Add type name to NameTable.
     for (const auto Type : llvm::make_first_range(VTableAccessCountMap)) {
       addName(Type);
     }
