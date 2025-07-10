@@ -137,8 +137,8 @@ exit:                                 ; preds = %exit.loopexit, %entry
   ret i32 %res.0.lcssa
 }
 
-define i32 @common_sext_different_types(ptr %a, ptr %b, ptr %c, i32 %N) {
-; CHECK-LABEL: define i32 @common_sext_different_types(
+define i32 @common_sext_different_src_types(ptr %a, ptr %b, ptr %c, i32 %N) {
+; CHECK-LABEL: define i32 @common_sext_different_src_types(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP28_NOT:%.*]] = icmp ult i32 [[N]], 2
@@ -222,8 +222,9 @@ exit:                                 ; preds = %exit.loopexit, %entry
   %res.0.lcssa = phi i32 [ %add3, %for.body ]
   ret i32 %res.0.lcssa
 }
-define i32 @common_zext_different_types(ptr %a, ptr %b, ptr %c, i32 %N) {
-; CHECK-LABEL: define i32 @common_zext_different_types(
+
+define i32 @common_zext_different_src_types(ptr %a, ptr %b, ptr %c, i32 %N) {
+; CHECK-LABEL: define i32 @common_zext_different_src_types(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP28_NOT:%.*]] = icmp ult i32 [[N]], 2
@@ -299,6 +300,156 @@ for.body:                                         ; preds = %for.body.preheader,
   %add = add nsw i32 %a.ext, %b.ext
   %add2 = add nsw i32 %c.ext, %b.ext2
   %add3 = add i32 %add, %add2
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %wide.trip.count
+  br i1 %exitcond, label %exit, label %for.body
+
+exit:                                 ; preds = %exit.loopexit, %entry
+  %res.0.lcssa = phi i32 [ %add3, %for.body ]
+  ret i32 %res.0.lcssa
+}
+
+define i32 @common_sext_different_dest_types(ptr %a, ptr %b, ptr %c, i32 %N) {
+; CHECK-LABEL: define i32 @common_sext_different_dest_types(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CMP28_NOT:%.*]] = icmp ult i32 [[N]], 2
+; CHECK-NEXT:    [[DIV27:%.*]] = lshr i32 [[N]], 1
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[DIV27]] to i64
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[TMP4]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i8>, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP6:%.*]] = sext <4 x i8> [[WIDE_LOAD]] to <4 x i32>
+; CHECK-NEXT:    [[TMP7:%.*]] = sext <4 x i8> [[WIDE_LOAD1]] to <4 x i32>
+; CHECK-NEXT:    [[TMP8:%.*]] = sext <4 x i8> [[WIDE_LOAD1]] to <4 x i16>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i8> [[WIDE_LOAD2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <4 x i32> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP11:%.*]] = add nsw <4 x i16> [[TMP9]], [[TMP8]]
+; CHECK-NEXT:    [[TMP12:%.*]] = sext <4 x i16> [[TMP11]] to <4 x i32>
+; CHECK-NEXT:    [[TMP13:%.*]] = add <4 x i32> [[TMP10]], [[TMP12]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP13]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP13]], i32 3
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  %cmp28.not = icmp ult i32 %N, 2
+  %div27 = lshr i32 %N, 1
+  %wide.trip.count = zext nneg i32 %div27 to i64
+  br label %for.body
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %res = phi i32 [ 0, %entry ], [ %add3, %for.body ]
+  %a.ptr = getelementptr inbounds nuw i8, ptr %a, i64 %iv
+  %b.ptr = getelementptr inbounds nuw i8, ptr %b, i64 %iv
+  %b.ptr2 = getelementptr inbounds nuw i16, ptr %b, i64 %iv
+  %c.ptr = getelementptr inbounds nuw i8, ptr %c, i64 %iv
+  %a.val = load i8, ptr %a.ptr, align 1
+  %b.val = load i8, ptr %b.ptr, align 1
+  %c.val = load i8, ptr %c.ptr, align 1
+  %a.ext = sext i8 %a.val to i32
+  %b.ext = sext i8 %b.val to i32
+  %b.ext2 = sext i8 %b.val to i16
+  %c.ext = sext i8 %c.val to i16
+  %add = add nsw i32 %a.ext, %b.ext
+  %add2 = add nsw i16 %c.ext, %b.ext2
+  %add2.ext = sext i16 %add2 to i32
+  %add3 = add i32 %add, %add2.ext
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %wide.trip.count
+  br i1 %exitcond, label %exit, label %for.body
+
+exit:                                 ; preds = %exit.loopexit, %entry
+  %res.0.lcssa = phi i32 [ %add3, %for.body ]
+  ret i32 %res.0.lcssa
+}
+
+define i32 @common_zext_different_dest_types(ptr %a, ptr %b, ptr %c, i32 %N) {
+; CHECK-LABEL: define i32 @common_zext_different_dest_types(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CMP28_NOT:%.*]] = icmp ult i32 [[N]], 2
+; CHECK-NEXT:    [[DIV27:%.*]] = lshr i32 [[N]], 1
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext nneg i32 [[DIV27]] to i64
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[TMP4]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP2]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i8>, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i8> [[WIDE_LOAD]] to <4 x i32>
+; CHECK-NEXT:    [[TMP7:%.*]] = zext <4 x i8> [[WIDE_LOAD1]] to <4 x i32>
+; CHECK-NEXT:    [[TMP8:%.*]] = zext <4 x i8> [[WIDE_LOAD1]] to <4 x i16>
+; CHECK-NEXT:    [[TMP9:%.*]] = zext <4 x i8> [[WIDE_LOAD2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <4 x i32> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP11:%.*]] = add nsw <4 x i16> [[TMP9]], [[TMP8]]
+; CHECK-NEXT:    [[TMP12:%.*]] = zext <4 x i16> [[TMP11]] to <4 x i32>
+; CHECK-NEXT:    [[TMP13:%.*]] = add <4 x i32> [[TMP10]], [[TMP12]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP13]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP13]], i32 3
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  %cmp28.not = icmp ult i32 %N, 2
+  %div27 = lshr i32 %N, 1
+  %wide.trip.count = zext nneg i32 %div27 to i64
+  br label %for.body
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %res = phi i32 [ 0, %entry ], [ %add3, %for.body ]
+  %a.ptr = getelementptr inbounds nuw i8, ptr %a, i64 %iv
+  %b.ptr = getelementptr inbounds nuw i8, ptr %b, i64 %iv
+  %b.ptr2 = getelementptr inbounds nuw i16, ptr %b, i64 %iv
+  %c.ptr = getelementptr inbounds nuw i8, ptr %c, i64 %iv
+  %a.val = load i8, ptr %a.ptr, align 1
+  %b.val = load i8, ptr %b.ptr, align 1
+  %c.val = load i8, ptr %c.ptr, align 1
+  %a.ext = zext i8 %a.val to i32
+  %b.ext = zext i8 %b.val to i32
+  %b.ext2 = zext i8 %b.val to i16
+  %c.ext = zext i8 %c.val to i16
+  %add = add nsw i32 %a.ext, %b.ext
+  %add2 = add nsw i16 %c.ext, %b.ext2
+  %add2.ext = zext i16 %add2 to i32
+  %add3 = add i32 %add, %add2.ext
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %wide.trip.count
   br i1 %exitcond, label %exit, label %for.body

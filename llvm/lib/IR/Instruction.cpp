@@ -935,8 +935,6 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
   if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I1))
     return GEP->getSourceElementType() ==
            cast<GetElementPtrInst>(I2)->getSourceElementType();
-  if (const CastInst *Cast = dyn_cast<CastInst>(I1))
-    return Cast->getDestTy() == cast<CastInst>(I2)->getDestTy();
 
   return true;
 }
