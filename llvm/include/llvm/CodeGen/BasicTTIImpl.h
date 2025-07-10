@@ -2489,6 +2489,9 @@ public:
     case Intrinsic::fptoui_sat: {
       std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(Tys[0]);
       std::pair<InstructionCost, MVT> RetLT = getTypeLegalizationCost(RetTy);
+
+      // For cast instructions, types are differnt between source and
+      // destination. Also need to check if the source type can be legalize.
       if (!SrcLT.first.isValid() || !RetLT.first.isValid())
         return InstructionCost::getInvalid();
       ISD = IID == Intrinsic::fptosi_sat ? ISD::FP_TO_SINT_SAT
