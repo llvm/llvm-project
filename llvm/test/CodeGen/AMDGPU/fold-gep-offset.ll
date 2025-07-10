@@ -75,6 +75,7 @@ define i32 @flat_offset_maybe_oob(ptr %p, i32 %i) {
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[2:3], 2, v[2:3]
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GFX12-NEXT:    flat_load_b32 v0, v[0:1] offset:12
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0

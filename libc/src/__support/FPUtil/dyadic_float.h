@@ -170,7 +170,6 @@ template <size_t Bits> struct DyadicFloat {
     return DyadicFloat(result_sign, result_exponent, result_mantissa);
   }
 
-#ifdef LIBC_TYPES_HAS_FLOAT16
   template <typename T, bool ShouldSignalExceptions>
   LIBC_INLINE constexpr cpp::enable_if_t<
       cpp::is_floating_point_v<T> && (FPBits<T>::FRACTION_LEN < Bits), T>
@@ -277,7 +276,6 @@ template <size_t Bits> struct DyadicFloat {
 
     return FPBits(result).get_val();
   }
-#endif // LIBC_TYPES_HAS_FLOAT16
 
   template <typename T, bool ShouldSignalExceptions,
             typename = cpp::enable_if_t<cpp::is_floating_point_v<T> &&
@@ -411,11 +409,14 @@ template <size_t Bits> struct DyadicFloat {
                                             (FPBits<T>::FRACTION_LEN < Bits),
                                         void>>
   LIBC_INLINE constexpr T as() const {
+    if constexpr (cpp::is_same_v<T, bfloat16>
 #if defined(LIBC_TYPES_HAS_FLOAT16) && !defined(__LIBC_USE_FLOAT16_CONVERSION)
-    if constexpr (cpp::is_same_v<T, float16>)
-      return generic_as<T, ShouldSignalExceptions>();
+                  || cpp::is_same_v<T, float16>
 #endif
-    return fast_as<T, ShouldSignalExceptions>();
+    )
+      return generic_as<T, ShouldSignalExceptions>();
+    else
+      return fast_as<T, ShouldSignalExceptions>();
   }
 
   template <typename T,

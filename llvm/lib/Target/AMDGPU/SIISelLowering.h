@@ -220,6 +220,7 @@ private:
                                           DAGCombinerInfo &DCI) const;
 
   SDValue performAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performPtrAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performAddCarrySubCarryCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSubCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -356,7 +357,7 @@ public:
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       unsigned *IsFast = nullptr) const override;
 
-  EVT getOptimalMemOpType(const MemOp &Op,
+  EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
 
   bool isMemOpHasNoClobberedMemOperand(const SDNode *N) const;

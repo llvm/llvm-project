@@ -14,13 +14,13 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCLabel.h"
 #include "llvm/MC/MCSectionCOFF.h"
@@ -74,6 +74,8 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
       CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0),
       AutoReset(DoAutoReset), TargetOptions(TargetOpts) {
   SaveTempLabels = TargetOptions && TargetOptions->MCSaveTempLabels;
+  if (SaveTempLabels)
+    setUseNamesOnTempLabels(true);
   SecureLogFile = TargetOptions ? TargetOptions->AsSecureLogFile : "";
 
   if (SrcMgr && SrcMgr->getNumBuffers())
@@ -720,20 +722,50 @@ MCContext::getELFUniqueIDForEntsize(StringRef SectionName, unsigned Flags,
                                       : std::nullopt;
 }
 
-MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
-                                         MCSection *Parent,
-                                         uint32_t Subsection) {
+template <typename TAttr>
+MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
+                                         TAttr Attributes, MCSection *Parent,
+                                         bool IsVirtual) {
+  std::string UniqueName(Name);
+  if (Parent) {
+    UniqueName.append("/").append(Parent->getName());
+    if (auto *P = static_cast<MCSectionGOFF *>(Parent)->getParent())
+      UniqueName.append("/").append(P->getName());
+  }
   // Do the lookup. If we don't have a hit, return a new section.
-  auto [Iter, Inserted] = GOFFUniquingMap.try_emplace(Section.str());
-  if (!Inserted)
+  auto IterBool = GOFFUniquingMap.insert(std::make_pair(UniqueName, nullptr));
+  auto Iter = IterBool.first;
+  if (!IterBool.second)
     return Iter->second;
 
-  StringRef CachedName = Iter->first;
+  StringRef CachedName = StringRef(Iter->first.c_str(), Name.size());
   MCSectionGOFF *GOFFSection = new (GOFFAllocator.Allocate())
-      MCSectionGOFF(CachedName, Kind, Parent, Subsection);
+      MCSectionGOFF(CachedName, Kind, IsVirtual, Attributes,
+                    static_cast<MCSectionGOFF *>(Parent));
   Iter->second = GOFFSection;
   allocInitialFragment(*GOFFSection);
   return GOFFSection;
+}
+
+MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
+                                         GOFF::SDAttr SDAttributes) {
+  return getGOFFSection<GOFF::SDAttr>(Kind, Name, SDAttributes, nullptr,
+                                      /*IsVirtual=*/true);
+}
+
+MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
+                                         GOFF::EDAttr EDAttributes,
+                                         MCSection *Parent) {
+  return getGOFFSection<GOFF::EDAttr>(
+      Kind, Name, EDAttributes, Parent,
+      /*IsVirtual=*/EDAttributes.BindAlgorithm == GOFF::ESD_BA_Merge);
+}
+
+MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
+                                         GOFF::PRAttr PRAttributes,
+                                         MCSection *Parent) {
+  return getGOFFSection<GOFF::PRAttr>(Kind, Name, PRAttributes, Parent,
+                                      /*IsVirtual=*/false);
 }
 
 MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,

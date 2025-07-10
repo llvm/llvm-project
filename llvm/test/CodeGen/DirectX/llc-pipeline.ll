@@ -34,6 +34,7 @@
 ; CHECK-NEXT:   DXIL Root Signature Analysis
 ; CHECK-NEXT:   DXIL Post Optimization Validation
 ; CHECK-NEXT:   DXIL Op Lowering
+; CHECK-NEXT:   DXIL Root Signature Analysis
 ; CHECK-NEXT:   DXIL Prepare Module
 
 ; CHECK-ASM-NEXT: DXIL Metadata Pretty Printer

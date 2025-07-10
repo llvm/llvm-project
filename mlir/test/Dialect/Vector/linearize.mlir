@@ -294,6 +294,20 @@ func.func @test_vector_extract_scalable(%arg0: vector<2x8x[2]xf32>) -> vector<8x
 
 // -----
 
+// CHECK-LABEL: test_vector_insert_scalar
+// CHECK-SAME: (%[[DEST:.*]]: vector<2x4xf32>, %[[SRC:.*]]: f32) -> vector<2x4xf32> {
+func.func @test_vector_insert_scalar(%arg0: vector<2x4xf32>, %arg1: f32) -> vector<2x4xf32> {
+
+  // CHECK: %[[DEST_1D:.*]] = vector.shape_cast %[[DEST]] : vector<2x4xf32> to vector<8xf32>
+  // CHECK: %[[INSERT_1D:.*]] = vector.insert %[[SRC]], %[[DEST_1D]] [6] : f32 into vector<8xf32>
+  // CHECK: %[[RES:.*]] = vector.shape_cast %[[INSERT_1D]] : vector<8xf32> to vector<2x4xf32>
+  // CHECK: return %[[RES]] : vector<2x4xf32>
+  %0 = vector.insert %arg1, %arg0[1, 2]: f32 into vector<2x4xf32>
+  return %0 : vector<2x4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: test_vector_insert
 // CHECK-SAME: (%[[DEST:.*]]: vector<2x8x4xf32>, %[[SRC:.*]]: vector<8x4xf32>) -> vector<2x8x4xf32> {
 func.func @test_vector_insert(%arg0: vector<2x8x4xf32>, %arg1: vector<8x4xf32>) -> vector<2x8x4xf32> {
@@ -444,7 +458,7 @@ func.func @linearize_scalable_vector_splat(%arg0: i32) -> vector<4x[2]xi32> {
 // CHECK-LABEL: linearize_create_mask
 // CHECK-SAME: (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index) -> vector<1x16xi1>
 func.func @linearize_create_mask(%arg0 : index, %arg1 : index) -> vector<1x16xi1> {
-  
+
   // CHECK: %[[C0:.*]] = arith.constant 0 : index
   // CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[ARG0]], %[[C0]] : index
   // CHECK: %[[INDEXCAST:.*]] = arith.index_cast %[[CMP]] : i1 to index

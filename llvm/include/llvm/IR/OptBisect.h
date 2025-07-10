@@ -28,8 +28,8 @@ public:
 
   /// IRDescription is a textual description of the IR unit the pass is running
   /// over.
-  virtual bool shouldRunPass(const StringRef PassName,
-                             StringRef IRDescription) {
+  virtual bool shouldRunPass(StringRef PassName,
+                             StringRef IRDescription) const {
     return true;
   }
 
@@ -62,8 +62,8 @@ public:
   /// Most passes should not call this routine directly. Instead, it is called
   /// through helper routines provided by the base classes of the pass. For
   /// instance, function passes should call FunctionPass::skipFunction().
-  bool shouldRunPass(const StringRef PassName,
-                     StringRef IRDescription) override;
+  bool shouldRunPass(StringRef PassName,
+                     StringRef IRDescription) const override;
 
   /// isEnabled() should return true before calling shouldRunPass().
   bool isEnabled() const override { return BisectLimit != Disabled; }
@@ -75,11 +75,11 @@ public:
     LastBisectNum = 0;
   }
 
-  static const int Disabled = std::numeric_limits<int>::max();
+  static constexpr int Disabled = std::numeric_limits<int>::max();
 
 private:
   int BisectLimit = Disabled;
-  int LastBisectNum = 0;
+  mutable int LastBisectNum = 0;
 };
 
 /// Singleton instance of the OptBisect class, so multiple pass managers don't

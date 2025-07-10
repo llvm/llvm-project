@@ -12,5 +12,5 @@ top:
   return sum;
 }
 
-// CHECK: [[LABEL_METADATA]] = !DILabel({{.*}}, name: "top", {{.*}}, line: 9)
+// CHECK: [[LABEL_METADATA]] = !DILabel({{.*}}, name: "top", {{.*}}, line: 9, column: 1)
 // CHECK: [[LABEL_LOCATION]] = !DILocation(line: 9,

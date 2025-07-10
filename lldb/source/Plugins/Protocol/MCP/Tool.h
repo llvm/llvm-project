@@ -22,10 +22,10 @@ public:
   virtual ~Tool() = default;
 
   virtual llvm::Expected<protocol::TextResult>
-  Call(const llvm::json::Value &args) = 0;
+  Call(const protocol::ToolArguments &args) = 0;
 
   virtual std::optional<llvm::json::Value> GetSchema() const {
-    return std::nullopt;
+    return llvm::json::Object{{"type", "object"}};
   }
 
   protocol::ToolDefinition GetDefinition() const;
@@ -37,20 +37,26 @@ private:
   std::string m_description;
 };
 
-class LLDBCommandTool : public mcp::Tool {
+class CommandTool : public mcp::Tool {
 public:
-  LLDBCommandTool(std::string name, std::string description,
-                  Debugger &debugger);
-  ~LLDBCommandTool() = default;
+  using mcp::Tool::Tool;
+  ~CommandTool() = default;
 
   virtual llvm::Expected<protocol::TextResult>
-  Call(const llvm::json::Value &args) override;
+  Call(const protocol::ToolArguments &args) override;
 
   virtual std::optional<llvm::json::Value> GetSchema() const override;
-
-private:
-  Debugger &m_debugger;
 };
+
+class DebuggerListTool : public mcp::Tool {
+public:
+  using mcp::Tool::Tool;
+  ~DebuggerListTool() = default;
+
+  virtual llvm::Expected<protocol::TextResult>
+  Call(const protocol::ToolArguments &args) override;
+};
+
 } // namespace lldb_private::mcp
 
 #endif
