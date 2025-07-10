@@ -30,7 +30,7 @@
 
 // TODO: we need a proper way to only turn this on for single-threaded baremetal
 // We cannot use LIBC_THREAD_MODE because libcxx doesn't define that
-#if defined(LIBC_TARGET_ARCH_IS_GPU) || defined(__ELF__)
+#if defined(LIBC_TARGET_ARCH_IS_GPU) || defined(LIBC_TARGET_ARCH_IS_BAREMETAL)
 #define LIBC_THREAD_LOCAL
 #else
 #define LIBC_THREAD_LOCAL thread_local
