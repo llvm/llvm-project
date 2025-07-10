@@ -1,4 +1,4 @@
-//===-- AdbClient.cpp -----------------------------------------------------===//
+//===-- AdbSyncService.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,6 +19,8 @@
 #include "lldb/Utility/DataEncoder.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 
 #include <climits>
 
@@ -191,19 +193,22 @@ bool AdbSyncService::IsConnected() const {
 AdbSyncService::AdbSyncService(std::string device_id)
     : m_device_id(std::move(device_id)) {
   m_conn = std::make_unique<ConnectionFileDescriptor>();
+  Log *log = GetLog(LLDBLog::Platform);
+  LLDB_LOGF(log, "AdbSyncService::AdbSyncService() - Creating AdbSyncService for device: %s", 
+            m_device_id.c_str());  
 }
 
 Status
 AdbSyncService::executeCommand(const std::function<Status()> &cmd) {
-  if (!m_conn)
-    return Status::FromErrorString("AdbSyncService is disconnected");
-
   Status error = cmd();
-
   return error;
 }
 
-AdbSyncService::~AdbSyncService() = default;
+AdbSyncService::~AdbSyncService() {
+  Log *log = GetLog(LLDBLog::Platform);
+  LLDB_LOGF(log, "AdbSyncService::~AdbSyncService() - Destroying AdbSyncService for device: %s", 
+            m_device_id.c_str());
+}
 
 Status AdbSyncService::SendSyncRequest(const char *request_id,
                                                const uint32_t data_len,

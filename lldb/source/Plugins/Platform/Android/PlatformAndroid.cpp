@@ -439,13 +439,68 @@ bool PlatformAndroid::GetRemoteOSVersion() {
   return !m_os_version.empty();
 }
 
+uint32_t PlatformAndroid::FindProcesses(
+    const ProcessInstanceInfoMatch &match_info,
+    ProcessInstanceInfoList &process_infos) {
+  Status error;
+  AdbClientUP adb(GetAdbClient(error));
+  if (error.Fail()) {
+    return 0;
+  }
+
+  std::string ps_output;
+  error = adb->Shell("ps -A -o PID,NAME", seconds(10), &ps_output);
+  // output looks like
+  // PID NAME
+  // 1 init
+  // 2 kthreadd
+  // 3 com.android.settings
+
+  if (error.Fail())
+      return 0;
+
+  llvm::StringRef ps_lines(ps_output);
+  
+  while (!ps_lines.empty()) {
+    llvm::StringRef line;
+    std::tie(line, ps_lines) = ps_lines.split('\n');
+    line = line.trim();
+    
+    if (line.empty() || line.starts_with("PID") || line.starts_with("USER"))
+      continue;
+
+    // Parse PID and process name from ps output
+    llvm::StringRef pid_str, name_str;
+    std::tie(pid_str, name_str) = line.split(' ');
+    pid_str = pid_str.trim();
+    name_str = name_str.trim();
+    
+    // Skip if we can't parse PID
+    lldb::pid_t pid;
+    if (pid_str.getAsInteger(10, pid))
+      continue;
+
+    // Create ProcessInstanceInfo for this process
+    ProcessInstanceInfo process_info;
+    process_info.SetProcessID(pid);
+    process_info.GetExecutableFile().SetFile(name_str, FileSpec::Style::posix);
+    
+    // Check if this process matches our search criteria
+    if (match_info.Matches(process_info)) {
+      process_infos.push_back(process_info);
+    }
+  }
+
+  return process_infos.size();
+}
+
 llvm::StringRef
 PlatformAndroid::GetLibdlFunctionDeclarations(lldb_private::Process *process) {
   SymbolContextList matching_symbols;
   std::vector<const char *> dl_open_names = {"__dl_dlopen", "dlopen"};
   const char *dl_open_name = nullptr;
   Target &target = process->GetTarget();
-  for (auto name : dl_open_names) {
+  for (const auto *name : dl_open_names) {
     target.GetImages().FindFunctionSymbols(
         ConstString(name), eFunctionNameTypeFull, matching_symbols);
     if (matching_symbols.GetSize()) {
@@ -466,11 +521,9 @@ PlatformAndroid::GetLibdlFunctionDeclarations(lldb_private::Process *process) {
 }
 
 PlatformAndroid::AdbClientUP PlatformAndroid::GetAdbClient(Status &error) {
-  AdbClientUP adb = std::make_unique<AdbClient>();
-  if (adb)
-    error.Clear();
-  else
-    error = Status::FromErrorString("Failed to create AdbClient");
+  AdbClientUP adb = std::make_unique<AdbClient>(m_device_id);
+  error.Clear();
+  error = adb->Connect();
   return adb;
 }
 

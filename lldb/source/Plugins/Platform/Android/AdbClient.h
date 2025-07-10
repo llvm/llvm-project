@@ -34,53 +34,6 @@ public:
 
   using DeviceIDList = std::list<std::string>;
 
-  class SyncService {
-    friend class AdbClient;
-
-  public:
-    explicit SyncService(std::unique_ptr<Connection> conn, std::string device_id);
-    
-    virtual ~SyncService();
-
-    virtual Status PullFile(const FileSpec &remote_file,
-                            const FileSpec &local_file);
-
-    virtual Status PushFile(const FileSpec &local_file, const FileSpec &remote_file);
-
-    virtual Status Stat(const FileSpec &remote_file, uint32_t &mode,
-                        uint32_t &size, uint32_t &mtime);
-
-    virtual bool IsConnected() const;
-    
-    const std::string &GetDeviceId() const { return m_device_id; }
-
-  protected:
-    virtual Status SendSyncRequest(const char *request_id, const uint32_t data_len,
-                                   const void *data);
-    virtual Status ReadSyncHeader(std::string &response_id, uint32_t &data_len);
-
-  private:
-
-    Status PullFileChunk(std::vector<char> &buffer, bool &eof);
-
-    Status internalPullFile(const FileSpec &remote_file,
-                            const FileSpec &local_file);
-
-    Status internalPushFile(const FileSpec &local_file,
-                            const FileSpec &remote_file);
-
-    Status internalStat(const FileSpec &remote_file, uint32_t &mode,
-                        uint32_t &size, uint32_t &mtime);
-
-    Status executeCommand(const std::function<Status()> &cmd);
-
-    // Internal connection setup methods
-    Status SetupSyncConnection(const std::string &device_id);
-
-    std::unique_ptr<Connection> m_conn;
-    std::string m_device_id;
-  };
-
   static Status CreateByDeviceID(const std::string &device_id, AdbClient &adb);
 
   AdbClient();
@@ -108,13 +61,10 @@ public:
                              std::chrono::milliseconds timeout,
                              const FileSpec &output_file_spec);
 
-  Status EnterSyncMode();
+  Status Connect();
 
 private:
   void SetDeviceID(const std::string &device_id);
-
-  Status Connect();
-  Status EnsureConnection();
 
   Status SendDeviceMessage(const std::string &packet);
 

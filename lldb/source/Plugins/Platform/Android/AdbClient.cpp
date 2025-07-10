@@ -10,6 +10,8 @@
 
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -30,13 +32,13 @@ const static char *kSocketNamespaceFileSystem = "localfilesystem";
 Status AdbClient::CreateByDeviceID(const std::string &device_id,
                                    AdbClient &adb) {
   Status error;
-  std::string android_serial;
+  std::string preferred_android_serial;
   if (!device_id.empty())
-    android_serial = device_id;
+    preferred_android_serial = device_id;
   else if (const char *env_serial = std::getenv("ANDROID_SERIAL"))
-    android_serial = env_serial;
+    preferred_android_serial = env_serial;
 
-  if (android_serial.empty()) {
+  if (preferred_android_serial.empty()) {
     DeviceIDList connected_devices;
     error = adb.GetDevices(connected_devices);
     if (error.Fail())
@@ -49,23 +51,32 @@ Status AdbClient::CreateByDeviceID(const std::string &device_id,
           connected_devices.size());
     adb.SetDeviceID(connected_devices.front());
   } else {
-    adb.SetDeviceID(android_serial);
+    adb.SetDeviceID(preferred_android_serial);
   }
   return error;
 }
 
 
 AdbClient::AdbClient(const std::string &device_id) : m_device_id(device_id) {
+  Log *log = GetLog(LLDBLog::Platform);
+  LLDB_LOGF(log, "AdbClient::AdbClient(device_id='%s') - Creating AdbClient with device ID", 
+              device_id.c_str());
   m_conn = std::make_unique<ConnectionFileDescriptor>();
   Connect();
 }
 
 AdbClient::AdbClient() {
+  Log *log = GetLog(LLDBLog::Platform);
+  LLDB_LOGF(log, "AdbClient::AdbClient() - Creating AdbClient with default constructor");
   m_conn = std::make_unique<ConnectionFileDescriptor>();
   Connect();
 }
 
-AdbClient::~AdbClient() = default;
+AdbClient::~AdbClient() {
+  Log *log = GetLog(LLDBLog::Platform);
+  LLDB_LOGF(log, "AdbClient::~AdbClient() - Destroying AdbClient for device: %s", 
+              m_device_id.c_str());
+}
 
 void AdbClient::SetDeviceID(const std::string &device_id) {
   m_device_id = device_id;
@@ -74,7 +85,9 @@ void AdbClient::SetDeviceID(const std::string &device_id) {
 const std::string &AdbClient::GetDeviceID() const { return m_device_id; }
 
 Status AdbClient::Connect() {
-  Status error;
+  if (m_conn->IsConnected())
+    return Status();
+
   return ConnectToAdb(*m_conn);
 }
 

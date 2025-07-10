@@ -1,5 +1,7 @@
 #include "lldb/Utility/Connection.h"
 #include "AdbClientUtils.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Timeout.h"
 #include <chrono>
@@ -34,10 +36,11 @@ Status ReadAllBytes(Connection &conn, void *buffer, size_t size) {
       break;
     now = steady_clock::now();
   }
-  if (total_read_bytes < size)
+  if (total_read_bytes < size) {
     error = Status::FromErrorStringWithFormat(
         "Unable to read requested number of bytes. Connection status: %d.",
         status);
+  }
   return error;
 }
 
@@ -67,7 +70,11 @@ Status GetResponseError(Connection &conn, const char *response_id) {
   auto error = ReadAdbMessage(conn, error_message);
   if (!error.Success())
     return error;
-  return Status(std::string(&error_message[0], error_message.size()));
+  
+  std::string error_str(&error_message[0], error_message.size());
+  Log *log = GetLog(LLDBLog::Platform);
+  LLDB_LOGF(log, "ADB error: %s", error_str.c_str());
+  return Status(error_str);
 }
 
 Status ConnectToAdb(Connection &conn) {
@@ -75,6 +82,9 @@ Status ConnectToAdb(Connection &conn) {
   if (const char *env_port = std::getenv("ANDROID_ADB_SERVER_PORT")) 
     port = env_port;
   std::string uri = "connect://127.0.0.1:" + port;
+  
+  Log *log = GetLog(LLDBLog::Platform);
+  LLDB_LOGF(log, "Connecting to ADB server at %s", uri.c_str());
   
   Status error;
   conn.Connect(uri.c_str(), &error);
@@ -90,6 +100,9 @@ Status EnterSyncMode(Connection &conn) {
 }
 
 Status SelectTargetDevice(Connection &conn, const std::string &device_id) {
+  Log *log = GetLog(LLDBLog::Platform);
+  LLDB_LOGF(log, "Selecting device: %s", device_id.c_str());
+    
   std::ostringstream msg;
   msg << "host:transport:" << device_id;
 
