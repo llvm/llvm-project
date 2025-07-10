@@ -7,6 +7,9 @@
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
+#ifdef HAVE_SYS_MMAN_H
+#include <sys/mman.h>
+#endif
 
 extern thread_local bool IOSandboxEnabled;
 
@@ -41,6 +44,7 @@ template <class FnTy> constexpr auto interpose(FnTy Fn) {
 
 static constexpr auto read = detail::interpose(::read);
 static constexpr auto pread = detail::interpose(::pread);
+static constexpr auto mmap = detail::interpose(::mmap);
 } // namespace llvm
 
 #endif
