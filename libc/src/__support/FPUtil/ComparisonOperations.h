@@ -24,7 +24,7 @@ namespace fputil {
 // 2. (i)   +inf  = +inf
 //    (ii)  -inf  = -inf
 //    (iii) -inf != +inf
-// 3. Any comparison with NaN return false except (NaN != NaN => true)
+// 3. Any comparison with NaN returns false
 template <typename T>
 LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool> equals(T x,
                                                                        T y) {
@@ -43,7 +43,6 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool> equals(T x,
   if (x_bits.is_zero() && y_bits.is_zero())
     return true;
 
-  // should also work for comparisons of different signs
   return x_bits.uintval() == y_bits.uintval();
 }
 
@@ -74,8 +73,8 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool> less_than(T x,
   if (x_bits.is_pos() && y_bits.is_neg())
     return false;
 
-  // since we store the float in the format: s | e | m
-  // the comparisons should work if we directly compare the uintval's
+  // since floating-point numbers are stored in the format: s | e | m
+  // we can directly compare the uintval's
 
   // both negative
   if (x_bits.is_neg())
@@ -94,7 +93,6 @@ greater_than(T x, T y) {
 }
 
 // Implements compareSignalingLessEqual predicate
-// following is expression is correct, accounting for NaN case(s) as well
 // x <= y => (x < y) || (x == y)
 template <typename T>
 LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
