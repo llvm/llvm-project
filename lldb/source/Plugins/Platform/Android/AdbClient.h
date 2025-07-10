@@ -10,6 +10,8 @@
 #define LLDB_SOURCE_PLUGINS_PLATFORM_ANDROID_ADBCLIENT_H
 
 #include "lldb/Utility/Status.h"
+#include "AdbClientUtils.h"
+#include "AdbSyncService.h"
 #include <chrono>
 #include <functional>
 #include <list>
@@ -36,7 +38,7 @@ public:
     friend class AdbClient;
 
   public:
-    explicit SyncService(std::unique_ptr<Connection> conn, const std::string &device_id);
+    explicit SyncService(std::unique_ptr<Connection> conn, std::string device_id);
     
     virtual ~SyncService();
 
@@ -56,7 +58,6 @@ public:
     virtual Status SendSyncRequest(const char *request_id, const uint32_t data_len,
                                    const void *data);
     virtual Status ReadSyncHeader(std::string &response_id, uint32_t &data_len);
-    virtual Status ReadAllBytes(void *buffer, size_t size);
 
   private:
 
@@ -107,34 +108,21 @@ public:
                              std::chrono::milliseconds timeout,
                              const FileSpec &output_file_spec);
 
-  Status SelectTargetDevice();
-
   Status EnterSyncMode();
 
 private:
   void SetDeviceID(const std::string &device_id);
 
   Status Connect();
-
-  Status SendMessage(const std::string &packet, const bool reconnect = true);
+  Status EnsureConnection();
 
   Status SendDeviceMessage(const std::string &packet);
-
-  Status ReadMessage(std::vector<char> &message);
 
   Status ReadMessageStream(std::vector<char> &message,
                            std::chrono::milliseconds timeout);
 
-  Status GetResponseError(const char *response_id);
-
-  Status ReadResponseStatus();
-
   Status internalShell(const char *command, std::chrono::milliseconds timeout,
                        std::vector<char> &output_buf);
-
-  Status ReadAllBytes(void *buffer, size_t size);
-
-  Status ConnectToAdb(Connection &conn);
 
   std::string m_device_id;
   std::unique_ptr<Connection> m_conn;

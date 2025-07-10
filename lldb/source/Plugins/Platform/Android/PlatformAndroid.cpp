@@ -18,6 +18,7 @@
 #include "lldb/ValueObject/ValueObject.h"
 
 #include "AdbClient.h"
+#include "AdbSyncService.h"
 #include "PlatformAndroid.h"
 #include "PlatformAndroidRemoteGDBServer.h"
 #include "lldb/Target/Target.h"
@@ -465,7 +466,7 @@ PlatformAndroid::GetLibdlFunctionDeclarations(lldb_private::Process *process) {
 }
 
 PlatformAndroid::AdbClientUP PlatformAndroid::GetAdbClient(Status &error) {
-  AdbClientUP adb(std::make_unique<AdbClient>(m_device_id));
+  AdbClientUP adb = std::make_unique<AdbClient>();
   if (adb)
     error.Clear();
   else
@@ -493,13 +494,11 @@ std::string PlatformAndroid::GetRunAs() {
   }
   return run_as.str();
 }
-
-std::unique_ptr<AdbClient::SyncService>
+std::unique_ptr<AdbSyncService>
 PlatformAndroid::GetSyncService(Status &error) {
-  auto conn = std::make_unique<ConnectionFileDescriptor>();
-  auto sync_service = std::make_unique<AdbClient::SyncService>(
-      std::move(conn), m_device_id);
-  
-  error.Clear();
+  auto sync_service = std::make_unique<AdbSyncService>(m_device_id);
+  error = sync_service->SetupSyncConnection();
+  if (error.Fail())
+    return nullptr;
   return sync_service;
 }

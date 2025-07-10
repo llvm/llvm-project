@@ -14,6 +14,7 @@
 
 #include "Plugins/Platform/Linux/PlatformLinux.h"
 
+#include "AdbSyncService.h"
 #include "AdbClient.h"
 
 namespace lldb_private {
@@ -82,7 +83,7 @@ public:
   virtual llvm::StringRef GetPropertyPackageName();
 
 protected:
-  virtual std::unique_ptr<AdbClient::SyncService> GetSyncService(Status &error);
+  virtual std::unique_ptr<AdbSyncService> GetSyncService(Status &error);
 
 private:
   std::string m_device_id;
