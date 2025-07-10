@@ -1290,3 +1290,60 @@ void f() {
 
 
 }
+
+namespace GH147121 {
+struct X {};
+struct S1 {
+    bool operator==(this auto &&, const X &); // #S1-cand
+};
+struct S2 {
+    bool operator==(this X, const auto &&); // #S2-cand
+};
+
+struct S3 {
+    S3& operator++(this X); // #S3-inc-cand
+    S3& operator++(this int); // #S3-inc-cand
+    int operator[](this X); // #S3-sub-cand
+    int operator[](this int); // #S3-sub-cand2
+    void f(this X); // #S3-f-cand
+    void f(this int); // #S3-f-cand2
+};
+
+int main() {
+    S1{} == S1{};
+    // expected-error@-1 {{invalid operands to binary expression ('S1' and 'S1')}}
+    // expected-note@#S1-cand {{candidate function template not viable}}
+    // expected-note@#S1-cand {{candidate function (with reversed parameter order) template not viable}}
+
+
+    S1{} != S1{};
+    // expected-error@-1 {{invalid operands to binary expression ('S1' and 'S1')}}
+    // expected-note@#S1-cand {{candidate function template not viable}}
+    // expected-note@#S1-cand {{candidate function (with reversed parameter order) template not viable}}
+
+
+    S2{} == S2{};
+    // expected-error@-1 {{invalid operands to binary expression ('S2' and 'S2')}}
+    // expected-note@#S2-cand {{candidate function template not viable}}
+    // expected-note@#S2-cand {{candidate function (with reversed parameter order) template not viable}}
+
+
+    S2{} != S2{};
+    // expected-error@-1 {{invalid operands to binary expression ('S2' and 'S2')}}
+    // expected-note@#S2-cand {{candidate function template not viable}}
+    // expected-note@#S2-cand {{candidate function (with reversed parameter order) template not viable}}
+
+    S3 s3;
+    ++s3;
+    // expected-error@-1{{cannot increment value of type 'S3'}}
+    s3[];
+    // expected-error@-1{{no viable overloaded operator[] for type 'S3'}}
+    // expected-note@#S3-sub-cand {{candidate function not viable: no known conversion from 'S3' to 'X' for object argument}}
+    // expected-note@#S3-sub-cand2 {{candidate function not viable: no known conversion from 'S3' to 'int' for object argument}}
+
+    s3.f();
+    // expected-error@-1{{no matching member function for call to 'f'}}
+    // expected-note@#S3-f-cand {{candidate function not viable: no known conversion from 'S3' to 'X' for object argument}}
+    // expected-note@#S3-f-cand2 {{candidate function not viable: no known conversion from 'S3' to 'int' for object argument}}
+}
+}
