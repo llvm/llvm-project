@@ -9979,13 +9979,15 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     }
   }
 
-  // fold (not (neg x)) -> (add X, -1)
-  // FIXME: This can be generalized to (not (sub Y, X)) -> (add X, ~Y) if
-  // Y is a constant or the subtract has a single use.
-  if (isAllOnesConstant(N1) && N0.getOpcode() == ISD::SUB &&
-      isNullConstant(N0.getOperand(0))) {
-    return DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(1),
-                       DAG.getAllOnesConstant(DL, VT));
+  // fold (not (sub Y, X)) -> (add X, ~Y) if Y is a constant.
+  // FIXME: We can also do this with single-use sub, but this causes an infinite
+  // loop
+  if (isAllOnesConstant(N1) && N0.getOpcode() == ISD::SUB) {
+    SDValue N00 = N0.getOperand(0), N01 = N0.getOperand(1);
+    if (isa<ConstantSDNode>(N00)) {
+      SDValue NotY = DAG.getNOT(DL, N00, VT); // N00 = ~N00
+      return DAG.getNode(ISD::ADD, DL, VT, N01, NotY);
+    }
   }
 
   // fold (not (add X, -1)) -> (neg X)
