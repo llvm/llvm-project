@@ -56,9 +56,10 @@
 
 ; RUN: llvm-dis %t.out.2.4.opt.bc -o - | FileCheck %s --check-prefixes=IR,IR-INLINE
 
-;; Next, add a threshold to prevent inlining of small count promoted calls.
+;; Next, add a threshold to prevent inlining of the promoted calls which have
+;; count 2 (the default threshold of 2 means they are inlinable by default).
 ; RUN: llvm-lto2 run %t/main.o %t/foo.o -enable-memprof-context-disambiguation \
-; RUN:	-memprof-icp-inline-minimum-count-threshold=3 \
+; RUN:	-memprof-icp-noinline-threshold=3 \
 ; RUN:	-enable-memprof-indirect-call-support=true \
 ; RUN:  -memprof-allow-recursive-callsites \
 ; RUN:  -supports-hot-cold-new \
