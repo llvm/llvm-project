@@ -566,7 +566,7 @@ void DataAggregator::checkLBRTOSErratum() {
       break;
     }
     // Disassemble instructions in [From, To] (no CFG is available yet)
-    for (uint64_t Addr = T.From; Addr < T.To; ) {
+    for (uint64_t Addr = T.From; Addr < T.To;) {
       // Since we checked the range first, there should be no unconditional jump
       // in the map. We can use entries as size hints to avoid disassembling.
       auto UII = UJmpOrSize.find(Addr);
@@ -660,7 +660,6 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   if (opts::ImputeTraceFallthrough)
     imputeFallThroughs();
 
-  clear(Returns);
   clear(UncondJumps);
 
   if (opts::HeatmapMode) {
