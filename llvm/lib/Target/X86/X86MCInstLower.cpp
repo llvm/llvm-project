@@ -80,7 +80,8 @@ public:
                                 const MachineOperand &MO) const;
   void Lower(const MachineInstr *MI, MCInst &OutMI) const;
 
-  MCSymbol *GetSymbolFromOperand(const MachineOperand &MO) const;
+  MCSymbol *GetSymbolFromOperand(const MachineOperand &MO,
+                                 MCContext *ExternalContext = nullptr) const;
   MCOperand LowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym) const;
 
 private:
@@ -152,7 +153,9 @@ MachineModuleInfoMachO &X86MCInstLower::getMachOMMI() const {
 
 /// GetSymbolFromOperand - Lower an MO_GlobalAddress or MO_ExternalSymbol
 /// operand to an MCSymbol.
-MCSymbol *X86MCInstLower::GetSymbolFromOperand(const MachineOperand &MO) const {
+MCSymbol *
+X86MCInstLower::GetSymbolFromOperand(const MachineOperand &MO,
+                                     MCContext *ExternalContext) const {
   const Triple &TT = TM.getTargetTriple();
   if (MO.isGlobal() && TT.isOSBinFormatELF())
     return AsmPrinter.getSymbolPreferLocal(*MO.getGlobal());
@@ -193,8 +196,13 @@ MCSymbol *X86MCInstLower::GetSymbolFromOperand(const MachineOperand &MO) const {
   }
 
   Name += Suffix;
-  if (!Sym)
-    Sym = Ctx.getOrCreateSymbol(Name);
+  if (!Sym) {
+    if (ExternalContext) {
+      Sym = ExternalContext->getOrCreateSymbol(Name);
+    } else {
+      Sym = Ctx.getOrCreateSymbol(Name);
+    }
+  }
 
   // If the target flags on the operand changes the name of the symbol, do that
   // before we return the symbol.
@@ -351,7 +359,8 @@ MCOperand X86MCInstLower::LowerMachineOperand(const MachineInstr *MI,
   case MachineOperand::MO_MachineBasicBlock:
   case MachineOperand::MO_GlobalAddress:
   case MachineOperand::MO_ExternalSymbol:
-    return LowerSymbolOperand(MO, GetSymbolFromOperand(MO));
+    return LowerSymbolOperand(MO,
+                              GetSymbolFromOperand(MO, &AsmPrinter.OutContext));
   case MachineOperand::MO_MCSymbol:
     return LowerSymbolOperand(MO, MO.getMCSymbol());
   case MachineOperand::MO_JumpTableIndex:
