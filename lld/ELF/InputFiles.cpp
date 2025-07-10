@@ -547,13 +547,14 @@ handleAArch64BAAndGnuProperties(ObjFile<ELFT> *file, Ctx &ctx,
     if (file->aarch64PauthAbiCoreInfo) {
       if (baInfo.Pauth.TagPlatform != file->aarch64PauthAbiCoreInfo->platform ||
           baInfo.Pauth.TagSchema != file->aarch64PauthAbiCoreInfo->version)
-        Err(ctx)
-            << file
-            << " GNU properties and build attributes have conflicting AArch64 PAuth data";
+        Err(ctx) << file
+                 << " GNU properties and build attributes have conflicting "
+                    "AArch64 PAuth data";
     }
     if (baInfo.AndFeatures != file->andFeatures)
       Err(ctx) << file
-               << " GNU properties and build attributes have conflicting AArch64 PAuth data";
+               << " GNU properties and build attributes have conflicting "
+                  "AArch64 PAuth data";
   } else {
     // When BuildAttributes are missing, PauthABI value defaults to (TagPlatform
     // = 0, TagSchema = 0). GNU properties do not write PAuthAbiCoreInfo if GNU
