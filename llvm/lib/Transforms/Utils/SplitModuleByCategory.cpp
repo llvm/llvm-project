@@ -291,6 +291,8 @@ EntryPointGroupVec selectEntryPointGroups(
     const Module &M, function_ref<std::optional<int>(const Function &F)> EPC) {
   // std::map is used here to ensure stable ordering of entry point groups,
   // which is based on their contents, this greatly helps LIT tests
+  // Note: EPC is allowed to return big identifiers. Therefore, we use
+  // std::map + SmallVector approach here.
   std::map<int, EntryPointSet> EntryPointsMap;
 
   for (const auto &F : M.functions())
