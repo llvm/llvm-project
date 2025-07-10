@@ -2488,8 +2488,7 @@ public:
 
   /// Check if a value \op N is a constant using the target's BooleanContent for
   /// its type.
-  LLVM_ABI std::optional<bool>
-  isBoolConstant(SDValue N, bool AllowTruncation = false) const;
+  LLVM_ABI std::optional<bool> isBoolConstant(SDValue N) const;
 
   /// Set CallSiteInfo to be associated with Node.
   void addCallSiteInfo(const SDNode *Node, CallSiteInfo &&CallInfo) {
