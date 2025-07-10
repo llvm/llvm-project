@@ -6436,7 +6436,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
 
   if (getLastProfileSampleUseArg(Args) &&
       Args.hasFlag(options::OPT_fsample_profile_use_profi,
-                   options::OPT_fno_sample_profile_use_profi, false)) {
+                   options::OPT_fno_sample_profile_use_profi, true)) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-sample-profile-use-profi");
   }
