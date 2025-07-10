@@ -81,8 +81,8 @@ class VOPD3e<bits<6> opX, bits<6> opY, VOP_Pseudo VDX, VOP_Pseudo VDY> : Enc96 {
   let Inst{46} = !if(!and(VDY.Pfl.HasVOPD3Src2, VDY.Pfl.HasModifiers), vsrc2Y_modifiers, 0);
   let Inst{55-48} = !if(!eq(!find(VDX.Pfl.AsmVOPD3X, "$vsrc1X"), -1), 0, vsrc1X);
 
-  // SP3 allows to use an SGPR in place of VSRC2 operand for V_DUAL_CNDMASK_B32
-  // despite the fact the operand does not accept SGPRs.
+  // Despite the vsrc operand name, SGPRs can be used for vsrc2X for
+  // V_DUAL_CNDMASK_B32
   let Inst{63-56} = !if(!eq(!find(VDX.Pfl.AsmVOPD3X, "$vsrc2X"), -1), 0, vsrc2X);
   let Inst{71-64} = vdstX;
   let Inst{79-72} = !if(!eq(!find(VDY.Pfl.AsmVOPD3Y, "$vsrc1Y"), -1), 0, vsrc1Y);
