@@ -270,8 +270,10 @@ void OmpStructureChecker::CheckDirectiveSpelling(
   // with spaces removed).
   auto removeSpaces = [](llvm::StringRef s) {
     std::string n{s.str()};
-    for (auto it{n.begin()}; it != n.end();) {
-      it = isspace(*it) ? n.erase(it) : std::next(it);
+    for (size_t idx{n.size()}; idx > 0; --idx) {
+      if (isspace(n[idx - 1])) {
+        n.erase(idx - 1, 1);
+      }
     }
     return n;
   };
