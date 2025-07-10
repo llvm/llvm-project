@@ -1760,7 +1760,7 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     // Those Values need to be returned by the new warp op.
     llvm::SmallSetVector<Value, 32> escapingValues;
     SmallVector<Type> escapingValueInputTypes;
-    SmallVector<Type> escapingValuedistTypes;
+    SmallVector<Type> escapingValueDistTypes;
     mlir::visitUsedValuesDefinedAbove(
         forOp.getBodyRegion(), [&](OpOperand *operand) {
           Operation *parent = operand->get().getParentRegion()->getParentOp();
@@ -1773,11 +1773,11 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
               distType = getDistributedType(vecType, map, warpOp.getWarpSize());
             }
             escapingValueInputTypes.push_back(operand->get().getType());
-            escapingValuedistTypes.push_back(distType);
+            escapingValueDistTypes.push_back(distType);
           }
         });
 
-    if (llvm::is_contained(escapingValuedistTypes, Type{}))
+    if (llvm::is_contained(escapingValueDistTypes, Type{}))
       return failure();
     // `WarpOp` can yield two types of values:
     // 1. Values that are not results of the `ForOp`:
@@ -1821,8 +1821,8 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     newWarpOpYieldValues.insert(newWarpOpYieldValues.end(),
                                 escapingValues.begin(), escapingValues.end());
     newWarpOpDistTypes.insert(newWarpOpDistTypes.end(),
-                              escapingValuedistTypes.begin(),
-                              escapingValuedistTypes.end());
+                              escapingValueDistTypes.begin(),
+                              escapingValueDistTypes.end());
     // Next, we insert all non-`ForOp` yielded values and their distributed
     // types. We also create a mapping between the non-`ForOp` yielded value
     // index and the corresponding new `WarpOp` yield value index (needed to
