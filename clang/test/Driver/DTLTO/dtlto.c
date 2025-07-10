@@ -21,11 +21,10 @@
 
 // FORWARD: ld.lld
 // FORWARD-SAME: "--thinlto-distributor=d.exe"
-// FORWARD-SAME: "--thinlto-remote-compiler={{.*}}clang
+// FORWARD-SAME: "--thinlto-remote-compiler={{.*}}clang{{(.exe)?}}"
 // FORWARD-SAME: "--thinlto-distributor-arg=a1"
 // FORWARD-SAME: "--thinlto-distributor-arg=a2"
 // FORWARD-SAME: "--thinlto-distributor-arg=a3"
-
 
 /// Check that options are not added without --thinlto-distributor= and
 /// that there is an unused option warning issued for -Xthinlto-distributor=
@@ -46,4 +45,4 @@
 
 // DEFAULT: ld.lld
 // DEFAULT-SAME: "--thinlto-distributor=d.exe"
-// DEFAULT-SAME: "--thinlto-remote-compiler={{.*}}clang
+// DEFAULT-SAME: "--thinlto-remote-compiler={{.*}}clang{{(.exe)?}}"
