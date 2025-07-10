@@ -2522,6 +2522,32 @@ def ComplexImagOp : CIR_Op<"complex.imag", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexAddOp
+//===----------------------------------------------------------------------===//
+
+def ComplexAddOp : CIR_Op<"complex.add", [Pure, SameOperandsAndResultType]> {
+  let summary = "Complex addition";
+  let description = [{
+    The `cir.complex.add` operation takes two complex numbers and returns
+    their sum.
+
+    Example:
+
+    ```mlir
+    %2 = cir.complex.add %0, %1 : !cir.complex<!cir.float>
+    ```
+  }];
+
+  let arguments = (ins CIR_ComplexType:$lhs, CIR_ComplexType:$rhs);
+
+  let results = (outs CIR_ComplexType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs `:` qualified(type($result)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Bit Manipulation Operations
 //===----------------------------------------------------------------------===//
 

@@ -886,6 +886,8 @@ public:
   void emitInitializerForField(clang::FieldDecl *field, LValue lhs,
                                clang::Expr *init);
 
+  mlir::Value emitPromotedComplexExpr(const Expr *e, QualType promotionType);
+
   mlir::Value emitPromotedScalarExpr(const Expr *e, QualType promotionType);
 
   /// Emit the computation of the specified expression of scalar type.
