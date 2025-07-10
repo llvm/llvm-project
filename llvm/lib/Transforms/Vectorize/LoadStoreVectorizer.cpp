@@ -345,7 +345,7 @@ private:
   std::vector<Chain> gatherChains(ArrayRef<Instruction *> Instrs);
 
   /// Propagates the best alignment in a chain of contiguous accesses
-  void propagateBestAlignmentsInChain(ArrayRef<ChainElem> C) const;
+  void propagateBestAlignmentInChain(ArrayRef<ChainElem> C) const;
 };
 
 class LoadStoreVectorizerLegacyPass : public FunctionPass {
@@ -721,7 +721,7 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
 
   // We know that the accesses are contiguous. Propagate alignment
   // information so that slices of the chain can still be vectorized.
-  propagateBestAlignmentsInChain(C);
+  propagateBestAlignmentInChain(C);
   LLVM_DEBUG({
     dbgs() << "LSV: Chain after alignment propagation:\n";
     dumpChain(C);
@@ -1639,31 +1639,23 @@ std::optional<APInt> Vectorizer::getConstantOffset(Value *PtrA, Value *PtrB,
   return std::nullopt;
 }
 
-void Vectorizer::propagateBestAlignmentsInChain(ArrayRef<ChainElem> C) const {
-  auto PropagateAlignments = [](auto ChainIt) {
-    ChainElem BestAlignedElem = *ChainIt.begin();
-    Align BestAlignSoFar = getLoadStoreAlignment(BestAlignedElem.Inst);
-
-    for (const ChainElem &E : ChainIt) {
-      Align OrigAlign = getLoadStoreAlignment(E.Inst);
-      if (OrigAlign > BestAlignSoFar) {
-        BestAlignedElem = E;
-        BestAlignSoFar = OrigAlign;
-        continue;
-      }
-
-      APInt DeltaFromBestAlignedElem =
-          APIntOps::abdu(E.OffsetFromLeader, BestAlignedElem.OffsetFromLeader);
-      // commonAlignment is equivalent to a greatest common power-of-two
-      // divisor; it returns the largest power of 2 that divides both A and B.
-      Align NewAlign = commonAlignment(
-          BestAlignSoFar, DeltaFromBestAlignedElem.getLimitedValue());
-      if (NewAlign > OrigAlign)
-        setLoadStoreAlignment(E.Inst, NewAlign);
+void Vectorizer::propagateBestAlignmentInChain(ArrayRef<ChainElem> C) const {
+  // Find the element in the chain with the best alignment and its offset.
+  Align BestAlign = getLoadStoreAlignment(C[0].Inst);
+  APInt BestAlignOffset = C[0].OffsetFromLeader;
+  for (const ChainElem &Elem : C) {
+    Align ElemAlign = getLoadStoreAlignment(Elem.Inst);
+    if (ElemAlign > BestAlign) {
+      BestAlign = ElemAlign;
+      BestAlignOffset = Elem.OffsetFromLeader;
     }
-  };
+  }
 
-  // Propagate forwards and backwards.
-  PropagateAlignments(C);
-  PropagateAlignments(reverse(C));
+  // Propagate the best alignment to other elements in the chain, if possible.
+  for (const ChainElem &Elem : C) {
+    APInt OffsetDelta = APIntOps::abdu(Elem.OffsetFromLeader, BestAlignOffset);
+    Align NewAlign = commonAlignment(BestAlign, OffsetDelta.getLimitedValue());
+    if (NewAlign > getLoadStoreAlignment(Elem.Inst))
+      setLoadStoreAlignment(Elem.Inst, NewAlign);
+  }
 }
