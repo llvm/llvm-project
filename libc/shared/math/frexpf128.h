@@ -10,12 +10,11 @@
 #define LLVM_LIBC_SHARED_MATH_FREXPF128_H
 
 #include "include/llvm-libc-types/float128.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT128
+
 #include "shared/libc_common.h"
 #include "src/__support/macros/properties/complex_types.h"
-
-#ifndef LIBC_TYPES_HAS_FLOAT128
-#error unsupported
-#endif
 
 namespace LIBC_NAMESPACE_DECL {
 namespace shared {

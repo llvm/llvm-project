@@ -11,9 +11,7 @@
 
 #include "include/llvm-libc-types/float128.h"
 
-#ifndef LIBC_TYPES_HAS_FLOAT128
-#error unsupported
-#else
+#ifdef LIBC_TYPES_HAS_FLOAT128
 
 #include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/__support/common.h"

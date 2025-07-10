@@ -2756,7 +2756,6 @@ libc_math_function(
     name = "expf",
     additional_deps = [
         ":__support_math_expf",
-        ":__support_math_frexpf128",
         ":errno",
     ],
 )
@@ -3210,7 +3209,12 @@ libc_math_function(name = "frexpf")
 
 libc_math_function(name = "frexpl")
 
-libc_math_function(name = "frexpf128")
+libc_math_function(
+    name = "frexpf128",
+    additional_deps = [
+        ":__support_math_frexpf128",
+    ]
+)
 
 libc_math_function(name = "frexpf16")
 
