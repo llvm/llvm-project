@@ -17,8 +17,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TOOLS_LLDB_DAP_PROTOCOL_H
-#define LLDB_TOOLS_LLDB_DAP_PROTOCOL_H
+#ifndef LLDB_TOOLS_LLDB_DAP_PROTOCOL_PROTOCOL_BASE_H
+#define LLDB_TOOLS_LLDB_DAP_PROTOCOL_PROTOCOL_BASE_H
 
 #include "llvm/Support/JSON.h"
 #include <cstdint>
@@ -141,12 +141,20 @@ using Message = std::variant<Request, Response, Event>;
 bool fromJSON(const llvm::json::Value &, Message &, llvm::json::Path);
 llvm::json::Value toJSON(const Message &);
 
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Message &V) {
+  OS << toJSON(V);
+  return OS;
+}
+
 /// On error (whenever `success` is false), the body can provide more details.
 struct ErrorResponseBody {
   /// A structured error message.
   std::optional<ErrorMessage> error;
 };
 llvm::json::Value toJSON(const ErrorResponseBody &);
+
+/// This is a placehold for requests with an empty, null or undefined arguments.
+using EmptyArguments = std::optional<std::monostate>;
 
 /// This is just an acknowledgement, so no body field is required.
 using VoidResponse = llvm::Error;

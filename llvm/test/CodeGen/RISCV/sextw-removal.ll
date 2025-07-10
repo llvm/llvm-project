@@ -180,8 +180,8 @@ define void @test5(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:    lui a2, 209715
 ; RV64I-NEXT:    lui a3, 61681
 ; RV64I-NEXT:    lui a4, 4112
-; RV64I-NEXT:    addiw s0, a1, 1365
-; RV64I-NEXT:    addiw s1, a2, 819
+; RV64I-NEXT:    addi s0, a1, 1365
+; RV64I-NEXT:    addi s1, a2, 819
 ; RV64I-NEXT:    addi s2, a3, -241
 ; RV64I-NEXT:    addi s3, a4, 257
 ; RV64I-NEXT:  .LBB4_1: # %bb2
@@ -327,10 +327,10 @@ define void @test7(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-NEXT:    lui a2, 209715
 ; RV64I-NEXT:    lui a3, 61681
 ; RV64I-NEXT:    lui a4, 4112
-; RV64I-NEXT:    addiw s0, a1, 1365
-; RV64I-NEXT:    addiw s1, a2, 819
-; RV64I-NEXT:    addiw s2, a3, -241
-; RV64I-NEXT:    addiw s3, a4, 257
+; RV64I-NEXT:    addi s0, a1, 1365
+; RV64I-NEXT:    addi s1, a2, 819
+; RV64I-NEXT:    addi s2, a3, -241
+; RV64I-NEXT:    addi s3, a4, 257
 ; RV64I-NEXT:    slli a1, s0, 32
 ; RV64I-NEXT:    add s0, s0, a1
 ; RV64I-NEXT:    slli a1, s1, 32

@@ -273,7 +273,13 @@ Error DirectX::RootSignature::parse() {
   Current += sizeof(uint32_t);
 
   ParametersHeaders.Data = PartData.substr(
-      RootParametersOffset, NumParameters * sizeof(dxbc::RootParameterHeader));
+      RootParametersOffset,
+      NumParameters * sizeof(dxbc::RTS0::v1::RootParameterHeader));
+
+  StaticSamplers.Stride = sizeof(dxbc::RTS0::v1::StaticSampler);
+  StaticSamplers.Data = PartData.substr(
+      StaticSamplersOffset,
+      NumStaticSamplers * sizeof(dxbc::RTS0::v1::StaticSampler));
 
   return Error::success();
 }

@@ -11,8 +11,8 @@
 #include "src/__support/common.h"
 
 #include "hdr/unistd_macros.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 #include "src/sys/auxv/getauxval.h"
 #include <sys/auxv.h>
 
