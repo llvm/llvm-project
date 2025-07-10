@@ -106,12 +106,12 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
   using OpConversionPattern<xegpu::CreateNdDescOp>::OpConversionPattern;
 
   // Calculate offset for each subgroup
-  SmallVector<OpFoldResult>
+  static SmallVector<OpFoldResult>
   calculateGlobalOffsets(ConversionPatternRewriter &rewriter, Location loc,
                          const SmallVector<OpFoldResult> &originalOffsets,
                          const SmallVector<Value> &localOffset,
                          const SmallVector<int64_t> &distUnitBaseAddr,
-                         const SmallVector<int64_t> &distUnitShape) const {
+                         const SmallVector<int64_t> &distUnitShape) {
     assert(localOffset.size() == distUnitBaseAddr.size() &&
            "localOffset and distUnitBaseAddr must have the same rank");
 
@@ -392,6 +392,46 @@ struct WgToSgElementwiseOp : public ConversionPattern {
   }
 };
 
+struct WgToSgConvertLayoutOp
+    : public OpConversionPattern<xegpu::ConvertLayoutOp> {
+  using OpConversionPattern<xegpu::ConvertLayoutOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(xegpu::ConvertLayoutOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::LayoutAttr input = op.getInputLayout();
+    xegpu::LayoutAttr target = op.getTargetLayout();
+
+    if (!input || !target || !input.isWgLayout() || !target.isWgLayout())
+      return rewriter.notifyMatchFailure(
+          op, "Input and target layouts must have subgroup layout");
+
+    DenseI32ArrayAttr inputSgLayout = input.getSgLayout();
+    DenseI32ArrayAttr inputSgData = input.getSgData();
+    DenseI32ArrayAttr targetSgLayout = target.getSgLayout();
+    DenseI32ArrayAttr targetSgData = target.getSgData();
+
+    // TODO: currently we only support for optimal case, where input and
+    // output has the same sg_layout and sg_data, so SLM is not involved.
+    if (inputSgLayout != targetSgLayout || inputSgData != targetSgData)
+      return failure();
+
+    input = input.dropSgLayoutAndData();
+    target = target.dropSgLayoutAndData();
+
+    SmallVector<Value> newOps(adaptor.getSource());
+
+    if (input && target) {
+      for (auto [i, src] : llvm::enumerate(adaptor.getSource())) {
+        auto newOp = rewriter.create<xegpu::ConvertLayoutOp>(
+            op.getLoc(), src.getType(), src, input, target);
+        newOps[i] = newOp;
+      }
+    }
+    rewriter.replaceOpWithMultiple(op, {newOps});
+    return success();
+  }
+};
+
 // Handles UnrealizedConversionCastOp generated during
 // SCFStructuralTypeConversions (step 1). This op may appear as either a
 // target or source materialization for Vector values, e.g.:
@@ -475,8 +515,8 @@ namespace xegpu {
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
   patterns.add<WgToSgCreateNdOp, WgToSgLoadNdOp, WgToSgStoreNdOp,
                WgToSgUpdateNdOffsetOp, WgToSgDpasOp, WgToSgPrefetchNdOp,
-               UnrealizedConversionCastOpPattern, WgToSgElementwiseOp>(
-      patterns.getContext());
+               UnrealizedConversionCastOpPattern, WgToSgElementwiseOp,
+               WgToSgConvertLayoutOp>(patterns.getContext());
 }
 } // namespace xegpu
 } // namespace mlir
@@ -582,6 +622,11 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
     auto layout = xegpu::getLayoutAttr(op.getResult());
     return isLegal(layout);
   });
+
+  target.addDynamicallyLegalOp<xegpu::ConvertLayoutOp>(
+      [=](xegpu::ConvertLayoutOp op) -> bool {
+        return isLegal(op.getInputLayout()) && isLegal(op.getTargetLayout());
+      });
 
   target.addDynamicallyLegalDialect<math::MathDialect, arith::ArithDialect>(
       [=](Operation *op) -> std::optional<bool> {
