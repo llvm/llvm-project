@@ -744,6 +744,8 @@ class TargetRegisterClass;
     MachineBasicBlock *emitLDR_D(MachineInstr &MI, MachineBasicBlock *BB) const;
     MachineBasicBlock *emitSTR_W(MachineInstr &MI, MachineBasicBlock *BB) const;
     MachineBasicBlock *emitSTR_D(MachineInstr &MI, MachineBasicBlock *BB) const;
+    MachineBasicBlock *emitRDDSP(MachineInstr &MI, MachineBasicBlock *BB) const;
+    MachineBasicBlock *emitWRDSP(MachineInstr &MI, MachineBasicBlock *BB) const;
   };
 
   /// Create MipsTargetLowering objects.

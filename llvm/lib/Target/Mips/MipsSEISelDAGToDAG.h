@@ -27,9 +27,6 @@ private:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  void addDSPCtrlRegOperands(bool IsDef, MachineInstr &MI,
-                             MachineFunction &MF);
-
   MCRegister getMSACtrlReg(const SDValue RegIdx) const;
 
   bool replaceUsesWithZeroReg(MachineRegisterInfo *MRI, const MachineInstr&);
