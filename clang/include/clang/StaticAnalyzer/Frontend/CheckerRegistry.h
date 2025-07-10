@@ -50,7 +50,7 @@
 //
 // A plugin may register several separate checkers by calling `addChecker()`
 // multiple times. If a checker requires custom registration functions (e.g.
-// checker option handling) use the non-templated variant of `addChecker` that
+// checker option handling) use the non-templated overload of `addChecker` that
 // takes two callback functions as the first two parameters.
 //
 // To load a checker plugin, specify the full path to the dynamic library as
@@ -111,7 +111,7 @@ private:
   static bool returnTrue(const CheckerManager &) { return true; }
 
   /// Adds a checker to the registry.
-  /// This private, most general variant is intended for loading the checker
+  /// This private, most general overload is intended for loading the checker
   /// definitions from `Checkers.td`.
   /// FIXME: The checker registry should not bother with loading `DocsUri`
   /// because it is (as of now) never queried from the checker registry.
