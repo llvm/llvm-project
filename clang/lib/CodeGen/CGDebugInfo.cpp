@@ -4188,11 +4188,10 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
     CXXRecordDecl *TemplateDecl =
         CTSD->getSpecializedTemplate()->getTemplatedDecl();
     RegionMap[TemplateDecl].reset(RealDecl);
-    TypeCache[QualType(Ty, 0).getAsOpaquePtr()].reset(RealDecl);
   } else {
     RegionMap[Ty->getDecl()].reset(RealDecl);
-    TypeCache[QualType(Ty, 0).getAsOpaquePtr()].reset(RealDecl);
   }
+  TypeCache[QualType(Ty, 0).getAsOpaquePtr()].reset(RealDecl);
 
   if (const auto *TSpecial = dyn_cast<ClassTemplateSpecializationDecl>(RD))
     DBuilder.replaceArrays(RealDecl, llvm::DINodeArray(),
