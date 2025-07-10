@@ -63,6 +63,15 @@ add_libc_fuzzer(
 )
 
 add_libc_fuzzer(
+  asin_fuzz
+  NEED_MPFR
+  SRCS
+    asin_fuzz.cpp
+  DEPENDS
+    libc.src.math.asin
+)
+
+add_libc_fuzzer(
   sin_fuzz
   NEED_MPFR
   SRCS
