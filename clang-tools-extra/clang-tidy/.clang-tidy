@@ -1,5 +1,5 @@
 InheritParentConfig: true
-Checks: [
+Checks: >
   bugprone-*,
   -bugprone-assignment-in-if-condition,
   -bugprone-branch-clone,
@@ -26,17 +26,16 @@ Checks: [
   -readability-braces-around-statements,
   -readability-container-contains,
   -readability-convert-member-functions-to-static,
-  -readability-else-after-return, # enabled via 'llvm-else-after-return'
+  -readability-else-after-return,
   -readability-function-cognitive-complexity,
   -readability-identifier-length,
   -readability-implicit-bool-conversion,
   -readability-isolate-declaration,
   -readability-magic-numbers,
   -readability-named-parameter,
-  -readability-qualified-auto, # enabled via 'llvm-qualified-auto'
+  -readability-qualified-auto,
   -readability-redundant-declaration,
   -readability-simplify-boolean-expr,
   -readability-static-definition-in-anonymous-namespace,
   -readability-suspicious-call-argument,
   -readability-use-anyofallof
-]
