@@ -176,10 +176,8 @@ define i64 @sdiv_select(i64 %a, i64 %b) {
 ; FIXED-ZERO-NEXT:    ret i64 [[DIV]]
 ;
 ; CHECK-LABEL: @sdiv_select(
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[A:%.*]], 0
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 [[A]], [[B_FR:%.*]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i64 0, i64 [[DIV]]
-; CHECK-NEXT:    ret i64 [[SELECT]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 [[A:%.*]], [[B_FR:%.*]]
+; CHECK-NEXT:    ret i64 [[DIV]]
 ;
   %cond = icmp eq i64 %a, 0
   %div = sdiv i64 %a, %b
@@ -195,10 +193,8 @@ define i64 @udiv_select(i64 %a, i64 %b) {
 ; FIXED-ZERO-NEXT:    ret i64 [[DIV]]
 ;
 ; CHECK-LABEL: @udiv_select(
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[A:%.*]], 0
-; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[A]], [[B_FR:%.*]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i64 0, i64 [[DIV]]
-; CHECK-NEXT:    ret i64 [[SELECT]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[A:%.*]], [[B_FR:%.*]]
+; CHECK-NEXT:    ret i64 [[DIV]]
 ;
   %cond = icmp eq i64 %a, 0
   %div = udiv i64 %a, %b
@@ -209,10 +205,8 @@ define i64 @udiv_select(i64 %a, i64 %b) {
 ; (select (icmp x, 0, eq), 0, (srem x, y)) -> (srem x, y)
 define i64 @srem_select(i64 %a, i64 %b) {
 ; CHECK-LABEL: @srem_select(
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[A:%.*]], 0
-; CHECK-NEXT:    [[REM:%.*]] = srem i64 [[A]], [[B:%.*]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i64 0, i64 [[REM]]
-; CHECK-NEXT:    ret i64 [[SELECT]]
+; CHECK-NEXT:    [[REM:%.*]] = srem i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i64 [[REM]]
 ;
   %cond = icmp eq i64 %a, 0
   %rem = srem i64 %a, %b
@@ -223,10 +217,8 @@ define i64 @srem_select(i64 %a, i64 %b) {
 ; (select (icmp x, 0, eq), 0, (urem x, y)) -> (urem x, y)
 define i64 @urem_select(i64 %a, i64 %b) {
 ; CHECK-LABEL: @urem_select(
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[A:%.*]], 0
-; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[A]], [[B:%.*]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i64 0, i64 [[REM]]
-; CHECK-NEXT:    ret i64 [[SELECT]]
+; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i64 [[REM]]
 ;
   %cond = icmp eq i64 %a, 0
   %rem = urem i64 %a, %b
