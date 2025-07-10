@@ -179,21 +179,20 @@ public:
                              std::optional<AArch64PACKey::ID> PACKey,
                              uint64_t PACDisc, Register PACAddrDisc, Value *DS);
 
-  // Emit R_AARCH64_INST32, the deactivation symbol relocation. Returns true if
-  // no instruction should be emitted because the deactivation symbol is defined
-  // in the current module so this function emitted a NOP instead.
+  // Emit R_AARCH64_PATCHINST, the deactivation symbol relocation. Returns true
+  // if no instruction should be emitted because the deactivation symbol is
+  // defined in the current module so this function emitted a NOP instead.
   bool emitDeactivationSymbolRelocation(Value *DS);
 
   // Emit the sequence to compute the discriminator.
   //
-  // ScratchReg should be x16/x17.
-  //
-  // The returned register is either unmodified AddrDisc or x16/x17.
+  // The returned register is either unmodified AddrDisc or ScratchReg.
   //
   // If the expanded pseudo is allowed to clobber AddrDisc register, setting
   // MayUseAddrAsScratch may save one MOV instruction, provided the address
   // is already in x16/x17 (i.e. return x16/x17 which is the *modified* AddrDisc
-  // register at the same time):
+  // register at the same time) or the OS doesn't make it safer to use x16/x17
+  // (see AArch64Subtarget::isX16X17Safer()):
   //
   //   mov   x17, x16
   //   movk  x17, #1234, lsl #48
@@ -2097,8 +2096,8 @@ bool AArch64AsmPrinter::emitDeactivationSymbolRelocation(Value *DS) {
 
     const MCExpr *DSExpr = MCSymbolRefExpr::create(
         OutContext.getOrCreateSymbol(DS->getName()), OutContext);
-    OutStreamer->emitRelocDirective(*DeactDotExpr, "R_AARCH64_INST32", DSExpr,
-                                    SMLoc(), *TM.getMCSubtargetInfo());
+    OutStreamer->emitRelocDirective(*DeactDotExpr, "R_AARCH64_PATCHINST",
+                                    DSExpr, SMLoc(), *TM.getMCSubtargetInfo());
   }
   return false;
 }
@@ -2427,15 +2426,19 @@ AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
   uint64_t KeyID = CPA.getKey()->getZExtValue();
   // We later rely on valid KeyID value in AArch64PACKeyIDToString call from
   // AArch64AuthMCExpr::printImpl, so fail fast.
-  if (KeyID > AArch64PACKey::LAST)
-    report_fatal_error("AArch64 PAC Key ID '" + Twine(KeyID) +
-                       "' out of range [0, " +
-                       Twine((unsigned)AArch64PACKey::LAST) + "]");
+  if (KeyID > AArch64PACKey::LAST) {
+    CPA.getContext().emitError("AArch64 PAC Key ID '" + Twine(KeyID) +
+                               "' out of range [0, " +
+                               Twine((unsigned)AArch64PACKey::LAST) + "]");
+    KeyID = 0;
+  }
 
   uint64_t Disc = CPA.getDiscriminator()->getZExtValue();
-  if (!isUInt<16>(Disc))
-    report_fatal_error("AArch64 PAC Discriminator '" + Twine(Disc) +
-                       "' out of range [0, 0xFFFF]");
+  if (!isUInt<16>(Disc)) {
+    CPA.getContext().emitError("AArch64 PAC Discriminator '" + Twine(Disc) +
+                               "' out of range [0, 0xFFFF]");
+    Disc = 0;
+  }
 
   // Check if we need to represent this with an IRELATIVE and emit it if so.
   if (auto *IFuncSym = emitPAuthRelocationAsIRelative(
