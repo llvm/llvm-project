@@ -309,7 +309,7 @@ struct LineLocation {
   }
 
   uint64_t getHashCode() const {
-    return ((uint64_t) Discriminator << 32) | LineOffset;
+    return ((uint64_t)Discriminator << 32) | LineOffset;
   }
 
   uint32_t LineOffset;

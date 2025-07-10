@@ -619,10 +619,11 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
   SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
       S.getCallsiteSamples());
   Indent += 1;
-  for (const auto* Element : SortedCallsiteSamples.get()) {
+  for (const auto *Element : SortedCallsiteSamples.get()) {
     // Element is a pointer to a pair of LineLocation and FunctionSamplesMap.
     const auto &[Loc, FunctionSamplesMap] = *Element;
-    for (const FunctionSamples &CalleeSamples : make_second_range(FunctionSamplesMap)) {
+    for (const FunctionSamples &CalleeSamples :
+         make_second_range(FunctionSamplesMap)) {
       OS.indent(Indent);
       Loc.print(OS);
       OS << ": ";
