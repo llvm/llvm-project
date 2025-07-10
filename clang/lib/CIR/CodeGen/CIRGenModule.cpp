@@ -1258,6 +1258,8 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   case Decl::Enum:
   case Decl::Using:          // using X; [C++]
   case Decl::UsingDirective: // using namespace X; [C++]
+  case Decl::UsingEnum:      // using enum X; [C++]
+  case Decl::NamespaceAlias:
   case Decl::Typedef:
   case Decl::TypeAlias: // using foo = bar; [C++11]
   case Decl::Record:
