@@ -36,11 +36,13 @@
 // NODIST: warning: argument unused during compilation: '-Xthinlto-distributor=a2,a3'
 // NODIST: ld.lld
 
+/// Create a response file to check the default behavior.
+// RUN: echo " \"%/s\" -### -fuse-ld=lld --target=x86_64-linux-gnu \
+// RUN:   -fthinlto-distributor=d.exe" > %t_l2.rsp
 
 /// Check the expected arguments are forwarded by default with only
 /// --thinlto-distributor=.
-// RUN: %clang --target=x86_64-linux-gnu -fthinlto-distributor=d.exe \
-// RUN:   -fuse-ld=lld -### %s 2>&1 | \
+// RUN: %clang -flto=thin @%t_l2.rsp 2>&1 | \
 // RUN:   FileCheck @%t_f.rsp --check-prefix=DEFAULT
 
 // DEFAULT: ld.lld
