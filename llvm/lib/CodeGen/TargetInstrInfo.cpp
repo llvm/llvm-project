@@ -476,6 +476,9 @@ static const TargetRegisterClass *canFoldCopy(const MachineInstr &MI,
   if (FoldOp.getSubReg() || LiveOp.getSubReg())
     return nullptr;
 
+  if (LiveOp.isUndef())
+    return nullptr;
+
   Register FoldReg = FoldOp.getReg();
   Register LiveReg = LiveOp.getReg();
 
