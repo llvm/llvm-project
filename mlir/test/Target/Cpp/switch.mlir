@@ -882,3 +882,39 @@ func.func @emitc_switch_ui64() {
   }
   return
 }
+
+// CPP-DEFAULT-LABEL: void emitc_switch_expression() {
+// CPP-DEFAULT:         int64_t v1 = 42;
+// CPP-DEFAULT:         switch (-v1) {
+// CPP-DEFAULT:         default: {
+// CPP-DEFAULT:           break;
+// CPP-DEFAULT:         }
+// CPP-DEFAULT:         }
+// CPP-DEFAULT:         return;
+// CPP-DEFAULT:       }
+
+// CPP-DECLTOP-LABEL: void emitc_switch_expression() {
+// CPP-DECLTOP:         int64_t v1;
+// CPP-DECLTOP:         v1 = 42;
+// CPP-DECLTOP:         switch (-v1) {
+// CPP-DECLTOP:         default: {
+// CPP-DECLTOP:           break;
+// CPP-DECLTOP:         }
+// CPP-DECLTOP:         }
+// CPP-DECLTOP:         return;
+// CPP-DECLTOP:       }
+
+func.func @emitc_switch_expression() {
+  %x = "emitc.constant"(){value = 42 : i64} : () -> i64
+
+  %0 = emitc.expression : i64 {
+    %a = emitc.unary_minus %x : (i64) -> i64
+    emitc.yield %a : i64
+  }
+
+  emitc.switch %0 : i64
+  default {
+    emitc.yield
+  }
+  return
+}

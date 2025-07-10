@@ -22,8 +22,6 @@ using namespace ompx;
 
 namespace {
 
-#pragma omp begin declare target device_type(nohost)
-
 void gpu_regular_warp_reduce(void *reduce_data, ShuffleReductFnTy shflFct) {
   for (uint32_t mask = mapping::getWarpSize() / 2; mask > 0; mask /= 2) {
     shflFct(reduce_data, /*LaneId - not used= */ 0,
@@ -73,16 +71,16 @@ static int32_t nvptx_parallel_reduce_nowait(void *reduce_data,
   if (NumThreads == 1)
     return 1;
 
-    //
-    // This reduce function handles reduction within a team. It handles
-    // parallel regions in both L1 and L2 parallelism levels. It also
-    // supports Generic, SPMD, and NoOMP modes.
-    //
-    // 1. Reduce within a warp.
-    // 2. Warp master copies value to warp 0 via shared memory.
-    // 3. Warp 0 reduces to a single value.
-    // 4. The reduced value is available in the thread that returns 1.
-    //
+  //
+  // This reduce function handles reduction within a team. It handles
+  // parallel regions in both L1 and L2 parallelism levels. It also
+  // supports Generic, SPMD, and NoOMP modes.
+  //
+  // 1. Reduce within a warp.
+  // 2. Warp master copies value to warp 0 via shared memory.
+  // 3. Warp 0 reduces to a single value.
+  // 4. The reduced value is available in the thread that returns 1.
+  //
 
 #if __has_builtin(__nvvm_reflect)
   if (__nvvm_reflect("__CUDA_ARCH") >= 700) {
@@ -198,15 +196,15 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   uint32_t NumThreads = omp_get_num_threads();
   uint32_t TeamId = omp_get_team_num();
   uint32_t NumTeams = omp_get_num_teams();
-  static unsigned SHARED(Bound);
-  static unsigned SHARED(ChunkTeamCount);
+  [[clang::loader_uninitialized]] static Local<unsigned> Bound;
+  [[clang::loader_uninitialized]] static Local<unsigned> ChunkTeamCount;
 
   // Block progress for teams greater than the current upper
   // limit. We always only allow a number of teams less or equal
   // to the number of slots in the buffer.
   bool IsMaster = (ThreadId == 0);
   while (IsMaster) {
-    Bound = atomic::load(&IterCnt, atomic::aquire);
+    Bound = atomic::load(&IterCnt, atomic::acquire);
     if (TeamId < Bound + num_of_records)
       break;
   }
@@ -259,7 +257,7 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   unsigned NumRecs = kmpcMin(NumTeams, uint32_t(num_of_records));
   if (ChunkTeamCount == NumTeams - Bound - 1) {
     // Ensure we see the global memory writes by other teams
-    fence::kernel(atomic::aquire);
+    fence::kernel(atomic::acquire);
 
     //
     // Last team processing.
@@ -316,5 +314,3 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
 void *__kmpc_reduction_get_fixed_buffer() {
   return state::getKernelLaunchEnvironment().ReductionBuffer;
 }
-
-#pragma omp end declare target

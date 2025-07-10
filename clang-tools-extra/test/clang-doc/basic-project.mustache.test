@@ -1,0 +1,481 @@
+// RUN: rm -rf %t && mkdir -p %t/docs %t/build
+// RUN: sed 's|$test_dir|%/S|g' %S/Inputs/basic-project/database_template.json > %t/build/compile_commands.json
+
+// RUN: clang-doc --format=mustache --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Shape.html -check-prefix=HTML-SHAPE
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Calculator.html -check-prefix=HTML-CALC
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Rectangle.html -check-prefix=HTML-RECTANGLE
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Circle.html -check-prefix=HTML-CIRCLE
+
+HTML-SHAPE: <html lang="en-US">
+HTML-SHAPE: <head>
+HTML-SHAPE:     <meta charset="utf-8"/>
+HTML-SHAPE:     <title>Shape</title>
+HTML-SHAPE:         <link rel="stylesheet" type="text/css" href="../clang-doc-mustache.css"/>
+HTML-SHAPE:         <script src="../mustache-index.js"></script>
+HTML-SHAPE:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+HTML-SHAPE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+HTML-SHAPE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
+HTML-SHAPE: </head>
+HTML-SHAPE: <body>
+HTML-SHAPE: <nav class="navbar">
+HTML-SHAPE:     <div class="navbar__container">
+HTML-SHAPE:             <div class="navbar__logo">
+HTML-SHAPE:             </div>
+HTML-SHAPE:         <div class="navbar__menu">
+HTML-SHAPE:             <ul class="navbar__links">
+HTML-SHAPE:                 <li class="navbar__item">
+HTML-SHAPE:                     <a href="/" class="navbar__link">Namespace</a>
+HTML-SHAPE:                 </li>
+HTML-SHAPE:                 <li class="navbar__item">
+HTML-SHAPE:                     <a href="/" class="navbar__link">Class</a>
+HTML-SHAPE:                 </li>
+HTML-SHAPE:             </ul>
+HTML-SHAPE:         </div>
+HTML-SHAPE:     </div>
+HTML-SHAPE: </nav>
+HTML-SHAPE: <main>
+HTML-SHAPE:     <div class="container">
+HTML-SHAPE:         <div class="sidebar">
+HTML-SHAPE:             <h2>class Shape</h2>
+HTML-SHAPE:             <ul>
+HTML-SHAPE:                 <li class="sidebar-section">
+HTML-SHAPE:                     <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-SHAPE:                 </li>
+HTML-SHAPE:                 <ul>
+HTML-SHAPE:                     <li class="sidebar-item-container">
+HTML-SHAPE:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">area</a>
+HTML-SHAPE:                     </li>
+HTML-SHAPE:                     <li class="sidebar-item-container">
+HTML-SHAPE:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">perimeter</a>
+HTML-SHAPE:                     </li>
+HTML-SHAPE:                     <li class="sidebar-item-container">
+HTML-SHAPE:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">~Shape</a>
+HTML-SHAPE:                     </li>
+HTML-SHAPE:                 </ul>
+HTML-SHAPE:             </ul>
+HTML-SHAPE:         </div>
+HTML-SHAPE:         <div class="resizer" id="resizer"></div>
+HTML-SHAPE:         <div class="content">
+HTML-SHAPE:             <section class="hero section-container">
+HTML-SHAPE:                 <div class="hero__title">
+HTML-SHAPE:                     <h1 class="hero__title-large">class Shape</h1>
+HTML-SHAPE:                 </div>
+HTML-SHAPE:             </section>
+HTML-SHAPE:             <section id="PublicMethods" class="section-container">
+HTML-SHAPE:                 <h2>Public Methods</h2>
+HTML-SHAPE:                 <div>
+HTML-SHAPE: <div class="delimiter-container">
+HTML-SHAPE:     <div id="{{([0-9A-F]{40})}}">
+HTML-SHAPE:         <pre>
+HTML-SHAPE:             <code class="language-cpp code-clang-doc">
+HTML-SHAPE: double area ()
+HTML-SHAPE:             </code>
+HTML-SHAPE:         </pre>
+HTML-SHAPE:     </div>
+HTML-SHAPE: </div>
+HTML-SHAPE: <div class="delimiter-container">
+HTML-SHAPE:     <div id="{{([0-9A-F]{40})}}">
+HTML-SHAPE:         <pre>
+HTML-SHAPE:             <code class="language-cpp code-clang-doc">
+HTML-SHAPE: double perimeter ()
+HTML-SHAPE:             </code>
+HTML-SHAPE:         </pre>
+HTML-SHAPE:     </div>
+HTML-SHAPE: </div>
+HTML-SHAPE: <div class="delimiter-container">
+HTML-SHAPE:     <div id="{{([0-9A-F]{40})}}">
+HTML-SHAPE:         <pre>
+HTML-SHAPE:             <code class="language-cpp code-clang-doc">
+HTML-SHAPE: void ~Shape ()
+HTML-SHAPE:             </code>
+HTML-SHAPE:         </pre>
+HTML-SHAPE:     </div>
+HTML-SHAPE: </div>
+HTML-SHAPE: </div>
+HTML-SHAPE:             </section>
+HTML-SHAPE:         </div>
+HTML-SHAPE:     </div>
+HTML-SHAPE: </main>
+HTML-SHAPE: </body>
+HTML-SHAPE: </html>
+
+
+HTML-CALC: <!DOCTYPE html>
+HTML-CALC: <html lang="en-US">
+HTML-CALC: <head>
+HTML-CALC:     <meta charset="utf-8"/>
+HTML-CALC:     <title>Calculator</title>
+HTML-CALC:         <link rel="stylesheet" type="text/css" href="../clang-doc-mustache.css"/>
+HTML-CALC:         <script src="../mustache-index.js"></script>
+HTML-CALC:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+HTML-CALC:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+HTML-CALC:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
+HTML-CALC: </head>
+HTML-CALC: <body>
+HTML-CALC: <nav class="navbar">
+HTML-CALC:     <div class="navbar__container">
+HTML-CALC:             <div class="navbar__logo">
+HTML-CALC:             </div>
+HTML-CALC:         <div class="navbar__menu">
+HTML-CALC:             <ul class="navbar__links">
+HTML-CALC:                 <li class="navbar__item">
+HTML-CALC:                     <a href="/" class="navbar__link">Namespace</a>
+HTML-CALC:                 </li>
+HTML-CALC:                 <li class="navbar__item">
+HTML-CALC:                     <a href="/" class="navbar__link">Class</a>
+HTML-CALC:                 </li>
+HTML-CALC:             </ul>
+HTML-CALC:         </div>
+HTML-CALC:     </div>
+HTML-CALC: </nav>
+HTML-CALC: <main>
+HTML-CALC:     <div class="container">
+HTML-CALC:         <div class="sidebar">
+HTML-CALC:             <h2>class Calculator</h2>
+HTML-CALC:             <ul>
+HTML-CALC:                 <li class="sidebar-section">
+HTML-CALC:                     <a class="sidebar-item" href="#PublicMethods">Public Members</a>
+HTML-CALC:                 </li>
+HTML-CALC:                 <ul>
+HTML-CALC:                     <li class="sidebar-item-container">
+HTML-CALC:                         <a class="sidebar-item" href="#public_val">public_val</a>
+HTML-CALC:                     </li>
+HTML-CALC:                     <li class="sidebar-item-container">
+HTML-CALC:                         <a class="sidebar-item" href="#static_val">static_val</a>
+HTML-CALC:                     </li>
+HTML-CALC:                 </ul>
+HTML-CALC:                 <li class="sidebar-section">
+HTML-CALC:                     <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-CALC:                 </li>
+HTML-CALC:                 <ul>
+HTML-CALC:                     <li class="sidebar-item-container">
+HTML-CALC:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">add</a>
+HTML-CALC:                     </li>
+HTML-CALC:                     <li class="sidebar-item-container">
+HTML-CALC:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">subtract</a>
+HTML-CALC:                     </li>
+HTML-CALC:                     <li class="sidebar-item-container">
+HTML-CALC:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">multiply</a>
+HTML-CALC:                     </li>
+HTML-CALC:                     <li class="sidebar-item-container">
+HTML-CALC:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">divide</a>
+HTML-CALC:                     </li>
+HTML-CALC:                     <li class="sidebar-item-container">
+HTML-CALC:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">mod</a>
+HTML-CALC:                     </li>
+HTML-CALC:                 </ul>
+HTML-CALC:             </ul>
+HTML-CALC:         </div>
+HTML-CALC:         <div class="resizer" id="resizer"></div>
+HTML-CALC:         <div class="content">
+HTML-CALC:             <section class="hero section-container">
+HTML-CALC:                 <div class="hero__title">
+HTML-CALC:                     <h1 class="hero__title-large">class Calculator</h1>
+HTML-CALC:                 </div>
+HTML-CALC:             </section>
+HTML-CALC:             <section id="PublicMembers" class="section-container">
+HTML-CALC:                 <h2>Public Members</h2>
+HTML-CALC:                 <div>
+HTML-CALC:                     <div id="public_val" class="delimiter-container">
+HTML-CALC:                         <pre>
+HTML-CALC: <code class="language-cpp code-clang-doc" >int public_val</code>
+HTML-CALC:                         </pre>
+HTML-CALC:                     </div>
+HTML-CALC:                     <div id="static_val" class="delimiter-container">
+HTML-CALC:                         <pre>
+HTML-CALC: <code class="language-cpp code-clang-doc" >const int static_val</code>
+HTML-CALC:                         </pre>
+HTML-CALC:                     </div>
+HTML-CALC:                 </div>
+HTML-CALC:             </section>
+HTML-CALC:             <section id="PublicMethods" class="section-container">
+HTML-CALC:                 <h2>Public Methods</h2>
+HTML-CALC:                 <div>
+HTML-CALC: <div class="delimiter-container">
+HTML-CALC:     <div id="{{([0-9A-F]{40})}}">
+HTML-CALC:         <pre>
+HTML-CALC:             <code class="language-cpp code-clang-doc">
+HTML-CALC: int add (int a, int b)
+HTML-CALC:             </code>
+HTML-CALC:         </pre>
+HTML-CALC:     </div>
+HTML-CALC: </div>
+HTML-CALC: <div class="delimiter-container">
+HTML-CALC:     <div id="{{([0-9A-F]{40})}}">
+HTML-CALC:         <pre>
+HTML-CALC:             <code class="language-cpp code-clang-doc">
+HTML-CALC: int subtract (int a, int b)
+HTML-CALC:             </code>
+HTML-CALC:         </pre>
+HTML-CALC:     </div>
+HTML-CALC: </div>
+HTML-CALC: <div class="delimiter-container">
+HTML-CALC:     <div id="{{([0-9A-F]{40})}}">
+HTML-CALC:         <pre>
+HTML-CALC:             <code class="language-cpp code-clang-doc">
+HTML-CALC: int multiply (int a, int b)
+HTML-CALC:             </code>
+HTML-CALC:         </pre>
+HTML-CALC:     </div>
+HTML-CALC: </div>
+HTML-CALC: <div class="delimiter-container">
+HTML-CALC:     <div id="{{([0-9A-F]{40})}}">
+HTML-CALC:         <pre>
+HTML-CALC:             <code class="language-cpp code-clang-doc">
+HTML-CALC: double divide (int a, int b)
+HTML-CALC:             </code>
+HTML-CALC:         </pre>
+HTML-CALC:     </div>
+HTML-CALC: </div>
+HTML-CALC: <div class="delimiter-container">
+HTML-CALC:     <div id="{{([0-9A-F]{40})}}">
+HTML-CALC:         <pre>
+HTML-CALC:             <code class="language-cpp code-clang-doc">
+HTML-CALC: int mod (int a, int b)
+HTML-CALC:             </code>
+HTML-CALC:         </pre>
+HTML-CALC:     </div>
+HTML-CALC: </div>
+HTML-CALC: </div>
+HTML-CALC:             </section>
+HTML-CALC:         </div>
+HTML-CALC:     </div>
+HTML-CALC: </main>
+HTML-CALC: </body>
+HTML-CALC: </html>
+
+
+HTML-RECTANGLE: <!DOCTYPE html>
+HTML-RECTANGLE: <html lang="en-US">
+HTML-RECTANGLE: <head>
+HTML-RECTANGLE:     <meta charset="utf-8"/>
+HTML-RECTANGLE:     <title>Rectangle</title>
+HTML-RECTANGLE:         <link rel="stylesheet" type="text/css" href="../clang-doc-mustache.css"/>
+HTML-RECTANGLE:         <script src="../mustache-index.js"></script>
+HTML-RECTANGLE:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+HTML-RECTANGLE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+HTML-RECTANGLE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
+HTML-RECTANGLE: </head>
+HTML-RECTANGLE: <body>
+HTML-RECTANGLE: <nav class="navbar">
+HTML-RECTANGLE:     <div class="navbar__container">
+HTML-RECTANGLE:             <div class="navbar__logo">
+HTML-RECTANGLE:             </div>
+HTML-RECTANGLE:         <div class="navbar__menu">
+HTML-RECTANGLE:             <ul class="navbar__links">
+HTML-RECTANGLE:                 <li class="navbar__item">
+HTML-RECTANGLE:                     <a href="/" class="navbar__link">Namespace</a>
+HTML-RECTANGLE:                 </li>
+HTML-RECTANGLE:                 <li class="navbar__item">
+HTML-RECTANGLE:                     <a href="/" class="navbar__link">Class</a>
+HTML-RECTANGLE:                 </li>
+HTML-RECTANGLE:             </ul>
+HTML-RECTANGLE:         </div>
+HTML-RECTANGLE:     </div>
+HTML-RECTANGLE: </nav>
+HTML-RECTANGLE: <main>
+HTML-RECTANGLE:     <div class="container">
+HTML-RECTANGLE:         <div class="sidebar">
+HTML-RECTANGLE:             <h2>class Rectangle</h2>
+HTML-RECTANGLE:             <ul>
+HTML-RECTANGLE:                     <li class="sidebar-section">
+HTML-RECTANGLE:                         <a class="sidebar-item" href="#PublicMethods">Protected Members</a>
+HTML-RECTANGLE:                     </li>
+HTML-RECTANGLE:                     <ul>
+HTML-RECTANGLE:                             <li class="sidebar-item-container">
+HTML-RECTANGLE:                                 <a class="sidebar-item" href="#width_">width_</a>
+HTML-RECTANGLE:                             </li>
+HTML-RECTANGLE:                             <li class="sidebar-item-container">
+HTML-RECTANGLE:                                 <a class="sidebar-item" href="#height_">height_</a>
+HTML-RECTANGLE:                             </li>
+HTML-RECTANGLE:                     </ul>
+HTML-RECTANGLE:                 <li class="sidebar-section">
+HTML-RECTANGLE:                     <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-RECTANGLE:                 </li>
+HTML-RECTANGLE:                 <ul>
+HTML-RECTANGLE:                     <li class="sidebar-item-container">
+HTML-RECTANGLE:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">Rectangle</a>
+HTML-RECTANGLE:                     </li>
+HTML-RECTANGLE:                     <li class="sidebar-item-container">
+HTML-RECTANGLE:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">area</a>
+HTML-RECTANGLE:                     </li>
+HTML-RECTANGLE:                     <li class="sidebar-item-container">
+HTML-RECTANGLE:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">perimeter</a>
+HTML-RECTANGLE:                     </li>
+HTML-RECTANGLE:                 </ul>
+HTML-RECTANGLE:             </ul>
+HTML-RECTANGLE:         </div>
+HTML-RECTANGLE:         <div class="resizer" id="resizer"></div>
+HTML-RECTANGLE:         <div class="content">
+HTML-RECTANGLE:             <section class="hero section-container">
+HTML-RECTANGLE:                 <div class="hero__title">
+HTML-RECTANGLE:                     <h1 class="hero__title-large">class Rectangle</h1>
+HTML-RECTANGLE:                 </div>
+HTML-RECTANGLE:             </section>
+HTML-RECTANGLE:             <section id="ProtectedMembers" class="section-container">
+HTML-RECTANGLE:                 <h2>Protected Members</h2>
+HTML-RECTANGLE:                 <div>
+HTML-RECTANGLE:                     <div id="width_" class="delimiter-container">
+HTML-RECTANGLE:                         <pre>
+HTML-RECTANGLE: <code class="language-cpp code-clang-doc" >double width_</code>
+HTML-RECTANGLE:                         </pre>
+HTML-RECTANGLE:                     </div>
+HTML-RECTANGLE:                     <div id="height_" class="delimiter-container">
+HTML-RECTANGLE:                         <pre>
+HTML-RECTANGLE: <code class="language-cpp code-clang-doc" >double height_</code>
+HTML-RECTANGLE:                         </pre>
+HTML-RECTANGLE:                     </div>
+HTML-RECTANGLE:                 </div>
+HTML-RECTANGLE:             </section>
+HTML-RECTANGLE:             <section id="PublicMethods" class="section-container">
+HTML-RECTANGLE:                 <h2>Public Methods</h2>
+HTML-RECTANGLE:                 <div>
+HTML-RECTANGLE: <div class="delimiter-container">
+HTML-RECTANGLE:     <div id="{{([0-9A-F]{40})}}">
+HTML-RECTANGLE:         <pre>
+HTML-RECTANGLE:             <code class="language-cpp code-clang-doc">
+HTML-RECTANGLE: void Rectangle (double width, double height)
+HTML-RECTANGLE:             </code>
+HTML-RECTANGLE:         </pre>
+HTML-RECTANGLE:     </div>
+HTML-RECTANGLE: </div>
+HTML-RECTANGLE: <div class="delimiter-container">
+HTML-RECTANGLE:     <div id="{{([0-9A-F]{40})}}">
+HTML-RECTANGLE:         <pre>
+HTML-RECTANGLE:             <code class="language-cpp code-clang-doc">
+HTML-RECTANGLE: double area ()
+HTML-RECTANGLE:             </code>
+HTML-RECTANGLE:         </pre>
+HTML-RECTANGLE:     </div>
+HTML-RECTANGLE: </div>
+HTML-RECTANGLE: <div class="delimiter-container">
+HTML-RECTANGLE:     <div id="{{([0-9A-F]{40})}}">
+HTML-RECTANGLE:         <pre>
+HTML-RECTANGLE:             <code class="language-cpp code-clang-doc">
+HTML-RECTANGLE: double perimeter ()
+HTML-RECTANGLE:             </code>
+HTML-RECTANGLE:         </pre>
+HTML-RECTANGLE:     </div>
+HTML-RECTANGLE: </div>
+HTML-RECTANGLE: </div>
+HTML-RECTANGLE:             </section>
+HTML-RECTANGLE:         </div>
+HTML-RECTANGLE:     </div>
+HTML-RECTANGLE: </main>
+HTML-RECTANGLE: </body>
+HTML-RECTANGLE: </html>
+
+
+HTML-CIRCLE: <!DOCTYPE html>
+HTML-CIRCLE: <html lang="en-US">
+HTML-CIRCLE: <head>
+HTML-CIRCLE:     <meta charset="utf-8"/>
+HTML-CIRCLE:     <title>Circle</title>
+HTML-CIRCLE:         <link rel="stylesheet" type="text/css" href="../clang-doc-mustache.css"/>
+HTML-CIRCLE:         <script src="../mustache-index.js"></script>
+HTML-CIRCLE:     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+HTML-CIRCLE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+HTML-CIRCLE:     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
+HTML-CIRCLE: </head>
+HTML-CIRCLE: <body>
+HTML-CIRCLE: <nav class="navbar">
+HTML-CIRCLE:     <div class="navbar__container">
+HTML-CIRCLE:             <div class="navbar__logo">
+HTML-CIRCLE:             </div>
+HTML-CIRCLE:         <div class="navbar__menu">
+HTML-CIRCLE:             <ul class="navbar__links">
+HTML-CIRCLE:                 <li class="navbar__item">
+HTML-CIRCLE:                     <a href="/" class="navbar__link">Namespace</a>
+HTML-CIRCLE:                 </li>
+HTML-CIRCLE:                 <li class="navbar__item">
+HTML-CIRCLE:                     <a href="/" class="navbar__link">Class</a>
+HTML-CIRCLE:                 </li>
+HTML-CIRCLE:             </ul>
+HTML-CIRCLE:         </div>
+HTML-CIRCLE:     </div>
+HTML-CIRCLE: </nav>
+HTML-CIRCLE: <main>
+HTML-CIRCLE:     <div class="container">
+HTML-CIRCLE:         <div class="sidebar">
+HTML-CIRCLE:             <h2>class Circle</h2>
+HTML-CIRCLE:             <ul>
+HTML-CIRCLE:                     <li class="sidebar-section">
+HTML-CIRCLE:                         <a class="sidebar-item" href="#PublicMethods">Protected Members</a>
+HTML-CIRCLE:                     </li>
+HTML-CIRCLE:                     <ul>
+HTML-CIRCLE:                             <li class="sidebar-item-container">
+HTML-CIRCLE:                                 <a class="sidebar-item" href="#radius_">radius_</a>
+HTML-CIRCLE:                             </li>
+HTML-CIRCLE:                     </ul>
+HTML-CIRCLE:                 <li class="sidebar-section">
+HTML-CIRCLE:                     <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-CIRCLE:                 </li>
+HTML-CIRCLE:                 <ul>
+HTML-CIRCLE:                     <li class="sidebar-item-container">
+HTML-CIRCLE:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">Circle</a>
+HTML-CIRCLE:                     </li>
+HTML-CIRCLE:                     <li class="sidebar-item-container">
+HTML-CIRCLE:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">area</a>
+HTML-CIRCLE:                     </li>
+HTML-CIRCLE:                     <li class="sidebar-item-container">
+HTML-CIRCLE:                         <a class="sidebar-item" href="#{{([0-9A-F]{40})}}">perimeter</a>
+HTML-CIRCLE:                     </li>
+HTML-CIRCLE:                 </ul>
+HTML-CIRCLE:             </ul>
+HTML-CIRCLE:         </div>
+HTML-CIRCLE:         <div class="resizer" id="resizer"></div>
+HTML-CIRCLE:         <div class="content">
+HTML-CIRCLE:             <section class="hero section-container">
+HTML-CIRCLE:                 <div class="hero__title">
+HTML-CIRCLE:                     <h1 class="hero__title-large">class Circle</h1>
+HTML-CIRCLE:                 </div>
+HTML-CIRCLE:             </section>
+HTML-CIRCLE:             <section id="ProtectedMembers" class="section-container">
+HTML-CIRCLE:                 <h2>Protected Members</h2>
+HTML-CIRCLE:                 <div>
+HTML-CIRCLE:                     <div id="radius_" class="delimiter-container">
+HTML-CIRCLE:                         <pre>
+HTML-CIRCLE: <code class="language-cpp code-clang-doc" >double radius_</code>
+HTML-CIRCLE:                         </pre>
+HTML-CIRCLE:                     </div>
+HTML-CIRCLE:                 </div>
+HTML-CIRCLE:             </section>
+HTML-CIRCLE:             <section id="PublicMethods" class="section-container">
+HTML-CIRCLE:                 <h2>Public Methods</h2>
+HTML-CIRCLE:                 <div>
+HTML-CIRCLE: <div class="delimiter-container">
+HTML-CIRCLE:     <div id="{{([0-9A-F]{40})}}">
+HTML-CIRCLE:         <pre>
+HTML-CIRCLE:             <code class="language-cpp code-clang-doc">
+HTML-CIRCLE: void Circle (double radius)
+HTML-CIRCLE:             </code>
+HTML-CIRCLE:         </pre>
+HTML-CIRCLE:     </div>
+HTML-CIRCLE: </div>
+HTML-CIRCLE: <div class="delimiter-container">
+HTML-CIRCLE:     <div id="{{([0-9A-F]{40})}}">
+HTML-CIRCLE:         <pre>
+HTML-CIRCLE:             <code class="language-cpp code-clang-doc">
+HTML-CIRCLE: double area ()
+HTML-CIRCLE:             </code>
+HTML-CIRCLE:         </pre>
+HTML-CIRCLE:     </div>
+HTML-CIRCLE: </div>
+HTML-CIRCLE: <div class="delimiter-container">
+HTML-CIRCLE:     <div id="{{([0-9A-F]{40})}}">
+HTML-CIRCLE:         <pre>
+HTML-CIRCLE:             <code class="language-cpp code-clang-doc">
+HTML-CIRCLE: double perimeter ()
+HTML-CIRCLE:             </code>
+HTML-CIRCLE:         </pre>
+HTML-CIRCLE:     </div>
+HTML-CIRCLE: </div>
+HTML-CIRCLE: </div>
+HTML-CIRCLE:             </section>
+HTML-CIRCLE:         </div>
+HTML-CIRCLE:     </div>
+HTML-CIRCLE: </main>
+HTML-CIRCLE: </body>
+HTML-CIRCLE: </html>
+

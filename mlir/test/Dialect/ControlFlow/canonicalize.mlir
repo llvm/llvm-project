@@ -102,6 +102,31 @@ func.func @cond_br_and_br_folding(%a : i32) {
 
 /// Test that pass-through successors of CondBranchOp get folded.
 
+// Test that the weights are preserved:
+// CHECK-LABEL:   func.func @cond_br_passthrough_weights(
+// CHECK-SAME:      %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32, %[[ARG2:.*]]: i1) -> i32 {
+func.func @cond_br_passthrough_weights(%arg0 : i32, %arg1 : i32, %cond : i1) -> i32 {
+// CHECK:           cf.cond_br %[[ARG2]] weights([30, 70]), ^bb1, ^bb2
+// CHECK:         ^bb1:
+// CHECK:           return %[[ARG0]] : i32
+// CHECK:         ^bb2:
+// CHECK:           return %[[ARG1]] : i32
+// CHECK:         }
+  cf.cond_br %cond weights([30,70]), ^bb1, ^bb3
+
+^bb1:
+  cf.br ^bb2
+
+^bb3:
+  cf.br ^bb4
+
+^bb2:
+  return %arg0 : i32
+
+^bb4:
+  return %arg1 : i32
+}
+
 // CHECK-LABEL: func @cond_br_passthrough(
 // CHECK-SAME: %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32, %[[COND:.*]]: i1
 func.func @cond_br_passthrough(%arg0 : i32, %arg1 : i32, %arg2 : i32, %cond : i1) -> (i32, i32) {

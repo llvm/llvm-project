@@ -49,7 +49,6 @@
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
-#include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -71,6 +70,7 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -87,8 +87,6 @@
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
-
-extern cl::opt<bool> UseNewDbgInfoFormat;
 
 #define DEBUG_TYPE "local"
 
@@ -203,10 +201,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
     BasicBlock *TheOnlyDest = DefaultDest;
 
     // If the default is unreachable, ignore it when searching for TheOnlyDest.
-    if (isa<UnreachableInst>(DefaultDest->getFirstNonPHIOrDbg()) &&
-        SI->getNumCases() > 0) {
+    if (SI->defaultDestUnreachable() && SI->getNumCases() > 0)
       TheOnlyDest = SI->case_begin()->getCaseSuccessor();
-    }
 
     bool Changed = false;
 
@@ -497,10 +493,7 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
       // are lifetime intrinsics then the intrinsics are dead.
       if (isa<AllocaInst>(Arg) || isa<GlobalValue>(Arg) || isa<Argument>(Arg))
         return llvm::all_of(Arg->uses(), [](Use &Use) {
-          if (IntrinsicInst *IntrinsicUse =
-                  dyn_cast<IntrinsicInst>(Use.getUser()))
-            return IntrinsicUse->isLifetimeStartOrEnd();
-          return false;
+          return isa<LifetimeIntrinsic>(Use.getUser());
         });
       return false;
     }
@@ -1163,7 +1156,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   if (BB == Succ)
     return false;
 
-  SmallPtrSet<BasicBlock *, 16> BBPreds(pred_begin(BB), pred_end(BB));
+  SmallPtrSet<BasicBlock *, 16> BBPreds(llvm::from_range, predecessors(BB));
 
   // The single common predecessor of BB and Succ when BB cannot be killed
   BasicBlock *CommonPred = nullptr;
@@ -1298,7 +1291,8 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     // All predecessors of BB (except the common predecessor) will be moved to
     // Succ.
     Updates.reserve(Updates.size() + 2 * pred_size(BB) + 1);
-    SmallPtrSet<BasicBlock *, 16> SuccPreds(pred_begin(Succ), pred_end(Succ));
+    SmallPtrSet<BasicBlock *, 16> SuccPreds(llvm::from_range,
+                                            predecessors(Succ));
     for (auto *PredOfBB : predecessors(BB)) {
       // Do not modify those common predecessors of BB and Succ
       if (!SuccPreds.contains(PredOfBB))
@@ -1450,9 +1444,9 @@ EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB,
       // Compute a hash value on the operands. Instcombine will likely have
       // sorted them, which helps expose duplicates, but we have to check all
       // the operands to be safe in case instcombine hasn't run.
-      return static_cast<unsigned>(hash_combine(
-          hash_combine_range(PN->value_op_begin(), PN->value_op_end()),
-          hash_combine_range(PN->block_begin(), PN->block_end())));
+      return static_cast<unsigned>(
+          hash_combine(hash_combine_range(PN->operand_values()),
+                       hash_combine_range(PN->blocks())));
     }
 
     static unsigned getHashValue(PHINode *PN) {
@@ -1552,9 +1546,9 @@ Align llvm::tryEnforceAlignment(Value *V, Align PrefAlign,
     return PrefAlign;
   }
 
-  if (auto *GO = dyn_cast<GlobalObject>(V)) {
+  if (auto *GV = dyn_cast<GlobalVariable>(V)) {
     // TODO: as above, this shouldn't be necessary.
-    Align CurrentAlign = GO->getPointerAlignment(DL);
+    Align CurrentAlign = GV->getPointerAlignment(DL);
     if (PrefAlign <= CurrentAlign)
       return CurrentAlign;
 
@@ -1562,16 +1556,16 @@ Align llvm::tryEnforceAlignment(Value *V, Align PrefAlign,
     // of the global.  If the memory we set aside for the global may not be the
     // memory used by the final program then it is impossible for us to reliably
     // enforce the preferred alignment.
-    if (!GO->canIncreaseAlignment())
+    if (!GV->canIncreaseAlignment())
       return CurrentAlign;
 
-    if (GO->isThreadLocal()) {
-      unsigned MaxTLSAlign = GO->getParent()->getMaxTLSAlignment() / CHAR_BIT;
+    if (GV->isThreadLocal()) {
+      unsigned MaxTLSAlign = GV->getParent()->getMaxTLSAlignment() / CHAR_BIT;
       if (MaxTLSAlign && PrefAlign > Align(MaxTLSAlign))
         PrefAlign = Align(MaxTLSAlign);
     }
 
-    GO->setAlignment(PrefAlign);
+    GV->setAlignment(PrefAlign);
     return PrefAlign;
   }
 
@@ -1586,7 +1580,7 @@ Align llvm::getOrEnforceKnownAlignment(Value *V, MaybeAlign PrefAlign,
   assert(V->getType()->isPointerTy() &&
          "getOrEnforceKnownAlignment expects a pointer!");
 
-  KnownBits Known = computeKnownBits(V, DL, 0, AC, CxtI, DT);
+  KnownBits Known = computeKnownBits(V, DL, AC, CxtI, DT);
   unsigned TrailZ = Known.countMinTrailingZeros();
 
   // Avoid trouble with ridiculously large TrailZ values, such as
@@ -1695,35 +1689,18 @@ static void insertDbgValueOrDbgVariableRecord(DIBuilder &Builder, Value *DV,
                                               DIExpression *DIExpr,
                                               const DebugLoc &NewLoc,
                                               BasicBlock::iterator Instr) {
-  if (!UseNewDbgInfoFormat) {
-    auto DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
-                                                  (Instruction *)nullptr);
-    cast<Instruction *>(DbgVal)->insertBefore(Instr);
-  } else {
-    // RemoveDIs: if we're using the new debug-info format, allocate a
-    // DbgVariableRecord directly instead of a dbg.value intrinsic.
-    ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
-    DbgVariableRecord *DV =
-        new DbgVariableRecord(DVAM, DIVar, DIExpr, NewLoc.get());
-    Instr->getParent()->insertDbgRecordBefore(DV, Instr);
-  }
+  ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
+  DbgVariableRecord *DVRec =
+      new DbgVariableRecord(DVAM, DIVar, DIExpr, NewLoc.get());
+  Instr->getParent()->insertDbgRecordBefore(DVRec, Instr);
 }
 
 static void insertDbgValueOrDbgVariableRecordAfter(
     DIBuilder &Builder, Value *DV, DILocalVariable *DIVar, DIExpression *DIExpr,
-    const DebugLoc &NewLoc, BasicBlock::iterator Instr) {
-  if (!UseNewDbgInfoFormat) {
-    auto DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
-                                                  (Instruction *)nullptr);
-    cast<Instruction *>(DbgVal)->insertAfter(&*Instr);
-  } else {
-    // RemoveDIs: if we're using the new debug-info format, allocate a
-    // DbgVariableRecord directly instead of a dbg.value intrinsic.
-    ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
-    DbgVariableRecord *DV =
-        new DbgVariableRecord(DVAM, DIVar, DIExpr, NewLoc.get());
-    Instr->getParent()->insertDbgRecordAfter(DV, &*Instr);
-  }
+    const DebugLoc &NewLoc, Instruction *Instr) {
+  BasicBlock::iterator NextIt = std::next(Instr->getIterator());
+  NextIt.setHeadBit(true);
+  insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc, NextIt);
 }
 
 /// Inserts a llvm.dbg.value intrinsic before a store to an alloca'd value
@@ -1815,7 +1792,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
   // preferable to keep tracking both the loaded value and the original
   // address in case the alloca can not be elided.
   insertDbgValueOrDbgVariableRecordAfter(Builder, LI, DIVar, DIExpr, NewLoc,
-                                         LI->getIterator());
+                                         LI);
 }
 
 void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
@@ -1853,7 +1830,6 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
   // then we want to insert a dbg.value for the corresponding fragment.
   LLVM_DEBUG(dbgs() << "Failed to convert dbg.declare to dbg.value: " << *DVR
                     << '\n');
-  assert(UseNewDbgInfoFormat);
 
   // For now, when there is a store to parts of the variable (but we do not
   // know which part) we insert an dbg.value intrinsic to indicate that we
@@ -1934,7 +1910,6 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR, LoadInst *LI,
   // future if multi-location support is added to the IR, it might be
   // preferable to keep tracking both the loaded value and the original
   // address in case the alloca can not be elided.
-  assert(UseNewDbgInfoFormat);
 
   // Create a DbgVariableRecord directly and insert.
   ValueAsMetadata *LIVAM = ValueAsMetadata::get(LI);
@@ -2108,7 +2083,7 @@ insertDbgVariableRecordsForPHIs(BasicBlock *BB,
   for (auto PHI : InsertedPHIs) {
     BasicBlock *Parent = PHI->getParent();
     // Avoid inserting a debug-info record into an EH block.
-    if (Parent->getFirstNonPHI()->isEHPad())
+    if (Parent->getFirstNonPHIIt()->isEHPad())
       continue;
     for (auto VI : PHI->operand_values()) {
       auto V = DbgValueMap.find(VI);
@@ -2174,7 +2149,7 @@ void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
   for (auto *PHI : InsertedPHIs) {
     BasicBlock *Parent = PHI->getParent();
     // Avoid inserting an intrinsic into an EH block.
-    if (Parent->getFirstNonPHI()->isEHPad())
+    if (Parent->getFirstNonPHIIt()->isEHPad())
       continue;
     for (auto *VI : PHI->operand_values()) {
       auto V = DbgValueMap.find(VI);
@@ -2197,7 +2172,7 @@ void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
     auto *NewDbgII = DI.second;
     auto InsertionPt = Parent->getFirstInsertionPt();
     assert(InsertionPt != Parent->end() && "Ill-formed basic block");
-    NewDbgII->insertBefore(&*InsertionPt);
+    NewDbgII->insertBefore(InsertionPt);
   }
 }
 
@@ -2873,10 +2848,8 @@ bool llvm::handleUnreachableTerminator(
   return Changed;
 }
 
-std::pair<unsigned, unsigned>
-llvm::removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB) {
+unsigned llvm::removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB) {
   unsigned NumDeadInst = 0;
-  unsigned NumDeadDbgInst = 0;
   // Delete the instructions backwards, as it has a reduced likelihood of
   // having to update as many def-use and use-def chains.
   Instruction *EndInst = BB->getTerminator(); // Last not to be deleted.
@@ -2895,15 +2868,12 @@ llvm::removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB) {
       EndInst = Inst;
       continue;
     }
-    if (isa<DbgInfoIntrinsic>(Inst))
-      ++NumDeadDbgInst;
-    else
-      ++NumDeadInst;
+    ++NumDeadInst;
     // RemoveDIs: erasing debug-info must be done manually.
     Inst->dropDbgRecords();
     Inst->eraseFromParent();
   }
-  return {NumDeadInst, NumDeadDbgInst};
+  return NumDeadInst;
 }
 
 unsigned llvm::changeToUnreachable(Instruction *I, bool PreserveLCSSA,
@@ -2975,12 +2945,16 @@ CallInst *llvm::createCallMatchingInvoke(InvokeInst *II) {
 CallInst *llvm::changeToCall(InvokeInst *II, DomTreeUpdater *DTU) {
   CallInst *NewCall = createCallMatchingInvoke(II);
   NewCall->takeName(II);
-  NewCall->insertBefore(II);
+  NewCall->insertBefore(II->getIterator());
   II->replaceAllUsesWith(NewCall);
 
   // Follow the call by a branch to the normal destination.
   BasicBlock *NormalDestBB = II->getNormalDest();
-  BranchInst::Create(NormalDestBB, II->getIterator());
+  auto *BI = BranchInst::Create(NormalDestBB, II->getIterator());
+  // Although it takes place after the call itself, the new branch is still
+  // performing part of the control-flow functionality of the invoke, so we use
+  // II's DebugLoc.
+  BI->setDebugLoc(II->getDebugLoc());
 
   // Update PHI nodes in the unwind destination
   BasicBlock *BB = II->getParent();
@@ -3147,7 +3121,8 @@ static bool markAliveBlocks(Function &F,
           BasicBlock *UnreachableNormalDest = BasicBlock::Create(
               Ctx, OrigNormalDest->getName() + ".unreachable",
               II->getFunction(), OrigNormalDest);
-          new UnreachableInst(Ctx, UnreachableNormalDest);
+          auto *UI = new UnreachableInst(Ctx, UnreachableNormalDest);
+          UI->setDebugLoc(DebugLoc::getTemporary());
           II->setNormalDest(UnreachableNormalDest);
           if (DTU)
             DTU->applyUpdates(
@@ -3206,7 +3181,7 @@ static bool markAliveBlocks(Function &F,
         BasicBlock *HandlerBB = *I;
         if (DTU)
           ++NumPerSuccessorCases[HandlerBB];
-        auto *CatchPad = cast<CatchPadInst>(HandlerBB->getFirstNonPHI());
+        auto *CatchPad = cast<CatchPadInst>(HandlerBB->getFirstNonPHIIt());
         if (!HandlerSet.insert({CatchPad, Empty}).second) {
           if (DTU)
             --NumPerSuccessorCases[HandlerBB];
@@ -3369,8 +3344,13 @@ static void combineMetadata(Instruction *K, const Instruction *J,
       case LLVMContext::MD_invariant_group:
         // Preserve !invariant.group in K.
         break;
+      // Keep empty cases for prof, mmra, memprof, and callsite to prevent them
+      // from being removed as unknown metadata. The actual merging is handled
+      // separately below.
+      case LLVMContext::MD_prof:
       case LLVMContext::MD_mmra:
-        // Combine MMRAs
+      case LLVMContext::MD_memprof:
+      case LLVMContext::MD_callsite:
         break;
       case LLVMContext::MD_align:
         if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
@@ -3382,14 +3362,6 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         if (!AAOnly && DoesKMove)
           K->setMetadata(Kind,
             MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
-        break;
-      case LLVMContext::MD_memprof:
-        if (!AAOnly)
-          K->setMetadata(Kind, MDNode::getMergedMemProfMetadata(KMD, JMD));
-        break;
-      case LLVMContext::MD_callsite:
-        if (!AAOnly)
-          K->setMetadata(Kind, MDNode::getMergedCallsiteMetadata(KMD, JMD));
         break;
       case LLVMContext::MD_preserve_access_index:
         // Preserve !preserve.access.index in K.
@@ -3403,10 +3375,6 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         // Preserve !nontemporal if it is present on both instructions.
         if (!AAOnly)
           K->setMetadata(Kind, JMD);
-        break;
-      case LLVMContext::MD_prof:
-        if (!AAOnly && DoesKMove)
-          K->setMetadata(Kind, MDNode::getMergedProfMetadata(KMD, JMD, K, J));
         break;
       case LLVMContext::MD_noalias_addrspace:
         if (DoesKMove)
@@ -3433,6 +3401,36 @@ static void combineMetadata(Instruction *K, const Instruction *J,
   if (JMMRA || KMMRA) {
     K->setMetadata(LLVMContext::MD_mmra,
                    MMRAMetadata::combine(K->getContext(), JMMRA, KMMRA));
+  }
+
+  // Merge memprof metadata.
+  // Handle separately to support cases where only one instruction has the
+  // metadata.
+  auto *JMemProf = J->getMetadata(LLVMContext::MD_memprof);
+  auto *KMemProf = K->getMetadata(LLVMContext::MD_memprof);
+  if (!AAOnly && (JMemProf || KMemProf)) {
+    K->setMetadata(LLVMContext::MD_memprof,
+                   MDNode::getMergedMemProfMetadata(KMemProf, JMemProf));
+  }
+
+  // Merge callsite metadata.
+  // Handle separately to support cases where only one instruction has the
+  // metadata.
+  auto *JCallSite = J->getMetadata(LLVMContext::MD_callsite);
+  auto *KCallSite = K->getMetadata(LLVMContext::MD_callsite);
+  if (!AAOnly && (JCallSite || KCallSite)) {
+    K->setMetadata(LLVMContext::MD_callsite,
+                   MDNode::getMergedCallsiteMetadata(KCallSite, JCallSite));
+  }
+
+  // Merge prof metadata.
+  // Handle separately to support cases where only one instruction has the
+  // metadata.
+  auto *JProf = J->getMetadata(LLVMContext::MD_prof);
+  auto *KProf = K->getMetadata(LLVMContext::MD_prof);
+  if (!AAOnly && (JProf || KProf)) {
+    K->setMetadata(LLVMContext::MD_prof,
+                   MDNode::getMergedProfMetadata(KProf, JProf, K, J));
   }
 }
 
@@ -3474,6 +3472,7 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
     case LLVMContext::MD_mem_parallel_loop_access:
     case LLVMContext::MD_access_group:
     case LLVMContext::MD_noundef:
+    case LLVMContext::MD_noalias_addrspace:
       // All of these directly apply.
       Dest.setMetadata(ID, N);
       break;
@@ -4104,7 +4103,8 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   if (!MatchBSwaps && !MatchBitReversals)
     return false;
   Type *ITy = I->getType();
-  if (!ITy->isIntOrIntVectorTy() || ITy->getScalarSizeInBits() > 128)
+  if (!ITy->isIntOrIntVectorTy() || ITy->getScalarSizeInBits() == 1 ||
+      ITy->getScalarSizeInBits() > 128)
     return false;  // Can't do integer/elements > 128 bits.
 
   // Try to find all the pieces corresponding to the bswap.
@@ -4207,12 +4207,19 @@ void llvm::maybeMarkSanitizerLibraryCallNoBuiltin(
 }
 
 bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
+  const auto *Op = I->getOperand(OpIdx);
   // We can't have a PHI with a metadata type.
-  if (I->getOperand(OpIdx)->getType()->isMetadataTy())
+  if (Op->getType()->isMetadataTy())
+    return false;
+
+  // swifterror pointers can only be used by a load, store, or as a swifterror
+  // argument; swifterror pointers are not allowed to be used in select or phi
+  // instructions.
+  if (Op->isSwiftError())
     return false;
 
   // Early exit.
-  if (!isa<Constant>(I->getOperand(OpIdx)))
+  if (!isa<Constant, InlineAsm>(Op))
     return true;
 
   switch (I->getOpcode()) {
@@ -4307,9 +4314,9 @@ Value *llvm::invertCondition(Value *Condition) {
   auto *Inverted =
       BinaryOperator::CreateNot(Condition, Condition->getName() + ".inv");
   if (Inst && !isa<PHINode>(Inst))
-    Inverted->insertAfter(Inst);
+    Inverted->insertAfter(Inst->getIterator());
   else
-    Inverted->insertBefore(&*Parent->getFirstInsertionPt());
+    Inverted->insertBefore(Parent->getFirstInsertionPt());
   return Inverted;
 }
 
@@ -4341,4 +4348,33 @@ bool llvm::inferAttributesFromOthers(Function &F) {
   // can infer by inspecting arguments of argmemonly-ish functions.
 
   return Changed;
+}
+
+void OverflowTracking::mergeFlags(Instruction &I) {
+#ifndef NDEBUG
+  if (Opcode)
+    assert(Opcode == I.getOpcode() &&
+           "can only use mergeFlags on instructions with matching opcodes");
+  else
+    Opcode = I.getOpcode();
+#endif
+  if (isa<OverflowingBinaryOperator>(&I)) {
+    HasNUW &= I.hasNoUnsignedWrap();
+    HasNSW &= I.hasNoSignedWrap();
+  }
+  if (auto *DisjointOp = dyn_cast<PossiblyDisjointInst>(&I))
+    IsDisjoint &= DisjointOp->isDisjoint();
+}
+
+void OverflowTracking::applyFlags(Instruction &I) {
+  I.clearSubclassOptionalData();
+  if (I.getOpcode() == Instruction::Add ||
+      (I.getOpcode() == Instruction::Mul && AllKnownNonZero)) {
+    if (HasNUW)
+      I.setHasNoUnsignedWrap();
+    if (HasNSW && (AllKnownNonNegative || HasNUW))
+      I.setHasNoSignedWrap();
+  }
+  if (auto *DisjointOp = dyn_cast<PossiblyDisjointInst>(&I))
+    DisjointOp->setIsDisjoint(IsDisjoint);
 }

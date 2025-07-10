@@ -9,8 +9,8 @@
 #ifndef FORTRAN_COMMON_FORMAT_H_
 #define FORTRAN_COMMON_FORMAT_H_
 
+#include "Fortran-consts.h"
 #include "enum-set.h"
-#include "flang/Common/Fortran-consts.h"
 #include <cstring>
 
 // Define a FormatValidator class template to validate a format expression
@@ -430,11 +430,11 @@ template <typename CHAR> void FormatValidator<CHAR>::NextToken() {
       }
     }
     SetLength();
-    if (stmt_ == IoStmtKind::Read &&
-        previousToken_.kind() != TokenKind::DT) { // 13.3.2p6
-      ReportError("String edit descriptor in READ format expression");
-    } else if (token_.kind() != TokenKind::String) {
+    if (token_.kind() != TokenKind::String) {
       ReportError("Unterminated string");
+    } else if (stmt_ == IoStmtKind::Read &&
+        previousToken_.kind() != TokenKind::DT) { // 13.3.2p6
+      ReportWarning("String edit descriptor in READ format expression");
     }
     break;
   default:

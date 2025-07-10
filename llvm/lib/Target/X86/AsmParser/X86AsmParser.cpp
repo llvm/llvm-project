@@ -9,11 +9,13 @@
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86EncodingOptimization.h"
 #include "MCTargetDesc/X86IntelInstPrinter.h"
+#include "MCTargetDesc/X86MCAsmInfo.h"
 #include "MCTargetDesc/X86MCExpr.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "MCTargetDesc/X86TargetStreamer.h"
 #include "TargetInfo/X86TargetInfo.h"
 #include "X86Operand.h"
+#include "llvm-c/Visibility.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -23,7 +25,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
@@ -122,6 +124,10 @@ private:
     SMLoc Result = Parser.getTok().getLoc();
     Parser.Lex();
     return Result;
+  }
+
+  bool tokenIsStartOfStatement(AsmToken::TokenKind Token) override {
+    return Token == AsmToken::LCurly;
   }
 
   X86TargetStreamer &getTargetStreamer() {
@@ -1097,8 +1103,6 @@ private:
              bool MatchingInlineAsm = false) {
     MCAsmParser &Parser = getParser();
     if (MatchingInlineAsm) {
-      if (!getLexer().isAtStartOfStatement())
-        Parser.eatToEndOfStatement();
       return false;
     }
     return Parser.Error(L, Msg, Range);
@@ -1495,7 +1499,7 @@ bool X86AsmParser::MatchRegisterByName(MCRegister &RegNo, StringRef RegName,
 bool X86AsmParser::ParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                  SMLoc &EndLoc, bool RestoreOnFailure) {
   MCAsmParser &Parser = getParser();
-  MCAsmLexer &Lexer = getLexer();
+  AsmLexer &Lexer = getLexer();
   RegNo = MCRegister();
 
   SmallVector<AsmToken, 5> Tokens;
@@ -2034,7 +2038,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       const MCExpr *Val;
       if (isParsingMSInlineAsm() || Parser.isParsingMasm()) {
         // MS Dot Operator expression
-        if (Identifier.count('.') &&
+        if (Identifier.contains('.') &&
             (PrevTK == AsmToken::RBrac || PrevTK == AsmToken::RParen)) {
           if (ParseIntelDotOperator(SM, End))
             return true;
@@ -2116,7 +2120,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         if (IDVal == "f" || IDVal == "b") {
           MCSymbol *Sym =
               getContext().getDirectionalLocalSymbol(IntVal, IDVal == "b");
-          MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
+          auto Variant = X86::S_None;
           const MCExpr *Val =
               MCSymbolRefExpr::create(Sym, Variant, getContext());
           if (IDVal == "b" && Sym->isUndefined())
@@ -2263,7 +2267,7 @@ bool X86AsmParser::ParseIntelInlineAsmIdentifier(
     return false;
   // Create the symbol reference.
   MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
-  MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
+  auto Variant = X86::S_None;
   Val = MCSymbolRefExpr::create(Sym, Variant, getParser().getContext());
   return false;
 }
@@ -2380,7 +2384,7 @@ bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM,
   // Drop the optional '.'.
   StringRef DotDispStr = Tok.getString();
   DotDispStr.consume_front(".");
-  StringRef TrailingDot;
+  bool TrailingDot = false;
 
   // .Imm gets lexed as a real.
   if (Tok.is(AsmToken::Real)) {
@@ -2390,10 +2394,7 @@ bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM,
     Info.Offset = DotDisp.getZExtValue();
   } else if ((isParsingMSInlineAsm() || getParser().isParsingMasm()) &&
              Tok.is(AsmToken::Identifier)) {
-    if (DotDispStr.ends_with(".")) {
-      TrailingDot = DotDispStr.substr(DotDispStr.size() - 1);
-      DotDispStr = DotDispStr.drop_back(1);
-    }
+    TrailingDot = DotDispStr.consume_back(".");
     const std::pair<StringRef, StringRef> BaseMember = DotDispStr.split('.');
     const StringRef Base = BaseMember.first, Member = BaseMember.second;
     if (getParser().lookUpField(SM.getType(), DotDispStr, Info) &&
@@ -2411,8 +2412,8 @@ bool X86AsmParser::ParseIntelDotOperator(IntelExprStateMachine &SM,
   const char *DotExprEndLoc = DotDispStr.data() + DotDispStr.size();
   while (Tok.getLoc().getPointer() < DotExprEndLoc)
     Lex();
-  if (!TrailingDot.empty())
-    getLexer().UnLex(AsmToken(AsmToken::Dot, TrailingDot));
+  if (TrailingDot)
+    getLexer().UnLex(AsmToken(AsmToken::Dot, "."));
   SM.addImm(Info.Offset);
   SM.setTypeInfo(Info.Type);
   return false;
@@ -3006,7 +3007,7 @@ bool X86AsmParser::ParseMemOperand(MCRegister SegReg, const MCExpr *Disp,
     if (!Id.empty()) {
       MCSymbol *Sym = this->getContext().getOrCreateSymbol(Id);
       if (Sym->isVariable()) {
-        auto V = Sym->getVariableValue(/*SetUsed*/ false);
+        auto V = Sym->getVariableValue();
         return isa<X86MCExpr>(V);
       }
     }
@@ -3306,11 +3307,11 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
   if ((PatchedName.starts_with("cmp") || PatchedName.starts_with("vcmp")) &&
       (PatchedName.ends_with("ss") || PatchedName.ends_with("sd") ||
        PatchedName.ends_with("sh") || PatchedName.ends_with("ph") ||
-       PatchedName.ends_with("pbf16") || PatchedName.ends_with("ps") ||
+       PatchedName.ends_with("bf16") || PatchedName.ends_with("ps") ||
        PatchedName.ends_with("pd"))) {
     bool IsVCMP = PatchedName[0] == 'v';
     unsigned CCIdx = IsVCMP ? 4 : 3;
-    unsigned suffixLength = PatchedName.ends_with("pbf16") ? 5 : 2;
+    unsigned suffixLength = PatchedName.ends_with("bf16") ? 5 : 2;
     unsigned CC = StringSwitch<unsigned>(
       PatchedName.slice(CCIdx, PatchedName.size() - suffixLength))
       .Case("eq",       0x00)
@@ -3375,8 +3376,8 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
         PatchedName = "vcmpsh";
       else if (PatchedName.ends_with("ph"))
         PatchedName = "vcmpph";
-      else if (PatchedName.ends_with("pbf16"))
-        PatchedName = "vcmppbf16";
+      else if (PatchedName.ends_with("bf16"))
+        PatchedName = "vcmpbf16";
       else
         llvm_unreachable("Unexpected suffix!");
 
@@ -4796,7 +4797,7 @@ bool X86AsmParser::ParseDirectiveCode(StringRef IDVal, SMLoc L) {
     Parser.Lex();
     if (!is16BitMode()) {
       SwitchMode(X86::Is16Bit);
-      getParser().getStreamer().emitAssemblerFlag(MCAF_Code16);
+      getTargetStreamer().emitCode16();
     }
   } else if (IDVal == ".code16gcc") {
     // .code16gcc parses as if in 32-bit mode, but emits code in 16-bit mode.
@@ -4804,19 +4805,19 @@ bool X86AsmParser::ParseDirectiveCode(StringRef IDVal, SMLoc L) {
     Code16GCC = true;
     if (!is16BitMode()) {
       SwitchMode(X86::Is16Bit);
-      getParser().getStreamer().emitAssemblerFlag(MCAF_Code16);
+      getTargetStreamer().emitCode16();
     }
   } else if (IDVal == ".code32") {
     Parser.Lex();
     if (!is32BitMode()) {
       SwitchMode(X86::Is32Bit);
-      getParser().getStreamer().emitAssemblerFlag(MCAF_Code32);
+      getTargetStreamer().emitCode32();
     }
   } else if (IDVal == ".code64") {
     Parser.Lex();
     if (!is64BitMode()) {
       SwitchMode(X86::Is64Bit);
-      getParser().getStreamer().emitAssemblerFlag(MCAF_Code64);
+      getTargetStreamer().emitCode64();
     }
   } else {
     Error(L, "unknown directive " + IDVal);

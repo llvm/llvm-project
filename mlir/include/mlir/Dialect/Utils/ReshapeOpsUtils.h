@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_UTILS_RESHAPEOPSUTILS_H
 #define MLIR_DIALECT_UTILS_RESHAPEOPSUTILS_H
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -57,7 +58,7 @@ getSymbolLessAffineMaps(ArrayRef<ReassociationExprs> reassociation);
 
 /// Wraps a list of reassociations in an ArrayAttr.
 ArrayAttr
-getReassociationIndicesAttribute(OpBuilder &b,
+getReassociationIndicesAttribute(Builder &b,
                                  ArrayRef<ReassociationIndices> reassociation);
 
 /// Convert Array<Array<AffineExpr>> to Array<Array<int64_t>>.
@@ -305,8 +306,43 @@ struct ComposeCollapseOfExpandOp : public OpRewritePattern<CollapseOpTy> {
       rewriter.replaceOpWithNewOp<CollapseOpTy>(
           collapseOp, resultType, expandOp.getSrc(), composedReassociation);
     } else if (srcRank < resultRank) {
+      // Compute the dynamic output shape for the new expand_shape op.
+      Location loc = collapseOp.getLoc();
+      SmallVector<OpFoldResult> origOutputShape =
+          expandOp.getMixedOutputShape();
+      SmallVector<OpFoldResult> newOutputShape;
+      for (const ReassociationIndices &indices :
+           collapseOp.getReassociationIndices()) {
+        int64_t numStaticElems = 1;
+        SmallVector<Value> dynamicSizes;
+        for (int64_t idx : indices) {
+          OpFoldResult size = origOutputShape[idx];
+          if (std::optional<int64_t> maybeCst = getConstantIntValue(size)) {
+            numStaticElems *= maybeCst.value();
+            continue;
+          }
+          dynamicSizes.push_back(cast<Value>(size));
+        }
+        if (dynamicSizes.empty()) {
+          newOutputShape.push_back(rewriter.getIndexAttr(numStaticElems));
+          continue;
+        }
+
+        // There is at least one dynamic size, so we can initialize `result` to
+        // the first dynamic size.
+        Value result = dynamicSizes[0];
+        for (Value v : llvm::drop_begin(dynamicSizes))
+          result = rewriter.create<arith::MulIOp>(loc, result, v);
+        if (numStaticElems != 1) {
+          result = rewriter.create<arith::MulIOp>(
+              loc, result,
+              rewriter.create<arith::ConstantIndexOp>(loc, numStaticElems));
+        }
+        newOutputShape.push_back(result);
+      }
       rewriter.replaceOpWithNewOp<ExpandOpTy>(
-          collapseOp, resultType, expandOp.getSrc(), composedReassociation);
+          collapseOp, resultType, expandOp.getSrc(), composedReassociation,
+          newOutputShape);
     } else {
       // Collapses/expansions that do not change the rank are not allowed. Use
       // a cast instead.
@@ -387,11 +423,14 @@ private:
       auto resultSubShape =
           resultShape.slice(resultIndices.front(), resultIndices.size());
 
+      if (llvm::count_if(srcSubShape, ShapedType::isDynamic) >= 2 &&
+          llvm::count_if(resultSubShape, ShapedType::isDynamic) >= 2)
+        return std::nullopt;
+
       if (srcSubShape.size() == resultSubShape.size()) {
-        if (srcSubShape != resultSubShape ||
-            llvm::count_if(srcSubShape, ShapedType::isDynamic) >= 2) {
+        if (srcSubShape != resultSubShape)
           return std::nullopt;
-        }
+
         for (auto index : llvm::seq<int64_t>(0, srcSubShape.size())) {
           composedReassociation.emplace_back(1, srcIndices.front() + index);
         }
@@ -568,6 +607,13 @@ struct PackingMetadata {
 // repeated N^2 counts).
 PackingMetadata computePackingMetadata(int64_t packedRank,
                                        ArrayRef<int64_t> innerDimPos);
+
+/// Try to remove a tensor operation if it would only reshape a constant.
+/// Removes the op and replaces the constant with a new constant of the result
+/// shape. When an optional cst attribute is passed, it is reshaped only if the
+/// splat value matches the value in the attribute.
+OpFoldResult reshapeConstantSource(DenseElementsAttr source, TensorType result,
+                                   std::optional<Attribute> cst = std::nullopt);
 } // namespace mlir
 
 #endif // MLIR_DIALECT_UTILS_RESHAPEOPSUTILS_H

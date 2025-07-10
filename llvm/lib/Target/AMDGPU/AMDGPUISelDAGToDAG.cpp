@@ -454,8 +454,7 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
   // 1 = Vector Register Class
   SmallVector<SDValue, 32 * 2 + 1> RegSeqArgs(NumVectorElts * 2 + 1);
 
-  bool IsGCN = CurDAG->getSubtarget().getTargetTriple().getArch() ==
-               Triple::amdgcn;
+  bool IsGCN = CurDAG->getSubtarget().getTargetTriple().isAMDGCN();
   RegSeqArgs[0] = CurDAG->getTargetConstant(RegClassID, DL, MVT::i32);
   bool IsRegSeq = true;
   unsigned NOps = N->getNumOperands();
@@ -487,6 +486,95 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
   if (!IsRegSeq)
     SelectCode(N);
   CurDAG->SelectNodeTo(N, AMDGPU::REG_SEQUENCE, N->getVTList(), RegSeqArgs);
+}
+
+void AMDGPUDAGToDAGISel::SelectVectorShuffle(SDNode *N) {
+  EVT VT = N->getValueType(0);
+  EVT EltVT = VT.getVectorElementType();
+
+  // TODO: Handle 16-bit element vectors with even aligned masks.
+  if (!Subtarget->hasPkMovB32() || !EltVT.bitsEq(MVT::i32) ||
+      VT.getVectorNumElements() != 2) {
+    SelectCode(N);
+    return;
+  }
+
+  auto *SVN = cast<ShuffleVectorSDNode>(N);
+
+  SDValue Src0 = SVN->getOperand(0);
+  SDValue Src1 = SVN->getOperand(1);
+  ArrayRef<int> Mask = SVN->getMask();
+  SDLoc DL(N);
+
+  assert(Src0.getValueType().getVectorNumElements() == 2 && Mask.size() == 2 &&
+         Mask[0] < 4 && Mask[1] < 4);
+
+  SDValue VSrc0 = Mask[0] < 2 ? Src0 : Src1;
+  SDValue VSrc1 = Mask[1] < 2 ? Src0 : Src1;
+  unsigned Src0SubReg = Mask[0] & 1 ? AMDGPU::sub1 : AMDGPU::sub0;
+  unsigned Src1SubReg = Mask[1] & 1 ? AMDGPU::sub1 : AMDGPU::sub0;
+
+  if (Mask[0] < 0) {
+    Src0SubReg = Src1SubReg;
+    MachineSDNode *ImpDef =
+        CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, VT);
+    VSrc0 = SDValue(ImpDef, 0);
+  }
+
+  if (Mask[1] < 0) {
+    Src1SubReg = Src0SubReg;
+    MachineSDNode *ImpDef =
+        CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, DL, VT);
+    VSrc1 = SDValue(ImpDef, 0);
+  }
+
+  // SGPR case needs to lower to copies.
+  //
+  // Also use subregister extract when we can directly blend the registers with
+  // a simple subregister copy.
+  //
+  // TODO: Maybe we should fold this out earlier
+  if (N->isDivergent() && Src0SubReg == AMDGPU::sub1 &&
+      Src1SubReg == AMDGPU::sub0) {
+    // The low element of the result always comes from src0.
+    // The high element of the result always comes from src1.
+    // op_sel selects the high half of src0.
+    // op_sel_hi selects the high half of src1.
+
+    unsigned Src0OpSel =
+        Src0SubReg == AMDGPU::sub1 ? SISrcMods::OP_SEL_0 : SISrcMods::NONE;
+    unsigned Src1OpSel =
+        Src1SubReg == AMDGPU::sub1 ? SISrcMods::OP_SEL_0 : SISrcMods::NONE;
+
+    // Enable op_sel_hi to avoid printing it. This should have no effect on the
+    // result.
+    Src0OpSel |= SISrcMods::OP_SEL_1;
+    Src1OpSel |= SISrcMods::OP_SEL_1;
+
+    SDValue Src0OpSelVal = CurDAG->getTargetConstant(Src0OpSel, DL, MVT::i32);
+    SDValue Src1OpSelVal = CurDAG->getTargetConstant(Src1OpSel, DL, MVT::i32);
+    SDValue ZeroMods = CurDAG->getTargetConstant(0, DL, MVT::i32);
+
+    CurDAG->SelectNodeTo(N, AMDGPU::V_PK_MOV_B32, N->getVTList(),
+                         {Src0OpSelVal, VSrc0, Src1OpSelVal, VSrc1,
+                          ZeroMods,   // clamp
+                          ZeroMods,   // op_sel
+                          ZeroMods,   // op_sel_hi
+                          ZeroMods,   // neg_lo
+                          ZeroMods}); // neg_hi
+    return;
+  }
+
+  SDValue ResultElt0 =
+      CurDAG->getTargetExtractSubreg(Src0SubReg, DL, EltVT, VSrc0);
+  SDValue ResultElt1 =
+      CurDAG->getTargetExtractSubreg(Src1SubReg, DL, EltVT, VSrc1);
+
+  const SDValue Ops[] = {
+      CurDAG->getTargetConstant(AMDGPU::SReg_64RegClassID, DL, MVT::i32),
+      ResultElt0, CurDAG->getTargetConstant(AMDGPU::sub0, DL, MVT::i32),
+      ResultElt1, CurDAG->getTargetConstant(AMDGPU::sub1, DL, MVT::i32)};
+  CurDAG->SelectNodeTo(N, TargetOpcode::REG_SEQUENCE, VT, Ops);
 }
 
 void AMDGPUDAGToDAGISel::Select(SDNode *N) {
@@ -562,6 +650,9 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     SelectBuildVector(N, RegClassID);
     return;
   }
+  case ISD::VECTOR_SHUFFLE:
+    SelectVectorShuffle(N);
+    return;
   case ISD::BUILD_PAIR: {
     SDValue RC, SubReg0, SubReg1;
     SDLoc DL(N);
@@ -906,7 +997,6 @@ void AMDGPUDAGToDAGISel::SelectADD_SUB_I64(SDNode *N) {
 }
 
 void AMDGPUDAGToDAGISel::SelectAddcSubb(SDNode *N) {
-  SDLoc DL(N);
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
   SDValue CI = N->getOperand(2);
@@ -959,7 +1049,6 @@ void AMDGPUDAGToDAGISel::SelectUADDO_USUBO(SDNode *N) {
 }
 
 void AMDGPUDAGToDAGISel::SelectFMA_W_CHAIN(SDNode *N) {
-  SDLoc SL(N);
   //  src0_modifiers, src0,  src1_modifiers, src1, src2_modifiers, src2, clamp, omod
   SDValue Ops[10];
 
@@ -980,7 +1069,6 @@ void AMDGPUDAGToDAGISel::SelectFMA_W_CHAIN(SDNode *N) {
 }
 
 void AMDGPUDAGToDAGISel::SelectFMUL_W_CHAIN(SDNode *N) {
-  SDLoc SL(N);
   //    src0_modifiers, src0,  src1_modifiers, src1, clamp, omod
   SDValue Ops[8];
 
@@ -995,7 +1083,6 @@ void AMDGPUDAGToDAGISel::SelectFMUL_W_CHAIN(SDNode *N) {
 // We need to handle this here because tablegen doesn't support matching
 // instructions with multiple outputs.
 void AMDGPUDAGToDAGISel::SelectDIV_SCALE(SDNode *N) {
-  SDLoc SL(N);
   EVT VT = N->getValueType(0);
 
   assert(VT == MVT::f32 || VT == MVT::f64);
@@ -1945,7 +2032,8 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
     int64_t COffsetVal = cast<ConstantSDNode>(RHS)->getSExtValue();
     const SIInstrInfo *TII = Subtarget->getInstrInfo();
 
-    if (TII->isLegalFLATOffset(COffsetVal, AMDGPUAS::PRIVATE_ADDRESS, true)) {
+    if (TII->isLegalFLATOffset(COffsetVal, AMDGPUAS::PRIVATE_ADDRESS,
+                               SIInstrFlags::FlatScratch)) {
       Addr = LHS;
       ImmOffset = COffsetVal;
     } else if (!LHS->isDivergent() && COffsetVal > 0) {
@@ -1953,8 +2041,8 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
       // saddr + large_offset -> saddr + (vaddr = large_offset & ~MaxOffset) +
       //                         (large_offset & MaxOffset);
       int64_t SplitImmOffset, RemainderOffset;
-      std::tie(SplitImmOffset, RemainderOffset)
-        = TII->splitFlatOffset(COffsetVal, AMDGPUAS::PRIVATE_ADDRESS, true);
+      std::tie(SplitImmOffset, RemainderOffset) = TII->splitFlatOffset(
+          COffsetVal, AMDGPUAS::PRIVATE_ADDRESS, SIInstrFlags::FlatScratch);
 
       if (isUInt<32>(RemainderOffset)) {
         SDNode *VMov = CurDAG->getMachineNode(
@@ -2573,8 +2661,20 @@ void AMDGPUDAGToDAGISel::SelectDSAppendConsume(SDNode *N, unsigned IntrID) {
 
 // We need to handle this here because tablegen doesn't support matching
 // instructions with multiple outputs.
-void AMDGPUDAGToDAGISel::SelectDSBvhStackIntrinsic(SDNode *N) {
-  unsigned Opc = AMDGPU::DS_BVH_STACK_RTN_B32;
+void AMDGPUDAGToDAGISel::SelectDSBvhStackIntrinsic(SDNode *N, unsigned IntrID) {
+  unsigned Opc;
+  switch (IntrID) {
+  case Intrinsic::amdgcn_ds_bvh_stack_rtn:
+  case Intrinsic::amdgcn_ds_bvh_stack_push4_pop1_rtn:
+    Opc = AMDGPU::DS_BVH_STACK_RTN_B32;
+    break;
+  case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
+    Opc = AMDGPU::DS_BVH_STACK_PUSH8_POP1_RTN_B32;
+    break;
+  case Intrinsic::amdgcn_ds_bvh_stack_push8_pop2_rtn:
+    Opc = AMDGPU::DS_BVH_STACK_PUSH8_POP2_RTN_B64;
+    break;
+  }
   SDValue Ops[] = {N->getOperand(2), N->getOperand(3), N->getOperand(4),
                    N->getOperand(5), N->getOperand(0)};
 
@@ -2738,7 +2838,10 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
     return;
   }
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
-    SelectDSBvhStackIntrinsic(N);
+  case Intrinsic::amdgcn_ds_bvh_stack_push4_pop1_rtn:
+  case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
+  case Intrinsic::amdgcn_ds_bvh_stack_push8_pop2_rtn:
+    SelectDSBvhStackIntrinsic(N, IntrID);
     return;
   case Intrinsic::amdgcn_init_whole_wave:
     CurDAG->getMachineFunction()
@@ -3101,6 +3204,33 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
     }
 
     Mods = VecMods;
+  } else if (Src.getOpcode() == ISD::VECTOR_SHUFFLE &&
+             Src.getNumOperands() == 2) {
+
+    // TODO: We should repeat the build_vector source check above for the
+    // vector_shuffle for negates and casts of individual elements.
+
+    auto *SVN = cast<ShuffleVectorSDNode>(Src);
+    ArrayRef<int> Mask = SVN->getMask();
+
+    if (Mask[0] < 2 && Mask[1] < 2) {
+      // src1 should be undef.
+      SDValue ShuffleSrc = SVN->getOperand(0);
+
+      if (ShuffleSrc.getOpcode() == ISD::FNEG) {
+        ShuffleSrc = ShuffleSrc.getOperand(0);
+        Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
+      }
+
+      if (Mask[0] == 1)
+        Mods |= SISrcMods::OP_SEL_0;
+      if (Mask[1] == 1)
+        Mods |= SISrcMods::OP_SEL_1;
+
+      Src = ShuffleSrc;
+      SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+      return true;
+    }
   }
 
   // Packed instructions do not have abs modifiers.
@@ -3532,6 +3662,11 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
       // TODO: Should we try to look for neg/abs here?
     }
 
+    // Prevent unnecessary subreg COPY to VGPR_16
+    if (Src.getOpcode() == ISD::TRUNCATE &&
+        Src.getOperand(0).getValueType() == MVT::i32) {
+      Src = Src.getOperand(0);
+    }
     return true;
   }
 
@@ -3748,7 +3883,7 @@ SDValue AMDGPUDAGToDAGISel::getHi16Elt(SDValue In) const {
 }
 
 bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
-  assert(CurDAG->getTarget().getTargetTriple().getArch() == Triple::amdgcn);
+  assert(CurDAG->getTarget().getTargetTriple().isAMDGCN());
 
   const SIRegisterInfo *SIRI =
     static_cast<const SIRegisterInfo *>(Subtarget->getRegisterInfo());
@@ -3802,7 +3937,7 @@ bool AMDGPUDAGToDAGISel::isUniformLoad(const SDNode *N) const {
   const auto *Ld = cast<LoadSDNode>(N);
 
   const MachineMemOperand *MMO = Ld->getMemOperand();
-  if (N->isDivergent() && !AMDGPUInstrInfo::isUniformMMO(MMO))
+  if (N->isDivergent() && !AMDGPU::isUniformMMO(MMO))
     return false;
 
   return MMO->getSize().hasValue() &&

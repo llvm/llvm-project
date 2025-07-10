@@ -351,8 +351,9 @@ InstrEmitter::AddRegisterOperand(MachineInstrBuilder &MIB,
         OpRC = TRI->getAllocatableClass(OpRC);
         assert(OpRC && "Constraints cannot be fulfilled for allocation");
         Register NewVReg = MRI->createVirtualRegister(OpRC);
-        BuildMI(*MBB, InsertPos, Op.getNode()->getDebugLoc(),
-                TII->get(TargetOpcode::COPY), NewVReg).addReg(VReg);
+        BuildMI(*MBB, InsertPos, MIB->getDebugLoc(),
+                TII->get(TargetOpcode::COPY), NewVReg)
+            .addReg(VReg);
         VReg = NewVReg;
       } else {
         assert(ConstrainedRC->isAllocatable() &&
@@ -630,16 +631,17 @@ void InstrEmitter::EmitSubregNode(SDNode *Node, VRBaseMapType &VRBaseMap,
 void
 InstrEmitter::EmitCopyToRegClassNode(SDNode *Node,
                                      VRBaseMapType &VRBaseMap) {
-  Register VReg = getVR(Node->getOperand(0), VRBaseMap);
-
   // Create the new VReg in the destination class and emit a copy.
   unsigned DstRCIdx = Node->getConstantOperandVal(1);
   const TargetRegisterClass *DstRC =
     TRI->getAllocatableClass(TRI->getRegClass(DstRCIdx));
   Register NewVReg = MRI->createVirtualRegister(DstRC);
-  BuildMI(*MBB, InsertPos, Node->getDebugLoc(), TII->get(TargetOpcode::COPY),
-    NewVReg).addReg(VReg);
+  const MCInstrDesc &II = TII->get(TargetOpcode::COPY);
+  MachineInstrBuilder MIB = BuildMI(*MF, Node->getDebugLoc(), II, NewVReg);
+  AddOperand(MIB, Node->getOperand(0), 1, &II, VRBaseMap, /*IsDebug=*/false,
+             /*IsClone=*/false, /*IsCloned*/ false);
 
+  MBB->insert(InsertPos, MIB);
   SDValue Op(Node, 0);
   bool isNew = VRBaseMap.insert(std::make_pair(Op, NewVReg)).second;
   (void)isNew; // Silence compiler warning.
@@ -826,7 +828,7 @@ InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
   //
   // i.e., point the instruction at the vreg, and patch it up later in
   // MachineFunction::finalizeDebugInstrRefs.
-  auto AddVRegOp = [&](unsigned VReg) {
+  auto AddVRegOp = [&](Register VReg) {
     MOs.push_back(MachineOperand::CreateReg(
         /* Reg */ VReg, /* isDef */ false, /* isImp */ false,
         /* isKill */ false, /* isDead */ false,
@@ -839,7 +841,7 @@ InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
 
     // Try to find both the defined register and the instruction defining it.
     MachineInstr *DefMI = nullptr;
-    unsigned VReg;
+    Register VReg;
 
     if (DbgOperand.getKind() == SDDbgOperand::VREG) {
       VReg = DbgOperand.getVReg();
@@ -1194,8 +1196,7 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
   // Add rounding control registers as implicit def for function call.
   if (II.isCall() && MF->getFunction().hasFnAttribute(Attribute::StrictFP)) {
     ArrayRef<MCPhysReg> RCRegs = TLI->getRoundingControlRegisters();
-    for (MCPhysReg Reg : RCRegs)
-      UsedRegs.push_back(Reg);
+    llvm::append_range(UsedRegs, RCRegs);
   }
 
   // Finally mark unused registers as dead.

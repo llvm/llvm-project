@@ -537,32 +537,44 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
 
           GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
               GEP->getSourceElementType(), NewPtr, NewOps);
-          NewGEP->setIsInBounds(GEP->isInBounds());
+          NewGEP->setNoWrapFlags(GEP->getNoWrapFlags());
           return NewGEP;
         }
       }
     } else if (auto *SVI = dyn_cast<ShuffleVectorInst>(I)) {
-      // If this is extracting an element from a shufflevector, figure out where
-      // it came from and extract from the appropriate input element instead.
-      // Restrict the following transformation to fixed-length vector.
-      if (isa<FixedVectorType>(SVI->getType()) && isa<ConstantInt>(Index)) {
-        int SrcIdx =
-            SVI->getMaskValue(cast<ConstantInt>(Index)->getZExtValue());
-        Value *Src;
-        unsigned LHSWidth = cast<FixedVectorType>(SVI->getOperand(0)->getType())
-                                ->getNumElements();
+      int SplatIndex = getSplatIndex(SVI->getShuffleMask());
+      // We know the all-0 splat must be reading from the first operand, even
+      // in the case of scalable vectors (vscale is always > 0).
+      if (SplatIndex == 0)
+        return ExtractElementInst::Create(SVI->getOperand(0),
+                                          Builder.getInt64(0));
 
-        if (SrcIdx < 0)
-          return replaceInstUsesWith(EI, PoisonValue::get(EI.getType()));
-        if (SrcIdx < (int)LHSWidth)
-          Src = SVI->getOperand(0);
-        else {
-          SrcIdx -= LHSWidth;
-          Src = SVI->getOperand(1);
+      if (isa<FixedVectorType>(SVI->getType())) {
+        std::optional<int> SrcIdx;
+        // getSplatIndex returns -1 to mean not-found.
+        if (SplatIndex != -1)
+          SrcIdx = SplatIndex;
+        else if (ConstantInt *CI = dyn_cast<ConstantInt>(Index))
+          SrcIdx = SVI->getMaskValue(CI->getZExtValue());
+
+        if (SrcIdx) {
+          Value *Src;
+          unsigned LHSWidth =
+              cast<FixedVectorType>(SVI->getOperand(0)->getType())
+                  ->getNumElements();
+
+          if (*SrcIdx < 0)
+            return replaceInstUsesWith(EI, PoisonValue::get(EI.getType()));
+          if (*SrcIdx < (int)LHSWidth)
+            Src = SVI->getOperand(0);
+          else {
+            *SrcIdx -= LHSWidth;
+            Src = SVI->getOperand(1);
+          }
+          Type *Int64Ty = Type::getInt64Ty(EI.getContext());
+          return ExtractElementInst::Create(
+              Src, ConstantInt::get(Int64Ty, *SrcIdx, false));
         }
-        Type *Int64Ty = Type::getInt64Ty(EI.getContext());
-        return ExtractElementInst::Create(
-            Src, ConstantInt::get(Int64Ty, SrcIdx, false));
       }
     } else if (auto *CI = dyn_cast<CastInst>(I)) {
       // Canonicalize extractelement(cast) -> cast(extractelement).
@@ -747,7 +759,7 @@ static bool replaceExtractElements(InsertElementInst *InsElt,
   // extract, so any subsequent extracts in the same basic block can use it.
   // TODO: Insert before the earliest ExtractElementInst that is replaced.
   if (ExtVecOpInst && !isa<PHINode>(ExtVecOpInst))
-    WideVec->insertAfter(ExtVecOpInst);
+    WideVec->insertAfter(ExtVecOpInst->getIterator());
   else
     IC.InsertNewInstWith(WideVec, ExtElt->getParent()->getFirstInsertionPt());
 
@@ -1111,11 +1123,11 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   // For each predecessor, what is the source aggregate,
   // from which all the elements were originally extracted from?
   // Note that we want for the map to have stable iteration order!
-  SmallDenseMap<BasicBlock *, Value *, 4> SourceAggregates;
+  SmallMapVector<BasicBlock *, Value *, 4> SourceAggregates;
   bool FoundSrcAgg = false;
   for (BasicBlock *Pred : Preds) {
     std::pair<decltype(SourceAggregates)::iterator, bool> IV =
-        SourceAggregates.insert({Pred, nullptr});
+        SourceAggregates.try_emplace(Pred);
     // Did we already evaluate this predecessor?
     if (!IV.second)
       continue;
@@ -1982,7 +1994,7 @@ static Value *buildNew(Instruction *I, ArrayRef<Value*> NewOps,
       ArrayRef<Value*> Idx = NewOps.slice(1);
       return Builder.CreateGEP(cast<GEPOperator>(I)->getSourceElementType(),
                                Ptr, Idx, "",
-                               cast<GEPOperator>(I)->isInBounds());
+                               cast<GEPOperator>(I)->getNoWrapFlags());
     }
   }
   llvm_unreachable("failed to rebuild vector instructions");
@@ -2244,7 +2256,7 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf,
   // have preserved the exact NaN bit-pattern.
   // Avoid the folding if X can have NaN elements.
   if (Shuf.getType()->getElementType()->isFloatingPointTy() &&
-      !isKnownNeverNaN(X, 0, SQ))
+      !isKnownNeverNaN(X, SQ))
     return nullptr;
 
   // Shuffle identity constants into the lanes that return the original value.
@@ -2532,20 +2544,6 @@ static Instruction *foldShuffleOfUnaryOps(ShuffleVectorInst &Shuf,
     return nullptr;
 
   bool IsFNeg = S0->getOpcode() == Instruction::FNeg;
-
-  // Match 1-input (unary) shuffle.
-  // shuffle (fneg/fabs X), Mask --> fneg/fabs (shuffle X, Mask)
-  if (S0->hasOneUse() && match(Shuf.getOperand(1), m_Poison())) {
-    Value *NewShuf = Builder.CreateShuffleVector(X, Shuf.getShuffleMask());
-    if (IsFNeg)
-      return UnaryOperator::CreateFNegFMF(NewShuf, S0);
-
-    Function *FAbs = Intrinsic::getOrInsertDeclaration(
-        Shuf.getModule(), Intrinsic::fabs, Shuf.getType());
-    CallInst *NewF = CallInst::Create(FAbs, {NewShuf});
-    NewF->setFastMathFlags(S0->getFastMathFlags());
-    return NewF;
-  }
 
   // Match 2-input (binary) shuffle.
   auto *S1 = dyn_cast<Instruction>(Shuf.getOperand(1));
@@ -3029,10 +3027,18 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     SmallVector<BitCastInst *, 8> BCs;
     DenseMap<Type *, Value *> NewBCs;
     for (User *U : SVI.users())
-      if (BitCastInst *BC = dyn_cast<BitCastInst>(U))
-        if (!BC->use_empty())
-          // Only visit bitcasts that weren't previously handled.
-          BCs.push_back(BC);
+      if (BitCastInst *BC = dyn_cast<BitCastInst>(U)) {
+        // Only visit bitcasts that weren't previously handled.
+        if (BC->use_empty())
+          continue;
+        // Prefer to combine bitcasts of bitcasts before attempting this fold.
+        if (BC->hasOneUse()) {
+          auto *BC2 = dyn_cast<BitCastInst>(BC->user_back());
+          if (BC2 && isEliminableCastPair(BC, BC2))
+            continue;
+        }
+        BCs.push_back(BC);
+      }
     for (BitCastInst *BC : BCs) {
       unsigned BegIdx = Mask.front();
       Type *TgtTy = BC->getDestTy();
@@ -3060,14 +3066,10 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
       unsigned SrcElemsPerTgtElem = TgtElemBitWidth / SrcElemBitWidth;
       assert(SrcElemsPerTgtElem);
       BegIdx /= SrcElemsPerTgtElem;
-      bool BCAlreadyExists = NewBCs.contains(CastSrcTy);
-      auto *NewBC =
-          BCAlreadyExists
-              ? NewBCs[CastSrcTy]
-              : Builder.CreateBitCast(V, CastSrcTy, SVI.getName() + ".bc");
-      if (!BCAlreadyExists)
-        NewBCs[CastSrcTy] = NewBC;
-      auto *Ext = Builder.CreateExtractElement(NewBC, BegIdx,
+      auto [It, Inserted] = NewBCs.try_emplace(CastSrcTy);
+      if (Inserted)
+        It->second = Builder.CreateBitCast(V, CastSrcTy, SVI.getName() + ".bc");
+      auto *Ext = Builder.CreateExtractElement(It->second, BegIdx,
                                                SVI.getName() + ".extract");
       // The shufflevector isn't being replaced: the bitcast that used it
       // is. InstCombine will visit the newly-created instructions.

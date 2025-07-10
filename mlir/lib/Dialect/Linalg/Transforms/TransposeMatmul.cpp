@@ -11,7 +11,6 @@
 
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #define DEBUG_TYPE "linalg-transpose-matmul"
 
@@ -38,7 +37,7 @@ FailureOr<Operation *> mlir::linalg::transposeMatmul(RewriterBase &rewriter,
         matmulOp, "only matmul ops with non-extended semantics are supported");
   }
 
-  if (!bufferization::hasTensorSemantics(matmulOp))
+  if (!matmulOp.hasPureTensorSemantics())
     return rewriter.notifyMatchFailure(
         matmulOp, "only matmul ops with tensors are supported");
 
@@ -88,7 +87,12 @@ FailureOr<Operation *>
 mlir::linalg::transposeBatchMatmul(RewriterBase &rewriter,
                                    linalg::BatchMatmulOp batchMatmulOp,
                                    bool transposeLHS) {
-  if (!bufferization::hasTensorSemantics(batchMatmulOp))
+  if (batchMatmulOp.hasUserDefinedMaps()) {
+    return rewriter.notifyMatchFailure(
+        batchMatmulOp, "ops with user-defined maps are not supported");
+  }
+
+  if (!batchMatmulOp.hasPureTensorSemantics())
     return rewriter.notifyMatchFailure(
         batchMatmulOp, "only matmul ops with tensors are supported");
 

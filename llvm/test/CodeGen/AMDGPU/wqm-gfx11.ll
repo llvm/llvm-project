@@ -21,7 +21,7 @@ main_body:
   %a = call float @llvm.amdgcn.lds.param.load(i32 0, i32 0, i32 %attr) #1
   %b = call float @llvm.amdgcn.lds.param.load(i32 1, i32 0, i32 %attr) #1
   %c = call float @llvm.amdgcn.lds.param.load(i32 2, i32 0, i32 %attr) #1
-  %tmp_0 = insertelement <3 x float> undef, float %a, i32 0
+  %tmp_0 = insertelement <3 x float> poison, float %a, i32 0
   %tmp_1 = insertelement <3 x float> %tmp_0, float %b, i32 1
   %tmp_2 = insertelement <3 x float> %tmp_1, float %c, i32 2
   %res = fadd <3 x float> %tmp_2, %to_add
@@ -50,7 +50,7 @@ main_body:
   %a = call float @llvm.amdgcn.lds.direct.load(i32 %arg_0) #1
   %b = call float @llvm.amdgcn.lds.direct.load(i32 %arg_1) #1
   %c = call float @llvm.amdgcn.lds.direct.load(i32 %arg_2) #1
-  %tmp_0 = insertelement <3 x float> undef, float %a, i32 0
+  %tmp_0 = insertelement <3 x float> poison, float %a, i32 0
   %tmp_1 = insertelement <3 x float> %tmp_0, float %b, i32 1
   %tmp_2 = insertelement <3 x float> %tmp_1, float %c, i32 2
   %res = fadd <3 x float> %tmp_2, %to_add

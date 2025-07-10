@@ -18,8 +18,8 @@ define void @void_func_v2i65(<2 x i65> %arg0) #0 {
   ; CHECK-NEXT:   [[TRUNC1:%[0-9]+]]:_(s65) = G_TRUNC [[MV1]](s96)
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s65>) = G_BUILD_VECTOR [[TRUNC]](s65), [[TRUNC1]](s65)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x s65>), [[DEF]](p1) :: (store (<2 x s65>) into `ptr addrspace(1) undef`, align 32, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR]](<2 x s65>), [[DEF]](p1) :: (store (<2 x s65>) into `ptr addrspace(1) poison`, align 32, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
-  store <2 x i65> %arg0, ptr addrspace(1) undef
+  store <2 x i65> %arg0, ptr addrspace(1) poison
   ret void
 }

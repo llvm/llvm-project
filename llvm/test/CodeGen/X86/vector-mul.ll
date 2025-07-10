@@ -812,6 +812,69 @@ define <16 x i16> @mul_v16i16_neg9(<16 x i16> %a0) nounwind {
   ret <16 x i16> %1
 }
 
+; PR47422 - check mul-shl-add sequence expands to adds.
+define <16 x i16> @madd_v16i16_3(<16 x i16> %a0, <16 x i16> %a1) nounwind {
+; X86-SSE-LABEL: madd_v16i16_3:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    pushl %ebp
+; X86-SSE-NEXT:    movl %esp, %ebp
+; X86-SSE-NEXT:    andl $-16, %esp
+; X86-SSE-NEXT:    subl $16, %esp
+; X86-SSE-NEXT:    movdqa %xmm1, %xmm3
+; X86-SSE-NEXT:    paddw %xmm1, %xmm3
+; X86-SSE-NEXT:    paddw %xmm3, %xmm1
+; X86-SSE-NEXT:    movdqa %xmm0, %xmm3
+; X86-SSE-NEXT:    paddw %xmm0, %xmm3
+; X86-SSE-NEXT:    paddw %xmm2, %xmm0
+; X86-SSE-NEXT:    paddw %xmm3, %xmm0
+; X86-SSE-NEXT:    paddw 8(%ebp), %xmm1
+; X86-SSE-NEXT:    movl %ebp, %esp
+; X86-SSE-NEXT:    popl %ebp
+; X86-SSE-NEXT:    retl
+;
+; X64-SSE-LABEL: madd_v16i16_3:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    movdqa %xmm1, %xmm4
+; X64-SSE-NEXT:    paddw %xmm1, %xmm4
+; X64-SSE-NEXT:    movdqa %xmm0, %xmm5
+; X64-SSE-NEXT:    paddw %xmm0, %xmm5
+; X64-SSE-NEXT:    paddw %xmm2, %xmm0
+; X64-SSE-NEXT:    paddw %xmm5, %xmm0
+; X64-SSE-NEXT:    paddw %xmm3, %xmm1
+; X64-SSE-NEXT:    paddw %xmm4, %xmm1
+; X64-SSE-NEXT:    retq
+;
+; X64-XOP-LABEL: madd_v16i16_3:
+; X64-XOP:       # %bb.0:
+; X64-XOP-NEXT:    vpaddw %xmm0, %xmm0, %xmm2
+; X64-XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; X64-XOP-NEXT:    vpaddw %xmm3, %xmm3, %xmm4
+; X64-XOP-NEXT:    vextractf128 $1, %ymm1, %xmm5
+; X64-XOP-NEXT:    vpaddw %xmm5, %xmm3, %xmm3
+; X64-XOP-NEXT:    vpaddw %xmm3, %xmm4, %xmm3
+; X64-XOP-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; X64-XOP-NEXT:    vpaddw %xmm0, %xmm2, %xmm0
+; X64-XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; X64-XOP-NEXT:    retq
+;
+; X64-AVX2-LABEL: madd_v16i16_3:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vpaddw %ymm0, %ymm0, %ymm2
+; X64-AVX2-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vpaddw %ymm2, %ymm0, %ymm0
+; X64-AVX2-NEXT:    retq
+;
+; X64-AVX512DQ-LABEL: madd_v16i16_3:
+; X64-AVX512DQ:       # %bb.0:
+; X64-AVX512DQ-NEXT:    vpaddw %ymm0, %ymm0, %ymm2
+; X64-AVX512DQ-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
+; X64-AVX512DQ-NEXT:    vpaddw %ymm2, %ymm0, %ymm0
+; X64-AVX512DQ-NEXT:    retq
+  %mul = mul <16 x i16> %a0, splat (i16 3)
+  %add = add <16 x i16> %mul, %a1
+  ret <16 x i16> %add
+}
+
 define <32 x i8> @mul_v32i8_neg5(<32 x i8> %a0) nounwind {
 ; SSE-LABEL: mul_v32i8_neg5:
 ; SSE:       # %bb.0:
@@ -1506,24 +1569,18 @@ define <2 x i64> @mul_v2i64_neg_17_65(<2 x i64> %a0) nounwind {
 }
 
 define <2 x i64> @mul_v2i64_0_1(<2 x i64> %a0) nounwind {
-; X86-SSE2-LABEL: mul_v2i64_0_1:
-; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    xorpd %xmm1, %xmm1
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; X86-SSE2-NEXT:    retl
+; SSE2-LABEL: mul_v2i64_0_1:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    xorps %xmm1, %xmm1
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
+; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    ret{{[l|q]}}
 ;
 ; SSE4-LABEL: mul_v2i64_0_1:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    xorps %xmm1, %xmm1
-; SSE4-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; SSE4-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; SSE4-NEXT:    ret{{[l|q]}}
-;
-; X64-SSE2-LABEL: mul_v2i64_0_1:
-; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    xorps %xmm1, %xmm1
-; X64-SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; X64-SSE2-NEXT:    movaps %xmm1, %xmm0
-; X64-SSE2-NEXT:    retq
 ;
 ; X64-AVX-LABEL: mul_v2i64_0_1:
 ; X64-AVX:       # %bb.0:

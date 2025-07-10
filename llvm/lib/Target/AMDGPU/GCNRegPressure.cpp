@@ -13,6 +13,7 @@
 
 #include "GCNRegPressure.h"
 #include "AMDGPU.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 
 using namespace llvm;
@@ -35,74 +36,79 @@ bool llvm::isEqual(const GCNRPTracker::LiveRegSet &S1,
 ///////////////////////////////////////////////////////////////////////////////
 // GCNRegPressure
 
-unsigned GCNRegPressure::getRegKind(Register Reg,
-                                    const MachineRegisterInfo &MRI) {
-  assert(Reg.isVirtual());
-  const auto *const RC = MRI.getRegClass(Reg);
-  const auto *STI =
-      static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
-  return STI->isSGPRClass(RC)
-             ? (STI->getRegSizeInBits(*RC) == 32 ? SGPR32 : SGPR_TUPLE)
-         : STI->isAGPRClass(RC)
-             ? (STI->getRegSizeInBits(*RC) == 32 ? AGPR32 : AGPR_TUPLE)
-             : (STI->getRegSizeInBits(*RC) == 32 ? VGPR32 : VGPR_TUPLE);
+unsigned GCNRegPressure::getRegKind(const TargetRegisterClass *RC,
+                                    const SIRegisterInfo *STI) {
+  return STI->isSGPRClass(RC) ? SGPR : (STI->isAGPRClass(RC) ? AGPR : VGPR);
 }
 
 void GCNRegPressure::inc(unsigned Reg,
                          LaneBitmask PrevMask,
                          LaneBitmask NewMask,
                          const MachineRegisterInfo &MRI) {
-  if (SIRegisterInfo::getNumCoveredRegs(NewMask) ==
-      SIRegisterInfo::getNumCoveredRegs(PrevMask))
+  unsigned NewNumCoveredRegs = SIRegisterInfo::getNumCoveredRegs(NewMask);
+  unsigned PrevNumCoveredRegs = SIRegisterInfo::getNumCoveredRegs(PrevMask);
+  if (NewNumCoveredRegs == PrevNumCoveredRegs)
     return;
 
   int Sign = 1;
   if (NewMask < PrevMask) {
     std::swap(NewMask, PrevMask);
+    std::swap(NewNumCoveredRegs, PrevNumCoveredRegs);
     Sign = -1;
   }
+  assert(PrevMask < NewMask && PrevNumCoveredRegs < NewNumCoveredRegs &&
+         "prev mask should always be lesser than new");
 
-  switch (auto Kind = getRegKind(Reg, MRI)) {
-  case SGPR32:
-  case VGPR32:
-  case AGPR32:
-    Value[Kind] += Sign;
-    break;
-
-  case SGPR_TUPLE:
-  case VGPR_TUPLE:
-  case AGPR_TUPLE:
-    assert(PrevMask < NewMask);
-
-    Value[Kind == SGPR_TUPLE ? SGPR32 : Kind == AGPR_TUPLE ? AGPR32 : VGPR32] +=
-      Sign * SIRegisterInfo::getNumCoveredRegs(~PrevMask & NewMask);
-
+  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+  const SIRegisterInfo *STI = static_cast<const SIRegisterInfo *>(TRI);
+  unsigned RegKind = getRegKind(RC, STI);
+  if (TRI->getRegSizeInBits(*RC) != 32) {
+    // Reg is from a tuple register class.
     if (PrevMask.none()) {
-      assert(NewMask.any());
-      const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-      Value[Kind] +=
-          Sign * TRI->getRegClassWeight(MRI.getRegClass(Reg)).RegWeight;
+      unsigned TupleIdx = TOTAL_KINDS + RegKind;
+      Value[TupleIdx] += Sign * TRI->getRegClassWeight(RC).RegWeight;
     }
-    break;
-
-  default: llvm_unreachable("Unknown register kind");
+    // Pressure scales with number of new registers covered by the new mask.
+    // Note when true16 is enabled, we can no longer safely use the following
+    // approach to calculate the difference in the number of 32-bit registers
+    // between two masks:
+    //
+    // Sign *= SIRegisterInfo::getNumCoveredRegs(~PrevMask & NewMask);
+    //
+    // The issue is that the mask calculation `~PrevMask & NewMask` doesn't
+    // properly account for partial usage of a 32-bit register when dealing with
+    // 16-bit registers.
+    //
+    // Consider this example:
+    // Assume PrevMask = 0b0010 and NewMask = 0b1111. Here, the correct register
+    // usage difference should be 1, because even though PrevMask uses only half
+    // of a 32-bit register, it should still be counted as a full register use.
+    // However, the mask calculation yields `~PrevMask & NewMask = 0b1101`, and
+    // calling `getNumCoveredRegs` returns 2 instead of 1. This incorrect
+    // calculation can lead to integer overflow when Sign = -1.
+    Sign *= NewNumCoveredRegs - PrevNumCoveredRegs;
   }
+  Value[RegKind] += Sign;
 }
 
 bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
                           unsigned MaxOccupancy) const {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  unsigned DynamicVGPRBlockSize =
+      MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
 
   const auto SGPROcc = std::min(MaxOccupancy,
                                 ST.getOccupancyWithNumSGPRs(getSGPRNum()));
-  const auto VGPROcc =
-    std::min(MaxOccupancy,
-             ST.getOccupancyWithNumVGPRs(getVGPRNum(ST.hasGFX90AInsts())));
+  const auto VGPROcc = std::min(
+      MaxOccupancy, ST.getOccupancyWithNumVGPRs(getVGPRNum(ST.hasGFX90AInsts()),
+                                                DynamicVGPRBlockSize));
   const auto OtherSGPROcc = std::min(MaxOccupancy,
                                 ST.getOccupancyWithNumSGPRs(O.getSGPRNum()));
   const auto OtherVGPROcc =
-    std::min(MaxOccupancy,
-             ST.getOccupancyWithNumVGPRs(O.getVGPRNum(ST.hasGFX90AInsts())));
+      std::min(MaxOccupancy,
+               ST.getOccupancyWithNumVGPRs(O.getVGPRNum(ST.hasGFX90AInsts()),
+                                           DynamicVGPRBlockSize));
 
   const auto Occ = std::min(SGPROcc, VGPROcc);
   const auto OtherOcc = std::min(OtherSGPROcc, OtherVGPROcc);
@@ -224,13 +230,15 @@ bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
                           O.getVGPRNum(ST.hasGFX90AInsts()));
 }
 
-Printable llvm::print(const GCNRegPressure &RP, const GCNSubtarget *ST) {
-  return Printable([&RP, ST](raw_ostream &OS) {
-    OS << "VGPRs: " << RP.Value[GCNRegPressure::VGPR32] << ' '
+Printable llvm::print(const GCNRegPressure &RP, const GCNSubtarget *ST,
+                      unsigned DynamicVGPRBlockSize) {
+  return Printable([&RP, ST, DynamicVGPRBlockSize](raw_ostream &OS) {
+    OS << "VGPRs: " << RP.getArchVGPRNum() << ' '
        << "AGPRs: " << RP.getAGPRNum();
     if (ST)
       OS << "(O"
-         << ST->getOccupancyWithNumVGPRs(RP.getVGPRNum(ST->hasGFX90AInsts()))
+         << ST->getOccupancyWithNumVGPRs(RP.getVGPRNum(ST->hasGFX90AInsts()),
+                                         DynamicVGPRBlockSize)
          << ')';
     OS << ", SGPRs: " << RP.getSGPRNum();
     if (ST)
@@ -238,7 +246,7 @@ Printable llvm::print(const GCNRegPressure &RP, const GCNSubtarget *ST) {
     OS << ", LVGPR WT: " << RP.getVGPRTuplesWeight()
        << ", LSGPR WT: " << RP.getSGPRTuplesWeight();
     if (ST)
-      OS << " -> Occ: " << RP.getOccupancy(*ST);
+      OS << " -> Occ: " << RP.getOccupancy(*ST, DynamicVGPRBlockSize);
     OS << '\n';
   });
 }
@@ -256,7 +264,7 @@ static LaneBitmask getDefRegMask(const MachineOperand &MO,
 }
 
 static void
-collectVirtualRegUses(SmallVectorImpl<RegisterMaskPair> &RegMaskPairs,
+collectVirtualRegUses(SmallVectorImpl<VRegMaskOrUnit> &VRegMaskOrUnits,
                       const MachineInstr &MI, const LiveIntervals &LIS,
                       const MachineRegisterInfo &MRI) {
 
@@ -268,12 +276,12 @@ collectVirtualRegUses(SmallVectorImpl<RegisterMaskPair> &RegMaskPairs,
       continue;
 
     Register Reg = MO.getReg();
-    auto I = llvm::find_if(RegMaskPairs, [Reg](const RegisterMaskPair &RM) {
+    auto I = llvm::find_if(VRegMaskOrUnits, [Reg](const VRegMaskOrUnit &RM) {
       return RM.RegUnit == Reg;
     });
 
-    auto &P = I == RegMaskPairs.end()
-                  ? RegMaskPairs.emplace_back(Reg, LaneBitmask::getNone())
+    auto &P = I == VRegMaskOrUnits.end()
+                  ? VRegMaskOrUnits.emplace_back(Reg, LaneBitmask::getNone())
                   : *I;
 
     P.LaneMask |= MO.getSubReg() ? TRI.getSubRegIndexLaneMask(MO.getSubReg())
@@ -281,7 +289,7 @@ collectVirtualRegUses(SmallVectorImpl<RegisterMaskPair> &RegMaskPairs,
   }
 
   SlotIndex InstrSI;
-  for (auto &P : RegMaskPairs) {
+  for (auto &P : VRegMaskOrUnits) {
     auto &LI = LIS.getInterval(P.RegUnit);
     if (!LI.hasSubRanges())
       continue;
@@ -351,6 +359,69 @@ static LaneBitmask findUseBetween(unsigned Reg, LaneBitmask LastUseMask,
       return LaneBitmask::getNone();
   }
   return LastUseMask;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// GCNRPTarget
+
+GCNRPTarget::GCNRPTarget(const MachineFunction &MF, const GCNRegPressure &RP,
+                         bool CombineVGPRSavings)
+    : RP(RP), CombineVGPRSavings(CombineVGPRSavings) {
+  const Function &F = MF.getFunction();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  setRegLimits(ST.getMaxNumSGPRs(F), ST.getMaxNumVGPRs(F), MF);
+}
+
+GCNRPTarget::GCNRPTarget(unsigned NumSGPRs, unsigned NumVGPRs,
+                         const MachineFunction &MF, const GCNRegPressure &RP,
+                         bool CombineVGPRSavings)
+    : RP(RP), CombineVGPRSavings(CombineVGPRSavings) {
+  setRegLimits(NumSGPRs, NumVGPRs, MF);
+}
+
+GCNRPTarget::GCNRPTarget(unsigned Occupancy, const MachineFunction &MF,
+                         const GCNRegPressure &RP, bool CombineVGPRSavings)
+    : RP(RP), CombineVGPRSavings(CombineVGPRSavings) {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  unsigned DynamicVGPRBlockSize =
+      MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
+  setRegLimits(ST.getMaxNumSGPRs(Occupancy, /*Addressable=*/false),
+               ST.getMaxNumVGPRs(Occupancy, DynamicVGPRBlockSize), MF);
+}
+
+void GCNRPTarget::setRegLimits(unsigned NumSGPRs, unsigned NumVGPRs,
+                               const MachineFunction &MF) {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  unsigned DynamicVGPRBlockSize =
+      MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize();
+  MaxSGPRs = std::min(ST.getAddressableNumSGPRs(), NumSGPRs);
+  MaxVGPRs = std::min(ST.getAddressableNumArchVGPRs(), NumVGPRs);
+  MaxUnifiedVGPRs =
+      ST.hasGFX90AInsts()
+          ? std::min(ST.getAddressableNumVGPRs(DynamicVGPRBlockSize), NumVGPRs)
+          : 0;
+}
+
+bool GCNRPTarget::isSaveBeneficial(Register Reg,
+                                   const MachineRegisterInfo &MRI) const {
+  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+  const SIRegisterInfo *SRI = static_cast<const SIRegisterInfo *>(TRI);
+
+  if (SRI->isSGPRClass(RC))
+    return RP.getSGPRNum() > MaxSGPRs;
+  unsigned NumVGPRs =
+      SRI->isAGPRClass(RC) ? RP.getAGPRNum() : RP.getArchVGPRNum();
+  return isVGPRBankSaveBeneficial(NumVGPRs);
+}
+
+bool GCNRPTarget::satisfied() const {
+  if (RP.getSGPRNum() > MaxSGPRs)
+    return false;
+  if (RP.getVGPRNum(false) > MaxVGPRs &&
+      (!CombineVGPRSavings || !satisifiesVGPRBanksTarget()))
+    return false;
+  return satisfiesUnifiedTarget();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -477,9 +548,9 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   MaxPressure = max(DefPressure, MaxPressure);
 
   // Make uses alive.
-  SmallVector<RegisterMaskPair, 8> RegUses;
+  SmallVector<VRegMaskOrUnit, 8> RegUses;
   collectVirtualRegUses(RegUses, MI, LIS, *MRI);
-  for (const RegisterMaskPair &U : RegUses) {
+  for (const VRegMaskOrUnit &U : RegUses) {
     LaneBitmask &LiveMask = LiveRegs[U.RegUnit];
     LaneBitmask PrevMask = LiveMask;
     LiveMask |= U.LaneMask;
@@ -665,7 +736,7 @@ GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
   RegOpers.adjustLaneLiveness(LIS, *MRI, SlotIdx);
   GCNRegPressure TempPressure = CurPressure;
 
-  for (const RegisterMaskPair &Use : RegOpers.Uses) {
+  for (const VRegMaskOrUnit &Use : RegOpers.Uses) {
     Register Reg = Use.RegUnit;
     if (!Reg.isVirtual())
       continue;
@@ -692,19 +763,19 @@ GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
     if (LastUseMask.none())
       continue;
 
-    LaneBitmask LiveMask =
-        LiveRegs.contains(Reg) ? LiveRegs.at(Reg) : LaneBitmask(0);
+    auto It = LiveRegs.find(Reg);
+    LaneBitmask LiveMask = It != LiveRegs.end() ? It->second : LaneBitmask(0);
     LaneBitmask NewMask = LiveMask & ~LastUseMask;
     TempPressure.inc(Reg, LiveMask, NewMask, *MRI);
   }
 
   // Generate liveness for defs.
-  for (const RegisterMaskPair &Def : RegOpers.Defs) {
+  for (const VRegMaskOrUnit &Def : RegOpers.Defs) {
     Register Reg = Def.RegUnit;
     if (!Reg.isVirtual())
       continue;
-    LaneBitmask LiveMask =
-        LiveRegs.contains(Reg) ? LiveRegs.at(Reg) : LaneBitmask(0);
+    auto It = LiveRegs.find(Reg);
+    LaneBitmask LiveMask = It != LiveRegs.end() ? It->second : LaneBitmask(0);
     LaneBitmask NewMask = LiveMask | Def.LaneMask;
     TempPressure.inc(Reg, LiveMask, NewMask, *MRI);
   }

@@ -52,9 +52,7 @@
 #endif
 #include <signal.h>
 #include <sys/stat.h>
-#if HAVE_DLFCN_H
 #include <dlfcn.h>
-#endif
 #if HAVE_MACH_MACH_H
 #include <mach/mach.h>
 #endif
@@ -80,9 +78,13 @@
 #include <__le_cwi.h>
 #endif
 
+#if defined(__linux__)
+#include <sys/syscall.h>
+#endif
+
 using namespace llvm;
 
-static void SignalHandler(int Sig);     // defined below.
+static void SignalHandler(int Sig, siginfo_t *Info, void *);
 static void InfoSignalHandler(int Sig); // defined below.
 
 using SignalHandlerFunctionType = void (*)();
@@ -151,6 +153,24 @@ public:
     }
   }
 
+  static void removeFile(char *path) {
+    // Get the status so we can determine if it's a file or directory. If we
+    // can't stat the file, ignore it.
+    struct stat buf;
+    if (stat(path, &buf) != 0)
+      return;
+
+    // If this is not a regular file, ignore it. We want to prevent removal
+    // of special files like /dev/null, even if the compiler is being run
+    // with the super-user permissions.
+    if (!S_ISREG(buf.st_mode))
+      return;
+
+    // Otherwise, remove the file. We ignore any errors here as there is
+    // nothing else we can do.
+    unlink(path);
+  }
+
   // Signal-safe.
   static void removeAllFiles(std::atomic<FileToRemoveList *> &Head) {
     // If cleanup were to occur while we're removing files we'd have a bad time.
@@ -164,21 +184,7 @@ public:
       // If erasing was occuring while we're trying to remove files we'd look
       // at free'd data. Take away the path and put it back when done.
       if (char *path = currentFile->Filename.exchange(nullptr)) {
-        // Get the status so we can determine if it's a file or directory. If we
-        // can't stat the file, ignore it.
-        struct stat buf;
-        if (stat(path, &buf) != 0)
-          continue;
-
-        // If this is not a regular file, ignore it. We want to prevent removal
-        // of special files like /dev/null, even if the compiler is being run
-        // with the super-user permissions.
-        if (!S_ISREG(buf.st_mode))
-          continue;
-
-        // Otherwise, remove the file. We ignore any errors here as there is
-        // nothing else we can do.
-        unlink(path);
+        removeFile(path);
 
         // We're done removing the file, erasing can safely proceed.
         currentFile->Filename.exchange(path);
@@ -311,8 +317,8 @@ static void RegisterHandlers() { // Not signal-safe.
 
     switch (Kind) {
     case SignalKind::IsKill:
-      NewHandler.sa_handler = SignalHandler;
-      NewHandler.sa_flags = SA_NODEFER | SA_RESETHAND | SA_ONSTACK;
+      NewHandler.sa_sigaction = SignalHandler;
+      NewHandler.sa_flags = SA_NODEFER | SA_RESETHAND | SA_ONSTACK | SA_SIGINFO;
       break;
     case SignalKind::IsInfo:
       NewHandler.sa_handler = InfoSignalHandler;
@@ -368,7 +374,7 @@ void sys::CleanupOnSignal(uintptr_t Context) {
 }
 
 // The signal handler that runs.
-static void SignalHandler(int Sig) {
+static void SignalHandler(int Sig, siginfo_t *Info, void *) {
   // Restore the signal behavior to default, so that the program actually
   // crashes when we return and the signal reissues.  This also ensures that if
   // we crash in our signal handler that the program will terminate immediately
@@ -408,6 +414,22 @@ static void SignalHandler(int Sig) {
   // handler would continue execution after that point, instead of
   // re-raising the signal.  Raise the signal manually in those cases.
   if (Sig == SIGILL || Sig == SIGFPE || Sig == SIGTRAP)
+    raise(Sig);
+#endif
+
+#if defined(__linux__)
+  // Re-raising a signal via `raise` loses the original siginfo. Recent
+  // versions of linux (>= 3.9) support processes sending a signal to itself
+  // with arbitrary signal information using a syscall. If this syscall is
+  // unsupported, errno will be set to EPERM and `raise` will be used instead.
+  int retval =
+      syscall(SYS_rt_tgsigqueueinfo, getpid(), syscall(SYS_gettid), Sig, Info);
+  if (retval != 0 && errno == EPERM)
+    raise(Sig);
+#else
+  // Signal sent from another userspace process, do not assume that continuing
+  // the execution would re-raise it.
+  if (Info->si_pid != getpid() && Info->si_pid != 0)
     raise(Sig);
 #endif
 }
@@ -466,7 +488,8 @@ void llvm::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr,
 
 #if ENABLE_BACKTRACES && defined(HAVE_BACKTRACE) &&                            \
     (defined(__linux__) || defined(__FreeBSD__) ||                             \
-     defined(__FreeBSD_kernel__) || defined(__NetBSD__))
+     defined(__FreeBSD_kernel__) || defined(__NetBSD__) ||                     \
+     defined(__OpenBSD__) || defined(__DragonFly__))
 struct DlIteratePhdrData {
   void **StackTrace;
   int depth;
@@ -498,6 +521,21 @@ static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *arg) {
   }
   return 0;
 }
+
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+#if !defined(HAVE_BACKTRACE)
+#error DebugLoc origin-tracking currently requires `backtrace()`.
+#endif
+namespace llvm {
+namespace sys {
+template <unsigned long MaxDepth>
+int getStackTrace(std::array<void *, MaxDepth> &StackTrace) {
+  return backtrace(StackTrace.data(), MaxDepth);
+}
+template int getStackTrace<16ul>(std::array<void *, 16ul> &);
+} // namespace sys
+} // namespace llvm
+#endif
 
 /// If this is an ELF platform, we can find all loaded modules and their virtual
 /// addresses with dl_iterate_phdr.
@@ -814,18 +852,21 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
   OS << "Stack dump without symbol names (ensure you have llvm-symbolizer in "
         "your PATH or set the environment var `LLVM_SYMBOLIZER_PATH` to point "
         "to it):\n";
-#if HAVE_DLFCN_H && HAVE_DLADDR
+#if HAVE_DLOPEN && !defined(_AIX)
   int width = 0;
   for (int i = 0; i < depth; ++i) {
     Dl_info dlinfo;
-    dladdr(StackTrace[i], &dlinfo);
-    const char *name = strrchr(dlinfo.dli_fname, '/');
-
     int nwidth;
-    if (!name)
-      nwidth = strlen(dlinfo.dli_fname);
-    else
-      nwidth = strlen(name) - 1;
+    if (dladdr(StackTrace[i], &dlinfo) == 0) {
+      nwidth = 7; // "(error)"
+    } else {
+      const char *name = strrchr(dlinfo.dli_fname, '/');
+
+      if (!name)
+        nwidth = strlen(dlinfo.dli_fname);
+      else
+        nwidth = strlen(name) - 1;
+    }
 
     if (nwidth > width)
       width = nwidth;
@@ -833,15 +874,20 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
 
   for (int i = 0; i < depth; ++i) {
     Dl_info dlinfo;
-    dladdr(StackTrace[i], &dlinfo);
 
     OS << format("%-2d", i);
 
-    const char *name = strrchr(dlinfo.dli_fname, '/');
-    if (!name)
-      OS << format(" %-*s", width, dlinfo.dli_fname);
-    else
-      OS << format(" %-*s", width, name + 1);
+    if (dladdr(StackTrace[i], &dlinfo) == 0) {
+      OS << format(" %-*s", width, static_cast<const char *>("(error)"));
+      dlinfo.dli_sname = nullptr;
+    } else {
+      const char *name = strrchr(dlinfo.dli_fname, '/');
+      if (!name)
+        OS << format(" %-*s", width,
+                     static_cast<const char *>(dlinfo.dli_fname));
+      else
+        OS << format(" %-*s", width, name + 1);
+    }
 
     OS << format(" %#0*lx", (int)(sizeof(void *) * 2) + 2,
                  (unsigned long)StackTrace[i]);

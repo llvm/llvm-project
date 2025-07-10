@@ -27,7 +27,7 @@ def AffineDataCopyGeneration : Pass<"affine-data-copy-generate", "func::FuncOp">
            /*default=*/"1",
            "Fast memory space identifier for copy generation (default: 1)">,
     Option<"generateDma", "generate-dma", "bool",
-           /*default=*/"true", "Generate DMA instead of point-wise copy">,
+           /*default=*/"false", "Generate DMA instead of point-wise copy">,
     Option<"minDmaTransferSize", "min-dma-transfer", "int",
            /*default=*/"1024",
            "Minimum DMA transfer size supported by the target in bytes">,
@@ -154,16 +154,16 @@ def AffineLoopFusion : Pass<"affine-loop-fusion"> {
   }];
   let constructor = "mlir::affine::createLoopFusionPass()";
   let options = [
-    Option<"computeToleranceThreshold", "fusion-compute-tolerance", "double",
+    Option<"computeToleranceThreshold", "compute-tolerance", "double",
            /*default=*/"0.30f", "Fractional increase in additional computation "
                                 "tolerated while fusing">,
-    Option<"fastMemorySpace", "fusion-fast-mem-space", "unsigned",
+    Option<"fastMemorySpace", "fast-mem-space", "unsigned",
            /*default=*/"0",
            "Faster memory space number to promote fusion buffers to">,
-    Option<"localBufSizeThreshold", "fusion-local-buf-threshold", "uint64_t",
+    Option<"localBufSizeThreshold", "local-buf-threshold", "uint64_t",
            /*default=*/"0", "Threshold size (KiB) for promoting local buffers "
                             "to fast memory space">,
-    Option<"maximalFusion", "fusion-maximal", "bool", /*default=*/"false",
+    Option<"maximalFusion", "maximal", "bool", /*default=*/"false",
            "Enables maximal loop fusion">,
     Option<"affineFusionMode", "mode", "enum FusionMode",
            "mlir::affine::FusionMode::Greedy", "fusion mode to attempt",
@@ -199,7 +199,7 @@ def AffineLoopTiling : Pass<"affine-loop-tile", "func::FuncOp"> {
   ];
 }
 
-def AffineLoopUnroll : Pass<"affine-loop-unroll", "func::FuncOp"> {
+def AffineLoopUnroll : InterfacePass<"affine-loop-unroll", "FunctionOpInterface"> {
   let summary = "Unroll affine loops";
   let constructor = "mlir::affine::createLoopUnrollPass()";
   let options = [
@@ -219,7 +219,7 @@ def AffineLoopUnroll : Pass<"affine-loop-unroll", "func::FuncOp"> {
   ];
 }
 
-def AffineLoopUnrollAndJam : Pass<"affine-loop-unroll-jam", "func::FuncOp"> {
+def AffineLoopUnrollAndJam : InterfacePass<"affine-loop-unroll-jam", "FunctionOpInterface"> {
   let summary = "Unroll and jam affine loops";
   let constructor = "mlir::affine::createLoopUnrollAndJamPass()";
   let options = [
@@ -370,7 +370,6 @@ def AffineVectorize : Pass<"affine-super-vectorize", "func::FuncOp"> {
 
 def AffineParallelize : Pass<"affine-parallelize", "func::FuncOp"> {
   let summary = "Convert affine.for ops into 1-D affine.parallel";
-  let constructor = "mlir::affine::createAffineParallelizePass()";
   let options = [
     Option<"maxNested", "max-nested", "unsigned", /*default=*/"-1u",
            "Maximum number of nested parallel loops to produce. "
@@ -397,10 +396,39 @@ def LoopCoalescing : Pass<"affine-loop-coalescing", "func::FuncOp"> {
   let dependentDialects = ["affine::AffineDialect","arith::ArithDialect"];
 }
 
+def RaiseMemrefDialect : Pass<"affine-raise-from-memref", "func::FuncOp"> {
+  let summary = "Turn some memref operators to affine operators where supported";
+  let description = [{
+    Raise memref.load and memref.store to affine.store and affine.load, inferring
+    the affine map of those operators if needed. This allows passes like --affine-scalrep
+    to optimize those loads and stores (forwarding them or eliminating them).
+    They can be turned back to memref dialect ops with --lower-affine.
+  }];
+  let constructor = "mlir::affine::createRaiseMemrefToAffine()";
+  let dependentDialects = ["affine::AffineDialect"];
+}
+
 def SimplifyAffineStructures : Pass<"affine-simplify-structures", "func::FuncOp"> {
   let summary = "Simplify affine expressions in maps/sets and normalize "
                 "memrefs";
   let constructor = "mlir::affine::createSimplifyAffineStructuresPass()";
+}
+
+def SimplifyAffineMinMaxPass : InterfacePass<"affine-simplify-min-max", "FunctionOpInterface"> {
+  let summary = "Simplify affine min/max/apply";
+  let description = [{
+    Apply the SimplifyAffineMaxOp, SimplifyAffineMinOp and SimplifyAffineApplyOp
+    patterns in addition to AffineMin/Max canonicalization patterns until a
+    fixed point is reached.
+    These patterns apply ValueBoundsOp interface on AffineMin/Max ops and
+    additional simplifications such as:
+    ```
+       min(x, y, cst) / cst -> 1
+    ```
+    when x, y, cst are all >= 0.
+    This is typically useful to extract more static informationfrom IR after
+    tiling but can also come at a cost due to Presburger-style analysis.
+  }];
 }
 
 def AffineExpandIndexOps : Pass<"affine-expand-index-ops"> {

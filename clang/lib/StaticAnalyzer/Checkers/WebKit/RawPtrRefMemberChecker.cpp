@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ASTUtils.h"
 #include "DiagOutputUtils.h"
 #include "PtrTypesSemantics.h"
-#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
@@ -30,14 +28,17 @@ class RawPtrRefMemberChecker
 private:
   BugType Bug;
   mutable BugReporter *BR;
+  mutable llvm::DenseSet<const ObjCIvarDecl *> IvarDeclsToIgnore;
+
+protected:
+  mutable std::optional<RetainTypeChecker> RTC;
 
 public:
   RawPtrRefMemberChecker(const char *description)
       : Bug(this, description, "WebKit coding guidelines") {}
 
-  virtual std::optional<bool>
-  isPtrCompatible(const clang::CXXRecordDecl *) const = 0;
-  virtual bool isPtrCls(const clang::CXXRecordDecl *) const = 0;
+  virtual std::optional<bool> isUnsafePtr(QualType,
+                                          bool ignoreARC = false) const = 0;
   virtual const char *typeName() const = 0;
   virtual const char *invariant() const = 0;
 
@@ -48,7 +49,7 @@ public:
     // The calls to checkAST* from AnalysisConsumer don't
     // visit template instantiations or lambda classes. We
     // want to visit those, so we make our own RecursiveASTVisitor.
-    struct LocalVisitor : DynamicRecursiveASTVisitor {
+    struct LocalVisitor : ConstDynamicRecursiveASTVisitor {
       const RawPtrRefMemberChecker *Checker;
       explicit LocalVisitor(const RawPtrRefMemberChecker *Checker)
           : Checker(Checker) {
@@ -57,34 +58,181 @@ public:
         ShouldVisitImplicitCode = false;
       }
 
-      bool VisitRecordDecl(RecordDecl *RD) override {
+      bool VisitTypedefDecl(const TypedefDecl *TD) override {
+        if (Checker->RTC)
+          Checker->RTC->visitTypedef(TD);
+        return true;
+      }
+
+      bool VisitRecordDecl(const RecordDecl *RD) override {
         Checker->visitRecordDecl(RD);
+        return true;
+      }
+
+      bool VisitObjCContainerDecl(const ObjCContainerDecl *CD) override {
+        Checker->visitObjCDecl(CD);
         return true;
       }
     };
 
     LocalVisitor visitor(this);
-    visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
+    if (RTC)
+      RTC->visitTranslationUnitDecl(TUD);
+    visitor.TraverseDecl(TUD);
   }
 
   void visitRecordDecl(const RecordDecl *RD) const {
     if (shouldSkipDecl(RD))
       return;
 
-    for (auto *Member : RD->fields()) {
-      const Type *MemberType = Member->getType().getTypePtrOrNull();
-      if (!MemberType)
-        continue;
+    for (auto *Member : RD->fields())
+      visitMember(Member, RD);
+  }
 
-      if (auto *MemberCXXRD = MemberType->getPointeeCXXRecordDecl()) {
-        // If we don't see the definition we just don't know.
-        if (MemberCXXRD->hasDefinition()) {
-          std::optional<bool> isRCAble = isPtrCompatible(MemberCXXRD);
-          if (isRCAble && *isRCAble)
-            reportBug(Member, MemberType, MemberCXXRD, RD);
-        }
-      }
+  void visitMember(const FieldDecl *Member, const RecordDecl *RD) const {
+    auto QT = Member->getType();
+    const Type *MemberType = QT.getTypePtrOrNull();
+
+    while (MemberType) {
+      auto IsUnsafePtr = isUnsafePtr(QT);
+      if (IsUnsafePtr && *IsUnsafePtr)
+        break;
+      if (!MemberType->isPointerType())
+        return;
+      QT = MemberType->getPointeeType();
+      MemberType = QT.getTypePtrOrNull();
     }
+
+    if (!MemberType)
+      return;
+
+    if (auto *MemberCXXRD = MemberType->getPointeeCXXRecordDecl())
+      reportBug(Member, MemberType, MemberCXXRD, RD);
+    else if (auto *ObjCDecl = getObjCDecl(MemberType))
+      reportBug(Member, MemberType, ObjCDecl, RD);
+  }
+
+  ObjCInterfaceDecl *getObjCDecl(const Type *TypePtr) const {
+    auto *PointeeType = TypePtr->getPointeeType().getTypePtrOrNull();
+    if (!PointeeType)
+      return nullptr;
+    auto *Desugared = PointeeType->getUnqualifiedDesugaredType();
+    if (!Desugared)
+      return nullptr;
+    auto *ObjCType = dyn_cast<ObjCInterfaceType>(Desugared);
+    if (!ObjCType)
+      return nullptr;
+    return ObjCType->getDecl();
+  }
+
+  void visitObjCDecl(const ObjCContainerDecl *CD) const {
+    if (BR->getSourceManager().isInSystemHeader(CD->getLocation()))
+      return;
+
+    ObjCContainerDecl::PropertyMap map;
+    CD->collectPropertiesToImplement(map);
+    for (auto it : map)
+      visitObjCPropertyDecl(CD, it.second);
+
+    if (auto *ID = dyn_cast<ObjCInterfaceDecl>(CD)) {
+      for (auto *Ivar : ID->ivars())
+        visitIvarDecl(CD, Ivar);
+      return;
+    }
+    if (auto *ID = dyn_cast<ObjCImplementationDecl>(CD)) {
+      for (auto *PropImpl : ID->property_impls())
+        visitPropImpl(CD, PropImpl);
+      for (auto *Ivar : ID->ivars())
+        visitIvarDecl(CD, Ivar);
+      return;
+    }
+  }
+
+  void visitIvarDecl(const ObjCContainerDecl *CD,
+                     const ObjCIvarDecl *Ivar) const {
+    if (BR->getSourceManager().isInSystemHeader(Ivar->getLocation()))
+      return;
+
+    if (IvarDeclsToIgnore.contains(Ivar))
+      return;
+
+    auto QT = Ivar->getType();
+    const Type *IvarType = QT.getTypePtrOrNull();
+    if (!IvarType)
+      return;
+
+    auto IsUnsafePtr = isUnsafePtr(QT);
+    if (!IsUnsafePtr || !*IsUnsafePtr)
+      return;
+
+    IvarDeclsToIgnore.insert(Ivar);
+
+    if (auto *MemberCXXRD = IvarType->getPointeeCXXRecordDecl())
+      reportBug(Ivar, IvarType, MemberCXXRD, CD);
+    else if (auto *ObjCDecl = getObjCDecl(IvarType))
+      reportBug(Ivar, IvarType, ObjCDecl, CD);
+  }
+
+  void visitObjCPropertyDecl(const ObjCContainerDecl *CD,
+                             const ObjCPropertyDecl *PD) const {
+    if (BR->getSourceManager().isInSystemHeader(PD->getLocation()))
+      return;
+
+    if (const ObjCInterfaceDecl *ID = dyn_cast<ObjCInterfaceDecl>(CD)) {
+      if (!RTC || !RTC->defaultSynthProperties() ||
+          ID->isObjCRequiresPropertyDefs())
+        return;
+    }
+
+    auto [IsUnsafe, PropType] = isPropImplUnsafePtr(PD);
+    if (!IsUnsafe)
+      return;
+
+    if (auto *MemberCXXRD = PropType->getPointeeCXXRecordDecl())
+      reportBug(PD, PropType, MemberCXXRD, CD);
+    else if (auto *ObjCDecl = getObjCDecl(PropType))
+      reportBug(PD, PropType, ObjCDecl, CD);
+  }
+
+  void visitPropImpl(const ObjCContainerDecl *CD,
+                     const ObjCPropertyImplDecl *PID) const {
+    if (BR->getSourceManager().isInSystemHeader(PID->getLocation()))
+      return;
+
+    if (PID->getPropertyImplementation() != ObjCPropertyImplDecl::Synthesize)
+      return;
+
+    auto *PropDecl = PID->getPropertyDecl();
+    if (auto *IvarDecl = PID->getPropertyIvarDecl()) {
+      if (IvarDeclsToIgnore.contains(IvarDecl))
+        return;
+      IvarDeclsToIgnore.insert(IvarDecl);
+    }
+    auto [IsUnsafe, PropType] = isPropImplUnsafePtr(PropDecl);
+    if (!IsUnsafe)
+      return;
+
+    if (auto *MemberCXXRD = PropType->getPointeeCXXRecordDecl())
+      reportBug(PropDecl, PropType, MemberCXXRD, CD);
+    else if (auto *ObjCDecl = getObjCDecl(PropType))
+      reportBug(PropDecl, PropType, ObjCDecl, CD);
+  }
+
+  std::pair<bool, const Type *>
+  isPropImplUnsafePtr(const ObjCPropertyDecl *PD) const {
+    if (!PD)
+      return {false, nullptr};
+
+    auto QT = PD->getType();
+    const Type *PropType = QT.getTypePtrOrNull();
+    if (!PropType)
+      return {false, nullptr};
+
+    // "assign" property doesn't retain even under ARC so treat it as unsafe.
+    bool ignoreARC =
+        !PD->isReadOnly() && PD->getSetterKind() == ObjCPropertyDecl::Assign;
+    auto IsUnsafePtr = isUnsafePtr(QT, ignoreARC);
+    return {IsUnsafePtr && *IsUnsafePtr, PropType};
   }
 
   bool shouldSkipDecl(const RecordDecl *RD) const {
@@ -104,8 +252,8 @@ public:
       return true;
 
     const auto Kind = RD->getTagKind();
-    // FIMXE: Should we check union members too?
-    if (Kind != TagTypeKind::Struct && Kind != TagTypeKind::Class)
+    if (Kind != TagTypeKind::Struct && Kind != TagTypeKind::Class &&
+        Kind != TagTypeKind::Union)
       return true;
 
     // Ignore CXXRecords that come from system headers.
@@ -115,30 +263,43 @@ public:
     // Ref-counted smartpointers actually have raw-pointer to uncounted type as
     // a member but we trust them to handle it correctly.
     auto CXXRD = llvm::dyn_cast_or_null<CXXRecordDecl>(RD);
-    if (CXXRD)
-      return isPtrCls(CXXRD);
+    if (CXXRD && isSmartPtr(CXXRD))
+      return true;
 
     return false;
   }
 
-  void reportBug(const FieldDecl *Member, const Type *MemberType,
-                 const CXXRecordDecl *MemberCXXRD,
-                 const RecordDecl *ClassCXXRD) const {
+  template <typename DeclType, typename PointeeType, typename ParentDeclType>
+  void reportBug(const DeclType *Member, const Type *MemberType,
+                 const PointeeType *Pointee,
+                 const ParentDeclType *ClassCXXRD) const {
     assert(Member);
     assert(MemberType);
-    assert(MemberCXXRD);
+    assert(Pointee);
 
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
-    Os << "Member variable ";
+    if (isa<ObjCContainerDecl>(ClassCXXRD)) {
+      if (isa<ObjCPropertyDecl>(Member))
+        Os << "Property ";
+      else
+        Os << "Instance variable ";
+    } else
+      Os << "Member variable ";
     printQuotedName(Os, Member);
     Os << " in ";
     printQuotedQualifiedName(Os, ClassCXXRD);
-    Os << " is a "
-       << (isa<PointerType>(MemberType) ? "raw pointer" : "reference") << " to "
-       << typeName() << " ";
-    printQuotedQualifiedName(Os, MemberCXXRD);
+    if (Member->getType().getTypePtrOrNull() == MemberType)
+      Os << " is a ";
+    else
+      Os << " contains a ";
+    if (printPointer(Os, MemberType) == PrintDeclKind::Pointer) {
+      auto Typedef = MemberType->getAs<TypedefType>();
+      assert(Typedef);
+      printQuotedQualifiedName(Os, Typedef->getDecl());
+    } else
+      printQuotedQualifiedName(Os, Pointee);
     Os << "; " << invariant() << ".";
 
     PathDiagnosticLocation BSLoc(Member->getSourceRange().getBegin(),
@@ -146,6 +307,15 @@ public:
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
     Report->addRange(Member->getSourceRange());
     BR->emitReport(std::move(Report));
+  }
+
+  enum class PrintDeclKind { Pointee, Pointer };
+  virtual PrintDeclKind printPointer(llvm::raw_svector_ostream &Os,
+                                     const Type *T) const {
+    T = T->getUnqualifiedDesugaredType();
+    bool IsPtr = isa<PointerType>(T) || isa<ObjCObjectPointerType>(T);
+    Os << (IsPtr ? "raw pointer" : "reference") << " to " << typeName() << " ";
+    return PrintDeclKind::Pointee;
   }
 };
 
@@ -155,13 +325,8 @@ public:
       : RawPtrRefMemberChecker("Member variable is a raw-pointer/reference to "
                                "reference-countable type") {}
 
-  std::optional<bool>
-  isPtrCompatible(const clang::CXXRecordDecl *R) const final {
-    return isRefCountable(R);
-  }
-
-  bool isPtrCls(const clang::CXXRecordDecl *R) const final {
-    return isRefCounted(R);
+  std::optional<bool> isUnsafePtr(QualType QT, bool) const final {
+    return isUncountedPtr(QT.getCanonicalType());
   }
 
   const char *typeName() const final { return "ref-countable type"; }
@@ -177,13 +342,8 @@ public:
       : RawPtrRefMemberChecker("Member variable is a raw-pointer/reference to "
                                "checked-pointer capable type") {}
 
-  std::optional<bool>
-  isPtrCompatible(const clang::CXXRecordDecl *R) const final {
-    return isCheckedPtrCapable(R);
-  }
-
-  bool isPtrCls(const clang::CXXRecordDecl *R) const final {
-    return isCheckedPtr(R);
+  std::optional<bool> isUnsafePtr(QualType QT, bool) const final {
+    return isUncheckedPtr(QT.getCanonicalType());
   }
 
   const char *typeName() const final { return "CheckedPtr capable type"; }
@@ -191,6 +351,34 @@ public:
   const char *invariant() const final {
     return "member variables must be a CheckedPtr, CheckedRef, WeakRef, or "
            "WeakPtr";
+  }
+};
+
+class NoUnretainedMemberChecker final : public RawPtrRefMemberChecker {
+public:
+  NoUnretainedMemberChecker()
+      : RawPtrRefMemberChecker("Member variable is a raw-pointer/reference to "
+                               "retainable type") {
+    RTC = RetainTypeChecker();
+  }
+
+  std::optional<bool> isUnsafePtr(QualType QT, bool ignoreARC) const final {
+    return RTC->isUnretained(QT, ignoreARC);
+  }
+
+  const char *typeName() const final { return "retainable type"; }
+
+  const char *invariant() const final {
+    return "member variables must be a RetainPtr";
+  }
+
+  PrintDeclKind printPointer(llvm::raw_svector_ostream &Os,
+                             const Type *T) const final {
+    if (!isa<ObjCObjectPointerType>(T) && T->getAs<TypedefType>()) {
+      Os << typeName() << " ";
+      return PrintDeclKind::Pointer;
+    }
+    return RawPtrRefMemberChecker::printPointer(Os, T);
   }
 };
 
@@ -210,5 +398,13 @@ void ento::registerNoUncheckedPtrMemberChecker(CheckerManager &Mgr) {
 
 bool ento::shouldRegisterNoUncheckedPtrMemberChecker(
     const CheckerManager &Mgr) {
+  return true;
+}
+
+void ento::registerNoUnretainedMemberChecker(CheckerManager &Mgr) {
+  Mgr.registerChecker<NoUnretainedMemberChecker>();
+}
+
+bool ento::shouldRegisterNoUnretainedMemberChecker(const CheckerManager &Mgr) {
   return true;
 }

@@ -26,6 +26,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Scalar.h"
 #include <optional>
 
@@ -170,84 +171,17 @@ static MachineSchedRegistry
     SchedCustomRegistry("hexagon", "Run Hexagon's custom scheduler",
                         createVLIWMachineSched);
 
-namespace llvm {
-extern char &HexagonCopyHoistingID;
-extern char &HexagonExpandCondsetsID;
-extern char &HexagonTfrCleanupID;
-void initializeHexagonBitSimplifyPass(PassRegistry &);
-void initializeHexagonCopyHoistingPass(PassRegistry &);
-void initializeHexagonConstExtendersPass(PassRegistry &);
-void initializeHexagonConstPropagationPass(PassRegistry &);
-void initializeHexagonCopyToCombinePass(PassRegistry &);
-void initializeHexagonEarlyIfConversionPass(PassRegistry &);
-void initializeHexagonExpandCondsetsPass(PassRegistry &);
-void initializeHexagonGenMemAbsolutePass(PassRegistry &);
-void initializeHexagonGenMuxPass(PassRegistry &);
-void initializeHexagonHardwareLoopsPass(PassRegistry &);
-void initializeHexagonLoopIdiomRecognizeLegacyPassPass(PassRegistry &);
-void initializeHexagonLoopAlignPass(PassRegistry &);
-void initializeHexagonMaskPass(PassRegistry &);
-void initializeHexagonMergeActivateWeightPass(PassRegistry &);
-void initializeHexagonNewValueJumpPass(PassRegistry &);
-void initializeHexagonOptAddrModePass(PassRegistry &);
-void initializeHexagonPacketizerPass(PassRegistry &);
-void initializeHexagonRDFOptPass(PassRegistry &);
-void initializeHexagonSplitDoubleRegsPass(PassRegistry &);
-void initializeHexagonTfrCleanupPass(PassRegistry &);
-void initializeHexagonVExtractPass(PassRegistry &);
-void initializeHexagonVectorCombineLegacyPass(PassRegistry &);
-void initializeHexagonVectorLoopCarriedReuseLegacyPassPass(PassRegistry &);
-Pass *createHexagonLoopIdiomPass();
-Pass *createHexagonVectorLoopCarriedReuseLegacyPass();
-
-FunctionPass *createHexagonBitSimplify();
-FunctionPass *createHexagonBranchRelaxation();
-FunctionPass *createHexagonCallFrameInformation();
-FunctionPass *createHexagonCFGOptimizer();
-FunctionPass *createHexagonCommonGEP();
-FunctionPass *createHexagonConstExtenders();
-FunctionPass *createHexagonConstPropagationPass();
-FunctionPass *createHexagonCopyHoisting();
-FunctionPass *createHexagonCopyToCombine();
-FunctionPass *createHexagonEarlyIfConversion();
-FunctionPass *createHexagonFixupHwLoops();
-FunctionPass *createHexagonGenExtract();
-FunctionPass *createHexagonGenInsert();
-FunctionPass *createHexagonGenMemAbsolute();
-FunctionPass *createHexagonGenMux();
-FunctionPass *createHexagonGenPredicate();
-FunctionPass *createHexagonHardwareLoops();
-FunctionPass *createHexagonISelDag(HexagonTargetMachine &TM,
-                                   CodeGenOptLevel OptLevel);
-FunctionPass *createHexagonLoopAlign();
-FunctionPass *createHexagonLoopRescheduling();
-FunctionPass *createHexagonMask();
-FunctionPass *createHexagonMergeActivateWeight();
-FunctionPass *createHexagonNewValueJump();
-FunctionPass *createHexagonOptAddrMode();
-FunctionPass *createHexagonOptimizeSZextends();
-FunctionPass *createHexagonPacketizer(bool Minimal);
-FunctionPass *createHexagonPeephole();
-FunctionPass *createHexagonRDFOpt();
-FunctionPass *createHexagonSplitConst32AndConst64();
-FunctionPass *createHexagonSplitDoubleRegs();
-FunctionPass *createHexagonStoreWidening();
-FunctionPass *createHexagonLoadWidening();
-FunctionPass *createHexagonTfrCleanup();
-FunctionPass *createHexagonVectorCombineLegacyPass();
-FunctionPass *createHexagonVectorPrint();
-FunctionPass *createHexagonVExtract();
-} // namespace llvm
-
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeHexagonTarget() {
   // Register the target.
   RegisterTargetMachine<HexagonTargetMachine> X(getTheHexagonTarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeHexagonAsmPrinterPass(PR);
   initializeHexagonBitSimplifyPass(PR);
   initializeHexagonConstExtendersPass(PR);
   initializeHexagonConstPropagationPass(PR);
@@ -266,6 +200,26 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTarget() {
   initializeHexagonVectorLoopCarriedReuseLegacyPassPass(PR);
   initializeHexagonVExtractPass(PR);
   initializeHexagonDAGToDAGISelLegacyPass(PR);
+  initializeHexagonLoopReschedulingPass(PR);
+  initializeHexagonBranchRelaxationPass(PR);
+  initializeHexagonCFGOptimizerPass(PR);
+  initializeHexagonCommonGEPPass(PR);
+  initializeHexagonCopyHoistingPass(PR);
+  initializeHexagonExpandCondsetsPass(PR);
+  initializeHexagonLoopAlignPass(PR);
+  initializeHexagonTfrCleanupPass(PR);
+  initializeHexagonFixupHwLoopsPass(PR);
+  initializeHexagonCallFrameInformationPass(PR);
+  initializeHexagonGenExtractPass(PR);
+  initializeHexagonGenInsertPass(PR);
+  initializeHexagonGenPredicatePass(PR);
+  initializeHexagonLoadWideningPass(PR);
+  initializeHexagonStoreWideningPass(PR);
+  initializeHexagonMaskPass(PR);
+  initializeHexagonOptimizeSZextendsPass(PR);
+  initializeHexagonPeepholePass(PR);
+  initializeHexagonSplitConst32AndConst64Pass(PR);
+  initializeHexagonVectorPrintPass(PR);
 }
 
 HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
@@ -287,10 +241,6 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
           (HexagonNoOpt ? CodeGenOptLevel::None : OL)),
       TLOF(std::make_unique<HexagonTargetObjectFile>()),
       Subtarget(Triple(TT), CPU, FS, *this) {
-  initializeHexagonCopyHoistingPass(*PassRegistry::getPassRegistry());
-  initializeHexagonExpandCondsetsPass(*PassRegistry::getPassRegistry());
-  initializeHexagonLoopAlignPass(*PassRegistry::getPassRegistry());
-  initializeHexagonTfrCleanupPass(*PassRegistry::getPassRegistry());
   initAsmInfo();
 }
 
@@ -339,7 +289,7 @@ void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
 TargetTransformInfo
 HexagonTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(HexagonTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<HexagonTTIImpl>(this, F));
 }
 
 MachineFunctionInfo *HexagonTargetMachine::createMachineFunctionInfo(
@@ -351,6 +301,11 @@ MachineFunctionInfo *HexagonTargetMachine::createMachineFunctionInfo(
 
 HexagonTargetMachine::~HexagonTargetMachine() = default;
 
+ScheduleDAGInstrs *
+HexagonTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  return createVLIWMachineSched(C);
+}
+
 namespace {
 /// Hexagon Code Generator Pass Configuration Options.
 class HexagonPassConfig : public TargetPassConfig {
@@ -360,11 +315,6 @@ public:
 
   HexagonTargetMachine &getHexagonTargetMachine() const {
     return getTM<HexagonTargetMachine>();
-  }
-
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override {
-    return createVLIWMachineSched(C);
   }
 
   void addIRPasses() override;

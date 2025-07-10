@@ -18,12 +18,11 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
 namespace bufferization {
-#define GEN_PASS_DEF_LOWERDEALLOCATIONS
+#define GEN_PASS_DEF_LOWERDEALLOCATIONSPASS
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 } // namespace bufferization
 } // namespace mlir
@@ -379,7 +378,7 @@ private:
 
 namespace {
 struct LowerDeallocationsPass
-    : public bufferization::impl::LowerDeallocationsBase<
+    : public bufferization::impl::LowerDeallocationsPassBase<
           LowerDeallocationsPass> {
   void runOnOperation() override {
     if (!isa<ModuleOp, FunctionOpInterface>(getOperation())) {
@@ -460,14 +459,14 @@ func::FuncOp mlir::bufferization::buildDeallocationLibraryFunction(
   Value toRetainSize = builder.create<memref::DimOp>(loc, toRetainMemref, c0);
 
   builder.create<scf::ForOp>(
-      loc, c0, toRetainSize, c1, std::nullopt,
+      loc, c0, toRetainSize, c1, ValueRange(),
       [&](OpBuilder &builder, Location loc, Value i, ValueRange iterArgs) {
         builder.create<memref::StoreOp>(loc, falseValue, retainCondsMemref, i);
         builder.create<scf::YieldOp>(loc);
       });
 
   builder.create<scf::ForOp>(
-      loc, c0, toDeallocSize, c1, std::nullopt,
+      loc, c0, toDeallocSize, c1, ValueRange(),
       [&](OpBuilder &builder, Location loc, Value outerIter,
           ValueRange iterArgs) {
         Value toDealloc =
@@ -545,8 +544,4 @@ void mlir::bufferization::populateBufferizationDeallocLoweringPattern(
     const bufferization::DeallocHelperMap &deallocHelperFuncMap) {
   patterns.add<DeallocOpConversion>(patterns.getContext(),
                                     deallocHelperFuncMap);
-}
-
-std::unique_ptr<Pass> mlir::bufferization::createLowerDeallocationsPass() {
-  return std::make_unique<LowerDeallocationsPass>();
 }

@@ -257,3 +257,53 @@ define double @vpreduce_ord_fadd_v4f64(double %s, <4 x double> %v, <4 x i1> %m, 
   %r = call double @llvm.vp.reduce.fadd.v4f64(double %s, <4 x double> %v, <4 x i1> %m, i32 %evl)
   ret double %r
 }
+
+define float @vpreduce_fminimum_v4f32(float %start, <4 x float> %val, <4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_fminimum_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vmfne.vv v9, v8, v8, v0.t
+; CHECK-NEXT:    feq.s a1, fa0, fa0
+; CHECK-NEXT:    vcpop.m a2, v9, v0.t
+; CHECK-NEXT:    xori a1, a1, 1
+; CHECK-NEXT:    or a1, a2, a1
+; CHECK-NEXT:    beqz a1, .LBB16_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    lui a0, 523264
+; CHECK-NEXT:    fmv.w.x fa0, a0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB16_2:
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vfmv.s.f v9, fa0
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vfredmin.vs v9, v8, v9, v0.t
+; CHECK-NEXT:    vfmv.f.s fa0, v9
+; CHECK-NEXT:    ret
+  %s = call float @llvm.vp.reduce.fminimum.v4f32(float %start, <4 x float> %val, <4 x i1> %m, i32 %evl)
+  ret float %s
+}
+
+define float @vpreduce_fmaximum_v4f32(float %start, <4 x float> %val, <4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_fmaximum_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vmfne.vv v9, v8, v8, v0.t
+; CHECK-NEXT:    feq.s a1, fa0, fa0
+; CHECK-NEXT:    vcpop.m a2, v9, v0.t
+; CHECK-NEXT:    xori a1, a1, 1
+; CHECK-NEXT:    or a1, a2, a1
+; CHECK-NEXT:    beqz a1, .LBB17_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    lui a0, 523264
+; CHECK-NEXT:    fmv.w.x fa0, a0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB17_2:
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vfmv.s.f v9, fa0
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vfredmax.vs v9, v8, v9, v0.t
+; CHECK-NEXT:    vfmv.f.s fa0, v9
+; CHECK-NEXT:    ret
+  %s = call float @llvm.vp.reduce.fmaximum.v4f32(float %start, <4 x float> %val, <4 x i1> %m, i32 %evl)
+  ret float %s
+}

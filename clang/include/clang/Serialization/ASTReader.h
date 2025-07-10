@@ -89,7 +89,7 @@ struct HeaderFileInfo;
 class HeaderSearchOptions;
 class LangOptions;
 class MacroInfo;
-class InMemoryModuleCache;
+class ModuleCache;
 class NamedDecl;
 class NamespaceDecl;
 class ObjCCategoryDecl;
@@ -151,9 +151,8 @@ public:
   ///
   /// \returns true to indicate the diagnostic options are invalid, or false
   /// otherwise.
-  virtual bool
-  ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
-                        StringRef ModuleFilename, bool Complain) {
+  virtual bool ReadDiagnosticOptions(DiagnosticOptions &DiagOpts,
+                                     StringRef ModuleFilename, bool Complain) {
     return false;
   }
 
@@ -237,6 +236,18 @@ public:
     return true;
   }
 
+  /// Overloaded member function of \c visitInputFile that should
+  /// be defined when there is a distinction between
+  /// the file name and name-as-requested. For example, when deserializing input
+  /// files from precompiled AST files.
+  ///
+  /// \returns true to continue receiving the next input file, false to stop.
+  virtual bool visitInputFile(StringRef FilenameAsRequested, StringRef Filename,
+                              bool isSystem, bool isOverridden,
+                              bool isExplicitModule) {
+    return true;
+  }
+
   /// Returns true if this \c ASTReaderListener wants to receive the
   /// imports of the AST file via \c visitImport, false otherwise.
   virtual bool needsImportVisitation() const { return false; }
@@ -273,7 +284,7 @@ public:
   bool ReadTargetOptions(const TargetOptions &TargetOpts,
                          StringRef ModuleFilename, bool Complain,
                          bool AllowCompatibleDifferences) override;
-  bool ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
+  bool ReadDiagnosticOptions(DiagnosticOptions &DiagOpts,
                              StringRef ModuleFilename, bool Complain) override;
   bool ReadFileSystemOptions(const FileSystemOptions &FSOpts,
                              bool Complain) override;
@@ -314,7 +325,7 @@ public:
   bool ReadTargetOptions(const TargetOptions &TargetOpts,
                          StringRef ModuleFilename, bool Complain,
                          bool AllowCompatibleDifferences) override;
-  bool ReadDiagnosticOptions(IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts,
+  bool ReadDiagnosticOptions(DiagnosticOptions &DiagOpts,
                              StringRef ModuleFilename, bool Complain) override;
   bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
                                StringRef ModuleFilename, bool ReadMacros,
@@ -361,6 +372,24 @@ struct LazySpecializationInfoLookupTable;
 } // namespace reader
 
 } // namespace serialization
+
+struct VisibleLookupBlockOffsets {
+  uint64_t VisibleOffset = 0;
+  uint64_t ModuleLocalOffset = 0;
+  uint64_t TULocalOffset = 0;
+
+  operator bool() const {
+    return VisibleOffset || ModuleLocalOffset || TULocalOffset;
+  }
+};
+
+struct LookupBlockOffsets : VisibleLookupBlockOffsets {
+  uint64_t LexicalOffset = 0;
+
+  operator bool() const {
+    return VisibleLookupBlockOffsets::operator bool() || LexicalOffset;
+  }
+};
 
 /// Reads an AST files chain containing the contents of a translation
 /// unit.
@@ -435,8 +464,6 @@ public:
   using ModuleReverseIterator = ModuleManager::ModuleReverseIterator;
 
 private:
-  using LocSeq = SourceLocationSequence;
-
   /// The receiver of some callbacks invoked by ASTReader.
   std::unique_ptr<ASTReaderListener> Listener;
 
@@ -498,7 +525,7 @@ private:
   ContinuousRangeMap<unsigned, ModuleFile*, 64> GlobalSLocEntryMap;
 
   using GlobalSLocOffsetMapType =
-      ContinuousRangeMap<unsigned, ModuleFile *, 64>;
+      ContinuousRangeMap<SourceLocation::UIntTy, ModuleFile *, 64>;
 
   /// A map of reversed (SourceManager::MaxLoadedOffset - SLocOffset)
   /// SourceLocation offsets to the modules containing them.
@@ -524,13 +551,6 @@ private:
   /// in the chain.
   DeclUpdateOffsetsMap DeclUpdateOffsets;
 
-  struct LookupBlockOffsets {
-    uint64_t LexicalOffset;
-    uint64_t VisibleOffset;
-    uint64_t ModuleLocalOffset;
-    uint64_t TULocalOffset;
-  };
-
   using DelayedNamespaceOffsetMapTy =
       llvm::DenseMap<GlobalDeclID, LookupBlockOffsets>;
 
@@ -546,11 +566,18 @@ private:
 
   /// Mapping from main decl ID to the related decls IDs.
   ///
-  /// These related decls have to be loaded right after the main decl.
-  /// It is required to have canonical declaration for related decls from the
-  /// same module as the enclosing main decl. Without this, due to lazy
-  /// deserialization, canonical declarations for the main decl and related can
-  /// be selected from different modules.
+  /// The key is the main decl ID, and the value is a vector of related decls
+  /// that must be loaded immediately after the main decl. This is necessary
+  /// to ensure that the definition for related decls comes from the same module
+  /// as the enclosing main decl. Without this, due to lazy deserialization,
+  /// the definition for the main decl and related decls may come from different
+  /// modules. It is used for the following cases:
+  /// - Lambda inside a template function definition: The main declaration is
+  ///   the enclosing function, and the related declarations are the lambda
+  ///   call operators.
+  /// - Friend function defined inside a template CXXRecord declaration: The
+  ///   main declaration is the enclosing record, and the related declarations
+  ///   are the friend functions.
   llvm::DenseMap<GlobalDeclID, SmallVector<GlobalDeclID, 4>> RelatedDeclsMap;
 
   struct PendingUpdateRecord {
@@ -1072,8 +1099,11 @@ private:
   /// from the current compiler instance.
   bool AllowConfigurationMismatch;
 
-  /// Whether validate system input files.
+  /// Whether to validate system input files.
   bool ValidateSystemInputs;
+
+  /// Whether to force the validation of user input files.
+  bool ForceValidateUserInputs;
 
   /// Whether validate headers and module maps using hash based on contents.
   bool ValidateASTInputFilesContent;
@@ -1169,11 +1199,11 @@ private:
   /// Number of Decl/types that are currently deserializing.
   unsigned NumCurrentElementsDeserializing = 0;
 
-  /// Set true while we are in the process of passing deserialized
-  /// "interesting" decls to consumer inside FinishedDeserializing().
-  /// This is used as a guard to avoid recursively repeating the process of
+  /// Set false while we are in a state where we cannot safely pass deserialized
+  /// "interesting" decls to the consumer inside FinishedDeserializing().
+  /// This is used as a guard to avoid recursively entering the process of
   /// passing decls to consumer.
-  bool PassingDeclsToConsumer = false;
+  bool CanPassDeclsToConsumer = true;
 
   /// The set of identifiers that were read while the AST reader was
   /// (recursively) loading declarations.
@@ -1235,24 +1265,6 @@ private:
   /// The DeclContexts for these Decls will be set once recursive loading has
   /// been completed.
   std::deque<PendingDeclContextInfo> PendingDeclContextInfos;
-
-  /// Deserialization of some attributes must be deferred since they refer
-  /// to themselves in their type (e.g., preferred_name attribute refers to the
-  /// typedef that refers back to the template specialization of the template
-  /// that the attribute is attached to).
-  /// More attributes that store TypeSourceInfo might be potentially affected,
-  /// see https://github.com/llvm/llvm-project/issues/56490 for details.
-  struct DeferredAttribute {
-    // Index of the deferred attribute in the Record of the TargetedDecl.
-    uint64_t RecordIdx;
-    // Decl to attach a deferred attribute to.
-    Decl *TargetedDecl;
-  };
-
-  /// The collection of Decls that have been loaded but some of their attributes
-  /// have been deferred, paired with the index inside the record pointing
-  /// at the skipped attribute.
-  SmallVector<DeferredAttribute> PendingDeferredAttributes;
 
   template <typename DeclTy>
   using DuplicateObjCDecls = std::pair<DeclTy *, DeclTy *>;
@@ -1402,6 +1414,10 @@ private:
   std::string SuggestedPredefines;
 
   llvm::DenseMap<const Decl *, bool> DefinitionSource;
+
+  /// Friend functions that were defined but might have had their bodies
+  /// removed.
+  llvm::DenseSet<const FunctionDecl *> ThisDeclarationWasADefinitionSet;
 
   bool shouldDisableValidationForFile(const serialization::ModuleFile &M) const;
 
@@ -1606,7 +1622,6 @@ private:
   void loadPendingDeclChain(Decl *D, uint64_t LocalOffset);
   void loadObjCCategories(GlobalDeclID ID, ObjCInterfaceDecl *D,
                           unsigned PreviousGeneration = 0);
-  void loadDeferredAttribute(const DeferredAttribute &DA);
 
   RecordLocation getLocalBitOffset(uint64_t GlobalOffset);
   uint64_t getGlobalBitOffset(ModuleFile &M, uint64_t LocalOffset);
@@ -1754,8 +1769,8 @@ public:
   ///
   /// \param ReadTimer If non-null, a timer used to track the time spent
   /// deserializing.
-  ASTReader(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
-            ASTContext *Context, const PCHContainerReader &PCHContainerRdr,
+  ASTReader(Preprocessor &PP, ModuleCache &ModCache, ASTContext *Context,
+            const PCHContainerReader &PCHContainerRdr,
             ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
             StringRef isysroot = "",
             DisableValidationForModuleKind DisableValidationKind =
@@ -1763,6 +1778,7 @@ public:
             bool AllowASTWithCompilerErrors = false,
             bool AllowConfigurationMismatch = false,
             bool ValidateSystemInputs = false,
+            bool ForceValidateUserInputs = true,
             bool ValidateASTInputFilesContent = false,
             bool UseGlobalIndex = true,
             std::unique_ptr<llvm::Timer> ReadTimer = {});
@@ -1966,8 +1982,7 @@ public:
   ///
   /// \returns true if an error occurred, false otherwise.
   static bool readASTFileControlBlock(
-      StringRef Filename, FileManager &FileMgr,
-      const InMemoryModuleCache &ModuleCache,
+      StringRef Filename, FileManager &FileMgr, const ModuleCache &ModCache,
       const PCHContainerReader &PCHContainerRdr, bool FindModuleFileExtensions,
       ASTReaderListener &Listener, bool ValidateDiagnosticOptions,
       unsigned ClientLoadCapabilities = ARR_ConfigurationMismatch |
@@ -1976,7 +1991,7 @@ public:
   /// Determine whether the given AST file is acceptable to load into a
   /// translation unit with the given language and target options.
   static bool isAcceptableASTFile(StringRef Filename, FileManager &FileMgr,
-                                  const InMemoryModuleCache &ModuleCache,
+                                  const ModuleCache &ModCache,
                                   const PCHContainerReader &PCHContainerRdr,
                                   const LangOptions &LangOpts,
                                   const TargetOptions &TargetOpts,
@@ -2387,6 +2402,8 @@ public:
 
   ExtKind hasExternalDefinitions(const Decl *D) override;
 
+  bool wasThisDeclarationADefinition(const FunctionDecl *FD) override;
+
   /// Retrieve a selector from the given module with its local ID
   /// number.
   Selector getLocalSelector(ModuleFile &M, unsigned LocalID);
@@ -2418,18 +2435,16 @@ public:
   /// Read a source location from raw form and return it in its
   /// originating module file's source location space.
   std::pair<SourceLocation, unsigned>
-  ReadUntranslatedSourceLocation(RawLocEncoding Raw,
-                                 LocSeq *Seq = nullptr) const {
-    return SourceLocationEncoding::decode(Raw, Seq);
+  ReadUntranslatedSourceLocation(RawLocEncoding Raw) const {
+    return SourceLocationEncoding::decode(Raw);
   }
 
   /// Read a source location from raw form.
-  SourceLocation ReadSourceLocation(ModuleFile &MF, RawLocEncoding Raw,
-                                    LocSeq *Seq = nullptr) const {
+  SourceLocation ReadSourceLocation(ModuleFile &MF, RawLocEncoding Raw) const {
     if (!MF.ModuleOffsetMap.empty())
       ReadModuleOffsetMap(MF);
 
-    auto [Loc, ModuleFileIndex] = ReadUntranslatedSourceLocation(Raw, Seq);
+    auto [Loc, ModuleFileIndex] = ReadUntranslatedSourceLocation(Raw);
     ModuleFile *OwningModuleFile =
         ModuleFileIndex == 0 ? &MF : MF.TransitiveImports[ModuleFileIndex - 1];
 
@@ -2457,9 +2472,9 @@ public:
 
   /// Read a source location.
   SourceLocation ReadSourceLocation(ModuleFile &ModuleFile,
-                                    const RecordDataImpl &Record, unsigned &Idx,
-                                    LocSeq *Seq = nullptr) {
-    return ReadSourceLocation(ModuleFile, Record[Idx++], Seq);
+                                    const RecordDataImpl &Record,
+                                    unsigned &Idx) {
+    return ReadSourceLocation(ModuleFile, Record[Idx++]);
   }
 
   /// Read a FileID.
@@ -2478,7 +2493,7 @@ public:
 
   /// Read a source range.
   SourceRange ReadSourceRange(ModuleFile &F, const RecordData &Record,
-                              unsigned &Idx, LocSeq *Seq = nullptr);
+                              unsigned &Idx);
 
   static llvm::BitVector ReadBitVector(const RecordData &Record,
                                        const StringRef Blob);
@@ -2666,7 +2681,7 @@ inline bool shouldSkipCheckingODR(const Decl *D) {
 
 /// Calculate a hash value for the primary module name of the given module.
 /// \returns std::nullopt if M is not a C++ standard module.
-std::optional<unsigned> getPrimaryModuleHash(const Module *M);
+UnsignedOrNone getPrimaryModuleHash(const Module *M);
 
 } // namespace clang
 

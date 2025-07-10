@@ -36,7 +36,7 @@ define dso_local void @foo(i32 %N) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    [[P:%.*]] = alloca float, align 4
-; TUNIT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 3, ptr noundef nonnull @.omp_outlined., ptr noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) undef, ptr noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) undef, i64 undef)
+; TUNIT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 3, ptr noundef nonnull @.omp_outlined., ptr noalias nofree nonnull readnone align 4 captures(none) dereferenceable(4) undef, ptr noalias nofree nonnull readnone align 4 captures(none) dereferenceable(4) undef, i64 undef)
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@foo
@@ -47,7 +47,7 @@ define dso_local void @foo(i32 %N) {
 ; CGSCC-NEXT:    store i32 [[N]], ptr [[N_ADDR]], align 4
 ; CGSCC-NEXT:    store float 3.000000e+00, ptr [[P]], align 4
 ; CGSCC-NEXT:    store i32 7, ptr [[N_ADDR]], align 4
-; CGSCC-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 3, ptr noundef nonnull @.omp_outlined., ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[N_ADDR]], ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[P]], i64 noundef 4617315517961601024)
+; CGSCC-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 3, ptr noundef nonnull @.omp_outlined., ptr noalias nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[N_ADDR]], ptr noalias nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[P]], i64 noundef 4617315517961601024)
 ; CGSCC-NEXT:    ret void
 ;
 entry:
@@ -62,7 +62,7 @@ entry:
 
 define internal void @.omp_outlined.(ptr noalias %.global_tid., ptr noalias %.bound_tid., ptr dereferenceable(4) %N, ptr dereferenceable(4) %p, i64 %q) {
 ; TUNIT-LABEL: define {{[^@]+}}@.omp_outlined.
-; TUNIT-SAME: (ptr noalias nocapture nofree readonly [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr noalias nocapture nofree noundef nonnull readnone align 4 dereferenceable(4) [[N:%.*]], ptr noalias nocapture nofree noundef nonnull readnone align 4 dereferenceable(4) [[P:%.*]], i64 [[Q:%.*]]) {
+; TUNIT-SAME: (ptr noalias nofree readonly captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr noalias nofree noundef nonnull readnone align 4 captures(none) dereferenceable(4) [[N:%.*]], ptr noalias nofree noundef nonnull readnone align 4 captures(none) dereferenceable(4) [[P:%.*]], i64 [[Q:%.*]]) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[Q_ADDR:%.*]] = alloca i64, align 8
 ; TUNIT-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
@@ -118,7 +118,7 @@ define internal void @.omp_outlined.(ptr noalias %.global_tid., ptr noalias %.bo
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@.omp_outlined.
-; CGSCC-SAME: (ptr noalias nocapture nofree readonly [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[N:%.*]], ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[P:%.*]], i64 [[Q:%.*]]) {
+; CGSCC-SAME: (ptr noalias nofree readonly captures(none) [[DOTGLOBAL_TID_:%.*]], ptr noalias nofree readnone captures(none) [[DOTBOUND_TID_:%.*]], ptr noalias nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[N:%.*]], ptr noalias nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[P:%.*]], i64 [[Q:%.*]]) {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[Q_ADDR:%.*]] = alloca i64, align 8
 ; CGSCC-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4

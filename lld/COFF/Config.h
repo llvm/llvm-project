@@ -164,7 +164,6 @@ struct Configuration {
   bool noimplib = false;
   std::set<std::string> delayLoads;
   std::map<std::string, int> dllOrder;
-  Symbol *delayLoadHelper = nullptr;
   Symbol *arm64ECIcallHelper = nullptr;
 
   llvm::DenseSet<llvm::StringRef> saveTempsArgs;
@@ -215,14 +214,8 @@ struct Configuration {
   // used for /dwodir
   StringRef dwoDir;
 
-  // Used for /aligncomm.
-  std::map<std::string, int> alignComm;
-
   // Used for /failifmismatch.
   std::map<StringRef, std::pair<StringRef, InputFile *>> mustMatch;
-
-  // Used for /alternatename.
-  std::map<StringRef, StringRef> alternateNames;
 
   // Used for /order.
   llvm::StringMap<int> order;
@@ -314,6 +307,7 @@ struct Configuration {
   bool warnDebugInfoUnusable = true;
   bool warnLongSectionNames = true;
   bool warnStdcallFixup = true;
+  bool warnExportedDllMain = true;
   bool incremental = true;
   bool integrityCheck = false;
   bool killAt = false;

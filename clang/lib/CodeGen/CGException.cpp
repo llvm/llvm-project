@@ -12,6 +12,7 @@
 
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
+#include "CGDebugInfo.h"
 #include "CGObjCRuntime.h"
 #include "CodeGenFunction.h"
 #include "ConstantEmitter.h"
@@ -318,9 +319,9 @@ static bool PersonalityHasOnlyCXXUses(llvm::Constant *Fn) {
     llvm::Function *F = dyn_cast<llvm::Function>(U);
     if (!F) return false;
 
-    for (auto BB = F->begin(), E = F->end(); BB != E; ++BB) {
-      if (BB->isLandingPad())
-        if (!LandingPadHasOnlyCXXUses(BB->getLandingPadInst()))
+    for (llvm::BasicBlock &BB : *F) {
+      if (BB.isLandingPad())
+        if (!LandingPadHasOnlyCXXUses(BB.getLandingPadInst()))
           return false;
     }
   }
@@ -936,8 +937,8 @@ llvm::BasicBlock *CodeGenFunction::EmitLandingPad() {
                              filterTypes[0]->getType() : Int8PtrTy,
                            filterTypes.size());
 
-    for (unsigned i = 0, e = filterTypes.size(); i != e; ++i)
-      Filters.push_back(cast<llvm::Constant>(filterTypes[i]));
+    for (llvm::Value *filterType : filterTypes)
+      Filters.push_back(cast<llvm::Constant>(filterType));
     llvm::Constant *FilterArray = llvm::ConstantArray::get(AType, Filters);
     LPadInst->addClause(FilterArray);
 
@@ -1155,9 +1156,8 @@ static void emitCatchDispatchBlock(CodeGenFunction &CGF,
     assert(typeValue && "fell into catch-all case!");
     // With opaque ptrs, only the address space can be a mismatch.
     if (typeValue->getType() != argTy)
-      typeValue =
-        CGF.getTargetHooks().performAddrSpaceCast(CGF, typeValue, globAS,
-                                                  LangAS::Default, argTy);
+      typeValue = CGF.getTargetHooks().performAddrSpaceCast(CGF, typeValue,
+                                                            globAS, argTy);
 
     // Figure out the next block.
     bool nextIsEnd;
@@ -1251,11 +1251,12 @@ void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
   llvm::BasicBlock *WasmCatchStartBlock = nullptr;
   if (EHPersonality::get(*this).isWasmPersonality()) {
     auto *CatchSwitch =
-        cast<llvm::CatchSwitchInst>(DispatchBlock->getFirstNonPHI());
+        cast<llvm::CatchSwitchInst>(DispatchBlock->getFirstNonPHIIt());
     WasmCatchStartBlock = CatchSwitch->hasUnwindDest()
                               ? CatchSwitch->getSuccessor(1)
                               : CatchSwitch->getSuccessor(0);
-    auto *CPI = cast<llvm::CatchPadInst>(WasmCatchStartBlock->getFirstNonPHI());
+    auto *CPI =
+        cast<llvm::CatchPadInst>(WasmCatchStartBlock->getFirstNonPHIIt());
     CurrentFuncletPad = CPI;
   }
 
@@ -1858,7 +1859,7 @@ Address CodeGenFunction::recoverAddrOfEscapedLocal(CodeGenFunction &ParentCGF,
            "expected alloca or localrecover in parent LocalDeclMap");
     RecoverCall = cast<llvm::CallInst>(ParentRecover->clone());
     RecoverCall->setArgOperand(1, ParentFP);
-    RecoverCall->insertBefore(AllocaInsertPt);
+    RecoverCall->insertBefore(AllocaInsertPt->getIterator());
   }
 
   // Bitcast the variable, rename it, and insert it in the local decl map.
@@ -2144,7 +2145,7 @@ llvm::Value *CodeGenFunction::EmitSEHExceptionInfo() {
   // Sema should diagnose calling this builtin outside of a filter context, but
   // don't crash if we screw up.
   if (!SEHInfo)
-    return llvm::UndefValue::get(Int8PtrTy);
+    return llvm::PoisonValue::get(Int8PtrTy);
   assert(SEHInfo->getType() == Int8PtrTy);
   return SEHInfo;
 }
@@ -2252,7 +2253,7 @@ void CodeGenFunction::ExitSEHTryStmt(const SEHTryStmt &S) {
   // __except blocks don't get outlined into funclets, so immediately do a
   // catchret.
   llvm::CatchPadInst *CPI =
-      cast<llvm::CatchPadInst>(CatchPadBB->getFirstNonPHI());
+      cast<llvm::CatchPadInst>(CatchPadBB->getFirstNonPHIIt());
   llvm::BasicBlock *ExceptBB = createBasicBlock("__except");
   Builder.CreateCatchRet(CPI, ExceptBB);
   EmitBlock(ExceptBB);

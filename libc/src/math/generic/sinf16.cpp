@@ -19,6 +19,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 constexpr size_t N_EXCEPTS = 4;
 
 constexpr fputil::ExceptValues<float16, N_EXCEPTS> SINF16_EXCEPTS{{
@@ -28,6 +29,7 @@ constexpr fputil::ExceptValues<float16, N_EXCEPTS> SINF16_EXCEPTS{{
     {0x5cb0, 0xbbff, 0, 1, 0},
     {0x51f5, 0xb80f, 0, 1, 0},
 }};
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   using FPBits = fputil::FPBits<float16>;
@@ -53,11 +55,14 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   //   	      = sin(k * pi/32) * cos(y * pi/32) +
   //   	        sin(y * pi/32) * cos(k * pi/32)
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   // Handle exceptional values
   bool x_sign = x_u >> 15;
+
   if (auto r = SINF16_EXCEPTS.lookup_odd(x_abs, x_sign);
       LIBC_UNLIKELY(r.has_value()))
     return r.value();
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   int rounding = fputil::quick_get_round();
 
@@ -82,6 +87,11 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   }
 
   if (xbits.is_inf_or_nan()) {
+    if (xbits.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
+      return FPBits::quiet_nan().get_val();
+    }
+
     if (xbits.is_inf()) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);

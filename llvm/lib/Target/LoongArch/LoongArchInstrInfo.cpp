@@ -39,8 +39,8 @@ MCInst LoongArchInstrInfo::getNop() const {
 
 void LoongArchInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI,
-                                     const DebugLoc &DL, MCRegister DstReg,
-                                     MCRegister SrcReg, bool KillSrc,
+                                     const DebugLoc &DL, Register DstReg,
+                                     Register SrcReg, bool KillSrc,
                                      bool RenamableDest,
                                      bool RenamableSrc) const {
   if (LoongArch::GPRRegClass.contains(DstReg, SrcReg)) {
@@ -113,7 +113,8 @@ void LoongArchInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 void LoongArchInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register SrcReg,
     bool IsKill, int FI, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+    const TargetRegisterInfo *TRI, Register VReg,
+    MachineInstr::MIFlag Flags) const {
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
 
@@ -146,12 +147,10 @@ void LoongArchInstrInfo::storeRegToStackSlot(
       .addMemOperand(MMO);
 }
 
-void LoongArchInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                              MachineBasicBlock::iterator I,
-                                              Register DstReg, int FI,
-                                              const TargetRegisterClass *RC,
-                                              const TargetRegisterInfo *TRI,
-                                              Register VReg) const {
+void LoongArchInstrInfo::loadRegFromStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DstReg,
+    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+    Register VReg, MachineInstr::MIFlag Flags) const {
   MachineFunction *MF = MBB.getParent();
   MachineFrameInfo &MFI = MF->getFrameInfo();
   DebugLoc DL;

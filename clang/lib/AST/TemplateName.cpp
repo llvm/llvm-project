@@ -59,7 +59,7 @@ void DeducedTemplateStorage::Profile(llvm::FoldingSetNodeID &ID,
 
 TemplateArgument
 SubstTemplateTemplateParmPackStorage::getArgumentPack() const {
-  return TemplateArgument(llvm::ArrayRef(Arguments, Bits.Data));
+  return TemplateArgument(ArrayRef(Arguments, Bits.Data));
 }
 
 TemplateTemplateParmDecl *
@@ -77,16 +77,18 @@ SubstTemplateTemplateParmStorage::getParameter() const {
 }
 
 void SubstTemplateTemplateParmStorage::Profile(llvm::FoldingSetNodeID &ID) {
-  Profile(ID, Replacement, getAssociatedDecl(), getIndex(), getPackIndex());
+  Profile(ID, Replacement, getAssociatedDecl(), getIndex(), getPackIndex(),
+          getFinal());
 }
 
 void SubstTemplateTemplateParmStorage::Profile(
     llvm::FoldingSetNodeID &ID, TemplateName Replacement, Decl *AssociatedDecl,
-    unsigned Index, std::optional<unsigned> PackIndex) {
+    unsigned Index, UnsignedOrNone PackIndex, bool Final) {
   Replacement.Profile(ID);
   ID.AddPointer(AssociatedDecl);
   ID.AddInteger(Index);
-  ID.AddInteger(PackIndex ? *PackIndex + 1 : 0);
+  ID.AddInteger(PackIndex.toInternalRepresentation());
+  ID.AddBoolean(Final);
 }
 
 SubstTemplateTemplateParmPackStorage::SubstTemplateTemplateParmPackStorage(
@@ -122,6 +124,31 @@ void SubstTemplateTemplateParmPackStorage::Profile(
   ID.AddBoolean(Final);
 }
 
+IdentifierOrOverloadedOperator::IdentifierOrOverloadedOperator(
+    const IdentifierInfo *II)
+    : PtrOrOp(reinterpret_cast<uintptr_t>(II)) {
+  static_assert(NUM_OVERLOADED_OPERATORS <= 4096,
+                "NUM_OVERLOADED_OPERATORS is too large");
+  assert(II);
+  assert(getIdentifier() == II);
+}
+IdentifierOrOverloadedOperator::IdentifierOrOverloadedOperator(
+    OverloadedOperatorKind OOK)
+    : PtrOrOp(-uintptr_t(OOK)) {
+  assert(OOK != OO_None);
+  assert(getOperator() == OOK);
+}
+
+void IdentifierOrOverloadedOperator::Profile(llvm::FoldingSetNodeID &ID) const {
+  if (auto *Identifier = getIdentifier()) {
+    ID.AddBoolean(false);
+    ID.AddPointer(Identifier);
+  } else {
+    ID.AddBoolean(true);
+    ID.AddInteger(getOperator());
+  }
+}
+
 TemplateName::TemplateName(void *Ptr) {
   Storage = StorageType::getFromOpaqueValue(Ptr);
 }
@@ -144,7 +171,7 @@ TemplateName::TemplateName(DeducedTemplateStorage *Deduced)
 bool TemplateName::isNull() const { return Storage.isNull(); }
 
 TemplateName::NameKind TemplateName::getKind() const {
-  if (auto *ND = Storage.dyn_cast<Decl *>()) {
+  if (auto *ND = dyn_cast<Decl *>(Storage)) {
     if (isa<UsingShadowDecl>(ND))
       return UsingTemplate;
     assert(isa<TemplateDecl>(ND));
@@ -182,7 +209,8 @@ TemplateDecl *TemplateName::getAsTemplateDecl(bool IgnoreDeduced) const {
            "Unexpected canonical DeducedTemplateName; Did you mean to use "
            "getTemplateDeclAndDefaultArgs instead?");
 
-  return cast_if_present<TemplateDecl>(Name.Storage.dyn_cast<Decl *>());
+  return cast_if_present<TemplateDecl>(
+      dyn_cast_if_present<Decl *>(Name.Storage));
 }
 
 std::pair<TemplateDecl *, DefaultArguments>
@@ -208,7 +236,7 @@ TemplateName::getTemplateDeclAndDefaultArgs() const {
 }
 
 std::optional<TemplateName> TemplateName::desugar(bool IgnoreDeduced) const {
-  if (Decl *D = Storage.dyn_cast<Decl *>()) {
+  if (Decl *D = dyn_cast_if_present<Decl *>(Storage)) {
     if (auto *USD = dyn_cast<UsingShadowDecl>(D))
       return TemplateName(USD->getTargetDecl());
     return std::nullopt;
@@ -242,7 +270,7 @@ AssumedTemplateStorage *TemplateName::getAsAssumedTemplateName() const {
 SubstTemplateTemplateParmStorage *
 TemplateName::getAsSubstTemplateTemplateParm() const {
   if (UncommonTemplateNameStorage *uncommon =
-          Storage.dyn_cast<UncommonTemplateNameStorage *>())
+          dyn_cast_if_present<UncommonTemplateNameStorage *>(Storage))
     return uncommon->getAsSubstTemplateTemplateParm();
 
   return nullptr;
@@ -258,7 +286,7 @@ TemplateName::getAsSubstTemplateTemplateParmPack() const {
 }
 
 QualifiedTemplateName *TemplateName::getAsQualifiedTemplateName() const {
-  return Storage.dyn_cast<QualifiedTemplateName *>();
+  return dyn_cast_if_present<QualifiedTemplateName *>(Storage);
 }
 
 DependentTemplateName *TemplateName::getAsDependentTemplateName() const {
@@ -274,9 +302,39 @@ UsingShadowDecl *TemplateName::getAsUsingShadowDecl() const {
   return nullptr;
 }
 
+DependentTemplateStorage::DependentTemplateStorage(
+    NestedNameSpecifier *Qualifier, IdentifierOrOverloadedOperator Name,
+    bool HasTemplateKeyword)
+    : Qualifier(Qualifier, HasTemplateKeyword), Name(Name) {
+  assert((!Qualifier || Qualifier->isDependent()) &&
+         "Qualifier must be dependent");
+}
+
+TemplateNameDependence DependentTemplateStorage::getDependence() const {
+  auto D = TemplateNameDependence::DependentInstantiation;
+  if (NestedNameSpecifier *Qualifier = getQualifier())
+    D |= toTemplateNameDependence(Qualifier->getDependence());
+  return D;
+}
+
+void DependentTemplateStorage::print(raw_ostream &OS,
+                                     const PrintingPolicy &Policy) const {
+  if (NestedNameSpecifier *NNS = getQualifier())
+    NNS->print(OS, Policy);
+
+  if (hasTemplateKeyword())
+    OS << "template ";
+
+  IdentifierOrOverloadedOperator Name = getName();
+  if (const IdentifierInfo *II = Name.getIdentifier())
+    OS << II->getName();
+  else
+    OS << "operator " << getOperatorSpelling(Name.getOperator());
+}
+
 DeducedTemplateStorage *TemplateName::getAsDeducedTemplateName() const {
   if (UncommonTemplateNameStorage *Uncommon =
-          Storage.dyn_cast<UncommonTemplateNameStorage *>())
+          dyn_cast_if_present<UncommonTemplateNameStorage *>(Storage))
     return Uncommon->getAsDeducedTemplateName();
 
   return nullptr;
@@ -312,7 +370,8 @@ TemplateNameDependence TemplateName::getDependence() const {
   case NameKind::DependentTemplate: {
     DependentTemplateName *S = getAsDependentTemplateName();
     auto D = TemplateNameDependence::DependentInstantiation;
-    D |= toTemplateNameDependence(S->getQualifier()->getDependence());
+    if (NestedNameSpecifier *Qualifier = S->getQualifier())
+      D |= toTemplateNameDependence(Qualifier->getDependence());
     return D;
   }
   case NameKind::SubstTemplateTemplateParm: {
@@ -351,9 +410,9 @@ bool TemplateName::containsUnexpandedParameterPack() const {
 
 void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
                          Qualified Qual) const {
-  auto handleAnonymousTTP = [](TemplateDecl *TD, raw_ostream &OS) {
+  auto handleAnonymousTTP = [&](TemplateDecl *TD, raw_ostream &OS) {
     if (TemplateTemplateParmDecl *TTP = dyn_cast<TemplateTemplateParmDecl>(TD);
-        TTP && TTP->getIdentifier() == nullptr) {
+        TTP && (Policy.PrintAsCanonical || TTP->getIdentifier() == nullptr)) {
       OS << "template-parameter-" << TTP->getDepth() << "-" << TTP->getIndex();
       return true;
     }
@@ -371,6 +430,8 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
     // names more often than to export them, thus using the original name is
     // most useful in this case.
     TemplateDecl *Template = getAsTemplateDecl();
+    if (Policy.PrintAsCanonical)
+      Template = cast<TemplateDecl>(Template->getCanonicalDecl());
     if (handleAnonymousTTP(Template, OS))
       return;
     if (Qual == Qualified::None)
@@ -378,6 +439,10 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
     else
       Template->printQualifiedName(OS, Policy);
   } else if (QualifiedTemplateName *QTN = getAsQualifiedTemplateName()) {
+    if (Policy.PrintAsCanonical) {
+      QTN->getUnderlyingTemplate().print(OS, Policy, Qual);
+      return;
+    }
     if (NestedNameSpecifier *NNS = QTN->getQualifier();
         Qual != Qualified::None && NNS)
       NNS->print(OS, Policy);
@@ -400,14 +465,7 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
     else
       OS << *UTD;
   } else if (DependentTemplateName *DTN = getAsDependentTemplateName()) {
-    if (NestedNameSpecifier *NNS = DTN->getQualifier())
-      NNS->print(OS, Policy);
-    OS << "template ";
-
-    if (DTN->isIdentifier())
-      OS << DTN->getIdentifier()->getName();
-    else
-      OS << "operator " << getOperatorSpelling(DTN->getOperator());
+    DTN->print(OS, Policy);
   } else if (SubstTemplateTemplateParmStorage *subst =
                  getAsSubstTemplateTemplateParm()) {
     subst->getReplacement().print(OS, Policy, Qual);

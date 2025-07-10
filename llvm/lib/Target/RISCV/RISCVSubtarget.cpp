@@ -17,8 +17,6 @@
 #include "RISCVFrameLowering.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "RISCVTargetMachine.h"
-#include "llvm/CodeGen/MacroFusion.h"
-#include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -61,6 +59,15 @@ static cl::opt<bool> UseAA("riscv-use-aa", cl::init(true),
 static cl::opt<unsigned> RISCVMinimumJumpTableEntries(
     "riscv-min-jump-table-entries", cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on RISCV"));
+
+static cl::opt<bool> UseMIPSLoadStorePairsOpt(
+    "use-riscv-mips-load-store-pairs",
+    cl::desc("Enable the load/store pair optimization pass"), cl::init(false),
+    cl::Hidden);
+
+static cl::opt<bool> UseCCMovInsn("use-riscv-ccmov",
+                                  cl::desc("Use 'mips.ccmov' instruction"),
+                                  cl::init(true), cl::Hidden);
 
 void RISCVSubtarget::anchor() {}
 
@@ -237,4 +244,12 @@ void RISCVSubtarget::overridePostRASchedPolicy(MachineSchedPolicy &Policy,
     Policy.OnlyTopDown = false;
     Policy.OnlyBottomUp = false;
   }
+}
+
+bool RISCVSubtarget::useLoadStorePairs() const {
+  return UseMIPSLoadStorePairsOpt && HasVendorXMIPSLSP;
+}
+
+bool RISCVSubtarget::useCCMovInsn() const {
+  return UseCCMovInsn && HasVendorXMIPSCMov;
 }

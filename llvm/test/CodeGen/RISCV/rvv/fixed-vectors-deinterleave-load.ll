@@ -10,38 +10,34 @@ define {<16 x i1>, <16 x i1>} @vector_deinterleave_load_v16i1_v32i1(ptr %p) {
 ; CHECK-LABEL: vector_deinterleave_load_v16i1_v32i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vid.v v9
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; CHECK-NEXT:    vlm.v v8, (a0)
-; CHECK-NEXT:    li a0, -256
+; CHECK-NEXT:    vlm.v v0, (a0)
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v11, v9, v9
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v9, a0
-; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vadd.vi v12, v11, -16
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmerge.vim v9, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v0, v8, 2
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vadd.vi v11, v11, -15
-; CHECK-NEXT:    vmerge.vim v13, v10, 1, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
+; CHECK-NEXT:    vslidedown.vi v0, v0, 2
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v10, v8, 0
+; CHECK-NEXT:    vnsrl.wi v10, v9, 0
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vnsrl.wi v9, v9, 8
+; CHECK-NEXT:    vnsrl.wi v11, v8, 0
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 8
-; CHECK-NEXT:    vmv1r.v v0, v9
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
-; CHECK-NEXT:    vrgather.vv v10, v13, v12, v0.t
-; CHECK-NEXT:    vrgather.vv v8, v13, v11, v0.t
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vslideup.vi v10, v11, 8
+; CHECK-NEXT:    vslideup.vi v9, v8, 8
 ; CHECK-NEXT:    vmsne.vi v0, v10, 0
-; CHECK-NEXT:    vmsne.vi v8, v8, 0
+; CHECK-NEXT:    vmsne.vi v8, v9, 0
 ; CHECK-NEXT:    ret
   %vec = load <32 x i1>, ptr %p
-  %retval = call {<16 x i1>, <16 x i1>} @llvm.vector.deinterleave2.v32i1(<32 x i1> %vec)
-  ret {<16 x i1>, <16 x i1>} %retval
+  %deinterleaved.results = call {<16 x i1>, <16 x i1>} @llvm.vector.deinterleave2.v32i1(<32 x i1> %vec)
+  %t0 = extractvalue { <16 x i1>, <16 x i1> } %deinterleaved.results, 0
+  %t1 = extractvalue { <16 x i1>, <16 x i1> } %deinterleaved.results, 1
+  %res0 = insertvalue { <16 x i1>, <16 x i1> } undef, <16 x i1> %t0, 0
+  %res1 = insertvalue { <16 x i1>, <16 x i1> } %res0, <16 x i1> %t1, 1
+  ret {<16 x i1>, <16 x i1>} %res1
 }
 
 define {<16 x i8>, <16 x i8>} @vector_deinterleave_load_v16i8_v32i8(ptr %p) {
@@ -51,8 +47,12 @@ define {<16 x i8>, <16 x i8>} @vector_deinterleave_load_v16i8_v32i8(ptr %p) {
 ; CHECK-NEXT:    vlseg2e8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <32 x i8>, ptr %p
-  %retval = call {<16 x i8>, <16 x i8>} @llvm.vector.deinterleave2.v32i8(<32 x i8> %vec)
-  ret {<16 x i8>, <16 x i8>} %retval
+  %deinterleaved.results = call {<16 x i8>, <16 x i8>} @llvm.vector.deinterleave2.v32i8(<32 x i8> %vec)
+  %t0 = extractvalue { <16 x i8>, <16 x i8> } %deinterleaved.results, 0
+  %t1 = extractvalue { <16 x i8>, <16 x i8> } %deinterleaved.results, 1
+  %res0 = insertvalue { <16 x i8>, <16 x i8> } undef, <16 x i8> %t0, 0
+  %res1 = insertvalue { <16 x i8>, <16 x i8> } %res0, <16 x i8> %t1, 1
+  ret {<16 x i8>, <16 x i8>} %res1
 }
 
 ; Shouldn't be lowered to vlseg because it's unaligned
@@ -67,8 +67,12 @@ define {<8 x i16>, <8 x i16>} @vector_deinterleave_load_v8i16_v16i16_align1(ptr 
 ; CHECK-NEXT:    vnsrl.wi v9, v10, 16
 ; CHECK-NEXT:    ret
   %vec = load <16 x i16>, ptr %p, align 1
-  %retval = call {<8 x i16>, <8 x i16>} @llvm.vector.deinterleave2.v16i16(<16 x i16> %vec)
-  ret {<8 x i16>, <8 x i16>} %retval
+  %deinterleaved.results = call {<8 x i16>, <8 x i16>} @llvm.vector.deinterleave2.v16i16(<16 x i16> %vec)
+  %t0 = extractvalue { <8 x i16>, <8 x i16> } %deinterleaved.results, 0
+  %t1 = extractvalue { <8 x i16>, <8 x i16> } %deinterleaved.results, 1
+  %res0 = insertvalue { <8 x i16>, <8 x i16> } undef, <8 x i16> %t0, 0
+  %res1 = insertvalue { <8 x i16>, <8 x i16> } %res0, <8 x i16> %t1, 1
+  ret {<8 x i16>, <8 x i16>} %res1
 }
 
 define {<8 x i16>, <8 x i16>} @vector_deinterleave_load_v8i16_v16i16(ptr %p) {
@@ -78,8 +82,12 @@ define {<8 x i16>, <8 x i16>} @vector_deinterleave_load_v8i16_v16i16(ptr %p) {
 ; CHECK-NEXT:    vlseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <16 x i16>, ptr %p
-  %retval = call {<8 x i16>, <8 x i16>} @llvm.vector.deinterleave2.v16i16(<16 x i16> %vec)
-  ret {<8 x i16>, <8 x i16>} %retval
+  %deinterleaved.results = call {<8 x i16>, <8 x i16>} @llvm.vector.deinterleave2.v16i16(<16 x i16> %vec)
+  %t0 = extractvalue { <8 x i16>, <8 x i16> } %deinterleaved.results, 0
+  %t1 = extractvalue { <8 x i16>, <8 x i16> } %deinterleaved.results, 1
+  %res0 = insertvalue { <8 x i16>, <8 x i16> } undef, <8 x i16> %t0, 0
+  %res1 = insertvalue { <8 x i16>, <8 x i16> } %res0, <8 x i16> %t1, 1
+  ret {<8 x i16>, <8 x i16>} %res1
 }
 
 define {<4 x i32>, <4 x i32>} @vector_deinterleave_load_v4i32_vv8i32(ptr %p) {
@@ -89,8 +97,12 @@ define {<4 x i32>, <4 x i32>} @vector_deinterleave_load_v4i32_vv8i32(ptr %p) {
 ; CHECK-NEXT:    vlseg2e32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <8 x i32>, ptr %p
-  %retval = call {<4 x i32>, <4 x i32>} @llvm.vector.deinterleave2.v8i32(<8 x i32> %vec)
-  ret {<4 x i32>, <4 x i32>} %retval
+  %deinterleaved.results = call {<4 x i32>, <4 x i32>} @llvm.vector.deinterleave2.v8i32(<8 x i32> %vec)
+  %t0 = extractvalue { <4 x i32>, <4 x i32> } %deinterleaved.results, 0
+  %t1 = extractvalue { <4 x i32>, <4 x i32> } %deinterleaved.results, 1
+  %res0 = insertvalue { <4 x i32>, <4 x i32> } undef, <4 x i32> %t0, 0
+  %res1 = insertvalue { <4 x i32>, <4 x i32> } %res0, <4 x i32> %t1, 1
+  ret {<4 x i32>, <4 x i32>} %res1
 }
 
 define {<2 x i64>, <2 x i64>} @vector_deinterleave_load_v2i64_v4i64(ptr %p) {
@@ -100,15 +112,13 @@ define {<2 x i64>, <2 x i64>} @vector_deinterleave_load_v2i64_v4i64(ptr %p) {
 ; CHECK-NEXT:    vlseg2e64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <4 x i64>, ptr %p
-  %retval = call {<2 x i64>, <2 x i64>} @llvm.vector.deinterleave2.v4i64(<4 x i64> %vec)
-  ret {<2 x i64>, <2 x i64>} %retval
+  %deinterleaved.results = call {<2 x i64>, <2 x i64>} @llvm.vector.deinterleave2.v4i64(<4 x i64> %vec)
+  %t0 = extractvalue { <2 x i64>, <2 x i64> } %deinterleaved.results, 0
+  %t1 = extractvalue { <2 x i64>, <2 x i64> } %deinterleaved.results, 1
+  %res0 = insertvalue { <2 x i64>, <2 x i64> } undef, <2 x i64> %t0, 0
+  %res1 = insertvalue { <2 x i64>, <2 x i64> } %res0, <2 x i64> %t1, 1
+  ret {<2 x i64>, <2 x i64>} %res1
 }
-
-declare {<16 x i1>, <16 x i1>} @llvm.vector.deinterleave2.v32i1(<32 x i1>)
-declare {<16 x i8>, <16 x i8>} @llvm.vector.deinterleave2.v32i8(<32 x i8>)
-declare {<8 x i16>, <8 x i16>} @llvm.vector.deinterleave2.v16i16(<16 x i16>)
-declare {<4 x i32>, <4 x i32>} @llvm.vector.deinterleave2.v8i32(<8 x i32>)
-declare {<2 x i64>, <2 x i64>} @llvm.vector.deinterleave2.v4i64(<4 x i64>)
 
 ; Floats
 
@@ -119,8 +129,12 @@ define {<2 x bfloat>, <2 x bfloat>} @vector_deinterleave_load_v2bf16_v4bf16(ptr 
 ; CHECK-NEXT:    vlseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <4 x bfloat>, ptr %p
-  %retval = call {<2 x bfloat>, <2 x bfloat>} @llvm.vector.deinterleave2.v4bf16(<4 x bfloat> %vec)
-  ret {<2 x bfloat>, <2 x bfloat>} %retval
+  %deinterleaved.results = call {<2 x bfloat>, <2 x bfloat>} @llvm.vector.deinterleave2.v4bf16(<4 x bfloat> %vec)
+  %t0 = extractvalue { <2 x bfloat>, <2 x bfloat> } %deinterleaved.results, 0
+  %t1 = extractvalue { <2 x bfloat>, <2 x bfloat> } %deinterleaved.results, 1
+  %res0 = insertvalue { <2 x bfloat>, <2 x bfloat> } undef, <2 x bfloat> %t0, 0
+  %res1 = insertvalue { <2 x bfloat>, <2 x bfloat> } %res0, <2 x bfloat> %t1, 1
+  ret {<2 x bfloat>, <2 x bfloat>} %res1
 }
 
 define {<4 x bfloat>, <4 x bfloat>} @vector_deinterleave_load_v4bf16_v8bf16(ptr %p) {
@@ -130,8 +144,12 @@ define {<4 x bfloat>, <4 x bfloat>} @vector_deinterleave_load_v4bf16_v8bf16(ptr 
 ; CHECK-NEXT:    vlseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <8 x bfloat>, ptr %p
-  %retval = call {<4 x bfloat>, <4 x bfloat>} @llvm.vector.deinterleave2.v8bf16(<8 x bfloat> %vec)
-  ret {<4 x bfloat>, <4 x bfloat>} %retval
+  %deinterleaved.results = call {<4 x bfloat>, <4 x bfloat>} @llvm.vector.deinterleave2.v8bf16(<8 x bfloat> %vec)
+  %t0 = extractvalue { <4 x bfloat>, <4 x bfloat> } %deinterleaved.results, 0
+  %t1 = extractvalue { <4 x bfloat>, <4 x bfloat> } %deinterleaved.results, 1
+  %res0 = insertvalue { <4 x bfloat>, <4 x bfloat> } undef, <4 x bfloat> %t0, 0
+  %res1 = insertvalue { <4 x bfloat>, <4 x bfloat> } %res0, <4 x bfloat> %t1, 1
+  ret {<4 x bfloat>, <4 x bfloat>} %res1
 }
 
 define {<2 x half>, <2 x half>} @vector_deinterleave_load_v2f16_v4f16(ptr %p) {
@@ -141,8 +159,12 @@ define {<2 x half>, <2 x half>} @vector_deinterleave_load_v2f16_v4f16(ptr %p) {
 ; CHECK-NEXT:    vlseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <4 x half>, ptr %p
-  %retval = call {<2 x half>, <2 x half>} @llvm.vector.deinterleave2.v4f16(<4 x half> %vec)
-  ret {<2 x half>, <2 x half>} %retval
+  %deinterleaved.results = call {<2 x half>, <2 x half>} @llvm.vector.deinterleave2.v4f16(<4 x half> %vec)
+  %t0 = extractvalue { <2 x half>, <2 x half> } %deinterleaved.results, 0
+  %t1 = extractvalue { <2 x half>, <2 x half> } %deinterleaved.results, 1
+  %res0 = insertvalue { <2 x half>, <2 x half> } undef, <2 x half> %t0, 0
+  %res1 = insertvalue { <2 x half>, <2 x half> } %res0, <2 x half> %t1, 1
+  ret {<2 x half>, <2 x half>} %res1
 }
 
 define {<4 x half>, <4 x half>} @vector_deinterleave_load_v4f16_v8f16(ptr %p) {
@@ -152,8 +174,12 @@ define {<4 x half>, <4 x half>} @vector_deinterleave_load_v4f16_v8f16(ptr %p) {
 ; CHECK-NEXT:    vlseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <8 x half>, ptr %p
-  %retval = call {<4 x half>, <4 x half>} @llvm.vector.deinterleave2.v8f16(<8 x half> %vec)
-  ret {<4 x half>, <4 x half>} %retval
+  %deinterleaved.results = call {<4 x half>, <4 x half>} @llvm.vector.deinterleave2.v8f16(<8 x half> %vec)
+  %t0 = extractvalue { <4 x half>, <4 x half> } %deinterleaved.results, 0
+  %t1 = extractvalue { <4 x half>, <4 x half> } %deinterleaved.results, 1
+  %res0 = insertvalue { <4 x half>, <4 x half> } undef, <4 x half> %t0, 0
+  %res1 = insertvalue { <4 x half>, <4 x half> } %res0, <4 x half> %t1, 1
+  ret {<4 x half>, <4 x half>} %res1
 }
 
 define {<2 x float>, <2 x float>} @vector_deinterleave_load_v2f32_v4f32(ptr %p) {
@@ -163,8 +189,12 @@ define {<2 x float>, <2 x float>} @vector_deinterleave_load_v2f32_v4f32(ptr %p) 
 ; CHECK-NEXT:    vlseg2e32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <4 x float>, ptr %p
-  %retval = call {<2 x float>, <2 x float>} @llvm.vector.deinterleave2.v4f32(<4 x float> %vec)
-  ret {<2 x float>, <2 x float>} %retval
+  %deinterleaved.results = call {<2 x float>, <2 x float>} @llvm.vector.deinterleave2.v4f32(<4 x float> %vec)
+  %t0 = extractvalue { <2 x float>, <2 x float> } %deinterleaved.results, 0
+  %t1 = extractvalue { <2 x float>, <2 x float> } %deinterleaved.results, 1
+  %res0 = insertvalue { <2 x float>, <2 x float> } undef, <2 x float> %t0, 0
+  %res1 = insertvalue { <2 x float>, <2 x float> } %res0, <2 x float> %t1, 1
+  ret {<2 x float>, <2 x float>} %res1
 }
 
 define {<8 x bfloat>, <8 x bfloat>} @vector_deinterleave_load_v8bf16_v16bf16(ptr %p) {
@@ -174,8 +204,12 @@ define {<8 x bfloat>, <8 x bfloat>} @vector_deinterleave_load_v8bf16_v16bf16(ptr
 ; CHECK-NEXT:    vlseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <16 x bfloat>, ptr %p
-  %retval = call {<8 x bfloat>, <8 x bfloat>} @llvm.vector.deinterleave2.v16bf16(<16 x bfloat> %vec)
-  ret {<8 x bfloat>, <8 x bfloat>} %retval
+  %deinterleaved.results = call {<8 x bfloat>, <8 x bfloat>} @llvm.vector.deinterleave2.v16bf16(<16 x bfloat> %vec)
+  %t0 = extractvalue { <8 x bfloat>, <8 x bfloat> } %deinterleaved.results, 0
+  %t1 = extractvalue { <8 x bfloat>, <8 x bfloat> } %deinterleaved.results, 1
+  %res0 = insertvalue { <8 x bfloat>, <8 x bfloat> } undef, <8 x bfloat> %t0, 0
+  %res1 = insertvalue { <8 x bfloat>, <8 x bfloat> } %res0, <8 x bfloat> %t1, 1
+  ret {<8 x bfloat>, <8 x bfloat>} %res1
 }
 
 define {<8 x half>, <8 x half>} @vector_deinterleave_load_v8f16_v16f16(ptr %p) {
@@ -185,8 +219,12 @@ define {<8 x half>, <8 x half>} @vector_deinterleave_load_v8f16_v16f16(ptr %p) {
 ; CHECK-NEXT:    vlseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <16 x half>, ptr %p
-  %retval = call {<8 x half>, <8 x half>} @llvm.vector.deinterleave2.v16f16(<16 x half> %vec)
-  ret {<8 x half>, <8 x half>} %retval
+  %deinterleaved.results = call {<8 x half>, <8 x half>} @llvm.vector.deinterleave2.v16f16(<16 x half> %vec)
+  %t0 = extractvalue { <8 x half>, <8 x half> } %deinterleaved.results, 0
+  %t1 = extractvalue { <8 x half>, <8 x half> } %deinterleaved.results, 1
+  %res0 = insertvalue { <8 x half>, <8 x half> } undef, <8 x half> %t0, 0
+  %res1 = insertvalue { <8 x half>, <8 x half> } %res0, <8 x half> %t1, 1
+  ret {<8 x half>, <8 x half>} %res1
 }
 
 define {<4 x float>, <4 x float>} @vector_deinterleave_load_v4f32_v8f32(ptr %p) {
@@ -196,8 +234,12 @@ define {<4 x float>, <4 x float>} @vector_deinterleave_load_v4f32_v8f32(ptr %p) 
 ; CHECK-NEXT:    vlseg2e32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <8 x float>, ptr %p
-  %retval = call {<4 x float>, <4 x float>} @llvm.vector.deinterleave2.v8f32(<8 x float> %vec)
-  ret  {<4 x float>, <4 x float>} %retval
+  %deinterleaved.results = call {<4 x float>, <4 x float>} @llvm.vector.deinterleave2.v8f32(<8 x float> %vec)
+  %t0 = extractvalue { <4 x float>, <4 x float> } %deinterleaved.results, 0
+  %t1 = extractvalue { <4 x float>, <4 x float> } %deinterleaved.results, 1
+  %res0 = insertvalue { <4 x float>, <4 x float> } undef, <4 x float> %t0, 0
+  %res1 = insertvalue { <4 x float>, <4 x float> } %res0, <4 x float> %t1, 1
+  ret {<4 x float>, <4 x float>} %res1
 }
 
 define {<2 x double>, <2 x double>} @vector_deinterleave_load_v2f64_v4f64(ptr %p) {
@@ -207,13 +249,143 @@ define {<2 x double>, <2 x double>} @vector_deinterleave_load_v2f64_v4f64(ptr %p
 ; CHECK-NEXT:    vlseg2e64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <4 x double>, ptr %p
-  %retval = call {<2 x double>, <2 x double>} @llvm.vector.deinterleave2.v4f64(<4 x double> %vec)
-  ret {<2 x double>, <2 x double>} %retval
+  %deinterleaved.results = call {<2 x double>, <2 x double>} @llvm.vector.deinterleave2.v4f64(<4 x double> %vec)
+  %t0 = extractvalue { <2 x double>, <2 x double> } %deinterleaved.results, 0
+  %t1 = extractvalue { <2 x double>, <2 x double> } %deinterleaved.results, 1
+  %res0 = insertvalue { <2 x double>, <2 x double> } undef, <2 x double> %t0, 0
+  %res1 = insertvalue { <2 x double>, <2 x double> } %res0, <2 x double> %t1, 1
+  ret {<2 x double>, <2 x double>} %res1
 }
 
-declare {<2 x half>,<2 x half>} @llvm.vector.deinterleave2.v4f16(<4 x half>)
-declare {<4 x half>, <4 x half>} @llvm.vector.deinterleave2.v8f16(<8 x half>)
-declare {<2 x float>, <2 x float>} @llvm.vector.deinterleave2.v4f32(<4 x float>)
-declare {<8 x half>, <8 x half>} @llvm.vector.deinterleave2.v16f16(<16 x half>)
-declare {<4 x float>, <4 x float>} @llvm.vector.deinterleave2.v8f32(<8 x float>)
-declare {<2 x double>, <2 x double>} @llvm.vector.deinterleave2.v4f64(<4 x double>)
+define { <8 x i8>, <8 x i8>, <8 x i8> } @vector_deinterleave_load_factor3(ptr %p) {
+; CHECK-LABEL: vector_deinterleave_load_factor3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vlseg3e8.v v6, (a0)
+; CHECK-NEXT:    ret
+  %vec = load <24 x i8>, ptr %p
+  %d0 = call {<8 x i8>, <8 x i8>, <8 x i8>} @llvm.vector.deinterleave3(<24 x i8> %vec)
+  %t0 = extractvalue {<8 x i8>, <8 x i8>, <8 x i8>} %d0, 0
+  %t1 = extractvalue {<8 x i8>, <8 x i8>, <8 x i8>} %d0, 1
+  %t2 = extractvalue {<8 x i8>, <8 x i8>, <8 x i8>} %d0, 2
+  %res0 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8> } poison, <8 x i8> %t0, 0
+  %res1 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8> } %res0, <8 x i8> %t1, 0
+  %res2 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8> } %res1, <8 x i8> %t2, 0
+  ret { <8 x i8>, <8 x i8>, <8 x i8> } %res2
+}
+
+define { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @vector_deinterleave_load_factor4(ptr %p) {
+; CHECK-LABEL: vector_deinterleave_load_factor4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vlseg4e8.v v8, (a0)
+; CHECK-NEXT:    ret
+  %vec = load <32 x i8>, ptr %p
+  %d0 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.vector.deinterleave4(<32 x i8> %vec)
+  %t0 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 0
+  %t1 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 1
+  %t2 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 2
+  %t3 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 3
+  %res0 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } poison, <8 x i8> %t0, 0
+  %res1 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res0, <8 x i8> %t1, 1
+  %res2 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res1, <8 x i8> %t2, 2
+  %res3 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res2, <8 x i8> %t3, 3
+  ret { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res3
+}
+
+define { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @vector_deinterleave_load_factor5(ptr %p) {
+; CHECK-LABEL: vector_deinterleave_load_factor5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vlseg5e8.v v8, (a0)
+; CHECK-NEXT:    ret
+  %vec = load <40 x i8>, ptr %p
+  %d0 = call {<8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>} @llvm.vector.deinterleave5(<40 x i8> %vec)
+  %t0 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 0
+  %t1 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 1
+  %t2 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 2
+  %t3 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 3
+  %t4 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 4
+  %res0 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } poison, <8 x i8> %t0, 0
+  %res1 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res0, <8 x i8> %t1, 1
+  %res2 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res1, <8 x i8> %t2, 2
+  %res3 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res2, <8 x i8> %t3, 3
+  %res4 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res3, <8 x i8> %t4, 4
+  ret { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res4
+}
+
+define { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @vector_deinterleave_load_factor6(ptr %p) {
+; CHECK-LABEL: vector_deinterleave_load_factor6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vlseg6e8.v v8, (a0)
+; CHECK-NEXT:    ret
+  %vec = load <48 x i8>, ptr %p
+  %d0 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.vector.deinterleave6(<48 x i8> %vec)
+  %t0 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 0
+  %t1 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 1
+  %t2 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 2
+  %t3 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 3
+  %t4 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 4
+  %t5 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 5
+  %res0 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } poison, <8 x i8> %t0, 0
+  %res1 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res0, <8 x i8> %t1, 1
+  %res2 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res1, <8 x i8> %t2, 2
+  %res3 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res2, <8 x i8> %t3, 3
+  %res4 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res3, <8 x i8> %t4, 4
+  %res5 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res4, <8 x i8> %t5, 5
+  ret { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res5
+}
+
+define { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @vector_deinterleave_load_factor7(ptr %p) {
+; CHECK-LABEL: vector_deinterleave_load_factor7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vlseg7e8.v v8, (a0)
+; CHECK-NEXT:    ret
+  %vec = load <56 x i8>, ptr %p
+  %d0 = call {<8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>} @llvm.vector.deinterleave7(<56 x i8> %vec)
+  %t0 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 0
+  %t1 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 1
+  %t2 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 2
+  %t3 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 3
+  %t4 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 4
+  %t5 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 5
+  %t6 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 6
+  %res0 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } poison, <8 x i8> %t0, 0
+  %res1 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res0, <8 x i8> %t1, 1
+  %res2 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res1, <8 x i8> %t2, 2
+  %res3 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res2, <8 x i8> %t3, 3
+  %res4 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res3, <8 x i8> %t4, 4
+  %res5 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res4, <8 x i8> %t5, 5
+  %res6 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res5, <8 x i8> %t6, 6
+  ret { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res6
+}
+
+define { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @vector_deinterleave_load_factor8(ptr %p) {
+; CHECK-LABEL: vector_deinterleave_load_factor8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vlseg8e8.v v8, (a0)
+; CHECK-NEXT:    vmv1r.v v15, v14
+; CHECK-NEXT:    ret
+  %vec = load <64 x i8>, ptr %p
+  %d0 = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.vector.deinterleave8(<64 x i8> %vec)
+  %t0 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 0
+  %t1 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 1
+  %t2 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 2
+  %t3 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 3
+  %t4 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 4
+  %t5 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 5
+  %t6 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 6
+  %t7 = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %d0, 7
+  %res0 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } poison, <8 x i8> %t0, 0
+  %res1 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res0, <8 x i8> %t1, 1
+  %res2 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res1, <8 x i8> %t2, 2
+  %res3 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res2, <8 x i8> %t3, 3
+  %res4 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res3, <8 x i8> %t4, 4
+  %res5 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res4, <8 x i8> %t5, 5
+  %res6 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res5, <8 x i8> %t6, 6
+  %res7 = insertvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res6, <8 x i8> %t6, 7
+  ret { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } %res7
+}

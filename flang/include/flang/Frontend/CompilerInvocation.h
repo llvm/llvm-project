@@ -13,14 +13,14 @@
 #ifndef FORTRAN_FRONTEND_COMPILERINVOCATION_H
 #define FORTRAN_FRONTEND_COMPILERINVOCATION_H
 
-#include "flang/Common/LangOptions.h"
 #include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/FrontendOptions.h"
 #include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Lower/LoweringOptions.h"
-#include "flang/Parser/parsing.h"
+#include "flang/Parser/options.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Support/LangOptions.h"
 #include "mlir/Support/Timing.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
@@ -29,7 +29,7 @@
 
 namespace llvm {
 class TargetMachine;
-}
+} // namespace llvm
 
 namespace Fortran::frontend {
 
@@ -43,7 +43,7 @@ bool parseDiagnosticArgs(clang::DiagnosticOptions &opts,
 class CompilerInvocationBase {
 public:
   /// Options controlling the diagnostic engine.
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> diagnosticOpts;
+  std::shared_ptr<clang::DiagnosticOptions> diagnosticOpts;
   /// Options for the preprocessor.
   std::shared_ptr<Fortran::frontend::PreprocessorOptions> preprocessorOpts;
 
@@ -102,8 +102,6 @@ class CompilerInvocation : public CompilerInvocationBase {
   bool debugModuleDir = false;
   bool hermeticModuleFileOutput = false;
 
-  bool warnAsErr = false;
-
   // Executable name
   const char *argv0;
 
@@ -116,6 +114,9 @@ class CompilerInvocation : public CompilerInvocationBase {
   // Fortran Dialect options
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds;
 
+  // Fortran Error options
+  size_t maxErrors = 0;
+  bool warnAsErr = false;
   // Fortran Warning options
   bool enableConformanceChecks = false;
   bool enableUsageChecks = false;
@@ -189,6 +190,8 @@ public:
   const bool &getHermeticModuleFileOutput() const {
     return hermeticModuleFileOutput;
   }
+  size_t &getMaxErrors() { return maxErrors; }
+  const size_t &getMaxErrors() const { return maxErrors; }
 
   bool &getWarnAsErr() { return warnAsErr; }
   const bool &getWarnAsErr() const { return warnAsErr; }
@@ -261,6 +264,7 @@ public:
     hermeticModuleFileOutput = flag;
   }
 
+  void setMaxErrors(size_t maxErrors) { this->maxErrors = maxErrors; }
   void setWarnAsErr(bool flag) { warnAsErr = flag; }
 
   void setUseAnalyzedObjectsForUnparse(bool flag) {

@@ -83,6 +83,11 @@ public:
   /// annotateInstWithNoAlias on the instructions of the versioned loop.
   void annotateLoopWithNoAlias();
 
+  /// Returns a pair containing the alias_scope and noalias metadata nodes for
+  /// \p OrigInst, if they exists.
+  std::pair<MDNode *, MDNode *>
+  getNoAliasMetadataFor(const Instruction *OrigInst) const;
+
   /// Set up the aliasing scopes based on the memchecks.  This needs to
   /// be called before the first call to annotateInstWithNoAlias.
   void prepareNoAliasMetadata();

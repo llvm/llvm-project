@@ -66,14 +66,8 @@
    don't. */
 #define HAVE_DECL_STRERROR_S 0
 
-/* Define to 1 if you have the <dlfcn.h> header file. */
-#define HAVE_DLFCN_H 1
-
 /* Define if dlopen() is available on this platform. */
 #define HAVE_DLOPEN 1
-
-/* Define if dladdr() is available on this platform. */
-#define HAVE_DLADDR 1
 
 /* Define to 1 if we can register EH frames on this platform. */
 /* HAVE_REGISTER_FRAME defined in Bazel*/
@@ -176,6 +170,9 @@
 
 /* Define to 1 if you have the <sys/mman.h> header file. */
 #define HAVE_SYS_MMAN_H 1
+
+/* Define to 1 if you have the <sys/ioctl.h> header file. */
+/* HAVE_SYS_IOCTL_H defined in Bazel */
 
 /* Define to 1 if stat struct has st_mtimespec member .*/
 /* #undef HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC */
@@ -301,6 +298,8 @@
 #define LLVM_SUPPORT_XCODE_SIGNPOSTS 0
 
 /* HAVE_PROC_PID_RUSAGE defined in Bazel */
+
+/* HAVE_GETAUXVAL defined in Bazel */
 
 /* Directly provide definitions here behind platform preprocessor definitions.
  * The preprocessor conditions are sufficient to handle all of the configuration

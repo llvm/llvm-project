@@ -8,7 +8,6 @@
 
 #include "InterpFrame.h"
 #include "Boolean.h"
-#include "Floating.h"
 #include "Function.h"
 #include "InterpStack.h"
 #include "InterpState.h"
@@ -23,11 +22,15 @@
 using namespace clang;
 using namespace clang::interp;
 
+InterpFrame::InterpFrame(InterpState &S)
+    : Caller(nullptr), S(S), Depth(0), Func(nullptr), RetPC(CodePtr()),
+      ArgSize(0), Args(nullptr), FrameOffset(0), IsBottom(true) {}
+
 InterpFrame::InterpFrame(InterpState &S, const Function *Func,
                          InterpFrame *Caller, CodePtr RetPC, unsigned ArgSize)
     : Caller(Caller), S(S), Depth(Caller ? Caller->Depth + 1 : 0), Func(Func),
       RetPC(RetPC), ArgSize(ArgSize), Args(static_cast<char *>(S.Stk.top())),
-      FrameOffset(S.Stk.size()) {
+      FrameOffset(S.Stk.size()), IsBottom(!Caller) {
   if (!Func)
     return;
 
@@ -73,11 +76,15 @@ InterpFrame::~InterpFrame() {
   // When destroying the InterpFrame, call the Dtor for all block
   // that haven't been destroyed via a destroy() op yet.
   // This happens when the execution is interruped midway-through.
-  if (Func) {
-    for (auto &Scope : Func->scopes()) {
-      for (auto &Local : Scope.locals()) {
-        S.deallocate(localBlock(Local.Offset));
-      }
+  destroyScopes();
+}
+
+void InterpFrame::destroyScopes() {
+  if (!Func)
+    return;
+  for (auto &Scope : Func->scopes()) {
+    for (auto &Local : Scope.locals()) {
+      S.deallocate(localBlock(Local.Offset));
     }
   }
 }
@@ -91,7 +98,7 @@ void InterpFrame::initScope(unsigned Idx) {
 }
 
 void InterpFrame::destroy(unsigned Idx) {
-  for (auto &Local : Func->getScope(Idx).locals()) {
+  for (auto &Local : Func->getScope(Idx).locals_reverse()) {
     S.deallocate(localBlock(Local.Offset));
   }
 }
@@ -99,12 +106,21 @@ void InterpFrame::destroy(unsigned Idx) {
 template <typename T>
 static void print(llvm::raw_ostream &OS, const T &V, ASTContext &ASTCtx,
                   QualType Ty) {
-  V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
+  if constexpr (std::is_same_v<Pointer, T>) {
+    if (Ty->isPointerOrReferenceType())
+      V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
+    else {
+      if (std::optional<APValue> RValue = V.toRValue(ASTCtx, Ty))
+        RValue->printPretty(OS, ASTCtx, Ty);
+      else
+        OS << "...";
+    }
+  } else {
+    V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
+  }
 }
 
 static bool shouldSkipInBacktrace(const Function *F) {
-  if (F->isBuiltin())
-    return true;
   if (F->isLambdaStaticInvoker())
     return true;
 
@@ -116,11 +132,7 @@ static bool shouldSkipInBacktrace(const Function *F) {
 }
 
 void InterpFrame::describe(llvm::raw_ostream &OS) const {
-  // We create frames for builtin functions as well, but we can't reliably
-  // diagnose them. The 'in call to' diagnostics for them add no value to the
-  // user _and_ it doesn't generally work since the argument types don't always
-  // match the function prototype. Just ignore them.
-  // Similarly, for lambda static invokers, we would just print __invoke().
+  // For lambda static invokers, we would just print __invoke().
   if (const auto *F = getFunction(); F && shouldSkipInBacktrace(F))
     return;
 
@@ -244,7 +256,7 @@ SourceInfo InterpFrame::getSource(CodePtr PC) const {
 
 const Expr *InterpFrame::getExpr(CodePtr PC) const {
   if (Func && !funcHasUsableBody(Func) && Caller)
-    return Caller->getExpr(PC);
+    return Caller->getExpr(RetPC);
 
   return S.getExpr(Func, PC);
 }

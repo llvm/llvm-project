@@ -426,9 +426,7 @@ DynamicLoaderHexagonDYLD::GetStepThroughTrampolinePlan(Thread &thread,
   typedef std::vector<lldb::addr_t> AddressVector;
   AddressVector addrs;
   for (const SymbolContext &context : target_symbols) {
-    AddressRange range;
-    context.GetAddressRange(eSymbolContextEverything, 0, false, range);
-    lldb::addr_t addr = range.GetBaseAddress().GetLoadAddress(&target);
+    addr_t addr = context.GetFunctionOrSymbolAddress().GetLoadAddress(&target);
     if (addr != LLDB_INVALID_ADDRESS)
       addrs.push_back(addr);
   }

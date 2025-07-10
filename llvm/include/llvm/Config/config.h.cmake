@@ -19,10 +19,6 @@
 /* Define to 1 to enable crash memory dumps, and to 0 otherwise. */
 #cmakedefine01 LLVM_ENABLE_CRASH_DUMPS
 
-/* Define to 1 to enable expensive checks for debug location coverage checking,
-   and to 0 otherwise. */
-#cmakedefine01 ENABLE_DEBUGLOC_COVERAGE_TRACKING
-
 /* Define to 1 to prefer forward slashes on Windows, and to 0 prefer
    backslashes. */
 #cmakedefine01 LLVM_WINDOWS_PREFER_FORWARD_SLASH
@@ -54,14 +50,8 @@
    don't. */
 #cmakedefine01 HAVE_DECL_STRERROR_S
 
-/* Define to 1 if you have the <dlfcn.h> header file. */
-#cmakedefine HAVE_DLFCN_H ${HAVE_DLFCN_H}
-
 /* Define if dlopen() is available on this platform. */
 #cmakedefine HAVE_DLOPEN ${HAVE_DLOPEN}
-
-/* Define if dladdr() is available on this platform. */
-#cmakedefine HAVE_DLADDR ${HAVE_DLADDR}
 
 /* Define to 1 if we can register EH frames on this platform. */
 #cmakedefine HAVE_REGISTER_FRAME ${HAVE_REGISTER_FRAME}
@@ -174,6 +164,9 @@
 /* Define to 1 if you have the <sys/mman.h> header file. */
 #cmakedefine HAVE_SYS_MMAN_H ${HAVE_SYS_MMAN_H}
 
+/* Define to 1 if you have the <sys/ioctl.h> header file. */
+#cmakedefine HAVE_SYS_IOCTL_H ${HAVE_SYS_IOCTL_H}
+
 /* Define to 1 if stat struct has st_mtimespec member .*/
 #cmakedefine HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC ${HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC}
 
@@ -246,6 +239,12 @@
 /* Have host's ___chkstk_ms */
 #cmakedefine HAVE____CHKSTK_MS ${HAVE____CHKSTK_MS}
 
+/* Define if ICU library is available */
+#cmakedefine01 HAVE_ICU
+
+/* Define if iconv library is available */
+#cmakedefine01 HAVE_ICONV
+
 /* Linker version detected at compile time. */
 #cmakedefine HOST_LINK_VERSION "${HOST_LINK_VERSION}"
 
@@ -300,5 +299,7 @@
 #cmakedefine HAVE_PROC_PID_RUSAGE 1
 
 #cmakedefine HAVE_BUILTIN_THREAD_POINTER ${HAVE_BUILTIN_THREAD_POINTER}
+
+#cmakedefine HAVE_GETAUXVAL ${HAVE_GETAUXVAL}
 
 #endif

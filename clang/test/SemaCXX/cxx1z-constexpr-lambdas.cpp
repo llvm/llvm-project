@@ -349,3 +349,55 @@ static_assert(OtherCaptures(), "");
 } // namespace PR36054
 
 #endif // ndef CPP14_AND_EARLIER
+
+
+#if __cpp_constexpr >= 201907L
+namespace GH114234 {
+template <auto Arg>
+auto g() { return Arg; }
+
+template <typename>
+auto f() {
+    []<typename>() {
+        g<[] { return 123; }()>();
+    }.template operator()<int>();
+}
+
+void test() { f<int>(); }
+}
+
+namespace GH97958 {
+static_assert(
+  []<int I=0>() -> decltype([]{ return true; })
+  { return {}; }()());
+}
+
+#endif
+
+#ifndef CPP14_AND_EARLIER
+namespace GH145956 {
+  constexpr int f() {
+    struct Pair { int first; int second; };
+    Pair p = {1, 2};
+    auto const& [key, value] = p;
+    return [&] { return key; }();
+#if __cpp_constexpr < 202002L
+    // expected-warning@-2 {{captured structured bindings are a C++20 extension}}
+    // expected-note@-4 {{'key' declared here}}
+#endif
+  }
+  static_assert(f() == 1);
+  constexpr auto retlambda() {
+    struct Pair { int first; int second; };
+    Pair p = {1, 2};
+    auto const& [key, value] = p;
+    return [=] { return key; };
+#if __cpp_constexpr < 202002L
+    // expected-warning@-2 {{captured structured bindings are a C++20 extension}}
+    // expected-note@-4 {{'key' declared here}}
+#endif
+  }
+  constexpr auto lambda = retlambda();
+  static_assert(lambda() == 1);
+}
+#endif

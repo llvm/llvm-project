@@ -119,7 +119,7 @@ Internally, a `clangDriver` based compiler driver works by creating actions
 that correspond to various compilation phases, e.g. `PreprocessJobClass`,
 `CompileJobClass`, `BackendJobClass` or `LinkJobClass` from the
 `clang::driver::Action::ActionClass` enum. There are also other, more
-specialised actions, e.g. `MigrateJobClass` or `InputClass`, that do not map
+specialised actions, e.g. `InputClass`, that do not map
 directly to common compilation steps. The actions to run are determined from
 the supplied compiler flags, e.g.
 
@@ -175,19 +175,18 @@ like this:
 
 ```
 $ flang -v -o example example.o
-"/usr/bin/ld" [...] example.o [...] "-lFortranRuntime" "-lFortranDecimal" [...]
+"/usr/bin/ld" [...] example.o [...] "-lflang_rt.runtime" [...]
 ```
 
 The automatically added libraries are:
 
-* `FortranRuntime`: Provides most of the Flang runtime library.
-* `FortranDecimal`: Provides operations for decimal numbers.
+* `flang_rt.runtime`: Provides most of the Flang runtime library.
 
 If the code is C/C++ based and invokes Fortran routines, one can either use Clang
 or Flang as the linker driver.  If Clang is used, it will automatically all
 required runtime libraries needed by C++ (e.g., for STL) to the linker invocation.
-In this case, one has to explicitly provide the Fortran runtime libraries
-`FortranRuntime` and/or `FortranDecimal`.  An alternative is to use Flang to link.
+In this case, one has to explicitly provide the Fortran runtime library
+`flang_rt.runtime`.  An alternative is to use Flang to link.
 In this case, it may be required to explicitly supply C++ runtime libraries.
 
 On Darwin, the logical root where the system libraries are located (sysroot)
@@ -615,3 +614,31 @@ nvfortran defines `-fast` as
  - `-Mcache_align`: there is no equivalent flag in Flang or Clang.
  - `-Mflushz`: flush-to-zero mode - when `-ffast-math` is specified, Flang will
    link to `crtfastmath.o` to ensure denormal numbers are flushed to zero.
+
+
+## FCC_OVERRIDE_OPTIONS
+
+The environment variable `FCC_OVERRIDE_OPTIONS` can be used to edit flang's
+command line arguments. The value of this variable is a space-separated list of
+edits to perform. The edits are applied in the order in which they appear in
+`FCC_OVERRIDE_OPTIONS`. Each edit should be one of the following form:
+
+- `#`: Silence information about the changes to the command line arguments.
+
+- `^FOO`: Add `FOO` as a new argument at the beginning of the command line right
+  after the name of the compiler executable.
+
+- `+FOO`: Add `FOO` as a new argument at the end of the command line.
+
+- `s/XXX/YYY/`: Substitute the regular expression `XXX` with `YYY` in the
+  command line.
+
+- `xOPTION`: Removes all instances of the literal argument `OPTION`.
+
+- `XOPTION`: Removes all instances of the literal argument `OPTION`, and the
+  following argument.
+
+- `Ox`: Removes all flags matching `O` or `O[sz0-9]` and adds `Ox` at the end
+  of the command line.
+
+This environment variable does not affect the options added by the config files.

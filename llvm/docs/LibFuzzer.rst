@@ -354,16 +354,18 @@ Output
 
 During operation the fuzzer prints information to ``stderr``, for example::
 
-  INFO: Seed: 1523017872
-  INFO: Loaded 1 modules (16 guards): [0x744e60, 0x744ea0),
-  INFO: -max_len is not provided, using 64
+  INFO: Running with entropic power schedule (0xFF, 100).
+  INFO: Seed: 1434179311
+  INFO: Loaded 1 modules   (8 inline 8-bit counters): 8 [0x5f03d189be90, 0x5f03d189be98),
+  INFO: Loaded 1 PC tables (8 PCs): 8 [0x5f03d189be98,0x5f03d189bf18),
+  INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 4096 bytes
   INFO: A corpus is not provided, starting from an empty corpus
-  #0	READ units: 1
-  #1	INITED cov: 3 ft: 2 corp: 1/1b exec/s: 0 rss: 24Mb
-  #3811	NEW    cov: 4 ft: 3 corp: 2/2b exec/s: 0 rss: 25Mb L: 1 MS: 5 ChangeBit-ChangeByte-ChangeBit-ShuffleBytes-ChangeByte-
-  #3827	NEW    cov: 5 ft: 4 corp: 3/4b exec/s: 0 rss: 25Mb L: 2 MS: 1 CopyPart-
-  #3963	NEW    cov: 6 ft: 5 corp: 4/6b exec/s: 0 rss: 25Mb L: 2 MS: 2 ShuffleBytes-ChangeBit-
-  #4167	NEW    cov: 7 ft: 6 corp: 5/9b exec/s: 0 rss: 25Mb L: 3 MS: 1 InsertByte-
+  #2      INITED cov: 2 ft: 2 corp: 1/1b exec/s: 0 rss: 31Mb
+  #144    NEW    cov: 3 ft: 3 corp: 2/2b lim: 4 exec/s: 0 rss: 31Mb L: 1/1 MS: 2 ChangeByte-ChangeByte-
+  #157    NEW    cov: 4 ft: 4 corp: 3/4b lim: 4 exec/s: 0 rss: 31Mb L: 2/2 MS: 3 CrossOver-ChangeBit-CrossOver-
+  #1345   NEW    cov: 5 ft: 5 corp: 4/8b lim: 14 exec/s: 0 rss: 32Mb L: 4/4 MS: 3 InsertByte-ChangeBit-CrossOver-
+  #1696   NEW    cov: 6 ft: 6 corp: 5/10b lim: 17 exec/s: 0 rss: 32Mb L: 2/4 MS: 1 EraseBytes-
+  #1832   REDUCE cov: 6 ft: 6 corp: 5/9b lim: 17 exec/s: 0 rss: 32Mb L: 3/3 MS: 1 EraseBytes-
   ...
 
 The early parts of the output include information about the fuzzer options and
@@ -407,7 +409,7 @@ Each output line also reports the following statistics (when non-zero):
 ``corp:``
   Number of entries in the current in-memory test corpus and its size in bytes.
 ``lim:``
-  Current limit on the length of new entries in the corpus.  Increases over time
+  Current limit on the length of new entries in the corpus. Increases over time
   until the max length (``-max_len``) is reached.
 ``exec/s:``
   Number of fuzzer iterations per second.
@@ -418,7 +420,8 @@ For ``NEW`` and ``REDUCE`` events, the output line also includes information
 about the mutation operation that produced the new input:
 
 ``L:``
-  Size of the new input in bytes.
+  Size of the new/reduced input in bytes and the size of the largest input
+  in current in-memory test corpus.
 ``MS: <n> <operations>``
   Count and list of the mutation operations used to generate the input.
 
@@ -453,19 +456,26 @@ A simple function that does something interesting if it receives the input
 
 You should get an error pretty quickly::
 
-  INFO: Seed: 1523017872
-  INFO: Loaded 1 modules (16 guards): [0x744e60, 0x744ea0),
-  INFO: -max_len is not provided, using 64
+  INFO: Running with entropic power schedule (0xFF, 100).
+  INFO: Seed: 1434179311
+  INFO: Loaded 1 modules   (8 inline 8-bit counters): 8 [0x5f03d189be90, 0x5f03d189be98),
+  INFO: Loaded 1 PC tables (8 PCs): 8 [0x5f03d189be98,0x5f03d189bf18),
+  INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 4096 bytes
   INFO: A corpus is not provided, starting from an empty corpus
-  #0	READ units: 1
-  #1	INITED cov: 3 ft: 2 corp: 1/1b exec/s: 0 rss: 24Mb
-  #3811	NEW    cov: 4 ft: 3 corp: 2/2b exec/s: 0 rss: 25Mb L: 1 MS: 5 ChangeBit-ChangeByte-ChangeBit-ShuffleBytes-ChangeByte-
-  #3827	NEW    cov: 5 ft: 4 corp: 3/4b exec/s: 0 rss: 25Mb L: 2 MS: 1 CopyPart-
-  #3963	NEW    cov: 6 ft: 5 corp: 4/6b exec/s: 0 rss: 25Mb L: 2 MS: 2 ShuffleBytes-ChangeBit-
-  #4167	NEW    cov: 7 ft: 6 corp: 5/9b exec/s: 0 rss: 25Mb L: 3 MS: 1 InsertByte-
-  ==31511== ERROR: libFuzzer: deadly signal
+  #2      INITED cov: 2 ft: 2 corp: 1/1b exec/s: 0 rss: 31Mb
+  #144    NEW    cov: 3 ft: 3 corp: 2/2b lim: 4 exec/s: 0 rss: 31Mb L: 1/1 MS: 2 ChangeByte-ChangeByte-
+  #157    NEW    cov: 4 ft: 4 corp: 3/4b lim: 4 exec/s: 0 rss: 31Mb L: 2/2 MS: 3 CrossOver-ChangeBit-CrossOver-
+  #1345   NEW    cov: 5 ft: 5 corp: 4/8b lim: 14 exec/s: 0 rss: 32Mb L: 4/4 MS: 3 InsertByte-ChangeBit-CrossOver-
+  #1696   NEW    cov: 6 ft: 6 corp: 5/10b lim: 17 exec/s: 0 rss: 32Mb L: 2/4 MS: 1 EraseBytes-
+  #1832   REDUCE cov: 6 ft: 6 corp: 5/9b lim: 17 exec/s: 0 rss: 32Mb L: 3/3 MS: 1 EraseBytes-
+  ==840148== ERROR: libFuzzer: deadly signal
   ...
-  artifact_prefix='./'; Test unit written to ./crash-b13e8756b13a00cf168300179061fb4b91fefbed
+  SUMMARY: libFuzzer: deadly signal
+  MS: 2 CopyPart-ChangeByte-; base unit: dbee5f8c7a5da845446e75b4a5708e74428b520a
+  0x48,0x49,0x21,
+  HI!
+  artifact_prefix='./'; Test unit written to ./crash-7a8dc3985d2a90fb6e62e94910fc11d31949c348
+  Base64: SEkh
 
 
 More examples

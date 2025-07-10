@@ -17,6 +17,7 @@
 #include <list>
 #include <map>
 #include <shared_mutex>
+#include <variant>
 #include <vector>
 
 #include "ExclusiveAccess.h"
@@ -30,6 +31,7 @@
 #include "GlobalHandler.h"
 #include "JIT.h"
 #include "MemoryManager.h"
+#include "OffloadError.h"
 #include "RPC.h"
 #include "omptarget.h"
 
@@ -92,14 +94,14 @@ struct AsyncInfoWrapperTy {
   }
 
   /// Synchronize with the __tgt_async_info's pending operations if it's the
-  /// internal async info. The error associated to the aysnchronous operations
+  /// internal async info. The error associated to the asynchronous operations
   /// issued in this queue must be provided in \p Err. This function will update
   /// the error parameter with the result of the synchronization if it was
   /// actually executed. This function must be called before destroying the
   /// object and only once.
   void finalize(Error &Err);
 
-  /// Register \p Ptr as an associated alloction that is freed after
+  /// Register \p Ptr as an associated allocation that is freed after
   /// finalization.
   void freeAllocationAfterSynchronization(void *Ptr) {
     AsyncInfoPtr->AssociatedAllocations.push_back(Ptr);
@@ -111,77 +113,116 @@ private:
   __tgt_async_info *AsyncInfoPtr;
 };
 
-/// The information level represents the level of a key-value property in the
-/// info tree print (i.e. indentation). The first level should be the default.
-enum InfoLevelKind { InfoLevel1 = 1, InfoLevel2, InfoLevel3 };
+/// Tree node for device information
+///
+/// This information is either printed or used by liboffload to extract certain
+/// device queries. Each property has an optional key, an optional value
+/// and optional children. The children can be used to store additional
+/// information (such as x, y and z components of ranges).
+struct InfoTreeNode {
+  static constexpr uint64_t IndentSize = 4;
 
-/// Class for storing device information and later be printed. An object of this
-/// type acts as a queue of key-value properties. Each property has a key, a
-/// a value, and an optional unit for the value. For printing purposes, the
-/// information can be classified into several levels. These levels are useful
-/// for defining sections and subsections. Thus, each key-value property also
-/// has an additional field indicating to which level belongs to. Notice that
-/// we use the level to determine the indentation of the key-value property at
-/// printing time. See the enum InfoLevelKind for the list of accepted levels.
-class InfoQueueTy {
-public:
-  struct InfoQueueEntryTy {
-    std::string Key;
-    std::string Value;
-    std::string Units;
-    uint64_t Level;
-  };
+  std::string Key;
+  using VariantType = std::variant<uint64_t, std::string, bool, std::monostate>;
+  VariantType Value;
+  std::string Units;
+  // Need to specify a default value number of elements here as `InfoTreeNode`'s
+  // size is unknown. This is a vector (rather than a Key->Value map) since:
+  // * The keys need to be owned and thus `std::string`s
+  // * The order of keys is important
+  // * The same key can appear multiple times
+  std::unique_ptr<llvm::SmallVector<InfoTreeNode, 8>> Children;
 
-private:
-  std::deque<InfoQueueEntryTy> Queue;
+  InfoTreeNode() : InfoTreeNode("", std::monostate{}, "") {}
+  InfoTreeNode(std::string Key, VariantType Value, std::string Units)
+      : Key(Key), Value(Value), Units(Units) {}
 
-public:
-  /// Add a new info entry to the queue. The entry requires at least a key
-  /// string in \p Key. The value in \p Value is optional and can be any type
-  /// that is representable as a string. The units in \p Units is optional and
-  /// must be a string. The info level is a template parameter that defaults to
-  /// the first level (top level).
-  template <InfoLevelKind L = InfoLevel1, typename T = std::string>
-  void add(const std::string &Key, T Value = T(),
-           const std::string &Units = std::string()) {
+  /// Add a new info entry as a child of this node. The entry requires at least
+  /// a key string in \p Key. The value in \p Value is optional and can be any
+  /// type that is representable as a string. The units in \p Units is optional
+  /// and must be a string.
+  template <typename T = std::monostate>
+  InfoTreeNode *add(std::string Key, T Value = T(),
+                    const std::string &Units = std::string()) {
     assert(!Key.empty() && "Invalid info key");
 
-    // Convert the value to a string depending on its type.
-    if constexpr (std::is_same_v<T, bool>)
-      Queue.push_back({Key, Value ? "Yes" : "No", Units, L});
+    if (!Children)
+      Children = std::make_unique<llvm::SmallVector<InfoTreeNode, 8>>();
+
+    VariantType ValueVariant;
+    if constexpr (std::is_same_v<T, bool> || std::is_same_v<T, std::monostate>)
+      ValueVariant = Value;
     else if constexpr (std::is_arithmetic_v<T>)
-      Queue.push_back({Key, std::to_string(Value), Units, L});
+      ValueVariant = static_cast<uint64_t>(Value);
     else
-      Queue.push_back({Key, Value, Units, L});
+      ValueVariant = std::string{Value};
+
+    return &Children->emplace_back(Key, ValueVariant, Units);
   }
 
-  const std::deque<InfoQueueEntryTy> &getQueue() const { return Queue; }
+  std::optional<InfoTreeNode *> get(StringRef Key) {
+    if (!Children)
+      return std::nullopt;
 
-  /// Print all info entries added to the queue.
+    auto It = std::find_if(Children->begin(), Children->end(),
+                           [&](auto &V) { return V.Key == Key; });
+    if (It == Children->end())
+      return std::nullopt;
+    return It;
+  }
+
+  /// Print all info entries in the tree
   void print() const {
-    // We print four spances for each level.
-    constexpr uint64_t IndentSize = 4;
+    // Fake an additional indent so that values are offset from the keys
+    doPrint(0, maxKeySize(1));
+  }
 
-    // Find the maximum key length (level + key) to compute the individual
-    // indentation of each entry.
-    uint64_t MaxKeySize = 0;
-    for (const auto &Entry : Queue) {
-      uint64_t KeySize = Entry.Key.size() + Entry.Level * IndentSize;
-      if (KeySize > MaxKeySize)
-        MaxKeySize = KeySize;
-    }
-
-    // Print all info entries.
-    for (const auto &Entry : Queue) {
+private:
+  void doPrint(int Level, uint64_t MaxKeySize) const {
+    if (Key.size()) {
       // Compute the indentations for the current entry.
-      uint64_t KeyIndentSize = Entry.Level * IndentSize;
+      uint64_t KeyIndentSize = Level * IndentSize;
       uint64_t ValIndentSize =
-          MaxKeySize - (Entry.Key.size() + KeyIndentSize) + IndentSize;
+          MaxKeySize - (Key.size() + KeyIndentSize) + IndentSize;
 
-      llvm::outs() << std::string(KeyIndentSize, ' ') << Entry.Key
-                   << std::string(ValIndentSize, ' ') << Entry.Value
-                   << (Entry.Units.empty() ? "" : " ") << Entry.Units << "\n";
+      llvm::outs() << std::string(KeyIndentSize, ' ') << Key
+                   << std::string(ValIndentSize, ' ');
+      std::visit(
+          [](auto &&V) {
+            using T = std::decay_t<decltype(V)>;
+            if constexpr (std::is_same_v<T, std::string>)
+              llvm::outs() << V;
+            else if constexpr (std::is_same_v<T, bool>)
+              llvm::outs() << (V ? "Yes" : "No");
+            else if constexpr (std::is_same_v<T, uint64_t>)
+              llvm::outs() << V;
+            else if constexpr (std::is_same_v<T, std::monostate>) {
+              // Do nothing
+            } else
+              static_assert(false, "doPrint visit not exhaustive");
+          },
+          Value);
+      llvm::outs() << (Units.empty() ? "" : " ") << Units << "\n";
     }
+
+    // Print children
+    if (Children)
+      for (const auto &Entry : *Children)
+        Entry.doPrint(Level + 1, MaxKeySize);
+  }
+
+  // Recursively calculates the maximum width of each key, including indentation
+  uint64_t maxKeySize(int Level) const {
+    uint64_t MaxKeySize = 0;
+
+    if (Children)
+      for (const auto &Entry : *Children) {
+        uint64_t KeySize = Entry.Key.size() + Level * IndentSize;
+        MaxKeySize = std::max(MaxKeySize, KeySize);
+        MaxKeySize = std::max(MaxKeySize, Entry.maxKeySize(Level + 1));
+      }
+
+    return MaxKeySize;
   }
 };
 
@@ -276,7 +317,7 @@ struct GenericKernelTy {
                            AsyncInfoWrapperTy &AsyncInfoWrapper) const = 0;
 
   /// Get the kernel name.
-  const char *getName() const { return Name; }
+  const char *getName() const { return Name.c_str(); }
 
   /// Get the kernel image.
   DeviceImageTy &getImage() const {
@@ -297,6 +338,7 @@ struct GenericKernelTy {
   /// Indicate whether an execution mode is valid.
   static bool isValidExecutionMode(OMPTgtExecModeFlags ExecutionMode) {
     switch (ExecutionMode) {
+    case OMP_TGT_EXEC_MODE_BARE:
     case OMP_TGT_EXEC_MODE_SPMD:
     case OMP_TGT_EXEC_MODE_GENERIC:
     case OMP_TGT_EXEC_MODE_GENERIC_SPMD:
@@ -309,6 +351,8 @@ protected:
   /// Get the execution mode name of the kernel.
   const char *getExecutionModeName() const {
     switch (KernelEnvironment.Configuration.ExecMode) {
+    case OMP_TGT_EXEC_MODE_BARE:
+      return "BARE";
     case OMP_TGT_EXEC_MODE_SPMD:
       return "SPMD";
     case OMP_TGT_EXEC_MODE_GENERIC:
@@ -364,9 +408,12 @@ private:
   bool isSPMDMode() const {
     return KernelEnvironment.Configuration.ExecMode == OMP_TGT_EXEC_MODE_SPMD;
   }
+  bool isBareMode() const {
+    return KernelEnvironment.Configuration.ExecMode == OMP_TGT_EXEC_MODE_BARE;
+  }
 
   /// The kernel name.
-  const char *Name;
+  std::string Name;
 
   /// The image that contains this kernel.
   DeviceImageTy *ImagePtr = nullptr;
@@ -383,9 +430,6 @@ protected:
 
   /// The prototype kernel launch environment.
   KernelLaunchEnvironmentTy KernelLaunchEnvironment;
-
-  /// If the kernel is a bare kernel.
-  bool IsBareKernel = false;
 };
 
 /// Information about an allocation, when it has been allocated, and when/if it
@@ -456,7 +500,7 @@ private:
 };
 
 /// Class representing a map of host pinned allocations. We track these pinned
-/// allocations, so memory tranfers invloving these buffers can be optimized.
+/// allocations, so memory transfers involving these buffers can be optimized.
 class PinnedAllocationMapTy {
 
   /// Struct representing a map entry.
@@ -482,7 +526,7 @@ class PinnedAllocationMapTy {
     /// becomes zero.
     mutable size_t References;
 
-    /// Create an entry with the host and device acessible pointers, the buffer
+    /// Create an entry with the host and device accessible pointers, the buffer
     /// size, and a boolean indicating whether the buffer was locked externally.
     EntryTy(void *HstPtr, void *DevAccessiblePtr, size_t Size,
             bool ExternallyLocked)
@@ -517,7 +561,7 @@ class PinnedAllocationMapTy {
   /// Indicate whether mapped host buffers should be locked automatically.
   bool LockMappedBuffers;
 
-  /// Indicate whether failures when locking mapped buffers should be ingored.
+  /// Indicate whether failures when locking mapped buffers should be ignored.
   bool IgnoreLockMappedFailures;
 
   /// Find an allocation that intersects with \p HstPtr pointer. Assume the
@@ -708,6 +752,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Expected<DeviceImageTy *>
   loadBinaryImpl(const __tgt_device_image *TgtImage, int32_t ImageId) = 0;
 
+  /// Unload a previously loaded Image from the device
+  Error unloadBinary(DeviceImageTy *Image);
+  virtual Error unloadBinaryImpl(DeviceImageTy *Image) = 0;
+
   /// Setup the device environment if needed. Notice this setup may not be run
   /// on some plugins. By default, it will be executed, but plugins can change
   /// this behavior by overriding the shouldSetupDeviceEnvironment function.
@@ -867,7 +915,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Print information about the device.
   Error printInfo();
-  virtual Error obtainInfoImpl(InfoQueueTy &Info) = 0;
+  virtual Expected<InfoTreeNode> obtainInfoImpl() = 0;
 
   /// Getters of the grid values.
   uint32_t getWarpSize() const { return GridValues.GV_Warp_Size; }
@@ -992,6 +1040,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   BoolEnvar OMPX_TrackAllocationTraces =
       BoolEnvar("OFFLOAD_TRACK_ALLOCATION_TRACES", false);
 
+  /// Array of images loaded into the device. Images are automatically
+  /// deallocated by the allocator.
+  llvm::SmallVector<DeviceImageTy *> LoadedImages;
+
 private:
   /// Get and set the stack size and heap size for the device. If not used, the
   /// plugin can implement the setters as no-op and setting the output
@@ -1041,10 +1093,6 @@ protected:
   /// regarding the initial number of streams and events.
   UInt32Envar OMPX_InitialNumStreams;
   UInt32Envar OMPX_InitialNumEvents;
-
-  /// Array of images loaded into the device. Images are automatically
-  /// deallocated by the allocator.
-  llvm::SmallVector<DeviceImageTy *> LoadedImages;
 
   /// The identifier of the device within the plugin. Notice this is not a
   /// global device id and is not the device id visible to the OpenMP user.
@@ -1122,7 +1170,7 @@ struct GenericPluginTy {
   /// Get the reference to the device with a certain device id.
   GenericDeviceTy &getDevice(int32_t DeviceId) {
     assert(isValidDeviceId(DeviceId) && "Invalid device id");
-    assert(Devices[DeviceId] && "Device is unitialized");
+    assert(Devices[DeviceId] && "Device is uninitialized");
 
     return *Devices[DeviceId];
   }
@@ -1149,6 +1197,8 @@ struct GenericPluginTy {
   template <typename Ty> Ty *allocate() {
     return reinterpret_cast<Ty *>(Allocator.Allocate(sizeof(Ty), alignof(Ty)));
   }
+
+  template <typename Ty> void free(Ty *Mem) { Allocator.Deallocate(Mem); }
 
   /// Get the reference to the global handler of this plugin.
   GenericGlobalHandlerTy &getGlobalHandler() {
@@ -1270,7 +1320,7 @@ public:
   int32_t data_retrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr,
                         int64_t Size);
 
-  /// Copy data from the given device asynchornously.
+  /// Copy data from the given device asynchronously.
   int32_t data_retrieve_async(int32_t DeviceId, void *HstPtr, void *TgtPtr,
                               int64_t Size, __tgt_async_info *AsyncInfoPtr);
 
@@ -1308,7 +1358,7 @@ public:
   int32_t wait_event(int32_t DeviceId, void *EventPtr,
                      __tgt_async_info *AsyncInfoPtr);
 
-  /// Syncrhonize execution until an event is done.
+  /// Synchronize execution until an event is done.
   int32_t sync_event(int32_t DeviceId, void *EventPtr);
 
   /// Remove the event from the plugin.
@@ -1327,7 +1377,7 @@ public:
   /// Sets the offset into the devices for use by OMPT.
   int32_t set_device_identifier(int32_t UserId, int32_t DeviceId);
 
-  /// Returns if the plugin can support auotmatic copy.
+  /// Returns if the plugin can support automatic copy.
   int32_t use_auto_zero_copy(int32_t DeviceId);
 
   /// Look up a global symbol in the given binary.
@@ -1376,10 +1426,19 @@ namespace Plugin {
 /// Plugin::check().
 static inline Error success() { return Error::success(); }
 
-/// Create a string error.
+/// Create an Offload error.
 template <typename... ArgsTy>
-static Error error(const char *ErrFmt, ArgsTy... Args) {
-  return createStringError(inconvertibleErrorCode(), ErrFmt, Args...);
+static Error error(error::ErrorCode Code, const char *ErrFmt, ArgsTy... Args) {
+  return error::createOffloadError(Code, ErrFmt, Args...);
+}
+
+inline Error error(error::ErrorCode Code, const char *S) {
+  return make_error<error::OffloadError>(Code, S);
+}
+
+inline Error error(error::ErrorCode Code, Error &&OtherError,
+                   const char *Context) {
+  return error::createOffloadError(Code, std::move(OtherError), Context);
 }
 
 /// Check the plugin-specific error code and return an error or success

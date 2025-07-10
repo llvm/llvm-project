@@ -207,6 +207,10 @@ else
 		override ARCH :=
 		override ARCHFLAG :=
 	endif
+	ifeq "$(ARCH)" "riscv"
+		override ARCH :=
+		override ARCHFLAG :=
+	endif
 	ifeq "$(findstring mips,$(ARCH))" "mips"
 		override ARCHFLAG := -
 	endif
@@ -270,6 +274,10 @@ endif
 
 ifeq "$(MAKE_DWO)" "YES"
 	CFLAGS += -gsplit-dwarf
+endif
+
+ifeq "$(MAKE_DEBUG_NAMES)" "YES"
+	CFLAGS += -gpubnames
 endif
 
 ifeq "$(USE_PRIVATE_MODULE_CACHE)" "YES"

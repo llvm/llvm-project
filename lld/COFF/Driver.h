@@ -143,8 +143,6 @@ private:
   // Used by the resolver to parse .drectve section contents.
   void parseDirectives(InputFile *file);
 
-  void parseModuleDefs(StringRef path);
-
   // Parse an /order file. If an option is given, the linker places COMDAT
   // sections int he same order as their names appear in the given file.
   void parseOrderFile(StringRef arg);
@@ -211,11 +209,9 @@ private:
   void parseSubsystem(StringRef arg, WindowsSubsystem *sys, uint32_t *major,
                       uint32_t *minor, bool *gotVersion = nullptr);
 
-  void parseAlternateName(StringRef);
   void parseMerge(StringRef);
   void parsePDBPageSize(StringRef);
   void parseSection(StringRef);
-  void parseAligncomm(StringRef);
 
   // Parses a MS-DOS stub file
   void parseDosStub(StringRef path);

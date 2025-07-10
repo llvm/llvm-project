@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_SELECTIONDAGISEL_H
 #define LLVM_CODEGEN_SELECTIONDAGISEL_H
 
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -46,19 +47,17 @@ public:
   TargetMachine &TM;
   const TargetLibraryInfo *LibInfo;
   std::unique_ptr<FunctionLoweringInfo> FuncInfo;
-  SwiftErrorValueTracking *SwiftError;
+  std::unique_ptr<SwiftErrorValueTracking> SwiftError;
   MachineFunction *MF;
   MachineModuleInfo *MMI;
   MachineRegisterInfo *RegInfo;
   SelectionDAG *CurDAG;
   std::unique_ptr<SelectionDAGBuilder> SDB;
-  AAResults *AA = nullptr;
+  mutable std::optional<BatchAAResults> BatchAA;
   AssumptionCache *AC = nullptr;
   GCFunctionInfo *GFI = nullptr;
   SSPLayoutInfo *SP = nullptr;
-#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
   TargetTransformInfo *TTI = nullptr;
-#endif
   CodeGenOptLevel OptLevel;
   const TargetInstrInfo *TII;
   const TargetLowering *TLI;
@@ -80,6 +79,13 @@ public:
   explicit SelectionDAGISel(TargetMachine &tm,
                             CodeGenOptLevel OL = CodeGenOptLevel::Default);
   virtual ~SelectionDAGISel();
+
+  /// Returns a (possibly null) pointer to the current BatchAAResults.
+  BatchAAResults *getBatchAA() const {
+    if (BatchAA.has_value())
+      return &BatchAA.value();
+    return nullptr;
+  }
 
   const TargetLowering *getTargetLowering() const { return TLI; }
 
@@ -320,20 +326,21 @@ public:
   };
 
   enum {
-    OPFL_None       = 0,  // Node has no chain or glue input and isn't variadic.
-    OPFL_Chain      = 1,     // Node has a chain input.
-    OPFL_GlueInput  = 2,     // Node has a glue input.
-    OPFL_GlueOutput = 4,     // Node has a glue output.
-    OPFL_MemRefs    = 8,     // Node gets accumulated MemRefs.
-    OPFL_Variadic0  = 1<<4,  // Node is variadic, root has 0 fixed inputs.
-    OPFL_Variadic1  = 2<<4,  // Node is variadic, root has 1 fixed inputs.
-    OPFL_Variadic2  = 3<<4,  // Node is variadic, root has 2 fixed inputs.
-    OPFL_Variadic3  = 4<<4,  // Node is variadic, root has 3 fixed inputs.
-    OPFL_Variadic4  = 5<<4,  // Node is variadic, root has 4 fixed inputs.
-    OPFL_Variadic5  = 6<<4,  // Node is variadic, root has 5 fixed inputs.
-    OPFL_Variadic6  = 7<<4,  // Node is variadic, root has 6 fixed inputs.
+    OPFL_None = 0,       // Node has no chain or glue input and isn't variadic.
+    OPFL_Chain = 1,      // Node has a chain input.
+    OPFL_GlueInput = 2,  // Node has a glue input.
+    OPFL_GlueOutput = 4, // Node has a glue output.
+    OPFL_MemRefs = 8,    // Node gets accumulated MemRefs.
+    OPFL_Variadic0 = 1 << 4, // Node is variadic, root has 0 fixed inputs.
+    OPFL_Variadic1 = 2 << 4, // Node is variadic, root has 1 fixed inputs.
+    OPFL_Variadic2 = 3 << 4, // Node is variadic, root has 2 fixed inputs.
+    OPFL_Variadic3 = 4 << 4, // Node is variadic, root has 3 fixed inputs.
+    OPFL_Variadic4 = 5 << 4, // Node is variadic, root has 4 fixed inputs.
+    OPFL_Variadic5 = 6 << 4, // Node is variadic, root has 5 fixed inputs.
+    OPFL_Variadic6 = 7 << 4, // Node is variadic, root has 6 fixed inputs.
+    OPFL_Variadic7 = 8 << 4, // Node is variadic, root has 7 fixed inputs.
 
-    OPFL_VariadicInfo = OPFL_Variadic6
+    OPFL_VariadicInfo = 15 << 4 // Mask for extracting the OPFL_VariadicN bits.
   };
 
   /// getNumFixedFromVariadicInfo - Transform an EmitNode flags word into the
@@ -417,7 +424,7 @@ public:
   /// It runs node predicate number PredNo and returns true if it succeeds or
   /// false if it fails.  The number is a private implementation
   /// detail to the code tblgen produces.
-  virtual bool CheckNodePredicate(SDNode *N, unsigned PredNo) const {
+  virtual bool CheckNodePredicate(SDValue Op, unsigned PredNo) const {
     llvm_unreachable("Tblgen should generate the implementation of this!");
   }
 
@@ -426,9 +433,9 @@ public:
   /// It runs node predicate number PredNo and returns true if it succeeds or
   /// false if it fails.  The number is a private implementation detail to the
   /// code tblgen produces.
-  virtual bool CheckNodePredicateWithOperands(
-      SDNode *N, unsigned PredNo,
-      const SmallVectorImpl<SDValue> &Operands) const {
+  virtual bool
+  CheckNodePredicateWithOperands(SDValue Op, unsigned PredNo,
+                                 ArrayRef<SDValue> Operands) const {
     llvm_unreachable("Tblgen should generate the implementation of this!");
   }
 

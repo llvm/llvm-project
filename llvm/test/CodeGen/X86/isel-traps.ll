@@ -63,8 +63,7 @@ define void @test_ubsantrap_custom() nounwind {
 ; GISEL-X86-LABEL: test_ubsantrap_custom:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    movl $42, %eax
-; GISEL-X86-NEXT:    movl %eax, (%esp)
+; GISEL-X86-NEXT:    movl $42, (%esp)
 ; GISEL-X86-NEXT:    calll guide
 ; GISEL-X86-NEXT:    addl $12, %esp
 ; GISEL-X86-NEXT:    retl

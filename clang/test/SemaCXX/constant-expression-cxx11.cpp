@@ -409,6 +409,10 @@ constexpr int a = 0;
 constexpr int b = 1;
 constexpr int n = &b - &a; // expected-error {{must be initialized by a constant expression}} \
                            // expected-note {{arithmetic involving unrelated objects '&b' and '&a' has unspecified value}}
+constexpr static int arrk[2] = {1,2};
+constexpr static int arrk2[2] = {3,4};
+constexpr int k2 = &arrk[1] - &arrk2[0]; // expected-error {{must be initialized by a constant expression}} \
+                                         // expected-note {{arithmetic involving unrelated objects}}
 
 namespace MaterializeTemporary {
 
@@ -1471,9 +1475,9 @@ namespace ConvertedConstantExpr {
   // useless note and instead just point to the non-constant subexpression.
   enum class E {
     em = m,
-    en = n, // expected-error {{not a constant expression}} expected-note {{initializer of 'n' is unknown}}
+    en = n, // expected-error {{enumerator value is not a constant expression}} cxx11_20-note {{initializer of 'n' is unknown}} cxx23-note {{read of non-constexpr variable 'n'}}
     eo = (m + // expected-error {{not a constant expression}}
-          n // expected-note {{initializer of 'n' is unknown}}
+          n // cxx11_20-note {{initializer of 'n' is unknown}} cxx23-note {{read of non-constexpr variable 'n'}}
           ),
     eq = reinterpret_cast<long>((int*)0) // expected-error {{not a constant expression}} expected-note {{reinterpret_cast}}
   };
@@ -1884,10 +1888,11 @@ namespace PR15884 {
 }
 
 namespace AfterError {
-  constexpr int error() {
+  constexpr int error() { // pre-cxx23-error {{no return statement in constexpr function}}
     return foobar; // expected-error {{undeclared identifier}}
-  }
-  constexpr int k = error(); // expected-error {{constexpr variable 'k' must be initialized by a constant expression}}
+  } // cxx23-note {{control reached end of constexpr function}}
+  constexpr int k = error(); // cxx23-error {{constexpr variable 'k' must be initialized by a constant expression}} \
+                                cxx23-note {{in call to 'error()'}}
 }
 
 namespace std {
@@ -2007,7 +2012,8 @@ namespace ConstexprConstructorRecovery {
 
 namespace Lifetime {
   void f() {
-    constexpr int &n = n; // expected-error {{constant expression}} expected-note {{use of reference outside its lifetime}} expected-warning {{not yet bound to a value}}
+    constexpr int &n = n; // expected-error {{constant expression}} cxx23-note {{reference to 'n' is not a constant expression}} cxx23-note {{address of non-static constexpr variable 'n' may differ}} expected-warning {{not yet bound to a value}}
+                          // cxx11_20-note@-1 {{use of reference outside its lifetime is not allowed in a constant expression}}
     constexpr int m = m; // expected-error {{constant expression}} expected-note {{read of object outside its lifetime}}
   }
 
@@ -2198,6 +2204,8 @@ namespace BuiltinStrlen {
   static_assert(__builtin_strlen("foo") == 3, "");
   static_assert(__builtin_strlen("foo\0quux") == 3, "");
   static_assert(__builtin_strlen("foo\0quux" + 4) == 4, "");
+  static_assert(__builtin_strlen("foo") + 1 + "foo" == "foo", ""); // expected-error {{static assertion expression is not an integral constant expression}}
+  // expected-note@-1 {{comparison against pointer '&"foo"[4]' that points past the end of a complete object has unspecified value}}
 
   constexpr bool check(const char *p) {
     return __builtin_strlen(p) == 3 &&
@@ -2427,15 +2435,15 @@ namespace array_size {
   template<typename T> void f1(T t) {
     constexpr int k = t.size();
   }
-  template<typename T> void f2(const T &t) { // expected-note 2{{declared here}}
-    constexpr int k = t.size(); // expected-error 2{{constant}} expected-note 2{{function parameter 't' with unknown value cannot be used in a constant expression}}
+  template<typename T> void f2(const T &t) { // cxx11_20-note 2{{declared here}}
+    constexpr int k = t.size();  // cxx11_20-error 2{{constexpr variable 'k' must be initialized by a constant expression}} cxx11_20-note 2{{function parameter 't' with unknown value cannot be used in a constant expression}}
   }
   template<typename T> void f3(const T &t) {
     constexpr int k = T::size();
   }
   void g(array<3> a) {
     f1(a);
-    f2(a); // expected-note {{instantiation of}}
+    f2(a); // cxx11_20-note {{in instantiation of function template}}
     f3(a);
   }
 
@@ -2444,8 +2452,9 @@ namespace array_size {
   };
   void h(array_nonstatic<3> a) {
     f1(a);
-    f2(a); // expected-note {{instantiation of}}
+    f2(a); // cxx11_20-note {{instantiation of}}
   }
+  //static_assert(f2(array_size::array<3>{}));
 }
 
 namespace flexible_array {
@@ -2505,6 +2514,9 @@ void testValueInRangeOfEnumerationValues() {
   // expected-error@-1 {{constexpr variable 'x2' must be initialized by a constant expression}}
   // expected-note@-2 {{integer value 8 is outside the valid range of values [-8, 7] for the enumeration type 'E1'}}
   E1 x2b = static_cast<E1>(8); // ok, not a constant expression context
+  static_assert(static_cast<E1>(8), "");
+  // expected-error@-1 {{static assertion expression is not an integral constant expression}}
+  // expected-note@-2 {{integer value 8 is outside the valid range of values [-8, 7] for the enumeration type 'E1'}}
 
   constexpr E2 x3 = static_cast<E2>(-8);
   // expected-error@-1 {{constexpr variable 'x3' must be initialized by a constant expression}}
@@ -2543,6 +2555,10 @@ void testValueInRangeOfEnumerationValues() {
   // expected-note@-2 {{integer value 2147483648 is outside the valid range of values [-2147483648, 2147483647] for the enumeration type 'EMaxInt'}}
 
   const NumberType neg_one = (NumberType) ((NumberType) 0 - (NumberType) 1); // ok, not a constant expression context
+  constexpr NumberType neg_one_constexpr = neg_one;
+  // expected-error@-1 {{constexpr variable 'neg_one_constexpr' must be initialized by a constant expression}}
+  // expected-note@-2 {{initializer of 'neg_one' is not a constant expression}}
+  // expected-note@-4 {{declared here}}
 
   CONSTEXPR_CAST_TO_SYSTEM_ENUM_OUTSIDE_OF_RANGE;
   // expected-error@-1 {{constexpr variable 'system_enum' must be initialized by a constant expression}}
@@ -2589,4 +2605,13 @@ struct S {
 void foo() {
   constexpr S s[2] = { }; // expected-error {{constexpr variable 's' must be initialized by a constant expression}}
 }
+}
+
+namespace DoubleCapture {
+  int DC() {
+  int a = 1000;
+    static auto f =
+      [a, &a] { // expected-error {{'a' can appear only once in a capture list}}
+    };
+  }
 }

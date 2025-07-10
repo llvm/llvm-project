@@ -240,7 +240,7 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
                 data = DataExtractor(data, offset, data.GetByteSize() - offset);
                 if (lo_pc != LLDB_INVALID_ADDRESS) {
                   assert(lo_pc >= cu->GetBaseAddress());
-                  DWARFExpression::ParseDWARFLocationList(cu, data, frame_base);
+                  cu->ParseDWARFLocationList(data, *frame_base);
                   frame_base->SetFuncFileAddress(lo_pc);
                 } else
                   set_frame_base_loclist_addr = true;
@@ -263,10 +263,9 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
   }
 
   if (set_frame_base_loclist_addr && !ranges.empty()) {
-    // TODO: Use the first range instead.
-    dw_addr_t lowest_range_pc = llvm::min_element(ranges)->LowPC;
-    assert(lowest_range_pc >= cu->GetBaseAddress());
-    frame_base->SetFuncFileAddress(lowest_range_pc);
+    dw_addr_t file_addr = ranges.begin()->LowPC;
+    assert(file_addr >= cu->GetBaseAddress());
+    frame_base->SetFuncFileAddress(file_addr);
   }
 
   if (ranges.empty() || name == nullptr || mangled == nullptr) {
@@ -404,6 +403,9 @@ dw_offset_t DWARFDebugInfoEntry::GetAttributeValue(
       const dw_offset_t attr_offset = offset;
       form_value.SetUnit(cu);
       form_value.SetForm(abbrevDecl->getFormByIndex(idx));
+      if (abbrevDecl->getAttrIsImplicitConstByIndex(idx))
+        form_value.SetValue(abbrevDecl->getAttrImplicitConstValueByIndex(idx));
+
       if (form_value.ExtractValue(data, &offset)) {
         if (end_attr_offset_ptr)
           *end_attr_offset_ptr = offset;
@@ -612,7 +614,11 @@ void DWARFDebugInfoEntry::BuildFunctionAddressRangeTable(
     DWARFUnit *cu, DWARFDebugAranges *debug_aranges) const {
   Log *log = GetLog(DWARFLog::DebugInfo);
   if (m_tag) {
-    if (m_tag == DW_TAG_subprogram) {
+    // Subprogram forward declarations don't have
+    // DW_AT_ranges/DW_AT_low_pc/DW_AT_high_pc attributes, so don't even try
+    // getting address range information for them.
+    if (m_tag == DW_TAG_subprogram &&
+        !GetAttributeValueAsOptionalUnsigned(cu, DW_AT_declaration)) {
       if (llvm::Expected<llvm::DWARFAddressRangesVector> ranges =
               GetAttributeAddressRanges(cu, /*check_hi_lo_pc=*/true)) {
         for (const auto &r : *ranges)

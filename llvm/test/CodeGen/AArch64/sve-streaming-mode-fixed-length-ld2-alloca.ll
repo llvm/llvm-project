@@ -28,23 +28,17 @@ define void @alloc_v4i8(ptr %st_ptr) nounwind {
 ;
 ; NONEON-NOSVE-LABEL: alloc_v4i8:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    sub sp, sp, #48
-; NONEON-NOSVE-NEXT:    stp x30, x19, [sp, #32] // 16-byte Folded Spill
+; NONEON-NOSVE-NEXT:    sub sp, sp, #32
+; NONEON-NOSVE-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
 ; NONEON-NOSVE-NEXT:    mov x19, x0
-; NONEON-NOSVE-NEXT:    add x0, sp, #28
+; NONEON-NOSVE-NEXT:    add x0, sp, #12
 ; NONEON-NOSVE-NEXT:    bl def
-; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #30]
-; NONEON-NOSVE-NEXT:    strh w8, [sp, #12]
-; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #28]
-; NONEON-NOSVE-NEXT:    strh w8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
-; NONEON-NOSVE-NEXT:    str d0, [sp, #16]
-; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #16]
+; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #14]
+; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #12]
 ; NONEON-NOSVE-NEXT:    strb w8, [x19, #1]
 ; NONEON-NOSVE-NEXT:    strb w9, [x19]
-; NONEON-NOSVE-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
-; NONEON-NOSVE-NEXT:    add sp, sp, #48
+; NONEON-NOSVE-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
+; NONEON-NOSVE-NEXT:    add sp, sp, #32
 ; NONEON-NOSVE-NEXT:    ret
   %alloc = alloca [4 x i8]
   call void @def(ptr %alloc)
@@ -75,8 +69,7 @@ define void @alloc_v6i8(ptr %st_ptr) nounwind {
 ; CHECK-NEXT:    ld1h { z1.s }, p1/z, [x8]
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    strb w8, [x19, #2]
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    strh w8, [x19]
+; CHECK-NEXT:    str h1, [x19]
 ; CHECK-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
@@ -124,10 +117,8 @@ define void @alloc_v32i8(ptr %st_ptr) nounwind {
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI2_0]
 ; CHECK-NEXT:    tbl z0.b, { z0.b }, z1.b
 ; CHECK-NEXT:    ldr q1, [sp, #16]
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    strb w8, [x19, #8]
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    str x8, [x19]
+; CHECK-NEXT:    stur b1, [x19, #8]
+; CHECK-NEXT:    str d0, [x19]
 ; CHECK-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret

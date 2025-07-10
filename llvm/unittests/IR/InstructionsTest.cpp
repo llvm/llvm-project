@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Instructions.h"
+#include "llvm-c/Core.h"
 #include "llvm/ADT/CombinationGenerator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -26,13 +27,11 @@
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm-c/Core.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 #include <memory>
-
-extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 
 namespace llvm {
 namespace {
@@ -850,8 +849,8 @@ TEST(InstructionsTest, GEPIndices) {
     Builder.getInt32(13),
     Builder.getInt32(42) };
 
-  Value *V = Builder.CreateGEP(ArrTy, UndefValue::get(PointerType::getUnqual(ArrTy)),
-                               Indices);
+  Value *V = Builder.CreateGEP(
+      ArrTy, UndefValue::get(PointerType::getUnqual(Context)), Indices);
   ASSERT_TRUE(isa<GetElementPtrInst>(V));
 
   auto *GEPI = cast<GetElementPtrInst>(V);
@@ -1451,8 +1450,6 @@ TEST(InstructionsTest, GetSplat) {
 
 TEST(InstructionsTest, SkipDebug) {
   LLVMContext C;
-  bool OldDbgValueMode = UseNewDbgInfoFormat;
-  UseNewDbgInfoFormat = false;
   std::unique_ptr<Module> M = parseIR(C,
                                       R"(
       declare void @llvm.dbg.value(metadata, metadata, metadata)
@@ -1479,6 +1476,8 @@ TEST(InstructionsTest, SkipDebug) {
   )");
   ASSERT_TRUE(M);
   Function *F = cast<Function>(M->getNamedValue("f"));
+  // This test wants to see dbg.values.
+  F->convertFromNewDbgValues();
   BasicBlock &BB = F->front();
 
   // The first non-debug instruction is the terminator.
@@ -1488,7 +1487,6 @@ TEST(InstructionsTest, SkipDebug) {
 
   // After the terminator, there are no non-debug instructions.
   EXPECT_EQ(nullptr, Term->getNextNonDebugInstruction());
-  UseNewDbgInfoFormat = OldDbgValueMode;
 }
 
 TEST(InstructionsTest, PhiMightNotBeFPMathOperator) {
@@ -1716,7 +1714,7 @@ TEST(InstructionsTest, DropLocation) {
         cast<Function>(M->getNamedValue("no_parent_scope"));
     BasicBlock &BB = NoParentScopeF->front();
 
-    auto *I1 = BB.getFirstNonPHI();
+    auto *I1 = &*BB.getFirstNonPHIIt();
     auto *I2 = I1->getNextNode();
     auto *I3 = BB.getTerminator();
 
@@ -1738,7 +1736,7 @@ TEST(InstructionsTest, DropLocation) {
         cast<Function>(M->getNamedValue("with_parent_scope"));
     BasicBlock &BB = WithParentScopeF->front();
 
-    auto *I2 = BB.getFirstNonPHI()->getNextNode();
+    auto *I2 = BB.getFirstNonPHIIt()->getNextNode();
 
     MDNode *Scope = cast<MDNode>(WithParentScopeF->getSubprogram());
     EXPECT_EQ(I2->getDebugLoc().getLine(), 2U);

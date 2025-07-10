@@ -8,6 +8,7 @@ set(LLVM_OPTIONAL_SOURCES
   DestinationStyleOpInterface.cpp
   FunctionImplementation.cpp
   FunctionInterfaces.cpp
+  IndexingMapOpInterface.cpp
   InferIntRangeInterface.cpp
   InferTypeOpInterface.cpp
   LoopLikeInterface.cpp
@@ -58,9 +59,11 @@ add_mlir_library(MLIRFunctionInterfaces
   MLIRFunctionInterfacesIncGen
 
   LINK_LIBS PUBLIC
+  MLIRCallInterfaces
   MLIRIR
 )
 
+add_mlir_interface_library(IndexingMapOpInterface)
 add_mlir_interface_library(InferIntRangeInterface)
 add_mlir_interface_library(InferTypeOpInterface)
 

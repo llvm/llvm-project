@@ -6,8 +6,8 @@
 ; Check that module LDS is allocated at address 0 and kernel starts its
 ; allocation past module LDS when a call is present.
 
-@lds.size.1.align.1 = internal unnamed_addr addrspace(3) global [1 x i8] undef, align 1
-@lds.size.16.align.16 = internal unnamed_addr addrspace(3) global [16 x i8] undef, align 16
+@lds.size.1.align.1 = internal unnamed_addr addrspace(3) global [1 x i8] poison, align 1
+@lds.size.16.align.16 = internal unnamed_addr addrspace(3) global [16 x i8] poison, align 16
 
 ; GCN-LABEL: {{^}}f0:
 ; GCN-DAG: v_mov_b32_e32 [[NULL:v[0-9]+]], 0

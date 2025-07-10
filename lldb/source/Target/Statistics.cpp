@@ -10,6 +10,7 @@
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -71,12 +72,23 @@ json::Value ModuleStats::ToJSON() const {
   module.try_emplace("debugInfoHadIncompleteTypes",
                      debug_info_had_incomplete_types);
   module.try_emplace("symbolTableStripped", symtab_stripped);
+  module.try_emplace("symbolTableSymbolCount", symtab_symbol_count);
+  module.try_emplace("dwoFileCount", dwo_file_count);
+  module.try_emplace("loadedDwoFileCount", loaded_dwo_file_count);
+
+  if (!symbol_locator_time.map.empty()) {
+    json::Object obj;
+    for (const auto &entry : symbol_locator_time.map)
+      obj.try_emplace(entry.first().str(), entry.second);
+    module.try_emplace("symbolLocatorTime", std::move(obj));
+  }
+
   if (!symfile_path.empty())
     module.try_emplace("symbolFilePath", symfile_path);
 
   if (!symfile_modules.empty()) {
     json::Array symfile_ids;
-    for (const auto symfile_id: symfile_modules)
+    for (const auto symfile_id : symfile_modules)
       symfile_ids.emplace_back(symfile_id);
     module.try_emplace("symbolFileModuleIdentifiers", std::move(symfile_ids));
   }
@@ -285,20 +297,22 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   const bool include_targets = options.GetIncludeTargets();
   const bool include_modules = options.GetIncludeModules();
   const bool include_transcript = options.GetIncludeTranscript();
+  const bool include_plugins = options.GetIncludePlugins();
 
   json::Array json_targets;
   json::Array json_modules;
+  StatisticsMap symbol_locator_total_time;
   double symtab_parse_time = 0.0;
   double symtab_index_time = 0.0;
   double debug_parse_time = 0.0;
   double debug_index_time = 0.0;
   uint32_t symtabs_loaded = 0;
-  uint32_t symtabs_saved = 0;
+  uint32_t symtabs_loaded_from_cache = 0;
+  uint32_t symtabs_saved_to_cache = 0;
   uint32_t debug_index_loaded = 0;
   uint32_t debug_index_saved = 0;
   uint64_t debug_info_size = 0;
 
-  std::vector<ModuleStats> modules;
   std::lock_guard<std::recursive_mutex> guard(
       Module::GetAllocationModuleCollectionMutex());
   const uint64_t num_modules = target != nullptr
@@ -309,6 +323,9 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   uint32_t num_modules_with_variable_errors = 0;
   uint32_t num_modules_with_incomplete_types = 0;
   uint32_t num_stripped_modules = 0;
+  uint32_t symtab_symbol_count = 0;
+  uint32_t total_loaded_dwo_file_count = 0;
+  uint32_t total_dwo_file_count = 0;
   for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
     Module *module = target != nullptr
                          ? target->GetImages().GetModuleAtIndex(image_idx).get()
@@ -316,16 +333,21 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     ModuleStats module_stat;
     module_stat.symtab_parse_time = module->GetSymtabParseTime().get().count();
     module_stat.symtab_index_time = module->GetSymtabIndexTime().get().count();
-    Symtab *symtab = module->GetSymtab();
+    module_stat.symbol_locator_time = module->GetSymbolLocatorStatistics();
+    symbol_locator_total_time.merge(module_stat.symbol_locator_time);
+    Symtab *symtab = module->GetSymtab(/*can_create=*/false);
     if (symtab) {
+      module_stat.symtab_symbol_count = symtab->GetNumSymbols();
+      symtab_symbol_count += module_stat.symtab_symbol_count;
+      ++symtabs_loaded;
       module_stat.symtab_loaded_from_cache = symtab->GetWasLoadedFromCache();
       if (module_stat.symtab_loaded_from_cache)
-        ++symtabs_loaded;
+        ++symtabs_loaded_from_cache;
       module_stat.symtab_saved_to_cache = symtab->GetWasSavedToCache();
       if (module_stat.symtab_saved_to_cache)
-        ++symtabs_saved;
+        ++symtabs_saved_to_cache;
     }
-    SymbolFile *sym_file = module->GetSymbolFile();
+    SymbolFile *sym_file = module->GetSymbolFile(/*can_create=*/false);
     if (sym_file) {
       if (!summary_only) {
         if (sym_file->GetObjectFile() != module->GetObjectFile())
@@ -335,6 +357,10 @@ llvm::json::Value DebuggerStats::ReportStatistics(
         for (const auto &symbol_module : symbol_modules.Modules())
           module_stat.symfile_modules.push_back((intptr_t)symbol_module.get());
       }
+      std::tie(module_stat.loaded_dwo_file_count, module_stat.dwo_file_count) =
+          sym_file->GetDwoFileCounts();
+      total_dwo_file_count += module_stat.dwo_file_count;
+      total_loaded_dwo_file_count += module_stat.loaded_dwo_file_count;
       module_stat.debug_info_index_loaded_from_cache =
           sym_file->GetDebugInfoIndexWasLoadedFromCache();
       if (module_stat.debug_info_index_loaded_from_cache)
@@ -393,8 +419,9 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   json::Object global_stats{
       {"totalSymbolTableParseTime", symtab_parse_time},
       {"totalSymbolTableIndexTime", symtab_index_time},
-      {"totalSymbolTablesLoadedFromCache", symtabs_loaded},
-      {"totalSymbolTablesSavedToCache", symtabs_saved},
+      {"totalSymbolTablesLoaded", symtabs_loaded},
+      {"totalSymbolTablesLoadedFromCache", symtabs_loaded_from_cache},
+      {"totalSymbolTablesSavedToCache", symtabs_saved_to_cache},
       {"totalDebugInfoParseTime", debug_parse_time},
       {"totalDebugInfoIndexTime", debug_index_time},
       {"totalDebugInfoIndexLoadedFromCache", debug_index_loaded},
@@ -407,6 +434,9 @@ llvm::json::Value DebuggerStats::ReportStatistics(
        num_modules_with_incomplete_types},
       {"totalDebugInfoEnabled", num_debug_info_enabled_modules},
       {"totalSymbolTableStripped", num_stripped_modules},
+      {"totalSymbolTableSymbolCount", symtab_symbol_count},
+      {"totalLoadedDwoFileCount", total_loaded_dwo_file_count},
+      {"totalDwoFileCount", total_dwo_file_count},
   };
 
   if (include_targets) {
@@ -417,6 +447,13 @@ llvm::json::Value DebuggerStats::ReportStatistics(
         json_targets.emplace_back(target->ReportStatistics(options));
     }
     global_stats.try_emplace("targets", std::move(json_targets));
+  }
+
+  if (!symbol_locator_total_time.map.empty()) {
+    json::Object obj;
+    for (const auto &entry : symbol_locator_total_time.map)
+      obj.try_emplace(entry.first().str(), entry.second);
+    global_stats.try_emplace("totalSymbolLocatorTime", std::move(obj));
   }
 
   ConstStringStats const_string_stats;
@@ -462,6 +499,10 @@ llvm::json::Value DebuggerStats::ReportStatistics(
         global_stats.try_emplace("transcript",
                                  std::move(json_transcript.get()));
     }
+  }
+
+  if (include_plugins) {
+    global_stats.try_emplace("plugins", PluginManager::GetJSON());
   }
 
   return std::move(global_stats);

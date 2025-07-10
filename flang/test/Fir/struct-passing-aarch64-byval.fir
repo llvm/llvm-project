@@ -71,3 +71,17 @@ func.func private @too_many_hfa(!fir.type<hfa_max{i:f128,j:f128,k:f128,l:f128}>,
 
 // CHECK-LABEL: func.func private @too_big(!fir.ref<!fir.type<too_big{i:!fir.array<5xi32>}>> {{{.*}}, llvm.byval = !fir.type<too_big{i:!fir.array<5xi32>}>})
 func.func private @too_big(!fir.type<too_big{i:!fir.array<5xi32>}>)
+
+// CHECK-LABEL: func.func private @pointer_type(!fir.ref<i64>, !fir.array<1xi64>)
+func.func private @pointer_type(!fir.ref<i64>, !fir.type<pointer_type{i:i64}>)
+
+// CHECK-LABEL: func.func private @pointer_type_too_many_int(!fir.ref<i64>, 
+// CHECK-SAME: !fir.array<2xi64>,
+// CHECK-SAME: !fir.array<2xi64>,
+// CHECK-SAME: !fir.array<2xi64>,
+// CHECK-SAME: !fir.ref<!fir.type<int_max{i:i64,j:i64}>> {{{.*}}, llvm.byval = !fir.type<int_max{i:i64,j:i64}>})
+func.func private @pointer_type_too_many_int(!fir.ref<i64>,
+                       !fir.type<int_max{i:i64,j:i64}>,
+                       !fir.type<int_max{i:i64,j:i64}>,
+                       !fir.type<int_max{i:i64,j:i64}>,
+                       !fir.type<int_max{i:i64,j:i64}>)

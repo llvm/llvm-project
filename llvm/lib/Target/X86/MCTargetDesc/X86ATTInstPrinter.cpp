@@ -14,6 +14,7 @@
 #include "X86ATTInstPrinter.h"
 #include "X86BaseInfo.h"
 #include "X86InstComments.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrAnalysis.h"
@@ -166,15 +167,15 @@ bool X86ATTInstPrinter::printVecCompareInstr(const MCInst *MI,
   case X86::VCMPPHZrmbi:     case X86::VCMPPHZrmbik:
   case X86::VCMPPHZrrib:     case X86::VCMPPHZrribk:
   case X86::VCMPSHZrrib_Int: case X86::VCMPSHZrribk_Int:
-  case X86::VCMPPBF16Z128rmi:  case X86::VCMPPBF16Z128rri:
-  case X86::VCMPPBF16Z256rmi:  case X86::VCMPPBF16Z256rri:
-  case X86::VCMPPBF16Zrmi:     case X86::VCMPPBF16Zrri:
-  case X86::VCMPPBF16Z128rmik: case X86::VCMPPBF16Z128rrik:
-  case X86::VCMPPBF16Z256rmik: case X86::VCMPPBF16Z256rrik:
-  case X86::VCMPPBF16Zrmik:    case X86::VCMPPBF16Zrrik:
-  case X86::VCMPPBF16Z128rmbi: case X86::VCMPPBF16Z128rmbik:
-  case X86::VCMPPBF16Z256rmbi: case X86::VCMPPBF16Z256rmbik:
-  case X86::VCMPPBF16Zrmbi:    case X86::VCMPPBF16Zrmbik:
+  case X86::VCMPBF16Z128rmi:  case X86::VCMPBF16Z128rri:
+  case X86::VCMPBF16Z256rmi:  case X86::VCMPBF16Z256rri:
+  case X86::VCMPBF16Zrmi:     case X86::VCMPBF16Zrri:
+  case X86::VCMPBF16Z128rmik: case X86::VCMPBF16Z128rrik:
+  case X86::VCMPBF16Z256rmik: case X86::VCMPBF16Z256rrik:
+  case X86::VCMPBF16Zrmik:    case X86::VCMPBF16Zrrik:
+  case X86::VCMPBF16Z128rmbi: case X86::VCMPBF16Z128rmbik:
+  case X86::VCMPBF16Z256rmbi: case X86::VCMPBF16Z256rmbik:
+  case X86::VCMPBF16Zrmbi:    case X86::VCMPBF16Zrmbik:
     if (Imm >= 0 && Imm <= 31) {
       OS << '\t';
       printCMPMnemonic(MI, /*IsVCMP*/true, OS);
@@ -414,7 +415,7 @@ void X86ATTInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     assert(Op.isExpr() && "unknown operand kind in printOperand");
     WithMarkup M = markup(O, Markup::Immediate);
     O << '$';
-    Op.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *Op.getExpr());
   }
 }
 
@@ -445,7 +446,7 @@ void X86ATTInstPrinter::printMemReference(const MCInst *MI, unsigned Op,
       O << formatImm(DispVal);
   } else {
     assert(DispSpec.isExpr() && "non-immediate displacement for LEA?");
-    DispSpec.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *DispSpec.getExpr());
   }
 
   if (IndexReg.getReg() || BaseReg.getReg()) {
@@ -500,7 +501,7 @@ void X86ATTInstPrinter::printMemOffset(const MCInst *MI, unsigned Op,
     O << formatImm(DispSpec.getImm());
   } else {
     assert(DispSpec.isExpr() && "non-immediate displacement?");
-    DispSpec.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *DispSpec.getExpr());
   }
 }
 

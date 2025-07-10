@@ -6,14 +6,14 @@
 
 ; CHECK:     %[[#Int:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#Float:]] = OpTypeFloat 32
-; CHECK-DAG: %[[#Scope_CrossDevice:]] = OpConstant %[[#Int]] 0
-; CHECK-DAG: %[[#Value:]] = OpConstant %[[#Int]] 42
-; CHECK-DAG: %[[#FPValue:]] = OpConstant %[[#Float]] 42
-; CHECK-DAG: %[[#Scope_Invocation:]] = OpConstant %[[#Int]] 4
-; CHECK-DAG: %[[#MemSem_SeqCst:]] = OpConstant %[[#Int]] 16
-; CHECK-DAG: %[[#Scope_Subgroup:]] = OpConstant %[[#Int]] 3
-; CHECK-DAG: %[[#Scope_Workgroup:]] = OpConstant %[[#Int]] 2
-; CHECK-DAG: %[[#Scope_Device:]] = OpConstant %[[#Int]] 1
+; CHECK-DAG: %[[#Scope_CrossDevice:]] = OpConstantNull %[[#Int]]
+; CHECK-DAG: %[[#Value:]] = OpConstant %[[#Int]] 42{{$}}
+; CHECK-DAG: %[[#FPValue:]] = OpConstant %[[#Float]] 42{{$}}
+; CHECK-DAG: %[[#Scope_Invocation:]] = OpConstant %[[#Int]] 4{{$}}
+; CHECK-DAG: %[[#MemSem_SeqCst:]] = OpConstant %[[#Int]] 16{{$}}
+; CHECK-DAG: %[[#Scope_Subgroup:]] = OpConstant %[[#Int]] 3{{$}}
+; CHECK-DAG: %[[#Scope_Workgroup:]] = OpConstant %[[#Int]] 2{{$}}
+; CHECK-DAG: %[[#Scope_Device:]] = OpConstant %[[#Int]] 1{{$}}
 ; CHECK-DAG: %[[#PointerType:]] = OpTypePointer CrossWorkgroup %[[#Int]]
 ; CHECK-DAG: %[[#FPPointerType:]] = OpTypePointer CrossWorkgroup %[[#Float]]
 ; CHECK-DAG: %[[#Pointer:]] = OpVariable %[[#PointerType]] CrossWorkgroup

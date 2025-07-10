@@ -13,6 +13,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/DiagnosticIDs.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
@@ -60,10 +61,8 @@
 
 #include "ASTUtils.h"
 #include "ClangASTSource.h"
-#include "ClangDiagnostic.h"
 #include "ClangExpressionDeclMap.h"
 #include "ClangExpressionHelper.h"
-#include "ClangExpressionParser.h"
 #include "ClangHost.h"
 #include "ClangModulesDeclVendor.h"
 #include "ClangPersistentVariables.h"
@@ -135,8 +134,9 @@ public:
 
     SourceModule module;
 
-    for (const std::pair<IdentifierInfo *, SourceLocation> &component : path)
-      module.path.push_back(ConstString(component.first->getName()));
+    for (const IdentifierLoc &component : path)
+      module.path.push_back(
+          ConstString(component.getIdentifierInfo()->getName()));
 
     StreamString error_stream;
 
@@ -164,13 +164,12 @@ static void AddAllFixIts(ClangDiagnostic *diag, const clang::Diagnostic &Info) {
 class ClangDiagnosticManagerAdapter : public clang::DiagnosticConsumer {
 public:
   ClangDiagnosticManagerAdapter(DiagnosticOptions &opts, StringRef filename)
-      : m_filename(filename) {
-    DiagnosticOptions *options = new DiagnosticOptions(opts);
-    options->ShowPresumedLoc = true;
-    options->ShowLevel = false;
+      : m_options(opts), m_filename(filename) {
+    m_options.ShowPresumedLoc = true;
+    m_options.ShowLevel = false;
     m_os = std::make_shared<llvm::raw_string_ostream>(m_output);
     m_passthrough =
-        std::make_shared<clang::TextDiagnosticPrinter>(*m_os, options);
+        std::make_shared<clang::TextDiagnosticPrinter>(*m_os, m_options);
   }
 
   void ResetManager(DiagnosticManager *manager = nullptr) {
@@ -311,6 +310,7 @@ public:
 
 private:
   DiagnosticManager *m_manager = nullptr;
+  DiagnosticOptions m_options;
   std::shared_ptr<clang::TextDiagnosticPrinter> m_passthrough;
   /// Output stream of m_passthrough.
   std::shared_ptr<llvm::raw_string_ostream> m_os;
@@ -787,7 +787,7 @@ ClangExpressionParser::ClangExpressionParser(
 
   if (auto *target_info = TargetInfo::CreateTargetInfo(
           m_compiler->getDiagnostics(),
-          m_compiler->getInvocation().TargetOpts)) {
+          m_compiler->getInvocation().getTargetOpts())) {
     if (log) {
       LLDB_LOGF(log, "Target datalayout string: '%s'",
                 target_info->getDataLayoutString());
@@ -831,7 +831,8 @@ ClangExpressionParser::ClangExpressionParser(
   // FIXME: We shouldn't need to do this, the target should be immutable once
   // created. This complexity should be lifted elsewhere.
   m_compiler->getTarget().adjust(m_compiler->getDiagnostics(),
-                                 m_compiler->getLangOpts());
+                                 m_compiler->getLangOpts(),
+                                 /*AuxTarget=*/nullptr);
 
   // 5. Set up the diagnostic buffer for reporting errors
   auto diag_mgr = new ClangDiagnosticManagerAdapter(
@@ -1538,6 +1539,10 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
       llvm_module_up, // handed off here
       function_name, exe_ctx.GetTargetSP(), sc,
       m_compiler->getTargetOpts().Features);
+
+  if (auto *options = m_expr.GetOptions())
+    execution_unit_sp->AppendPreferredSymbolContexts(
+        options->GetPreferredSymbolContexts());
 
   ClangExpressionHelper *type_system_helper =
       dyn_cast<ClangExpressionHelper>(m_expr.GetTypeSystemHelper());

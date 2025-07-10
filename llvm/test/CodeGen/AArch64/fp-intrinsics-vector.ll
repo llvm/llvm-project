@@ -193,10 +193,17 @@ define <4 x float> @uitofp_v4f32_v4i32(<4 x i32> %x) #0 {
 define <4 x float> @sitofp_v4f32_v4i64(<4 x i64> %x) #0 {
 ; CHECK-LABEL: sitofp_v4f32_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NEXT:    scvtf v1.2d, v1.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-NEXT:    fcvtn2 v0.4s, v1.2d
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    scvtf s0, x9
+; CHECK-NEXT:    mov x9, v1.d[1]
+; CHECK-NEXT:    scvtf s2, x8
+; CHECK-NEXT:    fmov x8, d1
+; CHECK-NEXT:    scvtf s1, x8
+; CHECK-NEXT:    mov v0.s[1], v2.s[0]
+; CHECK-NEXT:    mov v0.s[2], v1.s[0]
+; CHECK-NEXT:    scvtf s1, x9
+; CHECK-NEXT:    mov v0.s[3], v1.s[0]
 ; CHECK-NEXT:    ret
   %val = call <4 x float> @llvm.experimental.constrained.sitofp.v4f32.v4i64(<4 x i64> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret <4 x float> %val
@@ -205,10 +212,38 @@ define <4 x float> @sitofp_v4f32_v4i64(<4 x i64> %x) #0 {
 define <4 x float> @uitofp_v4f32_v4i64(<4 x i64> %x) #0 {
 ; CHECK-LABEL: uitofp_v4f32_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-NEXT:    fcvtn2 v0.4s, v1.2d
+; CHECK-NEXT:    movi v2.2d, #0x000000ffffffff
+; CHECK-NEXT:    ushr v3.2d, v1.2d, #32
+; CHECK-NEXT:    ushr v4.2d, v0.2d, #32
+; CHECK-NEXT:    mov x8, v3.d[1]
+; CHECK-NEXT:    mov x9, v4.d[1]
+; CHECK-NEXT:    fmov x10, d3
+; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    fmov x11, d4
+; CHECK-NEXT:    scvtf s2, x10
+; CHECK-NEXT:    mov x10, v1.d[1]
+; CHECK-NEXT:    scvtf s3, x8
+; CHECK-NEXT:    scvtf s4, x11
+; CHECK-NEXT:    mov x8, v0.d[1]
+; CHECK-NEXT:    scvtf s5, x9
+; CHECK-NEXT:    mov w9, #1333788672 // =0x4f800000
+; CHECK-NEXT:    fmov x11, d1
+; CHECK-NEXT:    dup v1.2s, w9
+; CHECK-NEXT:    fmov x9, d0
+; CHECK-NEXT:    scvtf s0, x10
+; CHECK-NEXT:    mov v2.s[1], v3.s[0]
+; CHECK-NEXT:    scvtf s6, x11
+; CHECK-NEXT:    scvtf s3, x8
+; CHECK-NEXT:    mov v4.s[1], v5.s[0]
+; CHECK-NEXT:    scvtf s5, x9
+; CHECK-NEXT:    mov v6.s[1], v0.s[0]
+; CHECK-NEXT:    fmul v0.2s, v2.2s, v1.2s
+; CHECK-NEXT:    fmul v1.2s, v4.2s, v1.2s
+; CHECK-NEXT:    mov v5.s[1], v3.s[0]
+; CHECK-NEXT:    fadd v2.2s, v0.2s, v6.2s
+; CHECK-NEXT:    fadd v0.2s, v1.2s, v5.2s
+; CHECK-NEXT:    mov v0.d[1], v2.d[0]
 ; CHECK-NEXT:    ret
   %val = call <4 x float> @llvm.experimental.constrained.uitofp.v4f32.v4i64(<4 x i64> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret <4 x float> %val

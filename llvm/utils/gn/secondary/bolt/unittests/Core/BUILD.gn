@@ -4,6 +4,7 @@ import("//third-party/unittest/unittest.gni")
 unittest("CoreTests") {
   configs += [ "//llvm/utils/gn/build:bolt_code" ]
   deps = [
+    "//bolt/include/bolt/Core:TargetConfig.def",
     "//bolt/lib/Core",
     "//bolt/lib/Rewrite",
     "//bolt/lib/Profile",
@@ -34,6 +35,7 @@ unittest("CoreTests") {
     deps += [
       "//llvm/lib/Target/AArch64/MCTargetDesc",
       "//llvm/lib/Target/AArch64/Utils",
+      "//llvm/lib/Target/AArch64:AArch64GenSDNodeInfo",
     ]
   }
   if (llvm_build_X86) {

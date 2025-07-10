@@ -169,8 +169,14 @@ class LLVMConfig(object):
                 features.add("target-aarch64")
             elif re.match(r"^arm.*", target_triple):
                 features.add("target-arm")
-            if re.match(r'^ppc64le.*-linux', target_triple):
-                features.add('target=powerpc64le-linux')
+            elif re.match(r"^ppc64le.*-linux", target_triple):
+                features.add("target=powerpc64le-linux")
+            elif re.match(r"^riscv64-.*-elf", target_triple):
+                features.add("target-riscv64")
+            elif re.match(r"^riscv32-.*-elf.", target_triple):
+                features.add("target-riscv32")
+            elif re.match(r"^loongarch64.*", target_triple):
+                features.add("target-loongarch64")
 
         if not user_is_root():
             features.add("non-root-user")
@@ -349,6 +355,14 @@ class LLVMConfig(object):
 
         return False
 
+    # Normalize 3-field target triple to 4-field triple with "unknown" as environment
+    def normalize_triple(self, triple):
+        compoments = triple.split("-", maxsplit=3)
+        if len(compoments) == 4:
+            return triple
+        assert len(compoments) == 3
+        return triple + "-unknown"
+
     def make_itanium_abi_triple(self, triple):
         m = re.match(r"(\w+)-(\w+)-(\w+)", triple)
         if not m:
@@ -506,19 +520,30 @@ class LLVMConfig(object):
                 self.lit_config.note("using {}: {}".format(name, tool))
         return tool
 
-    def use_clang(
+    def _get_clang_paths(self, additional_tool_dirs):
+        # Put Clang first to avoid LLVM from overriding out-of-tree clang
+        # builds.
+        exe_dir_props = [
+            self.config.name.lower() + "_tools_dir",
+            "clang_tools_dir",
+            "llvm_tools_dir",
+        ]
+        paths = [
+            getattr(self.config, pp)
+            for pp in exe_dir_props
+            if getattr(self.config, pp, None)
+        ]
+        paths = additional_tool_dirs + paths
+        return paths
+
+    def clang_setup(
         self,
         additional_tool_dirs=[],
-        additional_flags=[],
-        required=True,
-        use_installed=False,
     ):
-        """Configure the test suite to be able to invoke clang.
+        """Perform the setup needed to be able to invoke clang.
 
-        Sets up some environment variables important to clang, locates a
-        just-built or optionally an installed clang, and add a set of standard
-        substitutions useful to any test suite that makes use of clang.
-
+        This function performs all the necessary setup to execute clang (or
+        tooling based on clang) but does not actually add clang as a tool.
         """
         # Clear some environment variables that might affect Clang.
         #
@@ -559,20 +584,9 @@ class LLVMConfig(object):
         self.clear_environment(possibly_dangerous_env_vars)
 
         # Tweak the PATH to include the tools dir and the scripts dir.
-        # Put Clang first to avoid LLVM from overriding out-of-tree clang
-        # builds.
-        exe_dir_props = [
-            self.config.name.lower() + "_tools_dir",
-            "clang_tools_dir",
-            "llvm_tools_dir",
-        ]
-        paths = [
-            getattr(self.config, pp)
-            for pp in exe_dir_props
-            if getattr(self.config, pp, None)
-        ]
-        paths = additional_tool_dirs + paths
-        self.with_environment("PATH", paths, append_path=True)
+        self.with_environment(
+            "PATH", self._get_clang_paths(additional_tool_dirs), append_path=True
+        )
 
         lib_dir_props = [
             self.config.name.lower() + "_libs_dir",
@@ -597,69 +611,15 @@ class LLVMConfig(object):
         if pext:
             self.config.substitutions.append(("%pluginext", pext))
 
-        # Discover the 'clang' and 'clangcc' to use.
-        self.config.clang = self.use_llvm_tool(
-            "clang",
-            search_env="CLANG",
-            required=required,
-            search_paths=paths,
-            use_installed=use_installed,
-        )
-        if self.config.clang:
-            self.config.available_features.add("clang")
-            builtin_include_dir = self.get_clang_builtin_include_dir(self.config.clang)
-            tool_substitutions = [
-                ToolSubst(
-                    "%clang", command=self.config.clang, extra_args=additional_flags
-                ),
-                ToolSubst(
-                    "%clang_analyze_cc1",
-                    command="%clang_cc1",
-                    extra_args=["-analyze", "%analyze", "-setup-static-analyzer"]
-                    + additional_flags,
-                ),
-                ToolSubst(
-                    "%clang_cc1",
-                    command=self.config.clang,
-                    extra_args=[
-                        "-cc1",
-                        "-internal-isystem",
-                        builtin_include_dir,
-                        "-nostdsysteminc",
-                    ]
-                    + additional_flags,
-                ),
-                ToolSubst(
-                    "%clang_cpp",
-                    command=self.config.clang,
-                    extra_args=["--driver-mode=cpp"] + additional_flags,
-                ),
-                ToolSubst(
-                    "%clang_cl",
-                    command=self.config.clang,
-                    extra_args=["--driver-mode=cl"] + additional_flags,
-                ),
-                ToolSubst(
-                    "%clang_dxc",
-                    command=self.config.clang,
-                    extra_args=["--driver-mode=dxc"] + additional_flags,
-                ),
-                ToolSubst(
-                    "%clangxx",
-                    command=self.config.clang,
-                    extra_args=["--driver-mode=g++"] + additional_flags,
-                ),
-            ]
-            self.add_tool_substitutions(tool_substitutions)
-            self.config.substitutions.append(("%resource_dir", builtin_include_dir))
-
         # There will be no default target triple if one was not specifically
         # set, and the host's architecture is not an enabled target.
         if self.config.target_triple:
             self.config.substitutions.append(
                 (
                     "%itanium_abi_triple",
-                    self.make_itanium_abi_triple(self.config.target_triple),
+                    self.normalize_triple(
+                        self.make_itanium_abi_triple(self.config.target_triple)
+                    ),
                 )
             )
             self.config.substitutions.append(
@@ -711,6 +671,81 @@ class LLVMConfig(object):
         add_std_cxx("%std_cxx17-")
         add_std_cxx("%std_cxx20-")
         add_std_cxx("%std_cxx23-")
+
+    def use_clang(
+        self,
+        additional_tool_dirs=[],
+        additional_flags=[],
+        required=True,
+        use_installed=False,
+    ):
+        """Configure the test suite to be able to invoke clang.
+
+        Sets up some environment variables important to clang, locates a
+        just-built or optionally an installed clang, and add a set of standard
+        substitutions useful to any test suite that makes use of clang.
+
+        """
+        self.clang_setup(additional_tool_dirs)
+
+        paths = self._get_clang_paths(additional_tool_dirs)
+
+        # Discover the 'clang' and 'clangcc' to use.
+        self.config.clang = self.use_llvm_tool(
+            "clang",
+            search_env="CLANG",
+            required=required,
+            search_paths=paths,
+            use_installed=use_installed,
+        )
+        if self.config.clang:
+            self.config.available_features.add("clang")
+            builtin_include_dir = self.get_clang_builtin_include_dir(self.config.clang)
+            tool_substitutions = [
+                ToolSubst(
+                    "%clang", command=self.config.clang, extra_args=additional_flags
+                ),
+                ToolSubst(
+                    "%clang_analyze_cc1",
+                    command="%clang_cc1",
+                    # -setup-static-analyzer ensures that __clang_analyzer__ is defined
+                    extra_args=["-analyze", "-setup-static-analyzer"]
+                    + additional_flags,
+                ),
+                ToolSubst(
+                    "%clang_cc1",
+                    command=self.config.clang,
+                    extra_args=[
+                        "-cc1",
+                        "-internal-isystem",
+                        builtin_include_dir,
+                        "-nostdsysteminc",
+                    ]
+                    + additional_flags,
+                ),
+                ToolSubst(
+                    "%clang_cpp",
+                    command=self.config.clang,
+                    extra_args=["--driver-mode=cpp"] + additional_flags,
+                ),
+                ToolSubst(
+                    "%clang_cl",
+                    command=self.config.clang,
+                    extra_args=["--driver-mode=cl"] + additional_flags,
+                ),
+                ToolSubst(
+                    "%clang_dxc",
+                    command=self.config.clang,
+                    extra_args=["--driver-mode=dxc"] + additional_flags,
+                ),
+                ToolSubst(
+                    "%clangxx",
+                    command=self.config.clang,
+                    extra_args=["--driver-mode=g++"] + additional_flags,
+                ),
+            ]
+            self.add_tool_substitutions(tool_substitutions)
+            self.config.substitutions.append(("%resource_dir", builtin_include_dir))
 
         # FIXME: Find nicer way to prohibit this.
         def prefer(this, to):

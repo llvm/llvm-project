@@ -1,5 +1,8 @@
 # 'vector' Dialect
 
+**Please post an RFC on the [forum](https://llvm.discourse.group/c/mlir/31)
+before adding  any operation in this dialect.**
+
 [TOC]
 
 MLIR supports multi-dimensional `vector` types and custom operations on those

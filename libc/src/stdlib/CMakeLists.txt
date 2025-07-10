@@ -185,6 +185,28 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  a64l
+  SRCS
+    a64l.cpp
+  HDRS
+    a64l.h
+  DEPENDS
+    libc.src.__support.ctype_utils
+    libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
+  l64a
+  SRCS
+    l64a.cpp
+  HDRS
+    l64a.h
+  DEPENDS
+    libc.src.__support.ctype_utils
+    libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
   abs
   SRCS
     abs.cpp
@@ -321,6 +343,17 @@ add_entrypoint_object(
     srand.h
   DEPENDS
     .rand_util
+)
+
+add_entrypoint_object(
+  memalignment
+  SRCS
+    memalignment.cpp
+  HDRS
+    memalignment.h
+  DEPENDS
+    libc.src.__support.common
+    libc.hdr.types.size_t
 )
 
 if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
@@ -539,7 +572,7 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
 )
 
-# TODO: Move all exit functions to linux specific 
+# TODO: Move all exit functions to linux specific
 
 if(TARGET libc.src.__support.threads.mutex)
 add_header_library(
@@ -563,7 +596,7 @@ add_entrypoint_object(
   HDRS
     atexit.h
   CXX_STANDARD
-    20 # For constinit 
+    20 # For constinit
   DEPENDS
     .exit_handler
 )
@@ -575,7 +608,7 @@ add_entrypoint_object(
   HDRS
     at_quick_exit.h
   CXX_STANDARD
-    20 # For constinit 
+    20 # For constinit
   DEPENDS
     .exit_handler
     .atexit

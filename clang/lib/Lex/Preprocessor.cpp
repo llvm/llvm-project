@@ -77,13 +77,13 @@ LLVM_INSTANTIATE_REGISTRY(PragmaHandlerRegistry)
 
 ExternalPreprocessorSource::~ExternalPreprocessorSource() = default;
 
-Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
+Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
                            DiagnosticsEngine &diags, const LangOptions &opts,
                            SourceManager &SM, HeaderSearch &Headers,
                            ModuleLoader &TheModuleLoader,
                            IdentifierInfoLookup *IILookup, bool OwnsHeaders,
                            TranslationUnitKind TUKind)
-    : PPOpts(std::move(PPOpts)), Diags(&diags), LangOpts(opts),
+    : PPOpts(PPOpts), Diags(&diags), LangOpts(opts),
       FileMgr(Headers.getFileMgr()), SourceMgr(SM),
       ScratchBuf(new ScratchBuffer(SourceMgr)), HeaderInfo(Headers),
       TheModuleLoader(TheModuleLoader), ExternalSource(nullptr),
@@ -156,11 +156,11 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
     SkippingUntilPragmaHdrStop = true;
 
   // If using a PCH with a through header, start skipping tokens.
-  if (!this->PPOpts->PCHThroughHeader.empty() &&
-      !this->PPOpts->ImplicitPCHInclude.empty())
+  if (!this->PPOpts.PCHThroughHeader.empty() &&
+      !this->PPOpts.ImplicitPCHInclude.empty())
     SkippingUntilPCHThroughHeader = true;
 
-  if (this->PPOpts->GeneratePreamble)
+  if (this->PPOpts.GeneratePreamble)
     PreambleConditionalStack.startRecording();
 
   MaxTokens = LangOpts.MaxTokens;
@@ -247,6 +247,8 @@ void Preprocessor::DumpToken(const Token &Tok, bool DumpFlags) const {
     llvm::errs() << " [LeadingSpace]";
   if (Tok.isExpandDisabled())
     llvm::errs() << " [ExpandDisabled]";
+  if (Tok.isFirstPPToken())
+    llvm::errs() << " [First pp-token]";
   if (Tok.needsCleaning()) {
     const char *Start = SourceMgr.getCharacterData(Tok.getLocation());
     llvm::errs() << " [UnClean='" << StringRef(Start, Tok.getLength())
@@ -319,7 +321,7 @@ Preprocessor::macro_begin(bool IncludeExternalMacros) const {
 
   // Make sure we cover all macros in visible modules.
   for (const ModuleMacro &Macro : ModuleMacros)
-    CurSubmoduleState->Macros.insert(std::make_pair(Macro.II, MacroState()));
+    CurSubmoduleState->Macros.try_emplace(Macro.II);
 
   return CurSubmoduleState->Macros.begin();
 }
@@ -508,7 +510,7 @@ void Preprocessor::CreateString(StringRef Str, Token &Tok,
 SourceLocation Preprocessor::SplitToken(SourceLocation Loc, unsigned Length) {
   auto &SM = getSourceManager();
   SourceLocation SpellingLoc = SM.getSpellingLoc(Loc);
-  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(SpellingLoc);
+  FileIDAndOffset LocInfo = SM.getDecomposedLoc(SpellingLoc);
   bool Invalid = false;
   StringRef Buffer = SM.getBufferData(LocInfo.first, &Invalid);
   if (Invalid)
@@ -564,6 +566,21 @@ void Preprocessor::EnterMainSourceFile() {
     // #imported, it won't be re-entered.
     if (OptionalFileEntryRef FE = SourceMgr.getFileEntryRefForID(MainFileID))
       markIncluded(*FE);
+
+    // Record the first PP token in the main file. This is used to generate
+    // better diagnostics for C++ modules.
+    //
+    // // This is a comment.
+    // #define FOO int  // note: add 'module;' to the start of the file
+    // ^ FirstPPToken   //       to introduce a global module fragment.
+    //
+    // export module M; // error: module declaration must occur
+    //                  //        at the start of the translation unit.
+    if (getLangOpts().CPlusPlusModules) {
+      std::optional<Token> FirstPPTok = CurLexer->peekNextPPToken();
+      if (FirstPPTok && FirstPPTok->isFirstPPToken())
+        FirstPPTokenLoc = FirstPPTok->getLocation();
+    }
   }
 
   // Preprocess Predefines to populate the initial preprocessor state.
@@ -577,18 +594,18 @@ void Preprocessor::EnterMainSourceFile() {
   // Start parsing the predefines.
   EnterSourceFile(FID, nullptr, SourceLocation());
 
-  if (!PPOpts->PCHThroughHeader.empty()) {
+  if (!PPOpts.PCHThroughHeader.empty()) {
     // Lookup and save the FileID for the through header. If it isn't found
     // in the search path, it's a fatal error.
     OptionalFileEntryRef File = LookupFile(
-        SourceLocation(), PPOpts->PCHThroughHeader,
+        SourceLocation(), PPOpts.PCHThroughHeader,
         /*isAngled=*/false, /*FromDir=*/nullptr, /*FromFile=*/nullptr,
         /*CurDir=*/nullptr, /*SearchPath=*/nullptr, /*RelativePath=*/nullptr,
         /*SuggestedModule=*/nullptr, /*IsMapped=*/nullptr,
         /*IsFrameworkFound=*/nullptr);
     if (!File) {
       Diag(SourceLocation(), diag::err_pp_through_header_not_found)
-          << PPOpts->PCHThroughHeader;
+          << PPOpts.PCHThroughHeader;
       return;
     }
     setPCHThroughHeaderFileID(
@@ -614,21 +631,21 @@ bool Preprocessor::isPCHThroughHeader(const FileEntry *FE) {
 }
 
 bool Preprocessor::creatingPCHWithThroughHeader() {
-  return TUKind == TU_Prefix && !PPOpts->PCHThroughHeader.empty() &&
+  return TUKind == TU_Prefix && !PPOpts.PCHThroughHeader.empty() &&
          PCHThroughHeaderFileID.isValid();
 }
 
 bool Preprocessor::usingPCHWithThroughHeader() {
-  return TUKind != TU_Prefix && !PPOpts->PCHThroughHeader.empty() &&
+  return TUKind != TU_Prefix && !PPOpts.PCHThroughHeader.empty() &&
          PCHThroughHeaderFileID.isValid();
 }
 
 bool Preprocessor::creatingPCHWithPragmaHdrStop() {
-  return TUKind == TU_Prefix && PPOpts->PCHWithHdrStop;
+  return TUKind == TU_Prefix && PPOpts.PCHWithHdrStop;
 }
 
 bool Preprocessor::usingPCHWithPragmaHdrStop() {
-  return TUKind != TU_Prefix && PPOpts->PCHWithHdrStop;
+  return TUKind != TU_Prefix && PPOpts.PCHWithHdrStop;
 }
 
 /// Skip tokens until after the #include of the through header or
@@ -657,8 +674,8 @@ void Preprocessor::SkipTokensWhileUsingPCH() {
   if (ReachedMainFileEOF) {
     if (UsingPCHThroughHeader)
       Diag(SourceLocation(), diag::err_pp_through_header_not_seen)
-          << PPOpts->PCHThroughHeader << 1;
-    else if (!PPOpts->PCHWithHdrStopCreate)
+          << PPOpts.PCHThroughHeader << 1;
+    else if (!PPOpts.PCHWithHdrStopCreate)
       Diag(SourceLocation(), diag::err_pp_pragma_hdrstop_not_seen);
   }
 }
@@ -759,6 +776,8 @@ void Preprocessor::HandlePoisonedIdentifier(Token & Identifier) {
 
 void Preprocessor::updateOutOfDateIdentifier(const IdentifierInfo &II) const {
   assert(II.isOutOfDate() && "not out of date");
+  assert(getExternalSource() &&
+         "getExternalSource() should not return nullptr");
   getExternalSource()->updateOutOfDateIdentifier(II);
 }
 
@@ -809,14 +828,14 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
       if (!Identifier.isExpandDisabled() && MI->isEnabled()) {
         // C99 6.10.3p10: If the preprocessing token immediately after the
         // macro name isn't a '(', this macro should not be expanded.
-        if (!MI->isFunctionLike() || isNextPPTokenLParen())
+        if (!MI->isFunctionLike() || isNextPPTokenOneOf(tok::l_paren))
           return HandleMacroExpandedIdentifier(Identifier, MD);
       } else {
         // C99 6.10.3.4p2 says that a disabled macro may never again be
         // expanded, even if it's in a context where it could be expanded in the
         // future.
         Identifier.setFlag(Token::DisableExpand);
-        if (MI->isObjectLike() || isNextPPTokenLParen())
+        if (MI->isObjectLike() || isNextPPTokenOneOf(tok::l_paren))
           Diag(Identifier, diag::pp_disabled_macro_expansion);
       }
     }
@@ -833,6 +852,11 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
     // Don't diagnose this keyword again in this translation unit.
     II.setIsFutureCompatKeyword(false);
   }
+
+  // If this identifier would be a keyword in C++, diagnose as a compatibility
+  // issue.
+  if (II.IsKeywordInCPlusPlus() && !DisableMacroExpansion)
+    Diag(Identifier, diag::warn_pp_identifier_is_cpp_keyword) << &II;
 
   // If this is an extension token, diagnose its use.
   // We avoid diagnosing tokens that originate from macro definitions.
@@ -1159,8 +1183,8 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
     if (Result.is(tok::colon) && ModuleDeclState.isNamedModule()) {
       std::string Name = ModuleDeclState.getPrimaryName().str();
       Name += ":";
-      NamedModuleImportPath.push_back(
-          {getIdentifierInfo(Name), Result.getLocation()});
+      NamedModuleImportPath.emplace_back(Result.getLocation(),
+                                         getIdentifierInfo(Name));
       CurLexerCallback = CLK_LexAfterModuleImport;
       return true;
     }
@@ -1258,8 +1282,8 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
   if (ModuleImportExpectsIdentifier && Result.getKind() == tok::identifier) {
     // We expected to see an identifier here, and we did; continue handling
     // identifiers.
-    NamedModuleImportPath.push_back(
-        std::make_pair(Result.getIdentifierInfo(), Result.getLocation()));
+    NamedModuleImportPath.emplace_back(Result.getLocation(),
+                                       Result.getIdentifierInfo());
     ModuleImportExpectsIdentifier = false;
     CurLexerCallback = CLK_LexAfterModuleImport;
     return true;
@@ -1302,12 +1326,12 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
       // If the FlatModuleName ends with colon, it implies it is a partition.
       if (!FlatModuleName.empty() && FlatModuleName.back() != ':')
         FlatModuleName += ".";
-      FlatModuleName += Piece.first->getName();
+      FlatModuleName += Piece.getIdentifierInfo()->getName();
     }
-    SourceLocation FirstPathLoc = NamedModuleImportPath[0].second;
+    SourceLocation FirstPathLoc = NamedModuleImportPath[0].getLoc();
     NamedModuleImportPath.clear();
-    NamedModuleImportPath.push_back(
-        std::make_pair(getIdentifierInfo(FlatModuleName), FirstPathLoc));
+    NamedModuleImportPath.emplace_back(FirstPathLoc,
+                                       getIdentifierInfo(FlatModuleName));
   }
 
   Module *Imported = nullptr;
@@ -1331,9 +1355,10 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
   return true;
 }
 
-void Preprocessor::makeModuleVisible(Module *M, SourceLocation Loc) {
+void Preprocessor::makeModuleVisible(Module *M, SourceLocation Loc,
+                                     bool IncludeExports) {
   CurSubmoduleState->VisibleModules.setVisible(
-      M, Loc, [](Module *) {},
+      M, Loc, IncludeExports, [](Module *) {},
       [&](ArrayRef<Module *> Path, Module *Conflict, StringRef Message) {
         // FIXME: Include the path in the diagnostic.
         // FIXME: Include the import location for the conflicting module.

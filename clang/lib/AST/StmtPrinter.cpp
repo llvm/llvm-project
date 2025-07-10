@@ -17,6 +17,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
@@ -30,6 +31,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
@@ -44,7 +46,7 @@
 #include "clang/Basic/TypeTraits.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -259,7 +261,11 @@ void StmtPrinter::VisitNullStmt(NullStmt *Node) {
 void StmtPrinter::VisitDeclStmt(DeclStmt *Node) {
   Indent();
   PrintRawDeclStmt(Node);
-  OS << ";" << NL;
+  // Certain pragma declarations shouldn't have a semi-colon after them.
+  if (!Node->isSingleDecl() ||
+      !isa<OpenACCDeclareDecl, OpenACCRoutineDecl>(Node->getSingleDecl()))
+    OS << ";";
+  OS << NL;
 }
 
 void StmtPrinter::VisitCompoundStmt(CompoundStmt *Node) {
@@ -291,7 +297,7 @@ void StmtPrinter::VisitLabelStmt(LabelStmt *Node) {
 }
 
 void StmtPrinter::VisitAttributedStmt(AttributedStmt *Node) {
-  llvm::ArrayRef<const Attr *> Attrs = Node->getAttrs();
+  ArrayRef<const Attr *> Attrs = Node->getAttrs();
   for (const auto *Attr : Attrs) {
     Attr->printPretty(OS, Policy);
     if (Attr != Attrs.back())
@@ -499,7 +505,7 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
     OS << "goto ";
 
   OS << "(";
-  VisitStringLiteral(Node->getAsmString());
+  Visit(Node->getAsmStringExpr());
 
   // Outputs
   if (Node->getNumOutputs() != 0 || Node->getNumInputs() != 0 ||
@@ -516,7 +522,7 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
       OS << "] ";
     }
 
-    VisitStringLiteral(Node->getOutputConstraintLiteral(i));
+    Visit(Node->getOutputConstraintExpr(i));
     OS << " (";
     Visit(Node->getOutputExpr(i));
     OS << ")";
@@ -537,7 +543,7 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
       OS << "] ";
     }
 
-    VisitStringLiteral(Node->getInputConstraintLiteral(i));
+    Visit(Node->getInputConstraintExpr(i));
     OS << " (";
     Visit(Node->getInputExpr(i));
     OS << ")";
@@ -551,7 +557,7 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
     if (i != 0)
       OS << ", ";
 
-    VisitStringLiteral(Node->getClobberStringLiteral(i));
+    Visit(Node->getClobberExpr(i));
   }
 
   // Labels
@@ -580,6 +586,10 @@ void StmtPrinter::VisitMSAsmStmt(MSAsmStmt *Node) {
 
 void StmtPrinter::VisitCapturedStmt(CapturedStmt *Node) {
   PrintStmt(Node->getCapturedDecl()->getBody());
+}
+
+void StmtPrinter::VisitSYCLKernelCallStmt(SYCLKernelCallStmt *Node) {
+  PrintStmt(Node->getOutlinedFunctionDecl()->getBody());
 }
 
 void StmtPrinter::VisitObjCAtTryStmt(ObjCAtTryStmt *Node) {
@@ -725,7 +735,9 @@ void StmtPrinter::VisitOMPCanonicalLoop(OMPCanonicalLoop *Node) {
 
 void StmtPrinter::PrintOMPExecutableDirective(OMPExecutableDirective *S,
                                               bool ForceNoStmt) {
-  OMPClausePrinter Printer(OS, Policy);
+  unsigned OpenMPVersion =
+      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
+  OMPClausePrinter Printer(OS, Policy, OpenMPVersion);
   ArrayRef<OMPClause *> Clauses = S->clauses();
   for (auto *Clause : Clauses)
     if (Clause && !Clause->isImplicit()) {
@@ -754,6 +766,11 @@ void StmtPrinter::VisitOMPSimdDirective(OMPSimdDirective *Node) {
 
 void StmtPrinter::VisitOMPTileDirective(OMPTileDirective *Node) {
   Indent() << "#pragma omp tile";
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPStripeDirective(OMPStripeDirective *Node) {
+  Indent() << "#pragma omp stripe";
   PrintOMPExecutableDirective(Node);
 }
 
@@ -947,14 +964,18 @@ void StmtPrinter::VisitOMPTeamsDirective(OMPTeamsDirective *Node) {
 
 void StmtPrinter::VisitOMPCancellationPointDirective(
     OMPCancellationPointDirective *Node) {
+  unsigned OpenMPVersion =
+      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
   Indent() << "#pragma omp cancellation point "
-           << getOpenMPDirectiveName(Node->getCancelRegion());
+           << getOpenMPDirectiveName(Node->getCancelRegion(), OpenMPVersion);
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPCancelDirective(OMPCancelDirective *Node) {
+  unsigned OpenMPVersion =
+      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
   Indent() << "#pragma omp cancel "
-           << getOpenMPDirectiveName(Node->getCancelRegion());
+           << getOpenMPDirectiveName(Node->getCancelRegion(), OpenMPVersion);
   PrintOMPExecutableDirective(Node);
 }
 
@@ -1235,6 +1256,29 @@ void StmtPrinter::VisitOpenACCWaitConstruct(OpenACCWaitConstruct *S) {
   OS << '\n';
 }
 
+void StmtPrinter::VisitOpenACCAtomicConstruct(OpenACCAtomicConstruct *S) {
+  Indent() << "#pragma acc atomic";
+
+  if (S->getAtomicKind() != OpenACCAtomicKind::None)
+    OS << " " << S->getAtomicKind();
+
+  PrintOpenACCClauseList(S);
+  OS << '\n';
+  PrintStmt(S->getAssociatedStmt());
+}
+
+void StmtPrinter::VisitOpenACCCacheConstruct(OpenACCCacheConstruct *S) {
+  Indent() << "#pragma acc cache(";
+  if (S->hasReadOnly())
+    OS << "readonly: ";
+
+  llvm::interleaveComma(S->getVarList(), OS, [&](const Expr *E) {
+    E->printPretty(OS, nullptr, Policy);
+  });
+
+  OS << ")\n";
+}
+
 //===----------------------------------------------------------------------===//
 //  Expr printing methods.
 //===----------------------------------------------------------------------===//
@@ -1244,7 +1288,11 @@ void StmtPrinter::VisitSourceLocExpr(SourceLocExpr *Node) {
 }
 
 void StmtPrinter::VisitEmbedExpr(EmbedExpr *Node) {
-  llvm::report_fatal_error("Not implemented");
+  // FIXME: Embed parameters are not reflected in the AST, so there is no way to
+  // print them yet.
+  OS << "#embed ";
+  OS << Node->getFileName();
+  OS << NL;
 }
 
 void StmtPrinter::VisitConstantExpr(ConstantExpr *Node) {
@@ -1252,11 +1300,12 @@ void StmtPrinter::VisitConstantExpr(ConstantExpr *Node) {
 }
 
 void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
-  if (const auto *OCED = dyn_cast<OMPCapturedExprDecl>(Node->getDecl())) {
+  ValueDecl *VD = Node->getDecl();
+  if (const auto *OCED = dyn_cast<OMPCapturedExprDecl>(VD)) {
     OCED->getInit()->IgnoreImpCasts()->printPretty(OS, nullptr, Policy);
     return;
   }
-  if (const auto *TPOD = dyn_cast<TemplateParamObjectDecl>(Node->getDecl())) {
+  if (const auto *TPOD = dyn_cast<TemplateParamObjectDecl>(VD)) {
     TPOD->printAsExpr(OS, Policy);
     return;
   }
@@ -1264,16 +1313,45 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
     Qualifier->print(OS, Policy);
   if (Node->hasTemplateKeyword())
     OS << "template ";
-  if (Policy.CleanUglifiedParameters &&
-      isa<ParmVarDecl, NonTypeTemplateParmDecl>(Node->getDecl()) &&
-      Node->getDecl()->getIdentifier())
-    OS << Node->getDecl()->getIdentifier()->deuglifiedName();
-  else
-    Node->getNameInfo().printName(OS, Policy);
+
+  bool ForceAnonymous =
+      Policy.PrintAsCanonical && VD->getKind() == Decl::NonTypeTemplateParm;
+  DeclarationNameInfo NameInfo = Node->getNameInfo();
+  if (IdentifierInfo *ID = NameInfo.getName().getAsIdentifierInfo();
+      !ForceAnonymous &&
+      (ID || NameInfo.getName().getNameKind() != DeclarationName::Identifier)) {
+    if (Policy.CleanUglifiedParameters &&
+        isa<ParmVarDecl, NonTypeTemplateParmDecl>(VD) && ID)
+      OS << ID->deuglifiedName();
+    else
+      NameInfo.printName(OS, Policy);
+  } else {
+    switch (VD->getKind()) {
+    case Decl::NonTypeTemplateParm: {
+      auto *TD = cast<NonTypeTemplateParmDecl>(VD);
+      OS << "value-parameter-" << TD->getDepth() << '-' << TD->getIndex() << "";
+      break;
+    }
+    case Decl::ParmVar: {
+      auto *PD = cast<ParmVarDecl>(VD);
+      OS << "function-parameter-" << PD->getFunctionScopeDepth() << '-'
+         << PD->getFunctionScopeIndex();
+      break;
+    }
+    case Decl::Decomposition:
+      OS << "decomposition";
+      for (const auto &I : cast<DecompositionDecl>(VD)->bindings())
+        OS << '-' << I->getName();
+      break;
+    default:
+      OS << "unhandled-anonymous-" << VD->getDeclKindName();
+      break;
+    }
+  }
   if (Node->hasExplicitTemplateArgs()) {
     const TemplateParameterList *TPL = nullptr;
     if (!Node->hadMultipleCandidates())
-      if (auto *TD = dyn_cast<TemplateDecl>(Node->getDecl()))
+      if (auto *TD = dyn_cast<TemplateDecl>(VD))
         TPL = TD->getTemplateParameters();
     printTemplateArgumentList(OS, Node->template_arguments(), Policy, TPL);
   }
@@ -1934,7 +2012,6 @@ void StmtPrinter::VisitPseudoObjectExpr(PseudoObjectExpr *Node) {
 void StmtPrinter::VisitAtomicExpr(AtomicExpr *Node) {
   const char *Name = nullptr;
   switch (Node->getOp()) {
-#define BUILTIN(ID, TYPE, ATTRS)
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS) \
   case AtomicExpr::AO ## ID: \
     Name = #ID "("; \
@@ -2595,10 +2672,8 @@ void StmtPrinter::VisitCXXFoldExpr(CXXFoldExpr *E) {
 }
 
 void StmtPrinter::VisitCXXParenListInitExpr(CXXParenListInitExpr *Node) {
-  OS << "(";
-  llvm::interleaveComma(Node->getInitExprs(), OS,
+  llvm::interleaveComma(Node->getUserSpecifiedInitExprs(), OS,
                         [&](Expr *E) { PrintExpr(E); });
-  OS << ")";
 }
 
 void StmtPrinter::VisitConceptSpecializationExpr(ConceptSpecializationExpr *E) {
@@ -2836,11 +2911,6 @@ void StmtPrinter::VisitBlockExpr(BlockExpr *Node) {
 
 void StmtPrinter::VisitOpaqueValueExpr(OpaqueValueExpr *Node) {
   PrintExpr(Node->getSourceExpr());
-}
-
-void StmtPrinter::VisitTypoExpr(TypoExpr *Node) {
-  // TODO: Print something reasonable for a TypoExpr, if necessary.
-  llvm_unreachable("Cannot print TypoExpr nodes");
 }
 
 void StmtPrinter::VisitRecoveryExpr(RecoveryExpr *Node) {

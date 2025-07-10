@@ -97,7 +97,7 @@ public:
   // together.
   bool isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) override;
 
-  // isLegalToPruneDependencies - Is it legal to prune dependece between SUI
+  // isLegalToPruneDependencies - Is it legal to prune dependence between SUI
   // and SUJ.
   bool isLegalToPruneDependencies(SUnit *SUI, SUnit *SUJ) override;
 

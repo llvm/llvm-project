@@ -20,6 +20,7 @@ add_llvm_component_library(LLVMTransformUtils
   CtorUtils.cpp
   CountVisits.cpp
   Debugify.cpp
+  DeclareRuntimeLibcalls.cpp
   DemoteRegToStack.cpp
   DXILUpgrade.cpp
   EntryExitInstrumenter.cpp
@@ -56,6 +57,7 @@ add_llvm_component_library(LLVMTransformUtils
   LowerInvoke.cpp
   LowerMemIntrinsics.cpp
   LowerSwitch.cpp
+  LowerVectorIntrinsics.cpp
   MatrixUtils.cpp
   MemoryOpRemark.cpp
   MemoryTaggingSupport.cpp

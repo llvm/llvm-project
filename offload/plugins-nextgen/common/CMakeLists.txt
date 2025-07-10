@@ -1,3 +1,12 @@
+# The error codes in this header are shared with liboffload, so need to be
+# generated from the same source.
+include(TableGen)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include)
+set(LLVM_TARGET_DEFINITIONS ${CMAKE_CURRENT_SOURCE_DIR}/../../liboffload/API/OffloadAPI.td)
+tablegen(OFFLOAD include/OffloadErrcodes.inc -gen-errcodes -I ${CMAKE_CURRENT_SOURCE_DIR}/../../liboffload/API)
+tablegen(OFFLOAD include/OffloadInfo.inc -gen-info -I ${CMAKE_CURRENT_SOURCE_DIR}/../../liboffload/API)
+add_public_tablegen_target(PluginErrcodes)
+
 # NOTE: Don't try to build `PluginInterface` using `add_llvm_library` because we
 # don't want to export `PluginInterface` while `add_llvm_library` requires that.
 add_library(PluginCommon OBJECT
@@ -5,9 +14,10 @@ add_library(PluginCommon OBJECT
   src/GlobalHandler.cpp
   src/JIT.cpp
   src/RPC.cpp
+  src/OffloadError.cpp
   src/Utils/ELF.cpp
 )
-add_dependencies(PluginCommon intrinsics_gen)
+add_dependencies(PluginCommon intrinsics_gen PluginErrcodes)
 
 # Only enable JIT for those targets that LLVM can support.
 set(supported_jit_targets AMDGPU NVPTX)
@@ -21,20 +31,9 @@ if (NOT LLVM_LINK_LLVM_DYLIB)
   endforeach()
 endif()
 
-# Include the RPC server from the `libc` project if availible.
+# Include the RPC server from the `libc` project.
 include(FindLibcCommonUtils)
 target_link_libraries(PluginCommon PRIVATE llvm-libc-common-utilities)
-if(TARGET llvmlibc_rpc_server AND ${LIBOMPTARGET_GPU_LIBC_SUPPORT})
-	target_link_libraries(PluginCommon PRIVATE llvmlibc_rpc_server)
-	target_compile_definitions(PluginCommon PRIVATE LIBOMPTARGET_RPC_SUPPORT)
-elseif(${LIBOMPTARGET_GPU_LIBC_SUPPORT})
-  find_library(llvmlibc_rpc_server NAMES llvmlibc_rpc_server
-               PATHS ${LIBOMPTARGET_LLVM_LIBRARY_DIR} NO_DEFAULT_PATH)
-  if(llvmlibc_rpc_server)
-    target_link_libraries(PluginCommon PRIVATE ${llvmlibc_rpc_server})
-		target_compile_definitions(PluginCommon PRIVATE LIBOMPTARGET_RPC_SUPPORT)
-  endif()
-endif()
 
 # Define the TARGET_NAME and DEBUG_PREFIX.
 target_compile_definitions(PluginCommon PRIVATE
@@ -47,6 +46,7 @@ target_link_options(PluginCommon PUBLIC ${offload_link_flags})
 
 target_include_directories(PluginCommon PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${CMAKE_CURRENT_BINARY_DIR}/include
   ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
   ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
   ${LIBOMPTARGET_INCLUDE_DIR}

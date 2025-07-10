@@ -18,7 +18,6 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/MathExtras.h"
 
 namespace mlir {
@@ -38,6 +37,15 @@ namespace {
 ///
 /// The following tables define these constant transformation matrices for
 /// F(2 x 2, 3 x 3), F(4 x 4, 3 x 3), and F(2 x 2, 5 x 5)
+///
+/// To add more transformation matrices, we need to add the following
+/// items:
+/// 1. Add the constant transformation matrix to the corresponding
+///   G, GT, BT, B, AT, or A array.
+/// 2. Add the corresponding TransformMatrix to the GMatrices, GTMatrices,
+///   BTMatrices, BMatrices, ATMatrices, or AMatrices map.
+/// 3. Add a enum value F_m_r to WinogradConv2DFmr enum.
+///
 constexpr float G_2x2_3x3[] = {
    -1,     0,   0,
  1./2, -1./2, 1./2,
@@ -175,19 +183,6 @@ constexpr float A_2x2_5x5[] = {
     0, 1./2
 };
 // clang-format on
-
-using TransformMapKeyTy = std::pair<int, int>;
-
-/// We use F(m, r) to define the size of minimal filtering algorithms.
-/// m is the output dimension and r is the filter dimension. We can get
-/// the input dimension, alpha, from the formula, alpha = m + r - 1.
-///
-/// For example, when m = 2 and r = 3, we know its input size is 4.
-/// The Conv2D will operate on 4x4 input data with 3x3 filter and get
-/// 2x2 output result.
-constexpr TransformMapKeyTy F_2_3{2, 3};
-constexpr TransformMapKeyTy F_4_3{4, 3};
-constexpr TransformMapKeyTy F_2_5{2, 5};
 
 /// Structure to keep information of constant transform matrices.
 struct TransformMatrix {
@@ -344,22 +339,22 @@ Value insert2DDataTo6D(OpBuilder &builder, Location loc, Value source,
 ///     %ret = linalg.matmul %ret, GT
 ///     %inserted = insert %ret into filter<h x w x c x f>
 Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
-                      Value retValue, int64_t m, int64_t r,
+                      Value retValue, WinogradConv2DFmr fmr,
                       bool leftTransform = true, bool rightTransform = true) {
   // Map from (m, r) to G transform matrix.
-  static const llvm::SmallDenseMap<TransformMapKeyTy, TransformMatrix>
+  static const llvm::SmallDenseMap<WinogradConv2DFmr, TransformMatrix>
       GMatrices = {
-          {F_2_3, TransformMatrix(G_2x2_3x3, 4, 3)},
-          {F_4_3, TransformMatrix(G_4x4_3x3, 6, 3)},
-          {F_2_5, TransformMatrix(G_2x2_5x5, 6, 5)},
+          {WinogradConv2DFmr::F_2_3, TransformMatrix(G_2x2_3x3, 4, 3)},
+          {WinogradConv2DFmr::F_4_3, TransformMatrix(G_4x4_3x3, 6, 3)},
+          {WinogradConv2DFmr::F_2_5, TransformMatrix(G_2x2_5x5, 6, 5)},
       };
 
   // Map from (m, r) to GT transform matrix.
-  static const llvm::SmallDenseMap<TransformMapKeyTy, TransformMatrix>
+  static const llvm::SmallDenseMap<WinogradConv2DFmr, TransformMatrix>
       GTMatrices = {
-          {F_2_3, TransformMatrix(GT_2x2_3x3, 3, 4)},
-          {F_4_3, TransformMatrix(GT_4x4_3x3, 3, 6)},
-          {F_2_5, TransformMatrix(GT_2x2_5x5, 5, 6)},
+          {WinogradConv2DFmr::F_2_3, TransformMatrix(GT_2x2_3x3, 3, 4)},
+          {WinogradConv2DFmr::F_4_3, TransformMatrix(GT_4x4_3x3, 3, 6)},
+          {WinogradConv2DFmr::F_2_5, TransformMatrix(GT_2x2_5x5, 5, 6)},
       };
 
   auto filterType = cast<ShapedType>(filter.getType());
@@ -370,6 +365,8 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
   int64_t filterW = filterShape[2];
   int64_t filterC = filterShape[3];
 
+  int64_t m, r;
+  std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
   if (filterH != r && filterH != 1)
     return Value();
   if (filterW != r && filterW != 1)
@@ -387,14 +384,13 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
                             zeroIdx, filterH, filterW, /*loopNorFIdx=*/0,
                             /*loopCorFIdx=*/3, /*heightIdx=*/1, /*widthIdx=*/2);
 
-    TransformMapKeyTy key = {m, r};
     int64_t retRows = 1;
     Value matmulRetValue = extractFilter;
     Value zero = builder.create<arith::ConstantOp>(
         loc, rewriter.getZeroAttr(elementType));
     if (leftTransform) {
       // Get constant transform matrix G.
-      auto it = GMatrices.find(key);
+      auto it = GMatrices.find(fmr);
       if (it == GMatrices.end())
         return {};
       const TransformMatrix &GMatrix = it->second;
@@ -416,7 +412,7 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
 
     if (rightTransform) {
       // Get constant transform matrix GT.
-      auto it = GTMatrices.find(key);
+      auto it = GTMatrices.find(fmr);
       if (it == GTMatrices.end())
         return {};
       const TransformMatrix &GTMatrix = it->second;
@@ -476,24 +472,26 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
 ///                            %output<alphaH x alphaW x tileH x tileW x N x C>
 ///                            at [0, 0, %h, %w, %n, %c]
 Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
-                     Value retValue, int64_t m, int64_t r,
+                     Value retValue, WinogradConv2DFmr fmr,
                      bool leftTransform = true, bool rightTransform = true) {
   // Map from (m, r) to BT transform matrix.
-  static const llvm::SmallDenseMap<TransformMapKeyTy, TransformMatrix>
+  static const llvm::SmallDenseMap<WinogradConv2DFmr, TransformMatrix>
       BTMatrices = {
-          {F_2_3, TransformMatrix(BT_2x2_3x3, 4, 4)},
-          {F_4_3, TransformMatrix(BT_4x4_3x3, 6, 6)},
-          {F_2_5, TransformMatrix(BT_2x2_5x5, 6, 6)},
+          {WinogradConv2DFmr::F_2_3, TransformMatrix(BT_2x2_3x3, 4, 4)},
+          {WinogradConv2DFmr::F_4_3, TransformMatrix(BT_4x4_3x3, 6, 6)},
+          {WinogradConv2DFmr::F_2_5, TransformMatrix(BT_2x2_5x5, 6, 6)},
       };
 
   // Map from (m, r) to B transform matrix.
-  static const llvm::SmallDenseMap<TransformMapKeyTy, TransformMatrix>
+  static const llvm::SmallDenseMap<WinogradConv2DFmr, TransformMatrix>
       BMatrices = {
-          {F_2_3, TransformMatrix(B_2x2_3x3, 4, 4)},
-          {F_4_3, TransformMatrix(B_4x4_3x3, 6, 6)},
-          {F_2_5, TransformMatrix(B_2x2_5x5, 6, 6)},
+          {WinogradConv2DFmr::F_2_3, TransformMatrix(B_2x2_3x3, 4, 4)},
+          {WinogradConv2DFmr::F_4_3, TransformMatrix(B_4x4_3x3, 6, 6)},
+          {WinogradConv2DFmr::F_2_5, TransformMatrix(B_2x2_5x5, 6, 6)},
       };
 
+  int64_t m, r;
+  std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
   auto inputType = cast<ShapedType>(input.getType());
   Type elementType = inputType.getElementType();
   auto inputShape = inputType.getShape(); // N, H, W, C
@@ -514,12 +512,14 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
     Value CIter = ivs[3];
 
     auto context = builder.getContext();
+
+    auto identityAffineMap = rewriter.getMultiDimIdentityMap(1);
     auto affineMap =
         AffineMap::get(1, 0, {builder.getAffineDimExpr(0) * m}, context);
-    Value heightOffset =
-        builder.create<affine::AffineApplyOp>(loc, affineMap, tileHIter);
-    Value widthOffset =
-        builder.create<affine::AffineApplyOp>(loc, affineMap, tileWIter);
+    Value heightOffset = builder.create<affine::AffineApplyOp>(
+        loc, leftTransform ? affineMap : identityAffineMap, tileHIter);
+    Value widthOffset = builder.create<affine::AffineApplyOp>(
+        loc, rightTransform ? affineMap : identityAffineMap, tileWIter);
 
     // Extract (H, W) from (N, H, W, C).
     auto extractInput =
@@ -527,7 +527,6 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
                             widthOffset, alphaH, alphaW, /*loopNorFIdx=*/0,
                             /*loopCorFIdx=*/3, /*heightIdx=*/1, /*widthIdx=*/2);
 
-    TransformMapKeyTy key = {m, r};
     int64_t retRows = 1;
     int64_t retCols = 1;
     Value matmulRetValue = extractInput;
@@ -535,7 +534,7 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
         loc, rewriter.getZeroAttr(elementType));
     if (leftTransform) {
       // Get constant transform matrix BT.
-      auto it = BTMatrices.find(key);
+      auto it = BTMatrices.find(fmr);
       if (it == BTMatrices.end())
         return {};
       const TransformMatrix &BTMatrix = it->second;
@@ -558,7 +557,7 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
 
     if (rightTransform) {
       // Get constant transform matrix B.
-      auto it = BMatrices.find(key);
+      auto it = BMatrices.find(fmr);
       if (it == BMatrices.end())
         return {};
       const TransformMatrix &BMatrix = it->second;
@@ -694,24 +693,26 @@ static Value matrixMultiply(RewriterBase &rewriter, Location loc,
 ///                            output<N x H x W x F>
 ///                            at [%n, (%h x m), (%w x m), %f]
 Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
-                      Value output, int64_t m, int64_t r,
+                      Value output, WinogradConv2DFmr fmr,
                       bool leftTransform = true, bool rightTransform = true) {
   // Map from (m, r) to AT transform matrix.
-  static const llvm::SmallDenseMap<TransformMapKeyTy, TransformMatrix>
+  static const llvm::SmallDenseMap<WinogradConv2DFmr, TransformMatrix>
       ATMatrices = {
-          {F_2_3, TransformMatrix(AT_2x2_3x3, 2, 4)},
-          {F_4_3, TransformMatrix(AT_4x4_3x3, 4, 6, 32)},
-          {F_2_5, TransformMatrix(AT_2x2_5x5, 2, 6, 16)},
+          {WinogradConv2DFmr::F_2_3, TransformMatrix(AT_2x2_3x3, 2, 4)},
+          {WinogradConv2DFmr::F_4_3, TransformMatrix(AT_4x4_3x3, 4, 6, 32)},
+          {WinogradConv2DFmr::F_2_5, TransformMatrix(AT_2x2_5x5, 2, 6, 16)},
       };
 
   // Map from (m, r) to A transform matrix.
-  static const llvm::SmallDenseMap<TransformMapKeyTy, TransformMatrix>
+  static const llvm::SmallDenseMap<WinogradConv2DFmr, TransformMatrix>
       AMatrices = {
-          {F_2_3, TransformMatrix(A_2x2_3x3, 4, 2)},
-          {F_4_3, TransformMatrix(A_4x4_3x3, 6, 4, 32)},
-          {F_2_5, TransformMatrix(A_2x2_5x5, 6, 2, 16)},
+          {WinogradConv2DFmr::F_2_3, TransformMatrix(A_2x2_3x3, 4, 2)},
+          {WinogradConv2DFmr::F_4_3, TransformMatrix(A_4x4_3x3, 6, 4, 32)},
+          {WinogradConv2DFmr::F_2_5, TransformMatrix(A_2x2_5x5, 6, 2, 16)},
       };
 
+  int64_t m, r;
+  std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
   auto valueType = cast<ShapedType>(value.getType());
   Type elementType = valueType.getElementType();
   auto valueShape = valueType.getShape(); // H, W, TileH, TileW, N, F
@@ -741,9 +742,8 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
                             FIter, 2, 3, /*loopNorFIdx=*/4,
                             /*loopCorFIdx=*/5, /*heightIdx=*/0, /*widthIdx=*/1);
 
-    const TransformMapKeyTy key = {m, r};
-    const TransformMatrix &AMatrix = AMatrices.at(key);
-    const TransformMatrix &ATMatrix = ATMatrices.at(key);
+    const TransformMatrix &AMatrix = AMatrices.at(fmr);
+    const TransformMatrix &ATMatrix = ATMatrices.at(fmr);
     int64_t scalarFactor = (rightTransform ? AMatrix.scalarFactor : 1) *
                            (leftTransform ? ATMatrix.scalarFactor : 1);
     int64_t retCols = rightTransform ? AMatrix.cols : 1;
@@ -753,12 +753,13 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
     Value zero = builder.create<arith::ConstantOp>(
         loc, rewriter.getZeroAttr(elementType));
 
+    auto identityAffineMap = rewriter.getMultiDimIdentityMap(1);
     auto affineMap =
         AffineMap::get(1, 0, {builder.getAffineDimExpr(0) * m}, context);
-    Value heightOffset =
-        builder.create<affine::AffineApplyOp>(loc, affineMap, tileHIter);
-    Value widthOffset =
-        builder.create<affine::AffineApplyOp>(loc, affineMap, tileWIter);
+    Value heightOffset = builder.create<affine::AffineApplyOp>(
+        loc, leftTransform ? affineMap : identityAffineMap, tileHIter);
+    Value widthOffset = builder.create<affine::AffineApplyOp>(
+        loc, rightTransform ? affineMap : identityAffineMap, tileWIter);
 
     Value outInitVal =
         extract2DDataFrom4D(builder, loc, args[0], NIter, FIter, heightOffset,
@@ -900,7 +901,11 @@ static bool hasAllOneValues(DenseIntElementsAttr attr) {
 /// linalg.winograd_*_transform ops.
 static FailureOr<Operation *>
 winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
-                     int64_t m, int64_t r) {
+                     WinogradConv2DFmr fmr) {
+  if (!convOp.hasPureTensorSemantics())
+    return rewriter.notifyMatchFailure(
+        convOp, "expected pure tensor semantics for linalg.conv_2d_nhwc_fhwc");
+
   Value input = convOp.getInputs()[0];
   Value filter = convOp.getInputs()[1];
   Value output = convOp.getOutputs()[0];
@@ -939,6 +944,8 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
   int64_t outputW = outputShape[2];
   int64_t outputF = outputShape[3];
 
+  int64_t m, r;
+  std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
   // Only support F(m x m, r x r), F(m x 1, r x 1) or F(1 x m, 1 x r).
   bool isSupportedFilter = false;
   if (filterH == filterW && filterH == r)
@@ -951,17 +958,6 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
   if (!isSupportedFilter)
     return rewriter.notifyMatchFailure(
         convOp, "only support filter (r x r), (r x 1) or (1 x r)");
-
-  // Currently, we support (m, r) = (2, 3) or (4, 3) or (2, 5).
-  static const llvm::SmallVector<TransformMapKeyTy, 3> validConfigs = {
-      F_2_3, F_4_3, F_2_5};
-
-  TransformMapKeyTy key = {m, r};
-  auto it = std::find(validConfigs.begin(), validConfigs.end(), key);
-  // If we cannot find the constant transformation matrix, it means we do
-  // not support this configuration yet.
-  if (it == validConfigs.end())
-    return failure();
 
   // All the criterias are satisfied. We can do Winograd Conv2D.
   Location loc = convOp.getLoc();
@@ -986,7 +982,7 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
   Value retValue = rewriter.create<tensor::EmptyOp>(loc, retType.getShape(),
                                                     filterElementType);
   auto transformedFilter = rewriter.create<linalg::WinogradFilterTransformOp>(
-      loc, retType, filter, retValue, m, r);
+      loc, retType, filter, retValue, fmr);
 
   // --- Create operation for input transform ---
 
@@ -1005,7 +1001,7 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
   retValue = rewriter.create<tensor::EmptyOp>(loc, retType.getShape(),
                                               inputElementType);
   auto transformedInput = rewriter.create<linalg::WinogradInputTransformOp>(
-      loc, retType, input, retValue, m, r);
+      loc, retType, input, retValue, fmr);
 
   Type outputElementType = outputType.getElementType();
   Value matmulRet = matrixMultiply(rewriter, loc, transformedFilter,
@@ -1028,7 +1024,7 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
   }
 
   Value transformedOutput = rewriter.create<linalg::WinogradOutputTransformOp>(
-      loc, outputType, matmulRet, output, m, r);
+      loc, outputType, matmulRet, output, fmr);
 
   // When output size is not aligned with output tile size, extract the
   // value from the padded buffer.
@@ -1060,8 +1056,8 @@ decomposeWinogradFilterTransformHelper(RewriterBase &rewriter,
   // For F(1 x m, 1 x r), we only need to do right side transform.
   bool rightTransform = filterW != 1;
   Value transformedFilter =
-      filterTransform(rewriter, loc, filter, op.getOutput(), op.getM(),
-                      op.getR(), leftTransform, rightTransform);
+      filterTransform(rewriter, loc, filter, op.getOutput(), op.getFmr(),
+                      leftTransform, rightTransform);
   if (!transformedFilter)
     return failure();
 
@@ -1075,19 +1071,20 @@ FailureOr<Operation *>
 decomposeWinogradInputTransformHelper(RewriterBase &rewriter,
                                       linalg::WinogradInputTransformOp op) {
   Location loc = op.getLoc();
-  Value input = op.getInput();
-  auto inputType = cast<ShapedType>(input.getType());
-  auto inputShape = inputType.getShape();
-  int64_t inputH = inputShape[1];
-  int64_t inputW = inputShape[2];
+  Value output = op.getOutput();
+  auto outputType = cast<ShapedType>(output.getType());
+  auto outputShape = outputType.getShape();
+
+  int64_t outputH = outputShape[0];
+  int64_t outputW = outputShape[1];
 
   // For F(m x 1, r x 1), we only need to do left side transform.
-  bool leftTransform = inputH != 1;
+  bool leftTransform = outputH != 1;
   // For F(1 x m, 1 x r), we only need to do right side transform.
-  bool rightTransform = inputW != 1;
+  bool rightTransform = outputW != 1;
   Value transformedInput =
-      inputTransform(rewriter, loc, op.getInput(), op.getOutput(), op.getM(),
-                     op.getR(), leftTransform, rightTransform);
+      inputTransform(rewriter, loc, op.getInput(), op.getOutput(), op.getFmr(),
+                     leftTransform, rightTransform);
   if (!transformedInput)
     return failure();
 
@@ -1112,8 +1109,8 @@ decomposeWinogradOutputTransformHelper(RewriterBase &rewriter,
   // For F(1 x m, 1 x r), we only need to do right side transform.
   bool rightTransform = valueW != 1;
   Value transformedOutput =
-      outputTransform(rewriter, loc, value, op.getOutput(), op.getM(),
-                      op.getR(), leftTransform, rightTransform);
+      outputTransform(rewriter, loc, value, op.getOutput(), op.getFmr(),
+                      leftTransform, rightTransform);
   if (!transformedOutput)
     return failure();
 
@@ -1163,28 +1160,28 @@ class WinogradConv2DNhwcFhwc final
     : public OpRewritePattern<linalg::Conv2DNhwcFhwcOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
-  WinogradConv2DNhwcFhwc(mlir::MLIRContext *context, int64_t m, int64_t r)
-      : OpRewritePattern(context), m(m), r(r) {}
+  WinogradConv2DNhwcFhwc(mlir::MLIRContext *context, WinogradConv2DFmr fmr)
+      : OpRewritePattern(context), fmr(fmr) {}
 
   LogicalResult matchAndRewrite(linalg::Conv2DNhwcFhwcOp convOp,
                                 PatternRewriter &rewriter) const override {
-    if (failed(winogradConv2DHelper(rewriter, convOp, m, r)))
+    if (failed(winogradConv2DHelper(rewriter, convOp, fmr)))
       return failure();
 
     return success();
   }
 
 private:
-  int64_t m;
-  int64_t r;
+  WinogradConv2DFmr fmr;
 };
+
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
 FailureOr<Operation *> winogradConv2D(RewriterBase &rewriter,
-                                      linalg::Conv2DNhwcFhwcOp op, int64_t m,
-                                      int64_t r) {
-  return winogradConv2DHelper(rewriter, op, m, r);
+                                      linalg::Conv2DNhwcFhwcOp op,
+                                      linalg::WinogradConv2DFmr fmr) {
+  return winogradConv2DHelper(rewriter, op, fmr);
 }
 
 FailureOr<Operation *>
@@ -1205,11 +1202,11 @@ decomposeWinogradOutputTransformOp(RewriterBase &rewriter,
   return decomposeWinogradOutputTransformHelper(rewriter, op);
 }
 
-void populateWinogradConv2DPatterns(RewritePatternSet &patterns, int64_t m,
-                                    int64_t r) {
+void populateWinogradConv2DPatterns(RewritePatternSet &patterns,
+                                    WinogradConv2DFmr fmr) {
   MLIRContext *context = patterns.getContext();
   // TODO: Support more Conv2D data layout, e.g., conv_2d_nchw_fchw
-  patterns.insert<WinogradConv2DNhwcFhwc>(context, m, r);
+  patterns.insert<WinogradConv2DNhwcFhwc>(context, fmr);
 }
 
 void populateDecomposeWinogradOpsPatterns(RewritePatternSet &patterns) {

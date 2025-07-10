@@ -149,7 +149,7 @@ func.func @one_unused(%cond: i1) -> (index) {
 // CHECK:             call @side_effect() : () -> ()
 // CHECK:             [[C1:%.*]] = "test.value1"
 // CHECK:             scf.yield [[C1]] : index
-// CHECK:           } else
+// CHECK:           } else {
 // CHECK:             [[C3:%.*]] = "test.value3"
 // CHECK:             scf.yield [[C3]] : index
 // CHECK:           }
@@ -185,12 +185,12 @@ func.func @nested_unused(%cond1: i1, %cond2: i1) -> (index) {
 // CHECK:               call @side_effect() : () -> ()
 // CHECK:               [[C1:%.*]] = "test.value1"
 // CHECK:               scf.yield [[C1]] : index
-// CHECK:             } else
+// CHECK:             } else {
 // CHECK:               [[C3:%.*]] = "test.value3"
 // CHECK:               scf.yield [[C3]] : index
 // CHECK:             }
 // CHECK:             scf.yield [[V1]] : index
-// CHECK:           } else
+// CHECK:           } else {
 // CHECK:             [[C1_2:%.*]] = "test.value1_2"
 // CHECK:             scf.yield [[C1_2]] : index
 // CHECK:           }
@@ -215,7 +215,7 @@ func.func @all_unused(%cond: i1) {
 // CHECK-LABEL:   func @all_unused
 // CHECK:           scf.if %{{.*}} {
 // CHECK:             call @side_effect() : () -> ()
-// CHECK:           } else
+// CHECK:           } else {
 // CHECK:             call @side_effect() : () -> ()
 // CHECK:           }
 // CHECK:           return
@@ -817,6 +817,24 @@ func.func @fold_away_iter_and_result_with_no_use(%arg0 : i32,
 
   // CHECK: return %[[FOR_RES]] : i32
   return %0#0 : i32
+}
+
+// -----
+
+// CHECK-LABEL: @replace_duplicate_iter_args
+// CHECK-SAME: [[LB:%arg[0-9]]]: index, [[UB:%arg[0-9]]]: index, [[STEP:%arg[0-9]]]: index, [[A:%arg[0-9]]]: index, [[B:%arg[0-9]]]: index
+func.func @replace_duplicate_iter_args(%lb: index, %ub: index, %step: index, %a: index, %b: index) -> (index, index, index, index) {
+  // CHECK-NEXT: [[RES:%.*]]:2 = scf.for {{.*}} iter_args([[K0:%.*]] = [[A]], [[K1:%.*]] = [[B]])
+  %0:4 = scf.for %i = %lb to %ub step %step iter_args(%k0 = %a, %k1 = %b, %k2 = %b, %k3 = %a) -> (index, index, index, index) {
+    // CHECK-NEXT: [[V0:%.*]] = arith.addi [[K0]], [[K1]]
+    %1 = arith.addi %k0, %k1 : index
+    // CHECK-NEXT: [[V1:%.*]] = arith.addi [[K1]], [[K0]]
+    %2 = arith.addi %k2, %k3 : index
+    // CHECK-NEXT: yield [[V0]], [[V1]]
+    scf.yield %1, %2, %2, %1 : index, index, index, index
+  }
+  // CHECK: return [[RES]]#0, [[RES]]#1, [[RES]]#1, [[RES]]#0
+  return %0#0, %0#1, %0#2, %0#3 : index, index, index, index
 }
 
 // -----
@@ -1793,7 +1811,7 @@ module {
       %4 = affine.min #map2(%arg3)[%dim, %arg0]
       %extracted_slice0 = tensor.extract_slice %arg4[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
       %extracted_slice1 = tensor.extract_slice %arg5[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
-      %5 = linalg.elemwise_unary ins(%extracted_slice0 : tensor<?xf32>) outs(%extracted_slice1 : tensor<?xf32>) -> tensor<?xf32>
+      %5 = linalg.exp ins(%extracted_slice0 : tensor<?xf32>) outs(%extracted_slice1 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %5 into %arg5[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
       }
@@ -1807,7 +1825,7 @@ module {
 //  CHECK-SAME:                       shared_outs(%[[ITER_ARG_5:.*]] = %[[ARG2]]) -> (tensor<?xf32>) {
 //       CHECK:      %[[OPERAND0:.*]] = tensor.extract_slice %[[ARG1]]
 //       CHECK:      %[[OPERAND1:.*]] = tensor.extract_slice %[[ITER_ARG_5]]
-//       CHECK:      %[[ELEM:.*]] = linalg.elemwise_unary ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
+//       CHECK:      %[[ELEM:.*]] = linalg.exp ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
 //       CHECK:      scf.forall.in_parallel {
 //  CHECK-NEXT:         tensor.parallel_insert_slice %[[ELEM]] into %[[ITER_ARG_5]]
 //  CHECK-NEXT:      }
@@ -1833,7 +1851,7 @@ module {
       %extracted_slice_0 = tensor.extract_slice %arg6[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
       %extracted_slice_1 = tensor.extract_slice %arg7[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
       %extracted_slice_2 = tensor.extract_slice %0[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
-      %5 = linalg.elemwise_unary ins(%extracted_slice : tensor<?xf32>) outs(%extracted_slice_1 : tensor<?xf32>) -> tensor<?xf32>
+      %5 = linalg.exp ins(%extracted_slice : tensor<?xf32>) outs(%extracted_slice_1 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %5 into %arg6[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
         tensor.parallel_insert_slice %extracted_slice into %arg5[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
@@ -1850,7 +1868,7 @@ module {
 //  CHECK-SAME:                       shared_outs(%[[ITER_ARG_6:.*]] = %[[ARG2]]) -> (tensor<?xf32>) {
 //       CHECK:      %[[OPERAND0:.*]] = tensor.extract_slice %[[ARG1]]
 //       CHECK:      %[[OPERAND1:.*]] = tensor.extract_slice %[[ARG3]]
-//       CHECK:      %[[ELEM:.*]] = linalg.elemwise_unary ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
+//       CHECK:      %[[ELEM:.*]] = linalg.exp ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
 //       CHECK:      scf.forall.in_parallel {
 //  CHECK-NEXT:         tensor.parallel_insert_slice %[[ELEM]] into %[[ITER_ARG_6]]
 //  CHECK-NEXT:      }

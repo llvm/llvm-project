@@ -15,8 +15,10 @@
 // RISC-V specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
-def riscv_czero_eqz : SDNode<"RISCVISD::CZERO_EQZ", SDTIntBinOp>;
-def riscv_czero_nez : SDNode<"RISCVISD::CZERO_NEZ", SDTIntBinOp>;
+// Branchless select operations, matching the semantics of the instructions
+// defined in Zicond or XVentanaCondOps
+def riscv_czero_eqz : RVSDNode<"CZERO_EQZ", SDTIntBinOp>; // vt.maskc for XVentanaCondOps.
+def riscv_czero_nez : RVSDNode<"CZERO_NEZ", SDTIntBinOp>; // vt.maskcn for XVentanaCondOps.
 
 //===----------------------------------------------------------------------===//
 // Instructions
