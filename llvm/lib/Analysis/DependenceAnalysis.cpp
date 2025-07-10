@@ -4009,8 +4009,13 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   // TODO: Ideally, the distance should be set to 0 immediately simultaneously
   // with the corresponding direction being set to EQ.
   for (unsigned II = 1; II <= Result.getLevels(); ++II) {
-    if (Result.getDirection(II) == Dependence::DVEntry::EQ)
-      Result.DV[II - 1].Distance = SE->getZero(SrcSCEV->getType());
+    if (Result.getDirection(II) == Dependence::DVEntry::EQ) {
+      if (Result.DV[II - 1].Distance == nullptr)
+        Result.DV[II - 1].Distance = SE->getZero(SrcSCEV->getType());
+      else
+        assert(Result.DV[II - 1].Distance->isZero() &&
+               "Inconsistency between distance and direction");
+    }
 
 #ifndef NDEBUG
       // Check that the converse (i.e., if the distance is zero, then the
