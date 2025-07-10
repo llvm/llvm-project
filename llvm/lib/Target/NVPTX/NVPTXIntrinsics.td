@@ -754,26 +754,30 @@ foreach dim = [1, 2, 3, 4, 5] in {
 
 defvar frag_pat = (int_nvvm_prefetch_tensormap node:$addr);
 
-def prefetch_tensormap_const : PatFrag<!setdagop(frag_pat, ops), frag_pat, AS_match.const>;
-def prefetch_tensormap_gen : PatFrag<!setdagop(frag_pat, ops), frag_pat, AS_match.generic>;
-def prefetch_tensormap_param : PatFrag<!setdagop(frag_pat, ops), frag_pat, AS_match.param>;
+multiclass PREFETCH_TENSORMAP_PATFRAG<string suffix, code predicate> {
+  def !tolower(suffix) : PatFrag<!setdagop(frag_pat, ops), frag_pat, predicate>;
+}
+
+defm prefetch_tensormap_ : PREFETCH_TENSORMAP_PATFRAG<"CONST", AS_match.const>;
+defm prefetch_tensormap_ : PREFETCH_TENSORMAP_PATFRAG<"GENERIC", AS_match.generic>;
+defm prefetch_tensormap_ : PREFETCH_TENSORMAP_PATFRAG<"PARAM", AS_match.param>;
 
 multiclass PREFETCH_TENSORMAP_INST<string addrspace_name, PatFrag pattern_frag> {
   def "" : BasicNVPTXInst<(outs), (ins ADDR:$addr),
-           !strconcat("prefetch", !if(!eq(addrspace_name, ""), "",
-           !strconcat(".", addrspace_name)), ".tensormap [$addr];"),
+           "prefetch" # addrspace_name # ".tensormap",
            [(pattern_frag addr:$addr)]>,
            Requires<[hasPTX<80>, hasSM<90>]>;
 }
 
-defm PREFETCH_CONST_TENSORMAP   : PREFETCH_TENSORMAP_INST<"const", prefetch_tensormap_const>;
-defm PREFETCH_GENERIC_TENSORMAP : PREFETCH_TENSORMAP_INST<"", prefetch_tensormap_gen>;
-defm PREFETCH_PARAM_TENSORMAP   : PREFETCH_TENSORMAP_INST<"param", prefetch_tensormap_param>;
+defm PREFETCH_CONST_TENSORMAP   : PREFETCH_TENSORMAP_INST<".const", prefetch_tensormap_const>;
+defm PREFETCH_GENERIC_TENSORMAP : PREFETCH_TENSORMAP_INST<"", prefetch_tensormap_generic>;
+defm PREFETCH_PARAM_TENSORMAP   : PREFETCH_TENSORMAP_INST<".param", prefetch_tensormap_param>;
   
 class PREFETCH_INTRS<string InstName, Intrinsic Intr> :
           BasicNVPTXInst<(outs), (ins ADDR:$addr),
           InstName,
-          [(Intr addr:$addr)]>;
+          [(Intr addr:$addr)]>,
+          Requires<[hasPTX<80>, hasSM<90>]>;
 
 def PREFETCHU_L1 : PREFETCH_INTRS<"prefetchu.L1", int_nvvm_prefetchu_L1>;   
 def PREFETCH_L1 : PREFETCH_INTRS<"prefetch.L1", int_nvvm_prefetch_L1>;
