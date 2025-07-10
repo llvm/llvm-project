@@ -831,7 +831,8 @@ ClangExpressionParser::ClangExpressionParser(
   // FIXME: We shouldn't need to do this, the target should be immutable once
   // created. This complexity should be lifted elsewhere.
   m_compiler->getTarget().adjust(m_compiler->getDiagnostics(),
-                                 m_compiler->getLangOpts(), /*AuxTarget=*/nullptr);
+                                 m_compiler->getLangOpts(),
+                                 /*AuxTarget=*/nullptr);
 
   // 5. Set up the diagnostic buffer for reporting errors
   auto diag_mgr = new ClangDiagnosticManagerAdapter(
