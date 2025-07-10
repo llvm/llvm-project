@@ -4307,23 +4307,26 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, PtrSrcOrigin);
   }
 
+  // Test whether the mask indices are initialized, only checking the bits that
+  // are actually used.
+  //
+  // e.g., if Idx is <32 x i16>, only (log2(32) == 5) bits of each index are
+  //       used/checked.
   void maskedCheckAVXIndexShadow(IRBuilder<> &IRB, Value *Idx, Instruction *I) {
+    assert(isFixedIntVector(Idx));
     auto IdxVectorSize =
         cast<FixedVectorType>(Idx->getType())->getNumElements();
     assert(isPowerOf2_64(IdxVectorSize));
-    auto *IdxVectorElemType =
-        cast<FixedVectorType>(Idx->getType())->getElementType();
-    Constant *IndexBits =
-        ConstantInt::get(IdxVectorElemType, IdxVectorSize - 1);
-    auto *IdxShadow = getShadow(Idx);
-    // Only the low bits of Idx are used.
-    Value *V = nullptr;
-    for (size_t i = 0; i < IdxVectorSize; ++i) {
-      V = IRB.CreateExtractElement(IdxShadow, i);
-      assert(V->getType() == IndexBits->getType());
-      V = IRB.CreateOr(V, IRB.CreateAnd(V, IndexBits));
-    }
-    insertCheckShadow(V, getOrigin(Idx), I);
+
+    // Compiler isn't smart enough, let's help it
+    if (isa<Constant>(Idx))
+      return;
+
+    Value *Truncated = IRB.CreateTrunc(
+        Idx,
+        FixedVectorType::get(Type::getIntNTy(*MS.C, Log2_64(IdxVectorSize)),
+                             IdxVectorSize));
+    insertCheckShadow(Truncated, getOrigin(Idx), I);
   }
 
   // Instrument AVX permutation intrinsic.
@@ -4376,6 +4379,22 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  [[maybe_unused]] static bool isFixedIntVectorTy(const Type *T) {
+    return isa<FixedVectorType>(T) && T->isIntOrIntVectorTy();
+  }
+
+  [[maybe_unused]] static bool isFixedFPVectorTy(const Type *T) {
+    return isa<FixedVectorType>(T) && T->isFPOrFPVectorTy();
+  }
+
+  [[maybe_unused]] static bool isFixedIntVector(const Value *V) {
+    return isFixedIntVectorTy(V->getType());
+  }
+
+  [[maybe_unused]] static bool isFixedFPVector(const Value *V) {
+    return isFixedFPVectorTy(V->getType());
+  }
+
   // e.g., call <16 x i32> @llvm.x86.avx512.mask.cvtps2dq.512
   //                           (<16 x float> a, <16 x i32> writethru, i16 mask,
   //                           i32 rounding)
@@ -4391,13 +4410,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *A = I.getOperand(0);
     Value *WriteThrough = I.getOperand(1);
     Value *Mask = I.getOperand(2);
-    [[maybe_unused]] Value *RoundingMode = I.getOperand(3);
+    Value *RoundingMode = I.getOperand(3);
 
-    assert(isa<FixedVectorType>(A->getType()));
-    assert(A->getType()->isFPOrFPVectorTy());
-
-    assert(isa<FixedVectorType>(WriteThrough->getType()));
-    assert(WriteThrough->getType()->isIntOrIntVectorTy());
+    assert(isFixedFPVector(A));
+    assert(isFixedIntVector(WriteThrough));
 
     unsigned ANumElements =
         cast<FixedVectorType>(A->getType())->getNumElements();
@@ -4406,8 +4422,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     assert(Mask->getType()->isIntegerTy());
     assert(Mask->getType()->getScalarSizeInBits() == ANumElements);
+    insertCheckShadowOf(Mask, &I);
 
     assert(RoundingMode->getType()->isIntegerTy());
+    // Only four bits of the rounding mode are used, though it's very
+    // unusual to have uninitialized bits there (more commonly, it's a
+    // constant).
+    insertCheckShadowOf(RoundingMode, &I);
 
     assert(I.getType() == WriteThrough->getType());
 
@@ -4617,11 +4638,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *WriteThrough = I.getOperand(1);
     Value *Mask = I.getOperand(2);
 
-    assert(isa<FixedVectorType>(A->getType()));
-    assert(A->getType()->isIntOrIntVectorTy());
-
-    assert(isa<FixedVectorType>(WriteThrough->getType()));
-    assert(WriteThrough->getType()->isIntOrIntVectorTy());
+    assert(isFixedIntVector(A));
+    assert(isFixedIntVector(WriteThrough));
 
     unsigned ANumElements =
         cast<FixedVectorType>(A->getType())->getNumElements();

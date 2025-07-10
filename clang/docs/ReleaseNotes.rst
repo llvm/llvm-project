@@ -145,6 +145,8 @@ C++20 Feature Support
 - Fixed a crash with a defaulted spaceship (``<=>``) operator when the class
   contains a member declaration of vector type. Vector types cannot yet be
   compared directly, so this causes the operator to be deleted. (#GH137452)
+- Implement constant evaluation of lambdas that capture structured bindings.
+  (#GH145956)
 
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -660,6 +662,10 @@ Improvements to Clang's diagnostics
   #GH142457, #GH139913, #GH138850, #GH137867, #GH137860, #GH107840, #GH93308,
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
+  
+- Clang no longer emits a spurious -Wdangling-gsl warning in C++23 when
+  iterating over an element of a temporary container in a range-based
+  for loop.(#GH109793, #GH145164)
 
 - Fixed false positives in ``-Wformat-truncation`` and ``-Wformat-overflow``
   diagnostics when floating-point numbers had both width field and plus or space
@@ -770,8 +776,10 @@ Bug Fixes in This Version
 - In C23, something like ``[[/*possible attributes*/]];`` is an attribute
   declaration, not a statement. So it is not allowed by the syntax in places
   where a statement is required, specifically as the secondary block of a
-  selection or iteration statement. This differs from C++, since C++ allows 
+  selection or iteration statement. This differs from C++, since C++ allows
   declaration statements. Clang now emits a warning for these patterns. (#GH141659)
+- Fixed false positives for redeclaration errors of using enum in
+  nested scopes. (#GH147495)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -922,12 +930,17 @@ Bug Fixes to C++ Support
 - Fixed a crash when constant evaluating some explicit object member assignment operators. (#GH142835)
 - Fixed an access checking bug when substituting into concepts (#GH115838)
 - Fix a bug where private access specifier of overloaded function not respected. (#GH107629)
+- Correctly handles calling an explicit object member function template overload set
+  through its address (``(&Foo::bar<baz>)()``).
 - Correctly handle allocations in the condition of a ``if constexpr``.(#GH120197) (#GH134820)
 - Fixed a crash when handling invalid member using-declaration in C++20+ mode. (#GH63254)
+- Fixed parsing of lambda expressions that appear after ``*`` or ``&`` in contexts where a declaration can appear. (#GH63880)
+- Fix name lookup in lambda appearing in the body of a requires expression. (#GH147650)
 - Fix a crash when trying to instantiate an ambiguous specialization. (#GH51866)
 - Improved handling of variables with ``consteval`` constructors, to
   consistently treat the initializer as manifestly constant-evaluated.
   (#GH135281)
+- Fix a crash in the presence of invalid base classes. (#GH147186)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1228,6 +1241,7 @@ OpenMP Support
 - Fixed mapping of arrays of structs containing nested structs with user defined
   mappers, by using compiler-generated default mappers for the outer structs for
   such maps.
+- Deprecation warning has been emitted for deprecated delimited form of ``declare target``.
 
 Improvements
 ^^^^^^^^^^^^
