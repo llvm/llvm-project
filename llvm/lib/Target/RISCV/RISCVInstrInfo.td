@@ -120,6 +120,20 @@ def riscv_swap_csr  : RVSDNode<"SWAP_CSR",
                                                     SDTCisInt<2>]>,
                                [SDNPHasChain]>;
 
+// Clear bits of CSR. The first operand is the address of the required CSR,
+// the second is the bitmask of cleared bits.
+def riscv_clear_csr  : RVSDNode<"CLEAR_CSR",
+                               SDTypeProfile<0, 2, [SDTCisInt<0>,
+                                                    SDTCisInt<1>]>,
+                               [SDNPHasChain]>;
+
+// Set bits of CSR. The first operand is the address of the required CSR,
+// the second is the bitmask of bits to set.
+def riscv_set_csr  : RVSDNode<"SET_CSR",
+                               SDTypeProfile<0, 2, [SDTCisInt<0>,
+                                                    SDTCisInt<1>]>,
+                               [SDNPHasChain]>;
+
 // A read of the 64-bit counter CSR on a 32-bit target (returns (Lo, Hi)).
 // It takes a chain operand and another two target constant operands (the
 // CSR numbers of the low and high parts of the counter).
@@ -2038,6 +2052,42 @@ class SwapSysRegImm<SysReg SR, list<Register> Regs>
   let Defs = Regs;
 }
 
+class ClearSysReg<SysReg SR, list<Register> Regs>
+  : Pseudo<(outs), (ins GPR:$val),
+           [(riscv_clear_csr (XLenVT SR.Encoding), (XLenVT GPR:$val))]>,
+    PseudoInstExpansion<(CSRRC X0, SR.Encoding, GPR:$val)> {
+  let hasSideEffects = 0;
+  let Uses = Regs;
+  let Defs = Regs;
+}
+
+class ClearSysRegImm<SysReg SR, list<Register> Regs>
+  : Pseudo<(outs), (ins uimm5:$val),
+           [(riscv_clear_csr (XLenVT SR.Encoding), uimm5:$val)]>,
+    PseudoInstExpansion<(CSRRCI X0, SR.Encoding, uimm5:$val)> {
+  let hasSideEffects = 0;
+  let Uses = Regs;
+  let Defs = Regs;
+}
+
+class SetSysReg<SysReg SR, list<Register> Regs>
+  : Pseudo<(outs), (ins GPR:$val),
+           [(riscv_set_csr (XLenVT SR.Encoding), (XLenVT GPR:$val))]>,
+    PseudoInstExpansion<(CSRRS X0, SR.Encoding, GPR:$val)> {
+  let hasSideEffects = 0;
+  let Uses = Regs;
+  let Defs = Regs;
+}
+
+class SetSysRegImm<SysReg SR, list<Register> Regs>
+  : Pseudo<(outs), (ins uimm5:$val),
+           [(riscv_set_csr (XLenVT SR.Encoding), uimm5:$val)]>,
+    PseudoInstExpansion<(CSRRSI X0, SR.Encoding, uimm5:$val)> {
+  let hasSideEffects = 0;
+  let Uses = Regs;
+  let Defs = Regs;
+}
+
 def ReadFRM : ReadSysReg<SysRegFRM, [FRM]>;
 let hasPostISelHook = 1 in {
 def WriteFRM : WriteSysReg<SysRegFRM, [FRM]>;
@@ -2056,6 +2106,10 @@ let hasPostISelHook = 1 in {
 def ReadFCSR : ReadSysReg<SysRegFCSR, [FRM, FFLAGS]>;
 def WriteFCSR : WriteSysReg<SysRegFCSR, [FRM, FFLAGS]>;
 def WriteFCSRImm : WriteSysRegImm<SysRegFCSR, [FRM, FFLAGS]>;
+def ClearFCSR : ClearSysReg<SysRegFCSR, [FRM, FFLAGS]>;
+def ClearFCSRImm : ClearSysRegImm<SysRegFCSR, [FRM, FFLAGS]>;
+def SetFCSR : SetSysReg<SysRegFCSR, [FRM, FFLAGS]>;
+def SetFCSRImm : SetSysRegImm<SysRegFCSR, [FRM, FFLAGS]>;
 }
 
 /// Other pseudo-instructions
