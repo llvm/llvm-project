@@ -320,6 +320,6 @@ void linalg::populateBlockPackMatmulPatterns(
     RewritePatternSet &patterns, const ControlBlockPackMatmulFn &controlFn) {
   patterns.add<BlockPackMatmul<linalg::GenericOp>,
                BlockPackMatmul<linalg::MatmulOp>,
-               BlockPackMatmul<linalg::BatchMatmulOp>>(
-      patterns.getContext(), controlFn);
+               BlockPackMatmul<linalg::BatchMatmulOp>>(patterns.getContext(),
+                                                       controlFn);
 }
