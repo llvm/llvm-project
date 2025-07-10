@@ -3000,9 +3000,6 @@ lldb::addr_t Target::GetBreakableLoadAddress(lldb::addr_t addr) {
 lldb::DisassemblerSP Target::ReadInstructions(const Address &start_addr,
                                               uint32_t count,
                                               const char *flavor_string) {
-  if (!m_process_sp)
-    return lldb::DisassemblerSP();
-
   DataBufferHeap data(GetArchitecture().GetMaximumOpcodeByteSize() * count, 0);
   bool force_live_memory = true;
   lldb_private::Status error;
