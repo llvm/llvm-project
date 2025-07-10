@@ -3876,7 +3876,11 @@ Type OuterProductOp::getExpectedMaskType() {
 static Type inferStridedSliceOpResultType(VectorType vectorType,
                                           ArrayAttr offsets, ArrayAttr sizes,
                                           ArrayAttr strides) {
-  assert(offsets.size() == sizes.size() && offsets.size() == strides.size());
+
+  assert(offsets.size() == sizes.size() &&
+         "offsets and sizes must be same size");
+  assert(offsets.size() == strides.size() &&
+         "offsets and strides must be same size");
   SmallVector<int64_t, 4> shape;
   shape.reserve(vectorType.getRank());
   unsigned idx = 0;
@@ -5965,13 +5969,21 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
 
   VectorType resultType = getType();
 
-  // No-op shape cast.
-  if (getSource().getType() == resultType)
-    return getSource();
+  // y = shape_cast(shape_cast(shape_cast(x)))
+  //    -> shape_cast(x) # if x and y different types
+  //    -> x             # if x and y same type
+  // Value newSource  = getSource();
+  ShapeCastOp parent = *this;
+  while (auto precedingShapeCast =
+             parent.getSource().getDefiningOp<ShapeCastOp>()) {
+    parent = precedingShapeCast;
+  }
 
-  // shape_cast(shape_cast(x)) -> shape_cast(x)
-  if (auto precedingShapeCast = getSource().getDefiningOp<ShapeCastOp>()) {
-    setOperand(precedingShapeCast.getSource());
+  if (parent.getSource().getType() == resultType)
+    return parent.getSource();
+
+  if (parent != *this) {
+    setOperand(parent.getSource());
     return getResult();
   }
 
@@ -5991,14 +6003,20 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
       return bcastOp.getSource();
   }
 
-  // shape_cast(constant) -> constant
-  if (auto splatAttr =
-          llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource()))
-    return splatAttr.reshape(getType());
+  Attribute attr = adaptor.getSource();
+  if (attr) {
+    // shape_cast(constant) -> constant
+    if (auto splatAttr = llvm::dyn_cast<SplatElementsAttr>(attr))
+      return splatAttr.reshape(getType());
 
-  // shape_cast(poison) -> poison
-  if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getSource())) {
-    return ub::PoisonAttr::get(getContext());
+    if (auto dstElementsAttr = dyn_cast<DenseElementsAttr>(attr)) {
+      return dstElementsAttr.reshape(getType());
+    }
+
+    // shape_cast(poison) -> poison
+    if (llvm::dyn_cast<ub::PoisonAttr>(attr)) {
+      return ub::PoisonAttr::get(getContext());
+    }
   }
 
   return {};
