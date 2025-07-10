@@ -42,11 +42,10 @@
 #  endif
 #endif
 
-// This is required in order for _NEWLIB_VERSION to be defined in places where we use it.
-// TODO: We shouldn't be including arbitrarily-named headers from libc++ since this can break valid
-//       user code. Move code paths that need _NEWLIB_VERSION to another customization mechanism.
+// TODO: Remove this deprecated behavior after LLVM 22 release
+// To build libc++ with picolibc provide RUNTIMES_USE_LIBC=picolibc
 #if __has_include(<picolibc.h>)
-#  include <picolibc.h>
+#  define LIBCXX_LIBC_NEWLIB
 #endif
 
 #ifndef __BYTE_ORDER__

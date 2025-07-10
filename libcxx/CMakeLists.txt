@@ -481,6 +481,21 @@ include(config-ix)
 include(HandleLibC) # Setup the C library flags
 include(HandleLibCXXABI) # Setup the ABI library flags
 
+# Set C library in use to define respective macro in __config_site
+# RUNTIMES_USE_LIBC was checked in HandleLibC to be one of accepted values
+if (RUNTIMES_USE_LIBC STREQUAL "llvm-libc")
+  set(LIBCXX_LIBC_LLVMLIBC 1)
+elseif (RUNTIMES_USE_LIBC STREQUAL "picolibc")
+  set(LIBCXX_LIBC_PICOLIBC 1)
+  # picolibc is derived from newlib and behaves the same in regards to libc++
+  # so setting both here:
+  # * LIBCXX_LIBC_NEWLIB is used now
+  # * LIBCXX_LIBC_PICOLIBC can be used for further customizations later
+  set(LIBCXX_LIBC_NEWLIB 1) 
+elseif (RUNTIMES_USE_LIBC STREQUAL "newlib")
+  set(LIBCXX_LIBC_NEWLIB 1)
+endif()
+
 # FIXME(EricWF): See the FIXME on LIBCXX_ENABLE_PEDANTIC.
 # Remove the -pedantic flag and -Wno-pedantic and -pedantic-errors
 # so they don't get transformed into -Wno and -errors respectively.
