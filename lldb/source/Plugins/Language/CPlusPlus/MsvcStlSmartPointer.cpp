@@ -158,11 +158,5 @@ lldb_private::formatters::MsvcStlSmartPointerSyntheticFrontEnd::
 lldb_private::SyntheticChildrenFrontEnd *
 lldb_private::formatters::MsvcStlSmartPointerSyntheticFrontEndCreator(
     lldb::ValueObjectSP valobj_sp) {
-  if (!valobj_sp)
-    return nullptr;
-
-  if (!IsMsvcStlSmartPointer(*valobj_sp))
-    return nullptr;
-
   return new MsvcStlSmartPointerSyntheticFrontEnd(valobj_sp);
 }

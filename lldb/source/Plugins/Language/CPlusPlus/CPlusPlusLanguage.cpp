@@ -1580,6 +1580,25 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "^std::optional<.+>(( )?&)?$", stl_summary_flags, true);
 }
 
+static lldb_private::SyntheticChildrenFrontEnd *
+GenericSmartPointerSyntheticFrontEndCreator(CXXSyntheticChildren *children,
+                                            lldb::ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return nullptr;
+
+  if (IsMsvcStlSmartPointer(*valobj_sp))
+    return MsvcStlSmartPointerSyntheticFrontEndCreator(valobj_sp);
+  return LibStdcppSharedPtrSyntheticFrontEndCreator(children, valobj_sp);
+}
+
+static bool
+GenericSmartPointerSummaryProvider(ValueObject &valobj, Stream &stream,
+                                   const TypeSummaryOptions &options) {
+  if (IsMsvcStlSmartPointer(valobj))
+    return MsvcStlSmartPointerSummaryProvider(valobj, stream, options);
+  return LibStdcppSmartPointerSummaryProvider(valobj, stream, options);
+}
+
 /// Load formatters that are formatting types from more than one STL
 static void LoadCommonStlFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   if (!cpp_category_sp)

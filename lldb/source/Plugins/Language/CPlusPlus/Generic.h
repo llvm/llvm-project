@@ -24,13 +24,6 @@ bool GenericOptionalSummaryProvider(ValueObject &valobj, Stream &stream,
 lldb::ValueObjectSP GetDesugaredSmartPointerValue(ValueObject &ptr,
                                                   ValueObject &container);
 
-// std::shared_ptr<>/std::weak_ptr<>
-SyntheticChildrenFrontEnd *
-GenericSmartPointerSyntheticFrontEndCreator(CXXSyntheticChildren *children,
-                                            lldb::ValueObjectSP valobj_sp);
-bool GenericSmartPointerSummaryProvider(ValueObject &valobj, Stream &stream,
-                                        const TypeSummaryOptions &options);
-
 } // namespace formatters
 } // namespace lldb_private
 
