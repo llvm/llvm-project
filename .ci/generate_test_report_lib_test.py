@@ -20,7 +20,30 @@ def junit_from_xml(xml):
 
 class TestReports(unittest.TestCase):
     def test_title_only(self):
-        self.assertEqual(generate_test_report_lib.generate_report("Foo", 0, []), "")
+        self.assertEqual(
+            generate_test_report_lib.generate_report("Foo", 0, []),
+            dedent(
+                """\
+                # Foo
+
+                The build succeeded and no tests ran. This is expected in some build configurations."""
+            ),
+        )
+
+    def test_title_only_failure(self):
+        self.assertEqual(
+            generate_test_report_lib.generate_report("Foo", 1, []),
+            dedent(
+                """\
+            # Foo
+
+            The build failed before running any tests.
+
+            Download the build's log file to see the details.
+
+            If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+            ),
+        )
 
     def test_no_tests_in_testsuite(self):
         self.assertEqual(
@@ -40,7 +63,16 @@ class TestReports(unittest.TestCase):
                     )
                 ],
             ),
-            "",
+            dedent(
+                """\
+                # Foo
+
+                The build failed before running any tests.
+
+                Download the build's log file to see the details.
+
+                If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+            ),
         )
 
     def test_no_failures(self):
