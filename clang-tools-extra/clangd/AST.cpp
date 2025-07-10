@@ -187,6 +187,7 @@ std::string printQualifiedName(const NamedDecl &ND) {
   // include them, but at query time it's hard to find all the inline
   // namespaces to query: the preamble doesn't have a dedicated list.
   Policy.SuppressUnwrittenScope = true;
+  Policy.SuppressScope = true;
   // (unnamed struct), not (unnamed struct at /path/to/foo.cc:42:1).
   // In clangd, context is usually available and paths are mostly noise.
   Policy.AnonymousTagLocations = false;
@@ -213,8 +214,7 @@ std::string printUsingNamespaceName(const ASTContext &Ctx,
   std::string Name;
   llvm::raw_string_ostream Out(Name);
 
-  if (auto *Qual = D.getQualifier())
-    Qual->print(Out, PP);
+  D.getQualifier().print(Out, PP);
   D.getNominatedNamespaceAsWritten()->printName(Out);
   return Out.str();
 }
@@ -229,8 +229,7 @@ std::string printName(const ASTContext &Ctx, const NamedDecl &ND) {
   // Handle 'using namespace'. They all have the same name - <using-directive>.
   if (auto *UD = llvm::dyn_cast<UsingDirectiveDecl>(&ND)) {
     Out << "using namespace ";
-    if (auto *Qual = UD->getQualifier())
-      Qual->print(Out, PP);
+    UD->getQualifier().print(Out, PP);
     UD->getNominatedNamespaceAsWritten()->printName(Out);
     return Out.str();
   }
@@ -391,12 +390,13 @@ preferredIncludeDirective(llvm::StringRef FileName, const LangOptions &LangOpts,
 }
 
 std::string printType(const QualType QT, const DeclContext &CurContext,
-                      const llvm::StringRef Placeholder) {
+                      const llvm::StringRef Placeholder, bool FullyQualify) {
   std::string Result;
   llvm::raw_string_ostream OS(Result);
   PrintingPolicy PP(CurContext.getParentASTContext().getPrintingPolicy());
   PP.SuppressTagKeyword = true;
   PP.SuppressUnwrittenScope = true;
+  PP.FullyQualifiedName = FullyQualify;
 
   class PrintCB : public PrintingCallbacks {
   public:
@@ -439,6 +439,7 @@ QualType declaredType(const TypeDecl *D) {
   if (const auto *CTSD = llvm::dyn_cast<ClassTemplateSpecializationDecl>(D))
     if (const auto *Args = CTSD->getTemplateArgsAsWritten())
       return Context.getTemplateSpecializationType(
+          ElaboratedTypeKeyword::None,
           TemplateName(CTSD->getSpecializedTemplate()), Args->arguments(),
           /*CanonicalArgs=*/{});
   return Context.getTypeDeclType(D);

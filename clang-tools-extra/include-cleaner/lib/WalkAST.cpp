@@ -60,14 +60,10 @@ class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
   NamedDecl *getMemberProvider(QualType Base) {
     if (Base->isPointerType())
       return getMemberProvider(Base->getPointeeType());
-    // Unwrap the sugar ElaboratedType.
-    if (const auto *ElTy = dyn_cast<ElaboratedType>(Base))
-      return getMemberProvider(ElTy->getNamedType());
-
     if (const auto *TT = dyn_cast<TypedefType>(Base))
       return TT->getDecl();
     if (const auto *UT = dyn_cast<UsingType>(Base))
-      return UT->getFoundDecl();
+      return UT->getDecl();
     // A heuristic: to resolve a template type to **only** its template name.
     // We're only using this method for the base type of MemberExpr, in general
     // the template provides the member, and the critical case `unique_ptr<Foo>`

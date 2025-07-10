@@ -168,19 +168,6 @@ static DeclarationName getName(const DeclRefExpr &D) {
   return D.getDecl()->getDeclName();
 }
 
-static bool isNamedType(const ElaboratedTypeLoc &ETL) {
-  if (const auto *TFT =
-          ETL.getNamedTypeLoc().getTypePtr()->getAs<TypedefType>()) {
-    const TypedefNameDecl *Decl = TFT->getDecl();
-    return Decl->getDeclName().isIdentifier() && Decl->getName() == "type";
-  }
-  return false;
-}
-
-static bool isNamedType(const DependentNameTypeLoc &DTL) {
-  return DTL.getTypePtr()->getIdentifier()->getName() == "type";
-}
-
 namespace {
 AST_POLYMORPHIC_MATCHER(isValue, AST_POLYMORPHIC_SUPPORTED_TYPES(
                                      DeclRefExpr, DependentScopeDeclRefExpr)) {
@@ -188,10 +175,14 @@ AST_POLYMORPHIC_MATCHER(isValue, AST_POLYMORPHIC_SUPPORTED_TYPES(
   return Ident && Ident->isStr("value");
 }
 
-AST_POLYMORPHIC_MATCHER(isType,
-                        AST_POLYMORPHIC_SUPPORTED_TYPES(ElaboratedTypeLoc,
-                                                        DependentNameTypeLoc)) {
-  return Node.getBeginLoc().isValid() && isNamedType(Node);
+AST_MATCHER(TypeLoc, isType) {
+  if (auto TL = Node.getAs<TypedefTypeLoc>()) {
+    const auto *TD = TL.getDecl();
+    return TD->getDeclName().isIdentifier() && TD->getName() == "type";
+  }
+  if (auto TL = Node.getAs<DependentNameTypeLoc>())
+    return TL.getTypePtr()->getIdentifier()->getName() == "type";
+  return false;
 }
 } // namespace
 
@@ -214,10 +205,7 @@ void TypeTraitsCheck::registerMatchers(MatchFinder *Finder) {
                            .bind(Bind),
                        this);
   }
-  Finder->addMatcher(mapAnyOf(elaboratedTypeLoc, dependentNameTypeLoc)
-                         .with(isType())
-                         .bind(Bind),
-                     this);
+  Finder->addMatcher(typeLoc(isType()).bind(Bind), this);
 }
 
 static bool isNamedDeclInStdTraitsSet(const NamedDecl *ND,
@@ -274,8 +262,8 @@ void TypeTraitsCheck::check(const MatchFinder::MatchResult &Result) {
                                          SourceLocation EndLoc,
                                          SourceLocation TypenameLoc) {
     SourceLocation TemplateNameEndLoc;
-    if (auto TSTL = QualLoc.getTypeLoc().getAs<TemplateSpecializationTypeLoc>();
-        !TSTL.isNull())
+    if (auto TSTL =
+            QualLoc.getAsTypeLoc().getAs<TemplateSpecializationTypeLoc>())
       TemplateNameEndLoc = Lexer::getLocForEndOfToken(
           TSTL.getTemplateNameLoc(), 0, *Result.SourceManager,
           Result.Context->getLangOpts());

@@ -104,9 +104,8 @@ static bool areEquivalentExpr(const Expr *Left, const Expr *Right) {
     if (cast<DependentScopeDeclRefExpr>(Left)->getDeclName() !=
         cast<DependentScopeDeclRefExpr>(Right)->getDeclName())
       return false;
-    return areEquivalentNameSpecifier(
-        cast<DependentScopeDeclRefExpr>(Left)->getQualifier(),
-        cast<DependentScopeDeclRefExpr>(Right)->getQualifier());
+    return cast<DependentScopeDeclRefExpr>(Left)->getQualifier() ==
+           cast<DependentScopeDeclRefExpr>(Right)->getQualifier();
   case Stmt::DeclRefExprClass:
     return cast<DeclRefExpr>(Left)->getDecl() ==
            cast<DeclRefExpr>(Right)->getDecl();

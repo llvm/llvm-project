@@ -366,19 +366,11 @@ public:
       Visitor(TargetFinder &Outer, RelSet Flags) : Outer(Outer), Flags(Flags) {}
 
       void VisitTagType(const TagType *TT) {
-        Outer.add(TT->getAsTagDecl(), Flags);
-      }
-
-      void VisitElaboratedType(const ElaboratedType *ET) {
-        Outer.add(ET->desugar(), Flags);
+        Outer.add(cast<TagType>(TT)->getOriginalDecl(), Flags);
       }
 
       void VisitUsingType(const UsingType *ET) {
-        Outer.add(ET->getFoundDecl(), Flags);
-      }
-
-      void VisitInjectedClassNameType(const InjectedClassNameType *ICNT) {
-        Outer.add(ICNT->getDecl(), Flags);
+        Outer.add(ET->getDecl(), Flags);
       }
 
       void VisitDecltypeType(const DecltypeType *DTT) {
@@ -918,13 +910,6 @@ refInTypeLoc(TypeLoc L, const HeuristicResolver *Resolver) {
                                    DeclRelation::Alias, Resolver)});
     }
 
-    void VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
-      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
-                                  TL.getNameLoc(),
-                                  /*IsDecl=*/false,
-                                  {TL.getDecl()}});
-    }
-
     void VisitDependentTemplateSpecializationTypeLoc(
         DependentTemplateSpecializationTypeLoc L) {
       Refs.push_back(
@@ -943,12 +928,12 @@ refInTypeLoc(TypeLoc L, const HeuristicResolver *Resolver) {
     }
 
     void VisitTypedefTypeLoc(TypedefTypeLoc L) {
-      if (shouldSkipTypedef(L.getTypedefNameDecl()))
+      if (shouldSkipTypedef(L.getDecl()))
         return;
-      Refs.push_back(ReferenceLoc{NestedNameSpecifierLoc(),
+      Refs.push_back(ReferenceLoc{L.getQualifierLoc(),
                                   L.getNameLoc(),
                                   /*IsDecl=*/false,
-                                  {L.getTypedefNameDecl()}});
+                                  {L.getDecl()}});
     }
 
     void VisitObjCInterfaceTypeLoc(ObjCInterfaceTypeLoc L) {
@@ -978,17 +963,6 @@ public:
       return true;
     visitNode(DynTypedNode::create(TTL));
     return true;
-  }
-
-  bool TraverseElaboratedTypeLoc(ElaboratedTypeLoc L) {
-    // ElaboratedTypeLoc will reports information for its inner type loc.
-    // Otherwise we loose information about inner types loc's qualifier.
-    TypeLoc Inner = L.getNamedTypeLoc().getUnqualifiedLoc();
-    if (L.getBeginLoc() == Inner.getBeginLoc())
-      return RecursiveASTVisitor::TraverseTypeLoc(Inner);
-    else
-      TypeLocsToSkip.insert(Inner.getBeginLoc());
-    return RecursiveASTVisitor::TraverseElaboratedTypeLoc(L);
   }
 
   bool VisitStmt(Stmt *S) {
