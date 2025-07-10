@@ -907,12 +907,20 @@ static Instruction *foldSelectZeroOrFixedOp(SelectInst &SI,
   if (TrueValC == nullptr || !isa<Instruction>(FalseVal))
     return nullptr;
 
-  if (!(match(FalseVal, m_c_Mul(m_Specific(X), m_Value(Y))) ||
-        match(FalseVal, m_c_And(m_Specific(X), m_Value(Y))) ||
-        match(FalseVal, m_FShl(m_Specific(X), m_Specific(X), m_Value(Y))) ||
-        match(FalseVal, m_FShr(m_Specific(X), m_Specific(X), m_Value(Y))) ||
-        match(FalseVal,
-              m_c_Intrinsic<Intrinsic::umin>(m_Specific(X), m_Value(Y))))) {
+  bool FreezeY;
+  if (match(FalseVal, m_c_Mul(m_Specific(X), m_Value(Y))) ||
+      match(FalseVal, m_c_And(m_Specific(X), m_Value(Y))) ||
+      match(FalseVal, m_FShl(m_Specific(X), m_Specific(X), m_Value(Y))) ||
+      match(FalseVal, m_FShr(m_Specific(X), m_Specific(X), m_Value(Y))) ||
+      match(FalseVal,
+            m_c_Intrinsic<Intrinsic::umin>(m_Specific(X), m_Value(Y)))) {
+    FreezeY = true;
+  } else if (match(FalseVal, m_SDiv(m_Specific(X), m_Value(Y))) ||
+             match(FalseVal, m_UDiv(m_Specific(X), m_Value(Y))) ||
+             match(FalseVal, m_SRem(m_Specific(X), m_Value(Y))) ||
+             match(FalseVal, m_URem(m_Specific(X), m_Value(Y)))) {
+    FreezeY = false;
+  } else {
     return nullptr;
   }
 
@@ -925,13 +933,15 @@ static Instruction *foldSelectZeroOrFixedOp(SelectInst &SI,
     return nullptr;
 
   auto *FalseValI = cast<Instruction>(FalseVal);
-  auto *FrY = IC.InsertNewInstBefore(new FreezeInst(Y, Y->getName() + ".fr"),
-                                     FalseValI->getIterator());
-  IC.replaceOperand(*FalseValI,
-                    FalseValI->getOperand(0) == Y
-                        ? 0
-                        : (FalseValI->getOperand(1) == Y ? 1 : 2),
-                    FrY);
+  if (FreezeY) {
+    auto *FrY = IC.InsertNewInstBefore(new FreezeInst(Y, Y->getName() + ".fr"),
+                                       FalseValI->getIterator());
+    IC.replaceOperand(*FalseValI,
+                      FalseValI->getOperand(0) == Y
+                          ? 0
+                          : (FalseValI->getOperand(1) == Y ? 1 : 2),
+                      FrY);
+  }
   return IC.replaceInstUsesWith(SI, FalseValI);
 }
 
