@@ -2990,6 +2990,13 @@ bool GVNPass::performScalarPRE(Instruction *CurInst) {
   if (isa<GetElementPtrInst>(CurInst))
     return false;
 
+  // Don't do PRE on ptrauth_blend intrinsic: on AArch64 the instruction
+  // selector wants to take its operands into account when selecting the user
+  // of the blended discriminator, so don't hide the blend behind PHI nodes.
+  if (auto *II = dyn_cast<IntrinsicInst>(CurInst))
+    if (II->getIntrinsicID() == Intrinsic::ptrauth_blend)
+      return false;
+
   if (auto *CallB = dyn_cast<CallBase>(CurInst)) {
     // We don't currently value number ANY inline asm calls.
     if (CallB->isInlineAsm())
