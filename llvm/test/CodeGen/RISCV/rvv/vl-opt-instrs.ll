@@ -5476,9 +5476,8 @@ define <vscale x 4 x i32> @vrgather_vi(<vscale x 4 x i32> %a, <vscale x 4 x i32>
 ;
 ; VLOPT-LABEL: vrgather_vi:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; VLOPT-NEXT:    vrgather.vi v12, v8, 5
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vrgather.vi v12, v8, 5
 ; VLOPT-NEXT:    vadd.vv v8, v12, v10
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vrgather.vx.nxv4i32.iXLen(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen 5, iXLen -1)
@@ -5497,9 +5496,8 @@ define <vscale x 4 x i32> @vrgather_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32>
 ;
 ; VLOPT-LABEL: vrgather_vv:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; VLOPT-NEXT:    vrgather.vv v12, v8, v10
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vrgather.vv v12, v8, v10
 ; VLOPT-NEXT:    vadd.vv v8, v12, v8
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vrgather.vv.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %idx, iXLen -1)
@@ -5518,9 +5516,8 @@ define <vscale x 4 x i32> @vrgather_vx(<vscale x 4 x i32> %a, iXLen %idx, <vscal
 ;
 ; VLOPT-LABEL: vrgather_vx:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
-; VLOPT-NEXT:    vrgather.vx v12, v8, a0
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; VLOPT-NEXT:    vrgather.vx v12, v8, a0
 ; VLOPT-NEXT:    vadd.vv v8, v12, v10
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vrgather.vx.nxv4i32.iXLen(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen %idx, iXLen -1)
@@ -5539,9 +5536,8 @@ define <vscale x 4 x i32> @vrgatherei16_vv(<vscale x 4 x i32> %a, <vscale x 4 x 
 ;
 ; VLOPT-LABEL: vrgatherei16_vv:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; VLOPT-NEXT:    vrgatherei16.vv v12, v8, v10
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vrgatherei16.vv v12, v8, v10
 ; VLOPT-NEXT:    vadd.vv v8, v12, v8
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vrgatherei16.vv.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i16> %idx, iXLen -1)
