@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c23 -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -std=c23 -Wno-underlying-atomic-qualifier-ignored -ast-dump %s | FileCheck %s
 
 // The underlying type is the unqualified, non-atomic version of the type
 // specified.

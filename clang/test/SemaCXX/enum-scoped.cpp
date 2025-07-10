@@ -353,7 +353,7 @@ B b{a}; // expected-error {{cannot initialize}}
 namespace GH147736 {
 template <typename Ty>
 struct S {
-  enum OhBoy : Ty { // expected-warning 2 {{'_Atomic' qualifier ignored; operations involving the enumeration type will be non-atomic}}
+  enum OhBoy : Ty { // expected-error 2 {{'_Atomic' qualifier ignored; operations involving the enumeration type will be non-atomic}}
     Unimportant
   } e;
 };
