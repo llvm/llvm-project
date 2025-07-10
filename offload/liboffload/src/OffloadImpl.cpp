@@ -91,7 +91,9 @@ struct ol_program_impl_t {
 struct ol_symbol_impl_t {
   ol_symbol_impl_t(GenericKernelTy *Kernel)
       : PluginImpl(Kernel), Kind(OL_SYMBOL_KIND_KERNEL) {}
-  std::variant<GenericKernelTy *> PluginImpl;
+  ol_symbol_impl_t(GlobalTy &&Global)
+      : PluginImpl(Global), Kind(OL_SYMBOL_KIND_GLOBAL_VARIABLE) {}
+  std::variant<GenericKernelTy *, GlobalTy> PluginImpl;
   ol_symbol_kind_t Kind;
 };
 
@@ -722,6 +724,24 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
 
   if (EventOut)
     *EventOut = makeEvent(Queue);
+
+  return Error::success();
+}
+
+Error olGetGlobalVariable_impl(ol_program_handle_t Program,
+                               const char *GlobalName,
+                               ol_symbol_handle_t *Global) {
+  auto &Device = Program->Image->getDevice();
+
+  GlobalTy GlobalObj{GlobalName};
+  if (auto Res = Device.Plugin.getGlobalHandler().getGlobalMetadataFromDevice(
+          Device, *Program->Image, GlobalObj))
+    return Res;
+
+  *Global = Program->Symbols
+                .emplace_back(
+                    std::make_unique<ol_symbol_impl_t>(std::move(GlobalObj)))
+                .get();
 
   return Error::success();
 }

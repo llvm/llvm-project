@@ -223,6 +223,14 @@ TEST_P(olLaunchKernelGlobalTest, Success) {
   ASSERT_SUCCESS(olMemFree(Mem));
 }
 
+TEST_P(olLaunchKernelGlobalTest, InvalidNotAKernel) {
+  ol_symbol_handle_t Global = nullptr;
+  ASSERT_SUCCESS(olGetGlobalVariable(Program, "global", &Global));
+  ASSERT_ERROR(
+      OL_ERRC_SYMBOL_KIND,
+      olLaunchKernel(Queue, Device, Global, nullptr, 0, &LaunchArgs, nullptr));
+}
+
 TEST_P(olLaunchKernelGlobalCtorTest, Success) {
   void *Mem;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
