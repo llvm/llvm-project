@@ -114,6 +114,8 @@ typedef uint_t uint;
 #define STATVFS_F_FLAG(vfs) (vfs).f_flags
 #endif
 
+#include "IOSandboxInternal.h"
+
 using namespace llvm;
 
 namespace llvm {
@@ -197,7 +199,7 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   uint32_t size = sizeof(exe_path);
   if (_NSGetExecutablePath(exe_path, &size) == 0) {
     char link_path[PATH_MAX];
-    if (realpath(exe_path, link_path))
+    if (::realpath(exe_path, link_path))
       return link_path;
   }
 #elif defined(__FreeBSD__)
@@ -368,7 +370,7 @@ ErrorOr<space_info> disk_space(const Twine &Path) {
 std::error_code current_path(SmallVectorImpl<char> &result) {
   result.clear();
 
-  const char *pwd = ::getenv("PWD");
+  const char *pwd = getenv("PWD");
   llvm::sys::fs::file_status PWDStatus, DotStatus;
   if (pwd && llvm::sys::path::is_absolute(pwd) &&
       !llvm::sys::fs::status(pwd, PWDStatus) &&
@@ -381,7 +383,7 @@ std::error_code current_path(SmallVectorImpl<char> &result) {
   result.resize_for_overwrite(PATH_MAX);
 
   while (true) {
-    if (::getcwd(result.data(), result.size()) == nullptr) {
+    if (getcwd(result.data(), result.size()) == nullptr) {
       // See if there was a real error.
       if (errno != ENOMEM) {
         result.clear();
@@ -402,7 +404,7 @@ std::error_code set_current_path(const Twine &path) {
   SmallString<128> path_storage;
   StringRef p = path.toNullTerminatedStringRef(path_storage);
 
-  if (::chdir(p.begin()) == -1)
+  if (chdir(p.begin()) == -1)
     return errnoAsErrorCode();
 
   return std::error_code();
@@ -413,7 +415,7 @@ std::error_code create_directory(const Twine &path, bool IgnoreExisting,
   SmallString<128> path_storage;
   StringRef p = path.toNullTerminatedStringRef(path_storage);
 
-  if (::mkdir(p.begin(), Perms) == -1) {
+  if (mkdir(p.begin(), Perms) == -1) {
     if (errno != EEXIST || !IgnoreExisting)
       return errnoAsErrorCode();
   }
@@ -430,7 +432,7 @@ std::error_code create_link(const Twine &to, const Twine &from) {
   StringRef f = from.toNullTerminatedStringRef(from_storage);
   StringRef t = to.toNullTerminatedStringRef(to_storage);
 
-  if (::symlink(t.begin(), f.begin()) == -1)
+  if (symlink(t.begin(), f.begin()) == -1)
     return errnoAsErrorCode();
 
   return std::error_code();
@@ -443,7 +445,7 @@ std::error_code create_hard_link(const Twine &to, const Twine &from) {
   StringRef f = from.toNullTerminatedStringRef(from_storage);
   StringRef t = to.toNullTerminatedStringRef(to_storage);
 
-  if (::link(t.begin(), f.begin()) == -1)
+  if (link(t.begin(), f.begin()) == -1)
     return errnoAsErrorCode();
 
   return std::error_code();
@@ -594,7 +596,7 @@ std::error_code rename(const Twine &from, const Twine &to) {
 std::error_code resize_file(int FD, uint64_t Size) {
   // Use ftruncate as a fallback. It may or may not allocate space. At least on
   // OS X with HFS+ it does.
-  if (::ftruncate(FD, Size) == -1)
+  if (ftruncate(FD, Size) == -1)
     return errnoAsErrorCode();
 
   return std::error_code();
@@ -764,13 +766,13 @@ std::error_code status(const Twine &Path, file_status &Result, bool Follow) {
   StringRef P = Path.toNullTerminatedStringRef(PathStorage);
 
   struct stat Status;
-  int StatRet = (Follow ? ::stat : ::lstat)(P.begin(), &Status);
+  int StatRet = (Follow ? stat : lstat)(P.begin(), &Status);
   return fillStatus(StatRet, Status, Result);
 }
 
 std::error_code status(int FD, file_status &Result) {
   struct stat Status;
-  int StatRet = ::fstat(FD, &Status);
+  int StatRet = fstat(FD, &Status);
   return fillStatus(StatRet, Status, Result);
 }
 
@@ -786,13 +788,13 @@ std::error_code setPermissions(const Twine &Path, perms Permissions) {
   SmallString<128> PathStorage;
   StringRef P = Path.toNullTerminatedStringRef(PathStorage);
 
-  if (::chmod(P.begin(), Permissions))
+  if (chmod(P.begin(), Permissions))
     return errnoAsErrorCode();
   return std::error_code();
 }
 
 std::error_code setPermissions(int FD, perms Permissions) {
-  if (::fchmod(FD, Permissions))
+  if (fchmod(FD, Permissions))
     return errnoAsErrorCode();
   return std::error_code();
 }
@@ -803,7 +805,7 @@ std::error_code setLastAccessAndModificationTime(int FD, TimePoint<> AccessTime,
   timespec Times[2];
   Times[0] = sys::toTimeSpec(AccessTime);
   Times[1] = sys::toTimeSpec(ModificationTime);
-  if (::futimens(FD, Times))
+  if (futimens(FD, Times))
     return errnoAsErrorCode();
   return std::error_code();
 #elif defined(HAVE_FUTIMES)
@@ -813,7 +815,7 @@ std::error_code setLastAccessAndModificationTime(int FD, TimePoint<> AccessTime,
   Times[1] =
       sys::toTimeVal(std::chrono::time_point_cast<std::chrono::microseconds>(
           ModificationTime));
-  if (::futimes(FD, Times))
+  if (futimes(FD, Times))
     return errnoAsErrorCode();
   return std::error_code();
 #elif defined(__MVS__)
@@ -861,7 +863,7 @@ std::error_code mapped_file_region::init(int FD, uint64_t Offset,
   }
 #endif // #if defined (__APPLE__)
 
-  Mapping = ::mmap(nullptr, Size, prot, flags, FD, Offset);
+  Mapping = mmap(nullptr, Size, prot, flags, FD, Offset);
   if (Mapping == MAP_FAILED)
     return errnoAsErrorCode();
   return std::error_code();
@@ -878,7 +880,7 @@ mapped_file_region::mapped_file_region(int fd, mapmode mode, size_t length,
 
 void mapped_file_region::unmapImpl() {
   if (Mapping)
-    ::munmap(Mapping, Size);
+    munmap(Mapping, Size);
 }
 
 std::error_code mapped_file_region::sync() const {
@@ -906,7 +908,7 @@ std::error_code detail::directory_iterator_construct(detail::DirIterState &it,
                                                      StringRef path,
                                                      bool follow_symlinks) {
   SmallString<128> path_null(path);
-  DIR *directory = ::opendir(path_null.c_str());
+  DIR *directory = opendir(path_null.c_str());
   if (!directory)
     return errnoAsErrorCode();
 
@@ -919,7 +921,7 @@ std::error_code detail::directory_iterator_construct(detail::DirIterState &it,
 
 std::error_code detail::directory_iterator_destruct(detail::DirIterState &it) {
   if (it.IterationHandle)
-    ::closedir(reinterpret_cast<DIR *>(it.IterationHandle));
+    closedir(reinterpret_cast<DIR *>(it.IterationHandle));
   it.IterationHandle = 0;
   it.CurrentEntry = directory_entry();
   return std::error_code();
@@ -941,7 +943,7 @@ static file_type direntType(dirent *Entry) {
 
 std::error_code detail::directory_iterator_increment(detail::DirIterState &It) {
   errno = 0;
-  dirent *CurDir = ::readdir(reinterpret_cast<DIR *>(It.IterationHandle));
+  dirent *CurDir = readdir(reinterpret_cast<DIR *>(It.IterationHandle));
   if (CurDir == nullptr && errno != 0) {
     return errnoAsErrorCode();
   } else if (CurDir != nullptr) {
@@ -976,7 +978,7 @@ ErrorOr<basic_file_status> directory_entry::status() const {
 static bool hasProcSelfFD() {
   // If we have a /proc filesystem mounted, we can quickly establish the
   // real name of the file with readlink
-  static const bool Result = (::access("/proc/self/fd", R_OK) == 0);
+  static const bool Result = (access("/proc/self/fd", R_OK) == 0);
   return Result;
 }
 #endif
@@ -1031,9 +1033,9 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
 
   SmallString<128> Storage;
   StringRef P = Name.toNullTerminatedStringRef(Storage);
-  // Call ::open in a lambda to avoid overload resolution in RetryAfterSignal
+  // Call open in a lambda to avoid overload resolution in RetryAfterSignal
   // when open is overloaded, such as in Bionic.
-  auto Open = [&]() { return ::open(P.begin(), OpenFlags, Mode); };
+  auto Open = [&]() { return open(P.begin(), OpenFlags, Mode); };
   if ((ResultFD = sys::RetryAfterSignal(-1, Open)) < 0)
     return errnoAsErrorCode();
 #ifndef O_CLOEXEC
@@ -1155,7 +1157,7 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
   // When F_GETPATH is availble, it is the quickest way to get
   // the real path name.
   char Buffer[PATH_MAX];
-  if (::fcntl(ResultFD, F_GETPATH, Buffer) != -1)
+  if (fcntl(ResultFD, F_GETPATH, Buffer) != -1)
     RealPath->append(Buffer, Buffer + strlen(Buffer));
 #else
   char Buffer[PATH_MAX];
@@ -1163,7 +1165,7 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
   if (hasProcSelfFD()) {
     char ProcPath[64];
     snprintf(ProcPath, sizeof(ProcPath), "/proc/self/fd/%d", ResultFD);
-    ssize_t CharCount = ::readlink(ProcPath, Buffer, sizeof(Buffer));
+    ssize_t CharCount = readlink(ProcPath, Buffer, sizeof(Buffer));
     if (CharCount > 0)
       RealPath->append(Buffer, Buffer + CharCount);
   } else {
@@ -1171,8 +1173,8 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
     SmallString<128> Storage;
     StringRef P = Name.toNullTerminatedStringRef(Storage);
 
-    // Use ::realpath to get the real path name
-    if (::realpath(P.begin(), Buffer) != nullptr)
+    // Use realpath to get the real path name
+    if (realpath(P.begin(), Buffer) != nullptr)
       RealPath->append(Buffer, Buffer + strlen(Buffer));
 #if defined(TRY_PROC_SELF_FD)
   }
@@ -1224,11 +1226,11 @@ Expected<size_t> readNativeFileSlice(file_t FD, MutableArrayRef<char> Buf,
 #endif
 #ifdef HAVE_PREAD
   ssize_t NumRead =
-      sys::RetryAfterSignal(-1, ::pread, FD, Buf.data(), Size, Offset);
+      sys::RetryAfterSignal(-1, pread, FD, Buf.data(), Size, Offset);
 #else
   if (lseek(FD, Offset, SEEK_SET) == -1)
     return errorCodeToError(errnoAsErrorCode());
-  ssize_t NumRead = sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Size);
+  ssize_t NumRead = sys::RetryAfterSignal(-1, read, FD, Buf.data(), Size);
 #endif
   if (NumRead == -1)
     return errorCodeToError(errnoAsErrorCode());
@@ -1253,7 +1255,7 @@ std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout,
     Lock.l_whence = SEEK_SET;
     Lock.l_start = 0;
     Lock.l_len = 0;
-    if (::fcntl(FD, F_SETLK, &Lock) != -1)
+    if (fcntl(FD, F_SETLK, &Lock) != -1)
       return std::error_code();
     int Error = errno;
     if (Error != EACCES && Error != EAGAIN)
@@ -1279,7 +1281,7 @@ std::error_code lockFile(int FD, LockKind Kind) {
   Lock.l_whence = SEEK_SET;
   Lock.l_start = 0;
   Lock.l_len = 0;
-  if (::fcntl(FD, F_SETLKW, &Lock) != -1)
+  if (fcntl(FD, F_SETLKW, &Lock) != -1)
     return std::error_code();
   return errnoAsErrorCode();
 }
@@ -1290,7 +1292,7 @@ std::error_code unlockFile(int FD) {
   Lock.l_whence = SEEK_SET;
   Lock.l_start = 0;
   Lock.l_len = 0;
-  if (::fcntl(FD, F_SETLK, &Lock) != -1)
+  if (fcntl(FD, F_SETLK, &Lock) != -1)
     return std::error_code();
   return errnoAsErrorCode();
 }
@@ -1357,14 +1359,14 @@ std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
   SmallString<128> Storage;
   StringRef P = path.toNullTerminatedStringRef(Storage);
   char Buffer[PATH_MAX];
-  if (::realpath(P.begin(), Buffer) == nullptr)
+  if (realpath(P.begin(), Buffer) == nullptr)
     return errnoAsErrorCode();
   dest.append(Buffer, Buffer + strlen(Buffer));
   return std::error_code();
 }
 
 std::error_code changeFileOwnership(int FD, uint32_t Owner, uint32_t Group) {
-  auto FChown = [&]() { return ::fchown(FD, Owner, Group); };
+  auto FChown = [&]() { return fchown(FD, Owner, Group); };
   // Retry if fchown call fails due to interruption.
   if ((sys::RetryAfterSignal(-1, FChown)) < 0)
     return errnoAsErrorCode();

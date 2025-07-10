@@ -307,15 +307,19 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // If any timers were active but haven't been destroyed yet, print their
   // results now.  This happens in -disable-free mode.
-  std::unique_ptr<raw_ostream> IOFile = llvm::CreateInfoOutputFile();
-  if (Clang->getCodeGenOpts().TimePassesJson) {
-    *IOFile << "{\n";
-    llvm::TimerGroup::printAllJSONValues(*IOFile, "");
-    *IOFile << "\n}\n";
-  } else if (!Clang->getCodeGenOpts().TimePassesStatsFile) {
-    llvm::TimerGroup::printAll(*IOFile);
+  {
+    // This isn't a formal input or output of the compiler.
+    auto BypassSandbox = llvm::sys::sandbox_scoped_disable();
+    std::unique_ptr<raw_ostream> IOFile = llvm::CreateInfoOutputFile();
+    if (Clang->getCodeGenOpts().TimePassesJson) {
+      *IOFile << "{\n";
+      llvm::TimerGroup::printAllJSONValues(*IOFile, "");
+      *IOFile << "\n}\n";
+    } else if (!Clang->getCodeGenOpts().TimePassesStatsFile) {
+      llvm::TimerGroup::printAll(*IOFile);
+    }
+    llvm::TimerGroup::clearAll();
   }
-  llvm::TimerGroup::clearAll();
 
   if (llvm::timeTraceProfilerEnabled()) {
     // It is possible that the compiler instance doesn't own a file manager here
