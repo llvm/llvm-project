@@ -59,7 +59,7 @@ using LoanID = ID<struct LoanTag>;
 using OriginID = ID<struct OriginTag>;
 
 /// Information about a single borrow, or "Loan". A loan is created when a
-/// reference or pointer is taken.
+/// reference or pointer is created.
 struct Loan {
   /// TODO: Represent opaque loans.
   /// TODO: Represent nullptr: loans to no path. Accessing it UB! Currently it
@@ -82,6 +82,9 @@ struct Loan {
 /// https://github.com/llvm/llvm-project/pull/142313/commits/0cd187b01e61b200d92ca0b640789c1586075142#r2137644238
 struct Origin {
   OriginID ID;
+  /// A pointer to the AST node that this origin represents. This union
+  /// distinguishes between origins from lvalues (named variables or parameter)
+  /// and rvalues (expressions).
   llvm::PointerUnion<const clang::ValueDecl *, const clang::Expr *> Ptr;
 
   Origin(OriginID ID, const clang::ValueDecl *D) : ID(ID), Ptr(D) {}
@@ -95,6 +98,7 @@ struct Origin {
   }
 };
 
+/// Manages the creation, storage and retrieval of loans.
 class LoanManager {
 public:
   LoanManager() = default;
@@ -119,6 +123,8 @@ private:
   llvm::SmallVector<Loan> AllLoans;
 };
 
+/// Manages the creation, storage, and retrieval of origins for pointer-like
+/// variables and expressions.
 class OriginManager {
 public:
   OriginManager() = default;
@@ -212,7 +218,7 @@ public:
     Expire,
     /// An origin is propagated from a source to a destination (e.g., p = q).
     AssignOrigin,
-    /// An origin is part of a function's return value.
+    /// An origin escapes the function by flowing into the return value.
     ReturnOfOrigin
   };
 
@@ -449,7 +455,7 @@ public:
   }
 
 private:
-  // Check if a type have an origin.
+  // Check if a type has an origin.
   bool hasOrigin(QualType QT) { return QT->isPointerOrReferenceType(); }
 
   template <typename Destination, typename Source>
