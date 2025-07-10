@@ -980,7 +980,9 @@ public:
   /// contains the \p Offset.
   MCInst *getInstructionContainingOffset(uint64_t Offset);
 
-  std::optional<MCInst> disassembleInstructionAtOffset(uint64_t Offset) const;
+  std::optional<MCInst>
+  disassembleInstructionAtOffset(uint64_t Offset,
+                                 uint64_t *InstrSize = nullptr) const;
 
   /// Return offset for the first instruction. If there is data at the
   /// beginning of a function then offset of the first instruction could
