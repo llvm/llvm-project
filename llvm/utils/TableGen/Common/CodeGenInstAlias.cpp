@@ -40,8 +40,7 @@ bool CodeGenInstAlias::tryAliasOpMatch(const DagInit *Result,
     if (!Result->getArgName(AliasOpNo))
       PrintFatalError(Loc, "result argument #" + Twine(AliasOpNo) +
                                " must have a name!");
-    ResOp = ResultOperand(std::string(Result->getArgNameStr(AliasOpNo)),
-                          ResultRecord);
+    ResOp = ResultOperand(Result->getArgNameStr(AliasOpNo).str(), ResultRecord);
     return true;
   }
 
@@ -59,8 +58,7 @@ bool CodeGenInstAlias::tryAliasOpMatch(const DagInit *Result,
     if (!T.getRegisterClass(InstOpRec).hasSubClass(
             &T.getRegisterClass(ADI->getDef())))
       return false;
-    ResOp = ResultOperand(std::string(Result->getArgNameStr(AliasOpNo)),
-                          ResultRecord);
+    ResOp = ResultOperand(Result->getArgNameStr(AliasOpNo).str(), ResultRecord);
     return true;
   }
 
@@ -141,8 +139,8 @@ bool CodeGenInstAlias::tryAliasOpMatch(const DagInit *Result,
     // MIOperandInfo perhaps?
     if (InstOpRec->getValueInit("Type") != ADI->getDef()->getValueInit("Type"))
       return false;
-    ResOp = ResultOperand(std::string(Result->getArgNameStr(AliasOpNo)),
-                          ADI->getDef());
+    ResOp =
+        ResultOperand(Result->getArgNameStr(AliasOpNo).str(), ADI->getDef());
     return true;
   }
 
@@ -169,7 +167,7 @@ unsigned CodeGenInstAlias::ResultOperand::getMINumOperands() const {
 CodeGenInstAlias::CodeGenInstAlias(const Record *R, const CodeGenTarget &T)
     : TheDef(R) {
   Result = R->getValueAsDag("ResultInst");
-  AsmString = std::string(R->getValueAsString("AsmString"));
+  AsmString = R->getValueAsString("AsmString");
 
   // Verify that the root of the result is an instruction.
   const DefInit *DI = dyn_cast<DefInit>(Result->getOperator());

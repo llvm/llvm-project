@@ -18,7 +18,7 @@ program sample
         y = 2
     !$omp end critical (name)
      
-    !ERROR: Hint clause value is not a valid OpenMP synchronization value
+    !ERROR: The synchronization hint is not valid
     !$omp critical (name) hint(3)
         y = 2
     !$omp end critical (name)
@@ -27,12 +27,12 @@ program sample
         y = 2
     !$omp end critical (name)
     
-    !ERROR: Hint clause value is not a valid OpenMP synchronization value
+    !ERROR: The synchronization hint is not valid
     !$omp critical (name) hint(7)
         y = 2
     !$omp end critical (name)
    
-    !ERROR: Hint clause must have non-negative constant integer expression
+    !ERROR: Synchronization hint must be a constant integer value
     !ERROR: Must be a constant value
     !$omp critical (name) hint(x)
         y = 2
@@ -54,7 +54,7 @@ program sample
         y = 2
     !$omp end critical (name)
     
-    !ERROR: Hint clause must have non-negative constant integer expression
+    !ERROR: Synchronization hint must be a constant integer value
     !ERROR: Must be a constant value
     !$omp critical (name) hint(omp_sync_hint_uncontended + omp_sync_hint) 
         y = 2
@@ -84,35 +84,35 @@ program sample
         y = 2
     !$omp end critical (name)
 
-    !ERROR: Hint clause value is not a valid OpenMP synchronization value
+    !ERROR: The synchronization hint is not valid
      !$omp critical (name) hint(omp_sync_hint_uncontended + omp_sync_hint_contended)
         y = 2
     !$omp end critical (name)
 
-    !ERROR: Hint clause value is not a valid OpenMP synchronization value
+    !ERROR: The synchronization hint is not valid
     !$omp critical (name) hint(omp_sync_hint_nonspeculative + omp_lock_hint_speculative)
         y = 2
     !$omp end critical (name)
 
-    !ERROR: Hint clause must have non-negative constant integer expression
+    !ERROR: Synchronization hint must be a constant integer value
     !ERROR: Must have INTEGER type, but is REAL(4)
     !$omp critical (name) hint(1.0) 
         y = 2
     !$omp end critical (name)
 
-    !ERROR: Hint clause must have non-negative constant integer expression
+    !ERROR: Synchronization hint must be a constant integer value
     !ERROR: Operands of + must be numeric; have LOGICAL(4) and INTEGER(4)
     !$omp critical (name) hint(z + omp_sync_hint_nonspeculative)
         y = 2
     !$omp end critical (name)
 
-    !ERROR: Hint clause must have non-negative constant integer expression
+    !ERROR: Synchronization hint must be a constant integer value
     !ERROR: Must be a constant value
     !$omp critical (name) hint(k + omp_sync_hint_speculative)
         y = 2
     !$omp end critical (name)
 
-    !ERROR: Hint clause must have non-negative constant integer expression
+    !ERROR: Synchronization hint must be a constant integer value
     !ERROR: Must be a constant value
     !$omp critical (name) hint(p(1) + omp_sync_hint_uncontended)
         y = 2

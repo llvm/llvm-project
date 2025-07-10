@@ -12,7 +12,7 @@
 #include "llvm/Support/Signals.h"
 #include <sstream>
 
-#include <cmath>
+using namespace llvm;
 
 void SystemZHLASMAsmStreamer::EmitEOL() {
   // Comments are emitted on a new line before the instruction.
@@ -209,7 +209,7 @@ void SystemZHLASMAsmStreamer::emitHLASMValueImpl(const MCExpr *Value,
   switch (Value->getKind()) {
   case MCExpr::Constant: {
     OS << "XL" << Size << '\'';
-    Value->print(OS, MAI);
+    MAI->printExpr(OS, *Value);
     OS << '\'';
     return;
   }
@@ -258,12 +258,12 @@ void SystemZHLASMAsmStreamer::emitHLASMValueImpl(const MCExpr *Value,
     return;
   }
   case MCExpr::Target:
-    Value->print(OS, MAI);
+    MAI->printExpr(OS, *Value);
     return;
   default:
     if (Parens)
       OS << "A(";
-    Value->print(OS, MAI);
+    MAI->printExpr(OS, *Value);
     if (Parens)
       OS << ')';
     return;
@@ -278,5 +278,10 @@ void SystemZHLASMAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
 
   OS << " DC ";
   emitHLASMValueImpl(Value, Size, true);
+  EmitEOL();
+}
+
+void SystemZHLASMAsmStreamer::emitEnd() {
+  OS << " END";
   EmitEOL();
 }

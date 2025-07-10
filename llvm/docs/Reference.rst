@@ -41,6 +41,7 @@ LLVM and API reference documentation.
    PCSectionsMetadata
    PDB/index
    PointerAuth
+   MLGO
    ScudoHardenedAllocator
    MemoryModelRelaxationAnnotations
    MemTagSanitizer
@@ -239,3 +240,7 @@ Additional Topics
 :doc:`ConvergenceAndUniformity`
    A description of uniformity analysis in the presence of irreducible
    control flow, and its implementation.
+
+:doc:`MLGO`
+   Facilities for ML-Guided Optimization, such as collecting IR corpora from a
+   build, interfacing with ML models, an exposing features for training.

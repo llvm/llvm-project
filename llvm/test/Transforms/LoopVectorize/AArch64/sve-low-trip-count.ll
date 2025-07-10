@@ -5,9 +5,9 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @trip7_i64(ptr noalias nocapture noundef %dst, ptr noalias nocapture noundef readonly %src) #0 {
 ; CHECK-LABEL: @trip7_i64(
 ; CHECK:         = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    = mul i64
+; CHECK-NEXT:    = mul nuw i64
 ; CHECK:         [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[VF:%.*]] = mul i64 [[VSCALE]], 2
+; CHECK-NEXT:    [[VF:%.*]] = mul nuw i64 [[VSCALE]], 2
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
 ; CHECK:         [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ {{%.*}}, %vector.ph ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %vector.body ]

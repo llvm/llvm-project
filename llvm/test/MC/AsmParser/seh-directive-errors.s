@@ -17,6 +17,9 @@
 	.seh_endepilogue
 	# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: .seh_ directive must appear within an active frame
 
+	.seh_unwindv2start
+	# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: .seh_ directive must appear within an active frame
+
 	.def	 f;
 	.scl	2;
 	.type	32;
@@ -130,5 +133,29 @@ i:
 	.seh_setframe %xmm0, 16
 # CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: register is not supported for use with this directive
 	.seh_endprologue
+	ret
+	.seh_endproc
+
+j:
+	.seh_proc j
+	.seh_unwindversion 1
+# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: Unsupported version specified in .seh_unwindversion in j
+	.seh_unwindversion 2
+	.seh_unwindversion 2
+# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: Duplicate .seh_unwindversion in j
+	.seh_endprologue
+	.seh_unwindv2start
+# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: Stray .seh_unwindv2start in j
+
+	.seh_startepilogue
+	.seh_endepilogue
+# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: Missing .seh_unwindv2start in j
+	ret
+
+	.seh_startepilogue
+	.seh_unwindv2start
+	.seh_unwindv2start
+# CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: Duplicate .seh_unwindv2start in j
+	.seh_endepilogue
 	ret
 	.seh_endproc
