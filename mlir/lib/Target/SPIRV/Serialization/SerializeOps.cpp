@@ -136,6 +136,11 @@ LogicalResult Serializer::processSpecConstantCompositeReplicateOp(
   }
 
   auto constituent = dyn_cast<FlatSymbolRefAttr>(op.getConstituent());
+  if (!constituent)
+    return op.emitError(
+               "expected flat symbol reference for constituent instead of ")
+           << op.getConstituent();
+
   StringRef constituentName = constituent.getValue();
   uint32_t constituentID = getSpecConstID(constituentName);
   if (!constituentID) {

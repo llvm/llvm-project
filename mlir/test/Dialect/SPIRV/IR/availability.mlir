@@ -282,6 +282,7 @@ func.func @set_mesh_outputs(%0 : i32, %1 : i32) -> () {
 //===----------------------------------------------------------------------===//
 // Replicated Composite Constant op
 //===----------------------------------------------------------------------===//
+
 // CHECK-LABEL: constant_composite_replicate
 func.func @constant_composite_replicate() -> () {
   // CHECK: min version: v1.0
