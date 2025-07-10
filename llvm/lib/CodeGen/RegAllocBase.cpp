@@ -21,7 +21,6 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Spiller.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -61,7 +60,6 @@ void RegAllocBase::init(VirtRegMap &vrm, LiveIntervals &lis,
                         LiveRegMatrix &mat) {
   TRI = &vrm.getTargetRegInfo();
   MRI = &vrm.getRegInfo();
-  TII = vrm.getMachineFunction().getSubtarget().getInstrInfo();
   VRM = &vrm;
   LIS = &lis;
   Matrix = &mat;
@@ -169,15 +167,9 @@ void RegAllocBase::cleanupFailedVReg(Register FailedReg, MCRegister PhysReg,
   // We still should produce valid IR. Kill all the uses and reduce the live
   // ranges so that we don't think it's possible to introduce kill flags later
   // which will fail the verifier.
-
-  SmallVector<MachineInstr *, 4> UndefCopies;
-
   for (MachineOperand &MO : MRI->reg_operands(FailedReg)) {
-    if (MO.readsReg()) {
+    if (MO.readsReg())
       MO.setIsUndef(true);
-      if (MO.getParent()->isCopy() && MO.isUse())
-        UndefCopies.push_back(MO.getParent());
-    }
   }
 
   if (!MRI->isReserved(PhysReg)) {
@@ -188,20 +180,10 @@ void RegAllocBase::cleanupFailedVReg(Register FailedReg, MCRegister PhysReg,
       for (MachineOperand &MO : MRI->reg_operands(*Aliases)) {
         if (MO.readsReg()) {
           MO.setIsUndef(true);
-          if (MO.getParent()->isCopy() && MO.isUse())
-            UndefCopies.push_back(MO.getParent());
           LIS->removeAllRegUnitsForPhysReg(MO.getReg());
         }
       }
     }
-  }
-
-  // If we have produced an undef copy, convert to IMPLICIT_DEF.
-  for (MachineInstr *UndefCopy : UndefCopies) {
-    assert(UndefCopy->isCopy() && UndefCopy->getNumOperands() == 2);
-    const MCInstrDesc &Desc = TII->get(TargetOpcode::IMPLICIT_DEF);
-    UndefCopy->removeOperand(1);
-    UndefCopy->setDesc(Desc);
   }
 
   // Directly perform the rewrite, and do not leave it to VirtRegRewriter as
