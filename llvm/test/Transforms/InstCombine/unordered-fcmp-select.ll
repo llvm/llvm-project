@@ -135,3 +135,28 @@ define float @select_min_uge_2_use_cmp(float %a, float %b) {
   %sel = select nsz i1 %cmp, float %b, float %a
   ret float %sel
 }
+
+; Make sure that we do not recognize the following pattern as a SPF
+; unless the nsz flag is set on the select instruction.
+
+define float @pr141017(float %x) {
+; CHECK-LABEL: @pr141017(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nsz olt float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float -0.000000e+00, float [[X]]
+; CHECK-NEXT:    ret float [[SEL]]
+;
+  %cmp = fcmp nsz olt float %x, 0.0
+  %sel = select i1 %cmp, float -0.0, float %x
+  ret float %sel
+}
+
+define float @pr141017_select_nsz(float %x) {
+; CHECK-LABEL: @pr141017_select_nsz(
+; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp ole float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[DOTINV]], float -0.000000e+00, float [[X]]
+; CHECK-NEXT:    ret float [[SEL1]]
+;
+  %cmp = fcmp olt float %x, 0.0
+  %sel = select nsz i1 %cmp, float -0.0, float %x
+  ret float %sel
+}

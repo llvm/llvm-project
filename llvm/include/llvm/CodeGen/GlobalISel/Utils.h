@@ -617,6 +617,10 @@ LLVM_ABI bool isGuaranteedNotToBeUndef(Register Reg,
 /// estimate of the type.
 LLVM_ABI Type *getTypeForLLT(LLT Ty, LLVMContext &C);
 
+/// Returns true if the instruction \p MI is one of the assert
+/// instructions.
+LLVM_ABI bool isAssertMI(const MachineInstr &MI);
+
 /// An integer-like constant.
 ///
 /// It abstracts over scalar, fixed-length vectors, and scalable vectors.

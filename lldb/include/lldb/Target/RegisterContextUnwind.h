@@ -151,6 +151,9 @@ private:
       uint32_t lldb_regnum,
       lldb_private::UnwindLLDB::ConcreteRegisterLocation &regloc);
 
+  std::optional<UnwindPlan::Row::AbstractRegisterLocation>
+  GetAbstractRegisterLocation(uint32_t lldb_regnum, lldb::RegisterKind &kind);
+
   bool ReadRegisterValueFromRegisterLocation(
       lldb_private::UnwindLLDB::ConcreteRegisterLocation regloc,
       const lldb_private::RegisterInfo *reg_info,

@@ -45,17 +45,11 @@ class VPPhiAccessors;
 // coming from the input IR and instructions which VPlan will generate if
 // executed.
 class VPValue {
-  friend class VPBuilder;
   friend class VPDef;
   friend struct VPDoubleValueDef;
-  friend class VPInstruction;
   friend class VPInterleaveRecipe;
-  friend struct VPlanTransforms;
-  friend class VPBasicBlock;
-  friend class VPInterleavedAccessInfo;
-  friend class VPSlotTracker;
-  friend class VPRecipeBase;
   friend class VPlan;
+  friend class VPExpressionRecipe;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
@@ -337,13 +331,12 @@ public:
     VPBranchOnMaskSC,
     VPDerivedIVSC,
     VPExpandSCEVSC,
+    VPExpressionSC,
     VPIRInstructionSC,
     VPInstructionSC,
     VPInterleaveSC,
     VPReductionEVLSC,
     VPReductionSC,
-    VPMulAccumulateReductionSC,
-    VPExtendedReductionSC,
     VPPartialReductionSC,
     VPReplicateSC,
     VPScalarIVStepsSC,

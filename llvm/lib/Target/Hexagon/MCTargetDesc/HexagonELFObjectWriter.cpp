@@ -85,8 +85,6 @@ unsigned HexagonELFObjectWriter::getRelocType(const MCFixup &Fixup,
     default:
       report_fatal_error("Unrecognized variant type");
     };
-  case FK_PCRel_4:
-    return ELF::R_HEX_32_PCREL;
   case FK_Data_2:
     switch(Variant) {
     case HexagonMCExpr::VK_DTPREL:

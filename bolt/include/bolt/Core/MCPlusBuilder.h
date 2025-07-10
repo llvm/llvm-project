@@ -405,7 +405,7 @@ public:
 
   bool equals(const MCExpr &A, const MCExpr &B, CompFuncTy Comp) const;
 
-  virtual bool equals(const MCTargetExpr &A, const MCTargetExpr &B,
+  virtual bool equals(const MCSpecifierExpr &A, const MCSpecifierExpr &B,
                       CompFuncTy Comp) const;
 
   virtual bool isBranch(const MCInst &Inst) const {
@@ -1393,7 +1393,7 @@ public:
       return getTargetSymbol(BinaryExpr->getLHS());
 
     auto *SymbolRefExpr = dyn_cast<const MCSymbolRefExpr>(Expr);
-    if (SymbolRefExpr && SymbolRefExpr->getKind() == MCSymbolRefExpr::VK_None)
+    if (SymbolRefExpr && SymbolRefExpr->getSpecifier() == 0)
       return &SymbolRefExpr->getSymbol();
 
     return nullptr;

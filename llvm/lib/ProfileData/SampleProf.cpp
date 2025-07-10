@@ -150,10 +150,8 @@ sampleprof_error SampleRecord::merge(const SampleRecord &Other,
   return Result;
 }
 
-std::error_code
-SampleRecord::serialize(raw_ostream &OS,
-                        const MapVector<FunctionId, uint32_t> &NameTable,
-                        bool SerializeVTableProf) const {
+std::error_code SampleRecord::serialize(
+    raw_ostream &OS, const MapVector<FunctionId, uint32_t> &NameTable) const {
   encodeULEB128(getSamples(), OS);
   encodeULEB128(getCallTargets().size(), OS);
   for (const auto &J : getSortedCallTargets()) {
@@ -191,25 +189,6 @@ void SampleRecord::print(raw_ostream &OS, unsigned Indent) const {
   OS << "\n";
 }
 
-static sampleprof_error addWeightSample(uint64_t S, uint64_t Weight,
-                                        uint64_t &Samples) {
-  bool Overflowed;
-  Samples = SaturatingMultiplyAdd(S, Weight, Samples, &Overflowed);
-  return Overflowed ? sampleprof_error::counter_overflow
-                    : sampleprof_error::success;
-}
-
-sampleprof_error SampleRecord::addCalledTarget(FunctionId F, uint64_t S,
-                                               uint64_t Weight) {
-  return addWeightSample(S, Weight, CallTargets[F]);
-}
-
-sampleprof_error SampleRecord::addVTableAccessCount(FunctionId F, uint64_t S,
-                                                    uint64_t Weight) {
-  return sampleprof_error::success;
-  // return addWeightSample(S, Weight, VTableAccessCounts[F]);
-}
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void SampleRecord::dump() const { print(dbgs(), 0); }
 #endif
@@ -220,8 +199,7 @@ raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
   return OS;
 }
 
-template <typename T>
-static void printTypeCountMap(raw_ostream &OS, T Loc,
+static void printTypeCountMap(raw_ostream &OS, LineLocation Loc,
                               const TypeCountMap &TypeCountMap) {
   if (TypeCountMap.empty()) {
     return;
@@ -265,14 +243,15 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
     OS << "Samples collected in inlined callsites {\n";
     SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
         CallsiteSamples);
-    for (const auto &CS : SortedCallsiteSamples.get()) {
-      for (const auto &[FuncId, FuncSample] : CS->second) {
+    for (const auto *Element : SortedCallsiteSamples.get()) {
+      // Element is a pointer to a pair of LineLocation and FunctionSamplesMap.
+      const auto &[Loc, FunctionSampleMap] = *Element;
+      for (const FunctionSamples &FuncSample :
+           llvm::make_second_range(FunctionSampleMap)) {
         OS.indent(Indent + 2);
-        OS << CS->first << ": inlined callee: " << FuncSample.getFunction()
-           << ": ";
+        OS << Loc << ": inlined callee: " << FuncSample.getFunction() << ": ";
         FuncSample.print(OS, Indent + 4);
       }
-      const LineLocation &Loc = CS->first;
       auto TypeSamplesIter = VirtualCallsiteTypeCounts.find(Loc);
       if (TypeSamplesIter != VirtualCallsiteTypeCounts.end()) {
         OS.indent(Indent + 2);

@@ -14,7 +14,10 @@ void attempt() {
 // CHECK: store i32 %5, ptr %e{{.*}}, !dbg [[G1R1:!.*]]
 // CHECK: call void @__cxa_end_catch()
   catch (int e) { }
+
+// CHECK: ret{{.*}}, !dbg [[RET:!.*]]
 }
 
 // CHECK: [[G1R2]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 2)
 // CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
+// CHECK: [[RET]] = !DILocation({{.*}}, atomGroup: 2, atomRank: 1)

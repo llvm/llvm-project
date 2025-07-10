@@ -330,9 +330,9 @@ static bool ParseLine(const StringRef &Input, LineType &LineTy, uint32_t &Depth,
       // Change n3 to the next blank space after colon + integer pair.
       n3 = n4;
     }
-  } else if (Rest.starts_with(kBodySampleVTableProfPrefix)) {
+  } else if (Rest.starts_with(kVTableProfPrefix)) {
     LineTy = LineType::VirtualCallTypeProfile;
-    return parseTypeCountMap(Rest.substr(strlen(kBodySampleVTableProfPrefix)),
+    return parseTypeCountMap(Rest.substr(strlen(kVTableProfPrefix)),
                              TypeCountMap);
   } else {
     LineTy = LineType::CallSiteProfile;
@@ -699,7 +699,7 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
       return EC;
 
     if (!isOffsetLegal(*LineOffset)) {
-      return std::error_code();
+      return sampleprof_error::illegal_line_offset;
     }
 
     auto Discriminator = readNumber<uint64_t>();
@@ -1328,7 +1328,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readCSNameTableSec() {
         return EC;
 
       if (!isOffsetLegal(*LineOffset))
-        return std::error_code();
+        return sampleprof_error::illegal_line_offset;
 
       auto Discriminator = readNumber<uint64_t>();
       if (std::error_code EC = Discriminator.getError())

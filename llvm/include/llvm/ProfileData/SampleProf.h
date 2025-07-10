@@ -24,6 +24,7 @@
 #include "llvm/ProfileData/FunctionId.h"
 #include "llvm/ProfileData/HashKeyMap.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MathExtras.h"
@@ -43,7 +44,7 @@ namespace llvm {
 class DILocation;
 class raw_ostream;
 
-const std::error_category &sampleprof_category();
+LLVM_ABI const std::error_category &sampleprof_category();
 
 enum class sampleprof_error {
   success = 0,
@@ -62,7 +63,7 @@ enum class sampleprof_error {
   zlib_unavailable,
   hash_mismatch,
   illegal_line_offset,
-  duplicate_vtable_type,
+  duplicate_vtable_type
 };
 
 inline std::error_code make_error_code(sampleprof_error E) {
@@ -91,7 +92,7 @@ struct is_error_code_enum<llvm::sampleprof_error> : std::true_type {};
 namespace llvm {
 namespace sampleprof {
 
-constexpr char kBodySampleVTableProfPrefix[] = "vtables ";
+constexpr char kVTableProfPrefix[] = "vtables ";
 
 enum SampleProfileFormat {
   SPF_None = 0,
@@ -288,15 +289,15 @@ static inline bool hasSecFlag(const SecHdrTableEntry &Entry, SecFlagType Flag) {
 struct LineLocation {
   LineLocation(uint32_t L, uint32_t D) : LineOffset(L), Discriminator(D) {}
 
-  void print(raw_ostream &OS) const;
-  void dump() const;
+  LLVM_ABI void print(raw_ostream &OS) const;
+  LLVM_ABI void dump() const;
 
   // Serialize the line location to the output stream using ULEB128 encoding.
-  void serialize(raw_ostream &OS) const;
+  LLVM_ABI void serialize(raw_ostream &OS) const;
 
   bool operator<(const LineLocation &O) const {
-    return LineOffset < O.LineOffset ||
-           (LineOffset == O.LineOffset && Discriminator < O.Discriminator);
+    return std::tie(LineOffset, Discriminator) <
+           std::tie(O.LineOffset, O.Discriminator);
   }
 
   bool operator==(const LineLocation &O) const {
@@ -321,7 +322,7 @@ struct LineLocationHash {
   }
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
 
 /// Key represents the id of a vtable and value represents its count.
 /// TODO: Rename class FunctionId to SymbolId in a separate PR.
@@ -388,12 +389,14 @@ public:
   /// Sample counts accumulate using saturating arithmetic, to avoid wrapping
   /// around unsigned integers.
   sampleprof_error addCalledTarget(FunctionId F, uint64_t S,
-                                   uint64_t Weight = 1);
-
-  /// Add vtable type \p F with samples \p S.
-  /// Optionally scale sample count \p S by \p Weight.
-  sampleprof_error addVTableAccessCount(FunctionId F, uint64_t S,
-                                        uint64_t Weight = 1);
+                                   uint64_t Weight = 1) {
+    uint64_t &TargetSamples = CallTargets[F];
+    bool Overflowed;
+    TargetSamples =
+        SaturatingMultiplyAdd(S, Weight, TargetSamples, &Overflowed);
+    return Overflowed ? sampleprof_error::counter_overflow
+                      : sampleprof_error::success;
+  }
 
   /// Remove called function from the call target map. Return the target sample
   /// count of the called function.
@@ -445,14 +448,15 @@ public:
 
   /// Merge the samples in \p Other into this record.
   /// Optionally scale sample counts by \p Weight.
-  sampleprof_error merge(const SampleRecord &Other, uint64_t Weight = 1);
-  void print(raw_ostream &OS, unsigned Indent) const;
-  void dump() const;
+  LLVM_ABI sampleprof_error merge(const SampleRecord &Other,
+                                  uint64_t Weight = 1);
+  LLVM_ABI void print(raw_ostream &OS, unsigned Indent) const;
+  LLVM_ABI void dump() const;
   /// Serialize the sample record to the output stream using ULEB128 encoding.
   /// The \p NameTable is used to map function names to their IDs.
-  std::error_code serialize(raw_ostream &OS,
-                            const MapVector<FunctionId, uint32_t> &NameTable,
-                            bool SerializeVTableProf) const;
+  LLVM_ABI std::error_code
+  serialize(raw_ostream &OS,
+            const MapVector<FunctionId, uint32_t> &NameTable) const;
 
   bool operator==(const SampleRecord &Other) const {
     return NumSamples == Other.NumSamples && CallTargets == Other.CallTargets;
@@ -467,7 +471,7 @@ private:
   CallTargetMap CallTargets;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const SampleRecord &Sample);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const SampleRecord &Sample);
 
 // State of context associated with FunctionSamples
 enum ContextStateMask {
@@ -773,8 +777,8 @@ class FunctionSamples {
 public:
   FunctionSamples() = default;
 
-  void print(raw_ostream &OS = dbgs(), unsigned Indent = 0) const;
-  void dump() const;
+  LLVM_ABI void print(raw_ostream &OS = dbgs(), unsigned Indent = 0) const;
+  LLVM_ABI void dump() const;
 
   sampleprof_error addTotalSamples(uint64_t Num, uint64_t Weight = 1) {
     bool Overflowed;
@@ -907,14 +911,6 @@ public:
     return Ret->second.getSamples();
   }
 
-  SampleRecord *getBodySampleRecordAt(LineLocation Loc) {
-    auto MappedLoc = mapIRLocToProfileLoc(Loc);
-    auto Iter = BodySamples.find(MappedLoc);
-    if (Iter == BodySamples.end())
-      return nullptr;
-    return &Iter->second;
-  }
-
   /// Returns the call target map collected at a given location.
   /// Each location is specified by \p LineOffset and \p Discriminator.
   /// If the location is not found in profile, return error.
@@ -951,13 +947,6 @@ public:
     return &Iter->second;
   }
 
-  FunctionSamplesMap *findFunctionSamplesMapAt(LineLocation Loc) {
-    auto Iter = CallsiteSamples.find(mapIRLocToProfileLoc(Loc));
-    if (Iter == CallsiteSamples.end())
-      return nullptr;
-    return &Iter->second;
-  }
-
   /// Returns the TypeCountMap for inlined callsites at the given \p Loc.
   const TypeCountMap *findCallsiteTypeSamplesAt(const LineLocation &Loc) const {
     auto Iter = VirtualCallsiteTypeCounts.find(mapIRLocToProfileLoc(Loc));
@@ -972,7 +961,7 @@ public:
   /// \p Loc with the maximum total sample count. If \p Remapper or \p
   /// FuncNameToProfNameMap is not nullptr, use them to find FunctionSamples
   /// with equivalent name as \p CalleeName.
-  const FunctionSamples *findFunctionSamplesAt(
+  LLVM_ABI const FunctionSamples *findFunctionSamplesAt(
       const LineLocation &Loc, StringRef CalleeName,
       SampleProfileReaderItaniumRemapper *Remapper,
       const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
@@ -1237,14 +1226,14 @@ public:
 
   /// Returns the line offset to the start line of the subprogram.
   /// We assume that a single function will not exceed 65535 LOC.
-  static unsigned getOffset(const DILocation *DIL);
+  LLVM_ABI static unsigned getOffset(const DILocation *DIL);
 
   /// Returns a unique call site identifier for a given debug location of a call
   /// instruction. This is wrapper of two scenarios, the probe-based profile and
   /// regular profile, to hide implementation details from the sample loader and
   /// the context tracker.
-  static LineLocation getCallSiteIdentifier(const DILocation *DIL,
-                                            bool ProfileIsFS = false);
+  LLVM_ABI static LineLocation getCallSiteIdentifier(const DILocation *DIL,
+                                                     bool ProfileIsFS = false);
 
   /// Returns a unique hash code for a combination of a callsite location and
   /// the callee function name.
@@ -1267,30 +1256,30 @@ public:
   /// If \p Remapper or \p FuncNameToProfNameMap is not nullptr, it will be used
   /// to find matching FunctionSamples with not exactly the same but equivalent
   /// name.
-  const FunctionSamples *findFunctionSamples(
+  LLVM_ABI const FunctionSamples *findFunctionSamples(
       const DILocation *DIL,
       SampleProfileReaderItaniumRemapper *Remapper = nullptr,
       const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
           *FuncNameToProfNameMap = nullptr) const;
 
-  static bool ProfileIsProbeBased;
+  LLVM_ABI static bool ProfileIsProbeBased;
 
-  static bool ProfileIsCS;
+  LLVM_ABI static bool ProfileIsCS;
 
-  static bool ProfileIsPreInlined;
+  LLVM_ABI static bool ProfileIsPreInlined;
 
   SampleContext &getContext() const { return Context; }
 
   void setContext(const SampleContext &FContext) { Context = FContext; }
 
   /// Whether the profile uses MD5 to represent string.
-  static bool UseMD5;
+  LLVM_ABI static bool UseMD5;
 
   /// Whether the profile contains any ".__uniq." suffix in a name.
-  static bool HasUniqSuffix;
+  LLVM_ABI static bool HasUniqSuffix;
 
   /// If this profile uses flow sensitive discriminators.
-  static bool ProfileIsFS;
+  LLVM_ABI static bool ProfileIsFS;
 
   /// GUIDToFuncNameMap saves the mapping from GUID to the symbol name, for
   /// all the function symbols defined or declared in current module.
@@ -1304,7 +1293,7 @@ public:
 
   // Find all the names in the current FunctionSamples including names in
   // all the inline instances and names of call targets.
-  void findAllNames(DenseSet<FunctionId> &NameSet) const;
+  LLVM_ABI void findAllNames(DenseSet<FunctionId> &NameSet) const;
 
   bool operator==(const FunctionSamples &Other) const {
     return (GUIDToFuncNameMap == Other.GUIDToFuncNameMap ||
@@ -1364,7 +1353,7 @@ private:
   /// collected in the call to baz() at line offset 8.
   CallsiteSampleMap CallsiteSamples;
 
-  /// Map inlined virtual callsites to the vtable from which they are loaded.
+  /// Map virtual callsites to the vtable from which they are loaded.
   ///
   /// Each entry is a mapping from the location to the list of vtables and their
   /// sampled counts. For example, given:
@@ -1409,7 +1398,7 @@ static inline FunctionId getRepInFormat(StringRef Name) {
   return FunctionId(Function::getGUIDAssumingExternalLinkage(Name));
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const FunctionSamples &FS);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const FunctionSamples &FS);
 
 /// This class provides operator overloads to the map container using MD5 as the
 /// key type, so that existing code can still work in most cases using
@@ -1450,8 +1439,9 @@ public:
 
 using NameFunctionSamples = std::pair<hash_code, const FunctionSamples *>;
 
-void sortFuncProfiles(const SampleProfileMap &ProfileMap,
-                      std::vector<NameFunctionSamples> &SortedProfiles);
+LLVM_ABI void
+sortFuncProfiles(const SampleProfileMap &ProfileMap,
+                 std::vector<NameFunctionSamples> &SortedProfiles);
 
 /// Sort a LocationT->SampleT map by LocationT.
 ///
@@ -1489,11 +1479,11 @@ public:
   // mainly to honor the preinliner decsion. Note that when MergeColdContext is
   // true, preinliner decsion is not honored anyway so TrimBaseProfileOnly will
   // be ignored.
-  void trimAndMergeColdContextProfiles(uint64_t ColdCountThreshold,
-                                       bool TrimColdContext,
-                                       bool MergeColdContext,
-                                       uint32_t ColdContextFrameLength,
-                                       bool TrimBaseProfileOnly);
+  LLVM_ABI void trimAndMergeColdContextProfiles(uint64_t ColdCountThreshold,
+                                                bool TrimColdContext,
+                                                bool MergeColdContext,
+                                                uint32_t ColdContextFrameLength,
+                                                bool TrimBaseProfileOnly);
 
 private:
   SampleProfileMap &ProfileMap;
@@ -1505,10 +1495,10 @@ private:
 /// nested profile to flatten profile conversion, etc.
 class ProfileConverter {
 public:
-  ProfileConverter(SampleProfileMap &Profiles);
+  LLVM_ABI ProfileConverter(SampleProfileMap &Profiles);
   // Convert a full context-sensitive flat sample profile into a nested sample
   // profile.
-  void convertCSProfiles();
+  LLVM_ABI void convertCSProfiles();
   struct FrameNode {
     FrameNode(FunctionId FName = FunctionId(),
               FunctionSamples *FSamples = nullptr,
@@ -1524,8 +1514,8 @@ public:
     // Callsite location in parent context
     LineLocation CallSiteLoc;
 
-    FrameNode *getOrCreateChildFrame(const LineLocation &CallSite,
-                                     FunctionId CalleeName);
+    LLVM_ABI FrameNode *getOrCreateChildFrame(const LineLocation &CallSite,
+                                              FunctionId CalleeName);
   };
 
   static void flattenProfile(SampleProfileMap &ProfileMap,
@@ -1641,9 +1631,9 @@ public:
   void setToCompress(bool TC) { ToCompress = TC; }
   bool toCompress() { return ToCompress; }
 
-  std::error_code read(const uint8_t *Data, uint64_t ListSize);
-  std::error_code write(raw_ostream &OS);
-  void dump(raw_ostream &OS = dbgs()) const;
+  LLVM_ABI std::error_code read(const uint8_t *Data, uint64_t ListSize);
+  LLVM_ABI std::error_code write(raw_ostream &OS);
+  LLVM_ABI void dump(raw_ostream &OS = dbgs()) const;
 
 private:
   // Determine whether or not to compress the symbol list when

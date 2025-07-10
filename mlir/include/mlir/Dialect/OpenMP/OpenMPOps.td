@@ -889,7 +889,7 @@ def FlushOp : OpenMP_Op<"flush", clauses = [
     specified or implied.
   }] # clausesDescription;
 
-  let arguments = !con((ins Variadic<OpenMP_PointerLikeType>:$varList),
+  let arguments = !con((ins Variadic<AnyType>:$varList),
                        clausesArgs);
 
   // Override inherited assembly format to include `varList`.
@@ -1750,10 +1750,6 @@ def DeclareMapperInfoOp : OpenMP_Op<"declare_mapper.info", [
     This Op is used to capture the map information related to it's
     parent DeclareMapperOp.
   }] # clausesDescription;
-
-  let builders = [
-    OpBuilder<(ins CArg<"const DeclareMapperInfoOperands &">:$clauses)>
-  ];
 
   let extraClassDeclaration = [{
     // Override BlockArgOpenMPOpInterface method because `map` clauses have no

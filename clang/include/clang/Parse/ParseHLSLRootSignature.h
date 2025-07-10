@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_PARSE_PARSEHLSLROOTSIGNATURE_H
 #define LLVM_CLANG_PARSE_PARSEHLSLROOTSIGNATURE_H
 
+#include "clang/AST/Expr.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Lex/LexHLSLRootSignature.h"
 #include "clang/Lex/Preprocessor.h"
@@ -27,8 +28,9 @@ namespace hlsl {
 
 class RootSignatureParser {
 public:
-  RootSignatureParser(SmallVector<llvm::hlsl::rootsig::RootElement> &Elements,
-                      RootSignatureLexer &Lexer, clang::Preprocessor &PP);
+  RootSignatureParser(llvm::dxbc::RootSignatureVersion Version,
+                      SmallVector<llvm::hlsl::rootsig::RootElement> &Elements,
+                      StringLiteral *Signature, Preprocessor &PP);
 
   /// Consumes tokens from the Lexer and constructs the in-memory
   /// representations of the RootElements. Tokens are consumed until an
@@ -71,7 +73,7 @@ private:
   // expected, or, there is a lexing error
 
   /// Root Element parse methods:
-  std::optional<llvm::hlsl::rootsig::RootFlags> parseRootFlags();
+  std::optional<llvm::dxbc::RootFlags> parseRootFlags();
   std::optional<llvm::hlsl::rootsig::RootConstants> parseRootConstants();
   std::optional<llvm::hlsl::rootsig::RootDescriptor> parseRootDescriptor();
   std::optional<llvm::hlsl::rootsig::DescriptorTable> parseDescriptorTable();
@@ -86,15 +88,15 @@ private:
     std::optional<llvm::hlsl::rootsig::Register> Reg;
     std::optional<uint32_t> Num32BitConstants;
     std::optional<uint32_t> Space;
-    std::optional<llvm::hlsl::rootsig::ShaderVisibility> Visibility;
+    std::optional<llvm::dxbc::ShaderVisibility> Visibility;
   };
   std::optional<ParsedConstantParams> parseRootConstantParams();
 
   struct ParsedRootDescriptorParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
     std::optional<uint32_t> Space;
-    std::optional<llvm::hlsl::rootsig::ShaderVisibility> Visibility;
-    std::optional<llvm::hlsl::rootsig::RootDescriptorFlags> Flags;
+    std::optional<llvm::dxbc::ShaderVisibility> Visibility;
+    std::optional<llvm::dxbc::RootDescriptorFlags> Flags;
   };
   std::optional<ParsedRootDescriptorParams>
   parseRootDescriptorParams(RootSignatureToken::Kind RegType);
@@ -104,24 +106,25 @@ private:
     std::optional<uint32_t> NumDescriptors;
     std::optional<uint32_t> Space;
     std::optional<uint32_t> Offset;
-    std::optional<llvm::hlsl::rootsig::DescriptorRangeFlags> Flags;
+    std::optional<llvm::dxbc::DescriptorRangeFlags> Flags;
   };
   std::optional<ParsedClauseParams>
   parseDescriptorTableClauseParams(RootSignatureToken::Kind RegType);
 
   struct ParsedStaticSamplerParams {
     std::optional<llvm::hlsl::rootsig::Register> Reg;
+    std::optional<llvm::dxbc::SamplerFilter> Filter;
+    std::optional<llvm::dxbc::TextureAddressMode> AddressU;
+    std::optional<llvm::dxbc::TextureAddressMode> AddressV;
+    std::optional<llvm::dxbc::TextureAddressMode> AddressW;
     std::optional<float> MipLODBias;
-    std::optional<llvm::hlsl::rootsig::TextureAddressMode> AddressU;
-    std::optional<llvm::hlsl::rootsig::TextureAddressMode> AddressV;
-    std::optional<llvm::hlsl::rootsig::TextureAddressMode> AddressW;
     std::optional<uint32_t> MaxAnisotropy;
-    std::optional<llvm::hlsl::rootsig::ComparisonFunc> CompFunc;
-    std::optional<llvm::hlsl::rootsig::StaticBorderColor> BorderColor;
+    std::optional<llvm::dxbc::ComparisonFunc> CompFunc;
+    std::optional<llvm::dxbc::StaticBorderColor> BorderColor;
     std::optional<float> MinLOD;
     std::optional<float> MaxLOD;
     std::optional<uint32_t> Space;
-    std::optional<llvm::hlsl::rootsig::ShaderVisibility> Visibility;
+    std::optional<llvm::dxbc::ShaderVisibility> Visibility;
   };
   std::optional<ParsedStaticSamplerParams> parseStaticSamplerParams();
 
@@ -131,16 +134,13 @@ private:
   std::optional<float> parseFloatParam();
 
   /// Parsing methods of various enums
-  std::optional<llvm::hlsl::rootsig::ShaderVisibility> parseShaderVisibility();
-  std::optional<llvm::hlsl::rootsig::TextureAddressMode>
-  parseTextureAddressMode();
-  std::optional<llvm::hlsl::rootsig::ComparisonFunc> parseComparisonFunc();
-  std::optional<llvm::hlsl::rootsig::StaticBorderColor>
-  parseStaticBorderColor();
-  std::optional<llvm::hlsl::rootsig::RootDescriptorFlags>
-  parseRootDescriptorFlags();
-  std::optional<llvm::hlsl::rootsig::DescriptorRangeFlags>
-  parseDescriptorRangeFlags();
+  std::optional<llvm::dxbc::ShaderVisibility> parseShaderVisibility();
+  std::optional<llvm::dxbc::SamplerFilter> parseSamplerFilter();
+  std::optional<llvm::dxbc::TextureAddressMode> parseTextureAddressMode();
+  std::optional<llvm::dxbc::ComparisonFunc> parseComparisonFunc();
+  std::optional<llvm::dxbc::StaticBorderColor> parseStaticBorderColor();
+  std::optional<llvm::dxbc::RootDescriptorFlags> parseRootDescriptorFlags();
+  std::optional<llvm::dxbc::DescriptorRangeFlags> parseDescriptorRangeFlags();
 
   /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned
   /// 32-bit integer
@@ -188,11 +188,23 @@ private:
   bool tryConsumeExpectedToken(RootSignatureToken::Kind Expected);
   bool tryConsumeExpectedToken(ArrayRef<RootSignatureToken::Kind> Expected);
 
-private:
-  SmallVector<llvm::hlsl::rootsig::RootElement> &Elements;
-  RootSignatureLexer &Lexer;
+  /// Convert the token's offset in the signature string to its SourceLocation
+  ///
+  /// This allows to currently retrieve the location for multi-token
+  /// StringLiterals
+  SourceLocation getTokenLocation(RootSignatureToken Tok);
 
-  clang::Preprocessor &PP;
+  /// Construct a diagnostics at the location of the current token
+  DiagnosticBuilder reportDiag(unsigned DiagID) {
+    return getDiags().Report(getTokenLocation(CurToken), DiagID);
+  }
+
+private:
+  llvm::dxbc::RootSignatureVersion Version;
+  SmallVector<llvm::hlsl::rootsig::RootElement> &Elements;
+  StringLiteral *Signature;
+  RootSignatureLexer Lexer;
+  Preprocessor &PP;
 
   RootSignatureToken CurToken;
 };

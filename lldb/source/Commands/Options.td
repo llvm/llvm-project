@@ -13,6 +13,9 @@ let Command = "target modules dump separate debug info" in {
     Desc<"Output the details in JSON format.">;
   def tm_errors_only : Option<"errors-only", "e">, Group<1>,
     Desc<"Filter to show only debug info files with errors.">;
+  def tm_force_load_all_debug_info : Option<"force-load-all-debug-info", "f">,
+                                     Group<1>,
+                                     Desc<"Load all debug info files.">;
 }
 
 let Command = "help" in {
@@ -681,6 +684,11 @@ let Command = "platform shell" in {
     Desc<"Seconds to wait for the remote host to finish running the command.">;
   def platform_shell_interpreter : Option<"shell", "s">, Arg<"Path">,
     Desc<"Shell interpreter path. This is the binary used to run the command.">;
+}
+
+let Command = "plugin list" in {
+  def plugin_list_json : Option<"json", "j">,
+                         Desc<"Output the plugin list in json format.">;
 }
 
 let Command = "process launch" in {
@@ -1477,12 +1485,20 @@ let Command = "statistics dump" in {
     "this is turned off unless specified. "
     "In default mode, if both '--targets' and '--modules' are 'true', a list "
     "of module identifiers will be added to the 'targets' section.">;
-  def statistics_dump_transcript: Option<"transcript", "t">, Group<1>,
-    Arg<"Boolean">,
-    Desc<"If the setting interpreter.save-transcript is enabled and this "
-    "option is 'true', include a JSON array with all commands the user and/or "
-    "scripts executed during a debug session. "
-    "Defaults to true, unless the '--summary' mode is enabled, in which case "
-    "this is turned off unless specified.">;
-
+  def statistics_dump_transcript
+      : Option<"transcript", "t">,
+        Group<1>,
+        Arg<"Boolean">,
+        Desc<"If the setting interpreter.save-transcript is enabled and this "
+             "option is 'true', include a JSON array with all commands the "
+             "user and/or "
+             "scripts executed during a debug session. "
+             "Defaults to false. ">;
+  def statistics_dump_plugins
+      : Option<"plugins", "p">,
+        Group<1>,
+        Arg<"Boolean">,
+        Desc<"Dump statistics for known plugins including name, order, and "
+             "enabled state. Defaults to true for both summary and default "
+             "mode.">;
 }

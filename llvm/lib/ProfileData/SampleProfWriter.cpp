@@ -41,8 +41,9 @@
 using namespace llvm;
 using namespace sampleprof;
 
+// To begin with, make this option off by default.
 static cl::opt<bool> ExtBinaryWriteVTableTypeProf(
-    "extbinary-write-vtable-type-prof", cl::init(true), cl::Hidden,
+    "extbinary-write-vtable-type-prof", cl::init(false), cl::Hidden,
     cl::desc("Write vtable type profile in ext-binary sample profile writer"));
 
 namespace llvm {
@@ -599,13 +600,14 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
     for (const auto &J : Sample.getSortedCallTargets())
       OS << " " << J.first << ":" << J.second;
     OS << "\n";
+    LineCount++;
 
     if (const TypeCountMap *Map = S.findCallsiteTypeSamplesAt(Loc);
         Map && !Map->empty()) {
       OS.indent(Indent + 1);
       Loc.print(OS);
       OS << ": ";
-      OS << kBodySampleVTableProfPrefix;
+      OS << kVTableProfPrefix;
       for (const auto [TypeName, Count] : *Map) {
         OS << TypeName << ":" << Count << " ";
       }
@@ -617,10 +619,11 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
   SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
       S.getCallsiteSamples());
   Indent += 1;
-  for (const auto &I : SortedCallsiteSamples.get()) {
-    LineLocation Loc = I->first;
-    for (const auto &FS : I->second) {
-      const FunctionSamples &CalleeSamples = FS.second;
+  for (const auto *Element : SortedCallsiteSamples.get()) {
+    // Element is a pointer to a pair of LineLocation and FunctionSamplesMap.
+    const auto &[Loc, FunctionSamplesMap] = *Element;
+    for (const FunctionSamples &CalleeSamples :
+         make_second_range(FunctionSamplesMap)) {
       OS.indent(Indent);
       Loc.print(OS);
       OS << ": ";
@@ -633,7 +636,7 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
       OS.indent(Indent);
       Loc.print(OS);
       OS << ": ";
-      OS << kBodySampleVTableProfPrefix;
+      OS << kVTableProfPrefix;
       for (const auto [TypeId, Count] : *Map) {
         OS << TypeId << ":" << Count << " ";
       }
@@ -686,14 +689,6 @@ void SampleProfileWriterBinary::addContext(const SampleContext &Context) {
   addName(Context.getFunction());
 }
 
-void SampleProfileWriterBinary::addTypeNames(const TypeCountMap &M) {
-  if (!WriteVTableProf)
-    return;
-  // Add type name to TypeNameTable.
-  for (const auto Type : llvm::make_first_range(M))
-    addName(Type);
-}
-
 void SampleProfileWriterBinary::addNames(const FunctionSamples &S) {
   // Add all the names in indirect call targets.
   for (const auto &I : S.getBodySamples()) {
@@ -702,11 +697,6 @@ void SampleProfileWriterBinary::addNames(const FunctionSamples &S) {
       addName(J.first);
   }
 
-  // Add all the names in callsite types.
-  for (const auto &VTableAccessCountMap :
-       llvm::make_second_range(S.getCallsiteTypeCounts()))
-    addTypeNames(VTableAccessCountMap);
-
   // Recursively add all the names for inlined callsites.
   for (const auto &J : S.getCallsiteSamples())
     for (const auto &FS : J.second) {
@@ -714,6 +704,17 @@ void SampleProfileWriterBinary::addNames(const FunctionSamples &S) {
       addName(CalleeSamples.getFunction());
       addNames(CalleeSamples);
     }
+
+  if (!WriteVTableProf)
+    return;
+  // Add all the vtable names to NameTable.
+  for (const auto &VTableAccessCountMap :
+       llvm::make_second_range(S.getCallsiteTypeCounts())) {
+    // Add type name to NameTable.
+    for (const auto Type : llvm::make_first_range(VTableAccessCountMap)) {
+      addName(Type);
+    }
+  }
 }
 
 void SampleProfileWriterExtBinaryBase::addContext(
@@ -896,7 +897,7 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
     LineLocation Loc = I.first;
     const SampleRecord &Sample = I.second;
     Loc.serialize(OS);
-    Sample.serialize(OS, getNameTable(), WriteVTableProf);
+    Sample.serialize(OS, getNameTable());
   }
 
   // Recursively emit all the callsite samples.

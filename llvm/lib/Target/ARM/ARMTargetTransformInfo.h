@@ -54,7 +54,7 @@ namespace TPLoop {
 enum MemTransfer { ForceDisabled = 0, ForceEnabled, Allow };
 }
 
-class ARMTTIImpl : public BasicTTIImplBase<ARMTTIImpl> {
+class ARMTTIImpl final : public BasicTTIImplBase<ARMTTIImpl> {
   using BaseT = BasicTTIImplBase<ARMTTIImpl>;
   using TTI = TargetTransformInfo;
 
@@ -223,9 +223,9 @@ public:
   int getNumMemOps(const IntrinsicInst *I) const;
 
   InstructionCost
-  getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
-                 TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
-                 ArrayRef<const Value *> Args = {},
+  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 VectorType *SubTp, ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override;
 
   bool preferInLoopReduction(RecurKind Kind, Type *Ty) const override;
