@@ -3156,7 +3156,7 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
               llvm_unreachable("heuristic unrolling does not generate a loop");
             })
             .Default([&](Operation *op) {
-              assert(!"TODO: Custom name for this operation");
+              assert(false && "TODO: Custom name for this operation");
               return "transformed";
             });
   }
