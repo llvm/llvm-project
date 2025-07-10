@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple arm64-apple-macosx14.0.0 -O0 -debug-info-kind=standalone -dwarf-version=5 \
 // RUN: -fsanitize=nullability-arg -fsanitize-trap=nullability-arg -emit-llvm %s -o - | FileCheck %s
 
-#define NULL ((void *)0)
+#include <stddef.h>
 
 int nullability_arg(int* _Nonnull p)
 {
