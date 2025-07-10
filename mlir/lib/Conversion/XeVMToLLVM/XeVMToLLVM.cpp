@@ -125,8 +125,6 @@ int32_t getL1CacheControl(OpType op) {
     case LoadCacheControl::INVALIDATE_READ:
       control = 4;
       break;
-    default:
-      break;
     }
   } else {
     switch (*op.getCacheControl()) {
@@ -152,8 +150,6 @@ int32_t getL1CacheControl(OpType op) {
     case StoreCacheControl::L1WB_L2WB_L3UC:
     case StoreCacheControl::L1WB_L2UC_L3WB:
       control = 4;
-      break;
-    default:
       break;
     }
   }
@@ -184,8 +180,6 @@ int32_t getL3CacheControl(OpType op) {
     case LoadCacheControl::INVALIDATE_READ:
       control = 4;
       break;
-    default:
-      break;
     }
   } else {
     switch (*op.getCacheControl()) {
@@ -207,8 +201,6 @@ int32_t getL3CacheControl(OpType op) {
     case StoreCacheControl::L1S_L2WB_L3WB:
     case StoreCacheControl::L1WB_L2UC_L3WB:
       control = 2;
-      break;
-    default:
       break;
     }
   }
