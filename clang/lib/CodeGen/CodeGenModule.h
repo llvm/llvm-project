@@ -471,6 +471,7 @@ private:
   /// Deferred always inline functions that has a generated GlobalAlias due to
   /// -funique-internal-linkage-names
   llvm::MapVector<GlobalDecl, llvm::Function *> DeferredMaybeInlineFunctions;
+  llvm::MapVector<llvm::Function *, StringRef> RenamedAsmInlineFunctions;
 
   /// Store the list of global constructors and their respective priorities to
   /// be emitted when the translation unit is complete.

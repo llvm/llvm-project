@@ -6297,16 +6297,15 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
   SetLLVMFunctionAttributesForDefinition(D, Fn);
 
   // Avoid extra uses of the internal GlobalAlias if Callee has
-  // __attribute__((error)).
+  // __attribute__((error)) or inline assembly.
   for (auto BB = Fn->begin(); GA && BB != Fn->end(); BB++) {
     for (auto &I : *BB) {
       bool shouldEraseAlias = false;
       if (auto *CI = dyn_cast<llvm::CallBase>(&I)) {
         if (auto *Callee = CI->getCalledFunction()) {
+          GlobalDecl CalleeDecl;
           if (MustInlinedFunctions.contains(Callee->getName())) {
             // Callee is a known always inline, inline assembly
-            if (hasInlineAttr(D))
-              MustInlinedFunctions.insert(Fn->getName());
             shouldEraseAlias = true;
           } else if (Callee->hasFnAttribute("dontcall-error")) {
             // Callee has Error Attribute
@@ -6317,14 +6316,23 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
             DeferredMaybeInlineFunctions[GD] = Callee;
             GA = nullptr;
             break;
+          } else if (lookupRepresentativeDecl(Callee->getName(), CalleeDecl)) {
+            // Defer if Callee is also deferred
+            if (DeferredMaybeInlineFunctions.contains(CalleeDecl)) {
+              DeferredMaybeInlineFunctions[GD] = Callee;
+              GA = nullptr;
+              break;
+            }
           }
         } else if (CI->isInlineAsm() && hasInlineAttr(D)) {
           // Avoid alias towards always inline assembly to allow inlining
-          MustInlinedFunctions.insert(Fn->getName());
           shouldEraseAlias = true;
+          RenamedAsmInlineFunctions[Fn] = D->getName();
         }
       }
       if (shouldEraseAlias) {
+        if (hasInlineAttr(D))
+          MustInlinedFunctions.insert(Fn->getName());
         GA->eraseFromParent();
         GA = nullptr;
         break;
@@ -7624,7 +7632,8 @@ void CodeGenModule::FixupMaybeInlineFunctions() {
   unsigned long sz = 0;
   while (sz != DeferredMaybeInlineFunctions.size()) {
     sz = DeferredMaybeInlineFunctions.size();
-    for (auto I = DeferredMaybeInlineFunctions.begin(); I != DeferredMaybeInlineFunctions.end();) {
+    for (auto I = DeferredMaybeInlineFunctions.begin();
+         I != DeferredMaybeInlineFunctions.end();) {
       const auto *D = cast<FunctionDecl>(I->first.getDecl());
       auto *GA = GetGlobalValue(D->getName());
       StringRef MangledName = getMangledName(I->first);
@@ -7647,6 +7656,16 @@ void CodeGenModule::FixupMaybeInlineFunctions() {
     SetCommonAttributes(Decl, GA);
     addUsedOrCompilerUsedGlobal(GA);
     addUsedOrCompilerUsedGlobal(GV);
+  }
+
+  // Revert unique internal linkage name for all C inline functions that has
+  // inline assembly. This is a workaround to Linux static_call, because the
+  // original symbol name is used in an assembly trampoline. A more proper way
+  // here is to parse the inline assembly and figure out what kind of assembly
+  // constraints must inline (e.g. "i" through constant folding), but this might
+  // be difficult in the frontend..
+  for (auto &[Fn, Name] : RenamedAsmInlineFunctions) {
+    Fn->setName(Name);
   }
 }
 
