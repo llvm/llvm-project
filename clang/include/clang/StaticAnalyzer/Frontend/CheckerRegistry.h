@@ -108,9 +108,7 @@ private:
     mgr.template registerChecker<T>();
   }
 
-  static bool returnTrue(const CheckerManager &) {
-    return true;
-  }
+  static bool returnTrue(const CheckerManager &) { return true; }
 
   /// Adds a checker to the registry.
   /// This private, most general variant is intended for loading the checker
