@@ -7,7 +7,7 @@
 // CHECK64-NEXT:    tail call i64 @llvm.spv.num.workgroups.i64(i32 0)
 // CHECK32-NEXT:    tail call i32 @llvm.spv.num.workgroups.i32(i32 0)
 //
-unsigned int test_num_workgroups() {
+[[clang::sycl_external]] unsigned int test_num_workgroups() {
     return __builtin_spirv_num_workgroups(0);
 }
 
@@ -16,7 +16,7 @@ unsigned int test_num_workgroups() {
 // CHECK64-NEXT:    tail call i64 @llvm.spv.workgroup.size.i64(i32 0)
 // CHECK32-NEXT:    tail call i32 @llvm.spv.workgroup.size.i32(i32 0)
 //
-unsigned int test_workgroup_size() {
+[[clang::sycl_external]] unsigned int test_workgroup_size() {
     return __builtin_spirv_workgroup_size(0);
 }
 
@@ -25,7 +25,7 @@ unsigned int test_workgroup_size() {
 // CHECK64-NEXT:    tail call i64 @llvm.spv.group.id.i64(i32 0)
 // CHECK32-NEXT:    tail call i32 @llvm.spv.group.id.i32(i32 0)
 //
-unsigned int test_workgroup_id() {
+[[clang::sycl_external]] unsigned int test_workgroup_id() {
     return __builtin_spirv_workgroup_id(0);
 }
 
@@ -34,7 +34,7 @@ unsigned int test_workgroup_id() {
 // CHECK64-NEXT:    tail call i64 @llvm.spv.thread.id.in.group.i64(i32 0)
 // CHECK32-NEXT:    tail call i32 @llvm.spv.thread.id.in.group.i32(i32 0)
 //
-unsigned int test_local_invocation_id() {
+[[clang::sycl_external]] unsigned int test_local_invocation_id() {
     return __builtin_spirv_local_invocation_id(0);
 }
 
@@ -43,7 +43,7 @@ unsigned int test_local_invocation_id() {
 // CHECK64-NEXT:    tail call i64 @llvm.spv.thread.id.i64(i32 0)
 // CHECK32-NEXT:    tail call i32 @llvm.spv.thread.id.i32(i32 0)
 //
-unsigned int test_global_invocation_id() {
+[[clang::sycl_external]] unsigned int test_global_invocation_id() {
     return __builtin_spirv_global_invocation_id(0);
 }
 
@@ -52,7 +52,7 @@ unsigned int test_global_invocation_id() {
 // CHECK64-NEXT:    tail call i64 @llvm.spv.global.size.i64(i32 0)
 // CHECK32-NEXT:    tail call i32 @llvm.spv.global.size.i32(i32 0)
 //
-unsigned int test_global_size() {
+[[clang::sycl_external]] unsigned int test_global_size() {
     return __builtin_spirv_global_size(0);
 }
 
@@ -61,7 +61,7 @@ unsigned int test_global_size() {
 // CHECK64-NEXT:    tail call i64 @llvm.spv.global.offset.i64(i32 0)
 // CHECK32-NEXT:    tail call i32 @llvm.spv.global.offset.i32(i32 0)
 //
-unsigned int test_global_offset() {
+[[clang::sycl_external]] unsigned int test_global_offset() {
     return __builtin_spirv_global_offset(0);
 }
 
@@ -69,7 +69,7 @@ unsigned int test_global_offset() {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call i32 @llvm.spv.subgroup.size()
 //
-unsigned int test_subgroup_size() {
+[[clang::sycl_external]] unsigned int test_subgroup_size() {
     return __builtin_spirv_subgroup_size();
 }
 
@@ -77,7 +77,7 @@ unsigned int test_subgroup_size() {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call i32 @llvm.spv.subgroup.max.size()
 //
-unsigned int test_subgroup_max_size() {
+[[clang::sycl_external]] unsigned int test_subgroup_max_size() {
     return __builtin_spirv_subgroup_max_size();
 }
 
@@ -85,7 +85,7 @@ unsigned int test_subgroup_max_size() {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call i32 @llvm.spv.num.subgroups()
 //
-unsigned int test_num_subgroups() {
+[[clang::sycl_external]] unsigned int test_num_subgroups() {
     return __builtin_spirv_num_subgroups();
 }
 
@@ -93,7 +93,7 @@ unsigned int test_num_subgroups() {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call i32 @llvm.spv.subgroup.id()
 //
-unsigned int test_subgroup_id() {
+[[clang::sycl_external]] unsigned int test_subgroup_id() {
     return __builtin_spirv_subgroup_id();
 }
 
@@ -101,6 +101,6 @@ unsigned int test_subgroup_id() {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call i32 @llvm.spv.subgroup.local.invocation.id()
 //
-unsigned int test_subgroup_local_invocation_id() {
+[[clang::sycl_external]] unsigned int test_subgroup_local_invocation_id() {
     return __builtin_spirv_subgroup_local_invocation_id();
 }
