@@ -657,6 +657,7 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
     QualType elemTy = exprTy->castAs<clang::ComplexType>()->getElementType();
     mlir::Location loc = getLoc(e->getExprLoc());
     Address component = builder.createComplexRealPtr(loc, lv.getAddress());
+    assert(!cir::MissingFeatures::opTBAA());
     LValue elemLV = makeAddrLValue(component, elemTy);
     elemLV.getQuals().addQualifiers(lv.getQuals());
     return elemLV;
