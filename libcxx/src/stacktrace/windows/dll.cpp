@@ -12,7 +12,7 @@
 
 #  include <__stacktrace/base.h>
 
-#  include "stacktrace/alloc.h"
+#  include "stacktrace/base.h"
 #  include "stacktrace/config.h"
 #  include "stacktrace/utils.h"
 #  include "stacktrace/windows/dll.h"
@@ -49,7 +49,7 @@ size_t moduleCount; // 0 IFF module enumeration failed
 
 } // namespace
 
-win_impl::WinDebugAPIs(builder& trace) : builder_(trace), guard_(gWindowsAPILock) {
+win_impl::WinDebugAPIs(base& trace) : base_(trace), guard_(gWindowsAPILock) {
   if (!globalInitialized) {
     // Cannot proceed without these DLLs:
     if (!dbg) {
@@ -108,7 +108,7 @@ void win_impl::symbolize() {
     return;
   }
 
-  for (auto& entry : builder_.__entries_) {
+  for (auto& entry : base_.__entries_) {
     char space[sizeof(IMAGEHLP_SYMBOL64) + kMaxSymName];
     auto* sym          = (IMAGEHLP_SYMBOL64*)space;
     sym->SizeOfStruct  = sizeof(IMAGEHLP_SYMBOL64);
@@ -128,7 +128,7 @@ void win_impl::resolve_lines() {
     return;
   }
 
-  for (auto& entry : builder_.__entries_) {
+  for (auto& entry : base_.__entries_) {
     DWORD disp{0};
     IMAGEHLP_LINE64 line;
     line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
@@ -185,7 +185,7 @@ _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void win_impl::collect(size_t skip, size_
       continue;
     }
     --max_depth;
-    auto& entry = builder_.__entries_.emplace_back();
+    auto& entry = base_.__entries_.emplace_back();
     // We don't need to compute the un-slid addr; windbg only needs the actual addresses.
     // Assume address is of the instruction after a call instruction, since we can't
     // differentiate between a signal, SEH exception handler, or a normal function call.

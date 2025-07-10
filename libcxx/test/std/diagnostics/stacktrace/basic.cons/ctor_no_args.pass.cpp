@@ -18,31 +18,29 @@
 
 #include <cassert>
 #include <stacktrace>
+#include <type_traits>
 
-uint32_t test1_line;
-uint32_t test2_line;
+#include "../test_allocs.h"
 
-template <class A>
-_LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE std::basic_stacktrace<A> test1(A& alloc) {
-  test1_line = __LINE__ + 1; // add 1 to get the next line (where the call to `current` occurs)
-  auto ret   = std::basic_stacktrace<A>::current(alloc);
-  return ret;
-}
-
-template <class A>
-_LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE std::basic_stacktrace<A> test2(A& alloc) {
-  test2_line = __LINE__ + 1; // add 1 to get the next line (where the call to `current` occurs)
-  auto ret   = test1(alloc);
-  return ret;
-}
-
-_LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void test_default_construct() {
+void test_default_construct() {
   std::stacktrace st;
   assert(st.empty());
 }
 
-_LIBCPP_NO_TAIL_CALLS
+void test_default_construct_noexcept() {
+  static_assert(noexcept(std::stacktrace()));
+
+  using A1 = std::allocator<std::stacktrace_entry>;
+  static_assert(std::is_nothrow_default_constructible_v<A1>);
+  static_assert(noexcept(std::basic_stacktrace<A1>()));
+
+  using A2 = TestAlloc<std::stacktrace_entry, false, true, true, true>;
+  static_assert(!std::is_nothrow_default_constructible_v<A2>);
+  static_assert(!noexcept(std::basic_stacktrace<A2>()));
+}
+
 int main(int, char**) {
   test_default_construct();
+  test_default_construct_noexcept();
   return 0;
 }

@@ -21,8 +21,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __stacktrace {
 
+base::base() : base(std::allocator<std::stacktrace_entry>()) {}
+
 _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE _LIBCPP_EXPORTED_FROM_ABI void
-builder::build_stacktrace(size_t skip, size_t max_depth) {
+base::build_stacktrace(size_t skip, size_t max_depth) {
 #if defined(_LIBCPP_WIN32API)
   // Windows implementation
   win_impl dbghelp{*this};

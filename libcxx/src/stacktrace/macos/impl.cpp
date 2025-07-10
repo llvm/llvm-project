@@ -22,7 +22,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
-void ident_module(alloc& alloc, entry_base& entry, unsigned& index, image* images) {
+void ident_module(base& base, entry_base& entry, unsigned& index, image* images) {
   if (entry.__addr_actual_) {
     while (images[index].loaded_at_ > entry.__addr_actual_) {
       --index;
@@ -33,7 +33,7 @@ void ident_module(alloc& alloc, entry_base& entry, unsigned& index, image* image
     auto& image = images[index];
     if (image) {
       entry.__addr_unslid_ = entry.__addr_actual_ - images[index].slide_;
-      entry.__file_        = alloc.make_str(images[index].name_);
+      entry.__file_        = base.make_str(images[index].name_);
     }
   }
 }
@@ -65,31 +65,31 @@ void macos::ident_modules() {
   }
 
   // First image (the main program) is at index 1
-  builder_.__main_prog_path_ = builder_.__alloc_.make_str(images.at(1).name_);
+  base_.__main_prog_path_ = base_.make_str(images.at(1).name_);
 
   unsigned index = 1; // Starts at one, and is moved by 'ident_module'
-  for (auto& entry : builder_.__entries_) {
-    ident_module(builder_.__alloc_, (entry_base&)entry, index, images.data());
+  for (auto& entry : base_.__entries_) {
+    ident_module(base_, (entry_base&)entry, index, images.data());
   }
 }
 
-void symbolize_entry(alloc& alloc, entry_base& entry) {
+void symbolize_entry(base& base, entry_base& entry) {
   Dl_info info;
   if (dladdr((void*)entry.__addr_actual_, &info)) {
     if (info.dli_fname && entry.__file_->empty()) {
       // provide at least the binary filename in case we cannot lookup source location
-      entry.__file_ = alloc.make_str(info.dli_fname);
+      entry.__file_ = base.make_str(info.dli_fname);
     }
     if (info.dli_sname && entry.__desc_->empty()) {
       // provide at least the mangled name; try to unmangle in a later step
-      entry.__desc_ = alloc.make_str(info.dli_sname);
+      entry.__desc_ = base.make_str(info.dli_sname);
     }
   }
 }
 
 void macos::symbolize() {
-  for (auto& entry : builder_.__entries_) {
-    symbolize_entry(builder_.__alloc_, (entry_base&)entry);
+  for (auto& entry : base_.__entries_) {
+    symbolize_entry(base_, entry);
   }
 }
 

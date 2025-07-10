@@ -22,13 +22,15 @@ namespace std {
 #include <stacktrace>
 
 int main(int, char**) {
-  std::stacktrace_entry entry_t6;
+  std::stacktrace_entry e;
   // "Returns: false if and only if *this is empty."
-  assert(!entry_t6);
+  assert(!e);
   // Now set addr to something nonzero
-  *(uintptr_t*)(&entry_t6) = uintptr_t(&main);
-  assert(entry_t6.native_handle() == uintptr_t(&main));
-  assert(entry_t6);
+  *(uintptr_t*)(&e) = uintptr_t(&main);
+  assert(e.native_handle() == uintptr_t(&main));
+  assert(e);
+
+  static_assert(noexcept(bool(e)));
 
   return 0;
 }

@@ -15,7 +15,6 @@
 */
 
 #include <cassert>
-#include <iterator>
 #include <stacktrace>
 
 _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE std::stacktrace test1() { return std::stacktrace::current(0, 4); }
@@ -25,7 +24,6 @@ _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE std::stacktrace test3() { return test2();
 _LIBCPP_NO_TAIL_CALLS
 int main(int, char**) {
   auto st = test3();
-
   assert(st[0]);
   assert(st[1]);
   assert(st[2]);

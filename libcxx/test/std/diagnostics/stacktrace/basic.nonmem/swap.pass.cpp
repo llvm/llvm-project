@@ -19,18 +19,39 @@
 #include <cassert>
 #include <stacktrace>
 
+#include "../test_allocs.h"
+
 int main(int, char**) {
   std::stacktrace empty;
-  auto current = std::stacktrace::current();
-
-  std::stacktrace a(empty);
-  std::stacktrace b(current);
-  assert(a == empty);
-  assert(b == current);
+  auto a = std::stacktrace::current();
+  std::stacktrace b(empty);
+  assert(!a.empty());
+  assert(b.empty());
 
   std::swap(a, b);
-  assert(a == current);
-  assert(b == empty);
+  assert(a.empty());
+  assert(!b.empty());
+
+  // `AllocPropagate` satisfies the first (but not the second); stacktrace swap should be noexcept
+  AllocPropagate<std::stacktrace_entry> prop1;
+  AllocPropagate<std::stacktrace_entry> prop2;
+  auto prop_st1 = std::basic_stacktrace<decltype(prop1)>(prop1);
+  auto prop_st2 = std::basic_stacktrace<decltype(prop2)>(prop2);
+  static_assert(noexcept(std::swap(prop_st1, prop_st2)));
+
+  // `AllocNoPropagate` satisfies neither; stacktrace swap should not be noexcept
+  AllocNoPropagate<std::stacktrace_entry> no_prop1;
+  AllocNoPropagate<std::stacktrace_entry> no_prop2;
+  auto no_prop_st1 = std::basic_stacktrace<decltype(no_prop1)>(no_prop1);
+  auto no_prop_st2 = std::basic_stacktrace<decltype(no_prop2)>(no_prop2);
+  static_assert(!noexcept(std::swap(no_prop_st1, no_prop_st2)));
+
+  // `AllocAlwaysEqual` satisfies second; stacktrace swap should be noexcept
+  AllocAlwaysEqual<std::stacktrace_entry> always_eq1;
+  AllocAlwaysEqual<std::stacktrace_entry> always_eq2;
+  auto always_eq_st1 = std::basic_stacktrace<decltype(always_eq1)>(always_eq1);
+  auto always_eq_st2 = std::basic_stacktrace<decltype(always_eq2)>(always_eq2);
+  static_assert(noexcept(std::swap(always_eq_st1, always_eq_st2)));
 
   return 0;
 }

@@ -22,7 +22,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
 struct unwind {
-  builder& builder_;
+  base& base_;
   void collect(size_t skip, size_t max_depth);
 };
 

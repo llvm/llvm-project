@@ -18,62 +18,29 @@
 
 #include <cassert>
 #include <stacktrace>
+#include <type_traits>
 
-uint32_t test1_line;
-uint32_t test2_line;
+#include "../test_allocs.h"
 
-template <class A>
-_LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE std::basic_stacktrace<A> test1(A& alloc) {
-  test1_line = __LINE__ + 1; // add 1 to get the next line (where the call to `current` occurs)
-  auto ret   = std::basic_stacktrace<A>::current(alloc);
-  return ret;
-}
-
-template <class A>
-_LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE std::basic_stacktrace<A> test2(A& alloc) {
-  test2_line = __LINE__ + 1; // add 1 to get the next line (where the call to `current` occurs)
-  auto ret   = test1(alloc);
-  return ret;
-}
-
-template <typename T>
-struct test_alloc {
-  using size_type     = size_t;
-  using value_type    = T;
-  using pointer       = T*;
-  using const_pointer = T const*;
-
-  template <typename U>
-  struct rebind {
-    using other = test_alloc<U>;
-  };
-
-  std::allocator<T> wrapped_{};
-
-  test_alloc() = default;
-
-  template <typename U>
-  test_alloc(test_alloc<U> const& rhs) : wrapped_(rhs.wrapped_) {}
-
-  bool operator==(auto const& rhs) const { return &rhs == this; }
-  bool operator==(test_alloc const&) const { return true; }
-
-  T* allocate(size_t n) { return wrapped_.allocate(n); }
-  auto allocate_at_least(size_t n) { return wrapped_.allocate_at_least(n); }
-  void deallocate(T* ptr, size_t n) { return wrapped_.deallocate(ptr, n); }
-};
-
-_LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void test_construct_with_allocator() {
-  test_alloc<std::stacktrace_entry> alloc;
-  std::basic_stacktrace<decltype(alloc)> st(alloc);
+void test_construct_with_alloc() {
+  std::stacktrace st;
   assert(st.empty());
-
-  st = std::basic_stacktrace<decltype(alloc)>::current(alloc);
-  assert(!st.empty());
 }
 
-_LIBCPP_NO_TAIL_CALLS
+void test_construct_with_alloc_noexcept() {
+  static_assert(noexcept(std::stacktrace()));
+
+  using A1 = std::allocator<std::stacktrace_entry>;
+  static_assert(std::is_nothrow_constructible_v<A1>);
+  static_assert(noexcept(std::basic_stacktrace<A1>(A1())));
+
+  using A2 = TestAlloc<std::stacktrace_entry, false, true, true, true>;
+  static_assert(!std::is_nothrow_constructible_v<A2>);
+  static_assert(!noexcept(std::basic_stacktrace<A2>(A2())));
+}
+
 int main(int, char**) {
-  test_construct_with_allocator();
+  test_construct_with_alloc();
+  test_construct_with_alloc_noexcept();
   return 0;
 }

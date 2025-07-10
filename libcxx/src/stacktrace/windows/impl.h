@@ -18,16 +18,16 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
-struct builder;
+struct base;
 
 struct win_impl {
-  builder& builder_;
+  base& base_;
 
 #if defined(_LIBCPP_WIN32API)
   static std::mutex mutex_;
   std::lock_guard<std::mutex> guard_;
 
-  explicit win_impl(builder& builder) : builder_(builder), guard_(mutex_) { global_init(); }
+  explicit win_impl(base& base) : base_(base), guard_(mutex_) { global_init(); }
   ~win_impl();
 
   void global_init();

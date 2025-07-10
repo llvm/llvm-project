@@ -25,9 +25,12 @@ namespace std {
 
 _LIBCPP_NO_TAIL_CALLS
 int main(int, char**) {
-  std::stacktrace_entry entry_t2;
   static_assert(std::is_nothrow_copy_constructible_v<std::stacktrace_entry>);
-  std::stacktrace_entry entry_t3(entry_t2);
+
+  std::stacktrace_entry e1 = std::stacktrace::current()[0];
+  static_assert(noexcept(std::stacktrace_entry(e1)));
+  std::stacktrace_entry e2(e1);
+  assert(e2 == e1);
 
   return 0;
 }
