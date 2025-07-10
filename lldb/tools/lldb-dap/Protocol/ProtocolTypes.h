@@ -897,7 +897,7 @@ struct Variable {
   ///
   /// This attribute may be returned by a debug adapter if corresponding
   /// capability `supportsMemoryReferences` is true.
-  std::string memoryReference;
+  lldb::addr_t memoryReference = LLDB_INVALID_ADDRESS;
 
   /// A reference that allows the client to request the location where the
   /// variable is declared. This should be present only if the adapter is likely

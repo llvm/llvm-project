@@ -919,7 +919,7 @@ TEST(ProtocolTypesTest, Variable) {
   var.evaluateName = "my_name";
   var.namedVariables = 7;
   var.indexedVariables = 7;
-  var.memoryReference = "0x123";
+  var.memoryReference = 291u;
   var.declarationLocationReference = 24;
   var.valueLocationReference = 100;
 

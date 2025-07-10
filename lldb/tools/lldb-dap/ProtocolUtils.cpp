@@ -299,7 +299,7 @@ Variable CreateVariable(lldb::SBValue v, int64_t var_ref, bool format_hex,
     var.valueLocationReference = PackLocation(var_ref, true);
 
   if (lldb::addr_t addr = v.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
-    var.memoryReference = EncodeMemoryReference(addr);
+    var.memoryReference = addr;
 
   return var;
 }

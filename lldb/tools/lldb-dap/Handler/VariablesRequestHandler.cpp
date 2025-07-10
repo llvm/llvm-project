@@ -123,10 +123,11 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
       if (!variable.IsValid())
         break;
 
-      int64_t var_ref =
+      int64_t frame_var_ref =
           dap.variables.InsertVariable(variable, /*is_permanent=*/false);
       variables.emplace_back(CreateVariable(
-          variable, var_ref, hex, dap.configuration.enableAutoVariableSummaries,
+          variable, frame_var_ref, hex,
+          dap.configuration.enableAutoVariableSummaries,
           dap.configuration.enableSyntheticChildDebugging,
           variable_name_counts[GetNonNullVariableName(variable)] > 1));
     }

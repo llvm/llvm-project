@@ -120,6 +120,42 @@ DecodeMemoryReference(llvm::StringRef memoryReference) {
   return addr;
 }
 
+bool DecodeMemoryReference(const llvm::json::Value &v, llvm::StringLiteral key,
+                           lldb::addr_t &out, llvm::json::Path path,
+                           bool required) {
+  const llvm::json::Object *v_obj = v.getAsObject();
+  if (!v_obj) {
+    path.report("expected object");
+    return false;
+  }
+
+  const llvm::json::Value *mem_ref_value = v_obj->get(key);
+  if (!mem_ref_value) {
+    if (!required)
+      return true;
+
+    path.field(key).report("missing value");
+    return false;
+  }
+
+  const std::optional<llvm::StringRef> mem_ref_str =
+      mem_ref_value->getAsString();
+  if (!mem_ref_str) {
+    path.field(key).report("expected string");
+    return false;
+  }
+
+  const std::optional<lldb::addr_t> addr_opt =
+      DecodeMemoryReference(*mem_ref_str);
+  if (!addr_opt) {
+    path.field(key).report("malformed memory reference");
+    return false;
+  }
+
+  out = *addr_opt;
+  return true;
+}
+
 std::vector<std::string> GetStrings(const llvm::json::Object *obj,
                                     llvm::StringRef key) {
   std::vector<std::string> strs;

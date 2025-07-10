@@ -9,6 +9,7 @@
 #include "Protocol/ProtocolTypes.h"
 #include "JSONUtils.h"
 #include "ProtocolUtils.h"
+#include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -992,8 +993,9 @@ json::Value toJSON(const Variable &V) {
     result.insert({"namedVariables", V.namedVariables});
   if (V.indexedVariables)
     result.insert({"indexedVariables", V.indexedVariables});
-  if (!V.memoryReference.empty())
-    result.insert({"memoryReference", V.memoryReference});
+  if (V.memoryReference != LLDB_INVALID_ADDRESS)
+    result.insert(
+        {"memoryReference", EncodeMemoryReference(V.memoryReference)});
   if (V.declarationLocationReference)
     result.insert(
         {"declarationLocationReference", V.declarationLocationReference});
@@ -1012,10 +1014,11 @@ bool fromJSON(const json::Value &Param, Variable &V, json::Path Path) {
          O.mapOptional("evaluateName", V.evaluateName) &&
          O.mapOptional("namedVariables", V.namedVariables) &&
          O.mapOptional("indexedVariables", V.indexedVariables) &&
-         O.mapOptional("memoryReference", V.memoryReference) &&
          O.mapOptional("declarationLocationReference",
                        V.declarationLocationReference) &&
-         O.mapOptional("valueLocationReference", V.valueLocationReference);
+         O.mapOptional("valueLocationReference", V.valueLocationReference) &&
+         DecodeMemoryReference(Param, "memoryReference", V.memoryReference,
+                               Path, /*required=*/false);
 }
 
 } // namespace lldb_dap::protocol

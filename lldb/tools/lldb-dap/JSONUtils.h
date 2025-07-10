@@ -138,6 +138,30 @@ std::string EncodeMemoryReference(lldb::addr_t addr);
 std::optional<lldb::addr_t>
 DecodeMemoryReference(llvm::StringRef memoryReference);
 
+/// Decodes a memory reference from the given json value.
+///
+/// \param[in] v
+///    A JSON value that we expected to contain the memory reference.
+///
+/// \param[in] key
+///    The key of the memory reference.
+///
+/// \param[out] out
+///    The memory address, if successfully decoded.
+///
+/// \param[in] path
+///    The path for reporting errors.
+///
+/// \param[in] required
+///    Indicates if the key is required to be present, otherwise report an error
+///    if the key is missing.
+///
+/// \return
+///    Returns \b true if the address was decoded successfully.
+bool DecodeMemoryReference(const llvm::json::Value &v, llvm::StringLiteral key,
+                           lldb::addr_t &out, llvm::json::Path path,
+                           bool required);
+
 /// Extract an array of strings for the specified key from an object.
 ///
 /// String values in the array will be extracted without any quotes
