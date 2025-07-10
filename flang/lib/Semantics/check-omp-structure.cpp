@@ -259,6 +259,57 @@ void OmpStructureChecker::CheckVariableListItem(
   }
 }
 
+void OmpStructureChecker::CheckDirectiveSpelling(
+    parser::CharBlock spelling, llvm::omp::Directive id) {
+  // Directive names that contain spaces can be spelled in the source without
+  // any of the spaces. Because of that getOpenMPKind* is not guaranteed to
+  // work with the source spelling as the argument.
+  //
+  // To verify the source spellings, we have to get the spelling for a given
+  // version, remove spaces and compare it with the source spelling (also
+  // with spaces removed).
+  auto removeSpaces = [](llvm::StringRef s) {
+    std::string n{s.str()};
+    for (size_t idx{n.size()}; idx > 0; --idx) {
+      if (isspace(n[idx - 1])) {
+        n.erase(idx - 1, 1);
+      }
+    }
+    return n;
+  };
+
+  std::string lowerNoWS{removeSpaces(
+      parser::ToLowerCaseLetters({spelling.begin(), spelling.size()}))};
+  llvm::StringRef ref(lowerNoWS);
+  if (ref.starts_with("end")) {
+    ref = ref.drop_front(3);
+  }
+
+  unsigned version{context_.langOptions().OpenMPVersion};
+
+  // For every "future" version v, check if the check if the corresponding
+  // spelling of id was introduced later than the current version. If so,
+  // and if that spelling matches the source spelling, issue a warning.
+  for (unsigned v : llvm::omp::getOpenMPVersions()) {
+    if (v <= version) {
+      continue;
+    }
+    llvm::StringRef name{llvm::omp::getOpenMPDirectiveName(id, v)};
+    auto [kind, versions]{llvm::omp::getOpenMPDirectiveKindAndVersions(name)};
+    assert(kind == id && "Directive kind mismatch");
+
+    if (static_cast<int>(version) >= versions.Min) {
+      continue;
+    }
+    if (ref == removeSpaces(name)) {
+      context_.Say(spelling,
+          "Directive spelling '%s' is introduced in a later OpenMP version, %s"_warn_en_US,
+          parser::ToUpperCaseLetters(ref), TryVersion(versions.Min));
+      break;
+    }
+  }
+}
+
 void OmpStructureChecker::CheckMultipleOccurrence(
     semantics::UnorderedSymbolSet &listVars,
     const std::list<parser::Name> &nameList, const parser::CharBlock &item,
@@ -436,7 +487,133 @@ void OmpStructureChecker::Leave(const parser::OmpDirectiveSpecification &) {
   }
 }
 
+template <typename Checker> struct DirectiveSpellingVisitor {
+  using Directive = llvm::omp::Directive;
+
+  DirectiveSpellingVisitor(Checker &&checker) : checker_(std::move(checker)) {}
+
+  template <typename T> bool Pre(const T &) { return true; }
+  template <typename T> void Post(const T &) {}
+
+  bool Pre(const parser::OmpSectionsDirective &x) {
+    checker_(x.source, x.v);
+    return false;
+  }
+  bool Pre(const parser::OpenMPDeclarativeAllocate &x) {
+    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_allocate);
+    return false;
+  }
+  bool Pre(const parser::OmpDispatchDirective &x) {
+    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_dispatch);
+    return false;
+  }
+  bool Pre(const parser::OmpErrorDirective &x) {
+    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_error);
+    return false;
+  }
+  bool Pre(const parser::OmpNothingDirective &x) {
+    checker_(x.source, Directive::OMPD_nothing);
+    return false;
+  }
+  bool Pre(const parser::OpenMPExecutableAllocate &x) {
+    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_allocate);
+    return false;
+  }
+  bool Pre(const parser::OpenMPAllocatorsConstruct &x) {
+    checker_(
+        std::get<parser::Verbatim>(x.t).source, Directive::OMPD_allocators);
+    return false;
+  }
+  bool Pre(const parser::OmpAssumeDirective &x) {
+    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_assume);
+    return false;
+  }
+  bool Pre(const parser::OmpEndAssumeDirective &x) {
+    checker_(x.v.source, Directive::OMPD_assume);
+    return false;
+  }
+  bool Pre(const parser::OmpCriticalDirective &x) {
+    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_critical);
+    return false;
+  }
+  bool Pre(const parser::OmpEndCriticalDirective &x) {
+    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_critical);
+    return false;
+  }
+  bool Pre(const parser::OmpMetadirectiveDirective &x) {
+    checker_(
+        std::get<parser::Verbatim>(x.t).source, Directive::OMPD_metadirective);
+    return false;
+  }
+  bool Pre(const parser::OpenMPDeclarativeAssumes &x) {
+    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_assumes);
+    return false;
+  }
+  bool Pre(const parser::OpenMPDeclareMapperConstruct &x) {
+    checker_(
+        std::get<parser::Verbatim>(x.t).source, Directive::OMPD_declare_mapper);
+    return false;
+  }
+  bool Pre(const parser::OpenMPDeclareReductionConstruct &x) {
+    checker_(std::get<parser::Verbatim>(x.t).source,
+        Directive::OMPD_declare_reduction);
+    return false;
+  }
+  bool Pre(const parser::OpenMPDeclareSimdConstruct &x) {
+    checker_(
+        std::get<parser::Verbatim>(x.t).source, Directive::OMPD_declare_simd);
+    return false;
+  }
+  bool Pre(const parser::OpenMPDeclareTargetConstruct &x) {
+    checker_(
+        std::get<parser::Verbatim>(x.t).source, Directive::OMPD_declare_target);
+    return false;
+  }
+  bool Pre(const parser::OmpDeclareVariantDirective &x) {
+    checker_(std::get<parser::Verbatim>(x.t).source,
+        Directive::OMPD_declare_variant);
+    return false;
+  }
+  bool Pre(const parser::OpenMPThreadprivate &x) {
+    checker_(
+        std::get<parser::Verbatim>(x.t).source, Directive::OMPD_threadprivate);
+    return false;
+  }
+  bool Pre(const parser::OpenMPRequiresConstruct &x) {
+    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_requires);
+    return false;
+  }
+
+  bool Pre(const parser::OmpBlockDirective &x) {
+    checker_(x.source, x.v);
+    return false;
+  }
+
+  bool Pre(const parser::OmpLoopDirective &x) {
+    checker_(x.source, x.v);
+    return false;
+  }
+
+  bool Pre(const parser::OmpDirectiveSpecification &x) {
+    auto &name = std::get<parser::OmpDirectiveName>(x.t);
+    checker_(name.source, name.v);
+    return false;
+  }
+
+private:
+  Checker checker_;
+};
+
+template <typename T>
+DirectiveSpellingVisitor(T &&) -> DirectiveSpellingVisitor<T>;
+
 void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
+  DirectiveSpellingVisitor visitor(
+      [this](parser::CharBlock source, llvm::omp::Directive id) {
+        return CheckDirectiveSpelling(source, id);
+      });
+  parser::Walk(x, visitor);
+
   // Simd Construct with Ordered Construct Nesting check
   // We cannot use CurrentDirectiveIsNested() here because
   // PushContextAndClauseSets() has not been called yet, it is
@@ -461,6 +638,12 @@ void OmpStructureChecker::Leave(const parser::OpenMPConstruct &) {
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeConstruct &x) {
+  DirectiveSpellingVisitor visitor(
+      [this](parser::CharBlock source, llvm::omp::Directive id) {
+        return CheckDirectiveSpelling(source, id);
+      });
+  parser::Walk(x, visitor);
+
   EnterDirectiveNest(DeclarativeNest);
 }
 
