@@ -3863,6 +3863,20 @@ LogicalResult ScanOp::verify() {
                    "reduction modifier");
 }
 
+/// Verifies align clause in allocate directive
+
+LogicalResult AllocateDirOp::verify() {
+  std::optional<u_int64_t> align = this->getAlign();
+
+  if (align.has_value()) {
+    if ((align.value() > 0) && ((align.value() & (align.value() - 1)) != 0))
+      return emitError() << "ALIGN value : " << align.value()
+                         << " must be power of 2";
+  }
+
+  return success();
+}
+
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOpsAttributes.cpp.inc"
 
