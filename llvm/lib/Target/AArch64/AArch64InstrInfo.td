@@ -2152,6 +2152,7 @@ let Predicates = [HasPAuth] in {
     let Size = 32;
     let Defs = [NZCV];
     let Uses = [];
+    let usesCustomInserter = 1;
   }
 
   // PAC pseudo instruction. In AsmPrinter, it is expanded into an actual PAC*
