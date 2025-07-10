@@ -492,6 +492,7 @@ libc_support_library(
     name = "__support_macros_properties_types",
     hdrs = ["src/__support/macros/properties/types.h"],
     deps = [
+        ":__support_macros_config",
         ":__support_macros_properties_architectures",
         ":__support_macros_properties_compiler",
         ":__support_macros_properties_cpu_features",
@@ -1075,6 +1076,24 @@ libc_support_library(
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
     ],
+)
+
+libc_support_library(
+    name = "__support_fputil_bfloat16",
+    hdrs = ["src/__support/FPUtil/bfloat16.h"],
+    deps = [
+        ":__support_cpp_bit",
+        ":__support_cpp_type_traits",
+        ":__support_fputil_cast",
+        ":__support_fputil_dyadic_float",
+        ":__support_macros_config",
+        ":__support_macros_properties_types",
+    ],
+)
+
+alias(
+    name = "bfloat16",  # Alias for test/src/math:bfloat16_test.
+    actual = ":__support_fputil_bfloat16",
 )
 
 libc_support_library(
@@ -5824,6 +5843,32 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_macros_config",
+        ":types_size_t",
+        ":types_wchar_t",
+    ],
+)
+
+libc_function(
+    name = "wcslcat",
+    srcs = ["src/wchar/wcslcat.cpp"],
+    hdrs = ["src/wchar/wcslcat.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":string_utils",
+        ":types_size_t",
+        ":types_wchar_t",
+    ],
+)
+
+libc_function(
+    name = "wcslcpy",
+    srcs = ["src/wchar/wcslcpy.cpp"],
+    hdrs = ["src/wchar/wcslcpy.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":string_utils",
         ":types_size_t",
         ":types_wchar_t",
     ],

@@ -2442,8 +2442,9 @@ static mlir::acc::LoopOp createLoopOp(
       inclusiveBounds.push_back(true);
     }
   } else {
-    int64_t collapseValue = Fortran::lower::getCollapseValue(accClauseList);
-    for (unsigned i = 0; i < collapseValue; ++i) {
+    int64_t loopCount =
+        Fortran::lower::getLoopCountForCollapseAndTile(accClauseList);
+    for (unsigned i = 0; i < loopCount; ++i) {
       const Fortran::parser::LoopControl *loopControl;
       if (i == 0) {
         loopControl = &*outerDoConstruct.GetLoopControl();
@@ -2478,7 +2479,7 @@ static mlir::acc::LoopOp createLoopOp(
 
       inclusiveBounds.push_back(true);
 
-      if (i < collapseValue - 1)
+      if (i < loopCount - 1)
         crtEval = &*std::next(crtEval->getNestedEvaluations().begin());
     }
   }
@@ -4940,15 +4941,25 @@ void Fortran::lower::genEarlyReturnInOpenACCLoop(fir::FirOpBuilder &builder,
   builder.create<mlir::acc::YieldOp>(loc, yieldValue);
 }
 
-int64_t Fortran::lower::getCollapseValue(
+int64_t Fortran::lower::getLoopCountForCollapseAndTile(
     const Fortran::parser::AccClauseList &clauseList) {
+  int64_t collapseLoopCount = 1;
+  int64_t tileLoopCount = 1;
   for (const Fortran::parser::AccClause &clause : clauseList.v) {
     if (const auto *collapseClause =
             std::get_if<Fortran::parser::AccClause::Collapse>(&clause.u)) {
       const parser::AccCollapseArg &arg = collapseClause->v;
       const auto &collapseValue{std::get<parser::ScalarIntConstantExpr>(arg.t)};
-      return *Fortran::semantics::GetIntValue(collapseValue);
+      collapseLoopCount = *Fortran::semantics::GetIntValue(collapseValue);
+    }
+    if (const auto *tileClause =
+            std::get_if<Fortran::parser::AccClause::Tile>(&clause.u)) {
+      const parser::AccTileExprList &tileExprList = tileClause->v;
+      const std::list<parser::AccTileExpr> &listTileExpr = tileExprList.v;
+      tileLoopCount = listTileExpr.size();
     }
   }
-  return 1;
+  if (tileLoopCount > collapseLoopCount)
+    return tileLoopCount;
+  return collapseLoopCount;
 }

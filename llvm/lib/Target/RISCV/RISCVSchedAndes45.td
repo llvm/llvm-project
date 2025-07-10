@@ -330,10 +330,10 @@ def : ReadAdvance<ReadCSR, 0>;
 defm : UnsupportedSchedQ;
 defm : UnsupportedSchedSFB;
 defm : UnsupportedSchedV;
-defm : UnsupportedSchedXsfvcp;
 defm : UnsupportedSchedZabha;
 defm : UnsupportedSchedZbkb;
 defm : UnsupportedSchedZbkx;
 defm : UnsupportedSchedZfa;
 defm : UnsupportedSchedZvk;
+defm : UnsupportedSchedXsf;
 }

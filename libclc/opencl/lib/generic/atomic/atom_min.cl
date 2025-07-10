@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/opencl/atomic/atom_min.h>
+#include <clc/opencl/atomic/atomic_min.h>
 
 #ifdef cl_khr_global_int32_extended_atomics
 #define __CLC_ATOMIC_OP min
