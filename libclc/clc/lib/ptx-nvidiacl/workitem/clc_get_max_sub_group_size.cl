@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/workitem/get_group_id.h>
-#include <clc/workitem/clc_get_group_id.h>
+#include <clc/workitem/clc_get_max_sub_group_size.h>
 
-_CLC_OVERLOAD _CLC_DEF size_t get_group_id(uint dim) {
-  return __clc_get_group_id(dim);
+_CLC_OVERLOAD _CLC_DEF uint __clc_get_max_sub_group_size() {
+  return __nvvm_read_ptx_sreg_warpsize();
 }
