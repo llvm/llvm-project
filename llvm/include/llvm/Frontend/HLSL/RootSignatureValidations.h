@@ -52,8 +52,17 @@ struct RangeInfo {
   uint32_t Space;
   llvm::dxbc::ShaderVisibility Visibility;
 
-  // Retain information for diagnostic reporting
-  void *Cookie;
+  bool operator==(const RangeInfo &RHS) {
+    return std::tie(LowerBound, UpperBound, Class, Space, Visibility) ==
+           std::tie(RHS.LowerBound, RHS.UpperBound, RHS.Class, RHS.Space,
+                    RHS.Visibility);
+  }
+
+  bool operator<(const RangeInfo &RHS) {
+    return std::tie(Class, Space, LowerBound, UpperBound, Visibility) <
+           std::tie(RHS.Class, RHS.Space, RHS.LowerBound, RHS.UpperBound,
+                    RHS.Visibility);
+  }
 };
 
 class ResourceRange {
@@ -137,7 +146,7 @@ struct OverlappingRanges {
 ///   ResourceRange
 ///      B: Check for overlap with any overlapping Visibility ResourceRange
 llvm::SmallVector<OverlappingRanges>
-findOverlappingRanges(llvm::SmallVector<RangeInfo> &Infos);
+findOverlappingRanges(ArrayRef<RangeInfo> Infos);
 
 } // namespace rootsig
 } // namespace hlsl
