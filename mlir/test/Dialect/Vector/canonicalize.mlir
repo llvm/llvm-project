@@ -1057,6 +1057,38 @@ func.func @canonicalize_broadcast_shapecast_both_possible(%arg0: vector<1xf32>) 
 
 // -----
 
+// CHECK-LABEL: func.func @canonicalize_i1_select_to_broadcast
+// CHECK-SAME: (%[[PRED:.+]]: i1)
+// CHECK: vector.broadcast %[[PRED]] : i1 to vector<4xi1>
+func.func @canonicalize_i1_select_to_broadcast(%pred: i1) -> vector<4xi1> {
+  %true = arith.constant dense<true> : vector<4x4xi1>
+  %false = arith.constant dense<false> : vector<4x4xi1>
+  %selected = arith.select %pred, %true, %false : vector<4x4xi1>
+  // The select -> broadcast pattern only loads if vector dialect was loaded.
+  // Force loading vector dialect by adding a vector operation.
+  %vec = vector.extract %selected[0] : vector<4xi1> from vector<4x4xi1>
+  return %vec : vector<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @canonicalize_i1_select_to_not_broadcast
+// CHECK-SAME: (%[[PRED:.+]]: i1)
+// CHECK: %[[TRUE:.+]] = arith.constant true
+// CHECK: %[[NOT:.+]] = arith.xori %[[PRED]], %[[TRUE]] : i1
+// CHECK: vector.broadcast %[[NOT]] : i1 to vector<4xi1>
+func.func @canonicalize_i1_select_to_not_broadcast(%pred: i1) -> vector<4xi1> {
+  %true = arith.constant dense<true> : vector<4x4xi1>
+  %false = arith.constant dense<false> : vector<4x4xi1>
+  %selected = arith.select %pred, %false, %true : vector<4x4xi1>
+  // The select -> broadcast pattern only loads if vector dialect was loaded.
+  // Force loading vector dialect by adding a vector operation.
+  %vec = vector.extract %selected[0] : vector<4xi1> from vector<4x4xi1>
+  return %vec : vector<4xi1>
+}
+
+// -----
+
 // CHECK-LABEL: fold_vector_transfer_masks
 func.func @fold_vector_transfer_masks(%A: memref<?x?xf32>) -> (vector<4x8xf32>, vector<4x[4]xf32>) {
   // CHECK: %[[C0:.+]] = arith.constant 0 : index
