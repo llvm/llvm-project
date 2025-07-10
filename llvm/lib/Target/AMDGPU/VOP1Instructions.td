@@ -242,13 +242,11 @@ def VOPProfile_MOV : VOPProfile <[i32, i32, untyped, untyped]> {
   let InsVOPDY = (ins Src0RC32:$src0Y);
 }
 
-def VOPProfile_MOV_B64 : VOPProfile <[i64, i64, untyped, untyped]>;
-
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 defm V_MOV_B32 : VOP1Inst <"v_mov_b32", VOPProfile_MOV, null_frag, 0x8>;
 
 let SubtargetPredicate = isGFX940orGFX1250, SchedRW = [Write64Bit] in
-defm V_MOV_B64 : VOP1Inst <"v_mov_b64", VOPProfile_MOV_B64>;
+defm V_MOV_B64 : VOP1Inst <"v_mov_b64", VOP_I64_I64>;
 } // End isMoveImm = 1
 
 def VOP_READFIRSTLANE : VOPProfile <[i32, i32, untyped, untyped]> {
@@ -1167,6 +1165,8 @@ defm V_CVT_NORM_U16_F16      : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12<0x064>;
 defm V_CVT_F16_F32           : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12<0x00a>;
 defm V_CVT_F32_F16           : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12<0x00b>;
 
+defm V_MOV_B64 : VOP1_Real_FULL <GFX1250Gen, 0x1d>;
+
 defm V_TANH_F32              : VOP1_Real_FULL<GFX1250Gen, 0x01e>;
 defm V_TANH_F16              : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x01f>;
 defm V_PERMLANE16_SWAP_B32   : VOP1_Real_OpSelIsDPP_gfx1250<0x049>;
@@ -1729,8 +1729,6 @@ class MovDPP8Pattern<Predicate Pred, Instruction Inst, ValueType vt> : GCNPat <
   (Inst VGPR_32:$src, VGPR_32:$src, (as_i32timm $dpp8), (i32 DPP8Mode.FI_0))> {
   let OtherPredicates = [Pred];
 }
-
-defm V_MOV_B64 : VOP1_Real_FULL <GFX1250Gen, 0x1d>;
 
 foreach vt = Reg32Types.types in {
   def : MovDPP8Pattern<isGFX10Only, V_MOV_B32_dpp8_gfx10, vt>;
