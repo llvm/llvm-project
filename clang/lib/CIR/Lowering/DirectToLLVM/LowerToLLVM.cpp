@@ -1044,9 +1044,18 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
                                                getTypeConverter()));
     return mlir::success();
   } else if (auto complexTy = mlir::dyn_cast<cir::ComplexType>(op.getType())) {
-    auto complexAttr = mlir::cast<cir::ConstComplexAttr>(op.getValue());
     mlir::Type complexElemTy = complexTy.getElementType();
     mlir::Type complexElemLLVMTy = typeConverter->convertType(complexElemTy);
+
+    if (auto zeroInitAttr = mlir::dyn_cast<cir::ZeroAttr>(op.getValue())) {
+      mlir::TypedAttr zeroAttr = rewriter.getZeroAttr(complexElemLLVMTy);
+      mlir::ArrayAttr array = rewriter.getArrayAttr({zeroAttr, zeroAttr});
+      rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
+          op, getTypeConverter()->convertType(op.getType()), array);
+      return mlir::success();
+    }
+
+    auto complexAttr = mlir::cast<cir::ConstComplexAttr>(op.getValue());
 
     mlir::Attribute components[2];
     if (mlir::isa<cir::IntType>(complexElemTy)) {
