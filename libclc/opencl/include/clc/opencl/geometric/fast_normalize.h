@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_GEOMETRIC_FAST_NORMALIZE_H__
+#define __CLC_OPENCL_GEOMETRIC_FAST_NORMALIZE_H__
+
 #define __FLOAT_ONLY
 #define FUNCTION fast_normalize
 #define __CLC_GEOMETRIC_RET_GENTYPE
@@ -15,3 +18,5 @@
 
 #undef FUNCTION
 #undef __CLC_GEOMETRIC_RET_GENTYPE
+
+#endif // __CLC_OPENCL_GEOMETRIC_FAST_NORMALIZE_H__

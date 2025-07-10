@@ -4,7 +4,7 @@
 # RUN: not ld.lld %t.o -o %t 2>&1 | FileCheck --check-prefix=ERR %s
 
 .rodata
-# ERR: relocation R_AARCH64_FUNCINIT64 cannot be used against symbol 'func'
+# ERR: relocation R_AARCH64_FUNCINIT64 cannot be used against local symbol
 .8byte func@FUNCINIT
 
 .data
