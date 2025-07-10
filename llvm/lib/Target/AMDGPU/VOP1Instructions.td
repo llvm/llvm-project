@@ -242,13 +242,11 @@ def VOPProfile_MOV : VOPProfile <[i32, i32, untyped, untyped]> {
   let InsVOPDY = (ins Src0RC32:$src0Y);
 }
 
-def VOPProfile_MOV_B64 : VOPProfile <[i64, i64, untyped, untyped]>;
-
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 defm V_MOV_B32 : VOP1Inst <"v_mov_b32", VOPProfile_MOV, null_frag, 0x8>;
 
 let SubtargetPredicate = isGFX940orGFX1250, SchedRW = [Write64Bit] in
-defm V_MOV_B64 : VOP1Inst <"v_mov_b64", VOPProfile_MOV_B64>;
+defm V_MOV_B64 : VOP1Inst <"v_mov_b64", VOP_I64_I64>;
 } // End isMoveImm = 1
 
 def VOP_READFIRSTLANE : VOPProfile <[i32, i32, untyped, untyped]> {
@@ -1222,6 +1220,8 @@ defm V_CVT_NORM_U16_F16      : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0
 defm V_CVT_F16_F32           : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0x00a>;
 defm V_CVT_F32_F16           : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0x00b>;
 
+defm V_MOV_B64 : VOP1_Real_FULL <GFX1250Gen, 0x1d>;
+
 defm V_TANH_F32              : VOP1_Real_FULL_gfx1250_gfx13<0x01e>;
 defm V_TANH_F16              : VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<0x01f>;
 defm V_PERMLANE16_SWAP_B32   : VOP1_Real_OpSelIsDPP_gfx1250_gfx13<0x049>;
@@ -1690,17 +1690,34 @@ def : GCNPat<
 >;
 
 def : GCNPat<
-  (i64 (anyext i16:$src)),
+  (i64 (UniformUnaryFrag<anyext> i16:$src)),
+  (REG_SEQUENCE VReg_64,
+     (i32 (COPY $src)), sub0,
+     (V_MOV_B32_e32 (i32 0)), sub1)
+>;
+
+def : GCNPat<
+  (i64 (DivergentUnaryFrag<anyext> i16:$src)),
   (REG_SEQUENCE VReg_64, $src, lo16, (i16 (IMPLICIT_DEF)), hi16, (i32 (IMPLICIT_DEF)), sub1)
 >;
 
 def : GCNPat<
-  (i16 (trunc i32:$src)),
+  (i16 (UniformUnaryFrag<trunc> i32:$src)),
+  (COPY $src)
+>;
+
+def : GCNPat<
+  (i16 (DivergentUnaryFrag<trunc> i32:$src)),
   (EXTRACT_SUBREG $src, lo16)
 >;
 
 def : GCNPat <
-  (i16 (trunc i64:$src)),
+  (i16 (UniformUnaryFrag<trunc> i64:$src)),
+  (EXTRACT_SUBREG $src, sub0)
+>;
+
+def : GCNPat <
+  (i16 (DivergentUnaryFrag<trunc> i64:$src)),
   (EXTRACT_SUBREG $src, lo16)
 >;
 
@@ -1781,7 +1798,6 @@ class MovDPP8Pattern<Predicate Pred, Instruction Inst, ValueType vt> : GCNPat <
   let OtherPredicates = [Pred];
 }
 
-defm V_MOV_B64 : VOP1_Real_FULL <GFX1250Gen, 0x1d>;
 
 //===----------------------------------------------------------------------===//
 // GFX13

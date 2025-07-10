@@ -1849,14 +1849,14 @@ define amdgpu_kernel void @cluster_acquire_fence() {
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    global_inv scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1300-LABEL: cluster_acquire_fence:
 ; GFX1300:       ; %bb.0: ; %entry
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1300-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1300-NEXT:    global_inv scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
 entry:
   fence syncscope("cluster") acquire
@@ -1943,14 +1943,14 @@ define amdgpu_kernel void @cluster_release_fence() {
 ;
 ; GFX1250-LABEL: cluster_release_fence:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1300-LABEL: cluster_release_fence:
 ; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1300-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
@@ -2057,20 +2057,20 @@ define amdgpu_kernel void @cluster_acq_rel_fence() {
 ;
 ; GFX1250-LABEL: cluster_acq_rel_fence:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    global_inv scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1300-LABEL: cluster_acq_rel_fence:
 ; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1300-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1300-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1300-NEXT:    global_inv scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
 entry:
   fence syncscope("cluster") acq_rel
@@ -2173,20 +2173,20 @@ define amdgpu_kernel void @cluster_seq_cst_fence() {
 ;
 ; GFX1250-LABEL: cluster_seq_cst_fence:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    global_inv scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1300-LABEL: cluster_seq_cst_fence:
 ; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1300-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1300-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1300-NEXT:    global_inv scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
 entry:
   fence syncscope("cluster") seq_cst
@@ -2285,14 +2285,14 @@ define amdgpu_kernel void @cluster_one_as_acquire_fence() {
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
-; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    global_inv scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1300-LABEL: cluster_one_as_acquire_fence:
 ; GFX1300:       ; %bb.0: ; %entry
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
-; GFX1300-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1300-NEXT:    global_inv scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
 entry:
   fence syncscope("cluster-one-as") acquire
@@ -2379,14 +2379,14 @@ define amdgpu_kernel void @cluster_one_as_release_fence() {
 ;
 ; GFX1250-LABEL: cluster_one_as_release_fence:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1300-LABEL: cluster_one_as_release_fence:
 ; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1300-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
@@ -2493,20 +2493,20 @@ define amdgpu_kernel void @cluster_one_as_acq_rel_fence() {
 ;
 ; GFX1250-LABEL: cluster_one_as_acq_rel_fence:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
-; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    global_inv scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1300-LABEL: cluster_one_as_acq_rel_fence:
 ; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1300-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
-; GFX1300-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1300-NEXT:    global_inv scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
 entry:
   fence syncscope("cluster-one-as") acq_rel
@@ -2609,20 +2609,20 @@ define amdgpu_kernel void @cluster_one_as_seq_cst_fence() {
 ;
 ; GFX1250-LABEL: cluster_one_as_seq_cst_fence:
 ; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1250-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
-; GFX1250-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1250-NEXT:    global_inv scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX1300-LABEL: cluster_one_as_seq_cst_fence:
 ; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    global_wb scope:SCOPE_DEV
+; GFX1300-NEXT:    global_wb scope:SCOPE_SE
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
-; GFX1300-NEXT:    global_inv scope:SCOPE_DEV
+; GFX1300-NEXT:    global_inv scope:SCOPE_SE
 ; GFX1300-NEXT:    s_endpgm
 entry:
   fence syncscope("cluster-one-as") seq_cst

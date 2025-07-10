@@ -1480,13 +1480,6 @@ public:
 
   bool hasAddPC64Inst() const { return GFX1250Insts; }
 
-  /// \returns true if the target has s_wait_xcnt insertion. Supported for
-  /// GFX1250.
-  bool hasWaitXCnt() const { return HasWaitXcnt; }
-
-  // A single DWORD instructions can use a 64-bit literal.
-  bool has64BitLiterals() const { return Has64BitLiterals; }
-
   bool has1024AddressableVGPRs() const { return Has1024AddressableVGPRs; }
 
   bool hasVGPRIndexingRegisters() const { return HasVGPRIndexingRegisters; }
@@ -1506,6 +1499,13 @@ public:
   /// \returns true if the target supports using software to avoid hazards
   /// between VMEM and VALU instructions in some instances.
   bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }
+
+  /// \returns true if the target has s_wait_xcnt insertion. Supported for
+  /// GFX1250.
+  bool hasWaitXCnt() const { return HasWaitXcnt; }
+
+  // A single DWORD instructions can use a 64-bit literal.
+  bool has64BitLiterals() const { return Has64BitLiterals; }
 
   bool hasPointSampleAccel() const { return HasPointSampleAccel; }
 

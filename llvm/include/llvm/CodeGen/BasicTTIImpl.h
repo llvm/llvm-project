@@ -1773,6 +1773,18 @@ public:
         }
       }
 
+      if (ICA.getID() == Intrinsic::vp_select ||
+          ICA.getID() == Intrinsic::vp_merge) {
+        TTI::OperandValueInfo OpInfoX, OpInfoY;
+        if (!ICA.isTypeBasedOnly()) {
+          OpInfoX = TTI::getOperandInfo(ICA.getArgs()[0]);
+          OpInfoY = TTI::getOperandInfo(ICA.getArgs()[1]);
+        }
+        return getCmpSelInstrCost(
+            Instruction::Select, ICA.getReturnType(), ICA.getArgTypes()[0],
+            CmpInst::BAD_ICMP_PREDICATE, CostKind, OpInfoX, OpInfoY);
+      }
+
       std::optional<Intrinsic::ID> FID =
           VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID());
       if (FID) {
@@ -1781,6 +1793,10 @@ public:
         assert(ICA.getArgTypes().size() >= 2 &&
                "Expected VPIntrinsic to have Mask and Vector Length args and "
                "types");
+
+        ArrayRef<const Value *> NewArgs = ArrayRef(ICA.getArgs());
+        if (!ICA.isTypeBasedOnly())
+          NewArgs = NewArgs.drop_back(2);
         ArrayRef<Type *> NewTys = ArrayRef(ICA.getArgTypes()).drop_back(2);
 
         // VPReduction intrinsics have a start value argument that their non-vp
@@ -1788,11 +1804,14 @@ public:
         // counterpart.
         if (VPReductionIntrinsic::isVPReduction(ICA.getID()) &&
             *FID != Intrinsic::vector_reduce_fadd &&
-            *FID != Intrinsic::vector_reduce_fmul)
+            *FID != Intrinsic::vector_reduce_fmul) {
+          if (!ICA.isTypeBasedOnly())
+            NewArgs = NewArgs.drop_front();
           NewTys = NewTys.drop_front();
+        }
 
-        IntrinsicCostAttributes NewICA(*FID, ICA.getReturnType(), NewTys,
-                                       ICA.getFlags());
+        IntrinsicCostAttributes NewICA(*FID, ICA.getReturnType(), NewArgs,
+                                       NewTys, ICA.getFlags());
         return thisT()->getIntrinsicInstrCost(NewICA, CostKind);
       }
     }
@@ -2486,11 +2505,18 @@ public:
       ISD = ISD::UMULO;
       break;
     case Intrinsic::fptosi_sat:
-      ISD = ISD::FP_TO_SINT_SAT;
+    case Intrinsic::fptoui_sat: {
+      std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(Tys[0]);
+      std::pair<InstructionCost, MVT> RetLT = getTypeLegalizationCost(RetTy);
+
+      // For cast instructions, types are different between source and
+      // destination. Also need to check if the source type can be legalize.
+      if (!SrcLT.first.isValid() || !RetLT.first.isValid())
+        return InstructionCost::getInvalid();
+      ISD = IID == Intrinsic::fptosi_sat ? ISD::FP_TO_SINT_SAT
+                                         : ISD::FP_TO_UINT_SAT;
       break;
-    case Intrinsic::fptoui_sat:
-      ISD = ISD::FP_TO_UINT_SAT;
-      break;
+    }
     case Intrinsic::ctpop:
       ISD = ISD::CTPOP;
       // In case of legalization use TCC_Expensive. This is cheaper than a
