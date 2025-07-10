@@ -54,6 +54,7 @@ public:
   void printCTAGroup(const MCInst *MI, int OpNum, raw_ostream &O);
   void printCallOperand(const MCInst *MI, int OpNum, raw_ostream &O,
                         StringRef Modifier = {});
+  void printFTZFlag(const MCInst *MI, int OpNum, raw_ostream &O);
 };
 
 }

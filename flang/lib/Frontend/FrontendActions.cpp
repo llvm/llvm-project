@@ -750,6 +750,8 @@ void CodeGenAction::generateLLVMIR() {
   if (ci.getInvocation().getLoweringOpts().getIntegerWrapAround())
     config.NSWOnLoopVarInc = false;
 
+  config.ComplexRange = opts.getComplexRange();
+
   // Create the pass pipeline
   fir::createMLIRToLLVMPassPipeline(pm, config, getCurrentFile());
   (void)mlir::applyPassManagerCLOptions(pm);
