@@ -252,7 +252,7 @@ LLVM_ABI void initializePostDominatorTreeWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializePostInlineEntryExitInstrumenterPass(PassRegistry &);
 LLVM_ABI void initializePostMachineSchedulerLegacyPass(PassRegistry &);
 LLVM_ABI void initializePostRAHazardRecognizerLegacyPass(PassRegistry &);
-LLVM_ABI void initializePostRAMachineSinkingPass(PassRegistry &);
+LLVM_ABI void initializePostRAMachineSinkingLegacyPass(PassRegistry &);
 LLVM_ABI void initializePostRASchedulerLegacyPass(PassRegistry &);
 LLVM_ABI void initializePreISelIntrinsicLoweringLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializePrintFunctionPassWrapperPass(PassRegistry &);
