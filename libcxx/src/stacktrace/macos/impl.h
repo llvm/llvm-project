@@ -14,15 +14,13 @@
 #include <cstddef>
 #include <cstdlib>
 
-#include <__config>
-#include <__config_site>
 #include <__stacktrace/base.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
 struct macos {
-  builder& builder_;
+  base& base_;
 
 #if defined(__APPLE__)
   // defined in macos.cpp

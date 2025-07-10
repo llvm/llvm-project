@@ -28,6 +28,9 @@ _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE std::stacktrace test2b() { return test1()
 _LIBCPP_NO_TAIL_CALLS
 int main(int, char**) {
   auto st1a = test1(); // [test1, main, ...]
+
+  static_assert(noexcept(st1a == st1a));
+
   assert(st1a == st1a);
 
   auto st1b = st1a;
@@ -46,6 +49,8 @@ int main(int, char**) {
   auto st2b = test2b(); // [test1, test2b, main, ...]
   assert(st2a.size() == st2b.size());
   assert(st2a != st2b);
+
+  static_assert(noexcept(st2a == st2b));
 
   return 0;
 }

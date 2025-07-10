@@ -983,7 +983,9 @@
 {'is_defined': True, 'name': '__ZNSt3__112__stacktrace11__to_stringclERKNS_16stacktrace_entryE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112__stacktrace11__to_stringclERNS_13basic_ostreamIcNS_11char_traitsIcEEEEPKNS_16stacktrace_entryEm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112__stacktrace11__to_stringclERNS_13basic_ostreamIcNS_11char_traitsIcEEEERKNS_16stacktrace_entryE', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__112__stacktrace7builder16build_stacktraceEmm', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__112__stacktrace4base16build_stacktraceEmm', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__112__stacktrace4baseC1Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__112__stacktrace4baseC2Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112bad_weak_ptrD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112bad_weak_ptrD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__112bad_weak_ptrD2Ev', 'type': 'FUNC'}

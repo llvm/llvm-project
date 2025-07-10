@@ -110,7 +110,7 @@ struct fd_mmap final {
 
   _LIBCPP_HIDE_FROM_ABI explicit fd_mmap(fd&& fd) : fd_(std::move(fd)) {
     if (fd_) {
-      if ((size_ = ::lseek(fd, 0, SEEK_END))) {
+      if ((size_ = ::lseek(fd_, 0, SEEK_END))) {
         addr_ = (std::byte const*)::mmap(nullptr, size_, PROT_READ, MAP_SHARED, fd_, 0);
       }
     }
