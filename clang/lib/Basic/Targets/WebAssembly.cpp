@@ -372,9 +372,9 @@ WebAssemblyTargetInfo::getTargetBuiltins() const {
   return {{&BuiltinStrings, BuiltinInfos}};
 }
 
-void WebAssemblyTargetInfo::adjust(DiagnosticsEngine &Diags,
-                                   LangOptions &Opts) {
-  TargetInfo::adjust(Diags, Opts);
+void WebAssemblyTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+                                   const TargetInfo *Aux) {
+  TargetInfo::adjust(Diags, Opts, Aux);
   // Turn off POSIXThreads and ThreadModel so that we don't predefine _REENTRANT
   // or __STDCPP_THREADS__ if we will eventually end up stripping atomics
   // because they are unsupported.

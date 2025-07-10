@@ -29,7 +29,6 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/RegionUtils.h"
-#include "llvm/ADT/Sequence.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -245,7 +244,7 @@ void AffineLoopToGpuConverter::createLaunch(AffineForOp rootForOp,
   Location terminatorLoc = terminator.getLoc();
   terminator.erase();
   builder.setInsertionPointToEnd(innermostForOp.getBody());
-  builder.create<gpu::TerminatorOp>(terminatorLoc, std::nullopt);
+  builder.create<gpu::TerminatorOp>(terminatorLoc, TypeRange());
   launchOp.getBody().front().getOperations().splice(
       launchOp.getBody().front().begin(),
       innermostForOp.getBody()->getOperations());

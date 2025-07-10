@@ -13,6 +13,7 @@
 #ifndef LLVM_TEXTAPI_ARCHITECTURESET_H
 #define LLVM_TEXTAPI_ARCHITECTURESET_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/TextAPI/Architecture.h"
 #include <cstddef>
 #include <iterator>
@@ -38,7 +39,7 @@ public:
   constexpr ArchitectureSet() = default;
   constexpr ArchitectureSet(ArchSetType Raw) : ArchSet(Raw) {}
   ArchitectureSet(Architecture Arch) : ArchitectureSet() { set(Arch); }
-  ArchitectureSet(const std::vector<Architecture> &Archs);
+  LLVM_ABI ArchitectureSet(const std::vector<Architecture> &Archs);
 
   static ArchitectureSet All() { return ArchitectureSet(EndIndexVal); }
 
@@ -61,7 +62,7 @@ public:
     return (ArchSet & Archs.ArchSet) == Archs.ArchSet;
   }
 
-  size_t count() const;
+  LLVM_ABI size_t count() const;
 
   bool empty() const { return ArchSet == 0; }
 
@@ -158,9 +159,9 @@ public:
   const_iterator begin() const { return {&ArchSet}; }
   const_iterator end() const { return {&ArchSet, EndIndexVal}; }
 
-  operator std::string() const;
-  operator std::vector<Architecture>() const;
-  void print(raw_ostream &OS) const;
+  LLVM_ABI operator std::string() const;
+  LLVM_ABI operator std::vector<Architecture>() const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 };
 
 inline ArchitectureSet operator|(const Architecture &lhs,
@@ -168,7 +169,7 @@ inline ArchitectureSet operator|(const Architecture &lhs,
   return ArchitectureSet(lhs) | ArchitectureSet(rhs);
 }
 
-raw_ostream &operator<<(raw_ostream &OS, ArchitectureSet Set);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, ArchitectureSet Set);
 
 } // end namespace MachO.
 } // end namespace llvm.

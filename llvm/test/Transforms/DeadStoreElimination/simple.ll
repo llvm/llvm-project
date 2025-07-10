@@ -304,6 +304,58 @@ define void @custom_malloc_no_escape() {
   ret void
 }
 
+declare void @use.ptr(ptr)
+
+define void @malloc_no_escape_via_attr() {
+; CHECK-LABEL: @malloc_no_escape_via_attr(
+; CHECK-NEXT:    [[M:%.*]] = call ptr @malloc(i64 24)
+; CHECK-NEXT:    call void @use.ptr(ptr captures(none) [[M]])
+; CHECK-NEXT:    ret void
+;
+  %m = call ptr @malloc(i64 24)
+  call void @use.ptr(ptr captures(none) %m)
+  store i8 0, ptr %m
+  ret void
+}
+
+define void @malloc_address_only_escape() {
+; CHECK-LABEL: @malloc_address_only_escape(
+; CHECK-NEXT:    [[M:%.*]] = call ptr @malloc(i64 24)
+; CHECK-NEXT:    call void @use.ptr(ptr captures(address) [[M]])
+; CHECK-NEXT:    ret void
+;
+  %m = call ptr @malloc(i64 24)
+  call void @use.ptr(ptr captures(address) %m)
+  store i8 0, ptr %m
+  ret void
+}
+
+define void @malloc_provenance_escape() {
+; CHECK-LABEL: @malloc_provenance_escape(
+; CHECK-NEXT:    [[M:%.*]] = call ptr @malloc(i64 24)
+; CHECK-NEXT:    call void @use.ptr(ptr captures(provenance) [[M]])
+; CHECK-NEXT:    store i8 0, ptr [[M]], align 1
+; CHECK-NEXT:    ret void
+;
+  %m = call ptr @malloc(i64 24)
+  call void @use.ptr(ptr captures(provenance) %m)
+  store i8 0, ptr %m
+  ret void
+}
+
+define void @malloc_read_provenance_escape() {
+; CHECK-LABEL: @malloc_read_provenance_escape(
+; CHECK-NEXT:    [[M:%.*]] = call ptr @malloc(i64 24)
+; CHECK-NEXT:    call void @use.ptr(ptr captures(read_provenance) [[M]])
+; CHECK-NEXT:    store i8 0, ptr [[M]], align 1
+; CHECK-NEXT:    ret void
+;
+  %m = call ptr @malloc(i64 24)
+  call void @use.ptr(ptr captures(read_provenance) %m)
+  store i8 0, ptr %m
+  ret void
+}
+
 define void @test21() {
 ; CHECK-LABEL: @test21(
 ; CHECK-NEXT:    ret void
@@ -373,7 +425,7 @@ define ptr @test25(ptr %p) nounwind {
 ; CHECK-NEXT:    [[P_4:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP:%.*]] = load i8, ptr [[P_4]], align 1
 ; CHECK-NEXT:    store i8 0, ptr [[P_4]], align 1
-; CHECK-NEXT:    [[Q:%.*]] = call ptr @strdup(ptr [[P]]) #[[ATTR13:[0-9]+]]
+; CHECK-NEXT:    [[Q:%.*]] = call ptr @strdup(ptr [[P]]) #[[ATTR14:[0-9]+]]
 ; CHECK-NEXT:    store i8 [[TMP]], ptr [[P_4]], align 1
 ; CHECK-NEXT:    ret ptr [[Q]]
 ;
@@ -484,7 +536,7 @@ define i32 @test32(i1 %c, ptr %p, i32 %i, i1 %arg) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    store i32 [[V]], ptr [[P]], align 4
 ; CHECK-NEXT:    call void @unknown_func()
-; CHECK-NEXT:    br i1 %arg, label [[BB1]], label [[BB2:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB1]], label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -803,3 +855,36 @@ bb:
   store ptr null, ptr null, align 8
   ret void
 }
+
+define void @test_dead_on_return(ptr dead_on_return %p) {
+; CHECK-LABEL: @test_dead_on_return(
+; CHECK-NEXT:    ret void
+;
+  store i8 0, ptr %p
+  ret void
+}
+
+define void @test_dead_on_return_maythrow(ptr dead_on_return %p) {
+; CHECK-LABEL: @test_dead_on_return_maythrow(
+; CHECK-NEXT:    call void @maythrow()
+; CHECK-NEXT:    ret void
+;
+  store i8 0, ptr %p
+  call void @maythrow()
+  ret void
+}
+
+define ptr @test_dead_on_return_ptr_returned(ptr dead_on_return %p) {
+; CHECK-LABEL: @test_dead_on_return_ptr_returned(
+; CHECK-NEXT:    [[LOCAL_VAR:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    call void @opaque(ptr [[LOCAL_VAR]])
+; CHECK-NEXT:    ret ptr [[P:%.*]]
+;
+  %local.var = alloca ptr
+  call void @opaque(ptr %local.var)
+  store ptr %local.var, ptr %p
+  ret ptr %p
+}
+
+declare void @opaque(ptr)
+declare void @maythrow() memory(none)
