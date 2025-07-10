@@ -9,13 +9,14 @@
 // RUN:   --implicit-check-not=remote-compiler \
 // RUN:   --implicit-check-not=warning:" > %t_f.rsp
 
-// RUN: echo "--target=x86_64-linux-gnu \
+/// Create a response file to check that explicitly specified -Xthinlto-distributor
+/// options are forwarded correctly.
+// RUN: echo "-flto=thin \"%/s\" -### -fuse-ld=lld --target=x86_64-linux-gnu \
 // RUN:   -Xthinlto-distributor=a1 \
-// RUN:   -Xthinlto-distributor=a2,a3 \
-// RUN:   -fuse-ld=lld" > %t.rsp
+// RUN:   -Xthinlto-distributor=a2,a3" > %t_l1.rsp
 
 /// Check that options are forwarded as expected with --thinlto-distributor=.
-// RUN: %clang -### @%t.rsp -fthinlto-distributor=d.exe %s 2>&1 | \
+// RUN: %clang @%t_l1.rsp -fthinlto-distributor=d.exe 2>&1 | \
 // RUN:   FileCheck @%t_f.rsp --check-prefix=FORWARD
 
 // FORWARD: ld.lld
@@ -29,7 +30,7 @@
 /// Check that options are not added without --thinlto-distributor= and
 /// that there is an unused option warning issued for -Xthinlto-distributor=
 /// options. We specify -flto here as these options should be unaffected by it.
-// RUN: %clang -### @%t.rsp -flto=thin %s 2>&1 | \
+// RUN: %clang @%t_l1.rsp 2>&1 | \
 // RUN:   FileCheck @%t_f.rsp --check-prefix=NODIST
 
 // NODIST: warning: argument unused during compilation: '-Xthinlto-distributor=a1'
