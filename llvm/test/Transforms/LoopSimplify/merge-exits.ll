@@ -84,33 +84,28 @@ define float @merge_branches_profile_metadata(ptr %pTmp1, ptr %peakWeight, i32 %
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[T0:%.*]] = load float, ptr [[PEAKWEIGHT:%.*]], align 4
 ; CHECK-NEXT:    [[T11:%.*]] = add i32 [[BANDEDGEINDEX:%.*]], -1
-; CHECK-NEXT:    [[T121:%.*]] = icmp sgt i32 [[T11]], 0
-; CHECK-NEXT:    br i1 [[T121]], label [[BB_LR_PH:%.*]], label [[BB3:%.*]], !prof [[PROF0:![0-9]+]]
-; CHECK:       bb.lr.ph:
-; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[T11]] to i64
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[T11]], i32 0)
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SMAX]] to i64
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[BB_LR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[BB]] ]
-; CHECK-NEXT:    [[DISTERBHI_04:%.*]] = phi float [ 0.000000e+00, [[BB_LR_PH]] ], [ [[T4:%.*]], [[BB]] ]
-; CHECK-NEXT:    [[PEAKCOUNT_02:%.*]] = phi float [ [[T0]], [[BB_LR_PH]] ], [ [[T9:%.*]], [[BB]] ]
-; CHECK-NEXT:    [[T2:%.*]] = getelementptr float, ptr [[PTMP1:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[T2:%.*]] = getelementptr float, ptr [[PTMP1:%.*]], i64 [[INDVARS_IV:%.*]]
 ; CHECK-NEXT:    [[T3:%.*]] = load float, ptr [[T2]], align 4
-; CHECK-NEXT:    [[T4]] = fadd float [[T3]], [[DISTERBHI_04]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[T4:%.*]] = fadd float [[T3]], [[DISTERBHI_04:%.*]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[T7:%.*]] = getelementptr float, ptr [[PEAKWEIGHT]], i64 [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    [[T8:%.*]] = load float, ptr [[T7]], align 4
-; CHECK-NEXT:    [[T9]] = fadd float [[T8]], [[PEAKCOUNT_02]]
-; CHECK-NEXT:    [[T10:%.*]] = fcmp olt float [[T4]], 2.500000e+00
-; CHECK-NEXT:    [[T12:%.*]] = icmp sgt i64 [[TMP0]], [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[T10]], [[T12]]
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[BB]], label [[BB1_BB3_CRIT_EDGE:%.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       bb1.bb3_crit_edge:
-; CHECK-NEXT:    [[T4_LCSSA:%.*]] = phi float [ [[T4]], [[BB]] ]
-; CHECK-NEXT:    [[T9_LCSSA:%.*]] = phi float [ [[T9]], [[BB]] ]
-; CHECK-NEXT:    br label [[BB3]]
+; CHECK-NEXT:    [[T9:%.*]] = fadd float [[T8]], [[PEAKCOUNT_02:%.*]]
+; CHECK-NEXT:    [[T10:%.*]] = fcmp uge float [[T4]], 2.500000e+00
+; CHECK-NEXT:    br i1 [[T10]], label [[BB3:%.*]], label [[BB]], !prof [[PROF0:![0-9]+]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[INDVARS_IV]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT]], [[BB1:%.*]] ]
+; CHECK-NEXT:    [[DISTERBHI_04]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[T4]], [[BB1]] ]
+; CHECK-NEXT:    [[PEAKCOUNT_02]] = phi float [ [[T0]], [[ENTRY]] ], [ [[T9]], [[BB1]] ]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[BB1]], label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[PEAKCOUNT_0_LCSSA:%.*]] = phi float [ [[T9_LCSSA]], [[BB1_BB3_CRIT_EDGE]] ], [ [[T0]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[DISTERBHI_0_LCSSA:%.*]] = phi float [ [[T4_LCSSA]], [[BB1_BB3_CRIT_EDGE]] ], [ 0.000000e+00, [[ENTRY]] ]
+; CHECK-NEXT:    [[PEAKCOUNT_0_LCSSA:%.*]] = phi float [ [[PEAKCOUNT_02]], [[BB]] ], [ [[T9]], [[BB1]] ]
+; CHECK-NEXT:    [[DISTERBHI_0_LCSSA:%.*]] = phi float [ [[DISTERBHI_04]], [[BB]] ], [ [[T4]], [[BB1]] ]
 ; CHECK-NEXT:    [[T13:%.*]] = fdiv float [[PEAKCOUNT_0_LCSSA]], [[DISTERBHI_0_LCSSA]]
 ; CHECK-NEXT:    ret float [[T13]]
 ;

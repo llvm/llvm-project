@@ -2,10 +2,10 @@
 
 ; CHECK-LABEL: test:
 ; CHECK-LABEL: %cond.false12.i
-; CHECK:         b.gt
-; CHECK-NEXT:  LBB0_8:
+; CHECK:         b.le
+; CHECK-LABEL:  LBB0_9:
 ; CHECK-NEXT:    mov	 x8, x9
-; CHECK-NEXT:  LBB0_9:
+; CHECK-NEXT:  LBB0_10:
 define i64 @test(i64 %n, ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr %f) {
 entry:
   %cmp28 = icmp sgt i64 %n, 1

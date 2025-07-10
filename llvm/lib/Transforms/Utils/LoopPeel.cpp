@@ -351,7 +351,7 @@ bool llvm::canPeelLastIteration(const Loop &L, ScalarEvolution &SE) {
                     m_BasicBlock(Succ1), m_BasicBlock(Succ2))) &&
          ((Pred == CmpInst::ICMP_EQ && Succ2 == L.getHeader()) ||
           (Pred == CmpInst::ICMP_NE && Succ1 == L.getHeader())) &&
-         Bound->getType()->isIntegerTy() && 
+         Bound->getType()->isIntegerTy() &&
          SE.isLoopInvariant(SE.getSCEV(Bound), &L) &&
          match(SE.getSCEV(Inc),
                m_scev_AffineAddRec(m_SCEV(), m_scev_One(), m_SpecificLoop(&L)));
@@ -1030,8 +1030,9 @@ llvm::gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
 /// for the bulk of dynamic execution, can be further simplified by scalar
 /// optimizations.
 bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
-                    ScalarEvolution *SE, DominatorTree &DT, AssumptionCache *AC,
-                    bool PreserveLCSSA, ValueToValueMapTy &LVMap) {
+                    ScalarEvolution *SE, const TargetTransformInfo *TTI,
+                    DominatorTree &DT, AssumptionCache *AC, bool PreserveLCSSA,
+                    ValueToValueMapTy &LVMap) {
   assert(PeelCount > 0 && "Attempt to peel out zero iterations?");
   assert(canPeel(L) && "Attempt to peel a loop which is not peelable?");
   assert((!PeelLast || (canPeelLastIteration(*L, *SE) && PeelCount == 1)) &&
@@ -1308,7 +1309,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
 #endif
 
   // FIXME: Incrementally update loop-simplify
-  simplifyLoop(L, &DT, LI, SE, AC, nullptr, PreserveLCSSA);
+  simplifyLoop(L, &DT, LI, SE, AC, nullptr, TTI, PreserveLCSSA);
 
   NumPeeled++;
   NumPeeledEnd += PeelLast;

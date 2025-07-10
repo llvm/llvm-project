@@ -8,22 +8,25 @@ define i32 @test(i32 %c, ptr %a, ptr %b) {
 ; CHECK-LABEL: test:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, #1
-; CHECK-NEXT:    b.lt .LBB0_4
+; CHECK-NEXT:    b.lt .LBB0_5
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:  .LBB0_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr w9, [x1], #4
-; CHECK-NEXT:    cbnz w9, .LBB0_5
-; CHECK-NEXT:  // %bb.3: // %for.cond
+; CHECK-NEXT:    ldr w10, [x1], #4
+; CHECK-NEXT:    cmp w10, #0
+; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    cbnz w10, .LBB0_4
+; CHECK-NEXT:  // %bb.3: // %for.body
 ; CHECK-NEXT:    // in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    subs x8, x8, #1
-; CHECK-NEXT:    b.ne .LBB0_2
-; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    mov x9, x8
+; CHECK-NEXT:    sub x8, x8, #1
+; CHECK-NEXT:    cbnz x9, .LBB0_2
+; CHECK-NEXT:  .LBB0_4: // %return
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_5:
-; CHECK-NEXT:    mov w0, #1 // =0x1
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
 entry:
   %cmp13 = icmp sgt i32 %c, 0
@@ -56,13 +59,13 @@ define i64 @IVIncHoist_not_all_user_in_header(i32 %c, ptr %a, ptr %b) {
 ; CHECK-LABEL: IVIncHoist_not_all_user_in_header:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, #1
-; CHECK-NEXT:    b.lt .LBB1_5
+; CHECK-NEXT:    b.lt .LBB1_6
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
-; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    mov w9, w0
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    add x10, x1, #4
+; CHECK-NEXT:    sub x9, x9, #1
 ; CHECK-NEXT:    add x11, x2, #8
-; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:  .LBB1_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr w12, [x10, x8, lsl #2]
@@ -70,18 +73,22 @@ define i64 @IVIncHoist_not_all_user_in_header(i32 %c, ptr %a, ptr %b) {
 ; CHECK-NEXT:  // %bb.3: // %if.then
 ; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    ldr w12, [x11, x8, lsl #2]
-; CHECK-NEXT:    cbnz w12, .LBB1_6
-; CHECK-NEXT:  // %bb.4: // %for.cond
+; CHECK-NEXT:    add x13, x8, #3
+; CHECK-NEXT:    cmp w12, #0
+; CHECK-NEXT:    csel x0, xzr, x13, eq
+; CHECK-NEXT:    cbnz w12, .LBB1_5
+; CHECK-NEXT:  // %bb.4: // %if.then
 ; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    b.ne .LBB1_2
-; CHECK-NEXT:  .LBB1_5:
+; CHECK-NEXT:  .LBB1_5: // %return
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB1_6:
 ; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB1_6: // %if.then.return.loopexit_crit_edge
-; CHECK-NEXT:    add x0, x8, #3
-; CHECK-NEXT:  .LBB1_7: // %return
+; CHECK-NEXT:  .LBB1_7:
+; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
 entry:
   %cmp13 = icmp sgt i32 %c, 0
@@ -126,23 +133,25 @@ define i32 @negative_test_type_is_struct(i32 %c, ptr %a, ptr %b) {
 ; CHECK-LABEL: negative_test_type_is_struct:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, #1
-; CHECK-NEXT:    b.lt .LBB2_4
+; CHECK-NEXT:    b.lt .LBB2_5
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:  .LBB2_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr w9, [x1]
-; CHECK-NEXT:    cbnz w9, .LBB2_5
-; CHECK-NEXT:  // %bb.3: // %for.cond
+; CHECK-NEXT:    ldr w10, [x1], #4
+; CHECK-NEXT:    cmp w10, #0
+; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    cbnz w10, .LBB2_4
+; CHECK-NEXT:  // %bb.3: // %for.body
 ; CHECK-NEXT:    // in Loop: Header=BB2_2 Depth=1
-; CHECK-NEXT:    subs x8, x8, #1
-; CHECK-NEXT:    add x1, x1, #4
-; CHECK-NEXT:    b.ne .LBB2_2
-; CHECK-NEXT:  .LBB2_4:
-; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    mov x9, x8
+; CHECK-NEXT:    sub x8, x8, #1
+; CHECK-NEXT:    cbnz x9, .LBB2_2
+; CHECK-NEXT:  .LBB2_4: // %return
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB2_5:
-; CHECK-NEXT:    mov w0, #1 // =0x1
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
 entry:
   %cmp13 = icmp sgt i32 %c, 0

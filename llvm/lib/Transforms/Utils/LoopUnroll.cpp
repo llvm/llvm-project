@@ -1078,11 +1078,11 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
     // TODO: That potentially might be compile-time expensive. We should try
     // to fix the loop-simplified form incrementally.
-    simplifyLoop(OuterL, DT, LI, SE, AC, nullptr, PreserveLCSSA);
+    simplifyLoop(OuterL, DT, LI, SE, AC, nullptr, TTI, PreserveLCSSA);
   } else {
     // Simplify loops for which we might've broken loop-simplify form.
     for (Loop *SubLoop : LoopsToSimplify)
-      simplifyLoop(SubLoop, DT, LI, SE, AC, nullptr, PreserveLCSSA);
+      simplifyLoop(SubLoop, DT, LI, SE, AC, nullptr, TTI, PreserveLCSSA);
   }
 
   return CompletelyUnroll ? LoopUnrollResult::FullyUnrolled

@@ -40,6 +40,7 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 namespace llvm {
 
@@ -64,7 +65,8 @@ public:
 /// analyses if they're non-null, and LCSSA if \c PreserveLCSSA is true.
 LLVM_ABI bool simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
                            ScalarEvolution *SE, AssumptionCache *AC,
-                           MemorySSAUpdater *MSSAU, bool PreserveLCSSA);
+                           MemorySSAUpdater *MSSAU,
+                           const TargetTransformInfo *TTI, bool PreserveLCSSA);
 
 } // end namespace llvm
 

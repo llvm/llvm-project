@@ -66,7 +66,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 using namespace llvm;
 
@@ -475,7 +474,9 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
 static bool simplifyOneLoop(Loop *L, SmallVectorImpl<Loop *> &Worklist,
                             DominatorTree *DT, LoopInfo *LI,
                             ScalarEvolution *SE, AssumptionCache *AC,
-                            MemorySSAUpdater *MSSAU, bool PreserveLCSSA) {
+                            MemorySSAUpdater *MSSAU,
+                            const TargetTransformInfo *TTI,
+                            bool PreserveLCSSA) {
   bool Changed = false;
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
@@ -656,7 +657,7 @@ ReprocessLoop:
       // The block has now been cleared of all instructions except for
       // a comparison and a conditional branch. SimplifyCFG may be able
       // to fold it now.
-      if (!foldBranchToCommonDest(BI, /*DTU=*/nullptr, MSSAU))
+      if (!foldBranchToCommonDest(BI, /*DTU=*/nullptr, MSSAU, TTI))
         continue;
 
       // Success. The block is now dead, so remove it from the loop,
@@ -696,7 +697,8 @@ ReprocessLoop:
 
 bool llvm::simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
                         ScalarEvolution *SE, AssumptionCache *AC,
-                        MemorySSAUpdater *MSSAU, bool PreserveLCSSA) {
+                        MemorySSAUpdater *MSSAU, const TargetTransformInfo *TTI,
+                        bool PreserveLCSSA) {
   bool Changed = false;
 
 #ifndef NDEBUG
@@ -724,7 +726,7 @@ bool llvm::simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
 
   while (!Worklist.empty())
     Changed |= simplifyOneLoop(Worklist.pop_back_val(), Worklist, DT, LI, SE,
-                               AC, MSSAU, PreserveLCSSA);
+                               AC, MSSAU, TTI, PreserveLCSSA);
 
   // Changing exit conditions for blocks may affect exit counts of this loop and
   // any of its parents, so we must invalidate the entire subtree if we've made
@@ -747,6 +749,7 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<AssumptionCacheTracker>();
+      AU.addRequired<TargetTransformInfoWrapperPass>();
 
       // We need loop information to identify the loops...
       AU.addRequired<DominatorTreeWrapperPass>();
@@ -777,6 +780,7 @@ INITIALIZE_PASS_BEGIN(LoopSimplify, "loop-simplify",
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(LoopSimplify, "loop-simplify", "Canonicalize natural loops",
                     false, false)
 
@@ -791,6 +795,7 @@ bool LoopSimplify::runOnFunction(Function &F) {
   bool Changed = false;
   LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   auto *SEWP = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
   ScalarEvolution *SE = SEWP ? &SEWP->getSE() : nullptr;
   AssumptionCache *AC =
@@ -807,7 +812,8 @@ bool LoopSimplify::runOnFunction(Function &F) {
 
   // Simplify each loop nest in the function.
   for (auto *L : *LI)
-    Changed |= simplifyLoop(L, DT, LI, SE, AC, MSSAU.get(), PreserveLCSSA);
+    Changed |=
+        simplifyLoop(L, DT, LI, SE, AC, MSSAU.get(), &TTI, PreserveLCSSA);
 
 #ifndef NDEBUG
   if (PreserveLCSSA) {
@@ -832,13 +838,13 @@ PreservedAnalyses LoopSimplifyPass::run(Function &F,
     auto *MSSA = &MSSAAnalysis->getMSSA();
     MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
   }
-
+  auto &TTI = AM.getResult<TargetIRAnalysis>(F);
 
   // Note that we don't preserve LCSSA in the new PM, if you need it run LCSSA
   // after simplifying the loops. MemorySSA is preserved if it exists.
   for (auto *L : *LI)
-    Changed |=
-        simplifyLoop(L, DT, LI, SE, AC, MSSAU.get(), /*PreserveLCSSA*/ false);
+    Changed |= simplifyLoop(L, DT, LI, SE, AC, MSSAU.get(), &TTI,
+                            /*PreserveLCSSA*/ false);
 
   if (!Changed)
     return PreservedAnalyses::all();
