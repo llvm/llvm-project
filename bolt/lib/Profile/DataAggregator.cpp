@@ -77,6 +77,11 @@ FilterPID("pid",
   cl::Optional,
   cl::cat(AggregatorCategory));
 
+static cl::opt<bool> ImputeTraceFallthrough(
+    "impute-trace-fall-through",
+    cl::desc("impute missing fall-throughs for branch-only traces"),
+    cl::Optional, cl::cat(AggregatorCategory));
+
 static cl::opt<bool>
 IgnoreBuildID("ignore-build-id",
   cl::desc("continue even if build-ids in input binary and perf.data mismatch"),
@@ -513,6 +518,49 @@ void DataAggregator::parsePerfData(BinaryContext &BC) {
   deleteTempFiles();
 }
 
+void DataAggregator::imputeFallThroughs() {
+  if (Traces.empty())
+    return;
+
+  std::pair PrevBranch(Trace::EXTERNAL, Trace::EXTERNAL);
+  uint64_t AggregateCount = 0;
+  uint64_t AggregateFallthroughSize = 0;
+  uint64_t InferredTraces = 0;
+
+  // Helper map with whether the instruction is a call/ret/unconditional branch
+  std::unordered_map<uint64_t, bool> IsUncondJumpMap;
+  auto checkUncondJump = [&](const uint64_t Addr) {
+    auto isUncondJump = [&](const MCInst &MI) -> bool {
+      return BC->MIB->IsUnconditionalJump(MI);
+    };
+    return testAndSet<bool>(Addr, isUncondJump, IsUncondJumpMap).value_or(true);
+  };
+
+  for (auto &[Trace, Info] : Traces) {
+    if (Trace.From == Trace::EXTERNAL)
+      continue;
+    std::pair CurrentBranch(Trace.Branch, Trace.From);
+    if (Trace.To == Trace::BR_ONLY) {
+      uint64_t InferredBytes = PrevBranch == CurrentBranch
+                                   ? AggregateFallthroughSize / AggregateCount
+                                   : !checkUncondJump(Trace.From);
+      Trace.To = Trace.From + InferredBytes;
+      LLVM_DEBUG(dbgs() << "imputed " << Trace << " (" << InferredBytes
+                        << " bytes)\n");
+      ++InferredTraces;
+    } else {
+      if (CurrentBranch != PrevBranch)
+        AggregateCount = AggregateFallthroughSize = 0;
+      if (Trace.To != Trace::EXTERNAL)
+        AggregateFallthroughSize += (Trace.To - Trace.From) * Info.TakenCount;
+      AggregateCount += Info.TakenCount;
+    }
+    PrevBranch = CurrentBranch;
+  }
+  if (opts::Verbosity >= 1)
+    outs() << "BOLT-INFO: imputed " << InferredTraces << " traces\n";
+}
+
 Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   this->BC = &BC;
 
@@ -524,6 +572,9 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
 
   // Sort parsed traces for faster processing.
   llvm::sort(Traces, llvm::less_first());
+
+  if (opts::ImputeTraceFallthrough)
+    imputeFallThroughs();
 
   if (opts::HeatmapMode) {
     if (std::error_code EC = printLBRHeatMap())
@@ -726,22 +777,10 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
 }
 
 bool DataAggregator::checkReturn(uint64_t Addr) {
-  auto isReturn = [&](auto MI) { return MI && BC->MIB->isReturn(*MI); };
-  if (llvm::is_contained(Returns, Addr))
-    return true;
-
-  BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr);
-  if (!Func)
-    return false;
-
-  const uint64_t Offset = Addr - Func->getAddress();
-  if (Func->hasInstructions()
-          ? isReturn(Func->getInstructionAtOffset(Offset))
-          : isReturn(Func->disassembleInstructionAtOffset(Offset))) {
-    Returns.emplace(Addr);
-    return true;
-  }
-  return false;
+  auto isReturn = [&](const MCInst &MI) -> bool {
+    return BC->MIB->isReturn(MI);
+  };
+  return testAndSet<bool>(Addr, isReturn, Returns).value_or(false);
 }
 
 bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
@@ -1331,7 +1370,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     if (!Addr[0]->Offset)
       Addr[0]->Offset = Trace::FT_EXTERNAL_RETURN;
     else
-      Returns.emplace(Addr[0]->Offset);
+      Returns.emplace(Addr[0]->Offset, true);
   }
 
   /// Record a trace.
@@ -1592,7 +1631,7 @@ void DataAggregator::processBranchEvents() {
   NamedRegionTimer T("processBranch", "Processing branch events",
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
 
-  Returns.emplace(Trace::FT_EXTERNAL_RETURN);
+  Returns.emplace(Trace::FT_EXTERNAL_RETURN, true);
   for (const auto &[Trace, Info] : Traces) {
     bool IsReturn = checkReturn(Trace.Branch);
     // Ignore returns.

@@ -430,6 +430,12 @@ public:
     return Analysis->isIndirectBranch(Inst);
   }
 
+  bool IsUnconditionalJump(const MCInst &Inst) const {
+    const MCInstrDesc &Desc = Info->get(Inst.getOpcode());
+    // barrier captures returns and unconditional branches
+    return Desc.isCall() || Desc.isBarrier();
+  }
+
   /// Returns true if the instruction is memory indirect call or jump
   virtual bool isBranchOnMem(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
