@@ -15,16 +15,11 @@ target triple = "wasm32-unknown-unknown"
 define void @all_true_splat_not_all_one(ptr %ptr) {
 ; CHECK-LABEL: define void @all_true_splat_not_all_one(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = tail call i32 @llvm.wasm.alltrue.v16i8(<16 x i8> <i8 0, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
-; CHECK-NEXT:    store volatile i32 [[A]], ptr [[PTR]], align 4
-; CHECK-NEXT:    [[B:%.*]] = tail call i32 @llvm.wasm.alltrue.v8i16(<8 x i16> <i16 0, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
-; CHECK-NEXT:    store volatile i32 [[B]], ptr [[PTR]], align 4
-; CHECK-NEXT:    [[C:%.*]] = tail call i32 @llvm.wasm.alltrue.v4i32(<4 x i32> <i32 0, i32 1, i32 1, i32 1>)
-; CHECK-NEXT:    store volatile i32 [[C]], ptr [[PTR]], align 4
-; CHECK-NEXT:    [[D:%.*]] = tail call i32 @llvm.wasm.alltrue.v2i64(<2 x i64> <i64 0, i64 1>)
-; CHECK-NEXT:    store volatile i32 [[D]], ptr [[PTR]], align 4
-; CHECK-NEXT:    [[E:%.*]] = tail call i32 @llvm.wasm.alltrue.v4i64(<4 x i64> <i64 0, i64 1, i64 1, i64 1>)
-; CHECK-NEXT:    store volatile i32 [[E]], ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %a = tail call i32 @llvm.wasm.alltrue(<16 x i8> <i8 0, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
@@ -48,16 +43,11 @@ define void @all_true_splat_not_all_one(ptr %ptr) {
 define void @all_true_splat_one(ptr %ptr) {
 ; CHECK-LABEL: define void @all_true_splat_one(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = tail call i32 @llvm.wasm.alltrue.v16i8(<16 x i8> splat (i8 1))
-; CHECK-NEXT:    store volatile i32 [[A]], ptr [[PTR]], align 4
-; CHECK-NEXT:    [[B:%.*]] = tail call i32 @llvm.wasm.alltrue.v8i16(<8 x i16> splat (i16 1))
-; CHECK-NEXT:    store volatile i32 [[B]], ptr [[PTR]], align 4
-; CHECK-NEXT:    [[C:%.*]] = tail call i32 @llvm.wasm.alltrue.v4i32(<4 x i32> splat (i32 1))
-; CHECK-NEXT:    store volatile i32 [[C]], ptr [[PTR]], align 4
-; CHECK-NEXT:    [[D:%.*]] = tail call i32 @llvm.wasm.alltrue.v2i64(<2 x i64> splat (i64 1))
-; CHECK-NEXT:    store volatile i32 [[D]], ptr [[PTR]], align 4
-; CHECK-NEXT:    [[E:%.*]] = tail call i32 @llvm.wasm.alltrue.v4i64(<4 x i64> splat (i64 1))
-; CHECK-NEXT:    store volatile i32 [[E]], ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %a = tail call i32 @llvm.wasm.alltrue(<16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
@@ -82,16 +72,11 @@ define void @all_true_splat_one(ptr %ptr) {
 define void @any_true_splat_zero(ptr %ptr) {
 ; CHECK-LABEL: define void @any_true_splat_zero(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = tail call i32 @llvm.wasm.anytrue.v16i8(<16 x i8> zeroinitializer)
-; CHECK-NEXT:    store volatile i32 [[A]], ptr [[PTR]], align 4
-; CHECK-NEXT:    [[B:%.*]] = tail call i32 @llvm.wasm.anytrue.v8i16(<8 x i16> zeroinitializer)
-; CHECK-NEXT:    store volatile i32 [[B]], ptr [[PTR]], align 4
-; CHECK-NEXT:    [[C:%.*]] = tail call i32 @llvm.wasm.anytrue.v4i32(<4 x i32> zeroinitializer)
-; CHECK-NEXT:    store volatile i32 [[C]], ptr [[PTR]], align 4
-; CHECK-NEXT:    [[D:%.*]] = tail call i32 @llvm.wasm.anytrue.v2i64(<2 x i64> zeroinitializer)
-; CHECK-NEXT:    store volatile i32 [[D]], ptr [[PTR]], align 4
-; CHECK-NEXT:    [[E:%.*]] = tail call i32 @llvm.wasm.anytrue.v4i64(<4 x i64> zeroinitializer)
-; CHECK-NEXT:    store volatile i32 [[E]], ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 1, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 1, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 1, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 1, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 1, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %a = tail call i32 @llvm.wasm.anytrue(<16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>)
@@ -116,16 +101,11 @@ define void @any_true_splat_zero(ptr %ptr) {
 define void @any_true_splat_not_all_zero(ptr %ptr) {
 ; CHECK-LABEL: define void @any_true_splat_not_all_zero(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = tail call i32 @llvm.wasm.anytrue.v16i8(<16 x i8> <i8 1, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>)
-; CHECK-NEXT:    store volatile i32 [[A]], ptr [[PTR]], align 4
-; CHECK-NEXT:    [[B:%.*]] = tail call i32 @llvm.wasm.anytrue.v8i16(<8 x i16> <i16 1, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>)
-; CHECK-NEXT:    store volatile i32 [[B]], ptr [[PTR]], align 4
-; CHECK-NEXT:    [[C:%.*]] = tail call i32 @llvm.wasm.anytrue.v4i32(<4 x i32> <i32 1, i32 0, i32 0, i32 0>)
-; CHECK-NEXT:    store volatile i32 [[C]], ptr [[PTR]], align 4
-; CHECK-NEXT:    [[D:%.*]] = tail call i32 @llvm.wasm.anytrue.v2i64(<2 x i64> <i64 1, i64 0>)
-; CHECK-NEXT:    store volatile i32 [[D]], ptr [[PTR]], align 4
-; CHECK-NEXT:    [[E:%.*]] = tail call i32 @llvm.wasm.anytrue.v4i64(<4 x i64> <i64 1, i64 0, i64 0, i64 0>)
-; CHECK-NEXT:    store volatile i32 [[E]], ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[PTR]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %a = tail call i32 @llvm.wasm.anytrue(<16 x i8> <i8 1, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>)
