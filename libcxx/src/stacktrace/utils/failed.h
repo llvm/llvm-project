@@ -11,16 +11,18 @@
 
 #include <__config>
 #include <cerrno>
-#include <stdexcept>
+#include <exception>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
-struct failed : std::runtime_error {
-  virtual ~failed() = default;
+struct failed : std::exception {
+  char const* msg_{};
   int errno_{0};
-  failed() : std::runtime_error({}) {}
-  failed(char const* msg, int err) : std::runtime_error(msg), errno_(err) {}
+  failed(char const* msg, int err) : std::exception(), msg_(msg), errno_(err) {}
+
+  virtual ~failed() noexcept = default;
+  const char* what() const noexcept override { return msg_; }
 };
 
 } // namespace __stacktrace

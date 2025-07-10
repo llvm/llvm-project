@@ -40,9 +40,12 @@ int main(int, char**) {
   std::stacktrace_entry a;
   std::stacktrace_entry b;
   std::stacktrace_entry c;
+
   *(uintptr_t*)(&a) = uintptr_t(addr1);
   *(uintptr_t*)(&b) = uintptr_t(addr1);
   *(uintptr_t*)(&c) = uintptr_t(addr2);
+
+  static_assert(noexcept(a <=> b));
 
   assert(std::strong_ordering::equal == (a <=> b));
   assert(std::strong_ordering::equivalent == (a <=> b));

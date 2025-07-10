@@ -21,8 +21,8 @@ namespace std {
 #include <stacktrace>
 
 int main(int, char**) noexcept {
-  std::stacktrace_entry entry_t6;
-  assert(entry_t6.native_handle() == 0);
-
+  std::stacktrace_entry e;
+  static_assert(noexcept(e.native_handle()));
+  assert(e.native_handle() == 0);
   return 0;
 }

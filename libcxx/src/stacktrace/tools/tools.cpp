@@ -33,67 +33,67 @@ namespace __stacktrace {
 
 namespace {
 
-_LIBCPP_HIDE_FROM_ABI alloc::str hex_string(alloc& alloc, uintptr_t __addr) {
+_LIBCPP_HIDE_FROM_ABI base::str hex_string(base& base, uintptr_t __addr) {
   char __ret[19]; // "0x" + 16 digits + NUL
   auto __size = snprintf(__ret, sizeof(__ret), "0x%016llx", (unsigned long long)__addr);
-  return alloc.make_str(__ret, size_t(__size));
+  return base.make_str(__ret, size_t(__size));
 }
 
-_LIBCPP_HIDE_FROM_ABI alloc::str u64_string(alloc& alloc, uintptr_t __val) {
+_LIBCPP_HIDE_FROM_ABI base::str u64_string(base& base, uintptr_t __val) {
   char __ret[21]; // 20 digits max + NUL
   auto __size = snprintf(__ret, sizeof(__ret), "%zu", __val);
-  return alloc.make_str(__ret, size_t(__size));
+  return base.make_str(__ret, size_t(__size));
 }
 
 #  define STRINGIFY0(x) #x
 #  define STRINGIFY(x) STRINGIFY0(x)
 
-void try_tools(alloc& alloc, function<bool(tool const&)> cb) {
+void try_tools(base& base, function<bool(tool const&)> cb) {
   char const* prog_name;
 
   if ((prog_name = getenv("LIBCXX_STACKTRACE_FORCE_LLVM_SYMBOLIZER_PATH"))) {
-    if (cb(llvm_symbolizer{alloc, prog_name})) {
+    if (cb(llvm_symbolizer{base, prog_name})) {
       return;
     }
   } else {
 #  if defined(LIBCXX_STACKTRACE_FORCE_LLVM_SYMBOLIZER_PATH)
-    if (cb(llvm_symbolizer{alloc, STRINGIFY(LIBCXX_STACKTRACE_FORCE_LLVM_SYMBOLIZER_PATH)})) {
+    if (cb(llvm_symbolizer{base, STRINGIFY(LIBCXX_STACKTRACE_FORCE_LLVM_SYMBOLIZER_PATH)})) {
       return;
     }
 #  else
-    if (cb(llvm_symbolizer{alloc})) {
+    if (cb(llvm_symbolizer{base})) {
       return;
     }
 #  endif
   }
 
   if ((prog_name = getenv("LIBCXX_STACKTRACE_FORCE_GNU_ADDR2LINE_PATH"))) {
-    if (cb(addr2line{alloc, prog_name})) {
+    if (cb(addr2line{base, prog_name})) {
       return;
     }
   } else {
 #  if defined(LIBCXX_STACKTRACE_FORCE_GNU_ADDR2LINE_PATH)
-    if (cb(addr2line{alloc, STRINGIFY(LIBCXX_STACKTRACE_FORCE_GNU_ADDR2LINE_PATH)})) {
+    if (cb(addr2line{base, STRINGIFY(LIBCXX_STACKTRACE_FORCE_GNU_ADDR2LINE_PATH)})) {
       return;
     }
 #  else
-    if (cb(addr2line{alloc})) {
+    if (cb(addr2line{base})) {
       return;
     }
 #  endif
   }
 
   if ((prog_name = getenv("LIBCXX_STACKTRACE_FORCE_APPLE_ATOS_PATH"))) {
-    if (cb(atos{alloc, prog_name})) {
+    if (cb(atos{base, prog_name})) {
       return;
     }
   } else {
 #  if defined(LIBCXX_STACKTRACE_FORCE_APPLE_ATOS_PATH)
-    if (cb(atos{alloc, STRINGIFY(LIBCXX_STACKTRACE_FORCE_APPLE_ATOS_PATH)})) {
+    if (cb(atos{base, STRINGIFY(LIBCXX_STACKTRACE_FORCE_APPLE_ATOS_PATH)})) {
       return;
     }
 #  else
-    if (cb(atos{alloc})) {
+    if (cb(atos{base})) {
       return;
     }
 #  endif
@@ -103,9 +103,9 @@ void try_tools(alloc& alloc, function<bool(tool const&)> cb) {
 } // namespace
 
 void spawner::resolve_lines() {
-  try_tools(builder_.__alloc_, [&](tool const& prog) {
+  try_tools(base_, [&](tool const& prog) {
     char buf[512];
-    pspawn_tool proc(prog, builder_, buf, sizeof(buf));
+    pspawn_tool proc(prog, base_, buf, sizeof(buf));
     try {
       proc.run();
       return true;
@@ -120,19 +120,19 @@ void spawner::resolve_lines() {
   });
 }
 
-alloc::list<alloc::str> llvm_symbolizer::buildArgs(builder& builder) const {
-  auto ret = alloc_.make_list<alloc::str>();
-  ret.push_back(alloc_.make_str(progName_));
-  ret.push_back(alloc_.make_str("--demangle"));
-  ret.push_back(alloc_.make_str("--no-inlines"));
-  ret.push_back(alloc_.make_str("--verbose"));
-  ret.push_back(alloc_.make_str("--relativenames"));
-  ret.push_back(alloc_.make_str("--functions=short"));
-  for (auto& st_entry : builder.__entries_) {
+base::list<base::str> llvm_symbolizer::buildArgs(base& base) const {
+  auto ret = base_.make_list<base::str>();
+  ret.push_back(base_.make_str(progName_));
+  ret.push_back(base_.make_str("--demangle"));
+  ret.push_back(base_.make_str("--no-inlines"));
+  ret.push_back(base_.make_str("--verbose"));
+  ret.push_back(base_.make_str("--relativenames"));
+  ret.push_back(base_.make_str("--functions=short"));
+  for (auto& st_entry : base.__entries_) {
     auto& entry      = (entry_base&)st_entry;
-    auto addr_string = hex_string(alloc_, entry.__addr_unslid_);
+    auto addr_string = hex_string(base_, entry.__addr_unslid_);
     if (entry.__file_) {
-      auto arg = alloc_.make_str();
+      auto arg = base_.make_str();
       arg.reserve(entry.__file_->size() + 40);
       arg += "FILE:";
       arg += *entry.__file_;
@@ -146,7 +146,7 @@ alloc::list<alloc::str> llvm_symbolizer::buildArgs(builder& builder) const {
   return ret;
 }
 
-void llvm_symbolizer::parseOutput(builder& builder, __stacktrace::entry_base& entry, std::istream& output) const {
+void llvm_symbolizer::parseOutput(base& base, __stacktrace::entry_base& entry, std::istream& output) const {
   // clang-format off
 /*
 With "--verbose", parsing is a little easier, or at least, more reliable;
@@ -166,8 +166,7 @@ Note that this includes an extra empty line as a terminator.
 */
   // clang-format on
 
-  auto& alloc = builder.__alloc_;
-  auto line   = alloc.make_str();
+  auto line = base.make_str();
   line.reserve(512);
   std::string_view tmp;
   while (true) {
@@ -189,7 +188,7 @@ Note that this includes an extra empty line as a terminator.
       tmp = line;
       tmp = tmp.substr(tmp.find_first_of(":") + 2); // skip ": "
       if (tmp != "??") {
-        entry.__file_ = alloc.make_str(tmp);
+        entry.__file_ = base.make_str(tmp);
       }
     } else if (line.starts_with("  Line:")) {
       tmp = line;
@@ -206,29 +205,28 @@ Note that this includes an extra empty line as a terminator.
   }
 }
 
-alloc::list<alloc::str> addr2line::buildArgs(builder& builder) const {
-  auto& alloc = builder.__alloc_;
-  auto ret    = alloc.make_list<alloc::str>();
-  if (builder.__main_prog_path_.empty()) {
+base::list<base::str> addr2line::buildArgs(base& base) const {
+  auto ret = base.make_list<base::str>();
+  if (base.__main_prog_path_.empty()) {
     // Should not have reached here but be graceful anyway
-    ret.push_back(alloc.make_str("/bin/false"));
+    ret.push_back(base.make_str("/bin/false"));
     return ret;
   }
 
-  ret.push_back(alloc.make_str(progName_));
-  ret.push_back(alloc.make_str("--functions"));
-  ret.push_back(alloc.make_str("--demangle"));
-  ret.push_back(alloc.make_str("--basenames"));
-  ret.push_back(alloc.make_str("--pretty-print")); // This "human-readable form" is easier to parse
-  ret.push_back(alloc.make_str("-e"));
-  ret.push_back(builder.__main_prog_path_);
-  for (auto& entry : builder.__entries_) {
-    ret.push_back(hex_string(alloc, ((entry_base&)entry).__addr_unslid_));
+  ret.push_back(base.make_str(progName_));
+  ret.push_back(base.make_str("--functions"));
+  ret.push_back(base.make_str("--demangle"));
+  ret.push_back(base.make_str("--basenames"));
+  ret.push_back(base.make_str("--pretty-print")); // This "human-readable form" is easier to parse
+  ret.push_back(base.make_str("-e"));
+  ret.push_back(base.__main_prog_path_);
+  for (auto& entry : base.__entries_) {
+    ret.push_back(hex_string(base, ((entry_base&)entry).__addr_unslid_));
   }
   return ret;
 }
 
-void addr2line::parseOutput(builder& builder, entry_base& entry, std::istream& output) const {
+void addr2line::parseOutput(base& base, entry_base& entry, std::istream& output) const {
   // clang-format off
 /*
 Example:
@@ -244,8 +242,7 @@ test::Foo::Foo(int) at foo.cc:11
 */
   // clang-format on
 
-  auto& alloc = builder.__alloc_;
-  auto line   = alloc.make_str();
+  auto line = base.make_str();
   line.reserve(512);
   std::getline(output, line);
   while (!line.empty() && isspace(line.back())) {
@@ -261,16 +258,16 @@ test::Foo::Foo(int) at foo.cc:11
     return;
   }
   if (sepIndex > 0) {
-    entry.__desc_ = alloc.make_str(string_view(line).substr(0, sepIndex));
+    entry.__desc_ = base.make_str(string_view(line).substr(0, sepIndex));
   }
   auto fileBegin = sepIndex + 4;
   if (fileBegin >= line.size()) {
     return;
   }
-  auto fileline = alloc.make_str(string_view(line).substr(fileBegin));
+  auto fileline = base.make_str(string_view(line).substr(fileBegin));
   auto colon    = fileline.find_last_of(":");
   if (colon > 0 && !fileline.starts_with("?")) {
-    entry.__file_ = alloc.make_str(string_view(fileline).substr(0, colon));
+    entry.__file_ = base.make_str(string_view(fileline).substr(0, colon));
   }
 
   if (colon == std::string::npos) {
@@ -284,21 +281,20 @@ test::Foo::Foo(int) at foo.cc:11
   entry.__line_ = lineno;
 }
 
-alloc::list<alloc::str> atos::buildArgs(builder& builder) const {
-  auto& alloc = builder.__alloc_;
-  auto ret    = alloc.make_list<alloc::str>();
-  ret.push_back(alloc.make_str(progName_));
-  ret.push_back(alloc.make_str("-p"));
-  ret.push_back(u64_string(alloc, getpid()));
+base::list<base::str> atos::buildArgs(base& base) const {
+  auto ret = base.make_list<base::str>();
+  ret.push_back(base.make_str(progName_));
+  ret.push_back(base.make_str("-p"));
+  ret.push_back(u64_string(base, getpid()));
   // TODO(stackcx23): Allow options in env, e.g. LIBCPP_STACKTRACE_OPTIONS=FullPath
   // ret.push_back("--fullPath");
-  for (auto& entry : builder.__entries_) {
-    ret.push_back(hex_string(alloc, ((entry_base&)entry).__addr_actual_));
+  for (auto& entry : base.__entries_) {
+    ret.push_back(hex_string(base, ((entry_base&)entry).__addr_actual_));
   }
   return ret;
 }
 
-void atos::parseOutput(builder& builder, entry_base& entry, std::istream& output) const {
+void atos::parseOutput(base& base, entry_base& entry, std::istream& output) const {
   // Simple example:
   //
   //   main (in testprog) (/Users/steve/code/notes/testprog.cc:208)
@@ -322,8 +318,7 @@ void atos::parseOutput(builder& builder, entry_base& entry, std::istream& output
   // If this more or less fits our expected format we'll take these data,
   // even if the line number is 0.
 
-  auto& alloc = builder.__alloc_;
-  auto line   = alloc.make_str();
+  auto line = base.make_str();
   line.reserve(512);
   std::getline(output, line);
   while (!line.empty() && isspace(line.back())) {
@@ -360,12 +355,12 @@ void atos::parseOutput(builder& builder, entry_base& entry, std::istream& output
   // we have the name provided by atos; only use that if we have no symbol
   // (no need to copy more strings otherwise).
   if (entry.__desc_->empty() && !sym.empty()) {
-    entry.__desc_ = alloc.make_str(sym);
+    entry.__desc_ = base.make_str(sym);
   }
 
   std::string_view file{fileBegin, size_t(lastColon - fileBegin)};
   if (file != "?" && file != "??" && !file.empty()) {
-    entry.__file_ = alloc.make_str(file);
+    entry.__file_ = base.make_str(file);
   }
 
   unsigned lineno = 0;
