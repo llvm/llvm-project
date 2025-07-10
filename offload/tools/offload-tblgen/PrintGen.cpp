@@ -71,19 +71,21 @@ inline void printTagged(llvm::raw_ostream &os, const void *ptr, {0} value, size_
     auto Type = Val.getTaggedType();
     OS << formatv(TAB_1 "case {0}: {{\n", Name);
     // Special case for strings
-    if (Type == "char[]") {
-      OS << formatv(TAB_2 "printPtr(os, (const char*) ptr);\n");
-    } else {
-      OS << formatv(TAB_2 "const {0} * const tptr = (const {0} * const)ptr;\n",
-                    Type);
-      // TODO: Handle other cases here
-      OS << TAB_2 "os << (const void *)tptr << \" (\";\n";
-      if (Type.ends_with("*")) {
-        OS << TAB_2 "os << printPtr(os, tptr);\n";
+    if (Type) {
+      if (Type == "char[]") {
+        OS << formatv(TAB_2 "printPtr(os, (const char*) ptr);\n");
       } else {
-        OS << TAB_2 "os << *tptr;\n";
+        OS << formatv(
+            TAB_2 "const {0} * const tptr = (const {0} * const)ptr;\n", Type);
+        // TODO: Handle other cases here
+        OS << TAB_2 "os << (const void *)tptr << \" (\";\n";
+        if (Type->ends_with("*")) {
+          OS << TAB_2 "os << printPtr(os, tptr);\n";
+        } else {
+          OS << TAB_2 "os << *tptr;\n";
+        }
+        OS << TAB_2 "os << \")\";\n";
       }
-      OS << TAB_2 "os << \")\";\n";
     }
     OS << formatv(TAB_2 "break;\n" TAB_1 "}\n");
   }

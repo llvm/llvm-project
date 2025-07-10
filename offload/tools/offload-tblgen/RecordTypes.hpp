@@ -66,8 +66,8 @@ public:
   explicit EnumValueRec(const Record *rec) : rec(rec) {}
   std::string getName() const { return rec->getValueAsString("name").upper(); }
   StringRef getDesc() const { return rec->getValueAsString("desc"); }
-  StringRef getTaggedType() const {
-    return rec->getValueAsString("tagged_type");
+  std::optional<StringRef> getTaggedType() const {
+    return rec->getValueAsOptionalString("tagged_type");
   }
 
 private:
