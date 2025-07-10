@@ -538,6 +538,7 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
                         0 /*Src2HasMods*/, DstVT>.ret;
   let HasSrc2 = 0;
   let HasSrc2Mods = 0;
+  let HasVOPD3Src2 = 0;
 
   let HasExt = 1;
   let HasExtDPP = 1;
@@ -786,6 +787,7 @@ def VOP2e_I32_I32_I32_I1 : VOP2e_SGPR<[i32, i32, i32, i1]> {
   let InsVOPD3Y = (ins FP32VCSrcInputMods:$src0Y_modifiers, Src0VOPD3:$src0Y, FP32VRegSrcInputMods:$vsrc1Y_modifiers, Src1VOPD3:$vsrc1Y, Src2VOPD3:$vsrc2Y);
   let AsmVOPD3X = "$vdstX, $src0X_modifiers, $vsrc1X_modifiers, $vsrc2X";
   let AsmVOPD3Y = "$vdstY, $src0Y_modifiers, $vsrc1Y_modifiers, $vsrc2Y";
+  let HasVOPD3Src2 = 0;
 }
 def VOP2e_I16_I16_I16_I1 : VOP2e_SGPR<[i16, i16, i16, i1]>;
 // V_CNDMASK_B16 is VOP3 only
