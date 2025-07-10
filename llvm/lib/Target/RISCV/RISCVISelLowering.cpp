@@ -15894,10 +15894,8 @@ static SDValue expandMulToNAFSequence(SDNode *N, SelectionDAG &DAG,
 
 // X * (2^N +/- 2^M) -> (add/sub (shl X, C1), (shl X, C2))
 static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
-                                        uint64_t MulAmt) {
-  // Don't do this is if the Xqciac extension is enabled and the MulAmt is
-  // simm12.
-  auto &Subtarget = DAG.getSubtarget<RISCVSubtarget>();
+                                        uint64_t MulAmt,
+                                        const RISCVSubtarget &Subtarget) {
   if (Subtarget.hasVendorXqciac() && isInt<12>(MulAmt))
     return SDValue();
 
@@ -16085,7 +16083,7 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  if (SDValue V = expandMulToAddOrSubOfShl(N, DAG, MulAmt))
+  if (SDValue V = expandMulToAddOrSubOfShl(N, DAG, MulAmt, Subtarget))
     return V;
 
   if (!Subtarget.hasStdExtZmmul())
