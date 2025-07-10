@@ -85,8 +85,11 @@ struct VPRegisterUsage {
   SmallMapVector<unsigned, unsigned, 4> MaxLocalUsers;
 
   /// Check if any of the tracked live intervals exceeds the number of
-  /// available registers for the target.
-  bool exceedsMaxNumRegs(const TargetTransformInfo &TTI) const;
+  /// available registers for the target. Specifying OverrideMaxNumRegs
+  /// to be non-zero will cause that number to be used in place of the
+  /// number of available registers.
+  bool exceedsMaxNumRegs(const TargetTransformInfo &TTI,
+                         unsigned OverrideMaxNumRegs = 0) const;
 };
 
 /// Estimate the register usage for \p Plan and vectorization factors in \p VFs

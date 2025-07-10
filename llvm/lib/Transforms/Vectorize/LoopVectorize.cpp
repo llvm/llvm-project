@@ -964,9 +964,8 @@ public:
   /// user options, for the given register kind.
   bool useMaxBandwidth(TargetTransformInfo::RegisterKind RegKind);
 
-  /// \return True if maximizing vector bandwidth is enabled by the target or
-  /// user options, for the given vector factor.
-  bool useMaxBandwidth(ElementCount VF);
+  /// \return True if register pressure should be calculated for the given VF.
+  bool shouldCalculateRegPressureForVF(ElementCount VF);
 
   /// \return The size (in bits) of the smallest and widest types in the code
   /// that needs to be vectorized. We ignore values that remain scalar such as
@@ -1753,6 +1752,9 @@ public:
   /// Whether this loop should be optimized for size based on function attribute
   /// or profile information.
   bool OptForSize;
+
+  /// The highest VF possible for this loop, without using MaxBandwidth.
+  FixedScalableVFPair MaxPermissibleVFWithoutMaxBW;
 };
 } // end namespace llvm
 
@@ -3943,10 +3945,16 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   return FixedScalableVFPair::getNone();
 }
 
-bool LoopVectorizationCostModel::useMaxBandwidth(ElementCount VF) {
-  return useMaxBandwidth(VF.isScalable()
-                             ? TargetTransformInfo::RGK_ScalableVector
-                             : TargetTransformInfo::RGK_FixedWidthVector);
+bool LoopVectorizationCostModel::shouldCalculateRegPressureForVF(
+    ElementCount VF) {
+  if (!useMaxBandwidth(VF.isScalable()
+                           ? TargetTransformInfo::RGK_ScalableVector
+                           : TargetTransformInfo::RGK_FixedWidthVector))
+    return false;
+  // Only calculate register pressure for VFs enabled by MaxBandwidth.
+  return ElementCount::isKnownGT(
+      VF, VF.isScalable() ? MaxPermissibleVFWithoutMaxBW.ScalableVF
+                          : MaxPermissibleVFWithoutMaxBW.FixedVF);
 }
 
 bool LoopVectorizationCostModel::useMaxBandwidth(
@@ -4022,6 +4030,12 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
       ComputeScalableMaxVF ? TargetTransformInfo::RGK_ScalableVector
                            : TargetTransformInfo::RGK_FixedWidthVector;
   ElementCount MaxVF = MaxVectorElementCount;
+
+  if (MaxVF.isScalable())
+    MaxPermissibleVFWithoutMaxBW.ScalableVF = MaxVF;
+  else
+    MaxPermissibleVFWithoutMaxBW.FixedVF = MaxVF;
+
   if (useMaxBandwidth(RegKind)) {
     auto MaxVectorElementCountMaxBW = ElementCount::get(
         llvm::bit_floor(WidestRegister.getKnownMinValue() / SmallestType),
@@ -4375,9 +4389,10 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
       if (VF.isScalar())
         continue;
 
-      /// Don't consider the VF if it exceeds the number of registers for the
-      /// target.
-      if (CM.useMaxBandwidth(VF) && RUs[I].exceedsMaxNumRegs(TTI))
+      /// If the VF was proposed due to MaxBandwidth, don't consider the VF if
+      /// it exceeds the number of registers for the target.
+      if (CM.shouldCalculateRegPressureForVF(VF) &&
+          RUs[I].exceedsMaxNumRegs(TTI, ForceTargetNumVectorRegs))
         continue;
 
       InstructionCost C = CM.expectedCost(VF);
@@ -7155,7 +7170,8 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
       InstructionCost Cost = cost(*P, VF);
       VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
 
-      if (CM.useMaxBandwidth(VF) && RUs[I].exceedsMaxNumRegs(TTI)) {
+      if (CM.shouldCalculateRegPressureForVF(VF) &&
+          RUs[I].exceedsMaxNumRegs(TTI, ForceTargetNumVectorRegs)) {
         LLVM_DEBUG(dbgs() << "LV(REG): Not considering vector loop of width "
                           << VF << " because it uses too many registers\n");
         continue;
