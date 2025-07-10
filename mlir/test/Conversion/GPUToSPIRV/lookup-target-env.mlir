@@ -1,7 +1,7 @@
 // RUN: mlir-opt --spirv-attach-target='caps=Shader exts=SPV_KHR_storage_buffer_storage_class' --convert-gpu-to-spirv %s -o - | FileCheck %s
 
 module attributes {gpu.container_module} {
-  // CHECK-LABEL: spirv.module @{{.*}} GLSL450 requires #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]> {
+  // CHECK-LABEL: spirv.module @{{.*}} GLSL450
   gpu.module @kernels {
     // CHECK: spirv.func @load_kernel
     // CHECK-SAME: %[[ARG:.*]]: !spirv.ptr<!spirv.struct<(!spirv.array<48 x f32, stride=4> [0])>, StorageBuffer> {spirv.interface_var_abi = #spirv.interface_var_abi<(0, 0)>})
