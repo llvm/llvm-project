@@ -18,10 +18,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 if (CMAKE_SYSTEM_NAME STREQUAL Windows AND NOT MSVC)
 # Build with other compilers is not configured, not guaranteed and not tested.
-    message( FATAL_ERROR
-      "On Windows libsycl supports compiler which is some version of Microsoft"
-      " Visual C++ or another compiler simulating the Visual C++ cl"
-      " command-line syntax" )
+    message(FATAL_ERROR
+      "When compiling for Windows, libsycl requires a"
+      " version of Microsoft Visual C++ or another compiler"
+      " that uses the Visual C++ cl command-line syntax.")
 endif()
 
 #===============================================================================
@@ -71,8 +71,11 @@ set(LIBSYCL_MAJOR_VERSION 0)
 set(LIBSYCL_MINOR_VERSION 1)
 set(LIBSYCL_PATCH_VERSION 0)
 set(LIBSYCL_VERSION_STRING "${LIBSYCL_MAJOR_VERSION}.${LIBSYCL_MINOR_VERSION}.${LIBSYCL_PATCH_VERSION}")
-set(LIBSYCL_ABI_NAMESPACE "V${LIBSYCL_MAJOR_VERSION}" CACHE STRING
-    "The inline ABI namespace used by libsycl. It defaults to Vn where `n` is the current ABI version.")
+set(LIBSYCL_ABI_NAMESPACE "__V${LIBSYCL_MAJOR_VERSION}" CACHE STRING
+    "The inline ABI namespace used by libsycl. It defaults to __Vn where `n` is the current ABI version.")
+if (NOT LIBSYCL_ABI_NAMESPACE MATCHES "__V.*")
+   message(FATAL_ERROR "LIBSYCL_ABI_NAMESPACE must be a reserved identifier, got '${LIBSYCL_ABI_NAMESPACE}'.")
+endif()
 
 #===============================================================================
 # Setup build & install rules
