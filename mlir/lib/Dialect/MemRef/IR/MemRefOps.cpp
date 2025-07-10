@@ -2422,7 +2422,11 @@ computeCollapsedLayoutMap(MemRefType srcType,
     ArrayRef<int64_t> ref = llvm::ArrayRef(reassoc);
     while (srcShape[ref.back()] == 1 && ref.size() > 1)
       ref = ref.drop_back();
-    if (ShapedType::isStatic(srcShape[ref.back()]) || ref.size() == 1) {
+    auto precedingRef = ref.drop_back();
+    bool allUnitPreceding = llvm::all_of(
+        precedingRef, [&srcShape](int idx) { return srcShape[idx] == 1; });
+    if (ShapedType::isStatic(srcShape[ref.back()]) || ref.size() == 1 ||
+        allUnitPreceding) {
       resultStrides.push_back(srcStrides[ref.back()]);
     } else {
       // Dynamically-sized dims may turn out to be dims of size 1 at runtime, so
