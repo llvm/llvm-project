@@ -82,7 +82,7 @@ MCFixupKindInfo RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
       {"fixup_riscv_qc_e_branch", 0, 48, 0},
       {"fixup_riscv_qc_e_32", 16, 32, 0},
-      {"fixup_riscv_qc_abs20_u", 12, 20, 0},
+      {"fixup_riscv_qc_abs20_u", 0, 32, 0},
       {"fixup_riscv_qc_e_call_plt", 0, 48, 0},
 
       // Andes fixups
@@ -584,7 +584,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case RISCV::fixup_riscv_qc_e_32: {
     if (!isInt<32>(Value))
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
-    return ((Value & 0xffffffff) << 16);
+    return Value & 0xffffffffu;
   }
   case RISCV::fixup_riscv_qc_abs20_u: {
     if (!isInt<20>(Value))
