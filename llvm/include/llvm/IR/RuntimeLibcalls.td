@@ -1012,14 +1012,20 @@ defvar CompilerRTOnlyInt128Libcalls = [
   __mulodi4
 ];
 
-defvar DefaultRuntimeLibcallImpls =
-  !listremove(!listremove(AllDefaultRuntimeLibcallImpls,
-                          Int128RTLibcalls),
-                          CompilerRTOnlyInt128Libcalls);
+defvar DefaultRuntimeLibcallImpls_ppcf128 =
+    !filter(entry, AllDefaultRuntimeLibcallImpls,
+            !match(!cast<string>(entry.Provides), "PPCF128"));
 
 defvar DefaultRuntimeLibcallImpls_f128 =
-    !filter(entry, DefaultRuntimeLibcallImpls,
+    !filter(entry, AllDefaultRuntimeLibcallImpls,
             !match(!cast<string>(entry.Provides), "_F128"));
+
+defvar DefaultRuntimeLibcallImpls =
+  !listremove(
+    !listremove(
+        !listremove(AllDefaultRuntimeLibcallImpls, Int128RTLibcalls),
+                    CompilerRTOnlyInt128Libcalls),
+                    DefaultRuntimeLibcallImpls_ppcf128);
 
 defvar DefaultRuntimeLibcallImpls_atomic =
     !filter(entry, DefaultRuntimeLibcallImpls,
@@ -1841,6 +1847,7 @@ def PPCSystemLibrary
            (sub DefaultRuntimeLibcallImpls, memcpy,
                 DefaultRuntimeLibcallImpls_f128),
            __extendkftf2, __trunctfkf2,
+           DefaultRuntimeLibcallImpls_ppcf128,
            LibmF128Libcalls, AIX32Calls, AIX64Calls,
            AvailableIf<memcpy, isNotAIX>,
            LibcallImpls<(add Int128RTLibcalls), isPPC64>)>;
