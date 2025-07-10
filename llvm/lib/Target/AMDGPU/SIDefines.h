@@ -98,6 +98,8 @@ enum : uint64_t {
   // VINTERP instruction format.
   VINTERP = 1 << 29,
 
+  VOPD3 = 1 << 30,
+
   // High bits - other information.
   VM_CNT = UINT64_C(1) << 32,
   EXP_CNT = UINT64_C(1) << 33,

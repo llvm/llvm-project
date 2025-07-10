@@ -1482,6 +1482,8 @@ public:
 
   bool hasGFX1250Insts() const { return GFX1250Insts; }
 
+  bool hasVOPD3() const { return GFX1250Insts; }
+
   // \returns true if target has S_SETPRIO_INC_WG instruction.
   bool hasSetPrioIncWgInst() const { return HasSetPrioIncWgInst; }
 
