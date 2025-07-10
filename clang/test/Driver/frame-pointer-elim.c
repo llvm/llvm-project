@@ -4,6 +4,8 @@
 // KEEP-NON-LEAF: "-mframe-pointer=non-leaf"
 // KEEP-NONE-NOT: warning: argument unused
 // KEEP-NONE:     "-mframe-pointer=none"
+// KEEP-RESERVED-NOT: warning: argument unused
+// KEEP-RESERVED: "-mframe-pointer=reserved"
 
 // On Linux x86, omit frame pointer when optimization is enabled.
 // RUN: %clang -### --target=i386-linux -S -fomit-frame-pointer %s 2>&1 | \
@@ -214,6 +216,10 @@
 // RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
 // RUN: %clang -### --target=aarch64-none-elf -S -O1 -fno-omit-frame-pointer %s 2>&1 |  \
 // RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
+
+// AArch64 Windows requires that the frame pointer be reserved
+// RUN: %clang -### --target=aarch64-pc-windows-msvc -S -fomit-frame-pointer %s 2>&1 |  \
+// RUN:   FileCheck --check-prefix=KEEP-RESERVED %s
 
 void f0() {}
 void f1() { f0(); }

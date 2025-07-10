@@ -3798,6 +3798,17 @@ Trivially relocates ``count`` objects of relocatable, complete type ``T``
 from ``src`` to ``dest`` and returns ``dest``.
 This builtin is used to implement ``std::trivially_relocate``.
 
+``__builtin_invoke``
+--------------------
+
+**Syntax**:
+
+.. code-block:: c++
+
+  template <class Callee, class... Args>
+  decltype(auto) __builtin_invoke(Callee&& callee, Args&&... args);
+
+``__builtin_invoke`` is equivalent to ``std::invoke``.
 
 ``__builtin_preserve_access_index``
 -----------------------------------

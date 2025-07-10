@@ -139,7 +139,7 @@ struct Srp {
 // CHECK-A64-NEXT:    [[S:%.*]] = alloca [[STRUCT_SRP:%.*]], align 8
 // CHECK-A64-NEXT:    store [2 x ptr] [[S_COERCE]], ptr [[S]], align 8
 // CHECK-A64-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_SRP]], ptr [[S]], i32 0, i32 0
-// CHECK-A64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X]], align 8
+// CHECK-A64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X]], align 8, !nonnull [[META2:![0-9]+]], !align [[META3:![0-9]+]]
 // CHECK-A64-NEXT:    store i32 1, ptr [[TMP0]], align 4
 // CHECK-A64-NEXT:    ret void
 //
@@ -149,7 +149,7 @@ struct Srp {
 // CHECK-A64_32-NEXT:    [[S:%.*]] = alloca [[STRUCT_SRP:%.*]], align 4
 // CHECK-A64_32-NEXT:    store i64 [[S_COERCE]], ptr [[S]], align 4
 // CHECK-A64_32-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_SRP]], ptr [[S]], i32 0, i32 0
-// CHECK-A64_32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X]], align 4
+// CHECK-A64_32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X]], align 4, !nonnull [[META2:![0-9]+]], !align [[META3:![0-9]+]]
 // CHECK-A64_32-NEXT:    store i32 1, ptr [[TMP0]], align 4
 // CHECK-A64_32-NEXT:    ret void
 //
@@ -618,3 +618,180 @@ struct SpSempty {
 // CHECK-A64_32-NEXT:    ret void
 //
 void TpSempty(SpSempty s) { *s.x = 1; }
+
+
+struct Spaddrspace {
+    __attribute__((address_space(100))) int *x;
+};
+// CHECK-A64-LABEL: define dso_local void @_Z11Tpaddrspace11Spaddrspace(
+// CHECK-A64-SAME: i64 [[S_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-A64-NEXT:  [[ENTRY:.*:]]
+// CHECK-A64-NEXT:    [[S:%.*]] = alloca [[STRUCT_SPADDRSPACE:%.*]], align 8
+// CHECK-A64-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SPADDRSPACE]], ptr [[S]], i32 0, i32 0
+// CHECK-A64-NEXT:    [[COERCE_VAL_IP:%.*]] = inttoptr i64 [[S_COERCE]] to ptr addrspace(100)
+// CHECK-A64-NEXT:    store ptr addrspace(100) [[COERCE_VAL_IP]], ptr [[COERCE_DIVE]], align 8
+// CHECK-A64-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_SPADDRSPACE]], ptr [[S]], i32 0, i32 0
+// CHECK-A64-NEXT:    [[TMP0:%.*]] = load ptr addrspace(100), ptr [[X]], align 8
+// CHECK-A64-NEXT:    store i32 1, ptr addrspace(100) [[TMP0]], align 4
+// CHECK-A64-NEXT:    ret void
+//
+// CHECK-A64_32-LABEL: define void @_Z11Tpaddrspace11Spaddrspace(
+// CHECK-A64_32-SAME: i64 [[S_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-A64_32-NEXT:  [[ENTRY:.*:]]
+// CHECK-A64_32-NEXT:    [[S:%.*]] = alloca [[STRUCT_SPADDRSPACE:%.*]], align 4
+// CHECK-A64_32-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SPADDRSPACE]], ptr [[S]], i32 0, i32 0
+// CHECK-A64_32-NEXT:    [[COERCE_VAL_II:%.*]] = trunc i64 [[S_COERCE]] to i32
+// CHECK-A64_32-NEXT:    store i32 [[COERCE_VAL_II]], ptr [[COERCE_DIVE]], align 4
+// CHECK-A64_32-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_SPADDRSPACE]], ptr [[S]], i32 0, i32 0
+// CHECK-A64_32-NEXT:    [[TMP0:%.*]] = load ptr addrspace(100), ptr [[X]], align 4
+// CHECK-A64_32-NEXT:    store i32 1, ptr addrspace(100) [[TMP0]], align 4
+// CHECK-A64_32-NEXT:    ret void
+//
+void Tpaddrspace(Spaddrspace s) { *s.x = 1; }
+// CHECK-A64-LABEL: define dso_local void @_Z11Cpaddrspacev(
+// CHECK-A64-SAME: ) #[[ATTR0]] {
+// CHECK-A64-NEXT:  [[ENTRY:.*:]]
+// CHECK-A64-NEXT:    [[S:%.*]] = alloca [[STRUCT_SPADDRSPACE:%.*]], align 8
+// CHECK-A64-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_SPADDRSPACE]], align 8
+// CHECK-A64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP]], ptr align 8 [[S]], i64 8, i1 false)
+// CHECK-A64-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SPADDRSPACE]], ptr [[AGG_TMP]], i32 0, i32 0
+// CHECK-A64-NEXT:    [[TMP0:%.*]] = load ptr addrspace(100), ptr [[COERCE_DIVE]], align 8
+// CHECK-A64-NEXT:    [[COERCE_VAL_PI:%.*]] = ptrtoint ptr addrspace(100) [[TMP0]] to i64
+// CHECK-A64-NEXT:    call void @_Z11Tpaddrspace11Spaddrspace(i64 [[COERCE_VAL_PI]])
+// CHECK-A64-NEXT:    ret void
+//
+// CHECK-A64_32-LABEL: define void @_Z11Cpaddrspacev(
+// CHECK-A64_32-SAME: ) #[[ATTR0]] {
+// CHECK-A64_32-NEXT:  [[ENTRY:.*:]]
+// CHECK-A64_32-NEXT:    [[S:%.*]] = alloca [[STRUCT_SPADDRSPACE:%.*]], align 4
+// CHECK-A64_32-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_SPADDRSPACE]], align 4
+// CHECK-A64_32-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_TMP]], ptr align 4 [[S]], i32 4, i1 false)
+// CHECK-A64_32-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SPADDRSPACE]], ptr [[AGG_TMP]], i32 0, i32 0
+// CHECK-A64_32-NEXT:    [[TMP0:%.*]] = load ptr addrspace(100), ptr [[COERCE_DIVE]], align 4
+// CHECK-A64_32-NEXT:    [[COERCE_VAL_PI:%.*]] = ptrtoint ptr addrspace(100) [[TMP0]] to i32
+// CHECK-A64_32-NEXT:    [[COERCE_VAL_II:%.*]] = zext i32 [[COERCE_VAL_PI]] to i64
+// CHECK-A64_32-NEXT:    call void @_Z11Tpaddrspace11Spaddrspace(i64 [[COERCE_VAL_II]])
+// CHECK-A64_32-NEXT:    ret void
+//
+void Cpaddrspace() { Spaddrspace s; Tpaddrspace(s); }
+
+struct Sp2addrspace {
+    __attribute__((address_space(100))) int *x[2];
+};
+// CHECK-A64-LABEL: define dso_local void @_Z12Tp2addrspace12Sp2addrspace(
+// CHECK-A64-SAME: [2 x i64] [[S_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-A64-NEXT:  [[ENTRY:.*:]]
+// CHECK-A64-NEXT:    [[S:%.*]] = alloca [[STRUCT_SP2ADDRSPACE:%.*]], align 8
+// CHECK-A64-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SP2ADDRSPACE]], ptr [[S]], i32 0, i32 0
+// CHECK-A64-NEXT:    store [2 x i64] [[S_COERCE]], ptr [[COERCE_DIVE]], align 8
+// CHECK-A64-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_SP2ADDRSPACE]], ptr [[S]], i32 0, i32 0
+// CHECK-A64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x ptr addrspace(100)], ptr [[X]], i64 0, i64 0
+// CHECK-A64-NEXT:    [[TMP0:%.*]] = load ptr addrspace(100), ptr [[ARRAYIDX]], align 8
+// CHECK-A64-NEXT:    store i32 1, ptr addrspace(100) [[TMP0]], align 4
+// CHECK-A64-NEXT:    ret void
+//
+// CHECK-A64_32-LABEL: define void @_Z12Tp2addrspace12Sp2addrspace(
+// CHECK-A64_32-SAME: i64 [[S_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-A64_32-NEXT:  [[ENTRY:.*:]]
+// CHECK-A64_32-NEXT:    [[S:%.*]] = alloca [[STRUCT_SP2ADDRSPACE:%.*]], align 4
+// CHECK-A64_32-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SP2ADDRSPACE]], ptr [[S]], i32 0, i32 0
+// CHECK-A64_32-NEXT:    store i64 [[S_COERCE]], ptr [[COERCE_DIVE]], align 4
+// CHECK-A64_32-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_SP2ADDRSPACE]], ptr [[S]], i32 0, i32 0
+// CHECK-A64_32-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x ptr addrspace(100)], ptr [[X]], i32 0, i32 0
+// CHECK-A64_32-NEXT:    [[TMP0:%.*]] = load ptr addrspace(100), ptr [[ARRAYIDX]], align 4
+// CHECK-A64_32-NEXT:    store i32 1, ptr addrspace(100) [[TMP0]], align 4
+// CHECK-A64_32-NEXT:    ret void
+//
+void Tp2addrspace(Sp2addrspace s) { *s.x[0] = 1; }
+// CHECK-A64-LABEL: define dso_local void @_Z12Cp2addrspacev(
+// CHECK-A64-SAME: ) #[[ATTR0]] {
+// CHECK-A64-NEXT:  [[ENTRY:.*:]]
+// CHECK-A64-NEXT:    [[S:%.*]] = alloca [[STRUCT_SP2ADDRSPACE:%.*]], align 8
+// CHECK-A64-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_SP2ADDRSPACE]], align 8
+// CHECK-A64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP]], ptr align 8 [[S]], i64 16, i1 false)
+// CHECK-A64-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SP2ADDRSPACE]], ptr [[AGG_TMP]], i32 0, i32 0
+// CHECK-A64-NEXT:    [[TMP0:%.*]] = load [2 x i64], ptr [[COERCE_DIVE]], align 8
+// CHECK-A64-NEXT:    call void @_Z12Tp2addrspace12Sp2addrspace([2 x i64] [[TMP0]])
+// CHECK-A64-NEXT:    ret void
+//
+// CHECK-A64_32-LABEL: define void @_Z12Cp2addrspacev(
+// CHECK-A64_32-SAME: ) #[[ATTR0]] {
+// CHECK-A64_32-NEXT:  [[ENTRY:.*:]]
+// CHECK-A64_32-NEXT:    [[S:%.*]] = alloca [[STRUCT_SP2ADDRSPACE:%.*]], align 4
+// CHECK-A64_32-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_SP2ADDRSPACE]], align 4
+// CHECK-A64_32-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_TMP]], ptr align 4 [[S]], i32 8, i1 false)
+// CHECK-A64_32-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SP2ADDRSPACE]], ptr [[AGG_TMP]], i32 0, i32 0
+// CHECK-A64_32-NEXT:    [[TMP0:%.*]] = load i64, ptr [[COERCE_DIVE]], align 4
+// CHECK-A64_32-NEXT:    call void @_Z12Tp2addrspace12Sp2addrspace(i64 [[TMP0]])
+// CHECK-A64_32-NEXT:    ret void
+//
+void Cp2addrspace() { Sp2addrspace s; Tp2addrspace(s); }
+
+struct Sraddrspace {
+    __attribute__((address_space(100))) int &x;
+};
+// CHECK-A64-LABEL: define dso_local void @_Z11Traddrspace11Sraddrspace(
+// CHECK-A64-SAME: i64 [[S_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-A64-NEXT:  [[ENTRY:.*:]]
+// CHECK-A64-NEXT:    [[S:%.*]] = alloca [[STRUCT_SRADDRSPACE:%.*]], align 8
+// CHECK-A64-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SRADDRSPACE]], ptr [[S]], i32 0, i32 0
+// CHECK-A64-NEXT:    [[COERCE_VAL_IP:%.*]] = inttoptr i64 [[S_COERCE]] to ptr addrspace(100)
+// CHECK-A64-NEXT:    store ptr addrspace(100) [[COERCE_VAL_IP]], ptr [[COERCE_DIVE]], align 8
+// CHECK-A64-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_SRADDRSPACE]], ptr [[S]], i32 0, i32 0
+// CHECK-A64-NEXT:    [[TMP0:%.*]] = load ptr addrspace(100), ptr [[X]], align 8, !align [[META3]]
+// CHECK-A64-NEXT:    store i32 1, ptr addrspace(100) [[TMP0]], align 4
+// CHECK-A64-NEXT:    ret void
+//
+// CHECK-A64_32-LABEL: define void @_Z11Traddrspace11Sraddrspace(
+// CHECK-A64_32-SAME: i64 [[S_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-A64_32-NEXT:  [[ENTRY:.*:]]
+// CHECK-A64_32-NEXT:    [[S:%.*]] = alloca [[STRUCT_SRADDRSPACE:%.*]], align 4
+// CHECK-A64_32-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SRADDRSPACE]], ptr [[S]], i32 0, i32 0
+// CHECK-A64_32-NEXT:    [[COERCE_VAL_II:%.*]] = trunc i64 [[S_COERCE]] to i32
+// CHECK-A64_32-NEXT:    store i32 [[COERCE_VAL_II]], ptr [[COERCE_DIVE]], align 4
+// CHECK-A64_32-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_SRADDRSPACE]], ptr [[S]], i32 0, i32 0
+// CHECK-A64_32-NEXT:    [[TMP0:%.*]] = load ptr addrspace(100), ptr [[X]], align 4, !align [[META3]]
+// CHECK-A64_32-NEXT:    store i32 1, ptr addrspace(100) [[TMP0]], align 4
+// CHECK-A64_32-NEXT:    ret void
+//
+void Traddrspace(Sraddrspace s) { s.x = 1; }
+// CHECK-A64-LABEL: define dso_local void @_Z11Craddrspace11Sraddrspace(
+// CHECK-A64-SAME: i64 [[S_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-A64-NEXT:  [[ENTRY:.*:]]
+// CHECK-A64-NEXT:    [[S:%.*]] = alloca [[STRUCT_SRADDRSPACE:%.*]], align 8
+// CHECK-A64-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_SRADDRSPACE]], align 8
+// CHECK-A64-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SRADDRSPACE]], ptr [[S]], i32 0, i32 0
+// CHECK-A64-NEXT:    [[COERCE_VAL_IP:%.*]] = inttoptr i64 [[S_COERCE]] to ptr addrspace(100)
+// CHECK-A64-NEXT:    store ptr addrspace(100) [[COERCE_VAL_IP]], ptr [[COERCE_DIVE]], align 8
+// CHECK-A64-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP]], ptr align 8 [[S]], i64 8, i1 false)
+// CHECK-A64-NEXT:    [[COERCE_DIVE1:%.*]] = getelementptr inbounds nuw [[STRUCT_SRADDRSPACE]], ptr [[AGG_TMP]], i32 0, i32 0
+// CHECK-A64-NEXT:    [[TMP0:%.*]] = load ptr addrspace(100), ptr [[COERCE_DIVE1]], align 8
+// CHECK-A64-NEXT:    [[COERCE_VAL_PI:%.*]] = ptrtoint ptr addrspace(100) [[TMP0]] to i64
+// CHECK-A64-NEXT:    call void @_Z11Traddrspace11Sraddrspace(i64 [[COERCE_VAL_PI]])
+// CHECK-A64-NEXT:    ret void
+//
+// CHECK-A64_32-LABEL: define void @_Z11Craddrspace11Sraddrspace(
+// CHECK-A64_32-SAME: i64 [[S_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-A64_32-NEXT:  [[ENTRY:.*:]]
+// CHECK-A64_32-NEXT:    [[S:%.*]] = alloca [[STRUCT_SRADDRSPACE:%.*]], align 4
+// CHECK-A64_32-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_SRADDRSPACE]], align 4
+// CHECK-A64_32-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SRADDRSPACE]], ptr [[S]], i32 0, i32 0
+// CHECK-A64_32-NEXT:    [[COERCE_VAL_II:%.*]] = trunc i64 [[S_COERCE]] to i32
+// CHECK-A64_32-NEXT:    store i32 [[COERCE_VAL_II]], ptr [[COERCE_DIVE]], align 4
+// CHECK-A64_32-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_TMP]], ptr align 4 [[S]], i32 4, i1 false)
+// CHECK-A64_32-NEXT:    [[COERCE_DIVE1:%.*]] = getelementptr inbounds nuw [[STRUCT_SRADDRSPACE]], ptr [[AGG_TMP]], i32 0, i32 0
+// CHECK-A64_32-NEXT:    [[TMP0:%.*]] = load ptr addrspace(100), ptr [[COERCE_DIVE1]], align 4
+// CHECK-A64_32-NEXT:    [[COERCE_VAL_PI:%.*]] = ptrtoint ptr addrspace(100) [[TMP0]] to i32
+// CHECK-A64_32-NEXT:    [[COERCE_VAL_II2:%.*]] = zext i32 [[COERCE_VAL_PI]] to i64
+// CHECK-A64_32-NEXT:    call void @_Z11Traddrspace11Sraddrspace(i64 [[COERCE_VAL_II2]])
+// CHECK-A64_32-NEXT:    ret void
+//
+void Craddrspace(Sraddrspace s) { Traddrspace(s); }
+
+//.
+// CHECK-A64: [[META2]] = !{}
+// CHECK-A64: [[META3]] = !{i64 4}
+//.
+// CHECK-A64_32: [[META2]] = !{}
+// CHECK-A64_32: [[META3]] = !{i64 4}
+//.

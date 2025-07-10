@@ -219,7 +219,7 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
       const mlir::Value vector =
           builder.createLoad(loc, dst.getVectorAddress());
       const mlir::Value newVector = builder.create<cir::VecInsertOp>(
-          loc, vector, src.getScalarVal(), dst.getVectorIdx());
+          loc, vector, src.getValue(), dst.getVectorIdx());
       builder.createStore(loc, newVector, dst.getVectorAddress());
       return;
     }
@@ -232,7 +232,7 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
   assert(!cir::MissingFeatures::opLoadStoreObjC());
 
   assert(src.isScalar() && "Can't emit an aggregate store with this method");
-  emitStoreOfScalar(src.getScalarVal(), dst, isInit);
+  emitStoreOfScalar(src.getValue(), dst, isInit);
 }
 
 static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
@@ -326,13 +326,62 @@ mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
   return {};
 }
 
+RValue CIRGenFunction::emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc) {
+  const CIRGenBitFieldInfo &info = lv.getBitFieldInfo();
+
+  // Get the output type.
+  mlir::Type resLTy = convertType(lv.getType());
+  Address ptr = lv.getBitFieldAddress();
+
+  assert(!cir::MissingFeatures::armComputeVolatileBitfields());
+
+  mlir::Value field = builder.createGetBitfield(
+      getLoc(loc), resLTy, ptr.getPointer(), ptr.getElementType(), info,
+      lv.isVolatile(), false);
+  assert(!cir::MissingFeatures::opLoadEmitScalarRangeCheck() && "NYI");
+  return RValue::get(field);
+}
+
+Address CIRGenFunction::getAddrOfBitFieldStorage(LValue base,
+                                                 const FieldDecl *field,
+                                                 mlir::Type fieldType,
+                                                 unsigned index) {
+  mlir::Location loc = getLoc(field->getLocation());
+  cir::PointerType fieldPtr = cir::PointerType::get(fieldType);
+  cir::GetMemberOp sea = getBuilder().createGetMember(
+      loc, fieldPtr, base.getPointer(), field->getName(), index);
+  return Address(sea, CharUnits::One());
+}
+
+LValue CIRGenFunction::emitLValueForBitField(LValue base,
+                                             const FieldDecl *field) {
+  LValueBaseInfo baseInfo = base.getBaseInfo();
+  const CIRGenRecordLayout &layout =
+      cgm.getTypes().getCIRGenRecordLayout(field->getParent());
+  const CIRGenBitFieldInfo &info = layout.getBitFieldInfo(field);
+  assert(!cir::MissingFeatures::armComputeVolatileBitfields());
+  assert(!cir::MissingFeatures::preservedAccessIndexRegion());
+  unsigned idx = layout.getCIRFieldNo(field);
+
+  Address addr = getAddrOfBitFieldStorage(base, field, info.storageType, idx);
+
+  mlir::Location loc = getLoc(field->getLocation());
+  if (addr.getElementType() != info.storageType)
+    addr = builder.createElementBitCast(loc, addr, info.storageType);
+
+  QualType fieldType =
+      field->getType().withCVRQualifiers(base.getVRQualifiers());
+  // TODO(cir): Support TBAA for bit fields.
+  assert(!cir::MissingFeatures::opTBAA());
+  LValueBaseInfo fieldBaseInfo(baseInfo.getAlignmentSource());
+  return LValue::makeBitfield(addr, info, fieldType, fieldBaseInfo);
+}
+
 LValue CIRGenFunction::emitLValueForField(LValue base, const FieldDecl *field) {
   LValueBaseInfo baseInfo = base.getBaseInfo();
 
-  if (field->isBitField()) {
-    cgm.errorNYI(field->getSourceRange(), "emitLValueForField: bitfield");
-    return LValue();
-  }
+  if (field->isBitField())
+    return emitLValueForBitField(base, field);
 
   QualType fieldType = field->getType();
   const RecordDecl *rec = field->getParent();
@@ -390,6 +439,34 @@ LValue CIRGenFunction::emitLValueForField(LValue base, const FieldDecl *field) {
   return lv;
 }
 
+LValue CIRGenFunction::emitLValueForFieldInitialization(
+    LValue base, const clang::FieldDecl *field, llvm::StringRef fieldName) {
+  QualType fieldType = field->getType();
+
+  if (!fieldType->isReferenceType())
+    return emitLValueForField(base, field);
+
+  const CIRGenRecordLayout &layout =
+      cgm.getTypes().getCIRGenRecordLayout(field->getParent());
+  unsigned fieldIndex = layout.getCIRFieldNo(field);
+
+  Address v =
+      emitAddrOfFieldStorage(base.getAddress(), field, fieldName, fieldIndex);
+
+  // Make sure that the address is pointing to the right type.
+  mlir::Type memTy = convertTypeForMem(fieldType);
+  v = builder.createElementBitCast(getLoc(field->getSourceRange()), v, memTy);
+
+  // TODO: Generate TBAA information that describes this access as a structure
+  // member access and not just an access to an object of the field's type. This
+  // should be similar to what we do in EmitLValueForField().
+  LValueBaseInfo baseInfo = base.getBaseInfo();
+  AlignmentSource fieldAlignSource = baseInfo.getAlignmentSource();
+  LValueBaseInfo fieldBaseInfo(getFieldAlignmentSource(fieldAlignSource));
+  assert(!cir::MissingFeatures::opTBAA());
+  return makeAddrLValue(v, fieldType, fieldBaseInfo);
+}
+
 mlir::Value CIRGenFunction::emitToMemory(mlir::Value value, QualType ty) {
   // Bool has a different representation in memory than in registers,
   // but in ClangIR, it is simply represented as a cir.bool value.
@@ -431,6 +508,9 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(LValue lvalue,
 RValue CIRGenFunction::emitLoadOfLValue(LValue lv, SourceLocation loc) {
   assert(!lv.getType()->isFunctionType());
   assert(!(lv.getType()->isConstantMatrixType()) && "not implemented");
+
+  if (lv.isBitField())
+    return emitLoadOfBitfieldLValue(lv, loc);
 
   if (lv.isSimple())
     return RValue::get(emitLoadOfScalar(lv, loc));
@@ -949,7 +1029,7 @@ LValue CIRGenFunction::emitCallExprLValue(const CallExpr *e) {
          "Can't have a scalar return unless the return type is a "
          "reference type!");
 
-  return makeNaturalAlignPointeeAddrLValue(rv.getScalarVal(), e->getType());
+  return makeNaturalAlignPointeeAddrLValue(rv.getValue(), e->getType());
 }
 
 LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
@@ -997,10 +1077,9 @@ LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
   }
 
   case cir::TEK_Complex: {
-    assert(!cir::MissingFeatures::complexType());
-    cgm.errorNYI(e->getSourceRange(), "complex l-values");
-    return {};
+    return emitComplexAssignmentLValue(e);
   }
+
   case cir::TEK_Aggregate:
     cgm.errorNYI(e->getSourceRange(), "aggregate lvalues");
     return {};
@@ -1010,16 +1089,19 @@ LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
 
 /// Emit code to compute the specified expression which
 /// can have any type.  The result is returned as an RValue struct.
-RValue CIRGenFunction::emitAnyExpr(const Expr *e) {
+RValue CIRGenFunction::emitAnyExpr(const Expr *e, AggValueSlot aggSlot) {
   switch (CIRGenFunction::getEvaluationKind(e->getType())) {
   case cir::TEK_Scalar:
     return RValue::get(emitScalarExpr(e));
   case cir::TEK_Complex:
-    cgm.errorNYI(e->getSourceRange(), "emitAnyExpr: complex type");
-    return RValue::get(nullptr);
-  case cir::TEK_Aggregate:
-    cgm.errorNYI(e->getSourceRange(), "emitAnyExpr: aggregate type");
-    return RValue::get(nullptr);
+    return RValue::getComplex(emitComplexExpr(e));
+  case cir::TEK_Aggregate: {
+    if (aggSlot.isIgnored())
+      aggSlot = createAggTemp(e->getType(), getLoc(e->getSourceRange()),
+                              getCounterAggTmpAsString());
+    emitAggExpr(e, aggSlot);
+    return aggSlot.asRValue();
+  }
   }
   llvm_unreachable("bad evaluation kind");
 }
@@ -1052,7 +1134,8 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
 
     bool isPredefinedLibFunction =
         cgm.getASTContext().BuiltinInfo.isPredefinedLibFunction(builtinID);
-    bool hasAttributeNoBuiltin = false;
+    // Assume nobuiltins everywhere until we actually read the attributes.
+    bool hasAttributeNoBuiltin = true;
     assert(!cir::MissingFeatures::attributeNoBuiltin());
 
     // When directing calling an inline builtin, call it through it's mangled
@@ -1259,6 +1342,23 @@ Address CIRGenFunction::emitArrayToPointerDecay(const Expr *e) {
       cgm.getLoc(e->getSourceRange()), addr.getPointer(),
       convertTypeForMem(eltType));
   return Address(ptr, addr.getAlignment());
+}
+
+/// Given the address of a temporary variable, produce an r-value of its type.
+RValue CIRGenFunction::convertTempToRValue(Address addr, clang::QualType type,
+                                           clang::SourceLocation loc) {
+  LValue lvalue = makeAddrLValue(addr, type, AlignmentSource::Decl);
+  switch (getEvaluationKind(type)) {
+  case cir::TEK_Complex:
+    cgm.errorNYI(loc, "convertTempToRValue: complex type");
+    return RValue::get(nullptr);
+  case cir::TEK_Aggregate:
+    cgm.errorNYI(loc, "convertTempToRValue: aggregate type");
+    return RValue::get(nullptr);
+  case cir::TEK_Scalar:
+    return RValue::get(emitLoadOfScalar(lvalue, loc));
+  }
+  llvm_unreachable("bad evaluation kind");
 }
 
 /// Emit an `if` on a boolean condition, filling `then` and `else` into
@@ -1473,6 +1573,10 @@ void CIRGenFunction::emitCXXConstructExpr(const CXXConstructExpr *e,
     type = Ctor_Complete;
     break;
   case CXXConstructionKind::Delegating:
+    // We should be emitting a constructor; GlobalDecl will assert this
+    type = curGD.getCtorType();
+    delegating = true;
+    break;
   case CXXConstructionKind::VirtualBase:
   case CXXConstructionKind::NonVirtualBase:
     cgm.errorNYI(e->getSourceRange(),
@@ -1663,4 +1767,15 @@ mlir::Value CIRGenFunction::emitScalarConstant(
     return {};
   }
   return builder.getConstant(getLoc(e->getSourceRange()), constant.getValue());
+}
+
+/// An LValue is a candidate for having its loads and stores be made atomic if
+/// we are operating under /volatile:ms *and* the LValue itself is volatile and
+/// performing such an operation can be performed without a libcall.
+bool CIRGenFunction::isLValueSuitableForInlineAtomic(LValue lv) {
+  if (!cgm.getLangOpts().MSVolatile)
+    return false;
+
+  cgm.errorNYI("LValueSuitableForInlineAtomic LangOpts MSVolatile");
+  return false;
 }

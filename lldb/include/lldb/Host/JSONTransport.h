@@ -51,17 +51,17 @@ public:
   }
 };
 
-class TransportClosedError : public llvm::ErrorInfo<TransportClosedError> {
+class TransportInvalidError : public llvm::ErrorInfo<TransportInvalidError> {
 public:
   static char ID;
 
-  TransportClosedError() = default;
+  TransportInvalidError() = default;
 
   void log(llvm::raw_ostream &OS) const override {
-    OS << "transport is closed";
+    OS << "transport IO object invalid";
   }
   std::error_code convertToErrorCode() const override {
-    return llvm::inconvertibleErrorCode();
+    return std::make_error_code(std::errc::not_connected);
   }
 };
 
@@ -119,6 +119,21 @@ protected:
   static constexpr llvm::StringLiteral kHeaderContentLength =
       "Content-Length: ";
   static constexpr llvm::StringLiteral kHeaderSeparator = "\r\n\r\n";
+};
+
+/// A transport class for JSON RPC.
+class JSONRPCTransport : public JSONTransport {
+public:
+  JSONRPCTransport(lldb::IOObjectSP input, lldb::IOObjectSP output)
+      : JSONTransport(input, output) {}
+  virtual ~JSONRPCTransport() = default;
+
+protected:
+  virtual llvm::Error WriteImpl(const std::string &message) override;
+  virtual llvm::Expected<std::string>
+  ReadImpl(const std::chrono::microseconds &timeout) override;
+
+  static constexpr llvm::StringLiteral kMessageSeparator = "\n";
 };
 
 } // namespace lldb_private

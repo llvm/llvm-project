@@ -1323,6 +1323,14 @@ m_NSWAdd(const LHS &L, const RHS &R) {
                                                                             R);
 }
 template <typename LHS, typename RHS>
+inline OverflowingBinaryOp_match<LHS, RHS, Instruction::Add,
+                                 OverflowingBinaryOperator::NoSignedWrap, true>
+m_c_NSWAdd(const LHS &L, const RHS &R) {
+  return OverflowingBinaryOp_match<LHS, RHS, Instruction::Add,
+                                   OverflowingBinaryOperator::NoSignedWrap,
+                                   true>(L, R);
+}
+template <typename LHS, typename RHS>
 inline OverflowingBinaryOp_match<LHS, RHS, Instruction::Sub,
                                  OverflowingBinaryOperator::NoSignedWrap>
 m_NSWSub(const LHS &L, const RHS &R) {
@@ -2109,6 +2117,13 @@ template <typename OpTy>
 inline CastOperator_match<OpTy, Instruction::IntToPtr>
 m_IntToPtr(const OpTy &Op) {
   return CastOperator_match<OpTy, Instruction::IntToPtr>(Op);
+}
+
+/// Matches any cast or self. Used to ignore casts.
+template <typename OpTy>
+inline match_combine_or<CastInst_match<OpTy, CastInst>, OpTy>
+m_CastOrSelf(const OpTy &Op) {
+  return m_CombineOr(CastInst_match<OpTy, CastInst>(Op), Op);
 }
 
 /// Matches Trunc.

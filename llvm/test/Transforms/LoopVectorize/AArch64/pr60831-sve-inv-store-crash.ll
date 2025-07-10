@@ -9,15 +9,15 @@ define void @test_invar_gep(ptr %dst) #0 {
 ; CHECK-LABEL: @test_invar_gep(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -32,7 +32,7 @@ define void @test_invar_gep(ptr %dst) #0 {
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP16:%.*]] = mul i32 [[TMP15]], 4
+; CHECK-NEXT:    [[TMP16:%.*]] = mul nuw i32 [[TMP15]], 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = sub i32 [[TMP16]], 1
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <vscale x 4 x i64> [[TMP9]], i32 [[TMP17]]
 ; CHECK-NEXT:    store i64 [[TMP18]], ptr [[TMP14:%.*]], align 1

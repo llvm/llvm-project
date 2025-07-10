@@ -112,7 +112,7 @@ def SPIRV_KHRCooperativeMatrixLoadOp : SPIRV_KhrVendorOp<"CooperativeMatrixLoad"
   }];
 
   let assemblyFormat = [{
-    $pointer `,` $stride `,` $matrix_layout ( `,` $memory_operand^ )? attr-dict `:`
+    $pointer `,` $stride `,` $matrix_layout ( `,` $memory_operand^ )? ( `,` $alignment^ )? attr-dict `:`
       type(operands) `->` type($result)
   }];
 
@@ -123,11 +123,13 @@ def SPIRV_KHRCooperativeMatrixLoadOp : SPIRV_KhrVendorOp<"CooperativeMatrixLoad"
     Capability<[SPIRV_C_CooperativeMatrixKHR]>
   ];
 
+  // TODO: Add scope operand for MakePointer*. See #145485.
   let arguments = (ins
     SPIRV_AnyPtr:$pointer,
     SPIRV_KHR_CooperativeMatrixLayoutAttr:$matrix_layout,
     SPIRV_Integer:$stride,
-    OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_operand
+    OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_operand,
+    OptionalAttr<I32Attr>:$alignment
   );
 
   let results = (outs
@@ -139,7 +141,7 @@ def SPIRV_KHRCooperativeMatrixLoadOp : SPIRV_KhrVendorOp<"CooperativeMatrixLoad"
                    "spirv::ConstantOp":$stride,
                    "spirv::CooperativeMatrixLayoutKHR":$layout), [{
       build($_builder, $_state, result, pointer, layout, stride,
-            spirv::MemoryAccessAttr{});
+            spirv::MemoryAccessAttr{}, IntegerAttr{});
     }]>
   ];
 }
@@ -194,7 +196,7 @@ def SPIRV_KHRCooperativeMatrixStoreOp : SPIRV_KhrVendorOp<"CooperativeMatrixStor
   }];
 
   let assemblyFormat = [{
-    $pointer `,` $object `,` $stride `,` $matrix_layout ( `,` $memory_operand^ )? attr-dict `:`
+    $pointer `,` $object `,` $stride `,` $matrix_layout ( `,` $memory_operand^ )? ( `,` $alignment^ )? attr-dict `:`
       type(operands)
   }];
 
@@ -205,12 +207,14 @@ def SPIRV_KHRCooperativeMatrixStoreOp : SPIRV_KhrVendorOp<"CooperativeMatrixStor
     Capability<[SPIRV_C_CooperativeMatrixKHR]>
   ];
 
+  // TODO: Add scope operand for MakePointer*. See #145485.
   let arguments = (ins
     SPIRV_AnyPtr:$pointer,
     SPIRV_AnyCooperativeMatrix:$object,
     SPIRV_KHR_CooperativeMatrixLayoutAttr:$matrix_layout,
     SPIRV_Integer:$stride,
-    OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_operand
+    OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_operand,
+    OptionalAttr<I32Attr>:$alignment
   );
 
   let results = (outs);
@@ -220,7 +224,7 @@ def SPIRV_KHRCooperativeMatrixStoreOp : SPIRV_KhrVendorOp<"CooperativeMatrixStor
                    "spirv::ConstantOp":$stride,
                    "spirv::CooperativeMatrixLayoutKHR":$layout), [{
       build($_builder, $_state, pointer, object, layout, stride,
-            spirv::MemoryAccessAttr{});
+            spirv::MemoryAccessAttr{}, IntegerAttr{});
     }]>
   ];
 }

@@ -71,12 +71,16 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
   BOS.reserveExtraSpace(getSize());
 
   const uint32_t NumParameters = ParametersContainer.size();
-
+  const uint32_t NumSamplers = StaticSamplers.size();
   support::endian::write(BOS, Version, llvm::endianness::little);
   support::endian::write(BOS, NumParameters, llvm::endianness::little);
   support::endian::write(BOS, RootParameterOffset, llvm::endianness::little);
-  support::endian::write(BOS, NumStaticSamplers, llvm::endianness::little);
-  support::endian::write(BOS, StaticSamplersOffset, llvm::endianness::little);
+  support::endian::write(BOS, NumSamplers, llvm::endianness::little);
+  uint32_t SSO = StaticSamplersOffset;
+  if (NumSamplers > 0)
+    SSO = writePlaceholder(BOS);
+  else
+    support::endian::write(BOS, SSO, llvm::endianness::little);
   support::endian::write(BOS, Flags, llvm::endianness::little);
 
   SmallVector<uint32_t> ParamsOffsets;
@@ -133,29 +137,32 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
                                llvm::endianness::little);
         support::endian::write(BOS, Range.RegisterSpace,
                                llvm::endianness::little);
-        support::endian::write(BOS, Range.OffsetInDescriptorsFromTableStart,
-                               llvm::endianness::little);
         if (Version > 1)
           support::endian::write(BOS, Range.Flags, llvm::endianness::little);
+        support::endian::write(BOS, Range.OffsetInDescriptorsFromTableStart,
+                               llvm::endianness::little);
       }
       break;
     }
     }
   }
-  for (const auto &S : StaticSamplers) {
-    support::endian::write(BOS, S.Filter, llvm::endianness::little);
-    support::endian::write(BOS, S.AddressU, llvm::endianness::little);
-    support::endian::write(BOS, S.AddressV, llvm::endianness::little);
-    support::endian::write(BOS, S.AddressW, llvm::endianness::little);
-    support::endian::write(BOS, S.MipLODBias, llvm::endianness::little);
-    support::endian::write(BOS, S.MaxAnisotropy, llvm::endianness::little);
-    support::endian::write(BOS, S.ComparisonFunc, llvm::endianness::little);
-    support::endian::write(BOS, S.BorderColor, llvm::endianness::little);
-    support::endian::write(BOS, S.MinLOD, llvm::endianness::little);
-    support::endian::write(BOS, S.MaxLOD, llvm::endianness::little);
-    support::endian::write(BOS, S.ShaderRegister, llvm::endianness::little);
-    support::endian::write(BOS, S.RegisterSpace, llvm::endianness::little);
-    support::endian::write(BOS, S.ShaderVisibility, llvm::endianness::little);
+  if (NumSamplers > 0) {
+    rewriteOffsetToCurrentByte(BOS, SSO);
+    for (const auto &S : StaticSamplers) {
+      support::endian::write(BOS, S.Filter, llvm::endianness::little);
+      support::endian::write(BOS, S.AddressU, llvm::endianness::little);
+      support::endian::write(BOS, S.AddressV, llvm::endianness::little);
+      support::endian::write(BOS, S.AddressW, llvm::endianness::little);
+      support::endian::write(BOS, S.MipLODBias, llvm::endianness::little);
+      support::endian::write(BOS, S.MaxAnisotropy, llvm::endianness::little);
+      support::endian::write(BOS, S.ComparisonFunc, llvm::endianness::little);
+      support::endian::write(BOS, S.BorderColor, llvm::endianness::little);
+      support::endian::write(BOS, S.MinLOD, llvm::endianness::little);
+      support::endian::write(BOS, S.MaxLOD, llvm::endianness::little);
+      support::endian::write(BOS, S.ShaderRegister, llvm::endianness::little);
+      support::endian::write(BOS, S.RegisterSpace, llvm::endianness::little);
+      support::endian::write(BOS, S.ShaderVisibility, llvm::endianness::little);
+    }
   }
   assert(Storage.size() == getSize());
   OS.write(Storage.data(), Storage.size());

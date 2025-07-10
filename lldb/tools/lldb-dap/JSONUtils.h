@@ -196,24 +196,6 @@ GetStringMap(const llvm::json::Object &obj, llvm::StringRef key);
 void FillResponse(const llvm::json::Object &request,
                   llvm::json::Object &response);
 
-/// Converts a LLDB module to a VS Code DAP module for use in "modules" events.
-///
-/// \param[in] target
-///     A LLDB target object to convert into a JSON value.
-///
-/// \param[in] module
-///     A LLDB module object to convert into a JSON value
-///
-/// \param[in] id_only
-///     Only include the module ID in the JSON value. This is used when sending
-///     a "removed" module event.
-///
-/// \return
-///     A "Module" JSON object with that follows the formal JSON
-///     definition outlined by Microsoft.
-llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module,
-                               bool id_only = false);
-
 /// Create a "Event" JSON object using \a event_name as the event name
 ///
 /// \param[in] event_name
@@ -224,18 +206,6 @@ llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module,
 ///     definition outlined by Microsoft.
 llvm::json::Object CreateEventObject(const llvm::StringRef event_name);
 
-/// Create a "ExceptionBreakpointsFilter" JSON object as described in
-/// the debug adapter definition.
-///
-/// \param[in] bp
-///     The exception breakpoint object to use
-///
-/// \return
-///     A "ExceptionBreakpointsFilter" JSON object with that follows
-///     the formal JSON definition outlined by Microsoft.
-protocol::ExceptionBreakpointsFilter
-CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp);
-
 /// Create a "StackFrame" object for a LLDB frame object.
 ///
 /// This function will fill in the following keys in the returned
@@ -245,6 +215,9 @@ CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp);
 ///   "source" - source file information as a "Source" DAP object
 ///   "line" - the source file line number as an integer
 ///   "column" - the source file column number as an integer
+///
+/// \param[in] dap
+///     The DAP session associated with the stopped thread.
 ///
 /// \param[in] frame
 ///     The LLDB stack frame to use when populating out the "StackFrame"
@@ -257,7 +230,7 @@ CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp);
 /// \return
 ///     A "StackFrame" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
-llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
+llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
                                    lldb::SBFormat &format);
 
 /// Create a "StackFrame" label object for a LLDB thread.

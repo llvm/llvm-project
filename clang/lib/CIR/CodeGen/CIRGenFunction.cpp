@@ -462,21 +462,23 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
 
     startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
 
-    if (isa<CXXDestructorDecl>(funcDecl))
+    if (isa<CXXDestructorDecl>(funcDecl)) {
       getCIRGenModule().errorNYI(bodyRange, "C++ destructor definition");
-    else if (isa<CXXConstructorDecl>(funcDecl))
+    } else if (isa<CXXConstructorDecl>(funcDecl)) {
       emitConstructorBody(args);
-    else if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice &&
-             funcDecl->hasAttr<CUDAGlobalAttr>())
+    } else if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice &&
+               funcDecl->hasAttr<CUDAGlobalAttr>()) {
       getCIRGenModule().errorNYI(bodyRange, "CUDA kernel");
-    else if (isa<CXXMethodDecl>(funcDecl) &&
-             cast<CXXMethodDecl>(funcDecl)->isLambdaStaticInvoker())
+    } else if (isa<CXXMethodDecl>(funcDecl) &&
+               cast<CXXMethodDecl>(funcDecl)->isLambdaStaticInvoker()) {
       getCIRGenModule().errorNYI(bodyRange, "Lambda static invoker");
-    else if (funcDecl->isDefaulted() && isa<CXXMethodDecl>(funcDecl) &&
-             (cast<CXXMethodDecl>(funcDecl)->isCopyAssignmentOperator() ||
-              cast<CXXMethodDecl>(funcDecl)->isMoveAssignmentOperator()))
-      getCIRGenModule().errorNYI(bodyRange, "Default assignment operator");
-    else if (body) {
+    } else if (funcDecl->isDefaulted() && isa<CXXMethodDecl>(funcDecl) &&
+               (cast<CXXMethodDecl>(funcDecl)->isCopyAssignmentOperator() ||
+                cast<CXXMethodDecl>(funcDecl)->isMoveAssignmentOperator())) {
+      // Implicit copy-assignment gets the same special treatment as implicit
+      // copy-constructors.
+      emitImplicitAssignmentOperatorBody(args);
+    } else if (body) {
       if (mlir::failed(emitFunctionBody(body))) {
         fn.erase();
         return nullptr;
@@ -526,14 +528,8 @@ void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
   // TODO: in restricted cases, we can emit the vbase initializers of a
   // complete ctor and then delegate to the base ctor.
 
-  assert(!cir::MissingFeatures::emitCtorPrologue());
-  if (ctor->isDelegatingConstructor()) {
-    // This will be handled in emitCtorPrologue, but we should emit a diagnostic
-    // rather than silently fail to delegate.
-    cgm.errorNYI(ctor->getSourceRange(),
-                 "emitConstructorBody: delegating ctor");
-    return;
-  }
+  // Emit the constructor prologue, i.e. the base and member initializers.
+  emitCtorPrologue(ctor, ctorType, args);
 
   // TODO(cir): propagate this result via mlir::logical result. Just unreachable
   // now just to have it handled.
@@ -554,6 +550,15 @@ LValue CIRGenFunction::makeNaturalAlignPointeeAddrLValue(mlir::Value val,
   assert(!cir::MissingFeatures::opTBAA());
   CharUnits align = cgm.getNaturalTypeAlignment(ty, &baseInfo);
   return makeAddrLValue(Address(val, align), ty, baseInfo);
+}
+
+LValue CIRGenFunction::makeNaturalAlignAddrLValue(mlir::Value val,
+                                                  QualType ty) {
+  LValueBaseInfo baseInfo;
+  CharUnits alignment = cgm.getNaturalTypeAlignment(ty, &baseInfo);
+  Address addr(val, convertTypeForMem(ty), alignment);
+  assert(!cir::MissingFeatures::opTBAA());
+  return makeAddrLValue(addr, ty, baseInfo);
 }
 
 clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
@@ -633,6 +638,17 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::ImplicitCastExprClass:
     return emitCastLValue(cast<CastExpr>(e));
   }
+}
+
+static std::string getVersionedTmpName(llvm::StringRef name, unsigned cnt) {
+  SmallString<256> buffer;
+  llvm::raw_svector_ostream out(buffer);
+  out << name << cnt;
+  return std::string(out.str());
+}
+
+std::string CIRGenFunction::getCounterAggTmpAsString() {
+  return getVersionedTmpName("agg.tmp", counterAggTmp++);
 }
 
 void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,

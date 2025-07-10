@@ -45,6 +45,7 @@ enum {
   GFX940 = 9,
   GFX11 = 10,
   GFX12 = 11,
+  GFX1250 = 12,
 };
 }
 
@@ -106,14 +107,12 @@ enum : uint64_t {
   DisableWQM = UINT64_C(1) << 36,
   Gather4 = UINT64_C(1) << 37,
 
-  // Reserved, must be 0.
-  Reserved0 = UINT64_C(1) << 38,
+  TENSOR_CNT = UINT64_C(1) << 38,
 
   SCALAR_STORE = UINT64_C(1) << 39,
   FIXED_SIZE = UINT64_C(1) << 40,
 
-  // Reserved, must be 0.
-  Reserved1 = UINT64_C(1) << 41,
+  ASYNC_CNT = UINT64_C(1) << 41,
 
   VOP3_OPSEL = UINT64_C(1) << 42,
   maybeAtomic = UINT64_C(1) << 43,
@@ -335,6 +334,7 @@ enum : unsigned {
   INLINE_INTEGER_C_MAX = 208,
   INLINE_FLOATING_C_MIN = 240,
   INLINE_FLOATING_C_MAX = 248,
+  LITERAL64_CONST = 254,
   LITERAL_CONST = 255,
   VGPR_MIN = 256,
   VGPR_MAX = 511,

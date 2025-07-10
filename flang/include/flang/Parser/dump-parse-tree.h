@@ -565,6 +565,7 @@ public:
   NODE_ENUM(OmpDependenceType, Value)
   NODE(parser, OmpTaskDependenceType)
   NODE_ENUM(OmpTaskDependenceType, Value)
+  NODE(parser, OmpIndirectClause)
   NODE(parser, OmpIterationOffset)
   NODE(parser, OmpIteration)
   NODE(parser, OmpIterationVector)

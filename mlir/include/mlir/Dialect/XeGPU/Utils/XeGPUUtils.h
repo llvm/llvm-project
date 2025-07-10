@@ -26,6 +26,9 @@ class TensorDescType;
 
 namespace xegpu {
 
+/// Flatten a set of ValueRange into a single SmallVector<Value>
+SmallVector<Value> flattenValues(ArrayRef<ValueRange> values);
+
 /// If tensor descriptor has a layout attribute it is used in SIMT mode.
 /// In this mode, the distributed vector shape is determined as follows:
 /// Definitions:

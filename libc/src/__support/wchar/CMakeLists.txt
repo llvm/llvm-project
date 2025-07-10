@@ -13,14 +13,44 @@ add_object_library(
   SRCS 
     character_converter.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.types.char8_t
     libc.hdr.types.char32_t
+    libc.src.__support.error_or
+    libc.src.__support.math_extras
     .mbstate
-    .utf_ret
 )
 
-add_header_library(
-  utf_ret
+add_object_library(
+  wcrtomb
   HDRS
-    utf_ret.h
+    wcrtomb.h
+  SRCS 
+    wcrtomb.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.char32_t
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.__support.error_or
+    libc.src.__support.common
+    .character_converter
+    .mbstate
+)
+
+add_object_library(
+  mbrtowc
+  HDRS
+    mbrtowc.h
+  SRCS
+    mbrtowc.cpp
+  DEPENDS
+  libc.hdr.errno_macros
+  libc.hdr.types.wchar_t
+  libc.hdr.types.size_t
+  libc.src.__support.common
+  libc.src.__support.error_or
+  libc.src.__support.macros.config
+  .character_converter
+  .mbstate
 )
