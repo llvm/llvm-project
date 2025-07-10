@@ -11,6 +11,7 @@
 // appear to provide that behavior too.
 
 #include <cstddef>
+
 #include "test_macros.h"
 
 using PtrdiffT = ::ptrdiff_t;

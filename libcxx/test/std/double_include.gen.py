@@ -28,6 +28,9 @@ for header in public_headers:
 {lit_header_restrictions.get(header, '')}
 {lit_header_undeprecations.get(header, '')}
 
+// We're using compiler-specific flags in this test
+// REQUIRES: (gcc || clang)
+
 // RUN: %{{cxx}} -c %s -o %t.first.o %{{flags}} %{{compile_flags}}
 // RUN: %{{cxx}} -c %s -o %t.second.o -DWITH_MAIN %{{flags}} %{{compile_flags}}
 // RUN: %{{cxx}} -o %t.exe %t.first.o %t.second.o %{{flags}} %{{link_flags}}
