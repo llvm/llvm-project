@@ -23,14 +23,6 @@
 #include <cstdint>
 #include <memory>
 #include <string>
-#ifdef LLVM_ON_UNIX
-#include <unistd.h>
-#else
-// Windows/MSVC fallback
-#define STDIN_FILENO 0
-#define STDOUT_FILENO 1
-#define STDERR_FILENO 2
-#endif
 
 llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
 launchExecutor(llvm::StringRef ExecutablePath, bool UseSharedMemory,
