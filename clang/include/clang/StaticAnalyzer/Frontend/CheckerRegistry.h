@@ -108,7 +108,7 @@ private:
     mgr.template registerChecker<T>();
   }
 
-  template <typename T> static bool returnTrue(const CheckerManager &mgr) {
+  static bool returnTrue(const CheckerManager &) {
     return true;
   }
 
@@ -133,7 +133,7 @@ public:
   template <class T>
   void addChecker(StringRef FullName, StringRef Desc, bool IsHidden = false) {
     addChecker(&CheckerRegistry::initializeManager<CheckerManager, T>,
-               &CheckerRegistry::returnTrue<T>, FullName, Desc,
+               &CheckerRegistry::returnTrue, FullName, Desc,
                /*IsHidden=*/IsHidden);
   }
 
