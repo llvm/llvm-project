@@ -30,6 +30,34 @@ TEST_P(olGetSymbolInfoGlobalTest, SuccessKind) {
   ASSERT_EQ(RetrievedKind, OL_SYMBOL_KIND_GLOBAL_VARIABLE);
 }
 
+TEST_P(olGetSymbolInfoKernelTest, InvalidAddress) {
+  void *RetrievedAddr;
+  ASSERT_ERROR(OL_ERRC_SYMBOL_KIND,
+               olGetSymbolInfo(Kernel, OL_SYMBOL_INFO_GLOBAL_VARIABLE_ADDRESS,
+                               sizeof(RetrievedAddr), &RetrievedAddr));
+}
+
+TEST_P(olGetSymbolInfoGlobalTest, SuccessAddress) {
+  void *RetrievedAddr = nullptr;
+  ASSERT_SUCCESS(olGetSymbolInfo(Global, OL_SYMBOL_INFO_GLOBAL_VARIABLE_ADDRESS,
+                                 sizeof(RetrievedAddr), &RetrievedAddr));
+  ASSERT_NE(RetrievedAddr, nullptr);
+}
+
+TEST_P(olGetSymbolInfoKernelTest, InvalidSize) {
+  size_t RetrievedSize;
+  ASSERT_ERROR(OL_ERRC_SYMBOL_KIND,
+               olGetSymbolInfo(Kernel, OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE,
+                               sizeof(RetrievedSize), &RetrievedSize));
+}
+
+TEST_P(olGetSymbolInfoGlobalTest, SuccessSize) {
+  size_t RetrievedSize = 0;
+  ASSERT_SUCCESS(olGetSymbolInfo(Global, OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE,
+                                 sizeof(RetrievedSize), &RetrievedSize));
+  ASSERT_EQ(RetrievedSize, 64 * sizeof(uint32_t));
+}
+
 TEST_P(olGetSymbolInfoKernelTest, InvalidNullHandle) {
   ol_symbol_kind_t RetrievedKind;
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
