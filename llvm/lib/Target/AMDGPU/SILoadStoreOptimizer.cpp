@@ -845,10 +845,10 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
     const AMDGPU::GcnBufferFormatInfo *Info =
         AMDGPU::getGcnBufferFormatInfo(Format, *LSO.STM);
 
-    // TODO: Support merging 8-bit tbuffer load/store instructions
     // Use 2-byte element size if the tbuffer format is 16-bit.
-    if (Info && Info->BitsPerComp == 16)
-      EltSize = 2;
+    // Use 1-byte element size if the tbuffer format is 8-bit.
+    if (Info)
+      EltSize = Info->BitsPerComp / 8;
   }
 
   Width = getOpcodeWidth(*I, *LSO.TII);
@@ -1049,18 +1049,16 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
   if (CI.Offset == Paired.Offset)
     return false;
 
-  unsigned EltSize = CI.EltSize;
-
   // This won't be valid if the offset isn't aligned.
-  if ((CI.Offset % EltSize != 0) || (Paired.Offset % EltSize != 0))
+  if ((CI.Offset % CI.EltSize != 0) || (Paired.Offset % CI.EltSize != 0))
     return false;
 
   if (CI.InstClass == TBUFFER_LOAD || CI.InstClass == TBUFFER_STORE) {
-    const AMDGPU::GcnBufferFormatInfo *Info0 =
+    const llvm::AMDGPU::GcnBufferFormatInfo *Info0 =
         AMDGPU::getGcnBufferFormatInfo(CI.Format, STI);
     if (!Info0)
       return false;
-    const AMDGPU::GcnBufferFormatInfo *Info1 =
+    const llvm::AMDGPU::GcnBufferFormatInfo *Info1 =
         AMDGPU::getGcnBufferFormatInfo(Paired.Format, STI);
     if (!Info1)
       return false;
@@ -1069,12 +1067,7 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
         Info0->NumFormat != Info1->NumFormat)
       return false;
 
-    // Buffer instructions support up to 4 components per access (e.g., x, xy,
-    // xyz, xyzw).
     unsigned NumCombinedComponents = CI.Width + Paired.Width;
-    if (NumCombinedComponents > 4)
-      return false;
-
     if (getBufferFormatWithCompCount(CI.Format, NumCombinedComponents, STI) ==
         0)
       return false;
@@ -1084,15 +1077,15 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
     unsigned BytePerComp = Info0->BitsPerComp / 8;
     unsigned ElemIndex0 = CI.Offset / BytePerComp;
     unsigned ElemIndex1 = Paired.Offset / BytePerComp;
-    if (!(ElemIndex0 + CI.Width == ElemIndex1 ||
-          ElemIndex1 + Paired.Width == ElemIndex0))
+    if (ElemIndex0 + CI.Width != ElemIndex1 &&
+        ElemIndex1 + Paired.Width != ElemIndex0)
       return false;
 
     // 1-byte formats require 1-byte alignment.
     // 2-byte formats require 2-byte alignment.
     // 4-byte and larger formats require 4-byte alignment.
     unsigned MergedBytes = BytePerComp * NumCombinedComponents;
-    unsigned RequiredAlign = (MergedBytes >= 4) ? 4 : MergedBytes;
+    unsigned RequiredAlign = std::min(MergedBytes, 4u);
     unsigned MinOff = std::min(CI.Offset, Paired.Offset);
     if (MinOff % RequiredAlign != 0)
       return false;
