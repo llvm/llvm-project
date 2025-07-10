@@ -1,5 +1,6 @@
 // RUN: %check_clang_tidy %s readability-named-parameter %t
-// RUN: %check_clang_tidy -check-suffix=PLAIN-NAMES %s readability-named-parameter %t -- -config="{CheckOptions: [{key: readability-named-parameter.InsertPlainNamesInForwardDecls, value: true}]}"
+// RUN: %check_clang_tidy -check-suffix=PLAIN-NAMES %s readability-named-parameter %t -- \
+// RUN:   -config="{CheckOptions: [{key: readability-named-parameter.InsertPlainNamesInForwardDecls, value: true}]}"
 
 void Method(char *) { /* */ }
 // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: all parameters should be named in a function

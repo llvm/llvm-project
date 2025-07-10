@@ -95,7 +95,7 @@ void NamedParameterCheck::check(const MatchFinder::MatchResult &Result) {
 
     for (auto P : UnnamedParams) {
       // Fallback to an unused marker.
-      constexpr StringRef FallbackName = "unused";
+      static constexpr StringRef FallbackName = "unused";
       StringRef NewName = FallbackName;
 
       // If the method is overridden, try to copy the name from the base method
@@ -129,11 +129,10 @@ void NamedParameterCheck::check(const MatchFinder::MatchResult &Result) {
       if (InsertPlainNamesInForwardDecls && IsForwardDeclaration &&
           NewName != FallbackName) {
         // For forward declarations with InsertPlainNamesInForwardDecls enabled,
-        // insert the parameter name without comments
+        // insert the parameter name without comments.
         D << FixItHint::CreateInsertion(Parm->getLocation(),
                                         " " + NewName.str());
       } else {
-        // Default behavior: insert the parameter name as a comment
         D << FixItHint::CreateInsertion(Parm->getLocation(),
                                         " /*" + NewName.str() + "*/");
       }
