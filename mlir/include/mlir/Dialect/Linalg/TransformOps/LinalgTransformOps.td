@@ -2443,7 +2443,7 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
       Variadic<TransformAnyParamTypeOrAnyHandle>:$vector_sizes,
       DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_vector_sizes,
       OptionalAttr<UnitAttr>:$vectorize_nd_extract,
-      OptionalAttr<UnitAttr>:$assume_scalable_sizes_match_dim_size,
+      OptionalAttr<UnitAttr>:$assume_dynamic_dims_match_vec_sizes,
       DefaultValuedOptionalAttr<DenseBoolArrayAttr, "{}">:$scalable_sizes);
 
   let results = (outs);

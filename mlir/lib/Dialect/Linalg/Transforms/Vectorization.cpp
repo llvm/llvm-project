@@ -223,7 +223,7 @@ struct VectorizationState {
   LogicalResult initState(RewriterBase &rewriter, LinalgOp linalgOp,
                           ArrayRef<int64_t> inputVectorSizes,
                           ArrayRef<bool> inputScalableVecDims,
-                          bool assumeScalableVecSizesMatchDimSize = false);
+                          bool assumeDynamicDimsMatchVecSizes = false);
 
   /// Returns the canonical vector shape used to vectorize the iteration space.
   ArrayRef<int64_t> getCanonicalVecShape() const { return canonicalVecShape; }
@@ -333,16 +333,13 @@ private:
   /// when the vectorization state is initialized.
   OpBuilder::InsertionGuard rewriterGuard;
 
-  /// Do all scalable vector sizes match the corresponding input dim sizes?
-  /// (tensor or memref)
+  /// Do all dynamic dims match the corresponding vector sizes?
   ///
-  /// At the Tensor + MemRef levels, scalable sizes are modelled using
-  /// dynamic dimensions (i.e. `?`). In many cases these sizes result from
-  /// e.g. "scalable packing + tiling" and are known to always match the
-  /// scalable vector sizes. In such cases, masking can be safely skipped,
-  /// despite the presence of dynamic shapes. Use this flag with care and
-  /// only for cases where you are confident the assumption holds.
-  bool assumeScalableVecSizesMatchDimSize = false;
+  /// When a dynamic tensor/memref dimension matches the corresponding vector
+  /// dimension, masking can be safely skipped, despite the presence of dynamic
+  /// shapes. Use this flag with care and only for cases where you are
+  /// confident the assumption holds.
+  bool assumeDynamicDimsMatchVecSizes = false;
 };
 
 LogicalResult
@@ -383,8 +380,8 @@ LogicalResult VectorizationState::initState(RewriterBase &rewriter,
                                             LinalgOp linalgOp,
                                             ArrayRef<int64_t> inputVectorSizes,
                                             ArrayRef<bool> inputScalableVecDims,
-                                            bool assumeScalableSizes) {
-  assumeScalableVecSizesMatchDimSize = assumeScalableSizes;
+                                            bool assumeDimsMatchVec) {
+  assumeDynamicDimsMatchVecSizes = assumeDimsMatchVec;
   // Initialize the insertion point.
   rewriter.setInsertionPoint(linalgOp);
 
@@ -484,7 +481,7 @@ Value VectorizationState::getOrCreateMaskFor(
     return Value();
   }
 
-  if (assumeScalableVecSizesMatchDimSize) {
+  if (assumeDynamicDimsMatchVecSizes) {
     // Given that all _scalable vector sizes_ match the corresponding
     // memref/tensor dim sizes, masking can be skipped provided that:
     // * all vector sizes corresponding to dynamic dims are scalable.
@@ -2568,7 +2565,7 @@ bool mlir::linalg::hasVectorizationImpl(Operation *op) {
 FailureOr<VectorizationResult> mlir::linalg::vectorize(
     RewriterBase &rewriter, Operation *op, ArrayRef<int64_t> inputVectorSizes,
     ArrayRef<bool> inputScalableVecDims, bool vectorizeNDExtract,
-    bool flatten1DDepthwiseConv, bool assumeScalableSizesMultipleOfDim) {
+    bool flatten1DDepthwiseConv, bool assumeDynamicDimsMatchVecSizes) {
   LDBG("Attempting to vectorize:\n" << *op << "\n");
   LDBG("Input vector sizes: ");
   LLVM_DEBUG(llvm::interleaveComma(inputVectorSizes, llvm::dbgs()));
@@ -2589,7 +2586,7 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
   if (auto linalgOp = dyn_cast<linalg::LinalgOp>(op)) {
     if (failed(state.initState(rewriter, linalgOp, inputVectorSizes,
                                inputScalableVecDims,
-                               assumeScalableSizesMultipleOfDim))) {
+                               assumeDynamicDimsMatchVecSizes))) {
       LDBG("Vectorization state couldn't be initialized\n");
       return failure();
     }
