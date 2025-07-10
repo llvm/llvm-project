@@ -11,6 +11,14 @@
 #define _LIBCPP_STACKTRACE_BASE
 
 #include <__config>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 23
 
 #  include <__cstddef/byte.h>
@@ -27,13 +35,6 @@
 #  include <list>
 #  include <optional>
 #  include <string>
-
-#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#    pragma GCC system_header
-#  endif
-
-_LIBCPP_PUSH_MACROS
-#  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -128,9 +129,11 @@ struct _LIBCPP_EXPORTED_FROM_ABI builder final {
 };
 
 } // namespace __stacktrace
+
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_STD_VER >= 23
 #endif // _LIBCPP_STACKTRACE_BASE

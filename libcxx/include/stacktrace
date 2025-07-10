@@ -164,28 +164,27 @@ namespace std {
 
 */
 
-#include <__config>
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/__config>
+#else
+#  include <__config>
 
-#if _LIBCPP_STD_VER >= 23
+#  if _LIBCPP_STD_VER >= 23
+#    include <__stacktrace/base.h>
+#    include <__stacktrace/basic.h>
+#    include <__stacktrace/entry.h>
+#    include <__stacktrace/hash.h>
+#    include <__stacktrace/nonmem.h>
+#    include <__stacktrace/to_string.h>
+#    include <compare> // per [stacktrace.syn]
+#  endif
 
-#  include <compare> // according to [stacktrace.syn]
+#  include <version>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
 #  endif
 
-_LIBCPP_PUSH_MACROS
-#  include <__undef_macros>
-
-#  include <__stacktrace/base.h>
-#  include <__stacktrace/basic.h>
-#  include <__stacktrace/entry.h>
-#  include <__stacktrace/hash.h>
-#  include <__stacktrace/nonmem.h>
-#  include <__stacktrace/to_string.h>
-
-_LIBCPP_POP_MACROS
-
-#endif // _LIBCPP_STD_VER >= 23
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_STACKTRACE
