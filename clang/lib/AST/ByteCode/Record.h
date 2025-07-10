@@ -41,13 +41,6 @@ public:
     const Record *R;
   };
 
-  /// Mapping from identifiers to field descriptors.
-  using FieldList = llvm::SmallVector<Field, 8>;
-  /// Mapping from identifiers to base classes.
-  using BaseList = llvm::SmallVector<Base, 8>;
-  /// List of virtual base classes.
-  using VirtualBaseList = llvm::SmallVector<Base, 2>;
-
 public:
   /// Returns the underlying declaration.
   const RecordDecl *getDecl() const { return Decl; }
@@ -76,32 +69,32 @@ public:
     return nullptr;
   }
 
-  using const_field_iter = FieldList::const_iterator;
+  using const_field_iter = ArrayRef<Field>::const_iterator;
   llvm::iterator_range<const_field_iter> fields() const {
-    return llvm::make_range(Fields.begin(), Fields.end());
+    return llvm::make_range(Fields, Fields + NumFields);
   }
 
-  unsigned getNumFields() const { return Fields.size(); }
+  unsigned getNumFields() const { return NumFields; }
   const Field *getField(unsigned I) const { return &Fields[I]; }
 
-  using const_base_iter = BaseList::const_iterator;
+  using const_base_iter = ArrayRef<Base>::const_iterator;
   llvm::iterator_range<const_base_iter> bases() const {
-    return llvm::make_range(Bases.begin(), Bases.end());
+    return llvm::make_range(Bases, Bases + NumBases);
   }
 
-  unsigned getNumBases() const { return Bases.size(); }
+  unsigned getNumBases() const { return NumBases; }
   const Base *getBase(unsigned I) const {
     assert(I < getNumBases());
     return &Bases[I];
   }
 
-  using const_virtual_iter = VirtualBaseList::const_iterator;
+  using const_virtual_iter = ArrayRef<Base>::const_iterator;
   llvm::iterator_range<const_virtual_iter> virtual_bases() const {
-    return llvm::make_range(VirtualBases.begin(), VirtualBases.end());
+    return llvm::make_range(VBases, VBases + NumVBases);
   }
 
-  unsigned getNumVirtualBases() const { return VirtualBases.size(); }
-  const Base *getVirtualBase(unsigned I) const { return &VirtualBases[I]; }
+  unsigned getNumVirtualBases() const { return NumVBases; }
+  const Base *getVirtualBase(unsigned I) const { return &VBases[I]; }
 
   void dump(llvm::raw_ostream &OS, unsigned Indentation = 0,
             unsigned Offset = 0) const;
@@ -109,9 +102,9 @@ public:
 
 private:
   /// Constructor used by Program to create record descriptors.
-  Record(const RecordDecl *, BaseList &&Bases, FieldList &&Fields,
-         VirtualBaseList &&VirtualBases, unsigned VirtualSize,
-         unsigned BaseSize);
+  Record(const RecordDecl *, const Base *Bases, unsigned NumBases,
+         const Field *Fields, unsigned NumFields, Base *VBases,
+         unsigned NumVBases, unsigned VirtualSize, unsigned BaseSize);
 
 private:
   friend class Program;
@@ -119,18 +112,21 @@ private:
   /// Original declaration.
   const RecordDecl *Decl;
   /// List of all base classes.
-  BaseList Bases;
+  const Base *Bases;
+  unsigned NumBases;
   /// List of all the fields in the record.
-  FieldList Fields;
-  /// List o fall virtual bases.
-  VirtualBaseList VirtualBases;
+  const Field *Fields;
+  unsigned NumFields;
+  /// List of all virtual bases.
+  Base *VBases;
+  unsigned NumVBases;
 
   /// Mapping from declarations to bases.
   llvm::DenseMap<const RecordDecl *, const Base *> BaseMap;
   /// Mapping from field identifiers to descriptors.
   llvm::DenseMap<const FieldDecl *, const Field *> FieldMap;
   /// Mapping from declarations to virtual bases.
-  llvm::DenseMap<const RecordDecl *, Base *> VirtualBaseMap;
+  llvm::DenseMap<const RecordDecl *, const Base *> VirtualBaseMap;
   /// Size of the structure.
   unsigned BaseSize;
   /// Size of all virtual bases.
