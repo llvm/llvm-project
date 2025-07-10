@@ -27,8 +27,7 @@
 // FORWARD-SAME: "--thinlto-distributor-arg=a3"
 
 /// Check that options are not added without --thinlto-distributor= and
-/// that there is an unused option warning issued for -Xthinlto-distributor=
-/// options. We specify -flto here as these options should be unaffected by it.
+/// that a warning is issued for unused -Xthinlto-distributor options.
 // RUN: %clang @%t_l1.rsp 2>&1 | \
 // RUN:   FileCheck @%t_f.rsp --check-prefix=NODIST
 
@@ -48,3 +47,11 @@
 // DEFAULT: ld.lld
 // DEFAULT-SAME: "--thinlto-distributor=d.exe"
 // DEFAULT-SAME: "--thinlto-remote-compiler={{.*}}clang{{(.exe)?}}"
+
+/// Check that nothing is forwarded when the compiler is not in LTO mode, and that
+/// appropriate unused option warnings are issued.
+// RUN: %clang @%t_l2.rsp 2>&1 | \
+// RUN:   FileCheck @%t_f.rsp --check-prefix=NOFLTO
+
+// NOFLTO: warning: argument unused during compilation: '-fthinlto-distributor=d.exe'
+// NOFLTO: ld.lld
