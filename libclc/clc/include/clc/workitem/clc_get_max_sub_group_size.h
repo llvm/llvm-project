@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/workitem/get_group_id.h>
-#include <clc/workitem/clc_get_group_id.h>
+#ifndef __CLC_WORKITEM_CLC_GET_MAX_SUB_GROUP_SIZE_H__
+#define __CLC_WORKITEM_CLC_GET_MAX_SUB_GROUP_SIZE_H__
 
-_CLC_OVERLOAD _CLC_DEF size_t get_group_id(uint dim) {
-  return __clc_get_group_id(dim);
-}
+#include <clc/internal/clc.h>
+
+_CLC_DEF _CLC_OVERLOAD uint __clc_get_max_sub_group_size();
+
+#endif // __CLC_WORKITEM_CLC_GET_MAX_SUB_GROUP_SIZE_H__

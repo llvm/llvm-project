@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/workitem/get_group_id.h>
-#include <clc/workitem/clc_get_group_id.h>
+#ifndef __CLC_OPENCL_WORKITEM_GET_SUB_GROUP_LOCAL_ID_H__
+#define __CLC_OPENCL_WORKITEM_GET_SUB_GROUP_LOCAL_ID_H__
 
-_CLC_OVERLOAD _CLC_DEF size_t get_group_id(uint dim) {
-  return __clc_get_group_id(dim);
-}
+#include <clc/opencl/opencl-base.h>
+
+_CLC_OVERLOAD _CLC_DECL uint get_sub_group_local_id();
+
+#endif // __CLC_OPENCL_WORKITEM_GET_SUB_GROUP_LOCAL_ID_H__
