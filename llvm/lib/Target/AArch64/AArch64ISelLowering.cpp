@@ -16051,7 +16051,7 @@ SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
   SDValue Src = Op.getOperand(0);
   EVT SrcVT = Src.getValueType();
 
-  // Scalarize v2f32 to turn it into a faddp. This will be more efficient than
+  // Scalarize v2f16 to turn it into a faddp. This will be more efficient than
   // widening by inserting zeroes.
   if (Subtarget->hasFullFP16() && Op.getOpcode() == ISD::VECREDUCE_FADD &&
       SrcVT == MVT::v2f16) {
