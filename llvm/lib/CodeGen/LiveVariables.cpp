@@ -534,6 +534,8 @@ void LiveVariables::runOnInstr(MachineInstr &MI,
         UseRegs.push_back(MOReg);
     } else {
       assert(MO.isDef());
+      if (!(MOReg.isPhysical() && MRI->isReserved(MOReg)))
+        MO.setIsDead(false);
       DefRegs.push_back(MOReg);
     }
   }
