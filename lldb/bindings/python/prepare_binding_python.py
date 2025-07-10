@@ -206,6 +206,7 @@ def do_swig_rebuild(options, dependency_file, config_build_dir, settings):
             options.swig_executable,
             "-c++",
             "-python",
+            "-doxygen",
             "-features", "autodoc",
             "-threads",
             "-I" + os.path.normpath(os.path.join(options.src_root, "include")),
