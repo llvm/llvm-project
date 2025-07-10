@@ -402,7 +402,6 @@ def MEMCPY_ALIGN_4 : RuntimeLibcall;
 // Define implementation default libcalls
 //--------------------------------------------------------------------
 
-defset list<RuntimeLibcallImpl> AllDefaultRuntimeLibcallImpls = {
 let IsDefault = true in {
 
 //--------------------------------------------------------------------
@@ -908,7 +907,6 @@ def memset : RuntimeLibcallImpl<MEMSET>;
 def calloc : RuntimeLibcallImpl<CALLOC>;
 
 } // End let IsDefault = true
-} // End defset AllDefaultRuntimeLibcallImpls
 
 //--------------------------------------------------------------------
 // Define implementation other libcalls
@@ -999,8 +997,8 @@ defset list<RuntimeLibcallImpl> LibmF128FiniteLibcalls = {
 // unreasonable defaults like reporting f80 calls on most targets when
 // they are relevant to only one.
 
-defvar AllDefaultLibCalls =
-    !foreach(entry, AllDefaultRuntimeLibcallImpls, entry.Provides);
+defvar AllDefaultRuntimeLibcallImpls
+  = !filter(entry, !instances<RuntimeLibcallImpl>(), entry.IsDefault);
 
 // Exist in libgcc and compiler-rt for 64-bit targets, or if
 // COMPILER_RT_ENABLE_SOFTWARE_INT128.
