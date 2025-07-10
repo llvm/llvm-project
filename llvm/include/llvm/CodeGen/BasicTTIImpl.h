@@ -1787,6 +1787,11 @@ public:
 
       std::optional<Intrinsic::ID> FID =
           VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID());
+
+      // Not functionally equivalent but close enough for cost modelling.
+      if (ICA.getID() == Intrinsic::experimental_vp_reverse)
+        FID = Intrinsic::vector_reverse;
+
       if (FID) {
         // Non-vp version will have same arg types except mask and vector
         // length.
