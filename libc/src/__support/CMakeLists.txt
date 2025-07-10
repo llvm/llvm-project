@@ -393,7 +393,7 @@ add_subdirectory(time)
 
 # Requires access to uchar header which is not on macos
 # Therefore, cannot currently build this on macos in overlay mode
-if(NOT(LIBC_TARGET_OS_IS_DARWIN))
+if(NOT (LIBC_TARGET_OS_IS_DARWIN OR LIBC_TARGET_OS_IS_WINDOWS))
   add_subdirectory(wchar)
 endif()
 
