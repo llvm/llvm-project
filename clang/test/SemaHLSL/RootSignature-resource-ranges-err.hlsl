@@ -46,12 +46,12 @@ void bad_root_signature_7() {}
 [RootSignature("DescriptorTable(UAV(u0, numDescriptors=unbounded), visibility = SHADER_VISIBILITY_HULL), DescriptorTable(UAV(u2, numDescriptors=4))")]
 void bad_root_signature_8() {}
 
-// expected-error@+2 {{resource ranges b[0;2] and b[2;2] overlap within space = 0 and visibility = All}}
+// expected-error@+2 {{resource ranges b[2;2] and b[0;2] overlap within space = 0 and visibility = All}}
 // expected-note@+1 {{overlapping resource range here}}
 [RootSignature("RootConstants(num32BitConstants=4, b2), DescriptorTable(CBV(b0, numDescriptors=3))")]
 void bad_root_signature_9() {}
 
-// expected-error@+2 {{resource ranges s[4;unbounded) and s[17;17] overlap within space = 0 and visibility = All}}
+// expected-error@+2 {{resource ranges s[17;17] and s[4;unbounded) overlap within space = 0 and visibility = All}}
 // expected-note@+1 {{overlapping resource range here}}
 [RootSignature("StaticSampler(s17), DescriptorTable(Sampler(s0, numDescriptors=3),Sampler(s4, numDescriptors=unbounded))")]
 void bad_root_signature_10() {}
@@ -68,7 +68,9 @@ void bad_root_signature_11() {}
  "  CBV(b0, numDescriptors = 8), " \
  ")"
 
-// expected-error@+2 {{resource ranges b[0;7] and b[1;2] overlap within space = 0 and visibility = All}}
+// expected-error@+4 {{resource ranges b[4;7] and b[0;7] overlap within space = 0 and visibility = All}}
+// expected-error@+3 {{resource ranges b[1;2] and b[0;7] overlap within space = 0 and visibility = All}}
+// expected-note@+2 {{overlapping resource range here}}
 // expected-note@+1 {{overlapping resource range here}}
 [RootSignature(ReportFirstOverlap)]
 void bad_root_signature_12() {}
@@ -92,14 +94,14 @@ void valid_root_signature_13() {}
  "  UAV(u0, numDescriptors = 3), " \
  ")"
 
-// CHECK: [[@LINE-4]]:5: note: expanded from macro 'DemoNoteSourceLocations'
-// CHECK-NEXT: [[@LINE-5]] | "  SRV(t17, numDescriptors = 7), " \
-// CHECK-NEXT:             |    ^
-// CHECK: [[@LINE-14]]:5: note: expanded from macro 'DemoNoteSourceLocations'
-// CHECK-NEXT: [[@LINE-15]] | "  SRV(t22, numDescriptors = 1), "
+// CHECK: [[@LINE-11]]:5: note: expanded from macro 'DemoNoteSourceLocations'
+// CHECK-NEXT: [[@LINE-12]] | "  SRV(t22, numDescriptors = 1), "
+// CHECK-NEXT:              |    ^
+// CHECK: [[@LINE-7]]:5: note: expanded from macro 'DemoNoteSourceLocations'
+// CHECK-NEXT: [[@LINE-8]]  | "  SRV(t17, numDescriptors = 7), " \
 // CHECK-NEXT:              |    ^
 
-// expected-error@+2 {{resource ranges t[17;23] and t[22;22] overlap within space = 0 and visibility = All}}
+// expected-error@+2 {{resource ranges t[22;22] and t[17;23] overlap within space = 0 and visibility = All}}
 // expected-note@+1 {{overlapping resource range here}}
 [RootSignature(DemoNoteSourceLocations)]
 void bad_root_signature_14() {}
