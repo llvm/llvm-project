@@ -3274,8 +3274,12 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
   case AArch64::MOVT_TIZ_PSEUDO:
     return EmitZTInstr(MI, BB, AArch64::MOVT_TIZ, /*Op0IsDef=*/true);
 
-  case AArch64::AUT:
+  case AArch64::AUTx16x17:
     fixupBlendComponents(MI, BB, MI.getOperand(1), MI.getOperand(2),
+                         &AArch64::GPR64noipRegClass);
+    return BB;
+  case AArch64::AUTxMxN:
+    fixupBlendComponents(MI, BB, MI.getOperand(4), MI.getOperand(5),
                          &AArch64::GPR64noipRegClass);
     return BB;
   case AArch64::PAC:
