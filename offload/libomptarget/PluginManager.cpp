@@ -132,7 +132,8 @@ void PluginManager::initializeAllDevices() {
   std::atexit([]() {
     // Interop cleanup should be done before the plugins are deinitialized as
     // the backend libraries may be already unloaded.
-    PM->InteropTbl.clear();
+    if (PM)
+      PM->InteropTbl.clear();
   });
 }
 
