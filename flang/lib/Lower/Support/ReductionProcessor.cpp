@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ReductionProcessor.h"
+#include "flang/Lower/Support/ReductionProcessor.h"
 
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/ConvertType.h"
