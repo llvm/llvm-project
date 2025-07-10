@@ -335,7 +335,7 @@ VectorizationState::precomputeIterSpaceValueSizes(RewriterBase &rewriter,
                                                   LinalgOp linalgOp) {
   // TODO: Support 0-d vectors.
   for (int vecDim = 0, end = canonicalVecShape.size(); vecDim < end; ++vecDim) {
-    if (!ShapedType::isDynamic(iterSpaceStaticSizes[vecDim])) {
+    if (ShapedType::isStatic(iterSpaceStaticSizes[vecDim])) {
       // Create constant index op for static dimensions.
       iterSpaceValueSizes.push_back(rewriter.create<arith::ConstantIndexOp>(
           linalgOp.getLoc(), iterSpaceStaticSizes[vecDim]));
@@ -1652,7 +1652,7 @@ createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value vecToStore,
     for (unsigned i = 0; i < vecToStoreRank; i++)
       inBoundsVal[i] =
           (destShape[destRank - vecToStoreRank + i] >= vecToStoreShape[i]) &&
-          !ShapedType::isDynamic(destShape[destRank - vecToStoreRank + i]);
+          ShapedType::isStatic(destShape[destRank - vecToStoreRank + i]);
   }
 
   // If missing, initialize the write indices to 0.

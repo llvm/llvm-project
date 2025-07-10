@@ -264,7 +264,7 @@ static void shardShape(const InShape &inShape, const MeshShape &meshShape,
       // add halo sizes if requested
       int haloAxis = 0;
       for (auto [tensorAxis, innerSplitAxes] : llvm::enumerate(splitAxes)) {
-        if (!ShapedType::isDynamic(outShape[tensorAxis]) &&
+        if (ShapedType::isStatic(outShape[tensorAxis]) &&
             !innerSplitAxes.empty()) {
           if (haloSizes[haloAxis * 2] >= 0 &&
               haloSizes[haloAxis * 2 + 1] >= 0) {
@@ -415,7 +415,7 @@ LogicalResult MeshOp::verify() {
     return emitOpError("rank of mesh is expected to be a positive integer");
 
   for (int64_t dimSize : getShape()) {
-    if (dimSize < 0 && !ShapedType::isDynamic(dimSize))
+    if (dimSize < 0 && ShapedType::isStatic(dimSize))
       return emitOpError("dimension size of a mesh is expected to be "
                          "non-negative or dynamic");
   }
@@ -609,7 +609,7 @@ LogicalResult ShardingOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   auto shardedDimsOffsets = getStaticShardedDimsOffsets();
   if (!shardedDimsOffsets.empty()) {
     auto meshShape = mesh.value().getShape();
-    assert(!ShapedType::isDynamicShape(meshShape));
+    assert(ShapedType::isStaticShape(meshShape));
     uint64_t pos = 0;
     for (auto [tensorAxis, innerSplitAxes] : llvm::enumerate(getSplitAxes())) {
       if (!innerSplitAxes.empty()) {
@@ -621,7 +621,7 @@ LogicalResult ShardingOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
           if (shardedDimsOffsets.size() <= pos + i) {
             return emitError() << "sharded dims offsets has wrong size.";
           }
-          if (!ShapedType::isDynamic(shardedDimsOffsets[pos + i])) {
+          if (ShapedType::isStatic(shardedDimsOffsets[pos + i])) {
             if (shardedDimsOffsets[pos + i] < off) {
               return emitError()
                      << "sharded dims offsets must be non-decreasing.";
@@ -1036,8 +1036,8 @@ static LogicalResult verifyInGroupDevice(Location loc, StringRef deviceName,
   }
 
   for (size_t i = 0; i < device.size(); ++i) {
-    if (!ShapedType::isDynamic(device[i]) &&
-        !ShapedType::isDynamic(meshShape[meshAxes[i]]) &&
+    if (ShapedType::isStatic(device[i]) &&
+        ShapedType::isStatic(meshShape[meshAxes[i]]) &&
         meshShape[meshAxes[i]] <= device[i]) {
       return emitError(loc)
              << "Out of bounds coordinate " << i << " for in-group device \""
@@ -1065,8 +1065,7 @@ static LogicalResult verifyDimensionCompatibility(Location loc,
                                                   int64_t expectedDimSize,
                                                   int64_t resultDimSize,
                                                   int64_t resultAxis) {
-  if (!ShapedType::isDynamic(resultDimSize) &&
-      expectedDimSize != resultDimSize) {
+  if (ShapedType::isStatic(resultDimSize) && expectedDimSize != resultDimSize) {
     return emitError(loc) << "Dimension size mismatch for result axis "
                           << resultAxis << ". Expected "
                           << (ShapedType::isDynamic(expectedDimSize)
