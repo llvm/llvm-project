@@ -53,9 +53,7 @@ struct VPlanTransforms {
       verifyVPlanIsValid(Plan);
   }
 
-  static std::unique_ptr<VPlan>
-  buildPlainCFG(Loop *TheLoop, LoopInfo &LI,
-                DenseMap<const VPBlockBase *, BasicBlock *> &VPB2IRBB);
+  static std::unique_ptr<VPlan> buildPlainCFG(Loop *TheLoop, LoopInfo &LI);
 
   /// Prepare the plan for vectorization. It will introduce a dedicated
   /// VPBasicBlock for the vector pre-header as well as a VPBasicBlock as exit
@@ -75,6 +73,12 @@ struct VPlanTransforms {
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
   /// flat CFG into a hierarchical CFG.
   static void createLoopRegions(VPlan &Plan);
+
+  /// Wrap runtime check block \p CheckBlock in a VPIRBB and \p Cond in a
+  /// VPValue and connect the block to \p Plan, using the VPValue as branch
+  /// condition.
+  static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
+                               bool AddBranchWeights);
 
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
@@ -100,6 +104,12 @@ struct VPlanTransforms {
 
   /// Explicitly unroll \p Plan by \p UF.
   static void unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx);
+
+  /// Replace each VPReplicateRecipe outside on any replicate region in \p Plan
+  /// with \p VF single-scalar recipes.
+  /// TODO: Also replicate VPReplicateRecipes inside replicate regions, thereby
+  /// dissolving the latter.
+  static void replicateByVF(VPlan &Plan, ElementCount VF);
 
   /// Optimize \p Plan based on \p BestVF and \p BestUF. This may restrict the
   /// resulting plan to \p BestVF and \p BestUF.
@@ -186,6 +196,9 @@ struct VPlanTransforms {
                                          VPBasicBlock *LatchVPBB,
                                          VFRange &Range);
 
+  /// Replace loop regions with explicit CFG.
+  static void dissolveLoopRegions(VPlan &Plan);
+
   /// Lower abstract recipes to concrete ones, that can be codegen'd. Use \p
   /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
   static void convertToConcreteRecipes(VPlan &Plan, Type &CanonicalIVTy);
@@ -208,11 +221,6 @@ struct VPlanTransforms {
   optimizeInductionExitUsers(VPlan &Plan,
                              DenseMap<VPValue *, VPValue *> &EndValues);
 
-  /// Materialize VPInstruction::StepVectors for VPWidenIntOrFpInductionRecipes.
-  /// TODO: Remove once all of VPWidenIntOrFpInductionRecipe is expanded in
-  /// convertToConcreteRecipes.
-  static void materializeStepVectors(VPlan &Plan);
-
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
 
@@ -224,6 +232,21 @@ struct VPlanTransforms {
   /// candidates.
   static void narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
                                      unsigned VectorRegWidth);
+
+  /// Predicate and linearize the control-flow in the only loop region of
+  /// \p Plan. If \p FoldTail is true, create a mask guarding the loop
+  /// header, otherwise use all-true for the header mask. Masks for blocks are
+  /// added to a block-to-mask map which is returned in order to be used later
+  /// for wide recipe construction. This argument is temporary and will be
+  /// removed in the future.
+  static DenseMap<VPBasicBlock *, VPValue *>
+  introduceMasksAndLinearize(VPlan &Plan, bool FoldTail);
+
+  /// Add branch weight metadata, if the \p Plan's middle block is terminated by
+  /// a BranchOnCond recipe.
+  static void
+  addBranchWeightToMiddleTerminator(VPlan &Plan, ElementCount VF,
+                                    std::optional<unsigned> VScaleForTuning);
 };
 
 } // namespace llvm

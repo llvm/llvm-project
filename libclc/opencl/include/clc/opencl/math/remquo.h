@@ -6,9 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_FUNCTION remquo
+#ifndef __CLC_OPENCL_MATH_REMQUO_H__
+#define __CLC_OPENCL_MATH_REMQUO_H__
+
+#define FUNCTION remquo
 
 #define __CLC_BODY <clc/math/remquo_decl.inc>
 #include <clc/math/gentype.inc>
 
-#undef __CLC_FUNCTION
+#if _CLC_GENERIC_AS_SUPPORTED
+#define __CLC_BODY <clc/math/remquo_decl.inc>
+#define __CLC_ADDRESS_SPACE generic
+#include <clc/math/gentype.inc>
+#undef __CLC_ADDRESS_SPACE
+#endif
+
+#undef FUNCTION
+
+#endif // __CLC_OPENCL_MATH_REMQUO_H__

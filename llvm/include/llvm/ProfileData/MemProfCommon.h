@@ -1,4 +1,4 @@
-//===- MemProfCommon.h - MemProf support ----------------*- C++ -*-===//
+//===- MemProfCommon.h - MemProf common utilities ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,38 +6,32 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains common types used by different parts of the MemProf code.
+// This file contains MemProf common utilities.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_PROFILEDATA_MEMPROFCOMMON_H
 #define LLVM_PROFILEDATA_MEMPROFCOMMON_H
 
-#include <cstdint>
+#include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
+namespace memprof {
 
-// For optional hinted size reporting, holds a pair of the full stack id
-// (pre-trimming, from the full context in the profile), and the associated
-// total profiled size.
-struct ContextTotalSize {
-  uint64_t FullStackId;
-  uint64_t TotalSize;
-};
+struct Frame;
 
-// Allocation type assigned to an allocation reached by a given context.
-// More can be added, now this is cold, notcold and hot.
-// Values should be powers of two so that they can be ORed, in particular to
-// track allocations that have different behavior with different calling
-// contexts.
-enum class AllocationType : uint8_t {
-  None = 0,
-  NotCold = 1,
-  Cold = 2,
-  Hot = 4,
-  All = 7 // This should always be set to the OR of all values.
-};
+/// Return the allocation type for a given set of memory profile values.
+LLVM_ABI AllocationType getAllocType(uint64_t TotalLifetimeAccessDensity,
+                                     uint64_t AllocCount,
+                                     uint64_t TotalLifetime);
 
+/// Helper to generate a single hash id for a given callstack, used for emitting
+/// matching statistics and useful for uniquing such statistics across modules.
+/// Also used to dedup contexts when computing the summary.
+LLVM_ABI uint64_t computeFullStackId(ArrayRef<Frame> CallStack);
+
+} // namespace memprof
 } // namespace llvm
 
 #endif // LLVM_PROFILEDATA_MEMPROFCOMMON_H

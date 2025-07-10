@@ -16,11 +16,32 @@
 
 // UNSUPPORTED: c++03
 
-#include <tuple>
-#include <string>
+#include <array>
 #include <cassert>
+#include <tuple>
 
+#include "test_comparisons.h"
 #include "test_macros.h"
+
+#if TEST_STD_VER >= 26
+
+// Test SFINAE.
+
+static_assert(std::equality_comparable<std::tuple<EqualityComparable>>);
+static_assert(std::equality_comparable<std::tuple<EqualityComparable, EqualityComparable>>);
+
+static_assert(!std::equality_comparable<std::tuple<NonComparable>>);
+static_assert(!std::equality_comparable<std::tuple<EqualityComparable, NonComparable>>);
+static_assert(!std::equality_comparable<std::tuple<NonComparable, EqualityComparable>>);
+static_assert(!std::equality_comparable_with<std::tuple<EqualityComparable>, std::tuple<NonComparable>>);
+static_assert(!std::equality_comparable_with<std::tuple<NonComparable>, std::tuple<EqualityComparable>>);
+// Size mismatch.
+static_assert(
+    !std::equality_comparable_with<std::tuple<EqualityComparable>, std::tuple<EqualityComparable, EqualityComparable>>);
+static_assert(
+    !std::equality_comparable_with<std::tuple<EqualityComparable, EqualityComparable>, std::tuple<EqualityComparable>>);
+
+#endif
 
 int main(int, char**)
 {

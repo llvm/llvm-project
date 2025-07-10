@@ -1234,8 +1234,7 @@ Currently, only the following parameter attributes are defined:
     ``byval`` parameters). This is not a valid attribute for return
     values.
 
-    The byval type argument indicates the in-memory value type, and
-    must be the same as the pointee type of the argument.
+    The byval type argument indicates the in-memory value type.
 
     The byval attribute also supports specifying an alignment with the
     align attribute. It indicates the alignment of the stack slot to
@@ -1283,8 +1282,7 @@ Currently, only the following parameter attributes are defined:
     any parameter must have a ``"preallocated"`` operand bundle. A ``musttail``
     function call cannot have a ``"preallocated"`` operand bundle.
 
-    The preallocated attribute requires a type argument, which must be
-    the same as the pointee type of the argument.
+    The preallocated attribute requires a type argument.
 
     The preallocated attribute also supports specifying an alignment with the
     align attribute. It indicates the alignment of the stack slot to
@@ -1318,8 +1316,7 @@ Currently, only the following parameter attributes are defined:
     must be cleared off with :ref:`llvm.stackrestore
     <int_stackrestore>`.
 
-    The inalloca attribute requires a type argument, which must be the
-    same as the pointee type of the argument.
+    The inalloca attribute requires a type argument.
 
     See :doc:`InAlloca` for more information on how to use this
     attribute.
@@ -1331,8 +1328,7 @@ Currently, only the following parameter attributes are defined:
     loads and stores to the structure may be assumed by the callee not
     to trap and to be properly aligned.
 
-    The sret type argument specifies the in memory type, which must be
-    the same as the pointee type of the argument.
+    The sret type argument specifies the in memory type.
 
     A function that accepts an ``sret`` argument must return ``void``.
     A return value may not be ``sret``.
@@ -1741,6 +1737,23 @@ Currently, only the following parameter attributes are defined:
 
     This attribute cannot be applied to return values.
 
+``dead_on_return``
+    This attribute indicates that the memory pointed to by the argument is dead
+    upon function return, both upon normal return and if the calls unwinds, meaning
+    that the caller will not depend on its contents. Stores that would be observable
+    either on the return path or on the unwind path may be elided.
+
+    Specifically, the behavior is as-if any memory written through the pointer
+    during the execution of the function is overwritten with a poison value
+    upon function return. The caller may access the memory, but any load
+    not preceded by a store will return poison.
+
+    This attribute does not imply aliasing properties. For pointer arguments that
+    do not alias other memory locations, ``noalias`` attribute may be used in
+    conjunction. Conversely, this attribute always implies ``dead_on_unwind``.
+
+    This attribute cannot be applied to return values.
+
 ``range(<ty> <a>, <b>)``
     This attribute expresses the possible range of the parameter or return value.
     If the value is not in the specified range, it is converted to poison.
@@ -1954,6 +1967,10 @@ For example:
     The first three options are mutually exclusive, and the remaining options
     describe more details of how the function behaves. The remaining options
     are invalid for "free"-type functions.
+``"alloc-variant-zeroed"="FUNCTION"``
+    This attribute indicates that another function is equivalent to an allocator function,
+    but returns zeroed memory. The function must have "zeroed" allocation behavior,
+    the same ``alloc-family``, and take exactly the same arguments.
 ``allocsize(<EltSizeParam>[, <NumEltsParam>])``
     This attribute indicates that the annotated function will always return at
     least a given number of bytes (or null). Its arguments are zero-indexed
@@ -3573,7 +3590,8 @@ can read and/or modify state which is not accessible via a regular load
 or store in this module. Volatile operations may use addresses which do
 not point to memory (like MMIO registers). This means the compiler may
 not use a volatile operation to prove a non-volatile access to that
-address has defined behavior.
+address has defined behavior. This includes addresses typically forbidden,
+such as the pointer with bit-value 0.
 
 The allowed side-effects for volatile accesses are limited.  If a
 non-volatile store to a given address would be legal, a volatile
@@ -4292,7 +4310,10 @@ The semantics of non-zero address spaces are target-specific. Memory
 access through a non-dereferenceable pointer is undefined behavior in
 any address space. Pointers with the bit-value 0 are only assumed to
 be non-dereferenceable in address space 0, unless the function is
-marked with the ``null_pointer_is_valid`` attribute.
+marked with the ``null_pointer_is_valid`` attribute. However, *volatile*
+access to any non-dereferenceable address may have defined behavior
+(according to the target), and in this case the attribute is not needed
+even for address 0.
 
 If an object can be proven accessible through a pointer with a
 different address space, the access may be modified to use that
@@ -4430,7 +4451,8 @@ the type size is smaller than the type's store size.
       < vscale x <# elements> x <elementtype> > ; Scalable vector
 
 The number of elements is a constant integer value larger than 0;
-elementtype may be any integer, floating-point or pointer type. Vectors
+elementtype may be any integer, floating-point, pointer type, or a sized  
+target extension type that has the ``CanBeVectorElement`` property. Vectors
 of size zero are not allowed. For scalable vectors, the total number of
 elements is a constant multiple (called vscale) of the specified number
 of elements; vscale is a positive integer that is unknown at compile time
@@ -5610,6 +5632,8 @@ LoongArch:
 - ``m``: A memory operand whose address is formed by a base register and
   offset that is suitable for use in instructions with the same addressing
   mode as st.w and ld.w.
+- ``q``: A general-purpose register except for $r0 and $r1 (for the csrxchg
+  instruction).
 - ``I``: A signed 12-bit constant (for arithmetic instructions).
 - ``J``: An immediate integer zero.
 - ``K``: An unsigned 12-bit constant (for logic instructions).
@@ -6964,16 +6988,25 @@ appear in the included source file.
 DILabel
 """""""
 
-``DILabel`` nodes represent labels within a :ref:`DISubprogram`. All fields of
-a ``DILabel`` are mandatory. The ``scope:`` field must be one of either a
-:ref:`DILexicalBlockFile`, a :ref:`DILexicalBlock`, or a :ref:`DISubprogram`.
-The ``name:`` field is the label identifier. The ``file:`` field is the
-:ref:`DIFile` the label is present in. The ``line:`` field is the source line
+``DILabel`` nodes represent labels within a :ref:`DISubprogram`. The ``scope:``
+field must be one of either a :ref:`DILexicalBlockFile`, a
+:ref:`DILexicalBlock`, or a :ref:`DISubprogram`. The ``name:`` field is the
+label identifier. The ``file:`` field is the :ref:`DIFile` the label is
+present in. The ``line:`` and ``column:`` field are the source line and column
 within the file where the label is declared.
+
+Furthermore, a label can be marked as artificial, i.e. compiler-generated,
+using ``isArtificial:``. Such artificial labels are generated, e.g., by
+the ``CoroSplit`` pass. In addition, the ``CoroSplit`` pass also uses the
+``coroSuspendIdx:`` field to identify the coroutine suspend points.
+
+``scope:``, ``name:``, ``file:`` and ``line:`` are mandatory. The remaining
+fields are optional.
 
 .. code-block:: text
 
-  !2 = !DILabel(scope: !0, name: "foo", file: !1, line: 7)
+  !2 = !DILabel(scope: !0, name: "foo", file: !1, line: 7, column: 4)
+  !3 = !DILabel(scope: !0, name: "__coro_resume_3", file: !1, line: 9, column: 3, isArtificial: true, coroSuspendIdx: 3)
 
 DICommonBlock
 """""""""""""
@@ -9589,6 +9622,14 @@ the ``indirect labels``. Therefore, the address of a label as seen by another
 may not be equal to the address provided for the same block to this
 instruction's ``indirect labels`` operand. The assembly code may only transfer
 control to addresses provided via this instruction's ``indirect labels``.
+
+On target architectures that implement branch target enforcement by requiring
+indirect (register-controlled) branch instructions to jump only to locations
+marked by a special instruction (such as AArch64 ``bti``), the called code is
+expected not to use such an indirect branch to transfer control to the
+locations in ``indirect labels``. Therefore, including a label in the
+``indirect labels`` of a ``callbr`` does not require the compiler to put a
+``bti`` or equivalent instruction at the label.
 
 Arguments:
 """"""""""
@@ -12608,6 +12649,9 @@ result pointer is dereferenceable, the cast is assumed to be
 reversible (i.e. casting the result back to the original address space
 should yield the original bit pattern).
 
+Which address space casts are supported depends on the target. Unsupported
+address space casts return :ref:`poison <poisonvalues>`.
+
 Example:
 """"""""
 
@@ -13139,7 +13183,7 @@ This instruction requires several arguments:
    -  All ABI-impacting function attributes, such as sret, byval, inreg,
       returned, and inalloca, must match.
    -  The caller and callee prototypes must match. Pointer types of parameters
-      or return types may differ in pointee type, but not in address space.
+      or return types do not differ in address space.
 
    On the other hand, if the calling convention is `swifttailcc` or `tailcc`:
 
@@ -14578,7 +14622,7 @@ Semantics:
       compile-time-known constant value.
 
       The return value type of :ref:`llvm.get.dynamic.area.offset <int_get_dynamic_area_offset>`
-      must match the target's default address space's (address space 0) pointer type.
+      must match the target's :ref:`alloca address space <alloca_addrspace>` type.
 
 '``llvm.prefetch``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -20203,7 +20247,7 @@ Arguments:
 
 The argument to this intrinsic must be a vector.
 
-'``llvm.vector.deinterleave2/3/5/7``' Intrinsic
+'``llvm.vector.deinterleave2/3/4/5/6/7/8``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -20221,8 +20265,8 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-The '``llvm.vector.deinterleave2/3/5/7``' intrinsics deinterleave adjacent lanes
-into 2, 3, 5, and 7 separate vectors, respectively, and return them as the
+The '``llvm.vector.deinterleave2/3/4/5/6/7/8``' intrinsics deinterleave adjacent lanes
+into 2 through to 8 separate vectors, respectively, and return them as the
 result.
 
 This intrinsic works for both fixed and scalable vectors. While this intrinsic
@@ -20244,7 +20288,7 @@ Arguments:
 The argument is a vector whose type corresponds to the logical concatenation of
 the aggregated result types.
 
-'``llvm.vector.interleave2/3/5/7``' Intrinsic
+'``llvm.vector.interleave2/3/4/5/6/7/8``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -20262,7 +20306,7 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-The '``llvm.vector.interleave2/3/5/7``' intrinsic constructs a vector
+The '``llvm.vector.interleave2/3/4/5/6/7/8``' intrinsic constructs a vector
 by interleaving all the input vectors.
 
 This intrinsic works for both fixed and scalable vectors. While this intrinsic
@@ -20526,6 +20570,9 @@ More update operation types may be added in the future.
 
     declare void @llvm.experimental.vector.histogram.add.v8p0.i32(<8 x ptr> %ptrs, i32 %inc, <8 x i1> %mask)
     declare void @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> %ptrs, i64 %inc, <vscale x 2 x i1> %mask)
+    declare void @llvm.experimental.vector.histogram.uadd.sat.v8p0.i32(<8 x ptr> %ptrs, i32 %inc, <8 x i1> %mask)
+    declare void @llvm.experimental.vector.histogram.umax.v8p0.i32(<8 x ptr> %ptrs, i32 %val, <8 x i1> %mask)
+    declare void @llvm.experimental.vector.histogram.umin.v8p0.i32(<8 x ptr> %ptrs, i32 %val, <8 x i1> %mask)
 
 Arguments:
 """"""""""

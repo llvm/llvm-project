@@ -21,7 +21,6 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
@@ -112,11 +111,16 @@ void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   Asm.registerSymbol(*Section->getBeginSymbol());
 }
 
-void MCELFStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {
-  getAssembler().registerSymbol(*Symbol);
-  const MCExpr *Value = MCSymbolRefExpr::create(
-      Symbol, MCSymbolRefExpr::VK_WEAKREF, getContext());
-  Alias->setVariableValue(Value);
+void MCELFStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Target) {
+  auto *A = cast<MCSymbolELF>(Alias);
+  if (A->isDefined()) {
+    getContext().reportError(getStartTokLoc(), "symbol '" + A->getName() +
+                                                   "' is already defined");
+    return;
+  }
+  A->setVariableValue(MCSymbolRefExpr::create(Target, getContext()));
+  A->setIsWeakref();
+  getWriter().Weakrefs.push_back(A);
 }
 
 // When GNU as encounters more than one .type declaration for an object it seems
@@ -444,14 +448,19 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
   // Emit instruction directly into data fragment.
   size_t FixupStartIndex = DF->getFixups().size();
   size_t CodeOffset = DF->getContents().size();
-  Assembler.getEmitter().encodeInstruction(Inst, DF->getContents(),
-                                           DF->getFixups(), STI);
+  SmallVector<MCFixup, 1> Fixups;
+  Assembler.getEmitter().encodeInstruction(Inst, DF->getContentsForAppending(),
+                                           Fixups, STI);
+  DF->doneAppending();
+  if (!Fixups.empty())
+    DF->appendFixups(Fixups);
 
-  auto Fixups = MutableArrayRef(DF->getFixups()).slice(FixupStartIndex);
-  for (auto &Fixup : Fixups) {
+  for (auto &Fixup : MutableArrayRef(DF->getFixups()).slice(FixupStartIndex)) {
     Fixup.setOffset(Fixup.getOffset() + CodeOffset);
-    if (Fixup.needsRelax())
+    if (Fixup.isLinkerRelaxable()) {
       DF->setLinkerRelaxable();
+      getCurrentSectionOnly()->setLinkerRelaxable();
+    }
   }
 
   DF->setHasInstructions(STI);

@@ -26,20 +26,6 @@ llvm.func @atomic_hint(%v : !llvm.ptr, %x : !llvm.ptr, %expr : i32) {
 
 // -----
 
-llvm.func @do_simd(%lb : i32, %ub : i32, %step : i32) {
-  omp.wsloop {
-    // expected-warning@below {{simd information on composite construct discarded}}
-    omp.simd {
-      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-        omp.yield
-      }
-    } {omp.composite}
-  } {omp.composite}
-  llvm.return
-}
-
-// -----
-
 llvm.func @distribute_allocate(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.distribute operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.distribute}}
@@ -134,36 +120,6 @@ llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause linear in omp.simd operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.simd}}
   omp.simd linear(%x = %step : !llvm.ptr) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
-
-// -----
-
-omp.declare_reduction @add_f32 : f32
-init {
-^bb0(%arg: f32):
-  %0 = llvm.mlir.constant(0.0 : f32) : f32
-  omp.yield (%0 : f32)
-}
-combiner {
-^bb1(%arg0: f32, %arg1: f32):
-  %1 = llvm.fadd %arg0, %arg1 : f32
-  omp.yield (%1 : f32)
-}
-atomic {
-^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
-  %2 = llvm.load %arg3 : !llvm.ptr -> f32
-  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
-  omp.yield
-}
-llvm.func @simd_reduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause reduction in omp.simd operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.simd}}
-  omp.simd reduction(@add_f32 %x -> %prv : !llvm.ptr) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -511,6 +467,18 @@ llvm.func @wsloop_allocate(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 
 // -----
 
+llvm.func @wsloop_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: Unhandled clause linear in omp.wsloop operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.wsloop}}
+  omp.wsloop linear(%x = %step : !llvm.ptr) {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+  llvm.return
+}
+
+// -----
 llvm.func @wsloop_order(%lb : i32, %ub : i32, %step : i32) {
   // expected-error@below {{not yet implemented: Unhandled clause order in omp.wsloop operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.wsloop}}
@@ -519,5 +487,45 @@ llvm.func @wsloop_order(%lb : i32, %ub : i32, %step : i32) {
       omp.yield
     }
   }
+  llvm.return
+}
+
+// -----
+
+llvm.func @do_simd_if(%1 : !llvm.ptr, %5 : i32, %4 : i32, %6 : i1) {
+  omp.wsloop {
+    // expected-warning@below {{simd information on composite construct discarded}}
+    omp.simd if(%6) {
+      omp.loop_nest (%arg0) : i32 = (%5) to (%4) inclusive step (%5) {
+        llvm.store %arg0, %1 : i32, !llvm.ptr
+        omp.yield
+      }
+    } {omp.composite}
+  } {omp.composite}
+  llvm.return
+}
+
+// -----
+
+omp.declare_reduction @add_reduction_i32 : i32 init {
+^bb0(%arg0: i32):
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  omp.yield(%0 : i32)
+} combiner {
+^bb0(%arg0: i32, %arg1: i32):
+  %0 = llvm.add %arg0, %arg1 : i32
+  omp.yield(%0 : i32)
+}
+llvm.func @do_simd_reduction(%1 : !llvm.ptr, %3 : !llvm.ptr, %6 : i32, %7 : i32) {
+  omp.wsloop reduction(@add_reduction_i32 %3 -> %arg0 : !llvm.ptr) {
+    // expected-warning@below {{simd information on composite construct discarded}}
+    omp.simd reduction(@add_reduction_i32 %arg0 -> %arg1 : !llvm.ptr) {
+      omp.loop_nest (%arg2) : i32 = (%7) to (%6) inclusive step (%7) {
+        llvm.store %arg2, %1 : i32, !llvm.ptr
+        %12 = llvm.load %arg1 : !llvm.ptr -> i32
+        omp.yield
+      }
+    } {omp.composite}
+  } {omp.composite}
   llvm.return
 }

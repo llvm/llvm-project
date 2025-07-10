@@ -103,6 +103,11 @@ MCCodeEmitter *llvm::createAMDGPUMCCodeEmitter(const MCInstrInfo &MCII,
   return new AMDGPUMCCodeEmitter(MCII, *Ctx.getRegisterInfo());
 }
 
+static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
+                     const MCExpr *Value, uint16_t Kind, bool PCRel = false) {
+  Fixups.push_back(MCFixup::create(Offset, Value, Kind, PCRel));
+}
+
 // Returns the encoding value to use if the given integer is an integer inline
 // immediate value, or 0 if it is not.
 template <typename IntTy>
@@ -213,7 +218,8 @@ static uint32_t getLit16IntEncoding(uint32_t Val, const MCSubtargetInfo &STI) {
   return getLit32Encoding(Val, STI);
 }
 
-static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI) {
+static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI,
+                                 bool IsFP) {
   uint32_t IntImm = getIntInlineImmEncoding(static_cast<int64_t>(Val));
   if (IntImm != 0)
     return IntImm;
@@ -246,7 +252,17 @@ static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI) {
       STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm))
     return 248;
 
-  return 255;
+  // The rest part needs to align with AMDGPUInstPrinter::printImmediate64.
+
+  if (IsFP) {
+    return STI.hasFeature(AMDGPU::Feature64BitLiterals) && Lo_32(Val) ? 254
+                                                                      : 255;
+  }
+
+  return STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
+                 (!isInt<32>(Val) || !isUInt<32>(Val))
+             ? 254
+             : 255;
 }
 
 std::optional<uint32_t>
@@ -255,13 +271,12 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
                                     const MCSubtargetInfo &STI) const {
   int64_t Imm;
   if (MO.isExpr()) {
-    const auto *C = dyn_cast<MCConstantExpr>(MO.getExpr());
-    if (!C)
-      return 255;
-
-    Imm = C->getValue();
+    if (!MO.getExpr()->evaluateAsAbsolute(Imm))
+      return (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
+              OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_INT64)
+                 ? 254
+                 : 255;
   } else {
-
     assert(!MO.isDFPImm());
 
     if (!MO.isImm())
@@ -283,11 +298,13 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
     return getLit32Encoding(static_cast<uint32_t>(Imm), STI);
 
   case AMDGPU::OPERAND_REG_IMM_INT64:
-  case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
+    return getLit64Encoding(static_cast<uint64_t>(Imm), STI, false);
+
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-    return getLit64Encoding(static_cast<uint64_t>(Imm), STI);
+  case AMDGPU::OPERAND_REG_IMM_FP64:
+    return getLit64Encoding(static_cast<uint64_t>(Imm), STI, true);
 
   case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
@@ -417,7 +434,7 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
     // Is this operand a literal immediate?
     const MCOperand &Op = MI.getOperand(i);
     auto Enc = getLitEncoding(Op, Desc.operands()[i], STI);
-    if (!Enc || *Enc != 255)
+    if (!Enc || (*Enc != 255 && *Enc != 254))
       continue;
 
     // Yes! Encode it
@@ -431,10 +448,14 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
     } else // Exprs will be replaced with a fixup value.
       llvm_unreachable("Must be immediate or expr");
 
-    if (Desc.operands()[i].OperandType == AMDGPU::OPERAND_REG_IMM_FP64)
-      Imm = Hi_32(Imm);
-
-    support::endian::write<uint32_t>(CB, Imm, llvm::endianness::little);
+    if (*Enc == 254) {
+      assert(STI.hasFeature(AMDGPU::Feature64BitLiterals));
+      support::endian::write<uint64_t>(CB, Imm, llvm::endianness::little);
+    } else {
+      if (Desc.operands()[i].OperandType == AMDGPU::OPERAND_REG_IMM_FP64)
+        Imm = Hi_32(Imm);
+      support::endian::write<uint32_t>(CB, Imm, llvm::endianness::little);
+    }
 
     // Only one literal value allowed
     break;
@@ -449,8 +470,7 @@ void AMDGPUMCCodeEmitter::getSOPPBrEncoding(const MCInst &MI, unsigned OpNo,
 
   if (MO.isExpr()) {
     const MCExpr *Expr = MO.getExpr();
-    MCFixupKind Kind = (MCFixupKind)AMDGPU::fixup_si_sopp_br;
-    Fixups.push_back(MCFixup::create(0, Expr, Kind, MI.getLoc()));
+    addFixup(Fixups, 0, Expr, AMDGPU::fixup_si_sopp_br, true);
     Op = APInt::getZero(96);
   } else {
     getMachineOpValue(MI, MO, Op, Fixups, STI);
@@ -547,6 +567,7 @@ static bool needsPCRel(const MCExpr *Expr) {
   }
   case MCExpr::Unary:
     return needsPCRel(cast<MCUnaryExpr>(Expr)->getSubExpr());
+  case MCExpr::Specifier:
   case MCExpr::Target:
   case MCExpr::Constant:
     return false;
@@ -655,17 +676,11 @@ void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
     //
     // .Ltmp1:
     //   s_add_u32 s2, s2, (extern_const_addrspace+16)-.Ltmp1
-    MCFixupKind Kind;
-    if (needsPCRel(MO.getExpr()))
-      Kind = FK_PCRel_4;
-    else
-      Kind = FK_Data_4;
-
+    bool PCRel = needsPCRel(MO.getExpr());
     const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
     uint32_t Offset = Desc.getSize();
     assert(Offset == 4 || Offset == 8);
-
-    Fixups.push_back(MCFixup::create(Offset, MO.getExpr(), Kind, MI.getLoc()));
+    addFixup(Fixups, Offset, MO.getExpr(), FK_Data_4, PCRel);
   }
 
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());

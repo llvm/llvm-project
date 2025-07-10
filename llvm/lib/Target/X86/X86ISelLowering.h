@@ -1095,7 +1095,7 @@ namespace llvm {
     /// 4-byte boundaries.
     Align getByValTypeAlignment(Type *Ty, const DataLayout &DL) const override;
 
-    EVT getOptimalMemOpType(const MemOp &Op,
+    EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                             const AttributeList &FuncAttributes) const override;
 
     /// Returns true if it's safe to use load / store of the
@@ -1467,8 +1467,9 @@ namespace llvm {
     /// from i32 to i16.
     bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const override;
 
-    bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
-                                              EVT VT) const override;
+    bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
+                                              unsigned SelectOpcode, SDValue X,
+                                              SDValue Y) const override;
 
     /// Given an intrinsic, checks if on the target the intrinsic will need to map
     /// to a MemIntrinsicNode (touches memory). If this is the case, it returns

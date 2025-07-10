@@ -11,7 +11,9 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPCommon.h"
 
-using LlvmLibcBfloat16ToFloatTest = LIBC_NAMESPACE::testing::FPTest<bfloat16>;
+using BFloat16 = LIBC_NAMESPACE::fputil::BFloat16;
+using LlvmLibcBfloat16ConversionTest =
+    LIBC_NAMESPACE::testing::FPTest<BFloat16>;
 
 // range: [0, inf]
 static constexpr uint16_t POS_START = 0x0000U;
@@ -23,9 +25,9 @@ static constexpr uint16_t NEG_STOP = 0xff80U;
 
 using MPFRNumber = LIBC_NAMESPACE::testing::mpfr::MPFRNumber;
 
-TEST_F(LlvmLibcBfloat16ToFloatTest, PositiveRange) {
+TEST_F(LlvmLibcBfloat16ConversionTest, ToFloatPositiveRange) {
   for (uint16_t bits = POS_START; bits <= POS_STOP; bits++) {
-    bfloat16 bf16_num{bits};
+    BFloat16 bf16_num{bits};
     MPFRNumber mpfr_num{bf16_num};
 
     // bfloat16 to float
@@ -33,16 +35,16 @@ TEST_F(LlvmLibcBfloat16ToFloatTest, PositiveRange) {
     EXPECT_FP_EQ_ALL_ROUNDING(mpfr_float, static_cast<float>(bf16_num));
 
     // float to bfloat16
-    bfloat16 bf16_from_float{mpfr_float};
+    BFloat16 bf16_from_float{mpfr_float};
     MPFRNumber mpfr_num_2{mpfr_float};
-    bfloat16 mpfr_bfloat = mpfr_num_2.as<bfloat16>();
+    BFloat16 mpfr_bfloat = mpfr_num_2.as<BFloat16>();
     EXPECT_FP_EQ_ALL_ROUNDING(mpfr_bfloat, bf16_from_float);
   }
 }
 
-TEST_F(LlvmLibcBfloat16ToFloatTest, NegativeRange) {
+TEST_F(LlvmLibcBfloat16ConversionTest, ToFloatNegativeRange) {
   for (uint16_t bits = NEG_START; bits <= NEG_STOP; bits++) {
-    bfloat16 bf16_num{bits};
+    BFloat16 bf16_num{bits};
     MPFRNumber mpfr_num{bf16_num};
 
     // bfloat16 to float
@@ -50,18 +52,18 @@ TEST_F(LlvmLibcBfloat16ToFloatTest, NegativeRange) {
     EXPECT_FP_EQ_ALL_ROUNDING(mpfr_float, static_cast<float>(bf16_num));
 
     // float to bfloat16
-    bfloat16 bf16_from_float{mpfr_float};
+    BFloat16 bf16_from_float{mpfr_float};
     MPFRNumber mpfr_num_2{mpfr_float};
-    bfloat16 mpfr_bfloat = mpfr_num_2.as<bfloat16>();
+    BFloat16 mpfr_bfloat = mpfr_num_2.as<BFloat16>();
     EXPECT_FP_EQ_ALL_ROUNDING(mpfr_bfloat, bf16_from_float);
   }
 }
 
-TEST_F(LlvmLibcBfloat16ToFloatTest, SpecialIntegers) {
+TEST_F(LlvmLibcBfloat16ConversionTest, FromInteger) {
   constexpr int RANGE = 100'000;
   for (int i = -RANGE; i <= RANGE; i++) {
-    bfloat16 mpfr_bfloat = MPFRNumber(i).as<bfloat16>();
-    bfloat16 libc_bfloat{i};
+    BFloat16 mpfr_bfloat = MPFRNumber(i).as<BFloat16>();
+    BFloat16 libc_bfloat{i};
     EXPECT_FP_EQ_ALL_ROUNDING(mpfr_bfloat, libc_bfloat);
   }
 }

@@ -404,7 +404,7 @@ void LoopEmitter::categorizeIterators(
       spIters.push_back(it);
   }
 
-  std::stable_sort(spIters.begin(), spIters.end(), [](auto lhs, auto rhs) {
+  llvm::stable_sort(spIters, [](auto lhs, auto rhs) {
     // AffineUnRed > Affine > Slice > Trivial
     return static_cast<uint8_t>(lhs->kind) > static_cast<uint8_t>(rhs->kind);
   });
@@ -929,7 +929,7 @@ std::pair<Operation *, Value> sparse_tensor::genCoIteration(
     ivs.push_back(uniIdx);
 
   // Ensures all operands are valid.
-  assert(llvm::all_of(ivs, [](Value v) { return v != nullptr; }));
+  assert(!llvm::is_contained(ivs, nullptr));
   TypeRange types = ValueRange(ivs).getTypes();
   auto whileOp = builder.create<scf::WhileOp>(loc, types, ivs);
 

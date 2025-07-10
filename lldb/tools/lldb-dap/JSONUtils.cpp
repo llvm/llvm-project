@@ -10,6 +10,7 @@
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
 #include "LLDBUtils.h"
+#include "ProtocolUtils.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBCompileUnit.h"
 #include "lldb/API/SBDeclaration.h"
@@ -340,101 +341,6 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
   return llvm::json::Value(std::move(object));
 }
 
-static uint64_t GetDebugInfoSizeInSection(lldb::SBSection section) {
-  uint64_t debug_info_size = 0;
-  llvm::StringRef section_name(section.GetName());
-  if (section_name.starts_with(".debug") ||
-      section_name.starts_with("__debug") ||
-      section_name.starts_with(".apple") || section_name.starts_with("__apple"))
-    debug_info_size += section.GetFileByteSize();
-  size_t num_sub_sections = section.GetNumSubSections();
-  for (size_t i = 0; i < num_sub_sections; i++) {
-    debug_info_size +=
-        GetDebugInfoSizeInSection(section.GetSubSectionAtIndex(i));
-  }
-  return debug_info_size;
-}
-
-static uint64_t GetDebugInfoSize(lldb::SBModule module) {
-  uint64_t debug_info_size = 0;
-  size_t num_sections = module.GetNumSections();
-  for (size_t i = 0; i < num_sections; i++) {
-    debug_info_size += GetDebugInfoSizeInSection(module.GetSectionAtIndex(i));
-  }
-  return debug_info_size;
-}
-
-static std::string ConvertDebugInfoSizeToString(uint64_t debug_info) {
-  std::ostringstream oss;
-  oss << std::fixed << std::setprecision(1);
-  if (debug_info < 1024) {
-    oss << debug_info << "B";
-  } else if (debug_info < 1024 * 1024) {
-    double kb = double(debug_info) / 1024.0;
-    oss << kb << "KB";
-  } else if (debug_info < 1024 * 1024 * 1024) {
-    double mb = double(debug_info) / (1024.0 * 1024.0);
-    oss << mb << "MB";
-  } else {
-    double gb = double(debug_info) / (1024.0 * 1024.0 * 1024.0);
-    oss << gb << "GB";
-  }
-  return oss.str();
-}
-
-llvm::json::Value CreateModule(lldb::SBTarget &target, lldb::SBModule &module,
-                               bool id_only) {
-  llvm::json::Object object;
-  if (!target.IsValid() || !module.IsValid())
-    return llvm::json::Value(std::move(object));
-
-  const char *uuid = module.GetUUIDString();
-  object.try_emplace("id", uuid ? std::string(uuid) : std::string(""));
-
-  if (id_only)
-    return llvm::json::Value(std::move(object));
-
-  object.try_emplace("name", std::string(module.GetFileSpec().GetFilename()));
-  char module_path_arr[PATH_MAX];
-  module.GetFileSpec().GetPath(module_path_arr, sizeof(module_path_arr));
-  std::string module_path(module_path_arr);
-  object.try_emplace("path", module_path);
-  if (module.GetNumCompileUnits() > 0) {
-    std::string symbol_str = "Symbols loaded.";
-    std::string debug_info_size;
-    uint64_t debug_info = GetDebugInfoSize(module);
-    if (debug_info > 0) {
-      debug_info_size = ConvertDebugInfoSizeToString(debug_info);
-    }
-    object.try_emplace("symbolStatus", symbol_str);
-    object.try_emplace("debugInfoSize", debug_info_size);
-    char symbol_path_arr[PATH_MAX];
-    module.GetSymbolFileSpec().GetPath(symbol_path_arr,
-                                       sizeof(symbol_path_arr));
-    std::string symbol_path(symbol_path_arr);
-    object.try_emplace("symbolFilePath", symbol_path);
-  } else {
-    object.try_emplace("symbolStatus", "Symbols not found.");
-  }
-  std::string load_address =
-      llvm::formatv("{0:x}",
-                    module.GetObjectFileHeaderAddress().GetLoadAddress(target))
-          .str();
-  object.try_emplace("addressRange", load_address);
-  std::string version_str;
-  uint32_t version_nums[3];
-  uint32_t num_versions =
-      module.GetVersion(version_nums, sizeof(version_nums) / sizeof(uint32_t));
-  for (uint32_t i = 0; i < num_versions; ++i) {
-    if (!version_str.empty())
-      version_str += ".";
-    version_str += std::to_string(version_nums[i]);
-  }
-  if (!version_str.empty())
-    object.try_emplace("version", version_str);
-  return llvm::json::Value(std::move(object));
-}
-
 // "Event": {
 //   "allOf": [ { "$ref": "#/definitions/ProtocolMessage" }, {
 //     "type": "object",
@@ -479,65 +385,6 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
   event.try_emplace("type", "event");
   EmplaceSafeString(event, "event", event_name);
   return event;
-}
-
-protocol::ExceptionBreakpointsFilter
-CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
-  protocol::ExceptionBreakpointsFilter filter;
-  filter.filter = bp.GetFilter();
-  filter.label = bp.GetLabel();
-  filter.defaultState = ExceptionBreakpoint::kDefaultValue;
-  return filter;
-}
-
-protocol::Source CreateSource(const lldb::SBFileSpec &file) {
-  protocol::Source source;
-  if (file.IsValid()) {
-    const char *name = file.GetFilename();
-    if (name)
-      source.name = name;
-    char path[PATH_MAX] = "";
-    if (file.GetPath(path, sizeof(path)) &&
-        lldb::SBFileSpec::ResolvePath(path, path, PATH_MAX))
-      source.path = path;
-  }
-  return source;
-}
-
-protocol::Source CreateSource(const lldb::SBLineEntry &line_entry) {
-  return CreateSource(line_entry.GetFileSpec());
-}
-
-protocol::Source CreateSource(llvm::StringRef source_path) {
-  protocol::Source source;
-  llvm::StringRef name = llvm::sys::path::filename(source_path);
-  source.name = name;
-  source.path = source_path;
-  return source;
-}
-
-bool ShouldDisplayAssemblySource(
-    const lldb::SBLineEntry &line_entry,
-    lldb::StopDisassemblyType stop_disassembly_display) {
-  if (stop_disassembly_display == lldb::eStopDisassemblyTypeNever)
-    return false;
-
-  if (stop_disassembly_display == lldb::eStopDisassemblyTypeAlways)
-    return true;
-
-  // A line entry of 0 indicates the line is compiler generated i.e. no source
-  // file is associated with the frame.
-  auto file_spec = line_entry.GetFileSpec();
-  if (!file_spec.IsValid() || line_entry.GetLine() == 0 ||
-      line_entry.GetLine() == LLDB_INVALID_LINE_NUMBER)
-    return true;
-
-  if (stop_disassembly_display == lldb::eStopDisassemblyTypeNoSource &&
-      !file_spec.Exists()) {
-    return true;
-  }
-
-  return false;
 }
 
 // "StackFrame": {
@@ -601,9 +448,8 @@ bool ShouldDisplayAssemblySource(
 //   },
 //   "required": [ "id", "name", "line", "column" ]
 // }
-llvm::json::Value
-CreateStackFrame(lldb::SBFrame &frame, lldb::SBFormat &format,
-                 lldb::StopDisassemblyType stop_disassembly_display) {
+llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
+                                   lldb::SBFormat &format) {
   llvm::json::Object object;
   int64_t frame_id = MakeDAPFrameID(frame);
   object.try_emplace("id", frame_id);
@@ -622,8 +468,7 @@ CreateStackFrame(lldb::SBFrame &frame, lldb::SBFormat &format,
   if (frame_name.empty()) {
     // If the function name is unavailable, display the pc address as a 16-digit
     // hex string, e.g. "0x0000000000012345"
-    llvm::raw_string_ostream os(frame_name);
-    os << llvm::format_hex(frame.GetPC(), 18);
+    frame_name = GetLoadAddressString(frame.GetPC());
   }
 
   // We only include `[opt]` if a custom frame format is not specified.
@@ -632,31 +477,19 @@ CreateStackFrame(lldb::SBFrame &frame, lldb::SBFormat &format,
 
   EmplaceSafeString(object, "name", frame_name);
 
-  auto line_entry = frame.GetLineEntry();
-  if (!ShouldDisplayAssemblySource(line_entry, stop_disassembly_display)) {
-    object.try_emplace("source", CreateSource(line_entry));
+  std::optional<protocol::Source> source = dap.ResolveSource(frame);
+
+  if (source && !IsAssemblySource(*source)) {
+    // This is a normal source with a valid line entry.
+    auto line_entry = frame.GetLineEntry();
     object.try_emplace("line", line_entry.GetLine());
     auto column = line_entry.GetColumn();
     object.try_emplace("column", column);
   } else if (frame.GetSymbol().IsValid()) {
-    // If no source is associated with the frame, use the DAPFrameID to track
-    // the 'source' and generate assembly.
-    llvm::json::Object source;
-    EmplaceSafeString(source, "name", frame_name);
-    char buf[PATH_MAX] = {0};
-    size_t size = frame.GetModule().GetFileSpec().GetPath(buf, PATH_MAX);
-    EmplaceSafeString(source, "path",
-                      std::string(buf, size) + '`' + frame_name);
-    source.try_emplace("sourceReference", MakeDAPFrameID(frame));
-    // Mark the source as deemphasized since users will only be able to view
-    // assembly for these frames.
-    EmplaceSafeString(source, "presentationHint", "deemphasize");
-    object.try_emplace("source", std::move(source));
-
-    // Calculate the line of the current PC from the start of the current
-    // symbol.
-    lldb::SBTarget target = frame.GetThread().GetProcess().GetTarget();
-    lldb::SBInstructionList inst_list = target.ReadInstructions(
+    // This is a source where the disassembly is used, but there is a valid
+    // symbol. Calculate the line of the current PC from the start of the
+    // current symbol.
+    lldb::SBInstructionList inst_list = dap.target.ReadInstructions(
         frame.GetSymbol().GetStartAddress(), frame.GetPCAddress(), nullptr);
     size_t inst_line = inst_list.GetSize();
 
@@ -665,15 +498,12 @@ CreateStackFrame(lldb::SBFrame &frame, lldb::SBFormat &format,
     object.try_emplace("column", 1);
   } else {
     // No valid line entry or symbol.
-    llvm::json::Object source;
-    EmplaceSafeString(source, "name", frame_name);
-    source.try_emplace("sourceReference", MakeDAPFrameID(frame));
-    EmplaceSafeString(source, "presentationHint", "deemphasize");
-    object.try_emplace("source", std::move(source));
-
     object.try_emplace("line", 1);
     object.try_emplace("column", 1);
   }
+
+  if (source)
+    object.try_emplace("source", std::move(source).value());
 
   const auto pc = frame.GetPC();
   if (pc != LLDB_INVALID_ADDRESS) {
@@ -707,70 +537,6 @@ llvm::json::Value CreateExtendedStackFrameLabel(lldb::SBThread &thread,
   return llvm::json::Value(llvm::json::Object{{"id", thread.GetThreadID() + 1},
                                               {"name", name},
                                               {"presentationHint", "label"}});
-}
-
-// "Thread": {
-//   "type": "object",
-//   "description": "A Thread",
-//   "properties": {
-//     "id": {
-//       "type": "integer",
-//       "description": "Unique identifier for the thread."
-//     },
-//     "name": {
-//       "type": "string",
-//       "description": "A name of the thread."
-//     }
-//   },
-//   "required": [ "id", "name" ]
-// }
-llvm::json::Value CreateThread(lldb::SBThread &thread, lldb::SBFormat &format) {
-  llvm::json::Object object;
-  object.try_emplace("id", (int64_t)thread.GetThreadID());
-  std::string thread_str;
-  lldb::SBStream stream;
-  if (format && thread.GetDescriptionWithFormat(format, stream).Success()) {
-    thread_str = stream.GetData();
-  } else {
-    const char *thread_name = thread.GetName();
-    const char *queue_name = thread.GetQueueName();
-
-    if (thread_name) {
-      thread_str = std::string(thread_name);
-    } else if (queue_name) {
-      auto kind = thread.GetQueue().GetKind();
-      std::string queue_kind_label = "";
-      if (kind == lldb::eQueueKindSerial) {
-        queue_kind_label = " (serial)";
-      } else if (kind == lldb::eQueueKindConcurrent) {
-        queue_kind_label = " (concurrent)";
-      }
-
-      thread_str =
-          llvm::formatv("Thread {0} Queue: {1}{2}", thread.GetIndexID(),
-                        queue_name, queue_kind_label)
-              .str();
-    } else {
-      thread_str = llvm::formatv("Thread {0}", thread.GetIndexID()).str();
-    }
-  }
-
-  EmplaceSafeString(object, "name", thread_str);
-
-  return llvm::json::Value(std::move(object));
-}
-
-llvm::json::Array GetThreads(lldb::SBProcess process, lldb::SBFormat &format) {
-  lldb::SBMutex lock = process.GetTarget().GetAPIMutex();
-  std::lock_guard<lldb::SBMutex> guard(lock);
-
-  llvm::json::Array threads;
-  const uint32_t num_threads = process.GetNumThreads();
-  for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
-    lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
-    threads.emplace_back(CreateThread(thread, format));
-  }
-  return threads;
 }
 
 // "StoppedEvent": {
@@ -1303,7 +1069,7 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit) {
 /// https://microsoft.github.io/debug-adapter-protocol/specification#Reverse_Requests_RunInTerminal
 llvm::json::Object CreateRunInTerminalReverseRequest(
     llvm::StringRef program, const std::vector<std::string> &args,
-    const llvm::StringMap<std::string> env, llvm::StringRef cwd,
+    const llvm::StringMap<std::string> &env, llvm::StringRef cwd,
     llvm::StringRef comm_file, lldb::pid_t debugger_pid) {
   llvm::json::Object run_in_terminal_args;
   // This indicates the IDE to open an embedded terminal, instead of opening
@@ -1320,7 +1086,7 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
   req_args.push_back("--launch-target");
   req_args.push_back(program.str());
   req_args.insert(req_args.end(), args.begin(), args.end());
-  run_in_terminal_args.try_emplace("args", args);
+  run_in_terminal_args.try_emplace("args", req_args);
 
   if (!cwd.empty())
     run_in_terminal_args.try_emplace("cwd", cwd);
