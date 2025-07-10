@@ -1512,17 +1512,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return Cost * LT.first;
     break;
   }
-  case Intrinsic::vp_select: {
-    Intrinsic::ID IID = ICA.getID();
-    std::optional<unsigned> FOp = VPIntrinsic::getFunctionalOpcodeForVP(IID);
-    assert(FOp.has_value());
-    return getCmpSelInstrCost(*FOp, ICA.getReturnType(), ICA.getArgTypes()[0],
-                              CmpInst::BAD_ICMP_PREDICATE, CostKind);
-  }
-  case Intrinsic::vp_merge:
-    return getCmpSelInstrCost(Instruction::Select, ICA.getReturnType(),
-                              ICA.getArgTypes()[0], CmpInst::BAD_ICMP_PREDICATE,
-                              CostKind);
   case Intrinsic::experimental_vp_splat: {
     auto LT = getTypeLegalizationCost(RetTy);
     // TODO: Lower i1 experimental_vp_splat
