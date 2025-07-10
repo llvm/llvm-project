@@ -520,12 +520,11 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
           addSystemInclude(DriverArgs, CC1Args, Dir.str());
         }
         break;
-      } else {
-        // Add generic path if nothing else succeeded so far.
-        llvm::sys::path::append(Dir, "include", "c++", "v1");
-        addSystemInclude(DriverArgs, CC1Args, Dir.str());
-        break;
       }
+      // Add generic path if nothing else succeeded so far.
+      llvm::sys::path::append(Dir, "include", "c++", "v1");
+      addSystemInclude(DriverArgs, CC1Args, Dir.str());
+      break;
     }
     case ToolChain::CST_Libstdcxx: {
       llvm::sys::path::append(Dir, "include", "c++");
