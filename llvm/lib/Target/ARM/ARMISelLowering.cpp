@@ -523,66 +523,63 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       static const struct {
         const RTLIB::Libcall Op;
         const RTLIB::LibcallImpl Impl;
-        const CmpInst::Predicate Cond;
       } LibraryCalls[] = {
         // Single-precision floating-point arithmetic.
-        { RTLIB::ADD_F32, RTLIB::__addsf3vfp, CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::SUB_F32, RTLIB::__subsf3vfp, CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::MUL_F32, RTLIB::__mulsf3vfp, CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::DIV_F32, RTLIB::__divsf3vfp, CmpInst::BAD_ICMP_PREDICATE },
+        { RTLIB::ADD_F32, RTLIB::__addsf3vfp },
+        { RTLIB::SUB_F32, RTLIB::__subsf3vfp },
+        { RTLIB::MUL_F32, RTLIB::__mulsf3vfp },
+        { RTLIB::DIV_F32, RTLIB::__divsf3vfp },
 
         // Double-precision floating-point arithmetic.
-        { RTLIB::ADD_F64, RTLIB::__adddf3vfp, CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::SUB_F64, RTLIB::__subdf3vfp, CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::MUL_F64, RTLIB::__muldf3vfp, CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::DIV_F64, RTLIB::__divdf3vfp, CmpInst::BAD_ICMP_PREDICATE },
+        { RTLIB::ADD_F64, RTLIB::__adddf3vfp },
+        { RTLIB::SUB_F64, RTLIB::__subdf3vfp },
+        { RTLIB::MUL_F64, RTLIB::__muldf3vfp },
+        { RTLIB::DIV_F64, RTLIB::__divdf3vfp },
 
         // Single-precision comparisons.
-        { RTLIB::OEQ_F32, RTLIB::__eqsf2vfp,    CmpInst::ICMP_NE },
-        { RTLIB::UNE_F32, RTLIB::__nesf2vfp,    CmpInst::ICMP_NE },
-        { RTLIB::OLT_F32, RTLIB::__ltsf2vfp,    CmpInst::ICMP_NE },
-        { RTLIB::OLE_F32, RTLIB::__lesf2vfp,    CmpInst::ICMP_NE },
-        { RTLIB::OGE_F32, RTLIB::__gesf2vfp,    CmpInst::ICMP_NE },
-        { RTLIB::OGT_F32, RTLIB::__gtsf2vfp,    CmpInst::ICMP_NE },
-        { RTLIB::UO_F32,  RTLIB::__unordsf2vfp, CmpInst::ICMP_NE },
+        { RTLIB::OEQ_F32, RTLIB::__eqsf2vfp },
+        { RTLIB::UNE_F32, RTLIB::__nesf2vfp },
+        { RTLIB::OLT_F32, RTLIB::__ltsf2vfp },
+        { RTLIB::OLE_F32, RTLIB::__lesf2vfp },
+        { RTLIB::OGE_F32, RTLIB::__gesf2vfp },
+        { RTLIB::OGT_F32, RTLIB::__gtsf2vfp },
+        { RTLIB::UO_F32,  RTLIB::__unordsf2vfp },
 
         // Double-precision comparisons.
-        { RTLIB::OEQ_F64, RTLIB::__eqdf2vfp,    CmpInst::ICMP_NE },
-        { RTLIB::UNE_F64, RTLIB::__nedf2vfp,    CmpInst::ICMP_NE },
-        { RTLIB::OLT_F64, RTLIB::__ltdf2vfp,    CmpInst::ICMP_NE },
-        { RTLIB::OLE_F64, RTLIB::__ledf2vfp,    CmpInst::ICMP_NE },
-        { RTLIB::OGE_F64, RTLIB::__gedf2vfp,    CmpInst::ICMP_NE },
-        { RTLIB::OGT_F64, RTLIB::__gtdf2vfp,    CmpInst::ICMP_NE },
-        { RTLIB::UO_F64,  RTLIB::__unorddf2vfp, CmpInst::ICMP_NE },
+        { RTLIB::OEQ_F64, RTLIB::__eqdf2vfp },
+        { RTLIB::UNE_F64, RTLIB::__nedf2vfp },
+        { RTLIB::OLT_F64, RTLIB::__ltdf2vfp },
+        { RTLIB::OLE_F64, RTLIB::__ledf2vfp },
+        { RTLIB::OGE_F64, RTLIB::__gedf2vfp },
+        { RTLIB::OGT_F64, RTLIB::__gtdf2vfp },
+        { RTLIB::UO_F64,  RTLIB::__unorddf2vfp },
 
         // Floating-point to integer conversions.
         // i64 conversions are done via library routines even when generating VFP
         // instructions, so use the same ones.
-        { RTLIB::FPTOSINT_F64_I32, RTLIB::__fixdfsivfp,    CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::FPTOUINT_F64_I32, RTLIB::__fixunsdfsivfp, CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::FPTOSINT_F32_I32, RTLIB::__fixsfsivfp,    CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::FPTOUINT_F32_I32, RTLIB::__fixunssfsivfp, CmpInst::BAD_ICMP_PREDICATE },
+        { RTLIB::FPTOSINT_F64_I32, RTLIB::__fixdfsivfp },
+        { RTLIB::FPTOUINT_F64_I32, RTLIB::__fixunsdfsivfp },
+        { RTLIB::FPTOSINT_F32_I32, RTLIB::__fixsfsivfp },
+        { RTLIB::FPTOUINT_F32_I32, RTLIB::__fixunssfsivfp },
 
         // Conversions between floating types.
-        { RTLIB::FPROUND_F64_F32, RTLIB::__truncdfsf2vfp,  CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::FPEXT_F32_F64,   RTLIB::__extendsfdf2vfp, CmpInst::BAD_ICMP_PREDICATE },
+        { RTLIB::FPROUND_F64_F32, RTLIB::__truncdfsf2vfp },
+        { RTLIB::FPEXT_F32_F64,   RTLIB::__extendsfdf2vfp },
 
         // Integer to floating-point conversions.
         // i64 conversions are done via library routines even when generating VFP
         // instructions, so use the same ones.
         // FIXME: There appears to be some naming inconsistency in ARM libgcc:
         // e.g., __floatunsidf vs. __floatunssidfvfp.
-        { RTLIB::SINTTOFP_I32_F64, RTLIB::__floatsidfvfp,    CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::UINTTOFP_I32_F64, RTLIB::__floatunssidfvfp, CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::SINTTOFP_I32_F32, RTLIB::__floatsisfvfp,    CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::UINTTOFP_I32_F32, RTLIB::__floatunssisfvfp, CmpInst::BAD_ICMP_PREDICATE },
+        { RTLIB::SINTTOFP_I32_F64, RTLIB::__floatsidfvfp },
+        { RTLIB::UINTTOFP_I32_F64, RTLIB::__floatunssidfvfp },
+        { RTLIB::SINTTOFP_I32_F32, RTLIB::__floatsisfvfp },
+        { RTLIB::UINTTOFP_I32_F32, RTLIB::__floatunssisfvfp },
       };
       // clang-format on
 
       for (const auto &LC : LibraryCalls) {
         setLibcallImpl(LC.Op, LC.Impl);
-        if (LC.Cond != CmpInst::BAD_ICMP_PREDICATE)
-          setCmpLibcallCC(LC.Op, LC.Cond);
       }
     }
   }
@@ -598,95 +595,92 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       const RTLIB::Libcall Op;
       const RTLIB::LibcallImpl Impl;
       const CallingConv::ID CC;
-      const CmpInst::Predicate Cond;
     } LibraryCalls[] = {
       // Double-precision floating-point arithmetic helper functions
       // RTABI chapter 4.1.2, Table 2
-      { RTLIB::ADD_F64, RTLIB::__aeabi_dadd, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::DIV_F64, RTLIB::__aeabi_ddiv, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::MUL_F64, RTLIB::__aeabi_dmul, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::SUB_F64, RTLIB::__aeabi_dsub, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::ADD_F64, RTLIB::__aeabi_dadd, CallingConv::ARM_AAPCS },
+      { RTLIB::DIV_F64, RTLIB::__aeabi_ddiv, CallingConv::ARM_AAPCS },
+      { RTLIB::MUL_F64, RTLIB::__aeabi_dmul, CallingConv::ARM_AAPCS },
+      { RTLIB::SUB_F64, RTLIB::__aeabi_dsub, CallingConv::ARM_AAPCS },
 
       // Double-precision floating-point comparison helper functions
       // RTABI chapter 4.1.2, Table 3
-      { RTLIB::OEQ_F64, RTLIB::__aeabi_dcmpeq__ne, CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
-      { RTLIB::UNE_F64, RTLIB::__aeabi_dcmpeq__eq, CallingConv::ARM_AAPCS, CmpInst::ICMP_EQ },
-      { RTLIB::OLT_F64, RTLIB::__aeabi_dcmplt, CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
-      { RTLIB::OLE_F64, RTLIB::__aeabi_dcmple, CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
-      { RTLIB::OGE_F64, RTLIB::__aeabi_dcmpge, CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
-      { RTLIB::OGT_F64, RTLIB::__aeabi_dcmpgt, CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
-      { RTLIB::UO_F64,  RTLIB::__aeabi_dcmpun, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::OEQ_F64, RTLIB::__aeabi_dcmpeq__oeq, CallingConv::ARM_AAPCS },
+      { RTLIB::UNE_F64, RTLIB::__aeabi_dcmpeq__une, CallingConv::ARM_AAPCS },
+      { RTLIB::OLT_F64, RTLIB::__aeabi_dcmplt, CallingConv::ARM_AAPCS },
+      { RTLIB::OLE_F64, RTLIB::__aeabi_dcmple, CallingConv::ARM_AAPCS },
+      { RTLIB::OGE_F64, RTLIB::__aeabi_dcmpge, CallingConv::ARM_AAPCS },
+      { RTLIB::OGT_F64, RTLIB::__aeabi_dcmpgt, CallingConv::ARM_AAPCS },
+      { RTLIB::UO_F64,  RTLIB::__aeabi_dcmpun, CallingConv::ARM_AAPCS },
 
       // Single-precision floating-point arithmetic helper functions
       // RTABI chapter 4.1.2, Table 4
-      { RTLIB::ADD_F32, RTLIB::__aeabi_fadd, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::DIV_F32, RTLIB::__aeabi_fdiv, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::MUL_F32, RTLIB::__aeabi_fmul, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::SUB_F32, RTLIB::__aeabi_fsub, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::ADD_F32, RTLIB::__aeabi_fadd, CallingConv::ARM_AAPCS },
+      { RTLIB::DIV_F32, RTLIB::__aeabi_fdiv, CallingConv::ARM_AAPCS },
+      { RTLIB::MUL_F32, RTLIB::__aeabi_fmul, CallingConv::ARM_AAPCS },
+      { RTLIB::SUB_F32, RTLIB::__aeabi_fsub, CallingConv::ARM_AAPCS },
 
       // Single-precision floating-point comparison helper functions
       // RTABI chapter 4.1.2, Table 5
-      { RTLIB::OEQ_F32, RTLIB::__aeabi_fcmpeq__ne, CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
-      { RTLIB::UNE_F32, RTLIB::__aeabi_fcmpeq__eq, CallingConv::ARM_AAPCS, CmpInst::ICMP_EQ },
-      { RTLIB::OLT_F32, RTLIB::__aeabi_fcmplt, CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
-      { RTLIB::OLE_F32, RTLIB::__aeabi_fcmple, CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
-      { RTLIB::OGE_F32, RTLIB::__aeabi_fcmpge, CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
-      { RTLIB::OGT_F32, RTLIB::__aeabi_fcmpgt, CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
-      { RTLIB::UO_F32,  RTLIB::__aeabi_fcmpun, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::OEQ_F32, RTLIB::__aeabi_fcmpeq__oeq, CallingConv::ARM_AAPCS },
+      { RTLIB::UNE_F32, RTLIB::__aeabi_fcmpeq__une, CallingConv::ARM_AAPCS },
+      { RTLIB::OLT_F32, RTLIB::__aeabi_fcmplt, CallingConv::ARM_AAPCS},
+      { RTLIB::OLE_F32, RTLIB::__aeabi_fcmple, CallingConv::ARM_AAPCS },
+      { RTLIB::OGE_F32, RTLIB::__aeabi_fcmpge, CallingConv::ARM_AAPCS },
+      { RTLIB::OGT_F32, RTLIB::__aeabi_fcmpgt, CallingConv::ARM_AAPCS },
+      { RTLIB::UO_F32,  RTLIB::__aeabi_fcmpun, CallingConv::ARM_AAPCS },
 
       // Floating-point to integer conversions.
       // RTABI chapter 4.1.2, Table 6
-      { RTLIB::FPTOSINT_F64_I32, RTLIB::__aeabi_d2iz,  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::FPTOUINT_F64_I32, RTLIB::__aeabi_d2uiz, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::FPTOSINT_F64_I64, RTLIB::__aeabi_d2lz,  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::FPTOUINT_F64_I64, RTLIB::__aeabi_d2ulz, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::FPTOSINT_F32_I32, RTLIB::__aeabi_f2iz,  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::FPTOUINT_F32_I32, RTLIB::__aeabi_f2uiz, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::FPTOSINT_F32_I64, RTLIB::__aeabi_f2lz,  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::FPTOUINT_F32_I64, RTLIB::__aeabi_f2ulz, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::FPTOSINT_F64_I32, RTLIB::__aeabi_d2iz,  CallingConv::ARM_AAPCS },
+      { RTLIB::FPTOUINT_F64_I32, RTLIB::__aeabi_d2uiz, CallingConv::ARM_AAPCS },
+      { RTLIB::FPTOSINT_F64_I64, RTLIB::__aeabi_d2lz,  CallingConv::ARM_AAPCS },
+      { RTLIB::FPTOUINT_F64_I64, RTLIB::__aeabi_d2ulz, CallingConv::ARM_AAPCS },
+      { RTLIB::FPTOSINT_F32_I32, RTLIB::__aeabi_f2iz,  CallingConv::ARM_AAPCS },
+      { RTLIB::FPTOUINT_F32_I32, RTLIB::__aeabi_f2uiz, CallingConv::ARM_AAPCS },
+      { RTLIB::FPTOSINT_F32_I64, RTLIB::__aeabi_f2lz,  CallingConv::ARM_AAPCS },
+      { RTLIB::FPTOUINT_F32_I64, RTLIB::__aeabi_f2ulz, CallingConv::ARM_AAPCS },
 
       // Conversions between floating types.
       // RTABI chapter 4.1.2, Table 7
-      { RTLIB::FPROUND_F64_F32, RTLIB::__aeabi_d2f, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::FPROUND_F64_F16, RTLIB::__aeabi_d2h, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::FPEXT_F32_F64,   RTLIB::__aeabi_f2d, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::FPROUND_F64_F32, RTLIB::__aeabi_d2f, CallingConv::ARM_AAPCS },
+      { RTLIB::FPROUND_F64_F16, RTLIB::__aeabi_d2h, CallingConv::ARM_AAPCS },
+      { RTLIB::FPEXT_F32_F64,   RTLIB::__aeabi_f2d, CallingConv::ARM_AAPCS },
 
       // Integer to floating-point conversions.
       // RTABI chapter 4.1.2, Table 8
-      { RTLIB::SINTTOFP_I32_F64, RTLIB::__aeabi_i2d,  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::UINTTOFP_I32_F64, RTLIB::__aeabi_ui2d, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::SINTTOFP_I64_F64, RTLIB::__aeabi_l2d,  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::UINTTOFP_I64_F64, RTLIB::__aeabi_ul2d, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::SINTTOFP_I32_F32, RTLIB::__aeabi_i2f,  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::UINTTOFP_I32_F32, RTLIB::__aeabi_ui2f, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::SINTTOFP_I64_F32, RTLIB::__aeabi_l2f,  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::UINTTOFP_I64_F32, RTLIB::__aeabi_ul2f, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::SINTTOFP_I32_F64, RTLIB::__aeabi_i2d,  CallingConv::ARM_AAPCS },
+      { RTLIB::UINTTOFP_I32_F64, RTLIB::__aeabi_ui2d, CallingConv::ARM_AAPCS },
+      { RTLIB::SINTTOFP_I64_F64, RTLIB::__aeabi_l2d,  CallingConv::ARM_AAPCS },
+      { RTLIB::UINTTOFP_I64_F64, RTLIB::__aeabi_ul2d, CallingConv::ARM_AAPCS },
+      { RTLIB::SINTTOFP_I32_F32, RTLIB::__aeabi_i2f,  CallingConv::ARM_AAPCS },
+      { RTLIB::UINTTOFP_I32_F32, RTLIB::__aeabi_ui2f, CallingConv::ARM_AAPCS },
+      { RTLIB::SINTTOFP_I64_F32, RTLIB::__aeabi_l2f,  CallingConv::ARM_AAPCS },
+      { RTLIB::UINTTOFP_I64_F32, RTLIB::__aeabi_ul2f, CallingConv::ARM_AAPCS },
 
       // Long long helper functions
       // RTABI chapter 4.2, Table 9
-      { RTLIB::MUL_I64, RTLIB::__aeabi_lmul, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::SHL_I64, RTLIB::__aeabi_llsl, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::SRL_I64, RTLIB::__aeabi_llsr, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::SRA_I64, RTLIB::__aeabi_lasr, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::MUL_I64, RTLIB::__aeabi_lmul, CallingConv::ARM_AAPCS },
+      { RTLIB::SHL_I64, RTLIB::__aeabi_llsl, CallingConv::ARM_AAPCS },
+      { RTLIB::SRL_I64, RTLIB::__aeabi_llsr, CallingConv::ARM_AAPCS },
+      { RTLIB::SRA_I64, RTLIB::__aeabi_lasr, CallingConv::ARM_AAPCS },
 
       // Integer division functions
       // RTABI chapter 4.3.1
-      { RTLIB::SDIV_I8,  RTLIB::__aeabi_idiv__i8,     CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::SDIV_I16, RTLIB::__aeabi_idiv__i16,     CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::SDIV_I32, RTLIB::__aeabi_idiv__i32,     CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::SDIV_I64, RTLIB::__aeabi_ldivmod,  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::UDIV_I8,  RTLIB::__aeabi_uidiv__i8,    CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::UDIV_I16, RTLIB::__aeabi_uidiv__i16,    CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::UDIV_I32, RTLIB::__aeabi_uidiv__i32,    CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::UDIV_I64, RTLIB::__aeabi_uldivmod, CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::SDIV_I8,  RTLIB::__aeabi_idiv__i8,   CallingConv::ARM_AAPCS },
+      { RTLIB::SDIV_I16, RTLIB::__aeabi_idiv__i16,  CallingConv::ARM_AAPCS },
+      { RTLIB::SDIV_I32, RTLIB::__aeabi_idiv__i32,  CallingConv::ARM_AAPCS },
+      { RTLIB::SDIV_I64, RTLIB::__aeabi_ldivmod,    CallingConv::ARM_AAPCS },
+      { RTLIB::UDIV_I8,  RTLIB::__aeabi_uidiv__i8,  CallingConv::ARM_AAPCS },
+      { RTLIB::UDIV_I16, RTLIB::__aeabi_uidiv__i16, CallingConv::ARM_AAPCS },
+      { RTLIB::UDIV_I32, RTLIB::__aeabi_uidiv__i32, CallingConv::ARM_AAPCS },
+      { RTLIB::UDIV_I64, RTLIB::__aeabi_uldivmod,   CallingConv::ARM_AAPCS },
     };
     // clang-format on
 
     for (const auto &LC : LibraryCalls) {
       setLibcallImpl(LC.Op, LC.Impl);
       setLibcallImplCallingConv(LC.Impl, LC.CC);
-      if (LC.Cond != CmpInst::BAD_ICMP_PREDICATE)
-        setCmpLibcallCC(LC.Op, LC.Cond);
     }
 
     // EABI dependent RTLIB
