@@ -1356,6 +1356,8 @@ namespace llvm {
              TargetLowering::isTargetCanonicalConstantNode(Op);
     }
 
+    bool isTargetCanonicalSelect(SDNode *N) const override;
+
     const Constant *getTargetConstantFromLoad(LoadSDNode *LD) const override;
 
     SDValue unwrapAddress(SDValue N) const override;
