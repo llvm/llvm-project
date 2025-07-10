@@ -6771,6 +6771,7 @@ public:
       EK_Decltype,
       EK_TemplateArgument,
       EK_AttrArgument,
+      EK_VariableInit,
       EK_Other
     } ExprContext;
 
@@ -12510,6 +12511,7 @@ public:
       sema::TemplateDeductionInfo &Info,
       SmallVectorImpl<OriginalCallArg> const *OriginalCallArgs,
       bool PartialOverloading, bool PartialOrdering,
+      bool ForOverloadSetAddressResolution,
       llvm::function_ref<bool(bool)> CheckNonDependent =
           [](bool /*OnlyInitializeNonUserDefinedConversions*/) {
             return false;
@@ -13327,18 +13329,6 @@ public:
   /// \param ForDefaultArgumentSubstitution indicates we should continue looking
   /// when encountering a specialized member function template, rather than
   /// returning immediately.
-  void getTemplateInstantiationArgs(
-      MultiLevelTemplateArgumentList &Result, const NamedDecl *D,
-      const DeclContext *DC = nullptr, bool Final = false,
-      std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
-      bool RelativeToPrimary = false, const FunctionDecl *Pattern = nullptr,
-      bool ForConstraintInstantiation = false,
-      bool SkipForSpecialization = false,
-      bool ForDefaultArgumentSubstitution = false);
-
-  /// This creates a new \p MultiLevelTemplateArgumentList and invokes the other
-  /// overload with it as the first parameter. Prefer this overload in most
-  /// situations.
   MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
       const NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
       std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,

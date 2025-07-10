@@ -925,12 +925,6 @@ class ListOfModules {
 // Callback type for iterating over a set of memory ranges.
 typedef void (*RangeIteratorCallback)(uptr begin, uptr end, void *arg);
 
-enum AndroidApiLevel {
-  ANDROID_NOT_ANDROID = 0,
-  ANDROID_LOLLIPOP_MR1 = 22,
-  ANDROID_POST_LOLLIPOP = 23
-};
-
 void WriteToSyslog(const char *buffer);
 
 #if defined(SANITIZER_WINDOWS) && defined(_MSC_VER) && !defined(__clang__)
@@ -963,19 +957,8 @@ inline void AndroidLogInit() {}
 inline void SetAbortMessage(const char *) {}
 #endif
 
-#if SANITIZER_ANDROID
-void SanitizerInitializeUnwinder();
-AndroidApiLevel AndroidGetApiLevel();
-#else
-inline void AndroidLogWrite(const char *buffer_unused) {}
-inline void SanitizerInitializeUnwinder() {}
-inline AndroidApiLevel AndroidGetApiLevel() { return ANDROID_NOT_ANDROID; }
-#endif
-
 inline uptr GetPthreadDestructorIterations() {
-#if SANITIZER_ANDROID
-  return (AndroidGetApiLevel() == ANDROID_LOLLIPOP_MR1) ? 8 : 4;
-#elif SANITIZER_POSIX
+#if SANITIZER_POSIX
   return 4;
 #else
 // Unused on Windows.
