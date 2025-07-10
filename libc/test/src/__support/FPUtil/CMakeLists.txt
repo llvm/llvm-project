@@ -51,11 +51,11 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  comparision_operations_test
+  comparison_operations_test
   SUITE
     libc-fputil-tests
   SRCS
-    comparision_operations_test.cpp
+    comparison_operations_test.cpp
   DEPENDS
     libc.src.__support.FPUtil.comparison_operations
     libc.src.__support.FPUtil.fp_bits

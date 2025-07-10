@@ -217,7 +217,7 @@ add_header_library(
     .fenv_impl
     .fp_bits
     libc.src.__support.CPP.type_traits
-  libc.src.__support.macros.config
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -260,7 +260,7 @@ add_header_library(
   HDRS
     cast.h
   DEPENDS
-  .dyadic_flfoat
+    .dyadic_float
     .fp_bits
     libc.hdr.fenv_macros
     libc.src.__support.CPP.algorithm
