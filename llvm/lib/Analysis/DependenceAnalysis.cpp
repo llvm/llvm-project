@@ -189,7 +189,7 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
                                    /*UnderRuntimeAssumptions=*/true)) {
 
 #ifndef NDEBUG
-            // Verify that the distance begin zero is equivalent to the
+            // Verify that the distance being zero is equivalent to the
             // direction being EQ.
             for (unsigned Level = 1; Level <= D->getLevels(); Level++) {
               const SCEV *Distance = D->getDistance(Level);
