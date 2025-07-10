@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Index/IndexRecordReader.h"
-#include "IndexDataStoreUtils.h"
 #include "BitstreamVisitor.h"
+#include "IndexDataStoreUtils.h"
 #include "clang/Index/IndexDataStoreSymbolUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Bitstream/BitstreamReader.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -368,7 +369,42 @@ IndexRecordReader::createWithBuffer(std::unique_ptr<llvm::MemoryBuffer> Buffer,
   std::unique_ptr<IndexRecordReader> Reader;
   Reader.reset(new IndexRecordReader());
   auto &Impl = Reader->Impl;
-  Impl.Buffer = std::move(Buffer);
+  if (Buffer->getBuffer().starts_with("CIDXR")) {
+    if (!llvm::compression::zlib::isAvailable()) {
+      Error = "zlib not available to decompress compressed index record";
+      return nullptr;
+    }
+
+    ArrayRef compressedBuffer =
+        llvm::arrayRefFromStringRef(Buffer->getBuffer());
+
+    // Slice off the `CIDXR` marker we checked above.
+    compressedBuffer = compressedBuffer.slice(5);
+
+    // Read the uncompressed size of the record.
+    if (compressedBuffer.size() < 4) {
+      Error = "Unexpectedly found end of record file";
+      return nullptr;
+    }
+    size_t uncompressedSize =
+        llvm::support::endian::read32le(compressedBuffer.data());
+    compressedBuffer = compressedBuffer.slice(4);
+
+    // Decompress the record
+    llvm::SmallVector<uint8_t, 0> decompressed;
+    llvm::Error decompressError = llvm::compression::zlib::decompress(
+        compressedBuffer, decompressed, uncompressedSize);
+    if (decompressError) {
+      llvm::raw_string_ostream ErrorOS(Error);
+      ErrorOS << "Failed to decompress index record: " << decompressError;
+      return nullptr;
+    }
+    Impl.Buffer = llvm::MemoryBuffer::getMemBufferCopy(
+        llvm::toStringRef(decompressed),
+        Buffer->getBufferIdentifier() + " decompressed");
+  } else {
+    Impl.Buffer = std::move(Buffer);
+  }
   llvm::BitstreamCursor Stream(*Impl.Buffer);
 
   if (Stream.AtEndOfStream()) {
