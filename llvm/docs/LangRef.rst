@@ -3240,12 +3240,15 @@ as follows:
     as :ref:`Non-Integral Pointer Type <nointptrtype>` s.  The ``0``
     address space cannot be specified as non-integral.
 
+``<abi>`` provides a minimum allowed alignment for a type, and
+``<pref>`` allows providing a more optimal alignment that should be used
+when possible. ``<pref>`` is an optional value that must be greater than
+or equal to ``<abi>``. If omitted, the preceding ``:`` should also be
+omitted and ``<pref>`` will be equal to ``<abi>``.
+
 Unless explicitly stated otherwise, on every specification that specifies
 an alignment, the value of the alignment must be in the range [1,2^16)
 and must be a power of two times the width of a byte.
-On every specification that takes a ``<abi>:<pref>``, specifying the
-``<pref>`` alignment is optional. If omitted, the preceding ``:``
-should be omitted too and ``<pref>`` will be equal to ``<abi>``.
 
 When constructing the data layout for a given target, LLVM starts with a
 default set of specifications which are then (possibly) overridden by
@@ -3261,8 +3264,8 @@ specifications are given in this list:
 -  ``i8:8:8`` - i8 is 8-bit (byte) aligned as mandated
 -  ``i16:16:16`` - i16 is 16-bit aligned
 -  ``i32:32:32`` - i32 is 32-bit aligned
--  ``i64:32:64`` - i64 has ABI alignment of 32-bits but preferred
-   alignment of 64-bits
+-  ``i64:32:64`` - i64 has a required alignment of 32-bits but should be
+   aligned to 64-bits if possible.
 -  ``f16:16:16`` - half is 16-bit aligned
 -  ``f32:32:32`` - float is 32-bit aligned
 -  ``f64:64:64`` - double is 64-bit aligned
