@@ -562,9 +562,10 @@ legalizeGetHighLowi64Bytes(Instruction &I,
   }
 }
 
-static void legalizeLoadStoreOnArrayAllocas(
-    Instruction &I, SmallVectorImpl<Instruction *> &ToRemove,
-    DenseMap<Value *, Value *> &) {
+static void
+legalizeLoadStoreOnArrayAllocas(Instruction &I,
+                                SmallVectorImpl<Instruction *> &ToRemove,
+                                DenseMap<Value *, Value *> &) {
 
   Value *PtrOp;
   [[maybe_unused]] Type *LoadStoreTy;
@@ -585,7 +586,8 @@ static void legalizeLoadStoreOnArrayAllocas(
     return;
 
   Type *Ty = AllocaPtrOp->getAllocatedType();
-  if (!isa<ArrayType>(Ty)) return;
+  if (!isa<ArrayType>(Ty))
+    return;
   assert(!isa<ArrayType>(Ty->getArrayElementType()) &&
          "Expected allocated type of AllocaInst to be a flat ArrayType");
 
