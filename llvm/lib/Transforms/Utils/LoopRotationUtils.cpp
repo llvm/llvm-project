@@ -547,36 +547,22 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // possible or create a clone in the OldPreHeader if not.
     Instruction *LoopEntryBranch = OrigPreheader->getTerminator();
 
-    // Record all debug intrinsics preceding LoopEntryBranch to avoid
+    // Record all debug records preceding LoopEntryBranch to avoid
     // duplication.
-    using DbgIntrinsicHash =
+    using DbgHash =
         std::pair<std::pair<hash_code, DILocalVariable *>, DIExpression *>;
-    auto makeHash = [](auto *D) -> DbgIntrinsicHash {
+    auto makeHash = [](const DbgVariableRecord *D) -> DbgHash {
       auto VarLocOps = D->location_ops();
       return {{hash_combine_range(VarLocOps), D->getVariable()},
               D->getExpression()};
     };
 
-    SmallDenseSet<DbgIntrinsicHash, 8> DbgIntrinsics;
-    for (Instruction &I : llvm::drop_begin(llvm::reverse(*OrigPreheader))) {
-      if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
-        DbgIntrinsics.insert(makeHash(DII));
-        // Until RemoveDIs supports dbg.declares in DbgVariableRecord format,
-        // we'll need to collect DbgVariableRecords attached to any other debug
-        // intrinsics.
-        for (const DbgVariableRecord &DVR :
-             filterDbgVars(DII->getDbgRecordRange()))
-          DbgIntrinsics.insert(makeHash(&DVR));
-      } else {
-        break;
-      }
-    }
-
+    SmallDenseSet<DbgHash, 8> DbgRecords;
     // Build DbgVariableRecord hashes for DbgVariableRecords attached to the
-    // terminator, which isn't considered in the loop above.
+    // terminator.
     for (const DbgVariableRecord &DVR :
          filterDbgVars(OrigPreheader->getTerminator()->getDbgRecordRange()))
-      DbgIntrinsics.insert(makeHash(&DVR));
+      DbgRecords.insert(makeHash(&DVR));
 
     // Remember the local noalias scope declarations in the header. After the
     // rotation, they must be duplicated and the scope must be cloned. This
@@ -623,7 +609,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       // memory (without proving that the loop doesn't write).
       if (L->hasLoopInvariantOperands(Inst) && !Inst->mayReadFromMemory() &&
           !Inst->mayWriteToMemory() && !Inst->isTerminator() &&
-          !isa<DbgInfoIntrinsic>(Inst) && !isa<AllocaInst>(Inst) &&
+          !isa<AllocaInst>(Inst) &&
           // It is not safe to hoist the value of these instructions in
           // coroutines, as the addresses of otherwise eligible variables (e.g.
           // thread-local variables and errno) may change if the coroutine is
@@ -642,7 +628,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
           // Erase anything we've seen before.
           for (DbgVariableRecord &DVR :
                make_early_inc_range(filterDbgVars(DbgValueRange)))
-            if (DbgIntrinsics.count(makeHash(&DVR)))
+            if (DbgRecords.count(makeHash(&DVR)))
               DVR.eraseFromParent();
         }
 
@@ -671,20 +657,13 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
         // Erase anything we've seen before.
         for (DbgVariableRecord &DVR :
              make_early_inc_range(filterDbgVars(Range)))
-          if (DbgIntrinsics.count(makeHash(&DVR)))
+          if (DbgRecords.count(makeHash(&DVR)))
             DVR.eraseFromParent();
       }
 
       // Eagerly remap the operands of the instruction.
       RemapInstruction(C, ValueMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-
-      // Avoid inserting the same intrinsic twice.
-      if (auto *DII = dyn_cast<DbgVariableIntrinsic>(C))
-        if (DbgIntrinsics.count(makeHash(DII))) {
-          C->eraseFromParent();
-          continue;
-        }
 
       // With the operands remapped, see if the instruction constant folds or is
       // otherwise simplifyable.  This commonly occurs because the entry from PHI
@@ -806,7 +785,7 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     RewriteUsesOfClonedInstructions(OrigHeader, OrigPreheader, ValueMap, SE,
                                     &InsertedPHIs);
 
-    // Attach dbg.value intrinsics to the new phis if that phi uses a value that
+    // Attach debug records to the new phis if that phi uses a value that
     // previously had debug metadata attached. This keeps the debug info
     // up-to-date in the loop body.
     if (!InsertedPHIs.empty())
@@ -951,9 +930,6 @@ static bool shouldSpeculateInstrs(BasicBlock::iterator Begin,
 
     if (!isSafeToSpeculativelyExecute(&*I))
       return false;
-
-    if (isa<DbgInfoIntrinsic>(I))
-      continue;
 
     switch (I->getOpcode()) {
     default:

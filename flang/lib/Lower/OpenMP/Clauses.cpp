@@ -905,8 +905,8 @@ Inclusive make(const parser::OmpClause::Inclusive &inp,
 
 Indirect make(const parser::OmpClause::Indirect &inp,
               semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: indirect");
+  // inp.v.v -> std::optional<parser::ScalarLogicalExpr>
+  return Indirect{maybeApply(makeExprFn(semaCtx), inp.v.v)};
 }
 
 Init make(const parser::OmpClause::Init &inp,
@@ -1043,7 +1043,7 @@ Map make(const parser::OmpClause::Map &inp,
   auto type = [&]() -> std::optional<Map::MapType> {
     if (t3)
       return convert1(t3->v);
-    return Map::MapType::Tofrom;
+    return std::nullopt;
   }();
 
   Map::MapTypeModifiers typeMods;

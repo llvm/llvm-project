@@ -17,6 +17,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -123,29 +124,28 @@ bool MCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
         (SectionName == ".bss" && !usesELFSectionDirectiveForBSS());
 }
 
-void MCAsmInfo::initializeVariantKinds(ArrayRef<VariantKindDesc> Descs) {
-  assert(SpecifierToName.empty() && "cannot initialize twice");
+void MCAsmInfo::initializeAtSpecifiers(ArrayRef<AtSpecifier> Descs) {
+  assert(AtSpecifierToName.empty() && "cannot initialize twice");
   for (auto Desc : Descs) {
     [[maybe_unused]] auto It =
-        SpecifierToName.try_emplace(Desc.Kind, Desc.Name);
+        AtSpecifierToName.try_emplace(Desc.Kind, Desc.Name);
     assert(It.second && "duplicate Kind");
     [[maybe_unused]] auto It2 =
-        NameToSpecifier.try_emplace(Desc.Name.lower(), Desc.Kind);
-    // Workaround for VK_PPC_L/VK_PPC_LO ("l").
-    assert(It2.second || Desc.Name == "l");
+        NameToAtSpecifier.try_emplace(Desc.Name.lower(), Desc.Kind);
+    assert(It2.second);
   }
 }
 
 StringRef MCAsmInfo::getSpecifierName(uint32_t S) const {
-  auto It = SpecifierToName.find(S);
-  assert(It != SpecifierToName.end() &&
+  auto It = AtSpecifierToName.find(S);
+  assert(It != AtSpecifierToName.end() &&
          "ensure the specifier is set in initializeVariantKinds");
   return It->second;
 }
 
 std::optional<uint32_t> MCAsmInfo::getSpecifierForName(StringRef Name) const {
-  auto It = NameToSpecifier.find(Name.lower());
-  if (It != NameToSpecifier.end())
+  auto It = NameToAtSpecifier.find(Name.lower());
+  if (It != NameToAtSpecifier.end())
     return It->second;
   return {};
 }
@@ -157,17 +157,12 @@ void MCAsmInfo::printExpr(raw_ostream &OS, const MCExpr &Expr) const {
     Expr.print(OS, this);
 }
 
-void MCAsmInfo::printSpecifierExpr(raw_ostream &OS,
-                                   const MCSpecifierExpr &Expr) const {
-  // TODO: Switch to unreachable after all targets that use MCSpecifierExpr
-  // migrate to MCAsmInfo::printSpecifierExpr.
-  Expr.printImpl(OS, this);
-}
-
-bool MCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
+bool MCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &E,
                                           MCValue &Res,
                                           const MCAssembler *Asm) const {
-  // TODO: Remove after all targets that use MCSpecifierExpr migrate to
-  // MCAsmInfo::evaluateAsRelocatableImpl.
-  return Expr.evaluateAsRelocatableImpl(Res, Asm);
+  if (!E.getSubExpr()->evaluateAsRelocatable(Res, Asm))
+    return false;
+
+  Res.setSpecifier(E.getSpecifier());
+  return !Res.getSubSym();
 }

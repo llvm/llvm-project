@@ -724,59 +724,6 @@ struct LiftIllegalVectorTransposeToMemory
   }
 };
 
-/// A rewrite to turn unit dim transpose-like vector.shape_casts into
-/// vector.transposes. The shape_cast has to be from an illegal vector type to a
-/// legal one (as defined by isLegalVectorType).
-///
-/// The reasoning for this is if we've got to this pass and we still have
-/// shape_casts of illegal types, then they likely will not cancel out. Turning
-/// them into transposes gives LiftIllegalVectorTransposeToMemory a chance to
-/// eliminate them.
-///
-/// Example:
-///
-///  BEFORE:
-///  ```mlir
-///  %0 = vector.shape_cast %a : vector<[4]x1xf32> to vector<1x[4]xf32>
-///  ```
-///
-///  AFTER:
-///  ```mlir
-///  %0 = vector.transpose %0, [1, 0] : vector<[4]x1xf32> to vector<1x[4]xf32>
-///  ```
-struct ConvertIllegalShapeCastOpsToTransposes
-    : public OpRewritePattern<vector::ShapeCastOp> {
-  using OpRewritePattern<vector::ShapeCastOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(vector::ShapeCastOp shapeCastOp,
-                                PatternRewriter &rewriter) const override {
-    auto sourceType = shapeCastOp.getSourceVectorType();
-    auto resultType = shapeCastOp.getResultVectorType();
-    if (isLegalVectorType(sourceType) || !isLegalVectorType(resultType))
-      return rewriter.notifyMatchFailure(shapeCastOp,
-                                         kMatchFailureNotIllegalToLegal);
-
-    // Note: If we know that `sourceType` is an illegal vector type (and 2D)
-    // then dim 0 is scalable and dim 1 is fixed.
-    if (sourceType.getRank() != 2 || sourceType.getDimSize(1) != 1)
-      return rewriter.notifyMatchFailure(
-          shapeCastOp, "expected source to be a 2D scalable vector with a "
-                       "trailing unit dim");
-
-    auto loc = shapeCastOp.getLoc();
-    auto transpose = rewriter.create<vector::TransposeOp>(
-        loc, shapeCastOp.getSource(), ArrayRef<int64_t>{1, 0});
-
-    if (resultType.getRank() == 1)
-      rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(shapeCastOp, resultType,
-                                                       transpose);
-    else
-      rewriter.replaceOp(shapeCastOp, transpose);
-
-    return success();
-  }
-};
-
 /// Rewrites an illegal/unsupported SVE transfer_write(transpose) to instead use
 /// the ZA state. This workaround rewrite to support these transposes when ZA is
 /// available.
@@ -920,6 +867,116 @@ struct LowerIllegalTransposeStoreViaZA
   }
 };
 
+/// Lower `vector.transfer_read` of a scalable column to `scf::for`
+///
+/// Lowers a "read" of a scalable column from a MemRef for which there is no
+/// hardware pperation that we could use to a loop over the rows to read and
+/// loads one element at a time.
+///
+///  BEFORE:
+///  ```
+///  %res = vector.transfer_read %mem[%a, %b] (...)
+///    : memref<?x?xf32>, vector<[4]x1xf32>
+///  ```
+///
+///  AFTER:
+///  ```
+///    %cst = arith.constant (...) : vector<[4]xf32>
+///    %vscale = vector.vscale
+///    %c4_vscale = arith.muli %vscale, %c4 : index
+///    %scf = scf.for %lb = %c0 to %c4_vscale step %c1 iter_args(%arg4 = %cst)
+///      -> (vector<[4]xf32>) {
+///
+///        %load = memref.load %mem[%arg3 + %a, %b] : memref<?x?xf32>
+///        %vec = vector.insert %load, %cst [%arg3] : f32 into vector<[4]xf32>
+///        scf.yield %vec : vector<[4]xf32>
+///    }
+///    %res = vector.shape_cast %scf : vector<[4]xf32> to vector<[4]x1xf32>
+///  ```
+///
+///  TODO: This transformation isn't specific to SME - move it to the SVE
+///  dialect.
+///  TODO: Check the in_bounds attribute and generate vector.maskedload if
+///  required.
+struct LowerColumnTransferReadToLoops
+    : public OpRewritePattern<vector::TransferReadOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
+                                PatternRewriter &rewriter) const override {
+    // NOTE: This is a fairly low-level transformation, so we shouldn't be
+    // adding support for Tensors without good rationale.
+    if (readOp.hasPureTensorSemantics())
+      return rewriter.notifyMatchFailure(
+          readOp, "Tensor semantics are unsupported (either bufferize or "
+                  "extend this pattern)");
+
+    auto resType = readOp.getVectorType();
+
+    if (resType.getRank() != 2)
+      return rewriter.notifyMatchFailure(readOp,
+                                         "Only 2D vectors are supported!");
+
+    if (resType.getShape()[1] != 1)
+      return rewriter.notifyMatchFailure(
+          readOp, "The trailing output dim is != 1 (not supported ATM)");
+
+    if (!resType.getScalableDims()[0] || resType.getScalableDims()[1])
+      return rewriter.notifyMatchFailure(
+          readOp, "Expected the leading dim to be scalable and the trailing "
+                  "dim to be fixed.");
+
+    // Create new result type - similar to the original vector with the
+    // trailing unit dim collapsed.
+    int64_t numRows = resType.getShape()[0];
+    VectorType newResType = VectorType::get(numRows, resType.getElementType(),
+                                            /*scalableDims=*/{true});
+
+    // Create a loop over all rows and load one element at a time.
+    auto loc = readOp.getLoc();
+    auto lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    auto createVscaleMultiple =
+        vector::makeVscaleConstantBuilder(rewriter, loc);
+    auto upperBound = createVscaleMultiple(numRows);
+    auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    Value init = rewriter.create<arith::ConstantOp>(
+        loc, newResType, DenseElementsAttr::get(newResType, 0.0f));
+
+    scf::ForOp loadLoop;
+    {
+      OpBuilder::InsertionGuard g(rewriter);
+      loadLoop = rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step,
+                                             ValueRange{init});
+      rewriter.setInsertionPointToStart(loadLoop.getBody());
+
+      auto tileSliceIndex = loadLoop.getInductionVar();
+
+      auto idx0 = rewriter.create<arith::AddIOp>(loc, tileSliceIndex,
+                                                 readOp.getIndices()[0]);
+      auto idx1 = readOp.getIndices()[1];
+
+      Value scalar = rewriter.create<memref::LoadOp>(
+          loc, readOp.getBase(), SmallVector<Value>({idx0, idx1}));
+
+      Operation *updateInit = rewriter.create<vector::InsertOp>(
+          loc, scalar, loadLoop.getRegionIterArg(0), tileSliceIndex);
+
+      rewriter.create<scf::YieldOp>(loc, updateInit->getResult(0));
+    }
+
+    // The read operation has been "legalized", but since the original result
+    // type was a 2D vector, we need to cast before returning the result. This
+    // ShapeCast should cancel-out with some other ShapeCast (i.e. it's a
+    // no-op).
+    auto sc = rewriter.create<vector::ShapeCastOp>(
+        loc, readOp.getResult().getType(), loadLoop.getResult(0));
+
+    rewriter.replaceOp(readOp, sc);
+
+    return success();
+  }
+};
+
 struct VectorLegalizationPass
     : public arm_sme::impl::VectorLegalizationBase<VectorLegalizationPass> {
   void runOnOperation() override {
@@ -941,10 +998,10 @@ struct VectorLegalizationPass
 
     // Apply preprocessing patterns.
     RewritePatternSet rewritePatterns(context);
-    rewritePatterns.add<FoldExtractFromVectorOfSMELikeCreateMasks,
-                        LiftIllegalVectorTransposeToMemory,
-                        ConvertIllegalShapeCastOpsToTransposes,
-                        LowerIllegalTransposeStoreViaZA>(context);
+    rewritePatterns
+        .add<FoldExtractFromVectorOfSMELikeCreateMasks,
+             LowerColumnTransferReadToLoops, LiftIllegalVectorTransposeToMemory,
+             LowerIllegalTransposeStoreViaZA>(context);
     if (failed(
             applyPatternsGreedily(getOperation(), std::move(rewritePatterns))))
       return signalPassFailure();

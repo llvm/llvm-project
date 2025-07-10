@@ -74,6 +74,12 @@ struct VPlanTransforms {
   /// flat CFG into a hierarchical CFG.
   static void createLoopRegions(VPlan &Plan);
 
+  /// Wrap runtime check block \p CheckBlock in a VPIRBB and \p Cond in a
+  /// VPValue and connect the block to \p Plan, using the VPValue as branch
+  /// condition.
+  static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
+                               bool AddBranchWeights);
+
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
   /// to a wide recipe if needed.
@@ -98,6 +104,12 @@ struct VPlanTransforms {
 
   /// Explicitly unroll \p Plan by \p UF.
   static void unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx);
+
+  /// Replace each VPReplicateRecipe outside on any replicate region in \p Plan
+  /// with \p VF single-scalar recipes.
+  /// TODO: Also replicate VPReplicateRecipes inside replicate regions, thereby
+  /// dissolving the latter.
+  static void replicateByVF(VPlan &Plan, ElementCount VF);
 
   /// Optimize \p Plan based on \p BestVF and \p BestUF. This may restrict the
   /// resulting plan to \p BestVF and \p BestUF.
@@ -209,11 +221,6 @@ struct VPlanTransforms {
   optimizeInductionExitUsers(VPlan &Plan,
                              DenseMap<VPValue *, VPValue *> &EndValues);
 
-  /// Materialize VPInstruction::StepVectors for VPWidenIntOrFpInductionRecipes.
-  /// TODO: Remove once all of VPWidenIntOrFpInductionRecipe is expanded in
-  /// convertToConcreteRecipes.
-  static void materializeStepVectors(VPlan &Plan);
-
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);
 
@@ -237,7 +244,9 @@ struct VPlanTransforms {
 
   /// Add branch weight metadata, if the \p Plan's middle block is terminated by
   /// a BranchOnCond recipe.
-  static void addBranchWeightToMiddleTerminator(VPlan &Plan, ElementCount VF);
+  static void
+  addBranchWeightToMiddleTerminator(VPlan &Plan, ElementCount VF,
+                                    std::optional<unsigned> VScaleForTuning);
 };
 
 } // namespace llvm

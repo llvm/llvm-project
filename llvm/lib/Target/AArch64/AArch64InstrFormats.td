@@ -13124,7 +13124,7 @@ def LSLImm3ShiftOperand : AsmOperandClass {
   let DiagnosticType = "AddSubLSLImm3ShiftLarge";
 }
 
-def lsl_imm3_shift_operand : Operand<i32> {
+def lsl_imm3_shift_operand : Operand<i64> {
   let PrintMethod = "printShifter";
   let ParserMatchClass = LSLImm3ShiftOperand;
 }

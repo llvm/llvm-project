@@ -1,4 +1,4 @@
-//===- LowerContractionToSMMLAPattern.cpp - Contract to SMMLA ---*- C++ -*-===//
+//===- LowerContractionToSVEI8MMPattern.cpp - Contract to I8MM --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,6 +8,11 @@
 //
 // This file implements lowering patterns from vector.contract to operations
 // that map to instructions from the SVE FEAT_I8MM extension.
+//
+// TODO: There may be opportunities to unify this with a similar pattern
+// for Neon. See:
+//   https://github.com/llvm/llvm-project/issues/145559
+//   LowerContractionToNeonI8MMPattern.cpp
 //
 //===----------------------------------------------------------------------===//
 
@@ -39,7 +44,7 @@ namespace {
 //
 // Return success only for extensions from `i8` to `i32`.
 template <typename Op>
-std::optional<Value> getExtOperand(Value v, Type i8Ty, Type i32Ty) {
+std::optional<Value> getExtOperand(Value v) {
 
   static_assert(llvm::is_one_of<Op, arith::ExtSIOp, arith::ExtUIOp>::value,
                 "Must be instantiated with either sign- or zero- extension op");
@@ -50,7 +55,7 @@ std::optional<Value> getExtOperand(Value v, Type i8Ty, Type i32Ty) {
   if (!extOp) {
     if constexpr (std::is_same<Op, arith::ExtSIOp>::value) {
       auto vTy = cast<VectorType>(v.getType());
-      if (vTy.getElementType() != i8Ty)
+      if (!vTy.getElementType().isSignlessInteger(8))
         return {};
       return v;
     }
@@ -61,11 +66,11 @@ std::optional<Value> getExtOperand(Value v, Type i8Ty, Type i32Ty) {
   // operation type, check it's extended from `i8` to `i32`.
   auto inOp = extOp.getIn();
   auto inTy = dyn_cast<VectorType>(inOp.getType());
-  if (!inTy || inTy.getElementType() != i8Ty)
+  if (!inTy || !inTy.getElementType().isSignlessInteger(8))
     return {};
 
   auto outTy = dyn_cast<VectorType>(extOp.getType());
-  if (!outTy || outTy.getElementType() != i32Ty)
+  if (!outTy || !outTy.getElementType().isSignlessInteger(32))
     return {};
 
   return inOp;
@@ -199,27 +204,23 @@ public:
     // operands are supported, but they are lowered to different operations.
     // Determine which is the appropriate operation to lower to.
     MMLA mmlaOp = MMLA::Signed;
-    auto maybeLhs = getExtOperand<arith::ExtSIOp>(
-        op.getLhs(), rewriter.getI8Type(), rewriter.getI32Type());
+    auto maybeLhs = getExtOperand<arith::ExtSIOp>(op.getLhs());
     if (!maybeLhs) {
       mmlaOp = MMLA::Unsigned;
-      maybeLhs = getExtOperand<arith::ExtUIOp>(
-          op.getLhs(), rewriter.getI8Type(), rewriter.getI32Type());
+      maybeLhs = getExtOperand<arith::ExtUIOp>(op.getLhs());
     }
     if (!maybeLhs)
       return rewriter.notifyMatchFailure(
           op, "LHS is not a sign- or zero- extended i8");
 
-    auto maybeRhs = getExtOperand<arith::ExtSIOp>(
-        op.getRhs(), rewriter.getI8Type(), rewriter.getI32Type());
+    auto maybeRhs = getExtOperand<arith::ExtSIOp>(op.getRhs());
     if (maybeRhs) {
       if (mmlaOp == MMLA::Unsigned)
         mmlaOp = MMLA::Mixed;
     } else {
       if (mmlaOp == MMLA::Signed)
         mmlaOp = MMLA::MixedSwapped;
-      maybeRhs = getExtOperand<arith::ExtUIOp>(
-          op.getRhs(), rewriter.getI8Type(), rewriter.getI32Type());
+      maybeRhs = getExtOperand<arith::ExtUIOp>(op.getRhs());
     }
     if (!maybeRhs)
       return rewriter.notifyMatchFailure(

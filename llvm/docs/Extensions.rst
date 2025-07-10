@@ -430,27 +430,6 @@ Example:
    .uleb128  .LBB_END0_1-.LBB0_1          # BB_1 size
    .byte     y                            # BB_1 metadata
 
-Version 0: basic block address offsets are computed relative to the function
-address. This uses the unversioned ``SHT_LLVM_BB_ADDR_MAP_V0`` section type and
-is semantically equivalent to using ``SHT_LLVM_BB_ADDR_MAP`` with a zero
-version field.
-
-Example:
-
-.. code-block:: gas
-
-  .section  ".llvm_bb_addr_map","",@llvm_bb_addr_map_v0
-  .quad     .Lfunc_begin0                 # address of the function
-  .byte     2                             # number of basic blocks
-  # BB record for BB_0
-   .uleb128  .Lfunc_beign0-.Lfunc_begin0  # BB_0 offset relative to the function entry (always zero)
-   .uleb128  .LBB_END0_0-.Lfunc_begin0    # BB_0 size
-   .byte     x                            # BB_0 metadata
-  # BB record for BB_1
-   .uleb128  .LBB0_1-.Lfunc_begin0        # BB_1 offset relative to the function entry
-   .uleb128  .LBB_END0_1-.LBB0_1          # BB_1 size
-   .byte     y                            # BB_1 metadata
-
 PGO Analysis Map
 """"""""""""""""
 

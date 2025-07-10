@@ -36,7 +36,7 @@ export void foo() {
 
 // Buf1 initialization part 2 - body of StructuredBuffer<float> C1 constructor with explicit binding 
 // that calls the C2 constructor
-// CHECK: define linkonce_odr void @_ZN4hlsl16StructuredBufferIfEC1EjjijPKc(ptr noundef nonnull align 4 dereferenceable(4) %this, 
+// CHECK: define linkonce_odr hidden void @_ZN4hlsl16StructuredBufferIfEC1EjjijPKc(ptr noundef nonnull align 4 dereferenceable(4) %this, 
 // CHECK-SAME: i32 noundef %registerNo, i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, ptr noundef %name)
 // CHECK: call void @_ZN4hlsl16StructuredBufferIfEC2EjjijPKc(ptr noundef nonnull align 4 dereferenceable(4)
 // CHECK-SAME: %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}}, ptr noundef %{{.*}})
@@ -49,7 +49,7 @@ export void foo() {
 // CHECK-SAME: i32 noundef 0, i32 noundef 1, i32 noundef 0, i32 noundef 0, ptr noundef @[[Buf2Str]])
 
 // Buf2 initialization part 2 - body of RWStructuredBuffer<float> C1 constructor with implicit binding that calls the C2 constructor
-// CHECK: define linkonce_odr void @_ZN4hlsl18RWStructuredBufferIfEC1EjijjPKc(ptr noundef nonnull align 4 dereferenceable(4) %this,
+// CHECK: define linkonce_odr hidden void @_ZN4hlsl18RWStructuredBufferIfEC1EjijjPKc(ptr noundef nonnull align 4 dereferenceable(4) %this,
 // CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, i32 noundef %orderId, ptr noundef %name)
 // CHECK: call void @_ZN4hlsl18RWStructuredBufferIfEC2EjijjPKc(ptr noundef nonnull align 4 dereferenceable(4)
 // CHECK-SAME: %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}}, i32 noundef %{{.*}}, ptr noundef %{{.*}})
@@ -63,12 +63,12 @@ export void foo() {
 
 // Buf3 initialization part 2 - body of AppendStructuredBuffer<float> default C1 constructor that calls
 // the default C2 constructor
-// CHECK: define linkonce_odr void @_ZN4hlsl22AppendStructuredBufferIfEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) %this)
+// CHECK: define linkonce_odr hidden void @_ZN4hlsl22AppendStructuredBufferIfEC1Ev(ptr noundef nonnull align 4 dereferenceable(4) %this)
 // CHECK: call void @_ZN4hlsl22AppendStructuredBufferIfEC2Ev(ptr noundef nonnull align 4 dereferenceable(4) %{{.*}})
 
 // Buf1 initialization part 3 - body of AppendStructuredBuffer<float> C2 constructor with explicit binding 
 // that initializes handle with @llvm.dx.resource.handlefrombinding
-// CHECK: define linkonce_odr void @_ZN4hlsl16StructuredBufferIfEC2EjjijPKc(ptr noundef nonnull align 4 dereferenceable(4) %this,
+// CHECK: define linkonce_odr hidden void @_ZN4hlsl16StructuredBufferIfEC2EjjijPKc(ptr noundef nonnull align 4 dereferenceable(4) %this,
 // CHECK-SAME: i32 noundef %registerNo, i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, ptr noundef %name)
 // CHECK-DXIL: %[[HANDLE:.*]] = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_0_0t(
 // CHECK-SAME: i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 false, ptr %{{.*}})
@@ -77,7 +77,7 @@ export void foo() {
 
 // Buf2 initialization part 3 - body of RWStructuredBuffer<float> C2 constructor with implicit binding that initializes
 // handle with @llvm.dx.resource.handlefromimplicitbinding
-// CHECK: define linkonce_odr void @_ZN4hlsl18RWStructuredBufferIfEC2EjijjPKc(ptr noundef nonnull align 4 dereferenceable(4) %this,
+// CHECK: define linkonce_odr hidden void @_ZN4hlsl18RWStructuredBufferIfEC2EjijjPKc(ptr noundef nonnull align 4 dereferenceable(4) %this,
 // CHECK-SAME: i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index, i32 noundef %orderId, ptr noundef %name)
 // CHECK: %[[HANDLE:.*]] = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_f32_1_0t
 // CHECK-SAME: (i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i1 false, ptr %{{.*}})
@@ -86,7 +86,7 @@ export void foo() {
 
 // Buf3 initialization part 3 - body of AppendStructuredBuffer<float> default C2 constructor that
 // initializes handle to poison
-// CHECK: define linkonce_odr void @_ZN4hlsl22AppendStructuredBufferIfEC2Ev(ptr noundef nonnull align 4 dereferenceable(4) %this)
+// CHECK: define linkonce_odr hidden void @_ZN4hlsl22AppendStructuredBufferIfEC2Ev(ptr noundef nonnull align 4 dereferenceable(4) %this)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::AppendStructuredBuffer", ptr %{{.*}}, i32 0, i32 0
 // CHECK: store target("dx.RawBuffer", float, 1, 0) poison, ptr %__handle, align 4
 

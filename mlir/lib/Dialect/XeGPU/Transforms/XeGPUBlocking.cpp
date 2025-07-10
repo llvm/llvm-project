@@ -134,11 +134,13 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
 
 std::optional<SmallVector<int64_t>>
 XeGPUBlockingPass::getTileShape(Operation *op) const {
-  if (isa<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp>(op))
+  if (isa<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp, xegpu::CreateDescOp,
+          xegpu::UpdateOffsetOp>(op))
     return getTileShape(op->getOpResult(0));
-  if (isa<xegpu::PrefetchNdOp, xegpu::LoadNdOp>(op))
+  if (isa<xegpu::PrefetchNdOp, xegpu::LoadNdOp, xegpu::PrefetchOp,
+          xegpu::LoadGatherOp>(op))
     return getTileShape(op->getOpOperand(0));
-  if (isa<xegpu::StoreNdOp>(op))
+  if (isa<xegpu::StoreNdOp, xegpu::StoreScatterOp>(op))
     return getTileShape(op->getOpOperand(1));
 
   if (isa<xegpu::DpasOp>(op)) {
@@ -295,12 +297,36 @@ void XeGPUBlockingPass::runOnOperation() {
     Type elemTy = type.getElementType();
     Type newTy;
 
-    if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(type))
-      newTy = xegpu::TensorDescType::get(
-          ctx, tileShape, elemTy, tdescTy.getEncoding(),
-          tdescTy.getLayoutAttr().dropInstData());
-    else
+    if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(type)) {
+
+      Attribute encoding = tdescTy.getEncoding();
+      // If the encoding is a ScatterTensorDescAttr, we need to
+      // potentially adjust the chunk size based on the inst_data.
+      if (tdescTy.isScattered()) {
+        auto scatterAttr =
+            llvm::dyn_cast_if_present<xegpu::ScatterTensorDescAttr>(encoding);
+        int64_t chunkSize = scatterAttr.getChunkSize().getInt();
+
+        if (chunkSize > 1) {
+          int64_t blockedChunkSize = chunkSize;
+          auto instData = tdescTy.getLayoutAttr().getInstData();
+          if (!instData.empty())
+            blockedChunkSize = instData.asArrayRef().back();
+
+          // To create a new attribute with a different chunk_size:
+          auto newEncoding = xegpu::ScatterTensorDescAttr::get(
+              ctx, scatterAttr.getMemorySpace().getValue(), blockedChunkSize);
+
+          encoding = newEncoding;
+        }
+      }
+
+      newTy =
+          xegpu::TensorDescType::get(ctx, tileShape, elemTy, encoding,
+                                     tdescTy.getLayoutAttr().dropInstData());
+    } else {
       newTy = type.clone(tileShape, elemTy);
+    }
 
     std::optional<SmallVector<int64_t>> ratio =
         computeShapeRatio(type.getShape(), tileShape);

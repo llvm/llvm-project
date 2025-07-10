@@ -76,7 +76,6 @@ public:
     uint32_t Kind;
     StringRef Name;
   };
-  using VariantKindDesc = AtSpecifier;
 
 protected:
   //===------------------------------------------------------------------===//
@@ -427,9 +426,9 @@ protected:
   // If true, use Motorola-style integers in Assembly (ex. $0ac).
   bool UseMotorolaIntegers = false;
 
-  llvm::DenseMap<uint32_t, StringRef> SpecifierToName;
-  llvm::StringMap<uint32_t> NameToSpecifier;
-  void initializeVariantKinds(ArrayRef<VariantKindDesc> Descs);
+  llvm::DenseMap<uint32_t, StringRef> AtSpecifierToName;
+  llvm::StringMap<uint32_t> NameToAtSpecifier;
+  void initializeAtSpecifiers(ArrayRef<AtSpecifier>);
 
 public:
   explicit MCAsmInfo();
@@ -715,7 +714,10 @@ public:
   std::optional<uint32_t> getSpecifierForName(StringRef Name) const;
 
   void printExpr(raw_ostream &, const MCExpr &) const;
-  virtual void printSpecifierExpr(raw_ostream &, const MCSpecifierExpr &) const;
+  virtual void printSpecifierExpr(raw_ostream &,
+                                  const MCSpecifierExpr &) const {
+    llvm_unreachable("Need to implement hook if target uses MCSpecifierExpr");
+  }
   virtual bool evaluateAsRelocatableImpl(const MCSpecifierExpr &, MCValue &Res,
                                          const MCAssembler *Asm) const;
 };

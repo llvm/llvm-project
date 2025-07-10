@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/SparcInstPrinter.h"
-#include "MCTargetDesc/SparcMCExpr.h"
+#include "MCTargetDesc/SparcMCAsmInfo.h"
 #include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "MCTargetDesc/SparcTargetStreamer.h"
 #include "Sparc.h"
@@ -32,6 +32,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -82,7 +83,7 @@ public:
 static MCOperand createSparcMCOperand(uint16_t Kind, MCSymbol *Sym,
                                       MCContext &OutContext) {
   const MCSymbolRefExpr *MCSym = MCSymbolRefExpr::create(Sym, OutContext);
-  const SparcMCExpr *expr = MCSpecifierExpr::create(MCSym, Kind, OutContext);
+  auto *expr = MCSpecifierExpr::create(MCSym, Kind, OutContext);
   return MCOperand::createExpr(expr);
 }
 static MCOperand createPCXCallOP(MCSymbol *Label,
@@ -101,7 +102,7 @@ static MCOperand createPCXRelExprOp(uint16_t Spec, MCSymbol *GOTLabel,
 
   const MCBinaryExpr *Sub = MCBinaryExpr::createSub(Cur, Start, OutContext);
   const MCBinaryExpr *Add = MCBinaryExpr::createAdd(GOT, Sub, OutContext);
-  const SparcMCExpr *expr = MCSpecifierExpr::create(Add, Spec, OutContext);
+  auto *expr = MCSpecifierExpr::create(Add, Spec, OutContext);
   return MCOperand::createExpr(expr);
 }
 
@@ -506,7 +507,8 @@ INITIALIZE_PASS(SparcAsmPrinter, "sparc-asm-printer", "Sparc Assembly Printer",
                 false, false)
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSparcAsmPrinter() {
   RegisterAsmPrinter<SparcAsmPrinter> X(getTheSparcTarget());
   RegisterAsmPrinter<SparcAsmPrinter> Y(getTheSparcV9Target());
   RegisterAsmPrinter<SparcAsmPrinter> Z(getTheSparcelTarget());

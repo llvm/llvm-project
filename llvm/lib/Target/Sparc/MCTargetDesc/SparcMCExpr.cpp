@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SparcMCExpr.h"
+#include "MCTargetDesc/SparcMCAsmInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"

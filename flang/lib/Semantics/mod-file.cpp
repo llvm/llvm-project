@@ -109,15 +109,14 @@ bool ModFileWriter::WriteAll() {
 }
 
 void ModFileWriter::WriteAll(const Scope &scope) {
-  for (const auto &child : scope.children()) {
+  for (const Scope &child : scope.children()) {
     WriteOne(child);
   }
 }
 
 void ModFileWriter::WriteOne(const Scope &scope) {
   if (scope.kind() == Scope::Kind::Module) {
-    auto *symbol{scope.symbol()};
-    if (!symbol->test(Symbol::Flag::ModFile)) {
+    if (const auto *symbol{scope.symbol()}) {
       Write(*symbol);
     }
     WriteAll(scope); // write out submodules
@@ -134,7 +133,7 @@ static std::string ModFileName(const SourceName &name,
 // Write the module file for symbol, which must be a module or submodule.
 void ModFileWriter::Write(const Symbol &symbol) {
   const auto &module{symbol.get<ModuleDetails>()};
-  if (module.moduleFileHash()) {
+  if (symbol.test(Symbol::Flag::ModFile) || module.moduleFileHash()) {
     return; // already written
   }
   const auto *ancestor{module.ancestor()};
@@ -372,16 +371,19 @@ void ModFileWriter::PutSymbols(
   CollectSymbols(scope, sorted, uses, modules);
   // Write module files for dependencies first so that their
   // hashes are known.
-  for (auto ref : modules) {
+  for (const Symbol &mod : modules) {
     if (hermeticModules) {
-      hermeticModules->insert(*ref);
+      hermeticModules->insert(mod);
     } else {
-      Write(*ref);
-      needs_ << ModHeader::need
-             << CheckSumString(
-                    ref->get<ModuleDetails>().moduleFileHash().value())
-             << (ref->owner().IsIntrinsicModules() ? " i " : " n ")
-             << ref->name().ToString() << '\n';
+      Write(mod);
+      // It's possible that the module's file already existed and
+      // without its own hash due to being embedded in a hermetic
+      // module file.
+      if (auto hash{mod.get<ModuleDetails>().moduleFileHash()}) {
+        needs_ << ModHeader::need << CheckSumString(*hash)
+               << (mod.owner().IsIntrinsicModules() ? " i " : " n ")
+               << mod.name().ToString() << '\n';
+      }
     }
   }
   std::string buf; // stuff after CONTAINS in derived type
@@ -855,25 +857,25 @@ void CollectSymbols(const Scope &scope, SymbolVector &sorted,
   auto symbols{scope.GetSymbols()};
   std::size_t commonSize{scope.commonBlocks().size()};
   sorted.reserve(symbols.size() + commonSize);
-  for (SymbolRef symbol : symbols) {
-    const auto *generic{symbol->detailsIf<GenericDetails>()};
+  for (const Symbol &symbol : symbols) {
+    const auto *generic{symbol.detailsIf<GenericDetails>()};
     if (generic) {
       uses.insert(uses.end(), generic->uses().begin(), generic->uses().end());
-      for (auto ref : generic->uses()) {
-        modules.insert(GetUsedModule(ref->get<UseDetails>()));
+      for (const Symbol &used : generic->uses()) {
+        modules.insert(GetUsedModule(used.get<UseDetails>()));
       }
-    } else if (const auto *use{symbol->detailsIf<UseDetails>()}) {
+    } else if (const auto *use{symbol.detailsIf<UseDetails>()}) {
       modules.insert(GetUsedModule(*use));
     }
-    if (symbol->test(Symbol::Flag::ParentComp)) {
-    } else if (symbol->has<NamelistDetails>()) {
+    if (symbol.test(Symbol::Flag::ParentComp)) {
+    } else if (symbol.has<NamelistDetails>()) {
       namelist.push_back(symbol);
     } else if (generic) {
       if (generic->specific() &&
-          &generic->specific()->owner() == &symbol->owner()) {
+          &generic->specific()->owner() == &symbol.owner()) {
         sorted.push_back(*generic->specific());
       } else if (generic->derivedType() &&
-          &generic->derivedType()->owner() == &symbol->owner()) {
+          &generic->derivedType()->owner() == &symbol.owner()) {
         sorted.push_back(*generic->derivedType());
       }
       generics.push_back(symbol);
