@@ -302,6 +302,8 @@ def DotBF16Op : AVX512_Op<"dot", [Pure,
   }];
 }
 
+
+
 //----------------------------------------------------------------------------//
 // Convert packed F32 to packed BF16
 //----------------------------------------------------------------------------//
@@ -417,6 +419,57 @@ def DotOp : AVX_LowOp<"dot", [Pure,
         ::mlir::ArrayRef<Value> operands,
         const ::mlir::LLVMTypeConverter &typeConverter,
         ::mlir::RewriterBase &rewriter);
+  }];
+}
+
+//----------------------------------------------------------------------------//
+// AVX Int8 Dot
+//----------------------------------------------------------------------------//
+
+def DotInt8Op : AVX_Op<"dot.i32", [Pure,
+    X86IntrinsicOpInterface,
+    AllTypesMatch<["a", "b"]>,
+    AllTypesMatch<["src", "dst"]>,
+    TypesMatchWith<"`a` has same elements as `src`",
+                   "src", "a",
+                   "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0]}, "
+                   "IntegerType::get($_self.getContext(), 32))">
+  ]> {
+  let summary = "Dot Int8 op";
+  let description = [{
+    The `dot` op is an AVX2-I32/I8 specific op that can lower to the proper
+    LLVMAVX2-INT8/32 operation `llvm.vpdpbssd` depending on the width of MLIR
+    vectors it is applied to.
+
+    #### From the Intel Intrinsics Guide:
+
+    Multiply groups of 4 adjacent pairs of signed 8-bit integers in `a` with 
+    corresponding signed 8-bit integers in `b`, producing 4 intermediate signed 16-bit 
+    results. Sum these 4 results with the corresponding 32-bit integer in `src`, and 
+    store the packed 32-bit results in `dst`.
+
+    Example:
+    ```mlir
+    %dst = x86vector.avx.dot %src, %a, %b : vector<8xi32> -> vector<8xi32>
+    ```
+  }];
+  let arguments = (ins VectorOfLengthAndType<[4, 8], [I32]>:$src,
+                   VectorOfLengthAndType<[4, 8], [I32]>:$a,
+                   VectorOfLengthAndType<[4, 8], [I32]>:$b
+                   );
+  let results = (outs VectorOfLengthAndType<[4, 8], [I32]>:$dst);
+  let assemblyFormat =
+    "$src `,` $a `,` $b attr-dict `:` type($a) `->` type($src)";
+
+  let extraClassDeclaration = [{
+    std::string getIntrinsicName() {
+      std::string intr = "llvm.x86.avx2.vpdpbssd";
+      VectorType vecType = getSrc().getType();
+      unsigned elemBitWidth = vecType.getElementTypeBitWidth();
+      unsigned opBitWidth = vecType.getShape()[0] * elemBitWidth;
+      intr += "." + std::to_string(opBitWidth);
+      return intr;
+    }
   }];
 }
 

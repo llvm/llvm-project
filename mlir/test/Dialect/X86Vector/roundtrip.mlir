@@ -229,3 +229,19 @@ func.func @avx_dot(%a: vector<8xf32>, %b: vector<8xf32>) -> (vector<8xf32>)
   %0 = x86vector.avx.intr.dot %a, %b : vector<8xf32>
   return %0 : vector<8xf32>
 }
+
+// CHECK-LABEL: func @avx_dot_i32_128
+func.func @avx_dot_i32_128(%src: vector<4xi32>, %a: vector<4xi32>,
+    %b: vector<4xi32>) -> vector<4xi32> {
+  // CHECK: x86vector.avx.dot.i32 {{.*}} : vector<4xi32> -> vector<4xi32>
+  %0 = x86vector.avx.dot.i32 %src, %a, %b : vector<4xi32> -> vector<4xi32>
+  return %0 : vector<4xi32>
+}
+
+// CHECK-LABEL: func @avx_dot_i32_256
+func.func @avx_dot_i32_256(%src: vector<8xi32>, %a: vector<8xi32>,
+    %b: vector<8xi32>) -> vector<8xi32> {
+  // CHECK: x86vector.avx.dot.i32 {{.*}} : vector<8xi32> -> vector<8xi32>
+  %0 = x86vector.avx.dot.i32 %src, %a, %b : vector<8xi32> -> vector<8xi32>
+  return %0 : vector<8xi32>
+}

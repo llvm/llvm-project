@@ -234,3 +234,19 @@ func.func @LLVM_x86_avx_dp_ps_256(
   %0 = x86vector.avx.intr.dot %a, %b : vector<8xf32>
   return %0 : vector<8xf32>
 }
+
+// CHECK-LABEL: define <4 x i32> @LLVM_x86_avx2_vpdpbssd_128
+func.func @LLVM_x86_avx2_vpdpbssd_128(%src: vector<4xi32>, %a: vector<4xi32>,
+    %b: vector<4xi32>) -> vector<4xi32> {
+    // CHECK: call <4 x i32> @llvm.x86.avx2.vpdpbssd.128(
+  %0 = x86vector.avx.dot.i32 %src, %a, %b : vector<4xi32> -> vector<4xi32>
+  return %0 : vector<4xi32>
+}
+
+// CHECK-LABEL: define <8 x i32> @LLVM_x86_avx2_vpdpbssd_256
+func.func @LLVM_x86_avx2_vpdpbssd_256(%src: vector<8xi32>, %a: vector<8xi32>,
+    %b: vector<8xi32>) -> vector<8xi32> {
+    // CHECK: call <8 x i32> @llvm.x86.avx2.vpdpbssd.256(
+  %0 = x86vector.avx.dot.i32 %src, %a, %b : vector<8xi32> -> vector<8xi32>
+  return %0 : vector<8xi32>
+}
