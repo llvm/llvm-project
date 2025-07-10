@@ -466,9 +466,10 @@ func.func @invalid_splat(%v : f32) {
 
 // -----
 
-func.func @invalid_splat(%v : vector<8xf32>) {
-  // expected-error@+1 {{must be integer/index/float type}}
-  %w = tensor.splat %v : tensor<8xvector<8xf32>>
+// expected-note@+1 {{prior use here}}
+func.func @invalid_splat(%v : f32) {
+  // expected-error@+1 {{expects different type than prior uses: 'i32' vs 'f32'}}
+  %w = tensor.splat %v : tensor<1xi32>
   return
 }
 

@@ -17,6 +17,7 @@
 #include <cassert>
 #include <deque>
 #include <flat_map>
+#include <functional>
 #include <string>
 #include <utility>
 
@@ -77,6 +78,13 @@ int main(int, char**) {
     auto n = m.count(Transparent<int>{3});
     assert(n == 2);
     assert(transparent_used);
+  }
+  {
+    // LWG4239 std::string and C string literal
+    using M = std::flat_multimap<std::string, int, std::less<>>;
+    M m{{"alpha", 1}, {"beta", 2}, {"beta", 1}, {"eta", 3}, {"gamma", 3}};
+    assert(m.count("beta") == 2);
+    assert(m.count("charlie") == 0);
   }
 
   return 0;

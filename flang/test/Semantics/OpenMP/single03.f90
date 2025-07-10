@@ -39,7 +39,7 @@ subroutine omp_single
         !$omp single private(j) copyprivate(j)
             print *, "omp single", j
         !ERROR: COPYPRIVATE variable 'j' may not appear on a PRIVATE or FIRSTPRIVATE clause on a SINGLE construct
-        !WARNING: The COPYPRIVATE clause with 'j' is already used on the SINGLE directive
+        !WARNING: The COPYPRIVATE clause with 'j' is already used on the SINGLE directive [-Wopen-mp-usage]
         !$omp end single copyprivate(j)
 
         !$omp single nowait

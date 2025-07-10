@@ -18,9 +18,6 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/IR/AffineExpr.h"
-#include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
@@ -30,7 +27,6 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
 using namespace mlir;
@@ -148,6 +144,9 @@ struct LinalgOpInstancePromotionOptions {
   llvm::SmallSet<int64_t, 4> operandsNumbersToCopyIn;
   /// True if the full view should be used for the promoted buffer.
   DenseMap<Value, bool> useFullTileBuffers;
+  /// True if the original subview size should be used. This means the full tile
+  /// buffer is the same size as the partial view.
+  bool useOriginalSubviewSize;
 
   /// Callback functions for allocation and deallocation of promoted buffers, as
   /// well as to copy the data into and out of these buffers.
@@ -170,6 +169,7 @@ LinalgOpInstancePromotionOptions::LinalgOpInstancePromotionOptions(
       options.useFullTileBuffers.value_or(llvm::SmallBitVector());
   vUseFullTileBuffers.resize(linalgOp->getNumOperands(),
                              options.useFullTileBuffersDefault);
+  useOriginalSubviewSize = options.useOriginalSubviewSize;
 
   for (OpOperand &opOperand : linalgOp->getOpOperands()) {
     int64_t operandNumber = opOperand.getOperandNumber();
@@ -237,7 +237,8 @@ LinalgOpInstancePromotionOptions::LinalgOpInstancePromotionOptions(
 // by a partial `copy` op.
 FailureOr<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
     OpBuilder &b, Location loc, memref::SubViewOp subView,
-    const AllocBufferCallbackFn &allocationFn, DataLayout &layout) {
+    bool useOriginalSubviewSize, const AllocBufferCallbackFn &allocationFn,
+    DataLayout &layout) {
   auto viewType = subView.getType();
   auto rank = viewType.getRank();
   SmallVector<Value, 4> fullSizes;
@@ -254,7 +255,8 @@ FailureOr<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
     // to look for the bound.
     LLVM_DEBUG(llvm::dbgs() << "Extract tightest: " << rangeValue.size << "\n");
     Value size;
-    if (auto attr = llvm::dyn_cast_if_present<Attribute>(rangeValue.size)) {
+    if (llvm::isa_and_present<Attribute>(rangeValue.size) ||
+        useOriginalSubviewSize) {
       size = getValueOrCreateConstantIndexOp(b, loc, rangeValue.size);
     } else {
       FailureOr<int64_t> upperBound =
@@ -270,7 +272,6 @@ FailureOr<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
     partialSizes.push_back(
         b.createOrFold<memref::DimOp>(loc, subView, resultDimIdx++));
   }
-  SmallVector<int64_t, 4> dynSizes(fullSizes.size(), ShapedType::kDynamic);
   // If a callback is not specified, then use the default implementation for
   // allocating the promoted buffer.
   std::optional<Value> fullLocalView =
@@ -296,7 +297,8 @@ promoteSubViews(ImplicitLocOpBuilder &b,
     memref::SubViewOp subView =
         cast<memref::SubViewOp>(v.second.getDefiningOp());
     auto promotionInfo = promoteSubviewAsNewBuffer(
-        b, b.getLoc(), subView, options.allocationFn, layout);
+        b, b.getLoc(), subView, options.useOriginalSubviewSize,
+        options.allocationFn, layout);
     if (failed(promotionInfo))
       return failure();
     promotionInfoMap[v.first] = *promotionInfo;

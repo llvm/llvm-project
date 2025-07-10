@@ -1,0 +1,11 @@
+{
+    "Opcodes": {
+        "dummyOpc": [1, 2]
+    },
+    "Types": {
+        "dummyTy": [1, 2]
+    },
+    "Arguments": {
+        "dummyArg": [1, 2]
+    }
+}

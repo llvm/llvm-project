@@ -290,12 +290,12 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(
       %arg0: !transform.any_op,
       %arg1: !transform.op<"linalg.matmul">,
-      %arg2: !transform.op<"linalg.elemwise_binary">) {
+      %arg2: !transform.op<"linalg.elementwise">) {
     // Since the %arg2 handle is associated with both elementwise operations,
     // we need to split it into two handles so we can target only the second
     // elementwise operation.
     %add, %max = transform.split_handle %arg2
-        : (!transform.op<"linalg.elemwise_binary">)
+        : (!transform.op<"linalg.elementwise">)
         -> (!transform.any_op, !transform.any_op)
 
     // The actual tiling transformation takes tile sizes as attributes. It

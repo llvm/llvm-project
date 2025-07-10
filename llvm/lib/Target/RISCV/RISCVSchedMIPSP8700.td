@@ -263,6 +263,7 @@ def : ReadAdvance<ReadIRem, 0>;
 def : ReadAdvance<ReadIRem32, 0>;
 
 // Unsupported extensions.
+defm : UnsupportedSchedQ;
 defm : UnsupportedSchedV;
 defm : UnsupportedSchedZbc;
 defm : UnsupportedSchedZbs;
@@ -273,5 +274,9 @@ defm : UnsupportedSchedZfhmin;
 defm : UnsupportedSchedSFB;
 defm : UnsupportedSchedZabha;
 defm : UnsupportedSchedXsfvcp;
+defm : UnsupportedSchedXSfvfnrclipxfqf;
+defm : UnsupportedSchedXSfvfwmaccqqq;
+defm : UnsupportedSchedXSfvqmaccdod;
+defm : UnsupportedSchedXSfvqmaccqoq;
 defm : UnsupportedSchedZvk;
 }

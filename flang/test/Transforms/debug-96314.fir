@@ -1,6 +1,6 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s -o - | FileCheck %s
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   func.func @_QMhelperPmod_sub(%arg0: !fir.ref<i32> {fir.bindc_name = "a"} ) {
     return
   } loc(#loc1)

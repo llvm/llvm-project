@@ -41,9 +41,9 @@ int scopes() {
 
 long longfunc() { return 42l; }
 // CHECK: define{{.*}} i64 @_Z8longfuncv() {
-// CHECK:   %[[RV]] = alloca i64, i64 1, align 8
-// CHECK:   store i64 42, ptr %[[RV]], align 4
-// CHECK:   %[[R:.*]] = load i64, ptr %[[RV]], align 4
+// CHECK:   %[[RV:.*]] = alloca i64, i64 1, align 8
+// CHECK:   store i64 42, ptr %[[RV]], align 8
+// CHECK:   %[[R:.*]] = load i64, ptr %[[RV]], align 8
 // CHECK:   ret i64 %[[R]]
 // CHECK: }
 
@@ -58,8 +58,8 @@ unsigned unsignedfunc() { return 42u; }
 unsigned long long ullfunc() { return 42ull; }
 // CHECK: define{{.*}} i64 @_Z7ullfuncv() {
 // CHECK:   %[[RV:.*]] = alloca i64, i64 1, align 8
-// CHECK:   store i64 42, ptr %[[RV]], align 4
-// CHECK:   %[[R:.*]] = load i64, ptr %[[RV]], align 4
+// CHECK:   store i64 42, ptr %[[RV]], align 8
+// CHECK:   %[[R:.*]] = load i64, ptr %[[RV]], align 8
 // CHECK:   ret i64 %[[R]]
 // CHECK: }
 
