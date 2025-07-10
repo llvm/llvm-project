@@ -32,7 +32,7 @@ inline const bool
     __is_core_convertible_v<_Tp, _Up, decltype(static_cast<void (*)(_Up)>(0)(static_cast<_Tp (*)()>(0)()))> = true;
 
 template <class _Tp, class _Up>
-using __is_core_convertible = integral_constant<bool, __is_core_convertible_v<_Tp, _Up>>;
+using __is_core_convertible _LIBCPP_NODEBUG = integral_constant<bool, __is_core_convertible_v<_Tp, _Up>>;
 
 #if _LIBCPP_STD_VER >= 20
 
