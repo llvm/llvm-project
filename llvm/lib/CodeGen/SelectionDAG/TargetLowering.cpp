@@ -11581,6 +11581,26 @@ SDValue TargetLowering::expandVecReduce(SDNode *Node, SelectionDAG &DAG) const {
   return Res;
 }
 
+SDValue
+TargetLowering::expandFCanonicalizeWithStrictFmul(SDNode *Node, SDLoc DL,
+                                                  SelectionDAG &DAG) const {
+  // Create strict multiplication by 1.0.
+  SDValue Operand = Node->getOperand(0);
+  EVT VT = Operand.getValueType();
+  SDValue One = DAG.getConstantFP(1.0, DL, VT);
+  SDValue Chain = DAG.getEntryNode();
+
+  SDValue Mul = DAG.getNode(ISD::STRICT_FMUL, DL, {VT, MVT::Other},
+                            {Chain, Operand, One});
+
+  // Propagate existing flags on canonicalize, and additionally set NoFPExcept.
+  SDNodeFlags Flags = Node->getFlags();
+  Flags.setNoFPExcept(true);
+  Mul->setFlags(Flags);
+
+  return Mul;
+}
+
 SDValue TargetLowering::expandVecReduceSeq(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc dl(Node);
   SDValue AccOp = Node->getOperand(0);

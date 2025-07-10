@@ -5019,6 +5019,10 @@ public:
     return DL.isLittleEndian();
   }
 
+  virtual bool shouldExpandVectorFCANONICALIZEInVectorLegalizer() const {
+    return false;
+  }
+
   /// Returns a 0 terminated array of registers that can be safely used as
   /// scratch registers.
   virtual const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const {
@@ -5680,6 +5684,16 @@ public:
   /// Expand a VECREDUCE_* into an explicit calculation. If Count is specified,
   /// only the first Count elements of the vector are used.
   SDValue expandVecReduce(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// This implements llvm.canonicalize.f* by multiplication with 1.0, as
+  /// suggested in
+  /// https://llvm.org/docs/LangRef.html#llvm-canonicalize-intrinsic.
+  /// It uses strict_fp operations even outside a strict_fp context in order
+  /// to guarantee that the canonicalization is not optimized away by later
+  /// passes. The result chain introduced by that is intentionally ignored
+  /// since no ordering requirement is intended here.
+  SDValue expandFCanonicalizeWithStrictFmul(SDNode *Node, SDLoc DL,
+                                            SelectionDAG &DAG) const;
 
   /// Expand a VECREDUCE_SEQ_* into an explicit ordered calculation.
   SDValue expandVecReduceSeq(SDNode *Node, SelectionDAG &DAG) const;
