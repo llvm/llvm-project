@@ -738,19 +738,17 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
         implicit, dataClause, baseAddr.getType(), async, asyncDeviceTypes,
         asyncOnlyDeviceTypes, /*unwrapBoxAddr=*/true, info.isPresent);
     dataOperands.push_back(op.getAccVar());
-    // If the input value has a descriptor, we need to create a use device op
-    // for the descriptor as well as the base address.
+    // For UseDeviceOp, if operand is one of a pair resulting from a
+    // declare operation, create a UseDeviceOp for the other operand as well.
     if constexpr (std::is_same_v<Op, mlir::acc::UseDeviceOp>) {
-      LLVM_DEBUG(llvm::dbgs() << __func__ << " found usedeviceop \n"; info.dump(llvm::dbgs()));
-      LLVM_DEBUG(llvm::dbgs() << __func__ << " had previously created and added usedeviceop \n"; op.dump());
       if (mlir::isa<hlfir::DeclareOp>(baseAddr.getDefiningOp())) {
         Op op = createDataEntryOp<Op>(
-            builder, operandLocation, baseAddr.getDefiningOp()->getResult(1), asFortran, bounds, structured,
-            implicit, dataClause, baseAddr.getDefiningOp()->getResult(1).getType(), async, asyncDeviceTypes,
-            asyncOnlyDeviceTypes, /*unwrapBoxAddr=*/true, info.isPresent);
-        LLVM_DEBUG(llvm::dbgs() << __func__ << " created usedeviceop \n"; op.dump());
+            builder, operandLocation, baseAddr.getDefiningOp()->getResult(1),
+            asFortran, bounds, structured, implicit, dataClause,
+            baseAddr.getDefiningOp()->getResult(1).getType(), async,
+            asyncDeviceTypes, asyncOnlyDeviceTypes, /*unwrapBoxAddr=*/true,
+            info.isPresent);
         dataOperands.push_back(op.getAccVar());
-        LLVM_DEBUG(llvm::dbgs() << __func__ << "added usedeviceop on descriptor\n"; info.dump(llvm::dbgs()));
       }
     }
   }
