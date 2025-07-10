@@ -98,9 +98,9 @@ static void fixI8UseChain(Instruction &I,
       ElementType = AI->getAllocatedType();
     if (auto *GEP = dyn_cast<GetElementPtrInst>(NewOperands[0])) {
       ElementType = GEP->getSourceElementType();
-      if (ElementType->isArrayTy())
-        ElementType = ElementType->getArrayElementType();
     }
+    if (ElementType->isArrayTy())
+      ElementType = ElementType->getArrayElementType();
     LoadInst *NewLoad = Builder.CreateLoad(ElementType, NewOperands[0]);
     ReplacedValues[Load] = NewLoad;
     ToRemove.push_back(Load);
@@ -593,7 +593,8 @@ legalizeLoadStoreOnArrayAllocas(Instruction &I,
 
   IRBuilder<> Builder(&I);
   Value *Zero = Builder.getInt32(0);
-  Value *GEP = Builder.CreateInBoundsGEP(Ty, AllocaPtrOp, {Zero, Zero});
+  Value *GEP = Builder.CreateGEP(Ty, AllocaPtrOp, {Zero, Zero}, "",
+                                 GEPNoWrapFlags::all());
 
   Value *NewLoadStore = nullptr;
   if (auto *LI = dyn_cast<LoadInst>(&I))
