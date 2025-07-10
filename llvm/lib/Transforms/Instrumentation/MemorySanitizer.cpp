@@ -4319,7 +4319,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     assert(isPowerOf2_64(IdxVectorSize));
 
     // Compiler isn't smart enough, let's help it
-    if (auto *ConstantIdx = dyn_cast<Constant>(Idx))
+    if (isa<Constant>(Idx))
       return;
 
     Value *Truncated = IRB.CreateTrunc(
