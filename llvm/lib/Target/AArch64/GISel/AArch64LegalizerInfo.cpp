@@ -1288,6 +1288,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(1, s64, 2)
       .clampMaxNumElements(1, s32, 4)
       .clampMaxNumElements(1, s16, 8)
+      .moreElementsToNextPow2(1)
+      .scalarize(1)
       .lower();
 
   // For fmul reductions we need to split up into individual operations. We

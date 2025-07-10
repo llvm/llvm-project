@@ -63,7 +63,7 @@ AVRMCExpr::Specifier AVRMCExpr::parseSpecifier(StringRef Name) {
 const char *AVRMCExpr::getName() const {
   const auto &Modifier =
       llvm::find_if(ModifierNames, [this](ModifierEntry const &Mod) {
-        return Mod.specifier == specifier;
+        return Mod.specifier == getSpecifier();
       });
 
   if (Modifier != std::end(ModifierNames)) {
@@ -75,7 +75,7 @@ const char *AVRMCExpr::getName() const {
 AVR::Fixups AVRMCExpr::getFixupKind() const {
   AVR::Fixups Kind = AVR::Fixups::LastTargetFixupKind;
 
-  switch (specifier) {
+  switch (getSpecifier()) {
   case AVR::S_LO8:
     Kind = isNegated() ? AVR::fixup_lo8_ldi_neg : AVR::fixup_lo8_ldi;
     break;
@@ -133,7 +133,7 @@ int64_t AVRMCExpr::evaluateAsInt64(int64_t Value) const {
   if (Negated)
     Value *= -1;
 
-  switch (specifier) {
+  switch (getSpecifier()) {
   case AVR::S_LO8:
     Value &= 0xff;
     break;

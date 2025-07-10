@@ -432,8 +432,9 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
         return reportValueError(Ctx, "RegisterSpace", Descriptor.RegisterSpace);
 
       if (RSD.Version > 1) {
-        if (!llvm::hlsl::rootsig::verifyDescriptorFlag(Descriptor.Flags))
-          return reportValueError(Ctx, "DescriptorRangeFlag", Descriptor.Flags);
+        if (!llvm::hlsl::rootsig::verifyRootDescriptorFlag(RSD.Version,
+                                                           Descriptor.Flags))
+          return reportValueError(Ctx, "RootDescriptorFlag", Descriptor.Flags);
       }
       break;
     }
@@ -446,6 +447,9 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
 
         if (!llvm::hlsl::rootsig::verifyRegisterSpace(Range.RegisterSpace))
           return reportValueError(Ctx, "RegisterSpace", Range.RegisterSpace);
+
+        if (!llvm::hlsl::rootsig::verifyNumDescriptors(Range.NumDescriptors))
+          return reportValueError(Ctx, "NumDescriptors", Range.NumDescriptors);
 
         if (!llvm::hlsl::rootsig::verifyDescriptorRangeFlag(
                 RSD.Version, Range.RangeType, Range.Flags))

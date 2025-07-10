@@ -896,6 +896,38 @@ struct ModulesResponseBody {
 };
 llvm::json::Value toJSON(const ModulesResponseBody &);
 
+/// Arguments for `writeMemory` request.
+struct WriteMemoryArguments {
+  /// Memory reference to the base location to which data should be written.
+  lldb::addr_t memoryReference;
+
+  /// Offset (in bytes) to be applied to the reference location before writing
+  /// data. Can be negative.
+  std::optional<int64_t> offset;
+
+  /// Property to control partial writes. If true, the debug adapter should
+  /// attempt to write memory even if the entire memory region is not writable.
+  /// In such a case the debug adapter should stop after hitting the first byte
+  /// of memory that cannot be written and return the number of bytes written in
+  /// the response via the `offset` and `bytesWritten` properties.
+  /// If false or missing, a debug adapter should attempt to verify the region
+  /// is writable before writing, and fail the response if it is not.
+  std::optional<bool> allowPartial;
+
+  /// Bytes to write, encoded using base64.
+  std::string data;
+};
+bool fromJSON(const llvm::json::Value &, WriteMemoryArguments &,
+              llvm::json::Path);
+
+/// Response to writeMemory request.
+struct WriteMemoryResponseBody {
+  /// Property that should be returned when `allowPartial` is true to indicate
+  /// the number of bytes starting from address that were successfully written.
+  uint64_t bytesWritten = 0;
+};
+llvm::json::Value toJSON(const WriteMemoryResponseBody &);
+
 } // namespace lldb_dap::protocol
 
 #endif

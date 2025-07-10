@@ -13,7 +13,7 @@ typedef struct {
 } A;
 
 // CIR-DAG:  !rec_A = !cir.record<struct "A" packed padded {!s8i, !s8i, !s8i, !u16i, !cir.array<!u8i x 3>}>
-// CIR-DAG:  #bfi_more_bits = #cir.bitfield_info<name = "more_bits", storageType = !u16i, size = 4, offset = 3, isSigned = false>
+// CIR-DAG:  #bfi_more_bits = #cir.bitfield_info<name = "more_bits", storage_type = !u16i, size = 4, offset = 3, is_signed = false>
 // LLVM-DAG: %struct.A = type <{ i8, i8, i8, i16, [3 x i8] }>
 // OGCG-DAG: %struct.A = type <{ i8, i8, i8, i16, [3 x i8] }>
 
@@ -35,7 +35,7 @@ typedef struct {
   int e : 15;
   unsigned f; // type other than int above, not a bitfield
 } S;
-// CIR-DAG:  #bfi_c = #cir.bitfield_info<name = "c", storageType = !u64i, size = 17, offset = 32, isSigned = true>
+// CIR-DAG:  #bfi_c = #cir.bitfield_info<name = "c", storage_type = !u64i, size = 17, offset = 32, is_signed = true>
 // CIR-DAG:  !rec_S = !cir.record<struct "S" {!u64i, !u16i, !u32i}>
 // LLVM-DAG: %struct.S = type { i64, i16, i32 }
 // OGCG-DAG: %struct.S = type { i64, i16, i32 }

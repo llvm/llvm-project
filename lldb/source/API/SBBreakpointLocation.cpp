@@ -102,7 +102,7 @@ void SBBreakpointLocation::SetEnabled(bool enabled) {
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
         loc_sp->GetTarget().GetAPIMutex());
-    loc_sp->SetEnabled(enabled);
+    llvm::consumeError(loc_sp->SetEnabled(enabled));
   }
 }
 

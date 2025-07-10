@@ -311,9 +311,7 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
       case RISCV::XORI:
 
       case RISCV::ANDN:
-      case RISCV::BREV8:
       case RISCV::CLMUL:
-      case RISCV::ORC_B:
       case RISCV::ORN:
       case RISCV::SH1ADD:
       case RISCV::SH2ADD:

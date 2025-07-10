@@ -1,6 +1,6 @@
 // FIXME: These test cases currently crash during codegen, despite initializers
 // for CLEs being constant.
-// RUN: not --crash %clang_cc1 -verify -std=c++20 -emit-llvm %s
+// RUN: not --crash %clang_cc1 -verify -std=c++20 -emit-llvm %s -o -
 // expected-no-diagnostics
 namespace case1 {
 struct RR { int&& r; };

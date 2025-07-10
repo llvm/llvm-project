@@ -763,7 +763,7 @@ public:
 
   /// Build and insert \p Res = G_SEXT \p Op, \p Res = G_TRUNC \p Op, or
   /// \p Res = COPY \p Op depending on the differing sizes of \p Res and \p Op.
-  ///  ///
+  ///
   /// \pre setBasicBlock or setMI must have been called.
   /// \pre \p Res must be a generic virtual register with scalar or vector type.
   /// \pre \p Op must be a generic virtual register with scalar or vector type.
@@ -773,7 +773,7 @@ public:
 
   /// Build and insert \p Res = G_ZEXT \p Op, \p Res = G_TRUNC \p Op, or
   /// \p Res = COPY \p Op depending on the differing sizes of \p Res and \p Op.
-  ///  ///
+  ///
   /// \pre setBasicBlock or setMI must have been called.
   /// \pre \p Res must be a generic virtual register with scalar or vector type.
   /// \pre \p Op must be a generic virtual register with scalar or vector type.
@@ -783,7 +783,7 @@ public:
 
   // Build and insert \p Res = G_ANYEXT \p Op, \p Res = G_TRUNC \p Op, or
   /// \p Res = COPY \p Op depending on the differing sizes of \p Res and \p Op.
-  ///  ///
+  ///
   /// \pre setBasicBlock or setMI must have been called.
   /// \pre \p Res must be a generic virtual register with scalar or vector type.
   /// \pre \p Op must be a generic virtual register with scalar or vector type.
@@ -794,7 +794,7 @@ public:
   /// Build and insert \p Res = \p ExtOpc, \p Res = G_TRUNC \p
   /// Op, or \p Res = COPY \p Op depending on the differing sizes of \p Res and
   /// \p Op.
-  ///  ///
+  ///
   /// \pre setBasicBlock or setMI must have been called.
   /// \pre \p Res must be a generic virtual register with scalar or vector type.
   /// \pre \p Op must be a generic virtual register with scalar or vector type.
@@ -808,6 +808,48 @@ public:
   /// emulated using G_AND.
   MachineInstrBuilder buildZExtInReg(const DstOp &Res, const SrcOp &Op,
                                      int64_t ImmOp);
+
+  /// Build and insert \p Res = \p G_TRUNC_SSAT_S \p Op
+  ///
+  /// G_TRUNC_SSAT_S truncates the signed input, \p Op, to a signed result with
+  /// saturation.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with scalar or vector type.
+  /// \pre \p Op must be a generic virtual register with scalar or vector type.
+  ///
+  /// \return The newly created instruction.
+  MachineInstrBuilder buildTruncSSatS(const DstOp &Res, const SrcOp &Op) {
+    return buildInstr(TargetOpcode::G_TRUNC_SSAT_S, {Res}, {Op});
+  }
+
+  /// Build and insert \p Res = \p G_TRUNC_SSAT_U \p Op
+  ///
+  /// G_TRUNC_SSAT_U truncates the signed input, \p Op, to an unsigned result
+  /// with saturation.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with scalar or vector type.
+  /// \pre \p Op must be a generic virtual register with scalar or vector type.
+  ///
+  /// \return The newly created instruction.
+  MachineInstrBuilder buildTruncSSatU(const DstOp &Res, const SrcOp &Op) {
+    return buildInstr(TargetOpcode::G_TRUNC_SSAT_U, {Res}, {Op});
+  }
+
+  /// Build and insert \p Res = \p G_TRUNC_USAT_U \p Op
+  ///
+  /// G_TRUNC_USAT_U truncates the unsigned input, \p Op, to an unsigned result
+  /// with saturation.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Res must be a generic virtual register with scalar or vector type.
+  /// \pre \p Op must be a generic virtual register with scalar or vector type.
+  ///
+  /// \return The newly created instruction.
+  MachineInstrBuilder buildTruncUSatU(const DstOp &Res, const SrcOp &Op) {
+    return buildInstr(TargetOpcode::G_TRUNC_USAT_U, {Res}, {Op});
+  }
 
   /// Build and insert an appropriate cast between two registers of equal size.
   MachineInstrBuilder buildCast(const DstOp &Dst, const SrcOp &Src);

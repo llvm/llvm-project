@@ -55,8 +55,9 @@ namespace clang::tidy {
 
 namespace {
 #if CLANG_TIDY_ENABLE_STATIC_ANALYZER
+#define ANALYZER_CHECK_NAME_PREFIX "clang-analyzer-"
 static constexpr llvm::StringLiteral AnalyzerCheckNamePrefix =
-    "clang-analyzer-";
+    ANALYZER_CHECK_NAME_PREFIX;
 
 class AnalyzerDiagnosticConsumer : public ento::PathDiagnosticConsumer {
 public:
@@ -669,18 +670,19 @@ getAllChecksAndOptions(bool AllowEnablingAnalyzerAlphaCheckers) {
     Buffer.append(AnalyzerCheck);
     Result.Checks.insert(Buffer);
   }
-  for (std::string OptionName : {
+
+  static constexpr llvm::StringLiteral OptionNames[] = {
 #define GET_CHECKER_OPTIONS
 #define CHECKER_OPTION(TYPE, CHECKER, OPTION_NAME, DESCRIPTION, DEFAULT,       \
                        RELEASE, HIDDEN)                                        \
-  Twine(AnalyzerCheckNamePrefix).concat(CHECKER ":" OPTION_NAME).str(),
+  ANALYZER_CHECK_NAME_PREFIX CHECKER ":" OPTION_NAME,
 
 #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
 #undef CHECKER_OPTION
 #undef GET_CHECKER_OPTIONS
-       }) {
-    Result.Options.insert(OptionName);
-  }
+  };
+
+  Result.Options.insert_range(OptionNames);
 #endif // CLANG_TIDY_ENABLE_STATIC_ANALYZER
 
   Context.setOptionsCollector(&Result.Options);

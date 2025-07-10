@@ -531,4 +531,37 @@ json::Value toJSON(const ModulesResponseBody &MR) {
   return result;
 }
 
+bool fromJSON(const json::Value &Params, WriteMemoryArguments &WMA,
+              json::Path P) {
+  json::ObjectMapper O(Params, P);
+
+  const json::Object *wma_obj = Params.getAsObject();
+  constexpr llvm::StringRef ref_key = "memoryReference";
+  const std::optional<llvm::StringRef> memory_ref = wma_obj->getString(ref_key);
+  if (!memory_ref) {
+    P.field(ref_key).report("missing value");
+    return false;
+  }
+
+  const std::optional<lldb::addr_t> addr_opt =
+      DecodeMemoryReference(*memory_ref);
+  if (!addr_opt) {
+    P.field(ref_key).report("Malformed memory reference");
+    return false;
+  }
+
+  WMA.memoryReference = *addr_opt;
+
+  return O && O.mapOptional("allowPartial", WMA.allowPartial) &&
+         O.mapOptional("offset", WMA.offset) && O.map("data", WMA.data);
+}
+
+json::Value toJSON(const WriteMemoryResponseBody &WMR) {
+  json::Object result;
+
+  if (WMR.bytesWritten != 0)
+    result.insert({"bytesWritten", WMR.bytesWritten});
+  return result;
+}
+
 } // namespace lldb_dap::protocol

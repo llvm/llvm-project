@@ -1552,17 +1552,34 @@ def : GCNPat<
 >;
 
 def : GCNPat<
-  (i64 (anyext i16:$src)),
+  (i64 (UniformUnaryFrag<anyext> i16:$src)),
+  (REG_SEQUENCE VReg_64,
+     (i32 (COPY $src)), sub0,
+     (V_MOV_B32_e32 (i32 0)), sub1)
+>;
+
+def : GCNPat<
+  (i64 (DivergentUnaryFrag<anyext> i16:$src)),
   (REG_SEQUENCE VReg_64, $src, lo16, (i16 (IMPLICIT_DEF)), hi16, (i32 (IMPLICIT_DEF)), sub1)
 >;
 
 def : GCNPat<
-  (i16 (trunc i32:$src)),
+  (i16 (UniformUnaryFrag<trunc> i32:$src)),
+  (COPY $src)
+>;
+
+def : GCNPat<
+  (i16 (DivergentUnaryFrag<trunc> i32:$src)),
   (EXTRACT_SUBREG $src, lo16)
 >;
 
 def : GCNPat <
-  (i16 (trunc i64:$src)),
+  (i16 (UniformUnaryFrag<trunc> i64:$src)),
+  (EXTRACT_SUBREG $src, sub0)
+>;
+
+def : GCNPat <
+  (i16 (DivergentUnaryFrag<trunc> i64:$src)),
   (EXTRACT_SUBREG $src, lo16)
 >;
 
