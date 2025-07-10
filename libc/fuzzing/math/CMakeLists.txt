@@ -167,5 +167,5 @@ add_libc_fuzzer(
   SRCS
     sqrt_fuzz.cpp
   DEPENDS
-    libc.src.math.sqrt
+    libc.src.__support.FPUtil.generic.sqrt
 )
