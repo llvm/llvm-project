@@ -26,18 +26,12 @@
 #include "test_text_encoding.h"
 
 int main() {
-#if __CHAR_BIT__ == 8
-
-  {
-    auto te = std::text_encoding::literal();
-#  ifdef __GNUC_EXECUTION_CHARSET_NAME
-    assert(std::string_view(te.name()) == std::string_view(__GNUC_EXECUTION_CHARSET_NAME));
-#  elif defined(__clang_literal_encoding__)
-    assert(std::string_view(te.name()) == std::string_view(__clang_literal_encoding__));
-#  else
-    assert(te.mib() = std::text_encoding::id::unknown);
-#  endif
-  }
-
-#endif // if __CHAR_BIT__ == 8
+  auto te = std::text_encoding::literal();
+#ifdef __GNUC_EXECUTION_CHARSET_NAME
+  assert(std::string_view(te.name()) == std::string_view(__GNUC_EXECUTION_CHARSET_NAME));
+#elif defined(__clang_literal_encoding__)
+  assert(std::string_view(te.name()) == std::string_view(__clang_literal_encoding__));
+#else
+  assert(te.mib() = std::text_encoding::id::unknown);
+#endif
 }

@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <cassert>
 #include <print>
+#include <ranges>
 #include <string_view>
 #include <text_encoding>
 #include <type_traits>
@@ -47,7 +48,7 @@ constexpr bool test_ctor(te_id i, te_id expect_id, std::string_view expect_name)
   return true;
 }
 
-constexpr bool test_ctors_static() {
+constexpr bool test_ctors() {
   for (auto pair : unique_encoding_data) {
     if (!test_ctor(te_id{pair.mib}, te_id{pair.mib}, pair.name)) {
       return false;
@@ -61,7 +62,10 @@ constexpr bool test_unknown() {
   if (te.mib() != te_id::unknown) {
     return false;
   }
-  if (std::string_view(te.name()).compare(te.name()) != 0) {
+  if (std::string_view("").compare(te.name()) != 0) {
+    return false;
+  }
+  if (!std::ranges::empty(te.aliases())) {
     return false;
   }
   return true;
@@ -72,7 +76,10 @@ constexpr bool test_other() {
   if (te.mib() != te_id::other) {
     return false;
   }
-  if (std::string_view(te.name()).compare(te.name()) != 0) {
+  if (std::string_view("").compare(te.name()) != 0) {
+    return false;
+  }
+  if (!std::ranges::empty(te.aliases())) {
     return false;
   }
   return true;
@@ -85,28 +92,17 @@ int main() {
   }
 
   {
-    for (auto pair : unique_encoding_data) {
-      assert(test_ctor(te_id{pair.mib}, te_id{pair.mib}, pair.name));
-    }
-  }
-
-  {
-    static_assert(test_ctors_static());
+    static_assert(test_ctors());
+    assert(test_ctors());
   }
 
   {
     static_assert(test_unknown());
-  }
-
-  {
     assert(test_unknown());
   }
 
   {
     static_assert(test_other());
-  }
-
-  {
     assert(test_other());
   }
 }

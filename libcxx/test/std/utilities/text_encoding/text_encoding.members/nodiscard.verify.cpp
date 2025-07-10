@@ -31,7 +31,7 @@ int main() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   te.environment_is<std::text_encoding::id::unknown>();
 
-  // Clang does not emit a nodiscard warning for consteval functions with [[nodiscard]]: See #141536
+  // Clang does not emit a nodiscard warning for consteval functions with [[nodiscard]]: See issue #141536
   // expected-warning@+1 {{expression result unused}}
   std::text_encoding::literal();
 }

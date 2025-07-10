@@ -28,31 +28,51 @@
 
 using id = std::text_encoding::id;
 
-int main() {
-  {
-    auto te          = std::text_encoding(id::other);
-    auto empty_range = te.aliases();
+constexpr bool test_other() {
+  auto te1         = std::text_encoding(id::other);
+  auto empty_range = te1.aliases();
+  assert(std::ranges::empty(empty_range) && empty_range.empty() && !bool(empty_range));
 
-    assert(std::ranges::empty(empty_range));
-    assert(empty_range.empty());
-    assert(!bool(empty_range));
+  for (auto& other_name : other_names) {
+    auto te_other          = std::text_encoding(other_name);
+    auto empty_range_other = te_other.aliases();
+    assert(std::ranges::empty(empty_range_other) && empty_range_other.empty() && !bool(empty_range_other));
   }
 
-  {
-    auto te          = std::text_encoding(id::unknown);
-    auto empty_range = te.aliases();
+  return true;
+}
 
-    assert(std::ranges::empty(empty_range));
-    assert(empty_range.empty());
-    assert(!bool(empty_range));
-  }
+constexpr bool test_unknown() {
+  auto te          = std::text_encoding(id::unknown);
+  auto empty_range = te.aliases();
+  return std::ranges::empty(empty_range) && empty_range.empty() && !bool(empty_range);
+}
 
-  {
-    auto te    = std::text_encoding(id::UTF8);
+constexpr bool test_primary_encodings() {
+  for (auto& data : unique_encoding_data) {
+    auto te    = std::text_encoding(id(data.mib));
     auto range = te.aliases();
 
     assert(!std::ranges::empty(range));
     assert(!range.empty());
     assert(bool(range));
+  }
+  return true;
+}
+
+int main() {
+  {
+    static_assert(test_other());
+    assert(test_other());
+  }
+
+  {
+    static_assert(test_unknown());
+    assert(test_unknown());
+  }
+
+  {
+    static_assert(test_primary_encodings());
+    assert(test_primary_encodings());
   }
 }

@@ -38,7 +38,7 @@
 
 using id = std::text_encoding::id;
 int main() {
-  auto default_te       = std::text_encoding(id::ASCII);
+  auto default_te = std::text_encoding(id::ASCII);
 
   { // 1
 

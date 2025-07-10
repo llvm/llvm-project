@@ -1065,6 +1065,7 @@ system_error string
 system_error string_view
 system_error tuple
 system_error version
+text_encoding version
 thread array
 thread atomic
 thread bitset
