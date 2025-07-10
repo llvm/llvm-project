@@ -1487,7 +1487,11 @@ def : QCIMVCCIPat <SETULT, QC_MVLTUI>;
 
 let Predicates = [HasVendorXqcics, IsRV32] in {
 def : Pat<(select (XLenVT GPRNoX0:$rd), (XLenVT GPRNoX0:$rs2),(XLenVT GPRNoX0:$rs3)),
-          (QC_SELECTEQI GPRNoX0:$rd, (XLenVT 0), GPRNoX0:$rs3, GPRNoX0:$rs2)>;
+          (QC_SELECTNEI GPRNoX0:$rd, (XLenVT 0), GPRNoX0:$rs2, GPRNoX0:$rs3)>;
+def : Pat<(select (XLenVT GPRNoX0:$rd), (XLenVT GPRNoX0:$rs2), simm5:$simm2),
+          (QC_SELECTINEI GPRNoX0:$rd, (XLenVT 0), GPRNoX0:$rs2, simm5:$simm2)>;
+def : Pat<(select (XLenVT GPRNoX0:$rd), simm5:$simm2,(XLenVT GPRNoX0:$rs2)),
+          (QC_SELECTIEQI GPRNoX0:$rd, (XLenVT 0), GPRNoX0:$rs2, simm5:$simm2)>;
 
 // Below AddedComplexity is added to prefer these conditional select instructions over
 // conditional move instructions
