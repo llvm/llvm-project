@@ -2875,7 +2875,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   // component is FMAAK or FMAMK
   field dag InsVOPDX_immX = (ins !if(!eq(Src0VT.Size, 32), VSrc_f32, VSrc_f16):$src0X, VGPRSrc_32:$vsrc1X);
   field dag InsVOPDY = (ins Src0RC32:$src0Y, Src1RC32:$vsrc1Y);
-  field bit HasVOPD3Src2 = !empty(Ins32); // VOP3 does not have Ins32.
+  field bit HasVOPD3Src2 = HasSrc2;
   field dag InsVOPD3X = getInsVOPD3<Src0VOPD3, Src1VOPD3, Src2VOPD3,
                                     Src0ModVOPD3, Src1ModVOPD3, Src2ModVOPD3,
                                     HasSrc1, HasVOPD3Src2, HasModifiers, 0>.ret;
