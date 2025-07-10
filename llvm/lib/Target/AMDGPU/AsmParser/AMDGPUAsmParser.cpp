@@ -8,6 +8,7 @@
 
 #include "AMDKernelCodeT.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
+#include "MCTargetDesc/AMDGPUMCAsmInfo.h"
 #include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCKernelDescriptor.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -395,9 +396,7 @@ public:
     return isRegOrInline(AMDGPU::VS_64RegClassID, MVT::f64);
   }
 
-  bool isVRegWithInputMods(unsigned RCID) const {
-    return isRegClass(RCID);
-  }
+  bool isVRegWithInputMods(unsigned RCID) const { return isRegClass(RCID); }
 
   bool isVRegWithFP32InputMods() const {
     return isVRegWithInputMods(AMDGPU::VGPR_32RegClassID);
@@ -531,10 +530,6 @@ public:
 #if LLPC_BUILD_NPI
   bool isSCSrc_bf16() const {
     return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::bf16);
-  }
-
-  bool isSCSrc_f16() const {
-    return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::f16);
 #else /* LLPC_BUILD_NPI */
   bool isSCSrcV2B16() const {
     return isSCSrcB16();
@@ -542,6 +537,10 @@ public:
   }
 
 #if LLPC_BUILD_NPI
+  bool isSCSrc_f16() const {
+    return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::f16);
+  }
+
   bool isSCSrcV2B16() const { return isSCSrc_b16(); }
 
 #endif /* LLPC_BUILD_NPI */
@@ -775,23 +774,23 @@ public:
 
   bool isVSrc_v2b16() const { return isVSrc_b16() || isLiteralImm(MVT::v2i16); }
 
-  bool isVCSrcV2FP32() const {
 #if LLPC_BUILD_NPI
-    return isVCSrc_f64();
+  bool isVCSrcV2FP32() const { return isVCSrc_f64(); }
 #else /* LLPC_BUILD_NPI */
+  bool isVCSrcV2FP32() const {
     return isVCSrcF64();
-#endif /* LLPC_BUILD_NPI */
   }
+#endif /* LLPC_BUILD_NPI */
 
   bool isVSrc_v2f32() const { return isVSrc_f64() || isLiteralImm(MVT::v2f32); }
 
-  bool isVCSrcV2INT32() const {
 #if LLPC_BUILD_NPI
-    return isVCSrc_b64();
+  bool isVCSrcV2INT32() const { return isVCSrc_b64(); }
 #else /* LLPC_BUILD_NPI */
+  bool isVCSrcV2INT32() const {
     return isVCSrcB64();
-#endif /* LLPC_BUILD_NPI */
   }
+#endif /* LLPC_BUILD_NPI */
 
   bool isVSrc_v2b32() const { return isVSrc_b64() || isLiteralImm(MVT::v2i32); }
 
@@ -1386,7 +1385,7 @@ public:
     // clang-format on
   }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case Register:
       OS << "<register " << AMDGPUInstPrinter::getRegisterName(getReg())
@@ -1403,7 +1402,9 @@ public:
       OS << '\'' << getToken() << '\'';
       break;
     case Expression:
-      OS << "<expr " << *Expr << '>';
+      OS << "<expr ";
+      MAI.printExpr(OS, *Expr);
+      OS << '>';
       break;
     }
   }
@@ -2076,8 +2077,8 @@ private:
   bool validateSOPLiteral(const MCInst &Inst) const;
   bool validateConstantBusLimitations(const MCInst &Inst, const OperandVector &Operands);
 #if LLPC_BUILD_NPI
-  std::optional<unsigned>
-  checkVOPDRegBankConstraints(const MCInst &Inst, bool AsVOPD3);
+  std::optional<unsigned> checkVOPDRegBankConstraints(const MCInst &Inst,
+                                                      bool AsVOPD3);
   bool validateVOPD(const MCInst &Inst, const OperandVector &Operands);
   bool validateVOPM(const MCInst &Inst, const OperandVector &Operands);
   bool tryVOPD(const MCInst &Inst);
@@ -2096,8 +2097,8 @@ private:
   bool validateMIMGAddrSize(const MCInst &Inst, const SMLoc &IDLoc);
   bool validateMIMGD16(const MCInst &Inst);
   bool validateMIMGDim(const MCInst &Inst, const OperandVector &Operands);
-#if LLPC_BUILD_NPI
   bool validateTensorR128(const MCInst &Inst);
+#if LLPC_BUILD_NPI
   bool validateRayTracingR128(const MCInst &Inst);
 #endif /* LLPC_BUILD_NPI */
   bool validateMIMGMSAA(const MCInst &Inst);
@@ -4452,13 +4453,13 @@ bool AMDGPUAsmParser::validateConstantBusLimitations(
 }
 
 #if LLPC_BUILD_NPI
-std::optional<unsigned> AMDGPUAsmParser::checkVOPDRegBankConstraints(
-    const MCInst &Inst, bool AsVOPD3) {
+std::optional<unsigned>
+AMDGPUAsmParser::checkVOPDRegBankConstraints(const MCInst &Inst, bool AsVOPD3) {
 #else /* LLPC_BUILD_NPI */
 bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
     const MCInst &Inst, const OperandVector &Operands) {
-
 #endif /* LLPC_BUILD_NPI */
+
   const unsigned Opcode = Inst.getOpcode();
   if (!isVOPD(Opcode))
 #if LLPC_BUILD_NPI
@@ -4500,9 +4501,8 @@ bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
         return I;
     }
 
-    for (auto OpName : {OpName::vsrc1X, OpName::vsrc1Y,
-                        OpName::vsrc2X, OpName::vsrc2Y,
-                        OpName::imm}) {
+    for (auto OpName : {OpName::vsrc1X, OpName::vsrc1Y, OpName::vsrc2X,
+                        OpName::vsrc2Y, OpName::imm}) {
       int I = getNamedOperandIdx(Opcode, OpName);
       if (I == -1)
         continue;
@@ -4516,16 +4516,15 @@ bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
 #endif /* LLPC_BUILD_NPI */
 
   const auto &InstInfo = getVOPDInstInfo(Opcode, &MII);
-  auto InvalidCompOprIdx =
 #if LLPC_BUILD_NPI
-      InstInfo.getInvalidCompOperandIndex(getVRegIdx, *TRI, SkipSrc,
-                                          AllowSameVGPR, AsVOPD3);
+  auto InvalidCompOprIdx = InstInfo.getInvalidCompOperandIndex(
+      getVRegIdx, *TRI, SkipSrc, AllowSameVGPR, AsVOPD3);
 
   return InvalidCompOprIdx;
 }
 
-bool AMDGPUAsmParser::validateVOPD(
-    const MCInst &Inst, const OperandVector &Operands) {
+bool AMDGPUAsmParser::validateVOPD(const MCInst &Inst,
+                                   const OperandVector &Operands) {
 
   unsigned Opcode = Inst.getOpcode();
   bool AsVOPD3 = MII.get(Opcode).TSFlags & SIInstrFlags::VOPD3;
@@ -4542,6 +4541,7 @@ bool AMDGPUAsmParser::validateVOPD(
   auto InvalidCompOprIdx = checkVOPDRegBankConstraints(Inst, AsVOPD3);
   if (!InvalidCompOprIdx.has_value())
 #else /* LLPC_BUILD_NPI */
+  auto InvalidCompOprIdx =
       InstInfo.getInvalidCompOperandIndex(getVRegIdx, SkipSrc);
   if (!InvalidCompOprIdx)
 #endif /* LLPC_BUILD_NPI */
@@ -5083,22 +5083,22 @@ bool AMDGPUAsmParser::validateMIMGD16(const MCInst &Inst) {
   return true;
 }
 
-#if LLPC_BUILD_NPI
 bool AMDGPUAsmParser::validateTensorR128(const MCInst &Inst) {
   const unsigned Opc = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opc);
 
+#if LLPC_BUILD_NPI
   // Only validate tensor_* instructions.
+#endif /* LLPC_BUILD_NPI */
   if ((Desc.TSFlags & SIInstrFlags::TENSOR_CNT) == 0)
     return true;
 
   int R128Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::r128);
-  if (R128Idx >= 0 && Inst.getOperand(R128Idx).getImm())
-    return false;
 
-  return true;
+  return R128Idx < 0 || !Inst.getOperand(R128Idx).getImm();
 }
 
+#if LLPC_BUILD_NPI
 bool AMDGPUAsmParser::validateRayTracingR128(const MCInst &Inst) {
   const unsigned Opc = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opc);
@@ -5285,8 +5285,7 @@ AMDGPUAsmParser::validateLdsDirect(const MCInst &Inst) {
 bool AMDGPUAsmParser::validateRegOperands(const MCInst &Inst,
                                           const OperandVector &Operands) {
   unsigned Opc = Inst.getOpcode();
-  if (isVOPMAsmOnly(Opc) || Opc == V_SEND_VGPR_NEXT_B32_gfx13 ||
-      Opc == V_SEND_VGPR_PREV_B32_gfx13)
+  if (isVOPMAsmOnly(Opc) || isVNBR(Opc))
     return true;
 
   const MCRegisterInfo &MRI = *getMRI();
@@ -6144,23 +6143,11 @@ bool AMDGPUAsmParser::validateTHAndScopeBits(const MCInst &Inst,
       return PrintError("scope and th combination is not valid");
   }
 
-#if LLPC_BUILD_NPI
   unsigned THType = AMDGPU::getTemporalHintType(TID);
   if (THType == AMDGPU::CPol::TH_TYPE_ATOMIC) {
-#else /* LLPC_BUILD_NPI */
-  bool IsStore = TID.mayStore();
-  bool IsAtomic =
-      TID.TSFlags & (SIInstrFlags::IsAtomicNoRet | SIInstrFlags::IsAtomicRet);
-
-  if (IsAtomic) {
-#endif /* LLPC_BUILD_NPI */
     if (!(CPol & AMDGPU::CPol::TH_TYPE_ATOMIC))
       return PrintError("invalid th value for atomic instructions");
-#if LLPC_BUILD_NPI
   } else if (THType == AMDGPU::CPol::TH_TYPE_STORE) {
-#else /* LLPC_BUILD_NPI */
-  } else if (IsStore) {
-#endif /* LLPC_BUILD_NPI */
     if (!(CPol & AMDGPU::CPol::TH_TYPE_STORE))
       return PrintError("invalid th value for store instructions");
   } else {
@@ -6335,12 +6322,12 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     Error(IDLoc, "missing dim operand");
     return false;
   }
-#if LLPC_BUILD_NPI
   if (!validateTensorR128(Inst)) {
     Error(getImmLoc(AMDGPUOperand::ImmTyD16, Operands),
-      "instruction must set modifier r128=0");
+          "instruction must set modifier r128=0");
     return false;
   }
+#if LLPC_BUILD_NPI
   //TODO: FIXME:  GFX13 - verify if r128==1 for RayTracing.
   //MI400 changed R128->0 for Tensor instructions.
   if (!validateRayTracingR128(Inst)) {
@@ -7758,26 +7745,26 @@ StringRef AMDGPUAsmParser::parseMnemonicSuffix(StringRef Name) {
   setForcedDPP(false);
   setForcedSDWA(false);
 
-  if (Name.ends_with("_e64_dpp")) {
+  if (Name.consume_back("_e64_dpp")) {
     setForcedDPP(true);
     setForcedEncodingSize(64);
-    return Name.substr(0, Name.size() - 8);
+    return Name;
   }
-  if (Name.ends_with("_e64")) {
+  if (Name.consume_back("_e64")) {
     setForcedEncodingSize(64);
-    return Name.substr(0, Name.size() - 4);
+    return Name;
   }
-  if (Name.ends_with("_e32")) {
+  if (Name.consume_back("_e32")) {
     setForcedEncodingSize(32);
-    return Name.substr(0, Name.size() - 4);
+    return Name;
   }
-  if (Name.ends_with("_dpp")) {
+  if (Name.consume_back("_dpp")) {
     setForcedDPP(true);
-    return Name.substr(0, Name.size() - 4);
+    return Name;
   }
-  if (Name.ends_with("_sdwa")) {
+  if (Name.consume_back("_sdwa")) {
     setForcedSDWA(true);
-    return Name.substr(0, Name.size() - 5);
+    return Name;
   }
   return Name;
 }
@@ -10793,8 +10780,8 @@ void AMDGPUAsmParser::cvtVOPD(MCInst &Inst, const OperandVector &Operands) {
   }
 #if LLPC_BUILD_NPI
 
-  int BitOp3Idx = AMDGPU::getNamedOperandIdx(Inst.getOpcode(),
-                                             AMDGPU::OpName::bitop3);
+  int BitOp3Idx =
+      AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::bitop3);
   if (BitOp3Idx != -1) {
     OptionalImmIndexMap OptIdx;
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands.back());
@@ -11172,31 +11159,21 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
     }
   }
 
-#if LLPC_BUILD_NPI
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::clamp) && !IsVOP3CvtSrDpp)
-#else /* LLPC_BUILD_NPI */
-  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::byte_sel))
-#endif /* LLPC_BUILD_NPI */
     addOptionalImmOperand(Inst, Operands, OptionalIdx,
-#if LLPC_BUILD_NPI
                           AMDGPUOperand::ImmTyClamp);
-#else /* LLPC_BUILD_NPI */
-                          AMDGPUOperand::ImmTyByteSel);
-#endif /* LLPC_BUILD_NPI */
 
 #if LLPC_BUILD_NPI
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::byte_sel)) {
     if (VdstInIdx == static_cast<int>(Inst.getNumOperands()))
       Inst.addOperand(Inst.getOperand(0));
 #else /* LLPC_BUILD_NPI */
-  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::clamp))
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::byte_sel))
 #endif /* LLPC_BUILD_NPI */
     addOptionalImmOperand(Inst, Operands, OptionalIdx,
-#if LLPC_BUILD_NPI
                           AMDGPUOperand::ImmTyByteSel);
+#if LLPC_BUILD_NPI
   }
-#else /* LLPC_BUILD_NPI */
-                          AMDGPUOperand::ImmTyClamp);
 #endif /* LLPC_BUILD_NPI */
 
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::omod))

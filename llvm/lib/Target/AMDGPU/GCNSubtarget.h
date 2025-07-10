@@ -171,11 +171,9 @@ protected:
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
-#if LLPC_BUILD_NPI
-  bool HasFP8E5M3Insts = false;
-#endif /* LLPC_BUILD_NPI */
   bool HasWMMA128bInsts = false;
   bool HasWMMA256bInsts = false;
+  bool HasFP8E5M3Insts = false;
   bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
   bool HasAtomicFMinFMaxF32GlobalInsts = false;
@@ -262,8 +260,8 @@ protected:
 #if LLPC_BUILD_NPI
   bool HasTanhInsts = false;
   bool HasTensorCvtLutInsts = false;
-  bool HasTransposeLoadF4F6Insts = false;
 #endif /* LLPC_BUILD_NPI */
+  bool HasTransposeLoadF4F6Insts = false;
   bool HasPrngInst = false;
   bool HasBVHDualAndBVH8Insts = false;
   bool HasPermlane16Swap = false;
@@ -321,9 +319,7 @@ protected:
   bool HasMadU32Inst = false;
 #endif /* LLPC_BUILD_NPI */
   bool HasPointSampleAccel = false;
-#if LLPC_BUILD_NPI
   bool HasLdsBarrierArriveAtomic = false;
-#endif /* LLPC_BUILD_NPI */
   bool HasSetPrioIncWgInst = false;
 #if LLPC_BUILD_NPI
   bool HasAtomicMinMaxWithPayload = false;
@@ -967,10 +963,6 @@ public:
 
   bool hasFP8ConversionInsts() const { return HasFP8ConversionInsts; }
 
-#if LLPC_BUILD_NPI
-  bool hasFP8E5M3Insts() const { return HasFP8E5M3Insts; }
-
-#endif /* LLPC_BUILD_NPI */
   bool hasWMMA256bInsts() const { return HasWMMA256bInsts; }
 
   bool hasWMMA128bInsts() const { return HasWMMA128bInsts; }
@@ -980,6 +972,8 @@ public:
   }
 
   bool isGFX1170Plus() const { return getGeneration() >= GFX12 || isGFX1170(); }
+
+  bool hasFP8E5M3Insts() const { return HasFP8E5M3Insts; }
 
   bool hasPkFmacF16Inst() const {
     return HasPkFmacF16Inst;
@@ -1578,8 +1572,6 @@ public:
 
   bool hasTensorCvtLutInsts() const { return HasTensorCvtLutInsts; }
 
-  bool hasTransposeLoadF4F6Insts() const { return HasTransposeLoadF4F6Insts; }
-
 
   bool hasAddPC64Inst() const { return GFX1250Insts; }
 
@@ -1607,6 +1599,8 @@ public:
   bool hasParallelBitInsts() const { return HasParallelBitInsts; }
 
 #endif /* LLPC_BUILD_NPI */
+  bool hasTransposeLoadF4F6Insts() const { return HasTransposeLoadF4F6Insts; }
+
   /// \returns true if the target supports using software to avoid hazards
   /// between VMEM and VALU instructions in some instances.
   bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }
@@ -1620,9 +1614,9 @@ public:
 #endif /* LLPC_BUILD_NPI */
   bool hasPointSampleAccel() const { return HasPointSampleAccel; }
 
-#if LLPC_BUILD_NPI
   bool hasLdsBarrierArriveAtomic() const { return HasLdsBarrierArriveAtomic; }
 
+#if LLPC_BUILD_NPI
   bool hasAtomicMinMaxWithPayload() const { return HasAtomicMinMaxWithPayload; }
 
 #endif /* LLPC_BUILD_NPI */

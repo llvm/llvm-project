@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=bonaire -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -enable-var-scope --check-prefix=CI %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -verify-machineinstrs -mattr=+load-store-opt,-unaligned-access-mode < %s | FileCheck -enable-var-scope -check-prefixes=GFX9,GFX9-ALIGNED %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -verify-machineinstrs -mattr=+load-store-opt,+unaligned-access-mode < %s | FileCheck -enable-var-scope -check-prefixes=GFX9,GFX9-UNALIGNED %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1250 -verify-machineinstrs -mattr=+load-store-opt,+unaligned-access-mode < %s | FileCheck -enable-var-scope -check-prefixes=GFX1250,GFX1250-UNALIGNED %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1250 -mattr=+load-store-opt,+unaligned-access-mode < %s | FileCheck -enable-var-scope -check-prefixes=GFX1250,GFX1250-UNALIGNED %s
 
 @lds = addrspace(3) global [512 x float] poison, align 4
 @lds.f64 = addrspace(3) global [512 x double] poison, align 8

@@ -3,7 +3,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=tonga < %s | FileCheck -check-prefix=VI %s
 ; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX900 %s
 ; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 < %s | FileCheck -check-prefix=GFX942 %s
-; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefix=GFX1250 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefix=GFX1250 %s
 
 define amdgpu_kernel void @s_insertelement_v2bf16_0(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr) #0 {
 ; SI-LABEL: s_insertelement_v2bf16_0:

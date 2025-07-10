@@ -1320,13 +1320,14 @@ void TosaValidation::runOnOperation() {
 
     // validate operator element types:
     // - rescale operator is allowed to have ui8/ui16/ui32
-    //   operands/results
+    //   operands/results when strictOpSpecAlignment is false
     // - perform valid element type check at the beginning to
     //   protect rest of code against quantized element types
-    const bool opIsRescale = isa<tosa::RescaleOp>(op);
+    const bool allowUnsigned =
+        !strictOpSpecAlignment && isa<tosa::RescaleOp>(op);
     for (Value operand : op->getOperands()) {
       auto elementTy = getElementTypeOrSelf(operand);
-      if (!isValidElementType(elementTy, opIsRescale)) {
+      if (!isValidElementType(elementTy, allowUnsigned)) {
         op->emitOpError() << "is not profile-aligned: element type "
                           << elementTy << " is not legal";
         return signalPassFailure();
@@ -1334,7 +1335,7 @@ void TosaValidation::runOnOperation() {
     }
     for (Type resultTy : op->getResultTypes()) {
       auto elementTy = getElementTypeOrSelf(resultTy);
-      if (!isValidElementType(elementTy, opIsRescale)) {
+      if (!isValidElementType(elementTy, allowUnsigned)) {
         op->emitOpError() << "is not profile-aligned: element type "
                           << elementTy << " is not legal";
         return signalPassFailure();

@@ -905,14 +905,12 @@ def FeatureFP8ConversionInsts : SubtargetFeature<"fp8-conversion-insts",
   "Has fp8 and bf8 conversion instructions"
 >;
 
-#ifdef LLPC_BUILD_NPI
 def FeatureFP8E5M3Insts : SubtargetFeature<"fp8e5m3-insts",
   "HasFP8E5M3Insts",
   "true",
   "Has fp8 e5m3 format support"
 >;
 
-#endif /* LLPC_BUILD_NPI */
 def FeatureCvtFP8VOP1Bug : SubtargetFeature<"cvt-fp8-vop1-bug",
   "HasCvtFP8Vop1Bug",
   "true",
@@ -1239,13 +1237,13 @@ def FeatureTensorCvtLutInsts : SubtargetFeature<"tensor-cvt-lut-insts",
   "Has v_perm_pk16* instructions"
 >;
 
+#endif /* LLPC_BUILD_NPI */
 def FeatureTransposeLoadF4F6Insts : SubtargetFeature<"transpose-load-f4f6-insts",
   "HasTransposeLoadF4F6Insts",
   "true",
   "Has ds_load_tr4/tr6 and global_load_tr4/tr6 instructions"
 >;
 
-#endif /* LLPC_BUILD_NPI */
 def FeaturePrngInst : SubtargetFeature<"prng-inst",
   "HasPrngInst",
   "true",
@@ -1553,14 +1551,12 @@ def FeatureMemToLDSLoad : SubtargetFeature<"vmem-to-lds-load-insts",
   "The platform has memory to lds instructions (global_load w/lds bit set, buffer_load w/lds bit set or global_load_lds. This does not include scratch_load_lds."
 >;
 
-#ifdef LLPC_BUILD_NPI
 def FeatureLdsBarrierArriveAtomic : SubtargetFeature< "lds-barrier-arrive-atomic",
   "HasLdsBarrierArriveAtomic",
   "true",
   "Has LDS barrier-arrive atomic instructions"
 >;
 
-#endif /* LLPC_BUILD_NPI */
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -2237,9 +2233,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureAtomicBufferPkAddBF16Inst,
    FeatureFlatAtomicFaddF32Inst,
    FeatureFP8ConversionInsts,
-#ifdef LLPC_BUILD_NPI
    FeatureFP8E5M3Insts,
-#endif /* LLPC_BUILD_NPI */
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
    FeatureSALUFloatInsts,
@@ -2251,7 +2245,9 @@ def FeatureISAVersion12_50 : FeatureSet<
 #ifdef LLPC_BUILD_NPI
    FeatureTanhInsts,
    FeatureTensorCvtLutInsts,
+#endif /* LLPC_BUILD_NPI */
    FeatureTransposeLoadF4F6Insts,
+#ifdef LLPC_BUILD_NPI
    FeatureBF16TransInsts,
 #endif /* LLPC_BUILD_NPI */
    FeatureBF16ConversionInsts,
@@ -2286,8 +2282,8 @@ def FeatureISAVersion12_50 : FeatureSet<
 #ifdef LLPC_BUILD_NPI
    FeatureAddSubU64Insts,
    FeatureMadU32Inst,
-   FeatureLdsBarrierArriveAtomic,
 #endif /* LLPC_BUILD_NPI */
+   FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,
 ]>;
 
@@ -2703,11 +2699,16 @@ def isGFX11GFX12 :
             "Subtarget->getGeneration() == AMDGPUSubtarget::GFX12">,
   AssemblerPredicate<(all_of FeatureGFX11Insts, (not FeatureGFX13Insts))>;
 
+#endif /* LLPC_BUILD_NPI */
 def isGFX11PlusNot12_50 :
+#ifdef LLPC_BUILD_NPI
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11 && (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13 || !Subtarget->hasGFX1250Insts())">,
   AssemblerPredicate<(all_of FeatureGFX11Insts, (any_of FeatureGFX13Insts, (not FeatureGFX1250Insts)))>;
-
+#else /* LLPC_BUILD_NPI */
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11 && !Subtarget->hasGFX1250Insts()">,
+  AssemblerPredicate<(all_of FeatureGFX11Insts, (not FeatureGFX1250Insts))>;
 #endif /* LLPC_BUILD_NPI */
+
 def isGFX12Only :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12">,
 #ifdef LLPC_BUILD_NPI
@@ -3124,19 +3125,17 @@ def HasFP8Insts : Predicate<"Subtarget->hasFP8Insts()">,
 def HasFP8ConversionInsts : Predicate<"Subtarget->hasFP8ConversionInsts()">,
   AssemblerPredicate<(all_of FeatureFP8ConversionInsts)>;
 
-#ifdef LLPC_BUILD_NPI
-def HasFP8E5M3Insts : Predicate<"Subtarget->hasFP8E5M3Insts()">,
-  AssemblerPredicate<(all_of FeatureFP8E5M3Insts)>;
-
-def NotHasFP8E5M3Insts : Predicate<"!Subtarget->hasFP8E5M3Insts()">,
-  AssemblerPredicate<(all_of (not FeatureFP8E5M3Insts))>;
-
-#endif /* LLPC_BUILD_NPI */
 def HasWMMA256bInsts : Predicate<"Subtarget->hasWMMA256bInsts()">,
   AssemblerPredicate<(all_of FeatureWMMA256bInsts)>;
 
 def HasWMMA128bInsts : Predicate<"Subtarget->hasWMMA128bInsts()">,
   AssemblerPredicate<(all_of FeatureWMMA128bInsts)>;
+
+def HasFP8E5M3Insts : Predicate<"Subtarget->hasFP8E5M3Insts()">,
+  AssemblerPredicate<(all_of FeatureFP8E5M3Insts)>;
+
+def NotHasFP8E5M3Insts : Predicate<"!Subtarget->hasFP8E5M3Insts()">,
+  AssemblerPredicate<(all_of (not FeatureFP8E5M3Insts))>;
 
 def HasPkFmacF16Inst : Predicate<"Subtarget->hasPkFmacF16Inst()">,
   AssemblerPredicate<(all_of FeaturePkFmacF16Inst)>;
@@ -3229,10 +3228,10 @@ def HasTanhInsts : Predicate<"Subtarget->hasTanhInsts()">,
 def HasTensorCvtLutInsts : Predicate<"Subtarget->hasTensorCvtLutInsts()">,
   AssemblerPredicate<(all_of FeatureTensorCvtLutInsts)>;
 
+#endif /* LLPC_BUILD_NPI */
 def HasTransposeLoadF4F6Insts : Predicate<"Subtarget->hasTransposeLoadF4F6Insts()">,
   AssemblerPredicate<(all_of FeatureTransposeLoadF4F6Insts)>;
 
-#endif /* LLPC_BUILD_NPI */
 def HasPrngInst : Predicate<"Subtarget->hasPrngInst()">,
   AssemblerPredicate<(all_of FeaturePrngInst)>;
 
@@ -3327,9 +3326,11 @@ def HasParallelBitInsts : Predicate<"Subtarget->hasParallelBitInsts()">,
 def HasMadU32Inst : Predicate<"Subtarget->hasMadU32Inst()">,
                     AssemblerPredicate<(all_of FeatureMadU32Inst)>;
 
+#endif /* LLPC_BUILD_NPI */
 def HasLdsBarrierArriveAtomic : Predicate<"Subtarget->hasLdsBarrierArriveAtomic()">,
   AssemblerPredicate<(all_of FeatureLdsBarrierArriveAtomic)>;
 
+#ifdef LLPC_BUILD_NPI
 // TODO-GFX13: Enable this selectively on GFX13, to be confirmed at a later date.
 #endif /* LLPC_BUILD_NPI */
 def HasSetPrioIncWgInst : Predicate<"Subtarget->hasSetPrioIncWgInst()">,

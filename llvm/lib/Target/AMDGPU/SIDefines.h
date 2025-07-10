@@ -115,22 +115,12 @@ enum : uint64_t {
   DisableWQM = UINT64_C(1) << 36,
   Gather4 = UINT64_C(1) << 37,
 
-#if LLPC_BUILD_NPI
   TENSOR_CNT = UINT64_C(1) << 38,
-#else /* LLPC_BUILD_NPI */
-  // Reserved, must be 0.
-  Reserved0 = UINT64_C(1) << 38,
-#endif /* LLPC_BUILD_NPI */
 
   SCALAR_STORE = UINT64_C(1) << 39,
   FIXED_SIZE = UINT64_C(1) << 40,
 
-#if LLPC_BUILD_NPI
   ASYNC_CNT = UINT64_C(1) << 41,
-#else /* LLPC_BUILD_NPI */
-  // Reserved, must be 0.
-  Reserved1 = UINT64_C(1) << 41,
-#endif /* LLPC_BUILD_NPI */
 
   VOP3_OPSEL = UINT64_C(1) << 42,
   maybeAtomic = UINT64_C(1) << 43,

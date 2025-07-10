@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1250 -verify-machineinstrs < %s | FileCheck -check-prefix=MESA %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1250 < %s | FileCheck -check-prefix=MESA %s
 
 ; GFX1250 supports upto 320 KB configurable LDS memory.
 ; This test checks the min and max size of LDS that can be allocated.

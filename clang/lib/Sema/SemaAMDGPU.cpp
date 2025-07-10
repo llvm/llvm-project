@@ -546,6 +546,13 @@ void SemaAMDGPU::handleAMDGPUSpatialClusterKernelAttr(Decl *D,
   auto *Addr = ::new (getASTContext())
       AMDGPUSpatialClusterKernelAttr(getASTContext(), AL);
   D->addAttr(Addr);
+}
+
+void SemaAMDGPU::handleAMDGPUNoRankSpecializationAttr(Decl *D,
+                                                      const ParsedAttr &AL) {
+  auto *Addr = ::new (getASTContext())
+      AMDGPUNoRankSpecializationAttr(getASTContext(), AL);
+  D->addAttr(Addr);
 #endif /* LLPC_BUILD_NPI */
 }
 

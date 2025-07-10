@@ -1,4 +1,5 @@
 ; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds < %s 2>&1 | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -o - %s | FileCheck -check-prefixes=SOUT %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1301 -verify-machineinstrs -o - %s | FileCheck -check-prefixes=SOUT %s
 
 %class.ExpAmdWorkgroupWaveBarrier = type { target("amdgcn.named.barrier", 0) }

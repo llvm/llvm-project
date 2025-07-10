@@ -6750,6 +6750,21 @@ inline std::optional<unsigned> isDUPQMask(ArrayRef<int> Mask, unsigned Segments,
   return std::nullopt;
 }
 
+/// isDUPFirstSegmentMask - matches a splat of the first 128b segment.
+inline bool isDUPFirstSegmentMask(ArrayRef<int> Mask, unsigned Segments,
+                                  unsigned SegmentSize) {
+  // Make sure there's no size changes.
+  if (SegmentSize * Segments != Mask.size())
+    return false;
+
+  // Check that all lanes refer to the equivalent lane in the first segment.
+  // Undef/poison lanes (<0) are also accepted.
+  return all_of(enumerate(Mask), [&](auto P) {
+    const unsigned IndexWithinSegment = P.index() % SegmentSize;
+    return P.value() < 0 || unsigned(P.value()) == IndexWithinSegment;
+  });
+}
+
 } // namespace llvm
 
 #endif

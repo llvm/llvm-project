@@ -1750,9 +1750,9 @@ to guard against use of uninitialized memory.
 
 Rather, it is intended for use in "parameter-objects", used to simulate,
 for example, the passing of named parameters.
-The attribute generates a warning when explicit initializers for such
-variables are not provided (this occurs regardless of whether any in-class field
-initializers exist):
+Except inside unevaluated contexts, the attribute generates a warning when
+explicit initializers for such variables are not provided (this occurs
+regardless of whether any in-class field initializers exist):
 
 .. code-block:: c++
 
@@ -3321,6 +3321,19 @@ function definitions to enable spatial kernel launches.
 
 The cluster dims must be 1 dimensional. That is, the number of workgroups per spatial cluster in the Y
 and Z dimensions must be 1.
+  }];
+}
+
+def AMDGPUNoRankSpecializationDocs : Documentation {
+  let Category = DocCatAMDGPUAttributes;
+  let Content = [{
+This attribute disables the wavegroup rank specialization optimization.
+
+Clang supports the
+``__attribute__((amdgpu_no_rank_specialization()))``
+attribute for the AMDGPU target when compiling for a GFX13 target. This attribute may be attached
+to HIP wavegroup kernel function definitions to disable the specialization of waves by wavegroup 
+rank.
   }];
 }
 

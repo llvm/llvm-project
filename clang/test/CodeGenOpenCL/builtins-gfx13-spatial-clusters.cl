@@ -13,3 +13,88 @@ int test_amdgcn_wavegroup_id_in_cluster()
 {
   return __builtin_amdgcn_wavegroup_id_in_cluster();
 }
+
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_spatial_cluster_is_chain_start(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.amdgcn.spatial.cluster.is.chain.start()
+// CHECK-GFX1300-NEXT:    ret i1 [[TMP0]]
+//
+bool test_amdgcn_spatial_cluster_is_chain_start()
+{
+  return __builtin_amdgcn_spatial_cluster_is_chain_start();
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_spatial_cluster_is_chain_end(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.amdgcn.spatial.cluster.is.chain.end()
+// CHECK-GFX1300-NEXT:    ret i1 [[TMP0]]
+//
+bool test_amdgcn_spatial_cluster_is_chain_end()
+{
+  return __builtin_amdgcn_spatial_cluster_is_chain_end();
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_spatial_cluster_set_chain_start(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.spatial.cluster.set.chain.start(i1 true)
+// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.spatial.cluster.set.chain.start(i1 false)
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_spatial_cluster_set_chain_start()
+{
+  __builtin_amdgcn_spatial_cluster_set_chain_start(1);
+  __builtin_amdgcn_spatial_cluster_set_chain_start(0);
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_spatial_cluster_set_chain_end(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.spatial.cluster.set.chain.end(i1 true)
+// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.spatial.cluster.set.chain.end(i1 false)
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_spatial_cluster_set_chain_end()
+{
+  __builtin_amdgcn_spatial_cluster_set_chain_end(1);
+  __builtin_amdgcn_spatial_cluster_set_chain_end(0);
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_spatial_cluster_send_next(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.spatial.cluster.send.next(i32 42, ptr addrspace(10) [[DST:%.*]], ptr addrspace(3) [[SEMA:%.*]], ptr addrspace(10) [[DST_REFL:%.*]], ptr addrspace(3) [[SEMA_REFL:%.*]], i32 0)
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_spatial_cluster_send_next(__attribute__((address_space(10))) int *dst, __local void *sema, __attribute__((address_space(10))) int *dst_refl, __local void *sema_refl)
+{
+  __builtin_amdgcn_spatial_cluster_send_next(42, dst, sema, dst_refl, sema_refl, 0);
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_spatial_cluster_send_prev(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.spatial.cluster.send.prev(i32 42, ptr addrspace(10) [[DST:%.*]], ptr addrspace(3) [[SEMA:%.*]], ptr addrspace(10) [[DST_REFL:%.*]], ptr addrspace(3) [[SEMA_REFL:%.*]], i32 0)
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_spatial_cluster_send_prev(__attribute__((address_space(10))) int *dst, __local void *sema, __attribute__((address_space(10))) int *dst_refl, __local void *sema_refl)
+{
+  __builtin_amdgcn_spatial_cluster_send_prev(42, dst, sema, dst_refl, sema_refl, 0);
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_spatial_cluster_signal_next(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.spatial.cluster.signal.next(ptr addrspace(3) [[SEMA:%.*]], ptr addrspace(3) [[SEMA_REFL:%.*]])
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_spatial_cluster_signal_next(__local void *sema, __local void *sema_refl)
+{
+  __builtin_amdgcn_spatial_cluster_signal_next(sema, sema_refl);
+}
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_spatial_cluster_signal_prev(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.spatial.cluster.signal.prev(ptr addrspace(3) [[SEMA:%.*]], ptr addrspace(3) [[SEMA_REFL:%.*]])
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_spatial_cluster_signal_prev(__local void *sema, __local void *sema_refl)
+{
+  __builtin_amdgcn_spatial_cluster_signal_prev(sema, sema_refl);
+}

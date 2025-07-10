@@ -3,8 +3,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX11,GFX11-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX11,GFX11-FAKE16 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1250,GFX1250-TRUE16 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1250,GFX1250-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1250,GFX1250-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX1250,GFX1250-FAKE16 %s
 
 ; Make sure we don't crash or assert on spir_kernel calling convention.
 

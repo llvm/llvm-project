@@ -780,13 +780,8 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
         let samp = 0 in
 #ifdef LLPC_BUILD_NPI
           def _V4_gfx12 : VSAMPLE_Sampler_gfx12<op, asm, dst_rc, 4, VGPR_32, enableDisasm>;
-#else /* LLPC_BUILD_NPI */
-          def _V4_gfx12 : VSAMPLE_Sampler_gfx12<op, asm, dst_rc, 4, VGPR_32,
-                                                !if(enableDisasm, "GFX12", "")>;
-#endif /* LLPC_BUILD_NPI */
       }
       else {
-#ifdef LLPC_BUILD_NPI
         def _V4_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 4, enableDisasm>;
       }
     }
@@ -794,8 +789,13 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
       if isVSample then {
         let samp = 0 in
           def _V4_gfx13 : VSAMPLE_Sampler_gfx13<op, asm, dst_rc, 4, VGPR_32, enableDisasm>;
+#else /* LLPC_BUILD_NPI */
+          def _V4_gfx12 : VSAMPLE_Sampler_gfx12<op, asm, dst_rc, 4, VGPR_32,
+                                                !if(enableDisasm, "GFX12", "")>;
+#endif /* LLPC_BUILD_NPI */
       }
       else {
+#ifdef LLPC_BUILD_NPI
         def _V4_gfx13 : VIMAGE_NoSampler_gfx13<op, asm, dst_rc, 4, enableDisasm>;
 #else /* LLPC_BUILD_NPI */
         def _V4_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 4,
@@ -1374,7 +1374,16 @@ multiclass MIMG_Atomic_Base <MIMGBaseOpcode BaseOpc, mimgopc op, string asm,
     if !not(isCmpSwap) then {
       let VDataDwords = 1 in
       defm _V1 : MIMG_Atomic_Addr_Helper_m <op, asm, VGPR_32, 1, isFP, renamed>;
+#else /* LLPC_BUILD_NPI */
+  if !and(op.HAS_GFX12, !not(!empty(renamed))) then
+    def : AMDGPUMnemonicAlias<asm, renamed> {
+      let AssemblerPredicate = isGFX12Plus;
+      bit IsAtomicRet; // Unused
+      MIMGBaseOpcode BaseOpcode; // Unused
+      int VDataDwords; // Unused
+#endif /* LLPC_BUILD_NPI */
     }
+#ifdef LLPC_BUILD_NPI
 
     let VDataDwords = 2 in
     defm _V2 : MIMG_Atomic_Addr_Helper_m <op, asm, VReg_64, isCmpSwap, isFP, renamed>;
@@ -1386,16 +1395,7 @@ multiclass MIMG_Atomic_Base <MIMGBaseOpcode BaseOpc, mimgopc op, string asm,
       defm _V4 : MIMG_Atomic_Addr_Helper_m <op, asm, VReg_128, 0, isFP, renamed>;
       let VDataDwords = 5 in
       defm _V5 : MIMG_Atomic_Addr_Helper_m <op, asm, VReg_160, 0, isFP, renamed>;
-#else /* LLPC_BUILD_NPI */
-  if !and(op.HAS_GFX12, !not(!empty(renamed))) then
-    def : AMDGPUMnemonicAlias<asm, renamed> {
-      let AssemblerPredicate = isGFX12Plus;
-      bit IsAtomicRet; // Unused
-      MIMGBaseOpcode BaseOpcode; // Unused
-      int VDataDwords; // Unused
-#endif /* LLPC_BUILD_NPI */
     }
-#ifdef LLPC_BUILD_NPI
   }
 }
 
@@ -2684,7 +2684,6 @@ def : MIMGG16Mapping<IMAGE_SAMPLE_CD_O_nortn, IMAGE_SAMPLE_CD_O_G16_nortn>;
 def : MIMGG16Mapping<IMAGE_SAMPLE_CD_CL_O_nortn, IMAGE_SAMPLE_CD_CL_O_G16_nortn>;
 def : MIMGG16Mapping<IMAGE_SAMPLE_C_CD_O_nortn, IMAGE_SAMPLE_C_CD_O_G16_nortn>;
 def : MIMGG16Mapping<IMAGE_SAMPLE_C_CD_CL_O_nortn, IMAGE_SAMPLE_C_CD_CL_O_G16_nortn>;
-#ifdef LLPC_BUILD_NPI
 
 //===----------------------------------------------------------------------===//
 // VIMAGE Tensor Instructions
@@ -2710,9 +2709,15 @@ class VIMAGE_TENSOR_Pseudo<string opName, bit _UpTo2D = 0> :
   let hasSideEffects = 0;
 
   bit UpTo2D = _UpTo2D;
+#ifdef LLPC_BUILD_NPI
   let InOperandList = !if(UpTo2D, (ins SReg_128_XNULL:$vaddr0, SReg_256_XNULL:$vaddr1, R128A16:$r128, CPol:$cpol),
                                       (ins SReg_128_XNULL:$vaddr0, SReg_256_XNULL:$vaddr1, SReg_128_XNULL:$vaddr2,
                                        SReg_128_XNULL:$vaddr3, R128A16:$r128, CPol:$cpol));
+#else /* LLPC_BUILD_NPI */
+  let InOperandList = !if(UpTo2D, (ins SReg_128:$vaddr0, SReg_256:$vaddr1, R128A16:$r128, CPol:$cpol),
+                                      (ins SReg_128:$vaddr0, SReg_256:$vaddr1, SReg_128:$vaddr2,
+                                       SReg_128:$vaddr3, R128A16:$r128, CPol:$cpol));
+#endif /* LLPC_BUILD_NPI */
   string AsmOperands = " $vaddr0, $vaddr1"#!if(UpTo2D, "", ", $vaddr2, $vaddr3")#"$r128$cpol";
 }
 
@@ -2779,4 +2784,3 @@ multiclass VIMAGE_TENSOR_Real_gfx1250<bits<8> op> {
 
 defm TENSOR_LOAD_TO_LDS    : VIMAGE_TENSOR_Real_gfx1250<0xc4>;
 defm TENSOR_STORE_FROM_LDS : VIMAGE_TENSOR_Real_gfx1250<0xc5>;
-#endif /* LLPC_BUILD_NPI */

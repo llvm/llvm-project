@@ -716,6 +716,11 @@ bool isGenericAtomic(unsigned Opc);
 LLVM_READNONE
 bool isCvt_F32_Fp8_Bf8_e64(unsigned Opc);
 
+#if LLPC_BUILD_NPI
+LLVM_READNONE
+bool isVNBR(unsigned Opc);
+
+#endif /* LLPC_BUILD_NPI */
 namespace VOPD {
 
 enum Component : unsigned {
@@ -1090,7 +1095,6 @@ VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
                                const MCInstrInfo *InstrInfo);
 
 LLVM_READONLY
-#if LLPC_BUILD_NPI
 bool isAsyncStore(unsigned Opc);
 LLVM_READONLY
 bool isTensorStore(unsigned Opc);
@@ -1098,7 +1102,6 @@ LLVM_READONLY
 unsigned getTemporalHintType(const MCInstrDesc TID);
 
 LLVM_READONLY
-#endif /* LLPC_BUILD_NPI */
 bool isTrue16Inst(unsigned Opc);
 
 LLVM_READONLY
@@ -1566,6 +1569,8 @@ bool getHasDepthExport(const Function &F);
 bool getWavegroupEnable(const Function &F);
 
 bool getWavegroupRankFunction(const Function &F);
+
+bool getRankSpecializationEnable(const Function &F);
 
 std::optional<std::array<uint32_t, 3>> getReqdWorkGroupSize(const Function &F);
 

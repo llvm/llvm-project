@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -show-mc-encoding -verify-machineinstrs -start-before=amdgpu-resource-usage -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -show-mc-encoding -start-before=amdgpu-resource-usage -o - %s | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: {{^}}high_vgprs:
 ---

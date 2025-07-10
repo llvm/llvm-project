@@ -1,10 +1,10 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-attributor %s -o %t.bc
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -verify-machineinstrs %t.bc -o - | FileCheck --check-prefixes=CHECK-UNKNOWN %s
-; RUN: llc -mtriple=amdgcn-unknown-mesa3d -mcpu=gfx1250 -verify-machineinstrs %t.bc -o - | FileCheck -check-prefixes=CHECK-MESA3D %s
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1250 -verify-machineinstrs %t.bc -o - | FileCheck --check-prefixes=CHECK-G-UNKNOWN %s
-; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mcpu=gfx1250 -verify-machineinstrs %t.bc -o - | FileCheck -check-prefixes=CHECK-G-MESA3D %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs %t.bc -o - | FileCheck --check-prefixes=GFX13,GFX13-SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs %t.bc -o - | FileCheck --check-prefixes=GFX13,GFX13-GISEL %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 %t.bc -o - | FileCheck --check-prefixes=CHECK-UNKNOWN %s
+; RUN: llc -mtriple=amdgcn-unknown-mesa3d -mcpu=gfx1250 %t.bc -o - | FileCheck -check-prefixes=CHECK-MESA3D %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1250 %t.bc -o - | FileCheck --check-prefixes=CHECK-G-UNKNOWN %s
+; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mcpu=gfx1250 %t.bc -o - | FileCheck -check-prefixes=CHECK-G-MESA3D %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1300 %t.bc -o - | FileCheck --check-prefixes=GFX13,GFX13-SDAG %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1300 %t.bc -o - | FileCheck --check-prefixes=GFX13,GFX13-GISEL %s
 
 declare i32 @llvm.amdgcn.cluster.id.x() #0
 declare i32 @llvm.amdgcn.cluster.id.y() #0

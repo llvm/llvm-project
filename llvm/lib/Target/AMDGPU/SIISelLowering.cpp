@@ -684,7 +684,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 #if LLPC_BUILD_NPI
     // BF16 - VOP1 Actions.
     if (Subtarget->hasBF16TransInsts())
-      setOperationAction({ISD::FCOS, ISD::FSIN}, MVT::bf16, Custom);
+      setOperationAction({ISD::FCOS, ISD::FSIN, ISD::FDIV}, MVT::bf16, Custom);
 
 #endif /* LLPC_BUILD_NPI */
     setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, MVT::f16, Promote);
@@ -1130,6 +1130,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   }
 
   setTargetDAGCombine({ISD::ADD,
+                       ISD::PTRADD,
                        ISD::UADDO_CARRY,
                        ISD::SUB,
                        ISD::USUBO_CARRY,
@@ -1693,7 +1694,6 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
     return true;
   }
-#if LLPC_BUILD_NPI
   case Intrinsic::amdgcn_ds_atomic_async_barrier_arrive_b64:
   case Intrinsic::amdgcn_ds_atomic_barrier_arrive_rtn_b64: {
     Info.opc = (IntrID == Intrinsic::amdgcn_ds_atomic_barrier_arrive_rtn_b64)
@@ -1707,7 +1707,6 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     return true;
   }
-#endif /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_global_atomic_csub: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
@@ -1766,13 +1765,13 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_cluster_load_b32:
   case Intrinsic::amdgcn_cluster_load_b64:
   case Intrinsic::amdgcn_cluster_load_b128:
+#endif /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_ds_load_tr6_b96:
   case Intrinsic::amdgcn_ds_load_tr4_b64:
   case Intrinsic::amdgcn_ds_load_tr8_b64:
   case Intrinsic::amdgcn_ds_load_tr16_b128:
   case Intrinsic::amdgcn_global_load_tr6_b96:
   case Intrinsic::amdgcn_global_load_tr4_b64:
-#endif /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_global_load_tr_b64:
   case Intrinsic::amdgcn_global_load_tr_b128:
   case Intrinsic::amdgcn_ds_read_tr4_b64:
@@ -2080,22 +2079,18 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
 #endif /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_ds_append:
   case Intrinsic::amdgcn_ds_consume:
-#if LLPC_BUILD_NPI
   case Intrinsic::amdgcn_ds_load_tr8_b64:
   case Intrinsic::amdgcn_ds_load_tr16_b128:
   case Intrinsic::amdgcn_ds_load_tr4_b64:
   case Intrinsic::amdgcn_ds_load_tr6_b96:
-#endif /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_ds_read_tr4_b64:
   case Intrinsic::amdgcn_ds_read_tr6_b96:
   case Intrinsic::amdgcn_ds_read_tr8_b64:
   case Intrinsic::amdgcn_ds_read_tr16_b64:
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap:
-#if LLPC_BUILD_NPI
   case Intrinsic::amdgcn_ds_atomic_async_barrier_arrive_b64:
   case Intrinsic::amdgcn_ds_atomic_barrier_arrive_rtn_b64:
-#endif /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:
 #if LLPC_BUILD_NPI
@@ -2114,9 +2109,9 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
 #endif /* LLPC_BUILD_NPI */
   case Intrinsic::amdgcn_global_load_tr_b64:
   case Intrinsic::amdgcn_global_load_tr_b128:
-#if LLPC_BUILD_NPI
   case Intrinsic::amdgcn_global_load_tr4_b64:
   case Intrinsic::amdgcn_global_load_tr6_b96:
+#if LLPC_BUILD_NPI
   case Intrinsic::amdgcn_global_store_async_from_lds_b8:
   case Intrinsic::amdgcn_global_store_async_from_lds_b32:
   case Intrinsic::amdgcn_global_store_async_from_lds_b64:
@@ -7004,7 +6999,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 #if LLPC_BUILD_NPI
   case AMDGPU::WAVEGROUP_RANK_CALL: {
     const DebugLoc &DL = MI.getDebugLoc();
-    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
     MachineBasicBlock *SplitBB = BB->splitAt(MI, true /*UpdateLiveIns*/);
     MachineBasicBlock *RankCallBB = MF->CreateMachineBasicBlock();
     MachineFunction::iterator MBBI(SplitBB);
@@ -7017,13 +7011,16 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
           return SIInstrInfo::isWaveGroupRankCallMarker(DI);
         });
     // Initialize IDX0 before the 1st rank-call.
+    // Also flag that we need to preserve the preloaded SGPRs.
     if (!FoundRankCallMarker) {
       BuildMI(*BB, &MI, DL, TII->get(AMDGPU::S_SET_GPR_IDX_U32), AMDGPU::IDX0)
           .addTargetIndex(AMDGPU::TI_NUM_VGPRS_LANESHARED);
+      MFI->setPreservePreloadedSGPRs();
     }
     int Rank = MI.getOperand(0).getImm();
     assert(Rank < 8);
     // Set up conditional branch.
+    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
     Register WaveIDInWaveGroup =
         MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
     using namespace AMDGPU::Hwreg;
@@ -13196,7 +13193,11 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
     // Without !fpmath accuracy information, we can't do more because we don't
     // know exactly whether rcp is accurate enough to meet !fpmath requirement.
     // f16 is always accurate enough
+#if LLPC_BUILD_NPI
+    if (!AllowInaccurateRcp && VT != MVT::f16 && VT != MVT::bf16)
+#else /* LLPC_BUILD_NPI */
     if (!AllowInaccurateRcp && VT != MVT::f16)
+#endif /* LLPC_BUILD_NPI */
       return SDValue();
 
     if (CLHS->isExactlyValue(1.0)) {
@@ -13223,9 +13224,18 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
     }
   }
 
+#if LLPC_BUILD_NPI
+  // For f16 and bf16 require afn or arcp.
+#else /* LLPC_BUILD_NPI */
   // For f16 require afn or arcp.
+#endif /* LLPC_BUILD_NPI */
   // For f32 require afn.
+#if LLPC_BUILD_NPI
+  if (!AllowInaccurateRcp &&
+      ((VT != MVT::f16 && VT != MVT::bf16) || !Flags.hasAllowReciprocal()))
+#else /* LLPC_BUILD_NPI */
   if (!AllowInaccurateRcp && (VT != MVT::f16 || !Flags.hasAllowReciprocal()))
+#endif /* LLPC_BUILD_NPI */
     return SDValue();
 
   // Turn into multiply by the reciprocal.
@@ -13616,7 +13626,11 @@ SDValue SITargetLowering::LowerFDIV(SDValue Op, SelectionDAG &DAG) const {
   if (VT == MVT::f64)
     return LowerFDIV64(Op, DAG);
 
+#if LLPC_BUILD_NPI
+  if (VT == MVT::f16 || VT == MVT::bf16)
+#else /* LLPC_BUILD_NPI */
   if (VT == MVT::f16)
+#endif /* LLPC_BUILD_NPI */
     return LowerFDIV16(Op, DAG);
 
   llvm_unreachable("Unexpected type for fdiv");
@@ -17266,6 +17280,49 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
   return SDValue();
 }
 
+SDValue SITargetLowering::performPtrAddCombine(SDNode *N,
+                                               DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc DL(N);
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  if (N1.getOpcode() == ISD::ADD) {
+    // (ptradd x, (add y, z)) -> (ptradd (ptradd x, y), z) if z is a constant,
+    //    y is not, and (add y, z) is used only once.
+    // (ptradd x, (add y, z)) -> (ptradd (ptradd x, z), y) if y is a constant,
+    //    z is not, and (add y, z) is used only once.
+    // The goal is to move constant offsets to the outermost ptradd, to create
+    // more opportunities to fold offsets into memory instructions.
+    // Together with the generic combines in DAGCombiner.cpp, this also
+    // implements (ptradd (ptradd x, y), z) -> (ptradd (ptradd x, z), y)).
+    //
+    // This transform is here instead of in the general DAGCombiner as it can
+    // turn in-bounds pointer arithmetic out-of-bounds, which is problematic for
+    // AArch64's CPA.
+    SDValue X = N0;
+    SDValue Y = N1.getOperand(0);
+    SDValue Z = N1.getOperand(1);
+    if (N1.hasOneUse()) {
+      bool YIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Y);
+      bool ZIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Z);
+      if (ZIsConstant != YIsConstant) {
+        // If both additions in the original were NUW, the new ones are as well.
+        SDNodeFlags Flags =
+            (N->getFlags() & N1->getFlags()) & SDNodeFlags::NoUnsignedWrap;
+        if (YIsConstant)
+          std::swap(Y, Z);
+
+        SDValue Inner = DAG.getMemBasePlusOffset(X, Y, DL, Flags);
+        DCI.AddToWorklist(Inner.getNode());
+        return DAG.getMemBasePlusOffset(Inner, Z, DL, Flags);
+      }
+    }
+  }
+
+  return SDValue();
+}
+
 SDValue SITargetLowering::performSubCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -17804,6 +17861,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   switch (N->getOpcode()) {
   case ISD::ADD:
     return performAddCombine(N, DCI);
+  case ISD::PTRADD:
+    return performPtrAddCombine(N, DCI);
   case ISD::SUB:
     return performSubCombine(N, DCI);
   case ISD::UADDO_CARRY:

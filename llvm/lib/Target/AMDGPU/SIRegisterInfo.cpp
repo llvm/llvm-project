@@ -706,6 +706,10 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   reserveRegisterTuples(Reserved, AMDGPU::TENSORcnt);
 #endif /* LLPC_BUILD_NPI */
 
+  // Reserve async counters pseudo registers
+  reserveRegisterTuples(Reserved, AMDGPU::ASYNCcnt);
+  reserveRegisterTuples(Reserved, AMDGPU::TENSORcnt);
+
   // Reserve src_pops_exiting_wave_id - support is not implemented in Codegen.
   reserveRegisterTuples(Reserved, AMDGPU::SRC_POPS_EXITING_WAVE_ID);
 
@@ -757,6 +761,17 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   if (LongBranchReservedReg)
     reserveRegisterTuples(Reserved, LongBranchReservedReg);
 
+#if LLPC_BUILD_NPI
+  if (MFI->getPreservePreloadedSGPRs()) {
+    // Reserve the preloaded SGPRs for wavegroup rank-call.
+    auto NumPreloadSGPRs = MFI->getNumPreloadedSGPRs();
+    for (unsigned I = 0; I < NumPreloadSGPRs; ++I) {
+      MCPhysReg Reg = AMDGPU::SGPR0 + I;
+      reserveRegisterTuples(Reserved, Reg);
+    }
+  }
+
+#endif /* LLPC_BUILD_NPI */
   // We have to assume the SP is needed in case there are calls in the function,
   // which is detected after the function is lowered. If we aren't really going
   // to need SP, don't bother reserving it.

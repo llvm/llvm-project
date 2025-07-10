@@ -11,6 +11,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  wcsnlen
+  SRCS
+    wcsnlen.cpp
+  HDRS
+    wcsnlen.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+)
+
+add_entrypoint_object(
   wctob
   SRCS
     wctob.cpp
@@ -35,6 +46,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  wcstok
+  SRCS
+    wcstok.cpp
+  HDRS
+    wcstok.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+)
+
+add_entrypoint_object(
   wcrtomb
   SRCS
     wcrtomb.cpp
@@ -46,6 +67,19 @@ add_entrypoint_object(
     libc.src.__support.libc_errno
     libc.src.__support.wchar.wcrtomb
     libc.src.__support.wchar.mbstate
+)
+
+add_entrypoint_object(
+  wctomb
+  SRCS
+    wctomb.cpp
+  HDRS
+    wctomb.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.src.__support.wchar.wcrtomb
+    libc.src.__support.wchar.mbstate
+    libc.src.__support.libc_errno
 )
 
 add_entrypoint_object(
@@ -174,6 +208,17 @@ add_entrypoint_object(
     wcsspn.cpp
   HDRS
     wcsspn.h
+  DEPENDS
+    libc.hdr.wchar_macros
+    libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
+  wcscspn
+  SRCS
+    wcscspn.cpp
+  HDRS
+    wcscspn.h
   DEPENDS
     libc.hdr.wchar_macros
     libc.hdr.types.size_t

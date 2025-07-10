@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=+wavefrontsize32 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions < %s 2>%t | FileCheck -check-prefixes=GFX1250 %s
 ; RUN: FileCheck --check-prefix=WARN-GFX1250 %s < %t
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=+wavefrontsize32 -verify-machineinstrs < %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=+wavefrontsize32 < %s
 
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,-wavefrontsize64 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions < %s 2>%t | FileCheck -check-prefixes=GFX1200 %s

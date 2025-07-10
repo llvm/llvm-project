@@ -73,12 +73,6 @@ unsigned AMDGPUELFObjectWriter::getRelocType(const MCFixup &Fixup,
   MCFixupKind Kind = Fixup.getKind();
   switch (Kind) {
   default: break;
-  case FK_PCRel_4:
-    return ELF::R_AMDGPU_REL32;
-#if LLPC_BUILD_NPI
-  case FK_PCRel_8:
-    return ELF::R_AMDGPU_REL64;
-#endif /* LLPC_BUILD_NPI */
   case FK_Data_4:
   case FK_SecRel_4:
     return IsPCRel ? ELF::R_AMDGPU_REL32 : ELF::R_AMDGPU_ABS32;

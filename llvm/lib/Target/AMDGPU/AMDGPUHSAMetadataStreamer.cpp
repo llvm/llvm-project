@@ -606,6 +606,12 @@ void MetadataStreamerMsgPackV4::emitKernel(const MachineFunction &MF,
       Func.getCallingConv() != CallingConv::SPIR_KERNEL)
     return;
 
+#if LLPC_BUILD_NPI
+  // Rank functions are not kernels
+  if (Func.hasFnAttribute("amdgpu-wavegroup-rank-function"))
+    return;
+
+#endif /* LLPC_BUILD_NPI */
   auto CodeObjectVersion =
       AMDGPU::getAMDHSACodeObjectVersion(*Func.getParent());
   auto Kern = getHSAKernelProps(MF, ProgramInfo, CodeObjectVersion);

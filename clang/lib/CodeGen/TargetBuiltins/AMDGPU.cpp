@@ -726,7 +726,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8i16:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8f16:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8bf16:
-#if LLPC_BUILD_NPI
   case AMDGPU::BI__builtin_amdgcn_global_load_tr4_b64_v2i32:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr8_b64_v2i32:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr6_b96_v3i32:
@@ -739,7 +738,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8i16:
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8f16:
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8bf16:
-#endif /* LLPC_BUILD_NPI */
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr4_b64_v2i32:
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr8_b64_v2i32:
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr6_b96_v3i32:
@@ -750,9 +748,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_i32:
     case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_v2i32:
-#if LLPC_BUILD_NPI
     case AMDGPU::BI__builtin_amdgcn_global_load_tr8_b64_v2i32:
-#endif /* LLPC_BUILD_NPI */
       IID = Intrinsic::amdgcn_global_load_tr_b64;
       break;
     case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v4i16:
@@ -761,14 +757,11 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8i16:
     case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8f16:
     case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8bf16:
-#if LLPC_BUILD_NPI
     case AMDGPU::BI__builtin_amdgcn_global_load_tr16_b128_v8i16:
     case AMDGPU::BI__builtin_amdgcn_global_load_tr16_b128_v8f16:
     case AMDGPU::BI__builtin_amdgcn_global_load_tr16_b128_v8bf16:
-#endif /* LLPC_BUILD_NPI */
       IID = Intrinsic::amdgcn_global_load_tr_b128;
       break;
-#if LLPC_BUILD_NPI
     case AMDGPU::BI__builtin_amdgcn_global_load_tr4_b64_v2i32:
       IID = Intrinsic::amdgcn_global_load_tr4_b64;
       break;
@@ -789,7 +782,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8bf16:
       IID = Intrinsic::amdgcn_ds_load_tr16_b128;
       break;
-#endif /* LLPC_BUILD_NPI */
     case AMDGPU::BI__builtin_amdgcn_ds_read_tr4_b64_v2i32:
       IID = Intrinsic::amdgcn_ds_read_tr4_b64;
       break;
@@ -889,10 +881,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(IID, {SrcType});
     return Builder.CreateCall(F, {Args});
   }
-  case AMDGPU::BI__builtin_amdgcn_tensor_load_to_lds:
-  case AMDGPU::BI__builtin_amdgcn_tensor_load_to_lds_d2:
-  case AMDGPU::BI__builtin_amdgcn_tensor_store_from_lds:
-  case AMDGPU::BI__builtin_amdgcn_tensor_store_from_lds_d2:
   case AMDGPU::BI__builtin_amdgcn_cluster_load_async_to_lds_b8:
   case AMDGPU::BI__builtin_amdgcn_cluster_load_async_to_lds_b32:
   case AMDGPU::BI__builtin_amdgcn_cluster_load_async_to_lds_b64:
@@ -907,18 +895,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_global_store_async_from_lds_b128: {
     Intrinsic::ID IID;
     switch (BuiltinID) {
-    case AMDGPU::BI__builtin_amdgcn_tensor_load_to_lds:
-      IID = Intrinsic::amdgcn_tensor_load_to_lds;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_tensor_load_to_lds_d2:
-      IID = Intrinsic::amdgcn_tensor_load_to_lds_d2;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_tensor_store_from_lds:
-      IID = Intrinsic::amdgcn_tensor_store_from_lds;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_tensor_store_from_lds_d2:
-      IID = Intrinsic::amdgcn_tensor_store_from_lds_d2;
-      break;
     case AMDGPU::BI__builtin_amdgcn_cluster_load_async_to_lds_b8:
       IID = Intrinsic::amdgcn_cluster_load_async_to_lds_b8;
       break;
@@ -1226,7 +1202,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x32_bf8_bf8_w64:
   // GFX1250 WMMA builtins
   case AMDGPU::BI__builtin_amdgcn_wmma_f64_16x16x4_f64:
-  case AMDGPU::BI__builtin_amdgcn_wmma_f64_16x16x8_f64:
   case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x4_f32:
   case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x32_bf16:
   case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x32_f16:
@@ -1434,10 +1409,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     case AMDGPU::BI__builtin_amdgcn_wmma_f64_16x16x4_f64:
       ArgsForMatchingMatrixTypes = {5, 1};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f64_16x16x4_f64;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_wmma_f64_16x16x8_f64:
-      ArgsForMatchingMatrixTypes = {5, 1};
-      BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f64_16x16x8_f64;
       break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x4_f32:
       ArgsForMatchingMatrixTypes = {5, 1};

@@ -710,7 +710,7 @@ unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
 #if LLPC_BUILD_NPI
 CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
   bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(Opc) : 0;
-  Opc = IsConvertibleToBitOp ? AMDGPU::V_BITOP3_B32_e64 : Opc;
+  Opc = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : Opc;
 #else /* LLPC_BUILD_NPI */
 CanBeVOPD getCanBeVOPD(unsigned Opc) {
 #endif /* LLPC_BUILD_NPI */
@@ -737,7 +737,7 @@ CanBeVOPD getCanBeVOPD(unsigned Opc) {
 #if LLPC_BUILD_NPI
 unsigned getVOPDOpcode(unsigned Opc, bool VOPD3) {
   bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(Opc) : 0;
-  Opc = IsConvertibleToBitOp ? AMDGPU::V_BITOP3_B32_e64 : Opc;
+  Opc = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : Opc;
 #else /* LLPC_BUILD_NPI */
 unsigned getVOPDOpcode(unsigned Opc) {
 #endif /* LLPC_BUILD_NPI */
@@ -821,6 +821,12 @@ bool isCvt_F32_Fp8_Bf8_e64(unsigned Opc) {
          Opc == AMDGPU::V_CVT_PK_F32_FP8_t16_e64_gfx12;
 }
 
+#if LLPC_BUILD_NPI
+bool isVNBR(unsigned Opc) {
+  return AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vdst_refl);
+}
+
+#endif /* LLPC_BUILD_NPI */
 bool isGenericAtomic(unsigned Opc) {
   return Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_ADD ||
@@ -841,8 +847,8 @@ bool isGenericAtomic(unsigned Opc) {
          Opc == AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG;
 }
 
-#if LLPC_BUILD_NPI
 bool isAsyncStore(unsigned Opc) {
+#if LLPC_BUILD_NPI
   return Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_gfx1250 ||
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_gfx13 ||
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_gfx1250 ||
@@ -859,6 +865,9 @@ bool isAsyncStore(unsigned Opc) {
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_SADDR_gfx13 ||
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR_gfx1250 ||
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR_gfx13;
+#else /* LLPC_BUILD_NPI */
+  return false; // placeholder before async store implementation.
+#endif /* LLPC_BUILD_NPI */
 }
 
 bool isTensorStore(unsigned Opc) {
@@ -881,7 +890,6 @@ unsigned getTemporalHintType(const MCInstrDesc TID) {
   return CPol::TH_TYPE_LOAD;
 }
 
-#endif /* LLPC_BUILD_NPI */
 bool isTrue16Inst(unsigned Opc) {
   const VOPTrue16Info *Info = getTrue16OpcodeHelper(Opc);
   return Info && Info->IsTrue16;
@@ -952,7 +960,7 @@ unsigned getBitOp2(unsigned Opc) {
 int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily,
                 bool VOPD3) {
   bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(OpY) : 0;
-  OpY = IsConvertibleToBitOp ? AMDGPU::V_BITOP3_B32_e64 : OpY;
+  OpY = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : OpY;
 #else /* LLPC_BUILD_NPI */
 int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily) {
 #endif /* LLPC_BUILD_NPI */
@@ -2650,6 +2658,10 @@ bool getWavegroupRankFunction(const Function &F) {
   return F.hasFnAttribute("amdgpu-wavegroup-rank-function");
 }
 
+bool getRankSpecializationEnable(const Function &F) {
+  return !F.hasFnAttribute("amdgpu-no-rank-specialization");
+}
+
 std::optional<std::array<uint32_t, 3>> getReqdWorkGroupSize(const Function &F) {
   MDNode *Node = F.getMetadata("reqd_work_group_size");
   if (!Node)
@@ -3926,6 +3938,11 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
       AMDGPU::OpName::vdst, AMDGPU::OpName::src0, AMDGPU::OpName::src1,
       AMDGPU::OpName::src2, AMDGPU::OpName::src3, AMDGPU::OpName::src4,
       AMDGPU::OpName::src5};
+
+  static const AMDGPU::OpName VNBROps[VGPRLoweringOperandTableNumOps] = {
+      AMDGPU::OpName::vsrc, AMDGPU::OpName::vdst_refl,
+      AMDGPU::OpName::NUM_OPERAND_NAMES, AMDGPU::OpName::vdst,
+      DEFAULT_VALUES_3};
 #undef DEFAULT_VALUES_3
 
   uint64_t TSFlags = Desc.TSFlags;
@@ -3959,6 +3976,9 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
 
   if (AMDGPU::isVOPD(Desc.getOpcode()))
     return {VOPDOpsX, VOPDOpsY};
+
+  if (AMDGPU::isVNBR(Desc.getOpcode()))
+    return {VNBROps, nullptr};
 
   assert(!(TSFlags & SIInstrFlags::MIMG));
 
@@ -4131,6 +4151,8 @@ std::string ClusterDimsAttr::to_string() const {
     OS << Dims[0] << ',' << Dims[1] << ',' << Dims[2];
     return Buffer.c_str();
   }
+  default:
+    llvm_unreachable("Unknown ClusterDimsAttr kind");
   }
 }
 

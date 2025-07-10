@@ -289,6 +289,8 @@ protected:
 
   std::optional<llvm::Triple> DarwinTargetVariantTriple;
 
+  bool HasMicrosoftRecordLayout = false;
+
   // TargetInfo Constructor.  Default initializes all fields.
   TargetInfo(const llvm::Triple &T);
 
@@ -1034,9 +1036,15 @@ public:
   /// set of primary and secondary targets.
   virtual llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const = 0;
 
+  enum class ArmStreamingKind {
+    NotStreaming,
+    StreamingCompatible,
+    Streaming,
+  };
+
   /// Returns target-specific min and max values VScale_Range.
   virtual std::optional<std::pair<unsigned, unsigned>>
-  getVScaleRange(const LangOptions &LangOpts, bool IsArmStreamingFunction,
+  getVScaleRange(const LangOptions &LangOpts, ArmStreamingKind Mode,
                  llvm::StringMap<bool> *FeatureMap = nullptr) const {
     return std::nullopt;
   }
@@ -1325,7 +1333,8 @@ public:
   /// Apply changes to the target information with respect to certain
   /// language options which change the target configuration and adjust
   /// the language based on the target options where applicable.
-  virtual void adjust(DiagnosticsEngine &Diags, LangOptions &Opts);
+  virtual void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+                      const TargetInfo *Aux);
 
   /// Initialize the map with the default set of target features for the
   /// CPU this should include all legal feature strings on the target.
@@ -1840,6 +1849,8 @@ public:
 
   virtual void setAuxTarget(const TargetInfo *Aux) {}
 
+  bool hasMicrosoftRecordLayout() const { return HasMicrosoftRecordLayout; }
+
   /// Whether target allows debuginfo types for decl only variables/functions.
   virtual bool allowDebugInfoForExternalRef() const { return false; }
 
@@ -1851,7 +1862,7 @@ public:
 
   /// Returns the version of the darwin target variant SDK which was used during
   /// the compilation if one was specified, or an empty version otherwise.
-  const std::optional<VersionTuple> getDarwinTargetVariantSDKVersion() const {
+  std::optional<VersionTuple> getDarwinTargetVariantSDKVersion() const {
     return !getTargetOpts().DarwinTargetVariantSDKVersion.empty()
                ? getTargetOpts().DarwinTargetVariantSDKVersion
                : std::optional<VersionTuple>();

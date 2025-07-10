@@ -720,11 +720,13 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
 #if LLPC_BUILD_NPI
       if (isGFX1250Only() &&
+#else /* LLPC_BUILD_NPI */
+      if (isGFX1250() &&
+#endif /* LLPC_BUILD_NPI */
           tryDecodeInst(DecoderTableGFX125096, DecoderTableGFX1250_FAKE1696, MI,
                         DecW, Address, CS))
         break;
 
-#endif /* LLPC_BUILD_NPI */
       if (isGFX12() &&
           tryDecodeInst(DecoderTableGFX1296, DecoderTableGFX12_FAKE1696, MI,
                         DecW, Address, CS))
@@ -815,13 +817,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
 #if LLPC_BUILD_NPI
       if (isGFX1250Only() &&
+#else /* LLPC_BUILD_NPI */
+      if (isGFX1250() &&
+#endif /* LLPC_BUILD_NPI */
           tryDecodeInst(DecoderTableGFX125064, DecoderTableGFX1250_FAKE1664, MI,
                         QW, Address, CS))
-#else /* LLPC_BUILD_NPI */
-      // FIXME: DecoderTableGFX125064 is not defined yet.
-      if (isGFX1250() &&
-          tryDecodeInst(DecoderTableGFX1250_FAKE1664, MI, QW, Address, CS))
-#endif /* LLPC_BUILD_NPI */
         break;
 
       if (isGFX12() &&
@@ -896,26 +896,18 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                         DW, Address, CS))
         break;
 
-#if LLPC_BUILD_NPI
-      if (isGFX1250Only() &&
-          tryDecodeInst(DecoderTableGFX125032, DecoderTableGFX1250_FAKE1632, MI,
-                        DW, Address, CS))
-        break;
-
-#endif /* LLPC_BUILD_NPI */
       if (isGFX11() &&
           tryDecodeInst(DecoderTableGFX1132, DecoderTableGFX11_FAKE1632, MI, DW,
                         Address, CS))
         break;
 
-      // FIXME: Should use DecoderTableGFX1250_FAKE1632, but it is not generated
-      //        yet.
 #if LLPC_BUILD_NPI
       if (isGFX1250Only() &&
 #else /* LLPC_BUILD_NPI */
       if (isGFX1250() &&
 #endif /* LLPC_BUILD_NPI */
-          tryDecodeInst(DecoderTableGFX125032, MI, DW, Address, CS))
+          tryDecodeInst(DecoderTableGFX125032, DecoderTableGFX1250_FAKE1632, MI,
+                        DW, Address, CS))
         break;
 
       if (isGFX12() &&

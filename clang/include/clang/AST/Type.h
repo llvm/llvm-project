@@ -6408,17 +6408,12 @@ public:
   SpirvOperand() : Kind(Invalid), ResultType(), Value() {}
 
   SpirvOperand(SpirvOperandKind Kind, QualType ResultType, llvm::APInt Value)
-      : Kind(Kind), ResultType(ResultType), Value(Value) {}
+      : Kind(Kind), ResultType(ResultType), Value(std::move(Value)) {}
 
   SpirvOperand(const SpirvOperand &Other) { *this = Other; }
   ~SpirvOperand() {}
 
-  SpirvOperand &operator=(const SpirvOperand &Other) {
-    this->Kind = Other.Kind;
-    this->ResultType = Other.ResultType;
-    this->Value = Other.Value;
-    return *this;
-  }
+  SpirvOperand &operator=(const SpirvOperand &Other) = default;
 
   bool operator==(const SpirvOperand &Other) const {
     return Kind == Other.Kind && ResultType == Other.ResultType &&
@@ -6447,11 +6442,11 @@ public:
   }
 
   static SpirvOperand createConstant(QualType ResultType, llvm::APInt Val) {
-    return SpirvOperand(ConstantId, ResultType, Val);
+    return SpirvOperand(ConstantId, ResultType, std::move(Val));
   }
 
   static SpirvOperand createLiteral(llvm::APInt Val) {
-    return SpirvOperand(Literal, QualType(), Val);
+    return SpirvOperand(Literal, QualType(), std::move(Val));
   }
 
   static SpirvOperand createType(QualType T) {

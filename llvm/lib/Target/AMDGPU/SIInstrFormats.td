@@ -75,11 +75,9 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   field bit Gather4 = 0;
 
-#ifdef LLPC_BUILD_NPI
   // wait count to manage tensor loads/stores.
   field bit TENSOR_CNT = 0;
 
-#endif /* LLPC_BUILD_NPI */
   // This is an s_store_dword* instruction that requires a cache flush
   // on wave termination. It is necessary to distinguish from mayStore
   // SMEM instructions like the cache flush ones.
@@ -89,11 +87,9 @@ class InstSI <dag outs, dag ins, string asm = "",
   // instruction size.
   field bit FixedSize = 0;
 
-#ifdef LLPC_BUILD_NPI
   // wait count to manage asynchronous loads/stores.
   field bit ASYNC_CNT = 0;
 
-#endif /* LLPC_BUILD_NPI */
   // This bit indicates that this is a VOP3 opcode which supports op_sel
   // modifier.
   field bit VOP3_OPSEL = 0;
@@ -218,22 +214,12 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{36} = DisableWQM;
   let TSFlags{37} = Gather4;
 
-#ifdef LLPC_BUILD_NPI
   let TSFlags{38} = TENSOR_CNT;
-#else /* LLPC_BUILD_NPI */
-  // Reserved, must be 0.
-  let TSFlags{38} = 0;
-#endif /* LLPC_BUILD_NPI */
 
   let TSFlags{39} = ScalarStore;
   let TSFlags{40} = FixedSize;
 
-#ifdef LLPC_BUILD_NPI
   let TSFlags{41} = ASYNC_CNT;
-#else /* LLPC_BUILD_NPI */
-  // Reserved, must be 0.
-  let TSFlags{41} = 0;
-#endif /* LLPC_BUILD_NPI */
 
   let TSFlags{42} = VOP3_OPSEL;
 
@@ -341,14 +327,14 @@ def CPolBit {
 #ifdef LLPC_BUILD_NPI
   int NV = 5;
   int SCAL = 9;
-}
-
-class VOPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVOPDst"> {
-  let DecoderMethod = "Decode" # !subst("_STAGING", "", !cast<string>(rc)) # "RegisterClass";
 #endif /* LLPC_BUILD_NPI */
 }
 
 #ifdef LLPC_BUILD_NPI
+class VOPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVOPDst"> {
+  let DecoderMethod = "Decode" # !subst("_STAGING", "", !cast<string>(rc)) # "RegisterClass";
+}
+
 def VOPDstOperand_VGPR_32_Lo128 : VOPDstOperand <VGPR_32_STAGING_Lo128> {
   let DecoderMethod = "DecodeVGPR_32RegisterClass";
 }

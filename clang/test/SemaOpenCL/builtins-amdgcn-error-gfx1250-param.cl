@@ -4,8 +4,6 @@
 typedef unsigned int uint;
 typedef unsigned short int ushort;
 typedef int    v2i   __attribute__((ext_vector_type(2)));
-typedef int    v4i   __attribute__((ext_vector_type(4)));
-typedef int    v8i   __attribute__((ext_vector_type(8)));
 typedef unsigned int __attribute__((ext_vector_type(2))) uint2;
 typedef unsigned int __attribute__((ext_vector_type(3))) uint3;
 typedef __bf16 __attribute__((ext_vector_type(8))) bfloat8;
@@ -17,6 +15,9 @@ typedef half __attribute__((ext_vector_type(32))) half32;
 typedef float __attribute__((ext_vector_type(8))) float8;
 typedef float __attribute__((ext_vector_type(16))) float16;
 typedef float __attribute__((ext_vector_type(32))) float32;
+
+typedef int    v4i   __attribute__((ext_vector_type(4)));
+typedef int    v8i   __attribute__((ext_vector_type(8)));
 
 void test_setprio_inc_wg(short a) {
   __builtin_amdgcn_s_setprio_inc_wg(a); // expected-error {{'__builtin_amdgcn_s_setprio_inc_wg' must be a constant integer}}

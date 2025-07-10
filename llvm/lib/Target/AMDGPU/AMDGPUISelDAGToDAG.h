@@ -349,6 +349,9 @@ private:
   void SelectDSAppendConsume(SDNode *N, unsigned IntrID);
   void SelectDSBvhStackIntrinsic(SDNode *N, unsigned IntrID);
   void SelectPOPSExitingWaveID(SDNode *N);
+#if LLPC_BUILD_NPI
+  void SelectSpatialClusterChainIntrinsic(SDNode *N, unsigned IntrID);
+#endif /* LLPC_BUILD_NPI */
   void SelectDS_GWS(SDNode *N, unsigned IntrID);
 #if LLPC_BUILD_NPI
   void SelectLOAD_MCAST(MemIntrinsicSDNode *N, unsigned IntrID);
@@ -356,6 +359,7 @@ private:
   void SelectInterpP1F16(SDNode *N);
 #if LLPC_BUILD_NPI
   void SelectCvtTensor(SDNode *N, unsigned IntrID);
+  void SelectSpatialClusterVNBR(SDNode *N, unsigned IntrID);
 #endif /* LLPC_BUILD_NPI */
   void SelectINTRINSIC_W_CHAIN(SDNode *N);
   void SelectINTRINSIC_WO_CHAIN(SDNode *N);

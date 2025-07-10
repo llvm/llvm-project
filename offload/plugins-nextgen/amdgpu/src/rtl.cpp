@@ -2591,6 +2591,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       case HSA_DEVICE_TYPE_DSP:
         TmpCharPtr = "DSP";
         break;
+      default:
+        TmpCharPtr = "Unknown";
+        break;
       }
       Info.add("Device Type", TmpCharPtr);
     }
@@ -3500,6 +3503,9 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   switch (ResultCode) {
   case HSA_STATUS_ERROR_INVALID_SYMBOL_NAME:
     OffloadErrCode = ErrorCode::NOT_FOUND;
+    break;
+  case HSA_STATUS_ERROR_INVALID_CODE_OBJECT:
+    OffloadErrCode = ErrorCode::INVALID_BINARY;
     break;
   default:
     OffloadErrCode = ErrorCode::UNKNOWN;
