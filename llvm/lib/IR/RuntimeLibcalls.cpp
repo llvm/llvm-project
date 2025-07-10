@@ -272,6 +272,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
 
   if (TT.isOSOpenBSD()) {
     setLibcallImpl(RTLIB::STACKPROTECTOR_CHECK_FAIL, RTLIB::Unsupported);
+    setLibcallImpl(RTLIB::STACK_SMASH_HANDLER, RTLIB::__stack_smash_handler);
   }
 
   if (TT.isOSWindows() && !TT.isOSCygMing()) {
