@@ -52,13 +52,13 @@ struct RangeInfo {
   uint32_t Space;
   llvm::dxbc::ShaderVisibility Visibility;
 
-  bool operator==(const RangeInfo &RHS) {
+  bool operator==(const RangeInfo &RHS) const {
     return std::tie(LowerBound, UpperBound, Class, Space, Visibility) ==
            std::tie(RHS.LowerBound, RHS.UpperBound, RHS.Class, RHS.Space,
                     RHS.Visibility);
   }
 
-  bool operator<(const RangeInfo &RHS) {
+  bool operator<(const RangeInfo &RHS) const {
     return std::tie(Class, Space, LowerBound, UpperBound, Visibility) <
            std::tie(RHS.Class, RHS.Space, RHS.LowerBound, RHS.UpperBound,
                     RHS.Visibility);
