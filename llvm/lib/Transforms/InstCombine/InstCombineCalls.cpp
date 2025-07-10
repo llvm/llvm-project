@@ -72,6 +72,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <numeric>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -3478,6 +3479,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       unsigned SubVecNumElts = SubVecTy->getNumElements();
       unsigned IdxN = cast<ConstantInt>(Idx)->getZExtValue();
 
+      if ((IdxN % SubVecNumElts != 0) || (IdxN + SubVecNumElts > DstNumElts))
+        return II;
+
       // An insert that entirely overwrites Vec with SubVec is a nop.
       if (VecNumElts == SubVecNumElts)
         return replaceInstUsesWith(CI, SubVec);
@@ -3486,22 +3490,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // shufflevector requires the two input vectors to be the same width.
       // Elements beyond the bounds of SubVec within the widened vector are
       // undefined.
-      SmallVector<int, 8> WidenMask;
-      unsigned i;
-      for (i = 0; i != SubVecNumElts; ++i)
-        WidenMask.push_back(i);
-      for (; i != VecNumElts; ++i)
-        WidenMask.push_back(PoisonMaskElem);
+      SmallVector<int, 8> WidenMask(VecNumElts, PoisonMaskElem);
+      std::iota(WidenMask.begin(), WidenMask.begin() + SubVecNumElts, 0);
 
       Value *WidenShuffle = Builder.CreateShuffleVector(SubVec, WidenMask);
 
-      SmallVector<int, 8> Mask;
-      for (unsigned i = 0; i != IdxN; ++i)
-        Mask.push_back(i);
-      for (unsigned i = DstNumElts; i != DstNumElts + SubVecNumElts; ++i)
-        Mask.push_back(i);
-      for (unsigned i = IdxN + SubVecNumElts; i != DstNumElts; ++i)
-        Mask.push_back(i);
+      SmallVector<int, 8> Mask(DstNumElts);
+      std::iota(Mask.begin(), Mask.end(), 0);
+      std::iota(Mask.begin() + IdxN, Mask.begin() + IdxN + SubVecNumElts,
+                DstNumElts);
 
       Value *Shuffle = Builder.CreateShuffleVector(Vec, WidenShuffle, Mask);
       return replaceInstUsesWith(CI, Shuffle);

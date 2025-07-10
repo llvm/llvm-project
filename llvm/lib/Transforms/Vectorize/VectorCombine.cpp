@@ -832,11 +832,10 @@ bool VectorCombine::foldVectorInsertToShuffle(Instruction &I) {
   if (!SubVecPtr)
     return false;
 
-  unsigned SubVecIdx = SubVecPtr->getZExtValue();
+  unsigned IdxN = SubVecPtr->getZExtValue();
 
   // Ensure insertion of SubVec doesn't exceed Dst bounds.
-  if ((SubVecIdx % SubVecNumElts != 0) ||
-      (SubVecIdx + SubVecNumElts > DstNumElts))
+  if ((IdxN % SubVecNumElts != 0) || (IdxN + SubVecNumElts > DstNumElts))
     return false;
 
   // An insert that entirely overwrites Vec with SubVec is a nop.
@@ -857,7 +856,7 @@ bool VectorCombine::foldVectorInsertToShuffle(Instruction &I) {
 
   SmallVector<int, 8> Mask(DstNumElts);
   std::iota(Mask.begin(), Mask.end(), 0);
-  std::iota(Mask.begin() + SubVecIdx, Mask.begin() + SubVecIdx + SubVecNumElts,
+  std::iota(Mask.begin() + IdxN, Mask.begin() + IdxN + SubVecNumElts,
             DstNumElts);
 
   auto *InsertShuffle = Builder.CreateShuffleVector(Vec, WidenShuffle, Mask);
