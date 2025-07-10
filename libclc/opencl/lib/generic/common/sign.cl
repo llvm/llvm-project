@@ -8,7 +8,7 @@
 
 #include <clc/clcmacro.h>
 #include <clc/common/clc_sign.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/common/sign.h>
 
 #define FUNCTION sign
 #define __CLC_BODY <clc/shared/unary_def.inc>

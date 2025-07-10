@@ -3228,13 +3228,9 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
     // Signal to outer function
     Removed = true;
 
-    // Conservative default.
-    bool InWorkList = true;
     // Remove from the Chain and Chain Map
     if (auto It = BlockToChain.find(RemBB); It != BlockToChain.end()) {
-      BlockChain *Chain = It->second;
-      InWorkList = Chain->UnscheduledPredecessors == 0;
-      Chain->remove(RemBB);
+      It->second->remove(RemBB);
       BlockToChain.erase(It);
     }
 
@@ -3244,11 +3240,10 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
     }
 
     // Handle the Work Lists
-    if (InWorkList) {
-      SmallVectorImpl<MachineBasicBlock *> &RemoveList = BlockWorkList;
-      if (RemBB->isEHPad())
-        RemoveList = EHPadWorkList;
-      llvm::erase(RemoveList, RemBB);
+    if (RemBB->isEHPad()) {
+      llvm::erase(EHPadWorkList, RemBB);
+    } else {
+      llvm::erase(BlockWorkList, RemBB);
     }
 
     // Handle the filter set

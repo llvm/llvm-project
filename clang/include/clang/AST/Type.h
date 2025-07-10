@@ -5439,7 +5439,7 @@ public:
   }
 
   ArrayRef<QualType> getParamTypes() const {
-    return llvm::ArrayRef(param_type_begin(), param_type_end());
+    return {param_type_begin(), param_type_end()};
   }
 
   ExtProtoInfo getExtProtoInfo() const {
@@ -5593,7 +5593,7 @@ public:
   using param_type_iterator = const QualType *;
 
   ArrayRef<QualType> param_types() const {
-    return llvm::ArrayRef(param_type_begin(), param_type_end());
+    return {param_type_begin(), param_type_end()};
   }
 
   param_type_iterator param_type_begin() const {
@@ -5607,7 +5607,7 @@ public:
   using exception_iterator = const QualType *;
 
   ArrayRef<QualType> exceptions() const {
-    return llvm::ArrayRef(exception_begin(), exception_end());
+    return {exception_begin(), exception_end()};
   }
 
   exception_iterator exception_begin() const {
@@ -6404,17 +6404,12 @@ public:
   SpirvOperand() : Kind(Invalid), ResultType(), Value() {}
 
   SpirvOperand(SpirvOperandKind Kind, QualType ResultType, llvm::APInt Value)
-      : Kind(Kind), ResultType(ResultType), Value(Value) {}
+      : Kind(Kind), ResultType(ResultType), Value(std::move(Value)) {}
 
   SpirvOperand(const SpirvOperand &Other) { *this = Other; }
   ~SpirvOperand() {}
 
-  SpirvOperand &operator=(const SpirvOperand &Other) {
-    this->Kind = Other.Kind;
-    this->ResultType = Other.ResultType;
-    this->Value = Other.Value;
-    return *this;
-  }
+  SpirvOperand &operator=(const SpirvOperand &Other) = default;
 
   bool operator==(const SpirvOperand &Other) const {
     return Kind == Other.Kind && ResultType == Other.ResultType &&
@@ -6443,11 +6438,11 @@ public:
   }
 
   static SpirvOperand createConstant(QualType ResultType, llvm::APInt Val) {
-    return SpirvOperand(ConstantId, ResultType, Val);
+    return SpirvOperand(ConstantId, ResultType, std::move(Val));
   }
 
   static SpirvOperand createLiteral(llvm::APInt Val) {
-    return SpirvOperand(Literal, QualType(), Val);
+    return SpirvOperand(Literal, QualType(), std::move(Val));
   }
 
   static SpirvOperand createType(QualType T) {
@@ -7610,7 +7605,7 @@ public:
   /// Retrieve the type arguments of this object type as they were
   /// written.
   ArrayRef<QualType> getTypeArgsAsWritten() const {
-    return llvm::ArrayRef(getTypeArgStorage(), ObjCObjectTypeBits.NumTypeArgs);
+    return {getTypeArgStorage(), ObjCObjectTypeBits.NumTypeArgs};
   }
 
   /// Whether this is a "__kindof" type as written.

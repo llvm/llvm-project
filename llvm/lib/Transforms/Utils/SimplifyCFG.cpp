@@ -6198,7 +6198,7 @@ static bool initializeUniqueCases(SwitchInst *SI, PHINode *&PHI,
 // TODO: Handle switches with more than 2 cases that map to the same result.
 static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
                                  Constant *DefaultResult, Value *Condition,
-                                 IRBuilder<> &Builder) {
+                                 IRBuilder<> &Builder, const DataLayout &DL) {
   // If we are selecting between only two cases transform into a simple
   // select or a two-way select if default is possible.
   // Example:
@@ -6234,10 +6234,33 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
     // case 0,2,8,10 -> Cond & 0b1..0101 == 0 ? result : default
     if (isPowerOf2_32(CaseCount)) {
       ConstantInt *MinCaseVal = CaseValues[0];
-      // Find mininal value.
-      for (auto *Case : CaseValues)
+      // If there are bits that are set exclusively by CaseValues, we
+      // can transform the switch into a select if the conjunction of
+      // all the values uniquely identify CaseValues.
+      APInt AndMask = APInt::getAllOnes(MinCaseVal->getBitWidth());
+
+      // Find the minimum value and compute the and of all the case values.
+      for (auto *Case : CaseValues) {
         if (Case->getValue().slt(MinCaseVal->getValue()))
           MinCaseVal = Case;
+        AndMask &= Case->getValue();
+      }
+      KnownBits Known = computeKnownBits(Condition, DL);
+
+      if (!AndMask.isZero() && Known.getMaxValue().uge(AndMask)) {
+        // Compute the number of bits that are free to vary.
+        unsigned FreeBits = Known.countMaxActiveBits() - AndMask.popcount();
+
+        // Check if the number of values covered by the mask is equal
+        // to the number of cases.
+        if (FreeBits == Log2_32(CaseCount)) {
+          Value *And = Builder.CreateAnd(Condition, AndMask);
+          Value *Cmp = Builder.CreateICmpEQ(
+              And, Constant::getIntegerValue(And->getType(), AndMask));
+          return Builder.CreateSelect(Cmp, ResultVector[0].first,
+                                      DefaultResult);
+        }
+      }
 
       // Mark the bits case number touched.
       APInt BitMask = APInt::getZero(MinCaseVal->getBitWidth());
@@ -6325,7 +6348,7 @@ static bool trySwitchToSelect(SwitchInst *SI, IRBuilder<> &Builder,
   assert(PHI != nullptr && "PHI for value select not found");
   Builder.SetInsertPoint(SI);
   Value *SelectValue =
-      foldSwitchToSelect(UniqueResults, DefaultResult, Cond, Builder);
+      foldSwitchToSelect(UniqueResults, DefaultResult, Cond, Builder, DL);
   if (!SelectValue)
     return false;
 
@@ -6347,7 +6370,7 @@ public:
 
   /// Build instructions with Builder to retrieve the value at
   /// the position given by Index in the lookup table.
-  Value *buildLookup(Value *Index, IRBuilder<> &Builder);
+  Value *buildLookup(Value *Index, IRBuilder<> &Builder, const DataLayout &DL);
 
   /// Return true if a table with TableSize elements of
   /// type ElementType would fit in a target-legal register.
@@ -6533,7 +6556,8 @@ SwitchLookupTable::SwitchLookupTable(
   Kind = ArrayKind;
 }
 
-Value *SwitchLookupTable::buildLookup(Value *Index, IRBuilder<> &Builder) {
+Value *SwitchLookupTable::buildLookup(Value *Index, IRBuilder<> &Builder,
+                                      const DataLayout &DL) {
   switch (Kind) {
   case SingleValueKind:
     return SingleValue;
@@ -6575,16 +6599,12 @@ Value *SwitchLookupTable::buildLookup(Value *Index, IRBuilder<> &Builder) {
     return Builder.CreateTrunc(DownShifted, BitMapElementTy, "switch.masked");
   }
   case ArrayKind: {
-    // Make sure the table index will not overflow when treated as signed.
-    IntegerType *IT = cast<IntegerType>(Index->getType());
-    uint64_t TableSize =
-        Array->getInitializer()->getType()->getArrayNumElements();
-    if (TableSize > (1ULL << std::min(IT->getBitWidth() - 1, 63u)))
-      Index = Builder.CreateZExt(
-          Index, IntegerType::get(IT->getContext(), IT->getBitWidth() + 1),
-          "switch.tableidx.zext");
+    Type *IndexTy = DL.getIndexType(Array->getType());
 
-    Value *GEPIndices[] = {Builder.getInt32(0), Index};
+    if (Index->getType() != IndexTy)
+      Index = Builder.CreateZExtOrTrunc(Index, IndexTy);
+
+    Value *GEPIndices[] = {ConstantInt::get(IndexTy, 0), Index};
     Value *GEP = Builder.CreateInBoundsGEP(Array->getValueType(), Array,
                                            GEPIndices, "switch.gep");
     return Builder.CreateLoad(
@@ -7064,7 +7084,7 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     SwitchLookupTable Table(Mod, TableSize, TableIndexOffset, ResultList, DV,
                             DL, FuncName);
 
-    Value *Result = Table.buildLookup(TableIndex, Builder);
+    Value *Result = Table.buildLookup(TableIndex, Builder, DL);
 
     // Do a small peephole optimization: re-use the switch table compare if
     // possible.
@@ -7198,8 +7218,10 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
 /// will be transformed to:
 /// switch (count_trailing_zeros(C)) { case 0: case 1: case 6: case 7: }
 ///
-/// This transformation allows better lowering and could allow transforming into
-/// a lookup table.
+/// This transformation allows better lowering and may transform the switch
+/// instruction into a sequence of bit manipulation and a smaller
+/// log2(C)-indexed value table (instead of traditionally emitting a load of the
+/// address of the jump target, and indirectly jump to it).
 static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
                                         const DataLayout &DL,
                                         const TargetTransformInfo &TTI) {
@@ -7211,17 +7233,15 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
       !DL.fitsInLegalInteger(CondTy->getIntegerBitWidth()))
     return false;
 
-  const auto CttzIntrinsicCost = TTI.getIntrinsicInstrCost(
-      IntrinsicCostAttributes(Intrinsic::cttz, CondTy,
-                              {Condition, ConstantInt::getTrue(Context)}),
-      TTI::TCK_SizeAndLatency);
-
-  if (CttzIntrinsicCost > TTI::TCC_Basic)
-    // Inserting intrinsic is too expensive.
+  // Ensure trailing zeroes count intrinsic emission is not too expensive.
+  IntrinsicCostAttributes Attrs(Intrinsic::cttz, CondTy,
+                                {Condition, ConstantInt::getTrue(Context)});
+  if (TTI.getIntrinsicInstrCost(Attrs, TTI::TCK_SizeAndLatency) >
+      TTI::TCC_Basic * 2)
     return false;
 
   // Only bother with this optimization if there are more than 3 switch cases.
-  // SDAG will only bother creating jump tables for 4 or more cases.
+  // SDAG will start emitting jump tables for 4 or more cases.
   if (SI->getNumCases() < 4)
     return false;
 
