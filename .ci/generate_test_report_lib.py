@@ -25,7 +25,7 @@ def generate_report(
         #
         # If we were going to post a report, then yes, it would be misleading
         # to say we succeeded when the final return code was non-zero.
-        return ("", "success")
+        return ""
 
     failures = {}
     tests_run = 0
@@ -51,12 +51,7 @@ def generate_report(
                     )
 
     if not tests_run:
-        return ("", None)
-
-    style = "success"
-    # Either tests failed, or all tests passed but something failed to build.
-    if tests_failed or return_code != 0:
-        style = "error"
+        return ""
 
     report = [f"# {title}", ""]
 
@@ -132,7 +127,7 @@ def generate_report(
             list_failures=False,
         )
 
-    return report, style
+    return report
 
 
 def generate_report_from_files(title, return_code, junit_files):
