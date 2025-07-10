@@ -1165,9 +1165,10 @@ bool SemaHLSL::handleRootSignatureElements(
     Infos.push_back(Pair.first);
 
   // Helpers to report diagnostics
+  uint32_t DuplicateCounter = 0;
   using ElemPair = std::pair<const hlsl::RootSignatureElement *,
                              const hlsl::RootSignatureElement *>;
-  auto GetElemPair = [&Infos, &InfoPairs](
+  auto GetElemPair = [&Infos, &InfoPairs, &DuplicateCounter](
                          OverlappingRanges Overlap) -> ElemPair {
     auto InfoB = std::lower_bound(Infos.begin(), Infos.end(), *Overlap.B);
     auto DistB = std::distance(Infos.begin(), InfoB);
@@ -1175,9 +1176,8 @@ bool SemaHLSL::handleRootSignatureElements(
     std::advance(PairB, DistB);
 
     auto InfoA = std::lower_bound(InfoB, Infos.end(), *Overlap.A);
-    if (InfoA == InfoB)
-      InfoA++;
-    auto DistA = std::distance(InfoB, InfoA);
+    DuplicateCounter = InfoA == InfoB ? DuplicateCounter + 1 : 0;
+    auto DistA = std::distance(InfoB, InfoA) + DuplicateCounter;
     auto PairA = PairB;
     std::advance(PairA, DistA);
 
