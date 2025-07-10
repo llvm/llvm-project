@@ -34,6 +34,9 @@ int main(int, char**) {
 
   auto st1a = test1(); // [test1, main, ...]
   auto st1b = st1a;
+
+  static_assert(noexcept(st1a <=> st1b));
+
   assert(st1a == st1b);
   auto st2a = test2a(); // [test1, test2a, main, ...]
   assert(st1a != st2a);

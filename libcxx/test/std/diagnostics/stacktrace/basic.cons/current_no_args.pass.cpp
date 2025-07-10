@@ -62,6 +62,7 @@ _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void test_current() {
 
 _LIBCPP_NO_TAIL_CALLS
 int main(int, char**) {
+  static_assert(noexcept(std::stacktrace::current()));
   test_current();
   return 0;
 }

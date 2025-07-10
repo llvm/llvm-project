@@ -40,7 +40,7 @@ set(LIBCXX_SOURCES
   ryu/d2fixed.cpp
   ryu/d2s.cpp
   ryu/f2s.cpp
-  stacktrace/builder.cpp
+  stacktrace/base.cpp
   stacktrace/linux/elf.cpp
   stacktrace/linux/images.cpp
   stacktrace/linux/impl.cpp

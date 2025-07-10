@@ -15,7 +15,6 @@
 */
 
 #include <cassert>
-#include <iterator>
 #include <stacktrace>
 
 _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE std::stacktrace test1() { return std::stacktrace::current(0, 4); }

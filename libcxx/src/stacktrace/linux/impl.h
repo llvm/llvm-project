@@ -15,7 +15,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
 struct linux {
-  builder& builder_;
+  base& base_;
 
 #if defined(__linux__)
   // defined in linux.cpp

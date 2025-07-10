@@ -35,42 +35,42 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
 struct tool {
-  alloc& alloc_;
+  base& base_;
   char const* progName_;
 
-  tool(alloc& alloc, char const* progName) : alloc_(alloc), progName_(progName) {}
+  tool(base& base, char const* progName) : base_(base), progName_(progName) {}
   virtual ~tool() = default;
 
   /** Construct complete `argv` for the spawned process.
   Includes the program name at argv[0], followed by flags */
-  virtual alloc::list<alloc::str> buildArgs(builder& trace) const = 0;
+  virtual base::list<base::str> buildArgs(base& trace) const = 0;
 
   /** Parse line(s) output by the tool, and modify `entry`. */
-  virtual void parseOutput(builder& trace, entry_base& entry, std::istream& output) const = 0;
+  virtual void parseOutput(base& trace, entry_base& entry, std::istream& output) const = 0;
 };
 
 struct llvm_symbolizer : tool {
   virtual ~llvm_symbolizer() = default;
-  explicit llvm_symbolizer(alloc& alloc) : llvm_symbolizer(alloc, "llvm_symbolizer") {}
-  llvm_symbolizer(alloc& alloc, char const* progName) : tool{alloc, progName} {}
-  alloc::list<alloc::str> buildArgs(builder& trace) const override;
-  void parseOutput(builder& trace, entry_base& entry, std::istream& output) const override;
+  explicit llvm_symbolizer(base& base) : llvm_symbolizer(base, "llvm_symbolizer") {}
+  llvm_symbolizer(base& base, char const* progName) : tool{base, progName} {}
+  base::list<base::str> buildArgs(base& trace) const override;
+  void parseOutput(base& trace, entry_base& entry, std::istream& output) const override;
 };
 
 struct addr2line : tool {
   virtual ~addr2line() = default;
-  explicit addr2line(alloc& alloc) : addr2line(alloc, "addr2line") {}
-  addr2line(alloc& alloc, char const* progName) : tool{alloc, progName} {}
-  alloc::list<alloc::str> buildArgs(builder& trace) const override;
-  void parseOutput(builder& trace, entry_base& entry, std::istream& stream) const override;
+  explicit addr2line(base& base) : addr2line(base, "addr2line") {}
+  addr2line(base& base, char const* progName) : tool{base, progName} {}
+  base::list<base::str> buildArgs(base& trace) const override;
+  void parseOutput(base& trace, entry_base& entry, std::istream& stream) const override;
 };
 
 struct atos : tool {
   virtual ~atos() = default;
-  explicit atos(alloc& alloc) : atos(alloc, "atos") {}
-  atos(alloc& alloc, char const* progName) : tool{alloc, progName} {}
-  alloc::list<alloc::str> buildArgs(builder& trace) const override;
-  void parseOutput(builder& trace, entry_base& entry, std::istream& output) const override;
+  explicit atos(base& base) : atos(base, "atos") {}
+  atos(base& base, char const* progName) : tool{base, progName} {}
+  base::list<base::str> buildArgs(base& trace) const override;
+  void parseOutput(base& trace, entry_base& entry, std::istream& output) const override;
 };
 
 struct file_actions {
@@ -124,8 +124,8 @@ struct pspawn {
     }
   }
 
-  void spawn(alloc::list<alloc::str> const& argStrings) {
-    alloc::vec<char const*> argv = tool_.alloc_.make_vec<char const*>();
+  void spawn(base::list<base::str> const& argStrings) {
+    base::vec<char const*> argv = tool_.base_.make_vec<char const*>();
     argv.reserve(argStrings.size() + 1);
     for (auto const& str : argStrings) {
       argv.push_back(str.data());
@@ -145,13 +145,13 @@ struct pspawn {
 };
 
 struct pspawn_tool : pspawn {
-  builder& builder_;
+  base& base_;
   fd fd_;
   fd_streambuf buf_;
   fd_istream stream_;
 
-  pspawn_tool(tool const& a2l, builder& trace, char* buf, size_t size)
-      : pspawn{a2l}, builder_(trace), fd_(fa_.redirectOutFD()), buf_(fd_, buf, size), stream_(buf_) {
+  pspawn_tool(tool const& a2l, base& trace, char* buf, size_t size)
+      : pspawn{a2l}, base_(trace), fd_(fa_.redirectOutFD()), buf_(fd_, buf, size), stream_(buf_) {
     if (!debug::enabled()) {
       fa_.redirectErrNull();
     }
@@ -162,11 +162,11 @@ struct pspawn_tool : pspawn {
     // Cannot run "addr2line" or similar without addresses, since we
     // provide them in argv, and if there are none passed in argv, the
     // tool will try to read from stdin and hang.
-    if (builder_.__entries_.empty()) {
+    if (base_.__entries_.empty()) {
       return;
     }
 
-    auto argStrings = tool_.buildArgs(builder_);
+    auto argStrings = tool_.buildArgs(base_);
     if (debug::enabled()) {
       debug() << "Trying to get stacktrace using:";
       for (auto& str : argStrings) {
@@ -177,17 +177,17 @@ struct pspawn_tool : pspawn {
 
     spawn(argStrings);
 
-    auto end = builder_.__entries_.end();
-    auto it  = builder_.__entries_.begin();
+    auto end = base_.__entries_.end();
+    auto it  = base_.__entries_.begin();
     while (it != end) {
       auto& entry = (entry_base&)(*it++);
-      tool_.parseOutput(builder_, entry, stream_);
+      tool_.parseOutput(base_, entry, stream_);
     }
   }
 };
 
 struct spawner {
-  builder& builder_;
+  base& base_;
   void resolve_lines();
 };
 

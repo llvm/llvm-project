@@ -37,6 +37,7 @@ _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void test_current_with_skip_depth() {
 
 _LIBCPP_NO_TAIL_CALLS
 int main(int, char**) {
+  static_assert(noexcept(std::stacktrace::current(0, 0)));
   test_current_with_skip_depth();
   return 0;
 }

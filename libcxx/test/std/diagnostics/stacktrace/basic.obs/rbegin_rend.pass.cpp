@@ -26,6 +26,8 @@ _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE std::stacktrace test3() { return test2();
 _LIBCPP_NO_TAIL_CALLS
 int main(int, char**) {
   std::stacktrace st;
+  static_assert(noexcept(st.rbegin()));
+  static_assert(noexcept(st.rend()));
   static_assert(std::random_access_iterator<decltype(st.rbegin())>);
   assert(st.rbegin() == st.rend());
   // no longer empty:

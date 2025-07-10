@@ -32,9 +32,13 @@ int main(int, char**) {
   std::stacktrace_entry a;
   std::stacktrace_entry b;
   std::stacktrace_entry c;
+
   *(uintptr_t*)(&a) = uintptr_t(&func1);
   *(uintptr_t*)(&b) = uintptr_t(&func1);
   *(uintptr_t*)(&c) = uintptr_t(&func2);
+
+  static_assert(noexcept(a == b));
+
   assert(a == b);
   assert(a != c);
 
