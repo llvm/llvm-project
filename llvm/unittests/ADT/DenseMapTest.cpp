@@ -87,6 +87,14 @@ struct CtorTesterMapInfo {
 CtorTester getTestKey(int i, CtorTester *) { return CtorTester(i); }
 CtorTester getTestValue(int i, CtorTester *) { return CtorTester(42 + i); }
 
+std::optional<uint32_t> getTestKey(int i, std::optional<uint32_t> *) {
+  return i;
+}
+
+std::optional<uint32_t> getTestValue(int i, std::optional<uint32_t> *) {
+  return 42 + i;
+}
+
 // Test fixture, with helper functions implemented by forwarding to global
 // function overloads selected by component types of the type parameter. This
 // allows all of the map implementations to be tested with shared
