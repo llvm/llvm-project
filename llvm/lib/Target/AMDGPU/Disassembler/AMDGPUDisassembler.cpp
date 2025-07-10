@@ -1725,7 +1725,7 @@ MCOperand AMDGPUDisassembler::decodeLiteral64Constant() const {
   if (!HasLiteral) {
     if (Bytes.size() < 8) {
       return errOperand(0, "cannot read literal64, inst bytes left " +
-                        Twine(Bytes.size()));
+                               Twine(Bytes.size()));
     }
     HasLiteral = true;
     Literal64 = eatBytes<uint64_t>(Bytes);

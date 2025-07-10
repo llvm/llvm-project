@@ -373,3 +373,31 @@ static_assert(
 }
 
 #endif
+
+#ifndef CPP14_AND_EARLIER
+namespace GH145956 {
+  constexpr int f() {
+    struct Pair { int first; int second; };
+    Pair p = {1, 2};
+    auto const& [key, value] = p;
+    return [&] { return key; }();
+#if __cpp_constexpr < 202002L
+    // expected-warning@-2 {{captured structured bindings are a C++20 extension}}
+    // expected-note@-4 {{'key' declared here}}
+#endif
+  }
+  static_assert(f() == 1);
+  constexpr auto retlambda() {
+    struct Pair { int first; int second; };
+    Pair p = {1, 2};
+    auto const& [key, value] = p;
+    return [=] { return key; };
+#if __cpp_constexpr < 202002L
+    // expected-warning@-2 {{captured structured bindings are a C++20 extension}}
+    // expected-note@-4 {{'key' declared here}}
+#endif
+  }
+  constexpr auto lambda = retlambda();
+  static_assert(lambda() == 1);
+}
+#endif

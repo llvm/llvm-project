@@ -1070,6 +1070,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       // vXf32.
       setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
       setOperationAction({ISD::LRINT, ISD::LLRINT}, VT, Custom);
+      setOperationAction({ISD::LROUND, ISD::LLROUND}, VT, Custom);
       // Custom-lower insert/extract operations to simplify patterns.
       setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT}, VT,
                          Custom);
@@ -1151,6 +1152,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          Custom);
       setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
       setOperationAction({ISD::LRINT, ISD::LLRINT}, VT, Custom);
+      setOperationAction({ISD::LROUND, ISD::LLROUND}, VT, Custom);
       setOperationAction({ISD::VP_MERGE, ISD::VP_SELECT, ISD::SELECT}, VT,
                          Custom);
       setOperationAction(ISD::SELECT_CC, VT, Expand);
@@ -1453,6 +1455,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           setOperationAction({ISD::VP_SINT_TO_FP, ISD::VP_UINT_TO_FP}, VT,
                              Custom);
           setOperationAction({ISD::LRINT, ISD::LLRINT}, VT, Custom);
+          setOperationAction({ISD::LROUND, ISD::LLROUND}, VT, Custom);
           if (Subtarget.hasStdExtZfhmin()) {
             setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
           } else {
@@ -1478,6 +1481,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           setOperationAction(ISD::BITCAST, VT, Custom);
           setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
           setOperationAction({ISD::LRINT, ISD::LLRINT}, VT, Custom);
+          setOperationAction({ISD::LROUND, ISD::LLROUND}, VT, Custom);
           if (Subtarget.hasStdExtZfbfmin()) {
             setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
           } else {
@@ -1511,7 +1515,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FFLOOR, ISD::FROUND,
                             ISD::FROUNDEVEN, ISD::FRINT, ISD::LRINT,
-                            ISD::LLRINT, ISD::FNEARBYINT},
+                            ISD::LLRINT, ISD::LROUND, ISD::LLROUND,
+                            ISD::FNEARBYINT},
                            VT, Custom);
 
         setCondCodeAction(VFPCCToExpand, VT, Expand);
@@ -3211,7 +3216,11 @@ static RISCVFPRndMode::RoundingMode matchRoundingOp(unsigned Opc) {
   case ISD::VP_FCEIL:
     return RISCVFPRndMode::RUP;
   case ISD::FROUND:
+  case ISD::LROUND:
+  case ISD::LLROUND:
   case ISD::STRICT_FROUND:
+  case ISD::STRICT_LROUND:
+  case ISD::STRICT_LLROUND:
   case ISD::VP_FROUND:
     return RISCVFPRndMode::RMM;
   case ISD::FRINT:
@@ -3469,9 +3478,9 @@ lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
                      DAG.getTargetConstant(FRM, DL, Subtarget.getXLenVT()));
 }
 
-// Expand vector LRINT and LLRINT by converting to the integer domain.
-static SDValue lowerVectorXRINT(SDValue Op, SelectionDAG &DAG,
-                                const RISCVSubtarget &Subtarget) {
+// Expand vector [L]LRINT and [L]LROUND by converting to the integer domain.
+static SDValue lowerVectorXRINT_XROUND(SDValue Op, SelectionDAG &DAG,
+                                       const RISCVSubtarget &Subtarget) {
   SDLoc DL(Op);
   MVT DstVT = Op.getSimpleValueType();
   SDValue Src = Op.getOperand(0);
@@ -7711,11 +7720,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
   case ISD::LRINT:
   case ISD::LLRINT:
-    if (Op.getValueType().isVector())
-      return lowerVectorXRINT(Op, DAG, Subtarget);
-    [[fallthrough]];
   case ISD::LROUND:
   case ISD::LLROUND: {
+    if (Op.getValueType().isVector())
+      return lowerVectorXRINT_XROUND(Op, DAG, Subtarget);
     assert(Op.getOperand(0).getValueType() == MVT::f16 &&
            "Unexpected custom legalisation");
     SDLoc DL(Op);
@@ -23817,9 +23825,9 @@ bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
   return Subtarget.enableUnalignedVectorMem();
 }
 
-
-EVT RISCVTargetLowering::getOptimalMemOpType(const MemOp &Op,
-                                             const AttributeList &FuncAttributes) const {
+EVT RISCVTargetLowering::getOptimalMemOpType(
+    LLVMContext &Context, const MemOp &Op,
+    const AttributeList &FuncAttributes) const {
   if (!Subtarget.hasVInstructions())
     return MVT::Other;
 
@@ -24302,7 +24310,8 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
 }
 
 bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
-    LoadInst *LI, ArrayRef<Value *> DeinterleaveValues, unsigned Factor) const {
+    LoadInst *LI, ArrayRef<Value *> DeinterleaveValues) const {
+  const unsigned Factor = DeinterleaveValues.size();
   if (Factor > 8)
     return false;
 
@@ -24487,8 +24496,9 @@ static bool isMultipleOfN(const Value *V, const DataLayout &DL, unsigned N) {
 /// dealing with factor of 2 (extractvalue is still required for most of other
 /// factors though).
 bool RISCVTargetLowering::lowerInterleavedVPLoad(
-    VPIntrinsic *Load, Value *Mask, ArrayRef<Value *> DeinterleaveResults,
-    unsigned Factor) const {
+    VPIntrinsic *Load, Value *Mask,
+    ArrayRef<Value *> DeinterleaveResults) const {
+  const unsigned Factor = DeinterleaveResults.size();
   assert(Mask && "Expect a valid mask");
   assert(Load->getIntrinsicID() == Intrinsic::vp_load &&
          "Unexpected intrinsic");

@@ -321,7 +321,7 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
 
   case AMDGPU::OPERAND_REG_IMM_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
-     return getLit64Encoding(static_cast<uint64_t>(Imm), STI, false);
+    return getLit64Encoding(static_cast<uint64_t>(Imm), STI, false);
 
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
