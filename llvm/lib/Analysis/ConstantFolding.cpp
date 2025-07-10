@@ -1799,7 +1799,6 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::nvvm_d2ull_rn:
   case Intrinsic::nvvm_d2ull_rp:
   case Intrinsic::nvvm_d2ull_rz:
-    return !Call->isStrictFP();
 
   // NVVM math intrinsics:
   case Intrinsic::nvvm_ceil_d:
@@ -1861,6 +1860,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::nvvm_sqrt_rn_ftz_f:
   case Intrinsic::nvvm_sqrt_approx_f:
   case Intrinsic::nvvm_sqrt_approx_ftz_f:
+    return !Call->isStrictFP();
 
   // Sign operations are actually bitwise operations, they do not raise
   // exceptions even for SNANs.
