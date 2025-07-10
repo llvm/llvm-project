@@ -1063,9 +1063,11 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
       bool IsStdStreamVar = Ty->isPointerType() &&
                             Ty->getPointeeType() == FILETy &&
                             (N == "stdin" || N == "stdout" || N == "stderr");
-      // Pointer value of C standard streams is usually not modified by system
-      // calls. This means they should not get invalidated at system calls and
-      // can not belong to the system memory space.
+      // Pointer value of C standard streams is usually not modified by calls
+      // to functions declared in system headers. This means that they should
+      // not get invalidated by calls to functions declared in system headers,
+      // so they are placed in the global internal space, which is not
+      // invalidated by calls to functions declared in system headers.
       if (Ctx.getSourceManager().isInSystemHeader(D->getLocation()) &&
           !IsStdStreamVar) {
         sReg = getGlobalsRegion(MemRegion::GlobalSystemSpaceRegionKind);
