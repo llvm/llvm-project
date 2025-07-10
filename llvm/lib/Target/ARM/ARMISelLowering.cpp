@@ -715,10 +715,14 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       setLibcallImplCallingConv(RTLIB::__truncsfhf2, CallingConv::ARM_AAPCS);
       setLibcallImplCallingConv(RTLIB::__truncdfhf2, CallingConv::ARM_AAPCS);
       setLibcallImplCallingConv(RTLIB::__extendhfsf2, CallingConv::ARM_AAPCS);
+      setLibcallImplCallingConv(RTLIB::__gnu_h2f_ieee, CallingConv::ARM_AAPCS);
+      setLibcallImplCallingConv(RTLIB::__gnu_f2h_ieee, CallingConv::ARM_AAPCS);
     } else {
       setLibcallImplCallingConv(RTLIB::__truncsfhf2, CallingConv::ARM_APCS);
       setLibcallImplCallingConv(RTLIB::__truncdfhf2, CallingConv::ARM_APCS);
       setLibcallImplCallingConv(RTLIB::__extendhfsf2, CallingConv::ARM_APCS);
+      setLibcallImplCallingConv(RTLIB::__gnu_h2f_ieee, CallingConv::ARM_APCS);
+      setLibcallImplCallingConv(RTLIB::__gnu_f2h_ieee, CallingConv::ARM_APCS);
     }
   }
 
@@ -19219,9 +19223,9 @@ bool ARMTargetLowering::allowsMisalignedMemoryAccesses(EVT VT, unsigned,
   return false;
 }
 
-
 EVT ARMTargetLowering::getOptimalMemOpType(
-    const MemOp &Op, const AttributeList &FuncAttributes) const {
+    LLVMContext &Context, const MemOp &Op,
+    const AttributeList &FuncAttributes) const {
   // See if we can use NEON instructions for this...
   if ((Op.isMemcpy() || Op.isZeroMemset()) && Subtarget->hasNEON() &&
       !FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat)) {
