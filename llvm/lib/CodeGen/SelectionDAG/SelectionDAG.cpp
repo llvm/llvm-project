@@ -8829,7 +8829,7 @@ SelectionDAG::getMemcmp(SDValue Chain, const SDLoc &dl, SDValue Mem0,
     return {};
 
   // Emit a library call.
-  auto GetEntry = [&](Type *Ty, SDValue &SDV) {
+  auto GetEntry = [](Type *Ty, SDValue &SDV) {
     TargetLowering::ArgListEntry E;
     E.Ty = Ty;
     E.Node = SDV;
