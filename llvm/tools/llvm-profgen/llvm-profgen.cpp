@@ -67,6 +67,11 @@ static cl::opt<std::string> DebugBinPath(
              "from it instead of the executable binary."),
     cl::cat(ProfGenCategory));
 
+static cl::opt<std::string> DataAccessProfileFilename(
+    "data-access-profile", cl::value_desc("data-access-profile"),
+    cl::desc("Path of the data access profile to be generated."),
+    cl::cat(ProfGenCategory));
+
 extern cl::opt<bool> ShowDisassemblyOnly;
 extern cl::opt<bool> ShowSourceLocations;
 extern cl::opt<bool> SkipSymbolization;
@@ -178,6 +183,13 @@ int main(int argc, const char *argv[]) {
         PerfReaderBase::create(Binary.get(), PerfFile, PIDFilter);
     // Parse perf events and samples
     Reader->parsePerfTraces();
+
+    if (!DataAccessProfileFilename.empty()) {
+      // Parse the data access perf traces into <ip, data-addr> pairs, symbolize
+      // the data-addr to data-symbol. If the data-addr is a vtable, increment
+      // counters for the <ip, data-symbol> pair.
+      Reader->parseDataAccessPerfTraces(DataAccessProfileFilename, PIDFilter);
+    }
 
     if (SkipSymbolization)
       return EXIT_SUCCESS;
