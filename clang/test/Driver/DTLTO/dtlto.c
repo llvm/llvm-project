@@ -9,25 +9,25 @@
 
 /// Check that options are forwarded as expected with --thinlto-distributor=.
 // RUN: %clang -### @%t.rsp -fthinlto-distributor=d.exe %s 2>&1 | \
-// RUN:   FileCheck %s --implicit-check-not=warning
+// RUN:   FileCheck %s --implicit-check-not=warning --check-prefix=FORWARD
 
-// CHECK: ld.lld
-// CHECK-SAME: "--thinlto-distributor=d.exe"
-// CHECK-SAME: "--thinlto-remote-compiler={{.*}}clang
-// CHECK-SAME: "--thinlto-distributor-arg=a1"
-// CHECK-SAME: "--thinlto-distributor-arg=a2"
-// CHECK-SAME: "--thinlto-distributor-arg=a3"
+// FORWARD: ld.lld
+// FORWARD-SAME: "--thinlto-distributor=d.exe"
+// FORWARD-SAME: "--thinlto-remote-compiler={{.*}}clang
+// FORWARD-SAME: "--thinlto-distributor-arg=a1"
+// FORWARD-SAME: "--thinlto-distributor-arg=a2"
+// FORWARD-SAME: "--thinlto-distributor-arg=a3"
 
 
 /// Check that options are not added without --thinlto-distributor= and
 /// that there is an unused option warning issued for -Xthinlto-distributor=
 /// options. We specify -flto here as these options should be unaffected by it.
 // RUN: %clang -### @%t.rsp -flto=thin %s 2>&1 | \
-// RUN:   FileCheck %s --check-prefixes=NONE,NOMORE --implicit-check-not=warning
+// RUN:   FileCheck %s --check-prefixes=NODIST,NOMORE --implicit-check-not=warning
 
-// NONE: warning: argument unused during compilation: '-Xthinlto-distributor=a1'
-// NONE: warning: argument unused during compilation: '-Xthinlto-distributor=a2,a3'
-// NONE:     ld.lld
+// NODIST: warning: argument unused during compilation: '-Xthinlto-distributor=a1'
+// NODIST: warning: argument unused during compilation: '-Xthinlto-distributor=a2,a3'
+// NODIST: ld.lld
 // NOMORE-NOT: distributor
 // NOMORE-NOT: remote-compiler
 
