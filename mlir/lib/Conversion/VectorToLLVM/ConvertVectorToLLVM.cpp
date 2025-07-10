@@ -1742,7 +1742,6 @@ struct VectorBroadcastScalarToLowRankLowering
   LogicalResult
   matchAndRewrite(vector::BroadcastOp broadcast, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-
     if (isa<VectorType>(broadcast.getSourceType()))
       return rewriter.notifyMatchFailure(
           broadcast, "broadcast from vector type not handled");
@@ -1793,7 +1792,6 @@ struct VectorBroadcastScalarToNdLowering
   LogicalResult
   matchAndRewrite(BroadcastOp broadcast, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-
     if (isa<VectorType>(broadcast.getSourceType()))
       return rewriter.notifyMatchFailure(
           broadcast, "broadcast from vector type not handled");

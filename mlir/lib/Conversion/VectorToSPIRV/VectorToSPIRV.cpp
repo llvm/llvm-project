@@ -578,7 +578,6 @@ public:
   LogicalResult
   matchAndRewrite(vector::BroadcastOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-
     if (isa<VectorType>(op.getSourceType())) {
       return rewriter.notifyMatchFailure(
           op, "only conversion of 'broadcast from scalar' is supported");
