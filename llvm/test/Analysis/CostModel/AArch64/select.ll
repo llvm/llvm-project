@@ -11,17 +11,17 @@ define void @select() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v4 = select i1 undef, i64 undef, i64 undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v5 = select i1 undef, float undef, float undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %v6 = select i1 undef, double undef, double undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:1 Lat:1 SizeLat:1 for: %v13b = select <16 x i1> undef, <16 x i16> undef, <16 x i16> undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %v15b = select <8 x i1> undef, <8 x i32> undef, <8 x i32> undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:1 Lat:1 SizeLat:1 for: %v15c = select <16 x i1> undef, <16 x i32> undef, <16 x i32> undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:1 Lat:1 SizeLat:1 for: %v16a = select <4 x i1> undef, <4 x i64> undef, <4 x i64> undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:160 CodeSize:1 Lat:1 SizeLat:1 for: %v16b = select <8 x i1> undef, <8 x i64> undef, <8 x i64> undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:320 CodeSize:1 Lat:1 SizeLat:1 for: %v16c = select <16 x i1> undef, <16 x i64> undef, <16 x i64> undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v2float = select <2 x i1> undef, <2 x float> undef, <2 x float> undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v4float = select <4 x i1> undef, <4 x float> undef, <4 x float> undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v2double = select <2 x i1> undef, <2 x double> undef, <2 x double> undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v4half = select <4 x i1> undef, <4 x half> undef, <4 x half> undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v8half = select <8 x i1> undef, <8 x half> undef, <8 x half> undef
+; CHECK-NEXT:  Cost Model: Found costs of 16 for: %v13b = select <16 x i1> undef, <16 x i16> undef, <16 x i16> undef
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %v15b = select <8 x i1> undef, <8 x i32> undef, <8 x i32> undef
+; CHECK-NEXT:  Cost Model: Found costs of 16 for: %v15c = select <16 x i1> undef, <16 x i32> undef, <16 x i32> undef
+; CHECK-NEXT:  Cost Model: Found costs of 80 for: %v16a = select <4 x i1> undef, <4 x i64> undef, <4 x i64> undef
+; CHECK-NEXT:  Cost Model: Found costs of 160 for: %v16b = select <8 x i1> undef, <8 x i64> undef, <8 x i64> undef
+; CHECK-NEXT:  Cost Model: Found costs of 320 for: %v16c = select <16 x i1> undef, <16 x i64> undef, <16 x i64> undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v2float = select <2 x i1> undef, <2 x float> undef, <2 x float> undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4float = select <4 x i1> undef, <4 x float> undef, <4 x float> undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v2double = select <2 x i1> undef, <2 x double> undef, <2 x double> undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v4half = select <4 x i1> undef, <4 x half> undef, <4 x half> undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %v8half = select <8 x i1> undef, <8 x half> undef, <8 x half> undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %v1 = select i1 undef, i8 undef, i8 undef
