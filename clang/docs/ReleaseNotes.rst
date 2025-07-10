@@ -932,6 +932,7 @@ Bug Fixes to C++ Support
   through its address (``(&Foo::bar<baz>)()``).
 - Correctly handle allocations in the condition of a ``if constexpr``.(#GH120197) (#GH134820)
 - Fixed a crash when handling invalid member using-declaration in C++20+ mode. (#GH63254)
+- Fixed parsing of lambda expressions that appear after ``*`` or ``&`` in contexts where a declaration can appear. (#GH63880)
 - Fix name lookup in lambda appearing in the body of a requires expression. (#GH147650)
 - Fix a crash when trying to instantiate an ambiguous specialization. (#GH51866)
 - Improved handling of variables with ``consteval`` constructors, to
