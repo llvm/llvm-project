@@ -12,7 +12,7 @@ using namespace ento;
 namespace {
 class MainCallChecker : public Checker<check::PreStmt<CallExpr>> {
 
-  BugType BT{this, "call to main", "example analyzer plugin"};
+  const BugType BT{this, "call to main", "example analyzer plugin"};
 
 public:
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
