@@ -3230,8 +3230,7 @@ public:
   /// \p Mask is a mask value
   /// \p DeinterleaveRes is a list of deinterleaved results.
   virtual bool lowerInterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
-                                      ArrayRef<Value *> DeinterleaveRes,
-                                      unsigned Factor) const {
+                                      ArrayRef<Value *> DeinterleaveRes) const {
     return false;
   }
 
@@ -3254,8 +3253,7 @@ public:
   /// \p DeinterleaveValues contains the deinterleaved values.
   virtual bool
   lowerDeinterleaveIntrinsicToLoad(LoadInst *LI,
-                                   ArrayRef<Value *> DeinterleaveValues,
-                                   unsigned Factor) const {
+                                   ArrayRef<Value *> DeinterleaveValues) const {
     return false;
   }
 

@@ -3140,7 +3140,12 @@ static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
 }
 
 /// Returns true if \p VPValue is a narrow VPValue.
-static bool isAlreadyNarrow(VPValue *VPV) { return VPV->isLiveIn(); }
+static bool isAlreadyNarrow(VPValue *VPV) {
+  if (VPV->isLiveIn())
+    return true;
+  auto *RepR = dyn_cast<VPReplicateRecipe>(VPV);
+  return RepR && RepR->isSingleScalar();
+}
 
 void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
                                              unsigned VectorRegWidth) {
