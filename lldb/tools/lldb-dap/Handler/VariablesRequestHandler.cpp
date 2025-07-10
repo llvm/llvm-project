@@ -141,7 +141,7 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
                           std::optional<std::string> custom_name = {}) {
         if (!child.IsValid())
           return;
-        int64_t child_var_ref =
+        const int64_t child_var_ref =
             dap.variables.InsertVariable(child, is_permanent);
         variables.emplace_back(
             CreateVariable(child, child_var_ref, hex,
