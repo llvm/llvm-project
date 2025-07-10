@@ -4,6 +4,7 @@ on:
   pull_request:
     types:
       - opened
+      - reopened
 
 permissions:
   contents: read
@@ -20,14 +21,33 @@ jobs:
 
       - name: Extract author email
         id: author
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git log -1
-          echo "EMAIL=$(git show -s --format='%ae' HEAD~0)" >> $GITHUB_OUTPUT
+          # Use Github GraphQL APIs to get the email associated with the PR author.
+          query='
+          query($login: String!) {
+            user(login: $login) {
+              email
+            }
+          }'
+
+          PR_AUTHOR=${{ github.event.pull_request.user.login }}
+
+          email=$(gh api graphql -f login="$PR_AUTHOR" -f query="$query" -H "Authorization: Bearer $GITHUB_TOKEN" --jq '.data.user.email')
+          echo "EMAIL_AUTHOR_GH_UI=$email" >> "$GITHUB_OUTPUT"
+
+          # Print the email to the log for debugging purposes.
+          echo "GitHub user's email: $email"
+
           # Create empty comment file
           echo "[]" > comments
 
+      # When EMAIL_AUTHOR_GH_UI is NULL, author's email is hidden in GitHub UI.
+      # In this case, we warn the user to turn off "Keep my email addresses private"
+      # setting in their account.
       - name: Validate author email
-        if: ${{ endsWith(steps.author.outputs.EMAIL, 'noreply.github.com')  }}
+        if: ${{ steps.author.outputs.EMAIL_AUTHOR_GH_UI == '' }}
         env:
           COMMENT: >-
             ⚠️ We detected that you are using a GitHub private e-mail address to contribute to the repo.<br/>
