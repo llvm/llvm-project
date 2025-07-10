@@ -781,6 +781,9 @@ Bug Fixes in This Version
 - Fixed false positives for redeclaration errors of using enum in
   nested scopes. (#GH147495)
 
+- cv- and ref- qualified function types no longer silently produce invalid pointer to
+  qualified function types when they implicitly decay in some places. Fixes (#GH27059).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
