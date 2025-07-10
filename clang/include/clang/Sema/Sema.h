@@ -1614,7 +1614,17 @@ public:
   ///
   /// Triggered by declaration-attribute processing.
   void ProcessAPINotes(Decl *D);
+  /// Apply the 'Nullability:' annotation to the specified declaration
+  void ApplyNullability(Decl *D, NullabilityKind Nullability);
+  /// Apply the 'Type:' annotation to the specified declaration
+  void ApplyAPINotesType(Decl *D, StringRef TypeString);
 
+  /// Whether APINotes should be gathered for all applicable Swift language
+  /// versions, without being applied. Leaving clients of the current module
+  /// to select and apply the correct version.
+  bool captureSwiftVersionIndependentAPINotes() {
+    return APINotes.captureVersionIndependentSwift();
+  }
   ///@}
 
   //
@@ -12501,6 +12511,7 @@ public:
       sema::TemplateDeductionInfo &Info,
       SmallVectorImpl<OriginalCallArg> const *OriginalCallArgs,
       bool PartialOverloading, bool PartialOrdering,
+      bool ForOverloadSetAddressResolution,
       llvm::function_ref<bool(bool)> CheckNonDependent =
           [](bool /*OnlyInitializeNonUserDefinedConversions*/) {
             return false;

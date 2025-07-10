@@ -1787,12 +1787,21 @@ public:
 
       std::optional<Intrinsic::ID> FID =
           VPIntrinsic::getFunctionalIntrinsicIDForVP(ICA.getID());
+
+      // Not functionally equivalent but close enough for cost modelling.
+      if (ICA.getID() == Intrinsic::experimental_vp_reverse)
+        FID = Intrinsic::vector_reverse;
+
       if (FID) {
         // Non-vp version will have same arg types except mask and vector
         // length.
         assert(ICA.getArgTypes().size() >= 2 &&
                "Expected VPIntrinsic to have Mask and Vector Length args and "
                "types");
+
+        ArrayRef<const Value *> NewArgs = ArrayRef(ICA.getArgs());
+        if (!ICA.isTypeBasedOnly())
+          NewArgs = NewArgs.drop_back(2);
         ArrayRef<Type *> NewTys = ArrayRef(ICA.getArgTypes()).drop_back(2);
 
         // VPReduction intrinsics have a start value argument that their non-vp
@@ -1800,11 +1809,14 @@ public:
         // counterpart.
         if (VPReductionIntrinsic::isVPReduction(ICA.getID()) &&
             *FID != Intrinsic::vector_reduce_fadd &&
-            *FID != Intrinsic::vector_reduce_fmul)
+            *FID != Intrinsic::vector_reduce_fmul) {
+          if (!ICA.isTypeBasedOnly())
+            NewArgs = NewArgs.drop_front();
           NewTys = NewTys.drop_front();
+        }
 
-        IntrinsicCostAttributes NewICA(*FID, ICA.getReturnType(), NewTys,
-                                       ICA.getFlags());
+        IntrinsicCostAttributes NewICA(*FID, ICA.getReturnType(), NewArgs,
+                                       NewTys, ICA.getFlags());
         return thisT()->getIntrinsicInstrCost(NewICA, CostKind);
       }
     }

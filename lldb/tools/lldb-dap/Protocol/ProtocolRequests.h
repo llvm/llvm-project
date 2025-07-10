@@ -896,6 +896,54 @@ struct ModulesResponseBody {
 };
 llvm::json::Value toJSON(const ModulesResponseBody &);
 
+/// Arguments for `variables` request.
+struct VariablesArguments {
+  /// The variable for which to retrieve its children. The `variablesReference`
+  /// must have been obtained in the current suspended state. See 'Lifetime of
+  /// Object References' in the Overview section for details.
+  uint64_t variablesReference;
+
+  enum VariablesFilter : unsigned {
+    eVariablesFilterBoth = 0,
+    eVariablesFilterIndexed = 1 << 0,
+    eVariablesFilterNamed = 1 << 1,
+  };
+
+  /// Filter to limit the child variables to either named or indexed. If
+  /// omitted, both types are fetched.
+  VariablesFilter filter = eVariablesFilterBoth;
+
+  /// The index of the first variable to return; if omitted children start at 0.
+  ///
+  /// The attribute is only honored by a debug adapter if the corresponding
+  /// capability `supportsVariablePaging` is true.
+  uint64_t start = 0;
+
+  /// The number of variables to return. If count is missing or 0, all variables
+  /// are returned.
+  ///
+  /// The attribute is only honored by a debug adapter if the corresponding
+  /// capability `supportsVariablePaging` is true.
+  uint64_t count = 0;
+
+  /// Specifies details on how to format the Variable values.
+  ///
+  /// The attribute is only honored by a debug adapter if the corresponding
+  /// capability `supportsValueFormattingOptions` is true.
+  std::optional<ValueFormat> format;
+};
+bool fromJSON(const llvm::json::Value &Param,
+              VariablesArguments::VariablesFilter &VA, llvm::json::Path Path);
+bool fromJSON(const llvm::json::Value &, VariablesArguments &,
+              llvm::json::Path);
+
+/// Response to `variables` request.
+struct VariablesResponseBody {
+  /// All (or a range) of variables for the given variable reference.
+  std::vector<Variable> variables;
+};
+llvm::json::Value toJSON(const VariablesResponseBody &);
+
 /// Arguments for `writeMemory` request.
 struct WriteMemoryArguments {
   /// Memory reference to the base location to which data should be written.

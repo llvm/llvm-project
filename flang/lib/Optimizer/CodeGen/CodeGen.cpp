@@ -2239,17 +2239,18 @@ private:
         getSubcomponentIndices(rebox, rebox.getBox(), operands, fieldIndices);
       if (!rebox.getSubstr().empty())
         substringOffset = operands[rebox.getSubstrOperandIndex()];
-      base = genBoxOffsetGep(rewriter, loc, base, llvmBaseObjectType, zero,
-                             /*cstInteriorIndices=*/std::nullopt, fieldIndices,
-                             substringOffset);
+      base =
+          genBoxOffsetGep(rewriter, loc, base, llvmBaseObjectType, zero,
+                          /*cstInteriorIndices=*/llvm::ArrayRef<mlir::Value>(),
+                          fieldIndices, substringOffset);
     }
 
     if (rebox.getSlice().empty())
       // The array section is of the form array[%component][substring], keep
       // the input array extents and strides.
       return finalizeRebox(rebox, adaptor, destBoxTy, dest, base,
-                           /*lbounds*/ std::nullopt, inputExtents, inputStrides,
-                           rewriter);
+                           /*lbounds*/ llvm::ArrayRef<mlir::Value>(),
+                           inputExtents, inputStrides, rewriter);
 
     // The slice is of the form array(i:j:k)[%component]. Compute new extents
     // and strides.
@@ -2297,8 +2298,8 @@ private:
       }
     }
     return finalizeRebox(rebox, adaptor, destBoxTy, dest, base,
-                         /*lbounds*/ std::nullopt, slicedExtents, slicedStrides,
-                         rewriter);
+                         /*lbounds*/ llvm::ArrayRef<mlir::Value>(),
+                         slicedExtents, slicedStrides, rewriter);
   }
 
   /// Apply a new shape to the data described by a box given the base address,
@@ -3396,7 +3397,8 @@ static void genBrOp(A caseOp, mlir::Block *dest, std::optional<B> destOps,
   if (destOps)
     rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(caseOp, *destOps, dest);
   else
-    rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(caseOp, std::nullopt, dest);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(
+        caseOp, llvm::ArrayRef<mlir::Value>(), dest);
 }
 
 static void genCaseLadderStep(mlir::Location loc, mlir::Value cmp,
