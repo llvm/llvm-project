@@ -549,14 +549,11 @@ handleAArch64BAAndGnuProperties(ObjFile<ELFT> *file, Ctx &ctx,
           baInfo.Pauth.TagSchema != file->aarch64PauthAbiCoreInfo->version)
         Err(ctx)
             << file
-            << " Pauth Data mismatch: file contains both GNU properties and "
-               "AArch64 build attributes sections with different Pauth data";
+            << " GNU properties and build attributes have conflicting AArch64 PAuth data";
     }
     if (baInfo.AndFeatures != file->andFeatures)
       Err(ctx) << file
-               << " Features Data mismatch: file contains both GNU "
-                  "properties and AArch64 build attributes sections with "
-                  "different And Features data";
+               << " GNU properties and build attributes have conflicting AArch64 PAuth data";
   } else {
     // When BuildAttributes are missing, PauthABI value defaults to (TagPlatform
     // = 0, TagSchema = 0). GNU properties do not write PAuthAbiCoreInfo if GNU
@@ -721,12 +718,11 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
     }
   }
 
-  if (hasAArch64BuildAttributes) {
-    // Handle AArch64 Build Attributes and GNU properties:
-    // - Err on mismatched values.
-    // - Store missing values as GNU properties.
+  // Handle AArch64 Build Attributes and GNU properties:
+  // - Err on mismatched values.
+  // - Store missing values as GNU properties.
+  if (hasAArch64BuildAttributes)
     handleAArch64BAAndGnuProperties<ELFT>(this, ctx, aarch64BAsubSections);
-  }
 
   // Read a symbol table.
   initializeSymbols(obj);
