@@ -358,9 +358,6 @@ function build_with_cmake_cache() {
         $ExtraConfigureFlags
         2>&1 | tee $LogDir/llvm.configure-$Flavor.log
 
-  ${MAKE} $J_ARG $Verbose -C $CMakeBuildDir stage2-check-all \
-          2>&1 | tee $LogDir/llvm.make-$Flavor.log > $redir
-
   DESTDIR="${InstallDir}" \
   ${MAKE} -C $CMakeBuildDir stage2-install \
           2>&1 | tee $LogDir/llvm.install-$Flavor.log > $redir
@@ -375,6 +372,10 @@ function build_with_cmake_cache() {
   fi
   mv $Package $InstallDir/usr/local
   popd
+
+  ${MAKE} $J_ARG $Verbose -C $CMakeBuildDir stage2-check-all \
+          2>&1 | tee $LogDir/llvm.make-$Flavor.log > $redir
+
 ) 2>&1 | tee $LogDir/testing.$Release-$RC.log
 
   exit 0
