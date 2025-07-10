@@ -1784,6 +1784,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationPromotedToType(Opcode, MVT::nxv8bf16, MVT::nxv8f32);
     }
 
+    if (Subtarget->hasBF16())
+      setOperationAction(ISD::VECREDUCE_FADD, MVT::nxv8bf16, Custom);
+
     if (!Subtarget->hasSVEB16B16()) {
       for (auto Opcode : {ISD::FADD, ISD::FMA, ISD::FMAXIMUM, ISD::FMAXNUM,
                           ISD::FMINIMUM, ISD::FMINNUM, ISD::FMUL, ISD::FSUB}) {
@@ -16062,6 +16065,22 @@ SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
 
     if (SrcVT.getVectorElementType() == MVT::i1)
       return LowerPredReductionToSVE(Op, DAG);
+
+    if (SrcVT == MVT::nxv8bf16 && Op.getOpcode() == ISD::VECREDUCE_FADD) {
+      assert(Subtarget->hasBF16() &&
+             "VECREDUCE custom lowering expected +bf16!");
+      SDLoc DL(Op);
+      SDValue ID =
+          DAG.getTargetConstant(Intrinsic::aarch64_sve_bfdot, DL, MVT::i64);
+      SDValue Zero = DAG.getConstantFP(0.0, DL, MVT::nxv4f32);
+      SDValue One = DAG.getConstantFP(1.0, DL, MVT::nxv4f32);
+      // Use BFDOT's implicitly promotion to float with partial reduction.
+      SDValue BFDOT = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv4f32, ID,
+                                  Zero, Src, One);
+      SDValue FADDV = DAG.getNode(ISD::VECREDUCE_FADD, DL, MVT::f32, BFDOT);
+      return DAG.getNode(ISD::FP_ROUND, DL, MVT::bf16, FADDV,
+                         DAG.getTargetConstant(0, DL, MVT::i64));
+    }
 
     switch (Op.getOpcode()) {
     case ISD::VECREDUCE_ADD:
