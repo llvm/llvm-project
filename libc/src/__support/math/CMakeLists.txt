@@ -22,3 +22,11 @@ add_header_library(
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
 )
+
+add_header_library(
+  frexpf
+  HDRS
+    frexpf.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+)
