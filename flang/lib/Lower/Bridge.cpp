@@ -3083,25 +3083,25 @@ private:
     Fortran::lower::pft::Evaluation *curEval = &getEval();
 
     if (accLoop || accCombined) {
-      int64_t collapseValue;
+      int64_t loopCount;
       if (accLoop) {
         const Fortran::parser::AccBeginLoopDirective &beginLoopDir =
             std::get<Fortran::parser::AccBeginLoopDirective>(accLoop->t);
         const Fortran::parser::AccClauseList &clauseList =
             std::get<Fortran::parser::AccClauseList>(beginLoopDir.t);
-        collapseValue = Fortran::lower::getCollapseValue(clauseList);
+        loopCount = Fortran::lower::getLoopCountForCollapseAndTile(clauseList);
       } else if (accCombined) {
         const Fortran::parser::AccBeginCombinedDirective &beginCombinedDir =
             std::get<Fortran::parser::AccBeginCombinedDirective>(
                 accCombined->t);
         const Fortran::parser::AccClauseList &clauseList =
             std::get<Fortran::parser::AccClauseList>(beginCombinedDir.t);
-        collapseValue = Fortran::lower::getCollapseValue(clauseList);
+        loopCount = Fortran::lower::getLoopCountForCollapseAndTile(clauseList);
       }
 
       if (curEval->lowerAsStructured()) {
         curEval = &curEval->getFirstNestedEvaluation();
-        for (int64_t i = 1; i < collapseValue; i++)
+        for (int64_t i = 1; i < loopCount; i++)
           curEval = &*std::next(curEval->getNestedEvaluations().begin());
       }
     }
@@ -6155,8 +6155,8 @@ private:
 
       Fortran::lower::defineModuleVariable(*this, var);
     }
-      for (auto &eval : mod.evaluationList)
-        genFIR(eval);
+    for (auto &eval : mod.evaluationList)
+      genFIR(eval);
   }
 
   /// Lower functions contained in a module.

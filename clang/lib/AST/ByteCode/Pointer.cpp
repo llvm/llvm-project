@@ -30,8 +30,8 @@ Pointer::Pointer(Block *Pointee, uint64_t BaseAndOffset)
     : Pointer(Pointee, BaseAndOffset, BaseAndOffset) {}
 
 Pointer::Pointer(const Pointer &P)
-    : Offset(P.Offset), PointeeStorage(P.PointeeStorage),
-      StorageKind(P.StorageKind) {
+    : Offset(P.Offset), StorageKind(P.StorageKind),
+      PointeeStorage(P.PointeeStorage) {
 
   if (isBlockPointer() && PointeeStorage.BS.Pointee)
     PointeeStorage.BS.Pointee->addPointer(this);
@@ -48,8 +48,8 @@ Pointer::Pointer(Block *Pointee, unsigned Base, uint64_t Offset)
 }
 
 Pointer::Pointer(Pointer &&P)
-    : Offset(P.Offset), PointeeStorage(P.PointeeStorage),
-      StorageKind(P.StorageKind) {
+    : Offset(P.Offset), StorageKind(P.StorageKind),
+      PointeeStorage(P.PointeeStorage) {
 
   if (StorageKind == Storage::Block && PointeeStorage.BS.Pointee)
     PointeeStorage.BS.Pointee->replacePointer(&P, this);

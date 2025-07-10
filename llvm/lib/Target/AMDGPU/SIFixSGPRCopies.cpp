@@ -1088,8 +1088,7 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
       assert(MF.getSubtarget<GCNSubtarget>().useRealTrue16Insts() &&
              "We do not expect to see 16-bit copies from VGPR to SGPR unless "
              "we have 16-bit VGPRs");
-      assert(MRI->getRegClass(DstReg) == &AMDGPU::SGPR_LO16RegClass ||
-             MRI->getRegClass(DstReg) == &AMDGPU::SReg_32RegClass ||
+      assert(MRI->getRegClass(DstReg) == &AMDGPU::SReg_32RegClass ||
              MRI->getRegClass(DstReg) == &AMDGPU::SReg_32_XM0RegClass);
       // There is no V_READFIRSTLANE_B16, so legalize the dst/src reg to 32 bits
       MRI->setRegClass(DstReg, &AMDGPU::SReg_32_XM0RegClass);
