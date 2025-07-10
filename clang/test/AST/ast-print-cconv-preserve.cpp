@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -ast-print %s -o - | FileCheck %s
+// RUN: %clang_cc1 -ast-print -triple x86_64-unknown-unknown %s -o - | FileCheck %s
 
 void (__attribute__((preserve_none)) *none)();
 
