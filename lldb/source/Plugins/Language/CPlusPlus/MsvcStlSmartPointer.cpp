@@ -142,7 +142,7 @@ lldb_private::formatters::MsvcStlSmartPointerSyntheticFrontEnd::Update() {
 llvm::Expected<size_t>
 lldb_private::formatters::MsvcStlSmartPointerSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
-  if (name == "_Ptr" || name == "pointer")
+  if (name == "pointer")
     return 0;
 
   if (name == "object" || name == "$$dereference$$")
