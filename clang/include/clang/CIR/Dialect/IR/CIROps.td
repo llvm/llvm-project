@@ -1679,10 +1679,10 @@ def SetBitfieldOp : CIR_Op<"set_bitfield"> {
     The `cir.set_bitfield` operation provides a store-like access to
     a bit field of a record.
 
-    It expects an address of a storage where to store, a type of the storage,
-    a value being stored, a name of a bit field, a pointer to the storage in the
-    base record, a size of the storage, a size the bit field, an offset
-    of the bit field and a sign. Returns a value being stored.
+    A bitfield info attribute must be provided to describe the location of
+    the bitfield within the memory referenced by the $addr argument.
+    The $src argument is inserted at the appropriate place in the memory and
+    the value that was stored. Returns a value being stored.
 
     A unit attribute `volatile` can be used to indicate a volatile store of the
     bitfield.
