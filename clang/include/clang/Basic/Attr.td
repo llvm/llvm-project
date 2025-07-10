@@ -3068,6 +3068,26 @@ def Regparm : TypeAttr {
   let ASTNode = 0;
 }
 
+def SwiftType : Attr {
+  // This attribute has no spellings as it is only ever created implicitly
+  // from API notes.
+  let Spellings = [];
+  let Args = [StringArgument<"TypeString">];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
+}
+
+def SwiftNullability : Attr {
+  // This attribute has no spellings as it is only ever created implicitly
+  // from API notes.
+  let Spellings = [];
+  let Args = [EnumArgument<"Kind", "Kind", /*is_string=*/false,
+                           ["non_null", "nullable", "unspecified", "nullable_result"],
+                           ["NonNull", "Nullable", "Unspecified", "NullableResult"]>];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
+}
+
 def SwiftAsyncName : InheritableAttr {
   let Spellings = [GNU<"swift_async_name">];
   let Args = [StringArgument<"Name">];
