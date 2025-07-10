@@ -22,6 +22,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_SCHEDULER_H
 
 #include "llvm/SandboxIR/Instruction.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/DependencyGraph.h"
 #include <queue>
 
@@ -143,11 +144,11 @@ public:
   const_iterator begin() const { return Nodes.begin(); }
   const_iterator end() const { return Nodes.end(); }
   /// \Returns the bundle node that comes before the others in program order.
-  DGNode *getTop() const;
+  LLVM_ABI DGNode *getTop() const;
   /// \Returns the bundle node that comes after the others in program order.
-  DGNode *getBot() const;
+  LLVM_ABI DGNode *getBot() const;
   /// Move all bundle instructions to \p Where back-to-back.
-  void cluster(BasicBlock::iterator Where);
+  LLVM_ABI void cluster(BasicBlock::iterator Where);
   /// \Returns true if all nodes in the bundle are ready.
   bool ready() const {
     return all_of(Nodes, [](const auto *N) { return N->ready(); });
@@ -182,7 +183,7 @@ class Scheduler {
   /// Called by Sandbox IR's callback system, after \p I has been created.
   /// NOTE: This should run after DAG's callback has run.
   // TODO: Perhaps call DAG's notify function from within this one?
-  void notifyCreateInstr(Instruction *I);
+  LLVM_ABI void notifyCreateInstr(Instruction *I);
 
   /// \Returns a scheduling bundle containing \p Instrs.
   SchedBundle *createBundle(ArrayRef<Instruction *> Instrs);
@@ -206,7 +207,8 @@ class Scheduler {
                     /// were in the same SchedBundle.
   };
   /// \Returns whether none/some/all of \p Instrs have been scheduled.
-  BndlSchedState getBndlSchedState(ArrayRef<Instruction *> Instrs) const;
+  LLVM_ABI BndlSchedState
+  getBndlSchedState(ArrayRef<Instruction *> Instrs) const;
   /// Destroy the top-most part of the schedule that includes \p Instrs.
   void trimSchedule(ArrayRef<Instruction *> Instrs);
   /// Disable copies.
@@ -229,7 +231,7 @@ public:
   /// dependencies among \p Instrs. This function may involve scheduling
   /// intermediate instructions or canceling and re-scheduling if needed.
   /// \Returns true on success, false otherwise.
-  bool trySchedule(ArrayRef<Instruction *> Instrs);
+  LLVM_ABI bool trySchedule(ArrayRef<Instruction *> Instrs);
   /// Clear the scheduler's state, including the DAG.
   void clear() {
     Bndls.clear();

@@ -798,6 +798,60 @@ exit:
   ret i32 0
 }
 
+define void @rewrite_add_rec() {
+; CHECK-LABEL: 'rewrite_add_rec'
+; CHECK-NEXT:  Classifying expressions for: @rewrite_add_rec
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %outer.latch ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%outer.header> U: [0,10) S: [0,10) Exits: 9 LoopDispositions: { %outer.header: Computable, %inner: Invariant }
+; CHECK-NEXT:    %sub = sub i64 9, %iv
+; CHECK-NEXT:    --> {9,+,-1}<nsw><%outer.header> U: [0,10) S: [0,10) Exits: 0 LoopDispositions: { %outer.header: Computable, %inner: Invariant }
+; CHECK-NEXT:    %n.vec = and i64 %sub, -2
+; CHECK-NEXT:    --> (2 * ({9,+,-1}<nsw><%outer.header> /u 2))<nuw><nsw> U: [0,9) S: [0,9) Exits: 0 LoopDispositions: { %outer.header: Computable, %inner: Invariant }
+; CHECK-NEXT:    %inner.iv = phi i64 [ 0, %inner.ph ], [ %inner.iv.next, %inner ]
+; CHECK-NEXT:    --> {0,+,2}<%inner> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: (2 * ((-2 + (2 * ({9,+,-1}<nsw><%outer.header> /u 2))<nuw><nsw>)<nsw> /u 2))<nuw> LoopDispositions: { %inner: Computable, %outer.header: Variant }
+; CHECK-NEXT:    %inner.iv.next = add i64 %inner.iv, 2
+; CHECK-NEXT:    --> {2,+,2}<%inner> U: [0,-1) S: [-9223372036854775808,9223372036854775807) Exits: (2 + (2 * ((-2 + (2 * ({9,+,-1}<nsw><%outer.header> /u 2))<nuw><nsw>)<nsw> /u 2))<nuw>) LoopDispositions: { %inner: Computable, %outer.header: Variant }
+; CHECK-NEXT:    %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%outer.header> U: [1,11) S: [1,11) Exits: 10 LoopDispositions: { %outer.header: Computable, %inner: Invariant }
+; CHECK-NEXT:  Determining loop execution counts for: @rewrite_add_rec
+; CHECK-NEXT:  Loop %inner: backedge-taken count is ((-2 + (2 * ({9,+,-1}<nsw><%outer.header> /u 2))<nuw><nsw>)<nsw> /u 2)
+; CHECK-NEXT:  Loop %inner: constant max backedge-taken count is i64 9223372036854775807
+; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is ((-2 + (2 * ({9,+,-1}<nsw><%outer.header> /u 2))<nuw><nsw>)<nsw> /u 2)
+; CHECK-NEXT:  Loop %inner: Trip multiple is 1
+; CHECK-NEXT:  Loop %outer.header: backedge-taken count is i64 9
+; CHECK-NEXT:  Loop %outer.header: constant max backedge-taken count is i64 9
+; CHECK-NEXT:  Loop %outer.header: symbolic max backedge-taken count is i64 9
+; CHECK-NEXT:  Loop %outer.header: Trip multiple is 10
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %outer.latch ]
+  %sub = sub i64 9, %iv
+  %min.iters.check = icmp ult i64 %sub, 2
+  br i1 %min.iters.check, label %outer.latch, label %inner.ph
+
+inner.ph:
+  %n.vec = and i64 %sub, -2
+  br label %inner
+
+inner:
+  %inner.iv = phi i64 [ 0, %inner.ph ], [ %inner.iv.next, %inner ]
+  %inner.iv.next = add i64 %inner.iv, 2
+  call void @use(i64 %inner.iv)
+  %ec.inner = icmp eq i64 %inner.iv.next, %n.vec
+  br i1 %ec.inner, label %outer.latch, label %inner
+
+outer.latch:
+  %iv.next = add i64 %iv, 1
+  %ec.outer = icmp eq i64 %iv.next, 10
+  br i1 %ec.outer, label %exit, label %outer.header
+
+exit:
+  ret void
+}
+
 declare void @use(i64)
 
 declare i32 @llvm.umin.i32(i32, i32)
