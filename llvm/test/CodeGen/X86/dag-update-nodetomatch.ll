@@ -96,17 +96,6 @@ entry:
 define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-LABEL: _Z2x6v:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq x1@GOTPCREL(%rip), %rax
-; CHECK-NEXT:    movl (%rax), %eax
-; CHECK-NEXT:    andl $511, %eax # imm = 0x1FF
-; CHECK-NEXT:    leaq 1(%rax), %rdx
-; CHECK-NEXT:    movq x4@GOTPCREL(%rip), %rcx
-; CHECK-NEXT:    movl %edx, (%rcx)
-; CHECK-NEXT:    movq x3@GOTPCREL(%rip), %rcx
-; CHECK-NEXT:    movl (%rcx), %ecx
-; CHECK-NEXT:    testl %ecx, %ecx
-; CHECK-NEXT:    je .LBB1_18
-; CHECK-NEXT:  # %bb.1: # %for.cond1thread-pre-split.lr.ph
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    pushq %r15
@@ -125,21 +114,32 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    .cfi_offset %r14, -32
 ; CHECK-NEXT:    .cfi_offset %r15, -24
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movq x5@GOTPCREL(%rip), %rsi
-; CHECK-NEXT:    movq (%rsi), %rsi
-; CHECK-NEXT:    movl %ecx, %edi
-; CHECK-NEXT:    notl %edi
-; CHECK-NEXT:    leaq 8(,%rdi,8), %rdi
-; CHECK-NEXT:    imulq %rdx, %rdi
+; CHECK-NEXT:    movq x1@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movl (%rax), %ebx
+; CHECK-NEXT:    andl $511, %ebx # imm = 0x1FF
+; CHECK-NEXT:    leaq 1(%rbx), %rax
+; CHECK-NEXT:    movq x4@GOTPCREL(%rip), %rcx
+; CHECK-NEXT:    movl %eax, (%rcx)
+; CHECK-NEXT:    movq x3@GOTPCREL(%rip), %rcx
+; CHECK-NEXT:    movl (%rcx), %ecx
+; CHECK-NEXT:    testl %ecx, %ecx
+; CHECK-NEXT:    je .LBB1_18
+; CHECK-NEXT:  # %bb.1: # %for.cond1thread-pre-split.lr.ph
+; CHECK-NEXT:    movq x5@GOTPCREL(%rip), %rdx
+; CHECK-NEXT:    movq (%rdx), %rsi
+; CHECK-NEXT:    movl %ecx, %edx
+; CHECK-NEXT:    notl %edx
+; CHECK-NEXT:    leaq 8(,%rdx,8), %rdi
+; CHECK-NEXT:    imulq %rax, %rdi
 ; CHECK-NEXT:    addq %rsi, %rdi
 ; CHECK-NEXT:    movq x2@GOTPCREL(%rip), %r8
 ; CHECK-NEXT:    movl (%r8), %edx
-; CHECK-NEXT:    leal 8(,%rax,8), %r9d
-; CHECK-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    leaq 8(%rsi), %r9
-; CHECK-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    leal 8(,%rbx,8), %eax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    leaq 8(%rsi), %rax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    leaq 32(%rsi), %r11
-; CHECK-NEXT:    leaq 8(,%rax,8), %rbx
+; CHECK-NEXT:    leaq 8(,%rbx,8), %rbx
 ; CHECK-NEXT:    xorl %r14d, %r14d
 ; CHECK-NEXT:    movq x0@GOTPCREL(%rip), %r15
 ; CHECK-NEXT:    movq %rsi, %r12
@@ -195,8 +195,8 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    ja .LBB1_14
 ; CHECK-NEXT:  .LBB1_7: # %vector.body.preheader
 ; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    leaq -4(%rdx), %r10
-; CHECK-NEXT:    btl $2, %r10d
+; CHECK-NEXT:    leaq -4(%rdx), %rax
+; CHECK-NEXT:    btl $2, %eax
 ; CHECK-NEXT:    jb .LBB1_8
 ; CHECK-NEXT:  # %bb.9: # %vector.body.prol.preheader
 ; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
@@ -204,21 +204,22 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; CHECK-NEXT:    movdqu %xmm0, (%r12,%r13,8)
 ; CHECK-NEXT:    movdqu %xmm0, 16(%r12,%r13,8)
-; CHECK-NEXT:    movl $4, %eax
-; CHECK-NEXT:    shrq $2, %r10
+; CHECK-NEXT:    movl $4, %r10d
+; CHECK-NEXT:    shrq $2, %rax
 ; CHECK-NEXT:    jne .LBB1_11
 ; CHECK-NEXT:    jmp .LBB1_13
 ; CHECK-NEXT:  .LBB1_8: # in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    shrq $2, %r10
+; CHECK-NEXT:    xorl %r10d, %r10d
+; CHECK-NEXT:    shrq $2, %rax
 ; CHECK-NEXT:    je .LBB1_13
 ; CHECK-NEXT:  .LBB1_11: # %vector.body.preheader.new
 ; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; CHECK-NEXT:    leaq (%rax,%r13), %r9
-; CHECK-NEXT:    leaq (%r11,%r9,8), %r10
+; CHECK-NEXT:    movq %r10, %rax
 ; CHECK-NEXT:    subq %rdx, %rax
+; CHECK-NEXT:    addq %r13, %r10
+; CHECK-NEXT:    leaq (%r11,%r10,8), %r10
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_12: # %vector.body
 ; CHECK-NEXT:    # Parent Loop BB1_2 Depth=1
@@ -252,6 +253,7 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    movq %rdi, (%rax)
 ; CHECK-NEXT:    movq x3@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movl $0, (%rax)
+; CHECK-NEXT:  .LBB1_18: # %for.end5
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    popq %r12
@@ -264,13 +266,6 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    .cfi_restore %rbx
-; CHECK-NEXT:    .cfi_restore %r12
-; CHECK-NEXT:    .cfi_restore %r13
-; CHECK-NEXT:    .cfi_restore %r14
-; CHECK-NEXT:    .cfi_restore %r15
-; CHECK-NEXT:    .cfi_restore %rbp
-; CHECK-NEXT:  .LBB1_18: # %for.end5
 ; CHECK-NEXT:    retq
 entry:
   %0 = load i32, ptr @x1, align 4

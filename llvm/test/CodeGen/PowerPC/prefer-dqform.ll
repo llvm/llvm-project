@@ -41,24 +41,24 @@ define void @test(ptr dereferenceable(4) %.ial, ptr noalias dereferenceable(4) %
 ; CHECK-P9-NEXT:    lxvdsx vs0, 0, r8
 ; CHECK-P9-NEXT:    rldicl r3, r3, 60, 4
 ; CHECK-P9-NEXT:    extswsli r5, r5, 3
+; CHECK-P9-NEXT:    add r4, r9, r10
 ; CHECK-P9-NEXT:    addi r3, r3, 1
-; CHECK-P9-NEXT:    sub r4, r10, r5
-; CHECK-P9-NEXT:    add r5, r9, r10
+; CHECK-P9-NEXT:    sub r5, r10, r5
 ; CHECK-P9-NEXT:    mtctr r3
-; CHECK-P9-NEXT:    add r4, r6, r4
+; CHECK-P9-NEXT:    add r5, r6, r5
 ; CHECK-P9-NEXT:    .p2align 4
 ; CHECK-P9-NEXT:  .LBB0_2: # %_loop_2_do_
 ; CHECK-P9-NEXT:    #
-; CHECK-P9-NEXT:    lxv vs1, -16(r5)
-; CHECK-P9-NEXT:    lxv vs2, 0(r5)
-; CHECK-P9-NEXT:    lxv vs3, -16(r4)
-; CHECK-P9-NEXT:    lxv vs4, 0(r4)
-; CHECK-P9-NEXT:    addi r4, r4, 128
-; CHECK-P9-NEXT:    xvmaddadp vs1, vs3, vs1
-; CHECK-P9-NEXT:    stxv vs1, -16(r5)
-; CHECK-P9-NEXT:    xvmaddadp vs2, vs4, vs0
-; CHECK-P9-NEXT:    stxv vs2, 0(r5)
+; CHECK-P9-NEXT:    lxv vs1, -16(r4)
+; CHECK-P9-NEXT:    lxv vs2, 0(r4)
+; CHECK-P9-NEXT:    lxv vs3, -16(r5)
+; CHECK-P9-NEXT:    lxv vs4, 0(r5)
 ; CHECK-P9-NEXT:    addi r5, r5, 128
+; CHECK-P9-NEXT:    xvmaddadp vs1, vs3, vs1
+; CHECK-P9-NEXT:    stxv vs1, -16(r4)
+; CHECK-P9-NEXT:    xvmaddadp vs2, vs4, vs0
+; CHECK-P9-NEXT:    stxv vs2, 0(r4)
+; CHECK-P9-NEXT:    addi r4, r4, 128
 ; CHECK-P9-NEXT:    bdnz .LBB0_2
 ; CHECK-P9-NEXT:  # %bb.3: # %_return_bb
 ; CHECK-P9-NEXT:    blr
@@ -92,25 +92,25 @@ define void @test(ptr dereferenceable(4) %.ial, ptr noalias dereferenceable(4) %
 ; CHECK-P10-NEXT:    sub r3, r7, r3
 ; CHECK-P10-NEXT:    lxvdsx vs0, 0, r8
 ; CHECK-P10-NEXT:    rldicl r3, r3, 60, 4
+; CHECK-P10-NEXT:    add r4, r9, r10
 ; CHECK-P10-NEXT:    extswsli r5, r5, 3
 ; CHECK-P10-NEXT:    addi r3, r3, 1
-; CHECK-P10-NEXT:    sub r4, r10, r5
-; CHECK-P10-NEXT:    add r5, r9, r10
+; CHECK-P10-NEXT:    sub r5, r10, r5
 ; CHECK-P10-NEXT:    mtctr r3
-; CHECK-P10-NEXT:    add r4, r6, r4
+; CHECK-P10-NEXT:    add r5, r6, r5
 ; CHECK-P10-NEXT:    .p2align 4
 ; CHECK-P10-NEXT:  .LBB0_2: # %_loop_2_do_
 ; CHECK-P10-NEXT:    #
-; CHECK-P10-NEXT:    lxv vs1, -16(r5)
-; CHECK-P10-NEXT:    lxv vs2, 0(r5)
-; CHECK-P10-NEXT:    lxv vs3, -16(r4)
+; CHECK-P10-NEXT:    lxv vs1, -16(r4)
+; CHECK-P10-NEXT:    lxv vs2, 0(r4)
+; CHECK-P10-NEXT:    lxv vs3, -16(r5)
 ; CHECK-P10-NEXT:    xvmaddadp vs1, vs3, vs1
-; CHECK-P10-NEXT:    lxv vs4, 0(r4)
+; CHECK-P10-NEXT:    lxv vs4, 0(r5)
 ; CHECK-P10-NEXT:    xvmaddadp vs2, vs4, vs0
-; CHECK-P10-NEXT:    addi r4, r4, 128
-; CHECK-P10-NEXT:    stxv vs1, -16(r5)
-; CHECK-P10-NEXT:    stxv vs2, 0(r5)
 ; CHECK-P10-NEXT:    addi r5, r5, 128
+; CHECK-P10-NEXT:    stxv vs1, -16(r4)
+; CHECK-P10-NEXT:    stxv vs2, 0(r4)
+; CHECK-P10-NEXT:    addi r4, r4, 128
 ; CHECK-P10-NEXT:    bdnz .LBB0_2
 ; CHECK-P10-NEXT:  # %bb.3: # %_return_bb
 ; CHECK-P10-NEXT:    blr

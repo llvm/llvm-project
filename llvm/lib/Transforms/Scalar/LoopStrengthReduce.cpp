@@ -200,11 +200,16 @@ static cl::opt<bool> DropScaledForVScale(
     "lsr-drop-scaled-reg-for-vscale", cl::Hidden, cl::init(true),
     cl::desc("Avoid using scaled registers with vscale-relative addressing"));
 
+static cl::opt<unsigned> MinExpensiveFromulaeNum(
+    "lsr-min-expensive-formula-num", cl::Hidden, cl::init(16),
+    cl::desc(
+        "Minimum number of use formulae to consider their study expensive"));
+
 #ifndef NDEBUG
 // Stress test IV chain generation.
-static cl::opt<bool> StressIVChain(
-  "stress-ivchain", cl::Hidden, cl::init(false),
-  cl::desc("Stress test LSR IV chains"));
+static cl::opt<bool> StressIVChain("stress-ivchain", cl::Hidden,
+                                   cl::init(false),
+                                   cl::desc("Stress test LSR IV chains"));
 #else
 static bool StressIVChain = false;
 #endif
@@ -5388,13 +5393,26 @@ bool LSRInstance::SortLSRUses() {
 
   stable_sort(NewOrder, [](const LSRUse *L, const LSRUse *R) {
     auto CalcKey = [](const LSRUse *LU) {
-      // LSRUses w/ many registers and formulae go first avoid too big
-      // reduction of considered solutions count
       return std::tuple(LU->Regs.size(), LU->Formulae.size(), LU->Kind,
                         LU->MinOffset.getKnownMinValue(),
                         LU->MaxOffset.getKnownMinValue(),
                         LU->AllFixupsOutsideLoop, LU->RigidFormula);
     };
+
+    bool LExpensive = L->Formulae.size() >= MinExpensiveFromulaeNum;
+    bool RExpensive = R->Formulae.size() >= MinExpensiveFromulaeNum;
+
+    // If there are too many forlmulae then LSRUses w/ less formulae
+    // go first to save compilation time
+    if (LExpensive != RExpensive) {
+      return RExpensive;
+    }
+    if (LExpensive) {
+      return L->Formulae.size() < R->Formulae.size();
+    }
+
+    // LSRUses w/ many registers and formulae go first to avoid too big
+    // reduction of considered solutions count
     return CalcKey(L) > CalcKey(R);
   });
 

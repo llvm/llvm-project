@@ -30,8 +30,8 @@ define void @test(i32 %A, i32 %B, i32 %C) {
 ; DEFAULT-NEXT:    [[TMP7:%.*]] = add i32 [[TMP0]], [[PHI2]]
 ; DEFAULT-NEXT:    br label [[INNER_LOOP:%.*]]
 ; DEFAULT:       inner_loop:
-; DEFAULT-NEXT:    [[LSR_IV1:%.*]] = phi i32 [ [[LSR_IV_NEXT2:%.*]], [[INNER_LOOP]] ], [ [[TMP5]], [[PREHEADER]] ]
 ; DEFAULT-NEXT:    [[LSR_IV3:%.*]] = phi i32 [ [[LSR_IV_NEXT4:%.*]], [[INNER_LOOP]] ], [ [[TMP6]], [[PREHEADER]] ]
+; DEFAULT-NEXT:    [[LSR_IV1:%.*]] = phi i32 [ [[LSR_IV_NEXT2:%.*]], [[INNER_LOOP]] ], [ [[TMP5]], [[PREHEADER]] ]
 ; DEFAULT-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[INNER_LOOP]] ], [ [[TMP3]], [[PREHEADER]] ]
 ; DEFAULT-NEXT:    [[PHI5:%.*]] = phi i32 [ [[PHI3]], [[PREHEADER]] ], [ [[I30:%.*]], [[INNER_LOOP]] ]
 ; DEFAULT-NEXT:    [[PHI6:%.*]] = phi i32 [ [[PHI2]], [[PREHEADER]] ], [ [[I33:%.*]], [[INNER_LOOP]] ]
@@ -58,8 +58,8 @@ define void @test(i32 %A, i32 %B, i32 %C) {
 ; DEFAULT-NEXT:    [[I33]] = add i32 [[PHI6]], -3
 ; DEFAULT-NEXT:    [[ITER_SUB]] = add i32 [[ITER]], -1
 ; DEFAULT-NEXT:    [[LSR_IV_NEXT]] = add i32 [[LSR_IV]], 3
-; DEFAULT-NEXT:    [[LSR_IV_NEXT4]] = add i32 [[LSR_IV3]], -3
 ; DEFAULT-NEXT:    [[LSR_IV_NEXT2]] = add i32 [[LSR_IV1]], 3
+; DEFAULT-NEXT:    [[LSR_IV_NEXT4]] = add i32 [[LSR_IV3]], -3
 ; DEFAULT-NEXT:    [[ITER_CMP:%.*]] = icmp eq i32 [[ITER_SUB]], 0
 ; DEFAULT-NEXT:    br i1 [[ITER_CMP]], label [[OUTER_TAIL_LOOPEXIT:%.*]], label [[INNER_LOOP]]
 ; DEFAULT:       outer_tail.loopexit:
@@ -95,8 +95,8 @@ define void @test(i32 %A, i32 %B, i32 %C) {
 ; LIMIT-NEXT:    [[TMP7:%.*]] = add i32 [[TMP0]], [[PHI2]]
 ; LIMIT-NEXT:    br label [[INNER_LOOP:%.*]]
 ; LIMIT:       inner_loop:
-; LIMIT-NEXT:    [[LSR_IV1:%.*]] = phi i32 [ [[LSR_IV_NEXT2:%.*]], [[INNER_LOOP]] ], [ [[TMP5]], [[PREHEADER]] ]
 ; LIMIT-NEXT:    [[LSR_IV3:%.*]] = phi i32 [ [[LSR_IV_NEXT4:%.*]], [[INNER_LOOP]] ], [ [[TMP6]], [[PREHEADER]] ]
+; LIMIT-NEXT:    [[LSR_IV1:%.*]] = phi i32 [ [[LSR_IV_NEXT2:%.*]], [[INNER_LOOP]] ], [ [[TMP5]], [[PREHEADER]] ]
 ; LIMIT-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[INNER_LOOP]] ], [ [[TMP3]], [[PREHEADER]] ]
 ; LIMIT-NEXT:    [[PHI5:%.*]] = phi i32 [ [[PHI3]], [[PREHEADER]] ], [ [[I30:%.*]], [[INNER_LOOP]] ]
 ; LIMIT-NEXT:    [[PHI6:%.*]] = phi i32 [ [[PHI2]], [[PREHEADER]] ], [ [[I33:%.*]], [[INNER_LOOP]] ]
@@ -123,8 +123,8 @@ define void @test(i32 %A, i32 %B, i32 %C) {
 ; LIMIT-NEXT:    [[I33]] = add i32 [[PHI6]], -3
 ; LIMIT-NEXT:    [[ITER_SUB]] = add i32 [[ITER]], -1
 ; LIMIT-NEXT:    [[LSR_IV_NEXT]] = add i32 [[LSR_IV]], 3
-; LIMIT-NEXT:    [[LSR_IV_NEXT4]] = add i32 [[LSR_IV3]], -3
 ; LIMIT-NEXT:    [[LSR_IV_NEXT2]] = add i32 [[LSR_IV1]], 3
+; LIMIT-NEXT:    [[LSR_IV_NEXT4]] = add i32 [[LSR_IV3]], -3
 ; LIMIT-NEXT:    [[ITER_CMP:%.*]] = icmp eq i32 [[ITER_SUB]], 0
 ; LIMIT-NEXT:    br i1 [[ITER_CMP]], label [[OUTER_TAIL_LOOPEXIT:%.*]], label [[INNER_LOOP]]
 ; LIMIT:       outer_tail.loopexit:
