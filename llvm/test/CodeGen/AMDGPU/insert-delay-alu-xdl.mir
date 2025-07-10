@@ -1,0 +1,122 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs -start-before=amdgpu-insert-delay-alu %s -o - | FileCheck %s
+
+---
+name: wmma_xdl_twoaddr_trans
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}wmma_xdl_twoaddr_trans:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] clamp
+    ; CHECK-NEXT: v_exp_f32_e32 v16, v16
+    ; CHECK-NEXT: s_delay_alu instid0(XDL_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v18, v9, v9
+    ; CHECK-NEXT: v_add_nc_u32_e32 v17, v17, v16
+    liveins: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr9, $vgpr16, $vgpr17, $vgpr18
+    $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X16_FP8_FP8_twoaddr killed renamable $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, -1, 0, 0, implicit $exec
+    $vgpr16 = V_EXP_F32_e32 $vgpr16, implicit $exec, implicit $mode
+    $vgpr18 = V_ADD_U32_e32 $vgpr9, $vgpr9, implicit $exec
+    $vgpr17 = V_ADD_U32_e32 $vgpr17, $vgpr16, implicit $exec
+...
+
+---
+name: wmma_xdl_twoaddr_valu
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}wmma_xdl_twoaddr_valu:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] clamp
+    ; CHECK-NEXT: v_exp_f32_e32 v16, v16
+    ; CHECK-NEXT: s_delay_alu instid0(TRANS32_DEP_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v18, v16, v16
+    ; CHECK-NEXT: s_delay_alu instid0(XDL_DEP_1) | instid1(VALU_DEP_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v17, v18, v4
+    liveins: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr9, $vgpr16, $vgpr17, $vgpr18
+    $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X16_FP8_FP8_twoaddr killed renamable $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, -1, 0, 0, implicit $exec
+    $vgpr16 = V_EXP_F32_e32 $vgpr16, implicit $exec, implicit $mode
+    $vgpr18 = V_ADD_U32_e32 $vgpr16, $vgpr16, implicit $exec
+    $vgpr17 = V_ADD_U32_e32 $vgpr18, $vgpr4, implicit $exec
+...
+
+---
+name: wmma_xdl_twoaddr
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}wmma_xdl_twoaddr:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] clamp
+    ; CHECK-NEXT: s_delay_alu instid0(XDL_DEP_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v18, v9, v9
+    liveins: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr9, $vgpr16, $vgpr17, $vgpr18
+    $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X16_FP8_FP8_twoaddr killed renamable $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, -1, 0, 0, implicit $exec
+    $vgpr18 = V_ADD_U32_e32 $vgpr9, $vgpr9, implicit $exec
+...
+
+---
+name: swmma_xdl_twoaddr
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}swmma_xdl_twoaddr:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_swmma_f16_16x16_f16 v[12:15], v[0:3], v[4:11], v[12:15], v16 sparse_index_odd clamp
+    ; CHECK-NEXT: s_delay_alu instid0(XDL_DEP_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v18, v12, v12
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, $vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16, $vgpr18
+    $vgpr12_vgpr13_vgpr14_vgpr15 = V_SWMMA_F16_16X16X32_F16_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, $vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16, -1, -1, 0, 0, implicit $exec
+    $vgpr18 = V_ADD_U32_e32 $vgpr12, $vgpr12, implicit $exec
+...
+
+---
+name: dot_xdl_dep_2
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}dot_xdl_dep_2:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_dot4_i32_iu8 v0, s2, s3, v0 neg_lo:[1,1,0]
+    ; CHECK-NEXT: v_dot4_i32_iu8 v1, s2, s3, v2 neg_lo:[1,1,0]
+    ; CHECK-NEXT: s_delay_alu instid0(XDL_DEP_2)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v2, v0, v0
+    liveins: $vgpr0, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2
+    $vgpr0 = V_DOT4_I32_IU8 9, $sgpr2, 9, $sgpr3, 8, $vgpr0, 0, 0, 0, implicit $exec
+    $vgpr1 = V_DOT4_I32_IU8 9, $sgpr2, 9, $sgpr3, 8, $vgpr2, 0, 0, 0, implicit $exec
+    $vgpr2 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+# There's no encoding for XDL_DEP_3. A normal XDL instruction will have
+# completed already.
+---
+name: dot_xdl_dep_3
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}dot_xdl_dep_3:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_dot4_i32_iu8 v0, s2, s3, v0 neg_lo:[1,1,0]
+    ; CHECK-NEXT: v_dot4_i32_iu8 v1, s2, s3, v2 neg_lo:[1,1,0]
+    ; CHECK-NEXT: v_dot4_i32_iu8 v2, s2, s3, v3 neg_lo:[1,1,0]
+    ; CHECK-NEXT: v_add_nc_u32_e32 v3, v0, v0
+    liveins: $vgpr0, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
+    $vgpr0 = V_DOT4_I32_IU8 9, $sgpr2, 9, $sgpr3, 8, $vgpr0, 0, 0, 0, implicit $exec
+    $vgpr1 = V_DOT4_I32_IU8 9, $sgpr2, 9, $sgpr3, 8, $vgpr2, 0, 0, 0, implicit $exec
+    $vgpr2 = V_DOT4_I32_IU8 9, $sgpr2, 9, $sgpr3, 8, $vgpr3, 0, 0, 0, implicit $exec
+    $vgpr3 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: convolve
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}convolve:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_convolve_f32_iu4 g1[0:3], v[0:3], v[4:5], g1[4] aux_data:3 clamp idxs:0x1001
+    ; CHECK-NEXT: s_delay_alu instid0(XDL_DEP_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v5, v0, v0
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5
+    $vgpr0_vgpr1_vgpr2_vgpr3 = V_CONVOLVE_F32_IU4_1x1_4x2_ITER_1 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr4, $vgpr0, $vgpr0, $vgpr0, 3, -1, 4097, 0, implicit $exec
+    $vgpr5 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...

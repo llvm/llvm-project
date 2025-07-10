@@ -64,15 +64,17 @@ public:
   }
 
   // Types of delay that can be encoded in an s_delay_alu instruction.
-  enum DelayType { VALU, TRANS, SALU, OTHER };
+  enum DelayType { VALU, TRANS, XDL, SALU, OTHER };
 
   // Get the delay type for a MachineInstr.
   DelayType getDelayType(const MachineInstr &MI) {
     if (SIInstrInfo::isTRANS(MI))
       return TRANS;
-    // WMMA XDL ops are treated the same as TRANS.
+    // WMMA XDL ops are treated the same as TRANS on GFX1250.
     if (AMDGPU::isGFX1250Only(*ST) && SII->isXDLWMMA(MI))
       return TRANS;
+    if (AMDGPU::isGFX13(*ST) && SII->isXDL(MI))
+      return XDL;
     if (SIInstrInfo::isVALU(MI))
       return VALU;
     if (SIInstrInfo::isSALU(MI))
@@ -93,13 +95,17 @@ public:
     // an s_delay_alu instruction.
     static constexpr unsigned TRANS_MAX = 4;
 
+    // One larger than the maximum number of XDL instructions we can encode in
+    // an s_delay_alu instruction.
+    static constexpr unsigned XDL_MAX = 3;
+
     // One larger than the maximum number of SALU cycles we can encode in an
     // s_delay_alu instruction.
     static constexpr unsigned SALU_CYCLES_MAX = 4;
 
-    // If it was written by a (non-TRANS) VALU, remember how many clock cycles
-    // are left until it completes, and how many other (non-TRANS) VALU we have
-    // seen since it was issued.
+    // If it was written by a (non-TRANS and non-XDL) VALU, remember how many
+    // clock cycles are left until it completes, and how many other (non-TRANS
+    // and non-XDL) VALU we have seen since it was issued.
     uint8_t VALUCycles = 0;
     uint8_t VALUNum = VALU_MAX;
 
@@ -113,6 +119,11 @@ public:
     // non-TRANS VALU, this is used to decide whether to encode a wait for just
     // one or both of them.
     uint8_t TRANSNumVALU = VALU_MAX;
+
+    // Same as for TRANS and non-TRANS VALU, but for XDL ops.
+    uint8_t XDLCycles = 0;
+    uint8_t XDLNum = XDL_MAX;
+    uint8_t XDLNumVALU = VALU_MAX;
 
     // If it was written by an SALU, remember how many clock cycles are left
     // until it completes.
@@ -133,6 +144,11 @@ public:
         TRANSNum = 0;
         TRANSNumVALU = 0;
         break;
+      case XDL:
+        XDLCycles = Cycles;
+        XDLNum = 0;
+        XDLNumVALU = 0;
+        break;
       case SALU:
         // Guard against pseudo-instructions like SI_CALL which are marked as
         // SALU but with a very high latency.
@@ -144,7 +160,9 @@ public:
     bool operator==(const DelayInfo &RHS) const {
       return VALUCycles == RHS.VALUCycles && VALUNum == RHS.VALUNum &&
              TRANSCycles == RHS.TRANSCycles && TRANSNum == RHS.TRANSNum &&
-             TRANSNumVALU == RHS.TRANSNumVALU && SALUCycles == RHS.SALUCycles;
+             TRANSNumVALU == RHS.TRANSNumVALU && XDLCycles == RHS.XDLCycles &&
+             XDLNum == RHS.XDLNum && XDLNumVALU == RHS.XDLNumVALU &&
+             SALUCycles == RHS.SALUCycles;
     }
 
     bool operator!=(const DelayInfo &RHS) const { return !(*this == RHS); }
@@ -157,6 +175,9 @@ public:
       TRANSCycles = std::max(TRANSCycles, RHS.TRANSCycles);
       TRANSNum = std::min(TRANSNum, RHS.TRANSNum);
       TRANSNumVALU = std::min(TRANSNumVALU, RHS.TRANSNumVALU);
+      XDLCycles = std::max(XDLCycles, RHS.XDLCycles);
+      XDLNum = std::min(XDLNum, RHS.XDLNum);
+      XDLNumVALU = std::min(XDLNumVALU, RHS.XDLNumVALU);
       SALUCycles = std::max(SALUCycles, RHS.SALUCycles);
     }
 
@@ -190,6 +211,19 @@ public:
         Erase = false;
       }
 
+      XDLNum += (Type == XDL);
+      XDLNumVALU += (Type == VALU);
+      if (XDLNum >= XDL_MAX || XDLCycles <= Cycles) {
+        // Forget about any XDL instruction. It was too far back or has
+        // definitely completed by now.
+        XDLNum = XDL_MAX;
+        XDLNumVALU = VALU_MAX;
+        XDLCycles = 0;
+      } else {
+        XDLCycles -= Cycles;
+        Erase = false;
+      }
+
       if (SALUCycles <= Cycles) {
         // Forget about any SALU instruction. It has definitely completed by
         // now.
@@ -214,6 +248,12 @@ public:
         dbgs() << " TRANSNum=" << (int)TRANSNum;
       if (TRANSNumVALU < VALU_MAX)
         dbgs() << " TRANSNumVALU=" << (int)TRANSNumVALU;
+      if (XDLCycles)
+        dbgs() << " XDLCycles=" << (int)XDLCycles;
+      if (XDLNum < XDL_MAX)
+        dbgs() << " XDLNum=" << (int)XDLNum;
+      if (XDLNumVALU < VALU_MAX)
+        dbgs() << " XDLNumVALU=" << (int)XDLNumVALU;
       if (SALUCycles)
         dbgs() << " SALUCycles=" << (int)SALUCycles;
     }
@@ -291,10 +331,15 @@ public:
     if (Delay.TRANSNum < DelayInfo::TRANS_MAX)
       Imm |= 4 + Delay.TRANSNum;
 
-    // Wait for a VALU instruction (if it's more recent than any TRANS
+    // Wait for a XDL instruction.
+    if (Delay.XDLNum < DelayInfo::XDL_MAX)
+      Imm |= 11 + Delay.XDLNum;
+
+    // Wait for a VALU instruction (if it's more recent than any TRANS or XDL
     // instruction that we're also waiting for).
     if (Delay.VALUNum < DelayInfo::VALU_MAX &&
-        Delay.VALUNum <= Delay.TRANSNumVALU) {
+        Delay.VALUNum <= Delay.TRANSNumVALU &&
+        Delay.VALUNum <= Delay.XDLNumVALU) {
       if (Imm & 0xf)
         Imm |= Delay.VALUNum << 7;
       else
