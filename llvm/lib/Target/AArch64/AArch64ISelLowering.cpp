@@ -3265,20 +3265,20 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
                               &AArch64::GPR64noipRegClass);
     return BB;
   case AArch64::AUTH_TCRETURN:
-    fixupBlendComponents(MI, BB, MI.getOperand(3), MI.getOperand(4),
-                         &AArch64::tcGPR64RegClass);
+    fixupPtrauthDiscriminator(MI, BB, MI.getOperand(3), MI.getOperand(4),
+                              &AArch64::tcGPR64RegClass);
     return BB;
   case AArch64::AUTH_TCRETURN_BTI:
-    fixupBlendComponents(MI, BB, MI.getOperand(3), MI.getOperand(4),
-                         &AArch64::tcGPRnotx16x17RegClass);
+    fixupPtrauthDiscriminator(MI, BB, MI.getOperand(3), MI.getOperand(4),
+                              &AArch64::tcGPRnotx16x17RegClass);
     return BB;
   case AArch64::BLRA:
-    fixupBlendComponents(MI, BB, MI.getOperand(2), MI.getOperand(3),
-                         &AArch64::GPR64noipRegClass);
+    fixupPtrauthDiscriminator(MI, BB, MI.getOperand(2), MI.getOperand(3),
+                              &AArch64::GPR64noipRegClass);
     return BB;
   case AArch64::BLRA_RVMARKER:
-    fixupBlendComponents(MI, BB, MI.getOperand(4), MI.getOperand(5),
-                         &AArch64::GPR64noipRegClass);
+    fixupPtrauthDiscriminator(MI, BB, MI.getOperand(4), MI.getOperand(5),
+                              &AArch64::GPR64noipRegClass);
     return BB;
   }
 }
