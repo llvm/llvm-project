@@ -265,7 +265,7 @@ namespace const_modify {
 
 namespace null {
   constexpr int test(int *p) {
-    return *p = 123; // expected-note {{read of dereferenced null pointer}}
+    return *p = 123; // expected-note {{dereferencing a null pointer}}
   }
   static_assert(test(0), ""); // expected-error {{constant expression}} expected-note {{in call}}
 }
@@ -1340,7 +1340,7 @@ namespace comparison_dead_variable {
 namespace GH48665 {
 constexpr bool foo(int *i) {
     int &j = *i;
-    // expected-note@-1 {{read of dereferenced null pointer}}
+    // expected-note@-1 {{dereferencing a null pointer}}
     return true;
 }
 
@@ -1349,7 +1349,7 @@ static_assert(foo(nullptr), ""); // expected-note {{in call to 'foo(nullptr)'}}
 
 constexpr bool foo_rvalue(int *i) {
     int &&j = (int&&)*i;
-    // expected-note@-1 {{read of dereferenced null pointer}}
+    // expected-note@-1 {{dereferencing a null pointer}}
     return true;
 }
 static_assert(foo_rvalue(nullptr), ""); // expected-note {{in call to 'foo_rvalue(nullptr)'}}
@@ -1370,14 +1370,14 @@ struct Aggregate {
    int &r;
 };
 constexpr bool test_agg(int *i) {
-   Aggregate a{*i}; //expected-note {{read of dereferenced null pointer}}
+   Aggregate a{*i}; //expected-note {{dereferencing a null pointer}}
    return true;
 }
 static_assert(test_agg(nullptr), ""); // expected-note {{in call to 'test_agg(nullptr)'}}
 // expected-error@-1 {{static assertion expression is not an integral constant expression}}
 
 struct B {
-  constexpr B(int *p) : r{*p} {}  // expected-note {{read of dereferenced null pointer}}
+  constexpr B(int *p) : r{*p} {}  // expected-note {{dereferencing a null pointer}}
   int &r;
 };
 

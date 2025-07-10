@@ -42,7 +42,7 @@ struct s {
 
 EVAL_EXPR(19, ((int)&*(char*)10 == 10 ? 1 : -1));
 // expected-error@-1 {{not an integer constant expression}} \
-// expected-note@-1 {{read of dereferenced null pointer is not allowed in a constant expression}}
+// expected-note@-1 {{dereferencing a null pointer is not allowed in a constant expression}}
 
 
 EVAL_EXPR(20, __builtin_constant_p(*((int*) 10)));

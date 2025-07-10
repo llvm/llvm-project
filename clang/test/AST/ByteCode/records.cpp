@@ -1660,10 +1660,10 @@ namespace NullptrCast {
   constexpr A *na = nullptr;
   constexpr B *nb = nullptr;
   constexpr A &ra = *nb; // both-error {{constant expression}} \
-                         // ref-note {{read of dereferenced null pointer}} \
+                         // ref-note {{dereferencing a null pointer}} \
                          // expected-note {{cannot access base class of null pointer}}
   constexpr B &rb = (B&)*na; // both-error {{constant expression}} \
-                             // ref-note {{read of dereferenced null pointer}} \
+                             // ref-note {{dereferencing a null pointer}} \
                              // expected-note {{cannot access derived class of null pointer}}
   constexpr bool test() {
     auto a = (A*)(B*)nullptr;
