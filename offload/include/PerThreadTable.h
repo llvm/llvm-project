@@ -33,7 +33,7 @@ template <typename ContainerType, typename ObjectType> struct PerThreadTable {
   };
 
   std::mutex Mtx;
-  std::list<PerThreadData *> ThreadDataList;
+  std::list<std::shared_ptr<PerThreadData>> ThreadDataList;
 
   // define default constructors, disable copy and move constructors
   PerThreadTable() = default;
@@ -48,8 +48,13 @@ template <typename ContainerType, typename ObjectType> struct PerThreadTable {
 
 private:
   PerThreadData &getThreadData() {
-    static thread_local PerThreadData ThData;
-    return ThData;
+    static thread_local std::shared_ptr<PerThreadData> ThData = nullptr;
+    if (!ThData) {
+      ThData = std::make_shared<PerThreadData>();
+      std::lock_guard<std::mutex> Lock(Mtx);
+      ThreadDataList.push_back(ThData);
+    }
+    return *ThData;
   }
 
 protected:
@@ -58,8 +63,6 @@ protected:
     if (ThData.ThEntry)
       return *ThData.ThEntry;
     ThData.ThEntry = std::make_unique<ContainerType>();
-    std::lock_guard<std::mutex> Lock(Mtx);
-    ThreadDataList.push_back(&ThData);
     return *ThData.ThEntry;
   }
 
@@ -99,6 +102,8 @@ public:
   template <class F> void clear(F f) {
     std::lock_guard<std::mutex> Lock(Mtx);
     for (auto ThData : ThreadDataList) {
+      if (!ThData->ThEntry || ThData->NElements == 0)
+	continue;
       ThData->ThEntry->clear(f);
       ThData->NElements = 0;
     }
