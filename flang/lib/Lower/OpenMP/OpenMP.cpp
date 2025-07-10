@@ -16,7 +16,6 @@
 #include "ClauseProcessor.h"
 #include "DataSharingProcessor.h"
 #include "Decomposer.h"
-#include "ReductionProcessor.h"
 #include "flang/Common/idioms.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertExpr.h"
