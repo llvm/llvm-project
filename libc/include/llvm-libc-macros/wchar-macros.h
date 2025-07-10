@@ -10,7 +10,7 @@
 #define LLVM_LIBC_MACROS_WCHAR_MACROS_H
 
 #ifndef WEOF
-#define WEOF 0xffffffffu
+#define WEOF ((wint_t)(0xffffffffu))
 #endif
 
 #endif // LLVM_LIBC_MACROS_WCHAR_MACROS_H
