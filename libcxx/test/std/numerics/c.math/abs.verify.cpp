@@ -13,10 +13,10 @@ void f() {
     (void)std::abs(ui); // expected-error {{call to 'abs' is ambiguous}}
 
     unsigned char uc = -5;
-    (void)std::abs(uc); // expected-warning {{taking the absolute value of unsigned type 'unsigned char' has no effect}}
+    (void)std::abs(uc); // expected-warning 0-1 {{taking the absolute value of unsigned type 'unsigned char' has no effect}}
 
     unsigned short us = -5;
-    (void)std::abs(us); // expected-warning {{taking the absolute value of unsigned type 'unsigned short' has no effect}}
+    (void)std::abs(us); // expected-warning 0-1 {{taking the absolute value of unsigned type 'unsigned short' has no effect}}
 
     unsigned long ul = -5;
     (void)std::abs(ul); // expected-error {{call to 'abs' is ambiguous}}

@@ -413,7 +413,7 @@ define i32 @select_eq_10000_10001(i32 signext %a, i32 signext %b) {
 ; RV64-NEXT:    xor a0, a0, a1
 ; RV64-NEXT:    lui a1, 2
 ; RV64-NEXT:    seqz a0, a0
-; RV64-NEXT:    addiw a1, a1, 1810
+; RV64-NEXT:    addi a1, a1, 1810
 ; RV64-NEXT:    sub a0, a1, a0
 ; RV64-NEXT:    ret
   %1 = icmp eq i32 %a, %b
@@ -436,7 +436,7 @@ define i32 @select_ne_10001_10002(i32 signext %a, i32 signext %b) {
 ; RV64-NEXT:    xor a0, a0, a1
 ; RV64-NEXT:    lui a1, 2
 ; RV64-NEXT:    snez a0, a0
-; RV64-NEXT:    addiw a1, a1, 1810
+; RV64-NEXT:    addi a1, a1, 1810
 ; RV64-NEXT:    sub a0, a1, a0
 ; RV64-NEXT:    ret
   %1 = icmp ne i32 %a, %b

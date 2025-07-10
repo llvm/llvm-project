@@ -245,6 +245,7 @@ void SymbolTable::reportUndefinedSymbol(const UndefinedDiag &undefDiag) {
 }
 
 void SymbolTable::loadMinGWSymbols() {
+  std::vector<Symbol *> undefs;
   for (auto &i : symMap) {
     Symbol *sym = i.second;
     auto *undef = dyn_cast<Undefined>(sym);
@@ -252,7 +253,15 @@ void SymbolTable::loadMinGWSymbols() {
       continue;
     if (undef->getWeakAlias())
       continue;
+    undefs.push_back(sym);
+  }
 
+  for (auto sym : undefs) {
+    auto *undef = dyn_cast<Undefined>(sym);
+    if (!undef)
+      continue;
+    if (undef->getWeakAlias())
+      continue;
     StringRef name = undef->getName();
 
     if (machine == I386 && ctx.config.stdcallFixup) {
@@ -551,7 +560,7 @@ void SymbolTable::initializeLoadConfig() {
       Warn(ctx) << "EC version of '_load_config_used' is missing";
       return;
     }
-    if (ctx.hybridSymtab) {
+    if (ctx.config.machine == ARM64X) {
       Warn(ctx) << "native version of '_load_config_used' is missing for "
                    "ARM64X target";
       return;
@@ -771,7 +780,7 @@ void SymbolTable::addLazyDLLSymbol(DLLFile *f, DLLFile::Symbol *sym,
     return;
   }
   auto *u = dyn_cast<Undefined>(s);
-  if (!u || u->weakAlias || s->pendingArchiveLoad)
+  if (!u || (u->weakAlias && !u->isECAlias(machine)) || s->pendingArchiveLoad)
     return;
   s->pendingArchiveLoad = true;
   f->makeImport(sym);
