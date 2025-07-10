@@ -48,6 +48,9 @@ for header in public_headers:
 //--- {header}.compile.pass.cpp
 // UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
 
+// TODO: This is currently a libc++-specific way of testing the includes, but is a requirement for all implementation
+// REQUIRES: stdlib=libc++
+
 {lit_header_restrictions.get(header, '')}
 {lit_header_undeprecations.get(header, '')}
 
