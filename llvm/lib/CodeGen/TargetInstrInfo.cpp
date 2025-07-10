@@ -245,7 +245,7 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
     const TargetRegisterInfo &TRI =
         *MI.getMF()->getSubtarget().getRegisterInfo();
     Register FromReg = CommutedMI->getOperand(0).getReg();
-    CommutedMI->substituteRegister(FromReg, Reg0, /*SubRegIdx*/ 0, TRI);
+    CommutedMI->substituteRegister(FromReg, Reg0, /*SubRegIdx=*/0, TRI);
     CommutedMI->getOperand(0).setSubReg(SubReg0);
   }
   CommutedMI->getOperand(Idx2).setReg(Reg1);
