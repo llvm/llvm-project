@@ -781,6 +781,10 @@ Bug Fixes in This Version
 - Fixed false positives for redeclaration errors of using enum in
   nested scopes. (#GH147495)
 
+- When passing a qualified rvalue as the controlling expression of a
+  ``_Generic`` selection expression, Clang now properly strips the qualifiers.
+  Fixes #GH96713
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
