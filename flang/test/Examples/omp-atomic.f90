@@ -26,25 +26,31 @@ end
 ! CHECK:---
 ! CHECK-NEXT:- file:            '{{[^"]*}}omp-atomic.f90'
 ! CHECK-NEXT:  line:            9
-! CHECK-NEXT:  construct:       atomic-read
+! CHECK-NEXT:  construct:       atomic
 ! CHECK-NEXT:  clauses:
-! CHECK-NEXT:    - clause:      seq_cst
+! CHECK-NEXT:    - clause:      read
 ! CHECK-NEXT:      details:     ''
+! CHECK-NEXT:    - clause:      seq_cst
+! CHECK-NEXT:      details:     'name_modifier=atomic;'
 ! CHECK-NEXT:- file:            '{{[^"]*}}omp-atomic.f90'
 ! CHECK-NEXT:  line:            12
-! CHECK-NEXT:  construct:       atomic-write
+! CHECK-NEXT:  construct:       atomic
 ! CHECK-NEXT:  clauses:
 ! CHECK-NEXT:    - clause:      seq_cst
+! CHECK-NEXT:      details:     'name_modifier=atomic;'
+! CHECK-NEXT:    - clause:      write
 ! CHECK-NEXT:      details:     ''
 ! CHECK-NEXT:- file:            '{{[^"]*}}omp-atomic.f90'
 ! CHECK-NEXT:  line:            16
-! CHECK-NEXT:  construct:       atomic-capture
+! CHECK-NEXT:  construct:       atomic
 ! CHECK-NEXT:  clauses:
+! CHECK-NEXT:    - clause:      capture
+! CHECK-NEXT:      details:     'name_modifier=atomic;name_modifier=atomic;'
 ! CHECK-NEXT:    - clause:      seq_cst
 ! CHECK-NEXT:      details:     ''
 ! CHECK-NEXT:- file:            '{{[^"]*}}omp-atomic.f90'
 ! CHECK-NEXT:  line:            21
-! CHECK-NEXT:  construct:       atomic-atomic
+! CHECK-NEXT:  construct:       atomic
 ! CHECK-NEXT:  clauses:         []
 ! CHECK-NEXT:- file:            '{{[^"]*}}omp-atomic.f90'
 ! CHECK-NEXT:  line:            8

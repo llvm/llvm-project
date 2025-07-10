@@ -8,9 +8,7 @@
 
 #include "mlir/TableGen/Interfaces.h"
 #include "llvm/ADT/FunctionExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
@@ -51,13 +49,15 @@ bool InterfaceMethod::isStatic() const {
 
 // Return the body for this method if it has one.
 std::optional<StringRef> InterfaceMethod::getBody() const {
-  auto value = def->getValueAsString("body");
+  // Trim leading and trailing spaces from the default implementation.
+  auto value = def->getValueAsString("body").trim();
   return value.empty() ? std::optional<StringRef>() : value;
 }
 
 // Return the default implementation for this method if it has one.
 std::optional<StringRef> InterfaceMethod::getDefaultImplementation() const {
-  auto value = def->getValueAsString("defaultBody");
+  // Trim leading and trailing spaces from the default implementation.
+  auto value = def->getValueAsString("defaultBody").trim();
   return value.empty() ? std::optional<StringRef>() : value;
 }
 
@@ -83,7 +83,7 @@ Interface::Interface(const Record *def) : def(def) {
 
   // Initialize the interface methods.
   auto *listInit = dyn_cast<ListInit>(def->getValueInit("methods"));
-  for (const Init *init : listInit->getValues())
+  for (const Init *init : listInit->getElements())
     methods.emplace_back(cast<DefInit>(init)->getDef());
 
   // Initialize the interface base classes.
@@ -102,7 +102,7 @@ Interface::Interface(const Record *def) : def(def) {
         baseInterfaces.push_back(std::make_unique<Interface>(baseInterface));
         basesAdded.insert(baseInterface.getName());
       };
-  for (const Init *init : basesInit->getValues())
+  for (const Init *init : basesInit->getElements())
     addBaseInterfaceFn(Interface(cast<DefInit>(init)->getDef()));
 }
 

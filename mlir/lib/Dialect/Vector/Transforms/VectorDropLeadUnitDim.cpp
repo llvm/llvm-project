@@ -230,7 +230,7 @@ struct CastAwayTransferReadLeadingOneDim
     if (read.getTransferRank() == 0)
       return failure();
 
-    auto shapedType = cast<ShapedType>(read.getSource().getType());
+    auto shapedType = cast<ShapedType>(read.getBase().getType());
     if (shapedType.getElementType() != read.getVectorType().getElementType())
       return failure();
 
@@ -260,7 +260,7 @@ struct CastAwayTransferReadLeadingOneDim
     }
 
     auto newRead = rewriter.create<vector::TransferReadOp>(
-        read.getLoc(), newType, read.getSource(), read.getIndices(),
+        read.getLoc(), newType, read.getBase(), read.getIndices(),
         AffineMapAttr::get(newMap), read.getPadding(), mask, inBoundsAttr);
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(read, oldType, newRead);
 
@@ -284,7 +284,7 @@ struct CastAwayTransferWriteLeadingOneDim
     if (write.getTransferRank() == 0)
       return failure();
 
-    auto shapedType = dyn_cast<ShapedType>(write.getSource().getType());
+    auto shapedType = dyn_cast<ShapedType>(write.getBase().getType());
     if (shapedType.getElementType() != write.getVectorType().getElementType())
       return failure();
 
@@ -314,13 +314,13 @@ struct CastAwayTransferWriteLeadingOneDim
       Value newMask = dropUnitDimsFromMask(
           rewriter, write.getLoc(), write.getMask(), newType, newMap, maskType);
       rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-          write, newVector, write.getSource(), write.getIndices(),
+          write, newVector, write.getBase(), write.getIndices(),
           AffineMapAttr::get(newMap), newMask, inBoundsAttr);
       return success();
     }
 
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-        write, newVector, write.getSource(), write.getIndices(),
+        write, newVector, write.getBase(), write.getIndices(),
         AffineMapAttr::get(newMap), inBoundsAttr);
     return success();
   }

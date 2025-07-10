@@ -126,7 +126,7 @@ SyntaxTreeTest::buildTree(StringRef Code, const TestClangConfig &ClangConfig) {
   FS->addFile(FileName, time_t(), llvm::MemoryBuffer::getMemBufferCopy(""));
 
   if (!Diags->getClient())
-    Diags->setClient(new TextDiagnosticPrinter(llvm::errs(), DiagOpts.get()));
+    Diags->setClient(new TextDiagnosticPrinter(llvm::errs(), DiagOpts));
   Diags->setSeverityForGroup(diag::Flavor::WarningOrError, "unused-value",
                              diag::Severity::Ignored, SourceLocation());
 
@@ -151,8 +151,7 @@ SyntaxTreeTest::buildTree(StringRef Code, const TestClangConfig &ClangConfig) {
   Invocation->getFrontendOpts().DisableFree = false;
   Invocation->getPreprocessorOpts().addRemappedFile(
       FileName, llvm::MemoryBuffer::getMemBufferCopy(Code).release());
-  CompilerInstance Compiler;
-  Compiler.setInvocation(Invocation);
+  CompilerInstance Compiler(Invocation);
   Compiler.setDiagnostics(Diags.get());
   Compiler.setFileManager(FileMgr.get());
   Compiler.setSourceManager(SourceMgr.get());

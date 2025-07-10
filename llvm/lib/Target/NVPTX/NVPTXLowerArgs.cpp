@@ -536,7 +536,7 @@ static void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg) {
   const bool IsGridConstant = HasCvtaParam && isParamGridConstant(*Arg);
   const DataLayout &DL = Func->getDataLayout();
   BasicBlock::iterator FirstInst = Func->getEntryBlock().begin();
-  Type *StructType = Arg->getParamByValType();
+  [[maybe_unused]] Type *StructType = Arg->getParamByValType();
   assert(StructType && "Missing byval type");
 
   ArgUseChecker AUC(DL, IsGridConstant);

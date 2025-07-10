@@ -20,13 +20,9 @@
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "llvm/Support/MathExtras.h"
 
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Debug.h"
 #include <numeric>
 #include <optional>
-#include <type_traits>
 
 #define DEBUG_TYPE "affine-loop-analysis"
 
@@ -233,8 +229,9 @@ std::optional<uint64_t> mlir::affine::getConstantTripCount(AffineForOp forOp) {
             std::min(*tripCount, static_cast<uint64_t>(constExpr.getValue()));
       else
         tripCount = constExpr.getValue();
-    } else
+    } else {
       return std::nullopt;
+    }
   }
   return tripCount;
 }
@@ -401,9 +398,7 @@ isVectorizableLoopBodyWithOpCond(AffineForOp loop,
           return !VectorType::isValidElementType(type);
         }))
       return true;
-    return llvm::any_of(op.getResultTypes(), [](Type type) {
-      return !VectorType::isValidElementType(type);
-    });
+    return !llvm::all_of(op.getResultTypes(), VectorType::isValidElementType);
   });
   SmallVector<NestedMatch, 8> opsMatched;
   types.match(forOp, &opsMatched);

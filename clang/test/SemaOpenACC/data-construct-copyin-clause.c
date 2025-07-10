@@ -81,7 +81,8 @@ void ModList() {
 #pragma acc data copyin(alwaysout: V1)
   // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copyin' clause}}
 #pragma acc data copyin(zero: V1)
-#pragma acc data copyin(always, alwaysin, readonly: V1)
+#pragma acc data copyin(capture: V1)
+#pragma acc data copyin(always, alwaysin, readonly, capture: V1)
 
   // expected-error@+2{{OpenACC 'alwaysout' modifier not valid on 'copyin' clause}}
   // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copyin' clause}}
@@ -90,5 +91,6 @@ void ModList() {
 #pragma acc enter data copyin(alwaysout: V1)
   // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copyin' clause}}
 #pragma acc enter data copyin(zero: V1)
-#pragma acc enter data copyin(always, alwaysin, readonly: V1)
+  // expected-error@+1{{OpenACC 'capture' modifier not valid on 'copyin' clause}}
+#pragma acc enter data copyin(capture: V1)
 }

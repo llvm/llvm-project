@@ -190,6 +190,38 @@ public:
   bool ignoreDependence(bool IgnoreAnti) const;
 };
 
+/// Represents loop-carried dependencies. Because SwingSchedulerDAG doesn't
+/// assume cycle dependencies as the name suggests, such dependencies must be
+/// handled separately. After DAG construction is finished, these dependencies
+/// are added to SwingSchedulerDDG.
+/// TODO: Also handle output-dependencies introduced by physical registers.
+struct LoopCarriedEdges {
+  using OrderDep = SmallSetVector<SUnit *, 8>;
+  using OrderDepsType = DenseMap<SUnit *, OrderDep>;
+
+  OrderDepsType OrderDeps;
+
+  const OrderDep *getOrderDepOrNull(SUnit *Key) const {
+    auto Ite = OrderDeps.find(Key);
+    if (Ite == OrderDeps.end())
+      return nullptr;
+    return &Ite->second;
+  }
+
+  /// Retruns true if the edge from \p From to \p To is a back-edge that should
+  /// be used when scheduling.
+  bool shouldUseWhenScheduling(const SUnit *From, const SUnit *To) const;
+
+  /// Adds some edges to the original DAG that correspond to loop-carried
+  /// dependencies. Historically, loop-carried edges are represented by using
+  /// non-loop-carried edges in the original DAG. This function appends such
+  /// edges to preserve the previous behavior.
+  void modifySUnits(std::vector<SUnit> &SUnits);
+
+  void dump(SUnit *SU, const TargetRegisterInfo *TRI,
+            const MachineRegisterInfo *MRI) const;
+};
+
 /// Represents dependencies between instructions. This class is a wrapper of
 /// `SUnits` and its dependencies to manipulate back-edges in a natural way.
 /// Currently it only supports back-edges via PHI, which are expressed as
@@ -278,6 +310,13 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
   /// Ordered list of DAG postprocessing steps.
   std::vector<std::unique_ptr<ScheduleDAGMutation>> Mutations;
 
+  /// Used to compute single-iteration dependencies (i.e., buildSchedGraph).
+  AliasAnalysis *AA;
+
+  /// Used to compute loop-carried dependencies (i.e.,
+  /// addLoopCarriedDependences).
+  BatchAAResults BAA;
+
   /// Helper class to implement Johnson's circuit finding algorithm.
   class Circuits {
     std::vector<SUnit> &SUnits;
@@ -323,13 +362,14 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
 public:
   SwingSchedulerDAG(MachinePipeliner &P, MachineLoop &L, LiveIntervals &lis,
                     const RegisterClassInfo &rci, unsigned II,
-                    TargetInstrInfo::PipelinerLoopInfo *PLI)
+                    TargetInstrInfo::PipelinerLoopInfo *PLI, AliasAnalysis *AA)
       : ScheduleDAGInstrs(*P.MF, P.MLI, false), Pass(P), Loop(L), LIS(lis),
         RegClassInfo(rci), II_setByPragma(II), LoopPipelinerInfo(PLI),
-        Topo(SUnits, &ExitSU) {
+        Topo(SUnits, &ExitSU), AA(AA), BAA(*AA) {
     P.MF->getSubtarget().getSMSMutations(Mutations);
     if (SwpEnableCopyToPhi)
       Mutations.push_back(std::make_unique<CopyToPhiMutation>());
+    BAA.enableCrossIterationMode();
   }
 
   void schedule() override;
@@ -394,7 +434,7 @@ public:
                              const MachineInstr *OtherMI) const;
 
 private:
-  void addLoopCarriedDependences(AAResults *AA);
+  LoopCarriedEdges addLoopCarriedDependences();
   void updatePhiDependences();
   void changeDependences();
   unsigned calculateResMII();

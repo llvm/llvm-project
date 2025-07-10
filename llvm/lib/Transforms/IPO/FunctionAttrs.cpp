@@ -661,8 +661,13 @@ ArgumentAccessInfo getArgumentAccessInfo(const Instruction *I,
     auto TypeSize = DL.getTypeStoreSize(Ty);
     if (!TypeSize.isScalable() && Offset) {
       int64_t Size = TypeSize.getFixedValue();
-      return ConstantRange(APInt(64, *Offset, true),
-                           APInt(64, *Offset + Size, true));
+      APInt Low(64, *Offset, true);
+      bool Overflow;
+      APInt High = Low.sadd_ov(APInt(64, Size, true), Overflow);
+      // Bail if the range overflows signed 64-bit int.
+      if (Overflow)
+        return std::nullopt;
+      return ConstantRange(Low, High);
     }
     return std::nullopt;
   };
@@ -670,14 +675,24 @@ ArgumentAccessInfo getArgumentAccessInfo(const Instruction *I,
       [](Value *Length,
          std::optional<int64_t> Offset) -> std::optional<ConstantRange> {
     auto *ConstantLength = dyn_cast<ConstantInt>(Length);
-    if (ConstantLength && Offset &&
-        ConstantLength->getValue().isStrictlyPositive()) {
-      return ConstantRange(
-          APInt(64, *Offset, true),
-          APInt(64, *Offset + ConstantLength->getSExtValue(), true));
+    if (ConstantLength && Offset) {
+      int64_t Len = ConstantLength->getSExtValue();
+
+      // Reject zero or negative lengths
+      if (Len <= 0)
+        return std::nullopt;
+
+      APInt Low(64, *Offset, true);
+      bool Overflow;
+      APInt High = Low.sadd_ov(APInt(64, Len, true), Overflow);
+      if (Overflow)
+        return std::nullopt;
+
+      return ConstantRange(Low, High);
     }
     return std::nullopt;
   };
+
   if (auto *SI = dyn_cast<StoreInst>(I)) {
     if (SI->isSimple() && &SI->getOperandUse(1) == ArgUse.U) {
       // Get the fixed type size of "SI". Since the access range of a write
@@ -903,7 +918,7 @@ determinePointerAccessAttrs(Argument *A,
         for (Use &UU : CB.uses())
           if (Visited.insert(&UU).second)
             Worklist.push_back(&UU);
-      } else if (!CB.doesNotCapture(UseIndex)) {
+      } else if (capturesAnyProvenance(CB.getCaptureInfo(UseIndex))) {
         if (!CB.onlyReadsMemory())
           // If the callee can save a copy into other memory, then simply
           // scanning uses of the call is insufficient.  We have no way
@@ -1377,10 +1392,9 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
       }
     }
 
-    // TODO(captures): Ignore address-only captures.
-    if (capturesAnything(CC)) {
-      // As the pointer may be captured, determine the pointer attributes
-      // looking at each argument individually.
+    if (capturesAnyProvenance(CC)) {
+      // As the pointer provenance may be captured, determine the pointer
+      // attributes looking at each argument individually.
       for (ArgumentGraphNode *N : ArgumentSCC) {
         if (DetermineAccessAttrsForSingleton(N->Definition))
           Changed.insert(N->Definition->getParent());

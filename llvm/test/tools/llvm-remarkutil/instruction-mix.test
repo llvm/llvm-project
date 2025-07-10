@@ -1,0 +1,39 @@
+RUN: llvm-remarkutil instruction-mix --parser=yaml %p/Inputs/instruction-mix.yaml | FileCheck %s
+RUN: llvm-remarkutil instruction-mix %p/Inputs/instruction-mix.yaml | FileCheck %s
+RUN: llvm-remarkutil yaml2bitstream %p/Inputs/instruction-mix.yaml | llvm-remarkutil instruction-mix --parser=bitstream | FileCheck %s
+RUN: llvm-remarkutil yaml2bitstream %p/Inputs/instruction-mix.yaml | llvm-remarkutil instruction-mix | FileCheck %s
+RUN: llvm-remarkutil instruction-mix --parser=yaml %p/Inputs/instruction-mix.yaml --report_style=human | FileCheck %s
+RUN: llvm-remarkutil instruction-mix --parser=yaml %p/Inputs/instruction-mix.yaml --report_style=csv | FileCheck %s --check-prefix=CSV
+RUN: llvm-remarkutil instruction-mix --parser=yaml %p/Inputs/instruction-mix.yaml --rfilter=meow | FileCheck %s --check-prefix=MEOW-RE
+RUN: llvm-remarkutil instruction-mix --parser=yaml %p/Inputs/instruction-mix.yaml --filter=meow | FileCheck %s --check-prefix=MEOW-EXACT
+RUN: llvm-remarkutil instruction-mix --parser=yaml %p/Inputs/instruction-mix.yaml --filter=none | FileCheck %s --check-prefix=NONE-EXACT
+RUN: not llvm-remarkutil instruction-mix --parser=yaml %p/Inputs/instruction-mix.yaml --rfilter=* 2>&1 | FileCheck %s --check-prefix=ERROR
+
+; CHECK-LABEL: Instruction Count
+; CHECK-NEXT:  ----------- -----
+; CHECK-NEXT:  mul         20
+; CHECK-NEXT:  add         15
+; CHECK-NEXT:  nop         10
+
+; CSV-LABEL: Instruction,Count
+; CSV-NEXT: mul,20
+; CSV-NEXT: add,15
+; CSV-NEXT: nop,10
+
+; MEOW-RE:      Instruction Count
+; MEOW-RE-NEXT: ----------- -----
+; MEOW-RE-NEXT: mul         15
+; MEOW-RE-NEXT: add         12
+; MEOW-RE-NEXT: nop         9
+
+; MEOW-EXACT:      Instruction Count
+; MEOW-EXACT-NEXT: ----------- -----
+; MEOW-EXACT-NEXT: mul         9
+; MEOW-EXACT-NEXT: add         8
+; MEOW-EXACT-NEXT: nop         7
+
+; NONE-EXACT: Instruction Count
+; NONE-EXACT: ----------- -----
+; NONE-NOT: {{.*}}
+
+; ERROR: error: invalid argument '--rfilter=*': repetition-operator operand invalid

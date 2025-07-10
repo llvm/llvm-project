@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/fopen.h"
-#include "src/__support/CPP/string_view.h"
-#include "src/__support/macros/config.h"
-#include "src/stdio/gpu/file.h"
 
 #include "hdr/types/FILE.h"
+#include "src/__support/common.h"
+#include "src/stdio/gpu/file.h"
+#include "src/string/memory_utils/inline_memcpy.h"
+#include "src/string/string_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

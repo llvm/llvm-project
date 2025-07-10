@@ -15,6 +15,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/Frontend/ASTUnit.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace clang;
 using namespace clang::index;
@@ -409,7 +410,7 @@ const char *ScratchAlloc::toCStr(StringRef Str) {
 
 const char *ScratchAlloc::copyCStr(StringRef Str) {
   char *buf = IdxCtx.StrScratch.Allocate<char>(Str.size() + 1);
-  std::uninitialized_copy(Str.begin(), Str.end(), buf);
+  llvm::uninitialized_copy(Str, buf);
   buf[Str.size()] = '\0';
   return buf;
 }
@@ -1010,8 +1011,8 @@ bool CXIndexDataConsumer::markEntityOccurrenceInFile(const NamedDecl *D,
 
   SourceManager &SM = Ctx->getSourceManager();
   D = getEntityDecl(D);
-  
-  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(SM.getFileLoc(Loc));
+
+  FileIDAndOffset LocInfo = SM.getDecomposedLoc(SM.getFileLoc(Loc));
   FileID FID = LocInfo.first;
   if (FID.isInvalid())
     return true;
@@ -1092,7 +1093,7 @@ void CXIndexDataConsumer::translateLoc(SourceLocation Loc,
   SourceManager &SM = Ctx->getSourceManager();
   Loc = SM.getFileLoc(Loc);
 
-  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
+  FileIDAndOffset LocInfo = SM.getDecomposedLoc(Loc);
   FileID FID = LocInfo.first;
   unsigned FileOffset = LocInfo.second;
 
