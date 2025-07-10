@@ -83,8 +83,8 @@ struct Loan {
 struct Origin {
   OriginID ID;
   /// A pointer to the AST node that this origin represents. This union
-  /// distinguishes between origins from lvalues (named variables or parameter)
-  /// and rvalues (expressions).
+  /// distinguishes between origins from declarations (variables or parameters)
+  /// and origins from expressions.
   llvm::PointerUnion<const clang::ValueDecl *, const clang::Expr *> Ptr;
 
   Origin(OriginID ID, const clang::ValueDecl *D) : ID(ID), Ptr(D) {}
