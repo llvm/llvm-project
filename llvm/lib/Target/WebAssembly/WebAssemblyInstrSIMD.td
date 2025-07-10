@@ -1542,6 +1542,29 @@ defm "" : SIMDMADD<F32x4, 0x105, 0x106, [HasRelaxedSIMD]>;
 defm "" : SIMDMADD<F64x2, 0x107, 0x108, [HasRelaxedSIMD]>;
 defm "" : SIMDMADD<F16x8, 0x14e, 0x14f, [HasFP16]>;
 
+def fmul_fast : PatFrag<(ops node:$a, node:$b), (fmul node:$a, node:$b),[{
+  return N->getFlags().hasAllowContract();
+}]>;
+
+
+def fadd_fast : PatFrag<(ops node:$a, node:$b), (fadd node:$a, node:$b),[{
+  return N->getFlags().hasAllowContract();
+}]>;
+
+def : Pat<(fadd (v4f32 V128:$a), (fmul_fast (v4f32 V128:$b), (v4f32 V128:$c))),
+           (MADD_F32x4 V128:$a, V128:$b, V128:$c)>, Requires<[HasRelaxedSIMD]>;
+
+
+def : Pat<(fadd (v2f64 V128:$a), (fmul_fast (v2f64 V128:$b), (v2f64 V128:$c))),
+           (MADD_F64x2 V128:$a, V128:$b, V128:$c)>, Requires<[HasRelaxedSIMD]>;
+
+def : Pat<(fadd_fast (v4f32 V128:$a), (fmul (v4f32 V128:$b), (v4f32 V128:$c))),
+           (MADD_F32x4 V128:$a, V128:$b, V128:$c)>, Requires<[HasRelaxedSIMD]>;
+
+
+def : Pat<(fadd_fast (v2f64 V128:$a), (fmul (v2f64 V128:$b), (v2f64 V128:$c))),
+           (MADD_F64x2 V128:$a, V128:$b, V128:$c)>, Requires<[HasRelaxedSIMD]>;
+
 //===----------------------------------------------------------------------===//
 // Laneselect
 //===----------------------------------------------------------------------===//
