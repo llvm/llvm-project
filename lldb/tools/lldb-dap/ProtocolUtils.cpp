@@ -19,6 +19,7 @@
 
 #include <iomanip>
 #include <optional>
+#include <sstream>
 
 using namespace lldb_dap::protocol;
 namespace lldb_dap {
