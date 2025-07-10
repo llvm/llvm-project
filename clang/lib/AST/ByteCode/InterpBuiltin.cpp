@@ -2304,11 +2304,11 @@ static bool interp__builtin_elementwise_sat(InterpState &S, CodePtr OpPC,
     APSInt Result;
     if (BuiltinID == Builtin::BI__builtin_elementwise_add_sat) {
       Result = APSInt(Elem1.isSigned() ? Elem1.sadd_sat(Elem2)
-                                       : Elem2.uadd_sat(Elem2),
+                                       : Elem1.uadd_sat(Elem2),
                       Call->getType()->isUnsignedIntegerOrEnumerationType());
     } else if (BuiltinID == Builtin::BI__builtin_elementwise_sub_sat) {
       Result = APSInt(Elem1.isSigned() ? Elem1.ssub_sat(Elem2)
-                                       : Elem2.usub_sat(Elem2),
+                                       : Elem1.usub_sat(Elem2),
                       Call->getType()->isUnsignedIntegerOrEnumerationType());
     } else {
       llvm_unreachable("Wrong builtin ID");
