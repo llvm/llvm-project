@@ -1194,7 +1194,7 @@ TYPE_PARSER(sourced(construct<OpenMPUtilityConstruct>(
         sourced(Parser<OmpNothingDirective>{}))))))
 
 TYPE_PARSER(sourced(construct<OmpMetadirectiveDirective>(
-    "METADIRECTIVE" >> Parser<OmpClauseList>{})))
+    verbatim("METADIRECTIVE"_tok), Parser<OmpClauseList>{})))
 
 // Omp directives enclosing do loop
 TYPE_PARSER(sourced(construct<OmpLoopDirective>(first(
@@ -1687,7 +1687,7 @@ TYPE_PARSER(sourced(construct<OmpAssumeDirective>(
     verbatim("ASSUME"_tok), Parser<OmpClauseList>{})))
 
 TYPE_PARSER(sourced(construct<OmpEndAssumeDirective>(
-    verbatim(startOmpLine >> "END ASSUME"_tok))))
+    startOmpLine >> verbatim("END ASSUME"_tok))))
 
 TYPE_PARSER(sourced(
     construct<OpenMPAssumeConstruct>(Parser<OmpAssumeDirective>{} / endOmpLine,
