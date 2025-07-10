@@ -562,6 +562,48 @@ legalizeGetHighLowi64Bytes(Instruction &I,
   }
 }
 
+static void legalizeLoadStoreOnArrayAllocas(
+    Instruction &I, SmallVectorImpl<Instruction *> &ToRemove,
+    DenseMap<Value *, Value *> &) {
+
+  Value *PtrOp;
+  [[maybe_unused]] Type *LoadStoreTy;
+  if (auto *LI = dyn_cast<LoadInst>(&I)) {
+    PtrOp = LI->getPointerOperand();
+    LoadStoreTy = LI->getType();
+  } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
+    PtrOp = SI->getPointerOperand();
+    LoadStoreTy = SI->getValueOperand()->getType();
+  } else
+    return;
+
+  assert(LoadStoreTy->isSingleValueType() &&
+         "Expected load/store type to be a single-valued type");
+
+  auto *AllocaPtrOp = dyn_cast<AllocaInst>(PtrOp);
+  if (!AllocaPtrOp)
+    return;
+
+  Type *Ty = AllocaPtrOp->getAllocatedType();
+  if (!isa<ArrayType>(Ty)) return;
+  assert(!isa<ArrayType>(Ty->getArrayElementType()) &&
+         "Expected allocated type of AllocaInst to be a flat ArrayType");
+
+  IRBuilder<> Builder(&I);
+  Value *Zero = Builder.getInt32(0);
+  Value *GEP = Builder.CreateInBoundsGEP(Ty, AllocaPtrOp, {Zero, Zero});
+
+  Value *NewLoadStore = nullptr;
+  if (auto *LI = dyn_cast<LoadInst>(&I))
+    NewLoadStore = Builder.CreateLoad(LI->getType(), GEP, LI->getName());
+  else if (auto *SI = dyn_cast<StoreInst>(&I))
+    NewLoadStore =
+        Builder.CreateStore(SI->getValueOperand(), GEP, SI->isVolatile());
+
+  ToRemove.push_back(&I);
+  I.replaceAllUsesWith(NewLoadStore);
+}
+
 namespace {
 class DXILLegalizationPipeline {
 
@@ -605,6 +647,7 @@ private:
     LegalizationPipeline[Stage1].push_back(legalizeMemCpy);
     LegalizationPipeline[Stage1].push_back(removeMemSet);
     LegalizationPipeline[Stage1].push_back(updateFnegToFsub);
+    LegalizationPipeline[Stage1].push_back(legalizeLoadStoreOnArrayAllocas);
     // Note: legalizeGetHighLowi64Bytes and
     // downcastI64toI32InsertExtractElements both modify extractelement, so they
     // must run staggered stages. legalizeGetHighLowi64Bytes runs first b\c it
