@@ -16,7 +16,6 @@
 #define LLVM_MC_MCREGISTERINFO_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/LaneBitmask.h"
