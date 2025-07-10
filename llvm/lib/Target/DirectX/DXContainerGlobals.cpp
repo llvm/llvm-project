@@ -160,18 +160,18 @@ void DXContainerGlobals::addRootSignature(Module &M,
 
   assert(MMI.EntryPropertyVec.size() == 1);
 
-  auto &RSA = getAnalysis<RootSignatureAnalysisWrapper>().getRSInfo();
+  auto &RSA = getAnalysis<RootSignatureAnalysisWrapper>();
   const Function *EntryFunction = MMI.EntryPropertyVec[0].Entry;
-  const std::optional<mcdxbc::RootSignatureDesc> &RS =
-      RSA.getDescForFunction(EntryFunction);
+  const auto &FuncRs = RSA.find(EntryFunction);
 
-  if (!RS)
+  if (FuncRs == RSA.end())
     return;
 
+  const RootSignatureDesc &RS = FuncRs->second;
   SmallString<256> Data;
   raw_svector_ostream OS(Data);
 
-  RS->write(OS);
+  RS.write(OS);
 
   Constant *Constant =
       ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);

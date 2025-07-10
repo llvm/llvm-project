@@ -596,9 +596,9 @@ analyzeModule(Module &M) {
 
 AnalysisKey RootSignatureAnalysis::Key;
 
-RootSignatureAnalysis::Result
+SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc>
 RootSignatureAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
-  return RootSignatureBindingInfo(analyzeModule(M));
+  return analyzeModule(M);
 }
 
 //===----------------------------------------------------------------------===//
@@ -606,7 +606,8 @@ RootSignatureAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
 PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
                                                     ModuleAnalysisManager &AM) {
 
-  RootSignatureBindingInfo &RSDMap = AM.getResult<RootSignatureAnalysis>(M);
+  SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc> &RSDMap =
+      AM.getResult<RootSignatureAnalysis>(M);
 
   OS << "Root Signature Definitions"
      << "\n";
@@ -677,14 +678,13 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
 
 //===----------------------------------------------------------------------===//
 bool RootSignatureAnalysisWrapper::runOnModule(Module &M) {
-  FuncToRsMap = std::make_unique<RootSignatureBindingInfo>(
-      RootSignatureBindingInfo(analyzeModule(M)));
+  FuncToRsMap = analyzeModule(M);
   return false;
 }
 
 void RootSignatureAnalysisWrapper::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
+  AU.addRequired<DXILMetadataAnalysisWrapperPass>();
 }
 
 char RootSignatureAnalysisWrapper::ID = 0;
