@@ -28211,9 +28211,6 @@ SDValue X86TargetLowering::LowerRETURNADDR(SDValue Op,
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
   MFI.setReturnAddressIsTaken(true);
 
-  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
-
   unsigned Depth = Op.getConstantOperandVal(0);
   SDLoc dl(Op);
   EVT PtrVT = Op.getValueType();
@@ -29422,15 +29419,21 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
                    Op->getFlags().hasNoNaNs() || (IsXNeverNaN && IsYNeverNaN);
 
   // If we did no ordering operands for signed zero handling and we need
-  // to process NaN and we know that the second operand is not NaN then put
-  // it in first operand and we will not need to post handle NaN after max/min.
-  if (IgnoreSignedZero && !IgnoreNaN && DAG.isKnownNeverNaN(NewY))
+  // to process NaN and we know that one of the operands is not NaN then:
+  //  - For minimum/maximum, put it in the first operand,
+  //  - For minimumnum/maximumnum, put it in the second operand,
+  // and we will not need to post handle NaN after max/min.
+  if (IgnoreSignedZero && !IgnoreNaN &&
+      DAG.isKnownNeverNaN(IsNum ? NewX : NewY))
     std::swap(NewX, NewY);
 
   SDValue MinMax = DAG.getNode(MinMaxOp, DL, VT, NewX, NewY, Op->getFlags());
 
-  if (IgnoreNaN || DAG.isKnownNeverNaN(NewX))
+  if (IgnoreNaN || DAG.isKnownNeverNaN(IsNum ? NewY : NewX))
     return MinMax;
+
+  if (DAG.isKnownNeverNaN(NewX))
+    NewX = NewY;
 
   SDValue IsNaN =
       DAG.getSetCC(DL, SetCCType, NewX, NewX, IsNum ? ISD::SETO : ISD::SETUO);
@@ -34150,7 +34153,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
 
-    if (VT.isVector() && Subtarget.hasFP16() &&
+    if (VT.isVector() && Subtarget.hasFP16() && Subtarget.hasVLX() &&
         SrcVT.getVectorElementType() == MVT::f16) {
       EVT EleVT = VT.getVectorElementType();
       EVT ResVT = EleVT == MVT::i32 ? MVT::v4i32 : MVT::v8i16;
@@ -34164,10 +34167,12 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       }
 
       if (IsStrict) {
+        Opc = IsSigned ? X86ISD::STRICT_CVTTP2SI : X86ISD::STRICT_CVTTP2UI;
         Res =
             DAG.getNode(Opc, dl, {ResVT, MVT::Other}, {N->getOperand(0), Src});
         Chain = Res.getValue(1);
       } else {
+        Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
         Res = DAG.getNode(Opc, dl, ResVT, Src);
       }
 
@@ -45998,20 +46003,6 @@ static bool detectExtMul(SelectionDAG &DAG, const SDValue &Mul, SDValue &Op0,
   return false;
 }
 
-// Given a ABS node, detect the following pattern:
-// (ABS (SUB (ZERO_EXTEND a), (ZERO_EXTEND b))).
-// This is useful as it is the input into a SAD pattern.
-static bool detectZextAbsDiff(SDValue Abs, SDValue &Op0, SDValue &Op1) {
-  using namespace SDPatternMatch;
-
-  // Check if the operands of the sub are zero-extended from vectors of i8.
-  return sd_match(
-      Abs,
-      m_Abs(m_Sub(
-          m_AllOf(m_Value(Op0), m_ZExt(m_SpecificVectorElementVT(MVT::i8))),
-          m_AllOf(m_Value(Op1), m_ZExt(m_SpecificVectorElementVT(MVT::i8))))));
-}
-
 static SDValue createVPDPBUSD(SelectionDAG &DAG, SDValue LHS, SDValue RHS,
                               unsigned &LogBias, const SDLoc &DL,
                               const X86Subtarget &Subtarget) {
@@ -46056,23 +46047,22 @@ static SDValue createVPDPBUSD(SelectionDAG &DAG, SDValue LHS, SDValue RHS,
                           DpBuilder, false);
 }
 
-// Given two zexts of <k x i8> to <k x i32>, create a PSADBW of the inputs
-// to these zexts.
-static SDValue createPSADBW(SelectionDAG &DAG, const SDValue &Zext0,
-                            const SDValue &Zext1, const SDLoc &DL,
-                            const X86Subtarget &Subtarget) {
+// Create a PSADBW given two sources representable as zexts of vXi8.
+static SDValue createPSADBW(SelectionDAG &DAG, SDValue N0, SDValue N1,
+                            const SDLoc &DL, const X86Subtarget &Subtarget) {
   // Find the appropriate width for the PSADBW.
-  EVT InVT = Zext0.getOperand(0).getValueType();
-  unsigned RegSize = std::max(128u, (unsigned)InVT.getSizeInBits());
+  EVT DstVT = N0.getValueType();
+  EVT SrcVT = EVT::getVectorVT(*DAG.getContext(), MVT::i8,
+                               DstVT.getVectorElementCount());
+  unsigned RegSize = std::max(128u, (unsigned)SrcVT.getSizeInBits());
 
-  // "Zero-extend" the i8 vectors. This is not a per-element zext, rather we
-  // fill in the missing vector elements with 0.
-  unsigned NumConcat = RegSize / InVT.getSizeInBits();
-  SmallVector<SDValue, 16> Ops(NumConcat, DAG.getConstant(0, DL, InVT));
-  Ops[0] = Zext0.getOperand(0);
+  // Widen the vXi8 vectors, padding with zero vector elements.
+  unsigned NumConcat = RegSize / SrcVT.getSizeInBits();
+  SmallVector<SDValue, 16> Ops(NumConcat, DAG.getConstant(0, DL, SrcVT));
+  Ops[0] = DAG.getZExtOrTrunc(N0, DL, SrcVT);
   MVT ExtendedVT = MVT::getVectorVT(MVT::i8, RegSize / 8);
   SDValue SadOp0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, ExtendedVT, Ops);
-  Ops[0] = Zext1.getOperand(0);
+  Ops[0] = DAG.getZExtOrTrunc(N1, DL, SrcVT);
   SDValue SadOp1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, ExtendedVT, Ops);
 
   // Actually build the SAD, split as 128/256/512 bits for SSE/AVX2/AVX512BW.
@@ -46082,7 +46072,7 @@ static SDValue createPSADBW(SelectionDAG &DAG, const SDValue &Zext0,
     return DAG.getNode(X86ISD::PSADBW, DL, VT, Ops);
   };
   MVT SadVT = MVT::getVectorVT(MVT::i64, RegSize / 64);
-  return SplitOpsAndApply(DAG, Subtarget, DL, SadVT, { SadOp0, SadOp1 },
+  return SplitOpsAndApply(DAG, Subtarget, DL, SadVT, {SadOp0, SadOp1},
                           PSADBWBuilder);
 }
 
@@ -46374,14 +46364,15 @@ static SDValue combineVPDPBUSDPattern(SDNode *Extract, SelectionDAG &DAG,
 
 static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
+
   // PSADBW is only supported on SSE2 and up.
   if (!Subtarget.hasSSE2())
     return SDValue();
 
   EVT ExtractVT = Extract->getValueType(0);
-  // Verify the type we're extracting is either i32 or i64.
-  // FIXME: Could support other types, but this is what we have coverage for.
-  if (ExtractVT != MVT::i32 && ExtractVT != MVT::i64)
+  if (ExtractVT != MVT::i8 && ExtractVT != MVT::i16 && ExtractVT != MVT::i32 &&
+      ExtractVT != MVT::i64)
     return SDValue();
 
   EVT VT = Extract->getOperand(0).getValueType();
@@ -46394,8 +46385,7 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
   if (!Root)
     return SDValue();
 
-  // The operand is expected to be zero extended from i8
-  // (verified in detectZextAbsDiff).
+  // The operand is expected to be zero extended from i8.
   // In order to convert to i64 and above, additional any/zero/sign
   // extend is expected.
   // The zero extend from 32 bit has no mathematical effect on the result.
@@ -46407,14 +46397,27 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
       Root.getOpcode() == ISD::ANY_EXTEND)
     Root = Root.getOperand(0);
 
-  // Check whether we have an abs-diff pattern feeding into the select.
-  SDValue Zext0, Zext1;
-  if (!detectZextAbsDiff(Root, Zext0, Zext1))
+  // Check whether we have an vXi8 abdu pattern.
+  // TODO: Just match ISD::ABDU once the DAG is topological sorted.
+  SDValue Src0, Src1;
+  if (!sd_match(
+          Root,
+          m_AnyOf(
+              m_SpecificVectorElementVT(
+                  MVT::i8, m_c_BinOp(ISD::ABDU, m_Value(Src0), m_Value(Src1))),
+              m_SpecificVectorElementVT(
+                  MVT::i8, m_Sub(m_UMax(m_Value(Src0), m_Value(Src1)),
+                                 m_UMin(m_Deferred(Src0), m_Deferred(Src1)))),
+              m_Abs(
+                  m_Sub(m_AllOf(m_Value(Src0),
+                                m_ZExt(m_SpecificVectorElementVT(MVT::i8))),
+                        m_AllOf(m_Value(Src1),
+                                m_ZExt(m_SpecificVectorElementVT(MVT::i8))))))))
     return SDValue();
 
   // Create the SAD instruction.
   SDLoc DL(Extract);
-  SDValue SAD = createPSADBW(DAG, Zext0, Zext1, DL, Subtarget);
+  SDValue SAD = createPSADBW(DAG, Src0, Src1, DL, Subtarget);
 
   // If the original vector was wider than 8 elements, sum over the results
   // in the SAD vector.
@@ -47262,57 +47265,6 @@ static SDValue combineToExtendBoolVectorInReg(
                      DAG.getConstant(EltSizeInBits - 1, DL, VT));
 }
 
-/// If a vector select has an left operand that is 0, try to simplify the
-/// select to a bitwise logic operation.
-/// TODO: Move to DAGCombiner.combineVSelectWithAllOnesOrZeros, possibly using
-/// TargetLowering::hasAndNot()?
-static SDValue combineVSelectWithLastZeros(SDNode *N, SelectionDAG &DAG,
-                                           const SDLoc &DL,
-                                           TargetLowering::DAGCombinerInfo &DCI,
-                                           const X86Subtarget &Subtarget) {
-  SDValue Cond = N->getOperand(0);
-  SDValue LHS = N->getOperand(1);
-  SDValue RHS = N->getOperand(2);
-  EVT VT = LHS.getValueType();
-  EVT CondVT = Cond.getValueType();
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-
-  if (N->getOpcode() != ISD::VSELECT)
-    return SDValue();
-
-  assert(CondVT.isVector() && "Vector select expects a vector selector!");
-
-  // To use the condition operand as a bitwise mask, it must have elements that
-  // are the same size as the select elements. Ie, the condition operand must
-  // have already been promoted from the IR select condition type <N x i1>.
-  // Don't check if the types themselves are equal because that excludes
-  // vector floating-point selects.
-  if (CondVT.getScalarSizeInBits() != VT.getScalarSizeInBits())
-    return SDValue();
-
-  // Cond value must be 'sign splat' to be converted to a logical op.
-  if (DAG.ComputeNumSignBits(Cond) != CondVT.getScalarSizeInBits())
-    return SDValue();
-
-  if (!TLI.isTypeLegal(CondVT))
-    return SDValue();
-
-  // vselect Cond, 000..., X -> andn Cond, X
-  if (ISD::isBuildVectorAllZeros(LHS.getNode())) {
-    SDValue CastRHS = DAG.getBitcast(CondVT, RHS);
-    SDValue AndN;
-    // The canonical form differs for i1 vectors - x86andnp is not used
-    if (CondVT.getScalarType() == MVT::i1)
-      AndN = DAG.getNode(ISD::AND, DL, CondVT, DAG.getNOT(DL, Cond, CondVT),
-                         CastRHS);
-    else
-      AndN = DAG.getNode(X86ISD::ANDNP, DL, CondVT, Cond, CastRHS);
-    return DAG.getBitcast(VT, AndN);
-  }
-
-  return SDValue();
-}
-
 /// If both arms of a vector select are concatenated vectors, split the select,
 /// and concatenate the result to eliminate a wide (256-bit) vector instruction:
 ///   vselect Cond, (concat T0, T1), (concat F0, F1) -->
@@ -48053,9 +48005,6 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // Early exit check
   if (!TLI.isTypeLegal(VT) || isSoftF16(VT, Subtarget))
     return SDValue();
-
-  if (SDValue V = combineVSelectWithLastZeros(N, DAG, DL, DCI, Subtarget))
-    return V;
 
   if (SDValue V = combineVSelectToBLENDV(N, DAG, DL, DCI, Subtarget))
     return V;
@@ -49838,15 +49787,11 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
 static SDValue combineShiftToPMULH(SDNode *N, SelectionDAG &DAG,
                                    const SDLoc &DL,
                                    const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
   assert((N->getOpcode() == ISD::SRL || N->getOpcode() == ISD::SRA) &&
-           "SRL or SRA node is required here!");
+         "SRL or SRA node is required here!");
 
   if (!Subtarget.hasSSE2())
-    return SDValue();
-
-  // The operation feeding into the shift must be a multiply.
-  SDValue ShiftOperand = N->getOperand(0);
-  if (ShiftOperand.getOpcode() != ISD::MUL || !ShiftOperand.hasOneUse())
     return SDValue();
 
   // Input type should be at least vXi32.
@@ -49854,14 +49799,11 @@ static SDValue combineShiftToPMULH(SDNode *N, SelectionDAG &DAG,
   if (!VT.isVector() || VT.getVectorElementType().getSizeInBits() < 32)
     return SDValue();
 
-  // Need a shift by 16.
-  APInt ShiftAmt;
-  if (!ISD::isConstantSplatVector(N->getOperand(1).getNode(), ShiftAmt) ||
-      ShiftAmt != 16)
+  // The operation must be a multiply shifted right by 16.
+  SDValue LHS, RHS;
+  if (!sd_match(N->getOperand(1), m_SpecificInt(16)) ||
+      !sd_match(N->getOperand(0), m_OneUse(m_Mul(m_Value(LHS), m_Value(RHS)))))
     return SDValue();
-
-  SDValue LHS = ShiftOperand.getOperand(0);
-  SDValue RHS = ShiftOperand.getOperand(1);
 
   unsigned ExtOpc = LHS.getOpcode();
   if ((ExtOpc != ISD::SIGN_EXTEND && ExtOpc != ISD::ZERO_EXTEND) ||
@@ -53632,6 +53574,10 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
 
     SDLoc LdDL(Ld);
     SDLoc StDL(N);
+
+    // Remove any range metadata as we're converting to f64 load/store.
+    Ld->getMemOperand()->clearRanges();
+
     // Lower to a single movq load/store pair.
     SDValue NewLd = DAG.getLoad(MVT::f64, LdDL, Ld->getChain(),
                                 Ld->getBasePtr(), Ld->getMemOperand());
@@ -57930,22 +57876,20 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  SDValue X, Y;
+
   // add(psadbw(X,0),psadbw(Y,0)) -> psadbw(add(X,Y),0)
   // iff X and Y won't overflow.
-  if (Op0.getOpcode() == X86ISD::PSADBW && Op1.getOpcode() == X86ISD::PSADBW &&
-      ISD::isBuildVectorAllZeros(Op0.getOperand(1).getNode()) &&
-      ISD::isBuildVectorAllZeros(Op1.getOperand(1).getNode())) {
-    if (DAG.willNotOverflowAdd(false, Op0.getOperand(0), Op1.getOperand(0))) {
-      MVT OpVT = Op0.getOperand(1).getSimpleValueType();
-      SDValue Sum =
-          DAG.getNode(ISD::ADD, DL, OpVT, Op0.getOperand(0), Op1.getOperand(0));
-      return DAG.getNode(X86ISD::PSADBW, DL, VT, Sum,
-                         getZeroVector(OpVT, Subtarget, DAG, DL));
-    }
+  if (sd_match(Op0, m_c_BinOp(X86ISD::PSADBW, m_Value(X), m_Zero())) &&
+      sd_match(Op1, m_c_BinOp(X86ISD::PSADBW, m_Value(Y), m_Zero())) &&
+      DAG.willNotOverflowAdd(/*IsSigned=*/false, X, Y)) {
+    MVT OpVT = X.getSimpleValueType();
+    SDValue Sum = DAG.getNode(ISD::ADD, DL, OpVT, X, Y);
+    return DAG.getNode(X86ISD::PSADBW, DL, VT, Sum,
+                       getZeroVector(OpVT, Subtarget, DAG, DL));
   }
 
   if (VT.isVector()) {
-    SDValue X, Y;
     EVT BoolVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
                                   VT.getVectorElementCount());
 

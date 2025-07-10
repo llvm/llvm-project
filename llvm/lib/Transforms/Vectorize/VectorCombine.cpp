@@ -563,7 +563,8 @@ static ExtractElementInst *translateExtract(ExtractElementInst *ExtElt,
 
   Value *Shuf = createShiftShuffle(X, cast<ConstantInt>(C)->getZExtValue(),
                                    NewIndex, Builder);
-  return cast<ExtractElementInst>(Builder.CreateExtractElement(Shuf, NewIndex));
+  return dyn_cast<ExtractElementInst>(
+      Builder.CreateExtractElement(Shuf, NewIndex));
 }
 
 /// Try to reduce extract element costs by converting scalar compares to vector

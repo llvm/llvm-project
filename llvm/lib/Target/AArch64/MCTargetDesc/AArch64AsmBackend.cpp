@@ -15,7 +15,6 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -30,8 +29,6 @@ using namespace llvm;
 namespace {
 
 class AArch64AsmBackend : public MCAsmBackend {
-  static const unsigned PCRelFlagVal =
-      MCFixupKindInfo::FKF_IsAlignedDownTo32Bits | MCFixupKindInfo::FKF_IsPCRel;
 protected:
   Triple TheTriple;
 
@@ -50,27 +47,27 @@ public:
         // in AArch64FixupKinds.h.
         //
         // Name                           Offset (bits) Size (bits)     Flags
-        {"fixup_aarch64_pcrel_adr_imm21", 0, 32, PCRelFlagVal},
-        {"fixup_aarch64_pcrel_adrp_imm21", 0, 32, PCRelFlagVal},
+        {"fixup_aarch64_pcrel_adr_imm21", 0, 32, 0},
+        {"fixup_aarch64_pcrel_adrp_imm21", 0, 32, 0},
         {"fixup_aarch64_add_imm12", 10, 12, 0},
         {"fixup_aarch64_ldst_imm12_scale1", 10, 12, 0},
         {"fixup_aarch64_ldst_imm12_scale2", 10, 12, 0},
         {"fixup_aarch64_ldst_imm12_scale4", 10, 12, 0},
         {"fixup_aarch64_ldst_imm12_scale8", 10, 12, 0},
         {"fixup_aarch64_ldst_imm12_scale16", 10, 12, 0},
-        {"fixup_aarch64_ldr_pcrel_imm19", 5, 19, PCRelFlagVal},
+        {"fixup_aarch64_ldr_pcrel_imm19", 5, 19, 0},
         {"fixup_aarch64_movw", 5, 16, 0},
-        {"fixup_aarch64_pcrel_branch9", 5, 9,  PCRelFlagVal},
-        {"fixup_aarch64_pcrel_branch14", 5, 14, PCRelFlagVal},
-        {"fixup_aarch64_pcrel_branch16", 5, 16, PCRelFlagVal},
-        {"fixup_aarch64_pcrel_branch19", 5, 19, PCRelFlagVal},
-        {"fixup_aarch64_pcrel_branch26", 0, 26, PCRelFlagVal},
-        {"fixup_aarch64_pcrel_call26", 0, 26, PCRelFlagVal}};
+        {"fixup_aarch64_pcrel_branch9", 5, 9, 0},
+        {"fixup_aarch64_pcrel_branch14", 5, 14, 0},
+        {"fixup_aarch64_pcrel_branch16", 5, 16, 0},
+        {"fixup_aarch64_pcrel_branch19", 5, 19, 0},
+        {"fixup_aarch64_pcrel_branch26", 0, 26, 0},
+        {"fixup_aarch64_pcrel_call26", 0, 26, 0}};
 
     // Fixup kinds from raw relocation types and .reloc directives force
     // relocations and do not need these fields.
     if (mc::isRelocation(Kind))
-      return MCAsmBackend::getFixupKindInfo(FK_NONE);
+      return {};
 
     if (Kind < FirstTargetFixupKind)
       return MCAsmBackend::getFixupKindInfo(Kind);
@@ -87,8 +84,6 @@ public:
 
   bool fixupNeedsRelaxation(const MCFixup &Fixup,
                             uint64_t Value) const override;
-  void relaxInstruction(MCInst &Inst,
-                        const MCSubtargetInfo &STI) const override;
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 
@@ -510,11 +505,6 @@ bool AArch64AsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
   //
   // Relax if the value is too big for a (signed) i8.
   return int64_t(Value) != int64_t(int8_t(Value));
-}
-
-void AArch64AsmBackend::relaxInstruction(MCInst &Inst,
-                                         const MCSubtargetInfo &STI) const {
-  llvm_unreachable("AArch64AsmBackend::relaxInstruction() unimplemented");
 }
 
 bool AArch64AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,

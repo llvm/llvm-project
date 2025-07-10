@@ -2092,12 +2092,13 @@ ParseStatus RISCVAsmParser::parseOperandWithSpecifier(OperandVector &Operands) {
 }
 
 bool RISCVAsmParser::parseExprWithSpecifier(const MCExpr *&Res, SMLoc &E) {
+  SMLoc Loc = getLoc();
   if (getLexer().getKind() != AsmToken::Identifier)
-    return Error(getLoc(), "expected '%' relocation specifier");
+    return TokError("expected '%' relocation specifier");
   StringRef Identifier = getParser().getTok().getIdentifier();
   auto Spec = RISCV::parseSpecifierName(Identifier);
   if (!Spec)
-    return Error(getLoc(), "invalid relocation specifier");
+    return TokError("invalid relocation specifier");
 
   getParser().Lex(); // Eat the identifier
   if (parseToken(AsmToken::LParen, "expected '('"))
@@ -2107,7 +2108,7 @@ bool RISCVAsmParser::parseExprWithSpecifier(const MCExpr *&Res, SMLoc &E) {
   if (getParser().parseParenExpression(SubExpr, E))
     return true;
 
-  Res = MCSpecifierExpr::create(SubExpr, Spec, getContext());
+  Res = MCSpecifierExpr::create(SubExpr, Spec, getContext(), Loc);
   return false;
 }
 
@@ -3763,9 +3764,9 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
   if (!(MCID.TSFlags & RISCVII::ConstraintMask))
     return false;
 
-  if (Opcode == RISCV::VC_V_XVW || Opcode == RISCV::VC_V_IVW ||
-      Opcode == RISCV::VC_V_FVW || Opcode == RISCV::VC_V_VVW) {
-    // Operands Opcode, Dst, uimm, Dst, Rs2, Rs1 for VC_V_XVW.
+  if (Opcode == RISCV::SF_VC_V_XVW || Opcode == RISCV::SF_VC_V_IVW ||
+      Opcode == RISCV::SF_VC_V_FVW || Opcode == RISCV::SF_VC_V_VVW) {
+    // Operands Opcode, Dst, uimm, Dst, Rs2, Rs1 for SF_VC_V_XVW.
     MCRegister VCIXDst = Inst.getOperand(0).getReg();
     SMLoc VCIXDstLoc = Operands[2]->getStartLoc();
     if (MCID.TSFlags & RISCVII::VS1Constraint) {

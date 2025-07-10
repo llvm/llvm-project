@@ -17,7 +17,6 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -41,7 +40,7 @@ class HexagonAsmBackend : public MCAsmBackend {
   uint8_t OSABI;
   StringRef CPU;
   mutable uint64_t relaxedCnt;
-  mutable const MCInst *RelaxedMCB = nullptr;
+  mutable MCInst RelaxedMCB;
   std::unique_ptr <MCInstrInfo> MCII;
   std::unique_ptr <MCInst *> RelaxTarget;
   MCInst * Extender;
@@ -84,14 +83,15 @@ public:
   }
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
+    // clang-format off
     const static MCFixupKindInfo Infos[Hexagon::NumTargetFixupKinds] = {
       // This table *must* be in same the order of fixup_* kinds in
       // HexagonFixupKinds.h.
       //
       // namei                          offset  bits    flags
-      { "fixup_Hexagon_B22_PCREL",      0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B15_PCREL",      0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B7_PCREL",       0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_B22_PCREL",      0,      32,     0 },
+      { "fixup_Hexagon_B15_PCREL",      0,      32,     0 },
+      { "fixup_Hexagon_B7_PCREL",       0,      32,     0 },
       { "fixup_Hexagon_LO16",           0,      32,     0 },
       { "fixup_Hexagon_HI16",           0,      32,     0 },
       { "fixup_Hexagon_32",             0,      32,     0 },
@@ -102,15 +102,15 @@ public:
       { "fixup_Hexagon_GPREL16_2",      0,      32,     0 },
       { "fixup_Hexagon_GPREL16_3",      0,      32,     0 },
       { "fixup_Hexagon_HL16",           0,      32,     0 },
-      { "fixup_Hexagon_B13_PCREL",      0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B9_PCREL",       0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B32_PCREL_X",    0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_B13_PCREL",      0,      32,     0 },
+      { "fixup_Hexagon_B9_PCREL",       0,      32,     0 },
+      { "fixup_Hexagon_B32_PCREL_X",    0,      32,     0 },
       { "fixup_Hexagon_32_6_X",         0,      32,     0 },
-      { "fixup_Hexagon_B22_PCREL_X",    0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B15_PCREL_X",    0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B13_PCREL_X",    0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B9_PCREL_X",     0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B7_PCREL_X",     0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_B22_PCREL_X",    0,      32,     0 },
+      { "fixup_Hexagon_B15_PCREL_X",    0,      32,     0 },
+      { "fixup_Hexagon_B13_PCREL_X",    0,      32,     0 },
+      { "fixup_Hexagon_B9_PCREL_X",     0,      32,     0 },
+      { "fixup_Hexagon_B7_PCREL_X",     0,      32,     0 },
       { "fixup_Hexagon_16_X",           0,      32,     0 },
       { "fixup_Hexagon_12_X",           0,      32,     0 },
       { "fixup_Hexagon_11_X",           0,      32,     0 },
@@ -119,12 +119,12 @@ public:
       { "fixup_Hexagon_8_X",            0,      32,     0 },
       { "fixup_Hexagon_7_X",            0,      32,     0 },
       { "fixup_Hexagon_6_X",            0,      32,     0 },
-      { "fixup_Hexagon_32_PCREL",       0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_32_PCREL",       0,      32,     0 },
       { "fixup_Hexagon_COPY",           0,      32,     0 },
       { "fixup_Hexagon_GLOB_DAT",       0,      32,     0 },
       { "fixup_Hexagon_JMP_SLOT",       0,      32,     0 },
       { "fixup_Hexagon_RELATIVE",       0,      32,     0 },
-      { "fixup_Hexagon_PLT_B22_PCREL",  0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_PLT_B22_PCREL",  0,      32,     0 },
       { "fixup_Hexagon_GOTREL_LO16",    0,      32,     0 },
       { "fixup_Hexagon_GOTREL_HI16",    0,      32,     0 },
       { "fixup_Hexagon_GOTREL_32",      0,      32,     0 },
@@ -137,8 +137,8 @@ public:
       { "fixup_Hexagon_DTPREL_HI16",    0,      32,     0 },
       { "fixup_Hexagon_DTPREL_32",      0,      32,     0 },
       { "fixup_Hexagon_DTPREL_16",      0,      32,     0 },
-      { "fixup_Hexagon_GD_PLT_B22_PCREL",0,     32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_LD_PLT_B22_PCREL",0,     32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_GD_PLT_B22_PCREL",0,     32,     0 },
+      { "fixup_Hexagon_LD_PLT_B22_PCREL",0,     32,     0 },
       { "fixup_Hexagon_GD_GOT_LO16",    0,      32,     0 },
       { "fixup_Hexagon_GD_GOT_HI16",    0,      32,     0 },
       { "fixup_Hexagon_GD_GOT_32",      0,      32,     0 },
@@ -159,7 +159,7 @@ public:
       { "fixup_Hexagon_TPREL_HI16",     0,      32,     0 },
       { "fixup_Hexagon_TPREL_32",       0,      32,     0 },
       { "fixup_Hexagon_TPREL_16",       0,      32,     0 },
-      { "fixup_Hexagon_6_PCREL_X",      0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_6_PCREL_X",      0,      32,     0 },
       { "fixup_Hexagon_GOTREL_32_6_X",  0,      32,     0 },
       { "fixup_Hexagon_GOTREL_16_X",    0,      32,     0 },
       { "fixup_Hexagon_GOTREL_11_X",    0,      32,     0 },
@@ -183,11 +183,12 @@ public:
       { "fixup_Hexagon_TPREL_32_6_X",   0,      32,     0 },
       { "fixup_Hexagon_TPREL_16_X",     0,      32,     0 },
       { "fixup_Hexagon_TPREL_11_X",     0,      32,     0 },
-      { "fixup_Hexagon_GD_PLT_B22_PCREL_X",0,     32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_GD_PLT_B32_PCREL_X",0,     32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_LD_PLT_B22_PCREL_X",0,     32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_LD_PLT_B32_PCREL_X",0,     32,     MCFixupKindInfo::FKF_IsPCRel }
+      { "fixup_Hexagon_GD_PLT_B22_PCREL_X", 0,  32,     0 },
+      { "fixup_Hexagon_GD_PLT_B32_PCREL_X", 0,  32,     0 },
+      { "fixup_Hexagon_LD_PLT_B22_PCREL_X", 0,  32,     0 },
+      { "fixup_Hexagon_LD_PLT_B32_PCREL_X", 0,  32,     0 },
     };
+    // clang-format on
 
     if (Kind < FirstTargetFixupKind)
       return MCAsmBackend::getFixupKindInfo(Kind);
@@ -315,7 +316,6 @@ public:
       case FK_Data_1:
       case FK_Data_2:
       case FK_Data_4:
-      case FK_PCRel_4:
       case fixup_Hexagon_32:
         // Leave these relocations alone as they are used for EH.
         return false;
@@ -333,8 +333,7 @@ public:
         return 1;
       case FK_Data_2:
         return 2;
-      case FK_Data_4:         // this later gets mapped to R_HEX_32
-      case FK_PCRel_4:        // this later gets mapped to R_HEX_32_PCREL
+      case FK_Data_4: // this later gets mapped to R_HEX_32 or R_HEX_32_PCREL
       case fixup_Hexagon_32:
       case fixup_Hexagon_B32_PCREL_X:
       case fixup_Hexagon_B22_PCREL:
@@ -429,13 +428,11 @@ public:
     return Relaxable;
   }
 
-  /// MayNeedRelaxation - Check whether the given instruction may need
-  /// relaxation.
-  ///
-  /// \param Inst - The instruction to test.
-  bool mayNeedRelaxation(MCInst const &Inst,
+  bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override {
-    RelaxedMCB = &Inst;
+    RelaxedMCB.clear();
+    RelaxedMCB.setOpcode(Opcode);
+    RelaxedMCB.setOperands(Operands);
     return true;
   }
 
@@ -444,7 +441,7 @@ public:
   bool fixupNeedsRelaxationAdvanced(const MCFixup &Fixup, const MCValue &,
                                     uint64_t Value,
                                     bool Resolved) const override {
-    MCInst const &MCB = *RelaxedMCB;
+    MCInst const &MCB = RelaxedMCB;
     assert(HexagonMCInstrInfo::isBundle(MCB));
 
     *RelaxTarget = nullptr;
@@ -599,7 +596,7 @@ public:
             case MCFragment::FT_Relaxable: {
               MCContext &Context = getContext();
               auto &RF = cast<MCRelaxableFragment>(*Frags[K]);
-              auto &Inst = const_cast<MCInst &>(RF.getInst());
+              MCInst Inst = RF.getInst();
 
               const bool WouldTraverseLabel = llvm::any_of(
                   Asm.symbols(), [&Asm, &RF, &Inst](MCSymbol const &sym) {

@@ -118,8 +118,9 @@ class CompressInstEmitter {
 
     bool IsCompressOnly;
     CompressPat(const CodeGenInstruction &S, const CodeGenInstruction &D,
-                std::vector<const Record *> RF, IndexedMap<OpData> &SourceMap,
-                IndexedMap<OpData> &DestMap, bool IsCompressOnly)
+                std::vector<const Record *> RF,
+                const IndexedMap<OpData> &SourceMap,
+                const IndexedMap<OpData> &DestMap, bool IsCompressOnly)
         : Source(S), Dest(D), PatReqFeatures(std::move(RF)),
           SourceOperandMap(SourceMap), DestOperandMap(DestMap),
           IsCompressOnly(IsCompressOnly) {}
@@ -516,9 +517,9 @@ void CompressInstEmitter::evaluateCompressPat(const Record *Rec) {
     return R->getValueAsBit("AssemblerMatcherPredicate");
   });
 
-  CompressPatterns.push_back(CompressPat(
-      SourceInst, DestInst, std::move(PatReqFeatures), SourceOperandMap,
-      DestOperandMap, Rec->getValueAsBit("isCompressOnly")));
+  CompressPatterns.emplace_back(SourceInst, DestInst, std::move(PatReqFeatures),
+                                SourceOperandMap, DestOperandMap,
+                                Rec->getValueAsBit("isCompressOnly"));
 }
 
 static void
