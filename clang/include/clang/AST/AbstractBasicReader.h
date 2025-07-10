@@ -197,7 +197,7 @@ public:
         unsigned int_ = asImpl().readUInt32();
         Decl *decl = asImpl().template readDeclAs<Decl>();
         if (auto *recordDecl = dyn_cast<CXXRecordDecl>(decl))
-          elemTy = getASTContext().getRecordType(recordDecl);
+          elemTy = getASTContext().getCanonicalTagType(recordDecl);
         else
           elemTy = cast<ValueDecl>(decl)->getType();
         path.push_back(

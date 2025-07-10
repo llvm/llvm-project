@@ -5607,7 +5607,7 @@ static TemplateDeductionResult CheckDeductionConsistency(
   bool IsDeductionGuide = isa<CXXDeductionGuideDecl>(FTD->getTemplatedDecl());
   if (IsDeductionGuide) {
     if (auto *Injected = P->getAs<InjectedClassNameType>())
-      P = Injected->getInjectedSpecializationType();
+      P = Injected->getCanonicalInjectedTST();
   }
   QualType InstP = S.SubstType(P.getCanonicalType(), MLTAL, FTD->getLocation(),
                                FTD->getDeclName(), &IsIncompleteSubstitution);
@@ -5627,9 +5627,9 @@ static TemplateDeductionResult CheckDeductionConsistency(
   auto T2 = S.Context.getUnqualifiedArrayType(A.getNonReferenceType());
   if (IsDeductionGuide) {
     if (auto *Injected = T1->getAs<InjectedClassNameType>())
-      T1 = Injected->getInjectedSpecializationType();
+      T1 = Injected->getCanonicalInjectedTST();
     if (auto *Injected = T2->getAs<InjectedClassNameType>())
-      T2 = Injected->getInjectedSpecializationType();
+      T2 = Injected->getCanonicalInjectedTST();
   }
   if (!S.Context.hasSameType(T1, T2))
     return TemplateDeductionResult::NonDeducedMismatch;

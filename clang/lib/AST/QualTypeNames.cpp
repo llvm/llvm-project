@@ -434,45 +434,48 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
     QT = Ctx.getQualifiedType(QT, Quals);
   }
 
-  NestedNameSpecifier *Prefix = nullptr;
+  if (const auto *TST =
+          dyn_cast<const TemplateSpecializationType>(QT.getTypePtr())) {
+
+    const Type *T = getFullyQualifiedTemplateType(Ctx, TST, WithGlobalNsPrefix);
+    if (T == TST)
+      return QT;
+    return Ctx.getQualifiedType(T, QT.getQualifiers());
+  }
+
   // Local qualifiers are attached to the QualType outside of the
   // elaborated type.  Retrieve them before descending into the
   // elaborated type.
   Qualifiers PrefixQualifiers = QT.getLocalQualifiers();
   QT = QualType(QT.getTypePtr(), 0);
-  ElaboratedTypeKeyword Keyword = ElaboratedTypeKeyword::None;
-  if (const auto *ETypeInput = dyn_cast<ElaboratedType>(QT.getTypePtr())) {
-    QT = ETypeInput->getNamedType();
-    assert(!QT.hasLocalQualifiers());
-    Keyword = ETypeInput->getKeyword();
-  }
 
   // We don't consider the alias introduced by `using a::X` as a new type.
   // The qualified name is still a::X.
   if (const auto *UT = QT->getAs<UsingType>()) {
-    QT = Ctx.getQualifiedType(UT->getUnderlyingType(), PrefixQualifiers);
+    QT = Ctx.getQualifiedType(UT->desugar(), PrefixQualifiers);
     return getFullyQualifiedType(QT, Ctx, WithGlobalNsPrefix);
   }
 
   // Create a nested name specifier if needed.
-  Prefix = createNestedNameSpecifierForScopeOf(Ctx, QT.getTypePtr(),
-                                               true /*FullyQualified*/,
-                                               WithGlobalNsPrefix);
+  NestedNameSpecifier Prefix = createNestedNameSpecifierForScopeOf(
+      Ctx, QT.getTypePtr(), true /*FullyQualified*/, WithGlobalNsPrefix);
 
   // In case of template specializations iterate over the arguments and
   // fully qualify them as well.
-  if (isa<const TemplateSpecializationType>(QT.getTypePtr()) ||
-      isa<const RecordType>(QT.getTypePtr())) {
+  if (const auto *TT = dyn_cast<TagType>(QT.getTypePtr())) {
     // We are asked to fully qualify and we have a Record Type (which
     // may point to a template specialization) or Template
     // Specialization Type. We need to fully qualify their arguments.
 
     const Type *TypePtr = getFullyQualifiedTemplateType(
-        Ctx, QT.getTypePtr(), WithGlobalNsPrefix);
+        Ctx, TT, TT->getKeyword(), Prefix, WithGlobalNsPrefix);
     QT = QualType(TypePtr, 0);
-  }
-  if (Prefix || Keyword != ElaboratedTypeKeyword::None) {
-    QT = Ctx.getElaboratedType(Keyword, Prefix, QT);
+  } else if (const auto *TT = dyn_cast<TypedefType>(QT.getTypePtr())) {
+    QT = Ctx.getTypedefType(
+        TT->getKeyword(), Prefix, TT->getDecl(),
+        getFullyQualifiedType(TT->desugar(), Ctx, WithGlobalNsPrefix));
+  } else {
+    assert(!Prefix && "Unhandled type node");
   }
   QT = Ctx.getQualifiedType(QT, PrefixQualifiers);
   return QT;

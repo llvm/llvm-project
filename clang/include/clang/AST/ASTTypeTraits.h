@@ -307,7 +307,7 @@ public:
 
   /// For nodes which represent textual entities in the source code,
   /// return their SourceRange.  For all other nodes, return SourceRange().
-  SourceRange getSourceRange() const;
+  SourceRange getSourceRange(bool IncludeQualifier = false) const;
 
   /// @{
   /// Imposes an order on \c DynTypedNode.

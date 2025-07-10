@@ -510,7 +510,7 @@ public:
   }
   void VisitMemberPointerTypeLoc(MemberPointerTypeLoc TL) {
     // FIXME: Provide NestedNamespecifierLoc visitor.
-    Visit(TL.getQualifierLoc().getTypeLoc());
+    Visit(TL.getQualifierLoc().castAsTypeLoc());
   }
   void VisitVariableArrayTypeLoc(VariableArrayTypeLoc TL) {
     Visit(TL.getSizeExpr());
@@ -772,17 +772,16 @@ public:
   }
 
   void VisitUsingShadowDecl(const UsingShadowDecl *D) {
-    if (auto *TD = dyn_cast<TypeDecl>(D->getUnderlyingDecl()))
-      Visit(TD->getTypeForDecl());
+    Visit(D->getTargetDecl());
   }
 
   void VisitFriendDecl(const FriendDecl *D) {
     if (D->getFriendType()) {
       // Traverse any CXXRecordDecl owned by this type, since
       // it will not be in the parent context:
-      if (auto *ET = D->getFriendType()->getType()->getAs<ElaboratedType>())
-        if (auto *TD = ET->getOwnedTagDecl())
-          Visit(TD);
+      if (auto *TT = D->getFriendType()->getType()->getAs<TagType>())
+        if (TT->isTagOwned())
+          Visit(TT->getOriginalDecl());
     } else {
       Visit(D->getFriendDecl());
     }

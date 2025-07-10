@@ -1693,9 +1693,9 @@ void NamedDecl::printQualifiedName(raw_ostream &OS,
     return;
   }
   printNestedNameSpecifier(OS, P);
-  if (getDeclName())
-    OS << *this;
-  else {
+  if (getDeclName()) {
+    printName(OS, P);
+  } else {
     // Give the printName override a chance to pick a different name before we
     // fall back to "(anonymous)".
     SmallString<64> NameBuffer;
@@ -2889,7 +2889,7 @@ CharUnits VarDecl::getFlexibleArrayInitChars(const ASTContext &Ctx) const {
   if (!InitTy)
     return CharUnits::Zero();
   CharUnits FlexibleArraySize = Ctx.getTypeSizeInChars(InitTy);
-  const ASTRecordLayout &RL = Ctx.getASTRecordLayout(Ty->getDecl());
+  const ASTRecordLayout &RL = Ctx.getASTRecordLayout(RD);
   CharUnits FlexibleArrayOffset =
       Ctx.toCharUnitsFromBits(RL.getFieldOffset(RL.getFieldCount() - 1));
   if (FlexibleArrayOffset + FlexibleArraySize < RL.getSize())
@@ -4836,10 +4836,6 @@ TagDecl *TagDecl::getCanonicalDecl() { return getFirstDecl(); }
 
 void TagDecl::setTypedefNameForAnonDecl(TypedefNameDecl *TDD) {
   TypedefNameDeclOrQualifier = TDD;
-  if (const Type *T = getTypeForDecl()) {
-    (void)T;
-    assert(T->isLinkageValid());
-  }
   assert(isLinkageValid());
 }
 
@@ -4867,25 +4863,16 @@ void TagDecl::completeDefinition() {
 }
 
 TagDecl *TagDecl::getDefinition() const {
-  if (isCompleteDefinition())
+  if (isCompleteDefinition() || isBeingDefined())
     return const_cast<TagDecl *>(this);
-
-  // If it's possible for us to have an out-of-date definition, check now.
-  if (mayHaveOutOfDateDef()) {
-    if (IdentifierInfo *II = getIdentifier()) {
-      if (II->isOutOfDate()) {
-        updateOutOfDate(*II);
-      }
-    }
-  }
 
   if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(this))
     return CXXRD->getDefinition();
 
-  for (auto *R : redecls())
-    if (R->isCompleteDefinition())
+  for (TagDecl *R :
+       redecl_range(redecl_iterator(getNextRedeclaration()), redecl_iterator()))
+    if (R->isCompleteDefinition() || R->isBeingDefined())
       return R;
-
   return nullptr;
 }
 
@@ -4919,7 +4906,7 @@ void TagDecl::printName(raw_ostream &OS, const PrintingPolicy &Policy) const {
     // is already printed as part of the type.
     PrintingPolicy Copy(Policy);
     Copy.SuppressScope = true;
-    getASTContext().getTagDeclType(this).print(OS, Copy);
+    QualType(getASTContext().getCanonicalTagType(this)).print(OS, Copy);
     return;
   }
   // Otherwise, do the normal printing.
@@ -4963,19 +4950,13 @@ EnumDecl *EnumDecl::Create(ASTContext &C, DeclContext *DC,
                            IdentifierInfo *Id,
                            EnumDecl *PrevDecl, bool IsScoped,
                            bool IsScopedUsingClassTag, bool IsFixed) {
-  auto *Enum = new (C, DC) EnumDecl(C, DC, StartLoc, IdLoc, Id, PrevDecl,
-                                    IsScoped, IsScopedUsingClassTag, IsFixed);
-  Enum->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
-  C.getTypeDeclType(Enum, PrevDecl);
-  return Enum;
+  return new (C, DC) EnumDecl(C, DC, StartLoc, IdLoc, Id, PrevDecl, IsScoped,
+                              IsScopedUsingClassTag, IsFixed);
 }
 
 EnumDecl *EnumDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
-  EnumDecl *Enum =
-      new (C, ID) EnumDecl(C, nullptr, SourceLocation(), SourceLocation(),
-                           nullptr, nullptr, false, false, false);
-  Enum->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
-  return Enum;
+  return new (C, ID) EnumDecl(C, nullptr, SourceLocation(), SourceLocation(),
+                              nullptr, nullptr, false, false, false);
 }
 
 SourceRange EnumDecl::getIntegerTypeRange() const {
@@ -5035,7 +5016,7 @@ EnumDecl *EnumDecl::getTemplateInstantiationPattern() const {
       EnumDecl *ED = getInstantiatedFromMemberEnum();
       while (auto *NewED = ED->getInstantiatedFromMemberEnum())
         ED = NewED;
-      return getDefinitionOrSelf(ED);
+      return ::getDefinitionOrSelf(ED);
     }
   }
 
@@ -5125,21 +5106,15 @@ RecordDecl::RecordDecl(Kind DK, TagKind TK, const ASTContext &C,
 RecordDecl *RecordDecl::Create(const ASTContext &C, TagKind TK, DeclContext *DC,
                                SourceLocation StartLoc, SourceLocation IdLoc,
                                IdentifierInfo *Id, RecordDecl* PrevDecl) {
-  RecordDecl *R = new (C, DC) RecordDecl(Record, TK, C, DC,
-                                         StartLoc, IdLoc, Id, PrevDecl);
-  R->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
-
-  C.getTypeDeclType(R, PrevDecl);
-  return R;
+  return new (C, DC)
+      RecordDecl(Record, TK, C, DC, StartLoc, IdLoc, Id, PrevDecl);
 }
 
 RecordDecl *RecordDecl::CreateDeserialized(const ASTContext &C,
                                            GlobalDeclID ID) {
-  RecordDecl *R = new (C, ID)
+  return new (C, ID)
       RecordDecl(Record, TagTypeKind::Struct, C, nullptr, SourceLocation(),
                  SourceLocation(), nullptr, nullptr);
-  R->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
-  return R;
 }
 
 bool RecordDecl::isLambda() const {

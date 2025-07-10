@@ -195,15 +195,6 @@ SourceLocation TypeLoc::getBeginLoc() const {
   TypeLoc LeftMost = Cur;
   while (true) {
     switch (Cur.getTypeLocClass()) {
-    case Elaborated:
-      if (Cur.getLocalSourceRange().getBegin().isValid()) {
-        LeftMost = Cur;
-        break;
-      }
-      Cur = Cur.getNextTypeLoc();
-      if (Cur.isNull())
-        break;
-      continue;
     case FunctionProto:
       if (Cur.castAs<FunctionProtoTypeLoc>().getTypePtr()
               ->hasTrailingReturn()) {
@@ -275,7 +266,6 @@ SourceLocation TypeLoc::getEndLoc() const {
         Last = Cur;
       break;
     case Qualified:
-    case Elaborated:
       break;
     }
     Cur = Cur.getNextTypeLoc();
@@ -565,15 +555,6 @@ initializeQualifier(ASTContext &Context, NestedNameSpecifier *Qualifier,
   return Builder.getWithLocInContext(Context);
 }
 
-void ElaboratedTypeLoc::initializeLocal(ASTContext &Context,
-                                        SourceLocation Loc) {
-  if (isEmpty())
-    return;
-  initializeElaboratedKeyword(*this, Loc);
-  setQualifierLoc(
-      initializeQualifier(Context, getTypePtr()->getQualifier(), Loc));
-}
-
 void DependentNameTypeLoc::initializeLocal(ASTContext &Context,
                                            SourceLocation Loc) {
   initializeElaboratedKeyword(*this, Loc);
@@ -594,6 +575,78 @@ DependentTemplateSpecializationTypeLoc::initializeLocal(ASTContext &Context,
   setRAngleLoc(Loc);
   TemplateSpecializationTypeLoc::initializeArgLocs(
       Context, getTypePtr()->template_arguments(), getArgInfos(), Loc);
+}
+
+void TemplateSpecializationTypeLoc::set(SourceLocation ElaboratedKeywordLoc,
+                                        NestedNameSpecifierLoc QualifierLoc,
+                                        SourceLocation TemplateKeywordLoc,
+                                        SourceLocation NameLoc,
+                                        SourceLocation LAngleLoc,
+                                        SourceLocation RAngleLoc) {
+  TemplateSpecializationLocInfo &Data = *getLocalData();
+
+  Data.ElaboratedKWLoc = ElaboratedKeywordLoc;
+  SourceLocation BeginLoc = ElaboratedKeywordLoc;
+
+  getLocalData()->QualifierData = QualifierLoc.getOpaqueData();
+
+  assert(QualifierLoc.getNestedNameSpecifier() ==
+         getTypePtr()->getTemplateName().getQualifier());
+  Data.QualifierData = QualifierLoc ? QualifierLoc.getOpaqueData() : nullptr;
+  if (QualifierLoc && !BeginLoc.isValid())
+    BeginLoc = QualifierLoc.getBeginLoc();
+
+  Data.TemplateKWLoc = TemplateKeywordLoc;
+  if (!BeginLoc.isValid())
+    BeginLoc = TemplateKeywordLoc;
+
+  Data.NameLoc = NameLoc;
+  if (!BeginLoc.isValid())
+    BeginLoc = NameLoc;
+
+  Data.LAngleLoc = LAngleLoc;
+  Data.SR = SourceRange(BeginLoc, RAngleLoc);
+}
+
+void TemplateSpecializationTypeLoc::set(SourceLocation ElaboratedKeywordLoc,
+                                        NestedNameSpecifierLoc QualifierLoc,
+                                        SourceLocation TemplateKeywordLoc,
+                                        SourceLocation NameLoc,
+                                        const TemplateArgumentListInfo &TAL) {
+  set(ElaboratedKeywordLoc, QualifierLoc, TemplateKeywordLoc, NameLoc,
+      TAL.getLAngleLoc(), TAL.getRAngleLoc());
+  MutableArrayRef<TemplateArgumentLocInfo> ArgInfos = getArgLocInfos();
+  assert(TAL.size() == ArgInfos.size());
+  for (unsigned I = 0, N = TAL.size(); I != N; ++I)
+    ArgInfos[I] = TAL[I].getLocInfo();
+}
+
+void TemplateSpecializationTypeLoc::initializeLocal(ASTContext &Context,
+                                                    SourceLocation Loc) {
+  QualifiedTemplateName *Name =
+      getTypePtr()->getTemplateName().getAsAdjustedQualifiedTemplateName();
+
+  SourceLocation ElaboratedKeywordLoc =
+      getTypePtr()->getKeyword() != ElaboratedTypeKeyword::None
+          ? Loc
+          : SourceLocation();
+
+  NestedNameSpecifierLoc QualifierLoc;
+  if (NestedNameSpecifier Qualifier =
+          Name ? Name->getQualifier() : std::nullopt) {
+    NestedNameSpecifierLocBuilder Builder;
+    Builder.MakeTrivial(Context, Qualifier, Loc);
+    QualifierLoc = Builder.getWithLocInContext(Context);
+  }
+
+  TemplateArgumentListInfo TAL(Loc, Loc);
+  set(ElaboratedKeywordLoc, QualifierLoc,
+      /*TemplateKeywordLoc=*/Name && Name->hasTemplateKeyword()
+          ? Loc
+          : SourceLocation(),
+      /*NameLoc=*/Loc, /*LAngleLoc=*/Loc, /*RAngleLoc=*/Loc);
+  initializeArgLocs(Context, getTypePtr()->template_arguments(), getArgInfos(),
+                    Loc);
 }
 
 void TemplateSpecializationTypeLoc::initializeArgLocs(
@@ -631,7 +684,7 @@ void TemplateSpecializationTypeLoc::initializeArgLocs(
         Builder.MakeTrivial(Context, QTN->getQualifier(), Loc);
 
       ArgInfos[i] = TemplateArgumentLocInfo(
-          Context, Builder.getWithLocInContext(Context), Loc,
+          Context, Loc, Builder.getWithLocInContext(Context), Loc,
           Args[i].getKind() == TemplateArgument::Template ? SourceLocation()
                                                           : Loc);
       break;
@@ -680,6 +733,14 @@ void AutoTypeLoc::initializeLocal(ASTContext &Context, SourceLocation Loc) {
   }
 }
 
+void DeducedTemplateSpecializationTypeLoc::initializeLocal(ASTContext &Context,
+                                                           SourceLocation Loc) {
+  initializeElaboratedKeyword(*this, Loc);
+  setQualifierLoc(initializeQualifier(
+      Context, getTypePtr()->getTemplateName().getQualifier(), Loc));
+  setTemplateNameLoc(Loc);
+}
+
 namespace {
 
   class GetContainedAutoTypeLocVisitor :
@@ -692,10 +753,6 @@ namespace {
     }
 
     // Only these types can contain the desired 'auto' type.
-
-    TypeLoc VisitElaboratedTypeLoc(ElaboratedTypeLoc T) {
-      return Visit(T.getNamedTypeLoc());
-    }
 
     TypeLoc VisitQualifiedTypeLoc(QualifiedTypeLoc T) {
       return Visit(T.getUnqualifiedLoc());

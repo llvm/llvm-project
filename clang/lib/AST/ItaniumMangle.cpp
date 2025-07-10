@@ -1334,6 +1334,21 @@ void CXXNameMangler::manglePrefix(QualType type) {
       mangleTemplateArgs(Template, DTST->template_arguments());
       addSubstitution(QualType(DTST, 0));
     }
+  } else if (const auto *DNT = type->getAs<DependentNameType>()) {
+    // Clang 14 and before did not consider this substitutable.
+    bool Clang14Compat = isCompatibleWith(LangOptions::ClangABI::Ver14);
+    if (!Clang14Compat && mangleSubstitution(QualType(DNT, 0)))
+      return;
+
+    // Member expressions can have these without prefixes, but that
+    // should end up in mangleUnresolvedPrefix instead.
+    assert(DNT->getQualifier());
+    manglePrefix(DNT->getQualifier());
+
+    mangleSourceName(DNT->getIdentifier());
+
+    if (!Clang14Compat)
+      addSubstitution(QualType(DNT, 0));
   } else {
     // We use the QualType mangle type variant here because it handles
     // substitutions.
@@ -2608,9 +2623,6 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::Using:
     return mangleUnresolvedTypeOrSimpleId(cast<UsingType>(Ty)->desugar(),
                                           Prefix);
-  case Type::Elaborated:
-    return mangleUnresolvedTypeOrSimpleId(
-        cast<ElaboratedType>(Ty)->getNamedType(), Prefix);
   }
 
   return false;
@@ -4471,7 +4483,7 @@ void CXXNameMangler::mangleType(const InjectedClassNameType *T) {
   // Mangle injected class name types as if the user had written the
   // specialization out fully.  It may not actually be possible to see
   // this mangling, though.
-  mangleType(T->getInjectedSpecializationType());
+  mangleType(T->getCanonicalInjectedTST());
 }
 
 void CXXNameMangler::mangleType(const TemplateSpecializationType *T) {
@@ -4780,7 +4792,7 @@ void CXXNameMangler::mangleMemberExpr(const Expr *base,
   //              ::= pt <expression> <unresolved-name>
   if (base)
     mangleMemberExprBase(base, isArrow);
-  mangleUnresolvedName(qualifier, member, TemplateArgs, NumTemplateArgs, arity);
+  mangleUnresolvedName(Qualifier, member, TemplateArgs, NumTemplateArgs, arity);
 }
 
 /// Look at the callee of the given call expression and determine if
@@ -5855,7 +5867,8 @@ recurse:
     // externally-visible declaration, so there's no standard mangling for
     // this, but mangling as a literal of the closure type seems reasonable.
     Out << "L";
-    mangleType(Context.getASTContext().getRecordType(cast<LambdaExpr>(E)->getLambdaClass()));
+    mangleType(Context.getASTContext().getCanonicalTagType(
+        cast<LambdaExpr>(E)->getLambdaClass()));
     Out << "E";
     break;
   }
@@ -6528,7 +6541,7 @@ static QualType getLValueType(ASTContext &Ctx, const APValue &LV) {
                  dyn_cast<FieldDecl>(E.getAsBaseOrMember().getPointer()))
       T = FD->getType();
     else
-      T = Ctx.getRecordType(
+      T = Ctx.getCanonicalTagType(
           cast<CXXRecordDecl>(E.getAsBaseOrMember().getPointer()));
   }
   return T;
@@ -6895,7 +6908,7 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
             }
             TypeSoFar = FD->getType();
           } else {
-            TypeSoFar = Ctx.getRecordType(cast<CXXRecordDecl>(D));
+            TypeSoFar = Ctx.getCanonicalTagType(cast<CXXRecordDecl>(D));
           }
         }
       }

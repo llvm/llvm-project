@@ -133,7 +133,7 @@ InheritanceHierarchyWriter::WriteNodeReference(QualType Type,
 /// viewInheritance - Display the inheritance hierarchy of this C++
 /// class using GraphViz.
 void CXXRecordDecl::viewInheritance(ASTContext& Context) const {
-  QualType Self = Context.getTypeDeclType(this);
+  QualType Self = Context.getCanonicalTagType(this);
 
   int FD;
   SmallString<128> Filename;

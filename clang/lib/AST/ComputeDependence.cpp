@@ -820,8 +820,7 @@ clang::computeDependence(OverloadExpr *E, bool KnownDependent,
 ExprDependence clang::computeDependence(DependentScopeDeclRefExpr *E) {
   auto D = ExprDependence::TypeValue;
   D |= getDependenceInExpr(E->getNameInfo());
-  if (auto *Q = E->getQualifier())
-    D |= toExprDependence(Q->getDependence());
+  D |= toExprDependence(E->getQualifier().getDependence());
   for (const auto &A : E->template_arguments())
     D |= toExprDependence(A.getArgument().getDependence());
   return D;
@@ -872,8 +871,7 @@ ExprDependence clang::computeDependence(CXXDependentScopeMemberExpr *E) {
   auto D = ExprDependence::TypeValueInstantiation;
   if (!E->isImplicitAccess())
     D |= E->getBase()->getDependence();
-  if (auto *Q = E->getQualifier())
-    D |= toExprDependence(Q->getDependence());
+  D |= toExprDependence(E->getQualifier().getDependence());
   D |= getDependenceInExpr(E->getMemberNameInfo());
   for (const auto &A : E->template_arguments())
     D |= toExprDependence(A.getArgument().getDependence());

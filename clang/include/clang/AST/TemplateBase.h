@@ -525,6 +525,10 @@ public:
   SourceLocation getTemplateEllipsisLoc() const {
     return getTemplate()->EllipsisLoc;
   }
+
+private:
+  llvm::PointerUnion<TemplateTemplateArgLocInfo *, Expr *, TypeSourceInfo *>
+      Pointer;
 };
 
 /// Location wrapper for a TemplateArgument.  TemplateArgument is to
