@@ -5064,11 +5064,10 @@ add_header_library(
   HDRS
     expxf16.h
   DEPENDS
-    libc.src.__support.CPP.array
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer
-    libc.src.__support.FPUtil.polyeval
     libc.src.__support.macros.attributes
+    libc.src.__support.math.expf16_utils
 )

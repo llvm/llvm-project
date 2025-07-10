@@ -24,11 +24,23 @@ add_header_library(
 )
 
 add_header_library(
+  expf16_utils
+  HDRS
+    expf16_utils.h
+  DEPENDS
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.macros.attributes
+    libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
   expf16
   HDRS
     expf16.h
   DEPENDS
-    .expxf16
+    .expf16_utils
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.CPP.array
@@ -41,4 +53,5 @@ add_header_library(
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.optimization
+    libc.include.llvm-libc-macros.float16_macros
 )

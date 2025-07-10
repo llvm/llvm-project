@@ -24,7 +24,8 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
-#include "src/math/generic/expxf16.h"
+
+#include "expf16_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
