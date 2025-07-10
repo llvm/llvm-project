@@ -276,6 +276,9 @@ def err_expected_while : Error<"expected 'while' in do/while loop">;
 
 def err_expected_semi_after_stmt : Error<"expected ';' after %0 statement">;
 def err_expected_semi_after_expr : Error<"expected ';' after expression">;
+def warn_attr_in_secondary_block : ExtWarn<
+  "ISO C does not allow an attribute list to appear here">,
+  InGroup<DiagGroup<"c-attribute-extension">>;
 def err_extraneous_token_before_semi : Error<"extraneous '%0' before ';'">;
 
 def err_expected_semi_after_method_proto : Error<
@@ -474,9 +477,6 @@ def err_bool_redeclaration : Error<
 def warn_cxx98_compat_static_assert : Warning<
   "'static_assert' declarations are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
-def ext_ms_static_assert : ExtWarn<
-  "use of 'static_assert' without inclusion of <assert.h> is a Microsoft "
-  "extension">, InGroup<MicrosoftStaticAssert>;
 def ext_cxx_static_assert_no_message : ExtWarn<
   "'static_assert' with no message is a C++17 extension">, InGroup<CXX17>;
 def ext_c_static_assert_no_message : ExtWarn<
