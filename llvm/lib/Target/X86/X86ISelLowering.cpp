@@ -4975,6 +4975,16 @@ X86TargetLowering::getTargetConstantFromLoad(LoadSDNode *LD) const {
   return getTargetConstantFromNode(LD);
 }
 
+bool X86TargetLowering::isTargetCanonicalSelect(SDNode *N) const {
+  // Do not fold (vselect not(C), X, 0s) to (vselect C, Os, X)
+  SDValue Cond = N->getOperand(0);
+  SDValue RHS = N->getOperand(2);
+  EVT CondVT = Cond.getValueType();
+  return N->getOpcode() == ISD::VSELECT && Subtarget.hasAVX512() &&
+         CondVT.getVectorElementType() == MVT::i1 &&
+         ISD::isBuildVectorAllZeros(RHS.getNode());
+}
+
 // Extract raw constant bits from constant pools.
 static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
                                           APInt &UndefElts,
