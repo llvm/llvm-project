@@ -155,11 +155,18 @@ public:
     } break;
     case 'Y': {
       LanguageType language = Language::GetLanguageTypeFromString(option_arg);
-      if (language != eLanguageTypeUnknown)
-        m_bp_opts.GetCondition().SetLanguage(language);
-      else
+
+      LanguageSet languages_for_expressions =
+          Language::GetLanguagesSupportingTypeSystemsForExpressions();
+      if (language == eLanguageTypeUnknown)
         error = Status::FromError(CreateOptionParsingError(
             option_arg, short_option, long_option, "invalid language"));
+      else if (!languages_for_expressions[language])
+        error = Status::FromError(
+            CreateOptionParsingError(option_arg, short_option, long_option,
+                                     "no expression support for language"));
+      else
+        m_bp_opts.GetCondition().SetLanguage(language);
     } break;
     default:
       llvm_unreachable("Unimplemented option");
