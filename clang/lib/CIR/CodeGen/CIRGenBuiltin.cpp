@@ -83,13 +83,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
 
   const FunctionDecl *fd = gd.getDecl()->getAsFunction();
 
-  // If this is an alias for a lib function (e.g. __builtin_sin), emit
-  // the call using the normal call path, but using the unmangled
-  // version of the function name.
-  if (getContext().BuiltinInfo.isLibFunction(builtinID))
-    return emitLibraryCall(*this, fd, e,
-                           cgm.getBuiltinLibFunction(fd, builtinID));
-
   assert(!cir::MissingFeatures::builtinCallF128());
 
   // If the builtin has been declared explicitly with an assembler label,
@@ -122,6 +115,17 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value imag = emitScalarExpr(e->getArg(1));
     mlir::Value complex = builder.createComplexCreate(loc, real, imag);
     return RValue::get(complex);
+  }
+
+  case Builtin::BI__builtin_creal:
+  case Builtin::BI__builtin_crealf:
+  case Builtin::BI__builtin_creall:
+  case Builtin::BIcreal:
+  case Builtin::BIcrealf:
+  case Builtin::BIcreall: {
+    mlir::Value complex = emitComplexExpr(e->getArg(0));
+    mlir::Value real = builder.createComplexReal(loc, complex);
+    return RValue::get(real);
   }
 
   case Builtin::BI__builtin_clrsb:
@@ -191,6 +195,13 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return RValue::get(result);
   }
   }
+
+  // If this is an alias for a lib function (e.g. __builtin_sin), emit
+  // the call using the normal call path, but using the unmangled
+  // version of the function name.
+  if (getContext().BuiltinInfo.isLibFunction(builtinID))
+    return emitLibraryCall(*this, fd, e,
+                           cgm.getBuiltinLibFunction(fd, builtinID));
 
   cgm.errorNYI(e->getSourceRange(), "unimplemented builtin call");
   return getUndefRValue(e->getType());

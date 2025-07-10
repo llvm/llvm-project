@@ -140,9 +140,9 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
 // Given a compressed control flow instruction this function returns
 // the expanded instruction, or the original instruction code if no
 // expansion is available.
-static unsigned getRelaxedOpcode(const MCInst &Inst,
+static unsigned getRelaxedOpcode(unsigned Opcode, ArrayRef<MCOperand> Operands,
                                  const MCSubtargetInfo &STI) {
-  switch (Inst.getOpcode()) {
+  switch (Opcode) {
   case RISCV::C_BEQZ:
     return RISCV::BEQ;
   case RISCV::C_BNEZ:
@@ -158,7 +158,7 @@ static unsigned getRelaxedOpcode(const MCInst &Inst,
       break;
 
     // And only if it is using X0 or X1 for rd.
-    MCRegister Reg = Inst.getOperand(0).getReg();
+    MCRegister Reg = Operands[0].getReg();
     if (Reg == RISCV::X0)
       return RISCV::QC_E_J;
     if (Reg == RISCV::X1)
@@ -205,7 +205,7 @@ static unsigned getRelaxedOpcode(const MCInst &Inst,
   }
 
   // Returning the original opcode means we cannot relax the instruction.
-  return Inst.getOpcode();
+  return Opcode;
 }
 
 void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
@@ -223,7 +223,8 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
   case RISCV::C_JAL: {
     [[maybe_unused]] bool Success = RISCVRVC::uncompress(Res, Inst, STI);
     assert(Success && "Can't uncompress instruction");
-    assert(Res.getOpcode() == getRelaxedOpcode(Inst, STI) &&
+    assert(Res.getOpcode() ==
+               getRelaxedOpcode(Inst.getOpcode(), Inst.getOperands(), STI) &&
            "Branch Relaxation Error");
     break;
   }
@@ -235,7 +236,7 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
     assert((Inst.getOperand(0).getReg() == RISCV::X0 ||
             Inst.getOperand(0).getReg() == RISCV::X1) &&
            "JAL only relaxable with rd=x0 or rd=x1");
-    Res.setOpcode(getRelaxedOpcode(Inst, STI));
+    Res.setOpcode(getRelaxedOpcode(Inst.getOpcode(), Inst.getOperands(), STI));
     Res.addOperand(Inst.getOperand(1));
     break;
   }
@@ -257,7 +258,7 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
   case RISCV::QC_E_BGEI:
   case RISCV::QC_E_BLTUI:
   case RISCV::QC_E_BGEUI:
-    Res.setOpcode(getRelaxedOpcode(Inst, STI));
+    Res.setOpcode(getRelaxedOpcode(Inst.getOpcode(), Inst.getOperands(), STI));
     Res.addOperand(Inst.getOperand(0));
     Res.addOperand(Inst.getOperand(1));
     Res.addOperand(Inst.getOperand(2));
@@ -399,7 +400,8 @@ std::pair<bool, bool> RISCVAsmBackend::relaxLEB128(MCLEBFragment &LF,
   return std::make_pair(Expr.evaluateKnownAbsolute(Value, *Asm), false);
 }
 
-bool RISCVAsmBackend::mayNeedRelaxation(const MCInst &Inst,
+bool RISCVAsmBackend::mayNeedRelaxation(unsigned Opcode,
+                                        ArrayRef<MCOperand> Operands,
                                         const MCSubtargetInfo &STI) const {
   // This function has access to two STIs, the member of the AsmBackend, and the
   // one passed as an argument. The latter is more specific, so we query it for
@@ -407,7 +409,7 @@ bool RISCVAsmBackend::mayNeedRelaxation(const MCInst &Inst,
   if (STI.hasFeature(RISCV::FeatureExactAssembly))
     return false;
 
-  return getRelaxedOpcode(Inst, STI) != Inst.getOpcode();
+  return getRelaxedOpcode(Opcode, Operands, STI) != Opcode;
 }
 
 bool RISCVAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
