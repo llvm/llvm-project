@@ -8,6 +8,7 @@
 
 #include "src/__support/FPUtil/ComparisonOperations.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/macros/properties/types.h"
 #include "src/__support/sign.h"
 #include "test/UnitTest/FEnvSafeTest.h"
@@ -327,3 +328,7 @@ TEST_COMPARISON_OPS(LongDouble, long double)
 #ifdef LIBC_TYPES_HAS_FLOAT16
 TEST_COMPARISON_OPS(Float16, float16)
 #endif // LIBC_TYPES_HAS_FLOAT16
+
+#ifdef LIBC_TYPES_HAS_FLOAT128
+TEST_COMPARISON_OPS(Float128, float128)
+#endif // LIBC_TYPES_HAS_FLOAT128
