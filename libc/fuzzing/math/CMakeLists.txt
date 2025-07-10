@@ -81,6 +81,24 @@ add_libc_fuzzer(
 )
 
 add_libc_fuzzer(
+  exp2_fuzz
+  NEED_MPFR
+  SRCS
+    exp2_fuzz.cpp
+  DEPENDS
+    libc.src.math.exp2
+)
+
+add_libc_fuzzer(
+  expm1_fuzz
+  NEED_MPFR
+  SRCS
+    expm1_fuzz.cpp
+  DEPENDS
+    libc.src.math.expm1
+)
+
+add_libc_fuzzer(
   asin_fuzz
   NEED_MPFR
   SRCS
