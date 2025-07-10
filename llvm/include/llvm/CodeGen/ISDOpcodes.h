@@ -1563,6 +1563,8 @@ enum NodeType {
   // Outputs: Output Chain
   CLEAR_CACHE,
 
+  DEACTIVATION_SYMBOL,
+
   /// BUILTIN_OP_END - This must be the last enum value in this list.
   /// The target-specific pre-isel opcode values start here.
   BUILTIN_OP_END
