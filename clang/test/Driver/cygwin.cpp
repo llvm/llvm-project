@@ -15,20 +15,21 @@
 // CHECK-SAME: {{^}} "-internal-externc-isystem" "[[SYSROOT]]/usr/include/w32api"
 // CHECK-SAME: "-femulated-tls"
 // CHECK-SAME: "-exception-model=dwarf"
-// CHECK:      "{{.*}}gcc{{(\.exe)?}}"
-// CHECK-SAME: "-m32"
+// CHECK:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-SAME: "-m" "i386pe"
 
 // RUN: %clang -### %s --target=i686-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
 // RUN:   --stdlib=platform -static 2>&1 | FileCheck --check-prefix=CHECK-STATIC %s
 // CHECK-STATIC:      "-cc1" "-triple" "i686-pc-windows-cygnus"
 // CHECK-STATIC-SAME: "-static-define"
-// CHECK-STATIC:      "{{.*}}gcc{{(\.exe)?}}"
-// CHECK-STATIC-SAME: "-static"
+// CHECK-STATIC:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-STATIC-SAME: "-Bstatic"
 
 // RUN: %clang -### %s --target=i686-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
 // RUN:   -shared 2>&1 | FileCheck --check-prefix=CHECK-SHARED %s
-// CHECK-SHARED:      "{{.*}}gcc{{(\.exe)?}}"
-// CHECK-SHARED-SAME: "-shared"
+// CHECK-SHARED:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-SHARED-SAME: "--shared"
+// CHECK-SHARED-SAME: "-e" "__cygwin_dll_entry@12"
 
 // RUN: %clang -### -o %t %s 2>&1 -no-integrated-as -fuse-ld=ld \
 // RUN:     --gcc-toolchain=%S/Inputs/basic_cross_cygwin_tree/usr \
@@ -54,20 +55,22 @@
 // CHECK-64-SAME: {{^}} "-internal-externc-isystem" "[[SYSROOT]]/usr/include/w32api"
 // CHECK-64-SAME: "-femulated-tls"
 // CHECK-64-SAME: "-exception-model=seh"
-// CHECK-64:      "{{.*}}gcc{{(\.exe)?}}"
-// CHECK-64-SAME: "-m64"
+// CHECK-64:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-64-SAME: "-m" "i386pep"
+// CHECK-64-SAME: "--disable-high-entropy-va"
 
 // RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
 // RUN:   --stdlib=platform -static 2>&1 | FileCheck --check-prefix=CHECK-64-STATIC %s
 // CHECK-64-STATIC:      "-cc1" "-triple" "x86_64-pc-windows-cygnus"
 // CHECK-64-STATIC-SAME: "-static-define"
-// CHECK-64-STATIC:      "{{.*}}gcc{{(\.exe)?}}"
-// CHECK-64-STATIC-SAME: "-static"
+// CHECK-64-STATIC:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-64-STATIC-SAME: "-Bstatic"
 
 // RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
 // RUN:   -shared 2>&1 | FileCheck --check-prefix=CHECK-64-SHARED %s
-// CHECK-64-SHARED:      "{{.*}}gcc{{(\.exe)?}}"
-// CHECK-64-SHARED-SAME: "-shared"
+// CHECK-64-SHARED:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-64-SHARED-SAME: "--shared"
+// CHECK-64-SHARED-SAME: "-e" "_cygwin_dll_entry"
 
 // RUN: %clang -### -o %t %s 2>&1 -no-integrated-as -fuse-ld=ld \
 // RUN:     --gcc-toolchain=%S/Inputs/basic_cross_cygwin_tree/usr \
@@ -75,3 +78,45 @@
 // RUN:   | FileCheck --check-prefix=CHECK-64-CROSS %s
 // CHECK-64-CROSS: "-cc1" "-triple" "x86_64-pc-windows-cygnus"
 // CHECK-64-CROSS: "{{.*}}/Inputs/basic_cross_cygwin_tree/usr/lib/gcc/x86_64-pc-cygwin/10/../../../../x86_64-pc-cygwin/bin{{(/|\\\\)}}as" "--64"
+
+// RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
+// RUN:   -mdll 2>&1 | FileCheck --check-prefix=CHECK-64-DLL %s
+// CHECK-64-DLL:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-64-DLL-SAME: "--dll"
+// CHECK-64-DLL-SAME: "-e" "_cygwin_dll_entry"
+
+// RUN: %clang -### %s --target=i686-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
+// RUN:   -mdll 2>&1 | FileCheck --check-prefix=CHECK-DLL %s
+// CHECK-DLL:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-DLL-SAME: "--dll"
+// CHECK-DLL-SAME: "-e" "__cygwin_dll_entry@12"
+
+// RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
+// RUN:   -mwindows 2>&1 | FileCheck --check-prefix=CHECK-64-WINDOWS %s
+// CHECK-64-WINDOWS:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-64-WINDOWS-SAME: "--subsystem" "windows"
+
+// RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
+// RUN:   -mconsole 2>&1 | FileCheck --check-prefix=CHECK-64-CONSOLE %s
+// CHECK-64-CONSOLE:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-64-CONSOLE-SAME: "--subsystem" "console"
+
+// RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
+// RUN:   -Wl,--high-entropy-va 2>&1 | FileCheck --check-prefix=CHECK-64-ASLR-ON %s
+// CHECK-64-ASLR-ON:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-64-ASLR-ON-SAME: "--high-entropy-va"
+
+// RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
+// RUN:   -Wl,--disable-high-entropy-va 2>&1 | FileCheck --check-prefix=CHECK-64-ASLR-OFF %s
+// CHECK-64-ASLR-OFF:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-64-ASLR-OFF-SAME: "--disable-high-entropy-va"
+
+// RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
+// RUN:   -o a 2>&1 | FileCheck --check-prefix=CHECK-64-EXENAME %s
+// CHECK-64-EXENAME:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-64-EXENAME-SAME: "-o" "a.exe"
+
+// RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
+// RUN:   -o a.out 2>&1 | FileCheck --check-prefix=CHECK-64-EXENAME-WITH-EXT %s
+// CHECK-64-EXENAME-WITH-EXT:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-64-EXENAME-WITH-EXT-SAME: "-o" "a.out"
