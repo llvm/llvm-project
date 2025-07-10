@@ -12,7 +12,7 @@ module  {
     cir.return %vec : !cir.vector<4 x !s32i>
   }
 
-  // CHECK:  cir.func @fold_create_vector_op_test() -> !cir.vector<4 x !s32i> {
+  // CHECK:  cir.func{{.*}} @fold_create_vector_op_test() -> !cir.vector<4 x !s32i> {
   // CHECK-NEXT: %[[VEC:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i,
   // CHECK-SAME: #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
   // CHECK-NEXT: cir.return %[[VEC]] : !cir.vector<4 x !s32i>

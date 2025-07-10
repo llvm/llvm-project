@@ -222,25 +222,52 @@ define double @frem_f64_ninf(double %a, double %b) {
   ret double %r
 }
 
-define float @frem_f32_imm1(float %a) {
-; FAST-LABEL: frem_f32_imm1(
+define float @frem_f32_imm1_fast(float %a) {
+; FAST-LABEL: frem_f32_imm1_fast(
 ; FAST:       {
 ; FAST-NEXT:    .reg .b32 %r<5>;
 ; FAST-EMPTY:
 ; FAST-NEXT:  // %bb.0:
-; FAST-NEXT:    ld.param.b32 %r1, [frem_f32_imm1_param_0];
+; FAST-NEXT:    ld.param.b32 %r1, [frem_f32_imm1_fast_param_0];
 ; FAST-NEXT:    mul.f32 %r2, %r1, 0f3E124925;
 ; FAST-NEXT:    cvt.rzi.f32.f32 %r3, %r2;
 ; FAST-NEXT:    fma.rn.f32 %r4, %r3, 0fC0E00000, %r1;
 ; FAST-NEXT:    st.param.b32 [func_retval0], %r4;
 ; FAST-NEXT:    ret;
 ;
-; NORMAL-LABEL: frem_f32_imm1(
+; NORMAL-LABEL: frem_f32_imm1_fast(
 ; NORMAL:       {
 ; NORMAL-NEXT:    .reg .b32 %r<5>;
 ; NORMAL-EMPTY:
 ; NORMAL-NEXT:  // %bb.0:
-; NORMAL-NEXT:    ld.param.b32 %r1, [frem_f32_imm1_param_0];
+; NORMAL-NEXT:    ld.param.b32 %r1, [frem_f32_imm1_fast_param_0];
+; NORMAL-NEXT:    mul.rn.f32 %r2, %r1, 0f3E124925;
+; NORMAL-NEXT:    cvt.rzi.f32.f32 %r3, %r2;
+; NORMAL-NEXT:    fma.rn.f32 %r4, %r3, 0fC0E00000, %r1;
+; NORMAL-NEXT:    st.param.b32 [func_retval0], %r4;
+; NORMAL-NEXT:    ret;
+  %r = frem arcp float %a, 7.0
+  ret float %r
+}
+define float @frem_f32_imm1_normal(float %a) {
+; FAST-LABEL: frem_f32_imm1_normal(
+; FAST:       {
+; FAST-NEXT:    .reg .b32 %r<5>;
+; FAST-EMPTY:
+; FAST-NEXT:  // %bb.0:
+; FAST-NEXT:    ld.param.b32 %r1, [frem_f32_imm1_normal_param_0];
+; FAST-NEXT:    div.approx.f32 %r2, %r1, 0f40E00000;
+; FAST-NEXT:    cvt.rzi.f32.f32 %r3, %r2;
+; FAST-NEXT:    fma.rn.f32 %r4, %r3, 0fC0E00000, %r1;
+; FAST-NEXT:    st.param.b32 [func_retval0], %r4;
+; FAST-NEXT:    ret;
+;
+; NORMAL-LABEL: frem_f32_imm1_normal(
+; NORMAL:       {
+; NORMAL-NEXT:    .reg .b32 %r<5>;
+; NORMAL-EMPTY:
+; NORMAL-NEXT:  // %bb.0:
+; NORMAL-NEXT:    ld.param.b32 %r1, [frem_f32_imm1_normal_param_0];
 ; NORMAL-NEXT:    div.rn.f32 %r2, %r1, 0f40E00000;
 ; NORMAL-NEXT:    cvt.rzi.f32.f32 %r3, %r2;
 ; NORMAL-NEXT:    fma.rn.f32 %r4, %r3, 0fC0E00000, %r1;

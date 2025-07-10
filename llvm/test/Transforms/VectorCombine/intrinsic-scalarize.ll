@@ -152,12 +152,12 @@ define <vscale x 4 x float> @fma_scalable(float %x, float %y, float %z) {
   ret <vscale x 4 x float> %v
 }
 
-; TODO: We should be able to scalarize this if we preserve the scalar argument.
 define <4 x float> @scalar_argument(float %x) {
 ; CHECK-LABEL: define <4 x float> @scalar_argument(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[X_INSERT:%.*]] = insertelement <4 x float> poison, float [[X]], i32 0
-; CHECK-NEXT:    [[V:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[X_INSERT]], i32 42)
+; CHECK-NEXT:    [[V_SCALAR:%.*]] = call float @llvm.powi.f32.i32(float [[X]], i32 42)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> poison, i32 42)
+; CHECK-NEXT:    [[V:%.*]] = insertelement <4 x float> [[TMP1]], float [[V_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <4 x float> [[V]]
 ;
   %x.insert = insertelement <4 x float> poison, float %x, i32 0

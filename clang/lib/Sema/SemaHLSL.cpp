@@ -39,7 +39,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Frontend/HLSL/HLSLRootSignatureUtils.h"
+#include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -120,7 +120,7 @@ static ResourceClass getResourceClass(RegisterType RT) {
   llvm_unreachable("unexpected RegisterType value");
 }
 
-static Builtin::ID getSpecConstBuiltinId(QualType Type) {
+static Builtin::ID getSpecConstBuiltinId(const Type *Type) {
   const auto *BT = dyn_cast<BuiltinType>(Type);
   if (!BT) {
     if (!Type->isEnumeralType())
@@ -654,7 +654,8 @@ SemaHLSL::mergeVkConstantIdAttr(Decl *D, const AttributeCommonInfo &AL,
 
   auto *VD = cast<VarDecl>(D);
 
-  if (getSpecConstBuiltinId(VD->getType()) == Builtin::NotBuiltin) {
+  if (getSpecConstBuiltinId(VD->getType()->getUnqualifiedDesugaredType()) ==
+      Builtin::NotBuiltin) {
     Diag(VD->getLocation(), diag::err_specialization_const);
     return nullptr;
   }
@@ -1067,7 +1068,7 @@ void SemaHLSL::ActOnFinishRootSignatureDecl(
 
   auto *SignatureDecl = HLSLRootSignatureDecl::Create(
       SemaRef.getASTContext(), /*DeclContext=*/SemaRef.CurContext, Loc,
-      DeclIdent, Elements);
+      DeclIdent, SemaRef.getLangOpts().HLSLRootSigVer, Elements);
 
   if (handleRootSignatureDecl(SignatureDecl, Loc))
     return;
@@ -1078,29 +1079,8 @@ void SemaHLSL::ActOnFinishRootSignatureDecl(
 
 bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
                                        SourceLocation Loc) {
-  // The following conducts analysis on resource ranges to detect and report
-  // any overlaps in resource ranges.
-  //
-  // A resource range overlaps with another resource range if they have:
-  // - equivalent ResourceClass (SRV, UAV, CBuffer, Sampler)
-  // - equivalent resource space
-  // - overlapping visbility
-  //
-  // The following algorithm is implemented in the following steps:
-  //
-  // 1. Collect RangeInfo from relevant RootElements:
-  //   - RangeInfo will retain the interval, ResourceClass, Space and Visibility
-  // 2. Sort the RangeInfo's such that they are grouped together by
-  //  ResourceClass and Space (GroupT defined below)
-  // 3. Iterate through the collected RangeInfos by their groups
-  //   - For each group we will have a ResourceRange for each visibility
-  //   - As we iterate through we will:
-  //      A: Insert the current RangeInfo into the corresponding Visibility
-  //   ResourceRange
-  //      B: Check for overlap with any overlapping Visibility ResourceRange
   using RangeInfo = llvm::hlsl::rootsig::RangeInfo;
-  using ResourceRange = llvm::hlsl::rootsig::ResourceRange;
-  using GroupT = std::pair<ResourceClass, /*Space*/ uint32_t>;
+  using OverlappingRanges = llvm::hlsl::rootsig::OverlappingRanges;
 
   // 1. Collect RangeInfos
   llvm::SmallVector<RangeInfo> Infos;
@@ -1116,89 +1096,77 @@ bool SemaHLSL::handleRootSignatureDecl(HLSLRootSignatureDecl *D,
       Info.Space = Descriptor->Space;
       Info.Visibility = Descriptor->Visibility;
       Infos.push_back(Info);
+    } else if (const auto *Constants =
+                   std::get_if<llvm::hlsl::rootsig::RootConstants>(&Elem)) {
+      RangeInfo Info;
+      Info.LowerBound = Constants->Reg.Number;
+      Info.UpperBound = Info.LowerBound; // use inclusive ranges []
+
+      Info.Class = llvm::dxil::ResourceClass::CBuffer;
+      Info.Space = Constants->Space;
+      Info.Visibility = Constants->Visibility;
+      Infos.push_back(Info);
+    } else if (const auto *Sampler =
+                   std::get_if<llvm::hlsl::rootsig::StaticSampler>(&Elem)) {
+      RangeInfo Info;
+      Info.LowerBound = Sampler->Reg.Number;
+      Info.UpperBound = Info.LowerBound; // use inclusive ranges []
+
+      Info.Class = llvm::dxil::ResourceClass::Sampler;
+      Info.Space = Sampler->Space;
+      Info.Visibility = Sampler->Visibility;
+      Infos.push_back(Info);
+    } else if (const auto *Clause =
+                   std::get_if<llvm::hlsl::rootsig::DescriptorTableClause>(
+                       &Elem)) {
+      RangeInfo Info;
+      Info.LowerBound = Clause->Reg.Number;
+      assert(0 < Clause->NumDescriptors && "Verified as part of TODO(#129940)");
+      Info.UpperBound = Clause->NumDescriptors == RangeInfo::Unbounded
+                            ? RangeInfo::Unbounded
+                            : Info.LowerBound + Clause->NumDescriptors -
+                                  1; // use inclusive ranges []
+
+      Info.Class = Clause->Type;
+      Info.Space = Clause->Space;
+      // Note: Clause does not hold the visibility this will need to
+      Infos.push_back(Info);
+    } else if (const auto *Table =
+                   std::get_if<llvm::hlsl::rootsig::DescriptorTable>(&Elem)) {
+      // Table holds the Visibility of all owned Clauses in Table, so iterate
+      // owned Clauses and update their corresponding RangeInfo
+      assert(Table->NumClauses <= Infos.size() && "RootElement");
+      // The last Table->NumClauses elements of Infos are the owned Clauses
+      // generated RangeInfo
+      auto TableInfos =
+          MutableArrayRef<RangeInfo>(Infos).take_back(Table->NumClauses);
+      for (RangeInfo &Info : TableInfos)
+        Info.Visibility = Table->Visibility;
     }
   }
-
-  // 2. Sort the RangeInfo's by their GroupT to form groupings
-  std::sort(Infos.begin(), Infos.end(), [](RangeInfo A, RangeInfo B) {
-    return std::tie(A.Class, A.Space) < std::tie(B.Class, B.Space);
-  });
-
-  // 3. First we will init our state to track:
-  if (Infos.size() == 0)
-    return false; // No ranges to overlap
-  GroupT CurGroup = {Infos[0].Class, Infos[0].Space};
-  bool HadOverlap = false;
-
-  // Create a ResourceRange for each Visibility
-  ResourceRange::MapT::Allocator Allocator;
-  std::array<ResourceRange, 8> Ranges = {
-      ResourceRange(Allocator), // All
-      ResourceRange(Allocator), // Vertex
-      ResourceRange(Allocator), // Hull
-      ResourceRange(Allocator), // Domain
-      ResourceRange(Allocator), // Geometry
-      ResourceRange(Allocator), // Pixel
-      ResourceRange(Allocator), // Amplification
-      ResourceRange(Allocator), // Mesh
-  };
-
-  // Reset the ResourceRanges for when we iterate through a new group
-  auto ClearRanges = [&Ranges]() {
-    for (ResourceRange &Range : Ranges)
-      Range.clear();
-  };
 
   // Helper to report diagnostics
-  auto ReportOverlap = [this, Loc, &HadOverlap](const RangeInfo *Info,
-                                                const RangeInfo *OInfo) {
-    HadOverlap = true;
-    auto CommonVis =
-        Info->Visibility == llvm::hlsl::rootsig::ShaderVisibility::All
-            ? OInfo->Visibility
-            : Info->Visibility;
+  auto ReportOverlap = [this, Loc](OverlappingRanges Overlap) {
+    const RangeInfo *Info = Overlap.A;
+    const RangeInfo *OInfo = Overlap.B;
+    auto CommonVis = Info->Visibility == llvm::dxbc::ShaderVisibility::All
+                         ? OInfo->Visibility
+                         : Info->Visibility;
     this->Diag(Loc, diag::err_hlsl_resource_range_overlap)
         << llvm::to_underlying(Info->Class) << Info->LowerBound
+        << /*unbounded=*/(Info->UpperBound == RangeInfo::Unbounded)
         << Info->UpperBound << llvm::to_underlying(OInfo->Class)
-        << OInfo->LowerBound << OInfo->UpperBound << Info->Space << CommonVis;
+        << OInfo->LowerBound
+        << /*unbounded=*/(OInfo->UpperBound == RangeInfo::Unbounded)
+        << OInfo->UpperBound << Info->Space << CommonVis;
   };
 
-  // 3: Iterate through collected RangeInfos
-  for (const RangeInfo &Info : Infos) {
-    GroupT InfoGroup = {Info.Class, Info.Space};
-    // Reset our ResourceRanges when we enter a new group
-    if (CurGroup != InfoGroup) {
-      ClearRanges();
-      CurGroup = InfoGroup;
-    }
+  llvm::SmallVector<OverlappingRanges> Overlaps =
+      llvm::hlsl::rootsig::findOverlappingRanges(Infos);
+  for (OverlappingRanges Overlap : Overlaps)
+    ReportOverlap(Overlap);
 
-    // 3A: Insert range info into corresponding Visibility ResourceRange
-    ResourceRange &VisRange = Ranges[llvm::to_underlying(Info.Visibility)];
-    if (std::optional<const RangeInfo *> Overlapping = VisRange.insert(Info))
-      ReportOverlap(&Info, Overlapping.value());
-
-    // 3B: Check for overlap in all overlapping Visibility ResourceRanges
-    //
-    // If the range that we are inserting has ShaderVisiblity::All it needs to
-    // check for an overlap in all other visibility types as well.
-    // Otherwise, the range that is inserted needs to check that it does not
-    // overlap with ShaderVisibility::All.
-    //
-    // OverlapRanges will be an ArrayRef to all non-all visibility
-    // ResourceRanges in the former case and it will be an ArrayRef to just the
-    // all visiblity ResourceRange in the latter case.
-    ArrayRef<ResourceRange> OverlapRanges =
-        Info.Visibility == llvm::hlsl::rootsig::ShaderVisibility::All
-            ? ArrayRef<ResourceRange>{Ranges}.drop_front()
-            : ArrayRef<ResourceRange>{Ranges}.take_front();
-
-    for (const ResourceRange &Range : OverlapRanges)
-      if (std::optional<const RangeInfo *> Overlapping =
-              Range.getOverlapping(Info))
-        ReportOverlap(&Info, Overlapping.value());
-  }
-
-  return HadOverlap;
+  return Overlaps.size() != 0;
 }
 
 void SemaHLSL::handleRootSignatureAttr(Decl *D, const ParsedAttr &AL) {
@@ -1230,12 +1198,15 @@ void SemaHLSL::handleRootSignatureAttr(Decl *D, const ParsedAttr &AL) {
 void SemaHLSL::handleNumThreadsAttr(Decl *D, const ParsedAttr &AL) {
   llvm::VersionTuple SMVersion =
       getASTContext().getTargetInfo().getTriple().getOSVersion();
+  bool IsDXIL = getASTContext().getTargetInfo().getTriple().getArch() ==
+                llvm::Triple::dxil;
+
   uint32_t ZMax = 1024;
   uint32_t ThreadMax = 1024;
-  if (SMVersion.getMajor() <= 4) {
+  if (IsDXIL && SMVersion.getMajor() <= 4) {
     ZMax = 1;
     ThreadMax = 768;
-  } else if (SMVersion.getMajor() == 5) {
+  } else if (IsDXIL && SMVersion.getMajor() == 5) {
     ZMax = 64;
     ThreadMax = 1024;
   }
@@ -1588,6 +1559,15 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
     return false;
 
   Attr *A = nullptr;
+
+  AttributeCommonInfo ACI(
+      AL.getLoc(), AttributeScopeInfo(AL.getScopeName(), AL.getScopeLoc()),
+      AttributeCommonInfo::NoSemaHandlerAttribute,
+      {
+          AttributeCommonInfo::AS_CXX11, 0, false /*IsAlignas*/,
+          false /*IsRegularKeywordAttribute*/
+      });
+
   switch (AL.getKind()) {
   case ParsedAttr::AT_HLSLResourceClass: {
     if (!AL.isArgIdent(0)) {
@@ -1607,16 +1587,16 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
           << "ResourceClass" << Identifier;
       return false;
     }
-    A = HLSLResourceClassAttr::Create(getASTContext(), RC, AL.getLoc());
+    A = HLSLResourceClassAttr::Create(getASTContext(), RC, ACI);
     break;
   }
 
   case ParsedAttr::AT_HLSLROV:
-    A = HLSLROVAttr::Create(getASTContext(), AL.getLoc());
+    A = HLSLROVAttr::Create(getASTContext(), ACI);
     break;
 
   case ParsedAttr::AT_HLSLRawBuffer:
-    A = HLSLRawBufferAttr::Create(getASTContext(), AL.getLoc());
+    A = HLSLRawBufferAttr::Create(getASTContext(), ACI);
     break;
 
   case ParsedAttr::AT_HLSLContainedType: {
@@ -1631,7 +1611,7 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
     if (SemaRef.RequireCompleteType(TSI->getTypeLoc().getBeginLoc(), QT,
                                     diag::err_incomplete_type))
       return false;
-    A = HLSLContainedTypeAttr::Create(getASTContext(), TSI, AL.getLoc());
+    A = HLSLContainedTypeAttr::Create(getASTContext(), TSI, ACI);
     break;
   }
 
@@ -2366,7 +2346,7 @@ static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
                                            clang::QualType PassedType) {
   clang::QualType BaseType =
       PassedType->isVectorType()
-          ? PassedType->getAs<clang::VectorType>()->getElementType()
+          ? PassedType->castAs<clang::VectorType>()->getElementType()
           : PassedType;
   if (!BaseType->isHalfType() && !BaseType->isFloat32Type())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
@@ -3920,7 +3900,8 @@ bool SemaHLSL::handleInitialization(VarDecl *VDecl, Expr *&Init) {
     return false;
   }
 
-  Builtin::ID BID = getSpecConstBuiltinId(VDecl->getType());
+  Builtin::ID BID =
+      getSpecConstBuiltinId(VDecl->getType()->getUnqualifiedDesugaredType());
 
   // Argument 1: The ID from the attribute
   int ConstantID = ConstIdAttr->getId();

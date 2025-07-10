@@ -77,6 +77,7 @@ DEPENDENT_RUNTIMES_TO_BUILD = {"lldb": {"libcxx", "libcxxabi", "libunwind"}}
 DEPENDENT_RUNTIMES_TO_TEST = {
     "clang": {"compiler-rt"},
     "clang-tools-extra": {"libc"},
+    "libc": {"libc"},
     ".ci": {"compiler-rt", "libc"},
 }
 DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {

@@ -9,7 +9,7 @@
 
 program acc_loop
 
-  integer :: i, j
+  integer :: i, j, k
   integer, parameter :: n = 10
   real, dimension(n) :: a, b
   real, dimension(n, n) :: c, d
@@ -209,9 +209,9 @@ program acc_loop
 
 ! CHECK:      [[TILESIZE1:%.*]] = arith.constant 2 : i32
 ! CHECK:      [[TILESIZE2:%.*]] = arith.constant 2 : i32
-! CHECK:      acc.loop {{.*}} tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:      acc.loop {{.*}} tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) control(%arg0 : i32, %arg1 : i32) = (%{{.*}} : i32, i32) to (%{{.*}} : i32, i32) step (%{{.*}} : i32, i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true, true>, independent = [#acc.device_type<none>]}
 
   !$acc loop tile(tileSize)
   DO i = 1, n
@@ -229,9 +229,9 @@ program acc_loop
     END DO
   END DO
 
-! CHECK:      acc.loop {{.*}} tile({%{{.*}} : i32, %{{.*}} : i32}) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
+! CHECK:      acc.loop {{.*}} tile({%{{.*}} : i32, %{{.*}} : i32}) control(%arg0 : i32, %arg1 : i32) = (%{{.*}} : i32, i32) to (%{{.*}} : i32, i32) step (%{{.*}} : i32, i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true, true>, independent = [#acc.device_type<none>]}
 
   !$acc loop collapse(2)
   DO i = 1, n
@@ -245,6 +245,51 @@ program acc_loop
 ! CHECK:        fir.store %arg1 to %{{.*}} : !fir.ref<i32>
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>]{{.*}}}
+
+  !$acc loop collapse(2) tile(tileSize)
+  DO i = 1, n
+    DO j = 1, n
+      c(i, j) = d(i, j)
+    END DO
+  END DO
+
+! CHECK:      acc.loop {{.*}} tile({%{{.*}} : i32}) control(%arg0 : i32, %arg1 : i32) = (%{{.*}} : i32, i32) to (%{{.*}} : i32, i32) step (%{{.*}} : i32, i32) {
+! CHECK:        fir.store %arg0 to %{{.*}} : !fir.ref<i32>
+! CHECK:        fir.store %arg1 to %{{.*}} : !fir.ref<i32>
+! CHECK:        acc.yield
+! CHECK-NEXT: } attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>]{{.*}}}
+
+  !$acc loop collapse(2) tile(tileSize, tileSize, tileSize)
+  DO i = 1, n
+    DO j = 1, n
+      DO k = 1, n
+        c(i, j) = d(i, j)
+      END DO
+    END DO
+  END DO
+
+! CHECK:      acc.loop {{.*}} tile({%{{.*}} : i32, %{{.*}} : i32, %{{.*}} : i32}) control(%arg0 : i32, %arg1 : i32, %arg2 : i32) = (%{{.*}} : i32, i32, i32) to (%{{.*}} : i32, i32, i32) step (%{{.*}} : i32, i32, i32) {
+! CHECK:        fir.store %arg0 to %{{.*}} : !fir.ref<i32>
+! CHECK:        fir.store %arg1 to %{{.*}} : !fir.ref<i32>
+! CHECK:        fir.store %arg2 to %{{.*}} : !fir.ref<i32>
+! CHECK:        acc.yield
+! CHECK-NEXT: } attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>]{{.*}}}
+
+!$acc loop collapse(3) tile(tileSize, tileSize)
+  DO i = 1, n
+    DO j = 1, n
+      DO k = 1, n
+        c(i, j) = d(i, j)
+      END DO
+    END DO
+  END DO
+
+! CHECK:      acc.loop {{.*}} tile({%{{.*}} : i32, %{{.*}} : i32}) control(%arg0 : i32, %arg1 : i32, %arg2 : i32) = (%{{.*}} : i32, i32, i32) to (%{{.*}} : i32, i32, i32) step (%{{.*}} : i32, i32, i32) {
+! CHECK:        fir.store %arg0 to %{{.*}} : !fir.ref<i32>
+! CHECK:        fir.store %arg1 to %{{.*}} : !fir.ref<i32>
+! CHECK:        fir.store %arg2 to %{{.*}} : !fir.ref<i32>
+! CHECK:        acc.yield
+! CHECK-NEXT: } attributes {collapse = [3], collapseDeviceType = [#acc.device_type<none>]{{.*}}}
 
   !$acc loop
   DO i = 1, n

@@ -24,9 +24,6 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/SCF/Transforms/TileUsingInterface.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Tensor/Utils/Utils.h"
-#include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/Utils/Utils.h"
@@ -39,7 +36,6 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/TypeID.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -2065,7 +2061,7 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
       rewriter.setInsertionPoint(linalgTarget);
       for (OpOperand &operand : linalgTarget->getOpOperands()) {
         for (auto [i, dim] : llvm::enumerate(linalgTarget.getShape(&operand))) {
-          if (!ShapedType::isDynamic(dim))
+          if (ShapedType::isStatic(dim))
             continue;
           options.setSizeToPadTo(operand.getOperandNumber(), i,
                                  tensor::getMixedSize(rewriter,
@@ -2163,7 +2159,6 @@ LogicalResult transform::PadOp::verify() {
 void transform::PadTilingInterfaceOp::build(OpBuilder &b,
                                             OperationState &result,
                                             Value target,
-                                            ArrayRef<int64_t> paddingDimensions,
                                             ArrayRef<int64_t> paddingSizes,
                                             bool padToMultipleOf) {
   auto resultType = transform::AnyOpType::get(b.getContext());
@@ -2172,7 +2167,6 @@ void transform::PadTilingInterfaceOp::build(OpBuilder &b,
                /*types=*/TypeRange{resultType, resultType},
                /*target=*/target,
                /*paddingValues=*/ArrayAttr(), // let inference handle this
-               /*paddingDimensions=*/b.getI64ArrayAttr(paddingDimensions),
                /*paddingSizes=*/ValueRange{},
                /*paddingSizes=*/
                (paddingSizes.empty() ? DenseI64ArrayAttr()
@@ -2183,7 +2177,6 @@ void transform::PadTilingInterfaceOp::build(OpBuilder &b,
 
 void transform::PadTilingInterfaceOp::build(
     OpBuilder &b, OperationState &result, Value target,
-    ArrayRef<int64_t> paddingDimensions,
     ArrayRef<OpFoldResult> mixedPaddingSizes, bool padToMultipleOf) {
   auto resultType = transform::AnyOpType::get(b.getContext());
   SmallVector<int64_t> staticPaddingSizes;
@@ -2195,7 +2188,6 @@ void transform::PadTilingInterfaceOp::build(
                /*types=*/TypeRange{resultType, resultType},
                /*target=*/target,
                /*paddingValues=*/ArrayAttr(), // let inference handle this
-               /*paddingDimensions=*/b.getI64ArrayAttr(paddingDimensions),
                /*paddingSizes=*/dynamicPaddingSizes,
                /*paddingSizes=*/staticPaddingSizes,
                /*usePrescribedTensorShapes=*/padToMultipleOf);
@@ -2277,8 +2269,6 @@ transform::PadTilingInterfaceOp::apply(transform::TransformRewriter &rewriter,
     TilingInterface paddedOp;
     PadTilingInterfaceOptions options;
     options.setPaddingValues(paddingValues)
-        .setPaddingDimensions(
-            extractFromIntegerArrayAttr<int64_t>(getPaddingDimensions()))
         .setPaddingSizes(getMixedPaddingSizes())
         .setPadToMultipleOf(getPadToMultipleOf());
 
@@ -2303,20 +2293,7 @@ transform::PadTilingInterfaceOp::apply(transform::TransformRewriter &rewriter,
   return DiagnosedSilenceableFailure::success();
 }
 
-LogicalResult transform::PadTilingInterfaceOp::verify() {
-  SmallVector<int64_t> paddingDimensions =
-      extractFromIntegerArrayAttr<int64_t>(getPaddingDimensions());
-  if (any_of(paddingDimensions,
-             [](int64_t paddingDimension) { return paddingDimension < 0; })) {
-    return emitOpError() << "expects padding_dimensions to contain positive "
-                            "integers, found "
-                         << getPaddingDimensions();
-  }
-  if (getMixedPaddingSizes().size() != paddingDimensions.size()) {
-    return emitOpError() << "expects as many multiples as padding_dimensions";
-  }
-  return success();
-}
+LogicalResult transform::PadTilingInterfaceOp::verify() { return success(); }
 
 //===---------------------------------------------------------------------===//
 // HoistPadOp
@@ -2427,6 +2404,9 @@ transform::PromoteOp::applyToOne(transform::TransformRewriter &rewriter,
   if (getUseFullTilesByDefault())
     promotionOptions = promotionOptions.setUseFullTileBuffersByDefault(
         getUseFullTilesByDefault());
+  if (getUseOriginalSubviewSize())
+    promotionOptions =
+        promotionOptions.setUseOriginalSubviewSize(getUseOriginalSubviewSize());
   if (getUseAlloca())
     promotionOptions = promotionOptions.setUseAlloca(getUseAlloca());
   if (!getUseFullTileBuffers().empty())
@@ -2966,10 +2946,11 @@ void transform::TileReductionUsingForOp::build(
   // TODO: support mixed static-dynamic (see TileUsingForallOp).
   MLIRContext *ctx = builder.getContext();
   auto opTy = transform::AnyOpType::get(ctx);
-  auto staticTileSizesAttr = builder.getDenseI64ArrayAttr(staticTileSizes);
+  auto staticTileSizesAttr = builder.getI64ArrayAttr(staticTileSizes);
   build(builder, result,
         /*resultTypes=*/TypeRange{opTy, opTy, opTy, opTy},
         /*target=*/target,
+        /*reduction_dims=*/nullptr,
         /*tile_sizes=*/staticTileSizesAttr);
 }
 
@@ -2985,12 +2966,30 @@ DiagnosedSilenceableFailure transform::TileReductionUsingForOp::applyToOne(
         target->getLoc(),
         "Operation should implement PartialReductionOpInterface");
   }
-  FailureOr<scf::SCFTilingResult> result = scf::tileReductionUsingScf(
-      rewriter, partialReductionOp,
-      getAsOpFoldResult(rewriter.getI64ArrayAttr(getTileSizes())));
 
-  if (failed(result))
-    return emitDefaultSilenceableFailure(target);
+  SmallVector<unsigned> reductionDims =
+      extractFromIntegerArrayAttr<unsigned>(getReductionDims());
+  if (reductionDims.empty()) {
+    for (auto [idx, iteratorType] :
+         llvm::enumerate(partialReductionOp.getLoopIteratorTypes())) {
+      if (iteratorType == utils::IteratorType::reduction)
+        reductionDims.push_back(idx);
+    }
+  }
+
+  scf::SCFTilingOptions options;
+  options.setLoopType(scf::SCFTilingOptions::LoopType::ForOp);
+  options.setReductionTilingStrategy(
+      ReductionTilingStrategy::PartialReductionOuterReduction);
+  options.setTileSizes(getAsOpFoldResult(getTileSizesAttr()));
+  options.setReductionDims(reductionDims);
+  FailureOr<scf::SCFTilingResult> result =
+      scf::tileUsingSCF(rewriter, partialReductionOp, options);
+
+  if (failed(result)) {
+    return emitSilenceableFailure(getLoc(),
+                                  "failed to tile using partial reduction");
+  }
   rewriter.replaceOp(target, result->replacements);
   for (Value initValue : result->initialValues)
     results.push_back(initValue.getDefiningOp());
@@ -3022,6 +3021,7 @@ void transform::TileReductionUsingForallOp::build(
   build(builder, result,
         /*resultTypes=*/TypeRange{opTy, opTy, opTy, opTy},
         /*target=*/target,
+        /*reduction_dims=*/{},
         /*num_threads=*/staticNumThreadsAttr,
         /*tile_sizes=*/staticTileSizesAttr,
         /*mapping=*/mapping);
@@ -3036,23 +3036,45 @@ DiagnosedSilenceableFailure transform::TileReductionUsingForallOp::applyToOne(
       getAsOpFoldResult(rewriter.getI64ArrayAttr(getNumThreads()));
   SmallVector<OpFoldResult> tileSizes =
       getAsOpFoldResult(rewriter.getI64ArrayAttr(getTileSizes()));
-  FailureOr<linalg::ForallReductionTilingResult> result =
-      linalg::tileReductionUsingForall(
-          rewriter, cast<PartialReductionOpInterface>(target.getOperation()),
-          numThreads, tileSizes, getMapping());
+
+  scf::SCFTilingOptions options;
+  options.setLoopType(scf::SCFTilingOptions::LoopType::ForallOp);
+  options.setReductionTilingStrategy(
+      ReductionTilingStrategy::PartialReductionOuterParallel);
+  if (!getNumThreads().empty()) {
+    options.setNumThreads(numThreads);
+  } else {
+    options.setTileSizes(tileSizes);
+  }
+  if (auto mapping = getMapping()) {
+    options.setMapping(mapping.value().getValue());
+  }
+  SmallVector<unsigned> reductionDims =
+      extractFromIntegerArrayAttr<unsigned>(getReductionDims());
+  if (reductionDims.empty()) {
+    for (auto [idx, iteratorType] :
+         llvm::enumerate(target.getIteratorTypesArray())) {
+      if (iteratorType == utils::IteratorType::reduction)
+        reductionDims.push_back(idx);
+    }
+  }
+  options.setReductionDims(reductionDims);
+  FailureOr<scf::SCFTilingResult> result = scf::tileUsingSCF(
+      rewriter, cast<TilingInterface>(target.getOperation()), options);
 
   if (failed(result)) {
     auto diag = emitSilenceableError() << "could not tile reduction";
-    diag.attachNote(target.getLoc()) << "target operation";
     return diag;
   }
+  rewriter.replaceOp(target, result->replacements);
+
   for (Value initValue : result->initialValues)
     results.push_back(initValue.getDefiningOp());
-  for (auto parallelTiledOp : result->parallelTiledOps)
+  for (auto parallelTiledOp : result->tiledOps)
     results.push_back(parallelTiledOp);
   for (auto mergeOp : result->mergeOps)
     results.push_back(mergeOp);
-  results.push_back(result->loops);
+  results.push_back(result->loops.front());
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -3800,9 +3822,14 @@ struct VectorizationPattern : public RewritePattern {
     if (!linalg::hasVectorizationImpl(op))
       return rewriter.notifyMatchFailure(op,
                                          "Unsupported Op, cannot vectorize");
-    return vectorize(rewriter, op, /*inputVectorSizes=*/{},
-                     /*inputScalableVecDims=*/{}, vectorizeNDExtract,
-                     flatten1DDepthwiseConv);
+    FailureOr<VectorizationResult> vectorResults =
+        vectorize(rewriter, op, /*inputVectorSizes=*/{},
+                  /*inputScalableVecDims=*/{}, vectorizeNDExtract,
+                  flatten1DDepthwiseConv);
+    if (failed(vectorResults))
+      return failure();
+    rewriter.replaceOp(op, vectorResults->replacements);
+    return success();
   }
 
 private:
@@ -3891,13 +3918,14 @@ DiagnosedSilenceableFailure transform::VectorizeOp::apply(
       return mlir::emitSilenceableFailure(target->getLoc())
              << "Unsupported Op, cannot vectorize";
     }
-
-    if (failed(linalg::vectorize(rewriter, target, vectorSizes,
-                                 getScalableSizes(),
-                                 getVectorizeNdExtract().value_or(false)))) {
+    FailureOr<VectorizationResult> vectorResults =
+        linalg::vectorize(rewriter, target, vectorSizes, getScalableSizes(),
+                          getVectorizeNdExtract().value_or(false));
+    if (failed(vectorResults)) {
       return mlir::emitSilenceableFailure(target->getLoc())
              << "Attempted to vectorize, but failed";
     }
+    rewriter.replaceOp(target, vectorResults->replacements);
   }
 
   return DiagnosedSilenceableFailure::success();
@@ -4221,7 +4249,7 @@ DiagnosedSilenceableFailure transform::WinogradConv2DOp::applyToOne(
   bool supported = TypeSwitch<Operation *, bool>(target)
                        .Case([&](linalg::Conv2DNhwcFhwcOp op) {
                          maybeTransformed =
-                             winogradConv2D(rewriter, op, getM(), getR());
+                             winogradConv2D(rewriter, op, getFmr());
                          return true;
                        })
                        .Default([&](Operation *op) { return false; });

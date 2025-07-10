@@ -1985,6 +1985,38 @@ struct VectorFromElementsLowering
   }
 };
 
+/// Conversion pattern for a `vector.to_elements`.
+struct VectorToElementsLowering
+    : public ConvertOpToLLVMPattern<vector::ToElementsOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::ToElementsOp toElementsOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = toElementsOp.getLoc();
+    auto idxType = typeConverter->convertType(rewriter.getIndexType());
+    Value source = adaptor.getSource();
+
+    SmallVector<Value> results(toElementsOp->getNumResults());
+    for (auto [idx, element] : llvm::enumerate(toElementsOp.getElements())) {
+      // Create an extractelement operation only for results that are not dead.
+      if (element.use_empty())
+        continue;
+
+      auto constIdx = rewriter.create<LLVM::ConstantOp>(
+          loc, idxType, rewriter.getIntegerAttr(idxType, idx));
+      auto llvmType = typeConverter->convertType(element.getType());
+
+      Value result = rewriter.create<LLVM::ExtractElementOp>(loc, llvmType,
+                                                             source, constIdx);
+      results[idx] = result;
+    }
+
+    rewriter.replaceOp(toElementsOp, results);
+    return success();
+  }
+};
+
 /// Conversion pattern for vector.step.
 struct VectorScalableStepOpLowering
     : public ConvertOpToLLVMPattern<vector::StepOp> {
@@ -2035,7 +2067,8 @@ void mlir::populateVectorToLLVMConversionPatterns(
                VectorScalableInsertOpLowering, VectorScalableExtractOpLowering,
                MaskedReductionOpConversion, VectorInterleaveOpLowering,
                VectorDeinterleaveOpLowering, VectorFromElementsLowering,
-               VectorScalableStepOpLowering>(converter);
+               VectorToElementsLowering, VectorScalableStepOpLowering>(
+      converter);
 }
 
 void mlir::populateVectorToLLVMMatrixConversionPatterns(

@@ -70,7 +70,6 @@ inline bool fromJSON(const llvm::json::Value &E, Embedding &Out,
 // ==----------------------------------------------------------------------===//
 // Embedding
 //===----------------------------------------------------------------------===//
-
 Embedding &Embedding::operator+=(const Embedding &RHS) {
   assert(this->size() == RHS.size() && "Vectors must have the same dimension");
   std::transform(this->begin(), this->end(), RHS.begin(), this->begin(),
@@ -78,11 +77,35 @@ Embedding &Embedding::operator+=(const Embedding &RHS) {
   return *this;
 }
 
+Embedding Embedding::operator+(const Embedding &RHS) const {
+  Embedding Result(*this);
+  Result += RHS;
+  return Result;
+}
+
 Embedding &Embedding::operator-=(const Embedding &RHS) {
   assert(this->size() == RHS.size() && "Vectors must have the same dimension");
   std::transform(this->begin(), this->end(), RHS.begin(), this->begin(),
                  std::minus<double>());
   return *this;
+}
+
+Embedding Embedding::operator-(const Embedding &RHS) const {
+  Embedding Result(*this);
+  Result -= RHS;
+  return Result;
+}
+
+Embedding &Embedding::operator*=(double Factor) {
+  std::transform(this->begin(), this->end(), this->begin(),
+                 [Factor](double Elem) { return Elem * Factor; });
+  return *this;
+}
+
+Embedding Embedding::operator*(double Factor) const {
+  Embedding Result(*this);
+  Result *= Factor;
+  return Result;
 }
 
 Embedding &Embedding::scaleAndAdd(const Embedding &Src, float Factor) {
@@ -101,6 +124,13 @@ bool Embedding::approximatelyEquals(const Embedding &RHS,
   return true;
 }
 
+void Embedding::print(raw_ostream &OS) const {
+  OS << " [";
+  for (const auto &Elem : Data)
+    OS << " " << format("%.2f", Elem) << " ";
+  OS << "]\n";
+}
+
 // ==----------------------------------------------------------------------===//
 // Embedder and its subclasses
 //===----------------------------------------------------------------------===//
@@ -110,13 +140,13 @@ Embedder::Embedder(const Function &F, const Vocab &Vocabulary)
       Dimension(Vocabulary.begin()->second.size()), OpcWeight(::OpcWeight),
       TypeWeight(::TypeWeight), ArgWeight(::ArgWeight) {}
 
-Expected<std::unique_ptr<Embedder>>
-Embedder::create(IR2VecKind Mode, const Function &F, const Vocab &Vocabulary) {
+std::unique_ptr<Embedder> Embedder::create(IR2VecKind Mode, const Function &F,
+                                           const Vocab &Vocabulary) {
   switch (Mode) {
   case IR2VecKind::Symbolic:
     return std::make_unique<SymbolicEmbedder>(F, Vocabulary);
   }
-  return make_error<StringError>("Unknown IR2VecKind", errc::invalid_argument);
+  return nullptr;
 }
 
 // FIXME: Currently lookups are string based. Use numeric Keys
@@ -196,18 +226,12 @@ void SymbolicEmbedder::computeEmbeddings(const BasicBlock &BB) const {
   for (const auto &I : BB.instructionsWithoutDebug()) {
     Embedding InstVector(Dimension, 0);
 
-    const auto OpcVec = lookupVocab(I.getOpcodeName());
-    InstVector.scaleAndAdd(OpcVec, OpcWeight);
-
     // FIXME: Currently lookups are string based. Use numeric Keys
     // for efficiency.
-    const auto Type = I.getType();
-    const auto TypeVec = getTypeEmbedding(Type);
-    InstVector.scaleAndAdd(TypeVec, TypeWeight);
-
+    InstVector += lookupVocab(I.getOpcodeName());
+    InstVector += getTypeEmbedding(I.getType());
     for (const auto &Op : I.operands()) {
-      const auto OperandVec = getOperandEmbedding(Op.get());
-      InstVector.scaleAndAdd(OperandVec, ArgWeight);
+      InstVector += getOperandEmbedding(Op.get());
     }
     InstVecMap[&I] = InstVector;
     BBVector += InstVector;
@@ -251,6 +275,43 @@ bool IR2VecVocabResult::invalidate(
   return !(PAC.preservedWhenStateless());
 }
 
+Error IR2VecVocabAnalysis::parseVocabSection(
+    StringRef Key, const json::Value &ParsedVocabValue,
+    ir2vec::Vocab &TargetVocab, unsigned &Dim) {
+  json::Path::Root Path("");
+  const json::Object *RootObj = ParsedVocabValue.getAsObject();
+  if (!RootObj)
+    return createStringError(errc::invalid_argument,
+                             "JSON root is not an object");
+
+  const json::Value *SectionValue = RootObj->get(Key);
+  if (!SectionValue)
+    return createStringError(errc::invalid_argument,
+                             "Missing '" + std::string(Key) +
+                                 "' section in vocabulary file");
+  if (!json::fromJSON(*SectionValue, TargetVocab, Path))
+    return createStringError(errc::illegal_byte_sequence,
+                             "Unable to parse '" + std::string(Key) +
+                                 "' section from vocabulary");
+
+  Dim = TargetVocab.begin()->second.size();
+  if (Dim == 0)
+    return createStringError(errc::illegal_byte_sequence,
+                             "Dimension of '" + std::string(Key) +
+                                 "' section of the vocabulary is zero");
+
+  if (!std::all_of(TargetVocab.begin(), TargetVocab.end(),
+                   [Dim](const std::pair<StringRef, Embedding> &Entry) {
+                     return Entry.second.size() == Dim;
+                   }))
+    return createStringError(
+        errc::illegal_byte_sequence,
+        "All vectors in the '" + std::string(Key) +
+            "' section of the vocabulary are not of the same dimension");
+
+  return Error::success();
+}
+
 // FIXME: Make this optional. We can avoid file reads
 // by auto-generating a default vocabulary during the build time.
 Error IR2VecVocabAnalysis::readVocabulary() {
@@ -259,32 +320,40 @@ Error IR2VecVocabAnalysis::readVocabulary() {
     return createFileError(VocabFile, BufOrError.getError());
 
   auto Content = BufOrError.get()->getBuffer();
-  json::Path::Root Path("");
+
   Expected<json::Value> ParsedVocabValue = json::parse(Content);
   if (!ParsedVocabValue)
     return ParsedVocabValue.takeError();
 
-  bool Res = json::fromJSON(*ParsedVocabValue, Vocabulary, Path);
-  if (!Res)
-    return createStringError(errc::illegal_byte_sequence,
-                             "Unable to parse the vocabulary");
+  ir2vec::Vocab OpcodeVocab, TypeVocab, ArgVocab;
+  unsigned OpcodeDim = 0, TypeDim = 0, ArgDim = 0;
+  if (auto Err = parseVocabSection("Opcodes", *ParsedVocabValue, OpcodeVocab,
+                                   OpcodeDim))
+    return Err;
 
-  if (Vocabulary.empty())
-    return createStringError(errc::illegal_byte_sequence,
-                             "Vocabulary is empty");
+  if (auto Err =
+          parseVocabSection("Types", *ParsedVocabValue, TypeVocab, TypeDim))
+    return Err;
 
-  unsigned Dim = Vocabulary.begin()->second.size();
-  if (Dim == 0)
-    return createStringError(errc::illegal_byte_sequence,
-                             "Dimension of vocabulary is zero");
+  if (auto Err =
+          parseVocabSection("Arguments", *ParsedVocabValue, ArgVocab, ArgDim))
+    return Err;
 
-  if (!std::all_of(Vocabulary.begin(), Vocabulary.end(),
-                   [Dim](const std::pair<StringRef, Embedding> &Entry) {
-                     return Entry.second.size() == Dim;
-                   }))
-    return createStringError(
-        errc::illegal_byte_sequence,
-        "All vectors in the vocabulary are not of the same dimension");
+  if (!(OpcodeDim == TypeDim && TypeDim == ArgDim))
+    return createStringError(errc::illegal_byte_sequence,
+                             "Vocabulary sections have different dimensions");
+
+  auto scaleVocabSection = [](ir2vec::Vocab &Vocab, double Weight) {
+    for (auto &Entry : Vocab)
+      Entry.second *= Weight;
+  };
+  scaleVocabSection(OpcodeVocab, OpcWeight);
+  scaleVocabSection(TypeVocab, TypeWeight);
+  scaleVocabSection(ArgVocab, ArgWeight);
+
+  Vocabulary.insert(OpcodeVocab.begin(), OpcodeVocab.end());
+  Vocabulary.insert(TypeVocab.begin(), TypeVocab.end());
+  Vocabulary.insert(ArgVocab.begin(), ArgVocab.end());
 
   return Error::success();
 }
@@ -304,7 +373,6 @@ void IR2VecVocabAnalysis::emitError(Error Err, LLVMContext &Ctx) {
 IR2VecVocabAnalysis::Result
 IR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
   auto Ctx = &M.getContext();
-  // FIXME: Scale the vocabulary once. This would avoid scaling per use later.
   // If vocabulary is already populated by the constructor, use it.
   if (!Vocabulary.empty())
     return IR2VecVocabResult(std::move(Vocabulary));
@@ -323,15 +391,8 @@ IR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
 }
 
 // ==----------------------------------------------------------------------===//
-// IR2VecPrinterPass
+// Printer Passes
 //===----------------------------------------------------------------------===//
-
-void IR2VecPrinterPass::printVector(const Embedding &Vec) const {
-  OS << " [";
-  for (const auto &Elem : Vec)
-    OS << " " << format("%.2f", Elem) << " ";
-  OS << "]\n";
-}
 
 PreservedAnalyses IR2VecPrinterPass::run(Module &M,
                                          ModuleAnalysisManager &MAM) {
@@ -340,20 +401,16 @@ PreservedAnalyses IR2VecPrinterPass::run(Module &M,
 
   auto Vocab = IR2VecVocabResult.getVocabulary();
   for (Function &F : M) {
-    Expected<std::unique_ptr<Embedder>> EmbOrErr =
+    std::unique_ptr<Embedder> Emb =
         Embedder::create(IR2VecKind::Symbolic, F, Vocab);
-    if (auto Err = EmbOrErr.takeError()) {
-      handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EI) {
-        OS << "Error creating IR2Vec embeddings: " << EI.message() << "\n";
-      });
+    if (!Emb) {
+      OS << "Error creating IR2Vec embeddings \n";
       continue;
     }
 
-    std::unique_ptr<Embedder> Emb = std::move(*EmbOrErr);
-
     OS << "IR2Vec embeddings for function " << F.getName() << ":\n";
     OS << "Function vector: ";
-    printVector(Emb->getFunctionVector());
+    Emb->getFunctionVector().print(OS);
 
     OS << "Basic block vectors:\n";
     const auto &BBMap = Emb->getBBVecMap();
@@ -361,7 +418,7 @@ PreservedAnalyses IR2VecPrinterPass::run(Module &M,
       auto It = BBMap.find(&BB);
       if (It != BBMap.end()) {
         OS << "Basic block: " << BB.getName() << ":\n";
-        printVector(It->second);
+        It->second.print(OS);
       }
     }
 
@@ -373,10 +430,24 @@ PreservedAnalyses IR2VecPrinterPass::run(Module &M,
         if (It != InstMap.end()) {
           OS << "Instruction: ";
           I.print(OS);
-          printVector(It->second);
+          It->second.print(OS);
         }
       }
     }
   }
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses IR2VecVocabPrinterPass::run(Module &M,
+                                              ModuleAnalysisManager &MAM) {
+  auto IR2VecVocabResult = MAM.getResult<IR2VecVocabAnalysis>(M);
+  assert(IR2VecVocabResult.isValid() && "IR2Vec Vocabulary is invalid");
+
+  auto Vocab = IR2VecVocabResult.getVocabulary();
+  for (const auto &Entry : Vocab) {
+    OS << "Key: " << Entry.first << ": ";
+    Entry.second.print(OS);
+  }
+
   return PreservedAnalyses::all();
 }

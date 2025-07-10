@@ -1901,54 +1901,6 @@ int internal_uname(struct utsname *buf) {
 }
 #  endif
 
-#  if SANITIZER_ANDROID
-static int dl_iterate_phdr_test_cb(struct dl_phdr_info *info, size_t size,
-                                   void *data) {
-  // Any name starting with "lib" indicates a bug in L where library base names
-  // are returned instead of paths.
-  if (info->dlpi_name && info->dlpi_name[0] == 'l' &&
-      info->dlpi_name[1] == 'i' && info->dlpi_name[2] == 'b') {
-    *(bool *)data = true;
-    return 1;
-  }
-  return 0;
-}
-
-static atomic_uint32_t android_api_level;
-
-static AndroidApiLevel AndroidDetectApiLevelStatic() {
-#    if __ANDROID_API__ <= 22
-  return ANDROID_LOLLIPOP_MR1;
-#    else
-  return ANDROID_POST_LOLLIPOP;
-#    endif
-}
-
-static AndroidApiLevel AndroidDetectApiLevel() {
-  bool base_name_seen = false;
-  dl_iterate_phdr(dl_iterate_phdr_test_cb, &base_name_seen);
-  if (base_name_seen)
-    return ANDROID_LOLLIPOP_MR1;  // L MR1
-  return ANDROID_POST_LOLLIPOP;   // post-L
-  // Plain L (API level 21) is completely broken wrt ASan and not very
-  // interesting to detect.
-}
-
-extern "C" __attribute__((weak)) void *_DYNAMIC;
-
-AndroidApiLevel AndroidGetApiLevel() {
-  AndroidApiLevel level =
-      (AndroidApiLevel)atomic_load(&android_api_level, memory_order_relaxed);
-  if (level)
-    return level;
-  level = &_DYNAMIC == nullptr ? AndroidDetectApiLevelStatic()
-                               : AndroidDetectApiLevel();
-  atomic_store(&android_api_level, level, memory_order_relaxed);
-  return level;
-}
-
-#  endif
-
 static HandleSignalMode GetHandleSignalModeImpl(int signum) {
   switch (signum) {
     case SIGABRT:

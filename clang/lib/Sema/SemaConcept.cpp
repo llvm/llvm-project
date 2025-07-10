@@ -898,7 +898,7 @@ static const Expr *SubstituteConstraintExpressionWithoutSatisfaction(
     Sema &S, const Sema::TemplateCompareNewDeclInfo &DeclInfo,
     const Expr *ConstrExpr) {
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
-      DeclInfo.getDecl(), DeclInfo.getLexicalDeclContext(), /*Final=*/false,
+      DeclInfo.getDecl(), DeclInfo.getDeclContext(), /*Final=*/false,
       /*Innermost=*/std::nullopt,
       /*RelativeToPrimary=*/true,
       /*Pattern=*/nullptr, /*ForConstraintInstantiation=*/true,
@@ -1142,8 +1142,8 @@ bool Sema::CheckFunctionTemplateConstraints(
   }
 
   CXXThisScopeRAII ThisScope(*this, Record, ThisQuals, Record != nullptr);
-  LambdaScopeForCallOperatorInstantiationRAII LambdaScope(
-      *this, const_cast<FunctionDecl *>(Decl), *MLTAL, Scope);
+  LambdaScopeForCallOperatorInstantiationRAII LambdaScope(*this, Decl, *MLTAL,
+                                                          Scope);
 
   return CheckConstraintSatisfaction(Template, TemplateAC, *MLTAL,
                                      PointOfInstantiation, Satisfaction);

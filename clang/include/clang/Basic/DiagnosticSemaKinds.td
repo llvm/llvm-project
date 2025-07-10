@@ -1062,6 +1062,9 @@ def err_constexpr_main : Error<
   "'main' is not allowed to be declared %select{constexpr|consteval}0">;
 def err_deleted_main : Error<"'main' is not allowed to be deleted">;
 def err_mainlike_template_decl : Error<"%0 cannot be a template">;
+def warn_main_in_named_module
+    : ExtWarn<"'main' never has module linkage">,
+      InGroup<DiagGroup<"main-attached-to-named-module">>;
 def err_main_returns_nonint : Error<"'main' must return 'int'">;
 def ext_main_returns_nonint : ExtWarn<"return type of 'main' is not 'int'">,
     InGroup<MainReturnType>;
@@ -1084,9 +1087,9 @@ def warn_main_redefined : Warning<"variable named 'main' with external linkage "
     "has undefined behavior">, InGroup<Main>;
 def ext_main_used : Extension<
     "referring to 'main' within an expression is a Clang extension">, InGroup<Main>;
-def ext_main_invalid_linkage_specification : ExtWarn<
-  "'main' should not be "
-  "'extern \"%select{C|C++}0\"'">, InGroup<Main>;
+def ext_main_invalid_linkage_specification : ExtWarn<"'main' should not be "
+                                                     "'extern \"C\"'">,
+                                             InGroup<Main>;
 
 /// parser diagnostics
 def ext_no_declarators : ExtWarn<"declaration does not declare anything">,
@@ -1767,7 +1770,9 @@ def note_unsatisfied_trait
     : Note<"%0 is not %enum_select<TraitName>{"
            "%TriviallyRelocatable{trivially relocatable}|"
            "%Replaceable{replaceable}|"
-           "%TriviallyCopyable{trivially copyable}"
+           "%TriviallyCopyable{trivially copyable}|"
+           "%Empty{empty}|"
+           "%StandardLayout{standard-layout}"
            "}1">;
 
 def note_unsatisfied_trait_reason
@@ -1787,6 +1792,16 @@ def note_unsatisfied_trait_reason
            "%NonReplaceableField{has a non-replaceable member %1 of type %2}|"
            "%NTCBase{has a non-trivially-copyable base %1}|"
            "%NTCField{has a non-trivially-copyable member %1 of type %2}|"
+           "%NonEmptyMember{has a non-static data member %1 of type %2}|"
+           "%VirtualFunction{has a virtual function %1}|"
+           "%NonEmptyBase{has a base class %1 that is not empty}|"
+           "%NonZeroLengthField{field %1 is a non-zero-length bit-field}|"
+           "%NonStandardLayoutBase{has a non-standard-layout base %1}|"
+           "%MixedAccess{has mixed access specifiers}|"
+           "%MixedAccessField{field %1 has a different access specifier than field %2}|"
+           "%MultipleDataBase{has multiple base classes with data members}|"
+           "%NonStandardLayoutMember{has a non-standard-layout member %1 of type %2}|"
+           "%IndirectBaseWithFields{has an indirect base %1 with data members}|"
            "%DeletedDtr{has a %select{deleted|user-provided}1 destructor}|"
            "%UserProvidedCtr{has a user provided %select{copy|move}1 "
            "constructor}|"
@@ -1797,7 +1812,10 @@ def note_unsatisfied_trait_reason
            "%DeletedAssign{has a deleted %select{copy|move}1 "
            "assignment operator}|"
            "%UnionWithUserDeclaredSMF{is a union with a user-declared "
-           "%sub{select_special_member_kind}1}"
+           "%sub{select_special_member_kind}1}|"
+           "%FunctionType{is a function type}|"
+           "%CVVoidType{is a cv void type}|"
+           "%IncompleteArrayType{is an incomplete array type}"
            "}0">;
 
 def warn_consteval_if_always_true : Warning<
@@ -2461,7 +2479,8 @@ def note_uninit_reference_member : Note<
   "uninitialized reference member is here">;
 def warn_field_requires_explicit_init : Warning<
   "field %select{%1|in %1}0 requires explicit initialization but is not "
-   "explicitly initialized">, InGroup<UninitializedExplicitInit>;
+   "explicitly initialized">, InGroup<UninitializedExplicitInit>,
+   ShowInSystemHeader;
 def warn_field_is_uninit : Warning<"field %0 is uninitialized when used here">,
   InGroup<Uninitialized>;
 def warn_base_class_is_uninit : Warning<
@@ -3275,10 +3294,11 @@ def err_attribute_wrong_number_arguments : Error<
 def err_attribute_wrong_number_arguments_for : Error <
   "%0 attribute references function %1, which %plural{0:takes no arguments|1:takes one argument|"
   ":takes exactly %2 arguments}2">;
-def err_callback_attribute_wrong_arg_count : Error<
-  "'callback' attribute references function of type %0 which expects %1 "
-  "%plural{1:argument|:arguments}1 but attribute specifies %2 parameter index "
-  "%plural{1:argument|:arguments}2">;
+def err_attribute_wrong_arg_count_for_func
+    : Error<"%0 attribute references function of type %1 which expects %2 "
+            "%plural{1:argument|:arguments}2 but attribute specifies %3 "
+            "parameter index "
+            "%plural{1:argument|:arguments}3">;
 def err_attribute_bounds_for_function : Error<
   "%0 attribute references parameter %1, but the function %2 has only %3 parameters">;
 def err_attribute_no_member_function : Error<
@@ -3317,6 +3337,9 @@ def err_sve_vector_in_non_sve_target : Error<
   "SVE vector type %0 cannot be used in a target without sve">;
 def err_sve_vector_in_non_streaming_function : Error<
   "SVE vector type %0 cannot be used in a non-streaming function">;
+def err_sve_fixed_vector_in_streaming_function
+    : Error<"fixed width SVE vector type %0 cannot be used in a "
+            "%select{streaming|streaming-compatible}1 function">;
 def err_attribute_riscv_rvv_bits_unsupported : Error<
   "%0 is only supported when '-mrvv-vector-bits=<bits>' is specified with a "
   "value of \"zvl\" or a power 2 in the range [64,65536]">;
@@ -4694,9 +4717,9 @@ def note_protocol_decl : Note<
   "protocol is declared here">;
 def note_protocol_decl_undefined : Note<
   "protocol %0 has no definition">;
-def err_attribute_preferred_name_arg_invalid : Error<
-  "argument %0 to 'preferred_name' attribute is not a typedef for "
-  "a specialization of %1">;
+def err_attribute_not_typedef_for_specialization
+    : Error<"argument %0 to %1 attribute is not a typedef for "
+            "a specialization of %2">;
 def err_attribute_builtin_alias : Error<
   "%0 attribute can only be applied to a ARM, HLSL, SPIR-V or RISC-V builtin">;
 
@@ -13054,10 +13077,13 @@ def err_invalid_hlsl_resource_type: Error<
 def err_hlsl_spirv_only: Error<"%0 is only available for the SPIR-V target">;
 def err_hlsl_vk_literal_must_contain_constant: Error<"the argument to vk::Literal must be a vk::integral_constant">;
 
+def subst_hlsl_format_ranges: TextSubstitution<
+  "%select{t|u|b|s}0[%1;%select{%3]|unbounded)}2">;
+
 def err_hlsl_resource_range_overlap: Error<
-  "resource ranges %select{t|u|b|s}0[%1;%2] and %select{t|u|b|s}3[%4;%5] "
-  "overlap within space = %6 and visibility = "
-  "%select{All|Vertex|Hull|Domain|Geometry|Pixel|Amplification|Mesh}7">;
+  "resource ranges %sub{subst_hlsl_format_ranges}0,1,2,3 and %sub{subst_hlsl_format_ranges}4,5,6,7 "
+  "overlap within space = %8 and visibility = "
+  "%select{All|Vertex|Hull|Domain|Geometry|Pixel|Amplification|Mesh}9">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
@@ -13199,8 +13225,12 @@ def err_acc_not_a_var_ref_use_device_declare
     : Error<"OpenACC variable %select{in 'use_device' clause|on 'declare' "
             "construct}0 is not a valid variable name or array name">;
 def err_acc_not_a_var_ref_cache
-    : Error<"OpenACC variable in cache directive is not a valid sub-array or "
+    : Error<"OpenACC variable in 'cache' directive is not a valid sub-array or "
             "array element">;
+def warn_acc_cache_var_not_outside_loop
+    : Warning<"OpenACC variable in 'cache' directive was not declared outside "
+              "of the associated 'loop' directive; directive has no effect">,
+      InGroup<DiagGroup<"openacc-cache-var-inside-loop">>;
 def err_acc_typecheck_subarray_value
     : Error<"OpenACC sub-array subscripted value is not an array or pointer">;
 def err_acc_subarray_function_type

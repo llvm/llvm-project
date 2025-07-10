@@ -356,5 +356,14 @@ struct foo {
 };
 
 constexpr auto bar = foo(seq<0>());
+}
 
+namespace GH147650 {
+template <int> int b;
+template <int b>
+void f()
+    requires requires { [] { (void)b; static_assert(b == 42); }; } {}
+void test() {
+    f<42>();
+}
 }

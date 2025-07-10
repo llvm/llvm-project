@@ -111,6 +111,7 @@
 // RUN: %clang --autocomplete=-Wma | FileCheck %s -check-prefix=WARNING
 // WARNING: -Wmacro-redefined
 // WARNING-NEXT: -Wmain
+// WARNING-NEXT: -Wmain-attached-to-named-module
 // WARNING-NEXT: -Wmain-return-type
 // WARNING-NEXT: -Wmalformed-warning-check
 // WARNING-NEXT: -Wmany-braces-around-scalar-init
