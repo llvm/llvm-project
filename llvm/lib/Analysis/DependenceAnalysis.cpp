@@ -4018,12 +4018,12 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     }
 
 #ifndef NDEBUG
-      // Check that the converse (i.e., if the distance is zero, then the
-      // direction is EQ) holds.
-      const SCEV *Distance = Result.getDistance(II);
-      if (Distance && Distance->isZero())
-        assert(Result.getDirection(II) == Dependence::DVEntry::EQ &&
-               "Distance is zero, but direction is not EQ");
+    // Check that the converse (i.e., if the distance is zero, then the
+    // direction is EQ) holds.
+    const SCEV *Distance = Result.getDistance(II);
+    if (Distance && Distance->isZero())
+      assert(Result.getDirection(II) == Dependence::DVEntry::EQ &&
+             "Distance is zero, but direction is not EQ");
 #endif
   }
 
