@@ -340,3 +340,21 @@ void foo() {
 }
 
 }
+
+namespace GH147772 {
+
+template<int...>
+struct seq {};
+
+using arr = char[1];
+
+struct foo {
+	template<int... i>
+	constexpr foo(seq<i...>) requires requires {
+		arr { [](auto) requires(i, true) { return 0; }(i)... };
+	} {}
+};
+
+constexpr auto bar = foo(seq<0>());
+
+}

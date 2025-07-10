@@ -1078,15 +1078,19 @@ static bool CheckFunctionConstraintsWithoutInstantiation(
   // template. We need the entire list, since the constraint is completely
   // uninstantiated at this point.
 
-  // FIXME: Add TemplateArgs through the 'Innermost' parameter once
-  // the refactoring of getTemplateInstantiationArgs() relands.
-  MultiLevelTemplateArgumentList MLTAL;
-  MLTAL.addOuterTemplateArguments(Template, {}, /*Final=*/false);
-  SemaRef.getTemplateInstantiationArgs(
-      MLTAL, /*D=*/FD, FD,
+  // getTemplateInstantiationArgs uses this instantiation context to find out
+  // template arguments for uninstantiated functions.
+  std::optional<Sema::InstantiatingTemplate> Inst(
+      std::in_place, SemaRef, PointOfInstantiation,
+      Sema::InstantiatingTemplate::ConstraintsCheck{}, Template, TemplateArgs,
+      PointOfInstantiation);
+  if (Inst->isInvalid())
+    return true;
+  MultiLevelTemplateArgumentList MLTAL = SemaRef.getTemplateInstantiationArgs(
+      /*D=*/FD, FD,
       /*Final=*/false, /*Innermost=*/{}, /*RelativeToPrimary=*/true,
       /*Pattern=*/nullptr, /*ForConstraintInstantiation=*/true);
-  MLTAL.replaceInnermostTemplateArguments(Template, TemplateArgs);
+  Inst = std::nullopt;
 
   Sema::ContextRAII SavedContext(SemaRef, FD);
   std::optional<Sema::CXXThisScopeRAII> ThisScope;
