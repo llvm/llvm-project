@@ -502,12 +502,12 @@ bool AArch64ELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
 
 void AArch64ELFObjectWriter::sortRelocs(
     std::vector<ELFRelocationEntry> &Relocs) {
-  // INST32 relocations should be applied last because they may overwrite the
+  // PATCHINST relocations should be applied last because they may overwrite the
   // whole instruction and so should take precedence over other relocations that
   // modify operands of the original instruction.
   std::stable_partition(Relocs.begin(), Relocs.end(),
                         [](const ELFRelocationEntry &R) {
-                          return R.Type != ELF::R_AARCH64_INST32;
+                          return R.Type != ELF::R_AARCH64_PATCHINST;
                         });
 }
 

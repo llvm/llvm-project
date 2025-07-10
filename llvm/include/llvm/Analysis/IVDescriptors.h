@@ -57,6 +57,9 @@ enum class RecurKind {
   FindFirstIVSMin, /// FindFirst reduction with select(icmp(),x,y) where one of
                    ///< (x,y) is a decreasing loop induction, and both x and y
                    ///< are integer type, producing a SMin reduction.
+  FindFirstIVUMin, /// FindFirst reduction with select(icmp(),x,y) where one of
+                   ///< (x,y) is a decreasing loop induction, and both x and y
+                   ///< are integer type, producing a UMin reduction.
   FindLastIVSMax, ///< FindLast reduction with select(cmp(),x,y) where one of
                   ///< (x,y) is increasing loop induction, and both x and y
                   ///< are integer type, producing a SMax reduction.
@@ -265,7 +268,8 @@ public:
   /// Returns true if the recurrence kind is of the form
   ///   select(cmp(),x,y) where one of (x,y) is decreasing loop induction.
   static bool isFindFirstIVRecurrenceKind(RecurKind Kind) {
-    return Kind == RecurKind::FindFirstIVSMin;
+    return Kind == RecurKind::FindFirstIVSMin ||
+           Kind == RecurKind::FindFirstIVUMin;
   }
 
   /// Returns true if the recurrence kind is of the form
