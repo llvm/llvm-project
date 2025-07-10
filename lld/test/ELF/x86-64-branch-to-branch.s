@@ -53,6 +53,7 @@ vtable:
 # RELOC: RELOCATION RECORDS FOR [.text]:
 # RELOC-NEXT: OFFSET
 _start:
+.cfi_startproc
 # B2B-NEXT: jmp {{.*}} <f3>
 # B2B-RELOC-NEXT: R_X86_64_PLT32 f3-0x4
 # NOB2B-NEXT: jmp {{.*}} <f1{{.*}}>
@@ -79,6 +80,7 @@ jmp f6
 # B2B-NEXT: jmp {{.*}} <f7>
 # RELOC-NEXT: R_X86_64_PLT32 f7-0x4
 jmp f7
+.cfi_endproc
 
 .section .text.f1,"ax"
 .globl f1

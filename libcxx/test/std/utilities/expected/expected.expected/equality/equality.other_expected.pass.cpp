@@ -17,26 +17,26 @@
 #include <type_traits>
 #include <utility>
 
+#include "test_comparisons.h"
 #include "test_macros.h"
-#include "../../types.h"
 
 // Test constraint
-static_assert(!CanCompare<NonComparable, NonComparable>);
+static_assert(!HasOperatorEqual<NonComparable, NonComparable>);
 
-static_assert(CanCompare<std::expected<int, int>, std::expected<int, int>>);
-static_assert(CanCompare<std::expected<int, int>, std::expected<short, short>>);
+static_assert(HasOperatorEqual<std::expected<int, int>, std::expected<int, int>>);
+static_assert(HasOperatorEqual<std::expected<int, int>, std::expected<short, short>>);
 
 #if TEST_STD_VER >= 26
 // https://wg21.link/P3379R0
-static_assert(!CanCompare<std::expected<int, int>, std::expected<void, int>>);
-static_assert(CanCompare<std::expected<int, int>, std::expected<int, int>>);
-static_assert(!CanCompare<std::expected<NonComparable, int>, std::expected<NonComparable, int>>);
-static_assert(!CanCompare<std::expected<int, NonComparable>, std::expected<int, NonComparable>>);
-static_assert(!CanCompare<std::expected<NonComparable, int>, std::expected<int, NonComparable>>);
-static_assert(!CanCompare<std::expected<int, NonComparable>, std::expected<NonComparable, int>>);
+static_assert(!HasOperatorEqual<std::expected<int, int>, std::expected<void, int>>);
+static_assert(HasOperatorEqual<std::expected<int, int>, std::expected<int, int>>);
+static_assert(!HasOperatorEqual<std::expected<NonComparable, int>, std::expected<NonComparable, int>>);
+static_assert(!HasOperatorEqual<std::expected<int, NonComparable>, std::expected<int, NonComparable>>);
+static_assert(!HasOperatorEqual<std::expected<NonComparable, int>, std::expected<int, NonComparable>>);
+static_assert(!HasOperatorEqual<std::expected<int, NonComparable>, std::expected<NonComparable, int>>);
 #else
 // Note this is true because other overloads in expected<non-void> are unconstrained
-static_assert(CanCompare<std::expected<void, int>, std::expected<int, int>>);
+static_assert(HasOperatorEqual<std::expected<void, int>, std::expected<int, int>>);
 #endif
 constexpr bool test() {
   // x.has_value() && y.has_value()

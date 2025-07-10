@@ -71,10 +71,8 @@ gentbl_cc_library(
 cc_library(
     name = "ELF",
     srcs = glob([
-        "ELF/*.cpp",
-        "ELF/*.h",
-        "ELF/Arch/*.cpp",
-        "ELF/Arch/*.h",
+        "ELF/**/*.cpp",
+        "ELF/**/*.h",
     ]),
     includes = ["ELF"],
     textual_hdrs = [

@@ -13,6 +13,9 @@ def OpA : NS_Op<"one_normal_operand_op", []> {
   let arguments = (ins I32:$input);
 }
 
+// DECL-LABEL: class OpA : {{.*}} {
+// DECL: static constexpr int odsIndex_input = 0;
+
 // CHECK-LABEL: OpA definitions
 
 // CHECK:      void OpA::build
@@ -28,6 +31,9 @@ def OpB : NS_Op<"one_variadic_operand_op", []> {
   let arguments = (ins Variadic<I32>:$input);
 }
 
+// DECL-LABEL: class OpB : {{.*}} {
+// DECL: static constexpr int odsIndex_input = 0;
+
 // CHECK-LABEL: OpB::build
 // CHECK:         ::mlir::ValueRange input
 // CHECK-NOT:     assert
@@ -36,6 +42,11 @@ def OpB : NS_Op<"one_variadic_operand_op", []> {
 def OpD : NS_Op<"mix_variadic_and_normal_inputs_op", [SameVariadicOperandSize]> {
   let arguments = (ins Variadic<AnyTensor>:$input1, AnyTensor:$input2, Variadic<AnyTensor>:$input3);
 }
+
+// DECL-LABEL: class OpD : {{.*}} {
+// DECL: static constexpr int odsIndex_input1 = 0;
+// DECL: static constexpr int odsIndex_input2 = 1;
+// DECL: static constexpr int odsIndex_input3 = 2;
 
 // DECL-LABEL: ::mlir::Operation::operand_range getInput1
 // DECL-NEXT: return getODSOperands(0);

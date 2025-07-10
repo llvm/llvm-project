@@ -90,6 +90,8 @@ public:
       resetDataLayout("E-m:l-p1:32:32-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-"
                       "a:8:16-n32:64");
     } else {
+      // Support _Float16.
+      HasFloat16 = true;
       TLSSupported = true;
       resetDataLayout("E-m:e-i1:8:16-i8:8:16-i64:64-f128:64"
                       "-v128:64-a:8:16-n32:64");
@@ -103,8 +105,6 @@ public:
     // and instead the backend will promote each half operation to float
     // individually.
     HasLegalHalfType = false;
-    // Support _Float16.
-    HasFloat16 = true;
 
     HasStrictFP = true;
   }

@@ -421,7 +421,7 @@ endif()
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
 
   if (NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing -fno-semantic-interposition")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-semantic-interposition")
   else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-command-line-argument -Wstring-conversion \
           -Wcovered-switch-default")
@@ -504,9 +504,10 @@ add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(cmake/modules)
 
+option(FLANG_INCLUDE_TOOLS "Generate build targets for the Flang tools." ON)
 option(FLANG_BUILD_TOOLS
   "Build the Flang tools. If OFF, just generate build targets." ON)
-if (FLANG_BUILD_TOOLS)
+if (FLANG_INCLUDE_TOOLS)
   add_subdirectory(tools)
 endif()
 

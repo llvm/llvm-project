@@ -50,6 +50,7 @@ vtable:
 # RELOC: RELOCATION RECORDS FOR [.text]:
 # RELOC-NEXT: OFFSET
 _start:
+.cfi_startproc
 # B2B: bl {{.*}} <f3>
 # B2B-RELOC-NEXT: R_AARCH64_CALL26 f3
 # NOB2B: bl {{.*}} <f1{{.*}}>
@@ -60,6 +61,7 @@ bl f1
 # NOB2B: b {{.*}} <f2{{.*}}>
 # NOB2B-RELOC-NEXT: R_AARCH64_JUMP26 f2
 b f2
+.cfi_endproc
 
 .section .text.f1,"ax"
 .globl f1

@@ -23,7 +23,7 @@ template<Incrementable T> Incrementable auto incrementTwo(T t);
 // CHECK-NEXT:        }
 // CHECK-NEXT:      ],
 // CHECK-NEXT:      "ReturnType": {
-// CHECK-NEXT:        "IsBuiltIn": false,
+// CHECK-NEXT:        "IsBuiltIn": true,
 // CHECK-NEXT:        "IsTemplate": false,
 // CHECK-NEXT:        "Name": "void",
 // CHECK-NEXT:        "QualName": "void",
