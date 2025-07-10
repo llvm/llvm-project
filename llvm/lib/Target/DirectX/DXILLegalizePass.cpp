@@ -649,7 +649,6 @@ private:
     LegalizationPipeline[Stage1].push_back(legalizeMemCpy);
     LegalizationPipeline[Stage1].push_back(removeMemSet);
     LegalizationPipeline[Stage1].push_back(updateFnegToFsub);
-    LegalizationPipeline[Stage1].push_back(legalizeLoadStoreOnArrayAllocas);
     // Note: legalizeGetHighLowi64Bytes and
     // downcastI64toI32InsertExtractElements both modify extractelement, so they
     // must run staggered stages. legalizeGetHighLowi64Bytes runs first b\c it
@@ -657,6 +656,7 @@ private:
     // downcastI64toI32InsertExtractElements needs to handle.
     LegalizationPipeline[Stage2].push_back(
         downcastI64toI32InsertExtractElements);
+    LegalizationPipeline[Stage2].push_back(legalizeLoadStoreOnArrayAllocas);
   }
 };
 
