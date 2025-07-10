@@ -113,7 +113,7 @@ struct OffloadProgramTest : OffloadDeviceTest {
 struct OffloadKernelTest : OffloadProgramTest {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadProgramTest::SetUp());
-    ASSERT_SUCCESS(olGetKernel(Program, "foo", &Kernel));
+    ASSERT_SUCCESS(olGetSymbol(Program, "foo", OL_SYMBOL_KIND_KERNEL, &Kernel));
   }
 
   void TearDown() override {
