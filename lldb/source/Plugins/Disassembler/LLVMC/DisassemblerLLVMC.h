@@ -21,6 +21,10 @@
 class InstructionLLVMC;
 
 class DisassemblerLLVMC : public lldb_private::Disassembler {
+private:
+  void UpdateFeatureString(llvm::StringRef additional_features,
+                           std::string &features);
+
 public:
   DisassemblerLLVMC(const lldb_private::ArchSpec &arch, const char *flavor,
                     const char *cpu, const char *features);

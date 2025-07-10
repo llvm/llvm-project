@@ -1,0 +1,11 @@
+# REQUIRES: target=riscv32-{{.*}}
+
+# RUN: %lldb -b -o "disassemble -b -n main" %p/Inputs/riscv_xqci.out | FileCheck %s
+
+# CHECK: 1f 05 58 00 00 00  qc.e.li a0, 0x58
+# CHECK: 16 15              qc.extu a0, a0, 0x6, 0x0
+
+# RUN: %lldb -b -o "disassemble -b -n main -Y -xqci,+c" %p/Inputs/riscv_xqci.out | FileCheck --check-prefix=CHECK-NOXQCI %s
+
+# CHECK-NOXQCI: <invalid>
+

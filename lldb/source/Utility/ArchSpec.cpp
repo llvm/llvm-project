@@ -617,6 +617,14 @@ void ArchSpec::SetFlags(const std::string &elf_abi) {
   SetFlags(flag);
 }
 
+void ArchSpec::SetAdditionalDisassemblyFeatureStr(
+    llvm::StringRef additional_features) {
+  if (m_additional_disassembly_feature_str.find(additional_features.str()) ==
+      std::string::npos) {
+    m_additional_disassembly_feature_str += additional_features.str();
+  }
+}
+
 std::string ArchSpec::GetClangTargetCPU() const {
   std::string cpu;
   if (IsMIPS()) {

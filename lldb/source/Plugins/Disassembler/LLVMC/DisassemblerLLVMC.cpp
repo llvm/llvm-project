@@ -1436,6 +1436,37 @@ bool DisassemblerLLVMC::MCDisasmInstance::IsAuthenticated(
   return InstrDesc.isAuthenticated() || IsBrkC47x;
 }
 
+void DisassemblerLLVMC::UpdateFeatureString(llvm::StringRef additional_features,
+                                            std::string &features) {
+  // Allow users to override default additional features.
+  size_t start = 0, end;
+  while (!additional_features.empty() && start < additional_features.size()) {
+    end = additional_features.find(',', start);
+    if (end == llvm::StringRef::npos) {
+      end = additional_features.size();
+    }
+    llvm::StringRef flag =
+        additional_features.substr(start, end - start).trim();
+    if (!flag.empty()) {
+      if (flag.starts_with('+')) {
+        std::string dissable_flag = "-" + flag.substr(1).str();
+        if (features.find(dissable_flag) == std::string::npos) {
+          if (flag.back() != ',') {
+            features = ',' + features;
+          }
+          features = flag.str() + features;
+        }
+      } else {
+        if (flag.back() != ',') {
+          features = ',' + features;
+        }
+        features = flag.str() + features;
+      }
+    }
+    start = end + 1;
+  }
+}
+
 DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
                                      const char *flavor_string,
                                      const char *cpu_string,
@@ -1583,6 +1614,15 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
     features_str += "+a,+m,";
   }
 
+  const char *additional_features =
+      arch.GetAdditionalDisassemblyFeatureStr().data();
+  // Prepend the additional_features if it's not already in the features_str to
+  // avoid duplicates.
+  if (additional_features &&
+      features_str.find(additional_features) == std::string::npos) {
+    UpdateFeatureString(additional_features, features_str);
+  }
+
   // We use m_disasm_up.get() to tell whether we are valid or not, so if this
   // isn't good for some reason, we won't be valid and FindPlugin will fail and
   // we won't get used.
@@ -1595,9 +1635,8 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
   // thumb instruction disassembler.
   if (llvm_arch == llvm::Triple::arm) {
     std::string thumb_triple(thumb_arch.GetTriple().getTriple());
-    m_alternate_disasm_up =
-        MCDisasmInstance::Create(thumb_triple.c_str(), "", features_str.c_str(),
-                                 flavor, *this);
+    m_alternate_disasm_up = MCDisasmInstance::Create(
+        thumb_triple.c_str(), "", features_str.c_str(), flavor, *this);
     if (!m_alternate_disasm_up)
       m_disasm_up.reset();
 
