@@ -10,6 +10,7 @@
 #define _LIBCPP___TYPE_TRAITS_IS_CORE_CONVERTIBLE_H
 
 #include <__config>
+#include <__type_traits/detected_or.h>
 #include <__type_traits/integral_constant.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -24,27 +25,23 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // and __is_core_convertible<immovable-type,immovable-type> is true in C++17 and later.
 
 template <class _Tp, class _Up, class = void>
-struct __is_core_convertible : false_type {};
+inline const bool __is_core_convertible_v = false;
 
 template <class _Tp, class _Up>
-struct __is_core_convertible<_Tp, _Up, decltype(static_cast<void (*)(_Up)>(0)(static_cast<_Tp (*)()>(0)()))>
-    : true_type {};
-
-#if _LIBCPP_STD_VER >= 17
+inline const bool
+    __is_core_convertible_v<_Tp, _Up, decltype(static_cast<void (*)(_Up)>(0)(static_cast<_Tp (*)()>(0)()))> = true;
 
 template <class _Tp, class _Up>
-inline constexpr bool __is_core_convertible_v = __is_core_convertible<_Tp, _Up>::value;
-
-#endif
+using __is_core_convertible = integral_constant<bool, __is_core_convertible_v<_Tp, _Up>>;
 
 #if _LIBCPP_STD_VER >= 20
 
 template <class _Tp, class _Up>
-concept __core_convertible_to = __is_core_convertible<_Tp, _Up>::value;
+concept __core_convertible_to = __is_core_convertible_v<_Tp, _Up>;
 
 #endif // _LIBCPP_STD_VER >= 20
 
-template <class _Tp, class _Up, bool = __is_core_convertible<_Tp, _Up>::value>
+template <class _Tp, class _Up, bool = __is_core_convertible_v<_Tp, _Up>>
 inline const bool __is_nothrow_core_convertible_v = false;
 
 #ifndef _LIBCPP_CXX03_LANG
