@@ -8741,7 +8741,7 @@ body: |
     ; GFX11-NEXT: %x1:vgpr_32 = COPY killed [[TBUFFER_LOAD_FORMAT_XY_IDXEN]].sub1
     ; GFX11-NEXT: %x2:vgpr_32 = TBUFFER_LOAD_FORMAT_X_IDXEN [[COPY]], %rsrc, 0, 4, 13, 0, 0, implicit $exec :: (dereferenceable load (s16), addrspace 8)
     %0:vgpr_32 = COPY $vgpr0
-    %rsrc:sgpr_128 = REG_SEQUENCE $sgpr0,%subreg.sub0,$sgpr1,%subreg.sub1,$sgpr2,%subreg.sub2,$sgpr3,%subreg.sub3
+    %rsrc:sgpr_128 = REG_SEQUENCE $sgpr0, %subreg.sub0, $sgpr1,%subreg.sub1, $sgpr2, %subreg.sub2, $sgpr3, %subreg.sub3
     %x0:vgpr_32 = TBUFFER_LOAD_FORMAT_X_IDXEN %0, %rsrc, 0, 0, 13, 0, 0, implicit $exec :: (dereferenceable load (s16),align 2,addrspace 8)
     %x1:vgpr_32 = TBUFFER_LOAD_FORMAT_X_IDXEN %0, %rsrc, 0, 2, 13, 0, 0, implicit $exec :: (dereferenceable load (s16),align 2,addrspace 8)
     %x2:vgpr_32 = TBUFFER_LOAD_FORMAT_X_IDXEN %0, %rsrc, 0, 4, 13, 0, 0, implicit $exec :: (dereferenceable load (s16),align 2,addrspace 8)
