@@ -25,6 +25,7 @@
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
+#include "Plugins/Language/CPlusPlus/Generic.h"
 #include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/lldb-enumerations.h"
@@ -157,39 +158,43 @@ bool lldb_private::formatters::LibcxxSmartPointerSummaryProvider(
   ValueObjectSP valobj_sp(valobj.GetNonSyntheticValue());
   if (!valobj_sp)
     return false;
-  ValueObjectSP ptr_sp(valobj_sp->GetChildMemberWithName("__ptr_"));
-  ValueObjectSP count_sp(
-      valobj_sp->GetChildAtNamePath({"__cntrl_", "__shared_owners_"}));
-  ValueObjectSP weakcount_sp(
-      valobj_sp->GetChildAtNamePath({"__cntrl_", "__shared_weak_owners_"}));
 
-  if (!ptr_sp)
+  ValueObjectSP ptr_sp(valobj_sp->GetChildMemberWithName("__ptr_"));
+  ValueObjectSP ctrl_sp(valobj_sp->GetChildMemberWithName("__cntrl_"));
+  if (!ctrl_sp || !ptr_sp)
     return false;
 
-  if (ptr_sp->GetValueAsUnsigned(0) == 0) {
-    stream.Printf("nullptr");
+  DumpCxxSmartPtrPointerSummary(stream, *ptr_sp, options);
+
+  bool success;
+  uint64_t ctrl_addr = ctrl_sp->GetValueAsUnsigned(0, &success);
+  // Empty control field. We're done.
+  if (!success || ctrl_addr == 0)
     return true;
-  } else {
-    bool print_pointee = false;
-    Status error;
-    ValueObjectSP pointee_sp = ptr_sp->Dereference(error);
-    if (pointee_sp && error.Success()) {
-      if (pointee_sp->DumpPrintableRepresentation(
-              stream, ValueObject::eValueObjectRepresentationStyleSummary,
-              lldb::eFormatInvalid,
-              ValueObject::PrintableRepresentationSpecialCases::eDisable,
-              false))
-        print_pointee = true;
-    }
-    if (!print_pointee)
-      stream.Printf("ptr = 0x%" PRIx64, ptr_sp->GetValueAsUnsigned(0));
+
+  if (auto count_sp = ctrl_sp->GetChildMemberWithName("__shared_owners_")) {
+    bool success;
+    uint64_t count = count_sp->GetValueAsUnsigned(0, &success);
+    if (!success)
+      return false;
+
+    // std::shared_ptr releases the underlying resource when the
+    // __shared_owners_ count hits -1. So `__shared_owners_ == 0` indicates 1
+    // owner. Hence add +1 here.
+    stream.Printf(" strong=%" PRIu64, count + 1);
   }
 
-  if (count_sp)
-    stream.Printf(" strong=%" PRIu64, 1 + count_sp->GetValueAsUnsigned(0));
+  if (auto weak_count_sp =
+          ctrl_sp->GetChildMemberWithName("__shared_weak_owners_")) {
+    bool success;
+    uint64_t count = weak_count_sp->GetValueAsUnsigned(0, &success);
+    if (!success)
+      return false;
 
-  if (weakcount_sp)
-    stream.Printf(" weak=%" PRIu64, 1 + weakcount_sp->GetValueAsUnsigned(0));
+    // Unlike __shared_owners_, __shared_weak_owners_ indicates the exact
+    // std::weak_ptr reference count.
+    stream.Printf(" weak=%" PRIu64, count);
+  }
 
   return true;
 }
@@ -210,24 +215,7 @@ bool lldb_private::formatters::LibcxxUniquePointerSummaryProvider(
   if (!ptr_sp)
     return false;
 
-  if (ptr_sp->GetValueAsUnsigned(0) == 0) {
-    stream.Printf("nullptr");
-    return true;
-  } else {
-    bool print_pointee = false;
-    Status error;
-    ValueObjectSP pointee_sp = ptr_sp->Dereference(error);
-    if (pointee_sp && error.Success()) {
-      if (pointee_sp->DumpPrintableRepresentation(
-              stream, ValueObject::eValueObjectRepresentationStyleSummary,
-              lldb::eFormatInvalid,
-              ValueObject::PrintableRepresentationSpecialCases::eDisable,
-              false))
-        print_pointee = true;
-    }
-    if (!print_pointee)
-      stream.Printf("ptr = 0x%" PRIx64, ptr_sp->GetValueAsUnsigned(0));
-  }
+  DumpCxxSmartPtrPointerSummary(stream, *ptr_sp, options);
 
   return true;
 }
@@ -251,7 +239,8 @@ lldb_private::formatters::LibCxxVectorIteratorSyntheticFrontEndCreator(
 
 lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
     LibcxxSharedPtrSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
-    : SyntheticChildrenFrontEnd(*valobj_sp), m_cntrl(nullptr) {
+    : SyntheticChildrenFrontEnd(*valobj_sp), m_cntrl(nullptr),
+      m_ptr_obj(nullptr) {
   if (valobj_sp)
     Update();
 }
@@ -264,7 +253,7 @@ llvm::Expected<uint32_t> lldb_private::formatters::
 lldb::ValueObjectSP
 lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::GetChildAtIndex(
     uint32_t idx) {
-  if (!m_cntrl)
+  if (!m_cntrl || !m_ptr_obj)
     return lldb::ValueObjectSP();
 
   ValueObjectSP valobj_sp = m_backend.GetSP();
@@ -272,20 +261,13 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::GetChildAtIndex(
     return lldb::ValueObjectSP();
 
   if (idx == 0)
-    return valobj_sp->GetChildMemberWithName("__ptr_");
+    return m_ptr_obj->GetSP();
 
   if (idx == 1) {
-    if (auto ptr_sp = valobj_sp->GetChildMemberWithName("__ptr_")) {
-      Status status;
-      auto value_type_sp =
-            valobj_sp->GetCompilerType()
-              .GetTypeTemplateArgument(0).GetPointerType();
-      ValueObjectSP cast_ptr_sp = ptr_sp->Cast(value_type_sp);
-      ValueObjectSP value_sp = cast_ptr_sp->Dereference(status);
-      if (status.Success()) {
-        return value_sp;
-      }
-    }
+    Status status;
+    ValueObjectSP value_sp = m_ptr_obj->Dereference(status);
+    if (status.Success())
+      return value_sp;
   }
 
   return lldb::ValueObjectSP();
@@ -294,6 +276,7 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::GetChildAtIndex(
 lldb::ChildCacheState
 lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::Update() {
   m_cntrl = nullptr;
+  m_ptr_obj = nullptr;
 
   ValueObjectSP valobj_sp = m_backend.GetSP();
   if (!valobj_sp)
@@ -302,6 +285,16 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::Update() {
   TargetSP target_sp(valobj_sp->GetTargetSP());
   if (!target_sp)
     return lldb::ChildCacheState::eRefetch;
+
+  auto ptr_obj_sp = valobj_sp->GetChildMemberWithName("__ptr_");
+  if (!ptr_obj_sp)
+    return lldb::ChildCacheState::eRefetch;
+
+  auto cast_ptr_sp = GetDesugaredSmartPointerValue(*ptr_obj_sp, *valobj_sp);
+  if (!cast_ptr_sp)
+    return lldb::ChildCacheState::eRefetch;
+
+  m_ptr_obj = cast_ptr_sp->Clone(ConstString("pointer")).get();
 
   lldb::ValueObjectSP cntrl_sp(valobj_sp->GetChildMemberWithName("__cntrl_"));
 
@@ -313,10 +306,12 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::Update() {
 llvm::Expected<size_t>
 lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
-  if (name == "__ptr_")
+  if (name == "pointer")
     return 0;
-  if (name == "$$dereference$$")
+
+  if (name == "object" || name == "$$dereference$$")
     return 1;
+
   return llvm::createStringError("Type has no child named '%s'",
                                  name.AsCString());
 }
@@ -417,16 +412,10 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::
     return 0;
   if (name == "deleter")
     return 1;
-  if (name == "$$dereference$$")
+  if (name == "obj" || name == "object" || name == "$$dereference$$")
     return 2;
   return llvm::createStringError("Type has no child named '%s'",
                                  name.AsCString());
-}
-
-bool lldb_private::formatters::LibcxxContainerSummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  return FormatEntity::FormatStringRef("size=${svar%#}", stream, nullptr,
-                                       nullptr, nullptr, &valobj, false, false);
 }
 
 /// The field layout in a libc++ string (cap, side, data or data, size, cap).

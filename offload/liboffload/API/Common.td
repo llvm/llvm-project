@@ -1,3 +1,15 @@
+//===-- Common.td - Common definitions for Offload ---------*- tablegen -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file contains shared Offload API definitions
+//
+//===----------------------------------------------------------------------===//
+
 def : Macro {
   let name = "OL_VERSION_MAJOR";
   let desc = "Major version of the Offload API";
@@ -29,21 +41,6 @@ def : Macro {
   let desc = "Microsoft-specific dllexport storage-class attribute";
   let condition = "defined(_WIN32)";
   let value = "__declspec(dllexport)";
-  let alt_value = "";
-}
-
-def : Macro {
-  let name = "OL_DLLEXPORT";
-  let desc = "Microsoft-specific dllexport storage-class attribute";
-  let condition = "defined(_WIN32)";
-  let value = "__declspec(dllexport)";
-}
-
-def : Macro {
-  let name = "OL_DLLEXPORT";
-  let desc = "GCC-specific dllexport storage-class attribute";
-  let condition = "__GNUC__ >= 4";
-  let value = "__attribute__ ((visibility (\"default\")))";
   let alt_value = "";
 }
 

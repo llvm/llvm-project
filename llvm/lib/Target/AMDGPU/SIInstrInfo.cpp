@@ -7050,6 +7050,19 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return nullptr;
   }
 
+  // Legalize TENSOR_LOAD_TO_LDS, TENSOR_LOAD_TO_LDS_D2, TENSOR_STORE_FROM_LDS,
+  // TENSOR_STORE_FROM_LDS_D2. All their operands are scalar.
+  if (MI.getOpcode() == AMDGPU::TENSOR_LOAD_TO_LDS ||
+      MI.getOpcode() == AMDGPU::TENSOR_LOAD_TO_LDS_D2 ||
+      MI.getOpcode() == AMDGPU::TENSOR_STORE_FROM_LDS ||
+      MI.getOpcode() == AMDGPU::TENSOR_STORE_FROM_LDS_D2) {
+    for (MachineOperand &Src : MI.explicit_operands()) {
+      if (Src.isReg() && RI.hasVectorRegisters(MRI.getRegClass(Src.getReg())))
+        Src.setReg(readlaneVGPRToSGPR(Src.getReg(), MI, MRI));
+    }
+    return CreatedBB;
+  }
+
   // Legalize MUBUF instructions.
   bool isSoffsetLegal = true;
   int SoffsetIdx =
@@ -7248,7 +7261,8 @@ void SIInstrInfo::legalizeOperandsVALUt16(MachineInstr &MI, unsigned OpIdx,
   MachineBasicBlock *MBB = MI.getParent();
   // Legalize operands and check for size mismatch
   if (!OpIdx || OpIdx >= MI.getNumExplicitOperands() ||
-      OpIdx >= get(Opcode).getNumOperands())
+      OpIdx >= get(Opcode).getNumOperands() ||
+      get(Opcode).operands()[OpIdx].RegClass == -1)
     return;
 
   MachineOperand &Op = MI.getOperand(OpIdx);
@@ -7807,8 +7821,9 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
       // that copies will end up as machine instructions and not be
       // eliminated.
       addUsersToMoveToVALUWorklist(DstReg, MRI, Worklist);
-      MRI.replaceRegWith(DstReg, Inst.getOperand(1).getReg());
-      MRI.clearKillFlags(Inst.getOperand(1).getReg());
+      Register NewDstReg = Inst.getOperand(1).getReg();
+      MRI.replaceRegWith(DstReg, NewDstReg);
+      MRI.clearKillFlags(NewDstReg);
       Inst.getOperand(0).setReg(DstReg);
       // Make sure we don't leave around a dead VGPR->SGPR copy. Normally
       // these are deleted later, but at -O0 it would leave a suspicious
@@ -7816,6 +7831,11 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
       for (unsigned I = Inst.getNumOperands() - 1; I != 0; --I)
         Inst.removeOperand(I);
       Inst.setDesc(get(AMDGPU::IMPLICIT_DEF));
+      // Legalize t16 operand since replaceReg is called after addUsersToVALU
+      for (MachineOperand &MO :
+           make_early_inc_range(MRI.use_operands(NewDstReg))) {
+        legalizeOperandsVALUt16(*MO.getParent(), MRI);
+      }
       return;
     }
 

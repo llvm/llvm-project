@@ -1023,12 +1023,13 @@ defm offload_uniform_block : BoolFOption<"offload-uniform-block",
   BothFlags<[], [ClangOption], " that kernels are launched with uniform block sizes (default true for CUDA/HIP and false otherwise)">>;
 
 def fcomplex_arithmetic_EQ : Joined<["-"], "fcomplex-arithmetic=">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   Values<"full,improved,promoted,basic">, NormalizedValuesScope<"LangOptions">,
-  NormalizedValues<["CX_Full", "CX_Improved", "CX_Promoted", "CX_Basic"]>;
+  NormalizedValues<["CX_Full", "CX_Improved", "CX_Promoted", "CX_Basic"]>,
+  HelpText<"Controls the calculation methods of complex number multiplication and division.">;
 
 def complex_range_EQ : Joined<["-"], "complex-range=">, Group<f_Group>,
-  Visibility<[CC1Option]>,
+  Visibility<[CC1Option, FC1Option]>,
   Values<"full,improved,promoted,basic">, NormalizedValuesScope<"LangOptions">,
   NormalizedValues<["CX_Full", "CX_Improved", "CX_Promoted", "CX_Basic"]>,
   MarshallingInfoEnum<LangOpts<"ComplexRange">, "CX_Full">;
@@ -1138,7 +1139,11 @@ def fno_convergent_functions : Flag<["-"], "fno-convergent-functions">,
 
 // Common offloading options
 let Group = offload_Group in {
-def offload_arch_EQ : Joined<["--"], "offload-arch=">,
+def offload_targets_EQ : CommaJoined<["--"], "offload-targets=">,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+  HelpText<"Specify a list of target architectures to use for offloading.">;
+
+def offload_arch_EQ : CommaJoined<["--"], "offload-arch=">,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Specify an offloading device architecture for CUDA, HIP, or OpenMP. (e.g. sm_35). "
            "If 'native' is used the compiler will detect locally installed architectures. "
@@ -1169,10 +1174,12 @@ def offload_host_device : Flag<["--"], "offload-host-device">,
 def gpu_use_aux_triple_only : Flag<["--"], "gpu-use-aux-triple-only">,
   InternalDriverOpt, HelpText<"Prepare '-aux-triple' only without populating "
                               "'-aux-target-cpu' and '-aux-target-feature'.">;
+def offload_arch_tool_EQ : Joined<["--"], "offload-arch-tool=">,
+  HelpText<"Tool used for detecting offloading architectures in the system.">;
 def amdgpu_arch_tool_EQ : Joined<["--"], "amdgpu-arch-tool=">,
-  HelpText<"Tool used for detecting AMD GPU arch in the system.">;
+  Alias<offload_arch_tool_EQ>;
 def nvptx_arch_tool_EQ : Joined<["--"], "nvptx-arch-tool=">,
-  HelpText<"Tool used for detecting NVIDIA GPU arch in the system.">;
+  Alias<offload_arch_tool_EQ>;
 
 defm gpu_rdc : BoolFOption<"gpu-rdc",
   LangOpts<"GPURelocatableDeviceCode">, DefaultFalse,
@@ -1698,6 +1705,8 @@ def fsample_profile_use_profi : Flag<["-"], "fsample-profile-use-profi">,
                basic block counts to branch probabilities to fix them by extended
                and re-engineered classic MCMF (min-cost max-flow) approach.}]>;
 def fno_profile_sample_accurate : Flag<["-"], "fno-profile-sample-accurate">, Group<f_Group>;
+def fno_sample_profile_use_profi : Flag<["-"], "fno-sample-profile-use-profi">,
+                                   Group<f_Group>;
 def fno_auto_profile : Flag<["-"], "fno-auto-profile">, Group<f_Group>,
     Alias<fno_profile_sample_use>;
 def fauto_profile_EQ : Joined<["-"], "fauto-profile=">,
@@ -3487,7 +3496,8 @@ def fno_experimental_isel : Flag<["-"], "fno-experimental-isel">, Group<f_clang_
   Alias<fno_global_isel>;
 def fveclib : Joined<["-"], "fveclib=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
-    HelpText<"Use the given vector functions library">,
+    HelpText<"Use the given vector functions library.\n"
+             "  Note: -fveclib=libmvec on AArch64 requires GLIBC 2.40 or newer.">,
     HelpTextForVariants<[ClangOption, CC1Option],
       "Use the given vector functions library.\n"
       "  Note: -fveclib={ArmPL,SLEEF,libmvec} implies -fno-math-errno.\n"
@@ -3678,7 +3688,7 @@ def fopenmp_use_tls : Flag<["-"], "fopenmp-use-tls">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>;
 def fnoopenmp_use_tls : Flag<["-"], "fnoopenmp-use-tls">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
-def fopenmp_targets_EQ : CommaJoined<["-"], "fopenmp-targets=">,
+def fopenmp_targets_EQ : CommaJoined<["-"], "fopenmp-targets=">, Alias<offload_targets_EQ>,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Specify comma-separated list of triples OpenMP offloading targets to be supported">;
 def fopenmp_relocatable_target : Flag<["-"], "fopenmp-relocatable-target">,
@@ -5215,6 +5225,14 @@ def msve_vector_bits_EQ : Joined<["-"], "msve-vector-bits=">, Group<m_aarch64_Fe
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Specify the size in bits of an SVE vector register. Defaults to the"
            " vector length agnostic value of \"scalable\". (AArch64 only)">;
+def msve_streaming_vector_bits_EQ
+    : Joined<["-"], "msve-streaming-vector-bits=">,
+      Group<m_aarch64_Features_Group>,
+      Visibility<[ClangOption, FlangOption]>,
+      HelpText<
+          "Specify the size in bits of an SVE vector register in streaming "
+          "mode. Defaults to the vector length agnostic value of "
+          "\"scalable\". (AArch64 only)">;
 } // let Flags = [TargetSpecific]
 
 def mvscale_min_EQ : Joined<["-"], "mvscale-min=">,
@@ -5226,6 +5244,17 @@ def mvscale_max_EQ : Joined<["-"], "mvscale-max=">,
   HelpText<"Specify the vscale maximum. Defaults to the"
            " vector length agnostic value of \"0\". (AArch64/RISC-V only)">,
   MarshallingInfoInt<LangOpts<"VScaleMax">>;
+def mvscale_streaming_min_EQ
+    : Joined<["-"], "mvscale-streaming-min=">,
+      Visibility<[CC1Option, FC1Option]>,
+      HelpText<"Specify the vscale minimum. Defaults to \"1\". (AArch64 only)">,
+      MarshallingInfoInt<LangOpts<"VScaleStreamingMin">>;
+def mvscale_streaming_max_EQ
+    : Joined<["-"], "mvscale-streaming-max=">,
+      Visibility<[CC1Option, FC1Option]>,
+      HelpText<"Specify the vscale maximum. Defaults to the"
+               " vector length agnostic value of \"0\". (AArch64 only)">,
+      MarshallingInfoInt<LangOpts<"VScaleStreamingMax">>;
 
 def msign_return_address_EQ : Joined<["-"], "msign-return-address=">,
   Visibility<[ClangOption, CC1Option]>,
@@ -9353,6 +9382,8 @@ def dxc_validator_path_EQ : Joined<["--"], "dxv-path=">, Group<dxc_Group>,
   HelpText<"DXIL validator installation path">;
 def dxc_disable_validation : DXCFlag<"Vd">,
   HelpText<"Disable validation">;
+def dxc_gis : DXCFlag<"Gis">,
+  HelpText<"Enable IEEE strict mode (equivalent to -ffp-model=strict)">;
 def : Option<["/", "-"], "Qembed_debug", KIND_FLAG>, Group<dxc_Group>,
   Flags<[Ignored]>, Visibility<[DXCOption]>,
   HelpText<"Embed PDB in shader container (ignored)">;

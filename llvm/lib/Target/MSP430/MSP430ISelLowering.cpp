@@ -208,7 +208,6 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
     for (const auto &LC : LibraryCalls) {
       setLibcallImpl(LC.Op, LC.Impl);
     }
-    setLibcallCallingConv(RTLIB::MUL_I64, CallingConv::MSP430_BUILTIN);
   }
 
   setMinFunctionAlignment(Align(2));
@@ -1141,9 +1140,6 @@ SDValue MSP430TargetLowering::LowerRETURNADDR(SDValue Op,
                                               SelectionDAG &DAG) const {
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
   MFI.setReturnAddressIsTaken(true);
-
-  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
 
   unsigned Depth = Op.getConstantOperandVal(0);
   SDLoc dl(Op);

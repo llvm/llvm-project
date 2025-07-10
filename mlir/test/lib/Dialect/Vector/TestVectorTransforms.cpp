@@ -369,7 +369,7 @@ struct TestVectorTransferCollapseInnerMostContiguousDims
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
-    populateVectorTransferCollapseInnerMostContiguousDimsPatterns(patterns);
+    populateDropInnerMostUnitDimsXferOpPatterns(patterns);
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };

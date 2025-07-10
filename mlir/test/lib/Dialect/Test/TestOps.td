@@ -1192,7 +1192,6 @@ def OpFuncRef : TEST_Op<"op_funcref"> {
   let description = [{
     The "test.op_funcref" is a test op with a reference to a function symbol.
   }];
-  let builders = [OpBuilder<(ins "::mlir::func::FuncOp":$function)>];
 }
 
 // Pattern add the argument plus a increasing static number hidden in
@@ -3179,13 +3178,15 @@ def TestOpWithProperties : TEST_Op<"with_properties"> {
     `b` `=` $b `,`
     `c` `=` $c `,`
     `flag` `=` $flag `,`
-    `array` `=` $array attr-dict}];
+    `array` `=` $array `,`
+    `array32` `=` $array32 attr-dict}];
   let arguments = (ins
     I64Prop:$a,
     StrAttr:$b, // Attributes can directly be used here.
     StringProp:$c,
     BoolProp:$flag,
-    IntArrayProp<I64Prop>:$array // example of an array
+    IntArrayProp<I64Prop>:$array, // Example of an array.
+    IntArrayProp<I32Prop>:$array32 // Example of an array.
   );
 }
 
@@ -3615,29 +3616,16 @@ def TestAllocWithMultipleResults : TEST_Op<"alloc_with_multiple_results"> {
 // Test Ops bufferization
 //===----------------------------------------------------------------------===//
 
-def TestDummyTensorOp : TEST_Op<"dummy_tensor_op", [BufferizableOpInterface]> {
+def TestDummyTensorOp : TEST_Op<"dummy_tensor_op",
+    [DeclareOpInterfaceMethods<BufferizableOpInterface,
+        ["bufferize", "bufferizesToMemoryRead",
+         "bufferizesToMemoryWrite", "getAliasingValues"]>]> {
   let arguments = (ins
     Arg<TestTensorType>:$input
   );
   let results = (outs
     Arg<TestTensorType>:$output
   );
-  let extraClassDeclaration = [{
-    // BufferizableOpInterface
-    bool bufferizesToMemoryRead(mlir::OpOperand&,
-      const mlir::bufferization::AnalysisState&);
-
-    bool bufferizesToMemoryWrite(mlir::OpOperand&,
-      const mlir::bufferization::AnalysisState&);
-
-    mlir::bufferization::AliasingValueList getAliasingValues(mlir::OpOperand&,
-      const mlir::bufferization::AnalysisState&);
-
-    mlir::LogicalResult bufferize(
-      mlir::RewriterBase& rewriter,
-      const mlir::bufferization::BufferizationOptions& options,
-      mlir::bufferization::BufferizationState &state);
-  }];
 
   let extraClassDefinition = [{
     bool test::TestDummyTensorOp::bufferizesToMemoryRead(::mlir::OpOperand&,
@@ -3663,6 +3651,39 @@ def TestDummyMemrefOp : TEST_Op<"dummy_memref_op", []> {
   let results = (outs
     Arg<TestMemrefType>:$output
   );
+}
+
+def TestCreateTensorOp : TEST_Op<"create_tensor_op",
+    [DeclareOpInterfaceMethods<BufferizableOpInterface,
+        ["bufferize", "getBufferType", "bufferizesToMemoryRead",
+         "bufferizesToMemoryWrite", "getAliasingValues",
+         "bufferizesToAllocation"]>]> {
+  let arguments = (ins);
+  let results = (outs Arg<TestTensorType>:$output);
+  let extraClassDefinition = [{
+    bool test::TestCreateTensorOp::bufferizesToMemoryRead(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return true;
+    }
+    bool test::TestCreateTensorOp::bufferizesToMemoryWrite(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return true;
+    }
+    bool test::TestCreateTensorOp::bufferizesToAllocation(mlir::Value value) {
+      return false;
+    }
+
+    ::mlir::bufferization::AliasingValueList
+    test::TestCreateTensorOp::getAliasingValues(::mlir::OpOperand&,
+        const ::mlir::bufferization::AnalysisState&) {
+      return {};
+    }
+  }];
+}
+
+def TestCreateMemrefOp : TEST_Op<"create_memref_op"> {
+  let arguments = (ins);
+  let results = (outs Arg<TestMemrefType>:$output);
 }
 
 //===----------------------------------------------------------------------===//
