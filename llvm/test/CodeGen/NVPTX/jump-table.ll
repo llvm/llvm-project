@@ -99,7 +99,7 @@ define i32 @test2(i32 %tmp158) {
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 12;
 ; CHECK-NEXT:    ret;
 ; CHECK-NEXT:  $L__BB1_5: // %entry
-; CHECK-NEXT:    setp.eq.s32 %p3, %r1, 1024;
+; CHECK-NEXT:    setp.eq.b32 %p3, %r1, 1024;
 ; CHECK-NEXT:    @%p3 bra $L__BB1_3;
 ; CHECK-NEXT:    bra.uni $L__BB1_6;
 ; CHECK-NEXT:  $L__BB1_3: // %bb338
