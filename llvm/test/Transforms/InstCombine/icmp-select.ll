@@ -836,3 +836,63 @@ define i1 @discr_eq_constantexpr(ptr %p) {
   %cmp = icmp eq i64 %sub, -1
   ret i1 %cmp
 }
+
+define i1 @or_disjoint_eq(i8 %a, i1 %cond) {
+; CHECK-LABEL: @or_disjoint_eq(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i8 8, i8 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %or = or disjoint i8 %a, 3
+  %sel = select i1 %cond, i8 11, i8 7
+  %cmp = icmp eq i8 %or, %sel
+  ret i1 %cmp
+}
+
+define i1 @shl_nsw_eq(i8 %a, i1 %cond) {
+; CHECK-LABEL: @shl_nsw_eq(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i8 1, i8 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a_shl = shl nsw i8 %a, 3
+  %sel = select i1 %cond, i8 8, i8 16
+  %cmp = icmp eq i8 %a_shl, %sel
+  ret i1 %cmp
+}
+
+define i1 @shl_nuw_eq(i8 %a, i1 %cond) {
+; CHECK-LABEL: @shl_nuw_eq(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i8 1, i8 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a_shl = shl nuw i8 %a, 3
+  %sel = select i1 %cond, i8 8, i8 32
+  %cmp = icmp eq i8 %a_shl, %sel
+  ret i1 %cmp
+}
+
+define i1 @ashr_exact_eq(i8 %a, i1 %cond) {
+; CHECK-LABEL: @ashr_exact_eq(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i8 48, i8 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a_shl = ashr exact i8 %a, 2
+  %sel = select i1 %cond, i8 12, i8 4
+  %cmp = icmp eq i8 %a_shl, %sel
+  ret i1 %cmp
+}
+
+define i1 @lshr_exact_eq(i8 %a, i1 %cond) {
+; CHECK-LABEL: @lshr_exact_eq(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i8 48, i8 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %a_shl = lshr exact i8 %a, 2
+  %sel = select i1 %cond, i8 12, i8 4
+  %cmp = icmp eq i8 %a_shl, %sel
+  ret i1 %cmp
+}

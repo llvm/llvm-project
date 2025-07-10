@@ -2557,6 +2557,14 @@ static Value *simplifyXorInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       return X;
   }
 
+  // (xor (or disjoint X, Y), Y) -> X
+  {
+    Value *X;
+    if (match(Op0, m_c_DisjointOr(m_Value(X), m_Specific(Op1))) ||
+        match(Op1, m_c_DisjointOr(m_Value(X), m_Specific(Op0))))
+      return X;
+  }
+
   return nullptr;
 }
 
