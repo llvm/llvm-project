@@ -141,7 +141,8 @@ private:
     if (Field.IsInstruction)
       return I->getAsString();
     if (Field.Enum) {
-      auto *Entry = Field.Enum->EntryMap[cast<DefInit>(I)->getDef()];
+      const GenericEnum::Entry *Entry =
+          Field.Enum->getEntry(cast<DefInit>(I)->getDef());
       if (!Entry)
         PrintFatalError(Loc,
                         Twine("Entry for field '") + Field.Name + "' is null");
@@ -302,8 +303,8 @@ bool SearchableTableEmitter::compareBy(const Record *LHS, const Record *RHS,
     if (Field.Enum) {
       const Record *LHSr = cast<DefInit>(LHSI)->getDef();
       const Record *RHSr = cast<DefInit>(RHSI)->getDef();
-      int64_t LHSv = Field.Enum->EntryMap[LHSr]->second;
-      int64_t RHSv = Field.Enum->EntryMap[RHSr]->second;
+      int64_t LHSv = Field.Enum->getEntry(LHSr)->Value;
+      int64_t RHSv = Field.Enum->getEntry(RHSr)->Value;
       return CmpLTValue(LHSv, RHSv);
     }
 
