@@ -1640,9 +1640,10 @@ define signext i32 @test22(i64 %arg1, i64 %arg2, i64 %arg3)  {
 ; RV64ZBB-NEXT:    srli a0, a0, 28
 ; RV64ZBB-NEXT:    andi a0, a0, 1234
 ; RV64ZBB-NEXT:    addi a2, a2, 1
-; RV64ZBB-NEXT:    addw a0, a0, a1
+; RV64ZBB-NEXT:    add a0, a0, a1
 ; RV64ZBB-NEXT:    bltu a2, a3, .LBB26_1
 ; RV64ZBB-NEXT:  # %bb.2: # %bb7
+; RV64ZBB-NEXT:    sext.w a0, a0
 ; RV64ZBB-NEXT:    ret
 ;
 ; NOREMOVAL-LABEL: test22:

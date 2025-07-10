@@ -325,7 +325,8 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
 
       case RISCV::BREV8:
       case RISCV::ORC_B:
-        Worklist.push_back(std::make_pair(UserMI, Bits));
+        // BREV8 and ORC_B work on bytes. Round Bits down to the nearest byte.
+        Worklist.push_back(std::make_pair(UserMI, alignDown(Bits, 8)));
         break;
 
       case RISCV::PseudoCCMOVGPR:
