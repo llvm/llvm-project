@@ -12501,6 +12501,7 @@ public:
       sema::TemplateDeductionInfo &Info,
       SmallVectorImpl<OriginalCallArg> const *OriginalCallArgs,
       bool PartialOverloading, bool PartialOrdering,
+      bool ForOverloadSetAddressResolution,
       llvm::function_ref<bool(bool)> CheckNonDependent =
           [](bool /*OnlyInitializeNonUserDefinedConversions*/) {
             return false;
