@@ -102,3 +102,11 @@ add_header_library(
     libc.src.__support.FPUtil.manipulation_functions
     libc.include.llvm-libc-macros.float16_macros
 )
+
+add_header_library(
+  ldexpf
+  HDRS
+    ldexpf.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+)

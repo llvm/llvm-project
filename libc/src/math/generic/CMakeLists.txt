@@ -1913,7 +1913,7 @@ add_entrypoint_object(
   HDRS
     ../ldexpf.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.ldexpf
 )
 
 add_entrypoint_object(
