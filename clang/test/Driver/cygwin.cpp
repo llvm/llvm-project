@@ -15,19 +15,19 @@
 // CHECK-SAME: {{^}} "-internal-externc-isystem" "[[SYSROOT]]/usr/include/w32api"
 // CHECK-SAME: "-femulated-tls"
 // CHECK-SAME: "-exception-model=dwarf"
-// CHECK:      "{{.*}}gcc{{(\.exe)?}}"
-// CHECK-SAME: "-m32"
+// CHECK:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-SAME: "-m" "i386pe"
 
 // RUN: %clang -### %s --target=i686-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
 // RUN:   --stdlib=platform -static 2>&1 | FileCheck --check-prefix=CHECK-STATIC %s
 // CHECK-STATIC:      "-cc1" "-triple" "i686-pc-windows-cygnus"
 // CHECK-STATIC-SAME: "-static-define"
-// CHECK-STATIC:      "{{.*}}gcc{{(\.exe)?}}"
+// CHECK-STATIC:      "{{.*}}ld{{(\.exe)?}}"
 // CHECK-STATIC-SAME: "-static"
 
 // RUN: %clang -### %s --target=i686-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
 // RUN:   -shared 2>&1 | FileCheck --check-prefix=CHECK-SHARED %s
-// CHECK-SHARED:      "{{.*}}gcc{{(\.exe)?}}"
+// CHECK-SHARED:      "{{.*}}ld{{(\.exe)?}}"
 // CHECK-SHARED-SAME: "-shared"
 
 // RUN: %clang -### -o %t %s 2>&1 -no-integrated-as -fuse-ld=ld \
@@ -54,19 +54,19 @@
 // CHECK-64-SAME: {{^}} "-internal-externc-isystem" "[[SYSROOT]]/usr/include/w32api"
 // CHECK-64-SAME: "-femulated-tls"
 // CHECK-64-SAME: "-exception-model=seh"
-// CHECK-64:      "{{.*}}gcc{{(\.exe)?}}"
-// CHECK-64-SAME: "-m64"
+// CHECK-64:      "{{.*}}ld{{(\.exe)?}}"
+// CHECK-64-SAME: "-m" "i386pep"
 
 // RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
 // RUN:   --stdlib=platform -static 2>&1 | FileCheck --check-prefix=CHECK-64-STATIC %s
 // CHECK-64-STATIC:      "-cc1" "-triple" "x86_64-pc-windows-cygnus"
 // CHECK-64-STATIC-SAME: "-static-define"
-// CHECK-64-STATIC:      "{{.*}}gcc{{(\.exe)?}}"
+// CHECK-64-STATIC:      "{{.*}}ld{{(\.exe)?}}"
 // CHECK-64-STATIC-SAME: "-static"
 
 // RUN: %clang -### %s --target=x86_64-pc-cygwin --sysroot=%S/Inputs/basic_cygwin_tree \
 // RUN:   -shared 2>&1 | FileCheck --check-prefix=CHECK-64-SHARED %s
-// CHECK-64-SHARED:      "{{.*}}gcc{{(\.exe)?}}"
+// CHECK-64-SHARED:      "{{.*}}ld{{(\.exe)?}}"
 // CHECK-64-SHARED-SAME: "-shared"
 
 // RUN: %clang -### -o %t %s 2>&1 -no-integrated-as -fuse-ld=ld \
