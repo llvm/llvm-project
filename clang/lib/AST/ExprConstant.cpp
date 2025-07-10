@@ -1735,10 +1735,10 @@ namespace {
     bool checkNullPointerForFoldAccess(EvalInfo &Info, const Expr *E,
                                        AccessKinds AK) {
       return checkNullPointerDiagnosingWith([&Info, E, AK] {
-        if(AK == AccessKinds::AK_Dereference)
-            Info.FFDiag(E, diag::note_constexpr_dereferencing_null);
+        if (AK == AccessKinds::AK_Dereference)
+          Info.FFDiag(E, diag::note_constexpr_dereferencing_null);
         else
-            Info.FFDiag(E, diag::note_constexpr_access_null) << AK;
+          Info.FFDiag(E, diag::note_constexpr_access_null) << AK;
       });
     }
 
@@ -4310,10 +4310,10 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
   }
 
   if (!LVal.Base) {
-    if(AK == AccessKinds::AK_Dereference)
-        Info.FFDiag(E, diag::note_constexpr_dereferencing_null);
+    if (AK == AccessKinds::AK_Dereference)
+      Info.FFDiag(E, diag::note_constexpr_dereferencing_null);
     else
-        Info.FFDiag(E, diag::note_constexpr_access_null) << AK;
+      Info.FFDiag(E, diag::note_constexpr_access_null) << AK;
     return CompleteObject();
   }
 

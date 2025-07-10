@@ -223,8 +223,9 @@ def note_constexpr_ltor_incomplete_type : Note<
 def note_constexpr_access_null : Note<
   "%sub{access_kind}0 "
   "dereferenced null pointer is not allowed in a constant expression">;
-def note_constexpr_dereferencing_null : Note<
-    "dereferencing a null pointer is not allowed in a constant expression">;
+def note_constexpr_dereferencing_null
+    : Note<"dereferencing a null pointer is not allowed in a constant "
+           "expression">;
 def note_constexpr_access_past_end : Note<
   "%sub{access_kind}0 dereferenced one-past-the-end pointer "
   "is not allowed in a constant expression">;
