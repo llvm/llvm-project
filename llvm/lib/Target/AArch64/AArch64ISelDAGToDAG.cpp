@@ -1729,7 +1729,7 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
 }
 
 bool AArch64DAGToDAGISel::tryAuthLoad(SDNode *N) {
-  LoadSDNode *LD = cast<LoadSDNode>(N);
+  const LoadSDNode *LD = cast<LoadSDNode>(N);
   EVT VT = LD->getMemoryVT();
   if (VT != MVT::i64)
     return false;
@@ -1751,9 +1751,7 @@ bool AArch64DAGToDAGISel::tryAuthLoad(SDNode *N) {
     OffsetVal = cast<ConstantSDNode>(LD->getOffset())->getSExtValue();
   } else if (CurDAG->isBaseWithConstantOffset(Base)) {
     // We support both 'base' and 'base + constant offset' modes.
-    ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(Base.getOperand(1));
-    if (!RHS)
-      return false;
+    auto *RHS = cast<ConstantSDNode>(Base.getOperand(1));
     OffsetVal = RHS->getSExtValue();
     Base = Base.getOperand(0);
   }
@@ -1780,12 +1778,12 @@ bool AArch64DAGToDAGISel::tryAuthLoad(SDNode *N) {
   std::tie(IntDisc, AddrDisc) = extractPtrauthBlendDiscriminators(Disc, CurDAG);
 
   // If this is an indexed pre-inc load, we obviously need the writeback form.
-  bool needsWriteback = IsPre;
+  bool NeedsWriteback = IsPre;
   // If not, but the base authenticated pointer has any other use, it's
   // beneficial to use the writeback form, to "writeback" the auth, even if
   // there is no base+offset addition.
   if (!Ptr.hasOneUse()) {
-    needsWriteback = true;
+    NeedsWriteback = true;
 
     // However, we can only do that if we don't introduce cycles between the
     // load node and any other user of the pointer computation nodes.  That can
@@ -1802,7 +1800,7 @@ bool AArch64DAGToDAGISel::tryAuthLoad(SDNode *N) {
     SmallPtrSet<const SDNode *, 32> Visited;
     SmallVector<const SDNode *, 16> Worklist;
     Worklist.push_back(N);
-    for (SDNode *U : Ptr.getNode()->users())
+    for (const SDNode *U : Ptr.getNode()->users())
       if (SDNode::hasPredecessorHelper(U, Visited, Worklist, /*Max=*/32,
                                        /*TopologicalPrune=*/true))
         return false;
@@ -1821,10 +1819,10 @@ bool AArch64DAGToDAGISel::tryAuthLoad(SDNode *N) {
     unsigned Opc = 0;
     switch (KeyC) {
     case AArch64PACKey::DA:
-      Opc = needsWriteback ? AArch64::LDRAAwriteback : AArch64::LDRAAindexed;
+      Opc = NeedsWriteback ? AArch64::LDRAAwriteback : AArch64::LDRAAindexed;
       break;
     case AArch64PACKey::DB:
-      Opc = needsWriteback ? AArch64::LDRABwriteback : AArch64::LDRABindexed;
+      Opc = NeedsWriteback ? AArch64::LDRABwriteback : AArch64::LDRABindexed;
       break;
     default:
       llvm_unreachable("Invalid key for LDRAA/LDRAB");
@@ -1832,11 +1830,11 @@ bool AArch64DAGToDAGISel::tryAuthLoad(SDNode *N) {
     // The offset is encoded as scaled, for an element size of 8 bytes.
     SDValue Offset = CurDAG->getTargetConstant(OffsetVal / 8, DL, MVT::i64);
     SDValue Ops[] = {Base, Offset, Chain};
-    Res = needsWriteback
+    Res = NeedsWriteback
               ? CurDAG->getMachineNode(Opc, DL, MVT::i64, MVT::i64, MVT::Other,
                                        Ops)
               : CurDAG->getMachineNode(Opc, DL, MVT::i64, MVT::Other, Ops);
-    if (needsWriteback) {
+    if (NeedsWriteback) {
       Writeback = SDValue(Res, 0);
       ResVal = SDValue(Res, 1);
       OutChain = SDValue(Res, 2);
@@ -1846,7 +1844,7 @@ bool AArch64DAGToDAGISel::tryAuthLoad(SDNode *N) {
     }
   } else {
     // Otherwise, use the generalized LDRA pseudos.
-    unsigned Opc = needsWriteback ? AArch64::LDRApre : AArch64::LDRA;
+    unsigned Opc = NeedsWriteback ? AArch64::LDRApre : AArch64::LDRA;
 
     SDValue X16Copy =
         CurDAG->getCopyToReg(Chain, DL, AArch64::X16, Base, SDValue());
@@ -1854,7 +1852,7 @@ bool AArch64DAGToDAGISel::tryAuthLoad(SDNode *N) {
     SDValue Key = CurDAG->getTargetConstant(KeyC, DL, MVT::i32);
     SDValue Ops[] = {Offset, Key, IntDisc, AddrDisc, X16Copy.getValue(1)};
     Res = CurDAG->getMachineNode(Opc, DL, MVT::i64, MVT::Other, MVT::Glue, Ops);
-    if (needsWriteback)
+    if (NeedsWriteback)
       Writeback = CurDAG->getCopyFromReg(SDValue(Res, 1), DL, AArch64::X16,
                                          MVT::i64, SDValue(Res, 2));
     ResVal = SDValue(Res, 0);
@@ -1863,11 +1861,11 @@ bool AArch64DAGToDAGISel::tryAuthLoad(SDNode *N) {
 
   if (IsPre) {
     // If the original load was pre-inc, the resulting LDRA is writeback.
-    assert(needsWriteback && "preinc loads can't be selected into non-wb ldra");
+    assert(NeedsWriteback && "preinc loads can't be selected into non-wb ldra");
     ReplaceUses(SDValue(N, 1), Writeback); // writeback
     ReplaceUses(SDValue(N, 0), ResVal);    // loaded value
     ReplaceUses(SDValue(N, 2), OutChain);  // chain
-  } else if (needsWriteback) {
+  } else if (NeedsWriteback) {
     // If the original load was unindexed, but we emitted a writeback form,
     // we need to replace the uses of the original auth(signedbase)[+offset]
     // computation.

@@ -2232,11 +2232,11 @@ void AArch64AsmPrinter::emitPtrauthBranch(const MachineInstr *MI) {
 void AArch64AsmPrinter::LowerPtrauthAuthLoad(const MachineInstr &MI) {
   const bool IsPreWB = MI.getOpcode() == AArch64::LDRApre;
 
-  const unsigned DstReg = MI.getOperand(0).getReg();
+  const Register DstReg = MI.getOperand(0).getReg();
   const int64_t Offset = MI.getOperand(1).getImm();
   const auto Key = (AArch64PACKey::ID)MI.getOperand(2).getImm();
   const uint64_t Disc = MI.getOperand(3).getImm();
-  const unsigned AddrDisc = MI.getOperand(4).getReg();
+  const Register AddrDisc = MI.getOperand(4).getReg();
 
   Register DiscReg = emitPtrauthDiscriminator(Disc, AddrDisc, AArch64::X17);
 
@@ -2282,7 +2282,7 @@ void AArch64AsmPrinter::LowerPtrauthAuthLoad(const MachineInstr &MI) {
   AArch64_IMM::expandMOVImm(Offset, 64, ImmInsns);
 
   // X17 is dead at this point, use it as the offset register
-  for (auto &ImmI : ImmInsns) {
+  for (const auto &ImmI : ImmInsns) {
     switch (ImmI.Opcode) {
     default:
       llvm_unreachable("invalid ldra imm expansion opc!");
