@@ -11306,18 +11306,28 @@ bool SIInstrInfo::isXDLWMMA(const MachineInstr &MI) const {
 
   return true;
 }
-
-#endif /* LLPC_BUILD_NPI */
+#else /* LLPC_BUILD_NPI */
 bool SIInstrInfo::isXDL(const MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
+#endif /* LLPC_BUILD_NPI */
 
 #if LLPC_BUILD_NPI
-  if (AMDGPU::isGFX12Plus(ST))
-    return isDOT(MI) || isXDLWMMA(MI);
+bool SIInstrInfo::isXDL(const MachineInstr &MI) const {
+  if (AMDGPU::isGFX12Plus(ST)) {
+    if (isXDLWMMA(MI))
+      return true;
+    if (isDOT(MI))
+      return true;
+    if (AMDGPU::isGFX13(ST) && SIInstrInfo::isConvolve(MI))
 #else /* LLPC_BUILD_NPI */
   if (AMDGPU::isGFX12(ST))
     if (isWMMA(MI) || isSWMMAC(MI) || isDOT(MI))
+#endif /* LLPC_BUILD_NPI */
       return true;
+#if LLPC_BUILD_NPI
+  }
+
+  unsigned Opcode = MI.getOpcode();
 #endif /* LLPC_BUILD_NPI */
 
   if (!isMAI(MI) || isDGEMM(Opcode) ||
