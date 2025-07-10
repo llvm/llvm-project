@@ -651,12 +651,9 @@ void SearchableTableEmitter::collectEnumEntries(
   if (ValueField.empty()) {
     // Copy the map entries for sorting and clear the map.
     auto SavedEntries = Enum.Entries.takeVector();
-    llvm::stable_sort(
-        SavedEntries,
-        [](const std::pair<const Record *, GenericEnum::Entry> &LHS,
-           const std::pair<const Record *, GenericEnum::Entry> &RHS) {
-          return LHS.second.Name < RHS.second.Name;
-        });
+    llvm::stable_sort(SavedEntries, [](const auto &LHS, const auto &RHS) {
+      return LHS.second.Name < RHS.second.Name;
+    });
 
     // Repopulate entries using the new sorted order.
     for (auto [Idx, Entry] : enumerate(SavedEntries))
