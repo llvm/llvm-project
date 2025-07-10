@@ -9365,8 +9365,10 @@ def warn_atomic_implicit_seq_cst : Warning<
 def err_atomic_unsupported : Error<
   "atomic types are not supported in '%0'">;
 def warn_cv_stripped_in_enum : Warning<
-  "%select{'const' and 'volatile' qualifiers|'const' qualifier|'volatile' "
-  "qualifier}0 in enumeration underlying type ignored">,
+  "%enum_select<CVQualList>{"
+    "%Both{'const' and 'volatile' qualifiers}|"
+    "%Const{'const' qualifier}|"
+    "%Volatile{'volatile' qualifier}}0 in enumeration underlying type ignored">,
   InGroup<DiagGroup<"underlying-cv-qualifier-ignored">>;
 def warn_atomic_stripped_in_enum : Warning<
   "'_Atomic' qualifier ignored; operations involving the enumeration type will "

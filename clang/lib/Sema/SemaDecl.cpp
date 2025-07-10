@@ -17164,17 +17164,18 @@ bool Sema::CheckEnumUnderlyingType(TypeSourceInfo *TI) {
   // involving the enumeration type will be non-atomic.
   if (T->isAtomicType())
     Diag(UnderlyingLoc, diag::warn_atomic_stripped_in_enum);
+
   Qualifiers Q = T.getQualifiers();
-  int QualSelect = -1;
-  if (Q.hasConst() && Q.hasVolatile()) {
-    QualSelect = 0;
-  } else if (Q.hasConst()) {
-    QualSelect = 1;
-  } else if (Q.hasVolatile()) {
-    QualSelect = 2;
-  }
-  if (QualSelect != -1)
-    Diag(UnderlyingLoc, diag::warn_cv_stripped_in_enum) << QualSelect;
+  std::optional<diag::CVQualList> QualSelect;
+  if (Q.hasConst() && Q.hasVolatile())
+    QualSelect = diag::CVQualList::Both;
+  else if (Q.hasConst())
+    QualSelect = diag::CVQualList::Const;
+  else if (Q.hasVolatile())
+    QualSelect = diag::CVQualList::Volatile;
+
+  if (QualSelect)
+    Diag(UnderlyingLoc, diag::warn_cv_stripped_in_enum) << *QualSelect;
 
   T = T.getAtomicUnqualifiedType();
 
