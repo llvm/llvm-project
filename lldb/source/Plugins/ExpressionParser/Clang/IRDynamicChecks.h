@@ -53,7 +53,6 @@ public:
 
   bool DoCheckersExplainStop(lldb::addr_t addr, Stream &message) override;
 
-  std::shared_ptr<UtilityFunction> m_valid_pointer_check;
   std::shared_ptr<UtilityFunction> m_objc_object_check;
 };
 

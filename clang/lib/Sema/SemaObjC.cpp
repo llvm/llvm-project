@@ -124,17 +124,12 @@ ExprResult SemaObjC::CheckObjCForCollectionOperand(SourceLocation forLoc,
   if (!collection)
     return ExprError();
 
-  ExprResult result = SemaRef.CorrectDelayedTyposInExpr(collection);
-  if (!result.isUsable())
-    return ExprError();
-  collection = result.get();
-
   // Bail out early if we've got a type-dependent expression.
   if (collection->isTypeDependent())
     return collection;
 
   // Perform normal l-value conversion.
-  result = SemaRef.DefaultFunctionArrayLvalueConversion(collection);
+  ExprResult result = SemaRef.DefaultFunctionArrayLvalueConversion(collection);
   if (result.isInvalid())
     return ExprError();
   collection = result.get();
@@ -2314,8 +2309,8 @@ bool SemaObjC::isSignedCharBool(QualType Ty) {
 }
 
 void SemaObjC::adornBoolConversionDiagWithTernaryFixit(
-    Expr *SourceExpr, const Sema::SemaDiagnosticBuilder &Builder) {
-  Expr *Ignored = SourceExpr->IgnoreImplicit();
+    const Expr *SourceExpr, const Sema::SemaDiagnosticBuilder &Builder) {
+  const Expr *Ignored = SourceExpr->IgnoreImplicit();
   if (const auto *OVE = dyn_cast<OpaqueValueExpr>(Ignored))
     Ignored = OVE->getSourceExpr();
   bool NeedsParens = isa<AbstractConditionalOperator>(Ignored) ||

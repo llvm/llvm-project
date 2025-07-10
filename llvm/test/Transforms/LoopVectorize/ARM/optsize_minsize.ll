@@ -24,11 +24,10 @@ define void @always_vectorize(ptr %p, i32 %x) {
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; DEFAULT:       [[VECTOR_BODY]]:
-; DEFAULT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 0
-; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
+; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 0
 ; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
+; DEFAULT-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 0
 ; DEFAULT-NEXT:    store <4 x i32> [[TMP3]], ptr [[TMP5]], align 4
 ; DEFAULT-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
@@ -57,11 +56,10 @@ define void @always_vectorize(ptr %p, i32 %x) {
 ; OPTSIZE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; OPTSIZE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; OPTSIZE:       [[VECTOR_BODY]]:
-; OPTSIZE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 0
-; OPTSIZE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
+; OPTSIZE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 0
 ; OPTSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; OPTSIZE-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; OPTSIZE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
+; OPTSIZE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 0
 ; OPTSIZE-NEXT:    store <4 x i32> [[TMP3]], ptr [[TMP5]], align 4
 ; OPTSIZE-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; OPTSIZE:       [[MIDDLE_BLOCK]]:
@@ -90,11 +88,10 @@ define void @always_vectorize(ptr %p, i32 %x) {
 ; MINSIZE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; MINSIZE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; MINSIZE:       [[VECTOR_BODY]]:
-; MINSIZE-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 0
-; MINSIZE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
+; MINSIZE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 0
 ; MINSIZE-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
 ; MINSIZE-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; MINSIZE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
+; MINSIZE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 0
 ; MINSIZE-NEXT:    store <4 x i32> [[TMP2]], ptr [[TMP3]], align 4
 ; MINSIZE-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; MINSIZE:       [[MIDDLE_BLOCK]]:
@@ -393,9 +390,9 @@ define void @tail_predicate_without_optsize(ptr %p, i8 %a, i8 %b, i8 %c, i32 %n)
 ; DEFAULT-NEXT:    store i8 [[TMP71]], ptr [[TMP70]], align 1
 ; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE36]]
 ; DEFAULT:       [[PRED_STORE_CONTINUE36]]:
+; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add <16 x i8> [[VEC_IND]], splat (i8 16)
 ; DEFAULT-NEXT:    [[VEC_IND_NEXT2]] = add <16 x i8> [[VEC_IND1]], splat (i8 16)
-; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; DEFAULT-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]

@@ -7,18 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/GSYM/CallSiteInfo.h"
-#include "llvm/ADT/CachedHashString.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/GsymCreator.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
-#include <fstream>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 using namespace llvm;
@@ -234,13 +232,7 @@ Error CallSiteInfoLoader::processYAMLFunctions(
 raw_ostream &gsym::operator<<(raw_ostream &OS, const CallSiteInfo &CSI) {
   OS << "  Return=" << HEX64(CSI.ReturnOffset);
   OS << "  Flags=" << HEX8(CSI.Flags);
-
-  OS << "  RegEx=";
-  for (uint32_t i = 0; i < CSI.MatchRegex.size(); ++i) {
-    if (i > 0)
-      OS << ",";
-    OS << CSI.MatchRegex[i];
-  }
+  OS << "  RegEx=" << llvm::interleaved(CSI.MatchRegex, ",");
   return OS;
 }
 
