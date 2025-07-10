@@ -1562,7 +1562,7 @@ loadMBUFScalarOperandsFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
                                MachineDominatorTree *MDT,
                                MachineBasicBlock::iterator Begin = nullptr,
                                MachineBasicBlock::iterator End = nullptr,
-                               SmallVector<Register> PhySGPRs = {});
+                               ArrayRef<Register> PhySGPRs = {});
 
 namespace AMDGPU {
 
