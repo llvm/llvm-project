@@ -137,7 +137,7 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   switch (type) {
   case R_AARCH64_ABS16:
   case R_AARCH64_ABS32:
-  case R_AARCH64_INST32:
+  case R_AARCH64_PATCHINST:
   case R_AARCH64_ABS64:
   case R_AARCH64_FUNCINIT64:
   case R_AARCH64_ADD_ABS_LO12_NC:
@@ -283,7 +283,6 @@ int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_AARCH64_PREL16:
     return SignExtend64<16>(read16(ctx, buf));
   case R_AARCH64_ABS32:
-  case R_AARCH64_INST32:
   case R_AARCH64_PREL32:
     return SignExtend64<32>(read32(ctx, buf));
   case R_AARCH64_ABS64:
@@ -511,10 +510,10 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     checkIntUInt(ctx, loc, val, 32, rel);
     write32(ctx, loc, val);
     break;
-  case R_AARCH64_INST32:
+  case R_AARCH64_PATCHINST:
     if (!rel.sym->isUndefined()) {
-      checkIntUInt(ctx, loc, val, 32, rel);
-      write32(ctx, loc, val);
+      checkUInt(ctx, loc, val, 32, rel);
+      write32le(loc, val);
     }
     break;
   case R_AARCH64_PLT32:

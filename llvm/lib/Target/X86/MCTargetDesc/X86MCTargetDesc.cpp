@@ -17,6 +17,7 @@
 #include "X86IntelInstPrinter.h"
 #include "X86MCAsmInfo.h"
 #include "X86TargetStreamer.h"
+#include "llvm-c/Visibility.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/MC/MCDwarf.h"
