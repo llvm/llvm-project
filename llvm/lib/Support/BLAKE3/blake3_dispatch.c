@@ -4,44 +4,44 @@
 
 #include "blake3_impl.h"
 
+#if defined(_MSC_VER)
+#include <Windows.h>
+#endif
+
 #if defined(IS_X86)
 #if defined(_MSC_VER)
 #include <intrin.h>
 #elif defined(__GNUC__)
 #include <immintrin.h>
 #else
-#error "Unimplemented!"
+#undef IS_X86 /* Unimplemented! */
 #endif
 #endif
 
-/* Atomic access abstraction (since MSVC does not do C11 yet) */
-#if defined(_MSC_VER) && !defined(__clang__)
-#if !defined(IS_X86)
-#include <intrin.h>
-#endif
-#pragma warning(disable : 5105)
-#ifndef FORCEINLINE
-#define FORCEINLINE inline __forceinline
-#endif
-typedef volatile long atomic32_t;
-static FORCEINLINE int32_t atomic_load32(atomic32_t *src) { 
-  return _InterlockedOr(src, 0); 
-}
-static FORCEINLINE void atomic_store32(atomic32_t *dst, int32_t val) {
-  _InterlockedExchange(dst, val);
-}
+#if !defined(BLAKE3_ATOMICS)
+#if defined(__has_include)
+#if __has_include(<stdatomic.h>) && !defined(_MSC_VER)
+#define BLAKE3_ATOMICS 1
 #else
-#include <stdatomic.h>
-#ifndef FORCEINLINE
-#define FORCEINLINE inline __attribute__((__always_inline__))
-#endif
-typedef volatile _Atomic(int32_t) atomic32_t;
-static FORCEINLINE int32_t atomic_load32(atomic32_t *src) {
-  return atomic_load_explicit(src, memory_order_relaxed);
-}
-static FORCEINLINE void atomic_store32(atomic32_t *dst, int32_t val) {
-  atomic_store_explicit(dst, val, memory_order_relaxed);
-}
+#define BLAKE3_ATOMICS 0
+#endif /* __has_include(<stdatomic.h>) && !defined(_MSC_VER) */
+#else
+#define BLAKE3_ATOMICS 0
+#endif /* defined(__has_include) */
+#endif /* BLAKE3_ATOMICS */
+
+#if BLAKE3_ATOMICS
+#define ATOMIC_INT _Atomic int
+#define ATOMIC_LOAD(x) x
+#define ATOMIC_STORE(x, y) x = y
+#elif defined(_MSC_VER)
+#define ATOMIC_INT LONG
+#define ATOMIC_LOAD(x) InterlockedOr(&x, 0)
+#define ATOMIC_STORE(x, y) InterlockedExchange(&x, y)
+#else
+#define ATOMIC_INT int
+#define ATOMIC_LOAD(x) x
+#define ATOMIC_STORE(x, y) x = y
 #endif
 
 #define MAYBE_UNUSED(x) (void)((x))
@@ -89,7 +89,6 @@ static void cpuidex(uint32_t out[4], uint32_t id, uint32_t sid) {
 #endif
 }
 
-#endif
 
 enum cpu_feature {
   SSE2 = 1 << 0,
@@ -106,7 +105,7 @@ enum cpu_feature {
 #if !defined(BLAKE3_TESTING)
 static /* Allow the variable to be controlled manually for testing */
 #endif
-    atomic32_t g_cpu_features = UNDEFINED;
+    ATOMIC_INT g_cpu_features = UNDEFINED;
 
 LLVM_ATTRIBUTE_USED
 #if !defined(BLAKE3_TESTING)
@@ -114,16 +113,17 @@ static
 #endif
     enum cpu_feature
     get_cpu_features(void) {
-  enum cpu_feature _cpu_features;
-  _cpu_features = (enum cpu_feature)atomic_load32(&g_cpu_features);
-  if (_cpu_features != UNDEFINED) {
-    return _cpu_features;
+
+  /* If TSAN detects a data race here, try compiling with -DBLAKE3_ATOMICS=1 */
+  enum cpu_feature features = ATOMIC_LOAD(g_cpu_features);
+  if (features != UNDEFINED) {
+    return features;
   } else {
 #if defined(IS_X86)
     uint32_t regs[4] = {0};
     uint32_t *eax = &regs[0], *ebx = &regs[1], *ecx = &regs[2], *edx = &regs[3];
     (void)edx;
-    enum cpu_feature features = 0;
+    features = 0;
     cpuid(regs, 0);
     const int max_id = *eax;
     cpuid(regs, 1);
@@ -133,7 +133,7 @@ static
     if (*edx & (1UL << 26))
       features |= SSE2;
 #endif
-    if (*ecx & (1UL << 0))
+    if (*ecx & (1UL << 9))
       features |= SSSE3;
     if (*ecx & (1UL << 19))
       features |= SSE41;
@@ -156,15 +156,15 @@ static
         }
       }
     }
-    atomic_store32(&g_cpu_features, (int32_t)features);
+    ATOMIC_STORE(g_cpu_features, features);
     return features;
 #else
     /* How to detect NEON? */
-    atomic_store32(&g_cpu_features, 0);
     return 0;
 #endif
   }
 }
+#endif
 
 void blake3_compress_in_place(uint32_t cv[8],
                               const uint8_t block[BLAKE3_BLOCK_LEN],
