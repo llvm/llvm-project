@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
+#include "src/__support/libc_errno.h"
 #include "src/math/asinpif16.h"
 #include "src/math/fabs.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -13,8 +13,6 @@
 using LlvmLibcAsinpif16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
 TEST_F(LlvmLibcAsinpif16Test, SpecialNumbers) {
-  using FPBits = LIBC_NAMESPACE::fputil::FPBits<float16>;
-
   // zero
   EXPECT_FP_EQ(0.0f16, LIBC_NAMESPACE::asinpif16(0.0f16));
 
@@ -30,43 +28,41 @@ TEST_F(LlvmLibcAsinpif16Test, SpecialNumbers) {
                LIBC_NAMESPACE::asinpif16(FPBits::signaling_nan().get_val()));
 
   // infinity inputs -> should return NaN
-  errno = 0;
+  libc_errno = 0;
   EXPECT_FP_EQ(FPBits::quiet_nan().get_val(), LIBC_NAMESPACE::asinpif16(inf));
   EXPECT_MATH_ERRNO(EDOM);
 
-  errno = 0;
+  libc_errno = 0;
   EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
                LIBC_NAMESPACE::asinpif16(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
 }
 
 TEST_F(LlvmLibcAsinpif16Test, OutOfRange) {
-  using FPBits = LIBC_NAMESPACE::fputil::FPBits<float16>;
-
   // Test values > 1
-  errno = 0;
+  libc_errno = 0;
   EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
                LIBC_NAMESPACE::asinpif16(float16(1.5)));
   EXPECT_MATH_ERRNO(EDOM);
 
-  errno = 0;
+  libc_errno = 0;
   EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
                LIBC_NAMESPACE::asinpif16(float16(2.0)));
   EXPECT_MATH_ERRNO(EDOM);
 
   // Test values < -1
-  errno = 0;
+  libc_errno = 0;
   EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
                LIBC_NAMESPACE::asinpif16(float16(-1.5)));
   EXPECT_MATH_ERRNO(EDOM);
 
-  errno = 0;
+  libc_errno = 0;
   EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
                LIBC_NAMESPACE::asinpif16(float16(-2.0)));
   EXPECT_MATH_ERRNO(EDOM);
 
   // Test maximum normal value (should be > 1 for float16)
-  errno = 0;
+  libc_errno = 0;
   EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
                LIBC_NAMESPACE::asinpif16(FPBits::max_normal().get_val()));
   EXPECT_MATH_ERRNO(EDOM);
@@ -78,12 +74,10 @@ TEST_F(LlvmLibcAsinpif16Test, SymmetryProperty) {
                                    0.9f16, 0.99f16, 1.0f16};
 
   for (float16 x : test_vals) {
-    if (x <= 1.0) {
       float16 pos_result = LIBC_NAMESPACE::asinpif16(x);
       float16 neg_result = LIBC_NAMESPACE::asinpif16(-x);
 
       EXPECT_FP_EQ(pos_result,
                    static_cast<float16>(LIBC_NAMESPACE::fabs(neg_result)));
-    }
   }
 }
