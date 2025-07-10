@@ -217,7 +217,7 @@ namespace conversion_operator {
     int (&fp2)(int) = [](auto a) { return a; };  // expected-error{{non-const lvalue}}
     int (&&fp3)(int) = [](auto a) { return a; };
     // expected-error@-1   {{no viable conversion}}
-    // expected-note-re@-2 {{candidate template ignored: could not match 'auto (*)(type-parameter-0-0){{.*}}' against 'int (int)'}}
+    // expected-note-re@-2 {{candidate template ignored: could not match 'auto (*)(auto){{.*}}' against 'int (int)'}}
 
     using F = int(int);
     using G = int(void*);
@@ -293,7 +293,7 @@ int test() {
     print("a = ", a, "\n");
     return [](auto b) ->decltype(a) {
       // expected-error@-1   {{no viable conversion}}
-      // expected-note-re@-2 {{candidate template ignored: could not match 'int (*)(type-parameter-0-0){{.*}}' against 'int'}}
+      // expected-note-re@-2 {{candidate template ignored: could not match 'auto (*)(auto){{.*}}' ({{.*}}) against 'decltype(a)' (aka 'int')}}
       print("b = ", b, "\n");
       return b;
     };

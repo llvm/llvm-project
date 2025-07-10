@@ -24,49 +24,48 @@
 #include "test_iterators.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
-        typedef std::unordered_map<int, std::string> C;
-        typedef std::pair<int, std::string> P;
-        C c;
-        c.insert(
-                    {
-                        P(1, "one"),
-                        P(2, "two"),
-                        P(3, "three"),
-                        P(4, "four"),
-                        P(1, "four"),
-                        P(2, "four"),
-                    }
-                );
-        assert(c.size() == 4);
-        assert(c.at(1) == "one");
-        assert(c.at(2) == "two");
-        assert(c.at(3) == "three");
-        assert(c.at(4) == "four");
-    }
-    {
-        typedef std::unordered_map<int, std::string, std::hash<int>, std::equal_to<int>,
-                            min_allocator<std::pair<const int, std::string>>> C;
-        typedef std::pair<int, std::string> P;
-        C c;
-        c.insert(
-                    {
-                        P(1, "one"),
-                        P(2, "two"),
-                        P(3, "three"),
-                        P(4, "four"),
-                        P(1, "four"),
-                        P(2, "four"),
-                    }
-                );
-        assert(c.size() == 4);
-        assert(c.at(1) == "one");
-        assert(c.at(2) == "two");
-        assert(c.at(3) == "three");
-        assert(c.at(4) == "four");
-    }
+int main(int, char**) {
+  {
+    typedef std::unordered_map<int, std::string> C;
+    typedef std::pair<int, std::string> P;
+    C c;
+    c.insert({
+        P(1, "one"),
+        P(2, "two"),
+        P(3, "three"),
+        P(4, "four"),
+        P(1, "four"),
+        P(2, "four"),
+    });
+    assert(c.size() == 4);
+    assert(c.at(1) == "one");
+    assert(c.at(2) == "two");
+    assert(c.at(3) == "three");
+    assert(c.at(4) == "four");
+  }
+  {
+    typedef std::unordered_map<int,
+                               std::string,
+                               std::hash<int>,
+                               std::equal_to<int>,
+                               min_allocator<std::pair<const int, std::string>>>
+        C;
+    typedef std::pair<int, std::string> P;
+    C c;
+    c.insert({
+        P(1, "one"),
+        P(2, "two"),
+        P(3, "three"),
+        P(4, "four"),
+        P(1, "four"),
+        P(2, "four"),
+    });
+    assert(c.size() == 4);
+    assert(c.at(1) == "one");
+    assert(c.at(2) == "two");
+    assert(c.at(3) == "three");
+    assert(c.at(4) == "four");
+  }
 
   return 0;
 }

@@ -23,11 +23,12 @@
 #include "llvm/Analysis/Utils/TFUtils.h"
 #include "llvm/Analysis/Utils/TrainingLogger.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
 
-#include <vector>
 #include <optional>
+#include <vector>
 
 using namespace llvm;
 
@@ -253,16 +254,14 @@ private:
 };
 
 static const std::vector<TensorSpec> TrainingOnlyFeatures{
-    TensorSpec::createSpec<int64_t>(TFFeedPrefix + "inlining_default", {1}),
     TensorSpec::createSpec<float>(TFFeedPrefix + "discount", {1}),
     TensorSpec::createSpec<float>(TFFeedPrefix + "reward", {1}),
     TensorSpec::createSpec<int32_t>(TFFeedPrefix + "step_type", {1})};
 
 static const std::vector<TensorSpec> getInputFeatures() {
   std::vector<TensorSpec> InputSpecs;
-  for (size_t I = 0; I < NumberOfFeatures; ++I)
-    InputSpecs.push_back(TensorSpec::createSpec<int64_t>(
-        TFFeedPrefix + FeatureMap[I].name(), FeatureMap[I].shape()));
+  for (const auto &Feature : FeatureMap)
+    InputSpecs.push_back(TensorSpec(TFFeedPrefix + Feature.name(), Feature));
   append_range(InputSpecs, TrainingOnlyFeatures);
   return InputSpecs;
 }
@@ -299,7 +298,8 @@ void TrainingLogger::logInlineEvent(const InlineEvent &Event,
                                     const MLModelRunner &ModelRunner) {
   L->startObservation();
   size_t CurrentFeature = 0;
-  for (; CurrentFeature < NumberOfFeatures; ++CurrentFeature)
+  size_t FeatureMapSize = FeatureMap.size();
+  for (; CurrentFeature < FeatureMapSize; ++CurrentFeature)
     L->logTensorValue(CurrentFeature,
                       reinterpret_cast<const char *>(
                           ModelRunner.getTensorUntyped(CurrentFeature)));

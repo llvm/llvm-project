@@ -8,8 +8,8 @@ subroutine vec_splat_testf32i64(x)
 
 ! LLVMIR: %[[x:.*]] = load <4 x float>, ptr %{{[0-9]}}, align 16
 ! LLVMIR: %[[ele:.*]] = extractelement <4 x float> %[[x]], i64 3
-! LLVMIR: %[[ins:.*]] = insertelement <4 x float> undef, float %[[ele]], i32 0
-! LLVMIR: %[[y:.*]] = shufflevector <4 x float> %[[ins]], <4 x float> undef, <4 x i32> zeroinitializer
+! LLVMIR: %[[ins:.*]] = insertelement <4 x float> poison, float %[[ele]], i32 0
+! LLVMIR: %[[y:.*]] = shufflevector <4 x float> %[[ins]], <4 x float> poison, <4 x i32> zeroinitializer
 ! LLVMIR: store <4 x float> %[[y]], ptr %{{[0-9]}}, align 16
 end subroutine vec_splat_testf32i64
 
@@ -20,7 +20,7 @@ subroutine vec_splat_testu8i16(x)
 
 ! LLVMIR: %[[x:.*]] = load <16 x i8>, ptr %{{[0-9]}}, align 16
 ! LLVMIR: %[[ele:.*]] = extractelement <16 x i8> %[[x]], i16 15
-! LLVMIR: %[[ins:.*]] = insertelement <16 x i8> undef, i8 %[[ele]], i32 0
-! LLVMIR: %[[y:.*]] = shufflevector <16 x i8> %[[ins]], <16 x i8> undef, <16 x i32> zeroinitializer
+! LLVMIR: %[[ins:.*]] = insertelement <16 x i8> poison, i8 %[[ele]], i32 0
+! LLVMIR: %[[y:.*]] = shufflevector <16 x i8> %[[ins]], <16 x i8> poison, <16 x i32> zeroinitializer
 ! LLVMIR: store <16 x i8> %[[y]], ptr %{{[0-9]}}, align 16
 end subroutine vec_splat_testu8i16

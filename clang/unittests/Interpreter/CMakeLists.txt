@@ -1,4 +1,23 @@
-set(LLVM_LINK_COMPONENTS
+add_distinct_clang_unittest(ClangReplInterpreterTests
+  IncrementalCompilerBuilderTest.cpp
+  IncrementalProcessingTest.cpp
+  InterpreterTest.cpp
+  InterpreterExtensionsTest.cpp
+  CodeCompletionTest.cpp
+
+  EXPORT_SYMBOLS
+
+  CLANG_LIBS
+  clangAST
+  clangBasic
+  clangInterpreter
+  clangFrontend
+  clangSema
+
+  LINK_LIBS
+  LLVMTestingSupport
+
+  LLVM_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   Core
   MC
@@ -7,28 +26,10 @@ set(LLVM_LINK_COMPONENTS
   TargetParser
   )
 
-add_clang_unittest(ClangReplInterpreterTests
-  IncrementalCompilerBuilderTest.cpp
-  IncrementalProcessingTest.cpp
-  InterpreterTest.cpp
-  InterpreterExtensionsTest.cpp
-  CodeCompletionTest.cpp
-  )
-target_link_libraries(ClangReplInterpreterTests PUBLIC
-  clangAST
-  clangBasic
-  clangInterpreter
-  clangFrontend
-  clangSema
-  LLVMTestingSupport
-  )
-
 # Exceptions on Windows are not yet supported.
 if(NOT WIN32)
   add_subdirectory(ExceptionTests)
 endif()
-
-export_executable_symbols(ClangReplInterpreterTests)
 
 if(MSVC)
   set_target_properties(ClangReplInterpreterTests PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS 1)
@@ -65,10 +66,7 @@ if(MSVC)
   endif()
 
   # List to '/EXPORT:sym0 /EXPORT:sym1 /EXPORT:sym2 ...'
-  foreach(sym ${ClangReplInterpreterTests_exports})
-    set(ClangReplInterpreterTests_link_str "${ClangReplInterpreterTests_link_str} /EXPORT:${sym}")
-  endforeach(sym ${ClangReplInterpreterTests_exports})
-
-  set_property(TARGET ClangReplInterpreterTests APPEND_STRING PROPERTY LINK_FLAGS ${ClangReplInterpreterTests_link_str})
+  list(TRANSFORM ClangReplInterpreterTests_exports PREPEND "LINKER:/EXPORT:")
+  set_property(TARGET ClangReplInterpreterTests APPEND PROPERTY LINK_OPTIONS ${ClangReplInterpreterTests_exports})
 
 endif(MSVC)

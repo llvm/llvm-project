@@ -20,7 +20,7 @@ func.func @wrap_while_loop_in_zero_trip_check(%bound : i32) -> i32 {
 // CHECK-SAME:      %[[BOUND:.*]]: i32) -> i32 {
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : i32
 // CHECK-DAG:     %[[C5:.*]] = arith.constant 5 : i32
-// CHECK-DAG:     %[[PRE_COND:.*]] = arith.cmpi slt, %[[C0]], %[[BOUND]] : i32
+// CHECK-DAG:     %[[PRE_COND:.*]] = arith.cmpi sgt, %[[BOUND]], %[[C0]] : i32
 // CHECK-DAG:     %[[PRE_INV:.*]] = arith.addi %[[BOUND]], %[[C5]] : i32
 // CHECK:         %[[IF:.*]]:2 = scf.if %[[PRE_COND]] -> (i32, i32) {
 // CHECK:           %[[WHILE:.*]]:2 = scf.while (

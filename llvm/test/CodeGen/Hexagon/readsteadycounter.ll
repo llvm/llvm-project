@@ -1,5 +1,5 @@
 
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; CHECK-LABEL: test_readsteadycounter
 ; CHECK: r1:0 = c31:30

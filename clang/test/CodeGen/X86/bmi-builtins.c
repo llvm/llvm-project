@@ -1,5 +1,7 @@
-// RUN: %clang_cc1 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +bmi -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,TZCNT
-// RUN: %clang_cc1 -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 -ffreestanding %s -triple=x86_64-windows-msvc -emit-llvm -o - -Wall -Werror -DTEST_TZCNT | FileCheck %s --check-prefix=TZCNT
+// RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +bmi -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,TZCNT
+// RUN: %clang_cc1 -x c -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 -ffreestanding %s -triple=x86_64-windows-msvc -emit-llvm -o - -Wall -Werror -DTEST_TZCNT | FileCheck %s --check-prefix=TZCNT
+// RUN: %clang_cc1 -x c++ -std=c++11 -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +bmi -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK,TZCNT
+// RUN: %clang_cc1 -x c++ -std=c++11 -fms-extensions -fms-compatibility -fms-compatibility-version=17.00 -ffreestanding %s -triple=x86_64-windows-msvc -emit-llvm -o - -Wall -Werror -DTEST_TZCNT | FileCheck %s --check-prefix=TZCNT
 
 
 #include <immintrin.h>
@@ -232,3 +234,88 @@ unsigned long long test_blsr_u64(unsigned long long __X) {
 #endif
 
 #endif // !defined(TEST_TZCNT)
+
+// Test constexpr handling.
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+char andnu32[__andn_u32(0x01234567, 0xFECDBA98) == (~0x01234567 & 0xFECDBA98) ? 1 : -1];
+char andn2u32[_andn_u32(0x01234567, 0xFECDBA98) == (~0x01234567 & 0xFECDBA98) ? 1 : -1];
+
+char bextr32_0[__bextr_u32(0x00000000, 0x00000000) == 0x00000000 ? 1 : -1];
+char bextr32_1[__bextr_u32(0x000003F0, 0xFFFF1004) == 0x0000003F ? 1 : -1];
+char bextr32_2[__bextr_u32(0x000003F0, 0xFFFF3008) == 0x00000003 ? 1 : -1];
+
+char bextr32_3[_bextr2_u32(0x00000000, 0x00000000) == 0x00000000 ? 1 : -1];
+char bextr32_4[_bextr2_u32(0x000003F0, 0xFFFF1004) == 0x0000003F ? 1 : -1];
+char bextr32_5[_bextr2_u32(0x000003F0, 0xFFFF3008) == 0x00000003 ? 1 : -1];
+
+char bextr32_6[_bextr_u32(0x00000000, 0x00000000, 0x00000000) == 0x00000000 ? 1 : -1];
+char bextr32_7[_bextr_u32(0x000003F0, 0xFFFFFF04, 0xFFFFFF10) == 0x0000003F ? 1 : -1];
+char bextr32_8[_bextr_u32(0x000003F0, 0xFFFFFF08, 0xFFFFFF30) == 0x00000003 ? 1 : -1];
+
+char blsiu32[__blsi_u32(0x89ABCDEF) == (0x89ABCDEF & -0x89ABCDEF) ? 1 : -1];
+char blsi2u32[_blsi_u32(0x89ABCDEF) == (0x89ABCDEF & -0x89ABCDEF) ? 1 : -1];
+
+char blsmasku32[__blsmsk_u32(0x89ABCDEF) == (0x89ABCDEF ^ (0x89ABCDEF - 1)) ? 1 : -1];
+char blsmask2u32[_blsmsk_u32(0x89ABCDEF) == (0x89ABCDEF ^ (0x89ABCDEF - 1)) ? 1 : -1];
+
+char blsru32[__blsr_u32(0x89ABCDEF) == (0x89ABCDEF & (0x89ABCDEF - 1)) ? 1 : -1];
+char blsr2u32[_blsr_u32(0x89ABCDEF) == (0x89ABCDEF & (0x89ABCDEF - 1)) ? 1 : -1];
+
+char tzcntu16_0[__tzcnt_u16(0x0000) == 16 ? 1 : -1];
+char tzcntu16_1[__tzcnt_u16(0x0001) ==  0 ? 1 : -1];
+char tzcntu16_2[__tzcnt_u16(0x0010) ==  4 ? 1 : -1];
+
+char tzcnt2u16_0[_tzcnt_u16(0x0000) == 16 ? 1 : -1];
+char tzcnt2u16_1[_tzcnt_u16(0x0001) ==  0 ? 1 : -1];
+char tzcnt2u16_2[_tzcnt_u16(0x0010) ==  4 ? 1 : -1];
+
+char tzcntu32_0[__tzcnt_u32(0x00000000) == 32 ? 1 : -1];
+char tzcntu32_1[__tzcnt_u32(0x00000001) ==  0 ? 1 : -1];
+char tzcntu32_2[__tzcnt_u32(0x00000080) ==  7 ? 1 : -1];
+
+char tzcnt2u32_0[_tzcnt_u32(0x00000000) == 32 ? 1 : -1];
+char tzcnt2u32_1[_tzcnt_u32(0x00000001) ==  0 ? 1 : -1];
+char tzcnt2u32_2[_tzcnt_u32(0x00000080) ==  7 ? 1 : -1];
+
+char tzcnt3u32_0[_mm_tzcnt_32(0x00000000) == 32 ? 1 : -1];
+char tzcnt3u32_1[_mm_tzcnt_32(0x00000001) ==  0 ? 1 : -1];
+char tzcnt3u32_2[_mm_tzcnt_32(0x00000080) ==  7 ? 1 : -1];
+
+#ifdef __x86_64__
+char andnu64[__andn_u64(0x0123456789ABCDEFULL, 0xFECDBA9876543210ULL) == (~0x0123456789ABCDEFULL & 0xFECDBA9876543210ULL) ? 1 : -1];
+char andn2u64[_andn_u64(0x0123456789ABCDEFULL, 0xFECDBA9876543210ULL) == (~0x0123456789ABCDEFULL & 0xFECDBA9876543210ULL) ? 1 : -1];
+
+char bextr64_0[__bextr_u64(0x0000000000000000ULL, 0x0000000000000000ULL) == 0x0000000000000000ULL ? 1 : -1];
+char bextr64_1[__bextr_u64(0xF000000000000001ULL, 0x0000000000004001ULL) == 0x7800000000000000ULL ? 1 : -1];
+char bextr64_2[__bextr_u64(0xF000000000000001ULL, 0xFFFFFFFFFFFF1001ULL) == 0x0000000000000000ULL ? 1 : -1];
+
+char bextr64_3[_bextr2_u64(0x0000000000000000ULL, 0x0000000000000000ULL) == 0x0000000000000000ULL ? 1 : -1];
+char bextr64_4[_bextr2_u64(0xF000000000000001ULL, 0x0000000000004001ULL) == 0x7800000000000000ULL ? 1 : -1];
+char bextr64_5[_bextr2_u64(0xF000000000000001ULL, 0xFFFFFFFFFFFF1001ULL) == 0x0000000000000000ULL ? 1 : -1];
+
+char bextr64_6[_bextr_u64(0x0000000000000000ULL, 0x0000000000000000ULL, 0x0000000000000000ULL) == 0x0000000000000000ULL ? 1 : -1];
+char bextr64_7[_bextr_u64(0xF000000000000001ULL, 0x0000000000000001ULL, 0x0000000000000040ULL) == 0x7800000000000000ULL ? 1 : -1];
+char bextr64_8[_bextr_u64(0xF000000000000001ULL, 0xFFFFFFFFFFFFFF01ULL, 0xFFFFFFFFFFFFFF10ULL) == 0x0000000000000000ULL ? 1 : -1];
+
+char blsiu64[__blsi_u64(0x0123456789ABCDEFULL) == (0x0123456789ABCDEFULL & -0x0123456789ABCDEFULL) ? 1 : -1];
+char blsi2u64[_blsi_u64(0x0123456789ABCDEFULL) == (0x0123456789ABCDEFULL & -0x0123456789ABCDEFULL) ? 1 : -1];
+
+char blsmasku64[__blsmsk_u64(0x0123456789ABCDEFULL) == (0x0123456789ABCDEFULL ^ (0x0123456789ABCDEFULL - 1)) ? 1 : -1];
+char blsmask2u64[_blsmsk_u64(0x0123456789ABCDEFULL) == (0x0123456789ABCDEFULL ^ (0x0123456789ABCDEFULL - 1)) ? 1 : -1];
+
+char blsru64[__blsr_u64(0x0123456789ABCDEFULL) == (0x0123456789ABCDEFULL & (0x0123456789ABCDEFULL - 1)) ? 1 : -1];
+char blsr2u64[_blsr_u64(0x0123456789ABCDEFULL) == (0x0123456789ABCDEFULL & (0x0123456789ABCDEFULL - 1)) ? 1 : -1];
+
+char tzcntu64_0[__tzcnt_u64(0x0000000000000000ULL) == 64 ? 1 : -1];
+char tzcntu64_1[__tzcnt_u64(0x0000000000000001ULL) ==  0 ? 1 : -1];
+char tzcntu64_2[__tzcnt_u64(0x0000000800000000ULL) == 35 ? 1 : -1];
+
+char tzcnt2u64_0[_tzcnt_u64(0x0000000000000000ULL) == 64 ? 1 : -1];
+char tzcnt2u64_1[_tzcnt_u64(0x0000000000000001ULL) ==  0 ? 1 : -1];
+char tzcnt2u64_2[_tzcnt_u64(0x0000000800000000ULL) == 35 ? 1 : -1];
+
+char tzcnt3u64_0[_mm_tzcnt_64(0x0000000000000000ULL) == 64 ? 1 : -1];
+char tzcnt3u64_1[_mm_tzcnt_64(0x0000000000000001ULL) ==  0 ? 1 : -1];
+char tzcnt3u64_2[_mm_tzcnt_64(0x0000000800000000ULL) == 35 ? 1 : -1];
+#endif
+#endif

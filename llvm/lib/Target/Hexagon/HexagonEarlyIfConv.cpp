@@ -91,13 +91,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-
-  FunctionPass *createHexagonEarlyIfConversion();
-  void initializeHexagonEarlyIfConversionPass(PassRegistry& Registry);
-
-} // end namespace llvm
-
 static cl::opt<bool> EnableHexagonBP("enable-hexagon-br-prob", cl::Hidden,
   cl::init(true), cl::desc("Enable branch probability info"));
 static cl::opt<unsigned> SizeLimit("eif-limit", cl::init(6), cl::Hidden,
@@ -161,10 +154,10 @@ namespace {
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineBranchProbabilityInfo>();
+      AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
       AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addPreserved<MachineDominatorTreeWrapperPass>();
-      AU.addRequired<MachineLoopInfo>();
+      AU.addRequired<MachineLoopInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -1055,9 +1048,10 @@ bool HexagonEarlyIfConversion::runOnMachineFunction(MachineFunction &MF) {
   MFN = &MF;
   MRI = &MF.getRegInfo();
   MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  MLI = &getAnalysis<MachineLoopInfo>();
-  MBPI = EnableHexagonBP ? &getAnalysis<MachineBranchProbabilityInfo>() :
-    nullptr;
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  MBPI = EnableHexagonBP
+             ? &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI()
+             : nullptr;
 
   Deleted.clear();
   bool Changed = false;

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -fblocks -fobjc-arc -fobjc-runtime-has-weak -I %S/Inputs -verify %s
+// RUN: %clang_cc1 -fsyntax-only -fblocks -fobjc-arc -fobjc-runtime-has-weak -I %S/Inputs -verify -fexperimental-new-constant-interpreter %s
 
 #include "non-trivial-c-union.h"
 

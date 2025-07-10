@@ -296,7 +296,9 @@ void fir::printFirAttribute(FIROpsDialect *dialect, mlir::Attribute attr,
 //===----------------------------------------------------------------------===//
 
 void FIROpsDialect::registerAttributes() {
-  addAttributes<ClosedIntervalAttr, ExactTypeAttr, FortranVariableFlagsAttr,
-                LowerBoundAttr, PointIntervalAttr, RealAttr, ReduceAttr,
-                SubclassAttr, UpperBoundAttr>();
+  addAttributes<ClosedIntervalAttr, ExactTypeAttr, LowerBoundAttr,
+                PointIntervalAttr, RealAttr, SubclassAttr, UpperBoundAttr,
+#define GET_ATTRDEF_LIST
+#include "flang/Optimizer/Dialect/FIRAttr.cpp.inc"
+                >();
 }

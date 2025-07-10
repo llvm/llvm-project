@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -I %S/Inputs/SystemHeaderPrefix/.. %s 2>&1 | FileCheck -DROOT_ABSOLUTE=%s -check-prefix=NORMAL -check-prefix=CHECK %s
-// RUN: %clang_cc1 -fsyntax-only -I %S/Inputs/SystemHeaderPrefix/.. -fdiagnostics-absolute-paths %s 2>&1 | FileCheck -DROOT_ABSOLUTE=%s -check-prefix=ABSOLUTE -check-prefix=CHECK %s
+// RUN: %clang_cc1 -Wno-error=return-type -fsyntax-only -I %S/Inputs/SystemHeaderPrefix/.. %s 2>&1 | FileCheck -DROOT_ABSOLUTE=%s -check-prefix=NORMAL -check-prefix=CHECK %s
+// RUN: %clang_cc1 -Wno-error=return-type -fsyntax-only -I %S/Inputs/SystemHeaderPrefix/.. -fdiagnostics-absolute-paths %s 2>&1 | FileCheck -DROOT_ABSOLUTE=%s -check-prefix=ABSOLUTE -check-prefix=CHECK %s
 
 #include "absolute-paths-import.h"
 // NORMAL: In file included from {{.*}}absolute-paths.c:4:
@@ -8,9 +8,9 @@
 
 #include "absolute-paths.h"
 
-// Check whether the diagnostic from the header above includes the dummy
-// directory in the path.
-// NORMAL: SystemHeaderPrefix
+// Check that the bogus prefix we added is stripped out even if absolute paths
+// are disabled.
+// NORMAL-NOT: SystemHeaderPrefix
 // ABSOLUTE-NOT: SystemHeaderPrefix
 // CHECK: warning: non-void function does not return a value
 

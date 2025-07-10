@@ -50,7 +50,6 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/InitializePasses.h"
@@ -61,7 +60,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdlib>
@@ -121,8 +119,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &Fn) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     StringRef getPassName() const override { return ARM_LOAD_STORE_OPT_NAME; }
@@ -614,7 +611,7 @@ void ARMLoadStoreOpt::moveLiveRegsBefore(const MachineBasicBlock &MBB,
   }
 }
 
-static bool ContainsReg(const ArrayRef<std::pair<unsigned, bool>> &Regs,
+static bool ContainsReg(ArrayRef<std::pair<unsigned, bool>> Regs,
                         unsigned Reg) {
   for (const std::pair<unsigned, bool> &R : Regs)
     if (R.first == Reg)
@@ -2517,9 +2514,7 @@ static void updateRegisterMapForDbgValueListAfterMove(
     if (RegIt == RegisterMap.end())
       return;
     auto &InstrVec = RegIt->getSecond();
-    for (unsigned I = 0; I < InstrVec.size(); I++)
-      if (InstrVec[I] == InstrToReplace)
-        InstrVec[I] = DbgValueListInstr;
+    llvm::replace(InstrVec, InstrToReplace, DbgValueListInstr);
   });
 }
 
@@ -2533,8 +2528,7 @@ bool
 ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
   bool RetVal = false;
 
-  DenseMap<MachineInstr*, unsigned> MI2LocMap;
-  using MapIt = DenseMap<unsigned, SmallVector<MachineInstr *, 4>>::iterator;
+  DenseMap<MachineInstr *, unsigned> MI2LocMap;
   using Base2InstMap = DenseMap<unsigned, SmallVector<MachineInstr *, 4>>;
   using BaseVec = SmallVector<unsigned, 4>;
   Base2InstMap Base2LdsMap;
@@ -2572,15 +2566,15 @@ ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
       Register Base = MI.getOperand(1).getReg();
       int Offset = getMemoryOpOffset(MI);
       bool StopHere = false;
-      auto FindBases = [&] (Base2InstMap &Base2Ops, BaseVec &Bases) {
-        MapIt BI = Base2Ops.find(Base);
-        if (BI == Base2Ops.end()) {
-          Base2Ops[Base].push_back(&MI);
+      auto FindBases = [&](Base2InstMap &Base2Ops, BaseVec &Bases) {
+        auto [BI, Inserted] = Base2Ops.try_emplace(Base);
+        if (Inserted) {
+          BI->second.push_back(&MI);
           Bases.push_back(Base);
           return;
         }
-        for (unsigned i = 0, e = BI->second.size(); i != e; ++i) {
-          if (Offset == getMemoryOpOffset(*BI->second[i])) {
+        for (const MachineInstr *MI : BI->second) {
+          if (Offset == getMemoryOpOffset(*MI)) {
             StopHere = true;
             break;
           }
@@ -2854,12 +2848,10 @@ ARMPreAllocLoadStoreOpt::RescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
         //  Erase the entry into the DbgValueSinkCandidates for the DBG_VALUE
         //  that was moved.
         auto DbgVar = createDebugVariableFromMachineInstr(DbgInstr);
-        auto DbgIt = DbgValueSinkCandidates.find(DbgVar);
-        // If the instruction is a DBG_VALUE_LIST, it may have already been
-        // erased from the DbgValueSinkCandidates. Only erase if it exists in
-        // the DbgValueSinkCandidates.
-        if (DbgIt != DbgValueSinkCandidates.end())
-          DbgValueSinkCandidates.erase(DbgIt);
+        // Erase DbgVar from DbgValueSinkCandidates if still present.  If the
+        // instruction is a DBG_VALUE_LIST, it may have already been erased from
+        // DbgValueSinkCandidates.
+        DbgValueSinkCandidates.erase(DbgVar);
         // Zero out original dbg instr
         forEachDbgRegOperand(DbgInstr,
                              [&](MachineOperand &Op) { Op.setReg(0); });
@@ -3291,7 +3283,7 @@ bool ARMPreAllocLoadStoreOpt::DistributeIncrements() {
         continue;
 
       Register Base = MI.getOperand(BaseOp).getReg();
-      if (!Base.isVirtual() || Visited.count(Base))
+      if (!Base.isVirtual())
         continue;
 
       Visited.insert(Base);

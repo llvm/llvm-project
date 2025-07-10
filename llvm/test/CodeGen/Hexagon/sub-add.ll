@@ -1,9 +1,9 @@
-; RUN: llc -march=hexagon -enable-timing-class-latency=true < %s | FileCheck -check-prefix=CHECK-ONE %s
+; RUN: llc -mtriple=hexagon -enable-timing-class-latency=true < %s | FileCheck -check-prefix=CHECK-ONE %s
 ; REQUIRES: asserts
 ; Check there is no assert when enabling enable-timing-class-latency
 ; CHECK-ONE: f0:
 
-; RUN: llc -march=hexagon < %s | FileCheck -check-prefix=CHECK %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck -check-prefix=CHECK %s
 ; CHECK: add(r{{[0-9]*}},sub(#1,r{{[0-9]*}})
 ; CHECK: call f1
 

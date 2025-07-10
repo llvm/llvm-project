@@ -38,13 +38,13 @@ if (HAVE_LIBPTHREAD)
   list(APPEND LIBS pthread)
 endif()
 
-# Do not build unittest libraries automatically, they will be pulled in
-# by unittests if these are built.
+# Make available for runtimes using the LLVM buildtree
+# (required for unittests in bootstrapping builds)
+set(EXCLUDE_FROM_ALL OFF)
 
+# Install GTest only if requested.
 set(BUILDTREE_ONLY BUILDTREE_ONLY)
-set(EXCLUDE_FROM_ALL ON)
 if (LLVM_INSTALL_GTEST)
-  set(EXCLUDE_FROM_ALL OFF)
   set(BUILDTREE_ONLY "")
 endif ()
 
@@ -82,11 +82,19 @@ target_include_directories(llvm_gtest
   PRIVATE googletest googlemock
   )
 
+# When used from the buildtree, also force use of buildtree LLVM headers,
+# (instead locally installed version)
+# FIXME: Shouldn't this be done for all LLVM libraries? Currently, LLVM uses a
+# big giant `include_directories( ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR})`
+# which CMake does not add to the import library.
+target_include_directories(llvm_gtest BEFORE
+  PUBLIC $<BUILD_INTERFACE:${LLVM_SOURCE_DIR}/include>
+         $<BUILD_INTERFACE:${LLVM_BINARY_DIR}/include>
+  )
+
 add_subdirectory(UnitTestMain)
 
 if (LLVM_INSTALL_GTEST)
-  install(TARGETS llvm_gtest llvm_gtest_main LLVMTestingSupport LLVMTestingAnnotations
-	  ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT llvm_gtest)
   install(DIRECTORY googletest/include/gtest/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm-gtest/gtest/" COMPONENT llvm_gtest)
   install(DIRECTORY googlemock/include/gmock/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm-gmock/gmock/" COMPONENT llvm_gtest)
 endif()

@@ -17,6 +17,7 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Attr.h"
+#include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
@@ -123,17 +124,12 @@ ExprResult SemaObjC::CheckObjCForCollectionOperand(SourceLocation forLoc,
   if (!collection)
     return ExprError();
 
-  ExprResult result = SemaRef.CorrectDelayedTyposInExpr(collection);
-  if (!result.isUsable())
-    return ExprError();
-  collection = result.get();
-
   // Bail out early if we've got a type-dependent expression.
   if (collection->isTypeDependent())
     return collection;
 
   // Perform normal l-value conversion.
-  result = SemaRef.DefaultFunctionArrayLvalueConversion(collection);
+  ExprResult result = SemaRef.DefaultFunctionArrayLvalueConversion(collection);
   if (result.isInvalid())
     return ExprError();
   collection = result.get();
@@ -1244,8 +1240,9 @@ bool SemaObjC::CheckObjCString(Expr *Arg) {
 
 bool SemaObjC::CheckObjCMethodCall(ObjCMethodDecl *Method, SourceLocation lbrac,
                                    ArrayRef<const Expr *> Args) {
-  Sema::VariadicCallType CallType =
-      Method->isVariadic() ? Sema::VariadicMethod : Sema::VariadicDoesNotApply;
+  VariadicCallType CallType = Method->isVariadic()
+                                  ? VariadicCallType::Method
+                                  : VariadicCallType::DoesNotApply;
 
   SemaRef.checkCall(Method, nullptr, /*ThisArg=*/nullptr, Args,
                     /*IsMemberFunction=*/false, lbrac, Method->getSourceRange(),
@@ -1349,7 +1346,7 @@ bool SemaObjC::isObjCWritebackConversion(QualType FromType, QualType ToType,
 
   // Make sure that we have compatible qualifiers.
   FromQuals.setObjCLifetime(Qualifiers::OCL_Autoreleasing);
-  if (!ToQuals.compatiblyIncludes(FromQuals))
+  if (!ToQuals.compatiblyIncludes(FromQuals, getASTContext()))
     return false;
 
   // Remove qualifiers from the pointee type we're converting from; they
@@ -1445,10 +1442,8 @@ SemaObjC::ObjCSubscriptKind SemaObjC::CheckSubscriptingKind(Expr *FromE) {
 
 void SemaObjC::AddCFAuditedAttribute(Decl *D) {
   ASTContext &Context = getASTContext();
-  IdentifierInfo *Ident;
-  SourceLocation Loc;
-  std::tie(Ident, Loc) = SemaRef.PP.getPragmaARCCFCodeAuditedInfo();
-  if (!Loc.isValid())
+  auto IdLoc = SemaRef.PP.getPragmaARCCFCodeAuditedInfo();
+  if (!IdLoc.getLoc().isValid())
     return;
 
   // Don't add a redundant or conflicting attribute.
@@ -1456,7 +1451,8 @@ void SemaObjC::AddCFAuditedAttribute(Decl *D) {
       D->hasAttr<CFUnknownTransferAttr>())
     return;
 
-  AttributeCommonInfo Info(Ident, SourceRange(Loc),
+  AttributeCommonInfo Info(IdLoc.getIdentifierInfo(),
+                           SourceRange(IdLoc.getLoc()),
                            AttributeCommonInfo::Form::Pragma());
   D->addAttr(CFAuditedTransferAttr::CreateImplicit(Context, Info));
 }
@@ -1641,8 +1637,10 @@ void SemaObjC::handleMethodFamilyAttr(Decl *D, const ParsedAttr &AL) {
 
   IdentifierLoc *IL = AL.getArgAsIdent(0);
   ObjCMethodFamilyAttr::FamilyKind F;
-  if (!ObjCMethodFamilyAttr::ConvertStrToFamilyKind(IL->Ident->getName(), F)) {
-    Diag(IL->Loc, diag::warn_attribute_type_not_supported) << AL << IL->Ident;
+  if (!ObjCMethodFamilyAttr::ConvertStrToFamilyKind(
+          IL->getIdentifierInfo()->getName(), F)) {
+    Diag(IL->getLoc(), diag::warn_attribute_type_not_supported)
+        << AL << IL->getIdentifierInfo();
     return;
   }
 
@@ -1705,7 +1703,7 @@ void SemaObjC::handleBlocksAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  IdentifierInfo *II = AL.getArgAsIdent(0)->Ident;
+  IdentifierInfo *II = AL.getArgAsIdent(0)->getIdentifierInfo();
   BlocksAttr::BlockType type;
   if (!BlocksAttr::ConvertStrToBlockType(II->getName(), type)) {
     Diag(AL.getLoc(), diag::warn_attribute_type_not_supported) << AL << II;
@@ -1997,7 +1995,7 @@ void SemaObjC::handleNSErrorDomain(Decl *D, const ParsedAttr &Attr) {
 
   IdentifierLoc *IdentLoc =
       Attr.isArgIdent(0) ? Attr.getArgAsIdent(0) : nullptr;
-  if (!IdentLoc || !IdentLoc->Ident) {
+  if (!IdentLoc || !IdentLoc->getIdentifierInfo()) {
     // Try to locate the argument directly.
     SourceLocation Loc = Attr.getLoc();
     if (Attr.isArgExpr(0) && Attr.getArgAsExpr(0))
@@ -2008,18 +2006,18 @@ void SemaObjC::handleNSErrorDomain(Decl *D, const ParsedAttr &Attr) {
   }
 
   // Verify that the identifier is a valid decl in the C decl namespace.
-  LookupResult Result(SemaRef, DeclarationName(IdentLoc->Ident),
+  LookupResult Result(SemaRef, DeclarationName(IdentLoc->getIdentifierInfo()),
                       SourceLocation(),
                       Sema::LookupNameKind::LookupOrdinaryName);
   if (!SemaRef.LookupName(Result, SemaRef.TUScope) ||
       !Result.getAsSingle<VarDecl>()) {
-    Diag(IdentLoc->Loc, diag::err_nserrordomain_invalid_decl)
-        << 1 << IdentLoc->Ident;
+    Diag(IdentLoc->getLoc(), diag::err_nserrordomain_invalid_decl)
+        << 1 << IdentLoc->getIdentifierInfo();
     return;
   }
 
-  D->addAttr(::new (getASTContext())
-                 NSErrorDomainAttr(getASTContext(), Attr, IdentLoc->Ident));
+  D->addAttr(::new (getASTContext()) NSErrorDomainAttr(
+      getASTContext(), Attr, IdentLoc->getIdentifierInfo()));
 }
 
 void SemaObjC::handleBridgeAttr(Decl *D, const ParsedAttr &AL) {
@@ -2032,7 +2030,7 @@ void SemaObjC::handleBridgeAttr(Decl *D, const ParsedAttr &AL) {
 
   // Typedefs only allow objc_bridge(id) and have some additional checking.
   if (const auto *TD = dyn_cast<TypedefNameDecl>(D)) {
-    if (!Parm->Ident->isStr("id")) {
+    if (!Parm->getIdentifierInfo()->isStr("id")) {
       Diag(AL.getLoc(), diag::err_objc_attr_typedef_not_id) << AL;
       return;
     }
@@ -2045,8 +2043,8 @@ void SemaObjC::handleBridgeAttr(Decl *D, const ParsedAttr &AL) {
     }
   }
 
-  D->addAttr(::new (getASTContext())
-                 ObjCBridgeAttr(getASTContext(), AL, Parm->Ident));
+  D->addAttr(::new (getASTContext()) ObjCBridgeAttr(getASTContext(), AL,
+                                                    Parm->getIdentifierInfo()));
 }
 
 void SemaObjC::handleBridgeMutableAttr(Decl *D, const ParsedAttr &AL) {
@@ -2057,21 +2055,21 @@ void SemaObjC::handleBridgeMutableAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  D->addAttr(::new (getASTContext())
-                 ObjCBridgeMutableAttr(getASTContext(), AL, Parm->Ident));
+  D->addAttr(::new (getASTContext()) ObjCBridgeMutableAttr(
+      getASTContext(), AL, Parm->getIdentifierInfo()));
 }
 
 void SemaObjC::handleBridgeRelatedAttr(Decl *D, const ParsedAttr &AL) {
   IdentifierInfo *RelatedClass =
-      AL.isArgIdent(0) ? AL.getArgAsIdent(0)->Ident : nullptr;
+      AL.isArgIdent(0) ? AL.getArgAsIdent(0)->getIdentifierInfo() : nullptr;
   if (!RelatedClass) {
     Diag(D->getBeginLoc(), diag::err_objc_attr_not_id) << AL << 0;
     return;
   }
   IdentifierInfo *ClassMethod =
-      AL.getArgAsIdent(1) ? AL.getArgAsIdent(1)->Ident : nullptr;
+      AL.getArgAsIdent(1) ? AL.getArgAsIdent(1)->getIdentifierInfo() : nullptr;
   IdentifierInfo *InstanceMethod =
-      AL.getArgAsIdent(2) ? AL.getArgAsIdent(2)->Ident : nullptr;
+      AL.getArgAsIdent(2) ? AL.getArgAsIdent(2)->getIdentifierInfo() : nullptr;
   D->addAttr(::new (getASTContext()) ObjCBridgeRelatedAttr(
       getASTContext(), AL, RelatedClass, ClassMethod, InstanceMethod));
 }
@@ -2253,6 +2251,157 @@ void SemaObjC::handleExternallyRetainedAttr(Decl *D, const ParsedAttr &AL) {
     tryMakeVariablePseudoStrong(SemaRef, PVD, /*DiagnoseFailure=*/false);
   }
   handleSimpleAttribute<ObjCExternallyRetainedAttr>(*this, D, AL);
+}
+
+bool SemaObjC::GetFormatNSStringIdx(const FormatAttr *Format, unsigned &Idx) {
+  Sema::FormatStringInfo FSI;
+  if ((SemaRef.GetFormatStringType(Format) == FormatStringType::NSString) &&
+      SemaRef.getFormatStringInfo(Format->getFormatIdx(), Format->getFirstArg(),
+                                  false, true, &FSI)) {
+    Idx = FSI.FormatIdx;
+    return true;
+  }
+  return false;
+}
+
+/// Diagnose use of %s directive in an NSString which is being passed
+/// as formatting string to formatting method.
+void SemaObjC::DiagnoseCStringFormatDirectiveInCFAPI(const NamedDecl *FDecl,
+                                                     Expr **Args,
+                                                     unsigned NumArgs) {
+  unsigned Idx = 0;
+  bool Format = false;
+  ObjCStringFormatFamily SFFamily = FDecl->getObjCFStringFormattingFamily();
+  if (SFFamily == ObjCStringFormatFamily::SFF_CFString) {
+    Idx = 2;
+    Format = true;
+  } else
+    for (const auto *I : FDecl->specific_attrs<FormatAttr>()) {
+      if (GetFormatNSStringIdx(I, Idx)) {
+        Format = true;
+        break;
+      }
+    }
+  if (!Format || NumArgs <= Idx)
+    return;
+  const Expr *FormatExpr = Args[Idx];
+  if (const CStyleCastExpr *CSCE = dyn_cast<CStyleCastExpr>(FormatExpr))
+    FormatExpr = CSCE->getSubExpr();
+  const StringLiteral *FormatString;
+  if (const ObjCStringLiteral *OSL =
+          dyn_cast<ObjCStringLiteral>(FormatExpr->IgnoreParenImpCasts()))
+    FormatString = OSL->getString();
+  else
+    FormatString = dyn_cast<StringLiteral>(FormatExpr->IgnoreParenImpCasts());
+  if (!FormatString)
+    return;
+  if (SemaRef.FormatStringHasSArg(FormatString)) {
+    Diag(FormatExpr->getExprLoc(), diag::warn_objc_cdirective_format_string)
+        << "%s" << 1 << 1;
+    Diag(FDecl->getLocation(), diag::note_entity_declared_at)
+        << FDecl->getDeclName();
+  }
+}
+
+bool SemaObjC::isSignedCharBool(QualType Ty) {
+  return Ty->isSpecificBuiltinType(BuiltinType::SChar) && getLangOpts().ObjC &&
+         NSAPIObj->isObjCBOOLType(Ty);
+}
+
+void SemaObjC::adornBoolConversionDiagWithTernaryFixit(
+    const Expr *SourceExpr, const Sema::SemaDiagnosticBuilder &Builder) {
+  const Expr *Ignored = SourceExpr->IgnoreImplicit();
+  if (const auto *OVE = dyn_cast<OpaqueValueExpr>(Ignored))
+    Ignored = OVE->getSourceExpr();
+  bool NeedsParens = isa<AbstractConditionalOperator>(Ignored) ||
+                     isa<BinaryOperator>(Ignored) ||
+                     isa<CXXOperatorCallExpr>(Ignored);
+  SourceLocation EndLoc = SemaRef.getLocForEndOfToken(SourceExpr->getEndLoc());
+  if (NeedsParens)
+    Builder << FixItHint::CreateInsertion(SourceExpr->getBeginLoc(), "(")
+            << FixItHint::CreateInsertion(EndLoc, ")");
+  Builder << FixItHint::CreateInsertion(EndLoc, " ? YES : NO");
+}
+
+/// Check a single element within a collection literal against the
+/// target element type.
+static void checkCollectionLiteralElement(Sema &S, QualType TargetElementType,
+                                          Expr *Element, unsigned ElementKind) {
+  // Skip a bitcast to 'id' or qualified 'id'.
+  if (auto ICE = dyn_cast<ImplicitCastExpr>(Element)) {
+    if (ICE->getCastKind() == CK_BitCast &&
+        ICE->getSubExpr()->getType()->getAs<ObjCObjectPointerType>())
+      Element = ICE->getSubExpr();
+  }
+
+  QualType ElementType = Element->getType();
+  ExprResult ElementResult(Element);
+  if (ElementType->getAs<ObjCObjectPointerType>() &&
+      !S.IsAssignConvertCompatible(S.CheckSingleAssignmentConstraints(
+          TargetElementType, ElementResult, false, false))) {
+    S.Diag(Element->getBeginLoc(), diag::warn_objc_collection_literal_element)
+        << ElementType << ElementKind << TargetElementType
+        << Element->getSourceRange();
+  }
+
+  if (auto ArrayLiteral = dyn_cast<ObjCArrayLiteral>(Element))
+    S.ObjC().checkArrayLiteral(TargetElementType, ArrayLiteral);
+  else if (auto DictionaryLiteral = dyn_cast<ObjCDictionaryLiteral>(Element))
+    S.ObjC().checkDictionaryLiteral(TargetElementType, DictionaryLiteral);
+}
+
+/// Check an Objective-C array literal being converted to the given
+/// target type.
+void SemaObjC::checkArrayLiteral(QualType TargetType,
+                                 ObjCArrayLiteral *ArrayLiteral) {
+  if (!NSArrayDecl)
+    return;
+
+  const auto *TargetObjCPtr = TargetType->getAs<ObjCObjectPointerType>();
+  if (!TargetObjCPtr)
+    return;
+
+  if (TargetObjCPtr->isUnspecialized() ||
+      TargetObjCPtr->getInterfaceDecl()->getCanonicalDecl() !=
+          NSArrayDecl->getCanonicalDecl())
+    return;
+
+  auto TypeArgs = TargetObjCPtr->getTypeArgs();
+  if (TypeArgs.size() != 1)
+    return;
+
+  QualType TargetElementType = TypeArgs[0];
+  for (unsigned I = 0, N = ArrayLiteral->getNumElements(); I != N; ++I) {
+    checkCollectionLiteralElement(SemaRef, TargetElementType,
+                                  ArrayLiteral->getElement(I), 0);
+  }
+}
+
+void SemaObjC::checkDictionaryLiteral(
+    QualType TargetType, ObjCDictionaryLiteral *DictionaryLiteral) {
+  if (!NSDictionaryDecl)
+    return;
+
+  const auto *TargetObjCPtr = TargetType->getAs<ObjCObjectPointerType>();
+  if (!TargetObjCPtr)
+    return;
+
+  if (TargetObjCPtr->isUnspecialized() ||
+      TargetObjCPtr->getInterfaceDecl()->getCanonicalDecl() !=
+          NSDictionaryDecl->getCanonicalDecl())
+    return;
+
+  auto TypeArgs = TargetObjCPtr->getTypeArgs();
+  if (TypeArgs.size() != 2)
+    return;
+
+  QualType TargetKeyType = TypeArgs[0];
+  QualType TargetObjectType = TypeArgs[1];
+  for (unsigned I = 0, N = DictionaryLiteral->getNumElements(); I != N; ++I) {
+    auto Element = DictionaryLiteral->getKeyValueElement(I);
+    checkCollectionLiteralElement(SemaRef, TargetKeyType, Element.Key, 1);
+    checkCollectionLiteralElement(SemaRef, TargetObjectType, Element.Value, 2);
+  }
 }
 
 } // namespace clang

@@ -206,17 +206,9 @@ namespace test4 {
     using InnerNS::foo; // expected-error {{not a class}}
     using Base::bar; // expected-error {{no member named 'bar'}}
     using Unrelated::foo; // expected-error {{not a base class}}
-    using C::foo; // legal in C++03
-    using Subclass::foo; // legal in C++03
-#if __cplusplus >= 201103L
-    // expected-error@-3 {{refers to its own class}}
-    // expected-error@-3 {{refers into 'Subclass::', which is not a base class}}
-#endif
-
+    using C::foo; // expected-error {{refers to its own class}}
+    using Subclass::foo; // expected-error {{refers into 'Subclass', which is not a base class}}
     int bar();
-#if __cplusplus < 201103L
-    // expected-note@-2 {{target of using declaration}}
-#endif
     using C::bar; // expected-error {{refers to its own class}}
   };
 }

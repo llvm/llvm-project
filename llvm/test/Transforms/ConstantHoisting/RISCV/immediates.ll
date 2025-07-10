@@ -1,5 +1,5 @@
-; RUN: opt -mtriple=riscv32-unknown-elf -S -passes=consthoist < %s | FileCheck %s
-; RUN: opt -mtriple=riscv64-unknown-elf -S -passes=consthoist < %s | FileCheck %s
+; RUN: opt -mtriple=riscv32-unknown-elf -S -passes=consthoist < %s | FileCheck %s -check-prefixes=CHECK,RV32I
+; RUN: opt -mtriple=riscv64-unknown-elf -S -passes=consthoist < %s | FileCheck %s -check-prefixes=CHECK,RV64I
 
 ; Check that we don't hoist immediates with small values.
 define i64 @test1(i64 %a) nounwind {
@@ -55,16 +55,21 @@ define i32 @test6(i32 %a) nounwind "target-features"="+zbb" {
   ret i32 %2
 }
 
-; Check that we hoist zext.w without Zba.
+; Check that we hoist zext.w without Zba on RV64.
+; Check that we don't hoist on RV32.
 define i64 @test7(i64 %a) nounwind {
-; CHECK-LABEL: test7
-; CHECK: %const = bitcast i64 4294967295 to i64
+; RV32I-LABEL: test7
+; RV32I: and i64 %a, 4294967295
+
+; RV64I-LABEL: test7
+; RV64I: %const = bitcast i64 4294967295 to i64
   %1 = and i64 %a, 4294967295
   %2 = and i64 %1, 4294967295
   ret i64 %2
 }
 
-; Check that we don't hoist zext.w with Zba.
+; Check that we don't hoist zext.w with Zba on RV64.
+; Check that we don't hoist on RV32.
 define i64 @test8(i64 %a) nounwind "target-features"="+zba" {
 ; CHECK-LABEL: test8
 ; CHECK: and i64 %a, 4294967295
@@ -206,5 +211,69 @@ if.true:
   br label %exit
 exit:
   store i32 10, ptr inttoptr (i32 2044 to ptr)
+  ret void
+}
+
+; Check that we use a common base for immediates needed by a store if the
+; constants require more than 1 instruction.
+define void @test20(ptr %p1, ptr %p2) {
+; CHECK-LABEL: test20
+; CHECK: %const = bitcast i32 15111111 to i32
+; CHECK: store i32 %const, ptr %p1, align 4
+; CHECK: %const_mat = add i32 %const, 1
+; CHECK: store i32 %const_mat, ptr %p2, align 4
+  store i32 15111111, ptr %p1, align 4
+  store i32 15111112, ptr %p2, align 4
+  ret void
+}
+
+define void @test21(ptr %p1, ptr %p2) {
+; CHECK-LABEL: define void @test21(
+; CHECK-SAME: ptr [[P1:%.*]], ptr [[P2:%.*]]) {
+; CHECK-NEXT:    store i32 15111111, ptr [[P1]], align 1
+; CHECK-NEXT:    store i32 15111112, ptr [[P2]], align 1
+; CHECK-NEXT:    ret void
+;
+  store i32 15111111, ptr %p1, align 1
+  store i32 15111112, ptr %p2, align 1
+  ret void
+}
+
+; 0 immediates shouldn't be hoisted.
+define void @test22(ptr %p1, ptr %p2) {
+; CHECK-LABEL: define void @test22(
+; CHECK-SAME: ptr [[P1:%.*]], ptr [[P2:%.*]]) {
+; CHECK-NEXT:    store i64 0, ptr [[P1]], align 8
+; CHECK-NEXT:    store i64 -1, ptr [[P2]], align 8
+; CHECK-NEXT:    ret void
+;
+  store i64 0, ptr %p1, align 8
+  store i64 -1, ptr %p2, align 8
+  ret void
+}
+
+; 0 immediates shouldn't be hoisted.
+define void @test23(ptr %p1, ptr %p2) {
+; CHECK-LABEL: define void @test23(
+; CHECK-SAME: ptr [[P1:%.*]], ptr [[P2:%.*]]) {
+; CHECK-NEXT:    store i127 0, ptr [[P1]], align 8
+; CHECK-NEXT:    store i127 -1, ptr [[P2]], align 8
+; CHECK-NEXT:    ret void
+;
+  store i127 0, ptr %p1, align 8
+  store i127 -1, ptr %p2, align 8
+  ret void
+}
+
+; Hoisting doesn't happen for types that aren't legal.
+define void @test24(ptr %p1, ptr %p2) {
+; CHECK-LABEL: define void @test24(
+; CHECK-SAME: ptr [[P1:%.*]], ptr [[P2:%.*]]) {
+; CHECK-NEXT:    store i128 15111111, ptr [[P1]], align 4
+; CHECK-NEXT:    store i128 15111112, ptr [[P2]], align 4
+; CHECK-NEXT:    ret void
+;
+  store i128 15111111, ptr %p1, align 4
+  store i128 15111112, ptr %p2, align 4
   ret void
 }

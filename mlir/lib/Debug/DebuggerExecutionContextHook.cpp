@@ -301,7 +301,7 @@ void mlirDebuggerAddFileLineColLocBreakpoint(const char *file, int line,
 
 LLVM_ATTRIBUTE_NOINLINE void mlirDebuggerBreakpointHook() {
   static LLVM_THREAD_LOCAL void *volatile sink;
-  sink = (void *)&sink;
+  sink = static_cast<void *>(const_cast<void **>(&sink));
 }
 
 static void preventLinkerDeadCodeElim() {
@@ -321,7 +321,7 @@ static void preventLinkerDeadCodeElim() {
     sink = (void *)mlirDebuggerAddTagBreakpoint;
     sink = (void *)mlirDebuggerAddRewritePatternBreakpoint;
     sink = (void *)mlirDebuggerAddFileLineColLocBreakpoint;
-    sink = (void *)&sink;
+    sink = static_cast<void *>(const_cast<void **>(&sink));
     return true;
   }();
   (void)initialized;

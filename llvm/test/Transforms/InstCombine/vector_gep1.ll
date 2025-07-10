@@ -55,7 +55,7 @@ define <2 x i1> @test5(<2 x ptr> %a) {
 
 define <2 x ptr> @test7(<2 x ptr> %a) {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[W:%.*]] = getelementptr { i32, i32 }, <2 x ptr> [[A:%.*]], <2 x i64> <i64 5, i64 9>, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[W:%.*]] = getelementptr { i32, i32 }, <2 x ptr> [[A:%.*]], <2 x i64> <i64 5, i64 9>, i32 0
 ; CHECK-NEXT:    ret <2 x ptr> [[W]]
 ;
   %w = getelementptr {i32, i32}, <2 x ptr> %a, <2 x i32> <i32 5, i32 9>, <2 x i32> zeroinitializer
@@ -66,9 +66,7 @@ define <vscale x 2 x i1> @test8() {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    ret <vscale x 2 x i1> zeroinitializer
 ;
-  %ins = insertelement <vscale x 2 x i32> undef, i32 1, i32 0
-  %b = shufflevector <vscale x 2 x i32> %ins, <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer
-  %c = inttoptr <vscale x 2 x i32> %b to <vscale x 2 x ptr>
+  %c = inttoptr <vscale x 2 x i32> splat (i32 1) to <vscale x 2 x ptr>
   %d = icmp ult <vscale x 2 x ptr> %c, zeroinitializer
   ret <vscale x 2 x i1> %d
 }

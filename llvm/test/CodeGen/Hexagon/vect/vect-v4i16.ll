@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -disable-hsdr < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 -disable-hsdr < %s | FileCheck %s
 
 ; Check that store is post-incremented.
 ; CHECK: memh(r{{[0-9]+}}++#2)

@@ -56,4 +56,22 @@ define void @scalarize_v2i64_const_mask(ptr %p, <2 x i64> %data) {
   ret void
 }
 
+define void @scalarize_v2i64_splat_mask(ptr %p, <2 x i64> %data, i1 %mask) {
+; CHECK-LABEL: @scalarize_v2i64_splat_mask(
+; CHECK-NEXT:    [[MASK_VEC:%.*]] = insertelement <2 x i1> poison, i1 [[MASK:%.*]], i32 0
+; CHECK-NEXT:    [[MASK_SPLAT:%.*]] = shufflevector <2 x i1> [[MASK_VEC]], <2 x i1> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[MASK_SPLAT_FIRST:%.*]] = extractelement <2 x i1> [[MASK_SPLAT]], i64 0
+; CHECK-NEXT:    br i1 [[MASK_SPLAT_FIRST]], label [[COND_STORE:%.*]], label [[TMP1:%.*]]
+; CHECK:       cond.store:
+; CHECK-NEXT:    store <2 x i64> [[DATA:%.*]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    br label [[TMP1]]
+; CHECK:       1:
+; CHECK-NEXT:    ret void
+;
+  %mask.vec = insertelement <2 x i1> poison, i1 %mask, i32 0
+  %mask.splat = shufflevector <2 x i1> %mask.vec, <2 x i1> poison, <2 x i32> zeroinitializer
+  call void @llvm.masked.store.v2i64.p0(<2 x i64> %data, ptr %p, i32 8, <2 x i1> %mask.splat)
+  ret void
+}
+
 declare void @llvm.masked.store.v2i64.p0(<2 x i64>, ptr, i32, <2 x i1>)

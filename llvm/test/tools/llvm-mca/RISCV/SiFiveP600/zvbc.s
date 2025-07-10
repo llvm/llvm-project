@@ -29,13 +29,13 @@ vclmulh.vx v8, v12, a0
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      20
-# CHECK-NEXT: Total Cycles:      28
+# CHECK-NEXT: Total Cycles:      64
 # CHECK-NEXT: Total uOps:        20
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.71
-# CHECK-NEXT: IPC:               0.71
-# CHECK-NEXT: Block RThroughput: 30.0
+# CHECK-NEXT: uOps Per Cycle:    0.31
+# CHECK-NEXT: IPC:               0.31
+# CHECK-NEXT: Block RThroughput: 60.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -47,25 +47,25 @@ vclmulh.vx v8, v12, a0
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      2     0.50                        vclmul.vv	v4, v8, v12
-# CHECK-NEXT:  1      2     0.50                        vclmul.vx	v4, v8, a0
-# CHECK-NEXT:  1      2     0.50                        vclmulh.vv	v4, v8, v12
-# CHECK-NEXT:  1      2     0.50                        vclmulh.vx	v4, v8, a0
-# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
 # CHECK-NEXT:  1      2     1.00                        vclmul.vv	v4, v8, v12
 # CHECK-NEXT:  1      2     1.00                        vclmul.vx	v4, v8, a0
 # CHECK-NEXT:  1      2     1.00                        vclmulh.vv	v4, v8, v12
 # CHECK-NEXT:  1      2     1.00                        vclmulh.vx	v4, v8, a0
-# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m4, tu, mu
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m2, tu, mu
 # CHECK-NEXT:  1      2     2.00                        vclmul.vv	v4, v8, v12
 # CHECK-NEXT:  1      2     2.00                        vclmul.vx	v4, v8, a0
 # CHECK-NEXT:  1      2     2.00                        vclmulh.vv	v4, v8, v12
 # CHECK-NEXT:  1      2     2.00                        vclmulh.vx	v4, v8, a0
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m4, tu, mu
+# CHECK-NEXT:  1      4     4.00                        vclmul.vv	v4, v8, v12
+# CHECK-NEXT:  1      4     4.00                        vclmul.vx	v4, v8, a0
+# CHECK-NEXT:  1      4     4.00                        vclmulh.vv	v4, v8, v12
+# CHECK-NEXT:  1      4     4.00                        vclmulh.vx	v4, v8, a0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      2     4.00                        vclmul.vv	v8, v12, v24
-# CHECK-NEXT:  1      2     4.00                        vclmul.vx	v8, v12, a0
-# CHECK-NEXT:  1      2     4.00                        vclmulh.vv	v8, v12, v24
-# CHECK-NEXT:  1      2     4.00                        vclmulh.vx	v8, v12, a0
+# CHECK-NEXT:  1      8     8.00                        vclmul.vv	v8, v12, v24
+# CHECK-NEXT:  1      8     8.00                        vclmul.vx	v8, v12, a0
+# CHECK-NEXT:  1      8     8.00                        vclmulh.vv	v8, v12, v24
+# CHECK-NEXT:  1      8     8.00                        vclmulh.vx	v8, v12, a0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SiFiveP600Div
@@ -87,27 +87,27 @@ vclmulh.vx v8, v12, a0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]
-# CHECK-NEXT:  -      -      -      -     4.00    -      -      -      -      -      -     30.00  30.00   -      -      -
+# CHECK-NEXT:  -      -      -      -     4.00    -      -      -      -      -      -     60.00   -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vclmul.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vclmul.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vclmul.vx	v4, v8, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vclmulh.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vclmulh.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vclmulh.vx	v4, v8, a0
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -     vclmul.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vclmul.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vclmul.vx	v4, v8, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -     vclmulh.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vclmulh.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vclmulh.vx	v4, v8, a0
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     vclmul.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vclmul.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vclmul.vx	v4, v8, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     vclmulh.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vclmulh.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vclmulh.vx	v4, v8, a0
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -     vclmul.vv	v8, v12, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vclmul.vv	v8, v12, v24
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vclmul.vx	v8, v12, a0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -     vclmulh.vv	v8, v12, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vclmulh.vv	v8, v12, v24
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vclmulh.vx	v8, v12, a0

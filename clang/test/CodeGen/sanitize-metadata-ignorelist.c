@@ -50,6 +50,6 @@ void bar() {
   __atomic_fetch_add(&y, 2, __ATOMIC_RELAXED);
 }
 
-// ALLOW: __sanitizer_metadata_covered.module_ctor
-// FUN: __sanitizer_metadata_covered.module_ctor
-// SRC-NOT: __sanitizer_metadata_covered.module_ctor
+// ALLOW: __sanitizer_metadata_covered2.module_ctor
+// FUN: __sanitizer_metadata_covered2.module_ctor
+// SRC-NOT: __sanitizer_metadata_covered{{.*}}.module_ctor

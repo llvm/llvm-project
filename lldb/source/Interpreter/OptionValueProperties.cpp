@@ -131,8 +131,8 @@ Status OptionValueProperties::SetSubValue(const ExecutionContext *exe_ctx,
     // Don't set an error if the path contained .experimental. - those are
     // allowed to be missing and should silently fail.
     if (!name_contains_experimental && error.AsCString() == nullptr) {
-      error.SetErrorStringWithFormat("invalid value path '%s'",
-                                     name.str().c_str());
+      error = Status::FromErrorStringWithFormat("invalid value path '%s'",
+                                                name.str().c_str());
     }
   }
   return error;
@@ -335,7 +335,7 @@ void OptionValueProperties::DumpValue(const ExecutionContext *exe_ctx,
 }
 
 llvm::json::Value
-OptionValueProperties::ToJSON(const ExecutionContext *exe_ctx) {
+OptionValueProperties::ToJSON(const ExecutionContext *exe_ctx) const {
   llvm::json::Object json_properties;
   const size_t num_properties = m_properties.size();
   for (size_t i = 0; i < num_properties; ++i) {

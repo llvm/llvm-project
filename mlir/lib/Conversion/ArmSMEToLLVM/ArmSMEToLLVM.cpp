@@ -19,12 +19,12 @@
 #include "mlir/Dialect/ArmSME/Transforms/Transforms.h"
 #include "mlir/Dialect/ArmSME/Utils/Utils.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/ScopeExit.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTARMSMETOLLVM
@@ -80,6 +80,7 @@ static Operation *createLoadTileSliceIntrinsic(
       break;
     }
   }
+  llvm_unreachable("unknown type in createLoadTileSliceIntrinsic");
 }
 
 /// Helper to create an arm_sme.intr.st1*.(horiz|vert)' intrinsic.
@@ -124,6 +125,7 @@ static Operation *createStoreTileSliceIntrinsic(
           loc, maskOp, ptr, tileId, tileSliceI32);
     }
   }
+  llvm_unreachable("unknown type in createStoreTileSliceIntrinsic");
 }
 
 IntegerAttr getTileIdOrError(arm_sme::ArmSMETileOpInterface op) {
@@ -296,9 +298,9 @@ struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
     auto sliceIndexI64 = rewriter.create<arith::IndexCastOp>(
         loc, rewriter.getI64Type(), sliceIndex);
     return getStridedElementPtr(
-        loc, llvm::cast<MemRefType>(tileMemory.getType()),
-        descriptor.getResult(0), {sliceIndexI64, zero},
-        static_cast<ConversionPatternRewriter &>(rewriter));
+        static_cast<ConversionPatternRewriter &>(rewriter), loc,
+        llvm::cast<MemRefType>(tileMemory.getType()), descriptor.getResult(0),
+        {sliceIndexI64, zero});
   }
 
   /// Emits an in-place swap of a slice of a tile in ZA and a slice of a
@@ -314,7 +316,7 @@ struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
     auto allTruePredicate = rewriter.create<arith::ConstantOp>(
         loc, DenseElementsAttr::get(predicateType, true));
     // Create padding vector (never used due to all-true predicate).
-    auto padVector = rewriter.create<LLVM::UndefOp>(loc, sliceType);
+    auto padVector = rewriter.create<LLVM::PoisonOp>(loc, sliceType);
     // Get a pointer to the current slice.
     auto slicePtr =
         getInMemoryTileSlicePtr(rewriter, loc, tileAlloca, sliceIndex);
@@ -481,6 +483,9 @@ struct ZeroOpConversion : public ConvertArmSMEOpToLLVMPattern<arm_sme::ZeroOp> {
         loc, rewriter.getI32IntegerAttr(zeroMask));
 
     // Create a placeholder op to preserve dataflow.
+    // Note: Place the `get_tile` op at the start of the block. This ensures
+    // that if there are multiple `zero` ops the intrinsics will be consecutive.
+    rewriter.setInsertionPointToStart(zero->getBlock());
     rewriter.replaceOpWithNewOp<arm_sme::GetTileOp>(zero, zero.getVectorType());
 
     return success();
@@ -501,9 +506,9 @@ struct LoadTileSliceConversion
     if (!tileId)
       return failure();
 
-    Value ptr = this->getStridedElementPtr(loc, loadTileSliceOp.getMemRefType(),
-                                           adaptor.getBase(),
-                                           adaptor.getIndices(), rewriter);
+    Value ptr = this->getStridedElementPtr(
+        rewriter, loc, loadTileSliceOp.getMemRefType(), adaptor.getBase(),
+        adaptor.getIndices());
 
     auto tileSlice = loadTileSliceOp.getTileSliceIndex();
 
@@ -548,8 +553,8 @@ struct StoreTileSliceConversion
 
     // Create 'arm_sme.intr.st1*.horiz' intrinsic to store ZA tile slice.
     Value ptr = this->getStridedElementPtr(
-        loc, storeTileSliceOp.getMemRefType(), adaptor.getBase(),
-        adaptor.getIndices(), rewriter);
+        rewriter, loc, storeTileSliceOp.getMemRefType(), adaptor.getBase(),
+        adaptor.getIndices());
 
     auto tileSlice = storeTileSliceOp.getTileSliceIndex();
 
@@ -571,23 +576,23 @@ struct StoreTileSliceConversion
   }
 };
 
-/// Lower `arm_sme.move_vector_to_tile_slice` to SME intrinsics.
-struct MoveVectorToTileSliceConversion
-    : public ConvertArmSMEOpToLLVMPattern<arm_sme::MoveVectorToTileSliceOp> {
+/// Lower `arm_sme.insert_tile_slice` to SME intrinsics.
+struct InsertTileSliceConversion
+    : public ConvertArmSMEOpToLLVMPattern<arm_sme::InsertTileSliceOp> {
   using ConvertArmSMEOpToLLVMPattern::ConvertArmSMEOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(arm_sme::MoveVectorToTileSliceOp moveVectorToTileSliceOp,
-                  arm_sme::MoveVectorToTileSliceOp::Adaptor adaptor,
+  matchAndRewrite(arm_sme::InsertTileSliceOp insertTileSliceOp,
+                  arm_sme::InsertTileSliceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto loc = moveVectorToTileSliceOp.getLoc();
-    auto tileType = moveVectorToTileSliceOp.getTileType();
+    auto loc = insertTileSliceOp.getLoc();
+    auto tileType = insertTileSliceOp.getTileType();
 
-    auto tileId = getTileIdOrError(moveVectorToTileSliceOp);
+    auto tileId = getTileIdOrError(insertTileSliceOp);
     if (!tileId)
       return failure();
 
-    auto tileSlice = moveVectorToTileSliceOp.getTileSliceIndex();
+    auto tileSlice = insertTileSliceOp.getTileSliceIndex();
 
     // Cast tile slice from index to i32 for intrinsic.
     auto tileSliceI32 = rewriter.create<arith::IndexCastUIOp>(
@@ -602,42 +607,40 @@ struct MoveVectorToTileSliceConversion
     auto allActiveMask = rewriter.create<vector::SplatOp>(loc, predTy, one);
 
     // Create 'arm_sme.intr.write.(horiz|vert)' to write vector to tile slice.
-    switch (moveVectorToTileSliceOp.getLayout()) {
+    switch (insertTileSliceOp.getLayout()) {
     case arm_sme::TileSliceLayout::Horizontal:
       rewriter.create<arm_sme::aarch64_sme_write_horiz>(
           loc, tileId, tileSliceI32, allActiveMask,
-          moveVectorToTileSliceOp.getVector());
+          insertTileSliceOp.getVector());
       break;
     case arm_sme::TileSliceLayout::Vertical:
       rewriter.create<arm_sme::aarch64_sme_write_vert>(
           loc, tileId, tileSliceI32, allActiveMask,
-          moveVectorToTileSliceOp.getVector());
+          insertTileSliceOp.getVector());
       break;
     }
 
-    // Intrinsic has no result, replace 'arm_sme.move_vector_to_tile_slice' with
+    // Intrinsic has no result, replace 'arm_sme.insert_tile_slice' with
     // the input tile to preserve dataflow.
-    rewriter.replaceOp(moveVectorToTileSliceOp,
-                       moveVectorToTileSliceOp.getTile());
+    rewriter.replaceOp(insertTileSliceOp, insertTileSliceOp.getTile());
 
     return success();
   }
 };
 
-/// Lower `arm_sme.move_tile_slice_to_vector` to SME intrinsics.
-struct MoveTileSliceToVectorConversion
-    : public ConvertArmSMEOpToLLVMPattern<arm_sme::MoveTileSliceToVectorOp> {
+/// Lower `arm_sme.extract_tile_slice` to SME intrinsics.
+struct ExtractTileSliceConversion
+    : public ConvertArmSMEOpToLLVMPattern<arm_sme::ExtractTileSliceOp> {
   using ConvertArmSMEOpToLLVMPattern::ConvertArmSMEOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(arm_sme::MoveTileSliceToVectorOp moveTileSliceToVector,
-                  OpAdaptor,
+  matchAndRewrite(arm_sme::ExtractTileSliceOp extractTileSlice, OpAdaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto loc = moveTileSliceToVector.getLoc();
-    auto sliceType = moveTileSliceToVector.getSliceType();
-    auto sliceIndex = moveTileSliceToVector.getTileSliceIndex();
+    auto loc = extractTileSlice.getLoc();
+    auto sliceType = extractTileSlice.getSliceType();
+    auto sliceIndex = extractTileSlice.getTileSliceIndex();
 
-    auto tileId = getTileIdOrError(moveTileSliceToVector);
+    auto tileId = getTileIdOrError(extractTileSlice);
     if (!tileId)
       return failure();
 
@@ -655,16 +658,16 @@ struct MoveTileSliceToVectorConversion
         loc, rewriter.getI32Type(), sliceIndex);
 
     // Create 'arm_sme.intr.read.(horiz|vert)' to extract the tile slice.
-    switch (moveTileSliceToVector.getLayout()) {
+    switch (extractTileSlice.getLayout()) {
     case arm_sme::TileSliceLayout::Horizontal:
       rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_read_horiz>(
-          moveTileSliceToVector, sliceType, zeroVector, allTruePredicate,
-          tileId, sliceIndexI32);
+          extractTileSlice, sliceType, zeroVector, allTruePredicate, tileId,
+          sliceIndexI32);
       break;
     case arm_sme::TileSliceLayout::Vertical:
       rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_read_vert>(
-          moveTileSliceToVector, sliceType, zeroVector, allTruePredicate,
-          tileId, sliceIndexI32);
+          extractTileSlice, sliceType, zeroVector, allTruePredicate, tileId,
+          sliceIndexI32);
       break;
     }
 
@@ -848,12 +851,43 @@ struct StreamingVLOpConversion
       case arm_sme::TypeSize::Double:
         return rewriter.create<arm_sme::aarch64_sme_cntsd>(loc, i64Type);
       }
+      llvm_unreachable("unknown type size in StreamingVLOpConversion");
     }();
     rewriter.replaceOpWithNewOp<arith::IndexCastOp>(
         streamingVlOp, rewriter.getIndexType(), intrOp->getResult(0));
     return success();
   }
 };
+
+/// Merges consecutive `arm_sme.intr.zero` operations in a block by bitwise
+/// or-ing the zero masks. Note: In future the backend _should_ handle this.
+static void mergeConsecutiveTileZerosInBlock(Block *block) {
+  uint32_t mergedZeroMask = 0;
+  SmallVector<arm_sme::aarch64_sme_zero, 16> zeroOpsToMerge;
+  auto replaceMergedZeroOps = [&] {
+    auto cleanup = llvm::make_scope_exit([&] {
+      mergedZeroMask = 0;
+      zeroOpsToMerge.clear();
+    });
+    if (zeroOpsToMerge.size() <= 1)
+      return;
+    IRRewriter rewriter(zeroOpsToMerge.front());
+    rewriter.create<arm_sme::aarch64_sme_zero>(
+        zeroOpsToMerge.front().getLoc(),
+        rewriter.getI32IntegerAttr(mergedZeroMask));
+    for (auto zeroOp : zeroOpsToMerge)
+      rewriter.eraseOp(zeroOp);
+  };
+  for (Operation &op : *block) {
+    if (auto zeroOp = dyn_cast<arm_sme::aarch64_sme_zero>(op)) {
+      mergedZeroMask |= zeroOp.getTileMask();
+      zeroOpsToMerge.push_back(zeroOp);
+    } else {
+      replaceMergedZeroOps();
+    }
+  }
+  replaceMergedZeroOps();
+}
 
 } // namespace
 
@@ -878,6 +912,8 @@ struct ConvertArmSMEToLLVMPass
 
     if (failed(applyPartialConversion(function, target, std::move(patterns))))
       signalPassFailure();
+
+    function->walk(mergeConsecutiveTileZerosInBlock);
 
     // Walk the function and fail if there are unexpected operations on SME
     // tile types after conversion.
@@ -949,8 +985,8 @@ void mlir::populateArmSMEToLLVMConversionPatterns(LLVMTypeConverter &converter,
   });
 
   addArmSMEConversionPatterns<
-      LoadTileSliceConversion, MoveTileSliceToVectorConversion,
-      MoveVectorToTileSliceConversion, StoreTileSliceConversion,
+      LoadTileSliceConversion, ExtractTileSliceConversion,
+      InsertTileSliceConversion, StoreTileSliceConversion,
       StreamingVLOpConversion, OuterProductOpConversion,
       OuterProductWideningOpConversion<arm_sme::FMopa2WayOp,
                                        arm_sme::aarch64_sme_mopa_wide>,

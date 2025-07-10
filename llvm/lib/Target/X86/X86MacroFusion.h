@@ -22,7 +22,7 @@ class ScheduleDAGMutation;
 
 /// Note that you have to add:
 ///   DAG.addMutation(createX86MacroFusionDAGMutation());
-/// to X86PassConfig::createMachineScheduler() to have an effect.
+/// to X86TargetMachine::createMachineScheduler() to have an effect.
 std::unique_ptr<ScheduleDAGMutation>
 createX86MacroFusionDAGMutation();
 

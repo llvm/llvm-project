@@ -520,33 +520,18 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
       return NoMatch;
     }
 
-    case CStrTy: {
-      const PointerType *PT = argTy->getAs<PointerType>();
-      if (!PT)
-        return NoMatch;
-      QualType pointeeTy = PT->getPointeeType();
-      if (const BuiltinType *BT = pointeeTy->getAs<BuiltinType>())
-        switch (BT->getKind()) {
-          case BuiltinType::Char_U:
-          case BuiltinType::UChar:
-          case BuiltinType::Char_S:
-          case BuiltinType::SChar:
-            return Match;
-          default:
-            break;
-        }
-
+    case CStrTy:
+      if (const auto *PT = argTy->getAs<PointerType>();
+          PT && PT->getPointeeType()->isCharType())
+        return Match;
       return NoMatch;
-    }
 
-    case WCStrTy: {
-      const PointerType *PT = argTy->getAs<PointerType>();
-      if (!PT)
-        return NoMatch;
-      QualType pointeeTy =
-        C.getCanonicalType(PT->getPointeeType()).getUnqualifiedType();
-      return pointeeTy == C.getWideCharType() ? Match : NoMatch;
-    }
+    case WCStrTy:
+      if (const auto *PT = argTy->getAs<PointerType>();
+          PT &&
+          C.hasSameUnqualifiedType(PT->getPointeeType(), C.getWideCharType()))
+        return Match;
+      return NoMatch;
 
     case WIntTy: {
       QualType WInt = C.getCanonicalType(C.getWIntType()).getUnqualifiedType();
@@ -569,14 +554,24 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
     }
 
     case CPointerTy:
-      if (argTy->isVoidPointerType()) {
-        return Match;
-      } if (argTy->isPointerType() || argTy->isObjCObjectPointerType() ||
-            argTy->isBlockPointerType() || argTy->isNullPtrType()) {
+      if (const auto *PT = argTy->getAs<PointerType>()) {
+        QualType PointeeTy = PT->getPointeeType();
+        if (PointeeTy->isVoidType() || (!Ptr && PointeeTy->isCharType()))
+          return Match;
         return NoMatchPedantic;
-      } else {
-        return NoMatch;
       }
+
+      // nullptr_t* is not a double pointer, so reject when something like
+      // void** is expected.
+      // In C++, nullptr is promoted to void*. In C23, va_arg(ap, void*) is not
+      // undefined when the next argument is of type nullptr_t.
+      if (!Ptr && argTy->isNullPtrType())
+        return C.getLangOpts().CPlusPlus ? MatchPromotion : Match;
+
+      if (argTy->isObjCObjectPointerType() || argTy->isBlockPointerType())
+        return NoMatchPedantic;
+
+      return NoMatch;
 
     case ObjCPointerTy: {
       if (argTy->getAs<ObjCObjectPointerType>() ||
@@ -598,6 +593,97 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
   }
 
   llvm_unreachable("Invalid ArgType Kind!");
+}
+
+static analyze_format_string::ArgType::MatchKind
+integerTypeMatch(ASTContext &C, QualType A, QualType B, bool CheckSign) {
+  using MK = analyze_format_string::ArgType::MatchKind;
+
+  uint64_t IntSize = C.getTypeSize(C.IntTy);
+  uint64_t ASize = C.getTypeSize(A);
+  uint64_t BSize = C.getTypeSize(B);
+  if (std::max(ASize, IntSize) != std::max(BSize, IntSize))
+    return MK::NoMatch;
+  if (CheckSign && A->isSignedIntegerType() != B->isSignedIntegerType())
+    return MK::NoMatchSignedness;
+  if (ASize != BSize)
+    return MK::MatchPromotion;
+  return MK::Match;
+}
+
+analyze_format_string::ArgType::MatchKind
+ArgType::matchesArgType(ASTContext &C, const ArgType &Other) const {
+  using AK = analyze_format_string::ArgType::Kind;
+
+  // Per matchesType.
+  if (K == AK::InvalidTy || Other.K == AK::InvalidTy)
+    return NoMatch;
+  if (K == AK::UnknownTy || Other.K == AK::UnknownTy)
+    return Match;
+
+  // Handle whether either (or both, or neither) sides has Ptr set,
+  // in addition to whether either (or both, or neither) sides is a SpecificTy
+  // that is a pointer.
+  ArgType Left = *this;
+  bool LeftWasPointer = false;
+  ArgType Right = Other;
+  bool RightWasPointer = false;
+  if (Left.Ptr) {
+    Left.Ptr = false;
+    LeftWasPointer = true;
+  } else if (Left.K == AK::SpecificTy && Left.T->isPointerType()) {
+    Left.T = Left.T->getPointeeType();
+    LeftWasPointer = true;
+  }
+  if (Right.Ptr) {
+    Right.Ptr = false;
+    RightWasPointer = true;
+  } else if (Right.K == AK::SpecificTy && Right.T->isPointerType()) {
+    Right.T = Right.T->getPointeeType();
+    RightWasPointer = true;
+  }
+
+  if (LeftWasPointer != RightWasPointer)
+    return NoMatch;
+
+  // Ensure that if at least one side is a SpecificTy, then Left is a
+  // SpecificTy.
+  if (Right.K == AK::SpecificTy)
+    std::swap(Left, Right);
+
+  if (Left.K == AK::SpecificTy) {
+    if (Right.K == AK::SpecificTy) {
+      auto Canon1 = C.getCanonicalType(Left.T);
+      auto Canon2 = C.getCanonicalType(Right.T);
+      if (Canon1 == Canon2)
+        return Match;
+
+      auto *BT1 = QualType(Canon1)->getAs<BuiltinType>();
+      auto *BT2 = QualType(Canon2)->getAs<BuiltinType>();
+      if (BT1 == nullptr || BT2 == nullptr)
+        return NoMatch;
+      if (BT1 == BT2)
+        return Match;
+
+      if (!LeftWasPointer && BT1->isInteger() && BT2->isInteger())
+        return integerTypeMatch(C, Canon1, Canon2, true);
+      return NoMatch;
+    } else if (Right.K == AK::AnyCharTy) {
+      if (!LeftWasPointer && Left.T->isIntegerType())
+        return integerTypeMatch(C, Left.T, C.CharTy, false);
+      return NoMatch;
+    } else if (Right.K == AK::WIntTy) {
+      if (!LeftWasPointer && Left.T->isIntegerType())
+        return integerTypeMatch(C, Left.T, C.WIntTy, true);
+      return NoMatch;
+    }
+    // It's hypothetically possible to create an AK::SpecificTy ArgType
+    // that matches another kind of ArgType, but in practice Clang doesn't
+    // do that, so ignore that case.
+    return NoMatch;
+  }
+
+  return Left.K == Right.K ? Match : NoMatch;
 }
 
 ArgType ArgType::makeVectorType(ASTContext &C, unsigned NumElts) const {

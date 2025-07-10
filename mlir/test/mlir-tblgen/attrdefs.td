@@ -86,7 +86,7 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
 
 // DECL-LABEL: class CompoundAAttr : public ::mlir::Attribute
 // DECL: static CompoundAAttr getChecked(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::MLIRContext *context, int widthOfSomething, ::test::SimpleTypeA exampleTdType, ::llvm::APFloat apFloat, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
-// DECL: static ::mlir::LogicalResult verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, int widthOfSomething, ::test::SimpleTypeA exampleTdType, ::llvm::APFloat apFloat, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
+// DECL: static ::llvm::LogicalResult verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, int widthOfSomething, ::test::SimpleTypeA exampleTdType, ::llvm::APFloat apFloat, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
 // DECL: static constexpr ::llvm::StringLiteral getMnemonic() {
 // DECL:   return {"cmpnd_a"};
 // DECL: }
@@ -171,4 +171,18 @@ def H_TestExtraClassAttr : TestAttr<"TestExtraClass"> {
 
 // DEF-LABEL: int TestExtraClassAttr::getFoo(int i) {
 // DEF: return i+1;
+// DEF-NEXT: }
+
+def I_TestGenMnemonicAliasAttr : TestAttr<"TestGenMnemonicAlias"> {
+  let mnemonic = "test_gen_mnemonic_alias";
+  let genMnemonicAlias = 1;
+}
+
+// DECL-LABEL: class TestGenMnemonicAliasAttr : public ::mlir::Attribute
+// DECL-SAME: ::mlir::OpAsmAttrInterface::Trait
+// DECL: ::mlir::OpAsmAliasResult getAlias(::llvm::raw_ostream &os) const;
+
+// DEF-LABEL: ::mlir::OpAsmAliasResult TestGenMnemonicAliasAttr::getAlias(::llvm::raw_ostream &os) const {
+// DEF-NEXT: os << "test_gen_mnemonic_alias";
+// DEF-NEXT: return ::mlir::OpAsmAliasResult::OverridableAlias;
 // DEF-NEXT: }

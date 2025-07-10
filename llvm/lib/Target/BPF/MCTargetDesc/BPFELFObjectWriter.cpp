@@ -25,8 +25,8 @@ public:
   ~BPFELFObjectWriter() override = default;
 
 protected:
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override;
+  unsigned getRelocType(const MCFixup &, const MCValue &,
+                        bool IsPCRel) const override;
 };
 
 } // end anonymous namespace
@@ -35,8 +35,8 @@ BPFELFObjectWriter::BPFELFObjectWriter(uint8_t OSABI)
     : MCELFObjectTargetWriter(/*Is64Bit*/ true, OSABI, ELF::EM_BPF,
                               /*HasRelocationAddend*/ false) {}
 
-unsigned BPFELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
-                                          const MCFixup &Fixup,
+unsigned BPFELFObjectWriter::getRelocType(const MCFixup &Fixup,
+                                          const MCValue &Target,
                                           bool IsPCRel) const {
   // determine the type of the relocation
   switch (Fixup.getKind()) {
@@ -45,14 +45,13 @@ unsigned BPFELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   case FK_SecRel_8:
     // LD_imm64 instruction.
     return ELF::R_BPF_64_64;
-  case FK_PCRel_4:
-    // CALL instruction.
-    return ELF::R_BPF_64_32;
   case FK_Data_8:
     return ELF::R_BPF_64_ABS64;
   case FK_Data_4:
-    if (const MCSymbolRefExpr *A = Target.getSymA()) {
-      const MCSymbol &Sym = A->getSymbol();
+    if (Fixup.isPCRel()) // CALL instruction
+      return ELF::R_BPF_64_32;
+    if (const auto *A = Target.getAddSym()) {
+      const MCSymbol &Sym = *A;
 
       if (Sym.isDefined()) {
         MCSection &Section = Sym.getSection();

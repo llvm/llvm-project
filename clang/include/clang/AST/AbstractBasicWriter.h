@@ -138,8 +138,7 @@ public:
     asImpl().writeUInt32(uint32_t(value));
   }
 
-  template <class T>
-  void writeArray(llvm::ArrayRef<T> array) {
+  template <class T> void writeArray(ArrayRef<T> array) {
     asImpl().writeUInt32(array.size());
     for (const T &elt : array) {
       WriteDispatcher<T>::write(asImpl(), elt);
@@ -222,6 +221,14 @@ public:
     asImpl().writeUInt32(epi.getOpaqueValue());
   }
 
+  void writeFunctionEffect(FunctionEffect E) {
+    asImpl().writeUInt32(E.toOpaqueInt32());
+  }
+
+  void writeEffectConditionExpr(EffectConditionExpr CE) {
+    asImpl().writeExprRef(CE.getCondition());
+  }
+
   void writeNestedNameSpecifier(NestedNameSpecifier *NNS) {
     // Nested name specifiers usually aren't too long. I think that 8 would
     // typically accommodate the vast majority.
@@ -252,7 +259,6 @@ public:
         continue;
 
       case NestedNameSpecifier::TypeSpec:
-      case NestedNameSpecifier::TypeSpecWithTemplate:
         asImpl().writeQualType(QualType(NNS->getAsType(), 0));
         continue;
 

@@ -58,6 +58,9 @@ static cl::opt<std::string> targetTriple("target",
 static cl::opt<std::string>
     targetCPU("target-cpu", cl::desc("specify a target CPU"), cl::init(""));
 
+static cl::opt<std::string> tuneCPU("tune-cpu", cl::desc("specify a tune CPU"),
+                                    cl::init(""));
+
 static cl::opt<std::string>
     targetFeatures("target-features", cl::desc("specify the target features"),
                    cl::init(""));
@@ -67,14 +70,20 @@ static cl::opt<bool> codeGenLLVM(
     cl::desc("Run only CodeGen passes and translate FIR to LLVM IR"),
     cl::init(false));
 
-#include "flang/Tools/CLOptions.inc"
+static cl::opt<bool> emitFinalMLIR(
+    "emit-final-mlir",
+    cl::desc("Only translate FIR to MLIR, do not lower to LLVM IR"),
+    cl::init(false));
+
+#include "flang/Optimizer/Passes/CommandLineOpts.h"
+#include "flang/Optimizer/Passes/Pipelines.h"
 
 static void printModule(mlir::ModuleOp mod, raw_ostream &output) {
   output << mod << '\n';
 }
 
 // compile a .fir file
-static mlir::LogicalResult
+static llvm::LogicalResult
 compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   // check that there is a file to load
   ErrorOr<std::unique_ptr<MemoryBuffer>> fileOrErr =
@@ -113,6 +122,7 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   fir::setTargetTriple(*owningRef, targetTriple);
   fir::setKindMapping(*owningRef, kindMap);
   fir::setTargetCPU(*owningRef, targetCPU);
+  fir::setTuneCPU(*owningRef, tuneCPU);
   fir::setTargetFeatures(*owningRef, targetFeatures);
   // tco is a testing tool, so it will happily use the target independent
   // data layout if none is on the module.
@@ -134,6 +144,7 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
       return mlir::failure();
   } else {
     MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
+    config.EnableOpenMP = true;  // assume the input contains OpenMP
     config.AliasAnalysis = true; // enabled when optimizing for speed
     if (codeGenLLVM) {
       // Run only CodeGen passes.
@@ -143,13 +154,15 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
       fir::registerDefaultInlinerPass(config);
       fir::createMLIRToLLVMPassPipeline(pm, config);
     }
-    fir::addLLVMDialectToLLVMPass(pm, out.os());
+    if (!emitFinalMLIR)
+      fir::addLLVMDialectToLLVMPass(pm, out.os());
   }
 
   // run the pass manager
   if (mlir::succeeded(pm.run(*owningRef))) {
     // passes ran successfully, so keep the output
-    if ((emitFir || passPipeline.hasAnyOccurrences()) && !codeGenLLVM)
+    if ((emitFir || passPipeline.hasAnyOccurrences() || emitFinalMLIR) &&
+        !codeGenLLVM)
       printModule(*owningRef, out.os());
     out.keep();
     return mlir::success();

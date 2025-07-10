@@ -1,6 +1,6 @@
 # Here we use yaml from ihex-elf-sections.yaml, but add single load
 # segment containing all exported sections. In such case we should 
-# use physical address of a section intead of virtual address. Physical
+# use physical address of a section instead of virtual address. Physical
 # addresses start from 0x100000, so we create two additional 'ExtenededAddr'
 # (03) record in the beginning of IHex file with that physical address
 !ELF

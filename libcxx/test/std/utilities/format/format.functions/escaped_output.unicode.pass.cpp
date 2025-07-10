@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -23,6 +24,7 @@
 
 #include <cassert>
 #include <concepts>
+#include <cstdint>
 #include <iterator>
 #include <list>
 #include <vector>
@@ -335,7 +337,7 @@ void test_string() {
 
   // Ill-formed
   if constexpr (sizeof(CharT) == 1)
-    test_format(SV(R"("\x{80}")"), SV("{:?}"), SV("\x80"));
+    test_format(SV(R"("\x{80}")"), SV("{:?}"), "\x80");
 
   // *** P2713R1 examples ***
   test_format(SV(R"(["\u{301}"])"), SV("[{:?}]"), SV("\u0301"));

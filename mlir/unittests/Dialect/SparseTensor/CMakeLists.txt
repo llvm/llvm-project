@@ -1,7 +1,7 @@
 add_mlir_unittest(MLIRSparseTensorTests
   MergerTest.cpp
 )
-target_link_libraries(MLIRSparseTensorTests
+mlir_target_link_libraries(MLIRSparseTensorTests
   PRIVATE
   MLIRSparseTensorUtils
 )

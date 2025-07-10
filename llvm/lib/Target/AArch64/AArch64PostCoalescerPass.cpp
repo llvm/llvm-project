@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 //===----------------------------------------------------------------------===//
 
-#include "AArch64InstrInfo.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -22,9 +21,7 @@ namespace {
 struct AArch64PostCoalescer : public MachineFunctionPass {
   static char ID;
 
-  AArch64PostCoalescer() : MachineFunctionPass(ID) {
-    initializeAArch64PostCoalescerPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64PostCoalescer() : MachineFunctionPass(ID) {}
 
   LiveIntervals *LIS;
   MachineRegisterInfo *MRI;
@@ -37,7 +34,7 @@ struct AArch64PostCoalescer : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
-    AU.addRequired<LiveIntervals>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -48,7 +45,7 @@ char AArch64PostCoalescer::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AArch64PostCoalescer, "aarch64-post-coalescer-pass",
                       "AArch64 Post Coalescer Pass", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(AArch64PostCoalescer, "aarch64-post-coalescer-pass",
                     "AArch64 Post Coalescer Pass", false, false)
 
@@ -61,7 +58,7 @@ bool AArch64PostCoalescer::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   MRI = &MF.getRegInfo();
-  LIS = &getAnalysis<LiveIntervals>();
+  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {

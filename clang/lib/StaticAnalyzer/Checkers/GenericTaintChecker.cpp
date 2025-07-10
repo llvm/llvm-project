@@ -16,7 +16,6 @@
 
 #include "Yaml.h"
 #include "clang/AST/Attr.h"
-#include "clang/Basic/Builtins.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Checkers/Taint.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -27,6 +26,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/YAMLTraits.h"
 
 #include <limits>
@@ -153,7 +153,6 @@ const NoteTag *taintOriginTrackerTag(CheckerContext &C,
   return C.getNoteTag([TaintedSymbols = std::move(TaintedSymbols),
                        TaintedArgs = std::move(TaintedArgs), CallLocation](
                           PathSensitiveBugReport &BR) -> std::string {
-    SmallString<256> Msg;
     // We give diagnostics only for taint related reports
     if (!BR.isInteresting(CallLocation) ||
         BR.getBugType().getCategory() != categories::TaintedData) {
@@ -391,9 +390,10 @@ public:
   bool generateReportIfTainted(const Expr *E, StringRef Msg,
                                CheckerContext &C) const;
 
-private:
-  const BugType BT{this, "Use of Untrusted Data", categories::TaintedData};
+  bool isTaintReporterCheckerEnabled = false;
+  std::optional<BugType> BT;
 
+private:
   bool checkUncontrolledFormatString(const CallEvent &Call,
                                      CheckerContext &C) const;
 
@@ -1033,6 +1033,8 @@ bool GenericTaintRule::UntrustedEnv(CheckerContext &C) {
 bool GenericTaintChecker::generateReportIfTainted(const Expr *E, StringRef Msg,
                                                   CheckerContext &C) const {
   assert(E);
+  if (!isTaintReporterCheckerEnabled)
+    return false;
   std::optional<SVal> TaintedSVal =
       getTaintedPointeeOrPointer(C.getState(), C.getSVal(E));
 
@@ -1040,13 +1042,13 @@ bool GenericTaintChecker::generateReportIfTainted(const Expr *E, StringRef Msg,
     return false;
 
   // Generate diagnostic.
-  if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
-    auto report = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
+  assert(BT);
+  if (ExplodedNode *N = C.generateNonFatalErrorNode(C.getState())) {
+    auto report = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
     report->addRange(E->getSourceRange());
     for (auto TaintedSym : getTaintedSymbols(C.getState(), *TaintedSVal)) {
       report->markInteresting(TaintedSym);
     }
-
     C.emitReport(std::move(report));
     return true;
   }
@@ -1075,7 +1077,23 @@ static bool getPrintfFormatArgumentNum(const CallEvent &Call,
   const ArgIdxTy CallNumArgs = fromArgumentCount(Call.getNumArgs());
 
   for (const auto *Format : FDecl->specific_attrs<FormatAttr>()) {
+    // The format attribute uses 1-based parameter indexing, for example
+    // plain `printf(const char *fmt, ...)` would be annotated with
+    // `__format__(__printf__, 1, 2)`, so we need to subtract 1 to get a
+    // 0-based index. (This checker uses 0-based parameter indices.)
     ArgNum = Format->getFormatIdx() - 1;
+    // The format attribute also counts the implicit `this` parameter of
+    // methods, so e.g. in `SomeClass::method(const char *fmt, ...)` could be
+    // annotated with `__format__(__printf__, 2, 3)`. This checker doesn't
+    // count the implicit `this` parameter, so in this case we need to subtract
+    // one again.
+    // FIXME: Apparently the implementation of the format attribute doesn't
+    // support methods with an explicit object parameter, so we cannot
+    // implement proper support for that rare case either.
+    const CXXMethodDecl *MDecl = dyn_cast<CXXMethodDecl>(FDecl);
+    if (MDecl && !MDecl->isStatic())
+      ArgNum--;
+
     if ((Format->getType()->getName() == "printf") && CallNumArgs > ArgNum)
       return true;
   }
@@ -1122,8 +1140,19 @@ void GenericTaintChecker::taintUnsafeSocketProtocol(const CallEvent &Call,
 }
 
 /// Checker registration
-void ento::registerGenericTaintChecker(CheckerManager &Mgr) {
+void ento::registerTaintPropagationChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<GenericTaintChecker>();
+}
+
+bool ento::shouldRegisterTaintPropagationChecker(const CheckerManager &mgr) {
+  return true;
+}
+
+void ento::registerGenericTaintChecker(CheckerManager &Mgr) {
+  GenericTaintChecker *checker = Mgr.getChecker<GenericTaintChecker>();
+  checker->isTaintReporterCheckerEnabled = true;
+  checker->BT.emplace(Mgr.getCurrentCheckerName(), "Use of Untrusted Data",
+                      categories::TaintedData);
 }
 
 bool ento::shouldRegisterGenericTaintChecker(const CheckerManager &mgr) {

@@ -1,5 +1,6 @@
 # RUN: llc %s -mtriple=x86_64-unknown -mattr=+ndd,+egpr -start-before=x86-compress-evex -show-mc-encoding -o - | FileCheck --check-prefixes=CHECK,NDD %s
 # RUN: llc %s -mtriple=x86_64-unknown -mattr=+ndd,+egpr,+nf -start-before=x86-compress-evex -show-mc-encoding -o - | FileCheck --check-prefixes=CHECK,NDD-NF %s
+# RUN: llc %s -mtriple=x86_64-unknown -mattr=+ndd,+egpr,+nf -x86-enable-apx-for-relocation=true -start-before=x86-compress-evex -show-mc-encoding -o - | FileCheck --check-prefixes=CHECK,NDD-NF %s
 
 ...
 ---
@@ -125,5 +126,16 @@ body:             |
     $ebx = CFCMOV32rm_ND $ebx, $rax, 1, $noreg, 24, $noreg, 8, implicit $eflags
     $rax = CFCMOV64rr_ND $rax, $rbx, 4, implicit $eflags
     $rbx = CFCMOV64rm_ND $rbx, $rax, 1, $noreg, 24, $noreg, 8, implicit $eflags
+    RET64 $rax
+...
+---
+name:            no_convert_8bit_16bit
+body:             |
+  bb.0.entry:
+    liveins: $di, $si, $ax
+    ; CHECK: addb    %sil, %dil                      # EVEX TO LEGACY Compression encoding: [0x40,0x00,0xf7]
+    ; CHECK: xorw    %di, %ax                        # EVEX TO LEGACY Compression encoding: [0x66,0x31,0xf8]
+    $dil = ADD8rr_ND $dil, killed $sil, implicit-def dead $eflags
+    $ax = XOR16rr_ND $ax, killed $di, implicit-def dead $eflags
     RET64 $rax
 ...

@@ -17,7 +17,6 @@
 #include "SPIRVLegalizerInfo.h"
 #include "SPIRVRegisterBankInfo.h"
 #include "SPIRVTargetMachine.h"
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/TargetParser/Host.h"
 
 using namespace llvm;
@@ -37,6 +36,13 @@ static cl::opt<std::set<SPIRV::Extension::Extension>, false,
                SPIRVExtensionsParser>
     Extensions("spirv-ext",
                cl::desc("Specify list of enabled SPIR-V extensions"));
+
+// Provides access to the cl::opt<...> `Extensions` variable from outside of the
+// module.
+void SPIRVSubtarget::addExtensionsToClOpt(
+    const std::set<SPIRV::Extension::Extension> &AllowList) {
+  Extensions.insert(AllowList.begin(), AllowList.end());
+}
 
 // Compare version numbers, but allow 0 to mean unspecified.
 static bool isAtLeastVer(VersionTuple Target, VersionTuple VerToCompareTo) {
@@ -76,8 +82,16 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   }
   OpenCLVersion = VersionTuple(2, 2);
 
+  // Set the environment based on the target triple.
+  if (TargetTriple.getOS() == Triple::Vulkan)
+    Env = Shader;
+  else if (TargetTriple.getEnvironment() == Triple::OpenCL)
+    Env = Kernel;
+  else
+    Env = Unknown;
+
   // The order of initialization is important.
-  initAvailableExtensions();
+  initAvailableExtensions(Extensions);
   initAvailableExtInstSets();
 
   GR = std::make_unique<SPIRVGlobalRegistry>(PointerSize);
@@ -85,8 +99,7 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   InlineAsmInfo = std::make_unique<SPIRVInlineAsmLowering>(TLInfo);
   Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this);
   RegBankInfo = std::make_unique<SPIRVRegisterBankInfo>();
-  InstSelector.reset(
-      createSPIRVInstructionSelector(TM, *this, *RegBankInfo.get()));
+  InstSelector.reset(createSPIRVInstructionSelector(TM, *this, *RegBankInfo));
 }
 
 SPIRVSubtarget &SPIRVSubtarget::initSubtargetDependencies(StringRef CPU,
@@ -104,12 +117,20 @@ bool SPIRVSubtarget::canUseExtInstSet(
   return AvailableExtInstSets.contains(E);
 }
 
+SPIRV::InstructionSet::InstructionSet
+SPIRVSubtarget::getPreferredInstructionSet() const {
+  if (isShader())
+    return SPIRV::InstructionSet::GLSL_std_450;
+  else
+    return SPIRV::InstructionSet::OpenCL_std;
+}
+
 bool SPIRVSubtarget::isAtLeastSPIRVVer(VersionTuple VerToCompareTo) const {
   return isAtLeastVer(SPIRVVersion, VerToCompareTo);
 }
 
 bool SPIRVSubtarget::isAtLeastOpenCLVer(VersionTuple VerToCompareTo) const {
-  if (!isOpenCLEnv())
+  if (isShader())
     return false;
   return isAtLeastVer(OpenCLVersion, VerToCompareTo);
 }
@@ -120,27 +141,32 @@ bool SPIRVSubtarget::canDirectlyComparePointers() const {
   return !SPVTranslatorCompat && isAtLeastVer(SPIRVVersion, VersionTuple(1, 4));
 }
 
-void SPIRVSubtarget::initAvailableExtensions() {
-  AvailableExtensions.clear();
-  if (!isOpenCLEnv())
-    return;
-
-  AvailableExtensions.insert(Extensions.begin(), Extensions.end());
+void SPIRVSubtarget::accountForAMDShaderTrinaryMinmax() {
+  if (canUseExtension(
+          SPIRV::Extension::SPV_AMD_shader_trinary_minmax_extension)) {
+    AvailableExtInstSets.insert(
+        SPIRV::InstructionSet::SPV_AMD_shader_trinary_minmax);
+  }
 }
 
 // TODO: use command line args for this rather than just defaults.
 // Must have called initAvailableExtensions first.
 void SPIRVSubtarget::initAvailableExtInstSets() {
   AvailableExtInstSets.clear();
-  if (!isOpenCLEnv())
+  if (isShader())
     AvailableExtInstSets.insert(SPIRV::InstructionSet::GLSL_std_450);
   else
     AvailableExtInstSets.insert(SPIRV::InstructionSet::OpenCL_std);
 
   // Handle extended instruction sets from extensions.
-  if (canUseExtension(
-          SPIRV::Extension::SPV_AMD_shader_trinary_minmax_extension)) {
-    AvailableExtInstSets.insert(
-        SPIRV::InstructionSet::SPV_AMD_shader_trinary_minmax);
-  }
+  accountForAMDShaderTrinaryMinmax();
+}
+
+// Set available extensions after SPIRVSubtarget is created.
+void SPIRVSubtarget::initAvailableExtensions(
+    const std::set<SPIRV::Extension::Extension> &AllowedExtIds) {
+  AvailableExtensions.clear();
+  AvailableExtensions.insert_range(AllowedExtIds);
+
+  accountForAMDShaderTrinaryMinmax();
 }

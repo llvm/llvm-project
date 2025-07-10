@@ -61,7 +61,7 @@ bool GIMatchTableExecutor::executeMatchTable(
   // Bypass the flag check on the instruction, and only look at the MCInstrDesc.
   bool NoFPException = !State.MIs[0]->getDesc().mayRaiseFPException();
 
-  const uint16_t Flags = State.MIs[0]->getFlags();
+  const uint32_t Flags = State.MIs[0]->getFlags();
 
   enum RejectAction { RejectAndGiveUp, RejectAndResume };
   auto handleReject = [&]() -> RejectAction {
@@ -80,7 +80,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     for (auto MIB : OutMIs) {
       // Set the NoFPExcept flag when no original matched instruction could
       // raise an FP exception, but the new instruction potentially might.
-      uint16_t MIBFlags = Flags;
+      uint32_t MIBFlags = Flags | MIB.getInstr()->getFlags();
       if (NoFPException && MIB->mayRaiseFPException())
         MIBFlags |= MachineInstr::NoFPExcept;
       if (Observer)
@@ -219,12 +219,13 @@ bool GIMatchTableExecutor::executeMatchTable(
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       unsigned Opcode = State.MIs[InsnID]->getOpcode();
 
-      DEBUG_WITH_TYPE(TgtExecutor::getName(),
-                      dbgs() << CurrentIdx << ": GIM_CheckOpcode(MIs[" << InsnID
-                             << "], ExpectedOpcode=" << Expected0;
-                      if (MatcherOpcode == GIM_CheckOpcodeIsEither) dbgs()
-                      << " || " << Expected1;
-                      dbgs() << ") // Got=" << Opcode << "\n";);
+      DEBUG_WITH_TYPE(TgtExecutor::getName(), {
+        dbgs() << CurrentIdx << ": GIM_CheckOpcode(MIs[" << InsnID
+               << "], ExpectedOpcode=" << Expected0;
+        if (MatcherOpcode == GIM_CheckOpcodeIsEither)
+          dbgs() << " || " << Expected1;
+        dbgs() << ") // Got=" << Opcode << "\n";
+      });
 
       if (Opcode != Expected0 && Opcode != Expected1) {
         if (handleReject() == RejectAndGiveUp)
@@ -309,6 +310,23 @@ bool GIMatchTableExecutor::executeMatchTable(
       break;
     }
 
+    case GIM_CheckNumOperandsGE:
+    case GIM_CheckNumOperandsLE: {
+      uint64_t InsnID = readULEB();
+      uint64_t Expected = readULEB();
+      const bool IsLE = (MatcherOpcode == GIM_CheckNumOperandsLE);
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIM_CheckNumOperands"
+                             << (IsLE ? "LE" : "GE") << "(MIs[" << InsnID
+                             << "], Expected=" << Expected << ")\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+      const unsigned NumOps = State.MIs[InsnID]->getNumOperands();
+      if (IsLE ? (NumOps > Expected) : (NumOps < Expected)) {
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      }
+      break;
+    }
     case GIM_CheckNumOperands: {
       uint64_t InsnID = readULEB();
       uint64_t Expected = readULEB();
@@ -388,6 +406,26 @@ bool GIMatchTableExecutor::executeMatchTable(
           State.MIs[InsnID]->getOperand(1).getFPImm()->getValueAPF();
 
       if (!testImmPredicate_APFloat(Predicate, Value))
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      break;
+    }
+    case GIM_CheckLeafOperandPredicate: {
+      uint64_t InsnID = readULEB();
+      uint64_t OpIdx = readULEB();
+      uint16_t Predicate = readU16();
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx
+                             << ": GIM_CheckLeafOperandPredicate(MIs[" << InsnID
+                             << "]->getOperand(" << OpIdx
+                             << "), Predicate=" << Predicate << ")\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+      assert(State.MIs[InsnID]->getOperand(OpIdx).isReg() &&
+             "Expected register operand");
+      assert(Predicate > GICXXPred_Invalid && "Expected a valid predicate");
+      MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
+
+      if (!testMOPredicate_MO(Predicate, MO, State))
         if (handleReject() == RejectAndGiveUp)
           return false;
       break;
@@ -1078,6 +1116,22 @@ bool GIMatchTableExecutor::executeMatchTable(
                       dbgs()
                           << CurrentIdx << ": GIR_Copy(OutMIs[" << NewInsnID
                           << "], MIs[" << OldInsnID << "], " << OpIdx << ")\n");
+      break;
+    }
+
+    case GIR_CopyRemaining: {
+      uint64_t NewInsnID = readULEB();
+      uint64_t OldInsnID = readULEB();
+      uint64_t OpIdx = readULEB();
+      assert(OutMIs[NewInsnID] && "Attempted to add to undefined instruction");
+      MachineInstr &OldMI = *State.MIs[OldInsnID];
+      MachineInstrBuilder &NewMI = OutMIs[NewInsnID];
+      for (const auto &Op : drop_begin(OldMI.operands(), OpIdx))
+        NewMI.add(Op);
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIR_CopyRemaining(OutMIs["
+                             << NewInsnID << "], MIs[" << OldInsnID
+                             << "], /*start=*/" << OpIdx << ")\n");
       break;
     }
 

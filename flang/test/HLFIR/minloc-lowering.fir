@@ -28,7 +28,7 @@ func.func @_QPminloc1(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"},
 // CHECK:         %[[V8:.*]] = fir.convert %[[V0]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK-NEXT:    %[[V9:.*]] = fir.convert %[[V1]]#1 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 // CHECK:         %[[V12:.*]] = fir.convert %[[V3]] : (!fir.box<i1>) -> !fir.box<none>
-// CHECK-NEXT:    %[[V13:.*]] = fir.call @_FortranAMinlocInteger4(%[[V8]], %[[V9]], %[[C4]], {{.*}}, {{.*}}, %[[V12]], %[[FALSE]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+// CHECK-NEXT:    fir.call @_FortranAMinlocInteger4(%[[V8]], %[[V9]], %[[C4]], {{.*}}, {{.*}}, %[[V12]], %[[FALSE]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
 // CHECK-NEXT:    %[[V14:.*]] = fir.load %[[V0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 // CHECK-NEXT:    %[[V15:.*]]:3 = fir.box_dims %[[V14]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
 // CHECK-NEXT:    %[[V16:.*]] = fir.box_addr %[[V14]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
@@ -72,7 +72,7 @@ func.func @_QPminloc2(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "a"
 // CHECK:         %[[V11:.*]] = fir.convert %[[V0]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK-NEXT:    %[[V12:.*]] = fir.convert %[[V1]]#1 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<none>
 // CHECK:         %[[V15:.*]] = fir.convert %[[V6]] : (!fir.box<i1>) -> !fir.box<none>
-// CHECK-NEXT:    %[[V16:.*]] = fir.call @_FortranAMinlocDim(%[[V11]], %[[V12]], %[[C4]], %[[V5]], {{.*}}, {{.*}}, %[[V15]], %[[FALSE]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+// CHECK-NEXT:    fir.call @_FortranAMinlocDim(%[[V11]], %[[V12]], %[[C4]], %[[V5]], {{.*}}, {{.*}}, %[[V15]], %[[FALSE]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
 // CHECK-NEXT:    %[[V17:.*]] = fir.load %[[V0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 // CHECK-NEXT:    %[[V18:.*]]:3 = fir.box_dims %[[V17]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
 // CHECK-NEXT:    %[[V19:.*]] = fir.box_addr %[[V17]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
@@ -106,7 +106,7 @@ func.func @_QPminloc3(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"},
 // CHECK-NEXT:    %[[V1:.*]]:2 = hlfir.declare %[[ARG0]] {uniq_name = "_QFminloc3Ea"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 // CHECK-NEXT:    %[[V2:.*]]:2 = hlfir.declare %[[ARG2]] {uniq_name = "_QFminloc3Em"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 // CHECK-NEXT:    %[[V3:.*]]:2 = hlfir.declare %[[ARG1]] {uniq_name = "_QFminloc3Es"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-// CHECK-NEXT:    %[[V4:.*]] = fir.embox %[[V2]]#1 : (!fir.ref<!fir.logical<4>>) -> !fir.box<!fir.logical<4>>
+// CHECK-NEXT:    %[[V4:.*]] = fir.embox %[[V2]]#0 : (!fir.ref<!fir.logical<4>>) -> !fir.box<!fir.logical<4>>
 // CHECK-NEXT:    %[[V5:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
 // CHECK-NEXT:    %[[V6:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
 // CHECK-NEXT:    %[[V7:.*]] = fir.embox %[[V5]](%[[V6]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
@@ -114,7 +114,7 @@ func.func @_QPminloc3(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"},
 // CHECK:         %[[V9:.*]] = fir.convert %[[V0]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK-NEXT:    %[[V10:.*]] = fir.convert %[[V1]]#1 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 // CHECK:         %[[V13:.*]] = fir.convert %[[V4]] : (!fir.box<!fir.logical<4>>) -> !fir.box<none>
-// CHECK-NEXT:    %[[V14:.*]] = fir.call @_FortranAMinlocInteger4(%[[V9]], %[[V10]], %[[C4]], {{.*}}, {{.*}}, %[[V13]], %[[FALSE]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+// CHECK-NEXT:    fir.call @_FortranAMinlocInteger4(%[[V9]], %[[V10]], %[[C4]], {{.*}}, {{.*}}, %[[V13]], %[[FALSE]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
 // CHECK-NEXT:    %[[V15:.*]] = fir.load %[[V0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 // CHECK-NEXT:    %[[V16:.*]]:3 = fir.box_dims %[[V15]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
 // CHECK-NEXT:    %[[V17:.*]] = fir.box_addr %[[V15]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
@@ -155,7 +155,7 @@ func.func @_QPminloc4(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"},
 // CHECK:         %[[V8:.*]] = fir.convert %[[V0]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK-NEXT:    %[[V9:.*]] = fir.convert %[[V1]]#1 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 // CHECK:         %[[V12:.*]] = fir.convert %[[V2]]#1 : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.box<none>
-// CHECK-NEXT:    %[[V13:.*]] = fir.call @_FortranAMinlocInteger4(%[[V8]], %[[V9]], %[[C4]], {{.*}}, {{.*}}, %[[V12]], %[[FALSE]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+// CHECK-NEXT:    fir.call @_FortranAMinlocInteger4(%[[V8]], %[[V9]], %[[C4]], {{.*}}, {{.*}}, %[[V12]], %[[FALSE]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
 // CHECK-NEXT:    %[[V14:.*]] = fir.load %[[V0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 // CHECK-NEXT:    %[[V15:.*]]:3 = fir.box_dims %[[V14]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
 // CHECK-NEXT:    %[[V16:.*]] = fir.box_addr %[[V14]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
@@ -215,7 +215,7 @@ func.func @_QPminloc5(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_name = "s"})
 // CHECK-NEXT:    %[[V5:.*]] = fir.shape %[[C2]] : (index) -> !fir.shape<1>
 // CHECK-NEXT:    %[[V6:.*]]:2 = hlfir.declare %[[ARG0]](%[[V5]]) {uniq_name = "_QFminloc5Es"} : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>)
 // CHECK-NEXT:    %[[V7:.*]] = fir.shape %[[C2]], %[[C2]] : (index, index) -> !fir.shape<2>
-// CHECK-NEXT:    %[[V8:.*]] = fir.embox %[[V4]]#1(%[[V7]]) : (!fir.ref<!fir.array<2x2xi32>>, !fir.shape<2>) -> !fir.box<!fir.array<2x2xi32>>
+// CHECK-NEXT:    %[[V8:.*]] = fir.embox %[[V4]]#0(%[[V7]]) : (!fir.ref<!fir.array<2x2xi32>>, !fir.shape<2>) -> !fir.box<!fir.array<2x2xi32>>
 // CHECK-NEXT:    %[[V9:.*]] = fir.convert %[[TRUE]] : (i1) -> !fir.logical<4>
 // CHECK-NEXT:    fir.store %[[V9]] to %[[V1]] : !fir.ref<!fir.logical<4>>
 // CHECK-NEXT:    %[[V10:.*]] = fir.embox %[[V1]] : (!fir.ref<!fir.logical<4>>) -> !fir.box<!fir.logical<4>>
@@ -226,7 +226,7 @@ func.func @_QPminloc5(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_name = "s"})
 // CHECK:         %[[V15:.*]] = fir.convert %[[V0]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK-NEXT:    %[[V16:.*]] = fir.convert %[[V8]] : (!fir.box<!fir.array<2x2xi32>>) -> !fir.box<none>
 // CHECK:         %[[V19:.*]] = fir.convert %[[V10]] : (!fir.box<!fir.logical<4>>) -> !fir.box<none>
-// CHECK-NEXT:    %[[V20:.*]] = fir.call @_FortranAMinlocDim(%[[V15]], %[[V16]], %[[C4]], %[[C1]], {{.*}}, {{.*}}, %[[V19]], %[[FALSE]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+// CHECK-NEXT:    fir.call @_FortranAMinlocDim(%[[V15]], %[[V16]], %[[C4]], %[[C1]], {{.*}}, {{.*}}, %[[V19]], %[[FALSE]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
 // CHECK-NEXT:    %[[V21:.*]] = fir.load %[[V0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 // CHECK-NEXT:    %[[V22:.*]]:3 = fir.box_dims %[[V21]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
 // CHECK-NEXT:    %[[V23:.*]] = fir.box_addr %[[V21]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
@@ -265,7 +265,7 @@ func.func @_QPminloc6(%arg0: !fir.box<!fir.array<?x!fir.char<1,?>>> {fir.bindc_n
 // CHECK:         %[[V8:.*]] = fir.convert %[[V0]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK-NEXT:    %[[V9:.*]] = fir.convert %[[V1]]#1 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.box<none>
 // CHECK:         %[[V12:.*]] = fir.convert %[[V3]] : (!fir.box<i1>) -> !fir.box<none>
-// CHECK-NEXT:    %[[V13:.*]] = fir.call @_FortranAMinlocCharacter(%[[V8]], %[[V9]], %[[C4]], {{.*}}, {{.*}}, %[[V12]], %[[FALSE]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+// CHECK-NEXT:    fir.call @_FortranAMinlocCharacter(%[[V8]], %[[V9]], %[[C4]], {{.*}}, {{.*}}, %[[V12]], %[[FALSE]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
 // CHECK-NEXT:    %[[V14:.*]] = fir.load %[[V0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 // CHECK-NEXT:    %[[V15:.*]]:3 = fir.box_dims %[[V14]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
 // CHECK-NEXT:    %[[V16:.*]] = fir.box_addr %[[V14]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
@@ -310,7 +310,7 @@ func.func @_QPminloc7(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"},
 // CHECK:         %[[V10:.*]] = fir.convert %[[V0]] : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.ref<!fir.box<none>>
 // CHECK-NEXT:    %[[V11:.*]] = fir.convert %[[V1]]#1 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 // CHECK:         %[[V14:.*]] = fir.convert %[[V4]]#1 : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.box<none>
-// CHECK-NEXT:    %[[V15:.*]] = fir.call @_FortranAMinlocDim(%[[V10]], %[[V11]], %[[C4]], %[[V6]], {{.*}}, {{.*}}, %[[V14]], %[[FALSE]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+// CHECK-NEXT:    fir.call @_FortranAMinlocDim(%[[V10]], %[[V11]], %[[C4]], %[[V6]], {{.*}}, {{.*}}, %[[V14]], %[[FALSE]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> ()
 // CHECK-NEXT:    %[[V16:.*]] = fir.load %[[V0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 // CHECK-NEXT:    %[[V17:.*]] = fir.box_addr %[[V16]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
 // CHECK-NEXT:    %[[V18:.*]] = fir.load %[[V17]] : !fir.heap<i32>

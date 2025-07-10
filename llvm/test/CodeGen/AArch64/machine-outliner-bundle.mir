@@ -1,0 +1,54 @@
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner \
+# RUN: -verify-machineinstrs %s -o - | FileCheck %s
+
+# CHECK: name: OUTLINED_FUNCTION_0
+# CHECK-NOT: name:
+# CHECK: BUNDLE implicit-def $z3, implicit-def $q3, implicit-def $d3, implicit-def $s3, implicit-def $h3, implicit-def $b3, implicit $z19, implicit $p0, implicit $z16 {
+# CHECK:     $z3 = MOVPRFX_ZZ $z19
+# CHECK:     $z3 = FMUL_ZPmZ_S renamable $p0, killed $z3, renamable $z16
+# CHECK: }
+
+---
+name:            bundled
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $z3, $z19, $p0, $z16
+    renamable $q0 = LDRQui $sp, 1 :: (load 16)
+    STRSui renamable $s0, $sp, 9, implicit killed $q0 :: (store (s32))
+    BUNDLE implicit-def $z3, implicit-def $q3, implicit-def $d3, implicit-def $s3, implicit-def $h3, implicit-def $b3, implicit $z19, implicit $p0, implicit $z16 {
+      $z3 = MOVPRFX_ZZ $z19
+      $z3 = FMUL_ZPmZ_S renamable $p0, killed $z3, renamable $z16
+    }
+    renamable $q0 = LDRQui $sp, 0 :: (load 16, align 32)
+    STRSui renamable $s0, $sp, 10, implicit killed $q0 :: (store (s32))
+    RET undef $lr
+...
+---
+name:            bundled_clone
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $z3, $z19, $p0, $z16
+    renamable $q0 = LDRQui $sp, 1 :: (load 16)
+    STRSui renamable $s0, $sp, 9, implicit killed $q0 :: (store (s32))
+    BUNDLE implicit-def $z3, implicit-def $q3, implicit-def $d3, implicit-def $s3, implicit-def $h3, implicit-def $b3, implicit $z19, implicit $p0, implicit $z16 {
+      $z3 = MOVPRFX_ZZ $z19
+      $z3 = FMUL_ZPmZ_S renamable $p0, killed $z3, renamable $z16
+    }
+    renamable $q0 = LDRQui $sp, 0 :: (load 16, align 32)
+    STRSui renamable $s0, $sp, 10, implicit killed $q0 :: (store (s32))
+    RET undef $lr
+...

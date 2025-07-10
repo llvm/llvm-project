@@ -40,6 +40,10 @@ private:
                                 const InputInfoList &Inputs,
                                 const InputInfo &Output,
                                 const llvm::opt::ArgList &Args) const;
+  void constructLinkAndEmitSpirvCommand(Compilation &C, const JobAction &JA,
+                                        const InputInfoList &Inputs,
+                                        const InputInfo &Output,
+                                        const llvm::opt::ArgList &Args) const;
 };
 
 } // end namespace AMDGCN
@@ -88,6 +92,15 @@ public:
 
   const ToolChain &HostTC;
   void checkTargetID(const llvm::opt::ArgList &DriverArgs) const override;
+
+protected:
+  Tool *buildLinker() const override;
+};
+
+class LLVM_LIBRARY_VISIBILITY SPIRVAMDToolChain final : public ROCMToolChain {
+public:
+  SPIRVAMDToolChain(const Driver &D, const llvm::Triple &Triple,
+                    const llvm::opt::ArgList &Args);
 
 protected:
   Tool *buildLinker() const override;

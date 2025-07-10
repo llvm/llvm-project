@@ -200,17 +200,18 @@ struct ParenState {
       : Tok(Tok), Indent(Indent), LastSpace(LastSpace),
         NestedBlockIndent(Indent), IsAligned(false),
         BreakBeforeClosingBrace(false), BreakBeforeClosingParen(false),
-        AvoidBinPacking(AvoidBinPacking), BreakBeforeParameter(false),
-        NoLineBreak(NoLineBreak), NoLineBreakInOperand(false),
-        LastOperatorWrapped(true), ContainsLineBreak(false),
-        ContainsUnwrappedBuilder(false), AlignColons(true),
-        ObjCSelectorNameFound(false), HasMultipleNestedBlocks(false),
-        NestedBlockInlined(false), IsInsideObjCArrayLiteral(false),
-        IsCSharpGenericTypeConstraint(false), IsChainedConditional(false),
-        IsWrappedConditional(false), UnindentOperator(false) {}
+        BreakBeforeClosingAngle(false), AvoidBinPacking(AvoidBinPacking),
+        BreakBeforeParameter(false), NoLineBreak(NoLineBreak),
+        NoLineBreakInOperand(false), LastOperatorWrapped(true),
+        ContainsLineBreak(false), ContainsUnwrappedBuilder(false),
+        AlignColons(true), ObjCSelectorNameFound(false),
+        HasMultipleNestedBlocks(false), NestedBlockInlined(false),
+        IsInsideObjCArrayLiteral(false), IsCSharpGenericTypeConstraint(false),
+        IsChainedConditional(false), IsWrappedConditional(false),
+        UnindentOperator(false) {}
 
-  /// \brief The token opening this parenthesis level, or nullptr if this level
-  /// is opened by fake parenthesis.
+  /// The token opening this parenthesis level, or nullptr if this level is
+  /// opened by fake parenthesis.
   ///
   /// Not considered for memoization as it will always have the same value at
   /// the same token.
@@ -280,6 +281,9 @@ struct ParenState {
   /// was a newline after the beginning left paren.
   bool BreakBeforeClosingParen : 1;
 
+  /// Whether a newline needs to be inserted before a closing angle `>`.
+  bool BreakBeforeClosingAngle : 1;
+
   /// Avoid bin packing, i.e. multiple parameters/elements on multiple
   /// lines, in this context.
   bool AvoidBinPacking : 1;
@@ -340,16 +344,15 @@ struct ParenState {
 
   bool IsCSharpGenericTypeConstraint : 1;
 
-  /// \brief true if the current \c ParenState represents the false branch of
-  /// a chained conditional expression (e.g. else-if)
+  /// true if the current \c ParenState represents the false branch of a chained
+  /// conditional expression (e.g. else-if)
   bool IsChainedConditional : 1;
 
-  /// \brief true if there conditionnal was wrapped on the first operator (the
-  /// question mark)
+  /// true if there conditionnal was wrapped on the first operator (the question
+  /// mark)
   bool IsWrappedConditional : 1;
 
-  /// \brief Indicates the indent should be reduced by the length of the
-  /// operator.
+  /// Indicates the indent should be reduced by the length of the operator.
   bool UnindentOperator : 1;
 
   bool operator<(const ParenState &Other) const {
@@ -367,6 +370,8 @@ struct ParenState {
       return BreakBeforeClosingBrace;
     if (BreakBeforeClosingParen != Other.BreakBeforeClosingParen)
       return BreakBeforeClosingParen;
+    if (BreakBeforeClosingAngle != Other.BreakBeforeClosingAngle)
+      return BreakBeforeClosingAngle;
     if (QuestionColumn != Other.QuestionColumn)
       return QuestionColumn < Other.QuestionColumn;
     if (AvoidBinPacking != Other.AvoidBinPacking)

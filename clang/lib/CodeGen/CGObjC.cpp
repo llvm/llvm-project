@@ -14,6 +14,7 @@
 #include "CGObjCRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "CodeGenPGO.h"
 #include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
@@ -23,7 +24,6 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/CodeGenABITypes.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/IR/Constants.h"
@@ -140,7 +140,7 @@ llvm::Value *CodeGenFunction::EmitObjCCollectionLiteral(const Expr *E,
     llvm::Value *Ptr = EmitLoadOfScalar(LV, E->getBeginLoc());
     cast<llvm::LoadInst>(Ptr)->setMetadata(
         llvm::LLVMContext::MD_invariant_load,
-        llvm::MDNode::get(getLLVMContext(), std::nullopt));
+        llvm::MDNode::get(getLLVMContext(), {}));
     return Builder.CreateBitCast(Ptr, ConvertType(E->getType()));
   }
 
@@ -806,7 +806,7 @@ static llvm::Value *emitARCRetainLoadOfScalar(CodeGenFunction &CGF,
 /// its pointer, name, and types registered in the class structure.
 void CodeGenFunction::GenerateObjCMethod(const ObjCMethodDecl *OMD) {
   StartObjCMethod(OMD, OMD->getClassInterface());
-  PGO.assignRegionCounters(GlobalDecl(OMD), CurFn);
+  PGO->assignRegionCounters(GlobalDecl(OMD), CurFn);
   assert(isa<CompoundStmt>(OMD->getBody()));
   incrementProfileCounter(OMD->getBody());
   EmitCompoundStmtWithoutScope(*cast<CompoundStmt>(OMD->getBody()));
@@ -1952,7 +1952,7 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
     Builder.CreateLoad(StateItemsPtr, "stateitems");
 
   // Fetch the value at the current index from the buffer.
-  llvm::Value *CurrentItemPtr = Builder.CreateGEP(
+  llvm::Value *CurrentItemPtr = Builder.CreateInBoundsGEP(
       ObjCIdType, EnumStateItems, index, "currentitem.ptr");
   llvm::Value *CurrentItem =
     Builder.CreateAlignedLoad(ObjCIdType, CurrentItemPtr, getPointerAlign());
@@ -1968,7 +1968,9 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
     const ObjCInterfaceType *InterfaceTy =
         ObjPtrTy ? ObjPtrTy->getInterfaceType() : nullptr;
     if (InterfaceTy) {
-      SanitizerScope SanScope(this);
+      auto CheckOrdinal = SanitizerKind::SO_ObjCCast;
+      auto CheckHandler = SanitizerHandler::InvalidObjCCast;
+      SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
       auto &C = CGM.getContext();
       assert(InterfaceTy->getDecl() && "No decl for ObjC interface type");
       Selector IsKindOfClassSel = GetUnarySelector("isKindOfClass", C);
@@ -1985,8 +1987,7 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
       llvm::Constant *StaticData[] = {
           EmitCheckSourceLocation(S.getBeginLoc()),
           EmitCheckTypeDescriptor(QualType(InterfaceTy, 0))};
-      EmitCheck({{IsClass, SanitizerKind::ObjCCast}},
-                SanitizerHandler::InvalidObjCCast,
+      EmitCheck({{IsClass, CheckOrdinal}}, CheckHandler,
                 ArrayRef<llvm::Constant *>(StaticData), CurrentItem);
     }
   }
@@ -2028,7 +2029,7 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
 
   // First we check in the local buffer.
   llvm::Value *indexPlusOne =
-      Builder.CreateAdd(index, llvm::ConstantInt::get(NSUIntegerTy, 1));
+      Builder.CreateNUWAdd(index, llvm::ConstantInt::get(NSUIntegerTy, 1));
 
   // If we haven't overrun the buffer yet, we can continue.
   // Set the branch weights based on the simplifying assumption that this is
@@ -2319,7 +2320,7 @@ llvm::Value *CodeGenFunction::EmitARCRetainBlock(llvm::Value *value,
            CGM.getObjCEntrypoints().objc_retainBlock);
 
     call->setMetadata("clang.arc.copy_on_escape",
-                      llvm::MDNode::get(Builder.getContext(), std::nullopt));
+                      llvm::MDNode::get(Builder.getContext(), {}));
   }
 
   return result;
@@ -2361,8 +2362,7 @@ static void emitAutoreleasedReturnValueMarker(CodeGenFunction &CGF) {
 
   // Call the marker asm if we made one, which we do only at -O0.
   if (marker)
-    CGF.Builder.CreateCall(marker, std::nullopt,
-                           CGF.getBundlesForFunclet(marker));
+    CGF.Builder.CreateCall(marker, {}, CGF.getBundlesForFunclet(marker));
 }
 
 static llvm::Value *emitOptimizedARCReturnCall(llvm::Value *value,
@@ -2388,12 +2388,14 @@ static llvm::Value *emitOptimizedARCReturnCall(llvm::Value *value,
   // FIXME: Do this on all targets and at -O0 too. This can be enabled only if
   // the target backend knows how to handle the operand bundle.
   if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0 &&
-      (Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::x86_64)) {
+      (Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::aarch64_32 ||
+       Arch == llvm::Triple::x86_64)) {
     llvm::Value *bundleArgs[] = {EP};
     llvm::OperandBundleDef OB("clang.arc.attachedcall", bundleArgs);
     auto *oldCall = cast<llvm::CallBase>(value);
     llvm::CallBase *newCall = llvm::CallBase::addOperandBundle(
-        oldCall, llvm::LLVMContext::OB_clang_arc_attachedcall, OB, oldCall);
+        oldCall, llvm::LLVMContext::OB_clang_arc_attachedcall, OB,
+        oldCall->getIterator());
     newCall->copyMetadata(*oldCall);
     oldCall->replaceAllUsesWith(newCall);
     oldCall->eraseFromParent();
@@ -2448,7 +2450,7 @@ void CodeGenFunction::EmitARCRelease(llvm::Value *value,
 
   if (precise == ARCImpreciseLifetime) {
     call->setMetadata("clang.imprecise_release",
-                      llvm::MDNode::get(Builder.getContext(), std::nullopt));
+                      llvm::MDNode::get(Builder.getContext(), {}));
   }
 }
 
@@ -2842,7 +2844,7 @@ void CodeGenFunction::EmitObjCRelease(llvm::Value *value,
 
   if (precise == ARCImpreciseLifetime) {
     call->setMetadata("clang.imprecise_release",
-                      llvm::MDNode::get(Builder.getContext(), std::nullopt));
+                      llvm::MDNode::get(Builder.getContext(), {}));
   }
 }
 
@@ -3171,8 +3173,8 @@ ARCExprEmitter<Impl,Result>::visitPseudoObjectExpr(const PseudoObjectExpr *E) {
   }
 
   // Unbind all the opaques now.
-  for (unsigned i = 0, e = opaques.size(); i != e; ++i)
-    opaques[i].unbind(CGF);
+  for (CodeGenFunction::OpaqueValueMappingData &opaque : opaques)
+    opaque.unbind(CGF);
 
   return result;
 }

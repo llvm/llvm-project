@@ -46,7 +46,7 @@ static StringRef getLineCommentIndentPrefix(StringRef Comment,
   static constexpr StringRef KnownTextProtoPrefixes[] = {"####", "###", "##",
                                                          "//", "#"};
   ArrayRef<StringRef> KnownPrefixes(KnownCStylePrefixes);
-  if (Style.Language == FormatStyle::LK_TextProto)
+  if (Style.isTextProto())
     KnownPrefixes = KnownTextProtoPrefixes;
 
   assert(
@@ -158,8 +158,7 @@ getCommentSplit(StringRef Text, unsigned ContentStartColumn,
       return BreakableToken::Split(StringRef::npos, 0);
     StringRef BeforeCut = Text.substr(0, SpaceOffset).rtrim(Blanks);
     StringRef AfterCut = Text.substr(SpaceOffset);
-    // Don't trim the leading blanks if it would create a */ after the break.
-    if (!DecorationEndsWithStar || AfterCut.size() <= 1 || AfterCut[1] != '/')
+    if (!DecorationEndsWithStar)
       AfterCut = AfterCut.ltrim(Blanks);
     return BreakableToken::Split(BeforeCut.size(),
                                  AfterCut.begin() - BeforeCut.end());
@@ -420,7 +419,7 @@ BreakableComment::getSplit(unsigned LineIndex, unsigned TailOffset,
                            unsigned ColumnLimit, unsigned ContentStartColumn,
                            const llvm::Regex &CommentPragmasRegex) const {
   // Don't break lines matching the comment pragmas regex.
-  if (CommentPragmasRegex.match(Content[LineIndex]))
+  if (!AlwaysReflow || CommentPragmasRegex.match(Content[LineIndex]))
     return Split(StringRef::npos, 0);
   return getCommentSplit(Content[LineIndex].substr(TailOffset),
                          ContentStartColumn, ColumnLimit, Style.TabWidth,
@@ -576,7 +575,7 @@ BreakableBlockComment::BreakableBlockComment(
   IndentAtLineBreak = std::max<unsigned>(IndentAtLineBreak, Decoration.size());
 
   // Detect a multiline jsdoc comment and set DelimitersOnNewline in that case.
-  if (Style.isJavaScript() || Style.Language == FormatStyle::LK_Java) {
+  if (Style.isJavaScript() || Style.isJava()) {
     if ((Lines[0] == "*" || Lines[0].starts_with("* ")) && Lines.size() > 1) {
       // This is a multiline jsdoc comment.
       DelimitersOnNewline = true;
@@ -608,7 +607,7 @@ BreakableToken::Split BreakableBlockComment::getSplit(
     unsigned LineIndex, unsigned TailOffset, unsigned ColumnLimit,
     unsigned ContentStartColumn, const llvm::Regex &CommentPragmasRegex) const {
   // Don't break lines matching the comment pragmas regex.
-  if (CommentPragmasRegex.match(Content[LineIndex]))
+  if (!AlwaysReflow || CommentPragmasRegex.match(Content[LineIndex]))
     return Split(StringRef::npos, 0);
   return getCommentSplit(Content[LineIndex].substr(TailOffset),
                          ContentStartColumn, ColumnLimit, Style.TabWidth,
@@ -694,7 +693,7 @@ const llvm::StringSet<>
 };
 
 unsigned BreakableBlockComment::getContentIndent(unsigned LineIndex) const {
-  if (Style.Language != FormatStyle::LK_Java && !Style.isJavaScript())
+  if (!Style.isJava() && !Style.isJavaScript())
     return 0;
   // The content at LineIndex 0 of a comment like:
   // /** line 0 */
@@ -855,7 +854,8 @@ bool BreakableBlockComment::mayReflow(
   StringRef IndentContent = Content[LineIndex];
   if (Lines[LineIndex].ltrim(Blanks).starts_with("*"))
     IndentContent = Lines[LineIndex].ltrim(Blanks).substr(1);
-  return LineIndex > 0 && !CommentPragmasRegex.match(IndentContent) &&
+  return LineIndex > 0 && AlwaysReflow &&
+         !CommentPragmasRegex.match(IndentContent) &&
          mayReflowContent(Content[LineIndex]) && !Tok.Finalized &&
          !switchesFormatting(tokenAt(LineIndex));
 }
@@ -1160,7 +1160,8 @@ bool BreakableLineCommentSection::mayReflow(
   // // text that protrudes
   // //    into text with different indent
   // We do reflow in that case in block comments.
-  return LineIndex > 0 && !CommentPragmasRegex.match(IndentContent) &&
+  return LineIndex > 0 && AlwaysReflow &&
+         !CommentPragmasRegex.match(IndentContent) &&
          mayReflowContent(Content[LineIndex]) && !Tok.Finalized &&
          !switchesFormatting(tokenAt(LineIndex)) &&
          OriginalPrefix[LineIndex] == OriginalPrefix[LineIndex - 1];

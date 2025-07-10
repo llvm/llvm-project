@@ -1,11 +1,11 @@
+.. _testing:
+
 ==============
 Testing libc++
 ==============
 
 .. contents::
   :local:
-
-.. _testing:
 
 Getting Started
 ===============
@@ -26,7 +26,7 @@ Please see the `Lit Command Guide`_ for more information about LIT.
 Usage
 -----
 
-After building libc++, you can run parts of the libc++ test suite by simply
+After :ref:`building libc++ <VendorDocumentation>`, you can run parts of the libc++ test suite by simply
 running ``llvm-lit`` on a specified test or directory. If you're unsure
 whether the required libraries have been built, you can use the
 ``cxx-test-depends`` target. For example:
@@ -84,6 +84,12 @@ flags to use, and how to run an executable. This system is meant to be easily
 extended for custom needs, in particular when porting the libc++ test suite to
 new platforms.
 
+.. note::
+  If you run the test suite on Apple platforms, we recommend adding the terminal application
+  used to run the test suite to the list of "Developer Tools". This prevents the system from
+  trying to scan each individual test binary for malware and dramatically speeds up the test
+  suite.
+
 Using a Custom Site Configuration
 ---------------------------------
 
@@ -110,6 +116,7 @@ Additional tools
 The libc++ test suite uses a few optional tools to improve the code quality.
 
 These tools are:
+
 - clang-tidy (you might need additional dev packages to compile libc++-specific clang-tidy checks)
 
 Reproducing CI issues locally
@@ -285,7 +292,7 @@ tests using exceptions. The code to write a test manually would be:
 
 .. code-block:: cpp
 
-  void test_excption([[maybe_unused]] int arg) {
+  void test_exception([[maybe_unused]] int arg) {
   #ifndef TEST_HAS_NO_EXCEPTIONS // do nothing when tests are disabled
     try {
       foo(arg);
@@ -302,7 +309,7 @@ The same test using a macro:
 
 .. code-block:: cpp
 
-  void test_excption([[maybe_unused]] int arg) {
+  void test_exception([[maybe_unused]] int arg) {
     TEST_VALIDATE_EXCEPTION(bar,
                             [](const bar& e) {
                               LIBCPP_ASSERT(e.what() == what);
@@ -351,7 +358,7 @@ Test Filenames`_ when determining the names for new test files.
      - Same as ``FOO.pass.cpp``, but for Objective-C++.
 
    * - ``FOO.compile.pass.cpp``
-     - Checks whether the C++ code in the file compiles successfully. In general, prefer ``compile`` tests over ``verify`` tests, 
+     - Checks whether the C++ code in the file compiles successfully. In general, prefer ``compile`` tests over ``verify`` tests,
        subject to the specific recommendations, below, for when to write ``verify`` tests.
    * - ``FOO.compile.pass.mm``
      - Same as ``FOO.compile.pass.cpp``, but for Objective-C++.
@@ -385,6 +392,10 @@ Test Filenames`_ when determining the names for new test files.
        by LLVM split-file. Each generated file will drive an invocation of a separate Lit test. The format of the generated file will determine the type
        of Lit test to be executed. This can be used to generate multiple Lit tests from a single source file, which is useful for testing repetitive properties
        in the library. Be careful not to abuse this since this is not a replacement for usual code reuse techniques.
+
+   * - ``FOO.bench.cpp``
+     - A benchmark test. These tests are linked against the GoogleBenchmark library and generally consist of micro-benchmarks of individual
+       components of the library.
 
 
 libc++-Specific Lit Features
@@ -425,62 +436,83 @@ writing tests easier. See `libc++-specific Lit Directives`_ for more information
        extension.)
 
 
+C++ Standard version tests
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Historically libc++ tests used to filter the tests for C++ Standard versions
+with lit directives like:
+
+.. code-block:: cpp
+
+   // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+
+With C++ Standards released every 3 years, this solution is not scalable.
+Instead use:
+
+.. code-block:: cpp
+
+   // UNSUPPORTED: std-at-least-c++26
+
+There is no corresponding ``std-at-most-c++23``. This could be useful when
+tests are only valid for a small set of standard versions. For example, a
+deprecation test is only valid when the feature is deprecated until it is
+removed from the Standard. These tests should be written like:
+
+.. code-block:: cpp
+
+   // REQUIRES: c++17 || c++20 || c++23
+
+.. note::
+
+   There are a lot of tests with the first style, these can remain as they are.
+   The new style is only intended to be used for new tests.
+
+
 Benchmarks
 ==========
 
-Libc++ contains benchmark tests separately from the test of the test suite.
-The benchmarks are written using the `Google Benchmark`_ library, a copy of which
-is stored in the libc++ repository.
+Libc++'s test suite also contains benchmarks. The benchmarks are written using the `Google Benchmark`_
+library, a copy of which is stored in the LLVM monorepo. For more information about using the Google
+Benchmark library, see the `official documentation <https://github.com/google/benchmark>`_.
 
-For more information about using the Google Benchmark library see the
-`official documentation <https://github.com/google/benchmark>`_.
+The benchmarks are located under ``libcxx/test/benchmarks``. Running a benchmark
+works in the same way as running a test. Both the benchmarks and the tests share
+the same configuration, so make sure to enable the relevant optimization level
+when running the benchmarks. For example,
+
+.. code-block:: bash
+
+  $ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/string.bench.cpp --show-all --param optimization=speed
+
+Note that benchmarks are only dry-run when run via the ``check-cxx`` target since
+we only want to make sure they don't rot. Do not rely on the results of benchmarks
+run through ``check-cxx`` for anything, instead run the benchmarks manually using
+the instructions for running individual tests.
+
+If you want to compare the results of different benchmark runs, we recommend using the
+``libcxx-compare-benchmarks`` helper tool. First, configure CMake in a build directory
+and run the benchmark:
+
+.. code-block:: bash
+
+  $ cmake -S runtimes -B <build1> [...]
+  $ libcxx/utils/libcxx-lit <build1> libcxx/test/benchmarks/string.bench.cpp --param optimization=speed
+
+Then, do the same for the second configuration you want to test. Use a different build
+directory for that configuration:
+
+.. code-block:: bash
+
+  $ cmake -S runtimes -B <build2> [...]
+  $ libcxx/utils/libcxx-lit <build2> libcxx/test/benchmarks/string.bench.cpp --param optimization=speed
+
+Finally, use ``libcxx-compare-benchmarks`` to compare both:
+
+.. code-block:: bash
+
+  $ libcxx/utils/libcxx-compare-benchmarks <build1> <build2> libcxx/test/benchmarks/string.bench.cpp
 
 .. _`Google Benchmark`: https://github.com/google/benchmark
-
-Building Benchmarks
--------------------
-
-The benchmark tests are not built by default. The benchmarks can be built using
-the ``cxx-benchmarks`` target.
-
-An example build would look like:
-
-.. code-block:: bash
-
-  $ cd build
-  $ ninja cxx-benchmarks
-
-This will build all of the benchmarks under ``<libcxx-src>/benchmarks`` to be
-built against the just-built libc++. The compiled tests are output into
-``build/projects/libcxx/benchmarks``.
-
-The benchmarks can also be built against the platforms native standard library
-using the ``-DLIBCXX_BUILD_BENCHMARKS_NATIVE_STDLIB=ON`` CMake option. This
-is useful for comparing the performance of libc++ to other standard libraries.
-The compiled benchmarks are named ``<test>.libcxx.out`` if they test libc++ and
-``<test>.native.out`` otherwise.
-
-Also See:
-
-  * :ref:`Building Libc++ <build instructions>`
-  * :ref:`CMake Options`
-
-Running Benchmarks
-------------------
-
-The benchmarks must be run manually by the user. Currently there is no way
-to run them as part of the build.
-
-For example:
-
-.. code-block:: bash
-
-  $ cd build/projects/libcxx/benchmarks
-  $ ./algorithms.libcxx.out # Runs all the benchmarks
-  $ ./algorithms.libcxx.out --benchmark_filter=BM_Sort.* # Only runs the sort benchmarks
-
-For more information about running benchmarks see `Google Benchmark`_.
-
 
 .. _testing-hardening-assertions:
 
@@ -524,4 +556,3 @@ A toy example:
 
 Note that error messages are only tested (matched) if the ``debug``
 hardening mode is used.
-

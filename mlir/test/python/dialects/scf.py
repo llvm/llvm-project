@@ -279,6 +279,32 @@ def testIfWithoutElse():
 
 
 @constructAndPrintInModule
+def testNestedIf():
+    bool = IntegerType.get_signless(1)
+    i32 = IntegerType.get_signless(32)
+
+    @func.FuncOp.from_py_func(bool, bool)
+    def nested_if(b, c):
+        if_op = scf.IfOp(b)
+        with InsertionPoint(if_op.then_block) as ip:
+            if_op = scf.IfOp(c, ip=ip)
+            with InsertionPoint(if_op.then_block):
+                one = arith.ConstantOp(i32, 1)
+                add = arith.AddIOp(one, one)
+                scf.YieldOp([])
+            scf.YieldOp([])
+        return
+
+
+# CHECK: func @nested_if(%[[ARG0:.*]]: i1, %[[ARG1:.*]]: i1)
+# CHECK: scf.if %[[ARG0:.*]]
+# CHECK:   scf.if %[[ARG1:.*]]
+# CHECK:     %[[ONE:.*]] = arith.constant 1
+# CHECK:     %[[ADD:.*]] = arith.addi %[[ONE]], %[[ONE]]
+# CHECK: return
+
+
+@constructAndPrintInModule
 def testIfWithElse():
     bool = IntegerType.get_signless(1)
     i32 = IntegerType.get_signless(32)

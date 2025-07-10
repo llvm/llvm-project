@@ -8,16 +8,21 @@
 
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Analysis/CallGraph.h"
+#include "mlir/Dialect/Transform/IR/TransformAttrs.h"
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/Dialect/Transform/IR/Utils.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 
 #include "mlir/Dialect/Transform/IR/TransformDialect.cpp.inc"
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/Transform/IR/TransformAttrs.cpp.inc"
 
 #ifndef NDEBUG
 void transform::detail::checkImplementsTransformOpInterface(
@@ -66,6 +71,10 @@ void transform::TransformDialect::initialize() {
 #include "mlir/Dialect/Transform/IR/TransformOps.cpp.inc"
       >();
   initializeTypes();
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "mlir/Dialect/Transform/IR/TransformAttrs.cpp.inc"
+      >();
   initializeLibraryModule();
 }
 
@@ -111,7 +120,6 @@ void transform::TransformDialect::reportDuplicateTypeRegistration(
   llvm::raw_string_ostream msg(buffer);
   msg << "extensible dialect type '" << mnemonic
       << "' is already registered with a different implementation";
-  msg.flush();
   llvm::report_fatal_error(StringRef(buffer));
 }
 
@@ -121,7 +129,6 @@ void transform::TransformDialect::reportDuplicateOpRegistration(
   llvm::raw_string_ostream msg(buffer);
   msg << "extensible dialect operation '" << opName
       << "' is already registered with a mismatching TypeID";
-  msg.flush();
   llvm::report_fatal_error(StringRef(buffer));
 }
 

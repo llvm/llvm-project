@@ -8,9 +8,9 @@
 
 #include "clang/AST/CommentParser.h"
 #include "clang/AST/CommentCommandTraits.h"
-#include "clang/AST/CommentDiagnostic.h"
 #include "clang/AST/CommentSema.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/DiagnosticComment.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -222,6 +222,63 @@ public:
     return true;
   }
 
+  // Check if this line starts with @par or \par
+  bool startsWithParCommand() {
+    unsigned Offset = 1;
+
+    // Skip all whitespace characters at the beginning.
+    // This needs to backtrack because Pos has already advanced past the
+    // actual \par or @par command by the time this function is called.
+    while (isWhitespace(*(Pos.BufferPtr - Offset)))
+      Offset++;
+
+    // Once we've reached the whitespace, backtrack and check if the previous
+    // four characters are \par or @par.
+    llvm::StringRef LineStart(Pos.BufferPtr - Offset - 3, 4);
+    return LineStart.starts_with("\\par") || LineStart.starts_with("@par");
+  }
+
+  /// Extract a par command argument-header.
+  bool lexParHeading(Token &Tok) {
+    if (isEnd())
+      return false;
+
+    Position SavedPos = Pos;
+
+    consumeWhitespace();
+    SmallString<32> WordText;
+    const char *WordBegin = Pos.BufferPtr;
+    SourceLocation Loc = getSourceLocation();
+
+    if (!startsWithParCommand())
+      return false;
+
+    // Read until the end of this token, which is effectively the end of the
+    // line. This gets us the content of the par header, if there is one.
+    while (!isEnd()) {
+      WordText.push_back(peek());
+      if (Pos.BufferPtr + 1 == Pos.BufferEnd) {
+        consumeChar();
+        break;
+      }
+      consumeChar();
+    }
+
+    unsigned Length = WordText.size();
+    if (Length == 0) {
+      Pos = SavedPos;
+      return false;
+    }
+
+    char *TextPtr = Allocator.Allocate<char>(Length + 1);
+
+    memcpy(TextPtr, WordText.c_str(), Length + 1);
+    StringRef Text = StringRef(TextPtr, Length);
+
+    formTokenWithChars(Tok, Loc, WordBegin, Length, Text);
+    return true;
+  }
+
   /// Extract a word -- sequence of non-whitespace characters.
   bool lexWord(Token &Tok) {
     if (isEnd())
@@ -318,7 +375,7 @@ public:
       Pos.CurToken++;
     }
 
-    P.putBack(llvm::ArrayRef(Toks.begin() + Pos.CurToken, Toks.end()));
+    P.putBack(ArrayRef(Toks.begin() + Pos.CurToken, Toks.end()));
     Pos.CurToken = Toks.size();
 
     if (HavePartialTok)
@@ -374,7 +431,7 @@ Parser::parseCommandArgs(TextTokenRetokenizer &Retokenizer, unsigned NumArgs) {
     ParsedArgs++;
   }
 
-  return llvm::ArrayRef(Args, ParsedArgs);
+  return ArrayRef(Args, ParsedArgs);
 }
 
 ArrayRef<Comment::Argument>
@@ -391,7 +448,25 @@ Parser::parseThrowCommandArgs(TextTokenRetokenizer &Retokenizer,
     ParsedArgs++;
   }
 
-  return llvm::ArrayRef(Args, ParsedArgs);
+  return ArrayRef(Args, ParsedArgs);
+}
+
+ArrayRef<Comment::Argument>
+Parser::parseParCommandArgs(TextTokenRetokenizer &Retokenizer,
+                            unsigned NumArgs) {
+  assert(NumArgs > 0);
+  auto *Args = new (Allocator.Allocate<Comment::Argument>(NumArgs))
+      Comment::Argument[NumArgs];
+  unsigned ParsedArgs = 0;
+  Token Arg;
+
+  while (ParsedArgs < NumArgs && Retokenizer.lexParHeading(Arg)) {
+    Args[ParsedArgs] = Comment::Argument{
+        SourceRange(Arg.getLocation(), Arg.getEndLocation()), Arg.getText()};
+    ParsedArgs++;
+  }
+
+  return ArrayRef(Args, ParsedArgs);
 }
 
 BlockCommandComment *Parser::parseBlockCommand() {
@@ -424,7 +499,7 @@ BlockCommandComment *Parser::parseBlockCommand() {
   if (isTokBlockCommand()) {
     // Block command ahead.  We can't nest block commands, so pretend that this
     // command has an empty argument.
-    ParagraphComment *Paragraph = S.actOnParagraphComment(std::nullopt);
+    ParagraphComment *Paragraph = S.actOnParagraphComment({});
     if (PC) {
       S.actOnParamCommandFinish(PC, Paragraph);
       return PC;
@@ -449,6 +524,9 @@ BlockCommandComment *Parser::parseBlockCommand() {
     else if (Info->IsThrowsCommand)
       S.actOnBlockCommandArgs(
           BC, parseThrowCommandArgs(Retokenizer, Info->NumArgs));
+    else if (Info->IsParCommand)
+      S.actOnBlockCommandArgs(BC,
+                              parseParCommandArgs(Retokenizer, Info->NumArgs));
     else
       S.actOnBlockCommandArgs(BC, parseCommandArgs(Retokenizer, Info->NumArgs));
 
@@ -469,7 +547,7 @@ BlockCommandComment *Parser::parseBlockCommand() {
 
   ParagraphComment *Paragraph;
   if (EmptyParagraph)
-    Paragraph = S.actOnParagraphComment(std::nullopt);
+    Paragraph = S.actOnParagraphComment({});
   else {
     BlockContentComment *Block = parseParagraphOrBlockCommand();
     // Since we have checked for a block command, we should have parsed a
@@ -560,14 +638,14 @@ HTMLStartTagComment *Parser::parseHTMLStartTag() {
     }
 
     case tok::html_greater:
-      S.actOnHTMLStartTagFinish(HST, S.copyArray(llvm::ArrayRef(Attrs)),
+      S.actOnHTMLStartTagFinish(HST, S.copyArray(ArrayRef(Attrs)),
                                 Tok.getLocation(),
                                 /* IsSelfClosing = */ false);
       consumeToken();
       return HST;
 
     case tok::html_slash_greater:
-      S.actOnHTMLStartTagFinish(HST, S.copyArray(llvm::ArrayRef(Attrs)),
+      S.actOnHTMLStartTagFinish(HST, S.copyArray(ArrayRef(Attrs)),
                                 Tok.getLocation(),
                                 /* IsSelfClosing = */ true);
       consumeToken();
@@ -585,14 +663,14 @@ HTMLStartTagComment *Parser::parseHTMLStartTag() {
           Tok.is(tok::html_slash_greater))
         continue;
 
-      S.actOnHTMLStartTagFinish(HST, S.copyArray(llvm::ArrayRef(Attrs)),
+      S.actOnHTMLStartTagFinish(HST, S.copyArray(ArrayRef(Attrs)),
                                 SourceLocation(),
                                 /* IsSelfClosing = */ false);
       return HST;
 
     default:
       // Not a token from an HTML start tag.  Thus HTML tag prematurely ended.
-      S.actOnHTMLStartTagFinish(HST, S.copyArray(llvm::ArrayRef(Attrs)),
+      S.actOnHTMLStartTagFinish(HST, S.copyArray(ArrayRef(Attrs)),
                                 SourceLocation(),
                                 /* IsSelfClosing = */ false);
       bool StartLineInvalid;
@@ -731,7 +809,7 @@ BlockContentComment *Parser::parseParagraphOrBlockCommand() {
     break;
   }
 
-  return S.actOnParagraphComment(S.copyArray(llvm::ArrayRef(Content)));
+  return S.actOnParagraphComment(S.copyArray(ArrayRef(Content)));
 }
 
 VerbatimBlockComment *Parser::parseVerbatimBlock() {
@@ -769,12 +847,12 @@ VerbatimBlockComment *Parser::parseVerbatimBlock() {
   if (Tok.is(tok::verbatim_block_end)) {
     const CommandInfo *Info = Traits.getCommandInfo(Tok.getVerbatimBlockID());
     S.actOnVerbatimBlockFinish(VB, Tok.getLocation(), Info->Name,
-                               S.copyArray(llvm::ArrayRef(Lines)));
+                               S.copyArray(ArrayRef(Lines)));
     consumeToken();
   } else {
     // Unterminated \\verbatim block
     S.actOnVerbatimBlockFinish(VB, SourceLocation(), "",
-                               S.copyArray(llvm::ArrayRef(Lines)));
+                               S.copyArray(ArrayRef(Lines)));
   }
 
   return VB;
@@ -850,7 +928,7 @@ FullComment *Parser::parseFullComment() {
     while (Tok.is(tok::newline))
       consumeToken();
   }
-  return S.actOnFullComment(S.copyArray(llvm::ArrayRef(Blocks)));
+  return S.actOnFullComment(S.copyArray(ArrayRef(Blocks)));
 }
 
 } // end namespace comments

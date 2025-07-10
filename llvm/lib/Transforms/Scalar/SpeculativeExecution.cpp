@@ -71,6 +71,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Transforms/Scalar.h"
 
 using namespace llvm;
 
@@ -295,10 +296,6 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
   };
   auto AllPrecedingUsesFromBlockHoisted =
       [&HasNoUnhoistedInstr](const User *U) {
-        // Do not hoist any debug info intrinsics.
-        if (isa<DbgInfoIntrinsic>(U))
-          return false;
-
         return HasNoUnhoistedInstr(U->operand_values());
       };
 
@@ -312,9 +309,7 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
       if (TotalSpeculationCost > SpecExecMaxSpeculationCost)
         return false;  // too much to hoist
     } else {
-      // Debug info intrinsics should not be counted for threshold.
-      if (!isa<DbgInfoIntrinsic>(I))
-        NotHoistedInstCount++;
+      NotHoistedInstCount++;
       if (NotHoistedInstCount > SpecExecMaxNotHoisted)
         return false; // too much left behind
       NotHoisted.insert(&I);
@@ -327,7 +322,8 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
     auto Current = I;
     ++I;
     if (!NotHoisted.count(&*Current)) {
-      Current->moveBefore(ToBlock.getTerminator());
+      Current->moveBefore(ToBlock.getTerminator()->getIterator());
+      Current->dropLocation();
     }
   }
   return true;

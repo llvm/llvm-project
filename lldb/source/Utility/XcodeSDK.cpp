@@ -142,6 +142,8 @@ XcodeSDK::Type XcodeSDK::GetType() const {
 
 llvm::StringRef XcodeSDK::GetString() const { return m_name; }
 
+const FileSpec &XcodeSDK::GetSysroot() const { return m_sysroot; }
+
 bool XcodeSDK::Info::operator<(const Info &other) const {
   return std::tie(type, version, internal) <
          std::tie(other.type, other.version, other.internal);
@@ -160,11 +162,16 @@ void XcodeSDK::Merge(const XcodeSDK &other) {
     *this = other;
   else {
     // The Internal flag always wins.
-    if (llvm::StringRef(m_name).ends_with(".sdk"))
-      if (!l.internal && r.internal)
+    if (!l.internal && r.internal) {
+      if (llvm::StringRef(m_name).ends_with(".sdk"))
         m_name =
             m_name.substr(0, m_name.size() - 3) + std::string("Internal.sdk");
+    }
   }
+
+  // We changed the SDK name. Adjust the sysroot accordingly.
+  if (m_sysroot && m_sysroot.GetFilename().GetStringRef() != m_name)
+    m_sysroot.SetFilename(m_name);
 }
 
 std::string XcodeSDK::GetCanonicalName(XcodeSDK::Info info) {
@@ -256,6 +263,27 @@ bool XcodeSDK::SupportsSwift() const {
     return true;
   default:
     return false;
+  }
+}
+
+bool XcodeSDK::SDKSupportsBuiltinModules(const llvm::Triple &target_triple,
+                                         llvm::VersionTuple sdk_version) {
+  using namespace llvm;
+
+  switch (target_triple.getOS()) {
+  case Triple::OSType::MacOSX:
+    return sdk_version >= VersionTuple(15U);
+  case Triple::OSType::IOS:
+    return sdk_version >= VersionTuple(18U);
+  case Triple::OSType::TvOS:
+    return sdk_version >= VersionTuple(18U);
+  case Triple::OSType::WatchOS:
+    return sdk_version >= VersionTuple(11U);
+  case Triple::OSType::XROS:
+    return sdk_version >= VersionTuple(2U);
+  default:
+    // New SDKs support builtin modules from the start.
+    return true;
   }
 }
 

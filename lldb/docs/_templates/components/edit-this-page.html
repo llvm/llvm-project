@@ -1,0 +1,9 @@
+{% extends "furo/components/edit-this-page.html" %}
+
+{% block link_available -%}
+{%- if pagename.startswith("python_api") -%}
+  <!-- Python API docs are generated. -->
+{%- else -%}
+  {{ furo_edit_button(determine_page_edit_link()) }}
+{%- endif -%}
+{%- endblock %}

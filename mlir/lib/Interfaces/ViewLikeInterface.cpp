@@ -27,13 +27,69 @@ LogicalResult mlir::verifyListOfOperandsOrIntegers(Operation *op,
     return op->emitError("expected ") << numElements << " " << name
                                       << " values, got " << staticVals.size();
   unsigned expectedNumDynamicEntries =
-      llvm::count_if(staticVals, [](int64_t staticVal) {
-        return ShapedType::isDynamic(staticVal);
-      });
+      llvm::count_if(staticVals, ShapedType::isDynamic);
   if (values.size() != expectedNumDynamicEntries)
     return op->emitError("expected ")
            << expectedNumDynamicEntries << " dynamic " << name << " values";
   return success();
+}
+
+SliceBoundsVerificationResult mlir::verifyInBoundsSlice(
+    ArrayRef<int64_t> shape, ArrayRef<int64_t> staticOffsets,
+    ArrayRef<int64_t> staticSizes, ArrayRef<int64_t> staticStrides,
+    bool generateErrorMessage) {
+  SliceBoundsVerificationResult result;
+  result.isValid = true;
+  for (int64_t i = 0, e = shape.size(); i < e; ++i) {
+    // Nothing to verify for dynamic source dims.
+    if (ShapedType::isDynamic(shape[i]))
+      continue;
+    // Nothing to verify if the offset is dynamic.
+    if (ShapedType::isDynamic(staticOffsets[i]))
+      continue;
+    if (staticOffsets[i] >= shape[i]) {
+      result.errorMessage =
+          std::string("offset ") + std::to_string(i) +
+          " is out-of-bounds: " + std::to_string(staticOffsets[i]) +
+          " >= " + std::to_string(shape[i]);
+      result.isValid = false;
+      return result;
+    }
+    if (ShapedType::isDynamic(staticSizes[i]) ||
+        ShapedType::isDynamic(staticStrides[i]))
+      continue;
+    int64_t lastPos =
+        staticOffsets[i] + (staticSizes[i] - 1) * staticStrides[i];
+    if (lastPos >= shape[i]) {
+      result.errorMessage = std::string("slice along dimension ") +
+                            std::to_string(i) +
+                            " runs out-of-bounds: " + std::to_string(lastPos) +
+                            " >= " + std::to_string(shape[i]);
+      result.isValid = false;
+      return result;
+    }
+  }
+  return result;
+}
+
+SliceBoundsVerificationResult mlir::verifyInBoundsSlice(
+    ArrayRef<int64_t> shape, ArrayRef<OpFoldResult> mixedOffsets,
+    ArrayRef<OpFoldResult> mixedSizes, ArrayRef<OpFoldResult> mixedStrides,
+    bool generateErrorMessage) {
+  auto getStaticValues = [](ArrayRef<OpFoldResult> ofrs) {
+    SmallVector<int64_t> staticValues;
+    for (OpFoldResult ofr : ofrs) {
+      if (auto attr = dyn_cast<Attribute>(ofr)) {
+        staticValues.push_back(cast<IntegerAttr>(attr).getInt());
+      } else {
+        staticValues.push_back(ShapedType::kDynamic);
+      }
+    }
+    return staticValues;
+  };
+  return verifyInBoundsSlice(
+      shape, getStaticValues(mixedOffsets), getStaticValues(mixedSizes),
+      getStaticValues(mixedStrides), generateErrorMessage);
 }
 
 LogicalResult
@@ -68,12 +124,12 @@ mlir::detail::verifyOffsetSizeAndStrideOp(OffsetSizeAndStrideOpInterface op) {
     return failure();
 
   for (int64_t offset : op.getStaticOffsets()) {
-    if (offset < 0 && !ShapedType::isDynamic(offset))
+    if (offset < 0 && ShapedType::isStatic(offset))
       return op->emitError("expected offsets to be non-negative, but got ")
              << offset;
   }
   for (int64_t size : op.getStaticSizes()) {
-    if (size < 0 && !ShapedType::isDynamic(size))
+    if (size < 0 && ShapedType::isStatic(size))
       return op->emitError("expected sizes to be non-negative, but got ")
              << size;
   }
@@ -113,7 +169,8 @@ static char getRightDelimiter(AsmParser::Delimiter delimiter) {
 void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
                                  OperandRange values,
                                  ArrayRef<int64_t> integers,
-                                 ArrayRef<bool> scalables, TypeRange valueTypes,
+                                 ArrayRef<bool> scalableFlags,
+                                 TypeRange valueTypes,
                                  AsmParser::Delimiter delimiter) {
   char leftDelimiter = getLeftDelimiter(delimiter);
   char rightDelimiter = getRightDelimiter(delimiter);
@@ -126,7 +183,7 @@ void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
   unsigned dynamicValIdx = 0;
   unsigned scalableIndexIdx = 0;
   llvm::interleaveComma(integers, printer, [&](int64_t integer) {
-    if (!scalables.empty() && scalables[scalableIndexIdx])
+    if (!scalableFlags.empty() && scalableFlags[scalableIndexIdx])
       printer << "[";
     if (ShapedType::isDynamic(integer)) {
       printer << values[dynamicValIdx];
@@ -136,7 +193,7 @@ void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
     } else {
       printer << integer;
     }
-    if (!scalables.empty() && scalables[scalableIndexIdx])
+    if (!scalableFlags.empty() && scalableFlags[scalableIndexIdx])
       printer << "]";
 
     scalableIndexIdx++;
@@ -148,7 +205,7 @@ void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
 ParseResult mlir::parseDynamicIndexList(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    DenseI64ArrayAttr &integers, DenseBoolArrayAttr &scalables,
+    DenseI64ArrayAttr &integers, DenseBoolArrayAttr &scalableFlags,
     SmallVectorImpl<Type> *valueTypes, AsmParser::Delimiter delimiter) {
 
   SmallVector<int64_t, 4> integerVals;
@@ -183,7 +240,7 @@ ParseResult mlir::parseDynamicIndexList(
     return parser.emitError(parser.getNameLoc())
            << "expected SSA value or integer";
   integers = parser.getBuilder().getDenseI64ArrayAttr(integerVals);
-  scalables = parser.getBuilder().getDenseBoolArrayAttr(scalableVals);
+  scalableFlags = parser.getBuilder().getDenseBoolArrayAttr(scalableVals);
   return success();
 }
 
@@ -211,5 +268,5 @@ bool mlir::detail::sameOffsetsSizesAndStrides(
 unsigned mlir::detail::getNumDynamicEntriesUpToIdx(ArrayRef<int64_t> staticVals,
                                                    unsigned idx) {
   return std::count_if(staticVals.begin(), staticVals.begin() + idx,
-                       [&](int64_t val) { return ShapedType::isDynamic(val); });
+                       ShapedType::isDynamic);
 }

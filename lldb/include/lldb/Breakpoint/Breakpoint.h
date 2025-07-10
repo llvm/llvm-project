@@ -519,6 +519,8 @@ public:
 
   bool IsHardware() const { return m_hardware; }
 
+  llvm::Error SetIsHardware(bool is_hardware);
+
   lldb::BreakpointResolverSP GetResolver() { return m_resolver_sp; }
 
   lldb::SearchFilterSP GetSearchFilter() { return m_filter_sp; }
@@ -587,6 +589,8 @@ public:
 
   /// Get statistics associated with this breakpoint in JSON format.
   llvm::json::Value GetStatistics();
+
+  void ResetStatistics();
 
   /// Get the time it took to resolve all locations in this breakpoint.
   StatsDuration::Duration GetResolveTime() const { return m_resolve_time; }

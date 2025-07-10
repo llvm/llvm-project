@@ -11,14 +11,15 @@
 /// Language (DXIL).
 //===----------------------------------------------------------------------===//
 
-#include "DXILMetadata.h"
-#include "DXILResourceAnalysis.h"
+#include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "DirectXIRPasses/PointerTypeAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Analysis/DXILMetadataAnalysis.h"
+#include "llvm/Analysis/DXILResource.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/IRBuilder.h"
@@ -52,7 +53,6 @@ constexpr bool isValidForDXIL(Attribute::AttrKind Attr) {
                        Attribute::Nest,
                        Attribute::NoAlias,
                        Attribute::NoBuiltin,
-                       Attribute::NoCapture,
                        Attribute::NoDuplicate,
                        Attribute::NoImplicitFloat,
                        Attribute::NoInline,
@@ -116,6 +116,31 @@ static void removeStringFunctionAttributes(Function &F,
   F.removeRetAttrs(DeadAttrs);
 }
 
+static void cleanModuleFlags(Module &M) {
+  NamedMDNode *MDFlags = M.getModuleFlagsMetadata();
+  if (!MDFlags)
+    return;
+
+  SmallVector<llvm::Module::ModuleFlagEntry> FlagEntries;
+  M.getModuleFlagsMetadata(FlagEntries);
+  bool Updated = false;
+  for (auto &Flag : FlagEntries) {
+    // llvm 3.7 only supports behavior up to AppendUnique.
+    if (Flag.Behavior <= Module::ModFlagBehavior::AppendUnique)
+      continue;
+    Flag.Behavior = Module::ModFlagBehavior::Warning;
+    Updated = true;
+  }
+
+  if (!Updated)
+    return;
+
+  MDFlags->eraseFromParent();
+
+  for (auto &Flag : FlagEntries)
+    M.addModuleFlag(Flag.Behavior, Flag.Key->getString(), Flag.Val);
+}
+
 class DXILPrepareModule : public ModulePass {
 
   static Value *maybeGenerateBitcast(IRBuilder<> &Builder,
@@ -124,9 +149,49 @@ class DXILPrepareModule : public ModulePass {
                                      Type *Ty) {
     // Omit bitcasts if the incoming value matches the instruction type.
     auto It = PointerTypes.find(Operand);
-    if (It != PointerTypes.end())
-      if (cast<TypedPointerType>(It->second)->getElementType() == Ty)
+    if (It != PointerTypes.end()) {
+      auto *OpTy = cast<TypedPointerType>(It->second)->getElementType();
+      if (OpTy == Ty)
         return nullptr;
+    }
+
+    Type *ValTy = Operand->getType();
+    // Also omit the bitcast for matching global array types
+    if (auto *GlobalVar = dyn_cast<GlobalVariable>(Operand))
+      ValTy = GlobalVar->getValueType();
+
+    if (auto *AI = dyn_cast<AllocaInst>(Operand))
+      ValTy = AI->getAllocatedType();
+
+    if (auto *ArrTy = dyn_cast<ArrayType>(ValTy)) {
+      Type *ElTy = ArrTy->getElementType();
+      if (ElTy == Ty)
+        return nullptr;
+    }
+
+    // finally, drill down GEP instructions until we get the array
+    // that is being accessed, and compare element types
+    if (ConstantExpr *GEPInstr = dyn_cast<ConstantExpr>(Operand)) {
+      while (GEPInstr->getOpcode() == Instruction::GetElementPtr) {
+        Value *OpArg = GEPInstr->getOperand(0);
+        if (ConstantExpr *NewGEPInstr = dyn_cast<ConstantExpr>(OpArg)) {
+          GEPInstr = NewGEPInstr;
+          continue;
+        }
+
+        if (auto *GlobalVar = dyn_cast<GlobalVariable>(OpArg))
+          ValTy = GlobalVar->getValueType();
+        if (auto *AI = dyn_cast<AllocaInst>(Operand))
+          ValTy = AI->getAllocatedType();
+        if (auto *ArrTy = dyn_cast<ArrayType>(ValTy)) {
+          Type *ElTy = ArrTy->getElementType();
+          if (ElTy == Ty)
+            return nullptr;
+        }
+        break;
+      }
+    }
+
     // Insert bitcasts where we are removing the instruction.
     Builder.SetInsertPoint(&Inst);
     // This code only gets hit in opaque-pointer mode, so the type of the
@@ -135,6 +200,15 @@ class DXILPrepareModule : public ModulePass {
     return Builder.Insert(
         CastInst::Create(Instruction::BitCast, Operand,
                          Builder.getPtrTy(PtrTy->getAddressSpace())));
+  }
+
+  static std::array<unsigned, 6> getCompatibleInstructionMDs(llvm::Module &M) {
+    return {M.getMDKindID("dx.nonuniform"),
+            M.getMDKindID("dx.controlflow.hints"),
+            M.getMDKindID("dx.precise"),
+            llvm::LLVMContext::MD_range,
+            llvm::LLVMContext::MD_alias_scope,
+            llvm::LLVMContext::MD_noalias};
   }
 
 public:
@@ -147,9 +221,13 @@ public:
         AttrMask.addAttribute(I);
     }
 
-    dxil::ValidatorVersionMD ValVerMD(M);
-    VersionTuple ValVer = ValVerMD.getAsVersionTuple();
+    const dxil::ModuleMetadataInfo MetadataInfo =
+        getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
+    VersionTuple ValVer = MetadataInfo.ValidatorVersion;
     bool SkipValidation = ValVer.getMajor() == 0 && ValVer.getMinor() == 0;
+
+    // construct allowlist of valid metadata node kinds
+    std::array<unsigned, 6> DXILCompatibleMDs = getCompatibleInstructionMDs(M);
 
     for (auto &F : M.functions()) {
       F.removeFnAttrs(AttrMask);
@@ -164,14 +242,8 @@ public:
       for (auto &BB : F) {
         IRBuilder<> Builder(&BB);
         for (auto &I : make_early_inc_range(BB)) {
-          if (I.getOpcode() == Instruction::FNeg) {
-            Builder.SetInsertPoint(&I);
-            Value *In = I.getOperand(0);
-            Value *Zero = ConstantFP::get(In->getType(), -0.0);
-            I.replaceAllUsesWith(Builder.CreateFSub(Zero, In));
-            I.eraseFromParent();
-            continue;
-          }
+
+          I.dropUnknownNonDebugMetadata(DXILCompatibleMDs);
 
           // Emtting NoOp bitcast instructions allows the ValueEnumerator to be
           // unmodified as it reserves instruction IDs during contruction.
@@ -213,13 +285,26 @@ public:
         }
       }
     }
+    // Remove flags not for DXIL.
+    cleanModuleFlags(M);
+
+    // dx.rootsignatures will have been parsed from its metadata form as its
+    // binary form as part of the RootSignatureAnalysisWrapper, so safely
+    // remove it as it is not recognized in DXIL
+    if (NamedMDNode *RootSignature = M.getNamedMetadata("dx.rootsignatures"))
+      RootSignature->eraseFromParent();
+
     return true;
   }
 
   DXILPrepareModule() : ModulePass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<DXILMetadataAnalysisWrapperPass>();
+    AU.addRequired<RootSignatureAnalysisWrapper>();
+    AU.addPreserved<RootSignatureAnalysisWrapper>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
-    AU.addPreserved<DXILResourceWrapper>();
+    AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
+    AU.addPreserved<DXILResourceWrapperPass>();
   }
   static char ID; // Pass identification.
 };
@@ -229,6 +314,8 @@ char DXILPrepareModule::ID = 0;
 
 INITIALIZE_PASS_BEGIN(DXILPrepareModule, DEBUG_TYPE, "DXIL Prepare Module",
                       false, false)
+INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(RootSignatureAnalysisWrapper)
 INITIALIZE_PASS_END(DXILPrepareModule, DEBUG_TYPE, "DXIL Prepare Module", false,
                     false)
 

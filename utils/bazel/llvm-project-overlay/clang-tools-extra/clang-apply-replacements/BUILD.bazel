@@ -1,0 +1,43 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
+)
+
+licenses(["notice"])
+
+cc_library(
+    name = "lib",
+    srcs = glob(["lib/**/*.cpp"]),
+    hdrs = glob(["include/clang-apply-replacements/**/*.h"]),
+    includes = ["include"],
+    deps = [
+        "//clang:basic",
+        "//clang:format",
+        "//clang:lex",
+        "//clang:rewrite",
+        "//clang:tooling",
+        "//clang:tooling_core",
+        "//clang:tooling_refactoring",
+        "//llvm:Support",
+    ],
+)
+
+cc_binary(
+    name = "clang-apply-replacements",
+    srcs = glob([
+        "tool/*.cpp",
+    ]),
+    deps = [
+        ":lib",
+        "//clang:basic",
+        "//clang:format",
+        "//clang:rewrite",
+        "//llvm:Support",
+    ],
+)

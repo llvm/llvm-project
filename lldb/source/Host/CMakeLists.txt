@@ -7,13 +7,16 @@ if (APPLE AND LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY)
   endif()
 endif()
 
+if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  add_definitions("-D_ALL_SOURCE")
+endif()
+
 macro(add_host_subdirectory group)
   list(APPEND HOST_SOURCES ${ARGN})
   source_group(${group} FILES ${ARGN})
 endmacro()
 
 add_host_subdirectory(common
-  common/Alarm.cpp
   common/FileAction.cpp
   common/FileCache.cpp
   common/File.cpp
@@ -24,9 +27,11 @@ add_host_subdirectory(common
   common/HostNativeThreadBase.cpp
   common/HostProcess.cpp
   common/HostThread.cpp
-  common/LockFileBase.cpp
+  common/JSONTransport.cpp
   common/LZMA.cpp
+  common/LockFileBase.cpp
   common/MainLoopBase.cpp
+  common/MemoryMonitor.cpp
   common/MonitoringProcessLauncher.cpp
   common/NativeProcessProtocol.cpp
   common/NativeRegisterContext.cpp
@@ -83,6 +88,7 @@ else()
     posix/MainLoopPosix.cpp
     posix/PipePosix.cpp
     posix/ProcessLauncherPosixFork.cpp
+    posix/Support.cpp
     )
 
   if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
@@ -113,7 +119,6 @@ else()
     if (CMAKE_SYSTEM_NAME MATCHES "Android")
       add_host_subdirectory(android
         android/HostInfoAndroid.cpp
-        android/LibcGlue.cpp
         )
     endif()
   elseif (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
@@ -132,6 +137,13 @@ else()
     add_host_subdirectory(openbsd
       openbsd/Host.cpp
       openbsd/HostInfoOpenBSD.cpp
+      )
+
+  elseif (CMAKE_SYSTEM_NAME MATCHES "AIX")
+    add_host_subdirectory(aix
+      aix/Host.cpp
+      aix/HostInfoAIX.cpp
+      aix/Support.cpp
       )
   endif()
 endif()
@@ -166,14 +178,15 @@ endif()
 add_lldb_library(lldbHost NO_PLUGIN_DEPENDENCIES
   ${HOST_SOURCES}
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/Host
+  LINK_COMPONENTS
+    Object
+    Support
   LINK_LIBS
     lldbUtility
     ${EXTRA_LIBS}
     ${LLDBObjCLibs}
     ${LLDB_LIBEDIT_LIBS}
-
-  LINK_COMPONENTS
-    Object
-    Support
   )
 

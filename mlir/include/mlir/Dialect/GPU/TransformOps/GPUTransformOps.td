@@ -26,6 +26,7 @@ def ApplyGPUToNVVMConversionPatternsOp : Op<Transform_Dialect,
     Collects patterns that convert GPU dialect ops to NVVM dialect ops. These
     patterns require an "LLVMTypeConverter".
   }];
+  let arguments = (ins DefaultValuedAttr<I16Attr, "1">:$benefit);
   let assemblyFormat = "attr-dict";
 }
 
@@ -51,6 +52,20 @@ def ApplyGPUSubgroupReduceToNVVMConversionPatternsOp : Op<Transform_Dialect,
     These patterns require an "LLVMTypeConverter".
   }];
   let assemblyFormat = "attr-dict";
+}
+
+def ApplyGPUToROCDLConversionPatternsOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.gpu.gpu_to_rocdl",
+    [DeclareOpInterfaceMethods<ConversionPatternDescriptorOpInterface,
+                               ["verifyTypeConverter"]>]> {
+  let description = [{
+    Collects patterns that convert GPU dialect ops to ROCDL dialect ops. These
+    patterns require an "LLVMTypeConverter".
+  }];
+  let arguments = (ins StrAttr:$chipset);
+  let assemblyFormat = [{
+    `chipset` `=` $chipset attr-dict
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -131,24 +146,24 @@ def MapNestedForallToThreads :
      TransformEachOpTrait,
      TransformOpInterface]> {
   let description = [{
-      Target the `gpu.launch op` and rewrite all `scf.forall` nested in it to 
+      Target the `gpu.launch op` and rewrite all `scf.forall` nested in it to
       distributed `gpu.thread_id` attribute.
 
       The operation searches for `scf.forall` ops nested under `target` and maps
-      each such op to GPU threads. 
-      
+      each such op to GPU threads.
+
       `scf.forall` induction variables are rewritten to `gpu.thread_id` according
       to the `mapping` attribute.
 
       Different types of mappings attributes are supported:
         - the block_dims is a list of integers that specifies the number of
           threads in each dimension. This is a mandatory attribute that is used
-          to constrain the number of threads in each dimension. If an 
+          to constrain the number of threads in each dimension. If an
           `scf.forall` op is mapped to fewer threads, predication occurs.
         - the warp_dims is a list of integers that specifies the number of
           warps in each dimension. This is an optional attribute that is used
           to constrain the number of warps in each dimension. When present, this
-          attribute must be specified in a way that is compatible with the 
+          attribute must be specified in a way that is compatible with the
           block_dims attribute. If an `scf.forall` op is mapped to fewer warps,
           predication occurs.
 
@@ -163,18 +178,18 @@ def MapNestedForallToThreads :
       inserted after each scf.forall op. At this time, this is an all or nothing
       choice. This will need to be tightened in the future.
 
-      The operation alters the block size of the given gpu_launch using the 
+      The operation alters the block size of the given gpu_launch using the
       mandatory block_dims argument.
 
       #### Return modes:
 
-      This operation ignores non-gpu_launch ops and drops them in the return.
+      This operation ignores non-`gpu_launch` ops and drops them in the return.
 
       If any scf.forall with tensors is found, the transform definitely
       fails.
 
-      If all the scf.forall operations with gpu.thread mapping contained
-      within the LaunchOp referred to by the `target` PDLOperation lower to GPU
+      If all the `scf.forall` operations with gpu.thread mapping contained
+      within the `LaunchOp` referred to by the `target` handle lower to GPU
       properly, the transform succeeds. Otherwise the transform definitely
       fails.
 
@@ -267,7 +282,7 @@ def MapForallToBlocks :
     Only scf.forall distributed to **at most 3 dimensions** are
     currently supported.
 
-    The operation alters the block size of the given gpu_launch using the 
+    The operation alters the block size of the given gpu_launch using the
     grid_dims argument.
 
     #### Return modes:
@@ -277,8 +292,8 @@ def MapForallToBlocks :
     If any scf.forall with tensors is found, the transform definitely
     fails.
 
-    If all the scf.forall operations contained within the LaunchOp
-    referred to by the `target` PDLOperation lower to GPU properly, the
+    If all the `scf.forall` operations contained within the LaunchOp
+    referred to by the `target` handle lower to GPU properly, the
     transform succeeds. Otherwise the transform definitely fails.
 
     The returned handle points to the same LaunchOp operand, consuming it and
@@ -299,7 +314,7 @@ def MapForallToBlocks :
     `:` functional-type($target, $result)
   }];
   let hasVerifier = 1;
-  
+
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::transform::TransformRewriter &rewriter,
@@ -308,5 +323,16 @@ def MapForallToBlocks :
         ::mlir::transform::TransformState &state);
   }];
 }
+
+def ApplyGPUPromoteShuffleToAMDGPUPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.gpu.gpu_shuffle_to_amdgpu",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns that are tryin to promote `gpu.shuffle`s to specialized
+    AMDGPU intrinsics.
+  }];
+  let assemblyFormat = "attr-dict";
+}
+
 
 #endif // GPU_TRANSFORM_OPS

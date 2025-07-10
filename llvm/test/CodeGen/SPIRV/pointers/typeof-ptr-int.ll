@@ -1,7 +1,7 @@
 ; This test is to check that two functions have different SPIR-V type
 ; definitions, even though their LLVM function types are identical.
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpName %[[Fun32:.*]] "tp_arg_i32"

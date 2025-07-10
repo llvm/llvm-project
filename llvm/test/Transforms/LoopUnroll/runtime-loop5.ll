@@ -102,7 +102,7 @@ define i3 @test(ptr %a, i3 %n) {
 ; UNROLL-4-NEXT:    [[SUM_02_UNR_PH:%.*]] = phi i3 [ [[ADD_3]], [[FOR_BODY]] ]
 ; UNROLL-4-NEXT:    br label [[FOR_END_LOOPEXIT_UNR_LCSSA]]
 ; UNROLL-4:       for.end.loopexit.unr-lcssa:
-; UNROLL-4-NEXT:    [[ADD_LCSSA_PH:%.*]] = phi i3 [ undef, [[FOR_BODY_PREHEADER]] ], [ [[ADD_LCSSA_PH_PH]], [[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
+; UNROLL-4-NEXT:    [[ADD_LCSSA_PH:%.*]] = phi i3 [ poison, [[FOR_BODY_PREHEADER]] ], [ [[ADD_LCSSA_PH_PH]], [[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; UNROLL-4-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_UNR_PH]], [[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; UNROLL-4-NEXT:    [[SUM_02_UNR:%.*]] = phi i3 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[SUM_02_UNR_PH]], [[FOR_END_LOOPEXIT_UNR_LCSSA_LOOPEXIT]] ]
 ; UNROLL-4-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i3 [[XTRAITER]], 0

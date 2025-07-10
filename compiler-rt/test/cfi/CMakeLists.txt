@@ -47,7 +47,7 @@ foreach(arch ${CFI_TEST_ARCH})
   else()
     add_cfi_test_suites(False False)
     add_cfi_test_suites(False True)
-    if (COMPILER_RT_HAS_LLD AND NOT arch STREQUAL "i386")
+    if (COMPILER_RT_HAS_LLD)
 	    add_cfi_test_suites(True False)
 	    add_cfi_test_suites(True True)
     endif()
@@ -59,9 +59,7 @@ list(APPEND CFI_TEST_DEPS
   ubsan
   stats
 )
-if(COMPILER_RT_HAS_CFI)
-  list(APPEND CFI_TEST_DEPS cfi)
-endif()
+list(APPEND CFI_TEST_DEPS cfi)
 
 if(NOT COMPILER_RT_STANDALONE_BUILD)
   list(APPEND CFI_TEST_DEPS

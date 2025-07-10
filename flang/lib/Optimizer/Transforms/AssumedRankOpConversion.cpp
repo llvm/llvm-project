@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Common/Fortran.h"
 #include "flang/Lower/BuiltinModules.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Support.h"
@@ -17,6 +16,7 @@
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/support.h"
+#include "flang/Support/Fortran.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -63,7 +63,7 @@ public:
       : mlir::OpRewritePattern<fir::ReboxAssumedRankOp>(context),
         symbolTable{symbolTable}, kindMap{kindMap} {};
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::ReboxAssumedRankOp rebox,
                   mlir::PatternRewriter &rewriter) const override {
     fir::FirOpBuilder builder{rewriter, kindMap, symbolTable};
@@ -84,7 +84,9 @@ public:
     auto oldBoxType = mlir::cast<fir::BaseBoxType>(
         fir::unwrapRefType(rebox.getBox().getType()));
     auto newDerivedType = mlir::dyn_cast<fir::RecordType>(newEleType);
-    if (newDerivedType && (newEleType != oldBoxType.unwrapInnerType()) &&
+    if (newDerivedType && !fir::isPolymorphicType(newBoxType) &&
+        (fir::isPolymorphicType(oldBoxType) ||
+         (newEleType != oldBoxType.unwrapInnerType())) &&
         !fir::isPolymorphicType(newBoxType)) {
       newDtype = builder.create<fir::TypeDescOp>(
           loc, mlir::TypeAttr::get(newDerivedType));
@@ -121,7 +123,7 @@ public:
       : mlir::OpRewritePattern<fir::IsAssumedSizeOp>(context),
         symbolTable{symbolTable}, kindMap{kindMap} {};
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::IsAssumedSizeOp isAssumedSizeOp,
                   mlir::PatternRewriter &rewriter) const override {
     fir::FirOpBuilder builder{rewriter, kindMap, symbolTable};
@@ -150,8 +152,9 @@ public:
     patterns.insert<ReboxAssumedRankConv>(context, &symbolTable, kindMap);
     patterns.insert<IsAssumedSizeConv>(context, &symbolTable, kindMap);
     mlir::GreedyRewriteConfig config;
-    config.enableRegionSimplification = false;
-    (void)applyPatternsAndFoldGreedily(mod, std::move(patterns), config);
+    config.setRegionSimplificationLevel(
+        mlir::GreedySimplifyRegionLevel::Disabled);
+    (void)applyPatternsGreedily(mod, std::move(patterns), config);
   }
 };
 } // namespace

@@ -11,7 +11,9 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Mutex.h"
 #include <cassert>
 #include <memory>
 #include <string>
@@ -19,6 +21,7 @@
 
 namespace llvm {
 
+class TimerGlobals;
 class TimerGroup;
 class raw_ostream;
 
@@ -35,7 +38,7 @@ public:
   /// usage before the time, otherwise we get time before memory usage.  This
   /// matters if the time to get the memory usage is significant and shouldn't
   /// be counted as part of a duration.
-  static TimeRecord getCurrentTime(bool Start = true);
+  LLVM_ABI static TimeRecord getCurrentTime(bool Start = true);
 
   double getProcessTime() const { return UserTime + SystemTime; }
   double getUserTime() const { return UserTime; }
@@ -66,7 +69,7 @@ public:
 
   /// Print the current time record to \p OS, with a breakdown showing
   /// contributions to the \p Total time record.
-  void print(const TimeRecord &Total, raw_ostream &OS) const;
+  LLVM_ABI void print(const TimeRecord &Total, raw_ostream &OS) const;
 };
 
 /// This class is used to track the amount of time spent between invocations of
@@ -101,12 +104,13 @@ public:
     assert(!TG && !T.TG && "Can only assign uninit timers");
     return *this;
   }
-  ~Timer();
+  LLVM_ABI ~Timer();
 
   /// Create an uninitialized timer, client must use 'init'.
   explicit Timer() = default;
-  void init(StringRef TimerName, StringRef TimerDescription);
-  void init(StringRef TimerName, StringRef TimerDescription, TimerGroup &tg);
+  LLVM_ABI void init(StringRef TimerName, StringRef TimerDescription);
+  LLVM_ABI void init(StringRef TimerName, StringRef TimerDescription,
+                     TimerGroup &tg);
 
   const std::string &getName() const { return Name; }
   const std::string &getDescription() const { return Description; }
@@ -121,13 +125,16 @@ public:
   /// Start the timer running.  Time between calls to startTimer/stopTimer is
   /// counted by the Timer class.  Note that these calls must be correctly
   /// paired.
-  void startTimer();
+  LLVM_ABI void startTimer();
 
   /// Stop the timer.
-  void stopTimer();
+  LLVM_ABI void stopTimer();
 
   /// Clear the timer state.
-  void clear();
+  LLVM_ABI void clear();
+
+  /// Stop the timer and start another timer.
+  LLVM_ABI void yieldTo(Timer &);
 
   /// Return the duration for which this timer has been running.
   TimeRecord getTotalTime() const { return Time; }
@@ -161,9 +168,15 @@ public:
 /// statement.  All timers with the same name are merged.  This is primarily
 /// used for debugging and for hunting performance problems.
 struct NamedRegionTimer : public TimeRegion {
-  explicit NamedRegionTimer(StringRef Name, StringRef Description,
-                            StringRef GroupName,
-                            StringRef GroupDescription, bool Enabled = true);
+  LLVM_ABI explicit NamedRegionTimer(StringRef Name, StringRef Description,
+                                     StringRef GroupName,
+                                     StringRef GroupDescription,
+                                     bool Enabled = true);
+
+  // Create or get a TimerGroup stored in the same global map owned by
+  // NamedRegionTimer.
+  LLVM_ABI static TimerGroup &getNamedTimerGroup(StringRef GroupName,
+                                                 StringRef GroupDescription);
 };
 
 /// The TimerGroup class is used to group together related timers into a single
@@ -196,13 +209,17 @@ class TimerGroup {
   TimerGroup(const TimerGroup &TG) = delete;
   void operator=(const TimerGroup &TG) = delete;
 
-public:
-  explicit TimerGroup(StringRef Name, StringRef Description);
-
+  friend class TimerGlobals;
   explicit TimerGroup(StringRef Name, StringRef Description,
-                      const StringMap<TimeRecord> &Records);
+                      sys::SmartMutex<true> &lock);
 
-  ~TimerGroup();
+public:
+  LLVM_ABI explicit TimerGroup(StringRef Name, StringRef Description);
+
+  LLVM_ABI explicit TimerGroup(StringRef Name, StringRef Description,
+                               const StringMap<TimeRecord> &Records);
+
+  LLVM_ABI ~TimerGroup();
 
   void setName(StringRef NewName, StringRef NewDescription) {
     Name.assign(NewName.begin(), NewName.end());
@@ -211,36 +228,37 @@ public:
 
   /// Print any started timers in this group, optionally resetting timers after
   /// printing them.
-  void print(raw_ostream &OS, bool ResetAfterPrint = false);
+  LLVM_ABI void print(raw_ostream &OS, bool ResetAfterPrint = false);
 
   /// Clear all timers in this group.
-  void clear();
+  LLVM_ABI void clear();
 
   /// This static method prints all timers.
-  static void printAll(raw_ostream &OS);
+  LLVM_ABI static void printAll(raw_ostream &OS);
 
   /// Clear out all timers. This is mostly used to disable automatic
   /// printing on shutdown, when timers have already been printed explicitly
   /// using \c printAll or \c printJSONValues.
-  static void clearAll();
+  LLVM_ABI static void clearAll();
 
-  const char *printJSONValues(raw_ostream &OS, const char *delim);
+  LLVM_ABI const char *printJSONValues(raw_ostream &OS, const char *delim);
 
   /// Prints all timers as JSON key/value pairs.
-  static const char *printAllJSONValues(raw_ostream &OS, const char *delim);
+  LLVM_ABI static const char *printAllJSONValues(raw_ostream &OS,
+                                                 const char *delim);
 
   /// Ensure global objects required for statistics printing are initialized.
   /// This function is used by the Statistic code to ensure correct order of
   /// global constructors and destructors.
-  static void constructForStatistics();
+  LLVM_ABI static void constructForStatistics();
 
-  /// This makes the default group unmanaged, and lets the user manage the
-  /// group's lifetime.
-  static std::unique_ptr<TimerGroup> aquireDefaultGroup();
+  /// This makes the timer globals unmanaged, and lets the user manage the
+  /// lifetime.
+  LLVM_ABI static void *acquireTimerGlobals();
 
 private:
   friend class Timer;
-  friend void PrintStatisticsJSON(raw_ostream &OS);
+  LLVM_ABI friend void PrintStatisticsJSON(raw_ostream &OS);
   void addTimer(Timer &T);
   void removeTimer(Timer &T);
   void prepareToPrintList(bool reset_time = false);

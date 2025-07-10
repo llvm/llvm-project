@@ -84,7 +84,11 @@ struct SPIRVInlinerInterface : public DialectInlinerInterface {
     // TODO: we need to filter OpKill here to avoid inlining it to
     // a loop continue construct:
     // https://github.com/KhronosGroup/SPIRV-Headers/issues/86
-    // However OpKill is fragment shader specific and we don't support it yet.
+    // For now, we just disallow inlining OpKill anywhere in the code,
+    // but this restriction should be relaxed, as pointed above.
+    if (isa<spirv::KillOp>(op))
+      return false;
+
     return true;
   }
 
@@ -171,10 +175,7 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
 
   // Check other allowed types
   if (auto t = llvm::dyn_cast<FloatType>(type)) {
-    if (type.isBF16()) {
-      parser.emitError(typeLoc, "cannot use 'bf16' to compose SPIR-V types");
-      return Type();
-    }
+    // TODO: All float types are allowed for now, but this should be fixed.
   } else if (auto t = llvm::dyn_cast<IntegerType>(type)) {
     if (!ScalarType::isValid(t)) {
       parser.emitError(typeLoc,
@@ -191,6 +192,13 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
       parser.emitError(
           typeLoc, "vector length has to be less than or equal to 4 but found ")
           << t.getNumElements();
+      return Type();
+    }
+  } else if (auto t = dyn_cast<TensorArmType>(type)) {
+    if (!isa<ScalarType>(t.getElementType())) {
+      parser.emitError(
+          typeLoc, "only scalar element type allowed in tensor type but found ")
+          << t.getElementType();
       return Type();
     }
   } else {
@@ -362,39 +370,50 @@ static Type parseCooperativeMatrixType(SPIRVDialect const &dialect,
   return CooperativeMatrixType::get(elementTy, dims[0], dims[1], scope, use);
 }
 
-// joint-matrix-type ::= `!spirv.jointmatrix` `<`rows `x` columns `x`
-// element-type
-//                                                       `,` layout `,` scope`>`
-static Type parseJointMatrixType(SPIRVDialect const &dialect,
-                                 DialectAsmParser &parser) {
+// tensor-arm-type ::=
+//   `!spirv.arm.tensor` `<` dim0 `x` dim1 `x` ... `x` dimN `x` element-type`>`
+static Type parseTensorArmType(SPIRVDialect const &dialect,
+                               DialectAsmParser &parser) {
   if (parser.parseLess())
-    return Type();
+    return {};
 
-  SmallVector<int64_t, 2> dims;
+  bool unranked = false;
+  SmallVector<int64_t, 4> dims;
   SMLoc countLoc = parser.getCurrentLocation();
-  if (parser.parseDimensionList(dims, /*allowDynamic=*/false))
-    return Type();
 
-  if (dims.size() != 2) {
-    parser.emitError(countLoc, "expected rows and columns size");
-    return Type();
+  if (parser.parseOptionalStar().succeeded()) {
+    unranked = true;
+    if (parser.parseXInDimensionList())
+      return {};
+  } else if (parser.parseDimensionList(dims, /*allowDynamic=*/true)) {
+    return {};
+  }
+
+  if (!unranked && dims.empty()) {
+    parser.emitError(countLoc, "arm.tensors do not support rank zero");
+    return {};
+  }
+
+  if (llvm::is_contained(dims, 0)) {
+    parser.emitError(countLoc, "arm.tensors do not support zero dimensions");
+    return {};
+  }
+
+  if (llvm::any_of(dims, [](int64_t dim) { return dim < 0; }) &&
+      llvm::any_of(dims, [](int64_t dim) { return dim > 0; })) {
+    parser.emitError(countLoc, "arm.tensor shape dimensions must be either "
+                               "fully dynamic or completed shaped");
+    return {};
   }
 
   auto elementTy = parseAndVerifyType(dialect, parser);
   if (!elementTy)
-    return Type();
-  MatrixLayout matrixLayout;
-  if (parser.parseComma() ||
-      spirv::parseEnumKeywordAttr(matrixLayout, parser, "matrixLayout <id>"))
-    return Type();
-  Scope scope;
-  if (parser.parseComma() ||
-      spirv::parseEnumKeywordAttr(scope, parser, "scope <id>"))
-    return Type();
+    return {};
+
   if (parser.parseGreater())
-    return Type();
-  return JointMatrixINTELType::get(elementTy, scope, dims[0], dims[1],
-                                   matrixLayout);
+    return {};
+
+  return TensorArmType::get(dims, elementTy);
 }
 
 // TODO: Reorder methods to be utilities first and parse*Type
@@ -781,8 +800,6 @@ Type SPIRVDialect::parseType(DialectAsmParser &parser) const {
     return parseArrayType(*this, parser);
   if (keyword == "coopmatrix")
     return parseCooperativeMatrixType(*this, parser);
-  if (keyword == "jointmatrix")
-    return parseJointMatrixType(*this, parser);
   if (keyword == "image")
     return parseImageType(*this, parser);
   if (keyword == "ptr")
@@ -795,6 +812,8 @@ Type SPIRVDialect::parseType(DialectAsmParser &parser) const {
     return parseStructType(*this, parser);
   if (keyword == "matrix")
     return parseMatrixType(*this, parser);
+  if (keyword == "arm.tensor")
+    return parseTensorArmType(*this, parser);
   parser.emitError(parser.getNameLoc(), "unknown SPIR-V type: ") << keyword;
   return Type();
 }
@@ -886,23 +905,34 @@ static void print(CooperativeMatrixType type, DialectAsmPrinter &os) {
      << type.getUse() << ">";
 }
 
-static void print(JointMatrixINTELType type, DialectAsmPrinter &os) {
-  os << "jointmatrix<" << type.getRows() << "x" << type.getColumns() << "x";
-  os << type.getElementType() << ", "
-     << stringifyMatrixLayout(type.getMatrixLayout());
-  os << ", " << stringifyScope(type.getScope()) << ">";
-}
-
 static void print(MatrixType type, DialectAsmPrinter &os) {
   os << "matrix<" << type.getNumColumns() << " x " << type.getColumnType();
   os << ">";
 }
 
+static void print(TensorArmType type, DialectAsmPrinter &os) {
+  os << "arm.tensor<";
+
+  llvm::interleave(
+      type.getShape(), os,
+      [&](int64_t dim) {
+        if (ShapedType::isDynamic(dim))
+          os << '?';
+        else
+          os << dim;
+      },
+      "x");
+  if (!type.hasRank()) {
+    os << "*";
+  }
+  os << "x" << type.getElementType() << ">";
+}
+
 void SPIRVDialect::printType(Type type, DialectAsmPrinter &os) const {
   TypeSwitch<Type>(type)
-      .Case<ArrayType, CooperativeMatrixType, JointMatrixINTELType, PointerType,
-            RuntimeArrayType, ImageType, SampledImageType, StructType,
-            MatrixType>([&](auto type) { print(type, os); })
+      .Case<ArrayType, CooperativeMatrixType, PointerType, RuntimeArrayType,
+            ImageType, SampledImageType, StructType, MatrixType, TensorArmType>(
+          [&](auto type) { print(type, os); })
       .Default([](Type) { llvm_unreachable("unhandled SPIR-V type"); });
 }
 

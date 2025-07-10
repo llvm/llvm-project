@@ -135,15 +135,12 @@ class SystemZLongBranch : public MachineFunctionPass {
 public:
   static char ID;
 
-  SystemZLongBranch() : MachineFunctionPass(ID) {
-    initializeSystemZLongBranchPass(*PassRegistry::getPassRegistry());
-  }
+  SystemZLongBranch() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
 private:
@@ -218,9 +215,13 @@ static unsigned getInstSizeInBytes(const MachineInstr &MI,
           // These do not have a size:
           MI.isDebugOrPseudoInstr() || MI.isPosition() || MI.isKill() ||
           MI.isImplicitDef() || MI.getOpcode() == TargetOpcode::MEMBARRIER ||
+          MI.getOpcode() == TargetOpcode::INIT_UNDEF || MI.isFakeUse() ||
           // These have a size that may be zero:
           MI.isInlineAsm() || MI.getOpcode() == SystemZ::STACKMAP ||
-          MI.getOpcode() == SystemZ::PATCHPOINT) &&
+          MI.getOpcode() == SystemZ::PATCHPOINT ||
+          // EH_SjLj_Setup is a dummy terminator instruction of size 0,
+          // It is used to handle the clobber register for builtin setjmp.
+          MI.getOpcode() == SystemZ::EH_SjLj_Setup) &&
          "Missing size value for instruction.");
   return Size;
 }
@@ -371,16 +372,19 @@ void SystemZLongBranch::splitBranchOnCount(MachineInstr *MI,
                                            unsigned AddOpcode) {
   MachineBasicBlock *MBB = MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
-  BuildMI(*MBB, MI, DL, TII->get(AddOpcode))
-      .add(MI->getOperand(0))
-      .add(MI->getOperand(1))
-      .addImm(-1);
+  MachineInstr *AddImm = BuildMI(*MBB, MI, DL, TII->get(AddOpcode))
+                             .add(MI->getOperand(0))
+                             .add(MI->getOperand(1))
+                             .addImm(-1);
   MachineInstr *BRCL = BuildMI(*MBB, MI, DL, TII->get(SystemZ::BRCL))
                            .addImm(SystemZ::CCMASK_ICMP)
                            .addImm(SystemZ::CCMASK_CMP_NE)
                            .add(MI->getOperand(2));
   // The implicit use of CC is a killing use.
   BRCL->addRegisterKilled(SystemZ::CC, &TII->getRegisterInfo());
+  // The result of the BRANCH ON COUNT MI is the new count in register 0, so the
+  // debug tracking needs to go to the result of the Add immediate.
+  MBB->getParent()->substituteDebugValuesForInst(*MI, *AddImm);
   MI->eraseFromParent();
 }
 
@@ -399,6 +403,8 @@ void SystemZLongBranch::splitCompareBranch(MachineInstr *MI,
                            .add(MI->getOperand(3));
   // The implicit use of CC is a killing use.
   BRCL->addRegisterKilled(SystemZ::CC, &TII->getRegisterInfo());
+  // Since we are replacing branches that did not compute any value, no debug
+  // value substitution is necessary.
   MI->eraseFromParent();
 }
 

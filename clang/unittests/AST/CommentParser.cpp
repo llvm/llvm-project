@@ -33,16 +33,14 @@ const bool MY_DEBUG = true;
 class CommentParserTest : public ::testing::Test {
 protected:
   CommentParserTest()
-    : FileMgr(FileMgrOpts),
-      DiagID(new DiagnosticIDs()),
-      Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
-      SourceMgr(Diags, FileMgr),
-      Traits(Allocator, CommentOptions()) {
-  }
+      : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
+        Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),
+        SourceMgr(Diags, FileMgr), Traits(Allocator, CommentOptions()) {}
 
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
   llvm::BumpPtrAllocator Allocator;
@@ -1065,9 +1063,10 @@ TEST_F(CommentParserTest, InlineCommand5) {
 
 TEST_F(CommentParserTest, HTML1) {
   const char *Sources[] = {
-    "// <a",
-    "// <a>",
-    "// <a >"
+      "// <a",
+      "// <a>",
+      "// <a >",
+      "// <a\n// >",
   };
 
   for (size_t i = 0, e = std::size(Sources); i != e; i++) {
@@ -1088,8 +1087,9 @@ TEST_F(CommentParserTest, HTML1) {
 
 TEST_F(CommentParserTest, HTML2) {
   const char *Sources[] = {
-    "// <br/>",
-    "// <br />"
+      "// <br/>",
+      "// <br />",
+      "// <br \n// />",
   };
 
   for (size_t i = 0, e = std::size(Sources); i != e; i++) {
@@ -1110,10 +1110,8 @@ TEST_F(CommentParserTest, HTML2) {
 
 TEST_F(CommentParserTest, HTML3) {
   const char *Sources[] = {
-    "// <a href",
-    "// <a href ",
-    "// <a href>",
-    "// <a href >",
+      "// <a href",   "// <a href ",       "// <a href>",
+      "// <a href >", "// <a \n// href >",
   };
 
   for (size_t i = 0, e = std::size(Sources); i != e; i++) {
@@ -1134,8 +1132,9 @@ TEST_F(CommentParserTest, HTML3) {
 
 TEST_F(CommentParserTest, HTML4) {
   const char *Sources[] = {
-    "// <a href=\"bbb\"",
-    "// <a href=\"bbb\">",
+      "// <a href=\"bbb\"",
+      "// <a href=\"bbb\">",
+      "// <a \n// href=\"bbb\">",
   };
 
   for (size_t i = 0, e = std::size(Sources); i != e; i++) {
@@ -1639,6 +1638,143 @@ TEST_F(CommentParserTest, ThrowsCommandHasArg9) {
   }
 }
 
+TEST_F(CommentParserTest, ParCommandHasArg1) {
+  const char *Sources[] = {
+      "/// @par Paragraph header:",     "/// @par Paragraph header:\n",
+      "/// @par Paragraph header:\r\n", "/// @par Paragraph header:\n\r",
+      "/** @par Paragraph header:*/",
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "par", PC));
+      ASSERT_TRUE(HasChildCount(PC, 0));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "Paragraph header:");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ParCommandHasArg2) {
+  const char *Sources[] = {
+      "/// @par Paragraph header: ",     "/// @par Paragraph header: \n",
+      "/// @par Paragraph header: \r\n", "/// @par Paragraph header: \n\r",
+      "/** @par Paragraph header: */",
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "par", PC));
+      ASSERT_TRUE(HasChildCount(PC, 0));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "Paragraph header: ");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ParCommandHasArg3) {
+  const char *Sources[] = {
+      ("/// @par Paragraph header:\n"
+       "/// Paragraph body"),
+      ("/// @par Paragraph header:\r\n"
+       "/// Paragraph body"),
+      ("/// @par Paragraph header:\n\r"
+       "/// Paragraph body"),
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      TextComment *TC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "par", PC));
+      ASSERT_TRUE(HasChildCount(PC, 1));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "Paragraph header:");
+      ASSERT_TRUE(GetChildAt(PC, 0, TC));
+      ASSERT_TRUE(TC->getText() == " Paragraph body");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ParCommandHasArg4) {
+  const char *Sources[] = {
+      ("/// @par Paragraph header:\n"
+       "/// Paragraph body1\n"
+       "/// Paragraph body2"),
+      ("/// @par Paragraph header:\r\n"
+       "/// Paragraph body1\n"
+       "/// Paragraph body2"),
+      ("/// @par Paragraph header:\n\r"
+       "/// Paragraph body1\n"
+       "/// Paragraph body2"),
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      TextComment *TC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "par", PC));
+      ASSERT_TRUE(HasChildCount(PC, 2));
+      ASSERT_TRUE(BCC->getNumArgs() == 1);
+      ASSERT_TRUE(BCC->getArgText(0) == "Paragraph header:");
+      ASSERT_TRUE(GetChildAt(PC, 0, TC));
+      ASSERT_TRUE(TC->getText() == " Paragraph body1");
+      ASSERT_TRUE(GetChildAt(PC, 1, TC));
+      ASSERT_TRUE(TC->getText() == " Paragraph body2");
+    }
+  }
+}
+
+TEST_F(CommentParserTest, ParCommandHasArg5) {
+  const char *Sources[] = {
+      ("/// @par \n"
+       "/// Paragraphs with no text before newline have no heading"),
+      ("/// @par \r\n"
+       "/// Paragraphs with no text before newline have no heading"),
+      ("/// @par \n\r"
+       "/// Paragraphs with no text before newline have no heading"),
+  };
+
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
+    FullComment *FC = parseString(Sources[i]);
+    ASSERT_TRUE(HasChildCount(FC, 2));
+
+    ASSERT_TRUE(HasParagraphCommentAt(FC, 0, " "));
+    {
+      BlockCommandComment *BCC;
+      ParagraphComment *PC;
+      TextComment *TC;
+      ASSERT_TRUE(HasBlockCommandAt(FC, Traits, 1, BCC, "par", PC));
+      ASSERT_TRUE(HasChildCount(PC, 1));
+      ASSERT_TRUE(BCC->getNumArgs() == 0);
+      ASSERT_TRUE(GetChildAt(PC, 0, TC));
+      ASSERT_TRUE(TC->getText() ==
+                  "Paragraphs with no text before newline have no heading");
+    }
+  }
+}
 
 } // unnamed namespace
 

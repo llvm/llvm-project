@@ -110,26 +110,26 @@ void *r = new T[n][3]{ { 1, 2, 3 }, { 4, 5, 6 } };
 // { 1, 2, 3 }
 //
 //
-// CHECK: %[[T_0_0_0:.*]] = getelementptr inbounds %[[T:.+]], ptr %[[ALLOC]], i32 0, i32 0
+// CHECK: %[[T_0_0_0:.*]] = getelementptr inbounds nuw %[[T:.+]], ptr %[[ALLOC]], i32 0, i32 0
 // CHECK: store i32 1, ptr %[[T_0_0_0]]
 // CHECK: %[[T_0_1:.*]] = getelementptr inbounds %[[T]], ptr %[[ALLOC]], i64 1
-// CHECK: %[[T_0_1_0:.*]] = getelementptr inbounds %[[T]], ptr %[[T_0_1]], i32 0, i32 0
+// CHECK: %[[T_0_1_0:.*]] = getelementptr inbounds nuw %[[T]], ptr %[[T_0_1]], i32 0, i32 0
 // CHECK: store i32 2, ptr %[[T_0_1_0]]
 // CHECK: %[[T_0_2:.*]] = getelementptr inbounds %[[T]], ptr %[[ALLOC]], i64 2
-// CHECK: %[[T_0_2_0:.*]] = getelementptr inbounds %[[T]], ptr %[[T_0_2]], i32 0, i32 0
+// CHECK: %[[T_0_2_0:.*]] = getelementptr inbounds nuw %[[T]], ptr %[[T_0_2]], i32 0, i32 0
 // CHECK: store i32 3, ptr %[[T_0_2_0]]
 //
 // { 4, 5, 6 }
 //
 // CHECK: %[[T_1:.*]] = getelementptr inbounds [3 x %[[T]]], ptr %[[ALLOC]], i64 1
 //
-// CHECK: %[[T_1_0_0:.*]] = getelementptr inbounds %[[T]], ptr %[[T_1]], i32 0, i32 0
+// CHECK: %[[T_1_0_0:.*]] = getelementptr inbounds nuw %[[T]], ptr %[[T_1]], i32 0, i32 0
 // CHECK: store i32 4, ptr %[[T_1_0_0]]
 // CHECK: %[[T_1_1:.*]] = getelementptr inbounds %[[T]], ptr %[[T_1]], i64 1
-// CHECK: %[[T_1_1_0:.*]] = getelementptr inbounds %[[T]], ptr %[[T_1_1]], i32 0, i32 0
+// CHECK: %[[T_1_1_0:.*]] = getelementptr inbounds nuw %[[T]], ptr %[[T_1_1]], i32 0, i32 0
 // CHECK: store i32 5, ptr %[[T_1_1_0]]
 // CHECK: %[[T_1_2:.*]] = getelementptr inbounds %[[T]], ptr %[[T_1]], i64 2
-// CHECK: %[[T_1_2_0:.*]] = getelementptr inbounds %[[T]], ptr %[[T_1_2]], i32 0, i32 0
+// CHECK: %[[T_1_2_0:.*]] = getelementptr inbounds nuw %[[T]], ptr %[[T_1_2]], i32 0, i32 0
 // CHECK: store i32 6, ptr %[[T_1_2_0]]
 //
 // And the rest gets memset to 0.

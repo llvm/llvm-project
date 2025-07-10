@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++14 -verify %s
+// RUN: %clang_cc1 -Wno-error=return-type -std=c++14 -verify %s
 
 // pr33561
 class ArrayBuffer;

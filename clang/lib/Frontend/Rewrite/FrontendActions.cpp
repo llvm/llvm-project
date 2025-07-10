@@ -13,7 +13,6 @@
 #include "clang/Config/config.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
@@ -213,7 +212,7 @@ public:
 
   void visitModuleFile(StringRef Filename,
                        serialization::ModuleKind Kind) override {
-    auto File = CI.getFileManager().getFile(Filename);
+    auto File = CI.getFileManager().getOptionalFileRef(Filename);
     assert(File && "missing file for loaded module?");
 
     // Only rewrite each module file once.
@@ -242,11 +241,11 @@ public:
     (*OS) << '\n';
 
     // Rewrite the contents of the module in a separate compiler instance.
-    CompilerInstance Instance(CI.getPCHContainerOperations(),
-                              &CI.getModuleCache());
-    Instance.setInvocation(
-        std::make_shared<CompilerInvocation>(CI.getInvocation()));
+    CompilerInstance Instance(
+        std::make_shared<CompilerInvocation>(CI.getInvocation()),
+        CI.getPCHContainerOperations(), &CI.getModuleCache());
     Instance.createDiagnostics(
+        CI.getVirtualFileSystem(),
         new ForwardingDiagnosticConsumer(CI.getDiagnosticClient()),
         /*ShouldOwnClient=*/true);
     Instance.getFrontendOpts().DisableFree = false;

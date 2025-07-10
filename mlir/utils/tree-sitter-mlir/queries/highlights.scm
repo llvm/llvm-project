@@ -209,7 +209,7 @@
   "tensor.yield"
 
   "bufferization.alloc_tensor"
-  "bufferization.to_memref"
+  "bufferization.to_buffer"
   "bufferization.to_tensor"
 
   "linalg.batch_matmul"

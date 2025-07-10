@@ -80,8 +80,8 @@ static void *MallocStress(void *NumOfItrPtr) {
         case 2: size += 4096; break;
       }
       size_t alignment = 1 << (my_rand_r(&seed) % 10 + 1);
-      char *ptr = (char*)__asan::asan_memalign(alignment, size,
-                                               &stack2, __asan::FROM_MALLOC);
+      char *ptr = (char *)__asan::asan_memalign(alignment, size, &stack2,
+                                                __asan::FROM_MALLOC);
       EXPECT_EQ(size, __asan::asan_malloc_usable_size(ptr, 0, 0));
       vec.push_back(ptr);
       ptr[0] = 0;
@@ -137,7 +137,7 @@ TEST(AddressSanitizer, DISABLED_InternalPrintShadow) {
 }
 
 TEST(AddressSanitizer, QuarantineTest) {
-  BufferedStackTrace stack;
+  UNINITIALIZED BufferedStackTrace stack;
   stack.trace_buffer[0] = 0x890;
   stack.size = 1;
 
@@ -159,7 +159,7 @@ TEST(AddressSanitizer, QuarantineTest) {
 void *ThreadedQuarantineTestWorker(void *unused) {
   (void)unused;
   u32 seed = my_rand();
-  BufferedStackTrace stack;
+  UNINITIALIZED BufferedStackTrace stack;
   stack.trace_buffer[0] = 0x890;
   stack.size = 1;
 
@@ -194,7 +194,7 @@ TEST(AddressSanitizer, ThreadedQuarantineTest) {
 
 void *ThreadedOneSizeMallocStress(void *unused) {
   (void)unused;
-  BufferedStackTrace stack;
+  UNINITIALIZED BufferedStackTrace stack;
   stack.trace_buffer[0] = 0x890;
   stack.size = 1;
   const size_t kNumMallocs = 1000;
@@ -238,7 +238,7 @@ static void TestLoadStoreCallbacks(CB cb[2][5]) {
   uptr buggy_ptr;
 
   __asan_test_only_reported_buggy_pointer = &buggy_ptr;
-  BufferedStackTrace stack;
+  UNINITIALIZED BufferedStackTrace stack;
   stack.trace_buffer[0] = 0x890;
   stack.size = 1;
 

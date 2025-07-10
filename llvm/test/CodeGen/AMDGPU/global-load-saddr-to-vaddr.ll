@@ -13,7 +13,7 @@
 define amdgpu_kernel void @test_move_load_address_to_vgpr(ptr addrspace(1) nocapture %arg) {
 ; GCN-LABEL: test_move_load_address_to_vgpr:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dword v0, v1, s[0:1] glc
@@ -54,7 +54,7 @@ bb3:                                              ; preds = %bb3, %bb
 define amdgpu_kernel void @test_move_load_address_to_vgpr_d16_hi(ptr addrspace(1) nocapture %arg) {
 ; GCN-LABEL: test_move_load_address_to_vgpr_d16_hi:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_ushort v0, v1, s[0:1] glc
@@ -85,7 +85,7 @@ bb3:                                              ; preds = %bb3, %bb
   %i4 = zext i32 %i to i64
   %i5 = getelementptr inbounds i16, ptr addrspace(1) %arg, i64 %i4
   %i6 = load volatile i16, ptr addrspace(1) %i5, align 4
-  %insertelt = insertelement <2 x i16> undef, i16 %i6, i32 1
+  %insertelt = insertelement <2 x i16> poison, i16 %i6, i32 1
   %i8 =  bitcast <2 x i16> %insertelt to i32
   %i9 = icmp eq i32 %i8, 256
   br i1 %i9, label %bb2, label %bb3

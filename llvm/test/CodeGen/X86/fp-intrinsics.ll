@@ -2018,7 +2018,7 @@ define double @sifdb(i8 %x) #0 {
 ; AVX-LABEL: sifdb:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    movsbl %dil, %eax
-; AVX-NEXT:    vcvtsi2sd %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.sitofp.f64.i8(i8 %x,
@@ -2062,7 +2062,7 @@ define double @sifdw(i16 %x) #0 {
 ; AVX-LABEL: sifdw:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    movswl %di, %eax
-; AVX-NEXT:    vcvtsi2sd %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.sitofp.f64.i16(i16 %x,
@@ -2103,7 +2103,7 @@ define double @sifdi(i32 %x) #0 {
 ;
 ; AVX-LABEL: sifdi:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtsi2sd %edi, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %x,
@@ -2147,7 +2147,7 @@ define float @siffb(i8 %x) #0 {
 ; AVX-LABEL: siffb:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    movsbl %dil, %eax
-; AVX-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call float @llvm.experimental.constrained.sitofp.f32.i8(i8 %x,
@@ -2191,7 +2191,7 @@ define float @siffw(i16 %x) #0 {
 ; AVX-LABEL: siffw:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    movswl %di, %eax
-; AVX-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call float @llvm.experimental.constrained.sitofp.f32.i16(i16 %x,
@@ -2232,7 +2232,7 @@ define float @siffi(i32 %x) #0 {
 ;
 ; AVX-LABEL: siffi:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %x,
@@ -2267,7 +2267,7 @@ define double @sifdl(i64 %x) #0 {
 ;
 ; AVX-LABEL: sifdl:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtsi2sd %rdi, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2sd %rdi, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.sitofp.f64.i64(i64 %x,
@@ -2302,7 +2302,7 @@ define float @siffl(i64 %x) #0 {
 ;
 ; AVX-LABEL: siffl:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call float @llvm.experimental.constrained.sitofp.f32.i64(i64 %x,
@@ -2349,7 +2349,7 @@ define double @uifdb(i8 %x) #0 {
 ; AVX-LABEL: uifdb:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    movzbl %dil, %eax
-; AVX-NEXT:    vcvtsi2sd %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.uitofp.f64.i8(i8 %x,
@@ -2393,7 +2393,7 @@ define double @uifdw(i16 %x) #0 {
 ; AVX-LABEL: uifdw:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    movzwl %di, %eax
-; AVX-NEXT:    vcvtsi2sd %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.uitofp.f64.i16(i16 %x,
@@ -2440,12 +2440,12 @@ define double @uifdi(i32 %x) #0 {
 ; AVX1-LABEL: uifdi:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    movl %edi, %eax
-; AVX1-NEXT:    vcvtsi2sd %rax, %xmm0, %xmm0
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: uifdi:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtusi2sd %edi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtusi2sd %edi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %x,
@@ -2518,7 +2518,7 @@ define double @uifdl(i64 %x) #0 {
 ; AVX1-NEXT:    orq %rax, %rcx
 ; AVX1-NEXT:    testq %rdi, %rdi
 ; AVX1-NEXT:    cmovnsq %rdi, %rcx
-; AVX1-NEXT:    vcvtsi2sd %rcx, %xmm0, %xmm0
+; AVX1-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm0
 ; AVX1-NEXT:    jns .LBB48_2
 ; AVX1-NEXT:  # %bb.1:
 ; AVX1-NEXT:    vaddsd %xmm0, %xmm0, %xmm0
@@ -2527,7 +2527,7 @@ define double @uifdl(i64 %x) #0 {
 ;
 ; AVX512-LABEL: uifdl:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtusi2sd %rdi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtusi2sd %rdi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.uitofp.f64.i64(i64 %x,
@@ -2571,7 +2571,7 @@ define float @uiffb(i8 %x) #0 {
 ; AVX-LABEL: uiffb:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    movzbl %dil, %eax
-; AVX-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call float @llvm.experimental.constrained.uitofp.f32.i8(i8 %x,
@@ -2615,7 +2615,7 @@ define float @uiffw(i16 %x) #0 {
 ; AVX-LABEL: uiffw:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    movzwl %di, %eax
-; AVX-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call float @llvm.experimental.constrained.uitofp.f32.i16(i16 %x,
@@ -2662,12 +2662,12 @@ define float @uiffi(i32 %x) #0 {
 ; AVX1-LABEL: uiffi:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    movl %edi, %eax
-; AVX1-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: uiffi:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtusi2ss %edi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtusi2ss %edi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %result = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %x,
@@ -2740,7 +2740,7 @@ define float @uiffl(i64 %x) #0 {
 ; AVX1-NEXT:    orq %rax, %rcx
 ; AVX1-NEXT:    testq %rdi, %rdi
 ; AVX1-NEXT:    cmovnsq %rdi, %rcx
-; AVX1-NEXT:    vcvtsi2ss %rcx, %xmm0, %xmm0
+; AVX1-NEXT:    vcvtsi2ss %rcx, %xmm15, %xmm0
 ; AVX1-NEXT:    jns .LBB52_2
 ; AVX1-NEXT:  # %bb.1:
 ; AVX1-NEXT:    vaddss %xmm0, %xmm0, %xmm0
@@ -2749,7 +2749,7 @@ define float @uiffl(i64 %x) #0 {
 ;
 ; AVX512-LABEL: uiffl:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtusi2ss %rdi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtusi2ss %rdi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %result = call float @llvm.experimental.constrained.uitofp.f32.i64(i64 %x,
@@ -2809,6 +2809,369 @@ entry:
   ret double %result
 }
 
+; Verify that acos(42.0) isn't simplified when the rounding mode is unknown.
+define double @facos() #0 {
+; X87-LABEL: facos:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 16
+; X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    calll acos
+; X87-NEXT:    addl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: facos:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; X86-SSE-NEXT:    movsd %xmm0, (%esp)
+; X86-SSE-NEXT:    calll acos
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: facos:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; SSE-NEXT:    callq acos@PLT
+; SSE-NEXT:    popq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: facos:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; AVX-NEXT:    callq acos@PLT
+; AVX-NEXT:    popq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
+entry:
+  %result = call double @llvm.experimental.constrained.acos.f64(double 42.0,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+; Verify that asin(42.0) isn't simplified when the rounding mode is unknown.
+define double @fasin() #0 {
+; X87-LABEL: fasin:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 16
+; X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    calll asin
+; X87-NEXT:    addl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: fasin:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; X86-SSE-NEXT:    movsd %xmm0, (%esp)
+; X86-SSE-NEXT:    calll asin
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: fasin:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; SSE-NEXT:    callq asin@PLT
+; SSE-NEXT:    popq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: fasin:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; AVX-NEXT:    callq asin@PLT
+; AVX-NEXT:    popq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
+entry:
+  %result = call double @llvm.experimental.constrained.asin.f64(double 42.0,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+; Verify that atan(42.0) isn't simplified when the rounding mode is unknown.
+define double @fatan() #0 {
+; X87-LABEL: fatan:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 16
+; X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    calll atan
+; X87-NEXT:    addl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: fatan:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; X86-SSE-NEXT:    movsd %xmm0, (%esp)
+; X86-SSE-NEXT:    calll atan
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: fatan:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; SSE-NEXT:    callq atan@PLT
+; SSE-NEXT:    popq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: fatan:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; AVX-NEXT:    callq atan@PLT
+; AVX-NEXT:    popq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
+entry:
+  %result = call double @llvm.experimental.constrained.atan.f64(double 42.0,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+; Verify that atan2(42.1, 3.0) isn't simplified when the rounding mode is unknown.
+define double @fatan2() #0 {
+; X87-LABEL: fatan2:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    subl $28, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 32
+; X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X87-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{\.?LCPI[0-9]+_[0-9]+}}
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    calll atan2
+; X87-NEXT:    addl $28, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: fatan2:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $28, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 32
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = [3.0E+0,0.0E+0]
+; X86-SSE-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; X86-SSE-NEXT:    movsd %xmm0, (%esp)
+; X86-SSE-NEXT:    calll atan2
+; X86-SSE-NEXT:    addl $28, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: fatan2:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; SSE-NEXT:    movsd {{.*#+}} xmm1 = [3.0E+0,0.0E+0]
+; SSE-NEXT:    callq atan2@PLT
+; SSE-NEXT:    popq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: fatan2:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [3.0E+0,0.0E+0]
+; AVX-NEXT:    callq atan2@PLT
+; AVX-NEXT:    popq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
+entry:
+  %result = call double @llvm.experimental.constrained.atan2.f64(double 42.1,
+                                               double 3.0,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+; Verify that cosh(42.0) isn't simplified when the rounding mode is unknown.
+define double @fcosh() #0 {
+; X87-LABEL: fcosh:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 16
+; X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    calll cosh
+; X87-NEXT:    addl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: fcosh:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; X86-SSE-NEXT:    movsd %xmm0, (%esp)
+; X86-SSE-NEXT:    calll cosh
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: fcosh:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; SSE-NEXT:    callq cosh@PLT
+; SSE-NEXT:    popq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: fcosh:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; AVX-NEXT:    callq cosh@PLT
+; AVX-NEXT:    popq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
+entry:
+  %result = call double @llvm.experimental.constrained.cosh.f64(double 42.0,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+; Verify that sinh(42.0) isn't simplified when the rounding mode is unknown.
+define double @fsinh() #0 {
+; X87-LABEL: fsinh:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 16
+; X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    calll sinh
+; X87-NEXT:    addl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: fsinh:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; X86-SSE-NEXT:    movsd %xmm0, (%esp)
+; X86-SSE-NEXT:    calll sinh
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: fsinh:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; SSE-NEXT:    callq sinh@PLT
+; SSE-NEXT:    popq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: fsinh:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; AVX-NEXT:    callq sinh@PLT
+; AVX-NEXT:    popq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
+entry:
+  %result = call double @llvm.experimental.constrained.sinh.f64(double 42.0,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+; Verify that tanh(42.0) isn't simplified when the rounding mode is unknown.
+define double @ftanh() #0 {
+; X87-LABEL: ftanh:
+; X87:       # %bb.0: # %entry
+; X87-NEXT:    subl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 16
+; X87-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X87-NEXT:    fstpl (%esp)
+; X87-NEXT:    wait
+; X87-NEXT:    calll tanh
+; X87-NEXT:    addl $12, %esp
+; X87-NEXT:    .cfi_def_cfa_offset 4
+; X87-NEXT:    retl
+;
+; X86-SSE-LABEL: ftanh:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; X86-SSE-NEXT:    movsd %xmm0, (%esp)
+; X86-SSE-NEXT:    calll tanh
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
+; X86-SSE-NEXT:    retl
+;
+; SSE-LABEL: ftanh:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    pushq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 16
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; SSE-NEXT:    callq tanh@PLT
+; SSE-NEXT:    popq %rax
+; SSE-NEXT:    .cfi_def_cfa_offset 8
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: ftanh:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; AVX-NEXT:    callq tanh@PLT
+; AVX-NEXT:    popq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    retq
+entry:
+  %result = call double @llvm.experimental.constrained.tanh.f64(double 42.0,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
 
 attributes #0 = { strictfp }
 
@@ -2824,6 +3187,13 @@ declare double @llvm.experimental.constrained.powi.f64(double, i32, metadata, me
 declare double @llvm.experimental.constrained.sin.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.cos.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.tan.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.asin.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.acos.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.atan.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.atan2.f64(double, double, metadata, metadata)
+declare double @llvm.experimental.constrained.sinh.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.cosh.f64(double, metadata, metadata)
+declare double @llvm.experimental.constrained.tanh.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.exp.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.exp2.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.log.f64(double, metadata, metadata)

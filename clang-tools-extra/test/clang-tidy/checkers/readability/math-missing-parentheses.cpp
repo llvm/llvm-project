@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-math-missing-parentheses %t
+// RUN: %check_clang_tidy --match-partial-fixes %s readability-math-missing-parentheses %t
 
 #define MACRO_AND &
 #define MACRO_ADD +
@@ -155,5 +155,21 @@ namespace PR92516 {
   void f3(int i) {
     int j;
     for (j = i + 1, 2; j < 1; ++j) {}
+  }
+}
+
+namespace PR141249 {
+  void AssignAsParentBinOp(int* netChange, int* nums, int k, int i) {
+    //CHECK-MESSAGES: :[[@LINE+2]]:30: warning: '-' has higher precedence than '^'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
+    //CHECK-FIXES: netChange[i] = nums[i] ^ (k - nums[i]);
+    netChange[i] = nums[i] ^ k - nums[i];
+  }
+}
+
+void CompareAsParentBinOp(int b) {
+  //CHECK-MESSAGES: :[[@LINE+2]]:12: warning: '*' has higher precedence than '-'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
+  //CHECK-FIXES: if (b == (1 * 2) - 3)   {
+  if (b == 1 * 2 - 3)   {
+
   }
 }

@@ -24,6 +24,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 #include <functional>
@@ -41,7 +42,7 @@ struct MachinePointerInfo;
 class MachineRegisterInfo;
 class TargetLowering;
 
-class CallLowering {
+class LLVM_ABI CallLowering {
   const TargetLowering *TLI;
 
   virtual void anchor();
@@ -54,7 +55,7 @@ public:
     BaseArgInfo(Type *Ty,
                 ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
                 bool IsFixed = true)
-        : Ty(Ty), Flags(Flags.begin(), Flags.end()), IsFixed(IsFixed) {}
+        : Ty(Ty), Flags(Flags), IsFixed(IsFixed) {}
 
     BaseArgInfo() : Ty(nullptr), IsFixed(false) {}
   };
@@ -81,8 +82,8 @@ public:
     ArgInfo(ArrayRef<Register> Regs, Type *Ty, unsigned OrigIndex,
             ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
             bool IsFixed = true, const Value *OrigValue = nullptr)
-        : BaseArgInfo(Ty, Flags, IsFixed), Regs(Regs.begin(), Regs.end()),
-          OrigValue(OrigValue), OrigArgIndex(OrigIndex) {
+        : BaseArgInfo(Ty, Flags, IsFixed), Regs(Regs), OrigValue(OrigValue),
+          OrigArgIndex(OrigIndex) {
       if (!Regs.empty() && Flags.empty())
         this->Flags.push_back(ISD::ArgFlagsTy());
       // FIXME: We should have just one way of saying "no register".
@@ -172,7 +173,7 @@ public:
   ///
   /// ValueAssigner should not depend on any specific function state, and
   /// only determine the types and locations for arguments.
-  struct ValueAssigner {
+  struct LLVM_ABI ValueAssigner {
     ValueAssigner(bool IsIncoming, CCAssignFn *AssignFn_,
                   CCAssignFn *AssignFnVarArg_ = nullptr)
         : AssignFn(AssignFn_), AssignFnVarArg(AssignFnVarArg_),
@@ -239,7 +240,7 @@ public:
         : ValueAssigner(false, AssignFn_, AssignFnVarArg_) {}
   };
 
-  struct ValueHandler {
+  struct LLVM_ABI ValueHandler {
     MachineIRBuilder &MIRBuilder;
     MachineRegisterInfo &MRI;
     const bool IsIncomingArgumentHandler;
@@ -328,7 +329,7 @@ public:
 
   /// Base class for ValueHandlers used for arguments coming into the current
   /// function, or for return values received from a call.
-  struct IncomingValueHandler : public ValueHandler {
+  struct LLVM_ABI IncomingValueHandler : public ValueHandler {
     IncomingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
         : ValueHandler(/*IsIncoming*/ true, MIRBuilder, MRI) {}
 
@@ -409,20 +410,21 @@ protected:
   /// \p Handler to move them to the assigned locations.
   ///
   /// \return True if everything has succeeded, false otherwise.
-  bool determineAndHandleAssignments(
-      ValueHandler &Handler, ValueAssigner &Assigner,
-      SmallVectorImpl<ArgInfo> &Args, MachineIRBuilder &MIRBuilder,
-      CallingConv::ID CallConv, bool IsVarArg,
-      ArrayRef<Register> ThisReturnRegs = std::nullopt) const;
+  bool
+  determineAndHandleAssignments(ValueHandler &Handler, ValueAssigner &Assigner,
+                                SmallVectorImpl<ArgInfo> &Args,
+                                MachineIRBuilder &MIRBuilder,
+                                CallingConv::ID CallConv, bool IsVarArg,
+                                ArrayRef<Register> ThisReturnRegs = {}) const;
 
   /// Use \p Handler to insert code to handle the argument/return values
   /// represented by \p Args. It's expected determineAssignments previously
   /// processed these arguments to populate \p CCState and \p ArgLocs.
-  bool
-  handleAssignments(ValueHandler &Handler, SmallVectorImpl<ArgInfo> &Args,
-                    CCState &CCState, SmallVectorImpl<CCValAssign> &ArgLocs,
-                    MachineIRBuilder &MIRBuilder,
-                    ArrayRef<Register> ThisReturnRegs = std::nullopt) const;
+  bool handleAssignments(ValueHandler &Handler, SmallVectorImpl<ArgInfo> &Args,
+                         CCState &CCState,
+                         SmallVectorImpl<CCValAssign> &ArgLocs,
+                         MachineIRBuilder &MIRBuilder,
+                         ArrayRef<Register> ThisReturnRegs = {}) const;
 
   /// Check whether parameters to a call that are passed in callee saved
   /// registers are the same as from the calling function.  This needs to be
@@ -596,7 +598,7 @@ public:
                  ArrayRef<Register> ResRegs,
                  ArrayRef<ArrayRef<Register>> ArgRegs, Register SwiftErrorVReg,
                  std::optional<PtrAuthInfo> PAI, Register ConvergenceCtrlToken,
-                 std::function<unsigned()> GetCalleeReg) const;
+                 std::function<Register()> GetCalleeReg) const;
 
   /// For targets which want to use big-endian can enable it with
   /// enableBigEndian() hook
@@ -607,6 +609,15 @@ public:
   virtual bool isTypeIsValidForThisReturn(EVT Ty) const { return false; }
 };
 
+extern template LLVM_ABI void
+CallLowering::setArgFlags<Function>(CallLowering::ArgInfo &Arg, unsigned OpIdx,
+                                    const DataLayout &DL,
+                                    const Function &FuncInfo) const;
+
+extern template LLVM_ABI void
+CallLowering::setArgFlags<CallBase>(CallLowering::ArgInfo &Arg, unsigned OpIdx,
+                                    const DataLayout &DL,
+                                    const CallBase &FuncInfo) const;
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_GLOBALISEL_CALLLOWERING_H

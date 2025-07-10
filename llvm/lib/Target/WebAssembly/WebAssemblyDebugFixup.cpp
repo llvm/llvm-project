@@ -19,12 +19,9 @@
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
-#include "llvm/ADT/SCCIterator.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -107,7 +104,7 @@ bool WebAssemblyDebugFixup::runOnMachineFunction(MachineFunction &MF) {
           for (auto &Elem : reverse(Stack)) {
             if (MO.getReg() == Elem.Reg) {
               auto Depth = static_cast<unsigned>(&Elem - &Stack[0]);
-              LLVM_DEBUG(dbgs() << "Debug Value VReg " << MO.getReg()
+              LLVM_DEBUG(dbgs() << "Debug Value VReg " << printReg(MO.getReg())
                                 << " -> Stack Relative " << Depth << "\n");
               MO.ChangeToTargetIndex(WebAssembly::TI_OPERAND_STACK, Depth);
               // Save the DBG_VALUE instruction that defined this stackified

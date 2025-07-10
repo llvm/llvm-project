@@ -1,4 +1,4 @@
-; RUN: llc -march=mips64 -mcpu=mips64r2 -mattr=+soft-float -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=mips64 -mcpu=mips64r2 -mattr=+soft-float -O0 < %s | FileCheck %s
 
 
 define double @foo() #0 {

@@ -121,11 +121,11 @@ void test() {
     }
   }
 // These diagnostics happen when we try to construct bad_expected_access from the non copy-constructible error type.
-#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#if _LIBCPP_HAS_EXCEPTIONS
   // expected-error-re@*:* {{call to deleted constructor of{{.*}}}}
   // expected-error-re@*:* {{call to deleted constructor of{{.*}}}}
-  // expected-error-re@*:* {{call to deleted constructor of{{.*}}}}
-  // expected-error-re@*:* {{call to deleted constructor of{{.*}}}}
+  // expected-error-re@*:* 1-2{{call to deleted constructor of{{.*}}}}
+  // expected-error-re@*:* 0-2{{call to deleted constructor of{{.*}}}}
 #endif
 }
 // clang-format on

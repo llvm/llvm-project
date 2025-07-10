@@ -18,14 +18,13 @@
 using namespace mlir;
 using namespace mlir::detail;
 
-static Operation *createOp(MLIRContext *context,
-                           ArrayRef<Value> operands = std::nullopt,
-                           ArrayRef<Type> resultTypes = std::nullopt,
+static Operation *createOp(MLIRContext *context, ArrayRef<Value> operands = {},
+                           ArrayRef<Type> resultTypes = {},
                            unsigned int numRegions = 0) {
   context->allowUnregisteredDialects();
-  return Operation::create(
-      UnknownLoc::get(context), OperationName("foo.bar", context), resultTypes,
-      operands, std::nullopt, nullptr, std::nullopt, numRegions);
+  return Operation::create(UnknownLoc::get(context),
+                           OperationName("foo.bar", context), resultTypes,
+                           operands, std::nullopt, nullptr, {}, numRegions);
 }
 
 namespace {
@@ -34,7 +33,7 @@ TEST(OperandStorageTest, NonResizable) {
   Builder builder(&context);
 
   Operation *useOp =
-      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
+      createOp(&context, /*operands=*/{}, builder.getIntegerType(16));
   Value operand = useOp->getResult(0);
 
   // Create a non-resizable operation with one operand.
@@ -45,7 +44,7 @@ TEST(OperandStorageTest, NonResizable) {
   EXPECT_EQ(user->getNumOperands(), 1u);
 
   // Removing is okay.
-  user->setOperands(std::nullopt);
+  user->setOperands({});
   EXPECT_EQ(user->getNumOperands(), 0u);
 
   // Destroy the operations.
@@ -58,7 +57,7 @@ TEST(OperandStorageTest, Resizable) {
   Builder builder(&context);
 
   Operation *useOp =
-      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
+      createOp(&context, /*operands=*/{}, builder.getIntegerType(16));
   Value operand = useOp->getResult(0);
 
   // Create a resizable operation with one operand.
@@ -69,7 +68,7 @@ TEST(OperandStorageTest, Resizable) {
   EXPECT_EQ(user->getNumOperands(), 1u);
 
   // Removing is okay.
-  user->setOperands(std::nullopt);
+  user->setOperands({});
   EXPECT_EQ(user->getNumOperands(), 0u);
 
   // Adding more operands is okay.
@@ -86,7 +85,7 @@ TEST(OperandStorageTest, RangeReplace) {
   Builder builder(&context);
 
   Operation *useOp =
-      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
+      createOp(&context, /*operands=*/{}, builder.getIntegerType(16));
   Value operand = useOp->getResult(0);
 
   // Create a resizable operation with one operand.
@@ -122,7 +121,7 @@ TEST(OperandStorageTest, MutableRange) {
   Builder builder(&context);
 
   Operation *useOp =
-      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
+      createOp(&context, /*operands=*/{}, builder.getIntegerType(16));
   Value operand = useOp->getResult(0);
 
   // Create a resizable operation with one operand.
@@ -159,8 +158,7 @@ TEST(OperandStorageTest, RangeErase) {
   Builder builder(&context);
 
   Type type = builder.getNoneType();
-  Operation *useOp =
-      createOp(&context, /*operands=*/std::nullopt, {type, type});
+  Operation *useOp = createOp(&context, /*operands=*/{}, {type, type});
   Value operand1 = useOp->getResult(0);
   Value operand2 = useOp->getResult(1);
 
@@ -190,8 +188,8 @@ TEST(OperationOrderTest, OrderIsAlwaysValid) {
   MLIRContext context;
   Builder builder(&context);
 
-  Operation *containerOp = createOp(&context, /*operands=*/std::nullopt,
-                                    /*resultTypes=*/std::nullopt,
+  Operation *containerOp = createOp(&context, /*operands=*/{},
+                                    /*resultTypes=*/{},
                                     /*numRegions=*/1);
   Region &region = containerOp->getRegion(0);
   Block *block = new Block();
@@ -226,6 +224,26 @@ TEST(OperationFormatPrintTest, CanUseVariadicFormat) {
 
   std::string str = formatv("{0}", *op).str();
   ASSERT_STREQ(str.c_str(), "\"foo.bar\"() : () -> ()");
+
+  op->destroy();
+}
+
+TEST(OperationFormatPrintTest, CanPrintNameAsPrefix) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  context.allowUnregisteredDialects();
+  Operation *op = Operation::create(
+      NameLoc::get(StringAttr::get(&context, "my_named_loc")),
+      OperationName("t.op", &context), builder.getIntegerType(16), {},
+      std::nullopt, nullptr, {}, 0);
+
+  std::string str;
+  OpPrintingFlags flags;
+  flags.printNameLocAsPrefix(true);
+  llvm::raw_string_ostream os(str);
+  op->print(os, flags);
+  ASSERT_STREQ(str.c_str(), "%my_named_loc = \"t.op\"() : () -> i16\n");
 
   op->destroy();
 }
@@ -295,6 +313,7 @@ TEST(OperandStorageTest, PopulateDefaultAttrs) {
 TEST(OperationEquivalenceTest, HashWorksWithFlags) {
   MLIRContext context;
   context.getOrLoadDialect<test::TestDialect>();
+  OpBuilder b(&context);
 
   auto *op1 = createOp(&context);
   // `op1` has an unknown loc.
@@ -305,12 +324,36 @@ TEST(OperationEquivalenceTest, HashWorksWithFlags) {
         op, OperationEquivalence::ignoreHashValue,
         OperationEquivalence::ignoreHashValue, flags);
   };
+  // Check ignore location.
   EXPECT_EQ(getHash(op1, OperationEquivalence::IgnoreLocations),
             getHash(op2, OperationEquivalence::IgnoreLocations));
   EXPECT_NE(getHash(op1, OperationEquivalence::None),
             getHash(op2, OperationEquivalence::None));
+  op1->setLoc(NameLoc::get(StringAttr::get(&context, "foo")));
+  // Check ignore discardable dictionary attributes.
+  SmallVector<NamedAttribute> newAttrs = {
+      b.getNamedAttr("foo", b.getStringAttr("f"))};
+  op1->setAttrs(newAttrs);
+  EXPECT_EQ(getHash(op1, OperationEquivalence::IgnoreDiscardableAttrs),
+            getHash(op2, OperationEquivalence::IgnoreDiscardableAttrs));
+  EXPECT_NE(getHash(op1, OperationEquivalence::None),
+            getHash(op2, OperationEquivalence::None));
   op1->destroy();
   op2->destroy();
+
+  // Check ignore properties.
+  auto req1 = b.getI32IntegerAttr(10);
+  Operation *opWithProperty1 = b.create<test::OpAttrMatch1>(
+      b.getUnknownLoc(), req1, nullptr, nullptr, req1);
+  auto req2 = b.getI32IntegerAttr(60);
+  Operation *opWithProperty2 = b.create<test::OpAttrMatch1>(
+      b.getUnknownLoc(), req2, nullptr, nullptr, req2);
+  EXPECT_EQ(getHash(opWithProperty1, OperationEquivalence::IgnoreProperties),
+            getHash(opWithProperty2, OperationEquivalence::IgnoreProperties));
+  EXPECT_NE(getHash(opWithProperty1, OperationEquivalence::None),
+            getHash(opWithProperty2, OperationEquivalence::None));
+  opWithProperty1->destroy();
+  opWithProperty2->destroy();
 }
 
 } // namespace
