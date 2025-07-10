@@ -803,15 +803,15 @@ defm : DSAtomicRetNoRetPatIntrinsic_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32
 let SubtargetPredicate = isGFX1250Plus in {
 
 let WaveSizePredicate = isWave32, mayStore = 0 in {
-let SubtargetPredicate = HasTransposeLoadF4F6Insts in {
+let OtherPredicates = [HasTransposeLoadF4F6Insts] in {
 defm DS_LOAD_TR4_B64   : DS_1A_RET_NoM0<"ds_load_tr4_b64",   VReg_64>;
 defm DS_LOAD_TR6_B96   : DS_1A_RET_NoM0<"ds_load_tr6_b96",   VReg_96>;
-} // let SubtargetPredicate = HasTransposeLoadF4F6Insts
+} // End OtherPredicates = [HasTransposeLoadF4F6Insts]
 defm DS_LOAD_TR8_B64   : DS_1A_RET_NoM0<"ds_load_tr8_b64",   VReg_64>;
 defm DS_LOAD_TR16_B128 : DS_1A_RET_NoM0<"ds_load_tr16_b128", VReg_128>;
-} // let WaveSizePredicate = isWave32, mayStore = 0
+} // End WaveSizePredicate = isWave32, mayStore = 0
 
-let SubtargetPredicate = HasLdsBarrierArriveAtomic in {
+let OtherPredicates = [HasLdsBarrierArriveAtomic] in {
 let ASYNC_CNT = 1, LGKM_CNT = 0, Uses = [EXEC, ASYNCcnt], Defs = [ASYNCcnt] in {
 def DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_1A_Off16_NORET<"ds_atomic_async_barrier_arrive_b64">;
 }
@@ -827,9 +827,9 @@ def : GCNPat<
   (i64 (int_amdgcn_ds_atomic_barrier_arrive_rtn_b64 (DS1Addr1Offset i32:$ptr, i32:$offset), i64:$data)),
   (DS_ATOMIC_BARRIER_ARRIVE_RTN_B64 $ptr, $data, Offset:$offset, (i1 0))
 >;
-} // let SubtargetPredicate = HasLdsBarrierArriveAtomic
+} // End OtherPredicates = [HasLdsBarrierArriveAtomic]
 
-} // let SubtargetPredicate = isGFX1250Plus
+} // End SubtargetPredicate = isGFX1250Plus
 
 let WaveSizePredicate = isWave64, SubtargetPredicate = HasGFX950Insts, mayStore = 0 in {
   defm DS_READ_B64_TR_B4  : DS_1A_RET_NoM0<"ds_read_b64_tr_b4", VReg_64>;
@@ -1328,12 +1328,15 @@ class DSLoadTrPat <DS_Pseudo inst, ValueType vt, SDPatternOperator node> : GCNPa
 >;
 
 let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX1250Plus in {
-  def : DSLoadTrPat <DS_LOAD_TR8_B64,   v2i32,  int_amdgcn_ds_load_tr8_b64>;
-  def : DSLoadTrPat <DS_LOAD_TR4_B64,   v2i32,  int_amdgcn_ds_load_tr4_b64>;
-  def : DSLoadTrPat <DS_LOAD_TR6_B96,   v3i32,  int_amdgcn_ds_load_tr6_b96>;
+let OtherPredicates = [HasTransposeLoadF4F6Insts] in {
+  def : DSLoadTrPat <DS_LOAD_TR4_B64, v2i32, int_amdgcn_ds_load_tr4_b64>;
+  def : DSLoadTrPat <DS_LOAD_TR6_B96, v3i32, int_amdgcn_ds_load_tr6_b96>;
+} // End OtherPredicates = [HasTransposeLoadF4F6Insts]
+
+  def : DSLoadTrPat <DS_LOAD_TR8_B64, v2i32, int_amdgcn_ds_load_tr8_b64>;
   foreach vt = [v8i16, v8f16, v8bf16] in
-    def : DSLoadTrPat <DS_LOAD_TR16_B128, vt,  int_amdgcn_ds_load_tr16_b128>;
-} //let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX1250Plus
+    def : DSLoadTrPat <DS_LOAD_TR16_B128, vt, int_amdgcn_ds_load_tr16_b128>;
+} // End WaveSizePredicate = isWave32, SubtargetPredicate = isGFX1250Plus
 
 let SubtargetPredicate = HasGFX950Insts in {
   def : DSLoadTrPat <DS_READ_B64_TR_B4,  v2i32, int_amdgcn_ds_read_tr4_b64>;
@@ -1374,14 +1377,14 @@ class Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<bits<8> op, DS_Pseudo ps, i
 // GFX12, GFX13.
 //===----------------------------------------------------------------------===//
 
-multiclass DS_Real_gfx12<bits<8> op, string name = !tolower(NAME), bit needAlias = true> {
+multiclass DS_Real_gfx12<bits<8> op, string name = !tolower(NAME)> {
   defvar ps = !cast<DS_Pseudo>(NAME);
   let AssemblerPredicate = isGFX12Only in {
     let DecoderNamespace = "GFX12" in
       def _gfx12 :
         Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<op, ps, SIEncodingFamily.GFX12,
                                                        name, /*hasGDS=*/false>;
-    if !and(needAlias, !ne(ps.Mnemonic, name)) then
+    if !ne(ps.Mnemonic, name) then
       def : AMDGPUMnemonicAlias<ps.Mnemonic, name>;
   } // End AssemblerPredicate
 }

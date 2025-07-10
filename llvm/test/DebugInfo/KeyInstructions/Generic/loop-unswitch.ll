@@ -125,7 +125,7 @@ declare void @clobber()
 !2 = !{i32 13}
 !3 = !{i32 0}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!5 = distinct !DISubprogram(name: "partial_unswitch_true_successor_hoist_invariant", linkageName: "partial_unswitch_true_successor_hoist_invariant", scope: null, file: !1, line: 1, type: !6, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!5 = distinct !DISubprogram(name: "partial_unswitch_true_successor_hoist_invariant", linkageName: "partial_unswitch_true_successor_hoist_invariant", scope: null, file: !1, line: 1, type: !6, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, keyInstructions: true)
 !6 = !DISubroutineType(types: !7)
 !7 = !{}
 !8 = !DILocation(line: 1, scope: !5, atomGroup: 1, atomRank: 1)
@@ -142,6 +142,7 @@ declare void @clobber()
 !19 = !DILocation(line: 12, scope: !5, atomGroup: 12, atomRank: 1)
 !20 = !DILocation(line: 13, scope: !5, atomGroup: 13, atomRank: 1)
 ;.
+; CHECK: distinct !DISubprogram(name: "partial_unswitch_true_successor_hoist_invariant", {{.*}}keyInstructions: true)
 ; CHECK: [[DBG8]] = !DILocation(line: 3{{.*}}, atomGroup: 24, atomRank: 1)
 ; CHECK: [[DBG9]] = !DILocation(line: 4{{.*}}, atomGroup: 25, atomRank: 1)
 ; CHECK: [[DBG10]] = !DILocation(line: 5{{.*}}, atomGroup: 26, atomRank: 1)

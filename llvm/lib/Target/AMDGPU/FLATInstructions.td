@@ -221,19 +221,27 @@ class GlobalSaddrTable <bit is_saddr, string Name = ""> {
 // TODO: Is exec allowed for saddr? The disabled value 0x7f is the
 // same encoding value as exec_hi, so it isn't possible to use that if
 // saddr is 32-bit (which isn't handled here yet).
-class FLAT_Load_Pseudo <string opName, RegisterClass regClass,
-  bit HasTiedOutput = 0, bit HasSaddr = 0, bit EnableSaddr = 0, bit HasVaddr = 1,
-  RegisterClass SaddrRC = SReg_64_XEXEC_XNULL,
-  RegisterClass VaddrRC = !if(EnableSaddr, VGPR_32, VReg_64),
-  RegisterOperand vdata_op = getLdStRegisterOperand<regClass>.ret> : FLAT_Pseudo<
-  opName,
-  (outs vdata_op:$vdst),
-  !con(!if(EnableSaddr, (ins SaddrRC:$saddr), (ins)), !if(HasVaddr, (ins VaddrRC:$vaddr), (ins)),
-       (ins flat_offset:$offset),
-       // FIXME: Operands with default values do not work with following non-optional operands.
-       !if(HasTiedOutput, (ins CPol:$cpol, vdata_op:$vdst_in),
-                          (ins CPol_0:$cpol))),
-  " $vdst"#!if(HasVaddr, ", $vaddr", "")#!if(HasSaddr, !if(EnableSaddr, ", $saddr", ", off"), "")#"$offset$cpol"> {
+class FLAT_Load_Pseudo<
+    string opName, RegisterClass regClass, bit HasTiedOutput = 0,
+    bit HasSaddr = 0, bit EnableSaddr = 0, bit HasVaddr = 1,
+    RegisterClass SaddrRC = SReg_64_XEXEC_XNULL,
+    RegisterClass VaddrRC = !if(EnableSaddr, VGPR_32, VReg_64)>
+    : FLAT_Pseudo<opName, (outs), (ins), ""> {
+
+  defvar vdata_op = getLdStRegisterOperand<regClass>.ret;
+  let OutOperandList = (outs vdata_op:$vdst);
+  let InOperandList = !con(
+      !if(EnableSaddr, (ins SaddrRC:$saddr), (ins)),
+      !if(HasVaddr, (ins VaddrRC:$vaddr), (ins)),
+      (ins flat_offset:$offset),
+      // FIXME: Operands with default values do not work with following
+      // non-optional operands.
+      !if(HasTiedOutput, (ins CPol:$cpol, vdata_op:$vdst_in),
+                         (ins CPol_0:$cpol)));
+  let AsmOperands = " $vdst" # !if(HasVaddr, ", $vaddr", "")
+    # !if(HasSaddr, !if(EnableSaddr, ", $saddr", ", off"), "")
+    # "$offset$cpol";
+
   let has_data = 0;
   let mayLoad = 1;
   let has_saddr = HasSaddr;
@@ -2518,18 +2526,18 @@ let OtherPredicates = [isGFX12PlusNot12_50] in
   defm : GlobalFLATAtomicPatsRtn <"GLOBAL_ATOMIC_ORDERED_ADD_B64", "int_amdgcn_global_atomic_ordered_add_b64", i64, i64, /* isIntr */ 1>;
 
 let WaveSizePredicate = isWave32, OtherPredicates = [isGFX12Plus] in {
-  defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w32,  int_amdgcn_global_load_tr_b64, v2i32>;
+  defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w32, int_amdgcn_global_load_tr_b64, v2i32>;
   foreach vt = [v8i16, v8f16, v8bf16] in
     defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w32, int_amdgcn_global_load_tr_b128, vt>;
 }
 
 let WaveSizePredicate = isWave64, OtherPredicates = [isGFX12PlusNot12_50] in {
-  defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w64,  int_amdgcn_global_load_tr_b64, i32>;
+  defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w64, int_amdgcn_global_load_tr_b64, i32>;
   foreach vt = [v4i16, v4f16, v4bf16] in
     defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w64, int_amdgcn_global_load_tr_b128, vt>;
 }
 
-let WaveSizePredicate = isWave32,  OtherPredicates = [isGFX1250Plus] in {
+let WaveSizePredicate = isWave32,  OtherPredicates = [HasTransposeLoadF4F6Insts] in {
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR4_B64, int_amdgcn_global_load_tr4_b64, v2i32>;
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR6_B96, int_amdgcn_global_load_tr6_b96, v3i32>;
 }

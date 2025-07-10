@@ -175,14 +175,14 @@ enum RegisterMapping {
   SQ_MAX_PGM_VGPRS = 2048, // Maximum programmable VGPRs across all targets.
   AGPR_OFFSET = 512,       // Maximum programmable ArchVGPRs across all targets.
   SQ_MAX_PGM_SGPRS = 128,  // Maximum programmable SGPRs across all targets.
-  NUM_EXTRA_VGPRS = 9,     // Reserved slots for DS.
   // Artificial register slots to track LDS writes into specific LDS locations
   // if a location is known. When slots are exhausted or location is
   // unknown use the first slot. The first slot is also always updated in
   // addition to known location's slot to properly generate waits if dependent
   // instruction's location is unknown.
-  EXTRA_VGPR_LDS = 0,
-  NUM_ALL_VGPRS = SQ_MAX_PGM_VGPRS + NUM_EXTRA_VGPRS, // Where SGPR starts.
+  FIRST_LDS_VGPR = SQ_MAX_PGM_VGPRS, // Extra slots for LDS stores.
+  NUM_LDS_VGPRS = 9,                 // One more than the stores we track.
+  NUM_ALL_VGPRS = SQ_MAX_PGM_VGPRS + NUM_LDS_VGPRS, // Where SGPRs start.
 };
 
 // Enumerate different types of result-returning VMEM operations. Although
@@ -225,18 +225,22 @@ static bool isExpertMode(InstCounterType MaxCounter) {
 
 VmemType getVmemType(const MachineInstr &Inst) {
   assert(updateVMCntOnly(Inst));
-  if (!SIInstrInfo::isMIMG(Inst) && !SIInstrInfo::isVIMAGE(Inst) &&
-      !SIInstrInfo::isVSAMPLE(Inst))
+  if (!SIInstrInfo::isImage(Inst))
     return VMEM_NOSAMPLER;
   const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(Inst.getOpcode());
   const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
       AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
+
+  if (BaseInfo->BVH)
+    return VMEM_BVH;
+
   // We have to make an additional check for isVSAMPLE here since some
   // instructions don't have a sampler, but are still classified as sampler
   // instructions for the purposes of e.g. waitcnt.
-  bool HasSampler =
-      BaseInfo->Sampler || BaseInfo->MSAA || SIInstrInfo::isVSAMPLE(Inst);
-  return BaseInfo->BVH ? VMEM_BVH : HasSampler ? VMEM_SAMPLER : VMEM_NOSAMPLER;
+  if (BaseInfo->Sampler || BaseInfo->MSAA || SIInstrInfo::isVSAMPLE(Inst))
+    return VMEM_SAMPLER;
+
+  return VMEM_NOSAMPLER;
 }
 
 unsigned &getCounterRef(AMDGPU::Waitcnt &Wait, InstCounterType T) {
@@ -345,12 +349,8 @@ public:
   }
 
   unsigned getSgprScoresIdx(InstCounterType T) const {
-    if (T == SmemAccessCounter)
-      return 0;
-    if (T == X_CNT)
-      return 1;
-
-    llvm_unreachable("Invalid SMEM counter");
+    assert(isSmemCounter(T) && "Invalid SMEM counter");
+    return T == X_CNT ? 1 : 0;
   }
 
   unsigned getScoreLB(InstCounterType T) const {
@@ -368,10 +368,8 @@ public:
   }
 
   unsigned getRegScore(int GprNo, InstCounterType T) const {
-    if (GprNo < NUM_ALL_VGPRS) {
+    if (GprNo < NUM_ALL_VGPRS)
       return VgprScores[T][GprNo];
-    }
-    assert(isSmemCounter(T));
     return SgprScores[getSgprScoresIdx(T)][GprNo - NUM_ALL_VGPRS];
   }
 
@@ -545,7 +543,7 @@ private:
   unsigned char VgprVmemTypes[NUM_ALL_VGPRS] = {0};
   // Store representative LDS DMA operations. The only useful info here is
   // alias info. One store is kept per unique AAInfo.
-  SmallVector<const MachineInstr *, NUM_EXTRA_VGPRS - 1> LDSDMAStores;
+  SmallVector<const MachineInstr *, NUM_LDS_VGPRS - 1> LDSDMAStores;
 };
 
 // This abstracts the logic for generating and updating S_WAIT* instructions
@@ -974,7 +972,6 @@ void WaitcntBrackets::setScoreByInterval(RegInterval Interval,
       VgprUB = std::max(VgprUB, RegNo);
       VgprScores[CntTy][RegNo] = Score;
     } else {
-      assert(isSmemCounter(CntTy));
       SgprUB = std::max(SgprUB, RegNo - NUM_ALL_VGPRS);
       SgprScores[getSgprScoresIdx(CntTy)][RegNo - NUM_ALL_VGPRS] = Score;
     }
@@ -1117,7 +1114,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
     }
   } else if (T == X_CNT) {
     for (const MachineOperand &Op : Inst.all_uses())
-      setScoreByOperand(&Inst, TRI, MRI, Op, X_CNT, CurrScore);
+      setScoreByOperand(&Inst, TRI, MRI, Op, T, CurrScore);
   } else if (T == VA_VDST || T == VM_VSRC) {
     // Handle the register-interval written by v_store_idx.
     if (T == VA_VDST && Inst.getOpcode() == AMDGPU::V_STORE_IDX) {
@@ -1198,15 +1195,15 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
             }
           }
         }
-        if (Slot || LDSDMAStores.size() == NUM_EXTRA_VGPRS - 1)
+        if (Slot || LDSDMAStores.size() == NUM_LDS_VGPRS - 1)
           break;
         LDSDMAStores.push_back(&Inst);
         Slot = LDSDMAStores.size();
         break;
       }
-      setRegScore(SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS + Slot, T, CurrScore);
+      setRegScore(FIRST_LDS_VGPR + Slot, T, CurrScore);
       if (Slot)
-        setRegScore(SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS, T, CurrScore);
+        setRegScore(FIRST_LDS_VGPR, T, CurrScore);
     }
   }
 }
@@ -1267,7 +1264,7 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
         if (RegScore <= LB)
           continue;
         unsigned RelScore = RegScore - LB - 1;
-        if (J < SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS) {
+        if (J < FIRST_LDS_VGPR) {
           OS << RelScore << ":v" << J << " ";
         } else {
           OS << RelScore << ":ds ";
@@ -2043,8 +2040,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
                                                  bool FlushVmCnt) {
   setForceEmitWaitcnt();
 
-  if (MI.isMetaInstruction())
-    return false;
+  assert(!MI.isMetaInstruction());
 
   AMDGPU::Waitcnt Wait;
 
@@ -2226,7 +2222,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
           continue;
 
         // LOAD_CNT is only relevant to vgpr or LDS.
-        unsigned RegNo = SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS;
+        unsigned RegNo = FIRST_LDS_VGPR;
         // Only objects with alias scope info were added to LDSDMAScopes array.
         // In the absense of the scope info we will not be able to disambiguate
         // aliasing here. There is no need to try searching for a corresponding
@@ -2411,6 +2407,8 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
   // instructions will have been done so, now deal with any remaining.
   ScoreBrackets.applyWaitcnt(Wait);
 
+  // TODO-GFX13: VaVdst can be merged into VNBR once expert scheduling mode
+  // is more thoroughly tested.
   // ExpCnt can be merged into VINTERP.
   // Note that VINTERP wait_exp:7 always means "no wait" even if EXPcnt is
   // higher than 7.
@@ -2879,6 +2877,10 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
                                          E = Block.instr_end();
        Iter != E;) {
     MachineInstr &Inst = *Iter;
+    if (Inst.isMetaInstruction()) {
+      ++Iter;
+      continue;
+    }
 
     // Track pre-existing waitcnts that were added in earlier iterations or by
     // the memory legalizer.

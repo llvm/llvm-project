@@ -3439,6 +3439,66 @@ def int_amdgcn_wavegroup_id_in_cluster :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>,
   ClangBuiltin<"__builtin_amdgcn_wavegroup_id_in_cluster">;
 
+// i1 @llvm.amdgcn.spatial.cluster.is.chain.start()
+def int_amdgcn_spatial_cluster_is_chain_start :
+  DefaultAttrsIntrinsic<[llvm_i1_ty], [], [IntrInaccessibleMemOnly, IntrReadMem]>,
+  ClangBuiltin<"__builtin_amdgcn_spatial_cluster_is_chain_start">;
+
+// i1 @llvm.amdgcn.spatial.cluster.is.chain.end()
+def int_amdgcn_spatial_cluster_is_chain_end :
+  DefaultAttrsIntrinsic<[llvm_i1_ty], [], [IntrInaccessibleMemOnly, IntrReadMem]>,
+  ClangBuiltin<"__builtin_amdgcn_spatial_cluster_is_chain_end">;
+
+// void @llvm.amdgcn.spatial.cluster.set.chain.start(i1)
+def int_amdgcn_spatial_cluster_set_chain_start :
+  DefaultAttrsIntrinsic<[], [llvm_i1_ty], [IntrInaccessibleMemOnly, IntrWriteMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_spatial_cluster_set_chain_start">;
+
+// void @llvm.amdgcn.spatial.cluster.set.chain.end(i1)
+def int_amdgcn_spatial_cluster_set_chain_end :
+  DefaultAttrsIntrinsic<[], [llvm_i1_ty], [IntrInaccessibleMemOnly, IntrWriteMem, IntrConvergent]>,
+  ClangBuiltin<"__builtin_amdgcn_spatial_cluster_set_chain_end">;
+
+// void @llvm.amdgcn.spatial.cluster.send.next(i32, ptr addrspace(10), ptr addrspace(3), ptr addrspace(10), ptr addrspace(3))
+def int_amdgcn_spatial_cluster_send_next :
+  DefaultAttrsIntrinsic<[], [
+    llvm_i32_ty,                // Data to send
+    laneshared_ptr_ty,          // %dst address written in receiving wavegroup
+    local_ptr_ty,               // %sema signaled in receiving wavegroup
+    laneshared_ptr_ty,          // %dst_refl address written in sending wavegroup on reflection
+    local_ptr_ty,               // %sema_refl signaled in sending wavegroup on reflection
+    llvm_i32_ty                 // Flags to choose reflection data movement mode
+  ], [IntrHasSideEffects, IntrConvergent, IntrNoCallback]>,
+  ClangBuiltin<"__builtin_amdgcn_spatial_cluster_send_next">;
+
+// void @llvm.amdgcn.spatial.cluster.send.prev(i32, ptr addrspace(10), ptr addrspace(3), ptr addrspace(10), ptr addrspace(3))
+def int_amdgcn_spatial_cluster_send_prev :
+  DefaultAttrsIntrinsic<[], [
+    llvm_i32_ty,                // Data to send
+    laneshared_ptr_ty,          // %dst address written in receiving wavegroup
+    local_ptr_ty,               // %sema signaled in receiving wavegroup
+    laneshared_ptr_ty,          // %dst_refl address written in sending wavegroup on reflection
+    local_ptr_ty,               // %sema_refl signaled in sending wavegroup on reflection
+    llvm_i32_ty                 // Flags to choose reflection data movement mode
+  ], [IntrHasSideEffects, IntrConvergent, IntrNoCallback]>,
+  ClangBuiltin<"__builtin_amdgcn_spatial_cluster_send_prev">;
+
+// void @llvm.amdgcn.spatial.cluster.signal.next(ptr addrspace(3), ptr addrspace(3))
+def int_amdgcn_spatial_cluster_signal_next :
+  DefaultAttrsIntrinsic<[], [
+    local_ptr_ty,               // %sema signaled in receiving wavegroup
+    local_ptr_ty                // %sema_refl signaled in sending wavegroup on reflection
+  ], [IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>,
+  ClangBuiltin<"__builtin_amdgcn_spatial_cluster_signal_next">;
+
+// void @llvm.amdgcn.spatial.cluster.signal.prev(ptr addrspace(3), ptr addrspace(3))
+def int_amdgcn_spatial_cluster_signal_prev :
+  DefaultAttrsIntrinsic<[], [
+    local_ptr_ty,               // %sema signaled in receiving wavegroup
+    local_ptr_ty                // %sema_refl signaled in sending wavegroup on reflection
+  ], [IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>,
+  ClangBuiltin<"__builtin_amdgcn_spatial_cluster_signal_prev">;
+
 // ML Intrinsics
 //
 // Most ML intrinsics take aux_data argument, which maps to multiple fields
@@ -5114,7 +5174,6 @@ class AMDGPUWmmaScaleF4IntrinsicModsC<LLVMType scale_ty> :
 
 defset list<Intrinsic> AMDGPUWMMAIntrinsicsGFX1250 = {
 def int_amdgcn_wmma_f64_16x16x4_f64       : AMDGPUWmmaIntrinsicModsAll<llvm_anyfloat_ty, llvm_anyfloat_ty>;
-def int_amdgcn_wmma_f64_16x16x8_f64       : AMDGPUWmmaIntrinsicModsAll<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x4_f32       : AMDGPUWmmaIntrinsicModsAllReuse<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x32_bf16     : AMDGPUWmmaIntrinsicModsAllReuse<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x32_f16      : AMDGPUWmmaIntrinsicModsAllReuse<llvm_anyfloat_ty, llvm_anyfloat_ty>;
@@ -5205,10 +5264,14 @@ class AMDGPUTensorLoadStoreD2:
     "", [SDNPMemOperand]
   >;
 
-def int_amdgcn_tensor_load_to_lds : AMDGPUTensorLoadStore;
-def int_amdgcn_tensor_store_from_lds : AMDGPUTensorLoadStore;
-def int_amdgcn_tensor_load_to_lds_d2 : AMDGPUTensorLoadStoreD2;
-def int_amdgcn_tensor_store_from_lds_d2 : AMDGPUTensorLoadStoreD2;
+def int_amdgcn_tensor_load_to_lds :
+  ClangBuiltin<"__builtin_amdgcn_tensor_load_to_lds">, AMDGPUTensorLoadStore;
+def int_amdgcn_tensor_store_from_lds :
+  ClangBuiltin<"__builtin_amdgcn_tensor_store_from_lds">, AMDGPUTensorLoadStore;
+def int_amdgcn_tensor_load_to_lds_d2 :
+  ClangBuiltin<"__builtin_amdgcn_tensor_load_to_lds_d2">, AMDGPUTensorLoadStoreD2;
+def int_amdgcn_tensor_store_from_lds_d2 :
+  ClangBuiltin<"__builtin_amdgcn_tensor_store_from_lds_d2">, AMDGPUTensorLoadStoreD2;
 
 class AMDGPUClusterLoad<LLVMType ptr_ty>:
   Intrinsic<

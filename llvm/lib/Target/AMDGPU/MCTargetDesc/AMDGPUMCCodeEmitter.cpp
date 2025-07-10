@@ -124,6 +124,11 @@ MCCodeEmitter *llvm::createAMDGPUMCCodeEmitter(const MCInstrInfo &MCII,
   return new AMDGPUMCCodeEmitter(MCII, *Ctx.getRegisterInfo());
 }
 
+static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
+                     const MCExpr *Value, uint16_t Kind, bool PCRel = false) {
+  Fixups.push_back(MCFixup::create(Offset, Value, Kind, PCRel));
+}
+
 // Returns the encoding value to use if the given integer is an integer inline
 // immediate value, or 0 if it is not.
 template <typename IntTy>
@@ -502,8 +507,7 @@ void AMDGPUMCCodeEmitter::getSOPPBrEncoding(const MCInst &MI, unsigned OpNo,
 
   if (MO.isExpr()) {
     const MCExpr *Expr = MO.getExpr();
-    MCFixupKind Kind = (MCFixupKind)AMDGPU::fixup_si_sopp_br;
-    Fixups.push_back(MCFixup::create(0, Expr, Kind, MI.getLoc()));
+    addFixup(Fixups, 0, Expr, AMDGPU::fixup_si_sopp_br, true);
     Op = APInt::getZero(96);
   } else {
     getMachineOpValue(MI, MO, Op, Fixups, STI);
@@ -725,24 +729,16 @@ void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
     //
     // .Ltmp1:
     //   s_add_u32 s2, s2, (extern_const_addrspace+16)-.Ltmp1
+    bool PCRel = needsPCRel(MO.getExpr());
     const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
-    auto OpType = Desc.operands()[OpNo].OperandType;
-    MCFixupKind Kind;
-    if (needsPCRel(MO.getExpr()))
-      Kind = (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
-              OpType == AMDGPU::OPERAND_REG_IMM_INT64)
-                 ? FK_PCRel_8
-                 : FK_PCRel_4;
-    else
-      Kind = (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
-              OpType == AMDGPU::OPERAND_REG_IMM_INT64)
-                 ? FK_Data_8
-                 : FK_Data_4;
-
     uint32_t Offset = Desc.getSize();
     assert(Offset == 4 || Offset == 8);
-
-    Fixups.push_back(MCFixup::create(Offset, MO.getExpr(), Kind, MI.getLoc()));
+    auto OpType = Desc.operands()[OpNo].OperandType;
+    MCFixupKind Kind = (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
+                        OpType == AMDGPU::OPERAND_REG_IMM_INT64)
+                           ? FK_Data_8
+                           : FK_Data_4;
+    addFixup(Fixups, Offset, MO.getExpr(), Kind, PCRel);
   }
 
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());

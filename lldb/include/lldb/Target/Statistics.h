@@ -191,11 +191,7 @@ public:
 
   void SetIncludeTranscript(bool value) { m_include_transcript = value; }
   bool GetIncludeTranscript() const {
-    if (m_include_transcript.has_value())
-      return m_include_transcript.value();
-    // `m_include_transcript` has no value set, so return a value based on
-    // `m_summary_only`.
-    return !GetSummaryOnly();
+    return m_include_transcript.value_or(false);
   }
 
   void SetIncludePlugins(bool value) { m_include_plugins = value; }

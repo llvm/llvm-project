@@ -1022,6 +1022,42 @@ namespace OpNewNothrow {
                       // both-note {{in call to}}
 }
 
+namespace BaseCompare {
+  struct Cmp {
+    void *p;
+
+    template<typename T>
+    constexpr Cmp(T *t) : p(t) {}
+
+    constexpr friend bool operator==(Cmp a, Cmp b) {
+      return a.p == b.p;
+    }
+  };
+
+  class Base {};
+  class Derived : public Base {};
+  constexpr bool foo() {
+    Derived *D = std::allocator<Derived>{}.allocate(1);;
+    std::construct_at<Derived>(D);
+
+    Derived *d = D;
+    Base    *b = D;
+
+    Cmp ca(d);
+    Cmp cb(b);
+
+    if (ca == cb) {
+      std::allocator<Derived>{}.deallocate(D);
+      return true;
+    }
+    std::allocator<Derived>{}.deallocate(D);
+
+    return false;
+
+  }
+  static_assert(foo());
+}
+
 #else
 /// Make sure we reject this prior to C++20
 constexpr int a() { // both-error {{never produces a constant expression}}

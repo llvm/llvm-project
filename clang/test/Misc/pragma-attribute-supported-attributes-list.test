@@ -5,6 +5,7 @@
 // CHECK: #pragma clang attribute supports the following attributes:
 // CHECK-NEXT: AMDGPUFlatWorkGroupSize (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUMaxNumWorkGroups (SubjectMatchRule_function)
+// CHECK-NEXT: AMDGPUNoRankSpecialization (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUNumSGPR (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUNumVGPR (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUSpatialClusterKernel (SubjectMatchRule_function)
@@ -217,6 +218,7 @@
 // CHECK-NEXT: VTablePointerAuthentication (SubjectMatchRule_record)
 // CHECK-NEXT: VecReturn (SubjectMatchRule_record)
 // CHECK-NEXT: VecTypeHint (SubjectMatchRule_function)
+// CHECK-NEXT: Visibility ()
 // CHECK-NEXT: WarnUnused (SubjectMatchRule_record)
 // CHECK-NEXT: WarnUnusedResult (SubjectMatchRule_objc_method, SubjectMatchRule_enum, SubjectMatchRule_record, SubjectMatchRule_hasType_functionType, SubjectMatchRule_type_alias)
 // CHECK-NEXT: Weak (SubjectMatchRule_variable, SubjectMatchRule_function, SubjectMatchRule_record)

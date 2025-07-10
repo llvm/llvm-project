@@ -4855,7 +4855,7 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   auto *Latch = L->getLoopLatch();
   SmallVector<BasicBlock *> Preds(predecessors(Latch));
   if (!Term || !Term->isConditional() || Preds.size() == 1 ||
-      none_of(Preds, [Header](BasicBlock *Pred) { return Header == Pred; }) ||
+      !llvm::is_contained(Preds, Header) ||
       none_of(Preds, [L](BasicBlock *Pred) { return L->contains(Pred); }))
     return;
 
@@ -4967,9 +4967,9 @@ void AArch64TTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-Value *
-AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
-                                                  Type *ExpectedType) const {
+Value *AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
+                                                         Type *ExpectedType,
+                                                         bool CanCreate) const {
   switch (Inst->getIntrinsicID()) {
   default:
     return nullptr;
@@ -4978,7 +4978,7 @@ AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
   case Intrinsic::aarch64_neon_st4: {
     // Create a struct type
     StructType *ST = dyn_cast<StructType>(ExpectedType);
-    if (!ST)
+    if (!CanCreate || !ST)
       return nullptr;
     unsigned NumElts = Inst->arg_size() - 1;
     if (ST->getNumElements() != NumElts)
@@ -5405,11 +5405,21 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
 
   // Sub opcodes currently only occur in chained cases.
   // Independent partial reduction subtractions are still costed as an add
-  if (Opcode != Instruction::Add && Opcode != Instruction::Sub)
+  if ((Opcode != Instruction::Add && Opcode != Instruction::Sub) ||
+      OpAExtend == TTI::PR_None)
     return Invalid;
 
-  if (InputTypeA != InputTypeB)
+  // We only support multiply binary operations for now, and for muls we
+  // require the types being extended to be the same.
+  // NOTE: For muls AArch64 supports lowering mixed extensions to a usdot but
+  // only if the i8mm or sve/streaming features are available.
+  if (BinOp && (*BinOp != Instruction::Mul || InputTypeA != InputTypeB ||
+                OpBExtend == TTI::PR_None ||
+                (OpAExtend != OpBExtend && !ST->hasMatMulInt8() &&
+                 !ST->isSVEorStreamingSVEAvailable())))
     return Invalid;
+  assert((BinOp || (OpBExtend == TTI::PR_None && !InputTypeB)) &&
+         "Unexpected values for OpBExtend or InputTypeB");
 
   EVT InputEVT = EVT::getEVT(InputTypeA);
   EVT AccumEVT = EVT::getEVT(AccumType);
@@ -5454,15 +5464,6 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     if (VFMinValue != 8 || AccumEVT != MVT::i64)
       return Invalid;
   } else
-    return Invalid;
-
-  // AArch64 supports lowering mixed fixed-width extensions to a usdot but only
-  // if the i8mm feature is available.
-  if (OpAExtend == TTI::PR_None || OpBExtend == TTI::PR_None ||
-      (OpAExtend != OpBExtend && !ST->hasMatMulInt8()))
-    return Invalid;
-
-  if (!BinOp || *BinOp != Instruction::Mul)
     return Invalid;
 
   return Cost;
@@ -5600,9 +5601,8 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
   }
 
   // Segmented shuffle matching.
-  if ((ST->hasSVE2p1() || ST->hasSME2p1()) &&
-      ST->isSVEorStreamingSVEAvailable() && Kind == TTI::SK_PermuteSingleSrc &&
-      isa<FixedVectorType>(SrcTy) && !Mask.empty() &&
+  if (Kind == TTI::SK_PermuteSingleSrc && isa<FixedVectorType>(SrcTy) &&
+      !Mask.empty() && SrcTy->getPrimitiveSizeInBits().isNonZero() &&
       SrcTy->getPrimitiveSizeInBits().isKnownMultipleOf(
           AArch64::SVEBitsPerBlock)) {
 
@@ -5612,7 +5612,14 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
     unsigned SegmentElts = VTy->getNumElements() / Segments;
 
     // dupq zd.t, zn.t[idx]
-    if (isDUPQMask(Mask, Segments, SegmentElts))
+    if ((ST->hasSVE2p1() || ST->hasSME2p1()) &&
+        ST->isSVEorStreamingSVEAvailable() &&
+        isDUPQMask(Mask, Segments, SegmentElts))
+      return LT.first;
+
+    // mov zd.q, vn
+    if (ST->isSVEorStreamingSVEAvailable() &&
+        isDUPFirstSegmentMask(Mask, Segments, SegmentElts))
       return LT.first;
   }
 

@@ -81,6 +81,9 @@ private:
                                          MachineInstr &MI);
   void updatePrivateObjectNewRegs(MachineRegisterInfo *MRI,
                                   MachineOperand *IdxOp, MachineInstr *LdStMI);
+  SmallVector<BundleItem, 4>::iterator
+  tryGetDefInsertPt(SmallVector<BundleItem, 4> &Worklist,
+                    MachineInstr *StoreMI);
   bool hasConflictBetween(MachineBasicBlock *From, MachineBasicBlock *To,
                           MachineInstr &MI);
   bool blockPrologueInterferes(const MachineBasicBlock *BB,
@@ -625,15 +628,59 @@ void AMDGPUBundleIdxLdSt::updatePrivateObjectNewRegs(MachineRegisterInfo *MRI,
   }
 }
 
+SmallVector<BundleItem, 4>::iterator
+AMDGPUBundleIdxLdSt::tryGetDefInsertPt(SmallVector<BundleItem, 4> &Worklist,
+                                       MachineInstr *StoreMI) {
+  // TODO-GFX13: Handle more than 2 defs and optimal selection of what the last
+  // def will be.
+
+  // If there are multiple stores, ensure that the store
+  // getting sunk (i.e. the earliest store) can be sunk to the last store.
+  if (Worklist.empty())
+    return Worklist.begin();
+  bool IsNewLastMI = false;
+  MachineInstr *PrevLastMI = Worklist[0].MI;
+  // Determine if there is a new last def - in most circumstances
+  // the stores would be in order, but there is no guarantee.
+  MachineBasicBlock::instr_iterator I = PrevLastMI->getIterator(),
+                                    E = StoreMI->getParent()->instr_end();
+  for (++I; I != E; ++I) {
+    if (&*I == StoreMI) {
+      IsNewLastMI = true;
+      break;
+    }
+  }
+
+  if (!IsNewLastMI) {
+    // Then we have to verify that this MI can be sunk to the previous one
+    I = StoreMI->getIterator();
+    E = PrevLastMI->getIterator();
+    PrevLastMI = StoreMI;
+  } else {
+    // Otherwise verify that the previous last MI can be sunk to the current
+    // last MI
+    I = PrevLastMI->getIterator();
+    E = StoreMI->getIterator();
+  }
+  for (++I; I != E; ++I) {
+    if (I->isBundle())
+      I++;
+    if (PrevLastMI->mayAlias(AA, *I, false)) {
+      LLVM_DEBUG(dbgs() << " *** Conflict with "; I->print(dbgs()));
+      return nullptr;
+    }
+  }
+
+  if (IsNewLastMI)
+    return Worklist.begin();
+  return Worklist.begin() + 1;
+}
+
 bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
   LLVM_DEBUG(dbgs() << "BB." << MI->getParent()->getNumber() << " :: ";
              MI->print(dbgs()));
 
   if (MI->isMetaInstruction())
-    return false;
-  // Prevent cycles in data-flow from multiple defs. This check is too coarse.
-  // TODO-GFX13 Handle MI with multiple defs.
-  if (MI->getNumExplicitDefs() > 1)
     return false;
   // TODO-GFX13 Update TwoAddressInstructionPass to handle Bundles
   if (MI->isConvertibleTo3Addr() || MI->isRegSequence() || MI->isInsertSubreg())
@@ -650,15 +697,15 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
   if (MI->getOpcode() == AMDGPU::V_MOV_B64_PSEUDO && !ST->hasMovB64())
     return false;
 
-  // If multicast is used, and we cannot bundle its destination laneshared
-  // access, it is a fatal error, because we might clobber private vgprs in
-  // other SIMDs.
-  bool RejectIsError = SIInstrInfo::isMulticastToVGPRs(*MI);
+  // If multicast or neighbor data share is used, and we cannot bundle its
+  // destination laneshared access(es), it is a fatal error, because we might
+  // clobber private vgprs in other SIMDs.
   const auto rejectUser = [&](MachineInstr *Inst) {
     LLVM_DEBUG(dbgs() << "  Cannot bundle operand in :" << "\n"
                       << "    " << *Inst << "\n");
-    if (RejectIsError)
-      report_fatal_error("Failed to bundle multicast dest");
+    if (SIInstrInfo::mustHaveLanesharedResult(*MI))
+      report_fatal_error(
+          "Failed to bundle instruction that must have laneshared");
     return false;
   };
 
@@ -668,10 +715,8 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
   std::unordered_set<unsigned> IdxList;
   bool UsesIdx0ForPrivate = false;
   bool UsesIdx0ForDynamic = false;
-
+  unsigned DstCount = 0;
   for (auto &Def : MI->defs()) {
-    if (!Def.isReg())
-      continue;
     // TODO-GFX13 Update TwoAddressInstructionPass to handle Bundles
     if (Def.isTied())
       return false;
@@ -704,25 +749,50 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
         continue;
       }
     }
-
+    assert(AMDGPU::STG_DSTA + DstCount <= AMDGPU::STG_DSTB &&
+           "Exceeded the max amount of dst staging regs");
     MachineOperand *IdxOp = STI->getNamedOperand(*StoreMI, AMDGPU::OpName::idx);
     updatePrivateObjectNewRegs(MRI, IdxOp, StoreMI);
-    IdxList.insert(IdxOp->getReg());
-    Worklist.push_back({StoreMI, UseOfMI, {&Def}, AMDGPU::STG_DSTA, DefReg});
+    // If the idx operand to V_STORE_IDX is defined by CoreMI,
+    // we can't bundle.
+    if (MI->definesRegister(IdxOp->getReg(), TRI)) {
+      rejectUser(MI);
+      continue;
+    }
+    assert(DstCount <= 2 &&
+           "tryGetDefInsertPt only logically supports validation of 2 stores");
+    if (auto WorklistIt = tryGetDefInsertPt(Worklist, StoreMI);
+        WorklistIt != nullptr) {
+      IdxList.insert(IdxOp->getReg());
+      Worklist.insert(
+          WorklistIt,
+          {StoreMI, UseOfMI, {&Def}, AMDGPU::STG_DSTA + DstCount++, DefReg});
+    } else {
+      rejectUser(MI);
+      continue;
+    }
   }
 
-  // Check for constraints on moving MI down to StoreMI
-  // If MI must happen before I, then we cannot form the bundle by moving
-  // MI after I.
+  // Check for constraints on moving MI down to the last StoreMI (always the 0th
+  // worklist item) If MI must happen before I, then we cannot form the bundle
+  // by moving MI after I.
+  // This assumes that the defs of an instruction will be in the same order as
+  // their corresponding stores.
   if (Worklist.size() > 0) {
     bool MILoads = MI->mayLoad();
-    assert(!MI->mayStore() || MILoads &&
+    assert((!MI->mayStore() || MILoads) &&
                                   "Unexpected MI which produces a values and "
                                   "stores but does not load");
     if (MILoads) {
       MachineBasicBlock::iterator I = MI->getIterator(),
                                   E = Worklist[0].MI->getIterator();
+      unsigned OwnDefIdx = 1;
       for (++I; I != E; ++I) {
+        // Ignore own defs
+        if (OwnDefIdx < Worklist.size() && I == Worklist[OwnDefIdx].MI) {
+          OwnDefIdx++;
+          continue;
+        }
         if (I->mayStore() && MI->mayAlias(AA, *I, false)) {
           LLVM_DEBUG(dbgs() << " *** Conflict with "; I->print(dbgs()));
           return rejectUser(MI);
@@ -781,13 +851,21 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
 
     // Do not move any V_LOAD_IDX past an aliased V_STORE_IDX.
     bool AliasConflict = false;
+    // The index of the V_STORE_IDX that currently doesn't need an alias check.
+    unsigned IgnoreVStoreI = DstCount;
     MachineBasicBlock::instr_iterator I = LoadMI->getIterator(),
                                       E = Worklist[0].MI->getIterator();
     for (++I; I != E; ++I) {
       if (I->isBundle())
         I++;
+      // Ignore V_STORE_IDX that are part of this bundle.
+      if (IgnoreVStoreI > 0 && &*I == Worklist[IgnoreVStoreI - 1].MI) {
+        IgnoreVStoreI--;
+        continue;
+      }
       if (I->mayStore() && LoadMI->mayAlias(AA, *I, false)) {
-        LLVM_DEBUG(dbgs() << " *** Conflict with "; I->print(dbgs()));
+        LLVM_DEBUG(dbgs() << " *** Conflict with "; I->print(dbgs());
+                   dbgs() << "\tLoadMI: " << *LoadMI);
         AliasConflict = true;
         break;
       }
@@ -844,7 +922,6 @@ bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
     return false;
 
   // Replace the registers in the bundle with the staging registers.
-
   // Insert bundle where the store was, or where MI was if there was no store.
   auto LastMII = MachineBasicBlock::instr_iterator(Worklist[0].MI);
   auto FirstMII = LastMII;

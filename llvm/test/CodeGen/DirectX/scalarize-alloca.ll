@@ -2,11 +2,28 @@
 ; RUN: opt -S -passes='dxil-data-scalarization,dxil-flatten-arrays' -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s --check-prefixes=FCHECK,CHECK
 
 ; CHECK-LABEL: alloca_2d__vec_test
-define void @alloca_2d__vec_test() local_unnamed_addr #2 {
+define void @alloca_2d__vec_test() {
   ; SCHECK:  alloca [2 x [4 x i32]], align 16
   ; FCHECK:  alloca [8 x i32], align 16
   ; CHECK: ret void
   %1 = alloca [2 x <4 x i32>], align 16
+  ret void
+}
+
+; CHECK-LABEL: alloca_4d__vec_test
+define void @alloca_4d__vec_test() {
+  ; SCHECK:  alloca [2 x [2 x [2 x [2 x i32]]]], align 16
+  ; FCHECK:  alloca [16 x i32], align 16
+  ; CHECK: ret void
+  %1 = alloca [2 x [2 x [2 x <2 x i32>]]], align 16
+  ret void
+}
+
+; CHECK-LABEL: alloca_vec_test
+define void @alloca_vec_test() {
+  ; CHECK:  alloca [4 x i32], align 16
+  ; CHECK: ret void
+  %1 = alloca <4 x i32>, align 16
   ret void
 }
 

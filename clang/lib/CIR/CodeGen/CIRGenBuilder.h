@@ -10,8 +10,9 @@
 #define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENBUILDER_H
 
 #include "Address.h"
+#include "CIRGenRecordLayout.h"
 #include "CIRGenTypeCache.h"
-#include "clang/CIR/Interfaces/CIRFPTypeInterface.h"
+#include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
@@ -137,19 +138,6 @@ public:
     if (rd)
       kind = getRecordKind(rd->getTagKind());
     return getType<cir::RecordType>(nameAttr, kind);
-  }
-
-  bool isSized(mlir::Type ty) {
-    if (mlir::isa<cir::PointerType, cir::ArrayType, cir::BoolType, cir::IntType,
-                  cir::CIRFPTypeInterface, cir::ComplexType, cir::RecordType>(
-            ty))
-      return true;
-
-    if (const auto vt = mlir::dyn_cast<cir::VectorType>(ty))
-      return isSized(vt.getElementType());
-
-    assert(!cir::MissingFeatures::unsizedTypes());
-    return false;
   }
 
   // Return true if the value is a null constant such as null pointer, (+0.0)
@@ -404,6 +392,15 @@ public:
       uniqueName = name.str();
 
     return createGlobal(module, loc, uniqueName, type, linkage);
+  }
+
+  mlir::Value createGetBitfield(mlir::Location loc, mlir::Type resultType,
+                                mlir::Value addr, mlir::Type storageType,
+                                const CIRGenBitFieldInfo &info,
+                                bool isLvalueVolatile, bool useVolatile) {
+    return create<cir::GetBitfieldOp>(loc, resultType, addr, storageType,
+                                      info.name, info.size, info.offset,
+                                      info.isSigned, isLvalueVolatile);
   }
 };
 

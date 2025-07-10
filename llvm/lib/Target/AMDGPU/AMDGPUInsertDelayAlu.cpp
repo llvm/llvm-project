@@ -50,9 +50,17 @@ public:
 
   static bool instructionWaitsForSGPRWrites(const MachineInstr &MI) {
     // These instruction types wait for VA_SDST==0 before issuing.
-    const uint64_t VA_SDST_0 = SIInstrFlags::SALU | SIInstrFlags::SMRD;
+    uint64_t MIFlags = MI.getDesc().TSFlags;
+    if (MIFlags & SIInstrFlags::SMRD)
+      return true;
 
-    return MI.getDesc().TSFlags & VA_SDST_0;
+    if (MIFlags & SIInstrFlags::SALU) {
+      for (auto &Op : MI.operands()) {
+        if (Op.isReg())
+          return true;
+      }
+    }
+    return false;
   }
 
   // Types of delay that can be encoded in an s_delay_alu instruction.
@@ -63,8 +71,8 @@ public:
     if (SIInstrInfo::isTRANS(MI))
       return TRANS;
     // WMMA XDL ops are treated the same as TRANS.
-    if (SII->isXDL(MI))
-      return AMDGPU::isGFX1250Only(*ST) ? TRANS : VALU;
+    if (AMDGPU::isGFX1250Only(*ST) && SII->isXDLWMMA(MI))
+      return TRANS;
     if (SIInstrInfo::isVALU(MI))
       return VALU;
     if (SIInstrInfo::isSALU(MI))
@@ -152,10 +160,9 @@ public:
       SALUCycles = std::max(SALUCycles, RHS.SALUCycles);
     }
 
-    // Update this DelayInfo after issuing an instruction. IsVALU should be 1
-    // when issuing a (non-TRANS) VALU, else 0. IsTRANS should be 1 when issuing
-    // a TRANS, else 0. Cycles is the number of cycles it takes to issue the
-    // instruction.  Return true if there is no longer any useful delay info.
+    // Update this DelayInfo after issuing an instruction of the specified type.
+    // Cycles is the number of cycles it takes to issue the instruction.  Return
+    // true if there is no longer any useful delay info.
     bool advance(DelayType Type, unsigned Cycles) {
       bool Erase = true;
 

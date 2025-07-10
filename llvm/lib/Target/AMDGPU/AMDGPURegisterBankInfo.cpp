@@ -3430,6 +3430,11 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(B, MI, 2);
       return;
     }
+    case Intrinsic::amdgcn_spatial_cluster_send_next:
+    case Intrinsic::amdgcn_spatial_cluster_send_prev: {
+      applyDefaultMapping(OpdMapper);
+      return;
+    }
     default: {
       if (const AMDGPU::RsrcIntrinsic *RSrcIntrin =
               AMDGPU::lookupRsrcIntrinsic(IntrID)) {
@@ -4861,7 +4866,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_fp8:
     case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_bf8:
     case Intrinsic::amdgcn_wmma_f64_16x16x4_f64:
-    case Intrinsic::amdgcn_wmma_f64_16x16x8_f64:
     case Intrinsic::amdgcn_wmma_f32_16x16x4_f32:
     case Intrinsic::amdgcn_wmma_f32_16x16x32_bf16:
     case Intrinsic::amdgcn_wmma_f32_16x16x32_f16:
@@ -5434,8 +5438,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_global_load_monitor_b32:
     case Intrinsic::amdgcn_global_load_monitor_b64:
     case Intrinsic::amdgcn_global_load_monitor_b128:
-    case Intrinsic::amdgcn_ds_atomic_async_barrier_arrive_b64:
-    case Intrinsic::amdgcn_ds_atomic_barrier_arrive_rtn_b64:
     case Intrinsic::amdgcn_ds_read_tr4_b64:
     case Intrinsic::amdgcn_ds_read_tr6_b96:
     case Intrinsic::amdgcn_ds_read_tr8_b64:
@@ -5473,6 +5475,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_global_tiled_store_half_vst2_b128:
     case Intrinsic::amdgcn_global_tiled_store_b128:
     case Intrinsic::amdgcn_global_tiled_store_vst2_b128:
+    case Intrinsic::amdgcn_ds_atomic_async_barrier_arrive_b64:
+    case Intrinsic::amdgcn_ds_atomic_barrier_arrive_rtn_b64:
       return getDefaultMappingAllVGPR(MI);
     case Intrinsic::amdgcn_ds_ordered_add:
     case Intrinsic::amdgcn_ds_ordered_swap: {
@@ -5865,6 +5869,12 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_flat_prefetch:
     case Intrinsic::amdgcn_global_prefetch:
       return getDefaultMappingVOP(MI);
+    case Intrinsic::amdgcn_spatial_cluster_send_prev:
+    case Intrinsic::amdgcn_spatial_cluster_send_next: {
+      OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+      OpdsMapping[4] = getSGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
+      break;
+    }
     default:
       return getInvalidInstructionMapping();
     }

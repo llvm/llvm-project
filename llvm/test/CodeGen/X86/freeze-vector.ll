@@ -171,15 +171,15 @@ define void @freeze_extractelement(ptr %origin0, ptr %origin1, ptr %dst) nounwin
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    vmovdqa (%edx), %xmm0
-; X86-NEXT:    vpand (%ecx), %xmm0, %xmm0
+; X86-NEXT:    vmovdqa (%ecx), %xmm0
+; X86-NEXT:    vpand (%edx), %xmm0, %xmm0
 ; X86-NEXT:    vpextrb $6, %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_extractelement:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovdqa (%rdi), %xmm0
-; X64-NEXT:    vpand (%rsi), %xmm0, %xmm0
+; X64-NEXT:    vmovdqa (%rsi), %xmm0
+; X64-NEXT:    vpand (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    vpextrb $6, %xmm0, (%rdx)
 ; X64-NEXT:    retq
   %i0 = load <16 x i8>, ptr %origin0
@@ -198,8 +198,8 @@ define void @freeze_extractelement_escape(ptr %origin0, ptr %origin1, ptr %dst, 
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    vmovdqa (%esi), %xmm0
-; X86-NEXT:    vpand (%edx), %xmm0, %xmm0
+; X86-NEXT:    vmovdqa (%edx), %xmm0
+; X86-NEXT:    vpand (%esi), %xmm0, %xmm0
 ; X86-NEXT:    vmovdqa %xmm0, (%ecx)
 ; X86-NEXT:    vpextrb $6, %xmm0, (%eax)
 ; X86-NEXT:    popl %esi
@@ -207,8 +207,8 @@ define void @freeze_extractelement_escape(ptr %origin0, ptr %origin1, ptr %dst, 
 ;
 ; X64-LABEL: freeze_extractelement_escape:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovdqa (%rdi), %xmm0
-; X64-NEXT:    vpand (%rsi), %xmm0, %xmm0
+; X64-NEXT:    vmovdqa (%rsi), %xmm0
+; X64-NEXT:    vpand (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rcx)
 ; X64-NEXT:    vpextrb $6, %xmm0, (%rdx)
 ; X64-NEXT:    retq
@@ -239,8 +239,8 @@ define void @freeze_extractelement_extra_use(ptr %origin0, ptr %origin1, i64 %id
 ; X86-NEXT:    movl 32(%ebp), %edx
 ; X86-NEXT:    movl 12(%ebp), %esi
 ; X86-NEXT:    movl 8(%ebp), %edi
-; X86-NEXT:    vmovaps (%edi), %xmm0
-; X86-NEXT:    vandps (%esi), %xmm0, %xmm0
+; X86-NEXT:    vmovaps (%esi), %xmm0
+; X86-NEXT:    vandps (%edi), %xmm0, %xmm0
 ; X86-NEXT:    vmovaps %xmm0, (%esp)
 ; X86-NEXT:    movzbl (%esp,%ecx), %ecx
 ; X86-NEXT:    cmpb (%esp,%eax), %cl
@@ -255,8 +255,8 @@ define void @freeze_extractelement_extra_use(ptr %origin0, ptr %origin1, i64 %id
 ; X64:       # %bb.0:
 ; X64-NEXT:    andl $15, %ecx
 ; X64-NEXT:    andl $15, %edx
-; X64-NEXT:    vmovaps (%rdi), %xmm0
-; X64-NEXT:    vandps (%rsi), %xmm0, %xmm0
+; X64-NEXT:    vmovaps (%rsi), %xmm0
+; X64-NEXT:    vandps (%rdi), %xmm0, %xmm0
 ; X64-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzbl -24(%rsp,%rdx), %eax
 ; X64-NEXT:    cmpb -24(%rsp,%rcx), %al
@@ -342,42 +342,50 @@ define void @freeze_buildvector_single_repeated_maybe_poison_operand(ptr %origin
 define void @freeze_two_frozen_buildvectors(ptr %origin0, ptr %origin1, ptr %dst0, ptr %dst1) nounwind {
 ; X86-LABEL: freeze_two_frozen_buildvectors:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl (%esi), %esi
+; X86-NEXT:    andl $15, %esi
 ; X86-NEXT:    movl (%edx), %edx
 ; X86-NEXT:    andl $15, %edx
-; X86-NEXT:    vpinsrd $1, %edx, %xmm0, %xmm0
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm1 = [7,7,7,7]
-; X86-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vmovd %esi, %xmm0
+; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; X86-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5,6,7]
+; X86-NEXT:    vbroadcastss {{.*#+}} xmm2 = [7,7,7,7]
+; X86-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; X86-NEXT:    vmovdqa %xmm0, (%ecx)
 ; X86-NEXT:    vmovd %edx, %xmm0
 ; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; X86-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm2[0,1,2,3],xmm0[4,5],xmm2[6,7]
-; X86-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5],xmm1[6,7]
+; X86-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_two_frozen_buildvectors:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    andl $15, %eax
-; X64-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [7,7,7,7]
-; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; X64-NEXT:    movl (%rsi), %eax
+; X64-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    vpbroadcastd %xmm0, %xmm0
+; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3]
+; X64-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [7,7,7,7]
+; X64-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdx)
 ; X64-NEXT:    vmovd %eax, %xmm0
 ; X64-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X64-NEXT:    vpblendd {{.*#+}} xmm0 = xmm2[0,1],xmm0[2],xmm2[3]
-; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1],xmm0[2],xmm1[3]
+; X64-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rcx)
 ; X64-NEXT:    retq
   %i0.src = load i32, ptr %origin0
   %i0 = and i32 %i0.src, 15
   %i1.src = load i32, ptr %origin1
-  %i1 = and i32 %i0.src, 15
+  %i1 = and i32 %i1.src, 15
   %i2 = insertelement <4 x i32> poison, i32 %i0, i64 1
   %i3 = and <4 x i32> %i2, <i32 7, i32 7, i32 7, i32 7>
   %i4 = freeze <4 x i32> %i3
@@ -392,41 +400,43 @@ define void @freeze_two_frozen_buildvectors(ptr %origin0, ptr %origin1, ptr %dst
 define void @freeze_two_buildvectors_only_one_frozen(ptr %origin0, ptr %origin1, ptr %dst0, ptr %dst1) nounwind {
 ; X86-LABEL: freeze_two_buildvectors_only_one_frozen:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl (%edx), %edx
-; X86-NEXT:    andl $15, %edx
-; X86-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; X86-NEXT:    vmovd %edx, %xmm1
-; X86-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[0,0,1,1]
-; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm2[2,3],xmm0[4,5,6,7]
-; X86-NEXT:    vbroadcastss {{.*#+}} xmm2 = [7,7,7,7]
-; X86-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl (%esi), %esi
+; X86-NEXT:    andl $15, %esi
+; X86-NEXT:    vmovd %esi, %xmm0
+; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; X86-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5,6,7]
+; X86-NEXT:    vbroadcastss {{.*#+}} xmm1 = [7,7,7,7]
+; X86-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vbroadcastss (%edx), %xmm2
 ; X86-NEXT:    vmovdqa %xmm0, (%ecx)
-; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[0,1,0,1]
-; X86-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; X86-NEXT:    vpand %xmm1, %xmm2, %xmm0
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_two_buildvectors_only_one_frozen:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    andl $15, %eax
-; X64-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; X64-NEXT:    vmovd %eax, %xmm1
-; X64-NEXT:    vpbroadcastd %xmm1, %xmm1
-; X64-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [7,7,7,7]
-; X64-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; X64-NEXT:    vmovdqa %xmm0, (%rdx)
-; X64-NEXT:    vpand %xmm2, %xmm1, %xmm0
-; X64-NEXT:    vmovdqa %xmm0, (%rcx)
+; X64-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    vbroadcastss %xmm0, %xmm0
+; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; X64-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3]
+; X64-NEXT:    vbroadcastss {{.*#+}} xmm1 = [7,7,7,7]
+; X64-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vbroadcastss (%rsi), %xmm2
+; X64-NEXT:    vmovaps %xmm0, (%rdx)
+; X64-NEXT:    vandps %xmm1, %xmm2, %xmm0
+; X64-NEXT:    vmovaps %xmm0, (%rcx)
 ; X64-NEXT:    retq
   %i0.src = load i32, ptr %origin0
   %i0 = and i32 %i0.src, 15
   %i1.src = load i32, ptr %origin1
-  %i1 = and i32 %i0.src, 15
+  %i1 = and i32 %i1.src, 15
   %i2 = insertelement <4 x i32> poison, i32 %i0, i64 1
   %i3 = and <4 x i32> %i2, <i32 7, i32 7, i32 7, i32 7>
   %i4 = freeze <4 x i32> %i3
@@ -440,34 +450,40 @@ define void @freeze_two_buildvectors_only_one_frozen(ptr %origin0, ptr %origin1,
 define void @freeze_two_buildvectors_one_undef_elt(ptr %origin0, ptr %origin1, ptr %dst0, ptr %dst1) nounwind {
 ; X86-LABEL: freeze_two_buildvectors_one_undef_elt:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl (%edx), %edx
-; X86-NEXT:    andl $15, %edx
-; X86-NEXT:    vmovddup {{.*#+}} xmm0 = [7,0,7,0]
-; X86-NEXT:    # xmm0 = mem[0,0]
-; X86-NEXT:    vmovd %edx, %xmm1
-; X86-NEXT:    vpand %xmm0, %xmm1, %xmm2
-; X86-NEXT:    vmovdqa %xmm2, (%ecx)
-; X86-NEXT:    vpslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1,2,3,4,5,6,7]
-; X86-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl (%esi), %esi
+; X86-NEXT:    andl $15, %esi
+; X86-NEXT:    vmovd %esi, %xmm0
+; X86-NEXT:    vmovddup {{.*#+}} xmm1 = [7,0,7,0]
+; X86-NEXT:    # xmm1 = mem[0,0]
+; X86-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vmovddup {{.*#+}} xmm2 = mem[0,0]
+; X86-NEXT:    vmovdqa %xmm0, (%ecx)
+; X86-NEXT:    vpand %xmm1, %xmm2, %xmm0
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_two_buildvectors_one_undef_elt:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq (%rdi), %rax
+; X64-NEXT:    andl $15, %eax
 ; X64-NEXT:    vmovd %eax, %xmm0
-; X64-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [7,7]
+; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vpbroadcastq (%rsi), %xmm2
 ; X64-NEXT:    vmovdqa %xmm0, (%rdx)
+; X64-NEXT:    vpand %xmm1, %xmm2, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rcx)
 ; X64-NEXT:    retq
   %i0.src = load i64, ptr %origin0
   %i0 = and i64 %i0.src, 15
   %i1.src = load i64, ptr %origin1
-  %i1 = and i64 %i0.src, 15
+  %i1 = and i64 %i1.src, 15
   %i2 = insertelement <2 x i64> poison, i64 %i0, i64 0
   %i3 = and <2 x i64> %i2, <i64 7, i64 7>
   %i4 = freeze <2 x i64> %i3

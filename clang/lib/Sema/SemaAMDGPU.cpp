@@ -541,4 +541,11 @@ void SemaAMDGPU::handleAMDGPUSpatialClusterKernelAttr(Decl *D,
   D->addAttr(Addr);
 }
 
+void SemaAMDGPU::handleAMDGPUNoRankSpecializationAttr(Decl *D,
+                                                      const ParsedAttr &AL) {
+  auto *Addr = ::new (getASTContext())
+      AMDGPUNoRankSpecializationAttr(getASTContext(), AL);
+  D->addAttr(Addr);
+}
+
 } // namespace clang

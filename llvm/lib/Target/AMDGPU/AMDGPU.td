@@ -2996,17 +2996,17 @@ def HasFP8Insts : Predicate<"Subtarget->hasFP8Insts()">,
 def HasFP8ConversionInsts : Predicate<"Subtarget->hasFP8ConversionInsts()">,
   AssemblerPredicate<(all_of FeatureFP8ConversionInsts)>;
 
-def HasFP8E5M3Insts : Predicate<"Subtarget->hasFP8E5M3Insts()">,
-  AssemblerPredicate<(all_of FeatureFP8E5M3Insts)>;
-
-def NotHasFP8E5M3Insts : Predicate<"!Subtarget->hasFP8E5M3Insts()">,
-  AssemblerPredicate<(all_of (not FeatureFP8E5M3Insts))>;
-
 def HasWMMA256bInsts : Predicate<"Subtarget->hasWMMA256bInsts()">,
   AssemblerPredicate<(all_of FeatureWMMA256bInsts)>;
 
 def HasWMMA128bInsts : Predicate<"Subtarget->hasWMMA128bInsts()">,
   AssemblerPredicate<(all_of FeatureWMMA128bInsts)>;
+
+def HasFP8E5M3Insts : Predicate<"Subtarget->hasFP8E5M3Insts()">,
+  AssemblerPredicate<(all_of FeatureFP8E5M3Insts)>;
+
+def NotHasFP8E5M3Insts : Predicate<"!Subtarget->hasFP8E5M3Insts()">,
+  AssemblerPredicate<(all_of (not FeatureFP8E5M3Insts))>;
 
 def HasPkFmacF16Inst : Predicate<"Subtarget->hasPkFmacF16Inst()">,
   AssemblerPredicate<(all_of FeaturePkFmacF16Inst)>;

@@ -10750,8 +10750,12 @@ unsigned SIInstrInfo::getDSShaderTypeValue(const MachineFunction &MF) {
     return 3;
   case CallingConv::AMDGPU_HS:
   case CallingConv::AMDGPU_LS:
-  case CallingConv::AMDGPU_ES:
-    report_fatal_error("ds_ordered_count unsupported for this calling conv");
+  case CallingConv::AMDGPU_ES: {
+    const Function &F = MF.getFunction();
+    F.getContext().diagnose(DiagnosticInfoUnsupported(
+        F, "ds_ordered_count unsupported for this calling conv"));
+    [[fallthrough]];
+  }
   case CallingConv::AMDGPU_CS:
   case CallingConv::AMDGPU_KERNEL:
   case CallingConv::C:
@@ -11026,12 +11030,8 @@ bool SIInstrInfo::isXDLWMMA(const MachineInstr &MI) const {
 bool SIInstrInfo::isXDL(const MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
 
-  if (AMDGPU::isGFX12Plus(ST)) {
-    if (isDOT(MI))
-      return true;
-
-    return isXDLWMMA(MI);
-  }
+  if (AMDGPU::isGFX12Plus(ST))
+    return isDOT(MI) || isXDLWMMA(MI);
 
   if (!isMAI(MI) || isDGEMM(Opcode) ||
       Opcode == AMDGPU::V_ACCVGPR_WRITE_B32_e64 ||

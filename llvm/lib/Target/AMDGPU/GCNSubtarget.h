@@ -167,9 +167,9 @@ protected:
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasFP8ConversionInsts = false;
-  bool HasFP8E5M3Insts = false;
   bool HasWMMA128bInsts = false;
   bool HasWMMA256bInsts = false;
+  bool HasFP8E5M3Insts = false;
   bool HasCvtFP8Vop1Bug = false;
   bool HasPkFmacF16Inst = false;
   bool HasAtomicFMinFMaxF32GlobalInsts = false;
@@ -905,8 +905,6 @@ public:
 
   bool hasFP8ConversionInsts() const { return HasFP8ConversionInsts; }
 
-  bool hasFP8E5M3Insts() const { return HasFP8E5M3Insts; }
-
   bool hasWMMA256bInsts() const { return HasWMMA256bInsts; }
 
   bool hasWMMA128bInsts() const { return HasWMMA128bInsts; }
@@ -916,6 +914,8 @@ public:
   }
 
   bool isGFX1170Plus() const { return getGeneration() >= GFX12 || isGFX1170(); }
+
+  bool hasFP8E5M3Insts() const { return HasFP8E5M3Insts; }
 
   bool hasPkFmacF16Inst() const {
     return HasPkFmacF16Inst;
@@ -1477,8 +1477,6 @@ public:
 
   bool hasTensorCvtLutInsts() const { return HasTensorCvtLutInsts; }
 
-  bool hasTransposeLoadF4F6Insts() const { return HasTransposeLoadF4F6Insts; }
-
 
   bool hasAddPC64Inst() const { return GFX1250Insts; }
 
@@ -1502,6 +1500,8 @@ public:
   bool hasSGPRVMEM() const { return HasSGPRVMEM; }
 
   bool hasParallelBitInsts() const { return HasParallelBitInsts; }
+
+  bool hasTransposeLoadF4F6Insts() const { return HasTransposeLoadF4F6Insts; }
 
   /// \returns true if the target supports using software to avoid hazards
   /// between VMEM and VALU instructions in some instances.

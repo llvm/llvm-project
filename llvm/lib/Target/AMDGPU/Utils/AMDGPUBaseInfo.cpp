@@ -679,7 +679,7 @@ unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
 
 CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
   bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(Opc) : 0;
-  Opc = IsConvertibleToBitOp ? AMDGPU::V_BITOP3_B32_e64 : Opc;
+  Opc = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : Opc;
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   if (Info) {
     // Check that Opc can be used as VOPDY for this encoding. V_MOV_B32 as a
@@ -697,7 +697,7 @@ CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
 
 unsigned getVOPDOpcode(unsigned Opc, bool VOPD3) {
   bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(Opc) : 0;
-  Opc = IsConvertibleToBitOp ? AMDGPU::V_BITOP3_B32_e64 : Opc;
+  Opc = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : Opc;
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   return Info ? Info->VOPDOp : ~0u;
 }
@@ -762,6 +762,10 @@ bool isCvt_F32_Fp8_Bf8_e64(unsigned Opc) {
          Opc == AMDGPU::V_CVT_PK_F32_FP8_fake16_e64_gfx12 ||
          Opc == AMDGPU::V_CVT_PK_F32_BF8_t16_e64_gfx12 ||
          Opc == AMDGPU::V_CVT_PK_F32_FP8_t16_e64_gfx12;
+}
+
+bool isVNBR(unsigned Opc) {
+  return AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vdst_refl);
 }
 
 bool isGenericAtomic(unsigned Opc) {
@@ -890,7 +894,7 @@ unsigned getBitOp2(unsigned Opc) {
 int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily,
                 bool VOPD3) {
   bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(OpY) : 0;
-  OpY = IsConvertibleToBitOp ? AMDGPU::V_BITOP3_B32_e64 : OpY;
+  OpY = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : OpY;
   const VOPDInfo *Info =
       getVOPDInfoFromComponentOpcodes(OpX, OpY, EncodingFamily, VOPD3);
   return Info ? Info->Opcode : -1;
@@ -2489,6 +2493,10 @@ bool getWavegroupRankFunction(const Function &F) {
   return F.hasFnAttribute("amdgpu-wavegroup-rank-function");
 }
 
+bool getRankSpecializationEnable(const Function &F) {
+  return !F.hasFnAttribute("amdgpu-no-rank-specialization");
+}
+
 std::optional<std::array<uint32_t, 3>> getReqdWorkGroupSize(const Function &F) {
   MDNode *Node = F.getMetadata("reqd_work_group_size");
   if (!Node)
@@ -3635,6 +3643,11 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
       AMDGPU::OpName::vdst, AMDGPU::OpName::src0, AMDGPU::OpName::src1,
       AMDGPU::OpName::src2, AMDGPU::OpName::src3, AMDGPU::OpName::src4,
       AMDGPU::OpName::src5};
+
+  static const AMDGPU::OpName VNBROps[VGPRLoweringOperandTableNumOps] = {
+      AMDGPU::OpName::vsrc, AMDGPU::OpName::vdst_refl,
+      AMDGPU::OpName::NUM_OPERAND_NAMES, AMDGPU::OpName::vdst,
+      DEFAULT_VALUES_3};
 #undef DEFAULT_VALUES_3
 
   uint64_t TSFlags = Desc.TSFlags;
@@ -3668,6 +3681,9 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
 
   if (AMDGPU::isVOPD(Desc.getOpcode()))
     return {VOPDOpsX, VOPDOpsY};
+
+  if (AMDGPU::isVNBR(Desc.getOpcode()))
+    return {VNBROps, nullptr};
 
   assert(!(TSFlags & SIInstrFlags::MIMG));
 
@@ -3825,6 +3841,8 @@ std::string ClusterDimsAttr::to_string() const {
     OS << Dims[0] << ',' << Dims[1] << ',' << Dims[2];
     return Buffer.c_str();
   }
+  default:
+    llvm_unreachable("Unknown ClusterDimsAttr kind");
   }
 }
 
