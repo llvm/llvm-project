@@ -225,8 +225,7 @@ struct VectorizationState {
                           ArrayRef<bool> inputScalableVecDims,
                           bool assumeScalableVecSizesMatchDimSize = false);
 
-  /// Returns the canonical vector shape used to vectorize the iteration
-  /// space.
+  /// Returns the canonical vector shape used to vectorize the iteration space.
   ArrayRef<int64_t> getCanonicalVecShape() const { return canonicalVecShape; }
 
   /// Returns the vector dimensions that are scalable in the canonical vector
@@ -235,8 +234,8 @@ struct VectorizationState {
 
   /// Returns a vector type of the provided `elementType` with the canonical
   /// vector shape and the corresponding fixed/scalable dimensions bit. If
-  /// `dimPermutation` is provided, the canonical vector dimensions are
-  /// permuted accordingly.
+  /// `dimPermutation` is provided, the canonical vector dimensions are permuted
+  /// accordingly.
   VectorType getCanonicalVecType(
       Type elementType,
       std::optional<AffineMap> dimPermutation = std::nullopt) const {
@@ -256,9 +255,9 @@ struct VectorizationState {
   }
 
   /// Masks an operation with the canonical vector mask if the operation needs
-  /// masking. Returns the masked operation or the original operation if
-  /// masking is not needed. If provided, the canonical mask for this
-  /// operation is permuted using `maybeIndexingMap`.
+  /// masking. Returns the masked operation or the original operation if masking
+  /// is not needed. If provided, the canonical mask for this operation is
+  /// permuted using `maybeIndexingMap`.
   Operation *
   maskOperation(RewriterBase &rewriter, Operation *opToMask, LinalgOp linalgOp,
                 std::optional<AffineMap> maybeIndexingMap = std::nullopt);
@@ -278,15 +277,15 @@ private:
 
   /// Create or retrieve an existing mask value to mask `opToMask` in the
   /// canonical vector iteration space. If `maybeMaskingMap` the mask is
-  /// permuted using that permutation map. If a new mask is created, it will
-  /// be cached for future users.
+  /// permuted using that permutation map. If a new mask is created, it will be
+  /// cached for future users.
   Value getOrCreateMaskFor(RewriterBase &rewriter, Operation *opToMask,
                            LinalgOp linalgOp,
                            std::optional<AffineMap> maybeMaskingMap);
 
   /// Check whether this permutation map can be used for masking. At the
-  /// moment we only make sure that there are no broadcast dimensions, but
-  /// this might change if indexing maps evolve.
+  /// moment we only make sure that there are no broadcast dimensions, but this
+  /// might change if indexing maps evolve.
   bool isValidMaskingMap(AffineMap maskingMap) {
     return maskingMap.getBroadcastDims().size() == 0;
   }
@@ -326,8 +325,8 @@ private:
   /// shape.
   SmallVector<bool> scalableVecDims;
 
-  /// Holds the active masks for permutations of the canonical vector
-  /// iteration space.
+  /// Holds the active masks for permutations of the canonical vector iteration
+  /// space.
   DenseMap<AffineMap, Value> activeMaskCache;
 
   /// Global vectorization guard for the incoming rewriter. It's initialized
