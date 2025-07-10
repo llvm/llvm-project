@@ -6265,7 +6265,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (getLastProfileSampleUseArg(Args) &&
       Args.hasFlag(options::OPT_fsample_profile_use_profi,
-                   options::OPT_fno_sample_profile_use_profi, false)) {
+                   options::OPT_fno_sample_profile_use_profi, true)) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-sample-profile-use-profi");
   }
@@ -7046,6 +7046,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_fno_apinotes_modules, false))
     CmdArgs.push_back("-fapinotes-modules");
   Args.AddLastArg(CmdArgs, options::OPT_fapinotes_swift_version);
+
+  if (Args.hasFlag(options::OPT_fswift_version_independent_apinotes,
+                   options::OPT_fno_swift_version_independent_apinotes, false))
+    CmdArgs.push_back("-fswift-version-independent-apinotes");
 
   // -fblocks=0 is default.
   if (Args.hasFlag(options::OPT_fblocks, options::OPT_fno_blocks,

@@ -147,10 +147,10 @@ define ptr @test4() {
 ; POWEROF2-NEXT:    [[TMP13:%.*]] = fmul <2 x float> [[TMP12]], zeroinitializer
 ; POWEROF2-NEXT:    [[TMP14:%.*]] = shufflevector <4 x float> [[TMP10]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
 ; POWEROF2-NEXT:    [[TMP15:%.*]] = fmul <2 x float> zeroinitializer, [[TMP14]]
-; POWEROF2-NEXT:    [[TMP18:%.*]] = extractelement <2 x float> [[TMP9]], i32 0
-; POWEROF2-NEXT:    [[TMP17:%.*]] = fmul float 0.000000e+00, [[TMP18]]
-; POWEROF2-NEXT:    [[TMP30:%.*]] = extractelement <2 x float> [[TMP9]], i32 1
-; POWEROF2-NEXT:    [[TMP19:%.*]] = fmul float [[TMP30]], 0.000000e+00
+; POWEROF2-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[TMP9]], i32 0
+; POWEROF2-NEXT:    [[TMP17:%.*]] = fmul float 0.000000e+00, [[TMP16]]
+; POWEROF2-NEXT:    [[TMP18:%.*]] = extractelement <2 x float> [[TMP9]], i32 1
+; POWEROF2-NEXT:    [[TMP19:%.*]] = fmul float [[TMP18]], 0.000000e+00
 ; POWEROF2-NEXT:    [[TMP20:%.*]] = extractelement <2 x float> [[TMP13]], i32 0
 ; POWEROF2-NEXT:    [[TMP21:%.*]] = fadd reassoc nsz float [[TMP20]], [[TMP17]]
 ; POWEROF2-NEXT:    [[TMP22:%.*]] = extractelement <2 x float> [[TMP15]], i32 0

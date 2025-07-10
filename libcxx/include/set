@@ -736,15 +736,15 @@ public:
   }
 #  endif // _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(const value_type& __v) { return __tree_.__insert_unique(__v); }
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(const value_type& __v) { return __tree_.__emplace_unique(__v); }
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, const value_type& __v) {
-    return __tree_.__insert_unique(__p, __v);
+    return __tree_.__emplace_hint_unique(__p, __v);
   }
 
   template <class _InputIterator>
   _LIBCPP_HIDE_FROM_ABI void insert(_InputIterator __f, _InputIterator __l) {
     for (const_iterator __e = cend(); __f != __l; ++__f)
-      __tree_.__insert_unique(__e, *__f);
+      __tree_.__emplace_hint_unique(__e, *__f);
   }
 
 #  if _LIBCPP_STD_VER >= 23
@@ -752,18 +752,18 @@ public:
   _LIBCPP_HIDE_FROM_ABI void insert_range(_Range&& __range) {
     const_iterator __end = cend();
     for (auto&& __element : __range) {
-      __tree_.__insert_unique(__end, std::forward<decltype(__element)>(__element));
+      __tree_.__emplace_hint_unique(__end, std::forward<decltype(__element)>(__element));
     }
   }
 #  endif
 
 #  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> insert(value_type&& __v) {
-    return __tree_.__insert_unique(std::move(__v));
+    return __tree_.__emplace_unique(std::move(__v));
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, value_type&& __v) {
-    return __tree_.__insert_unique(__p, std::move(__v));
+    return __tree_.__emplace_hint_unique(__p, std::move(__v));
   }
 
   _LIBCPP_HIDE_FROM_ABI void insert(initializer_list<value_type> __il) { insert(__il.begin(), __il.end()); }
@@ -1201,15 +1201,15 @@ public:
   }
 #  endif // _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI iterator insert(const value_type& __v) { return __tree_.__insert_multi(__v); }
+  _LIBCPP_HIDE_FROM_ABI iterator insert(const value_type& __v) { return __tree_.__emplace_multi(__v); }
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, const value_type& __v) {
-    return __tree_.__insert_multi(__p, __v);
+    return __tree_.__emplace_hint_multi(__p, __v);
   }
 
   template <class _InputIterator>
   _LIBCPP_HIDE_FROM_ABI void insert(_InputIterator __f, _InputIterator __l) {
     for (const_iterator __e = cend(); __f != __l; ++__f)
-      __tree_.__insert_multi(__e, *__f);
+      __tree_.__emplace_hint_multi(__e, *__f);
   }
 
 #  if _LIBCPP_STD_VER >= 23
@@ -1217,16 +1217,16 @@ public:
   _LIBCPP_HIDE_FROM_ABI void insert_range(_Range&& __range) {
     const_iterator __end = cend();
     for (auto&& __element : __range) {
-      __tree_.__insert_multi(__end, std::forward<decltype(__element)>(__element));
+      __tree_.__emplace_hint_multi(__end, std::forward<decltype(__element)>(__element));
     }
   }
 #  endif
 
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI iterator insert(value_type&& __v) { return __tree_.__insert_multi(std::move(__v)); }
+  _LIBCPP_HIDE_FROM_ABI iterator insert(value_type&& __v) { return __tree_.__emplace_multi(std::move(__v)); }
 
   _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, value_type&& __v) {
-    return __tree_.__insert_multi(__p, std::move(__v));
+    return __tree_.__emplace_hint_multi(__p, std::move(__v));
   }
 
   _LIBCPP_HIDE_FROM_ABI void insert(initializer_list<value_type> __il) { insert(__il.begin(), __il.end()); }
