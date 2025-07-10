@@ -184,10 +184,10 @@ public:
 
   /// Replace (0, vreg) discriminator components with the operands of blend
   /// or with (immediate, XZR) when possible.
-  void fixupBlendComponents(MachineInstr &MI, MachineBasicBlock *BB,
-                            MachineOperand &IntDiscOp,
-                            MachineOperand &AddrDiscOp,
-                            const TargetRegisterClass *AddrDiscRC) const;
+  void fixupPtrauthDiscriminator(MachineInstr &MI, MachineBasicBlock *BB,
+                                 MachineOperand &IntDiscOp,
+                                 MachineOperand &AddrDiscOp,
+                                 const TargetRegisterClass *AddrDiscRC) const;
 
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,

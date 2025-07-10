@@ -3124,7 +3124,7 @@ static MachineInstr *stripVRegCopies(const MachineRegisterInfo &MRI,
   return nullptr;
 }
 
-void AArch64TargetLowering::fixupBlendComponents(
+void AArch64TargetLowering::fixupPtrauthDiscriminator(
     MachineInstr &MI, MachineBasicBlock *BB, MachineOperand &IntDiscOp,
     MachineOperand &AddrDiscOp, const TargetRegisterClass *AddrDiscRC) const {
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
@@ -3268,8 +3268,8 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     return EmitZTInstr(MI, BB, AArch64::MOVT_TIZ, /*Op0IsDef=*/true);
 
   case AArch64::PAC:
-    fixupBlendComponents(MI, BB, MI.getOperand(3), MI.getOperand(4),
-                         &AArch64::GPR64noipRegClass);
+    fixupPtrauthDiscriminator(MI, BB, MI.getOperand(3), MI.getOperand(4),
+                              &AArch64::GPR64noipRegClass);
     return BB;
   }
 }
