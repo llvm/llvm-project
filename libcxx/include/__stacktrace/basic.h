@@ -43,20 +43,21 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 class stacktrace_entry;
 
 template <class _Allocator>
-class _LIBCPP_EXPORTED_FROM_ABI basic_stacktrace {
+class _LIBCPP_EXPORTED_FROM_ABI basic_stacktrace : private __stacktrace::base {
   friend struct hash<basic_stacktrace<_Allocator>>;
   friend struct __stacktrace::__to_string;
 
   using _ATraits _LIBCPP_NODEBUG               = allocator_traits<_Allocator>;
-  constexpr static bool __kPropOnCopy          = _ATraits::propagate_on_container_copy_assignment::value;
-  constexpr static bool __kPropOnMove          = _ATraits::propagate_on_container_move_assignment::value;
+  constexpr static bool __kPropOnCopyAssign    = _ATraits::propagate_on_container_copy_assignment::value;
+  constexpr static bool __kPropOnMoveAssign    = _ATraits::propagate_on_container_move_assignment::value;
   constexpr static bool __kPropOnSwap          = _ATraits::propagate_on_container_swap::value;
   constexpr static bool __kAlwaysEqual         = _ATraits::is_always_equal::value;
   constexpr static bool __kNoThrowDflConstruct = is_nothrow_default_constructible_v<_Allocator>;
   constexpr static bool __kNoThrowAlloc =
       noexcept(noexcept(_Allocator().allocate(1)) && noexcept(_Allocator().allocate_at_least(1)));
 
-  [[no_unique_address]] _Allocator __alloc_;
+  [[no_unique_address]]
+  _Allocator __alloc_;
 
   using __entry_vec _LIBCPP_NODEBUG = vector<stacktrace_entry, _Allocator>;
   __entry_vec __entries_;
@@ -94,7 +95,7 @@ public:
   current(size_type __skip,
           size_type __max_depth,
           const allocator_type& __caller_alloc = allocator_type()) noexcept(__kNoThrowAlloc) {
-    __stacktrace::builder __builder(__caller_alloc);
+    __stacktrace::base __builder(__caller_alloc);
     __builder.build_stacktrace(__skip + 1, __max_depth);
     basic_stacktrace<_Allocator> __ret{__caller_alloc};
     __ret.__entries_.reserve(__builder.__entries_.size());
@@ -109,57 +110,39 @@ public:
   _LIBCPP_EXPORTED_FROM_ABI basic_stacktrace() noexcept(__kNoThrowDflConstruct) : basic_stacktrace(allocator_type()) {}
 
   _LIBCPP_EXPORTED_FROM_ABI explicit basic_stacktrace(const allocator_type& __alloc) noexcept
-      : __alloc_(__alloc), __entries_(__alloc_) {}
+      : base(__alloc), __entries_(__alloc_) {}
 
-  _LIBCPP_EXPORTED_FROM_ABI basic_stacktrace(basic_stacktrace const& __other) = default;
+  _LIBCPP_EXPORTED_FROM_ABI basic_stacktrace(basic_stacktrace const& __other)
+      : basic_stacktrace(__other, _ATraits::select_on_container_copy_construction(__other.__alloc_)) {}
 
-  _LIBCPP_EXPORTED_FROM_ABI basic_stacktrace(basic_stacktrace&& __other) noexcept = default;
+  _LIBCPP_EXPORTED_FROM_ABI basic_stacktrace(basic_stacktrace&& __other) noexcept
+      : __alloc_(std::move(__other.__alloc_)), __entries_(std::move(__other.__entries_)) {}
 
   _LIBCPP_EXPORTED_FROM_ABI basic_stacktrace(basic_stacktrace const& __other, allocator_type const& __alloc)
-      : __alloc_(__alloc), __entries_(__other.__entries_, __alloc) {}
+      : base(__alloc), __alloc_(__alloc), __entries_(__other.__entries_, __alloc) {}
 
   _LIBCPP_EXPORTED_FROM_ABI basic_stacktrace(basic_stacktrace&& __other, allocator_type const& __alloc)
-      : __alloc_(__alloc) {
-    if (__kAlwaysEqual || __alloc_ == __other.__alloc_) {
-      __entries_ = std::move(__other.__entries_);
-    } else {
-      // "moving" from a container with a different allocator; we're forced to copy items instead
-      for (auto const& __entry : __other.__entries_) {
-        __entries_.push_back(__entry);
-      }
-    }
+      : base(__alloc) {
+    __entries_ = {std::move(__other.__entries_), __alloc_};
   }
 
   _LIBCPP_EXPORTED_FROM_ABI basic_stacktrace& operator=(const basic_stacktrace& __other) {
-    if (this == std::addressof(__other)) {
-      return *this;
+    if (this != std::addressof(__other)) {
+      if (__kPropOnCopyAssign) {
+        __alloc_ = __other.__alloc_;
+      }
+      __entries_ = {__other.__entries_, __alloc_};
     }
-    if (__kPropOnCopy) {
-      __alloc_ = __other.__alloc_;
-    }
-    __entries_ = {__other.__entries_, __alloc_};
     return *this;
   }
 
   _LIBCPP_EXPORTED_FROM_ABI basic_stacktrace&
-  operator=(basic_stacktrace&& __other) noexcept(__kPropOnMove || __kAlwaysEqual) {
-    if (this == std::addressof(__other)) {
-      return *this;
-    }
-    if (__kPropOnMove) {
-      __alloc_   = __other.__alloc_;
-      __entries_ = std::move(__other.__entries_);
-    } else {
-      auto __allocs_eq = __kAlwaysEqual || __alloc_ == __other.__alloc_;
-      if (__allocs_eq) {
-        __entries_ = std::move(__other.__entries_);
-      } else {
-        // "moving" from a container with a different allocator;
-        // we're forced to copy items instead
-        for (auto const& __entry : __other.__entries_) {
-          __entries_.push_back(__entry);
-        }
+  operator=(basic_stacktrace&& __other) noexcept(__kPropOnMoveAssign || __kAlwaysEqual) {
+    if (this != std::addressof(__other)) {
+      if (__kPropOnMoveAssign) {
+        __alloc_ = std::move(__other.__alloc_);
       }
+      __entries_ = {std::move(__other.__entries_), __alloc_};
     }
     return *this;
   }
@@ -229,7 +212,9 @@ public:
   // (19.6.4.5)
   // [stacktrace.basic.mod], modifiers
 
-  _LIBCPP_EXPORTED_FROM_ABI void swap(basic_stacktrace<_Allocator>& __other) noexcept {
+  _LIBCPP_EXPORTED_FROM_ABI void swap(basic_stacktrace& __other) noexcept(
+      allocator_traits<_Allocator>::propagate_on_container_swap::value ||
+      allocator_traits<_Allocator>::is_always_equal::value) {
     std::swap(__entries_, __other.__entries_);
     if (__kPropOnSwap) {
       std::swap(__alloc_, __other.__alloc_);

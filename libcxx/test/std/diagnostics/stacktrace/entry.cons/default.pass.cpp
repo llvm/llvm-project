@@ -23,13 +23,12 @@ namespace std {
 #include <stacktrace>
 #include <type_traits>
 
-_LIBCPP_NO_TAIL_CALLS
-int main(int, char**) noexcept {
-  // "Postconditions: *this is empty."
-  static_assert(std::is_default_constructible_v<std::stacktrace_entry>);
+int main(int, char**) {
   static_assert(std::is_nothrow_default_constructible_v<std::stacktrace_entry>);
-  std::stacktrace_entry entry_t2;
-  assert(!entry_t2);
+
+  std::stacktrace_entry entry;
+  // "Postconditions: *this is empty."
+  assert(!entry);
 
   return 0;
 }
