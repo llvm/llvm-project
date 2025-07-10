@@ -30,11 +30,16 @@ SanitizerSpecialCaseList::create(const std::vector<std::string> &Paths,
 
 std::unique_ptr<SanitizerSpecialCaseList>
 SanitizerSpecialCaseList::createOrDie(const std::vector<std::string> &Paths,
-                                      llvm::vfs::FileSystem &VFS) {
+                                      llvm::vfs::FileSystem &VFS,
+                                      DiagnosticsEngine &Diags) {
   std::string Error;
   if (auto SSCL = create(Paths, VFS, Error))
     return SSCL;
-  llvm::report_fatal_error(StringRef(Error));
+  unsigned DiagID = Diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
+                                          "failed to load NoSanitize file: %0");
+
+  Diags.Report(DiagID) << Error;
+  exit(1);
 }
 
 void SanitizerSpecialCaseList::createSanitizerSections() {
