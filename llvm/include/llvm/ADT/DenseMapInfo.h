@@ -322,8 +322,7 @@ struct DenseMapInfo<Enum, std::enable_if_t<std::is_enum_v<Enum>>> {
   static bool isEqual(const Enum &LHS, const Enum &RHS) { return LHS == RHS; }
 };
 
-template <typename T>
-struct DenseMapInfo<std::optional<T>> {
+template <typename T> struct DenseMapInfo<std::optional<T>> {
   using Optional = std::optional<T>;
   using Info = DenseMapInfo<T>;
 
