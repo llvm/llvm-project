@@ -80,26 +80,6 @@ def Ordering_sequentially_consistent : PatLeaf<(i32 7)>; // SequentiallyConsiste
 def Ordering_volatile : PatLeaf<(i32 8)>;            // Volatile = 8
 def Ordering_relaxed_mmio : PatLeaf<(i32 9)>;         // RelaxedMMIO = 9
 
-multiclass nvvm_ternary_atomic_op_scoped<SDPatternOperator frag> {
-  defvar frag_pat = (frag node:$ptr, node:$cmp, node:$val);
-  def NAME#_cta: PatFrag<!setdagop(frag_pat, ops),
-      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val), [{
-        return Scopes[cast<MemSDNode>(N)->getSyncScopeID()] == NVPTX::Scope::Block;
-  }]>;
-  def NAME#_cluster : PatFrag<!setdagop(frag_pat, ops),
-      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val), [{
-        return Scopes[cast<MemSDNode>(N)->getSyncScopeID()] == NVPTX::Scope::Cluster;
-  }]>;
-  def NAME#_gpu: PatFrag<!setdagop(frag_pat, ops),
-      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val), [{
-        return Scopes[cast<MemSDNode>(N)->getSyncScopeID()] == NVPTX::Scope::Device;
-  }]>;
-  def NAME#_sys: PatFrag<!setdagop(frag_pat, ops),
-      (!cast<SDPatternOperator>(NAME) node:$ptr, node:$cmp, node:$val), [{
-        return Scopes[cast<MemSDNode>(N)->getSyncScopeID()] == NVPTX::Scope::System;
-  }]>;
-}
-
 
 // A node that will be replaced with the current PTX version.
 class PTX {
