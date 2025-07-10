@@ -5,6 +5,14 @@
 
 from junitparser import JUnitXml, Failure
 
+SEE_BUILD_FILE_STR = "Download the build's log file to see the details."
+UNRELATED_FAILURES_STR = (
+    "If these failures are unrelated to your changes (for example "
+    "tests are broken or flaky at HEAD), please open an issue at "
+    "https://github.com/llvm/llvm-project/issues and add the "
+    "`infrastructure` label."
+)
+
 
 # Set size_limit to limit the byte size of the report. The default is 1MB as this
 # is the most that can be put into an annotation. If the generated report exceeds
@@ -19,14 +27,6 @@ def generate_report(
     size_limit=1024 * 1024,
     list_failures=True,
 ):
-    if not junit_objects:
-        # Note that we do not post an empty report, therefore we can ignore a
-        # non-zero return code in situations like this.
-        #
-        # If we were going to post a report, then yes, it would be misleading
-        # to say we succeeded when the final return code was non-zero.
-        return ""
-
     failures = {}
     tests_run = 0
     tests_skipped = 0
@@ -50,10 +50,27 @@ def generate_report(
                         (test.classname + "/" + test.name, test.result[0].text)
                     )
 
-    if not tests_run:
-        return ""
-
     report = [f"# {title}", ""]
+
+    if tests_run == 0:
+        if return_code == 0:
+            report.extend(
+                [
+                    "The build succeeded and no tests ran. This is expected in some "
+                    "build configurations."
+                ]
+            )
+        else:
+            report.extend(
+                [
+                    "The build failed before running any tests.",
+                    "",
+                    SEE_BUILD_FILE_STR,
+                    "",
+                    UNRELATED_FAILURES_STR,
+                ]
+            )
+        return "\n".join(report)
 
     tests_passed = tests_run - tests_skipped - tests_failed
 
@@ -72,7 +89,7 @@ def generate_report(
             [
                 "",
                 "Failed tests and their output was too large to report. "
-                "Download the build's log file to see the details.",
+                + SEE_BUILD_FILE_STR,
             ]
         )
     elif failures:
@@ -102,20 +119,12 @@ def generate_report(
                 "",
                 "All tests passed but another part of the build **failed**.",
                 "",
-                "Download the build's log file to see the details.",
+                SEE_BUILD_FILE_STR,
             ]
         )
 
     if failures or return_code != 0:
-        report.extend(
-            [
-                "",
-                "If these failures are unrelated to your changes (for example "
-                "tests are broken or flaky at HEAD), please open an issue at "
-                "https://github.com/llvm/llvm-project/issues and add the "
-                "`infrastructure` label.",
-            ]
-        )
+        report.extend(["", UNRELATED_FAILURES_STR])
 
     report = "\n".join(report)
     if len(report.encode("utf-8")) > size_limit:
