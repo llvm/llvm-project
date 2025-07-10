@@ -4,33 +4,33 @@
 
 ; RUN: opt -disable-output -disable-verify \
 ; RUN:     -opt-disable-enable-verbosity \
-; RUN:     -passes=inferattrs -opt-disable=inferfunctionattrspass %s 2>&1 \
+; RUN:     -passes=inferattrs -opt-disable=inferattrs %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-MODULE-PASS
-; CHECK-MODULE-PASS: DISABLE: NOT running pass InferFunctionAttrsPass on [module]
+; CHECK-MODULE-PASS: OptDisable: NOT running pass inferattrs on [module]
 
 ; RUN: opt -disable-output -disable-verify \
 ; RUN:     -opt-disable-enable-verbosity \
-; RUN:     -passes=sroa -opt-disable=sroapass %s 2>&1 \
+; RUN:     -passes=sroa -opt-disable=sroa %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-FUNCTION-PASS
-; CHECK-FUNCTION-PASS: DISABLE: NOT running pass SROAPass on f1
-; CHECK-FUNCTION-PASS: DISABLE: NOT running pass SROAPass on f2
-; CHECK-FUNCTION-PASS: DISABLE: NOT running pass SROAPass on f3
-; CHECK-FUNCTION-PASS: DISABLE: NOT running pass SROAPass on f4
+; CHECK-FUNCTION-PASS: OptDisable: NOT running pass sroa on f1
+; CHECK-FUNCTION-PASS: OptDisable: NOT running pass sroa on f2
+; CHECK-FUNCTION-PASS: OptDisable: NOT running pass sroa on f3
+; CHECK-FUNCTION-PASS: OptDisable: NOT running pass sroa on f4
 
 ; RUN: opt -disable-output -disable-verify \
-; RUN:     -opt-disable=inferfunctionattrspass,PostOrderFunctionAttrsPass \
+; RUN:     -opt-disable=inferattrs,function-attrs  \
 ; RUN:     -opt-disable-enable-verbosity \
 ; RUN:     -passes='inferattrs,cgscc(function-attrs,function(early-cse))' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-MULTI-PASS
-; CHECK-MULTI-PASS: DISABLE: NOT running pass InferFunctionAttrsPass on [module]
-; CHECK-MULTI-PASS: DISABLE: NOT running pass PostOrderFunctionAttrsPass on (f1)
-; CHECK-MULTI-PASS: DISABLE: running pass EarlyCSEPass on f1
-; CHECK-MULTI-PASS: DISABLE: NOT running pass PostOrderFunctionAttrsPass on (f2)
-; CHECK-MULTI-PASS: DISABLE: running pass EarlyCSEPass on f2
-; CHECK-MULTI-PASS: DISABLE: NOT running pass PostOrderFunctionAttrsPass on (f3)
-; CHECK-MULTI-PASS: DISABLE: running pass EarlyCSEPass on f3
-; CHECK-MULTI-PASS: DISABLE: NOT running pass PostOrderFunctionAttrsPass on (f4)
-; CHECK-MULTI-PASS: DISABLE: running pass EarlyCSEPass on f4
+; CHECK-MULTI-PASS: OptDisable: NOT running pass inferattrs on [module]
+; CHECK-MULTI-PASS: OptDisable: NOT running pass function-attrs on (f1)
+; CHECK-MULTI-PASS: OptDisable: running pass early-cse on f1
+; CHECK-MULTI-PASS: OptDisable: NOT running pass function-attrs on (f2)
+; CHECK-MULTI-PASS: OptDisable: running pass early-cse on f2
+; CHECK-MULTI-PASS: OptDisable: NOT running pass function-attrs on (f3)
+; CHECK-MULTI-PASS: OptDisable: running pass early-cse on f3
+; CHECK-MULTI-PASS: OptDisable: NOT running pass function-attrs on (f4)
+; CHECK-MULTI-PASS: OptDisable: running pass early-cse on f4
 
 declare i32 @g()
 

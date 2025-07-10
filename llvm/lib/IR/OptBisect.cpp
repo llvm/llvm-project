@@ -75,7 +75,7 @@ bool OptBisect::shouldRunPass(StringRef PassName,
 static void printDisablePassMessage(const StringRef &Name, StringRef TargetDesc,
                                     bool Running) {
   StringRef Status = Running ? "" : "NOT ";
-  dbgs() << "DISABLE: " << Status << "running pass " << Name << " on "
+  dbgs() << "OptDisable: " << Status << "running pass " << Name << " on "
          << TargetDesc << "\n";
 }
 
@@ -87,7 +87,7 @@ bool OptDisable::shouldRunPass(StringRef PassName,
                                StringRef IRDescription) const {
   assert(isEnabled());
 
-  bool ShouldRun = !DisabledPasses.contains(PassName.lower());
+  const bool ShouldRun = !DisabledPasses.contains(PassName.lower());
   if (OptDisableVerbose)
     printDisablePassMessage(PassName, IRDescription, ShouldRun);
   return ShouldRun;
