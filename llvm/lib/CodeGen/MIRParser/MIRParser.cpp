@@ -434,7 +434,7 @@ bool MIRParserImpl::computeFunctionProperties(
   MF.setHasInlineAsm(HasInlineAsm);
 
   if (HasTiedOps && AllTiedOpsRewritten)
-    Properties.set(MachineFunctionProperties::Property::TiedOpsRewritten);
+    Properties.setTiedOpsRewritten();
 
   if (ComputedPropertyHelper(YamlMF.IsSSA, isSSA(MF),
                              MachineFunctionProperties::Property::IsSSA)) {
@@ -556,21 +556,19 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
   MF.setHasEHFunclets(YamlMF.HasEHFunclets);
   MF.setIsOutlined(YamlMF.IsOutlined);
 
+  MachineFunctionProperties &Props = MF.getProperties();
   if (YamlMF.Legalized)
-    MF.getProperties().set(MachineFunctionProperties::Property::Legalized);
+    Props.setLegalized();
   if (YamlMF.RegBankSelected)
-    MF.getProperties().set(
-        MachineFunctionProperties::Property::RegBankSelected);
+    Props.setRegBankSelected();
   if (YamlMF.Selected)
-    MF.getProperties().set(MachineFunctionProperties::Property::Selected);
+    Props.setSelected();
   if (YamlMF.FailedISel)
-    MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
+    Props.setFailedISel();
   if (YamlMF.FailsVerification)
-    MF.getProperties().set(
-        MachineFunctionProperties::Property::FailsVerification);
+    Props.setFailsVerification();
   if (YamlMF.TracksDebugUserValues)
-    MF.getProperties().set(
-        MachineFunctionProperties::Property::TracksDebugUserValues);
+    Props.setTracksDebugUserValues();
 
   PerFunctionMIParsingState PFS(MF, SM, IRSlots, *Target);
   if (parseRegisterInfo(PFS, YamlMF))
@@ -765,22 +763,25 @@ bool MIRParserImpl::setupRegisterInfo(const PerFunctionMIParsingState &PFS,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
 
-  bool Error = false;
+  SmallVector<std::string> Errors;
+
   // Create VRegs
   auto populateVRegInfo = [&](const VRegInfo &Info, const Twine &Name) {
     Register Reg = Info.VReg;
     switch (Info.Kind) {
     case VRegInfo::UNKNOWN:
-      error(Twine("Cannot determine class/bank of virtual register ") +
-            Name + " in function '" + MF.getName() + "'");
-      Error = true;
+      Errors.push_back(
+          (Twine("Cannot determine class/bank of virtual register ") + Name +
+           " in function '" + MF.getName() + "'")
+              .str());
       break;
     case VRegInfo::NORMAL:
       if (!Info.D.RC->isAllocatable()) {
-        error(Twine("Cannot use non-allocatable class '") +
-              TRI->getRegClassName(Info.D.RC) + "' for virtual register " +
-              Name + " in function '" + MF.getName() + "'");
-        Error = true;
+        Errors.push_back((Twine("Cannot use non-allocatable class '") +
+                          TRI->getRegClassName(Info.D.RC) +
+                          "' for virtual register " + Name + " in function '" +
+                          MF.getName() + "'")
+                             .str());
         break;
       }
 
@@ -822,7 +823,14 @@ bool MIRParserImpl::setupRegisterInfo(const PerFunctionMIParsingState &PFS,
     }
   }
 
-  return Error;
+  if (Errors.empty())
+    return false;
+
+  // Report errors in a deterministic order.
+  sort(Errors);
+  for (auto &E : Errors)
+    error(E);
+  return true;
 }
 
 bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,

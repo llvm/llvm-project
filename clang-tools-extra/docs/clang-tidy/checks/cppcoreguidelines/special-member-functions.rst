@@ -85,3 +85,8 @@ Options
       struct A : boost::noncopyable {
         ~A() { std::cout << "dtor\n"; }
       };
+
+.. option:: IgnoreMacros
+
+   If set to `true`, the check will not give warnings for classes defined
+   inside macros. Default is `true`.

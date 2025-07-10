@@ -1910,11 +1910,7 @@ template <class BidirectionalIterator, class Compare>
 #  pragma GCC system_header
 #endif
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER == 14
-#  include <__cxx03/execution>
-#endif
-
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 #  include <__cxx03/atomic>
 #  include <__cxx03/cstdlib>
 #  include <__cxx03/cstring>

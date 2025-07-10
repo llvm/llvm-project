@@ -92,7 +92,7 @@ public:
       auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
       auto loop =
           rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step);
-      for (Operation &nested : *loop.getBody())
+      for (Operation &nested : make_early_inc_range(*loop.getBody()))
         rewriter.eraseOp(&nested);
       loopIvs.push_back(loop.getInductionVar());
 

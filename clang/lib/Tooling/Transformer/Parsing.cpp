@@ -7,21 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/Transformer/Parsing.h"
-#include "clang/AST/Expr.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/CharInfo.h"
-#include "clang/Basic/SourceLocation.h"
-#include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Transformer/RangeSelector.h"
-#include "clang/Tooling/Transformer/SourceCode.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include <optional>
 #include <string>
 #include <utility>
-#include <vector>
 
 using namespace clang;
 using namespace transformer;

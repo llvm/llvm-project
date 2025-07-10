@@ -1,14 +1,43 @@
 #include "TargetInfo.h"
 #include "ABIInfo.h"
-#include "CIRGenFunctionInfo.h"
-#include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
 
-static bool testIfIsVoidTy(QualType ty) {
-  const auto *builtinTy = ty->getAs<BuiltinType>();
-  return builtinTy && builtinTy->getKind() == BuiltinType::Void;
+bool clang::CIRGen::isEmptyRecordForLayout(const ASTContext &context,
+                                           QualType t) {
+  const RecordType *rt = t->getAs<RecordType>();
+  if (!rt)
+    return false;
+
+  const RecordDecl *rd = rt->getDecl();
+
+  // If this is a C++ record, check the bases first.
+  if (const CXXRecordDecl *cxxrd = dyn_cast<CXXRecordDecl>(rd)) {
+    if (cxxrd->isDynamicClass())
+      return false;
+
+    for (const auto &I : cxxrd->bases())
+      if (!isEmptyRecordForLayout(context, I.getType()))
+        return false;
+  }
+
+  for (const auto *I : rd->fields())
+    if (!isEmptyFieldForLayout(context, I))
+      return false;
+
+  return true;
+}
+
+bool clang::CIRGen::isEmptyFieldForLayout(const ASTContext &context,
+                                          const FieldDecl *fd) {
+  if (fd->isZeroLengthBitField())
+    return true;
+
+  if (fd->isUnnamedBitField())
+    return false;
+
+  return isEmptyRecordForLayout(context, fd->getType());
 }
 
 namespace {
@@ -16,8 +45,6 @@ namespace {
 class X8664ABIInfo : public ABIInfo {
 public:
   X8664ABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
-
-  void computeInfo(CIRGenFunctionInfo &funcInfo) const override;
 };
 
 class X8664TargetCIRGenInfo : public TargetCIRGenInfo {
@@ -27,20 +54,6 @@ public:
 };
 
 } // namespace
-
-void X8664ABIInfo::computeInfo(CIRGenFunctionInfo &funcInfo) const {
-  // Top level CIR has unlimited arguments and return types. Lowering for ABI
-  // specific concerns should happen during a lowering phase. Assume everything
-  // is direct for now.
-  assert(!cir::MissingFeatures::opCallArgs());
-
-  CanQualType retTy = funcInfo.getReturnType();
-  if (testIfIsVoidTy(retTy))
-    funcInfo.getReturnInfo() = cir::ABIArgInfo::getIgnore();
-  else
-    funcInfo.getReturnInfo() =
-        cir::ABIArgInfo::getDirect(cgt.convertType(retTy));
-}
 
 std::unique_ptr<TargetCIRGenInfo>
 clang::CIRGen::createX8664TargetCIRGenInfo(CIRGenTypes &cgt) {

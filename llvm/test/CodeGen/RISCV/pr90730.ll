@@ -5,7 +5,7 @@ define i32 @pr90730(i32 %x, i1 %y, ptr %p) {
 ; CHECK-LABEL: pr90730:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a1, 8
-; CHECK-NEXT:    addiw a1, a1, -960
+; CHECK-NEXT:    addi a1, a1, -960
 ; CHECK-NEXT:    andn a0, a1, a0
 ; CHECK-NEXT:    sw zero, 0(a2)
 ; CHECK-NEXT:    ret
