@@ -3011,12 +3011,7 @@ def Vector_ScanOp :
       vector<4x8x16x32xf32>, vector<4x16x32xf32>
     ```
   }];
-  let builders = [
-    OpBuilder<(ins "Value":$source, "Value":$initial_value,
-                   "CombiningKind":$kind,
-                   CArg<"int64_t", "0">:$reduction_dim,
-                   CArg<"bool", "true">:$inclusive)>
-  ];
+
   let extraClassDeclaration = [{
     VectorType getSourceType() {
       return ::llvm::cast<VectorType>(getSource().getType());
