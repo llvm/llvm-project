@@ -26,7 +26,7 @@ class TestReports(unittest.TestCase):
                 """\
                 # Foo
 
-                The build succeeded but no tests ran."""
+                The build succeeded and no tests ran. This is expected in some build configurations."""
             ),
         )
 

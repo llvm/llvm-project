@@ -54,7 +54,12 @@ def generate_report(
 
     if tests_run == 0:
         if return_code == 0:
-            report.extend(["The build succeeded but no tests ran."])
+            report.extend(
+                [
+                    "The build succeeded and no tests ran. This is expected in some "
+                    "build configurations."
+                ]
+            )
         else:
             report.extend(
                 [
