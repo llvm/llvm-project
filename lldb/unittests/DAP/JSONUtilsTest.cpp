@@ -209,6 +209,15 @@ TEST(JSONUtilsTest, DecodeMemoryReference) {
   {
     addr_t addr = LLDB_INVALID_ADDRESS;
     json::Path::Root root;
+    EXPECT_FALSE(DecodeMemoryReference(json::Value{"string"}, "mem_ref", addr,
+                                       root,
+                                       /*required=*/true));
+    EXPECT_THAT_ERROR(root.getError(), FailedWithMessage("expected object"));
+  }
+
+  {
+    addr_t addr = LLDB_INVALID_ADDRESS;
+    json::Path::Root root;
     EXPECT_FALSE(DecodeMemoryReference(json::Object{}, "mem_ref", addr, root,
                                        /*required=*/true));
     EXPECT_THAT_ERROR(root.getError(),

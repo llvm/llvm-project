@@ -123,7 +123,7 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
       if (!variable.IsValid())
         break;
 
-      int64_t frame_var_ref =
+      const int64_t frame_var_ref =
           dap.variables.InsertVariable(variable, /*is_permanent=*/false);
       variables.emplace_back(CreateVariable(
           variable, frame_var_ref, hex,
@@ -136,7 +136,8 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
     // children.
     lldb::SBValue variable = dap.variables.GetVariable(var_ref);
     if (variable.IsValid()) {
-      bool is_permanent = dap.variables.IsPermanentVariableReference(var_ref);
+      const bool is_permanent =
+          dap.variables.IsPermanentVariableReference(var_ref);
       auto addChild = [&](lldb::SBValue child,
                           std::optional<std::string> custom_name = {}) {
         if (!child.IsValid())
@@ -150,7 +151,7 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
                            /*is_name_duplicated=*/false, custom_name));
       };
       const int64_t num_children = variable.GetNumChildren();
-      int64_t end_idx = start + ((count == 0) ? num_children : count);
+      const int64_t end_idx = start + ((count == 0) ? num_children : count);
       int64_t i = start;
       for (; i < end_idx && i < num_children; ++i)
         addChild(variable.GetChildAtIndex(i));
