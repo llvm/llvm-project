@@ -540,6 +540,22 @@ void ProfileGenerator::generateLineNumBasedProfile() {
   // Fill in boundary sample counts as well as call site samples for calls
   populateBoundarySamplesForAllFunctions(SC.BranchCounter);
 
+  // For each instruction with vtable accesses, get its symbolized inline
+  // stack, and add the vtable counters to the function samples.
+  for (const auto &[IpData, Count] : SC.DataAccessCounter) {
+    uint64_t InstAddr = IpData.first;
+    const SampleContextFrameVector &FrameVec =
+        Binary->getCachedFrameLocationStack(InstAddr, false);
+    if (!FrameVec.empty()) {
+      FunctionSamples &FunctionProfile =
+          getLeafProfileAndAddTotalSamples(FrameVec, 0);
+      LineLocation Loc(
+          FrameVec.back().Location.LineOffset,
+          getBaseDiscriminator(FrameVec.back().Location.Discriminator));
+      FunctionProfile.getTypeSamplesAt(Loc)[FunctionId(IpData.second)] += Count;
+    }
+  }
+
   updateFunctionSamples();
 }
 

@@ -6,12 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 #include "PerfReader.h"
+#include "ErrorHandling.h"
+#include "PerfReader.h"
 #include "ProfileGenerator.h"
+#include "ProfiledBinary.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LineIterator.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/ToolOutputFile.h"
+
+#include <regex>
 
 #define DEBUG_TYPE "perf-reader"
 
@@ -368,6 +375,61 @@ PerfReaderBase::create(ProfiledBinary *Binary, PerfInputFile &PerfInput,
   }
 
   return PerfReader;
+}
+
+void PerfReaderBase::parseDataAccessPerfTraces(
+    StringRef DataAccessPerfTraceFile, std::optional<int32_t> PIDFilter) {
+  std::regex logRegex(
+      R"(^.*?PERF_RECORD_SAMPLE\(.*?\):\s*(\d+)\/(\d+):\s*(0x[0-9a-fA-F]+)\s+period:\s*\d+\s+addr:\s*(0x[0-9a-fA-F]+)$)");
+
+  auto BufferOrErr = MemoryBuffer::getFile(DataAccessPerfTraceFile);
+  std::error_code EC = BufferOrErr.getError();
+  if (EC)
+    exitWithError("Failed to open perf trace file: " + DataAccessPerfTraceFile);
+
+  assert(!SampleCounters.empty() && "Sample counters should not be empty!");
+  SampleCounter &Counter = SampleCounters.begin()->second;
+  line_iterator LineIt(*BufferOrErr.get(), true);
+  for (; !LineIt.is_at_eof(); ++LineIt) {
+    StringRef Line = *LineIt;
+
+    MMapEvent MMap;
+    if (Line.contains("PERF_RECORD_MMAP2")) {
+      if (PerfScriptReader::extractMMapEventForBinary(Binary, Line, MMap)) {
+        if (!MMap.MemProtectionFlag.contains("x")) {
+          Binary->addMMapNonTextEvent(MMap);
+        }
+      }
+      continue;
+    }
+
+    // Skip lines that do not contain "PERF_RECORD_SAMPLE".
+    if (!Line.contains("PERF_RECORD_SAMPLE")) {
+      continue;
+    }
+
+    std::smatch matches;
+    const std::string LineStr = Line.str();
+
+    if (std::regex_search(LineStr.begin(), LineStr.end(), matches, logRegex)) {
+      if (matches.size() != 5)
+        continue;
+
+      const int32_t PID = std::stoi(matches[1].str());
+      if (PIDFilter && *PIDFilter != PID) {
+        continue;
+      }
+
+      const uint64_t DataAddress = std::stoull(matches[4].str(), nullptr, 16);
+      StringRef DataSymbol = Binary->symbolizeDataAddress(
+          Binary->CanonicalizeNonTextAddress(DataAddress));
+      if (DataSymbol.starts_with("_ZTV")) {
+        const uint64_t IP = std::stoull(matches[3].str(), nullptr, 16);
+        Counter.recordDataAccessCount(Binary->canonicalizeVirtualAddress(IP),
+                                      DataSymbol, 1);
+      }
+    }
+  }
 }
 
 PerfInputFile
@@ -990,14 +1052,14 @@ bool PerfScriptReader::extractMMapEventForBinary(ProfiledBinary *Binary,
   constexpr static const char *const MMap2Pattern =
       "PERF_RECORD_MMAP2 (-?[0-9]+)/[0-9]+: "
       "\\[(0x[a-f0-9]+)\\((0x[a-f0-9]+)\\) @ "
-      "(0x[a-f0-9]+|0) .*\\]: [-a-z]+ (.*)";
+      "(0x[a-f0-9]+|0) .*\\]: ([-a-z]+) (.*)";
   // Parse a MMap line like
   // PERF_RECORD_MMAP -1/0: [0xffffffff81e00000(0x3e8fa000) @ \
   //  0xffffffff81e00000]: x [kernel.kallsyms]_text
   constexpr static const char *const MMapPattern =
       "PERF_RECORD_MMAP (-?[0-9]+)/[0-9]+: "
       "\\[(0x[a-f0-9]+)\\((0x[a-f0-9]+)\\) @ "
-      "(0x[a-f0-9]+|0)\\]: [-a-z]+ (.*)";
+      "(0x[a-f0-9]+|0)\\]: ([-a-z]+) (.*)";
   // Field 0 - whole line
   // Field 1 - PID
   // Field 2 - base address
@@ -1010,11 +1072,12 @@ bool PerfScriptReader::extractMMapEventForBinary(ProfiledBinary *Binary,
     MMAPPED_ADDRESS = 2,
     MMAPPED_SIZE = 3,
     PAGE_OFFSET = 4,
-    BINARY_PATH = 5
+    MEM_PROTECTION_FLAG = 5,
+    BINARY_PATH = 6,
   };
 
   bool R = false;
-  SmallVector<StringRef, 6> Fields;
+  SmallVector<StringRef, 7> Fields;
   if (Line.contains("PERF_RECORD_MMAP2 ")) {
     Regex RegMmap2(MMap2Pattern);
     R = RegMmap2.match(Line, &Fields);
@@ -1035,6 +1098,7 @@ bool PerfScriptReader::extractMMapEventForBinary(ProfiledBinary *Binary,
   Fields[MMAPPED_ADDRESS].getAsInteger(0, MMap.Address);
   Fields[MMAPPED_SIZE].getAsInteger(0, MMap.Size);
   Fields[PAGE_OFFSET].getAsInteger(0, MMap.Offset);
+  MMap.MemProtectionFlag = Fields[MEM_PROTECTION_FLAG];
   MMap.BinaryPath = Fields[BINARY_PATH];
   if (ShowMmapEvents) {
     outs() << "Mmap: Binary " << MMap.BinaryPath << " loaded at "

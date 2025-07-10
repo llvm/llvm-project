@@ -1,0 +1,18 @@
+RUN: llvm-profgen --perfscript=%p/Inputs/lbr-perf-for-dap.script --data-access-profile=%p/Inputs/dap-perf-trace.txt \
+RUN:  --binary=%p/Inputs/dap.perfbin --format=text --pid=3446532 \
+RUN: -ignore-stack-samples -use-dwarf-correlation -o %t.afdo
+
+RUN: llvm-profdata show --sample --function=_Z9loop_funciii %t.afdo 2>&1 | FileCheck %s
+
+CHECK:       Function: _Z9loop_funciii: 15248, 260, 5 sampled lines
+CHECK-NEXT:  Samples collected in the function's body {
+CHECK-NEXT:    0: 244
+CHECK-NEXT:    1: 266, calls: _Z10createTypei:252
+CHECK-NEXT:    3: 272, calls: _ZN12_GLOBAL__N_18Derived24funcEii:198 _ZN8Derived14funcEii:68
+CHECK-NEXT:    3: vtables: _ZTV8Derived1:16 _ZTVN12_GLOBAL__N_18Derived2E:5 
+CHECK-NEXT:    5.1: 289, calls: _ZN12_GLOBAL__N_18Derived2D0Ev:218 _ZN8Derived1D0Ev:71
+CHECK-NEXT:    5.1: vtables: _ZTV8Derived1:9 _ZTVN12_GLOBAL__N_18Derived2E:3 
+CHECK-NEXT:    7: 240
+CHECK-NEXT: }
+CHECK-NEXT: No inlined callsites in this function
+
