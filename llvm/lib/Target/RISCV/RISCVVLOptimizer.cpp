@@ -747,6 +747,15 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
     return TwoTimes ? MILog2SEW + 1 : MILog2SEW;
   }
 
+  // Vector Register Gather with 16-bit Index Elements Instruction
+  // vrgatherei16.vv vd, vs2, vs1
+  // Dest and source data EEW=SEW. Index vector EEW=16.
+  case RISCV::VRGATHEREI16_VV: {
+    if (MO.getOperandNo() == 0 || MO.getOperandNo() == 1)
+      return MILog2SEW;
+    return 4; // vs1 index vector has EEW=16, log2(16)=4
+  }
+
   default:
     return std::nullopt;
   }
@@ -1051,6 +1060,11 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VSLIDEDOWN_VI:
   case RISCV::VSLIDE1UP_VX:
   case RISCV::VFSLIDE1UP_VF:
+  // Vector Register Gather Instructions
+  case RISCV::VRGATHER_VI:
+  case RISCV::VRGATHER_VV:
+  case RISCV::VRGATHER_VX:
+  case RISCV::VRGATHEREI16_VV:
   // Vector Single-Width Floating-Point Add/Subtract Instructions
   case RISCV::VFADD_VF:
   case RISCV::VFADD_VV:
