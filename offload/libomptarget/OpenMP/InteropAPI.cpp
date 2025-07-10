@@ -286,9 +286,6 @@ int __tgt_interop_use(ident_t *LocRef, omp_interop_val_t *Interop,
   if (OffloadPolicy::get(*PM).Kind == OffloadPolicy::DISABLED || !Interop)
     return OFFLOAD_FAIL;
 
-  if (!Interop)
-    return OFFLOAD_FAIL;
-
   if (Interop->interop_type == kmp_interop_type_targetsync) {
     if (Deps) {
       if (nowait) {
@@ -322,9 +319,6 @@ int __tgt_interop_release(ident_t *LocRef, omp_interop_val_t *Interop,
   if (OffloadPolicy::get(*PM).Kind == OffloadPolicy::DISABLED || !Interop)
     return OFFLOAD_FAIL;
 
-  if (!Interop)
-    return OFFLOAD_FAIL;
-
   if (Interop->interop_type == kmp_interop_type_targetsync) {
     if (Ctx->flags.nowait)
       DP("Warning: nowait flag on interop destroy not supported "
@@ -347,11 +341,6 @@ EXTERN int ompx_interop_add_completion_callback(omp_interop_val_t *Interop,
 
   if (OffloadPolicy::get(*PM).Kind == OffloadPolicy::DISABLED || !Interop)
     return omp_irc_other;
-
-  if (!Interop) {
-    DP("Call to %s with invalid interop\n", __func__);
-    return omp_irc_empty;
-  }
 
   Interop->addCompletionCb(cb, data);
 
