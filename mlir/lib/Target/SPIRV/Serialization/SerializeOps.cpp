@@ -429,7 +429,8 @@ Serializer::processGraphEntryPointARMOp(spirv::GraphEntryPointARMOp op) {
   return success();
 }
 
-LogicalResult Serializer::processGraphOutputsARMOp(spirv::GraphOutputsARMOp op) {
+LogicalResult
+Serializer::processGraphOutputsARMOp(spirv::GraphOutputsARMOp op) {
   for (auto [idx, value] : llvm::enumerate(op->getOperands())) {
     SmallVector<uint32_t, 2> outputOperands;
 

@@ -1402,8 +1402,9 @@ LogicalResult Serializer::processOperation(Operation *opInst) {
       .Case([&](spirv::GraphEntryPointARMOp op) {
         return processGraphEntryPointARMOp(op);
       })
-      .Case(
-          [&](spirv::GraphOutputsARMOp op) { return processGraphOutputsARMOp(op); })
+      .Case([&](spirv::GraphOutputsARMOp op) {
+        return processGraphOutputsARMOp(op);
+      })
       .Case([&](spirv::GlobalVariableOp op) {
         return processGlobalVariableOp(op);
       })
