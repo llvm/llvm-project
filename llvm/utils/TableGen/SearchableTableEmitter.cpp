@@ -131,17 +131,17 @@ private:
         return SI->getValue().str();
       else
         return SI->getAsString();
-    } else if (const auto *BI = dyn_cast<BitsInit>(I)) {
+    }
+    if (const auto *BI = dyn_cast<BitsInit>(I))
       return "0x" + utohexstr(getAsInt(BI));
-    } else if (const auto *BI = dyn_cast<BitInit>(I)) {
+    if (const auto *BI = dyn_cast<BitInit>(I))
       return BI->getValue() ? "true" : "false";
-    } else if (Field.IsIntrinsic) {
+    if (Field.IsIntrinsic)
       return "Intrinsic::" + getIntrinsic(I).EnumName.str();
-    } else if (Field.IsInstruction) {
+    if (Field.IsInstruction)
       return I->getAsString();
     if (Field.Enum) {
-      const GenericEnum::Entry *Entry =
-          Field.Enum->getEntry(cast<DefInit>(I)->getDef());
+      auto *Entry = Field.Enum->EntryMap[cast<DefInit>(I)->getDef()];
       if (!Entry)
         PrintFatalError(Loc,
                         Twine("Entry for field '") + Field.Name + "' is null");
@@ -174,7 +174,8 @@ private:
       if (Ctx == TypeInTempStruct)
         return "std::string";
       return "StringRef";
-    } else if (const auto *BI = dyn_cast<BitsRecTy>(Field.RecType)) {
+    }
+    if (const auto *BI = dyn_cast<BitsRecTy>(Field.RecType)) {
       unsigned NumBits = BI->getNumBits();
       if (NumBits <= 8)
         return "uint8_t";
@@ -188,11 +189,11 @@ private:
                                      "' lookup method '" + Index.Name +
                                      "', key field '" + Field.Name +
                                      "' of type bits is too large");
-    } else if (isa<BitRecTy>(Field.RecType)) {
-      return "bool";
-    } else if (Field.Enum || Field.IsIntrinsic || Field.IsInstruction) {
-      return "unsigned";
     }
+    if (isa<BitRecTy>(Field.RecType))
+      return "bool";
+    if (Field.Enum || Field.IsIntrinsic || Field.IsInstruction)
+      return "unsigned";
     PrintFatalError(Index.Loc,
                     Twine("In table '") + Table.Name + "' lookup method '" +
                         Index.Name + "', key field '" + Field.Name +
@@ -245,67 +246,74 @@ int64_t SearchableTableEmitter::getNumericKey(const SearchIndex &Index,
 /// key of \p Index.
 bool SearchableTableEmitter::compareBy(const Record *LHS, const Record *RHS,
                                        const SearchIndex &Index) {
-  for (const auto &Field : Index.Fields) {
-    const Init *LHSI = LHS->getValueInit(Field.Name);
-    const Init *RHSI = RHS->getValueInit(Field.Name);
+  // Compare two values and return:
+  // true if LHS < RHS
+  // false if  LHS > RHS
+  // std::nullopt if LHS == RHS
+  auto CmpLTValue = [](const auto &LHS,
+                       const auto &RHS) -> std::optional<bool> {
+    if (LHS < RHS)
+      return true;
+    if (LHS > RHS)
+      return false;
+    return std::nullopt;
+  };
 
+  // Compare two fields and returns:
+  // true if LHS < RHS
+  // false if  LHS > RHS
+  // std::nullopt if LHS == RHS
+  auto CmpLTField = [this, &Index, CmpLTValue](
+                        const Init *LHSI, const Init *RHSI,
+                        const GenericField &Field) -> std::optional<bool> {
     if (isa<BitsRecTy>(Field.RecType) || isa<IntRecTy>(Field.RecType)) {
       int64_t LHSi = getAsInt(LHSI);
       int64_t RHSi = getAsInt(RHSI);
-      if (LHSi < RHSi)
-        return true;
-      if (LHSi > RHSi)
-        return false;
-    } else if (Field.IsIntrinsic) {
+      return CmpLTValue(LHSi, RHSi);
+    }
+
+    if (Field.IsIntrinsic) {
       const CodeGenIntrinsic &LHSi = getIntrinsic(LHSI);
       const CodeGenIntrinsic &RHSi = getIntrinsic(RHSI);
-      if (std::tie(LHSi.TargetPrefix, LHSi.Name) <
-          std::tie(RHSi.TargetPrefix, RHSi.Name))
-        return true;
-      if (std::tie(LHSi.TargetPrefix, LHSi.Name) >
-          std::tie(RHSi.TargetPrefix, RHSi.Name))
-        return false;
-    } else if (Field.IsInstruction) {
+      return CmpLTValue(std::tie(LHSi.TargetPrefix, LHSi.Name),
+                        std::tie(RHSi.TargetPrefix, RHSi.Name));
+    }
+
+    if (Field.IsInstruction) {
       // This does not correctly compare the predefined instructions!
       const Record *LHSr = cast<DefInit>(LHSI)->getDef();
       const Record *RHSr = cast<DefInit>(RHSI)->getDef();
 
-      bool LHSpseudo = LHSr->getValueAsBit("isPseudo");
-      bool RHSpseudo = RHSr->getValueAsBit("isPseudo");
-      if (LHSpseudo && !RHSpseudo)
-        return true;
-      if (!LHSpseudo && RHSpseudo)
-        return false;
-
-      int comp = LHSr->getName().compare(RHSr->getName());
-      if (comp < 0)
-        return true;
-      if (comp > 0)
-        return false;
-    } else if (Field.Enum) {
-      auto LHSr = cast<DefInit>(LHSI)->getDef();
-      auto RHSr = cast<DefInit>(RHSI)->getDef();
-      int64_t LHSv = Field.Enum->getEntry(LHSr)->Value;
-      int64_t RHSv = Field.Enum->getEntry(RHSr)->Value;
-      if (LHSv < RHSv)
-        return true;
-      if (LHSv > RHSv)
-        return false;
-    } else {
-      std::string LHSs = primaryRepresentation(Index.Loc, Field, LHSI);
-      std::string RHSs = primaryRepresentation(Index.Loc, Field, RHSI);
-
-      if (isa<StringRecTy>(Field.RecType)) {
-        LHSs = StringRef(LHSs).upper();
-        RHSs = StringRef(RHSs).upper();
-      }
-
-      int comp = LHSs.compare(RHSs);
-      if (comp < 0)
-        return true;
-      if (comp > 0)
-        return false;
+      // Order pseudo instructions before non-pseudo ones.
+      bool LHSNotPseudo = !LHSr->getValueAsBit("isPseudo");
+      bool RHSNotPseudo = !RHSr->getValueAsBit("isPseudo");
+      return CmpLTValue(std::tuple(LHSNotPseudo, LHSr->getName()),
+                        std::tuple(RHSNotPseudo, RHSr->getName()));
     }
+
+    if (Field.Enum) {
+      const Record *LHSr = cast<DefInit>(LHSI)->getDef();
+      const Record *RHSr = cast<DefInit>(RHSI)->getDef();
+      int64_t LHSv = Field.Enum->EntryMap[LHSr]->second;
+      int64_t RHSv = Field.Enum->EntryMap[RHSr]->second;
+      return CmpLTValue(LHSv, RHSv);
+    }
+
+    std::string LHSs = primaryRepresentation(Index.Loc, Field, LHSI);
+    std::string RHSs = primaryRepresentation(Index.Loc, Field, RHSI);
+
+    if (isa<StringRecTy>(Field.RecType)) {
+      LHSs = StringRef(LHSs).upper();
+      RHSs = StringRef(RHSs).upper();
+    }
+    return CmpLTValue(LHSs, RHSs);
+  };
+
+  for (const GenericField &Field : Index.Fields) {
+    const Init *LHSI = LHS->getValueInit(Field.Name);
+    const Init *RHSI = RHS->getValueInit(Field.Name);
+    if (std::optional<bool> Cmp = CmpLTField(LHSI, RHSI, Field))
+      return *Cmp;
   }
   return false;
 }
