@@ -72,7 +72,7 @@ public:
     case 'c':
       // Normally an empty breakpoint condition marks is as unset. But we need
       // to say it was passed in.
-      m_bp_opts.SetCondition(option_arg.str().c_str());
+      m_bp_opts.GetCondition().SetText(option_arg.str());
       m_bp_opts.m_set_flags.Set(BreakpointOptions::eCondition);
       break;
     case 'C':
@@ -153,6 +153,21 @@ public:
       } else {
         m_bp_opts.GetThreadSpec()->SetIndex(thread_index);
       }
+    } break;
+    case 'Y': {
+      LanguageType language = Language::GetLanguageTypeFromString(option_arg);
+
+      LanguageSet languages_for_expressions =
+          Language::GetLanguagesSupportingTypeSystemsForExpressions();
+      if (language == eLanguageTypeUnknown)
+        error = Status::FromError(CreateOptionParsingError(
+            option_arg, short_option, long_option, "invalid language"));
+      else if (!languages_for_expressions[language])
+        error = Status::FromError(
+            CreateOptionParsingError(option_arg, short_option, long_option,
+                                     "no expression support for language"));
+      else
+        m_bp_opts.GetCondition().SetLanguage(language);
     } break;
     default:
       llvm_unreachable("Unimplemented option");
