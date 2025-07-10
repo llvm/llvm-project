@@ -326,13 +326,9 @@ template <typename T> struct DenseMapInfo<std::optional<T>> {
   using Optional = std::optional<T>;
   using Info = DenseMapInfo<T>;
 
-  static inline Optional getEmptyKey() {
-    return std::make_optional(Info::getEmptyKey());
-  }
+  static inline Optional getEmptyKey() { return {Info::getEmptyKey()}; }
 
-  static inline Optional getTombstoneKey() {
-    return std::make_optional(Info::getTombstoneKey());
-  }
+  static inline Optional getTombstoneKey() { return {Info::getTombstoneKey()}; }
 
   static unsigned getHashValue(const Optional &OptionalVal) {
     return detail::combineHashValue(
