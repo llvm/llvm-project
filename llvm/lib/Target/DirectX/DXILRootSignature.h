@@ -106,4 +106,4 @@ public:
 
 } // namespace dxil
 } // namespace llvm
-#endif
+#endif // LLVM_LIB_TARGET_DIRECTX_DXILROOTSIGNATURE_H
