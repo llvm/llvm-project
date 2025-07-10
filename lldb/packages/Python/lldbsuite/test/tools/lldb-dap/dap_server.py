@@ -831,13 +831,17 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
-    def request_writeMemory(self, memoryReference, data, offset=0, allowPartial=True):
+    def request_writeMemory(self, memoryReference, data, offset=0, allowPartial=False):
         args_dict = {
             "memoryReference": memoryReference,
-            "offset": offset,
-            "allowPartial": allowPartial,
             "data": data,
         }
+
+        if offset:
+            args_dict["offset"] = offset
+        if allowPartial:
+            args_dict["allowPartial"] = allowPartial
+
         command_dict = {
             "command": "writeMemory",
             "type": "request",
