@@ -1946,7 +1946,7 @@ llvm::LogicalResult fir::EmboxOp::verify() {
 
 /// Returns true if \p extent matches the extent of the \p box's
 /// dimension \p dim.
-bool isBoxExtent(mlir::Value box, std::int64_t dim, mlir::Value extent) {
+static bool isBoxExtent(mlir::Value box, std::int64_t dim, mlir::Value extent) {
   if (auto op = extent.getDefiningOp<fir::BoxDimsOp>())
     if (op.getVal() == box && op.getExtent() == extent)
       if (auto dimOperand = fir::getIntIfConstant(op.getDim()))
@@ -1957,8 +1957,8 @@ bool isBoxExtent(mlir::Value box, std::int64_t dim, mlir::Value extent) {
 /// Returns true if \p lb matches the lower bound of the \p box's
 /// dimension \p dim. If \p mayHaveNonDefaultLowerBounds is false,
 /// then \p lb may be an integer constant 1.
-bool isBoxLb(mlir::Value box, std::int64_t dim, mlir::Value lb,
-             bool mayHaveNonDefaultLowerBounds = true) {
+static bool isBoxLb(mlir::Value box, std::int64_t dim, mlir::Value lb,
+                    bool mayHaveNonDefaultLowerBounds = true) {
   if (auto op = lb.getDefiningOp<fir::BoxDimsOp>()) {
     if (op.getVal() == box && op.getLowerBound() == lb)
       if (auto dimOperand = fir::getIntIfConstant(op.getDim()))
@@ -1978,8 +1978,8 @@ bool isBoxLb(mlir::Value box, std::int64_t dim, mlir::Value lb,
 /// tries its best to recognize the computation pattern.
 /// The conservative result 'false' does not necessarily mean
 /// that \p ub is not an actual upper bound value.
-bool isBoxUb(mlir::Value box, std::int64_t dim, mlir::Value ub,
-             bool mayHaveNonDefaultLowerBounds = true) {
+static bool isBoxUb(mlir::Value box, std::int64_t dim, mlir::Value ub,
+                    bool mayHaveNonDefaultLowerBounds = true) {
   if (auto sub1 = ub.getDefiningOp<mlir::arith::SubIOp>()) {
     auto one = fir::getIntIfConstant(sub1.getOperand(1));
     if (!one || *one != 1)
