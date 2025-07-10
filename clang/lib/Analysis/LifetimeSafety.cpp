@@ -148,7 +148,7 @@ public:
 
   OriginID get(const ValueDecl &D) {
     auto It = DeclToOriginID.find(&D);
-    // TODO: This should be an assert(It != ExprToOriginID.end()). The current
+    // TODO: This should be an assert(It != DeclToOriginID.end()). The current
     // implementation falls back to getOrCreate to avoid crashing on
     // yet-unhandled pointer expressions, creating an empty origin for them.
     if (It == DeclToOriginID.end())
