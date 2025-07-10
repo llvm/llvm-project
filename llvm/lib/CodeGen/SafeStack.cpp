@@ -475,8 +475,16 @@ void SafeStack::checkStackGuard(IRBuilder<> &IRB, Function &F, Instruction &RI,
       SplitBlockAndInsertIfThen(Cmp, &RI, /* Unreachable */ true, Weights, DTU);
   IRBuilder<> IRBFail(CheckTerm);
   // FIXME: respect -fsanitize-trap / -ftrap-function here?
+  const char *StackChkFailName =
+      TL.getLibcallName(RTLIB::STACKPROTECTOR_CHECK_FAIL);
+  if (!StackChkFailName) {
+    F.getContext().emitError(
+        "no libcall available for stackprotector check fail");
+    return;
+  }
+
   FunctionCallee StackChkFail =
-      F.getParent()->getOrInsertFunction("__stack_chk_fail", IRB.getVoidTy());
+      F.getParent()->getOrInsertFunction(StackChkFailName, IRB.getVoidTy());
   IRBFail.CreateCall(StackChkFail, {});
 }
 
