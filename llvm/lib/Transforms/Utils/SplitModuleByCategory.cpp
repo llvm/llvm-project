@@ -241,7 +241,8 @@ ModuleDesc extractSubModule(const Module &M,
 // The function produces a copy of input LLVM IR module M with only those
 // functions and globals that can be called from entry points that are specified
 // in ModuleEntryPoints vector, in addition to the entry point functions.
-ModuleDesc extractCallGraph(const Module &M, EntryPointGroup &&ModuleEntryPoints,
+ModuleDesc extractCallGraph(const Module &M,
+                            EntryPointGroup &&ModuleEntryPoints,
                             const DependencyGraph &DG) {
   SetVector<const GlobalValue *> GVs;
   collectFunctionsAndGlobalVariablesToExtract(GVs, M, ModuleEntryPoints, DG);
