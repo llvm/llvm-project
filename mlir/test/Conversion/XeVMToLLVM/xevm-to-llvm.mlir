@@ -34,7 +34,7 @@ llvm.func @blockload2d(%a: !llvm.ptr<1>, %base_width_a: i32, %base_height_a: i32
 
 // -----
 // CHECK-LABEL: llvm.func spir_funccc @_Z41intel_sub_group_2d_block_read_16b_8r16x1cPU3AS1viiiDv2_iPt(
-llvm.func @blockload2d(%a: !llvm.ptr<1>, %base_width_a: i32, %base_height_a: i32, %base_pitch_a: i32, %x: i32, %y: i32) -> vector<8xi16> {
+llvm.func @blockload2d_cache_control(%a: !llvm.ptr<1>, %base_width_a: i32, %base_height_a: i32, %base_pitch_a: i32, %x: i32, %y: i32) -> vector<8xi16> {
   // CHECK: xevm.DecorationCacheControl = 
   // CHECK-SAME: 6442 : i32, 0 : i32, 1 : i32, 0 : i32
   // CHECK-SAME: 6442 : i32, 1 : i32, 1 : i32, 0 : i32
@@ -48,9 +48,9 @@ llvm.func @blockload2d(%a: !llvm.ptr<1>, %base_width_a: i32, %base_height_a: i32
 // CHECK-LABEL: llvm.func spir_funccc @_Z41intel_sub_group_2d_block_read_16b_8r16x2cPU3AS1viiiDv2_iPt(
 // CHECK-SAME:   !llvm.ptr<1> {llvm.nonnull, llvm.readonly}, i32, i32, i32, vector<2xi32>,
 // CHECK-SAME:   !llvm.ptr {llvm.nonnull, llvm.writeonly}) attributes {no_unwind, will_return}
-// CHECK:      llvm.func @blockload2d(%[[ARG0:.*]]: !llvm.ptr<1>,
+// CHECK:      llvm.func @blockload2d_v_blocks(%[[ARG0:.*]]: !llvm.ptr<1>,
 // CHECK-SAME:   %[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32, %[[ARG3:.*]]: i32, %[[ARG4:.*]]: i32, %[[ARG5:.*]]: i32)
-llvm.func @blockload2d(%a: !llvm.ptr<1>, %base_width_a: i32, %base_height_a: i32, %base_pitch_a: i32, %x: i32, %y: i32) -> vector<16xi16> {
+llvm.func @blockload2d_v_blocks(%a: !llvm.ptr<1>, %base_width_a: i32, %base_height_a: i32, %base_pitch_a: i32, %x: i32, %y: i32) -> vector<16xi16> {
   // CHECK: %[[VAR0:.*]] = llvm.mlir.undef : vector<2xi32>
   // CHECK: %[[VAR1:.*]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK: %[[VAR2:.*]] = llvm.mlir.constant(1 : i32) : i32
@@ -77,9 +77,9 @@ llvm.func @blockload2d(%a: !llvm.ptr<1>, %base_width_a: i32, %base_height_a: i32
 // CHECK-LABEL:  llvm.func spir_funccc @_Z52intel_sub_group_2d_block_read_transform_16b_16r16x1cPU3AS1viiiDv2_iPj(
 // CHECK-SAME: !llvm.ptr<1> {llvm.nonnull, llvm.readonly}, i32, i32, i32, vector<2xi32>,
 // CHECK-SAME: !llvm.ptr {llvm.nonnull, llvm.writeonly}) attributes {no_unwind, will_return}
-// CHECK:      llvm.func @blockload2d(%[[ARG0:.*]]: !llvm.ptr<1>,
+// CHECK:      llvm.func @blockload2d_pack_register(%[[ARG0:.*]]: !llvm.ptr<1>,
 // CHECK-SAME:   %[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32, %[[ARG3:.*]]: i32, %[[ARG4:.*]]: i32, %[[ARG5:.*]]: i32)
-llvm.func @blockload2d(%a: !llvm.ptr<1>, %base_width_a: i32, %base_height_a: i32, %base_pitch_a: i32, %x: i32, %y: i32) -> vector<8xi32> {
+llvm.func @blockload2d_pack_register(%a: !llvm.ptr<1>, %base_width_a: i32, %base_height_a: i32, %base_pitch_a: i32, %x: i32, %y: i32) -> vector<8xi32> {
   // CHECK: %[[VAR0:.*]] = llvm.mlir.undef : vector<2xi32>
   // CHECK: %[[VAR1:.*]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK: %[[VAR2:.*]] = llvm.mlir.constant(1 : i32) : i32
@@ -106,9 +106,9 @@ llvm.func @blockload2d(%a: !llvm.ptr<1>, %base_width_a: i32, %base_height_a: i32
 // CHECK-LABEL: llvm.func spir_funccc @_Z51intel_sub_group_2d_block_read_transpose_32b_16r8x1cPU3AS1viiiDv2_iPj(
 // CHECK-SAME:   !llvm.ptr<1> {llvm.nonnull, llvm.readonly}, i32, i32, i32, vector<2xi32>,
 // CHECK-SAME:   !llvm.ptr {llvm.nonnull, llvm.writeonly}) attributes {no_unwind, will_return}
-// CHECK:      llvm.func @blockload2d(%[[ARG0:.*]]: !llvm.ptr<1>,
+// CHECK:      llvm.func @blockload2d_transpose(%[[ARG0:.*]]: !llvm.ptr<1>,
 // CHECK-SAME:   %[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32, %[[ARG3:.*]]: i32, %[[ARG4:.*]]: i32, %[[ARG5:.*]]: i32)
-llvm.func @blockload2d(%a: !llvm.ptr<1>, %base_width_a: i32, %base_height_a: i32, %base_pitch_a: i32, %x: i32, %y: i32) -> vector<8xi32> {
+llvm.func @blockload2d_transpose(%a: !llvm.ptr<1>, %base_width_a: i32, %base_height_a: i32, %base_pitch_a: i32, %x: i32, %y: i32) -> vector<8xi32> {
   // CHECK: %[[VAR0:.*]] = llvm.mlir.undef : vector<2xi32>
   // CHECK: %[[VAR1:.*]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK: %[[VAR2:.*]] = llvm.mlir.constant(1 : i32) : i32
@@ -162,7 +162,7 @@ llvm.func @blockstore2d(%c: !llvm.ptr<1>, %base_width_c: i32, %base_height_c: i3
 
 // -----
 // CHECK-LABEL: llvm.func spir_funccc @_Z42intel_sub_group_2d_block_write_32b_8r16x1cPU3AS1viiiDv2_iPj(
-llvm.func @blockstore2d(%c: !llvm.ptr<1>, %base_width_c: i32, %base_height_c: i32, %base_pitch_c: i32, %x: i32, %y: i32, %c_result_casted: vector<8xi32>) {
+llvm.func @blockstore2d_cache_control(%c: !llvm.ptr<1>, %base_width_c: i32, %base_height_c: i32, %base_pitch_c: i32, %x: i32, %y: i32, %c_result_casted: vector<8xi32>) {
   // CHECK: xevm.DecorationCacheControl =
   // CHECK-SAME: 6443 : i32, 0 : i32, 2 : i32, 0 : i32
   // CHECK-SAME: 6443 : i32, 1 : i32, 2 : i32, 0 : i32
