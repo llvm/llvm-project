@@ -3464,11 +3464,10 @@ bool RISCVDAGToDAGISel::selectSHXADD_UWOp(SDValue N, unsigned ShAmt,
 }
 
 bool RISCVDAGToDAGISel::orDisjoint(const SDNode *N) const {
+  assert(N->getOpcode() == ISD::OR || N->getOpcode() == RISCVISD::OR_VL);
   if (N->getFlags().hasDisjoint())
     return true;
-  KnownBits Known0 = CurDAG->computeKnownBits(N->getOperand(0), 0);
-  KnownBits Known1 = CurDAG->computeKnownBits(N->getOperand(1), 0);
-  return KnownBits::haveNoCommonBitsSet(Known0, Known1);
+  return CurDAG->haveNoCommonBitsSet(N->getOperand(0), N->getOperand(1));
 }
 
 bool RISCVDAGToDAGISel::selectImm64IfCheaper(int64_t Imm, int64_t OrigImm,
