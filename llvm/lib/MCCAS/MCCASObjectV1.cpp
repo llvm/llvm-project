@@ -1782,12 +1782,12 @@ MCSymbolIdFragmentRef::materialize(MCCASReader &Reader,
     if (!B)                                                                    \
       return B.takeError();                                                    \
     MB.Asm.writeFragmentPadding(MB.FragmentOS, F, FragmentSize);               \
-    ArrayRef<char> Contents = F.getContents();                                 \
     B->Data.append(MB.FragmentData);                                           \
     B->Data.append(FragmentContents.begin(), FragmentContents.end());          \
-    assert(((MB.FragmentData.empty() && Contents.empty()) ||                   \
-            (MB.FragmentData.size() + Contents.size() == FragmentSize)) &&     \
-           "Size should match");                                               \
+    assert(                                                                    \
+        ((MB.FragmentData.empty() && F.getContents().empty()) ||               \
+         (MB.FragmentData.size() + F.getContents().size() == FragmentSize)) && \
+        "Size should match");                                                  \
     return get(B->build());                                                    \
   }                                                                            \
   Expected<uint64_t> MCFragmentName##Ref::materialize(                         \
@@ -4123,11 +4123,10 @@ Error DIEVisitor::visitDIERef(DIEDedupeTopLevelRef StartDIERef) {
       readAbbrevIdx(DistinctExtractor, DistinctCursor);
   if (!MaybeAbbrevIdx)
     return MaybeAbbrevIdx.takeError();
-  auto AbbrevIdx = *MaybeAbbrevIdx;
   // The tag of a fresh block must be meaningful, otherwise we wouldn't have
   // made a new block.
-  assert(AbbrevIdx != getEndOfDIESiblingsMarker() &&
-         AbbrevIdx != getDIEInAnotherBlockMarker());
+  assert(*MaybeAbbrevIdx != getEndOfDIESiblingsMarker() &&
+         *MaybeAbbrevIdx != getDIEInAnotherBlockMarker());
 
   DistinctCursor.seek(Offset);
 
