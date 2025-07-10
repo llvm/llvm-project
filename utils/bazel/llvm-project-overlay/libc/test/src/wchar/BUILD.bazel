@@ -84,6 +84,16 @@ libc_test(
 )
 
 libc_test(
+    name = "wcslcpy_test",
+    srcs = ["wcslcpy_test.cpp"],
+    deps = [
+        "//libc:types_size_t",
+        "//libc:types_wchar_t",
+        "//libc:wcslcpy",
+    ],
+)
+
+libc_test(
     name = "wcslen_test",
     srcs = ["wcslen_test.cpp"],
     deps = [

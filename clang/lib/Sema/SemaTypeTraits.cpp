@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TypeTraits.h"
@@ -1963,6 +1965,7 @@ static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
       .Case("is_assignable", TypeTrait::BTT_IsAssignable)
       .Case("is_empty", TypeTrait::UTT_IsEmpty)
       .Case("is_standard_layout", TypeTrait::UTT_IsStandardLayout)
+      .Case("is_constructible", TypeTrait::TT_IsConstructible)
       .Default(std::nullopt);
 }
 
@@ -1999,8 +2002,16 @@ static ExtractedTypeTraitInfo ExtractTypeTraitFromExpression(const Expr *E) {
     Trait = StdNameToTypeTrait(Name);
     if (!Trait)
       return std::nullopt;
-    for (const auto &Arg : VD->getTemplateArgs().asArray())
-      Args.push_back(Arg.getAsType());
+    for (const auto &Arg : VD->getTemplateArgs().asArray()) {
+      if (Arg.getKind() == TemplateArgument::ArgKind::Pack) {
+        for (const auto &InnerArg : Arg.pack_elements())
+          Args.push_back(InnerArg.getAsType());
+      } else if (Arg.getKind() == TemplateArgument::ArgKind::Type) {
+        Args.push_back(Arg.getAsType());
+      } else {
+        llvm_unreachable("Unexpected kind");
+      }
+    }
     return {{Trait.value(), std::move(Args)}};
   }
 
@@ -2271,6 +2282,60 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
       break;
     }
   }
+}
+
+static void DiagnoseNonConstructibleReason(
+    Sema &SemaRef, SourceLocation Loc,
+    const llvm::SmallVector<clang::QualType, 1> &Ts) {
+  if (Ts.empty()) {
+    return;
+  }
+
+  bool ContainsVoid = false;
+  for (const QualType &ArgTy : Ts) {
+    ContainsVoid |= ArgTy->isVoidType();
+  }
+
+  if (ContainsVoid)
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::CVVoidType;
+
+  QualType T = Ts[0];
+  if (T->isFunctionType())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::FunctionType;
+
+  if (T->isIncompleteArrayType())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::IncompleteArrayType;
+
+  const CXXRecordDecl *D = T->getAsCXXRecordDecl();
+  if (!D || D->isInvalidDecl() || !D->hasDefinition())
+    return;
+
+  llvm::BumpPtrAllocator OpaqueExprAllocator;
+  SmallVector<Expr *, 2> ArgExprs;
+  ArgExprs.reserve(Ts.size() - 1);
+  for (unsigned I = 1, N = Ts.size(); I != N; ++I) {
+    QualType ArgTy = Ts[I];
+    if (ArgTy->isObjectType() || ArgTy->isFunctionType())
+      ArgTy = SemaRef.Context.getRValueReferenceType(ArgTy);
+    ArgExprs.push_back(
+        new (OpaqueExprAllocator.Allocate<OpaqueValueExpr>())
+            OpaqueValueExpr(Loc, ArgTy.getNonLValueExprType(SemaRef.Context),
+                            Expr::getValueKindForType(ArgTy)));
+  }
+
+  EnterExpressionEvaluationContext Unevaluated(
+      SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
+  Sema::ContextRAII TUContext(SemaRef,
+                              SemaRef.Context.getTranslationUnitDecl());
+  InitializedEntity To(InitializedEntity::InitializeTemporary(T));
+  InitializationKind InitKind(InitializationKind::CreateDirect(Loc, Loc, Loc));
+  InitializationSequence Init(SemaRef, To, InitKind, ArgExprs);
+
+  Init.Diagnose(SemaRef, To, InitKind, ArgExprs);
+  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
 }
 
 static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
@@ -2558,6 +2623,9 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
     break;
   case UTT_IsStandardLayout:
     DiagnoseNonStandardLayoutReason(*this, E->getBeginLoc(), Args[0]);
+    break;
+  case TT_IsConstructible:
+    DiagnoseNonConstructibleReason(*this, E->getBeginLoc(), Args);
     break;
   default:
     break;

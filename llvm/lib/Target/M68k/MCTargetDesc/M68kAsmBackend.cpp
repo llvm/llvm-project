@@ -56,7 +56,7 @@ public:
                   MutableArrayRef<char> Data, uint64_t Value,
                   bool IsResolved) override;
 
-  bool mayNeedRelaxation(const MCInst &Inst,
+  bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override;
 
   bool fixupNeedsRelaxation(const MCFixup &Fixup,
@@ -183,10 +183,10 @@ static unsigned getRelaxedOpcode(unsigned Opcode) {
   return getRelaxedOpcodeBranch(Opcode);
 }
 
-bool M68kAsmBackend::mayNeedRelaxation(const MCInst &Inst,
+bool M68kAsmBackend::mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand>,
                                        const MCSubtargetInfo &STI) const {
   // Branches can always be relaxed in either mode.
-  return getRelaxedOpcode(Inst.getOpcode()) != Inst.getOpcode();
+  return getRelaxedOpcode(Opcode) != Opcode;
 
   // NOTE will change for x20 mem
 }
