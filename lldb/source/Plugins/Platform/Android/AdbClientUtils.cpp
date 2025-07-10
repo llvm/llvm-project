@@ -44,7 +44,7 @@ Status ReadAllBytes(Connection &conn, void *buffer, size_t size) {
   return error;
 }
 
-Status SendAdbMessage(Connection &conn, const std::string &packet, const bool reconnect) {
+Status SendAdbMessage(Connection &conn, const std::string &packet) {
   Status error;
 
   char length_buffer[5];
@@ -92,7 +92,7 @@ Status ConnectToAdb(Connection &conn) {
 }
 
 Status EnterSyncMode(Connection &conn) {
-  auto error = SendAdbMessage(conn, "sync:", false);
+  auto error = SendAdbMessage(conn, "sync:");
   if (error.Fail())
     return error;
 
@@ -106,7 +106,7 @@ Status SelectTargetDevice(Connection &conn, const std::string &device_id) {
   std::ostringstream msg;
   msg << "host:transport:" << device_id;
 
-  auto error = SendAdbMessage(conn, msg.str(), true);
+  auto error = SendAdbMessage(conn, msg.str());
   if (error.Fail())
     return error;
 

@@ -94,7 +94,7 @@ Status AdbClient::Connect() {
 Status AdbClient::GetDevices(DeviceIDList &device_list) {
   device_list.clear();
 
-  auto error = SendAdbMessage(*m_conn, "host:devices", true);
+  auto error = SendAdbMessage(*m_conn, "host:devices");
   if (error.Fail())
     return error;
 
@@ -165,7 +165,7 @@ Status AdbClient::DeletePortForwarding(const uint16_t local_port) {
 Status AdbClient::SendDeviceMessage(const std::string &packet) {
   std::ostringstream msg;
   msg << "host-serial:" << m_device_id << ":" << packet;
-  return SendAdbMessage(*m_conn, msg.str(), true);
+  return SendAdbMessage(*m_conn, msg.str());
 }
 
 Status AdbClient::ReadMessageStream(std::vector<char> &message,
@@ -205,7 +205,7 @@ Status AdbClient::internalShell(const char *command, milliseconds timeout,
 
   StreamString adb_command;
   adb_command.Printf("shell:%s", command);
-  error = SendAdbMessage(*m_conn, std::string(adb_command.GetString()), false);
+  error = SendAdbMessage(*m_conn, std::string(adb_command.GetString()));
   if (error.Fail())
     return error;
 

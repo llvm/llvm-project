@@ -31,7 +31,7 @@ const static uint32_t kDefaultMode = 0100770;
 namespace adb_client_utils {
 
 Status ReadAllBytes(Connection &conn, void *buffer, size_t size);
-Status SendAdbMessage(Connection &conn, const std::string &packet, const bool reconnect);
+Status SendAdbMessage(Connection &conn, const std::string &packet);
 Status GetResponseError(Connection &conn, const char *response_id);
 Status ConnectToAdb(Connection &conn);
 Status EnterSyncMode(Connection &conn);
