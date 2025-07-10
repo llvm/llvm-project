@@ -2017,7 +2017,7 @@ public:
   /// It returns EVT::Other if the type should be determined using generic
   /// target-independent logic.
   virtual EVT
-  getOptimalMemOpType(const MemOp &Op,
+  getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                       const AttributeList & /*FuncAttributes*/) const {
     return MVT::Other;
   }
@@ -4109,8 +4109,9 @@ public:
   /// It returns the types of the sequence of memory ops to perform
   /// memset / memcpy by reference.
   virtual bool
-  findOptimalMemOpLowering(std::vector<EVT> &MemOps, unsigned Limit,
-                           const MemOp &Op, unsigned DstAS, unsigned SrcAS,
+  findOptimalMemOpLowering(LLVMContext &Context, std::vector<EVT> &MemOps,
+                           unsigned Limit, const MemOp &Op, unsigned DstAS,
+                           unsigned SrcAS,
                            const AttributeList &FuncAttributes) const;
 
   /// Check to see if the specified operand of the specified instruction is a
