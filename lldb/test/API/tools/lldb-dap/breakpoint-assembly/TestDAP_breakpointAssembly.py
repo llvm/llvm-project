@@ -107,12 +107,16 @@ class TestDAP_setBreakpointsAssembly(lldbdap_testcase.DAPTestCaseBase):
             persistent_breakpoint_ids = self.set_source_breakpoints_assembly(
                 source_reference, [persistent_breakpoint_line]
             )
-            
+
             self.assertEqual(
-                len(persistent_breakpoint_ids), 1, "Expected one assembly breakpoint to be set"
+                len(persistent_breakpoint_ids),
+                1,
+                "Expected one assembly breakpoint to be set",
             )
 
-            persistent_breakpoint_source = self.dap_server.resolved_breakpoints[persistent_breakpoint_ids[0]].source()
+            persistent_breakpoint_source = self.dap_server.resolved_breakpoints[
+                persistent_breakpoint_ids[0]
+            ].source()
             self.assertIn(
                 "adapterData",
                 persistent_breakpoint_source,
@@ -135,9 +139,10 @@ class TestDAP_setBreakpointsAssembly(lldbdap_testcase.DAPTestCaseBase):
             self.dap_server.request_initialize()
             self.dap_server.request_launch(program)
             new_session_breakpoints_ids = self.set_source_breakpoints_from_source(
-                Source(raw_dict=persistent_breakpoint_source), [persistent_breakpoint_line]
+                Source(raw_dict=persistent_breakpoint_source),
+                [persistent_breakpoint_line],
             )
-            
+
             self.assertEqual(
                 len(new_session_breakpoints_ids),
                 1,
@@ -146,9 +151,11 @@ class TestDAP_setBreakpointsAssembly(lldbdap_testcase.DAPTestCaseBase):
 
             self.continue_to_breakpoints(new_session_breakpoints_ids)
             current_line = self.get_stackFrames()[0]["line"]
-            self.assertEqual(current_line, persistent_breakpoint_line,
-                            "Expected to hit the persistent assembly breakpoint at the same line")
+            self.assertEqual(
+                current_line,
+                persistent_breakpoint_line,
+                "Expected to hit the persistent assembly breakpoint at the same line",
+            )
         finally:
             self.dap_server.request_disconnect(terminateDebuggee=True)
             self.dap_server.terminate()
-
