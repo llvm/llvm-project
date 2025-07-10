@@ -115,8 +115,8 @@ class SIRegisterClass <string n, list<ValueType> rTypes, int Align, dag rList>
   // very high priority, if not the highest priority, when considering which VirtReg to allocate next.
   //
   // We have 5 bits to assign AllocationPriorities to RegisterClasses. Generally, it is beneficial to 
-  // assign more constrained RegisterClasses first. As a result, we prioritize larger register classes
-  // over smaller register classes. 
+  // assign more constrained RegisterClasses first. As a result, we prioritize register classes with 
+  // more 32 bit tuples (e.g. VReg_512) over registers with fewer tuples (e.g. VGPR_32). 
   // 
   // The interesting case is the vector register case on architectures which have ARegs, VRegs, AVRegs.
   // In this case, we would like to assign ARegs and VRegs before AVRegs, as AVRegs are less constrained
