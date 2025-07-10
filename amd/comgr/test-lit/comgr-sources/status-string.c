@@ -37,6 +37,5 @@ int main(int argc, char *argv[]) {
   }
 
   fail_amd_comgr_(status_string(-1, &StatusString));
-  free(StatusString);
   return 0;
 }
