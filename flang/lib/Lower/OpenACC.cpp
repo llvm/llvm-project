@@ -724,7 +724,7 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
             /*treatIndexAsSection=*/true, /*unwrapFirBox=*/unwrapFirBox,
             /*genDefaultBounds=*/generateDefaultBounds,
             /*strideIncludeLowerExtent=*/strideIncludeLowerExtent);
-    LLVM_DEBUG(llvm::dbgs() << __func__ << "\n"; info.dump(llvm::dbgs()));
+    LLVM_DEBUG(llvm::dbgs() << __func__ << "Here \n"; info.dump(llvm::dbgs()));
 
     // If the input value is optional and is not a descriptor, we use the
     // rawInput directly.
@@ -738,6 +738,21 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
         implicit, dataClause, baseAddr.getType(), async, asyncDeviceTypes,
         asyncOnlyDeviceTypes, /*unwrapBoxAddr=*/true, info.isPresent);
     dataOperands.push_back(op.getAccVar());
+    // If the input value has a descriptor, we need to create a use device op
+    // for the descriptor as well as the base address.
+    if constexpr (std::is_same_v<Op, mlir::acc::UseDeviceOp>) {
+      LLVM_DEBUG(llvm::dbgs() << __func__ << " found usedeviceop \n"; info.dump(llvm::dbgs()));
+      LLVM_DEBUG(llvm::dbgs() << __func__ << " had previously created and added usedeviceop \n"; op.dump());
+      if (mlir::isa<hlfir::DeclareOp>(baseAddr.getDefiningOp())) {
+        Op op = createDataEntryOp<Op>(
+            builder, operandLocation, baseAddr.getDefiningOp()->getResult(1), asFortran, bounds, structured,
+            implicit, dataClause, baseAddr.getDefiningOp()->getResult(1).getType(), async, asyncDeviceTypes,
+            asyncOnlyDeviceTypes, /*unwrapBoxAddr=*/true, info.isPresent);
+        LLVM_DEBUG(llvm::dbgs() << __func__ << " created usedeviceop \n"; op.dump());
+        dataOperands.push_back(op.getAccVar());
+        LLVM_DEBUG(llvm::dbgs() << __func__ << "added usedeviceop on descriptor\n"; info.dump(llvm::dbgs()));
+      }
+    }
   }
 }
 
