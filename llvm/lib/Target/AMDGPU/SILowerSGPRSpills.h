@@ -21,6 +21,7 @@ public:
     // SILowerSGPRSpills introduces new Virtual VGPRs for spilling SGPRs.
     return MachineFunctionProperties().setIsSSA().setNoVRegs();
   }
+  static bool isRequired() { return true; }
 };
 } // namespace llvm
 

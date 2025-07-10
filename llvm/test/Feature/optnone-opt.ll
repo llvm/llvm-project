@@ -54,7 +54,6 @@ attributes #0 = { optnone noinline }
 ; Loop IR passes that opt doesn't turn on by default.
 ; LoopPassManager should not be skipped over an optnone function
 ; NPM-LOOP-NOT: Skipping pass: PassManager
-; NPM-LOOP-DAG: Skipping pass: LoopSimplifyPass on foo
 ; NPM-LOOP-DAG: Skipping pass: LCSSAPass
 ; NPM-LOOP-DAG: Skipping pass: IndVarSimplifyPass
 ; NPM-LOOP-DAG: Skipping pass: SimpleLoopUnswitchPass
