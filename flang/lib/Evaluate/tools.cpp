@@ -1154,6 +1154,31 @@ template semantics::UnorderedSymbolSet CollectCudaSymbols(
 template semantics::UnorderedSymbolSet CollectCudaSymbols(
     const Expr<SubscriptInteger> &);
 
+bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
+  semantics::UnorderedSymbolSet hostSymbols;
+  semantics::UnorderedSymbolSet deviceSymbols;
+
+  SymbolVector symbols{GetSymbolVector(expr)};
+  std::reverse(symbols.begin(), symbols.end());
+  bool skipNext{false};
+  for (const Symbol &sym : symbols) {
+    bool isComponent{sym.owner().IsDerivedType()};
+    bool skipComponent{false};
+    if (!skipNext) {
+      if (IsCUDADeviceSymbol(sym)) {
+        deviceSymbols.insert(sym);
+      } else if (isComponent) {
+        skipComponent = true; // Component is not device. Look on the base.
+      } else {
+        hostSymbols.insert(sym);
+      }
+    }
+    skipNext = isComponent && !skipComponent;
+  }
+  bool hasConstant{HasConstant(expr)};
+  return (hasConstant || (hostSymbols.size() > 0)) && deviceSymbols.size() > 0;
+}
+
 // HasVectorSubscript()
 struct HasVectorSubscriptHelper
     : public AnyTraverse<HasVectorSubscriptHelper, bool,
