@@ -1887,19 +1887,19 @@ multiclass F_ATOMIC_3<RegTyInfo t, string op_str, SDPatternOperator op, SDNode a
   let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
     def _rr : BasicFlagsNVPTXInst<(outs t.RC:$dst),
       (ins ADDR:$addr, t.RC:$b, t.RC:$c), (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
-      asm_str, []>;
+      asm_str>;
 
     def _ir : BasicFlagsNVPTXInst<(outs t.RC:$dst),
       (ins ADDR:$addr, t.Imm:$b, t.RC:$c), (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
-      asm_str, []>;
+      asm_str>;
 
     def _ri : BasicFlagsNVPTXInst<(outs t.RC:$dst),
       (ins ADDR:$addr, t.RC:$b, t.Imm:$c), (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
-      asm_str, []>;
+      asm_str>;
 
     def _ii : BasicFlagsNVPTXInst<(outs t.RC:$dst),
       (ins ADDR:$addr, t.Imm:$b, t.Imm:$c), (ins AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
-      asm_str, []>;
+      asm_str>;
   }
 
   defvar GetSem = SDNodeXForm<atomic, [{
@@ -1921,10 +1921,10 @@ multiclass F_ATOMIC_3<RegTyInfo t, string op_str, SDPatternOperator op, SDNode a
         (!cast<Instruction>(NAME # _ir) ADDR:$addr, (t.Ty t.ImmNode:$b), t.Ty:$c, (GetSem $this), (GetScope $this), (GetAddSp $this))>;
 
   def : Pat<(op:$this addr:$addr, t.Ty:$b, (t.Ty t.ImmNode:$c)),
-        (!cast<Instruction>(NAME # _#ri) ADDR:$addr, t.Ty:$b, (t.Ty t.ImmNode:$c), (GetSem $this), (GetScope $this), (GetAddSp $this))>;
+        (!cast<Instruction>(NAME # _ri) ADDR:$addr, t.Ty:$b, (t.Ty t.ImmNode:$c), (GetSem $this), (GetScope $this), (GetAddSp $this))>;
 
   def : Pat<(op:$this addr:$addr, (t.Ty t.ImmNode:$b), (t.Ty t.ImmNode:$c)),
-        (!cast<Instruction>(NAME # _#ii) ADDR:$addr, (t.Ty t.ImmNode:$b), (t.Ty t.ImmNode:$c), (GetSem $this), (GetScope $this), (GetAddSp $this))>;
+        (!cast<Instruction>(NAME # _ii) ADDR:$addr, (t.Ty t.ImmNode:$b), (t.Ty t.ImmNode:$c), (GetSem $this), (GetScope $this), (GetAddSp $this))>;
 }
 
 multiclass F_ATOMIC_2_AS<RegTyInfo t, SDPatternOperator frag, string op_str, list<Predicate> preds = []> {
