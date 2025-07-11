@@ -95,7 +95,8 @@ STATISTIC(NewMergedNodes, "Number of new nodes created during merging");
 STATISTIC(NonNewMergedNodes, "Number of non new nodes used during merging");
 STATISTIC(MissingAllocForContextId,
           "Number of missing alloc nodes for context ids");
-STATISTIC(SkippedCallsCloning, "Number of calls skipped during cloning");
+STATISTIC(SkippedCallsCloning,
+          "Number of calls skipped during cloning due to unexpected operand");
 
 static cl::opt<std::string> DotFilePathPrefix(
     "memprof-dot-file-path-prefix", cl::init(""), cl::Hidden,
