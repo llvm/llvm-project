@@ -8,6 +8,14 @@ func.func @alloca() {
   return
 }
 
+// CHECK-LABEL: alloc()
+func.func @alloc() {
+  // CHECK-NEXT:  %0 = "emitc.constant"() <{value = 3996 : index}> : () -> index
+  // CHECK-NEXT:  %1 = emitc.call_opaque "malloc"(%0) : (index) -> !emitc.ptr<i32>
+  %alloc = memref.alloc() : memref<999xi32>
+  return
+}
+
 // -----
 
 // CHECK-LABEL: memref_store
