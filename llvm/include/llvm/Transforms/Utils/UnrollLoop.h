@@ -54,10 +54,13 @@ LLVM_ABI const Loop *addClonedBlockToLoopInfo(BasicBlock *OriginalBB,
                                               LoopInfo *LI,
                                               NewLoopsMap &NewLoops);
 
-/// Represents the result of a \c UnrollLoop invocation.
+/// Represents the result of a \c UnrollLoop and \c UnrollAndJamLoop invocation.
 enum class LoopUnrollResult {
   /// The loop was not modified.
   Unmodified,
+
+  /// The loop was modified, but not unrolled.
+  Modified,
 
   /// The loop was partially unrolled -- we still have a loop, but with a
   /// smaller trip count.  We may also have emitted epilogue loop if the loop
@@ -67,6 +70,18 @@ enum class LoopUnrollResult {
   /// The loop was fully unrolled into straight-line code.  We no longer have
   /// any back-edges.
   FullyUnrolled
+};
+
+/// Represents the result of a \c UnrollRuntimeLoopRemainder invocation.
+enum class LoopReminderUnrollResult {
+  /// The loop reminder was not modified.
+  Unmodified,
+
+  /// The loop was rotated, but not unrolled.
+  Rotated,
+
+  /// The loop reminder was unrolled.
+  Unrolled
 };
 
 struct UnrollLoopOptions {
@@ -90,7 +105,7 @@ LLVM_ABI LoopUnrollResult UnrollLoop(Loop *L, UnrollLoopOptions ULO,
                                      Loop **RemainderLoop = nullptr,
                                      AAResults *AA = nullptr);
 
-LLVM_ABI bool UnrollRuntimeLoopRemainder(
+LLVM_ABI LoopReminderUnrollResult UnrollRuntimeLoopRemainder(
     Loop *L, unsigned Count, bool AllowExpensiveTripCount,
     bool UseEpilogRemainder, bool UnrollRemainder, bool ForgetAllSCEV,
     LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,

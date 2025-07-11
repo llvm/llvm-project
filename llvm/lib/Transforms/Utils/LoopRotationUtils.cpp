@@ -69,16 +69,19 @@ class LoopRotate {
   bool RotationOnly;
   bool IsUtilMode;
   bool PrepareForLTO;
+  function_ref<bool(Loop *, ScalarEvolution *)> ProfitabilityCheck;
 
 public:
   LoopRotate(unsigned MaxHeaderSize, LoopInfo *LI,
              const TargetTransformInfo *TTI, AssumptionCache *AC,
              DominatorTree *DT, ScalarEvolution *SE, MemorySSAUpdater *MSSAU,
              const SimplifyQuery &SQ, bool RotationOnly, bool IsUtilMode,
-             bool PrepareForLTO)
+             bool PrepareForLTO,
+             function_ref<bool(Loop *, ScalarEvolution *)> ProfitabilityCheck)
       : MaxHeaderSize(MaxHeaderSize), LI(LI), TTI(TTI), AC(AC), DT(DT), SE(SE),
         MSSAU(MSSAU), SQ(SQ), RotationOnly(RotationOnly),
-        IsUtilMode(IsUtilMode), PrepareForLTO(PrepareForLTO) {}
+        IsUtilMode(IsUtilMode), PrepareForLTO(PrepareForLTO),
+        ProfitabilityCheck(ProfitabilityCheck) {}
   bool processLoop(Loop *L);
 
 private:
@@ -440,9 +443,9 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
 
     // Rotate if either the loop latch does *not* exit the loop, or if the loop
     // latch was just simplified. Or if we think it will be profitable.
-    if (L->isLoopExiting(OrigLatch) && !SimplifiedLatch && IsUtilMode == false &&
-        !profitableToRotateLoopExitingLatch(L) &&
-        !canRotateDeoptimizingLatchExit(L))
+    if (L->isLoopExiting(OrigLatch) && !SimplifiedLatch &&
+        IsUtilMode == false && !profitableToRotateLoopExitingLatch(L) &&
+        !canRotateDeoptimizingLatchExit(L) && !ProfitabilityCheck(L, SE))
       return Rotated;
 
     // Check size of original header and reject loop if it is very big or we can't
@@ -1053,13 +1056,14 @@ bool LoopRotate::processLoop(Loop *L) {
 
 
 /// The utility to convert a loop into a loop with bottom test.
-bool llvm::LoopRotation(Loop *L, LoopInfo *LI, const TargetTransformInfo *TTI,
-                        AssumptionCache *AC, DominatorTree *DT,
-                        ScalarEvolution *SE, MemorySSAUpdater *MSSAU,
-                        const SimplifyQuery &SQ, bool RotationOnly = true,
-                        unsigned Threshold = unsigned(-1),
-                        bool IsUtilMode = true, bool PrepareForLTO) {
+bool llvm::LoopRotation(
+    Loop *L, LoopInfo *LI, const TargetTransformInfo *TTI, AssumptionCache *AC,
+    DominatorTree *DT, ScalarEvolution *SE, MemorySSAUpdater *MSSAU,
+    const SimplifyQuery &SQ, bool RotationOnly = true,
+    unsigned Threshold = unsigned(-1), bool IsUtilMode = true,
+    bool PrepareForLTO,
+    function_ref<bool(Loop *, ScalarEvolution *)> ProfitabilityCheck) {
   LoopRotate LR(Threshold, LI, TTI, AC, DT, SE, MSSAU, SQ, RotationOnly,
-                IsUtilMode, PrepareForLTO);
+                IsUtilMode, PrepareForLTO, ProfitabilityCheck);
   return LR.processLoop(L);
 }

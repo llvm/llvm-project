@@ -486,12 +486,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   // All these values should be taken only after peeling because they might have
   // changed.
-  BasicBlock *Preheader = L->getLoopPreheader();
-  BasicBlock *Header = L->getHeader();
   BasicBlock *LatchBlock = L->getLoopLatch();
-  SmallVector<BasicBlock *, 4> ExitBlocks;
-  L->getExitBlocks(ExitBlocks);
-  std::vector<BasicBlock *> OriginalLoopBlocks = L->getBlocks();
 
   const unsigned MaxTripCount = SE->getSmallConstantMaxTripCount(L);
   const bool MaxOrZero = SE->isBackedgeTakenCountMaxOrZero(L);
@@ -503,6 +498,87 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // and will never be executed.
   if (MaxTripCount && ULO.Count > MaxTripCount)
     ULO.Count = MaxTripCount;
+
+  // Are we eliminating the loop control altogether?  Note that we can know
+  // we're eliminating the backedge without knowing exactly which iteration
+  // of the unrolled body exits.
+  const bool CompletelyUnroll = ULO.Count == MaxTripCount;
+
+  const bool PreserveOnlyFirst = CompletelyUnroll && MaxOrZero;
+
+  // There's no point in performing runtime unrolling if this unroll count
+  // results in a full unroll.
+  if (CompletelyUnroll)
+    ULO.Runtime = false;
+
+  // The current loop unroll pass can unroll loops that have
+  // (1) single latch; and
+  // (2a) latch is unconditional; or
+  // (2b) latch is conditional and is an exiting block
+  // FIXME: The implementation can be extended to work with more complicated
+  // cases, e.g. loops with multiple latches.
+  BranchInst *LatchBI = dyn_cast<BranchInst>(LatchBlock->getTerminator());
+
+  // A conditional branch which exits the loop, which can be optimized to an
+  // unconditional branch in the unrolled loop in some cases.
+  bool LatchIsExiting = L->isLoopExiting(LatchBlock);
+  if (!LatchBI || (LatchBI->isConditional() && !LatchIsExiting)) {
+    LLVM_DEBUG(
+        dbgs() << "Can't unroll; a conditional latch must exit the loop");
+    return LoopUnrollResult::Unmodified;
+  }
+
+  assert((!ULO.Runtime || canHaveUnrollRemainder(L)) &&
+         "Can't runtime unroll if loop contains a convergent operation.");
+
+  bool EpilogProfitability =
+      UnrollRuntimeEpilog.getNumOccurrences() ? UnrollRuntimeEpilog
+                                              : isEpilogProfitable(L);
+
+  LoopReminderUnrollResult UnrollReminderResult =
+      LoopReminderUnrollResult::Unmodified;
+  if (ULO.Runtime) {
+    UnrollReminderResult = UnrollRuntimeLoopRemainder(
+        L, ULO.Count, ULO.AllowExpensiveTripCount, EpilogProfitability,
+        ULO.UnrollRemainder, ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
+        PreserveLCSSA, ULO.SCEVExpansionBudget, ULO.RuntimeUnrollMultiExit,
+        RemainderLoop);
+    LatchBlock = L->getLoopLatch();
+    LatchIsExiting = L->isLoopExiting(LatchBlock);
+  }
+
+  if (ULO.Runtime &&
+      UnrollReminderResult != LoopReminderUnrollResult::Unrolled) {
+    if (ULO.Force)
+      ULO.Runtime = false;
+    else {
+      LLVM_DEBUG(dbgs() << "Won't unroll; remainder loop could not be "
+                           "generated when assuming runtime trip count\n");
+      // Loop might have been rotated inside of UnrollRuntimeLoopRemainder and
+      // this needs to be propagated.
+      return UnrollReminderResult == LoopReminderUnrollResult::Rotated
+                 ? LoopUnrollResult::Modified
+                 : LoopUnrollResult::Unmodified;
+      ;
+    }
+  }
+
+  BasicBlock *Preheader = L->getLoopPreheader();
+  BasicBlock *Header = L->getHeader();
+  SmallVector<BasicBlock *, 4> ExitBlocks;
+  L->getExitBlocks(ExitBlocks);
+  std::vector<BasicBlock *> OriginalLoopBlocks = L->getBlocks();
+
+  // Go through all exits of L and see if there are any phi-nodes there. We just
+  // conservatively assume that they're inserted to preserve LCSSA form, which
+  // means that complete unrolling might break this form. We need to either fix
+  // it in-place after the transformation, or entirely rebuild LCSSA. TODO: For
+  // now we just recompute LCSSA for the outer loop, but it should be possible
+  // to fix it in-place.
+  bool NeedToFixLCSSA =
+      PreserveLCSSA && CompletelyUnroll &&
+      any_of(ExitBlocks,
+             [](const BasicBlock *BB) { return isa<PHINode>(BB->begin()); });
 
   struct ExitInfo {
     unsigned TripCount;
@@ -538,68 +614,6 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                       << ": TripCount=" << Info.TripCount
                       << ", TripMultiple=" << Info.TripMultiple
                       << ", BreakoutTrip=" << Info.BreakoutTrip << "\n");
-  }
-
-  // Are we eliminating the loop control altogether?  Note that we can know
-  // we're eliminating the backedge without knowing exactly which iteration
-  // of the unrolled body exits.
-  const bool CompletelyUnroll = ULO.Count == MaxTripCount;
-
-  const bool PreserveOnlyFirst = CompletelyUnroll && MaxOrZero;
-
-  // There's no point in performing runtime unrolling if this unroll count
-  // results in a full unroll.
-  if (CompletelyUnroll)
-    ULO.Runtime = false;
-
-  // Go through all exits of L and see if there are any phi-nodes there. We just
-  // conservatively assume that they're inserted to preserve LCSSA form, which
-  // means that complete unrolling might break this form. We need to either fix
-  // it in-place after the transformation, or entirely rebuild LCSSA. TODO: For
-  // now we just recompute LCSSA for the outer loop, but it should be possible
-  // to fix it in-place.
-  bool NeedToFixLCSSA =
-      PreserveLCSSA && CompletelyUnroll &&
-      any_of(ExitBlocks,
-             [](const BasicBlock *BB) { return isa<PHINode>(BB->begin()); });
-
-  // The current loop unroll pass can unroll loops that have
-  // (1) single latch; and
-  // (2a) latch is unconditional; or
-  // (2b) latch is conditional and is an exiting block
-  // FIXME: The implementation can be extended to work with more complicated
-  // cases, e.g. loops with multiple latches.
-  BranchInst *LatchBI = dyn_cast<BranchInst>(LatchBlock->getTerminator());
-
-  // A conditional branch which exits the loop, which can be optimized to an
-  // unconditional branch in the unrolled loop in some cases.
-  bool LatchIsExiting = L->isLoopExiting(LatchBlock);
-  if (!LatchBI || (LatchBI->isConditional() && !LatchIsExiting)) {
-    LLVM_DEBUG(
-        dbgs() << "Can't unroll; a conditional latch must exit the loop");
-    return LoopUnrollResult::Unmodified;
-  }
-
-  assert((!ULO.Runtime || canHaveUnrollRemainder(L)) &&
-         "Can't runtime unroll if loop contains a convergent operation.");
-
-  bool EpilogProfitability =
-      UnrollRuntimeEpilog.getNumOccurrences() ? UnrollRuntimeEpilog
-                                              : isEpilogProfitable(L);
-
-  if (ULO.Runtime &&
-      !UnrollRuntimeLoopRemainder(L, ULO.Count, ULO.AllowExpensiveTripCount,
-                                  EpilogProfitability, ULO.UnrollRemainder,
-                                  ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
-                                  PreserveLCSSA, ULO.SCEVExpansionBudget,
-                                  ULO.RuntimeUnrollMultiExit, RemainderLoop)) {
-    if (ULO.Force)
-      ULO.Runtime = false;
-    else {
-      LLVM_DEBUG(dbgs() << "Won't unroll; remainder loop could not be "
-                           "generated when assuming runtime trip count\n");
-      return LoopUnrollResult::Unmodified;
-    }
   }
 
   using namespace ore;
