@@ -192,9 +192,9 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
   unsigned DestReg = X86::EAX;
 
   if (F.getParent()->getModuleFlag("kcfi-arity")) {
-    // The ArityToRegMap assumes the 64-bit Linux kernel ABI
+    // The ArityToRegMap assumes the 64-bit SysV ABI.
     [[maybe_unused]] const auto &Triple = MF.getTarget().getTargetTriple();
-    assert(Triple.isArch64Bit() && Triple.isOSLinux());
+    assert(Triple.isArch64Bit() && !Triple.isOSWindows());
 
     // Determine the function's arity (i.e., the number of arguments) at the ABI
     // level by counting the number of parameters that are passed
