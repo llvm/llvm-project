@@ -2467,7 +2467,7 @@ def : Pat<(brcond i32:$a, bb:$target),
 
 // SelectionDAGBuilder::visitSWitchCase() will invert the condition of a
 // conditional branch if the target block is the next block so that the code
-// can fall through to the target block.  The invertion is done by 'xor
+// can fall through to the target block.  The inversion is done by 'xor
 // condition, 1', which will be translated to (setne condition, -1).  Since ptx
 // supports '@!pred bra target', we should use it.
 def : Pat<(brcond (i1 (setne i1:$a, -1)), bb:$target),

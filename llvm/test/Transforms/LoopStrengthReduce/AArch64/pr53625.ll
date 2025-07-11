@@ -131,12 +131,11 @@ define i32 @negative_test_type_is_struct(i32 %c, ptr %a, ptr %b) {
 ; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:  .LBB2_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr w9, [x1]
+; CHECK-NEXT:    ldr w9, [x1], #4
 ; CHECK-NEXT:    cbnz w9, .LBB2_5
 ; CHECK-NEXT:  // %bb.3: // %for.cond
 ; CHECK-NEXT:    // in Loop: Header=BB2_2 Depth=1
 ; CHECK-NEXT:    subs x8, x8, #1
-; CHECK-NEXT:    add x1, x1, #4
 ; CHECK-NEXT:    b.ne .LBB2_2
 ; CHECK-NEXT:  .LBB2_4:
 ; CHECK-NEXT:    mov w0, wzr
