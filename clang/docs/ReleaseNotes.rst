@@ -699,6 +699,9 @@ Improvements to Clang's diagnostics
 - Clang now tries to avoid printing file paths that contain ``..``, instead preferring
   the canonical file path if it ends up being shorter.
 
+- Clang now diagnoses missing format attributes for non-template functions
+  and class/struct/union members. (#GH60718)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
