@@ -668,9 +668,7 @@ void privatizeSymbol(
 
   const semantics::Symbol *sym =
       isDoConcurrent ? &symToPrivatize->GetUltimate() : symToPrivatize;
-  const lower::SymbolBox hsb = isDoConcurrent
-                                   ? converter.shallowLookupSymbol(*sym)
-                                   : converter.lookupOneLevelUpSymbol(*sym);
+  const lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*sym);
   assert(hsb && "Host symbol box not found");
 
   mlir::Location symLoc = hsb.getAddr().getLoc();
