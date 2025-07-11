@@ -16,6 +16,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/IntegerSet.h"
@@ -366,8 +367,12 @@ static std::optional<APInt> buildAttributeAPInt(Type type, bool isNegative,
     return std::nullopt;
 
   // Extend or truncate the bitwidth to the right size.
-  unsigned width = type.isIndex() ? IndexType::kInternalStorageBitWidth
-                                  : type.getIntOrFloatBitWidth();
+  unsigned width;
+  if (auto intLikeType = dyn_cast<IntegerLikeTypeInterface>(type)) {
+    width = intLikeType.getStorageBitWidth();
+  } else {
+    width = type.getIntOrFloatBitWidth();
+  }
 
   if (width > result.getBitWidth()) {
     result = result.zext(width);
@@ -424,10 +429,6 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
       return Attribute();
     return FloatAttr::get(floatType, *result);
   }
-
-  if (!isa<IntegerType, IndexType>(type))
-    return emitError(loc, "integer literal not valid for specified type"),
-           nullptr;
 
   if (isNegative && type.isUnsignedInteger()) {
     emitError(loc,
@@ -584,7 +585,8 @@ DenseElementsAttr TensorLiteralParser::getAttr(SMLoc loc, ShapedType type) {
   }
 
   // Handle integer and index types.
-  if (eltType.isIntOrIndex()) {
+  auto integerLikeType = dyn_cast<IntegerLikeTypeInterface>(eltType);
+  if (integerLikeType || eltType.isIntOrIndex()) {
     std::vector<APInt> intValues;
     if (failed(getIntAttrElements(loc, eltType, intValues)))
       return nullptr;

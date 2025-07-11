@@ -327,4 +327,42 @@ def ShapedTypeInterface : TypeInterface<"ShapedType"> {
   }];
 }
 
+def IntegerLikeTypeInterface : TypeInterface<"IntegerLikeTypeInterface"> {
+  let cppNamespace = "::mlir";
+  let description = [{
+    This type interface is for types that behave like integers. It provides
+    the API that allows MLIR utilities to treat them the same was as MLIR
+    treats integer types in settings like parsing and printing.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns the storage bit width for this type.
+      }],
+      /*retTy=*/"unsigned",
+      /*methodName=*/"getStorageBitWidth",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns true if this type is signed.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isSigned",
+      /*args=*/(ins),
+      /*defaultImplementation=*/"return true;"
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns true if this type is signless.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isSignless",
+      /*args=*/(ins),
+      /*defaultImplementation=*/"return true;"
+    >,
+  ];
+}
+
 #endif // MLIR_IR_BUILTINTYPEINTERFACES_TD_
