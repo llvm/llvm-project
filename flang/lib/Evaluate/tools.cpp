@@ -2334,6 +2334,11 @@ bool IsBuiltinCPtr(const Symbol &symbol) {
   return false;
 }
 
+bool IsFromBuiltinModule(const Symbol &symbol) {
+  const Scope &scope{symbol.GetUltimate().owner()};
+  return IsSameModule(&scope, scope.context().GetBuiltinsScope());
+}
+
 bool IsIsoCType(const DerivedTypeSpec *derived) {
   return IsBuiltinDerivedType(derived, "c_ptr") ||
       IsBuiltinDerivedType(derived, "c_funptr");

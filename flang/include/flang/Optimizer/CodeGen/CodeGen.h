@@ -39,6 +39,9 @@ struct FIRToLLVMPassOptions {
   // that such programs would crash at runtime if the derived type descriptors
   // are required by the runtime, so this is only an option to help debugging.
   bool ignoreMissingTypeDescriptors = false;
+  // Similar to ignoreMissingTypeDescriptors, but generate external declaration
+  // for the missing type descriptor globals instead.
+  bool skipExternalRttiDefinition = false;
 
   // Generate TBAA information for FIR types and memory accessing operations.
   bool applyTBAA = false;

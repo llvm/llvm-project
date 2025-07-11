@@ -56,7 +56,7 @@ typedef int MyTypedef;
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "ReturnType": {
-// CHECK-NEXT:         "IsBuiltIn": false,
+// CHECK-NEXT:         "IsBuiltIn": true,
 // CHECK-NEXT:         "IsTemplate": false,
 // CHECK-NEXT:         "Name": "void",
 // CHECK-NEXT:         "QualName": "void",
@@ -93,7 +93,7 @@ typedef int MyTypedef;
 // CHECK-NEXT:      "TypeDeclaration": "",
 // CHECK-NEXT:      "USR": "{{[0-9A-F]*}}",
 // CHECK-NEXT:      "Underlying": {
-// CHECK-NEXT:        "IsBuiltIn": false,
+// CHECK-NEXT:        "IsBuiltIn": true,
 // CHECK-NEXT:        "IsTemplate": false,
 // CHECK-NEXT:        "Name": "int",
 // CHECK-NEXT:        "QualName": "int",
@@ -111,8 +111,7 @@ typedef int MyTypedef;
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "Name": "Global",
 // CHECK-NEXT:       "Type": {
-// COM:                FIXME: IsBuiltIn emits as its default value
-// CHECK-NEXT:         "IsBuiltIn": false,
+// CHECK-NEXT:         "IsBuiltIn": true,
 // CHECK-NEXT:         "IsTemplate": false,
 // CHECK-NEXT:         "Name": "int",
 // CHECK-NEXT:         "QualName": "int",

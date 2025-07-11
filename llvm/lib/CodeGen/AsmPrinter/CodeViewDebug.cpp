@@ -669,6 +669,8 @@ void CodeViewDebug::endModule() {
   if (!Asm)
     return;
 
+  emitSecureHotPatchInformation();
+
   emitInlineeLinesSubsection();
 
   // Emit per-function debug information.
@@ -821,6 +823,28 @@ void CodeViewDebug::emitObjName() {
   emitNullTerminatedSymbolName(OS, PathRef);
 
   endSymbolRecord(CompilerEnd);
+}
+
+void CodeViewDebug::emitSecureHotPatchInformation() {
+  MCSymbol *hotPatchInfo = nullptr;
+
+  for (const auto &F : MMI->getModule()->functions()) {
+    if (!F.isDeclarationForLinker() &&
+        F.hasFnAttribute("marked_for_windows_hot_patching")) {
+      if (hotPatchInfo == nullptr)
+        hotPatchInfo = beginCVSubsection(DebugSubsectionKind::Symbols);
+      MCSymbol *HotPatchEnd = beginSymbolRecord(SymbolKind::S_HOTPATCHFUNC);
+      auto *SP = F.getSubprogram();
+      OS.AddComment("Function");
+      OS.emitInt32(getFuncIdForSubprogram(SP).getIndex());
+      OS.AddComment("Name");
+      emitNullTerminatedSymbolName(OS, F.getName());
+      endSymbolRecord(HotPatchEnd);
+    }
+  }
+
+  if (hotPatchInfo != nullptr)
+    endCVSubsection(hotPatchInfo);
 }
 
 namespace {
@@ -2061,8 +2085,8 @@ TypeIndex CodeViewDebug::lowerTypeFunction(const DISubroutineType *Ty) {
   ArrayRef<TypeIndex> ArgTypeIndices = {};
   if (!ReturnAndArgTypeIndices.empty()) {
     auto ReturnAndArgTypesRef = ArrayRef(ReturnAndArgTypeIndices);
-    ReturnTypeIndex = ReturnAndArgTypesRef.front();
-    ArgTypeIndices = ReturnAndArgTypesRef.drop_front();
+    ReturnTypeIndex = ReturnAndArgTypesRef.consume_front();
+    ArgTypeIndices = ReturnAndArgTypesRef;
   }
 
   ArgListRecord ArgListRec(TypeRecordKind::ArgList, ArgTypeIndices);
@@ -3542,15 +3566,34 @@ void CodeViewDebug::collectDebugInfoForJumpTables(const MachineFunction *MF,
           break;
         }
 
-        CurFn->JumpTables.push_back(
-            {EntrySize, Base, BaseOffset, Branch,
-             MF->getJTISymbol(JumpTableIndex, MMI->getContext()),
-             JTI.getJumpTables()[JumpTableIndex].MBBs.size()});
+        const MachineJumpTableEntry &JTE = JTI.getJumpTables()[JumpTableIndex];
+        JumpTableInfo CVJTI{EntrySize,
+                            Base,
+                            BaseOffset,
+                            Branch,
+                            MF->getJTISymbol(JumpTableIndex, MMI->getContext()),
+                            JTE.MBBs.size()};
+        for (const auto &MBB : JTE.MBBs)
+          CVJTI.Cases.push_back(MBB->getSymbol());
+        CurFn->JumpTables.push_back(std::move(CVJTI));
       });
 }
 
 void CodeViewDebug::emitDebugInfoForJumpTables(const FunctionInfo &FI) {
-  for (auto JumpTable : FI.JumpTables) {
+  // Emit S_LABEL32 records for each jump target
+  for (const auto &JumpTable : FI.JumpTables) {
+    for (const auto &CaseSym : JumpTable.Cases) {
+      MCSymbol *LabelEnd = beginSymbolRecord(SymbolKind::S_LABEL32);
+      OS.AddComment("Offset and segment");
+      OS.emitCOFFSecRel32(CaseSym, 0);
+      OS.AddComment("Flags");
+      OS.emitInt8(0);
+      emitNullTerminatedSymbolName(OS, CaseSym->getName());
+      endSymbolRecord(LabelEnd);
+    }
+  }
+
+  for (const auto &JumpTable : FI.JumpTables) {
     MCSymbol *JumpTableEnd = beginSymbolRecord(SymbolKind::S_ARMSWITCHTABLE);
     if (JumpTable.Base) {
       OS.AddComment("Base offset");

@@ -28,6 +28,7 @@
 #include <string>
 
 #define LLDB_DAP_INVALID_VARRERF UINT64_MAX
+#define LLDB_DAP_INVALID_SRC_REF 0
 
 namespace lldb_dap::protocol {
 
@@ -328,7 +329,7 @@ struct Source {
   /// `source` request (even if a path is specified). Since a `sourceReference`
   /// is only valid for a session, it can not be used to persist a source. The
   /// value should be less than or equal to 2147483647 (2^31-1).
-  std::optional<int64_t> sourceReference;
+  std::optional<int32_t> sourceReference;
 
   /// A hint for how to present the source in the UI. A value of `deemphasize`
   /// can be used to indicate that the source is not available or that it is

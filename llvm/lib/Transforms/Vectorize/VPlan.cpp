@@ -261,6 +261,13 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
     return Data.VPV2Scalars[Def][0];
   }
 
+  // Look through BuildVector to avoid redundant extracts.
+  // TODO: Remove once replicate regions are unrolled explicitly.
+  if (Lane.getKind() == VPLane::Kind::First && match(Def, m_BuildVector())) {
+    auto *BuildVector = cast<VPInstruction>(Def);
+    return get(BuildVector->getOperand(Lane.getKnownLane()), true);
+  }
+
   assert(hasVectorValue(Def));
   auto *VecPart = Data.VPV2Vector[Def];
   if (!VecPart->getType()->isVectorTy()) {
@@ -465,7 +472,7 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
            "Predecessor basic-block not found building successor.");
     BasicBlock *PredBB = CFG.VPBB2IRBB[PredVPBB];
     auto *PredBBTerminator = PredBB->getTerminator();
-    LLVM_DEBUG(dbgs() << "LV: draw edge from" << PredBB->getName() << '\n');
+    LLVM_DEBUG(dbgs() << "LV: draw edge from " << PredBB->getName() << '\n');
 
     auto *TermBr = dyn_cast<BranchInst>(PredBBTerminator);
     if (isa<UnreachableInst>(PredBBTerminator)) {
@@ -579,8 +586,8 @@ VPBasicBlock *VPBasicBlock::clone() {
 }
 
 void VPBasicBlock::executeRecipes(VPTransformState *State, BasicBlock *BB) {
-  LLVM_DEBUG(dbgs() << "LV: vectorizing VPBB:" << getName()
-                    << " in BB:" << BB->getName() << '\n');
+  LLVM_DEBUG(dbgs() << "LV: vectorizing VPBB: " << getName()
+                    << " in BB: " << BB->getName() << '\n');
 
   State->CFG.PrevVPBB = this;
 
@@ -589,7 +596,7 @@ void VPBasicBlock::executeRecipes(VPTransformState *State, BasicBlock *BB) {
     Recipe.execute(*State);
   }
 
-  LLVM_DEBUG(dbgs() << "LV: filled BB:" << *BB);
+  LLVM_DEBUG(dbgs() << "LV: filled BB: " << *BB);
 }
 
 VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
@@ -1501,10 +1508,9 @@ void VPSlotTracker::assignName(const VPValue *V) {
   // Use the name of the underlying Value, wrapped in "ir<>", and versioned by
   // appending ".Number" to the name if there are multiple uses.
   std::string Name;
-  if (UV) {
-    raw_string_ostream S(Name);
-    UV->printAsOperand(S, false);
-  } else
+  if (UV)
+    Name = getName(UV);
+  else
     Name = VPI->getName();
 
   assert(!Name.empty() && "Name cannot be empty.");
@@ -1549,6 +1555,30 @@ void VPSlotTracker::assignNames(const VPBasicBlock *VPBB) {
   for (const VPRecipeBase &Recipe : *VPBB)
     for (VPValue *Def : Recipe.definedValues())
       assignName(Def);
+}
+
+std::string VPSlotTracker::getName(const Value *V) {
+  std::string Name;
+  raw_string_ostream S(Name);
+  if (V->hasName() || !isa<Instruction>(V)) {
+    V->printAsOperand(S, false);
+    return Name;
+  }
+
+  if (!MST) {
+    // Lazily create the ModuleSlotTracker when we first hit an unnamed
+    // instruction.
+    auto *I = cast<Instruction>(V);
+    // This check is required to support unit tests with incomplete IR.
+    if (I->getParent()) {
+      MST = std::make_unique<ModuleSlotTracker>(I->getModule());
+      MST->incorporateFunction(*I->getFunction());
+    } else {
+      MST = std::make_unique<ModuleSlotTracker>(nullptr);
+    }
+  }
+  V->printAsOperand(S, false, *MST);
+  return Name;
 }
 
 std::string VPSlotTracker::getOrCreateName(const VPValue *V) const {

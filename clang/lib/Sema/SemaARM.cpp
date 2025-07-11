@@ -1084,7 +1084,7 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   // converted to a register of the form S1_2_C3_C4_5. Let the hardware throw
   // an exception for incorrect registers. This matches MSVC behavior.
   if (BuiltinID == AArch64::BI_ReadStatusReg ||
-      BuiltinID == AArch64::BI_WriteStatusReg)
+      BuiltinID == AArch64::BI_WriteStatusReg || BuiltinID == AArch64::BI__sys)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0x7fff);
 
   if (BuiltinID == AArch64::BI__getReg)
@@ -1410,21 +1410,41 @@ void SemaARM::CheckSMEFunctionDefAttributes(const FunctionDecl *FD) {
 }
 
 /// getSVETypeSize - Return SVE vector or predicate register size.
-static uint64_t getSVETypeSize(ASTContext &Context, const BuiltinType *Ty) {
+static uint64_t getSVETypeSize(ASTContext &Context, const BuiltinType *Ty,
+                               bool IsStreaming) {
   assert(Ty->isSveVLSBuiltinType() && "Invalid SVE Type");
+  uint64_t VScale = IsStreaming ? Context.getLangOpts().VScaleStreamingMin
+                                : Context.getLangOpts().VScaleMin;
   if (Ty->getKind() == BuiltinType::SveBool ||
       Ty->getKind() == BuiltinType::SveCount)
-    return (Context.getLangOpts().VScaleMin * 128) / Context.getCharWidth();
-  return Context.getLangOpts().VScaleMin * 128;
+    return (VScale * 128) / Context.getCharWidth();
+  return VScale * 128;
 }
 
 bool SemaARM::areCompatibleSveTypes(QualType FirstType, QualType SecondType) {
-  auto IsValidCast = [this](QualType FirstType, QualType SecondType) {
+  bool IsStreaming = false;
+  if (getLangOpts().VScaleMin != getLangOpts().VScaleStreamingMin ||
+      getLangOpts().VScaleMax != getLangOpts().VScaleStreamingMax) {
+    if (const FunctionDecl *FD =
+            SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)) {
+      // For streaming-compatible functions, we don't know vector length.
+      if (const auto *T = FD->getType()->getAs<FunctionProtoType>()) {
+        if (T->getAArch64SMEAttributes() &
+            FunctionType::SME_PStateSMCompatibleMask)
+          return false;
+      }
+
+      if (IsArmStreamingFunction(FD, /*IncludeLocallyStreaming=*/true))
+        IsStreaming = true;
+    }
+  }
+
+  auto IsValidCast = [&](QualType FirstType, QualType SecondType) {
     if (const auto *BT = FirstType->getAs<BuiltinType>()) {
       if (const auto *VT = SecondType->getAs<VectorType>()) {
-        ASTContext &Context = getASTContext();
         // Predicates have the same representation as uint8 so we also have to
         // check the kind to make these types incompatible.
+        ASTContext &Context = getASTContext();
         if (VT->getVectorKind() == VectorKind::SveFixedLengthPredicate)
           return BT->getKind() == BuiltinType::SveBool;
         else if (VT->getVectorKind() == VectorKind::SveFixedLengthData)
@@ -1432,7 +1452,7 @@ bool SemaARM::areCompatibleSveTypes(QualType FirstType, QualType SecondType) {
                  FirstType->getSveEltType(Context);
         else if (VT->getVectorKind() == VectorKind::Generic)
           return Context.getTypeSize(SecondType) ==
-                     getSVETypeSize(Context, BT) &&
+                     getSVETypeSize(Context, BT, IsStreaming) &&
                  Context.hasSameType(
                      VT->getElementType(),
                      Context.getBuiltinVectorTypeInfo(BT).ElementType);
@@ -1447,7 +1467,23 @@ bool SemaARM::areCompatibleSveTypes(QualType FirstType, QualType SecondType) {
 
 bool SemaARM::areLaxCompatibleSveTypes(QualType FirstType,
                                        QualType SecondType) {
-  auto IsLaxCompatible = [this](QualType FirstType, QualType SecondType) {
+  bool IsStreaming = false;
+  if (getLangOpts().VScaleMin != getLangOpts().VScaleStreamingMin ||
+      getLangOpts().VScaleMax != getLangOpts().VScaleStreamingMax) {
+    if (const FunctionDecl *FD =
+            SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)) {
+      // For streaming-compatible functions, we don't know vector length.
+      if (const auto *T = FD->getType()->getAs<FunctionProtoType>())
+        if (T->getAArch64SMEAttributes() &
+            FunctionType::SME_PStateSMCompatibleMask)
+          return false;
+
+      if (IsArmStreamingFunction(FD, /*IncludeLocallyStreaming=*/true))
+        IsStreaming = true;
+    }
+  }
+
+  auto IsLaxCompatible = [&](QualType FirstType, QualType SecondType) {
     const auto *BT = FirstType->getAs<BuiltinType>();
     if (!BT)
       return false;
@@ -1471,7 +1507,8 @@ bool SemaARM::areLaxCompatibleSveTypes(QualType FirstType,
       // ACLE Spec Version 00bet6, 3.7.3.2. Behavior common to vectors and
       // predicates.
       if (VecTy->getVectorKind() == VectorKind::Generic &&
-          Context.getTypeSize(SecondType) != getSVETypeSize(Context, BT))
+          Context.getTypeSize(SecondType) !=
+              getSVETypeSize(Context, BT, IsStreaming))
         return false;
 
       // If -flax-vector-conversions=all is specified, the types are

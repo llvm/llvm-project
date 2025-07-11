@@ -7,18 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #ifdef cl_khr_global_int32_extended_atomics
-#define __CLC_FUNCTION atom_min
+#define FUNCTION atom_min
 #define __CLC_ADDRESS_SPACE global
 #include <clc/opencl/atomic/atom_decl_int32.inc>
 #endif // cl_khr_global_int32_extended_atomics
 
 #ifdef cl_khr_local_int32_extended_atomics
-#define __CLC_FUNCTION atom_min
+#define FUNCTION atom_min
 #define __CLC_ADDRESS_SPACE local
 #include <clc/opencl/atomic/atom_decl_int32.inc>
 #endif // cl_khr_local_int32_extended_atomics
 
 #ifdef cl_khr_int64_extended_atomics
-#define __CLC_FUNCTION atom_min
+#define FUNCTION atom_min
 #include <clc/opencl/atomic/atom_decl_int64.inc>
 #endif // cl_khr_int64_extended_atomics

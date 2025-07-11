@@ -1201,7 +1201,7 @@ multiclass SiFive7ReadAdvance {
   def : ReadAdvance<ReadVST4R, 0>;
   def : ReadAdvance<ReadVST8R, 0>;
 
-  // 12. Vector Integer Arithmetic Instructions
+  // 11. Vector Integer Arithmetic Instructions
   defm : LMULReadAdvance<"ReadVIALUV", 0>;
   defm : LMULReadAdvance<"ReadVIALUX", 0>;
   defm : LMULReadAdvanceW<"ReadVIWALUV", 0>;
@@ -1232,7 +1232,7 @@ multiclass SiFive7ReadAdvance {
   defm : LMULReadAdvance<"ReadVIMovV", 0>;
   defm : LMULReadAdvance<"ReadVIMovX", 0>;
 
-  // 13. Vector Fixed-Point Arithmetic Instructions
+  // 12. Vector Fixed-Point Arithmetic Instructions
   defm : LMULReadAdvance<"ReadVSALUV", 0>;
   defm : LMULReadAdvance<"ReadVSALUX", 0>;
   defm : LMULReadAdvance<"ReadVAALUV", 0>;
@@ -1244,7 +1244,7 @@ multiclass SiFive7ReadAdvance {
   defm : LMULReadAdvanceW<"ReadVNClipV", 0>;
   defm : LMULReadAdvanceW<"ReadVNClipX", 0>;
 
-  // 14. Vector Floating-Point Instructions
+  // 13. Vector Floating-Point Instructions
   defm : LMULSEWReadAdvanceF<"ReadVFALUV", 0>;
   defm : LMULSEWReadAdvanceF<"ReadVFALUF", 0>;
   defm : LMULSEWReadAdvanceFW<"ReadVFWALUV", 0>;
@@ -1280,7 +1280,7 @@ multiclass SiFive7ReadAdvance {
   defm : LMULReadAdvanceW<"ReadVFNCvtFToIV", 0>;
   defm : LMULSEWReadAdvanceFW<"ReadVFNCvtFToFV", 0>;
 
-  // 15. Vector Reduction Operations
+  // 14. Vector Reduction Operations
   def : ReadAdvance<ReadVIRedV, 0>;
   def : ReadAdvance<ReadVIRedV0, 0>;
   def : ReadAdvance<ReadVIWRedV, 0>;
@@ -1294,14 +1294,14 @@ multiclass SiFive7ReadAdvance {
   def : ReadAdvance<ReadVFWRedOV, 0>;
   def : ReadAdvance<ReadVFWRedOV0, 0>;
 
-  // 16. Vector Mask Instructions
+  // 15. Vector Mask Instructions
   defm : LMULReadAdvance<"ReadVMALUV", 0>;
   defm : LMULReadAdvance<"ReadVMPopV", 0>;
   defm : LMULReadAdvance<"ReadVMFFSV", 0>;
   defm : LMULReadAdvance<"ReadVMSFSV", 0>;
   defm : LMULReadAdvance<"ReadVIotaV", 0>;
 
-  // 17. Vector Permutation Instructions
+  // 16. Vector Permutation Instructions
   def : ReadAdvance<ReadVMovXS, 0>;
   def : ReadAdvance<ReadVMovSX_V, 0>;
   def : ReadAdvance<ReadVMovSX_X, 0>;

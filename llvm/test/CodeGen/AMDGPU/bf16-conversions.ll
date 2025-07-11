@@ -158,7 +158,7 @@ define amdgpu_ps float @v_test_cvt_v2f64_v2bf16_v(<2 x double> %src) {
 ; GFX-950-NEXT:    v_cmp_eq_u32_e64 s[0:1], 1, v7
 ; GFX-950-NEXT:    v_cndmask_b32_e64 v2, -1, 1, s[2:3]
 ; GFX-950-NEXT:    v_add_u32_e32 v2, v6, v2
-; GFX-950-NEXT:    s_or_b64 vcc, vcc, s[0:1]
+; GFX-950-NEXT:    s_or_b64 vcc, s[0:1], vcc
 ; GFX-950-NEXT:    v_cvt_f32_f64_e32 v5, v[0:1]
 ; GFX-950-NEXT:    v_cndmask_b32_e32 v4, v2, v6, vcc
 ; GFX-950-NEXT:    v_cvt_f64_f32_e32 v[2:3], v5
@@ -168,7 +168,7 @@ define amdgpu_ps float @v_test_cvt_v2f64_v2bf16_v(<2 x double> %src) {
 ; GFX-950-NEXT:    v_cmp_eq_u32_e64 s[0:1], 1, v6
 ; GFX-950-NEXT:    v_cndmask_b32_e64 v0, -1, 1, s[2:3]
 ; GFX-950-NEXT:    v_add_u32_e32 v0, v5, v0
-; GFX-950-NEXT:    s_or_b64 vcc, vcc, s[0:1]
+; GFX-950-NEXT:    s_or_b64 vcc, s[0:1], vcc
 ; GFX-950-NEXT:    v_cndmask_b32_e32 v0, v0, v5, vcc
 ; GFX-950-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v4
 ; GFX-950-NEXT:    ; return to shader part epilog

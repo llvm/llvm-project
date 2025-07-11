@@ -166,7 +166,7 @@ public:
   /// constructed for. If valid, the attributes applied to this decl may
   /// contribute to the function attributes and calling convention.
   void constructAttributeList(CIRGenCalleeInfo calleeInfo,
-                              cir::SideEffect &sideEffect);
+                              mlir::NamedAttrList &attrs);
 
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
@@ -256,6 +256,10 @@ public:
   /// declarations are emitted lazily.
   void emitGlobal(clang::GlobalDecl gd);
 
+  void emitAliasForGlobal(llvm::StringRef mangledName, mlir::Operation *op,
+                          GlobalDecl aliasGD, cir::FuncOp aliasee,
+                          cir::GlobalLinkageKind linkage);
+
   mlir::Type convertType(clang::QualType type);
 
   /// Set the visibility for the given global.
@@ -267,6 +271,10 @@ public:
   /// This must be called after dllimport/dllexport is set.
   void setGVProperties(mlir::Operation *op, const NamedDecl *d) const;
   void setGVPropertiesAux(mlir::Operation *op, const NamedDecl *d) const;
+
+  /// Set function attributes for a function declaration.
+  void setFunctionAttributes(GlobalDecl gd, cir::FuncOp f,
+                             bool isIncompleteFunction, bool isThunk);
 
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);
@@ -340,13 +348,21 @@ public:
       clang::VisibilityAttr::VisibilityType visibility);
   cir::VisibilityAttr getGlobalVisibilityAttrFromDecl(const Decl *decl);
   static mlir::SymbolTable::Visibility getMLIRVisibility(cir::GlobalOp op);
-
+  cir::GlobalLinkageKind getFunctionLinkage(GlobalDecl gd);
   cir::GlobalLinkageKind getCIRLinkageForDeclarator(const DeclaratorDecl *dd,
                                                     GVALinkage linkage,
                                                     bool isConstantVariable);
+  void setFunctionLinkage(GlobalDecl gd, cir::FuncOp f) {
+    cir::GlobalLinkageKind l = getFunctionLinkage(gd);
+    f.setLinkageAttr(cir::GlobalLinkageKindAttr::get(&getMLIRContext(), l));
+    mlir::SymbolTable::setSymbolVisibility(f,
+                                           getMLIRVisibilityFromCIRLinkage(l));
+  }
 
   cir::GlobalLinkageKind getCIRLinkageVarDefinition(const VarDecl *vd,
                                                     bool isConstant);
+
+  void addReplacement(llvm::StringRef name, mlir::Operation *op);
 
   /// Helpers to emit "not yet implemented" error diagnostics
   DiagnosticBuilder errorNYI(SourceLocation, llvm::StringRef);
@@ -386,6 +402,17 @@ private:
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> mangledDeclNames;
   llvm::StringMap<clang::GlobalDecl, llvm::BumpPtrAllocator> manglings;
+
+  // FIXME: should we use llvm::TrackingVH<mlir::Operation> here?
+  typedef llvm::StringMap<mlir::Operation *> ReplacementsTy;
+  ReplacementsTy replacements;
+  /// Call replaceAllUsesWith on all pairs in replacements.
+  void applyReplacements();
+
+  /// A helper function to replace all uses of OldF to NewF that replace
+  /// the type of pointer arguments. This is not needed to tradtional
+  /// pipeline since LLVM has opaque pointers but CIR not.
+  void replacePointerTypeArgs(cir::FuncOp oldF, cir::FuncOp newF);
 
   void setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op);
 };

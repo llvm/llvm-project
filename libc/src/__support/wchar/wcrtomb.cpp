@@ -11,6 +11,7 @@
 #include "src/__support/wchar/character_converter.h"
 #include "src/__support/wchar/mbstate.h"
 
+#include "hdr/errno_macros.h"
 #include "hdr/types/char32_t.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
@@ -26,8 +27,8 @@ ErrorOr<size_t> wcrtomb(char *__restrict s, wchar_t wc,
 
   CharacterConverter cr(ps);
 
-  if (s == nullptr)
-    return Error(-1);
+  if (!cr.isValidState())
+    return Error(EINVAL);
 
   int status = cr.push(static_cast<char32_t>(wc));
   if (status != 0)

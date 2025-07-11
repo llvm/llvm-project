@@ -6409,12 +6409,7 @@ public:
   SpirvOperand(const SpirvOperand &Other) { *this = Other; }
   ~SpirvOperand() {}
 
-  SpirvOperand &operator=(const SpirvOperand &Other) {
-    this->Kind = Other.Kind;
-    this->ResultType = Other.ResultType;
-    this->Value = Other.Value;
-    return *this;
-  }
+  SpirvOperand &operator=(const SpirvOperand &Other) = default;
 
   bool operator==(const SpirvOperand &Other) const {
     return Kind == Other.Kind && ResultType == Other.ResultType &&

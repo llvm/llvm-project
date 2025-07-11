@@ -1002,11 +1002,11 @@ static bool usesMSVCFloatingPoint(const Triple &TT, const Module &M) {
 
   for (const Function &F : M) {
     for (const Instruction &I : instructions(F)) {
-      if (I.getType()->isFPOrFPVectorTy())
+      if (I.getType()->isFloatingPointTy())
         return true;
 
       for (const auto &Op : I.operands()) {
-        if (Op->getType()->isFPOrFPVectorTy())
+        if (Op->getType()->isFloatingPointTy())
           return true;
       }
     }

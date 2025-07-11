@@ -1399,7 +1399,7 @@ public:
       return getTargetSymbol(BinaryExpr->getLHS());
 
     auto *SymbolRefExpr = dyn_cast<const MCSymbolRefExpr>(Expr);
-    if (SymbolRefExpr && SymbolRefExpr->getKind() == MCSymbolRefExpr::VK_None)
+    if (SymbolRefExpr && SymbolRefExpr->getSpecifier() == 0)
       return &SymbolRefExpr->getSymbol();
 
     return nullptr;
