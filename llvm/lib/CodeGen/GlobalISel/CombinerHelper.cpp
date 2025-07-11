@@ -5642,7 +5642,7 @@ MachineInstr *CombinerHelper::buildSDivUsingMul(MachineInstr &MI) const {
     auto *CI = cast<ConstantInt>(C);
     const APInt &Divisor = CI->getValue();
 
-    SignedDivisionByConstantInfo magics =
+    SignedDivisionByConstantInfo Magics =
         SignedDivisionByConstantInfo::get(Divisor);
     int NumeratorFactor = 0;
     int ShiftMask = -1;
@@ -5650,21 +5650,21 @@ MachineInstr *CombinerHelper::buildSDivUsingMul(MachineInstr &MI) const {
     if (Divisor.isOne() || Divisor.isAllOnes()) {
       // If d is +1/-1, we just multiply the numerator by +1/-1.
       NumeratorFactor = Divisor.getSExtValue();
-      magics.Magic = 0;
-      magics.ShiftAmount = 0;
+      Magics.Magic = 0;
+      Magics.ShiftAmount = 0;
       ShiftMask = 0;
-    } else if (Divisor.isStrictlyPositive() && magics.Magic.isNegative()) {
+    } else if (Divisor.isStrictlyPositive() && Magics.Magic.isNegative()) {
       // If d > 0 and m < 0, add the numerator.
       NumeratorFactor = 1;
-    } else if (Divisor.isNegative() && magics.Magic.isStrictlyPositive()) {
+    } else if (Divisor.isNegative() && Magics.Magic.isStrictlyPositive()) {
       // If d < 0 and m > 0, subtract the numerator.
       NumeratorFactor = -1;
     }
 
-    MagicFactors.push_back(MIB.buildConstant(ScalarTy, magics.Magic).getReg(0));
+    MagicFactors.push_back(MIB.buildConstant(ScalarTy, Magics.Magic).getReg(0));
     Factors.push_back(MIB.buildConstant(ScalarTy, NumeratorFactor).getReg(0));
     Shifts.push_back(
-        MIB.buildConstant(ScalarShiftAmtTy, magics.ShiftAmount).getReg(0));
+        MIB.buildConstant(ScalarShiftAmtTy, Magics.ShiftAmount).getReg(0));
     ShiftMasks.push_back(MIB.buildConstant(ScalarTy, ShiftMask).getReg(0));
 
     return true;

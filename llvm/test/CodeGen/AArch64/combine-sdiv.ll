@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=aarch64-unknown-unknown -global-isel=0 | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=aarch64-unknown-unknown -global-isel=1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; These tests are taken from the combine-udiv.ll in X86.
+; These tests are taken from the combine-sdiv.ll in X86.
 define i32 @combine_sdiv_by_one(i32 %x) {
 ; CHECK-LABEL: combine_sdiv_by_one:
 ; CHECK:       // %bb.0:
