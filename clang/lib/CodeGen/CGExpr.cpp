@@ -4145,6 +4145,9 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   llvm::StringRef TrapMessage = GetUBSanTrapForHandler(CheckHandlerID);
 
   if (getDebugInfo() && !TrapMessage.empty()) {
+    assert(TrapLocation &&
+           "Artificial trap frame requires valid debug-info for its scope.");
+
     TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
         TrapLocation, "Undefined Behavior Sanitizer", TrapMessage);
   }
