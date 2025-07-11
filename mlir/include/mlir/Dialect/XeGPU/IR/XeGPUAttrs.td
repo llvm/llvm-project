@@ -42,9 +42,18 @@ def XeGPU_BlockTensorDescAttr: XeGPU_TensorDescAttr<"BlockTensorDesc", "block_td
   }];
 
   let parameters = (ins
-    OptionalParameter<"MemorySpaceAttr">: $memory_space,
-    OptionalParameter<"IntegerAttr", "1">: $array_length,
-    OptionalParameter<"BoolAttr", "true">: $boundary_check
+    DefaultValuedParameter<
+      "MemorySpaceAttr",
+      "MemorySpaceAttr::get($_ctxt, xegpu::MemorySpace::Global)",
+      "Data memory location">: $memory_space,
+    DefaultValuedParameter<
+      "IntegerAttr",
+      "IntegerAttr::get(IntegerType::get($_ctxt, 64), 1)",
+      "Number of continuous blocks to load">: $array_length,
+    DefaultValuedParameter<
+      "BoolAttr",
+      "BoolAttr::get($_ctxt, true)",
+      "Checking the out of boundary access">: $boundary_check
   );
 
   let builders = [
@@ -67,8 +76,8 @@ def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scat
         TensorDesc is located, `Global` device memory or `Shared` local memory.
         It is default to `Global`.
 
-    2.  `chunk_size`: indicates number of contiguous elements accessed for each
-        offset, default is 1. It is used with `scattered` attr only.
+    2. `chunk_size`: Specifies the number of contiguous elements accessed per offset.
+      The default value is 1.
   }];
 
   let parameters = (ins
@@ -90,6 +99,12 @@ def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scat
       CArg<"int", "1">: $chunk_size
     )>
   ];
+
+  let extraClassDeclaration = [{
+    int64_t getChunkSizeAsInt() {
+      return getChunkSize().getInt();
+    }
+  }];
 
   let genVerifyDecl = 1;
  }

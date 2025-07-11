@@ -17,6 +17,7 @@ class DuplicateLibcallImplWithPrefix<RuntimeLibcallImpl Impl, string prefix>
 
 /// Libcall Predicates
 def isOSDarwin : RuntimeLibcallPredicate<"TT.isOSDarwin()">;
+def isOSWindows : RuntimeLibcallPredicate<"TT.isOSWindows()">;
 
 def darwinHasSinCosStret : RuntimeLibcallPredicate<"darwinHasSinCosStret(TT)">;
 def darwinHasExp10 : RuntimeLibcallPredicate<"darwinHasExp10(TT)">;
@@ -385,6 +386,34 @@ def HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES : RuntimeLibcall;
 
 // XCore calls
 def MEMCPY_ALIGN_4 : RuntimeLibcall;
+
+// Objective-C calls
+def OBJC_AUTORELEASE : RuntimeLibcall;
+def OBJC_AUTORELEASEPOOLPOP : RuntimeLibcall;
+def OBJC_AUTORELEASEPOOLPUSH : RuntimeLibcall;
+def OBJC_AUTORELEASERETURNVALUE : RuntimeLibcall;
+def OBJC_COPYWEAK : RuntimeLibcall;
+def OBJC_DESTROYWEAK : RuntimeLibcall;
+def OBJC_INITWEAK : RuntimeLibcall;
+def OBJC_LOADWEAK : RuntimeLibcall;
+def OBJC_LOADWEAKRETAINED : RuntimeLibcall;
+def OBJC_MOVEWEAK : RuntimeLibcall;
+def OBJC_RELEASE : RuntimeLibcall;
+def OBJC_RETAIN : RuntimeLibcall;
+def OBJC_RETAINAUTORELEASE : RuntimeLibcall;
+def OBJC_RETAINAUTORELEASERETURNVALUE : RuntimeLibcall;
+def OBJC_RETAINAUTORELEASEDRETURNVALUE : RuntimeLibcall;
+def OBJC_CLAIMAUTORELEASEDRETURNVALUE : RuntimeLibcall;
+def OBJC_RETAINBLOCK : RuntimeLibcall;
+def OBJC_STORESTRONG : RuntimeLibcall;
+def OBJC_STOREWEAK : RuntimeLibcall;
+def OBJC_UNSAFECLAIMAUTORELEASEDRETURNVALUE : RuntimeLibcall;
+def OBJC_RETAINEDOBJECT : RuntimeLibcall;
+def OBJC_UNRETAINEDOBJECT : RuntimeLibcall;
+def OBJC_UNRETAINEDPOINTER : RuntimeLibcall;
+def OBJC_RETAIN_AUTORELEASE : RuntimeLibcall;
+def OBJC_SYNC_ENTER : RuntimeLibcall;
+def OBJC_SYNC_EXIT : RuntimeLibcall;
 
 //--------------------------------------------------------------------
 // Define implementation default libcalls
@@ -1032,6 +1061,37 @@ defvar LibmHasSinCosF128 = LibcallImpls<(add sincos_f128), hasSinCos>;
 defvar LibmHasSinCosPPCF128 = LibcallImpls<(add sincos_ppcf128), hasSinCos>;
 
 //===----------------------------------------------------------------------===//
+// Objective-C Runtime Libcalls
+//===----------------------------------------------------------------------===//
+
+def objc_autorelease : RuntimeLibcallImpl<OBJC_AUTORELEASE>;
+def objc_autoreleasePoolPop : RuntimeLibcallImpl<OBJC_AUTORELEASEPOOLPOP>;
+def objc_autoreleasePoolPush : RuntimeLibcallImpl<OBJC_AUTORELEASEPOOLPUSH>;
+def objc_autoreleaseReturnValue : RuntimeLibcallImpl<OBJC_AUTORELEASERETURNVALUE>;
+def objc_copyWeak : RuntimeLibcallImpl<OBJC_COPYWEAK>;
+def objc_destroyWeak : RuntimeLibcallImpl<OBJC_DESTROYWEAK>;
+def objc_initWeak : RuntimeLibcallImpl<OBJC_INITWEAK>;
+def objc_loadWeak : RuntimeLibcallImpl<OBJC_LOADWEAK>;
+def objc_loadWeakRetained : RuntimeLibcallImpl<OBJC_LOADWEAKRETAINED>;
+def objc_moveWeak : RuntimeLibcallImpl<OBJC_MOVEWEAK>;
+def objc_release : RuntimeLibcallImpl<OBJC_RELEASE>;
+def objc_retain : RuntimeLibcallImpl<OBJC_RETAIN>;
+def objc_retainAutorelease : RuntimeLibcallImpl<OBJC_RETAINAUTORELEASE>;
+def objc_retainAutoreleaseReturnValue : RuntimeLibcallImpl<OBJC_RETAINAUTORELEASERETURNVALUE>;
+def objc_retainAutoreleasedReturnValue : RuntimeLibcallImpl<OBJC_RETAINAUTORELEASEDRETURNVALUE>;
+def objc_claimAutoreleasedReturnValue : RuntimeLibcallImpl<OBJC_CLAIMAUTORELEASEDRETURNVALUE>;
+def objc_retainBlock : RuntimeLibcallImpl<OBJC_RETAINBLOCK>;
+def objc_storeStrong : RuntimeLibcallImpl<OBJC_STORESTRONG>;
+def objc_storeWeak : RuntimeLibcallImpl<OBJC_STOREWEAK>;
+def objc_unsafeClaimAutoreleasedReturnValue : RuntimeLibcallImpl<OBJC_UNSAFECLAIMAUTORELEASEDRETURNVALUE>;
+def objc_retainedObject : RuntimeLibcallImpl<OBJC_RETAINEDOBJECT>;
+def objc_unretainedObject : RuntimeLibcallImpl<OBJC_UNRETAINEDOBJECT>;
+def objc_unretainedPointer : RuntimeLibcallImpl<OBJC_UNRETAINEDPOINTER>;
+def objc_retain_autorelease : RuntimeLibcallImpl<OBJC_RETAIN_AUTORELEASE>;
+def objc_sync_enter : RuntimeLibcallImpl<OBJC_SYNC_ENTER>;
+def objc_sync_exit : RuntimeLibcallImpl<OBJC_SYNC_EXIT>;
+
+//===----------------------------------------------------------------------===//
 // AArch64 Runtime Libcalls
 //===----------------------------------------------------------------------===//
 
@@ -1176,8 +1236,8 @@ def __aeabi_dsub : RuntimeLibcallImpl<SUB_F64>; // CallingConv::ARM_AAPCS
 
 // Double-precision floating-point comparison helper functions
 // RTABI chapter 4.1.2, Table 3
-def __aeabi_dcmpeq__ne : RuntimeLibcallImpl<OEQ_F64, "__aeabi_dcmpeq">; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
-def __aeabi_dcmpeq__eq : RuntimeLibcallImpl<UNE_F64, "__aeabi_dcmpeq">; // CallingConv::ARM_AAPCS, CmpInst::ICMP_EQ
+def __aeabi_dcmpeq__oeq : RuntimeLibcallImpl<OEQ_F64, "__aeabi_dcmpeq">; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
+def __aeabi_dcmpeq__une : RuntimeLibcallImpl<UNE_F64, "__aeabi_dcmpeq">; // CallingConv::ARM_AAPCS, CmpInst::ICMP_EQ
 def __aeabi_dcmplt : RuntimeLibcallImpl<OLT_F64>; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
 def __aeabi_dcmple : RuntimeLibcallImpl<OLE_F64>; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
 def __aeabi_dcmpge : RuntimeLibcallImpl<OGE_F64>; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
@@ -1193,8 +1253,8 @@ def __aeabi_fsub : RuntimeLibcallImpl<SUB_F32>; // CallingConv::ARM_AAPCS
 
 // Single-precision floating-point comparison helper functions
 // RTABI chapter 4.1.2, Table 5
-def __aeabi_fcmpeq__ne : RuntimeLibcallImpl<OEQ_F32, "__aeabi_fcmpeq">; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
-def __aeabi_fcmpeq__eq : RuntimeLibcallImpl<UNE_F32, "__aeabi_fcmpeq">; // CallingConv::ARM_AAPCS, CmpInst::ICMP_EQ
+def __aeabi_fcmpeq__oeq : RuntimeLibcallImpl<OEQ_F32, "__aeabi_fcmpeq">; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
+def __aeabi_fcmpeq__une : RuntimeLibcallImpl<UNE_F32, "__aeabi_fcmpeq">; // CallingConv::ARM_AAPCS, CmpInst::ICMP_EQ
 def __aeabi_fcmplt : RuntimeLibcallImpl<OLT_F32>; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
 def __aeabi_fcmple : RuntimeLibcallImpl<OLE_F32>; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
 def __aeabi_fcmpge : RuntimeLibcallImpl<OGE_F32>; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
@@ -1271,6 +1331,7 @@ def __aeabi_memclr4 : RuntimeLibcallImpl<AEABI_MEMCLR4>;
 def __aeabi_memclr8 : RuntimeLibcallImpl<AEABI_MEMCLR8>;
 
 // isTargetWindows()
+defset list<RuntimeLibcallImpl> WindowsFPIntCastLibcalls = {
 def __stoi64 : RuntimeLibcallImpl<FPTOSINT_F32_I64>; // CallingConv::ARM_AAPCS_VFP
 def __dtoi64 : RuntimeLibcallImpl<FPTOSINT_F64_I64>; // CallingConv::ARM_AAPCS_VFP
 def __stou64 : RuntimeLibcallImpl<FPTOUINT_F32_I64>; // CallingConv::ARM_AAPCS_VFP
@@ -1279,6 +1340,7 @@ def __i64tos : RuntimeLibcallImpl<SINTTOFP_I64_F32>; // CallingConv::ARM_AAPCS_V
 def __i64tod : RuntimeLibcallImpl<SINTTOFP_I64_F64>; // CallingConv::ARM_AAPCS_VFP
 def __u64tos : RuntimeLibcallImpl<UINTTOFP_I64_F32>; // CallingConv::ARM_AAPCS_VFP
 def __u64tod : RuntimeLibcallImpl<UINTTOFP_I64_F64>; // CallingConv::ARM_AAPCS_VFP
+}
 
 def __rt_sdiv : RuntimeLibcallImpl<SDIVREM_I32>; // CallingConv::ARM_AAPCS
 def __rt_sdiv64 : RuntimeLibcallImpl<SDIVREM_I64>; // CallingConv::ARM_AAPCS
@@ -1304,6 +1366,51 @@ def __aeabi_h2f : RuntimeLibcallImpl<FPEXT_F16_F32>; // CallingConv::ARM_AAPCS
 // !isTargetMachO()
 def __gnu_f2h_ieee : RuntimeLibcallImpl<FPROUND_F32_F16>;
 def __gnu_h2f_ieee : RuntimeLibcallImpl<FPEXT_F16_F32>;
+
+
+def WindowARMDivRemCalls : LibcallImpls<
+  (add __rt_sdiv, __rt_sdiv64, __rt_udiv, __rt_udiv64),
+  isOSWindows> {
+  let CallingConv = ARM_AAPCS;
+}
+
+def WindowARMFPIntCasts : LibcallImpls<
+  (add WindowsFPIntCastLibcalls),
+  isOSWindows> {
+  let CallingConv = ARM_AAPCS_VFP;
+}
+
+
+// Register based DivRem for AEABI (RTABI 4.2)
+def AEABIDivRemCalls : LibcallImpls<
+  (add __aeabi_idivmod, __aeabi_ldivmod,
+       __aeabi_uidivmod, __aeabi_uldivmod),
+  RuntimeLibcallPredicate<[{TT.isTargetAEABI() || TT.isAndroid() || TT.isTargetGNUAEABI() ||
+    TT.isTargetMuslAEABI()}]>> {
+  let CallingConv = ARM_AAPCS;
+}
+
+def isARMOrThumb : RuntimeLibcallPredicate<"TT.isARM() || TT.isThumb()">;
+
+def ARMSystemLibrary
+    : SystemRuntimeLibrary<isARMOrThumb,
+      (add DefaultLibcallImpls32,
+           WindowARMDivRemCalls,
+           WindowARMFPIntCasts,
+           AEABIDivRemCalls,
+           DarwinSinCosStret, DarwinExp10,
+
+           // Use divmod compiler-rt calls for iOS 5.0 and later.
+           LibcallImpls<(add __divmodsi4, __udivmodsi4),
+                        RuntimeLibcallPredicate<[{TT.isOSBinFormatMachO() &&
+                                                  (!TT.isiOS() || !TT.isOSVersionLT(5, 0))}]>>)> {
+  let DefaultLibcallCallingConv = LibcallCallingConv<[{
+     (!TT.isOSDarwin() && !TT.isiOS() && !TT.isWatchOS() && !TT.isDriverKit()) ?
+        (FloatABI == FloatABI::Hard ? CallingConv::ARM_AAPCS_VFP
+                                    : CallingConv::ARM_AAPCS) :
+                                      CallingConv::C
+  }]>;
+}
 
 //===----------------------------------------------------------------------===//
 // AVR Runtime Libcalls

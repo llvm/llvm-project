@@ -39,6 +39,23 @@ FailureOr<TilingResult> tensor::replaceExtractSliceWithTiledProducer(
   if (failed(tiledResult))
     return failure();
 
+  // For cases where the slice was rank-reducing, create a rank-reducing slice
+  // to get the same type back.
+  llvm::SmallBitVector droppedDims = sliceOp.getDroppedDims();
+  if (droppedDims.any()) {
+    assert(tiledResult->tiledValues.size() == 1 &&
+           "expected only a single tiled result value to replace the extract "
+           "slice");
+    SmallVector<OpFoldResult> offsets(sliceOp.getSourceType().getRank(),
+                                      builder.getIndexAttr(0));
+    SmallVector<OpFoldResult> strides(sliceOp.getSourceType().getRank(),
+                                      builder.getIndexAttr(1));
+    auto newSliceOp = builder.create<tensor::ExtractSliceOp>(
+        sliceOp.getLoc(), sliceOp.getType(), tiledResult->tiledValues[0],
+        offsets, sliceOp.getMixedSizes(), strides);
+    tiledResult->tiledValues[0] = newSliceOp;
+  }
+
   return *tiledResult;
 }
 
