@@ -24,6 +24,24 @@ void test_s_monitor_sleep() {
   __builtin_amdgcn_s_monitor_sleep(10);
 }
 
+// CHECK-LABEL: @test_s_wait_asynccnt(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void @llvm.amdgcn.s.wait.asynccnt(i16 0)
+// CHECK-NEXT:    ret void
+//
+void test_s_wait_asynccnt() {
+  __builtin_amdgcn_s_wait_asynccnt(0);
+}
+
+// CHECK-LABEL: @test_s_wait_tensorcnt(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void @llvm.amdgcn.s.wait.tensorcnt(i16 0)
+// CHECK-NEXT:    ret void
+//
+void test_s_wait_tensorcnt() {
+  __builtin_amdgcn_s_wait_tensorcnt(0);
+}
+
 // CHECK-LABEL: @test_cvt_f16_fp8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
