@@ -1,0 +1,35 @@
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <mtext>exp</mtext>
+    <mfenced>
+      <mrow>
+        <mi>x</mi>
+      </mrow>
+    </mfenced>
+    <mspace width="1em"/>
+    <mo>=</mo>
+    <mspace width="1em"/>
+    <munderover>
+      <mo>&#x2211;</mo>
+      <mrow>
+        <mi>n</mi>
+        <mo>=</mo>
+        <mn>0</mn>
+      </mrow>
+      <mi>&#x221E;</mi>
+    </munderover>
+    <mfrac>
+      <mrow>
+        <msup>
+          <mi>x</mi>
+          <mi>n</mi>
+        </msup>
+      </mrow>
+      <mrow>
+        <mi>n</mi>
+        <mo>!</mo>
+      </mrow>
+    </mfrac>
+  </mrow>
+</math>
+

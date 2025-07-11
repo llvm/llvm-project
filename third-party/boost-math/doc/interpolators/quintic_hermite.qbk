@@ -1,0 +1,189 @@
+[/
+Copyright (c) 2020 Nick Thompson
+Use, modification and distribution are subject to the
+Boost Software License, Version 1.0. (See accompanying file
+LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:quintic_hermite Quintic Hermite interpolation]
+
+[heading Synopsis]
+``
+#include <boost/math/interpolators/quintic_hermite.hpp>
+
+namespace boost::math::interpolators {
+
+template<class RandomAccessContainer>
+class quintic_hermite {
+public:
+    using Real = typename RandomAccessContainer::value_type;
+    quintic_hermite(RandomAccessContainer && x, RandomAccessContainer && y, RandomAccessContainer && dydx, RandomAccessContainer && d2ydx2)
+
+    inline Real operator()(Real x) const;
+
+    inline Real prime(Real x) const;
+
+    inline Real double_prime(Real x) const;
+
+    std::pair<Real, Real> domain() const;
+
+    friend std::ostream& operator<<(std::ostream & os, const quintic_hermite & m);
+
+    void push_back(Real x, Real y, Real dydx, Real d2ydx2);
+};
+
+template<class RandomAccessContainer>
+class cardinal_quintic_hermite {
+public:
+    using Real = typename RandomAccessContainer::value_type;
+    cardinal_quintic_hermite(RandomAccessContainer && y, RandomAccessContainer && dydx, RandomAccessContainer && d2ydx2, Real x0, Real dx);
+
+    inline Real operator()(Real x) const;
+
+    inline Real prime(Real x) const;
+
+    inline Real double_prime(Real x) const;
+
+    std::pair<Real, Real> domain() const;
+};
+
+template<class RandomAccessContainer>
+class cardinal_quintic_hermite_aos {
+public:
+    using Point = typename RandomAccessContainer::value_type;
+    using Real = typename Point::value_type;
+    cardinal_quintic_hermite_aos(RandomAccessContainer && data, Real x0, Real dx)
+
+    inline Real operator()(Real x) const;
+
+    inline Real prime(Real x) const;
+
+    inline Real double_prime(Real x) const;
+
+    std::pair<Real, Real> domain() const;
+
+}
+``
+
+
+[heading Quintic Hermite Interpolation]
+
+The quintic Hermite interpolator takes a list of possibly non-uniformly spaced abscissas, ordinates, and their velocities and accelerations which are used to construct a quintic interpolating polynomial between segments.
+This is useful for taking solution skeletons from ODE steppers and turning them into a continuous function, provided that the right-hand side /f/(/x/, /y/) is differentiable along the solution path.
+The interpolant is /C/[super 2] and its evaluation has [bigo](log(/N/)) complexity.
+An example usage is as follows:
+
+    std::vector<double> x{1,2,3, 4, 5, 6};
+    std::vector<double> y{7,8,9,10,11,12};
+    std::vector<double> dydx{1,1,1,1,1,1};
+    std::vector<double> d2ydx2{0,0,0,0,0,0};
+
+    using boost::math::interpolators::quintic_hermite;
+    auto spline = quintic_hermite(std::move(x), std::move(y), std::move(dydx), std::move(d2ydx2));
+    // evaluate at a point:
+    double z = spline(3.4);
+    // evaluate derivative at a point:
+    double zprime = spline.prime(3.4);
+
+Periodically, it is helpful to see what data the interpolator has.
+This can be achieved via
+
+    std::cout << spline << "\n";
+
+Note that the interpolator is pimpl'd, so that copying the class is cheap, and hence it can be shared between threads.
+(The call operator and `.prime()` are threadsafe.)
+
+The interpolator can be updated in constant time.
+Hence we can use `boost::circular_buffer` to do real-time interpolation.
+
+
+    #include <boost/circular_buffer.hpp>
+    ...
+    boost::circular_buffer<double> initial_x{1,2,3,4};
+    boost::circular_buffer<double> initial_y{4,5,6,7};
+    boost::circular_buffer<double> initial_dydx{1,1,1,1};
+    boost::circular_buffer<double> initial_d2ydx2{0,0,0,0};
+    auto circular_akima = quintic_hermite(std::move(initial_x), std::move(initial_y), std::move(initial_dydx), std::move(initial_d2ydx2));
+    // interpolate via call operation:
+    double y = circular_akima(3.5);
+    // add new data:
+    circular_akima.push_back(5, 8, 1, 0);
+    // interpolate at 4.5:
+    y = circular_akima(4.5);
+
+[$../graphs/quintic_sine_approximation.svg]
+
+For equispaced data, we can use `cardinal_quintic_hermite` or `cardinal_quintic_hermite_aos` to get constant-time evaluation.
+This is useful in memory-constrained or performance critical applications where data is equispaced.
+
+[heading Complexity and Performance]
+
+The following google benchmark demonstrates the cost of the call operator for this interpolator:
+
+```
+Run on (16 X 4300 MHz CPU s)
+CPU Caches:
+  L1 Data 32K (x8)
+  L1 Instruction 32K (x8)
+  L2 Unified 1024K (x8)
+  L3 Unified 11264K (x1)
+Load Average: 0.92, 0.64, 0.35
+--------------------------------------------------
+Benchmark                                  Time
+--------------------------------------------------
+QuinticHermite<double>/8                   8.14 ns
+QuinticHermite<double>/16                  8.69 ns
+QuinticHermite<double>/32                  9.42 ns
+QuinticHermite<double>/64                  9.90 ns
+QuinticHermite<double>/128                 10.4 ns
+QuinticHermite<double>/256                 10.9 ns
+QuinticHermite<double>/512                 11.6 ns
+QuinticHermite<double>/1024                12.3 ns
+QuinticHermite<double>/2048                12.8 ns
+QuinticHermite<double>/4096                13.6 ns
+QuinticHermite<double>/8192                14.6 ns
+QuinticHermite<double>/16384               15.5 ns
+QuinticHermite<double>/32768               17.4 ns
+QuinticHermite<double>/65536               18.5 ns
+QuinticHermite<double>/131072              18.8 ns
+QuinticHermite<double>/262144              19.8 ns
+QuinticHermite<double>/524288              20.5 ns
+QuinticHermite<double>/1048576             21.6 ns
+QuinticHermite<double>/2097152             22.5 ns
+QuinticHermite<double>/4194304             24.2 ns
+QuinticHermite<double>/8388608             26.6 ns
+QuinticHermite<double>/16777216            26.7 ns
+QuinticHermite<double>_BigO                1.14 lgN
+CardinalQuinticHermite<double>/256         5.22 ns
+CardinalQuinticHermite<double>/512         5.21 ns
+CardinalQuinticHermite<double>/1024        5.21 ns
+CardinalQuinticHermite<double>/2048        5.32 ns
+CardinalQuinticHermite<double>/4096        5.33 ns
+CardinalQuinticHermite<double>/8192        5.50 ns
+CardinalQuinticHermite<double>/16384       5.74 ns
+CardinalQuinticHermite<double>/32768       7.74 ns
+CardinalQuinticHermite<double>/65536       10.6 ns
+CardinalQuinticHermite<double>/131072      10.7 ns
+CardinalQuinticHermite<double>/262144      10.6 ns
+CardinalQuinticHermite<double>/524288      10.5 ns
+CardinalQuinticHermite<double>/1048576     10.6 ns
+CardinalQuinticHermite<double>_BigO        7.57 (1)
+CardinalQuinticHermiteAOS<double>/256      5.27 ns
+CardinalQuinticHermiteAOS<double>/512      5.26 ns
+CardinalQuinticHermiteAOS<double>/1024     5.26 ns
+CardinalQuinticHermiteAOS<double>/2048     5.28 ns
+CardinalQuinticHermiteAOS<double>/4096     5.30 ns
+CardinalQuinticHermiteAOS<double>/8192     5.41 ns
+CardinalQuinticHermiteAOS<double>/16384    5.89 ns
+CardinalQuinticHermiteAOS<double>/32768    5.97 ns
+CardinalQuinticHermiteAOS<double>/65536    5.96 ns
+CardinalQuinticHermiteAOS<double>/131072   5.92 ns
+CardinalQuinticHermiteAOS<double>/262144   5.94 ns
+CardinalQuinticHermiteAOS<double>/524288   5.96 ns
+CardinalQuinticHermiteAOS<double>/1048576  5.93 ns
+CardinalQuinticHermiteAOS<double>_BigO     5.64 (1)
+```
+
+
+[endsect]
+[/section:quintic_hermite]

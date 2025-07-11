@@ -1,0 +1,30 @@
+[section:contact Contact Info and Support]
+
+The main place to see and raise issues is now at [@https://github.com/boostorg/math/ GitHub].
+Currently open bug reports can be viewed [@https://github.com/boostorg/math/issues here].
+
+All old bug reports, including closed ones, can be viewed on Trac (now read-only)
+[@https://svn.boost.org/trac/boost/query?status=assigned&status=closed&status=new&status=reopened&component=math&col=id&col=summary&col=status&col=type&col=milestone&col=component&order=priority here]
+and more recent issues on GitHub [@https://github.com/boostorg/math/issues?utf8=%E2%9C%93&q=is%3Aissue here].
+
+The other places for discussion about this library are via the Boost mailing lists:
+
+* Use the 
+[@http://www.boost.org/more/mailing_lists.htm#users boost-user list] 
+for general support questions.
+* Use the 
+[@http://www.boost.org/more/mailing_lists.htm#main boost-developer list] 
+for discussion about implementation and or submission of extensions.
+
+You can also find JM at john - at - johnmaddock.co.uk and PAB at
+pbristow - at - hetp.u-net.com.
+
+[endsect] [/section:contact Contact Info and Support]
+
+[/ 
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

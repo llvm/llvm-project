@@ -1,0 +1,176 @@
+[section:rational Polynomial and Rational Function Evaluation]
+
+[h4 Synopsis]
+
+``
+#include <boost/math/tools/rational.hpp>
+``
+
+   // Polynomials:
+   template <std::size_t N, class T, class V>
+   V evaluate_polynomial(const T(&poly)[N], const V& val);
+
+   template <std::size_t N, class T, class V>
+   V evaluate_polynomial(const std::array<T,N>& poly, const V& val);
+
+   template <class T, class U>
+   U evaluate_polynomial(const T* poly, U z, std::size_t count);
+
+   // Even polynomials:
+   template <std::size_t N, class T, class V>
+   V evaluate_even_polynomial(const T(&poly)[N], const V& z);
+
+   template <std::size_t N, class T, class V>
+   V evaluate_even_polynomial(const std::array<T,N>& poly, const V& z);
+
+   template <class T, class U>
+   U evaluate_even_polynomial(const T* poly, U z, std::size_t count);
+
+   // Odd polynomials
+   template <std::size_t N, class T, class V>
+   V evaluate_odd_polynomial(const T(&a)[N], const V& z);
+
+   template <std::size_t N, class T, class V>
+   V evaluate_odd_polynomial(const std::array<T,N>& a, const V& z);
+
+   template <class T, class U>
+   U evaluate_odd_polynomial(const T* poly, U z, std::size_t count);
+
+   // Rational Functions:
+   template <std::size_t N, class T, class V>
+   V evaluate_rational(const T(&a)[N], const T(&b)[N], const V& z);
+
+   template <std::size_t N, class T, class V>
+   V evaluate_rational(const std::array<T,N>& a, const std::array<T,N>& b, const V& z);
+
+   template <class T, class U, class V>
+   V evaluate_rational(const T* num, const U* denom, V z, unsigned count);
+
+[h4 Description]
+
+Each of the functions come in three variants: a pair of overloaded functions
+where the order of the polynomial or rational function is evaluated at
+compile time, and an overload that accepts a runtime variable for the size
+of the coefficient array.  Generally speaking, compile time evaluation of the
+array size results in better type safety, is less prone to programmer errors,
+and may result in better optimised code.  The polynomial evaluation functions
+in particular, are specialised for various array sizes, allowing for
+loop unrolling, and one hopes, optimal inline expansion.
+
+   template <std::size_t N, class T, class V>
+   V evaluate_polynomial(const T(&poly)[N], const V& val);
+
+   template <std::size_t N, class T, class V>
+   V evaluate_polynomial(const std::array<T,N>& poly, const V& val);
+
+   template <class T, class U>
+   U evaluate_polynomial(const T* poly, U z, std::size_t count);
+
+Evaluates the [@http://en.wikipedia.org/wiki/Polynomial polynomial] described by
+the coefficients stored in /poly/.
+
+If the size of the array is specified at runtime, then the polynomial
+most have order /count-1/ with /count/ coefficients.  Otherwise it has
+order /N-1/ with /N/ coefficients.
+
+Coefficients should be stored such that the coefficients for the x[super i] terms
+are in poly[i].
+
+The types of the coefficients and of variable
+/z/ may differ as long as /*poly/ is convertible to type /U/.
+This allows, for example, for the coefficient table
+to be a table of integers if this is appropriate.
+
+   template <std::size_t N, class T, class V>
+   V evaluate_even_polynomial(const T(&poly)[N], const V& z);
+
+   template <std::size_t N, class T, class V>
+   V evaluate_even_polynomial(const std::array<T,N>& poly, const V& z);
+
+   template <class T, class U>
+   U evaluate_even_polynomial(const T* poly, U z, std::size_t count);
+
+As above, but evaluates an even polynomial: one where all the powers
+of /z/ are even numbers.  Equivalent to calling
+`evaluate_polynomial(poly, z*z, count)`.
+
+   template <std::size_t N, class T, class V>
+   V evaluate_odd_polynomial(const T(&a)[N], const V& z);
+
+   template <std::size_t N, class T, class V>
+   V evaluate_odd_polynomial(const std::array<T,N>& a, const V& z);
+
+   template <class T, class U>
+   U evaluate_odd_polynomial(const T* poly, U z, std::size_t count);
+
+As above but evaluates a polynomial where all the powers are odd numbers.
+Equivalent to `evaluate_polynomial(poly+1, z*z, count-1) * z + poly[0]`.
+
+   template <std::size_t N, class T, class U, class V>
+   V evaluate_rational(const T(&num)[N], const U(&denom)[N], const V& z);
+
+   template <std::size_t N, class T, class U, class V>
+   V evaluate_rational(const std::array<T,N>& num, const std::array<U,N>& denom, const V& z);
+
+   template <class T, class U, class V>
+   V evaluate_rational(const T* num, const U* denom, V z, unsigned count);
+
+Evaluates the rational function (the ratio of two polynomials) described by
+the coefficients stored in /num/ and /denom/.
+
+If the size of the array is specified at runtime then both
+polynomials most have order /count-1/ with /count/ coefficients.
+Otherwise both polynomials have order /N-1/ with /N/ coefficients.
+
+Array /num/ describes the numerator, and /demon/ the denominator.
+
+Coefficients should be stored such that the coefficients for the x[super i ] terms
+are in num[i] and denom[i].
+
+The types of the coefficients and of variable
+/v/ may differ as long as /*num/ and /*denom/ are convertible to type /V/.
+This allows, for example, for one or both of the coefficient tables
+to be a table of integers if this is appropriate.
+
+These functions are designed to safely evaluate the result, even when the value
+/z/ is very large.  As such they do not take advantage of compile time array
+sizes to make any optimisations.  These functions are best reserved for situations
+where /z/ may be large: if you can be sure that numerical overflow will not occur
+then polynomial evaluation with compile-time array sizes may offer slightly
+better performance.
+
+[h4 Implementation]
+
+Polynomials are evaluated by
+[@http://en.wikipedia.org/wiki/Horner_algorithm Horners method].
+If the array size is known at
+compile time then the functions dispatch to size-specific implementations
+that unroll the evaluation loop.
+
+Rational evaluation is by
+[@http://en.wikipedia.org/wiki/Horner_algorithm Horners method]:
+with the two polynomials being evaluated
+in parallel to make the most of the processors floating-point pipeline.
+If /v/ is greater than one, then the polynomials are evaluated in reverse
+order as polynomials in ['1\/v]: this avoids unnecessary numerical overflow when the
+coefficients are large.
+
+Both the polynomial and rational function evaluation algorithms can be
+tuned using various configuration macros to provide optimal performance
+for a particular combination of compiler and platform.  This includes
+support for second-order Horner's methods.  The various options are
+[link math_toolkit.tuning documented here].  However, the performance
+benefits to be gained from these are marginal on most current hardware,
+consequently it's best to run the
+[link math_toolkit.perf_test_app performance test application] before
+changing the default settings.
+
+[endsect] [/section:rational Polynomial and Rational Function Evaluation]
+
+[/
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
