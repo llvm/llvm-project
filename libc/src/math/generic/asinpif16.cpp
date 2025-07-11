@@ -42,8 +42,8 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
 
   FPBits xbits(x);
   uint16_t x_uint = xbits.uintval();
-  bool is_neg = static_cast<bool>(x_uint >> 15);
-  float16 x_abs = is_neg ? -x : x;
+  bool is_neg = xbits.is_neg();
+  float16 x_abs = xbits.abs().get_val();
 
   auto signed_result = [is_neg](auto r) -> auto { return is_neg ? -r : r; };
 
@@ -89,7 +89,7 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   //
   // it's very accurate in the range [0, 0.5] and has a maximum error of
   // 0.0000000000000001 in the range [0, 0.5].
-  static constexpr double POLY_COEFFS[10] = {
+  constexpr double POLY_COEFFS[10] = {
       0x1.45f306dc9c889p-2, // x^1
       0x1.b2995e7b7b5fdp-5, // x^3
       0x1.8723a1d588a36p-6, // x^5
