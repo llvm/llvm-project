@@ -2906,7 +2906,7 @@ static void handleWarnUnusedResult(Sema &S, Decl *D, const ParsedAttr &AL) {
       && (!AL.getScopeName() || AL.isClangScope())) {
     // The standard attribute cannot be applied to variable declarations such
     // as a function pointer.
-    if (isa<VarDecl>(D))
+    if (!AL.isClangScope() && isa<VarDecl>(D))
       S.Diag(AL.getLoc(), diag::warn_attribute_wrong_decl_type)
           << AL << AL.isRegularKeywordAttribute()
           << ExpectedFunctionOrClassOrEnum;
