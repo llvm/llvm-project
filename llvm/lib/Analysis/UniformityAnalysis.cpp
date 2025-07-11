@@ -150,9 +150,6 @@ INITIALIZE_PASS_BEGIN(UniformityInfoWrapperPass, "uniformity",
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-// Though Uniformity Analysis depends on the CFG,
-// it also needs to be invalidated if values are changed, so isCFGOnly: false.
-// See NOTE on updatability at the start of GenericUniformityImpl.h
 INITIALIZE_PASS_END(UniformityInfoWrapperPass, "uniformity",
                     "Uniformity Analysis", false, true)
 
