@@ -741,10 +741,6 @@ static bool satisfiesProperties2326(
       !AddConstexprToMethodOfClassWithoutConstexprConstructor)
     return false;
 
-  if (Method && Method->getParent()->isLambda()) {
-    return false;
-  }
-
   if (FDecl->hasBody() && llvm::isa<CoroutineBodyStmt>(FDecl->getBody()))
     return false;
 
@@ -841,7 +837,8 @@ void UseConstexprCheck::registerMatchers(MatchFinder *Finder) {
           isDefinition(),
           unless(anyOf(isConstexpr(), isImplicit(), hasExternalFormalLinkage(),
                        isInMacro(), isMain(), isInStdNamespace(),
-                       isExpansionInSystemHeader(), isExternC())),
+                       isExpansionInSystemHeader(), isExternC(),
+                       cxxMethodDecl(ofClass(cxxRecordDecl(isLambda()))))),
           locationPermitsConstexpr(), allRedeclsInSameFile(),
           satisfiesProperties(
               ConservativeLiteralType,
