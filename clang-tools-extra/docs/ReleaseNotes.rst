@@ -194,6 +194,15 @@ New checks
   Finds virtual function overrides with different visibility than the function
   in the base class.
 
+- New :doc:`bugprone-default-lambda-capture
+  <clang-tidy/checks/bugprone/default-lambda-capture>` check.
+
+  Finds lambda expressions that use default capture modes (``[=]`` or ``[&]``)
+  and suggests using explicit captures instead. Default captures can lead to
+  subtle bugs including dangling references with ``[&]``, unnecessary copies
+  with ``[=]``, and make code less maintainable by hiding which variables are
+  actually being captured.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
