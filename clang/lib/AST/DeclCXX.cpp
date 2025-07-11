@@ -1218,7 +1218,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
     bool IsZeroSize = Field->isZeroSize(Context);
 
     // P3074
-    const bool TrivialUnion = Context.getLangOpts().CPlusPlus26 && isUnion();
+    bool TrivialUnion = Context.getLangOpts().CPlusPlus26 && isUnion();
 
     if (const auto *RecordTy = T->getAs<RecordType>()) {
       auto *FieldRec = cast<CXXRecordDecl>(RecordTy->getDecl());

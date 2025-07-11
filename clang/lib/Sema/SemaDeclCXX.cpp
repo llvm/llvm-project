@@ -9543,7 +9543,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
   if (DiagKind == -1)
     return false;
 
-  if (S.Context.getLangOpts().CPlusPlus26 && inUnion() &&
+  if (S.LangOpts.CPlusPlus26 && inUnion() &&
       CSM == CXXSpecialMemberKind::Destructor) {
     // [class.dtor]/7 In C++26, a destructor for a union X is only deleted under
     // the additional conditions that:
@@ -9565,7 +9565,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
         break;
     }
 
-    auto ParentDecl = dyn_cast<CXXRecordDecl>(Parent);
+    auto ParentDecl = cast<CXXRecordDecl>(Parent);
     if (!ParentDecl->isBeingDefined()) {
       Sema::SpecialMemberOverloadResult SMOR = S.LookupSpecialMember(
           ParentDecl, CXXSpecialMemberKind::DefaultConstructor, false, false,
@@ -9735,7 +9735,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForField(FieldDecl *FD) {
   if (inUnion() && shouldDeleteForVariantPtrAuthMember(FD))
     return true;
 
-  if (inUnion() && S.Context.getLangOpts().CPlusPlus26 &&
+  if (inUnion() && S.LangOpts.CPlusPlus26 &&
       CSM == CXXSpecialMemberKind::DefaultConstructor)
     return false;
 
@@ -9818,7 +9818,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForField(FieldDecl *FD) {
       // At least one member in each anonymous union must be non-const
       if (CSM == CXXSpecialMemberKind::DefaultConstructor &&
           AllVariantFieldsAreConst && !FieldRecord->field_empty() &&
-          !S.Context.getLangOpts().CPlusPlus26) {
+          !S.LangOpts.CPlusPlus26) {
         if (Diagnose)
           S.Diag(FieldRecord->getLocation(),
                  diag::note_deleted_default_ctor_all_const)
@@ -9849,7 +9849,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForAllConstMembers() {
   if (CSM == CXXSpecialMemberKind::DefaultConstructor && inUnion() &&
       AllFieldsAreConst) {
 
-    if (S.Context.getLangOpts().CPlusPlus26)
+    if (S.LangOpts.CPlusPlus26)
       return false;
 
     bool AnyFields = false;
