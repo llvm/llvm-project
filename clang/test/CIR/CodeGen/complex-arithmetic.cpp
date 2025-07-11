@@ -173,6 +173,7 @@ void foo4() {
 
 // LLVM: %[[COMPLEX_A:.*]] = alloca { i32, i32 }, i64 1, align 4
 // LLVM: %[[COMPLEX_B:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: %[[COMPLEX_C:.*]] = alloca { i32, i32 }, i64 1, align 4
 // LLVM: %[[TMP_A:.*]] = load { i32, i32 }, ptr %[[COMPLEX_A]], align 4
 // LLVM: %[[TMP_B:.*]] = load { i32, i32 }, ptr %[[COMPLEX_B]], align 4
 // LLVM: %[[A_REAL:.*]] = extractvalue { i32, i32 } %[[TMP_A]], 0
@@ -183,6 +184,7 @@ void foo4() {
 // LLVM: %[[SUB_IMAG:.*]] = sub i32 %[[A_IMAG]], %[[B_IMAG]]
 // LLVM: %[[RESULT:.*]] = insertvalue { i32, i32 } poison, i32 %[[SUB_REAL]], 0
 // LLVM: %[[RESULT_2:.*]] = insertvalue { i32, i32 } %[[RESULT]], i32 %[[SUB_IMAG]], 1
+// LLVM: store { i32, i32 } %[[RESULT_2]], ptr %[[COMPLEX_C]], align 4
 
 // OGCG: %[[COMPLEX_A:.*]] = alloca { i32, i32 }, align 4
 // OGCG: %[[COMPLEX_B:.*]] = alloca { i32, i32 }, align 4

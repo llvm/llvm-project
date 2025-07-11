@@ -74,7 +74,6 @@ public:
   mlir::Value emitPromotedComplexOperand(const Expr *e, QualType promotionTy);
 
   mlir::Value emitBinAdd(const BinOpInfo &op);
-
   mlir::Value emitBinSub(const BinOpInfo &op);
 
   QualType getPromotionType(QualType ty, bool isDivOpCode = false) {
