@@ -736,6 +736,142 @@ public:
 };
 
 // ========================================================================= //
+//                         Expired Loans Analysis
+// ========================================================================= //
+
+/// The lattice for tracking expired loans. It is a set of loan IDs.
+struct ExpiredLattice {
+  LoanSet Expired;
+
+  ExpiredLattice() = default;
+  explicit ExpiredLattice(LoanSet S) : Expired(S) {}
+
+  bool operator==(const ExpiredLattice &Other) const {
+    return Expired == Other.Expired;
+  }
+  bool operator!=(const ExpiredLattice &Other) const {
+    return !(*this == Other);
+  }
+
+  /// Computes the union of two lattices.
+  ExpiredLattice join(const ExpiredLattice &Other,
+                      LoanSet::Factory &Factory) const {
+    LoanSet JoinedSet = Expired;
+    for (LoanID LID : Other.Expired)
+      JoinedSet = Factory.add(JoinedSet, LID);
+    return ExpiredLattice(JoinedSet);
+  }
+
+  void dump(llvm::raw_ostream &OS) const {
+    OS << "ExpiredLattice State:\n";
+    if (Expired.isEmpty())
+      OS << "  <empty>\n";
+    for (const LoanID &LID : Expired)
+      OS << "  Loan " << LID << " is expired\n";
+  }
+};
+
+/// Transfer function for the expired loans analysis.
+class ExpiredLoansTransferer {
+  FactManager &AllFacts;
+  LoanSet::Factory &SetFactory;
+
+public:
+  explicit ExpiredLoansTransferer(FactManager &F, LoanSet::Factory &SF)
+      : AllFacts(F), SetFactory(SF) {}
+
+  /// Computes the exit state of a block by applying all its facts sequentially
+  /// to a given entry state.
+  ExpiredLattice transferBlock(const CFGBlock *Block,
+                                ExpiredLattice EntryState) {
+    ExpiredLattice BlockState = EntryState;
+    llvm::ArrayRef<const Fact *> Facts = AllFacts.getFacts(Block);
+
+    for (const Fact *F : Facts) {
+      BlockState = transferFact(BlockState, F);
+    }
+    return BlockState;
+  }
+
+private:
+  ExpiredLattice transferFact(ExpiredLattice In, const Fact *F) {
+    if (const auto *EF = F->getAs<ExpireFact>())
+      return ExpiredLattice(SetFactory.add(In.Expired, EF->getLoanID()));
+
+    if (const auto *IF = F->getAs<IssueFact>())
+      return ExpiredLattice(SetFactory.remove(In.Expired, IF->getLoanID()));
+
+    return In;
+  }
+};
+
+/// Dataflow analysis driver for tracking expired loans.
+class ExpiredLoansAnalysis {
+  const CFG &Cfg;
+  AnalysisDeclContext &AC;
+  LoanSet::Factory SetFactory;
+  ExpiredLoansTransferer Xfer;
+
+  llvm::DenseMap<const CFGBlock *, ExpiredLattice> BlockEntryStates;
+  llvm::DenseMap<const CFGBlock *, ExpiredLattice> BlockExitStates;
+
+public:
+  ExpiredLoansAnalysis(const CFG &C, FactManager &FS, AnalysisDeclContext &AC)
+      : Cfg(C), AC(AC), Xfer(FS, SetFactory) {}
+
+  void run() {
+    llvm::TimeTraceScope TimeProfile("Expired Loans Analysis");
+    ForwardDataflowWorklist Worklist(Cfg, AC);
+    const CFGBlock *Entry = &Cfg.getEntry();
+    BlockEntryStates[Entry] = ExpiredLattice(SetFactory.getEmptySet());
+    Worklist.enqueueBlock(Entry);
+    while (const CFGBlock *B = Worklist.dequeue()) {
+      ExpiredLattice EntryState = getEntryState(B);
+      ExpiredLattice ExitState = Xfer.transferBlock(B, EntryState);
+      BlockExitStates[B] = ExitState;
+
+      for (const CFGBlock *Successor : B->succs()) {
+        auto SuccIt = BlockEntryStates.find(Successor);
+        ExpiredLattice OldSuccEntryState = (SuccIt != BlockEntryStates.end())
+                                                ? SuccIt->second
+                                                : ExpiredLattice{};
+        ExpiredLattice NewSuccEntryState =
+            OldSuccEntryState.join(ExitState, SetFactory);
+        if (SuccIt == BlockEntryStates.end() ||
+            NewSuccEntryState != OldSuccEntryState) {
+          BlockEntryStates[Successor] = NewSuccEntryState;
+          Worklist.enqueueBlock(Successor);
+        }
+      }
+    }
+  }
+
+  void dump() const {
+    llvm::dbgs() << "==========================================\n";
+    llvm::dbgs() << "       Expired Loans Results:\n";
+    llvm::dbgs() << "==========================================\n";
+    const CFGBlock &B = Cfg.getExit();
+    getExitState(&B).dump(llvm::dbgs());
+  }
+
+  ExpiredLattice getEntryState(const CFGBlock *B) const {
+    auto It = BlockEntryStates.find(B);
+    if (It != BlockEntryStates.end()) {
+      return It->second;
+    }
+    return ExpiredLattice(SetFactory.getEmptySet());
+  }
+
+  ExpiredLattice getExitState(const CFGBlock *B) const {
+    auto It = BlockExitStates.find(B);
+    if (It != BlockExitStates.end()) {
+      return It->second;
+    }
+    return ExpiredLattice(SetFactory.getEmptySet());
+  }
+};
+
+// ========================================================================= //
 //  TODO: Analysing dataflow results and error reporting.
 // ========================================================================= //
 } // anonymous namespace
@@ -762,5 +898,9 @@ void runLifetimeSafetyAnalysis(const DeclContext &DC, const CFG &Cfg,
   LifetimeDataflow Dataflow(Cfg, FactMgr, AC);
   Dataflow.run();
   DEBUG_WITH_TYPE("LifetimeDataflow", Dataflow.dump());
+
+  ExpiredLoansAnalysis ExpiredAnalysis(Cfg, FactMgr, AC);
+  ExpiredAnalysis.run();
+  DEBUG_WITH_TYPE("ExpiredLoans", ExpiredAnalysis.dump());
 }
 } // namespace clang
