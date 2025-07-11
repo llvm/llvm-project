@@ -146,6 +146,21 @@ TEST_F(HTTPDelimitedJSONTransportTest, ReadWithEOF) {
   });
 }
 
+TEST_F(HTTPDelimitedJSONTransportTest, ReaderWithUnhandledData) {
+  std::string json = R"json({"str": "foo"})json";
+  std::string message =
+      formatv("Content-Length: {0}\r\nContent-type: text/json\r\n\r\n{1}",
+              json.size(), json)
+          .str();
+  // Write an incomplete message and close the handle.
+  ASSERT_THAT_EXPECTED(input.Write(message.data(), message.size() - 1),
+                       Succeeded());
+  input.CloseWriteFileDescriptor();
+  RunOnce<JSONTestType>([&](llvm::Expected<JSONTestType> message) {
+    ASSERT_THAT_EXPECTED(message, Failed<TransportUnhandledContentsError>());
+  });
+}
+
 TEST_F(HTTPDelimitedJSONTransportTest, InvalidTransport) {
   transport = std::make_unique<HTTPDelimitedJSONTransport>(nullptr, nullptr);
   auto handle = transport->RegisterReadObject<JSONTestType>(
@@ -216,6 +231,18 @@ TEST_F(JSONRPCTransportTest, ReadWithEOF) {
   input.CloseWriteFileDescriptor();
   RunOnce<JSONTestType>([&](llvm::Expected<JSONTestType> message) {
     ASSERT_THAT_EXPECTED(message, Failed<TransportEOFError>());
+  });
+}
+
+TEST_F(JSONRPCTransportTest, ReaderWithUnhandledData) {
+  std::string message = R"json({"str": "foo"})json"
+                        "\n";
+  // Write an incomplete message and close the handle.
+  ASSERT_THAT_EXPECTED(input.Write(message.data(), message.size() - 1),
+                       Succeeded());
+  input.CloseWriteFileDescriptor();
+  RunOnce<JSONTestType>([&](llvm::Expected<JSONTestType> message) {
+    ASSERT_THAT_EXPECTED(message, Failed<TransportUnhandledContentsError>());
   });
 }
 
