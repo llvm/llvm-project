@@ -7318,6 +7318,15 @@ bool llvm::isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
 
 /// Shifts return poison if shiftwidth is larger than the bitwidth.
 static bool shiftAmountKnownInRange(const Value *ShiftAmount) {
+  auto *A = dyn_cast<Argument>(ShiftAmount);
+  if (A) {
+    auto Range = A->getRange();
+    if (Range && Range->getUnsignedMax().ult(
+                     ShiftAmount->getType()->getIntegerBitWidth())) {
+      return true;
+    }
+  }
+
   auto *C = dyn_cast<Constant>(ShiftAmount);
   if (!C)
     return false;
