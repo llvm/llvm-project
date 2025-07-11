@@ -495,6 +495,12 @@ template <typename Checker> struct DirectiveSpellingVisitor {
   template <typename T> bool Pre(const T &) { return true; }
   template <typename T> void Post(const T &) {}
 
+  template <typename... Ts>
+  static const parser::OmpDirectiveName &GetDirName(
+      const std::tuple<Ts...> &t) {
+    return std::get<parser::OmpDirectiveSpecification>(t).DirName();
+  }
+
   bool Pre(const parser::OmpSectionsDirective &x) {
     checker_(x.source, x.v);
     return false;
@@ -520,8 +526,7 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     return false;
   }
   bool Pre(const parser::OpenMPAllocatorsConstruct &x) {
-    checker_(
-        std::get<parser::Verbatim>(x.t).source, Directive::OMPD_allocators);
+    checker_(GetDirName(x.t).source, Directive::OMPD_allocators);
     return false;
   }
   bool Pre(const parser::OmpAssumeDirective &x) {
@@ -1657,26 +1662,45 @@ void OmpStructureChecker::Leave(const parser::OpenMPExecutableAllocate &x) {
 
 void OmpStructureChecker::Enter(const parser::OpenMPAllocatorsConstruct &x) {
   isPredefinedAllocator = true;
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_allocators);
-  const auto &clauseList{std::get<parser::OmpClauseList>(x.t)};
-  for (const auto &clause : clauseList.v) {
+
+  auto &dirSpec{std::get<parser::OmpDirectiveSpecification>(x.t)};
+  auto &block{std::get<parser::Block>(x.t)};
+  PushContextAndClauseSets(
+      dirSpec.DirName().source, llvm::omp::Directive::OMPD_allocators);
+
+  if (block.empty()) {
+    context_.Say(dirSpec.source,
+        "The ALLOCATORS construct should contain a single ALLOCATE statement"_err_en_US);
+    return;
+  }
+
+  omp::SourcedActionStmt action{omp::GetActionStmt(block)};
+  const auto *allocate{
+      action ? parser::Unwrap<parser::AllocateStmt>(action.stmt) : nullptr};
+
+  if (!allocate) {
+    const parser::CharBlock &source = action ? action.source : x.source;
+    context_.Say(source,
+        "The body of the ALLOCATORS construct should be an ALLOCATE statement"_err_en_US);
+  }
+
+  for (const auto &clause : dirSpec.Clauses().v) {
     if (const auto *allocClause{
             parser::Unwrap<parser::OmpClause::Allocate>(clause)}) {
       CheckVarIsNotPartOfAnotherVar(
-          dir.source, std::get<parser::OmpObjectList>(allocClause->v.t));
+          dirSpec.source, std::get<parser::OmpObjectList>(allocClause->v.t));
     }
   }
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPAllocatorsConstruct &x) {
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  const auto &clauseList{std::get<parser::OmpClauseList>(x.t)};
-  for (const auto &clause : clauseList.v) {
+  auto &dirSpec{std::get<parser::OmpDirectiveSpecification>(x.t)};
+
+  for (const auto &clause : dirSpec.Clauses().v) {
     if (const auto *allocClause{
             std::get_if<parser::OmpClause::Allocate>(&clause.u)}) {
       CheckPredefinedAllocatorRestriction(
-          dir.source, std::get<parser::OmpObjectList>(allocClause->v.t));
+          dirSpec.source, std::get<parser::OmpObjectList>(allocClause->v.t));
     }
   }
   dirContext_.pop_back();

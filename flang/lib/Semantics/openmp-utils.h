@@ -29,6 +29,19 @@ class Symbol;
 
 // Add this namespace to avoid potential conflicts
 namespace omp {
+// There is no consistent way to get the source of an ActionStmt, but there
+// is "source" in Statement<T>. This structure keeps the ActionStmt with the
+// extracted source for further use.
+struct SourcedActionStmt {
+  const parser::ActionStmt *stmt{nullptr};
+  parser::CharBlock source;
+
+  operator bool() const { return stmt != nullptr; }
+};
+
+SourcedActionStmt GetActionStmt(const parser::ExecutionPartConstruct *x);
+SourcedActionStmt GetActionStmt(const parser::Block &block);
+
 std::string ThisVersion(unsigned version);
 std::string TryVersion(unsigned version);
 
