@@ -163,10 +163,11 @@ if(ENABLE_SHARED)
       VERSION ${LIBCLANG_LIBRARY_VERSION}
       DEFINE_SYMBOL _CINDEX_LIB_)
     if (CYGWIN)
-      # cygclang.dll is needed in build-tree for testsuite of python bindings.
+      # We need cygclang.dll in build-tree additional to installed-tree for testsuite of python bindings.
+      set(plain_name "$<TARGET_FILE_DIR:libclang>/$<TARGET_FILE_PREFIX:libclang>clang$<TARGET_FILE_SUFFIX:libclang>")
       add_custom_command(TARGET libclang POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E create_symlink "$<TARGET_FILE_NAME:libclang>"
-        "$<TARGET_FILE_DIR:libclang>/$<TARGET_FILE_PREFIX:libclang>clang$<TARGET_FILE_SUFFIX:libclang>")
+                         COMMAND ${CMAKE_COMMAND} -E create_symlink "$<TARGET_FILE_NAME:libclang>" "${plain_name}")
+      install(FILES "${plain_name}" DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT libclang)
     endif()
     # Avoid declaring clang c++ symbols that are statically linked into libclang as dllimport'ed.
     # If llvm/libclang-cpp dll is also being built for windows clang c++ symbols will still be
