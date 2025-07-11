@@ -223,7 +223,10 @@ public:
       lldb::addr_t instance, swift::remote::TypeInfoProvider *provider,
       swift::reflection::DescriptorFinder *descriptor_finder) override {
     auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
-    auto *ti = m_reflection_ctx.getInstanceTypeInfo(instance, provider);
+    auto *ti = m_reflection_ctx.getInstanceTypeInfo(
+        swift::remote::RemoteAddress(
+            instance, swift::remote::RemoteAddress::DefaultAddressSpace),
+        provider);
     if (!ti)
       return llvm::createStringError("could not get instance type info");
     return *ti;
@@ -273,7 +276,9 @@ public:
     auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
     // Guard against faulty self-referential metadata.
     unsigned limit = 256;
-    auto md_ptr = m_reflection_ctx.readMetadataFromInstance(pointer);
+    auto md_ptr =
+        m_reflection_ctx.readMetadataFromInstance(swift::remote::RemoteAddress(
+            pointer, swift::remote::RemoteAddress::DefaultAddressSpace));
     if (!md_ptr)
       return false;
 
@@ -345,7 +350,10 @@ public:
                        bool skip_artificial_subclasses) override {
     auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
     if (auto *tr = m_reflection_ctx.readTypeFromMetadata(
-            metadata_address, skip_artificial_subclasses))
+            swift::remote::RemoteAddress(
+                metadata_address,
+                swift::remote::RemoteAddress::DefaultAddressSpace),
+            skip_artificial_subclasses))
       return *tr;
     return llvm::createStringError("could not read type from metadata");
   }
@@ -356,7 +364,9 @@ public:
                        bool skip_artificial_subclasses) override {
     auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
     auto metadata_address =
-        m_reflection_ctx.readMetadataFromInstance(instance_address);
+        m_reflection_ctx.readMetadataFromInstance(swift::remote::RemoteAddress(
+            instance_address,
+            swift::remote::RemoteAddress::DefaultAddressSpace));
     if (!metadata_address)
       return llvm::createStringError(
           llvm::formatv("could not read heap metadata for object at {0:x}",
@@ -370,7 +380,8 @@ public:
 
   std::optional<swift::remote::RemoteAbsolutePointer>
   ReadPointer(lldb::addr_t instance_address) override {
-    auto ptr = m_reflection_ctx.readPointer(instance_address);
+    auto ptr = m_reflection_ctx.readPointer(swift::remote::RemoteAddress(
+        instance_address, swift::remote::RemoteAddress::DefaultAddressSpace));
     return ptr;
   }
 
@@ -399,7 +410,9 @@ public:
   asyncTaskInfo(lldb::addr_t AsyncTaskPtr, unsigned ChildTaskLimit,
                 unsigned AsyncBacktraceLimit) override {
     auto [error, task_info] = m_reflection_ctx.asyncTaskInfo(
-        AsyncTaskPtr, ChildTaskLimit, AsyncBacktraceLimit);
+        swift::remote::RemoteAddress(
+            AsyncTaskPtr, swift::remote::RemoteAddress::DefaultAddressSpace),
+        ChildTaskLimit, AsyncBacktraceLimit);
     if (error)
       return llvm::createStringError(*error);
 

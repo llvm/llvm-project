@@ -24,8 +24,34 @@
 #include "llvm/Support/Memory.h"
 
 namespace lldb_private {
+class LLDBMemoryReader;
+class MemoryReaderLocalBufferHolder {
+public:
+  MemoryReaderLocalBufferHolder() : m_memory_reader(nullptr) {}
+  MemoryReaderLocalBufferHolder(MemoryReaderLocalBufferHolder &&other)
+      : m_memory_reader(other.m_memory_reader) {
+    other.m_memory_reader = nullptr;
+  }
+
+  MemoryReaderLocalBufferHolder &operator=(MemoryReaderLocalBufferHolder &&other) {
+    this->m_memory_reader = other.m_memory_reader;
+    other.m_memory_reader = nullptr;
+    return *this;
+  }
+
+  ~MemoryReaderLocalBufferHolder(); 
+private:
+  friend LLDBMemoryReader;
+
+  MemoryReaderLocalBufferHolder(LLDBMemoryReader *memory_reader)
+      : m_memory_reader(memory_reader) {}
+
+  LLDBMemoryReader *m_memory_reader;
+};
+
 class LLDBMemoryReader : public swift::remote::MemoryReader {
 public:
+
   LLDBMemoryReader(Process &p,
                    std::function<swift::remote::RemoteAbsolutePointer(
                        swift::remote::RemoteAbsolutePointer)>
@@ -59,9 +85,7 @@ public:
   bool readString(swift::remote::RemoteAddress address,
                   std::string &dest) override;
 
-  void pushLocalBuffer(uint64_t local_buffer, uint64_t local_buffer_size);
-
-  void popLocalBuffer();
+  MemoryReaderLocalBufferHolder pushLocalBuffer(uint64_t local_buffer, uint64_t local_buffer_size);
 
   /// Adds the module to the list of modules we're tracking using tagged
   /// addresses, so we can read memory from the file cache whenever possible.
@@ -74,6 +98,10 @@ public:
   bool readMetadataFromFileCacheEnabled() const;
 
 private:
+  friend MemoryReaderLocalBufferHolder;
+
+  void popLocalBuffer();
+
   /// Gets the file address and module that were mapped to a given tagged
   /// address.
   std::optional<std::pair<uint64_t, lldb::ModuleSP>>
@@ -93,7 +121,6 @@ private:
   std::optional<Address>
   resolveRemoteAddressFromSymbolObjectFile(uint64_t address) const;
 
-private:
   Process &m_process;
   size_t m_max_read_amount;
 

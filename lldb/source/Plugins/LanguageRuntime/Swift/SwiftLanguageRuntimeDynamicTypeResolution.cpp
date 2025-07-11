@@ -261,15 +261,12 @@ std::shared_ptr<LLDBMemoryReader> SwiftLanguageRuntime::GetMemoryReader() {
   return m_memory_reader_sp;
 }
 
-void SwiftLanguageRuntime::PushLocalBuffer(uint64_t local_buffer,
+MemoryReaderLocalBufferHolder SwiftLanguageRuntime::PushLocalBuffer(uint64_t local_buffer,
                                            uint64_t local_buffer_size) {
-  ((LLDBMemoryReader *)GetMemoryReader().get())
+  return ((LLDBMemoryReader *)GetMemoryReader().get())
       ->pushLocalBuffer(local_buffer, local_buffer_size);
 }
 
-void SwiftLanguageRuntime::PopLocalBuffer() {
-  ((LLDBMemoryReader *)GetMemoryReader().get())->popLocalBuffer();
-}
 
 class LLDBTypeInfoProvider : public swift::remote::TypeInfoProvider {
   SwiftLanguageRuntime &m_runtime;
@@ -1452,9 +1449,8 @@ llvm::Expected<std::string> SwiftLanguageRuntime::GetEnumCaseName(
     return "";
 
   auto *eti = llvm::cast<EnumTypeInfo>(ti);
-  PushLocalBuffer((int64_t)data.GetDataStart(), data.GetByteSize());
-  auto defer = llvm::make_scope_exit([&] { PopLocalBuffer(); });
-  RemoteAddress addr(data.GetDataStart());
+  auto buffer_holder = PushLocalBuffer((int64_t)data.GetDataStart(), data.GetByteSize());
+  RemoteAddress addr = RemoteAddress((uint64_t)data.GetDataStart(), swift::reflection::RemoteAddress::DefaultAddressSpace);
   int case_index;
   if (eti->projectEnumValue(*GetMemoryReader(), addr, &case_index))
     return eti->getCases()[case_index].Name;
@@ -1567,7 +1563,7 @@ SwiftLanguageRuntime::ProjectEnum(ValueObject &valobj) {
     }
   }
 
-  swift::reflection::RemoteAddress remote_addr(addr);
+  auto remote_addr = swift::reflection::RemoteAddress(addr, 0);
   int case_index;
   auto *eti = llvm::cast<swift::reflection::EnumTypeInfo>(ti);
   if (!eti->projectEnumValue(*GetMemoryReader(), remote_addr, &case_index))
@@ -2050,10 +2046,11 @@ CompilerType SwiftLanguageRuntime::GetDynamicTypeAndAddress_EmbeddedClass(
   if (!pointer)
     return {};
   llvm::StringRef symbol_name;
-  if (pointer->isResolved()) {
+  if (pointer->getSymbol().empty() || pointer->getOffset()) {
     // Find the symbol name at this address.
     Address address;
-    address.SetLoadAddress(pointer->getOffset(), &GetProcess().GetTarget());
+    address.SetLoadAddress(pointer->getResolvedAddress().getRawAddress(),
+                           &GetProcess().GetTarget());
     Symbol *symbol = address.CalculateSymbolContextSymbol();
     if (!symbol)
       return {};
@@ -2298,85 +2295,90 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Existential(
     return false;
   }
 
+  // This scope is needed because the validation code will call PushLocalBuffer,
+  // so we need to pop it before that call.
+  {
+    MemoryReaderLocalBufferHolder holder;
+    if (use_local_buffer)
+      holder = PushLocalBuffer(
+          existential_address,
+          llvm::expectedToOptional(in_value.GetByteSize()).value_or(0));
 
-  if (use_local_buffer)
-    PushLocalBuffer(
-        existential_address,
-        llvm::expectedToOptional(in_value.GetByteSize()).value_or(0));
+    auto remote_existential = swift::remote::RemoteAddress(
+        existential_address, swift::remote::RemoteAddress::DefaultAddressSpace);
 
-  swift::remote::RemoteAddress remote_existential(existential_address);
-
-  ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
-  if (!reflection_ctx)
-    return false;
-  auto tr_ts = tss->GetTypeSystemSwiftTypeRef();
-  if (!tr_ts)
-    return false;
-
-  auto flavor = SwiftLanguageRuntime::GetManglingFlavor(
-      existential_type.GetMangledTypeName());
-  CompilerType dynamic_type;
-  uint64_t dynamic_address = 0;
-  if (flavor == swift::Mangle::ManglingFlavor::Default) {
-    auto pair = reflection_ctx->ProjectExistentialAndUnwrapClass(
-        remote_existential, *existential_typeref, tr_ts->GetDescriptorFinder());
-
-    if (!pair) {
-      if (log)
-        log->Printf("Runtime failed to get dynamic type of existential");
-      return false;
-    }
-
-    const swift::reflection::TypeRef *typeref;
-    swift::remote::RemoteAddress out_address(nullptr);
-    std::tie(typeref, out_address) = *pair;
-
-    auto ts = tss->GetTypeSystemSwiftTypeRef();
-    if (!ts)
-      return false;
-    swift::Demangle::Demangler dem;
-    swift::Demangle::NodePointer node = typeref->getDemangling(dem);
-    dynamic_type = ts->RemangleAsType(dem, node, flavor);
-    dynamic_address = out_address.getAddressData();
-  } else {
-    // In the embedded Swift case, the existential container just points to the
-    // instance.
-    auto reflection_ctx = GetReflectionContext();
+    ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
     if (!reflection_ctx)
       return false;
-    auto maybe_addr_or_symbol =
-        reflection_ctx->ReadPointer(existential_address);
-    if (!maybe_addr_or_symbol)
+    auto tr_ts = tss->GetTypeSystemSwiftTypeRef();
+    if (!tr_ts)
       return false;
 
-    uint64_t address = 0;
-    if (maybe_addr_or_symbol->isResolved()) {
-      address = maybe_addr_or_symbol->getOffset();
+    auto flavor = SwiftLanguageRuntime::GetManglingFlavor(
+        existential_type.GetMangledTypeName());
+    CompilerType dynamic_type;
+    uint64_t dynamic_address = 0;
+    if (flavor == swift::Mangle::ManglingFlavor::Default) {
+      auto pair = reflection_ctx->ProjectExistentialAndUnwrapClass(
+          remote_existential, *existential_typeref,
+          tr_ts->GetDescriptorFinder());
+
+      if (!pair) {
+        if (log)
+          log->Printf("Runtime failed to get dynamic type of existential");
+        return false;
+      }
+
+      const swift::reflection::TypeRef *typeref;
+      swift::remote::RemoteAddress out_address;
+      std::tie(typeref, out_address) = *pair;
+
+      auto ts = tss->GetTypeSystemSwiftTypeRef();
+      if (!ts)
+        return false;
+      swift::Demangle::Demangler dem;
+      swift::Demangle::NodePointer node = typeref->getDemangling(dem);
+      dynamic_type = ts->RemangleAsType(dem, node, flavor);
+      dynamic_address = out_address.getRawAddress();
     } else {
-      SymbolContextList sc_list;
-      auto &module_list = GetProcess().GetTarget().GetImages();
-      module_list.FindSymbolsWithNameAndType(
-          ConstString(maybe_addr_or_symbol->getSymbol()), eSymbolTypeAny,
-          sc_list);
-      if (sc_list.GetSize() != 1)
+      // In the embedded Swift case, the existential container just points to
+      // the instance.
+      auto reflection_ctx = GetReflectionContext();
+      if (!reflection_ctx)
+        return false;
+      auto maybe_addr_or_symbol =
+          reflection_ctx->ReadPointer(existential_address);
+      if (!maybe_addr_or_symbol)
         return false;
 
-      SymbolContext sc = sc_list[0];
-      Symbol *symbol = sc.symbol;
-      address = symbol->GetLoadAddress(&GetProcess().GetTarget());
+      uint64_t address = 0;
+      if (maybe_addr_or_symbol->getSymbol().empty() &&
+          maybe_addr_or_symbol->getOffset() == 0) {
+        address = maybe_addr_or_symbol->getResolvedAddress().getRawAddress();
+      } else {
+        SymbolContextList sc_list;
+        auto &module_list = GetProcess().GetTarget().GetImages();
+        module_list.FindSymbolsWithNameAndType(
+            ConstString(maybe_addr_or_symbol->getSymbol()), eSymbolTypeAny,
+            sc_list);
+        if (sc_list.GetSize() != 1)
+          return false;
+
+        SymbolContext sc = sc_list[0];
+        Symbol *symbol = sc.symbol;
+        address = symbol->GetLoadAddress(&GetProcess().GetTarget());
+      }
+
+      dynamic_type =
+          GetDynamicTypeAndAddress_EmbeddedClass(address, existential_type);
+      if (!dynamic_type)
+        return false;
+      dynamic_address =
+          maybe_addr_or_symbol->getResolvedAddress().getRawAddress();
     }
-
-    dynamic_type =
-        GetDynamicTypeAndAddress_EmbeddedClass(address, existential_type);
-    if (!dynamic_type)
-      return false;
-    dynamic_address = maybe_addr_or_symbol->getOffset();
+    class_type_or_name.SetCompilerType(dynamic_type);
+    address.SetRawAddress(dynamic_address);
   }
-  if (use_local_buffer)
-    PopLocalBuffer();
-
-  class_type_or_name.SetCompilerType(dynamic_type);
-  address.SetRawAddress(dynamic_address);
 
 #ifndef NDEBUG
   if (ModuleList::GetGlobalModuleListProperties()
@@ -2833,21 +2835,22 @@ Value::ValueType SwiftLanguageRuntime::GetValueType(
         existential_address = in_value.GetAddressOf();
       }
 
+      MemoryReaderLocalBufferHolder holder;
       if (use_local_buffer)
-        PushLocalBuffer(
+        holder = PushLocalBuffer(
             existential_address,
             llvm::expectedToOptional(in_value.GetByteSize()).value_or(0));
 
       // Read the value witness table and check if the data is inlined in
       // the existential container or not.
-      swift::remote::RemoteAddress remote_existential(existential_address);
+      auto remote_existential = swift::remote::RemoteAddress(
+          existential_address,
+          swift::remote::RemoteAddress::DefaultAddressSpace);
       if (ThreadSafeReflectionContext reflection_ctx = GetReflectionContext()) {
         std::optional<bool> is_inlined =
             reflection_ctx->IsValueInlinedInExistentialContainer(
                 remote_existential);
 
-        if (use_local_buffer)
-          PopLocalBuffer();
 
         // An error has occurred when trying to read value witness table,
         // default to treating it as pointer.

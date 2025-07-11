@@ -584,8 +584,11 @@ bool SwiftLanguageRuntime::AddJitObjectFileToReflectionContext(
 
             auto *Buf = malloc(size);
             std::memcpy(Buf, data.begin(), size);
-            swift::remote::RemoteRef<void> remote_ref(section->GetFileAddress(),
-                                                      Buf);
+            swift::remote::RemoteRef<void> remote_ref(
+                swift::remote::RemoteAddress(
+                    section->GetFileAddress(),
+                    swift::remote::RemoteAddress::DefaultAddressSpace),
+                Buf);
 
             return {remote_ref, size};
           }
@@ -723,7 +726,10 @@ std::optional<uint32_t> SwiftLanguageRuntime::AddObjectFileToReflectionContext(
                        section_list->GetSectionAtIndex(0)->GetFileAddress();
         assert(address <= end_address && "Address outside of range!");
 
-        swift::remote::RemoteRef<void> remote_ref(address, Buf);
+        swift::remote::RemoteRef<void> remote_ref(
+            swift::remote::RemoteAddress(
+                address, swift::remote::RemoteAddress::DefaultAddressSpace),
+            Buf);
         return {remote_ref, size};
       }
     }
@@ -794,18 +800,23 @@ bool SwiftLanguageRuntime::AddModuleToReflectionContext(
     const uint8_t *file_data = extractor.GetDataStart();
     llvm::sys::MemoryBlock file_buffer((void *)file_data, size);
     info_id = m_reflection_ctx->ReadELF(
-        swift::remote::RemoteAddress(load_ptr),
+        swift::remote::RemoteAddress(
+            load_ptr, swift::remote::RemoteAddress::DefaultAddressSpace),
         std::optional<llvm::sys::MemoryBlock>(file_buffer),
         likely_module_names);
   } else if (read_from_file_cache &&
              obj_file->GetPluginName() == "mach-o") {
     info_id = AddObjectFileToReflectionContext(module_sp, likely_module_names);
     if (!info_id)
-      info_id = m_reflection_ctx->AddImage(swift::remote::RemoteAddress(load_ptr),
-                                 likely_module_names);
+      info_id = m_reflection_ctx->AddImage(
+          swift::remote::RemoteAddress(
+              load_ptr, swift::remote::RemoteAddress::DefaultAddressSpace),
+          likely_module_names);
   } else {
-    info_id = m_reflection_ctx->AddImage(swift::remote::RemoteAddress(load_ptr),
-                               likely_module_names);
+    info_id = m_reflection_ctx->AddImage(
+        swift::remote::RemoteAddress(
+            load_ptr, swift::remote::RemoteAddress::DefaultAddressSpace),
+        likely_module_names);
   }
 
   if (!info_id) {

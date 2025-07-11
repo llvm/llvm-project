@@ -1080,16 +1080,19 @@ void SwiftASTContext::SetCompilerInvocationLLDBOverrides() {
 }
 
 SwiftASTContext::~SwiftASTContext() {
+#ifndef NDEBUG
+  m_ast_context_mutex.lock();
   if (swift::ASTContext *ctx = m_ast_context_ap.get())
     // A RemoteASTContext associated with this swift::ASTContext has
     // to be destroyed before the swift::ASTContext is destroyed.
     assert(!GetASTMap().Lookup(ctx) && "ast context still in global map");
+  m_ast_context_mutex.unlock();
+#endif
 }
 
-
 SwiftASTContextForModule::~SwiftASTContextForModule() {
-  if (swift::ASTContext *ctx = m_ast_context_ap.get())
-    GetASTMap().Erase(ctx);
+  if (auto ctx = GetASTContext())
+    GetASTMap().Erase(*ctx);
 }
 
 /// This code comes from CompilerInvocation.cpp (setRuntimeResourcePath).
@@ -2583,8 +2586,9 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
 
     // Report progress on module importing by using a callback function in
     // swift::ASTContext
+    auto ast_context = swift_ast_sp->GetASTContext();
     Progress progress("Importing Swift standard library");
-    swift_ast_sp->m_ast_context_ap->SetPreModuleImportCallback(
+    ast_context->SetPreModuleImportCallback(
         [&progress](llvm::StringRef module_name,
                     swift::ASTContext::ModuleImportKind kind) {
           progress.Increment(1, module_name.str());
@@ -2593,13 +2597,13 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
     // Clear the callback function on scope exit to prevent an out-of-scope
     // access of the progress local variable
     auto on_exit = llvm::make_scope_exit([&]() {
-      swift_ast_sp->m_ast_context_ap->SetPreModuleImportCallback(
+      ast_context->SetPreModuleImportCallback(
           [](llvm::StringRef module_name,
              swift::ASTContext::ModuleImportKind kind) {});
     });
 
     swift::ModuleDecl *stdlib =
-        swift_ast_sp->m_ast_context_ap->getStdlibModule(can_create);
+        ast_context->getStdlibModule(can_create);
     if (!stdlib || IsDWARFImported(*stdlib)) {
       logError("couldn't load the Swift stdlib");
       return {};
@@ -3154,10 +3158,11 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   }
 
   {
+    auto ast_context = swift_ast_sp->GetASTContext();
     // Report progress on module importing by using a callback function in
     // swift::ASTContext
     Progress progress("Importing Swift standard library");
-    swift_ast_sp->m_ast_context_ap->SetPreModuleImportCallback(
+    ast_context->SetPreModuleImportCallback(
         [&progress](llvm::StringRef module_name,
                     swift::ASTContext::ModuleImportKind kind) {
           progress.Increment(1, module_name.str());
@@ -3166,14 +3171,14 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     // Clear the callback function on scope exit to prevent an out-of-scope
     // access of the progress local variable
     auto on_exit = llvm::make_scope_exit([&]() {
-      swift_ast_sp->m_ast_context_ap->SetPreModuleImportCallback(
+      ast_context->SetPreModuleImportCallback(
           [](llvm::StringRef module_name,
              swift::ASTContext::ModuleImportKind kind) {});
     });
 
     const bool can_create = true;
     swift::ModuleDecl *stdlib =
-        swift_ast_sp->m_ast_context_ap->getStdlibModule(can_create);
+        ast_context->getStdlibModule(can_create);
     if (!stdlib || IsDWARFImported(*stdlib)) {
       logError("couldn't load the Swift stdlib");
       return {};
@@ -3365,10 +3370,17 @@ bool SwiftASTContext::SetTriple(const llvm::Triple triple, Module *module) {
 
   m_compiler_invocation_ap->setTargetTriple(adjusted_triple);
 
+#ifndef NDEBUG
   assert(GetTriple() == adjusted_triple);
+  // We can't call GetASTContext() here because
+  // m_initialized_search_path_options and  m_initialized_clang_importer_options
+  // need to be initialized before initializing the AST context.
+  m_ast_context_mutex.lock();
   assert(!m_ast_context_ap ||
          (llvm::Triple(m_ast_context_ap->LangOpts.Target.getTriple()) ==
           adjusted_triple));
+  m_ast_context_mutex.unlock();
+#endif
 
   // Every time the triple is changed the LangOpts must be updated
   // too, because Swift default-initializes the EnableObjCInterop
@@ -3782,6 +3794,10 @@ ThreadSafeASTContext SwiftASTContext::GetASTContext() {
   return {m_ast_context_ap.get(), m_ast_context_mutex};
 }
 
+ThreadSafeASTContext SwiftASTContext::GetASTContext() const {
+  return const_cast<SwiftASTContext *>(this)->GetASTContext();
+}
+
 swift::MemoryBufferSerializedModuleLoader *
 SwiftASTContext::GetMemoryBufferModuleLoader() {
   VALID_OR_RETURN(nullptr);
@@ -3795,14 +3811,6 @@ swift::ClangImporter *SwiftASTContext::GetClangImporter() {
 
   GetASTContext();
   return m_clangimporter;
-}
-
-const swift::SearchPathOptions *SwiftASTContext::GetSearchPathOptions() const {
-  VALID_OR_RETURN(0);
-
-  if (!m_ast_context_ap)
-    return nullptr;
-  return &m_ast_context_ap->SearchPathOpts;
 }
 
 const std::vector<std::string> &SwiftASTContext::GetClangArguments() {
@@ -4793,8 +4801,7 @@ SwiftASTContext::ReconstructType(ConstString mangled_typename) {
 
 CompilerType SwiftASTContext::GetAnyObjectType() {
   VALID_OR_RETURN(CompilerType());
-  ThreadSafeASTContext ast = GetASTContext();
-  return ToCompilerType({ast->getAnyObjectType()});
+  return ToCompilerType({GetASTContext()->getAnyObjectType()});
 }
 
 static CompilerType ValueDeclToType(swift::ValueDecl *decl) {
@@ -4927,7 +4934,7 @@ SwiftASTContext::FindContainedTypeOrDecl(llvm::StringRef name,
       return 0;
     swift::NominalTypeDecl *nominal_decl = nominal_type->getDecl();
     llvm::ArrayRef<swift::ValueDecl *> decls = nominal_decl->lookupDirect(
-        swift::DeclName(m_ast_context_ap->getIdentifier(name)));
+        swift::DeclName(GetASTContext()->getIdentifier(name)));
     for (auto *decl : decls)
       results.emplace(DeclToTypeOrDecl(decl));
   }
@@ -5065,7 +5072,8 @@ size_t SwiftASTContext::FindType(const char *name,
 CompilerType SwiftASTContext::ImportType(CompilerType &type, Status &error) {
   VALID_OR_RETURN(CompilerType());
 
-  if (m_ast_context_ap.get() == NULL)
+  auto ast_context = GetASTContext();
+  if (!ast_context)
     return CompilerType();
 
   auto ts = type.GetTypeSystem();
@@ -5138,7 +5146,7 @@ swift::ModuleDecl *SwiftASTContext::GetScratchModule() {
   if (m_scratch_module == nullptr) {
     ThreadSafeASTContext ast_ctx = GetASTContext();
     m_scratch_module = swift::ModuleDecl::createEmpty(
-        GetASTContext()->getIdentifier("__lldb_scratch_module"), **ast_ctx);
+      ast_ctx->getIdentifier("__lldb_scratch_module"), **ast_ctx);
   }
   return m_scratch_module;
 }
@@ -5235,12 +5243,13 @@ SwiftASTContext::CreateTupleType(const std::vector<TupleElement> &elements) {
     std::vector<swift::TupleTypeElt> tuple_elems;
     for (const TupleElement &element : elements) {
       if (auto swift_type = GetSwiftTypeIgnoringErrors(element.element_type)) {
-        if (element.element_name.IsEmpty())
+        if (element.element_name.IsEmpty()) {
           tuple_elems.push_back(swift::TupleTypeElt(swift_type));
-        else
+        } else {
           tuple_elems.push_back(swift::TupleTypeElt(
-              swift_type, m_ast_context_ap->getIdentifier(
+              swift_type, GetASTContext()->getIdentifier(
                               element.element_name.GetCString())));
+        }
       } else
         return {};
     }
@@ -5363,7 +5372,7 @@ void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
                                        uint32_t bufferID, uint32_t first_line,
                                        uint32_t last_line) const {
   // VALID_OR_RETURN cannot be used here here since would exit on error.
-  if (!m_ast_context_ap.get()) {
+  if (!GetASTContext()) {
     RaiseFatalError("Swift compiler could not be initialized");
     return;
   }
@@ -5373,7 +5382,7 @@ void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
   assert(m_diagnostic_consumer_ap);
   auto &diags =
       *static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get());
-  if (m_ast_context_ap->Diags.hasFatalErrorOccurred() &&
+  if (GetASTContext()->Diags.hasFatalErrorOccurred() &&
       !m_reported_fatal_error) {
     DiagnosticManager fatal_diagnostics;
     diags.PrintDiagnostics(fatal_diagnostics, {}, bufferID, first_line,
@@ -5460,7 +5469,8 @@ void SwiftASTContext::LogConfiguration(bool repl, bool playground) {
   // want the logs in the error case!
   HEALTH_LOG_PRINTF("(SwiftASTContext*)%p:", static_cast<void *>(this));
 
-  if (!m_ast_context_ap) {
+  auto ast_context = GetASTContext();
+  if (!ast_context) {
     HEALTH_LOG_PRINTF("  (no AST context)");
     return;
   }
@@ -5469,49 +5479,49 @@ void SwiftASTContext::LogConfiguration(bool repl, bool playground) {
   if (playground)
     HEALTH_LOG_PRINTF("  Playground                       : true");
   HEALTH_LOG_PRINTF("  Swift/C++ interop                : %s",
-                    m_ast_context_ap->LangOpts.EnableCXXInterop ? "on" : "off");
+                    ast_context->LangOpts.EnableCXXInterop ? "on" : "off");
   HEALTH_LOG_PRINTF("  Swift/Objective-C interop        : %s",
-                    m_ast_context_ap->LangOpts.EnableObjCInterop ? "on" : "off");
+                    ast_context->LangOpts.EnableObjCInterop ? "on" : "off");
 
   HEALTH_LOG_PRINTF("  Architecture                     : %s",
-                    m_ast_context_ap->LangOpts.Target.getTriple().c_str());
+                    ast_context->LangOpts.Target.getTriple().c_str());
   HEALTH_LOG_PRINTF(
       "  SDK path                         : %s",
-      m_ast_context_ap->SearchPathOpts.getSDKPath().str().c_str());
+      ast_context->SearchPathOpts.getSDKPath().str().c_str());
   HEALTH_LOG_PRINTF(
       "  Runtime resource path            : %s",
-      m_ast_context_ap->SearchPathOpts.RuntimeResourcePath.c_str());
+      ast_context->SearchPathOpts.RuntimeResourcePath.c_str());
   HEALTH_LOG_PRINTF("  Runtime library paths            : (%llu items)",
-                    (unsigned long long)m_ast_context_ap->SearchPathOpts
+                    (unsigned long long)ast_context->SearchPathOpts
                         .RuntimeLibraryPaths.size());
 
   for (const auto &runtime_library_path :
-       m_ast_context_ap->SearchPathOpts.RuntimeLibraryPaths)
+       ast_context->SearchPathOpts.RuntimeLibraryPaths)
     HEALTH_LOG_PRINTF("    %s", runtime_library_path.c_str());
 
   HEALTH_LOG_PRINTF("  Runtime library import paths     : (%llu items)",
-                    (unsigned long long)m_ast_context_ap->SearchPathOpts
+                    (unsigned long long)ast_context->SearchPathOpts
                         .getRuntimeLibraryImportPaths()
                         .size());
 
   for (const auto &runtime_import_path :
-       m_ast_context_ap->SearchPathOpts.getRuntimeLibraryImportPaths())
+       ast_context->SearchPathOpts.getRuntimeLibraryImportPaths())
     HEALTH_LOG_PRINTF("    %s", runtime_import_path.c_str());
 
   HEALTH_LOG_PRINTF("  Framework search paths           : (%llu items)",
-                    (unsigned long long)m_ast_context_ap->SearchPathOpts
+                    (unsigned long long)ast_context->SearchPathOpts
                         .getFrameworkSearchPaths()
                         .size());
   for (const auto &framework_search_path :
-       m_ast_context_ap->SearchPathOpts.getFrameworkSearchPaths())
+       ast_context->SearchPathOpts.getFrameworkSearchPaths())
     HEALTH_LOG_PRINTF("    %s", framework_search_path.Path.c_str());
 
   HEALTH_LOG_PRINTF("  Import search paths              : (%llu items)",
-                    (unsigned long long)m_ast_context_ap->SearchPathOpts
+                    (unsigned long long)ast_context->SearchPathOpts
                         .getImportSearchPaths()
                         .size());
   for (const auto &import_search_path :
-       m_ast_context_ap->SearchPathOpts.getImportSearchPaths())
+       ast_context->SearchPathOpts.getImportSearchPaths())
     HEALTH_LOG_PRINTF("    %s", import_search_path.Path.c_str());
 
   swift::ClangImporterOptions &clang_importer_options =
@@ -5531,9 +5541,9 @@ void SwiftASTContext::LogConfiguration(bool repl, bool playground) {
     HEALTH_LOG_PRINTF("    %s", extra_arg.c_str());
 
   HEALTH_LOG_PRINTF("  Plugin search options            : (%llu items)",
-                    (unsigned long long)m_ast_context_ap->SearchPathOpts
+                    (unsigned long long)ast_context->SearchPathOpts
                         .PluginSearchOpts.size());
-  for (auto &elem : m_ast_context_ap->SearchPathOpts.PluginSearchOpts) {
+  for (auto &elem : ast_context->SearchPathOpts.PluginSearchOpts) {
     if (auto *opt =
             elem.dyn_cast<swift::PluginSearchOption::LoadPluginLibrary>()) {
       HEALTH_LOG_PRINTF("    -load-plugin-library %s",
@@ -8873,21 +8883,21 @@ SwiftASTContextForExpressions::SwiftASTContextForExpressions(
 
 SwiftASTContextForExpressions::~SwiftASTContextForExpressions() {
   LOG_PRINTF(GetLog(LLDBLog::Types | LLDBLog::Expressions), "tearing down");
-  swift::ASTContext *ctx = m_ast_context_ap.get();
-  if (!ctx)
+  auto swift_context = GetASTContext();
+  if (!swift_context)
     return;
   // A RemoteASTContext associated with this swift::ASTContext has
   // to be destroyed before the swift::ASTContext is destroyed.
   if (TargetSP target_sp = GetTargetWP().lock()) {
     if (ProcessSP process_sp = target_sp->GetProcessSP())
       if (auto *runtime = SwiftLanguageRuntime::Get(process_sp))
-        runtime->ReleaseAssociatedRemoteASTContext(ctx);
+        runtime->ReleaseAssociatedRemoteASTContext(*swift_context);
   } else {
     LOG_PRINTF(GetLog(LLDBLog::Types | LLDBLog::Expressions),
                "Failed to lock target in ~SwiftASTContextForExpressions().");
   }
 
-  GetASTMap().Erase(ctx);
+  GetASTMap().Erase(*swift_context);
 }
 
 PersistentExpressionState *

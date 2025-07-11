@@ -172,8 +172,9 @@ SwiftMetadataCache::generateHashTableBlob(
     auto &mangled_name = std::get<1>(pair);
     if (mangled_name.empty())
       continue;
-    auto offset = field_descriptor.getAddressData() -
-                  field_descriptors.startAddress().getAddressData();
+    auto offset =
+        field_descriptor.getRemoteAddress().getRawAddress() -
+        field_descriptors.startAddress().getRemoteAddress().getRawAddress();
     table_generator.insert(mangled_name, offset, m_info);
   }
 

@@ -63,6 +63,7 @@ class SwiftLanguageRuntimeStub;
 class SwiftLanguageRuntimeImpl;
 class ReflectionContextInterface;
 class LLDBMemoryReader;
+class MemoryReaderLocalBufferHolder;
 struct SuperClassType;
 
 using ThreadSafeReflectionContext = LockGuarded<ReflectionContextInterface>;
@@ -728,9 +729,8 @@ protected:
 
   std::shared_ptr<LLDBMemoryReader> GetMemoryReader();
 
-  void PushLocalBuffer(uint64_t local_buffer, uint64_t local_buffer_size);
-
-  void PopLocalBuffer();
+  MemoryReaderLocalBufferHolder PushLocalBuffer(uint64_t local_buffer,
+                                                uint64_t local_buffer_size);
 
   // These are the helper functions for GetObjectDescription for various
   // types of swift objects.
