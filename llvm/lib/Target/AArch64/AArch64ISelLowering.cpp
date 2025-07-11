@@ -1748,9 +1748,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (auto VT : {MVT::nxv2bf16, MVT::nxv4bf16, MVT::nxv8bf16}) {
       setOperationAction(ISD::BITCAST, VT, Custom);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
-      setOperationAction(ISD::FABS, VT, Legal);
+      setOperationAction(ISD::FABS, VT, Custom);
       setOperationAction(ISD::FCOPYSIGN, VT, Custom);
-      setOperationAction(ISD::FNEG, VT, Legal);
+      setOperationAction(ISD::FNEG, VT, Custom);
       setOperationAction(ISD::FP_EXTEND, VT, Custom);
       setOperationAction(ISD::FP_ROUND, VT, Custom);
       setOperationAction(ISD::MLOAD, VT, Custom);
@@ -17463,7 +17463,9 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
     return false;
   }
 
-  VectorType *VTy = cast<VectorType>(DeinterleavedValues[0]->getType());
+  Value *FirstActive = *llvm::find_if(DeinterleavedValues,
+                                      [](Value *V) { return V != nullptr; });
+  VectorType *VTy = cast<VectorType>(FirstActive->getType());
 
   const DataLayout &DL = LI->getModule()->getDataLayout();
   bool UseScalable;
@@ -17512,8 +17514,10 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
       LLVM_DEBUG(dbgs() << "LdN4 res: "; LdN->dump());
     }
     // Replace output of deinterleave2 intrinsic by output of ldN2/ldN4
-    for (unsigned J = 0; J < Factor; ++J)
-      DeinterleavedValues[J]->replaceAllUsesWith(ExtractedLdValues[J]);
+    for (unsigned J = 0; J < Factor; ++J) {
+      if (DeinterleavedValues[J])
+        DeinterleavedValues[J]->replaceAllUsesWith(ExtractedLdValues[J]);
+    }
   } else {
     Value *Result;
     if (UseScalable)
@@ -17522,8 +17526,10 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
       Result = Builder.CreateCall(LdNFunc, BaseAddr, "ldN");
     // Replace output of deinterleave2 intrinsic by output of ldN2/ldN4
     for (unsigned I = 0; I < Factor; I++) {
-      Value *NewExtract = Builder.CreateExtractValue(Result, I);
-      DeinterleavedValues[I]->replaceAllUsesWith(NewExtract);
+      if (DeinterleavedValues[I]) {
+        Value *NewExtract = Builder.CreateExtractValue(Result, I);
+        DeinterleavedValues[I]->replaceAllUsesWith(NewExtract);
+      }
     }
   }
   return true;
@@ -17593,7 +17599,8 @@ bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
 }
 
 EVT AArch64TargetLowering::getOptimalMemOpType(
-    const MemOp &Op, const AttributeList &FuncAttributes) const {
+    LLVMContext &Context, const MemOp &Op,
+    const AttributeList &FuncAttributes) const {
   bool CanImplicitFloat = !FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat);
   bool CanUseNEON = Subtarget->hasNEON() && CanImplicitFloat;
   bool CanUseFP = Subtarget->hasFPARMv8() && CanImplicitFloat;
@@ -17827,17 +17834,19 @@ bool AArch64TargetLowering::shouldConsiderGEPOffsetSplit() const {
 
 bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(
     const MachineFunction &MF, EVT VT) const {
-  VT = VT.getScalarType();
+  EVT ScalarVT = VT.getScalarType();
 
-  if (!VT.isSimple())
+  if (!ScalarVT.isSimple())
     return false;
 
-  switch (VT.getSimpleVT().SimpleTy) {
+  switch (ScalarVT.getSimpleVT().SimpleTy) {
   case MVT::f16:
     return Subtarget->hasFullFP16();
   case MVT::f32:
   case MVT::f64:
     return true;
+  case MVT::bf16:
+    return VT.isScalableVector() && Subtarget->hasSVEB16B16();
   default:
     break;
   }

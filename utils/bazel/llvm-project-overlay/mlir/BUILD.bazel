@@ -856,7 +856,7 @@ mlir_c_api_cc_library(
         ":TransformDialectTransforms",
     ],
 )
-        
+
 mlir_c_api_cc_library(
     name = "CAPIMLProgram",
     srcs = [
@@ -4634,6 +4634,7 @@ cc_library(
         ":TransformIRDLExtension",
         ":TransformLoopExtension",
         ":TransformPDLExtension",
+        ":TransformTuneExtension",
         ":UBToLLVM",
         ":VCIXToLLVMIRTranslation",
         ":VectorToLLVM",
@@ -4800,6 +4801,7 @@ cc_library(
         ":MemRefDialect",
         ":MemRefUtils",
         ":Pass",
+        ":Rewrite",
         ":SCFDialect",
         ":SideEffectInterfaces",
         ":SubsetOpInterface",
@@ -5433,6 +5435,7 @@ cc_library(
         ":Transforms",
         ":VCIXToLLVMIRTranslation",
         ":VectorDialect",
+        ":XeVMDialect",
         ":config",
         "//llvm:Core",
         "//llvm:MC",
@@ -8033,12 +8036,15 @@ cc_library(
         ":ArithDialect",
         ":ArithUtils",
         ":ConversionPassIncGen",
+        ":DialectUtils",
         ":IR",
         ":LLVMDialect",
         ":Pass",
         ":ROCDLDialect",
         ":TransformUtils",
         ":VectorDialect",
+        ":VectorTransforms",
+        ":VectorUtils",
     ],
 )
 

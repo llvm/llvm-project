@@ -215,7 +215,7 @@ Changes in existing checks
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by adding a
   flag to specify the function used for forwarding instead of ``std::forward``.
-   
+
 - Improved :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check by
   fixing false positives when calling indexing operators that do not perform
@@ -281,6 +281,10 @@ Changes in existing checks
   excluding variables with ``thread_local`` storage class specifier from being
   matched.
 
+- Improved :doc:`modernize-pass-by-value
+  <clang-tidy/checks/modernize/pass-by-value>` check by fixing false positives
+  when class passed by const-reference had a private move constructor.
+
 - Improved :doc:`modernize-type-traits
   <clang-tidy/checks/modernize/type-traits>` check by detecting more type traits.
 
@@ -337,6 +341,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/math-missing-parentheses>` check by fixing
   false negatives where math expressions are the operand of assignment operators
   or comparison operators.
+
+- Improved :doc:`readability-named-parameter
+  <clang-tidy/checks/readability/named-parameter>` check by adding the option
+  `InsertPlainNamesInForwardDecls` to insert parameter names without comments
+  for forward declarations only.
 
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
