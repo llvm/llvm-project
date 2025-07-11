@@ -3772,123 +3772,6 @@ bool AMDGPUInstructionSelector::selectWaveAddress(MachineInstr &MI) const {
   return true;
 }
 
-// Match BITOP3 operation and return a number of matched instructions plus
-// truth table.
-static std::pair<unsigned, uint8_t> BitOp3_Op(Register R,
-                                              SmallVectorImpl<Register> &Src,
-                                              const MachineRegisterInfo &MRI) {
-  unsigned NumOpcodes = 0;
-  uint8_t LHSBits, RHSBits;
-
-  auto getOperandBits = [&Src, R, &MRI](Register Op, uint8_t &Bits) -> bool {
-    // Define truth table given Src0, Src1, Src2 bits permutations:
-    //                          0     0     0
-    //                          0     0     1
-    //                          0     1     0
-    //                          0     1     1
-    //                          1     0     0
-    //                          1     0     1
-    //                          1     1     0
-    //                          1     1     1
-    const uint8_t SrcBits[3] = { 0xf0, 0xcc, 0xaa };
-
-    if (mi_match(Op, MRI, m_AllOnesInt())) {
-      Bits = 0xff;
-      return true;
-    }
-    if (mi_match(Op, MRI, m_ZeroInt())) {
-      Bits = 0;
-      return true;
-    }
-
-    for (unsigned I = 0; I < Src.size(); ++I) {
-      // Try to find existing reused operand
-      if (Src[I] == Op) {
-        Bits = SrcBits[I];
-        return true;
-      }
-      // Try to replace parent operator
-      if (Src[I] == R) {
-        Bits = SrcBits[I];
-        Src[I] = Op;
-        return true;
-      }
-    }
-
-    if (Src.size() == 3) {
-      // No room left for operands. Try one last time, there can be a 'not' of
-      // one of our source operands. In this case we can compute the bits
-      // without growing Src vector.
-      Register LHS;
-      if (mi_match(Op, MRI, m_Not(m_Reg(LHS)))) {
-        LHS = getSrcRegIgnoringCopies(LHS, MRI);
-        for (unsigned I = 0; I < Src.size(); ++I) {
-          if (Src[I] == LHS) {
-            Bits = ~SrcBits[I];
-            return true;
-          }
-        }
-      }
-
-      return false;
-    }
-
-    Bits = SrcBits[Src.size()];
-    Src.push_back(Op);
-    return true;
-  };
-
-  MachineInstr *MI = MRI.getVRegDef(R);
-  switch (MI->getOpcode()) {
-  case TargetOpcode::G_AND:
-  case TargetOpcode::G_OR:
-  case TargetOpcode::G_XOR: {
-    Register LHS = getSrcRegIgnoringCopies(MI->getOperand(1).getReg(), MRI);
-    Register RHS = getSrcRegIgnoringCopies(MI->getOperand(2).getReg(), MRI);
-
-    SmallVector<Register, 3> Backup(Src.begin(), Src.end());
-    if (!getOperandBits(LHS, LHSBits) ||
-        !getOperandBits(RHS, RHSBits)) {
-      Src = Backup;
-      return std::make_pair(0, 0);
-    }
-
-    // Recursion is naturally limited by the size of the operand vector.
-    auto Op = BitOp3_Op(LHS, Src, MRI);
-    if (Op.first) {
-      NumOpcodes += Op.first;
-      LHSBits = Op.second;
-    }
-
-    Op = BitOp3_Op(RHS, Src, MRI);
-    if (Op.first) {
-      NumOpcodes += Op.first;
-      RHSBits = Op.second;
-    }
-    break;
-  }
-  default:
-    return std::make_pair(0, 0);
-  }
-
-  uint8_t TTbl;
-  switch (MI->getOpcode()) {
-  case TargetOpcode::G_AND:
-    TTbl = LHSBits & RHSBits;
-    break;
-  case TargetOpcode::G_OR:
-    TTbl = LHSBits | RHSBits;
-    break;
-  case TargetOpcode::G_XOR:
-    TTbl = LHSBits ^ RHSBits;
-    break;
-  default:
-    break;
-  }
-
-  return std::make_pair(NumOpcodes + 1, TTbl);
-}
-
 bool AMDGPUInstructionSelector::selectBITOP3(MachineInstr &MI) const {
   if (!Subtarget->hasBitOp3Insts())
     return false;
@@ -3903,7 +3786,8 @@ bool AMDGPUInstructionSelector::selectBITOP3(MachineInstr &MI) const {
   uint8_t TTbl;
   unsigned NumOpcodes;
 
-  std::tie(NumOpcodes, TTbl) = BitOp3_Op(DstReg, Src, *MRI);
+  auto Helper = AMDGPU::BitOp3Helper<Register>(MRI);
+  std::tie(NumOpcodes, TTbl) = AMDGPU::BitOp3_Op(Helper, DstReg, Src);
 
   // Src.empty() case can happen if all operands are all zero or all ones.
   // Normally it shall be optimized out before reaching this.

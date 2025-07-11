@@ -13,6 +13,7 @@
 
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPU.h"
+#include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
@@ -3690,133 +3691,14 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixMods(SDValue In, SDValue &Src,
   return true;
 }
 
-// Match BITOP3 operation and return a number of matched instructions plus
-// truth table.
-static std::pair<unsigned, uint8_t> BitOp3_Op(SDValue In,
-                                              SmallVectorImpl<SDValue> &Src) {
-  unsigned NumOpcodes = 0;
-  uint8_t LHSBits, RHSBits;
-
-  auto getOperandBits = [&Src, In](SDValue Op, uint8_t &Bits) -> bool {
-    // Define truth table given Src0, Src1, Src2 bits permutations:
-    //                          0     0     0
-    //                          0     0     1
-    //                          0     1     0
-    //                          0     1     1
-    //                          1     0     0
-    //                          1     0     1
-    //                          1     1     0
-    //                          1     1     1
-    const uint8_t SrcBits[3] = { 0xf0, 0xcc, 0xaa };
-
-    if (auto *C = dyn_cast<ConstantSDNode>(Op)) {
-      if (C->isAllOnes()) {
-        Bits = 0xff;
-        return true;
-      }
-      if (C->isZero()) {
-        Bits = 0;
-        return true;
-      }
-    }
-
-    for (unsigned I = 0; I < Src.size(); ++I) {
-      // Try to find existing reused operand
-      if (Src[I] == Op) {
-        Bits = SrcBits[I];
-        return true;
-      }
-      // Try to replace parent operator
-      if (Src[I] == In) {
-        Bits = SrcBits[I];
-        Src[I] = Op;
-        return true;
-      }
-    }
-
-    if (Src.size() == 3) {
-      // No room left for operands. Try one last time, there can be a 'not' of
-      // one of our source operands. In this case we can compute the bits
-      // without growing Src vector.
-      if (Op.getOpcode() == ISD::XOR) {
-        if (auto *C = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
-          if (C->isAllOnes()) {
-            SDValue LHS = Op.getOperand(0);
-            for (unsigned I = 0; I < Src.size(); ++I) {
-              if (Src[I] == LHS) {
-                Bits = ~SrcBits[I];
-                return true;
-              }
-            }
-          }
-        }
-      }
-
-      return false;
-    }
-
-    Bits = SrcBits[Src.size()];
-    Src.push_back(Op);
-    return true;
-  };
-
-  switch (In.getOpcode()) {
-  case ISD::AND:
-  case ISD::OR:
-  case ISD::XOR: {
-    SDValue LHS = In.getOperand(0);
-    SDValue RHS = In.getOperand(1);
-
-    SmallVector<SDValue, 3> Backup(Src.begin(), Src.end());
-    if (!getOperandBits(LHS, LHSBits) ||
-        !getOperandBits(RHS, RHSBits)) {
-      Src = Backup;
-      return std::make_pair(0, 0);
-    }
-
-    // Recursion is naturally limited by the size of the operand vector.
-    auto Op = BitOp3_Op(LHS, Src);
-    if (Op.first) {
-      NumOpcodes += Op.first;
-      LHSBits = Op.second;
-    }
-
-    Op = BitOp3_Op(RHS, Src);
-    if (Op.first) {
-      NumOpcodes += Op.first;
-      RHSBits = Op.second;
-    }
-    break;
-  }
-  default:
-    return std::make_pair(0, 0);
-  }
-
-  uint8_t TTbl;
-  switch (In.getOpcode()) {
-  case ISD::AND:
-    TTbl = LHSBits & RHSBits;
-    break;
-  case ISD::OR:
-    TTbl = LHSBits | RHSBits;
-    break;
-  case ISD::XOR:
-    TTbl = LHSBits ^ RHSBits;
-    break;
-  default:
-    break;
-  }
-
-  return std::make_pair(NumOpcodes + 1, TTbl);
-}
-
 bool AMDGPUDAGToDAGISel::SelectBITOP3(SDValue In, SDValue &Src0, SDValue &Src1,
                                       SDValue &Src2, SDValue &Tbl) const {
   SmallVector<SDValue, 3> Src;
   uint8_t TTbl;
   unsigned NumOpcodes;
 
-  std::tie(NumOpcodes, TTbl) = BitOp3_Op(In, Src);
+  auto Helper = AMDGPU::BitOp3Helper<SDValue>();
+  std::tie(NumOpcodes, TTbl) = AMDGPU::BitOp3_Op(Helper, In, Src);
 
   // Src.empty() case can happen if all operands are all zero or all ones.
   // Normally it shall be optimized out before reaching this.
