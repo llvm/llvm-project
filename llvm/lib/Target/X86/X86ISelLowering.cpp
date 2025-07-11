@@ -2633,6 +2633,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
         setOperationAction(Op, MVT::f32, Promote);
   }
 
+  setOperationPromotedToType(ISD::ATOMIC_LOAD, MVT::f16, MVT::i16);
+  setOperationPromotedToType(ISD::ATOMIC_LOAD, MVT::f32, MVT::i32);
+  setOperationPromotedToType(ISD::ATOMIC_LOAD, MVT::f64, MVT::i64);
+
   // We have target-specific dag combine patterns for the following nodes:
   setTargetDAGCombine({ISD::VECTOR_SHUFFLE,
                        ISD::SCALAR_TO_VECTOR,
@@ -32118,6 +32122,13 @@ X86TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
     // use a cmpxchg loop.
     return AtomicExpansionKind::CmpXChg;
   }
+}
+
+TargetLowering::AtomicExpansionKind
+X86TargetLowering::shouldCastAtomicLoadInIR(LoadInst *LI) const {
+  if (LI->getType()->getScalarType()->isFloatingPointTy())
+    return AtomicExpansionKind::CastToInteger;
+  return AtomicExpansionKind::None;
 }
 
 LoadInst *
