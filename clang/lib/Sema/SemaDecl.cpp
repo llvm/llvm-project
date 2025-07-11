@@ -17155,6 +17155,30 @@ bool Sema::CheckEnumUnderlyingType(TypeSourceInfo *TI) {
   if (T->isDependentType())
     return false;
 
+  // C++0x 7.2p2: The type-specifier-seq of an enum-base shall name an
+  // integral type; any cv-qualification is ignored.
+  // C23 6.7.3.3p5: The underlying type of the enumeration is the unqualified,
+  // non-atomic version of the type specified by the type specifiers in the
+  // specifier qualifier list.
+  // Because of how odd C's rule is, we'll let the user know that operations
+  // involving the enumeration type will be non-atomic.
+  if (T->isAtomicType())
+    Diag(UnderlyingLoc, diag::warn_atomic_stripped_in_enum);
+
+  Qualifiers Q = T.getQualifiers();
+  std::optional<unsigned> QualSelect;
+  if (Q.hasConst() && Q.hasVolatile())
+    QualSelect = diag::CVQualList::Both;
+  else if (Q.hasConst())
+    QualSelect = diag::CVQualList::Const;
+  else if (Q.hasVolatile())
+    QualSelect = diag::CVQualList::Volatile;
+
+  if (QualSelect)
+    Diag(UnderlyingLoc, diag::warn_cv_stripped_in_enum) << *QualSelect;
+
+  T = T.getAtomicUnqualifiedType();
+
   // This doesn't use 'isIntegralType' despite the error message mentioning
   // integral type because isIntegralType would also allow enum types in C.
   if (const BuiltinType *BT = T->getAs<BuiltinType>())
@@ -17551,6 +17575,9 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
     } else if (UnderlyingType.get()) {
       // C++0x 7.2p2: The type-specifier-seq of an enum-base shall name an
       // integral type; any cv-qualification is ignored.
+      // C23 6.7.3.3p5: The underlying type of the enumeration is the
+      // unqualified, non-atomic version of the type specified by the type
+      // specifiers in the specifier qualifier list.
       TypeSourceInfo *TI = nullptr;
       GetTypeFromParser(UnderlyingType.get(), &TI);
       EnumUnderlying = TI;
@@ -17562,6 +17589,18 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
       if (DiagnoseUnexpandedParameterPack(TI->getTypeLoc().getBeginLoc(), TI,
                                           UPPC_FixedUnderlyingType))
         EnumUnderlying = Context.IntTy.getTypePtr();
+
+      // If the underlying type is atomic, we need to adjust the type before
+      // continuing. This only happens in the case we stored a TypeSourceInfo
+      // into EnumUnderlying because the other cases are error recovery up to
+      // this point. But because it's not possible to gin up a TypeSourceInfo
+      // for a non-atomic type from an atomic one, we'll store into the Type
+      // field instead. FIXME: it would be nice to have an easy way to get a
+      // derived TypeSourceInfo which strips qualifiers including the weird
+      // ones like _Atomic where it forms a different type.
+      if (TypeSourceInfo *TI = dyn_cast<TypeSourceInfo *>(EnumUnderlying);
+          TI && TI->getType()->isAtomicType())
+        EnumUnderlying = TI->getType().getAtomicUnqualifiedType().getTypePtr();
 
     } else if (Context.getTargetInfo().getTriple().isWindowsMSVCEnvironment()) {
       // For MSVC ABI compatibility, unfixed enums must use an underlying type
