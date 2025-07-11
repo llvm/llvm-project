@@ -206,6 +206,13 @@ private:
   bool skipUntilExpectedToken(RootSignatureToken::Kind Expected);
   bool skipUntilExpectedToken(ArrayRef<RootSignatureToken::Kind> Expected);
 
+  /// Consume tokens until we reach a closing right paren, ')', or, until we
+  /// have reached the end of the stream. This will place the current token
+  /// to be the end of stream or the right paren.
+  ///
+  /// Returns true if it is closed before the end of stream.
+  bool skipUntilClosedParens(uint32_t NumParens = 1);
+
   /// Convert the token's offset in the signature string to its SourceLocation
   ///
   /// This allows to currently retrieve the location for multi-token

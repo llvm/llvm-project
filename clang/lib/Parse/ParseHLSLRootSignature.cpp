@@ -62,7 +62,7 @@ bool RootSignatureParser::parse() {
         HadLocalError = true;
         // We are within a DescriptorTable, we will do our best to recover
         // by skipping until we encounter the expected closing ')'.
-        skipUntilExpectedToken(TokenKind::pu_r_paren);
+        skipUntilClosedParens();
         consumeNextToken();
       }
     } else if (tryConsumeExpectedToken(
@@ -1416,6 +1416,24 @@ bool RootSignatureParser::skipUntilExpectedToken(
   }
 
   return true;
+}
+
+bool RootSignatureParser::skipUntilClosedParens(uint32_t NumParens) {
+  TokenKind ParenKinds[] = {
+      TokenKind::pu_l_paren,
+      TokenKind::pu_r_paren,
+  };
+  while (skipUntilExpectedToken(ParenKinds)) {
+    consumeNextToken();
+    if (CurToken.TokKind == TokenKind::pu_r_paren)
+      NumParens--;
+    else
+      NumParens++;
+    if (NumParens == 0)
+      return true;
+  }
+
+  return false;
 }
 
 SourceLocation RootSignatureParser::getTokenLocation(RootSignatureToken Tok) {

@@ -141,3 +141,16 @@ void multiple_errors() {}
 // expected-error@+1 {{invalid parameter of SRV}}
 [RootSignature(DemoGranularityRootSignature)]
 void granularity_errors() {}
+
+#define TestTableScope \
+  "DescriptorTable( " \
+  "  UAV(u0, reported_diag), " \
+  "  SRV(t0, skipped_diag), " \
+  "  Sampler(s0, skipped_diag), " \
+  ")," \
+  "CBV(s0, reported_diag)"
+
+// expected-error@+2 {{invalid parameter of UAV}}
+// expected-error@+1 {{invalid parameter of CBV}}
+[RootSignature(TestTableScope)]
+void recover_scope_errors() {}
