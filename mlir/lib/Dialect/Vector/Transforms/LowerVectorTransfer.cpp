@@ -35,8 +35,8 @@ inverseTransposeInBoundsAttr(OpBuilder &builder, ArrayAttr attr,
 
 /// Extend the rank of a vector Value by `addedRanks` by adding outer unit
 /// dimensions.
-static Value extendVectorRank(OpBuilder &builder, Location loc, Value vec,
-                              int64_t addedRank) {
+static TypedValue<VectorType> extendVectorRank(OpBuilder &builder, Location loc,
+                                               Value vec, int64_t addedRank) {
   auto originalVecType = cast<VectorType>(vec.getType());
   SmallVector<int64_t> newShape(addedRank, 1);
   newShape.append(originalVecType.getShape().begin(),
@@ -53,16 +53,21 @@ static Value extendVectorRank(OpBuilder &builder, Location loc, Value vec,
 /// Extend the rank of a vector Value by `addedRanks` by adding inner unit
 /// dimensions.
 static Value extendMaskRank(OpBuilder &builder, Location loc, Value vec,
-                            int64_t addedRank) {
-  Value broadcasted = extendVectorRank(builder, loc, vec, addedRank);
-  SmallVector<int64_t> permutation;
-  for (int64_t i = addedRank,
-               e = cast<VectorType>(broadcasted.getType()).getRank();
-       i < e; ++i)
-    permutation.push_back(i);
-  for (int64_t i = 0; i < addedRank; ++i)
-    permutation.push_back(i);
-  return builder.create<vector::TransposeOp>(loc, broadcasted, permutation);
+                            ArrayRef<int64_t> missingInnerDims) {
+  TypedValue<VectorType> broadcasted =
+      extendVectorRank(builder, loc, vec, missingInnerDims.size());
+  SmallVector<bool> missing(broadcasted.getType().getRank(), false);
+  SmallVector<int64_t> inversePerm;
+  for (int64_t i : missingInnerDims) {
+    inversePerm.push_back(i);
+    missing[i] = true;
+  }
+  for (auto [i, used] : llvm::enumerate(missing)) {
+    if (!used)
+      inversePerm.push_back(i);
+  }
+  return builder.create<vector::TransposeOp>(
+      loc, broadcasted, invertPermutationVector(inversePerm));
 }
 
 //===----------------------------------------------------------------------===//
@@ -268,28 +273,30 @@ struct TransferWriteNonPermutationLowering
     for (AffineExpr exp : map.getResults())
       foundDim[cast<AffineDimExpr>(exp).getPosition()] = true;
     SmallVector<AffineExpr> exprs;
-    bool foundFirstDim = false;
+    std::optional<int64_t> firstDim = std::nullopt;
     SmallVector<int64_t> missingInnerDim;
     for (size_t i = 0; i < foundDim.size(); i++) {
       if (foundDim[i]) {
-        foundFirstDim = true;
+        if (!firstDim) {
+          firstDim = i;
+        }
         continue;
       }
-      if (!foundFirstDim)
+      if (!firstDim)
         continue;
       // Once we found one outer dimension existing in the map keep track of all
       // the missing dimensions after that.
-      missingInnerDim.push_back(i);
+      missingInnerDim.push_back(i - firstDim.value());
       exprs.push_back(rewriter.getAffineDimExpr(i));
     }
     // Vector: add unit dims at the beginning of the shape.
     Value newVec = extendVectorRank(rewriter, op.getLoc(), op.getVector(),
                                     missingInnerDim.size());
-    // Mask: add unit dims at the end of the shape.
+    // Mask: add unit dims at the positions of the missing dimensions.
     Value newMask;
     if (op.getMask())
-      newMask = extendMaskRank(rewriter, op.getLoc(), op.getMask(),
-                               missingInnerDim.size());
+      newMask =
+          extendMaskRank(rewriter, op.getLoc(), op.getMask(), missingInnerDim);
     exprs.append(map.getResults().begin(), map.getResults().end());
     AffineMap newMap =
         AffineMap::get(map.getNumDims(), 0, exprs, op.getContext());
