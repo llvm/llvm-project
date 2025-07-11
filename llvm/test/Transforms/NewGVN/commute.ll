@@ -48,6 +48,7 @@ declare i16 @llvm.umul.fix.i16(i16, i16, i32)
 
 define i16 @intrinsic_3_args(i16 %x, i16 %y) {
 ; CHECK-LABEL: @intrinsic_3_args(
+; CHECK-NEXT:    [[M1:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[X:%.*]], i16 [[Y:%.*]], i32 1)
 ; CHECK-NEXT:    ret i16 0
 ;
   %m1 = call i16 @llvm.smul.fix.i16(i16 %x, i16 %y, i32 1)
