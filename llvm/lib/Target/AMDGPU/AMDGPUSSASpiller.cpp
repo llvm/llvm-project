@@ -137,15 +137,14 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
   void initActiveSetUsualBlock(MachineBasicBlock &MBB);
   void initActiveSetLoopHeader(MachineBasicBlock &MBB);
 
-  Register reloadAtEnd(MachineBasicBlock &MBB, VRegMaskPair VMP,
-                       MachineInstr *ReloadMI);
+  Register reloadAtEnd(MachineBasicBlock &MBB, VRegMaskPair VMP);
   void spillAtEnd(MachineBasicBlock &MBB, VRegMaskPair VMP);
   Register reloadBefore(MachineBasicBlock::iterator InsertBefore,
-                        VRegMaskPair VMP, MachineInstr *&ReloadMI);
+                        VRegMaskPair VMP);
   void spillBefore(MachineBasicBlock &MBB,
                    MachineBasicBlock::iterator InsertBefore, VRegMaskPair VMP);
 
-  void rewriteUses(MachineInstr &I, Register OldVReg, Register NewVReg);
+  void rewriteUses(Register OldVReg, Register NewVReg);
 
   unsigned getLoopMaxRP(MachineLoop *L);
   // Returns number of spilled VRegs
@@ -304,12 +303,23 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
         auto B = I->getOperand(++OpNo);
         assert(B.isMBB());
         MachineBasicBlock *ValueSrc = B.getMBB();
-       
+
         if (ProcessedBlocks.contains(ValueSrc->getNumber())) {
           auto Info = getBlockInfo(*ValueSrc);
-          dumpRegSet(Info.ActiveSet);
-          assert(getBlockInfo(*ValueSrc).ActiveSet.contains(VMP) &&
-                 "PHI node input value is not live out predecessor!");
+          auto SrcActive = Info.ActiveSet;
+          auto SrcSpill = Info.SpillSet;
+          dumpRegSet(SrcActive);
+          dumpRegSet(SrcSpill);
+          assert((SrcActive.contains(VMP) || SrcSpill.contains(VMP)) &&
+                 "PHI node input value is neither live out predecessor no "
+                 "spilled!");
+          if (SrcSpill.contains(VMP)) {
+            // reload it at the end of the source block
+            Register NewVreg = reloadAtEnd(*ValueSrc, VMP);
+            VRegMaskPair NewVMP(NewVreg, VMP.getLaneMask());
+            rewriteUses(VMP.getVReg(), NewVreg);
+            Active.insert(NewVMP);
+          }
         }
         continue;
       }
@@ -377,10 +387,8 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
     for (auto R : Reloads) {
       LLVM_DEBUG(dbgs() << "\nReloading "; printVRegMaskPair(R);
                  dbgs() << "\n");
-      MachineInstr *ReloadMI = nullptr;
-      Register NewVReg = reloadBefore(I, R, ReloadMI);
-      assert(ReloadMI && "NULL returned from reloadBefore\n");
-      rewriteUses(*ReloadMI, R.getVReg(), NewVReg);
+      Register NewVReg = reloadBefore(I, R);
+      rewriteUses(R.getVReg(), NewVReg);
     }
 
     std::advance(I, NSpills);
@@ -422,30 +430,8 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
           if (ValueSrc->getNumber() == MBB.getNumber()) {
             VRegMaskPair VMP(U, TRI, MRI);
             if (!isCoveredActive(VMP, Active)) {
-              MachineInstr *ReloadMI = nullptr;
-              Register NewVReg = reloadAtEnd(MBB, VMP, ReloadMI);
-              // U.setReg(NewVReg);
-              // U.setSubReg(AMDGPU::NoRegister);
-
-              // The code below is commented out because of the BUG in
-              // MachineSSAUpdater. In case the register class of a PHI operand
-              // defined register is a superclass of a NewReg it inserts a COPY
-              // AFTER the PHI
-
-              //  Predecessor:
-              //  %157:vgpr_32 = SI_SPILL_V32_RESTORE %stack.0
-
-              //  %146:vreg_64 = PHI %70:vreg_64.sub0, %bb.3, %144:vgpr_32, %bb.1
-
-              // becomes:
-
-              // %146:vreg_64 = PHI %158:vreg_64.sub0, %bb.3, %144:vgpr_32,
-              // %bb.1 %158:vreg_64 = COPY %157
-
-              MachineSSAUpdater SSAUpddater(*MBB.getParent());
-              SSAUpddater.Initialize(U.getReg());
-              SSAUpddater.AddAvailableValue(&MBB, NewVReg);
-              SSAUpddater.RewriteUse(U);
+              Register NewVReg = reloadAtEnd(MBB, VMP);
+              rewriteUses(VMP.getVReg(), NewVReg);
             }
           }
         }
@@ -594,9 +580,8 @@ void AMDGPUSSASpiller::connectToPredecessors(MachineBasicBlock &MBB,
       // is not live across the edge.
 
       for (auto R : ReloadInPred) {
-        MachineInstr *ReloadMI = nullptr;
-        Register NewVReg = reloadAtEnd(*Pred, R, ReloadMI);
-        rewriteUses(*ReloadMI, R.getVReg(), NewVReg);
+        Register NewVReg = reloadAtEnd(*Pred, R);
+        rewriteUses(R.getVReg(), NewVReg);
       }
     }
   }
@@ -721,9 +706,8 @@ void AMDGPUSSASpiller::initActiveSetLoopHeader(MachineBasicBlock &MBB) {
              dumpRegSet(getBlockInfo(MBB).ActiveSet));
 }
 
-Register AMDGPUSSASpiller::reloadAtEnd(MachineBasicBlock &MBB, VRegMaskPair VMP,
-                                       MachineInstr *ReloadMI) {
-  return reloadBefore(*MBB.getFirstInstrTerminator(), VMP, ReloadMI);
+Register AMDGPUSSASpiller::reloadAtEnd(MachineBasicBlock &MBB, VRegMaskPair VMP) {
+  return reloadBefore(*MBB.getFirstInstrTerminator(), VMP);
 }
 
 void AMDGPUSSASpiller::spillAtEnd(MachineBasicBlock &MBB, VRegMaskPair VMP) {
@@ -732,14 +716,13 @@ void AMDGPUSSASpiller::spillAtEnd(MachineBasicBlock &MBB, VRegMaskPair VMP) {
 
 Register
 AMDGPUSSASpiller::reloadBefore(MachineBasicBlock::iterator InsertBefore,
-                               VRegMaskPair VMP, MachineInstr *&ReloadMI) {
+                               VRegMaskPair VMP) {
   MachineBasicBlock *MBB = InsertBefore->getParent();
   const TargetRegisterClass *RC = VMP.getRegClass(MRI, TRI);
   int FI = getStackSlot(VMP);
   Register NewVReg = MRI->createVirtualRegister(RC);
   TII->loadRegFromStackSlot(*MBB, InsertBefore, NewVReg, FI, RC, TRI, NewVReg);
-  // FIXME: dirty hack! To avoid further changing the TargetInstrInfo interface.
-  ReloadMI = &*(--InsertBefore);
+  MachineInstr *ReloadMI = MRI->getVRegDef(NewVReg);
   LIS.InsertMachineInstrInMaps(*ReloadMI);
 
   LIS.createAndComputeVirtRegInterval(NewVReg);
@@ -772,15 +755,20 @@ void AMDGPUSSASpiller::spillBefore(MachineBasicBlock &MBB,
   SpillPoints[VMP] = &Spill;
 }
 
-void AMDGPUSSASpiller::rewriteUses(MachineInstr &I, Register OldVReg,
+void AMDGPUSSASpiller::rewriteUses(Register OldVReg,
                                    Register NewVReg) {
-  MachineSSAUpdater SSAUpdater(*I.getParent()->getParent());
+  MachineInstr *DefMI = MRI->getVRegDef(NewVReg);
+  assert(DefMI);
+  MachineBasicBlock *ReloadBB = DefMI->getParent();
+  MachineFunction *MF = ReloadBB->getParent();
+
+  MachineSSAUpdater SSAUpdater(*MF);
   SSAUpdater.Initialize(OldVReg);
-  SSAUpdater.AddAvailableValue(I.getParent(), NewVReg);
+  SSAUpdater.AddAvailableValue(ReloadBB, NewVReg);
   for (auto &U : MRI->use_operands(OldVReg)) {
     MachineInstr *UseMI = U.getParent();
-    if (MDT.dominates(&I, UseMI)) {
-      if (I.getParent() == UseMI->getParent()) {
+    if (MDT.dominates(DefMI, UseMI)) {
+      if (ReloadBB == UseMI->getParent()) {
         // If the use is in the same block, just rewrite it.
         U.setReg(NewVReg);
         U.setSubReg(AMDGPU::NoRegister);
