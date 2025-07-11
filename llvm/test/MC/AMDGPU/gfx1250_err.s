@@ -1,5 +1,30 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX1250-ERR --implicit-check-not=error: -strict-whitespace %s
 
+// For v_dual_cndmask_b32 use of the explicit src2 forces VOPD3 form even if it is vcc_lo.
+// If src2 is omitted then it forces VOPD form. As a result a proper form of the instruction
+// has to be used if the other component of the dual instruction cannot be used if that
+// encoding.
+
+v_dual_cndmask_b32 v2, v4, v1 :: v_dual_fma_f32 v7, v1, v2, v3
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid VOPDY instruction
+// GFX1250-ERR: v_dual_cndmask_b32 v2, v4, v1 :: v_dual_fma_f32 v7, v1, v2, v3
+// GFX1250-ERR:                                  ^
+
+v_dual_fma_f32 v7, v1, v2, v3 :: v_dual_cndmask_b32 v2, v4, v1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: too few operands for instruction
+// GFX1250-ERR: v_dual_fma_f32 v7, v1, v2, v3 :: v_dual_cndmask_b32 v2, v4, v1
+// GFX1250-ERR: ^
+
+v_dual_cndmask_b32 v7, v1, v2 :: v_dual_cndmask_b32 v2, v4, v1, vcc_lo
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1250-ERR: v_dual_cndmask_b32 v7, v1, v2 :: v_dual_cndmask_b32 v2, v4, v1, vcc_lo
+// GFX1250-ERR:                                                                 ^
+
+v_dual_cndmask_b32 v7, v1, v2, vcc_lo :: v_dual_cndmask_b32 v2, v4, v1
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: too few operands for instruction
+// GFX1250-ERR: v_dual_cndmask_b32 v7, v1, v2, vcc_lo :: v_dual_cndmask_b32 v2, v4, v1
+// GFX1250-ERR: ^
+
 // Check for unique 64-bit literal
 
 v_mov_b64 v[4:5], v[2:3] quad_perm:[1,1,1,1]
