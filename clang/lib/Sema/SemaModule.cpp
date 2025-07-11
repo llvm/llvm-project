@@ -13,7 +13,9 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTMutationListener.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/ModuleLoader.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/SemaInternal.h"
@@ -55,23 +57,6 @@ static void checkModuleImportContext(Sema &S, Module *M,
       << M->getFullModuleName();
     S.Diag(ExternCLoc, diag::note_extern_c_begins_here);
   }
-}
-
-// We represent the primary and partition names as 'Paths' which are sections
-// of the hierarchical access path for a clang module.  However for C++20
-// the periods in a name are just another character, and we will need to
-// flatten them into a string.
-static std::string stringFromPath(ModuleIdPath Path) {
-  std::string Name;
-  if (Path.empty())
-    return Name;
-
-  for (auto &Piece : Path) {
-    if (!Name.empty())
-      Name += ".";
-    Name += Piece.getIdentifierInfo()->getName();
-  }
-  return Name;
 }
 
 /// Helper function for makeTransitiveImportsVisible to decide whether
@@ -303,7 +288,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     // We were asked to compile a module interface unit but this is a module
     // implementation unit.
     Diag(ModuleLoc, diag::err_module_interface_implementation_mismatch)
-      << FixItHint::CreateInsertion(ModuleLoc, "export ");
+        << FixItHint::CreateInsertion(ModuleLoc, "export ");
     MDK = ModuleDeclKind::Interface;
     break;
 
@@ -369,10 +354,10 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // Flatten the dots in a module name. Unlike Clang's hierarchical module map
   // modules, the dots here are just another character that can appear in a
   // module name.
-  std::string ModuleName = stringFromPath(Path);
+  std::string ModuleName = ModuleNameLoc::stringFromModuleIdPath(Path);
   if (IsPartition) {
     ModuleName += ":";
-    ModuleName += stringFromPath(Partition);
+    ModuleName += ModuleNameLoc::stringFromModuleIdPath(Partition);
   }
   // If a module name was explicitly specified on the command line, it must be
   // correct.
@@ -385,7 +370,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
         << getLangOpts().CurrentModule;
     return nullptr;
   }
-  const_cast<LangOptions&>(getLangOpts()).CurrentModule = ModuleName;
+  const_cast<LangOptions &>(getLangOpts()).CurrentModule = ModuleName;
 
   auto &Map = PP.getHeaderSearchInfo().getModuleMap();
   Module *Mod;                 // The module we are creating.
@@ -430,7 +415,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     Interface = getModuleLoader().loadModule(ModuleLoc, {ModuleNameLoc},
                                              Module::AllVisible,
                                              /*IsInclusionDirective=*/false);
-    const_cast<LangOptions&>(getLangOpts()).CurrentModule = ModuleName;
+    const_cast<LangOptions &>(getLangOpts()).CurrentModule = ModuleName;
 
     if (!Interface) {
       Diag(ModuleLoc, diag::err_module_not_defined) << ModuleName;
@@ -574,8 +559,8 @@ Sema::ActOnPrivateModuleFragmentDecl(SourceLocation ModuleLoc,
 
 DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
                                    SourceLocation ExportLoc,
-                                   SourceLocation ImportLoc, ModuleIdPath Path,
-                                   bool IsPartition) {
+                                   SourceLocation ImportLoc,
+                                   ModuleNameLoc *PathLoc, bool IsPartition) {
   assert((!IsPartition || getLangOpts().CPlusPlusModules) &&
          "partition seen in non-C++20 code?");
 
@@ -584,6 +569,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   IdentifierLoc ModuleNameLoc;
 
   std::string ModuleName;
+  ModuleIdPath Path;
   if (IsPartition) {
     // We already checked that we are in a module purview in the parser.
     assert(!ModuleScopes.empty() && "in a module purview, but no module?");
@@ -592,15 +578,17 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     // otherwise, the name of the importing named module.
     ModuleName = NamedMod->getPrimaryModuleInterfaceName().str();
     ModuleName += ":";
-    ModuleName += stringFromPath(Path);
+    ModuleName += PathLoc->str();
     ModuleNameLoc =
-        IdentifierLoc(Path[0].getLoc(), PP.getIdentifierInfo(ModuleName));
+        IdentifierLoc(PathLoc->getBeginLoc(), PP.getIdentifierInfo(ModuleName));
     Path = ModuleIdPath(ModuleNameLoc);
   } else if (getLangOpts().CPlusPlusModules) {
-    ModuleName = stringFromPath(Path);
+    ModuleName = PathLoc->str();
     ModuleNameLoc =
-        IdentifierLoc(Path[0].getLoc(), PP.getIdentifierInfo(ModuleName));
+        IdentifierLoc(PathLoc->getBeginLoc(), PP.getIdentifierInfo(ModuleName));
     Path = ModuleIdPath(ModuleNameLoc);
+  } else {
+    Path = PathLoc->getModuleIdPath();
   }
 
   // Diagnose self-import before attempting a load.
