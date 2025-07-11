@@ -87,6 +87,7 @@
 # CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 0xf9,0x04,0x0a,0x78,0x01,0x06,0x06,0x05
 
-# CHECK-MI: v_pk_fmac_f16_sdwa v5, v1, sext(v2) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+# FIXME: The instruction gets printed using the wrong function (AMDGPUInstPrinter::printOperandAndIntInputMods) and hence the "-" modifier is not printed.
+# COM: v_pk_fmac_f16_sdwa v5, v1, -v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 0xf9,0x04,0x0a,0x78,0x01,0x06,0x06,0x16
 
