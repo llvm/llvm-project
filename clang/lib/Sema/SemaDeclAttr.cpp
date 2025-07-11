@@ -2920,9 +2920,9 @@ static void handleWarnUnusedResult(Sema &S, Decl *D, const ParsedAttr &AL) {
 
       // If this is spelled as the standard C++17 attribute, but not in C++17,
       // warn about using it as an extension. If there are attribute arguments,
-      // then claim it's a C++20 extension instead.
-      // FIXME: If WG14 does not seem likely to adopt the same feature, add an
-      // extension warning for C23 mode.
+      // then claim it's a C++20 extension instead. C23 supports this attribute
+     // with the message; no extension warning is needed there beyond the one
+     // already issued for accepting attributes in older modes.
       const LangOptions &LO = S.getLangOpts();
       if (AL.getNumArgs() == 1) {
         if (LO.CPlusPlus && !LO.CPlusPlus20)
