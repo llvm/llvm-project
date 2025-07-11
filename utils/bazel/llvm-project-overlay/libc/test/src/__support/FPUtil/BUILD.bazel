@@ -24,6 +24,17 @@ libc_test(
 )
 
 libc_test(
+    name = "bfloat16_test",
+    srcs = ["bfloat16_test.cpp"],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+        "//libc/test/UnitTest:fp_test_helpers",
+        "//libc/utils/MPFRWrapper:mp_common",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+libc_test(
     name = "dyadic_float_test",
     srcs = ["dyadic_float_test.cpp"],
     copts = ["-frounding-math"],

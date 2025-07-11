@@ -145,6 +145,8 @@ C++20 Feature Support
 - Fixed a crash with a defaulted spaceship (``<=>``) operator when the class
   contains a member declaration of vector type. Vector types cannot yet be
   compared directly, so this causes the operator to be deleted. (#GH137452)
+- Implement constant evaluation of lambdas that capture structured bindings.
+  (#GH145956)
 
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -310,6 +312,15 @@ C23 Feature Support
   `WG14 N2975 <https://open-std.org/JTC1/SC22/WG14/www/docs/n2975.pdf>`_
 - Fixed a bug with handling the type operand form of ``typeof`` when it is used
   to specify a fixed underlying type for an enumeration. #GH146351
+- Fixed a rejects-valid bug where Clang would reject an enumeration with an
+  ``_Atomic`` underlying type. The underlying type is the non-atomic,
+  unqualified version of the specified type. Due to the perhaps surprising lack
+  of atomic behavior, this is diagnosed under
+  ``-Wunderlying-atomic-qualifier-ignored``, which defaults to an error. This
+  can be downgraded with ``-Wno-underlying-atomic-qualifier-ignored`` or
+  ``-Wno-error=underlying-atomic-qualifier-ignored``. Clang now also diagnoses
+  cv-qualifiers as being ignored, but that warning does not default to an error.
+  It can be controlled by ``-Wunderlying-cv-qualifier-ignore``. (#GH147736)
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -660,6 +671,10 @@ Improvements to Clang's diagnostics
   #GH142457, #GH139913, #GH138850, #GH137867, #GH137860, #GH107840, #GH93308,
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
+  
+- Clang no longer emits a spurious -Wdangling-gsl warning in C++23 when
+  iterating over an element of a temporary container in a range-based
+  for loop.(#GH109793, #GH145164)
 
 - Fixed false positives in ``-Wformat-truncation`` and ``-Wformat-overflow``
   diagnostics when floating-point numbers had both width field and plus or space
@@ -767,6 +782,13 @@ Bug Fixes in This Version
   flag and diagnostic because the macro injection was used to emit this warning.
   Unfortunately there is no other good way to diagnose usage of ``static_assert``
   macro without inclusion of ``<assert.h>``.
+- In C23, something like ``[[/*possible attributes*/]];`` is an attribute
+  declaration, not a statement. So it is not allowed by the syntax in places
+  where a statement is required, specifically as the secondary block of a
+  selection or iteration statement. This differs from C++, since C++ allows
+  declaration statements. Clang now emits a warning for these patterns. (#GH141659)
+- Fixed false positives for redeclaration errors of using enum in
+  nested scopes. (#GH147495)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -882,6 +904,7 @@ Bug Fixes to C++ Support
 - Fixed a Clang regression in C++20 mode where unresolved dependent call expressions were created inside non-dependent contexts (#GH122892)
 - Clang now emits the ``-Wunused-variable`` warning when some structured bindings are unused
   and the ``[[maybe_unused]]`` attribute is not applied. (#GH125810)
+- Fixed ``static_cast`` not performing access or ambiguity checks when converting to an rvalue reference to a base class. (#GH121429)
 - Declarations using class template argument deduction with redundant
   parentheses around the declarator are no longer rejected. (#GH39811)
 - Fixed a crash caused by invalid declarations of ``std::initializer_list``. (#GH132256)
@@ -917,12 +940,18 @@ Bug Fixes to C++ Support
 - Fixed a crash when constant evaluating some explicit object member assignment operators. (#GH142835)
 - Fixed an access checking bug when substituting into concepts (#GH115838)
 - Fix a bug where private access specifier of overloaded function not respected. (#GH107629)
+- Correctly handles calling an explicit object member function template overload set
+  through its address (``(&Foo::bar<baz>)()``).
+- Fix a crash when forming an invalid call to an operator with an explicit object member. (#GH147121)
 - Correctly handle allocations in the condition of a ``if constexpr``.(#GH120197) (#GH134820)
 - Fixed a crash when handling invalid member using-declaration in C++20+ mode. (#GH63254)
+- Fixed parsing of lambda expressions that appear after ``*`` or ``&`` in contexts where a declaration can appear. (#GH63880)
+- Fix name lookup in lambda appearing in the body of a requires expression. (#GH147650)
 - Fix a crash when trying to instantiate an ambiguous specialization. (#GH51866)
 - Improved handling of variables with ``consteval`` constructors, to
   consistently treat the initializer as manifestly constant-evaluated.
   (#GH135281)
+- Fix a crash in the presence of invalid base classes. (#GH147186)
 - Fixed a crash involving list-initialization of an empty class with a
   non-empty initializer list. (#GH147949)
 
@@ -1057,6 +1086,8 @@ RISC-V Support
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* Provide a __device__ version of std::__glibcxx_assert_fail() in a header wrapper.
 
 CUDA Support
 ^^^^^^^^^^^^
@@ -1225,6 +1256,7 @@ OpenMP Support
 - Fixed mapping of arrays of structs containing nested structs with user defined
   mappers, by using compiler-generated default mappers for the outer structs for
   such maps.
+- Deprecation warning has been emitted for deprecated delimited form of ``declare target``.
 
 Improvements
 ^^^^^^^^^^^^

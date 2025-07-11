@@ -1,6 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --output=%t --format=json --executor=standalone %s
-// RUN: FileCheck %s < %t/GlobalNamespace/MyClass.json
+// RUN: FileCheck %s < %t/_ZTV7MyClass.json
 
 struct Foo;
 
@@ -134,6 +134,7 @@ protected:
 // CHECK-NEXT:      "Filename": "{{.*}}class.cpp",
 // CHECK-NEXT:      "LineNumber": 10
 // CHECK-NEXT:    },
+// CHECK-NEXT:    "MangledName": "_ZTV7MyClass",
 // CHECK-NEXT:    "Name": "MyClass",
 // CHECK-NEXT:    "Namespace": [
 // CHECK-NEXT:      "GlobalNamespace"
