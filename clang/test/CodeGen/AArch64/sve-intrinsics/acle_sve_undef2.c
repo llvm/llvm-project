@@ -169,3 +169,16 @@ svmfloat8x2_t test_svundef2_mf8(void) MODE_ATTR
 {
   return svundef2_mf8();
 }
+
+// CHECK-LABEL: @test_svundef2_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } undef
+//
+// CPP-CHECK-LABEL: @_Z18test_svundef2_bf16v(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } undef
+//
+svbfloat16x2_t test_svundef2_bf16(void) MODE_ATTR
+{
+  return svundef2_bf16();
+}
