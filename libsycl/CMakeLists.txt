@@ -31,6 +31,12 @@ endif()
 option(LIBSYCL_ENABLE_WERROR "Treat all warnings as errors in the libsycl project" OFF)
 option(LIBSYCL_ENABLE_PEDANTIC "Compile with pedantic enabled." OFF)
 
+# If LIBSYCL_ENABLE_BACKENDS is undefined, we default to enabling OpenCL and Level
+# Zero backends.
+if (NOT DEFINED LIBSYCL_ENABLE_BACKENDS)
+  set(LIBSYCL_ENABLE_BACKENDS "opencl;level_zero" CACHE STRING "Backends enabled for SYCL")
+endif()
+
 #===============================================================================
 # Configure System
 #===============================================================================
@@ -78,6 +84,14 @@ if (NOT LIBSYCL_ABI_NAMESPACE MATCHES "__V.*")
 endif()
 
 #===============================================================================
+# Dependencies
+#===============================================================================
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
+# Download & build dependency for kernel offloading
+include(FetchUnifiedRuntime)
+
+#===============================================================================
 # Setup build & install rules
 #===============================================================================
 
@@ -97,17 +111,36 @@ file(GLOB_RECURSE HEADERS_IN_SYCL_DIR CONFIGURE_DEPENDS "${LIBSYCL_SOURCE_INCLUD
 string(REPLACE "${LIBSYCL_SOURCE_INCLUDE_DIR}" "${LIBSYCL_BUILD_INCLUDE_DIR}"
   OUT_HEADERS_IN_SYCL_DIR "${HEADERS_IN_SYCL_DIR}")
 
+set(OUT_UR_HEADERS
+  ${LIBSYCL_BUILD_INCLUDE_DIR}/ur_api.h
+  ${LIBSYCL_BUILD_INCLUDE_DIR}/ur_api_funcs.def
+  ${LIBSYCL_BUILD_INCLUDE_DIR}/ur_print.hpp)
+set(UR_HEADERS_TO_COPY
+  ${UNIFIED_RUNTIME_INCLUDE_DIR}/ur_api.h
+  ${UNIFIED_RUNTIME_INCLUDE_DIR}/ur_api_funcs.def
+  ${UNIFIED_RUNTIME_INCLUDE_DIR}/ur_print.hpp)
+
 # Copy SYCL headers from sources to build directory
 add_custom_target(sycl-headers
-  DEPENDS ${OUT_HEADERS_IN_SYCL_DIR})
+  DEPENDS ${OUT_HEADERS_IN_SYCL_DIR}
+          ${OUT_UR_HEADERS})
 
 add_custom_command(
   OUTPUT  ${OUT_HEADERS_IN_SYCL_DIR}
+          ${OUT_UR_HEADERS}
   DEPENDS ${HEADERS_IN_SYCL_DIR}
+          ${UR_HEADERS_TO_COPY}
   COMMAND ${CMAKE_COMMAND} -E copy_directory ${LIBSYCL_SOURCE_INCLUDE_DIR}/sycl ${LIBSYCL_BUILD_INCLUDE_DIR}/sycl
+  COMMAND ${CMAKE_COMMAND} -E copy ${UR_HEADERS_TO_COPY} ${LIBSYCL_BUILD_INCLUDE_DIR}
   COMMENT "Copying SYCL headers...")
 
 install(DIRECTORY "${LIBSYCL_SOURCE_INCLUDE_DIR}/sycl" DESTINATION ${LIBSYCL_INCLUDE_DIR} COMPONENT sycl-headers)
+install(FILES "${UNIFIED_RUNTIME_INCLUDE_DIR}/ur_api.h" DESTINATION ${LIBSYCL_INCLUDE_DIR}
+  COMPONENT sycl-headers)
+install(FILES "${UNIFIED_RUNTIME_INCLUDE_DIR}/ur_api_funcs.def" DESTINATION ${LIBSYCL_INCLUDE_DIR}
+  COMPONENT sycl-headers)
+install(FILES "${UNIFIED_RUNTIME_INCLUDE_DIR}/ur_print.hpp" DESTINATION ${LIBSYCL_INCLUDE_DIR}
+  COMPONENT sycl-headers)
 
 set(LIBSYCL_RT_LIBS ${LIBSYCL_SHARED_OUTPUT_NAME})
 

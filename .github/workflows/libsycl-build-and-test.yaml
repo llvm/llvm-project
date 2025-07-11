@@ -1,0 +1,43 @@
+# This file defines pre-commit CI for libsycl++.
+name: Build libsycl
+on:
+  pull_request:
+    paths:
+      - 'libsycl/**'
+      - '.github/workflows/libsycl-build-and-test.yaml'
+
+permissions:
+  contents: read # Default everything to read-only
+
+concurrency:
+  # Cancel a currently running workflow from the same PR
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build_ubuntu2204:
+    # sergey-semenov repo is set is for test purposes
+    if: github.repository_owner == 'sergey-semenov'
+    # github runner
+    runs-on: ubuntu-22.04
+    # reuse libcxx container for now
+    container: ghcr.io/llvm/libcxx-linux-builder:2b57ebb50b6d418e70382e655feaa619b558e254
+    continue-on-error: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Register cleanup after job is finished
+        uses: ./libsycl/utils/ci/actions/cleanup
+      - name: Compile
+        env:
+          CC: 'clang-21'
+          CXX: 'clang++-21'
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/build
+          mkdir -p $GITHUB_WORKSPACE/install
+          cmake -G Ninja -S $GITHUB_WORKSPACE/llvm -B $GITHUB_WORKSPACE/build \
+            -DLLVM_ENABLE_PROJECTS="clang" \
+            -DLLVM_INSTALL_UTILS=ON \
+            -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/install \
+            -DLLVM_ENABLE_RUNTIMES="libsycl" \
+            -DCMAKE_BUILD_TYPE=Release
+          ninja -C $GITHUB_WORKSPACE/build install --verbose
