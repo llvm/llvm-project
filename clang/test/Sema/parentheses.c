@@ -5,7 +5,7 @@
 // Test the various warnings under -Wparentheses
 void if_assign(void) {
   int i;
-  if (i = 4) {} // expected-warning {{assignment as a condition}} \
+  if (i = 4) {} // expected-warning {{assignment as a truth value}} \
                 // expected-note{{place parentheses around the assignment to silence this warning}} \
                 // expected-note{{use '==' to turn this assignment into an equality comparison}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:7-[[@LINE-3]]:7}:"("
@@ -118,4 +118,4 @@ void conditional_op(int x, int y, _Bool b, void* p) {
 }
 
 // RUN: not %clang_cc1 -fsyntax-only -Wparentheses -Werror %s 2>&1 | FileCheck %s -check-prefix=CHECK-FLAG
-// CHECK-FLAG: error: using the result of an assignment as a condition without parentheses [-Werror,-Wparentheses]
+// CHECK-FLAG: error: using the result of an assignment as a truth value without parentheses [-Werror,-Wparentheses]
