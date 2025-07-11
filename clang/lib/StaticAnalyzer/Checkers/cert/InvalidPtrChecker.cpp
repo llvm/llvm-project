@@ -76,6 +76,10 @@ private:
        &InvalidPtrChecker::postPreviousReturnInvalidatingCall},
       {{CDM::CLibrary, {"asctime"}, 1},
        &InvalidPtrChecker::postPreviousReturnInvalidatingCall},
+      {{CDM::CLibrary, {"ctime"}, 1},
+       &InvalidPtrChecker::postPreviousReturnInvalidatingCall},
+      {{CDM::CLibrary, {"localtime"}, 1},
+       &InvalidPtrChecker::postPreviousReturnInvalidatingCall},
   };
 
   // The private members of this checker corresponding to commandline options
