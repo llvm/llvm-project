@@ -7,11 +7,68 @@
 //===----------------------------------------------------------------------===//
 
 #include "AvoidPlatformSpecificFundamentalTypesCheck.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/TargetInfo.h"
 
 using namespace clang::ast_matchers;
+
+namespace {
+AST_MATCHER(clang::QualType, isBuiltinInt) {
+  const auto *BT = Node->getAs<clang::BuiltinType>();
+  if (!BT)
+    return false;
+
+  switch (BT->getKind()) {
+  case clang::BuiltinType::Short:
+  case clang::BuiltinType::UShort:
+  case clang::BuiltinType::Int:
+  case clang::BuiltinType::UInt:
+  case clang::BuiltinType::Long:
+  case clang::BuiltinType::ULong:
+  case clang::BuiltinType::LongLong:
+  case clang::BuiltinType::ULongLong:
+    return true;
+  default:
+    return false;
+  }
+}
+
+AST_MATCHER(clang::QualType, isBuiltinFloat) {
+  const auto *BT = Node->getAs<clang::BuiltinType>();
+  if (!BT)
+    return false;
+
+  switch (BT->getKind()) {
+  case clang::BuiltinType::Half:
+  case clang::BuiltinType::BFloat16:
+  case clang::BuiltinType::Float:
+  case clang::BuiltinType::Double:
+  case clang::BuiltinType::LongDouble:
+    return true;
+  default:
+    return false;
+  }
+}
+
+AST_MATCHER(clang::QualType, isBuiltinChar) {
+  const auto *BT = Node->getAs<clang::BuiltinType>();
+  if (!BT)
+    return false;
+
+  switch (BT->getKind()) {
+  case clang::BuiltinType::Char_S:
+  case clang::BuiltinType::Char_U:
+  case clang::BuiltinType::SChar:
+  case clang::BuiltinType::UChar:
+    return true;
+  default:
+    return false;
+  }
+}
+} // namespace
 
 namespace clang::tidy::portability {
 
@@ -76,62 +133,16 @@ std::string AvoidPlatformSpecificFundamentalTypesCheck::getFloatReplacement(
 
 void AvoidPlatformSpecificFundamentalTypesCheck::registerMatchers(
     MatchFinder *Finder) {
-  // Build the list of type strings to match
-  std::vector<std::string> TypeStrings;
-
-  // Add integer types if the option is enabled
-  if (WarnOnInts) {
-    TypeStrings.insert(TypeStrings.end(), {"short",
-                                           "short int",
-                                           "signed short",
-                                           "signed short int",
-                                           "unsigned short",
-                                           "unsigned short int",
-                                           "int",
-                                           "signed",
-                                           "signed int",
-                                           "unsigned",
-                                           "unsigned int",
-                                           "long",
-                                           "long int",
-                                           "signed long",
-                                           "signed long int",
-                                           "unsigned long",
-                                           "unsigned long int",
-                                           "long long",
-                                           "long long int",
-                                           "signed long long",
-                                           "signed long long int",
-                                           "unsigned long long",
-                                           "unsigned long long int"});
-  }
-
-  // Add float types if the option is enabled
-  if (WarnOnFloats) {
-    TypeStrings.insert(TypeStrings.end(),
-                       {"half", "__bf16", "float", "double", "long double"});
-  }
-
-  // Add char types if the option is enabled
-  if (WarnOnChars) {
-    TypeStrings.insert(TypeStrings.end(),
-                       {"char", "signed char", "unsigned char"});
-  }
+  // Create the type matcher using the three separate matchers
+  auto PlatformSpecificFundamentalType = qualType(
+      allOf(builtinType(),
+            anyOf(WarnOnInts ? isBuiltinInt() : unless(anything()),
+                  WarnOnFloats ? isBuiltinFloat() : unless(anything()),
+                  WarnOnChars ? isBuiltinChar() : unless(anything()))));
 
   // If no types are enabled, return early
-  if (TypeStrings.empty())
+  if (!WarnOnInts && !WarnOnFloats && !WarnOnChars)
     return;
-
-  // Create the matcher dynamically
-  auto TypeMatcher = asString(TypeStrings.front());
-  for (const auto &TypeString : TypeStrings)
-    TypeMatcher = anyOf(TypeMatcher, asString(TypeString));
-
-  auto PlatformSpecificFundamentalType = qualType(allOf(
-      // Must be a builtin type directly (not through typedef)
-      builtinType(),
-      // Match the specific fundamental types we care about
-      TypeMatcher));
 
   // Match variable declarations with platform-specific fundamental types
   Finder->addMatcher(
