@@ -172,6 +172,8 @@ def SPIRV_EXTConstantCompositeReplicateOp : SPIRV_ExtVendorOp<"ConstantComposite
   );
 
   let autogenSerialization = 0;
+
+  let assemblyFormat = "` ` `[` $value `]` `:` type($replicated_constant) attr-dict";
 }
 
 // -----

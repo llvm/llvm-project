@@ -769,33 +769,17 @@ void mlir::spirv::AddressOfOp::getAsmResultNames(
 // spirv.EXTConstantCompositeReplicate
 //===----------------------------------------------------------------------===//
 
-ParseResult
-spirv::EXTConstantCompositeReplicateOp::parse(OpAsmParser &parser,
-                                              OperationState &result) {
-
-  Attribute value;
-  StringRef valueAttrName =
-      spirv::EXTConstantCompositeReplicateOp::getValueAttrName(result.name);
-  Type resultType;
-
-  if (parser.parseLSquare() ||
-      parser.parseAttribute(value, valueAttrName, result.attributes) ||
-      parser.parseRSquare() || parser.parseColonType(resultType))
-    return failure();
-
-  if (isa<NoneType, TensorType>(resultType))
-    if (parser.parseColonType(resultType))
-      return failure();
-
-  return parser.addTypeToList(resultType, result.types);
-}
-
-void spirv::EXTConstantCompositeReplicateOp::print(OpAsmPrinter &printer) {
-  printer << " [" << getValue() << "] : " << getType();
-}
-
 LogicalResult spirv::EXTConstantCompositeReplicateOp::verify() {
-  Type valueType = dyn_cast<TypedAttr>(getValue()).getType();
+  Type valueType;
+  if (auto typedAttr = dyn_cast<TypedAttr>(getValue())) {
+    valueType = typedAttr.getType();
+  } else if (auto arrayAttr = dyn_cast<ArrayAttr>(getValue())) {
+    auto elementType = dyn_cast<TypedAttr>(arrayAttr[0]).getType();
+    valueType = spirv::ArrayType::get(elementType, arrayAttr.size());
+  } else {
+    return emitError("unknown value attribute type");
+  }
+
   Type compositeElementType =
       dyn_cast<spirv::CompositeType>(getType()).getElementType(0);
   SmallVector<Type, 3> possibleTypes = {compositeElementType};
@@ -805,13 +789,8 @@ LogicalResult spirv::EXTConstantCompositeReplicateOp::verify() {
   }
 
   if (!is_contained(possibleTypes, valueType)) {
-    std::string strTypes;
-    llvm::raw_string_ostream os(strTypes);
-    interleave(
-        possibleTypes, os, [&](Type type) { os << "'" << type << "'"; },
-        " or ");
     return emitError("expected value attribute type ")
-           << strTypes << ", but got: " << valueType;
+           << interleaved(possibleTypes, " or ") << ", but got: " << valueType;
   }
 
   return success();

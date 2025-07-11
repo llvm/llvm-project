@@ -1123,7 +1123,15 @@ uint32_t Serializer::prepareConstantCompositeReplicate(Location loc,
   }
 
   auto elementType = dyn_cast<CompositeType>(resultType).getElementType(0);
-  Type valueType = dyn_cast<TypedAttr>(valueAttr).getType();
+  Type valueType;
+  if (auto typedAttr = dyn_cast<TypedAttr>(valueAttr)) {
+    valueType = typedAttr.getType();
+  } else if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr)) {
+    auto elementType = dyn_cast<TypedAttr>(arrayAttr[0]).getType();
+    valueType = spirv::ArrayType::get(elementType, arrayAttr.size());
+  } else {
+    return 0;
+  }
 
   uint32_t constandID;
   if (elementType == valueType) {
