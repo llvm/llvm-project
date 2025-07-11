@@ -169,9 +169,9 @@ static std::string getIntrinsicNameImpl(Intrinsic::ID Id, ArrayRef<Type *> Tys,
   if (HasUnnamedType) {
     assert(M && "unnamed types need a module");
     if (!FT)
-      FT = Intrinsic::getType(M->getContext(), Id, Tys);
+      FT = Intrinsic::getType(M, Id, Tys);
     else
-      assert((FT == Intrinsic::getType(M->getContext(), Id, Tys)) &&
+      assert((FT == Intrinsic::getType(M, Id, Tys)) &&
              "Provided FunctionType must match arguments");
     return M->getUniqueIntrinsicName(Result, Id, FT);
   }
@@ -212,6 +212,9 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
   switch (Info) {
   case IIT_Done:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Void, 0));
+    return;
+  case IIT_BYTE:
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Byte, 0));
     return;
   case IIT_VARARG:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::VarArg, 0));
@@ -491,7 +494,8 @@ void Intrinsic::getIntrinsicInfoTableEntries(
 }
 
 static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                             ArrayRef<Type *> Tys, LLVMContext &Context) {
+                             ArrayRef<Type *> Tys, LLVMContext &Context,
+                             const DataLayout &DL) {
   using namespace Intrinsic;
 
   IITDescriptor D = Infos.front();
@@ -500,6 +504,8 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   switch (D.Kind) {
   case IITDescriptor::Void:
     return Type::getVoidTy(Context);
+  case IITDescriptor::Byte:
+    return Type::getIntNTy(Context, DL.getByteWidth());
   case IITDescriptor::VarArg:
     return Type::getVoidTy(Context);
   case IITDescriptor::MMX:
@@ -528,14 +534,14 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::Integer:
     return IntegerType::get(Context, D.Integer_Width);
   case IITDescriptor::Vector:
-    return VectorType::get(DecodeFixedType(Infos, Tys, Context),
+    return VectorType::get(DecodeFixedType(Infos, Tys, Context, DL),
                            D.Vector_Width);
   case IITDescriptor::Pointer:
     return PointerType::get(Context, D.Pointer_AddressSpace);
   case IITDescriptor::Struct: {
     SmallVector<Type *, 8> Elts;
     for (unsigned i = 0, e = D.Struct_NumElements; i != e; ++i)
-      Elts.push_back(DecodeFixedType(Infos, Tys, Context));
+      Elts.push_back(DecodeFixedType(Infos, Tys, Context, DL));
     return StructType::get(Context, Elts);
   }
   case IITDescriptor::Argument:
@@ -568,7 +574,7 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return VectorType::getOneNthElementsVectorType(
         cast<VectorType>(Tys[D.getRefArgNumber()]), D.getVectorDivisor());
   case IITDescriptor::SameVecWidthArgument: {
-    Type *EltTy = DecodeFixedType(Infos, Tys, Context);
+    Type *EltTy = DecodeFixedType(Infos, Tys, Context, DL);
     Type *Ty = Tys[D.getArgumentNumber()];
     if (auto *VTy = dyn_cast<VectorType>(Ty))
       return VectorType::get(EltTy, VTy->getElementCount());
@@ -593,17 +599,18 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   llvm_unreachable("unhandled");
 }
 
-FunctionType *Intrinsic::getType(LLVMContext &Context, ID id,
-                                 ArrayRef<Type *> Tys) {
+FunctionType *Intrinsic::getType(const Module *M, ID id, ArrayRef<Type *> Tys) {
   SmallVector<IITDescriptor, 8> Table;
   getIntrinsicInfoTableEntries(id, Table);
 
   ArrayRef<IITDescriptor> TableRef = Table;
-  Type *ResultTy = DecodeFixedType(TableRef, Tys, Context);
+  Type *ResultTy =
+      DecodeFixedType(TableRef, Tys, M->getContext(), M->getDataLayout());
 
   SmallVector<Type *, 8> ArgTys;
   while (!TableRef.empty())
-    ArgTys.push_back(DecodeFixedType(TableRef, Tys, Context));
+    ArgTys.push_back(
+        DecodeFixedType(TableRef, Tys, M->getContext(), M->getDataLayout()));
 
   // DecodeFixedType returns Void for IITDescriptor::Void and
   // IITDescriptor::VarArg If we see void type as the type of the last argument,
@@ -752,7 +759,7 @@ Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id,
                                             ArrayRef<Type *> Tys) {
   // There can never be multiple globals with the same name of different types,
   // because intrinsics must be a specific type.
-  auto *FT = getType(M->getContext(), id, Tys);
+  auto *FT = getType(M, id, Tys);
   return cast<Function>(
       M->getOrInsertFunction(
            Tys.empty() ? getName(id) : getName(id, Tys, M, FT), FT)
@@ -807,7 +814,8 @@ using DeferredIntrinsicMatchPair =
     std::pair<Type *, ArrayRef<Intrinsic::IITDescriptor>>;
 
 static bool
-matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
+matchIntrinsicType(const DataLayout &DL, Type *Ty,
+                   ArrayRef<Intrinsic::IITDescriptor> &Infos,
                    SmallVectorImpl<Type *> &ArgTys,
                    SmallVectorImpl<DeferredIntrinsicMatchPair> &DeferredChecks,
                    bool IsDeferredCheck) {
@@ -830,6 +838,8 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
   switch (D.Kind) {
   case IITDescriptor::Void:
     return !Ty->isVoidTy();
+  case IITDescriptor::Byte:
+    return !Ty->isIntegerTy(DL.getByteWidth());
   case IITDescriptor::VarArg:
     return true;
   case IITDescriptor::MMX: {
@@ -863,7 +873,7 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::Vector: {
     VectorType *VT = dyn_cast<VectorType>(Ty);
     return !VT || VT->getElementCount() != D.Vector_Width ||
-           matchIntrinsicType(VT->getElementType(), Infos, ArgTys,
+           matchIntrinsicType(DL, VT->getElementType(), Infos, ArgTys,
                               DeferredChecks, IsDeferredCheck);
   }
   case IITDescriptor::Pointer: {
@@ -878,7 +888,7 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
       return true;
 
     for (unsigned i = 0, e = D.Struct_NumElements; i != e; ++i)
-      if (matchIntrinsicType(ST->getElementType(i), Infos, ArgTys,
+      if (matchIntrinsicType(DL, ST->getElementType(i), Infos, ArgTys,
                              DeferredChecks, IsDeferredCheck))
         return true;
     return false;
@@ -969,7 +979,7 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
         return true;
       EltTy = ThisArgType->getElementType();
     }
-    return matchIntrinsicType(EltTy, Infos, ArgTys, DeferredChecks,
+    return matchIntrinsicType(DL, EltTy, Infos, ArgTys, DeferredChecks,
                               IsDeferredCheck);
   }
   case IITDescriptor::VecOfAnyPtrsToElt: {
@@ -1033,24 +1043,24 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
 }
 
 Intrinsic::MatchIntrinsicTypesResult
-Intrinsic::matchIntrinsicSignature(FunctionType *FTy,
+Intrinsic::matchIntrinsicSignature(const DataLayout &DL, FunctionType *FTy,
                                    ArrayRef<Intrinsic::IITDescriptor> &Infos,
                                    SmallVectorImpl<Type *> &ArgTys) {
   SmallVector<DeferredIntrinsicMatchPair, 2> DeferredChecks;
-  if (matchIntrinsicType(FTy->getReturnType(), Infos, ArgTys, DeferredChecks,
-                         false))
+  if (matchIntrinsicType(DL, FTy->getReturnType(), Infos, ArgTys,
+                         DeferredChecks, false))
     return MatchIntrinsicTypes_NoMatchRet;
 
   unsigned NumDeferredReturnChecks = DeferredChecks.size();
 
   for (auto *Ty : FTy->params())
-    if (matchIntrinsicType(Ty, Infos, ArgTys, DeferredChecks, false))
+    if (matchIntrinsicType(DL, Ty, Infos, ArgTys, DeferredChecks, false))
       return MatchIntrinsicTypes_NoMatchArg;
 
   for (unsigned I = 0, E = DeferredChecks.size(); I != E; ++I) {
     DeferredIntrinsicMatchPair &Check = DeferredChecks[I];
-    if (matchIntrinsicType(Check.first, Check.second, ArgTys, DeferredChecks,
-                           true))
+    if (matchIntrinsicType(DL, Check.first, Check.second, ArgTys,
+                           DeferredChecks, true))
       return I < NumDeferredReturnChecks ? MatchIntrinsicTypes_NoMatchRet
                                          : MatchIntrinsicTypes_NoMatchArg;
   }
@@ -1077,7 +1087,8 @@ bool Intrinsic::matchIntrinsicVarArg(
   return true;
 }
 
-bool Intrinsic::getIntrinsicSignature(Intrinsic::ID ID, FunctionType *FT,
+bool Intrinsic::getIntrinsicSignature(const DataLayout &DL, Intrinsic::ID ID,
+                                      FunctionType *FT,
                                       SmallVectorImpl<Type *> &ArgTys) {
   if (!ID)
     return false;
@@ -1086,7 +1097,7 @@ bool Intrinsic::getIntrinsicSignature(Intrinsic::ID ID, FunctionType *FT,
   getIntrinsicInfoTableEntries(ID, Table);
   ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
 
-  if (Intrinsic::matchIntrinsicSignature(FT, TableRef, ArgTys) !=
+  if (Intrinsic::matchIntrinsicSignature(DL, FT, TableRef, ArgTys) !=
       Intrinsic::MatchIntrinsicTypesResult::MatchIntrinsicTypes_Match) {
     return false;
   }
@@ -1097,8 +1108,8 @@ bool Intrinsic::getIntrinsicSignature(Intrinsic::ID ID, FunctionType *FT,
 
 bool Intrinsic::getIntrinsicSignature(Function *F,
                                       SmallVectorImpl<Type *> &ArgTys) {
-  return getIntrinsicSignature(F->getIntrinsicID(), F->getFunctionType(),
-                               ArgTys);
+  return getIntrinsicSignature(F->getDataLayout(), F->getIntrinsicID(),
+                               F->getFunctionType(), ArgTys);
 }
 
 std::optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {

@@ -1585,7 +1585,7 @@ Value *NumericalStabilitySanitizer::maybeHandleKnownCallBase(
   SmallVector<Type *, 4> ArgTys;
   ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
   [[maybe_unused]] Intrinsic::MatchIntrinsicTypesResult MatchResult =
-      Intrinsic::matchIntrinsicSignature(WidenedFnTy, TableRef, ArgTys);
+      Intrinsic::matchIntrinsicSignature(DL, WidenedFnTy, TableRef, ArgTys);
   assert(MatchResult == Intrinsic::MatchIntrinsicTypes_Match &&
          "invalid widened intrinsic");
   // For known intrinsic functions, we create a second call to the same

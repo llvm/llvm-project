@@ -870,7 +870,7 @@ CallInst *IRBuilderBase::CreateIntrinsic(Type *RetTy, Intrinsic::ID ID,
   FunctionType *FTy = FunctionType::get(RetTy, ArgTys, false);
   SmallVector<Type *> OverloadTys;
   Intrinsic::MatchIntrinsicTypesResult Res =
-      matchIntrinsicSignature(FTy, TableRef, OverloadTys);
+      matchIntrinsicSignature(M->getDataLayout(), FTy, TableRef, OverloadTys);
   (void)Res;
   assert(Res == Intrinsic::MatchIntrinsicTypes_Match && TableRef.empty() &&
          "Wrong types for intrinsic!");

@@ -346,8 +346,8 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
           return error(Info.second, "intrinsic can only be used as callee");
 
         SmallVector<Type *> OverloadTys;
-        if (!Intrinsic::getIntrinsicSignature(IID, CB->getFunctionType(),
-                                              OverloadTys))
+        if (!Intrinsic::getIntrinsicSignature(
+                M->getDataLayout(), IID, CB->getFunctionType(), OverloadTys))
           return error(Info.second, "invalid intrinsic signature");
 
         U.set(Intrinsic::getOrInsertDeclaration(M, IID, OverloadTys));

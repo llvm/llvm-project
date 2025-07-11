@@ -16932,8 +16932,9 @@ Align SITargetLowering::computeKnownAlignForTargetInstr(
     // site specifies a lower alignment?
     Intrinsic::ID IID = GI->getIntrinsicID();
     LLVMContext &Ctx = VT.getMachineFunction().getFunction().getContext();
+    const Module *M = VT.getMachineFunction().getFunction().getParent();
     AttributeList Attrs =
-        Intrinsic::getAttributes(Ctx, IID, Intrinsic::getType(Ctx, IID));
+        Intrinsic::getAttributes(Ctx, IID, Intrinsic::getType(M, IID));
     if (MaybeAlign RetAlign = Attrs.getRetAlignment())
       return *RetAlign;
   }

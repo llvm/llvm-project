@@ -5531,7 +5531,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   // Walk the descriptors to extract overloaded types.
   SmallVector<Type *, 4> ArgTys;
   Intrinsic::MatchIntrinsicTypesResult Res =
-      Intrinsic::matchIntrinsicSignature(IFTy, TableRef, ArgTys);
+      Intrinsic::matchIntrinsicSignature(DL, IFTy, TableRef, ArgTys);
   Check(Res != Intrinsic::MatchIntrinsicTypes_NoMatchRet,
         "Intrinsic has incorrect return type!", IF);
   Check(Res != Intrinsic::MatchIntrinsicTypes_NoMatchArg,
