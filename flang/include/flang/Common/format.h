@@ -34,7 +34,7 @@ namespace Fortran::common {
 
 /// Add two signed integers, computing the two's complement truncated result,
 /// returning true if overflow occurred.
-bool AddOverflow(int64_t X, int64_t Y, int64_t &Result) {
+static inline bool AddOverflow(int64_t X, int64_t Y, int64_t &Result) {
 #if __has_builtin(__builtin_add_overflow)
   return __builtin_add_overflow(X, Y, &Result);
 #else
@@ -58,7 +58,7 @@ bool AddOverflow(int64_t X, int64_t Y, int64_t &Result) {
 
 /// Multiply two signed integers, computing the two's complement truncated
 /// result, returning true if an overflow occurred.
-int64_t MulOverflow(int64_t X, int64_t Y, int64_t &Result) {
+static inline bool MulOverflow(int64_t X, int64_t Y, int64_t &Result) {
 #if __has_builtin(__builtin_mul_overflow)
   return __builtin_mul_overflow(X, Y, &Result);
 #else
