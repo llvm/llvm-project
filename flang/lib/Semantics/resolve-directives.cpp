@@ -2293,7 +2293,6 @@ void OmpAttributeVisitor::Post(const parser::OpenMPAllocatorsConstruct &x) {
       }
     }
   }
-
   PopContext();
 }
 
