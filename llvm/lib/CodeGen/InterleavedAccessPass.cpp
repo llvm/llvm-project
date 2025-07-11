@@ -381,7 +381,8 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
     SmallVector<Value *, 4> ShuffleValues(Factor, nullptr);
     for (auto [Idx, ShuffleMaskIdx] : enumerate(Indices))
       ShuffleValues[ShuffleMaskIdx] = Shuffles[Idx];
-    if (!TLI->lowerInterleavedVPLoad(VPLoad, LaneMask, ShuffleValues))
+    VectorDeinterleaving VD(ShuffleValues);
+    if (!TLI->lowerInterleavedVPLoad(VPLoad, LaneMask, VD))
       // If Extracts is not empty, tryReplaceExtracts made changes earlier.
       return !Extracts.empty() || BinOpShuffleChanged;
   } else {
@@ -615,24 +616,9 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
   if (!LoadedVal->hasOneUse() || !isa<LoadInst, VPIntrinsic>(LoadedVal))
     return false;
 
-  const unsigned Factor = getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
+  VectorDeinterleaving VD(DI);
+  const unsigned Factor = VD.getFactor();
   assert(Factor && "unexpected deinterleave intrinsic");
-
-  SmallVector<Value *, 8> DeinterleaveValues(Factor, nullptr);
-  Value *LastFactor = nullptr;
-  for (auto *User : DI->users()) {
-    auto *Extract = dyn_cast<ExtractValueInst>(User);
-    if (!Extract || Extract->getNumIndices() != 1)
-      return false;
-    unsigned Idx = Extract->getIndices()[0];
-    if (DeinterleaveValues[Idx])
-      return false;
-    DeinterleaveValues[Idx] = Extract;
-    LastFactor = Extract;
-  }
-
-  if (!LastFactor)
-    return false;
 
   if (auto *VPLoad = dyn_cast<VPIntrinsic>(LoadedVal)) {
     if (VPLoad->getIntrinsicID() != Intrinsic::vp_load)
@@ -640,7 +626,7 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
     // Check mask operand. Handle both all-true/false and interleaved mask.
     Value *WideMask = VPLoad->getOperand(1);
     Value *Mask =
-        getMask(WideMask, Factor, cast<VectorType>(LastFactor->getType()));
+        getMask(WideMask, Factor, cast<VectorType>(VD.getDeinterleavedType()));
     if (!Mask)
       return false;
 
@@ -649,7 +635,8 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
 
     // Since lowerInterleaveLoad expects Shuffles and LoadInst, use special
     // TLI function to emit target-specific interleaved instruction.
-    if (!TLI->lowerInterleavedVPLoad(VPLoad, Mask, DeinterleaveValues))
+    VectorDeinterleaving VD(DI);
+    if (!TLI->lowerInterleavedVPLoad(VPLoad, Mask, VD))
       return false;
 
   } else {
@@ -661,13 +648,10 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
                       << " and factor = " << Factor << "\n");
 
     // Try and match this with target specific intrinsics.
-    if (!TLI->lowerDeinterleaveIntrinsicToLoad(LI, DeinterleaveValues))
+    if (!TLI->lowerDeinterleaveIntrinsicToLoad(LI, DI))
       return false;
   }
 
-  for (Value *V : DeinterleaveValues)
-    if (V)
-      DeadInsts.insert(cast<Instruction>(V));
   DeadInsts.insert(DI);
   // We now have a target-specific load, so delete the old one.
   DeadInsts.insert(cast<Instruction>(LoadedVal));

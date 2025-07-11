@@ -437,14 +437,14 @@ public:
   bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
                              unsigned Factor) const override;
 
-  bool lowerDeinterleaveIntrinsicToLoad(
-      LoadInst *LI, ArrayRef<Value *> DeinterleaveValues) const override;
+  bool lowerDeinterleaveIntrinsicToLoad(LoadInst *LI,
+                                        IntrinsicInst *DI) const override;
 
   bool lowerInterleaveIntrinsicToStore(
       StoreInst *SI, ArrayRef<Value *> InterleaveValues) const override;
 
   bool lowerInterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
-                              ArrayRef<Value *> DeinterleaveRes) const override;
+                              const VectorDeinterleaving &VD) const override;
 
   bool lowerInterleavedVPStore(VPIntrinsic *Store, Value *Mask,
                                ArrayRef<Value *> InterleaveOps) const override;

@@ -14,6 +14,7 @@
 #include "RISCVISelLowering.h"
 #include "RISCVSubtarget.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -233,17 +234,17 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
 }
 
 bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
-    LoadInst *LI, ArrayRef<Value *> DeinterleaveValues) const {
-  const unsigned Factor = DeinterleaveValues.size();
+    LoadInst *LI, IntrinsicInst *DI) const {
+  VectorDeinterleaving VD(DI);
+  const unsigned Factor = VD.getFactor();
+  assert(Factor && "unexpected deinterleaving factor");
   if (Factor > 8)
     return false;
 
   assert(LI->isSimple());
   IRBuilder<> Builder(LI);
 
-  Value *FirstActive =
-      *llvm::find_if(DeinterleaveValues, [](Value *V) { return V != nullptr; });
-  VectorType *ResVTy = cast<VectorType>(FirstActive->getType());
+  VectorType *ResVTy = cast<VectorType>(VD.getDeinterleavedType());
 
   const DataLayout &DL = LI->getDataLayout();
 
@@ -293,16 +294,7 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
     }
   }
 
-  for (auto [Idx, DIV] : enumerate(DeinterleaveValues)) {
-    if (!DIV)
-      continue;
-    // We have to create a brand new ExtractValue to replace each
-    // of these old ExtractValue instructions.
-    Value *NewEV =
-        Builder.CreateExtractValue(Return, {static_cast<unsigned>(Idx)});
-    DIV->replaceAllUsesWith(NewEV);
-  }
-
+  DI->replaceAllUsesWith(Return);
   return true;
 }
 
@@ -419,16 +411,14 @@ static bool isMultipleOfN(const Value *V, const DataLayout &DL, unsigned N) {
 /// dealing with factor of 2 (extractvalue is still required for most of other
 /// factors though).
 bool RISCVTargetLowering::lowerInterleavedVPLoad(
-    VPIntrinsic *Load, Value *Mask,
-    ArrayRef<Value *> DeinterleaveResults) const {
-  const unsigned Factor = DeinterleaveResults.size();
+    VPIntrinsic *Load, Value *Mask, const VectorDeinterleaving &VD) const {
   assert(Mask && "Expect a valid mask");
   assert(Load->getIntrinsicID() == Intrinsic::vp_load &&
          "Unexpected intrinsic");
 
-  Value *FirstActive = *llvm::find_if(DeinterleaveResults,
-                                      [](Value *V) { return V != nullptr; });
-  VectorType *VTy = cast<VectorType>(FirstActive->getType());
+  const unsigned Factor = VD.getFactor();
+  assert(Factor && "unexpected vector deinterleaving");
+  VectorType *VTy = cast<VectorType>(VD.getDeinterleavedType());
 
   auto &DL = Load->getModule()->getDataLayout();
   Align Alignment = Load->getParamAlign(0).value_or(
@@ -494,14 +484,18 @@ bool RISCVTargetLowering::lowerInterleavedVPLoad(
     }
   }
 
-  for (auto [Idx, DIO] : enumerate(DeinterleaveResults)) {
-    if (!DIO)
-      continue;
-    // We have to create a brand new ExtractValue to replace each
-    // of these old ExtractValue instructions.
-    Value *NewEV =
-        Builder.CreateExtractValue(Return, {static_cast<unsigned>(Idx)});
-    DIO->replaceAllUsesWith(NewEV);
+  if (VD.DI) {
+    VD.DI->replaceAllUsesWith(Return);
+  } else {
+    for (auto [Idx, DIO] : enumerate(VD.Values)) {
+      if (!DIO)
+        continue;
+      // We have to create a brand new ExtractValue to replace each
+      // of these old ExtractValue instructions.
+      Value *NewEV =
+          Builder.CreateExtractValue(Return, {static_cast<unsigned>(Idx)});
+      DIO->replaceAllUsesWith(NewEV);
+    }
   }
 
   return true;

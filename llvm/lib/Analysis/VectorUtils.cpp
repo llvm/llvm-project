@@ -306,6 +306,25 @@ unsigned llvm::getDeinterleaveIntrinsicFactor(Intrinsic::ID ID) {
   }
 }
 
+unsigned VectorDeinterleaving::getFactor() const {
+  assert(isValid());
+  if (DI)
+    return getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
+  else
+    return Values.size();
+}
+
+Type *VectorDeinterleaving::getDeinterleavedType() const {
+  assert(getFactor() > 0);
+  if (DI) {
+    return *DI->getType()->subtype_begin();
+  } else {
+    Value *FirstActive =
+        *llvm::find_if(Values, [](Value *V) { return V != nullptr; });
+    return FirstActive->getType();
+  }
+}
+
 /// Given a vector and an element number, see if the scalar value is
 /// already around as a register, for example if it were inserted then extracted
 /// from the vector.

@@ -96,6 +96,7 @@ class TargetRegisterClass;
 class TargetRegisterInfo;
 class TargetTransformInfo;
 class Value;
+struct VectorDeinterleaving;
 class VPIntrinsic;
 
 namespace Sched {
@@ -3230,7 +3231,7 @@ public:
   /// \p Mask is a mask value
   /// \p DeinterleaveRes is a list of deinterleaved results.
   virtual bool lowerInterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
-                                      ArrayRef<Value *> DeinterleaveRes) const {
+                                      const VectorDeinterleaving &VD) const {
     return false;
   }
 
@@ -3251,9 +3252,8 @@ public:
   ///
   /// \p LI is the accompanying load instruction.
   /// \p DeinterleaveValues contains the deinterleaved values.
-  virtual bool
-  lowerDeinterleaveIntrinsicToLoad(LoadInst *LI,
-                                   ArrayRef<Value *> DeinterleaveValues) const {
+  virtual bool lowerDeinterleaveIntrinsicToLoad(LoadInst *LI,
+                                                IntrinsicInst *DI) const {
     return false;
   }
 

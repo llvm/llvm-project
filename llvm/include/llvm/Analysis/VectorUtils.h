@@ -23,6 +23,7 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
+class IntrinsicInst;
 class TargetLibraryInfo;
 
 /// The Vector Function Database.
@@ -187,6 +188,25 @@ LLVM_ABI unsigned getInterleaveIntrinsicFactor(Intrinsic::ID ID);
 
 /// Returns the corresponding factor of llvm.vector.deinterleaveN intrinsics.
 LLVM_ABI unsigned getDeinterleaveIntrinsicFactor(Intrinsic::ID ID);
+
+/// A vector can either be deinterleaved through an intrinsic or a combination
+/// of shufflevector instructions. This is a thin abstraction layer to provide
+/// some common information like the deinterleaving factor.
+struct VectorDeinterleaving {
+  IntrinsicInst *DI = nullptr;
+  ArrayRef<Value *> Values;
+
+  unsigned getFactor() const;
+
+  Type *getDeinterleavedType() const;
+
+  explicit VectorDeinterleaving(IntrinsicInst *DI) : DI(DI) {}
+  explicit VectorDeinterleaving(ArrayRef<Value *> Values) : Values(Values) {}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  bool isValid() const { return (DI != nullptr) ^ !Values.empty(); }
+#endif
+};
 
 /// Given a vector and an element number, see if the scalar value is
 /// already around as a register, for example if it were inserted then extracted
