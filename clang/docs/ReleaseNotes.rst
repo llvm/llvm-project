@@ -312,6 +312,15 @@ C23 Feature Support
   `WG14 N2975 <https://open-std.org/JTC1/SC22/WG14/www/docs/n2975.pdf>`_
 - Fixed a bug with handling the type operand form of ``typeof`` when it is used
   to specify a fixed underlying type for an enumeration. #GH146351
+- Fixed a rejects-valid bug where Clang would reject an enumeration with an
+  ``_Atomic`` underlying type. The underlying type is the non-atomic,
+  unqualified version of the specified type. Due to the perhaps surprising lack
+  of atomic behavior, this is diagnosed under
+  ``-Wunderlying-atomic-qualifier-ignored``, which defaults to an error. This
+  can be downgraded with ``-Wno-underlying-atomic-qualifier-ignored`` or
+  ``-Wno-error=underlying-atomic-qualifier-ignored``. Clang now also diagnoses
+  cv-qualifiers as being ignored, but that warning does not default to an error.
+  It can be controlled by ``-Wunderlying-cv-qualifier-ignore``. (#GH147736)
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^
