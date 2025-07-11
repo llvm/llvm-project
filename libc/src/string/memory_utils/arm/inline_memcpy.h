@@ -30,7 +30,7 @@ template <size_t bytes, BlockOp block_op = BlockOp::kFull>
 LIBC_INLINE void copy_block_and_bump_pointers(Ptr &dst, CPtr &src) {
   if constexpr (block_op == BlockOp::kFull) {
     copy_assume_aligned<bytes>(dst, src);
-  } else {
+  } else if constexpr (block_op == BlockOp::kByWord) {
     // We restrict loads/stores to 4 byte to prevent the use of load/store
     // multiple (LDM, STM) and load/store double (LDRD, STRD). First, they
     // may fault (see notes below) and second, they use more registers which
@@ -40,6 +40,8 @@ LIBC_INLINE void copy_block_and_bump_pointers(Ptr &dst, CPtr &src) {
     for (size_t offset = 0; offset < bytes; offset += kWordSize) {
       copy_assume_aligned<kWordSize>(dst + offset, src + offset);
     }
+  } else {
+    static_assert(false, "Invalid BlockOp");
   }
   // In the 1, 2, 4 byte copy case, the compiler can fold pointer offsetting
   // into the load/store instructions.
