@@ -286,6 +286,9 @@ mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
   if (auto firLocalOp = getRegion().getParentOfType<fir::LocalitySpecifierOp>())
     return &getRegion().front();
 
+  if (auto firLocalOp = getRegion().getParentOfType<fir::DeclareReductionOp>())
+    return &getRegion().front();
+
   return getEntryBlock();
 }
 
