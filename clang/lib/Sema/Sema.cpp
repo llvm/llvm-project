@@ -2092,21 +2092,34 @@ Sema::SemaDiagnosticBuilder::~SemaDiagnosticBuilder() {
 }
 
 Sema::SemaDiagnosticBuilder
-Sema::targetDiag(SourceLocation Loc, unsigned DiagID, const FunctionDecl *FD) {
+Sema::targetDiag(SourceLocation Loc, unsigned DiagID, FunctionDecl *FD) {
   FD = FD ? FD : getCurFunctionDecl();
-  if (LangOpts.OpenMP)
-    return LangOpts.OpenMPIsTargetDevice
-               ? OpenMP().diagIfOpenMPDeviceCode(Loc, DiagID, FD)
-               : OpenMP().diagIfOpenMPHostCode(Loc, DiagID, FD);
-  if (getLangOpts().CUDA)
-    return getLangOpts().CUDAIsDevice ? CUDA().DiagIfDeviceCode(Loc, DiagID)
-                                      : CUDA().DiagIfHostCode(Loc, DiagID);
 
-  if (getLangOpts().SYCLIsDevice)
-    return SYCL().DiagIfDeviceCode(Loc, DiagID);
+  SemaDiagnosticBuilder SDB = [&]() -> SemaDiagnosticBuilder {
+    if (LangOpts.OpenMP) {
+      return LangOpts.OpenMPIsTargetDevice
+                 ? OpenMP().diagIfOpenMPDeviceCode(Loc, DiagID, FD)
+                 : OpenMP().diagIfOpenMPHostCode(Loc, DiagID, FD);
+    }
 
-  return SemaDiagnosticBuilder(SemaDiagnosticBuilder::K_Immediate, Loc, DiagID,
-                               FD, *this);
+    if (getLangOpts().CUDA) {
+      return getLangOpts().CUDAIsDevice ? CUDA().DiagIfDeviceCode(Loc, DiagID)
+                                        : CUDA().DiagIfHostCode(Loc, DiagID);
+    }
+
+    if (getLangOpts().SYCLIsDevice) {
+      return SYCL().DiagIfDeviceCode(Loc, DiagID);
+    }
+
+    return SemaDiagnosticBuilder(SemaDiagnosticBuilder::K_Immediate, Loc,
+                                 DiagID, FD, *this);
+  }();
+
+  if (SDB.isDeferred()) {
+    FD->setInvalidDecl();
+  }
+
+  return SDB;
 }
 
 void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
@@ -2138,9 +2151,8 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
 
   // Try to associate errors with the lexical context, if that is a function, or
   // the value declaration otherwise.
-  const FunctionDecl *FD = isa<FunctionDecl>(C)
-                               ? cast<FunctionDecl>(C)
-                               : dyn_cast_or_null<FunctionDecl>(D);
+  FunctionDecl *FD = isa<FunctionDecl>(C) ? cast<FunctionDecl>(C)
+                                          : dyn_cast_or_null<FunctionDecl>(D);
 
   auto CheckDeviceType = [&](QualType Ty) {
     if (Ty->isDependentType())

@@ -138,6 +138,7 @@ public:
     ~SemaDiagnosticBuilder();
 
     bool isImmediate() const { return ImmediateDiag.has_value(); }
+    bool isDeferred() const { return PartialDiagId.has_value(); }
 
     /// Convertible to bool: True if we immediately emitted an error, false if
     /// we didn't emit an error or we created a deferred error.

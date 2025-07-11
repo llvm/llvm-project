@@ -309,9 +309,10 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
     TargetInfo::ConstraintInfo Info(ConstraintStr, OutputName);
     if (!Context.getTargetInfo().validateOutputConstraint(Info) &&
         !(LangOpts.HIPStdPar && LangOpts.CUDAIsDevice)) {
-      return StmtError(targetDiag(Constraint->getBeginLoc(),
-                                  diag::err_asm_invalid_output_constraint)
-                       << Info.getConstraintStr());
+      targetDiag(Constraint->getBeginLoc(),
+                 diag::err_asm_invalid_output_constraint)
+          << Info.getConstraintStr();
+      return CreateGCCAsmStmt();
     }
 
     ExprResult ER = CheckPlaceholderExpr(Exprs[i]);
@@ -377,9 +378,9 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
             FeatureMap,
             GCCAsmStmt::ExtractStringFromGCCAsmStmtComponent(Constraint),
             Size)) {
-      return StmtError(targetDiag(OutputExpr->getBeginLoc(),
-                                  diag::err_asm_invalid_output_size)
-                       << Info.getConstraintStr());
+      targetDiag(OutputExpr->getBeginLoc(), diag::err_asm_invalid_output_size)
+          << Info.getConstraintStr();
+      return CreateGCCAsmStmt();
     }
   }
 
@@ -398,9 +399,10 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
     TargetInfo::ConstraintInfo Info(ConstraintStr, InputName);
     if (!Context.getTargetInfo().validateInputConstraint(OutputConstraintInfos,
                                                          Info)) {
-      return StmtError(targetDiag(Constraint->getBeginLoc(),
-                                  diag::err_asm_invalid_input_constraint)
-                       << Info.getConstraintStr());
+      targetDiag(Constraint->getBeginLoc(),
+                 diag::err_asm_invalid_input_constraint)
+          << Info.getConstraintStr();
+      return CreateGCCAsmStmt();
     }
 
     ExprResult ER = CheckPlaceholderExpr(Exprs[i]);
@@ -502,9 +504,13 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
         GCCAsmStmt::ExtractStringFromGCCAsmStmtComponent(ClobberExpr);
 
     if (!Context.getTargetInfo().isValidClobber(Clobber)) {
-      return StmtError(targetDiag(ClobberExpr->getBeginLoc(),
-                                  diag::err_asm_unknown_register_name)
-                       << Clobber);
+      targetDiag(ClobberExpr->getBeginLoc(),
+                 diag::err_asm_unknown_register_name)
+          << Clobber;
+      return new (Context) GCCAsmStmt(
+          Context, AsmLoc, IsSimple, IsVolatile, NumOutputs, NumInputs, Names,
+          constraints.data(), Exprs.data(), asmString, NumClobbers,
+          clobbers.data(), NumLabels, RParenLoc);
     }
 
     if (Clobber == "unwind") {
