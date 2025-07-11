@@ -35,11 +35,8 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MathExtras.h"
-#include <algorithm>
 #include <optional>
-#include <vector>
 
 using namespace mlir;
 using namespace mlir::tensor;

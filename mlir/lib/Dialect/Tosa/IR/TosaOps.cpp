@@ -22,12 +22,10 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include <numeric>
