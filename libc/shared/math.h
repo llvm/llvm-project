@@ -11,6 +11,7 @@
 
 #include "libc_common.h"
 
+#include "math/exp.h"
 #include "math/expf.h"
 #include "math/expf16.h"
 #include "math/frexpf.h"
@@ -19,6 +20,5 @@
 #include "math/ldexpf.h"
 #include "math/ldexpf128.h"
 #include "math/ldexpf16.h"
-#include "math/exp.h"
 
 #endif // LLVM_LIBC_SHARED_MATH_H

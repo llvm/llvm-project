@@ -9,10 +9,9 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXP_UTILS_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXP_UTILS_H
 
-#include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/optional.h"
 #include "src/__support/FPUtil/FPBits.h"
-
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -23,8 +22,8 @@ namespace LIBC_NAMESPACE_DECL {
 // So if we scale x up by 2^1022, we can use
 //   double(1.0 + 2^1022 * x) - 1.0 to test how x is rounded in denormal range.
 template <bool SKIP_ZIV_TEST = false>
-static constexpr cpp::optional<double>
-ziv_test_denorm(int hi, double mid, double lo, double err) {
+static constexpr cpp::optional<double> ziv_test_denorm(int hi, double mid,
+                                                       double lo, double err) {
   using FPBits = typename fputil::FPBits<double>;
 
   // Scaling factor = 1/(min normal number) = 2^1022
