@@ -13,7 +13,7 @@
 // RUN: cat %t/result-first-scan.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t --check-prefix=SINGLE
 
 /// Re-run scan with different module map for direct dependency.
-// RUN: mv %t/A_without_visible_export.modulemap %t/Sysroot/usr/include/A/module.modulemap
+// RUN: mv %t/A_with_visible_export.modulemap %t/Sysroot/usr/include/A/module.modulemap
 // RUN: clang-scan-deps -emit-visible-modules -compilation-database %t/compile-commands.json \
 // RUN:   -j 1 -format experimental-full 2>&1 > %t/result.json
 // RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t --check-prefix=MULTIPLE
@@ -64,7 +64,7 @@ module A {
   }
 }
 
-//--- A_without_visible_export.modulemap
+//--- A_with_visible_export.modulemap
 module A {
   explicit module visibleToTU {
     header "visibleToTU.h"
