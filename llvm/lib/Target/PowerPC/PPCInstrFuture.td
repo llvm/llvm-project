@@ -204,7 +204,7 @@ def : Pat<(int_ppc_vsx_stxvrl v4i32:$XT, addr:$RA, i64:$RB),
           (STXVRL $XT, $RA, $RB)>;
 def : Pat<(int_ppc_vsx_stxvrll v4i32:$XT, addr:$RA, i64:$RB),
           (STXVRLL $XT, $RA, $RB)>;
-def : Pat<(int_ppc_vsx_stxvprl v256i1:$XT, addr:$RA, i64:$RB),
-          (STXVPRL $XT, $RA, $RB)>;
-def : Pat<(int_ppc_vsx_stxvprll v256i1:$XT, addr:$RA, i64:$RB),
-          (STXVPRLL $XT, $RA, $RB)>;
+def : Pat<(int_ppc_vsx_stxvprl v256i1:$XTp, addr:$RA, i64:$RB),
+          (STXVPRL $XTp, $RA, $RB)>;
+def : Pat<(int_ppc_vsx_stxvprll v256i1:$XTp, addr:$RA, i64:$RB),
+          (STXVPRLL $XTp, $RA, $RB)>;
