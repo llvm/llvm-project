@@ -486,14 +486,16 @@ bool AMDGPUAsmPrinter::doFinalization(Module &M) {
   // Pad with s_code_end to help tools and guard against instruction prefetch
   // causing stale data in caches. Arguably this should be done by the linker,
   // which is why this isn't done for Mesa.
-  // Don't do it if there are no functions.
+  // Don't do it if there is no code.
   const MCSubtargetInfo &STI = *getGlobalSTI();
   if ((AMDGPU::isGFX10Plus(STI) || AMDGPU::isGFX90A(STI)) &&
       (STI.getTargetTriple().getOS() == Triple::AMDHSA ||
-       STI.getTargetTriple().getOS() == Triple::AMDPAL) &&
-      !M.empty()) {
-    OutStreamer->switchSection(getObjFileLowering().getTextSection());
-    getTargetStreamer()->EmitCodeEnd(STI);
+       STI.getTargetTriple().getOS() == Triple::AMDPAL)) {
+    MCSection *TextSect = getObjFileLowering().getTextSection();
+    if (TextSect->hasInstructions()) {
+      OutStreamer->switchSection(TextSect);
+      getTargetStreamer()->EmitCodeEnd(STI);
+    }
   }
 
   // Assign expressions which can only be resolved when all other functions are
