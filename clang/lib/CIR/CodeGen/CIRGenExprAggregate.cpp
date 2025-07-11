@@ -16,6 +16,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 
 #include "clang/AST/Expr.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include <cstdint>
 
@@ -360,6 +361,28 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
 
   cgf.cgm.errorNYI(
       "visitCXXParenListOrInitListExpr Record or VariableSizeArray type");
+}
+
+// TODO(cir): This could be shared with classic codegen.
+AggValueSlot::Overlap_t CIRGenFunction::getOverlapForBaseInit(
+    const CXXRecordDecl *rd, const CXXRecordDecl *baseRD, bool isVirtual) {
+  // If the most-derived object is a field declared with [[no_unique_address]],
+  // the tail padding of any virtual base could be reused for other subobjects
+  // of that field's class.
+  if (isVirtual)
+    return AggValueSlot::MayOverlap;
+
+  // If the base class is laid out entirely within the nvsize of the derived
+  // class, its tail padding cannot yet be initialized, so we can issue
+  // stores at the full width of the base class.
+  const ASTRecordLayout &layout = getContext().getASTRecordLayout(rd);
+  if (layout.getBaseClassOffset(baseRD) +
+          getContext().getASTRecordLayout(baseRD).getSize() <=
+      layout.getNonVirtualSize())
+    return AggValueSlot::DoesNotOverlap;
+
+  // The tail padding may contain values we need to preserve.
+  return AggValueSlot::MayOverlap;
 }
 
 void CIRGenFunction::emitAggExpr(const Expr *e, AggValueSlot slot) {
