@@ -3510,6 +3510,13 @@ public:
     return false;
   }
 
+  /// True if the target allows transformations of in-bounds pointer
+  /// arithmetic that cause out-of-bounds intermediate results.
+  virtual bool canTransformPtrArithOutOfBounds(const Function &F,
+                                               EVT PtrVT) const {
+    return false;
+  }
+
   /// Does this target support complex deinterleaving
   virtual bool isComplexDeinterleavingSupported() const { return false; }
 

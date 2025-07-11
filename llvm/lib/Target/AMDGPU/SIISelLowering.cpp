@@ -10602,6 +10602,11 @@ bool SITargetLowering::shouldPreservePtrArith(const Function &F,
   return UseSelectionDAGPTRADD && PtrVT == MVT::i64;
 }
 
+bool SITargetLowering::canTransformPtrArithOutOfBounds(const Function &F,
+                                                       EVT PtrVT) const {
+  return true;
+}
+
 // The raw.(t)buffer and struct.(t)buffer intrinsics have two offset args:
 // offset (the offset that is included in bounds checking and swizzling, to be
 // split between the instruction's voffset and immoffset fields) and soffset
@@ -15139,64 +15144,17 @@ SDValue SITargetLowering::performPtrAddCombine(SDNode *N,
       return Folded;
   }
 
-  if (N0.getOpcode() == ISD::PTRADD && N1.getOpcode() == ISD::Constant) {
-    // Fold (ptradd (ptradd GA, v), c) -> (ptradd (ptradd GA, c) v) with
-    // global address GA and constant c, such that c can be folded into GA.
-    SDValue GAValue = N0.getOperand(0);
-    if (const GlobalAddressSDNode *GA =
-            dyn_cast<GlobalAddressSDNode>(GAValue)) {
-      if (DCI.isBeforeLegalizeOps() && isOffsetFoldingLegal(GA)) {
-        // If both additions in the original were NUW, reassociation preserves
-        // that.
-        SDNodeFlags Flags =
-            (N->getFlags() & N0->getFlags()) & SDNodeFlags::NoUnsignedWrap;
-        SDValue Inner = DAG.getMemBasePlusOffset(GAValue, N1, DL, Flags);
-        DCI.AddToWorklist(Inner.getNode());
-        return DAG.getMemBasePlusOffset(Inner, N0.getOperand(1), DL, Flags);
-      }
-    }
-  }
-
   if (N1.getOpcode() != ISD::ADD || !N1.hasOneUse())
     return SDValue();
 
-  // (ptradd x, (add y, z)) -> (ptradd (ptradd x, y), z) if z is a constant,
-  //    y is not, and (add y, z) is used only once.
-  // (ptradd x, (add y, z)) -> (ptradd (ptradd x, z), y) if y is a constant,
-  //    z is not, and (add y, z) is used only once.
-  // The goal is to move constant offsets to the outermost ptradd, to create
-  // more opportunities to fold offsets into memory instructions.
-  // Together with the generic combines in DAGCombiner.cpp, this also
-  // implements (ptradd (ptradd x, y), z) -> (ptradd (ptradd x, z), y)).
-  //
-  // This transform is here instead of in the general DAGCombiner as it can
-  // turn in-bounds pointer arithmetic out-of-bounds, which is problematic for
-  // AArch64's CPA.
   SDValue X = N0;
   SDValue Y = N1.getOperand(0);
   SDValue Z = N1.getOperand(1);
   bool YIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Y);
   bool ZIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Z);
 
-  // If both additions in the original were NUW, reassociation preserves that.
-  SDNodeFlags ReassocFlags =
-      (N->getFlags() & N1->getFlags()) & SDNodeFlags::NoUnsignedWrap;
-
-  if (ZIsConstant != YIsConstant) {
-    if (YIsConstant)
-      std::swap(Y, Z);
-    SDValue Inner = DAG.getMemBasePlusOffset(X, Y, DL, ReassocFlags);
-    DCI.AddToWorklist(Inner.getNode());
-    return DAG.getMemBasePlusOffset(Inner, Z, DL, ReassocFlags);
-  }
-
-  // If one of Y and Z is constant, they have been handled above. If both were
-  // constant, the addition would have been folded in SelectionDAG::getNode
-  // already. This ensures that the generic DAG combines won't undo the
-  // following reassociation.
-  assert(!YIsConstant && !ZIsConstant);
-
-  if (!X->isDivergent() && Y->isDivergent() != Z->isDivergent()) {
+  if (!YIsConstant && !ZIsConstant && !X->isDivergent() &&
+      Y->isDivergent() != Z->isDivergent()) {
     // Reassociate (ptradd x, (add y, z)) -> (ptradd (ptradd x, y), z) if x and
     // y are uniform and z isn't.
     // Reassociate (ptradd x, (add y, z)) -> (ptradd (ptradd x, z), y) if x and
@@ -15207,6 +15165,9 @@ SDValue SITargetLowering::performPtrAddCombine(SDNode *N,
     // reassociate.
     if (Y->isDivergent())
       std::swap(Y, Z);
+    // If both additions in the original were NUW, reassociation preserves that.
+    SDNodeFlags ReassocFlags =
+        (N->getFlags() & N1->getFlags()) & SDNodeFlags::NoUnsignedWrap;
     SDValue UniformInner = DAG.getMemBasePlusOffset(X, Y, DL, ReassocFlags);
     DCI.AddToWorklist(UniformInner.getNode());
     return DAG.getMemBasePlusOffset(UniformInner, Z, DL, ReassocFlags);
