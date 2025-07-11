@@ -46,7 +46,7 @@ int Opcode::Dump(Stream *s, uint32_t min_byte_width) const {
     // to reverse the bytes manually.
     if (GetEndianSwap())
       for (int i = 0; i < m_data.inst.length; i++)
-        buf[m_data.inst.length - i] = m_data.inst.bytes[i];
+        buf[m_data.inst.length - i - 1] = m_data.inst.bytes[i];
     else
       memcpy(buf, m_data.inst.bytes, m_data.inst.length);
     uint32_t i = 0;
