@@ -117,6 +117,8 @@ HexagonTargetLowering::initializeHVXLowering() {
   setOperationAction(ISD::VECTOR_SHUFFLE,          ByteW, Legal);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
 
+  if (Subtarget.useHVX128BOps())
+    setOperationAction(ISD::BITCAST, MVT::v32i1, Custom);
   if (Subtarget.useHVX128BOps() && Subtarget.useHVXV68Ops() &&
       Subtarget.useHVXFloatingPoint()) {
 
@@ -2001,6 +2003,28 @@ HexagonTargetLowering::LowerHvxBitcast(SDValue Op, SelectionDAG &DAG) const {
 
     return DAG.getNode(ISD::BUILD_PAIR, dl, ResTy, Combines);
   }
+
+  // Handle bitcast from i32, v2i16, and v4i8 to v32i1.
+  // Splat the input into a 32-element i32 vector, then AND each element
+  // with a unique bitmask to isolate individual bits.
+  if (ResTy == MVT::v32i1 &&
+      (ValTy == MVT::i32 || ValTy == MVT::v2i16 || ValTy == MVT::v4i8) &&
+      Subtarget.useHVX128BOps()) {
+    SDValue Val32 = Val;
+    if (ValTy == MVT::v2i16 || ValTy == MVT::v4i8)
+      Val32 = DAG.getNode(ISD::BITCAST, dl, MVT::i32, Val);
+
+    MVT VecTy = MVT::getVectorVT(MVT::i32, 32);
+    SDValue Splat = DAG.getNode(ISD::SPLAT_VECTOR, dl, VecTy, Val32);
+    SmallVector<SDValue, 32> Mask;
+    for (unsigned i = 0; i < 32; ++i)
+      Mask.push_back(DAG.getConstant(1u << i, dl, MVT::i32));
+
+    SDValue MaskVec = DAG.getBuildVector(VecTy, dl, Mask);
+    SDValue Anded = DAG.getNode(ISD::AND, dl, VecTy, Splat, MaskVec);
+    return DAG.getNode(HexagonISD::V2Q, dl, ResTy, Anded);
+  }
+
   if (isHvxBoolTy(ResTy) && ValTy.isScalarInteger()) {
     // Handle bitcast from i128 -> v128i1 and i64 -> v64i1.
     unsigned BitWidth = ValTy.getSizeInBits();
