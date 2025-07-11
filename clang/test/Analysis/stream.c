@@ -534,38 +534,21 @@ void only_success_path_does_not_alias_with_stdout(void) {
 
 extern void do_something();
 
-void test_no_invalidate_at_system_call(int use_std) {
-  FILE *fd;
-  char *buf;
-
-  if (use_std) {
-    fd = stdin;
-  } else {
-    if ((fd = fopen("x/y/z", "r")) == NULL)
-      return;
-
-    clang_analyzer_eval(fd == stdin); // expected-warning{{FALSE}}
-    buf = (char *)malloc(100);
-    clang_analyzer_eval(fd == stdin); // expected-warning{{FALSE}}
-  }
-
-  if (fd != stdin)
-    fclose(fd);
+void test_no_invalidate_at_system_call() {
+  FILE *old_stdin = stdin;
+  if ((stdin = fopen("x/y/z", "r")) == NULL)
+    return;
+  clang_analyzer_eval(old_stdin == stdin); // expected-warning{{FALSE}}
+  free(malloc(100));
+  clang_analyzer_eval(old_stdin == stdin); // expected-warning{{FALSE}}
+  fclose(stdin);
 }
 
-void test_invalidate_at_non_system_call(int use_std) {
-  FILE *fd;
-
-  if (use_std) {
-    fd = stdin;
-  } else {
-    if ((fd = fopen("x/y/z", "r")) == NULL)
-      return;
-  }
-
+void test_invalidate_at_non_system_call() {
+  FILE *old_stdin = stdin;
+  if ((stdin = fopen("x/y/z", "r")) == NULL)
+    return;
+  clang_analyzer_eval(old_stdin == stdin); // expected-warning{{FALSE}}
   do_something();
-  clang_analyzer_eval(fd == stdin); // expected-warning{{UNKNOWN}}
-
-  if (fd != stdin)
-    fclose(fd);
-} // expected-warning{{Opened stream never closed. Potential resource leak}}
+  clang_analyzer_eval(old_stdin == stdin); // expected-warning{{UNKNOWN}}
+}

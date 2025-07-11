@@ -1022,6 +1022,23 @@ getStackOrCaptureRegionForDeclContext(const LocationContext *LC,
   return (const StackFrameContext *)nullptr;
 }
 
+static bool isStdStreamVar(const VarDecl *D) {
+  const auto *ND = dyn_cast<NamedDecl>(D);
+  if (!ND)
+    return false;
+  DeclarationName DeclN = ND->getDeclName();
+  if (!DeclN.isIdentifier())
+    return false;
+  StringRef N = DeclN.getAsIdentifierInfo()->getName();
+  QualType FILETy = D->getASTContext().getFILEType();
+  if (FILETy.isNull())
+    return false;
+  FILETy = FILETy.getCanonicalType();
+  QualType Ty = D->getType().getCanonicalType();
+  return Ty->isPointerType() && Ty->getPointeeType() == FILETy &&
+         (N == "stdin" || N == "stdout" || N == "stderr");
+}
+
 const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
                                                 const LocationContext *LC) {
   const auto *PVD = dyn_cast<ParmVarDecl>(D);
@@ -1055,21 +1072,13 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
     if (Ty.isConstQualified()) {
       sReg = getGlobalsRegion(MemRegion::GlobalImmutableSpaceRegionKind);
     } else {
-      StringRef N = D->getNameAsString();
-      QualType FILETy = D->getASTContext().getFILEType();
-      if (!FILETy.isNull())
-        FILETy = FILETy.getCanonicalType();
-      Ty = Ty.getCanonicalType();
-      bool IsStdStreamVar = Ty->isPointerType() &&
-                            Ty->getPointeeType() == FILETy &&
-                            (N == "stdin" || N == "stdout" || N == "stderr");
       // Pointer value of C standard streams is usually not modified by calls
       // to functions declared in system headers. This means that they should
       // not get invalidated by calls to functions declared in system headers,
       // so they are placed in the global internal space, which is not
       // invalidated by calls to functions declared in system headers.
       if (Ctx.getSourceManager().isInSystemHeader(D->getLocation()) &&
-          !IsStdStreamVar) {
+          !isStdStreamVar(D)) {
         sReg = getGlobalsRegion(MemRegion::GlobalSystemSpaceRegionKind);
       } else {
         sReg = getGlobalsRegion(MemRegion::GlobalInternalSpaceRegionKind);
