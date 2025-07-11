@@ -2696,9 +2696,8 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
 ///      EMIT %ptr.ind = ptradd %pointer.phi, %vf
 ///      EMIT branch-on-count ...
 ///  }
-static void
-expandVPWidenPointerInductionRecipe(VPWidenPointerInductionRecipe *R,
-                                    VPTypeAnalysis &TypeInfo) {
+static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R,
+                                          VPTypeAnalysis &TypeInfo) {
   VPlan *Plan = R->getParent()->getPlan();
 
   assert(R->getInductionDescriptor().getKind() ==
@@ -2813,7 +2812,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
       }
 
       if (auto *WidenIVR = dyn_cast<VPWidenPointerInductionRecipe>(&R)) {
-        expandVPWidenPointerInductionRecipe(WidenIVR, TypeInfo);
+        expandVPWidenPointerInduction(WidenIVR, TypeInfo);
         ToRemove.push_back(WidenIVR);
         continue;
       }
