@@ -776,8 +776,10 @@ Bug Fixes in This Version
 - In C23, something like ``[[/*possible attributes*/]];`` is an attribute
   declaration, not a statement. So it is not allowed by the syntax in places
   where a statement is required, specifically as the secondary block of a
-  selection or iteration statement. This differs from C++, since C++ allows 
+  selection or iteration statement. This differs from C++, since C++ allows
   declaration statements. Clang now emits a warning for these patterns. (#GH141659)
+- Fixed false positives for redeclaration errors of using enum in
+  nested scopes. (#GH147495)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -893,6 +895,7 @@ Bug Fixes to C++ Support
 - Fixed a Clang regression in C++20 mode where unresolved dependent call expressions were created inside non-dependent contexts (#GH122892)
 - Clang now emits the ``-Wunused-variable`` warning when some structured bindings are unused
   and the ``[[maybe_unused]]`` attribute is not applied. (#GH125810)
+- Fixed ``static_cast`` not performing access or ambiguity checks when converting to an rvalue reference to a base class. (#GH121429)
 - Declarations using class template argument deduction with redundant
   parentheses around the declarator are no longer rejected. (#GH39811)
 - Fixed a crash caused by invalid declarations of ``std::initializer_list``. (#GH132256)
@@ -930,6 +933,7 @@ Bug Fixes to C++ Support
 - Fix a bug where private access specifier of overloaded function not respected. (#GH107629)
 - Correctly handles calling an explicit object member function template overload set
   through its address (``(&Foo::bar<baz>)()``).
+- Fix a crash when forming an invalid call to an operator with an explicit object member. (#GH147121)
 - Correctly handle allocations in the condition of a ``if constexpr``.(#GH120197) (#GH134820)
 - Fixed a crash when handling invalid member using-declaration in C++20+ mode. (#GH63254)
 - Fixed parsing of lambda expressions that appear after ``*`` or ``&`` in contexts where a declaration can appear. (#GH63880)

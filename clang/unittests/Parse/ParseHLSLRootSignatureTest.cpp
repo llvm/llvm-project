@@ -1238,4 +1238,166 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidNonZeroFlagsTest) {
   ASSERT_TRUE(Consumer->isSatisfied());
 }
 
+TEST_F(ParseHLSLRootSignatureTest, InvalidRootElementMissingCommaTest) {
+  // This test will check that an error is produced when there is a missing
+  // comma between parameters
+  const llvm::StringLiteral Source = R"cc(
+    RootFlags()
+    RootConstants(num32BitConstants = 1, b0)
+  )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
+                                   Signature, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->setExpected(diag::err_hlsl_unexpected_end_of_params);
+  ASSERT_TRUE(Parser.parse());
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidDescriptorTableMissingCommaTest) {
+  // This test will check that an error is produced when there is a missing
+  // comma between parameters
+  const llvm::StringLiteral Source = R"cc(
+    DescriptorTable(
+      CBV(b0)
+      visibility = SHADER_VISIBILITY_ALL
+    )
+  )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
+                                   Signature, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->setExpected(diag::err_hlsl_unexpected_end_of_params);
+  ASSERT_TRUE(Parser.parse());
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidRootConstantParamsCommaTest) {
+  // This test will check that an error is produced when there is a missing
+  // comma between parameters
+  const llvm::StringLiteral Source = R"cc(
+    RootConstants(
+      num32BitConstants = 1
+      b0
+    )
+  )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
+                                   Signature, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->setExpected(diag::err_hlsl_unexpected_end_of_params);
+  ASSERT_TRUE(Parser.parse());
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidRootDescriptorParamsCommaTest) {
+  // This test will check that an error is produced when there is a missing
+  // comma between parameters
+  const llvm::StringLiteral Source = R"cc(
+    CBV(
+      b0
+      flags = 0
+    )
+  )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
+                                   Signature, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->setExpected(diag::err_hlsl_unexpected_end_of_params);
+  ASSERT_TRUE(Parser.parse());
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidDescriptorClauseParamsCommaTest) {
+  // This test will check that an error is produced when there is a missing
+  // comma between parameters
+  const llvm::StringLiteral Source = R"cc(
+    DescriptorTable(
+      UAV(
+        u0
+        flags = 0
+      )
+    )
+  )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
+                                   Signature, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->setExpected(diag::err_hlsl_unexpected_end_of_params);
+  ASSERT_TRUE(Parser.parse());
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidStaticSamplerCommaTest) {
+  // This test will check that an error is produced when there is a missing
+  // comma between parameters
+  const llvm::StringLiteral Source = R"cc(
+    StaticSampler(
+      s0
+      maxLOD = 3
+    )
+  )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+
+  SmallVector<RootElement> Elements;
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
+                                   Signature, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->setExpected(diag::err_hlsl_unexpected_end_of_params);
+  ASSERT_TRUE(Parser.parse());
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
 } // anonymous namespace
