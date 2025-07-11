@@ -29,23 +29,11 @@ enum { MAX_LANES = 64 };
 
 using namespace llvm;
 
-namespace {
-enum MFMARegClass {
-  Unspecified,
-  VGPR,
-  AGPR,
-};
-}
-
-cl::opt<MFMARegClass>
-    MFMAForm("amdgpu-mfma-form", cl::Hidden,
-             cl::desc("Register class to use for Opc and Dest of MFMA. If "
+cl::opt<bool>
+    MFMAVGPRForm("amdgpu-mfma-vgpr-form", cl::Hidden,
+             cl::desc("Whether to force use VGPR for Opc and Dest of MFMA. If "
                       "unspecified, default to compiler heuristics"),
-             cl::init(MFMARegClass::Unspecified),
-             cl::values(clEnumValN(MFMARegClass::VGPR, "vgpr",
-                                   "Use the VGPR MFMA form."),
-                        clEnumValN(MFMARegClass::AGPR, "agpr",
-                                   "Use the VGPR MFMA form.")));
+             cl::init(false));
 
 const GCNTargetMachine &getTM(const GCNSubtarget *STI) {
   const SITargetLowering *TLI = STI->getTargetLowering();
@@ -87,14 +75,11 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     PSInputAddr = AMDGPU::getInitialPSInputAddr(F);
   }
 
-  MayNeedAGPRs = ST.hasMAIInsts();
-  if (MFMAForm == MFMARegClass::Unspecified && ST.hasGFX90AInsts() &&
+  MayNeedAGPRs = ST.hasMAIInsts() & !MFMAVGPRForm;
+  if (!MFMAVGPRForm && ST.hasGFX90AInsts() &&
       ST.getMaxNumVGPRs(F) <= AMDGPU::VGPR_32RegClass.getNumRegs() &&
       !mayUseAGPRs(F))
     MayNeedAGPRs = false; // We will select all MAI with VGPR operands.
-
-  else if (MFMAForm != MFMARegClass::Unspecified)
-    MayNeedAGPRs = MFMAForm == MFMARegClass::AGPR;
 
   if (AMDGPU::isChainCC(CC)) {
     // Chain functions don't receive an SP from their caller, but are free to
