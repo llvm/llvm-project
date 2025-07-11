@@ -716,7 +716,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadMethods() {
   return *this;
 }
 
-FieldDecl *BuiltinTypeDeclBuilder::getResourceHandleField() {
+FieldDecl *BuiltinTypeDeclBuilder::getResourceHandleField() const {
   auto I = Fields.find("__handle");
   assert(I != Fields.end() &&
          I->second->getType()->isHLSLAttributedResourceType() &&
@@ -741,7 +741,7 @@ QualType BuiltinTypeDeclBuilder::getHandleElementType() {
 }
 
 HLSLAttributedResourceType::Attributes
-BuiltinTypeDeclBuilder::getResourceAttrs() {
+BuiltinTypeDeclBuilder::getResourceAttrs() const {
   QualType HandleType = getResourceHandleField()->getType();
   return cast<HLSLAttributedResourceType>(HandleType)->getAttrs();
 }
