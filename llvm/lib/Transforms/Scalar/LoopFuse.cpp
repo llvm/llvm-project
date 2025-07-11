@@ -988,8 +988,8 @@ private:
 
             // If it is not safe to hoist/sink all instructions in the
             // pre-header, we cannot fuse these loops.
-            if (!collectAndFixMovablePreheaderInsts(*FC0, *FC1, SafeToHoist,
-                                                    SafeToSink)) {
+            if (!collectMovablePreheaderInsts(*FC0, *FC1, SafeToHoist,
+                                              SafeToSink)) {
               LLVM_DEBUG(dbgs() << "Could not hoist/sink all instructions in "
                                    "Fusion Candidate Pre-header.\n"
                                 << "Not Fusing.\n");
@@ -1200,7 +1200,7 @@ private:
 
   /// Collect instructions in the \p FC1 Preheader that can be hoisted
   /// to the \p FC0 Preheader or sunk into the \p FC1 Body
-  bool collectAndFixMovablePreheaderInsts(
+  bool collectMovablePreheaderInsts(
       const FusionCandidate &FC0, const FusionCandidate &FC1,
       SmallVector<Instruction *, 4> &SafeToHoist,
       SmallVector<Instruction *, 4> &SafeToSink) const {
@@ -1249,7 +1249,6 @@ private:
     LLVM_DEBUG(
         dbgs() << "All preheader instructions could be sunk or hoisted!\n");
 
-    fixPHINodes(SafeToSink, FC0, FC1);
     return true;
   }
 
@@ -1593,7 +1592,8 @@ private:
   /// two loops could also be fused into a single block. This will require
   /// analysis to prove it is safe to move the contents of the block past
   /// existing code, which currently has not been implemented.
-  Loop *performFusion(const FusionCandidate &FC0, const FusionCandidate &FC1) {
+  Loop *performFusion(const FusionCandidate &FC0, const FusionCandidate &FC1,
+                      SmallVector<Instruction *, 4> &SafeToSink) {
     assert(FC0.isValid() && FC1.isValid() &&
            "Expecting valid fusion candidates");
 
@@ -1734,6 +1734,9 @@ private:
                                                        FC1.Latch, FC0.Header));
     TreeUpdates.emplace_back(DominatorTree::UpdateType(DominatorTree::Delete,
                                                        FC1.Latch, FC1.Header));
+
+    // Fix PHI nodes that are sunk into the body of the loop.
+    fixPHINodes(SafeToSink, FC0, FC1);
 
     // Update DT/PDT
     DTU.applyUpdates(TreeUpdates);
