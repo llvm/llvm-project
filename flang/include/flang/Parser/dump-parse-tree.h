@@ -710,8 +710,6 @@ public:
   NODE(parser, OpenMPDepobjConstruct)
   NODE(parser, OpenMPUtilityConstruct)
   NODE(parser, OpenMPDispatchConstruct)
-  NODE(parser, OmpDispatchDirective)
-  NODE(parser, OmpEndDispatchDirective)
   NODE(parser, OpenMPFlushConstruct)
   NODE(parser, OpenMPLoopConstruct)
   NODE(parser, OpenMPExecutableAllocate)

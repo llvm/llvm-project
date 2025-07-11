@@ -4183,7 +4183,8 @@ public:
   /// block with multiple predecessors (one for the exit via the latch and one
   /// via the other early exit).
   bool hasEarlyExit() const {
-    return ExitBlocks.size() > 1 || ExitBlocks[0]->getNumPredecessors() > 1;
+    return ExitBlocks.size() > 1 ||
+           (ExitBlocks.size() == 1 && ExitBlocks[0]->getNumPredecessors() > 1);
   }
 
   /// Returns true if the scalar tail may execute after the vector loop. Note

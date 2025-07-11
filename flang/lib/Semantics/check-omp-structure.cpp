@@ -509,8 +509,8 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_allocate);
     return false;
   }
-  bool Pre(const parser::OmpDispatchDirective &x) {
-    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_dispatch);
+  bool Pre(const parser::OpenMPDispatchConstruct &x) {
+    checker_(GetDirName(x.t).source, Directive::OMPD_dispatch);
     return false;
   }
   bool Pre(const parser::OmpErrorDirective &x) {
@@ -1595,28 +1595,31 @@ void OmpStructureChecker::Enter(const parser::OmpErrorDirective &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPDispatchConstruct &x) {
-  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_dispatch);
+  auto &dirSpec{std::get<parser::OmpDirectiveSpecification>(x.t)};
   const auto &block{std::get<parser::Block>(x.t)};
-  if (block.empty() || block.size() > 1) {
+  PushContextAndClauseSets(
+      dirSpec.DirName().source, llvm::omp::Directive::OMPD_dispatch);
+
+  if (block.empty()) {
     context_.Say(x.source,
-        "The DISPATCH construct is empty or contains more than one statement"_err_en_US);
+        "The DISPATCH construct should contain a single function or subroutine call"_err_en_US);
     return;
   }
 
-  auto it{block.begin()};
   bool passChecks{false};
-  if (const parser::AssignmentStmt *
-      assignStmt{parser::Unwrap<parser::AssignmentStmt>(*it)}) {
+  omp::SourcedActionStmt action{omp::GetActionStmt(block)};
+  if (const auto *assignStmt{
+          parser::Unwrap<parser::AssignmentStmt>(*action.stmt)}) {
     if (parser::Unwrap<parser::FunctionReference>(assignStmt->t)) {
       passChecks = true;
     }
-  } else if (parser::Unwrap<parser::CallStmt>(*it)) {
+  } else if (parser::Unwrap<parser::CallStmt>(*action.stmt)) {
     passChecks = true;
   }
 
   if (!passChecks) {
-    context_.Say(x.source,
-        "The DISPATCH construct does not contain a SUBROUTINE or FUNCTION"_err_en_US);
+    context_.Say(action.source,
+        "The body of the DISPATCH construct should be a function or a subroutine call"_err_en_US);
   }
 }
 
