@@ -15,7 +15,7 @@
 ; RUN: sed 's/PrimTy/fp128/g' %s | sed 's/Prim0/0xL0/g' | llc -mtriple=i686-pc-windows-msvc -verify-machineinstrs     | FileCheck %s --check-prefix=CHECK-MSVC32
 ; RUN: sed 's/PrimTy/i128/g'  %s | sed 's/Prim0/0/g'    | llc -mtriple=i686-pc-windows-msvc -verify-machineinstrs     | FileCheck %s --check-prefix=CHECK-MSVC32
 
-define PrimTy @return(ptr %p) {
+define PrimTy @return(ptr %p) nounwind {
 ; CHECK-X64-F128-LABEL: return:
 ; CHECK-X64-F128:       # %bb.0:
 ; CHECK-X64-F128-NEXT:    movaps (%rdi), %xmm0
@@ -52,11 +52,7 @@ define PrimTy @return(ptr %p) {
 ; CHECK-X86-LABEL: return:
 ; CHECK-X86:       # %bb.0:
 ; CHECK-X86-NEXT:    pushl %edi
-; CHECK-X86-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-X86-NEXT:    pushl %esi
-; CHECK-X86-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-X86-NEXT:    .cfi_offset %esi, -12
-; CHECK-X86-NEXT:    .cfi_offset %edi, -8
 ; CHECK-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-X86-NEXT:    movl (%ecx), %edx
@@ -68,9 +64,7 @@ define PrimTy @return(ptr %p) {
 ; CHECK-X86-NEXT:    movl %esi, 4(%eax)
 ; CHECK-X86-NEXT:    movl %edx, (%eax)
 ; CHECK-X86-NEXT:    popl %esi
-; CHECK-X86-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-X86-NEXT:    popl %edi
-; CHECK-X86-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-X86-NEXT:    retl $4
 ;
 ; CHECK-MSVC32-LABEL: return:
@@ -94,7 +88,7 @@ define PrimTy @return(ptr %p) {
   ret PrimTy %r
 }
 
-define PrimTy @first_arg(PrimTy %x) {
+define PrimTy @first_arg(PrimTy %x) nounwind {
 ; CHECK-X64-F128-LABEL: first_arg:
 ; CHECK-X64-F128:       # %bb.0:
 ; CHECK-X64-F128-NEXT:    retq
@@ -128,11 +122,7 @@ define PrimTy @first_arg(PrimTy %x) {
 ; CHECK-X86-LABEL: first_arg:
 ; CHECK-X86:       # %bb.0:
 ; CHECK-X86-NEXT:    pushl %edi
-; CHECK-X86-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-X86-NEXT:    pushl %esi
-; CHECK-X86-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-X86-NEXT:    .cfi_offset %esi, -12
-; CHECK-X86-NEXT:    .cfi_offset %edi, -8
 ; CHECK-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -143,9 +133,7 @@ define PrimTy @first_arg(PrimTy %x) {
 ; CHECK-X86-NEXT:    movl %edx, 4(%eax)
 ; CHECK-X86-NEXT:    movl %ecx, (%eax)
 ; CHECK-X86-NEXT:    popl %esi
-; CHECK-X86-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-X86-NEXT:    popl %edi
-; CHECK-X86-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-X86-NEXT:    retl $4
 ;
 ; CHECK-MSVC32-LABEL: first_arg:
@@ -167,7 +155,7 @@ define PrimTy @first_arg(PrimTy %x) {
   ret PrimTy %x
 }
 
-define PrimTy @leading_args(i64 %_0, i64 %_1, i64 %_2, i64 %_3, PrimTy %x) {
+define PrimTy @leading_args(i64 %_0, i64 %_1, i64 %_2, i64 %_3, PrimTy %x) nounwind {
 ; CHECK-X64-F128-LABEL: leading_args:
 ; CHECK-X64-F128:       # %bb.0:
 ; CHECK-X64-F128-NEXT:    retq
@@ -205,11 +193,7 @@ define PrimTy @leading_args(i64 %_0, i64 %_1, i64 %_2, i64 %_3, PrimTy %x) {
 ; CHECK-X86-LABEL: leading_args:
 ; CHECK-X86:       # %bb.0:
 ; CHECK-X86-NEXT:    pushl %edi
-; CHECK-X86-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-X86-NEXT:    pushl %esi
-; CHECK-X86-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-X86-NEXT:    .cfi_offset %esi, -12
-; CHECK-X86-NEXT:    .cfi_offset %edi, -8
 ; CHECK-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -220,9 +204,7 @@ define PrimTy @leading_args(i64 %_0, i64 %_1, i64 %_2, i64 %_3, PrimTy %x) {
 ; CHECK-X86-NEXT:    movl %edx, 4(%eax)
 ; CHECK-X86-NEXT:    movl %ecx, (%eax)
 ; CHECK-X86-NEXT:    popl %esi
-; CHECK-X86-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-X86-NEXT:    popl %edi
-; CHECK-X86-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-X86-NEXT:    retl $4
 ;
 ; CHECK-MSVC32-LABEL: leading_args:
@@ -244,7 +226,7 @@ define PrimTy @leading_args(i64 %_0, i64 %_1, i64 %_2, i64 %_3, PrimTy %x) {
   ret PrimTy %x
 }
 
-define PrimTy @many_leading_args(i64 %_0, i64 %_1, i64 %_2, i64 %_3, i64 %_4, PrimTy %_5, PrimTy %x) {
+define PrimTy @many_leading_args(i64 %_0, i64 %_1, i64 %_2, i64 %_3, i64 %_4, PrimTy %_5, PrimTy %x) nounwind {
 ; CHECK-X64-F128-LABEL: many_leading_args:
 ; CHECK-X64-F128:       # %bb.0:
 ; CHECK-X64-F128-NEXT:    movaps %xmm1, %xmm0
@@ -283,11 +265,7 @@ define PrimTy @many_leading_args(i64 %_0, i64 %_1, i64 %_2, i64 %_3, i64 %_4, Pr
 ; CHECK-X86-LABEL: many_leading_args:
 ; CHECK-X86:       # %bb.0:
 ; CHECK-X86-NEXT:    pushl %edi
-; CHECK-X86-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-X86-NEXT:    pushl %esi
-; CHECK-X86-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-X86-NEXT:    .cfi_offset %esi, -12
-; CHECK-X86-NEXT:    .cfi_offset %edi, -8
 ; CHECK-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -298,9 +276,7 @@ define PrimTy @many_leading_args(i64 %_0, i64 %_1, i64 %_2, i64 %_3, i64 %_4, Pr
 ; CHECK-X86-NEXT:    movl %edx, 4(%eax)
 ; CHECK-X86-NEXT:    movl %ecx, (%eax)
 ; CHECK-X86-NEXT:    popl %esi
-; CHECK-X86-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-X86-NEXT:    popl %edi
-; CHECK-X86-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-X86-NEXT:    retl $4
 ;
 ; CHECK-MSVC32-LABEL: many_leading_args:
@@ -322,7 +298,7 @@ define PrimTy @many_leading_args(i64 %_0, i64 %_1, i64 %_2, i64 %_3, i64 %_4, Pr
   ret PrimTy %x
 }
 
-define PrimTy @trailing_arg(i64 %_0, i64 %_1, i64 %_2, i64 %_3, i64 %_4, PrimTy %x, i64 %_5) {
+define PrimTy @trailing_arg(i64 %_0, i64 %_1, i64 %_2, i64 %_3, i64 %_4, PrimTy %x, i64 %_5) nounwind {
 ; CHECK-X64-F128-LABEL: trailing_arg:
 ; CHECK-X64-F128:       # %bb.0:
 ; CHECK-X64-F128-NEXT:    retq
@@ -360,11 +336,7 @@ define PrimTy @trailing_arg(i64 %_0, i64 %_1, i64 %_2, i64 %_3, i64 %_4, PrimTy 
 ; CHECK-X86-LABEL: trailing_arg:
 ; CHECK-X86:       # %bb.0:
 ; CHECK-X86-NEXT:    pushl %edi
-; CHECK-X86-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-X86-NEXT:    pushl %esi
-; CHECK-X86-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-X86-NEXT:    .cfi_offset %esi, -12
-; CHECK-X86-NEXT:    .cfi_offset %edi, -8
 ; CHECK-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -375,9 +347,7 @@ define PrimTy @trailing_arg(i64 %_0, i64 %_1, i64 %_2, i64 %_3, i64 %_4, PrimTy 
 ; CHECK-X86-NEXT:    movl %edx, 4(%eax)
 ; CHECK-X86-NEXT:    movl %ecx, (%eax)
 ; CHECK-X86-NEXT:    popl %esi
-; CHECK-X86-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-X86-NEXT:    popl %edi
-; CHECK-X86-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-X86-NEXT:    retl $4
 ;
 ; CHECK-MSVC32-LABEL: trailing_arg:
