@@ -122,7 +122,6 @@ DependencyScanningFilesystemSharedCache::getOutOfDateEntries(
     std::lock_guard<std::mutex> LockGuard(Shard.CacheLock);
     for (const auto &[Path, CachedPair] : Shard.CacheByFilename) {
       const CachedFileSystemEntry *Entry = CachedPair.first;
-
       llvm::ErrorOr<llvm::vfs::Status> Status = UnderlyingFS.status(Path);
       if (Status) {
         if (Entry->getError()) {
