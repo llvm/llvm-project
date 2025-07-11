@@ -220,7 +220,7 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   // we need to update the implicit-def after commuting to result in:
   //   %1.sub = INST %1.sub(tied), %0.sub, implicit-def %1
   SmallVector<unsigned> UpdateImplicitDefIdx;
-  if (HasDef && MI.hasImplicitDef() && MI.getOperand(0).getReg() == Reg0) {
+  if (HasDef && MI.hasImplicitDef()) {
     const TargetRegisterInfo *TRI =
         MI.getMF()->getSubtarget().getRegisterInfo();
     for (auto [OpNo, MO] : llvm::enumerate(MI.implicit_operands())) {
