@@ -177,5 +177,5 @@ if args.command == "create":
     create_release(llvm_repo, args.release)
 if args.command == "upload":
     upload_files(llvm_repo, args.release, args.files)
-if args.commands == "uncomment_download_links":
+if args.command == "uncomment_download_links":
     uncomment_download_links(llvm_repo, args.release)
