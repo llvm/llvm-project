@@ -240,7 +240,7 @@ void LiveElementPrinter::update(object::SectionedAddress ThisAddr,
                                 bool IncludeDefinedVars) {
   // Do not create live ranges when debug-inlined-funcs option is provided with
   // line format option.
-  if (DbgInlinedFunctions == DFLine)
+  if (DbgInlinedFunctions == DFLimitsOnly)
     return;
 
   // First, check variables which have already been assigned a column, so
@@ -441,7 +441,7 @@ void LiveElementPrinter::printStartLine(formatted_raw_ostream &OS,
                                         object::SectionedAddress Addr) {
   // Print a line to idenfity the start of an inlined function if line format
   // is specified.
-  if (DbgInlinedFunctions == DFLine)
+  if (DbgInlinedFunctions == DFLimitsOnly)
     for (const std::unique_ptr<LiveElement> &LE : LiveElements)
       LE->printElementLine(OS, Addr, false);
 }
@@ -450,7 +450,7 @@ void LiveElementPrinter::printEndLine(formatted_raw_ostream &OS,
                                       object::SectionedAddress Addr) {
   // Print a line to idenfity the end of an inlined function if line format is
   // specified.
-  if (DbgInlinedFunctions == DFLine)
+  if (DbgInlinedFunctions == DFLimitsOnly)
     for (const std::unique_ptr<LiveElement> &LE : LiveElements)
       LE->printElementLine(OS, Addr, true);
 }

@@ -148,13 +148,13 @@ OPTIONS
 .. option:: --debug-inlined-funcs[=<format>]
 
   Print the locations of inlined functions alongside disassembly.
-  ``format`` may be ``unicode``, ``ascii`` or ``line``, defaulting to
+  ``format`` may be ``ascii``, ``limits-only`` or ``unicode``, defaulting to
   ``unicode`` if omitted.
 
 .. option:: --debug-vars[=<format>]
 
   Print the locations (in registers or memory) of source-level variables
-  alongside disassembly. ``format`` may be ``unicode`` or ``ascii``, defaulting
+  alongside disassembly. ``format`` may be ``ascii`` or ``unicode``, defaulting
   to ``unicode`` if omitted.
 
 .. option:: --debuginfod, --no-debuginfod

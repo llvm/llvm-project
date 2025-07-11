@@ -1,101 +1,104 @@
-## Generated with this compile command, with the source code in Inputs/debug-inlined-functions.c:
-## clang -g -c debug-inlined-function.c -O1 -S -o -
+## Generated with this compile command, with the source code in Inputs/debug-inlined-functions.cc:
+## clang++ -g -c debug-inlined-functions.cc -O1 -S -o -
 
 # RUN: llvm-mc -triple=x86_64 %s -filetype=obj -o %t.o
 
-# RUN: llvm-objdump %t.o -d --debug-inlined-funcs=line | \
+# RUN: llvm-objdump %t.o -d -C --debug-inlined-funcs=limits-only | \
 # RUN:     FileCheck %s --check-prefix=LINE
 
-# RUN: llvm-objdump %t.o -d --debug-inlined-funcs | \
-# RUN:     FileCheck %s --check-prefix=DEFAULT --strict-whitespace
-
-# RUN: llvm-objdump %t.o -d --debug-inlined-funcs=unicode | \
+# RUN: llvm-objdump %t.o -d -C --debug-inlined-funcs | \
 # RUN:     FileCheck %s --check-prefix=UNICODE --strict-whitespace
 
-# RUN: llvm-objdump %t.o -d --debug-inlined-funcs=unicode --debug-indent=30 | \
+# RUN: llvm-objdump %t.o -d -C --debug-inlined-funcs=unicode | \
+# RUN:     FileCheck %s --check-prefix=UNICODE --strict-whitespace
+
+# RUN: llvm-objdump %t.o -d --debug-inlined-funcs=unicode | \
+# RUN:     FileCheck %s --check-prefix=MANGLE --strict-whitespace
+
+# RUN: llvm-objdump %t.o -d -C --debug-inlined-funcs=unicode --debug-indent=30 | \
 # RUN:     FileCheck %s --check-prefix=INDENT --strict-whitespace
 
-# RUN: llvm-objdump %t.o -d --debug-inlined-funcs=ascii | \
+# RUN: llvm-objdump %t.o -d -C --debug-inlined-funcs=ascii | \
 # RUN:     FileCheck %s --check-prefix=ASCII  --strict-whitespace
 
-# RUN: llvm-objdump %t.o -d --debug-inlined-funcs=unicode --debug-vars=unicode | \
+# RUN: llvm-objdump %t.o -d -C --debug-inlined-funcs=unicode --debug-vars=unicode | \
 # RUN:     FileCheck %s --check-prefix=DEBUG-ALL --strict-whitespace
 
-# LINE: 0000000000000000 <bar>:
+# LINE: 0000000000000000 <bar(int, int)>:
 # LINE-NEXT: 0: 8d 04 3e                      leal    (%rsi,%rdi), %eax
 # LINE-NEXT: 3: 0f af f7                      imull   %edi, %esi
 # LINE-NEXT: 6: 01 f0                         addl    %esi, %eax
 # LINE-NEXT: 8: c3                            retq
 # LINE-NEXT: 9: 0f 1f 80 00 00 00 00          nopl    (%rax)
 # LINE-EMPTY:
-# LINE-NEXT: 0000000000000010 <foo>:
-# LINE-NEXT: debug-inlined-functions.c:8:16: bar inlined into foo
+# LINE-NEXT: 0000000000000010 <foo(int, int)>:
+# LINE-NEXT: debug-inlined-functions.cc:8:16: bar(int, int) inlined into foo(int, int)
 # LINE-NEXT: 10: 8d 04 3e                     leal    (%rsi,%rdi), %eax
 # LINE-NEXT: 13: 0f af f7                     imull   %edi, %esi
 # LINE-NEXT: 16: 01 f0                        addl    %esi, %eax
-# LINE-NEXT: debug-inlined-functions.c:8:16: end of bar inlined into foo
+# LINE-NEXT: debug-inlined-functions.cc:8:16: end of bar(int, int) inlined into foo(int, int)
 # LINE-NEXT: 18: c3                           retq
 
-# DEFAULT: 0000000000000000 <bar>:
-# DEFAULT-NEXT:        0: 8d 04 3e                     	leal	(%rsi,%rdi), %eax
-# DEFAULT-NEXT:        3: 0f af f7                     	imull	%edi, %esi
-# DEFAULT-NEXT:        6: 01 f0                        	addl	%esi, %eax
-# DEFAULT-NEXT:        8: c3                           	retq
-# DEFAULT-NEXT:        9: 0f 1f 80 00 00 00 00         	nopl	(%rax)
-# DEFAULT-EMPTY:
-# DEFAULT-NEXT: 0000000000000010 <foo>:
-# DEFAULT-NEXT:                                                                                                 ┠─ bar = inlined into foo
-# DEFAULT-NEXT:        10: 8d 04 3e                     	leal	(%rsi,%rdi), %eax                           ┃
-# DEFAULT-NEXT:        13: 0f af f7                     	imull	%edi, %esi                                  ┃
-# DEFAULT-NEXT:        16: 01 f0                        	addl	%esi, %eax                                  ┻
-# DEFAULT-NEXT:        18: c3                           	retq
-
-# UNICODE: 0000000000000000 <bar>:
+# UNICODE: 0000000000000000 <bar(int, int)>:
 # UNICODE-NEXT:        0: 8d 04 3e                     	leal	(%rsi,%rdi), %eax
 # UNICODE-NEXT:        3: 0f af f7                     	imull	%edi, %esi
 # UNICODE-NEXT:        6: 01 f0                        	addl	%esi, %eax
 # UNICODE-NEXT:        8: c3                           	retq
 # UNICODE-NEXT:        9: 0f 1f 80 00 00 00 00         	nopl	(%rax)
 # UNICODE-EMPTY:
-# UNICODE-NEXT: 0000000000000010 <foo>:
-# UNICODE-NEXT:                                                                                                 ┠─ bar = inlined into foo
-# UNICODE-NEXT:        10: 8d 04 3e                     	leal	(%rsi,%rdi), %eax                           ┃
-# UNICODE-NEXT:        13: 0f af f7                     	imull	%edi, %esi                                  ┃
-# UNICODE-NEXT:        16: 01 f0                        	addl	%esi, %eax                                  ┻
-# UNICODE-NEXT:        18: c3                           	retq
+# UNICODE-NEXT: 0000000000000010 <foo(int, int)>:
+# UNICODE-NEXT:                                                                                             ┠─ bar(int, int) = inlined into foo(int, int)
+# UNICODE-NEXT:      10: 8d 04 3e                     	leal	(%rsi,%rdi), %eax                           ┃
+# UNICODE-NEXT:      13: 0f af f7                     	imull	%edi, %esi                                  ┃
+# UNICODE-NEXT:      16: 01 f0                        	addl	%esi, %eax                                  ┻
+# UNICODE-NEXT:      18: c3                           	retq
 
-# INDENT: 0000000000000000 <bar>:
+# MANGLE: 0000000000000000 <_Z3barii>:
+# MANGLE-NEXT:        0: 8d 04 3e                     	leal	(%rsi,%rdi), %eax
+# MANGLE-NEXT:        3: 0f af f7                     	imull	%edi, %esi
+# MANGLE-NEXT:        6: 01 f0                        	addl	%esi, %eax
+# MANGLE-NEXT:        8: c3                           	retq
+# MANGLE-NEXT:        9: 0f 1f 80 00 00 00 00         	nopl	(%rax)
+# MANGLE-EMPTY:
+# MANGLE-NEXT: 0000000000000010 <_Z3fooii>:
+# MANGLE-NEXT:                                                                                             ┠─ _Z3barii = inlined into _Z3fooii
+# MANGLE-NEXT:      10: 8d 04 3e                     	leal	(%rsi,%rdi), %eax                           ┃
+# MANGLE-NEXT:      13: 0f af f7                     	imull	%edi, %esi                                  ┃
+# MANGLE-NEXT:      16: 01 f0                        	addl	%esi, %eax                                  ┻
+# MANGLE-NEXT:      18: c3                           	retq
+
+# INDENT: 0000000000000000 <bar(int, int)>:
 # INDENT-NEXT:        0: 8d 04 3e                     	leal	(%rsi,%rdi), %eax
 # INDENT-NEXT:        3: 0f af f7                     	imull	%edi, %esi
 # INDENT-NEXT:        6: 01 f0                        	addl	%esi, %eax
 # INDENT-NEXT:        8: c3                           	retq
 # INDENT-NEXT:        9: 0f 1f 80 00 00 00 00         	nopl	(%rax)
 # INDENT-EMPTY:
-# INDENT-NEXT: 0000000000000010 <foo>:
-# INDENT-NEXT:                                                                        ┠─ bar = inlined into foo
+# INDENT-NEXT: 0000000000000010 <foo(int, int)>:
+# INDENT-NEXT:                                                                        ┠─ bar(int, int) = inlined into foo(int, int)
 # INDENT-NEXT:       10: 8d 04 3e                     	leal	(%rsi,%rdi), %eax     ┃
 # INDENT-NEXT:       13: 0f af f7                     	imull	%edi, %esi            ┃
 # INDENT-NEXT:       16: 01 f0                        	addl	%esi, %eax            ┻
 # INDENT-NEXT:       18: c3                           	retq
 
-# ASCII: 0000000000000000 <bar>:
+# ASCII: 0000000000000000 <bar(int, int)>:
 # ASCII-NEXT:        0: 8d 04 3e                     	leal	(%rsi,%rdi), %eax
 # ASCII-NEXT:        3: 0f af f7                     	imull	%edi, %esi
 # ASCII-NEXT:        6: 01 f0                        	addl	%esi, %eax
 # ASCII-NEXT:        8: c3                           	retq
 # ASCII-NEXT:        9: 0f 1f 80 00 00 00 00         	nopl	(%rax)
 # ASCII-EMPTY:
-# ASCII-NEXT: 0000000000000010 <foo>:
-# ASCII-NEXT:                                                                                               |- bar = inlined into foo
+# ASCII-NEXT: 0000000000000010 <foo(int, int)>:
+# ASCII-NEXT:                                                                                               |- bar(int, int) = inlined into foo(int, int)
 # ASCII-NEXT:        10: 8d 04 3e                     	leal	(%rsi,%rdi), %eax                           |
 # ASCII-NEXT:        13: 0f af f7                     	imull	%edi, %esi                                  |
 # ASCII-NEXT:        16: 01 f0                        	addl	%esi, %eax                                  v
 # ASCII-NEXT:        18: c3                           	retq
 
-# DEBUG-ALL: 0000000000000010 <foo>:
+# DEBUG-ALL: 0000000000000010 <foo(int, int)>:
 # DEBUG-ALL-NEXT:                                                                                           ┠─ a = RDI
 # DEBUG-ALL-NEXT:                                                                                           ┃ ┠─ b = RSI
-# DEBUG-ALL-NEXT:                                                                                           ┃ ┃ ┠─ bar = inlined into foo
+# DEBUG-ALL-NEXT:                                                                                           ┃ ┃ ┠─ bar(int, int) = inlined into foo(int, int)
 # DEBUG-ALL-NEXT:                                                                                           ┃ ┃ ┃ ┠─ x = RDI
 # DEBUG-ALL-NEXT:                                                                                           ┃ ┃ ┃ ┃ ┠─ y = RSI
 # DEBUG-ALL-NEXT:                                                                                           ┃ ┃ ┃ ┃ ┃ ┌─ sum = RAX
@@ -107,71 +110,70 @@
 # DEBUG-ALL-NEXT:  16: 01 f0                        	addl	%esi, %eax                                  ┃ ╈ ┻ ┻   ┻ ┃ ┃
 # DEBUG-ALL-NEXT:  18: c3                           	retq                                                ┻ ┻         ┻ ┻
 
-    .file   "debug-inlined-functions.c"
+	.file	"debug-inlined-functions.cc"
 	.text
-	.globl	bar                             # -- Begin function bar
+	.globl	_Z3barii                        # -- Begin function _Z3barii
 	.p2align	4
-	.type	bar,@function
-bar:                                    # @bar
+	.type	_Z3barii,@function
+_Z3barii:                               # @_Z3barii
 .Lfunc_begin0:
-	.file	0 "" "debug-inlined-function.c"
+	.file	0 "debug-inlined-functions.cc" md5 0xf07b869ec4d0996589aa6856ae4e6c83
 	.cfi_startproc
-# %bb.0:
+# %bb.0:                                # %entry
 	#DEBUG_VALUE: bar:x <- $edi
 	#DEBUG_VALUE: bar:y <- $esi
                                         # kill: def $esi killed $esi def $rsi
                                         # kill: def $edi killed $edi def $rdi
-	.file	1 "" "debug-inlined-functions.c"
-	.loc	1 2 15 prologue_end
+	.loc	0 2 15 prologue_end             # llvm/test/tools/llvm-objdump/X86/Inputs/debug-inlined-functions.cc:2:15
 	leal	(%rsi,%rdi), %eax
 .Ltmp0:
 	#DEBUG_VALUE: bar:sum <- $eax
-	.loc	1 3 15
+	.loc	0 3 15                          # llvm/test/tools/llvm-objdump/X86/Inputs/debug-inlined-functions.cc:3:15
 	imull	%edi, %esi
 .Ltmp1:
 	#DEBUG_VALUE: bar:y <- [DW_OP_LLVM_entry_value 1] $esi
 	#DEBUG_VALUE: bar:mul <- $esi
-	.loc	1 4 14
+	.loc	0 4 14                          # llvm/test/tools/llvm-objdump/X86/Inputs/debug-inlined-functions.cc:4:14
 	addl	%esi, %eax
 .Ltmp2:
-	.loc	1 4 3 is_stmt 0
+	.loc	0 4 3 is_stmt 0                 # llvm/test/tools/llvm-objdump/X86/Inputs/debug-inlined-functions.cc:4:3
 	retq
 .Ltmp3:
 .Lfunc_end0:
-	.size	bar, .Lfunc_end0-bar
+	.size	_Z3barii, .Lfunc_end0-_Z3barii
 	.cfi_endproc
                                         # -- End function
-	.globl	foo                             # -- Begin function foo
+	.globl	_Z3fooii                        # -- Begin function _Z3fooii
 	.p2align	4
-	.type	foo,@function
-foo:                                    # @foo
+	.type	_Z3fooii,@function
+_Z3fooii:                               # @_Z3fooii
 .Lfunc_begin1:
 	.cfi_startproc
-# %bb.0:
+# %bb.0:                                # %entry
 	#DEBUG_VALUE: foo:a <- $edi
 	#DEBUG_VALUE: foo:b <- $esi
 	#DEBUG_VALUE: bar:x <- $edi
 	#DEBUG_VALUE: bar:y <- $esi
                                         # kill: def $esi killed $esi def $rsi
                                         # kill: def $edi killed $edi def $rdi
-	.loc	1 2 15 prologue_end is_stmt 1
+	.loc	0 2 15 prologue_end is_stmt 1   # llvm/test/tools/llvm-objdump/X86/Inputs/debug-inlined-functions.cc:2:15 @[ llvm/test/tools/llvm-objdump/X86/Inputs/debug-inlined-functions.cc:8:16 ]
 	leal	(%rsi,%rdi), %eax
 .Ltmp4:
 	#DEBUG_VALUE: bar:sum <- $eax
-	.loc	1 3 15
+	.loc	0 3 15                          # llvm/test/tools/llvm-objdump/X86/Inputs/debug-inlined-functions.cc:3:15 @[ llvm/test/tools/llvm-objdump/X86/Inputs/debug-inlined-functions.cc:8:16 ]
 	imull	%edi, %esi
 .Ltmp5:
 	#DEBUG_VALUE: foo:b <- [DW_OP_LLVM_entry_value 1] $esi
 	#DEBUG_VALUE: bar:mul <- $esi
-	.loc	1 4 14
+	.loc	0 4 14                          # llvm/test/tools/llvm-objdump/X86/Inputs/debug-inlined-functions.cc:4:14 @[ llvm/test/tools/llvm-objdump/X86/Inputs/debug-inlined-functions.cc:8:16 ]
 	addl	%esi, %eax
 .Ltmp6:
 	#DEBUG_VALUE: foo:result <- $eax
-	.loc	1 9 3
+	.loc	0 9 3                           # llvm/test/tools/llvm-objdump/X86/Inputs/debug-inlined-functions.cc:9:3
 	retq
 .Ltmp7:
 .Lfunc_end1:
-	.size	foo, .Lfunc_end1-foo
+	.size	_Z3fooii, .Lfunc_end1-_Z3fooii
 	.cfi_endproc
                                         # -- End function
 	.section	.debug_loclists,"",@progbits
@@ -334,14 +336,14 @@ foo:                                    # @foo
 	.byte	6                               # Abbreviation Code
 	.byte	46                              # DW_TAG_subprogram
 	.byte	1                               # DW_CHILDREN_yes
+	.byte	110                             # DW_AT_linkage_name
+	.byte	37                              # DW_FORM_strx1
 	.byte	3                               # DW_AT_name
 	.byte	37                              # DW_FORM_strx1
 	.byte	58                              # DW_AT_decl_file
 	.byte	11                              # DW_FORM_data1
 	.byte	59                              # DW_AT_decl_line
 	.byte	11                              # DW_FORM_data1
-	.byte	39                              # DW_AT_prototyped
-	.byte	25                              # DW_FORM_flag_present
 	.byte	73                              # DW_AT_type
 	.byte	19                              # DW_FORM_ref4
 	.byte	63                              # DW_AT_external
@@ -399,14 +401,14 @@ foo:                                    # @foo
 	.byte	24                              # DW_FORM_exprloc
 	.byte	122                             # DW_AT_call_all_calls
 	.byte	25                              # DW_FORM_flag_present
+	.byte	110                             # DW_AT_linkage_name
+	.byte	37                              # DW_FORM_strx1
 	.byte	3                               # DW_AT_name
 	.byte	37                              # DW_FORM_strx1
 	.byte	58                              # DW_AT_decl_file
 	.byte	11                              # DW_FORM_data1
 	.byte	59                              # DW_AT_decl_line
 	.byte	11                              # DW_FORM_data1
-	.byte	39                              # DW_AT_prototyped
-	.byte	25                              # DW_FORM_flag_present
 	.byte	73                              # DW_AT_type
 	.byte	19                              # DW_FORM_ref4
 	.byte	63                              # DW_AT_external
@@ -484,9 +486,9 @@ foo:                                    # @foo
 	.byte	1                               # DWARF Unit Type
 	.byte	8                               # Address Size (in bytes)
 	.long	.debug_abbrev                   # Offset Into Abbrev. Section
-	.byte	1                               # Abbrev [1] 0xc:0xc2 DW_TAG_compile_unit
+	.byte	1                               # Abbrev [1] 0xc:0xc4 DW_TAG_compile_unit
 	.byte	0                               # DW_AT_producer
-	.short	29                              # DW_AT_language
+	.short	33                              # DW_AT_language
 	.byte	1                               # DW_AT_name
 	.long	.Lstr_offsets_base0             # DW_AT_str_offsets_base
 	.long	.Lline_table_start0             # DW_AT_stmt_list
@@ -505,137 +507,141 @@ foo:                                    # @foo
 	.byte	3                               # Abbrev [3] 0x33:0x7 DW_TAG_formal_parameter
 	.byte	1                               # DW_AT_location
 	.byte	85
-	.long	85                              # DW_AT_abstract_origin
+	.long	86                              # DW_AT_abstract_origin
 	.byte	4                               # Abbrev [4] 0x3a:0x6 DW_TAG_formal_parameter
 	.byte	0                               # DW_AT_location
-	.long	93                              # DW_AT_abstract_origin
+	.long	94                              # DW_AT_abstract_origin
 	.byte	5                               # Abbrev [5] 0x40:0x6 DW_TAG_variable
 	.byte	1                               # DW_AT_location
-	.long	101                             # DW_AT_abstract_origin
+	.long	102                             # DW_AT_abstract_origin
 	.byte	5                               # Abbrev [5] 0x46:0x6 DW_TAG_variable
 	.byte	2                               # DW_AT_location
-	.long	109                             # DW_AT_abstract_origin
+	.long	110                             # DW_AT_abstract_origin
 	.byte	0                               # End Of Children Mark
-	.byte	6                               # Abbrev [6] 0x4d:0x29 DW_TAG_subprogram
-	.byte	3                               # DW_AT_name
-	.byte	1                               # DW_AT_decl_file
+	.byte	6                               # Abbrev [6] 0x4d:0x2a DW_TAG_subprogram
+	.byte	3                               # DW_AT_linkage_name
+	.byte	4                               # DW_AT_name
+	.byte	0                               # DW_AT_decl_file
 	.byte	1                               # DW_AT_decl_line
-                                        # DW_AT_prototyped
-	.long	118                             # DW_AT_type
+	.long	119                             # DW_AT_type
                                         # DW_AT_external
                                         # DW_AT_inline
-	.byte	7                               # Abbrev [7] 0x55:0x8 DW_TAG_formal_parameter
-	.byte	5                               # DW_AT_name
-	.byte	1                               # DW_AT_decl_file
-	.byte	1                               # DW_AT_decl_line
-	.long	118                             # DW_AT_type
-	.byte	7                               # Abbrev [7] 0x5d:0x8 DW_TAG_formal_parameter
+	.byte	7                               # Abbrev [7] 0x56:0x8 DW_TAG_formal_parameter
 	.byte	6                               # DW_AT_name
-	.byte	1                               # DW_AT_decl_file
+	.byte	0                               # DW_AT_decl_file
 	.byte	1                               # DW_AT_decl_line
-	.long	118                             # DW_AT_type
-	.byte	8                               # Abbrev [8] 0x65:0x8 DW_TAG_variable
+	.long	119                             # DW_AT_type
+	.byte	7                               # Abbrev [7] 0x5e:0x8 DW_TAG_formal_parameter
 	.byte	7                               # DW_AT_name
-	.byte	1                               # DW_AT_decl_file
-	.byte	2                               # DW_AT_decl_line
-	.long	118                             # DW_AT_type
-	.byte	8                               # Abbrev [8] 0x6d:0x8 DW_TAG_variable
+	.byte	0                               # DW_AT_decl_file
+	.byte	1                               # DW_AT_decl_line
+	.long	119                             # DW_AT_type
+	.byte	8                               # Abbrev [8] 0x66:0x8 DW_TAG_variable
 	.byte	8                               # DW_AT_name
-	.byte	1                               # DW_AT_decl_file
+	.byte	0                               # DW_AT_decl_file
+	.byte	2                               # DW_AT_decl_line
+	.long	119                             # DW_AT_type
+	.byte	8                               # Abbrev [8] 0x6e:0x8 DW_TAG_variable
+	.byte	9                               # DW_AT_name
+	.byte	0                               # DW_AT_decl_file
 	.byte	3                               # DW_AT_decl_line
-	.long	118                             # DW_AT_type
+	.long	119                             # DW_AT_type
 	.byte	0                               # End Of Children Mark
-	.byte	9                               # Abbrev [9] 0x76:0x4 DW_TAG_base_type
-	.byte	4                               # DW_AT_name
+	.byte	9                               # Abbrev [9] 0x77:0x4 DW_TAG_base_type
+	.byte	5                               # DW_AT_name
 	.byte	5                               # DW_AT_encoding
 	.byte	4                               # DW_AT_byte_size
-	.byte	10                              # Abbrev [10] 0x7a:0x53 DW_TAG_subprogram
+	.byte	10                              # Abbrev [10] 0x7b:0x54 DW_TAG_subprogram
 	.byte	1                               # DW_AT_low_pc
 	.long	.Lfunc_end1-.Lfunc_begin1       # DW_AT_high_pc
 	.byte	1                               # DW_AT_frame_base
 	.byte	87
                                         # DW_AT_call_all_calls
-	.byte	9                               # DW_AT_name
-	.byte	1                               # DW_AT_decl_file
+	.byte	10                              # DW_AT_linkage_name
+	.byte	11                              # DW_AT_name
+	.byte	0                               # DW_AT_decl_file
 	.byte	7                               # DW_AT_decl_line
-                                        # DW_AT_prototyped
-	.long	118                             # DW_AT_type
+	.long	119                             # DW_AT_type
                                         # DW_AT_external
-	.byte	11                              # Abbrev [11] 0x89:0xa DW_TAG_formal_parameter
+	.byte	11                              # Abbrev [11] 0x8b:0xa DW_TAG_formal_parameter
 	.byte	1                               # DW_AT_location
 	.byte	85
-	.byte	10                              # DW_AT_name
-	.byte	1                               # DW_AT_decl_file
-	.byte	7                               # DW_AT_decl_line
-	.long	118                             # DW_AT_type
-	.byte	12                              # Abbrev [12] 0x93:0x9 DW_TAG_formal_parameter
-	.byte	3                               # DW_AT_location
-	.byte	11                              # DW_AT_name
-	.byte	1                               # DW_AT_decl_file
-	.byte	7                               # DW_AT_decl_line
-	.long	118                             # DW_AT_type
-	.byte	13                              # Abbrev [13] 0x9c:0x9 DW_TAG_variable
-	.byte	7                               # DW_AT_location
 	.byte	12                              # DW_AT_name
-	.byte	1                               # DW_AT_decl_file
+	.byte	0                               # DW_AT_decl_file
+	.byte	7                               # DW_AT_decl_line
+	.long	119                             # DW_AT_type
+	.byte	12                              # Abbrev [12] 0x95:0x9 DW_TAG_formal_parameter
+	.byte	3                               # DW_AT_location
+	.byte	13                              # DW_AT_name
+	.byte	0                               # DW_AT_decl_file
+	.byte	7                               # DW_AT_decl_line
+	.long	119                             # DW_AT_type
+	.byte	13                              # Abbrev [13] 0x9e:0x9 DW_TAG_variable
+	.byte	7                               # DW_AT_location
+	.byte	14                              # DW_AT_name
+	.byte	0                               # DW_AT_decl_file
 	.byte	8                               # DW_AT_decl_line
-	.long	118                             # DW_AT_type
-	.byte	14                              # Abbrev [14] 0xa5:0x27 DW_TAG_inlined_subroutine
+	.long	119                             # DW_AT_type
+	.byte	14                              # Abbrev [14] 0xa7:0x27 DW_TAG_inlined_subroutine
 	.long	77                              # DW_AT_abstract_origin
 	.byte	1                               # DW_AT_low_pc
 	.long	.Ltmp6-.Lfunc_begin1            # DW_AT_high_pc
-	.byte	1                               # DW_AT_call_file
+	.byte	0                               # DW_AT_call_file
 	.byte	8                               # DW_AT_call_line
 	.byte	16                              # DW_AT_call_column
-	.byte	3                               # Abbrev [3] 0xb2:0x7 DW_TAG_formal_parameter
+	.byte	3                               # Abbrev [3] 0xb4:0x7 DW_TAG_formal_parameter
 	.byte	1                               # DW_AT_location
 	.byte	85
-	.long	85                              # DW_AT_abstract_origin
-	.byte	4                               # Abbrev [4] 0xb9:0x6 DW_TAG_formal_parameter
+	.long	86                              # DW_AT_abstract_origin
+	.byte	4                               # Abbrev [4] 0xbb:0x6 DW_TAG_formal_parameter
 	.byte	4                               # DW_AT_location
-	.long	93                              # DW_AT_abstract_origin
-	.byte	5                               # Abbrev [5] 0xbf:0x6 DW_TAG_variable
+	.long	94                              # DW_AT_abstract_origin
+	.byte	5                               # Abbrev [5] 0xc1:0x6 DW_TAG_variable
 	.byte	5                               # DW_AT_location
-	.long	101                             # DW_AT_abstract_origin
-	.byte	5                               # Abbrev [5] 0xc5:0x6 DW_TAG_variable
+	.long	102                             # DW_AT_abstract_origin
+	.byte	5                               # Abbrev [5] 0xc7:0x6 DW_TAG_variable
 	.byte	6                               # DW_AT_location
-	.long	109                             # DW_AT_abstract_origin
+	.long	110                             # DW_AT_abstract_origin
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 .Ldebug_info_end0:
 	.section	.debug_str_offsets,"",@progbits
-	.long	56                              # Length of String Offsets Set
+	.long	64                              # Length of String Offsets Set
 	.short	5
 	.short	0
 .Lstr_offsets_base0:
 	.section	.debug_str,"MS",@progbits,1
 .Linfo_string0:
-	.asciz	"clang version 21.0.0git (git@github.com:llvm/llvm-project.git a97f73405f8e074263a0ed2dd2b8c87c014f46d9)" # string offset=0
+	.asciz	"clang version 21.0.0git (git@github.com:llvm/llvm-project.git eed98e1493414ae9c30596b1eeb8f4a9b260e42)" # string offset=0
 .Linfo_string1:
-	.asciz	"SRC_COMPDIR/debug.c" # string offset=108
+	.asciz	"llvm/test/tools/llvm-objdump/X86/Inputs/debug-inlined-functions.cc" # string offset=112
 .Linfo_string2:
-	.asciz	"build" # string offset=224
+	.asciz	"llvm-project" # string offset=179
 .Linfo_string3:
-	.asciz	"bar"                           # string offset=273
+	.asciz	"_Z3barii"                      # string offset=229
 .Linfo_string4:
-	.asciz	"int"                           # string offset=277
+	.asciz	"bar"                           # string offset=238
 .Linfo_string5:
-	.asciz	"x"                             # string offset=281
+	.asciz	"int"                           # string offset=242
 .Linfo_string6:
-	.asciz	"y"                             # string offset=283
+	.asciz	"x"                             # string offset=246
 .Linfo_string7:
-	.asciz	"sum"                           # string offset=285
+	.asciz	"y"                             # string offset=248
 .Linfo_string8:
-	.asciz	"mul"                           # string offset=289
+	.asciz	"sum"                           # string offset=250
 .Linfo_string9:
-	.asciz	"foo"                           # string offset=293
+	.asciz	"mul"                           # string offset=254
 .Linfo_string10:
-	.asciz	"a"                             # string offset=297
+	.asciz	"_Z3fooii"                      # string offset=258
 .Linfo_string11:
-	.asciz	"b"                             # string offset=299
+	.asciz	"foo"                           # string offset=267
 .Linfo_string12:
-	.asciz	"result"                        # string offset=301
+	.asciz	"a"                             # string offset=271
+.Linfo_string13:
+	.asciz	"b"                             # string offset=273
+.Linfo_string14:
+	.asciz	"result"                        # string offset=275
 	.section	.debug_str_offsets,"",@progbits
 	.long	.Linfo_string0
 	.long	.Linfo_string1
@@ -650,6 +656,8 @@ foo:                                    # @foo
 	.long	.Linfo_string10
 	.long	.Linfo_string11
 	.long	.Linfo_string12
+	.long	.Linfo_string13
+	.long	.Linfo_string14
 	.section	.debug_addr,"",@progbits
 	.long	.Ldebug_addr_end0-.Ldebug_addr_start0 # Length of contribution
 .Ldebug_addr_start0:
@@ -660,7 +668,7 @@ foo:                                    # @foo
 	.quad	.Lfunc_begin0
 	.quad	.Lfunc_begin1
 .Ldebug_addr_end0:
-	.ident	"clang version 21.0.0git (git@github.com:llvm/llvm-project.git a97f73405f8e074263a0ed2dd2b8c87c014f46d9)"
+	.ident	"clang version 21.0.0git (git@github.com:llvm/llvm-project.git eed98e1493414ae9c30596b1eeb8f4a9b260e42a)"
 	.section	".note.GNU-stack","",@progbits
 	.addrsig
 	.section	.debug_line,"",@progbits

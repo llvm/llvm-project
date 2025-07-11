@@ -80,7 +80,7 @@ public:
   void dump(raw_ostream &OS) const override;
 };
 
-/// Helper class for printing source locations for variables and inline
+/// Helper class for printing source locations for variables and inlined
 /// subroutines alongside disassembly.
 class LiveElementPrinter {
   // Information we want to track about one column in which we are printing an

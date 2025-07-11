@@ -1627,6 +1627,7 @@ static void emitPostInstructionInfo(formatted_raw_ostream &FOS,
       FOS.PadToColumn(CommentColumn);
       FOS << MAI.getCommentString() << ' ' << Comment;
     }
+    LEP.printAfterInst(FOS);
     FOS << '\n';
   } while (!Comments.empty());
   FOS.flush();
@@ -3600,8 +3601,8 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
           InputArgs.getLastArg(OBJDUMP_debug_inlined_funcs_EQ)) {
     DbgInlinedFunctions = StringSwitch<DebugFormat>(A->getValue())
                               .Case("ascii", DFASCII)
+                              .Case("limits-only", DFLimitsOnly)
                               .Case("unicode", DFUnicode)
-                              .Case("line", DFLine)
                               .Default(DFInvalid);
     if (DbgInlinedFunctions == DFInvalid)
       invalidArgValue(A);

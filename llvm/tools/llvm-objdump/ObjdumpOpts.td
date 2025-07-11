@@ -242,7 +242,7 @@ defm prefix_strip
       MetaVarName<"prefix">;
 
 def debug_indent_EQ : Joined<["--"], "debug-indent=">,
-  HelpText<"Distance to indent the source-level variable display, "
+  HelpText<"Distance to indent the source-level variable and inlined function display, "
            "relative to the start of the disassembly">;
 
 def debug_inlined_funcs_EQ : Joined<["--"], "debug-inlined-funcs=">,

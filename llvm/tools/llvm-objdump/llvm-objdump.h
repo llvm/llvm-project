@@ -40,7 +40,7 @@ class XCOFFObjectFile;
 
 namespace objdump {
 
-enum DebugFormat { DFDisabled, DFUnicode, DFASCII, DFLine, DFInvalid };
+enum DebugFormat { DFASCII, DFDisabled, DFInvalid, DFLimitsOnly, DFUnicode };
 
 extern bool ArchiveHeaders;
 extern int DbgIndent;
