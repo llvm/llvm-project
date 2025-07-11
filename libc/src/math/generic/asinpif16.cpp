@@ -20,8 +20,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-static constexpr float16 ONE_OVER_TWO = 0.5f16;
-
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 static constexpr size_t N_ASINPIF16_EXCEPTS = 3;
 
@@ -31,14 +29,12 @@ static constexpr fputil::ExceptValues<float16, N_ASINPIF16_EXCEPTS>
         // x = 0.0, asinfpi(0.0) = 0.0
         {0x0000, 0x0000, 0, 0, 0},
 
-        // x = 1.0, asinfpi(1) = 1/2
-        {(fputil::FPBits<float16>(1.0f16)).uintval(),
-         (fputil::FPBits<float16>(ONE_OVER_TWO)).uintval(), 0, 0, 0},
-
-        // x = -1.0, asinfpi(-1.0) = -1/2
-        {(fputil::FPBits<float16>(-1.0f16)).uintval(),
-         (fputil::FPBits<float16>(-ONE_OVER_TWO)).uintval(), 0, 0, 0},
+        // x = 0x1.004p-3, asinpif16(x) = 0x1.47p-5 (RZ)
+        {0x3001U, 0x291cU, 1U, 0U, 1U},
+        // x = 0x1.0bp-1, asinpif16(x) = 0x1.658p-3 (RZ)
+        {0x382cU, 0x3196U, 1U, 0U, 0U},
     }};
+
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
@@ -94,33 +90,27 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   // it's very accurate in the range [0, 0.5] and has a maximum error of
   // 0.0000000000000001 in the range [0, 0.5].
   static constexpr double POLY_COEFFS[10] = {
-      0.318309886183791,   // x^1
-      0.0530516476972984,  // x^3
-      0.0238732414637843,  // x^5
-      0.0142102627760621,  // x^7
-      0.00967087327815336, // x^9
-      0.00712127941391293, // x^11
-      0.00552355646848375, // x^13
-      0.00444514782463692, // x^15
-      0.00367705242846804, // x^17
-      0.00310721681820837  // x^19
+      0x1.45f306dc9c889p-2, // x^1
+      0x1.b2995e7b7b5fdp-5, // x^3
+      0x1.8723a1d588a36p-6, // x^5
+      0x1.d1a452f20430dp-7, // x^7
+      0x1.3ce52a3a09f61p-7, // x^9
+      0x1.d2b33e303d375p-8, // x^11
+      0x1.69fde663c674fp-8, // x^13
+      0x1.235134885f19bp-8, // x^15
   };
-
   // polynomial evaluation using horner's method
   // work only for |x| in [0, 0.5]
-  auto asinpi_polyeval = [](double xsq) -> double {
-    return fputil::polyeval(xsq, POLY_COEFFS[0], POLY_COEFFS[1], POLY_COEFFS[2],
-                            POLY_COEFFS[3], POLY_COEFFS[4], POLY_COEFFS[5],
-                            POLY_COEFFS[6], POLY_COEFFS[7], POLY_COEFFS[8],
-                            POLY_COEFFS[9]);
+  auto asinpi_polyeval = [](double x) -> double {
+    return x * fputil::polyeval(x * x, POLY_COEFFS[0], POLY_COEFFS[1],
+                                POLY_COEFFS[2], POLY_COEFFS[3], POLY_COEFFS[4],
+                                POLY_COEFFS[5], POLY_COEFFS[6], POLY_COEFFS[7]);
   };
 
   // if |x| <= 0.5:
-  if (LIBC_UNLIKELY(x_abs <= ONE_OVER_TWO)) {
+  if (LIBC_UNLIKELY(x_abs <= 0.5f16)) {
     // Use polynomial approximation of asin(x)/pi in the range [0, 0.5]
-    double xd = static_cast<double>(x);
-    double xsq = xd * xd;
-    double result = xd * asinpi_polyeval(xsq);
+    double result = asinpi_polyeval(fputil::cast<double>(x_abs));
     return fputil::cast<float16>(signed_result(result));
   }
 
@@ -151,11 +141,9 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   //             = 0.5 - 0.5 * x
   //             = multiply_add(-0.5, x, 0.5)
 
-  double u = static_cast<double>(
-      fputil::multiply_add(-ONE_OVER_TWO, x_abs, ONE_OVER_TWO));
-  double u_sqrt = fputil::sqrt<double>(static_cast<double>(u));
-  double asinpi_sqrt_u = u_sqrt * asinpi_polyeval(u);
-  double result = fputil::multiply_add(-2.0f16, asinpi_sqrt_u, ONE_OVER_TWO);
+  double u = fputil::multiply_add(-0.5, fputil::cast<double>(x_abs), 0.5);
+  double asinpi_sqrt_u = asinpi_polyeval(fputil::sqrt<double>(u));
+  double result = fputil::multiply_add(-2.0, asinpi_sqrt_u, 0.5);
 
   return fputil::cast<float16>(signed_result(result));
 }
