@@ -691,7 +691,7 @@ Improvements to Clang's diagnostics
   the canonical file path if it ends up being shorter.
 
 - Improve the diagnostics for placement new expression when const-qualified
-  object was passed as the storage argument.
+  object was passed as the storage argument. (#GH143708)
 
 Improvements to Clang's time-trace
 ----------------------------------
