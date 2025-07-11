@@ -1536,18 +1536,15 @@ multiclass SIMDMADD<Vec vec, bits<32> simdopA, bits<32> simdopS, list<Predicate>
              (vec.vt V128:$a), (vec.vt V128:$b), (vec.vt V128:$c)))],
            vec.prefix#".relaxed_nmadd\t$dst, $a, $b, $c",
            vec.prefix#".relaxed_nmadd", simdopS, reqs>;
+
+  def : Pat<(fadd_contract (vec.vt V128:$a), (fmul_contract (vec.vt V128:$b), (vec.vt V128:$c))),
+             (!cast<Instruction>("MADD_"#vec) V128:$a, V128:$b, V128:$c)>, Requires<[HasRelaxedSIMD]>;
+
 }
 
 defm "" : SIMDMADD<F32x4, 0x105, 0x106, [HasRelaxedSIMD]>;
 defm "" : SIMDMADD<F64x2, 0x107, 0x108, [HasRelaxedSIMD]>;
 defm "" : SIMDMADD<F16x8, 0x14e, 0x14f, [HasFP16]>;
-
-def : Pat<(fadd_contract (v4f32 V128:$a), (fmul_contract (v4f32 V128:$b), (v4f32 V128:$c))),
-           (MADD_F32x4 V128:$a, V128:$b, V128:$c)>, Requires<[HasRelaxedSIMD]>;
-
-
-def : Pat<(fadd_contract (v2f64 V128:$a), (fmul_contract (v2f64 V128:$b), (v2f64 V128:$c))),
-           (MADD_F64x2 V128:$a, V128:$b, V128:$c)>, Requires<[HasRelaxedSIMD]>;
 
 //===----------------------------------------------------------------------===//
 // Laneselect
