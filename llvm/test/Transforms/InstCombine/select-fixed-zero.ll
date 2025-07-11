@@ -39,6 +39,22 @@ define i64 @shl_select(i64 %a, i64 noundef range(i64 0, 64) %b) {
   ret i64 %select
 }
 
+; (select (icmp x, 0, eq), 0, (shl x, y)) -> (shl x, y)
+define i64 @and_shl_select(i64 %a, i64 noundef %b) {
+; CHECK-LABEL: @and_shl_select(
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[A:%.*]], 0
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[B:%.*]], 15
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[A]], [[AND]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i64 0, i64 [[SHL]]
+; CHECK-NEXT:    ret i64 [[SELECT]]
+;
+  %cond = icmp eq i64 %a, 0
+  %and = and i64 %b, 15
+  %shl = shl i64 %a, %and
+  %select = select i1 %cond, i64 0, i64 %shl
+  ret i64 %select
+}
+
 ; Don't transform since shl could be poison
 define i64 @shl_select_undef(i64 %a, i64 noundef %b) {
 ; CHECK-LABEL: @shl_select_undef(
