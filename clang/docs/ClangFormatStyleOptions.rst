@@ -4423,6 +4423,21 @@ the configuration (without a prefix: ``Auto``).
          #endif
        #endif
 
+  * ``PPDIS_Leave`` (in configuration: ``Leave``)
+    Leaves indentation of directives as-is.
+
+    .. note::
+
+     Ignores ``PPIndentWidth``.
+
+    .. code-block:: c++
+
+      #if FOO
+        #if BAR
+      #include <foo>
+        #endif
+      #endif
+
 
 
 .. _IndentRequiresClause:
