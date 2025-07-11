@@ -224,6 +224,10 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
       return;
     }
 
+    assert(dst.isBitField() && "Unknown LValue type");
+    emitStoreThroughBitfieldLValue(src, dst);
+    return;
+
     cgm.errorNYI(dst.getPointer().getLoc(),
                  "emitStoreThroughLValue: non-simple lvalue");
     return;
@@ -321,9 +325,21 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
 
 mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
                                                            LValue dst) {
-  assert(!cir::MissingFeatures::bitfields());
-  cgm.errorNYI("bitfields");
-  return {};
+
+  assert(!cir::MissingFeatures::armComputeVolatileBitfields());
+
+  const CIRGenBitFieldInfo &info = dst.getBitFieldInfo();
+  mlir::Type resLTy = convertTypeForMem(dst.getType());
+  Address ptr = dst.getBitFieldAddress();
+
+  assert(!cir::MissingFeatures::armComputeVolatileBitfields());
+  const bool useVolatile = false;
+
+  mlir::Value dstAddr = dst.getAddress().getPointer();
+
+  return builder.createSetBitfield(dstAddr.getLoc(), resLTy, dstAddr,
+                                   ptr.getElementType(), src.getValue(), info,
+                                   dst.isVolatileQualified(), useVolatile);
 }
 
 RValue CIRGenFunction::emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc) {
@@ -1062,11 +1078,10 @@ LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
     LValue lv = emitLValue(e->getLHS());
 
     SourceLocRAIIObject loc{*this, getLoc(e->getSourceRange())};
-    if (lv.isBitField()) {
-      cgm.errorNYI(e->getSourceRange(), "bitfields");
-      return {};
-    }
-    emitStoreThroughLValue(rv, lv);
+    if (lv.isBitField())
+      emitStoreThroughBitfieldLValue(rv, lv);
+    else
+      emitStoreThroughLValue(rv, lv);
 
     if (getLangOpts().OpenMP) {
       cgm.errorNYI(e->getSourceRange(), "openmp");
@@ -1094,8 +1109,7 @@ RValue CIRGenFunction::emitAnyExpr(const Expr *e, AggValueSlot aggSlot) {
   case cir::TEK_Scalar:
     return RValue::get(emitScalarExpr(e));
   case cir::TEK_Complex:
-    cgm.errorNYI(e->getSourceRange(), "emitAnyExpr: complex type");
-    return RValue::get(nullptr);
+    return RValue::getComplex(emitComplexExpr(e));
   case cir::TEK_Aggregate: {
     if (aggSlot.isIgnored())
       aggSlot = createAggTemp(e->getType(), getLoc(e->getSourceRange()),

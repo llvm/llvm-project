@@ -18,6 +18,8 @@
 
 namespace Fortran::runtime::io {
 
+RT_OFFLOAD_API_GROUP_BEGIN
+
 class IoErrorHandler;
 
 // Points to (but does not own) a CHARACTER scalar or array for internal I/O.
@@ -55,5 +57,8 @@ private:
 
 extern template class InternalDescriptorUnit<Direction::Output>;
 extern template class InternalDescriptorUnit<Direction::Input>;
+
+RT_OFFLOAD_API_GROUP_END
+
 } // namespace Fortran::runtime::io
 #endif // FLANG_RT_RUNTIME_INTERNAL_UNIT_H_
