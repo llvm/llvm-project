@@ -1343,7 +1343,7 @@ def V_FMAMK_F32 : VOP2_Pseudo<"v_fmamk_f32", VOP_MADMK_F32, [], "">, VOPD_Compon
 
 let isCommutable = 1 in
 def V_FMAAK_F32 : VOP2_Pseudo<"v_fmaak_f32", VOP_MADAK_F32, [], "">, VOPD_Component<0x1, "v_fmaak_f32">;
-} // End SubtargetPredicate = HasFmaakFmamkF32Insts, isReMaterializable = 1, FixedSize = 1
+} // End SubtargetPredicate = HasFmaakFmamkF32Insts, isReMaterializable = 1, CanBeVOPD3X = 0, FixedSize = 1
 
 let SubtargetPredicate = HasFmaakFmamkF64Insts, isReMaterializable = 1,
     FixedSize = 1, Size = 12, SchedRW = [Write64Bit] in {

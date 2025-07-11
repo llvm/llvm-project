@@ -2076,6 +2076,7 @@ class getSrcModVOP3VC <ValueType VT, bit IsFake16 = 1> {
                 Int32VCSrcInputMods));
 }
 
+// Return type of input modifiers operand for specified input operand for DPP
 // True16: If the destination is a 16-bit value, the src0 modifier must hold
 // dst's opsel bit. Use a dummy value for DstVT if getting the mod for a src operand besides 0.
 // 64-bit src types are not implemented for True16 dst.
