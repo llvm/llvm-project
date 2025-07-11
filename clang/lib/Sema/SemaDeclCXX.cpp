@@ -9556,9 +9556,9 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
     // and M has a destructor that is non-trivial,
 
     RecordDecl *Parent = Field->getParent();
-    while (Parent &&
-           (Parent->isAnonymousStructOrUnion() ||
-            (Parent->isUnion() && Parent->getIdentifier() == nullptr))) {
+    while (Parent && (Parent->isAnonymousStructOrUnion() ||
+                      ((Parent->isUnion() || Parent->isStruct()) &&
+                       Parent->getIdentifier() == nullptr))) {
       if (auto RD = dyn_cast_or_null<RecordDecl>(Parent->getParent()))
         Parent = RD;
       else

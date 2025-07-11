@@ -50,18 +50,34 @@ union U4 {
 U4 u4; // expected-error {{deleted function}} expected-note@#4 {{non-trivial destructor}}
 
 union U5 {
-  NonTrivial nt;
-  U5* next = nullptr;
+  NonTrivial nt[2] = {1, 2}; // #5
 };
-U5 u5;
+U5 u5; // expected-error {{deleted function}} expected-note@#5 {{non-trivial destructor}}
 
 union U6 {
-  U6() = default;
   NonTrivial nt;
   U6* next = nullptr;
 };
 U6 u6;
 
+union U7 {
+  U7() = default;
+  NonTrivial nt;
+  U6* next = nullptr;
+};
+U7 u7;
+
+union U8 {
+    struct {
+        NonTrivial x;
+    };
+} u8;
+
+union U9 {
+    struct {
+        NonTrivial x = 1; // #6
+    };
+} u9; // expected-error {{deleted function}}
 
 struct DeletedDtor {
   ~DeletedDtor() = delete; // expected-note 2 {{deleted here}}
