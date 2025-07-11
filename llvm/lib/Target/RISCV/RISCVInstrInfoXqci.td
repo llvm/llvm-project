@@ -1356,6 +1356,11 @@ class SelectQCbi<CondCode Cond, DAGOperand InTyImm, Pseudo OpNode >
           (OpNode GPRNoX0:$lhs, InTyImm:$Constant,
            (IntCCtoRISCVCC $cc), GPRNoX0:$truev, GPRNoX0:$falsev)>;
 
+let Predicates = [HasVendorXqciac, IsRV32] in {
+def : Pat<(XLenVT (add GPRNoX0:$rd, (mul GPRNoX0:$rs1, simm12:$imm12))),
+          (QC_MULIADD GPRNoX0:$rd, GPRNoX0:$rs1, simm12:$imm12)>;
+} // Predicates = [HasVendorXqciac, IsRV32]
+
 /// Simple arithmetic operations
 
 let Predicates = [HasVendorXqcilia, IsRV32] in {
