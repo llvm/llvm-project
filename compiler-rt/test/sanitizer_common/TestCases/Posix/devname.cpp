@@ -1,5 +1,6 @@
 // RUN: %clangxx -O0 -g %s -o %t && %run %t 2>&1 | FileCheck %s
-// UNSUPPORTED: target={{.*(linux|solaris).*}}
+// AIX does not define devname_r()
+// UNSUPPORTED: target={{.*(linux|solaris|aix).*}}
 
 #include <assert.h>
 #include <stdio.h>

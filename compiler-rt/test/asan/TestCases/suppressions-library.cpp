@@ -12,6 +12,11 @@
 // FIXME: Upload suppressions to device.
 // XFAIL: android
 
+// For this case, crash_function(which calls malloc/free) is compiled to a shared library,
+// However intercepting symbols in a shared library is still unsupported.
+
+// UNSUPPORTED: target={{.*aix.*}}
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
