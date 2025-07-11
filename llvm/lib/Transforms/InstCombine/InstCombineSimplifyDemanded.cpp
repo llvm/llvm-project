@@ -991,9 +991,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         Value *InnerPtr;
         uint64_t GEPIndex;
         uint64_t PtrMaskImmediate;
-        if (match(I, m_Intrinsic<Intrinsic::ptrmask>(
-                         m_PtrAdd(m_Value(InnerPtr), m_ConstantInt(GEPIndex)),
-                         m_ConstantInt(PtrMaskImmediate)))) {
+        if (match(I,
+                  m_Intrinsic<Intrinsic::ptrmask>(
+                      m_PtrAdd(DL, m_Value(InnerPtr), m_ConstantInt(GEPIndex)),
+                      m_ConstantInt(PtrMaskImmediate)))) {
 
           LHSKnown = computeKnownBits(InnerPtr, I, Depth + 1);
           if (!LHSKnown.isZero()) {
