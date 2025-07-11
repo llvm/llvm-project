@@ -199,8 +199,9 @@ define <2 x half> @v_test_canonicalize_build_vector_v2f16(half %lo, half %hi) #1
 ; VI-LABEL: v_test_canonicalize_build_vector_v2f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v1, v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
+; VI-NEXT:    v_mov_b32_e32 v2, 0x3c00
+; VI-NEXT:    v_mul_f16_e32 v0, 1.0, v0
+; VI-NEXT:    v_mul_f16_sdwa v1, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1394,10 +1395,11 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2f16(ptr addrspace(1) %out) 
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    flat_load_dword v0, v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v1, 0x3c00
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v1, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    v_or_b32_e32 v2, v0, v1
+; VI-NEXT:    v_mul_f16_e32 v2, 1.0, v0
+; VI-NEXT:    v_mul_f16_sdwa v0, v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_or_b32_e32 v2, v2, v0
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_dword v[0:1], v2
@@ -1468,10 +1470,11 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_v2f16(ptr addrspace(1) %
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    flat_load_dword v0, v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v1, 0x3c00
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v1, |v0|, |v0| dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e64 v0, |v0|, |v0|
-; VI-NEXT:    v_or_b32_e32 v2, v0, v1
+; VI-NEXT:    v_mul_f16_e64 v2, |v0|, 1.0
+; VI-NEXT:    v_mul_f16_sdwa v0, |v0|, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_or_b32_e32 v2, v2, v0
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_dword v[0:1], v2
@@ -1545,10 +1548,11 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_v2f16(ptr addrspace
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    flat_load_dword v0, v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v1, 0x3c00
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v1, -|v0|, -|v0| dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e64 v0, -|v0|, -|v0|
-; VI-NEXT:    v_or_b32_e32 v2, v0, v1
+; VI-NEXT:    v_mul_f16_e64 v2, -|v0|, 1.0
+; VI-NEXT:    v_mul_f16_sdwa v0, -|v0|, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_or_b32_e32 v2, v2, v0
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_dword v[0:1], v2
@@ -1624,10 +1628,11 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_v2f16(ptr addrspace(1) %
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    flat_load_dword v0, v[0:1]
+; VI-NEXT:    v_mov_b32_e32 v1, 0x3c00
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v1, -v0, -v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e64 v0, -v0, -v0
-; VI-NEXT:    v_or_b32_e32 v2, v0, v1
+; VI-NEXT:    v_mul_f16_e64 v2, -v0, 1.0
+; VI-NEXT:    v_mul_f16_sdwa v0, -v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_or_b32_e32 v2, v2, v0
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_dword v[0:1], v2
@@ -1695,12 +1700,13 @@ define amdgpu_kernel void @s_test_canonicalize_var_v2f16(ptr addrspace(1) %out, 
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; VI-NEXT:    v_mov_b32_e32 v0, 0x3c00
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_lshr_b32 s3, s2, 16
-; VI-NEXT:    v_mov_b32_e32 v1, s3
-; VI-NEXT:    v_max_f16_e64 v0, s2, s2
-; VI-NEXT:    v_max_f16_sdwa v1, v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-NEXT:    v_or_b32_e32 v2, v0, v1
+; VI-NEXT:    v_mul_f16_e64 v1, s2, 1.0
+; VI-NEXT:    s_lshr_b32 s2, s2, 16
+; VI-NEXT:    v_mov_b32_e32 v2, s2
+; VI-NEXT:    v_mul_f16_sdwa v0, v2, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-NEXT:    v_or_b32_e32 v2, v1, v0
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_dword v[0:1], v2
@@ -2425,9 +2431,10 @@ define <3 x half> @v_test_canonicalize_var_v3f16(<3 x half> %val) #1 {
 ; VI-LABEL: v_test_canonicalize_var_v3f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v2, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    v_max_f16_e32 v1, v1, v1
+; VI-NEXT:    v_mov_b32_e32 v2, 0x3c00
+; VI-NEXT:    v_mul_f16_sdwa v2, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v0, 1.0, v0
+; VI-NEXT:    v_mul_f16_e32 v1, 1.0, v1
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v2
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2463,12 +2470,13 @@ define <4 x half> @v_test_canonicalize_var_v4f16(<4 x half> %val) #1 {
 ; VI-LABEL: v_test_canonicalize_var_v4f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v2, v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v3, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v1, v1, v1
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    v_or_b32_e32 v0, v0, v3
-; VI-NEXT:    v_or_b32_e32 v1, v1, v2
+; VI-NEXT:    v_mov_b32_e32 v2, 0x3c00
+; VI-NEXT:    v_mul_f16_sdwa v3, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v1, 1.0, v1
+; VI-NEXT:    v_mul_f16_sdwa v2, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v0, 1.0, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v2
+; VI-NEXT:    v_or_b32_e32 v1, v1, v3
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_test_canonicalize_var_v4f16:
@@ -2883,9 +2891,11 @@ define <4 x half> @v_test_canonicalize_reg_undef_undef_undef_v4f16(half %val) #1
 ; VI-LABEL: v_test_canonicalize_reg_undef_undef_undef_v4f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    v_or_b32_e32 v0, 0x7e000000, v0
-; VI-NEXT:    v_mov_b32_e32 v1, 0x7e007e00
+; VI-NEXT:    v_mul_f16_e64 v1, s4, 1.0
+; VI-NEXT:    v_mul_f16_e32 v0, 1.0, v0
+; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v1
+; VI-NEXT:    v_or_b32_e32 v0, v0, v2
+; VI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_test_canonicalize_reg_undef_undef_undef_v4f16:
@@ -2932,10 +2942,13 @@ define <4 x half> @v_test_canonicalize_reg_reg_undef_undef_v4f16(half %val0, hal
 ; VI-LABEL: v_test_canonicalize_reg_reg_undef_undef_v4f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    v_max_f16_sdwa v1, v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-NEXT:    v_mov_b32_e32 v3, 0x3c00
+; VI-NEXT:    v_mul_f16_e64 v2, s4, 1.0
+; VI-NEXT:    v_mul_f16_sdwa v1, v1, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v0, 1.0, v0
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v1
-; VI-NEXT:    v_mov_b32_e32 v1, 0x7e007e00
+; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
+; VI-NEXT:    v_or_b32_e32 v1, v2, v1
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_test_canonicalize_reg_reg_undef_undef_v4f16:
@@ -2985,10 +2998,13 @@ define <4 x half> @v_test_canonicalize_reg_undef_reg_reg_v4f16(half %val0, half 
 ; VI-LABEL: v_test_canonicalize_reg_undef_reg_reg_v4f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_e32 v1, v1, v1
-; VI-NEXT:    v_max_f16_sdwa v2, v2, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    v_or_b32_e32 v0, 0x7e000000, v0
+; VI-NEXT:    v_mov_b32_e32 v3, 0x3c00
+; VI-NEXT:    v_mov_b32_e32 v4, s4
+; VI-NEXT:    v_mul_f16_sdwa v2, v2, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v1, 1.0, v1
+; VI-NEXT:    v_mul_f16_sdwa v3, v4, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v0, 1.0, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v3
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v2
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3044,15 +3060,16 @@ define <6 x half> @v_test_canonicalize_var_v6f16(<6 x half> %val) #1 {
 ; VI-LABEL: v_test_canonicalize_var_v6f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v3, v2, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v4, v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v5, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v2, v2, v2
-; VI-NEXT:    v_max_f16_e32 v1, v1, v1
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    v_or_b32_e32 v0, v0, v5
-; VI-NEXT:    v_or_b32_e32 v1, v1, v4
-; VI-NEXT:    v_or_b32_e32 v2, v2, v3
+; VI-NEXT:    v_mov_b32_e32 v3, 0x3c00
+; VI-NEXT:    v_mul_f16_sdwa v4, v2, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v2, 1.0, v2
+; VI-NEXT:    v_mul_f16_sdwa v5, v1, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v1, 1.0, v1
+; VI-NEXT:    v_mul_f16_sdwa v3, v0, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v0, 1.0, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v3
+; VI-NEXT:    v_or_b32_e32 v1, v1, v5
+; VI-NEXT:    v_or_b32_e32 v2, v2, v4
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_test_canonicalize_var_v6f16:
@@ -3095,18 +3112,19 @@ define <8 x half> @v_test_canonicalize_var_v8f16(<8 x half> %val) #1 {
 ; VI-LABEL: v_test_canonicalize_var_v8f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v4, v3, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v5, v2, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v6, v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v7, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v3, v3, v3
-; VI-NEXT:    v_max_f16_e32 v2, v2, v2
-; VI-NEXT:    v_max_f16_e32 v1, v1, v1
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    v_or_b32_e32 v0, v0, v7
-; VI-NEXT:    v_or_b32_e32 v1, v1, v6
-; VI-NEXT:    v_or_b32_e32 v2, v2, v5
-; VI-NEXT:    v_or_b32_e32 v3, v3, v4
+; VI-NEXT:    v_mov_b32_e32 v4, 0x3c00
+; VI-NEXT:    v_mul_f16_sdwa v5, v3, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v3, 1.0, v3
+; VI-NEXT:    v_mul_f16_sdwa v6, v2, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v2, 1.0, v2
+; VI-NEXT:    v_mul_f16_sdwa v7, v1, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v1, 1.0, v1
+; VI-NEXT:    v_mul_f16_sdwa v4, v0, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v0, 1.0, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v4
+; VI-NEXT:    v_or_b32_e32 v1, v1, v7
+; VI-NEXT:    v_or_b32_e32 v2, v2, v6
+; VI-NEXT:    v_or_b32_e32 v3, v3, v5
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_test_canonicalize_var_v8f16:
@@ -3155,24 +3173,25 @@ define <12 x half> @v_test_canonicalize_var_v12f16(<12 x half> %val) #1 {
 ; VI-LABEL: v_test_canonicalize_var_v12f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v6, v5, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v7, v4, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v8, v3, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v9, v2, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v10, v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v11, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v5, v5, v5
-; VI-NEXT:    v_max_f16_e32 v4, v4, v4
-; VI-NEXT:    v_max_f16_e32 v3, v3, v3
-; VI-NEXT:    v_max_f16_e32 v2, v2, v2
-; VI-NEXT:    v_max_f16_e32 v1, v1, v1
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    v_or_b32_e32 v0, v0, v11
-; VI-NEXT:    v_or_b32_e32 v1, v1, v10
-; VI-NEXT:    v_or_b32_e32 v2, v2, v9
-; VI-NEXT:    v_or_b32_e32 v3, v3, v8
-; VI-NEXT:    v_or_b32_e32 v4, v4, v7
-; VI-NEXT:    v_or_b32_e32 v5, v5, v6
+; VI-NEXT:    v_mov_b32_e32 v6, 0x3c00
+; VI-NEXT:    v_mul_f16_sdwa v7, v5, v6 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v5, 1.0, v5
+; VI-NEXT:    v_mul_f16_sdwa v8, v4, v6 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v4, 1.0, v4
+; VI-NEXT:    v_mul_f16_sdwa v9, v3, v6 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v3, 1.0, v3
+; VI-NEXT:    v_mul_f16_sdwa v10, v2, v6 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v2, 1.0, v2
+; VI-NEXT:    v_mul_f16_sdwa v11, v1, v6 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v1, 1.0, v1
+; VI-NEXT:    v_mul_f16_sdwa v6, v0, v6 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v0, 1.0, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v6
+; VI-NEXT:    v_or_b32_e32 v1, v1, v11
+; VI-NEXT:    v_or_b32_e32 v2, v2, v10
+; VI-NEXT:    v_or_b32_e32 v3, v3, v9
+; VI-NEXT:    v_or_b32_e32 v4, v4, v8
+; VI-NEXT:    v_or_b32_e32 v5, v5, v7
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_test_canonicalize_var_v12f16:
@@ -3233,30 +3252,31 @@ define <16 x half> @v_test_canonicalize_var_v16f16(<16 x half> %val) #1 {
 ; VI-LABEL: v_test_canonicalize_var_v16f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v8, v7, v7 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v9, v6, v6 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v10, v5, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v11, v4, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v12, v3, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v13, v2, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v14, v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v15, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v7, v7, v7
-; VI-NEXT:    v_max_f16_e32 v6, v6, v6
-; VI-NEXT:    v_max_f16_e32 v5, v5, v5
-; VI-NEXT:    v_max_f16_e32 v4, v4, v4
-; VI-NEXT:    v_max_f16_e32 v3, v3, v3
-; VI-NEXT:    v_max_f16_e32 v2, v2, v2
-; VI-NEXT:    v_max_f16_e32 v1, v1, v1
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    v_or_b32_e32 v0, v0, v15
-; VI-NEXT:    v_or_b32_e32 v1, v1, v14
-; VI-NEXT:    v_or_b32_e32 v2, v2, v13
-; VI-NEXT:    v_or_b32_e32 v3, v3, v12
-; VI-NEXT:    v_or_b32_e32 v4, v4, v11
-; VI-NEXT:    v_or_b32_e32 v5, v5, v10
-; VI-NEXT:    v_or_b32_e32 v6, v6, v9
-; VI-NEXT:    v_or_b32_e32 v7, v7, v8
+; VI-NEXT:    v_mov_b32_e32 v8, 0x3c00
+; VI-NEXT:    v_mul_f16_sdwa v9, v7, v8 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v7, 1.0, v7
+; VI-NEXT:    v_mul_f16_sdwa v10, v6, v8 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v6, 1.0, v6
+; VI-NEXT:    v_mul_f16_sdwa v11, v5, v8 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v5, 1.0, v5
+; VI-NEXT:    v_mul_f16_sdwa v12, v4, v8 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v4, 1.0, v4
+; VI-NEXT:    v_mul_f16_sdwa v13, v3, v8 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v3, 1.0, v3
+; VI-NEXT:    v_mul_f16_sdwa v14, v2, v8 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v2, 1.0, v2
+; VI-NEXT:    v_mul_f16_sdwa v15, v1, v8 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v1, 1.0, v1
+; VI-NEXT:    v_mul_f16_sdwa v8, v0, v8 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v0, 1.0, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v8
+; VI-NEXT:    v_or_b32_e32 v1, v1, v15
+; VI-NEXT:    v_or_b32_e32 v2, v2, v14
+; VI-NEXT:    v_or_b32_e32 v3, v3, v13
+; VI-NEXT:    v_or_b32_e32 v4, v4, v12
+; VI-NEXT:    v_or_b32_e32 v5, v5, v11
+; VI-NEXT:    v_or_b32_e32 v6, v6, v10
+; VI-NEXT:    v_or_b32_e32 v7, v7, v9
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_test_canonicalize_var_v16f16:
@@ -3329,54 +3349,55 @@ define <32 x half> @v_test_canonicalize_var_v32f16(<32 x half> %val) #1 {
 ; VI-LABEL: v_test_canonicalize_var_v32f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v19, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
+; VI-NEXT:    v_mov_b32_e32 v16, 0x3c00
+; VI-NEXT:    v_mul_f16_sdwa v19, v0, v16 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v0, 1.0, v0
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v19
-; VI-NEXT:    v_max_f16_sdwa v19, v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v1, v1, v1
+; VI-NEXT:    v_mul_f16_sdwa v19, v1, v16 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v1, 1.0, v1
 ; VI-NEXT:    v_or_b32_e32 v1, v1, v19
-; VI-NEXT:    v_max_f16_sdwa v19, v2, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v2, v2, v2
+; VI-NEXT:    v_mul_f16_sdwa v19, v2, v16 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v2, 1.0, v2
 ; VI-NEXT:    v_or_b32_e32 v2, v2, v19
-; VI-NEXT:    v_max_f16_sdwa v19, v3, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v3, v3, v3
+; VI-NEXT:    v_mul_f16_sdwa v19, v3, v16 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v3, 1.0, v3
 ; VI-NEXT:    v_or_b32_e32 v3, v3, v19
-; VI-NEXT:    v_max_f16_sdwa v19, v4, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v4, v4, v4
+; VI-NEXT:    v_mul_f16_sdwa v19, v4, v16 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v4, 1.0, v4
 ; VI-NEXT:    v_or_b32_e32 v4, v4, v19
-; VI-NEXT:    v_max_f16_sdwa v19, v5, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v5, v5, v5
+; VI-NEXT:    v_mul_f16_sdwa v19, v5, v16 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v5, 1.0, v5
 ; VI-NEXT:    v_or_b32_e32 v5, v5, v19
-; VI-NEXT:    v_max_f16_sdwa v19, v6, v6 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v6, v6, v6
+; VI-NEXT:    v_mul_f16_sdwa v19, v6, v16 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v6, 1.0, v6
 ; VI-NEXT:    v_or_b32_e32 v6, v6, v19
-; VI-NEXT:    v_max_f16_sdwa v19, v7, v7 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v7, v7, v7
+; VI-NEXT:    v_mul_f16_sdwa v19, v7, v16 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v7, 1.0, v7
 ; VI-NEXT:    v_or_b32_e32 v7, v7, v19
-; VI-NEXT:    v_max_f16_sdwa v19, v8, v8 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v8, v8, v8
+; VI-NEXT:    v_mul_f16_sdwa v19, v8, v16 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v8, 1.0, v8
 ; VI-NEXT:    v_or_b32_e32 v8, v8, v19
-; VI-NEXT:    v_max_f16_sdwa v19, v9, v9 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v9, v9, v9
+; VI-NEXT:    v_mul_f16_sdwa v19, v9, v16 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v9, 1.0, v9
 ; VI-NEXT:    v_or_b32_e32 v9, v9, v19
-; VI-NEXT:    v_max_f16_sdwa v19, v10, v10 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v10, v10, v10
+; VI-NEXT:    v_mul_f16_sdwa v19, v10, v16 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v10, 1.0, v10
 ; VI-NEXT:    v_or_b32_e32 v10, v10, v19
-; VI-NEXT:    v_max_f16_sdwa v19, v11, v11 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v11, v11, v11
-; VI-NEXT:    v_max_f16_sdwa v16, v15, v15 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v17, v14, v14 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v18, v13, v13 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT:    v_mul_f16_sdwa v19, v11, v16 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v11, 1.0, v11
+; VI-NEXT:    v_mul_f16_sdwa v17, v15, v16 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v15, 1.0, v15
+; VI-NEXT:    v_mul_f16_sdwa v18, v14, v16 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v14, 1.0, v14
 ; VI-NEXT:    v_or_b32_e32 v11, v11, v19
-; VI-NEXT:    v_max_f16_sdwa v19, v12, v12 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v15, v15, v15
-; VI-NEXT:    v_max_f16_e32 v14, v14, v14
-; VI-NEXT:    v_max_f16_e32 v13, v13, v13
-; VI-NEXT:    v_max_f16_e32 v12, v12, v12
-; VI-NEXT:    v_or_b32_e32 v12, v12, v19
-; VI-NEXT:    v_or_b32_e32 v13, v13, v18
-; VI-NEXT:    v_or_b32_e32 v14, v14, v17
-; VI-NEXT:    v_or_b32_e32 v15, v15, v16
+; VI-NEXT:    v_mul_f16_sdwa v19, v13, v16 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v13, 1.0, v13
+; VI-NEXT:    v_mul_f16_sdwa v16, v12, v16 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v12, 1.0, v12
+; VI-NEXT:    v_or_b32_e32 v12, v12, v16
+; VI-NEXT:    v_or_b32_e32 v13, v13, v19
+; VI-NEXT:    v_or_b32_e32 v14, v14, v18
+; VI-NEXT:    v_or_b32_e32 v15, v15, v17
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_test_canonicalize_var_v32f16:
@@ -3499,104 +3520,105 @@ define <64 x half> @v_test_canonicalize_var_v64f16(<64 x half> %val) #1 {
 ; VI-LABEL: v_test_canonicalize_var_v64f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v31, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    v_or_b32_e32 v0, v0, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v1, v1, v1
-; VI-NEXT:    v_or_b32_e32 v1, v1, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v2, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v2, v2, v2
-; VI-NEXT:    v_or_b32_e32 v2, v2, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v3, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v3, v3, v3
-; VI-NEXT:    v_or_b32_e32 v3, v3, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v4, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v4, v4, v4
-; VI-NEXT:    v_or_b32_e32 v4, v4, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v5, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v5, v5, v5
-; VI-NEXT:    v_or_b32_e32 v5, v5, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v6, v6 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v6, v6, v6
-; VI-NEXT:    v_or_b32_e32 v6, v6, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v7, v7 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v7, v7, v7
-; VI-NEXT:    v_or_b32_e32 v7, v7, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v8, v8 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v8, v8, v8
-; VI-NEXT:    v_or_b32_e32 v8, v8, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v9, v9 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v9, v9, v9
-; VI-NEXT:    v_or_b32_e32 v9, v9, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v10, v10 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v10, v10, v10
-; VI-NEXT:    v_or_b32_e32 v10, v10, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v11, v11 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v11, v11, v11
-; VI-NEXT:    v_or_b32_e32 v11, v11, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v12, v12 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v12, v12, v12
-; VI-NEXT:    v_or_b32_e32 v12, v12, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v13, v13 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v13, v13, v13
-; VI-NEXT:    v_or_b32_e32 v13, v13, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v14, v14 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v14, v14, v14
-; VI-NEXT:    v_or_b32_e32 v14, v14, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v15, v15 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v15, v15, v15
-; VI-NEXT:    v_or_b32_e32 v15, v15, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v16, v16 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v16, v16, v16
-; VI-NEXT:    v_or_b32_e32 v16, v16, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v17, v17 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v17, v17, v17
-; VI-NEXT:    v_or_b32_e32 v17, v17, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v18, v18 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v18, v18, v18
-; VI-NEXT:    v_or_b32_e32 v18, v18, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v19, v19 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v19, v19, v19
-; VI-NEXT:    v_or_b32_e32 v19, v19, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v20, v20 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v20, v20, v20
-; VI-NEXT:    v_or_b32_e32 v20, v20, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v21, v21 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v21, v21, v21
-; VI-NEXT:    v_or_b32_e32 v21, v21, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v22, v22 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v22, v22, v22
-; VI-NEXT:    v_or_b32_e32 v22, v22, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v23, v23 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v23, v23, v23
-; VI-NEXT:    v_or_b32_e32 v23, v23, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v24, v24 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v24, v24, v24
-; VI-NEXT:    v_or_b32_e32 v24, v24, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v25, v25 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v25, v25, v25
-; VI-NEXT:    v_or_b32_e32 v25, v25, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v26, v26 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v26, v26, v26
-; VI-NEXT:    v_or_b32_e32 v26, v26, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v27, v27 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v27, v27, v27
-; VI-NEXT:    v_or_b32_e32 v27, v27, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v28, v28 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v28, v28, v28
-; VI-NEXT:    v_or_b32_e32 v28, v28, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v29, v29 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v29, v29, v29
-; VI-NEXT:    v_or_b32_e32 v29, v29, v31
-; VI-NEXT:    v_max_f16_sdwa v31, v30, v30 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v30, v30, v30
-; VI-NEXT:    v_or_b32_e32 v30, v30, v31
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; VI-NEXT:    v_mov_b32_e32 v31, 0x3c00
+; VI-NEXT:    v_mul_f16_sdwa v32, v0, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v0, 1.0, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v1, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v1, 1.0, v1
+; VI-NEXT:    v_or_b32_e32 v1, v1, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v2, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v2, 1.0, v2
+; VI-NEXT:    v_or_b32_e32 v2, v2, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v3, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v3, 1.0, v3
+; VI-NEXT:    v_or_b32_e32 v3, v3, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v4, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v4, 1.0, v4
+; VI-NEXT:    v_or_b32_e32 v4, v4, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v5, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v5, 1.0, v5
+; VI-NEXT:    v_or_b32_e32 v5, v5, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v6, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v6, 1.0, v6
+; VI-NEXT:    v_or_b32_e32 v6, v6, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v7, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v7, 1.0, v7
+; VI-NEXT:    v_or_b32_e32 v7, v7, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v8, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v8, 1.0, v8
+; VI-NEXT:    v_or_b32_e32 v8, v8, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v9, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v9, 1.0, v9
+; VI-NEXT:    v_or_b32_e32 v9, v9, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v10, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v10, 1.0, v10
+; VI-NEXT:    v_or_b32_e32 v10, v10, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v11, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v11, 1.0, v11
+; VI-NEXT:    v_or_b32_e32 v11, v11, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v12, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v12, 1.0, v12
+; VI-NEXT:    v_or_b32_e32 v12, v12, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v13, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v13, 1.0, v13
+; VI-NEXT:    v_or_b32_e32 v13, v13, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v14, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v14, 1.0, v14
+; VI-NEXT:    v_or_b32_e32 v14, v14, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v15, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v15, 1.0, v15
+; VI-NEXT:    v_or_b32_e32 v15, v15, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v16, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v16, 1.0, v16
+; VI-NEXT:    v_or_b32_e32 v16, v16, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v17, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v17, 1.0, v17
+; VI-NEXT:    v_or_b32_e32 v17, v17, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v18, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v18, 1.0, v18
+; VI-NEXT:    v_or_b32_e32 v18, v18, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v19, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v19, 1.0, v19
+; VI-NEXT:    v_or_b32_e32 v19, v19, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v20, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v20, 1.0, v20
+; VI-NEXT:    v_or_b32_e32 v20, v20, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v21, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v21, 1.0, v21
+; VI-NEXT:    v_or_b32_e32 v21, v21, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v22, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v22, 1.0, v22
+; VI-NEXT:    v_or_b32_e32 v22, v22, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v23, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v23, 1.0, v23
+; VI-NEXT:    v_or_b32_e32 v23, v23, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v24, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v24, 1.0, v24
+; VI-NEXT:    v_or_b32_e32 v24, v24, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v25, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v25, 1.0, v25
+; VI-NEXT:    v_or_b32_e32 v25, v25, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v26, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v26, 1.0, v26
+; VI-NEXT:    v_or_b32_e32 v26, v26, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v27, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v27, 1.0, v27
+; VI-NEXT:    v_or_b32_e32 v27, v27, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v28, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v28, 1.0, v28
+; VI-NEXT:    v_or_b32_e32 v28, v28, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v29, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v29, 1.0, v29
+; VI-NEXT:    v_or_b32_e32 v29, v29, v32
+; VI-NEXT:    v_mul_f16_sdwa v32, v30, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v30, 1.0, v30
+; VI-NEXT:    v_or_b32_e32 v30, v30, v32
+; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v32, v31, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v31, v31, v31
-; VI-NEXT:    v_or_b32_e32 v31, v31, v32
+; VI-NEXT:    v_mul_f16_sdwa v31, v32, v31 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; VI-NEXT:    v_mul_f16_e32 v32, 1.0, v32
+; VI-NEXT:    v_or_b32_e32 v31, v32, v31
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_test_canonicalize_var_v64f16:

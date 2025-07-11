@@ -2506,9 +2506,9 @@ define amdgpu_kernel void @test_canonicalize_value_v2f16_flush(ptr addrspace(1) 
 ; GFX8-NEXT:    v_mov_b32_e32 v1, 0x3c00
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    v_mul_f16_sdwa v1, v1, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX8-NEXT:    v_mul_f16_e32 v0, 1.0, v0
-; GFX8-NEXT:    v_or_b32_e32 v4, v0, v1
+; GFX8-NEXT:    v_mul_f16_e32 v4, 1.0, v0
+; GFX8-NEXT:    v_mul_f16_sdwa v0, v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-NEXT:    v_or_b32_e32 v4, v4, v0
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s2, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
 ; GFX8-NEXT:    flat_store_dword v[0:1], v4
@@ -2886,14 +2886,15 @@ define amdgpu_kernel void @test_canonicalize_value_v2f16_denorm(ptr addrspace(1)
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s0, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dword v0, v[0:1]
-; GFX8-NEXT:    v_mov_b32_e32 v1, s3
+; GFX8-NEXT:    v_mov_b32_e32 v1, 0x3c00
+; GFX8-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    v_max_f16_sdwa v3, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; GFX8-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX8-NEXT:    v_or_b32_e32 v3, v0, v3
+; GFX8-NEXT:    v_mul_f16_e32 v4, 1.0, v0
+; GFX8-NEXT:    v_mul_f16_sdwa v0, v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-NEXT:    v_or_b32_e32 v4, v4, v0
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s2, v2
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_store_dword v[0:1], v3
+; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
+; GFX8-NEXT:    flat_store_dword v[0:1], v4
 ; GFX8-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: test_canonicalize_value_v2f16_denorm:
@@ -2957,8 +2958,8 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2f64(ptr addrspace(1) %out) 
 ; GFX6-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX6-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
-; GFX6-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
-; GFX6-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX6-NEXT:    v_mul_f64 v[2:3], v[2:3], 1.0
+; GFX6-NEXT:    v_mul_f64 v[0:1], v[0:1], 1.0
 ; GFX6-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GFX6-NEXT:    s_endpgm
 ;
@@ -2977,8 +2978,8 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2f64(ptr addrspace(1) %out) 
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
-; GFX8-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX8-NEXT:    v_mul_f64 v[2:3], v[2:3], 1.0
+; GFX8-NEXT:    v_mul_f64 v[0:1], v[0:1], 1.0
 ; GFX8-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GFX8-NEXT:    s_endpgm
 ;
@@ -2990,8 +2991,8 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2f64(ptr addrspace(1) %out) 
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
-; GFX9-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX9-NEXT:    v_mul_f64 v[2:3], v[2:3], 1.0
+; GFX9-NEXT:    v_mul_f64 v[0:1], v[0:1], 1.0
 ; GFX9-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -3005,8 +3006,8 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2f64(ptr addrspace(1) %out) 
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_load_b128 v[0:3], v0, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
-; GFX11-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX11-NEXT:    v_mul_f64 v[2:3], v[2:3], 1.0
+; GFX11-NEXT:    v_mul_f64 v[0:1], v[0:1], 1.0
 ; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -3020,8 +3021,8 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2f64(ptr addrspace(1) %out) 
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    global_load_b128 v[0:3], v0, s[0:1]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[2:3]
-; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
+; GFX12-NEXT:    v_mul_f64_e32 v[2:3], 1.0, v[2:3]
+; GFX12-NEXT:    v_mul_f64_e32 v[0:1], 1.0, v[0:1]
 ; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
 ; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -3044,14 +3045,14 @@ define <2 x float> @v_test_canonicalize_v2f32_flush(<2 x float> %arg) #1 {
 ; GFX9-LABEL: v_test_canonicalize_v2f32_flush:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f32_e32 v0, v0, v0
-; GFX9-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX9-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GFX9-NEXT:    v_mul_f32_e32 v1, 1.0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_test_canonicalize_v2f32_flush:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
+; GFX11-NEXT:    v_dual_mul_f32 v0, 1.0, v0 :: v_dual_mul_f32 v1, 1.0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: v_test_canonicalize_v2f32_flush:
@@ -3061,7 +3062,7 @@ define <2 x float> @v_test_canonicalize_v2f32_flush(<2 x float> %arg) #1 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
+; GFX12-NEXT:    v_dual_mul_f32 v0, 1.0, v0 :: v_dual_mul_f32 v1, 1.0, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %canon = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %arg)
   ret <2 x float> %canon
@@ -3080,16 +3081,16 @@ define <3 x float> @v_test_canonicalize_v3f32_flush(<3 x float> %arg) #1 {
 ; GFX9-LABEL: v_test_canonicalize_v3f32_flush:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f32_e32 v0, v0, v0
-; GFX9-NEXT:    v_max_f32_e32 v1, v1, v1
-; GFX9-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX9-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GFX9-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; GFX9-NEXT:    v_mul_f32_e32 v2, 1.0, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_test_canonicalize_v3f32_flush:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
-; GFX11-NEXT:    v_max_f32_e32 v2, v2, v2
+; GFX11-NEXT:    v_dual_mul_f32 v0, 1.0, v0 :: v_dual_mul_f32 v1, 1.0, v1
+; GFX11-NEXT:    v_mul_f32_e32 v2, 1.0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: v_test_canonicalize_v3f32_flush:
@@ -3099,8 +3100,8 @@ define <3 x float> @v_test_canonicalize_v3f32_flush(<3 x float> %arg) #1 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
-; GFX12-NEXT:    v_max_num_f32_e32 v2, v2, v2
+; GFX12-NEXT:    v_dual_mul_f32 v0, 1.0, v0 :: v_dual_mul_f32 v1, 1.0, v1
+; GFX12-NEXT:    v_mul_f32_e32 v2, 1.0, v2
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %canon = call <3 x float> @llvm.canonicalize.v3f32(<3 x float> %arg)
   ret <3 x float> %canon
@@ -3120,17 +3121,17 @@ define <4 x float> @v_test_canonicalize_v4f32_flush(<4 x float> %arg) #1 {
 ; GFX9-LABEL: v_test_canonicalize_v4f32_flush:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f32_e32 v0, v0, v0
-; GFX9-NEXT:    v_max_f32_e32 v1, v1, v1
-; GFX9-NEXT:    v_max_f32_e32 v2, v2, v2
-; GFX9-NEXT:    v_max_f32_e32 v3, v3, v3
+; GFX9-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GFX9-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; GFX9-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; GFX9-NEXT:    v_mul_f32_e32 v3, 1.0, v3
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_test_canonicalize_v4f32_flush:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
-; GFX11-NEXT:    v_dual_max_f32 v2, v2, v2 :: v_dual_max_f32 v3, v3, v3
+; GFX11-NEXT:    v_dual_mul_f32 v0, 1.0, v0 :: v_dual_mul_f32 v1, 1.0, v1
+; GFX11-NEXT:    v_dual_mul_f32 v2, 1.0, v2 :: v_dual_mul_f32 v3, 1.0, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: v_test_canonicalize_v4f32_flush:
@@ -3140,8 +3141,8 @@ define <4 x float> @v_test_canonicalize_v4f32_flush(<4 x float> %arg) #1 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
-; GFX12-NEXT:    v_dual_max_num_f32 v2, v2, v2 :: v_dual_max_num_f32 v3, v3, v3
+; GFX12-NEXT:    v_dual_mul_f32 v0, 1.0, v0 :: v_dual_mul_f32 v1, 1.0, v1
+; GFX12-NEXT:    v_dual_mul_f32 v2, 1.0, v2 :: v_dual_mul_f32 v3, 1.0, v3
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %canon = call <4 x float> @llvm.canonicalize.v4f32(<4 x float> %arg)
   ret <4 x float> %canon
@@ -3165,23 +3166,23 @@ define <8 x float> @v_test_canonicalize_v8f32_flush(<8 x float> %arg) #1 {
 ; GFX9-LABEL: v_test_canonicalize_v8f32_flush:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f32_e32 v0, v0, v0
-; GFX9-NEXT:    v_max_f32_e32 v1, v1, v1
-; GFX9-NEXT:    v_max_f32_e32 v2, v2, v2
-; GFX9-NEXT:    v_max_f32_e32 v3, v3, v3
-; GFX9-NEXT:    v_max_f32_e32 v4, v4, v4
-; GFX9-NEXT:    v_max_f32_e32 v5, v5, v5
-; GFX9-NEXT:    v_max_f32_e32 v6, v6, v6
-; GFX9-NEXT:    v_max_f32_e32 v7, v7, v7
+; GFX9-NEXT:    v_mul_f32_e32 v0, 1.0, v0
+; GFX9-NEXT:    v_mul_f32_e32 v1, 1.0, v1
+; GFX9-NEXT:    v_mul_f32_e32 v2, 1.0, v2
+; GFX9-NEXT:    v_mul_f32_e32 v3, 1.0, v3
+; GFX9-NEXT:    v_mul_f32_e32 v4, 1.0, v4
+; GFX9-NEXT:    v_mul_f32_e32 v5, 1.0, v5
+; GFX9-NEXT:    v_mul_f32_e32 v6, 1.0, v6
+; GFX9-NEXT:    v_mul_f32_e32 v7, 1.0, v7
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_test_canonicalize_v8f32_flush:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
-; GFX11-NEXT:    v_dual_max_f32 v2, v2, v2 :: v_dual_max_f32 v3, v3, v3
-; GFX11-NEXT:    v_dual_max_f32 v4, v4, v4 :: v_dual_max_f32 v5, v5, v5
-; GFX11-NEXT:    v_dual_max_f32 v6, v6, v6 :: v_dual_max_f32 v7, v7, v7
+; GFX11-NEXT:    v_dual_mul_f32 v0, 1.0, v0 :: v_dual_mul_f32 v1, 1.0, v1
+; GFX11-NEXT:    v_dual_mul_f32 v2, 1.0, v2 :: v_dual_mul_f32 v3, 1.0, v3
+; GFX11-NEXT:    v_dual_mul_f32 v4, 1.0, v4 :: v_dual_mul_f32 v5, 1.0, v5
+; GFX11-NEXT:    v_dual_mul_f32 v6, 1.0, v6 :: v_dual_mul_f32 v7, 1.0, v7
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: v_test_canonicalize_v8f32_flush:
@@ -3191,10 +3192,10 @@ define <8 x float> @v_test_canonicalize_v8f32_flush(<8 x float> %arg) #1 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_dual_max_num_f32 v0, v0, v0 :: v_dual_max_num_f32 v1, v1, v1
-; GFX12-NEXT:    v_dual_max_num_f32 v2, v2, v2 :: v_dual_max_num_f32 v3, v3, v3
-; GFX12-NEXT:    v_dual_max_num_f32 v4, v4, v4 :: v_dual_max_num_f32 v5, v5, v5
-; GFX12-NEXT:    v_dual_max_num_f32 v6, v6, v6 :: v_dual_max_num_f32 v7, v7, v7
+; GFX12-NEXT:    v_dual_mul_f32 v0, 1.0, v0 :: v_dual_mul_f32 v1, 1.0, v1
+; GFX12-NEXT:    v_dual_mul_f32 v2, 1.0, v2 :: v_dual_mul_f32 v3, 1.0, v3
+; GFX12-NEXT:    v_dual_mul_f32 v4, 1.0, v4 :: v_dual_mul_f32 v5, 1.0, v5
+; GFX12-NEXT:    v_dual_mul_f32 v6, 1.0, v6 :: v_dual_mul_f32 v7, 1.0, v7
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %canon = call <8 x float> @llvm.canonicalize.v8f32(<8 x float> %arg)
   ret <8 x float> %canon
@@ -3204,22 +3205,22 @@ define <2 x double> @v_test_canonicalize_v2f64(<2 x double> %arg) #1 {
 ; GFX678-LABEL: v_test_canonicalize_v2f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX678-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
-; GFX678-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
+; GFX678-NEXT:    v_mul_f64 v[0:1], v[0:1], 1.0
+; GFX678-NEXT:    v_mul_f64 v[2:3], v[2:3], 1.0
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_test_canonicalize_v2f64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
-; GFX9-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
+; GFX9-NEXT:    v_mul_f64 v[0:1], v[0:1], 1.0
+; GFX9-NEXT:    v_mul_f64 v[2:3], v[2:3], 1.0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_test_canonicalize_v2f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
-; GFX11-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
+; GFX11-NEXT:    v_mul_f64 v[0:1], v[0:1], 1.0
+; GFX11-NEXT:    v_mul_f64 v[2:3], v[2:3], 1.0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: v_test_canonicalize_v2f64:
@@ -3229,8 +3230,8 @@ define <2 x double> @v_test_canonicalize_v2f64(<2 x double> %arg) #1 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
-; GFX12-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[2:3]
+; GFX12-NEXT:    v_mul_f64_e32 v[0:1], 1.0, v[0:1]
+; GFX12-NEXT:    v_mul_f64_e32 v[2:3], 1.0, v[2:3]
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %canon = call <2 x double> @llvm.canonicalize.v2f64(<2 x double> %arg)
   ret <2 x double> %canon
@@ -3240,25 +3241,25 @@ define <3 x double> @v_test_canonicalize_v3f64(<3 x double> %arg) #1 {
 ; GFX678-LABEL: v_test_canonicalize_v3f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX678-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
-; GFX678-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
-; GFX678-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
+; GFX678-NEXT:    v_mul_f64 v[0:1], v[0:1], 1.0
+; GFX678-NEXT:    v_mul_f64 v[2:3], v[2:3], 1.0
+; GFX678-NEXT:    v_mul_f64 v[4:5], v[4:5], 1.0
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_test_canonicalize_v3f64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
-; GFX9-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
-; GFX9-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
+; GFX9-NEXT:    v_mul_f64 v[0:1], v[0:1], 1.0
+; GFX9-NEXT:    v_mul_f64 v[2:3], v[2:3], 1.0
+; GFX9-NEXT:    v_mul_f64 v[4:5], v[4:5], 1.0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_test_canonicalize_v3f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
-; GFX11-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
-; GFX11-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
+; GFX11-NEXT:    v_mul_f64 v[0:1], v[0:1], 1.0
+; GFX11-NEXT:    v_mul_f64 v[2:3], v[2:3], 1.0
+; GFX11-NEXT:    v_mul_f64 v[4:5], v[4:5], 1.0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: v_test_canonicalize_v3f64:
@@ -3268,9 +3269,9 @@ define <3 x double> @v_test_canonicalize_v3f64(<3 x double> %arg) #1 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
-; GFX12-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[2:3]
-; GFX12-NEXT:    v_max_num_f64_e32 v[4:5], v[4:5], v[4:5]
+; GFX12-NEXT:    v_mul_f64_e32 v[0:1], 1.0, v[0:1]
+; GFX12-NEXT:    v_mul_f64_e32 v[2:3], 1.0, v[2:3]
+; GFX12-NEXT:    v_mul_f64_e32 v[4:5], 1.0, v[4:5]
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %canon = call <3 x double> @llvm.canonicalize.v3f64(<3 x double> %arg)
   ret <3 x double> %canon
@@ -3280,28 +3281,28 @@ define <4 x double> @v_test_canonicalize_v4f64(<4 x double> %arg) #1 {
 ; GFX678-LABEL: v_test_canonicalize_v4f64:
 ; GFX678:       ; %bb.0:
 ; GFX678-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX678-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
-; GFX678-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
-; GFX678-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
-; GFX678-NEXT:    v_max_f64 v[6:7], v[6:7], v[6:7]
+; GFX678-NEXT:    v_mul_f64 v[0:1], v[0:1], 1.0
+; GFX678-NEXT:    v_mul_f64 v[2:3], v[2:3], 1.0
+; GFX678-NEXT:    v_mul_f64 v[4:5], v[4:5], 1.0
+; GFX678-NEXT:    v_mul_f64 v[6:7], v[6:7], 1.0
 ; GFX678-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_test_canonicalize_v4f64:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
-; GFX9-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
-; GFX9-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
-; GFX9-NEXT:    v_max_f64 v[6:7], v[6:7], v[6:7]
+; GFX9-NEXT:    v_mul_f64 v[0:1], v[0:1], 1.0
+; GFX9-NEXT:    v_mul_f64 v[2:3], v[2:3], 1.0
+; GFX9-NEXT:    v_mul_f64 v[4:5], v[4:5], 1.0
+; GFX9-NEXT:    v_mul_f64 v[6:7], v[6:7], 1.0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_test_canonicalize_v4f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
-; GFX11-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
-; GFX11-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
-; GFX11-NEXT:    v_max_f64 v[6:7], v[6:7], v[6:7]
+; GFX11-NEXT:    v_mul_f64 v[0:1], v[0:1], 1.0
+; GFX11-NEXT:    v_mul_f64 v[2:3], v[2:3], 1.0
+; GFX11-NEXT:    v_mul_f64 v[4:5], v[4:5], 1.0
+; GFX11-NEXT:    v_mul_f64 v[6:7], v[6:7], 1.0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: v_test_canonicalize_v4f64:
@@ -3311,10 +3312,10 @@ define <4 x double> @v_test_canonicalize_v4f64(<4 x double> %arg) #1 {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
-; GFX12-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[2:3]
-; GFX12-NEXT:    v_max_num_f64_e32 v[4:5], v[4:5], v[4:5]
-; GFX12-NEXT:    v_max_num_f64_e32 v[6:7], v[6:7], v[6:7]
+; GFX12-NEXT:    v_mul_f64_e32 v[0:1], 1.0, v[0:1]
+; GFX12-NEXT:    v_mul_f64_e32 v[2:3], 1.0, v[2:3]
+; GFX12-NEXT:    v_mul_f64_e32 v[4:5], 1.0, v[4:5]
+; GFX12-NEXT:    v_mul_f64_e32 v[6:7], 1.0, v[6:7]
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %canon = call <4 x double> @llvm.canonicalize.v4f64(<4 x double> %arg)
   ret <4 x double> %canon
