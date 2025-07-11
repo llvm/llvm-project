@@ -35,12 +35,17 @@ class VOP <string opName> {
 
 // First 13 insts from VOPDY are also VOPDX. DOT2ACC_F32_BF16 is omitted
 defvar VOPDX_Max_Index = 12;
+defvar VOPD3X_Max_Index = 36;
 
-class VOPD_Component<bits<5> OpIn, string vOPDName> {
+class VOPD_Component<bits<6> OpIn, string vOPDName> {
   Instruction BaseVOP = !cast<Instruction>(NAME);
   string VOPDName = "v_dual_" # !substr(vOPDName, 2);
-  bits<5> VOPDOp = OpIn;
+  bits<6> VOPDOp = OpIn;
   bit CanBeVOPDX = !le(VOPDOp, VOPDX_Max_Index);
+  bit CanBeVOPD3X = !and(!le(VOPDOp, VOPD3X_Max_Index),
+                         !and(!ne(vOPDName, "v_bitop2_b32"),
+                              !and(!ne(vOPDName, "v_max_i32"),
+                                   !ne(vOPDName, "v_min_i32"))));
 }
 
 class VOPAnyCommon <dag outs, dag ins, string asm, list<dag> pattern> :
@@ -352,13 +357,13 @@ class VOP3FP8OpSel_src_bytesel_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3e_gf
   let Inst{14} = !if(!and(p.HasOpSel, p.HasDst), src0_modifiers{3}, 0);
 }
 
- class VOP3FP8OpSel_dst_bytesel_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p> {
-   bits<2> byte_sel;
+class VOP3FP8OpSel_dst_bytesel_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p> {
+  bits<2> byte_sel;
 
-   let Inst{11} = 0; // op_sel0
-   let Inst{12} = 0; // op_sel1
-   let Inst{14-13} = byte_sel;  // op_sel2/3
- }
+  let Inst{11} = !if(!and(p.HasOpSel, p.HasSrc0Mods), src0_modifiers{2}, 0); // op_sel0
+  let Inst{12} = !if(!and(p.HasOpSel, p.HasSrc1Mods), src1_modifiers{2}, 0); // op_sel1
+  let Inst{14-13} = byte_sel;  // op_sel2/3
+}
 
 class VOP3DotOpSel_gfx11_gfx12<bits<10> op, VOPProfile p> :
     VOP3e_t16_gfx11_gfx12<op, p>{

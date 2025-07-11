@@ -597,7 +597,9 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   llvm::ArrayRef<mlir::Type> allResultTypes;
 
   // If we cannot parse a string callee, it means this is an indirect call.
-  if (!parser.parseOptionalAttribute(calleeAttr, "callee", result.attributes)
+  if (!parser
+           .parseOptionalAttribute(calleeAttr, CIRDialect::getCalleeAttrName(),
+                                   result.attributes)
            .has_value()) {
     OpAsmParser::UnresolvedOperand indirectVal;
     // Do not resolve right now, since we need to figure out the type
@@ -615,6 +617,10 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   if (parser.parseRParen())
     return mlir::failure();
 
+  if (parser.parseOptionalKeyword("nothrow").succeeded())
+    result.addAttribute(CIRDialect::getNoThrowAttrName(),
+                        mlir::UnitAttr::get(parser.getContext()));
+
   if (parser.parseOptionalKeyword("side_effect").succeeded()) {
     if (parser.parseLParen().failed())
       return failure();
@@ -624,7 +630,7 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
     if (parser.parseRParen().failed())
       return failure();
     auto attr = cir::SideEffectAttr::get(parser.getContext(), sideEffect);
-    result.addAttribute("side_effect", attr);
+    result.addAttribute(CIRDialect::getSideEffectAttrName(), attr);
   }
 
   if (parser.parseOptionalAttrDict(result.attributes))
@@ -649,7 +655,7 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
 static void printCallCommon(mlir::Operation *op,
                             mlir::FlatSymbolRefAttr calleeSym,
                             mlir::Value indirectCallee,
-                            mlir::OpAsmPrinter &printer,
+                            mlir::OpAsmPrinter &printer, bool isNothrow,
                             cir::SideEffect sideEffect) {
   printer << ' ';
 
@@ -666,13 +672,19 @@ static void printCallCommon(mlir::Operation *op,
   }
   printer << "(" << ops << ")";
 
+  if (isNothrow)
+    printer << " nothrow";
+
   if (sideEffect != cir::SideEffect::All) {
     printer << " side_effect(";
     printer << stringifySideEffect(sideEffect);
     printer << ")";
   }
 
-  printer.printOptionalAttrDict(op->getAttrs(), {"callee", "side_effect"});
+  printer.printOptionalAttrDict(op->getAttrs(),
+                                {CIRDialect::getCalleeAttrName(),
+                                 CIRDialect::getNoThrowAttrName(),
+                                 CIRDialect::getSideEffectAttrName()});
 
   printer << " : ";
   printer.printFunctionalType(op->getOperands().getTypes(),
@@ -687,13 +699,15 @@ mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
 void cir::CallOp::print(mlir::OpAsmPrinter &p) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
   cir::SideEffect sideEffect = getSideEffect();
-  printCallCommon(*this, getCalleeAttr(), indirectCallee, p, sideEffect);
+  printCallCommon(*this, getCalleeAttr(), indirectCallee, p, getNothrow(),
+                  sideEffect);
 }
 
 static LogicalResult
 verifyCallCommInSymbolUses(mlir::Operation *op,
                            SymbolTableCollection &symbolTable) {
-  auto fnAttr = op->getAttrOfType<FlatSymbolRefAttr>("callee");
+  auto fnAttr =
+      op->getAttrOfType<FlatSymbolRefAttr>(CIRDialect::getCalleeAttrName());
   if (!fnAttr) {
     // This is an indirect call, thus we don't have to check the symbol uses.
     return mlir::success();

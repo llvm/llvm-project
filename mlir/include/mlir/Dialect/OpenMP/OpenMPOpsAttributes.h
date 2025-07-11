@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_OPENMP_OPENMPOPSATTRIBUTES_H_
 
 #include "mlir/Dialect/OpenMP/OpenMPOpsEnums.h"
+#include "mlir/IR/BuiltinAttributes.h"
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOpsAttributes.h.inc"

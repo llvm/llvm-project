@@ -1196,17 +1196,22 @@ struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
     // augment it to transfer multiple elements per thread by issuing multiple
     // `global_load_lds` instructions.
     Type transferType = op.getTransferType();
-    size_t loadWidth = [&]() -> size_t {
+    int loadWidth = [&]() -> int {
       if (auto transferVectorType = dyn_cast<VectorType>(transferType)) {
-        return transferVectorType.getNumElements() *
-               (transferVectorType.getElementTypeBitWidth() / 8);
+        return (transferVectorType.getNumElements() *
+                transferVectorType.getElementTypeBitWidth()) /
+               8;
       }
       return transferType.getIntOrFloatBitWidth() / 8;
     }();
 
-    // Currently only 1, 2, and 4 byte loads are supported.
-    if (loadWidth != 1 && loadWidth != 2 && loadWidth != 4)
+    // Currently only 1, 2, 4, 12 and 16 byte loads are supported.
+    if (!llvm::is_contained({1, 2, 4, 12, 16}, loadWidth))
       return op.emitOpError("chipset unsupported element size");
+
+    if (chipset != kGfx950 && llvm::is_contained({12, 16}, loadWidth))
+      return op.emitOpError("Gather to LDS instructions with 12-byte and "
+                            "16-byte load widths are only supported on gfx950");
 
     Value srcPtr =
         getStridedElementPtr(rewriter, loc, srcMemRefType, adaptor.getSrc(),

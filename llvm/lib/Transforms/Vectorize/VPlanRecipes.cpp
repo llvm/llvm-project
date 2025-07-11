@@ -751,8 +751,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // and will be removed by breaking up the recipe further.
     auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
     // Get its reduction variable descriptor.
-    const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
-    RecurKind RK = RdxDesc.getRecurrenceKind();
+    RecurKind RK = PhiR->getRecurrenceKind();
     assert(RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
            "Unexpected reduction kind");
     assert(!PhiR->isInLoop() &&
@@ -764,14 +763,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *ReducedPartRdx = State.get(getOperand(3));
     RecurKind MinMaxKind;
     bool IsSigned = RecurrenceDescriptor::isSignedRecurrenceKind(RK);
-    if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) {
+    if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK))
       MinMaxKind = IsSigned ? RecurKind::SMax : RecurKind::UMax;
-    } else {
-      assert(RecurrenceDescriptor::isFindFirstIVRecurrenceKind(RK) &&
-             "Kind must either be FindLastIV or FindFirstIV");
-      assert(IsSigned && "Only FindFirstIV with SMax is currently supported");
-      MinMaxKind = RecurKind::SMin;
-    }
+    else
+      MinMaxKind = IsSigned ? RecurKind::SMin : RecurKind::UMin;
     for (unsigned Part = 1; Part < UF; ++Part)
       ReducedPartRdx = createMinMaxOp(Builder, MinMaxKind, ReducedPartRdx,
                                       State.get(getOperand(3 + Part)));
@@ -786,9 +781,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // and will be removed by breaking up the recipe further.
     auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
     // Get its reduction variable descriptor.
-    const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
 
-    RecurKind RK = RdxDesc.getRecurrenceKind();
+    RecurKind RK = PhiR->getRecurrenceKind();
     assert(!RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
            "should be handled by ComputeFindIVResult");
 
@@ -814,9 +808,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
         if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
           ReducedPartRdx = createMinMaxOp(Builder, RK, ReducedPartRdx, RdxPart);
         else
-          ReducedPartRdx =
-              Builder.CreateBinOp((Instruction::BinaryOps)RdxDesc.getOpcode(),
-                                  RdxPart, ReducedPartRdx, "bin.rdx");
+          ReducedPartRdx = Builder.CreateBinOp(
+              (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK),
+              RdxPart, ReducedPartRdx, "bin.rdx");
       }
     }
 

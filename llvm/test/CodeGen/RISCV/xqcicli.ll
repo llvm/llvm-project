@@ -2,7 +2,9 @@
 ; Test that we are able to generate the Xqcicli instructions
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32I
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicli -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicli,+experimental-xqcics -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s --check-prefixes=RV32IXQCICLI
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicli,+experimental-xqcicm -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32IXQCICLI
 
 define i32 @select_cc_example_eq(i32 %a, i32 %b, i32 %x, i32 %y) {

@@ -135,11 +135,6 @@ DEFAULT_FEATURES = [
     Feature(name=lambda cfg: "msvc-{}.{}".format(*_msvcVersion(cfg)), when=_isMSVC),
 
     Feature(
-        name="thread-safety",
-        when=lambda cfg: hasCompileFlag(cfg, "-Werror=thread-safety"),
-        actions=[AddCompileFlag("-Werror=thread-safety")],
-    ),
-    Feature(
         name="diagnose-if-support",
         when=lambda cfg: hasCompileFlag(cfg, "-Wuser-defined-warnings"),
         actions=[AddCompileFlag("-Wuser-defined-warnings")],

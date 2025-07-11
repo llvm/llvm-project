@@ -7,6 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Verifier.h"
+#include "llvm/IRReader/IRReader.h"
+#include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/raw_ostream.h"
+
 #include "gtest/gtest.h"
 
 #include <atomic>
@@ -17,6 +24,24 @@ using namespace llvm;
 using namespace llvm::orc;
 
 namespace {
+
+const llvm::StringRef FooSrc = R"(
+  define void @foo() {
+    ret void
+  }
+)";
+
+static ThreadSafeModule parseModule(llvm::StringRef Source,
+                                    llvm::StringRef Name) {
+  auto Ctx = std::make_unique<LLVMContext>();
+  SMDiagnostic Err;
+  auto M = parseIR(MemoryBufferRef(Source, Name), Err, *Ctx);
+  if (!M) {
+    Err.print("Testcase source failed to parse: ", errs());
+    exit(1);
+  }
+  return ThreadSafeModule(std::move(M), std::move(Ctx));
+}
 
 TEST(ThreadSafeModuleTest, ContextWhollyOwnedByOneModule) {
   // Test that ownership of a context can be transferred to a single
@@ -101,6 +126,30 @@ TEST(ThreadSafeModuleTest, ConsumingModuleDo) {
   auto M = std::make_unique<Module>("M", *Ctx);
   ThreadSafeModule TSM(std::move(M), std::move(Ctx));
   TSM.consumingModuleDo([](std::unique_ptr<Module> M) {});
+}
+
+TEST(ThreadSafeModuleTest, CloneToNewContext) {
+  auto TSM1 = parseModule(FooSrc, "foo.ll");
+  auto TSM2 = cloneToNewContext(TSM1);
+  TSM2.withModuleDo([&](Module &NewM) {
+    EXPECT_FALSE(verifyModule(NewM, &errs()));
+    TSM1.withModuleDo([&](Module &OrigM) {
+      EXPECT_NE(&NewM.getContext(), &OrigM.getContext());
+    });
+  });
+}
+
+TEST(ObjectFormatsTest, CloneToContext) {
+  auto TSM1 = parseModule(FooSrc, "foo.ll");
+
+  auto TSCtx = ThreadSafeContext(std::make_unique<LLVMContext>());
+  auto TSM2 = cloneToContext(TSM1, TSCtx);
+
+  TSM2.withModuleDo([&](Module &M) {
+    EXPECT_FALSE(verifyModule(M, &errs()));
+    TSCtx.withContextDo(
+        [&](LLVMContext *Ctx) { EXPECT_EQ(&M.getContext(), Ctx); });
+  });
 }
 
 } // end anonymous namespace

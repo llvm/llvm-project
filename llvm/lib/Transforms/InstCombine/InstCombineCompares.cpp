@@ -5120,6 +5120,18 @@ static Instruction *foldICmpXorXX(ICmpInst &I, const SimplifyQuery &Q,
   return nullptr;
 }
 
+/// Return true if X is a multiple of C.
+/// TODO: Handle non-power-of-2 factors.
+static bool isMultipleOf(Value *X, const APInt &C, const SimplifyQuery &Q) {
+  if (C.isOne())
+    return true;
+
+  if (!C.isPowerOf2())
+    return false;
+
+  return MaskedValueIsZero(X, C - 1, Q);
+}
+
 /// Try to fold icmp (binop), X or icmp X, (binop).
 /// TODO: A large part of this logic is duplicated in InstSimplify's
 /// simplifyICmpWithBinOp(). We should be able to share that and avoid the code
@@ -5278,66 +5290,62 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
     return new ICmpInst(Pred, Y, Z);
   }
 
-  // icmp slt (A + -1), Op1 -> icmp sle A, Op1
-  if (A && NoOp0WrapProblem && Pred == CmpInst::ICMP_SLT &&
-      match(B, m_AllOnes()))
-    return new ICmpInst(CmpInst::ICMP_SLE, A, Op1);
+  if (ICmpInst::isRelational(Pred)) {
+    // Return if both X and Y is divisible by Z/-Z.
+    // TODO: Generalize to check if (X - Y) is divisible by Z/-Z.
+    auto ShareCommonDivisor = [&Q](Value *X, Value *Y, Value *Z,
+                                   bool IsNegative) -> bool {
+      const APInt *OffsetC;
+      if (!match(Z, m_APInt(OffsetC)))
+        return false;
 
-  // icmp sge (A + -1), Op1 -> icmp sgt A, Op1
-  if (A && NoOp0WrapProblem && Pred == CmpInst::ICMP_SGE &&
-      match(B, m_AllOnes()))
-    return new ICmpInst(CmpInst::ICMP_SGT, A, Op1);
+      // Fast path for Z == 1/-1.
+      if (IsNegative ? OffsetC->isAllOnes() : OffsetC->isOne())
+        return true;
 
-  // icmp sle (A + 1), Op1 -> icmp slt A, Op1
-  if (A && NoOp0WrapProblem && Pred == CmpInst::ICMP_SLE && match(B, m_One()))
-    return new ICmpInst(CmpInst::ICMP_SLT, A, Op1);
+      APInt C = *OffsetC;
+      if (IsNegative)
+        C.negate();
+      // Note: -INT_MIN is also negative.
+      if (!C.isStrictlyPositive())
+        return false;
 
-  // icmp sgt (A + 1), Op1 -> icmp sge A, Op1
-  if (A && NoOp0WrapProblem && Pred == CmpInst::ICMP_SGT && match(B, m_One()))
-    return new ICmpInst(CmpInst::ICMP_SGE, A, Op1);
+      return isMultipleOf(X, C, Q) && isMultipleOf(Y, C, Q);
+    };
 
-  // icmp sgt Op0, (C + -1) -> icmp sge Op0, C
-  if (C && NoOp1WrapProblem && Pred == CmpInst::ICMP_SGT &&
-      match(D, m_AllOnes()))
-    return new ICmpInst(CmpInst::ICMP_SGE, Op0, C);
+    // TODO: The subtraction-related identities shown below also hold, but
+    // canonicalization from (X -nuw 1) to (X + -1) means that the combinations
+    // wouldn't happen even if they were implemented.
+    //
+    // icmp ult (A - 1), Op1 -> icmp ule A, Op1
+    // icmp uge (A - 1), Op1 -> icmp ugt A, Op1
+    // icmp ugt Op0, (C - 1) -> icmp uge Op0, C
+    // icmp ule Op0, (C - 1) -> icmp ult Op0, C
 
-  // icmp sle Op0, (C + -1) -> icmp slt Op0, C
-  if (C && NoOp1WrapProblem && Pred == CmpInst::ICMP_SLE &&
-      match(D, m_AllOnes()))
-    return new ICmpInst(CmpInst::ICMP_SLT, Op0, C);
+    // icmp slt (A + -1), Op1 -> icmp sle A, Op1
+    // icmp sge (A + -1), Op1 -> icmp sgt A, Op1
+    // icmp sle (A + 1), Op1 -> icmp slt A, Op1
+    // icmp sgt (A + 1), Op1 -> icmp sge A, Op1
+    // icmp ule (A + 1), Op0 -> icmp ult A, Op1
+    // icmp ugt (A + 1), Op0 -> icmp uge A, Op1
+    if (A && NoOp0WrapProblem &&
+        ShareCommonDivisor(A, Op1, B,
+                           ICmpInst::isLT(Pred) || ICmpInst::isGE(Pred)))
+      return new ICmpInst(ICmpInst::getFlippedStrictnessPredicate(Pred), A,
+                          Op1);
 
-  // icmp sge Op0, (C + 1) -> icmp sgt Op0, C
-  if (C && NoOp1WrapProblem && Pred == CmpInst::ICMP_SGE && match(D, m_One()))
-    return new ICmpInst(CmpInst::ICMP_SGT, Op0, C);
-
-  // icmp slt Op0, (C + 1) -> icmp sle Op0, C
-  if (C && NoOp1WrapProblem && Pred == CmpInst::ICMP_SLT && match(D, m_One()))
-    return new ICmpInst(CmpInst::ICMP_SLE, Op0, C);
-
-  // TODO: The subtraction-related identities shown below also hold, but
-  // canonicalization from (X -nuw 1) to (X + -1) means that the combinations
-  // wouldn't happen even if they were implemented.
-  //
-  // icmp ult (A - 1), Op1 -> icmp ule A, Op1
-  // icmp uge (A - 1), Op1 -> icmp ugt A, Op1
-  // icmp ugt Op0, (C - 1) -> icmp uge Op0, C
-  // icmp ule Op0, (C - 1) -> icmp ult Op0, C
-
-  // icmp ule (A + 1), Op0 -> icmp ult A, Op1
-  if (A && NoOp0WrapProblem && Pred == CmpInst::ICMP_ULE && match(B, m_One()))
-    return new ICmpInst(CmpInst::ICMP_ULT, A, Op1);
-
-  // icmp ugt (A + 1), Op0 -> icmp uge A, Op1
-  if (A && NoOp0WrapProblem && Pred == CmpInst::ICMP_UGT && match(B, m_One()))
-    return new ICmpInst(CmpInst::ICMP_UGE, A, Op1);
-
-  // icmp uge Op0, (C + 1) -> icmp ugt Op0, C
-  if (C && NoOp1WrapProblem && Pred == CmpInst::ICMP_UGE && match(D, m_One()))
-    return new ICmpInst(CmpInst::ICMP_UGT, Op0, C);
-
-  // icmp ult Op0, (C + 1) -> icmp ule Op0, C
-  if (C && NoOp1WrapProblem && Pred == CmpInst::ICMP_ULT && match(D, m_One()))
-    return new ICmpInst(CmpInst::ICMP_ULE, Op0, C);
+    // icmp sgt Op0, (C + -1) -> icmp sge Op0, C
+    // icmp sle Op0, (C + -1) -> icmp slt Op0, C
+    // icmp sge Op0, (C + 1) -> icmp sgt Op0, C
+    // icmp slt Op0, (C + 1) -> icmp sle Op0, C
+    // icmp uge Op0, (C + 1) -> icmp ugt Op0, C
+    // icmp ult Op0, (C + 1) -> icmp ule Op0, C
+    if (C && NoOp1WrapProblem &&
+        ShareCommonDivisor(Op0, C, D,
+                           ICmpInst::isGT(Pred) || ICmpInst::isLE(Pred)))
+      return new ICmpInst(ICmpInst::getFlippedStrictnessPredicate(Pred), Op0,
+                          C);
+  }
 
   // if C1 has greater magnitude than C2:
   //  icmp (A + C1), (C + C2) -> icmp (A + C3), C

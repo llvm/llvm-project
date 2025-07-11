@@ -13,9 +13,9 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
@@ -41,7 +41,7 @@ public:
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
 
-  bool mayNeedRelaxation(const MCInst &Inst,
+  bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override;
 
   unsigned getMinimumNopSize() const override;
@@ -71,12 +71,13 @@ bool AMDGPUAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
   return (((int64_t(Value)/4)-1) == 0x3f);
 }
 
-bool AMDGPUAsmBackend::mayNeedRelaxation(const MCInst &Inst,
-                       const MCSubtargetInfo &STI) const {
+bool AMDGPUAsmBackend::mayNeedRelaxation(unsigned Opcode,
+                                         ArrayRef<MCOperand> Operands,
+                                         const MCSubtargetInfo &STI) const {
   if (!STI.hasFeature(AMDGPU::FeatureOffset3fBug))
     return false;
 
-  if (AMDGPU::getSOPPWithRelaxation(Inst.getOpcode()) >= 0)
+  if (AMDGPU::getSOPPWithRelaxation(Opcode) >= 0)
     return true;
 
   return false;
@@ -94,7 +95,6 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
     return 2;
   case FK_SecRel_4:
   case FK_Data_4:
-  case FK_PCRel_4:
     return 4;
   case FK_SecRel_8:
   case FK_Data_8:
@@ -121,7 +121,6 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case FK_Data_2:
   case FK_Data_4:
   case FK_Data_8:
-  case FK_PCRel_4:
   case FK_SecRel_4:
     return Value;
   default:
@@ -175,12 +174,12 @@ AMDGPUAsmBackend::getFixupKind(StringRef Name) const {
 
 MCFixupKindInfo AMDGPUAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[AMDGPU::NumTargetFixupKinds] = {
-    // name                   offset bits  flags
-    { "fixup_si_sopp_br",     0,     16,   MCFixupKindInfo::FKF_IsPCRel },
+      // name                   offset bits  flags
+      {"fixup_si_sopp_br", 0, 16, 0},
   };
 
   if (mc::isRelocation(Kind))
-    return MCAsmBackend::getFixupKindInfo(FK_NONE);
+    return {};
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
@@ -196,18 +195,21 @@ unsigned AMDGPUAsmBackend::getMinimumNopSize() const {
 
 bool AMDGPUAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
                                     const MCSubtargetInfo *STI) const {
-  // If the count is not 4-byte aligned, we must be writing data into the text
-  // section (otherwise we have unaligned instructions, and thus have far
-  // bigger problems), so just write zeros instead.
-  OS.write_zeros(Count % 4);
+  // If the count is not aligned to the minimum instruction alignment, we must
+  // be writing data into the text section (otherwise we have unaligned
+  // instructions, and thus have far bigger problems), so just write zeros
+  // instead.
+  unsigned MinInstAlignment = getContext().getAsmInfo()->getMinInstAlignment();
+  OS.write_zeros(Count % MinInstAlignment);
 
   // We are properly aligned, so write NOPs as requested.
-  Count /= 4;
+  Count /= MinInstAlignment;
 
   // FIXME: R600 support.
   // s_nop 0
   const uint32_t Encoded_S_NOP_0 = 0xbf800000;
 
+  assert(MinInstAlignment == sizeof(Encoded_S_NOP_0));
   for (uint64_t I = 0; I != Count; ++I)
     support::endian::write<uint32_t>(OS, Encoded_S_NOP_0, Endian);
 
