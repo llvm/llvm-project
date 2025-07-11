@@ -19,10 +19,13 @@ namespace object {
 
 template <endianness E> class SFrameParser {
 public:
-  static Expected<SFrameParser> create(ArrayRef<uint8_t> Contents);
+  static Expected<SFrameParser> create(ArrayRef<uint8_t> Contents,
+                                       uint64_t SectionAddress);
 
   const sframe::Preamble<E> &getPreamble() const { return Header.Preamble; }
   const sframe::Header<E> &getHeader() const { return Header; }
+
+  Expected<ArrayRef<uint8_t>> getAuxHeader() const;
 
   bool usesFixedRAOffset() const {
     return getHeader().ABIArch == sframe::ABI::AMD64EndianLittle;
@@ -31,12 +34,22 @@ public:
     return false; // Not used in any currently defined ABI.
   }
 
+  using FDERange = ArrayRef<sframe::FuncDescEntry<E>>;
+  Expected<FDERange> fdes() const;
+
+  // Decodes the start address of the given FDE, which must be one of the
+  // objects returned by the `fdes()` function.
+  uint64_t getAbsoluteStartAddress(typename FDERange::iterator FDE) const;
+
 private:
   ArrayRef<uint8_t> Data;
+  uint64_t SectionAddress;
   const sframe::Header<E> &Header;
 
-  SFrameParser(ArrayRef<uint8_t> Data, const sframe::Header<E> &Header)
-      : Data(Data), Header(Header) {}
+  SFrameParser(ArrayRef<uint8_t> Data, uint64_t SectionAddress, const sframe::Header<E> &Header)
+      : Data(Data), SectionAddress(SectionAddress), Header(Header) {}
+
+  uint64_t getFDEBegin() const { return sizeof(Header) + Header.AuxHdrLen + Header.FDEOff; }
 };
 
 extern template class SFrameParser<endianness::big>;
