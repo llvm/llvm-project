@@ -745,6 +745,10 @@ static bool satisfiesProperties2326(
       !AddConstexprToMethodOfClassWithoutConstexprConstructor)
     return false;
 
+  if (Method && Method->getParent()->isLambda()) {
+    return false;
+  }
+
   if (FDecl->hasBody() && llvm::isa<CoroutineBodyStmt>(FDecl->getBody()))
     return false;
 

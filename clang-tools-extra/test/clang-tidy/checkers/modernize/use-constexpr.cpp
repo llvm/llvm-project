@@ -422,6 +422,11 @@ namespace function_non_literal_ref {
   // CHECK-FIXES-23: constexpr static int f26(NonLiteral& x) {
   // CHECK-MESSAGES-20-CLT: :[[@LINE-7]]:14: warning: function 'f26' can be declared 'constexpr' [modernize-use-constexpr]
   // CHECK-FIXES-20-CLT: constexpr static int f26(NonLiteral& x) {
+
+  template <typename> void f27() {
+    [](int N) { N; };
+  }
+
 } // namespace function_non_literal_ref
 
 template <typename T>
