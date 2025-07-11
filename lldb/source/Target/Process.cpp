@@ -3144,14 +3144,14 @@ void Process::CompleteAttach() {
     }
   }
 
-  // If we don't have an operating system plugin loaded yet, see if 
+  // If we don't have an operating system plugin loaded yet, see if
   // LoadOperatingSystemPlugin can find one (and stuff it in m_os_up).
   if (!m_os_up)
     LoadOperatingSystemPlugin(false);
 
   if (m_os_up) {
     // Somebody might have gotten threads before we loaded the OS Plugin above,
-    // so we need to force the update now or the newly loaded plugin won't get 
+    // so we need to force the update now or the newly loaded plugin won't get
     // a chance to process the threads.
     m_thread_list.Clear();
     UpdateThreadListIfNeeded();
