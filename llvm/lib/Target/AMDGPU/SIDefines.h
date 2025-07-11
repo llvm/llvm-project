@@ -262,16 +262,16 @@ enum OperandType : unsigned {
 // Input operand modifiers bit-masks
 // NEG and SEXT share same bit-mask because they can't be set simultaneously.
 namespace SISrcMods {
-  enum : unsigned {
-   NONE = 0,
-   NEG = 1 << 0,   // Floating-point negate modifier
-   ABS = 1 << 1,   // Floating-point absolute modifier
-   SEXT = 1 << 0,  // Integer sign-extend modifier
-   NEG_HI = ABS,   // Floating-point negate high packed component modifier.
-   OP_SEL_0 = 1 << 2,
-   OP_SEL_1 = 1 << 3,
-   DST_OP_SEL = 1 << 3 // VOP3 dst op_sel (share mask with OP_SEL_1)
-  };
+enum : unsigned {
+  NONE = 0,
+  NEG = 1 << 0,  // Floating-point negate modifier
+  ABS = 1 << 1,  // Floating-point absolute modifier
+  SEXT = 1 << 4, // Integer sign-extend modifier
+  NEG_HI = ABS,  // Floating-point negate high packed component modifier.
+  OP_SEL_0 = 1 << 2,
+  OP_SEL_1 = 1 << 3,
+  DST_OP_SEL = 1 << 3 // VOP3 dst op_sel (share mask with OP_SEL_1)
+};
 }
 
 namespace SIOutMods {
