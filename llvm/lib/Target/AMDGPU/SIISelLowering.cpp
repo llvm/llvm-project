@@ -15199,7 +15199,15 @@ SDValue SITargetLowering::performPtrAddCombine(SDNode *N,
   // Adapted from DAGCombiner::visitADDLikeCommutative.
   SDValue V, K;
   if (sd_match(N1, m_Shl(m_Neg(m_Value(V)), m_Value(K)))) {
-    SDValue Inner = DAG.getNode(ISD::SHL, DL, VT, V, K);
+    SDNodeFlags ShlFlags = N1->getFlags();
+    // If the original shl is NUW and NSW, the first k+1 bits of 0-v are all 0,
+    // so v is either 0 or the first k+1 bits of v are all 1 -> NSW can be
+    // preserved.
+    SDNodeFlags NewShlFlags =
+        ShlFlags.hasNoUnsignedWrap() && ShlFlags.hasNoSignedWrap()
+            ? SDNodeFlags::NoSignedWrap
+            : SDNodeFlags();
+    SDValue Inner = DAG.getNode(ISD::SHL, DL, VT, V, K, NewShlFlags);
     DCI.AddToWorklist(Inner.getNode());
     return DAG.getNode(ISD::SUB, DL, VT, N0, Inner);
   }
@@ -15228,8 +15236,7 @@ SDValue SITargetLowering::performPtrAddCombine(SDNode *N,
     SDValue GAValue = N0.getOperand(0);
     if (const GlobalAddressSDNode *GA =
             dyn_cast<GlobalAddressSDNode>(GAValue)) {
-      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-      if (DCI.isBeforeLegalizeOps() && TLI.isOffsetFoldingLegal(GA)) {
+      if (DCI.isBeforeLegalizeOps() && isOffsetFoldingLegal(GA)) {
         // If both additions in the original were NUW, reassociation preserves
         // that.
         SDNodeFlags Flags =
