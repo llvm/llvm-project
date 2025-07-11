@@ -263,7 +263,8 @@ public:
   bool tryFoldPhiAGPR(MachineInstr &MI);
   bool tryFoldLoad(MachineInstr &MI);
 #if LLPC_BUILD_NPI
-  bool tryFoldVLoadStoreIdxOffset(MachineInstr &MI, MachineInstr *&SMovImmZero);
+  bool tryFoldDynamicIdxOffset(MachineOperand *Idx, MachineOperand *Offset,
+                               MachineInstr *&SMovImmZero);
 #endif /* LLPC_BUILD_NPI */
 
   bool tryOptimizeAGPRPhis(MachineBasicBlock &MBB);
@@ -2682,19 +2683,20 @@ bool SIFoldOperandsImpl::tryFoldLoad(MachineInstr &MI) {
 }
 
 #if LLPC_BUILD_NPI
-// when index operand of v_load_idx is a known constant, fold it
+// When the dynamic index operand is a known constant, fold it
 // into the offset operand
-bool SIFoldOperandsImpl::tryFoldVLoadStoreIdxOffset(MachineInstr &MI,
-                                                    MachineInstr *&SMovImmZero) {
-  auto IdxOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::idx);
-  auto OffOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::offset);
+bool SIFoldOperandsImpl::tryFoldDynamicIdxOffset(MachineOperand *IdxOpnd,
+                                                 MachineOperand *OffOpnd,
+                                                 MachineInstr *&SMovImmZero) {
+  if (!IdxOpnd || !OffOpnd)
+    return false;
 
   auto DefMI = MRI->getVRegDef(IdxOpnd->getReg());
   if (DefMI->getOpcode() == AMDGPU::S_MOV_B32) {
     auto ImmOpnd = DefMI->getOperand(1);
     if (ImmOpnd.isImm() && ImmOpnd.getImm()) {
-      auto Offset =
-          (ImmOpnd.getImm() + OffOpnd->getImm()) % ST->getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize());
+      auto Offset = (ImmOpnd.getImm() + OffOpnd->getImm()) %
+                    ST->getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize());
       OffOpnd->setImm(Offset);
       Register IdxReg;
       if (!SMovImmZero) {
@@ -2859,9 +2861,20 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
 #if LLPC_BUILD_NPI
       }
 
-      if ((&MI)->getOpcode() == AMDGPU::V_LOAD_IDX ||
-          (&MI)->getOpcode() == AMDGPU::V_STORE_IDX) {
-        if (tryFoldVLoadStoreIdxOffset(MI, SMovImmZero)) {
+      if (SIInstrInfo::isVLdStIdx(MI.getOpcode())) {
+        MachineOperand *IdxOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::idx),
+                       *OffOpnd =
+                           TII->getNamedOperand(MI, AMDGPU::OpName::offset);
+        if (tryFoldDynamicIdxOffset(IdxOpnd, OffOpnd, SMovImmZero)) {
+          Changed = true;
+          continue;
+        }
+      }
+      if (SIInstrInfo::mustHaveLanesharedResult(MI)) {
+        MachineOperand *IdxOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::idx),
+                       *OffOpnd =
+                           TII->getNamedOperand(MI, AMDGPU::OpName::dyn_offset);
+        if (tryFoldDynamicIdxOffset(IdxOpnd, OffOpnd, SMovImmZero)) {
           Changed = true;
           continue;
         }

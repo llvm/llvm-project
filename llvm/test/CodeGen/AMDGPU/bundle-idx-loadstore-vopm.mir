@@ -386,7 +386,7 @@ body:             |
     ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 2, implicit-def dead $scc
     ; LOWERED-NEXT: $vgpr1 = V_MOV_B32_e32 undef $vgpr4, <0x{{[0-9a-f]+}}>, implicit $exec
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
-    ; LOWERED-NEXT: undef $vgpr0_vgpr1_vgpr2_vgpr3 = V_CONVOLVE_BF16_BF16_1x1_4x4_ITER_4 killed undef $vgpr12_vgpr13_vgpr14_vgpr15, killed undef $vgpr8_vgpr9_vgpr10_vgpr11, killed undef $vgpr7, killed renamable $vgpr0, killed undef $vgpr5, killed renamable $vgpr1, 12290, -1, 3158561, 0, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: undef $vgpr0_vgpr1_vgpr2_vgpr3 = V_CONVOLVE_BF16_BF16_1x1_4x4_ITER_4 killed undef $vgpr12_vgpr13_vgpr14_vgpr15, killed undef $vgpr8_vgpr9_vgpr10_vgpr11, killed undef $vgpr7, killed $vgpr0, killed undef $vgpr5, killed $vgpr1, 12290, -1, 3158561, 0, <0x{{[0-9a-f]+}}>, implicit $exec
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:sreg_32_xexec_hi = S_LSHL_B32 1, 3, implicit-def $scc
     %2:sreg_32_xexec_hi = S_LSHL_B32 1, 4, implicit-def $scc
@@ -465,7 +465,7 @@ body:             |
     ; LOWERED-NEXT: $vgpr0 = V_MOV_B32_e32 undef $vgpr5, <0x{{[0-9a-f]+}}>, implicit $exec
     ; LOWERED-NEXT: renamable $vgpr1 = V_MOV_B32_e32 $sgpr0, implicit $exec
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
-    ; LOWERED-NEXT: undef $vgpr0_vgpr1_vgpr2_vgpr3 = V_CONVOLVE_BF16_BF16_1x1_4x4_ITER_4 killed undef $vgpr12_vgpr13_vgpr14_vgpr15, killed undef $vgpr8_vgpr9_vgpr10_vgpr11, killed undef $vgpr7, killed undef $vgpr6, killed renamable $vgpr0, killed renamable $vgpr1, 12290, -1, 209441, 0, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: undef $vgpr0_vgpr1_vgpr2_vgpr3 = V_CONVOLVE_BF16_BF16_1x1_4x4_ITER_4 killed undef $vgpr12_vgpr13_vgpr14_vgpr15, killed undef $vgpr8_vgpr9_vgpr10_vgpr11, killed undef $vgpr7, killed undef $vgpr6, killed $vgpr0, killed $vgpr1, 12290, -1, 209441, 0, <0x{{[0-9a-f]+}}>, implicit $exec
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:sreg_32_xexec_hi = S_LSHL_B32 1, 3, implicit-def $scc
     %2:sreg_32_xexec_hi = S_LSHL_B32 1, 4, implicit-def $scc

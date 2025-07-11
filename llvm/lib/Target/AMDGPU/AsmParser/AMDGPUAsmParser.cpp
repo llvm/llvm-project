@@ -389,7 +389,6 @@ public:
     return isRegOrInline(AMDGPU::VS_32RegClassID, MVT::f32);
   }
 
-#if LLPC_BUILD_NPI
   bool isRegOrInlineImmWithFP64InputMods() const {
     return isRegOrInline(AMDGPU::VS_64RegClassID, MVT::f64);
   }
@@ -404,7 +403,6 @@ public:
     return isVRegWithInputMods(AMDGPU::VReg_64RegClassID);
   }
 
-#endif /* LLPC_BUILD_NPI */
   bool isPackedFP16InputMods() const {
     return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::v2f16);
   }
@@ -528,10 +526,6 @@ public:
 #if LLPC_BUILD_NPI
   bool isSCSrc_bf16() const {
     return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::bf16);
-  }
-
-  bool isSCSrc_f16() const {
-    return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::f16);
 #else /* LLPC_BUILD_NPI */
   bool isSCSrcV2B16() const {
     return isSCSrcB16();
@@ -539,6 +533,10 @@ public:
   }
 
 #if LLPC_BUILD_NPI
+  bool isSCSrc_f16() const {
+    return isRegOrInlineNoMods(AMDGPU::SReg_32RegClassID, MVT::f16);
+  }
+
   bool isSCSrcV2B16() const { return isSCSrc_b16(); }
 
 #endif /* LLPC_BUILD_NPI */
@@ -663,10 +661,8 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VS_64_Lo256RegClassID, MVT::i64);
   }
 
-  bool isVCSrc_b64() const {
-#else /* LLPC_BUILD_NPI */
-  bool isVCSrcB64() const {
 #endif /* LLPC_BUILD_NPI */
+  bool isVCSrc_b64() const {
     return isRegOrInlineNoMods(AMDGPU::VS_64RegClassID, MVT::i64);
   }
 
@@ -692,11 +688,7 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VS_32RegClassID, MVT::f32);
   }
 
-#if LLPC_BUILD_NPI
   bool isVCSrc_f64() const {
-#else /* LLPC_BUILD_NPI */
-  bool isVCSrcF64() const {
-#endif /* LLPC_BUILD_NPI */
     return isRegOrInlineNoMods(AMDGPU::VS_64RegClassID, MVT::f64);
   }
 
@@ -748,11 +740,7 @@ public:
     return isVCSrc_f32() || isLiteralImm(MVT::i32) || isExpr();
   }
 
-#if LLPC_BUILD_NPI
   bool isVSrc_b64() const { return isVCSrc_f64() || isLiteralImm(MVT::i64); }
-#else /* LLPC_BUILD_NPI */
-  bool isVSrc_b64() const { return isVCSrcF64() || isLiteralImm(MVT::i64); }
-#endif /* LLPC_BUILD_NPI */
 
   bool isVSrcT_b16() const { return isVCSrcT_b16() || isLiteralImm(MVT::i16); }
 
@@ -768,35 +756,22 @@ public:
 
   bool isVSrc_v2b16() const { return isVSrc_b16() || isLiteralImm(MVT::v2i16); }
 
-#if LLPC_BUILD_NPI
   bool isVCSrcV2FP32() const { return isVCSrc_f64(); }
-#else /* LLPC_BUILD_NPI */
-  bool isVCSrcV2FP32() const {
-    return isVCSrcF64();
-  }
-#endif /* LLPC_BUILD_NPI */
 
   bool isVSrc_v2f32() const { return isVSrc_f64() || isLiteralImm(MVT::v2f32); }
 
 #if LLPC_BUILD_NPI
-  bool isVCSrcV2INT32() const { return isVCSrc_b64(); }
 #else /* LLPC_BUILD_NPI */
-  bool isVCSrcV2INT32() const {
-    return isVCSrcB64();
-  }
-#endif /* LLPC_BUILD_NPI */
+  bool isVCSrc_v2b32() const { return isVCSrc_b64(); }
 
+#endif /* LLPC_BUILD_NPI */
   bool isVSrc_v2b32() const { return isVSrc_b64() || isLiteralImm(MVT::v2i32); }
 
   bool isVSrc_f32() const {
     return isVCSrc_f32() || isLiteralImm(MVT::f32) || isExpr();
   }
 
-#if LLPC_BUILD_NPI
   bool isVSrc_f64() const { return isVCSrc_f64() || isLiteralImm(MVT::f64); }
-#else /* LLPC_BUILD_NPI */
-  bool isVSrc_f64() const { return isVCSrcF64() || isLiteralImm(MVT::f64); }
-#endif /* LLPC_BUILD_NPI */
 
   bool isVSrcT_bf16() const { return isVCSrcTBF16() || isLiteralImm(MVT::bf16); }
 
@@ -1772,8 +1747,10 @@ public:
   bool isGFX13() const { return AMDGPU::isGFX13(getSTI()); }
 
   bool isGFX13Plus() const { return AMDGPU::isGFX13Plus(getSTI()); }
-
+#else /* LLPC_BUILD_NPI */
+  bool isGFX1250() const { return AMDGPU::isGFX1250(getSTI()); }
 #endif /* LLPC_BUILD_NPI */
+
   bool isGFX10_AEncoding() const { return AMDGPU::isGFX10_AEncoding(getSTI()); }
 
   bool isGFX10_BEncoding() const {
@@ -2060,19 +2037,16 @@ private:
   bool validateSMEMOffset(const MCInst &Inst, const OperandVector &Operands);
   bool validateSOPLiteral(const MCInst &Inst) const;
   bool validateConstantBusLimitations(const MCInst &Inst, const OperandVector &Operands);
-#if LLPC_BUILD_NPI
   std::optional<unsigned> checkVOPDRegBankConstraints(const MCInst &Inst,
                                                       bool AsVOPD3);
   bool validateVOPD(const MCInst &Inst, const OperandVector &Operands);
+#if LLPC_BUILD_NPI
   bool validateVOPM(const MCInst &Inst, const OperandVector &Operands);
+#endif /* LLPC_BUILD_NPI */
   bool tryVOPD(const MCInst &Inst);
   bool tryVOPD3(const MCInst &Inst);
   bool tryAnotherVOPDEncoding(const MCInst &Inst);
 
-#else /* LLPC_BUILD_NPI */
-  bool validateVOPDRegBankConstraints(const MCInst &Inst,
-                                      const OperandVector &Operands);
-#endif /* LLPC_BUILD_NPI */
   bool validateIntClampSupported(const MCInst &Inst);
   bool validateMIMGAtomicDMask(const MCInst &Inst);
   bool validateMIMGGatherDMask(const MCInst &Inst);
@@ -4009,7 +3983,6 @@ unsigned AMDGPUAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
     }
   }
 
-#if LLPC_BUILD_NPI
   // Asm can first try to match VOPD or VOPD3. By failing early here with
   // Match_InvalidOperand, the parser will retry parsing as VOPD3 or VOPD.
   // Checking later during validateInstruction does not give a chance to retry
@@ -4017,7 +3990,6 @@ unsigned AMDGPUAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   if (tryAnotherVOPDEncoding(Inst))
     return Match_InvalidOperand;
 
-#endif /* LLPC_BUILD_NPI */
   return Match_Success;
 }
 
@@ -4203,14 +4175,10 @@ static OperandIndices getSrcOperandIndices(unsigned Opcode,
 
     return {getNamedOperandIdx(Opcode, OpName::src0X),
             getNamedOperandIdx(Opcode, OpName::vsrc1X),
-#if LLPC_BUILD_NPI
             getNamedOperandIdx(Opcode, OpName::vsrc2X),
-#endif /* LLPC_BUILD_NPI */
             getNamedOperandIdx(Opcode, OpName::src0Y),
             getNamedOperandIdx(Opcode, OpName::vsrc1Y),
-#if LLPC_BUILD_NPI
             getNamedOperandIdx(Opcode, OpName::vsrc2Y),
-#endif /* LLPC_BUILD_NPI */
             ImmXIdx,
             ImmIdx};
   }
@@ -4341,21 +4309,12 @@ bool AMDGPUAsmParser::validateConstantBusLimitations(
   return false;
 }
 
-#if LLPC_BUILD_NPI
 std::optional<unsigned>
 AMDGPUAsmParser::checkVOPDRegBankConstraints(const MCInst &Inst, bool AsVOPD3) {
-#else /* LLPC_BUILD_NPI */
-bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
-    const MCInst &Inst, const OperandVector &Operands) {
-#endif /* LLPC_BUILD_NPI */
 
   const unsigned Opcode = Inst.getOpcode();
   if (!isVOPD(Opcode))
-#if LLPC_BUILD_NPI
     return {};
-#else /* LLPC_BUILD_NPI */
-    return true;
-#endif /* LLPC_BUILD_NPI */
 
   const MCRegisterInfo *TRI = getContext().getRegisterInfo();
 
@@ -4369,14 +4328,18 @@ bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
   // On GFX1170+ if both OpX and OpY are V_MOV_B32 then OPY uses SRC2
   // source-cache.
   bool SkipSrc = Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx1170 ||
-#if LLPC_BUILD_NPI
                  Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12 ||
                  Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx1250 ||
+#if LLPC_BUILD_NPI
                  Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_e96_gfx1250 ||
                  Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx13 ||
                  Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_e96_gfx1250 ||
                  Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_e96_gfx13;
   bool AllowSameVGPR = isGFX1250Plus();
+#else /* LLPC_BUILD_NPI */
+                 Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_e96_gfx1250;
+  bool AllowSameVGPR = isGFX1250();
+#endif /* LLPC_BUILD_NPI */
 
   if (AsVOPD3) { // Literal constants are not allowed with VOPD3.
     for (auto OpName : {OpName::src0X, OpName::src0Y}) {
@@ -4400,12 +4363,8 @@ bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
         return (unsigned)I;
     }
   }
-#else /* LLPC_BUILD_NPI */
-                 Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12;
-#endif /* LLPC_BUILD_NPI */
 
   const auto &InstInfo = getVOPDInstInfo(Opcode, &MII);
-#if LLPC_BUILD_NPI
   auto InvalidCompOprIdx = InstInfo.getInvalidCompOperandIndex(
       getVRegIdx, *TRI, SkipSrc, AllowSameVGPR, AsVOPD3);
 
@@ -4429,17 +4388,10 @@ bool AMDGPUAsmParser::validateVOPD(const MCInst &Inst,
 
   auto InvalidCompOprIdx = checkVOPDRegBankConstraints(Inst, AsVOPD3);
   if (!InvalidCompOprIdx.has_value())
-#else /* LLPC_BUILD_NPI */
-  auto InvalidCompOprIdx =
-      InstInfo.getInvalidCompOperandIndex(getVRegIdx, SkipSrc);
-  if (!InvalidCompOprIdx)
-#endif /* LLPC_BUILD_NPI */
     return true;
 
   auto CompOprIdx = *InvalidCompOprIdx;
-#if LLPC_BUILD_NPI
   const auto &InstInfo = getVOPDInstInfo(Opcode, &MII);
-#endif /* LLPC_BUILD_NPI */
   auto ParsedIdx =
       std::max(InstInfo[VOPD::X].getIndexInParsedOperands(CompOprIdx),
                InstInfo[VOPD::Y].getIndexInParsedOperands(CompOprIdx));
@@ -4447,14 +4399,10 @@ bool AMDGPUAsmParser::validateVOPD(const MCInst &Inst,
 
   auto Loc = ((AMDGPUOperand &)*Operands[ParsedIdx]).getStartLoc();
   if (CompOprIdx == VOPD::Component::DST) {
-#if LLPC_BUILD_NPI
     if (AsVOPD3)
       Error(Loc, "dst registers must be distinct");
     else
       Error(Loc, "one dst register must be even and the other odd");
-#else /* LLPC_BUILD_NPI */
-    Error(Loc, "one dst register must be even and the other odd");
-#endif /* LLPC_BUILD_NPI */
   } else {
     auto CompSrcIdx = CompOprIdx - VOPD::Component::DST_NUM;
     Error(Loc, Twine("src") + Twine(CompSrcIdx) +
@@ -4464,7 +4412,6 @@ bool AMDGPUAsmParser::validateVOPD(const MCInst &Inst,
   return false;
 }
 
-#if LLPC_BUILD_NPI
 // \returns true if \p Inst does not satisfy VOPD constraints, but can be
 // potentially used as VOPD3 with the same operands.
 bool AMDGPUAsmParser::tryVOPD3(const MCInst &Inst) {
@@ -4526,7 +4473,11 @@ bool AMDGPUAsmParser::tryVOPD(const MCInst &Inst) {
 // form but switch to VOPD3 otherwise.
 bool AMDGPUAsmParser::tryAnotherVOPDEncoding(const MCInst &Inst) {
   const unsigned Opcode = Inst.getOpcode();
+#if LLPC_BUILD_NPI
   if (!isGFX1250Plus() || !isVOPD(Opcode))
+#else /* LLPC_BUILD_NPI */
+  if (!isGFX1250() || !isVOPD(Opcode))
+#endif /* LLPC_BUILD_NPI */
     return false;
 
   if (MII.get(Opcode).TSFlags & SIInstrFlags::VOPD3)
@@ -4534,7 +4485,6 @@ bool AMDGPUAsmParser::tryAnotherVOPDEncoding(const MCInst &Inst) {
   return tryVOPD3(Inst);
 }
 
-#endif /* LLPC_BUILD_NPI */
 bool AMDGPUAsmParser::validateIntClampSupported(const MCInst &Inst) {
 
   const unsigned Opc = Inst.getOpcode();
@@ -6163,11 +6113,7 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   if (!validateConstantBusLimitations(Inst, Operands)) {
     return false;
   }
-#if LLPC_BUILD_NPI
   if (!validateVOPD(Inst, Operands)) {
-#else /* LLPC_BUILD_NPI */
-  if (!validateVOPDRegBankConstraints(Inst, Operands)) {
-#endif /* LLPC_BUILD_NPI */
     return false;
   }
   if (!validateIntClampSupported(Inst)) {
@@ -10619,18 +10565,14 @@ ParseStatus AMDGPUAsmParser::parseVOPD(OperandVector &Operands) {
 
 // Create VOPD MCInst operands using parsed assembler operands.
 void AMDGPUAsmParser::cvtVOPD(MCInst &Inst, const OperandVector &Operands) {
-#if LLPC_BUILD_NPI
   const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
 
-#endif /* LLPC_BUILD_NPI */
   auto addOp = [&](uint16_t ParsedOprIdx) { // NOLINT:function pointer
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[ParsedOprIdx]);
-#if LLPC_BUILD_NPI
     if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
       Op.addRegOrImmWithFPInputModsOperands(Inst, 2);
       return;
     }
-#endif /* LLPC_BUILD_NPI */
     if (Op.isReg()) {
       Op.addRegOperands(Inst, 1);
       return;
@@ -10659,7 +10601,6 @@ void AMDGPUAsmParser::cvtVOPD(MCInst &Inst, const OperandVector &Operands) {
     if (CInfo.hasSrc2Acc())
       addOp(CInfo.getIndexOfDstInParsedOperands());
   }
-#if LLPC_BUILD_NPI
 
   int BitOp3Idx =
       AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::bitop3);
@@ -10671,7 +10612,6 @@ void AMDGPUAsmParser::cvtVOPD(MCInst &Inst, const OperandVector &Operands) {
 
     addOptionalImmOperand(Inst, Operands, OptIdx, AMDGPUOperand::ImmTyBitOp3);
   }
-#endif /* LLPC_BUILD_NPI */
 }
 
 //===----------------------------------------------------------------------===//

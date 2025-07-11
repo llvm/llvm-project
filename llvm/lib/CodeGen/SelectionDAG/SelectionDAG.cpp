@@ -11821,6 +11821,35 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
                  dbgs() << " into " << *DbgExpression << '\n');
       break;
     }
+    case ISD::BITCAST: {
+      DIExpression *Expr = DV->getExpression();
+      if (Expr->holdsOldElements())
+        break;
+
+      SDValue N0 = N.getOperand(0);
+      auto NewLocOps = DV->copyLocationOps();
+      bool Changed = false;
+      for (size_t i = 0; i < NewLocOps.size(); ++i) {
+        if (NewLocOps[i].getKind() != SDDbgOperand::SDNODE ||
+            NewLocOps[i].getSDNode() != &N)
+          continue;
+        NewLocOps[i] = SDDbgOperand::fromNode(N0.getNode(), N0.getResNo());
+        Changed = true;
+      }
+      assert(Changed && "Salvage target doesn't use N");
+      (void)Changed;
+
+      SDDbgValue *Clone =
+          getDbgValueList(DV->getVariable(), Expr, NewLocOps,
+                          DV->getAdditionalDependencies(), DV->isIndirect(),
+                          DV->getDebugLoc(), DV->getOrder(), DV->isVariadic());
+      ClonedDVs.push_back(Clone);
+      DV->setIsInvalidated();
+      DV->setIsEmitted();
+      LLVM_DEBUG(dbgs() << "SALVAGE: Rewriting"; N0.getNode()->dumprFull(this);
+                 dbgs() << " into " << *Expr << '\n');
+      break;
+    }
     }
   }
 

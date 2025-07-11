@@ -423,9 +423,7 @@ struct VOPDComponentInfo {
   uint16_t BaseVOP;
   uint16_t VOPDOp;
   bool CanBeVOPDX;
-#if LLPC_BUILD_NPI
   bool CanBeVOPD3X;
-#endif /* LLPC_BUILD_NPI */
 };
 
 struct VOPDInfo {
@@ -433,9 +431,7 @@ struct VOPDInfo {
   uint16_t OpX;
   uint16_t OpY;
   uint16_t Subtarget;
-#if LLPC_BUILD_NPI
   bool VOPD3;
-#endif /* LLPC_BUILD_NPI */
 };
 
 struct VOPTrue16Info {
@@ -696,10 +692,8 @@ const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
 
 #endif /* LLPC_BUILD_NPI */
 unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
-#if LLPC_BUILD_NPI
   if (ST.hasFeature(AMDGPU::FeatureGFX1250Insts))
     return SIEncodingFamily::GFX1250;
-#endif /* LLPC_BUILD_NPI */
   if (ST.hasFeature(AMDGPU::FeatureGFX12Insts))
     return SIEncodingFamily::GFX12;
   if (ST.hasFeature(AMDGPU::FeatureGFX11Insts))
@@ -707,15 +701,10 @@ unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
   llvm_unreachable("Subtarget generation does not support VOPD!");
 }
 
-#if LLPC_BUILD_NPI
 CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
   bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(Opc) : 0;
   Opc = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : Opc;
-#else /* LLPC_BUILD_NPI */
-CanBeVOPD getCanBeVOPD(unsigned Opc) {
-#endif /* LLPC_BUILD_NPI */
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
-#if LLPC_BUILD_NPI
   if (Info) {
     // Check that Opc can be used as VOPDY for this encoding. V_MOV_B32 as a
     // VOPDX is just a placeholder here, it is supported on all encodings.
@@ -727,20 +716,12 @@ CanBeVOPD getCanBeVOPD(unsigned Opc) {
     return {VOPD3 ? Info->CanBeVOPD3X : Info->CanBeVOPDX, CanBeVOPDY};
   }
 
-#else /* LLPC_BUILD_NPI */
-  if (Info)
-    return {Info->CanBeVOPDX, true};
-#endif /* LLPC_BUILD_NPI */
   return {false, false};
 }
 
-#if LLPC_BUILD_NPI
 unsigned getVOPDOpcode(unsigned Opc, bool VOPD3) {
   bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(Opc) : 0;
   Opc = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : Opc;
-#else /* LLPC_BUILD_NPI */
-unsigned getVOPDOpcode(unsigned Opc) {
-#endif /* LLPC_BUILD_NPI */
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   return Info ? Info->VOPDOp : ~0u;
 }
@@ -941,7 +922,6 @@ int getMCOpcode(uint16_t Opcode, unsigned Gen) {
   return getMCOpcodeGen(Opcode, static_cast<Subtarget>(Gen));
 }
 
-#if LLPC_BUILD_NPI
 unsigned getBitOp2(unsigned Opc) {
   switch (Opc) {
   default:
@@ -961,15 +941,8 @@ int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily,
                 bool VOPD3) {
   bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(OpY) : 0;
   OpY = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : OpY;
-#else /* LLPC_BUILD_NPI */
-int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily) {
-#endif /* LLPC_BUILD_NPI */
   const VOPDInfo *Info =
-#if LLPC_BUILD_NPI
       getVOPDInfoFromComponentOpcodes(OpX, OpY, EncodingFamily, VOPD3);
-#else /* LLPC_BUILD_NPI */
-      getVOPDInfoFromComponentOpcodes(OpX, OpY, EncodingFamily);
-#endif /* LLPC_BUILD_NPI */
   return Info ? Info->Opcode : -1;
 }
 
@@ -984,11 +957,7 @@ std::pair<unsigned, unsigned> getVOPDComponents(unsigned VOPDOpcode) {
 
 namespace VOPD {
 
-#if LLPC_BUILD_NPI
 ComponentProps::ComponentProps(const MCInstrDesc &OpDesc, bool VOP3Layout) {
-#else /* LLPC_BUILD_NPI */
-ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
-#endif /* LLPC_BUILD_NPI */
   assert(OpDesc.getNumDefs() == Component::DST_NUM);
 
   assert(OpDesc.getOperandConstraint(Component::SRC0, MCOI::TIED_TO) == -1);
@@ -996,22 +965,15 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
   auto TiedIdx = OpDesc.getOperandConstraint(Component::SRC2, MCOI::TIED_TO);
   assert(TiedIdx == -1 || TiedIdx == Component::DST);
   HasSrc2Acc = TiedIdx != -1;
-#if LLPC_BUILD_NPI
   Opcode = OpDesc.getOpcode();
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
   IsVOP3 = VOP3Layout || (OpDesc.TSFlags & SIInstrFlags::VOP3);
   SrcOperandsNum = AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src2)   ? 3
                    : AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::imm)  ? 3
                    : AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src1) ? 2
                                                                            : 1;
-#else /* LLPC_BUILD_NPI */
-  SrcOperandsNum = OpDesc.getNumOperands() - OpDesc.getNumDefs();
-#endif /* LLPC_BUILD_NPI */
   assert(SrcOperandsNum <= Component::MAX_SRC_NUM);
 
-#if LLPC_BUILD_NPI
   if (Opcode == AMDGPU::V_CNDMASK_B32_e32 ||
       Opcode == AMDGPU::V_CNDMASK_B32_e64) {
     // CNDMASK is an awkward exception, it has FP modifiers, but not FP
@@ -1031,7 +993,6 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
   if (OpDesc.TSFlags & SIInstrFlags::VOP3)
     return;
 
-#endif /* LLPC_BUILD_NPI */
   auto OperandsNum = OpDesc.getNumOperands();
   unsigned CompOprIdx;
   for (CompOprIdx = Component::SRC1; CompOprIdx < OperandsNum; ++CompOprIdx) {
@@ -1042,12 +1003,10 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
   }
 }
 
-#if LLPC_BUILD_NPI
 int ComponentProps::getBitOp3OperandIdx() const {
   return getNamedOperandIdx(Opcode, OpName::bitop3);
 }
 
-#endif /* LLPC_BUILD_NPI */
 unsigned ComponentInfo::getIndexInParsedOperands(unsigned CompOprIdx) const {
   assert(CompOprIdx < Component::MAX_OPR_NUM);
 
@@ -1063,7 +1022,6 @@ unsigned ComponentInfo::getIndexInParsedOperands(unsigned CompOprIdx) const {
 }
 
 std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
-#if LLPC_BUILD_NPI
     std::function<unsigned(unsigned, unsigned)> GetRegIdx,
     const MCRegisterInfo &MRI, bool SkipSrc, bool AllowSameVGPR,
     bool VOPD3) const {
@@ -1088,33 +1046,20 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
       return true;
     if (BaseY != Y && (BaseX & BanksMask) == ((BaseY + 1) & BanksMask))
       return true;
-#else /* LLPC_BUILD_NPI */
-    std::function<unsigned(unsigned, unsigned)> GetRegIdx, bool SkipSrc) const {
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
     // If both are 64-bit bank conflict will be detected yet while checking
     // the first subreg.
     return false;
   };
-#else /* LLPC_BUILD_NPI */
-  auto OpXRegs = getRegIndices(ComponentIndex::X, GetRegIdx);
-  auto OpYRegs = getRegIndices(ComponentIndex::Y, GetRegIdx);
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
-  const unsigned CompOprNum =
-      SkipSrc ? Component::DST_NUM : Component::MAX_OPR_NUM;
-#endif /* LLPC_BUILD_NPI */
   unsigned CompOprIdx;
-#if LLPC_BUILD_NPI
   for (CompOprIdx = 0; CompOprIdx < Component::MAX_OPR_NUM; ++CompOprIdx) {
     unsigned BanksMasks = VOPD3 ? VOPD3_VGPR_BANK_MASKS[CompOprIdx]
                                 : VOPD_VGPR_BANK_MASKS[CompOprIdx];
     if (!OpXRegs[CompOprIdx] || !OpYRegs[CompOprIdx])
       continue;
 
+#if LLPC_BUILD_NPI
     // Skip MSB check if it is src2 yet one of component-inst is not VOP3.
     if (CompOprIdx != Component::SRC2 ||
         (CompInfo[ComponentIndex::X].isVOP3() &&
@@ -1124,6 +1069,7 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
         return CompOprIdx;
     }
 
+#endif /* LLPC_BUILD_NPI */
     if (SkipSrc && CompOprIdx >= Component::DST_NUM)
       continue;
 
@@ -1139,13 +1085,6 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
     if (banksOverlap(OpXRegs[CompOprIdx], OpYRegs[CompOprIdx], BanksMasks) &&
         (!AllowSameVGPR || CompOprIdx < Component::DST_NUM ||
          OpXRegs[CompOprIdx] != OpYRegs[CompOprIdx]))
-#else /* LLPC_BUILD_NPI */
-  for (CompOprIdx = 0; CompOprIdx < CompOprNum; ++CompOprIdx) {
-    unsigned BanksMasks = VOPD_VGPR_BANK_MASKS[CompOprIdx];
-    if (OpXRegs[CompOprIdx] && OpYRegs[CompOprIdx] &&
-        ((OpXRegs[CompOprIdx] & BanksMasks) ==
-         (OpYRegs[CompOprIdx] & BanksMasks)))
-#endif /* LLPC_BUILD_NPI */
       return CompOprIdx;
   }
 
@@ -1159,16 +1098,10 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
 // GetRegIdx(Component, MCOperandIdx) must return a VGPR register index
 // for the specified component and MC operand. The callback must return 0
 // if the operand is not a register or not a VGPR.
-#if LLPC_BUILD_NPI
 InstInfo::RegIndices
 InstInfo::getRegIndices(unsigned CompIdx,
                         std::function<unsigned(unsigned, unsigned)> GetRegIdx,
                         bool VOPD3) const {
-#else /* LLPC_BUILD_NPI */
-InstInfo::RegIndices InstInfo::getRegIndices(
-    unsigned CompIdx,
-    std::function<unsigned(unsigned, unsigned)> GetRegIdx) const {
-#endif /* LLPC_BUILD_NPI */
   assert(CompIdx < COMPONENTS_NUM);
 
   const auto &Comp = CompInfo[CompIdx];
@@ -1180,12 +1113,8 @@ InstInfo::RegIndices InstInfo::getRegIndices(
     unsigned CompSrcIdx = CompOprIdx - DST_NUM;
     RegIndices[CompOprIdx] =
         Comp.hasRegSrcOperand(CompSrcIdx)
-#if LLPC_BUILD_NPI
             ? GetRegIdx(CompIdx,
                         Comp.getIndexOfSrcInMCOperands(CompSrcIdx, VOPD3))
-#else /* LLPC_BUILD_NPI */
-            ? GetRegIdx(CompIdx, Comp.getIndexOfSrcInMCOperands(CompSrcIdx))
-#endif /* LLPC_BUILD_NPI */
             : 0;
   }
   return RegIndices;
@@ -1202,14 +1131,9 @@ VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
   auto [OpX, OpY] = getVOPDComponents(VOPDOpcode);
   const auto &OpXDesc = InstrInfo->get(OpX);
   const auto &OpYDesc = InstrInfo->get(OpY);
-#if LLPC_BUILD_NPI
   bool VOPD3 = InstrInfo->get(VOPDOpcode).TSFlags & SIInstrFlags::VOPD3;
   VOPD::ComponentInfo OpXInfo(OpXDesc, VOPD::ComponentKind::COMPONENT_X, VOPD3);
   VOPD::ComponentInfo OpYInfo(OpYDesc, OpXInfo, VOPD3);
-#else /* LLPC_BUILD_NPI */
-  VOPD::ComponentInfo OpXInfo(OpXDesc, VOPD::ComponentKind::COMPONENT_X);
-  VOPD::ComponentInfo OpYInfo(OpYDesc, OpXInfo);
-#endif /* LLPC_BUILD_NPI */
   return VOPD::InstInfo(OpXInfo, OpYInfo);
 }
 

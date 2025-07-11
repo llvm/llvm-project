@@ -105,10 +105,11 @@ let HasExt64BitDPP = 1 in
 #endif /* LLPC_BUILD_NPI */
 def V_LSHL_ADD_U64_PROF : VOP3_Profile<VOP_I64_I64_I32_I64>;
 
-#ifdef LLPC_BUILD_NPI
 def VOP_F64_F64_F64_F64_DPP_PROF : VOP3_Profile<VOP_F64_F64_F64_F64>;
+#ifdef LLPC_BUILD_NPI
 def V_MAD_U32_PROF: VOP3_Profile<VOP_I32_I32_I32_I32> {
 #else /* LLPC_BUILD_NPI */
+
 def DIV_FIXUP_F32_PROF : VOP3_Profile<VOP_F32_F32_F32_F32> {
 #endif /* LLPC_BUILD_NPI */
   let HasExtVOP3DPP = 0;
@@ -225,11 +226,7 @@ defm V_FMA_LEGACY_F32 : VOP3Inst <"v_fma_legacy_f32",
 
 defm V_MAD_I32_I24 : VOP3Inst <"v_mad_i32_i24", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
 defm V_MAD_U32_U24 : VOP3Inst <"v_mad_u32_u24", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
-#ifdef LLPC_BUILD_NPI
 defm V_FMA_F32 : VOP3Inst <"v_fma_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, any_fma>, VOPD_Component<0x13, "v_fma_f32">;
-#else /* LLPC_BUILD_NPI */
-defm V_FMA_F32 : VOP3Inst <"v_fma_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, any_fma>;
-#endif /* LLPC_BUILD_NPI */
 defm V_LERP_U8 : VOP3Inst <"v_lerp_u8", VOP3_Profile<VOP_I32_I32_I32_I32>, int_amdgcn_lerp>;
 
 #ifdef LLPC_BUILD_NPI
@@ -247,11 +244,7 @@ let SchedRW = [WriteIntMul] in {
 let SchedRW = [WriteDoubleAdd] in {
 let FPDPRounding = 1 in {
 let IsDPMACCInstruction = 1 in
-#ifdef LLPC_BUILD_NPI
 defm V_FMA_F64 : VOP3Inst <"v_fma_f64", VOP_F64_F64_F64_F64_DPP_PROF, any_fma>, VOPD_Component<0x20, "v_fma_f64">;
-#else /* LLPC_BUILD_NPI */
-defm V_FMA_F64 : VOP3Inst <"v_fma_f64", VOP3_Profile<VOP_F64_F64_F64_F64>, any_fma>;
-#endif /* LLPC_BUILD_NPI */
 let SubtargetPredicate = isNotGFX12Plus in {
 defm V_ADD_F64 : VOP3Inst <"v_add_f64", VOP3_Profile<VOP_F64_F64_F64>, any_fadd>;
 let IsDPMACCInstruction = 1 in
@@ -1371,15 +1364,11 @@ class VOP3_BITOP3_Profile<VOPProfile pfl, VOP3Features f> : VOP3_Profile<pfl, f>
   let HasClamp = 0;
   let HasOMod = 0;
   let HasModifiers = 0;
-#ifdef LLPC_BUILD_NPI
   let HasVOPD3Src2 = 0;
-#endif /* LLPC_BUILD_NPI */
   let HasBitOp3 = 1;
-#ifdef LLPC_BUILD_NPI
 
   let InsVOPD3Y = (ins Src0VOPD3:$src0Y, Src1VOPD3:$vsrc1Y, bitop3_0:$bitop3);
   let AsmVOPD3Y = getAsmVOPDPart<NumSrcArgs, "Y", HasVOPD3Src2, HasModifiers>.ret # "$bitop3";
-#endif /* LLPC_BUILD_NPI */
 }
 
 class VOP3_CVT_SCALE_F1632_FP8BF8_Profile<ValueType DstTy> : VOP3_Profile<VOPProfile<[DstTy, i32, f32, untyped]>,
@@ -1802,12 +1791,8 @@ let SubtargetPredicate = HasBitOp3Insts  in {
                                   VOP3_BITOP3_Profile<VOPProfile <[i16, i16, i16, i16, i32]>, VOP3_OPSEL>>;
 #endif /* LLPC_BUILD_NPI */
     defm V_BITOP3_B32 : VOP3Inst <"v_bitop3_b32",
-#ifdef LLPC_BUILD_NPI
                                   VOP3_BITOP3_Profile<VOPProfile <[i32, i32, i32, i32, i32]>, VOP3_REGULAR>>,
                         VOPD_Component<0x12, "v_bitop2_b32">;
-#else /* LLPC_BUILD_NPI */
-                                  VOP3_BITOP3_Profile<VOPProfile <[i32, i32, i32, i32, i32]>, VOP3_REGULAR>>;
-#endif /* LLPC_BUILD_NPI */
   }
 #ifdef LLPC_BUILD_NPI
 

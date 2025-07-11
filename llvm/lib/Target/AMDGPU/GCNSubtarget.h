@@ -1706,8 +1706,10 @@ public:
 #if LLPC_BUILD_NPI
   bool hasGFX13Insts() const { return GFX13Insts; }
 
+#endif /* LLPC_BUILD_NPI */
   bool hasVOPD3() const { return GFX1250Insts; }
 
+#if LLPC_BUILD_NPI
   // \returns true if the target has V_ADD_U64/V_SUB_U64 instructions.
   bool hasAddSubU64Insts() const { return HasAddSubU64Insts; }
 

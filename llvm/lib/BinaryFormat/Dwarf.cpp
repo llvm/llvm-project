@@ -159,6 +159,8 @@ StringRef llvm::dwarf::OperationEncodingString(unsigned Encoding) {
     return "DW_OP_LLVM_extract_bits_sext";
   case DW_OP_LLVM_extract_bits_zext:
     return "DW_OP_LLVM_extract_bits_zext";
+  case DW_OP_LLVM_poisoned:
+    return "DW_OP_LLVM_poisoned";
   }
 }
 
@@ -175,6 +177,7 @@ unsigned llvm::dwarf::getOperationEncoding(StringRef OperationEncodingString) {
       .Case("DW_OP_LLVM_arg", DW_OP_LLVM_arg)
       .Case("DW_OP_LLVM_extract_bits_sext", DW_OP_LLVM_extract_bits_sext)
       .Case("DW_OP_LLVM_extract_bits_zext", DW_OP_LLVM_extract_bits_zext)
+      .Case("DW_OP_LLVM_poisoned", DW_OP_LLVM_poisoned)
       .Default(0);
 }
 
@@ -762,6 +765,8 @@ StringRef llvm::dwarf::AttributeValueString(uint16_t Attr, unsigned Val) {
     return DefaultedMemberString(Val);
   case DW_AT_APPLE_enum_kind:
     return EnumKindString(Val);
+  case DW_AT_LLVM_memory_space:
+    return MemorySpaceString(Val);
   }
 
   return StringRef();
@@ -909,6 +914,50 @@ StringRef llvm::dwarf::RLEString(unsigned RLE) {
     return "DW_RLE_" #NAME;
 #include "llvm/BinaryFormat/Dwarf.def"
   }
+}
+
+unsigned llvm::dwarf::getMemorySpace(StringRef CCString) {
+  return StringSwitch<unsigned>(CCString)
+#define HANDLE_DW_MSPACE(ID, NAME)                                             \
+  .Case("DW_MSPACE_LLVM_" #NAME, DW_MSPACE_LLVM_##NAME)
+#include "llvm/BinaryFormat/Dwarf.def"
+      .Default(0);
+}
+
+StringRef llvm::dwarf::MemorySpaceString(unsigned MS) {
+  switch (MS) {
+  default:
+    return StringRef();
+#define HANDLE_DW_MSPACE(ID, NAME)                                             \
+  case DW_MSPACE_LLVM_##NAME:                                                  \
+    return "DW_MSPACE_LLVM_" #NAME;
+#include "llvm/BinaryFormat/Dwarf.def"
+  case DW_MSPACE_LLVM_lo_user:
+    return "DW_MSPACE_LLVM_lo_user";
+  case DW_MSPACE_LLVM_hi_user:
+    return "DW_MSPACE_LLVM_hi_user";
+  }
+}
+
+StringRef llvm::dwarf::AddressSpaceString(unsigned AS, llvm::Triple TT) {
+  switch (AS) {
+#define HANDLE_DW_ASPACE(ID, NAME)                                             \
+  case DW_ASPACE_LLVM_##NAME:                                                  \
+    return "DW_ASPACE_LLVM_" #NAME;
+#define HANDLE_DW_ASPACE_PRED(ID, NAME, PRED)
+#include "llvm/BinaryFormat/Dwarf.def"
+  default:
+    break;
+  }
+
+  bool SELECT_AMDGPU = TT.isAMDGPU();
+#define HANDLE_DW_ASPACE(ID, NAME)
+#define HANDLE_DW_ASPACE_PRED(ID, NAME, PRED)                                  \
+  if (DW_ASPACE_LLVM_##NAME == AS && PRED)                                     \
+    return "DW_ASPACE_LLVM_" #NAME;
+#include "llvm/BinaryFormat/Dwarf.def"
+
+  return "";
 }
 
 StringRef (*const llvm::dwarf::EnumTraits<Tag>::StringFn)(unsigned) = TagString;

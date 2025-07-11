@@ -56,9 +56,6 @@ def GFX1250Gen       : GFXGen<isGFX125xOnly, "GFX1250", "_gfx1250", SIEncodingFa
 def GFX12Not12_50Gen : GFXGen<isGFX12Not12_50, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
 def GFX12Gen         : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
 def GFX1170Gen       : GFXGen<isGFX1170Only, "GFX1170", "_gfx1170", SIEncodingFamily.GFX1170>;
-#ifdef LLPC_BUILD_NPI
-def GFX11Not12_50Gen : GFXGen<isGFX11Not12_50, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
-#endif /* LLPC_BUILD_NPI */
 def GFX11Not11_70Gen : GFXGen<isGFX11Not11_70, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
 def GFX11Gen         : GFXGen<isGFX11Only, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
 def GFX10Gen         : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.GFX10>;
@@ -1447,13 +1444,11 @@ class FPVCSrcInputModsMatchClass <int opSize> : FPInputModsMatchClass <opSize> {
   let PredicateMethod = "isRegOrInlineImmWithFP"#opSize#"InputMods";
 }
 
-#ifdef LLPC_BUILD_NPI
 class FPVRegSrcInputModsMatchClass <int opSize> : FPInputModsMatchClass <opSize> {
   let Name = "VRegWithFP"#opSize#"InputMods";
   let PredicateMethod = "isVRegWithFP"#opSize#"InputMods";
 }
 
-#endif /* LLPC_BUILD_NPI */
 def FP16InputModsMatchClass : FPInputModsMatchClass<16>;
 class FPT16InputModsMatchClass<bit IsFake16> : FPInputModsMatchClass<16> {
   let Name = !if(IsFake16, "RegOrImmWithFPFake16InputMods",
@@ -1472,12 +1467,10 @@ class FP16VCSrcInputModsMatchClass<bit IsFake16>
                         !if(IsFake16, "true", "false") # ">";
 }
 def FP32VCSrcInputModsMatchClass : FPVCSrcInputModsMatchClass<32>;
-#ifdef LLPC_BUILD_NPI
 def FP64VCSrcInputModsMatchClass : FPVCSrcInputModsMatchClass<64>;
 
 def FP32VRegSrcInputModsMatchClass : FPVRegSrcInputModsMatchClass<32>;
 def FP64VRegSrcInputModsMatchClass : FPVRegSrcInputModsMatchClass<64>;
-#endif /* LLPC_BUILD_NPI */
 
 class InputMods <AsmOperandClass matchClass> : Operand <i32> {
   let OperandNamespace = "AMDGPU";
@@ -1504,12 +1497,10 @@ class FPT16VCSrcInputMods<bit IsFake16 = 1>
   let EncoderMethod = "getMachineOpValueT16";
 }
 def FP32VCSrcInputMods : FPInputMods<FP32VCSrcInputModsMatchClass>;
-#ifdef LLPC_BUILD_NPI
 def FP64VCSrcInputMods : FPInputMods<FP64VCSrcInputModsMatchClass>;
 
 def FP32VRegSrcInputMods : FPInputMods<FP32VRegSrcInputModsMatchClass>;
 def FP64VRegSrcInputMods : FPInputMods<FP64VRegSrcInputModsMatchClass>;
-#endif /* LLPC_BUILD_NPI */
 
 class IntInputModsMatchClass <int opSize> : AsmOperandClass {
   let Name = "RegOrImmWithInt"#opSize#"InputMods";
@@ -1965,7 +1956,6 @@ class getVOPSrc0ForVT<ValueType VT, bit IsTrue16, bit IsFake16 = 1> {
         1               : VSrc_b32);
 }
 
-#ifdef LLPC_BUILD_NPI
 // Returns the register class to use for source VGPR, SGPR or inline constant
 // for the given VT.
 class getVCSrcForVT<ValueType VT> {
@@ -1992,7 +1982,6 @@ class getVCSrcForVT<ValueType VT> {
     );
 }
 
-#endif /* LLPC_BUILD_NPI */
 class getSOPSrcForVT<ValueType VT> {
   RegisterOperand ret = !if(!eq(VT.Size, 64), SSrc_b64, SSrc_b32);
 }
@@ -2195,7 +2184,6 @@ class getSrcModDPP_t16 <ValueType VT, bit IsFake16 = 1> {
 }
 
 // Return type of input modifiers operand for specified input operand for DPP
-#ifdef LLPC_BUILD_NPI
 // or VOPD3.
 class getSrcModVOP3VC <ValueType VT, bit IsFake16 = 1> {
   Operand ret =
@@ -2209,7 +2197,7 @@ class getSrcModVOP3VC <ValueType VT, bit IsFake16 = 1> {
                 Int32VCSrcInputMods));
 }
 
-#endif /* LLPC_BUILD_NPI */
+// Return type of input modifiers operand for specified input operand for DPP
 // True16: If the destination is a 16-bit value, the src0 modifier must hold
 // dst's opsel bit. Use a dummy value for DstVT if getting the mod for a src operand besides 0.
 // 64-bit src types are not implemented for True16 dst.
@@ -2230,27 +2218,12 @@ class getSrc0ModVOP3DPP <ValueType VT, ValueType DstVT, bit IsFake16 = 1> {
   Operand ret = !if(!and(!not(IsFake16), !eq(DstVT.Size, 16)), T16Dst, Normal);
 }
 
-#ifdef LLPC_BUILD_NPI
 // Return type of input modifiers operand for specified input operand for VGPR
 // only operands (VOPD3 vsrc1 and vsrc2).
 class getSrcModVOP3V <ValueType VT> {
-#else /* LLPC_BUILD_NPI */
-// GFX11 only supports VGPR src1, but the restriction is done in AsmParser
-// and GCNDPPCombine.
-class getSrcModVOP3DPP<ValueType VT, bit IsFake16 = 1> {
-#endif /* LLPC_BUILD_NPI */
   Operand ret =
-#ifdef LLPC_BUILD_NPI
       !if (!eq(VT.Value, f64.Value), FP64VRegSrcInputMods,
            FP32VRegSrcInputMods);
-#else /* LLPC_BUILD_NPI */
-      !if (VT.isFP,
-           !if (!or(!eq(VT.Value, f16.Value), !eq(VT.Value, bf16.Value)),
-                FPT16VCSrcInputMods<IsFake16>, FP32VCSrcInputMods),
-           !if (!eq(VT.Value, i16.Value),
-                IntT16VCSrcInputMods<IsFake16>,
-                Int32VCSrcInputMods));
-#endif /* LLPC_BUILD_NPI */
 }
 
 // Return type of input modifiers operand specified input operand for SDWA
@@ -2523,7 +2496,6 @@ class getInsSDWA <RegisterOperand Src0RC, RegisterOperand Src1RC, int NumSrcArgs
             (ins)/* endif */)));
 }
 
-#ifdef LLPC_BUILD_NPI
 // Ins for VOPD3
 class getInsVOPD3<RegisterOperand Src0VOPD3, RegisterOperand Src1VOPD3, RegisterOperand Src2VOPD3,
                   Operand Src0Mod, Operand Src1Mod, Operand Src2Mod,
@@ -2545,7 +2517,6 @@ class getInsVOPD3<RegisterOperand Src0VOPD3, RegisterOperand Src1VOPD3, Register
                  !if(HasSrc2, Src2, (ins)));
 }
 
-#endif /* LLPC_BUILD_NPI */
 // Outs for DPP
 class getOutsDPP <bit HasDst, ValueType DstVT, RegisterOperand DstRCDPP> {
   dag ret = !if(HasDst,
@@ -2577,29 +2548,16 @@ class getAsm32 <bit HasDst, int NumSrcArgs, ValueType DstVT = i32> {
                !if(!eq(NumSrcArgs, 3), src0#src1#src2, "");
 }
 
-#ifdef LLPC_BUILD_NPI
 class getAsmVOPDPart <int NumSrcArgs, string XorY, bit HasVOPD3Src2 = 0, bit HasModifiers = 0> {
   string mods = !if(HasModifiers, "_modifiers", "");
-#else /* LLPC_BUILD_NPI */
-class getAsmVOPDPart <int NumSrcArgs, string XorY> {
-#endif /* LLPC_BUILD_NPI */
   string dst = "$vdst" # XorY;
-#ifdef LLPC_BUILD_NPI
   string src0 = ", $src0" # XorY # mods;
   string src1 = ", $vsrc1" # XorY # mods;
   string src2 = ", $vsrc2" # XorY # mods;
-#else /* LLPC_BUILD_NPI */
-  string src0 = ", $src0" # XorY;
-  string src1 = ", $vsrc1" # XorY;
-#endif /* LLPC_BUILD_NPI */
   string ret = dst #
                !if(!ge(NumSrcArgs, 1), src0, "") #
-#ifdef LLPC_BUILD_NPI
                !if(!ge(NumSrcArgs, 2), src1, "") #
                !if(HasVOPD3Src2, src2, "");
-#else /* LLPC_BUILD_NPI */
-               !if(!ge(NumSrcArgs, 2), src1, "");
-#endif /* LLPC_BUILD_NPI */
 }
 
 // Returns the assembly string for the inputs and outputs of a VOP3P
@@ -2919,23 +2877,16 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field Operand Src1ModDPP = getSrcModDPP<Src1VT>.ret;
   field Operand Src2ModDPP = getSrcModDPP<Src2VT>.ret;
   field Operand Src0ModVOP3DPP = getSrc0ModVOP3DPP<Src0VT, DstVT>.ret;
-#ifdef LLPC_BUILD_NPI
   field Operand Src1ModVOP3DPP = getSrcModVOP3VC<Src1VT>.ret;
   field Operand Src2ModVOP3DPP = getSrcModVOP3VC<Src2VT>.ret;
-#else /* LLPC_BUILD_NPI */
-  field Operand Src1ModVOP3DPP = getSrcModVOP3DPP<Src1VT>.ret;
-  field Operand Src2ModVOP3DPP = getSrcModVOP3DPP<Src2VT>.ret;
-#endif /* LLPC_BUILD_NPI */
   field Operand Src0ModSDWA = getSrcModSDWA<Src0VT>.ret;
   field Operand Src1ModSDWA = getSrcModSDWA<Src1VT>.ret;
-#ifdef LLPC_BUILD_NPI
   field RegisterOperand Src0VOPD3 = getVCSrcForVT<Src0VT>.ret;
   field RegisterOperand Src1VOPD3 = getVregSrcForVT<Src1VT>.ret;
   field RegisterOperand Src2VOPD3 = getVregSrcForVT<Src2VT>.ret;
   field Operand Src0ModVOPD3 = getSrcModVOP3VC<Src0VT>.ret;
   field Operand Src1ModVOPD3 = getSrcModVOP3V<Src1VT>.ret;
   field Operand Src2ModVOPD3 = getSrcModVOP3V<Src2VT>.ret;
-#endif /* LLPC_BUILD_NPI */
 
 
   field bit IsMAI = 0;
@@ -3074,7 +3025,6 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field dag InsVOPDX_immX = (ins !if(!eq(Src0VT.Size, 32), VSrc_f32, VSrc_f16):$src0X, VGPR_32:$vsrc1X);
 #endif /* LLPC_BUILD_NPI */
   field dag InsVOPDY = (ins Src0RC32:$src0Y, Src1RC32:$vsrc1Y);
-#ifdef LLPC_BUILD_NPI
   field bit HasVOPD3Src2 = HasSrc2;
   field dag InsVOPD3X = getInsVOPD3<Src0VOPD3, Src1VOPD3, Src2VOPD3,
                                     Src0ModVOPD3, Src1ModVOPD3, Src2ModVOPD3,
@@ -3082,7 +3032,6 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field dag InsVOPD3Y = getInsVOPD3<Src0VOPD3, Src1VOPD3, Src2VOPD3,
                                     Src0ModVOPD3, Src1ModVOPD3, Src2ModVOPD3,
                                     HasSrc1, HasVOPD3Src2, HasModifiers, 1>.ret;
-#endif /* LLPC_BUILD_NPI */
 
   field string Asm32 = getAsm32<HasDst, NumSrcArgs, DstVT>.ret;
   field string AsmDPP = !if(HasExtDPP,
@@ -3103,10 +3052,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field string AsmSDWA9 = getAsmSDWA9<HasDst, HasSDWAOMod, NumSrcArgs, DstVT>.ret;
   field string AsmVOPDX = getAsmVOPDPart<NumSrcArgs, "X">.ret;
   field string AsmVOPDY = getAsmVOPDPart<NumSrcArgs, "Y">.ret;
-#ifdef LLPC_BUILD_NPI
   field string AsmVOPD3X = getAsmVOPDPart<NumSrcArgs, "X", HasVOPD3Src2, HasModifiers>.ret;
   field string AsmVOPD3Y = getAsmVOPDPart<NumSrcArgs, "Y", HasVOPD3Src2, HasModifiers>.ret;
-#endif /* LLPC_BUILD_NPI */
   field string TieRegDPP = "$old";
   field bit IsSMFMAC = false;
   field bit HasAbid = !and(IsMAI, HasSrc1);
@@ -3150,13 +3097,8 @@ class VOPProfile_True16<VOPProfile P> : VOPProfile<P.ArgVT> {
   let Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT, 0 /*IsFake16*/>.ret;
   let Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT, 0 /*IsFake16*/>.ret;
   let Src0ModVOP3DPP = getSrc0ModVOP3DPP<Src0VT, DstVT, 0/*IsFake16*/>.ret;
-#ifdef LLPC_BUILD_NPI
   let Src1ModVOP3DPP = getSrcModVOP3VC<Src1VT, 0 /*IsFake16*/>.ret;
   let Src2ModVOP3DPP = getSrcModVOP3VC<Src2VT, 0 /*IsFake16*/>.ret;
-#else /* LLPC_BUILD_NPI */
-  let Src1ModVOP3DPP = getSrcModVOP3DPP<Src1VT, 0 /*IsFake16*/>.ret;
-  let Src2ModVOP3DPP = getSrcModVOP3DPP<Src2VT, 0 /*IsFake16*/>.ret;
-#endif /* LLPC_BUILD_NPI */
 
   let DstRC64 = getVALUDstForVT<DstVT, 1 /*IsTrue16*/, 1 /*IsVOP3Encoding*/>.ret;
   let Src0RC64 = getVOP3SrcForVT<Src0VT, 1 /*IsTrue16*/>.ret;
@@ -3185,13 +3127,8 @@ class VOPProfile_Fake16<VOPProfile P> : VOPProfile<P.ArgVT> {
   let Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT, 1 /*IsFake16*/>.ret;
   let Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT, 1 /*IsFake16*/>.ret;
   let Src0ModVOP3DPP = getSrc0ModVOP3DPP<Src0VT, DstVT, 1/*IsFake16*/>.ret;
-#ifdef LLPC_BUILD_NPI
   let Src1ModVOP3DPP = getSrcModVOP3VC<Src1VT, 1 /*IsFake16*/>.ret;
   let Src2ModVOP3DPP = getSrcModVOP3VC<Src2VT, 1 /*IsFake16*/>.ret;
-#else /* LLPC_BUILD_NPI */
-  let Src1ModVOP3DPP = getSrcModVOP3DPP<Src1VT, 1/*IsFake16*/>.ret;
-  let Src2ModVOP3DPP = getSrcModVOP3DPP<Src2VT, 1/*IsFake16*/>.ret;
-#endif /* LLPC_BUILD_NPI */
 }
 
 def VOP_F16_F16 : VOPProfile<[f16, f16, untyped, untyped]>;
@@ -3753,11 +3690,7 @@ def FP4FP8DstByteSelTable : GenericTable {
 def VOPDComponentTable : GenericTable {
   let FilterClass = "VOPD_Component";
   let CppTypeName = "VOPDComponentInfo";
-#ifdef LLPC_BUILD_NPI
   let Fields = ["BaseVOP", "VOPDOp", "CanBeVOPDX", "CanBeVOPD3X"];
-#else /* LLPC_BUILD_NPI */
-  let Fields = ["BaseVOP", "VOPDOp", "CanBeVOPDX"];
-#endif /* LLPC_BUILD_NPI */
   let PrimaryKey = ["BaseVOP"];
   let PrimaryKeyName = "getVOPDComponentHelper";
 }
@@ -3770,22 +3703,14 @@ def getVOPDBaseFromComponent : SearchIndex {
 def VOPDPairs : GenericTable {
   let FilterClass = "VOPD_Base";
   let CppTypeName = "VOPDInfo";
-#ifdef LLPC_BUILD_NPI
   let Fields = ["Opcode", "OpX", "OpY", "SubTgt", "VOPD3"];
-#else /* LLPC_BUILD_NPI */
-  let Fields = ["Opcode", "OpX", "OpY", "SubTgt"];
-#endif /* LLPC_BUILD_NPI */
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "getVOPDOpcodeHelper";
 }
 
 def getVOPDInfoFromComponentOpcodes : SearchIndex {
   let Table = VOPDPairs;
-#ifdef LLPC_BUILD_NPI
   let Key = ["OpX", "OpY", "SubTgt", "VOPD3"];
-#else /* LLPC_BUILD_NPI */
-  let Key = ["OpX", "OpY", "SubTgt"];
-#endif /* LLPC_BUILD_NPI */
 }
 
 include "SIInstructions.td"

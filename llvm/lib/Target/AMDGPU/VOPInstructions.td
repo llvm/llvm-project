@@ -43,29 +43,17 @@ class VOP <string opName> {
 
 // First 13 insts from VOPDY are also VOPDX. DOT2ACC_F32_BF16 is omitted
 defvar VOPDX_Max_Index = 12;
-#ifdef LLPC_BUILD_NPI
 defvar VOPD3X_Max_Index = 36;
-#endif /* LLPC_BUILD_NPI */
 
-#ifdef LLPC_BUILD_NPI
 class VOPD_Component<bits<6> OpIn, string vOPDName> {
-#else /* LLPC_BUILD_NPI */
-class VOPD_Component<bits<5> OpIn, string vOPDName> {
-#endif /* LLPC_BUILD_NPI */
   Instruction BaseVOP = !cast<Instruction>(NAME);
   string VOPDName = "v_dual_" # !substr(vOPDName, 2);
-#ifdef LLPC_BUILD_NPI
   bits<6> VOPDOp = OpIn;
-#else /* LLPC_BUILD_NPI */
-  bits<5> VOPDOp = OpIn;
-#endif /* LLPC_BUILD_NPI */
   bit CanBeVOPDX = !le(VOPDOp, VOPDX_Max_Index);
-#ifdef LLPC_BUILD_NPI
   bit CanBeVOPD3X = !and(!le(VOPDOp, VOPD3X_Max_Index),
                          !and(!ne(vOPDName, "v_bitop2_b32"),
                               !and(!ne(vOPDName, "v_max_i32"),
                                    !ne(vOPDName, "v_min_i32"))));
-#endif /* LLPC_BUILD_NPI */
 }
 
 class VOPAnyCommon <dag outs, dag ins, string asm, list<dag> pattern> :
@@ -764,9 +752,9 @@ def SDWA {
 class VOP_SDWAe<VOPProfile P> : Enc64 {
   bits<8> src0;
   bits<3> src0_sel;
-  bits<2> src0_modifiers; // float: {abs,neg}, int {sext}
+  bits<5> src0_modifiers; // float: {abs,neg}, int {sext}
   bits<3> src1_sel;
-  bits<2> src1_modifiers;
+  bits<5> src1_modifiers;
   bits<3> dst_sel;
   bits<2> dst_unused;
   bits<1> clamp;
@@ -776,10 +764,10 @@ class VOP_SDWAe<VOPProfile P> : Enc64 {
   let Inst{44-43} = !if(P.EmitDstSel, dst_unused{1-0}, ?);
   let Inst{45}    = !if(P.HasSDWAClamp, clamp{0}, 0);
   let Inst{50-48} = !if(P.HasSrc0, src0_sel{2-0}, 0);
-  let Inst{51}    = !if(P.HasSrc0IntMods, src0_modifiers{0}, 0);
+  let Inst{51}    = !if(P.HasSrc0IntMods, src0_modifiers{4}, 0);
   let Inst{53-52} = !if(P.HasSrc0FloatMods, src0_modifiers{1-0}, 0);
   let Inst{58-56} = !if(P.HasSrc1, src1_sel{2-0}, 0);
-  let Inst{59}    = !if(P.HasSrc1IntMods, src1_modifiers{0}, 0);
+  let Inst{59}    = !if(P.HasSrc1IntMods, src1_modifiers{4}, 0);
   let Inst{61-60} = !if(P.HasSrc1FloatMods, src1_modifiers{1-0}, 0);
 }
 
@@ -800,18 +788,18 @@ class VOP_SDWAe<VOPProfile P> : Enc64 {
 class VOP_SDWA9e<VOPProfile P> : Enc64 {
   bits<9> src0; // {src0_sgpr{0}, src0{7-0}}
   bits<3> src0_sel;
-  bits<2> src0_modifiers; // float: {abs,neg}, int {sext}
+  bits<5> src0_modifiers; // float: {abs,neg}, int {sext}
   bits<3> src1_sel;
-  bits<2> src1_modifiers;
+  bits<5> src1_modifiers;
   bits<1> src1_sgpr;
 
   let Inst{39-32} = !if(P.HasSrc0, src0{7-0}, 0);
   let Inst{50-48} = !if(P.HasSrc0, src0_sel{2-0}, 0);
-  let Inst{51}    = !if(P.HasSrc0IntMods, src0_modifiers{0}, 0);
+  let Inst{51}    = !if(P.HasSrc0IntMods, src0_modifiers{4}, 0);
   let Inst{53-52} = !if(P.HasSrc0FloatMods, src0_modifiers{1-0}, 0);
   let Inst{55}    = !if(P.HasSrc0, src0{8}, 0);
   let Inst{58-56} = !if(P.HasSrc1, src1_sel{2-0}, 0);
-  let Inst{59}    = !if(P.HasSrc1IntMods, src1_modifiers{0}, 0);
+  let Inst{59}    = !if(P.HasSrc1IntMods, src1_modifiers{4}, 0);
   let Inst{61-60} = !if(P.HasSrc1FloatMods, src1_modifiers{1-0}, 0);
   let Inst{63}    = 0; // src1_sgpr - should be specified in subclass
 }
@@ -2230,7 +2218,7 @@ multiclass VOP3Only_ScaleSel_Real_gfx1250_gfx13<bits<10> preGFX13, bits<10> op =
 
 multiclass VOP3Only_Realtriple_t16_gfx11_gfx12_not_gfx1250_gfx13<bits<10> preGFX13Op, bits<10> op, string asmName, string opName = NAME,
                                                        string pseudo_mnemonic = "", bit isSingle = 0> :
-  VOP3_Realtriple_with_name<GFX11Not12_50Gen, preGFX13Op, opName, asmName, pseudo_mnemonic, isSingle>,
+  VOP3_Realtriple_with_name<GFX11Gen, preGFX13Op, opName, asmName, pseudo_mnemonic, isSingle>,
   VOP3_Realtriple_with_name<GFX12Not12_50Gen, preGFX13Op, opName, asmName, pseudo_mnemonic, isSingle>,
   VOP3_Realtriple_with_name<GFX13Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
 
@@ -2243,9 +2231,9 @@ multiclass VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12_not_gfx1250_gfx13<bits
 multiclass VOP3_Realtriple_with_name_gfx11_gfx12_not_gfx1250_gfx13<bits<10> preGFX13Op, bits<10> op, string opName,
                                                            string asmName, string pseudo_mnemonic = "",
                                                            bit isSingle = 0> :
-  VOP3_Realtriple_with_name<GFX13Gen, op, opName, asmName, pseudo_mnemonic, isSingle>,
+  VOP3_Realtriple_with_name<GFX11Gen, preGFX13Op, opName, asmName, pseudo_mnemonic, isSingle>,
   VOP3_Realtriple_with_name<GFX12Not12_50Gen, preGFX13Op, opName, asmName, pseudo_mnemonic, isSingle>,
-  VOP3_Realtriple_with_name<GFX11Not12_50Gen, preGFX13Op, opName, asmName, pseudo_mnemonic, isSingle>;
+  VOP3_Realtriple_with_name<GFX13Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
 
 #endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
@@ -2379,7 +2367,7 @@ multiclass VOP3Only_Realtriple_gfx1250<bits<10> op, bit isSingle = 0> :
 
 #ifdef LLPC_BUILD_NPI
 multiclass VOP3Only_Realtriple_gfx11_gfx12_not_gfx1250_gfx13<bits<10> gfx12Op, bits<10> op, bit isSingle = 0> :
-  VOP3_Realtriple<GFX11Not12_50Gen, gfx12Op, isSingle>,
+  VOP3_Realtriple<GFX11Gen, gfx12Op, isSingle>,
   VOP3_Realtriple<GFX12Not12_50Gen, gfx12Op, isSingle>,
   VOP3_Realtriple<GFX13Gen, op, isSingle>;
 

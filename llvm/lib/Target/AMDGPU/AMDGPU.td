@@ -2663,12 +2663,6 @@ def isGFX11Only :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX11">,
   AssemblerPredicate<(all_of FeatureGFX11Insts, (not FeatureGFX12Insts))>;
 
-#ifdef LLPC_BUILD_NPI
-def isGFX11Not12_50 :
-  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX11 && !Subtarget->hasGFX1250Insts()">,
-  AssemblerPredicate<(all_of FeatureGFX11Insts, (not FeatureGFX1250Insts))>;
-
-#endif /* LLPC_BUILD_NPI */
 def isGFX11Not11_70 :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX11 &&"
             "!Subtarget->hasIEEEMinimumMaximumInsts()">,

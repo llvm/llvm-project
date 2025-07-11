@@ -3095,6 +3095,67 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
+/// Convert an omp.canonical_loop to LLVM-IR
+static LogicalResult
+convertOmpCanonicalLoopOp(omp::CanonicalLoopOp op, llvm::IRBuilderBase &builder,
+                          LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+
+  llvm::OpenMPIRBuilder::LocationDescription loopLoc(builder);
+  Value loopIV = op.getInductionVar();
+  Value loopTC = op.getTripCount();
+
+  llvm::Value *llvmTC = moduleTranslation.lookupValue(loopTC);
+
+  llvm::Expected<llvm::CanonicalLoopInfo *> llvmOrError =
+      ompBuilder->createCanonicalLoop(
+          loopLoc,
+          [&](llvm::OpenMPIRBuilder::InsertPointTy ip, llvm::Value *llvmIV) {
+            // Register the mapping of MLIR induction variable to LLVM-IR
+            // induction variable
+            moduleTranslation.mapValue(loopIV, llvmIV);
+
+            builder.restoreIP(ip);
+            llvm::Expected<llvm::BasicBlock *> bodyGenStatus =
+                convertOmpOpRegions(op.getRegion(), "omp.loop.region", builder,
+                                    moduleTranslation);
+
+            return bodyGenStatus.takeError();
+          },
+          llvmTC, "omp.loop");
+  if (!llvmOrError)
+    return op.emitError(llvm::toString(llvmOrError.takeError()));
+
+  llvm::CanonicalLoopInfo *llvmCLI = *llvmOrError;
+  llvm::IRBuilderBase::InsertPoint afterIP = llvmCLI->getAfterIP();
+  builder.restoreIP(afterIP);
+
+  // Register the mapping of MLIR loop to LLVM-IR OpenMPIRBuilder loop
+  if (Value cli = op.getCli())
+    moduleTranslation.mapOmpLoop(cli, llvmCLI);
+
+  return success();
+}
+
+/// Apply a `#pragma omp unroll` / "!$omp unroll" transformation using the
+/// OpenMPIRBuilder.
+static LogicalResult
+applyUnrollHeuristic(omp::UnrollHeuristicOp op, llvm::IRBuilderBase &builder,
+                     LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+
+  Value applyee = op.getApplyee();
+  assert(applyee && "Loop to apply unrolling on required");
+
+  llvm::CanonicalLoopInfo *consBuilderCLI =
+      moduleTranslation.lookupOMPLoop(applyee);
+  llvm::OpenMPIRBuilder::LocationDescription loc(builder);
+  ompBuilder->unrollLoopHeuristic(loc.DL, consBuilderCLI);
+
+  moduleTranslation.invalidateOmpLoop(applyee);
+  return success();
+}
+
 /// Convert an Atomic Ordering attribute to llvm::AtomicOrdering.
 static llvm::AtomicOrdering
 convertAtomicOrdering(std::optional<omp::ClauseMemoryOrderKind> ao) {
@@ -5715,6 +5776,33 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
+// Add DIOp based expression in the declare target variables for AMDGPU target.
+static void updateDebugInfoForDeclareTargetVariables(
+    LLVM::GlobalOp globalOp, LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Module *M = moduleTranslation.getLLVMModule();
+  if (!llvm::Triple(M->getTargetTriple()).isAMDGPU())
+    return;
+
+  llvm::GlobalVariable *GV = M->getGlobalVariable(globalOp.getSymName());
+  if (GV) {
+    llvm::SmallVector<llvm::DIGlobalVariableExpression *> GVEs;
+    GV->getDebugInfo(GVEs);
+    GV->eraseMetadata(llvm::LLVMContext::MD_dbg);
+    llvm::DIExprBuilder ExprBuilder(M->getContext());
+    unsigned int globalAS = M->getDataLayout().getDefaultGlobalsAddressSpace();
+    auto ptrTy = llvm::PointerType::get(M->getContext(), globalAS);
+    ExprBuilder.append<llvm::DIOp::Arg>(0u, ptrTy);
+    ExprBuilder.append<llvm::DIOp::Deref>(GV->getType());
+    for (auto *GVE : GVEs) {
+      llvm::DIExpression *Old = GVE->getExpression();
+      assert((Old == nullptr) || (Old->getNumElements() == 0));
+      auto *newGVE = llvm::DIGlobalVariableExpression::get(
+          M->getContext(), GVE->getVariable(), ExprBuilder.intoExpression());
+      GV->addDebugInfo(newGVE);
+    }
+  }
+}
+
 static LogicalResult
 convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
                          LLVM::ModuleTranslation &moduleTranslation) {
@@ -5746,6 +5834,7 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
 
   if (LLVM::GlobalOp gOp = dyn_cast<LLVM::GlobalOp>(op)) {
     llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+    updateDebugInfoForDeclareTargetVariables(gOp, moduleTranslation);
     if (auto *gVal = llvmModule->getNamedValue(gOp.getSymName())) {
       llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
       bool isDeclaration = gOp.isDeclaration();
@@ -5989,6 +6078,23 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
                 // etc. and then discarded
                 return success();
               })
+          .Case([&](omp::NewCliOp op) {
+            // Meta-operation: Doesn't do anything by itself, but used to
+            // identify a loop.
+            return success();
+          })
+          .Case([&](omp::CanonicalLoopOp op) {
+            return convertOmpCanonicalLoopOp(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::UnrollHeuristicOp op) {
+            // FIXME: Handling omp.unroll_heuristic as an executable requires
+            // that the generator (e.g. omp.canonical_loop) has been seen first.
+            // For construct that require all codegen to occur inside a callback
+            // (e.g. OpenMPIRBilder::createParallel), all codegen of that
+            // contained region including their transformations must occur at
+            // the omp.canonical_loop.
+            return applyUnrollHeuristic(op, builder, moduleTranslation);
+          })
           .Default([&](Operation *inst) {
             return inst->emitError()
                    << "not yet implemented: " << inst->getName();

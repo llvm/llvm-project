@@ -18,6 +18,7 @@ define amdgpu_ps void @test_permute_pair_gensgpr_b32(i32 %src0, i64 %src1, ptr a
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX13-NEXT:    v_readfirstlane_b32 s1, v2
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_permute_pair_gensgpr_b32 v0, v0, s[0:1]
 ; GFX13-NEXT:    global_store_b32 v[3:4], v0, off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm

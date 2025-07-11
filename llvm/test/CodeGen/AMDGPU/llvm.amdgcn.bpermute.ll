@@ -6,7 +6,7 @@ define amdgpu_ps void @test_bpermute_ii(ptr addrspace(1) %out) {
 ; GFX13-LABEL: test_bpermute_ii:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    v_mov_b32_e32 v2, 3
-; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX13-NEXT:    global_store_b32 v[0:1], v2, off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %res = call i32 @llvm.amdgcn.bpermute.b32(i32 3, i32 5)
   store i32 %res, ptr addrspace(1) %out
@@ -17,7 +17,7 @@ define amdgpu_ps void @test_bpermute_is(ptr addrspace(1) %out, i32 inreg %src1) 
 ; GFX13-LABEL: test_bpermute_is:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    v_mov_b32_e32 v2, 3
-; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX13-NEXT:    global_store_b32 v[0:1], v2, off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %res = call i32 @llvm.amdgcn.bpermute.b32(i32 3, i32 %src1)
   store i32 %res, ptr addrspace(1) %out
@@ -28,8 +28,9 @@ define amdgpu_ps void @test_bpermute_iv(ptr addrspace(1) %out, i32 %src1) {
 ; GFX13-LABEL: test_bpermute_iv:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    v_mov_b32_e32 v3, 3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_bpermute_b32 v2, v3, v2
-; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX13-NEXT:    global_store_b32 v[0:1], v2, off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %res = call i32 @llvm.amdgcn.bpermute.b32(i32 3, i32 %src1)
   store i32 %res, ptr addrspace(1) %out
@@ -40,7 +41,7 @@ define amdgpu_ps void @test_bpermute_si(ptr addrspace(1) %out, i32 inreg %src0) 
 ; GFX13-LABEL: test_bpermute_si:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s0
-; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX13-NEXT:    global_store_b32 v[0:1], v2, off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %res = call i32 @llvm.amdgcn.bpermute.b32(i32 %src0, i32 5)
   store i32 %res, ptr addrspace(1) %out
@@ -51,7 +52,7 @@ define amdgpu_ps void @test_bpermute_ss(ptr addrspace(1) %out, i32 inreg %src0, 
 ; GFX13-LABEL: test_bpermute_ss:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s0
-; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX13-NEXT:    global_store_b32 v[0:1], v2, off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %res = call i32 @llvm.amdgcn.bpermute.b32(i32 %src0, i32 %src1)
   store i32 %res, ptr addrspace(1) %out
@@ -62,8 +63,9 @@ define amdgpu_ps void @test_bpermute_sv(ptr addrspace(1) %out, i32 inreg %src0, 
 ; GFX13-LABEL: test_bpermute_sv:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    v_mov_b32_e32 v3, s0
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_bpermute_b32 v2, v3, v2
-; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX13-NEXT:    global_store_b32 v[0:1], v2, off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %res = call i32 @llvm.amdgcn.bpermute.b32(i32 %src0, i32 %src1)
   store i32 %res, ptr addrspace(1) %out
@@ -76,7 +78,7 @@ define amdgpu_ps void @test_bpermute_vi(ptr addrspace(1) %out, i32 %src0) {
 ; GFX13-NEXT:    v_readlane_b32 s0, v2, 5
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s0
-; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX13-NEXT:    global_store_b32 v[0:1], v2, off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %res = call i32 @llvm.amdgcn.bpermute.b32(i32 %src0, i32 5)
   store i32 %res, ptr addrspace(1) %out
@@ -89,7 +91,7 @@ define amdgpu_ps void @test_bpermute_vs(ptr addrspace(1) %out, i32 %src0, i32 in
 ; GFX13-NEXT:    v_readlane_b32 s0, v2, s0
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_mov_b32_e32 v2, s0
-; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX13-NEXT:    global_store_b32 v[0:1], v2, off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %res = call i32 @llvm.amdgcn.bpermute.b32(i32 %src0, i32 %src1)
   store i32 %res, ptr addrspace(1) %out
@@ -100,7 +102,7 @@ define amdgpu_ps void @test_bpermute_vv(ptr addrspace(1) %out, i32 %src0, i32 %s
 ; GFX13-LABEL: test_bpermute_vv:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    v_bpermute_b32 v2, v2, v3
-; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX13-NEXT:    global_store_b32 v[0:1], v2, off scope:SCOPE_SE
 ; GFX13-NEXT:    s_endpgm
   %res = call i32 @llvm.amdgcn.bpermute.b32(i32 %src0, i32 %src1)
   store i32 %res, ptr addrspace(1) %out

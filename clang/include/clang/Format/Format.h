@@ -513,9 +513,9 @@ struct FormatStyle {
     ENAS_LeftWithLastLine,
     /// Align escaped newlines in the right-most column.
     /// \code
-    ///   #define A                                                                      \
-    ///     int aaaa;                                                                    \
-    ///     int b;                                                                       \
+    ///   #define A                                                            \
+    ///     int aaaa;                                                          \
+    ///     int b;                                                             \
     ///     int dddddddddd;
     /// \endcode
     ENAS_Right,

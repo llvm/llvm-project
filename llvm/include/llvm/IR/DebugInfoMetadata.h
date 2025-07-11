@@ -15,11 +15,13 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DbgVariableFragmentInfo.h"
 #include "llvm/IR/Metadata.h"
@@ -1255,15 +1257,16 @@ private:
   /// The DWARF address space of the memory pointed to or referenced by a
   /// pointer or reference type respectively.
   std::optional<unsigned> DWARFAddressSpace;
+  dwarf::MemorySpace DWARFMemorySpace;
 
   DIDerivedType(LLVMContext &C, StorageType Storage, unsigned Tag,
                 unsigned Line, uint32_t AlignInBits,
-                std::optional<unsigned> DWARFAddressSpace,
+                std::optional<unsigned> DWARFAddressSpace, dwarf::MemorySpace MS,
                 std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
                 ArrayRef<Metadata *> Ops)
       : DIType(C, DIDerivedTypeKind, Storage, Tag, Line, AlignInBits, 0, Flags,
                Ops),
-        DWARFAddressSpace(DWARFAddressSpace) {
+        DWARFAddressSpace(DWARFAddressSpace), DWARFMemorySpace(MS) {
     if (PtrAuthData)
       SubclassData32 = PtrAuthData->RawData;
   }
@@ -1272,7 +1275,7 @@ private:
   getImpl(LLVMContext &Context, unsigned Tag, StringRef Name, DIFile *File,
           unsigned Line, DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
           uint32_t AlignInBits, uint64_t OffsetInBits,
-          std::optional<unsigned> DWARFAddressSpace,
+          std::optional<unsigned> DWARFAddressSpace, dwarf::MemorySpace MS,
           std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
           Metadata *ExtraData, DINodeArray Annotations, StorageType Storage,
           bool ShouldCreate = true) {
@@ -1282,14 +1285,14 @@ private:
         ConstantInt::get(Type::getInt64Ty(Context), OffsetInBits));
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name), File,
                    Line, Scope, BaseType, SizeInBitsNode, AlignInBits,
-                   OffsetInBitsNode, DWARFAddressSpace, PtrAuthData, Flags,
+                   OffsetInBitsNode, DWARFAddressSpace, MS, PtrAuthData, Flags,
                    ExtraData, Annotations.get(), Storage, ShouldCreate);
   }
   static DIDerivedType *
   getImpl(LLVMContext &Context, unsigned Tag, MDString *Name, DIFile *File,
           unsigned Line, DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
           uint32_t AlignInBits, uint64_t OffsetInBits,
-          std::optional<unsigned> DWARFAddressSpace,
+          std::optional<unsigned> DWARFAddressSpace, dwarf::MemorySpace MS,
           std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
           Metadata *ExtraData, DINodeArray Annotations, StorageType Storage,
           bool ShouldCreate = true) {
@@ -1299,27 +1302,27 @@ private:
         ConstantInt::get(Type::getInt64Ty(Context), OffsetInBits));
     return getImpl(Context, Tag, Name, File, Line, Scope, BaseType,
                    SizeInBitsNode, AlignInBits, OffsetInBitsNode,
-                   DWARFAddressSpace, PtrAuthData, Flags, ExtraData,
+                   DWARFAddressSpace, MS, PtrAuthData, Flags, ExtraData,
                    Annotations.get(), Storage, ShouldCreate);
   }
   static DIDerivedType *
   getImpl(LLVMContext &Context, unsigned Tag, StringRef Name, DIFile *File,
           unsigned Line, DIScope *Scope, DIType *BaseType, Metadata *SizeInBits,
           uint32_t AlignInBits, Metadata *OffsetInBits,
-          std::optional<unsigned> DWARFAddressSpace,
+          std::optional<unsigned> DWARFAddressSpace, dwarf::MemorySpace MS,
           std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
           Metadata *ExtraData, DINodeArray Annotations, StorageType Storage,
           bool ShouldCreate = true) {
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name), File,
                    Line, Scope, BaseType, SizeInBits, AlignInBits, OffsetInBits,
-                   DWARFAddressSpace, PtrAuthData, Flags, ExtraData,
-                   Annotations.get(), Storage, ShouldCreate);
+                   DWARFAddressSpace, MS, PtrAuthData, Flags, ExtraData, Annotations.get(),
+                   Storage, ShouldCreate);
   }
   LLVM_ABI static DIDerivedType *
   getImpl(LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
           unsigned Line, Metadata *Scope, Metadata *BaseType,
           Metadata *SizeInBits, uint32_t AlignInBits, Metadata *OffsetInBits,
-          std::optional<unsigned> DWARFAddressSpace,
+          std::optional<unsigned> DWARFAddressSpace, dwarf::MemorySpace MS,
           std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
           Metadata *ExtraData, Metadata *Annotations, StorageType Storage,
           bool ShouldCreate = true);
@@ -1328,7 +1331,7 @@ private:
     return getTemporary(
         getContext(), getTag(), getRawName(), getFile(), getLine(), getScope(),
         getBaseType(), getRawSizeInBits(), getAlignInBits(),
-        getRawOffsetInBits(), getDWARFAddressSpace(), getPtrAuthData(),
+        getRawOffsetInBits(), getDWARFAddressSpace(), getDWARFMemorySpace(), getPtrAuthData(),
         getFlags(), getExtraData(), getRawAnnotations());
   }
 
@@ -1338,48 +1341,54 @@ public:
                      unsigned Line, Metadata *Scope, Metadata *BaseType,
                      Metadata *SizeInBits, uint32_t AlignInBits,
                      Metadata *OffsetInBits,
-                     std::optional<unsigned> DWARFAddressSpace,
+                     std::optional<unsigned> DWARFAddressSpace, dwarf::MemorySpace MS,
                      std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
                      Metadata *ExtraData = nullptr,
                      Metadata *Annotations = nullptr),
                     (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                     AlignInBits, OffsetInBits, DWARFAddressSpace, PtrAuthData,
+                     AlignInBits, OffsetInBits, DWARFAddressSpace, MS, PtrAuthData,
                      Flags, ExtraData, Annotations))
   DEFINE_MDNODE_GET(DIDerivedType,
                     (unsigned Tag, StringRef Name, DIFile *File, unsigned Line,
                      DIScope *Scope, DIType *BaseType, Metadata *SizeInBits,
                      uint32_t AlignInBits, Metadata *OffsetInBits,
-                     std::optional<unsigned> DWARFAddressSpace,
+                     std::optional<unsigned> DWARFAddressSpace, dwarf::MemorySpace MS,
                      std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
                      Metadata *ExtraData = nullptr,
                      DINodeArray Annotations = nullptr),
                     (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                     AlignInBits, OffsetInBits, DWARFAddressSpace, PtrAuthData,
+                     AlignInBits, OffsetInBits, DWARFAddressSpace, MS, PtrAuthData,
                      Flags, ExtraData, Annotations))
   DEFINE_MDNODE_GET(DIDerivedType,
                     (unsigned Tag, MDString *Name, DIFile *File, unsigned Line,
                      DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
                      uint32_t AlignInBits, uint64_t OffsetInBits,
-                     std::optional<unsigned> DWARFAddressSpace,
+                     std::optional<unsigned> DWARFAddressSpace, dwarf::MemorySpace MS,
                      std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
                      Metadata *ExtraData = nullptr,
                      DINodeArray Annotations = nullptr),
                     (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                     AlignInBits, OffsetInBits, DWARFAddressSpace, PtrAuthData,
+                     AlignInBits, OffsetInBits, DWARFAddressSpace, MS, PtrAuthData,
                      Flags, ExtraData, Annotations))
   DEFINE_MDNODE_GET(DIDerivedType,
                     (unsigned Tag, StringRef Name, DIFile *File, unsigned Line,
                      DIScope *Scope, DIType *BaseType, uint64_t SizeInBits,
                      uint32_t AlignInBits, uint64_t OffsetInBits,
-                     std::optional<unsigned> DWARFAddressSpace,
+                     std::optional<unsigned> DWARFAddressSpace, dwarf::MemorySpace MS, 
                      std::optional<PtrAuthData> PtrAuthData, DIFlags Flags,
                      Metadata *ExtraData = nullptr,
                      DINodeArray Annotations = nullptr),
                     (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                     AlignInBits, OffsetInBits, DWARFAddressSpace, PtrAuthData,
-                     Flags, ExtraData, Annotations))
+                     AlignInBits, OffsetInBits, DWARFAddressSpace, MS, PtrAuthData, Flags,
+                     ExtraData, Annotations))
 
   TempDIDerivedType clone() const { return cloneImpl(); }
+
+  TempDIDerivedType cloneWithAddressSpace(unsigned DWARFAddrSpace) const {
+    auto Tmp = clone();
+    Tmp->DWARFAddressSpace = DWARFAddrSpace;
+    return Tmp;
+  }
 
   /// Get the base type this is derived from.
   DIType *getBaseType() const { return cast_or_null<DIType>(getRawBaseType()); }
@@ -1390,6 +1399,10 @@ public:
   std::optional<unsigned> getDWARFAddressSpace() const {
     return DWARFAddressSpace;
   }
+
+  /// \returns The DWARF memory space of the memory pointed to or referenced by
+  /// a pointer or reference type respectively.
+  dwarf::MemorySpace getDWARFMemorySpace() const { return DWARFMemorySpace; }
 
   LLVM_ABI std::optional<PtrAuthData> getPtrAuthData() const;
 
@@ -3247,11 +3260,12 @@ public:
 /// Uses the SubclassData32 Metadata slot.
 class DIVariable : public DINode {
   unsigned Line;
+  dwarf::MemorySpace MemorySpace;
 
 protected:
   LLVM_ABI DIVariable(LLVMContext &C, unsigned ID, StorageType Storage,
                       signed Line, ArrayRef<Metadata *> Ops,
-                      uint32_t AlignInBits = 0);
+                      dwarf::MemorySpace MS, uint32_t AlignInBits = 0);
   ~DIVariable() = default;
 
 public:
@@ -3291,6 +3305,9 @@ public:
     return std::nullopt;
   }
 
+  /// \returns The DWARF memory space in which the variable resides.
+  dwarf::MemorySpace getDWARFMemorySpace() const { return MemorySpace; }
+
   Metadata *getRawScope() const { return getOperand(0); }
   MDString *getRawName() const { return getOperandAs<MDString>(1); }
   Metadata *getRawFile() const { return getOperand(2); }
@@ -3299,6 +3316,427 @@ public:
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DILocalVariableKind ||
            MD->getMetadataID() == DIGlobalVariableKind;
+  }
+};
+
+namespace DIOp {
+
+// These are the concrete alternatives that a DIOp::Variant encapsulates.
+#define HANDLE_OP0(NAME)                                                       \
+  class NAME {                                                                 \
+  public:                                                                      \
+    explicit constexpr NAME() {}                                               \
+    bool operator==(const NAME &O) const { return true; }                      \
+    friend hash_code hash_value(const NAME &O);                                \
+    static constexpr StringRef getAsmName();                                   \
+    static constexpr unsigned getBitcodeID();                                  \
+  };
+#define HANDLE_OP1(NAME, TYPE1, NAME1)                                         \
+  class NAME {                                                                 \
+    TYPE1 NAME1;                                                               \
+                                                                               \
+  public:                                                                      \
+    explicit constexpr NAME(TYPE1 NAME1) : NAME1(NAME1) {}                     \
+    bool operator==(const NAME &O) const { return NAME1 == O.NAME1; }          \
+    friend hash_code hash_value(const NAME &O);                                \
+    static constexpr StringRef getAsmName();                                   \
+    static constexpr unsigned getBitcodeID();                                  \
+    TYPE1 get##NAME1() const { return NAME1; }                                 \
+    void set##NAME1(TYPE1 NAME1) { this->NAME1 = NAME1; }                      \
+  };
+#define HANDLE_OP2(NAME, TYPE1, NAME1, TYPE2, NAME2)                           \
+  class NAME {                                                                 \
+    TYPE1 NAME1;                                                               \
+    TYPE2 NAME2;                                                               \
+                                                                               \
+  public:                                                                      \
+    explicit constexpr NAME(TYPE1 NAME1, TYPE2 NAME2)                          \
+        : NAME1(NAME1), NAME2(NAME2) {}                                        \
+    bool operator==(const NAME &O) const {                                     \
+      return NAME1 == O.NAME1 && NAME2 == O.NAME2;                             \
+    }                                                                          \
+    friend hash_code hash_value(const NAME &O);                                \
+    static constexpr StringRef getAsmName();                                   \
+    static constexpr unsigned getBitcodeID();                                  \
+    TYPE1 get##NAME1() const { return NAME1; }                                 \
+    void set##NAME1(TYPE1 NAME1) { this->NAME1 = NAME1; }                      \
+    TYPE2 get##NAME2() const { return NAME2; }                                 \
+    void set##NAME2(TYPE2 NAME2) { this->NAME2 = NAME2; }                      \
+  };
+LLVM_PACKED_START
+#include "llvm/IR/DIExprOps.def"
+LLVM_PACKED_END
+
+/// Container for a runtime-variant DIOp
+using Variant = std::variant<
+#define HANDLE_OP_NAME(NAME) NAME
+#define SEPARATOR ,
+#include "llvm/IR/DIExprOps.def"
+    >;
+
+#define HANDLE_OP_NAME(NAME)                                                   \
+  constexpr StringRef DIOp::NAME::getAsmName() { return "DIOp" #NAME; }
+#include "llvm/IR/DIExprOps.def"
+
+StringRef getAsmName(const Variant &V);
+
+#define DEFINE_BC_ID(NAME, ID)                                                 \
+  constexpr unsigned DIOp::NAME::getBitcodeID() { return ID; }
+DEFINE_BC_ID(Referrer, 1u)
+DEFINE_BC_ID(Arg, 2u)
+DEFINE_BC_ID(TypeObject, 3u)
+DEFINE_BC_ID(Constant, 4u)
+DEFINE_BC_ID(Convert, 5u)
+DEFINE_BC_ID(Reinterpret, 6u)
+DEFINE_BC_ID(BitOffset, 7u)
+DEFINE_BC_ID(ByteOffset, 8u)
+DEFINE_BC_ID(Composite, 9u)
+DEFINE_BC_ID(Extend, 10u)
+DEFINE_BC_ID(Select, 11u)
+DEFINE_BC_ID(AddrOf, 12u)
+DEFINE_BC_ID(Deref, 13u)
+DEFINE_BC_ID(Read, 14u)
+DEFINE_BC_ID(Add, 15u)
+DEFINE_BC_ID(Sub, 16u)
+DEFINE_BC_ID(Mul, 17u)
+DEFINE_BC_ID(Div, 18u)
+DEFINE_BC_ID(LShr, 19u)
+DEFINE_BC_ID(Shl, 20u)
+DEFINE_BC_ID(PushLane, 21u)
+DEFINE_BC_ID(Fragment, 22u)
+DEFINE_BC_ID(ZExt, 23u)
+DEFINE_BC_ID(SExt, 24u)
+DEFINE_BC_ID(AShr, 25u)
+DEFINE_BC_ID(And, 26u)
+DEFINE_BC_ID(Or, 27u)
+DEFINE_BC_ID(Xor, 28u)
+DEFINE_BC_ID(Mod, 29u)
+#undef DEFINE_BC_ID
+
+unsigned getBitcodeID(const Variant &V);
+
+/// Get the number of stack elements this operation consumes.
+unsigned getNumInputs(Variant V);
+
+// The sizeof of `Op` is the size of the largest union variant, which
+// should essentially be defined as a packed struct equivalent to:
+//
+//    uint8_t Index; // Internal to std::variant, but we expect this to be
+//                   // the smallest available integral type which
+//                   // can represent our set of alternatives.
+//    uint32_t I;
+//    void* P;
+//
+// Note that there is no public interface which lets a pointer to the members
+// of the alternative types escape, and so we can safely pack them. This
+// means huge performance benefits (smaller memory footprint and more
+// cache-friendly traversal).
+//
+// This static_assert tries to catch issues where the struct is not packed into
+// at most two 64-bit words, as we would expect it to be.
+//
+// FIXME: If we can constrain `I` further to <= 16 bits we should also
+// fit in two 32-bit words on 32-bit targets.
+static_assert(sizeof(DIOp::Variant) <= 16);
+
+} // namespace DIOp
+
+/// Context in which a DIExpression is to be evaluated, used to permit more
+/// complete validation.
+struct DIExpressionEnv {
+  /// The source variable whose location is being described by the expression.
+  DIVariable *Variable;
+  /// Argument(s) to the debug intrinsic or DIGlobalVariableExpression node
+  /// referencing the expression.
+  ArrayRef<const Value *> Arguments;
+  /// DataLayout of the Target associated with the expression.
+  const DataLayout &DL;
+};
+
+/// CRTP visitor class for visiting DIExpr operations in order.
+///
+/// The derived class must provide an overload set for the method
+/// `bool visit(OpT Op, Type *ResultType, ArrayRef<StackEntry> Inputs)` handling
+/// every "DIOp*" `OpT` (i.e. for every alternative type of `DIOp::Variant`).
+/// The `ResultType` is the type of the entry the operation pushes onto the
+/// stack (or `nullptr` if the operation pushes nothing). The `Inputs` are the
+/// stack entries the operation consumes, where the highest index is the top of
+/// the stack (i.e. the most recently pushed entry). The return value is
+/// `true` when the visit succeeds, and `false` when it fails; a returned
+/// `false` will short-circuit to the caller, so the rest of the expression will
+/// not be visited.
+///
+/// For convenience a no-op overload set is defined in this class, where each
+/// method simply returns `true`. If the derived class does not intend to
+/// exhaustively cover every "DIOp*" operation it can declare `using
+/// DIExprConstVisitor<Derived>::visit;` to bring the no-op overload set into
+/// the derived class, and then it can selectively shadow the overloads it is
+/// interested in. This scheme is employed to avoid the need for dynamic virtual
+/// function dispatch.
+///
+/// This class validates that the expression yields one stack entry. To visit
+/// that final `StackEntry` the derived class can implement `bool
+/// visitResult(StackEntry Result)`.
+///
+/// To handle error messages generated by this class, the derived class can
+/// define a method `bool error(const Twine &)` which will be called with
+/// any error messages before `false` is returned.
+///
+/// This class implements type propagation, and maintains a stack so operation
+/// visitor functions can inspect their input stack entries. It validates
+/// properties of the expression which can be checked purely by looking at the
+/// expression itself, including:
+///
+/// * Input and result type equality (e.g. for arithmetic operations)
+/// * Type category requirements (e.g. for shift operations requiring integer
+/// types)
+/// * Input counts, including the dynamic input requirement of DIOpComposite
+///
+/// Anything further, including debug intrinsic argument type compatibility
+/// with DIOpArg uses, must be handled by the derived class if required.
+template <class Derived> class DIExprConstVisitor {
+protected:
+  LLVMContext &Context;
+  ArrayRef<DIOp::Variant> Expr;
+
+  /// Represents the result of evaluating an operation.
+  /// ResultType cannot be null.
+  struct StackEntry {
+    DIOp::Variant Operation;
+    Type *ResultType;
+
+    StackEntry(DIOp::Variant Operation, Type *ResultType)
+        : Operation(Operation), ResultType(ResultType) {
+      assert(ResultType &&
+             "null ResultType indicates no StackEntry should be created");
+    }
+  };
+
+  SmallVector<StackEntry, 8> Stack;
+
+  bool error(const Twine &) { return false; }
+
+  Derived &getDerived() { return static_cast<Derived &>(*this); }
+
+  std::optional<Type *> getTypeError(const Twine &Msg) {
+    getDerived().error(Msg);
+    return std::nullopt;
+  }
+
+  // The getType overloads return:
+  //
+  // * std::nullopt when an error has occured.
+  // * nullptr when the operation does not push anything.
+  // * the type of the pushed entry, otherwise.
+  //
+  // Note: This assumes operations push either 0 or 1 entries, which is
+  // currently true.
+
+  std::optional<Type *> getType(DIOp::Referrer Op, ArrayRef<StackEntry>) {
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::Arg Op, ArrayRef<StackEntry>) {
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::TypeObject Op, ArrayRef<StackEntry>) {
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::Constant Op, ArrayRef<StackEntry>) {
+    return Op.getLiteralValue()->getType();
+  }
+
+  std::optional<Type *> getType(DIOp::Convert Op, ArrayRef<StackEntry>) {
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::ZExt Op, ArrayRef<StackEntry> Ins) {
+    if (!Ins[0].ResultType->isIntegerTy())
+      return getTypeError("DIOpZExt requires integer typed input");
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::SExt Op, ArrayRef<StackEntry> Ins) {
+    if (!Ins[0].ResultType->isIntegerTy())
+      return getTypeError("DIOpSExt requires integer typed input");
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::Reinterpret Op, ArrayRef<StackEntry>) {
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::BitOffset Op, ArrayRef<StackEntry> Ins) {
+    if (!Ins[1].ResultType->isIntegerTy())
+      return getTypeError(
+          "DIOpBitOffset requires first input be integer typed");
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::ByteOffset Op, ArrayRef<StackEntry> Ins) {
+    if (!Ins[1].ResultType->isIntegerTy())
+      return getTypeError(
+          "DIOpByteOffset requires first input be integer typed");
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::Composite Op, ArrayRef<StackEntry> Ins) {
+    assert(Op.getCount() == Ins.size() &&
+           "DIOpComposite has wrong number of inputs");
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::Extend Op, ArrayRef<StackEntry> Ins) {
+    if (!Ins[0].ResultType->isPointerTy() &&
+        !Ins[0].ResultType->isFloatingPointTy() &&
+        !Ins[0].ResultType->isIntegerTy())
+      return getTypeError(
+          "DIOpExtend child must have integer, floating point, or ptr type");
+    return VectorType::get(Ins[0].ResultType,
+                           ElementCount::getFixed(Op.getCount()));
+  }
+
+  std::optional<Type *> getType(DIOp::Select Op, ArrayRef<StackEntry> Ins) {
+    if (Ins[1].ResultType != Ins[2].ResultType)
+      return getTypeError(
+          "DIOpSelect requires first two inputs have same type");
+    if (!Ins[1].ResultType->isVectorTy())
+      return getTypeError(
+          "DIOpSelect requires first two inputs to be vector typed");
+    return Ins[1].ResultType;
+  }
+
+  std::optional<Type *> getType(DIOp::AddrOf Op, ArrayRef<StackEntry>) {
+    // FIXME: Track this to ensure invariants on uses
+    return PointerType::get(Context, Op.getAddressSpace());
+  }
+
+  std::optional<Type *> getType(DIOp::Deref Op, ArrayRef<StackEntry> Ins) {
+    if (!Ins[0].ResultType->isPointerTy())
+      return getTypeError("DIOpDeref requires input to be pointer typed");
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::Read Op, ArrayRef<StackEntry> Ins) {
+    return Ins[0].ResultType;
+  }
+
+  template <typename OpT>
+  std::optional<Type *> getTypeBinOp(OpT Op, ArrayRef<StackEntry> Ins) {
+    if (Ins[0].ResultType != Ins[1].ResultType)
+      return getTypeError(Twine(Op.getAsmName()) +
+                          " requires identical type inputs");
+    return Ins[0].ResultType;
+  }
+
+  std::optional<Type *> getType(DIOp::Add Op, ArrayRef<StackEntry> Ins) {
+    return getTypeBinOp(Op, Ins);
+  }
+
+  std::optional<Type *> getType(DIOp::Sub Op, ArrayRef<StackEntry> Ins) {
+    return getTypeBinOp(Op, Ins);
+  }
+
+  std::optional<Type *> getType(DIOp::Mul Op, ArrayRef<StackEntry> Ins) {
+    return getTypeBinOp(Op, Ins);
+  }
+
+  std::optional<Type *> getType(DIOp::Div Op, ArrayRef<StackEntry> Ins) {
+    return getTypeBinOp(Op, Ins);
+  }
+
+  std::optional<Type *> getType(DIOp::Mod Op, ArrayRef<StackEntry> Ins) {
+    return getTypeBinOp(Op, Ins);
+  }
+
+  std::optional<Type *> getType(DIOp::LShr, ArrayRef<StackEntry> Ins) {
+    if (!Ins[0].ResultType->isIntegerTy() || !Ins[1].ResultType->isIntegerTy())
+      return getTypeError("DIOpLShr requires all integer inputs");
+    return Ins[0].ResultType;
+  }
+
+  std::optional<Type *> getType(DIOp::AShr, ArrayRef<StackEntry> Ins) {
+    if (!Ins[0].ResultType->isIntegerTy() || !Ins[1].ResultType->isIntegerTy())
+      return getTypeError("DIOpAShr requires all integer inputs");
+    return Ins[0].ResultType;
+  }
+
+  std::optional<Type *> getType(DIOp::Shl, ArrayRef<StackEntry> Ins) {
+    if (!Ins[0].ResultType->isIntegerTy() || !Ins[1].ResultType->isIntegerTy())
+      return getTypeError("DIOpShl requires all integer inputs");
+    return Ins[0].ResultType;
+  }
+
+  std::optional<Type *> getType(DIOp::And, ArrayRef<StackEntry> Ins) {
+    if (!Ins[0].ResultType->isIntegerTy() || !Ins[1].ResultType->isIntegerTy())
+      return getTypeError("DIOpAnd requires all integer inputs");
+    return Ins[0].ResultType;
+  }
+
+  std::optional<Type *> getType(DIOp::Or, ArrayRef<StackEntry> Ins) {
+    if (!Ins[0].ResultType->isIntegerTy() || !Ins[1].ResultType->isIntegerTy())
+      return getTypeError("DIOpOr requires all integer inputs");
+    return Ins[0].ResultType;
+  }
+
+  std::optional<Type *> getType(DIOp::Xor, ArrayRef<StackEntry> Ins) {
+    if (!Ins[0].ResultType->isIntegerTy() || !Ins[1].ResultType->isIntegerTy())
+      return getTypeError("DIOpXor requires all integer inputs");
+    return Ins[0].ResultType;
+  }
+
+  std::optional<Type *> getType(DIOp::PushLane Op, ArrayRef<StackEntry>) {
+    if (!Op.getResultType()->isIntegerTy())
+      return getTypeError("DIOpPushLane requires integer result type");
+    return Op.getResultType();
+  }
+
+  std::optional<Type *> getType(DIOp::Fragment, ArrayRef<StackEntry>) {
+    return nullptr;
+  }
+
+  template <typename OpT> bool visitOperator(OpT Op) {
+    if (Stack.size() < getNumInputs(Op))
+      return getDerived().error(Op.getAsmName() + " requires more inputs");
+    auto InBegin = Stack.end() - getNumInputs(Op);
+    std::optional<Type *> Ty = getType(Op, ArrayRef(InBegin, Stack.end()));
+    if (!Ty)
+      return false;
+    if (!getDerived().visit(Op, *Ty, ArrayRef(InBegin, Stack.end())))
+      return false;
+    Stack.erase(InBegin, Stack.end());
+    if (*Ty)
+      Stack.emplace_back(Op, *Ty);
+    return true;
+  }
+
+#define HANDLE_OP_NAME(NAME)                                                   \
+  bool visit(DIOp::NAME Op, Type *ResultType, ArrayRef<StackEntry> Inputs) {   \
+    return true;                                                               \
+  }
+#include "DIExprOps.def"
+
+  bool visitResult(StackEntry Result) { return true; }
+
+public:
+  DIExprConstVisitor(LLVMContext &Context, ArrayRef<DIOp::Variant> Expr)
+      : Context(Context), Expr(Expr) {}
+
+  bool visitInOrder() {
+    for (const auto &Op : Expr) {
+      if (!std::visit([this](auto Op) { return this->visitOperator(Op); }, Op))
+        return false;
+    }
+    if (Stack.size() != 1) {
+      getDerived().error(
+          "DIOp expression requires one element on stack after evaluating");
+      return false;
+    }
+    if (!getDerived().visitResult(Stack.back()))
+      return false;
+    return true;
   }
 };
 
@@ -3315,15 +3753,76 @@ class DIExpression : public MDNode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
-  std::vector<uint64_t> Elements;
+public:
+  using OldElements = std::vector<uint64_t>;
+  using NewElements = SmallVector<DIOp::Variant, 0>;
+  using OldElementsRef = ArrayRef<uint64_t>;
+  using NewElementsRef = ArrayRef<DIOp::Variant>;
+  using ElementsRef = std::variant<OldElementsRef, NewElementsRef>;
+
+private:
+  std::variant<OldElements, NewElements> Elements;
+
+  // When existing code operates on a DIOp-based (i.e. "NewElements")
+  // DIExpression they will transparently see this expression in place of
+  // the actual expression. So long as they unconditionally replace the
+  // expression with a new "OldElements" version derived from this poison we
+  // will see this DW_OP_LLVM_poisoned operation during DWARF generation and can
+  // e.g. lower it to an undefined location to reflect the fact that the
+  // expression was not understood by some pass.
+  //
+  // There is some risk that a particular set of circumstances in code from
+  // upstream could align to foil this scheme, e.g. if a pass were to
+  // inspect an expression to see if it contains some particular pattern
+  // and decides only to update the expression in the absense of that pattern
+  // then the poisoned expression would lead to it not making the change. In
+  // practice no such call-site could be identified in the codebase, and in
+  // general the decision to modify the expression is made irrespective of
+  // the expression contents (although the contents in many cases then
+  // influences exactly *how* the expression is modified).
+  static constexpr std::array<uint64_t, 1> PoisonedExpr = {
+      dwarf::DW_OP_LLVM_poisoned};
+
+  DIExpression *getPoisonedFragment(unsigned OffsetInBits,
+                                    unsigned SizeInBits) const {
+    std::array<uint64_t, 4> PoisonedOps = {dwarf::DW_OP_LLVM_poisoned,
+                                           dwarf::DW_OP_LLVM_fragment,
+                                           OffsetInBits, SizeInBits};
+    return DIExpression::get(getContext(), PoisonedOps);
+  }
+
+  OldElementsRef getPoisonedElements() const {
+    std::optional<FragmentInfo> Frag = getFragmentInfo();
+    if (!Frag)
+      return PoisonedExpr;
+    return getPoisonedFragment(Frag->OffsetInBits, Frag->SizeInBits)
+        ->getElements();
+  }
 
   DIExpression(LLVMContext &C, StorageType Storage, ArrayRef<uint64_t> Elements)
       : MDNode(C, DIExpressionKind, Storage, {}),
-        Elements(Elements.begin(), Elements.end()) {}
+        Elements(std::in_place_type<OldElements>, Elements.begin(),
+                 Elements.end()) {}
+  DIExpression(LLVMContext &C, StorageType Storage,
+               ArrayRef<DIOp::Variant> Elements)
+      : MDNode(C, DIExpressionKind, Storage, {}),
+        Elements(std::in_place_type<NewElements>, Elements.begin(),
+                 Elements.end()) {}
   ~DIExpression() = default;
 
+  // FIXME: workaround to avoid updating callsites for now
   LLVM_ABI static DIExpression *getImpl(LLVMContext &Context,
-                                        ArrayRef<uint64_t> Elements,
+                                        std::nullopt_t Elements,
+                                        StorageType Storage,
+                                        bool ShouldCreate = true);
+
+  LLVM_ABI static DIExpression *getImpl(LLVMContext &Context,
+                                        OldElementsRef Elements,
+                                        StorageType Storage,
+                                        bool ShouldCreate = true);
+
+  LLVM_ABI static DIExpression *getImpl(LLVMContext &Context, bool /*ignored*/,
+                                        NewElementsRef Elements,
                                         StorageType Storage,
                                         bool ShouldCreate = true);
 
@@ -3332,18 +3831,58 @@ class DIExpression : public MDNode {
   }
 
 public:
+  DIExpression *getPoisoned() const {
+    std::optional<FragmentInfo> Frag = getFragmentInfo();
+    if (!Frag)
+      return DIExpression::get(getContext(), PoisonedExpr);
+    return getPoisonedFragment(Frag->OffsetInBits, Frag->SizeInBits);
+  }
+
+  DEFINE_MDNODE_GET(DIExpression, (std::nullopt_t Elements), (Elements))
   DEFINE_MDNODE_GET(DIExpression, (ArrayRef<uint64_t> Elements), (Elements))
+  // The bool parameter is ignored, and only present to disambiguate the
+  // overload for the new elements from the old for the empty initializer list
+  // case (i.e. DIExpression::new({}))
+  DEFINE_MDNODE_GET(DIExpression,
+                    (bool /*ignored*/, ArrayRef<DIOp::Variant> Elements),
+                    (false, Elements))
 
   TempDIExpression clone() const { return cloneImpl(); }
 
-  ArrayRef<uint64_t> getElements() const { return Elements; }
+  OldElementsRef getElements() const {
+    if (auto *E = std::get_if<OldElements>(&Elements))
+      return *E;
+    return getPoisonedElements();
+  }
 
-  unsigned getNumElements() const { return Elements.size(); }
+  unsigned getNumElements() const { return getElements().size(); }
 
   uint64_t getElement(unsigned I) const {
-    assert(I < Elements.size() && "Index out of range");
-    return Elements[I];
+    assert(I < getNumElements() && "Index out of range");
+    return getElements()[I];
   }
+
+  ElementsRef getElementsRef() const {
+    return std::visit([](auto &&V) -> ElementsRef { return {V}; }, Elements);
+  }
+  std::optional<OldElementsRef> getOldElementsRef() const {
+    if (auto *E = std::get_if<OldElements>(&Elements))
+      return *E;
+    return std::nullopt;
+  }
+  std::optional<NewElementsRef> getNewElementsRef() const {
+    if (auto *E = std::get_if<NewElements>(&Elements))
+      return *E;
+    return std::nullopt;
+  }
+
+  template <typename T> bool holds() const {
+    return std::holds_alternative<T>(Elements);
+  }
+  bool holdsOldElements() const { return holds<OldElements>(); }
+  bool holdsNewElements() const { return holds<NewElements>(); }
+
+  bool isPoisoned() const;
 
   enum SignedOrUnsignedConstant { SignedConstant, UnsignedConstant };
   /// Determine whether this represents a constant value, if so
@@ -3360,10 +3899,27 @@ public:
   /// (0 and 1).
   LLVM_ABI uint64_t getNumLocationOperands() const;
 
+  /// Return the number of unique location operands referred to (via DIOpArg) in
+  /// this expression. Like getNumLocationOperands, but for DIOp-DIExpressions.
+  uint64_t getNewNumLocationOperands() const;
+
   using element_iterator = ArrayRef<uint64_t>::iterator;
 
   element_iterator elements_begin() const { return getElements().begin(); }
   element_iterator elements_end() const { return getElements().end(); }
+
+  /// Returns the pointer address space this DIOp-based DIExpression produces.
+  /// Note that this may diverge from the the pointer address space of the
+  /// result type. When there is a divergent address space, the DIExpression
+  /// must produce a generic pointer whose value can be proven to belong to a
+  /// more specific address space. For instance in this expression, this
+  /// function returns 4:
+  ///
+  ///   !DIExpression(DIOpArg(0, ptr addrspace(4)), DIOpConvert(ptr))
+  ///
+  /// A divergent address space can be created by a DIOpConvert, and is
+  /// preserved across DIOpReinterpret.
+  std::optional<unsigned> getNewDivergentAddrSpace() const;
 
   /// A lightweight wrapper around an expression operand.
   ///
@@ -3464,7 +4020,9 @@ public:
   }
   /// @}
 
-  LLVM_ABI bool isValid() const;
+  LLVM_ABI bool isValid(std::optional<DIExpressionEnv> Env = std::nullopt,
+                        std::optional<std::reference_wrapper<llvm::raw_ostream>>
+                            ErrS = std::nullopt) const;
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIExpressionKind;
@@ -3488,8 +4046,12 @@ public:
   LLVM_ABI static std::optional<FragmentInfo>
   getFragmentInfo(expr_op_iterator Start, expr_op_iterator End);
 
+  static std::optional<FragmentInfo> getFragmentInfo(NewElementsRef E);
+
   /// Retrieve the details of this fragment expression.
   std::optional<FragmentInfo> getFragmentInfo() const {
+    if (auto NewElements = getNewElementsRef())
+      return getFragmentInfo(*NewElements);
     return getFragmentInfo(expr_op_begin(), expr_op_end());
   }
 
@@ -3638,6 +4200,15 @@ public:
                                                ArrayRef<uint64_t> Ops,
                                                unsigned ArgNo,
                                                bool StackValue = false);
+
+  /// Create a copy of \p Expr by appending the given list of \p Ops to each
+  /// instance of the operand `DIOpArg(ArgNo, OldArgType)`, updating OldArgType
+  /// to \p NewArgType if non-null. This is used to modify a specific location
+  /// used by \p Expr, such as when salvaging that location.
+  static DIExpression *appendNewOpsToArg(const DIExpression *Expr,
+                                         ArrayRef<DIOp::Variant> Ops,
+                                         unsigned ArgNo,
+                                         Type *NewArgType = nullptr);
 
   /// Create a copy of \p Expr with each instance of
   /// `DW_OP_LLVM_arg, \p OldArg` replaced with `DW_OP_LLVM_arg, \p NewArg`,
@@ -3791,6 +4362,137 @@ template <> struct DenseMapInfo<DIExpression::FragmentInfo> {
   static bool isEqual(const FragInfo &A, const FragInfo &B) { return A == B; }
 };
 
+template <class NodeTy> struct MDNodeKeyImpl;
+
+/// Mutable buffer to manipulate debug info expressions.
+///
+/// Example of creating a new expression from scratch:
+///
+/// LLVMContext Ctx;
+///
+/// DIExprBuilder Builder(Ctx);
+/// Builder.append<DIOp::Add>().intoExpr();
+///
+/// Example of modifying an expression:
+///
+/// DIExpr *Expr = ...;
+/// ...
+/// DIExpr *NewExpr = Expr.builder()
+///     .append(DIOp::InPlaceDeref)
+///     .intoExpr();
+///
+/// Despite the name, it supports creating both DIExpr and DIOp-based
+/// ("NewElements") DIExpression nodes.
+class DIExprBuilder {
+  LLVMContext &C;
+  SmallVector<DIOp::Variant> Elements;
+#ifndef NDEBUG
+  bool StateIsUnspecified = false;
+#endif
+public:
+  /// Create a builder for a new, initially empty expression.
+  explicit DIExprBuilder(LLVMContext &C);
+  /// Create a builder for a new expression for the sequence of ops in \p IL.
+  explicit DIExprBuilder(LLVMContext &C,
+                         std::initializer_list<DIOp::Variant> IL);
+  /// Create a builder for a new expression for the sequence of ops in \p V.
+  explicit DIExprBuilder(LLVMContext &C, ArrayRef<DIOp::Variant> V);
+  /// Create a builder for a new expression, initially a copy of \p E.
+  explicit DIExprBuilder(const DIExpression &E);
+
+  class Iterator
+      : public iterator_facade_base<Iterator, std::random_access_iterator_tag,
+                                    DIOp::Variant> {
+    friend DIExprBuilder;
+    DIOp::Variant *Op = nullptr;
+    Iterator(DIOp::Variant *Op) : Op(Op) {}
+
+  public:
+    Iterator() = delete;
+    Iterator(const Iterator &) = default;
+    Iterator &operator=(const Iterator &) = default;
+    bool operator==(const Iterator &R) const { return R.Op == Op; }
+    DIOp::Variant &operator*() const { return *Op; }
+    friend iterator_facade_base::difference_type operator-(Iterator LHS,
+                                                           Iterator RHS) {
+      return LHS.Op - RHS.Op;
+    }
+    Iterator &operator+=(iterator_facade_base::difference_type D) {
+      Op += D;
+      return *this;
+    }
+    Iterator &operator-=(iterator_facade_base::difference_type D) {
+      Op -= D;
+      return *this;
+    }
+  };
+
+  Iterator begin() { return Elements.begin(); }
+  Iterator end() { return Elements.end(); }
+  iterator_range<Iterator> range() { return make_range(begin(), end()); }
+
+  Iterator insert(Iterator I, DIOp::Variant O);
+
+  template <typename T, typename... ArgsT>
+  Iterator insert(Iterator I, ArgsT &&...Args) {
+    // FIXME: SmallVector doesn't define an ::emplace(iterator, ...)
+    return Elements.insert(
+        I.Op, DIOp::Variant{std::in_place_type<T>, std::forward<ArgsT>(Args)...});
+  }
+
+  template <typename RangeTy> Iterator insert(Iterator I, RangeTy &&R) {
+    return Elements.insert(I.Op, R.begin(), R.end());
+  }
+
+  template <typename ItTy> Iterator insert(Iterator I, ItTy &&From, ItTy &&To) {
+    return Elements.insert(I.Op, std::forward<ItTy>(From),
+                           std::forward<ItTy>(To));
+  }
+
+  Iterator insert(Iterator I, std::initializer_list<DIOp::Variant> IL) {
+    return Elements.insert(I.Op, IL.begin(), IL.end());
+  }
+
+  /// Appends \p O to the expression being built.
+  DIExprBuilder &append(DIOp::Variant O);
+
+  /// Appends a new DIOp of type T to the expression being built. The new
+  /// DIOp is constructed in-place by forwarding the provided arguments Args.
+  template <typename T, typename... ArgsT>
+  DIExprBuilder &append(ArgsT &&...Args) {
+    Elements.emplace_back(std::in_place_type<T>, std::forward<ArgsT>(Args)...);
+    return *this;
+  }
+
+  Iterator erase(Iterator I);
+  Iterator erase(Iterator From, Iterator To);
+
+  /// Returns true if the expression being built contains DIOp of type T,
+  /// false otherwise.
+  template <typename T> bool contains() const {
+    return any_of(Elements,
+                  [](auto &&E) { return std::holds_alternative<T>(E); });
+  }
+
+  /// Update the expression to reflect the removal of one level of indirection
+  /// from the value acting as the referrer.
+  ///
+  /// The referrer must be of pointer type, as the expression is logically
+  /// updated by replacing the @c DIOpReferrer result type with its pointee
+  /// type, provided as @c PointeeType, and inserting @p
+  /// DIOpAddrOf(<pointer-address-space>) after it.
+  ///
+  /// Returns @c *this to permit chaining with other methods.
+  DIExprBuilder &removeReferrerIndirection(Type *PointeeType);
+
+  /// Get the uniqued, immutable expression metadata from the current state
+  /// of the builder.
+  ///
+  /// This leaves the Builder in a valid but unspecified state, as if it were
+  /// moved from.
+  DIExpression *intoExpression();
+};
+
 /// Holds a DIExpression and keeps track of how many operands have been consumed
 /// so far.
 class DIExpressionCursor {
@@ -3880,9 +4582,10 @@ class DIGlobalVariable : public DIVariable {
   bool IsDefinition;
 
   DIGlobalVariable(LLVMContext &C, StorageType Storage, unsigned Line,
-                   bool IsLocalToUnit, bool IsDefinition, uint32_t AlignInBits,
-                   ArrayRef<Metadata *> Ops)
-      : DIVariable(C, DIGlobalVariableKind, Storage, Line, Ops, AlignInBits),
+                   bool IsLocalToUnit, bool IsDefinition, dwarf::MemorySpace MS,
+                   uint32_t AlignInBits, ArrayRef<Metadata *> Ops)
+      : DIVariable(C, DIGlobalVariableKind, Storage, Line, Ops, MS,
+                   AlignInBits),
         IsLocalToUnit(IsLocalToUnit), IsDefinition(IsDefinition) {}
   ~DIGlobalVariable() = default;
 
@@ -3891,12 +4594,12 @@ class DIGlobalVariable : public DIVariable {
           StringRef LinkageName, DIFile *File, unsigned Line, DIType *Type,
           bool IsLocalToUnit, bool IsDefinition,
           DIDerivedType *StaticDataMemberDeclaration, MDTuple *TemplateParams,
-          uint32_t AlignInBits, DINodeArray Annotations, StorageType Storage,
-          bool ShouldCreate = true) {
+          dwarf::MemorySpace MS, uint32_t AlignInBits, DINodeArray Annotations,
+          StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name),
                    getCanonicalMDString(Context, LinkageName), File, Line, Type,
                    IsLocalToUnit, IsDefinition, StaticDataMemberDeclaration,
-                   cast_or_null<Metadata>(TemplateParams), AlignInBits,
+                   cast_or_null<Metadata>(TemplateParams), MS, AlignInBits,
                    Annotations.get(), Storage, ShouldCreate);
   }
   LLVM_ABI static DIGlobalVariable *
@@ -3904,34 +4607,38 @@ class DIGlobalVariable : public DIVariable {
           MDString *LinkageName, Metadata *File, unsigned Line, Metadata *Type,
           bool IsLocalToUnit, bool IsDefinition,
           Metadata *StaticDataMemberDeclaration, Metadata *TemplateParams,
-          uint32_t AlignInBits, Metadata *Annotations, StorageType Storage,
-          bool ShouldCreate = true);
+          dwarf::MemorySpace MS, uint32_t AlignInBits, Metadata *Annotations,
+          StorageType Storage, bool ShouldCreate = true);
 
   TempDIGlobalVariable cloneImpl() const {
     return getTemporary(getContext(), getScope(), getName(), getLinkageName(),
                         getFile(), getLine(), getType(), isLocalToUnit(),
                         isDefinition(), getStaticDataMemberDeclaration(),
-                        getTemplateParams(), getAlignInBits(),
-                        getAnnotations());
+                        getTemplateParams(), getDWARFMemorySpace(),
+                        getAlignInBits(), getAnnotations());
   }
 
 public:
-  DEFINE_MDNODE_GET(
-      DIGlobalVariable,
-      (DIScope * Scope, StringRef Name, StringRef LinkageName, DIFile *File,
-       unsigned Line, DIType *Type, bool IsLocalToUnit, bool IsDefinition,
-       DIDerivedType *StaticDataMemberDeclaration, MDTuple *TemplateParams,
-       uint32_t AlignInBits, DINodeArray Annotations),
-      (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit, IsDefinition,
-       StaticDataMemberDeclaration, TemplateParams, AlignInBits, Annotations))
-  DEFINE_MDNODE_GET(
-      DIGlobalVariable,
-      (Metadata * Scope, MDString *Name, MDString *LinkageName, Metadata *File,
-       unsigned Line, Metadata *Type, bool IsLocalToUnit, bool IsDefinition,
-       Metadata *StaticDataMemberDeclaration, Metadata *TemplateParams,
-       uint32_t AlignInBits, Metadata *Annotations),
-      (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit, IsDefinition,
-       StaticDataMemberDeclaration, TemplateParams, AlignInBits, Annotations))
+  DEFINE_MDNODE_GET(DIGlobalVariable,
+                    (DIScope * Scope, StringRef Name, StringRef LinkageName,
+                     DIFile *File, unsigned Line, DIType *Type,
+                     bool IsLocalToUnit, bool IsDefinition,
+                     DIDerivedType *StaticDataMemberDeclaration,
+                     MDTuple *TemplateParams, dwarf::MemorySpace MS,
+                     uint32_t AlignInBits, DINodeArray Annotations),
+                    (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit,
+                     IsDefinition, StaticDataMemberDeclaration, TemplateParams,
+                     MS, AlignInBits, Annotations))
+  DEFINE_MDNODE_GET(DIGlobalVariable,
+                    (Metadata * Scope, MDString *Name, MDString *LinkageName,
+                     Metadata *File, unsigned Line, Metadata *Type,
+                     bool IsLocalToUnit, bool IsDefinition,
+                     Metadata *StaticDataMemberDeclaration,
+                     Metadata *TemplateParams, dwarf::MemorySpace MS,
+                     uint32_t AlignInBits, Metadata *Annotations),
+                    (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit,
+                     IsDefinition, StaticDataMemberDeclaration, TemplateParams,
+                     MS, AlignInBits, Annotations))
 
   TempDIGlobalVariable clone() const { return cloneImpl(); }
 
@@ -4026,9 +4733,9 @@ class DILocalVariable : public DIVariable {
   DIFlags Flags;
 
   DILocalVariable(LLVMContext &C, StorageType Storage, unsigned Line,
-                  unsigned Arg, DIFlags Flags, uint32_t AlignInBits,
-                  ArrayRef<Metadata *> Ops)
-      : DIVariable(C, DILocalVariableKind, Storage, Line, Ops, AlignInBits),
+                  unsigned Arg, DIFlags Flags, dwarf::MemorySpace MS,
+                  uint32_t AlignInBits, ArrayRef<Metadata *> Ops)
+      : DIVariable(C, DILocalVariableKind, Storage, Line, Ops, MS, AlignInBits),
         Arg(Arg), Flags(Flags) {
     assert(Arg < (1 << 16) && "DILocalVariable: Arg out of range");
   }
@@ -4037,37 +4744,40 @@ class DILocalVariable : public DIVariable {
   static DILocalVariable *getImpl(LLVMContext &Context, DIScope *Scope,
                                   StringRef Name, DIFile *File, unsigned Line,
                                   DIType *Type, unsigned Arg, DIFlags Flags,
-                                  uint32_t AlignInBits, DINodeArray Annotations,
-                                  StorageType Storage,
+                                  dwarf::MemorySpace MS, uint32_t AlignInBits,
+                                  DINodeArray Annotations, StorageType Storage,
                                   bool ShouldCreate = true) {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name), File,
-                   Line, Type, Arg, Flags, AlignInBits, Annotations.get(),
+                   Line, Type, Arg, Flags, MS, AlignInBits, Annotations.get(),
                    Storage, ShouldCreate);
   }
   LLVM_ABI static DILocalVariable *
   getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name, Metadata *File,
           unsigned Line, Metadata *Type, unsigned Arg, DIFlags Flags,
-          uint32_t AlignInBits, Metadata *Annotations, StorageType Storage,
-          bool ShouldCreate = true);
+          dwarf::MemorySpace MS, uint32_t AlignInBits, Metadata *Annotations,
+          StorageType Storage, bool ShouldCreate = true);
 
   TempDILocalVariable cloneImpl() const {
     return getTemporary(getContext(), getScope(), getName(), getFile(),
                         getLine(), getType(), getArg(), getFlags(),
-                        getAlignInBits(), getAnnotations());
+                        getDWARFMemorySpace(), getAlignInBits(),
+                        getAnnotations());
   }
 
 public:
   DEFINE_MDNODE_GET(DILocalVariable,
                     (DILocalScope * Scope, StringRef Name, DIFile *File,
                      unsigned Line, DIType *Type, unsigned Arg, DIFlags Flags,
-                     uint32_t AlignInBits, DINodeArray Annotations),
-                    (Scope, Name, File, Line, Type, Arg, Flags, AlignInBits,
+                     dwarf::MemorySpace MS, uint32_t AlignInBits,
+                     DINodeArray Annotations),
+                    (Scope, Name, File, Line, Type, Arg, Flags, MS, AlignInBits,
                      Annotations))
   DEFINE_MDNODE_GET(DILocalVariable,
                     (Metadata * Scope, MDString *Name, Metadata *File,
                      unsigned Line, Metadata *Type, unsigned Arg, DIFlags Flags,
-                     uint32_t AlignInBits, Metadata *Annotations),
-                    (Scope, Name, File, Line, Type, Arg, Flags, AlignInBits,
+                     dwarf::MemorySpace MS, uint32_t AlignInBits,
+                     Metadata *Annotations),
+                    (Scope, Name, File, Line, Type, Arg, Flags, MS, AlignInBits,
                      Annotations))
 
   TempDILocalVariable clone() const { return cloneImpl(); }

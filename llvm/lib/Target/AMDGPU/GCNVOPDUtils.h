@@ -23,11 +23,7 @@ class SIInstrInfo;
 
 bool checkVOPDRegConstraints(const SIInstrInfo &TII,
                              const MachineInstr &FirstMI,
-#if LLPC_BUILD_NPI
                              const MachineInstr &SecondMI, bool IsVOPD3);
-#else /* LLPC_BUILD_NPI */
-                             const MachineInstr &SecondMI);
-#endif /* LLPC_BUILD_NPI */
 
 std::unique_ptr<ScheduleDAGMutation> createVOPDPairingMutation();
 

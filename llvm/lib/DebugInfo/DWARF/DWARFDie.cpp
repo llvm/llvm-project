@@ -89,6 +89,20 @@ static void dumpLocationList(raw_ostream &OS, const DWARFFormValue &FormValue,
       &Offset, OS, U->getBaseAddress(), Ctx.getDWARFObj(), U, DumpOpts, Indent);
 }
 
+static void dumpDWARFAddressSpace(raw_ostream &OS,
+                                  const DWARFFormValue &FormValue,
+                                  DIDumpOptions DumpOpts) {
+  FormValue.dump(OS, DumpOpts);
+
+  auto AddressSpaceAsUInt = FormValue.getAsUnsignedConstant();
+  auto GetNameForDWARFAddressSpace = DumpOpts.GetNameForDWARFAddressSpace;
+  if (GetNameForDWARFAddressSpace && AddressSpaceAsUInt) {
+    StringRef ASName = GetNameForDWARFAddressSpace(*AddressSpaceAsUInt);
+    if (!ASName.empty())
+      OS << " \"" << ASName << "\"";
+  }
+}
+
 static void dumpLocationExpr(raw_ostream &OS, const DWARFFormValue &FormValue,
                              DWARFUnit *U, unsigned Indent,
                              DIDumpOptions DumpOpts) {
@@ -183,6 +197,8 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
             FormValue.isFormClass(DWARFFormValue::FC_Block)))
     dumpLocationExpr(OS, FormValue, U, sizeof(BaseIndent) + Indent + 4,
                      DumpOpts);
+  else if (Attr == dwarf::DW_AT_LLVM_address_space)
+    dumpDWARFAddressSpace(OS, FormValue, DumpOpts);
   else
     FormValue.dump(OS, DumpOpts);
 

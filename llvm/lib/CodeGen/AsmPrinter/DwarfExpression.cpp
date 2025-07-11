@@ -18,9 +18,11 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
+#include <stack>
 
 using namespace llvm;
 
@@ -42,9 +44,10 @@ void DwarfExpression::emitConstu(uint64_t Value) {
 
 void DwarfExpression::addReg(int64_t DwarfReg, const char *Comment) {
   assert(DwarfReg >= 0 && "invalid negative dwarf register number");
-  assert((isUnknownLocation() || isRegisterLocation()) &&
-         "location description already locked down");
-  LocationKind = Register;
+  assert(ASTRoot || (isUnknownLocation() || isRegisterLocation()) &&
+                        "location description already locked down");
+  if (!ASTRoot)
+    LocationKind = Register;
   if (DwarfReg < 32) {
     emitOp(dwarf::DW_OP_reg0 + DwarfReg, Comment);
   } else {
@@ -195,6 +198,8 @@ void DwarfExpression::addStackValue() {
 }
 
 void DwarfExpression::addSignedConstant(int64_t Value) {
+  if (IsPoisonedExpr || !IsImplemented)
+    return;
   assert(isImplicitLocation() || isUnknownLocation());
   LocationKind = Implicit;
   emitOp(dwarf::DW_OP_consts);
@@ -202,12 +207,16 @@ void DwarfExpression::addSignedConstant(int64_t Value) {
 }
 
 void DwarfExpression::addUnsignedConstant(uint64_t Value) {
+  if (IsPoisonedExpr || !IsImplemented)
+    return;
   assert(isImplicitLocation() || isUnknownLocation());
   LocationKind = Implicit;
   emitConstu(Value);
 }
 
 void DwarfExpression::addUnsignedConstant(const APInt &Value) {
+  if (IsPoisonedExpr || !IsImplemented)
+    return;
   assert(isImplicitLocation() || isUnknownLocation());
   LocationKind = Implicit;
 
@@ -228,6 +237,8 @@ void DwarfExpression::addUnsignedConstant(const APInt &Value) {
 }
 
 void DwarfExpression::addConstantFP(const APFloat &APF, const AsmPrinter &AP) {
+  if (IsPoisonedExpr || !IsImplemented)
+    return;
   assert(isImplicitLocation() || isUnknownLocation());
   APInt API = APF.bitcastToAPInt();
   int NumBytes = API.getBitWidth() / 8;
@@ -258,6 +269,8 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
                                               DIExpressionCursor &ExprCursor,
                                               llvm::Register MachineReg,
                                               unsigned FragmentOffsetInBits) {
+  if (IsPoisonedExpr || !IsImplemented)
+    return true;
   auto Fragment = ExprCursor.getFragmentInfo();
   if (!addMachineReg(TRI, MachineReg, Fragment ? Fragment->SizeInBits : ~1U)) {
     LocationKind = Unknown;
@@ -349,7 +362,6 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   auto Reg = DwarfRegs[0];
   bool FBReg = isFrameRegister(TRI, MachineReg);
   int SignedOffset = 0;
-  assert(!Reg.isSubRegister() && "full register expected");
 
   // Pattern-match combinations for which more efficient representations exist.
   // [Reg, DW_OP_plus_uconst, Offset] --> [DW_OP_breg, Offset].
@@ -381,8 +393,20 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
 
   if (FBReg)
     addFBReg(SignedOffset);
-  else
+  else {
     addBReg(Reg.DwarfRegNo, SignedOffset);
+    // Compose the remaining subregs.
+    unsigned ShAmt = Reg.SubRegSize;
+    for (unsigned i = 1, e = DwarfRegs.size(); i < e; ++i) {
+      Reg = DwarfRegs[i];
+      addBReg(Reg.DwarfRegNo, 0);
+      emitOp(dwarf::DW_OP_constu);
+      emitUnsigned(ShAmt);
+      emitOp(dwarf::DW_OP_shl);
+      emitOp(dwarf::DW_OP_plus);
+      ShAmt += Reg.SubRegSize;
+    }
+  }
   DwarfRegs.clear();
 
   // If we need to mask out a subregister, do it now, unless the next
@@ -502,6 +526,8 @@ bool DwarfExpression::addExpression(
   // and not any other parts of the following DWARF expression.
   assert(!IsEmittingEntryValue && "Can't emit entry value around expression");
 
+  IsPoisonedExpr = false;
+
   std::optional<DIExpression::ExprOperand> PrevConvertOp;
 
   while (ExprCursor) {
@@ -517,6 +543,10 @@ bool DwarfExpression::addExpression(
     }
 
     switch (OpNum) {
+    case dwarf::DW_OP_LLVM_poisoned:
+      emitUserOp(dwarf::DW_OP_LLVM_undefined);
+      LocationKind = Unknown;
+      break;
     case dwarf::DW_OP_LLVM_arg:
       if (!InsertArg(Op->getArg(0), ExprCursor)) {
         LocationKind = Unknown;
@@ -699,6 +729,36 @@ bool DwarfExpression::addExpression(
   return true;
 }
 
+void DwarfExpression::addExpression(DIExpression::NewElementsRef Expr,
+                                    ArrayRef<DbgValueLocEntry> ArgLocEntries,
+                                    const TargetRegisterInfo *TRI) {
+  if (!IsImplemented)
+    return;
+  assert(!IsPoisonedExpr && "poisoned exprs should have old elements");
+  this->ArgLocEntries = ArgLocEntries;
+  this->TRI = TRI;
+  std::optional<DIOp::Fragment> FragOp;
+  for (DIOp::Variant Op : Expr) {
+    if (auto *Frag = std::get_if<DIOp::Fragment>(&Op)) {
+      FragOp = *Frag;
+      IsFragment = true;
+      break;
+    }
+  }
+  buildAST(Expr);
+  traverse(ASTRoot.get(), ValueKind::LocationDesc,
+           /*PermitDivergentAddrSpace=*/
+           PermitDivergentAddrSpaceResult && !IsFragment);
+  if (FragOp)
+    addOpPiece(FragOp->getBitSize());
+  if (!IsImplemented)
+    emitUserOp(dwarf::DW_OP_LLVM_undefined);
+  IsFragment = false;
+  ASTRoot.reset();
+  this->TRI = nullptr;
+  this->ArgLocEntries = std::nullopt;
+}
+
 /// add masking operations to stencil out a subregister.
 void DwarfExpression::maskSubRegister() {
   assert(SubRegisterSizeInBits && "no subregister was registered");
@@ -706,6 +766,11 @@ void DwarfExpression::maskSubRegister() {
     addShr(SubRegisterOffsetInBits);
   uint64_t Mask = (1ULL << (uint64_t)SubRegisterSizeInBits) - 1ULL;
   addAnd(Mask);
+}
+
+void DwarfExpression::emitUserOp(uint8_t UserOp, const char *Comment) {
+  emitOp(dwarf::DW_OP_LLVM_user);
+  emitOp(UserOp);
 }
 
 void DwarfExpression::finalize() {
@@ -720,7 +785,13 @@ void DwarfExpression::finalize() {
 }
 
 void DwarfExpression::addFragmentOffset(const DIExpression *Expr) {
-  if (!Expr || !Expr->isFragment())
+  if (!Expr || !IsImplemented)
+    return;
+
+  if (Expr->holdsOldElements() && Expr->isPoisoned())
+    IsPoisonedExpr = true;
+
+  if (!Expr->isFragment())
     return;
 
   uint64_t FragmentOffset = Expr->getFragmentInfo()->OffsetInBits;
@@ -770,6 +841,8 @@ void DwarfExpression::emitLegacyZExt(unsigned FromBits) {
 }
 
 void DwarfExpression::addWasmLocation(unsigned Index, uint64_t Offset) {
+  if (IsPoisonedExpr || !IsImplemented)
+    return;
   emitOp(dwarf::DW_OP_WASM_location);
   emitUnsigned(Index == 4/*TI_LOCAL_INDIRECT*/ ? 0/*TI_LOCAL*/ : Index);
   emitUnsigned(Offset);
@@ -780,4 +853,460 @@ void DwarfExpression::addWasmLocation(unsigned Index, uint64_t Offset) {
     assert(LocationKind == Implicit || LocationKind == Unknown);
     LocationKind = Implicit;
   }
+}
+
+static bool isUnsigned(const ConstantInt *CI) {
+  return (CI->getIntegerType()->getSignBit() & CI->getSExtValue()) == 0;
+}
+
+void DwarfExpression::buildAST(DIExpression::NewElementsRef Elements) {
+  std::stack<std::unique_ptr<Node>> Operands;
+
+  for (const auto &Op : Elements) {
+    if (std::holds_alternative<DIOp::Fragment>(Op))
+      continue;
+    std::unique_ptr<DwarfExpression::Node> OpNode =
+        std::make_unique<DwarfExpression::Node>(Op);
+    size_t OpChildrenCount = DIOp::getNumInputs(OpNode->getElement());
+    if (OpChildrenCount == 0) {
+      Operands.push(std::move(OpNode));
+    } else {
+      for (size_t I = 0; I < OpChildrenCount; ++I) {
+        OpNode->getChildren().insert(OpNode->getChildren().begin(),
+                                     std::move(Operands.top()));
+        Operands.pop();
+      }
+      Operands.push(std::move(OpNode));
+    }
+  }
+
+  assert(Operands.size() == 1);
+  ASTRoot = std::move(Operands.top());
+}
+
+using NewOpResult = DwarfExpression::OpResult;
+
+std::optional<NewOpResult>
+DwarfExpression::traverse(Node *OpNode, std::optional<ValueKind> ReqVK,
+                          bool PermitDivergentAddrSpace) {
+  std::optional<NewOpResult> Result =
+      std::visit([&](auto &&E) { return traverse(E, OpNode->getChildren()); },
+                 OpNode->getElement());
+  if (!Result) {
+    IsImplemented = false;
+    return Result;
+  }
+  if (Result->DivergentAddrSpace && !PermitDivergentAddrSpace) {
+    // FIXME: When DWARF supports address space conversions, generate a
+    // DW_OP_convert here to convert to the required address space.
+    IsImplemented = false;
+    return Result;
+  }
+  OpNode->setIsLowered();
+  OpNode->setResultType(Result->Ty);
+  return ReqVK ? convertValueKind(*Result, *ReqVK) : Result;
+}
+
+NewOpResult DwarfExpression::convertValueKind(const NewOpResult &Res,
+                                              ValueKind ReqVK) {
+  if (Res.VK == ValueKind::Value && ReqVK == ValueKind::LocationDesc) {
+    emitOp(dwarf::DW_OP_stack_value);
+    return {Res.Ty, ValueKind::LocationDesc, Res.DivergentAddrSpace};
+  }
+
+  if (Res.VK == ValueKind::LocationDesc && ReqVK == ValueKind::Value) {
+    readToValue(Res.Ty);
+    return {Res.Ty, ValueKind::Value, Res.DivergentAddrSpace};
+  }
+
+  return Res;
+}
+
+std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Arg Arg,
+                                                     ChildrenT Children) {
+  uint32_t Index = Arg.getIndex();
+  assert(Index < ArgLocEntries.size());
+  auto Entry = ArgLocEntries[Index];
+
+  if (Entry.isGlobal()) {
+    const GlobalVariable *GV = Entry.getGlobal();
+
+    // FIXME: This is a workaround to avoid generating symbols for non-global
+    // address spaces, e.g. LDS. Generate a 'DW_OP_constu' with a dummy
+    // constant value (0) for now.
+    unsigned AMDGPUGlobalAddrSpace = 1;
+    if ((AP.TM.getTargetTriple().getArch() == Triple::amdgcn) &&
+        (GV->getAddressSpace() != AMDGPUGlobalAddrSpace)) {
+      emitConstu(0);
+      emitOp(dwarf::DW_OP_stack_value);
+      return NewOpResult{Arg.getResultType(), ValueKind::LocationDesc};
+    }
+
+    // TODO: We only support PIC reloc-model and non-TLS globals so far, see
+    // DwarfCompileUnit::addLocationAttribute(..., DIGlobalVariable *, ...) for
+    // what (more) general support might entail.
+    if (GV->isThreadLocal() || AP.TM.getRelocationModel() != Reloc::PIC_ ||
+        AP.TM.getTargetTriple().isWasm())
+      return std::nullopt;
+
+    CU.getDwarfDebug().addArangeLabel(SymbolCU(&CU, AP.getSymbol(GV)));
+    emitOpAddress(GV);
+    emitOp(dwarf::DW_OP_stack_value);
+    return NewOpResult{Arg.getResultType(), ValueKind::LocationDesc};
+  }
+
+  if (Entry.isLocation()) {
+    assert(DwarfRegs.empty() && "unconsumed registers?");
+    if (!TRI || !addMachineReg(*TRI, Entry.getLoc().getReg())) {
+      DwarfRegs.clear();
+      return std::nullopt;
+    }
+
+    // addMachineReg sets DwarfRegs and SubRegister{Size,Offset}InBits. Collect
+    // them here and reset the fields to avoid hitting any asserts.
+    decltype(DwarfRegs) Regs;
+    std::swap(Regs, DwarfRegs);
+    unsigned SubRegOffset = SubRegisterOffsetInBits;
+    unsigned SubRegSize = SubRegisterSizeInBits;
+    SubRegisterOffsetInBits = SubRegisterSizeInBits = 0;
+    if (SubRegOffset % 8 || SubRegSize % 8)
+      return std::nullopt;
+    SubRegOffset /= 8;
+    SubRegSize /= 8;
+
+    auto focusThreadIfRequired = [this](int64_t DwarfRegNo) {
+      // FIXME: This should be represented in the DIExpression.
+      if (auto LaneSize = TRI->getDwarfRegLaneSize(DwarfRegNo, false)) {
+        emitUserOp(dwarf::DW_OP_LLVM_push_lane);
+        emitConstu(*LaneSize);
+        emitOp(dwarf::DW_OP_mul);
+        emitUserOp(dwarf::DW_OP_LLVM_offset);
+      }
+    };
+
+    if (Regs.size() == 1) {
+      addReg(Regs[0].DwarfRegNo, Regs[0].Comment);
+      focusThreadIfRequired(Regs[0].DwarfRegNo);
+
+      if (SubRegOffset) {
+        emitUserOp(dwarf::DW_OP_LLVM_offset_uconst);
+        emitUnsigned(SubRegOffset);
+      }
+
+      // Ignore SubRegSize, no correct consumer can read or write past the end
+      // of the subregister location.
+
+      return NewOpResult{Arg.getResultType(), ValueKind::LocationDesc};
+    }
+
+    assert(SubRegOffset == 0 && SubRegSize == 0 &&
+           "register piece cannot apply to multiple registers");
+
+    // When emitting fragments, the top element on the stack might be an
+    // incomplete composite. Push/drop a lit0 so that we don't add the registers
+    // to the larger composite.
+    if (IsFragment)
+      emitOp(dwarf::DW_OP_lit0);
+
+    for (auto &Reg : Regs) {
+      if (Reg.SubRegSize % 8)
+        return std::nullopt;
+      if (Reg.DwarfRegNo >= 0) {
+        addReg(Reg.DwarfRegNo, Reg.Comment);
+        focusThreadIfRequired(Regs[0].DwarfRegNo);
+      }
+      emitOp(dwarf::DW_OP_piece);
+      emitUnsigned(Reg.SubRegSize / 8);
+    }
+    emitUserOp(dwarf::DW_OP_LLVM_piece_end);
+
+    if (IsFragment) {
+      emitOp(dwarf::DW_OP_swap);
+      emitOp(dwarf::DW_OP_drop);
+    }
+
+    return NewOpResult{Arg.getResultType(), ValueKind::LocationDesc};
+  }
+
+  if (Entry.isInt()) {
+    emitConstu(Entry.getInt());
+  } else if (Entry.isConstantFP()) {
+    // DwarfExpression does not support arguments wider than 64 bits
+    // (see PR52584).
+    // TODO: Consider chunking expressions containing overly wide
+    // arguments into separate pointer-sized fragment expressions.
+    APInt RawBytes = Entry.getConstantFP()->getValueAPF().bitcastToAPInt();
+    if (RawBytes.getBitWidth() > 64)
+      return std::nullopt;
+    emitConstu(RawBytes.getZExtValue());
+  } else if (Entry.isConstantInt()) {
+    APInt RawBytes = Entry.getConstantInt()->getValue();
+    if (RawBytes.getBitWidth() > 64)
+      return std::nullopt;
+    emitConstu(RawBytes.getZExtValue());
+  } else if (Entry.isTargetIndexLocation()) {
+    return std::nullopt;
+  } else {
+    llvm_unreachable("Unsupported Entry type.");
+  }
+
+  return NewOpResult{Arg.getResultType(), ValueKind::Value};
+}
+
+std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Constant Constant,
+                                                     ChildrenT Children) {
+  ConstantData *LiteralValue = Constant.getLiteralValue();
+
+  // FIXME: Support ConstantFP?
+  ConstantInt *IntLiteralValue = dyn_cast<ConstantInt>(LiteralValue);
+  if (!IntLiteralValue)
+    return std::nullopt;
+
+  if (isUnsigned(IntLiteralValue)) {
+    emitConstu(IntLiteralValue->getZExtValue());
+  } else {
+    emitOp(dwarf::DW_OP_consts);
+    emitSigned(IntLiteralValue->getSExtValue());
+  }
+
+  return NewOpResult{IntLiteralValue->getType(), ValueKind::Value};
+}
+
+std::optional<NewOpResult> DwarfExpression::traverse(DIOp::PushLane PushLane,
+                                                     ChildrenT Children) {
+  return std::nullopt;
+}
+
+std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Referrer ReferrerOp,
+                                                     ChildrenT Children) {
+  return std::nullopt;
+}
+
+std::optional<NewOpResult>
+DwarfExpression::traverse(DIOp::TypeObject TypeObject, ChildrenT Children) {
+  return std::nullopt;
+}
+
+std::optional<NewOpResult> DwarfExpression::traverse(DIOp::AddrOf AddrOf,
+                                                     ChildrenT Children) {
+  return std::nullopt;
+}
+
+std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Convert Convert,
+                                                     ChildrenT Children) {
+  auto Child = traverse(Children[0].get(), /*RequiredVK=*/std::nullopt,
+                        /*PermitDivergentAddrSpace=*/true);
+  if (!Child)
+    return std::nullopt;
+
+  Type *DestTy = Convert.getResultType();
+  if (Child->Ty->isPointerTy() && DestTy->isPointerTy() &&
+      Child->Ty->getPointerAddressSpace() != DestTy->getPointerAddressSpace()) {
+    unsigned DivAddrSpace = Child->DivergentAddrSpace
+                                ? *Child->DivergentAddrSpace
+                                : Child->Ty->getPointerAddressSpace();
+    return NewOpResult{DestTy, Child->VK, DivAddrSpace};
+  }
+
+  if (!Child->Ty->isIntegerTy() || !DestTy->isIntegerTy())
+    return std::nullopt;
+
+  // If we're not dealing with the divergent address space case, Convert
+  // requires a value operand.
+  if (Child->VK == ValueKind::LocationDesc)
+    readToValue(Child->Ty);
+
+  uint64_t ToBits = DestTy->getPrimitiveSizeInBits().getFixedValue();
+  uint64_t FromBits = Child->Ty->getPrimitiveSizeInBits().getFixedValue();
+
+  if (ToBits < FromBits) {
+    // This function is called "ZExt", but it's actually doing a truncation on
+    // generic types (operation is "Child & ((1u << ToBits) - 1)").
+    emitLegacyZExt(ToBits);
+  }
+  return NewOpResult{DestTy, ValueKind::Value};
+}
+
+std::optional<NewOpResult> DwarfExpression::traverse(DIOp::ZExt ZExt,
+                                                     ChildrenT Children) {
+  auto Child = traverse(Children[0].get(), ValueKind::Value);
+  if (!Child || !Child->Ty->isIntegerTy())
+    return std::nullopt;
+
+  uint64_t FromBits = Child->Ty->getPrimitiveSizeInBits().getFixedValue();
+  emitLegacyZExt(FromBits);
+  return NewOpResult{ZExt.getResultType(), ValueKind::Value};
+}
+
+std::optional<NewOpResult> DwarfExpression::traverse(DIOp::SExt SExt,
+                                                     ChildrenT Children) {
+  auto Child = traverse(Children[0].get(), ValueKind::Value);
+  if (!Child || !Child->Ty->isIntegerTy())
+    return std::nullopt;
+
+  uint64_t FromBits = Child->Ty->getPrimitiveSizeInBits().getFixedValue();
+  emitLegacySExt(FromBits);
+  return NewOpResult{SExt.getResultType(), ValueKind::Value};
+}
+
+std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Deref Deref,
+                                                     ChildrenT Children) {
+  auto Child = traverse(Children[0].get(), ValueKind::LocationDesc,
+                        /*PermitDivergentAddrSpace=*/true);
+  if (!Child)
+    return std::nullopt;
+
+  // FIXME(KZHURAVL): Support non pointer types?
+  if (!Child->Ty->isPointerTy())
+    return std::nullopt;
+
+  PointerType *PointerResultType = dyn_cast<PointerType>(Child->Ty);
+  assert(PointerResultType && "Expected PointerType, but got something else");
+
+  unsigned PointerLLVMAddrSpace = Child->DivergentAddrSpace
+                                      ? *Child->DivergentAddrSpace
+                                      : PointerResultType->getAddressSpace();
+  uint64_t PointerSizeInBits =
+      AP.getDataLayout().getPointerSizeInBits(PointerLLVMAddrSpace);
+  assert(PointerSizeInBits % 8 == 0 && "Expected multiple of 8");
+
+  uint64_t PointerSizeInBytes = PointerSizeInBits / 8;
+  auto PointerDWARFAddrSpace = AP.TM.mapToDWARFAddrSpace(PointerLLVMAddrSpace);
+  if (!PointerDWARFAddrSpace) {
+    LLVM_DEBUG(dbgs() << "Failed to lower DIOpDeref of pointer to addrspace("
+                      << PointerLLVMAddrSpace
+                      << "): no corresponding DWARF addrspace.\n");
+    return std::nullopt;
+  }
+
+  emitOp(dwarf::DW_OP_deref_size);
+  emitData1(PointerSizeInBytes);
+  emitConstu(*PointerDWARFAddrSpace);
+  emitUserOp(dwarf::DW_OP_LLVM_form_aspace_address);
+
+  // FIXME(KZHURAVL): Is the following result type correct?
+  return NewOpResult{Deref.getResultType(), ValueKind::LocationDesc};
+}
+
+std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Extend Extend,
+                                                     ChildrenT Children) {
+  return std::nullopt;
+}
+
+std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Read Read,
+                                                     ChildrenT Children) {
+  auto Child = traverse(Children[0].get(), ValueKind::LocationDesc);
+  if (!Child)
+    return std::nullopt;
+  readToValue(Children[0].get());
+  return NewOpResult{Child->Ty, ValueKind::Value};
+}
+
+std::optional<NewOpResult>
+DwarfExpression::traverse(DIOp::Reinterpret Reinterpret, ChildrenT Children) {
+  auto Child = traverse(Children[0].get(), ValueKind::LocationDesc,
+                        /*PermitDivergentAddrSpace=*/true);
+  if (!Child)
+    return Child;
+  return NewOpResult{Reinterpret.getResultType(), Child->VK,
+                     Child->DivergentAddrSpace};
+}
+
+std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Select Select,
+                                                     ChildrenT Children) {
+  return std::nullopt;
+}
+
+std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Composite Composite,
+                                                     ChildrenT Children) {
+  if (IsFragment)
+    emitOp(dwarf::DW_OP_lit0);
+
+  for (auto &Child : Children) {
+    auto R = traverse(Child.get(), std::nullopt);
+    if (!R)
+      return std::nullopt;
+    TypeSize Size = R->Ty->getPrimitiveSizeInBits();
+    if (!Size.isFixed() || Size.getFixedValue() % 8 != 0)
+      return std::nullopt;
+    emitOp(dwarf::DW_OP_piece);
+    emitUnsigned(Size.getFixedValue() / 8);
+  }
+  emitUserOp(dwarf::DW_OP_LLVM_piece_end);
+
+  if (IsFragment) {
+    emitOp(dwarf::DW_OP_swap);
+    emitOp(dwarf::DW_OP_drop);
+  }
+
+  return NewOpResult{Composite.getResultType(), ValueKind::LocationDesc};
+}
+
+std::optional<NewOpResult>
+DwarfExpression::traverseMathOp(uint8_t DwarfOp, ChildrenT Children) {
+  auto LHS = traverse(Children[0].get(), ValueKind::Value);
+  if (!LHS)
+    return std::nullopt;
+  auto RHS = traverse(Children[1].get(), ValueKind::Value);
+  if (!RHS)
+    return std::nullopt;
+
+  emitOp(DwarfOp);
+  return NewOpResult{LHS->Ty, ValueKind::Value};
+}
+
+std::optional<NewOpResult>
+DwarfExpression::traverse(DIOp::ByteOffset ByteOffset, ChildrenT Children) {
+  auto LHS = traverse(Children[0].get(), ValueKind::LocationDesc);
+  if (!LHS)
+    return std::nullopt;
+  auto RHS = traverse(Children[1].get(), ValueKind::Value);
+  if (!RHS)
+    return std::nullopt;
+
+  emitUserOp(dwarf::DW_OP_LLVM_offset);
+  return NewOpResult{ByteOffset.getResultType(), ValueKind::LocationDesc};
+}
+
+std::optional<NewOpResult> DwarfExpression::traverse(DIOp::BitOffset BitOffset,
+                                                     ChildrenT Children) {
+  auto LHS = traverse(Children[0].get(), ValueKind::LocationDesc);
+  if (!LHS)
+    return std::nullopt;
+  auto RHS = traverse(Children[1].get(), ValueKind::Value);
+  if (!RHS)
+    return std::nullopt;
+
+  emitUserOp(dwarf::DW_OP_LLVM_bit_offset);
+  return NewOpResult{BitOffset.getResultType(), ValueKind::LocationDesc};
+}
+
+std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Fragment Fragment,
+                                                     ChildrenT Children) {
+  llvm_unreachable("should have dropped fragments by now");
+  return std::nullopt;
+}
+
+void DwarfExpression::readToValue(Type *Ty) {
+  uint64_t PrimitiveSizeInBits = Ty->getPrimitiveSizeInBits();
+  assert(PrimitiveSizeInBits != 0 && "Expected primitive type");
+
+  uint64_t ByteAlignedPrimitiveSizeInBits = alignTo<8>(PrimitiveSizeInBits);
+  uint64_t PrimitiveSizeInBytes = ByteAlignedPrimitiveSizeInBits / 8;
+  bool NeedsMask = ByteAlignedPrimitiveSizeInBits != PrimitiveSizeInBits;
+
+  emitOp(dwarf::DW_OP_deref_size);
+  emitData1(PrimitiveSizeInBytes);
+
+  if (NeedsMask) {
+    uint64_t Mask = (1ULL << PrimitiveSizeInBits) - 1ULL;
+    emitConstu(Mask);
+    emitOp(dwarf::DW_OP_and);
+  }
+}
+
+void DwarfExpression::readToValue(DwarfExpression::Node *OpNode) {
+  assert(OpNode->isLowered() && "Expected lowered node");
+  assert(OpNode->getResultType() && "Expected non-null result type");
+  readToValue(OpNode->getResultType());
 }

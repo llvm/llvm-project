@@ -1036,6 +1036,32 @@ bool AMDGPUTargetMachine::isNoopAddrSpaceCast(unsigned SrcAS,
          AMDGPU::isFlatGlobalAddrSpace(DestAS);
 }
 
+std::optional<dwarf::AddressSpace>
+AMDGPUTargetMachine::mapToDWARFAddrSpace(unsigned LLVMAddrSpace) const {
+  using AS = dwarf::AddressSpace;
+
+  static_assert(
+      AMDGPUAS::FLAT_ADDRESS == 0 && AMDGPUAS::GLOBAL_ADDRESS == 1 &&
+          AMDGPUAS::REGION_ADDRESS == 2 && AMDGPUAS::LOCAL_ADDRESS == 3 &&
+          AMDGPUAS::CONSTANT_ADDRESS == 4 && AMDGPUAS::PRIVATE_ADDRESS == 5,
+      "LLVMToDwarfAddrSpaceMapping entries must be in the same order as the "
+      "associated DWARF address-space values.");
+
+  // FIXME: This mapping should likely be driven from tablegen or an ".inc"
+  // header.
+  static const dwarf::AddressSpace LLVMToDWARFAddrSpaceMapping[] = {
+      AS::DW_ASPACE_LLVM_AMDGPU_generic,
+      AS::DW_ASPACE_LLVM_none,
+      AS::DW_ASPACE_LLVM_AMDGPU_region,
+      AS::DW_ASPACE_LLVM_AMDGPU_local,
+      AS::DW_ASPACE_LLVM_none,
+      AS::DW_ASPACE_LLVM_AMDGPU_private_lane};
+
+  if (LLVMAddrSpace < std::size(LLVMToDWARFAddrSpaceMapping))
+    return LLVMToDWARFAddrSpaceMapping[LLVMAddrSpace];
+  return std::nullopt;
+}
+
 unsigned AMDGPUTargetMachine::getAssumedAddrSpace(const Value *V) const {
   if (auto *Arg = dyn_cast<Argument>(V);
       Arg &&

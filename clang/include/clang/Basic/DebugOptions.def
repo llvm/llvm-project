@@ -53,6 +53,10 @@ DEBUGOPT(DebugStrictDwarf, 1, 1, Affecting) ///< Whether or not to use strict DW
 DEBUGOPT(DebugOmitUnreferencedMethods, 1, 0, Affecting) ///< Omit unreferenced member
                                                         ///< functions in type debug info.
 
+/// Control DWARF extensions for heterogeneous debugging enablement and approach.
+ENUM_DEBUGOPT(HeterogeneousDwarfMode, HeterogeneousDwarfOpts, 2,
+              HeterogeneousDwarfOpts::Disabled, Benign)
+
 /// Control the Assignment Tracking debug info feature.
 ENUM_DEBUGOPT(AssignmentTrackingMode, AssignmentTrackingOpts, 2,
               AssignmentTrackingOpts::Disabled, Benign)

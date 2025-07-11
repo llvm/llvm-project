@@ -55,9 +55,9 @@ class InstSI <dag outs, dag ins, string asm = "",
   // VINTERP instruction format.
   field bit VINTERP = 0;
 
-#ifdef LLPC_BUILD_NPI
   field bit VOPD3 = 0;
 
+#ifdef LLPC_BUILD_NPI
   // This bit indicates that this is one of CONVOLVE instructions.
   field bit IsConvolve = 0;
 
@@ -202,9 +202,7 @@ class InstSI <dag outs, dag ins, string asm = "",
 
   let TSFlags{28} = LDSDIR;
   let TSFlags{29} = VINTERP;
-#ifdef LLPC_BUILD_NPI
   let TSFlags{30} = VOPD3;
-#endif /* LLPC_BUILD_NPI */
 
   let TSFlags{32} = VM_CNT;
   let TSFlags{33} = EXP_CNT;
@@ -327,14 +325,14 @@ def CPolBit {
 #ifdef LLPC_BUILD_NPI
   int NV = 5;
   int SCAL = 9;
+}
+
+class VOPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVOPDst"> {
+  let DecoderMethod = "Decode" # !subst("_STAGING", "", !cast<string>(rc)) # "RegisterClass";
 #endif /* LLPC_BUILD_NPI */
 }
 
 #ifdef LLPC_BUILD_NPI
-class VOPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVOPDst"> {
-  let DecoderMethod = "Decode" # !subst("_STAGING", "", !cast<string>(rc)) # "RegisterClass";
-}
-
 def VOPDstOperand_VGPR_32_Lo128 : VOPDstOperand <VGPR_32_STAGING_Lo128> {
   let DecoderMethod = "DecodeVGPR_32RegisterClass";
 }

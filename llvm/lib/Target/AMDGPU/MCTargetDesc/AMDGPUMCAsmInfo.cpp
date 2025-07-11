@@ -57,6 +57,7 @@ AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
   SupportsDebugInformation = true;
   UsesCFIWithoutEH = true;
   DwarfRegNumForCFI = true;
+  SupportsHeterogeneousDebuggingExtensions = true;
 
   UseIntegratedAssembler = false;
   initializeAtSpecifiers(atSpecifiers);

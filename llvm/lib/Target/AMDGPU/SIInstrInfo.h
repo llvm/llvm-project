@@ -318,6 +318,21 @@ public:
                     MachineBasicBlock::iterator I, const DebugLoc &DL,
                     Register SrcReg, int Value)  const;
 
+private:
+  void storeRegToStackSlotImpl(MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator MI, Register SrcReg,
+                               bool isKill, int FrameIndex,
+                               const TargetRegisterClass *RC,
+                               const TargetRegisterInfo *TRI, Register VReg,
+                               MachineInstr::MIFlag Flags, bool NeedsCFI) const;
+
+public:
+  void storeRegToStackSlotCFI(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MI, Register SrcReg,
+                              bool isKill, int FrameIndex,
+                              const TargetRegisterClass *RC,
+                              const TargetRegisterInfo *TRI) const;
+                              
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;
 
@@ -706,6 +721,7 @@ public:
   static bool isBlockLoadStore(uint16_t Opcode) {
     switch (Opcode) {
     case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
+    case AMDGPU::SI_BLOCK_SPILL_V1024_CFI_SAVE:
     case AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE:
     case AMDGPU::SCRATCH_STORE_BLOCK_SADDR:
     case AMDGPU::SCRATCH_LOAD_BLOCK_SADDR:
@@ -934,8 +950,17 @@ public:
   static bool mustHaveLanesharedResult(const MachineInstr &MI) {
     switch (MI.getOpcode()) {
     case AMDGPU::CLUSTER_LOAD_B32:
+    case AMDGPU::CLUSTER_LOAD_B32_LANESHARED:
+    case AMDGPU::CLUSTER_LOAD_B32_SADDR:
+    case AMDGPU::CLUSTER_LOAD_B32_LANESHARED_SADDR:
     case AMDGPU::CLUSTER_LOAD_B64:
+    case AMDGPU::CLUSTER_LOAD_B64_LANESHARED:
+    case AMDGPU::CLUSTER_LOAD_B64_SADDR:
+    case AMDGPU::CLUSTER_LOAD_B64_LANESHARED_SADDR:
     case AMDGPU::CLUSTER_LOAD_B128:
+    case AMDGPU::CLUSTER_LOAD_B128_LANESHARED:
+    case AMDGPU::CLUSTER_LOAD_B128_SADDR:
+    case AMDGPU::CLUSTER_LOAD_B128_LANESHARED_SADDR:
     case AMDGPU::DS_LOAD_MCAST_B32:
     case AMDGPU::DS_LOAD_MCAST_B64:
     case AMDGPU::DS_LOAD_MCAST_B128:
@@ -1402,8 +1427,8 @@ public:
   void legalizeOperandsSMRD(MachineRegisterInfo &MRI, MachineInstr &MI) const;
   void legalizeOperandsFLAT(MachineRegisterInfo &MRI, MachineInstr &MI) const;
 #if LLPC_BUILD_NPI
-  void legalizeOperandsVLdStIdx(MachineRegisterInfo &MRI,
-                                MachineInstr &MI) const;
+  void legalizeOperandsVLdStIdx(MachineRegisterInfo &MRI, MachineInstr &MI,
+                                unsigned OpNo) const;
 #endif /* LLPC_BUILD_NPI */
 
   void legalizeGenericOperand(MachineBasicBlock &InsertMBB,

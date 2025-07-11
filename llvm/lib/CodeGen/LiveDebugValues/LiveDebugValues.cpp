@@ -12,8 +12,10 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
@@ -155,7 +157,8 @@ bool LiveDebugValues::run(MachineFunction &MF,
 
 bool llvm::debuginfoShouldUseDebugInstrRef(const Triple &T) {
   // Enable by default on x86_64, disable if explicitly turned off on cmdline.
-  if (T.getArch() == llvm::Triple::x86_64 &&
+  if ((T.getArch() == llvm::Triple::x86_64 ||
+       T.getArch() == llvm::Triple::amdgcn) &&
       ValueTrackingVariableLocations != cl::boolOrDefault::BOU_FALSE)
     return true;
 

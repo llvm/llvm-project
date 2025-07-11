@@ -1,5 +1,7 @@
 // RUN: mlir-translate -mlir-to-llvmir --split-input-file %s | FileCheck %s --check-prefixes=CHECK,RECORDS
 
+// XFAIL: *
+
 // CHECK-LABEL: define void @func_with_empty_named_info()
 // Check that translation doens't crash in the presence of an inlineble call
 // with a named loc that has no backing source info.

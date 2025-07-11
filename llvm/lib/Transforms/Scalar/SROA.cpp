@@ -5187,6 +5187,15 @@ static DIExpression *createOrReplaceFragment(const DIExpression *Expr,
   bool HasFragment = false;
   bool HasBitExtract = false;
 
+  if (auto NewElems = Expr->getNewElementsRef()) {
+    DIExprBuilder B(Expr->getContext());
+    for (DIOp::Variant Op : *NewElems)
+      if (!std::holds_alternative<DIOp::Fragment>(Op))
+        B.append(Op);
+    B.append<DIOp::Fragment>(Frag.OffsetInBits, Frag.SizeInBits);
+    return B.intoExpression();
+  }
+
   for (auto &Op : Expr->expr_ops()) {
     if (Op.getOp() == dwarf::DW_OP_LLVM_fragment) {
       HasFragment = true;
@@ -5356,6 +5365,19 @@ insertNewDbgInst(DIBuilder &DIB, DbgVariableRecord *Orig, AllocaInst *NewAddr,
   (void)NewAssign;
 }
 
+static bool isNoOffsetDIOpExpr(const DIExpression *Expr) {
+  auto OptNewOps = Expr->getNewElementsRef();
+  if (!OptNewOps)
+    return false;
+
+  ArrayRef<DIOp::Variant> NewOps = *OptNewOps;
+  if (!NewOps.empty() && std::holds_alternative<DIOp::Fragment>(NewOps.back()))
+    NewOps = NewOps.drop_back();
+
+  return NewOps.size() == 2 && std::holds_alternative<DIOp::Arg>(NewOps[0]) &&
+         std::holds_alternative<DIOp::Deref>(NewOps[1]);
+}
+
 /// Walks the slices of an alloca and form partitions based on them,
 /// rewriting each of their uses.
 bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
@@ -5469,7 +5491,12 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
     // that come after it.
     int64_t CurrentExprOffsetInBytes = 0;
     SmallVector<uint64_t> PostOffsetOps;
-    if (!getAddressExpression(DbgVariable)
+    const DIExpression *NoOffsetDIOpExpr = nullptr;
+    if (isNoOffsetDIOpExpr(getAddressExpression(DbgVariable))) {
+      NoOffsetDIOpExpr = getAddressExpression(DbgVariable);
+      ArrayRef<uint64_t> PoisonElems = NoOffsetDIOpExpr->getElements();
+      PostOffsetOps.append(PoisonElems.begin(), PoisonElems.end());
+    } else if (!getAddressExpression(DbgVariable)
              ->extractLeadingOffset(CurrentExprOffsetInBytes, PostOffsetOps))
       return; // Couldn't interpret this DIExpression - drop the var.
 
@@ -5530,6 +5557,8 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
       if (OffestFromNewAllocaInBits > 0) {
         int64_t OffsetInBytes = (OffestFromNewAllocaInBits + 7) / 8;
         NewExpr = DIExpression::prepend(NewExpr, /*flags=*/0, OffsetInBytes);
+      } else if (NoOffsetDIOpExpr && OffestFromNewAllocaInBits == 0) {
+        NewExpr = const_cast<DIExpression *>(NoOffsetDIOpExpr);
       }
 
       // Remove any existing intrinsics on the new alloca describing

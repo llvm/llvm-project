@@ -3537,6 +3537,7 @@ define amdgpu_gfx i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, i32 %fp
 ; PRE-GFX10-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; PRE-GFX10-NEXT:    s_mov_b64 exec, s[36:37]
 ; PRE-GFX10-NEXT:    v_writelane_b32 v40, s34, 8
+; PRE-GFX10-NEXT:    s_addk_i32 s32, 0x400
 ; PRE-GFX10-NEXT:    v_writelane_b32 v40, s4, 0
 ; PRE-GFX10-NEXT:    v_writelane_b32 v40, s5, 1
 ; PRE-GFX10-NEXT:    v_writelane_b32 v40, s6, 2
@@ -3544,10 +3545,9 @@ define amdgpu_gfx i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, i32 %fp
 ; PRE-GFX10-NEXT:    v_writelane_b32 v40, s8, 4
 ; PRE-GFX10-NEXT:    v_writelane_b32 v40, s9, 5
 ; PRE-GFX10-NEXT:    v_writelane_b32 v40, s30, 6
+; PRE-GFX10-NEXT:    v_writelane_b32 v40, s31, 7
 ; PRE-GFX10-NEXT:    s_mov_b32 s5, 0
 ; PRE-GFX10-NEXT:    s_mov_b64 s[6:7], exec
-; PRE-GFX10-NEXT:    s_addk_i32 s32, 0x400
-; PRE-GFX10-NEXT:    v_writelane_b32 v40, s31, 7
 ; PRE-GFX10-NEXT:  .LBB18_1: ; =>This Inner Loop Header: Depth=1
 ; PRE-GFX10-NEXT:    v_readfirstlane_b32 s4, v1
 ; PRE-GFX10-NEXT:    v_cmp_eq_u32_e64 s[34:35], s4, v1
@@ -3560,9 +3560,9 @@ define amdgpu_gfx i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, i32 %fp
 ; PRE-GFX10-NEXT:    s_cbranch_execnz .LBB18_1
 ; PRE-GFX10-NEXT:  ; %bb.2:
 ; PRE-GFX10-NEXT:    s_mov_b64 exec, s[6:7]
+; PRE-GFX10-NEXT:    v_readlane_b32 s30, v40, 6
 ; PRE-GFX10-NEXT:    v_mov_b32_e32 v0, v2
 ; PRE-GFX10-NEXT:    v_readlane_b32 s31, v40, 7
-; PRE-GFX10-NEXT:    v_readlane_b32 s30, v40, 6
 ; PRE-GFX10-NEXT:    v_readlane_b32 s9, v40, 5
 ; PRE-GFX10-NEXT:    v_readlane_b32 s8, v40, 4
 ; PRE-GFX10-NEXT:    v_readlane_b32 s7, v40, 3
@@ -3591,12 +3591,12 @@ define amdgpu_gfx i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, i32 %fp
 ; GFX10-32-NEXT:    s_addk_i32 s32, 0x200
 ; GFX10-32-NEXT:    v_writelane_b32 v40, s4, 0
 ; GFX10-32-NEXT:    v_writelane_b32 v40, s5, 1
-; GFX10-32-NEXT:    s_mov_b32 s5, 0
 ; GFX10-32-NEXT:    v_writelane_b32 v40, s6, 2
-; GFX10-32-NEXT:    s_mov_b32 s6, exec_lo
 ; GFX10-32-NEXT:    v_writelane_b32 v40, s7, 3
 ; GFX10-32-NEXT:    v_writelane_b32 v40, s30, 4
 ; GFX10-32-NEXT:    v_writelane_b32 v40, s31, 5
+; GFX10-32-NEXT:    s_mov_b32 s5, 0
+; GFX10-32-NEXT:    s_mov_b32 s6, exec_lo
 ; GFX10-32-NEXT:  .LBB18_1: ; =>This Inner Loop Header: Depth=1
 ; GFX10-32-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX10-32-NEXT:    v_cmp_eq_u32_e64 s34, s4, v1
@@ -3609,9 +3609,9 @@ define amdgpu_gfx i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, i32 %fp
 ; GFX10-32-NEXT:    s_cbranch_execnz .LBB18_1
 ; GFX10-32-NEXT:  ; %bb.2:
 ; GFX10-32-NEXT:    s_mov_b32 exec_lo, s6
+; GFX10-32-NEXT:    v_readlane_b32 s30, v40, 4
 ; GFX10-32-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX10-32-NEXT:    v_readlane_b32 s31, v40, 5
-; GFX10-32-NEXT:    v_readlane_b32 s30, v40, 4
 ; GFX10-32-NEXT:    v_readlane_b32 s7, v40, 3
 ; GFX10-32-NEXT:    v_readlane_b32 s6, v40, 2
 ; GFX10-32-NEXT:    v_readlane_b32 s5, v40, 1
@@ -3639,14 +3639,14 @@ define amdgpu_gfx i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, i32 %fp
 ; GFX10-64-NEXT:    s_addk_i32 s32, 0x400
 ; GFX10-64-NEXT:    v_writelane_b32 v40, s4, 0
 ; GFX10-64-NEXT:    v_writelane_b32 v40, s5, 1
-; GFX10-64-NEXT:    s_mov_b32 s5, 0
 ; GFX10-64-NEXT:    v_writelane_b32 v40, s6, 2
 ; GFX10-64-NEXT:    v_writelane_b32 v40, s7, 3
-; GFX10-64-NEXT:    s_mov_b64 s[6:7], exec
 ; GFX10-64-NEXT:    v_writelane_b32 v40, s8, 4
 ; GFX10-64-NEXT:    v_writelane_b32 v40, s9, 5
 ; GFX10-64-NEXT:    v_writelane_b32 v40, s30, 6
 ; GFX10-64-NEXT:    v_writelane_b32 v40, s31, 7
+; GFX10-64-NEXT:    s_mov_b32 s5, 0
+; GFX10-64-NEXT:    s_mov_b64 s[6:7], exec
 ; GFX10-64-NEXT:  .LBB18_1: ; =>This Inner Loop Header: Depth=1
 ; GFX10-64-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX10-64-NEXT:    v_cmp_eq_u32_e64 s[34:35], s4, v1
@@ -3659,9 +3659,9 @@ define amdgpu_gfx i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, i32 %fp
 ; GFX10-64-NEXT:    s_cbranch_execnz .LBB18_1
 ; GFX10-64-NEXT:  ; %bb.2:
 ; GFX10-64-NEXT:    s_mov_b64 exec, s[6:7]
+; GFX10-64-NEXT:    v_readlane_b32 s30, v40, 6
 ; GFX10-64-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX10-64-NEXT:    v_readlane_b32 s31, v40, 7
-; GFX10-64-NEXT:    v_readlane_b32 s30, v40, 6
 ; GFX10-64-NEXT:    v_readlane_b32 s9, v40, 5
 ; GFX10-64-NEXT:    v_readlane_b32 s8, v40, 4
 ; GFX10-64-NEXT:    v_readlane_b32 s7, v40, 3

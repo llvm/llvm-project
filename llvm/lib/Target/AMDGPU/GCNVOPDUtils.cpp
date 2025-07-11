@@ -36,16 +36,11 @@ using namespace llvm;
 
 bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
                                    const MachineInstr &FirstMI,
-#if LLPC_BUILD_NPI
                                    const MachineInstr &SecondMI, bool IsVOPD3) {
-#else /* LLPC_BUILD_NPI */
-                                   const MachineInstr &SecondMI) {
-#endif /* LLPC_BUILD_NPI */
   namespace VOPD = AMDGPU::VOPD;
 
   const MachineFunction *MF = FirstMI.getMF();
   const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-#if LLPC_BUILD_NPI
 
   if (IsVOPD3 && !ST.hasVOPD3())
     return false;
@@ -54,7 +49,6 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   if (TII.isDPP(FirstMI) || TII.isDPP(SecondMI))
     return false;
 
-#endif /* LLPC_BUILD_NPI */
   const SIRegisterInfo *TRI = dyn_cast<SIRegisterInfo>(ST.getRegisterInfo());
   const MachineRegisterInfo &MRI = MF->getRegInfo();
   // Literals also count against scalar bus limit
@@ -94,40 +88,27 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   for (auto CompIdx : VOPD::COMPONENTS) {
     const MachineInstr &MI = (CompIdx == VOPD::X) ? FirstMI : SecondMI;
 
-#if LLPC_BUILD_NPI
     const MachineOperand &Src0 = *TII.getNamedOperand(MI, AMDGPU::OpName::src0);
-#else /* LLPC_BUILD_NPI */
-    const MachineOperand &Src0 = MI.getOperand(VOPD::Component::SRC0);
-#endif /* LLPC_BUILD_NPI */
     if (Src0.isReg()) {
       if (!TRI->isVectorRegister(MRI, Src0.getReg())) {
         if (!is_contained(UniqueScalarRegs, Src0.getReg()))
           UniqueScalarRegs.push_back(Src0.getReg());
       }
-#if LLPC_BUILD_NPI
     } else if (!TII.isInlineConstant(Src0)) {
       if (IsVOPD3)
         return false;
       addLiteral(Src0);
-#else /* LLPC_BUILD_NPI */
-    } else {
-      if (!TII.isInlineConstant(MI, VOPD::Component::SRC0))
-        addLiteral(Src0);
-#endif /* LLPC_BUILD_NPI */
     }
 
     if (InstInfo[CompIdx].hasMandatoryLiteral()) {
-#if LLPC_BUILD_NPI
       if (IsVOPD3)
         return false;
 
-#endif /* LLPC_BUILD_NPI */
       auto CompOprIdx = InstInfo[CompIdx].getMandatoryLiteralCompOperandIndex();
       addLiteral(MI.getOperand(CompOprIdx));
     }
     if (MI.getDesc().hasImplicitUseOfPhysReg(AMDGPU::VCC))
       UniqueScalarRegs.push_back(AMDGPU::VCC_LO);
-#if LLPC_BUILD_NPI
 
     if (IsVOPD3) {
       for (auto OpName : {AMDGPU::OpName::src1, AMDGPU::OpName::src2}) {
@@ -162,7 +143,6 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
           return false;
       }
     }
-#endif /* LLPC_BUILD_NPI */
   }
 
   if (UniqueLiterals.size() > 1)
@@ -175,19 +155,12 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   bool SkipSrc = ST.isGFX1170Plus() &&
                  FirstMI.getOpcode() == AMDGPU::V_MOV_B32_e32 &&
                  SecondMI.getOpcode() == AMDGPU::V_MOV_B32_e32;
-#if LLPC_BUILD_NPI
   bool AllowSameVGPR = ST.hasGFX1250Insts();
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
   if (InstInfo.hasInvalidOperand(getVRegIdx, *TRI, SkipSrc, AllowSameVGPR,
                                  IsVOPD3))
-#else /* LLPC_BUILD_NPI */
-  if (InstInfo.hasInvalidOperand(getVRegIdx, SkipSrc))
-#endif /* LLPC_BUILD_NPI */
     return false;
 
-#if LLPC_BUILD_NPI
   if (IsVOPD3) {
     // BITOP3 can be converted to DUAL_BITOP2 only if src2 is zero.
     if (AMDGPU::hasNamedOperand(SecondMI.getOpcode(), AMDGPU::OpName::bitop3)) {
@@ -204,7 +177,6 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
     }
   }
 
-#endif /* LLPC_BUILD_NPI */
   LLVM_DEBUG(dbgs() << "VOPD Reg Constraints Passed\n\tX: " << FirstMI
                     << "\n\tY: " << SecondMI << "\n");
   return true;
@@ -218,35 +190,17 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
                                        const MachineInstr *FirstMI,
                                        const MachineInstr &SecondMI) {
   const SIInstrInfo &STII = static_cast<const SIInstrInfo &>(TII);
-#if LLPC_BUILD_NPI
   const GCNSubtarget &ST = STII.getSubtarget();
   unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(ST);
-#endif /* LLPC_BUILD_NPI */
   unsigned Opc2 = SecondMI.getOpcode();
-#if LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
-  auto SecondCanBeVOPD = AMDGPU::getCanBeVOPD(Opc2);
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
   const auto checkVOPD = [&](bool VOPD3) -> bool {
     auto SecondCanBeVOPD = AMDGPU::getCanBeVOPD(Opc2, EncodingFamily, VOPD3);
-#else /* LLPC_BUILD_NPI */
-  // One instruction case
-  if (!FirstMI)
-    return SecondCanBeVOPD.Y;
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
     // One instruction case
     if (!FirstMI)
       return SecondCanBeVOPD.Y || SecondCanBeVOPD.X;
-#else /* LLPC_BUILD_NPI */
-  unsigned Opc = FirstMI->getOpcode();
-  auto FirstCanBeVOPD = AMDGPU::getCanBeVOPD(Opc);
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
     unsigned Opc = FirstMI->getOpcode();
     auto FirstCanBeVOPD = AMDGPU::getCanBeVOPD(Opc, EncodingFamily, VOPD3);
 
@@ -256,17 +210,8 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
 
     return checkVOPDRegConstraints(STII, *FirstMI, SecondMI, VOPD3);
   };
-#else /* LLPC_BUILD_NPI */
-  if (!((FirstCanBeVOPD.X && SecondCanBeVOPD.Y) ||
-        (FirstCanBeVOPD.Y && SecondCanBeVOPD.X)))
-    return false;
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
   return checkVOPD(false) || (ST.hasVOPD3() && checkVOPD(true));
-#else /* LLPC_BUILD_NPI */
-  return checkVOPDRegConstraints(STII, *FirstMI, SecondMI);
-#endif /* LLPC_BUILD_NPI */
 }
 
 namespace {

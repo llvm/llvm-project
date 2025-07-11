@@ -164,11 +164,7 @@ multiclass VOP2Inst_e32<string opName,
                Commutable_REV<revOp#"_e32", !eq(revOp, opName)>;
 }
 multiclass
-#ifdef LLPC_BUILD_NPI
     VOP2Inst_e32_VOPD<string opName, VOPProfile P, bits<6> VOPDOp,
-#else /* LLPC_BUILD_NPI */
-    VOP2Inst_e32_VOPD<string opName, VOPProfile P, bits<5> VOPDOp,
-#endif /* LLPC_BUILD_NPI */
                       string VOPDName, SDPatternOperator node = null_frag,
                       string revOp = opName> {
   defm NAME : VOP2Inst_e32<opName, P, node, revOp>,
@@ -190,6 +186,12 @@ multiclass VOP2Inst_e64<string opName,
       def _e64_dpp  : VOP3_DPP_Pseudo <opName, P> {
         let OtherPredicates = [HasDPALU_DPP];
       }
+#else /* LLPC_BUILD_NPI */
+    let SubtargetPredicate = isGFX11Plus in {
+      if P.HasExtVOP3DPP then
+        def _e64_dpp  : VOP3_DPP_Pseudo <opName, P>;
+    } // End SubtargetPredicate = isGFX11Plus
+#endif /* LLPC_BUILD_NPI */
 }
 
 multiclass VOP2Inst_e64_VOPD<string opName,
@@ -199,12 +201,6 @@ multiclass VOP2Inst_e64_VOPD<string opName,
                              string revOp = opName> {
   defm NAME: VOP2Inst_e64<opName, P, node, revOp>,
              VOPD_Component<VOPDOp, VOPDName>;
-#else /* LLPC_BUILD_NPI */
-    let SubtargetPredicate = isGFX11Plus in {
-      if P.HasExtVOP3DPP then
-        def _e64_dpp  : VOP3_DPP_Pseudo <opName, P>;
-    } // End SubtargetPredicate = isGFX11Plus
-#endif /* LLPC_BUILD_NPI */
 }
 
 multiclass VOP2Inst_sdwa<string opName,
@@ -267,20 +263,12 @@ multiclass VOP2Inst_e64_t16<string opName,
 
 multiclass VOP2Inst_VOPD<string opName,
                          VOPProfile P,
-#ifdef LLPC_BUILD_NPI
                          bits<6> VOPDOp,
-#else /* LLPC_BUILD_NPI */
-                         bits<5> VOPDOp,
-#endif /* LLPC_BUILD_NPI */
                          string VOPDName,
                          SDPatternOperator node = null_frag,
                          string revOp = opName> :
     VOP2Inst_e32_VOPD<opName, P, VOPDOp, VOPDName, node, revOp>,
-#ifdef LLPC_BUILD_NPI
     VOP2Inst_e64_VOPD<opName, P, VOPDOp, VOPDName, node, revOp>,
-#else /* LLPC_BUILD_NPI */
-    VOP2Inst_e64<opName, P, node, revOp>,
-#endif /* LLPC_BUILD_NPI */
     VOP2Inst_sdwa<opName, P, revOp> {
     if P.HasExtDPP then
       def _dpp  : VOP2_DPP_Pseudo <opName, P>;
@@ -347,11 +335,7 @@ multiclass VOP2bInstAliases<VOP2_Pseudo ps, VOP2_Real inst, string OpName> {
 }
 
 multiclass
-#ifdef LLPC_BUILD_NPI
     VOP2eInst_Base<string opName, VOPProfile P, bits<6> VOPDOp, string VOPDName,
-#else /* LLPC_BUILD_NPI */
-    VOP2eInst_Base<string opName, VOPProfile P, bits<5> VOPDOp, string VOPDName,
-#endif /* LLPC_BUILD_NPI */
                    SDPatternOperator node, string revOp, bit useSGPRInput> {
 
   let SchedRW = [Write32Bit] in {
@@ -373,7 +357,6 @@ multiclass
         def _dpp  : VOP2_DPP_Pseudo <opName, P>;
     }
 
-#ifdef LLPC_BUILD_NPI
     let isReMaterializable = 1 in {
     if !empty(VOPDName) then
       def _e64 : VOP3InstBase <opName, P, node, 1>,
@@ -382,11 +365,6 @@ multiclass
       def _e64 : VOP3InstBase <opName, P, node, 1>,
                  Commutable_REV<revOp#"_e64", !eq(revOp, opName)>,
                  VOPD_Component<VOPDOp, VOPDName>;
-#else /* LLPC_BUILD_NPI */
-    def _e64 : VOP3InstBase <opName, P, node, 1>,
-               Commutable_REV<revOp#"_e64", !eq(revOp, opName)> {
-      let isReMaterializable = 1;
-#endif /* LLPC_BUILD_NPI */
     }
 
 #ifdef LLPC_BUILD_NPI
@@ -413,11 +391,7 @@ multiclass
     : VOP2eInst_Base<opName, P, 0, "", node, revOp, useSGPRInput>;
 
 multiclass
-#ifdef LLPC_BUILD_NPI
     VOP2eInst_VOPD<string opName, VOPProfile P, bits<6> VOPDOp, string VOPDName,
-#else /* LLPC_BUILD_NPI */
-    VOP2eInst_VOPD<string opName, VOPProfile P, bits<5> VOPDOp, string VOPDName,
-#endif /* LLPC_BUILD_NPI */
                    SDPatternOperator node = null_frag, string revOp = opName,
                    bit useSGPRInput = !eq(P.NumSrcArgs, 3)>
     : VOP2eInst_Base<opName, P, VOPDOp, VOPDName, node, revOp, useSGPRInput>;
@@ -591,14 +565,12 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
   // We need a dummy src2 tied to dst to track the use of that register for s_delay_alu
   let InsVOPDX = (ins Src0RC32:$src0X, Src1RC32:$vsrc1X, VGPRSrc_32:$src2X);
   let InsVOPDY = (ins Src0RC32:$src0Y, Src1RC32:$vsrc1Y, VGPRSrc_32:$src2Y);
-#ifdef LLPC_BUILD_NPI
   let InsVOPD3X = (ins Src0ModVOPD3:$src0X_modifiers, Src0VOPD3:$src0X,
                        Src1ModVOPD3:$vsrc1X_modifiers, Src1RC32:$vsrc1X,
                        VGPRSrc_32:$src2X);
   let InsVOPD3Y = (ins Src0ModVOPD3:$src0Y_modifiers, Src0VOPD3:$src0Y,
                        Src1ModVOPD3:$vsrc1Y_modifiers, Src1RC32:$vsrc1Y,
                        VGPRSrc_32:$src2Y);
-#endif /* LLPC_BUILD_NPI */
 
   let InsDPP8 = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
                      Src1ModDPP:$src1_modifiers, Src1DPP:$src1,
@@ -623,9 +595,7 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
                         0 /*Src2HasMods*/, DstVT>.ret;
   let HasSrc2 = 0;
   let HasSrc2Mods = 0;
-#ifdef LLPC_BUILD_NPI
   let HasVOPD3Src2 = 0;
-#endif /* LLPC_BUILD_NPI */
 
   let HasExt = 1;
   let HasExtDPP = 1;
@@ -666,13 +636,8 @@ def VOP_MAC_F16_t16 : VOP_MAC <f16> {
   let Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT, 0/*IsFake16*/>.ret;
   let Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT, 0/*IsFake16*/>.ret;
   let Src0ModVOP3DPP = getSrc0ModVOP3DPP<Src0VT, DstVT, 0/*IsFake16*/>.ret;
-#ifdef LLPC_BUILD_NPI
   let Src1ModVOP3DPP = getSrcModVOP3VC<Src1VT, 0/*IsFake16*/>.ret;
   let Src2ModVOP3DPP = getSrcModVOP3VC<Src2VT, 0/*IsFake16*/>.ret;
-#else /* LLPC_BUILD_NPI */
-  let Src1ModVOP3DPP = getSrcModVOP3DPP<Src1VT, 0/*IsFake16*/>.ret;
-  let Src2ModVOP3DPP = getSrcModVOP3DPP<Src2VT, 0/*IsFake16*/>.ret;
-#endif /* LLPC_BUILD_NPI */
   let Src0Mod = getSrc0Mod<Src0VT, DstVT, 1/*IsTrue16*/, 0/*IsFake16*/>.ret;
   let Src1Mod = getSrcMod<Src1VT, 1/*IsTrue16*/, 0/*IsFake16*/>.ret;
   let Src2Mod = getSrcMod<Src2VT, 1/*IsTrue16*/, 0/*IsFake16*/>.ret;
@@ -703,13 +668,8 @@ def VOP_MAC_F16_fake16 : VOP_MAC <f16> {
   let Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT, 1/*IsFake16*/>.ret;
   let Src2VOP3DPP = getVOP3DPPSrcForVT<Src2VT, 1/*IsFake16*/>.ret;
   let Src0ModVOP3DPP = getSrc0ModVOP3DPP<Src0VT, DstVT, 1/*IsFake16*/>.ret;
-#ifdef LLPC_BUILD_NPI
   let Src1ModVOP3DPP = getSrcModVOP3VC<Src1VT, 1/*IsFake16*/>.ret;
   let Src2ModVOP3DPP = getSrcModVOP3VC<Src2VT, 1/*IsFake16*/>.ret;
-#else /* LLPC_BUILD_NPI */
-  let Src1ModVOP3DPP = getSrcModVOP3DPP<Src1VT, 1/*IsFake16*/>.ret;
-  let Src2ModVOP3DPP = getSrcModVOP3DPP<Src2VT, 1/*IsFake16*/>.ret;
-#endif /* LLPC_BUILD_NPI */
   let Src0Mod = getSrc0Mod<Src0VT, DstVT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
   let Src1Mod = getSrcMod<Src1VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
   let Src2Mod = getSrcMod<Src2VT, 1/*IsTrue16*/, 1/*IsFake16*/>.ret;
@@ -878,7 +838,6 @@ class VOP2e_SGPR<list<ValueType> ArgVT> : VOPProfile<ArgVT> {
   let HasExtSDWA9 = 1;
 }
 
-#ifdef LLPC_BUILD_NPI
 def VOP2e_I32_I32_I32_I1 : VOP2e_SGPR<[i32, i32, i32, i1]> {
   let Src2VOPD3 = SSrc_i1;
   let InsVOPD3X = (ins FP32VCSrcInputMods:$src0X_modifiers, Src0VOPD3:$src0X, FP32VRegSrcInputMods:$vsrc1X_modifiers, Src1VOPD3:$vsrc1X, Src2VOPD3:$vsrc2X);
@@ -887,9 +846,6 @@ def VOP2e_I32_I32_I32_I1 : VOP2e_SGPR<[i32, i32, i32, i1]> {
   let AsmVOPD3Y = "$vdstY, $src0Y_modifiers, $vsrc1Y_modifiers, $vsrc2Y";
   let HasVOPD3Src2 = 0;
 }
-#else /* LLPC_BUILD_NPI */
-def VOP2e_I32_I32_I32_I1 : VOP2e_SGPR<[i32, i32, i32, i1]>;
-#endif /* LLPC_BUILD_NPI */
 def VOP2e_I16_I16_I16_I1 : VOP2e_SGPR<[i16, i16, i16, i1]>;
 // V_CNDMASK_B16 is VOP3 only
 def VOP2e_I16_I16_I16_I1_true16 : VOP2e_SGPR<[i16, i16, i16, i1]> {
@@ -910,11 +866,7 @@ def VOP2e_I16_I16_I16_I1_true16 : VOP2e_SGPR<[i16, i16, i16, i1]> {
   let Src0VOP3DPP = VGPRSrc_16;
   let Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT, 0/*IsFake16*/>.ret;
   let Src0ModVOP3DPP = getSrc0ModVOP3DPP<f16, DstVT, 0/*IsFake16*/>.ret;
-#ifdef LLPC_BUILD_NPI
   let Src1ModVOP3DPP = getSrcModVOP3VC<f16, 0/*IsFake16*/>.ret;
-#else /* LLPC_BUILD_NPI */
-  let Src1ModVOP3DPP = getSrcModVOP3DPP<f16, 0/*IsFake16*/>.ret;
-#endif /* LLPC_BUILD_NPI */
 }
 def VOP2e_I16_I16_I16_I1_fake16 : VOP2e_SGPR<[i16, i16, i16, i1]> {
   let IsTrue16 = 1;
@@ -926,11 +878,7 @@ def VOP2e_I16_I16_I16_I1_fake16 : VOP2e_SGPR<[i16, i16, i16, i1]> {
   let Src0VOP3DPP = VGPRSrc_32;
   let Src1VOP3DPP = getVOP3DPPSrcForVT<Src1VT, 1/*IsFake16*/>.ret;
   let Src0ModVOP3DPP = getSrc0ModVOP3DPP<f16, DstVT, 1/*IsFake16*/>.ret;
-#ifdef LLPC_BUILD_NPI
   let Src1ModVOP3DPP = getSrcModVOP3VC<f16, 1/*IsFake16*/>.ret;
-#else /* LLPC_BUILD_NPI */
-  let Src1ModVOP3DPP = getSrcModVOP3DPP<f16, 1/*IsFake16*/>.ret;
-#endif /* LLPC_BUILD_NPI */
 }
 
 def VOP_READLANE : VOPProfile<[i32, i32, i32, untyped]> {
@@ -992,22 +940,12 @@ defm V_MUL_U32_U24 : VOP2Inst <"v_mul_u32_u24", VOP_I32_I32_I32_ARITH, AMDGPUmul
 defm V_MUL_HI_U32_U24 : VOP2Inst <"v_mul_hi_u32_u24", VOP_I32_I32_I32, AMDGPUmulhi_u24>;
 defm V_MIN_F32 : VOP2Inst_VOPD <"v_min_f32", VOP_F32_F32_F32, 0xb, "v_min_f32", fminnum_like>;
 defm V_MAX_F32 : VOP2Inst_VOPD <"v_max_f32", VOP_F32_F32_F32, 0xa, "v_max_f32", fmaxnum_like>;
-#ifdef LLPC_BUILD_NPI
 defm V_MIN_I32 : VOP2Inst_VOPD <"v_min_i32", VOP_PAT_GEN<VOP_I32_I32_I32>, 0x18, "v_min_i32", smin>;
 defm V_MAX_I32 : VOP2Inst_VOPD <"v_max_i32", VOP_PAT_GEN<VOP_I32_I32_I32>, 0x17, "v_max_i32", smax>;
-#else /* LLPC_BUILD_NPI */
-defm V_MIN_I32 : VOP2Inst <"v_min_i32", VOP_PAT_GEN<VOP_I32_I32_I32>, smin>;
-defm V_MAX_I32 : VOP2Inst <"v_max_i32", VOP_PAT_GEN<VOP_I32_I32_I32>, smax>;
-#endif /* LLPC_BUILD_NPI */
 defm V_MIN_U32 : VOP2Inst <"v_min_u32", VOP_PAT_GEN<VOP_I32_I32_I32>, umin>;
 defm V_MAX_U32 : VOP2Inst <"v_max_u32", VOP_PAT_GEN<VOP_I32_I32_I32>, umax>;
-#ifdef LLPC_BUILD_NPI
 defm V_LSHRREV_B32 : VOP2Inst_VOPD <"v_lshrrev_b32", VOP_I32_I32_I32, 0x15, "v_lshrrev_b32", clshr_rev_32, "v_lshr_b32">;
 defm V_ASHRREV_I32 : VOP2Inst_VOPD <"v_ashrrev_i32", VOP_I32_I32_I32, 0x16, "v_ashrrev_i32", cashr_rev_32, "v_ashr_i32">;
-#else /* LLPC_BUILD_NPI */
-defm V_LSHRREV_B32 : VOP2Inst <"v_lshrrev_b32", VOP_I32_I32_I32, clshr_rev_32, "v_lshr_b32">;
-defm V_ASHRREV_I32 : VOP2Inst <"v_ashrrev_i32", VOP_I32_I32_I32, cashr_rev_32, "v_ashr_i32">;
-#endif /* LLPC_BUILD_NPI */
 defm V_LSHLREV_B32 : VOP2Inst_VOPD <"v_lshlrev_b32", VOP_I32_I32_I32, 0x11, "v_lshlrev_b32", clshl_rev_32, "v_lshl_b32">;
 defm V_AND_B32 : VOP2Inst_VOPD <"v_and_b32", VOP_PAT_GEN<VOP_I32_I32_I32>, 0x12, "v_and_b32", and>;
 defm V_OR_B32 : VOP2Inst <"v_or_b32", VOP_PAT_GEN<VOP_I32_I32_I32>, or>;
@@ -1039,11 +977,7 @@ defm V_SUBBREV_U32 : VOP2bInst <"v_subbrev_u32", VOP2b_I32_I1_I32_I32_I1, null_f
 
 
 let SubtargetPredicate = HasAddNoCarryInsts, isReMaterializable = 1 in {
-#ifdef LLPC_BUILD_NPI
   defm V_SUB_U32 : VOP2Inst_VOPD <"v_sub_u32", VOP_I32_I32_I32_ARITH, 0x14, "v_sub_nc_u32", null_frag, "v_sub_u32">;
-#else /* LLPC_BUILD_NPI */
-  defm V_SUB_U32 : VOP2Inst <"v_sub_u32", VOP_I32_I32_I32_ARITH, null_frag, "v_sub_u32">;
-#endif /* LLPC_BUILD_NPI */
   defm V_SUBREV_U32 : VOP2Inst <"v_subrev_u32", VOP_I32_I32_I32_ARITH, null_frag, "v_sub_u32">;
 }
 
@@ -1471,16 +1405,12 @@ let AddedComplexity = 30 in {
   }
 } // End AddedComplexity = 30
 
-#ifdef LLPC_BUILD_NPI
 let SubtargetPredicate = HasFmaakFmamkF32Insts, isReMaterializable = 1, CanBeVOPD3X = 0, FixedSize = 1 in {
-#else /* LLPC_BUILD_NPI */
-let SubtargetPredicate = HasFmaakFmamkF32Insts, isReMaterializable = 1, FixedSize = 1 in {
-#endif /* LLPC_BUILD_NPI */
 def V_FMAMK_F32 : VOP2_Pseudo<"v_fmamk_f32", VOP_MADMK_F32, [], "">, VOPD_Component<0x2, "v_fmamk_f32">;
 
 let isCommutable = 1 in
 def V_FMAAK_F32 : VOP2_Pseudo<"v_fmaak_f32", VOP_MADAK_F32, [], "">, VOPD_Component<0x1, "v_fmaak_f32">;
-} // End SubtargetPredicate = HasFmaakFmamkF32Insts, isReMaterializable = 1, FixedSize = 1
+} // End SubtargetPredicate = HasFmaakFmamkF32Insts, isReMaterializable = 1, CanBeVOPD3X = 0, FixedSize = 1
 
 #ifdef LLPC_BUILD_NPI
 let SubtargetPredicate = HasFmaakFmamkF64Insts, isReMaterializable = 1,
@@ -1615,13 +1545,8 @@ def : VOPBinOpClampPat<usubsat, V_SUB_U16_e64, i16>;
 
 let SubtargetPredicate = isGFX12Plus, isReMaterializable = 1 in {
   let SchedRW = [WriteDoubleAdd], isCommutable = 1, FPDPRounding = 1 in {
-#ifdef LLPC_BUILD_NPI
     defm V_ADD_F64_pseudo : VOP2Inst_VOPD <"v_add_f64_pseudo", VOP_F64_F64_F64, 0x21, "v_add_f64", any_fadd>;
     defm V_MUL_F64_pseudo : VOP2Inst_VOPD <"v_mul_f64_pseudo", VOP_F64_F64_F64, 0x22, "v_mul_f64", fmul>;
-#else /* LLPC_BUILD_NPI */
-      defm V_ADD_F64_pseudo : VOP2Inst <"v_add_f64_pseudo", VOP_F64_F64_F64, any_fadd>;
-      defm V_MUL_F64_pseudo : VOP2Inst <"v_mul_f64_pseudo", VOP_F64_F64_F64, fmul>;
-#endif /* LLPC_BUILD_NPI */
   } // End SchedRW = [WriteDoubleAdd], isCommutable = 1, FPDPRounding = 1
   let SchedRW = [Write64Bit] in {
     defm V_LSHLREV_B64_pseudo : VOP2Inst <"v_lshlrev_b64_pseudo", VOP_I64_I32_I64, clshl_rev_64>;
@@ -1630,13 +1555,8 @@ let SubtargetPredicate = isGFX12Plus, isReMaterializable = 1 in {
 
 let SubtargetPredicate = HasIEEEMinimumMaximumInsts, isReMaterializable = 1,
     SchedRW = [WriteDoubleAdd], isCommutable = 1, IsDPMACCInstruction = 1 in {
-#ifdef LLPC_BUILD_NPI
   defm V_MIN_NUM_F64 : VOP2Inst_VOPD <"v_min_num_f64", VOP_F64_F64_F64, 0x24, "v_min_num_f64", fminnum_like>;
   defm V_MAX_NUM_F64 : VOP2Inst_VOPD <"v_max_num_f64", VOP_F64_F64_F64, 0x23, "v_max_num_f64", fmaxnum_like>;
-#else /* LLPC_BUILD_NPI */
-  defm V_MIN_NUM_F64 : VOP2Inst <"v_min_num_f64", VOP_F64_F64_F64, fminnum_like>;
-  defm V_MAX_NUM_F64 : VOP2Inst <"v_max_num_f64", VOP_F64_F64_F64, fmaxnum_like>;
-#endif /* LLPC_BUILD_NPI */
 }
 
 //===----------------------------------------------------------------------===//
@@ -2314,16 +2234,16 @@ multiclass VOP2_Real_e32_gfx11_gfx12<bits<6> op> :
 
 multiclass VOP3Only_Realtriple_gfx11_gfx12<bits<10> op> :
   VOP3Only_Realtriple<GFX11Gen, op>, VOP3Only_Realtriple<GFX12Gen, op>;
-
-multiclass VOP3Only_Realtriple_t16_gfx11_gfx12<bits<10> op, string asmName, string OpName = NAME> :
-  VOP3_Realtriple_t16_gfx11<op, asmName, OpName, "", /*IsSingle*/1>,
-  VOP3_Realtriple_t16_gfx12<op, asmName, OpName, "", /*IsSingle*/1>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
 multiclass VOP2Only_Real_MADK_t16_gfx11_gfx12_gfx13<
     bits<6> op, string asmName, string opName = NAME> :
 #else /* LLPC_BUILD_NPI */
+multiclass VOP3Only_Realtriple_t16_gfx11_gfx12<bits<10> op, string asmName, string OpName = NAME> :
+  VOP3_Realtriple_t16_gfx11<op, asmName, OpName, "", /*IsSingle*/1>,
+  VOP3_Realtriple_t16_gfx12<op, asmName, OpName, "", /*IsSingle*/1>;
+
 multiclass VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<bits<10> op, string asmName, string OpName = NAME> {
   defm _t16: VOP3Only_Realtriple_t16_gfx11_gfx12<op, asmName, OpName#"_t16">;
   defm _fake16: VOP3Only_Realtriple_t16_gfx11_gfx12<op, asmName, OpName#"_fake16">;

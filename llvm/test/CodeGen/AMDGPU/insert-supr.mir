@@ -106,7 +106,7 @@ body: |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_SINGLEUSE_VDST 2
+  ; CHECK-NEXT:   S_SINGLEUSE_VDST 145
   ; CHECK-NEXT:   $vgpr2_vgpr3 = V_MOV_B64_e64 $vgpr0_vgpr1, implicit $exec
   ; CHECK-NEXT:   $vgpr4_vgpr5 = V_MOV_2SRC_B64 $vgpr2, $vgpr3, 0, 1, implicit $exec
   ; CHECK-NEXT:   $vgpr6_vgpr7 = V_MOV_B64_e64 $vgpr4_vgpr5, implicit $exec

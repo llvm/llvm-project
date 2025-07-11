@@ -1225,6 +1225,9 @@ TARGET_BUILTIN(__builtin_amdgcn_load_mcast_b128, "vV4i*10V4iC*Iii", "n", "gfx13-
 
 TARGET_BUILTIN(__builtin_amdgcn_map_shared_rank, "v*11v*3i", "n", "gfx13-insts")
 TARGET_BUILTIN(__builtin_amdgcn_query_shared_rank, "ivC*11", "n", "gfx13-insts")
+TARGET_BUILTIN(__builtin_amdgcn_dds_load_async_to_lds_b32, "viC*11i*3IiIi", "n", "gfx13-insts")
+TARGET_BUILTIN(__builtin_amdgcn_dds_load_async_to_lds_b64, "vV2iC*11V2i*3IiIi", "n", "gfx13-insts")
+TARGET_BUILTIN(__builtin_amdgcn_dds_load_async_to_lds_b128, "vV4iC*11V4i*3IiIi", "n", "gfx13-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_wavegroup_id_in_cluster, "i", "nc", "gfx13-insts")
 TARGET_BUILTIN(__builtin_amdgcn_spatial_cluster_is_chain_start, "b", "nc", "gfx13-insts")
