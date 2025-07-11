@@ -5,8 +5,8 @@ define i64 @simple(i32 %x) {
 ; CHECK-LABEL: define i64 @simple(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[LSHR:%.*]] = and i32 [[X]], -256
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[LSHR]] to i64
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i64 [[TMP1]], 24
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[LSHR]] to i64
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i64 [[ZEXT]], 24
 ; CHECK-NEXT:    ret i64 [[SHL]]
 ;
   %lshr = lshr i32 %x, 8
@@ -20,8 +20,8 @@ define i64 @masked(i32 %x) {
 ; CHECK-LABEL: define i64 @masked(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[X]], 4080
-; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[MASK]] to i64
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i64 [[TMP1]], 44
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext nneg i32 [[MASK]] to i64
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i64 [[ZEXT]], 44
 ; CHECK-NEXT:    ret i64 [[SHL]]
 ;
   %lshr = lshr i32 %x, 4
@@ -66,4 +66,18 @@ define i64 @combine(i32 %lower, i32 %upper) {
   %o.3 = or i64 %o.2, %s.3
 
   ret i64 %o.3
+}
+
+define <2 x i64> @simple.vec(<2 x i32> %v) {
+; CHECK-LABEL: define <2 x i64> @simple.vec(
+; CHECK-SAME: <2 x i32> [[V:%.*]]) {
+; CHECK-NEXT:    [[LSHR:%.*]] = and <2 x i32> [[V]], splat (i32 -256)
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i32> [[LSHR]] to <2 x i64>
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw <2 x i64> [[ZEXT]], splat (i64 24)
+; CHECK-NEXT:    ret <2 x i64> [[SHL]]
+;
+  %lshr = lshr <2 x i32> %v, splat(i32 8)
+  %zext = zext <2 x i32> %lshr to <2 x i64>
+  %shl = shl <2 x i64> %zext, splat(i64 32)
+  ret <2 x i64> %shl
 }
