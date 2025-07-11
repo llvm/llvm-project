@@ -59,12 +59,15 @@ Expected<std::vector<std::string>> HTTPDelimitedJSONTransport::Parse() {
       continue;
     }
 
-    // HTTP Headers are `<field-name>: [<field-value>]`.
+    // HTTP Headers are formatted like `<field-name> ':' [<field-value>]`.
     if (!header.contains(kHeaderFieldSeparator))
       return make_error<StringError>("malformed content header",
                                      inconvertibleErrorCode());
 
     auto [name, value] = header.split(kHeaderFieldSeparator);
+
+    // Handle known headers, at the moment only "Content-Length" is supported,
+    // other headers are ignored.
     if (name.lower() == kHeaderContentLength.lower()) {
       value = value.trim();
       if (value.trim().consumeInteger(10, content_length))
