@@ -916,12 +916,18 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
     clang_disposeDiagnostic(Diag);
   }
 
-  CXCStringArray InvalidNegativeStatCachedPaths =
-      clang_experimental_DependencyScannerService_getInvalidNegStatCachedPaths(
+  CXDepScanFSOutOfDateEntrySet OutOfDateEntrySet =
+      clang_experimental_DependencyScannerService_getFSCacheOutOfDateEntrySet(
           Service);
 
-  llvm::errs() << "note: number of invalid negatively stat cached paths: "
-               << InvalidNegativeStatCachedPaths.Count << "\n";
+  llvm::errs()
+      << "note: number of out of date file system cache entries: "
+      << clang_experimental_DepScanFSCacheOutOfDateEntrySet_getNumOfEntries(
+             OutOfDateEntrySet)
+      << "\n";
+
+  clang_experimental_DepScanFSCacheOutOfDateEntrySet_disposeSet(
+      OutOfDateEntrySet);
 
   return 1;
 }

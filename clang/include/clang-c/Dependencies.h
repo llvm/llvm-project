@@ -585,10 +585,98 @@ const char *clang_experimental_DepGraph_getTUContextHash(CXDepGraph);
 CINDEX_LINKAGE
 CXDiagnosticSet clang_experimental_DepGraph_getDiagnostics(CXDepGraph);
 
-CINDEX_LINKAGE
-CXCStringArray
-    clang_experimental_DependencyScannerService_getInvalidNegStatCachedPaths(
-        CXDependencyScannerService);
+/**
+ * The kind of scanning file system cache out-of-date entries.
+ */
+typedef enum {
+  /**
+   * The entry is negatively stat cached (which indicates the file did not exist
+   * the first time it was looked up during scanning), but the cached file
+   * exists on the underlying file system.
+   */
+  NegativelyCached,
+
+  /**
+   * The entry indicates that for the cached file, its cached size
+   * is different from its size reported by the underlying file system.
+   */
+  SizeChanged
+} CXDepScanFSCacheOutOfDateKind;
+
+/**
+ * The opaque object that contains the scanning file system cache's out-of-date
+ * entires.
+ */
+typedef struct CXOpaqueDepScanFSOutOfDateEntrySet *CXDepScanFSOutOfDateEntrySet;
+
+/**
+ * The opaque object that represents a single scanning file system cache's out-
+ * of-date entry.
+ */
+typedef struct CXOpaqueDepScanFSOutOfDateEntry *CXDepScanFSOutOfDateEntry;
+
+/**
+ * Returns all the file system cache out-of-date entries given a
+ * \c CXDependencyScannerService .
+ *
+ * This function is intended to be called when the build has finished,
+ * and the \c CXDependencyScannerService instance is about to be disposed.
+ *
+ * The \c CXDependencyScannerService instance owns the strings used
+ * by the out-of-date entries and should be disposed after the
+ * out-of-date entries are used and disposed.
+ */
+CXDepScanFSOutOfDateEntrySet
+clang_experimental_DependencyScannerService_getFSCacheOutOfDateEntrySet(
+    CXDependencyScannerService S);
+
+/**
+ * Returns the number of out-of-date entries contained in a
+ * \c CXDepScanFSOutOfDateEntrySet .
+ */
+size_t clang_experimental_DepScanFSCacheOutOfDateEntrySet_getNumOfEntries(
+    CXDepScanFSOutOfDateEntrySet Entries);
+
+/**
+ * Returns the out-of-date entry at offset \p Idx of the \c
+ * CXDepScanFSOutOfDateEntrySet instance.
+ */
+CXDepScanFSOutOfDateEntry
+clang_experimental_DepScanFSCacheOutOfDateEntrySet_getEntry(
+    CXDepScanFSOutOfDateEntrySet Entries, size_t Idx);
+
+/**
+ * Given an instance of \c CXDepScanFSOutOfDateEntry, returns its Kind.
+ */
+CXDepScanFSCacheOutOfDateKind
+clang_experimental_DepScanFSCacheOutOfDateEntry_getKind(
+    CXDepScanFSOutOfDateEntry Entry);
+
+/**
+ * Given an instance of \c CXDepScanFSOutOfDateEntry, returns the path.
+ */
+CXString clang_experimental_DepScanFSCacheOutOfDateEntry_getPath(
+    CXDepScanFSOutOfDateEntry Entry);
+
+/**
+ * Given an instance of \c CXDepScanFSOutOfDateEntry of kind SizeChanged,
+ * returns the cached size.
+ */
+uint64_t clang_experimental_DepScanFSCacheOutOfDateEntry_getCachedSize(
+    CXDepScanFSOutOfDateEntry Entry);
+
+/**
+ * Given an instance of \c CXDepScanFSOutOfDateEntry of kind SizeChanged,
+ * returns the actual size on the underlying file system.
+ */
+uint64_t clang_experimental_DepScanFSCacheOutOfDateEntry_getActualSize(
+    CXDepScanFSOutOfDateEntry Entry);
+
+/**
+ * Dispose the \c CXDepScanFSOutOfDateEntrySet instance.
+ */
+void clang_experimental_DepScanFSCacheOutOfDateEntrySet_disposeSet(
+    CXDepScanFSOutOfDateEntrySet Entries);
 
 /**
  * Options used to generate a reproducer.

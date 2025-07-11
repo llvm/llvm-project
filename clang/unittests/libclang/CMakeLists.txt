@@ -1,6 +1,7 @@
 add_clang_unittest(libclangTests
   LibclangTest.cpp
   DriverTest.cpp
+  DependencyScanningCAPITests.cpp
   LINK_LIBS
   libclang
   )
