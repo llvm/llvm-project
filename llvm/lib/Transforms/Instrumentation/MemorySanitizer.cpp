@@ -4307,23 +4307,26 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, PtrSrcOrigin);
   }
 
+  // Test whether the mask indices are initialized, only checking the bits that
+  // are actually used.
+  //
+  // e.g., if Idx is <32 x i16>, only (log2(32) == 5) bits of each index are
+  //       used/checked.
   void maskedCheckAVXIndexShadow(IRBuilder<> &IRB, Value *Idx, Instruction *I) {
+    assert(isFixedIntVector(Idx));
     auto IdxVectorSize =
         cast<FixedVectorType>(Idx->getType())->getNumElements();
     assert(isPowerOf2_64(IdxVectorSize));
-    auto *IdxVectorElemType =
-        cast<FixedVectorType>(Idx->getType())->getElementType();
-    Constant *IndexBits =
-        ConstantInt::get(IdxVectorElemType, IdxVectorSize - 1);
-    auto *IdxShadow = getShadow(Idx);
-    // Only the low bits of Idx are used.
-    Value *V = nullptr;
-    for (size_t i = 0; i < IdxVectorSize; ++i) {
-      V = IRB.CreateExtractElement(IdxShadow, i);
-      assert(V->getType() == IndexBits->getType());
-      V = IRB.CreateOr(V, IRB.CreateAnd(V, IndexBits));
-    }
-    insertCheckShadow(V, getOrigin(Idx), I);
+
+    // Compiler isn't smart enough, let's help it
+    if (isa<Constant>(Idx))
+      return;
+
+    Value *Truncated = IRB.CreateTrunc(
+        Idx,
+        FixedVectorType::get(Type::getIntNTy(*MS.C, Log2_64(IdxVectorSize)),
+                             IdxVectorSize));
+    insertCheckShadow(Truncated, getOrigin(Idx), I);
   }
 
   // Instrument AVX permutation intrinsic.
@@ -4566,16 +4569,37 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     SC.Done(&I);
   }
 
-  // Instrument abs intrinsic.
-  // handleUnknownIntrinsic can't handle it because of the last
-  // is_int_min_poison argument which does not match the result type.
+  // Instrument @llvm.abs intrinsic.
+  //
+  // e.g., i32       @llvm.abs.i32  (i32       <Src>, i1 <is_int_min_poison>)
+  //       <4 x i32> @llvm.abs.v4i32(<4 x i32> <Src>, i1 <is_int_min_poison>)
   void handleAbsIntrinsic(IntrinsicInst &I) {
-    assert(I.getType()->isIntOrIntVectorTy());
-    assert(I.getArgOperand(0)->getType() == I.getType());
+    assert(I.arg_size() == 2);
+    Value *Src = I.getArgOperand(0);
+    Value *IsIntMinPoison = I.getArgOperand(1);
 
-    // FIXME: Handle is_int_min_poison.
+    assert(I.getType()->isIntOrIntVectorTy());
+
+    assert(Src->getType() == I.getType());
+
+    assert(IsIntMinPoison->getType()->isIntegerTy());
+    assert(IsIntMinPoison->getType()->getIntegerBitWidth() == 1);
+
     IRBuilder<> IRB(&I);
-    setShadow(&I, getShadow(&I, 0));
+    Value *SrcShadow = getShadow(Src);
+
+    APInt MinVal =
+        APInt::getSignedMinValue(Src->getType()->getScalarSizeInBits());
+    Value *MinValVec = ConstantInt::get(Src->getType(), MinVal);
+    Value *SrcIsMin = IRB.CreateICmp(CmpInst::ICMP_EQ, Src, MinValVec);
+
+    Value *PoisonedShadow = getPoisonedShadow(Src);
+    Value *PoisonedIfIntMinShadow =
+        IRB.CreateSelect(SrcIsMin, PoisonedShadow, SrcShadow);
+    Value *Shadow =
+        IRB.CreateSelect(IsIntMinPoison, PoisonedIfIntMinShadow, SrcShadow);
+
+    setShadow(&I, Shadow);
     setOrigin(&I, getOrigin(&I, 0));
   }
 
