@@ -9,6 +9,7 @@
 #include "Protocol/ProtocolTypes.h"
 #include "JSONUtils.h"
 #include "ProtocolUtils.h"
+#include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -874,19 +875,10 @@ llvm::json::Value toJSON(const DisassembledInstruction::PresentationHint &PH) {
 bool fromJSON(const llvm::json::Value &Params, DisassembledInstruction &DI,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
-  std::string raw_address;
-  if (!O || !O.map("address", raw_address))
-    return false;
-
-  std::optional<lldb::addr_t> address = DecodeMemoryReference(raw_address);
-  if (!address) {
-    P.field("address").report("expected string encoded uint64_t");
-    return false;
-  }
-
-  DI.address = *address;
-
-  return O.map("instruction", DI.instruction) &&
+  return O &&
+         DecodeMemoryReference(Params, "address", DI.address, P,
+                               /*required=*/true) &&
+         O.map("instruction", DI.instruction) &&
          O.mapOptional("instructionBytes", DI.instructionBytes) &&
          O.mapOptional("symbol", DI.symbol) &&
          O.mapOptional("location", DI.location) &&
@@ -951,6 +943,73 @@ json::Value toJSON(const Module &M) {
         {"debugInfoSize", ConvertDebugInfoSizeToString(M.debugInfoSizeBytes)});
 
   return result;
+}
+
+json::Value toJSON(const VariablePresentationHint &VPH) {
+  json::Object result{};
+
+  if (!VPH.kind.empty())
+    result.insert({"kind", VPH.kind});
+  if (!VPH.attributes.empty())
+    result.insert({"attributes", VPH.attributes});
+  if (!VPH.visibility.empty())
+    result.insert({"visibility", VPH.visibility});
+  if (VPH.lazy)
+    result.insert({"lazy", VPH.lazy});
+
+  return result;
+}
+
+bool fromJSON(const json::Value &Param, VariablePresentationHint &VPH,
+              json::Path Path) {
+  json::ObjectMapper O(Param, Path);
+  return O && O.mapOptional("kind", VPH.kind) &&
+         O.mapOptional("attributes", VPH.attributes) &&
+         O.mapOptional("visibility", VPH.visibility) &&
+         O.mapOptional("lazy", VPH.lazy);
+}
+
+json::Value toJSON(const Variable &V) {
+  json::Object result{{"name", V.name},
+                      {"variablesReference", V.variablesReference},
+                      {"value", V.value}};
+
+  if (!V.type.empty())
+    result.insert({"type", V.type});
+  if (V.presentationHint)
+    result.insert({"presentationHint", *V.presentationHint});
+  if (!V.evaluateName.empty())
+    result.insert({"evaluateName", V.evaluateName});
+  if (V.namedVariables)
+    result.insert({"namedVariables", V.namedVariables});
+  if (V.indexedVariables)
+    result.insert({"indexedVariables", V.indexedVariables});
+  if (V.memoryReference != LLDB_INVALID_ADDRESS)
+    result.insert(
+        {"memoryReference", EncodeMemoryReference(V.memoryReference)});
+  if (V.declarationLocationReference)
+    result.insert(
+        {"declarationLocationReference", V.declarationLocationReference});
+  if (V.valueLocationReference)
+    result.insert({"valueLocationReference", V.valueLocationReference});
+
+  return result;
+}
+
+bool fromJSON(const json::Value &Param, Variable &V, json::Path Path) {
+  json::ObjectMapper O(Param, Path);
+  return O && O.map("name", V.name) &&
+         O.map("variablesReference", V.variablesReference) &&
+         O.map("value", V.value) && O.mapOptional("type", V.type) &&
+         O.mapOptional("presentationHint", *V.presentationHint) &&
+         O.mapOptional("evaluateName", V.evaluateName) &&
+         O.mapOptional("namedVariables", V.namedVariables) &&
+         O.mapOptional("indexedVariables", V.indexedVariables) &&
+         O.mapOptional("declarationLocationReference",
+                       V.declarationLocationReference) &&
+         O.mapOptional("valueLocationReference", V.valueLocationReference) &&
+         DecodeMemoryReference(Param, "memoryReference", V.memoryReference,
+                               Path, /*required=*/false);
 }
 
 } // namespace lldb_dap::protocol
