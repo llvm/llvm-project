@@ -87,9 +87,10 @@ private:
                                const MCSubtargetInfo &STI) const;
 
   /// Encode an fp or int literal.
-  std::optional<uint32_t> getLitEncoding(const MCOperand &MO,
-                                         const MCOperandInfo &OpInfo,
-                                         const MCSubtargetInfo &STI) const;
+  std::optional<uint64_t>
+  getLitEncoding(const MCOperand &MO, const MCOperandInfo &OpInfo,
+                 const MCSubtargetInfo &STI,
+                 bool HasMandatoryLiteral = false) const;
 
   void getBinaryCodeForInstr(const MCInst &MI, SmallVectorImpl<MCFixup> &Fixups,
                              APInt &Inst, APInt &Scratch,
@@ -265,10 +266,9 @@ static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI,
              : 255;
 }
 
-std::optional<uint32_t>
-AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
-                                    const MCOperandInfo &OpInfo,
-                                    const MCSubtargetInfo &STI) const {
+std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
+    const MCOperand &MO, const MCOperandInfo &OpInfo,
+    const MCSubtargetInfo &STI, bool HasMandatoryLiteral) const {
   int64_t Imm;
   if (MO.isExpr()) {
     if (!MO.getExpr()->evaluateAsAbsolute(Imm))
@@ -303,8 +303,12 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
 
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-  case AMDGPU::OPERAND_REG_IMM_FP64:
     return getLit64Encoding(static_cast<uint64_t>(Imm), STI, true);
+
+  case AMDGPU::OPERAND_REG_IMM_FP64: {
+    auto Enc = getLit64Encoding(static_cast<uint64_t>(Imm), STI, true);
+    return (HasMandatoryLiteral && Enc == 255) ? 254 : Enc;
+  }
 
   case AMDGPU::OPERAND_REG_IMM_INT16:
   case AMDGPU::OPERAND_REG_INLINE_C_INT16:
@@ -339,6 +343,7 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
 
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
+  case AMDGPU::OPERAND_KIMM64:
     return MO.getImm();
   default:
     llvm_unreachable("invalid operand size");
@@ -685,7 +690,10 @@ void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
 
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   if (AMDGPU::isSISrcOperand(Desc, OpNo)) {
-    if (auto Enc = getLitEncoding(MO, Desc.operands()[OpNo], STI)) {
+    bool HasMandatoryLiteral =
+        AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::imm);
+    if (auto Enc = getLitEncoding(MO, Desc.operands()[OpNo], STI,
+                                  HasMandatoryLiteral)) {
       Op = *Enc;
       return;
     }
