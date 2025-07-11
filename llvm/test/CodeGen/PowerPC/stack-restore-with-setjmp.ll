@@ -16,12 +16,13 @@ define dso_local signext i32 @main(i32 signext %argc, ptr nocapture readnone %ar
 ; CHECK-NEXT:    stw 12, 8(1)
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    stdu 1, -784(1)
-; CHECK-NEXT:    mr 4, 3
+; CHECK-NEXT:    # kill: def $r3 killed $r3 killed $x3
+; CHECK-NEXT:    cmpwi 2, 3, 2
+; CHECK-NEXT:    li 4, 0
+; CHECK-NEXT:    # kill: def $r4 killed $r4 killed $x4
+; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    std 0, 800(1)
 ; CHECK-NEXT:    mr 31, 1
-; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    # kill: def $r3 killed $r3 killed $x3
-; CHECK-NEXT:    cmpwi 2, 4, 2
 ; CHECK-NEXT:    blt 2, .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    addi 3, 31, 112
@@ -65,6 +66,7 @@ define dso_local signext i32 @main(i32 signext %argc, ptr nocapture readnone %ar
 ; BE-NEXT:    stdu 1, -800(1)
 ; BE-NEXT:    li 4, 0
 ; BE-NEXT:    # kill: def $r3 killed $r3 killed $x3
+; BE-NEXT:    # kill: def $r4 killed $r4 killed $x4
 ; BE-NEXT:    cmpwi 2, 3, 2
 ; BE-NEXT:    mr 3, 4
 ; BE-NEXT:    std 0, 816(1)

@@ -50,7 +50,7 @@ public:
   }
 
   Bitset &set() {
-    std::fill(std::begin(Bits), std::end(Bits), -BitWord(0));
+    llvm::fill(Bits, -BitWord(0));
     return *this;
   }
 

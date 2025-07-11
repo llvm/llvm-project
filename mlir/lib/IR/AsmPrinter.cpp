@@ -36,7 +36,6 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -442,6 +441,7 @@ public:
   /// Print the given attribute without considering an alias.
   void printAttributeImpl(Attribute attr,
                           AttrTypeElision typeElision = AttrTypeElision::Never);
+  void printNamedAttribute(NamedAttribute attr);
 
   /// Print the alias for the given attribute, return failure if no alias could
   /// be printed.
@@ -481,7 +481,6 @@ protected:
   void printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
                              ArrayRef<StringRef> elidedAttrs = {},
                              bool withKeyword = false);
-  void printNamedAttribute(NamedAttribute attr);
   void printTrailingLocation(Location loc, bool allowAlias = true);
   void printLocationInternal(LocationAttr loc, bool pretty = false,
                              bool isTopLevel = false);
@@ -801,6 +800,10 @@ private:
   void printAttributeWithoutType(Attribute attr) override {
     printAttribute(attr);
   }
+  void printNamedAttribute(NamedAttribute attr) override {
+    printAttribute(attr.getValue());
+  }
+
   LogicalResult printAlias(Attribute attr) override {
     initializer.visit(attr);
     return success();
@@ -975,6 +978,10 @@ private:
     recordAliasResult(
         initializer.visit(attr, canBeDeferred, /*elideType=*/true));
   }
+  void printNamedAttribute(NamedAttribute attr) override {
+    printAttribute(attr.getValue());
+  }
+
   LogicalResult printAlias(Attribute attr) override {
     printAttribute(attr);
     return success();
@@ -2381,7 +2388,6 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
     return;
   return printAttributeImpl(attr, typeElision);
 }
-
 void AsmPrinter::Impl::printAttributeImpl(Attribute attr,
                                           AttrTypeElision typeElision) {
   if (!isa<BuiltinDialect>(attr.getDialect())) {
@@ -2971,6 +2977,11 @@ void AsmPrinter::printAttributeWithoutType(Attribute attr) {
   assert(impl &&
          "expected AsmPrinter::printAttributeWithoutType to be overriden");
   impl->printAttribute(attr, Impl::AttrTypeElision::Must);
+}
+
+void AsmPrinter::printNamedAttribute(NamedAttribute attr) {
+  assert(impl && "expected AsmPrinter::printNamedAttribute to be overriden");
+  impl->printNamedAttribute(attr);
 }
 
 void AsmPrinter::printKeywordOrString(StringRef keyword) {

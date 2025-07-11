@@ -619,7 +619,7 @@ LLVM_ABI FunctionPass *createSelectOptimizePass();
 LLVM_ABI FunctionPass *createCallBrPass();
 
 /// Creates Windows Secure Hot Patch pass. \see WindowsSecureHotPatching.cpp
-ModulePass *createWindowsSecureHotPatchingPass();
+LLVM_ABI ModulePass *createWindowsSecureHotPatchingPass();
 
 /// Lowers KCFI operand bundles for indirect calls.
 LLVM_ABI FunctionPass *createKCFIPass();

@@ -4612,7 +4612,7 @@ struct OmpDirectiveSpecification {
 
 struct OmpMetadirectiveDirective {
   TUPLE_CLASS_BOILERPLATE(OmpMetadirectiveDirective);
-  std::tuple<OmpClauseList> t;
+  std::tuple<Verbatim, OmpClauseList> t;
   CharBlock source;
 };
 

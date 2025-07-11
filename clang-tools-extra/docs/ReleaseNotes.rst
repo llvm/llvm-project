@@ -216,6 +216,12 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by adding a
   flag to specify the function used for forwarding instead of ``std::forward``.
    
+- Improved :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check by
+  fixing false positives when calling indexing operators that do not perform
+  pointer arithmetic in template, for example ``std::map::operator[]`` and
+  when pointer arithmetic was used through type aliases.
+
 - Improved :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
   <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
   by adding a flag to specify the function used for moving instead of
@@ -260,6 +266,11 @@ Changes in existing checks
   <clang-tidy/checks/misc/redundant-expression>` check by providing additional
   examples and fixing some macro related false positives.
 
+- Improved :doc:`misc-unconventional-assign-operator
+  <clang-tidy/checks/misc/unconventional-assign-operator>` check by fixing
+  false positives when copy assignment operator function in a template class
+  returns the result of another assignment to ``*this`` (``return *this=...``).
+
 - Improved :doc:`misc-unused-using-decls
   <clang-tidy/checks/misc/unused-using-decls>` check by fixing false positives
   on ``operator""`` with template parameters.
@@ -269,6 +280,13 @@ Changes in existing checks
   for function or variable in header file which contains macro expansion and
   excluding variables with ``thread_local`` storage class specifier from being
   matched.
+
+- Improved :doc:`modernize-pass-by-value
+  <clang-tidy/checks/modernize/pass-by-value>` check by fixing false positives
+  when class passed by const-reference had a private move constructor.
+
+- Improved :doc:`modernize-type-traits
+  <clang-tidy/checks/modernize/type-traits>` check by detecting more type traits.
 
 - Improved :doc:`modernize-use-default-member-init
   <clang-tidy/checks/modernize/use-default-member-init>` check by matching

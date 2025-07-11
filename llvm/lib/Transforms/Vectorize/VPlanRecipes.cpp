@@ -296,49 +296,70 @@ bool VPRecipeBase::isScalarCast() const {
 InstructionCost
 VPPartialReductionRecipe::computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const {
-  std::optional<unsigned> Opcode = std::nullopt;
-  VPValue *BinOp = getOperand(1);
+  std::optional<unsigned> Opcode;
+  VPValue *Op = getOperand(0);
+  VPRecipeBase *OpR = Op->getDefiningRecipe();
 
-  // If the partial reduction is predicated, a select will be operand 0 rather
-  // than the binary op
+  // If the partial reduction is predicated, a select will be operand 0
   using namespace llvm::VPlanPatternMatch;
-  if (match(getOperand(1), m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
-    BinOp = BinOp->getDefiningRecipe()->getOperand(1);
+  if (match(getOperand(1), m_Select(m_VPValue(), m_VPValue(Op), m_VPValue()))) {
+    OpR = Op->getDefiningRecipe();
+  }
 
-  // If BinOp is a negation, use the side effect of match to assign the actual
-  // binary operation to BinOp
-  match(BinOp, m_Binary<Instruction::Sub>(m_SpecificInt(0), m_VPValue(BinOp)));
-  VPRecipeBase *BinOpR = BinOp->getDefiningRecipe();
-
-  if (auto *WidenR = dyn_cast<VPWidenRecipe>(BinOpR))
-    Opcode = std::make_optional(WidenR->getOpcode());
-
-  VPRecipeBase *ExtAR = BinOpR->getOperand(0)->getDefiningRecipe();
-  VPRecipeBase *ExtBR = BinOpR->getOperand(1)->getDefiningRecipe();
-
-  auto *PhiType = Ctx.Types.inferScalarType(getOperand(1));
-  auto *InputTypeA = Ctx.Types.inferScalarType(ExtAR ? ExtAR->getOperand(0)
-                                                     : BinOpR->getOperand(0));
-  auto *InputTypeB = Ctx.Types.inferScalarType(ExtBR ? ExtBR->getOperand(0)
-                                                     : BinOpR->getOperand(1));
+  Type *InputTypeA = nullptr, *InputTypeB = nullptr;
+  TTI::PartialReductionExtendKind ExtAType = TTI::PR_None,
+                                  ExtBType = TTI::PR_None;
 
   auto GetExtendKind = [](VPRecipeBase *R) {
-    // The extend could come from outside the plan.
     if (!R)
-      return TargetTransformInfo::PR_None;
+      return TTI::PR_None;
     auto *WidenCastR = dyn_cast<VPWidenCastRecipe>(R);
     if (!WidenCastR)
-      return TargetTransformInfo::PR_None;
+      return TTI::PR_None;
     if (WidenCastR->getOpcode() == Instruction::CastOps::ZExt)
-      return TargetTransformInfo::PR_ZeroExtend;
+      return TTI::PR_ZeroExtend;
     if (WidenCastR->getOpcode() == Instruction::CastOps::SExt)
-      return TargetTransformInfo::PR_SignExtend;
-    return TargetTransformInfo::PR_None;
+      return TTI::PR_SignExtend;
+    return TTI::PR_None;
   };
 
-  return Ctx.TTI.getPartialReductionCost(
-      getOpcode(), InputTypeA, InputTypeB, PhiType, VF, GetExtendKind(ExtAR),
-      GetExtendKind(ExtBR), Opcode, Ctx.CostKind);
+  // Pick out opcode, type/ext information and use sub side effects from a widen
+  // recipe.
+  auto HandleWiden = [&](VPWidenRecipe *Widen) {
+    if (match(Widen,
+              m_Binary<Instruction::Sub>(m_SpecificInt(0), m_VPValue(Op)))) {
+      Widen = dyn_cast<VPWidenRecipe>(Op->getDefiningRecipe());
+    }
+    Opcode = Widen->getOpcode();
+    VPRecipeBase *ExtAR = Widen->getOperand(0)->getDefiningRecipe();
+    VPRecipeBase *ExtBR = Widen->getOperand(1)->getDefiningRecipe();
+    InputTypeA = Ctx.Types.inferScalarType(ExtAR ? ExtAR->getOperand(0)
+                                                 : Widen->getOperand(0));
+    InputTypeB = Ctx.Types.inferScalarType(ExtBR ? ExtBR->getOperand(0)
+                                                 : Widen->getOperand(1));
+    ExtAType = GetExtendKind(ExtAR);
+    ExtBType = GetExtendKind(ExtBR);
+  };
+
+  if (isa<VPWidenCastRecipe>(OpR)) {
+    InputTypeA = Ctx.Types.inferScalarType(OpR->getOperand(0));
+    ExtAType = GetExtendKind(OpR);
+  } else if (isa<VPReductionPHIRecipe>(OpR)) {
+    auto RedPhiOp1R = getOperand(1)->getDefiningRecipe();
+    if (isa<VPWidenCastRecipe>(RedPhiOp1R)) {
+      InputTypeA = Ctx.Types.inferScalarType(RedPhiOp1R->getOperand(0));
+      ExtAType = GetExtendKind(RedPhiOp1R);
+    } else if (auto Widen = dyn_cast<VPWidenRecipe>(RedPhiOp1R))
+      HandleWiden(Widen);
+  } else if (auto Widen = dyn_cast<VPWidenRecipe>(OpR)) {
+    HandleWiden(Widen);
+  } else if (auto Reduction = dyn_cast<VPPartialReductionRecipe>(OpR)) {
+    return Reduction->computeCost(VF, Ctx);
+  }
+  auto *PhiType = Ctx.Types.inferScalarType(getOperand(1));
+  return Ctx.TTI.getPartialReductionCost(getOpcode(), InputTypeA, InputTypeB,
+                                         PhiType, VF, ExtAType, ExtBType,
+                                         Opcode, Ctx.CostKind);
 }
 
 void VPPartialReductionRecipe::execute(VPTransformState &State) {
@@ -730,8 +751,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // and will be removed by breaking up the recipe further.
     auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
     // Get its reduction variable descriptor.
-    const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
-    RecurKind RK = RdxDesc.getRecurrenceKind();
+    RecurKind RK = PhiR->getRecurrenceKind();
     assert(RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
            "Unexpected reduction kind");
     assert(!PhiR->isInLoop() &&
@@ -743,14 +763,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *ReducedPartRdx = State.get(getOperand(3));
     RecurKind MinMaxKind;
     bool IsSigned = RecurrenceDescriptor::isSignedRecurrenceKind(RK);
-    if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) {
+    if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK))
       MinMaxKind = IsSigned ? RecurKind::SMax : RecurKind::UMax;
-    } else {
-      assert(RecurrenceDescriptor::isFindFirstIVRecurrenceKind(RK) &&
-             "Kind must either be FindLastIV or FindFirstIV");
-      assert(IsSigned && "Only FindFirstIV with SMax is currently supported");
-      MinMaxKind = RecurKind::SMin;
-    }
+    else
+      MinMaxKind = IsSigned ? RecurKind::SMin : RecurKind::UMin;
     for (unsigned Part = 1; Part < UF; ++Part)
       ReducedPartRdx = createMinMaxOp(Builder, MinMaxKind, ReducedPartRdx,
                                       State.get(getOperand(3 + Part)));
@@ -765,9 +781,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // and will be removed by breaking up the recipe further.
     auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
     // Get its reduction variable descriptor.
-    const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
 
-    RecurKind RK = RdxDesc.getRecurrenceKind();
+    RecurKind RK = PhiR->getRecurrenceKind();
     assert(!RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
            "should be handled by ComputeFindIVResult");
 
@@ -793,9 +808,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
         if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
           ReducedPartRdx = createMinMaxOp(Builder, RK, ReducedPartRdx, RdxPart);
         else
-          ReducedPartRdx =
-              Builder.CreateBinOp((Instruction::BinaryOps)RdxDesc.getOpcode(),
-                                  RdxPart, ReducedPartRdx, "bin.rdx");
+          ReducedPartRdx = Builder.CreateBinOp(
+              (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK),
+              RdxPart, ReducedPartRdx, "bin.rdx");
       }
     }
 
@@ -2309,12 +2324,12 @@ void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-static Type *getGEPIndexTy(bool IsScalable, bool IsReverse,
+static Type *getGEPIndexTy(bool IsScalable, bool IsReverse, bool IsUnitStride,
                            unsigned CurrentPart, IRBuilderBase &Builder) {
   // Use i32 for the gep index type when the value is constant,
   // or query DataLayout for a more suitable index type otherwise.
   const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
-  return IsScalable && (IsReverse || CurrentPart > 0)
+  return !IsUnitStride || (IsScalable && (IsReverse || CurrentPart > 0))
              ? DL.getIndexType(Builder.getPtrTy(0))
              : Builder.getInt32Ty();
 }
@@ -2322,18 +2337,21 @@ static Type *getGEPIndexTy(bool IsScalable, bool IsReverse,
 void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   unsigned CurrentPart = getUnrollPart(*this);
+  bool IsUnitStride = Stride == 1 || Stride == -1;
   Type *IndexTy = getGEPIndexTy(State.VF.isScalable(), /*IsReverse*/ true,
-                                CurrentPart, Builder);
+                                IsUnitStride, CurrentPart, Builder);
 
   // The wide store needs to start at the last vector element.
   Value *RunTimeVF = State.get(getVFValue(), VPLane(0));
   if (IndexTy != RunTimeVF->getType())
     RunTimeVF = Builder.CreateZExtOrTrunc(RunTimeVF, IndexTy);
-  // NumElt = -CurrentPart * RunTimeVF
+  // NumElt = Stride * CurrentPart * RunTimeVF
   Value *NumElt = Builder.CreateMul(
-      ConstantInt::get(IndexTy, -(int64_t)CurrentPart), RunTimeVF);
-  // LastLane = 1 - RunTimeVF
-  Value *LastLane = Builder.CreateSub(ConstantInt::get(IndexTy, 1), RunTimeVF);
+      ConstantInt::get(IndexTy, Stride * (int64_t)CurrentPart), RunTimeVF);
+  // LastLane = Stride * (RunTimeVF - 1)
+  Value *LastLane = Builder.CreateSub(RunTimeVF, ConstantInt::get(IndexTy, 1));
+  if (Stride != 1)
+    LastLane = Builder.CreateMul(ConstantInt::get(IndexTy, Stride), LastLane);
   Value *Ptr = State.get(getOperand(0), VPLane(0));
   Value *ResultPtr =
       Builder.CreateGEP(IndexedTy, Ptr, NumElt, "", getGEPNoWrapFlags());
@@ -2358,7 +2376,7 @@ void VPVectorPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   unsigned CurrentPart = getUnrollPart(*this);
   Type *IndexTy = getGEPIndexTy(State.VF.isScalable(), /*IsReverse*/ false,
-                                CurrentPart, Builder);
+                                /*IsUnitStride*/ true, CurrentPart, Builder);
   Value *Ptr = State.get(getOperand(0), VPLane(0));
 
   Value *Increment = createStepForVF(Builder, IndexTy, State.VF, CurrentPart);
@@ -2656,6 +2674,7 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
             Instruction::ZExt,
         RedTy, SrcVecTy, Ctx.CostKind);
   }
+  llvm_unreachable("Unknown VPExpressionRecipe::ExpressionTypes enum");
 }
 
 bool VPExpressionRecipe::mayReadOrWriteMemory() const {
@@ -3414,36 +3433,9 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
   unsigned InterleaveFactor = Group->getFactor();
   auto *VecTy = VectorType::get(ScalarTy, State.VF * InterleaveFactor);
 
-  // TODO: extend the masked interleaved-group support to reversed access.
   VPValue *BlockInMask = getMask();
-  assert((!BlockInMask || !Group->isReverse()) &&
-         "Reversed masked interleave-group not supported.");
-
   VPValue *Addr = getAddr();
   Value *ResAddr = State.get(Addr, VPLane(0));
-  if (auto *I = dyn_cast<Instruction>(ResAddr))
-    State.setDebugLocFrom(I->getDebugLoc());
-
-  // If the group is reverse, adjust the index to refer to the last vector lane
-  // instead of the first. We adjust the index from the first vector lane,
-  // rather than directly getting the pointer for lane VF - 1, because the
-  // pointer operand of the interleaved access is supposed to be uniform.
-  if (Group->isReverse()) {
-    Value *RuntimeVF =
-        getRuntimeVF(State.Builder, State.Builder.getInt32Ty(), State.VF);
-    Value *Index =
-        State.Builder.CreateSub(RuntimeVF, State.Builder.getInt32(1));
-    Index = State.Builder.CreateMul(Index,
-                                    State.Builder.getInt32(Group->getFactor()));
-    Index = State.Builder.CreateNeg(Index);
-
-    bool InBounds = false;
-    if (auto *Gep = dyn_cast<GetElementPtrInst>(ResAddr->stripPointerCasts()))
-      InBounds = Gep->isInBounds();
-    ResAddr = State.Builder.CreateGEP(ScalarTy, ResAddr, Index, "", InBounds);
-  }
-
-  State.setDebugLocFrom(getDebugLoc());
   Value *PoisonVec = PoisonValue::get(VecTy);
 
   auto CreateGroupMask = [&BlockInMask, &State,

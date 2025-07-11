@@ -84,7 +84,15 @@ struct ol_program_impl_t {
         DeviceImage(DeviceImage) {}
   plugin::DeviceImageTy *Image;
   std::unique_ptr<llvm::MemoryBuffer> ImageData;
+  std::vector<std::unique_ptr<ol_symbol_impl_t>> Symbols;
   __tgt_device_image DeviceImage;
+};
+
+struct ol_symbol_impl_t {
+  ol_symbol_impl_t(GenericKernelTy *Kernel)
+      : PluginImpl(Kernel), Kind(OL_SYMBOL_KIND_KERNEL) {}
+  std::variant<GenericKernelTy *> PluginImpl;
+  ol_symbol_kind_t Kind;
 };
 
 namespace llvm {
@@ -302,6 +310,41 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
                      "plugin did not provide a response for this information");
   };
 
+  auto getInfoXyz =
+      [&](std::vector<std::string> Names) -> llvm::Expected<ol_dimensions_t> {
+    for (auto &Name : Names) {
+      if (auto Entry = Device->Info.get(Name)) {
+        auto Node = *Entry;
+        ol_dimensions_t Out{0, 0, 0};
+
+        auto getField = [&](StringRef Name, uint32_t &Dest) {
+          if (auto F = Node->get(Name)) {
+            if (!std::holds_alternative<size_t>((*F)->Value))
+              return makeError(
+                  ErrorCode::BACKEND_FAILURE,
+                  "plugin returned incorrect type for dimensions element");
+            Dest = std::get<size_t>((*F)->Value);
+          } else
+            return makeError(ErrorCode::BACKEND_FAILURE,
+                             "plugin didn't provide all values for dimensions");
+          return Plugin::success();
+        };
+
+        if (auto Res = getField("x", Out.x))
+          return Res;
+        if (auto Res = getField("y", Out.y))
+          return Res;
+        if (auto Res = getField("z", Out.z))
+          return Res;
+
+        return Out;
+      }
+    }
+
+    return makeError(ErrorCode::UNIMPLEMENTED,
+                     "plugin did not provide a response for this information");
+  };
+
   switch (PropName) {
   case OL_DEVICE_INFO_PLATFORM:
     return Info.write<void *>(Device->Platform);
@@ -314,6 +357,9 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   case OL_DEVICE_INFO_DRIVER_VERSION:
     return Info.writeString(
         getInfoString({"CUDA Driver Version", "HSA Runtime Version"}));
+  case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE:
+    return Info.write(getInfoXyz({"Workgroup Max Size per Dimension" /*AMD*/,
+                                  "Maximum Block Dimensions" /*CUDA*/}));
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getDeviceInfo enum '%i' is invalid", PropName);
@@ -339,6 +385,8 @@ Error olGetDeviceInfoImplDetailHost(ol_device_handle_t Device,
     return Info.writeString("Liboffload");
   case OL_DEVICE_INFO_DRIVER_VERSION:
     return Info.writeString(LLVM_VERSION_STRING);
+  case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE:
+    return Info.write<ol_dimensions_t>(ol_dimensions_t{1, 1, 1});
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getDeviceInfo enum '%i' is invalid", PropName);
@@ -447,6 +495,33 @@ Error olWaitQueue_impl(ol_queue_handle_t Queue) {
   return Error::success();
 }
 
+Error olGetQueueInfoImplDetail(ol_queue_handle_t Queue,
+                               ol_queue_info_t PropName, size_t PropSize,
+                               void *PropValue, size_t *PropSizeRet) {
+  InfoWriter Info(PropSize, PropValue, PropSizeRet);
+
+  switch (PropName) {
+  case OL_QUEUE_INFO_DEVICE:
+    return Info.write<ol_device_handle_t>(Queue->Device);
+  default:
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "olGetQueueInfo enum '%i' is invalid", PropName);
+  }
+
+  return Error::success();
+}
+
+Error olGetQueueInfo_impl(ol_queue_handle_t Queue, ol_queue_info_t PropName,
+                          size_t PropSize, void *PropValue) {
+  return olGetQueueInfoImplDetail(Queue, PropName, PropSize, PropValue,
+                                  nullptr);
+}
+
+Error olGetQueueInfoSize_impl(ol_queue_handle_t Queue, ol_queue_info_t PropName,
+                              size_t *PropSizeRet) {
+  return olGetQueueInfoImplDetail(Queue, PropName, 0, nullptr, PropSizeRet);
+}
+
 Error olWaitEvent_impl(ol_event_handle_t Event) {
   if (auto Res = Event->Queue->Device->Device->syncEvent(Event->EventInfo))
     return Res;
@@ -459,6 +534,34 @@ Error olDestroyEvent_impl(ol_event_handle_t Event) {
     return Res;
 
   return olDestroy(Event);
+}
+
+Error olGetEventInfoImplDetail(ol_event_handle_t Event,
+                               ol_event_info_t PropName, size_t PropSize,
+                               void *PropValue, size_t *PropSizeRet) {
+  InfoWriter Info(PropSize, PropValue, PropSizeRet);
+
+  switch (PropName) {
+  case OL_EVENT_INFO_QUEUE:
+    return Info.write<ol_queue_handle_t>(Event->Queue);
+  default:
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "olGetEventInfo enum '%i' is invalid", PropName);
+  }
+
+  return Error::success();
+}
+
+Error olGetEventInfo_impl(ol_event_handle_t Event, ol_event_info_t PropName,
+                          size_t PropSize, void *PropValue) {
+
+  return olGetEventInfoImplDetail(Event, PropName, PropSize, PropValue,
+                                  nullptr);
+}
+
+Error olGetEventInfoSize_impl(ol_event_handle_t Event, ol_event_info_t PropName,
+                              size_t *PropSizeRet) {
+  return olGetEventInfoImplDetail(Event, PropName, 0, nullptr, PropSizeRet);
 }
 
 ol_event_handle_t makeEvent(ol_queue_handle_t Queue) {
@@ -558,7 +661,7 @@ Error olDestroyProgram_impl(ol_program_handle_t Program) {
 }
 
 Error olGetKernel_impl(ol_program_handle_t Program, const char *KernelName,
-                       ol_kernel_handle_t *Kernel) {
+                       ol_symbol_handle_t *Kernel) {
 
   auto &Device = Program->Image->getDevice();
   auto KernelImpl = Device.constructKernel(KernelName);
@@ -568,13 +671,15 @@ Error olGetKernel_impl(ol_program_handle_t Program, const char *KernelName,
   if (auto Err = KernelImpl->init(Device, *Program->Image))
     return Err;
 
-  *Kernel = &*KernelImpl;
+  *Kernel = Program->Symbols
+                .emplace_back(std::make_unique<ol_symbol_impl_t>(&*KernelImpl))
+                .get();
 
   return Error::success();
 }
 
 Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
-                          ol_kernel_handle_t Kernel, const void *ArgumentsData,
+                          ol_symbol_handle_t Kernel, const void *ArgumentsData,
                           size_t ArgumentsSize,
                           const ol_kernel_launch_size_args_t *LaunchSizeArgs,
                           ol_event_handle_t *EventOut) {
@@ -584,6 +689,10 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
         ErrorCode::INVALID_DEVICE,
         "device specified does not match the device of the given queue");
   }
+
+  if (Kernel->Kind != OL_SYMBOL_KIND_KERNEL)
+    return createOffloadError(ErrorCode::SYMBOL_KIND,
+                              "provided symbol is not a kernel");
 
   auto *QueueImpl = Queue ? Queue->AsyncInfo : nullptr;
   AsyncInfoWrapperTy AsyncInfoWrapper(*DeviceImpl, QueueImpl);
@@ -603,7 +712,7 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   // Don't do anything with pointer indirection; use arg data as-is
   LaunchArgs.Flags.IsCUDA = true;
 
-  auto *KernelImpl = reinterpret_cast<GenericKernelTy *>(Kernel);
+  auto *KernelImpl = std::get<GenericKernelTy *>(Kernel->PluginImpl);
   auto Err = KernelImpl->launch(*DeviceImpl, LaunchArgs.ArgPtrs, nullptr,
                                 LaunchArgs, AsyncInfoWrapper);
 

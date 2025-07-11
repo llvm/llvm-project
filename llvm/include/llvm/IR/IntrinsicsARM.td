@@ -451,9 +451,6 @@ class Neon_3Arg_Long_Intrinsic
                            LLVMTruncatedType<0>],
                           [IntrNoMem]>;
 
-class Neon_1FloatArg_Intrinsic
-  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
-
 class Neon_CvtFxToFP_Intrinsic
   : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_anyint_ty, llvm_i32_ty],
                           [IntrNoMem]>;
@@ -676,11 +673,6 @@ def int_arm_neon_vtbx1 : Neon_Tbl3Arg_Intrinsic;
 def int_arm_neon_vtbx2 : Neon_Tbl4Arg_Intrinsic;
 def int_arm_neon_vtbx3 : Neon_Tbl5Arg_Intrinsic;
 def int_arm_neon_vtbx4 : Neon_Tbl6Arg_Intrinsic;
-
-// Vector and Scalar Rounding.
-def int_arm_neon_vrintn : Neon_1FloatArg_Intrinsic;
-def int_arm_neon_vrintx : Neon_1Arg_Intrinsic;
-def int_arm_neon_vrintz : Neon_1Arg_Intrinsic;
 
 // De-interleaving vector loads from N-element structures.
 // Source operands are the address and alignment.

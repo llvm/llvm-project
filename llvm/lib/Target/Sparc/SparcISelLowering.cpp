@@ -2874,9 +2874,6 @@ static SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MFI.setReturnAddressIsTaken(true);
 
-  if (TLI.verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
-
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
   uint64_t depth = Op.getConstantOperandVal(0);
