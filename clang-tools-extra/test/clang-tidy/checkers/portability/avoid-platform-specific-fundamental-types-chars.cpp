@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s portability-avoid-platform-specific-fundamental-types %t -- -config="{CheckOptions: [{key: portability-avoid-platform-specific-fundamental-types.WarnOnInts, value: false}, {key: portability-avoid-platform-specific-fundamental-types.WarnOnFloats, value: false}]}" -header-filter=.*
+// RUN: %check_clang_tidy -std=c++11-or-later %s portability-avoid-platform-specific-fundamental-types %t -- -config="{CheckOptions: [{key: portability-avoid-platform-specific-fundamental-types.WarnOnInts, value: false}, {key: portability-avoid-platform-specific-fundamental-types.WarnOnFloats, value: false}]}"
 
 // Test character types that should trigger warnings when WarnOnChars is enabled
 char global_char = 'a';

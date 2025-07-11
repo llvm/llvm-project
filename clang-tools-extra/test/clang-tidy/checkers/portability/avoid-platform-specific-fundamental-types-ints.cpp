@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s portability-avoid-platform-specific-fundamental-types %t -- -config="{CheckOptions: [{key: portability-avoid-platform-specific-fundamental-types.WarnOnChars, value: false}, {key: portability-avoid-platform-specific-fundamental-types.WarnOnFloats, value: false}]}" -header-filter=.*
+// RUN: %check_clang_tidy -std=c++11-or-later %s portability-avoid-platform-specific-fundamental-types %t -- -config="{CheckOptions: [{key: portability-avoid-platform-specific-fundamental-types.WarnOnChars, value: false}, {key: portability-avoid-platform-specific-fundamental-types.WarnOnFloats, value: false}]}"
 
 // Mock fixed-width integer types
 // NOLINTBEGIN(portability-avoid-platform-specific-fundamental-types)
