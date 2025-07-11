@@ -1088,6 +1088,12 @@ public:
     if (!llvm::all_equal(eltwise->getOperandTypes()))
       return rewriter.notifyMatchFailure(op, "operand types are different");
 
+    // Dynamic position can cause dominance issues, so conservatively fail for
+    // now.
+    if (!op.getDynamicPosition().empty())
+      return rewriter.notifyMatchFailure(
+          op, "dynamic position not yet implemented");
+
     Type dstType = op.getType();
 
     OpBuilder::InsertionGuard g(rewriter);

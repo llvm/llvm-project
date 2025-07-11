@@ -4126,6 +4126,13 @@ TEST_F(TokenAnnotatorTest, JsonCodeInRawString) {
   EXPECT_TOKEN(Tokens[6], tok::colon, TT_DictLiteral);
 }
 
+TEST_F(TokenAnnotatorTest, LineCommentTrailingBackslash) {
+  auto Tokens = annotate("// a \\\n"
+                         "// b");
+  ASSERT_EQ(Tokens.size(), 3u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::comment, TT_LineComment);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang

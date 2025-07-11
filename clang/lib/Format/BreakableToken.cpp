@@ -26,18 +26,6 @@ namespace clang {
 namespace format {
 
 static constexpr StringRef Blanks = " \t\v\f\r";
-static bool IsBlank(char C) {
-  switch (C) {
-  case ' ':
-  case '\t':
-  case '\v':
-  case '\f':
-  case '\r':
-    return true;
-  default:
-    return false;
-  }
-}
 
 static StringRef getLineCommentIndentPrefix(StringRef Comment,
                                             const FormatStyle &Style) {
@@ -193,7 +181,7 @@ getStringSplit(StringRef Text, unsigned UsedColumns, unsigned ColumnLimit,
     if (Chars > MaxSplit || Text.size() <= Advance)
       break;
 
-    if (IsBlank(Text[0]))
+    if (Blanks.contains(Text[0]))
       SpaceOffset = SplitPoint;
     if (Text[0] == '/')
       SlashOffset = SplitPoint;

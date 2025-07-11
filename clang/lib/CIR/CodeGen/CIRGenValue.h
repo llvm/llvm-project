@@ -186,6 +186,8 @@ public:
   bool isBitField() const { return lvType == BitField; }
   bool isVolatile() const { return quals.hasVolatile(); }
 
+  bool isVolatileQualified() const { return quals.hasVolatile(); }
+
   unsigned getVRQualifiers() const {
     return quals.getCVRQualifiers() & ~clang::Qualifiers::Const;
   }

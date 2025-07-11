@@ -238,7 +238,14 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   }
 
   if (HasDef) {
-    CommutedMI->getOperand(0).setReg(Reg0);
+    // Use `substituteRegister` so that for a case like this:
+    //   %0.sub = INST %0.sub(tied), %1.sub, implicit-def %0
+    // the implicit-def is also updated, to result in:
+    //   %1.sub = INST %1.sub(tied), %0.sub, implicit-def %1
+    const TargetRegisterInfo &TRI =
+        *MI.getMF()->getSubtarget().getRegisterInfo();
+    Register FromReg = CommutedMI->getOperand(0).getReg();
+    CommutedMI->substituteRegister(FromReg, Reg0, /*SubRegIdx=*/0, TRI);
     CommutedMI->getOperand(0).setSubReg(SubReg0);
   }
   CommutedMI->getOperand(Idx2).setReg(Reg1);

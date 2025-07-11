@@ -8,107 +8,37 @@
 
 #include "DAP.h"
 #include "EventHelper.h"
+#include "Handler/RequestHandler.h"
 #include "JSONUtils.h"
-#include "RequestHandler.h"
+#include "ProtocolUtils.h"
+
+using namespace llvm;
+using namespace lldb_dap::protocol;
 
 namespace lldb_dap {
 
-// "VariablesRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Variables request; value of command field is 'variables'.
-//     Retrieves all child variables for the given variable reference. An
-//     optional filter can be used to limit the fetched children to either named
-//     or indexed children.", "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "variables" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/VariablesArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments"  ]
-//   }]
-// },
-// "VariablesArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'variables' request.",
-//   "properties": {
-//     "variablesReference": {
-//       "type": "integer",
-//       "description": "The Variable reference."
-//     },
-//     "filter": {
-//       "type": "string",
-//       "enum": [ "indexed", "named" ],
-//       "description": "Optional filter to limit the child variables to either
-//       named or indexed. If ommited, both types are fetched."
-//     },
-//     "start": {
-//       "type": "integer",
-//       "description": "The index of the first variable to return; if omitted
-//       children start at 0."
-//     },
-//     "count": {
-//       "type": "integer",
-//       "description": "The number of variables to return. If count is missing
-//       or 0, all variables are returned."
-//     },
-//     "format": {
-//       "$ref": "#/definitions/ValueFormat",
-//       "description": "Specifies details on how to format the Variable
-//       values."
-//     }
-//   },
-//   "required": [ "variablesReference" ]
-// },
-// "VariablesResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'variables' request.",
-//     "properties": {
-//       "body": {
-//         "type": "object",
-//         "properties": {
-//           "variables": {
-//             "type": "array",
-//             "items": {
-//               "$ref": "#/definitions/Variable"
-//             },
-//             "description": "All (or a range) of variables for the given
-//             variable reference."
-//           }
-//         },
-//         "required": [ "variables" ]
-//       }
-//     },
-//     "required": [ "body" ]
-//   }]
-// }
-void VariablesRequestHandler::operator()(
-    const llvm::json::Object &request) const {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  llvm::json::Array variables;
-  const auto *arguments = request.getObject("arguments");
-  const auto variablesReference =
-      GetInteger<uint64_t>(arguments, "variablesReference").value_or(0);
-  const auto start = GetInteger<int64_t>(arguments, "start").value_or(0);
-  const auto count = GetInteger<int64_t>(arguments, "count").value_or(0);
+/// Retrieves all child variables for the given variable reference.
+///
+/// A filter can be used to limit the fetched children to either named or
+/// indexed children.
+Expected<VariablesResponseBody>
+VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
+  const uint64_t var_ref = arguments.variablesReference;
+  const uint64_t count = arguments.count;
+  const uint64_t start = arguments.start;
   bool hex = false;
-  const auto *format = arguments->getObject("format");
-  if (format)
-    hex = GetBoolean(format, "hex").value_or(false);
+  if (arguments.format)
+    hex = arguments.format->hex;
 
-  if (lldb::SBValueList *top_scope =
-          dap.variables.GetTopLevelScope(variablesReference)) {
+  std::vector<Variable> variables;
+
+  if (lldb::SBValueList *top_scope = dap.variables.GetTopLevelScope(var_ref)) {
     // variablesReference is one of our scopes, not an actual variable it is
     // asking for the list of args, locals or globals.
     int64_t start_idx = 0;
     int64_t num_children = 0;
 
-    if (variablesReference == VARREF_REGS) {
+    if (var_ref == VARREF_REGS) {
       // Change the default format of any pointer sized registers in the first
       // register set to be the lldb::eFormatAddressInfo so we show the pointer
       // and resolve what the pointer resolves to. Only change the format if the
@@ -128,7 +58,7 @@ void VariablesRequestHandler::operator()(
     }
 
     num_children = top_scope->GetSize();
-    if (num_children == 0 && variablesReference == VARREF_LOCALS) {
+    if (num_children == 0 && var_ref == VARREF_LOCALS) {
       // Check for an error in the SBValueList that might explain why we don't
       // have locals. If we have an error display it as the sole value in the
       // the locals.
@@ -145,12 +75,11 @@ void VariablesRequestHandler::operator()(
         // errors are only set when there is a problem that the user could
         // fix, so no error will show up when you have no debug info, only when
         // we do have debug info and something that is fixable can be done.
-        llvm::json::Object object;
-        EmplaceSafeString(object, "name", "<error>");
-        EmplaceSafeString(object, "type", "const char *");
-        EmplaceSafeString(object, "value", var_err);
-        object.try_emplace("variablesReference", (int64_t)0);
-        variables.emplace_back(std::move(object));
+        Variable var;
+        var.name = "<error>";
+        var.type = "const char *";
+        var.value = var_err;
+        variables.emplace_back(var);
       }
     }
     const int64_t end_idx = start_idx + ((count == 0) ? num_children : count);
@@ -165,7 +94,7 @@ void VariablesRequestHandler::operator()(
     }
 
     // Show return value if there is any ( in the local top frame )
-    if (variablesReference == VARREF_LOCALS) {
+    if (var_ref == VARREF_LOCALS) {
       auto process = dap.target.GetProcess();
       auto selected_thread = process.GetSelectedThread();
       lldb::SBValue stop_return_value = selected_thread.GetStopReturnValue();
@@ -194,32 +123,35 @@ void VariablesRequestHandler::operator()(
       if (!variable.IsValid())
         break;
 
-      int64_t var_ref =
+      const int64_t frame_var_ref =
           dap.variables.InsertVariable(variable, /*is_permanent=*/false);
       variables.emplace_back(CreateVariable(
-          variable, var_ref, hex, dap.configuration.enableAutoVariableSummaries,
+          variable, frame_var_ref, hex,
+          dap.configuration.enableAutoVariableSummaries,
           dap.configuration.enableSyntheticChildDebugging,
           variable_name_counts[GetNonNullVariableName(variable)] > 1));
     }
   } else {
     // We are expanding a variable that has children, so we will return its
     // children.
-    lldb::SBValue variable = dap.variables.GetVariable(variablesReference);
+    lldb::SBValue variable = dap.variables.GetVariable(var_ref);
     if (variable.IsValid()) {
+      const bool is_permanent =
+          dap.variables.IsPermanentVariableReference(var_ref);
       auto addChild = [&](lldb::SBValue child,
                           std::optional<std::string> custom_name = {}) {
         if (!child.IsValid())
           return;
-        bool is_permanent =
-            dap.variables.IsPermanentVariableReference(variablesReference);
-        int64_t var_ref = dap.variables.InsertVariable(child, is_permanent);
-        variables.emplace_back(CreateVariable(
-            child, var_ref, hex, dap.configuration.enableAutoVariableSummaries,
-            dap.configuration.enableSyntheticChildDebugging,
-            /*is_name_duplicated=*/false, custom_name));
+        const int64_t child_var_ref =
+            dap.variables.InsertVariable(child, is_permanent);
+        variables.emplace_back(
+            CreateVariable(child, child_var_ref, hex,
+                           dap.configuration.enableAutoVariableSummaries,
+                           dap.configuration.enableSyntheticChildDebugging,
+                           /*is_name_duplicated=*/false, custom_name));
       };
       const int64_t num_children = variable.GetNumChildren();
-      int64_t end_idx = start + ((count == 0) ? num_children : count);
+      const int64_t end_idx = start + ((count == 0) ? num_children : count);
       int64_t i = start;
       for (; i < end_idx && i < num_children; ++i)
         addChild(variable.GetChildAtIndex(i));
@@ -233,10 +165,8 @@ void VariablesRequestHandler::operator()(
         addChild(variable.GetNonSyntheticValue(), "[raw]");
     }
   }
-  llvm::json::Object body;
-  body.try_emplace("variables", std::move(variables));
-  response.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(response)));
+
+  return VariablesResponseBody{variables};
 }
 
 } // namespace lldb_dap

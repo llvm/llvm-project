@@ -47,6 +47,9 @@ private:
   /// Does this use always see an uninitialized value?
   bool AlwaysUninit;
 
+  /// Is this use a const reference to this variable?
+  bool ConstRefUse = false;
+
   /// This use is always uninitialized if it occurs after any of these branches
   /// is taken.
   SmallVector<Branch, 2> UninitBranches;
@@ -61,9 +64,12 @@ public:
 
   void setUninitAfterCall() { UninitAfterCall = true; }
   void setUninitAfterDecl() { UninitAfterDecl = true; }
+  void setConstRefUse() { ConstRefUse = true; }
 
   /// Get the expression containing the uninitialized use.
   const Expr *getUser() const { return User; }
+
+  bool isConstRefUse() const { return ConstRefUse; }
 
   /// The kind of uninitialized use.
   enum Kind {
@@ -109,10 +115,6 @@ public:
   /// Called when the uninitialized variable is used at the given expression.
   virtual void handleUseOfUninitVariable(const VarDecl *vd,
                                          const UninitUse &use) {}
-
-  /// Called when the uninitialized variable is used as const refernce argument.
-  virtual void handleConstRefUseOfUninitVariable(const VarDecl *vd,
-                                                 const UninitUse &use) {}
 
   /// Called when the uninitialized variable analysis detects the
   /// idiom 'int x = x'.  All other uses of 'x' within the initializer

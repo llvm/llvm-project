@@ -262,6 +262,34 @@ json::Value toJSON(const BreakpointLocationsResponseBody &BLRB) {
   return json::Object{{"breakpoints", BLRB.breakpoints}};
 }
 
+bool fromJSON(const json::Value &Params, Console &C, json::Path P) {
+  auto oldFormatConsole = Params.getAsBoolean();
+  if (oldFormatConsole) {
+    C = *oldFormatConsole ? eConsoleIntegratedTerminal : eConsoleInternal;
+    return true;
+  }
+  auto newFormatConsole = Params.getAsString();
+  if (!newFormatConsole) {
+    P.report("expected a string");
+    return false;
+  }
+
+  std::optional<Console> console =
+      StringSwitch<std::optional<Console>>(*newFormatConsole)
+          .Case("internalConsole", eConsoleInternal)
+          .Case("integratedTerminal", eConsoleIntegratedTerminal)
+          .Case("externalTerminal", eConsoleExternalTerminal)
+          .Default(std::nullopt);
+  if (!console) {
+    P.report("unexpected value, expected 'internalConsole', "
+             "'integratedTerminal' or 'externalTerminal'");
+    return false;
+  }
+
+  C = *console;
+  return true;
+}
+
 bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
@@ -273,9 +301,8 @@ bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
          O.mapOptional("disableASLR", LRA.disableASLR) &&
          O.mapOptional("disableSTDIO", LRA.disableSTDIO) &&
          O.mapOptional("shellExpandArguments", LRA.shellExpandArguments) &&
-
-         O.mapOptional("runInTerminal", LRA.runInTerminal) &&
-         parseEnv(Params, LRA.env, P);
+         O.mapOptional("runInTerminal", LRA.console) &&
+         O.mapOptional("console", LRA.console) && parseEnv(Params, LRA.env, P);
 }
 
 bool fromJSON(const json::Value &Params, AttachRequestArguments &ARA,
@@ -529,6 +556,41 @@ json::Value toJSON(const ModulesResponseBody &MR) {
     result.insert({"totalModules", MR.totalModules});
 
   return result;
+}
+
+bool fromJSON(const json::Value &Param, VariablesArguments::VariablesFilter &VA,
+              json::Path Path) {
+  auto rawFilter = Param.getAsString();
+  if (!rawFilter) {
+    Path.report("expected a string");
+    return false;
+  }
+  std::optional<VariablesArguments::VariablesFilter> filter =
+      StringSwitch<std::optional<VariablesArguments::VariablesFilter>>(
+          *rawFilter)
+          .Case("indexed", VariablesArguments::eVariablesFilterIndexed)
+          .Case("named", VariablesArguments::eVariablesFilterNamed)
+          .Default(std::nullopt);
+  if (!filter) {
+    Path.report("unexpected value, expected 'named' or 'indexed'");
+    return false;
+  }
+
+  VA = *filter;
+  return true;
+}
+
+bool fromJSON(const json::Value &Param, VariablesArguments &VA,
+              json::Path Path) {
+  json::ObjectMapper O(Param, Path);
+  return O && O.map("variablesReference", VA.variablesReference) &&
+         O.mapOptional("filter", VA.filter) &&
+         O.mapOptional("start", VA.start) && O.mapOptional("count", VA.count) &&
+         O.mapOptional("format", VA.format);
+}
+
+json::Value toJSON(const VariablesResponseBody &VRB) {
+  return json::Object{{"variables", VRB.variables}};
 }
 
 bool fromJSON(const json::Value &Params, WriteMemoryArguments &WMA,
