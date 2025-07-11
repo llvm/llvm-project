@@ -10,11 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ReductionProcessor.h"
+#include "flang/Lower/Support/ReductionProcessor.h"
 
-#include "Clauses.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/ConvertType.h"
+#include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/Support/PrivateReductionUtils.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Complex.h"
