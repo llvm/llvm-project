@@ -22,7 +22,6 @@ define amdgpu_kernel void @kernel() {
 ; CHECK-NEXT:    s_mov_b32 s1, s0
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
 ; CHECK-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
-; CHECK-NEXT:    s_or_b32 s0, 0, 0
 ; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
 ; CHECK-NEXT:    ds_write_b64 v2, v[0:1]
 ; CHECK-NEXT:  .LBB0_3: ; %land.end59
