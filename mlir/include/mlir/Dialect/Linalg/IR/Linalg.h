@@ -163,7 +163,8 @@ public:
   /// Build a transpose A matmul with a specific result type.
   static void build(OpBuilder &builder, OperationState &result,
                     TypeRange resultTensorTypes, ValueRange inputs,
-                    ValueRange outputs, ArrayRef<NamedAttribute> attributes = {});
+                    ValueRange outputs,
+                    ArrayRef<NamedAttribute> attributes = {});
 
   /// Build a transpose A matmul with a specific result type and a cast type.
   static void build(OpBuilder &builder, OperationState &result,
@@ -191,7 +192,8 @@ public:
   /// Build a transpose B matmul with a specific result type.
   static void build(OpBuilder &builder, OperationState &result,
                     TypeRange resultTensorTypes, ValueRange inputs,
-                    ValueRange outputs, ArrayRef<NamedAttribute> attributes = {});
+                    ValueRange outputs,
+                    ArrayRef<NamedAttribute> attributes = {});
 
   /// Build a transpose B matmul with a specific result type and a cast type.
   static void build(OpBuilder &builder, OperationState &result,
@@ -220,7 +222,8 @@ public:
   /// Build a transpose A matmul with a specific result type.
   static void build(OpBuilder &builder, OperationState &result,
                     TypeRange resultTensorTypes, ValueRange inputs,
-                    ValueRange outputs, ArrayRef<NamedAttribute> attributes = {});
+                    ValueRange outputs,
+                    ArrayRef<NamedAttribute> attributes = {});
 
   /// Build a transpose A matmul with a specific result type and a cast type.
   static void build(OpBuilder &builder, OperationState &result,
@@ -249,7 +252,8 @@ public:
   /// Build a transpose A matmul with a specific result type.
   static void build(OpBuilder &builder, OperationState &result,
                     TypeRange resultTensorTypes, ValueRange inputs,
-                    ValueRange outputs, ArrayRef<NamedAttribute> attributes = {});
+                    ValueRange outputs,
+                    ArrayRef<NamedAttribute> attributes = {});
 
   /// Build a transpose A matmul with a specific result type and a cast type.
   static void build(OpBuilder &builder, OperationState &result,
