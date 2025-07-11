@@ -146,7 +146,7 @@ char UniformityInfoWrapperPass::ID = 0;
 UniformityInfoWrapperPass::UniformityInfoWrapperPass() : FunctionPass(ID) {}
 
 INITIALIZE_PASS_BEGIN(UniformityInfoWrapperPass, "uniformity",
-                      "Uniformity Analysis", true, true)
+                      "Uniformity Analysis", false, true)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(CycleInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
