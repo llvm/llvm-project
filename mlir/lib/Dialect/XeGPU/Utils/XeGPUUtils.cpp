@@ -141,7 +141,8 @@ xegpu::LayoutAttr xegpu::getLayoutAttr(const Value value) {
     auto parentOp = arg.getOwner()->getParentOp();
     if (auto loop = dyn_cast<LoopLikeOpInterface>(parentOp)) {
       OpOperand *tiedInit = loop.getTiedLoopInit(arg);
-      return getLayoutAttr(tiedInit->get());
+      if (tiedInit)
+        return getLayoutAttr(tiedInit->get());
     }
   }
 
@@ -178,11 +179,15 @@ void xegpu::setLayoutAttrs(Operation *op,
                            function_ref<LayoutAttr(Value)> getLayoutImpl) {
   op->walk([&](Operation *nestOp) {
     for (OpOperand &opr : nestOp->getOpOperands()) {
+      llvm::dbgs() << "set layout for: " << opr.get();
       auto layout = getLayoutImpl(opr.get());
+      llvm::dbgs() << "  with: " << layout << "\n";
       setLayoutAttr(opr, layout);
     }
     for (OpResult result : nestOp->getOpResults()) {
+      llvm::dbgs() << "set layout for: " << result;
       auto layout = getLayoutImpl(result);
+      llvm::dbgs() << "  with: " << layout << "\n";
       setLayoutAttr(result, layout);
     }
   });
