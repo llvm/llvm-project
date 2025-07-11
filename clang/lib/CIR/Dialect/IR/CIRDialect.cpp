@@ -2084,6 +2084,10 @@ LogicalResult cir::ComplexImagOp::verify() {
 }
 
 OpFoldResult cir::ComplexImagOp::fold(FoldAdaptor adaptor) {
+  if (auto complexCreateOp =
+          dyn_cast_or_null<cir::ComplexCreateOp>(getOperand().getDefiningOp()))
+    return complexCreateOp.getOperand(1);
+
   auto complex =
       mlir::cast_if_present<cir::ConstComplexAttr>(adaptor.getOperand());
   return complex ? complex.getImag() : nullptr;
