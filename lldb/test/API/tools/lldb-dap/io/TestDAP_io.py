@@ -48,18 +48,18 @@ class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
         lldb-dap handles invalid message headers.
         """
         process = self.launch()
-        process.stdin.write(b"not the corret message header")
+        process.stdin.write(b"not the correct message header")
         process.stdin.close()
-        self.assertEqual(process.wait(timeout=5.0), 1)
+        self.assertEqual(process.wait(timeout=5.0), 0)
 
     def test_partial_header(self):
         """
-        lldb-dap handles parital message headers.
+        lldb-dap handles partial message headers.
         """
         process = self.launch()
         process.stdin.write(b"Content-Length: ")
         process.stdin.close()
-        self.assertEqual(process.wait(timeout=5.0), 1)
+        self.assertEqual(process.wait(timeout=5.0), 0)
 
     def test_incorrect_content_length(self):
         """
@@ -68,7 +68,7 @@ class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
         process = self.launch()
         process.stdin.write(b"Content-Length: abc")
         process.stdin.close()
-        self.assertEqual(process.wait(timeout=5.0), 1)
+        self.assertEqual(process.wait(timeout=5.0), 0)
 
     def test_partial_content_length(self):
         """
@@ -77,4 +77,4 @@ class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
         process = self.launch()
         process.stdin.write(b"Content-Length: 10\r\n\r\n{")
         process.stdin.close()
-        self.assertEqual(process.wait(timeout=5.0), 1)
+        self.assertEqual(process.wait(timeout=5.0), 0)

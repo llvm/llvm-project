@@ -13,13 +13,15 @@
 #ifndef LLDB_HOST_JSONTRANSPORT_H
 #define LLDB_HOST_JSONTRANSPORT_H
 
+#include "lldb/Host/MainLoopBase.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
-#include <chrono>
+#include <string>
 #include <system_error>
+#include <vector>
 
 namespace lldb_private {
 
@@ -68,6 +70,10 @@ public:
 /// A transport class that uses JSON for communication.
 class JSONTransport {
 public:
+  using ReadHandleUP = MainLoopBase::ReadHandleUP;
+  template <typename T>
+  using Callback = std::function<void(MainLoopBase &, llvm::Expected<T>)>;
+
   JSONTransport(lldb::IOObjectSP input, lldb::IOObjectSP output);
   virtual ~JSONTransport() = default;
 
@@ -83,24 +89,59 @@ public:
     return WriteImpl(message);
   }
 
-  /// Reads the next message from the input stream.
+  /// Registers the transport with the MainLoop.
   template <typename T>
-  llvm::Expected<T> Read(const std::chrono::microseconds &timeout) {
-    llvm::Expected<std::string> message = ReadImpl(timeout);
-    if (!message)
-      return message.takeError();
-    return llvm::json::parse<T>(/*JSON=*/*message);
+  llvm::Expected<ReadHandleUP> RegisterReadObject(MainLoopBase &loop,
+                                                  Callback<T> callback) {
+    Status error;
+    ReadHandleUP handle = loop.RegisterReadObject(
+        m_input,
+        [&](MainLoopBase &loop) {
+          char buf[1024];
+          size_t len = sizeof(buf);
+          do {
+            if (llvm::Error error = m_input->Read(buf, len).takeError()) {
+              callback(loop, std::move(error));
+              return;
+            }
+
+            if (len == 0) // EOF
+              break;
+
+            m_buffer.append(std::string(buf, len));
+          } while (len == sizeof(buf));
+
+          llvm::Expected<std::vector<std::string>> messages = Parse();
+          if (llvm::Error error = messages.takeError()) {
+            callback(loop, std::move(error));
+            return;
+          }
+
+          for (const auto &message : *messages)
+            if constexpr (std::is_same<T, std::string>::value)
+              callback(loop, message);
+            else
+              callback(loop, llvm::json::parse<T>(message));
+
+          // On EOF, request termination after handling all the messages.
+          if (len == 0)
+            callback(loop, llvm::make_error<TransportEOFError>());
+        },
+        error);
+    if (error.Fail())
+      return error.takeError();
+    return handle;
   }
 
 protected:
   virtual void Log(llvm::StringRef message);
 
   virtual llvm::Error WriteImpl(const std::string &message) = 0;
-  virtual llvm::Expected<std::string>
-  ReadImpl(const std::chrono::microseconds &timeout) = 0;
+  virtual llvm::Expected<std::vector<std::string>> Parse() = 0;
 
   lldb::IOObjectSP m_input;
   lldb::IOObjectSP m_output;
+  std::string m_buffer;
 };
 
 /// A transport class for JSON with a HTTP header.
@@ -111,14 +152,12 @@ public:
   virtual ~HTTPDelimitedJSONTransport() = default;
 
 protected:
-  virtual llvm::Error WriteImpl(const std::string &message) override;
-  virtual llvm::Expected<std::string>
-  ReadImpl(const std::chrono::microseconds &timeout) override;
+  llvm::Error WriteImpl(const std::string &message) override;
+  llvm::Expected<std::vector<std::string>> Parse() override;
 
-  // FIXME: Support any header.
-  static constexpr llvm::StringLiteral kHeaderContentLength =
-      "Content-Length: ";
-  static constexpr llvm::StringLiteral kHeaderSeparator = "\r\n\r\n";
+  static constexpr llvm::StringLiteral kHeaderContentLength = "Content-Length";
+  static constexpr llvm::StringLiteral kHeaderFieldSeparator = ":";
+  static constexpr llvm::StringLiteral kHeaderSeparator = "\r\n";
 };
 
 /// A transport class for JSON RPC.
@@ -129,9 +168,8 @@ public:
   virtual ~JSONRPCTransport() = default;
 
 protected:
-  virtual llvm::Error WriteImpl(const std::string &message) override;
-  virtual llvm::Expected<std::string>
-  ReadImpl(const std::chrono::microseconds &timeout) override;
+  llvm::Error WriteImpl(const std::string &message) override;
+  llvm::Expected<std::vector<std::string>> Parse() override;
 
   static constexpr llvm::StringLiteral kMessageSeparator = "\n";
 };
