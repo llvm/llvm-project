@@ -58,8 +58,18 @@ struct TestFIROpenACCInterfaces
         llvm::errs() << "Visiting: " << *op << "\n";
         llvm::errs() << "\tVar: " << var << "\n";
 
-        if (auto ptrTy = dyn_cast_if_present<acc::PointerLikeType>(typeOfVar)) {
+        if (mlir::isa<acc::PointerLikeType>(typeOfVar) &&
+            mlir::isa<acc::MappableType>(typeOfVar)) {
+          llvm::errs() << "\tPointer-like and Mappable: " << typeOfVar << "\n";
+        } else if (mlir::isa<acc::PointerLikeType>(typeOfVar)) {
           llvm::errs() << "\tPointer-like: " << typeOfVar << "\n";
+        } else {
+          assert(
+              mlir::isa<acc::MappableType>(typeOfVar) && "expected mappable");
+          llvm::errs() << "\tMappable: " << typeOfVar << "\n";
+        }
+
+        if (auto ptrTy = dyn_cast_if_present<acc::PointerLikeType>(typeOfVar)) {
           // If the pointee is not mappable, print details about it. Otherwise,
           // we defer to the mappable printing below to print those details.
           if (!mappableTy) {
@@ -72,8 +82,6 @@ struct TestFIROpenACCInterfaces
         }
 
         if (mappableTy) {
-          llvm::errs() << "\tMappable: " << mappableTy << "\n";
-
           acc::VariableTypeCategory typeCategory =
               mappableTy.getTypeCategory(var);
           llvm::errs() << "\t\tType category: " << typeCategory << "\n";

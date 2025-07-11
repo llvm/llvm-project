@@ -14,13 +14,13 @@ using olGetKernelTest = OffloadProgramTest;
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetKernelTest);
 
 TEST_P(olGetKernelTest, Success) {
-  ol_kernel_handle_t Kernel = nullptr;
+  ol_symbol_handle_t Kernel = nullptr;
   ASSERT_SUCCESS(olGetKernel(Program, "foo", &Kernel));
   ASSERT_NE(Kernel, nullptr);
 }
 
 TEST_P(olGetKernelTest, InvalidNullProgram) {
-  ol_kernel_handle_t Kernel = nullptr;
+  ol_symbol_handle_t Kernel = nullptr;
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
                olGetKernel(nullptr, "foo", &Kernel));
 }
@@ -32,7 +32,7 @@ TEST_P(olGetKernelTest, InvalidNullKernelPointer) {
 
 // Error code returning from plugin interface not yet supported
 TEST_P(olGetKernelTest, InvalidKernelName) {
-  ol_kernel_handle_t Kernel = nullptr;
+  ol_symbol_handle_t Kernel = nullptr;
   ASSERT_ERROR(OL_ERRC_NOT_FOUND,
                olGetKernel(Program, "invalid_kernel_name", &Kernel));
 }

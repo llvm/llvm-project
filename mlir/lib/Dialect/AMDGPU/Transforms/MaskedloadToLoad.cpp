@@ -15,6 +15,7 @@
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
@@ -52,13 +53,25 @@ static LogicalResult baseInBufferAddrSpace(PatternRewriter &rewriter,
 }
 
 static Value createVectorLoadForMaskedLoad(OpBuilder &builder, Location loc,
-                                           vector::MaskedLoadOp maskedOp) {
+                                           vector::MaskedLoadOp maskedOp,
+                                           bool passthru) {
   VectorType vectorType = maskedOp.getVectorType();
   Value load = builder.create<vector::LoadOp>(
       loc, vectorType, maskedOp.getBase(), maskedOp.getIndices());
-  Value res = builder.create<arith::SelectOp>(
-      loc, vectorType, maskedOp.getMask(), load, maskedOp.getPassThru());
-  return res;
+  if (passthru)
+    load = builder.create<arith::SelectOp>(loc, vectorType, maskedOp.getMask(),
+                                           load, maskedOp.getPassThru());
+  return load;
+}
+
+/// Check if the given value comes from a broadcasted i1 condition.
+static FailureOr<Value> matchFullMask(OpBuilder &b, Value val) {
+  auto broadcastOp = val.getDefiningOp<vector::BroadcastOp>();
+  if (!broadcastOp)
+    return failure();
+  if (isa<VectorType>(broadcastOp.getSourceType()))
+    return failure();
+  return broadcastOp.getSource();
 }
 
 static constexpr char kMaskedloadNeedsMask[] =
@@ -76,6 +89,16 @@ struct MaskedLoadLowering final : OpRewritePattern<vector::MaskedLoadOp> {
 
     if (failed(baseInBufferAddrSpace(rewriter, maskedOp))) {
       return failure();
+    }
+
+    // Check if this is either a full inbounds load or an empty, oob load. If
+    // so, take the fast path and don't generate an if condition, because we
+    // know doing the oob load is always safe.
+    if (succeeded(matchFullMask(rewriter, maskedOp.getMask()))) {
+      Value load = createVectorLoadForMaskedLoad(rewriter, maskedOp.getLoc(),
+                                                 maskedOp, /*passthru=*/true);
+      rewriter.replaceOp(maskedOp, load);
+      return success();
     }
 
     Location loc = maskedOp.getLoc();
@@ -135,7 +158,8 @@ struct MaskedLoadLowering final : OpRewritePattern<vector::MaskedLoadOp> {
     };
 
     auto elseBuilder = [&](OpBuilder &builder, Location loc) {
-      Value res = createVectorLoadForMaskedLoad(builder, loc, maskedOp);
+      Value res = createVectorLoadForMaskedLoad(builder, loc, maskedOp,
+                                                /*passthru=*/true);
       rewriter.create<scf::YieldOp>(loc, res);
     };
 
@@ -148,11 +172,63 @@ struct MaskedLoadLowering final : OpRewritePattern<vector::MaskedLoadOp> {
   }
 };
 
+struct FullMaskedLoadToConditionalLoad
+    : OpRewritePattern<vector::MaskedLoadOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::MaskedLoadOp loadOp,
+                                PatternRewriter &rewriter) const override {
+    FailureOr<Value> maybeCond = matchFullMask(rewriter, loadOp.getMask());
+    if (failed(maybeCond)) {
+      return failure();
+    }
+
+    Value cond = maybeCond.value();
+    auto trueBuilder = [&](OpBuilder &builder, Location loc) {
+      Value res = createVectorLoadForMaskedLoad(builder, loc, loadOp,
+                                                /*passthru=*/false);
+      rewriter.create<scf::YieldOp>(loc, res);
+    };
+    auto falseBuilder = [&](OpBuilder &builder, Location loc) {
+      rewriter.create<scf::YieldOp>(loc, loadOp.getPassThru());
+    };
+    auto ifOp = rewriter.create<scf::IfOp>(loadOp.getLoc(), cond, trueBuilder,
+                                           falseBuilder);
+    rewriter.replaceOp(loadOp, ifOp);
+    return success();
+  }
+};
+
+struct FullMaskedStoreToConditionalStore
+    : OpRewritePattern<vector::MaskedStoreOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::MaskedStoreOp storeOp,
+                                PatternRewriter &rewriter) const override {
+    FailureOr<Value> maybeCond = matchFullMask(rewriter, storeOp.getMask());
+    if (failed(maybeCond)) {
+      return failure();
+    }
+    Value cond = maybeCond.value();
+
+    auto trueBuilder = [&](OpBuilder &builder, Location loc) {
+      rewriter.create<vector::StoreOp>(loc, storeOp.getValueToStore(),
+                                       storeOp.getBase(), storeOp.getIndices());
+      rewriter.create<scf::YieldOp>(loc);
+    };
+    auto ifOp = rewriter.create<scf::IfOp>(storeOp.getLoc(), cond, trueBuilder);
+    rewriter.replaceOp(storeOp, ifOp);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::amdgpu::populateAmdgpuMaskedloadToLoadPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<MaskedLoadLowering>(patterns.getContext(), benefit);
+  patterns.add<MaskedLoadLowering, FullMaskedLoadToConditionalLoad,
+               FullMaskedStoreToConditionalStore>(patterns.getContext(),
+                                                  benefit);
 }
 
 struct AmdgpuMaskedloadToLoadPass final

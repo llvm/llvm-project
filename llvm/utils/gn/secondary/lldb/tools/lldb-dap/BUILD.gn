@@ -66,6 +66,7 @@ static_library("lib") {
     "Handler/TestGetTargetBreakpointsRequestHandler.cpp",
     "Handler/ThreadsRequestHandler.cpp",
     "Handler/VariablesRequestHandler.cpp",
+    "Handler/WriteMemoryRequestHandler.cpp",
     "InstructionBreakpoint.cpp",
     "JSONUtils.cpp",
     "LLDBUtils.cpp",

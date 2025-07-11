@@ -2031,7 +2031,9 @@ bool TargetLoweringBase::isLegalAddressingMode(const DataLayout &DL,
 Value *TargetLoweringBase::getIRStackGuard(IRBuilderBase &IRB) const {
   if (getTargetMachine().getTargetTriple().isOSOpenBSD()) {
     Module &M = *IRB.GetInsertBlock()->getParent()->getParent();
-    PointerType *PtrTy = PointerType::getUnqual(M.getContext());
+    const DataLayout &DL = M.getDataLayout();
+    PointerType *PtrTy =
+        PointerType::get(M.getContext(), DL.getDefaultGlobalsAddressSpace());
     GlobalVariable *G = M.getOrInsertGlobal("__guard_local", PtrTy);
     G->setVisibility(GlobalValue::HiddenVisibility);
     return G;

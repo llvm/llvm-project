@@ -29,8 +29,9 @@
 
 namespace fir::acc {
 
-static mlir::TypedValue<mlir::acc::PointerLikeType>
-getPtrFromVar(mlir::Value var) {
+template <typename Ty>
+mlir::TypedValue<mlir::acc::PointerLikeType>
+OpenACCMappableModel<Ty>::getVarPtr(mlir::Type type, mlir::Value var) const {
   if (auto ptr =
           mlir::dyn_cast<mlir::TypedValue<mlir::acc::PointerLikeType>>(var))
     return ptr;
@@ -44,34 +45,51 @@ getPtrFromVar(mlir::Value var) {
   return {};
 }
 
-template <>
-mlir::TypedValue<mlir::acc::PointerLikeType>
-OpenACCMappableModel<fir::SequenceType>::getVarPtr(mlir::Type type,
-                                                   mlir::Value var) const {
-  return getPtrFromVar(var);
-}
-
-template <>
-mlir::TypedValue<mlir::acc::PointerLikeType>
+template mlir::TypedValue<mlir::acc::PointerLikeType>
 OpenACCMappableModel<fir::BaseBoxType>::getVarPtr(mlir::Type type,
-                                                  mlir::Value var) const {
-  return getPtrFromVar(var);
-}
+                                                  mlir::Value var) const;
 
-template <>
-std::optional<llvm::TypeSize>
-OpenACCMappableModel<fir::SequenceType>::getSizeInBytes(
+template mlir::TypedValue<mlir::acc::PointerLikeType>
+OpenACCMappableModel<fir::ReferenceType>::getVarPtr(mlir::Type type,
+                                                    mlir::Value var) const;
+
+template mlir::TypedValue<mlir::acc::PointerLikeType>
+OpenACCMappableModel<fir::HeapType>::getVarPtr(mlir::Type type,
+                                               mlir::Value var) const;
+
+template mlir::TypedValue<mlir::acc::PointerLikeType>
+OpenACCMappableModel<fir::PointerType>::getVarPtr(mlir::Type type,
+                                                  mlir::Value var) const;
+
+template <typename Ty>
+std::optional<llvm::TypeSize> OpenACCMappableModel<Ty>::getSizeInBytes(
     mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
     const mlir::DataLayout &dataLayout) const {
-  // TODO: Bounds operation affect the total size - add support to take them
+  // TODO: Bounds operation affect the size - add support to take them
   // into account.
   if (!accBounds.empty())
     return {};
 
+  // Class-type is either a polymorphic or unlimited polymorphic. In the latter
+  // case, the size is not computable. But in the former it should be - however,
+  // fir::getTypeSizeAndAlignment does not support polymorphic types.
+  if (mlir::isa<fir::ClassType>(type)) {
+    return {};
+  }
+
+  // When requesting the size of a box entity or a reference, the intent
+  // is to get the size of the data that it is referring to.
+  mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(type);
+  assert(eleTy && "expect to be able to unwrap the element type");
+
+  // If the type enclosed is a mappable type, then have it provide the size.
+  if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(eleTy))
+    return mappableTy.getSizeInBytes(var, accBounds, dataLayout);
+
   // Dynamic extents or unknown ranks generally do not have compile-time
   // computable dimensions.
-  auto seqType = mlir::cast<fir::SequenceType>(type);
-  if (seqType.hasDynamicExtents() || seqType.hasUnknownShape())
+  auto seqType = mlir::dyn_cast<fir::SequenceType>(eleTy);
+  if (seqType && (seqType.hasDynamicExtents() || seqType.hasUnknownShape()))
     return {};
 
   // Attempt to find an operation that a lookup for KindMapping can be done
@@ -85,99 +103,113 @@ OpenACCMappableModel<fir::SequenceType>::getSizeInBytes(
   auto kindMap = fir::getKindMapping(kindMapSrcOp);
 
   auto sizeAndAlignment =
-      fir::getTypeSizeAndAlignment(var.getLoc(), type, dataLayout, kindMap);
+      fir::getTypeSizeAndAlignment(var.getLoc(), eleTy, dataLayout, kindMap);
   if (!sizeAndAlignment.has_value())
     return {};
 
   return {llvm::TypeSize::getFixed(sizeAndAlignment->first)};
 }
 
-template <>
-std::optional<llvm::TypeSize>
+template std::optional<llvm::TypeSize>
 OpenACCMappableModel<fir::BaseBoxType>::getSizeInBytes(
     mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
-    const mlir::DataLayout &dataLayout) const {
-  // If we have a box value instead of box reference, the intent is to
-  // get the size of the data not the box itself.
-  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(var.getType())) {
-    if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(
-            fir::unwrapRefType(boxTy.getEleTy()))) {
-      return mappableTy.getSizeInBytes(var, accBounds, dataLayout);
-    }
-  }
-  // Size for boxes is not computable until it gets materialized.
-  return {};
-}
+    const mlir::DataLayout &dataLayout) const;
 
-template <>
-std::optional<int64_t>
-OpenACCMappableModel<fir::SequenceType>::getOffsetInBytes(
+template std::optional<llvm::TypeSize>
+OpenACCMappableModel<fir::ReferenceType>::getSizeInBytes(
+    mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
+    const mlir::DataLayout &dataLayout) const;
+
+template std::optional<llvm::TypeSize>
+OpenACCMappableModel<fir::HeapType>::getSizeInBytes(
+    mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
+    const mlir::DataLayout &dataLayout) const;
+
+template std::optional<llvm::TypeSize>
+OpenACCMappableModel<fir::PointerType>::getSizeInBytes(
+    mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
+    const mlir::DataLayout &dataLayout) const;
+
+template <typename Ty>
+std::optional<int64_t> OpenACCMappableModel<Ty>::getOffsetInBytes(
     mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
     const mlir::DataLayout &dataLayout) const {
-  // TODO: Bounds operation affect the offset- add support to take them
+  // TODO: Bounds operation affect the offset - add support to take them
   // into account.
   if (!accBounds.empty())
     return {};
 
+  // Class-type does not behave like a normal box because it does not hold an
+  // element type. Thus special handle it here.
+  if (mlir::isa<fir::ClassType>(type)) {
+    // The pointer to the class-type is always at the start address.
+    return {0};
+  }
+
+  mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(type);
+  assert(eleTy && "expect to be able to unwrap the element type");
+
+  // If the type enclosed is a mappable type, then have it provide the offset.
+  if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(eleTy))
+    return mappableTy.getOffsetInBytes(var, accBounds, dataLayout);
+
   // Dynamic extents (aka descriptor-based arrays) - may have a offset.
   // For example, a negative stride may mean a negative offset to compute the
   // start of array.
-  auto seqType = mlir::cast<fir::SequenceType>(type);
-  if (seqType.hasDynamicExtents() || seqType.hasUnknownShape())
+  auto seqType = mlir::dyn_cast<fir::SequenceType>(eleTy);
+  if (seqType && (seqType.hasDynamicExtents() || seqType.hasUnknownShape()))
     return {};
 
-  // We have non-dynamic extents - but if for some reason the size is not
-  // computable - assume offset is not either. Otherwise, it is an offset of
-  // zero.
+  // If the size is computable and since there are no bounds or dynamic extents,
+  // then the offset relative to pointer must be zero.
   if (getSizeInBytes(type, var, accBounds, dataLayout).has_value()) {
     return {0};
   }
+
+  // The offset is not evident because it is relative to the pointer being held.
+  // And we don't have any further details about this type.
   return {};
 }
 
-template <>
-std::optional<int64_t> OpenACCMappableModel<fir::BaseBoxType>::getOffsetInBytes(
+template std::optional<int64_t>
+OpenACCMappableModel<fir::BaseBoxType>::getOffsetInBytes(
     mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
-    const mlir::DataLayout &dataLayout) const {
-  // If we have a box value instead of box reference, the intent is to
-  // get the offset of the data not the offset of the box itself.
-  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(var.getType())) {
-    if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(
-            fir::unwrapRefType(boxTy.getEleTy()))) {
-      return mappableTy.getOffsetInBytes(var, accBounds, dataLayout);
-    }
-  }
-  // Until boxes get materialized, the offset is not evident because it is
-  // relative to the pointer being held.
-  return {};
-}
+    const mlir::DataLayout &dataLayout) const;
 
-template <>
-llvm::SmallVector<mlir::Value>
-OpenACCMappableModel<fir::SequenceType>::generateAccBounds(
-    mlir::Type type, mlir::Value var, mlir::OpBuilder &builder) const {
+template std::optional<int64_t>
+OpenACCMappableModel<fir::ReferenceType>::getOffsetInBytes(
+    mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
+    const mlir::DataLayout &dataLayout) const;
+
+template std::optional<int64_t>
+OpenACCMappableModel<fir::HeapType>::getOffsetInBytes(
+    mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
+    const mlir::DataLayout &dataLayout) const;
+
+template std::optional<int64_t>
+OpenACCMappableModel<fir::PointerType>::getOffsetInBytes(
+    mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
+    const mlir::DataLayout &dataLayout) const;
+
+static llvm::SmallVector<mlir::Value>
+generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
+                       mlir::OpBuilder &builder) {
   assert((mlir::isa<mlir::acc::PointerLikeType>(var.getType()) ||
           mlir::isa<mlir::acc::MappableType>(var.getType())) &&
          "must be pointer-like or mappable");
-
   fir::FirOpBuilder firBuilder(builder, var.getDefiningOp());
-  auto seqType = mlir::cast<fir::SequenceType>(type);
   mlir::Location loc = var.getLoc();
-
-  mlir::Value varPtr =
-      mlir::isa<mlir::acc::PointerLikeType>(var.getType())
-          ? var
-          : mlir::cast<mlir::acc::MappableType>(var.getType()).getVarPtr(var);
 
   if (seqType.hasDynamicExtents() || seqType.hasUnknownShape()) {
     if (auto boxAddr =
-            mlir::dyn_cast_if_present<fir::BoxAddrOp>(varPtr.getDefiningOp())) {
+            mlir::dyn_cast_if_present<fir::BoxAddrOp>(var.getDefiningOp())) {
       mlir::Value box = boxAddr.getVal();
       auto res =
           hlfir::translateToExtendedValue(loc, firBuilder, hlfir::Entity(box));
       fir::ExtendedValue exv = res.first;
       mlir::Value boxRef = box;
-      if (auto boxPtr = getPtrFromVar(box)) {
+      if (auto boxPtr = mlir::cast<mlir::acc::MappableType>(box.getType())
+                            .getVarPtr(box)) {
         boxRef = boxPtr;
       }
       // TODO: Handle Fortran optional.
@@ -189,7 +221,7 @@ OpenACCMappableModel<fir::SequenceType>::generateAccBounds(
           firBuilder, loc, exv, info);
     }
 
-    if (mlir::isa<hlfir::DeclareOp, fir::DeclareOp>(varPtr.getDefiningOp())) {
+    if (mlir::isa<hlfir::DeclareOp, fir::DeclareOp>(var.getDefiningOp())) {
       mlir::Value zero =
           firBuilder.createIntegerConstant(loc, builder.getIndexType(), 0);
       mlir::Value one =
@@ -197,10 +229,10 @@ OpenACCMappableModel<fir::SequenceType>::generateAccBounds(
 
       mlir::Value shape;
       if (auto declareOp =
-              mlir::dyn_cast_if_present<fir::DeclareOp>(varPtr.getDefiningOp()))
+              mlir::dyn_cast_if_present<fir::DeclareOp>(var.getDefiningOp()))
         shape = declareOp.getShape();
       else if (auto declareOp = mlir::dyn_cast_if_present<hlfir::DeclareOp>(
-                   varPtr.getDefiningOp()))
+                   var.getDefiningOp()))
         shape = declareOp.getShape();
 
       const bool strideIncludeLowerExtent = true;
@@ -265,9 +297,9 @@ OpenACCMappableModel<fir::SequenceType>::generateAccBounds(
 
   // TODO: Detect assumed-size case.
   const bool isAssumedSize = false;
-  auto valToCheck = varPtr;
+  auto valToCheck = var;
   if (auto boxAddr =
-          mlir::dyn_cast_if_present<fir::BoxAddrOp>(varPtr.getDefiningOp())) {
+          mlir::dyn_cast_if_present<fir::BoxAddrOp>(var.getDefiningOp())) {
     valToCheck = boxAddr.getVal();
   }
   auto res = hlfir::translateToExtendedValue(loc, firBuilder,
@@ -279,86 +311,34 @@ OpenACCMappableModel<fir::SequenceType>::generateAccBounds(
       /*isAssumedSize=*/isAssumedSize);
 }
 
-template <>
+template <typename Ty>
 llvm::SmallVector<mlir::Value>
-OpenACCMappableModel<fir::BaseBoxType>::generateAccBounds(
-    mlir::Type type, mlir::Value var, mlir::OpBuilder &builder) const {
-  // If we have a box value instead of box reference, the intent is to
-  // get the bounds of the data not the bounds of the box itself.
-  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(var.getType())) {
-    if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(
-            fir::unwrapRefType(boxTy.getEleTy()))) {
-      mlir::Value data = builder.create<fir::BoxAddrOp>(var.getLoc(), var);
-      return mappableTy.generateAccBounds(data, builder);
-    }
+OpenACCMappableModel<Ty>::generateAccBounds(mlir::Type type, mlir::Value var,
+                                            mlir::OpBuilder &builder) const {
+  // acc bounds only make sense for arrays - thus look for sequence type.
+  mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(type);
+  if (auto seqTy = mlir::dyn_cast_if_present<fir::SequenceType>(eleTy)) {
+    return generateSeqTyAccBounds(seqTy, var, builder);
   }
-  // Box references are not arrays - thus generating acc.bounds does not make
-  // sense.
+
   return {};
 }
 
-static bool isScalarLike(mlir::Type type) {
-  return fir::isa_trivial(type) || fir::isa_ref_type(type);
-}
+template llvm::SmallVector<mlir::Value>
+OpenACCMappableModel<fir::BaseBoxType>::generateAccBounds(
+    mlir::Type type, mlir::Value var, mlir::OpBuilder &builder) const;
 
-static bool isArrayLike(mlir::Type type) {
-  return mlir::isa<fir::SequenceType>(type);
-}
+template llvm::SmallVector<mlir::Value>
+OpenACCMappableModel<fir::ReferenceType>::generateAccBounds(
+    mlir::Type type, mlir::Value var, mlir::OpBuilder &builder) const;
 
-static bool isCompositeLike(mlir::Type type) {
-  // class(*) is not a composite type since it does not have a determined type.
-  if (fir::isUnlimitedPolymorphicType(type))
-    return false;
+template llvm::SmallVector<mlir::Value>
+OpenACCMappableModel<fir::HeapType>::generateAccBounds(
+    mlir::Type type, mlir::Value var, mlir::OpBuilder &builder) const;
 
-  return mlir::isa<fir::RecordType, fir::ClassType, mlir::TupleType>(type);
-}
-
-template <>
-mlir::acc::VariableTypeCategory
-OpenACCMappableModel<fir::SequenceType>::getTypeCategory(
-    mlir::Type type, mlir::Value var) const {
-  return mlir::acc::VariableTypeCategory::array;
-}
-
-template <>
-mlir::acc::VariableTypeCategory
-OpenACCMappableModel<fir::BaseBoxType>::getTypeCategory(mlir::Type type,
-                                                        mlir::Value var) const {
-  // Class-type does not behave like a normal box because it does not hold an
-  // element type. Thus special handle it here.
-  if (mlir::isa<fir::ClassType>(type)) {
-    // class(*) is not a composite type since it does not have a determined
-    // type.
-    if (fir::isUnlimitedPolymorphicType(type))
-      return mlir::acc::VariableTypeCategory::uncategorized;
-    return mlir::acc::VariableTypeCategory::composite;
-  }
-
-  mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(type);
-  assert(eleTy && "expect to be able to unwrap the element type");
-
-  // If the type enclosed by the box is a mappable type, then have it
-  // provide the type category.
-  if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(eleTy))
-    return mappableTy.getTypeCategory(var);
-
-  // For all arrays, despite whether they are allocatable, pointer, assumed,
-  // etc, we'd like to categorize them as "array".
-  if (isArrayLike(eleTy))
-    return mlir::acc::VariableTypeCategory::array;
-
-  // We got here because we don't have an array nor a mappable type. At this
-  // point, we know we have a type that fits the "aggregate" definition since it
-  // is a type with a descriptor. Try to refine it by checking if it matches the
-  // "composite" definition.
-  if (isCompositeLike(eleTy))
-    return mlir::acc::VariableTypeCategory::composite;
-
-  // Even if we have a scalar type - simply because it is wrapped in a box
-  // we want to categorize it as "nonscalar". Anything else would've been
-  // non-scalar anyway.
-  return mlir::acc::VariableTypeCategory::nonscalar;
-}
+template llvm::SmallVector<mlir::Value>
+OpenACCMappableModel<fir::PointerType>::generateAccBounds(
+    mlir::Type type, mlir::Value var, mlir::OpBuilder &builder) const;
 
 static mlir::Value
 getBaseRef(mlir::TypedValue<mlir::acc::PointerLikeType> varPtr) {
@@ -389,6 +369,110 @@ getBaseRef(mlir::TypedValue<mlir::acc::PointerLikeType> varPtr) {
   return baseRef;
 }
 
+static bool isScalarLike(mlir::Type type) {
+  return fir::isa_trivial(type) || fir::isa_ref_type(type);
+}
+
+static bool isArrayLike(mlir::Type type) {
+  return mlir::isa<fir::SequenceType>(type);
+}
+
+static bool isCompositeLike(mlir::Type type) {
+  // class(*) is not a composite type since it does not have a determined type.
+  if (fir::isUnlimitedPolymorphicType(type))
+    return false;
+
+  return mlir::isa<fir::RecordType, fir::ClassType, mlir::TupleType>(type);
+}
+
+static mlir::acc::VariableTypeCategory
+categorizeElemType(mlir::Type enclosingTy, mlir::Type eleTy, mlir::Value var) {
+  // If the type enclosed is a mappable type, then have it provide the type
+  // category.
+  if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(eleTy))
+    return mappableTy.getTypeCategory(var);
+
+  // For all arrays, despite whether they are allocatable, pointer, assumed,
+  // etc, we'd like to categorize them as "array".
+  if (isArrayLike(eleTy))
+    return mlir::acc::VariableTypeCategory::array;
+
+  if (isCompositeLike(eleTy))
+    return mlir::acc::VariableTypeCategory::composite;
+  if (mlir::isa<fir::BoxType>(enclosingTy)) {
+    // Even if we have a scalar type - simply because it is wrapped in a box
+    // we want to categorize it as "nonscalar". Anything else would've been
+    // non-scalar anyway.
+    return mlir::acc::VariableTypeCategory::nonscalar;
+  }
+  if (isScalarLike(eleTy))
+    return mlir::acc::VariableTypeCategory::scalar;
+  if (mlir::isa<fir::CharacterType, mlir::FunctionType>(eleTy))
+    return mlir::acc::VariableTypeCategory::nonscalar;
+  // Assumed-type (type(*))does not have a determined type that can be
+  // categorized.
+  if (mlir::isa<mlir::NoneType>(eleTy))
+    return mlir::acc::VariableTypeCategory::uncategorized;
+  // "pointers" - in the sense of raw address point-of-view, are considered
+  // scalars.
+  if (mlir::isa<fir::LLVMPointerType>(eleTy))
+    return mlir::acc::VariableTypeCategory::scalar;
+
+  // Without further checking, this type cannot be categorized.
+  return mlir::acc::VariableTypeCategory::uncategorized;
+}
+
+template <typename Ty>
+mlir::acc::VariableTypeCategory
+OpenACCMappableModel<Ty>::getTypeCategory(mlir::Type type,
+                                          mlir::Value var) const {
+  // FIR uses operations to compute interior pointers.
+  // So for example, an array element or composite field access to a float
+  // value would both be represented as !fir.ref<f32>. We do not want to treat
+  // such a reference as a scalar. Thus unwrap interior pointer calculations.
+  mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(type);
+  if (eleTy && isScalarLike(eleTy)) {
+    if (auto ptrLikeVar = mlir::dyn_cast_if_present<
+            mlir::TypedValue<mlir::acc::PointerLikeType>>(var)) {
+      auto baseRef = getBaseRef(ptrLikeVar);
+      if (baseRef != var) {
+        type = baseRef.getType();
+        if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(type))
+          return mappableTy.getTypeCategory(baseRef);
+      }
+    }
+  }
+
+  // Class-type does not behave like a normal box because it does not hold an
+  // element type. Thus special handle it here.
+  if (mlir::isa<fir::ClassType>(type)) {
+    // class(*) is not a composite type since it does not have a determined
+    // type.
+    if (fir::isUnlimitedPolymorphicType(type))
+      return mlir::acc::VariableTypeCategory::uncategorized;
+    return mlir::acc::VariableTypeCategory::composite;
+  }
+
+  assert(eleTy && "expect to be able to unwrap the element type");
+  return categorizeElemType(type, eleTy, var);
+}
+
+template mlir::acc::VariableTypeCategory
+OpenACCMappableModel<fir::BaseBoxType>::getTypeCategory(mlir::Type type,
+                                                        mlir::Value var) const;
+
+template mlir::acc::VariableTypeCategory
+OpenACCMappableModel<fir::ReferenceType>::getTypeCategory(
+    mlir::Type type, mlir::Value var) const;
+
+template mlir::acc::VariableTypeCategory
+OpenACCMappableModel<fir::HeapType>::getTypeCategory(mlir::Type type,
+                                                     mlir::Value var) const;
+
+template mlir::acc::VariableTypeCategory
+OpenACCMappableModel<fir::PointerType>::getTypeCategory(mlir::Type type,
+                                                        mlir::Value var) const;
+
 static mlir::acc::VariableTypeCategory
 categorizePointee(mlir::Type pointer,
                   mlir::TypedValue<mlir::acc::PointerLikeType> varPtr,
@@ -406,29 +490,7 @@ categorizePointee(mlir::Type pointer,
   // It must be a pointer-like type since it is not a MappableType.
   auto ptrLikeTy = mlir::cast<mlir::acc::PointerLikeType>(baseRef.getType());
   mlir::Type eleTy = ptrLikeTy.getElementType();
-
-  if (auto mappableEleTy = mlir::dyn_cast<mlir::acc::MappableType>(eleTy))
-    return mappableEleTy.getTypeCategory(varPtr);
-
-  if (isScalarLike(eleTy))
-    return mlir::acc::VariableTypeCategory::scalar;
-  if (isArrayLike(eleTy))
-    return mlir::acc::VariableTypeCategory::array;
-  if (isCompositeLike(eleTy))
-    return mlir::acc::VariableTypeCategory::composite;
-  if (mlir::isa<fir::CharacterType, mlir::FunctionType>(eleTy))
-    return mlir::acc::VariableTypeCategory::nonscalar;
-  // Assumed-type (type(*))does not have a determined type that can be
-  // categorized.
-  if (mlir::isa<mlir::NoneType>(eleTy))
-    return mlir::acc::VariableTypeCategory::uncategorized;
-  // "pointers" - in the sense of raw address point-of-view, are considered
-  // scalars.
-  if (mlir::isa<fir::LLVMPointerType>(eleTy))
-    return mlir::acc::VariableTypeCategory::scalar;
-
-  // Without further checking, this type cannot be categorized.
-  return mlir::acc::VariableTypeCategory::uncategorized;
+  return categorizeElemType(pointer, eleTy, varPtr);
 }
 
 template <>

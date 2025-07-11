@@ -25,77 +25,6 @@ static cl::opt<bool>
 static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
                                FloatABI::ABIType FloatABIType,
                                EABI EABIVersion) {
-  if (!TT.isOSDarwin() && !TT.isiOS() && !TT.isWatchOS() && !TT.isDriverKit()) {
-    CallingConv::ID DefaultCC = FloatABIType == FloatABI::Hard
-                                    ? CallingConv::ARM_AAPCS_VFP
-                                    : CallingConv::ARM_AAPCS;
-    for (RTLIB::LibcallImpl LC : RTLIB::libcall_impls())
-      Info.setLibcallImplCallingConv(LC, DefaultCC);
-  }
-
-  // Register based DivRem for AEABI (RTABI 4.2)
-  if (TT.isTargetAEABI() || TT.isAndroid() || TT.isTargetGNUAEABI() ||
-      TT.isTargetMuslAEABI() || TT.isOSWindows()) {
-    if (TT.isOSWindows()) {
-      const struct {
-        const RTLIB::Libcall Op;
-        const RTLIB::LibcallImpl Impl;
-        const CallingConv::ID CC;
-      } LibraryCalls[] = {
-          {RTLIB::SDIVREM_I32, RTLIB::__rt_sdiv, CallingConv::ARM_AAPCS},
-          {RTLIB::SDIVREM_I64, RTLIB::__rt_sdiv64, CallingConv::ARM_AAPCS},
-          {RTLIB::UDIVREM_I32, RTLIB::__rt_udiv, CallingConv::ARM_AAPCS},
-          {RTLIB::UDIVREM_I64, RTLIB::__rt_udiv64, CallingConv::ARM_AAPCS},
-      };
-
-      for (const auto &LC : LibraryCalls) {
-        Info.setLibcallImpl(LC.Op, LC.Impl);
-        Info.setLibcallImplCallingConv(LC.Impl, LC.CC);
-      }
-    } else {
-      const struct {
-        const RTLIB::Libcall Op;
-        const RTLIB::LibcallImpl Impl;
-      } LibraryCalls[] = {
-          {RTLIB::SDIVREM_I32, RTLIB::__aeabi_idivmod},
-          {RTLIB::SDIVREM_I64, RTLIB::__aeabi_ldivmod},
-          {RTLIB::UDIVREM_I32, RTLIB::__aeabi_uidivmod},
-          {RTLIB::UDIVREM_I64, RTLIB::__aeabi_uldivmod},
-      };
-
-      for (const auto &LC : LibraryCalls)
-        Info.setLibcallImpl(LC.Op, LC.Impl);
-    }
-  }
-
-  if (TT.isOSWindows()) {
-    static const struct {
-      const RTLIB::Libcall Op;
-      const RTLIB::LibcallImpl Impl;
-      const CallingConv::ID CC;
-    } LibraryCalls[] = {
-        {RTLIB::FPTOSINT_F32_I64, RTLIB::__stoi64, CallingConv::ARM_AAPCS_VFP},
-        {RTLIB::FPTOSINT_F64_I64, RTLIB::__dtoi64, CallingConv::ARM_AAPCS_VFP},
-        {RTLIB::FPTOUINT_F32_I64, RTLIB::__stou64, CallingConv::ARM_AAPCS_VFP},
-        {RTLIB::FPTOUINT_F64_I64, RTLIB::__dtou64, CallingConv::ARM_AAPCS_VFP},
-        {RTLIB::SINTTOFP_I64_F32, RTLIB::__i64tos, CallingConv::ARM_AAPCS_VFP},
-        {RTLIB::SINTTOFP_I64_F64, RTLIB::__i64tod, CallingConv::ARM_AAPCS_VFP},
-        {RTLIB::UINTTOFP_I64_F32, RTLIB::__u64tos, CallingConv::ARM_AAPCS_VFP},
-        {RTLIB::UINTTOFP_I64_F64, RTLIB::__u64tod, CallingConv::ARM_AAPCS_VFP},
-    };
-
-    for (const auto &LC : LibraryCalls) {
-      Info.setLibcallImpl(LC.Op, LC.Impl);
-      Info.setLibcallImplCallingConv(LC.Impl, LC.CC);
-    }
-  }
-
-  // Use divmod compiler-rt calls for iOS 5.0 and later.
-  if (TT.isOSBinFormatMachO() && (!TT.isiOS() || !TT.isOSVersionLT(5, 0))) {
-    Info.setLibcallImpl(RTLIB::SDIVREM_I32, RTLIB::__divmodsi4);
-    Info.setLibcallImpl(RTLIB::UDIVREM_I32, RTLIB::__udivmodsi4);
-  }
-
   static const RTLIB::LibcallImpl AAPCS_Libcalls[] = {
       RTLIB::__aeabi_dadd,        RTLIB::__aeabi_ddiv,
       RTLIB::__aeabi_dmul,        RTLIB::__aeabi_dsub,
@@ -212,7 +141,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
                                        ExceptionHandling ExceptionModel,
                                        FloatABI::ABIType FloatABI,
                                        EABI EABIVersion, StringRef ABIName) {
-  setTargetRuntimeLibcallSets(TT);
+  setTargetRuntimeLibcallSets(TT, FloatABI);
 
   // Use the f128 variants of math functions on x86
   if (TT.isX86() && TT.isGNUEnvironment())

@@ -159,7 +159,7 @@ void MetaRename(Module &M,
   auto ExcludeLibFuncs = [&](Function &F) {
     LibFunc Tmp;
     StringRef Name = F.getName();
-    return Name.starts_with("llvm.") || (!Name.empty() && Name[0] == 1) ||
+    return F.isIntrinsic() || (!Name.empty() && Name[0] == 1) ||
            GetTLI(F).getLibFunc(F, Tmp) ||
            IsNameExcluded(Name, ExcludedFuncPrefixes);
   };

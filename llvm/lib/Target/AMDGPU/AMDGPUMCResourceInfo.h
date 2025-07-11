@@ -98,7 +98,7 @@ public:
   /// functions with indirect calls should be assigned the module level maximum.
   void gatherResourceInfo(
       const MachineFunction &MF,
-      const AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo &FRI,
+      const AMDGPUResourceUsageAnalysisWrapperPass::FunctionResourceInfo &FRI,
       MCContext &OutContext);
 
   const MCExpr *createTotalNumVGPRs(const MachineFunction &MF, MCContext &Ctx);

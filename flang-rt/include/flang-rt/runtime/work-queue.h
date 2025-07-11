@@ -74,6 +74,8 @@ namespace Fortran::runtime {
 class Terminator;
 class WorkQueue;
 
+RT_OFFLOAD_API_GROUP_BEGIN
+
 // Ticket worker base classes
 
 template <typename TICKET> class ImmediateTicketRunner {
@@ -361,6 +363,7 @@ public:
       : ImmediateTicketRunner<DescriptorIoTicket>(*this),
         Elementwise{descriptor}, io_{io}, table_{table},
         anyIoTookPlace_{anyIoTookPlace} {}
+
   RT_API_ATTRS int Begin(WorkQueue &);
   RT_API_ATTRS int Continue(WorkQueue &);
   RT_API_ATTRS bool &anyIoTookPlace() { return anyIoTookPlace_; }
@@ -550,6 +553,8 @@ private:
   TicketList static_[numStatic_];
   TicketList *firstFree_{static_};
 };
+
+RT_OFFLOAD_API_GROUP_END
 
 } // namespace Fortran::runtime
 #endif // FLANG_RT_RUNTIME_WORK_QUEUE_H_

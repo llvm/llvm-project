@@ -159,3 +159,15 @@ struct U {
   template <typename T>
   void m_fn1(T x = 0[0); // expected-error{{expected ']'}} expected-note{{to match this '['}}
 } *U;
+
+
+
+namespace GH63880{
+void f() {
+    char* i(*[] { return new int; }());
+    // expected-error@-1{{cannot initialize a variable of type 'char *' with an lvalue of type 'int'}}
+
+    char* j(&[]() -> int& { return *new int; }());
+    //expected-error@-1{{cannot initialize a variable of type 'char *' with an rvalue of type 'int *'}}
+}
+}

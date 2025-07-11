@@ -210,13 +210,14 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
 }
 
 bool TargetLowering::findOptimalMemOpLowering(
-    std::vector<EVT> &MemOps, unsigned Limit, const MemOp &Op, unsigned DstAS,
-    unsigned SrcAS, const AttributeList &FuncAttributes) const {
+    LLVMContext &Context, std::vector<EVT> &MemOps, unsigned Limit,
+    const MemOp &Op, unsigned DstAS, unsigned SrcAS,
+    const AttributeList &FuncAttributes) const {
   if (Limit != ~unsigned(0) && Op.isMemcpyWithFixedDstAlign() &&
       Op.getSrcAlign() < Op.getDstAlign())
     return false;
 
-  EVT VT = getOptimalMemOpType(Op, FuncAttributes);
+  EVT VT = getOptimalMemOpType(Context, Op, FuncAttributes);
 
   if (VT == MVT::Other) {
     // Use the largest integer type whose alignment constraints are satisfied.

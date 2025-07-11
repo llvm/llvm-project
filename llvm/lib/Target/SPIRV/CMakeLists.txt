@@ -44,6 +44,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVRegularizer.cpp
   SPIRVSubtarget.cpp
   SPIRVTargetMachine.cpp
+  SPIRVTargetTransformInfo.cpp
   SPIRVUtils.cpp
   SPIRVEmitNonSemanticDI.cpp
 

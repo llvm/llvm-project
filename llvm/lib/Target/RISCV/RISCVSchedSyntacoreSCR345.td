@@ -182,11 +182,6 @@ multiclass SCR_Other {
 multiclass SCR_Unsupported :
   UnsupportedSchedSFB,
   UnsupportedSchedV,
-  UnsupportedSchedXsfvcp,
-  UnsupportedSchedXSfvfnrclipxfqf,
-  UnsupportedSchedXSfvfwmaccqqq,
-  UnsupportedSchedXSfvqmaccdod,
-  UnsupportedSchedXSfvqmaccqoq,
   UnsupportedSchedZabha,
   UnsupportedSchedZba,
   UnsupportedSchedZbb,
@@ -195,7 +190,8 @@ multiclass SCR_Unsupported :
   UnsupportedSchedZbkb,
   UnsupportedSchedZbkx,
   UnsupportedSchedZfa,
-  UnsupportedSchedZvk;
+  UnsupportedSchedZvk,
+  UnsupportedSchedXsf;
 
 multiclass SCR3_Unsupported :
   SCR_Unsupported,

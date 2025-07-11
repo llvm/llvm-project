@@ -23,7 +23,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
   // CHECK: Size: 40
 
   // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "arr", structured = false}
-  // CHECK: Mappable: !fir.array<10xf32>
+  // CHECK: Pointer-like and Mappable: !fir.ref<!fir.array<10xf32>>
   // CHECK: Type category: array
   // CHECK: Size: 40
 
@@ -60,20 +60,17 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
   }
 
   // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>> {name = "arr1", structured = false}
-  // CHECK: Pointer-like: !fir.ref<!fir.array<?xf32>>
-  // CHECK: Mappable: !fir.array<?xf32>
+  // CHECK: Pointer-like and Mappable: !fir.ref<!fir.array<?xf32>>
   // CHECK: Type category: array
   // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
 
   // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>> {name = "arr2", structured = false}
-  // CHECK: Pointer-like: !fir.ref<!fir.array<?xf32>>
-  // CHECK: Mappable: !fir.array<?xf32>
+  // CHECK: Pointer-like and Mappable: !fir.ref<!fir.array<?xf32>>
   // CHECK: Type category: array
   // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c2{{.*}} : index)
 
   // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "arr3", structured = false}
-  // CHECK: Pointer-like: !fir.ref<!fir.array<10xf32>>
-  // CHECK: Mappable: !fir.array<10xf32>
+  // CHECK: Pointer-like and Mappable: !fir.ref<!fir.array<10xf32>>
   // CHECK: Type category: array
   // CHECK: Size: 40
   // CHECK: Offset: 0

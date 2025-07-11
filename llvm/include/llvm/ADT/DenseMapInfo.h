@@ -17,6 +17,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -319,6 +320,28 @@ struct DenseMapInfo<Enum, std::enable_if_t<std::is_enum_v<Enum>>> {
   }
 
   static bool isEqual(const Enum &LHS, const Enum &RHS) { return LHS == RHS; }
+};
+
+template <typename T> struct DenseMapInfo<std::optional<T>> {
+  using Optional = std::optional<T>;
+  using Info = DenseMapInfo<T>;
+
+  static inline Optional getEmptyKey() { return {Info::getEmptyKey()}; }
+
+  static inline Optional getTombstoneKey() { return {Info::getTombstoneKey()}; }
+
+  static unsigned getHashValue(const Optional &OptionalVal) {
+    return detail::combineHashValue(
+        OptionalVal.has_value(),
+        Info::getHashValue(OptionalVal.value_or(Info::getEmptyKey())));
+  }
+
+  static bool isEqual(const Optional &LHS, const Optional &RHS) {
+    if (LHS && RHS) {
+      return Info::isEqual(LHS.value(), RHS.value());
+    }
+    return !LHS && !RHS;
+  }
 };
 } // end namespace llvm
 

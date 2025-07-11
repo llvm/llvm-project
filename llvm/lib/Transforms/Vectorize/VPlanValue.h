@@ -26,6 +26,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -44,7 +45,7 @@ class VPPhiAccessors;
 // flow into, within and out of the VPlan. VPValues can stand for live-ins
 // coming from the input IR and instructions which VPlan will generate if
 // executed.
-class VPValue {
+class LLVM_ABI_FOR_TEST VPValue {
   friend class VPDef;
   friend struct VPDoubleValueDef;
   friend class VPInterleaveRecipe;

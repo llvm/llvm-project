@@ -293,22 +293,15 @@ static LogicalResult checkVarAndVarType(Op op) {
   if (!op.getVar())
     return op.emitError("must have var operand");
 
-  if (mlir::isa<mlir::acc::PointerLikeType>(op.getVar().getType()) &&
-      mlir::isa<mlir::acc::MappableType>(op.getVar().getType())) {
-    // TODO: If a type implements both interfaces (mappable and pointer-like),
-    // it is unclear which semantics to apply without additional info which
-    // would need captured in the data operation. For now restrict this case
-    // unless a compelling reason to support disambiguating between the two.
-    return op.emitError("var must be mappable or pointer-like (not both)");
-  }
-
+  // A variable must have a type that is either pointer-like or mappable.
   if (!mlir::isa<mlir::acc::PointerLikeType>(op.getVar().getType()) &&
       !mlir::isa<mlir::acc::MappableType>(op.getVar().getType()))
     return op.emitError("var must be mappable or pointer-like");
 
-  if (mlir::isa<mlir::acc::MappableType>(op.getVar().getType()) &&
-      op.getVarType() != op.getVar().getType())
-    return op.emitError("varType must match when var is mappable");
+  // When it is a pointer-like type, the varType must capture the target type.
+  if (mlir::isa<mlir::acc::PointerLikeType>(op.getVar().getType()) &&
+      op.getVarType() == op.getVar().getType())
+    return op.emitError("varType must capture the element type of var");
 
   return success();
 }

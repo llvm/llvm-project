@@ -53,7 +53,7 @@ __thread int t;
 // omp52-error@+2 {{expected '(' after 'declare target'}}
 // omp45-to-51-error@+1 {{expected '(' after 'declare target'}}
 #pragma omp declare target . 
-
+// omp52-or-later-warning@+1 {{the delimited form of '#pragma omp declare target' without clauses is deprecated; use '#pragma omp begin declare target' instead}}
 #pragma omp declare target
 void f();
 // omp60-warning@+3 {{extra tokens at the end of '#pragma omp end declare_target' are ignored}}
@@ -156,7 +156,7 @@ typedef int sint;
 template <typename T>
 T bla1() { return 0; }
 
-#pragma omp declare target
+#pragma omp begin declare target
 template <typename T>
 T bla2() { return 0; }
 #pragma omp end declare target
@@ -164,7 +164,7 @@ T bla2() { return 0; }
 template<>
 float bla2() { return 1.0; }
 
-#pragma omp declare target
+#pragma omp begin declare target
 void blub2() {
   bla2<float>();
   bla2<int>();
@@ -179,7 +179,7 @@ void t2() {
   }
 }
 
-#pragma omp declare target
+#pragma omp begin declare target
   void abc();
 #pragma omp end declare target
 void cba();
@@ -188,13 +188,13 @@ void cba();
 // omp45-to-51-error@+1 {{unexpected OpenMP directive '#pragma omp end declare target'}}
 #pragma omp end declare target 
 
-#pragma omp declare target
-#pragma omp declare target
+#pragma omp begin declare target
+#pragma omp begin declare target
 void def();
 #pragma omp end declare target
 void fed();
 
-#pragma omp declare target
+#pragma omp begin declare target
 // expected-note@+1 {{defined as threadprivate or thread local}}
 #pragma omp threadprivate(a) 
 extern int b;
@@ -239,7 +239,7 @@ void foo(int p) {
   q();
   c();
 }
-#pragma omp declare target
+#pragma omp begin declare target
 void foo1() {
   // omp5-or-later-var-note@+1 {{variable 'z' is captured here}}
   [&](){ (void)(b+z);}(); 
@@ -258,7 +258,7 @@ int C::method() {
 }
 
 struct S {
-#pragma omp declare target
+#pragma omp begin declare target
   int v;
 #pragma omp end declare target
 };
@@ -293,7 +293,7 @@ int main (int argc, char **argv) {
 }
 
 namespace {
-#pragma omp declare target
+#pragma omp begin declare target
   int x;
 }
 #pragma omp end declare target
@@ -347,7 +347,7 @@ void host3() {host1();} // dev5-error {{function with 'device_type(host)' is not
 // omp52-or-later-error@+1 {{expected at least one 'enter', 'link' or 'indirect' clause}}
 #pragma omp declare target to(host3)
 
-#pragma omp declare target
+#pragma omp begin declare target
 void any1() {any();}
 // dev5-error@+1 {{function with 'device_type(host)' is not available on device}}
 void any2() {host1();} 
@@ -411,7 +411,7 @@ struct target{
 // expected-warning@+1 {{declaration is not declared in any declare target region}}
 static target S;  
 
-#pragma omp declare target
+#pragma omp begin declare target
 // expected-note@+1 {{used here}}
 int target_var = variable;  
 // expected-note@+1 {{used here}}

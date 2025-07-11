@@ -181,6 +181,19 @@ add_header_library(
 )
 
 add_header_library(
+  wcs_to_integer
+  HDRS
+    wcs_to_integer.h
+  DEPENDS
+    .wctype_utils
+    .str_to_num_result
+    libc.hdr.errno_macros
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.common
+)
+
+add_header_library(
   integer_to_string
   HDRS
     integer_to_string.h

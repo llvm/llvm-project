@@ -13308,7 +13308,7 @@ NamedDecl *Sema::BuildUsingEnumDeclaration(Scope *S, AccessSpecifier AS,
     LookupResult Previous(*this, UsingEnumName, LookupUsingDeclName,
                           RedeclarationKind::ForVisibleRedeclaration);
 
-    LookupName(Previous, S);
+    LookupQualifiedName(Previous, CurContext);
 
     for (NamedDecl *D : Previous)
       if (UsingEnumDecl *UED = dyn_cast<UsingEnumDecl>(D))

@@ -164,14 +164,13 @@ createDataEntryOp(fir::FirOpBuilder &builder, mlir::Location loc,
   op.setStructured(structured);
   op.setImplicit(implicit);
   op.setDataClause(dataClause);
-  if (auto mappableTy =
-          mlir::dyn_cast<mlir::acc::MappableType>(baseAddr.getType())) {
-    op.setVarType(baseAddr.getType());
+  if (auto pointerLikeTy =
+          mlir::dyn_cast<mlir::acc::PointerLikeType>(baseAddr.getType())) {
+    op.setVarType(pointerLikeTy.getElementType());
   } else {
-    assert(mlir::isa<mlir::acc::PointerLikeType>(baseAddr.getType()) &&
-           "expected pointer-like");
-    op.setVarType(mlir::cast<mlir::acc::PointerLikeType>(baseAddr.getType())
-                      .getElementType());
+    assert(mlir::isa<mlir::acc::MappableType>(baseAddr.getType()) &&
+           "expected mappable");
+    op.setVarType(baseAddr.getType());
   }
 
   op->setAttr(Op::getOperandSegmentSizeAttr(),

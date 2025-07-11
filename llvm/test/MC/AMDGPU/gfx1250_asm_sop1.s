@@ -28,3 +28,15 @@ s_rfe_i64 s[2:3]
 
 s_rfe_b64 s[2:3]
 // GFX1250: s_rfe_i64 s[2:3]                        ; encoding: [0x02,0x4a,0x80,0xbe]
+
+s_barrier_signal -3
+// GFX1250: s_barrier_signal -3                     ; encoding: [0xc3,0x4e,0x80,0xbe]
+
+s_get_barrier_state s3, -3
+// GFX1250: s_get_barrier_state s3, -3              ; encoding: [0xc3,0x50,0x83,0xbe]
+
+s_get_barrier_state s3, -4
+// GFX1250: s_get_barrier_state s3, -4              ; encoding: [0xc4,0x50,0x83,0xbe]
+
+s_get_barrier_state s3, m0
+// GFX1250: s_get_barrier_state s3, m0              ; encoding: [0x7d,0x50,0x83,0xbe]

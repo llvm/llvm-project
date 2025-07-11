@@ -21,7 +21,28 @@ def junit_from_xml(xml):
 class TestReports(unittest.TestCase):
     def test_title_only(self):
         self.assertEqual(
-            generate_test_report_lib.generate_report("Foo", 0, []), ("", "success")
+            generate_test_report_lib.generate_report("Foo", 0, []),
+            dedent(
+                """\
+                # Foo
+
+                The build succeeded and no tests ran. This is expected in some build configurations."""
+            ),
+        )
+
+    def test_title_only_failure(self):
+        self.assertEqual(
+            generate_test_report_lib.generate_report("Foo", 1, []),
+            dedent(
+                """\
+            # Foo
+
+            The build failed before running any tests.
+
+            Download the build's log file to see the details.
+
+            If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+            ),
         )
 
     def test_no_tests_in_testsuite(self):
@@ -42,7 +63,16 @@ class TestReports(unittest.TestCase):
                     )
                 ],
             ),
-            ("", None),
+            dedent(
+                """\
+                # Foo
+
+                The build failed before running any tests.
+
+                Download the build's log file to see the details.
+
+                If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+            ),
         )
 
     def test_no_failures(self):
@@ -70,8 +100,7 @@ class TestReports(unittest.TestCase):
               # Foo
 
               * 1 test passed"""
-                ),
-                "success",
+                )
             ),
         )
 
@@ -93,12 +122,6 @@ class TestReports(unittest.TestCase):
                         )
                     )
                 ],
-                buildkite_info={
-                    "BUILDKITE_ORGANIZATION_SLUG": "organization_slug",
-                    "BUILDKITE_PIPELINE_SLUG": "pipeline_slug",
-                    "BUILDKITE_BUILD_NUMBER": "build_number",
-                    "BUILDKITE_JOB_ID": "job_id",
-                },
             ),
             (
                 dedent(
@@ -109,11 +132,10 @@ class TestReports(unittest.TestCase):
 
               All tests passed but another part of the build **failed**.
 
-              [Download](https://buildkite.com/organizations/organization_slug/pipelines/pipeline_slug/builds/build_number/jobs/job_id/download.txt) the build's log file to see the details.
+              Download the build's log file to see the details.
               
               If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
-                ),
-                "error",
+                )
             ),
         )
 
@@ -174,14 +196,12 @@ class TestReports(unittest.TestCase):
           </details>
           
           If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
-                ),
-                "error",
+                )
             ),
         )
 
-    MULTI_SUITE_OUTPUT = (
-        dedent(
-            """\
+    MULTI_SUITE_OUTPUT = dedent(
+        """\
         # ABC and DEF
 
         * 1 test passed
@@ -210,8 +230,6 @@ class TestReports(unittest.TestCase):
         </details>
         
         If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
-        ),
-        "error",
     )
 
     def test_report_single_file_multiple_testsuites(self):
@@ -320,8 +338,7 @@ class TestReports(unittest.TestCase):
           Failed tests and their output was too large to report. Download the build's log file to see the details.
           
           If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
-                ),
-                "error",
+                )
             ),
         )
 
@@ -346,12 +363,6 @@ class TestReports(unittest.TestCase):
                     )
                 ],
                 list_failures=False,
-                buildkite_info={
-                    "BUILDKITE_ORGANIZATION_SLUG": "organization_slug",
-                    "BUILDKITE_PIPELINE_SLUG": "pipeline_slug",
-                    "BUILDKITE_BUILD_NUMBER": "build_number",
-                    "BUILDKITE_JOB_ID": "job_id",
-                },
             ),
             (
                 dedent(
@@ -360,11 +371,10 @@ class TestReports(unittest.TestCase):
 
           * 1 test failed
 
-          Failed tests and their output was too large to report. [Download](https://buildkite.com/organizations/organization_slug/pipelines/pipeline_slug/builds/build_number/jobs/job_id/download.txt) the build's log file to see the details.
+          Failed tests and their output was too large to report. Download the build's log file to see the details.
           
           If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
-                ),
-                "error",
+                )
             ),
         )
 
@@ -403,7 +413,6 @@ class TestReports(unittest.TestCase):
           Failed tests and their output was too large to report. Download the build's log file to see the details.
           
           If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
-                ),
-                "error",
+                )
             ),
         )
