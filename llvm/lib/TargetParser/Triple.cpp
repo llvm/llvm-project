@@ -934,6 +934,8 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
     case Triple::Win32:
     case Triple::UEFI:
       return Triple::COFF;
+    case Triple::UnknownOS:
+      return T.getVendor() == Triple::Apple ? Triple::MachO : Triple::ELF;
     default:
       return T.isOSDarwin() ? Triple::MachO : Triple::ELF;
     }
