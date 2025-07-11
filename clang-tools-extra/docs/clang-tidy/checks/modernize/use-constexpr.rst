@@ -3,7 +3,7 @@
 modernize-use-constexpr
 =======================
 
-Finds functions and variables that can be declared 'constexpr'.
+Finds functions and variables that can be declared ``constexpr``.
 
 The check analyses any function and variable according to the rules defined
 for the language version that the code is compiled with.
@@ -49,16 +49,16 @@ Options
   While a function of a class or struct could be declared ``constexpr``, when
   the class itself can never be constructed at compile-time, then adding
   ``constexpr`` to a member function is superfluous. This option controls if
-  ``constexpr`` should be added anyways. Default is ``false``.
+  ``constexpr`` should be added anyways. Default is `false`.
 
 .. option:: ConstexprString
 
   The string to use to specify a variable or function as ``constexpr``, for
-  example, a macro. Default is ``constexpr``.
+  example, a macro. Default is `constexpr`.
 
 .. option:: ConstexprString
 
   The string to use with C++23 to specify a function-local variable as 
-  ``static constexpr``, for example, a macro. Default is ``static constexpr``
-  (concatenating ``static`` with the `ConstexprString` option).
+  ``static constexpr``, for example, a macro. Default is `static constexpr`
+  (concatenating `static` with the `ConstexprString` option).
 
