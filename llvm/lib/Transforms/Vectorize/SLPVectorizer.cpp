@@ -5809,8 +5809,7 @@ static InstructionCost getExtractWithExtendCost(
   return TTI.getExtractWithExtendCost(Opcode, Dst, VecTy, Index, CostKind);
 }
 
-/// Correctly creates insert_subvector, checking that the index is multiple of
-/// the subvectors length. Otherwise, generates shuffle using \p Generator or
+/// Creates subvector insert. Generates shuffle using \p Generator or
 /// using default shuffle.
 static Value *createInsertVector(
     IRBuilderBase &Builder, Value *Vec, Value *V, unsigned Index,
@@ -5824,32 +5823,26 @@ static Value *createInsertVector(
   SmallVector<int> Mask(VecVF, PoisonMaskElem);
   if (isa<PoisonValue>(Vec)) {
     auto *Begin = std::next(Mask.begin(), Index);
-    std::iota(Begin, std::next(Begin, getNumElements(V->getType())), 0);
+    std::iota(Begin, std::next(Begin, SubVecVF), 0);
     Vec = Builder.CreateShuffleVector(V, Mask);
     return Vec;
   }
   std::iota(Mask.begin(), Mask.end(), 0);
   std::iota(std::next(Mask.begin(), Index),
             std::next(Mask.begin(), Index + SubVecVF), VecVF);
-  if (Generator) {
-    Vec = Generator(Vec, V, Mask);
-  } else {
-    // 1. Resize V to the size of Vec.
-    SmallVector<int> ResizeMask(VecVF, PoisonMaskElem);
-    std::iota(ResizeMask.begin(), std::next(ResizeMask.begin(), SubVecVF), 0);
-    V = Builder.CreateShuffleVector(V, ResizeMask);
-    Vec = Builder.CreateShuffleVector(Vec, V, Mask);
-  }
-  return Vec;
+  if (Generator)
+    return Generator(Vec, V, Mask);
+  // 1. Resize V to the size of Vec.
+  SmallVector<int> ResizeMask(VecVF, PoisonMaskElem);
+  std::iota(ResizeMask.begin(), std::next(ResizeMask.begin(), SubVecVF), 0);
+  V = Builder.CreateShuffleVector(V, ResizeMask);
+  // 2. Insert V into Vec.
+  return Builder.CreateShuffleVector(Vec, V, Mask);
 }
 
-/// Correctly creates extract_subvector, checking that the index is multiple of
-/// the subvectors length. Otherwise, generates shuffle using \p Generator or
-/// using default shuffle.
+/// Generates subvector extract using \p Generator or using default shuffle.
 static Value *createExtractVector(IRBuilderBase &Builder, Value *Vec,
                                   unsigned SubVecVF, unsigned Index) {
-  // Create shuffle, extract_subvector requires that index is multiple of
-  // the subvector length.
   SmallVector<int> Mask(SubVecVF, PoisonMaskElem);
   std::iota(Mask.begin(), Mask.end(), Index);
   return Builder.CreateShuffleVector(Vec, Mask);
