@@ -312,6 +312,15 @@ C23 Feature Support
   `WG14 N2975 <https://open-std.org/JTC1/SC22/WG14/www/docs/n2975.pdf>`_
 - Fixed a bug with handling the type operand form of ``typeof`` when it is used
   to specify a fixed underlying type for an enumeration. #GH146351
+- Fixed a rejects-valid bug where Clang would reject an enumeration with an
+  ``_Atomic`` underlying type. The underlying type is the non-atomic,
+  unqualified version of the specified type. Due to the perhaps surprising lack
+  of atomic behavior, this is diagnosed under
+  ``-Wunderlying-atomic-qualifier-ignored``, which defaults to an error. This
+  can be downgraded with ``-Wno-underlying-atomic-qualifier-ignored`` or
+  ``-Wno-error=underlying-atomic-qualifier-ignored``. Clang now also diagnoses
+  cv-qualifiers as being ignored, but that warning does not default to an error.
+  It can be controlled by ``-Wunderlying-cv-qualifier-ignore``. (#GH147736)
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -895,6 +904,7 @@ Bug Fixes to C++ Support
 - Fixed a Clang regression in C++20 mode where unresolved dependent call expressions were created inside non-dependent contexts (#GH122892)
 - Clang now emits the ``-Wunused-variable`` warning when some structured bindings are unused
   and the ``[[maybe_unused]]`` attribute is not applied. (#GH125810)
+- Fixed ``static_cast`` not performing access or ambiguity checks when converting to an rvalue reference to a base class. (#GH121429)
 - Declarations using class template argument deduction with redundant
   parentheses around the declarator are no longer rejected. (#GH39811)
 - Fixed a crash caused by invalid declarations of ``std::initializer_list``. (#GH132256)
@@ -932,6 +942,7 @@ Bug Fixes to C++ Support
 - Fix a bug where private access specifier of overloaded function not respected. (#GH107629)
 - Correctly handles calling an explicit object member function template overload set
   through its address (``(&Foo::bar<baz>)()``).
+- Fix a crash when forming an invalid call to an operator with an explicit object member. (#GH147121)
 - Correctly handle allocations in the condition of a ``if constexpr``.(#GH120197) (#GH134820)
 - Fixed a crash when handling invalid member using-declaration in C++20+ mode. (#GH63254)
 - Fixed parsing of lambda expressions that appear after ``*`` or ``&`` in contexts where a declaration can appear. (#GH63880)
@@ -1073,6 +1084,8 @@ RISC-V Support
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* Provide a __device__ version of std::__glibcxx_assert_fail() in a header wrapper.
 
 CUDA Support
 ^^^^^^^^^^^^
