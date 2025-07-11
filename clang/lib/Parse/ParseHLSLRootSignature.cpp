@@ -38,59 +38,67 @@ bool RootSignatureParser::parse() {
   // end of the stream
   bool HadError = false;
   while (!peekExpectedToken(TokenKind::end_of_stream)) {
-    bool HadLocalError = false;
     if (tryConsumeExpectedToken(TokenKind::kw_RootFlags)) {
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Flags = parseRootFlags();
-      if (Flags.has_value())
-        Elements.emplace_back(ElementLoc, *Flags);
-      else
-        HadLocalError = true;
+      if (!Flags.has_value()) {
+        HadError = true;
+        skipUntilExpectedToken(RootElementKeywords);
+        continue;
+      }
+
+      Elements.emplace_back(ElementLoc, *Flags);
     } else if (tryConsumeExpectedToken(TokenKind::kw_RootConstants)) {
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Constants = parseRootConstants();
-      if (Constants.has_value())
-        Elements.emplace_back(ElementLoc, *Constants);
-      else
-        HadLocalError = true;
+      if (!Constants.has_value()) {
+        HadError = true;
+        skipUntilExpectedToken(RootElementKeywords);
+        continue;
+      }
+      Elements.emplace_back(ElementLoc, *Constants);
     } else if (tryConsumeExpectedToken(TokenKind::kw_DescriptorTable)) {
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Table = parseDescriptorTable();
-      if (Table.has_value())
-        Elements.emplace_back(ElementLoc, *Table);
-      else {
-        HadLocalError = true;
+      if (!Table.has_value()) {
+        HadError = true;
         // We are within a DescriptorTable, we will do our best to recover
         // by skipping until we encounter the expected closing ')'.
         skipUntilClosedParens();
         consumeNextToken();
+        skipUntilExpectedToken(RootElementKeywords);
+        continue;
       }
+      Elements.emplace_back(ElementLoc, *Table);
     } else if (tryConsumeExpectedToken(
                    {TokenKind::kw_CBV, TokenKind::kw_SRV, TokenKind::kw_UAV})) {
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Descriptor = parseRootDescriptor();
-      if (Descriptor.has_value())
-        Elements.emplace_back(ElementLoc, *Descriptor);
-      else
-        HadLocalError = true;
+      if (!Descriptor.has_value()) {
+        HadError = true;
+        skipUntilExpectedToken(RootElementKeywords);
+        continue;
+      }
+      Elements.emplace_back(ElementLoc, *Descriptor);
     } else if (tryConsumeExpectedToken(TokenKind::kw_StaticSampler)) {
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Sampler = parseStaticSampler();
-      if (Sampler.has_value())
-        Elements.emplace_back(ElementLoc, *Sampler);
-      else
-        HadLocalError = true;
+      if (!Sampler.has_value()) {
+        HadError = true;
+        skipUntilExpectedToken(RootElementKeywords);
+        continue;
+      }
+      Elements.emplace_back(ElementLoc, *Sampler);
     } else {
-      HadLocalError = true;
+      HadError = true;
       consumeNextToken(); // let diagnostic be at the start of invalid token
       reportDiag(diag::err_hlsl_invalid_token)
           << /*parameter=*/0 << /*param of*/ TokenKind::kw_RootSignature;
+      skipUntilExpectedToken(RootElementKeywords);
+      continue;
     }
 
-    if (HadLocalError) {
-      HadError = true;
-      skipUntilExpectedToken(RootElementKeywords);
-    } else if (!tryConsumeExpectedToken(TokenKind::pu_comma)) {
+    if (!tryConsumeExpectedToken(TokenKind::pu_comma)) {
       // ',' denotes another element, otherwise, expected to be at end of stream
       break;
     }
