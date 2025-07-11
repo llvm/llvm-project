@@ -49,19 +49,20 @@ int Opcode::Dump(Stream *s, uint32_t min_byte_width) const {
         buf[m_data.inst.length - i - 1] = m_data.inst.bytes[i];
     else
       memcpy(buf, m_data.inst.bytes, m_data.inst.length);
+
+    const bool format_as_words = !(m_data.inst.length % 4);
     uint32_t i = 0;
     while (i < m_data.inst.length) {
       if (i > 0)
         s->PutChar(' ');
-      // if size % 4 == 0, print as 1 or 2 32 bit values (32 or 64 bit inst)
-      if (!(m_data.inst.length % 4)) {
+      if (format_as_words) {
+        // Format as words; print 1 or more UInt32 values.
         uint32_t value;
         memcpy(&value, &buf[i], 4);
         s->Printf("%8.8x", value);
         i += 4;
-        // else if size % 2 == 0, print as 1 or 3 16 bit values (16 or 48 bit
-        // inst)
-      } else if (!(m_data.inst.length % 2)) {
+      } else {
+        // Format as halfwords; print 1 or more UInt16 values.
         uint16_t value;
         memcpy(&value, &buf[i], 2);
         s->Printf("%4.4x", value);
