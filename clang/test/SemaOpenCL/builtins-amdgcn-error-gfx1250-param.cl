@@ -12,6 +12,14 @@ void test_s_monitor_sleep(short a) {
   __builtin_amdgcn_s_monitor_sleep(a); // expected-error {{'__builtin_amdgcn_s_monitor_sleep' must be a constant integer}}
 }
 
+void test_s_wait_asynccnt(short a) {
+  __builtin_amdgcn_s_wait_asynccnt(a); // expected-error {{'__builtin_amdgcn_s_wait_asynccnt' must be a constant integer}}
+}
+
+void test_s_wait_tensorcnt(short a) {
+  __builtin_amdgcn_s_wait_tensorcnt(a); // expected-error {{'__builtin_amdgcn_s_wait_tensorcnt' must be a constant integer}}
+}
+
 void test__builtin_amdgcn_cvt_f16_fp8(int a, int b) {
   __builtin_amdgcn_cvt_f16_fp8(a, b); // expected-error {{'__builtin_amdgcn_cvt_f16_fp8' must be a constant integer}}
 }
