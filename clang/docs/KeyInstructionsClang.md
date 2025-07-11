@@ -14,7 +14,7 @@ Class `ApplyAtomGroup` - This is a scoped helper similar to `ApplyDebugLocation`
 
 `CodeGenFunction::addInstToNewSourceAtom(llvm::Instruction *KeyInstruction, llvm::Value *Backup)` adds an instruction (and a backup instruction if non-null) to a new "atom group". Currently mostly used in loop handling code.
 
-There are a couple of other helpers, including `addRetToOverrideOrNewSourceAtom` used for `rets` which is covered in the examples below.
+There are a couple of other helpers, including `addInstToSpecificSourceAtom` used for `rets` which is covered in the examples below.
 
 ## Examples
 
@@ -41,80 +41,6 @@ entry:
 
 The store is the key instruction for the assignment (`atomGroup` 1). The instruction corresponding to the final (and in this case only) RHS value, the load from `%a.addr`, is a good backup location for `is_stmt` if the store gets optimized away. It's part of the same source atom, but has lower `is_stmt` precedence, so it gets a higher `atomRank`.
 
-This is all handled during CodeGen. The atom group is set here:
-```
->  clang::CodeGen::ApplyAtomGroup::ApplyAtomGroup(clang::CodeGen::CGDebugInfo * DI) Line 187
-   clang::CodeGen::CodeGenFunction::EmitAutoVarInit(const clang::CodeGen::CodeGenFunction::AutoVarEmission & emission) Line 1961
-   clang::CodeGen::CodeGenFunction::EmitAutoVarDecl(const clang::VarDecl & D) Line 1361
-   clang::CodeGen::CodeGenFunction::EmitVarDecl(const clang::VarDecl & D) Line 219
-   clang::CodeGen::CodeGenFunction::EmitDecl(const clang::Decl & D) Line 164
-   clang::CodeGen::CodeGenFunction::EmitDeclStmt(const clang::DeclStmt & S) Line 1611
-   clang::CodeGen::CodeGenFunction::EmitSimpleStmt(const clang::Stmt * S, llvm::ArrayRef<clang::Attr const *> Attrs) Line 466
-   clang::CodeGen::CodeGenFunction::EmitStmt(const clang::Stmt * S, llvm::ArrayRef<clang::Attr const *> Attrs) Line 72
-   clang::CodeGen::CodeGenFunction::EmitCompoundStmtWithoutScope(const clang::CompoundStmt & S, bool GetLast, clang::CodeGen::AggValueSlot AggSlot) Line 556+
-   clang::CodeGen::CodeGenFunction::EmitFunctionBody(const clang::Stmt * Body) Line 1307
-```
+The implicit return is also key (`atomGroup` 2) so that it's stepped on, to match existing non-key-instructions behaviour. This is achieved by calling  `addInstToNewSourceAtom` from within `EmitFunctionEpilog`.
 
-And the DILocations are updated here:
-```
->  clang::CodeGen::CodeGenFunction::addInstToCurrentSourceAtom(llvm::Instruction * KeyInstruction, llvm::Value * Backup, unsigned char KeyInstRank) Line 2551
-   clang::CodeGen::CodeGenFunction::EmitStoreOfScalar(llvm::Value * Value, clang::CodeGen::Address Addr, bool Volatile, clang::QualType Ty, clang::CodeGen::LValueBaseInfo BaseInfo, clang::CodeGen::TBAAAccessInfo TBAAInfo, bool isInit, bool isNontemporal) Line 2133
-   clang::CodeGen::CodeGenFunction::EmitStoreOfScalar(llvm::Value * value, clang::CodeGen::LValue lvalue, bool isInit) Line 2152
-   clang::CodeGen::CodeGenFunction::EmitStoreThroughLValue(clang::CodeGen::RValue Src, clang::CodeGen::LValue Dst, bool isInit) Line 2478
-   clang::CodeGen::CodeGenFunction::EmitScalarInit(const clang::Expr * init, const clang::ValueDecl * D, clang::CodeGen::LValue lvalue, bool capturedByInit) Line 805
-   clang::CodeGen::CodeGenFunction::EmitExprAsInit(const clang::Expr * init, const clang::ValueDecl * D, clang::CodeGen::LValue lvalue, bool capturedByInit) Line 2088
-   clang::CodeGen::CodeGenFunction::EmitAutoVarInit(const clang::CodeGen::CodeGenFunction::AutoVarEmission & emission) Line 2050
-   clang::CodeGen::CodeGenFunction::EmitAutoVarDecl(const clang::VarDecl & D) Line 1361
-   clang::CodeGen::CodeGenFunction::EmitVarDecl(const clang::VarDecl & D) Line 219
-   clang::CodeGen::CodeGenFunction::EmitDecl(const clang::Decl & D) Line 164
-   clang::CodeGen::CodeGenFunction::EmitDeclStmt(const clang::DeclStmt & S) Line 1611
-   clang::CodeGen::CodeGenFunction::EmitSimpleStmt(const clang::Stmt * S, llvm::ArrayRef<clang::Attr const *> Attrs) Line 466
-   clang::CodeGen::CodeGenFunction::EmitStmt(const clang::Stmt * S, llvm::ArrayRef<clang::Attr const *> Attrs) Line 72
-   clang::CodeGen::CodeGenFunction::EmitCompoundStmtWithoutScope(const clang::CompoundStmt & S, bool GetLast, clang::CodeGen::AggValueSlot AggSlot) Line 556
-   clang::CodeGen::CodeGenFunction::EmitFunctionBody(const clang::Stmt * Body) Line 1307
-
-```
-
-The implicit return is also key (`atomGroup` 2) so that it's stepped on, to match existing non-key-instructions behaviour.
-
-```
->  clang::CodeGen::CodeGenFunction::addRetToOverrideOrNewSourceAtom(llvm::ReturnInst * Ret, llvm::Value * Backup, unsigned char KeyInstRank) Line 2567
-   clang::CodeGen::CodeGenFunction::EmitFunctionEpilog(const clang::CodeGen::CGFunctionInfo & FI, bool EmitRetDbgLoc, clang::SourceLocation EndLoc) Line 3839
-   clang::CodeGen::CodeGenFunction::FinishFunction(clang::SourceLocation EndLoc) Line 433
-```
-
-`addRetToOverrideOrNewSourceAtom` is a special function used for handling `ret`s. In this case it simply replaces the DILocation with the `atomGroup` and `atomRank` set, adding it to its own atom.
-
-To demonstrate why `ret`s need special handling, we need to look at a more "complex" example, below.
-
-```
-int fun(int a) {
-  return a;
-}
-```
-
-Rather than emit a `ret` for each `return` Clang, in all but the simplest cases (as in the first example) emits a branch to a dedicated block with a single `ret`. That branch is the key instruction for the return statement. If there's only one branch to that block, because there's only one `return` (as in this example), Clang folds the block into its only predecessor. We need to do some accounting to transfer the `atomGroup` number to the `ret` when that happens:
-
-When we hit the special-casing code that knows we've only got one block (the IR looks like this):
-```
-entry:
-  %a.addr = alloca i32, align 4
-  %allocapt = bitcast i32 undef to i32
-  store i32 %a, ptr %a.addr, align 4
-  br label %return, !dbg !6
-```
-
-...remember the branch-to-return-block's `atomGroup`:
-
-```
->  clang::CodeGen::CGDebugInfo::setRetInstSourceAtomOverride(unsigned __int64 Group) Line 168
-   clang::CodeGen::CodeGenFunction::EmitReturnBlock() Line 332
-   clang::CodeGen::CodeGenFunction::FinishFunction(clang::SourceLocation EndLoc) Line 415
-```
-
-And apply it to the `ret` when it's added:
-```
->  clang::CodeGen::CodeGenFunction::addRetToOverrideOrNewSourceAtom(llvm::ReturnInst * Ret, llvm::Value * Backup, unsigned char KeyInstRank) Line 2567
-   clang::CodeGen::CodeGenFunction::EmitFunctionEpilog(const clang::CodeGen::CGFunctionInfo & FI, bool EmitRetDbgLoc, clang::SourceLocation EndLoc) Line 3839
-   clang::CodeGen::CodeGenFunction::FinishFunction(clang::SourceLocation EndLoc) Line 433
-```
+Explicit return statements are handled uniquely. Rather than emit a `ret` for each `return` Clang, in all but the simplest cases (as in the first example) emits a branch to a dedicated block with a single `ret`. That branch is the key instruction for the return statement. If there's only one branch to that block, because there's only one `return` (as in this example), Clang folds the block into its only predecessor. Handily `EmitReturnBlock` returns the `DebugLoc` associated with the single branch in that case, which is fed into `addInstToSpecificSourceAtom` to ensure the `ret` gets the right group.
