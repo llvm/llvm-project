@@ -1305,44 +1305,44 @@ class QCScaledStPat<PatFrag StoreOp, RVInst Inst>
           (Inst GPR:$rd, GPRMem:$rs1, GPRNoX0:$rs2, uimm3:$shamt)>;
 
 class QCIMVCCPat<CondCode Cond, QCIMVCC Inst>
-    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rs1), (XLenVT GPRNoX0:$rs2), Cond)), (XLenVT GPRNoX0:$rs3), (XLenVT GPRNoX0:$rd)),
+    : Pat<(select (i32 (setcc (i32 GPRNoX0:$rs1), (i32 GPRNoX0:$rs2), Cond)), (i32 GPRNoX0:$rs3), (i32 GPRNoX0:$rd)),
           (Inst GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, GPRNoX0:$rs3)>;
 
 class QCIMVCCIPat<CondCode Cond, QCIMVCCI Inst, DAGOperand InTyImm>
-    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rs1), InTyImm:$imm, Cond)), (XLenVT GPRNoX0:$rs3), (XLenVT GPRNoX0:$rd)),
+    : Pat<(select (i32 (setcc (i32 GPRNoX0:$rs1), InTyImm:$imm, Cond)), (i32 GPRNoX0:$rs3), (i32 GPRNoX0:$rd)),
           (Inst GPRNoX0:$rd, GPRNoX0:$rs1, InTyImm:$imm, GPRNoX0:$rs3)>;
 
 class QCISELECTCCIPat<CondCode Cond, QCISELECTCCI Inst>
-    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rd), simm5:$imm, Cond)), (XLenVT GPRNoX0:$rs2), (XLenVT GPRNoX0:$rs3)),
+    : Pat<(select (i32 (setcc (i32 GPRNoX0:$rd), simm5:$imm, Cond)), (i32 GPRNoX0:$rs2), (i32 GPRNoX0:$rs3)),
           (Inst GPRNoX0:$rd, simm5:$imm, GPRNoX0:$rs2, GPRNoX0:$rs3)>;
 
 class QCISELECTICCIPat<CondCode Cond, QCISELECTICCI Inst>
-    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rd), simm5:$imm, Cond)), (XLenVT GPRNoX0:$rs2), simm5:$simm2),
+    : Pat<(select (i32 (setcc (i32 GPRNoX0:$rd), simm5:$imm, Cond)), (i32 GPRNoX0:$rs2), simm5:$simm2),
           (Inst GPRNoX0:$rd, simm5:$imm, GPRNoX0:$rs2, simm5:$simm2)>;
 
 class QCISELECTICCIPatInv<CondCode Cond, QCISELECTICCI Inst>
-    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rd), simm5:$imm, Cond)), simm5:$simm2, (XLenVT GPRNoX0:$rs2)),
+    : Pat<(select (i32 (setcc (i32 GPRNoX0:$rd), simm5:$imm, Cond)), simm5:$simm2, (i32 GPRNoX0:$rs2)),
           (Inst GPRNoX0:$rd, simm5:$imm, GPRNoX0:$rs2, simm5:$simm2)>;
 
 class QCISELECTICCPat<CondCode Cond, QCISELECTICC Inst>
-    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rd), (XLenVT GPRNoX0:$rs1), Cond)), (XLenVT GPRNoX0:$rs2), simm5:$simm2),
+    : Pat<(select (i32 (setcc (i32 GPRNoX0:$rd), (i32 GPRNoX0:$rs1), Cond)), (i32 GPRNoX0:$rs2), simm5:$simm2),
           (Inst GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, simm5:$simm2)>;
 
 class QCISELECTICCPatInv<CondCode Cond, QCISELECTICC Inst>
-    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rd), (XLenVT GPRNoX0:$rs1), Cond)), simm5:$simm2, (XLenVT GPRNoX0:$rs2)),
+    : Pat<(select (i32 (setcc (i32 GPRNoX0:$rd), (i32 GPRNoX0:$rs1), Cond)), simm5:$simm2, (i32 GPRNoX0:$rs2)),
           (Inst GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, simm5:$simm2)>;
 
 class QCISELECTIICCPat<CondCode Cond, QCISELECTIICC Inst>
-    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rd), (XLenVT GPRNoX0:$rs1), Cond)), simm5:$simm1, simm5:$simm2),
+    : Pat<(select (i32 (setcc (i32 GPRNoX0:$rd), (i32 GPRNoX0:$rs1), Cond)), simm5:$simm1, simm5:$simm2),
           (Inst GPRNoX0:$rd, GPRNoX0:$rs1, simm5:$simm1, simm5:$simm2)>;
 
 // Match `riscv_brcc` and lower to the appropriate XQCIBI branch instruction.
 class BcciPat<CondCode Cond, QCIBranchInst_rii Inst, DAGOperand InTyImm>
-    : Pat<(riscv_brcc (XLenVT GPRNoX0:$rs1), InTyImm:$rs2, Cond, bb:$imm12),
+    : Pat<(riscv_brcc (i32 GPRNoX0:$rs1), InTyImm:$rs2, Cond, bb:$imm12),
           (Inst GPRNoX0:$rs1, InTyImm:$rs2, bare_simm13_lsb0_bb:$imm12)>;
 
 class Bcci48Pat<CondCode Cond, QCIBranchInst48_rii Inst, DAGOperand InTyImm>
-    : Pat<(riscv_brcc (XLenVT GPRNoX0:$rs1), InTyImm:$rs2, Cond, bb:$imm12),
+    : Pat<(riscv_brcc (i32 GPRNoX0:$rs1), InTyImm:$rs2, Cond, bb:$imm12),
           (Inst GPRNoX0:$rs1, InTyImm:$rs2, bare_simm13_lsb0_bb:$imm12)>;
 
 defm CC_SImm5NonZero_QC  : SelectCC_GPR_riirr<GPRNoX0, simm5nonzero>;
@@ -1357,7 +1357,7 @@ class SelectQCbi<CondCode Cond, DAGOperand InTyImm, Pseudo OpNode >
            (IntCCtoRISCVCC $cc), GPRNoX0:$truev, GPRNoX0:$falsev)>;
 
 let Predicates = [HasVendorXqciac, IsRV32] in {
-def : Pat<(XLenVT (add GPRNoX0:$rd, (mul GPRNoX0:$rs1, simm12:$imm12))),
+def : Pat<(i32 (add GPRNoX0:$rd, (mul GPRNoX0:$rs1, simm12:$imm12))),
           (QC_MULIADD GPRNoX0:$rd, GPRNoX0:$rs1, simm12:$imm12)>;
 } // Predicates = [HasVendorXqciac, IsRV32]
 
@@ -1476,8 +1476,8 @@ let Predicates = [HasVendorXqciint, IsRV32] in
 def : Pat<(riscv_mileaveret_glue), (QC_C_MILEAVERET)>;
 
 let Predicates = [HasVendorXqcicm, IsRV32] in {
-def : Pat<(select (XLenVT GPRNoX0:$rs1), (XLenVT GPRNoX0:$rd),(XLenVT GPRNoX0:$rs3)),
-          (QC_MVEQI GPRNoX0:$rd, GPRNoX0:$rs1, (XLenVT 0), GPRNoX0:$rs3)>;
+def : Pat<(select (i32 GPRNoX0:$rs1), (i32 GPRNoX0:$rd),(i32 GPRNoX0:$rs3)),
+          (QC_MVEQI GPRNoX0:$rd, GPRNoX0:$rs1, (i32 0), GPRNoX0:$rs3)>;
 
 def : QCIMVCCPat <SETEQ,  QC_MVEQ>;
 def : QCIMVCCPat <SETNE,  QC_MVNE>;
@@ -1491,12 +1491,12 @@ def : QCIMVCCIPat <SETULT, QC_MVLTUI, uimm5>;
 }
 
 let Predicates = [HasVendorXqcics, IsRV32] in {
-def : Pat<(select (XLenVT GPRNoX0:$rd), (XLenVT GPRNoX0:$rs2),(XLenVT GPRNoX0:$rs3)),
-          (QC_SELECTNEI GPRNoX0:$rd, (XLenVT 0), GPRNoX0:$rs2, GPRNoX0:$rs3)>;
-def : Pat<(select (XLenVT GPRNoX0:$rd), (XLenVT GPRNoX0:$rs2), simm5:$simm2),
-          (QC_SELECTINEI GPRNoX0:$rd, (XLenVT 0), GPRNoX0:$rs2, simm5:$simm2)>;
-def : Pat<(select (XLenVT GPRNoX0:$rd), simm5:$simm2,(XLenVT GPRNoX0:$rs2)),
-          (QC_SELECTIEQI GPRNoX0:$rd, (XLenVT 0), GPRNoX0:$rs2, simm5:$simm2)>;
+def : Pat<(select (i32 GPRNoX0:$rd), (i32 GPRNoX0:$rs2),(i32 GPRNoX0:$rs3)),
+          (QC_SELECTNEI GPRNoX0:$rd, (i32 0), GPRNoX0:$rs2, GPRNoX0:$rs3)>;
+def : Pat<(select (i32 GPRNoX0:$rd), (i32 GPRNoX0:$rs2), simm5:$simm2),
+          (QC_SELECTINEI GPRNoX0:$rd, (i32 0), GPRNoX0:$rs2, simm5:$simm2)>;
+def : Pat<(select (i32 GPRNoX0:$rd), simm5:$simm2,(i32 GPRNoX0:$rs2)),
+          (QC_SELECTIEQI GPRNoX0:$rd, (i32 0), GPRNoX0:$rs2, simm5:$simm2)>;
 
 // Below AddedComplexity is added to prefer these conditional select instructions over
 // conditional move instructions
