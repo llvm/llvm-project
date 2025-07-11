@@ -1,4 +1,4 @@
-// RUN: mlir-opt --spirv-attach-target='caps=Shader exts=SPV_KHR_storage_buffer_storage_class' --convert-gpu-to-spirv %s -o - | FileCheck %s
+// RUN: mlir-opt --spirv-attach-target='caps=Shader exts=SPV_KHR_storage_buffer_storage_class' --convert-gpu-to-spirv %s | FileCheck %s
 
 module attributes {gpu.container_module} {
   // CHECK-LABEL: spirv.module @{{.*}} GLSL450
