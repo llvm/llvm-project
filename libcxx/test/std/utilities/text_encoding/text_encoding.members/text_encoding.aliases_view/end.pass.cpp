@@ -20,18 +20,17 @@
 #include <ranges>
 #include <text_encoding>
 
-
 int main() {
-  auto te1 = std::text_encoding("US-ASCII");
-  auto te2 = std::text_encoding("UTF_8");
+  auto te1      = std::text_encoding("US-ASCII");
+  auto te2      = std::text_encoding("UTF_8");
   auto other_te = std::text_encoding(std::text_encoding::other);
   auto a_1 = te1.aliases(), a_2 = te2.aliases();
   auto a_other = other_te.aliases();
 
   auto iter1 = a_1.begin(), iter2 = a_2.begin();
-  // 1. 
+  // 1.
   assert(a_other.begin() == a_other.end());
-  
+
   // 2.
   assert((iter1 + 1000) == std::ranges::end(a_1));
   assert((iter1 + 1000) == a_1.end());

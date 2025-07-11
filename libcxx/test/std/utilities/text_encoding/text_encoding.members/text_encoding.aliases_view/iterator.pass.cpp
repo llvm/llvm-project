@@ -20,8 +20,8 @@
 constexpr bool iter_test() {
   constexpr int num_ascii_aliases = 11;
 
-  constexpr auto te      = std::text_encoding("US-ASCII"); // 11 aliases
-  constexpr auto te2     = std::text_encoding("ANSI_X3.4-1968");
+  constexpr auto te  = std::text_encoding("US-ASCII"); // 11 aliases
+  constexpr auto te2 = std::text_encoding("ANSI_X3.4-1968");
 
   constexpr auto aliases = te.aliases(), aliases2 = te2.aliases();
   auto begin_ascii = aliases.begin(), begin_ascii2 = aliases2.begin();

@@ -22,7 +22,6 @@
 #include <ranges>
 #include <text_encoding>
 
-
 using id = std::text_encoding::id;
 
 int main() {
