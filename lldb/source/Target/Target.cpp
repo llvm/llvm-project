@@ -4820,10 +4820,13 @@ uint32_t TargetProperties::GetMaxZeroPaddingInFloatFormat() const {
       idx, g_target_properties[idx].default_uint_value);
 }
 
-uint32_t TargetProperties::GetMaximumNumberOfChildrenToDisplay() const {
+std::pair<uint32_t, bool>
+TargetProperties::GetMaximumNumberOfChildrenToDisplay() const {
   const uint32_t idx = ePropertyMaxChildrenCount;
-  return GetPropertyAtIndexAs<uint64_t>(
-      idx, g_target_properties[idx].default_uint_value);
+  auto *option_value =
+      m_collection_sp->GetPropertyAtIndexAsOptionValueUInt64(idx);
+  bool is_default = !option_value->OptionWasSet();
+  return {option_value->GetCurrentValue(), is_default};
 }
 
 std::pair<uint32_t, bool>
