@@ -110,8 +110,8 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   // if |x| <= 0.5:
   if (LIBC_UNLIKELY(x_abs <= 0.5f16)) {
     // Use polynomial approximation of asin(x)/pi in the range [0, 0.5]
-    double result = asinpi_polyeval(fputil::cast<double>(x_abs));
-    return fputil::cast<float16>(signed_result(result));
+    double result = asinpi_polyeval(fputil::cast<double>(x));
+    return fputil::cast<float16>(result);
   }
 
   // If |x| > 0.5, we need to use the range reduction method:
