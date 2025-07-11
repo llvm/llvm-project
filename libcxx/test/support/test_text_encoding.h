@@ -21,7 +21,7 @@ struct encoding_data {
   int size;
 };
 
-constexpr encoding_data all_encoding_data[] {
+constexpr encoding_data all_encoding_data[]{
     {"US-ASCII", 3, 8},
     {"iso-ir-6", 3, 8},
     {"ANSI_X3.4-1968", 3, 14},
@@ -1165,20 +1165,18 @@ constexpr const encoding_data unique_encoding_data[]{
     {"CP50220", 2260, 7},
 };
 
-constexpr const char* other_names[]
-{
-  "graah",
-  "oops",
-  "libcxx",
-  "foobar",
-  "barbaz",
-  "1234567",
-  "llvm-project"
-  "github.com/llvm/llvm-project"
-  "utf-81",
-  "utf-9",
-  "CA-ASCII"
-};
+constexpr const char* other_names[]{
+    "graah",
+    "oops",
+    "libcxx",
+    "foobar",
+    "barbaz",
+    "1234567",
+    "llvm-project"
+    "github.com/llvm/llvm-project"
+    "utf-81",
+    "utf-9",
+    "CA-ASCII"};
 
 inline bool checkTextEncoding(std::text_encoding te1, std::text_encoding te2) {
   if (te1 != te2) {
