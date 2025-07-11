@@ -57,6 +57,7 @@ define void @foo() {
   AM.registerPass([] { return AssumptionAnalysis(); });
   AM.registerPass([] { return DominatorTreeAnalysis(); });
   AM.registerPass([] { return LoopAnalysis(); });
+  AM.registerPass([] { return OptimizationRemarkEmitterAnalysis(); });
   SVecPass.run(LLVMF, AM);
   // This shouldn't crash.
   SVecPass.run(LLVMF, AM);

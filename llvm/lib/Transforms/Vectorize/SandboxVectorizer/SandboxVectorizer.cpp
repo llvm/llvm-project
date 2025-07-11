@@ -72,6 +72,7 @@ PreservedAnalyses SandboxVectorizerPass::run(Function &F,
   TTI = &AM.getResult<TargetIRAnalysis>(F);
   AA = &AM.getResult<AAManager>(F);
   SE = &AM.getResult<ScalarEvolutionAnalysis>(F);
+  ORE = &AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
   bool Changed = runImpl(F);
   if (!Changed)
@@ -133,7 +134,7 @@ bool SandboxVectorizerPass::runImpl(Function &LLVMF) {
 
   // Create SandboxIR for LLVMF and run BottomUpVec on it.
   sandboxir::Function &F = *Ctx->createFunction(&LLVMF);
-  sandboxir::Analyses A(*AA, *SE, *TTI);
+  sandboxir::Analyses A(*AA, *SE, *TTI, *ORE);
   bool Change = FPM.runOnFunction(F, A);
   // Given that sandboxir::Context `Ctx` is defined at a pass-level scope, the
   // maps from LLVM IR to Sandbox IR may go stale as later passes remove LLVM IR
