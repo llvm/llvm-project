@@ -29,8 +29,12 @@ extern uptr kHighMemEnd; // Initialized in __memprof_init.
 } // namespace __memprof
 
 // Size of memory block mapped to a single shadow location
+#if SANITIZER_APPLE
+#define MEM_GRANULARITY 8ULL
+#define MEM_GRANULARITY_8_MAX_COUNTER 255U
+#else
 #define MEM_GRANULARITY 64ULL
-
+#endif
 #define SHADOW_MASK ~(MEM_GRANULARITY - 1)
 
 #define MEM_TO_SHADOW(mem)                                                     \
@@ -129,7 +133,13 @@ inline bool AddrIsAlignedByGranularity(uptr a) {
 }
 
 inline void RecordAccess(uptr a) {
-  // If we use a different shadow size then the type below needs adjustment.
+// If we use a different shadow size then the type below needs adjustment.
+#if SANITIZER_APPLE
+  CHECK_EQ(SHADOW_ENTRY_SIZE, 1);
+  u8 *shadow_address = (u8 *)MEM_TO_SHADOW(a);
+  if (*shadow_address < MEM_GRANULARITY_8_MAX_COUNTER)
+    (*shadow_address)++;
+#else
   CHECK_EQ(SHADOW_ENTRY_SIZE, 8);
   u64 *shadow_address = (u64 *)MEM_TO_SHADOW(a);
   (*shadow_address)++;

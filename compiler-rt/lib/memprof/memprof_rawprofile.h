@@ -10,6 +10,12 @@ namespace __memprof {
 // binary format. The format itself is documented memprof_rawprofile.cpp.
 u64 SerializeToRawProfile(MIBMapTy &BlockCache, ArrayRef<LoadedModule> Modules,
                           char *&Buffer);
+// Serialize the in-memory representation of the memprof profile for the binary
+// accesss to the raw binary format. The format itself is documented
+// memprof_rawprofile.cpp.
+u64 SerializeBinaryAccesses(ArrayRef<LoadedModule> Modules, char *&Buffer);
+// Print out the binary accesss profile.
+void DumpBinaryAccesses();
 } // namespace __memprof
 
 #endif // MEMPROF_RAWPROFILE_H_

@@ -90,7 +90,13 @@ static int GetCpuId(void) {
   // will seg fault as the address of __vdso_getcpu will be null.
   if (!memprof_inited)
     return -1;
+#if SANITIZER_APPLE
+  // On Apple platforms, sched_getcpu is not available.
+  // TODO: better way to handle this?
+  return -100;
+#else
   return sched_getcpu();
+#endif
 }
 
 // Compute the timestamp in ms.
@@ -356,11 +362,15 @@ struct Allocator {
 
     InsertLiveBlocks();
     if (flags()->print_text) {
-      if (!flags()->print_terse)
-        Printf("Recorded MIBs (incl. live on exit):\n");
-      MIBMap.ForEach(PrintCallback,
-                     reinterpret_cast<void *>(flags()->print_terse));
-      StackDepotPrintAll();
+      if (flags()->dump_binary_access_profile_only)
+        DumpBinaryAccesses();
+      else {
+        if (!flags()->print_terse)
+          Printf("Recorded MIBs (incl. live on exit):\n");
+        MIBMap.ForEach(PrintCallback,
+                       reinterpret_cast<void *>(flags()->print_terse));
+        StackDepotPrintAll();
+      }
     } else {
       // Serialize the contents to a raw profile. Format documented in
       // memprof_rawprofile.h.
@@ -369,7 +379,11 @@ struct Allocator {
       __sanitizer::ListOfModules List;
       List.init();
       ArrayRef<LoadedModule> Modules(List.begin(), List.end());
-      u64 BytesSerialized = SerializeToRawProfile(MIBMap, Modules, Buffer);
+      u64 BytesSerialized = 0;
+      if (flags()->dump_binary_access_profile_only)
+        BytesSerialized = SerializeBinaryAccesses(Modules, Buffer);
+      else
+        BytesSerialized = SerializeToRawProfile(MIBMap, Modules, Buffer);
       CHECK(Buffer && BytesSerialized && "could not serialize to buffer");
       report_file.Write(Buffer, BytesSerialized);
     }
@@ -764,6 +778,18 @@ uptr memprof_malloc_usable_size(const void *ptr) {
     return 0;
   uptr usable_size = instance.AllocationSize(reinterpret_cast<uptr>(ptr));
   return usable_size;
+}
+
+uptr memprof_mz_size(const void *ptr) {
+  return instance.AllocationSize(reinterpret_cast<uptr>(ptr));
+}
+
+void memprof_mz_force_lock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
+  instance.ForceLock();
+}
+
+void memprof_mz_force_unlock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
+  instance.ForceUnlock();
 }
 
 } // namespace __memprof
