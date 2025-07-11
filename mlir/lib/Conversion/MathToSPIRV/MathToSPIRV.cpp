@@ -37,11 +37,11 @@ static Value getScalarOrVectorI32Constant(Type type, int value,
       return nullptr;
     SmallVector<int> values(vectorType.getNumElements(), value);
     return spirv::ConstantOp::create(builder, loc, type,
-                                             builder.getI32VectorAttr(values));
+                                     builder.getI32VectorAttr(values));
   }
   if (type.isInteger(32))
     return spirv::ConstantOp::create(builder, loc, type,
-                                             builder.getI32IntegerAttr(value));
+                                     builder.getI32IntegerAttr(value));
 
   return nullptr;
 }
@@ -144,10 +144,11 @@ struct CopySignPattern final : public OpConversionPattern<math::CopySignOp> {
     Type intType = rewriter.getIntegerType(bitwidth);
     uint64_t intValue = uint64_t(1) << (bitwidth - 1);
 
-    Value signMask = spirv::ConstantOp::create(rewriter,
-        loc, intType, rewriter.getIntegerAttr(intType, intValue));
-    Value valueMask = spirv::ConstantOp::create(rewriter,
-        loc, intType, rewriter.getIntegerAttr(intType, intValue - 1u));
+    Value signMask = spirv::ConstantOp::create(
+        rewriter, loc, intType, rewriter.getIntegerAttr(intType, intValue));
+    Value valueMask = spirv::ConstantOp::create(
+        rewriter, loc, intType,
+        rewriter.getIntegerAttr(intType, intValue - 1u));
 
     if (auto vectorType = dyn_cast<VectorType>(type)) {
       assert(vectorType.getRank() == 1);
@@ -155,12 +156,12 @@ struct CopySignPattern final : public OpConversionPattern<math::CopySignOp> {
       intType = VectorType::get(count, intType);
 
       SmallVector<Value> signSplat(count, signMask);
-      signMask =
-          spirv::CompositeConstructOp::create(rewriter, loc, intType, signSplat);
+      signMask = spirv::CompositeConstructOp::create(rewriter, loc, intType,
+                                                     signSplat);
 
       SmallVector<Value> valueSplat(count, valueMask);
       valueMask = spirv::CompositeConstructOp::create(rewriter, loc, intType,
-                                                               valueSplat);
+                                                      valueSplat);
     }
 
     Value lhsCast =
@@ -168,13 +169,13 @@ struct CopySignPattern final : public OpConversionPattern<math::CopySignOp> {
     Value rhsCast =
         spirv::BitcastOp::create(rewriter, loc, intType, adaptor.getRhs());
 
-    Value value = spirv::BitwiseAndOp::create(rewriter,
-        loc, intType, ValueRange{lhsCast, valueMask});
-    Value sign = spirv::BitwiseAndOp::create(rewriter,
-        loc, intType, ValueRange{rhsCast, signMask});
+    Value value = spirv::BitwiseAndOp::create(rewriter, loc, intType,
+                                              ValueRange{lhsCast, valueMask});
+    Value sign = spirv::BitwiseAndOp::create(rewriter, loc, intType,
+                                             ValueRange{rhsCast, signMask});
 
     Value result = spirv::BitwiseOrOp::create(rewriter, loc, intType,
-                                                       ValueRange{value, sign});
+                                              ValueRange{value, sign});
     rewriter.replaceOpWithNewOp<spirv::BitcastOp>(copySignOp, type, result);
     return success();
   }
@@ -321,15 +322,15 @@ struct Log2Log10OpPattern final : public OpConversionPattern<MathLogOp> {
 
     auto getConstantValue = [&](double value) {
       if (auto floatType = dyn_cast<FloatType>(type)) {
-        return spirv::ConstantOp::create(rewriter,
-            loc, type, rewriter.getFloatAttr(floatType, value));
+        return spirv::ConstantOp::create(
+            rewriter, loc, type, rewriter.getFloatAttr(floatType, value));
       }
       if (auto vectorType = dyn_cast<VectorType>(type)) {
         Type elemType = vectorType.getElementType();
 
         if (isa<FloatType>(elemType)) {
-          return spirv::ConstantOp::create(rewriter,
-              loc, type,
+          return spirv::ConstantOp::create(
+              rewriter, loc, type,
               DenseFPElementsAttr::get(
                   vectorType, FloatAttr::get(elemType, value).getValue()));
         }
@@ -408,8 +409,9 @@ struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
 
     Value NanValue =
         spirv::ConstantOp::create(rewriter, loc, operandType, nanAttr);
-    Value lhs = spirv::SelectOp::create(rewriter,
-        loc, cmpNegativeWithFractionalExp, NanValue, adaptor.getLhs());
+    Value lhs =
+        spirv::SelectOp::create(rewriter, loc, cmpNegativeWithFractionalExp,
+                                NanValue, adaptor.getLhs());
     Value abs = spirv::GLFAbsOp::create(rewriter, loc, lhs);
 
     // TODO: The following just forcefully casts y into an integer value in
@@ -455,13 +457,13 @@ struct RoundOpPattern final : public OpConversionPattern<math::RoundOp> {
     auto one = spirv::ConstantOp::getOne(ty, loc, rewriter);
     Value half;
     if (VectorType vty = dyn_cast<VectorType>(ty)) {
-      half = spirv::ConstantOp::create(rewriter,
-          loc, vty,
+      half = spirv::ConstantOp::create(
+          rewriter, loc, vty,
           DenseElementsAttr::get(vty,
                                  rewriter.getFloatAttr(ety, 0.5).getValue()));
     } else {
-      half = spirv::ConstantOp::create(rewriter,
-          loc, ty, rewriter.getFloatAttr(ety, 0.5));
+      half = spirv::ConstantOp::create(rewriter, loc, ty,
+                                       rewriter.getFloatAttr(ety, 0.5));
     }
 
     auto abs = spirv::GLFAbsOp::create(rewriter, loc, operand);

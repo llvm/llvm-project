@@ -170,8 +170,8 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
   if (llvm::isa<RankedTensorType>(shapedValue.getType())) {
     tensor = shapedValue;
   } else if (llvm::isa<MemRefType>(shapedValue.getType())) {
-    tensor = ToTensorOp::create(b,
-        loc, memref::getTensorTypeFromMemRefType(shapedValue.getType()),
+    tensor = ToTensorOp::create(
+        b, loc, memref::getTensorTypeFromMemRefType(shapedValue.getType()),
         shapedValue);
   } else if (llvm::isa<UnrankedTensorType>(shapedValue.getType()) ||
              llvm::isa<UnrankedMemRefType>(shapedValue.getType())) {
@@ -210,7 +210,7 @@ FailureOr<Value> bufferization::allocateTensorForShapedValue(
 
   // Create AllocTensorOp.
   auto allocTensorOp = AllocTensorOp::create(b, loc, tensorType, dynamicSizes,
-                                               copy ? tensor : Value());
+                                             copy ? tensor : Value());
 
   // Add 'memory_space' attribute. Not needed if 'copy' operand is specified.
   if (copy)
@@ -753,8 +753,8 @@ void bufferization::replaceOpWithBufferizedValues(RewriterBase &rewriter,
       // ToTensorOp. Throughout bufferization, this ToTensorOp will gradually
       // loose all of its users and eventually DCE away.
       rewriter.setInsertionPointAfter(op);
-      replacement = bufferization::ToTensorOp::create(rewriter,
-          replacement.getLoc(), opResult.getType(), replacement);
+      replacement = bufferization::ToTensorOp::create(
+          rewriter, replacement.getLoc(), opResult.getType(), replacement);
     }
     replacements.push_back(replacement);
   }

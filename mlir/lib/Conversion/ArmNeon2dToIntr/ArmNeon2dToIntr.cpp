@@ -44,8 +44,8 @@ public:
         vector::ShapeCastOp::create(rewriter, loc, flattenedVectorType, b2d);
     Value c1d =
         vector::ShapeCastOp::create(rewriter, loc, flattenedVectorType, c2d);
-    Value newOp = SdotOp::create(rewriter, loc, op.getRes().getType(), op.getA(),
-                                          b1d, c1d);
+    Value newOp = SdotOp::create(rewriter, loc, op.getRes().getType(),
+                                 op.getA(), b1d, c1d);
     rewriter.replaceOp(op, {newOp});
     return success();
   }

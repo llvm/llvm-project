@@ -156,7 +156,7 @@ public:
     Value step =
         arith::ConstantIndexOp::create(rewriter, loc, op.getStepAsInt());
     auto scfForOp = scf::ForOp::create(rewriter, loc, lowerBound, upperBound,
-                                                step, op.getInits());
+                                       step, op.getInits());
     rewriter.eraseBlock(scfForOp.getBody());
     rewriter.inlineRegionBefore(op.getRegion(), scfForOp.getRegion(),
                                 scfForOp.getRegion().end());
@@ -206,8 +206,8 @@ public:
     if (op.getResults().empty()) {
       // Case with no reduction operations/return values.
       parOp = scf::ParallelOp::create(rewriter, loc, lowerBoundTuple,
-                                               upperBoundTuple, steps,
-                                               /*bodyBuilderFn=*/nullptr);
+                                      upperBoundTuple, steps,
+                                      /*bodyBuilderFn=*/nullptr);
       rewriter.eraseBlock(parOp.getBody());
       rewriter.inlineRegionBefore(op.getRegion(), parOp.getRegion(),
                                   parOp.getRegion().end());
@@ -233,9 +233,9 @@ public:
       identityVals.push_back(
           arith::getIdentityValue(reductionOpValue, resultType, rewriter, loc));
     }
-    parOp = scf::ParallelOp::create(rewriter,
-        loc, lowerBoundTuple, upperBoundTuple, steps, identityVals,
-        /*bodyBuilderFn=*/nullptr);
+    parOp = scf::ParallelOp::create(rewriter, loc, lowerBoundTuple,
+                                    upperBoundTuple, steps, identityVals,
+                                    /*bodyBuilderFn=*/nullptr);
 
     //  Copy the body of the affine.parallel op.
     rewriter.eraseBlock(parOp.getBody());
@@ -299,17 +299,17 @@ public:
           isEquality ? arith::CmpIPredicate::eq : arith::CmpIPredicate::sge;
       Value cmpVal =
           arith::CmpIOp::create(rewriter, loc, pred, affResult, zeroConstant);
-      cond = cond
-                 ? arith::AndIOp::create(rewriter, loc, cond, cmpVal).getResult()
-                 : cmpVal;
+      cond =
+          cond ? arith::AndIOp::create(rewriter, loc, cond, cmpVal).getResult()
+               : cmpVal;
     }
     cond = cond ? cond
                 : arith::ConstantIntOp::create(rewriter, loc, /*value=*/1,
-                                                        /*width=*/1);
+                                               /*width=*/1);
 
     bool hasElseRegion = !op.getElseRegion().empty();
     auto ifOp = scf::IfOp::create(rewriter, loc, op.getResultTypes(), cond,
-                                           hasElseRegion);
+                                  hasElseRegion);
     rewriter.inlineRegionBefore(op.getThenRegion(),
                                 &ifOp.getThenRegion().back());
     rewriter.eraseBlock(&ifOp.getThenRegion().back());

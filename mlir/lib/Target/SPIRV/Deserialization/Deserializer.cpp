@@ -518,8 +518,8 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
   }
 
   std::string fnName = getFunctionSymbol(fnID);
-  auto funcOp = spirv::FuncOp::create(opBuilder,
-      unknownLoc, fnName, functionType, fnControl.value());
+  auto funcOp = spirv::FuncOp::create(opBuilder, unknownLoc, fnName,
+                                      functionType, fnControl.value());
   // Processing other function attributes.
   if (decorations.count(fnID)) {
     for (auto attr : decorations[fnID].getAttrs()) {
@@ -707,7 +707,7 @@ spirv::Deserializer::createSpecConstant(Location loc, uint32_t resultID,
                                         TypedAttr defaultValue) {
   auto symName = opBuilder.getStringAttr(getSpecConstantSymbol(resultID));
   auto op = spirv::SpecConstantOp::create(opBuilder, unknownLoc, symName,
-                                                    defaultValue);
+                                          defaultValue);
   if (decorations.count(resultID)) {
     for (auto attr : decorations[resultID].getAttrs())
       op->setAttr(attr.getName(), attr.getValue());
@@ -782,9 +782,9 @@ spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
            << wordIndex << " of " << operands.size() << " processed";
   }
   auto loc = createFileLineColLoc(opBuilder);
-  auto varOp = spirv::GlobalVariableOp::create(opBuilder,
-      loc, TypeAttr::get(type), opBuilder.getStringAttr(variableName),
-      initializer);
+  auto varOp = spirv::GlobalVariableOp::create(
+      opBuilder, loc, TypeAttr::get(type),
+      opBuilder.getStringAttr(variableName), initializer);
 
   // Decorations.
   if (decorations.count(variableID)) {
@@ -1581,8 +1581,8 @@ spirv::Deserializer::processSpecConstantComposite(ArrayRef<uint32_t> operands) {
     elements.push_back(SymbolRefAttr::get(elementInfo));
   }
 
-  auto op = spirv::SpecConstantCompositeOp::create(opBuilder,
-      unknownLoc, TypeAttr::get(resultType), symName,
+  auto op = spirv::SpecConstantCompositeOp::create(
+      opBuilder, unknownLoc, TypeAttr::get(resultType), symName,
       opBuilder.getArrayAttr(elements));
   specConstCompositeMap[resultID] = op;
 
@@ -1764,8 +1764,8 @@ spirv::Deserializer::processBranchConditional(ArrayRef<uint32_t> operands) {
   // an OpSelectionMerge instruction, in this case they will have the same
   // OpLine information.
   auto loc = createFileLineColLoc(opBuilder);
-  spirv::BranchConditionalOp::create(opBuilder,
-      loc, condition, trueBlock,
+  spirv::BranchConditionalOp::create(
+      opBuilder, loc, condition, trueBlock,
       /*trueArguments=*/ArrayRef<Value>(), falseBlock,
       /*falseArguments=*/ArrayRef<Value>(), weights);
 
@@ -2093,7 +2093,7 @@ LogicalResult ControlFlowStructurizer::structurize() {
     // loop header block.
     builder.setInsertionPointToEnd(&body.front());
     spirv::BranchOp::create(builder, location, mapper.lookupOrNull(headerBlock),
-                                    ArrayRef<Value>(blockArgs));
+                            ArrayRef<Value>(blockArgs));
   }
 
   // Values defined inside the selection region that need to be yielded outside
@@ -2177,12 +2177,12 @@ LogicalResult ControlFlowStructurizer::structurize() {
     Operation *newOp = nullptr;
 
     if (isLoop)
-      newOp = spirv::LoopOp::create(builder,
-          location, TypeRange(ValueRange(outsideUses)),
-          static_cast<spirv::LoopControl>(control));
+      newOp = spirv::LoopOp::create(builder, location,
+                                    TypeRange(ValueRange(outsideUses)),
+                                    static_cast<spirv::LoopControl>(control));
     else
-      newOp = spirv::SelectionOp::create(builder,
-          location, TypeRange(ValueRange(outsideUses)),
+      newOp = spirv::SelectionOp::create(
+          builder, location, TypeRange(ValueRange(outsideUses)),
           static_cast<spirv::SelectionControl>(control));
 
     newOp->getRegion(0).takeBody(body);
@@ -2362,22 +2362,22 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
 
     if (auto branchOp = dyn_cast<spirv::BranchOp>(op)) {
       // Replace the previous branch op with a new one with block arguments.
-      spirv::BranchOp::create(opBuilder, branchOp.getLoc(), branchOp.getTarget(),
-                                        blockArgs);
+      spirv::BranchOp::create(opBuilder, branchOp.getLoc(),
+                              branchOp.getTarget(), blockArgs);
       branchOp.erase();
     } else if (auto branchCondOp = dyn_cast<spirv::BranchConditionalOp>(op)) {
       assert((branchCondOp.getTrueBlock() == target ||
               branchCondOp.getFalseBlock() == target) &&
              "expected target to be either the true or false target");
       if (target == branchCondOp.getTrueTarget())
-        spirv::BranchConditionalOp::create(opBuilder,
-            branchCondOp.getLoc(), branchCondOp.getCondition(), blockArgs,
-            branchCondOp.getFalseBlockArguments(),
+        spirv::BranchConditionalOp::create(
+            opBuilder, branchCondOp.getLoc(), branchCondOp.getCondition(),
+            blockArgs, branchCondOp.getFalseBlockArguments(),
             branchCondOp.getBranchWeightsAttr(), branchCondOp.getTrueTarget(),
             branchCondOp.getFalseTarget());
       else
-        spirv::BranchConditionalOp::create(opBuilder,
-            branchCondOp.getLoc(), branchCondOp.getCondition(),
+        spirv::BranchConditionalOp::create(
+            opBuilder, branchCondOp.getLoc(), branchCondOp.getCondition(),
             branchCondOp.getTrueBlockArguments(), blockArgs,
             branchCondOp.getBranchWeightsAttr(), branchCondOp.getTrueBlock(),
             branchCondOp.getFalseBlock());

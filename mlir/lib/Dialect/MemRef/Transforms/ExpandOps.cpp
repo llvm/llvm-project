@@ -54,8 +54,8 @@ public:
         Value index = arith::ConstantIndexOp::create(rewriter, loc, i);
         size = memref::LoadOp::create(rewriter, loc, op.getShape(), index);
         if (!isa<IndexType>(size.getType()))
-          size = arith::IndexCastOp::create(rewriter,
-              loc, rewriter.getIndexType(), size);
+          size = arith::IndexCastOp::create(rewriter, loc,
+                                            rewriter.getIndexType(), size);
         sizes[i] = size;
       } else {
         auto sizeAttr = rewriter.getIndexAttr(op.getType().getDimSize(i));
@@ -71,8 +71,9 @@ public:
         if (stride) {
           stride = arith::MulIOp::create(rewriter, loc, stride, size);
         } else if (op.getType().isDynamicDim(i)) {
-          stride = arith::MulIOp::create(rewriter,
-              loc, arith::ConstantIndexOp::create(rewriter, loc, staticStride),
+          stride = arith::MulIOp::create(
+              rewriter, loc,
+              arith::ConstantIndexOp::create(rewriter, loc, staticStride),
               size);
         } else {
           staticStride *= op.getType().getDimSize(i);

@@ -381,8 +381,8 @@ FailureOr<Value> combineContractAndBroadcast(vector::ContractionOp contractOp,
   if (getUnusedDimsBitVector({maps[0], maps[1]}).any())
     return failure();
 
-  Operation *newOp = vector::ContractionOp::create(rewriter,
-      contractOp.getLoc(), lhs, rhs, contractOp.getAcc(),
+  Operation *newOp = vector::ContractionOp::create(
+      rewriter, contractOp.getLoc(), lhs, rhs, contractOp.getAcc(),
       rewriter.getAffineMapArrayAttr(maps), rewriter.getArrayAttr(iterators));
 
   // Handle the mask.
@@ -534,8 +534,8 @@ struct ReorderElementwiseOpsOnTranspose final
         // This is a constant. Create a reverse transpose op for it.
         auto vectorType =
             srcType.clone(cast<VectorType>(operand.getType()).getElementType());
-        srcValues.push_back(vector::TransposeOp::create(rewriter,
-            operand.getLoc(), vectorType, operand, invOrder));
+        srcValues.push_back(vector::TransposeOp::create(
+            rewriter, operand.getLoc(), vectorType, operand, invOrder));
       }
     }
 
@@ -608,13 +608,13 @@ struct BubbleDownVectorBitCastForExtract
     // Get the single scalar (as a vector) in the source value that packs the
     // desired scalar. E.g. extract vector<1xf32> from vector<4xf32>
     Location loc = extractOp.getLoc();
-    Value packedValue = vector::ExtractOp::create(rewriter,
-        loc, castOp.getSource(), index / expandRatio);
+    Value packedValue = vector::ExtractOp::create(
+        rewriter, loc, castOp.getSource(), index / expandRatio);
     Type packedVecType = VectorType::get(/*shape=*/{1}, packedValue.getType());
-    Value zero = arith::ConstantOp::create(rewriter,
-        loc, packedVecType, rewriter.getZeroAttr(packedVecType));
+    Value zero = arith::ConstantOp::create(rewriter, loc, packedVecType,
+                                           rewriter.getZeroAttr(packedVecType));
     packedValue = vector::InsertOp::create(rewriter, loc, packedValue, zero,
-                                                    /*position=*/0);
+                                           /*position=*/0);
 
     // Cast it to a vector with the desired scalar's type.
     // E.g. f32 -> vector<2xf16>
@@ -700,9 +700,9 @@ struct BubbleDownBitCastForStridedSliceExtract
     VectorType newExtractType =
         VectorType::get(dims, castSrcType.getElementType());
 
-    auto newExtractOp = vector::ExtractStridedSliceOp::create(rewriter,
-        extractOp.getLoc(), newExtractType, castOp.getSource(), newOffsets,
-        newSizes, extractOp.getStrides());
+    auto newExtractOp = vector::ExtractStridedSliceOp::create(
+        rewriter, extractOp.getLoc(), newExtractType, castOp.getSource(),
+        newOffsets, newSizes, extractOp.getStrides());
 
     rewriter.replaceOpWithNewOp<vector::BitCastOp>(
         extractOp, extractOp.getType(), newExtractOp);
@@ -761,8 +761,9 @@ struct BubbleUpBitCastForInsert : public OpRewritePattern<vector::BitCastOp> {
         isNumElemsShrink ? srcDims.back() / ratio : srcDims.back() * ratio;
     VectorType newCastSrcType =
         VectorType::get(srcDims, castDstType.getElementType());
-    auto newCastSrcOp = vector::BitCastOp::create(rewriter,
-        bitcastOp.getLoc(), newCastSrcType, insertOp.getValueToStore());
+    auto newCastSrcOp =
+        vector::BitCastOp::create(rewriter, bitcastOp.getLoc(), newCastSrcType,
+                                  insertOp.getValueToStore());
 
     SmallVector<int64_t> dstDims(insertOp.getDestVectorType().getShape());
     dstDims.back() =
@@ -771,8 +772,8 @@ struct BubbleUpBitCastForInsert : public OpRewritePattern<vector::BitCastOp> {
         VectorType::get(dstDims, castDstType.getElementType());
 
     // Bitcast the destination.
-    auto newCastDstOp = vector::BitCastOp::create(rewriter,
-        bitcastOp.getLoc(), newCastDstType, insertOp.getDest());
+    auto newCastDstOp = vector::BitCastOp::create(
+        rewriter, bitcastOp.getLoc(), newCastDstType, insertOp.getDest());
 
     // Generate new insert.
     rewriter.replaceOpWithNewOp<vector::InsertOp>(
@@ -852,8 +853,9 @@ struct BubbleUpBitCastForStridedSliceInsert
     VectorType newCastSrcType =
         VectorType::get(srcDims, castDstType.getElementType());
 
-    auto newCastSrcOp = vector::BitCastOp::create(rewriter,
-        bitcastOp.getLoc(), newCastSrcType, insertOp.getValueToStore());
+    auto newCastSrcOp =
+        vector::BitCastOp::create(rewriter, bitcastOp.getLoc(), newCastSrcType,
+                                  insertOp.getValueToStore());
 
     SmallVector<int64_t> dstDims =
         llvm::to_vector<4>(insertOp.getDestVectorType().getShape());
@@ -861,8 +863,8 @@ struct BubbleUpBitCastForStridedSliceInsert
     VectorType newCastDstType =
         VectorType::get(dstDims, castDstType.getElementType());
 
-    auto newCastDstOp = vector::BitCastOp::create(rewriter,
-        bitcastOp.getLoc(), newCastDstType, insertOp.getDest());
+    auto newCastDstOp = vector::BitCastOp::create(
+        rewriter, bitcastOp.getLoc(), newCastDstType, insertOp.getDest());
 
     rewriter.replaceOpWithNewOp<vector::InsertStridedSliceOp>(
         bitcastOp, bitcastOp.getType(), newCastSrcOp, newCastDstOp, newOffsets,
@@ -936,8 +938,8 @@ public:
     Type elemType = castDstType.getElementType();
     assert(elemType.isSignlessIntOrIndexOrFloat());
 
-    Value zero = arith::ConstantOp::create(rewriter,
-        loc, elemType, rewriter.getZeroAttr(elemType));
+    Value zero = arith::ConstantOp::create(rewriter, loc, elemType,
+                                           rewriter.getZeroAttr(elemType));
     Value res = SplatOp::create(rewriter, loc, castDstType, zero);
 
     SmallVector<int64_t> sliceShape = {castDstLastDim};
@@ -947,13 +949,13 @@ public:
                         castDstType.getElementType());
 
     for (int i = 0, e = shrinkRatio; i < e; ++i) {
-      Value extracted = ExtractStridedSliceOp::create(rewriter,
-          loc, bitcastOp.getSource(), ArrayRef<int64_t>{i * castDstLastDim},
-          sliceShape, strides);
+      Value extracted = ExtractStridedSliceOp::create(
+          rewriter, loc, bitcastOp.getSource(),
+          ArrayRef<int64_t>{i * castDstLastDim}, sliceShape, strides);
       Value bitcast =
           BitCastOp::create(rewriter, loc, newCastDstType, extracted);
-      res = InsertStridedSliceOp::create(rewriter,
-          loc, bitcast, res,
+      res = InsertStridedSliceOp::create(
+          rewriter, loc, bitcast, res,
           ArrayRef<int64_t>{i * castDstLastDim / shrinkRatio}, strides);
     }
     rewriter.replaceOp(bitcastOp, res);
@@ -1303,8 +1305,8 @@ static Value buildVectorComparison(PatternRewriter &rewriter, Operation *op,
   Value bound = getValueOrCreateCastToIndexLike(rewriter, loc, idxType, b);
   Value bounds =
       vector::SplatOp::create(rewriter, loc, indices.getType(), bound);
-  return arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt, indices,
-                                        bounds);
+  return arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
+                               indices, bounds);
 }
 
 template <typename ConcreteOp>
@@ -1336,8 +1338,8 @@ public:
     Value dim =
         vector::createOrFoldDimOp(rewriter, loc, xferOp.getBase(), lastIndex);
     Value b = arith::SubIOp::create(rewriter, loc, dim.getType(), dim, off);
-    Value mask = vector::CreateMaskOp::create(rewriter,
-        loc,
+    Value mask = vector::CreateMaskOp::create(
+        rewriter, loc,
         VectorType::get(vtp.getShape(), rewriter.getI1Type(),
                         vtp.getScalableDims()),
         b);
@@ -1548,12 +1550,13 @@ class DropInnerMostUnitDimsTransferRead
         strides);
     ArrayAttr inBoundsAttr = rewriter.getArrayAttr(
         readOp.getInBoundsAttr().getValue().drop_back(dimsToDrop));
-    Value rankedReducedView = memref::SubViewOp::create(rewriter,
-        loc, resultMemrefType, readOp.getBase(), offsets, sizes, strides);
+    Value rankedReducedView =
+        memref::SubViewOp::create(rewriter, loc, resultMemrefType,
+                                  readOp.getBase(), offsets, sizes, strides);
     auto permMap = getTransferMinorIdentityMap(
         cast<ShapedType>(rankedReducedView.getType()), resultTargetVecType);
-    Value result = vector::TransferReadOp::create(rewriter,
-        loc, resultTargetVecType, rankedReducedView,
+    Value result = vector::TransferReadOp::create(
+        rewriter, loc, resultTargetVecType, rankedReducedView,
         readOp.getIndices().drop_back(dimsToDrop), AffineMapAttr::get(permMap),
         readOp.getPadding(),
         // TODO: support mask.
@@ -1639,8 +1642,9 @@ class DropInnerMostUnitDimsTransferWrite
     ArrayAttr inBoundsAttr = rewriter.getArrayAttr(
         writeOp.getInBoundsAttr().getValue().drop_back(dimsToDrop));
 
-    Value rankedReducedView = memref::SubViewOp::create(rewriter,
-        loc, resultMemrefType, writeOp.getBase(), offsets, sizes, strides);
+    Value rankedReducedView =
+        memref::SubViewOp::create(rewriter, loc, resultMemrefType,
+                                  writeOp.getBase(), offsets, sizes, strides);
     auto permMap = getTransferMinorIdentityMap(
         cast<ShapedType>(rankedReducedView.getType()), resultTargetVecType);
 
@@ -1837,7 +1841,7 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
           loc, parentReduction.getVector(), op.getVector());
     } else {
       vAdd = arith::AddFOp::create(rewriter, loc, parentReduction.getVector(),
-                                            op.getVector());
+                                   op.getVector());
     }
     rewriter.replaceOpWithNewOp<vector::ReductionOp>(op, op.getKind(), vAdd,
                                                      parentReduction.getAcc());
@@ -2004,8 +2008,8 @@ struct DropUnitDimsFromTransposeOp final
 
     Location loc = op.getLoc();
     // Drop the unit dims via shape_cast.
-    auto dropDimsShapeCast = vector::ShapeCastOp::create(rewriter,
-        loc, sourceTypeWithoutUnitDims, op.getVector());
+    auto dropDimsShapeCast = vector::ShapeCastOp::create(
+        rewriter, loc, sourceTypeWithoutUnitDims, op.getVector());
     // Create the new transpose.
     auto transposeWithoutUnitDims =
         vector::TransposeOp::create(rewriter, loc, dropDimsShapeCast, newPerm);
@@ -2111,8 +2115,8 @@ struct ReduceRedundantZero final : OpRewritePattern<vector::ReductionOp> {
     if (!matchPattern(addLhs.getRhs(), m_AnyZeroFloat()))
       return failure();
 
-    auto newAdd = arith::AddFOp::create(rewriter, vAdd.getLoc(), addLhs.getLhs(),
-                                                 vAdd.getRhs());
+    auto newAdd = arith::AddFOp::create(rewriter, vAdd.getLoc(),
+                                        addLhs.getLhs(), vAdd.getRhs());
     rewriter.replaceOpWithNewOp<vector::ReductionOp>(op, op.getKind(), newAdd,
                                                      op.getAcc());
     return success();
@@ -2154,8 +2158,8 @@ struct BreakDownVectorReduction final : OpRewritePattern<vector::ReductionOp> {
     Location loc = op.getLoc();
     SmallVector<Value> extracted(numElems, nullptr);
     for (auto [idx, extractedElem] : llvm::enumerate(extracted))
-      extractedElem = vector::ExtractOp::create(rewriter,
-          loc, op.getVector(), static_cast<int64_t>(idx));
+      extractedElem = vector::ExtractOp::create(rewriter, loc, op.getVector(),
+                                                static_cast<int64_t>(idx));
 
     Value res = extracted.front();
     for (auto extractedElem : llvm::drop_begin(extracted))
@@ -2234,8 +2238,8 @@ struct FoldArithToVectorOuterProduct : public OpRewritePattern<MulOpType> {
       if (!broadcastedRhs || !isValidBroadcastSource(broadcastedRhs))
         return failure();
 
-      return vector::OuterProductOp::create(rewriter,
-          mulOp->getLoc(), resType, broadcastedLhs.getSource(),
+      return vector::OuterProductOp::create(
+          rewriter, mulOp->getLoc(), resType, broadcastedLhs.getSource(),
           broadcastedRhs.getSource(), Value(), vector::CombiningKind::ADD);
     };
 

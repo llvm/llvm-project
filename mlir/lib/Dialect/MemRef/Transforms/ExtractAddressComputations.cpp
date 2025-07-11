@@ -43,7 +43,7 @@ static memref::LoadOp rebuildLoadOp(RewriterBase &rewriter,
                                     ArrayRef<Value> indices) {
   Location loc = loadOp.getLoc();
   return memref::LoadOp::create(rewriter, loc, srcMemRef, indices,
-                                         loadOp.getNontemporal());
+                                loadOp.getNontemporal());
 }
 
 // Matches getViewSizeForEachDim specs for LoadOp.
@@ -73,8 +73,7 @@ static memref::StoreOp rebuildStoreOp(RewriterBase &rewriter,
                                       ArrayRef<Value> indices) {
   Location loc = storeOp.getLoc();
   return memref::StoreOp::create(rewriter, loc, storeOp.getValueToStore(),
-                                          srcMemRef, indices,
-                                          storeOp.getNontemporal());
+                                 srcMemRef, indices, storeOp.getNontemporal());
 }
 
 // Matches getViewSizeForEachDim specs for StoreOp.
@@ -104,8 +103,8 @@ static nvgpu::LdMatrixOp rebuildLdMatrixOp(RewriterBase &rewriter,
                                            Value srcMemRef,
                                            ArrayRef<Value> indices) {
   Location loc = ldMatrixOp.getLoc();
-  return nvgpu::LdMatrixOp::create(rewriter,
-      loc, ldMatrixOp.getResult().getType(), srcMemRef, indices,
+  return nvgpu::LdMatrixOp::create(
+      rewriter, loc, ldMatrixOp.getResult().getType(), srcMemRef, indices,
       ldMatrixOp.getTranspose(), ldMatrixOp.getNumTiles());
 }
 
@@ -132,8 +131,8 @@ rebuildTransferReadOp(RewriterBase &rewriter,
                       vector::TransferReadOp transferReadOp, Value srcMemRef,
                       ArrayRef<Value> indices) {
   Location loc = transferReadOp.getLoc();
-  return vector::TransferReadOp::create(rewriter,
-      loc, transferReadOp.getResult().getType(), srcMemRef, indices,
+  return vector::TransferReadOp::create(
+      rewriter, loc, transferReadOp.getResult().getType(), srcMemRef, indices,
       transferReadOp.getPermutationMap(), transferReadOp.getPadding(),
       transferReadOp.getMask(), transferReadOp.getInBoundsAttr());
 }
@@ -150,8 +149,8 @@ rebuildTransferWriteOp(RewriterBase &rewriter,
                        vector::TransferWriteOp transferWriteOp, Value srcMemRef,
                        ArrayRef<Value> indices) {
   Location loc = transferWriteOp.getLoc();
-  return vector::TransferWriteOp::create(rewriter,
-      loc, transferWriteOp.getValue(), srcMemRef, indices,
+  return vector::TransferWriteOp::create(
+      rewriter, loc, transferWriteOp.getValue(), srcMemRef, indices,
       transferWriteOp.getPermutationMapAttr(), transferWriteOp.getMask(),
       transferWriteOp.getInBoundsAttr());
 }
@@ -182,9 +181,8 @@ static SmallVector<OpFoldResult>
 getGenericOpViewSizeForEachDim(RewriterBase &rewriter,
                                LoadStoreLikeOp loadStoreLikeOp) {
   Location loc = loadStoreLikeOp.getLoc();
-  auto extractStridedMetadataOp =
-      memref::ExtractStridedMetadataOp::create(rewriter,
-          loc, getSrcMemRef(loadStoreLikeOp));
+  auto extractStridedMetadataOp = memref::ExtractStridedMetadataOp::create(
+      rewriter, loc, getSrcMemRef(loadStoreLikeOp));
   SmallVector<OpFoldResult> srcSizes =
       extractStridedMetadataOp.getConstifiedMixedSizes();
   SmallVector<OpFoldResult> indices =
@@ -268,8 +266,8 @@ struct LoadStoreLikeOpRewriter : public OpRewritePattern<LoadStoreLikeOp> {
     // Therefore the strides multipliers are simply ones.
     auto subview =
         memref::SubViewOp::create(rewriter, loc, /*source=*/srcMemRef,
-                                           /*offsets=*/indices,
-                                           /*sizes=*/sizes, /*strides=*/ones);
+                                  /*offsets=*/indices,
+                                  /*sizes=*/sizes, /*strides=*/ones);
     // Rewrite the load/store with the subview as the base pointer.
     SmallVector<Value> zeros(loadStoreRank,
                              arith::ConstantIndexOp::create(rewriter, loc, 0));

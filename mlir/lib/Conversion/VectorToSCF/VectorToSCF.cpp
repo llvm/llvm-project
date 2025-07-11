@@ -202,7 +202,7 @@ static Value generateInBoundsCheck(
     Value memrefIdx =
         affine::makeComposedAffineApply(b, loc, d0 + d1, {base, iv});
     cond = arith::CmpIOp::create(lb, arith::CmpIPredicate::sgt, memrefDim,
-                                    memrefIdx);
+                                 memrefIdx);
   }
 
   // Condition check 2: Masked in?
@@ -215,8 +215,8 @@ static Value generateInBoundsCheck(
 
   // If the condition is non-empty, generate an SCF::IfOp.
   if (cond) {
-    auto check = scf::IfOp::create(lb,
-        cond,
+    auto check = scf::IfOp::create(
+        lb, cond,
         /*thenBuilder=*/
         [&](OpBuilder &b, Location loc) {
           maybeYieldValue(b, loc, hasRetVal, inBoundsCase(b, loc));
@@ -310,7 +310,8 @@ static BufferAllocs allocBuffers(OpBuilder &b, OpTy xferOp) {
     auto maskBuffer = memref::AllocaOp::create(b, loc, maskType);
     b.setInsertionPoint(xferOp);
     memref::StoreOp::create(b, loc, xferOp.getMask(), maskBuffer);
-    result.maskBuffer = memref::LoadOp::create(b, loc, maskBuffer, ValueRange());
+    result.maskBuffer =
+        memref::LoadOp::create(b, loc, maskBuffer, ValueRange());
   }
 
   return result;
@@ -421,14 +422,15 @@ struct Strategy<TransferReadOp> {
     auto bufferType = dyn_cast<ShapedType>(buffer.getType());
     auto vecType = dyn_cast<VectorType>(bufferType.getElementType());
     auto inBoundsAttr = dropFirstElem(b, xferOp.getInBoundsAttr());
-    auto newXferOp = vector::TransferReadOp::create(b,
-        loc, vecType, xferOp.getBase(), xferIndices,
+    auto newXferOp = vector::TransferReadOp::create(
+        b, loc, vecType, xferOp.getBase(), xferIndices,
         AffineMapAttr::get(unpackedPermutationMap(b, xferOp)),
         xferOp.getPadding(), Value(), inBoundsAttr);
 
     maybeApplyPassLabel(b, newXferOp, options.targetRank);
 
-    memref::StoreOp::create(b, loc, newXferOp.getVector(), buffer, storeIndices);
+    memref::StoreOp::create(b, loc, newXferOp.getVector(), buffer,
+                            storeIndices);
     return newXferOp;
   }
 
@@ -510,8 +512,8 @@ struct Strategy<TransferWriteOp> {
     auto inBoundsAttr = dropFirstElem(b, xferOp.getInBoundsAttr());
     auto source = loopState.empty() ? xferOp.getBase() : loopState[0];
     Type type = isTensorOp(xferOp) ? xferOp.getShapedType() : Type();
-    auto newXferOp = vector::TransferWriteOp::create(b,
-        loc, type, vec, source, xferIndices,
+    auto newXferOp = vector::TransferWriteOp::create(
+        b, loc, type, vec, source, xferIndices,
         AffineMapAttr::get(unpackedPermutationMap(b, xferOp)), Value(),
         inBoundsAttr);
 
@@ -611,7 +613,7 @@ struct PrepareTransferReadConversion
 
     Location loc = xferOp.getLoc();
     memref::StoreOp::create(rewriter, loc, newXfer->getResult(0),
-                                     buffers.dataBuffer);
+                            buffers.dataBuffer);
     rewriter.replaceOpWithNewOp<memref::LoadOp>(xferOp, buffers.dataBuffer);
 
     return success();
@@ -654,7 +656,7 @@ struct PrepareTransferWriteConversion
     Location loc = xferOp.getLoc();
     auto buffers = allocBuffers(rewriter, xferOp);
     memref::StoreOp::create(rewriter, loc, xferOp.getVector(),
-                                     buffers.dataBuffer);
+                            buffers.dataBuffer);
     auto loadedVec = memref::LoadOp::create(rewriter, loc, buffers.dataBuffer);
     rewriter.modifyOpInPlace(xferOp, [&]() {
       xferOp.getValueToStoreMutable().assign(loadedVec);
@@ -736,14 +738,14 @@ struct DecomposePrintOpConversion : public VectorToSCFPattern<vector::PrintOp> {
           vectorType.cloneWith({}, getIntTypeWithSignlessSemantics(legalIntTy));
       auto targetVectorType = vectorType.cloneWith({}, legalIntTy);
       value = vector::BitCastOp::create(rewriter, loc, signlessSourceVectorType,
-                                                 value);
+                                        value);
       if (value.getType() != signlessTargetVectorType) {
         if (width == 1 || intTy.isUnsigned())
-          value = arith::ExtUIOp::create(rewriter, loc, signlessTargetVectorType,
-                                                  value);
+          value = arith::ExtUIOp::create(rewriter, loc,
+                                         signlessTargetVectorType, value);
         else
-          value = arith::ExtSIOp::create(rewriter, loc, signlessTargetVectorType,
-                                                  value);
+          value = arith::ExtSIOp::create(rewriter, loc,
+                                         signlessTargetVectorType, value);
       }
       value = vector::BitCastOp::create(rewriter, loc, targetVectorType, value);
       vectorType = targetVectorType;
@@ -770,11 +772,12 @@ struct DecomposePrintOpConversion : public VectorToSCFPattern<vector::PrintOp> {
     for (unsigned d = 0; d < shape.size(); d++) {
       // Setup loop bounds and step.
       Value lowerBound = arith::ConstantIndexOp::create(rewriter, loc, 0);
-      Value upperBound = arith::ConstantIndexOp::create(rewriter, loc, shape[d]);
+      Value upperBound =
+          arith::ConstantIndexOp::create(rewriter, loc, shape[d]);
       Value step = arith::ConstantIndexOp::create(rewriter, loc, 1);
       if (!scalableDimensions.empty() && scalableDimensions[d]) {
-        auto vscale = vector::VectorScaleOp::create(rewriter,
-            loc, rewriter.getIndexType());
+        auto vscale = vector::VectorScaleOp::create(rewriter, loc,
+                                                    rewriter.getIndexType());
         upperBound = arith::MulIOp::create(rewriter, loc, upperBound, vscale);
       }
       auto lastIndex = arith::SubIOp::create(rewriter, loc, upperBound, step);
@@ -783,8 +786,8 @@ struct DecomposePrintOpConversion : public VectorToSCFPattern<vector::PrintOp> {
       vector::PrintOp::create(rewriter, loc, vector::PrintPunctuation::Open);
       auto loop =
           scf::ForOp::create(rewriter, loc, lowerBound, upperBound, step);
-      auto printClose = vector::PrintOp::create(rewriter,
-          loc, vector::PrintPunctuation::Close);
+      auto printClose = vector::PrintOp::create(
+          rewriter, loc, vector::PrintPunctuation::Close);
       if (!firstClose)
         firstClose = printClose;
 
@@ -793,14 +796,14 @@ struct DecomposePrintOpConversion : public VectorToSCFPattern<vector::PrintOp> {
 
       // Print a comma after all but the last element.
       rewriter.setInsertionPointToStart(loop.getBody());
-      auto notLastIndex = arith::CmpIOp::create(rewriter,
-          loc, arith::CmpIPredicate::ult, loopIdx, lastIndex);
+      auto notLastIndex = arith::CmpIOp::create(
+          rewriter, loc, arith::CmpIPredicate::ult, loopIdx, lastIndex);
       scf::IfOp::create(rewriter, loc, notLastIndex,
-                                 [&](OpBuilder &builder, Location loc) {
-                                   vector::PrintOp::create(builder,
-                                       loc, vector::PrintPunctuation::Comma);
-                                   scf::YieldOp::create(builder, loc);
-                                 });
+                        [&](OpBuilder &builder, Location loc) {
+                          vector::PrintOp::create(
+                              builder, loc, vector::PrintPunctuation::Comma);
+                          scf::YieldOp::create(builder, loc);
+                        });
 
       rewriter.setInsertionPointToStart(loop.getBody());
     }
@@ -810,7 +813,8 @@ struct DecomposePrintOpConversion : public VectorToSCFPattern<vector::PrintOp> {
     Value flatIndex;
     auto currentStride = 1;
     for (int d = shape.size() - 1; d >= 0; d--) {
-      auto stride = arith::ConstantIndexOp::create(rewriter, loc, currentStride);
+      auto stride =
+          arith::ConstantIndexOp::create(rewriter, loc, currentStride);
       auto index = arith::MulIOp::create(rewriter, loc, stride, loopIndices[d]);
       if (flatIndex)
         flatIndex = arith::AddIOp::create(rewriter, loc, flatIndex, index);
@@ -820,10 +824,9 @@ struct DecomposePrintOpConversion : public VectorToSCFPattern<vector::PrintOp> {
     }
 
     // Print the scalar elements in the inner most loop.
-    auto element =
-        vector::ExtractOp::create(rewriter, loc, value, flatIndex);
+    auto element = vector::ExtractOp::create(rewriter, loc, value, flatIndex);
     vector::PrintOp::create(rewriter, loc, element,
-                                     vector::PrintPunctuation::NoPunctuation);
+                            vector::PrintPunctuation::NoPunctuation);
 
     rewriter.setInsertionPointAfter(firstClose);
     vector::PrintOp::create(rewriter, loc, printOp.getPunctuation());
@@ -942,16 +945,16 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
 
     // Loop bounds and step.
     auto lb = arith::ConstantIndexOp::create(locB, 0);
-    auto ub = arith::ConstantIndexOp::create(locB,
-        castedDataType->getDimSize(castedDataType->getRank() - 1));
+    auto ub = arith::ConstantIndexOp::create(
+        locB, castedDataType->getDimSize(castedDataType->getRank() - 1));
     auto step = arith::ConstantIndexOp::create(locB, 1);
     // TransferWriteOps that operate on tensors return the modified tensor and
     // require a loop state.
     auto loopState = Strategy<OpTy>::initialLoopState(xferOp);
 
     // Generate for loop.
-    auto result = scf::ForOp::create(locB,
-        lb, ub, step, loopState ? ValueRange(loopState) : ValueRange(),
+    auto result = scf::ForOp::create(
+        locB, lb, ub, step, loopState ? ValueRange(loopState) : ValueRange(),
         [&](OpBuilder &b, Location loc, Value iv, ValueRange loopState) {
           Type stateType = loopState.empty() ? Type() : loopState[0].getType();
 
@@ -977,7 +980,7 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
                   getMaskBufferLoadIndices(xferOp, castedMaskBuffer,
                                            loadIndices, iv);
                   auto mask = memref::LoadOp::create(b, loc, castedMaskBuffer,
-                                                       loadIndices);
+                                                     loadIndices);
                   rewriter.modifyOpInPlace(newXfer, [&]() {
                     newXfer.getMaskMutable().assign(mask);
                   });
@@ -1135,15 +1138,15 @@ struct ScalableTransposeTransferWriteConversion
     VectorType sliceType = VectorType::Builder(vectorType).dropDim(0);
     Value sliceMask = nullptr;
     if (!maskDims->empty()) {
-      sliceMask = vector::CreateMaskOp::create(rewriter,
-          loc, sliceType.clone(rewriter.getI1Type()),
+      sliceMask = vector::CreateMaskOp::create(
+          rewriter, loc, sliceType.clone(rewriter.getI1Type()),
           ArrayRef<OpFoldResult>(*maskDims).drop_front());
     }
 
     Value initDest = isTensorOp(writeOp) ? writeOp.getBase() : Value{};
     ValueRange initLoopArgs = initDest ? initDest : ValueRange{};
-    auto result = scf::ForOp::create(rewriter,
-        loc, lb, ub, step, initLoopArgs,
+    auto result = scf::ForOp::create(
+        rewriter, loc, lb, ub, step, initLoopArgs,
         [&](OpBuilder &b, Location loc, Value iv, ValueRange loopIterArgs) {
           // Indices for the new transfer op.
           SmallVector<Value, 8> xferIndices;
@@ -1152,25 +1155,25 @@ struct ScalableTransposeTransferWriteConversion
           // Extract a transposed slice from the source vector.
           SmallVector<Value> transposeElements =
               llvm::map_to_vector(fixedDimOffsets, [&](int64_t idx) -> Value {
-                return vector::ExtractOp::create(b,
-                    loc, transposeSourceSlices[idx], iv);
+                return vector::ExtractOp::create(
+                    b, loc, transposeSourceSlices[idx], iv);
               });
           auto sliceVec = vector::FromElementsOp::create(b, loc, sliceType,
-                                                           transposeElements);
+                                                         transposeElements);
 
           // Create the transfer_write for the slice.
           Value dest =
               loopIterArgs.empty() ? writeOp.getBase() : loopIterArgs.front();
-          auto newWriteOp = vector::TransferWriteOp::create(b,
-              loc, sliceVec, dest, xferIndices,
+          auto newWriteOp = vector::TransferWriteOp::create(
+              b, loc, sliceVec, dest, xferIndices,
               ArrayRef<bool>(writeOp.getInBoundsValues()).drop_front());
           if (sliceMask)
             newWriteOp.getMaskMutable().assign(sliceMask);
 
           // Yield from the loop.
-          scf::YieldOp::create(b, loc, loopIterArgs.empty()
-                                          ? ValueRange{}
-                                          : newWriteOp.getResult());
+          scf::YieldOp::create(b, loc,
+                               loopIterArgs.empty() ? ValueRange{}
+                                                    : newWriteOp.getResult());
         });
 
     if (isTensorOp(writeOp))
@@ -1263,7 +1266,7 @@ struct UnrollTransferReadConversion
       return insertOp.getDest();
     Location loc = xferOp.getLoc();
     return vector::SplatOp::create(rewriter, loc, xferOp.getVectorType(),
-                                            xferOp.getPadding());
+                                   xferOp.getPadding());
   }
 
   /// If the result of the TransferReadOp has exactly one user, which is a
@@ -1337,8 +1340,8 @@ struct UnrollTransferReadConversion
 
             auto inBoundsAttr = dropFirstElem(b, xferOp.getInBoundsAttr());
 
-            auto newXferOp = vector::TransferReadOp::create(b,
-                loc, newXferVecType, xferOp.getBase(), xferIndices,
+            auto newXferOp = vector::TransferReadOp::create(
+                b, loc, newXferVecType, xferOp.getBase(), xferIndices,
                 AffineMapAttr::get(unpackedPermutationMap(b, xferOp)),
                 xferOp.getPadding(), Value(), inBoundsAttr);
             maybeAssignMask(b, xferOp, newXferOp, i);
@@ -1348,10 +1351,10 @@ struct UnrollTransferReadConversion
               // vector.insert does not accept rank-0 as the non-indexed
               // argument. Extract the scalar before inserting.
               valToInser = vector::ExtractOp::create(b, loc, valToInser,
-                                                       SmallVector<int64_t>());
+                                                     SmallVector<int64_t>());
             }
             return vector::InsertOp::create(b, loc, valToInser, vec,
-                                              insertionIndices);
+                                            insertionIndices);
           },
           /*outOfBoundsCase=*/
           [&](OpBuilder &b, Location loc) {
@@ -1485,13 +1488,13 @@ struct UnrollTransferWriteConversion
               // When target-rank=0, unrolling would causes the vector input
               // argument into `transfer_write` to become a scalar. We solve
               // this by broadcasting the scalar to a 0D vector.
-              xferVec = vector::BroadcastOp::create(b,
-                  loc, VectorType::get({}, extracted.getType()), extracted);
+              xferVec = vector::BroadcastOp::create(
+                  b, loc, VectorType::get({}, extracted.getType()), extracted);
             } else {
               xferVec = extracted;
             }
-            auto newXferOp = vector::TransferWriteOp::create(b,
-                loc, sourceType, xferVec, source, xferIndices,
+            auto newXferOp = vector::TransferWriteOp::create(
+                b, loc, sourceType, xferVec, source, xferIndices,
                 AffineMapAttr::get(unpackedPermutationMap(b, xferOp)), Value(),
                 inBoundsAttr);
 
@@ -1585,7 +1588,7 @@ struct Strategy1d<TransferReadOp> {
     // Inititalize vector with padding value.
     Location loc = xferOp.getLoc();
     return vector::SplatOp::create(b, loc, xferOp.getVectorType(),
-                                     xferOp.getPadding());
+                                   xferOp.getPadding());
   }
 };
 
@@ -1602,8 +1605,7 @@ struct Strategy1d<TransferWriteOp> {
     generateInBoundsCheck(
         b, xferOp, iv, dim,
         /*inBoundsCase=*/[&](OpBuilder &b, Location loc) {
-          auto val =
-              vector::ExtractOp::create(b, loc, xferOp.getVector(), iv);
+          auto val = vector::ExtractOp::create(b, loc, xferOp.getVector(), iv);
           memref::StoreOp::create(b, loc, val, xferOp.getBase(), indices);
         });
     scf::YieldOp::create(b, loc);

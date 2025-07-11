@@ -56,11 +56,11 @@ static Value createVectorLoadForMaskedLoad(OpBuilder &builder, Location loc,
                                            vector::MaskedLoadOp maskedOp,
                                            bool passthru) {
   VectorType vectorType = maskedOp.getVectorType();
-  Value load = vector::LoadOp::create(builder,
-      loc, vectorType, maskedOp.getBase(), maskedOp.getIndices());
+  Value load = vector::LoadOp::create(
+      builder, loc, vectorType, maskedOp.getBase(), maskedOp.getIndices());
   if (passthru)
-    load = arith::SelectOp::create(builder,loc, vectorType, maskedOp.getMask(),
-                                           load, maskedOp.getPassThru());
+    load = arith::SelectOp::create(builder, loc, vectorType, maskedOp.getMask(),
+                                   load, maskedOp.getPassThru());
   return load;
 }
 
@@ -132,14 +132,14 @@ struct MaskedLoadLowering final : OpRewritePattern<vector::MaskedLoadOp> {
     Value delta = arith::SubIOp::create(rewriter, loc, totalSize, linearIndex);
 
     // 1) check if delta < vectorSize
-    Value isOutofBounds = arith::CmpIOp::create(rewriter,
-        loc, arith::CmpIPredicate::ult, delta, vectorSizeOffset);
+    Value isOutofBounds = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::ult, delta, vectorSizeOffset);
 
     // 2) check if (detla % elements_per_word != 0)
-    Value elementsPerWord = arith::ConstantIndexOp::create(rewriter,
-        loc, llvm::divideCeil(32, elementBitWidth));
-    Value isNotWordAligned = arith::CmpIOp::create(rewriter,
-        loc, arith::CmpIPredicate::ne,
+    Value elementsPerWord = arith::ConstantIndexOp::create(
+        rewriter, loc, llvm::divideCeil(32, elementBitWidth));
+    Value isNotWordAligned = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::ne,
         arith::RemUIOp::create(rewriter, loc, delta, elementsPerWord),
         arith::ConstantIndexOp::create(rewriter, loc, 0));
 

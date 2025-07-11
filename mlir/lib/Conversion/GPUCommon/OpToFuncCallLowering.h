@@ -115,19 +115,20 @@ public:
     // there is no guarantee of a specific value being used to indicate true,
     // compare for inequality with zero (rather than truncate or shift).
     if (isResultBool) {
-      Value zero = LLVM::ConstantOp::create(rewriter,
-          op->getLoc(), rewriter.getIntegerType(32),
-          rewriter.getI32IntegerAttr(0));
-      Value truncated = LLVM::ICmpOp::create(rewriter,
-          op->getLoc(), LLVM::ICmpPredicate::ne, callOp.getResult(), zero);
+      Value zero = LLVM::ConstantOp::create(rewriter, op->getLoc(),
+                                            rewriter.getIntegerType(32),
+                                            rewriter.getI32IntegerAttr(0));
+      Value truncated =
+          LLVM::ICmpOp::create(rewriter, op->getLoc(), LLVM::ICmpPredicate::ne,
+                               callOp.getResult(), zero);
       rewriter.replaceOp(op, {truncated});
       return success();
     }
 
     assert(callOp.getResult().getType().isF32() &&
            "only f32 types are supposed to be truncated back");
-    Value truncated = LLVM::FPTruncOp::create(rewriter,
-        op->getLoc(), adaptor.getOperands().front().getType(),
+    Value truncated = LLVM::FPTruncOp::create(
+        rewriter, op->getLoc(), adaptor.getOperands().front().getType(),
         callOp.getResult());
     rewriter.replaceOp(op, {truncated});
     return success();
@@ -142,8 +143,9 @@ public:
     if (!f16Func.empty() && isa<Float16Type>(type))
       return operand;
 
-    return LLVM::FPExtOp::create(rewriter,
-        operand.getLoc(), Float32Type::get(rewriter.getContext()), operand);
+    return LLVM::FPExtOp::create(rewriter, operand.getLoc(),
+                                 Float32Type::get(rewriter.getContext()),
+                                 operand);
   }
 
   Type getFunctionType(Type resultType, ValueRange operands) const {

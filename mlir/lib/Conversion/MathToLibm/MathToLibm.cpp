@@ -84,9 +84,10 @@ VecOpToScalarOp<Op>::matchAndRewrite(Op op, PatternRewriter &rewriter) const {
   auto shape = vecType.getShape();
   int64_t numElements = vecType.getNumElements();
 
-  Value result = arith::ConstantOp::create(rewriter,
-      loc, DenseElementsAttr::get(
-               vecType, FloatAttr::get(vecType.getElementType(), 0.0)));
+  Value result = arith::ConstantOp::create(
+      rewriter, loc,
+      DenseElementsAttr::get(vecType,
+                             FloatAttr::get(vecType.getElementType(), 0.0)));
   SmallVector<int64_t> strides = computeStrides(shape);
   for (auto linearIndex = 0; linearIndex < numElements; ++linearIndex) {
     SmallVector<int64_t> positions = delinearize(linearIndex, strides);
@@ -140,7 +141,7 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
     auto opFunctionTy = FunctionType::get(
         rewriter.getContext(), op->getOperandTypes(), op->getResultTypes());
     opFunc = func::FuncOp::create(rewriter, rewriter.getUnknownLoc(), name,
-                                           opFunctionTy);
+                                  opFunctionTy);
     opFunc.setPrivate();
 
     // By definition Math dialect operations imply LLVM's "readnone"

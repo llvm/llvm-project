@@ -294,10 +294,10 @@ LogicalResult IndexCastOpLowering<OpTy, ExtCastTy>::matchAndRewrite(
         typename OpTy::Adaptor adaptor(operands);
         if (targetBits < sourceBits) {
           return LLVM::TruncOp::create(rewriter, op.getLoc(), llvm1DVectorTy,
-                                                adaptor.getIn());
+                                       adaptor.getIn());
         }
         return ExtCastTy::create(rewriter, op.getLoc(), llvm1DVectorTy,
-                                          adaptor.getIn());
+                                 adaptor.getIn());
       },
       rewriter);
 }
@@ -324,8 +324,8 @@ LogicalResult AddUIExtendedOpLowering::matchAndRewrite(
     Type newOverflowType = typeConverter->convertType(overflowResultType);
     Type structType =
         LLVM::LLVMStructType::getLiteral(ctx, {sumResultType, newOverflowType});
-    Value addOverflow = LLVM::UAddWithOverflowOp::create(rewriter,
-        loc, structType, adaptor.getLhs(), adaptor.getRhs());
+    Value addOverflow = LLVM::UAddWithOverflowOp::create(
+        rewriter, loc, structType, adaptor.getLhs(), adaptor.getRhs());
     Value sumExtracted =
         LLVM::ExtractValueOp::create(rewriter, loc, addOverflow, 0);
     Value overflowExtracted =
@@ -435,8 +435,8 @@ CmpIOpLowering::matchAndRewrite(arith::CmpIOp op, OpAdaptor adaptor,
       op.getOperation(), adaptor.getOperands(), *getTypeConverter(),
       [&](Type llvm1DVectorTy, ValueRange operands) {
         OpAdaptor adaptor(operands);
-        return LLVM::ICmpOp::create(rewriter,
-            op.getLoc(), llvm1DVectorTy,
+        return LLVM::ICmpOp::create(
+            rewriter, op.getLoc(), llvm1DVectorTy,
             convertCmpPredicate<LLVM::ICmpPredicate>(op.getPredicate()),
             adaptor.getLhs(), adaptor.getRhs());
       },
@@ -471,8 +471,8 @@ CmpFOpLowering::matchAndRewrite(arith::CmpFOp op, OpAdaptor adaptor,
       op.getOperation(), adaptor.getOperands(), *getTypeConverter(),
       [&](Type llvm1DVectorTy, ValueRange operands) {
         OpAdaptor adaptor(operands);
-        return LLVM::FCmpOp::create(rewriter,
-            op.getLoc(), llvm1DVectorTy,
+        return LLVM::FCmpOp::create(
+            rewriter, op.getLoc(), llvm1DVectorTy,
             convertCmpPredicate<LLVM::FCmpPredicate>(op.getPredicate()),
             adaptor.getLhs(), adaptor.getRhs(), fmf);
       },

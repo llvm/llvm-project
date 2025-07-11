@@ -91,8 +91,9 @@ PowFStrengthReduction::matchAndRewrite(math::PowFOp op,
 
   // Replace `pow(x, -1.0)` with `1.0 / x`.
   if (isExponentValue(-1.0)) {
-    Value one = arith::ConstantOp::create(rewriter,
-        loc, rewriter.getFloatAttr(getElementTypeOrSelf(op.getType()), 1.0));
+    Value one = arith::ConstantOp::create(
+        rewriter, loc,
+        rewriter.getFloatAttr(getElementTypeOrSelf(op.getType()), 1.0));
     rewriter.replaceOpWithNewOp<arith::DivFOp>(op, ValueRange({bcast(one), x}));
     return success();
   }
@@ -175,11 +176,11 @@ PowIStrengthReduction<PowIOpTy, DivOpTy, MulOpTy>::matchAndRewrite(
   Value one;
   Type opType = getElementTypeOrSelf(op.getType());
   if constexpr (std::is_same_v<PowIOpTy, math::FPowIOp>)
-    one = arith::ConstantOp::create(rewriter,
-        loc, rewriter.getFloatAttr(opType, 1.0));
+    one = arith::ConstantOp::create(rewriter, loc,
+                                    rewriter.getFloatAttr(opType, 1.0));
   else
-    one = arith::ConstantOp::create(rewriter,
-        loc, rewriter.getIntegerAttr(opType, 1));
+    one = arith::ConstantOp::create(rewriter, loc,
+                                    rewriter.getIntegerAttr(opType, 1));
 
   // Replace `[fi]powi(x, 0)` with `1`.
   if (exponentValue == 0) {

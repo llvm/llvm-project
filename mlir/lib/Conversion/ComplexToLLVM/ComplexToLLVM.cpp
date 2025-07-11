@@ -79,8 +79,8 @@ struct AbsOpConversion : public ConvertOpToLLVMPattern<complex::AbsOp> {
     LLVM::FastmathFlagsAttr fmf = LLVM::FastmathFlagsAttr::get(
         op.getContext(),
         convertArithFastMathFlagsToLLVM(complexFMFAttr.getValue()));
-    Value sqNorm = LLVM::FAddOp::create(rewriter,
-        loc, LLVM::FMulOp::create(rewriter, loc, real, real, fmf),
+    Value sqNorm = LLVM::FAddOp::create(
+        rewriter, loc, LLVM::FMulOp::create(rewriter, loc, real, real, fmf),
         LLVM::FMulOp::create(rewriter, loc, imag, imag, fmf), fmf);
 
     rewriter.replaceOpWithNewOp<LLVM::SqrtOp>(op, sqNorm);
@@ -191,10 +191,10 @@ struct AddOpConversion : public ConvertOpToLLVMPattern<complex::AddOp> {
     LLVM::FastmathFlagsAttr fmf = LLVM::FastmathFlagsAttr::get(
         op.getContext(),
         convertArithFastMathFlagsToLLVM(complexFMFAttr.getValue()));
-    Value real =
-        LLVM::FAddOp::create(rewriter, loc, arg.lhs.real(), arg.rhs.real(), fmf);
-    Value imag =
-        LLVM::FAddOp::create(rewriter, loc, arg.lhs.imag(), arg.rhs.imag(), fmf);
+    Value real = LLVM::FAddOp::create(rewriter, loc, arg.lhs.real(),
+                                      arg.rhs.real(), fmf);
+    Value imag = LLVM::FAddOp::create(rewriter, loc, arg.lhs.imag(),
+                                      arg.rhs.imag(), fmf);
     result.setReal(rewriter, loc, real);
     result.setImaginary(rewriter, loc, imag);
 
@@ -278,12 +278,12 @@ struct MulOpConversion : public ConvertOpToLLVMPattern<complex::MulOp> {
     Value lhsRe = arg.lhs.real();
     Value lhsIm = arg.lhs.imag();
 
-    Value real = LLVM::FSubOp::create(rewriter,
-        loc, LLVM::FMulOp::create(rewriter, loc, rhsRe, lhsRe, fmf),
+    Value real = LLVM::FSubOp::create(
+        rewriter, loc, LLVM::FMulOp::create(rewriter, loc, rhsRe, lhsRe, fmf),
         LLVM::FMulOp::create(rewriter, loc, rhsIm, lhsIm, fmf), fmf);
 
-    Value imag = LLVM::FAddOp::create(rewriter,
-        loc, LLVM::FMulOp::create(rewriter, loc, lhsIm, rhsRe, fmf),
+    Value imag = LLVM::FAddOp::create(
+        rewriter, loc, LLVM::FMulOp::create(rewriter, loc, lhsIm, rhsRe, fmf),
         LLVM::FMulOp::create(rewriter, loc, lhsRe, rhsIm, fmf), fmf);
 
     result.setReal(rewriter, loc, real);
@@ -313,10 +313,10 @@ struct SubOpConversion : public ConvertOpToLLVMPattern<complex::SubOp> {
     LLVM::FastmathFlagsAttr fmf = LLVM::FastmathFlagsAttr::get(
         op.getContext(),
         convertArithFastMathFlagsToLLVM(complexFMFAttr.getValue()));
-    Value real =
-        LLVM::FSubOp::create(rewriter, loc, arg.lhs.real(), arg.rhs.real(), fmf);
-    Value imag =
-        LLVM::FSubOp::create(rewriter, loc, arg.lhs.imag(), arg.rhs.imag(), fmf);
+    Value real = LLVM::FSubOp::create(rewriter, loc, arg.lhs.real(),
+                                      arg.rhs.real(), fmf);
+    Value imag = LLVM::FSubOp::create(rewriter, loc, arg.lhs.imag(),
+                                      arg.rhs.imag(), fmf);
     result.setReal(rewriter, loc, real);
     result.setImaginary(rewriter, loc, imag);
 

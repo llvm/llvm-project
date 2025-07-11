@@ -27,9 +27,10 @@ WarpDistributionPattern::moveRegionToNewWarpOpAndReplaceReturns(
   // Create a new op before the existing one, with the extra operands.
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(warpOp);
-  auto newWarpOp = WarpExecuteOnLane0Op::create(rewriter,
-      warpOp.getLoc(), newReturnTypes, warpOp.getLaneid(), warpOp.getWarpSize(),
-      warpOp.getArgs(), warpOp.getBody()->getArgumentTypes());
+  auto newWarpOp = WarpExecuteOnLane0Op::create(
+      rewriter, warpOp.getLoc(), newReturnTypes, warpOp.getLaneid(),
+      warpOp.getWarpSize(), warpOp.getArgs(),
+      warpOp.getBody()->getArgumentTypes());
 
   Region &opBody = warpOp.getBodyRegion();
   Region &newOpBody = newWarpOp.getBodyRegion();

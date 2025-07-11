@@ -201,7 +201,7 @@ LogicalResult DecomposeProjectedPermutation::matchAndRewrite(
           tensor::EmptyOp::create(rewriter, loc, transposedShape, elType);
 
       auto transposeOp = TransposeOp::create(rewriter, loc, newInitValues[i],
-                                                      emptyTensor, permutation);
+                                             emptyTensor, permutation);
       newInitValues[i] = transposeOp->getResult(0);
       isChanged = true;
     }
@@ -209,11 +209,11 @@ LogicalResult DecomposeProjectedPermutation::matchAndRewrite(
     // Does it require broadcast?
     if (!broadcastedDims.empty()) {
       assert(broadcastedDims.size() && "should have non size broadcast");
-      Value emptyTensor = tensor::EmptyOp::create(rewriter,
-          loc, outputShape, inputRTType.getElementType());
+      Value emptyTensor = tensor::EmptyOp::create(rewriter, loc, outputShape,
+                                                  inputRTType.getElementType());
 
-      auto broadcastOp = linalg::BroadcastOp::create(rewriter,
-          loc, newInitValues[i], emptyTensor, broadcastedDims);
+      auto broadcastOp = linalg::BroadcastOp::create(
+          rewriter, loc, newInitValues[i], emptyTensor, broadcastedDims);
 
       newInitValues[i] = broadcastOp->getResult(0);
       isChanged = true;
@@ -227,7 +227,8 @@ LogicalResult DecomposeProjectedPermutation::matchAndRewrite(
   SmallVector<Value> operands = op->getOperands();
   ValueRange operandsRef(operands);
 
-  auto newOp = linalg::GenericOp::create(rewriter,
+  auto newOp = linalg::GenericOp::create(
+      rewriter,
       /*location=*/op.getLoc(),
       /*resultTensorTypes=*/op->getResultTypes(),
       /*inputs=*/newInitValues,

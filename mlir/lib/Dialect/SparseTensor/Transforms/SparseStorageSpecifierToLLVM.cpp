@@ -75,9 +75,9 @@ private:
 
   void insertField(OpBuilder &builder, Location loc, ArrayRef<int64_t> indices,
                    Value v) {
-    value = LLVM::InsertValueOp::create(builder,
-        loc, value, genCast(builder, loc, v, builder.getIntegerType(64)),
-        indices);
+    value = LLVM::InsertValueOp::create(
+        builder, loc, value,
+        genCast(builder, loc, v, builder.getIntegerType(64)), indices);
   }
 
 public:
@@ -205,14 +205,14 @@ void SpecifierStructBuilder::setMemSize(OpBuilder &builder, Location loc,
 Value SpecifierStructBuilder::memSizeArray(OpBuilder &builder,
                                            Location loc) const {
   return LLVM::ExtractValueOp::create(builder, loc, value,
-                                              kMemSizePosInSpecifier);
+                                      kMemSizePosInSpecifier);
 }
 
 /// Builds IR inserting the memory size array into the descriptor.
 void SpecifierStructBuilder::setMemSizeArray(OpBuilder &builder, Location loc,
                                              Value array) {
   value = LLVM::InsertValueOp::create(builder, loc, value, array,
-                                              kMemSizePosInSpecifier);
+                                      kMemSizePosInSpecifier);
 }
 
 } // namespace

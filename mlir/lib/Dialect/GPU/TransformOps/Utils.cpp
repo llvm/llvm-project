@@ -76,9 +76,10 @@ buildPredicates(RewriterBase &rewriter, Location loc, ArrayRef<Value> activeIds,
     }
     if (activeMappingSize == availableMappingSize)
       continue;
-    Value idx = arith::ConstantIndexOp::create(rewriter, loc, activeMappingSize);
+    Value idx =
+        arith::ConstantIndexOp::create(rewriter, loc, activeMappingSize);
     Value pred = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::ult,
-                                                activeId, idx);
+                                       activeId, idx);
     predicateOps.push_back(pred);
   }
   return predicateOps;
@@ -422,7 +423,7 @@ DiagnosedSilenceableFailure createGpuLaunch(
   Value blkSizeY = blockDimY.has_value() ? createConst(blockDimY.value()) : one;
   Value blkSizeZ = blockDimZ.has_value() ? createConst(blockDimZ.value()) : one;
   launchOp = LaunchOp::create(rewriter, loc, gridSizeX, gridSizeY, gridSizeZ,
-                                       blkSizeX, blkSizeY, blkSizeZ);
+                              blkSizeX, blkSizeY, blkSizeZ);
   rewriter.setInsertionPointToEnd(&launchOp.getBody().front());
   TerminatorOp::create(rewriter, loc);
   return DiagnosedSilenceableFailure::success();
@@ -446,7 +447,7 @@ DiagnosedSilenceableFailure alterGpuLaunch(
   rewriter.setInsertionPointAfterValue(currentBlockdim.x);
   auto createConstValue = [&](int dim) {
     return arith::ConstantIndexOp::create(rewriter, currentBlockdim.x.getLoc(),
-                                                   dim);
+                                          dim);
   };
 
   if (gridDimX.has_value())

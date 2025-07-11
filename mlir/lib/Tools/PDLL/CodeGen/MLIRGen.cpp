@@ -206,7 +206,7 @@ static void checkAndNestUnderRewriteOp(OpBuilder &builder, Value rootExpr,
   if (isa<pdl::PatternOp>(builder.getInsertionBlock()->getParentOp())) {
     pdl::RewriteOp rewrite =
         pdl::RewriteOp::create(builder, loc, rootExpr, /*name=*/StringAttr(),
-                                       /*externalArgs=*/ValueRange());
+                               /*externalArgs=*/ValueRange());
     builder.createBlock(&rewrite.getBodyRegion());
   }
 }
@@ -242,8 +242,8 @@ void CodeGen::genImpl(const ast::ReplaceStmt *stmt) {
   bool usesReplOperation =
       replValues.size() == 1 &&
       isa<pdl::OperationType>(replValues.front().getType());
-  pdl::ReplaceOp::create(builder,
-      loc, rootExpr, usesReplOperation ? replValues[0] : Value(),
+  pdl::ReplaceOp::create(
+      builder, loc, rootExpr, usesReplOperation ? replValues[0] : Value(),
       usesReplOperation ? ValueRange() : ValueRange(replValues));
 }
 
@@ -283,8 +283,8 @@ void CodeGen::genImpl(const ast::PatternDecl *decl) {
 
   // FIXME: Properly model HasBoundedRecursion in PDL so that we don't drop it
   // here.
-  pdl::PatternOp pattern = pdl::PatternOp::create(builder,
-      genLoc(decl->getLoc()), decl->getBenefit(),
+  pdl::PatternOp pattern = pdl::PatternOp::create(
+      builder, genLoc(decl->getLoc()), decl->getBenefit(),
       name ? std::optional<StringRef>(name->getName())
            : std::optional<StringRef>());
 
@@ -344,24 +344,25 @@ Value CodeGen::genNonInitializerVar(const ast::VariableDecl *varDecl,
   if (isa<ast::AttributeType>(type))
     return pdl::AttributeOp::create(builder, loc, getTypeConstraint());
   if (ast::OperationType opType = dyn_cast<ast::OperationType>(type)) {
-    Value operands = pdl::OperandsOp::create(builder,
-        loc, pdl::RangeType::get(builder.getType<pdl::ValueType>()),
+    Value operands = pdl::OperandsOp::create(
+        builder, loc, pdl::RangeType::get(builder.getType<pdl::ValueType>()),
         /*type=*/Value());
-    Value results = pdl::TypesOp::create(builder,
-        loc, pdl::RangeType::get(builder.getType<pdl::TypeType>()),
+    Value results = pdl::TypesOp::create(
+        builder, loc, pdl::RangeType::get(builder.getType<pdl::TypeType>()),
         /*types=*/ArrayAttr());
     return pdl::OperationOp::create(builder, loc, opType.getName(), operands,
-                                            ArrayRef<StringRef>(), ValueRange(),
-                                            results);
+                                    ArrayRef<StringRef>(), ValueRange(),
+                                    results);
   }
 
   if (ast::RangeType rangeTy = dyn_cast<ast::RangeType>(type)) {
     ast::Type eleTy = rangeTy.getElementType();
     if (isa<ast::ValueType>(eleTy))
       return pdl::OperandsOp::create(builder, loc, mlirType,
-                                             getTypeConstraint());
+                                     getTypeConstraint());
     if (isa<ast::TypeType>(eleTy))
-      return pdl::TypesOp::create(builder, loc, mlirType, /*types=*/ArrayAttr());
+      return pdl::TypesOp::create(builder, loc, mlirType,
+                                  /*types=*/ArrayAttr());
   }
 
   llvm_unreachable("invalid non-initialized variable type");
@@ -444,7 +445,7 @@ Value CodeGen::genExprImpl(const ast::MemberAccessExpr *expr) {
       Type mlirType = genType(expr->getType());
       if (isa<pdl::ValueType>(mlirType))
         return pdl::ResultOp::create(builder, loc, mlirType, parentExprs[0],
-                                             builder.getI32IntegerAttr(0));
+                                     builder.getI32IntegerAttr(0));
       return pdl::ResultsOp::create(builder, loc, mlirType, parentExprs[0]);
     }
 
@@ -456,7 +457,7 @@ Value CodeGen::genExprImpl(const ast::MemberAccessExpr *expr) {
       name.getAsInteger(/*Radix=*/10, resultIndex);
       IntegerAttr index = builder.getI32IntegerAttr(resultIndex);
       return pdl::ResultOp::create(builder, loc, genType(expr->getType()),
-                                           parentExprs[0], index);
+                                   parentExprs[0], index);
     }
 
     // Find the result with the member name or by index.
@@ -475,7 +476,7 @@ Value CodeGen::genExprImpl(const ast::MemberAccessExpr *expr) {
     // Generate the result access.
     IntegerAttr index = builder.getI32IntegerAttr(resultIndex);
     return pdl::ResultsOp::create(builder, loc, genType(expr->getType()),
-                                          parentExprs[0], index);
+                                  parentExprs[0], index);
   }
 
   // Handle tuple based member access.
@@ -519,7 +520,7 @@ Value CodeGen::genExprImpl(const ast::OperationExpr *expr) {
     results.push_back(genSingleExpr(result));
 
   return pdl::OperationOp::create(builder, loc, opName, operands, attrNames,
-                                          attrValues, results);
+                                  attrValues, results);
 }
 
 Value CodeGen::genExprImpl(const ast::RangeExpr *expr) {
@@ -528,7 +529,7 @@ Value CodeGen::genExprImpl(const ast::RangeExpr *expr) {
     llvm::append_range(elements, genExpr(element));
 
   return pdl::RangeOp::create(builder, genLoc(expr->getLoc()),
-                                      genType(expr->getType()), elements);
+                              genType(expr->getType()), elements);
 }
 
 SmallVector<Value> CodeGen::genExprImpl(const ast::TupleExpr *expr) {
@@ -542,8 +543,8 @@ Value CodeGen::genExprImpl(const ast::TypeExpr *expr) {
   Type type = parseType(expr->getValue(), builder.getContext());
   assert(type && "invalid MLIR type data");
   return pdl::TypeOp::create(builder, genLoc(expr->getLoc()),
-                                     builder.getType<pdl::TypeType>(),
-                                     TypeAttr::get(type));
+                             builder.getType<pdl::TypeType>(),
+                             TypeAttr::get(type));
 }
 
 SmallVector<Value>
@@ -587,7 +588,7 @@ CodeGen::genConstraintOrRewriteCall(const T *decl, Location loc,
       resultTypes.push_back(genType(declResultType));
     }
     PDLOpT pdlOp = PDLOpT::create(builder, loc, resultTypes,
-                                          decl->getName().getName(), inputs);
+                                  decl->getName().getName(), inputs);
     if (isNegated && std::is_same_v<PDLOpT, pdl::ApplyNativeConstraintOp>)
       cast<pdl::ApplyNativeConstraintOp>(pdlOp).setIsNegated(true);
     return pdlOp->getResults();

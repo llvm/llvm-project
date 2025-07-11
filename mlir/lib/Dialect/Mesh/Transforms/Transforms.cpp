@@ -52,7 +52,8 @@ struct ProcessMultiIndexOpLowering
     Value linearIndex = ProcessLinearIndexOp::create(builder, mesh);
     ValueRange meshShape = MeshShapeOp::create(builder, mesh).getResults();
     SmallVector<Value> completeMultiIndex =
-        affine::AffineDelinearizeIndexOp::create(builder, linearIndex, meshShape)
+        affine::AffineDelinearizeIndexOp::create(builder, linearIndex,
+                                                 meshShape)
             .getMultiIndex();
     SmallVector<Value> multiIndex;
     ArrayRef<MeshAxis> opMeshAxes = op.getAxes();
@@ -104,7 +105,8 @@ struct AllSliceOpLowering
     Value zero = arith::ConstantOp::create(builder, builder.getIndexAttr(0));
 
     Operation::result_range processInGroupMultiIndex =
-        ProcessMultiIndexOp::create(builder, mesh.getSymName(), op.getMeshAxes())
+        ProcessMultiIndexOp::create(builder, mesh.getSymName(),
+                                    op.getMeshAxes())
             .getResults();
 
     Operation::result_range processGroupShape =
@@ -118,13 +120,13 @@ struct AllSliceOpLowering
         tensor::DimOp::create(builder, op.getOperand(), sliceAxis);
     Value operandSliceAxisSizeModProcessGroupSize =
         arith::RemUIOp::create(builder, operandSliceAxisSize, processGroupSize);
-    Value isTargetShapeExactlyDivisible = arith::CmpIOp::create(builder,
-        arith::CmpIPredicate::eq, operandSliceAxisSizeModProcessGroupSize,
-        zero);
+    Value isTargetShapeExactlyDivisible =
+        arith::CmpIOp::create(builder, arith::CmpIPredicate::eq,
+                              operandSliceAxisSizeModProcessGroupSize, zero);
     cf::AssertOp::create(builder, isTargetShapeExactlyDivisible,
-                                 "Slicing a tensor with axis size that is "
-                                 "not exactly divisible by the "
-                                 "mesh process group size is not supported.");
+                         "Slicing a tensor with axis size that is "
+                         "not exactly divisible by the "
+                         "mesh process group size is not supported.");
     Value resultSliceAxisSize =
         arith::DivUIOp::create(builder, operandSliceAxisSize, processGroupSize);
     OpFoldResult processInGroupLinearIndex = affine::linearizeIndex(
@@ -152,8 +154,8 @@ struct AllSliceOpLowering
                  resultSliceAxisSize);
     SmallVector<OpFoldResult> strides(
         operandType.getRank(), getAsIndexOpFoldResult(builder.getContext(), 1));
-    Value slice = tensor::ExtractSliceOp::create(builder,
-        op.getOperand(), offsets, sizes, strides);
+    Value slice = tensor::ExtractSliceOp::create(builder, op.getOperand(),
+                                                 offsets, sizes, strides);
     Value newResult =
         tensor::CastOp::create(builder, op.getResult().getType(), slice);
     rewriter.replaceAllUsesWith(op.getResult(), newResult);
@@ -218,7 +220,8 @@ createProcessLinearIndex(StringRef mesh, ValueRange processInGroupMultiIndex,
       llvm::to_vector_of<OpFoldResult>(processGroupShape), builder);
   auto res = dyn_cast<Value>(processInGroupLinearIndex);
   if (!res)
-    res = arith::ConstantIndexOp::create(builder,
+    res = arith::ConstantIndexOp::create(
+        builder,
         cast<IntegerAttr>(cast<Attribute>(processInGroupLinearIndex)).getInt());
   return cast<TypedValue<IndexType>>(res);
 }

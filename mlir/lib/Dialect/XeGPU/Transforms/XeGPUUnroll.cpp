@@ -83,8 +83,9 @@ protected:
                                  rewriter.getUnitAttr());
       auto blkAttr = NamedAttribute(rewriter.getStringAttr(blockAttrName),
                                     rewriter.getDenseI64ArrayAttr(blockSize));
-      auto castOp = UnrealizedConversionCastOp::create(rewriter,
-          loc, destTy, srcs, ArrayRef<NamedAttribute>({attr, blkAttr}));
+      auto castOp = UnrealizedConversionCastOp::create(
+          rewriter, loc, destTy, srcs,
+          ArrayRef<NamedAttribute>({attr, blkAttr}));
       return castOp.getResult(0);
     }
 
@@ -109,8 +110,9 @@ protected:
                                  rewriter.getUnitAttr());
       auto blkAttr = NamedAttribute(rewriter.getStringAttr(blockAttrName),
                                     rewriter.getDenseI64ArrayAttr(blockSize));
-      auto castOp = UnrealizedConversionCastOp::create(rewriter,
-          loc, destTypes, src, ArrayRef<NamedAttribute>({attr, blkAttr}));
+      auto castOp = UnrealizedConversionCastOp::create(
+          rewriter, loc, destTypes, src,
+          ArrayRef<NamedAttribute>({attr, blkAttr}));
       return castOp.getResults();
     }
 
@@ -169,9 +171,9 @@ struct UnrollCreateNdOp : public UnrollPattern<xegpu::CreateNdDescOp> {
            llvm::zip(validIdxes, oldOffsets, offsets))
         mixedOffsets[idx] = addi(oldOff, offset);
 
-      auto newOp = xegpu::CreateNdDescOp::create(rewriter,
-          loc, newTdescTy, op.getSource(), mixedOffsets, op.getMixedSizes(),
-          op.getMixedStrides());
+      auto newOp = xegpu::CreateNdDescOp::create(
+          rewriter, loc, newTdescTy, op.getSource(), mixedOffsets,
+          op.getMixedSizes(), op.getMixedStrides());
       newOps.push_back(newOp);
     }
     Value castOp = unpack(newOps, tdescTy, *targetShape, loc, rewriter);
@@ -199,8 +201,8 @@ struct UnrollUpdateNdOffsetOp : public UnrollPattern<xegpu::UpdateNdOffsetOp> {
 
     SmallVector<Value> newOps;
     for (auto t : convertedTdesc) {
-      auto newOp = xegpu::UpdateNdOffsetOp::create(rewriter,
-          loc, t.getType(), t, op.getOffsets(), op.getConstOffsets());
+      auto newOp = xegpu::UpdateNdOffsetOp::create(
+          rewriter, loc, t.getType(), t, op.getOffsets(), op.getConstOffsets());
       newOps.push_back(newOp);
     }
     Value castOp = unpack(newOps, op.getType(), *targetShape, loc, rewriter);
@@ -226,7 +228,8 @@ struct UnrollPrefetchNdOp : public UnrollPattern<xegpu::PrefetchNdOp> {
         op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
 
     for (auto t : convertedTdesc)
-      xegpu::PrefetchNdOp::create(rewriter, loc, TypeRange(), t, op->getAttrs());
+      xegpu::PrefetchNdOp::create(rewriter, loc, TypeRange(), t,
+                                  op->getAttrs());
 
     rewriter.eraseOp(op);
     return success();
@@ -292,7 +295,7 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
 
     for (auto [v, t] : llvm::zip(convertedValues, convertedTdescs))
       xegpu::StoreNdOp::create(rewriter, loc, v, t, op.getL1HintAttr(),
-                                        op.getL2HintAttr(), op.getL3HintAttr());
+                               op.getL2HintAttr(), op.getL3HintAttr());
 
     rewriter.eraseOp(op);
     return success();
@@ -385,7 +388,7 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
             operands.push_back(tmpC);
 
           tmpC = xegpu::DpasOp::create(rewriter, loc, vecTy, operands,
-                                                op->getAttrs());
+                                       op->getAttrs());
         }
         newOps.push_back(tmpC);
       }
@@ -436,22 +439,23 @@ struct UnrollCreateDescOp : public UnrollPattern<xegpu::CreateDescOp> {
            llvm::zip(convertedIndiceVec, convertedIndiceTypes)) {
         for (int64_t i = 0; i < numNewChunks; ++i) {
           // Compute the offset
-          Value inc = arith::ConstantIndexOp::create(rewriter,
-              loc, i * blockedChunkSize);
-          Value incVec = vector::SplatOp::create(rewriter, loc, indiceType, inc);
+          Value inc = arith::ConstantIndexOp::create(rewriter, loc,
+                                                     i * blockedChunkSize);
+          Value incVec =
+              vector::SplatOp::create(rewriter, loc, indiceType, inc);
           Value offsetIndice =
               arith::AddIOp::create(rewriter, loc, indice, incVec);
 
-          auto newOp = xegpu::CreateDescOp::create(rewriter,
-              loc, newTdescTy, op.getSource(), offsetIndice);
+          auto newOp = xegpu::CreateDescOp::create(
+              rewriter, loc, newTdescTy, op.getSource(), offsetIndice);
 
           newOps.push_back(newOp);
         }
       }
     } else {
       for (auto indice : convertedIndiceVec) {
-        auto newOp = xegpu::CreateDescOp::create(rewriter,
-            loc, newTdescTy, op.getSource(), indice);
+        auto newOp = xegpu::CreateDescOp::create(rewriter, loc, newTdescTy,
+                                                 op.getSource(), indice);
         newOps.push_back(newOp);
       }
     }
@@ -515,9 +519,9 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
 
     SmallVector<Value> newOps;
     for (auto [t, m] : llvm::zip(convertedTdescs, convertedMasks)) {
-      auto newOp = xegpu::LoadGatherOp::create(rewriter,
-          loc, newValueTy, t, m, op.getL1HintAttr(), op.getL2HintAttr(),
-          op.getL3HintAttr());
+      auto newOp = xegpu::LoadGatherOp::create(
+          rewriter, loc, newValueTy, t, m, op.getL1HintAttr(),
+          op.getL2HintAttr(), op.getL3HintAttr());
       newOps.push_back(newOp);
     }
 
@@ -609,8 +613,7 @@ struct UnrollStoreScatterOp : public UnrollPattern<xegpu::StoreScatterOp> {
       Value t = convertedTdescs[i];
       Value m = op.getMask() ? convertedMasks[i] : nullptr;
       xegpu::StoreScatterOp::create(rewriter, loc, v, t, m, op.getL1HintAttr(),
-                                             op.getL2HintAttr(),
-                                             op.getL3HintAttr());
+                                    op.getL2HintAttr(), op.getL3HintAttr());
     }
 
     rewriter.eraseOp(op);

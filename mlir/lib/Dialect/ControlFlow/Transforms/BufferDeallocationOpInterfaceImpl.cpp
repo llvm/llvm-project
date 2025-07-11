@@ -87,8 +87,8 @@ struct CondBranchOpInterface
                                destOperands.getAsOperandRange(), toRetain);
       SmallVector<Value> adaptedConditions(
           llvm::map_range(conditions, conditionModifier));
-      auto deallocOp = bufferization::DeallocOp::create(builder,
-          condBr.getLoc(), memrefs, adaptedConditions, toRetain);
+      auto deallocOp = bufferization::DeallocOp::create(
+          builder, condBr.getLoc(), memrefs, adaptedConditions, toRetain);
       state.resetOwnerships(deallocOp.getRetained(), condBr->getBlock());
       for (auto [retained, ownership] : llvm::zip(
                deallocOp.getRetained(), deallocOp.getUpdatedConditions())) {
@@ -116,17 +116,18 @@ struct CondBranchOpInterface
         condBr.getTrueDest(), condBr.getTrueDestOperandsMutable(),
         [&](Value cond) {
           return arith::AndIOp::create(builder, condBr.getLoc(), cond,
-                                               condBr.getCondition());
+                                       condBr.getCondition());
         },
         thenMapping);
     DeallocOp elseTakenDeallocOp = insertDeallocForBranch(
         condBr.getFalseDest(), condBr.getFalseDestOperandsMutable(),
         [&](Value cond) {
-          Value trueVal = arith::ConstantOp::create(builder,
-              condBr.getLoc(), builder.getBoolAttr(true));
-          Value negation = arith::XOrIOp::create(builder,
-              condBr.getLoc(), trueVal, condBr.getCondition());
-          return arith::AndIOp::create(builder, condBr.getLoc(), cond, negation);
+          Value trueVal = arith::ConstantOp::create(builder, condBr.getLoc(),
+                                                    builder.getBoolAttr(true));
+          Value negation = arith::XOrIOp::create(
+              builder, condBr.getLoc(), trueVal, condBr.getCondition());
+          return arith::AndIOp::create(builder, condBr.getLoc(), cond,
+                                       negation);
         },
         elseMapping);
 
@@ -143,9 +144,9 @@ struct CondBranchOpInterface
 
     for (Value retained : commonValues) {
       state.resetOwnerships(retained, condBr->getBlock());
-      Value combinedOwnership = arith::SelectOp::create(builder,
-          condBr.getLoc(), condBr.getCondition(), thenMapping[retained],
-          elseMapping[retained]);
+      Value combinedOwnership = arith::SelectOp::create(
+          builder, condBr.getLoc(), condBr.getCondition(),
+          thenMapping[retained], elseMapping[retained]);
       state.updateOwnership(retained, combinedOwnership, condBr->getBlock());
     }
 

@@ -161,8 +161,8 @@ struct ConvertLoad final : public OpConversionPattern<memref::LoadOp> {
       return rewriter.notifyMatchFailure(op.getLoc(), "expected array type");
     }
 
-    auto subscript = emitc::SubscriptOp::create(rewriter,
-        op.getLoc(), arrayValue, operands.getIndices());
+    auto subscript = emitc::SubscriptOp::create(
+        rewriter, op.getLoc(), arrayValue, operands.getIndices());
 
     rewriter.replaceOpWithNewOp<emitc::LoadOp>(op, resultTy, subscript);
     return success();
@@ -181,8 +181,8 @@ struct ConvertStore final : public OpConversionPattern<memref::StoreOp> {
       return rewriter.notifyMatchFailure(op.getLoc(), "expected array type");
     }
 
-    auto subscript = emitc::SubscriptOp::create(rewriter,
-        op.getLoc(), arrayValue, operands.getIndices());
+    auto subscript = emitc::SubscriptOp::create(
+        rewriter, op.getLoc(), arrayValue, operands.getIndices());
     rewriter.replaceOpWithNewOp<emitc::AssignOp>(op, subscript,
                                                  operands.getValue());
     return success();

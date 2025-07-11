@@ -456,8 +456,8 @@ struct SwapVectorExtractOfArithExtend
     Value extendSource = extendOp->getOperand(0);
 
     // Create new extract from source of extend.
-    Value newExtract = vector::ExtractOp::create(rewriter,
-        loc, extendSource, extractOp.getMixedPosition());
+    Value newExtract = vector::ExtractOp::create(rewriter, loc, extendSource,
+                                                 extractOp.getMixedPosition());
 
     // Extend new extract to original result type.
     Operation *newExtend =
@@ -503,8 +503,9 @@ struct SwapVectorScalableExtractOfArithExtend
     // Create new extract from source of extend.
     VectorType extractResultVectorType =
         resultType.clone(extendSourceVectorType.getElementType());
-    Value newExtract = vector::ScalableExtractOp::create(rewriter,
-        loc, extractResultVectorType, extendSource, extractOp.getPos());
+    Value newExtract = vector::ScalableExtractOp::create(
+        rewriter, loc, extractResultVectorType, extendSource,
+        extractOp.getPos());
 
     // Extend new extract to original result type.
     Operation *newExtend =

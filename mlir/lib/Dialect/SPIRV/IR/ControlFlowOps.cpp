@@ -569,10 +569,10 @@ SelectionOp::createIfThen(Location loc, Value condition,
   {
     OpBuilder::InsertionGuard guard(builder);
     builder.createBlock(thenBlock);
-    spirv::BranchConditionalOp::create(builder,
-        loc, condition, thenBlock,
-        /*trueArguments=*/ArrayRef<Value>(), mergeBlock,
-        /*falseArguments=*/ArrayRef<Value>());
+    spirv::BranchConditionalOp::create(builder, loc, condition, thenBlock,
+                                       /*trueArguments=*/ArrayRef<Value>(),
+                                       mergeBlock,
+                                       /*falseArguments=*/ArrayRef<Value>());
   }
 
   return selectionOp;

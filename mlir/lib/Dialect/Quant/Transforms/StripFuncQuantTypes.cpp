@@ -47,7 +47,7 @@ class QuantizedTypeConverter : public TypeConverter {
   static Value materializeConversion(OpBuilder &builder, Type type,
                                      ValueRange inputs, Location loc) {
     return quant::StorageCastOp::create(builder, loc, type,
-                                                llvm::getSingleElement(inputs));
+                                        llvm::getSingleElement(inputs));
   }
 
 public:

@@ -124,11 +124,13 @@ public:
                                   rewriter.getContext(), 32, min, max));
     }
     if (indexBitwidth > 32) {
-      newOp = LLVM::SExtOp::create(rewriter,
-          loc, IntegerType::get(context, indexBitwidth), newOp->getResult(0));
+      newOp = LLVM::SExtOp::create(rewriter, loc,
+                                   IntegerType::get(context, indexBitwidth),
+                                   newOp->getResult(0));
     } else if (indexBitwidth < 32) {
-      newOp = LLVM::TruncOp::create(rewriter,
-          loc, IntegerType::get(context, indexBitwidth), newOp->getResult(0));
+      newOp = LLVM::TruncOp::create(rewriter, loc,
+                                    IntegerType::get(context, indexBitwidth),
+                                    newOp->getResult(0));
     }
 
     rewriter.replaceOp(op, newOp->getResults());

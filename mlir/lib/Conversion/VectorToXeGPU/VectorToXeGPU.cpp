@@ -109,7 +109,7 @@ createNdDescriptor(PatternRewriter &rewriter, Location loc,
   xegpu::CreateNdDescOp ndDesc;
   if (srcTy.hasStaticShape()) {
     ndDesc = xegpu::CreateNdDescOp::create(rewriter, loc, descType, src,
-                                                    getAsOpFoldResult(offsets));
+                                           getAsOpFoldResult(offsets));
   } else {
     // In case of any dynamic shapes, source's shape and strides have to be
     // explicitly provided.
@@ -145,8 +145,8 @@ createNdDescriptor(PatternRewriter &rewriter, Location loc,
     }
     std::reverse(dynStrides.begin(), dynStrides.end());
 
-    ndDesc = xegpu::CreateNdDescOp::create(rewriter,
-        loc, descType, src, dynOffsets, dynShapes, dynStrides,
+    ndDesc = xegpu::CreateNdDescOp::create(
+        rewriter, loc, descType, src, dynOffsets, dynShapes, dynStrides,
         DenseI64ArrayAttr::get(rewriter.getContext(), constOffsets),
         DenseI64ArrayAttr::get(rewriter.getContext(), srcTy.getShape()),
         DenseI64ArrayAttr::get(rewriter.getContext(), strides));
@@ -200,10 +200,10 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
                                                   ArrayRef<int64_t>{1, 0});
     // By default, no specific caching policy is assigned.
     xegpu::CachePolicyAttr hint = nullptr;
-    auto loadOp = xegpu::LoadNdOp::create(rewriter,
-        loc, vecTy, ndDesc, /*packed=*/nullptr, transposeAttr,
-        /*l1_hint=*/hint,
-        /*l2_hint=*/hint, /*l3_hint=*/hint);
+    auto loadOp = xegpu::LoadNdOp::create(rewriter, loc, vecTy, ndDesc,
+                                          /*packed=*/nullptr, transposeAttr,
+                                          /*l1_hint=*/hint,
+                                          /*l2_hint=*/hint, /*l3_hint=*/hint);
     rewriter.replaceOp(readOp, loadOp);
 
     return success();
@@ -239,8 +239,8 @@ struct TransferWriteLowering
     xegpu::CachePolicyAttr hint = nullptr;
     auto storeOp =
         xegpu::StoreNdOp::create(rewriter, loc, writeOp.getVector(), ndDesc,
-                                          /*l1_hint=*/hint,
-                                          /*l2_hint=*/hint, /*l3_hint=*/hint);
+                                 /*l1_hint=*/hint,
+                                 /*l2_hint=*/hint, /*l3_hint=*/hint);
     rewriter.replaceOp(writeOp, storeOp);
 
     return success();
@@ -269,8 +269,8 @@ struct LoadLowering : public OpRewritePattern<vector::LoadOp> {
 
     // By default, no specific caching policy is assigned.
     xegpu::CachePolicyAttr hint = nullptr;
-    auto loadNdOp = xegpu::LoadNdOp::create(rewriter,
-        loc, vecTy, ndDesc, /*packed=*/nullptr, /*transpose=*/nullptr,
+    auto loadNdOp = xegpu::LoadNdOp::create(
+        rewriter, loc, vecTy, ndDesc, /*packed=*/nullptr, /*transpose=*/nullptr,
         /*l1_hint=*/hint,
         /*l2_hint=*/hint, /*l3_hint=*/hint);
     rewriter.replaceOp(loadOp, loadNdOp);
@@ -304,8 +304,8 @@ struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
     xegpu::CachePolicyAttr hint = nullptr;
     auto storeNdOp =
         xegpu::StoreNdOp::create(rewriter, loc, vector, ndDesc,
-                                          /*l1_hint=*/hint,
-                                          /*l2_hint=*/hint, /*l3_hint=*/hint);
+                                 /*l1_hint=*/hint,
+                                 /*l2_hint=*/hint, /*l3_hint=*/hint);
     rewriter.replaceOp(storeOp, storeNdOp);
 
     return success();
@@ -339,8 +339,9 @@ struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
     if (!isRowMajorMatmul(contractOp.getIndexingMapsAttr()))
       return rewriter.notifyMatchFailure(contractOp, "Invalid indexing maps");
 
-    auto dpasOp = xegpu::DpasOp::create(rewriter,
-        loc, TypeRange{contractOp.getResultType()}, ValueRange{lhs, rhs, acc});
+    auto dpasOp = xegpu::DpasOp::create(rewriter, loc,
+                                        TypeRange{contractOp.getResultType()},
+                                        ValueRange{lhs, rhs, acc});
     rewriter.replaceOp(contractOp, dpasOp);
 
     return success();

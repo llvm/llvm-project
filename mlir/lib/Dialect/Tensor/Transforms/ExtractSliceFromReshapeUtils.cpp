@@ -142,15 +142,15 @@ tensor::ExtractSliceFromCollapseHelper::emitLoopNestBody(
   SmallVector<Range> extractParams =
       helper.getExtractSliceParams(builder.getContext(), multiIndices);
 
-  Value subTileResult = tensor::ExtractSliceOp::create(builder,
-      loc, collapseShapeOp.getSrc(), extractParams);
+  Value subTileResult = tensor::ExtractSliceOp::create(
+      builder, loc, collapseShapeOp.getSrc(), extractParams);
 
   SmallVector<Range> insertParams =
       helper.getInsertSliceParams(builder.getContext(), tileInductionVars);
 
   // Collapse the dimensions of the source slice back down.
-  Value collapsedResult = tensor::CollapseShapeOp::create(builder,
-      loc, subTileResult, reassociationIndices);
+  Value collapsedResult = tensor::CollapseShapeOp::create(
+      builder, loc, subTileResult, reassociationIndices);
   return std::make_pair(collapsedResult, insertParams);
 }
 
@@ -173,8 +173,9 @@ tensor::simplifyCollapseShapeWithRankReducingExtractSlice(
   SmallVector<OpFoldResult> sizes =
       tensor::getMixedSizes(rewriter, op.getLoc(), op.getSrc());
   SmallVector<OpFoldResult> strides(sourceType.getRank(), one);
-  auto sliceOp = tensor::ExtractSliceOp::create(rewriter,
-      op.getLoc(), info->sliceResultType, op.getSrc(), offsets, sizes, strides);
+  auto sliceOp = tensor::ExtractSliceOp::create(
+      rewriter, op.getLoc(), info->sliceResultType, op.getSrc(), offsets, sizes,
+      strides);
 
   if (!info->newReassociationIndices.has_value()) {
     rewriter.replaceOp(op, sliceOp.getResult());

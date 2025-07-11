@@ -419,7 +419,7 @@ AsyncRuntimeRefCountingPass::addDropRefInDivergentLivenessSuccessor(
 
       OpBuilder builder = OpBuilder::atBlockBegin(refCountingBlock);
       RuntimeDropRefOp::create(builder, value.getLoc(), value,
-                                       builder.getI64IntegerAttr(1));
+                               builder.getI64IntegerAttr(1));
 
       // No need to update the terminator operation.
       if (successor == refCountingBlock)

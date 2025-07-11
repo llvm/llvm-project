@@ -139,16 +139,16 @@ ExtFOnFloat8RewritePattern::matchAndRewrite(arith::ExtFOp op,
   Type outElemType = getElementTypeOrSelf(op.getOut().getType());
   VectorType extResType = VectorType::get(2, rewriter.getF32Type());
   if (!inVecType) {
-    Value asFloat = amdgpu::ExtPackedFp8Op::create(rewriter,
-        loc, rewriter.getF32Type(), in, 0);
+    Value asFloat = amdgpu::ExtPackedFp8Op::create(
+        rewriter, loc, rewriter.getF32Type(), in, 0);
     Value result = castF32To(outElemType, asFloat, loc, rewriter);
     rewriter.replaceOp(op, result);
     return success();
   }
   int64_t numElements = inVecType.getNumElements();
 
-  Value zero = arith::ConstantOp::create(rewriter,
-      loc, outElemType, rewriter.getFloatAttr(outElemType, 0.0));
+  Value zero = arith::ConstantOp::create(
+      rewriter, loc, outElemType, rewriter.getFloatAttr(outElemType, 0.0));
   VectorType outType = cast<VectorType>(op.getOut().getType());
 
   if (inVecType.getShape().empty()) {
@@ -158,8 +158,8 @@ ExtFOnFloat8RewritePattern::matchAndRewrite(arith::ExtFOp op,
         vector::ExtractOp::create(rewriter, loc, in, ArrayRef<int64_t>{});
     Value scalarExt =
         arith::ExtFOp::create(rewriter, loc, outElemType, scalarIn);
-    Value result = vector::InsertOp::create(rewriter, loc, scalarExt, zerodSplat,
-                                                     ArrayRef<int64_t>{});
+    Value result = vector::InsertOp::create(rewriter, loc, scalarExt,
+                                            zerodSplat, ArrayRef<int64_t>{});
     rewriter.replaceOp(op, result);
     return success();
   }
@@ -176,19 +176,19 @@ ExtFOnFloat8RewritePattern::matchAndRewrite(arith::ExtFOp op,
 
   for (int64_t i = 0; i < numElements; i += 4) {
     int64_t elemsThisOp = std::min(numElements, i + 4) - i;
-    Value inSlice = vector::ExtractStridedSliceOp::create(rewriter,
-        loc, in, i, elemsThisOp, 1);
+    Value inSlice = vector::ExtractStridedSliceOp::create(rewriter, loc, in, i,
+                                                          elemsThisOp, 1);
     for (int64_t j = 0; j < elemsThisOp; j += 2) {
       if (i + j + 1 < numElements) { // Convert two 8-bit elements
-        Value asFloats = amdgpu::ExtPackedFp8Op::create(rewriter,
-            loc, extResType, inSlice, j / 2);
+        Value asFloats = amdgpu::ExtPackedFp8Op::create(
+            rewriter, loc, extResType, inSlice, j / 2);
         Type desType = VectorType::get(2, outElemType);
         Value asType = castF32To(desType, asFloats, loc, rewriter);
-        result = vector::InsertStridedSliceOp::create(rewriter,
-            loc, asType, result, i + j, 1);
+        result = vector::InsertStridedSliceOp::create(rewriter, loc, asType,
+                                                      result, i + j, 1);
       } else { // Convert a 8-bit element
-        Value asFloat = amdgpu::ExtPackedFp8Op::create(rewriter,
-            loc, rewriter.getF32Type(), inSlice, j / 2 * 2);
+        Value asFloat = amdgpu::ExtPackedFp8Op::create(
+            rewriter, loc, rewriter.getF32Type(), inSlice, j / 2 * 2);
         Value asType = castF32To(outElemType, asFloat, loc, rewriter);
         result = vector::InsertOp::create(rewriter, loc, asType, result, i + j);
       }
@@ -250,11 +250,13 @@ static Value clampInput(PatternRewriter &rewriter, Location loc,
       loc, arith::CmpFPredicate::OEQ, source, negInf);
   Value isNan = rewriter.createOrFold<arith::CmpFOp>(
       loc, arith::CmpFPredicate::UNO, source, source);
-  Value isNonFinite = arith::OrIOp::create(rewriter,
-      loc, arith::OrIOp::create(rewriter, loc, isInf, isNegInf), isNan);
+  Value isNonFinite = arith::OrIOp::create(
+      rewriter, loc, arith::OrIOp::create(rewriter, loc, isInf, isNegInf),
+      isNan);
 
   Value clampedBelow = arith::MaximumFOp::create(rewriter, loc, source, minCst);
-  Value clamped = arith::MinimumFOp::create(rewriter, loc, clampedBelow, maxCst);
+  Value clamped =
+      arith::MinimumFOp::create(rewriter, loc, clampedBelow, maxCst);
   Value res =
       arith::SelectOp::create(rewriter, loc, isNonFinite, source, clamped);
   return res;
@@ -290,8 +292,8 @@ TruncFToFloat8RewritePattern::matchAndRewrite(arith::TruncFOp op,
   VectorType truncResType = VectorType::get(4, outElemType);
   if (!inVectorTy) {
     Value asFloat = castToF32(in, loc, rewriter);
-    Value asF8s = amdgpu::PackedTrunc2xFp8Op::create(rewriter,
-        loc, truncResType, asFloat, /*sourceB=*/nullptr, 0,
+    Value asF8s = amdgpu::PackedTrunc2xFp8Op::create(
+        rewriter, loc, truncResType, asFloat, /*sourceB=*/nullptr, 0,
         /*existing=*/nullptr);
     Value result = vector::ExtractOp::create(rewriter, loc, asF8s, 0);
     rewriter.replaceOp(op, result);
@@ -299,8 +301,8 @@ TruncFToFloat8RewritePattern::matchAndRewrite(arith::TruncFOp op,
   }
 
   int64_t numElements = outVecType.getNumElements();
-  Value zero = arith::ConstantOp::create(rewriter,
-      loc, outElemType, rewriter.getFloatAttr(outElemType, 0.0));
+  Value zero = arith::ConstantOp::create(
+      rewriter, loc, outElemType, rewriter.getFloatAttr(outElemType, 0.0));
   if (outVecType.getShape().empty()) {
     Value scalarIn =
         vector::ExtractOp::create(rewriter, loc, in, ArrayRef<int64_t>{});
@@ -308,7 +310,7 @@ TruncFToFloat8RewritePattern::matchAndRewrite(arith::TruncFOp op,
     Value scalarTrunc =
         arith::TruncFOp::create(rewriter, loc, outElemType, scalarIn);
     Value result = vector::InsertOp::create(rewriter, loc, scalarTrunc, zero,
-                                                     ArrayRef<int64_t>{});
+                                            ArrayRef<int64_t>{});
     rewriter.replaceOp(op, result);
     return success();
   }
@@ -334,14 +336,14 @@ TruncFToFloat8RewritePattern::matchAndRewrite(arith::TruncFOp op,
         Value elemB = vector::ExtractOp::create(rewriter, loc, in, i + j + 1);
         asFloatB = castToF32(elemB, loc, rewriter);
       }
-      thisResult = amdgpu::PackedTrunc2xFp8Op::create(rewriter,
-          loc, truncResType, asFloatA, asFloatB, j / 2, thisResult);
+      thisResult = amdgpu::PackedTrunc2xFp8Op::create(
+          rewriter, loc, truncResType, asFloatA, asFloatB, j / 2, thisResult);
     }
     if (elemsThisOp < 4)
-      thisResult = vector::ExtractStridedSliceOp::create(rewriter,
-          loc, thisResult, 0, elemsThisOp, 1);
+      thisResult = vector::ExtractStridedSliceOp::create(
+          rewriter, loc, thisResult, 0, elemsThisOp, 1);
     result = vector::InsertStridedSliceOp::create(rewriter, loc, thisResult,
-                                                           result, i, 1);
+                                                  result, i, 1);
   }
 
   if (inVectorTy.getRank() != outVecType.getRank()) {
@@ -407,10 +409,10 @@ LogicalResult TruncfToFloat16RewritePattern::matchAndRewrite(
         ROCDL::CvtPkRtz::create(rewriter, loc, truncResType, elemA, elemB);
     // Place back the truncated result into the possibly larger vector. If we
     // are operating on a size 2 vector, these operations should be folded away
-    thisResult = vector::ExtractStridedSliceOp::create(rewriter,
-        loc, thisResult, 0, elemsThisOp, 1);
+    thisResult = vector::ExtractStridedSliceOp::create(
+        rewriter, loc, thisResult, 0, elemsThisOp, 1);
     result = vector::InsertStridedSliceOp::create(rewriter, loc, thisResult,
-                                                           result, i, 1);
+                                                  result, i, 1);
   }
 
   if (inVectorTy.getRank() != outVecType.getRank()) {

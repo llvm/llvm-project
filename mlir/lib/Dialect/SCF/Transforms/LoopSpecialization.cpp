@@ -66,7 +66,7 @@ static void specializeParallelLoopForUnrolling(ParallelOp op) {
     Value constant =
         arith::ConstantIndexOp::create(b, op.getLoc(), std::get<1>(bound));
     Value cmp = arith::CmpIOp::create(b, op.getLoc(), arith::CmpIPredicate::eq,
-                                        std::get<0>(bound), constant);
+                                      std::get<0>(bound), constant);
     cond = cond ? arith::AndIOp::create(b, op.getLoc(), cond, cmp) : cmp;
     map.map(std::get<0>(bound), constant);
   }
@@ -97,7 +97,7 @@ static void specializeForLoopForUnrolling(ForOp op) {
   IRMapping map;
   Value constant = arith::ConstantIndexOp::create(b, op.getLoc(), minConstant);
   Value cond = arith::CmpIOp::create(b, op.getLoc(), arith::CmpIPredicate::eq,
-                                       bound, constant);
+                                     bound, constant);
   map.map(bound, constant);
   auto ifOp = scf::IfOp::create(b, op.getLoc(), cond, /*withElseRegion=*/true);
   ifOp.getThenBodyBuilder().clone(*op.getOperation(), map);

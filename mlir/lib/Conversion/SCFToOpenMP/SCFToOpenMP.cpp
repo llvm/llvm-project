@@ -188,7 +188,7 @@ createDecl(PatternRewriter &builder, SymbolTable &symbolTable,
   OpBuilder::InsertionGuard guard(builder);
   Type type = reduce.getOperands()[reductionIndex].getType();
   auto decl = omp::DeclareReductionOp::create(builder, reduce.getLoc(),
-                                                      "__scf_reduction", type);
+                                              "__scf_reduction", type);
   symbolTable.insert(decl);
 
   builder.createBlock(&decl.getInitializerRegion(),
@@ -228,10 +228,10 @@ static omp::DeclareReductionOp addAtomicRMW(OpBuilder &builder,
   Block *atomicBlock = &decl.getAtomicReductionRegion().back();
   builder.setInsertionPointToEnd(atomicBlock);
   Value loaded = LLVM::LoadOp::create(builder, reduce.getLoc(), decl.getType(),
-                                              atomicBlock->getArgument(1));
+                                      atomicBlock->getArgument(1));
   LLVM::AtomicRMWOp::create(builder, reduce.getLoc(), atomicKind,
-                                    atomicBlock->getArgument(0), loaded,
-                                    LLVM::AtomicOrdering::monotonic);
+                            atomicBlock->getArgument(0), loaded,
+                            LLVM::AtomicOrdering::monotonic);
   omp::YieldOp::create(builder, reduce.getLoc(), ArrayRef<Value>());
   return decl;
 }
@@ -380,8 +380,9 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
     // Allocate reduction variables. Make sure the we don't overflow the stack
     // with local `alloca`s by saving and restoring the stack pointer.
     Location loc = parallelOp.getLoc();
-    Value one = LLVM::ConstantOp::create(rewriter,
-        loc, rewriter.getIntegerType(64), rewriter.getI64IntegerAttr(1));
+    Value one =
+        LLVM::ConstantOp::create(rewriter, loc, rewriter.getIntegerType(64),
+                                 rewriter.getI64IntegerAttr(1));
     SmallVector<Value> reductionVariables;
     reductionVariables.reserve(parallelOp.getNumReductions());
     auto ptrType = LLVM::LLVMPointerType::get(parallelOp.getContext());
@@ -390,8 +391,8 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
               isa<LLVM::PointerElementTypeInterface>(init.getType())) &&
              "cannot create a reduction variable if the type is not an LLVM "
              "pointer element");
-      Value storage =
-          LLVM::AllocaOp::create(rewriter, loc, ptrType, init.getType(), one, 0);
+      Value storage = LLVM::AllocaOp::create(rewriter, loc, ptrType,
+                                             init.getType(), one, 0);
       LLVM::StoreOp::create(rewriter, loc, init, storage);
       reductionVariables.push_back(storage);
     }
@@ -412,7 +413,7 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
              "expect reduction region to have one block");
       Value pvtRedVar = parallelOp.getRegion().addArgument(x.getType(), loc);
       Value pvtRedVal = LLVM::LoadOp::create(rewriter, reduce.getLoc(),
-                                                      rD.getType(), pvtRedVar);
+                                             rD.getType(), pvtRedVar);
       // Make a copy of the reduction combiner region in the body
       mlir::OpBuilder builder(rewriter.getContext());
       builder.setInsertionPoint(reduce);
@@ -437,12 +438,12 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
 
     Value numThreadsVar;
     if (numThreads > 0) {
-      numThreadsVar = LLVM::ConstantOp::create(rewriter,
-          loc, rewriter.getI32IntegerAttr(numThreads));
+      numThreadsVar = LLVM::ConstantOp::create(
+          rewriter, loc, rewriter.getI32IntegerAttr(numThreads));
     }
     // Create the parallel wrapper.
-    auto ompParallel = omp::ParallelOp::create(rewriter,
-        loc,
+    auto ompParallel = omp::ParallelOp::create(
+        rewriter, loc,
         /* allocate_vars = */ llvm::SmallVector<Value>{},
         /* allocator_vars = */ llvm::SmallVector<Value>{},
         /* if_expr = */ Value{},
@@ -490,8 +491,8 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
                                               parallelOp.getLoc()));
 
         // Create loop nest and populate region with contents of scf.parallel.
-        auto loopOp = omp::LoopNestOp::create(rewriter,
-            parallelOp.getLoc(), parallelOp.getLowerBound(),
+        auto loopOp = omp::LoopNestOp::create(
+            rewriter, parallelOp.getLoc(), parallelOp.getLowerBound(),
             parallelOp.getUpperBound(), parallelOp.getStep());
 
         rewriter.inlineRegionBefore(parallelOp.getRegion(), loopOp.getRegion(),
@@ -511,8 +512,8 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
             rewriter.splitBlock(&loopOpEntryBlock, loopOpEntryBlock.begin());
         rewriter.setInsertionPointToStart(&loopOpEntryBlock);
 
-        auto scope = memref::AllocaScopeOp::create(rewriter, parallelOp.getLoc(),
-                                                            TypeRange());
+        auto scope = memref::AllocaScopeOp::create(
+            rewriter, parallelOp.getLoc(), TypeRange());
         omp::YieldOp::create(rewriter, loc, ValueRange());
         Block *scopeBlock = rewriter.createBlock(&scope.getBodyRegion());
         rewriter.mergeBlocks(ops, scopeBlock);

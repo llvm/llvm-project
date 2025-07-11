@@ -94,8 +94,8 @@ static FlatSymbolRefAttr getMangledSortHelperFunc(
     OpBuilder::InsertionGuard insertionGuard(builder);
     builder.setInsertionPoint(insertPoint);
     Location loc = insertPoint.getLoc();
-    func = func::FuncOp::create(builder,
-        loc, nameOstream.str(),
+    func = func::FuncOp::create(
+        builder, loc, nameOstream.str(),
         FunctionType::get(context, operands.getTypes(), resultTypes));
     func.setPrivate();
     createFunc(builder, module, func, xPerm, ny, nTrailingP);
@@ -221,7 +221,7 @@ static Value createEqCompare(OpBuilder &builder, Location loc, Value i, Value j,
     Value ne =
         arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::ne, vi, vj);
     scf::IfOp ifOp = scf::IfOp::create(builder, loc, builder.getIntegerType(1),
-                                               ne, /*else=*/true);
+                                       ne, /*else=*/true);
     // If (x[i] != x[j]).
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
     Value f = constantI1(builder, loc, false);
@@ -266,7 +266,8 @@ static Value createLessThanCompare(OpBuilder &builder, Location loc, Value i,
 
   Value res;
   if (isLastDim) {
-    res = arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::ult, vi, vj);
+    res =
+        arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::ult, vi, vj);
     // For 1D, we create a compare without any control flow. Otherwise, we
     // create YieldOp to return the result in the nested if-stmt.
     if (!isFirstDim)
@@ -275,7 +276,7 @@ static Value createLessThanCompare(OpBuilder &builder, Location loc, Value i,
     Value ne =
         arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::ne, vi, vj);
     scf::IfOp ifOp = scf::IfOp::create(builder, loc, builder.getIntegerType(1),
-                                               ne, /*else=*/true);
+                                       ne, /*else=*/true);
     // If (x[i] != x[j]).
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
     Value lt =
@@ -337,16 +338,16 @@ static void createBinarySearchFunc(OpBuilder &builder, ModuleOp module,
   ValueRange args = entryBlock->getArguments();
   Value p = args[hiIdx];
   SmallVector<Type, 2> types(2, p.getType()); // Only two types.
-  scf::WhileOp whileOp = scf::WhileOp::create(builder,
-      loc, types, SmallVector<Value, 2>{args[loIdx], args[hiIdx]});
+  scf::WhileOp whileOp = scf::WhileOp::create(
+      builder, loc, types, SmallVector<Value, 2>{args[loIdx], args[hiIdx]});
 
   // The before-region of the WhileOp.
   Block *before =
       builder.createBlock(&whileOp.getBefore(), {}, types, {loc, loc});
   builder.setInsertionPointToEnd(before);
-  Value cond1 = arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::ult,
-                                              before->getArgument(0),
-                                              before->getArgument(1));
+  Value cond1 =
+      arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::ult,
+                            before->getArgument(0), before->getArgument(1));
   scf::ConditionOp::create(builder, loc, cond1, before->getArguments());
 
   // The after-region of the WhileOp.
@@ -357,8 +358,8 @@ static void createBinarySearchFunc(OpBuilder &builder, ModuleOp module,
   Value hi = after->getArgument(1);
   // Compute mid = (lo + hi) >> 1.
   Value c1 = constantIndex(builder, loc, 1);
-  Value mid = arith::ShRUIOp::create(builder,
-      loc, arith::AddIOp::create(builder, loc, lo, hi), c1);
+  Value mid = arith::ShRUIOp::create(
+      builder, loc, arith::AddIOp::create(builder, loc, lo, hi), c1);
   Value midp1 = arith::AddIOp::create(builder, loc, mid, c1);
 
   // Compare xs[p] < xs[mid].
@@ -521,7 +522,7 @@ static void createChoosePivot(OpBuilder &builder, ModuleOp module,
   Value len = arith::SubIOp::create(builder, loc, hiP1, lo);
   Value lenThreshold = constantIndex(builder, loc, 1000);
   Value lenCond = arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::ult,
-                                                len, lenThreshold);
+                                        len, lenThreshold);
   scf::IfOp lenIf = scf::IfOp::create(builder, loc, lenCond, /*else=*/true);
 
   // When len < 1000, choose pivot from median of 3 values.
@@ -607,7 +608,7 @@ static void createPartitionFunc(OpBuilder &builder, ModuleOp module,
                                       {loc, loc, loc, loc});
   builder.setInsertionPointToEnd(before);
   scf::ConditionOp::create(builder, loc, before->getArgument(3),
-                                   before->getArguments());
+                           before->getArguments());
 
   // The after-region of the WhileOp.
   Block *after =
@@ -639,14 +640,14 @@ static void createPartitionFunc(OpBuilder &builder, ModuleOp module,
   Value icond =
       arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::eq, i, p);
   scf::IfOp ifOpI = scf::IfOp::create(builder, loc, TypeRange{p.getType()},
-                                              icond, /*else=*/true);
+                                      icond, /*else=*/true);
   builder.setInsertionPointToStart(&ifOpI.getThenRegion().front());
   scf::YieldOp::create(builder, loc, ValueRange{j});
   builder.setInsertionPointToStart(&ifOpI.getElseRegion().front());
   Value jcond =
       arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::eq, j, p);
   scf::IfOp ifOpJ = scf::IfOp::create(builder, loc, TypeRange{p.getType()},
-                                              jcond, /*else=*/true);
+                                      jcond, /*else=*/true);
   builder.setInsertionPointToStart(&ifOpJ.getThenRegion().front());
   scf::YieldOp::create(builder, loc, ValueRange{i});
   builder.setInsertionPointToStart(&ifOpJ.getElseRegion().front());
@@ -656,8 +657,9 @@ static void createPartitionFunc(OpBuilder &builder, ModuleOp module,
   builder.setInsertionPointAfter(ifOpI);
   Value compareEqIJ =
       arith::AndIOp::create(builder, loc, iCompareEq, jCompareEq);
-  scf::IfOp ifOp2 = scf::IfOp::create(builder,
-      loc, TypeRange{i.getType(), j.getType()}, compareEqIJ, /*else=*/true);
+  scf::IfOp ifOp2 =
+      scf::IfOp::create(builder, loc, TypeRange{i.getType(), j.getType()},
+                        compareEqIJ, /*else=*/true);
   builder.setInsertionPointToStart(&ifOp2.getThenRegion().front());
   Value i2 = arith::AddIOp::create(builder, loc, i, c1);
   Value j2 = arith::SubIOp::create(builder, loc, j, c1);
@@ -665,17 +667,18 @@ static void createPartitionFunc(OpBuilder &builder, ModuleOp module,
   builder.setInsertionPointToStart(&ifOp2.getElseRegion().front());
   scf::YieldOp::create(builder, loc, ValueRange{i, j});
   builder.setInsertionPointAfter(ifOp2);
-  scf::YieldOp::create(builder,
-      loc,
-      ValueRange{ifOp2.getResult(0), ifOp2.getResult(1), ifOpI.getResult(0),
-                 /*cont=*/constantI1(builder, loc, true)});
+  scf::YieldOp::create(builder, loc,
+                       ValueRange{ifOp2.getResult(0), ifOp2.getResult(1),
+                                  ifOpI.getResult(0),
+                                  /*cont=*/constantI1(builder, loc, true)});
 
   // False branch for if i < j (i.e., i >= j):
   builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
   p = arith::AddIOp::create(builder, loc, j,
-                                    constantOne(builder, loc, j.getType()));
-  scf::YieldOp::create(builder,
-      loc, ValueRange{i, j, p, /*cont=*/constantI1(builder, loc, false)});
+                            constantOne(builder, loc, j.getType()));
+  scf::YieldOp::create(
+      builder, loc,
+      ValueRange{i, j, p, /*cont=*/constantI1(builder, loc, false)});
 
   // Return for the whileOp.
   builder.setInsertionPointAfter(ifOp);
@@ -773,7 +776,7 @@ static void createShiftDownFunc(OpBuilder &builder, ModuleOp module,
     Value lChildIdx = arith::AddIOp::create(builder, loc, lChild, first);
     Value rChild = arith::AddIOp::create(builder, loc, lChild, c1);
     Value cond1 = arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::ult,
-                                                rChild, n);
+                                        rChild, n);
     SmallVector<Type, 2> ifTypes(2, r.getType());
     scf::IfOp if1 =
         scf::IfOp::create(builder, loc, ifTypes, cond1, /*else=*/true);
@@ -803,8 +806,8 @@ static void createShiftDownFunc(OpBuilder &builder, ModuleOp module,
 
   // While (data[start] < data[childIndex]).
   SmallVector<Type, 3> types(3, child.getType());
-  scf::WhileOp whileOp = scf::WhileOp::create(builder,
-      loc, types, SmallVector<Value, 2>{start, child, childIdx});
+  scf::WhileOp whileOp = scf::WhileOp::create(
+      builder, loc, types, SmallVector<Value, 2>{start, child, childIdx});
 
   // The before-region of the WhileOp.
   SmallVector<Location, 3> locs(3, loc);
@@ -828,16 +831,17 @@ static void createShiftDownFunc(OpBuilder &builder, ModuleOp module,
   start = childIdx;
   Value cond2 =
       arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::uge, t, child);
-  scf::IfOp if2 = scf::IfOp::create(builder,
-      loc, TypeRange{child.getType(), child.getType()}, cond2, /*else=*/true);
+  scf::IfOp if2 = scf::IfOp::create(builder, loc,
+                                    TypeRange{child.getType(), child.getType()},
+                                    cond2, /*else=*/true);
   builder.setInsertionPointToStart(&if2.getThenRegion().front());
   auto [newChild, newChildIdx] = getLargerChild(child);
   scf::YieldOp::create(builder, loc, ValueRange{newChild, newChildIdx});
   builder.setInsertionPointToStart(&if2.getElseRegion().front());
   scf::YieldOp::create(builder, loc, ValueRange{child, childIdx});
   builder.setInsertionPointAfter(if2);
-  scf::YieldOp::create(builder,
-      loc, ValueRange{start, if2.getResult(0), if2.getResult(1)});
+  scf::YieldOp::create(builder, loc,
+                       ValueRange{start, if2.getResult(0), if2.getResult(1)});
 
   builder.setInsertionPointAfter(ifN);
   func::ReturnOp::create(builder, loc);
@@ -888,7 +892,7 @@ static void createHeapSortFunc(OpBuilder &builder, ModuleOp module,
       builder, func, TypeRange(), kShiftDownFuncNamePrefix, xPerm, ny,
       shiftDownOperands, createShiftDownFunc, /*nTrailingP=*/1);
   func::CallOp::create(builder, loc, shiftDownFunc, TypeRange(),
-                               shiftDownOperands);
+                       shiftDownOperands);
 
   builder.setInsertionPointAfter(forI);
   // For l = n downto 2.
@@ -905,7 +909,7 @@ static void createHeapSortFunc(OpBuilder &builder, ModuleOp module,
   shiftDownOperands[shiftDownOperands.size() - 1] =
       arith::SubIOp::create(builder, loc, l, c1);
   func::CallOp::create(builder, loc, shiftDownFunc, TypeRange(),
-                               shiftDownOperands);
+                       shiftDownOperands);
 
   builder.setInsertionPointAfter(forL);
   func::ReturnOp::create(builder, loc);
@@ -949,7 +953,7 @@ createQuickSort(OpBuilder &builder, ModuleOp module, func::FuncOp func,
   // Else len > 2, need recursion.
   builder.setInsertionPointToStart(&ifLenGtTwo.getThenRegion().front());
   Value cond = arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::ule,
-                                             lenLow, lenHigh);
+                                     lenLow, lenHigh);
 
   Value c0 = constantIndex(builder, loc, 0);
   scf::IfOp ifOp = scf::IfOp::create(builder, loc, types, cond, /*else=*/true);
@@ -1153,8 +1157,8 @@ static void createQuickSortFunc(OpBuilder &builder, ModuleOp module,
   if (isHybrid) {
     Value len = arith::SubIOp::create(builder, loc, hi, lo);
     Value lenLimit = constantIndex(builder, loc, 30);
-    Value lenCond = arith::CmpIOp::create(builder,
-        loc, arith::CmpIPredicate::ule, len, lenLimit);
+    Value lenCond = arith::CmpIOp::create(
+        builder, loc, arith::CmpIPredicate::ule, len, lenLimit);
     scf::IfOp lenIf =
         scf::IfOp::create(builder, loc, types, lenCond, /*else=*/true);
 
@@ -1164,17 +1168,17 @@ static void createQuickSortFunc(OpBuilder &builder, ModuleOp module,
         builder, func, TypeRange(), kSortStableFuncNamePrefix, xPerm, ny,
         ValueRange(args).drop_back(nTrailingP), createSortStableFunc);
     func::CallOp::create(builder, loc, insertionSortFunc, TypeRange(),
-                                 ValueRange(args).drop_back(nTrailingP));
+                         ValueRange(args).drop_back(nTrailingP));
     scf::YieldOp::create(builder, loc, ValueRange{lo, lo});
 
     // When len > limit.
     builder.setInsertionPointToStart(&lenIf.getElseRegion().front());
     Value depthLimit = args.back();
     depthLimit = arith::SubIOp::create(builder, loc, depthLimit,
-                                               constantI64(builder, loc, 1));
+                                       constantI64(builder, loc, 1));
     Value depthCond =
         arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::ule,
-                                      depthLimit, constantI64(builder, loc, 0));
+                              depthLimit, constantI64(builder, loc, 0));
     scf::IfOp depthIf =
         scf::IfOp::create(builder, loc, types, depthCond, /*else=*/true);
 
@@ -1184,7 +1188,7 @@ static void createQuickSortFunc(OpBuilder &builder, ModuleOp module,
         builder, func, TypeRange(), kHeapSortFuncNamePrefix, xPerm, ny,
         ValueRange(args).drop_back(nTrailingP), createHeapSortFunc);
     func::CallOp::create(builder, loc, heapSortFunc, TypeRange(),
-                                 ValueRange(args).drop_back(nTrailingP));
+                         ValueRange(args).drop_back(nTrailingP));
     scf::YieldOp::create(builder, loc, ValueRange{lo, lo});
 
     // When depth doesn't exceed limit.
@@ -1248,11 +1252,11 @@ LogicalResult matchAndRewriteSortOp(OpTy op, ValueRange xys, AffineMap xPerm,
     // As a heuristics, set depthLimit = 2 * log2(n).
     Value lo = operands[loIdx];
     Value hi = operands[hiIdx];
-    Value len = arith::IndexCastOp::create(rewriter,
-        loc, rewriter.getI64Type(),
+    Value len = arith::IndexCastOp::create(
+        rewriter, loc, rewriter.getI64Type(),
         arith::SubIOp::create(rewriter, loc, hi, lo));
-    Value depthLimit = arith::SubIOp::create(rewriter,
-        loc, constantI64(rewriter, loc, 64),
+    Value depthLimit = arith::SubIOp::create(
+        rewriter, loc, constantI64(rewriter, loc, 64),
         math::CountLeadingZerosOp::create(rewriter, loc, len));
     operands.push_back(depthLimit);
     break;
@@ -1317,14 +1321,14 @@ public:
     bool nIsOne = (nValue && nValue.value() == 1);
 
     if (!op.getInbounds()) {
-      Value cond = arith::CmpIOp::create(rewriter,
-          loc, arith::CmpIPredicate::ugt, newSize, capacity);
+      Value cond = arith::CmpIOp::create(
+          rewriter, loc, arith::CmpIPredicate::ugt, newSize, capacity);
 
       Value c2 = constantIndex(rewriter, loc, 2);
       auto bufferType =
           MemRefType::get({ShapedType::kDynamic}, value.getType());
       scf::IfOp ifOp = scf::IfOp::create(rewriter, loc, bufferType, cond,
-                                                  /*else=*/true);
+                                         /*else=*/true);
       // True branch.
       rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
       if (nIsOne) {
@@ -1343,7 +1347,7 @@ public:
         capacity =
             arith::MulIOp::create(rewriter, loc, before->getArgument(0), c2);
         cond = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::ugt,
-                                              newSize, capacity);
+                                     newSize, capacity);
         scf::ConditionOp::create(rewriter, loc, cond, ValueRange{capacity});
         // The after-region of the WhileOp.
         Block *after = rewriter.createBlock(&whileOp.getAfter(), {},
@@ -1355,13 +1359,14 @@ public:
         capacity = whileOp.getResult(0);
       }
 
-      Value newBuffer =
-          memref::ReallocOp::create(rewriter, loc, bufferType, buffer, capacity);
+      Value newBuffer = memref::ReallocOp::create(rewriter, loc, bufferType,
+                                                  buffer, capacity);
       if (enableBufferInitialization) {
-        Value fillSize = arith::SubIOp::create(rewriter, loc, capacity, newSize);
+        Value fillSize =
+            arith::SubIOp::create(rewriter, loc, capacity, newSize);
         Value fillValue = constantZero(rewriter, loc, value.getType());
-        Value subBuffer = memref::SubViewOp::create(rewriter,
-            loc, newBuffer, /*offset=*/ValueRange{newSize},
+        Value subBuffer = memref::SubViewOp::create(
+            rewriter, loc, newBuffer, /*offset=*/ValueRange{newSize},
             /*size=*/ValueRange{fillSize},
             /*step=*/ValueRange{constantIndex(rewriter, loc, 1)});
         linalg::FillOp::create(rewriter, loc, fillValue, subBuffer);
@@ -1381,8 +1386,9 @@ public:
     if (nIsOne) {
       memref::StoreOp::create(rewriter, loc, value, buffer, size);
     } else {
-      Value subBuffer = memref::SubViewOp::create(rewriter,
-          loc, buffer, /*offset=*/ValueRange{size}, /*size=*/ValueRange{n},
+      Value subBuffer = memref::SubViewOp::create(
+          rewriter, loc, buffer, /*offset=*/ValueRange{size},
+          /*size=*/ValueRange{n},
           /*step=*/ValueRange{constantIndex(rewriter, loc, 1)});
       linalg::FillOp::create(rewriter, loc, value, subBuffer);
     }

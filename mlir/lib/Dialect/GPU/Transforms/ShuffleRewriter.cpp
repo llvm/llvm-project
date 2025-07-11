@@ -53,8 +53,8 @@ struct GpuShuffleRewriter : public OpRewritePattern<gpu::ShuffleOp> {
     lo = arith::TruncIOp::create(rewriter, valueLoc, i32, value);
 
     // Get the high bits by trunc(value >> 32).
-    auto c32 = arith::ConstantOp::create(rewriter,
-        valueLoc, rewriter.getIntegerAttr(i64, 32));
+    auto c32 = arith::ConstantOp::create(rewriter, valueLoc,
+                                         rewriter.getIntegerAttr(i64, 32));
     hi = arith::ShRUIOp::create(rewriter, valueLoc, value, c32);
     hi = arith::TruncIOp::create(rewriter, valueLoc, i32, hi);
 

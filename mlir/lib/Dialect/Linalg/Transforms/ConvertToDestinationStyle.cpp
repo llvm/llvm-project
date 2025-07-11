@@ -38,7 +38,7 @@ static Value createInserts(RewriterBase &rewriter, Location loc, int dim,
     for (int i = 0; i < shape.back(); ++i) {
       indices.back() = constants[i];
       destination = tensor::InsertOp::create(rewriter, loc, *elementIt,
-                                                      destination, indices);
+                                             destination, indices);
       ++elementIt;
     }
     return destination;
@@ -65,16 +65,16 @@ static void createMemcpy(OpBuilder &b, Location loc, Value tensorSource,
       MaterializeInDestination: {
     // Note: This is the preferred way of memcpy'ing because no layout map
     // and/or memory space must be specified for the source.
-    auto materializeOp = bufferization::MaterializeInDestinationOp::create(b,
-        loc, tensorSource, memrefDest);
+    auto materializeOp = bufferization::MaterializeInDestinationOp::create(
+        b, loc, tensorSource, memrefDest);
     materializeOp.setWritable(true);
   } break;
   case linalg::BufferizeToAllocationOptions::MemcpyOp::MemrefCopy: {
     // TODO: Support custom memory space on source.
     // We do not know the layout map of the source yet, so use a fully dynamic
     // layout for best compatibility.
-    Value toBuffer = bufferization::ToBufferOp::create(b,
-        loc, bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType),
+    Value toBuffer = bufferization::ToBufferOp::create(
+        b, loc, bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType),
         tensorSource, /*readOnly=*/true);
     memref::CopyOp::create(b, loc, toBuffer, memrefDest);
   } break;
@@ -82,8 +82,8 @@ static void createMemcpy(OpBuilder &b, Location loc, Value tensorSource,
     // TODO: Support custom memory space on source.
     // We do not know the layout map of the source yet, so use a fully dynamic
     // layout for best compatibility.
-    Value toBuffer = bufferization::ToBufferOp::create(b,
-        loc, bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType),
+    Value toBuffer = bufferization::ToBufferOp::create(
+        b, loc, bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType),
         tensorSource, /*readOnly=*/true);
     linalg::CopyOp::create(b, loc, toBuffer, memrefDest);
   } break;
@@ -121,14 +121,14 @@ static Operation *movePaddingToFillOrGenericOp(RewriterBase &rewriter,
                                   yieldedValue.getType(), yieldedValue.getLoc())
             ->getResult(0);
     auto fillOp = linalg::FillOp::create(rewriter, loc, ValueRange(fillValue),
-                                                  ValueRange(dest));
+                                         ValueRange(dest));
     return fillOp;
   }
 
   if (invariantYieldedValue) {
     // Padding with an invariant value.
-    auto fillOp = linalg::FillOp::create(rewriter, loc, ValueRange(yieldedValue),
-                                                  ValueRange(dest));
+    auto fillOp = linalg::FillOp::create(
+        rewriter, loc, ValueRange(yieldedValue), ValueRange(dest));
     return fillOp;
   }
 
@@ -137,8 +137,8 @@ static Operation *movePaddingToFillOrGenericOp(RewriterBase &rewriter,
                                                  utils::IteratorType::parallel);
   SmallVector<AffineMap> indexingMaps(
       1, rewriter.getMultiDimIdentityMap(resultType.getRank()));
-  auto genericOp = linalg::GenericOp::create(rewriter,
-      loc, resultType, /*inputs=*/ValueRange(),
+  auto genericOp = linalg::GenericOp::create(
+      rewriter, loc, resultType, /*inputs=*/ValueRange(),
       /*outputs=*/ValueRange{dest}, /*indexingMaps=*/
       indexingMaps, iteratorTypes);
   Block *body = rewriter.createBlock(&genericOp->getRegion(0), {},
@@ -180,7 +180,7 @@ static SmallVector<Value> reifyOrComputeDynamicSizes(OpBuilder &b,
     if (tensorType.isDynamicDim(i))
       dynSizes.push_back(
           DimOp::create(b, value.getLoc(), value,
-                          arith::ConstantIndexOp::create(b, value.getLoc(), i)));
+                        arith::ConstantIndexOp::create(b, value.getLoc(), i)));
   }
   return dynSizes;
 }
@@ -243,14 +243,14 @@ Value linalg::bufferizeToAllocation(
       getMixedSizes(rewriter, loc, padOp.getSource());
   SmallVector<OpFoldResult> strides(padOp.getResultType().getRank(),
                                     rewriter.getIndexAttr(1));
-  Value subview = memref::SubViewOp::create(rewriter,
-      loc, alloc, /*offsets=*/padOp.getMixedLowPad(), sizes, strides);
+  Value subview = memref::SubViewOp::create(
+      rewriter, loc, alloc, /*offsets=*/padOp.getMixedLowPad(), sizes, strides);
   createMemcpy(rewriter, loc, padOp.getSource(), subview, options);
 
   // Create bufferization.to_tensor with "restrict" and "writable". The returned
   // tensor is a new buffer allocation, so it does not alias with any buffer.
-  Value toTensorOp = bufferization::ToTensorOp::create(rewriter,
-      loc, padOp.getResult().getType(), alloc, /*restrict=*/true,
+  Value toTensorOp = bufferization::ToTensorOp::create(
+      rewriter, loc, padOp.getResult().getType(), alloc, /*restrict=*/true,
       /*writable=*/true);
   rewriter.replaceOp(padOp, toTensorOp);
   return alloc;
@@ -338,8 +338,9 @@ Value linalg::bufferizeToAllocation(
 
   // Create bufferization.to_tensor with "restrict" and "writable". The returned
   // tensor is a new buffer allocation, so it does not alias with any buffer.
-  Value toTensorOp = bufferization::ToTensorOp::create(rewriter,
-      loc, allocTensorOp.getResult().getType(), alloc, /*restrict=*/true,
+  Value toTensorOp = bufferization::ToTensorOp::create(
+      rewriter, loc, allocTensorOp.getResult().getType(), alloc,
+      /*restrict=*/true,
       /*writable=*/true);
   rewriter.replaceOp(allocTensorOp, toTensorOp);
   return alloc;
@@ -394,16 +395,16 @@ mlir::linalg::rewriteInDestinationPassingStyle(RewriterBase &rewriter,
   RankedTensorType tensorType = cast<RankedTensorType>(generateOp.getType());
 
   // Create tensor.empty.
-  auto emptyOp =
-      EmptyOp::create(rewriter, loc, tensorType, generateOp.getDynamicExtents());
+  auto emptyOp = EmptyOp::create(rewriter, loc, tensorType,
+                                 generateOp.getDynamicExtents());
 
   // Create linalg.generic.
   SmallVector<utils::IteratorType> iteratorTypes(tensorType.getRank(),
                                                  utils::IteratorType::parallel);
   SmallVector<AffineMap> indexingMaps(
       1, rewriter.getMultiDimIdentityMap(tensorType.getRank()));
-  auto genericOp = linalg::GenericOp::create(rewriter,
-      loc, tensorType, /*inputs=*/ValueRange(),
+  auto genericOp = linalg::GenericOp::create(
+      rewriter, loc, tensorType, /*inputs=*/ValueRange(),
       /*outputs=*/ValueRange{emptyOp.getResult()}, /*indexingMaps=*/
       indexingMaps, iteratorTypes);
   Block *body = rewriter.createBlock(&genericOp->getRegion(0), {},
@@ -567,8 +568,8 @@ Value linalg::bufferizeToAllocation(
       createMemcpy(rewriter, op->getLoc(), operand->get(), alloc, options);
     }
     rewriter.modifyOpInPlace(op, [&]() {
-      auto toTensorOp = ToTensorOp::create(rewriter,
-          op->getLoc(), operand->get().getType(), alloc);
+      auto toTensorOp = ToTensorOp::create(rewriter, op->getLoc(),
+                                           operand->get().getType(), alloc);
       operand->set(toTensorOp);
       if (options.bufferizeDestinationOnly) {
         rewriter.modifyOpInPlace(toTensorOp, [&]() {

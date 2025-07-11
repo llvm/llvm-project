@@ -64,10 +64,10 @@ static Value allocBuffer(ImplicitLocOpBuilder &b,
         MemRefType::Builder(staticBufferType).setMemorySpace(memorySpaceAttr);
     if (options.useAlloca) {
       return memref::AllocaOp::create(b, staticBufferType, ValueRange{},
-                                        alignmentAttr);
+                                      alignmentAttr);
     }
     return memref::AllocOp::create(b, staticBufferType, ValueRange{},
-                                     alignmentAttr);
+                                   alignmentAttr);
   }
 
   // Fallback dynamic buffer.
@@ -124,7 +124,7 @@ defaultDeallocBufferCallBack(const LinalgPromotionOptions &options,
   if (!options.useAlloca) {
     auto viewOp = cast<memref::ViewOp>(fullLocalView.getDefiningOp());
     memref::DeallocOp::create(b, viewOp.getSource().getLoc(),
-                                viewOp.getSource());
+                              viewOp.getSource());
   }
   return success();
 }

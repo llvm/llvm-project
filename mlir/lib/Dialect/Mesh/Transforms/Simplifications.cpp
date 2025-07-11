@@ -92,8 +92,8 @@ struct MeshShapeFolder
         newShapeOpMeshAxes.push_back(opMeshAxes[i]);
       } else {
         // Fold static mesh axes.
-        newResults[i] = arith::ConstantOp::create(builder,
-            builder.getIndexAttr(meshAxisSize));
+        newResults[i] = arith::ConstantOp::create(
+            builder, builder.getIndexAttr(meshAxisSize));
       }
     }
 

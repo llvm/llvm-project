@@ -119,8 +119,9 @@ extractConvInputSlices(RewriterBase &rewriter, Location loc, Value input,
     SmallVector<int64_t> strides = {1};
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
-        result.push_back(vector::ExtractStridedSliceOp::create(rewriter,
-            loc, input, /*offsets=*/ArrayRef<int64_t>{w + kw}, sizes, strides));
+        result.push_back(vector::ExtractStridedSliceOp::create(
+            rewriter, loc, input, /*offsets=*/ArrayRef<int64_t>{w + kw}, sizes,
+            strides));
       }
     }
   } else {
@@ -130,8 +131,8 @@ extractConvInputSlices(RewriterBase &rewriter, Location loc, Value input,
     SmallVector<int64_t> strides = {1, 1, 1};
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
-        result.push_back(vector::ExtractStridedSliceOp::create(rewriter,
-            loc, input,
+        result.push_back(vector::ExtractStridedSliceOp::create(
+            rewriter, loc, input,
             /*offsets=*/ArrayRef<int64_t>{0, w * strideW + kw * dilationW, 0},
             sizes, strides));
       }
@@ -149,8 +150,8 @@ static SmallVector<Value> extractConvFilterSlices(RewriterBase &rewriter,
   // Extract rhs slice of size [{c, f} for channeled convolutions and {1} for
   // non-chanelled convolution] @ [kw].
   for (int64_t kw = 0; kw < kwSize; ++kw) {
-    result.push_back(vector::ExtractOp::create(rewriter,
-        loc, filter, /*offsets=*/ArrayRef<int64_t>{kw}));
+    result.push_back(vector::ExtractOp::create(
+        rewriter, loc, filter, /*offsets=*/ArrayRef<int64_t>{kw}));
   }
   return result;
 }
@@ -167,8 +168,9 @@ extractConvResultSlices(RewriterBase &rewriter, Location loc, Value res,
     SmallVector<int64_t> sizes = {wSizeStep};
     SmallVector<int64_t> strides = {1};
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
-      result.push_back(vector::ExtractStridedSliceOp::create(rewriter,
-          loc, res, /*offsets=*/ArrayRef<int64_t>{w}, sizes, strides));
+      result.push_back(vector::ExtractStridedSliceOp::create(
+          rewriter, loc, res, /*offsets=*/ArrayRef<int64_t>{w}, sizes,
+          strides));
     }
   } else {
     // Extract res slice: {n, wSizeStep, f} @ [0, w, 0] for channeled
@@ -176,8 +178,9 @@ extractConvResultSlices(RewriterBase &rewriter, Location loc, Value res,
     SmallVector<int64_t> sizes = {nSize, wSizeStep, fSize};
     SmallVector<int64_t> strides = {1, 1, 1};
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
-      result.push_back(vector::ExtractStridedSliceOp::create(rewriter,
-          loc, res, /*offsets=*/ArrayRef<int64_t>{0, w, 0}, sizes, strides));
+      result.push_back(vector::ExtractStridedSliceOp::create(
+          rewriter, loc, res, /*offsets=*/ArrayRef<int64_t>{0, w, 0}, sizes,
+          strides));
     }
   }
   return result;
@@ -194,17 +197,18 @@ static Value insertConvResultSlices(RewriterBase &rewriter, Location loc,
     // This does not depend on kw.
     SmallVector<int64_t> strides = {1};
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
-      res = vector::InsertStridedSliceOp::create(rewriter,
-          loc, resVals[w], res, /*offsets=*/ArrayRef<int64_t>{w}, strides);
+      res = vector::InsertStridedSliceOp::create(
+          rewriter, loc, resVals[w], res, /*offsets=*/ArrayRef<int64_t>{w},
+          strides);
     }
   } else {
     // Write back res slice: {n, wSizeStep, f} @ [0, w, 0] for channeled
     // convolution. This does not depend on kw.
     SmallVector<int64_t> strides = {1, 1, 1};
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
-      res = vector::InsertStridedSliceOp::create(rewriter,
-          loc, resVals[w], res, /*offsets=*/ArrayRef<int64_t>{0, w, 0},
-          strides);
+      res = vector::InsertStridedSliceOp::create(
+          rewriter, loc, resVals[w], res,
+          /*offsets=*/ArrayRef<int64_t>{0, w, 0}, strides);
     }
   }
   return res;
@@ -337,8 +341,8 @@ VectorizationState::precomputeIterSpaceValueSizes(RewriterBase &rewriter,
   for (int vecDim = 0, end = canonicalVecShape.size(); vecDim < end; ++vecDim) {
     if (ShapedType::isStatic(iterSpaceStaticSizes[vecDim])) {
       // Create constant index op for static dimensions.
-      iterSpaceValueSizes.push_back(arith::ConstantIndexOp::create(rewriter,
-          linalgOp.getLoc(), iterSpaceStaticSizes[vecDim]));
+      iterSpaceValueSizes.push_back(arith::ConstantIndexOp::create(
+          rewriter, linalgOp.getLoc(), iterSpaceStaticSizes[vecDim]));
       continue;
     }
 
@@ -350,11 +354,12 @@ VectorizationState::precomputeIterSpaceValueSizes(RewriterBase &rewriter,
                                                          operandDimPos)))
       return failure();
 
-    Value dynamicDim = linalgOp.hasPureTensorSemantics()
-                           ? (Value)tensor::DimOp::create(rewriter,
-                                 linalgOp.getLoc(), operand, operandDimPos)
-                           : (Value)memref::DimOp::create(rewriter,
-                                 linalgOp.getLoc(), operand, operandDimPos);
+    Value dynamicDim =
+        linalgOp.hasPureTensorSemantics()
+            ? (Value)tensor::DimOp::create(rewriter, linalgOp.getLoc(), operand,
+                                           operandDimPos)
+            : (Value)memref::DimOp::create(rewriter, linalgOp.getLoc(), operand,
+                                           operandDimPos);
     iterSpaceValueSizes.push_back(dynamicDim);
   }
 
@@ -475,7 +480,7 @@ Value VectorizationState::getOrCreateMaskFor(
 
   // Create the mask based on the dimension values.
   Value mask = vector::CreateMaskOp::create(rewriter, linalgOp.getLoc(),
-                                                     maskType, upperBounds);
+                                            maskType, upperBounds);
   LDBG("Creating new mask: " << mask << "\n");
   activeMaskCache[maskingMap] = mask;
   return mask;
@@ -643,8 +648,8 @@ static Operation *buildMultiDimReduce(OpBuilder &b, Operation *reduceOp,
                                       ArrayRef<bool> dimsToMask) {
   auto maybeKind = getCombinerOpKind(reduceOp);
   assert(maybeKind && "Failed precondition: could not get reduction kind");
-  return vector::MultiDimReductionOp::create(b,
-      reduceOp->getLoc(), valueToReduce, acc, dimsToMask, *maybeKind);
+  return vector::MultiDimReductionOp::create(
+      b, reduceOp->getLoc(), valueToReduce, acc, dimsToMask, *maybeKind);
 }
 
 static SmallVector<bool> getDimsToReduce(LinalgOp linalgOp) {
@@ -688,19 +693,20 @@ static Value buildVectorWrite(RewriterBase &rewriter, Value value,
   Operation *write;
   if (vectorType.getRank() > 0) {
     AffineMap writeMap = inversePermutation(reindexIndexingMap(opOperandMap));
-    SmallVector<Value> indices(linalgOp.getRank(outputOperand),
-                               arith::ConstantIndexOp::create(rewriter, loc, 0));
+    SmallVector<Value> indices(
+        linalgOp.getRank(outputOperand),
+        arith::ConstantIndexOp::create(rewriter, loc, 0));
     value = broadcastIfNeeded(rewriter, value, vectorType);
     assert(value.getType() == vectorType && "Incorrect type");
-    write = vector::TransferWriteOp::create(rewriter,
-        loc, value, outputOperand->get(), indices, writeMap);
+    write = vector::TransferWriteOp::create(
+        rewriter, loc, value, outputOperand->get(), indices, writeMap);
   } else {
     // 0-d case is still special: do not invert the reindexing writeMap.
     if (!isa<VectorType>(value.getType()))
       value = vector::BroadcastOp::create(rewriter, loc, vectorType, value);
     assert(value.getType() == vectorType && "Incorrect type");
-    write = vector::TransferWriteOp::create(rewriter,
-        loc, value, outputOperand->get(), ValueRange{});
+    write = vector::TransferWriteOp::create(rewriter, loc, value,
+                                            outputOperand->get(), ValueRange{});
   }
 
   write = state.maskOperation(rewriter, write, linalgOp, opOperandMap);
@@ -793,9 +799,9 @@ static VectorizationHookResult vectorizeLinalgIndex(RewriterBase &rewriter,
   auto permMap =
       AffineMap::getPermutationMap(permPattern, linalgOp.getContext());
 
-  auto broadCastOp = vector::BroadcastOp::create(rewriter,
-      loc, state.getCanonicalVecType(rewriter.getIndexType(), permMap),
-      indexSteps);
+  auto broadCastOp = vector::BroadcastOp::create(
+      rewriter, loc,
+      state.getCanonicalVecType(rewriter.getIndexType(), permMap), indexSteps);
   SmallVector<int64_t> transposition =
       llvm::to_vector<16>(llvm::seq<int64_t>(0, linalgOp.getNumLoops()));
   std::swap(transposition.back(), transposition[dim]);
@@ -1110,12 +1116,12 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
 
   // Compute the static loop sizes of the extract op.
   auto resultType = state.getCanonicalVecType(extractOp.getResult().getType());
-  auto maskConstantOp = arith::ConstantOp::create(rewriter,
-      loc,
+  auto maskConstantOp = arith::ConstantOp::create(
+      rewriter, loc,
       DenseIntElementsAttr::get(state.getCanonicalVecType(rewriter.getI1Type()),
                                 /*value=*/true));
-  auto passThruConstantOp =
-      arith::ConstantOp::create(rewriter, loc, rewriter.getZeroAttr(resultType));
+  auto passThruConstantOp = arith::ConstantOp::create(
+      rewriter, loc, rewriter.getZeroAttr(resultType));
 
   // Base indices are currently set to 0. We will need to re-visit if more
   // generic scenarios are to be supported.
@@ -1131,8 +1137,8 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
     Value offset = calculateGatherOffset(rewriter, state, extractOp, bvm);
 
     // Generate the gather load
-    Operation *gatherOp = vector::GatherOp::create(rewriter,
-        loc, resultType, extractOp.getTensor(), baseIndices, offset,
+    Operation *gatherOp = vector::GatherOp::create(
+        rewriter, loc, resultType, extractOp.getTensor(), baseIndices, offset,
         maskConstantOp, passThruConstantOp);
     gatherOp = state.maskOperation(rewriter, gatherOp, linalgOp);
 
@@ -1166,8 +1172,8 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
       continue;
     }
 
-    auto indexAs1dVector = vector::ShapeCastOp::create(rewriter,
-        loc,
+    auto indexAs1dVector = vector::ShapeCastOp::create(
+        rewriter, loc,
         VectorType::get(resultType.getShape().back(), rewriter.getIndexType(),
                         resultType.getScalableDims().back()),
         idx);
@@ -1186,8 +1192,8 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
     SmallVector<AffineExpr> exprs(dstRank, getAffineConstantExpr(0, ctx));
     auto permutationMap = AffineMap::get(srcRank, 0, exprs, ctx);
 
-    auto transferReadOp = vector::TransferReadOp::create(rewriter,
-        loc, resultType, extractOp.getTensor(), transferReadIdxs,
+    auto transferReadOp = vector::TransferReadOp::create(
+        rewriter, loc, resultType, extractOp.getTensor(), transferReadIdxs,
         /*padding=*/std::nullopt, permutationMap, inBounds);
 
     // Mask this broadcasting xfer_read here rather than relying on the generic
@@ -1195,8 +1201,8 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
     // valid here).
     SmallVector<int64_t> readMaskShape = {1};
     auto readMaskType = VectorType::get(readMaskShape, rewriter.getI1Type());
-    auto allTrue = vector::ConstantMaskOp::create(rewriter,
-        loc, readMaskType, vector::ConstantMaskKind::AllTrue);
+    auto allTrue = vector::ConstantMaskOp::create(
+        rewriter, loc, readMaskType, vector::ConstantMaskKind::AllTrue);
     auto *maskedReadOp =
         mlir::vector::maskOperation(rewriter, transferReadOp, allTrue);
 
@@ -1223,8 +1229,8 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
     rankDiff--;
   }
 
-  auto transferReadOp = vector::TransferReadOp::create(rewriter,
-      loc, resultType, extractOp.getTensor(), transferReadIdxs,
+  auto transferReadOp = vector::TransferReadOp::create(
+      rewriter, loc, resultType, extractOp.getTensor(), transferReadIdxs,
       /*padding=*/std::nullopt, permutationMap, inBounds);
 
   LDBG("Vectorised as contiguous load: " << extractOp);
@@ -1435,8 +1441,8 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
 
     SmallVector<Value> indices(linalgOp.getShape(opOperand).size(), zero);
 
-    Operation *read = vector::TransferReadOp::create(rewriter,
-        loc, readType, opOperand->get(), indices,
+    Operation *read = vector::TransferReadOp::create(
+        rewriter, loc, readType, opOperand->get(), indices,
         /*padding=*/std::nullopt, readMap);
     read = state.maskOperation(rewriter, read, linalgOp, indexingMap);
     Value readValue = read->getResult(0);
@@ -1453,7 +1459,7 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
     // TODO: remove this.
     if (readType.getRank() == 0)
       readValue = vector::ExtractOp::create(rewriter, loc, readValue,
-                                                     ArrayRef<int64_t>());
+                                            ArrayRef<int64_t>());
 
     LDBG("New vectorized bbarg(" << bbarg.getArgNumber() << "): " << readValue
                                  << "\n");
@@ -1665,12 +1671,11 @@ createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value vecToStore,
   }
 
   // Generate the xfer_write Op
-  Operation *write =
-      vector::TransferWriteOp::create(builder, loc,
-                                              /*vector=*/vecToStore,
-                                              /*source=*/dest,
-                                              /*indices=*/writeIndices,
-                                              /*inBounds=*/inBoundsVal);
+  Operation *write = vector::TransferWriteOp::create(builder, loc,
+                                                     /*vector=*/vecToStore,
+                                                     /*source=*/dest,
+                                                     /*indices=*/writeIndices,
+                                                     /*inBounds=*/inBoundsVal);
 
   // If masking is disabled, exit.
   if (useInBoundsInsteadOfMasking)
@@ -1742,8 +1747,9 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
   Location loc = packOp.getLoc();
   auto padValue = packOp.getPaddingValue();
   if (!padValue) {
-    padValue = arith::ConstantOp::create(rewriter,
-        loc, rewriter.getZeroAttr(packOp.getSourceType().getElementType()));
+    padValue = arith::ConstantOp::create(
+        rewriter, loc,
+        rewriter.getZeroAttr(packOp.getSourceType().getElementType()));
   }
   ReifiedRankedShapedTypeDims reifiedReturnShapes;
   LogicalResult status =
@@ -1787,12 +1793,12 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
   // Create TransposeOp.
   auto destPermutation =
       invertPermutationVector(getPackInverseDestPerm(packOp));
-  auto transposeOp = vector::TransposeOp::create(rewriter,
-      loc, shapeCastOp.getResult(), destPermutation);
+  auto transposeOp = vector::TransposeOp::create(
+      rewriter, loc, shapeCastOp.getResult(), destPermutation);
 
   // Create TransferWriteOp.
-  Value dest = tensor::EmptyOp::create(rewriter,
-      loc, reifiedReturnShapes[0],
+  Value dest = tensor::EmptyOp::create(
+      rewriter, loc, reifiedReturnShapes[0],
       transposeOp.getResult().getType().getElementType());
   Operation *write =
       createWriteOrMaskedWrite(rewriter, loc, transposeOp.getResult(), dest);
@@ -1892,8 +1898,9 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
   }
   Location loc = unpackOp->getLoc();
 
-  auto padValue = arith::ConstantOp::create(rewriter,
-      loc, rewriter.getZeroAttr(unpackOp.getSourceType().getElementType()));
+  auto padValue = arith::ConstantOp::create(
+      rewriter, loc,
+      rewriter.getZeroAttr(unpackOp.getSourceType().getElementType()));
 
   // Read result, mask if necessary. If transferReadOp shape is not equal
   // to shape of source, then a mask is necessary.
@@ -1911,16 +1918,16 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
   RankedTensorType stripMineTensorType =
       RankedTensorType::get(stripMineShape, stripMineElemType);
   // Transpose the appropriate rows to match output.
-  vector::TransposeOp transposeOp = vector::TransposeOp::create(rewriter,
-      loc, readResult, lastDimToInsertPosPerm);
+  vector::TransposeOp transposeOp = vector::TransposeOp::create(
+      rewriter, loc, readResult, lastDimToInsertPosPerm);
 
   // Collapse the vector to the size required by result.
   RankedTensorType collapsedType = tensor::CollapseShapeOp::inferCollapsedType(
       stripMineTensorType, packMetadata.reassociations);
   mlir::VectorType vecCollapsedType =
       VectorType::get(collapsedType.getShape(), collapsedType.getElementType());
-  vector::ShapeCastOp shapeCastOp = vector::ShapeCastOp::create(rewriter,
-      loc, vecCollapsedType, transposeOp->getResult(0));
+  vector::ShapeCastOp shapeCastOp = vector::ShapeCastOp::create(
+      rewriter, loc, vecCollapsedType, transposeOp->getResult(0));
 
   // writeVectorSizes had to match the shapecast shape for dynamic sizes,
   // otherwise the validator complains that the mask size is invalid.
@@ -1928,8 +1935,8 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
       unpackOp.getDestType().hasStaticShape()
           ? vectorSizes
           : shapeCastOp.getResultVectorType().getShape());
-  Value dest = tensor::EmptyOp::create(rewriter,
-      loc, reifiedRetShapes[0],
+  Value dest = tensor::EmptyOp::create(
+      rewriter, loc, reifiedRetShapes[0],
       shapeCastOp.getResult().getType().getElementType());
   Operation *write = createWriteOrMaskedWrite(
       rewriter, loc, shapeCastOp.getResult(), dest,
@@ -1963,8 +1970,8 @@ vectorizeAsTensorPadOp(RewriterBase &rewriter, tensor::PadOp padOp,
       /*useInBoundsInsteadOfMasking=*/false);
 
   // Create Xfer write Op
-  Value dest = tensor::EmptyOp::create(rewriter,
-      loc, reifiedReturnShapes[0], padOp.getResultType().getElementType());
+  Value dest = tensor::EmptyOp::create(rewriter, loc, reifiedReturnShapes[0],
+                                       padOp.getResultType().getElementType());
   Operation *write = createWriteOrMaskedWrite(rewriter, loc, maskedRead, dest);
   newResults.push_back(write->getResult(0));
   return success();
@@ -2637,17 +2644,18 @@ LogicalResult mlir::linalg::vectorizeCopy(RewriterBase &rewriter,
   Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
   SmallVector<Value> indices(srcType.getRank(), zero);
 
-  Value readValue = vector::TransferReadOp::create(rewriter,
-      loc, readType, copyOp.getSource(), indices,
+  Value readValue = vector::TransferReadOp::create(
+      rewriter, loc, readType, copyOp.getSource(), indices,
       /*padding=*/std::nullopt,
       rewriter.getMultiDimIdentityMap(srcType.getRank()));
   if (cast<VectorType>(readValue.getType()).getRank() == 0) {
+    readValue = vector::ExtractOp::create(rewriter, loc, readValue,
+                                          ArrayRef<int64_t>());
     readValue =
-        vector::ExtractOp::create(rewriter, loc, readValue, ArrayRef<int64_t>());
-    readValue = vector::BroadcastOp::create(rewriter, loc, writeType, readValue);
+        vector::BroadcastOp::create(rewriter, loc, writeType, readValue);
   }
-  Operation *writeValue = vector::TransferWriteOp::create(rewriter,
-      loc, readValue, copyOp.getTarget(), indices,
+  Operation *writeValue = vector::TransferWriteOp::create(
+      rewriter, loc, readValue, copyOp.getTarget(), indices,
       rewriter.getMultiDimIdentityMap(srcType.getRank()));
   rewriter.replaceOp(copyOp, writeValue->getResults());
   return success();
@@ -2957,8 +2965,8 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
 
   if (!padValue) {
     auto elemType = sourceType.getElementType();
-    padValue = arith::ConstantOp::create(rewriter,
-        sliceOp.getLoc(), elemType, rewriter.getZeroAttr(elemType));
+    padValue = arith::ConstantOp::create(rewriter, sliceOp.getLoc(), elemType,
+                                         rewriter.getZeroAttr(elemType));
   }
 
   // 2. Get the vector shape
@@ -3077,8 +3085,9 @@ struct PadOpVectorizationWithInsertSlicePattern
     // padding.
     SmallVector<Value> readIndices(
         vecRank, arith::ConstantIndexOp::create(rewriter, padOp.getLoc(), 0));
-    auto read = vector::TransferReadOp::create(rewriter,
-        padOp.getLoc(), vecType, padOp.getSource(), readIndices, padValue);
+    auto read = vector::TransferReadOp::create(rewriter, padOp.getLoc(),
+                                               vecType, padOp.getSource(),
+                                               readIndices, padValue);
 
     // Generate TransferWriteOp: Write to InsertSliceOp's dest tensor at
     // specified offsets. Write is fully in-bounds because a InsertSliceOp's
@@ -3212,8 +3221,8 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
   // When forwarding to vector.transfer_read, the attribute must be reset
   // conservatively.
   auto vectorType = xferOp.getVectorType();
-  Value res = vector::TransferReadOp::create(rewriter,
-      xferOp.getLoc(), vectorType, in, xferOp.getIndices(),
+  Value res = vector::TransferReadOp::create(
+      rewriter, xferOp.getLoc(), vectorType, in, xferOp.getIndices(),
       xferOp.getPermutationMapAttr(), xferOp.getPadding(), xferOp.getMask(),
       rewriter.getBoolArrayAttr(
           SmallVector<bool>(vectorType.getRank(), false)));
@@ -3271,8 +3280,8 @@ LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
   // When forwarding to vector.transfer_write, the attribute must be reset
   // conservatively.
   auto vector = xferOp.getVector();
-  vector::TransferWriteOp::create(rewriter,
-      xferOp.getLoc(), vector, out, xferOp.getIndices(),
+  vector::TransferWriteOp::create(
+      rewriter, xferOp.getLoc(), vector, out, xferOp.getIndices(),
       xferOp.getPermutationMapAttr(), xferOp.getMask(),
       rewriter.getBoolArrayAttr(SmallVector<bool>(
           dyn_cast<VectorType>(vector.getType()).getRank(), false)));
@@ -3486,17 +3495,17 @@ struct Conv1DGenerator
     SmallVector<Value> resPadding(resShape.size(), zero);
 
     // Read the whole lhs, rhs and res in one shot (with zero padding).
-    Value lhs = vector::TransferReadOp::create(rewriter,
-        loc, lhsType, lhsShaped, lhsPadding,
+    Value lhs = vector::TransferReadOp::create(
+        rewriter, loc, lhsType, lhsShaped, lhsPadding,
         /*padding=*/arith::getZeroConstant(rewriter, loc, lhsEltType));
     // This is needed only for Conv.
     Value rhs = nullptr;
     if (oper == ConvOperationKind::Conv)
-      rhs = vector::TransferReadOp::create(rewriter,
-          loc, rhsType, rhsShaped, rhsPadding,
+      rhs = vector::TransferReadOp::create(
+          rewriter, loc, rhsType, rhsShaped, rhsPadding,
           /*padding=*/arith::getZeroConstant(rewriter, loc, rhsEltType));
-    Value res = vector::TransferReadOp::create(rewriter,
-        loc, resType, resShaped, resPadding,
+    Value res = vector::TransferReadOp::create(
+        rewriter, loc, resType, resShaped, resPadding,
         /*padding=*/arith::getZeroConstant(rewriter, loc, resEltType));
 
     // The base vectorization case for channeled convolution is input:
@@ -3633,8 +3642,8 @@ struct Conv1DGenerator
     bindDims(ctx, n, w, f, c);
     lhs = promote(rewriter, loc, lhs, res.getType());
     rhs = promote(rewriter, loc, rhs, res.getType());
-    auto contrationOp = vector::ContractionOp::create(rewriter,
-        loc, lhs, rhs, res,
+    auto contrationOp = vector::ContractionOp::create(
+        rewriter, loc, lhs, rhs, res,
         /*indexingMaps=*/MapList{{n, w, c}, {c, f}, {n, w, f}},
         /*iteratorTypes=*/ArrayRef<vector::IteratorType>{par, par, par, red});
     contrationOp.setKind(reductionKind);
@@ -3645,8 +3654,8 @@ struct Conv1DGenerator
   // convolution.
   Value conv1dSliceAsOuterProduct(RewriterBase &rewriter, Location loc,
                                   Value lhs, Value rhs, Value res) {
-    return vector::OuterProductOp::create(rewriter,
-        loc, res.getType(), lhs, rhs, res, vector::CombiningKind::ADD);
+    return vector::OuterProductOp::create(rewriter, loc, res.getType(), lhs,
+                                          rhs, res, vector::CombiningKind::ADD);
   }
 
   // Create a reduction: lhs{n, w, c} -> res{n, w, c}
@@ -3743,22 +3752,22 @@ struct Conv1DGenerator
 
     // Read lhs slice of size {n, w * strideW + kw * dilationW, c} @ [0, 0,
     // 0].
-    Value lhs = vector::TransferReadOp::create(rewriter,
-        loc, lhsType, lhsShaped, ValueRange{zero, zero, zero},
+    Value lhs = vector::TransferReadOp::create(
+        rewriter, loc, lhsType, lhsShaped, ValueRange{zero, zero, zero},
         /*padding=*/arith::getZeroConstant(rewriter, loc, lhsEltType));
     auto maybeMaskedLhs = maybeMaskXferOp(
         lhsType.getShape(), lhsType.getScalableDims(), lhs.getDefiningOp());
 
     // Read rhs slice of size {kw, c} @ [0, 0].
-    Value rhs = vector::TransferReadOp::create(rewriter,
-        loc, rhsType, rhsShaped, ValueRange{zero, zero},
+    Value rhs = vector::TransferReadOp::create(
+        rewriter, loc, rhsType, rhsShaped, ValueRange{zero, zero},
         /*padding=*/arith::getZeroConstant(rewriter, loc, rhsEltType));
     auto maybeMaskedRhs = maybeMaskXferOp(
         rhsType.getShape(), rhsType.getScalableDims(), rhs.getDefiningOp());
 
     // Read res slice of size {n, w, c} @ [0, 0, 0].
-    Value res = vector::TransferReadOp::create(rewriter,
-        loc, resType, resShaped, ValueRange{zero, zero, zero},
+    Value res = vector::TransferReadOp::create(
+        rewriter, loc, resType, resShaped, ValueRange{zero, zero, zero},
         /*padding=*/arith::getZeroConstant(rewriter, loc, resEltType));
     auto maybeMaskedRes = maybeMaskXferOp(
         resType.getShape(), resType.getScalableDims(), res.getDefiningOp());
@@ -3775,22 +3784,22 @@ struct Conv1DGenerator
     //   @ [0, sw * w + dw * kw, 0].
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
-        lhsVals.push_back(vector::ExtractStridedSliceOp::create(rewriter,
-            loc, maybeMaskedLhs->getResult(0),
+        lhsVals.push_back(vector::ExtractStridedSliceOp::create(
+            rewriter, loc, maybeMaskedLhs->getResult(0),
             /*offsets=*/ArrayRef<int64_t>{0, w * strideW + kw * dilationW, 0},
             inOutSliceSizes, inOutStrides));
       }
     }
     // Extract rhs slice of size {c} @ [kw].
     for (int64_t kw = 0; kw < kwSize; ++kw) {
-      rhsVals.push_back(vector::ExtractOp::create(rewriter,
-          loc, maybeMaskedRhs->getResult(0),
-          /*offsets=*/ArrayRef<int64_t>{kw}));
+      rhsVals.push_back(
+          vector::ExtractOp::create(rewriter, loc, maybeMaskedRhs->getResult(0),
+                                    /*offsets=*/ArrayRef<int64_t>{kw}));
     }
     // Extract res slice: {n, wSizeStep, c} @ [0, w, 0].
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
-      resVals.push_back(vector::ExtractStridedSliceOp::create(rewriter,
-          loc, maybeMaskedRes->getResult(0),
+      resVals.push_back(vector::ExtractStridedSliceOp::create(
+          rewriter, loc, maybeMaskedRes->getResult(0),
           /*offsets=*/ArrayRef<int64_t>{0, w, 0}, inOutSliceSizes,
           inOutStrides));
     }
@@ -3815,17 +3824,19 @@ struct Conv1DGenerator
         if (flatten) {
           // Flatten the input and output vectors (collapse the channel
           // dimension)
-          lhsVal = vector::ShapeCastOp::create(rewriter,
-              loc, lhsTypeAfterFlattening, lhsVals[linearIndex(kw, w)]);
-          resVal = vector::ShapeCastOp::create(rewriter,
-              loc, resTypeAfterFlattening, resVals[w]);
+          lhsVal =
+              vector::ShapeCastOp::create(rewriter, loc, lhsTypeAfterFlattening,
+                                          lhsVals[linearIndex(kw, w)]);
+          resVal = vector::ShapeCastOp::create(
+              rewriter, loc, resTypeAfterFlattening, resVals[w]);
         }
         resVals[w] = depthwiseConv1dSliceAsMulAcc(rewriter, loc, lhsVal,
                                                   rhsVals[kw], resVal, flatten);
         if (flatten) {
           // Un-flatten the output vector (restore the channel dimension)
-          resVals[w] = vector::ShapeCastOp::create(rewriter,
-              loc, VectorType::get(inOutSliceSizes, resEltType), resVals[w]);
+          resVals[w] = vector::ShapeCastOp::create(
+              rewriter, loc, VectorType::get(inOutSliceSizes, resEltType),
+              resVals[w]);
         }
       }
     }
@@ -3843,8 +3854,8 @@ struct Conv1DGenerator
     // Write back res slice: {n, wSizeStep, c} @ [0, w, 0].
     // This does not depend on kw.
     for (int64_t w = 0; w < wSize; w += wSizeStep) {
-      maybeMaskedRes = vector::InsertStridedSliceOp::create(rewriter,
-          loc, resVals[w], maybeMaskedRes->getResult(0),
+      maybeMaskedRes = vector::InsertStridedSliceOp::create(
+          rewriter, loc, resVals[w], maybeMaskedRes->getResult(0),
           /*offsets=*/ArrayRef<int64_t>{0, w, 0},
           /*strides=*/ArrayRef<int64_t>{1, 1, 1});
     }
@@ -3853,8 +3864,8 @@ struct Conv1DGenerator
     //===------------------------------------------------------------------===//
 
     // Write back res slice of size {n, w, c} @ [0, 0, 0].
-    Operation *resOut = vector::TransferWriteOp::create(rewriter,
-        loc, maybeMaskedRes->getResult(0), resShaped,
+    Operation *resOut = vector::TransferWriteOp::create(
+        rewriter, loc, maybeMaskedRes->getResult(0), resShaped,
         ValueRange{zero, zero, zero});
     return maybeMaskXferOp(resType.getShape(), resType.getScalableDims(),
                            resOut);
@@ -3894,8 +3905,8 @@ struct Conv1DGenerator
       rhs = vector::ShuffleOp::create(rewriter, loc, rhs, rhs, indices);
     }
     // Broadcast the filter to match the output vector
-    rhs = vector::BroadcastOp::create(rewriter,
-        loc, resTy.clone(rhsTy.getElementType()), rhs);
+    rhs = vector::BroadcastOp::create(rewriter, loc,
+                                      resTy.clone(rhsTy.getElementType()), rhs);
 
     rhs = promote(rewriter, loc, rhs, resTy);
 

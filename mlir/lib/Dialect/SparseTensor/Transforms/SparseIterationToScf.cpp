@@ -68,11 +68,11 @@ genCoIterateBranchNest(PatternRewriter &rewriter, Location loc, CoIterateOp op,
   for (unsigned i : caseBits.bits()) {
     SparseIterator *it = iters[i].get();
     Value pred = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq,
-                                                it->getCrd(), loopCrd);
+                                       it->getCrd(), loopCrd);
     casePred = arith::AndIOp::create(rewriter, loc, casePred, pred);
   }
-  scf::IfOp ifOp = scf::IfOp::create(rewriter,
-      loc, ValueRange(userReduc).getTypes(), casePred, /*else=*/true);
+  scf::IfOp ifOp = scf::IfOp::create(
+      rewriter, loc, ValueRange(userReduc).getTypes(), casePred, /*else=*/true);
   rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
 
   // Erase the empty block.
@@ -127,8 +127,8 @@ static ValueRange genLoopWithIterator(
   if (it->iteratableByFor()) {
     auto [lo, hi] = it->genForCond(rewriter, loc);
     Value step = constantIndex(rewriter, loc, 1);
-    scf::ForOp forOp = scf::ForOp::create(rewriter,
-        loc, lo, hi, step, reduc,
+    scf::ForOp forOp = scf::ForOp::create(
+        rewriter, loc, lo, hi, step, reduc,
         [&](OpBuilder &b, Location loc, Value iv, ValueRange iterArgs) {
           // Empty builder function to ensure that no terminator is created.
         });
@@ -212,8 +212,8 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     Value pos = adaptor.getIterator().back();
-    Value valBuf = ToValuesOp::create(rewriter,
-        loc, llvm::getSingleElement(adaptor.getTensor()));
+    Value valBuf = ToValuesOp::create(
+        rewriter, loc, llvm::getSingleElement(adaptor.getTensor()));
     rewriter.replaceOpWithNewOp<memref::LoadOp>(op, valBuf, pos);
     return success();
   }
@@ -385,8 +385,8 @@ class SparseCoIterateOpConverter : public OpConversionPattern<CoIterateOp> {
         SmallVector<Value> nextIterYields(res);
         // 2nd. foward the loop.
         for (SparseIterator *it : validIters) {
-          Value cmp = arith::CmpIOp::create(rewriter,
-              loc, arith::CmpIPredicate::eq, it->getCrd(), loopCrd);
+          Value cmp = arith::CmpIOp::create(
+              rewriter, loc, arith::CmpIPredicate::eq, it->getCrd(), loopCrd);
           it->forwardIf(rewriter, loc, cmp);
           llvm::append_range(nextIterYields, it->getCursor());
         }

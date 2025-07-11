@@ -126,8 +126,8 @@ struct WmmaLoadOpToNVVMLowering
         cast<MemRefType>(subgroupMmaLoadMatrixOp.getSrcMemref().getType()),
         adaptor.getSrcMemref(), adaptor.getIndices());
 
-    Value leadingDim = LLVM::ConstantOp::create(rewriter,
-        loc, rewriter.getI32Type(),
+    Value leadingDim = LLVM::ConstantOp::create(
+        rewriter, loc, rewriter.getI32Type(),
         subgroupMmaLoadMatrixOp.getLeadDimensionAttr());
     rewriter.replaceOpWithNewOp<NVVM::WMMALoadOp>(
         op, resType, dataPtr, leadingDim, m, n, k, layout, eltype, frag);
@@ -181,8 +181,8 @@ struct WmmaStoreOpToNVVMLowering
         rewriter, loc,
         cast<MemRefType>(subgroupMmaStoreMatrixOp.getDstMemref().getType()),
         adaptor.getDstMemref(), adaptor.getIndices());
-    Value leadingDim = LLVM::ConstantOp::create(rewriter,
-        loc, rewriter.getI32Type(),
+    Value leadingDim = LLVM::ConstantOp::create(
+        rewriter, loc, rewriter.getI32Type(),
         subgroupMmaStoreMatrixOp.getLeadDimensionAttr());
     rewriter.replaceOpWithNewOp<NVVM::WMMAStoreOp>(
         op, dataPtr, m, n, k, layout, eltype, storeOpOperands, leadingDim);
@@ -282,10 +282,10 @@ struct WmmaConstantOpToNVVMLowering
     if (auto vecType = dyn_cast<VectorType>(type.getBody()[0])) {
       Value vecCst = LLVM::PoisonOp::create(rewriter, loc, vecType);
       for (int64_t vecEl = 0; vecEl < vecType.getNumElements(); vecEl++) {
-        Value idx = LLVM::ConstantOp::create(rewriter,
-            loc, rewriter.getI32Type(), vecEl);
+        Value idx = LLVM::ConstantOp::create(rewriter, loc,
+                                             rewriter.getI32Type(), vecEl);
         vecCst = LLVM::InsertElementOp::create(rewriter, loc, vecType, vecCst,
-                                                        cst, idx);
+                                               cst, idx);
       }
       cst = vecCst;
     }
@@ -305,14 +305,14 @@ static Value createMinMaxF(OpBuilder &builder, Location loc, Value lhs,
   Type i1Type = builder.getI1Type();
   if (auto vecType = dyn_cast<VectorType>(lhs.getType()))
     i1Type = VectorType::get(vecType.getShape(), i1Type);
-  Value cmp = LLVM::FCmpOp::create(builder,
-      loc, i1Type, isMin ? LLVM::FCmpPredicate::olt : LLVM::FCmpPredicate::ogt,
-      lhs, rhs);
+  Value cmp = LLVM::FCmpOp::create(
+      builder, loc, i1Type,
+      isMin ? LLVM::FCmpPredicate::olt : LLVM::FCmpPredicate::ogt, lhs, rhs);
   Value sel = LLVM::SelectOp::create(builder, loc, cmp, lhs, rhs);
-  Value isNan = LLVM::FCmpOp::create(builder,
-      loc, i1Type, LLVM::FCmpPredicate::uno, lhs, rhs);
-  Value nan = LLVM::ConstantOp::create(builder,
-      loc, lhs.getType(),
+  Value isNan = LLVM::FCmpOp::create(builder, loc, i1Type,
+                                     LLVM::FCmpPredicate::uno, lhs, rhs);
+  Value nan = LLVM::ConstantOp::create(
+      builder, loc, lhs.getType(),
       builder.getFloatAttr(floatType,
                            APFloat::getQNaN(floatType.getFloatSemantics())));
   return LLVM::SelectOp::create(builder, loc, isNan, nan, sel);
@@ -360,8 +360,8 @@ struct WmmaElementwiseOpToNVVMLowering
     for (size_t i = 0, e = destType.getBody().size(); i < e; ++i) {
       SmallVector<Value> extractedOperands;
       for (size_t opIdx = 0; opIdx < numOperands; opIdx++) {
-        extractedOperands.push_back(LLVM::ExtractValueOp::create(rewriter,
-            loc, adaptor.getOperands()[opIdx], i));
+        extractedOperands.push_back(LLVM::ExtractValueOp::create(
+            rewriter, loc, adaptor.getOperands()[opIdx], i));
       }
       Value element =
           createScalarOp(rewriter, loc, subgroupMmaElementwiseOp.getOpType(),

@@ -132,11 +132,11 @@ static Value createDestinationPassingStyleInitOperand(
   Value processLinearIndexInReductionGroup = mesh::createProcessLinearIndex(
       meshOp.getSymName(), reductionMeshAxes, builder);
   Value zero = arith::ConstantIndexOp::create(builder, 0);
-  Value isLeadProcess = arith::CmpIOp::create(builder,
-      builder.getI1Type(), arith::CmpIPredicate::eq,
+  Value isLeadProcess = arith::CmpIOp::create(
+      builder, builder.getI1Type(), arith::CmpIPredicate::eq,
       processLinearIndexInReductionGroup, zero);
   scf::IfOp ifOp = scf::IfOp::create(builder, spmdizedOperand.getType(),
-                                             isLeadProcess, true, true);
+                                     isLeadProcess, true, true);
   // Then block.
   {
     OpBuilder::InsertionGuard insertionGuard(builder);
@@ -158,7 +158,7 @@ static Value createDestinationPassingStyleInitOperand(
         arith::getNeutralElement(combinerOps[0]);
 
     Value init = tensor::EmptyOp::create(builder, op.getLoc(), shape,
-                                                 neutralEl.value().getType());
+                                         neutralEl.value().getType());
     Value constant =
         arith::ConstantOp::create(builder, op.getLoc(), neutralEl.value());
     Value fill = linalg::FillOp::create(builder, op.getLoc(), constant, init)
@@ -202,9 +202,9 @@ static void createAllReduceForResultWithoutPartialSharding(
   }
 
   Value spmdizedLinalgOpResult = spmdizationMap.lookup(unshardedLinalgOpResult);
-  Value reducedValue = mesh::AllReduceOp::create(builder,
-      spmdizedLinalgOpResult, resultSharding.getMesh(), allReduceMeshAxes,
-      reductionKind);
+  Value reducedValue = mesh::AllReduceOp::create(
+      builder, spmdizedLinalgOpResult, resultSharding.getMesh(),
+      allReduceMeshAxes, reductionKind);
   spmdizationMap.map(unshardedLinalgOpResult, reducedValue);
 }
 

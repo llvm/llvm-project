@@ -70,8 +70,9 @@ static void inlineRegionAndEmitStore(OpBuilder &b, Location loc, OpType op,
   Operation *terminator = block.getTerminator();
   for (OpOperand &operand : terminator->getOpOperands()) {
     Value toStore = map.lookupOrDefault(operand.get());
-    StoreOpTy::create(b, loc, toStore, outputBuffers[operand.getOperandNumber()],
-                        indexing[operand.getOperandNumber()]);
+    StoreOpTy::create(b, loc, toStore,
+                      outputBuffers[operand.getOperandNumber()],
+                      indexing[operand.getOperandNumber()]);
   }
 }
 

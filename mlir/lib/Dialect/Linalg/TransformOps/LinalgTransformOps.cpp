@@ -672,9 +672,10 @@ static Operation *replaceForAllWithNewSignature(
   newOuts.push_back(outputs[resultNumber]);
 
   // Create new scf.forall op
-  auto newforallOp = scf::ForallOp::create(rewriter,
-      loc, forallOp.getMixedLowerBound(), forallOp.getMixedUpperBound(),
-      forallOp.getMixedStep(), newOuts, forallOp.getMapping());
+  auto newforallOp = scf::ForallOp::create(
+      rewriter, loc, forallOp.getMixedLowerBound(),
+      forallOp.getMixedUpperBound(), forallOp.getMixedStep(), newOuts,
+      forallOp.getMapping());
   rewriter.eraseBlock(newforallOp.getBody());
   newforallOp.getRegion().takeBody(forallOp.getRegion());
 
@@ -700,7 +701,7 @@ static Operation *replaceForAllWithNewSignature(
   Value dst = newforallOp.getRegionIterArgs().back();
   SmallVector<OpFoldResult> strides(offsets.size(), rewriter.getIndexAttr(1));
   tensor::ParallelInsertSliceOp::create(rewriter, firstYieldOp->getLoc(), src,
-                                                 dst, offsets, sizes, strides);
+                                        dst, offsets, sizes, strides);
 
   for (auto result : llvm::enumerate(forallOp.getResults())) {
     rewriter.replaceAllUsesWith(result.value(),
@@ -3410,8 +3411,8 @@ transform::TileUsingForOp::apply(transform::TransformRewriter &rewriter,
         for (auto [ofrIdx, ofr] : llvm::enumerate(getMixedSizes())) {
           if (auto attr = llvm::dyn_cast_if_present<Attribute>(ofr)) {
             if (scalableSizes[ofrIdx]) {
-              auto val = arith::ConstantIndexOp::create(b,
-                  getLoc(), cast<IntegerAttr>(attr).getInt());
+              auto val = arith::ConstantIndexOp::create(
+                  b, getLoc(), cast<IntegerAttr>(attr).getInt());
               Value vscale =
                   vector::VectorScaleOp::create(b, getLoc(), b.getIndexType());
               sizes.push_back(
@@ -3626,9 +3627,10 @@ static scf::ForallOp normalizeForallLoopOp(RewriterBase &rewriter,
   SmallVector<OpFoldResult> normalizedSteps(normalizedUbs.size(),
                                             rewriter.getIndexAttr(1));
 
-  auto normalizedForallOp = scf::ForallOp::create(rewriter,
-      loc, normalizedLbs, normalizedUbs, normalizedSteps, loop.getOutputs(),
-      loop.getMapping(), [](OpBuilder &, Location, ValueRange) {});
+  auto normalizedForallOp = scf::ForallOp::create(
+      rewriter, loc, normalizedLbs, normalizedUbs, normalizedSteps,
+      loop.getOutputs(), loop.getMapping(),
+      [](OpBuilder &, Location, ValueRange) {});
 
   auto normalizedLoopIvs = normalizedForallOp.getInductionVars();
   OpBuilder::InsertionGuard g(rewriter);
@@ -4128,8 +4130,8 @@ DiagnosedSilenceableFailure doit(RewriterBase &rewriter, OpTy target,
         target->template getParentOfType<scf::InParallelOp>());
   }
 
-  Value extracted = tensor::ExtractSliceOp::create(rewriter,
-      target.getLoc(), target.getDest(), target.getMixedOffsets(),
+  Value extracted = tensor::ExtractSliceOp::create(
+      rewriter, target.getLoc(), target.getDest(), target.getMixedOffsets(),
       target.getMixedSizes(), target.getMixedStrides());
   Value copied = rewriter
                      .create<linalg::CopyOp>(target.getLoc(),

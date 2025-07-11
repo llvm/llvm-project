@@ -81,8 +81,8 @@ static Value getLinearIndexI32(ConversionPatternRewriter &rewriter,
               : LLVM::ConstantOp::create(rewriter, loc, i32, stride);
       increment = LLVM::MulOp::create(rewriter, loc, increment, strideValue);
     }
-    index =
-        index ? LLVM::AddOp::create(rewriter, loc, index, increment) : increment;
+    index = index ? LLVM::AddOp::create(rewriter, loc, index, increment)
+                  : increment;
   }
   return index ? index : createI32Constant(rewriter, loc, 0);
 }
@@ -133,13 +133,13 @@ static Value makeBufferRsrc(ConversionPatternRewriter &rewriter, Location loc,
   if (chipset.majorVersion == 9 && chipset >= kGfx942 && cacheSwizzleStride) {
     Value cacheStrideZext =
         LLVM::ZExtOp::create(rewriter, loc, i16, cacheSwizzleStride);
-    Value swizzleBit = LLVM::ConstantOp::create(rewriter,
-        loc, i16, rewriter.getI16IntegerAttr(1 << 14));
+    Value swizzleBit = LLVM::ConstantOp::create(
+        rewriter, loc, i16, rewriter.getI16IntegerAttr(1 << 14));
     stride = LLVM::OrOp::create(rewriter, loc, cacheStrideZext, swizzleBit,
-                                         /*isDisjoint=*/true);
+                                /*isDisjoint=*/true);
   } else {
     stride = LLVM::ConstantOp::create(rewriter, loc, i16,
-                                               rewriter.getI16IntegerAttr(0));
+                                      rewriter.getI16IntegerAttr(0));
   }
   // Get the number of elements.
   // Flag word:
@@ -209,20 +209,21 @@ struct FatRawBufferCastLowering
             : descriptor.alignedPtr(rewriter, loc);
 
     Value offset = adaptor.getResetOffset()
-                       ? LLVM::ConstantOp::create(rewriter,
-                             loc, getIndexType(), rewriter.getIndexAttr(0))
+                       ? LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
+                                                  rewriter.getIndexAttr(0))
                        : descriptor.offset(rewriter, loc);
 
     bool hasSizes = memrefType.getRank() > 0;
     // No need to unpack() and pack() all the individual sizes and strides,
     // so we'll just extract the arrays.
-    Value sizes = hasSizes ? LLVM::ExtractValueOp::create(rewriter,
-                                 loc, descriptor, kSizePosInMemRefDescriptor)
-                           : Value{};
-    Value strides = hasSizes
-                        ? LLVM::ExtractValueOp::create(rewriter,
-                              loc, descriptor, kStridePosInMemRefDescriptor)
-                        : Value{};
+    Value sizes = hasSizes
+                      ? LLVM::ExtractValueOp::create(rewriter, loc, descriptor,
+                                                     kSizePosInMemRefDescriptor)
+                      : Value{};
+    Value strides =
+        hasSizes ? LLVM::ExtractValueOp::create(rewriter, loc, descriptor,
+                                                kStridePosInMemRefDescriptor)
+                 : Value{};
 
     Value fatPtr = makeBufferRsrc(
         rewriter, loc, basePointer, numRecords, adaptor.getBoundsCheck(),
@@ -231,17 +232,17 @@ struct FatRawBufferCastLowering
     Value result = MemRefDescriptor::poison(
         rewriter, loc,
         getTypeConverter()->convertType(op.getResult().getType()));
-    result = LLVM::InsertValueOp::create(rewriter,
-        loc, result, fatPtr, kAllocatedPtrPosInMemRefDescriptor);
-    result = LLVM::InsertValueOp::create(rewriter,
-        loc, result, fatPtr, kAlignedPtrPosInMemRefDescriptor);
+    result = LLVM::InsertValueOp::create(rewriter, loc, result, fatPtr,
+                                         kAllocatedPtrPosInMemRefDescriptor);
+    result = LLVM::InsertValueOp::create(rewriter, loc, result, fatPtr,
+                                         kAlignedPtrPosInMemRefDescriptor);
     result = LLVM::InsertValueOp::create(rewriter, loc, result, offset,
-                                                  kOffsetPosInMemRefDescriptor);
+                                         kOffsetPosInMemRefDescriptor);
     if (hasSizes) {
       result = LLVM::InsertValueOp::create(rewriter, loc, result, sizes,
-                                                    kSizePosInMemRefDescriptor);
-      result = LLVM::InsertValueOp::create(rewriter,
-          loc, result, strides, kStridePosInMemRefDescriptor);
+                                           kSizePosInMemRefDescriptor);
+      result = LLVM::InsertValueOp::create(rewriter, loc, result, strides,
+                                           kStridePosInMemRefDescriptor);
     }
     rewriter.replaceOp(op, result);
     return success();
@@ -342,8 +343,8 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     SmallVector<Value, 6> args;
     if (storeData) {
       if (llvmBufferValType != llvmWantedDataType) {
-        Value castForStore =
-            LLVM::BitcastOp::create(rewriter, loc, llvmBufferValType, storeData);
+        Value castForStore = LLVM::BitcastOp::create(
+            rewriter, loc, llvmBufferValType, storeData);
         args.push_back(castForStore);
       } else {
         args.push_back(storeData);
@@ -352,8 +353,8 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
 
     if (atomicCmpData) {
       if (llvmBufferValType != llvmWantedDataType) {
-        Value castForCmp = LLVM::BitcastOp::create(rewriter,
-            loc, llvmBufferValType, atomicCmpData);
+        Value castForCmp = LLVM::BitcastOp::create(
+            rewriter, loc, llvmBufferValType, atomicCmpData);
         args.push_back(castForCmp);
       } else {
         args.push_back(atomicCmpData);
@@ -382,9 +383,9 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     if (std::optional<int32_t> indexOffset = adaptor.getIndexOffset();
         indexOffset && *indexOffset > 0) {
       Value extraOffsetConst = createI32Constant(rewriter, loc, *indexOffset);
-      voffset =
-          voffset ? LLVM::AddOp::create(rewriter, loc, voffset, extraOffsetConst)
-                  : extraOffsetConst;
+      voffset = voffset ? LLVM::AddOp::create(rewriter, loc, voffset,
+                                              extraOffsetConst)
+                        : extraOffsetConst;
     }
     voffset = LLVM::MulOp::create(rewriter, loc, voffset, byteWidthConst);
     args.push_back(voffset);
@@ -404,12 +405,12 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     llvm::SmallVector<Type, 1> resultTypes(gpuOp->getNumResults(),
                                            llvmBufferValType);
     Operation *lowered = Intrinsic::create(rewriter, loc, resultTypes, args,
-                                                    ArrayRef<NamedAttribute>());
+                                           ArrayRef<NamedAttribute>());
     if (lowered->getNumResults() == 1) {
       Value replacement = lowered->getResult(0);
       if (llvmBufferValType != llvmWantedDataType) {
         replacement = LLVM::BitcastOp::create(rewriter, loc, llvmWantedDataType,
-                                                       replacement);
+                                              replacement);
       }
       rewriter.replaceOp(gpuOp, replacement);
     } else {
@@ -516,19 +517,21 @@ static Value convertMFMAVectorOperand(ConversionPatternRewriter &rewriter,
   Type inputType = input.getType();
   if (auto vectorType = dyn_cast<VectorType>(inputType)) {
     if (vectorType.getElementType().isBF16() && !allowBf16)
-      return LLVM::BitcastOp::create(rewriter,
-          loc, vectorType.clone(rewriter.getI16Type()), input);
+      return LLVM::BitcastOp::create(
+          rewriter, loc, vectorType.clone(rewriter.getI16Type()), input);
     if (vectorType.getElementType().isInteger(8) &&
         vectorType.getNumElements() <= 8)
-      return LLVM::BitcastOp::create(rewriter,
-          loc, rewriter.getIntegerType(vectorType.getNumElements() * 8), input);
+      return LLVM::BitcastOp::create(
+          rewriter, loc,
+          rewriter.getIntegerType(vectorType.getNumElements() * 8), input);
     if (isa<IntegerType>(vectorType.getElementType()) &&
         vectorType.getElementTypeBitWidth() <= 8) {
       int64_t numWords = llvm::divideCeil(
           vectorType.getNumElements() * vectorType.getElementTypeBitWidth(),
           32);
-      return LLVM::BitcastOp::create(rewriter,
-          loc, VectorType::get(numWords, rewriter.getI32Type()), input);
+      return LLVM::BitcastOp::create(
+          rewriter, loc, VectorType::get(numWords, rewriter.getI32Type()),
+          input);
     }
   }
   return input;
@@ -576,8 +579,8 @@ static void wmmaPushInputOperand(ConversionPatternRewriter &rewriter,
   Type elemType = vectorType.getElementType();
 
   if (elemType.isBF16())
-    llvmInput = LLVM::BitcastOp::create(rewriter,
-        loc, vectorType.clone(rewriter.getI16Type()), llvmInput);
+    llvmInput = LLVM::BitcastOp::create(
+        rewriter, loc, vectorType.clone(rewriter.getI16Type()), llvmInput);
   if (elemType.getIntOrFloatBitWidth() > 8) {
     operands.push_back(llvmInput);
     return;
@@ -633,8 +636,8 @@ static void wmmaPushOutputOperand(ConversionPatternRewriter &rewriter,
   auto vectorType = dyn_cast<VectorType>(inputType);
   Type elemType = vectorType.getElementType();
   if (elemType.isBF16())
-    output = LLVM::BitcastOp::create(rewriter,
-        loc, vectorType.clone(rewriter.getI16Type()), output);
+    output = LLVM::BitcastOp::create(
+        rewriter, loc, vectorType.clone(rewriter.getI16Type()), output);
   operands.push_back(output);
   if (elemType.isF16() || elemType.isBF16() || elemType.isInteger(16)) {
     operands.push_back(createI1Constant(rewriter, loc, subwordOffset));
@@ -1092,8 +1095,8 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
 
     Operation *maybeCastBack = lowered;
     if (rawOutType != outType)
-      maybeCastBack =
-          LLVM::BitcastOp::create(rewriter, loc, outType, lowered->getResult(0));
+      maybeCastBack = LLVM::BitcastOp::create(rewriter, loc, outType,
+                                              lowered->getResult(0));
     rewriter.replaceOp(op, maybeCastBack->getResults());
 
     return success();
@@ -1143,22 +1146,22 @@ struct TransposeLoadOpLowering
     switch (elementTypeSize) {
     case 4: {
       assert(numElements == 16);
-      auto rocdlOp =
-          ROCDL::ds_read_tr4_b64::create(rewriter, loc, rocdlResultType, srcPtr);
+      auto rocdlOp = ROCDL::ds_read_tr4_b64::create(rewriter, loc,
+                                                    rocdlResultType, srcPtr);
       rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, rocdlOp);
       break;
     }
     case 6: {
       assert(numElements == 16);
-      auto rocdlOp =
-          ROCDL::ds_read_tr6_b96::create(rewriter, loc, rocdlResultType, srcPtr);
+      auto rocdlOp = ROCDL::ds_read_tr6_b96::create(rewriter, loc,
+                                                    rocdlResultType, srcPtr);
       rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, rocdlOp);
       break;
     }
     case 8: {
       assert(numElements == 8);
-      auto rocdlOp =
-          ROCDL::ds_read_tr8_b64::create(rewriter, loc, rocdlResultType, srcPtr);
+      auto rocdlOp = ROCDL::ds_read_tr8_b64::create(rewriter, loc,
+                                                    rocdlResultType, srcPtr);
       rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, rocdlOp);
       break;
     }
@@ -1318,8 +1321,8 @@ LogicalResult ExtPackedFp8OpLowering::matchAndRewrite(
   if (!sourceVecType || sourceVecType.getNumElements() < 4) {
     Value longVec = LLVM::UndefOp::create(rewriter, loc, v4i8);
     if (!sourceVecType) {
-      longVec = LLVM::InsertElementOp::create(rewriter,
-          loc, longVec, source, createI32Constant(rewriter, loc, 0));
+      longVec = LLVM::InsertElementOp::create(
+          rewriter, loc, longVec, source, createI32Constant(rewriter, loc, 0));
     } else {
       for (int32_t i = 0, e = sourceVecType.getNumElements(); i < e; ++i) {
         Value idx = createI32Constant(rewriter, loc, i);
@@ -1384,8 +1387,8 @@ LogicalResult ScaledExtPackedOpLowering::matchAndRewrite(
   if (sourceVecType.getNumElements() < packedVecType.getNumElements()) {
     Value longVec = LLVM::ZeroOp::create(rewriter, loc, packedVecType);
     if (!sourceVecType) {
-      longVec = LLVM::InsertElementOp::create(rewriter,
-          loc, longVec, source, createI32Constant(rewriter, loc, 0));
+      longVec = LLVM::InsertElementOp::create(
+          rewriter, loc, longVec, source, createI32Constant(rewriter, loc, 0));
     } else {
       for (int32_t i = 0, e = sourceVecType.getNumElements(); i < e; ++i) {
         Value idx = createI32Constant(rewriter, loc, i);
@@ -1476,32 +1479,35 @@ LogicalResult PackedScaledTruncOpLowering::matchAndRewrite(
 
   Value result;
   if (sourceElemType.isF32() && isa<Float8E5M2Type>(resultElemType))
-    result = ROCDL::CvtScaleF32PkBf8F32Op::create(rewriter,
-        loc, intResultType, existing, sourceA, sourceB, scale, op.getIndex());
+    result = ROCDL::CvtScaleF32PkBf8F32Op::create(rewriter, loc, intResultType,
+                                                  existing, sourceA, sourceB,
+                                                  scale, op.getIndex());
   else if (sourceElemType.isF16() && isa<Float8E5M2Type>(resultElemType))
-    result = ROCDL::CvtScaleF32PkBf8F16Op::create(rewriter,
-        loc, intResultType, existing, source, scale, op.getIndex());
+    result = ROCDL::CvtScaleF32PkBf8F16Op::create(
+        rewriter, loc, intResultType, existing, source, scale, op.getIndex());
   else if (sourceElemType.isBF16() && isa<Float8E5M2Type>(resultElemType))
-    result = ROCDL::CvtScaleF32PkBf8Bf16Op::create(rewriter,
-        loc, intResultType, existing, source, scale, op.getIndex());
+    result = ROCDL::CvtScaleF32PkBf8Bf16Op::create(
+        rewriter, loc, intResultType, existing, source, scale, op.getIndex());
   else if (sourceElemType.isF32() && isa<Float8E4M3FNType>(resultElemType))
-    result = ROCDL::CvtScaleF32PkFp8F32Op::create(rewriter,
-        loc, intResultType, existing, sourceA, sourceB, scale, op.getIndex());
+    result = ROCDL::CvtScaleF32PkFp8F32Op::create(rewriter, loc, intResultType,
+                                                  existing, sourceA, sourceB,
+                                                  scale, op.getIndex());
   else if (sourceElemType.isF16() && isa<Float8E4M3FNType>(resultElemType))
-    result = ROCDL::CvtScaleF32PkFp8F16Op::create(rewriter,
-        loc, intResultType, existing, source, scale, op.getIndex());
+    result = ROCDL::CvtScaleF32PkFp8F16Op::create(
+        rewriter, loc, intResultType, existing, source, scale, op.getIndex());
   else if (sourceElemType.isBF16() && isa<Float8E4M3FNType>(resultElemType))
-    result = ROCDL::CvtScaleF32PkFp8Bf16Op::create(rewriter,
-        loc, intResultType, existing, source, scale, op.getIndex());
+    result = ROCDL::CvtScaleF32PkFp8Bf16Op::create(
+        rewriter, loc, intResultType, existing, source, scale, op.getIndex());
   else if (sourceElemType.isF32() && isa<Float4E2M1FNType>(resultElemType))
-    result = ROCDL::CvtScaleF32PkFp4F32Op::create(rewriter,
-        loc, intResultType, existing, sourceA, sourceB, scale, op.getIndex());
+    result = ROCDL::CvtScaleF32PkFp4F32Op::create(rewriter, loc, intResultType,
+                                                  existing, sourceA, sourceB,
+                                                  scale, op.getIndex());
   else if (sourceElemType.isF16() && isa<Float4E2M1FNType>(resultElemType))
-    result = ROCDL::CvtScaleF32PkFp4F16Op::create(rewriter,
-        loc, intResultType, existing, source, scale, op.getIndex());
+    result = ROCDL::CvtScaleF32PkFp4F16Op::create(
+        rewriter, loc, intResultType, existing, source, scale, op.getIndex());
   else if (sourceElemType.isBF16() && isa<Float4E2M1FNType>(resultElemType))
-    result = ROCDL::CvtScaleF32PkFp4Bf16Op::create(rewriter,
-        loc, intResultType, existing, source, scale, op.getIndex());
+    result = ROCDL::CvtScaleF32PkFp4Bf16Op::create(
+        rewriter, loc, intResultType, existing, source, scale, op.getIndex());
   else
     return failure();
 
@@ -1536,10 +1542,10 @@ LogicalResult PackedTrunc2xFp8OpLowering::matchAndRewrite(
   Value result;
   if (typeIsExpectedBf8ForChipset(chipset, resultElemType))
     result = ROCDL::CvtPkBf8F32Op::create(rewriter, loc, i32, sourceA, sourceB,
-                                                   existing, op.getWordIndex());
+                                          existing, op.getWordIndex());
   else if (typeIsExpectedFp8ForChipset(chipset, resultElemType))
     result = ROCDL::CvtPkFp8F32Op::create(rewriter, loc, i32, sourceA, sourceB,
-                                                   existing, op.getWordIndex());
+                                          existing, op.getWordIndex());
 
   result = rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(
       op, getTypeConverter()->convertType(resultType), result);
@@ -1569,11 +1575,11 @@ LogicalResult PackedStochRoundFp8OpLowering::matchAndRewrite(
 
   Value result;
   if (typeIsExpectedBf8ForChipset(chipset, resultElemType))
-    result = ROCDL::CvtSrBf8F32Op::create(rewriter,
-        loc, i32, source, stoch, existing, op.getStoreIndex());
+    result = ROCDL::CvtSrBf8F32Op::create(rewriter, loc, i32, source, stoch,
+                                          existing, op.getStoreIndex());
   else if (typeIsExpectedFp8ForChipset(chipset, resultElemType))
-    result = ROCDL::CvtSrFp8F32Op::create(rewriter,
-        loc, i32, source, stoch, existing, op.getStoreIndex());
+    result = ROCDL::CvtSrFp8F32Op::create(rewriter, loc, i32, source, stoch,
+                                          existing, op.getStoreIndex());
 
   result = rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(
       op, getTypeConverter()->convertType(resultType), result);
@@ -1622,8 +1628,9 @@ struct AMDGPUDPPLowering : public ConvertOpToLLVMPattern<DPPOp> {
         auto llvmVecType = typeConverter->convertType(mlir::VectorType::get(
             32 / operandType.getIntOrFloatBitWidth(), llvmSrcIntType));
         Value undefVec = LLVM::UndefOp::create(rewriter, loc, llvmVecType);
-        operand = LLVM::InsertElementOp::create(rewriter,
-            loc, undefVec, operand, createI32Constant(rewriter, loc, 0));
+        operand =
+            LLVM::InsertElementOp::create(rewriter, loc, undefVec, operand,
+                                          createI32Constant(rewriter, loc, 0));
         operand = LLVM::BitcastOp::create(rewriter, loc, llvmType, operand);
       }
       return operand;
@@ -1711,8 +1718,9 @@ struct AMDGPUDPPLowering : public ConvertOpToLLVMPattern<DPPOp> {
     bool boundCtrl = DppOp->getAttrOfType<BoolAttr>("bound_ctrl").getValue();
 
     // create a ROCDL_DPPMovOp instruction with the appropriate attributes
-    auto dppMovOp = ROCDL::DPPUpdateOp::create(rewriter,
-        loc, llvmType, old, src, DppCtrl, rowMask, bankMask, boundCtrl);
+    auto dppMovOp =
+        ROCDL::DPPUpdateOp::create(rewriter, loc, llvmType, old, src, DppCtrl,
+                                   rowMask, bankMask, boundCtrl);
 
     Value result = dppMovOp.getRes();
     if (srcType.getIntOrFloatBitWidth() < 32) {

@@ -46,10 +46,10 @@ static void inlineWhileCase(Region &srcRegion, Region &dstRegion,
   auto yield = cast<YieldOp>(headBlock->getTerminator());
   rewriter.setInsertionPoint(yield);
   if (isCond) {
-    auto condition =
-        tensor::ExtractOp::create(rewriter, yield.getLoc(), yield.getOperand(0));
+    auto condition = tensor::ExtractOp::create(rewriter, yield.getLoc(),
+                                               yield.getOperand(0));
     scf::ConditionOp::create(rewriter, yield.getLoc(), condition,
-                                      headBlock->getArguments());
+                             headBlock->getArguments());
   } else {
     rewriter.setInsertionPoint(yield);
     scf::YieldOp::create(rewriter, yield.getLoc(), yield.getInputs());
@@ -68,7 +68,7 @@ public:
     auto condition =
         tensor::ExtractOp::create(rewriter, op.getLoc(), op.getCondition());
     auto newIf = scf::IfOp::create(rewriter, op.getLoc(), op.getResultTypes(),
-                                            condition, true);
+                                   condition, true);
 
     inlineIfCase(op.getThenGraph(), newIf.getThenRegion(), op.getInputList(),
                  rewriter);
@@ -120,8 +120,8 @@ public:
 
       // Read the index and cast it to index type
       auto index = tensor::ExtractOp::create(builder, loc, indices, ivs);
-      auto castIndex = arith::IndexCastOp::create(builder,
-          loc, builder.getIndexType(), index);
+      auto castIndex = arith::IndexCastOp::create(
+          builder, loc, builder.getIndexType(), index);
 
       // Offset, sizes, and strides for the input tensor
       auto inputOffset = llvm::to_vector(ivs);
@@ -130,13 +130,13 @@ public:
       llvm::SmallVector<Value> sizes = {one, one, dimC};
       llvm::SmallVector<Value> strides = {one, one, one};
 
-      auto slice = tensor::ExtractSliceOp::create(builder,
-          loc, input, inputOffset, sizes, strides);
+      auto slice = tensor::ExtractSliceOp::create(builder, loc, input,
+                                                  inputOffset, sizes, strides);
 
       // Insert the slice into the output accumulator tensor.
       llvm::SmallVector<Value> outputOffset = {n, castIndex, zero};
-      auto updated = tensor::InsertSliceOp::create(builder,
-          loc, slice, args[0], outputOffset, sizes, strides);
+      auto updated = tensor::InsertSliceOp::create(
+          builder, loc, slice, args[0], outputOffset, sizes, strides);
 
       return {updated};
     };
@@ -155,8 +155,8 @@ public:
 
   LogicalResult matchAndRewrite(tosa::WhileOp op,
                                 PatternRewriter &rewriter) const final {
-    auto newWhile = scf::WhileOp::create(rewriter,
-        op.getLoc(), op.getResultTypes(), op.getInputList());
+    auto newWhile = scf::WhileOp::create(
+        rewriter, op.getLoc(), op.getResultTypes(), op.getInputList());
     rewriter.createBlock(&newWhile.getBefore());
     rewriter.createBlock(&newWhile.getAfter());
 

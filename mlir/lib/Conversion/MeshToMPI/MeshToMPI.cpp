@@ -147,8 +147,9 @@ struct ConvertShardingOp : public OpConversionPattern<ShardingOp> {
     Value resSplitAxes = tensor::EmptyOp::create(rewriter, loc, shape, i16);
     auto attr = IntegerAttr::get(i16, -1);
     Value fillValue = arith::ConstantOp::create(rewriter, loc, i16, attr);
-    resSplitAxes = linalg::FillOp::create(rewriter, loc, fillValue, resSplitAxes)
-                       .getResult(0);
+    resSplitAxes =
+        linalg::FillOp::create(rewriter, loc, fillValue, resSplitAxes)
+            .getResult(0);
 
     // explicitly write values into tensor row by row
     std::array<int64_t, 2> strides = {1, 1};
@@ -163,8 +164,9 @@ struct ConvertShardingOp : public OpConversionPattern<ShardingOp> {
       auto tensorType = RankedTensorType::get({size}, i16);
       auto attrs = DenseIntElementsAttr::get(tensorType, axes.asArrayRef());
       auto vals = arith::ConstantOp::create(rewriter, loc, tensorType, attrs);
-      resSplitAxes = tensor::InsertSliceOp::create(rewriter,
-          loc, vals, resSplitAxes, empty, empty, empty, offs, sizes, strides);
+      resSplitAxes = tensor::InsertSliceOp::create(rewriter, loc, vals,
+                                                   resSplitAxes, empty, empty,
+                                                   empty, offs, sizes, strides);
     }
 
     // To hold halos sizes, create 2d Tensor with shape {nSplits, 2}.
@@ -189,8 +191,8 @@ struct ConvertShardingOp : public OpConversionPattern<ShardingOp> {
     // MeshOp)
     Value resOffsets;
     if (adaptor.getStaticShardedDimsOffsets().empty()) {
-      resOffsets = tensor::EmptyOp::create(rewriter,
-          loc, std::array<int64_t, 2>{0, 0}, i64);
+      resOffsets = tensor::EmptyOp::create(rewriter, loc,
+                                           std::array<int64_t, 2>{0, 0}, i64);
     } else {
       SymbolTableCollection symbolTableCollection;
       auto meshOp = getMesh(op, symbolTableCollection);
@@ -204,10 +206,10 @@ struct ConvertShardingOp : public OpConversionPattern<ShardingOp> {
       assert(maxSplitSize);
       ++maxSplitSize; // add one for the total size
 
-      resOffsets = tensor::EmptyOp::create(rewriter,
-          loc, std::array<int64_t, 2>{nSplits, maxSplitSize}, i64);
-      Value zero = arith::ConstantOp::create(rewriter,
-          loc, i64, rewriter.getI64IntegerAttr(ShapedType::kDynamic));
+      resOffsets = tensor::EmptyOp::create(
+          rewriter, loc, std::array<int64_t, 2>{nSplits, maxSplitSize}, i64);
+      Value zero = arith::ConstantOp::create(
+          rewriter, loc, i64, rewriter.getI64IntegerAttr(ShapedType::kDynamic));
       resOffsets =
           linalg::FillOp::create(rewriter, loc, zero, resOffsets).getResult(0);
       SmallVector<Value> offsets =
@@ -223,8 +225,9 @@ struct ConvertShardingOp : public OpConversionPattern<ShardingOp> {
         Value vals = tensor::FromElementsOp::create(rewriter, loc, values);
         std::array<int64_t, 2> offs = {static_cast<int64_t>(i), 0};
         std::array<int64_t, 2> sizes = {1, splitSize};
-        resOffsets = tensor::InsertSliceOp::create(rewriter,
-            loc, vals, resOffsets, empty, empty, empty, offs, sizes, strides);
+        resOffsets = tensor::InsertSliceOp::create(rewriter, loc, vals,
+                                                   resOffsets, empty, empty,
+                                                   empty, offs, sizes, strides);
         curr += splitSize;
       }
     }
@@ -346,11 +349,11 @@ struct ConvertNeighborsLinearIndicesOp
     Value dimSz = dims[axes[0]];
     Value one = arith::ConstantIndexOp::create(rewriter, loc, 1);
     Value minus1 = arith::ConstantIndexOp::create(rewriter, loc, -1);
-    Value atBorder = arith::CmpIOp::create(rewriter,
-        loc, arith::CmpIPredicate::sle, orgIdx,
-        arith::ConstantIndexOp::create(rewriter, loc, 0));
-    auto down = scf::IfOp::create(rewriter,
-        loc, atBorder,
+    Value atBorder =
+        arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::sle, orgIdx,
+                              arith::ConstantIndexOp::create(rewriter, loc, 0));
+    auto down = scf::IfOp::create(
+        rewriter, loc, atBorder,
         [&](OpBuilder &builder, Location loc) {
           scf::YieldOp::create(builder, loc, minus1);
         },
@@ -359,14 +362,14 @@ struct ConvertNeighborsLinearIndicesOp
           tmp[axes[0]] =
               arith::SubIOp::create(rewriter, op.getLoc(), orgIdx, one)
                   .getResult();
-          scf::YieldOp::create(builder,
-              loc, multiToLinearIndex(loc, rewriter, tmp, dims));
+          scf::YieldOp::create(builder, loc,
+                               multiToLinearIndex(loc, rewriter, tmp, dims));
         });
-    atBorder = arith::CmpIOp::create(rewriter,
-        loc, arith::CmpIPredicate::sge, orgIdx,
+    atBorder = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::sge, orgIdx,
         arith::SubIOp::create(rewriter, loc, dimSz, one).getResult());
-    auto up = scf::IfOp::create(rewriter,
-        loc, atBorder,
+    auto up = scf::IfOp::create(
+        rewriter, loc, atBorder,
         [&](OpBuilder &builder, Location loc) {
           scf::YieldOp::create(builder, loc, minus1);
         },
@@ -374,8 +377,8 @@ struct ConvertNeighborsLinearIndicesOp
           SmallVector<Value> tmp = mIdx;
           tmp[axes[0]] =
               arith::AddIOp::create(rewriter, op.getLoc(), orgIdx, one);
-          scf::YieldOp::create(builder,
-              loc, multiToLinearIndex(loc, rewriter, tmp, dims));
+          scf::YieldOp::create(builder, loc,
+                               multiToLinearIndex(loc, rewriter, tmp, dims));
         });
     rewriter.replaceOp(op, ValueRange{down.getResult(0), up.getResult(0)});
     return success();
@@ -447,8 +450,9 @@ struct ConvertShardShapeOp : public OpConversionPattern<ShardShapeOp> {
           rewriter, loc, sharding.getStaticShardedDimsOffsets(),
           sharding.getDynamicShardedDimsOffsets(), index);
       if (!tmp.empty())
-        shardedDimsOffs = tensor::FromElementsOp::create(rewriter,
-            loc, RankedTensorType::get({(int64_t)tmp.size()}, index), tmp);
+        shardedDimsOffs = tensor::FromElementsOp::create(
+            rewriter, loc, RankedTensorType::get({(int64_t)tmp.size()}, index),
+            tmp);
     }
 
     // With static mesh shape the sizes of the split axes are known.
@@ -469,8 +473,8 @@ struct ConvertShardShapeOp : public OpConversionPattern<ShardShapeOp> {
         auto axes = splitAxes[i];
         // The current dimension might not be sharded.
         // Create a value from the static position in shardDimsOffsets.
-        Value posVal =
-            arith::ConstantOp::create(rewriter, loc, rewriter.getIndexAttr(pos));
+        Value posVal = arith::ConstantOp::create(rewriter, loc,
+                                                 rewriter.getIndexAttr(pos));
         // Get the index of the local shard in the mesh axis.
         Value idx = multiIdx[axes[0]];
         auto numShards =
@@ -492,8 +496,8 @@ struct ConvertShardShapeOp : public OpConversionPattern<ShardShapeOp> {
           Value sz = arith::SubIOp::create(rewriter, loc, nextOff, off);
           shardShape.emplace_back(sz);
         } else {
-          Value numShardsVal = arith::ConstantOp::create(rewriter,
-              loc, rewriter.getIndexAttr(numShards));
+          Value numShardsVal = arith::ConstantOp::create(
+              rewriter, loc, rewriter.getIndexAttr(numShards));
           // Compute shard dim size by distributing odd elements to trailing
           // shards:
           // sz = dim / numShards
@@ -501,8 +505,8 @@ struct ConvertShardShapeOp : public OpConversionPattern<ShardShapeOp> {
           Value sz = arith::DivSIOp::create(rewriter, loc, dim, numShardsVal);
           Value sz1 = arith::RemSIOp::create(rewriter, loc, dim, numShardsVal);
           sz1 = arith::SubIOp::create(rewriter, loc, numShardsVal, sz1);
-          auto cond = arith::CmpIOp::create(rewriter,
-              loc, arith::CmpIPredicate::sge, idx, sz1);
+          auto cond = arith::CmpIOp::create(
+              rewriter, loc, arith::CmpIPredicate::sge, idx, sz1);
           Value odd = arith::SelectOp::create(rewriter, loc, cond, one, zero);
           sz = arith::AddIOp::create(rewriter, loc, sz, odd);
           shardShape.emplace_back(sz);
@@ -583,8 +587,8 @@ struct ConvertAllReduceOp : public OpConversionPattern<AllReduceOp> {
     }
 
     // Allocate buffer and copy input to buffer.
-    Value buffer = memref::AllocOp::create(iBuilder,
-        shape, cast<ShapedType>(op.getType()).getElementType());
+    Value buffer = memref::AllocOp::create(
+        iBuilder, shape, cast<ShapedType>(op.getType()).getElementType());
     linalg::CopyOp::create(iBuilder, input, buffer);
 
     // Get an MPI_Comm_split for the AllReduce operation.
@@ -623,19 +627,19 @@ struct ConvertAllReduceOp : public OpConversionPattern<AllReduceOp> {
     if (inType.getRank() > 1) {
       ReassociationIndices reassociation(inType.getRank());
       std::iota(reassociation.begin(), reassociation.end(), 0);
-      buffer1d = memref::CollapseShapeOp::create(iBuilder,
-          buffer, ArrayRef<ReassociationIndices>(reassociation));
+      buffer1d = memref::CollapseShapeOp::create(
+          iBuilder, buffer, ArrayRef<ReassociationIndices>(reassociation));
     }
 
     // Create the MPI AllReduce operation.
-    mpi::AllReduceOp::create(iBuilder,
-        TypeRange(), buffer1d, buffer1d,
-        getMPIReductionOp(adaptor.getReductionAttr()), comm);
+    mpi::AllReduceOp::create(iBuilder, TypeRange(), buffer1d, buffer1d,
+                             getMPIReductionOp(adaptor.getReductionAttr()),
+                             comm);
 
     // If the destination is a memref, cast it to a tensor
     if (isa<RankedTensorType>(op.getType()))
       buffer = bufferization::ToTensorOp::create(iBuilder, op.getType(), buffer,
-                                                          true);
+                                                 true);
 
     rewriter.replaceOp(op, buffer);
     return success();
@@ -676,9 +680,10 @@ struct ConvertUpdateHaloOp : public OpConversionPattern<UpdateHaloOp> {
     auto toValue = [&rewriter, &loc](OpFoldResult &v) -> Value {
       if (auto value = dyn_cast<Value>(v))
         return value;
-      return arith::ConstantOp::create(rewriter,
-          loc, rewriter.getIndexAttr(
-                   cast<IntegerAttr>(cast<Attribute>(v)).getInt()));
+      return arith::ConstantOp::create(
+          rewriter, loc,
+          rewriter.getIndexAttr(
+              cast<IntegerAttr>(cast<Attribute>(v)).getInt()));
     };
 
     auto dest = adaptor.getDestination();
@@ -723,8 +728,8 @@ struct ConvertUpdateHaloOp : public OpConversionPattern<UpdateHaloOp> {
         offsets[i] = haloSizes[currHaloDim * 2];
 
         // prepare shape and offsets of highest dim's halo exchange
-        Value _haloSz = arith::AddIOp::create(rewriter,
-            loc, toValue(haloSizes[currHaloDim * 2]),
+        Value _haloSz = arith::AddIOp::create(
+            rewriter, loc, toValue(haloSizes[currHaloDim * 2]),
             toValue(haloSizes[currHaloDim * 2 + 1]));
         // the halo shape of lower dims exlude the halos
         dimSizes[i] =
@@ -758,20 +763,22 @@ struct ConvertUpdateHaloOp : public OpConversionPattern<UpdateHaloOp> {
                                                        splitAxes)
                      .getResults();
       // MPI operates on i32...
-      Value neighbourIDs[2] = {arith::IndexCastOp::create(rewriter,
-                                   loc, rewriter.getI32Type(), tmp[0]),
-                               arith::IndexCastOp::create(rewriter,
-                                   loc, rewriter.getI32Type(), tmp[1])};
+      Value neighbourIDs[2] = {
+          arith::IndexCastOp::create(rewriter, loc, rewriter.getI32Type(),
+                                     tmp[0]),
+          arith::IndexCastOp::create(rewriter, loc, rewriter.getI32Type(),
+                                     tmp[1])};
 
       auto lowerRecvOffset = rewriter.getIndexAttr(0);
       auto lowerSendOffset = toValue(haloSizes[currHaloDim * 2]);
-      auto upperRecvOffset = arith::SubIOp::create(rewriter,
-          loc, toValue(shape[dim]), toValue(haloSizes[currHaloDim * 2 + 1]));
-      auto upperSendOffset = arith::SubIOp::create(rewriter,
-          loc, upperRecvOffset, toValue(haloSizes[currHaloDim * 2]));
+      auto upperRecvOffset =
+          arith::SubIOp::create(rewriter, loc, toValue(shape[dim]),
+                                toValue(haloSizes[currHaloDim * 2 + 1]));
+      auto upperSendOffset = arith::SubIOp::create(
+          rewriter, loc, upperRecvOffset, toValue(haloSizes[currHaloDim * 2]));
 
-      Value commWorld = mpi::CommWorldOp::create(rewriter,
-          loc, mpi::CommType::get(op->getContext()));
+      Value commWorld = mpi::CommWorldOp::create(
+          rewriter, loc, mpi::CommType::get(op->getContext()));
 
       // Make sure we send/recv in a way that does not lead to a dead-lock.
       // The current approach is by far not optimal, this should be at least
@@ -787,33 +794,34 @@ struct ConvertUpdateHaloOp : public OpConversionPattern<UpdateHaloOp> {
         // Processes on the mesh borders have only one neighbor
         auto to = upperHalo ? neighbourIDs[0] : neighbourIDs[1];
         auto from = upperHalo ? neighbourIDs[1] : neighbourIDs[0];
-        auto hasFrom = arith::CmpIOp::create(rewriter,
-            loc, arith::CmpIPredicate::sge, from, zero);
-        auto hasTo = arith::CmpIOp::create(rewriter,
-            loc, arith::CmpIPredicate::sge, to, zero);
-        auto buffer = memref::AllocOp::create(rewriter,
-            loc, dimSizes, cast<ShapedType>(array.getType()).getElementType());
+        auto hasFrom = arith::CmpIOp::create(
+            rewriter, loc, arith::CmpIPredicate::sge, from, zero);
+        auto hasTo = arith::CmpIOp::create(rewriter, loc,
+                                           arith::CmpIPredicate::sge, to, zero);
+        auto buffer = memref::AllocOp::create(
+            rewriter, loc, dimSizes,
+            cast<ShapedType>(array.getType()).getElementType());
         // if has neighbor: copy halo data from array to buffer and send
-        scf::IfOp::create(rewriter,
-            loc, hasTo, [&](OpBuilder &builder, Location loc) {
+        scf::IfOp::create(
+            rewriter, loc, hasTo, [&](OpBuilder &builder, Location loc) {
               offsets[dim] = upperHalo ? OpFoldResult(lowerSendOffset)
                                        : OpFoldResult(upperSendOffset);
-              auto subview = memref::SubViewOp::create(builder,
-                  loc, array, offsets, dimSizes, strides);
+              auto subview = memref::SubViewOp::create(
+                  builder, loc, array, offsets, dimSizes, strides);
               memref::CopyOp::create(builder, loc, subview, buffer);
               mpi::SendOp::create(builder, loc, TypeRange{}, buffer, tag, to,
-                                          commWorld);
+                                  commWorld);
               scf::YieldOp::create(builder, loc);
             });
         // if has neighbor: receive halo data into buffer and copy to array
-        scf::IfOp::create(rewriter,
-            loc, hasFrom, [&](OpBuilder &builder, Location loc) {
+        scf::IfOp::create(
+            rewriter, loc, hasFrom, [&](OpBuilder &builder, Location loc) {
               offsets[dim] = upperHalo ? OpFoldResult(upperRecvOffset)
                                        : OpFoldResult(lowerRecvOffset);
               mpi::RecvOp::create(builder, loc, TypeRange{}, buffer, tag, from,
-                                          commWorld);
-              auto subview = memref::SubViewOp::create(builder,
-                  loc, array, offsets, dimSizes, strides);
+                                  commWorld);
+              auto subview = memref::SubViewOp::create(
+                  builder, loc, array, offsets, dimSizes, strides);
               memref::CopyOp::create(builder, loc, buffer, subview);
               scf::YieldOp::create(builder, loc);
             });
@@ -825,16 +833,17 @@ struct ConvertUpdateHaloOp : public OpConversionPattern<UpdateHaloOp> {
         OpFoldResult &v = haloSizes[currHaloDim * 2 + upOrDown];
         Value haloSz = dyn_cast<Value>(v);
         if (!haloSz)
-          haloSz = arith::ConstantOp::create(rewriter,
-              loc, rewriter.getI32IntegerAttr(
-                       cast<IntegerAttr>(cast<Attribute>(v)).getInt()));
-        auto hasSize = arith::CmpIOp::create(rewriter,
-            loc, arith::CmpIPredicate::sgt, haloSz, zero);
+          haloSz = arith::ConstantOp::create(
+              rewriter, loc,
+              rewriter.getI32IntegerAttr(
+                  cast<IntegerAttr>(cast<Attribute>(v)).getInt()));
+        auto hasSize = arith::CmpIOp::create(
+            rewriter, loc, arith::CmpIPredicate::sgt, haloSz, zero);
         scf::IfOp::create(rewriter, loc, hasSize,
-                                   [&](OpBuilder &builder, Location loc) {
-                                     genSendRecv(upOrDown > 0);
-                                     scf::YieldOp::create(builder, loc);
-                                   });
+                          [&](OpBuilder &builder, Location loc) {
+                            genSendRecv(upOrDown > 0);
+                            scf::YieldOp::create(builder, loc);
+                          });
       };
 
       doSendRecv(0);
@@ -852,8 +861,8 @@ struct ConvertUpdateHaloOp : public OpConversionPattern<UpdateHaloOp> {
       rewriter.replaceOp(op, array);
     } else {
       assert(isa<RankedTensorType>(op.getResult().getType()));
-      rewriter.replaceOp(op, bufferization::ToTensorOp::create(rewriter,
-                                 loc, op.getResult().getType(), array,
+      rewriter.replaceOp(op, bufferization::ToTensorOp::create(
+                                 rewriter, loc, op.getResult().getType(), array,
                                  /*restrict=*/true, /*writable=*/true));
     }
     return success();

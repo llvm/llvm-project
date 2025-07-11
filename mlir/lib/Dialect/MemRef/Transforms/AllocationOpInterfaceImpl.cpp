@@ -35,8 +35,9 @@ struct DefaultAllocationInterface
   static ::std::optional<::mlir::Operation *>
   buildPromotedAlloc(OpBuilder &builder, Value alloc) {
     Operation *definingOp = alloc.getDefiningOp();
-    return memref::AllocaOp::create(builder,
-        definingOp->getLoc(), cast<MemRefType>(definingOp->getResultTypes()[0]),
+    return memref::AllocaOp::create(
+        builder, definingOp->getLoc(),
+        cast<MemRefType>(definingOp->getResultTypes()[0]),
         definingOp->getOperands(), definingOp->getAttrs());
   }
 };

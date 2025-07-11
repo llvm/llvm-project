@@ -8,8 +8,8 @@
 
 #include "Standalone/StandaloneDialect.h"
 #include "Standalone/StandaloneOps.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "Standalone/StandaloneTypes.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 
 using namespace mlir;
 using namespace mlir::standalone;

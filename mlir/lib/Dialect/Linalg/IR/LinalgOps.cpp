@@ -78,11 +78,11 @@ static Operation *getSlice(OpBuilder &b, Location loc, Value source,
   return TypeSwitch<Type, Operation *>(source.getType())
       .Case<RankedTensorType>([&](RankedTensorType t) -> Operation * {
         return tensor::ExtractSliceOp::create(b, loc, source, offsets, sizes,
-                                                strides);
+                                              strides);
       })
       .Case<MemRefType>([&](MemRefType type) -> Operation * {
         return memref::SubViewOp::create(b, loc, source, offsets, sizes,
-                                           strides);
+                                         strides);
       })
       .Default([&](Type t) -> Operation * { return nullptr; });
 }
@@ -467,7 +467,7 @@ public:
     case UnaryFn::reciprocal: {
       Attribute oneAttr = builder.getOneAttr(arg.getType());
       auto one = arith::ConstantOp::create(builder, arg.getLoc(),
-                                                   ::cast<TypedAttr>(oneAttr));
+                                           ::cast<TypedAttr>(oneAttr));
       return arith::DivFOp::create(builder, arg.getLoc(), one, arg);
     }
     case UnaryFn::round:
@@ -647,7 +647,8 @@ public:
     builder.setInsertionPointToEnd(&block);
     Location loc = builder.getUnknownLoc();
     Attribute valueAttr = parseAttribute(value, builder.getContext());
-    return arith::ConstantOp::create(builder, loc, ::cast<TypedAttr>(valueAttr));
+    return arith::ConstantOp::create(builder, loc,
+                                     ::cast<TypedAttr>(valueAttr));
   }
 
   Value index(int64_t dim) {
@@ -749,14 +750,14 @@ struct FoldFillWithTensorReshape : OpRewritePattern<TensorReshapeOp> {
     TensorReshapeOp newInit;
     if constexpr (std::is_same<TensorReshapeOp, tensor::ExpandShapeOp>::value) {
 
-      newInit = TensorReshapeOp::create(rewriter,
-          loc, reshapeOp.getResultType(), oldFill.output(),
+      newInit = TensorReshapeOp::create(
+          rewriter, loc, reshapeOp.getResultType(), oldFill.output(),
           reshapeOp.getReassociation(), reshapeOp.getOutputShape(),
           reshapeOp.getStaticOutputShape());
     } else {
-      newInit = TensorReshapeOp::create(rewriter, loc, reshapeOp.getResultType(),
-                                                 oldFill.output(),
-                                                 reshapeOp.getReassociation());
+      newInit = TensorReshapeOp::create(
+          rewriter, loc, reshapeOp.getResultType(), oldFill.output(),
+          reshapeOp.getReassociation());
     }
     rewriter.replaceOpWithNewOp<FillOp>(reshapeOp, ValueRange{oldFill.value()},
                                         ValueRange{newInit});
@@ -786,17 +787,17 @@ struct FoldFillWithPad final : public OpRewritePattern<tensor::PadOp> {
       return rewriter.notifyMatchFailure(
           padOp, "failed to reify tensor.pad op result shape");
 
-    auto emptyTensor = tensor::EmptyOp::create(rewriter,
-        padOp.getLoc(), reifiedShape.front(),
-        padOp.getResultType().getElementType());
+    auto emptyTensor =
+        tensor::EmptyOp::create(rewriter, padOp.getLoc(), reifiedShape.front(),
+                                padOp.getResultType().getElementType());
     Value replacement =
         rewriter
             .create<FillOp>(fillOp.getLoc(), ValueRange{padValue},
                             ValueRange{emptyTensor})
             .getResult(0);
     if (replacement.getType() != padOp.getResultType()) {
-      replacement = tensor::CastOp::create(rewriter,
-          fillOp.getLoc(), padOp.getResultType(), replacement);
+      replacement = tensor::CastOp::create(rewriter, fillOp.getLoc(),
+                                           padOp.getResultType(), replacement);
     }
     rewriter.replaceOp(padOp, replacement);
     return success();
@@ -943,7 +944,7 @@ static FailureOr<FillOp> foldFillPackIntoFillOp(RewriterBase &rewriter,
     return failure();
 
   return linalg::FillOp::create(rewriter, packOp.getLoc(), fillOp.getInputs(),
-                                         packOp.getDest());
+                                packOp.getDest());
 }
 
 /// Wrapper pattern that applies foldFillPackIntoFillOp method.
@@ -1042,8 +1043,8 @@ struct FoldConcatsOfFill : public OpRewritePattern<tensor::ConcatOp> {
           concatOp, "not all operands are defined by a compatible fill op");
     }
 
-    Value outsConcat = tensor::ConcatOp::create(rewriter,
-        concatOp.getLoc(), concatOp.getDim(), allOuts);
+    Value outsConcat = tensor::ConcatOp::create(rewriter, concatOp.getLoc(),
+                                                concatOp.getDim(), allOuts);
     rewriter.replaceOpWithNewOp<linalg::FillOp>(
         concatOp, firstFillOp.getDpsInputOperand(0)->get(), outsConcat);
     return success();
@@ -1407,14 +1408,14 @@ struct EraseIdentityLinalgOp : public OpRewritePattern<OpTy> {
         // TODO: unify the two ops?
         if (sparse_tensor::getSparseTensorEncoding(returnType) ||
             sparse_tensor::getSparseTensorEncoding(resultType))
-          returnedArg = sparse_tensor::ConvertOp::create(rewriter,
-              linalgOp.getLoc(), resultType, returnedArg);
+          returnedArg = sparse_tensor::ConvertOp::create(
+              rewriter, linalgOp.getLoc(), resultType, returnedArg);
         else {
           if (!tensor::CastOp::areCastCompatible(returnedArg.getType(),
                                                  resultType))
             return failure();
-          returnedArg = tensor::CastOp::create(rewriter,
-              linalgOp.getLoc(), resultType, returnedArg);
+          returnedArg = tensor::CastOp::create(rewriter, linalgOp.getLoc(),
+                                               resultType, returnedArg);
         }
       }
       returnedArgs.push_back(returnedArg);
@@ -2147,8 +2148,8 @@ struct SwapTransposeWithBroadcast : OpRewritePattern<linalg::TransposeOp> {
     }
     SmallVector<OpFoldResult> transposeResultShapes =
         applyPermutation(dims, resultPerms);
-    Value transposeInit = tensor::EmptyOp::create(rewriter,
-        transposeOp.getLoc(), transposeResultShapes,
+    Value transposeInit = tensor::EmptyOp::create(
+        rewriter, transposeOp.getLoc(), transposeResultShapes,
         broadcastInputTy.getElementType());
 
     // Create broadcast(transpose(input)).
@@ -2560,8 +2561,8 @@ struct FoldTensorCastConsumerOp : public OpRewritePattern<tensor::CastOp> {
     Operation *newOp = clone(rewriter, linalgOp, resultTypes, newOperands);
 
     // Create a tensor.cast operation back to the original type.
-    Value castBack = tensor::CastOp::create(rewriter,
-        loc, resultValue.getType(), newOp->getResult(resultNumber));
+    Value castBack = tensor::CastOp::create(
+        rewriter, loc, resultValue.getType(), newOp->getResult(resultNumber));
 
     SmallVector<Value> results(newOp->result_begin(), newOp->result_end());
     results[resultNumber] = castBack;
@@ -2924,9 +2925,9 @@ static Value reduce(OpBuilder &builder, Location loc, Value input, Value output,
          "We should have two maps: 1 for the input, 1 for the output");
   assert(indexingMaps[0].isIdentity() && "input map should be identity");
 
-  auto genericOp = linalg::GenericOp::create(builder,
-      loc, output.getType(), input, output, indexingMaps, iteratorTypes,
-      [&](OpBuilder &b, Location loc, ValueRange args) {
+  auto genericOp = linalg::GenericOp::create(
+      builder, loc, output.getType(), input, output, indexingMaps,
+      iteratorTypes, [&](OpBuilder &b, Location loc, ValueRange args) {
         Value result = T::create(b, loc, args[0], args[1]);
         linalg::YieldOp::create(b, loc, result);
       });
@@ -2947,9 +2948,10 @@ static Value buildSubAndExpOp(OpBuilder &builder, Location loc, Value input,
   assert(indexingMaps[0].isIdentity() && "input map should be identity");
   // Add the affine map for the output argument.
   indexingMaps.push_back(indexingMaps[0]);
-  auto genericOp = linalg::GenericOp::create(builder,
-      loc, input.getType(), ValueRange{input, max}, output, indexingMaps,
-      iteratorTypes, [&](OpBuilder &b, Location loc, ValueRange args) {
+  auto genericOp = linalg::GenericOp::create(
+      builder, loc, input.getType(), ValueRange{input, max}, output,
+      indexingMaps, iteratorTypes,
+      [&](OpBuilder &b, Location loc, ValueRange args) {
         Value diff = arith::SubFOp::create(b, loc, args[0], args[1]);
         Value result = math::ExpOp::create(b, loc, diff);
         linalg::YieldOp::create(b, loc, result);
@@ -2974,9 +2976,9 @@ static Value buildDivOp(OpBuilder &builder, Location loc, Value numerator,
   assert(indexingMaps[0].isIdentity() && "Numerator map should be identity");
   // Add the affine map for the output tensor.
   indexingMaps.push_back(indexingMaps[0]);
-  auto genericOp = linalg::GenericOp::create(builder,
-      loc, numerator.getType(), ValueRange{numerator, denominator}, output,
-      indexingMaps, iteratorTypes,
+  auto genericOp = linalg::GenericOp::create(
+      builder, loc, numerator.getType(), ValueRange{numerator, denominator},
+      output, indexingMaps, iteratorTypes,
       [&](OpBuilder &b, Location loc, ValueRange args) {
         Value result = arith::DivFOp::create(b, loc, args[0], args[1]);
         linalg::YieldOp::create(b, loc, result);
@@ -3153,8 +3155,8 @@ FailureOr<TilingResult> WinogradFilterTransformOp::getTiledImplementation(
   int64_t filterRank = getFilterOperandRank();
   SmallVector<OpFoldResult> filterStrides(filterRank, oneAttr);
   Location loc = getLoc();
-  auto filterSlice = tensor::ExtractSliceOp::create(builder,
-      loc, getFilter(), sliceOffsets, sliceSizes, filterStrides);
+  auto filterSlice = tensor::ExtractSliceOp::create(
+      builder, loc, getFilter(), sliceOffsets, sliceSizes, filterStrides);
   tiledOperands.emplace_back(filterSlice);
 
   SmallVector<OpFoldResult> resultOffsets, resultSizes;
@@ -3164,8 +3166,8 @@ FailureOr<TilingResult> WinogradFilterTransformOp::getTiledImplementation(
 
   int64_t outputRank = getOutputOperandRank();
   SmallVector<OpFoldResult> outputStrides(outputRank, oneAttr);
-  auto outputSlice = tensor::ExtractSliceOp::create(builder,
-      loc, getOutput(), resultOffsets, resultSizes, outputStrides);
+  auto outputSlice = tensor::ExtractSliceOp::create(
+      builder, loc, getOutput(), resultOffsets, resultSizes, outputStrides);
   tiledOperands.emplace_back(outputSlice);
 
   SmallVector<Type> resultTypes;
@@ -3333,8 +3335,8 @@ WinogradInputTransformOp::getTiledImplementation(OpBuilder &builder,
       {sizes[getOutputNDim()], sizeH, sizeW, sizes[getOutputCDim()]});
   int64_t inputRank = getInputOperandRank();
   SmallVector<OpFoldResult> inputStrides(inputRank, oneAttr);
-  auto inputSlice = tensor::ExtractSliceOp::create(builder,
-      loc, getInput(), sliceOffsets, sliceSizes, inputStrides);
+  auto inputSlice = tensor::ExtractSliceOp::create(
+      builder, loc, getInput(), sliceOffsets, sliceSizes, inputStrides);
   tiledOperands.emplace_back(inputSlice);
 
   SmallVector<OpFoldResult> resultOffsets, resultSizes;
@@ -3344,8 +3346,8 @@ WinogradInputTransformOp::getTiledImplementation(OpBuilder &builder,
 
   int64_t outputRank = getOutputOperandRank();
   SmallVector<OpFoldResult> outputStrides(outputRank, oneAttr);
-  auto outputSlice = tensor::ExtractSliceOp::create(builder,
-      loc, getOutput(), resultOffsets, resultSizes, outputStrides);
+  auto outputSlice = tensor::ExtractSliceOp::create(
+      builder, loc, getOutput(), resultOffsets, resultSizes, outputStrides);
   tiledOperands.emplace_back(outputSlice);
 
   SmallVector<Type> resultTypes;
@@ -3504,8 +3506,8 @@ FailureOr<TilingResult> WinogradOutputTransformOp::getTiledImplementation(
                      sizes[getValueFDim()]});
   int64_t valueRank = getValueOperandRank();
   SmallVector<OpFoldResult> sliceStrides(valueRank, oneAttr);
-  auto valueSlice = tensor::ExtractSliceOp::create(builder,
-      loc, getValue(), sliceOffsets, sliceSizes, sliceStrides);
+  auto valueSlice = tensor::ExtractSliceOp::create(
+      builder, loc, getValue(), sliceOffsets, sliceSizes, sliceStrides);
   tiledOperands.emplace_back(valueSlice);
 
   SmallVector<OpFoldResult> resultOffsets, resultSizes;
@@ -3515,8 +3517,8 @@ FailureOr<TilingResult> WinogradOutputTransformOp::getTiledImplementation(
 
   int64_t outputRank = getOutputOperandRank();
   SmallVector<OpFoldResult> strides(outputRank, oneAttr);
-  auto outputSlice = tensor::ExtractSliceOp::create(builder,
-      loc, getOutput(), resultOffsets, resultSizes, strides);
+  auto outputSlice = tensor::ExtractSliceOp::create(
+      builder, loc, getOutput(), resultOffsets, resultSizes, strides);
   tiledOperands.emplace_back(outputSlice);
 
   SmallVector<Type> resultTypes;
@@ -4997,8 +4999,8 @@ PackOp PackOp::createTransposedClone(OpBuilder &b, Location loc,
       createDestinationTensor(b, loc, getSource(), metadata.innerTiles,
                               metadata.innerDimsPos, metadata.outerDimsPerm);
   return PackOp::create(b, loc, getSource(), transposedDest,
-                          metadata.innerDimsPos, metadata.innerTiles,
-                          getPaddingValue(), metadata.outerDimsPerm);
+                        metadata.innerDimsPos, metadata.innerTiles,
+                        getPaddingValue(), metadata.outerDimsPerm);
 }
 
 /// Returns true if the tiles and the tiled dims are constant.
@@ -5250,18 +5252,20 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
     // TODO: Strictly speaking, discardable attributes should be _discarded_ at
     // this point. However, in practice, we use them for things that we'd like
     // to preserve. Implement a better abstraction.
-    PackOp newOp = PackOp::create(rewriter,
-        op.getLoc(), newOperands[0], newOperands[1], op.getInnerDimsPos(),
-        newMixedTileSizes, op.getPaddingValue(), op.getOuterDimsPerm());
+    PackOp newOp =
+        PackOp::create(rewriter, op.getLoc(), newOperands[0], newOperands[1],
+                       op.getInnerDimsPos(), newMixedTileSizes,
+                       op.getPaddingValue(), op.getOuterDimsPerm());
     newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
 
     // Replace op.
     Value oldResult = op.getResult();
     Value newResult = newOp.getResult();
-    Value replacement = (newResult.getType() != oldResult.getType())
-                            ? tensor::CastOp::create(rewriter,
-                                  op->getLoc(), oldResult.getType(), newResult)
-                            : newResult;
+    Value replacement =
+        (newResult.getType() != oldResult.getType())
+            ? tensor::CastOp::create(rewriter, op->getLoc(),
+                                     oldResult.getType(), newResult)
+            : newResult;
 
     rewriter.replaceOp(op, {replacement});
 
@@ -5358,7 +5362,8 @@ Value UnPackOp::createDestinationTensor(OpBuilder &b, Location loc,
   for (auto i :
        llvm::seq<unsigned>(0, srcType.getRank() - innerTileSizes.size())) {
     if (srcType.isDynamicDim(i))
-      mixedSizes.push_back(tensor::DimOp::create(b, loc, source, i).getResult());
+      mixedSizes.push_back(
+          tensor::DimOp::create(b, loc, source, i).getResult());
     else
       mixedSizes.push_back(b.getIndexAttr(srcType.getDimSize(i)));
   }
@@ -5381,8 +5386,8 @@ UnPackOp UnPackOp::createTransposedClone(OpBuilder &b, Location loc,
   PackOrUnPackTransposeResult metadata = commonPermutationOfPackAndUnPackOp(
       *this, innerPermutation, outerPermutation);
   return UnPackOp::create(b, loc, transposedSource, getDest(),
-                            metadata.innerDimsPos, metadata.innerTiles,
-                            metadata.outerDimsPerm);
+                          metadata.innerDimsPos, metadata.innerTiles,
+                          metadata.outerDimsPerm);
 }
 
 /// Returns true if the `srcShape` or `destShape` is different from the one in
@@ -5454,8 +5459,8 @@ LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
             extractSliceUser.getResultType().getRank()) {
       OpBuilder::InsertionGuard g(rewriter);
       rewriter.setInsertionPoint(unPackOp);
-      auto newDest = tensor::ExtractSliceOp::create(rewriter,
-          unPackOp->getLoc(), unPackOp.getDest(),
+      auto newDest = tensor::ExtractSliceOp::create(
+          rewriter, unPackOp->getLoc(), unPackOp.getDest(),
           extractSliceUser.getMixedOffsets(), extractSliceUser.getMixedSizes(),
           extractSliceUser.getMixedStrides());
       rewriter.modifyOpInPlace(unPackOp, [&]() {
@@ -5475,17 +5480,17 @@ LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
     if (srcShape != unPackOp.getSourceType().getShape()) {
       auto newSrcType = unPackOp.getSourceType().clone(srcShape);
       source = tensor::CastOp::create(rewriter, loc, newSrcType,
-                                               unPackOp.getSource());
+                                      unPackOp.getSource());
     }
     Value dest = unPackOp.getDest();
     if (destShape != unPackOp.getDestType().getShape()) {
       auto newDestType = unPackOp.getDestType().clone(destShape);
-      dest =
-          tensor::CastOp::create(rewriter, loc, newDestType, unPackOp.getDest());
+      dest = tensor::CastOp::create(rewriter, loc, newDestType,
+                                    unPackOp.getDest());
     }
-    Value newOp = UnPackOp::create(rewriter,
-        loc, source, dest, unPackOp.getInnerDimsPos(), unPackOp.getMixedTiles(),
-        unPackOp.getOuterDimsPerm());
+    Value newOp = UnPackOp::create(
+        rewriter, loc, source, dest, unPackOp.getInnerDimsPos(),
+        unPackOp.getMixedTiles(), unPackOp.getOuterDimsPerm());
     rewriter.replaceOpWithNewOp<tensor::CastOp>(
         unPackOp, unPackOp.getResult().getType(), newOp);
     return success();
@@ -5542,18 +5547,19 @@ struct FoldTensorCastUnPackOp : public OpRewritePattern<UnPackOp> {
     // TODO: Strictly speaking, discardable attributes should be _discarded_ at
     // this point. However, in practice, we use them for things that we'd like
     // to preserve. Implement a better abstraction.
-    UnPackOp newOp = UnPackOp::create(rewriter,
-        op.getLoc(), sourceTensor, newOperands[1], op.getInnerDimsPos(),
-        newMixedTileSizes, op.getOuterDimsPerm());
+    UnPackOp newOp = UnPackOp::create(rewriter, op.getLoc(), sourceTensor,
+                                      newOperands[1], op.getInnerDimsPos(),
+                                      newMixedTileSizes, op.getOuterDimsPerm());
     newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
 
     // Replace op.
     Value oldResult = op.getResult();
     Value newResult = newOp.getResult();
-    Value replacement = (newResult.getType() != oldResult.getType())
-                            ? tensor::CastOp::create(rewriter,
-                                  op->getLoc(), oldResult.getType(), newResult)
-                            : newResult;
+    Value replacement =
+        (newResult.getType() != oldResult.getType())
+            ? tensor::CastOp::create(rewriter, op->getLoc(),
+                                     oldResult.getType(), newResult)
+            : newResult;
 
     rewriter.replaceOp(op, {replacement});
 

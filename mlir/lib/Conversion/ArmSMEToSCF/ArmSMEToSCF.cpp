@@ -59,8 +59,9 @@ FailureOr<scf::ForOp> createLoadStoreForOverTileSlices(
   if (memrefIndices.size() != 2)
     return rewriter.notifyMatchFailure(loc, "invalid number of indices");
 
-  auto minTileSlices = arith::ConstantIndexOp::create(rewriter,
-      loc, arm_sme::getSMETileSliceMinNumElts(tileType.getElementType()));
+  auto minTileSlices = arith::ConstantIndexOp::create(
+      rewriter, loc,
+      arm_sme::getSMETileSliceMinNumElts(tileType.getElementType()));
   auto vscale =
       vector::VectorScaleOp::create(rewriter, loc, rewriter.getIndexType());
   auto predicateType =
@@ -82,30 +83,30 @@ FailureOr<scf::ForOp> createLoadStoreForOverTileSlices(
     // The upper bound of the loop must be clamped at `numTileSlices` as
     // `vector.create_mask` allows operands to be greater than the size of a
     // dimension.
-    auto numRowI64 = arith::IndexCastOp::create(rewriter,
-        loc, rewriter.getI64Type(), maskDim0);
-    auto numTileSlicesI64 = arith::IndexCastOp::create(rewriter,
-        loc, rewriter.getI64Type(), numTileSlices);
+    auto numRowI64 = arith::IndexCastOp::create(
+        rewriter, loc, rewriter.getI64Type(), maskDim0);
+    auto numTileSlicesI64 = arith::IndexCastOp::create(
+        rewriter, loc, rewriter.getI64Type(), numTileSlices);
     auto upperBoundI64 =
         arith::MinSIOp::create(rewriter, loc, numRowI64, numTileSlicesI64);
-    upperBound = arith::IndexCastOp::create(rewriter,
-        loc, rewriter.getIndexType(), upperBoundI64);
+    upperBound = arith::IndexCastOp::create(
+        rewriter, loc, rewriter.getIndexType(), upperBoundI64);
 
     predicate =
         vector::CreateMaskOp::create(rewriter, loc, predicateType, maskDim1);
   } else {
     upperBound = numTileSlices;
     // No mask. Create an 'all true' predicate for the tile slice.
-    predicate = arith::ConstantOp::create(rewriter,
-        loc, DenseElementsAttr::get(predicateType, true));
+    predicate = arith::ConstantOp::create(
+        rewriter, loc, DenseElementsAttr::get(predicateType, true));
   }
 
   bool hasCarriedArgs = bool(initTile);
   auto lowerBound = arith::ConstantIndexOp::create(rewriter, loc, 0);
   auto step = arith::ConstantIndexOp::create(rewriter, loc, 1);
-  auto forOp = scf::ForOp::create(rewriter, loc, lowerBound, upperBound, step,
-                                           hasCarriedArgs ? ValueRange{initTile}
-                                                          : ValueRange{});
+  auto forOp =
+      scf::ForOp::create(rewriter, loc, lowerBound, upperBound, step,
+                         hasCarriedArgs ? ValueRange{initTile} : ValueRange{});
 
   rewriter.setInsertionPointToStart(forOp.getBody());
   Value tileSliceIndex = forOp.getInductionVar();
@@ -207,9 +208,10 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
             Value currentTile) -> Value {
           // Create 'arm_sme.load_tile_slice' to load tile slice from memory
           // into tile.
-          return arm_sme::LoadTileSliceOp::create(rewriter,
-              loc, tileType, tileLoadOp.getBase(), predicate, currentTile,
-              memrefIndices, tileSliceIndex, tileLoadOp.getLayout());
+          return arm_sme::LoadTileSliceOp::create(
+              rewriter, loc, tileType, tileLoadOp.getBase(), predicate,
+              currentTile, memrefIndices, tileSliceIndex,
+              tileLoadOp.getLayout());
         });
 
     if (failed(forOp))
@@ -283,22 +285,22 @@ struct TileLoadOpWithMaskAndPadNonZeroConversion
     auto numRows = createMaskOp.getOperands()[0];
     auto numCols = createMaskOp.getOperands()[1];
 
-    auto numColsI32 = arith::IndexCastUIOp::create(rewriter,
-        loc, rewriter.getI32Type(), numCols);
+    auto numColsI32 = arith::IndexCastUIOp::create(
+        rewriter, loc, rewriter.getI32Type(), numCols);
 
     auto initTile = arm_sme::GetTileOp::create(rewriter, loc, tileType);
 
     // Create a loop that loads each ZA tile slice from memory.
     auto step = arith::ConstantIndexOp::create(rewriter, loc, 1);
-    auto minTileSlices = arith::ConstantIndexOp::create(rewriter,
-        loc, arm_sme::getSMETileSliceMinNumElts(tileElementType));
+    auto minTileSlices = arith::ConstantIndexOp::create(
+        rewriter, loc, arm_sme::getSMETileSliceMinNumElts(tileElementType));
     auto vscale =
         vector::VectorScaleOp::create(rewriter, loc, rewriter.getIndexType());
     auto lowerBound = arith::ConstantIndexOp::create(rewriter, loc, 0);
     auto numTileSlices =
         arith::MulIOp::create(rewriter, loc, minTileSlices, vscale);
     auto forOp = scf::ForOp::create(rewriter, loc, lowerBound, numTileSlices,
-                                             step, ValueRange{initTile});
+                                    step, ValueRange{initTile});
 
     rewriter.setInsertionPointToStart(forOp.getBody());
 
@@ -306,17 +308,18 @@ struct TileLoadOpWithMaskAndPadNonZeroConversion
     auto currentTile = forOp.getRegionIterArg(0);
 
     // Combine masks.
-    auto rowIsActive = arith::CmpIOp::create(rewriter,
-        loc, arith::CmpIPredicate::ult, tileSliceIndex, numRows);
-    auto rowIsActiveI32 = arith::ExtSIOp::create(rewriter,
-        loc, rewriter.getI32Type(), rowIsActive);
-    auto mask = arith::AndIOp::create(rewriter, loc, rowIsActiveI32, numColsI32);
-    auto maskIndex =
-        arith::IndexCastOp::create(rewriter, loc, rewriter.getIndexType(), mask);
+    auto rowIsActive = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::ult, tileSliceIndex, numRows);
+    auto rowIsActiveI32 = arith::ExtSIOp::create(
+        rewriter, loc, rewriter.getI32Type(), rowIsActive);
+    auto mask =
+        arith::AndIOp::create(rewriter, loc, rowIsActiveI32, numColsI32);
+    auto maskIndex = arith::IndexCastOp::create(rewriter, loc,
+                                                rewriter.getIndexType(), mask);
     auto predicateType =
         VectorType::get(tileType.getDimSize(1), rewriter.getI1Type(), true);
-    auto maskOp1D = vector::CreateMaskOp::create(rewriter,
-        loc, predicateType, maskIndex.getResult());
+    auto maskOp1D = vector::CreateMaskOp::create(rewriter, loc, predicateType,
+                                                 maskIndex.getResult());
 
     auto memrefIndices = getMemrefIndices(
         tileLoadOp.getIndices(), tileLoadOp.getMemRefType().getRank(),
@@ -326,14 +329,15 @@ struct TileLoadOpWithMaskAndPadNonZeroConversion
     VectorType tileSliceType = VectorType::Builder(tileType).dropDim(0);
     auto pad1DOp = vector::SplatOp::create(rewriter, loc, tileSliceType, padOp);
 
-    auto loadSlice = vector::MaskedLoadOp::create(rewriter,
-        loc, tileSliceType, tileLoadOp.getBase(), memrefIndices, maskOp1D,
-        /*passthru=*/pad1DOp);
+    auto loadSlice = vector::MaskedLoadOp::create(rewriter, loc, tileSliceType,
+                                                  tileLoadOp.getBase(),
+                                                  memrefIndices, maskOp1D,
+                                                  /*passthru=*/pad1DOp);
 
     // Create 'arm_sme.insert_tile_slice' to insert slice into tile.
-    auto insertSlice = arm_sme::InsertTileSliceOp::create(rewriter,
-        loc, tileType, loadSlice->getResult(0), currentTile, tileSliceIndex,
-        tileLoadOp.getLayout());
+    auto insertSlice = arm_sme::InsertTileSliceOp::create(
+        rewriter, loc, tileType, loadSlice->getResult(0), currentTile,
+        tileSliceIndex, tileLoadOp.getLayout());
     scf::YieldOp::create(rewriter, loc, insertSlice.getResult());
 
     rewriter.setInsertionPointAfter(forOp);

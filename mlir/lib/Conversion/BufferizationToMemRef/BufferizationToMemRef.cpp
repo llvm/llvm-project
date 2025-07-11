@@ -103,7 +103,8 @@ struct CloneOpConversion : public OpConversionPattern<bufferization::CloneOp> {
       }
 
       // Allocate a memref with identity layout.
-      alloc = memref::AllocOp::create(rewriter, loc, allocType, dynamicOperands);
+      alloc =
+          memref::AllocOp::create(rewriter, loc, allocType, dynamicOperands);
       // Cast the allocation to the specified type if needed.
       if (memrefType != allocType)
         alloc =

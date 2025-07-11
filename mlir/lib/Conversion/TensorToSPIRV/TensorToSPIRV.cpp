@@ -69,8 +69,8 @@ public:
       // have bugs dealing with that. So for now, use spirv.Store for
       // initialization.
       varOp = spirv::VariableOp::create(rewriter, loc, varType,
-                                                 spirv::StorageClass::Function,
-                                                 /*initializer=*/nullptr);
+                                        spirv::StorageClass::Function,
+                                        /*initializer=*/nullptr);
       spirv::StoreOp::create(rewriter, loc, varOp, adaptor.getTensor());
     } else {
       // Need to store the value to the local variable. It's questionable

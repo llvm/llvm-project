@@ -68,7 +68,7 @@ public:
       TypeAttr typeAttr = TypeAttr::get(val.getType());
       fields.push_back({fieldName, typeAttr});
       emitc::FieldOp::create(rewriter, funcOp.getLoc(), fieldName, typeAttr,
-                                      argAttr);
+                             argAttr);
     }
 
     rewriter.setInsertionPointToEnd(&newClassOp.getBody().front());

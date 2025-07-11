@@ -66,8 +66,8 @@ LogicalResult mlir::LLVM::createPrintStrCall(
       DenseElementsAttr::get(dataAttrType, llvm::ArrayRef(elementVals));
   auto arrayTy =
       LLVM::LLVMArrayType::get(IntegerType::get(ctx, 8), elementVals.size());
-  auto globalOp = LLVM::GlobalOp::create(builder,
-      loc, arrayTy, /*constant=*/true, LLVM::Linkage::Private,
+  auto globalOp = LLVM::GlobalOp::create(
+      builder, loc, arrayTy, /*constant=*/true, LLVM::Linkage::Private,
       ensureSymbolNameIsUnique(moduleOp, symbolName, symbolTables), dataAttr);
 
   auto ptrTy = LLVM::LLVMPointerType::get(builder.getContext());
@@ -83,6 +83,6 @@ LogicalResult mlir::LLVM::createPrintStrCall(
   if (failed(printer))
     return failure();
   LLVM::CallOp::create(builder, loc, TypeRange(),
-                               SymbolRefAttr::get(printer.value()), gep);
+                       SymbolRefAttr::get(printer.value()), gep);
   return success();
 }

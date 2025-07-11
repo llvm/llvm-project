@@ -195,8 +195,8 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
   }
   FunctionType type =
       FunctionType::get(launchOp.getContext(), kernelOperandTypes, {});
-  auto outlinedFunc = gpu::GPUFuncOp::create(builder,
-      loc, kernelFnName, type,
+  auto outlinedFunc = gpu::GPUFuncOp::create(
+      builder, loc, kernelFnName, type,
       TypeRange(ValueRange(launchOp.getWorkgroupAttributions())),
       TypeRange(ValueRange(launchOp.getPrivateAttributions())));
   outlinedFunc->setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
@@ -287,9 +287,9 @@ static void convertToLaunchFuncOp(gpu::LaunchOp launchOp,
   Value asyncToken = launchOp.getAsyncToken();
   std::optional<gpu::KernelDim3> clusterSize =
       launchOp.getClusterSizeOperandValues();
-  auto launchFunc = gpu::LaunchFuncOp::create(builder,
-      launchOp.getLoc(), kernelFunc, launchOp.getGridSizeOperandValues(),
-      launchOp.getBlockSizeOperandValues(),
+  auto launchFunc = gpu::LaunchFuncOp::create(
+      builder, launchOp.getLoc(), kernelFunc,
+      launchOp.getGridSizeOperandValues(), launchOp.getBlockSizeOperandValues(),
       launchOp.getDynamicSharedMemorySize(), operands,
       asyncToken ? asyncToken.getType() : nullptr,
       launchOp.getAsyncDependencies(), clusterSize);
@@ -416,7 +416,7 @@ private:
     if (!kernelModule) {
       // If not found, create a new GPU module
       kernelModule = gpu::GPUModuleOp::create(builder, kernelFunc.getLoc(),
-                                                      kernelModuleName);
+                                              kernelModuleName);
     }
 
     // If a valid data layout spec was provided, attach it to the kernel module.

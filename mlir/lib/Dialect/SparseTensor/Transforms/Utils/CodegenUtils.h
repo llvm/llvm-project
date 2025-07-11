@@ -97,8 +97,8 @@ public:
       // Create the function if not already exist.
       OpBuilder::InsertionGuard insertionGuard(builder);
       builder.setInsertionPoint(getParentOpOf<func::FuncOp>(builder));
-      func = func::FuncOp::create(builder,
-          loc, funcName,
+      func = func::FuncOp::create(
+          builder, loc, funcName,
           FunctionType::get(context, params.getTypes(), retTypes));
       func.setPrivate();
       // Set the insertion point to the body of the function.
@@ -400,8 +400,8 @@ inline Value constantLevelTypeEncoding(OpBuilder &builder, Location loc,
 inline Value genValFromAttr(OpBuilder &builder, Location loc, Attribute attr) {
   if (auto complexAttr = dyn_cast<complex::NumberAttr>(attr)) {
     Type tp = cast<ComplexType>(complexAttr.getType()).getElementType();
-    return complex::ConstantOp::create(builder,
-        loc, complexAttr.getType(),
+    return complex::ConstantOp::create(
+        builder, loc, complexAttr.getType(),
         builder.getArrayAttr({FloatAttr::get(tp, complexAttr.getReal()),
                               FloatAttr::get(tp, complexAttr.getImag())}));
   }

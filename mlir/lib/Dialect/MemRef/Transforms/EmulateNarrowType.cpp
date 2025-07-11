@@ -112,8 +112,8 @@ static Value getSubByteWriteMask(Location loc, OpFoldResult linearizedIndices,
   auto dstIntegerType = builder.getIntegerType(dstBits);
   auto maskRightAlignedAttr =
       builder.getIntegerAttr(dstIntegerType, (1 << srcBits) - 1);
-  Value maskRightAligned = arith::ConstantOp::create(builder,
-      loc, dstIntegerType, maskRightAlignedAttr);
+  Value maskRightAligned = arith::ConstantOp::create(
+      builder, loc, dstIntegerType, maskRightAlignedAttr);
   Value writeMaskInverse =
       arith::ShLIOp::create(builder, loc, maskRightAligned, bitwidthOffset);
   auto flipValAttr = builder.getIntegerAttr(dstIntegerType, -1);
@@ -299,15 +299,15 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
     Value bitsLoad;
     if (convertedType.getRank() == 0) {
       bitsLoad = memref::LoadOp::create(rewriter, loc, adaptor.getMemref(),
-                                                 ValueRange{});
+                                        ValueRange{});
     } else {
       // Linearize the indices of the original load instruction. Do not account
       // for the scaling yet. This will be accounted for later.
       OpFoldResult linearizedIndices = getLinearizedSrcIndices(
           rewriter, loc, srcBits, adaptor.getIndices(), op.getMemRef());
 
-      Value newLoad = memref::LoadOp::create(rewriter,
-          loc, adaptor.getMemref(),
+      Value newLoad = memref::LoadOp::create(
+          rewriter, loc, adaptor.getMemref(),
           getIndicesForLoadOrStore(rewriter, loc, linearizedIndices, srcBits,
                                    dstBits));
 
@@ -326,8 +326,8 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
     Operation *result;
     auto resultTy = getTypeConverter()->convertType(oldElementType);
     if (resultTy == convertedElementType) {
-      auto mask = arith::ConstantOp::create(rewriter,
-          loc, convertedElementType,
+      auto mask = arith::ConstantOp::create(
+          rewriter, loc, convertedElementType,
           rewriter.getIntegerAttr(convertedElementType, (1 << srcBits) - 1));
 
       result = arith::AndIOp::create(rewriter, loc, bitsLoad, mask);
@@ -416,13 +416,13 @@ struct ConvertMemrefStore final : OpConversionPattern<memref::StoreOp> {
 
     Location loc = op.getLoc();
     Value extendedInput = arith::ExtUIOp::create(rewriter, loc, dstIntegerType,
-                                                          adaptor.getValue());
+                                                 adaptor.getValue());
 
     // Special case 0-rank memref stores. No need for masking.
     if (convertedType.getRank() == 0) {
       memref::AtomicRMWOp::create(rewriter, loc, arith::AtomicRMWKind::assign,
-                                           extendedInput, adaptor.getMemref(),
-                                           ValueRange{});
+                                  extendedInput, adaptor.getMemref(),
+                                  ValueRange{});
       rewriter.eraseOp(op);
       return success();
     }
@@ -441,12 +441,10 @@ struct ConvertMemrefStore final : OpConversionPattern<memref::StoreOp> {
 
     // Clear destination bits
     memref::AtomicRMWOp::create(rewriter, loc, arith::AtomicRMWKind::andi,
-                                         writeMask, adaptor.getMemref(),
-                                         storeIndices);
+                                writeMask, adaptor.getMemref(), storeIndices);
     // Write srcs bits to destination
     memref::AtomicRMWOp::create(rewriter, loc, arith::AtomicRMWKind::ori,
-                                         alignedVal, adaptor.getMemref(),
-                                         storeIndices);
+                                alignedVal, adaptor.getMemref(), storeIndices);
     rewriter.eraseOp(op);
     return success();
   }
@@ -506,8 +504,8 @@ struct ConvertMemRefSubview final : OpConversionPattern<memref::SubViewOp> {
     }
 
     // Transform the offsets, sizes and strides according to the emulation.
-    auto stridedMetadata = memref::ExtractStridedMetadataOp::create(rewriter,
-        loc, subViewOp.getViewSource());
+    auto stridedMetadata = memref::ExtractStridedMetadataOp::create(
+        rewriter, loc, subViewOp.getViewSource());
 
     OpFoldResult linearizedIndices;
     auto strides = stridedMetadata.getConstifiedMixedStrides();

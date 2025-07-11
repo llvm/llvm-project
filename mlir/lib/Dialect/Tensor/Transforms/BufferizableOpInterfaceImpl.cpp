@@ -222,8 +222,8 @@ struct CollapseShapeOpInterface
           MemRefType::get(collapseShapeOp.getSrcType().getShape(),
                           collapseShapeOp.getSrcType().getElementType(),
                           AffineMap(), bufferType.getMemorySpace());
-      buffer = bufferization::ToBufferOp::create(rewriter,
-          op->getLoc(), memrefType, *tensorAlloc);
+      buffer = bufferization::ToBufferOp::create(rewriter, op->getLoc(),
+                                                 memrefType, *tensorAlloc);
     }
 
     // Result type is inferred by the builder.
@@ -349,8 +349,8 @@ struct ExpandShapeOpInterface
     if (failed(buffer))
       return failure();
 
-    auto memrefExpandShape = memref::ExpandShapeOp::create(rewriter,
-        op->getLoc(), tensorResultType.getShape(), *buffer,
+    auto memrefExpandShape = memref::ExpandShapeOp::create(
+        rewriter, op->getLoc(), tensorResultType.getShape(), *buffer,
         expandShapeOp.getReassociationIndices(),
         expandShapeOp.getMixedOutputShape());
     replaceOpWithBufferizedValues(rewriter, op,
@@ -398,8 +398,8 @@ struct ExtractSliceOpInterface
         extractSliceOp.getResult(), options, state);
     if (failed(resultMemrefType))
       return failure();
-    Value subView = memref::SubViewOp::create(rewriter,
-        loc, llvm::cast<MemRefType>(*resultMemrefType), *srcMemref,
+    Value subView = memref::SubViewOp::create(
+        rewriter, loc, llvm::cast<MemRefType>(*resultMemrefType), *srcMemref,
         mixedOffsets, mixedSizes, mixedStrides);
 
     replaceOpWithBufferizedValues(rewriter, op, subView);
@@ -507,8 +507,8 @@ struct FromElementsOpInterface
         bufferization::getBufferType(*tensorAlloc, options, state);
     if (failed(memrefType))
       return failure();
-    Value buffer = bufferization::ToBufferOp::create(rewriter,
-        op->getLoc(), *memrefType, *tensorAlloc);
+    Value buffer = bufferization::ToBufferOp::create(rewriter, op->getLoc(),
+                                                     *memrefType, *tensorAlloc);
 
     // Case: tensor<0xelem_type>.
     if (fromElementsOp.getElements().empty()) {
@@ -518,8 +518,8 @@ struct FromElementsOpInterface
 
     // Case: tensor<elem_type>.
     if (shape.empty()) {
-      memref::StoreOp::create(rewriter,
-          loc, fromElementsOp.getElements().front(), buffer);
+      memref::StoreOp::create(rewriter, loc,
+                              fromElementsOp.getElements().front(), buffer);
       replaceOpWithBufferizedValues(rewriter, op, buffer);
       return success();
     }
@@ -577,7 +577,7 @@ static Value lowerGenerateLikeOpBody(RewriterBase &rewriter, Location loc,
   OpBuilder::InsertionGuard g(rewriter);
   auto linalgOp =
       linalg::MapOp::create(rewriter, loc, tensorType, /*inputs=*/ValueRange(),
-                                     /*init=*/tensorDestination);
+                            /*init=*/tensorDestination);
   Block &linalgBody = linalgOp.getMapper().emplaceBlock();
 
   // Create linalg::IndexOps.
@@ -645,7 +645,7 @@ struct InsertOpInterface
     if (failed(destMemref))
       return failure();
     memref::StoreOp::create(rewriter, insertOp.getLoc(), insertOp.getScalar(),
-                                     *destMemref, insertOp.getIndices());
+                            *destMemref, insertOp.getIndices());
     replaceOpWithBufferizedValues(rewriter, op, *destMemref);
     return success();
   }
@@ -713,9 +713,9 @@ struct InsertSliceOpInterface
         memref::SubViewOp::inferRankReducedResultType(
             insertSliceOp.getSourceType().getShape(), dstMemrefType,
             mixedOffsets, mixedSizes, mixedStrides);
-    Value subView = memref::SubViewOp::create(rewriter,
-        loc, subviewMemRefType, *dstMemref, mixedOffsets, mixedSizes,
-        mixedStrides);
+    Value subView =
+        memref::SubViewOp::create(rewriter, loc, subviewMemRefType, *dstMemref,
+                                  mixedOffsets, mixedSizes, mixedStrides);
 
     // Copy tensor. If this tensor.insert_slice has a matching
     // tensor.extract_slice, the copy operation will eventually fold away.
@@ -802,8 +802,8 @@ struct PadOpInterface
       AffineExpr s0, s1, s2;
       bindSymbols(op->getContext(), s0, s1, s2);
       AffineExpr sumExpr = s0 + s1 + s2;
-      Value sum = affine::AffineApplyOp::create(rewriter,
-          loc, sumExpr, ValueRange{srcDim, lowPad, highPad});
+      Value sum = affine::AffineApplyOp::create(
+          rewriter, loc, sumExpr, ValueRange{srcDim, lowPad, highPad});
       dynamicSizes.push_back(sum);
     }
 
@@ -995,9 +995,9 @@ struct ParallelInsertSliceOpInterface
             parallelInsertSliceOp.getMixedOffsets(),
             parallelInsertSliceOp.getMixedSizes(),
             parallelInsertSliceOp.getMixedStrides());
-    Value subview = memref::SubViewOp::create(rewriter,
-        parallelInsertSliceOp.getLoc(), subviewMemRefType, *destBuffer,
-        parallelInsertSliceOp.getMixedOffsets(),
+    Value subview = memref::SubViewOp::create(
+        rewriter, parallelInsertSliceOp.getLoc(), subviewMemRefType,
+        *destBuffer, parallelInsertSliceOp.getMixedOffsets(),
         parallelInsertSliceOp.getMixedSizes(),
         parallelInsertSliceOp.getMixedStrides());
 
@@ -1065,9 +1065,9 @@ struct SplatOpInterface
     if (options.defaultMemorySpaceFn(tensorType) != Attribute())
       return op->emitError("memory space not implemented yet");
 
-    auto linalgOp =
-        linalg::MapOp::create(rewriter, loc, tensorType, /*inputs=*/ValueRange(),
-                                       /*init=*/*tensorAlloc);
+    auto linalgOp = linalg::MapOp::create(rewriter, loc, tensorType,
+                                          /*inputs=*/ValueRange(),
+                                          /*init=*/*tensorAlloc);
     Block &linalgBody = linalgOp.getMapper().emplaceBlock();
 
     // Create linalg::IndexOps.
@@ -1126,8 +1126,8 @@ struct ConcatOpInterface
     MemRefType memrefType =
         MemRefType::get(concatOp.getResultType().getShape(),
                         concatOp.getResultType().getElementType(), layout);
-    Value dstBuffer = bufferization::ToBufferOp::create(rewriter,
-        op->getLoc(), memrefType, *tensorAlloc);
+    Value dstBuffer = bufferization::ToBufferOp::create(
+        rewriter, op->getLoc(), memrefType, *tensorAlloc);
 
     // Extract the dimension for the concat op
     uint64_t concatDim = concatOp.getDim();
@@ -1174,8 +1174,9 @@ struct ConcatOpInterface
 
       if (dynamicConcatDim) {
         offsets[concatDim] = dynamicOffset.value();
-        dynamicSize = memref::DimOp::create(rewriter, loc, *srcBuffer, concatDim)
-                          .getResult();
+        dynamicSize =
+            memref::DimOp::create(rewriter, loc, *srcBuffer, concatDim)
+                .getResult();
         sizes[concatDim] = dynamicSize.value();
       } else {
         sizes[concatDim] = rewriter.getIndexAttr(operandConcatDimSize);
@@ -1188,16 +1189,16 @@ struct ConcatOpInterface
           memref::SubViewOp::inferRankReducedResultType(
               operandTensorType.getShape(), dstMemrefType, offsets, sizes,
               strides);
-      Value subview = memref::SubViewOp::create(rewriter,
-          loc, subviewMemRefType, dstBuffer, offsets, sizes, strides);
+      Value subview = memref::SubViewOp::create(
+          rewriter, loc, subviewMemRefType, dstBuffer, offsets, sizes, strides);
 
       // Copy the source buffer into the destination subview.
       if (failed(options.createMemCpy(rewriter, loc, *srcBuffer, subview)))
         return failure();
 
       if (dynamicConcatDim) {
-        dynamicOffset = arith::AddIOp::create(rewriter,
-            loc, dynamicOffset.value(), dynamicSize.value());
+        dynamicOffset = arith::AddIOp::create(
+            rewriter, loc, dynamicOffset.value(), dynamicSize.value());
       } else {
         concatDimOffset += operandConcatDimSize;
       }

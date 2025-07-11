@@ -95,8 +95,8 @@ static Value reshapeLoad(Location loc, Value val, VectorType type,
   // Unroll leading dimensions.
   VectorType vType = VectorType::Builder(type).dropDim(0);
   VectorType resType = VectorType::Builder(type).dropDim(index);
-  Value result = arith::ConstantOp::create(rewriter,
-      loc, resType, rewriter.getZeroAttr(resType));
+  Value result = arith::ConstantOp::create(rewriter, loc, resType,
+                                           rewriter.getZeroAttr(resType));
   for (int64_t d = 0, e = resType.getDimSize(0); d < e; d++) {
     Value ext = vector::ExtractOp::create(rewriter, loc, val, d);
     Value load = reshapeLoad(loc, ext, vType, index - 1, pos, rewriter);
@@ -447,8 +447,8 @@ struct UnrolledOuterProductGenerator
         extractMask =
             vector::ExtractOp::create(rewriter, loc, maybeMask.value(), k);
 
-      Operation *outerProdOp = vector::OuterProductOp::create(rewriter,
-          loc, res.getType(), extractA, extractB, res, kind);
+      Operation *outerProdOp = vector::OuterProductOp::create(
+          rewriter, loc, res.getType(), extractA, extractB, res, kind);
       res = maskOperation(rewriter, outerProdOp, extractMask)->getResult(0);
     }
     return res;
@@ -755,7 +755,7 @@ FailureOr<Value> ContractionOpToDotLowering::matchAndRewriteMaskableOp(
 
   // ExtractOp does not allow dynamic indexing, we must unroll explicitly.
   Value res = arith::ConstantOp::create(rewriter, loc, dstType,
-                                                 rewriter.getZeroAttr(dstType));
+                                        rewriter.getZeroAttr(dstType));
   bool isInt = isa<IntegerType>(dstType.getElementType());
   llvm::SmallVector<Value> extractedCols;
   extractedCols.reserve(dstColumns);
@@ -766,15 +766,16 @@ FailureOr<Value> ContractionOpToDotLowering::matchAndRewriteMaskableOp(
       // avoid having duplicate SSA values pointing to the same rows/columns.
       if (r == 0) {
         Value colRhs =
-            rank == 1 ? rhs
-                      : vector::ExtractOp::create(rewriter, op.getLoc(), rhs, c);
+            rank == 1
+                ? rhs
+                : vector::ExtractOp::create(rewriter, op.getLoc(), rhs, c);
         extractedCols.push_back(colRhs);
       }
       Value extractedColRhs = extractedCols[c];
       Value product =
           createMul(op.getLoc(), rowLhs, extractedColRhs, isInt, rewriter);
-      Value sum = vector::ReductionOp::create(rewriter,
-          op.getLoc(), vector::CombiningKind::ADD, product);
+      Value sum = vector::ReductionOp::create(
+          rewriter, op.getLoc(), vector::CombiningKind::ADD, product);
 
       SmallVector<int64_t, 2> pos = rank == 1 ? SmallVector<int64_t, 2>{r}
                                               : SmallVector<int64_t, 2>{r, c};
@@ -1097,8 +1098,8 @@ FailureOr<Value> ContractionOpLowering::lowerParallel(PatternRewriter &rewriter,
       rewriter.getArrayAttr(adjustIter(op.getIteratorTypes(), iterIndex));
   // Unroll into a series of lower dimensional vector.contract ops.
   Location loc = op.getLoc();
-  Value result = arith::ConstantOp::create(rewriter,
-      loc, resType, rewriter.getZeroAttr(resType));
+  Value result = arith::ConstantOp::create(rewriter, loc, resType,
+                                           rewriter.getZeroAttr(resType));
 
   for (int64_t d = 0; d < dimSize; ++d) {
     auto lhs = reshapeLoad(loc, op.getLhs(), lhsType, lhsIndex, d, rewriter);
@@ -1110,8 +1111,8 @@ FailureOr<Value> ContractionOpLowering::lowerParallel(PatternRewriter &rewriter,
       lowMask = reshapeLoad(loc, mask, cast<VectorType>(mask.getType()),
                             iterIndex, d, rewriter);
 
-    Operation *lowContract = vector::ContractionOp::create(rewriter,
-        loc, lhs, rhs, acc, lowAffine, lowIter);
+    Operation *lowContract = vector::ContractionOp::create(
+        rewriter, loc, lhs, rhs, acc, lowAffine, lowIter);
     lowContract = maskOperation(rewriter, lowContract, lowMask);
     result = reshapeStore(loc, lowContract->getResult(0), result, resType,
                           resIndex, d, rewriter);
@@ -1186,8 +1187,8 @@ FailureOr<Value> ContractionOpLowering::lowerReduction(
       newMask = reshapeLoad(loc, mask, cast<VectorType>(mask.getType()),
                             iterIndex, d, rewriter);
 
-    Operation *newContract = vector::ContractionOp::create(rewriter,
-        loc, lhs, rhs, result, lowAffine, lowIter);
+    Operation *newContract = vector::ContractionOp::create(
+        rewriter, loc, lhs, rhs, result, lowAffine, lowIter);
     result = maskOperation(rewriter, newContract, newMask)->getResult(0);
   }
   return result;
@@ -1240,7 +1241,8 @@ public:
 
     if (!rhsType) {
       // Special case: AXPY operation.
-      Value b = vector::BroadcastOp::create(rewriter, loc, lhsType, op.getRhs());
+      Value b =
+          vector::BroadcastOp::create(rewriter, loc, lhsType, op.getRhs());
       std::optional<Value> mult = createContractArithOp(
           loc, op.getLhs(), b, acc, kind, rewriter, isInt, mask);
       if (!mult.has_value())
@@ -1249,8 +1251,8 @@ public:
       return success();
     }
 
-    Value result = arith::ConstantOp::create(rewriter,
-        loc, resType, rewriter.getZeroAttr(resType));
+    Value result = arith::ConstantOp::create(rewriter, loc, resType,
+                                             rewriter.getZeroAttr(resType));
     for (int64_t d = 0, e = resType.getDimSize(0); d < e; ++d) {
       Value x = vector::ExtractOp::create(rewriter, loc, op.getLhs(), d);
       Value a = vector::BroadcastOp::create(rewriter, loc, rhsType, x);
@@ -1363,9 +1365,9 @@ FailureOr<Value> ContractionOpToMatmulOpLowering::matchAndRewriteMaskableOp(
   rhs = vector::ShapeCastOp::create(rew, loc, flattenedRHSType, rhs);
 
   Value mul = vector::MatmulOp::create(rew, loc, lhs, rhs, lhsRows, lhsColumns,
-                                           rhsColumns);
-  mul = vector::ShapeCastOp::create(rew,
-      loc,
+                                       rhsColumns);
+  mul = vector::ShapeCastOp::create(
+      rew, loc,
       VectorType::get({lhsRows, rhsColumns},
                       getElementTypeOrSelf(op.getAcc().getType())),
       mul);
@@ -1377,11 +1379,11 @@ FailureOr<Value> ContractionOpToMatmulOpLowering::matchAndRewriteMaskableOp(
   else if (accMap != AffineMap::get(3, 0, {m, n}, ctx))
     llvm_unreachable("invalid contraction semantics");
 
-  Value res =
-      isa<IntegerType>(elementType)
-          ? static_cast<Value>(arith::AddIOp::create(rew, loc, op.getAcc(), mul))
-          : static_cast<Value>(
-                arith::AddFOp::create(rew, loc, op.getAcc(), mul));
+  Value res = isa<IntegerType>(elementType)
+                  ? static_cast<Value>(
+                        arith::AddIOp::create(rew, loc, op.getAcc(), mul))
+                  : static_cast<Value>(
+                        arith::AddFOp::create(rew, loc, op.getAcc(), mul));
 
   return res;
 }

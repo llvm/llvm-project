@@ -144,8 +144,8 @@ LogicalResult mlir::tosa::EqualizeRanks(ImplicitLocOpBuilder &builder,
       ArrayRef<int64_t>(reshapeOutputShape), reshapeInputType.getElementType());
   auto reshapeOutputShapeValue = getTosaConstShape(builder, reshapeOutputShape);
 
-  auto reshapeLower = tosa::ReshapeOp::create(builder,
-      reshapeOutputType, lowerTensorValue, reshapeOutputShapeValue);
+  auto reshapeLower = tosa::ReshapeOp::create(
+      builder, reshapeOutputType, lowerTensorValue, reshapeOutputShapeValue);
 
   if (input1Rank > input2Rank) {
     input1 = higherTensorValue;

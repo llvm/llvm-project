@@ -127,8 +127,8 @@ struct DistributedLoadStoreHelper {
       }
     }
     SmallVector<bool> inBounds(indices.size(), true);
-    return vector::TransferWriteOp::create(b,
-        loc, val, buffer, indices,
+    return vector::TransferWriteOp::create(
+        b, loc, val, buffer, indices,
         ArrayRef<bool>(inBounds.begin(), inBounds.end()));
   }
 
@@ -172,8 +172,9 @@ struct DistributedLoadStoreHelper {
       }
     }
     SmallVector<bool> inBounds(indices.size(), true);
-    return vector::TransferReadOp::create(b,
-        loc, cast<VectorType>(type), buffer, indices, /*padding=*/std::nullopt,
+    return vector::TransferReadOp::create(
+        b, loc, cast<VectorType>(type), buffer, indices,
+        /*padding=*/std::nullopt,
         ArrayRef<bool>(inBounds.begin(), inBounds.end()));
   }
 
@@ -244,10 +245,10 @@ struct WarpOpToScfIfPattern : public WarpDistributionPattern {
 
     // Step 1: Create scf.if op.
     Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
-    Value isLane0 = arith::CmpIOp::create(rewriter,
-        loc, arith::CmpIPredicate::eq, warpOp.getLaneid(), c0);
+    Value isLane0 = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::eq, warpOp.getLaneid(), c0);
     auto ifOp = scf::IfOp::create(rewriter, loc, isLane0,
-                                           /*withElseRegion=*/false);
+                                  /*withElseRegion=*/false);
     rewriter.eraseOp(ifOp.thenBlock()->getTerminator());
 
     // Step 2: insert appropriate (alloc, write)-pairs before the scf.if and
@@ -512,8 +513,9 @@ struct WarpOpTransferWrite : public WarpDistributionPattern {
     rewriter.setInsertionPointAfter(newWarpOp);
 
     // Create a second warp op that contains only writeOp.
-    auto secondWarpOp = WarpExecuteOnLane0Op::create(rewriter,
-        loc, TypeRange(), newWarpOp.getLaneid(), newWarpOp.getWarpSize());
+    auto secondWarpOp = WarpExecuteOnLane0Op::create(rewriter, loc, TypeRange(),
+                                                     newWarpOp.getLaneid(),
+                                                     newWarpOp.getWarpSize());
     Block &body = secondWarpOp.getBodyRegion().front();
     rewriter.setInsertionPointToStart(&body);
     auto newWriteOp =
@@ -823,9 +825,9 @@ struct WarpOpTransferRead : public WarpDistributionPattern {
     Value newMask =
         hasMask ? newWarpOp.getResult(newRetIndices[newRetIndices.size() - 1])
                 : Value();
-    auto newRead = vector::TransferReadOp::create(rewriter,
-        read.getLoc(), distributedVal.getType(), read.getBase(), newIndices,
-        read.getPermutationMapAttr(), newPadding, newMask,
+    auto newRead = vector::TransferReadOp::create(
+        rewriter, read.getLoc(), distributedVal.getType(), read.getBase(),
+        newIndices, read.getPermutationMapAttr(), newPadding, newMask,
         read.getInBoundsAttr());
 
     rewriter.replaceAllUsesWith(distributedVal, newRead);
@@ -965,8 +967,8 @@ struct WarpOpBroadcast : public WarpDistributionPattern {
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, {broadcastSrc}, {broadcastSrcType}, newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
-    Value broadcasted = vector::BroadcastOp::create(rewriter,
-        loc, destVecType, newWarpOp->getResult(newRetIndices[0]));
+    Value broadcasted = vector::BroadcastOp::create(
+        rewriter, loc, destVecType, newWarpOp->getResult(newRetIndices[0]));
     rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber),
                                 broadcasted);
     return success();
@@ -1008,8 +1010,8 @@ struct WarpOpShapeCast : public WarpDistributionPattern {
         rewriter, warpOp, {oldCastOp.getSource()}, {castDistributedType},
         newRetIndices);
     rewriter.setInsertionPointAfter(newWarpOp);
-    Value newCast = vector::ShapeCastOp::create(rewriter,
-        oldCastOp.getLoc(), castResultType,
+    Value newCast = vector::ShapeCastOp::create(
+        rewriter, oldCastOp.getLoc(), castResultType,
         newWarpOp->getResult(newRetIndices[0]));
     rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber), newCast);
     return success();
@@ -1182,9 +1184,10 @@ struct WarpOpInsertStridedSlice : public WarpDistributionPattern {
     Value distributedDest = newWarpOp->getResult(newRetIndices[1]);
     // Create a new insert strided slice op that inserts distributed source into
     // distributed dest.
-    Value newInsert = vector::InsertStridedSliceOp::create(rewriter,
-        insertOp.getLoc(), distributedDest.getType(), distributedSource,
-        distributedDest, insertOp.getOffsets(), insertOp.getStrides());
+    Value newInsert = vector::InsertStridedSliceOp::create(
+        rewriter, insertOp.getLoc(), distributedDest.getType(),
+        distributedSource, distributedDest, insertOp.getOffsets(),
+        insertOp.getStrides());
     rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber), newInsert);
     return success();
   }
@@ -1277,8 +1280,8 @@ struct WarpOpExtractStridedSlice : public WarpDistributionPattern {
     // Create a new extract strided slice op that extracts from the
     // distributed vector.
     Value distributedVec = newWarpOp->getResult(newRetIndices[0]);
-    Value newExtract = vector::ExtractStridedSliceOp::create(rewriter,
-        extractOp.getLoc(), distributedType, distributedVec,
+    Value newExtract = vector::ExtractStridedSliceOp::create(
+        rewriter, extractOp.getLoc(), distributedType, distributedVec,
         extractOp.getOffsets(),
         ArrayAttr::get(rewriter.getContext(), distributedSizes),
         extractOp.getStrides());
@@ -1323,8 +1326,8 @@ struct WarpOpExtract : public WarpDistributionPattern {
       rewriter.setInsertionPointAfter(newWarpOp);
       Value distributedVec = newWarpOp->getResult(newRetIndices[0]);
       // Extract from distributed vector.
-      Value newExtract = vector::ExtractOp::create(rewriter,
-          loc, distributedVec, extractOp.getMixedPosition());
+      Value newExtract = vector::ExtractOp::create(
+          rewriter, loc, distributedVec, extractOp.getMixedPosition());
       rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber),
                                   newExtract);
       return success();
@@ -1352,8 +1355,8 @@ struct WarpOpExtract : public WarpDistributionPattern {
     rewriter.setInsertionPointAfter(newWarpOp);
     Value distributedVec = newWarpOp->getResult(newRetIndices[0]);
     // Extract from distributed vector.
-    Value newExtract = vector::ExtractOp::create(rewriter,
-        loc, distributedVec, extractOp.getMixedPosition());
+    Value newExtract = vector::ExtractOp::create(rewriter, loc, distributedVec,
+                                                 extractOp.getMixedPosition());
     rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber),
                                 newExtract);
     return success();
@@ -1515,7 +1518,7 @@ struct WarpOpInsertScalar : public WarpDistributionPattern {
         indices.push_back(pos);
       }
       newInsert = vector::InsertOp::create(rewriter, loc, newSource,
-                                                    distributedVec, indices);
+                                           distributedVec, indices);
       // Broadcast: Simply move the vector.insert op out.
       rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber),
                                   newInsert);
@@ -1531,16 +1534,17 @@ struct WarpOpInsertScalar : public WarpDistributionPattern {
     // Insert position: pos % elementsPerLane
     OpFoldResult newPos = affine::makeComposedFoldedAffineApply(
         rewriter, loc, sym0 % elementsPerLane, pos);
-    Value isInsertingLane = arith::CmpIOp::create(rewriter,
-        loc, arith::CmpIPredicate::eq, newWarpOp.getLaneid(), insertingLane);
+    Value isInsertingLane =
+        arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq,
+                              newWarpOp.getLaneid(), insertingLane);
     Value newResult =
         rewriter
             .create<scf::IfOp>(
                 loc, isInsertingLane,
                 /*thenBuilder=*/
                 [&](OpBuilder &builder, Location loc) {
-                  Value newInsert = vector::InsertOp::create(builder,
-                      loc, newSource, distributedVec, newPos);
+                  Value newInsert = vector::InsertOp::create(
+                      builder, loc, newSource, distributedVec, newPos);
                   scf::YieldOp::create(builder, loc, newInsert);
                 },
                 /*elseBuilder=*/
@@ -1582,8 +1586,9 @@ struct WarpOpInsert : public WarpDistributionPattern {
       rewriter.setInsertionPointAfter(newWarpOp);
       Value distributedSrc = newWarpOp->getResult(newRetIndices[0]);
       Value distributedDest = newWarpOp->getResult(newRetIndices[1]);
-      Value newResult = vector::InsertOp::create(rewriter,
-          loc, distributedSrc, distributedDest, insertOp.getMixedPosition());
+      Value newResult = vector::InsertOp::create(rewriter, loc, distributedSrc,
+                                                 distributedDest,
+                                                 insertOp.getMixedPosition());
       rewriter.replaceAllUsesWith(newWarpOp->getResult(operandNumber),
                                   newResult);
       return success();
@@ -1632,23 +1637,25 @@ struct WarpOpInsert : public WarpDistributionPattern {
     Value newResult;
     if (distrSrcDim >= 0) {
       // Every lane inserts a small piece.
-      newResult = vector::InsertOp::create(rewriter,
-          loc, distributedSrc, distributedDest, insertOp.getMixedPosition());
+      newResult = vector::InsertOp::create(rewriter, loc, distributedSrc,
+                                           distributedDest,
+                                           insertOp.getMixedPosition());
     } else {
       // One lane inserts the entire source vector.
       int64_t elementsPerLane = distrDestType.getDimSize(distrDestDim);
       SmallVector<OpFoldResult> pos = insertOp.getMixedPosition();
       SmallVector<int64_t> newPos = getAsIntegers(pos);
       // tid of inserting lane: pos / elementsPerLane
-      Value insertingLane = arith::ConstantIndexOp::create(rewriter,
-          loc, newPos[distrDestDim] / elementsPerLane);
-      Value isInsertingLane = arith::CmpIOp::create(rewriter,
-          loc, arith::CmpIPredicate::eq, newWarpOp.getLaneid(), insertingLane);
+      Value insertingLane = arith::ConstantIndexOp::create(
+          rewriter, loc, newPos[distrDestDim] / elementsPerLane);
+      Value isInsertingLane =
+          arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq,
+                                newWarpOp.getLaneid(), insertingLane);
       // Insert position: pos % elementsPerLane
       newPos[distrDestDim] %= elementsPerLane;
       auto insertingBuilder = [&](OpBuilder &builder, Location loc) {
-        Value newInsert = vector::InsertOp::create(builder,
-            loc, distributedSrc, distributedDest, newPos);
+        Value newInsert = vector::InsertOp::create(builder, loc, distributedSrc,
+                                                   distributedDest, newPos);
         scf::YieldOp::create(builder, loc, newInsert);
       };
       auto nonInsertingBuilder = [&](OpBuilder &builder, Location loc) {
@@ -1761,9 +1768,9 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
 
     // Create a new for op outside the region with a WarpExecuteOnLane0Op
     // region inside.
-    auto newForOp = scf::ForOp::create(rewriter,
-        forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
-        forOp.getStep(), newOperands);
+    auto newForOp =
+        scf::ForOp::create(rewriter, forOp.getLoc(), forOp.getLowerBound(),
+                           forOp.getUpperBound(), forOp.getStep(), newOperands);
     rewriter.setInsertionPointToStart(newForOp.getBody());
 
     SmallVector<Value> warpInput(newForOp.getRegionIterArgs().begin(),
@@ -1776,9 +1783,10 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
       argIndexMapping[escapingValues[i]] = warpInputType.size();
       warpInputType.push_back(inputTypes[i]);
     }
-    auto innerWarp = WarpExecuteOnLane0Op::create(rewriter,
-        newWarpOp.getLoc(), newForOp.getResultTypes(), newWarpOp.getLaneid(),
-        newWarpOp.getWarpSize(), warpInput, warpInputType);
+    auto innerWarp = WarpExecuteOnLane0Op::create(
+        rewriter, newWarpOp.getLoc(), newForOp.getResultTypes(),
+        newWarpOp.getLaneid(), newWarpOp.getWarpSize(), warpInput,
+        warpInputType);
 
     SmallVector<Value> argMapping;
     argMapping.push_back(newForOp.getInductionVar());

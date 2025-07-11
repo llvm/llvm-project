@@ -405,8 +405,8 @@ public:
     inputOps.push_back(op.getDpsInputOperand(1 - other)->get());
     fusedIndexMaps.push_back(fusedIndexMaps.back()); // mimic other
     // Fuse producer and consumer into a new generic op.
-    auto fusedOp = GenericOp::create(rewriter,
-        loc, op.getResult(0).getType(), inputOps, outputOps,
+    auto fusedOp = GenericOp::create(
+        rewriter, loc, op.getResult(0).getType(), inputOps, outputOps,
         rewriter.getAffineMapArrayAttr(fusedIndexMaps), prod.getIteratorTypes(),
         /*doc=*/nullptr, /*library_call=*/nullptr);
     Block &prodBlock = prod.getRegion().front();
@@ -695,8 +695,8 @@ public:
     // CustomReduce {
     //    x = x REDUC y, identity
     // }
-    auto custom = sparse_tensor::ReduceOp::create(rewriter,
-        loc, rtp, semiring.getResult(), s1, identity);
+    auto custom = sparse_tensor::ReduceOp::create(
+        rewriter, loc, rtp, semiring.getResult(), s1, identity);
     Block *region =
         rewriter.createBlock(&custom.getRegion(), {}, {rtp, rtp}, {loc, loc});
     rewriter.setInsertionPointToStart(&custom.getRegion().front());
@@ -724,8 +724,9 @@ public:
     auto stt = getSparseTensorType(tensor);
     // Header with NSE.
     auto nse = NumberOfEntriesOp::create(rewriter, loc, tensor);
-    vector::PrintOp::create(rewriter,
-        loc, rewriter.getStringAttr("---- Sparse Tensor ----\nnse = "));
+    vector::PrintOp::create(
+        rewriter, loc,
+        rewriter.getStringAttr("---- Sparse Tensor ----\nnse = "));
     vector::PrintOp::create(rewriter, loc, nse);
     // Print run-time contents for dim/lvl sizes.
     vector::PrintOp::create(rewriter, loc, rewriter.getStringAttr("dim = "));
@@ -745,8 +746,8 @@ public:
       case SparseTensorFieldKind::PosMemRef: {
         auto lvl = constantIndex(rewriter, loc, l);
         vector::PrintOp::create(rewriter, loc, rewriter.getStringAttr("pos["));
-        vector::PrintOp::create(rewriter,
-            loc, lvl, vector::PrintPunctuation::NoPunctuation);
+        vector::PrintOp::create(rewriter, loc, lvl,
+                                vector::PrintPunctuation::NoPunctuation);
         vector::PrintOp::create(rewriter, loc, rewriter.getStringAttr("] : "));
         auto pos = ToPositionsOp::create(rewriter, loc, tensor, l);
         printContents(rewriter, loc, pos);
@@ -755,8 +756,8 @@ public:
       case SparseTensorFieldKind::CrdMemRef: {
         auto lvl = constantIndex(rewriter, loc, l);
         vector::PrintOp::create(rewriter, loc, rewriter.getStringAttr("crd["));
-        vector::PrintOp::create(rewriter,
-            loc, lvl, vector::PrintPunctuation::NoPunctuation);
+        vector::PrintOp::create(rewriter, loc, lvl,
+                                vector::PrintPunctuation::NoPunctuation);
         vector::PrintOp::create(rewriter, loc, rewriter.getStringAttr("] : "));
         Value crd = nullptr;
         // For COO AoS storage, we want to print a single, linear view of
@@ -771,7 +772,7 @@ public:
       }
       case SparseTensorFieldKind::ValMemRef: {
         vector::PrintOp::create(rewriter, loc,
-                                         rewriter.getStringAttr("values : "));
+                                rewriter.getStringAttr("values : "));
         auto val = ToValuesOp::create(rewriter, loc, tensor);
         printContents(rewriter, loc, val);
         break;
@@ -827,17 +828,17 @@ private:
         Value imag = complex::ImOp::create(rewriter, loc, val);
         vector::PrintOp::create(rewriter, loc, vector::PrintPunctuation::Open);
         vector::PrintOp::create(rewriter, loc, real,
-                                         vector::PrintPunctuation::Comma);
+                                vector::PrintPunctuation::Comma);
         vector::PrintOp::create(rewriter, loc, imag,
-                                         vector::PrintPunctuation::Close);
+                                vector::PrintPunctuation::Close);
       } else {
-        vector::PrintOp::create(rewriter,
-            loc, val, vector::PrintPunctuation::NoPunctuation);
+        vector::PrintOp::create(rewriter, loc, val,
+                                vector::PrintPunctuation::NoPunctuation);
       }
       // Terminating comma (except at end).
       auto bound = arith::AddIOp::create(rewriter, loc, idxs.back(), step);
-      Value cond = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::ne,
-                                                  bound, size);
+      Value cond = arith::CmpIOp::create(rewriter, loc,
+                                         arith::CmpIPredicate::ne, bound, size);
       scf::IfOp ifOp = scf::IfOp::create(rewriter, loc, cond, /*else*/ false);
       rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
       vector::PrintOp::create(rewriter, loc, vector::PrintPunctuation::Comma);
@@ -861,10 +862,10 @@ private:
         val = tensor::DimOp::create(rewriter, loc, tensor, idx);
       else
         val = LvlOp::create(rewriter, loc, tensor, idx);
-      vector::PrintOp::create(rewriter,
-          loc, val,
-          i != size - 1 ? vector::PrintPunctuation::Comma
-                        : vector::PrintPunctuation::NoPunctuation);
+      vector::PrintOp::create(rewriter, loc, val,
+                              i != size - 1
+                                  ? vector::PrintPunctuation::Comma
+                                  : vector::PrintPunctuation::NoPunctuation);
     }
     // Close bracket and end of line.
     vector::PrintOp::create(rewriter, loc, vector::PrintPunctuation::Close);
@@ -920,8 +921,8 @@ public:
     //   %t = sparse_tensor.cast %tmp
     // depending on whether the input/output are sorted in the same way.
     const auto encSrc = srcTp->getEncoding();
-    ForeachOp foreachOp = ForeachOp::create(rewriter,
-        loc, srcTensor, buffer,
+    ForeachOp foreachOp = ForeachOp::create(
+        rewriter, loc, srcTensor, buffer,
         [&](OpBuilder &builder, Location loc, ValueRange srcLcvs, Value v,
             ValueRange reduc) {
           const Dimension srcRank = srcTp->getDimRank();
@@ -1025,8 +1026,8 @@ public:
     //   %t = sparse_tensor.cast %tmp
     // depending on whether the input/output are sorted in the same way.
     const auto encSrc = srcTp.getEncoding();
-    ForeachOp foreachOp = ForeachOp::create(rewriter,
-        loc, srcTensor, buffer,
+    ForeachOp foreachOp = ForeachOp::create(
+        rewriter, loc, srcTensor, buffer,
         [&](OpBuilder &builder, Location loc, ValueRange srcLcvs, Value v,
             ValueRange reduc) {
           const Dimension dimRank = srcTp.getDimRank();
@@ -1089,12 +1090,12 @@ public:
           RankedTensorType::get(rtp.getShape(), rtp.getElementType());
       ReshapeOp reshape;
       if constexpr (std::is_same<ReshapeOp, tensor::ExpandShapeOp>::value) {
-        reshape = ReshapeOp::create(rewriter,
-            loc, denseTp, op.getSrc(), op.getReassociation(),
-            op.getOutputShape(), op.getStaticOutputShape());
+        reshape = ReshapeOp::create(rewriter, loc, denseTp, op.getSrc(),
+                                    op.getReassociation(), op.getOutputShape(),
+                                    op.getStaticOutputShape());
       } else {
         reshape = ReshapeOp::create(rewriter, loc, denseTp, op.getSrc(),
-                                             op.getReassociation());
+                                    op.getReassociation());
       }
       Value convert = ConvertOp::create(rewriter, loc, rtp, reshape);
       rewriter.replaceOp(op, convert);
@@ -1161,18 +1162,20 @@ struct SparseTensorDimOpRewriter : public OpRewritePattern<tensor::DimOp> {
     SmallVector<Value> maxLvlCrds;
     for (Level l = 0; l < stt->getLvlRank(); l++) {
       Value lvlSz = LvlOp::create(rewriter, loc, op.getSource(), l);
-      Value maxLvlCrd = arith::SubIOp::create(rewriter,
-          loc, lvlSz, constantOne(rewriter, loc, rewriter.getIndexType()));
+      Value maxLvlCrd = arith::SubIOp::create(
+          rewriter, loc, lvlSz,
+          constantOne(rewriter, loc, rewriter.getIndexType()));
       maxLvlCrds.push_back(maxLvlCrd);
     }
 
     AffineExpr lvl2DimExp = stt->getLvlToDim().getResult(*dim);
-    Value maxDimCrd = affine::AffineApplyOp::create(rewriter,
-        op.getLoc(), AffineMap::get(stt->getLvlRank(), 0, lvl2DimExp),
+    Value maxDimCrd = affine::AffineApplyOp::create(
+        rewriter, op.getLoc(), AffineMap::get(stt->getLvlRank(), 0, lvl2DimExp),
         maxLvlCrds);
 
-    Value dimSz = arith::AddIOp::create(rewriter,
-        loc, maxDimCrd, constantOne(rewriter, loc, rewriter.getIndexType()));
+    Value dimSz = arith::AddIOp::create(
+        rewriter, loc, maxDimCrd,
+        constantOne(rewriter, loc, rewriter.getIndexType()));
     rewriter.replaceOp(op, dimSz);
     return success();
   }
@@ -1212,8 +1215,8 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
     for (Value input : op.getInputs()) {
       // Builds a for op for each input tensor to append new values into the
       // output tensor.
-      foreachOp = ForeachOp::create(rewriter,
-          loc, input, iterArg,
+      foreachOp = ForeachOp::create(
+          rewriter, loc, input, iterArg,
           [&](OpBuilder &builder, Location loc, ValueRange dcvs, Value v,
               ValueRange reduc) {
             SmallVector<Value> offDimCrd(dcvs);
@@ -1224,8 +1227,9 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
             dstBuf.val = reduc.front();
             if (!dstTp.isAllDense()) {
               Value cond = genIsNonzero(builder, loc, v);
-              auto ifOp = scf::IfOp::create(builder, loc, reduc.getTypes(), cond,
-                                                    /*else*/ true);
+              auto ifOp =
+                  scf::IfOp::create(builder, loc, reduc.getTypes(), cond,
+                                    /*else*/ true);
               builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
               scf::YieldOp::create(builder, loc, dstBuf.val);
 
@@ -1247,7 +1251,7 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
       const Size sz = getSparseTensorType(input).getDynamicDimSize(conDim);
       assert(ShapedType::isStatic(sz));
       offset = arith::AddIOp::create(rewriter, loc, offset,
-                                              constantIndex(rewriter, loc, sz));
+                                     constantIndex(rewriter, loc, sz));
       iterArg = foreachOp.getResult(0);
       dstBuf.val = iterArg;
     }
@@ -1299,8 +1303,8 @@ struct DirectConvertRewriter : public OpRewritePattern<ConvertOp> {
     ValueRange vs;
     TensorLike dstBuf(rewriter, loc, dstStt.getRankedTensorType(), sizes);
 
-    auto foreachOp = ForeachOp::create(rewriter,
-        loc, src, dstBuf.val, foreachOrder,
+    auto foreachOp = ForeachOp::create(
+        rewriter, loc, src, dstBuf.val, foreachOrder,
         [&](OpBuilder &builder, Location loc, ValueRange dcvs, Value v,
             ValueRange reduc) {
           // Enters the loop, update the SSA value for insertion chain.
@@ -1308,7 +1312,7 @@ struct DirectConvertRewriter : public OpRewritePattern<ConvertOp> {
           if (!skipZeroCheck) {
             Value cond = genIsNonzero(builder, loc, v);
             auto ifOp = scf::IfOp::create(builder, loc, reduc.getTypes(), cond,
-                                                  /*else*/ true);
+                                          /*else*/ true);
             builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
             scf::YieldOp::create(builder, loc, dstBuf.val);
 
@@ -1349,8 +1353,8 @@ struct CrdTranslateRewriter : public OpRewritePattern<CrdTranslateOp> {
       // TODO: we should probably expand the affine map to IR using our own
       // rules, since affine.apply assume signed value, while the cooridinates
       // we provided must always be signless.
-      Value trans = affine::AffineApplyOp::create(rewriter,
-          op.getLoc(), AffineMap::get(map.getNumDims(), 0, result),
+      Value trans = affine::AffineApplyOp::create(
+          rewriter, op.getLoc(), AffineMap::get(map.getNumDims(), 0, result),
           op.getInCrds());
       outCrds.push_back(trans);
     }
@@ -1515,7 +1519,7 @@ struct OutRewriter : public OpRewritePattern<OutOp> {
     sizesForTensor(rewriter, dims, loc, srcTp, src);
     for (Dimension d = 0; d < dimRank; d++) {
       memref::StoreOp::create(rewriter, loc, dims[d], dimSizes,
-                                       constantIndex(rewriter, loc, d));
+                              constantIndex(rewriter, loc, d));
     }
 
     // Create a sparse tensor writer and output meta data.
@@ -1536,13 +1540,13 @@ struct OutRewriter : public OpRewritePattern<OutOp> {
     ModuleOp module = op->getParentOfType<ModuleOp>();
 
     // For each element in the source tensor, output the element.
-    ForeachOp::create(rewriter,
-        loc, src, ValueRange(),
+    ForeachOp::create(
+        rewriter, loc, src, ValueRange(),
         [&](OpBuilder &builder, Location loc, ValueRange dcvs, Value v,
             ValueRange reduc) {
           for (Dimension d = 0; d < dimRank; d++) {
             memref::StoreOp::create(rewriter, loc, dcvs[d], dimCoords,
-                                             constantIndex(builder, loc, d));
+                                    constantIndex(builder, loc, d));
           }
           memref::StoreOp::create(rewriter, loc, v, value);
           SmallVector<Value> operands{writer, rankValue, dimCoords, value};

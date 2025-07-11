@@ -113,20 +113,22 @@ handleInlinedAllocas(Operation *call,
     // scope if some are already present in the body of the caller. This is not
     // invalid IR, but LLVM cleans these up in InstCombineCalls.cpp, along with
     // other cases where the stacksave/stackrestore is redundant.
-    stackPtr = LLVM::StackSaveOp::create(builder,
-        call->getLoc(), LLVM::LLVMPointerType::get(call->getContext()));
+    stackPtr = LLVM::StackSaveOp::create(
+        builder, call->getLoc(),
+        LLVM::LLVMPointerType::get(call->getContext()));
   }
   builder.setInsertionPointToStart(callerEntryBlock);
   for (auto &[allocaOp, arraySize, shouldInsertLifetime] : allocasToMove) {
-    auto newConstant = LLVM::ConstantOp::create(builder,
-        allocaOp->getLoc(), allocaOp.getArraySize().getType(), arraySize);
+    auto newConstant =
+        LLVM::ConstantOp::create(builder, allocaOp->getLoc(),
+                                 allocaOp.getArraySize().getType(), arraySize);
     // Insert a lifetime start intrinsic where the alloca was before moving it.
     if (shouldInsertLifetime) {
       OpBuilder::InsertionGuard insertionGuard(builder);
       builder.setInsertionPoint(allocaOp);
-      LLVM::LifetimeStartOp::create(builder,
-          allocaOp.getLoc(), arraySize.getValue().getLimitedValue(),
-          allocaOp.getResult());
+      LLVM::LifetimeStartOp::create(builder, allocaOp.getLoc(),
+                                    arraySize.getValue().getLimitedValue(),
+                                    allocaOp.getResult());
     }
     allocaOp->moveAfter(newConstant);
     allocaOp.getArraySizeMutable().assign(newConstant.getResult());
@@ -142,9 +144,9 @@ handleInlinedAllocas(Operation *call,
       LLVM::StackRestoreOp::create(builder, call->getLoc(), stackPtr);
     for (auto &[allocaOp, arraySize, shouldInsertLifetime] : allocasToMove) {
       if (shouldInsertLifetime)
-        LLVM::LifetimeEndOp::create(builder,
-            allocaOp.getLoc(), arraySize.getValue().getLimitedValue(),
-            allocaOp.getResult());
+        LLVM::LifetimeEndOp::create(builder, allocaOp.getLoc(),
+                                    arraySize.getValue().getLimitedValue(),
+                                    allocaOp.getResult());
     }
   }
 }
@@ -604,15 +606,16 @@ static Value handleByValArgumentInit(OpBuilder &builder, Location loc,
     Block *entryBlock = &(*argument.getParentRegion()->begin());
     builder.setInsertionPointToStart(entryBlock);
     Value one = LLVM::ConstantOp::create(builder, loc, builder.getI64Type(),
-                                                 builder.getI64IntegerAttr(1));
-    allocaOp = LLVM::AllocaOp::create(builder,
-        loc, argument.getType(), elementType, one, targetAlignment);
+                                         builder.getI64IntegerAttr(1));
+    allocaOp = LLVM::AllocaOp::create(builder, loc, argument.getType(),
+                                      elementType, one, targetAlignment);
   }
   // Copy the pointee to the newly allocated value.
-  Value copySize = LLVM::ConstantOp::create(builder,
-      loc, builder.getI64Type(), builder.getI64IntegerAttr(elementTypeSize));
+  Value copySize =
+      LLVM::ConstantOp::create(builder, loc, builder.getI64Type(),
+                               builder.getI64IntegerAttr(elementTypeSize));
   LLVM::MemcpyOp::create(builder, loc, allocaOp, argument, copySize,
-                                 /*isVolatile=*/false);
+                         /*isVolatile=*/false);
   return allocaOp;
 }
 

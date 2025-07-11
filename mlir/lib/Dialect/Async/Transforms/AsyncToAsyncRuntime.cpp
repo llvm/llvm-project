@@ -376,7 +376,7 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
 
     // Add async.coro.suspend as a suspended block terminator.
     CoroSuspendOp::create(builder, coroSaveOp.getState(), coro.suspend,
-                                  branch.getDest(), coro.cleanupForDestroy);
+                          branch.getDest(), coro.cleanupForDestroy);
 
     branch.erase();
   }
@@ -384,8 +384,9 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
   // Replace the original `async.execute` with a call to outlined function.
   {
     ImplicitLocOpBuilder callBuilder(loc, execute);
-    auto callOutlinedFunc = func::CallOp::create(callBuilder,
-        func.getName(), execute.getResultTypes(), functionInputs.getArrayRef());
+    auto callOutlinedFunc = func::CallOp::create(callBuilder, func.getName(),
+                                                 execute.getResultTypes(),
+                                                 functionInputs.getArrayRef());
     execute.replaceAllUsesWith(callOutlinedFunc.getResults());
     execute.erase();
   }
@@ -587,12 +588,13 @@ public:
 
       // Assert that the awaited operands is not in the error state.
       Value isError = RuntimeIsErrorOp::create(builder, i1, operand);
-      Value notError = arith::XOrIOp::create(builder,
-          isError, arith::ConstantOp::create(builder,
-                       loc, i1, builder.getIntegerAttr(i1, 1)));
+      Value notError = arith::XOrIOp::create(
+          builder, isError,
+          arith::ConstantOp::create(builder, loc, i1,
+                                    builder.getIntegerAttr(i1, 1)));
 
       cf::AssertOp::create(builder, notError,
-                                   "Awaited async operand is in error state");
+                           "Awaited async operand is in error state");
     }
 
     // Inside the coroutine we convert await operation into coroutine suspension
@@ -615,8 +617,8 @@ public:
 
       // Add async.coro.suspend as a suspended block terminator.
       builder.setInsertionPointToEnd(suspended);
-      CoroSuspendOp::create(builder, coroSaveOp.getState(), coro.suspend, resume,
-                                    coro.cleanupForDestroy);
+      CoroSuspendOp::create(builder, coroSaveOp.getState(), coro.suspend,
+                            resume, coro.cleanupForDestroy);
 
       // Split the resume block into error checking and continuation.
       Block *continuation = rewriter.splitBlock(resume, Block::iterator(op));
@@ -625,10 +627,10 @@ public:
       builder.setInsertionPointToStart(resume);
       auto isError = RuntimeIsErrorOp::create(builder, loc, i1, operand);
       cf::CondBranchOp::create(builder, isError,
-                                       /*trueDest=*/setupSetErrorBlock(coro),
-                                       /*trueArgs=*/ArrayRef<Value>(),
-                                       /*falseDest=*/continuation,
-                                       /*falseArgs=*/ArrayRef<Value>());
+                               /*trueDest=*/setupSetErrorBlock(coro),
+                               /*trueArgs=*/ArrayRef<Value>(),
+                               /*falseDest=*/continuation,
+                               /*falseArgs=*/ArrayRef<Value>());
 
       // Make sure that replacement value will be constructed in the
       // continuation block.
@@ -758,10 +760,10 @@ public:
     Block *cont = rewriter.splitBlock(op->getBlock(), Block::iterator(op));
     rewriter.setInsertionPointToEnd(cont->getPrevNode());
     cf::CondBranchOp::create(rewriter, loc, adaptor.getArg(),
-                                      /*trueDest=*/cont,
-                                      /*trueArgs=*/ArrayRef<Value>(),
-                                      /*falseDest=*/setupSetErrorBlock(coro),
-                                      /*falseArgs=*/ArrayRef<Value>());
+                             /*trueDest=*/cont,
+                             /*trueArgs=*/ArrayRef<Value>(),
+                             /*falseDest=*/setupSetErrorBlock(coro),
+                             /*falseArgs=*/ArrayRef<Value>());
     rewriter.eraseOp(op);
 
     return success();

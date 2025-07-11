@@ -24,7 +24,7 @@ static Value buildArithValue(OpBuilder &b, Location loc, AffineMap map,
     switch (e.getKind()) {
     case AffineExprKind::Constant:
       return ConstantIndexOp::create(b, loc,
-                                       cast<AffineConstantExpr>(e).getValue());
+                                     cast<AffineConstantExpr>(e).getValue());
     case AffineExprKind::DimId:
       return operands[cast<AffineDimExpr>(e).getPosition()];
     case AffineExprKind::SymbolId:
@@ -33,27 +33,27 @@ static Value buildArithValue(OpBuilder &b, Location loc, AffineMap map,
     case AffineExprKind::Add: {
       auto binaryExpr = cast<AffineBinaryOpExpr>(e);
       return AddIOp::create(b, loc, buildExpr(binaryExpr.getLHS()),
-                              buildExpr(binaryExpr.getRHS()));
+                            buildExpr(binaryExpr.getRHS()));
     }
     case AffineExprKind::Mul: {
       auto binaryExpr = cast<AffineBinaryOpExpr>(e);
       return MulIOp::create(b, loc, buildExpr(binaryExpr.getLHS()),
-                              buildExpr(binaryExpr.getRHS()));
+                            buildExpr(binaryExpr.getRHS()));
     }
     case AffineExprKind::FloorDiv: {
       auto binaryExpr = cast<AffineBinaryOpExpr>(e);
       return DivSIOp::create(b, loc, buildExpr(binaryExpr.getLHS()),
-                               buildExpr(binaryExpr.getRHS()));
+                             buildExpr(binaryExpr.getRHS()));
     }
     case AffineExprKind::CeilDiv: {
       auto binaryExpr = cast<AffineBinaryOpExpr>(e);
       return CeilDivSIOp::create(b, loc, buildExpr(binaryExpr.getLHS()),
-                                   buildExpr(binaryExpr.getRHS()));
+                                 buildExpr(binaryExpr.getRHS()));
     }
     case AffineExprKind::Mod: {
       auto binaryExpr = cast<AffineBinaryOpExpr>(e);
       return RemSIOp::create(b, loc, buildExpr(binaryExpr.getLHS()),
-                               buildExpr(binaryExpr.getRHS()));
+                             buildExpr(binaryExpr.getRHS()));
     }
     }
     llvm_unreachable("unsupported AffineExpr kind");

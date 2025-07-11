@@ -201,9 +201,9 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
           calculateGlobalOffsets(rewriter, loc, originalOffsets, localOffset,
                                  distUnitBaseAddr, distUnitShape);
 
-      auto newCreateNdOp = xegpu::CreateNdDescOp::create(rewriter,
-          loc, newTdescTy, op.getSource(), globalOffsets, op.getMixedSizes(),
-          op.getMixedStrides());
+      auto newCreateNdOp = xegpu::CreateNdDescOp::create(
+          rewriter, loc, newTdescTy, op.getSource(), globalOffsets,
+          op.getMixedSizes(), op.getMixedStrides());
       newCreateNdOps.push_back(newCreateNdOp);
     }
 
@@ -225,7 +225,7 @@ struct WgToSgLoadNdOp : public OpConversionPattern<xegpu::LoadNdOp> {
       ArrayRef<int64_t> srcShape = tdescTy.getShape();
       VectorType newResTy = VectorType::get(srcShape, tdescTy.getElementType());
       auto newLoadOp = xegpu::LoadNdOp::create(rewriter, op.getLoc(), newResTy,
-                                                        src, op->getAttrs());
+                                               src, op->getAttrs());
       newLoadOps.push_back(newLoadOp);
     }
     rewriter.replaceOpWithMultiple(op, {newLoadOps});
@@ -243,7 +243,7 @@ struct WgToSgStoreNdOp : public OpConversionPattern<xegpu::StoreNdOp> {
                   ConversionPatternRewriter &rewriter) const override {
     for (auto [v, t] : llvm::zip(adaptor.getValue(), adaptor.getTensorDesc()))
       xegpu::StoreNdOp::create(rewriter, op.getLoc(), v, t, op.getL1HintAttr(),
-                                        op.getL2HintAttr(), op.getL3HintAttr());
+                               op.getL2HintAttr(), op.getL3HintAttr());
 
     rewriter.eraseOp(op);
     return success();
@@ -261,8 +261,8 @@ struct WgToSgUpdateNdOffsetOp
                   ConversionPatternRewriter &rewriter) const override {
     llvm::SmallVector<Value> newUpdateTileOffsetOps;
     for (auto tDesc : adaptor.getTensorDesc()) {
-      auto newUpdateTileOffsetOp = xegpu::UpdateNdOffsetOp::create(rewriter,
-          op.getLoc(), tDesc.getType(), tDesc, op.getOffsets(),
+      auto newUpdateTileOffsetOp = xegpu::UpdateNdOffsetOp::create(
+          rewriter, op.getLoc(), tDesc.getType(), tDesc, op.getOffsets(),
           op.getConstOffsets());
       newUpdateTileOffsetOps.push_back(newUpdateTileOffsetOp);
     }
@@ -325,7 +325,7 @@ struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
                   ConversionPatternRewriter &rewriter) const override {
     for (auto src : adaptor.getTensorDesc())
       xegpu::PrefetchNdOp::create(rewriter, op.getLoc(), TypeRange(), src,
-                                           op->getAttrs());
+                                  op->getAttrs());
     rewriter.eraseOp(op);
     return success();
   }

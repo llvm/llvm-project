@@ -169,7 +169,7 @@ LogicalResult mlir::bufferization::eliminateEmptyTensors(
           continue;
         rewriter.setInsertionPointAfterValue(replacement);
         replacement = tensor::CastOp::create(rewriter, v.getLoc(), v.getType(),
-                                                      replacement);
+                                             replacement);
       }
       // Replace the specific use of the tensor::EmptyOp.
       rewriter.modifyOpInPlace(user, [&]() {

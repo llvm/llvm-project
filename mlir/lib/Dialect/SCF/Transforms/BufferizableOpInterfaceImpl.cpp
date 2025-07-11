@@ -205,8 +205,8 @@ struct ExecuteRegionOpInterface
     SmallVector<Value> newResults;
     for (const auto &it : llvm::enumerate(executeRegionOp->getResultTypes())) {
       if (isa<TensorType>(it.value())) {
-        newResults.push_back(bufferization::ToTensorOp::create(rewriter,
-            executeRegionOp.getLoc(), it.value(),
+        newResults.push_back(bufferization::ToTensorOp::create(
+            rewriter, executeRegionOp.getLoc(), it.value(),
             newOp->getResult(it.index())));
       } else {
         newResults.push_back(newOp->getResult(it.index()));
@@ -260,9 +260,9 @@ struct IfOpInterface
 
     // Create new op.
     rewriter.setInsertionPoint(ifOp);
-    auto newIfOp =
-        scf::IfOp::create(rewriter, ifOp.getLoc(), newTypes, ifOp.getCondition(),
-                                   /*withElseRegion=*/true);
+    auto newIfOp = scf::IfOp::create(rewriter, ifOp.getLoc(), newTypes,
+                                     ifOp.getCondition(),
+                                     /*withElseRegion=*/true);
 
     // Move over then/else blocks.
     rewriter.mergeBlocks(ifOp.thenBlock(), newIfOp.thenBlock());
@@ -374,9 +374,9 @@ struct IndexSwitchOpInterface
 
     // Create new op.
     rewriter.setInsertionPoint(switchOp);
-    auto newSwitchOp = scf::IndexSwitchOp::create(rewriter,
-        switchOp.getLoc(), newTypes, switchOp.getArg(), switchOp.getCases(),
-        switchOp.getCases().size());
+    auto newSwitchOp = scf::IndexSwitchOp::create(
+        rewriter, switchOp.getLoc(), newTypes, switchOp.getArg(),
+        switchOp.getCases(), switchOp.getCases().size());
 
     // Move over blocks.
     for (auto [src, dest] :
@@ -769,8 +769,8 @@ struct ForOpInterface
     }
 
     // Construct a new scf.for op with memref instead of tensor values.
-    auto newForOp = scf::ForOp::create(rewriter,
-        forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
+    auto newForOp = scf::ForOp::create(
+        rewriter, forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
         forOp.getStep(), castedInitArgs);
     newForOp->setAttrs(forOp->getAttrs());
     Block *loopBody = newForOp.getBody();
@@ -1005,8 +1005,8 @@ struct WhileOpInterface
     // Construct a new scf.while op with memref instead of tensor values.
     ValueRange argsRangeBefore(castedInitArgs);
     TypeRange argsTypesBefore(argsRangeBefore);
-    auto newWhileOp = scf::WhileOp::create(rewriter,
-        whileOp.getLoc(), argsTypesAfter, castedInitArgs);
+    auto newWhileOp = scf::WhileOp::create(rewriter, whileOp.getLoc(),
+                                           argsTypesAfter, castedInitArgs);
 
     // Add before/after regions to the new op.
     SmallVector<Location> bbArgLocsBefore(castedInitArgs.size(),
@@ -1265,8 +1265,8 @@ struct ForallOpInterface
              forallOp.getBody()->getArguments().drop_front(rank), buffers)) {
       BlockArgument bbArg = std::get<0>(it);
       Value buffer = std::get<1>(it);
-      Value bufferAsTensor = ToTensorOp::create(rewriter,
-          forallOp.getLoc(), bbArg.getType(), buffer);
+      Value bufferAsTensor = ToTensorOp::create(rewriter, forallOp.getLoc(),
+                                                bbArg.getType(), buffer);
       bbArg.replaceAllUsesWith(bufferAsTensor);
     }
 
@@ -1274,8 +1274,8 @@ struct ForallOpInterface
     // introduced terminator.
     rewriter.setInsertionPoint(forallOp);
     ForallOp newForallOp;
-    newForallOp = ForallOp::create(rewriter,
-        forallOp.getLoc(), forallOp.getMixedLowerBound(),
+    newForallOp = ForallOp::create(
+        rewriter, forallOp.getLoc(), forallOp.getMixedLowerBound(),
         forallOp.getMixedUpperBound(), forallOp.getMixedStep(),
         /*outputs=*/ValueRange(), forallOp.getMapping());
 

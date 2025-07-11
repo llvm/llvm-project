@@ -58,8 +58,9 @@ static SmallVector<Value> computeStrides(Location loc, RewriterBase &rewriter,
       // Note: basis elements and their products are, definitionally,
       // non-negative, so `nuw` is justified.
       if (dynamicPart)
-        dynamicPart = arith::MulIOp::create(rewriter,
-            loc, dynamicPart, dynamicBasis[dynamicIndex - 1], ovflags);
+        dynamicPart =
+            arith::MulIOp::create(rewriter, loc, dynamicPart,
+                                  dynamicBasis[dynamicIndex - 1], ovflags);
       else
         dynamicPart = dynamicBasis[dynamicIndex - 1];
       --dynamicIndex;
@@ -111,15 +112,15 @@ affine::lowerAffineDelinearizeIndexOp(RewriterBase &rewriter,
 
   auto emitModTerm = [&](Value stride) -> Value {
     Value remainder = arith::RemSIOp::create(rewriter, loc, linearIdx, stride);
-    Value remainderNegative = arith::CmpIOp::create(rewriter,
-        loc, arith::CmpIPredicate::slt, remainder, zero);
+    Value remainderNegative = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::slt, remainder, zero);
     // If the correction is relevant, this term is <= stride, which is known
     // to be positive in `index`. Otherwise, while 2 * stride might overflow,
     // this branch won't be taken, so the risk of `poison` is fine.
-    Value corrected = arith::AddIOp::create(rewriter,
-        loc, remainder, stride, arith::IntegerOverflowFlags::nsw);
+    Value corrected = arith::AddIOp::create(rewriter, loc, remainder, stride,
+                                            arith::IntegerOverflowFlags::nsw);
     Value mod = arith::SelectOp::create(rewriter, loc, remainderNegative,
-                                                 corrected, remainder);
+                                        corrected, remainder);
     return mod;
   };
 
@@ -167,8 +168,8 @@ LogicalResult affine::lowerAffineLinearizeIndexOp(RewriterBase &rewriter,
   // our hands on an `OpOperand&` for the loop invariant counting function.
   for (auto [stride, idxOp] :
        llvm::zip_equal(strides, llvm::drop_end(op.getMultiIndexMutable()))) {
-    Value scaledIdx = arith::MulIOp::create(rewriter,
-        loc, idxOp.get(), stride, arith::IntegerOverflowFlags::nsw);
+    Value scaledIdx = arith::MulIOp::create(rewriter, loc, idxOp.get(), stride,
+                                            arith::IntegerOverflowFlags::nsw);
     int64_t numHoistableLoops = numEnclosingInvariantLoops(idxOp);
     scaledValues.emplace_back(scaledIdx, numHoistableLoops);
   }
@@ -185,7 +186,7 @@ LogicalResult affine::lowerAffineLinearizeIndexOp(RewriterBase &rewriter,
   for (auto [scaledValue, numHoistableLoops] : llvm::drop_begin(scaledValues)) {
     std::ignore = numHoistableLoops;
     result = arith::AddIOp::create(rewriter, loc, result, scaledValue,
-                                            arith::IntegerOverflowFlags::nsw);
+                                   arith::IntegerOverflowFlags::nsw);
   }
   rewriter.replaceOp(op, result);
   return success();
