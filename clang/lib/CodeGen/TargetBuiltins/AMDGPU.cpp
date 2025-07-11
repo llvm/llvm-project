@@ -869,7 +869,10 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_global_store_async_from_lds_b8:
   case AMDGPU::BI__builtin_amdgcn_global_store_async_from_lds_b32:
   case AMDGPU::BI__builtin_amdgcn_global_store_async_from_lds_b64:
-  case AMDGPU::BI__builtin_amdgcn_global_store_async_from_lds_b128: {
+  case AMDGPU::BI__builtin_amdgcn_global_store_async_from_lds_b128:
+  case AMDGPU::BI__builtin_amdgcn_dds_load_async_to_lds_b32:
+  case AMDGPU::BI__builtin_amdgcn_dds_load_async_to_lds_b64:
+  case AMDGPU::BI__builtin_amdgcn_dds_load_async_to_lds_b128: {
     Intrinsic::ID IID;
     switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_cluster_load_async_to_lds_b8:
@@ -907,6 +910,15 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       break;
     case AMDGPU::BI__builtin_amdgcn_global_store_async_from_lds_b128:
       IID = Intrinsic::amdgcn_global_store_async_from_lds_b128;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_dds_load_async_to_lds_b32:
+      IID = Intrinsic::amdgcn_dds_load_async_to_lds_b32;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_dds_load_async_to_lds_b64:
+      IID = Intrinsic::amdgcn_dds_load_async_to_lds_b64;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_dds_load_async_to_lds_b128:
+      IID = Intrinsic::amdgcn_dds_load_async_to_lds_b128;
       break;
     }
 
