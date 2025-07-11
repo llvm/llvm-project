@@ -1176,6 +1176,7 @@ private:
     return true;
   }
 
+  // This function fixes sunk PHI nodes after fusion.
   void fixPHINodes(SmallVector<Instruction *, 4> &SafeToSink,
                    const FusionCandidate &FC0,
                    const FusionCandidate &FC1) const {
@@ -1183,12 +1184,10 @@ private:
     // to take values from the latch block of FC0 if they are taking
     // from the latch block of FC1.
     for (Instruction *Inst : SafeToSink) {
-      LLVM_DEBUG(dbgs() << "UPDATING: Instruction: " << *Inst << "\n");
       // Continue if the instruction is not a PHI node.
       if (!isa<PHINode>(Inst))
         continue;
       PHINode *Phi = dyn_cast<PHINode>(Inst);
-      LLVM_DEBUG(dbgs() << "UPDATING: PHI node: " << *Phi << "\n");
       for (unsigned I = 0; I < Phi->getNumIncomingValues(); I++) {
         if (Phi->getIncomingBlock(I) != FC0.Latch)
           continue;
@@ -1248,7 +1247,6 @@ private:
     }
     LLVM_DEBUG(
         dbgs() << "All preheader instructions could be sunk or hoisted!\n");
-
     return true;
   }
 
