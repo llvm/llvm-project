@@ -1328,6 +1328,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::BITREVERSE, MVT::i16, Custom);
     setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
     setOperationAction(ISD::BITREVERSE, MVT::i64, Custom);
+    setOperationAction(ISD::BITREVERSE, MVT::v16i8, Custom);
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSSE3()) {
@@ -32694,7 +32695,8 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
   if (Subtarget.hasXOP() && !VT.is512BitVector())
     return LowerBITREVERSE_XOP(Op, DAG);
 
-  assert(Subtarget.hasSSSE3() && "SSSE3 required for BITREVERSE");
+  assert((Subtarget.hasSSSE3() || Subtarget.hasGFNI()) &&
+         "SSSE3 or GFNI required for BITREVERSE");
 
   SDValue In = Op.getOperand(0);
   SDLoc DL(Op);
