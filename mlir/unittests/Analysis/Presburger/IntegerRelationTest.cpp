@@ -608,3 +608,17 @@ TEST(IntegerRelationTest, convertVarKindToLocal) {
   EXPECT_EQ(space.getId(VarKind::Symbol, 0), Identifier(&identifiers[3]));
   EXPECT_EQ(space.getId(VarKind::Symbol, 1), Identifier(&identifiers[4]));
 }
+
+TEST(IntegerRelationTest, rangeProduct) {
+  IntegerRelation r1 = parseRelationFromSet(
+      "(i, j, k) : (2*i + 3*k == 0, i >= 0, j >= 0, k >= 0)", 2);
+  IntegerRelation r2 = parseRelationFromSet(
+      "(i, j, l) : (4*i + 6*j + 9*l == 0, i >= 0, j >= 0, l >= 0)", 2);
+
+  IntegerRelation rangeProd = r1.rangeProduct(r2);
+  IntegerRelation expected = parseRelationFromSet(
+      "(i, j, k, l) : (2*i + 3*k == 0, 4*i + 6*j + 9*l == 0, i >= 0, j >= 0, k >= 0, l >= 0)", 2);
+
+  EXPECT_TRUE(expected.isEqual(rangeProd));
+}
+
