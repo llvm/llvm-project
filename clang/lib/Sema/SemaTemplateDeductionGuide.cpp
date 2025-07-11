@@ -969,14 +969,11 @@ Expr *buildIsDeducibleConstraint(Sema &SemaRef,
 }
 
 std::pair<TemplateDecl *, llvm::ArrayRef<TemplateArgument>>
-getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate,
-                          bool Desugar) {
+getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate) {
   // Unwrap the sugared ElaboratedType.
   auto RhsType = AliasTemplate->getTemplatedDecl()
                      ->getUnderlyingType()
                      .getSingleStepDesugaredType(SemaRef.Context);
-  if (Desugar)
-    RhsType = RhsType.getDesugaredType(SemaRef.Context);
   TemplateDecl *Template = nullptr;
   llvm::ArrayRef<TemplateArgument> AliasRhsTemplateArgs;
   if (const auto *TST = RhsType->getAs<TemplateSpecializationType>()) {
@@ -984,7 +981,8 @@ getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate,
     //   template<typename T>
     //   using AliasFoo1 = Foo<T>; // a class/type alias template specialization
     Template = TST->getTemplateName().getAsTemplateDecl();
-    AliasRhsTemplateArgs = TST->template_arguments();
+    AliasRhsTemplateArgs =
+        TST->getAsNonAliasTemplateSpecializationType()->template_arguments();
   } else if (const auto *RT = RhsType->getAs<RecordType>()) {
     // Cases where template arguments in the RHS of the alias are not
     // dependent. e.g.
@@ -1026,7 +1024,7 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
 
   auto &Context = SemaRef.Context;
   auto [Template, AliasRhsTemplateArgs] =
-      getRHSTemplateDeclAndArgs(SemaRef, AliasTemplate, /*Desugar=*/true);
+      getRHSTemplateDeclAndArgs(SemaRef, AliasTemplate);
 
   // We need both types desugared, before we continue to perform type deduction.
   // The intent is to get the template argument list 'matched', e.g. in the
@@ -1244,7 +1242,7 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
     return;
   auto &Context = SemaRef.Context;
   auto [Template, AliasRhsTemplateArgs] =
-      getRHSTemplateDeclAndArgs(SemaRef, AliasTemplate, /*Desugar=*/false);
+      getRHSTemplateDeclAndArgs(SemaRef, AliasTemplate);
   if (!Template)
     return;
   auto SourceDeductionGuides = getSourceDeductionGuides(
@@ -1324,8 +1322,7 @@ FunctionTemplateDecl *DeclareAggregateDeductionGuideForTypeAlias(
     Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate,
     MutableArrayRef<QualType> ParamTypes, SourceLocation Loc) {
   TemplateDecl *RHSTemplate =
-      getRHSTemplateDeclAndArgs(SemaRef, AliasTemplate, /*Desugar=*/false)
-          .first;
+      getRHSTemplateDeclAndArgs(SemaRef, AliasTemplate).first;
   if (!RHSTemplate)
     return nullptr;
 
