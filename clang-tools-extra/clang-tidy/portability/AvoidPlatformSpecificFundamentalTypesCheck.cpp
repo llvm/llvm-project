@@ -119,15 +119,13 @@ void AvoidPlatformSpecificFundamentalTypesCheck::registerMatchers(
   }
 
   // If no types are enabled, return early
-  if (TypeStrings.empty()) {
+  if (TypeStrings.empty())
     return;
-  }
 
   // Create the matcher dynamically
   auto TypeMatcher = asString(TypeStrings.front());
-  for (const auto &TypeString : TypeStrings) {
+  for (const auto &TypeString : TypeStrings)
     TypeMatcher = anyOf(TypeMatcher, asString(TypeString));
-  }
 
   auto PlatformSpecificFundamentalType = qualType(allOf(
       // Must be a builtin type directly (not through typedef)
@@ -175,9 +173,8 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
   SourceRange TypeRange;
 
   auto SetTypeRange = [&TypeRange](auto Decl) {
-    if (Decl->getTypeSourceInfo()) {
+    if (Decl->getTypeSourceInfo())
       TypeRange = Decl->getTypeSourceInfo()->getTypeLoc().getSourceRange();
-    }
   };
 
   if (const auto *VD = Result.Nodes.getNodeAs<VarDecl>("var_decl")) {
@@ -227,9 +224,8 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
                     "consider using '%1' instead")
           << TypeName << Replacement;
 
-      if (TypeRange.isValid()) {
+      if (TypeRange.isValid())
         Diag << FixItHint::CreateReplacement(TypeRange, Replacement);
-      }
 
       if (auto IncludeFixit = IncludeInserter.createIncludeInsertion(
               Result.SourceManager->getFileID(Loc), "<stdfloat>")) {
