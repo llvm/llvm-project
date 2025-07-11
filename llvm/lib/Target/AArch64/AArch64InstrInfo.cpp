@@ -7868,62 +7868,48 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
   case AArch64MachineCombinerPattern::MULADDWI_OP1:
-  case AArch64MachineCombinerPattern::MULADDXI_OP1: {
+  case AArch64MachineCombinerPattern::MULADDXI_OP1:
+  case AArch64MachineCombinerPattern::MULSUBWI_OP1:
+  case AArch64MachineCombinerPattern::MULSUBXI_OP1: {
     // MUL I=A,B,0
-    // ADD R,I,Imm
-    // ==> MOV V, Imm
+    // ADD/SUB R,I,Imm
+    // ==> MOV V, Imm/-Imm
     // ==> MADD R,A,B,V
     // --- Create(MADD);
-    const TargetRegisterClass *OrrRC;
-    unsigned BitSize, OrrOpc, ZeroReg;
-    if (Pattern == AArch64MachineCombinerPattern::MULADDWI_OP1) {
-      OrrOpc = AArch64::ORRWri;
-      OrrRC = &AArch64::GPR32spRegClass;
+    const TargetRegisterClass *RC;
+    unsigned BitSize, MovImm;
+    if (Pattern == AArch64MachineCombinerPattern::MULADDWI_OP1 ||
+        Pattern == AArch64MachineCombinerPattern::MULSUBWI_OP1) {
+      MovImm = AArch64::MOVi32imm;
+      RC = &AArch64::GPR32spRegClass;
       BitSize = 32;
-      ZeroReg = AArch64::WZR;
       Opc = AArch64::MADDWrrr;
       RC = &AArch64::GPR32RegClass;
     } else {
-      OrrOpc = AArch64::ORRXri;
-      OrrRC = &AArch64::GPR64spRegClass;
+      MovImm = AArch64::MOVi64imm;
+      RC = &AArch64::GPR64spRegClass;
       BitSize = 64;
-      ZeroReg = AArch64::XZR;
       Opc = AArch64::MADDXrrr;
       RC = &AArch64::GPR64RegClass;
     }
-    Register NewVR = MRI.createVirtualRegister(OrrRC);
+    Register NewVR = MRI.createVirtualRegister(RC);
     uint64_t Imm = Root.getOperand(2).getImm();
 
     if (Root.getOperand(3).isImm()) {
       unsigned Val = Root.getOperand(3).getImm();
       Imm = Imm << Val;
     }
-    uint64_t UImm = SignExtend64(Imm, BitSize);
-    // The immediate can be composed via a single instruction.
+    bool IsSub = Pattern == AArch64MachineCombinerPattern::MULSUBWI_OP1 ||
+                 Pattern == AArch64MachineCombinerPattern::MULSUBXI_OP1;
+    uint64_t UImm = SignExtend64(IsSub ? -Imm : Imm, BitSize);
+    // Check that the immediate can be composed via a single instruction.
     SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
     AArch64_IMM::expandMOVImm(UImm, BitSize, Insn);
     if (Insn.size() != 1)
       return;
-    auto MovI = Insn.begin();
-    MachineInstrBuilder MIB1;
-    // MOV is an alias for one of three instructions: movz, movn, and orr.
-    if (MovI->Opcode == OrrOpc)
-      MIB1 = BuildMI(MF, MIMetadata(Root), TII->get(OrrOpc), NewVR)
-                 .addReg(ZeroReg)
-                 .addImm(MovI->Op2);
-    else {
-      if (BitSize == 32)
-        assert((MovI->Opcode == AArch64::MOVNWi ||
-                MovI->Opcode == AArch64::MOVZWi) &&
-               "Expected opcode");
-      else
-        assert((MovI->Opcode == AArch64::MOVNXi ||
-                MovI->Opcode == AArch64::MOVZXi) &&
-               "Expected opcode");
-      MIB1 = BuildMI(MF, MIMetadata(Root), TII->get(MovI->Opcode), NewVR)
-                 .addImm(MovI->Op1)
-                 .addImm(MovI->Op2);
-    }
+    MachineInstrBuilder MIB1 =
+        BuildMI(MF, MIMetadata(Root), TII->get(MovImm), NewVR)
+            .addImm(IsSub ? -Imm : Imm);
     InsInstrs.push_back(MIB1);
     InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
     MUL = genMaddR(MF, MRI, TII, Root, InsInstrs, 1, Opc, NewVR, RC);
@@ -7977,67 +7963,6 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
     }
     MUL = genFusedMultiply(MF, MRI, TII, Root, InsInstrs, 2, Opc, RC);
     break;
-  case AArch64MachineCombinerPattern::MULSUBWI_OP1:
-  case AArch64MachineCombinerPattern::MULSUBXI_OP1: {
-    // MUL I=A,B,0
-    // SUB R,I, Imm
-    // ==> MOV  V, -Imm
-    // ==> MADD R,A,B,V // = -Imm + A*B
-    // --- Create(MADD);
-    const TargetRegisterClass *OrrRC;
-    unsigned BitSize, OrrOpc, ZeroReg;
-    if (Pattern == AArch64MachineCombinerPattern::MULSUBWI_OP1) {
-      OrrOpc = AArch64::ORRWri;
-      OrrRC = &AArch64::GPR32spRegClass;
-      BitSize = 32;
-      ZeroReg = AArch64::WZR;
-      Opc = AArch64::MADDWrrr;
-      RC = &AArch64::GPR32RegClass;
-    } else {
-      OrrOpc = AArch64::ORRXri;
-      OrrRC = &AArch64::GPR64spRegClass;
-      BitSize = 64;
-      ZeroReg = AArch64::XZR;
-      Opc = AArch64::MADDXrrr;
-      RC = &AArch64::GPR64RegClass;
-    }
-    Register NewVR = MRI.createVirtualRegister(OrrRC);
-    uint64_t Imm = Root.getOperand(2).getImm();
-    if (Root.getOperand(3).isImm()) {
-      unsigned Val = Root.getOperand(3).getImm();
-      Imm = Imm << Val;
-    }
-    uint64_t UImm = SignExtend64(-Imm, BitSize);
-    // The immediate can be composed via a single instruction.
-    SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
-    AArch64_IMM::expandMOVImm(UImm, BitSize, Insn);
-    if (Insn.size() != 1)
-      return;
-    auto MovI = Insn.begin();
-    MachineInstrBuilder MIB1;
-    // MOV is an alias for one of three instructions: movz, movn, and orr.
-    if (MovI->Opcode == OrrOpc)
-      MIB1 = BuildMI(MF, MIMetadata(Root), TII->get(OrrOpc), NewVR)
-                 .addReg(ZeroReg)
-                 .addImm(MovI->Op2);
-    else {
-      if (BitSize == 32)
-        assert((MovI->Opcode == AArch64::MOVNWi ||
-                MovI->Opcode == AArch64::MOVZWi) &&
-               "Expected opcode");
-      else
-        assert((MovI->Opcode == AArch64::MOVNXi ||
-                MovI->Opcode == AArch64::MOVZXi) &&
-               "Expected opcode");
-      MIB1 = BuildMI(MF, MIMetadata(Root), TII->get(MovI->Opcode), NewVR)
-                 .addImm(MovI->Op1)
-                 .addImm(MovI->Op2);
-    }
-    InsInstrs.push_back(MIB1);
-    InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
-    MUL = genMaddR(MF, MRI, TII, Root, InsInstrs, 1, Opc, NewVR, RC);
-    break;
-  }
   case AArch64MachineCombinerPattern::MULADDv8i8_OP1:
     Opc = AArch64::MLAv8i8;
     RC = &AArch64::FPR64RegClass;

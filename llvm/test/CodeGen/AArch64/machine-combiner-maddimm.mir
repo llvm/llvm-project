@@ -14,8 +14,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK-NEXT: [[MOVZWi:%[0-9]+]]:gpr32common = nsw MOVZWi 79, 0
-    ; CHECK-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32common = nsw MADDWrrr [[COPY1]], [[COPY]], [[MOVZWi]]
+    ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = nsw MOVi32imm 79
+    ; CHECK-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32common = nsw MADDWrrr [[COPY1]], [[COPY]], [[MOVi32imm]]
     ; CHECK-NEXT: $w0 = COPY [[MADDWrrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr32 = COPY $w0
@@ -38,8 +38,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK-NEXT: [[MOVZXi:%[0-9]+]]:gpr64common = nsw MOVZXi 79, 0
-    ; CHECK-NEXT: [[MADDXrrr:%[0-9]+]]:gpr64common = nsw MADDXrrr [[COPY1]], [[COPY]], [[MOVZXi]]
+    ; CHECK-NEXT: [[MOVi64imm:%[0-9]+]]:gpr64 = nsw MOVi64imm 79
+    ; CHECK-NEXT: [[MADDXrrr:%[0-9]+]]:gpr64common = nsw MADDXrrr [[COPY1]], [[COPY]], [[MOVi64imm]]
     ; CHECK-NEXT: $x0 = COPY [[MADDXrrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr64 = COPY $x0
@@ -62,8 +62,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK-NEXT: [[MOVNWi:%[0-9]+]]:gpr32common = nsw MOVNWi 0, 0
-    ; CHECK-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32 = nsw MADDWrrr [[COPY1]], [[COPY]], [[MOVNWi]]
+    ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = nsw MOVi32imm -1
+    ; CHECK-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32 = nsw MADDWrrr [[COPY1]], [[COPY]], [[MOVi32imm]]
     ; CHECK-NEXT: $w0 = COPY [[MADDWrrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr32 = COPY $w0
@@ -86,8 +86,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK-NEXT: [[MOVNXi:%[0-9]+]]:gpr64common = nsw MOVNXi 0, 0
-    ; CHECK-NEXT: [[MADDXrrr:%[0-9]+]]:gpr64 = nsw MADDXrrr [[COPY1]], [[COPY]], [[MOVNXi]]
+    ; CHECK-NEXT: [[MOVi64imm:%[0-9]+]]:gpr64 = nsw MOVi64imm -1
+    ; CHECK-NEXT: [[MADDXrrr:%[0-9]+]]:gpr64 = nsw MADDXrrr [[COPY1]], [[COPY]], [[MOVi64imm]]
     ; CHECK-NEXT: $x0 = COPY [[MADDXrrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr64 = COPY $x0
@@ -110,8 +110,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK-NEXT: [[ORRWri:%[0-9]+]]:gpr32common = nsw ORRWri $wzr, 1291
-    ; CHECK-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32common = nsw MADDWrrr [[COPY1]], [[COPY]], [[ORRWri]]
+    ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = nsw MOVi32imm 16773120
+    ; CHECK-NEXT: [[MADDWrrr:%[0-9]+]]:gpr32common = nsw MADDWrrr [[COPY1]], [[COPY]], [[MOVi32imm]]
     ; CHECK-NEXT: $w0 = COPY [[MADDWrrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr32 = COPY $w0
@@ -134,8 +134,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
-    ; CHECK-NEXT: [[ORRXri:%[0-9]+]]:gpr64common = nsw ORRXri $xzr, 7435
-    ; CHECK-NEXT: [[MADDXrrr:%[0-9]+]]:gpr64common = nsw MADDXrrr [[COPY1]], [[COPY]], [[ORRXri]]
+    ; CHECK-NEXT: [[MOVi64imm:%[0-9]+]]:gpr64 = nsw MOVi64imm 16773120
+    ; CHECK-NEXT: [[MADDXrrr:%[0-9]+]]:gpr64common = nsw MADDXrrr [[COPY1]], [[COPY]], [[MOVi64imm]]
     ; CHECK-NEXT: $x0 = COPY [[MADDXrrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr64 = COPY $x0
