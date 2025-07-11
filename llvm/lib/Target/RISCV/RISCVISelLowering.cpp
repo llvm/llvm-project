@@ -1772,7 +1772,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                      ->getZExtValue());
       Info.align = DL.getABITypeAlign(MemTy);
     } else {
-      Info.align = Align(DL.getTypeSizeInBits(MemTy->getScalarType()) / 8);
+      Info.align = Align(DL.getTypeStoreSize(MemTy->getScalarType()));
     }
     Info.size = MemoryLocation::UnknownSize;
     Info.flags |=
@@ -1824,6 +1824,11 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 3,
                                /*IsStore*/ true,
                                /*IsUnitStrided*/ false, /*UsePtrVal*/ true);
+  case Intrinsic::riscv_vlm:
+    return SetRVVLoadStoreInfo(/*PtrOp*/ 0,
+                               /*IsStore*/ false,
+                               /*IsUnitStrided*/ true,
+                               /*UsePtrVal*/ true);
   case Intrinsic::riscv_vle:
   case Intrinsic::riscv_vle_mask:
   case Intrinsic::riscv_vleff:
@@ -1832,6 +1837,7 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                /*IsStore*/ false,
                                /*IsUnitStrided*/ true,
                                /*UsePtrVal*/ true);
+  case Intrinsic::riscv_vsm:
   case Intrinsic::riscv_vse:
   case Intrinsic::riscv_vse_mask:
     return SetRVVLoadStoreInfo(/*PtrOp*/ 1,
