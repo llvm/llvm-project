@@ -529,6 +529,8 @@ void AMDGPUSSASpiller::connectToPredecessors(MachineBasicBlock &MBB,
   // set_intersect(Entry.SpillSet, Entry.ActiveSet);
   DenseMap<MachineBasicBlock*, RegisterSet> ToSpill;
   for (auto Pred : Preds) {
+    if (Pred == &MBB)
+      continue;
     auto &PE = getBlockInfo(*Pred);
     LLVM_DEBUG(dbgs() << "\nCurr block [ MBB_" << MBB.getNumber() << "."
                       << MBB.getName() << " ] Active Set:\n";
@@ -564,6 +566,8 @@ void AMDGPUSSASpiller::connectToPredecessors(MachineBasicBlock &MBB,
   }
 
   for (auto Pred : Preds) {
+    if (Pred == &MBB)
+      continue;
     auto &PE = getBlockInfo(*Pred);
     LLVM_DEBUG(dbgs() << "\nCurr block [ MBB_" << MBB.getNumber() << "."
                       << MBB.getName() << " ] Active Set:\n";
@@ -748,12 +752,13 @@ void AMDGPUSSASpiller::spillBefore(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator InsertBefore,
                                    VRegMaskPair VMP) {
   
-  const TargetRegisterClass *RC = VMP.getRegClass(MRI, TRI);
-  LaneBitmask FullMask = getFullMaskForRC(*RC, TRI);
-  unsigned SubRegIdx = VMP.getLaneMask() == FullMask
-                           ? AMDGPU::NoRegister
-                           : getSubRegIndexForLaneMask(VMP.getLaneMask(), TRI);
-
+  // const TargetRegisterClass *RC = VMP.getRegClass(MRI, TRI);
+  // LaneBitmask FullMask = getFullMaskForRC(*RC, TRI);
+  // unsigned SubRegIdx = VMP.getLaneMask() == FullMask
+  //                          ? AMDGPU::NoRegister
+  //                          : getSubRegIndexForLaneMask(VMP.getLaneMask(), TRI);
+  const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, VMP.getVReg());
+  unsigned SubRegIdx = VMP.getSubReg(MRI, TRI);
   int FI = assignVirt2StackSlot(VMP);
   TII->storeRegToStackSlot(MBB, InsertBefore, VMP.getVReg(), true, FI, RC, TRI,
                            VMP.getVReg(), SubRegIdx);
@@ -912,10 +917,10 @@ unsigned AMDGPUSSASpiller::fillActiveSet(MachineBasicBlock &MBB, RegisterSet S,
   sortRegSetAt(MBB, MBB.getFirstNonPHI(), S);
   for (auto VMP : S) {
     unsigned RSize = VMP.getSizeInRegs(MRI, TRI);
-    if (Size + RSize <= Limit) {
-      Active.insert(VMP);
-      Size += RSize;
-    }
+    if (Size + RSize > Limit)
+      break;
+    Active.insert(VMP);
+    Size += RSize;
   }
   return Size;
 }

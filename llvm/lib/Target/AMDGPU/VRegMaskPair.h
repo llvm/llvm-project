@@ -27,6 +27,8 @@ class VRegMaskPair {
       VRegMaskPair(Register VReg, LaneBitmask LaneMask)
           : VReg(VReg), LaneMask(LaneMask) {}
 
+      VRegMaskPair()
+          : VReg(AMDGPU::NoRegister), LaneMask(LaneBitmask::getNone()) {}
       VRegMaskPair(const VRegMaskPair &Other) = default;
       VRegMaskPair(VRegMaskPair &&Other) = default;
       VRegMaskPair &operator=(const VRegMaskPair &Other) = default;
@@ -49,6 +51,15 @@ class VRegMaskPair {
       const Register getVReg() const { return VReg; }
       const LaneBitmask getLaneMask() const { return LaneMask; }
 
+      unsigned getSubReg(const MachineRegisterInfo *MRI,
+                         const SIRegisterInfo *TRI) const {
+        const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, VReg);
+        LaneBitmask Mask = getFullMaskForRC(*RC, TRI);
+        if (LaneMask != Mask)
+          return getSubRegIndexForLaneMask(LaneMask, TRI);
+        return AMDGPU::NoRegister;
+      }
+
       const TargetRegisterClass *getRegClass(const MachineRegisterInfo *MRI,
                                              const SIRegisterInfo *TRI) const {
 
@@ -56,7 +67,8 @@ class VRegMaskPair {
         LaneBitmask Mask = getFullMaskForRC(*RC, TRI);
         if (LaneMask != Mask) {
           unsigned SubRegIdx = getSubRegIndexForLaneMask(LaneMask, TRI);
-          RC = TRI->getSubRegisterClass(RC, SubRegIdx);
+          // RC = TRI->getSubRegisterClass(RC, SubRegIdx);
+          return TRI->getSubRegisterClass(RC, SubRegIdx);
         }
 
         return RC;
