@@ -30,27 +30,33 @@ public:
   static char ID;
 
   TransportEOFError() = default;
-
-  void log(llvm::raw_ostream &OS) const override {
-    OS << "transport end of file reached";
-  }
+  void log(llvm::raw_ostream &OS) const override { OS << "transport EOF"; }
   std::error_code convertToErrorCode() const override {
-    return llvm::inconvertibleErrorCode();
+    return std::make_error_code(std::errc::io_error);
   }
 };
 
-class TransportTimeoutError : public llvm::ErrorInfo<TransportTimeoutError> {
+class TransportUnhandledContentsError
+    : public llvm::ErrorInfo<TransportUnhandledContentsError> {
 public:
   static char ID;
 
-  TransportTimeoutError() = default;
+  explicit TransportUnhandledContentsError(std::string unhandled_contents)
+      : m_unhandled_contents(unhandled_contents) {}
 
   void log(llvm::raw_ostream &OS) const override {
-    OS << "transport operation timed out";
+    OS << "transport EOF with unhandled contents " << m_unhandled_contents;
   }
   std::error_code convertToErrorCode() const override {
-    return std::make_error_code(std::errc::timed_out);
+    return std::make_error_code(std::errc::bad_message);
   }
+
+  const std::string &getUnhandledContents() const {
+    return m_unhandled_contents;
+  }
+
+private:
+  std::string m_unhandled_contents;
 };
 
 class TransportInvalidError : public llvm::ErrorInfo<TransportInvalidError> {
@@ -97,19 +103,14 @@ public:
     ReadHandleUP handle = loop.RegisterReadObject(
         m_input,
         [&](MainLoopBase &loop) {
-          char buf[1024];
-          size_t len = sizeof(buf);
-          do {
-            if (llvm::Error error = m_input->Read(buf, len).takeError()) {
-              callback(loop, std::move(error));
-              return;
-            }
+          char buffer[kReadBufferSize];
+          size_t len = sizeof(buffer);
+          if (llvm::Error error = m_input->Read(buffer, len).takeError()) {
+            callback(loop, std::move(error));
+            return;
+          }
 
-            if (len == 0) // EOF
-              break;
-
-            m_buffer.append(std::string(buf, len));
-          } while (len == sizeof(buf));
+          m_buffer.append(std::string(buffer, len));
 
           llvm::Expected<std::vector<std::string>> messages = Parse();
           if (llvm::Error error = messages.takeError()) {
@@ -125,8 +126,13 @@ public:
 
           // On EOF, notify the callback after the remaining messages were
           // handled.
-          if (len == 0)
-            callback(loop, llvm::make_error<TransportEOFError>());
+          if (len == 0) {
+            if (m_buffer.empty())
+              callback(loop, llvm::make_error<TransportEOFError>());
+            else
+              callback(loop, llvm::make_error<TransportUnhandledContentsError>(
+                                 m_buffer));
+          }
         },
         error);
     if (error.Fail())
@@ -135,6 +141,9 @@ public:
   }
 
 protected:
+  template <typename... Ts> inline auto Logv(const char *Fmt, Ts &&...Vals) {
+    Log(llvm::formatv(Fmt, std::forward<Ts>(Vals)...).str());
+  }
   virtual void Log(llvm::StringRef message);
 
   virtual llvm::Error WriteImpl(const std::string &message) = 0;
@@ -143,6 +152,8 @@ protected:
   lldb::IOObjectSP m_input;
   lldb::IOObjectSP m_output;
   std::string m_buffer;
+
+  static constexpr size_t kReadBufferSize = 1024;
 };
 
 /// A transport class for JSON with a HTTP header.

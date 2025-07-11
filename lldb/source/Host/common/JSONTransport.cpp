@@ -29,56 +29,58 @@ void JSONTransport::Log(llvm::StringRef message) {
   LLDB_LOG(GetLog(LLDBLog::Host), "{0}", message);
 }
 
+// Parses messages based on
+// https://microsoft.github.io/debug-adapter-protocol/overview#base-protocol
 Expected<std::vector<std::string>> HTTPDelimitedJSONTransport::Parse() {
   if (m_buffer.empty())
     return std::vector<std::string>{};
 
   std::vector<std::string> messages;
-  llvm::StringRef buf = m_buffer;
+  StringRef buffer = m_buffer;
   size_t content_length = 0, end_of_last_message = 0, cursor = 0;
   do {
-    auto idx = buf.find(kHeaderSeparator, cursor);
+    auto idx = buffer.find(kHeaderSeparator, cursor);
+    // Separator not found, we need more data.
     if (idx == StringRef::npos)
       break;
 
-    auto header = buf.slice(cursor, idx);
+    auto header = buffer.slice(cursor, idx);
     cursor = idx + kHeaderSeparator.size();
 
     // An empty line separates the headers from the message body.
     if (header.empty()) {
-      // Not enough data, wait for the next chunk to arrive.
-      if (content_length + cursor > buf.size())
+      // Check if we have enough data or wait for the next chunk to arrive.
+      if (content_length + cursor > buffer.size())
         break;
 
-      std::string body = buf.substr(cursor, content_length).str();
+      std::string body = buffer.substr(cursor, content_length).str();
       end_of_last_message = cursor + content_length;
       cursor += content_length;
-      Log(llvm::formatv("--> {0}", body).str());
-      messages.push_back(body);
+      Logv("--> {0}", body);
+      messages.emplace_back(std::move(body));
       content_length = 0;
       continue;
     }
 
     // HTTP Headers are formatted like `<field-name> ':' [<field-value>]`.
     if (!header.contains(kHeaderFieldSeparator))
-      return make_error<StringError>("malformed content header",
-                                     inconvertibleErrorCode());
+      return createStringError("malformed content header");
 
     auto [name, value] = header.split(kHeaderFieldSeparator);
 
-    // Handle known headers, at the moment only "Content-Length" is supported,
+    // Handle known headers, at the moment only "Content-Length" is specified,
     // other headers are ignored.
     if (name.lower() == kHeaderContentLength.lower()) {
       value = value.trim();
       if (value.trim().consumeInteger(10, content_length))
-        return make_error<StringError>(
-            formatv("invalid content length: {0}", value).str(),
-            inconvertibleErrorCode());
+        return createStringError(std::errc::invalid_argument,
+                                 "invalid content length: %s",
+                                 value.str().c_str());
     }
-  } while (cursor < buf.size());
+  } while (cursor < buffer.size());
 
   // Store the remainder of the buffer for the next read callback.
-  m_buffer = buf.substr(end_of_last_message);
+  m_buffer = buffer.substr(end_of_last_message);
 
   return messages;
 }
@@ -87,7 +89,7 @@ Error HTTPDelimitedJSONTransport::WriteImpl(const std::string &message) {
   if (!m_output || !m_output->IsValid())
     return llvm::make_error<TransportInvalidError>();
 
-  Log(llvm::formatv("<-- {0}", message).str());
+  Logv("<-- {0}", message);
 
   std::string Output;
   raw_string_ostream OS(Output);
@@ -106,7 +108,7 @@ Expected<std::vector<std::string>> JSONRPCTransport::Parse() {
       break;
     std::string raw_json = buf.substr(0, idx).str();
     buf = buf.substr(idx + 1);
-    Log(llvm::formatv("--> {0}", raw_json).str());
+    Logv("--> {0}", raw_json);
     messages.push_back(raw_json);
   } while (!buf.empty());
 
@@ -120,7 +122,7 @@ Error JSONRPCTransport::WriteImpl(const std::string &message) {
   if (!m_output || !m_output->IsValid())
     return llvm::make_error<TransportInvalidError>();
 
-  Log(llvm::formatv("<-- {0}", message).str());
+  Logv("<-- {0}", message);
 
   std::string Output;
   llvm::raw_string_ostream OS(Output);
@@ -130,5 +132,5 @@ Error JSONRPCTransport::WriteImpl(const std::string &message) {
 }
 
 char TransportEOFError::ID;
-char TransportTimeoutError::ID;
+char TransportUnhandledContentsError::ID;
 char TransportInvalidError::ID;
