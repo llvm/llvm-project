@@ -78,10 +78,10 @@ bb:
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <32 x float>, ptr addrspace(1) %arg, i32 %id
   %in.1 = load <32 x float>, ptr addrspace(1) %gep, align 128
-  %mai.1 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %in.1, i32 0, i32 0, i32 0)
-  %mai.2 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %mai.1, i32 0, i32 0, i32 0)
+  %mai.1 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.000000e+00, float 2.000000e+00, <32 x float> %in.1, i32 0, i32 0, i32 0)
+  %mai.2 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.000000e+00, float 2.000000e+00, <32 x float> %mai.1, i32 0, i32 0, i32 0)
   %tmp.1 = shufflevector <32 x float> %mai.2, <32 x float> %mai.1, <32 x i32> <i32 32, i32 33, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29>
-  %mai.3 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %tmp.1, i32 0, i32 0, i32 0)
+  %mai.3 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.000000e+00, float 2.000000e+00, <32 x float> %tmp.1, i32 0, i32 0, i32 0)
   store <32 x float> %mai.3, ptr addrspace(1) %arg, align 128
   ret void
 }
@@ -125,9 +125,9 @@ bb:
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <32 x float>, ptr addrspace(1) %arg, i32 %id
   %in.1 = load <32 x float>, ptr addrspace(1) %gep, align 128
-  %mai.1 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %in.1, i32 0, i32 0, i32 0)
-  %mai.2 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %mai.1, i32 0, i32 0, i32 0)
-  %mai.3 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %mai.2, i32 0, i32 0, i32 0)
+  %mai.1 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.000000e+00, float 2.000000e+00, <32 x float> %in.1, i32 0, i32 0, i32 0)
+  %mai.2 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.000000e+00, float 2.000000e+00, <32 x float> %mai.1, i32 0, i32 0, i32 0)
+  %mai.3 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.000000e+00, float 2.000000e+00, <32 x float> %mai.2, i32 0, i32 0, i32 0)
   store <32 x float> %mai.3, ptr addrspace(1) %arg, align 128
   ret void
 }
@@ -159,9 +159,9 @@ bb:
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <32 x float>, ptr addrspace(1) %arg, i32 %id
   %in.1 = load <32 x float>, ptr addrspace(1) %gep, align 128
-  %mai.1 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> zeroinitializer, i32 0, i32 0, i32 0)
-  %mai.2 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %mai.1, i32 0, i32 0, i32 0)
-  %mai.3 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %mai.2, i32 0, i32 0, i32 0)
+  %mai.1 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.000000e+00, float 2.000000e+00, <32 x float> zeroinitializer, i32 0, i32 0, i32 0)
+  %mai.2 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.000000e+00, float 2.000000e+00, <32 x float> %mai.1, i32 0, i32 0, i32 0)
+  %mai.3 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.000000e+00, float 2.000000e+00, <32 x float> %mai.2, i32 0, i32 0, i32 0)
   store <32 x float> %mai.3, ptr addrspace(1) %arg, align 128
   ret void
 }
@@ -193,9 +193,9 @@ bb:
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <32 x float>, ptr addrspace(1) %arg, i32 %id
   %in.1 = load <32 x float>, ptr addrspace(1) %gep, align 128
-  %mai.1 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> splat (float 1.0), i32 0, i32 0, i32 0)
-  %mai.2 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %mai.1, i32 0, i32 0, i32 0)
-  %mai.3 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.0, float 2.0, <32 x float> %mai.2, i32 0, i32 0, i32 0)
+  %mai.1 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.000000e+00, float 2.000000e+00, <32 x float> splat (float 1.000000e+00), i32 0, i32 0, i32 0)
+  %mai.2 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.000000e+00, float 2.000000e+00, <32 x float> %mai.1, i32 0, i32 0, i32 0)
+  %mai.3 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.000000e+00, float 2.000000e+00, <32 x float> %mai.2, i32 0, i32 0, i32 0)
   store <32 x float> %mai.3, ptr addrspace(1) %arg, align 128
   ret void
 }
@@ -390,10 +390,136 @@ bb:
   ret void
 }
 
+define amdgpu_kernel void @illegal_mfma_after_rewrite() #1 {
+; CHECK-LABEL: illegal_mfma_after_rewrite:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_mov_b32 s0, 0
+; CHECK-NEXT:    s_mov_b32 s1, s0
+; CHECK-NEXT:    v_mov_b64_e32 v[8:9], s[0:1]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; def s[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_mov_b64_e32 v[6:7], s[2:3]
+; CHECK-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
+; CHECK-NEXT:    s_mov_b32 s0, 0x3c003c00
+; CHECK-NEXT:    s_mov_b32 s1, s0
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[0:3], v[8:9], v[8:9], v[4:7]
+; CHECK-NEXT:    v_mov_b64_e32 v[12:13], s[0:1]
+; CHECK-NEXT:    s_mov_b32 s0, 0x7e007e00
+; CHECK-NEXT:    s_mov_b32 s1, s0
+; CHECK-NEXT:    v_mov_b64_e32 v[10:11], s[0:1]
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[14:17], v[8:9], v[12:13], v[4:7]
+; CHECK-NEXT:    s_nop 1
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, v0
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[18:21], v[8:9], v[10:11], v[4:7]
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, v1
+; CHECK-NEXT:    v_accvgpr_write_b32 a2, v2
+; CHECK-NEXT:    v_accvgpr_write_b32 a3, v3
+; CHECK-NEXT:    v_mov_b32_e32 v4, 0x7fc00000
+; CHECK-NEXT:    v_mov_b32_e32 v5, v4
+; CHECK-NEXT:    v_mov_b32_e32 v6, v4
+; CHECK-NEXT:    v_mov_b32_e32 v7, v4
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[14:17], v[8:9], v[8:9], v[14:17]
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[22:25], v[8:9], v[8:9], v[4:7]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; def v[4:7]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[0:3], v[8:9], v[12:13], v[4:7]
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[26:29], v[8:9], v[8:9], v[4:7]
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[0:3], v[8:9], v[8:9], v[0:3]
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[22:25], v[8:9], v[8:9], v[22:25]
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[4:7], v[8:9], v[8:9], v[26:29]
+; CHECK-NEXT:    s_nop 5
+; CHECK-NEXT:    v_cvt_f16_f32_e32 v23, v14
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[14:17], v[8:9], v[8:9], v[18:21]
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[0:3], v[12:13], v[8:9], v[0:3]
+; CHECK-NEXT:    s_nop 1
+; CHECK-NEXT:    v_accvgpr_read_b32 v19, a3
+; CHECK-NEXT:    v_accvgpr_read_b32 v18, a2
+; CHECK-NEXT:    v_mov_b64_e32 v[20:21], 0
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_accvgpr_read_b32 v17, a1
+; CHECK-NEXT:    v_accvgpr_read_b32 v16, a0
+; CHECK-NEXT:    v_cvt_f16_f32_e32 v15, v22
+; CHECK-NEXT:    v_cvt_f16_f32_e32 v14, v14
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[16:19], v[8:9], v[8:9], v[16:19]
+; CHECK-NEXT:    v_cvt_f16_f32_e32 v12, v0
+; CHECK-NEXT:    global_store_short v[20:21], v23, off
+; CHECK-NEXT:    buffer_wbl2 sc0 sc1
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    buffer_inv sc0 sc1
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[0:3], v[10:11], v[8:9], v[4:7]
+; CHECK-NEXT:    global_store_short v[20:21], v15, off
+; CHECK-NEXT:    buffer_wbl2 sc0 sc1
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    buffer_inv sc0 sc1
+; CHECK-NEXT:    global_store_short v[20:21], v14, off
+; CHECK-NEXT:    v_cvt_f16_f32_e32 v14, v16
+; CHECK-NEXT:    buffer_wbl2 sc0 sc1
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    buffer_inv sc0 sc1
+; CHECK-NEXT:    global_store_short v[20:21], v14, off
+; CHECK-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; CHECK-NEXT:    buffer_wbl2 sc0 sc1
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    buffer_inv sc0 sc1
+; CHECK-NEXT:    global_store_short v[20:21], v12, off
+; CHECK-NEXT:    buffer_wbl2 sc0 sc1
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    buffer_inv sc0 sc1
+; CHECK-NEXT:    global_store_short v[20:21], v0, off
+; CHECK-NEXT:    s_endpgm
+entry:
+  %k0 = call <4 x float> asm sideeffect "; def $0", "=s"()
+  %i2 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> zeroinitializer, <4 x half> zeroinitializer, <4 x float> %k0, i32 0, i32 0, i32 0)
+  %i4 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> zeroinitializer, <4 x half> splat (half 0xH3C00), <4 x float> %k0, i32 0, i32 0, i32 0)
+  %i6 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> zeroinitializer, <4 x half> splat (half 0xH7E00), <4 x float> %k0, i32 0, i32 0, i32 0)
+  %i5 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> zeroinitializer, <4 x half> zeroinitializer, <4 x float> splat (float 0x7FF8000000000000), i32 0, i32 0, i32 0)
+  %k = call <4 x float> asm sideeffect "; def $0", "=v"()
+  %i1 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> zeroinitializer, <4 x half> zeroinitializer, <4 x float> %k, i32 0, i32 0, i32 0)
+  %i7 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> zeroinitializer, <4 x half> splat (half 0xH3C00), <4 x float> %k, i32 0, i32 0, i32 0)
+  %i17 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> zeroinitializer, <4 x half> zeroinitializer, <4 x float> %i1, i32 0, i32 0, i32 0)
+  %i19 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> zeroinitializer, <4 x half> zeroinitializer, <4 x float> %i4, i32 0, i32 0, i32 0)
+  %c_thread_buf.0 = extractelement <4 x float> %i19, i64 0
+  %conv.0 = fptrunc float %c_thread_buf.0 to half
+  store half %conv.0, ptr addrspace(1) null, align 2
+  fence seq_cst
+  %i22 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> zeroinitializer, <4 x half> zeroinitializer, <4 x float> %i5, i32 0, i32 0, i32 0)
+  %c_thread_buf.1 = extractelement <4 x float> %i22, i64 0
+  %conv1 = fptrunc float %c_thread_buf.1 to half
+  store half %conv1, ptr addrspace(1) null, align 2
+  fence seq_cst
+  %i23 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> zeroinitializer, <4 x half> zeroinitializer, <4 x float> %i6, i32 0, i32 0, i32 0)
+  %c_thread_buf.2 = extractelement <4 x float> %i23, i64 0
+  %conv2 = fptrunc float %c_thread_buf.2 to half
+  store half %conv2, ptr addrspace(1) null, align 2
+  fence seq_cst
+  %i25 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> zeroinitializer, <4 x half> zeroinitializer, <4 x float> %i2, i32 0, i32 0, i32 0)
+  %c_thread_buf.3 = extractelement <4 x float> %i25, i64 0
+  %conv3 = fptrunc float %c_thread_buf.3 to half
+  store half %conv3, ptr addrspace(1) null, align 2
+  fence seq_cst
+  %i26 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> zeroinitializer, <4 x half> zeroinitializer, <4 x float> %i7, i32 0, i32 0, i32 0)
+  %i27 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> splat (half 0xH3C00), <4 x half> zeroinitializer, <4 x float> %i26, i32 0, i32 0, i32 0)
+  %c_thread_buf.4 = extractelement <4 x float> %i27, i64 0
+  %conv4 = fptrunc float %c_thread_buf.4 to half
+  store half %conv4, ptr addrspace(1) null, align 2
+  fence seq_cst
+  %i31 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> splat (half 0xH7E00), <4 x half> zeroinitializer, <4 x float> %i17, i32 0, i32 0, i32 0)
+  %c_thread_buf.5 = extractelement <4 x float> %i31, i64 0
+  %conv5 = fptrunc float %c_thread_buf.5 to half
+  store half %conv5, ptr addrspace(1) null, align 2
+  ret void
+}
+
 declare <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half>, <4 x half>, <4 x float>, i32 immarg, i32 immarg, i32 immarg) #2
 declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32 immarg, i32 immarg, i32 immarg) #2
 declare noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x() #3
 
 attributes #0 = { nounwind "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="4,4" }
-attributes #1 = { convergent nocallback nofree nosync nounwind willreturn memory(none) }
-attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #1 = { mustprogress nofree norecurse nounwind willreturn "amdgpu-waves-per-eu"="8,8" }
+attributes #2 = { convergent nocallback nofree nosync nounwind willreturn memory(none) }
+attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
