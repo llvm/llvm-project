@@ -19,11 +19,14 @@ namespace fir::acc {
 void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
   registry.addExtension(+[](mlir::MLIRContext *ctx,
                             fir::FIROpsDialect *dialect) {
-    fir::SequenceType::attachInterface<OpenACCMappableModel<fir::SequenceType>>(
-        *ctx);
     fir::BoxType::attachInterface<OpenACCMappableModel<fir::BaseBoxType>>(*ctx);
     fir::ClassType::attachInterface<OpenACCMappableModel<fir::BaseBoxType>>(
         *ctx);
+    fir::ReferenceType::attachInterface<
+        OpenACCMappableModel<fir::ReferenceType>>(*ctx);
+    fir::PointerType::attachInterface<OpenACCMappableModel<fir::PointerType>>(
+        *ctx);
+    fir::HeapType::attachInterface<OpenACCMappableModel<fir::HeapType>>(*ctx);
 
     fir::ReferenceType::attachInterface<
         OpenACCPointerLikeModel<fir::ReferenceType>>(*ctx);
@@ -31,6 +34,7 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
         OpenACCPointerLikeModel<fir::PointerType>>(*ctx);
     fir::HeapType::attachInterface<OpenACCPointerLikeModel<fir::HeapType>>(
         *ctx);
+
     fir::LLVMPointerType::attachInterface<
         OpenACCPointerLikeModel<fir::LLVMPointerType>>(*ctx);
   });

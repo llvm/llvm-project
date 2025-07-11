@@ -6,8 +6,7 @@ define arm_aapcs_vfpcc <4 x float> @arm_max_no_idx_f32_mve(ptr %pSrc, i32 %block
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    subs r2, r1, #4
-; CHECK-NEXT:    movw r3, #0
+; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    movt r3, #65408
 ; CHECK-NEXT:    vdup.32 q0, r3
 ; CHECK-NEXT:    dlstp.32 lr, r1

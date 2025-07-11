@@ -13,7 +13,6 @@
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/DialectRegistry.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "tosa-sharding-impl"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE << "]: ")

@@ -552,8 +552,8 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
     if (auto *MD = dyn_cast_if_present<CXXMethodDecl>(S.getCurFunctionDecl());
         MD && MD->isImplicit() && MD->isDefaulted() &&
         (isa<CXXConstructorDecl, CXXDestructorDecl>(MD) ||
-          MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator())) {
-       return;
+         MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator())) {
+      return;
     }
     if (ObjCPropertyAccess)
       diag = diag::warn_property_method_deprecated;

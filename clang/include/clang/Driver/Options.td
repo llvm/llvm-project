@@ -1891,6 +1891,12 @@ defm apinotes_modules : BoolOption<"f", "apinotes-modules",
     NegFlag<SetFalse, [], [ClangOption], "Disable">,
     BothFlags<[], [ClangOption, CC1Option], " module-based external API notes support">>,
     Group<f_clang_Group>;
+defm swift_version_independent_apinotes : BoolOption<"f", "swift-version-independent-apinotes",
+  LangOpts<"SwiftVersionIndependentAPINotes">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption, CC1Option], " version-independent external API notes support">>,
+  Group<f_clang_Group>;
 def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
   Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
   MetaVarName<"<version>">,
@@ -6080,7 +6086,7 @@ def stdlibxx_isystem : JoinedOrSeparate<["-"], "stdlib++-isystem">,
   Flags<[NoXarchOption]>, MetaVarName<"<directory>">;
 def unwindlib_EQ : Joined<["-", "--"], "unwindlib=">,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Unwind library to use">, Values<"libgcc,unwindlib,platform">;
+  HelpText<"Unwind library to use">, Values<"libgcc,libunwind,platform">;
 def sub__library : JoinedOrSeparate<["-"], "sub_library">;
 def sub__umbrella : JoinedOrSeparate<["-"], "sub_umbrella">;
 def system_header_prefix : Joined<["--"], "system-header-prefix=">,

@@ -1428,11 +1428,11 @@ namespace {
     }
     bool destroy(bool RunDestructors = true) {
       bool OK = cleanup(Info, RunDestructors, OldStackSize);
-      OldStackSize = -1U;
+      OldStackSize = std::numeric_limits<unsigned>::max();
       return OK;
     }
     ~ScopeRAII() {
-      if (OldStackSize != -1U)
+      if (OldStackSize != std::numeric_limits<unsigned>::max())
         destroy(false);
       // Body moved to a static method to encourage the compiler to inline away
       // instances of this class.
@@ -11537,12 +11537,12 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       switch (E->getBuiltinCallee()) {
       case Builtin::BI__builtin_elementwise_add_sat:
         ResultElements.push_back(APValue(
-            APSInt(LHS.isSigned() ? LHS.sadd_sat(RHS) : RHS.uadd_sat(RHS),
+            APSInt(LHS.isSigned() ? LHS.sadd_sat(RHS) : LHS.uadd_sat(RHS),
                    DestEltTy->isUnsignedIntegerOrEnumerationType())));
         break;
       case Builtin::BI__builtin_elementwise_sub_sat:
         ResultElements.push_back(APValue(
-            APSInt(LHS.isSigned() ? LHS.ssub_sat(RHS) : RHS.usub_sat(RHS),
+            APSInt(LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS),
                    DestEltTy->isUnsignedIntegerOrEnumerationType())));
         break;
       }

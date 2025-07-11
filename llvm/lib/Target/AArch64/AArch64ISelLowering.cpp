@@ -1352,6 +1352,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::VECREDUCE_FADD, VT, Legal);
       }
     }
+    if (Subtarget->hasFullFP16())
+      setOperationAction(ISD::VECREDUCE_FADD, MVT::v2f16, Custom);
+
     for (MVT VT : { MVT::v8i8, MVT::v4i16, MVT::v2i32,
                     MVT::v16i8, MVT::v8i16, MVT::v4i32 }) {
       setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
@@ -1748,9 +1751,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (auto VT : {MVT::nxv2bf16, MVT::nxv4bf16, MVT::nxv8bf16}) {
       setOperationAction(ISD::BITCAST, VT, Custom);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
-      setOperationAction(ISD::FABS, VT, Legal);
+      setOperationAction(ISD::FABS, VT, Custom);
       setOperationAction(ISD::FCOPYSIGN, VT, Custom);
-      setOperationAction(ISD::FNEG, VT, Legal);
+      setOperationAction(ISD::FNEG, VT, Custom);
       setOperationAction(ISD::FP_EXTEND, VT, Custom);
       setOperationAction(ISD::FP_ROUND, VT, Custom);
       setOperationAction(ISD::MLOAD, VT, Custom);
@@ -16046,9 +16049,19 @@ static SDValue getVectorBitwiseReduce(unsigned Opcode, SDValue Vec, EVT VT,
 SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
                                               SelectionDAG &DAG) const {
   SDValue Src = Op.getOperand(0);
+  EVT SrcVT = Src.getValueType();
+
+  // Scalarize v2f16 to turn it into a faddp. This will be more efficient than
+  // widening by inserting zeroes.
+  if (Subtarget->hasFullFP16() && Op.getOpcode() == ISD::VECREDUCE_FADD &&
+      SrcVT == MVT::v2f16) {
+    SDLoc DL(Op);
+    return DAG.getNode(ISD::FADD, DL, MVT::f16,
+                       DAG.getExtractVectorElt(DL, MVT::f16, Src, 0),
+                       DAG.getExtractVectorElt(DL, MVT::f16, Src, 1));
+  }
 
   // Try to lower fixed length reductions to SVE.
-  EVT SrcVT = Src.getValueType();
   bool OverrideNEON = !Subtarget->isNeonAvailable() ||
                       Op.getOpcode() == ISD::VECREDUCE_AND ||
                       Op.getOpcode() == ISD::VECREDUCE_OR ||
@@ -17599,7 +17612,8 @@ bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
 }
 
 EVT AArch64TargetLowering::getOptimalMemOpType(
-    const MemOp &Op, const AttributeList &FuncAttributes) const {
+    LLVMContext &Context, const MemOp &Op,
+    const AttributeList &FuncAttributes) const {
   bool CanImplicitFloat = !FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat);
   bool CanUseNEON = Subtarget->hasNEON() && CanImplicitFloat;
   bool CanUseFP = Subtarget->hasFPARMv8() && CanImplicitFloat;
@@ -17833,17 +17847,19 @@ bool AArch64TargetLowering::shouldConsiderGEPOffsetSplit() const {
 
 bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(
     const MachineFunction &MF, EVT VT) const {
-  VT = VT.getScalarType();
+  EVT ScalarVT = VT.getScalarType();
 
-  if (!VT.isSimple())
+  if (!ScalarVT.isSimple())
     return false;
 
-  switch (VT.getSimpleVT().SimpleTy) {
+  switch (ScalarVT.getSimpleVT().SimpleTy) {
   case MVT::f16:
     return Subtarget->hasFullFP16();
   case MVT::f32:
   case MVT::f64:
     return true;
+  case MVT::bf16:
+    return VT.isScalableVector() && Subtarget->hasSVEB16B16();
   default:
     break;
   }
