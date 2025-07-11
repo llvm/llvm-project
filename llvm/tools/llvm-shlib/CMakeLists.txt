@@ -40,7 +40,7 @@ if(LLVM_BUILD_LLVM_DYLIB)
     # Add symlink for backwards compatibility with old library name
     llvm_install_library_symlink(LLVM-${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX} $<TARGET_FILE_NAME:LLVM> SHARED FULL_DEST COMPONENT LLVM)
     if (CYGWIN)
-      llvm_install_library_symlink(LLVM-${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX} $<TARGET_FILE_NAME:LLVM> IMPORT FULL_DEST COMPONENT LLVM)
+      llvm_install_library_symlink(LLVM-${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX} $<TARGET_LINKER_FILE_NAME:LLVM> IMPORT FULL_DEST COMPONENT LLVM)
     endif()
   endif()
 
