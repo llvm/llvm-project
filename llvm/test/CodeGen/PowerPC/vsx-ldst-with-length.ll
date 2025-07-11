@@ -27,3 +27,26 @@ entry:
   ret <4 x i32> %0
 }
 declare <4 x i32> @llvm.ppc.vsx.lxvrll(ptr, i64)
+
+define <256 x i1> @testLXVPRL(ptr %vpp, i64 %b) {
+; CHECK-LABEL: testLXVPRL:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lxvprl vsp34, r4, r5
+; CHECK:         blr
+entry:
+  %0 = tail call <256 x i1> @llvm.ppc.vsx.lxvprl(ptr %vpp, i64 %b)
+  ret <256 x i1> %0
+}
+declare <256 x i1> @llvm.ppc.vsx.lxvprl(ptr, i64)
+
+define <256 x i1> @testLXVPRLL(ptr %vpp, i64 %b) {
+; CHECK-LABEL: testLXVPRLL:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lxvprll vsp34, r4, r5
+; CHECK:         blr
+entry:
+  %0 = tail call <256 x i1> @llvm.ppc.vsx.lxvprll(ptr %vpp, i64 %b)
+  ret <256 x i1> %0
+}
+declare <256 x i1> @llvm.ppc.vsx.lxvprll(ptr, i64)
+
