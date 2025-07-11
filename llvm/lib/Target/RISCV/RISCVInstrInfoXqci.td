@@ -1484,10 +1484,14 @@ def : QCIMVCCPat <SETNE,  QC_MVNE>;
 def : QCIMVCCPat <SETLT,  QC_MVLT>;
 def : QCIMVCCPat <SETULT, QC_MVLTU>;
 
-def : QCIMVCCIPat <SETEQ,  QC_MVEQI, simm5>;
-def : QCIMVCCIPat <SETNE,  QC_MVNEI, simm5>;
 def : QCIMVCCIPat <SETLT,  QC_MVLTI, simm5>;
 def : QCIMVCCIPat <SETULT, QC_MVLTUI, uimm5>;
+}
+
+// Prioritize Xqcics over these patterns.
+let Predicates = [HasVendorXqcicm, NoVendorXqcics, IsRV32] in {
+def : QCIMVCCIPat <SETEQ,  QC_MVEQI, simm5>;
+def : QCIMVCCIPat <SETNE,  QC_MVNEI, simm5>;
 }
 
 let Predicates = [HasVendorXqcics, IsRV32] in {
@@ -1498,12 +1502,8 @@ def : Pat<(select (XLenVT GPRNoX0:$rd), (XLenVT GPRNoX0:$rs2), simm5:$simm2),
 def : Pat<(select (XLenVT GPRNoX0:$rd), simm5:$simm2,(XLenVT GPRNoX0:$rs2)),
           (QC_SELECTIEQI GPRNoX0:$rd, (XLenVT 0), GPRNoX0:$rs2, simm5:$simm2)>;
 
-// Below AddedComplexity is added to prefer these conditional select instructions over
-// conditional move instructions
-let AddedComplexity = 1 in {
 def : QCISELECTCCIPat <SETEQ,  QC_SELECTEQI>;
 def : QCISELECTCCIPat <SETNE,  QC_SELECTNEI>;
-}
 
 def : QCISELECTICCIPat <SETEQ,  QC_SELECTIEQI>;
 def : QCISELECTICCIPat <SETNE,  QC_SELECTINEI>;
