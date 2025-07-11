@@ -144,4 +144,122 @@ std::pair<int64_t, int64_t> getFmrFromWinogradConv2DFmr(WinogradConv2DFmr fmr);
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Linalg/IR/LinalgRelayoutOps.h.inc"
 
+namespace mlir::linalg {
+
+/// Specialization of `linalg.matmul` op that has a transpose map on A
+class MatmulTransposeAOp : public MatmulOp {
+  /// Create an affine map for a transpose-A matmul. Used only in the builders.
+  static SmallVector<AffineMap> getAffineMaps(OpBuilder &builder);
+
+public:
+  using MatmulOp::MatmulOp;
+  static ::mlir::TypeID resolveTypeID() { return TypeID::get<MatmulOp>(); }
+
+  /// Build a transpose A matmul.
+  static void build(OpBuilder &builder, OperationState &result,
+                    ValueRange inputs, ValueRange outputs,
+                    ArrayRef<NamedAttribute> attributes = {});
+
+  /// Build a transpose A matmul with a specific result type.
+  static void build(OpBuilder &builder, OperationState &result,
+                    TypeRange resultTensorTypes, ValueRange inputs,
+                    ValueRange outputs, ArrayRef<NamedAttribute> attributes = {});
+
+  /// Build a transpose A matmul with a specific result type and a cast type.
+  static void build(OpBuilder &builder, OperationState &result,
+                    TypeRange resultTensorTypes, ValueRange inputs,
+                    ValueRange outputs, Attribute cast,
+                    ArrayRef<NamedAttribute> attributes = {});
+
+  static bool classof(Operation *op);
+};
+
+/// Specialization of `linalg.matmul` op that has a transpose map on B
+class MatmulTransposeBOp : public MatmulOp {
+  /// Create an affine map for a transpose-B matmul. Used only in the builders.
+  static SmallVector<AffineMap> getAffineMaps(OpBuilder &builder);
+
+public:
+  using MatmulOp::MatmulOp;
+  static ::mlir::TypeID resolveTypeID() { return TypeID::get<MatmulOp>(); }
+
+  /// Build a transpose B matmul.
+  static void build(OpBuilder &builder, OperationState &result,
+                    ValueRange inputs, ValueRange outputs,
+                    ArrayRef<NamedAttribute> attributes = {});
+
+  /// Build a transpose B matmul with a specific result type.
+  static void build(OpBuilder &builder, OperationState &result,
+                    TypeRange resultTensorTypes, ValueRange inputs,
+                    ValueRange outputs, ArrayRef<NamedAttribute> attributes = {});
+
+  /// Build a transpose B matmul with a specific result type and a cast type.
+  static void build(OpBuilder &builder, OperationState &result,
+                    TypeRange resultTensorTypes, ValueRange inputs,
+                    ValueRange outputs, Attribute cast,
+                    ArrayRef<NamedAttribute> attributes = {});
+
+  static bool classof(Operation *op);
+};
+
+/// Specialization of `linalg.batch_matmul` op that has a transpose map on A
+class BatchMatmulTransposeAOp : public BatchMatmulOp {
+  /// Create an affine map for a transpose-A batch_matmul. Used only in the
+  /// builders.
+  static SmallVector<AffineMap> getAffineMaps(OpBuilder &builder);
+
+public:
+  using BatchMatmulOp::BatchMatmulOp;
+  static ::mlir::TypeID resolveTypeID() { return TypeID::get<BatchMatmulOp>(); }
+
+  /// Build a transpose A matmul.
+  static void build(OpBuilder &builder, OperationState &result,
+                    ValueRange inputs, ValueRange outputs,
+                    ArrayRef<NamedAttribute> attributes = {});
+
+  /// Build a transpose A matmul with a specific result type.
+  static void build(OpBuilder &builder, OperationState &result,
+                    TypeRange resultTensorTypes, ValueRange inputs,
+                    ValueRange outputs, ArrayRef<NamedAttribute> attributes = {});
+
+  /// Build a transpose A matmul with a specific result type and a cast type.
+  static void build(OpBuilder &builder, OperationState &result,
+                    TypeRange resultTensorTypes, ValueRange inputs,
+                    ValueRange outputs, Attribute cast,
+                    ArrayRef<NamedAttribute> attributes = {});
+
+  static bool classof(Operation *op);
+};
+
+/// Specialization of `linalg.batch_matmul` op that has a transpose map on B
+class BatchMatmulTransposeBOp : public BatchMatmulOp {
+  /// Create an affine map for a transpose-B batch_matmul. Used only in the
+  /// builders.
+  static SmallVector<AffineMap> getAffineMaps(OpBuilder &builder);
+
+public:
+  using BatchMatmulOp::BatchMatmulOp;
+  static ::mlir::TypeID resolveTypeID() { return TypeID::get<BatchMatmulOp>(); }
+
+  /// Build a transpose A matmul.
+  static void build(OpBuilder &builder, OperationState &result,
+                    ValueRange inputs, ValueRange outputs,
+                    ArrayRef<NamedAttribute> attributes = {});
+
+  /// Build a transpose A matmul with a specific result type.
+  static void build(OpBuilder &builder, OperationState &result,
+                    TypeRange resultTensorTypes, ValueRange inputs,
+                    ValueRange outputs, ArrayRef<NamedAttribute> attributes = {});
+
+  /// Build a transpose A matmul with a specific result type and a cast type.
+  static void build(OpBuilder &builder, OperationState &result,
+                    TypeRange resultTensorTypes, ValueRange inputs,
+                    ValueRange outputs, Attribute cast,
+                    ArrayRef<NamedAttribute> attributes = {});
+
+  static bool classof(Operation *op);
+};
+
+} // namespace mlir::linalg
+
 #endif // MLIR_DIALECT_LINALG_IR_LINALG_H

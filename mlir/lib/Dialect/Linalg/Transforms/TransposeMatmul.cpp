@@ -23,11 +23,10 @@ using namespace mlir::linalg;
 ///
 /// with
 ///
-///   linalg.matmul affine_maps { #A^T, #B, #C } (linalg.transpose(a), b)
+///   linalg.matmul_transpose_a(linalg.transpose(a), b)
 ///
 /// By default the LHS is transposed. Set `transposeLHS=false` to
 /// transpose RHS instead.
-/// FIXME: This API is not intuitive, replace LHS=false with something better
 FailureOr<Operation *> mlir::linalg::transposeMatmul(RewriterBase &rewriter,
                                                      linalg::MatmulOp matmulOp,
                                                      bool transposeLHS) {
@@ -58,31 +57,18 @@ FailureOr<Operation *> mlir::linalg::transposeMatmul(RewriterBase &rewriter,
       dynamicDims);
   auto transposeOp = rewriter.create<linalg::TransposeOp>(
       loc, input, empty, ArrayRef<int64_t>{1, 0});
-  Value newLHS, newRHS;
-  AffineMap mapLHS, mapRHS, mapOut;
-  AffineExpr d0, d1, d2;
-  auto context = rewriter.getContext();
-  bindDims(context, d0, d1, d2);
+  Operation *newMatmulOp;
   if (transposeLHS) {
-    newLHS = transposeOp->getResult(0);
-    newRHS = matmulOp.getInputs()[1];
-    mapLHS = AffineMap::get(3, 0, {d2, d0}, context);
-    mapRHS = AffineMap::get(3, 0, {d2, d1}, context);
-    mapOut = AffineMap::get(3, 0, {d0, d1}, context);
+    newMatmulOp = rewriter.create<linalg::MatmulTransposeAOp>(
+        loc, matmulOp.getResultTypes(),
+        ValueRange{transposeOp->getResult(0), matmulOp.getInputs()[1]},
+        matmulOp.getOutputs());
   } else {
-    newLHS = matmulOp.getInputs()[0];
-    newRHS = transposeOp->getResult(0);
-    mapLHS = AffineMap::get(3, 0, {d0, d2}, context);
-    mapRHS = AffineMap::get(3, 0, {d1, d2}, context);
-    mapOut = AffineMap::get(3, 0, {d0, d1}, context);
+    newMatmulOp = rewriter.create<linalg::MatmulTransposeBOp>(
+        loc, matmulOp.getResultTypes(),
+        ValueRange{matmulOp.getInputs()[0], transposeOp->getResult(0)},
+        matmulOp.getOutputs());
   }
-  Operation *newMatmulOp = rewriter.create<linalg::MatmulOp>(
-      loc, matmulOp.getResultTypes(), ValueRange{newLHS, newRHS},
-      matmulOp.getOutputs());
-  newMatmulOp->setAttr("indexing_maps",
-                       rewriter.getArrayAttr({AffineMapAttr::get(mapLHS),
-                                              AffineMapAttr::get(mapRHS),
-                                              AffineMapAttr::get(mapOut)}));
   rewriter.replaceOp(matmulOp, newMatmulOp);
   return newMatmulOp;
 }
@@ -93,11 +79,10 @@ FailureOr<Operation *> mlir::linalg::transposeMatmul(RewriterBase &rewriter,
 ///
 /// with
 ///
-///   linalg.batch_matmul affine_maps { #A^T, #B, #C } (linalg.transpose(a), b)
+///   linalg.batch_matmul_transpose_a(linalg.transpose(a), b)
 ///
 /// Only the non-batch dimensions are transposed. By default the LHS is
 /// transposed. Set `transposeLHS=false` to transpose RHS instead.
-/// FIXME: This API is not intuitive, replace LHS=false with something better
 FailureOr<Operation *>
 mlir::linalg::transposeBatchMatmul(RewriterBase &rewriter,
                                    linalg::BatchMatmulOp batchMatmulOp,
@@ -129,31 +114,18 @@ mlir::linalg::transposeBatchMatmul(RewriterBase &rewriter,
       type.getElementType(), dynamicDims);
   auto transposeOp = rewriter.create<linalg::TransposeOp>(
       loc, input, empty, ArrayRef<int64_t>{0, 2, 1});
-  Value newLHS, newRHS;
-  AffineMap mapLHS, mapRHS, mapOut;
-  AffineExpr d0, d1, d2, d3;
-  auto context = rewriter.getContext();
-  bindDims(context, d0, d1, d2, d3);
+  Operation *newMatmulOp;
   if (transposeLHS) {
-    newLHS = transposeOp->getResult(0);
-    newRHS = batchMatmulOp.getInputs()[1];
-    mapLHS = AffineMap::get(4, 0, {d0, d3, d1}, context);
-    mapRHS = AffineMap::get(4, 0, {d0, d3, d2}, context);
-    mapOut = AffineMap::get(4, 0, {d0, d1, d2}, context);
+    newMatmulOp = rewriter.create<linalg::BatchMatmulTransposeAOp>(
+        loc, batchMatmulOp.getResultTypes(),
+        ValueRange{transposeOp->getResult(0), batchMatmulOp.getInputs()[1]},
+        batchMatmulOp.getOutputs());
   } else {
-    newLHS = batchMatmulOp.getInputs()[0];
-    newRHS = transposeOp->getResult(0);
-    mapLHS = AffineMap::get(4, 0, {d0, d1, d3}, context);
-    mapRHS = AffineMap::get(4, 0, {d0, d2, d3}, context);
-    mapOut = AffineMap::get(4, 0, {d0, d1, d2}, context);
+    newMatmulOp = rewriter.create<linalg::BatchMatmulTransposeBOp>(
+        loc, batchMatmulOp.getResultTypes(),
+        ValueRange{batchMatmulOp.getInputs()[0], transposeOp->getResult(0)},
+        batchMatmulOp.getOutputs());
   }
-  Operation *newMatmulOp = rewriter.create<linalg::BatchMatmulOp>(
-      loc, batchMatmulOp.getResultTypes(), ValueRange{newLHS, newRHS},
-      batchMatmulOp.getOutputs());
-  newMatmulOp->setAttr("indexing_maps",
-                       rewriter.getArrayAttr({AffineMapAttr::get(mapLHS),
-                                              AffineMapAttr::get(mapRHS),
-                                              AffineMapAttr::get(mapOut)}));
   rewriter.replaceOp(batchMatmulOp, newMatmulOp);
   return newMatmulOp;
 }
