@@ -79,22 +79,10 @@ add_llvm_target(RISCVCodeGen
   GISel/RISCVRegisterBankInfo.cpp
 
   LINK_COMPONENTS
-  Analysis
-  AsmPrinter
-  CodeGen
-  CodeGenTypes
-  Core
-  GlobalISel
-  IPO
-  MC
   RISCVDesc
   RISCVInfo
-  Scalar
-  SelectionDAG
-  Support
-  Target
-  TargetParser
-  TransformUtils
+  ${TARGET_LIBRARIES}
+  GlobalISel
   Vectorize
 
   ADD_TO_COMPONENT

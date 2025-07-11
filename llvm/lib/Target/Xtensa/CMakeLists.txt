@@ -26,15 +26,9 @@ add_llvm_target(XtensaCodeGen
   XtensaTargetMachine.cpp
 
   LINK_COMPONENTS
-  AsmPrinter
-  CodeGen
-  Core
-  MC
-  SelectionDAG
-  Support
-  Target
   XtensaDesc
   XtensaInfo
+  ${TARGET_LIBRARIES}
 
   ADD_TO_COMPONENT
   Xtensa

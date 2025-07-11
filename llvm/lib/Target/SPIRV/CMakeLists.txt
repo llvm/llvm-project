@@ -49,23 +49,12 @@ add_llvm_target(SPIRVCodeGen
   SPIRVEmitNonSemanticDI.cpp
 
   LINK_COMPONENTS
-  Analysis
-  AsmPrinter
-  CodeGen
-  CodeGenTypes
-  Core
-  Demangle
-  GlobalISel
   SPIRVAnalysis
-  MC
   SPIRVDesc
   SPIRVInfo
-  ScalarOpts
-  SelectionDAG
-  Support
-  Target
-  TargetParser
-  TransformUtils
+  ${TARGET_LIBRARIES}
+  Demangle
+  GlobalISel
 
   ADD_TO_COMPONENT
   SPIRV

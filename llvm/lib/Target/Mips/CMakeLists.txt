@@ -67,20 +67,10 @@ add_llvm_target(MipsCodeGen
   MipsMulMulBugPass.cpp
 
   LINK_COMPONENTS
-  Analysis
-  AsmPrinter
-  CodeGen
-  CodeGenTypes
-  Core
-  GlobalISel
-  MC
   MipsDesc
   MipsInfo
-  SelectionDAG
-  Support
-  Target
-  TargetParser
-  TransformUtils
+  ${TARGET_LIBRARIES}
+  GlobalISel
 
   ADD_TO_COMPONENT
   Mips

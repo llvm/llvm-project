@@ -39,23 +39,12 @@ add_llvm_target(DirectXCodeGen
   DXILLegalizePass.cpp
   
   LINK_COMPONENTS
-  Analysis
-  AsmPrinter
-  CodeGen
-  CodeGenTypes
-  Core
   DXILBitWriter
   DirectXDesc
   DirectXInfo
   DirectXPointerTypeAnalysis
   FrontendHLSL
-  MC
-  ScalarOpts
-  SelectionDAG
-  Support
-  Target
-  TargetParser
-  TransformUtils
+  ${TARGET_LIBRARIES}
 
   ADD_TO_COMPONENT
   DirectX
