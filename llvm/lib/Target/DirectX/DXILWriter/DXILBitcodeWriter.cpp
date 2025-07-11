@@ -2545,6 +2545,25 @@ void DXILBitcodeWriter::writeInstruction(const Instruction &I, unsigned InstID,
   Vals.clear();
 }
 
+// HLSL Change
+namespace {
+struct ValueNameCreator {
+  MallocAllocator Allocator;
+  SmallVector<ValueName *, 2>
+      ValueNames; // SmallVector N = 2 because we currently only expect this
+                  // to hold ValueNames for Lifetime intrinsics
+  ~ValueNameCreator() {
+    for (auto *VN : ValueNames)
+      VN->Destroy(Allocator);
+  }
+  ValueName *create(StringRef Name, Value *V) {
+    ValueName *VN = ValueName::create(Name, Allocator, V);
+    ValueNames.push_back(VN);
+    return VN;
+  }
+};
+} // anonymous namespace
+
 // Emit names for globals/functions etc.
 void DXILBitcodeWriter::writeFunctionLevelValueSymbolTable(
     const ValueSymbolTable &VST) {
@@ -2559,8 +2578,8 @@ void DXILBitcodeWriter::writeFunctionLevelValueSymbolTable(
   // to ensure the binary is the same no matter what values ever existed.
   SmallVector<const ValueName *, 16> SortedTable;
 
-  MallocAllocator Allocator;
-  SmallVector<ValueName *, 2> LifetimeValueNames;
+  // HLSL Change
+  ValueNameCreator VNC;
   for (auto &VI : VST) {
     ValueName *VN = VI.second->getValueName();
     // Clang mangles lifetime intrinsic names by appending '.p0' to the end,
@@ -2571,14 +2590,12 @@ void DXILBitcodeWriter::writeFunctionLevelValueSymbolTable(
     if (const Function *Fn = dyn_cast<Function>(VI.getValue());
         Fn && Fn->isIntrinsic()) {
       Intrinsic::ID IID = Fn->getIntrinsicID();
-      if (IID == Intrinsic::lifetime_start || IID == Intrinsic::lifetime_end) {
-        VN = ValueName::create(Intrinsic::getBaseName(IID), Allocator,
-                               VI.second);
-        LifetimeValueNames.push_back(VN);
-      }
+      if (IID == Intrinsic::lifetime_start || IID == Intrinsic::lifetime_end)
+        VN = VNC.create(Intrinsic::getBaseName(IID), VI.second);
     }
     SortedTable.push_back(VN);
   }
+
   // The keys are unique, so there shouldn't be stability issues.
   llvm::sort(SortedTable, [](const ValueName *A, const ValueName *B) {
     return A->first() < B->first();
@@ -2628,8 +2645,6 @@ void DXILBitcodeWriter::writeFunctionLevelValueSymbolTable(
     NameVals.clear();
   }
   Stream.ExitBlock();
-  for (auto *VN : LifetimeValueNames)
-    VN->Destroy(Allocator);
 }
 
 /// Emit a function body to the module stream.
