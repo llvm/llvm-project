@@ -966,6 +966,17 @@ def EmitC_LoadOp : EmitC_Op<"load", [CExpressionInterface,
   let results = (outs AnyType:$result);
 
   let assemblyFormat = "$operand attr-dict `:` type($operand)"; 
+
+  let extraClassDeclaration = [{
+    bool hasSideEffects() {
+      auto *defOp = this->getOperand().getDefiningOp();
+      // The load side effect semantic depends on the operation that was used to
+      // declare the load's operand, `VariableOp` and `MemberOp` perform loading
+      // from the stack, thus we may consider them as not having side effect to
+      // make end code more readable by letting those loads to get inlined.
+      return !defOp || !(isa<VariableOp>(defOp) || isa<MemberOp>(defOp));
+    }
+  }];
 }
 
 def EmitC_MulOp : EmitC_BinaryOp<"mul", []> {
