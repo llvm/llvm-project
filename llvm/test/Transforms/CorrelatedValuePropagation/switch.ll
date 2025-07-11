@@ -199,11 +199,13 @@ define i32 @test_unreachable_default_cond_may_be_undef(i32 %num) {
 ; CHECK:       sw.bb4:
 ; CHECK-NEXT:    [[CALL5:%.*]] = call i32 @call2()
 ; CHECK-NEXT:    br label [[CLEANUP]]
+; CHECK:       default.unreachable:
+; CHECK-NEXT:    unreachable
 ; CHECK:       sw.default:
 ; CHECK-NEXT:    [[CALL6:%.*]] = call i32 @call3()
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[CALL6]], [[SW_DEFAULT]] ], [ [[CALL5]], [[SW_BB4]] ], [ [[CALL3]], [[SW_BB2]] ], [ [[CALL]], [[SW_BB]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[CALL6]], [[SW_DEFAULT1:%.*]] ], [ [[CALL5]], [[SW_BB4]] ], [ [[CALL3]], [[SW_BB2]] ], [ [[CALL]], [[SW_BB]] ]
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
