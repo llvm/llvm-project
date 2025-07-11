@@ -16,6 +16,20 @@
 using namespace clang::ast_matchers;
 
 namespace {
+
+static bool isCharType(const clang::BuiltinType *BT) {
+  using clang::BuiltinType;
+  switch (BT->getKind()) {
+  case BuiltinType::Char_S:
+  case BuiltinType::Char_U:
+  case BuiltinType::SChar:
+  case BuiltinType::UChar:
+    return true;
+  default:
+    return false;
+  }
+}
+
 AST_MATCHER(clang::QualType, isBuiltinInt) {
   const auto *BT = Node->getAs<clang::BuiltinType>();
   if (!BT)
@@ -58,15 +72,7 @@ AST_MATCHER(clang::QualType, isBuiltinChar) {
   if (!BT)
     return false;
 
-  switch (BT->getKind()) {
-  case clang::BuiltinType::Char_S:
-  case clang::BuiltinType::Char_U:
-  case clang::BuiltinType::SChar:
-  case clang::BuiltinType::UChar:
-    return true;
-  default:
-    return false;
-  }
+  return isCharType(BT);
 }
 } // namespace
 
@@ -96,8 +102,8 @@ void AvoidPlatformSpecificFundamentalTypesCheck::storeOptions(
   Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
 }
 
-std::string AvoidPlatformSpecificFundamentalTypesCheck::getFloatReplacement(
-    const BuiltinType *BT, ASTContext &Context) const {
+static std::string getFloatReplacement(const BuiltinType *BT,
+                                       ASTContext &Context) {
   const TargetInfo &Target = Context.getTargetInfo();
 
   auto GetReplacementType = [](unsigned Width) {
@@ -234,10 +240,7 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
                 "consider using a typedef or fixed-width type instead")
           << TypeName;
     }
-  } else if (BT->getKind() == BuiltinType::Char_S ||
-             BT->getKind() == BuiltinType::Char_U ||
-             BT->getKind() == BuiltinType::SChar ||
-             BT->getKind() == BuiltinType::UChar) {
+  } else if (isCharType(BT)) {
     diag(Loc, "avoid using platform-dependent character type '%0'; "
               "consider using char8_t for text or std::byte for bytes")
         << TypeName;
