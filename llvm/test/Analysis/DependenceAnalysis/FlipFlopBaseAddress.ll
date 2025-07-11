@@ -8,11 +8,11 @@
 define float @bug41488_test1(float %f) {
 ; CHECK-LABEL: 'bug41488_test1'
 ; CHECK-NEXT:  Src: %0 = load float, ptr %p, align 4 --> Dst: %0 = load float, ptr %p, align 4
-; CHECK-NEXT:    da analyze - input [*]!
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load float, ptr %p, align 4 --> Dst: store float %f, ptr %q, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store float %f, ptr %q, align 4 --> Dst: store float %f, ptr %q, align 4
-; CHECK-NEXT:    da analyze - output [*]!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   %g = alloca float, align 4
@@ -34,11 +34,11 @@ for.cond.cleanup:
 define void @bug41488_test2(i32 %n) {
 ; CHECK-LABEL: 'bug41488_test2'
 ; CHECK-NEXT:  Src: %0 = load float, ptr %p, align 4 --> Dst: %0 = load float, ptr %p, align 4
-; CHECK-NEXT:    da analyze - input [*]!
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load float, ptr %p, align 4 --> Dst: store float 0.000000e+00, ptr %q, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store float 0.000000e+00, ptr %q, align 4 --> Dst: store float 0.000000e+00, ptr %q, align 4
-; CHECK-NEXT:    da analyze - output [*]!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   %g = alloca float, align 4
@@ -68,7 +68,7 @@ define void @bug53942_foo(i32 noundef %n, ptr noalias nocapture noundef writeonl
 ; CHECK-NEXT:  Src: %.pre = load double, ptr %B, align 8 --> Dst: store double %.pre, ptr %arrayidx2, align 8
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store double %.pre, ptr %arrayidx2, align 8 --> Dst: store double %.pre, ptr %arrayidx2, align 8
-; CHECK-NEXT:    da analyze - output [*]!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   %cmp8 = icmp sgt i32 %n, 1
@@ -99,11 +99,11 @@ for.body:                                         ; preds = %for.body.preheader,
 define void @bug53942_bar(i32 noundef %n, ptr noalias noundef %A, ptr noalias noundef %B) {
 ; CHECK-LABEL: 'bug53942_bar'
 ; CHECK-NEXT:  Src: %0 = load double, ptr %arrayidx, align 8 --> Dst: %0 = load double, ptr %arrayidx, align 8
-; CHECK-NEXT:    da analyze - input [*]!
+; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load double, ptr %arrayidx, align 8 --> Dst: store double %0, ptr %arrayidx8, align 8
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: store double %0, ptr %arrayidx8, align 8 --> Dst: store double %0, ptr %arrayidx8, align 8
-; CHECK-NEXT:    da analyze - output [*]!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %for.cond
@@ -166,14 +166,14 @@ for.end:                                          ; preds = %for.cond.cleanup
 ;       (j % 2 == 0 ? A[i][j] : A[i][j+1]) = 1;
 ; }
 ;
-; FIXME: There are loop-carried dependencies between the store instruction. For
+; There are loop-carried dependencies between the store instruction. For
 ; example, the value of %ptr0 when (i, j) = (0, 1) is %A+8, which is the same
 ; as when (i, j) = (0, 2).
 
 define void @non_invariant_baseptr_with_identical_obj(ptr %A) {
 ; CHECK-LABEL: 'non_invariant_baseptr_with_identical_obj'
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx, align 4 --> Dst: store i32 1, ptr %idx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %loop.i.header
@@ -216,13 +216,13 @@ exit:
 ; Similar to the above case, but ptr0 is loop-invariant with respsect to the
 ; k-loop.
 ;
-; FIXME: Same as the above case, there are loop-carried dependencies between
-; the store.
+; Same as the above case, there are loop-carried dependencies between the
+; store.
 
 define void @non_invariant_baseptr_with_identical_obj2(ptr %A) {
 ; CHECK-LABEL: 'non_invariant_baseptr_with_identical_obj2'
 ; CHECK-NEXT:  Src: store i32 1, ptr %idx, align 4 --> Dst: store i32 1, ptr %idx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - confused!
 ;
 entry:
   br label %loop.i.header

@@ -3383,6 +3383,10 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
                                     SrcSubscripts, DstSubscripts))
     return false;
 
+  assert(isLoopInvariant(SrcBase, SrcLoop) &&
+         isLoopInvariant(DstBase, DstLoop) &&
+         "Expected SrcBase and DstBase to be loop invariant");
+
   int Size = SrcSubscripts.size();
   LLVM_DEBUG({
     dbgs() << "\nSrcSubscripts: ";
@@ -3662,6 +3666,19 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     // We check this upfront so we don't crash in cases where getMinusSCEV()
     // returns a SCEVCouldNotCompute.
     LLVM_DEBUG(dbgs() << "can't analyze SCEV with different pointer base\n");
+    return std::make_unique<Dependence>(Src, Dst,
+                                        SCEVUnionPredicate(Assume, *SE));
+  }
+
+  // Even if the base pointers are the same, they may not be loop-invariant. It
+  // could lead to incorrect results, as we're analyzing loop-carried
+  // dependencies. Src and Dst can be in different loops, so we need to check
+  // the base pointer is invariant in both loops.
+  Loop *SrcLoop = LI->getLoopFor(Src->getParent());
+  Loop *DstLoop = LI->getLoopFor(Dst->getParent());
+  if (!isLoopInvariant(SrcBase, SrcLoop) ||
+      !isLoopInvariant(DstBase, DstLoop)) {
+    LLVM_DEBUG(dbgs() << "The base pointer is not loop invariant.\n");
     return std::make_unique<Dependence>(Src, Dst,
                                         SCEVUnionPredicate(Assume, *SE));
   }
