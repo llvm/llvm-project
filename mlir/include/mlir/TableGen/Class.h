@@ -332,13 +332,23 @@ public:
       : properties(properties),
         methodSignature(std::forward<RetTypeT>(retType),
                         std::forward<NameT>(name), std::forward<Args>(args)...),
-        methodBody(properties & Declaration) {}
+        methodBody(properties & Declaration) {
+    if (!methodPropertiesAreCompatible(properties)) {
+      llvm::report_fatal_error(
+          "Invalid combination of method properties specified");
+    }
+  }
   /// Create a method with a return type, a name, method properties, and a list
   /// of parameters.
   Method(StringRef retType, StringRef name, Properties properties,
          std::initializer_list<MethodParameter> params)
       : properties(properties), methodSignature(retType, name, params),
-        methodBody(properties & Declaration) {}
+        methodBody(properties & Declaration) {
+    if (!methodPropertiesAreCompatible(properties)) {
+      llvm::report_fatal_error(
+          "Invalid combination of method properties specified");
+    }
+  }
 
   // Define move constructor and assignment operator to prevent copying.
   Method(Method &&) = default;
@@ -402,6 +412,10 @@ protected:
   MethodBody methodBody;
   /// Deprecation message if the method is deprecated.
   std::optional<std::string> deprecationMessage;
+
+  /// Utility method to verify method properties correctness.
+  [[maybe_unused]] static bool
+  methodPropertiesAreCompatible(Properties properties);
 };
 
 /// This enum describes C++ inheritance visibility.
