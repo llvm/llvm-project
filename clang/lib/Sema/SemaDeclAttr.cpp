@@ -2902,8 +2902,8 @@ static void handleWarnUnusedResult(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
 
   StringRef Str;
-  if (AL.isStandardAttributeSyntax()
-      && (!AL.getScopeName() || AL.isClangScope())) {
+  if (AL.isStandardAttributeSyntax() &&
+      (!AL.getScopeName() || AL.isClangScope())) {
     // The standard attribute cannot be applied to variable declarations such
     // as a function pointer.
     if (!AL.isClangScope() && isa<VarDecl>(D))
