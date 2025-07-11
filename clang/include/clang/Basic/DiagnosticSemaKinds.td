@@ -10627,6 +10627,10 @@ def warn_dangling_reference_captured_by_unknown : Warning<
    "object whose reference is captured will be destroyed at the end of "
    "the full-expression">, InGroup<DanglingCapture>;
 
+def warn_experimental_lifetime_safety_dummy_warning : Warning<
+   "todo: remove this warning after we have atleast one warning based on the lifetime analysis">, 
+   InGroup<LifetimeSafety>, DefaultIgnore;
+
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
 // Array comparisons have similar warnings

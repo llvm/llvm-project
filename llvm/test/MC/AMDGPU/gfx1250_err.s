@@ -62,6 +62,16 @@ v_dual_cndmask_b32 v7, v1, v2, vcc_lo :: v_dual_cndmask_b32 v2, v4, v1
 
 // Check for unique 64-bit literal
 
+v_mov_b64 v[4:5], v[2:3] quad_perm:[1,1,1,1]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1250-ERR: v_mov_b64 v[4:5], v[2:3] quad_perm:[1,1,1,1]
+// GFX1250-ERR:                          ^
+
+v_mov_b64 v[4:5], v[2:3] dpp8:[7,6,5,4,3,2,1,0]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1250-ERR: v_mov_b64 v[4:5], v[2:3] dpp8:[7,6,5,4,3,2,1,0]
+// GFX1250-ERR:                          ^
+
 s_andn2_b64 s[2:3], 0x10abcdef12345678, 0xabcdef12345678
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 // GFX1250-ERR: s_andn2_b64 s[2:3], 0x10abcdef12345678, 0xabcdef12345678

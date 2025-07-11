@@ -668,8 +668,6 @@ public:
 
   bool isVSrc_v2f32() const { return isVSrc_f64() || isLiteralImm(MVT::v2f32); }
 
-  bool isVCSrcV2INT32() const { return isVCSrc_b64(); }
-
   bool isVSrc_v2b32() const { return isVSrc_b64() || isLiteralImm(MVT::v2i32); }
 
   bool isVSrc_f32() const {
