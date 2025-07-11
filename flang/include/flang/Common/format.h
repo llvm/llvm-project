@@ -82,10 +82,10 @@ int64_t MulOverflow(int64_t X, int64_t Y, int64_t &Result) {
   // positive) divided by an argument compares to the other.
   if (IsNegative)
     return UX >
-        (static_cast<uint64_t>(std::numeric_limits<T>::max()) + uint64_t(1)) /
+        (static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) + uint64_t(1)) /
         UY;
   else
-    return UX > (static_cast<uint64_t>(std::numeric_limits<T>::max())) / UY;
+    return UX > (static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) / UY;
 #endif
 }
 
