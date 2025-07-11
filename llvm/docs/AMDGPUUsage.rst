@@ -6501,6 +6501,11 @@ in :ref:`amdgpu-amdhsa-function-call-convention-non-kernel-functions` by setting
 SGPR32 to the unswizzled scratch offset of the address past the last local
 allocation.
 
+The kernel must also set up the stack pointer when any amount of stack is used
+when wavegroups are enabled on GFX13+. The waves of a wavegroup share the same
+scratch allocation. The prolog partitions the scratch space, giving each wave
+of a wavegroup a different initial stack pointer.
+
 .. _amdgpu-amdhsa-kernel-prolog-frame-pointer:
 
 Frame Pointer
@@ -6668,6 +6673,15 @@ scratch backing memory.
 The Private Segment Buffer is always requested, but the Private Segment
 Wavefront Offset is only requested if it is used (see
 :ref:`amdgpu-amdhsa-initial-kernel-execution-state`).
+
+idx0 register
++++++++++++++
+
+When wavegroups are enabled on GFX13+, the kernel prolog sets IDX0 to the
+base index of the wave's private VGPRs.
+
+Hardware initializes IDX0 to 0, so no setup is required in kernels that do not
+use wavegroups.
 
 .. _amdgpu-amdhsa-memory-model:
 
@@ -17445,6 +17459,10 @@ On entry to a function:
     :ref:`amdgpu-amdhsa-kernel-prolog-m0`.
 #.  The EXEC register is set to the lanes active on entry to the function.
 #.  MODE register: *TBD*
+#.  GFX13+: All {DST,SRC*}_{MSB,IDX} bits in GPR_MSB_IDX are 0.
+    (These are the bits set by S_SET_VGPR_FRAMES.)
+#.  GFX13+: IDX0 points at the beginning of the wave's private VGPR region.
+    (As a corollary, IDX0 is 0 when wavegroups are not used.)
 #.  VGPR0-31 and SGPR4-29 are used to pass function input arguments as described
     below.
 #.  SGPR30-31 return address (RA). The code address that the function must
@@ -17504,6 +17522,8 @@ On exit from a function:
     * FLAT_SCRATCH
     * EXEC
     * GFX6-GFX8: M0
+    * GFX13+: All {DST,SRC*}_{MSB,IDX} bits in GPR_MSB_IDX
+    * GFX13+: IDX0
     * All SGPR registers except the clobbered registers of SGPR4-31.
     * VGPR40-47
     * VGPR56-63
