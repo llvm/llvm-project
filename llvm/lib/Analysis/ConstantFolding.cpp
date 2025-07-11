@@ -2867,12 +2867,11 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case Intrinsic::wasm_alltrue:
       // Check each element individually
       unsigned E = cast<FixedVectorType>(Op->getType())->getNumElements();
-      for (unsigned I = 0; I != E; ++I) 
-        if (Constant *Elt = Op->getAggregateElement(I)) 
+      for (unsigned I = 0; I != E; ++I)
+        if (Constant *Elt = Op->getAggregateElement(I))
           if (Elt->isZeroValue())
             return ConstantInt::get(Ty, 0);
-        
-      
+
       return ConstantInt::get(Ty, 1);
     }
   }
