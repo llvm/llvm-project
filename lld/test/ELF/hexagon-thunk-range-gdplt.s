@@ -1,13 +1,13 @@
 # REQUIRES: hexagon
 # RUN: rm -rf %t && split-file %s %t && cd %t
-# RUN: llvm-mc -filetype=obj -triple=hexagon-unknown-elf main.s -o main.o
-# RUN: ld.lld -shared main.o -o test.so
-# RUN: llvm-objdump -d --no-show-raw-insn test.so | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple=hexagon-unknown-elf a.s -o a.o
+# RUN: ld.lld -shared a.o -o a.so
+# RUN: llvm-objdump -d --no-show-raw-insn a.so | FileCheck %s
 
 ## Test thunk range scenarios for Hexagon R_HEX_GD_PLT_B22_PCREL relocations.
 ## Same ±8MB range as regular calls.
 
-#--- main.s
+#--- a.s
 .globl _start
 .type _start, @function
 _start:
@@ -47,8 +47,8 @@ tls_var_distant:
   .word 0x9abc
 
 # CHECK: Disassembly of section .text:
-# CHECK: 000102d4 <_start>:
-# CHECK-NEXT:    { immext(#0x420100)
+# CHECK: <_start>:
+# CHECK-NEXT:  102d4:  { immext(#0x420100)
 # CHECK-NEXT:      r2 = add(pc,##0x420130) }
 # CHECK-NEXT:    { immext(#0xfffeffc0)
 # CHECK-NEXT:      r0 = add(r2,##-0x10018) }
@@ -58,16 +58,16 @@ tls_var_distant:
 # CHECK-NEXT:    { call 0x410360 }
 # CHECK-NEXT:    { jumpr r31 }
 
-# CHECK: 004102f8 <more_code>:
-# CHECK-NEXT:    { immext(#0xfffeffc0)
+# CHECK: <more_code>:
+# CHECK-NEXT:  4102f8:   { immext(#0xfffeffc0)
 # CHECK-NEXT:      r0 = add(r2,##-0x10008) }
 # CHECK-NEXT:    { call 0x410360 }
 # CHECK-NEXT:    { jumpr r31 }
 
 ## Verify PLT entries are created for TLS
 # CHECK: Disassembly of section .plt:
-# CHECK: 00410310 <.plt>:
-# CHECK-NEXT:    { immext(#0x200c0)
+# CHECK: <.plt>:
+# CHECK-NEXT:  410310:  { immext(#0x200c0)
 # CHECK-NEXT:      r28 = add(pc,##0x200f4) }
 # CHECK-NEXT:    { r14 -= add(r28,#0x10)
 # CHECK-NEXT:      r15 = memw(r28+#0x8)
@@ -76,20 +76,20 @@ tls_var_distant:
 # CHECK-NEXT:      jumpr r28 }
 # CHECK-NEXT:    { trap0(#0xdb) }
 
-# CHECK: 00410340 <tls_var_far@plt>:
-# CHECK-NEXT:    { immext(#0x200c0)
+# CHECK: <tls_var_far@plt>:
+# CHECK-NEXT:  410340:  { immext(#0x200c0)
 # CHECK-NEXT:      r14 = add(pc,##0x200d8) }
 # CHECK-NEXT:    { r28 = memw(r14+#0x0) }
 # CHECK-NEXT:    { jumpr r28 }
 
-# CHECK: 00410350 <tls_var_distant@plt>:
-# CHECK-NEXT:    { immext(#0x200c0)
+# CHECK: <tls_var_distant@plt>:
+# CHECK-NEXT:  410350:   { immext(#0x200c0)
 # CHECK-NEXT:      r14 = add(pc,##0x200cc) }
 # CHECK-NEXT:    { r28 = memw(r14+#0x0) }
 # CHECK-NEXT:    { jumpr r28 }
 
-# CHECK: 00410360 <__tls_get_addr@plt>:
-# CHECK-NEXT:    { immext(#0x200c0)
+# CHECK: <__tls_get_addr@plt>:
+# CHECK-NEXT:  410360:   { immext(#0x200c0)
 # CHECK-NEXT:      r14 = add(pc,##0x200c0) }
 # CHECK-NEXT:    { r28 = memw(r14+#0x0) }
 # CHECK-NEXT:    { jumpr r28 }

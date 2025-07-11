@@ -1538,7 +1538,7 @@ bool PPC64LongBranchThunk::isCompatibleWith(const InputSection &isec,
 // Hexagon Target Thunks
 static uint64_t getHexagonThunkDestVA(Ctx &ctx, const Symbol &s, int64_t a) {
   uint64_t v = s.isInPlt(ctx) ? s.getPltVA(ctx) : s.getVA(ctx, a);
-  return SignExtend64<32>(v); // FIXME: sign extend to 64-bit?
+  return SignExtend64<32>(v);
 }
 
 void HexagonThunk::writeTo(uint8_t *buf) {
@@ -1745,17 +1745,16 @@ static std::unique_ptr<Thunk> addThunkHexagon(Ctx &ctx,
                                               const InputSection &isec,
                                               Relocation &rel, Symbol &s) {
   switch (rel.type) {
-  case R_HEX_B9_PCREL:
-  case R_HEX_B13_PCREL:
-  case R_HEX_B15_PCREL:
   case R_HEX_B22_PCREL:
   case R_HEX_PLT_B22_PCREL:
   case R_HEX_GD_PLT_B22_PCREL:
+  case R_HEX_LD_PLT_B22_PCREL:
+  case R_HEX_B15_PCREL:
+  case R_HEX_B13_PCREL:
+  case R_HEX_B9_PCREL:
     return std::make_unique<HexagonThunk>(ctx, isec, rel, s);
   default:
-    Fatal(ctx) << "unrecognized relocation " << rel.type << " to " << &s
-               << " for hexagon target";
-    llvm_unreachable("");
+    llvm_unreachable("unexpected relocation");
   }
 }
 

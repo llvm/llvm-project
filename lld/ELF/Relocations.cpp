@@ -2137,7 +2137,7 @@ constexpr uint32_t HEXAGON_END_OF_DUPLEX = 0 << 14;
 // relocation.
 static int getHexagonPacketOffset(const InputSection &isec,
                                   const Relocation &rel) {
-  const ArrayRef<uint8_t> SectContents = isec.content();
+  const ArrayRef<uint8_t> data = isec.content();
 
   // Search back as many as 3 instructions.
   for (unsigned i = 0;; i++) {
@@ -2145,13 +2145,14 @@ static int getHexagonPacketOffset(const InputSection &isec,
       return i * 4;
     uint32_t instWord = 0;
     const ArrayRef<uint8_t> InstWordContents =
-        SectContents.drop_front(rel.offset - (i + 1) * 4);
+        data.drop_front(rel.offset - (i + 1) * 4);
     ::memcpy(&instWord, InstWordContents.data(), sizeof(instWord));
     if (((instWord & HEXAGON_MASK_END_PACKET) == HEXAGON_END_OF_PACKET) ||
         ((instWord & HEXAGON_MASK_END_PACKET) == HEXAGON_END_OF_DUPLEX))
       return i * 4;
   }
 }
+
 static int64_t getPCBias(Ctx &ctx, const InputSection &isec,
                          const Relocation &rel) {
   if (ctx.arg.emachine == EM_ARM) {
