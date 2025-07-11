@@ -525,6 +525,14 @@ TEST_F(IRBuilderTest, DataLayout) {
   EXPECT_FALSE(M->getDataLayout().isLegalInteger(32));
 }
 
+TEST_F(IRBuilderTest, GetByteTy) {
+  IRBuilder<> Builder(BB);
+
+  EXPECT_TRUE(Builder.getByteTy()->isIntegerTy(8));
+  M->setDataLayout("b:32");
+  EXPECT_TRUE(Builder.getByteTy()->isIntegerTy(32));
+}
+
 TEST_F(IRBuilderTest, GetIntTy) {
   IRBuilder<> Builder(BB);
   IntegerType *Ty1 = Builder.getInt1Ty();
@@ -534,6 +542,20 @@ TEST_F(IRBuilderTest, GetIntTy) {
   IntegerType *IntPtrTy = Builder.getIntPtrTy(DL);
   unsigned IntPtrBitSize = DL.getPointerSizeInBits(0);
   EXPECT_EQ(IntPtrTy, IntegerType::get(Ctx, IntPtrBitSize));
+}
+
+TEST_F(IRBuilderTest, CreatePtrAdd) {
+  IRBuilder<> Builder(BB);
+
+  M->setDataLayout("b:16-p:32:32");
+  Value *V = Builder.CreatePtrAdd(GV, ConstantInt::get(Ctx, APInt(32, 42)));
+  ASSERT_TRUE(isa<GEPOperator>(V));
+  EXPECT_TRUE(cast<GEPOperator>(V)->getResultElementType()->isIntegerTy(16));
+
+  M->setDataLayout("b:32-p:64:32");
+  V = Builder.CreateInBoundsPtrAdd(GV, ConstantInt::get(Ctx, APInt(64, 42)));
+  ASSERT_TRUE(isa<GEPOperator>(V));
+  EXPECT_TRUE(cast<GEPOperator>(V)->getResultElementType()->isIntegerTy(32));
 }
 
 TEST_F(IRBuilderTest, UnaryOperators) {

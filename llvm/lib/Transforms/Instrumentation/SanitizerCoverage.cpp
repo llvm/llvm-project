@@ -357,14 +357,13 @@ ModuleSanitizerCoverage::CreateSecStartEnd(Module &M, const char *Section,
   GlobalVariable *SecEnd = new GlobalVariable(M, Ty, false, Linkage, nullptr,
                                               getSectionEnd(Section));
   SecEnd->setVisibility(GlobalValue::HiddenVisibility);
-  IRBuilder<> IRB(M.getContext());
   if (!TargetTriple.isOSBinFormatCOFF())
     return std::make_pair(SecStart, SecEnd);
 
   // Account for the fact that on windows-msvc __start_* symbols actually
   // point to a uint64_t before the start of the array.
-  auto GEP =
-      IRB.CreatePtrAdd(SecStart, ConstantInt::get(IntptrTy, sizeof(uint64_t)));
+  Constant *GEP = ConstantExpr::getGetElementPtr(
+      Int8Ty, SecStart, ConstantInt::get(IntptrTy, sizeof(uint64_t)));
   return std::make_pair(GEP, SecEnd);
 }
 
