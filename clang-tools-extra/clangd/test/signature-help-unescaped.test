@@ -1,3 +1,7 @@
+# We specify a custom path in XDG_CONFIG_HOME, which only works on some systems.
+# UNSUPPORTED: system-windows
+# UNSUPPORTED: system-darwin
+
 # RUN: mkdir -p %t/clangd
 
 # Create a config file that configures to use CommentFormat Markdown.
