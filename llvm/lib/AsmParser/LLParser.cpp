@@ -3033,6 +3033,16 @@ bool LLParser::parseType(Type *&Result, const Twine &Msg, bool AllowVoid) {
   }
 }
 
+/// parseFirstClassType - parse a first class type.
+bool LLParser::parseFirstClassType(Type *&Result) {
+  LocTy TyLoc;
+  if (parseType(Result, TyLoc))
+    return true;
+  if (!Result->isFirstClassType())
+    return error(TyLoc, "expected first class type");
+  return false;
+}
+
 /// parseParameterList
 ///    ::= '(' ')'
 ///    ::= '(' Arg (',' Arg)* ')'
@@ -4734,6 +4744,16 @@ struct DwarfEnumKindField : public MDUnsignedField {
                         dwarf::DW_APPLE_ENUM_KIND_max) {}
 };
 
+struct DwarfMSpaceField : public MDUnsignedField {
+  dwarf::MemorySpace val() const {
+    return static_cast<dwarf::MemorySpace>(Val);
+  }
+
+  DwarfMSpaceField()
+      : MDUnsignedField(dwarf::DW_MSPACE_LLVM_none,
+                        dwarf::DW_MSPACE_LLVM_hi_user) {}
+};
+
 struct EmissionKindField : public MDUnsignedField {
   EmissionKindField() : MDUnsignedField(0, DICompileUnit::LastEmissionKind) {}
 };
@@ -4991,6 +5011,26 @@ bool LLParser::parseMDField(LocTy Loc, StringRef Name, DwarfCCField &Result) {
                     Lex.getStrVal() + "'");
   assert(CC <= Result.Max && "Expected valid DWARF calling convention");
   Result.assign(CC);
+  Lex.Lex();
+  return false;
+}
+
+template <>
+bool LLParser::parseMDField(LocTy Loc, StringRef Name,
+                            DwarfMSpaceField &Result) {
+  if (Lex.getKind() == lltok::APSInt)
+    return parseMDField(Loc, Name, static_cast<MDUnsignedField &>(Result));
+
+  if (Lex.getKind() != lltok::DwarfMSpaceLLVM)
+    return tokError("expected DWARF memory space");
+
+  unsigned MS = dwarf::getMemorySpace(Lex.getStrVal());
+  if (!MS)
+    return tokError("invalid DWARF memory space" + Twine(" '") +
+                    Lex.getStrVal() + "'");
+  assert(MS <= dwarf::DW_MSPACE_LLVM_hi_user &&
+         "Expected valid DWARF memorySpace");
+  Result.assign(MS);
   Lex.Lex();
   return false;
 }
@@ -5636,7 +5676,8 @@ bool LLParser::parseDIStringType(MDNode *&Result, bool IsDistinct) {
 ///   ::= !DIDerivedType(tag: DW_TAG_pointer_type, name: "int", file: !0,
 ///                      line: 7, scope: !1, baseType: !2, size: 32,
 ///                      align: 32, offset: 0, flags: 0, extraData: !3,
-///                      dwarfAddressSpace: 3, ptrAuthKey: 1,
+///                      addressSpace: 3, memorySpace: DW_MSPACE_LLVM_none
+///                      ptrAuthKey: 1,
 ///                      ptrAuthIsAddressDiscriminated: true,
 ///                      ptrAuthExtraDiscriminator: 0x1234,
 ///                      ptrAuthIsaPointer: 1, ptrAuthAuthenticatesNullValues:1
@@ -5654,7 +5695,8 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(offset, MDUnsignedOrMDField, (0, UINT64_MAX));                      \
   OPTIONAL(flags, DIFlagField, );                                              \
   OPTIONAL(extraData, MDField, );                                              \
-  OPTIONAL(dwarfAddressSpace, MDUnsignedField, (UINT32_MAX, UINT32_MAX));      \
+  OPTIONAL(addressSpace, MDUnsignedField, (UINT32_MAX, UINT32_MAX));      \
+  OPTIONAL(memorySpace, DwarfMSpaceField, );                                   \
   OPTIONAL(annotations, MDField, );                                            \
   OPTIONAL(ptrAuthKey, MDUnsignedField, (0, 7));                               \
   OPTIONAL(ptrAuthIsAddressDiscriminated, MDBoolField, );                      \
@@ -5665,8 +5707,9 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
 #undef VISIT_MD_FIELDS
 
   std::optional<unsigned> DWARFAddressSpace;
-  if (dwarfAddressSpace.Val != UINT32_MAX)
-    DWARFAddressSpace = dwarfAddressSpace.Val;
+  
+  if (addressSpace.Val != UINT32_MAX)
+    DWARFAddressSpace = addressSpace.Val;
   std::optional<DIDerivedType::PtrAuthData> PtrAuthData;
   if (ptrAuthKey.Val)
     PtrAuthData.emplace(
@@ -5678,6 +5721,7 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
       DIDerivedType, (Context, tag.Val, name.Val, file.Val, line.Val, scope.Val,
                       baseType.Val, size.getValueAsMetadata(Context), align.Val,
                       offset.getValueAsMetadata(Context), DWARFAddressSpace,
+                      memorySpace.val(),
                       PtrAuthData, flags.Val, extraData.Val, annotations.Val));
   return false;
 }
@@ -6072,17 +6116,17 @@ bool LLParser::parseDIGlobalVariable(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(isDefinition, MDBoolField, (true));                                 \
   OPTIONAL(templateParams, MDField, );                                         \
   OPTIONAL(declaration, MDField, );                                            \
+  OPTIONAL(memorySpace, DwarfMSpaceField, );                                   \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
   OPTIONAL(annotations, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  Result =
-      GET_OR_DISTINCT(DIGlobalVariable,
-                      (Context, scope.Val, name.Val, linkageName.Val, file.Val,
-                       line.Val, type.Val, isLocal.Val, isDefinition.Val,
-                       declaration.Val, templateParams.Val, align.Val,
-                       annotations.Val));
+  Result = GET_OR_DISTINCT(
+      DIGlobalVariable,
+      (Context, scope.Val, name.Val, linkageName.Val, file.Val, line.Val,
+       type.Val, isLocal.Val, isDefinition.Val, declaration.Val,
+       templateParams.Val, memorySpace.val(), align.Val, annotations.Val));
   return false;
 }
 
@@ -6102,6 +6146,7 @@ bool LLParser::parseDILocalVariable(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(line, LineField, );                                                 \
   OPTIONAL(type, MDField, );                                                   \
   OPTIONAL(flags, DIFlagField, );                                              \
+  OPTIONAL(memorySpace, DwarfMSpaceField, );                                   \
   OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
   OPTIONAL(annotations, MDField, );
   PARSE_MD_FIELDS();
@@ -6109,8 +6154,8 @@ bool LLParser::parseDILocalVariable(MDNode *&Result, bool IsDistinct) {
 
   Result = GET_OR_DISTINCT(DILocalVariable,
                            (Context, scope.Val, name.Val, file.Val, line.Val,
-                            type.Val, arg.Val, flags.Val, align.Val,
-                            annotations.Val));
+                            type.Val, arg.Val, flags.Val, memorySpace.val(),
+                            align.Val, annotations.Val));
   return false;
 }
 
@@ -6138,11 +6183,153 @@ bool LLParser::parseDILabel(MDNode *&Result, bool IsDistinct) {
   return false;
 }
 
+// Common parser for both DIExpr and DIOp-based ("NewElements") DIExpression.
+// Begins parsing assuming the name and open parenthesis has been parsed
+// already, and populates Result with the appropriate metadata based on
+// IsDIExpr.
+//
+// An empty DIExpr is permitted (although currently has no use), but an empty
+// DIOp-based DIExpression is not as at least one DIOp token is required to
+// disambiguate with an empty "OldElements" DIExpression.
+bool LLParser::parseDIOpExpression(MDNode *&Result) {
+  DIExprBuilder Builder(Context);
+  if (Lex.getKind() != lltok::rparen)
+    do {
+      if (Lex.getKind() != lltok::DIOp)
+        return tokError("expected DIOp");
+      std::string Name = Lex.getStrVal();
+      Lex.Lex();
+      if (parseToken(lltok::lparen, "expected '(' here"))
+        return true;
+      if (Name == DIOp::Referrer::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::Referrer>(Ty);
+      } else if (Name == DIOp::Arg::getAsmName()) {
+        uint32_t I;
+        Type *Ty = nullptr;
+        if (parseUInt32(I))
+          return true;
+        if (parseToken(lltok::comma, "expected ',' here"))
+          return true;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::Arg>(I, Ty);
+      } else if (Name == DIOp::TypeObject::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::TypeObject>(Ty);
+      } else if (Name == DIOp::Constant::getAsmName()) {
+        Type *Ty = nullptr;
+        Constant *C = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        LocTy ValLoc = Lex.getLoc();
+        if (parseConstantValue(Ty, C))
+          return true;
+        if (!isa<ConstantData>(C))
+          return error(ValLoc, "expected constant data");
+        Builder.append<DIOp::Constant>(cast<ConstantData>(C));
+      } else if (Name == DIOp::Convert::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::Convert>(Ty);
+      } else if (Name == DIOp::ZExt::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::ZExt>(Ty);
+      } else if (Name == DIOp::SExt::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::SExt>(Ty);
+      } else if (Name == DIOp::Reinterpret::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::Reinterpret>(Ty);
+      } else if (Name == DIOp::BitOffset::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::BitOffset>(Ty);
+      } else if (Name == DIOp::ByteOffset::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::ByteOffset>(Ty);
+      } else if (Name == DIOp::Composite::getAsmName()) {
+        uint32_t I;
+        Type *Ty = nullptr;
+        if (parseUInt32(I))
+          return true;
+        if (parseToken(lltok::comma, "expected ',' here"))
+          return true;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::Composite>(I, Ty);
+      } else if (Name == DIOp::Extend::getAsmName()) {
+        uint32_t I;
+        if (parseUInt32(I))
+          return true;
+        Builder.append<DIOp::Extend>(I);
+      } else if (Name == DIOp::AddrOf::getAsmName()) {
+        uint32_t I;
+        if (parseUInt32(I))
+          return true;
+        Builder.append<DIOp::AddrOf>(I);
+      } else if (Name == DIOp::Deref::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::Deref>(Ty);
+      } else if (Name == DIOp::PushLane::getAsmName()) {
+        Type *Ty = nullptr;
+        if (parseFirstClassType(Ty))
+          return true;
+        Builder.append<DIOp::PushLane>(Ty);
+      } else if (Name == DIOp::Fragment::getAsmName()) {
+        uint32_t BitOffset, BitSize;
+        if (parseUInt32(BitOffset))
+          return true;
+        if (parseToken(lltok::comma, "expected ',' here"))
+          return true;
+        if (parseUInt32(BitSize))
+          return true;
+        Builder.append<DIOp::Fragment>(BitOffset, BitSize);
+      }
+#define HANDLE_OP0(NAME)                                                       \
+  else if (Name == DIOp::NAME::getAsmName()) {                                 \
+    Builder.append<DIOp::NAME>();                                              \
+  }
+#include "llvm/IR/DIExprOps.def"
+#undef HANDLE_OP0
+      else {
+        llvm_unreachable("unhandled DIOp");
+      }
+      if (parseToken(lltok::rparen, "expected ')' here"))
+        return true;
+    } while (EatIfPresent(lltok::comma));
+
+  if (parseToken(lltok::rparen, "expected ')' here"))
+    return true;
+
+  Result = Builder.intoExpression();
+  return false;
+}
+
 /// parseDIExpressionBody:
 ///   ::= (0, 7, -1)
 bool LLParser::parseDIExpressionBody(MDNode *&Result, bool IsDistinct) {
   if (parseToken(lltok::lparen, "expected '(' here"))
     return true;
+
+  if (Lex.getKind() == lltok::DIOp)
+    return parseDIOpExpression(Result);
 
   SmallVector<uint64_t, 8> Elements;
   if (Lex.getKind() != lltok::rparen)

@@ -14,8 +14,8 @@
 # RUN: yaml2obj --docnum=2 -DMACH=EF_AMDGPU_MACH_R600_R600 %s \
 # RUN:   | llvm-dwarfdump - 2>&1 | FileCheck --check-prefixes=R600,KNOWN %s
 
-# UNKNOWN:   -: Error in creating MCRegInfo
-# KNOWN-NOT: -: Error in creating MCRegInfo
+# UNKNOWN:   -: Error in creating Target
+# KNOWN-NOT: -: Error in creating Target
 
 # AMDGCN: -:      file format elf64-amdgpu
 

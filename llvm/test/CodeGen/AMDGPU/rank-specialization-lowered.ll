@@ -87,12 +87,12 @@ define internal void @test_kernel_1.rank_0_2_3_4_5_6_7() #3 {
 ; CHECK-NEXT:    s_wait_samplecnt 0x0
 ; CHECK-NEXT:    s_wait_rtscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_writelane_b32 v127, s30, 0
+; CHECK-NEXT:    v_writelane_b32 v127, s31, 1
 ; CHECK-NEXT:    s_get_pc_i64 s[0:1]
 ; CHECK-NEXT:    s_add_nc_u64 s[0:1], s[0:1], dummy_store@gotpcrel+4
-; CHECK-NEXT:    v_writelane_b32 v127, s30, 0
 ; CHECK-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
 ; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    v_writelane_b32 v127, s31, 1
 ; CHECK-NEXT:    s_branch .LBB3_2
 ; CHECK-NEXT:  .LBB3_1: ; %Flow
 ; CHECK-NEXT:    ; in Loop: Header=BB3_2 Depth=1
@@ -111,8 +111,8 @@ define internal void @test_kernel_1.rank_0_2_3_4_5_6_7() #3 {
 ; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    s_branch .LBB3_1
 ; CHECK-NEXT:  .LBB3_4: ; %if.end7
-; CHECK-NEXT:    v_readlane_b32 s31, v127, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v127, 0
+; CHECK-NEXT:    v_readlane_b32 s31, v127, 1
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   br label %for.cond
@@ -139,15 +139,15 @@ define internal void @test_kernel_1.rank_1() #3 {
 ; CHECK-NEXT:    s_wait_samplecnt 0x0
 ; CHECK-NEXT:    s_wait_rtscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_writelane_b32 v127, s30, 0
+; CHECK-NEXT:    v_writelane_b32 v127, s31, 1
 ; CHECK-NEXT:    s_get_pc_i64 s[0:1]
 ; CHECK-NEXT:    s_add_nc_u64 s[0:1], s[0:1], dummy_store@gotpcrel+4
 ; CHECK-NEXT:    s_get_pc_i64 s[16:17]
 ; CHECK-NEXT:    s_add_nc_u64 s[16:17], s[16:17], dummy_rank1a@gotpcrel+4
 ; CHECK-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
 ; CHECK-NEXT:    s_load_b64 s[16:17], s[16:17], 0x0
-; CHECK-NEXT:    v_writelane_b32 v127, s30, 0
 ; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    v_writelane_b32 v127, s31, 1
 ; CHECK-NEXT:    s_branch .LBB4_2
 ; CHECK-NEXT:  .LBB4_1: ; %Flow
 ; CHECK-NEXT:    ; in Loop: Header=BB4_2 Depth=1
@@ -172,8 +172,8 @@ define internal void @test_kernel_1.rank_1() #3 {
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
-; CHECK-NEXT:    v_readlane_b32 s31, v127, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v127, 0
+; CHECK-NEXT:    v_readlane_b32 s31, v127, 1
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   br label %for.cond

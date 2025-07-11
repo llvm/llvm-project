@@ -1333,6 +1333,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
       NewVar = DIB.createAutoVariable(
           NewScope, OldVar->getName(), OldVar->getFile(), OldVar->getLine(),
           OldVar->getType(), /*AlwaysPreserve=*/false, DINode::FlagZero,
+          OldVar->getDWARFMemorySpace(),
           OldVar->getAlignInBits());
     }
     return cast<DILocalVariable>(NewVar);

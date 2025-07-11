@@ -633,6 +633,8 @@ public:
   void substituteDebugValuesForInst(const MachineInstr &Old, MachineInstr &New,
                                     unsigned MaxOperand = UINT_MAX);
 
+  using SalvageCopySSAResult = std::pair<DebugInstrOperandPair, MachineInstr *>;
+
   /// Find the underlying  defining instruction / operand for a COPY instruction
   /// while in SSA form. Copies do not actually define values -- they move them
   /// between registers. Labelling a COPY-like instruction with an instruction
@@ -644,11 +646,11 @@ public:
   /// \p MI The copy-like instruction to salvage.
   /// \p DbgPHICache A container to cache already-solved COPYs.
   /// \returns An instruction/operand pair identifying the defining value.
-  DebugInstrOperandPair
+  SalvageCopySSAResult
   salvageCopySSA(MachineInstr &MI,
-                 DenseMap<Register, DebugInstrOperandPair> &DbgPHICache);
+                 DenseMap<Register, SalvageCopySSAResult> &DbgPHICache);
 
-  DebugInstrOperandPair salvageCopySSAImpl(MachineInstr &MI);
+  SalvageCopySSAResult salvageCopySSAImpl(MachineInstr &MI);
 
   /// Finalise any partially emitted debug instructions. These are DBG_INSTR_REF
   /// instructions where we only knew the vreg of the value they use, not the
@@ -1223,6 +1225,10 @@ public:
   }
 
   [[nodiscard]] unsigned addFrameInst(const MCCFIInstruction &Inst);
+
+  /// Replace all references to register \param From with register \param To in
+  /// frame instructions. Note that .cfi_escape instructions will be left as-is.
+  void replaceFrameInstRegister(Register From, Register To);
 
   /// Returns a reference to a list of symbols immediately following calls to
   /// _setjmp in the function. Used to construct the longjmp target table used

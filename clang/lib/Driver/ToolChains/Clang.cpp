@@ -4768,6 +4768,40 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
   renderDwarfFormat(D, T, Args, CmdArgs, EffectiveDWARFVersion);
   RenderDebugInfoCompressionArgs(Args, CmdArgs, D, TC);
 
+  bool EmitDwarfForAMDGCN =
+      EmitDwarf &&
+      (T.isAMDGCN() || (T.isSPIRV() && T.getVendor() == llvm::Triple::AMD));
+  if (EmitDwarfForAMDGCN)
+    CmdArgs.append({"-mllvm", "-amdgpu-spill-cfi-saved-regs"});
+  if (Arg *A = Args.getLastArg(options::OPT_gheterogeneous_dwarf_EQ)) {
+    if (StringRef(A->getValue()) == "diexpr")
+      D.Diag(clang::diag::err_drv_unsupported_opt_with_suggestion)
+          << A->getAsString(Args) << "-gheterogeneous-dwarf=diexpression";
+    A->render(Args, CmdArgs);
+  } else if (EmitDwarfForAMDGCN) {
+#ifndef NDEBUG
+    // There doesn't seem to be a straightforward way to "render" an option
+    // acquired from the OptTable into a string we can append to CmdArgs.
+    // All of the logic is buried in "accept" which works directly in terms
+    // of an ArgList.
+    //
+    // Instead, assert that the static string we are adding to CmdArgs has
+    // the same shape as what a bare -gheterogeneous-dwarf would alias to
+    // if the user has provided it in ArgList.
+    const Option GHeterogeneousDwarf =
+        getDriverOptTable().getOption(options::OPT_gheterogeneous_dwarf);
+    const Option Aliased = GHeterogeneousDwarf.getAlias();
+    assert(Aliased.isValid() && "gheterogeneous-dwarf must be an alias");
+    assert(Aliased.getName() == "gheterogeneous-dwarf=" &&
+           "gheterogeneous-dwarf must alias gheterogeneous-dwarf=");
+    assert(StringRef(GHeterogeneousDwarf.getAliasArgs()) == "diexpression" &&
+           GHeterogeneousDwarf.getAliasArgs()[strlen("diexpression") + 1] ==
+               '\0' &&
+           "gheterogeneous-dwarf must alias gheterogeneous-dwarf=diexpression");
+#endif
+    CmdArgs.push_back("-gheterogeneous-dwarf=diexpression");
+  }
+
   // This controls whether or not we perform JustMyCode instrumentation.
   if (Args.hasFlag(options::OPT_fjmc, options::OPT_fno_jmc, false)) {
     if (TC.getTriple().isOSBinFormatELF() ||

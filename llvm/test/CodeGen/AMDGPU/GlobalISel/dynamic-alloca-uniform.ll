@@ -363,7 +363,6 @@ define void @func_dynamic_stackalloc_sgpr_align32(ptr addrspace(1) %out) {
 ; GFX9-NEXT:    s_addc_u32 s5, s5, gv@gotpcrel32@hi+12
 ; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-NEXT:    s_mov_b32 s33, s6
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; GFX9-NEXT:    s_add_u32 s5, s32, 0x7ff
@@ -377,6 +376,7 @@ define void @func_dynamic_stackalloc_sgpr_align32(ptr addrspace(1) %out) {
 ; GFX9-NEXT:    s_add_u32 s32, s5, s4
 ; GFX9-NEXT:    s_mov_b32 s32, s34
 ; GFX9-NEXT:    s_mov_b32 s34, s7
+; GFX9-NEXT:    s_mov_b32 s33, s6
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -394,7 +394,6 @@ define void @func_dynamic_stackalloc_sgpr_align32(ptr addrspace(1) %out) {
 ; GFX10-NEXT:    s_addc_u32 s5, s5, gv@gotpcrel32@hi+12
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; GFX10-NEXT:    s_mov_b32 s33, s6
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; GFX10-NEXT:    s_add_u32 s5, s32, 0x3ff
@@ -408,6 +407,7 @@ define void @func_dynamic_stackalloc_sgpr_align32(ptr addrspace(1) %out) {
 ; GFX10-NEXT:    s_add_u32 s32, s5, s4
 ; GFX10-NEXT:    s_mov_b32 s32, s34
 ; GFX10-NEXT:    s_mov_b32 s34, s7
+; GFX10-NEXT:    s_mov_b32 s33, s6
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: func_dynamic_stackalloc_sgpr_align32:
@@ -424,7 +424,6 @@ define void @func_dynamic_stackalloc_sgpr_align32(ptr addrspace(1) %out) {
 ; GFX11-NEXT:    s_addc_u32 s1, s1, gv@gotpcrel32@hi+12
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX11-NEXT:    s_mov_b32 s33, s2
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX11-NEXT:    s_add_u32 s1, s32, 0x3ff
@@ -439,6 +438,7 @@ define void @func_dynamic_stackalloc_sgpr_align32(ptr addrspace(1) %out) {
 ; GFX11-NEXT:    s_add_u32 s32, s1, s0
 ; GFX11-NEXT:    s_mov_b32 s32, s34
 ; GFX11-NEXT:    s_mov_b32 s34, s3
+; GFX11-NEXT:    s_mov_b32 s33, s2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %n = load i32, ptr addrspace(4) @gv
   %alloca = alloca i32, i32 %n, align 32, addrspace(5)

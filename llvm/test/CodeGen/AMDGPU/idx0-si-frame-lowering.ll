@@ -45,6 +45,13 @@ define void @test_nonentry(i64 %a, i64 %b, i64 %c, i64 %d) {
   ; GFX13: bb.0.bb:
   ; GFX13-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
   ; GFX13-NEXT: {{  $}}
+  ; GFX13-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+  ; GFX13-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+  ; GFX13-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr0
+  ; GFX13-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr1
+  ; GFX13-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr2
+  ; GFX13-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr3
+  ; GFX13-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr4
   ; GFX13-NEXT:   renamable $sgpr0 = V_READFIRSTLANE_B32 killed $vgpr0, implicit $exec
   ; GFX13-NEXT:   renamable $sgpr1 = V_READFIRSTLANE_B32 killed $vgpr2, implicit $exec
   ; GFX13-NEXT:   renamable $sgpr2 = V_READFIRSTLANE_B32 killed $vgpr4, implicit $exec
@@ -163,6 +170,8 @@ define dso_local amdgpu_kernel void @test_wavegroup_entry(i64 %idx0, i64 %idx1, 
   ; GFX13: bb.0.bb:
   ; GFX13-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8
   ; GFX13-NEXT: {{  $}}
+  ; GFX13-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+  ; GFX13-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX13-NEXT:   $sgpr9 = S_GETREG_B32 7195, implicit $mode
   ; GFX13-NEXT:   $sgpr10 = S_MUL_I32 $sgpr9, target-index(amdgpu-num-vgprs)
   ; GFX13-NEXT:   $sgpr10 = S_ADD_U32 $sgpr10, 40, implicit-def $scc
@@ -262,6 +271,8 @@ define dso_local amdgpu_kernel void @test_wavegroup_entry_private(i64 %idx0, i64
   ; GFX13: bb.0.bb:
   ; GFX13-NEXT:   liveins: $sgpr4_sgpr5, $sgpr8
   ; GFX13-NEXT: {{  $}}
+  ; GFX13-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+  ; GFX13-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX13-NEXT:   $sgpr0 = S_GETREG_B32 7195, implicit $mode
   ; GFX13-NEXT:   $sgpr1 = S_MUL_I32 $sgpr0, target-index(amdgpu-num-vgprs)
   ; GFX13-NEXT:   $sgpr1 = S_ADD_U32 $sgpr1, 40, implicit-def $scc
@@ -368,6 +379,8 @@ define dso_local amdgpu_kernel void @test_nonwavegroup_entry_private(i64 %idx0, 
   ; GFX13: bb.0.bb:
   ; GFX13-NEXT:   liveins: $sgpr4_sgpr5
   ; GFX13-NEXT: {{  $}}
+  ; GFX13-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+  ; GFX13-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX13-NEXT:   renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7 = S_LOAD_DWORDX8_IMM killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s256) from %ir.idx0.kernarg.offset, align 4, addrspace 4)
   ; GFX13-NEXT:   $idx0 = S_SET_GPR_IDX_U32 0
   ; GFX13-NEXT:   renamable $sgpr0 = S_LSHL_B32 renamable $sgpr0, 2, implicit-def dead $scc

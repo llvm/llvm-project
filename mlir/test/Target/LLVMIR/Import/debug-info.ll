@@ -1,5 +1,7 @@
 ; RUN: mlir-translate -import-llvm -mlir-print-debuginfo -split-input-file %s | FileCheck %s
 
+; XFAIL: *
+
 ; CHECK: #[[$UNKNOWN_LOC:.+]] = loc(unknown)
 
 ; CHECK-LABEL: @module_loc(

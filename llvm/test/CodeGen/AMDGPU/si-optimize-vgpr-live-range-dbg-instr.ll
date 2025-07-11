@@ -9,6 +9,15 @@ define void @__omp_offloading_35_36570d3__ZN6openmc31process_advance_particle_ev
 ; GCN-NEXT:    .cfi_sections .debug_frame
 ; GCN-NEXT:    .cfi_startproc
 ; GCN-NEXT:  ; %bb.0: ; %bb
+; GCN-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
+; GCN-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
+; GCN-NEXT:    .cfi_undefined 2560
+; GCN-NEXT:    .cfi_undefined 2561
+; GCN-NEXT:    .cfi_undefined 2562
+; GCN-NEXT:    .cfi_undefined 2563
+; GCN-NEXT:    .cfi_undefined 2564
+; GCN-NEXT:    .cfi_undefined 36
+; GCN-NEXT:    .cfi_undefined 37
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0

@@ -6,6 +6,8 @@ define amdgpu_kernel void @wavegroup_kernel_3x64x2(ptr addrspace(1) %p) "amdgpu-
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   liveins: $sgpr4_sgpr5, $sgpr8
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; CHECK-NEXT:   $sgpr0 = S_GETREG_B32 7195, implicit $mode
   ; CHECK-NEXT:   $sgpr1 = S_MUL_I32 $sgpr0, target-index(amdgpu-num-vgprs)
   ; CHECK-NEXT:   $idx0 = S_SET_GPR_IDX_U32 $sgpr1
