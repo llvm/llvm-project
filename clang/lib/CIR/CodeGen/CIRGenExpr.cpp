@@ -1593,10 +1593,15 @@ void CIRGenFunction::emitCXXConstructExpr(const CXXConstructExpr *e,
     delegating = true;
     break;
   case CXXConstructionKind::VirtualBase:
-  case CXXConstructionKind::NonVirtualBase:
+    // This should just set 'forVirtualBase' to true and fall through, but
+    // virtual base class support is otherwise missing, so this needs to wait
+    // until it can be tested.
     cgm.errorNYI(e->getSourceRange(),
-                 "emitCXXConstructExpr: other construction kind");
+                 "emitCXXConstructExpr: virtual base constructor");
     return;
+  case CXXConstructionKind::NonVirtualBase:
+    type = Ctor_Base;
+    break;
   }
 
   emitCXXConstructorCall(cd, type, forVirtualBase, delegating, dest, e);
