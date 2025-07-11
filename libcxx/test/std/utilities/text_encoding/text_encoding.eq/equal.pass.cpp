@@ -23,10 +23,6 @@
 // 4. operator==(const text_encoding&, const text_encoding&) returns false when comparingtext_encodings with different ids
 // 5. operator==(const text_encoding&, const text_encoding&) for text_encodings with ids of "other" returns false if the names are not equal
 
-#include <cassert>
-#include <text_encoding>
-
-#include "test_macros.h"
 #include "test_text_encoding.h"
 
 using id = std::text_encoding::id;

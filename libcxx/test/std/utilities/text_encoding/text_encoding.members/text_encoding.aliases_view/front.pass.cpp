@@ -17,14 +17,6 @@
 // 2. An aliases_views of two text_encoding objects that represent the same ID but hold different names return the same front()
 // 3. An aliases_views of two text_encoding objects that represent different IDs return different front()
 
-// TODO: The Generic-modules build fails to compile this test without the (seemingly redundant) <ranges> include, due to .front() not being a member of text_encoding::aliases_view.
-#include <cassert>
-#include <cstdlib>
-#include <ranges>
-#include <text_encoding>
-
-#include "platform_support.h"
-#include "test_macros.h"
 #include "test_text_encoding.h"
 
 using id = std::text_encoding::id;

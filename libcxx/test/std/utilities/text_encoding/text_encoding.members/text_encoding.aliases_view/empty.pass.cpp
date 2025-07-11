@@ -17,13 +17,6 @@
 // 2. An alias_view of a text_encoding object for "unknown" is empty
 // 3. An alias_view of a text_encoding object for a known encoding e.g. "UTF-8" is not empty
 
-#include <cassert>
-#include <cstdlib>
-#include <ranges>
-#include <text_encoding>
-
-#include "platform_support.h"
-#include "test_macros.h"
 #include "test_text_encoding.h"
 
 using id = std::text_encoding::id;

@@ -18,12 +18,6 @@
 // 1. Verify that text_encoding::aliases_view satisfies ranges::forward_range, copyable, view,
 //    ranges::random_access_range and ranges::borrowed_range
 
-#include <concepts>
-#include <ranges>
-#include <text_encoding>
-
-#include "platform_support.h"
-#include "test_macros.h"
 #include "test_text_encoding.h"
 
 int main() {

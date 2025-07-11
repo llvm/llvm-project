@@ -19,40 +19,38 @@
 // text_encoding text_encoding::environment();
 
 // Concerns:
-// 1. text_encoding::environment() returns the encoding for the environment's default locale, which should be the "C" locale for a C++ program.
-// 2. text_encoding::environment() still returns the default locale encoding when the locale is set to "en_US.UTF-8".
-// 3. text_encoding::environment() is affected by changes to the "LANG" environment variable.
+// 1. Depending on the environment text_encoding mib, verify that environment_is returns true for that mib.
+// 2. text_encoding::environment() is affected by changes to the "LANG" environment variable.
+// 3. text_encoding::environment() still returns the default locale encoding when the locale is set to "en_US.UTF-8".
 
 // The current implementation of text_encoding::environment() while conformant,
 // is unfortunately affected by changes to the "LANG" environment variable.
 
-#include <cassert>
-#include <clocale>
-#include <cstdlib>
-#include <string_view>
-#include <text_encoding>
-
-#include "platform_support.h"
-#include "test_macros.h"
 #include "test_text_encoding.h"
 
 using id = std::text_encoding::id;
 int main() {
-  auto default_te = std::text_encoding(id::ASCII);
+  auto env_te = std::text_encoding(id::ASCII);
+  // 1
+  {
+    auto mib = env_te.mib();
 
-  { // 1
-
-    auto env_te = std::text_encoding::environment();
-    assert(env_te == std::text_encoding::environment());
-    assert(checkTextEncoding(env_te, default_te));
+    if (mib == std::text_encoding::ASCII) {
+      assert(std::text_encoding::environment_is<std::text_encoding::ASCII>());
+    }
+    if (mib == std::text_encoding::UTF8) {
+      assert(std::text_encoding::environment_is<std::text_encoding::UTF8>());
+    }
+    if (mib == std::text_encoding::ISOLatin1) {
+      assert(std::text_encoding::environment_is<std::text_encoding::ISOLatin1>());
+    }
   }
-
   { // 2
     std::setlocale(LC_ALL, LOCALE_en_US_UTF_8);
 
-    auto env_te = std::text_encoding::environment();
+    auto env_te2 = std::text_encoding::environment();
 
-    assert(checkTextEncoding(env_te, default_te));
+    assert(checkTextEncoding(env_te, env_te2));
   }
 
   { // 3
@@ -67,6 +65,8 @@ int main() {
 
     assert(std::text_encoding::environment_is<std::text_encoding::id::UTF8>());
   }
+
+  // 3
 
   return 0;
 }

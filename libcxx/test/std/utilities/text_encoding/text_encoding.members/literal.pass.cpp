@@ -18,11 +18,6 @@
 // Concerns:
 // 1. text_encoding::literal() returns the proper encoding depending on the compiler, else unknown.
 
-#include <cassert>
-#include <string_view>
-#include <text_encoding>
-
-#include "test_macros.h"
 #include "test_text_encoding.h"
 
 int main() {

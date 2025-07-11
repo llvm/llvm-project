@@ -12,9 +12,6 @@
 
 // struct text_encoding::aliases_view
 
-#include <cassert>
-#include <text_encoding>
-
 #include "test_text_encoding.h"
 
 constexpr bool iter_test() {

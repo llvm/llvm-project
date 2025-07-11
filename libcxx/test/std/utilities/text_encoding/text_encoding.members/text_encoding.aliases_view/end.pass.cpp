@@ -16,9 +16,7 @@
 // 1. begin() of an aliases_view() of "other" is equal to end()
 // 2. That pushing an iterator beyond its range will result in it comparing equal to its end()
 
-#include <cassert>
-#include <ranges>
-#include <text_encoding>
+#include "test_text_encoding.h"
 
 int main() {
   auto te1      = std::text_encoding("US-ASCII");

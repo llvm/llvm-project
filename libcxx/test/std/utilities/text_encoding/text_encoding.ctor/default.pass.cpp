@@ -20,10 +20,7 @@
 // 1. Default constructor must be nothrow
 // 2. Default constructing a text_encoding object makes it so that mib() == id::unknown, and its name is empty
 
-#include <cassert>
-#include <string_view>
-#include <text_encoding>
-#include <type_traits>
+#include "test_text_encoding.h"
 
 int main(int, char**) {
   {

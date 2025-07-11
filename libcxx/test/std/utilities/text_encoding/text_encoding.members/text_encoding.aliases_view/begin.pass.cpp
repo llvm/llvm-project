@@ -17,10 +17,7 @@
 // 2. begin() of aliases_views of two text_encoding objects that represent the same ID but hold different names are the same.
 // 3. begin() of aliases_views of two text_encoding objects that represent different IDs are different.
 
-#include <cassert>
-#include <cstdlib>
-#include <ranges>
-#include <text_encoding>
+#include "test_text_encoding.h"
 
 using id = std::text_encoding::id;
 

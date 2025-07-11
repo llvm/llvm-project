@@ -22,14 +22,6 @@
 // 3. Constructing an object using id::unknown must set mib() to id::unknown and the name to an empty string.
 // 4. Constructing an object using id::other must set mib() to id::other and the name to an empty string.
 
-#include <algorithm>
-#include <cassert>
-#include <print>
-#include <ranges>
-#include <string_view>
-#include <text_encoding>
-#include <type_traits>
-
 #include "test_text_encoding.h"
 
 using te_id = std::text_encoding::id;
