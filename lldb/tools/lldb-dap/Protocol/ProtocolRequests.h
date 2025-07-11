@@ -242,6 +242,12 @@ struct Configuration {
   std::string platformName;
 };
 
+enum Console : unsigned {
+  eConsoleInternal,
+  eConsoleIntegratedTerminal,
+  eConsoleExternalTerminal
+};
+
 /// lldb-dap specific launch arguments.
 struct LaunchRequestArguments {
   /// Common lldb-dap configuration values for launching/attaching operations.
@@ -290,9 +296,9 @@ struct LaunchRequestArguments {
   /// Set whether to shell expand arguments to the process when launching.
   bool shellExpandArguments = false;
 
-  /// Launch the program inside an integrated terminal in the IDE. Useful for
-  /// debugging interactive command line programs.
-  bool runInTerminal = false;
+  /// Specify where to launch the program: internal console, integrated
+  /// terminal or external terminal.
+  Console console = eConsoleInternal;
 
   /// @}
 };

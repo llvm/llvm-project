@@ -513,13 +513,13 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
-class CIRToLLVMGetBitfieldOpLowering
-    : public mlir::OpConversionPattern<cir::GetBitfieldOp> {
+class CIRToLLVMComplexRealPtrOpLowering
+    : public mlir::OpConversionPattern<cir::ComplexRealPtrOp> {
 public:
-  using mlir::OpConversionPattern<cir::GetBitfieldOp>::OpConversionPattern;
+  using mlir::OpConversionPattern<cir::ComplexRealPtrOp>::OpConversionPattern;
 
   mlir::LogicalResult
-  matchAndRewrite(cir::GetBitfieldOp op, OpAdaptor,
+  matchAndRewrite(cir::ComplexRealPtrOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 
@@ -530,6 +530,26 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::ComplexAddOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMSetBitfieldOpLowering
+    : public mlir::OpConversionPattern<cir::SetBitfieldOp> {
+public:
+  using mlir::OpConversionPattern<cir::SetBitfieldOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::SetBitfieldOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMGetBitfieldOpLowering
+    : public mlir::OpConversionPattern<cir::GetBitfieldOp> {
+public:
+  using mlir::OpConversionPattern<cir::GetBitfieldOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::GetBitfieldOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 

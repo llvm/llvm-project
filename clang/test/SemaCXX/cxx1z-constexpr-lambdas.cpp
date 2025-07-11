@@ -3,6 +3,10 @@
 // RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fdelayed-template-parsing %s -fcxx-exceptions
 // RUN: %clang_cc1 -std=c++14 -verify -fsyntax-only -fblocks %s -DCPP14_AND_EARLIER -fcxx-exceptions
 
+// RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks %s -fcxx-exceptions -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only -fblocks %s -fcxx-exceptions -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fdelayed-template-parsing %s -fcxx-exceptions -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++14 -verify -fsyntax-only -fblocks %s -DCPP14_AND_EARLIER -fcxx-exceptions -fexperimental-new-constant-interpreter
 
 namespace test_lambda_is_literal {
 #ifdef CPP14_AND_EARLIER

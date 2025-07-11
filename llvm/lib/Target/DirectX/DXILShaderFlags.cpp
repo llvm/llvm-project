@@ -152,7 +152,7 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
   if (!CSF.Int64Ops)
     CSF.Int64Ops = I.getType()->isIntegerTy(64);
 
-  if (!CSF.Int64Ops) {
+  if (!CSF.Int64Ops && !isa<LifetimeIntrinsic>(&I)) {
     for (const Value *Op : I.operands()) {
       if (Op->getType()->isIntegerTy(64)) {
         CSF.Int64Ops = true;
