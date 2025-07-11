@@ -1,13 +1,12 @@
-;; Test to ensure the call updated to call a clone does not mutate the callee
-;; function type. In rare cases we may end up with a callee declaration that
-;; does not match the call type, because it was imported from a different
+;; Test to ensure the callite when updated to call a clone does not mutate the
+;; callee function type. In rare cases we may end up with a callee declaration
+;; that does not match the call type, because it was imported from a different
 ;; module with an incomplete return type (in which case clang gives it a void
 ;; return type).
 
 ; RUN: rm -rf %t && split-file %s %t && cd %t
 ; RUN: llvm-as src.ll -o src.o
 ; RUN: llvm-as src.o.thinlto.ll -o src.o.thinlto.bc
-
 ; RUN: opt -passes=memprof-context-disambiguation src.o -S -memprof-import-summary=src.o.thinlto.bc | FileCheck %s
 
 ;--- src.ll
