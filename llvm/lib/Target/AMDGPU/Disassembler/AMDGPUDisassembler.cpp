@@ -354,8 +354,8 @@ static DecodeStatus decodeOperand_KImmFP(MCInst &Inst, unsigned Imm,
 }
 
 static DecodeStatus decodeOperand_KImmFP64(MCInst &Inst, uint64_t Imm,
-                                         uint64_t Addr,
-                                         const MCDisassembler *Decoder) {
+                                           uint64_t Addr,
+                                           const MCDisassembler *Decoder) {
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
   return addOperand(Inst, DAsm->decodeMandatoryLiteral64Constant(Imm));
 }

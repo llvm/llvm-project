@@ -266,11 +266,9 @@ static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI,
              : 255;
 }
 
-std::optional<uint64_t>
-AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
-                                    const MCOperandInfo &OpInfo,
-                                    const MCSubtargetInfo &STI,
-                                    bool HasMandatoryLiteral) const {
+std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
+    const MCOperand &MO, const MCOperandInfo &OpInfo,
+    const MCSubtargetInfo &STI, bool HasMandatoryLiteral) const {
   int64_t Imm;
   if (MO.isExpr()) {
     if (!MO.getExpr()->evaluateAsAbsolute(Imm))

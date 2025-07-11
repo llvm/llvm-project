@@ -984,9 +984,7 @@ public:
     return isLiteralImm(MVT::f16);
   }
 
-  bool isKImmFP64() const {
-    return isLiteralImm(MVT::f64);
-  }
+  bool isKImmFP64() const { return isLiteralImm(MVT::f64); }
 
   bool isMem() const override {
     return false;
