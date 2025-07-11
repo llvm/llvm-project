@@ -26,11 +26,13 @@ run_statement = Template(
 """
 )
 
+
 def get_addrspace_cast(addrspace):
     if addrspace == 0:
         return ""
     else:
         return " addrspace({})".format(str(addrspace))
+
 
 TESTS = [(60, 50), (70, 63), (90, 87)]
 
@@ -49,7 +51,6 @@ ADDRSPACES = [0, 1, 3]
 ADDRSPACE_NUM_TO_ADDRSPACE = {0: "generic", 1: "global", 3: "shared"}
 
 
-
 if __name__ == "__main__":
     for sm, ptx in TESTS:
         with open("cmpxchg-sm{}.ll".format(str(sm)), "w") as fp:
@@ -64,7 +65,7 @@ if __name__ == "__main__":
             for size, success, failure in product(
                 SIZES, SUCCESS_ORDERINGS, FAILURE_ORDERINGS
             ):
-                 print(
+                print(
                     cmpxchg_func.substitute(
                         success=success,
                         failure=failure,
@@ -81,7 +82,7 @@ if __name__ == "__main__":
             # fix addrspace, ordering, generate all possible scopes, for operation sizes i8, i32
             addrspace, success, failure = 1, "acq_rel", "acquire"
             for size in [8, 32]:
-                 print(
+                print(
                     cmpxchg_func_no_scope.substitute(
                         success=success,
                         failure=failure,
@@ -110,13 +111,11 @@ if __name__ == "__main__":
                     ),
                     file=fp,
                 )
- 
-             # Third slice: Are all address spaces correctly supported?
-             # fix ordering, scope, generate all possible address spaces, for operation sizes i8, i32
+
+            # Third slice: Are all address spaces correctly supported?
+            # fix ordering, scope, generate all possible address spaces, for operation sizes i8, i32
             success, failure, llvm_scope = "acq_rel", "acquire", "block"
-            for size, addrspace in product(
-                [8, 32], ADDRSPACES
-            ):
+            for size, addrspace in product([8, 32], ADDRSPACES):
                 if addrspace == 1:
                     # skip (acq_rel, acquire, global, cta)
                     continue
