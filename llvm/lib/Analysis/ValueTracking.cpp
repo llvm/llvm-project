@@ -7327,6 +7327,16 @@ static bool shiftAmountKnownInRange(const Value *ShiftAmount) {
     }
   }
 
+  const Instruction *I = dyn_cast<Instruction>(ShiftAmount);
+  if (I) {
+    const DataLayout &DL = I->getDataLayout();
+    KnownBits Known = computeKnownBits(ShiftAmount, DL);
+    if (Known.getMaxValue().ult(ShiftAmount->getType()->getIntegerBitWidth())) {
+      return true;
+    }
+    return false;
+  }
+
   auto *C = dyn_cast<Constant>(ShiftAmount);
   if (!C)
     return false;

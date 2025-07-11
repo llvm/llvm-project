@@ -42,11 +42,9 @@ define i64 @shl_select(i64 %a, i64 noundef range(i64 0, 64) %b) {
 ; (select (icmp x, 0, eq), 0, (shl x, y)) -> (shl x, y)
 define i64 @and_shl_select(i64 %a, i64 noundef %b) {
 ; CHECK-LABEL: @and_shl_select(
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[A:%.*]], 0
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[B:%.*]], 15
-; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[A]], [[AND]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i64 0, i64 [[SHL]]
-; CHECK-NEXT:    ret i64 [[SELECT]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[A:%.*]], [[AND]]
+; CHECK-NEXT:    ret i64 [[SHL]]
 ;
   %cond = icmp eq i64 %a, 0
   %and = and i64 %b, 15
