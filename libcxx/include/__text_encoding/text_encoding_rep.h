@@ -346,8 +346,6 @@ public:
 
   // [text.encoding.aliases], class text_encoding::aliases_view
   struct __aliases_view : ranges::view_interface<__aliases_view> {
-    _LIBCPP_HIDE_FROM_ABI constexpr __aliases_view() = default;
-    _LIBCPP_HIDE_FROM_ABI constexpr __aliases_view(const __encoding_data* __d) : __view_data_(__d) {}
     struct __end_sentinel {};
     struct __iterator {
       using value_type      = const char*;
@@ -461,6 +459,9 @@ public:
     _LIBCPP_HIDE_FROM_ABI constexpr __end_sentinel end() const { return __end_sentinel{}; }
 
   private:
+    friend struct __text_encoding_rep;
+
+    _LIBCPP_HIDE_FROM_ABI constexpr __aliases_view(const __encoding_data* __d) : __view_data_(__d) {}
     const __encoding_data* __view_data_ = nullptr;
   };
 
