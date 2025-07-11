@@ -188,7 +188,7 @@ static std::string getDescription(const Function &F) {
 bool FunctionPass::skipFunction(const Function &F) const {
   OptPassGate &Gate = F.getContext().getOptPassGate();
 
-  StringRef PassName = this->getPassArgument();
+  StringRef PassName = getPassArgument();
   if (PassName.empty())
     PassName = this->getPassName();
 

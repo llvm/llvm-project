@@ -80,7 +80,7 @@ static void printDisablePassMessage(const StringRef &Name, StringRef TargetDesc,
 }
 
 void OptDisable::setDisabled(StringRef Pass) {
-  DisabledPasses.insert(Pass.lower());
+  DisabledPasses.insert(Pass);
 }
 
 bool OptDisable::shouldRunPass(StringRef PassName,
