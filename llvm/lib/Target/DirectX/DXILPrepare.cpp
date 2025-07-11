@@ -240,12 +240,10 @@ public:
       for (size_t Idx = 0, End = F.arg_size(); Idx < End; ++Idx)
         F.removeParamAttrs(Idx, AttrMask);
 
-      // Match FnAttrs of lifetime intrinsics in LLVM 3.7
-      if (F.isIntrinsic())
-        switch (F.getIntrinsicID())
-        case Intrinsic::lifetime_start:
-        case Intrinsic::lifetime_end:
-          F.removeFnAttr(Attribute::Memory);
+      // Lifetime intrinsics in LLVM 3.7 do not have the memory FnAttr
+      if (Intrinsic::ID IID = F.getIntrinsicID();
+          IID == Intrinsic::lifetime_start || IID == Intrinsic::lifetime_end)
+        F.removeFnAttr(Attribute::Memory);
 
       for (auto &BB : F) {
         IRBuilder<> Builder(&BB);
