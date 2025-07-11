@@ -700,6 +700,17 @@ bool Debugger::SetShowInlineDiagnostics(bool b) {
   return SetPropertyAtIndex(idx, b);
 }
 
+bool Debugger::GetClearSharedModules() const {
+  const uint32_t idx = ePropertyClearSharedModules;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_debugger_properties[idx].default_uint_value);
+}
+
+bool Debugger::SetClearSharedModules(bool b) {
+  const uint32_t idx = ePropertyClearSharedModules;
+  return SetPropertyAtIndex(idx, b);
+}
+
 #pragma mark Debugger
 
 // const DebuggerPropertiesSP &
@@ -1099,6 +1110,10 @@ void Debugger::Clear() {
         target_sp->Destroy();
       }
     }
+
+    if (GetClearSharedModules())
+      ModuleList::RemoveOrphanSharedModules(/*mandatory=*/true);
+
     m_broadcaster_manager_sp->Clear();
 
     // Close the input file _before_ we close the input read communications

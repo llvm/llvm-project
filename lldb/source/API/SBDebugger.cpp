@@ -1466,6 +1466,12 @@ bool SBDebugger::SetShowInlineDiagnostics(bool value) {
   return (m_opaque_sp ? m_opaque_sp->SetShowInlineDiagnostics(value) : false);
 }
 
+bool SBDebugger::SetClearSharedModules(bool value) {
+  LLDB_INSTRUMENT_VA(this, value);
+
+  return (m_opaque_sp ? m_opaque_sp->SetClearSharedModules(value) : false);
+}
+
 bool SBDebugger::SetUseSourceCache(bool value) {
   LLDB_INSTRUMENT_VA(this, value);
 

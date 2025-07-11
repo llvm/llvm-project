@@ -268,4 +268,8 @@ let Definition = "debugger" in {
     Global,
     DefaultFalse,
     Desc<"Controls whether diagnostics can refer directly to the command input, drawing arrows to it. If false, diagnostics will echo the input.">;
+  def ClearSharedModules: Property<"clear-shared-modules", "Boolean">,
+    Global,
+    DefaultFalse,
+    Desc<"Controls whether the debugger clears internal shared modules as it exits.">;
 }

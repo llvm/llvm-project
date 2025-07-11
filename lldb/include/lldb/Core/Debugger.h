@@ -373,6 +373,10 @@ public:
 
   bool SetShowInlineDiagnostics(bool);
 
+  bool GetClearSharedModules() const;
+
+  bool SetClearSharedModules(bool);
+
   bool LoadPlugin(const FileSpec &spec, Status &error);
 
   void RunIOHandlers();

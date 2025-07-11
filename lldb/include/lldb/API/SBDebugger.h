@@ -319,6 +319,8 @@ public:
 
   bool SetShowInlineDiagnostics(bool);
 
+  bool SetClearSharedModules(bool);
+
   bool SetUseSourceCache(bool use_source_cache);
 
   bool GetUseSourceCache() const;
