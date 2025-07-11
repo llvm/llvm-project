@@ -2593,6 +2593,9 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::reset_fpmode:
     MIRBuilder.buildResetFPMode();
     return true;
+  case Intrinsic::get_rounding:
+    MIRBuilder.buildGetRounding(getOrCreateVReg(CI));
+    return true;
   case Intrinsic::vscale: {
     MIRBuilder.buildVScale(getOrCreateVReg(CI), 1);
     return true;
