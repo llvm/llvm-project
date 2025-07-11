@@ -23,6 +23,10 @@
 
 // RUN: %clang -E  %s -o - | FileCheck --check-prefix=CHECK-NO-UBSAN %s
 
+#if !__has_feature(undefined_behavior_sanitizer_finegrained_feature_checks)
+#error "Missing undefined_behavior_sanitizer_finegrained_feature_checks"
+#endif
+
 #if __has_feature(undefined_behavior_sanitizer)
 int UBSanEnabled();
 #else

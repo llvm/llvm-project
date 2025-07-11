@@ -54,6 +54,7 @@ FEATURE(memtag_globals,
 FEATURE(xray_instrument, LangOpts.XRayInstrument)
 FEATURE(undefined_behavior_sanitizer,
         LangOpts.Sanitize.hasOneOf(SanitizerKind::Undefined))
+FEATURE(undefined_behavior_sanitizer_finegrained_feature_checks, true)
 // These are all part of undefined_behavior_sanitizer:
 FEATURE(alignment_sanitizer,
         LangOpts.Sanitize.has(SanitizerKind::Alignment))
