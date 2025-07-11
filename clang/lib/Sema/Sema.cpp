@@ -2096,32 +2096,29 @@ Sema::targetDiag(SourceLocation Loc, unsigned DiagID, FunctionDecl *FD) {
   FD = FD ? FD : getCurFunctionDecl();
 
   if (LangOpts.OpenMP) {
-    if (LangOpts.OpenMPIsTargetDevice) {
+    if (LangOpts.OpenMPIsTargetDevice)
       return OpenMP().diagIfOpenMPDeviceCode(Loc, DiagID, FD);
-    }
 
     SemaDiagnosticBuilder SDB = OpenMP().diagIfOpenMPHostCode(Loc, DiagID, FD);
-    if (SDB.isDeferred()) {
+    if (SDB.isDeferred())
       FD->setInvalidDecl();
-    }
+
     return SDB;
   }
 
   if (getLangOpts().CUDA) {
-    if (getLangOpts().CUDAIsDevice) {
+    if (getLangOpts().CUDAIsDevice)
       return CUDA().DiagIfDeviceCode(Loc, DiagID);
-    }
 
     SemaDiagnosticBuilder SDB = CUDA().DiagIfHostCode(Loc, DiagID);
-    if (SDB.isDeferred()) {
+    if (SDB.isDeferred())
       FD->setInvalidDecl();
-    }
+
     return SDB;
   }
 
-  if (getLangOpts().SYCLIsDevice) {
+  if (getLangOpts().SYCLIsDevice)
     return SYCL().DiagIfDeviceCode(Loc, DiagID);
-  }
 
   return SemaDiagnosticBuilder(SemaDiagnosticBuilder::K_Immediate, Loc, DiagID,
                                FD, *this);
