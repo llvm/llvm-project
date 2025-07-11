@@ -935,4 +935,7 @@ main:
     # CHECK: f16x8.convert_i16x8_u # encoding: [0xfd,0xc8,0x02]
     f16x8.convert_i16x8_u
 
+    # CHECK: f32x4.promote_low_f16x8 # encoding: [0xfd,0xcb,0x02]
+    f32x4.promote_low_f16x8
+
     end_function
