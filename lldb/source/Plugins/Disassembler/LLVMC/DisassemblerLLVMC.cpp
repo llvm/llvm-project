@@ -1146,7 +1146,7 @@ public:
       }
     }
 
-    if (Log *log = GetLog(LLDBLog::Process)) {
+    if (Log *log = GetLog(LLDBLog::Disassembler)) {
       StreamString ss;
 
       ss.Printf("[%s] expands to %zu operands:\n", operands_string,
