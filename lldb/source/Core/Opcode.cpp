@@ -21,7 +21,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-int Opcode::Dump(Stream *s, uint32_t min_byte_width) {
+int Opcode::Dump(Stream *s, uint32_t min_byte_width) const {
   const uint32_t previous_bytes = s->GetWrittenBytes();
   switch (m_type) {
   case Opcode::eTypeInvalid:
@@ -37,6 +37,38 @@ int Opcode::Dump(Stream *s, uint32_t min_byte_width) {
   case Opcode::eType32:
     s->Printf("0x%8.8x", m_data.inst32);
     break;
+
+  case Opcode::eType16_32Tuples: {
+    uint8_t buf[m_data.inst.length];
+    // Swap the byte order if lldb and the
+    // target are different endian.  May be
+    // any of 2/4/6/8/etc bytes long, easiest
+    // to reverse the bytes manually.
+    if (GetEndianSwap())
+      for (int i = 0; i < m_data.inst.length; i++)
+        buf[m_data.inst.length - i] = m_data.inst.bytes[i];
+    else
+      memcpy(buf, m_data.inst.bytes, m_data.inst.length);
+    uint32_t i = 0;
+    while (i < m_data.inst.length) {
+      if (i > 0)
+        s->PutChar(' ');
+      // if size % 4 == 0, print as 1 or 2 32 bit values (32 or 64 bit inst)
+      if (!(m_data.inst.length % 4)) {
+        uint32_t value;
+        memcpy(&value, &buf[i], 4);
+        s->Printf("%8.8x", value);
+        i += 4;
+        // else if size % 2 == 0, print as 1 or 3 16 bit values (16 or 48 bit
+        // inst)
+      } else if (!(m_data.inst.length % 2)) {
+        uint16_t value;
+        memcpy(&value, &buf[i], 2);
+        s->Printf("%4.4x", value);
+        i += 2;
+      }
+    }
+  } break;
 
   case Opcode::eType64:
     s->Printf("0x%16.16" PRIx64, m_data.inst64);
@@ -69,6 +101,7 @@ lldb::ByteOrder Opcode::GetDataByteOrder() const {
   case Opcode::eType8:
   case Opcode::eType16:
   case Opcode::eType16_2:
+  case Opcode::eType16_32Tuples:
   case Opcode::eType32:
   case Opcode::eType64:
     return endian::InlHostByteOrder();
@@ -112,6 +145,9 @@ uint32_t Opcode::GetData(DataExtractor &data) const {
         swap_buf[2] = m_data.inst.bytes[3];
         swap_buf[3] = m_data.inst.bytes[2];
         buf = swap_buf;
+        break;
+      case Opcode::eType16_32Tuples:
+        buf = GetOpcodeDataBytes();
         break;
       case Opcode::eType32:
         *(uint32_t *)swap_buf = llvm::byteswap<uint32_t>(m_data.inst32);
