@@ -3034,7 +3034,7 @@ body:             |
   ; LOWERED-NEXT:   $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr4
   ; LOWERED-NEXT:   $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
   ; LOWERED-NEXT:   $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr7
-  ; LOWERED-NEXT:   undef $vgpr0_vgpr1_vgpr2_vgpr3 = contract V_CONVOLVE_F16_FP8_FP8_3x3_4x4 killed renamable $vgpr0_vgpr1_vgpr2_vgpr3, killed undef $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8, killed undef $vgpr0_vgpr1_vgpr2, killed renamable $vgpr4_vgpr5_vgpr6, killed undef $vgpr288_vgpr289_vgpr290, 8, -1, 12801, 0, <0x{{[0-9a-f]+}}>, implicit $exec
+  ; LOWERED-NEXT:   undef $vgpr0_vgpr1_vgpr2_vgpr3 = contract V_CONVOLVE_F16_FP8_FP8_3x3_4x4 killed $vgpr0_vgpr1_vgpr2_vgpr3, killed undef $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8, killed undef $vgpr0_vgpr1_vgpr2, killed $vgpr4_vgpr5_vgpr6, killed undef $vgpr288_vgpr289_vgpr290, 8, -1, 12801, 0, <0x{{[0-9a-f]+}}>, implicit $exec
   ; LOWERED-NEXT:   dead $idx0 = S_SET_GPR_IDX_U32 killed renamable $sgpr5
   ; LOWERED-NEXT:   S_ENDPGM 0
   bb.0:

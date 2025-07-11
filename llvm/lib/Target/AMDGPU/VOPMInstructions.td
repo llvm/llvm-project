@@ -589,6 +589,7 @@ class VOPM_Pseudo <VOPProfile P, list<dag> pattern = [], string opName = !tolowe
   let IsWMMA = P.IsWMMA;
   let IsSWMMAC = P.IsSWMMAC;
   let IsConvolve = P.IsConvolve;
+  let VALU = 1;
 }
 
 let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
