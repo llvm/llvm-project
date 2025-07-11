@@ -63,8 +63,10 @@ int64_t MulOverflow(int64_t X, int64_t Y, int64_t &Result) {
   return __builtin_mul_overflow(X, Y, &Result);
 #else
   // Perform the unsigned multiplication on absolute values.
-  const uint64_t UX = X < 0 ? (0 - static_cast<uint64_t>(X)) : static_cast<uint64_t>(X);
-  const uint64_t UY = Y < 0 ? (0 - static_cast<uint64_t>(Y)) : static_cast<uint64_t>(Y);
+  const uint64_t UX =
+      X < 0 ? (0 - static_cast<uint64_t>(X)) : static_cast<uint64_t>(X);
+  const uint64_t UY =
+      Y < 0 ? (0 - static_cast<uint64_t>(Y)) : static_cast<uint64_t>(Y);
   const uint64_t UResult = UX * UY;
 
   // Convert to signed.
@@ -79,7 +81,9 @@ int64_t MulOverflow(int64_t X, int64_t Y, int64_t &Result) {
   // Check how the max allowed absolute value (2^n for negative, 2^(n-1) for
   // positive) divided by an argument compares to the other.
   if (IsNegative)
-    return UX > (static_cast<uint64_t>(std::numeric_limits<T>::max()) + uint64_t(1)) / UY;
+    return UX >
+        (static_cast<uint64_t>(std::numeric_limits<T>::max()) + uint64_t(1)) /
+        UY;
   else
     return UX > (static_cast<uint64_t>(std::numeric_limits<T>::max())) / UY;
 #endif
