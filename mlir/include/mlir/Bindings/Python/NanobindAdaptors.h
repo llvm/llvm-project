@@ -457,9 +457,10 @@ public:
     nanobind::object newCf = nanobind::cpp_function(
         [superCls, isaFunction, captureTypeName](
             nanobind::object cls, nanobind::object otherAttribute) {
-          MlirAttribute rawAttribute =
-              nanobind::cast<MlirAttribute>(otherAttribute);
-          if (!isaFunction(rawAttribute)) {
+          MlirAttribute rawAttribute;
+          if (!nanobind::try_cast<MlirAttribute>(otherAttribute,
+                                                 rawAttribute) ||
+              !isaFunction(rawAttribute)) {
             auto origRepr =
                 nanobind::cast<std::string>(nanobind::repr(otherAttribute));
             throw std::invalid_argument(
@@ -538,8 +539,9 @@ public:
     nanobind::object newCf = nanobind::cpp_function(
         [superCls, isaFunction, captureTypeName](nanobind::object cls,
                                                  nanobind::object otherType) {
-          MlirType rawType = nanobind::cast<MlirType>(otherType);
-          if (!isaFunction(rawType)) {
+          MlirType rawType;
+          if (!nanobind::try_cast<MlirType>(otherType, rawType) ||
+              !isaFunction(rawType)) {
             auto origRepr =
                 nanobind::cast<std::string>(nanobind::repr(otherType));
             throw std::invalid_argument((llvm::Twine("Cannot cast type to ") +
@@ -620,8 +622,9 @@ public:
     nanobind::object newCf = nanobind::cpp_function(
         [superCls, isaFunction, captureValueName](nanobind::object cls,
                                                   nanobind::object otherValue) {
-          MlirValue rawValue = nanobind::cast<MlirValue>(otherValue);
-          if (!isaFunction(rawValue)) {
+          MlirValue rawValue;
+          if (!nanobind::try_cast<MlirValue>(otherValue, rawValue) ||
+              !isaFunction(rawValue)) {
             auto origRepr =
                 nanobind::cast<std::string>(nanobind::repr(otherValue));
             throw std::invalid_argument((llvm::Twine("Cannot cast value to ") +
