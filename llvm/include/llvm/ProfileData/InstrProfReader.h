@@ -493,7 +493,7 @@ private:
   }
 
   StringRef getName(uint64_t NameRef) const {
-    return Symtab->getFuncOrVarName(swap(NameRef));
+    return Symtab->getFuncOrVarName(Correlator ? NameRef : swap(NameRef));
   }
 
   int getCounterTypeSize() const {
