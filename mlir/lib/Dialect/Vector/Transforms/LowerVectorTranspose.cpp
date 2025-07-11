@@ -80,8 +80,8 @@ getUnpackShufflePermFor128Lane(ArrayRef<int64_t> vals, int numBits) {
 static Value createUnpackLoPd(ImplicitLocOpBuilder &b, Value v1, Value v2,
                               int numBits) {
   int numElem = numBits / 32;
-  return vector::ShuffleOp::create(b,
-      v1, v2,
+  return vector::ShuffleOp::create(
+      b, v1, v2,
       getUnpackShufflePermFor128Lane({0, 1, numElem, numElem + 1}, numBits));
 }
 
@@ -94,8 +94,8 @@ static Value createUnpackLoPd(ImplicitLocOpBuilder &b, Value v1, Value v2,
 static Value createUnpackHiPd(ImplicitLocOpBuilder &b, Value v1, Value v2,
                               int numBits) {
   int numElem = numBits / 32;
-  return vector::ShuffleOp::create(b,
-      v1, v2,
+  return vector::ShuffleOp::create(
+      b, v1, v2,
       getUnpackShufflePermFor128Lane({2, 3, numElem + 2, numElem + 3},
                                      numBits));
 }
@@ -109,8 +109,8 @@ static Value createUnpackHiPd(ImplicitLocOpBuilder &b, Value v1, Value v2,
 static Value createUnpackLoPs(ImplicitLocOpBuilder &b, Value v1, Value v2,
                               int numBits) {
   int numElem = numBits / 32;
-  auto shuffle = vector::ShuffleOp::create(b,
-      v1, v2,
+  auto shuffle = vector::ShuffleOp::create(
+      b, v1, v2,
       getUnpackShufflePermFor128Lane({0, numElem, 1, numElem + 1}, numBits));
   return shuffle;
 }
@@ -124,8 +124,8 @@ static Value createUnpackLoPs(ImplicitLocOpBuilder &b, Value v1, Value v2,
 static Value createUnpackHiPs(ImplicitLocOpBuilder &b, Value v1, Value v2,
                               int numBits) {
   int numElem = numBits / 32;
-  return vector::ShuffleOp::create(b,
-      v1, v2,
+  return vector::ShuffleOp::create(
+      b, v1, v2,
       getUnpackShufflePermFor128Lane({2, numElem + 2, 3, numElem + 3},
                                      numBits));
 }
@@ -338,8 +338,8 @@ public:
           vector::ShapeCastOp::create(rewriter, loc, flattenedType, input);
       auto rows = rewriter.getI32IntegerAttr(resType.getShape()[0]);
       auto columns = rewriter.getI32IntegerAttr(resType.getShape()[1]);
-      Value trans = vector::FlatTransposeOp::create(rewriter,
-          loc, flattenedType, matrix, rows, columns);
+      Value trans = vector::FlatTransposeOp::create(
+          rewriter, loc, flattenedType, matrix, rows, columns);
       rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, resType, trans);
       return success();
     }
@@ -483,7 +483,7 @@ public:
     auto flattenedType = VectorType::get({n * m}, srcType.getElementType());
     auto reshInputType = VectorType::get({m, n}, srcType.getElementType());
     auto reshInput = vector::ShapeCastOp::create(rewriter, loc, flattenedType,
-                                                          op.getVector());
+                                                 op.getVector());
 
     Value res;
     if (vectorTransposeLowering == VectorTransposeLowering::Shuffle16x16 &&

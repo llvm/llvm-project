@@ -89,10 +89,10 @@ static void convVals(OpBuilder &builder, Location loc, TypeRange types,
           Value mem;
           if (kind == SparseTensorFieldKind::PosMemRef)
             mem = sparse_tensor::ToPositionsOp::create(builder, loc, inputs[0],
-                                                               lv);
+                                                       lv);
           else if (kind == SparseTensorFieldKind::CrdMemRef)
-            mem = sparse_tensor::ToCoordinatesOp::create(builder, loc, inputs[0],
-                                                                 lv);
+            mem = sparse_tensor::ToCoordinatesOp::create(builder, loc,
+                                                         inputs[0], lv);
           else
             mem = sparse_tensor::ToValuesOp::create(builder, loc, inputs[0]);
           toVals.push_back(mem);
@@ -199,8 +199,9 @@ struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
     OpBuilder moduleBuilder(modOp.getBodyRegion());
     unsigned extra = inputTypes.size();
     inputTypes.append(extraTypes);
-    auto func = func::FuncOp::create(moduleBuilder,
-        loc, orgName, FunctionType::get(context, inputTypes, outputTypes));
+    auto func = func::FuncOp::create(
+        moduleBuilder, loc, orgName,
+        FunctionType::get(context, inputTypes, outputTypes));
     func.setPublic();
 
     // Construct new wrapper method body.
@@ -216,8 +217,8 @@ struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
     // Call the original, now private method. A subsequent inlining pass can
     // determine whether cloning the method body in place is worthwhile.
     auto org = SymbolRefAttr::get(context, wrapper);
-    auto call = func::CallOp::create(rewriter, loc, funcOp.getResultTypes(), org,
-                                              inputs);
+    auto call = func::CallOp::create(rewriter, loc, funcOp.getResultTypes(),
+                                     org, inputs);
 
     // Convert outputs and return.
     SmallVector<Value> outputs;

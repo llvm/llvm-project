@@ -85,7 +85,8 @@ static Value permuteVectorOffset(OpBuilder &b, Location loc,
       Value finalShiftVal = arith::ConstantIndexOp::create(b, loc, shlBits);
       srcBits = b.createOrFold<arith::ShLIOp>(loc, srcBits, finalShiftVal);
     } else if (shlBits < 0) {
-      Value finalShiftVal = arith::ConstantIndexOp::create(b, loc, -1 * shlBits);
+      Value finalShiftVal =
+          arith::ConstantIndexOp::create(b, loc, -1 * shlBits);
       srcBits = b.createOrFold<arith::ShRUIOp>(loc, srcBits, finalShiftVal);
     }
   } else {

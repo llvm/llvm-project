@@ -112,11 +112,11 @@ public:
 
     // We can not do clone as the number of result types after conversion
     // might be different.
-    ForOp newOp = ForOp::create(rewriter,
-        op.getLoc(), llvm::getSingleElement(adaptor.getLowerBound()),
-        llvm::getSingleElement(adaptor.getUpperBound()),
-        llvm::getSingleElement(adaptor.getStep()),
-        flattenValues(adaptor.getInitArgs()));
+    ForOp newOp = ForOp::create(rewriter, op.getLoc(),
+                                llvm::getSingleElement(adaptor.getLowerBound()),
+                                llvm::getSingleElement(adaptor.getUpperBound()),
+                                llvm::getSingleElement(adaptor.getStep()),
+                                flattenValues(adaptor.getInitArgs()));
 
     // Reserve whatever attributes in the original op.
     newOp->setAttrs(op->getAttrs());
@@ -142,9 +142,9 @@ public:
                                       ConversionPatternRewriter &rewriter,
                                       TypeRange dstTypes) const {
 
-    IfOp newOp = IfOp::create(rewriter,
-        op.getLoc(), dstTypes, llvm::getSingleElement(adaptor.getCondition()),
-        true);
+    IfOp newOp =
+        IfOp::create(rewriter, op.getLoc(), dstTypes,
+                     llvm::getSingleElement(adaptor.getCondition()), true);
     newOp->setAttrs(op->getAttrs());
 
     // We do not need the empty blocks created by rewriter.
@@ -172,7 +172,7 @@ public:
                                          ConversionPatternRewriter &rewriter,
                                          TypeRange dstTypes) const {
     auto newOp = WhileOp::create(rewriter, op.getLoc(), dstTypes,
-                                          flattenValues(adaptor.getOperands()));
+                                 flattenValues(adaptor.getOperands()));
 
     for (auto i : {0u, 1u}) {
       if (failed(rewriter.convertRegionTypes(&op.getRegion(i), *typeConverter)))

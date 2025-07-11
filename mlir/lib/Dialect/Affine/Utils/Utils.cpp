@@ -93,12 +93,12 @@ public:
 
     Value remainder = arith::RemSIOp::create(builder, loc, lhs, rhs);
     Value zeroCst = arith::ConstantIndexOp::create(builder, loc, 0);
-    Value isRemainderNegative = arith::CmpIOp::create(builder,
-        loc, arith::CmpIPredicate::slt, remainder, zeroCst);
+    Value isRemainderNegative = arith::CmpIOp::create(
+        builder, loc, arith::CmpIPredicate::slt, remainder, zeroCst);
     Value correctedRemainder =
         arith::AddIOp::create(builder, loc, remainder, rhs);
-    Value result = arith::SelectOp::create(builder,
-        loc, isRemainderNegative, correctedRemainder, remainder);
+    Value result = arith::SelectOp::create(builder, loc, isRemainderNegative,
+                                           correctedRemainder, remainder);
     return result;
   }
 
@@ -132,16 +132,17 @@ public:
 
     Value zeroCst = arith::ConstantIndexOp::create(builder, loc, 0);
     Value noneCst = arith::ConstantIndexOp::create(builder, loc, -1);
-    Value negative = arith::CmpIOp::create(builder,
-        loc, arith::CmpIPredicate::slt, lhs, zeroCst);
-    Value negatedDecremented = arith::SubIOp::create(builder, loc, noneCst, lhs);
-    Value dividend =
-        arith::SelectOp::create(builder, loc, negative, negatedDecremented, lhs);
+    Value negative = arith::CmpIOp::create(
+        builder, loc, arith::CmpIPredicate::slt, lhs, zeroCst);
+    Value negatedDecremented =
+        arith::SubIOp::create(builder, loc, noneCst, lhs);
+    Value dividend = arith::SelectOp::create(builder, loc, negative,
+                                             negatedDecremented, lhs);
     Value quotient = arith::DivSIOp::create(builder, loc, dividend, rhs);
     Value correctedQuotient =
         arith::SubIOp::create(builder, loc, noneCst, quotient);
     Value result = arith::SelectOp::create(builder, loc, negative,
-                                                   correctedQuotient, quotient);
+                                           correctedQuotient, quotient);
     return result;
   }
 
@@ -171,19 +172,19 @@ public:
 
     Value zeroCst = arith::ConstantIndexOp::create(builder, loc, 0);
     Value oneCst = arith::ConstantIndexOp::create(builder, loc, 1);
-    Value nonPositive = arith::CmpIOp::create(builder,
-        loc, arith::CmpIPredicate::sle, lhs, zeroCst);
+    Value nonPositive = arith::CmpIOp::create(
+        builder, loc, arith::CmpIPredicate::sle, lhs, zeroCst);
     Value negated = arith::SubIOp::create(builder, loc, zeroCst, lhs);
     Value decremented = arith::SubIOp::create(builder, loc, lhs, oneCst);
-    Value dividend =
-        arith::SelectOp::create(builder, loc, nonPositive, negated, decremented);
+    Value dividend = arith::SelectOp::create(builder, loc, nonPositive, negated,
+                                             decremented);
     Value quotient = arith::DivSIOp::create(builder, loc, dividend, rhs);
     Value negatedQuotient =
         arith::SubIOp::create(builder, loc, zeroCst, quotient);
     Value incrementedQuotient =
         arith::AddIOp::create(builder, loc, quotient, oneCst);
-    Value result = arith::SelectOp::create(builder,
-        loc, nonPositive, negatedQuotient, incrementedQuotient);
+    Value result = arith::SelectOp::create(
+        builder, loc, nonPositive, negatedQuotient, incrementedQuotient);
     return result;
   }
 
@@ -299,8 +300,8 @@ static AffineIfOp hoistAffineIfOp(AffineIfOp ifOp, Operation *hoistOverOp) {
   IRMapping operandMap;
   OpBuilder b(hoistOverOp);
   auto hoistedIfOp = AffineIfOp::create(b, ifOp.getLoc(), ifOp.getIntegerSet(),
-                                          ifOp.getOperands(),
-                                          /*elseBlock=*/true);
+                                        ifOp.getOperands(),
+                                        /*elseBlock=*/true);
 
   // Create a clone of hoistOverOp to use for the else branch of the hoisted
   // conditional. The else block may get optimized away if empty.
@@ -369,8 +370,8 @@ mlir::affine::affineParallelize(AffineForOp forOp,
       parallelReductions, [](const LoopReduction &red) { return red.value; }));
   auto reductionKinds = llvm::to_vector<4>(llvm::map_range(
       parallelReductions, [](const LoopReduction &red) { return red.kind; }));
-  AffineParallelOp newPloop = AffineParallelOp::create(outsideBuilder,
-      loc, ValueRange(reducedValues).getTypes(), reductionKinds,
+  AffineParallelOp newPloop = AffineParallelOp::create(
+      outsideBuilder, loc, ValueRange(reducedValues).getTypes(), reductionKinds,
       llvm::ArrayRef(lowerBoundMap), lowerBoundOperands,
       llvm::ArrayRef(upperBoundMap), upperBoundOperands,
       llvm::ArrayRef(forOp.getStepAsInt()));
@@ -541,7 +542,8 @@ void mlir::affine::normalizeAffineParallel(AffineParallelOp op) {
     SmallVector<Value, 8> applyOperands{dimOperands};
     applyOperands.push_back(iv);
     applyOperands.append(symbolOperands.begin(), symbolOperands.end());
-    auto apply = AffineApplyOp::create(builder, op.getLoc(), map, applyOperands);
+    auto apply =
+        AffineApplyOp::create(builder, op.getLoc(), map, applyOperands);
     iv.replaceAllUsesExcept(apply, apply);
   }
 
@@ -622,8 +624,9 @@ LogicalResult mlir::affine::normalizeAffineFor(AffineForOp op,
   AffineValueMap newIvToOldIvMap;
   AffineValueMap::difference(lbMap, scaleIvValueMap, &newIvToOldIvMap);
   (void)newIvToOldIvMap.canonicalize();
-  auto newIV = AffineApplyOp::create(opBuilder,
-      loc, newIvToOldIvMap.getAffineMap(), newIvToOldIvMap.getOperands());
+  auto newIV =
+      AffineApplyOp::create(opBuilder, loc, newIvToOldIvMap.getAffineMap(),
+                            newIvToOldIvMap.getOperands());
   op.getInductionVar().replaceAllUsesExcept(newIV->getResult(0), newIV);
   return success();
 }
@@ -1188,7 +1191,7 @@ LogicalResult mlir::affine::replaceAllMemRefUsesWith(
       auto singleResMap = AffineMap::get(oldMap.getNumDims(),
                                          oldMap.getNumSymbols(), resultExpr);
       auto afOp = AffineApplyOp::create(builder, op->getLoc(), singleResMap,
-                                                oldMapOperands);
+                                        oldMapOperands);
       oldMemRefOperands.push_back(afOp);
       affineApplyOps.push_back(afOp);
     }
@@ -1215,7 +1218,7 @@ LogicalResult mlir::affine::replaceAllMemRefUsesWith(
       auto singleResMap = AffineMap::get(
           indexRemap.getNumDims(), indexRemap.getNumSymbols(), resultExpr);
       auto afOp = AffineApplyOp::create(builder, op->getLoc(), singleResMap,
-                                                remapOperands);
+                                        remapOperands);
       remapOutputs.push_back(afOp);
       affineApplyOps.push_back(afOp);
     }
@@ -1264,8 +1267,8 @@ LogicalResult mlir::affine::replaceAllMemRefUsesWith(
     // AffineMapAccessInterface, we need to apply the values of `newMapOperands`
     // to the `newMap` to get the correct indices.
     for (unsigned i = 0; i < newMemRefRank; i++) {
-      state.operands.push_back(AffineApplyOp::create(builder,
-          op->getLoc(),
+      state.operands.push_back(AffineApplyOp::create(
+          builder, op->getLoc(),
           AffineMap::get(newMap.getNumDims(), newMap.getNumSymbols(),
                          newMap.getResult(i)),
           newMapOperands));
@@ -1450,8 +1453,8 @@ void mlir::affine::createAffineComputationSlice(
   for (auto resultExpr : composedMap.getResults()) {
     auto singleResMap = AffineMap::get(composedMap.getNumDims(),
                                        composedMap.getNumSymbols(), resultExpr);
-    sliceOps->push_back(AffineApplyOp::create(builder,
-        opInst->getLoc(), singleResMap, composedOpOperands));
+    sliceOps->push_back(AffineApplyOp::create(
+        builder, opInst->getLoc(), singleResMap, composedOpOperands));
   }
 
   // Construct the new operands that include the results from the composed
@@ -1740,12 +1743,11 @@ LogicalResult mlir::affine::normalizeMemRef(AllocLikeOp allocOp) {
     createNewDynamicSizes(oldMemRefType, newMemRefType, layoutMap, allocOp, b,
                           newDynamicSizes);
     // Add the new dynamic sizes in new AllocOp.
-    newAlloc =
-        AllocLikeOp::create(b, allocOp.getLoc(), newMemRefType, newDynamicSizes,
-                              allocOp.getAlignmentAttr());
+    newAlloc = AllocLikeOp::create(b, allocOp.getLoc(), newMemRefType,
+                                   newDynamicSizes, allocOp.getAlignmentAttr());
   } else {
     newAlloc = AllocLikeOp::create(b, allocOp.getLoc(), newMemRefType,
-                                     allocOp.getAlignmentAttr());
+                                   allocOp.getAlignmentAttr());
   }
   // Replace all uses of the old memref.
   if (failed(replaceAllMemRefUsesWith(oldMemRef, /*newMemRef=*/newAlloc,
@@ -1804,7 +1806,7 @@ mlir::affine::normalizeMemRef(memref::ReinterpretCastOp reinterpretCastOp) {
     if (memrefType.isDynamicDim(i))
       mapOperands[i] =
           arith::SubIOp::create(b, loc, oldSizes[0].getType(), oldSizes[idx++],
-                                  arith::ConstantIndexOp::create(b, loc, 1));
+                                arith::ConstantIndexOp::create(b, loc, 1));
     else
       mapOperands[i] = arith::ConstantIndexOp::create(b, loc, oldShape[i] - 1);
   }
@@ -1816,8 +1818,8 @@ mlir::affine::normalizeMemRef(memref::ReinterpretCastOp reinterpretCastOp) {
   for (unsigned i = 0; i < newRank; i++) {
     if (!newMemRefType.isDynamicDim(i))
       continue;
-    newSizes.push_back(AffineApplyOp::create(b,
-        loc,
+    newSizes.push_back(AffineApplyOp::create(
+        b, loc,
         AffineMap::get(oldLayoutMap.getNumDims(), oldLayoutMap.getNumSymbols(),
                        oldLayoutMap.getResult(i)),
         mapOperands));
@@ -1825,11 +1827,11 @@ mlir::affine::normalizeMemRef(memref::ReinterpretCastOp reinterpretCastOp) {
   for (unsigned i = 0, e = newSizes.size(); i < e; i++) {
     newSizes[i] =
         arith::AddIOp::create(b, loc, newSizes[i].getType(), newSizes[i],
-                                arith::ConstantIndexOp::create(b, loc, 1));
+                              arith::ConstantIndexOp::create(b, loc, 1));
   }
   // Create the new reinterpret_cast op.
-  auto newReinterpretCast = memref::ReinterpretCastOp::create(b,
-      loc, newMemRefType, reinterpretCastOp.getSource(),
+  auto newReinterpretCast = memref::ReinterpretCastOp::create(
+      b, loc, newMemRefType, reinterpretCastOp.getSource(),
       /*offsets=*/ValueRange(), newSizes,
       /*strides=*/ValueRange(),
       /*static_offsets=*/newStaticOffsets,

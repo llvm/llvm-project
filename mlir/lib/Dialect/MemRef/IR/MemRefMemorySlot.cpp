@@ -89,7 +89,7 @@ Value memref::AllocaOp::getDefaultValue(const MemorySlot &slot,
       })
       .Default([&](Type t) {
         return arith::ConstantOp::create(builder, getLoc(), t,
-                                                 builder.getZeroAttr(t));
+                                         builder.getZeroAttr(t));
       });
 }
 

@@ -115,8 +115,8 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
         newShape,
         cast<RankedTensorType>(operand->get().getType()).getElementType());
 
-    Value newInput = tensor::ExpandShapeOp::create(b,
-        loc, newType, operand->get(), reassociation);
+    Value newInput = tensor::ExpandShapeOp::create(
+        b, loc, newType, operand->get(), reassociation);
     newInputs.push_back(newInput);
   }
 
@@ -140,14 +140,14 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
   }
   Value emptyOrAllocTensor;
   if (useAlloc) {
-    emptyOrAllocTensor = bufferization::AllocTensorOp::create(b,
-        loc,
+    emptyOrAllocTensor = bufferization::AllocTensorOp::create(
+        b, loc,
         RankedTensorType::get(newOutputShape,
                               op.getRegionOutputArgs()[0].getType()),
         ValueRange{});
   } else {
-    emptyOrAllocTensor = tensor::EmptyOp::create(b,
-        loc, newOutputShape, op.getRegionOutputArgs()[0].getType());
+    emptyOrAllocTensor = tensor::EmptyOp::create(
+        b, loc, newOutputShape, op.getRegionOutputArgs()[0].getType());
   }
   Value constantOp = arith::ConstantOp::create(b, loc, *identity);
   Value identityTensor =
@@ -168,8 +168,8 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
   }
   // Create the new op matching the original op with an extra parallel
   // dimension.
-  GenericOp genericOp = GenericOp::create(b,
-      loc, TypeRange({emptyOrAllocTensor.getType()}), newInputs,
+  GenericOp genericOp = GenericOp::create(
+      b, loc, TypeRange({emptyOrAllocTensor.getType()}), newInputs,
       ValueRange({identityTensor}), newMaps, newIteratorTypes);
   b.inlineRegionBefore(op->getRegion(0), genericOp.getRegion(),
                        genericOp.getRegion().begin());
@@ -191,8 +191,8 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
   AffineMap outputMap = AffineMap::get(intermRank, 0, exprs, op.getContext());
   SmallVector<AffineMap> reductionMaps = {inputMap, outputMap};
 
-  auto reduction = GenericOp::create(b,
-      loc, op->getResultTypes(), ValueRange({genericOp.getResult(0)}),
+  auto reduction = GenericOp::create(
+      b, loc, op->getResultTypes(), ValueRange({genericOp.getResult(0)}),
       op.getDpsInits(), reductionMaps, reductionIteratorTypes,
       [reductionOp](OpBuilder &b, Location loc, ValueRange inputs) {
         Operation *clonedReductionOp = b.clone(*reductionOp);
@@ -321,11 +321,11 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
           bufferization::AllocTensorOp::create(b, loc, newT, dims);
     } else {
       emptyOrAllocTensor = tensor::EmptyOp::create(b, loc, newT.getShape(),
-                                                     t.getElementType(), dims);
+                                                   t.getElementType(), dims);
     }
     Value constantOp = arith::ConstantOp::create(b, loc, std::get<1>(it));
-    fillOps.push_back(
-        linalg::FillOp::create(b, op->getLoc(), constantOp, emptyOrAllocTensor));
+    fillOps.push_back(linalg::FillOp::create(b, op->getLoc(), constantOp,
+                                             emptyOrAllocTensor));
     newOutputs.push_back(fillOps.back().getResult(0));
     emptyOrAllocTensorOps.push_back(emptyOrAllocTensor.getDefiningOp());
   }
@@ -354,8 +354,8 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   SmallVector<Value> newInputs = op.getDpsInputs();
   // Add a single shape-only tensor to carry the dimensions without resorting to
   // more complex inversions.
-  newInputs.push_back(tensor::EmptyOp::create(b,
-      loc, ArrayRef<int64_t>{reductionDimSize / splitFactor, splitFactor},
+  newInputs.push_back(tensor::EmptyOp::create(
+      b, loc, ArrayRef<int64_t>{reductionDimSize / splitFactor, splitFactor},
       b.getIntegerType(1)));
   // Output tensors are already good to go.
 
@@ -366,7 +366,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
                        utils::IteratorType::parallel);
   GenericOp genericOp =
       GenericOp::create(b, loc, ValueRange(newOutputs).getTypes(), newInputs,
-                          newOutputs, newMaps, iteratorTypes);
+                        newOutputs, newMaps, iteratorTypes);
   b.inlineRegionBefore(op->getRegion(0), genericOp.getRegion(),
                        genericOp.getRegion().begin());
   genericOp.getRegion().front().insertArgument(reductionDimPos,

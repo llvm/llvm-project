@@ -43,7 +43,8 @@ struct DemapInsRewriter : public OpRewritePattern<SourceOp> {
     SmallVector<Value> deMappedIns(op->getOperands());
     for (Value &in : deMappedIns) {
       if (auto stt = tryGetSparseTensorType(in); stt && !stt->isIdentity()) {
-        in = ReinterpretMapOp::create(rewriter, loc, stt->getDemappedType(), in);
+        in =
+            ReinterpretMapOp::create(rewriter, loc, stt->getDemappedType(), in);
         changed = true;
       }
     }
@@ -338,7 +339,7 @@ translateMap(linalg::GenericOp op, PatternRewriter &rewriter) {
 static Value genDemap(OpBuilder &builder, SparseTensorEncodingAttr enc,
                       Value val) {
   return ReinterpretMapOp::create(builder, val.getLoc(), enc.withoutDimToLvl(),
-                                          val);
+                                  val);
 }
 
 // Generates a "re"mapping reinterpretation of the map.
@@ -604,8 +605,8 @@ struct TensorAllocDemapper : public OpRewritePattern<AllocOp> {
     ValueRange dynSz = op.getDynamicSizes();
     for (int64_t dimSz : stt.getDimShape()) {
       if (ShapedType::isDynamic(dimSz)) {
-        Value maxCrd = arith::SubIOp::create(rewriter,
-            loc, dynSz.front(), constantIndex(rewriter, loc, 1));
+        Value maxCrd = arith::SubIOp::create(rewriter, loc, dynSz.front(),
+                                             constantIndex(rewriter, loc, 1));
         maxDimCrds.push_back(maxCrd);
         dynSz = dynSz.drop_front();
       } else {
@@ -619,8 +620,8 @@ struct TensorAllocDemapper : public OpRewritePattern<AllocOp> {
     SmallVector<Value> dynLvlSzs;
     for (unsigned i = 0, e = lvlShape.size(); i < e; i++) {
       if (ShapedType::isDynamic(lvlShape[i])) {
-        Value sz = arith::AddIOp::create(rewriter,
-            loc, maxLvlCrds[i], constantIndex(rewriter, loc, 1));
+        Value sz = arith::AddIOp::create(rewriter, loc, maxLvlCrds[i],
+                                         constantIndex(rewriter, loc, 1));
         dynLvlSzs.push_back(sz);
       }
     }
@@ -650,8 +651,8 @@ struct TensorInsertDemapper
     auto stt = getSparseTensorType(op.getResult());
     ValueRange lvlCrd = stt.translateCrds(rewriter, loc, op.getIndices(),
                                           CrdTransDirectionKind::dim2lvl);
-    auto insertOp = tensor::InsertOp::create(rewriter,
-        loc, op.getScalar(), adaptor.getDest(), lvlCrd);
+    auto insertOp = tensor::InsertOp::create(rewriter, loc, op.getScalar(),
+                                             adaptor.getDest(), lvlCrd);
 
     Value out = genRemap(rewriter, stt.getEncoding(), insertOp.getResult());
     rewriter.replaceOp(op, out);

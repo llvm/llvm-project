@@ -317,7 +317,7 @@ static void genBuffers(CodegenEnv &env, OpBuilder &builder) {
           Value zero = constantZero(builder, loc,
                                     getElementTypeOrSelf(tensor.getType()));
           linalg::FillOp::create(builder, loc, ValueRange{zero},
-                                         ValueRange{init});
+                                 ValueRange{init});
         }
         return init;
       },
@@ -470,9 +470,9 @@ static void genInsertionStore(CodegenEnv &env, OpBuilder &builder, OpOperand *t,
   // If statement.
   Value isFilled = memref::LoadOp::create(builder, loc, filled, index);
   Value cond = arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::eq,
-                                             isFilled, fval);
+                                     isFilled, fval);
   scf::IfOp ifOp = scf::IfOp::create(builder, loc, builder.getIndexType(), cond,
-                                             /*else=*/true);
+                                     /*else=*/true);
   // True branch.
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   memref::StoreOp::create(builder, loc, tval, filled, index);
@@ -516,7 +516,8 @@ static Value genTensorLoad(CodegenEnv &env, OpBuilder &builder, ExprId exp) {
   if (llvm::isa<TensorType>(ptr.getType())) {
     assert(env.options().sparseEmitStrategy ==
            SparseEmitStrategy::kSparseIterator);
-    return ExtractValOp::create(builder, loc, ptr, llvm::getSingleElement(args));
+    return ExtractValOp::create(builder, loc, ptr,
+                                llvm::getSingleElement(args));
   }
   return memref::LoadOp::create(builder, loc, ptr, args);
 }
@@ -768,7 +769,8 @@ static void genExpand(CodegenEnv &env, OpBuilder &builder, LoopId curr,
     Type t2 = MemRefType::get(dynShape, builder.getI1Type());
     Type t3 = MemRefType::get(dynShape, builder.getIndexType());
     Type t4 = builder.getIndexType();
-    auto r = ExpandOp::create(builder, loc, TypeRange({t1, t2, t3, t4}), tensor);
+    auto r =
+        ExpandOp::create(builder, loc, TypeRange({t1, t2, t3, t4}), tensor);
     assert(r.getNumResults() == 4);
     env.startExpand(r.getResult(0), r.getResult(1), r.getResult(2),
                     r.getResult(3));
@@ -782,7 +784,7 @@ static void genExpand(CodegenEnv &env, OpBuilder &builder, LoopId curr,
     Value count = env.getExpandCount();
     Value chain = env.getInsertionChain();
     Value compress = CompressOp::create(builder, loc, values, filled, added,
-                                                count, chain, indices);
+                                        count, chain, indices);
     env.updateInsertionChain(compress);
     env.endExpand();
   }
@@ -943,12 +945,13 @@ static scf::IfOp genIf(CodegenEnv &env, OpBuilder &builder, LoopId curr,
           const Value crd = env.emitter().getCoord(tid, *lvl);
           const Value lvar = env.getLoopVar(curr);
           clause = arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::eq,
-                                                 crd, lvar);
+                                         crd, lvar);
         } else {
           assert(lt.hasDenseSemantic() || isUndefLT(lt));
           clause = constantI1(builder, loc, true);
         }
-        cond = cond ? arith::AndIOp::create(builder, loc, cond, clause) : clause;
+        cond =
+            cond ? arith::AndIOp::create(builder, loc, cond, clause) : clause;
       });
   if (env.isReduc()) {
     types.push_back(env.getReduc().getType());

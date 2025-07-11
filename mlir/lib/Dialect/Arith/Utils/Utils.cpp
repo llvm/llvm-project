@@ -105,8 +105,8 @@ Value mlir::getValueOrCreateConstantIntOp(OpBuilder &b, Location loc,
   if (auto value = dyn_cast_if_present<Value>(ofr))
     return value;
   auto attr = cast<IntegerAttr>(cast<Attribute>(ofr));
-  return arith::ConstantOp::create(b,
-      loc, b.getIntegerAttr(attr.getType(), attr.getValue().getSExtValue()));
+  return arith::ConstantOp::create(
+      b, loc, b.getIntegerAttr(attr.getType(), attr.getValue().getSExtValue()));
 }
 
 Value mlir::getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
@@ -215,8 +215,8 @@ static Value convertScalarToComplexDtype(ImplicitLocOpBuilder &b, Value operand,
     if (from.getType().getIntOrFloatBitWidth() > toBitwidth) {
       from = arith::TruncFOp::create(b, toFpTy, from);
     }
-    Value zero = mlir::arith::ConstantFloatOp::create(b,
-        toFpTy, mlir::APFloat(toFpTy.getFloatSemantics(), 0));
+    Value zero = mlir::arith::ConstantFloatOp::create(
+        b, toFpTy, mlir::APFloat(toFpTy.getFloatSemantics(), 0));
     return complex::CreateOp::create(b, targetType, from, zero);
   }
 
@@ -228,8 +228,8 @@ static Value convertScalarToComplexDtype(ImplicitLocOpBuilder &b, Value operand,
     } else {
       from = arith::SIToFPOp::create(b, toFpTy, from);
     }
-    Value zero = mlir::arith::ConstantFloatOp::create(b,
-        toFpTy, mlir::APFloat(toFpTy.getFloatSemantics(), 0));
+    Value zero = mlir::arith::ConstantFloatOp::create(
+        b, toFpTy, mlir::APFloat(toFpTy.getFloatSemantics(), 0));
     return complex::CreateOp::create(b, targetType, from, zero);
   }
 
@@ -350,7 +350,7 @@ Value createProduct(OpBuilder &builder, Location loc, ArrayRef<Value> values) {
 Value createProduct(OpBuilder &builder, Location loc, ArrayRef<Value> values,
                     Type resultType) {
   Value one = ConstantOp::create(builder, loc, resultType,
-                                         builder.getOneAttr(resultType));
+                                 builder.getOneAttr(resultType));
   ArithBuilder arithBuilder(builder, loc);
   return std::accumulate(
       values.begin(), values.end(), one,

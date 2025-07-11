@@ -118,8 +118,8 @@ LogicalResult RawBufferAtomicByCasPattern<AtomicOp, ArithOp>::matchAndRewrite(
 
   SmallVector<NamedAttribute> loadAttrs;
   patchOperandSegmentSizes(origAttrs, loadAttrs, DataArgAction::Drop);
-  Value initialLoad =
-      RawBufferLoadOp::create(rewriter, loc, dataType, invariantArgs, loadAttrs);
+  Value initialLoad = RawBufferLoadOp::create(rewriter, loc, dataType,
+                                              invariantArgs, loadAttrs);
   Block *currentBlock = rewriter.getInsertionBlock();
   Block *afterAtomic =
       rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
@@ -137,8 +137,8 @@ LogicalResult RawBufferAtomicByCasPattern<AtomicOp, ArithOp>::matchAndRewrite(
   patchOperandSegmentSizes(origAttrs, cmpswapAttrs, DataArgAction::Duplicate);
   SmallVector<Value> cmpswapArgs = {operated, prevLoad};
   cmpswapArgs.append(invariantArgs.begin(), invariantArgs.end());
-  Value atomicRes = RawBufferAtomicCmpswapOp::create(rewriter,
-      loc, dataType, cmpswapArgs, cmpswapAttrs);
+  Value atomicRes = RawBufferAtomicCmpswapOp::create(rewriter, loc, dataType,
+                                                     cmpswapArgs, cmpswapAttrs);
 
   // We care about exact bitwise equality here, so do some bitcasts.
   // These will fold away during lowering to the ROCDL dialect, where
@@ -154,10 +154,11 @@ LogicalResult RawBufferAtomicByCasPattern<AtomicOp, ArithOp>::matchAndRewrite(
     atomicResForCompare =
         arith::BitcastOp::create(rewriter, loc, equivInt, atomicRes);
   }
-  Value canLeave = arith::CmpIOp::create(rewriter,
-      loc, arith::CmpIPredicate::eq, atomicResForCompare, prevLoadForCompare);
+  Value canLeave =
+      arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq,
+                            atomicResForCompare, prevLoadForCompare);
   cf::CondBranchOp::create(rewriter, loc, canLeave, afterAtomic, ValueRange{},
-                                    loopBlock, atomicRes);
+                           loopBlock, atomicRes);
   rewriter.eraseOp(atomicOp);
   return success();
 }

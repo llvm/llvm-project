@@ -64,8 +64,8 @@ getOrCreateOperandsMatchingResultTypes(OpBuilder &b, Operation *op) {
       continue;
 
     // Extract static / dynamic shape mix from the first operand.
-    res.push_back(tensor::EmptyOp::create(b,
-        loc, tensor::getMixedSizes(b, loc, operands.front()),
+    res.push_back(tensor::EmptyOp::create(
+        b, loc, tensor::getMixedSizes(b, loc, operands.front()),
         cast<RankedTensorType>(t).getElementType()));
   }
   return res;

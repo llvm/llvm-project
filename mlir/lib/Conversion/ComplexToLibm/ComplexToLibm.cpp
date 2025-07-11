@@ -85,7 +85,7 @@ LogicalResult ScalarOpToLibmCall<Op, TypeResolver>::matchAndRewrite(
     auto opFunctionTy = FunctionType::get(
         rewriter.getContext(), op->getOperandTypes(), op->getResultTypes());
     opFunc = func::FuncOp::create(rewriter, rewriter.getUnknownLoc(), name,
-                                           opFunctionTy);
+                                  opFunctionTy);
     opFunc.setPrivate();
   }
   assert(isa<FunctionOpInterface>(SymbolTable::lookupSymbolIn(module, name)));

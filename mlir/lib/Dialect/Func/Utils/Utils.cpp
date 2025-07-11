@@ -44,8 +44,8 @@ func::replaceFuncWithNewOrder(RewriterBase &rewriter, func::FuncOp funcOp,
   for (unsigned int idx : newResultsOrder)
     newOutputTypes.push_back(origOutputTypes[idx]);
   rewriter.setInsertionPoint(funcOp);
-  auto newFuncOp = func::FuncOp::create(rewriter,
-      funcOp.getLoc(), funcOp.getName(),
+  auto newFuncOp = func::FuncOp::create(
+      rewriter, funcOp.getLoc(), funcOp.getName(),
       rewriter.getFunctionType(newInputTypes, newOutputTypes));
 
   Region &newRegion = newFuncOp.getBody();
@@ -109,8 +109,9 @@ func::replaceCallOpWithNewOrder(RewriterBase &rewriter, func::CallOp callOp,
   // Replace the kernel call operation with a new one that has the
   // reordered arguments.
   rewriter.setInsertionPoint(callOp);
-  auto newCallOp = func::CallOp::create(rewriter,
-      callOp.getLoc(), callOp.getCallee(), newResultTypes, newArgsOrderValues);
+  auto newCallOp =
+      func::CallOp::create(rewriter, callOp.getLoc(), callOp.getCallee(),
+                           newResultTypes, newArgsOrderValues);
   newCallOp.setNoInlineAttr(callOp.getNoInlineAttr());
   for (auto &&[newIndex, origIndex] : llvm::enumerate(newResultsOrder))
     rewriter.replaceAllUsesWith(callOp.getResult(origIndex),

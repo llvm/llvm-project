@@ -8,9 +8,9 @@
 
 #include "mlir/Dialect/Async/IR/Async.h"
 
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
-#include "mlir/IR/Builders.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;

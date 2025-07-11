@@ -96,8 +96,8 @@ FailureOr<scf::WhileOp> mlir::scf::wrapWhileLoopInZeroTripCheck(
       condOp.getArgs(), [&](Value arg) { return mapper.lookupOrDefault(arg); });
 
   // Create rotated while loop.
-  auto newLoopOp = scf::WhileOp::create(rewriter,
-      whileOp.getLoc(), whileOp.getResultTypes(), clonedCondArgs,
+  auto newLoopOp = scf::WhileOp::create(
+      rewriter, whileOp.getLoc(), whileOp.getResultTypes(), clonedCondArgs,
       [&](OpBuilder &builder, Location loc, ValueRange args) {
         // Rotate and move the loop body into before block.
         auto newBlock = builder.getBlock();
@@ -113,8 +113,8 @@ FailureOr<scf::WhileOp> mlir::scf::wrapWhileLoopInZeroTripCheck(
       });
 
   // Create zero-trip-check and move the while loop in.
-  auto ifOp = scf::IfOp::create(rewriter,
-      whileOp.getLoc(), clonedCondition,
+  auto ifOp = scf::IfOp::create(
+      rewriter, whileOp.getLoc(), clonedCondition,
       [&](OpBuilder &builder, Location loc) {
         // Then runs the while loop.
         rewriter.moveOpBefore(newLoopOp, builder.getInsertionBlock(),

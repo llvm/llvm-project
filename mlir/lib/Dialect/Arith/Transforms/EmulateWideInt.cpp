@@ -81,7 +81,7 @@ static Value extractLastDimSlice(ConversionPatternRewriter &rewriter,
   SmallVector<int64_t> strides(shape.size(), 1);
 
   return vector::ExtractStridedSliceOp::create(rewriter, loc, input, offsets,
-                                                        sizes, strides);
+                                               sizes, strides);
 }
 
 /// Extracts two vector slices from the `input` whose type is `vector<...x2T>`,
@@ -142,7 +142,7 @@ static Value insertLastDimSlice(ConversionPatternRewriter &rewriter,
   offsets.back() = lastOffset;
   SmallVector<int64_t> strides(shape.size(), 1);
   return vector::InsertStridedSliceOp::create(rewriter, loc, source, dest,
-                                                       offsets, strides);
+                                              offsets, strides);
 }
 
 /// Constructs a new vector of type `resultType` by creating a series of
@@ -362,8 +362,8 @@ struct ConvertCmpI final : OpConversionPattern<arith::CmpIOp> {
     }
     default: {
       // Handle inequality checks.
-      Value highEq = arith::CmpIOp::create(rewriter,
-          loc, arith::CmpIPredicate::eq, lhsElem1, rhsElem1);
+      Value highEq = arith::CmpIOp::create(
+          rewriter, loc, arith::CmpIPredicate::eq, lhsElem1, rhsElem1);
       cmpResult =
           arith::SelectOp::create(rewriter, loc, highEq, lowCmp, highCmp);
       break;
@@ -443,8 +443,8 @@ struct ConvertExtSI final : OpConversionPattern<arith::ExtSIOp> {
         loc, newResultComponentTy, newOperand);
     Value operandZeroCst =
         createScalarOrSplatConstant(rewriter, loc, newResultComponentTy, 0);
-    Value signBit = arith::CmpIOp::create(rewriter,
-        loc, arith::CmpIPredicate::slt, extended, operandZeroCst);
+    Value signBit = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::slt, extended, operandZeroCst);
     Value signValue =
         arith::ExtSIOp::create(rewriter, loc, newResultComponentTy, signBit);
 
@@ -680,16 +680,16 @@ struct ConvertShLI final : OpConversionPattern<arith::ShLIOp> {
     Value elemBitWidth =
         createScalarOrSplatConstant(rewriter, loc, newOperandTy, newBitWidth);
 
-    Value illegalElemShift = arith::CmpIOp::create(rewriter,
-        loc, arith::CmpIPredicate::uge, rhsElem0, elemBitWidth);
+    Value illegalElemShift = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::uge, rhsElem0, elemBitWidth);
 
     Value shiftedElem0 =
         arith::ShLIOp::create(rewriter, loc, lhsElem0, rhsElem0);
     Value resElem0 = arith::SelectOp::create(rewriter, loc, illegalElemShift,
-                                                      zeroCst, shiftedElem0);
+                                             zeroCst, shiftedElem0);
 
-    Value cappedShiftAmount = arith::SelectOp::create(rewriter,
-        loc, illegalElemShift, elemBitWidth, rhsElem0);
+    Value cappedShiftAmount = arith::SelectOp::create(
+        rewriter, loc, illegalElemShift, elemBitWidth, rhsElem0);
     Value rightShiftAmount =
         arith::SubIOp::create(rewriter, loc, elemBitWidth, cappedShiftAmount);
     Value shiftedRight =
@@ -701,10 +701,10 @@ struct ConvertShLI final : OpConversionPattern<arith::ShLIOp> {
 
     Value shiftedElem1 =
         arith::ShLIOp::create(rewriter, loc, lhsElem1, rhsElem0);
-    Value resElem1High = arith::SelectOp::create(rewriter,
-        loc, illegalElemShift, zeroCst, shiftedElem1);
-    Value resElem1Low = arith::SelectOp::create(rewriter,
-        loc, illegalElemShift, shiftedLeft, shiftedRight);
+    Value resElem1High = arith::SelectOp::create(
+        rewriter, loc, illegalElemShift, zeroCst, shiftedElem1);
+    Value resElem1Low = arith::SelectOp::create(rewriter, loc, illegalElemShift,
+                                                shiftedLeft, shiftedRight);
     Value resElem1 =
         arith::OrIOp::create(rewriter, loc, resElem1Low, resElem1High);
 
@@ -769,20 +769,20 @@ struct ConvertShRUI final : OpConversionPattern<arith::ShRUIOp> {
     Value elemBitWidth =
         createScalarOrSplatConstant(rewriter, loc, newOperandTy, newBitWidth);
 
-    Value illegalElemShift = arith::CmpIOp::create(rewriter,
-        loc, arith::CmpIPredicate::uge, rhsElem0, elemBitWidth);
+    Value illegalElemShift = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::uge, rhsElem0, elemBitWidth);
 
     Value shiftedElem0 =
         arith::ShRUIOp::create(rewriter, loc, lhsElem0, rhsElem0);
     Value resElem0Low = arith::SelectOp::create(rewriter, loc, illegalElemShift,
-                                                         zeroCst, shiftedElem0);
+                                                zeroCst, shiftedElem0);
     Value shiftedElem1 =
         arith::ShRUIOp::create(rewriter, loc, lhsElem1, rhsElem0);
     Value resElem1 = arith::SelectOp::create(rewriter, loc, illegalElemShift,
-                                                      zeroCst, shiftedElem1);
+                                             zeroCst, shiftedElem1);
 
-    Value cappedShiftAmount = arith::SelectOp::create(rewriter,
-        loc, illegalElemShift, elemBitWidth, rhsElem0);
+    Value cappedShiftAmount = arith::SelectOp::create(
+        rewriter, loc, illegalElemShift, elemBitWidth, rhsElem0);
     Value leftShiftAmount =
         arith::SubIOp::create(rewriter, loc, elemBitWidth, cappedShiftAmount);
     Value shiftedLeft =
@@ -792,8 +792,8 @@ struct ConvertShRUI final : OpConversionPattern<arith::ShRUIOp> {
     Value shiftedRight =
         arith::ShRUIOp::create(rewriter, loc, lhsElem1, overshotShiftAmount);
 
-    Value resElem0High = arith::SelectOp::create(rewriter,
-        loc, illegalElemShift, shiftedRight, shiftedLeft);
+    Value resElem0High = arith::SelectOp::create(
+        rewriter, loc, illegalElemShift, shiftedRight, shiftedLeft);
     Value resElem0 =
         arith::OrIOp::create(rewriter, loc, resElem0Low, resElem0High);
 
@@ -832,8 +832,8 @@ struct ConvertShRSI final : OpConversionPattern<arith::ShRSIOp> {
     // Perform as many ops over the narrow integer type as possible and let the
     // other emulation patterns convert the rest.
     Value elemZero = createScalarOrSplatConstant(rewriter, loc, narrowTy, 0);
-    Value signBit = arith::CmpIOp::create(rewriter,
-        loc, arith::CmpIPredicate::slt, lhsElem1, elemZero);
+    Value signBit = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::slt, lhsElem1, elemZero);
     signBit = dropTrailingX1Dim(rewriter, loc, signBit);
 
     // Create a bit pattern of either all ones or all zeros. Then shift it left
@@ -857,8 +857,8 @@ struct ConvertShRSI final : OpConversionPattern<arith::ShRSIOp> {
 
     // Handle shifting by zero. This is necessary when the `signBits` shift is
     // invalid.
-    Value isNoop = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq,
-                                                  rhsElem0, elemZero);
+    Value isNoop = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::eq, rhsElem0, elemZero);
     isNoop = dropTrailingX1Dim(rewriter, loc, isNoop);
     rewriter.replaceOpWithNewOp<arith::SelectOp>(op, isNoop, op.getLhs(),
                                                  shrsi);
@@ -894,8 +894,8 @@ struct ConvertSubI final : OpConversionPattern<arith::SubIOp> {
     // CARRY is 1 or 0.
     Value low = arith::SubIOp::create(rewriter, loc, lhsElem0, rhsElem0);
     // We have a carry if lhsElem0 < rhsElem0.
-    Value carry0 = arith::CmpIOp::create(rewriter,
-        loc, arith::CmpIPredicate::ult, lhsElem0, rhsElem0);
+    Value carry0 = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::ult, lhsElem0, rhsElem0);
     Value carryVal = arith::ExtUIOp::create(rewriter, loc, newElemTy, carry0);
 
     Value high0 = arith::SubIOp::create(rewriter, loc, lhsElem1, carryVal);
@@ -933,8 +933,8 @@ struct ConvertSIToFP final : OpConversionPattern<arith::SIToFPOp> {
     // result or not based on that sign bit. We implement negation by
     // subtracting from zero. Note that this relies on the the other conversion
     // patterns to legalize created ops and narrow the bit widths.
-    Value isNeg = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
-                                                 in, zeroCst);
+    Value isNeg = arith::CmpIOp::create(rewriter, loc,
+                                        arith::CmpIPredicate::slt, in, zeroCst);
     Value neg = arith::SubIOp::create(rewriter, loc, zeroCst, in);
     Value abs = arith::SelectOp::create(rewriter, loc, isNeg, neg, in);
 
@@ -985,8 +985,8 @@ struct ConvertUIToFP final : OpConversionPattern<arith::UIToFPOp> {
     //
     // Note 2: We do not strictly need the `hi == 0`, case, but it makes
     // constant folding easier.
-    Value hiEqZero = arith::CmpIOp::create(rewriter,
-        loc, arith::CmpIPredicate::eq, hiInt, zeroCst);
+    Value hiEqZero = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::eq, hiInt, zeroCst);
 
     Type resultTy = op.getType();
     Type resultElemTy = getElementTypeOrSelf(resultTy);
@@ -999,7 +999,8 @@ struct ConvertUIToFP final : OpConversionPattern<arith::UIToFPOp> {
     if (auto vecTy = dyn_cast<VectorType>(resultTy))
       pow2Attr = SplatElementsAttr::get(vecTy, pow2Attr);
 
-    Value pow2Val = arith::ConstantOp::create(rewriter, loc, resultTy, pow2Attr);
+    Value pow2Val =
+        arith::ConstantOp::create(rewriter, loc, resultTy, pow2Attr);
 
     Value hiVal = arith::MulFOp::create(rewriter, loc, hiFp, pow2Val);
     Value result = arith::AddFOp::create(rewriter, loc, lowFp, hiVal);
@@ -1042,8 +1043,8 @@ struct ConvertFPToSI final : OpConversionPattern<arith::FPToSIOp> {
 
     // Get the absolute value. One could have used math.absf here, but that
     // introduces an extra dependency.
-    Value isNeg = arith::CmpFOp::create(rewriter, loc, arith::CmpFPredicate::OLT,
-                                                 inFp, zeroCst);
+    Value isNeg = arith::CmpFOp::create(
+        rewriter, loc, arith::CmpFPredicate::OLT, inFp, zeroCst);
     Value negInFp = arith::NegFOp::create(rewriter, loc, inFp);
 
     Value absVal = arith::SelectOp::create(rewriter, loc, isNeg, negInFp, inFp);

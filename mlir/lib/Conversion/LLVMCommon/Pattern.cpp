@@ -58,7 +58,7 @@ Value ConvertToLLVMPattern::createIndexAttrConstant(OpBuilder &builder,
                                                     Type resultType,
                                                     int64_t value) {
   return LLVM::ConstantOp::create(builder, loc, resultType,
-                                          builder.getIndexAttr(value));
+                                  builder.getIndexAttr(value));
 }
 
 Value ConvertToLLVMPattern::getStridedElementPtr(
@@ -132,8 +132,8 @@ void ConvertToLLVMPattern::getMemRefDescriptorSizes(
     Type elementType = typeConverter->convertType(memRefType.getElementType());
     auto elementPtrType = LLVM::LLVMPointerType::get(rewriter.getContext());
     Value nullPtr = LLVM::ZeroOp::create(rewriter, loc, elementPtrType);
-    Value gepPtr = LLVM::GEPOp::create(rewriter,
-        loc, elementPtrType, elementType, nullPtr, runningStride);
+    Value gepPtr = LLVM::GEPOp::create(rewriter, loc, elementPtrType,
+                                       elementType, nullPtr, runningStride);
     size = LLVM::PtrToIntOp::create(rewriter, loc, getIndexType(), gepPtr);
   } else {
     size = runningStride;
@@ -151,7 +151,7 @@ Value ConvertToLLVMPattern::getSizeInBytes(
   auto convertedPtrType = LLVM::LLVMPointerType::get(rewriter.getContext());
   auto nullPtr = LLVM::ZeroOp::create(rewriter, loc, convertedPtrType);
   auto gep = LLVM::GEPOp::create(rewriter, loc, convertedPtrType, llvmType,
-                                          nullPtr, ArrayRef<LLVM::GEPArg>{1});
+                                 nullPtr, ArrayRef<LLVM::GEPArg>{1});
   return LLVM::PtrToIntOp::create(rewriter, loc, getIndexType(), gep);
 }
 
@@ -277,9 +277,9 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
                   .create<LLVM::CallOp>(loc, mallocFunc.value(), allocationSize)
                   .getResult()
             : LLVM::AllocaOp::create(builder, loc, getPtrType(),
-                                             IntegerType::get(getContext(), 8),
-                                             allocationSize,
-                                             /*alignment=*/0);
+                                     IntegerType::get(getContext(), 8),
+                                     allocationSize,
+                                     /*alignment=*/0);
     Value source = desc.memRefDescPtr(builder, loc);
     LLVM::MemcpyOp::create(builder, loc, memory, source, allocationSize, false);
     if (!toDynamic)
@@ -349,8 +349,8 @@ LogicalResult LLVM::detail::oneToOneRewrite(
   SmallVector<Value, 4> results;
   results.reserve(numResults);
   for (unsigned i = 0; i < numResults; ++i) {
-    results.push_back(LLVM::ExtractValueOp::create(rewriter,
-        op->getLoc(), newOp->getResult(0), i));
+    results.push_back(LLVM::ExtractValueOp::create(rewriter, op->getLoc(),
+                                                   newOp->getResult(0), i));
   }
   rewriter.replaceOp(op, results);
   return success();
@@ -371,8 +371,8 @@ LogicalResult LLVM::detail::intrinsicRewrite(
   if (numResults != 0)
     resType = typeConverter.packOperationResults(op->getResultTypes());
 
-  auto callIntrOp = LLVM::CallIntrinsicOp::create(rewriter,
-      loc, resType, rewriter.getStringAttr(intrinsic), operands);
+  auto callIntrOp = LLVM::CallIntrinsicOp::create(
+      rewriter, loc, resType, rewriter.getStringAttr(intrinsic), operands);
   // Propagate attributes.
   callIntrOp->setAttrs(op->getAttrDictionary());
 
@@ -518,20 +518,20 @@ Value mlir::LLVM::getStridedElementPtr(OpBuilder &builder, Location loc,
       Value stride =
           ShapedType::isDynamic(strides[i])
               ? memRefDescriptor.stride(builder, loc, i)
-              : LLVM::ConstantOp::create(builder,
-                    loc, indexType, builder.getIndexAttr(strides[i]));
-      increment =
-          LLVM::MulOp::create(builder, loc, increment, stride, intOverflowFlags);
+              : LLVM::ConstantOp::create(builder, loc, indexType,
+                                         builder.getIndexAttr(strides[i]));
+      increment = LLVM::MulOp::create(builder, loc, increment, stride,
+                                      intOverflowFlags);
     }
     index = index ? LLVM::AddOp::create(builder, loc, index, increment,
-                                                intOverflowFlags)
+                                        intOverflowFlags)
                   : increment;
   }
 
   Type elementPtrType = memRefDescriptor.getElementPtrType();
-  return index ? LLVM::GEPOp::create(builder,
-                     loc, elementPtrType,
-                     converter.convertType(type.getElementType()), base, index,
-                     noWrapFlags)
-               : base;
+  return index
+             ? LLVM::GEPOp::create(builder, loc, elementPtrType,
+                                   converter.convertType(type.getElementType()),
+                                   base, index, noWrapFlags)
+             : base;
 }

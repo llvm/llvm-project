@@ -74,7 +74,7 @@ struct AssertOpLowering : public ConvertOpToLLVMPattern<cf::AssertOp> {
         rewriter.setInsertionPointToStart(module.getBody());
         auto abortFuncTy = LLVM::LLVMFunctionType::get(getVoidType(), {});
         abortFunc = LLVM::LLVMFuncOp::create(rewriter, rewriter.getUnknownLoc(),
-                                                      "abort", abortFuncTy);
+                                             "abort", abortFuncTy);
       }
       LLVM::CallOp::create(rewriter, loc, abortFunc, ValueRange());
       LLVM::UnreachableOp::create(rewriter, loc);

@@ -226,8 +226,8 @@ struct BroadcastOpToArmSMELowering
         (srcVectorType && (srcVectorType.getRank() == 0))) {
       // Broadcast scalar or 0-d vector to 1-d vector.
       VectorType tileSliceType = VectorType::Builder(tileType).dropDim(0);
-      broadcastOp1D = vector::BroadcastOp::create(rewriter,
-          loc, tileSliceType, broadcastOp.getSource());
+      broadcastOp1D = vector::BroadcastOp::create(rewriter, loc, tileSliceType,
+                                                  broadcastOp.getSource());
     } else if (srcVectorType && (srcVectorType.getRank() == 1))
       // Value to broadcast is already a 1-d vector, nothing to do.
       broadcastOp1D = broadcastOp.getSource();
@@ -240,8 +240,8 @@ struct BroadcastOpToArmSMELowering
                             Value currentTile) {
       // Create 'arm_sme.insert_tile_slice' to broadcast the value
       // to each tile slice.
-      auto nextTile = arm_sme::InsertTileSliceOp::create(b,
-          loc, tileType, broadcastOp1D, currentTile, tileSliceIndex);
+      auto nextTile = arm_sme::InsertTileSliceOp::create(
+          b, loc, tileType, broadcastOp1D, currentTile, tileSliceIndex);
       return nextTile.getResult();
     };
 
@@ -292,15 +292,15 @@ struct SplatOpToArmSMELowering : public OpRewritePattern<vector::SplatOp> {
 
     // First, broadcast the scalar to a 1-d vector.
     VectorType tileSliceType = VectorType::Builder(tileType).dropDim(0);
-    Value broadcastOp1D = vector::BroadcastOp::create(rewriter,
-        loc, tileSliceType, splatOp.getInput());
+    Value broadcastOp1D = vector::BroadcastOp::create(
+        rewriter, loc, tileSliceType, splatOp.getInput());
 
     auto initTile = arm_sme::GetTileOp::create(rewriter, loc, tileType);
 
     auto makeLoopBody = [&](OpBuilder &b, Location loc, Value tileSliceIndex,
                             Value currentTile) {
-      auto nextTile = arm_sme::InsertTileSliceOp::create(b,
-          loc, tileType, broadcastOp1D, currentTile, tileSliceIndex);
+      auto nextTile = arm_sme::InsertTileSliceOp::create(
+          b, loc, tileType, broadcastOp1D, currentTile, tileSliceIndex);
       return nextTile.getResult();
     };
 
@@ -371,8 +371,8 @@ struct TransposeOpToArmSMELowering
     // Allocate buffer to store input tile to.
     Value vscale =
         vector::VectorScaleOp::create(rewriter, loc, rewriter.getIndexType());
-    Value minTileSlices = arith::ConstantOp::create(rewriter,
-        loc, rewriter.getIndexAttr(tileType.getDimSize(0)));
+    Value minTileSlices = arith::ConstantOp::create(
+        rewriter, loc, rewriter.getIndexAttr(tileType.getDimSize(0)));
     Value c0 =
         arith::ConstantOp::create(rewriter, loc, rewriter.getIndexAttr(0));
     Value numTileSlices =
@@ -380,12 +380,12 @@ struct TransposeOpToArmSMELowering
     auto bufferType =
         MemRefType::get({ShapedType::kDynamic, ShapedType::kDynamic},
                         tileType.getElementType());
-    auto buffer = memref::AllocaOp::create(rewriter,
-        loc, bufferType, ValueRange{numTileSlices, numTileSlices});
+    auto buffer = memref::AllocaOp::create(
+        rewriter, loc, bufferType, ValueRange{numTileSlices, numTileSlices});
 
     // Store input tile.
-    auto tileStoreOp = arm_sme::TileStoreOp::create(rewriter,
-        loc, input, buffer, ValueRange{c0, c0});
+    auto tileStoreOp = arm_sme::TileStoreOp::create(rewriter, loc, input,
+                                                    buffer, ValueRange{c0, c0});
 
     // Reload input tile vertically.
     rewriter.replaceOpWithNewOp<arm_sme::TileLoadOp>(
@@ -488,10 +488,10 @@ struct VectorOuterProductToArmSMELowering
     Value rhsMaskDim = createMaskOp.getOperand(1);
 
     VectorType operandMaskType = VectorType::Builder(maskType).dropDim(0);
-    Value lhsMask =
-        vector::CreateMaskOp::create(rewriter, loc, operandMaskType, lhsMaskDim);
-    Value rhsMask =
-        vector::CreateMaskOp::create(rewriter, loc, operandMaskType, rhsMaskDim);
+    Value lhsMask = vector::CreateMaskOp::create(rewriter, loc, operandMaskType,
+                                                 lhsMaskDim);
+    Value rhsMask = vector::CreateMaskOp::create(rewriter, loc, operandMaskType,
+                                                 rhsMaskDim);
 
     return std::make_pair(lhsMask, rhsMask);
   }
@@ -531,8 +531,8 @@ struct VectorExtractToArmSMELowering
     }
 
     Value sliceIndex = vector::getAsValues(rewriter, loc, position[0]).front();
-    auto extractTileSlice = arm_sme::ExtractTileSliceOp::create(rewriter,
-        loc, sourceVector, sliceIndex);
+    auto extractTileSlice = arm_sme::ExtractTileSliceOp::create(
+        rewriter, loc, sourceVector, sliceIndex);
 
     if (position.size() == 1) {
       // Single index case: Extracts a 1D slice.
@@ -593,10 +593,10 @@ struct VectorInsertToArmSMELowering
     if (position.size() == 2) {
       // Two indices case: Insert single element into tile.
       // We need to first extract the existing slice and update the element.
-      tileSlice = arm_sme::ExtractTileSliceOp::create(rewriter,
-          loc, insertOp.getDest(), sliceIndex);
+      tileSlice = arm_sme::ExtractTileSliceOp::create(
+          rewriter, loc, insertOp.getDest(), sliceIndex);
       tileSlice = vector::InsertOp::create(rewriter, loc, source, tileSlice,
-                                                    position[1]);
+                                           position[1]);
     }
 
     // Insert the slice into the destination tile.
@@ -648,17 +648,18 @@ struct VectorPrintToArmSMELowering : public OpRewritePattern<vector::PrintOp> {
     auto lowerBound = arith::ConstantIndexOp::create(rewriter, loc, 0);
     auto upperBound = arith::MulIOp::create(rewriter, loc, minTileRows, vscale);
     auto step = arith::ConstantIndexOp::create(rewriter, loc, 1);
-    auto forOp = scf::ForOp::create(rewriter, loc, lowerBound, upperBound, step);
+    auto forOp =
+        scf::ForOp::create(rewriter, loc, lowerBound, upperBound, step);
     {
       // Loop body.
       rewriter.setInsertionPointToStart(forOp.getBody());
       // Extract the current row from the tile.
       Value rowIndex = forOp.getInductionVar();
-      auto tileSlice = arm_sme::ExtractTileSliceOp::create(rewriter,
-          loc, printOp.getSource(), rowIndex);
+      auto tileSlice = arm_sme::ExtractTileSliceOp::create(
+          rewriter, loc, printOp.getSource(), rowIndex);
       // Print the row with a 1D vector.print.
       vector::PrintOp::create(rewriter, loc, tileSlice,
-                                       printOp.getPunctuation());
+                              printOp.getPunctuation());
     }
 
     rewriter.eraseOp(printOp);
@@ -707,8 +708,8 @@ struct FoldTransferWriteOfExtractTileSlice
     Value mask = writeOp.getMask();
     if (!mask) {
       auto maskType = writeOp.getVectorType().clone(rewriter.getI1Type());
-      mask = arith::ConstantOp::create(rewriter,
-          writeOp.getLoc(), maskType, DenseElementsAttr::get(maskType, true));
+      mask = arith::ConstantOp::create(rewriter, writeOp.getLoc(), maskType,
+                                       DenseElementsAttr::get(maskType, true));
     }
 
     rewriter.replaceOpWithNewOp<arm_sme::StoreTileSliceOp>(
@@ -776,10 +777,10 @@ struct ExtractFromCreateMaskToPselLowering
     // Create the two 1-D masks at the location of the 2-D create_mask (which is
     // usually outside a loop). This prevents the need for later hoisting.
     rewriter.setInsertionPoint(createMaskOp);
-    auto rowMask = vector::CreateMaskOp::create(rewriter,
-        loc, rowMaskType, createMaskOp.getOperand(0));
-    auto colMask = vector::CreateMaskOp::create(rewriter,
-        loc, colMaskType, createMaskOp.getOperand(1));
+    auto rowMask = vector::CreateMaskOp::create(rewriter, loc, rowMaskType,
+                                                createMaskOp.getOperand(0));
+    auto colMask = vector::CreateMaskOp::create(rewriter, loc, colMaskType,
+                                                createMaskOp.getOperand(1));
 
     rewriter.setInsertionPoint(extractOp);
     auto position =

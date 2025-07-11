@@ -65,13 +65,13 @@ struct VectorMaskedLoadOpConverter final
     Value base = maskedLoadOp.getBase();
     Value iValue = maskedLoadOp.getPassThru();
     auto indices = llvm::to_vector_of<Value>(maskedLoadOp.getIndices());
-    Value one = arith::ConstantOp::create(rewriter,
-        loc, indexType, IntegerAttr::get(indexType, 1));
+    Value one = arith::ConstantOp::create(rewriter, loc, indexType,
+                                          IntegerAttr::get(indexType, 1));
     for (int64_t i = 0; i < maskLength; ++i) {
       auto maskBit = vector::ExtractOp::create(rewriter, loc, mask, i);
 
-      auto ifOp = scf::IfOp::create(rewriter,
-          loc, maskBit,
+      auto ifOp = scf::IfOp::create(
+          rewriter, loc, maskBit,
           [&](OpBuilder &builder, Location loc) {
             auto loadedValue =
                 memref::LoadOp::create(builder, loc, base, indices);
@@ -84,7 +84,8 @@ struct VectorMaskedLoadOpConverter final
           });
       iValue = ifOp.getResult(0);
 
-      indices.back() = arith::AddIOp::create(rewriter, loc, indices.back(), one);
+      indices.back() =
+          arith::AddIOp::create(rewriter, loc, indices.back(), one);
     }
 
     rewriter.replaceOp(maskedLoadOp, iValue);
@@ -132,8 +133,8 @@ struct VectorMaskedStoreOpConverter final
     Value base = maskedStoreOp.getBase();
     Value value = maskedStoreOp.getValueToStore();
     auto indices = llvm::to_vector_of<Value>(maskedStoreOp.getIndices());
-    Value one = arith::ConstantOp::create(rewriter,
-        loc, indexType, IntegerAttr::get(indexType, 1));
+    Value one = arith::ConstantOp::create(rewriter, loc, indexType,
+                                          IntegerAttr::get(indexType, 1));
     for (int64_t i = 0; i < maskLength; ++i) {
       auto maskBit = vector::ExtractOp::create(rewriter, loc, mask, i);
 
@@ -143,7 +144,8 @@ struct VectorMaskedStoreOpConverter final
       memref::StoreOp::create(rewriter, loc, extractedValue, base, indices);
 
       rewriter.setInsertionPointAfter(ifOp);
-      indices.back() = arith::AddIOp::create(rewriter, loc, indices.back(), one);
+      indices.back() =
+          arith::AddIOp::create(rewriter, loc, indices.back(), one);
     }
 
     rewriter.eraseOp(maskedStoreOp);

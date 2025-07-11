@@ -591,8 +591,8 @@ static FailureOr<PackingResult> buildPackingLoopNestImpl(
 
     // Create a packing loop that takes `hoistedPackedTensor` as iteration
     // argument.
-    auto clonedForOp = scf::ForOp::create(rewriter,
-        loc, bvm.lookupOrDefault(forOp.getLowerBound()),
+    auto clonedForOp = scf::ForOp::create(
+        rewriter, loc, bvm.lookupOrDefault(forOp.getLowerBound()),
         bvm.lookupOrDefault(forOp.getUpperBound()),
         bvm.lookupOrDefault(forOp.getStep()), hoistedPackedTensor);
 
@@ -640,11 +640,11 @@ static FailureOr<PackingResult> buildPackingLoopNestImpl(
   TransposeOp maybeTransposeOp;
   Value paddedTensor = bvm.lookup(opToHoist.getResult());
   if (!transposeVector.empty()) {
-    Value outputTensor = tensor::ExtractSliceOp::create(rewriter,
-        loc, transposedTensorType, hoistedPackedTensor, offsets, sizes,
-        strides);
-    maybeTransposeOp = linalg::TransposeOp::create(rewriter,
-        loc, paddedTensor, outputTensor, transposeVector);
+    Value outputTensor = tensor::ExtractSliceOp::create(
+        rewriter, loc, transposedTensorType, hoistedPackedTensor, offsets,
+        sizes, strides);
+    maybeTransposeOp = linalg::TransposeOp::create(
+        rewriter, loc, paddedTensor, outputTensor, transposeVector);
     paddedTensor = maybeTransposeOp.getResult()[0];
   }
 
@@ -652,8 +652,9 @@ static FailureOr<PackingResult> buildPackingLoopNestImpl(
   if (nPackedLoops > 0) {
     // Step 4. Create InsertSliceOp at the innermost loop level, inserting an
     // optionally transposed padded slice into the packed tensor.
-    Value inserted = tensor::InsertSliceOp::create(rewriter,
-        loc, paddedTensor, hoistedPackedTensor, offsets, sizes, strides);
+    Value inserted = tensor::InsertSliceOp::create(rewriter, loc, paddedTensor,
+                                                   hoistedPackedTensor, offsets,
+                                                   sizes, strides);
 
     // Step 5. Iteratively pop the stack and propagate the yield.
     Value valueToYield = inserted;
@@ -712,8 +713,8 @@ static FailureOr<PackingResult> buildPackingLoopNestImpl(
   rewriter.setInsertionPoint(outerLoop);
   SmallVector<Value> dynamicTensorSizes =
       analysis.getHoistedPackedTensorSizes(rewriter, loc);
-  auto emptyOp = tensor::EmptyOp::create(rewriter,
-      loc, hoistedPackedTensorType.getShape(),
+  auto emptyOp = tensor::EmptyOp::create(
+      rewriter, loc, hoistedPackedTensorType.getShape(),
       hoistedPackedTensorType.getElementType(), dynamicTensorSizes);
 
   return buildPackingLoopNestImpl(rewriter, bvm, opToHoist, transposeVector,
@@ -840,8 +841,8 @@ padThroughLoopIterArg(RewriterBase &rewriter, Value paddedValueBeforeHoisting,
   {
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPointAfter(forOp);
-    extracted = tensor::ExtractSliceOp::create(rewriter,
-        hoistedPackedTensor.getLoc(), hoistedPackedTensor,
+    extracted = tensor::ExtractSliceOp::create(
+        rewriter, hoistedPackedTensor.getLoc(), hoistedPackedTensor,
         outerSliceOp.getMixedOffsets(), outerSliceOp.getMixedSizes(),
         outerSliceOp.getMixedStrides());
     rewriter.replaceAllUsesWith(forOp.getResult(iterArgNumber), extracted);
@@ -934,8 +935,8 @@ static Value replaceByPackingResult(RewriterBase &rewriter,
   // offsets = [maybe_leading_ivs, 0 .. 0].
   // sizes = [1 .. 1, transposedShape] (defined above).
   // strides = [1 .. 1] (defined above)
-  return tensor::ExtractSliceOp::create(rewriter,
-      loc, transposedTensorType, hoistedPackedTensor, offsets,
+  return tensor::ExtractSliceOp::create(
+      rewriter, loc, transposedTensorType, hoistedPackedTensor, offsets,
       packingResult.sizes, packingResult.strides);
 }
 
@@ -982,10 +983,11 @@ FailureOr<Value> mlir::linalg::hoistPaddingOnTensors(
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPointAfter(newResult.getDefiningOp());
     // Transpose the packed tensor back to the original storage order.
-    Value emptyTensor = tensor::EmptyOp::create(rewriter,
-        loc, paddedTensorType.getShape(), paddedTensorType.getElementType());
-    TransposeOp unTransposeOp = linalg::TransposeOp::create(rewriter,
-        loc, newResult, emptyTensor, transposeVector);
+    Value emptyTensor =
+        tensor::EmptyOp::create(rewriter, loc, paddedTensorType.getShape(),
+                                paddedTensorType.getElementType());
+    TransposeOp unTransposeOp = linalg::TransposeOp::create(
+        rewriter, loc, newResult, emptyTensor, transposeVector);
     newResult = unTransposeOp.getResult()[0];
     transposeOps.push_back(unTransposeOp);
   }

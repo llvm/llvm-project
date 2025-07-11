@@ -29,8 +29,8 @@ static Value createConst(Location loc, Type type, int value,
                          PatternRewriter &rewriter) {
   auto attr = rewriter.getIntegerAttr(getElementTypeOrSelf(type), value);
   if (auto shapedTy = dyn_cast<ShapedType>(type)) {
-    return arith::ConstantOp::create(rewriter,
-        loc, DenseElementsAttr::get(shapedTy, attr));
+    return arith::ConstantOp::create(rewriter, loc,
+                                     DenseElementsAttr::get(shapedTy, attr));
   }
   return arith::ConstantOp::create(rewriter, loc, attr);
 }
@@ -40,8 +40,8 @@ static Value createFloatConst(Location loc, Type type, APFloat value,
                               PatternRewriter &rewriter) {
   auto attr = rewriter.getFloatAttr(getElementTypeOrSelf(type), value);
   if (auto shapedTy = dyn_cast<ShapedType>(type)) {
-    return arith::ConstantOp::create(rewriter,
-        loc, DenseElementsAttr::get(shapedTy, attr));
+    return arith::ConstantOp::create(rewriter, loc,
+                                     DenseElementsAttr::get(shapedTy, attr));
   }
 
   return arith::ConstantOp::create(rewriter, loc, attr);
@@ -99,16 +99,16 @@ struct CeilDivSIOpConverter : public OpRewritePattern<arith::CeilDivSIOp> {
 
     Value quotient = arith::DivSIOp::create(rewriter, loc, a, b);
     Value product = arith::MulIOp::create(rewriter, loc, quotient, b);
-    Value notEqualDivisor = arith::CmpIOp::create(rewriter,
-        loc, arith::CmpIPredicate::ne, a, product);
+    Value notEqualDivisor = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::ne, a, product);
 
-    Value aNeg =
-        arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt, a, zero);
-    Value bNeg =
-        arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt, b, zero);
+    Value aNeg = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
+                                       a, zero);
+    Value bNeg = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
+                                       b, zero);
 
-    Value signEqual = arith::CmpIOp::create(rewriter,
-        loc, arith::CmpIPredicate::eq, aNeg, bNeg);
+    Value signEqual = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::eq, aNeg, bNeg);
     Value cond =
         arith::AndIOp::create(rewriter, loc, notEqualDivisor, signEqual);
 
@@ -138,17 +138,17 @@ struct FloorDivSIOpConverter : public OpRewritePattern<arith::FloorDivSIOp> {
 
     Value quotient = arith::DivSIOp::create(rewriter, loc, a, b);
     Value product = arith::MulIOp::create(rewriter, loc, quotient, b);
-    Value notEqualDivisor = arith::CmpIOp::create(rewriter,
-        loc, arith::CmpIPredicate::ne, a, product);
+    Value notEqualDivisor = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::ne, a, product);
     Value zero = createConst(loc, type, 0, rewriter);
 
-    Value aNeg =
-        arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt, a, zero);
-    Value bNeg =
-        arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt, b, zero);
+    Value aNeg = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
+                                       a, zero);
+    Value bNeg = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
+                                       b, zero);
 
-    Value signOpposite = arith::CmpIOp::create(rewriter,
-        loc, arith::CmpIPredicate::ne, aNeg, bNeg);
+    Value signOpposite = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::ne, aNeg, bNeg);
     Value cond =
         arith::AndIOp::create(rewriter, loc, notEqualDivisor, signOpposite);
 
@@ -197,8 +197,8 @@ public:
     Value select = arith::SelectOp::create(rewriter, loc, cmp, lhs, rhs);
 
     // Handle the case where rhs is NaN: 'isNaN(rhs) ? rhs : select'.
-    Value isNaN = arith::CmpFOp::create(rewriter, loc, arith::CmpFPredicate::UNO,
-                                                 rhs, rhs);
+    Value isNaN = arith::CmpFOp::create(rewriter, loc,
+                                        arith::CmpFPredicate::UNO, rhs, rhs);
     rewriter.replaceOpWithNewOp<arith::SelectOp>(op, isNaN, rhs, select);
     return success();
   }
@@ -223,8 +223,8 @@ public:
     Value select = arith::SelectOp::create(rewriter, loc, cmp, lhs, rhs);
 
     // Handle the case where lhs is NaN: 'isNaN(lhs) ? rhs : select'.
-    Value isNaN = arith::CmpFOp::create(rewriter, loc, arith::CmpFPredicate::UNO,
-                                                 lhs, lhs);
+    Value isNaN = arith::CmpFOp::create(rewriter, loc,
+                                        arith::CmpFPredicate::UNO, lhs, lhs);
     rewriter.replaceOpWithNewOp<arith::SelectOp>(op, isNaN, rhs, select);
     return success();
   }
@@ -415,7 +415,8 @@ struct F4E2M1ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
     Value c0x8 = createConst(loc, i4Ty, 0x8, rewriter);
     Value negative =
         arith::CmpIOp::create(b, arith::CmpIPredicate::uge, i4Bits, c0x8);
-    Value bit32 = arith::SelectOp::create(b, negative, c0x80000000, zeroExpBits);
+    Value bit32 =
+        arith::SelectOp::create(b, negative, c0x80000000, zeroExpBits);
 
     // Add segments together.
     Value bits1To31 = arith::AddIOp::create(b, bits1To24, bits25To31);
@@ -464,7 +465,7 @@ struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
     Value result = arith::BitcastOp::create(b, f32Ty, f32Bits);
     if (resultETy.getIntOrFloatBitWidth() < 32) {
       result = arith::TruncFOp::create(b, resultTy, result, nullptr,
-                                         op.getFastmathAttr());
+                                       op.getFastmathAttr());
     } else if (resultETy.getIntOrFloatBitWidth() > 32) {
       result = arith::ExtFOp::create(b, resultTy, result, op.getFastmathAttr());
     }
@@ -570,7 +571,7 @@ struct F4E2M1TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
         arith::CmpIOp::create(b, arith::CmpIPredicate::eq, f8Exp, c0xff);
     Value man23Bits = arith::AndIOp::create(b, f32Bits, cF32MantissaMask);
     Value isNonZeroMan = arith::CmpIOp::create(b, arith::CmpIPredicate::ugt,
-                                                 man23Bits, zeroExpBits);
+                                               man23Bits, zeroExpBits);
     Value roundToHalf = arith::AndIOp::create(b, isNegOneExp, isNonZeroMan);
     Value isZeroExp =
         arith::CmpIOp::create(b, arith::CmpIPredicate::eq, f8Exp, c0x00);
@@ -628,8 +629,8 @@ struct F8E8M0TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     if (operandETy.getIntOrFloatBitWidth() < 32) {
       operand = arith::ExtFOp::create(b, f32Ty, operand, op.getFastmathAttr());
     } else if (operandETy.getIntOrFloatBitWidth() > 32) {
-      operand = arith::TruncFOp::create(b,
-          f32Ty, operand, op.getRoundingmodeAttr(), op.getFastmathAttr());
+      operand = arith::TruncFOp::create(
+          b, f32Ty, operand, op.getRoundingmodeAttr(), op.getFastmathAttr());
     }
     Value f32Bits = arith::BitcastOp::create(b, i32Ty, operand);
     Value cF32MantissaWidth = createConst(op->getLoc(), i32Ty, 23, rewriter);
@@ -655,7 +656,7 @@ struct ScalingExtFOpConverter : public OpRewritePattern<arith::ScalingExtFOp> {
       scaleETy = b.getF8E8M0Type();
       scaleTy = cloneToShapedType(scaleTy, scaleETy);
       scaleOperand = arith::TruncFOp::create(b, scaleTy, scaleOperand, nullptr,
-                                               op.getFastmathAttr());
+                                             op.getFastmathAttr());
     }
     if (!llvm::isa<Float8E8M0FNUType>(scaleETy)) {
       return rewriter.notifyMatchFailure(
@@ -696,7 +697,7 @@ struct ScalingTruncFOpConverter
       scaleETy = b.getF8E8M0Type();
       scaleTy = cloneToShapedType(scaleTy, scaleETy);
       scaleOperand = arith::TruncFOp::create(b, scaleTy, scaleOperand, nullptr,
-                                               op.getFastmathAttr());
+                                             op.getFastmathAttr());
     }
     if (!llvm::isa<Float8E8M0FNUType>(scaleETy)) {
       return rewriter.notifyMatchFailure(
@@ -710,9 +711,9 @@ struct ScalingTruncFOpConverter
     scaleOperand =
         arith::ExtFOp::create(b, inputTy, scaleOperand, op.getFastmathAttr());
     Value result = arith::DivFOp::create(b, inputOperand, scaleOperand,
-                                           op.getFastmathAttr());
-    Value resultCast = arith::TruncFOp::create(b,
-        resultTy, result, op.getRoundingmodeAttr(), op.getFastmathAttr());
+                                         op.getFastmathAttr());
+    Value resultCast = arith::TruncFOp::create(
+        b, resultTy, result, op.getRoundingmodeAttr(), op.getFastmathAttr());
     rewriter.replaceOp(op, resultCast);
     return success();
   }

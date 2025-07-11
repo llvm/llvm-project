@@ -669,21 +669,24 @@ static Value castToSourceType(const spirv::TargetEnv &targetEnv,
                               Location loc) {
   // We can only cast one value in SPIR-V.
   if (inputs.size() != 1) {
-    auto castOp = UnrealizedConversionCastOp::create(builder, loc, type, inputs);
+    auto castOp =
+        UnrealizedConversionCastOp::create(builder, loc, type, inputs);
     return castOp.getResult(0);
   }
   Value input = inputs.front();
 
   // Only support integer types for now. Floating point types to be implemented.
   if (!isa<IntegerType>(type)) {
-    auto castOp = UnrealizedConversionCastOp::create(builder, loc, type, inputs);
+    auto castOp =
+        UnrealizedConversionCastOp::create(builder, loc, type, inputs);
     return castOp.getResult(0);
   }
   auto inputType = cast<IntegerType>(input.getType());
 
   auto scalarType = dyn_cast<spirv::ScalarType>(type);
   if (!scalarType) {
-    auto castOp = UnrealizedConversionCastOp::create(builder, loc, type, inputs);
+    auto castOp =
+        UnrealizedConversionCastOp::create(builder, loc, type, inputs);
     return castOp.getResult(0);
   }
 
@@ -691,7 +694,8 @@ static Value castToSourceType(const spirv::TargetEnv &targetEnv,
   // truncating to go back so we don't need to worry about the signedness.
   // For extension, we cannot have enough signal here to decide which op to use.
   if (inputType.getIntOrFloatBitWidth() < scalarType.getIntOrFloatBitWidth()) {
-    auto castOp = UnrealizedConversionCastOp::create(builder, loc, type, inputs);
+    auto castOp =
+        UnrealizedConversionCastOp::create(builder, loc, type, inputs);
     return castOp.getResult(0);
   }
 
@@ -708,7 +712,8 @@ static Value castToSourceType(const spirv::TargetEnv &targetEnv,
   scalarType.getCapabilities(caps);
   if (failed(checkCapabilityRequirements(type, targetEnv, caps)) ||
       failed(checkExtensionRequirements(type, targetEnv, exts))) {
-    auto castOp = UnrealizedConversionCastOp::create(builder, loc, type, inputs);
+    auto castOp =
+        UnrealizedConversionCastOp::create(builder, loc, type, inputs);
     return castOp.getResult(0);
   }
 
@@ -843,7 +848,7 @@ getOrInsertPushConstantVariable(Location loc, Block &block,
   auto type = getPushConstantStorageType(elementCount, builder, indexType);
   const char *name = "__push_constant_var__";
   return spirv::GlobalVariableOp::create(builder, loc, type, name,
-                                                 /*initializer=*/nullptr);
+                                         /*initializer=*/nullptr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -879,8 +884,8 @@ struct FuncOpConversion final : OpConversionPattern<func::FuncOp> {
     }
 
     // Create the converted spirv.func op.
-    auto newFuncOp = spirv::FuncOp::create(rewriter,
-        funcOp.getLoc(), funcOp.getName(),
+    auto newFuncOp = spirv::FuncOp::create(
+        rewriter, funcOp.getLoc(), funcOp.getName(),
         rewriter.getFunctionType(signatureConverter.getConvertedTypes(),
                                  resultType ? TypeRange(resultType)
                                             : TypeRange()));
@@ -920,7 +925,7 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
 
     // Create a new func op with the original type and copy the function body.
     auto newFuncOp = func::FuncOp::create(rewriter, funcOp.getLoc(),
-                                                   funcOp.getName(), fnType);
+                                          funcOp.getName(), fnType);
     rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
                                 newFuncOp.end());
 
@@ -954,8 +959,8 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
       auto origVecType = dyn_cast<VectorType>(origType);
       if (!origVecType) {
         // We need a placeholder for the old argument that will be erased later.
-        Value result = arith::ConstantOp::create(rewriter,
-            loc, origType, rewriter.getZeroAttr(origType));
+        Value result = arith::ConstantOp::create(
+            rewriter, loc, origType, rewriter.getZeroAttr(origType));
         rewriter.replaceAllUsesWith(newFuncOp.getArgument(origInputNo), result);
         tmpOps.insert({result.getDefiningOp(), newInputNo});
         oneToNTypeMapping.addInputs(origInputNo, origType);
@@ -967,8 +972,8 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
       auto targetShape = getTargetShape(origVecType);
       if (!targetShape) {
         // We need a placeholder for the old argument that will be erased later.
-        Value result = arith::ConstantOp::create(rewriter,
-            loc, origType, rewriter.getZeroAttr(origType));
+        Value result = arith::ConstantOp::create(
+            rewriter, loc, origType, rewriter.getZeroAttr(origType));
         rewriter.replaceAllUsesWith(newFuncOp.getArgument(origInputNo), result);
         tmpOps.insert({result.getDefiningOp(), newInputNo});
         oneToNTypeMapping.addInputs(origInputNo, origType);
@@ -982,12 +987,12 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
           llvm::to_vector_of<int64_t, 4>(origVecType.getShape());
 
       // Prepare the result vector.
-      Value result = arith::ConstantOp::create(rewriter,
-          loc, origVecType, rewriter.getZeroAttr(origVecType));
+      Value result = arith::ConstantOp::create(
+          rewriter, loc, origVecType, rewriter.getZeroAttr(origVecType));
       ++newOpCount;
       // Prepare the placeholder for the new arguments that will be added later.
-      Value dummy = arith::ConstantOp::create(rewriter,
-          loc, unrolledType, rewriter.getZeroAttr(unrolledType));
+      Value dummy = arith::ConstantOp::create(
+          rewriter, loc, unrolledType, rewriter.getZeroAttr(unrolledType));
       ++newOpCount;
 
       // Create the `vector.insert_strided_slice` ops.
@@ -995,8 +1000,8 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
       SmallVector<Type> newTypes;
       for (SmallVector<int64_t> offsets :
            StaticTileOffsetRange(originalShape, *targetShape)) {
-        result = vector::InsertStridedSliceOp::create(rewriter,
-            loc, dummy, result, offsets, strides);
+        result = vector::InsertStridedSliceOp::create(rewriter, loc, dummy,
+                                                      result, offsets, strides);
         newTypes.push_back(unrolledType);
         unrolledInputNums.push_back(newInputNo);
         ++newInputNo;
@@ -1109,8 +1114,8 @@ struct ReturnOpVectorUnroll final : OpRewritePattern<func::ReturnOp> {
       Value returnValue = returnOp.getOperand(origResultNo);
       for (SmallVector<int64_t> offsets :
            StaticTileOffsetRange(originalShape, *targetShape)) {
-        Value result = vector::ExtractStridedSliceOp::create(rewriter,
-            loc, returnValue, offsets, extractShape, strides);
+        Value result = vector::ExtractStridedSliceOp::create(
+            rewriter, loc, returnValue, offsets, extractShape, strides);
         if (originalShape.size() > 1) {
           SmallVector<int64_t> extractIndices(originalShape.size() - 1, 0);
           result =
@@ -1179,11 +1184,11 @@ Value spirv::getPushConstantValue(Operation *op, unsigned elementCount,
       loc, parent->getRegion(0).front(), elementCount, builder, integerType);
 
   Value zeroOp = spirv::ConstantOp::getZero(integerType, loc, builder);
-  Value offsetOp = spirv::ConstantOp::create(builder,
-      loc, integerType, builder.getI32IntegerAttr(offset));
+  Value offsetOp = spirv::ConstantOp::create(builder, loc, integerType,
+                                             builder.getI32IntegerAttr(offset));
   auto addrOp = spirv::AddressOfOp::create(builder, loc, varOp);
-  auto acOp = spirv::AccessChainOp::create(builder,
-      loc, addrOp, llvm::ArrayRef({zeroOp, offsetOp}));
+  auto acOp = spirv::AccessChainOp::create(builder, loc, addrOp,
+                                           llvm::ArrayRef({zeroOp, offsetOp}));
   return spirv::LoadOp::create(builder, loc, acOp);
 }
 
@@ -1276,10 +1281,10 @@ Value mlir::spirv::getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
   if (isa<spirv::ArrayType>(pointeeType)) {
     linearizedIndices.push_back(linearIndex);
     return spirv::AccessChainOp::create(builder, loc, basePtr,
-                                                linearizedIndices);
+                                        linearizedIndices);
   }
   return spirv::PtrAccessChainOp::create(builder, loc, basePtr, linearIndex,
-                                                 linearizedIndices);
+                                         linearizedIndices);
 }
 
 Value mlir::spirv::getElementPtr(const SPIRVTypeConverter &typeConverter,

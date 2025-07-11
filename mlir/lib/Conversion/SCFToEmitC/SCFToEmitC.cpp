@@ -164,8 +164,9 @@ ForLowering::matchAndRewrite(ForOp forOp, OpAdaptor adaptor,
 
   assignValues(adaptor.getInitArgs(), resultVariables, rewriter, loc);
 
-  emitc::ForOp loweredFor = emitc::ForOp::create(rewriter,
-      loc, adaptor.getLowerBound(), adaptor.getUpperBound(), adaptor.getStep());
+  emitc::ForOp loweredFor =
+      emitc::ForOp::create(rewriter, loc, adaptor.getLowerBound(),
+                           adaptor.getUpperBound(), adaptor.getStep());
 
   Block *loweredBody = loweredFor.getBody();
 
@@ -304,8 +305,9 @@ LogicalResult IndexSwitchOpLowering::matchAndRewrite(
                                        "create variables for results failed");
   }
 
-  auto loweredSwitch = emitc::SwitchOp::create(rewriter,
-      loc, adaptor.getArg(), adaptor.getCases(), indexSwitchOp.getNumCases());
+  auto loweredSwitch =
+      emitc::SwitchOp::create(rewriter, loc, adaptor.getArg(),
+                              adaptor.getCases(), indexSwitchOp.getNumCases());
 
   // Lowering all case regions.
   for (auto pair :

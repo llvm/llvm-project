@@ -309,14 +309,14 @@ public:
         continue;
 
       auto dim = tensor::DimOp::create(rewriter, loc, input, index);
-      auto offset = arith::ConstantOp::create(rewriter,
-          loc, rewriter.getIndexAttr(sliceStarts[index]));
+      auto offset = arith::ConstantOp::create(
+          rewriter, loc, rewriter.getIndexAttr(sliceStarts[index]));
       dynSizes.push_back(arith::SubIOp::create(rewriter, loc, dim, offset));
     }
 
-    auto newSliceOp = tensor::ExtractSliceOp::create(rewriter,
-        sliceOp.getLoc(), sliceOp.getType(), input, ValueRange({}), dynSizes,
-        ValueRange({}), rewriter.getDenseI64ArrayAttr(sliceStarts),
+    auto newSliceOp = tensor::ExtractSliceOp::create(
+        rewriter, sliceOp.getLoc(), sliceOp.getType(), input, ValueRange({}),
+        dynSizes, ValueRange({}), rewriter.getDenseI64ArrayAttr(sliceStarts),
         rewriter.getDenseI64ArrayAttr(sizes),
         rewriter.getDenseI64ArrayAttr(strides));
 
@@ -375,16 +375,16 @@ public:
     highValues.reserve(rank);
 
     for (int i = 0; i < rank; i++) {
-      Value lowVal = arith::ConstantOp::create(rewriter,
-          loc, rewriter.getIndexAttr(paddingVals[2 * i]));
-      Value highVal = arith::ConstantOp::create(rewriter,
-          loc, rewriter.getIndexAttr(paddingVals[2 * i + 1]));
+      Value lowVal = arith::ConstantOp::create(
+          rewriter, loc, rewriter.getIndexAttr(paddingVals[2 * i]));
+      Value highVal = arith::ConstantOp::create(
+          rewriter, loc, rewriter.getIndexAttr(paddingVals[2 * i + 1]));
       lowValues.push_back(lowVal);
       highValues.push_back(highVal);
     }
 
-    auto newPadOp = tensor::PadOp::create(rewriter,
-        loc, padOp.getType(), input, lowValues, highValues, padConstant);
+    auto newPadOp = tensor::PadOp::create(rewriter, loc, padOp.getType(), input,
+                                          lowValues, highValues, padConstant);
 
     rewriter.replaceOp(padOp, newPadOp.getResult());
     return success();
@@ -439,8 +439,9 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
       }
     }
 
-    Value result = tensor::EmptyOp::create(rewriter,
-        loc, resultType.getShape(), resultType.getElementType(), dynDims);
+    Value result =
+        tensor::EmptyOp::create(rewriter, loc, resultType.getShape(),
+                                resultType.getElementType(), dynDims);
 
     for (auto [arg, offset] : llvm::zip(adaptor.getOperands(), axisOffsets)) {
       auto sizes = tensor::getMixedSizes(rewriter, op.getLoc(), arg);

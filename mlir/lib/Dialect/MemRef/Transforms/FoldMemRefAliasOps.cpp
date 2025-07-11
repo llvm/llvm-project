@@ -76,8 +76,8 @@ static LogicalResult resolveSourceIndicesExpandShape(
         llvm::map_to_vector(group, [&](int64_t d) { return destShape[d]; });
     SmallVector<Value> groupIndices =
         llvm::map_to_vector(group, [&](int64_t d) { return indices[d]; });
-    Value collapsedIndex = affine::AffineLinearizeIndexOp::create(rewriter,
-        loc, groupIndices, groupBasis, /*disjoint=*/startsInbounds);
+    Value collapsedIndex = affine::AffineLinearizeIndexOp::create(
+        rewriter, loc, groupIndices, groupBasis, /*disjoint=*/startsInbounds);
     sourceIndices.push_back(collapsedIndex);
   }
   return success();
@@ -102,8 +102,8 @@ resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
                                   ValueRange indices,
                                   SmallVectorImpl<Value> &sourceIndices) {
   // Note: collapse_shape requires a strided memref, we can do this.
-  auto metadata = memref::ExtractStridedMetadataOp::create(rewriter,
-      loc, collapseShapeOp.getSrc());
+  auto metadata = memref::ExtractStridedMetadataOp::create(
+      rewriter, loc, collapseShapeOp.getSrc());
   SmallVector<OpFoldResult> sourceSizes = metadata.getConstifiedMixedSizes();
   for (auto [index, group] :
        llvm::zip(indices, collapseShapeOp.getReassociationIndices())) {
@@ -117,8 +117,8 @@ resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
 
     SmallVector<OpFoldResult> basis =
         llvm::map_to_vector(group, [&](int64_t d) { return sourceSizes[d]; });
-    auto delinearize = affine::AffineDelinearizeIndexOp::create(rewriter,
-        loc, index, basis, /*hasOuterBound=*/true);
+    auto delinearize = affine::AffineDelinearizeIndexOp::create(
+        rewriter, loc, index, basis, /*hasOuterBound=*/true);
     llvm::append_range(sourceIndices, delinearize.getResults());
   }
   if (collapseShapeOp.getReassociationIndices().empty()) {

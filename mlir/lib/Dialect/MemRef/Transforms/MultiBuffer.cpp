@@ -63,9 +63,10 @@ static void replaceUsesAndPropagateType(RewriterBase &rewriter,
         subviewUse.getType().getShape(), cast<MemRefType>(val.getType()),
         subviewUse.getStaticOffsets(), subviewUse.getStaticSizes(),
         subviewUse.getStaticStrides());
-    Value newSubview = memref::SubViewOp::create(rewriter,
-        subviewUse->getLoc(), newType, val, subviewUse.getMixedOffsets(),
-        subviewUse.getMixedSizes(), subviewUse.getMixedStrides());
+    Value newSubview = memref::SubViewOp::create(
+        rewriter, subviewUse->getLoc(), newType, val,
+        subviewUse.getMixedOffsets(), subviewUse.getMixedSizes(),
+        subviewUse.getMixedStrides());
 
     // Ouch recursion ... is this really necessary?
     replaceUsesAndPropagateType(rewriter, subviewUse, newSubview);
@@ -177,8 +178,8 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
   Location loc = allocOp->getLoc();
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(allocOp);
-  auto mbAlloc = memref::AllocOp::create(rewriter,
-      loc, mbMemRefType, ValueRange{}, allocOp->getAttrs());
+  auto mbAlloc = memref::AllocOp::create(rewriter, loc, mbMemRefType,
+                                         ValueRange{}, allocOp->getAttrs());
   LLVM_DEBUG(DBGS() << "--multi-buffered alloc: " << mbAlloc << "\n");
 
   // 3. Within the loop, build the modular leading index (i.e. each loop
@@ -212,7 +213,7 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
   MemRefType dstMemref = memref::SubViewOp::inferRankReducedResultType(
       originalShape, mbMemRefType, offsets, sizes, strides);
   Value subview = memref::SubViewOp::create(rewriter, loc, dstMemref, mbAlloc,
-                                                     offsets, sizes, strides);
+                                            offsets, sizes, strides);
   LLVM_DEBUG(DBGS() << "--multi-buffered slice: " << subview << "\n");
 
   // 5. Due to the recursive nature of replaceUsesAndPropagateType , we need to

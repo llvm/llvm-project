@@ -207,8 +207,8 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
     if (isZeroInteger(newLength)) {
       hasZeroLen = true;
     } else if (!hasZeroLen) {
-      Value check = arith::CmpIOp::create(b,
-          loc, arith::CmpIPredicate::eq,
+      Value check = arith::CmpIOp::create(
+          b, loc, arith::CmpIPredicate::eq,
           getValueOrCreateConstantIndexOp(b, loc, newLength),
           getValueOrCreateConstantIndexOp(b, loc, zero));
       dynHasZeroLenCond =
@@ -245,8 +245,8 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
   // have a dimension of size 0, the semantics of which is unclear.)
   auto createGenerateOp = [&]() {
     // Create GenerateOp.
-    auto generateOp = tensor::GenerateOp::create(b,
-        loc, resultType, dynDims,
+    auto generateOp = tensor::GenerateOp::create(
+        b, loc, resultType, dynDims,
         [&](OpBuilder &builder, Location gLoc, ValueRange indices) {
           tensor::YieldOp::create(builder, gLoc, padValue);
         });
@@ -257,10 +257,10 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
   // the result shape of the new SliceOp has a zero dimension.
   auto createPadOfExtractSlice = [&]() {
     // Create pad(extract_slice(x)).
-    auto newSliceOp = tensor::ExtractSliceOp::create(b,
-        loc, padOp.getSource(), newOffsets, newLengths, newStrides);
-    auto newPadOp = PadOp::create(b,
-        loc, Type(), newSliceOp, newLows, newHighs,
+    auto newSliceOp = tensor::ExtractSliceOp::create(
+        b, loc, padOp.getSource(), newOffsets, newLengths, newStrides);
+    auto newPadOp = PadOp::create(
+        b, loc, Type(), newSliceOp, newLows, newHighs,
         /*nofold=*/padOp.getNofold(),
         getPrunedAttributeList(padOp, PadOp::getAttributeNames()));
 
@@ -287,8 +287,8 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
     Operation *thenOp;
     Operation *elseOp;
     Operation *sliceOp;
-    auto result = scf::IfOp::create(b,
-        loc, dynHasZeroLenCond,
+    auto result = scf::IfOp::create(
+        b, loc, dynHasZeroLenCond,
         /*thenBuilder=*/
         [&](OpBuilder &b, Location loc) {
           thenOp = createGenerateOp();

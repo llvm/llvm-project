@@ -54,8 +54,8 @@ static LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable,
       SymbolTable::lookupSymbolIn(symbolTable, name));
   if (!func) {
     OpBuilder b(symbolTable->getRegion(0));
-    func = LLVM::LLVMFuncOp::create(b,
-        symbolTable->getLoc(), name,
+    func = LLVM::LLVMFuncOp::create(
+        b, symbolTable->getLoc(), name,
         LLVM::LLVMFunctionType::get(resultType, paramTypes));
     func.setCConv(LLVM::cconv::CConv::SPIR_FUNC);
     func.setNoUnwind(true);
@@ -163,7 +163,7 @@ struct LaunchConfigConversion : ConvertToLLVMPattern {
     Location loc = op->getLoc();
     gpu::Dimension dim = getDimension(op);
     Value dimVal = LLVM::ConstantOp::create(rewriter, loc, dimTy,
-                                                     static_cast<int64_t>(dim));
+                                            static_cast<int64_t>(dim));
     rewriter.replaceOp(op, createSPIRVBuiltinCall(loc, rewriter, func, dimVal));
     return success();
   }
@@ -292,12 +292,12 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     return TypeSwitch<Type, Value>(oldVal.getType())
         .Case([&](BFloat16Type) {
           return LLVM::BitcastOp::create(rewriter, loc, rewriter.getI16Type(),
-                                                  oldVal);
+                                         oldVal);
         })
         .Case([&](IntegerType intTy) -> Value {
           if (intTy.getWidth() == 1)
             return LLVM::ZExtOp::create(rewriter, loc, rewriter.getI8Type(),
-                                                 oldVal);
+                                        oldVal);
           return oldVal;
         })
         .Default(oldVal);

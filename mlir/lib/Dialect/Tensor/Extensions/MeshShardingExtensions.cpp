@@ -78,8 +78,8 @@ struct CreatorOpShardingInterface
             device =
                 mesh::ProcessMultiIndexOp::create(builder, op->getLoc(), mesh)
                     .getResults();
-            shapeForDevice = mesh::ShardShapeOp::create(builder,
-                op->getLoc(), oldType.getShape(), spmdizedOperands,
+            shapeForDevice = mesh::ShardShapeOp::create(
+                builder, op->getLoc(), oldType.getShape(), spmdizedOperands,
                 newSharding->getResult(0), device);
           }
           newOperands.emplace_back(shapeForDevice.getResult()[i]);

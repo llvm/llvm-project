@@ -76,15 +76,15 @@ scf::ForOp createLoopOverTileSlices(
     std::function<Value(OpBuilder &, Location, Value, Value)> makeLoopBody) {
   OpBuilder::InsertionGuard g(rewriter);
   auto step = arith::ConstantIndexOp::create(rewriter, loc, 1);
-  auto minTileSlices = arith::ConstantIndexOp::create(rewriter,
-      loc, llvm::cast<VectorType>(initTile.getType()).getDimSize(0));
+  auto minTileSlices = arith::ConstantIndexOp::create(
+      rewriter, loc, llvm::cast<VectorType>(initTile.getType()).getDimSize(0));
   auto vscale =
       vector::VectorScaleOp::create(rewriter, loc, rewriter.getIndexType());
   auto lowerBound = arith::ConstantIndexOp::create(rewriter, loc, 0);
   auto numTileSlices =
       arith::MulIOp::create(rewriter, loc, minTileSlices, vscale);
-  auto forOp = scf::ForOp::create(rewriter, loc, lowerBound, numTileSlices, step,
-                                           ValueRange{initTile});
+  auto forOp = scf::ForOp::create(rewriter, loc, lowerBound, numTileSlices,
+                                  step, ValueRange{initTile});
   rewriter.setInsertionPointToStart(forOp.getBody());
   Value nextTile =
       makeLoopBody(rewriter, loc, /*tileSliceIndex=*/forOp.getInductionVar(),

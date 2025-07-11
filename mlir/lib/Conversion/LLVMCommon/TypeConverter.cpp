@@ -732,7 +732,7 @@ Value LLVMTypeConverter::promoteOneMemRefDescriptor(Location loc, Value operand,
   // alloca op and so we omit allocating at the entry block.
   auto ptrType = LLVM::LLVMPointerType::get(builder.getContext());
   Value one = LLVM::ConstantOp::create(builder, loc, builder.getI64Type(),
-                                               builder.getIndexAttr(1));
+                                       builder.getIndexAttr(1));
   Value allocated =
       LLVM::AllocaOp::create(builder, loc, ptrType, operand.getType(), one);
   // Store into the alloca'ed descriptor.

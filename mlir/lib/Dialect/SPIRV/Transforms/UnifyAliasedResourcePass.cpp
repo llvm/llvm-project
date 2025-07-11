@@ -380,13 +380,13 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
       Type indexType = oldIndex.getType();
 
       int ratio = dstNumBytes / srcNumBytes;
-      auto ratioValue = spirv::ConstantOp::create(rewriter,
-          loc, indexType, rewriter.getIntegerAttr(indexType, ratio));
+      auto ratioValue = spirv::ConstantOp::create(
+          rewriter, loc, indexType, rewriter.getIntegerAttr(indexType, ratio));
 
       indices.back() =
           spirv::SDivOp::create(rewriter, loc, indexType, oldIndex, ratioValue);
-      indices.push_back(
-          spirv::SModOp::create(rewriter, loc, indexType, oldIndex, ratioValue));
+      indices.push_back(spirv::SModOp::create(rewriter, loc, indexType,
+                                              oldIndex, ratioValue));
 
       rewriter.replaceOpWithNewOp<spirv::AccessChainOp>(
           acOp, adaptor.getBasePtr(), indices);
@@ -407,8 +407,8 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
       Type indexType = oldIndex.getType();
 
       int ratio = srcNumBytes / dstNumBytes;
-      auto ratioValue = spirv::ConstantOp::create(rewriter,
-          loc, indexType, rewriter.getIntegerAttr(indexType, ratio));
+      auto ratioValue = spirv::ConstantOp::create(
+          rewriter, loc, indexType, rewriter.getIntegerAttr(indexType, ratio));
 
       indices.back() =
           spirv::IMulOp::create(rewriter, loc, indexType, oldIndex, ratioValue);
@@ -443,7 +443,7 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
 
     if (areSameBitwidthScalarType(srcElemType, dstElemType)) {
       auto castOp = spirv::BitcastOp::create(rewriter, loc, srcElemType,
-                                                      newLoadOp.getValue());
+                                             newLoadOp.getValue());
       rewriter.replaceOp(loadOp, castOp->getResults());
 
       return success();
@@ -475,10 +475,10 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
       auto indices = llvm::to_vector<4>(acOp.getIndices());
       for (int i = 1; i < ratio; ++i) {
         // Load all subsequent components belonging to this element.
-        indices.back() = spirv::IAddOp::create(rewriter,
-            loc, i32Type, indices.back(), oneValue);
-        auto componentAcOp = spirv::AccessChainOp::create(rewriter,
-            loc, acOp.getBasePtr(), indices);
+        indices.back() = spirv::IAddOp::create(rewriter, loc, i32Type,
+                                               indices.back(), oneValue);
+        auto componentAcOp = spirv::AccessChainOp::create(
+            rewriter, loc, acOp.getBasePtr(), indices);
         // Assuming little endian, this reads lower-ordered bits of the number
         // to lower-numbered components of the vector.
         components.push_back(
@@ -513,8 +513,8 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
               c = spirv::BitcastOp::create(rewriter, loc, castType, c);
           }
         }
-      Value vectorValue = spirv::CompositeConstructOp::create(rewriter,
-          loc, vectorType, components);
+      Value vectorValue = spirv::CompositeConstructOp::create(
+          rewriter, loc, vectorType, components);
 
       if (!isa<VectorType>(srcElemType))
         vectorValue =

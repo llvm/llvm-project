@@ -22,7 +22,7 @@ using ValueTuple = std::tuple<Value, Value, Value>;
 // File local helper functions/macros.
 //===----------------------------------------------------------------------===//
 #define CMPI(p, lhs, rhs)                                                      \
-  (arith::CmpIOp::create(b, l, arith::CmpIPredicate::p, (lhs), (rhs))           \
+  (arith::CmpIOp::create(b, l, arith::CmpIPredicate::p, (lhs), (rhs))          \
        .getResult())
 
 #define C_FALSE (constantI1(b, l, false))
@@ -732,8 +732,8 @@ public:
   //      [itVal0, itVal1, ..., pNx0],
   //      ...]
   Value allocSubSectPosBuf(OpBuilder &b, Location l) {
-    return memref::AllocaOp::create(b,
-        l,
+    return memref::AllocaOp::create(
+        b, l,
         MemRefType::get({ShapedType::kDynamic, tupleSz + 1}, b.getIndexType()),
         maxTupleCnt);
   }
@@ -741,12 +741,12 @@ public:
   void storeNxLvlStart(OpBuilder &b, Location l, Value tupleId,
                        Value start) const {
     memref::StoreOp::create(b, l, start, subSectPosBuf,
-                              ValueRange{tupleId, C_IDX(tupleSz)});
+                            ValueRange{tupleId, C_IDX(tupleSz)});
   }
 
   Value loadNxLvlStart(OpBuilder &b, Location l, Value tupleId) const {
     return memref::LoadOp::create(b, l, subSectPosBuf,
-                                    ValueRange{tupleId, C_IDX(tupleSz)});
+                                  ValueRange{tupleId, C_IDX(tupleSz)});
   }
 
   void storeCursorVals(OpBuilder &b, Location l, Value tupleId,
@@ -754,7 +754,7 @@ public:
     assert(itVals.size() == tupleSz);
     for (unsigned i = 0; i < tupleSz; i++) {
       memref::StoreOp::create(b, l, itVals[i], subSectPosBuf,
-                                ValueRange{tupleId, C_IDX(i)});
+                              ValueRange{tupleId, C_IDX(i)});
     }
   }
 
@@ -763,7 +763,7 @@ public:
     SmallVector<Value> ret;
     for (unsigned i = 0; i < tupleSz; i++) {
       Value v = memref::LoadOp::create(b, l, subSectPosBuf,
-                                         ValueRange{tupleId, C_IDX(i)});
+                                       ValueRange{tupleId, C_IDX(i)});
       ret.push_back(v);
     }
     return ret;
@@ -1058,8 +1058,8 @@ ValueRange SparseIterator::forwardIf(OpBuilder &b, Location l, Value cond) {
 }
 
 Value DedupIterator::genSegmentHigh(OpBuilder &b, Location l, Value pos) {
-  auto whileOp = scf::WhileOp::create(b,
-      l, pos.getType(), pos,
+  auto whileOp = scf::WhileOp::create(
+      b, l, pos.getType(), pos,
       /*beforeBuilder=*/
       [this, pos](OpBuilder &b, Location l, ValueRange ivs) {
         Value inBound = CMPI(ult, ivs.front(), posHi);
@@ -1137,8 +1137,8 @@ ValueRange FilterIterator::forwardImpl(OpBuilder &b, Location l) {
 
   SmallVector<Value> whileArgs(getCursor().begin(), getCursor().end());
   whileArgs.push_back(isFirst);
-  auto whileOp = scf::WhileOp::create(b,
-      l, ValueRange(whileArgs).getTypes(), whileArgs,
+  auto whileOp = scf::WhileOp::create(
+      b, l, ValueRange(whileArgs).getTypes(), whileArgs,
       /*beforeBuilder=*/
       [this](OpBuilder &b, Location l, ValueRange ivs) {
         ValueRange isFirst = linkNewScope(ivs);
@@ -1219,8 +1219,8 @@ ValueRange NonEmptySubSectIterator::inflateSubSectTree(
     SmallVector<Value> iterArgs;
     iterArgs.push_back(C_IDX(0));
     iterArgs.append(reduc.begin(), reduc.end());
-    auto forEachLeaf = scf::ForOp::create(b,
-        l, /*lb=*/C_IDX(0), /*ub=*/tupleCnt, /*step=*/C_IDX(1), iterArgs,
+    auto forEachLeaf = scf::ForOp::create(
+        b, l, /*lb=*/C_IDX(0), /*ub=*/tupleCnt, /*step=*/C_IDX(1), iterArgs,
         [&helper, &builder](OpBuilder &b, Location l, Value tupleId,
                             ValueRange iterArgs) {
           // Deserialize the iterator at the cached position (tupleId).
@@ -1235,8 +1235,8 @@ ValueRange NonEmptySubSectIterator::inflateSubSectTree(
           SmallVector<Value> whileArgs(helper.wrap.getCursor());
           whileArgs.append(iterArgs.begin(), iterArgs.end());
 
-          auto whileOp = scf::WhileOp::create(b,
-              l, ValueRange(whileArgs).getTypes(), whileArgs,
+          auto whileOp = scf::WhileOp::create(
+              b, l, ValueRange(whileArgs).getTypes(), whileArgs,
               /*beforeBuilder=*/
               [&helper](OpBuilder &b, Location l, ValueRange ivs) {
                 helper.wrap.linkNewScope(ivs);
@@ -1267,8 +1267,8 @@ ValueRange NonEmptySubSectIterator::inflateSubSectTree(
                                      ValueRange reduc) {
     assert(!parent || parent->lvl + 1 == lvl);
     delegate->genInit(b, l, parent);
-    auto forOp = scf::ForOp::create(b,
-        l, /*lb=*/C_IDX(0), /*ub=*/subSectSz, /*step=*/C_IDX(1), reduc,
+    auto forOp = scf::ForOp::create(
+        b, l, /*lb=*/C_IDX(0), /*ub=*/subSectSz, /*step=*/C_IDX(1), reduc,
         [&](OpBuilder &b, Location l, Value crd, ValueRange iterArgs) {
           helper.locate(b, l, crd);
           scf::ValueVector nx = builder(b, l, &helper.wrap, iterArgs);
@@ -1458,8 +1458,8 @@ ValueRange NonEmptySubSectIterator::forwardImpl(OpBuilder &b, Location l) {
                 return genWhenInBound(b, l, *delegate, /*elseRet=*/iterArgs,
                                       [nxMin](OpBuilder &b, Location l,
                                               Value crd) -> scf::ValueVector {
-                                        Value nx = arith::MinUIOp::create(b,
-                                            l, crd, nxMin);
+                                        Value nx = arith::MinUIOp::create(
+                                            b, l, crd, nxMin);
                                         return {nx, C_TRUE};
                                       });
               });
@@ -1581,8 +1581,9 @@ sparse_tensor::makeSparseTensorLevel(OpBuilder &b, Location l, Value t,
   auto stt = getSparseTensorType(t);
 
   LevelType lt = stt.getLvlType(lvl);
-  Value sz = stt.hasEncoding() ? LvlOp::create(b, l, t, lvl).getResult()
-                               : tensor::DimOp::create(b, l, t, lvl).getResult();
+  Value sz = stt.hasEncoding()
+                 ? LvlOp::create(b, l, t, lvl).getResult()
+                 : tensor::DimOp::create(b, l, t, lvl).getResult();
 
   SmallVector<Value, 2> buffers;
   if (lt.isWithPosLT()) {

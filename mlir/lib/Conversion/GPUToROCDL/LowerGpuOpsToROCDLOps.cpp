@@ -85,9 +85,9 @@ static Value getLaneId(ConversionPatternRewriter &rewriter, Location loc,
   Value zero = arith::ConstantIntOp::create(rewriter, loc, 0, 32);
   Value minus1 = arith::ConstantIntOp::create(rewriter, loc, -1, 32);
   Value mbcntLo = ROCDL::MbcntLoOp::create(rewriter, loc, int32Type,
-                                                    ValueRange{minus1, zero});
+                                           ValueRange{minus1, zero});
   Value laneId = ROCDL::MbcntHiOp::create(rewriter, loc, int32Type,
-                                                   ValueRange{minus1, mbcntLo});
+                                          ValueRange{minus1, mbcntLo});
   return laneId;
 }
 static constexpr StringLiteral amdgcnDataLayout =
@@ -112,19 +112,19 @@ struct GPULaneIdOpToROCDL : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
     Type intTy = IntegerType::get(context, 32);
     Value zero = arith::ConstantIntOp::create(rewriter, loc, 0, 32);
     Value minus1 = arith::ConstantIntOp::create(rewriter, loc, -1, 32);
-    Value mbcntLo =
-        ROCDL::MbcntLoOp::create(rewriter, loc, intTy, ValueRange{minus1, zero});
-    Value laneId = ROCDL::MbcntHiOp::create(rewriter,
-        loc, intTy, ValueRange{minus1, mbcntLo});
+    Value mbcntLo = ROCDL::MbcntLoOp::create(rewriter, loc, intTy,
+                                             ValueRange{minus1, zero});
+    Value laneId = ROCDL::MbcntHiOp::create(rewriter, loc, intTy,
+                                            ValueRange{minus1, mbcntLo});
     // Truncate or extend the result depending on the index bitwidth specified
     // by the LLVMTypeConverter options.
     const unsigned indexBitwidth = getTypeConverter()->getIndexTypeBitwidth();
     if (indexBitwidth > 32) {
-      laneId = LLVM::SExtOp::create(rewriter,
-          loc, IntegerType::get(context, indexBitwidth), laneId);
+      laneId = LLVM::SExtOp::create(
+          rewriter, loc, IntegerType::get(context, indexBitwidth), laneId);
     } else if (indexBitwidth < 32) {
-      laneId = LLVM::TruncOp::create(rewriter,
-          loc, IntegerType::get(context, indexBitwidth), laneId);
+      laneId = LLVM::TruncOp::create(
+          rewriter, loc, IntegerType::get(context, indexBitwidth), laneId);
     }
     rewriter.replaceOp(op, {laneId});
     return success();
@@ -149,8 +149,8 @@ struct GPUSubgroupSizeOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp> {
           /*bitWidth=*/32, /*lower=*/isBeforeGfx10 ? 64 : 32,
           /*upper=*/op.getUpperBoundAttr().getInt() + 1);
     }
-    Value wavefrontOp = ROCDL::WavefrontSizeOp::create(rewriter,
-        op.getLoc(), rewriter.getI32Type(), bounds);
+    Value wavefrontOp = ROCDL::WavefrontSizeOp::create(
+        rewriter, op.getLoc(), rewriter.getI32Type(), bounds);
     wavefrontOp = truncOrExtToLLVMType(rewriter, op.getLoc(), wavefrontOp,
                                        *getTypeConverter());
     rewriter.replaceOp(op, {wavefrontOp});
@@ -200,24 +200,24 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     switch (op.getMode()) {
     case gpu::ShuffleMode::UP:
       dstLane = LLVM::SubOp::create(rewriter, loc, int32Type, srcLaneId,
-                                             adaptor.getOffset());
+                                    adaptor.getOffset());
       break;
     case gpu::ShuffleMode::DOWN:
       dstLane = LLVM::AddOp::create(rewriter, loc, int32Type, srcLaneId,
-                                             adaptor.getOffset());
+                                    adaptor.getOffset());
       break;
     case gpu::ShuffleMode::XOR:
       dstLane = LLVM::XOrOp::create(rewriter, loc, int32Type, srcLaneId,
-                                             adaptor.getOffset());
+                                    adaptor.getOffset());
       break;
     case gpu::ShuffleMode::IDX:
       dstLane = adaptor.getOffset();
       break;
     }
-    Value isActiveSrcLane = LLVM::ICmpOp::create(rewriter,
-        loc, LLVM::ICmpPredicate::slt, dstLane, widthOrZeroIfOutside);
+    Value isActiveSrcLane = LLVM::ICmpOp::create(
+        rewriter, loc, LLVM::ICmpPredicate::slt, dstLane, widthOrZeroIfOutside);
     Value selectDstLane = LLVM::SelectOp::create(rewriter, loc, isActiveSrcLane,
-                                                          dstLane, srcLaneId);
+                                                 dstLane, srcLaneId);
     Value two = LLVM::ConstantOp::create(rewriter, loc, int32Type, 2);
     Value dwordAlignedDstLane =
         LLVM::ShlOp::create(rewriter, loc, int32Type, selectDstLane, two);
@@ -227,7 +227,7 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     SmallVector<Value> swizzled;
     for (Value v : decomposed) {
       Value res = ROCDL::DsBpermuteOp::create(rewriter, loc, int32Type,
-                                                       dwordAlignedDstLane, v);
+                                              dwordAlignedDstLane, v);
       swizzled.emplace_back(res);
     }
     Value shflValue =

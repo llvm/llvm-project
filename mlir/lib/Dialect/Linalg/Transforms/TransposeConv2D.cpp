@@ -99,7 +99,7 @@ FailureOr<Operation *> transposeConv2DHelper(RewriterBase &rewriter,
   }
   auto newConv =
       HWCFConvOp::create(rewriter, loc, resultTy, newInputs, op.getOutputs(),
-                                  op.getStrides(), op.getDilations());
+                         op.getStrides(), op.getDilations());
   rewriter.replaceOp(op, newConv);
   return newConv.getOperation();
 }

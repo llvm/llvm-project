@@ -865,7 +865,7 @@ LogicalResult ModuleImport::convertModuleFlagsMetadata() {
 
   if (!moduleFlags.empty())
     LLVM::ModuleFlagsOp::create(builder, mlirModule.getLoc(),
-                                        builder.getArrayAttr(moduleFlags));
+                                builder.getArrayAttr(moduleFlags));
 
   return success();
 }
@@ -881,7 +881,7 @@ LogicalResult ModuleImport::convertLinkerOptionsMetadata() {
       for (const llvm::MDOperand &option : node->operands())
         options.push_back(cast<llvm::MDString>(option)->getString());
       LLVM::LinkerOptionsOp::create(builder, mlirModule.getLoc(),
-                                            builder.getStrArrayAttr(options));
+                                    builder.getStrArrayAttr(options));
     }
   }
   return success();
@@ -984,8 +984,8 @@ void ModuleImport::processComdat(const llvm::Comdat *comdat) {
   ComdatOp comdatOp = getGlobalComdatOp();
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToEnd(&comdatOp.getBody().back());
-  auto selectorOp = ComdatSelectorOp::create(builder,
-      mlirModule.getLoc(), comdat->getName(),
+  auto selectorOp = ComdatSelectorOp::create(
+      builder, mlirModule.getLoc(), comdat->getName(),
       convertComdatFromLLVM(comdat->getSelectionKind()));
   auto symbolRef =
       SymbolRefAttr::get(builder.getContext(), getGlobalComdatOpName(),
@@ -1346,12 +1346,12 @@ LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
   OpBuilder::InsertionGuard guard = setGlobalInsertionPoint();
 
   Type type = convertType(alias->getValueType());
-  AliasOp aliasOp = AliasOp::create(builder,
-      mlirModule.getLoc(), type, convertLinkageFromLLVM(alias->getLinkage()),
-      alias->getName(),
-      /*dso_local=*/alias->isDSOLocal(),
-      /*thread_local=*/alias->isThreadLocal(),
-      /*attrs=*/ArrayRef<NamedAttribute>());
+  AliasOp aliasOp = AliasOp::create(builder, mlirModule.getLoc(), type,
+                                    convertLinkageFromLLVM(alias->getLinkage()),
+                                    alias->getName(),
+                                    /*dso_local=*/alias->isDSOLocal(),
+                                    /*thread_local=*/alias->isThreadLocal(),
+                                    /*attrs=*/ArrayRef<NamedAttribute>());
   globalInsertionOp = aliasOp;
 
   clearRegionState();
@@ -1403,8 +1403,8 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   if (globalName.empty())
     globalName = getOrCreateNamelessSymbolName(globalVar).getValue();
 
-  GlobalOp globalOp = GlobalOp::create(builder,
-      mlirModule.getLoc(), type, globalVar->isConstant(),
+  GlobalOp globalOp = GlobalOp::create(
+      builder, mlirModule.getLoc(), type, globalVar->isConstant(),
       convertLinkageFromLLVM(globalVar->getLinkage()), StringRef(globalName),
       valueAttr, alignment, /*addr_space=*/globalVar->getAddressSpace(),
       /*dso_local=*/globalVar->isDSOLocal(),
@@ -1488,13 +1488,13 @@ ModuleImport::convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar) {
   OpBuilder::InsertionGuard guard = setGlobalInsertionPoint();
 
   if (globalVar->getName() == getGlobalCtorsVarName()) {
-    globalInsertionOp = LLVM::GlobalCtorsOp::create(builder,
-        mlirModule.getLoc(), builder.getArrayAttr(funcs),
+    globalInsertionOp = LLVM::GlobalCtorsOp::create(
+        builder, mlirModule.getLoc(), builder.getArrayAttr(funcs),
         builder.getI32ArrayAttr(priorities), builder.getArrayAttr(dataList));
     return success();
   }
-  globalInsertionOp = LLVM::GlobalDtorsOp::create(builder,
-      mlirModule.getLoc(), builder.getArrayAttr(funcs),
+  globalInsertionOp = LLVM::GlobalDtorsOp::create(
+      builder, mlirModule.getLoc(), builder.getArrayAttr(funcs),
       builder.getI32ArrayAttr(priorities), builder.getArrayAttr(dataList));
   return success();
 }
@@ -1683,13 +1683,14 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     Value root = UndefOp::create(builder, loc, rootType);
     for (const auto &it : llvm::enumerate(elementValues)) {
       if (isArrayOrStruct) {
-        root = InsertValueOp::create(builder, loc, root, it.value(), it.index());
+        root =
+            InsertValueOp::create(builder, loc, root, it.value(), it.index());
       } else {
         Attribute indexAttr = builder.getI32IntegerAttr(it.index());
         Value indexValue =
             ConstantOp::create(builder, loc, builder.getI32Type(), indexAttr);
         root = InsertElementOp::create(builder, loc, rootType, root, it.value(),
-                                               indexValue);
+                                       indexValue);
       }
     }
     return root;
@@ -2125,15 +2126,15 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
 
     if (!brInst->isConditional()) {
       auto brOp = LLVM::BrOp::create(builder, loc, succBlockArgs.front(),
-                                             succBlocks.front());
+                                     succBlocks.front());
       mapNoResultOp(inst, brOp);
       return success();
     }
     FailureOr<Value> condition = convertValue(brInst->getCondition());
     if (failed(condition))
       return failure();
-    auto condBrOp = LLVM::CondBrOp::create(builder,
-        loc, *condition, succBlocks.front(), succBlockArgs.front(),
+    auto condBrOp = LLVM::CondBrOp::create(
+        builder, loc, *condition, succBlocks.front(), succBlockArgs.front(),
         succBlocks.back(), succBlockArgs.back());
     mapNoResultOp(inst, condBrOp);
     return success();
@@ -2166,9 +2167,9 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
       caseBlocks[it.index()] = lookupBlock(succBB);
     }
 
-    auto switchOp = SwitchOp::create(builder,
-        loc, *condition, lookupBlock(defaultBB), defaultBlockArgs, caseValues,
-        caseBlocks, caseOperandRefs);
+    auto switchOp = SwitchOp::create(builder, loc, *condition,
+                                     lookupBlock(defaultBB), defaultBlockArgs,
+                                     caseValues, caseBlocks, caseOperandRefs);
     mapNoResultOp(inst, switchOp);
     return success();
   }
@@ -2218,8 +2219,8 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
         // IR). Build the indirect call by passing an empty `callee` operand and
         // insert into `operands` to include the indirect call target.
         FlatSymbolRefAttr calleeSym = convertCalleeName(callInst);
-        Value indirectCallVal = LLVM::AddressOfOp::create(builder,
-            loc, LLVM::LLVMPointerType::get(context), calleeSym);
+        Value indirectCallVal = LLVM::AddressOfOp::create(
+            builder, loc, LLVM::LLVMPointerType::get(context), calleeSym);
         operands->insert(operands->begin(), indirectCallVal);
       } else {
         // Regular direct call using callee name.
@@ -2310,8 +2311,8 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
       // IR). Build the indirect invoke by passing an empty `callee` operand and
       // insert into `operands` to include the indirect invoke target.
       FlatSymbolRefAttr calleeSym = convertCalleeName(invokeInst);
-      Value indirectInvokeVal = LLVM::AddressOfOp::create(builder,
-          loc, LLVM::LLVMPointerType::get(context), calleeSym);
+      Value indirectInvokeVal = LLVM::AddressOfOp::create(
+          builder, loc, LLVM::LLVMPointerType::get(context), calleeSym);
       operands->insert(operands->begin(), indirectInvokeVal);
     } else {
       // Regular direct invoke using callee name.
@@ -2320,9 +2321,9 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     // Create the invoke operation. Normal destination block arguments will be
     // added later on to handle the case in which the operation result is
     // included in this list.
-    auto invokeOp = InvokeOp::create(builder,
-        loc, *funcTy, calleeName, *operands, directNormalDest, ValueRange(),
-        lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
+    auto invokeOp = InvokeOp::create(
+        builder, loc, *funcTy, calleeName, *operands, directNormalDest,
+        ValueRange(), lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
 
     if (failed(convertInvokeAttributes(invokeInst, invokeOp)))
       return failure();
@@ -2382,8 +2383,8 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     }
 
     Type type = convertType(inst->getType());
-    auto gepOp = GEPOp::create(builder,
-        loc, type, sourceElementType, *basePtr, indices,
+    auto gepOp = GEPOp::create(
+        builder, loc, type, sourceElementType, *basePtr, indices,
         static_cast<GEPNoWrapFlags>(gepInst->getNoWrapFlags().getRaw()));
     mapValue(inst, gepOp);
     return success();
@@ -2409,8 +2410,8 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     SmallVector<ValueRange> succBlockArgsRange =
         llvm::to_vector_of<ValueRange>(succBlockArgs);
     Location loc = translateLoc(inst->getDebugLoc());
-    auto indBrOp = LLVM::IndirectBrOp::create(builder,
-        loc, *basePtr, succBlockArgsRange, succBlocks);
+    auto indBrOp = LLVM::IndirectBrOp::create(builder, loc, *basePtr,
+                                              succBlockArgsRange, succBlocks);
 
     mapNoResultOp(inst, indBrOp);
     return success();
@@ -2854,8 +2855,8 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   builder.setInsertionPointToEnd(mlirModule.getBody());
 
   Location loc = debugImporter->translateFuncLocation(func);
-  LLVMFuncOp funcOp = LLVMFuncOp::create(builder,
-      loc, func->getName(), functionType,
+  LLVMFuncOp funcOp = LLVMFuncOp::create(
+      builder, loc, func->getName(), functionType,
       convertLinkageFromLLVM(func->getLinkage()), dsoLocal, cconv);
 
   convertParameterAttributes(func, funcOp, builder);
@@ -3032,12 +3033,12 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
   Operation *op =
       llvm::TypeSwitch<llvm::DbgVariableIntrinsic *, Operation *>(dbgIntr)
           .Case([&](llvm::DbgDeclareInst *) {
-            return LLVM::DbgDeclareOp::create(builder,
-                loc, *argOperand, localVariableAttr, locationExprAttr);
+            return LLVM::DbgDeclareOp::create(
+                builder, loc, *argOperand, localVariableAttr, locationExprAttr);
           })
           .Case([&](llvm::DbgValueInst *) {
-            return LLVM::DbgValueOp::create(builder,
-                loc, *argOperand, localVariableAttr, locationExprAttr);
+            return LLVM::DbgValueOp::create(
+                builder, loc, *argOperand, localVariableAttr, locationExprAttr);
           });
   mapNoResultOp(dbgIntr, op);
   setNonDebugMetadataAttrs(dbgIntr, op);
@@ -3083,7 +3084,7 @@ LogicalResult ModuleImport::processBasicBlock(llvm::BasicBlock *bb,
     OpBuilder::InsertionGuard guard(builder);
     builder.setInsertionPointToStart(block);
     BlockTagOp::create(builder, block->getParentOp()->getLoc(),
-                               BlockTagAttr::get(context, bb->getNumber()));
+                       BlockTagAttr::get(context, bb->getNumber()));
   }
   return success();
 }

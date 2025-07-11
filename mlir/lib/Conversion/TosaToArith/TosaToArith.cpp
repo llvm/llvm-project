@@ -51,8 +51,8 @@ TypedAttr getConstantAttr(Type type, int64_t value, PatternRewriter &rewriter) {
 
 Value getConstantValue(Location loc, Type type, int64_t value,
                        PatternRewriter &rewriter) {
-  return arith::ConstantOp::create(rewriter,
-      loc, getConstantAttr(type, value, rewriter));
+  return arith::ConstantOp::create(rewriter, loc,
+                                   getConstantAttr(type, value, rewriter));
 }
 
 // This converts the TOSA ApplyScale operator to a set of arithmetic ops,
@@ -104,13 +104,13 @@ public:
       int64_t roundInt = 1 << 30;
       Value roundUp = getConstantValue(loc, i64Ty, roundInt, rewriter);
       Value roundDown = getConstantValue(loc, i64Ty, -roundInt, rewriter);
-      Value positive = arith::CmpIOp::create(rewriter,
-          loc, arith::CmpIPredicate::sge, value, zero);
+      Value positive = arith::CmpIOp::create(
+          rewriter, loc, arith::CmpIPredicate::sge, value, zero);
       Value dir =
           arith::SelectOp::create(rewriter, loc, positive, roundUp, roundDown);
       Value val = arith::AddIOp::create(rewriter, loc, dir, multiply64);
-      Value valid = arith::CmpIOp::create(rewriter,
-          loc, arith::CmpIPredicate::sgt, shift32, thirtyOne32);
+      Value valid = arith::CmpIOp::create(
+          rewriter, loc, arith::CmpIPredicate::sgt, shift32, thirtyOne32);
       multiply64 =
           arith::SelectOp::create(rewriter, loc, valid, val, multiply64);
     }
@@ -163,10 +163,10 @@ public:
     Value high32 = value64.getHigh();
 
     // Determine the direction and amount to shift the high bits.
-    Value shiftOver32 = arith::CmpIOp::create(rewriter,
-        loc, arith::CmpIPredicate::sge, shift32, thirtyTwo32);
-    Value roundHighBits = arith::CmpIOp::create(rewriter,
-        loc, arith::CmpIPredicate::sgt, shift32, thirtyTwo32);
+    Value shiftOver32 = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::sge, shift32, thirtyTwo32);
+    Value roundHighBits = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::sgt, shift32, thirtyTwo32);
 
     Value shiftHighL =
         arith::SubIOp::create(rewriter, loc, thirtyTwo32, shift32);
@@ -181,11 +181,11 @@ public:
     // Conditionally perform our double round.
     if (op.getRoundingMode() == "DOUBLE_ROUND") {
       Value negOne32 = getConstantValue(loc, i32Ty, -1, rewriter);
-      Value valuePositive = arith::CmpIOp::create(rewriter,
-          loc, arith::CmpIPredicate::sge, value32, zero32);
+      Value valuePositive = arith::CmpIOp::create(
+          rewriter, loc, arith::CmpIPredicate::sge, value32, zero32);
 
-      Value roundDir =
-          arith::SelectOp::create(rewriter, loc, valuePositive, one32, negOne32);
+      Value roundDir = arith::SelectOp::create(rewriter, loc, valuePositive,
+                                               one32, negOne32);
       roundDir =
           arith::SelectOp::create(rewriter, loc, shiftOver32, roundDir, zero32);
 
@@ -205,14 +205,15 @@ public:
       Value shiftSubOne = arith::SubIOp::create(rewriter, loc, shift32, one32);
       Value roundBit = arith::ShLIOp::create(rewriter, loc, one32, shiftSubOne);
       roundBit = arith::SelectOp::create(rewriter, loc, roundHighBits, zero32,
-                                                  roundBit);
+                                         roundBit);
 
       Value newLow32 = arith::AddIOp::create(rewriter, loc, low32, roundBit);
-      Value wasRounded = arith::CmpIOp::create(rewriter,
-          loc, arith::CmpIPredicate::ugt, low32, newLow32);
+      Value wasRounded = arith::CmpIOp::create(
+          rewriter, loc, arith::CmpIPredicate::ugt, low32, newLow32);
       low32 = newLow32;
 
-      Value rounded32 = arith::ExtUIOp::create(rewriter, loc, i32Ty, wasRounded);
+      Value rounded32 =
+          arith::ExtUIOp::create(rewriter, loc, i32Ty, wasRounded);
       high32 = arith::AddIOp::create(rewriter, loc, high32, rounded32);
     }
 
@@ -222,7 +223,7 @@ public:
           arith::SubIOp::create(rewriter, loc, shiftHighR, one32);
       Value roundBit = arith::ShLIOp::create(rewriter, loc, one32, shiftSubOne);
       roundBit = arith::SelectOp::create(rewriter, loc, roundHighBits, roundBit,
-                                                  zero32);
+                                         zero32);
       high32 = arith::AddIOp::create(rewriter, loc, high32, roundBit);
     }
 

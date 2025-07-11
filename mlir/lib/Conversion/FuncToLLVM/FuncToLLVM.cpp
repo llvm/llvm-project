@@ -115,8 +115,8 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
   SmallVector<NamedAttribute> attributes;
   filterFuncAttributes(funcOp, attributes);
 
-  auto wrapperFuncOp = LLVM::LLVMFuncOp::create(rewriter,
-      loc, llvm::formatv("_mlir_ciface_{0}", funcOp.getName()).str(),
+  auto wrapperFuncOp = LLVM::LLVMFuncOp::create(
+      rewriter, loc, llvm::formatv("_mlir_ciface_{0}", funcOp.getName()).str(),
       wrapperFuncType, LLVM::Linkage::External, /*dsoLocal=*/false,
       /*cconv=*/LLVM::CConv::C, /*comdat=*/nullptr, attributes);
   propagateArgResAttrs(rewriter, !!resultStructType, funcOp, wrapperFuncOp);
@@ -129,14 +129,14 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
   for (auto [index, argType] : llvm::enumerate(type.getInputs())) {
     Value arg = wrapperFuncOp.getArgument(index + argOffset);
     if (auto memrefType = dyn_cast<MemRefType>(argType)) {
-      Value loaded = LLVM::LoadOp::create(rewriter,
-          loc, typeConverter.convertType(memrefType), arg);
+      Value loaded = LLVM::LoadOp::create(
+          rewriter, loc, typeConverter.convertType(memrefType), arg);
       MemRefDescriptor::unpack(rewriter, loc, loaded, memrefType, args);
       continue;
     }
     if (isa<UnrankedMemRefType>(argType)) {
-      Value loaded = LLVM::LoadOp::create(rewriter,
-          loc, typeConverter.convertType(argType), arg);
+      Value loaded = LLVM::LoadOp::create(
+          rewriter, loc, typeConverter.convertType(argType), arg);
       UnrankedMemRefDescriptor::unpack(rewriter, loc, loaded, args);
       continue;
     }
@@ -148,7 +148,7 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
 
   if (resultStructType) {
     LLVM::StoreOp::create(rewriter, loc, call.getResult(),
-                                   wrapperFuncOp.getArgument(0));
+                          wrapperFuncOp.getArgument(0));
     LLVM::ReturnOp::create(rewriter, loc, ValueRange{});
   } else {
     LLVM::ReturnOp::create(rewriter, loc, call.getResults());
@@ -182,8 +182,8 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
   filterFuncAttributes(funcOp, attributes);
 
   // Create the auxiliary function.
-  auto wrapperFunc = LLVM::LLVMFuncOp::create(builder,
-      loc, llvm::formatv("_mlir_ciface_{0}", funcOp.getName()).str(),
+  auto wrapperFunc = LLVM::LLVMFuncOp::create(
+      builder, loc, llvm::formatv("_mlir_ciface_{0}", funcOp.getName()).str(),
       wrapperType, LLVM::Linkage::External, /*dsoLocal=*/false,
       /*cconv=*/LLVM::CConv::C, /*comdat=*/nullptr, attributes);
   propagateArgResAttrs(builder, !!resultStructType, funcOp, wrapperFunc);
@@ -201,8 +201,8 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
   if (resultStructType) {
     // Allocate the struct on the stack and pass the pointer.
     Type resultType = cast<LLVM::LLVMFunctionType>(wrapperType).getParamType(0);
-    Value one = LLVM::ConstantOp::create(builder,
-        loc, typeConverter.convertType(builder.getIndexType()),
+    Value one = LLVM::ConstantOp::create(
+        builder, loc, typeConverter.convertType(builder.getIndexType()),
         builder.getIntegerAttr(builder.getIndexType(), 1));
     Value result =
         LLVM::AllocaOp::create(builder, loc, resultType, resultStructType, one);
@@ -229,11 +229,11 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
                     wrapperArgsRange.take_front(numToDrop));
 
       auto ptrTy = LLVM::LLVMPointerType::get(builder.getContext());
-      Value one = LLVM::ConstantOp::create(builder,
-          loc, typeConverter.convertType(builder.getIndexType()),
+      Value one = LLVM::ConstantOp::create(
+          builder, loc, typeConverter.convertType(builder.getIndexType()),
           builder.getIntegerAttr(builder.getIndexType(), 1));
-      Value allocated = LLVM::AllocaOp::create(builder,
-          loc, ptrTy, packed.getType(), one, /*alignment=*/0);
+      Value allocated = LLVM::AllocaOp::create(
+          builder, loc, ptrTy, packed.getType(), one, /*alignment=*/0);
       LLVM::StoreOp::create(builder, loc, packed, allocated);
       arg = allocated;
     } else {
@@ -357,8 +357,8 @@ FailureOr<LLVM::LLVMFuncOp> mlir::convertFuncOpToLLVMFuncOp(
     symbolTable.remove(funcOp);
   }
 
-  auto newFuncOp = LLVM::LLVMFuncOp::create(rewriter,
-      funcOp.getLoc(), funcOp.getName(), llvmType, linkage,
+  auto newFuncOp = LLVM::LLVMFuncOp::create(
+      rewriter, funcOp.getLoc(), funcOp.getName(), llvmType, linkage,
       /*dsoLocal=*/false, /*cconv=*/LLVM::CConv::C, /*comdat=*/nullptr,
       attributes);
 
@@ -556,9 +556,10 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
     auto promoted = this->getTypeConverter()->promoteOperands(
         callOp.getLoc(), /*opOperands=*/callOp->getOperands(),
         adaptor.getOperands(), rewriter, useBarePtrCallConv);
-    auto newOp = LLVM::CallOp::create(rewriter,
-        callOp.getLoc(), packedResult ? TypeRange(packedResult) : TypeRange(),
-        promoted, callOp->getAttrs());
+    auto newOp = LLVM::CallOp::create(rewriter, callOp.getLoc(),
+                                      packedResult ? TypeRange(packedResult)
+                                                   : TypeRange(),
+                                      promoted, callOp->getAttrs());
 
     newOp.getProperties().operandSegmentSizes = {
         static_cast<int32_t>(promoted.size()), 0};
@@ -573,8 +574,8 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
       // Extract individual results from the structure and return them as list.
       results.reserve(numResults);
       for (unsigned i = 0; i < numResults; ++i) {
-        results.push_back(LLVM::ExtractValueOp::create(rewriter,
-            callOp.getLoc(), newOp->getResult(0), i));
+        results.push_back(LLVM::ExtractValueOp::create(
+            rewriter, callOp.getLoc(), newOp->getResult(0), i));
       }
     }
 

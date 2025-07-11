@@ -200,8 +200,8 @@ updateCalls(ModuleOp module,
     newOperands.append(outParams.begin(), outParams.end());
     auto newResultTypes = llvm::to_vector<6>(llvm::map_range(
         replaceWithNewCallResults, [](Value v) { return v.getType(); }));
-    auto newCall = func::CallOp::create(builder, op.getLoc(), op.getCalleeAttr(),
-                                                newResultTypes, newOperands);
+    auto newCall = func::CallOp::create(
+        builder, op.getLoc(), op.getCalleeAttr(), newResultTypes, newOperands);
     for (auto t : llvm::zip(replaceWithNewCallResults, newCall.getResults()))
       std::get<0>(t).replaceAllUsesWith(std::get<1>(t));
     op.erase();

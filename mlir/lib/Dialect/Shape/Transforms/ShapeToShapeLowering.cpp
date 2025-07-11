@@ -50,7 +50,7 @@ NumElementsOpConverter::matchAndRewrite(NumElementsOp op,
   Block *body = reduce.getBody();
   OpBuilder b = OpBuilder::atBlockEnd(body);
   Value product = MulOp::create(b, loc, valueType, body->getArgument(1),
-                                  body->getArgument(2));
+                                body->getArgument(2));
   shape::YieldOp::create(b, loc, product);
 
   rewriter.replaceOp(op, reduce.getResult());

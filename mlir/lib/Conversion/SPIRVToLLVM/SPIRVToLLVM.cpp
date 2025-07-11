@@ -94,13 +94,13 @@ static IntegerAttr minusOneIntegerAttribute(Type type, Builder builder) {
 static Value createConstantAllBitsSet(Location loc, Type srcType, Type dstType,
                                       PatternRewriter &rewriter) {
   if (isa<VectorType>(srcType)) {
-    return LLVM::ConstantOp::create(rewriter,
-        loc, dstType,
+    return LLVM::ConstantOp::create(
+        rewriter, loc, dstType,
         SplatElementsAttr::get(cast<ShapedType>(srcType),
                                minusOneIntegerAttribute(srcType, rewriter)));
   }
-  return LLVM::ConstantOp::create(rewriter,
-      loc, dstType, minusOneIntegerAttribute(srcType, rewriter));
+  return LLVM::ConstantOp::create(rewriter, loc, dstType,
+                                  minusOneIntegerAttribute(srcType, rewriter));
 }
 
 /// Creates `llvm.mlir.constant` with a floating-point scalar or vector value.
@@ -108,14 +108,14 @@ static Value createFPConstant(Location loc, Type srcType, Type dstType,
                               PatternRewriter &rewriter, double value) {
   if (auto vecType = dyn_cast<VectorType>(srcType)) {
     auto floatType = cast<FloatType>(vecType.getElementType());
-    return LLVM::ConstantOp::create(rewriter,
-        loc, dstType,
+    return LLVM::ConstantOp::create(
+        rewriter, loc, dstType,
         SplatElementsAttr::get(vecType,
                                rewriter.getFloatAttr(floatType, value)));
   }
   auto floatType = cast<FloatType>(srcType);
-  return LLVM::ConstantOp::create(rewriter,
-      loc, dstType, rewriter.getFloatAttr(floatType, value));
+  return LLVM::ConstantOp::create(rewriter, loc, dstType,
+                                  rewriter.getFloatAttr(floatType, value));
 }
 
 /// Utility function for bitfield ops:
@@ -153,10 +153,10 @@ static Value broadcast(Location loc, Value toBroadcast, unsigned numElements,
   auto llvmI32Type = typeConverter.convertType(rewriter.getIntegerType(32));
   Value broadcasted = LLVM::PoisonOp::create(rewriter, loc, llvmVectorType);
   for (unsigned i = 0; i < numElements; ++i) {
-    auto index = LLVM::ConstantOp::create(rewriter,
-        loc, llvmI32Type, rewriter.getI32IntegerAttr(i));
-    broadcasted = LLVM::InsertElementOp::create(rewriter,
-        loc, llvmVectorType, broadcasted, toBroadcast, index);
+    auto index = LLVM::ConstantOp::create(rewriter, loc, llvmI32Type,
+                                          rewriter.getI32IntegerAttr(i));
+    broadcasted = LLVM::InsertElementOp::create(
+        rewriter, loc, llvmVectorType, broadcasted, toBroadcast, index);
   }
   return broadcasted;
 }
@@ -217,8 +217,8 @@ static Type convertStructTypePacked(spirv::StructType type,
 /// Creates LLVM dialect constant with the given value.
 static Value createI32ConstantOf(Location loc, PatternRewriter &rewriter,
                                  unsigned value) {
-  return LLVM::ConstantOp::create(rewriter,
-      loc, IntegerType::get(rewriter.getContext(), 32),
+  return LLVM::ConstantOp::create(
+      rewriter, loc, IntegerType::get(rewriter.getContext(), 32),
       rewriter.getIntegerAttr(rewriter.getI32Type(), value));
 }
 
@@ -322,8 +322,9 @@ public:
     auto llvmIndexType = getTypeConverter()->convertType(indexType);
     if (!llvmIndexType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
-    Value zero = LLVM::ConstantOp::create(rewriter,
-        op.getLoc(), llvmIndexType, rewriter.getIntegerAttr(indexType, 0));
+    Value zero =
+        LLVM::ConstantOp::create(rewriter, op.getLoc(), llvmIndexType,
+                                 rewriter.getIntegerAttr(indexType, 0));
     indices.insert(indices.begin(), zero);
 
     auto elementType = getTypeConverter()->convertType(
@@ -377,11 +378,11 @@ public:
     Value maskShiftedByCount =
         LLVM::ShlOp::create(rewriter, loc, dstType, minusOne, count);
     Value negated = LLVM::XOrOp::create(rewriter, loc, dstType,
-                                                 maskShiftedByCount, minusOne);
+                                        maskShiftedByCount, minusOne);
     Value maskShiftedByCountAndOffset =
         LLVM::ShlOp::create(rewriter, loc, dstType, negated, offset);
-    Value mask = LLVM::XOrOp::create(rewriter,
-        loc, dstType, maskShiftedByCountAndOffset, minusOne);
+    Value mask = LLVM::XOrOp::create(rewriter, loc, dstType,
+                                     maskShiftedByCountAndOffset, minusOne);
 
     // Extract unchanged bits from the `Base`  that are outside of
     // [Offset, Offset + Count - 1]. Then `or` with shifted `Insert`.
@@ -470,8 +471,8 @@ public:
     auto baseSize = rewriter.getIntegerAttr(integerType, getBitWidth(srcType));
     Value size =
         isa<VectorType>(srcType)
-            ? LLVM::ConstantOp::create(rewriter,
-                  loc, dstType,
+            ? LLVM::ConstantOp::create(
+                  rewriter, loc, dstType,
                   SplatElementsAttr::get(cast<ShapedType>(srcType), baseSize))
             : LLVM::ConstantOp::create(rewriter, loc, dstType, baseSize);
 
@@ -481,8 +482,8 @@ public:
         LLVM::AddOp::create(rewriter, loc, dstType, count, offset);
     Value amountToShiftLeft =
         LLVM::SubOp::create(rewriter, loc, dstType, size, countPlusOffset);
-    Value baseShiftedLeft = LLVM::ShlOp::create(rewriter,
-        loc, dstType, op.getBase(), amountToShiftLeft);
+    Value baseShiftedLeft = LLVM::ShlOp::create(
+        rewriter, loc, dstType, op.getBase(), amountToShiftLeft);
 
     // Shift the result right, filling the bits with the sign bit.
     Value amountToShiftRight =
@@ -518,7 +519,7 @@ public:
     Value maskShiftedByCount =
         LLVM::ShlOp::create(rewriter, loc, dstType, minusOne, count);
     Value mask = LLVM::XOrOp::create(rewriter, loc, dstType, maskShiftedByCount,
-                                              minusOne);
+                                     minusOne);
 
     // Shift `Base` by `Offset` and apply the mask on it.
     Value shiftedBase =
@@ -694,8 +695,8 @@ public:
     auto structType = LLVM::LLVMStructType::getLiteral(context, fields);
 
     // Create `llvm.mlir.global` with initializer region containing one block.
-    auto global = LLVM::GlobalOp::create(rewriter,
-        UnknownLoc::get(context), structType, /*isConstant=*/true,
+    auto global = LLVM::GlobalOp::create(
+        rewriter, UnknownLoc::get(context), structType, /*isConstant=*/true,
         LLVM::Linkage::External, executionModeInfoName, Attribute(),
         /*alignment=*/0);
     Location loc = global.getLoc();
@@ -705,8 +706,8 @@ public:
     // Initialize the struct and set the execution mode value.
     rewriter.setInsertionPointToStart(block);
     Value structValue = LLVM::PoisonOp::create(rewriter, loc, structType);
-    Value executionMode = LLVM::ConstantOp::create(rewriter,
-        loc, llvmI32Type,
+    Value executionMode = LLVM::ConstantOp::create(
+        rewriter, loc, llvmI32Type,
         rewriter.getI32IntegerAttr(
             static_cast<uint32_t>(executionModeAttr.getValue())));
     structValue = rewriter.create<LLVM::InsertValueOp>(loc, structValue,
@@ -716,8 +717,8 @@ public:
     for (unsigned i = 0, e = values.size(); i < e; ++i) {
       auto attr = values.getValue()[i];
       Value entry = LLVM::ConstantOp::create(rewriter, loc, llvmI32Type, attr);
-      structValue = LLVM::InsertValueOp::create(rewriter,
-          loc, structValue, entry, ArrayRef<int64_t>({1, i}));
+      structValue = LLVM::InsertValueOp::create(
+          rewriter, loc, structValue, entry, ArrayRef<int64_t>({1, i}));
     }
     LLVM::ReturnOp::create(rewriter, loc, ArrayRef<Value>({structValue}));
     rewriter.eraseOp(op);
@@ -973,8 +974,8 @@ public:
     IntegerAttr minusOne = minusOneIntegerAttribute(srcType, rewriter);
     auto mask =
         isa<VectorType>(srcType)
-            ? LLVM::ConstantOp::create(rewriter,
-                  loc, dstType,
+            ? LLVM::ConstantOp::create(
+                  rewriter, loc, dstType,
                   SplatElementsAttr::get(cast<VectorType>(srcType), minusOne))
             : LLVM::ConstantOp::create(rewriter, loc, dstType, minusOne);
     rewriter.template replaceOpWithNewOp<LLVM::XOrOp>(notOp, dstType,
@@ -1034,8 +1035,8 @@ static LLVM::LLVMFuncOp lookupOrCreateSPIRVFn(Operation *symbolTable,
     return func;
 
   OpBuilder b(symbolTable->getRegion(0));
-  func = LLVM::LLVMFuncOp::create(b,
-      symbolTable->getLoc(), name,
+  func = LLVM::LLVMFuncOp::create(
+      b, symbolTable->getLoc(), name,
       LLVM::LLVMFunctionType::get(resultType, paramTypes));
   func.setCConv(LLVM::cconv::CConv::SPIR_FUNC);
   func.setConvergent(convergent);
@@ -1078,12 +1079,12 @@ public:
         lookupOrCreateSPIRVFn(symbolTable, funcName, {i32, i32, i32}, voidTy);
 
     Location loc = controlBarrierOp->getLoc();
-    Value execution = LLVM::ConstantOp::create(rewriter,
-        loc, i32, static_cast<int32_t>(adaptor.getExecutionScope()));
-    Value memory = LLVM::ConstantOp::create(rewriter,
-        loc, i32, static_cast<int32_t>(adaptor.getMemoryScope()));
-    Value semantics = LLVM::ConstantOp::create(rewriter,
-        loc, i32, static_cast<int32_t>(adaptor.getMemorySemantics()));
+    Value execution = LLVM::ConstantOp::create(
+        rewriter, loc, i32, static_cast<int32_t>(adaptor.getExecutionScope()));
+    Value memory = LLVM::ConstantOp::create(
+        rewriter, loc, i32, static_cast<int32_t>(adaptor.getMemoryScope()));
+    Value semantics = LLVM::ConstantOp::create(
+        rewriter, loc, i32, static_cast<int32_t>(adaptor.getMemorySemantics()));
 
     auto call = createSPIRVBuiltinCall(loc, rewriter, func,
                                        {execution, memory, semantics});
@@ -1255,10 +1256,12 @@ public:
         lookupOrCreateSPIRVFn(symbolTable, funcName, paramTypes, retTy);
 
     Location loc = op.getLoc();
-    Value scope = LLVM::ConstantOp::create(rewriter,
-        loc, i32Ty, static_cast<int32_t>(adaptor.getExecutionScope()));
-    Value groupOp = LLVM::ConstantOp::create(rewriter,
-        loc, i32Ty, static_cast<int32_t>(adaptor.getGroupOperation()));
+    Value scope = LLVM::ConstantOp::create(
+        rewriter, loc, i32Ty,
+        static_cast<int32_t>(adaptor.getExecutionScope()));
+    Value groupOp = LLVM::ConstantOp::create(
+        rewriter, loc, i32Ty,
+        static_cast<int32_t>(adaptor.getGroupOperation()));
     SmallVector<Value> operands{scope, groupOp};
     operands.append(adaptor.getOperands().begin(), adaptor.getOperands().end());
 
@@ -1441,9 +1444,8 @@ public:
     Block *falseBlock = condBrOp.getFalseBlock();
     rewriter.setInsertionPointToEnd(currentBlock);
     LLVM::CondBrOp::create(rewriter, loc, condBrOp.getCondition(), trueBlock,
-                                    condBrOp.getTrueTargetOperands(),
-                                    falseBlock,
-                                    condBrOp.getFalseTargetOperands());
+                           condBrOp.getTrueTargetOperands(), falseBlock,
+                           condBrOp.getFalseTargetOperands());
 
     rewriter.eraseBlock(headerBlock);
     rewriter.inlineRegionBefore(op.getBody(), continueBlock);
@@ -1767,16 +1769,17 @@ public:
         baseVector = vector2;
       }
 
-      Value dstIndex = LLVM::ConstantOp::create(rewriter,
-          loc, llvmI32Type, rewriter.getIntegerAttr(rewriter.getI32Type(), i));
-      Value index = LLVM::ConstantOp::create(rewriter,
-          loc, llvmI32Type,
+      Value dstIndex = LLVM::ConstantOp::create(
+          rewriter, loc, llvmI32Type,
+          rewriter.getIntegerAttr(rewriter.getI32Type(), i));
+      Value index = LLVM::ConstantOp::create(
+          rewriter, loc, llvmI32Type,
           rewriter.getIntegerAttr(rewriter.getI32Type(), indexVal - offsetVal));
 
-      auto extractOp = LLVM::ExtractElementOp::create(rewriter,
-          loc, scalarType, baseVector, index);
+      auto extractOp = LLVM::ExtractElementOp::create(rewriter, loc, scalarType,
+                                                      baseVector, index);
       targetOp = LLVM::InsertElementOp::create(rewriter, loc, dstType, targetOp,
-                                                        extractOp, dstIndex);
+                                               extractOp, dstIndex);
     }
     rewriter.replaceOp(op, targetOp);
     return success();

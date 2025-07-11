@@ -70,7 +70,8 @@ static scf::ForOp createFor(OpBuilder &builder, Location loc, Value upper,
   if (!lower)
     lower = constantZero(builder, loc, indexType);
   Value one = constantOne(builder, loc, indexType);
-  scf::ForOp forOp = scf::ForOp::create(builder, loc, lower, upper, one, fields);
+  scf::ForOp forOp =
+      scf::ForOp::create(builder, loc, lower, upper, one, fields);
   for (unsigned i = 0, e = fields.size(); i < e; i++)
     fields[i] = forOp.getRegionIterArg(i);
   builder.setInsertionPointToStart(forOp.getBody());
@@ -86,9 +87,9 @@ static void createPushback(OpBuilder &builder, Location loc,
   Value field = desc.getMemRefField(kind, lvl);
   StorageSpecifierKind specFieldKind = toSpecifierKind(kind);
 
-  auto pushBackOp = PushBackOp::create(builder,
-      loc, desc.getSpecifierField(builder, loc, specFieldKind, lvl), field,
-      genCast(builder, loc, value, etp), repeat);
+  auto pushBackOp = PushBackOp::create(
+      builder, loc, desc.getSpecifierField(builder, loc, specFieldKind, lvl),
+      field, genCast(builder, loc, value, etp), repeat);
 
   desc.setMemRefField(kind, lvl, pushBackOp.getOutBuffer());
   desc.setSpecifierField(builder, loc, specFieldKind, lvl,
@@ -178,16 +179,16 @@ static void createAllocFields(OpBuilder &builder, Location loc,
   if (stt.isAllDense()) {
     valHeuristic = lvlSizesValues[0];
     for (Level lvl = 1; lvl < lvlRank; lvl++)
-      valHeuristic =
-          arith::MulIOp::create(builder, loc, valHeuristic, lvlSizesValues[lvl]);
+      valHeuristic = arith::MulIOp::create(builder, loc, valHeuristic,
+                                           lvlSizesValues[lvl]);
   } else if (sizeHint) {
     if (stt.getAoSCOOStart() == 0) {
       posHeuristic = constantIndex(builder, loc, 2);
-      crdHeuristic = arith::MulIOp::create(builder,
-          loc, constantIndex(builder, loc, lvlRank), sizeHint); // AOS
+      crdHeuristic = arith::MulIOp::create(
+          builder, loc, constantIndex(builder, loc, lvlRank), sizeHint); // AOS
     } else if (lvlRank == 2 && stt.isDenseLvl(0) && stt.isCompressedLvl(1)) {
-      posHeuristic = arith::AddIOp::create(builder,
-          loc, sizeHint, constantIndex(builder, loc, 1));
+      posHeuristic = arith::AddIOp::create(builder, loc, sizeHint,
+                                           constantIndex(builder, loc, 1));
       crdHeuristic = sizeHint;
     } else {
       posHeuristic = crdHeuristic = constantIndex(builder, loc, 16);
@@ -290,22 +291,22 @@ static Value genCompressed(OpBuilder &builder, Location loc,
   const Value msz =
       crdStrideC ? arith::DivUIOp::create(builder, loc, crdMsz, crdStrideC)
                  : crdMsz;
-  const Value plast = arith::SubIOp::create(builder,
-      loc, genCast(builder, loc, pstop, indexType), one);
+  const Value plast = arith::SubIOp::create(
+      builder, loc, genCast(builder, loc, pstop, indexType), one);
   // Conditional expression.
   Value lt = arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::ult,
-                                           pstart, pstop);
+                                   pstart, pstop);
   types.push_back(boolType);
   scf::IfOp ifOp1 = scf::IfOp::create(builder, loc, types, lt, /*else*/ true);
   types.pop_back();
   builder.setInsertionPointToStart(&ifOp1.getThenRegion().front());
-  Value crd =
-      genLoad(builder, loc, desc.getMemRefField(crdFidx),
-              crdStrideC ? arith::MulIOp::create(builder, loc, plast, crdStrideC)
-                         : plast);
-  Value eq = arith::CmpIOp::create(builder,
-      loc, arith::CmpIPredicate::eq, genCast(builder, loc, crd, indexType),
-      lvlCoords[lvl]);
+  Value crd = genLoad(
+      builder, loc, desc.getMemRefField(crdFidx),
+      crdStrideC ? arith::MulIOp::create(builder, loc, plast, crdStrideC)
+                 : plast);
+  Value eq = arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::eq,
+                                   genCast(builder, loc, crd, indexType),
+                                   lvlCoords[lvl]);
   scf::YieldOp::create(builder, loc, eq);
   builder.setInsertionPointToStart(&ifOp1.getElseRegion().front());
   if (lvl > 0)
@@ -381,10 +382,10 @@ static void genEndInsert(OpBuilder &builder, Location loc,
         Value oldv = loop.getRegionIterArg(0);
         Value newv = genLoad(builder, loc, posMemRef, i);
         Value posZero = constantZero(builder, loc, posType);
-        Value cond = arith::CmpIOp::create(builder,
-            loc, arith::CmpIPredicate::eq, newv, posZero);
+        Value cond = arith::CmpIOp::create(
+            builder, loc, arith::CmpIPredicate::eq, newv, posZero);
         scf::IfOp ifOp = scf::IfOp::create(builder, loc, TypeRange(posType),
-                                                   cond, /*else*/ true);
+                                           cond, /*else*/ true);
         builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
         genStore(builder, loc, oldv, posMemRef, i);
         scf::YieldOp::create(builder, loc, oldv);
@@ -582,8 +583,9 @@ public:
       return failure();
 
     // (1) Generates new call with flattened return value.
-    auto newCall = func::CallOp::create(rewriter,
-        loc, op.getCallee(), finalRetTy, flattenValues(adaptor.getOperands()));
+    auto newCall =
+        func::CallOp::create(rewriter, loc, op.getCallee(), finalRetTy,
+                             flattenValues(adaptor.getOperands()));
     // (2) Gather sparse tensor returns.
     SmallVector<SmallVector<Value>> packedResultVals;
     // Tracks the offset of current return value (of the original call)
@@ -672,7 +674,7 @@ struct SparseReorderCOOConverter : public OpConversionPattern<ReorderCOOOp> {
     auto id = AffineMap::getMultiDimIdentityMap(srcStt.getLvlRank(), ctx);
 
     SortOp::create(rewriter, loc, nnz, crd, ValueRange{val}, id,
-                            rewriter.getIndexAttr(0), op.getAlgorithm());
+                   rewriter.getIndexAttr(0), op.getAlgorithm());
 
     // Since we do in-place sorting, the destinate tensor will have the same set
     // of memrefs as the source tensor.
@@ -931,12 +933,12 @@ public:
     // operation is amortized over the innermost loops for the access
     // pattern expansion. As noted in the operation doc, we would like
     // to amortize this setup cost even between kernels.
-    linalg::FillOp::create(rewriter,
-        loc, ValueRange{constantZero(rewriter, loc, eltType)},
-        ValueRange{values});
-    linalg::FillOp::create(rewriter,
-        loc, ValueRange{constantZero(rewriter, loc, boolType)},
-        ValueRange{filled});
+    linalg::FillOp::create(rewriter, loc,
+                           ValueRange{constantZero(rewriter, loc, eltType)},
+                           ValueRange{values});
+    linalg::FillOp::create(rewriter, loc,
+                           ValueRange{constantZero(rewriter, loc, boolType)},
+                           ValueRange{filled});
     // Replace expansion op with these buffers and initial coordinate.
     assert(op.getNumResults() == 4);
     rewriter.replaceOp(op, {values, filled, added, zero});
@@ -965,9 +967,10 @@ public:
     // If the innermost level is ordered, we need to sort the coordinates
     // in the "added" array prior to applying the compression.
     if (dstType.isOrderedLvl(dstType.getLvlRank() - 1))
-      SortOp::create(rewriter,
-          loc, count, added, ValueRange{}, rewriter.getMultiDimIdentityMap(1),
-          rewriter.getIndexAttr(0), SparseTensorSortKind::HybridQuickSort);
+      SortOp::create(rewriter, loc, count, added, ValueRange{},
+                     rewriter.getMultiDimIdentityMap(1),
+                     rewriter.getIndexAttr(0),
+                     SparseTensorSortKind::HybridQuickSort);
     // While performing the insertions, we also need to reset the elements
     // of the values/filled-switch by only iterating over the set elements,
     // to ensure that the runtime complexity remains proportional to the
@@ -1192,8 +1195,8 @@ public:
             // would require a subViewOp to avoid overflow when copying
             // values.
             Value sz = linalg::createOrFoldDimOp(rewriter, loc, srcMem, 0);
-            auto dstMem = memref::AllocOp::create(rewriter,
-                loc, cast<MemRefType>(fTp), sz);
+            auto dstMem = memref::AllocOp::create(rewriter, loc,
+                                                  cast<MemRefType>(fTp), sz);
             if (fTp != srcMem.getType()) {
               // Converts elements type.
               scf::buildLoopNest(
@@ -1242,8 +1245,9 @@ public:
     auto desc = getMutDescriptorFromTensorTuple(adaptor.getSource(), fields,
                                                 op.getSource().getType());
 
-    auto newSpec = StorageSpecifierInitOp::create(rewriter,
-        loc, StorageSpecifierType::get(ctx, dstEnc), desc.getSpecifier());
+    auto newSpec = StorageSpecifierInitOp::create(
+        rewriter, loc, StorageSpecifierType::get(ctx, dstEnc),
+        desc.getSpecifier());
     desc.setSpecifier(newSpec);
 
     // Fills in slice information.
@@ -1326,8 +1330,8 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
               // Flattens the buffer to batchLvlRank.
               auto reassoc = getReassociationForFlattening(
                   mem.getType(), stt.getBatchLvlRank());
-              mem = memref::CastOp::create(rewriter,
-                  loc, fType,
+              mem = memref::CastOp::create(
+                  rewriter, loc, fType,
                   memref::CollapseShapeOp::create(rewriter, loc, mem, reassoc));
             } else {
               mem = memref::CastOp::create(rewriter, loc, fType, mem);
@@ -1396,8 +1400,8 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
       assert(isWithCrdLT(lt) && lvl <= trailCOOStart);
       // FIXME: This seems to be unnecessarily complex, can we simplify it?
       if (lvl == trailCOOStart) {
-        Value cooSz = arith::MulIOp::create(rewriter,
-            loc, memSize, constantIndex(rewriter, loc, trailCOORank));
+        Value cooSz = arith::MulIOp::create(
+            rewriter, loc, memSize, constantIndex(rewriter, loc, trailCOORank));
         desc.setCrdMemSize(rewriter, loc, lvl, cooSz);
       } else {
         desc.setCrdMemSize(rewriter, loc, lvl, memSize);
@@ -1471,8 +1475,9 @@ struct SparseDisassembleOpConverter
     // Converts MemRefs back to Tensors.
     SmallVector<Value> retValues = llvm::to_vector(
         llvm::map_range(retMem, [&rewriter, loc](Value v) -> Value {
-          return bufferization::ToTensorOp::create(rewriter,
-              loc, memref::getTensorTypeFromMemRefType(v.getType()), v);
+          return bufferization::ToTensorOp::create(
+              rewriter, loc, memref::getTensorTypeFromMemRefType(v.getType()),
+              v);
         }));
     // Appends the actual memory length used in each buffer returned.
     retValues.append(retLen.begin(), retLen.end());
@@ -1549,15 +1554,15 @@ struct SparseNewConverter : public OpConversionPattern<NewOp> {
     const Level lvlRank = dstTp.getLvlRank();
     if (dstTp.isOrderedLvl(lvlRank - 1)) {
       Value kFalse = constantI1(rewriter, loc, false);
-      Value notSorted = arith::CmpIOp::create(rewriter,
-          loc, arith::CmpIPredicate::eq, isSorted, kFalse);
+      Value notSorted = arith::CmpIOp::create(
+          rewriter, loc, arith::CmpIPredicate::eq, isSorted, kFalse);
       scf::IfOp ifOp =
           scf::IfOp::create(rewriter, loc, notSorted, /*else*/ false);
       rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
       auto xPerm = rewriter.getMultiDimIdentityMap(lvlRank);
       SortOp::create(rewriter, loc, nse, xs, ValueRange{ys}, xPerm,
-                              rewriter.getIndexAttr(0),
-                              SparseTensorSortKind::HybridQuickSort);
+                     rewriter.getIndexAttr(0),
+                     SparseTensorSortKind::HybridQuickSort);
       rewriter.setInsertionPointAfter(ifOp);
     }
 
@@ -1569,8 +1574,8 @@ struct SparseNewConverter : public OpConversionPattern<NewOp> {
     memref::StoreOp::create(rewriter, loc, posNse, posMemref0, c1);
 
     // Update storage specifier.
-    Value coordinatesSize = arith::MulIOp::create(rewriter,
-        loc, nse, constantIndex(rewriter, loc, lvlRank));
+    Value coordinatesSize = arith::MulIOp::create(
+        rewriter, loc, nse, constantIndex(rewriter, loc, lvlRank));
     desc.setSpecifierField(rewriter, loc, StorageSpecifierKind::CrdMemSize, 0,
                            coordinatesSize);
     desc.setSpecifierField(rewriter, loc, StorageSpecifierKind::ValMemSize,

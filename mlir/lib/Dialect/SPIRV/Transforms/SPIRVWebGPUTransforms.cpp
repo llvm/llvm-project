@@ -64,14 +64,14 @@ static Value lowerExtendedMultiplication(Operation *mulOp,
   //     and 4 additions after constant folding.
   //   - With sign-extended arguments, we end up emitting 8 multiplications and
   //     and 12 additions after CSE.
-  Value cstLowMask = ConstantOp::create(rewriter,
-      loc, lhs.getType(), getScalarOrSplatAttr(argTy, (1 << 16) - 1));
+  Value cstLowMask = ConstantOp::create(
+      rewriter, loc, lhs.getType(), getScalarOrSplatAttr(argTy, (1 << 16) - 1));
   auto getLowDigit = [&rewriter, loc, cstLowMask](Value val) {
     return BitwiseAndOp::create(rewriter, loc, val, cstLowMask);
   };
 
   Value cst16 = ConstantOp::create(rewriter, loc, lhs.getType(),
-                                            getScalarOrSplatAttr(argTy, 16));
+                                   getScalarOrSplatAttr(argTy, 16));
   auto getHighDigit = [&rewriter, loc, cst16](Value val) {
     return ShiftRightLogicalOp::create(rewriter, loc, val, cst16);
   };
@@ -86,7 +86,7 @@ static Value lowerExtendedMultiplication(Operation *mulOp,
   };
 
   Value cst0 = ConstantOp::create(rewriter, loc, lhs.getType(),
-                                           getScalarOrSplatAttr(argTy, 0));
+                                  getScalarOrSplatAttr(argTy, 0));
 
   Value lhsLow = getLowDigit(lhs);
   Value lhsHigh = getHighDigit(lhs);
@@ -128,8 +128,9 @@ static Value lowerExtendedMultiplication(Operation *mulOp,
   Value low = combineDigits(resultDigits[0], resultDigits[1]);
   Value high = combineDigits(resultDigits[2], resultDigits[3]);
 
-  return CompositeConstructOp::create(rewriter,
-      loc, mulOp->getResultTypes().front(), llvm::ArrayRef({low, high}));
+  return CompositeConstructOp::create(rewriter, loc,
+                                      mulOp->getResultTypes().front(),
+                                      llvm::ArrayRef({low, high}));
 }
 
 //===----------------------------------------------------------------------===//
@@ -184,18 +185,19 @@ struct ExpandAddCarryPattern final : OpRewritePattern<IAddCarryOp> {
           loc,
           llvm::formatv("Unexpected integer type for WebGPU: '{0}'", elemTy));
 
-    Value one =
-        ConstantOp::create(rewriter, loc, argTy, getScalarOrSplatAttr(argTy, 1));
-    Value zero =
-        ConstantOp::create(rewriter, loc, argTy, getScalarOrSplatAttr(argTy, 0));
+    Value one = ConstantOp::create(rewriter, loc, argTy,
+                                   getScalarOrSplatAttr(argTy, 1));
+    Value zero = ConstantOp::create(rewriter, loc, argTy,
+                                    getScalarOrSplatAttr(argTy, 0));
 
     // Calculate the carry by checking if the addition resulted in an overflow.
     Value out = IAddOp::create(rewriter, loc, lhs, rhs);
     Value cmp = ULessThanOp::create(rewriter, loc, out, lhs);
     Value carry = SelectOp::create(rewriter, loc, cmp, one, zero);
 
-    Value add = CompositeConstructOp::create(rewriter,
-        loc, op->getResultTypes().front(), llvm::ArrayRef({out, carry}));
+    Value add = CompositeConstructOp::create(rewriter, loc,
+                                             op->getResultTypes().front(),
+                                             llvm::ArrayRef({out, carry}));
 
     rewriter.replaceOp(op, add);
     return success();

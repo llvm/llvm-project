@@ -379,12 +379,11 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
 
   // With the body block done, we can fill in the condition block.
   rewriter.setInsertionPointToEnd(conditionBlock);
-  auto comparison = arith::CmpIOp::create(rewriter,
-      loc, arith::CmpIPredicate::slt, iv, upperBound);
+  auto comparison = arith::CmpIOp::create(
+      rewriter, loc, arith::CmpIPredicate::slt, iv, upperBound);
 
   cf::CondBranchOp::create(rewriter, loc, comparison, firstBodyBlock,
-                                    ArrayRef<Value>(), endBlock,
-                                    ArrayRef<Value>());
+                           ArrayRef<Value>(), endBlock, ArrayRef<Value>());
 
   // The result of the loop operation is the values of the condition block
   // arguments except the induction variable on the last iteration.
@@ -440,8 +439,8 @@ LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
 
   rewriter.setInsertionPointToEnd(condBlock);
   cf::CondBranchOp::create(rewriter, loc, ifOp.getCondition(), thenBlock,
-                                    /*trueArgs=*/ArrayRef<Value>(), elseBlock,
-                                    /*falseArgs=*/ArrayRef<Value>());
+                           /*trueArgs=*/ArrayRef<Value>(), elseBlock,
+                           /*falseArgs=*/ArrayRef<Value>());
 
   // Ok, we're done!
   rewriter.replaceOp(ifOp, continueBlock->getArguments());
@@ -465,7 +464,8 @@ ExecuteRegionLowering::matchAndRewrite(ExecuteRegionOp op,
     if (auto terminator = dyn_cast<scf::YieldOp>(block.getTerminator())) {
       ValueRange terminatorOperands = terminator->getOperands();
       rewriter.setInsertionPointToEnd(&block);
-      cf::BranchOp::create(rewriter, loc, remainingOpsBlock, terminatorOperands);
+      cf::BranchOp::create(rewriter, loc, remainingOpsBlock,
+                           terminatorOperands);
       rewriter.eraseOp(terminator);
     }
   }
@@ -695,12 +695,12 @@ IndexSwitchLowering::matchAndRewrite(IndexSwitchOp op,
   SmallVector<ValueRange> caseOperands(caseSuccessors.size(), {});
 
   // Cast switch index to integer case value.
-  Value caseValue = arith::IndexCastOp::create(rewriter,
-      op.getLoc(), rewriter.getI32Type(), op.getArg());
+  Value caseValue = arith::IndexCastOp::create(
+      rewriter, op.getLoc(), rewriter.getI32Type(), op.getArg());
 
-  cf::SwitchOp::create(rewriter,
-      op.getLoc(), caseValue, *defaultBlock, ValueRange(),
-      rewriter.getDenseI32ArrayAttr(caseValues), caseSuccessors, caseOperands);
+  cf::SwitchOp::create(rewriter, op.getLoc(), caseValue, *defaultBlock,
+                       ValueRange(), rewriter.getDenseI32ArrayAttr(caseValues),
+                       caseSuccessors, caseOperands);
   rewriter.replaceOp(op, continueBlock->getArguments());
   return success();
 }

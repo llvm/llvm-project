@@ -579,8 +579,8 @@ convertTransferReadOp(RewriterBase &rewriter, vector::TransferReadOp op,
   }
   gpu::MMAMatrixType type =
       gpu::MMAMatrixType::get(op.getVectorType().getShape(), elType, fragType);
-  Value load = gpu::SubgroupMmaLoadMatrixOp::create(rewriter,
-      op.getLoc(), type, op.getBase(), op.getIndices(),
+  Value load = gpu::SubgroupMmaLoadMatrixOp::create(
+      rewriter, op.getLoc(), type, op.getBase(), op.getIndices(),
       rewriter.getIndexAttr(*stride),
       isTranspose ? rewriter.getUnitAttr() : UnitAttr());
   valueMapping[mappingResult] = load;
@@ -610,8 +610,8 @@ convertTransferWriteOp(RewriterBase &rewriter, vector::TransferWriteOp op,
   }
 
   Value matrix = it->second;
-  auto store = gpu::SubgroupMmaStoreMatrixOp::create(rewriter,
-      op.getLoc(), matrix, op.getBase(), op.getIndices(),
+  auto store = gpu::SubgroupMmaStoreMatrixOp::create(
+      rewriter, op.getLoc(), matrix, op.getBase(), op.getIndices(),
       rewriter.getIndexAttr(*stride), /*transpose=*/UnitAttr());
   (void)store;
 
@@ -661,8 +661,8 @@ convertConstantOpMmaSync(RewriterBase &rewriter, arith::ConstantOp op,
     return rewriter.notifyMatchFailure(op, "not a splat");
   }
 
-  Value result = arith::ConstantOp::create(rewriter,
-      op.getLoc(), vectorType,
+  Value result = arith::ConstantOp::create(
+      rewriter, op.getLoc(), vectorType,
       DenseElementsAttr::get(vectorType, dense.getSplatValue<Attribute>()));
   valueMapping[op.getResult()] = result;
   return success();
@@ -757,8 +757,9 @@ creatLdMatrixCompatibleLoads(RewriterBase &rewriter, vector::TransferReadOp op,
   getXferIndices<vector::TransferReadOp>(rewriter, op, *offsets, {laneId},
                                          indices);
 
-  nvgpu::LdMatrixOp newOp = nvgpu::LdMatrixOp::create(rewriter,
-      loc, vectorType, op.getBase(), indices, *transpose, params->numTiles);
+  nvgpu::LdMatrixOp newOp =
+      nvgpu::LdMatrixOp::create(rewriter, loc, vectorType, op.getBase(),
+                                indices, *transpose, params->numTiles);
   valueMapping[op] = newOp->getResult(0);
   return success();
 }
@@ -788,8 +789,8 @@ createNonLdMatrixLoads(RewriterBase &rewriter, vector::TransferReadOp op,
   Type loadedElType = regInfo->registerLLVMType;
   VectorType vectorType = getMmaSyncVectorOperandType(*regInfo);
 
-  Value fill = arith::ConstantOp::create(rewriter,
-      op.getLoc(), vectorType.getElementType(),
+  Value fill = arith::ConstantOp::create(
+      rewriter, op.getLoc(), vectorType.getElementType(),
       rewriter.getZeroAttr(vectorType.getElementType()));
   Value result =
       vector::SplatOp::create(rewriter, op.getLoc(), fill, vectorType);
@@ -809,15 +810,15 @@ createNonLdMatrixLoads(RewriterBase &rewriter, vector::TransferReadOp op,
       if (failed(coords))
         return rewriter.notifyMatchFailure(op, "no coords");
 
-      Value logicalValueId = arith::ConstantOp::create(rewriter,
-          loc, rewriter.getIndexType(),
+      Value logicalValueId = arith::ConstantOp::create(
+          rewriter, loc, rewriter.getIndexType(),
           rewriter.getIndexAttr(i * regInfo->elementsPerRegister));
       SmallVector<Value, 4> newIndices;
       getXferIndices<vector::TransferReadOp>(
           rewriter, op, *coords, {laneId, logicalValueId}, newIndices);
 
       Value el = vector::LoadOp::create(rewriter, loc, loadedElType,
-                                                 op.getBase(), newIndices);
+                                        op.getBase(), newIndices);
       result = vector::InsertOp::create(rewriter, loc, el, result, i);
     }
   } else {
@@ -828,8 +829,8 @@ createNonLdMatrixLoads(RewriterBase &rewriter, vector::TransferReadOp op,
       for (unsigned innerIdx = 0; innerIdx < vectorType.getShape()[1];
            innerIdx++) {
 
-        Value logicalValueId = arith::ConstantOp::create(rewriter,
-            loc, rewriter.getIndexType(),
+        Value logicalValueId = arith::ConstantOp::create(
+            rewriter, loc, rewriter.getIndexType(),
             rewriter.getIndexAttr(i * regInfo->elementsPerRegister + innerIdx));
         FailureOr<AffineMap> coords = nvgpu::getLaneIdAndValueIdToOperandCoord(
             rewriter, op.getLoc(), *warpMatrixInfo);
@@ -840,9 +841,9 @@ createNonLdMatrixLoads(RewriterBase &rewriter, vector::TransferReadOp op,
         getXferIndices<vector::TransferReadOp>(
             rewriter, op, *coords, {laneId, logicalValueId}, newIndices);
         Value el = memref::LoadOp::create(rewriter, op.getLoc(), loadedElType,
-                                                   op.getBase(), newIndices);
-        result = vector::InsertOp::create(rewriter,
-            op.getLoc(), el, result, ArrayRef<int64_t>{i, innerIdx});
+                                          op.getBase(), newIndices);
+        result = vector::InsertOp::create(rewriter, op.getLoc(), el, result,
+                                          ArrayRef<int64_t>{i, innerIdx});
       }
     }
   }
@@ -919,8 +920,8 @@ convertTransferWriteToStores(RewriterBase &rewriter, vector::TransferWriteOp op,
   Value laneId = gpu::LaneIdOp::create(rewriter, loc, /*upperBound=*/nullptr);
 
   for (unsigned i = 0; i < vectorType.getShape()[0]; i++) {
-    Value logicalValueId = arith::ConstantOp::create(rewriter,
-        loc, rewriter.getIndexType(),
+    Value logicalValueId = arith::ConstantOp::create(
+        rewriter, loc, rewriter.getIndexType(),
         rewriter.getIndexAttr(i * regInfo->elementsPerRegister));
     FailureOr<AffineMap> coords = nvgpu::getLaneIdAndValueIdToOperandCoord(
         rewriter, op.getLoc(), *warpMatrixInfo);
@@ -1015,8 +1016,8 @@ convertExtractStridedSlice(RewriterBase &rewriter,
   else if (offsets[1])
     sliceOffset[0] = (warpVectorShape[1] / offsets[1]);
 
-  Value newOp = vector::ExtractStridedSliceOp::create(rewriter,
-      loc, sourceVector, sliceOffset, sliceShape, strides);
+  Value newOp = vector::ExtractStridedSliceOp::create(
+      rewriter, loc, sourceVector, sliceOffset, sliceShape, strides);
 
   valueMapping[op] = newOp;
   return success();
@@ -1035,9 +1036,10 @@ convertContractOp(RewriterBase &rewriter, vector::ContractionOp op,
       itC == valueMapping.end())
     return rewriter.notifyMatchFailure(op, "no mapping");
   Value opA = itA->second, opB = itB->second, opC = itC->second;
-  Value matmul = gpu::SubgroupMmaComputeOp::create(rewriter,
-      op.getLoc(), opC.getType(), opA, opB, opC, /*a_transpose=*/UnitAttr(),
-      /*b_transpose=*/UnitAttr());
+  Value matmul = gpu::SubgroupMmaComputeOp::create(rewriter, op.getLoc(),
+                                                   opC.getType(), opA, opB, opC,
+                                                   /*a_transpose=*/UnitAttr(),
+                                                   /*b_transpose=*/UnitAttr());
   valueMapping[op.getResult()] = matmul;
   return success();
 }
@@ -1058,8 +1060,8 @@ convertContractOpToMmaSync(RewriterBase &rewriter, vector::ContractionOp op,
   int64_t m = cast<VectorType>(op.getLhs().getType()).getShape()[0];
   int64_t n = cast<VectorType>(op.getRhs().getType()).getShape()[0];
   int64_t k = cast<VectorType>(op.getLhs().getType()).getShape()[1];
-  Value matmul = nvgpu::MmaSyncOp::create(rewriter,
-      op.getLoc(), opA, opB, opC, rewriter.getI64ArrayAttr({m, n, k}));
+  Value matmul = nvgpu::MmaSyncOp::create(rewriter, op.getLoc(), opA, opB, opC,
+                                          rewriter.getI64ArrayAttr({m, n, k}));
   valueMapping[op.getResult()] = matmul;
   return success();
 }
@@ -1081,8 +1083,8 @@ convertConstantOp(RewriterBase &rewriter, arith::ConstantOp op,
   auto vecType = cast<VectorType>(op.getType());
   gpu::MMAMatrixType type = gpu::MMAMatrixType::get(
       vecType.getShape(), vecType.getElementType(), llvm::StringRef(fragType));
-  auto matrix = gpu::SubgroupMmaConstantMatrixOp::create(rewriter,
-      op.getLoc(), type, scalarConstant);
+  auto matrix = gpu::SubgroupMmaConstantMatrixOp::create(rewriter, op.getLoc(),
+                                                         type, scalarConstant);
   valueMapping[op.getResult()] = matrix;
   return success();
 }
@@ -1100,8 +1102,8 @@ convertBroadcastOp(RewriterBase &rewriter, vector::BroadcastOp op,
   auto vecType = op.getResultVectorType();
   gpu::MMAMatrixType type = gpu::MMAMatrixType::get(
       vecType.getShape(), vecType.getElementType(), llvm::StringRef(fragType));
-  auto matrix = gpu::SubgroupMmaConstantMatrixOp::create(rewriter,
-      op.getLoc(), type, op.getSource());
+  auto matrix = gpu::SubgroupMmaConstantMatrixOp::create(rewriter, op.getLoc(),
+                                                         type, op.getSource());
   valueMapping[op.getResult()] = matrix;
   return success();
 }
@@ -1118,9 +1120,9 @@ static scf::ForOp replaceForOpWithNewSignature(RewriterBase &rewriter,
   rewriter.setInsertionPoint(loop);
   auto operands = llvm::to_vector<4>(loop.getInitArgs());
   llvm::append_range(operands, newInitArgs);
-  scf::ForOp newLoop = scf::ForOp::create(rewriter,
-      loop.getLoc(), loop.getLowerBound(), loop.getUpperBound(), loop.getStep(),
-      operands);
+  scf::ForOp newLoop =
+      scf::ForOp::create(rewriter, loop.getLoc(), loop.getLowerBound(),
+                         loop.getUpperBound(), loop.getStep(), operands);
   rewriter.eraseBlock(newLoop.getBody());
 
   newLoop.getRegion().getBlocks().splice(
@@ -1220,8 +1222,8 @@ convertElementwiseOp(RewriterBase &rewriter, Operation *op,
                                          resultType.getOperand());
   }
 
-  Value newOp = gpu::SubgroupMmaElementwiseOp::create(rewriter,
-      op->getLoc(), resultType, matrixOperands, opType);
+  Value newOp = gpu::SubgroupMmaElementwiseOp::create(
+      rewriter, op->getLoc(), resultType, matrixOperands, opType);
   valueMapping[op->getResult(0)] = newOp;
   return success();
 }

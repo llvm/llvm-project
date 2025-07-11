@@ -109,7 +109,7 @@ LogicalResult moduleSerializer(GPUModuleOp op,
     handler = moduleHandler;
   builder.setInsertionPointAfter(op);
   gpu::BinaryOp::create(builder, op.getLoc(), op.getName(), handler,
-                                builder.getArrayAttr(objects));
+                        builder.getArrayAttr(objects));
   op->erase();
   return success();
 }

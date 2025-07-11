@@ -190,8 +190,8 @@ static void fuseIfLegal(ParallelOp firstPloop, ParallelOp &secondPloop,
 
   IRRewriter b(builder);
   b.setInsertionPoint(secondPloop);
-  auto newSecondPloop = ParallelOp::create(b,
-      secondPloop.getLoc(), secondPloop.getLowerBound(),
+  auto newSecondPloop = ParallelOp::create(
+      b, secondPloop.getLoc(), secondPloop.getLowerBound(),
       secondPloop.getUpperBound(), secondPloop.getStep(), newInitVars);
 
   Block *newBlock = newSecondPloop.getBody();

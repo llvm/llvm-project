@@ -53,15 +53,15 @@ public:
     int64_t rankRest = dstType.getRank() - rankDiff;
     // Extract / insert the subvector of matching rank and InsertStridedSlice
     // on it.
-    Value extracted = ExtractOp::create(rewriter,
-        loc, op.getDest(),
-        getI64SubArray(op.getOffsets(), /*dropFront=*/0,
-                       /*dropBack=*/rankRest));
+    Value extracted =
+        ExtractOp::create(rewriter, loc, op.getDest(),
+                          getI64SubArray(op.getOffsets(), /*dropFront=*/0,
+                                         /*dropBack=*/rankRest));
 
     // A different pattern will kick in for InsertStridedSlice with matching
     // ranks.
-    auto stridedSliceInnerOp = InsertStridedSliceOp::create(rewriter,
-        loc, op.getValueToStore(), extracted,
+    auto stridedSliceInnerOp = InsertStridedSliceOp::create(
+        rewriter, loc, op.getValueToStore(), extracted,
         getI64SubArray(op.getOffsets(), /*dropFront=*/rankDiff),
         getI64SubArray(op.getStrides(), /*dropFront=*/0));
 
@@ -131,8 +131,8 @@ public:
       SmallVector<int64_t> offsets(nDest, 0);
       for (int64_t i = 0; i < nSrc; ++i)
         offsets[i] = i;
-      Value scaledSource = ShuffleOp::create(rewriter,
-          loc, op.getValueToStore(), op.getValueToStore(), offsets);
+      Value scaledSource = ShuffleOp::create(
+          rewriter, loc, op.getValueToStore(), op.getValueToStore(), offsets);
 
       // 2. Create a mask where we take the value from scaledSource of dest
       // depending on the offset.
@@ -164,8 +164,8 @@ public:
             ExtractOp::create(rewriter, loc, op.getDest(), off);
         // 3. Reduce the problem to lowering a new InsertStridedSlice op with
         // smaller rank.
-        extractedSource = InsertStridedSliceOp::create(rewriter,
-            loc, extractedSource, extractedDest,
+        extractedSource = InsertStridedSliceOp::create(
+            rewriter, loc, extractedSource, extractedDest,
             getI64SubArray(op.getOffsets(), /* dropFront=*/1),
             getI64SubArray(op.getStrides(), /* dropFront=*/1));
       }
@@ -252,8 +252,8 @@ public:
     for (int64_t i = offset, e = offset + size * stride; i < e; i += stride)
       elements.push_back(ExtractOp::create(rewriter, loc, op.getVector(), i));
 
-    Value result = arith::ConstantOp::create(rewriter,
-        loc, rewriter.getZeroAttr(op.getType()));
+    Value result = arith::ConstantOp::create(
+        rewriter, loc, rewriter.getZeroAttr(op.getType()));
     for (int64_t i = 0; i < size; ++i)
       result = InsertOp::create(rewriter, loc, elements[i], result, i);
 
@@ -301,14 +301,14 @@ public:
       return failure();
 
     // Extract/insert on a lower ranked extract strided slice op.
-    Value zero = arith::ConstantOp::create(rewriter,
-        loc, elemType, rewriter.getZeroAttr(elemType));
+    Value zero = arith::ConstantOp::create(rewriter, loc, elemType,
+                                           rewriter.getZeroAttr(elemType));
     Value res = SplatOp::create(rewriter, loc, dstType, zero);
     for (int64_t off = offset, e = offset + size * stride, idx = 0; off < e;
          off += stride, ++idx) {
       Value one = ExtractOp::create(rewriter, loc, op.getVector(), off);
-      Value extracted = ExtractStridedSliceOp::create(rewriter,
-          loc, one, getI64SubArray(op.getOffsets(), /* dropFront=*/1),
+      Value extracted = ExtractStridedSliceOp::create(
+          rewriter, loc, one, getI64SubArray(op.getOffsets(), /* dropFront=*/1),
           getI64SubArray(op.getSizes(), /* dropFront=*/1),
           getI64SubArray(op.getStrides(), /* dropFront=*/1));
       res = InsertOp::create(rewriter, loc, extracted, res, idx);

@@ -138,8 +138,8 @@ static Value getZero(OpBuilder &b, Location loc, Type elementType) {
     return arith::ConstantIndexOp::create(b, loc, 0);
   // Assume float.
   auto floatType = cast<FloatType>(elementType);
-  return arith::ConstantFloatOp::create(b,
-      loc, floatType, APFloat::getZero(floatType.getFloatSemantics()));
+  return arith::ConstantFloatOp::create(
+      b, loc, floatType, APFloat::getZero(floatType.getFloatSemantics()));
 }
 
 GenericOp
@@ -188,8 +188,8 @@ DecomposeLinalgOp::createPeeledGenericOp(GenericOp genericOp,
 
     // Fall back path, use an `init_tensor` and identity indexing map.
     AffineMap indexingMap = rewriter.getMultiDimIdentityMap(domain.size());
-    Value emptyTensor =
-        tensor::EmptyOp::create(rewriter, loc, domain, scalarOpResult.getType());
+    Value emptyTensor = tensor::EmptyOp::create(rewriter, loc, domain,
+                                                scalarOpResult.getType());
     newInitValues.push_back(emptyTensor);
     newResultTypes.push_back(emptyTensor.getType());
     peeledGenericOpIndexingMaps.push_back(indexingMap);
@@ -202,10 +202,10 @@ DecomposeLinalgOp::createPeeledGenericOp(GenericOp genericOp,
   resultTypes.append(newResultTypes.begin(), newResultTypes.end());
   auto indexingMapAttr =
       rewriter.getAffineMapArrayAttr(peeledGenericOpIndexingMaps);
-  return GenericOp::create(rewriter,
-      loc, resultTypes, genericOp.getInputs(), outsOperands, indexingMapAttr,
-      genericOp.getIteratorTypes(), /*doc=*/nullptr, /*libraryCall=*/nullptr,
-      [](OpBuilder, Location, ValueRange) {});
+  return GenericOp::create(
+      rewriter, loc, resultTypes, genericOp.getInputs(), outsOperands,
+      indexingMapAttr, genericOp.getIteratorTypes(), /*doc=*/nullptr,
+      /*libraryCall=*/nullptr, [](OpBuilder, Location, ValueRange) {});
 }
 
 GenericOp
@@ -239,8 +239,8 @@ DecomposeLinalgOp::createResidualGenericOp(GenericOp genericOp,
     indexingMaps.push_back(genericOp.getMatchingIndexingMap(&outOperand));
 
   auto indexingMapAttr = rewriter.getAffineMapArrayAttr(indexingMaps);
-  return GenericOp::create(rewriter,
-      genericOp->getLoc(), genericOp->getResultTypes(),
+  return GenericOp::create(
+      rewriter, genericOp->getLoc(), genericOp->getResultTypes(),
       residualGenericOpOperands, genericOp.getOutputs(), indexingMapAttr,
       genericOp.getIteratorTypes(), /*doc=*/nullptr, /*libraryCall=*/nullptr,
       [](OpBuilder, Location, ValueRange) {});

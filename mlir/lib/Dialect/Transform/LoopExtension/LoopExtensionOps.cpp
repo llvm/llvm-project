@@ -8,8 +8,8 @@
 
 #include "mlir/Dialect/Transform/LoopExtension/LoopExtensionOps.h"
 
-#include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 
 using namespace mlir;
 

@@ -33,7 +33,7 @@ static Value createFloatConst(Location loc, Type type, APFloat value,
   auto attr = b.getFloatAttr(eltType, value);
   if (auto shapedTy = dyn_cast<ShapedType>(type)) {
     return arith::ConstantOp::create(b, loc,
-                                       DenseElementsAttr::get(shapedTy, attr));
+                                     DenseElementsAttr::get(shapedTy, attr));
   }
 
   return arith::ConstantOp::create(b, loc, attr);
@@ -50,7 +50,7 @@ static Value createIntConst(Location loc, Type type, int64_t value,
   auto attr = b.getIntegerAttr(getElementTypeOrSelf(type), value);
   if (auto shapedTy = dyn_cast<ShapedType>(type)) {
     return arith::ConstantOp::create(b, loc,
-                                       DenseElementsAttr::get(shapedTy, attr));
+                                     DenseElementsAttr::get(shapedTy, attr));
   }
 
   return arith::ConstantOp::create(b, loc, attr);
@@ -116,8 +116,8 @@ static LogicalResult convertTanhOp(math::TanhOp op, PatternRewriter &rewriter) {
   Value negTwo = createFloatConst(loc, floatType, -2.0, rewriter);
 
   // Compute sign(x) = cast<float_type>(x < 0) * (-2) + 1
-  Value isNegative = arith::CmpFOp::create(rewriter,
-      loc, arith::CmpFPredicate::OLT, op.getOperand(), zero);
+  Value isNegative = arith::CmpFOp::create(
+      rewriter, loc, arith::CmpFPredicate::OLT, op.getOperand(), zero);
   Value isNegativeFloat =
       arith::UIToFPOp::create(rewriter, loc, floatType, isNegative);
   Value isNegativeTimesNegTwo =
@@ -236,8 +236,9 @@ static LogicalResult convertCeilOp(math::CeilOp op, PatternRewriter &rewriter) {
   Value one = createFloatConst(op->getLoc(), opType, 1.00, rewriter);
 
   Value gtCheck = arith::CmpFOp::create(b, arith::CmpFPredicate::OGT, operand,
-                                          fpFixedConvert);
-  Value incrValue = arith::SelectOp::create(b, op->getLoc(), gtCheck, one, zero);
+                                        fpFixedConvert);
+  Value incrValue =
+      arith::SelectOp::create(b, op->getLoc(), gtCheck, one, zero);
 
   Value ret = arith::AddFOp::create(b, opType, fpFixedConvert, incrValue);
   rewriter.replaceOp(op, ret);
@@ -259,7 +260,7 @@ static LogicalResult convertFPowIOp(math::FPowIOp op,
     Value castPowerToFp =
         arith::SIToFPOp::create(rewriter, op.getLoc(), baseType, power);
     Value res = math::PowFOp::create(rewriter, op.getLoc(), baseType, base,
-                                              castPowerToFp);
+                                     castPowerToFp);
     rewriter.replaceOp(op, res);
     return success();
   };
@@ -309,7 +310,7 @@ static LogicalResult convertFPowIOp(math::FPowIOp op,
     res =
         arith::SelectOp::create(b, op->getLoc(), zeroEqCheck, posInfinity, res);
     res = arith::SelectOp::create(b, op->getLoc(), negZeroEqCheck, negInfinity,
-                                    res);
+                                  res);
   }
 
   rewriter.replaceOp(op, res);
@@ -451,14 +452,14 @@ static LogicalResult convertRoundOp(math::RoundOp op,
   //
   // All three cases satisfy the property `biasedExp >= 23`.
   Value operandBitcast = arith::BitcastOp::create(b, i32Ty, operand);
-  Value operandExp = arith::AndIOp::create(b,
-      arith::ShRUIOp::create(b, operandBitcast, c23), expMask);
+  Value operandExp = arith::AndIOp::create(
+      b, arith::ShRUIOp::create(b, operandBitcast, c23), expMask);
   Value operandBiasedExp = arith::SubIOp::create(b, operandExp, c127);
-  Value isSpecialValOrLargeVal =
-      arith::CmpIOp::create(b, arith::CmpIPredicate::sge, operandBiasedExp, c23);
+  Value isSpecialValOrLargeVal = arith::CmpIOp::create(
+      b, arith::CmpIPredicate::sge, operandBiasedExp, c23);
 
   Value result = arith::SelectOp::create(b, isSpecialValOrLargeVal, operand,
-                                           fpFixedConvert);
+                                         fpFixedConvert);
   rewriter.replaceOp(op, result);
   return success();
 }
@@ -488,8 +489,8 @@ static LogicalResult convertCtlzOp(math::CountLeadingZerosOp op,
     auto bits = createIntConst(loc, operandTy, half, rewriter);
     auto mask = createIntConst(loc, operandTy, allbits >> half, rewriter);
 
-    Value pred =
-        arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::ule, x, mask);
+    Value pred = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::ule,
+                                       x, mask);
     Value add = arith::AddIOp::create(rewriter, loc, count, bits);
     Value shift = arith::ShLIOp::create(rewriter, loc, x, bits);
 
@@ -499,7 +500,7 @@ static LogicalResult convertCtlzOp(math::CountLeadingZerosOp op,
 
   Value zero = createIntConst(loc, operandTy, 0, rewriter);
   Value pred = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq,
-                                              operand, zero);
+                                     operand, zero);
 
   Value bwval = createIntConst(loc, operandTy, bitwidth, rewriter);
   Value sel = arith::SelectOp::create(rewriter, loc, pred, bwval, count);
@@ -554,11 +555,11 @@ static LogicalResult convertRoundEvenOp(math::RoundEvenOp op,
   Value roundBitcast = arith::BitcastOp::create(b, iTy, round);
 
   // Get biased exponents for operand and round(operand)
-  Value operandExp = arith::AndIOp::create(b,
-      arith::ShRUIOp::create(b, operandBitcast, c23), expMask);
+  Value operandExp = arith::AndIOp::create(
+      b, arith::ShRUIOp::create(b, operandBitcast, c23), expMask);
   Value operandBiasedExp = arith::SubIOp::create(b, operandExp, c127);
-  Value roundExp = arith::AndIOp::create(b,
-      arith::ShRUIOp::create(b, roundBitcast, c23), expMask);
+  Value roundExp = arith::AndIOp::create(
+      b, arith::ShRUIOp::create(b, roundBitcast, c23), expMask);
   Value roundBiasedExp = arith::SubIOp::create(b, roundExp, c127);
 
   auto safeShiftRight = [&](Value x, Value shift) -> Value {
@@ -592,8 +593,8 @@ static LogicalResult convertRoundEvenOp(math::RoundEvenOp op,
       arith::CmpIOp::create(b, arith::CmpIPredicate::eq, roundBiasedExp, c0);
   Value roundBiasedExpMinus1 = arith::SubIOp::create(b, roundBiasedExp, c1);
   Value roundMaskedMantissa = maskMantissa(roundBitcast, roundBiasedExpMinus1);
-  Value roundIsNotEvenOrSpecialVal = arith::CmpIOp::create(b,
-      arith::CmpIPredicate::ne, roundMaskedMantissa, c0);
+  Value roundIsNotEvenOrSpecialVal = arith::CmpIOp::create(
+      b, arith::CmpIPredicate::ne, roundMaskedMantissa, c0);
   roundIsNotEvenOrSpecialVal =
       arith::OrIOp::create(b, roundIsNotEvenOrSpecialVal, roundBiasedExpEq0);
 
@@ -604,19 +605,19 @@ static LogicalResult convertRoundEvenOp(math::RoundEvenOp op,
   // values +-0.5 are the only halfway values that have `biasedExp == -1 < 0`,
   // so these are handled separately. In particular, if `biasedExp == -1`, the
   // value is halfway if the entire mantissa is zero.
-  Value operandBiasedExpEqNeg1 = arith::CmpIOp::create(b,
-      arith::CmpIPredicate::eq, operandBiasedExp, cNeg1);
-  Value expectedOperandMaskedMantissa = arith::SelectOp::create(b,
-      operandBiasedExpEqNeg1, c0, safeShiftRight(c2To22, operandBiasedExp));
+  Value operandBiasedExpEqNeg1 = arith::CmpIOp::create(
+      b, arith::CmpIPredicate::eq, operandBiasedExp, cNeg1);
+  Value expectedOperandMaskedMantissa = arith::SelectOp::create(
+      b, operandBiasedExpEqNeg1, c0, safeShiftRight(c2To22, operandBiasedExp));
   Value operandMaskedMantissa = maskMantissa(operandBitcast, operandBiasedExp);
   Value operandIsHalfway =
       arith::CmpIOp::create(b, arith::CmpIPredicate::eq, operandMaskedMantissa,
-                              expectedOperandMaskedMantissa);
+                            expectedOperandMaskedMantissa);
   // Ensure `biasedExp` is in the valid range for half values.
-  Value operandBiasedExpGeNeg1 = arith::CmpIOp::create(b,
-      arith::CmpIPredicate::sge, operandBiasedExp, cNeg1);
-  Value operandBiasedExpLt23 =
-      arith::CmpIOp::create(b, arith::CmpIPredicate::slt, operandBiasedExp, c23);
+  Value operandBiasedExpGeNeg1 = arith::CmpIOp::create(
+      b, arith::CmpIPredicate::sge, operandBiasedExp, cNeg1);
+  Value operandBiasedExpLt23 = arith::CmpIOp::create(
+      b, arith::CmpIPredicate::slt, operandBiasedExp, c23);
   operandIsHalfway =
       arith::AndIOp::create(b, operandIsHalfway, operandBiasedExpLt23);
   operandIsHalfway =

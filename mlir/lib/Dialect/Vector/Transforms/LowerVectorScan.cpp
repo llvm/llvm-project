@@ -122,8 +122,8 @@ struct ScanToArithOps : public OpRewritePattern<vector::ScanOp> {
       return failure();
 
     VectorType resType = VectorType::get(destShape, elType);
-    Value result = arith::ConstantOp::create(rewriter,
-        loc, resType, rewriter.getZeroAttr(resType));
+    Value result = arith::ConstantOp::create(rewriter, loc, resType,
+                                             rewriter.getZeroAttr(resType));
     int64_t reductionDim = scanOp.getReductionDim();
     bool inclusive = scanOp.getInclusive();
     int64_t destRank = destType.getRank();
@@ -144,9 +144,9 @@ struct ScanToArithOps : public OpRewritePattern<vector::ScanOp> {
     for (int i = 0; i < destShape[reductionDim]; i++) {
       offsets[reductionDim] = i;
       ArrayAttr scanOffsets = rewriter.getI64ArrayAttr(offsets);
-      Value input = vector::ExtractStridedSliceOp::create(rewriter,
-          loc, reductionType, scanOp.getSource(), scanOffsets, scanSizes,
-          scanStrides);
+      Value input = vector::ExtractStridedSliceOp::create(
+          rewriter, loc, reductionType, scanOp.getSource(), scanOffsets,
+          scanSizes, scanStrides);
       Value output;
       if (i == 0) {
         if (inclusive) {
@@ -154,11 +154,11 @@ struct ScanToArithOps : public OpRewritePattern<vector::ScanOp> {
         } else {
           if (initialValueRank == 0) {
             // ShapeCastOp cannot handle 0-D vectors
-            output = vector::BroadcastOp::create(rewriter,
-                loc, input.getType(), scanOp.getInitialValue());
+            output = vector::BroadcastOp::create(rewriter, loc, input.getType(),
+                                                 scanOp.getInitialValue());
           } else {
-            output = vector::ShapeCastOp::create(rewriter,
-                loc, input.getType(), scanOp.getInitialValue());
+            output = vector::ShapeCastOp::create(rewriter, loc, input.getType(),
+                                                 scanOp.getInitialValue());
           }
         }
       } else {
@@ -166,8 +166,8 @@ struct ScanToArithOps : public OpRewritePattern<vector::ScanOp> {
         output = vector::makeArithReduction(rewriter, loc, scanOp.getKind(),
                                             lastOutput, y);
       }
-      result = vector::InsertStridedSliceOp::create(rewriter,
-          loc, output, result, offsets, strides);
+      result = vector::InsertStridedSliceOp::create(rewriter, loc, output,
+                                                    result, offsets, strides);
       lastOutput = output;
       lastInput = input;
     }
@@ -179,7 +179,7 @@ struct ScanToArithOps : public OpRewritePattern<vector::ScanOp> {
           vector::BroadcastOp::create(rewriter, loc, initialValueType, v);
     } else {
       reduction = vector::ShapeCastOp::create(rewriter, loc, initialValueType,
-                                                       lastOutput);
+                                              lastOutput);
     }
 
     rewriter.replaceOp(scanOp, {result, reduction});

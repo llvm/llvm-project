@@ -34,8 +34,8 @@ static Value sourceMaterializationCallback(OpBuilder &builder, Type type,
 
   // A detensored value is converted back by creating a new tensor from its
   // element(s).
-  return tensor::FromElementsOp::create(builder,
-      loc, RankedTensorType::get({}, inputType), inputs[0]);
+  return tensor::FromElementsOp::create(
+      builder, loc, RankedTensorType::get({}, inputType), inputs[0]);
 }
 
 namespace {
@@ -480,8 +480,8 @@ struct LinalgDetensorize
     Block *postEntryBlock =
         rewriter.splitBlock(entryBlock, entryBlock->begin());
     rewriter.setInsertionPointToStart(entryBlock);
-    auto branch =
-        cf::BranchOp::create(rewriter, rewriter.getUnknownLoc(), postEntryBlock);
+    auto branch = cf::BranchOp::create(rewriter, rewriter.getUnknownLoc(),
+                                       postEntryBlock);
 
     if (aggressiveMode.getValue()) {
       AggressiveDetensoringModel costModel;

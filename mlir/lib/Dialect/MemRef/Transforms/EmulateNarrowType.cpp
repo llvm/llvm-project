@@ -112,8 +112,8 @@ static Value getSubByteWriteMask(Location loc, OpFoldResult linearizedIndices,
   auto dstIntegerType = builder.getIntegerType(dstBits);
   auto maskRightAlignedAttr =
       builder.getIntegerAttr(dstIntegerType, (1 << srcBits) - 1);
-  Value maskRightAligned = arith::ConstantOp::create(builder,
-      loc, dstIntegerType, maskRightAlignedAttr);
+  Value maskRightAligned = arith::ConstantOp::create(
+      builder, loc, dstIntegerType, maskRightAlignedAttr);
   Value writeMaskInverse =
       arith::ShLIOp::create(builder, loc, maskRightAligned, bitwidthOffset);
   auto flipValAttr = builder.getIntegerAttr(dstIntegerType, -1);
@@ -299,15 +299,15 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
     Value bitsLoad;
     if (convertedType.getRank() == 0) {
       bitsLoad = memref::LoadOp::create(rewriter, loc, adaptor.getMemref(),
-                                                 ValueRange{});
+                                        ValueRange{});
     } else {
       // Linearize the indices of the original load instruction. Do not account
       // for the scaling yet. This will be accounted for later.
       OpFoldResult linearizedIndices = getLinearizedSrcIndices(
           rewriter, loc, srcBits, adaptor.getIndices(), op.getMemRef());
 
-      Value newLoad = memref::LoadOp::create(rewriter,
-          loc, adaptor.getMemref(),
+      Value newLoad = memref::LoadOp::create(
+          rewriter, loc, adaptor.getMemref(),
           getIndicesForLoadOrStore(rewriter, loc, linearizedIndices, srcBits,
                                    dstBits));
 
@@ -331,8 +331,8 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
             : IntegerType::get(rewriter.getContext(),
                                resultTy.getIntOrFloatBitWidth());
     if (conversionTy == convertedElementType) {
-      auto mask = arith::ConstantOp::create(rewriter,
-          loc, convertedElementType,
+      auto mask = arith::ConstantOp::create(
+          rewriter, loc, convertedElementType,
           rewriter.getIntegerAttr(convertedElementType, (1 << srcBits) - 1));
 
       result = arith::AndIOp::create(rewriter, loc, bitsLoad, mask);
@@ -435,14 +435,13 @@ struct ConvertMemrefStore final : OpConversionPattern<memref::StoreOp> {
           input);
     }
     Value extendedInput =
-        arith::ExtUIOp::create(rewriter, loc, dstIntegerType,
-                                                          input);
+        arith::ExtUIOp::create(rewriter, loc, dstIntegerType, input);
 
     // Special case 0-rank memref stores. No need for masking.
     if (convertedType.getRank() == 0) {
       memref::AtomicRMWOp::create(rewriter, loc, arith::AtomicRMWKind::assign,
-                                           extendedInput, adaptor.getMemref(),
-                                           ValueRange{});
+                                  extendedInput, adaptor.getMemref(),
+                                  ValueRange{});
       rewriter.eraseOp(op);
       return success();
     }
@@ -461,12 +460,10 @@ struct ConvertMemrefStore final : OpConversionPattern<memref::StoreOp> {
 
     // Clear destination bits
     memref::AtomicRMWOp::create(rewriter, loc, arith::AtomicRMWKind::andi,
-                                         writeMask, adaptor.getMemref(),
-                                         storeIndices);
+                                writeMask, adaptor.getMemref(), storeIndices);
     // Write srcs bits to destination
     memref::AtomicRMWOp::create(rewriter, loc, arith::AtomicRMWKind::ori,
-                                         alignedVal, adaptor.getMemref(),
-                                         storeIndices);
+                                alignedVal, adaptor.getMemref(), storeIndices);
     rewriter.eraseOp(op);
     return success();
   }
@@ -526,8 +523,8 @@ struct ConvertMemRefSubview final : OpConversionPattern<memref::SubViewOp> {
     }
 
     // Transform the offsets, sizes and strides according to the emulation.
-    auto stridedMetadata = memref::ExtractStridedMetadataOp::create(rewriter,
-        loc, subViewOp.getViewSource());
+    auto stridedMetadata = memref::ExtractStridedMetadataOp::create(
+        rewriter, loc, subViewOp.getViewSource());
 
     OpFoldResult linearizedIndices;
     auto strides = stridedMetadata.getConstifiedMixedStrides();
@@ -637,53 +634,52 @@ static SmallVector<int64_t> getLinearizedShape(MemRefType ty, int srcBits,
 
 void memref::populateMemRefNarrowTypeEmulationConversions(
     arith::NarrowTypeEmulationConverter &typeConverter) {
-  typeConverter.addConversion(
-      [&typeConverter](MemRefType ty) -> std::optional<Type> {
-        Type elementType = ty.getElementType();
-        if (!elementType.isIntOrFloat())
-          return ty;
+  typeConverter.addConversion([&typeConverter](
+                                  MemRefType ty) -> std::optional<Type> {
+    Type elementType = ty.getElementType();
+    if (!elementType.isIntOrFloat())
+      return ty;
 
-        unsigned width = elementType.getIntOrFloatBitWidth();
-        unsigned loadStoreWidth = typeConverter.getLoadStoreBitwidth();
-        if (width >= loadStoreWidth)
-          return ty;
+    unsigned width = elementType.getIntOrFloatBitWidth();
+    unsigned loadStoreWidth = typeConverter.getLoadStoreBitwidth();
+    if (width >= loadStoreWidth)
+      return ty;
 
-        // Currently only handle innermost stride being 1, checking
-        SmallVector<int64_t> strides;
-        int64_t offset;
-        if (failed(ty.getStridesAndOffset(strides, offset)))
-          return nullptr;
-        if (!strides.empty() && strides.back() != 1)
-          return nullptr;
+    // Currently only handle innermost stride being 1, checking
+    SmallVector<int64_t> strides;
+    int64_t offset;
+    if (failed(ty.getStridesAndOffset(strides, offset)))
+      return nullptr;
+    if (!strides.empty() && strides.back() != 1)
+      return nullptr;
 
-        auto newElemTy = IntegerType::get(
-            ty.getContext(), loadStoreWidth,
-            elementType.isInteger()
-                ? cast<IntegerType>(elementType).getSignedness()
-                : IntegerType::SignednessSemantics::Signless);
-        if (!newElemTy)
-          return nullptr;
+    auto newElemTy = IntegerType::get(
+        ty.getContext(), loadStoreWidth,
+        elementType.isInteger() ? cast<IntegerType>(elementType).getSignedness()
+                                : IntegerType::SignednessSemantics::Signless);
+    if (!newElemTy)
+      return nullptr;
 
-        StridedLayoutAttr layoutAttr;
-        // If the offset is 0, we do not need a strided layout as the stride is
-        // 1, so we only use the strided layout if the offset is not 0.
-        if (offset != 0) {
-          if (offset == ShapedType::kDynamic) {
-            layoutAttr = StridedLayoutAttr::get(ty.getContext(), offset,
-                                                ArrayRef<int64_t>{1});
-          } else {
-            // Check if the number of bytes are a multiple of the loadStoreWidth
-            // and if so, divide it by the loadStoreWidth to get the offset.
-            if ((offset * width) % loadStoreWidth != 0)
-              return std::nullopt;
-            offset = (offset * width) / loadStoreWidth;
+    StridedLayoutAttr layoutAttr;
+    // If the offset is 0, we do not need a strided layout as the stride is
+    // 1, so we only use the strided layout if the offset is not 0.
+    if (offset != 0) {
+      if (offset == ShapedType::kDynamic) {
+        layoutAttr = StridedLayoutAttr::get(ty.getContext(), offset,
+                                            ArrayRef<int64_t>{1});
+      } else {
+        // Check if the number of bytes are a multiple of the loadStoreWidth
+        // and if so, divide it by the loadStoreWidth to get the offset.
+        if ((offset * width) % loadStoreWidth != 0)
+          return std::nullopt;
+        offset = (offset * width) / loadStoreWidth;
 
-            layoutAttr = StridedLayoutAttr::get(ty.getContext(), offset,
-                                                ArrayRef<int64_t>{1});
-          }
-        }
+        layoutAttr = StridedLayoutAttr::get(ty.getContext(), offset,
+                                            ArrayRef<int64_t>{1});
+      }
+    }
 
-        return MemRefType::get(getLinearizedShape(ty, width, loadStoreWidth),
-                               newElemTy, layoutAttr, ty.getMemorySpace());
-      });
+    return MemRefType::get(getLinearizedShape(ty, width, loadStoreWidth),
+                           newElemTy, layoutAttr, ty.getMemorySpace());
+  });
 }

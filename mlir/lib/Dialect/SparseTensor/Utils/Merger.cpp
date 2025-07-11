@@ -1666,10 +1666,10 @@ Value Merger::buildExp(RewriterBase &rewriter, Location loc, ExprId e, Value v0,
   case TensorExp::Kind::kNegC:
     return complex::NegOp::create(rewriter, loc, v0);
   case TensorExp::Kind::kNegI: // no negi in std
-    return arith::SubIOp::create(rewriter,
-        loc,
+    return arith::SubIOp::create(
+        rewriter, loc,
         arith::ConstantOp::create(rewriter, loc, v0.getType(),
-                                           rewriter.getZeroAttr(v0.getType())),
+                                  rewriter.getZeroAttr(v0.getType())),
         v0);
   case TensorExp::Kind::kTruncF:
     return arith::TruncFOp::create(rewriter, loc, inferType(e, v0), v0);

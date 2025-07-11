@@ -1309,11 +1309,11 @@ struct ConvertSelectionOpToSelect final : OpRewritePattern<spirv::SelectionOp> {
     auto storeOpAttributes =
         cast<spirv::StoreOp>(trueBlock->front())->getAttrs();
 
-    auto selectOp = spirv::SelectOp::create(rewriter,
-        selectionOp.getLoc(), trueValue.getType(),
+    auto selectOp = spirv::SelectOp::create(
+        rewriter, selectionOp.getLoc(), trueValue.getType(),
         brConditionalOp.getCondition(), trueValue, falseValue);
     spirv::StoreOp::create(rewriter, selectOp.getLoc(), ptrValue,
-                                    selectOp.getResult(), storeOpAttributes);
+                           selectOp.getResult(), storeOpAttributes);
 
     // `spirv.mlir.selection` is not needed anymore.
     rewriter.eraseOp(op);

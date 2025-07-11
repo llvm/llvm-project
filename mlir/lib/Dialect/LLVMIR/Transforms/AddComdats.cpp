@@ -34,8 +34,9 @@ static void addComdat(LLVM::LLVMFuncOp &op, OpBuilder &builder,
 
   PatternRewriter::InsertionGuard guard(builder);
   builder.setInsertionPointToStart(&comdatOp.getBody().back());
-  auto selectorOp = mlir::LLVM::ComdatSelectorOp::create(builder,
-      comdatOp.getLoc(), op.getSymName(), mlir::LLVM::comdat::Comdat::Any);
+  auto selectorOp = mlir::LLVM::ComdatSelectorOp::create(
+      builder, comdatOp.getLoc(), op.getSymName(),
+      mlir::LLVM::comdat::Comdat::Any);
   op.setComdatAttr(mlir::SymbolRefAttr::get(
       builder.getContext(), comdatName,
       mlir::FlatSymbolRefAttr::get(selectorOp.getSymNameAttr())));

@@ -93,8 +93,8 @@ LogicalResult LLVM::detail::handleMultidimensionalVectors(
     // element, extract operand vectors
     SmallVector<Value, 4> extractedOperands;
     for (const auto &operand : llvm::enumerate(operands)) {
-      extractedOperands.push_back(LLVM::ExtractValueOp::create(rewriter,
-          loc, operand.value(), position));
+      extractedOperands.push_back(LLVM::ExtractValueOp::create(
+          rewriter, loc, operand.value(), position));
     }
     Value newVal = createOperand(result1DVectorTy, extractedOperands);
     desc = LLVM::InsertValueOp::create(rewriter, loc, desc, newVal, position);

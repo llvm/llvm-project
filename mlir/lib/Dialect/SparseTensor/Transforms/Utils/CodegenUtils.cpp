@@ -204,10 +204,10 @@ Value mlir::sparse_tensor::genIsNonzero(OpBuilder &builder, mlir::Location loc,
   Value zero = constantZero(builder, loc, tp);
   if (isa<FloatType>(tp))
     return arith::CmpFOp::create(builder, loc, arith::CmpFPredicate::UNE, v,
-                                         zero);
+                                 zero);
   if (tp.isIntOrIndex())
     return arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::ne, v,
-                                         zero);
+                                 zero);
   if (isa<ComplexType>(tp))
     return complex::NotEqualOp::create(builder, loc, v, zero);
   llvm_unreachable("Non-numeric type");
@@ -296,7 +296,8 @@ void mlir::sparse_tensor::reshapeCvs(
     for (unsigned j = start, end = start + map.value().size(); j < end; j++) {
       linear = arith::DivUIOp::create(builder, loc, linear, sizes[j]);
       if (isCollapse) {
-        const Value mul = arith::MulIOp::create(builder, loc, srcCvs[j], linear);
+        const Value mul =
+            arith::MulIOp::create(builder, loc, srcCvs[j], linear);
         val = val ? arith::AddIOp::create(builder, loc, val, mul) : mul;
       } else {
         const Value old = val;
@@ -326,8 +327,8 @@ FlatSymbolRefAttr mlir::sparse_tensor::getFunc(ModuleOp module, StringRef name,
   auto func = module.lookupSymbol<func::FuncOp>(result.getAttr());
   if (!func) {
     OpBuilder moduleBuilder(module.getBodyRegion());
-    func = func::FuncOp::create(moduleBuilder,
-        module.getLoc(), name,
+    func = func::FuncOp::create(
+        moduleBuilder, module.getLoc(), name,
         FunctionType::get(context, operands.getTypes(), resultType));
     func.setPrivate();
     if (static_cast<bool>(emitCInterface))
@@ -490,7 +491,7 @@ void sparse_tensor::foreachInSparseConstant(
     if (isa<ComplexType>(attr.getElementType())) {
       auto valAttr = cast<ArrayAttr>(elems[i].second);
       val = complex::ConstantOp::create(builder, loc, attr.getElementType(),
-                                                valAttr);
+                                        valAttr);
     } else {
       auto valAttr = cast<TypedAttr>(elems[i].second);
       val = arith::ConstantOp::create(builder, loc, valAttr);
@@ -514,7 +515,7 @@ SmallVector<Value> sparse_tensor::loadAll(OpBuilder &builder, Location loc,
   vs.reserve(size);
   for (unsigned i = 0; i < size; i++) {
     Value v = memref::LoadOp::create(builder, loc, mem,
-                                             constantIndex(builder, loc, i));
+                                     constantIndex(builder, loc, i));
     if (i == offsetIdx && offsetVal)
       v = arith::AddIOp::create(builder, loc, v, offsetVal);
     vs.push_back(v);
@@ -538,7 +539,7 @@ void sparse_tensor::storeAll(OpBuilder &builder, Location loc, Value mem,
             ? arith::AddIOp::create(builder, loc, v.value(), offsetVal)
             : v.value();
     memref::StoreOp::create(builder, loc, w, mem,
-                                    constantIndex(builder, loc, v.index()));
+                            constantIndex(builder, loc, v.index()));
   }
 }
 
@@ -609,8 +610,8 @@ Value sparse_tensor::genReader(OpBuilder &builder, Location loc,
     // subsequent clients need the values (DCE will remove unused).
     for (Dimension d = 0; d < dimRank; d++) {
       if (stt.isDynamicDim(d))
-        dimSizesValues[d] = memref::LoadOp::create(builder,
-            loc, dimSizesBuffer, constantIndex(builder, loc, d));
+        dimSizesValues[d] = memref::LoadOp::create(
+            builder, loc, dimSizesBuffer, constantIndex(builder, loc, d));
     }
   }
   return reader;
@@ -687,7 +688,7 @@ Value sparse_tensor::genMapBuffers(
       lvlSz = dimSizesValues[d];
       if (cf != 0)
         lvlSz = arith::DivUIOp::create(builder, loc, lvlSz,
-                                               constantIndex(builder, loc, cf));
+                                       constantIndex(builder, loc, cf));
     } else {
       lvlSz = constantIndex(builder, loc, cm);
     }

@@ -165,8 +165,9 @@ async::ExecuteOp addExecuteResults(async::ExecuteOp executeOp,
 
   // Clone executeOp with the extra results.
   OpBuilder builder(executeOp);
-  auto newOp = async::ExecuteOp::create(builder,
-      executeOp.getLoc(), TypeRange{resultTypes}.drop_front() /*drop token*/,
+  auto newOp = async::ExecuteOp::create(
+      builder, executeOp.getLoc(),
+      TypeRange{resultTypes}.drop_front() /*drop token*/,
       executeOp.getDependencies(), executeOp.getBodyOperands());
   IRMapping mapper;
   newOp.getRegion().getBlocks().clear();

@@ -38,8 +38,8 @@ Value mlir::x86vector::avx2::inline_asm::mm256BlendPsAsm(
       "=x,x,x"; // Careful: constraint parser is very brittle: no ws!
   SmallVector<Value> asmVals{v1, v2};
   auto asmStr = llvm::formatv(asmTp, llvm::format_hex(mask, /*width=*/2)).str();
-  auto asmOp = LLVM::InlineAsmOp::create(b,
-      v1.getType(), /*operands=*/asmVals, /*asm_string=*/asmStr,
+  auto asmOp = LLVM::InlineAsmOp::create(
+      b, v1.getType(), /*operands=*/asmVals, /*asm_string=*/asmStr,
       /*constraints=*/asmCstr, /*has_side_effects=*/false,
       /*is_align_stack=*/false, LLVM::TailCallKind::None,
       /*asm_dialect=*/asmDialectAttr,
@@ -49,14 +49,14 @@ Value mlir::x86vector::avx2::inline_asm::mm256BlendPsAsm(
 
 Value mlir::x86vector::avx2::intrin::mm256UnpackLoPs(ImplicitLocOpBuilder &b,
                                                      Value v1, Value v2) {
-  return vector::ShuffleOp::create(b,
-      v1, v2, ArrayRef<int64_t>{0, 8, 1, 9, 4, 12, 5, 13});
+  return vector::ShuffleOp::create(b, v1, v2,
+                                   ArrayRef<int64_t>{0, 8, 1, 9, 4, 12, 5, 13});
 }
 
 Value mlir::x86vector::avx2::intrin::mm256UnpackHiPs(ImplicitLocOpBuilder &b,
                                                      Value v1, Value v2) {
-  return vector::ShuffleOp::create(b,
-      v1, v2, ArrayRef<int64_t>{2, 10, 3, 11, 6, 14, 7, 15});
+  return vector::ShuffleOp::create(
+      b, v1, v2, ArrayRef<int64_t>{2, 10, 3, 11, 6, 14, 7, 15});
 }
 ///                            a  a   b   b  a  a   b   b
 /// Takes an 8 bit mask, 2 bit for each position of a[0, 3)  **and** b[0, 4):
@@ -262,7 +262,7 @@ public:
       // Insert transposed 1-D vectors into the higher-order dimension of the
       // output vector.
       Value res = arith::ConstantOp::create(ib, reshInputType,
-                                               ib.getZeroAttr(reshInputType));
+                                            ib.getZeroAttr(reshInputType));
       for (int64_t i = 0; i < m; ++i)
         res = vector::InsertOp::create(ib, vs[i], res, i);
 

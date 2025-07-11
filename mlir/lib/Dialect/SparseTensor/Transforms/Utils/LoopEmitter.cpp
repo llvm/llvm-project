@@ -25,7 +25,7 @@ using namespace mlir::sparse_tensor;
 //===----------------------------------------------------------------------===//
 
 #define CMPI(p, l, r)                                                          \
-  (arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::p, (l), (r))       \
+  (arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::p, (l), (r))      \
        .getResult())
 
 #define C_IDX(v) (constantIndex(builder, loc, (v)))
@@ -45,8 +45,8 @@ using namespace mlir::sparse_tensor;
 #ifndef NDEBUG
 LLVM_ATTRIBUTE_UNUSED static void dumpIndexMemRef(OpBuilder &builder,
                                                   Location loc, Value memref) {
-  memref = memref::CastOp::create(builder,
-      loc, UnrankedMemRefType::get(builder.getIndexType(), 0), memref);
+  memref = memref::CastOp::create(
+      builder, loc, UnrankedMemRefType::get(builder.getIndexType(), 0), memref);
   createFuncCall(builder, loc, "printMemrefInd", TypeRange{},
                  ValueRange{memref}, EmitCInterface::On);
 }
@@ -604,11 +604,11 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtLvls(
       // Extract and iterate over the iteration space.
       ExtractIterSpaceOp extractSpaceOp =
           lvl == 0 ? ExtractIterSpaceOp::create(builder, loc, t)
-                   : ExtractIterSpaceOp::create(builder,
-                         loc, t, spIterVals[tid][lvl - 1], lvl);
+                   : ExtractIterSpaceOp::create(builder, loc, t,
+                                                spIterVals[tid][lvl - 1], lvl);
 
-      IterateOp iterOp = IterateOp::create(builder,
-          loc, extractSpaceOp.getExtractedSpace(), reduc);
+      IterateOp iterOp = IterateOp::create(
+          builder, loc, extractSpaceOp.getExtractedSpace(), reduc);
       spIterVals[tid][lvl] = iterOp.getIterator();
 
       // Update the reduction varaibles.
@@ -626,8 +626,8 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtLvls(
       Value t = tensors[tid];
       ExtractIterSpaceOp extractSpaceOp =
           lvl == 0 ? ExtractIterSpaceOp::create(builder, loc, t)
-                   : ExtractIterSpaceOp::create(builder,
-                         loc, t, spIterVals[tid][lvl - 1], lvl);
+                   : ExtractIterSpaceOp::create(builder, loc, t,
+                                                spIterVals[tid][lvl - 1], lvl);
       spaces.push_back(extractSpaceOp.getExtractedSpace());
     }
     auto coIterOp = CoIterateOp::create(builder, loc, spaces, reduc, numCases);

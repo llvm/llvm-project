@@ -121,8 +121,8 @@ VecOpToScalarOp<Op>::matchAndRewrite(Op op, PatternRewriter &rewriter) const {
     initValueAttr = FloatAttr::get(resultElementType, 0.0);
   else
     initValueAttr = IntegerAttr::get(resultElementType, 0);
-  Value result = arith::ConstantOp::create(rewriter,
-      loc, DenseElementsAttr::get(vecType, initValueAttr));
+  Value result = arith::ConstantOp::create(
+      rewriter, loc, DenseElementsAttr::get(vecType, initValueAttr));
   SmallVector<int64_t> strides = computeStrides(shape);
   for (int64_t linearIndex = 0; linearIndex < numElements; ++linearIndex) {
     SmallVector<int64_t> positions = delinearize(linearIndex, strides);
@@ -208,12 +208,12 @@ static func::FuncOp createElementIPowIFunc(ModuleOp *module, Type elementType) {
   Value bArg = funcOp.getArgument(0);
   Value pArg = funcOp.getArgument(1);
   builder.setInsertionPointToEnd(entryBlock);
-  Value zeroValue = arith::ConstantOp::create(builder,
-      elementType, builder.getIntegerAttr(elementType, 0));
-  Value oneValue = arith::ConstantOp::create(builder,
-      elementType, builder.getIntegerAttr(elementType, 1));
-  Value minusOneValue = arith::ConstantOp::create(builder,
-      elementType,
+  Value zeroValue = arith::ConstantOp::create(
+      builder, elementType, builder.getIntegerAttr(elementType, 0));
+  Value oneValue = arith::ConstantOp::create(
+      builder, elementType, builder.getIntegerAttr(elementType, 1));
+  Value minusOneValue = arith::ConstantOp::create(
+      builder, elementType,
       builder.getIntegerAttr(elementType,
                              APInt(elementType.getIntOrFloatBitWidth(), -1ULL,
                                    /*isSigned=*/true)));
@@ -231,15 +231,16 @@ static func::FuncOp createElementIPowIFunc(ModuleOp *module, Type elementType) {
 
   // if (p < T(0)) {
   builder.setInsertionPointToEnd(fallthroughBlock);
-  auto pIsNeg =
-      arith::CmpIOp::create(builder, arith::CmpIPredicate::sle, pArg, zeroValue);
+  auto pIsNeg = arith::CmpIOp::create(builder, arith::CmpIPredicate::sle, pArg,
+                                      zeroValue);
   //   if (b == T(0))
   builder.createBlock(funcBody);
   auto bIsZero =
       arith::CmpIOp::create(builder, arith::CmpIPredicate::eq, bArg, zeroValue);
   //     return T(1) / T(0);
   thenBlock = builder.createBlock(funcBody);
-  func::ReturnOp::create(builder,
+  func::ReturnOp::create(
+      builder,
       arith::DivSIOp::create(builder, oneValue, zeroValue).getResult());
   fallthroughBlock = builder.createBlock(funcBody);
   // Set up conditional branch for (b == T(0)).
@@ -261,12 +262,12 @@ static func::FuncOp createElementIPowIFunc(ModuleOp *module, Type elementType) {
   //   if (b == T(-1)) {
   builder.setInsertionPointToEnd(fallthroughBlock);
   auto bIsMinusOne = arith::CmpIOp::create(builder, arith::CmpIPredicate::eq,
-                                                   bArg, minusOneValue);
+                                           bArg, minusOneValue);
   //     if (p & T(1))
   builder.createBlock(funcBody);
-  auto pIsOdd = arith::CmpIOp::create(builder,
-      arith::CmpIPredicate::ne, arith::AndIOp::create(builder, pArg, oneValue),
-      zeroValue);
+  auto pIsOdd = arith::CmpIOp::create(
+      builder, arith::CmpIPredicate::ne,
+      arith::AndIOp::create(builder, pArg, oneValue), zeroValue);
   //       return T(-1);
   thenBlock = builder.createBlock(funcBody);
   func::ReturnOp::create(builder, minusOneValue);
@@ -283,7 +284,7 @@ static func::FuncOp createElementIPowIFunc(ModuleOp *module, Type elementType) {
   // Set up conditional branch for (b == T(-1)).
   builder.setInsertionPointToEnd(bIsMinusOne->getBlock());
   cf::CondBranchOp::create(builder, bIsMinusOne, pIsOdd->getBlock(),
-                                   fallthroughBlock);
+                           fallthroughBlock);
 
   //   return T(0);
   // } // (p < T(0))
@@ -296,7 +297,7 @@ static func::FuncOp createElementIPowIFunc(ModuleOp *module, Type elementType) {
   builder.setInsertionPointToEnd(pIsNeg->getBlock());
   // Set initial values of 'result', 'b' and 'p' for the loop.
   cf::CondBranchOp::create(builder, pIsNeg, bIsZero->getBlock(), loopHeader,
-                                   ValueRange{oneValue, bArg, pArg});
+                           ValueRange{oneValue, bArg, pArg});
 
   // T result = T(1);
   // while (true) {
@@ -313,8 +314,8 @@ static func::FuncOp createElementIPowIFunc(ModuleOp *module, Type elementType) {
   builder.setInsertionPointToEnd(loopHeader);
 
   //   if (p & T(1))
-  auto powerTmpIsOdd = arith::CmpIOp::create(builder,
-      arith::CmpIPredicate::ne,
+  auto powerTmpIsOdd = arith::CmpIOp::create(
+      builder, arith::CmpIPredicate::ne,
       arith::AndIOp::create(builder, powerTmp, oneValue), zeroValue);
   thenBlock = builder.createBlock(funcBody);
   //     result *= b;
@@ -326,7 +327,7 @@ static func::FuncOp createElementIPowIFunc(ModuleOp *module, Type elementType) {
   // Set up conditional branch for (p & T(1)).
   builder.setInsertionPointToEnd(powerTmpIsOdd->getBlock());
   cf::CondBranchOp::create(builder, powerTmpIsOdd, thenBlock, fallthroughBlock,
-                                   resultTmp);
+                           resultTmp);
   // Merged 'result'.
   newResultTmp = fallthroughBlock->getArgument(0);
 
@@ -336,22 +337,23 @@ static func::FuncOp createElementIPowIFunc(ModuleOp *module, Type elementType) {
 
   //   if (p == T(0))
   auto newPowerIsZero = arith::CmpIOp::create(builder, arith::CmpIPredicate::eq,
-                                                      newPowerTmp, zeroValue);
+                                              newPowerTmp, zeroValue);
   //     return result;
   thenBlock = builder.createBlock(funcBody);
   func::ReturnOp::create(builder, newResultTmp);
   fallthroughBlock = builder.createBlock(funcBody);
   // Set up conditional branch for (p == T(0)).
   builder.setInsertionPointToEnd(newPowerIsZero->getBlock());
-  cf::CondBranchOp::create(builder, newPowerIsZero, thenBlock, fallthroughBlock);
+  cf::CondBranchOp::create(builder, newPowerIsZero, thenBlock,
+                           fallthroughBlock);
 
   //   b *= b;
   // }
   builder.setInsertionPointToEnd(fallthroughBlock);
   Value newBaseTmp = arith::MulIOp::create(builder, baseTmp, baseTmp);
   // Pass new values for 'result', 'b' and 'p' to the loop header.
-  cf::BranchOp::create(builder,
-      ValueRange{newResultTmp, newBaseTmp, newPowerTmp}, loopHeader);
+  cf::BranchOp::create(
+      builder, ValueRange{newResultTmp, newBaseTmp, newPowerTmp}, loopHeader);
   return funcOp;
 }
 
@@ -433,23 +435,25 @@ static func::FuncOp createElementFPowIFunc(ModuleOp *module,
   Value bArg = funcOp.getArgument(0);
   Value pArg = funcOp.getArgument(1);
   builder.setInsertionPointToEnd(entryBlock);
-  Value oneBValue = arith::ConstantOp::create(builder,
-      baseType, builder.getFloatAttr(baseType, 1.0));
-  Value zeroPValue = arith::ConstantOp::create(builder,
-      powType, builder.getIntegerAttr(powType, 0));
-  Value onePValue = arith::ConstantOp::create(builder,
-      powType, builder.getIntegerAttr(powType, 1));
-  Value minPValue = arith::ConstantOp::create(builder,
-      powType, builder.getIntegerAttr(powType, llvm::APInt::getSignedMinValue(
-                                                   powType.getWidth())));
-  Value maxPValue = arith::ConstantOp::create(builder,
-      powType, builder.getIntegerAttr(powType, llvm::APInt::getSignedMaxValue(
-                                                   powType.getWidth())));
+  Value oneBValue = arith::ConstantOp::create(
+      builder, baseType, builder.getFloatAttr(baseType, 1.0));
+  Value zeroPValue = arith::ConstantOp::create(
+      builder, powType, builder.getIntegerAttr(powType, 0));
+  Value onePValue = arith::ConstantOp::create(
+      builder, powType, builder.getIntegerAttr(powType, 1));
+  Value minPValue = arith::ConstantOp::create(
+      builder, powType,
+      builder.getIntegerAttr(
+          powType, llvm::APInt::getSignedMinValue(powType.getWidth())));
+  Value maxPValue = arith::ConstantOp::create(
+      builder, powType,
+      builder.getIntegerAttr(
+          powType, llvm::APInt::getSignedMaxValue(powType.getWidth())));
 
   // if (p == Tp{0})
   //   return Tb{1};
-  auto pIsZero =
-      arith::CmpIOp::create(builder, arith::CmpIPredicate::eq, pArg, zeroPValue);
+  auto pIsZero = arith::CmpIOp::create(builder, arith::CmpIPredicate::eq, pArg,
+                                       zeroPValue);
   Block *thenBlock = builder.createBlock(funcBody);
   func::ReturnOp::create(builder, oneBValue);
   Block *fallthroughBlock = builder.createBlock(funcBody);
@@ -460,7 +464,7 @@ static func::FuncOp createElementFPowIFunc(ModuleOp *module,
   builder.setInsertionPointToEnd(fallthroughBlock);
   // bool isNegativePower{p < Tp{0}}
   auto pIsNeg = arith::CmpIOp::create(builder, arith::CmpIPredicate::sle, pArg,
-                                              zeroPValue);
+                                      zeroPValue);
   // bool isMin{p == std::numeric_limits<Tp>::min()};
   auto pIsMin =
       arith::CmpIOp::create(builder, arith::CmpIPredicate::eq, pArg, minPValue);
@@ -498,8 +502,8 @@ static func::FuncOp createElementFPowIFunc(ModuleOp *module,
   builder.setInsertionPointToEnd(loopHeader);
 
   //   if (p & Tp{1})
-  auto powerTmpIsOdd = arith::CmpIOp::create(builder,
-      arith::CmpIPredicate::ne,
+  auto powerTmpIsOdd = arith::CmpIOp::create(
+      builder, arith::CmpIPredicate::ne,
       arith::AndIOp::create(builder, powerTmp, onePValue), zeroPValue);
   thenBlock = builder.createBlock(funcBody);
   //     result *= b;
@@ -511,7 +515,7 @@ static func::FuncOp createElementFPowIFunc(ModuleOp *module,
   // Set up conditional branch for (p & Tp{1}).
   builder.setInsertionPointToEnd(powerTmpIsOdd->getBlock());
   cf::CondBranchOp::create(builder, powerTmpIsOdd, thenBlock, fallthroughBlock,
-                                   resultTmp);
+                           resultTmp);
   // Merged 'result'.
   newResultTmp = fallthroughBlock->getArgument(0);
 
@@ -521,7 +525,7 @@ static func::FuncOp createElementFPowIFunc(ModuleOp *module,
 
   //   if (p == Tp{0})
   auto newPowerIsZero = arith::CmpIOp::create(builder, arith::CmpIPredicate::eq,
-                                                      newPowerTmp, zeroPValue);
+                                              newPowerTmp, zeroPValue);
   //     break;
   //
   // The conditional branch is finalized below with a jump to
@@ -533,8 +537,8 @@ static func::FuncOp createElementFPowIFunc(ModuleOp *module,
   builder.setInsertionPointToEnd(fallthroughBlock);
   Value newBaseTmp = arith::MulFOp::create(builder, baseTmp, baseTmp);
   // Pass new values for 'result', 'b' and 'p' to the loop header.
-  cf::BranchOp::create(builder,
-      ValueRange{newResultTmp, newBaseTmp, newPowerTmp}, loopHeader);
+  cf::BranchOp::create(
+      builder, ValueRange{newResultTmp, newBaseTmp, newPowerTmp}, loopHeader);
 
   // Set up conditional branch for early loop exit:
   //   if (p == Tp{0})
@@ -543,7 +547,7 @@ static func::FuncOp createElementFPowIFunc(ModuleOp *module,
                                         builder.getLoc());
   builder.setInsertionPointToEnd(newPowerIsZero->getBlock());
   cf::CondBranchOp::create(builder, newPowerIsZero, loopExit, newResultTmp,
-                                   fallthroughBlock, ValueRange{});
+                           fallthroughBlock, ValueRange{});
 
   // if (isMin) {
   //   result *= origBase;
@@ -554,7 +558,7 @@ static func::FuncOp createElementFPowIFunc(ModuleOp *module,
                                          builder.getLoc());
   builder.setInsertionPointToEnd(loopExit);
   cf::CondBranchOp::create(builder, pIsMin, thenBlock, fallthroughBlock,
-                                   newResultTmp);
+                           newResultTmp);
   builder.setInsertionPointToEnd(thenBlock);
   newResultTmp = arith::MulFOp::create(builder, newResultTmp, bArg);
   cf::BranchOp::create(builder, newResultTmp, fallthroughBlock);
@@ -568,7 +572,7 @@ static func::FuncOp createElementFPowIFunc(ModuleOp *module,
                                            builder.getLoc());
   builder.setInsertionPointToEnd(fallthroughBlock);
   cf::CondBranchOp::create(builder, pIsNeg, thenBlock, returnBlock,
-                                   newResultTmp);
+                           newResultTmp);
   builder.setInsertionPointToEnd(thenBlock);
   newResultTmp = arith::DivFOp::create(builder, oneBValue, newResultTmp);
   cf::BranchOp::create(builder, newResultTmp, returnBlock);
@@ -683,33 +687,34 @@ static func::FuncOp createCtlzFunc(ModuleOp *module, Type elementType) {
 
   Value arg = funcOp.getArgument(0);
   Type indexType = builder.getIndexType();
-  Value bitWidthValue = arith::ConstantOp::create(builder,
-      elementType, builder.getIntegerAttr(elementType, bitWidth));
-  Value zeroValue = arith::ConstantOp::create(builder,
-      elementType, builder.getIntegerAttr(elementType, 0));
+  Value bitWidthValue = arith::ConstantOp::create(
+      builder, elementType, builder.getIntegerAttr(elementType, bitWidth));
+  Value zeroValue = arith::ConstantOp::create(
+      builder, elementType, builder.getIntegerAttr(elementType, 0));
 
   Value inputEqZero =
       arith::CmpIOp::create(builder, arith::CmpIPredicate::eq, arg, zeroValue);
 
   // if input == 0, return bit width, else enter loop.
-  scf::IfOp ifOp = scf::IfOp::create(builder,
-      elementType, inputEqZero, /*addThenBlock=*/true, /*addElseBlock=*/true);
+  scf::IfOp ifOp =
+      scf::IfOp::create(builder, elementType, inputEqZero,
+                        /*addThenBlock=*/true, /*addElseBlock=*/true);
   ifOp.getThenBodyBuilder().create<scf::YieldOp>(loc, bitWidthValue);
 
   auto elseBuilder =
       ImplicitLocOpBuilder::atBlockEnd(loc, &ifOp.getElseRegion().front());
 
-  Value oneIndex = arith::ConstantOp::create(elseBuilder,
-      indexType, elseBuilder.getIndexAttr(1));
-  Value oneValue = arith::ConstantOp::create(elseBuilder,
-      elementType, elseBuilder.getIntegerAttr(elementType, 1));
-  Value bitWidthIndex = arith::ConstantOp::create(elseBuilder,
-      indexType, elseBuilder.getIndexAttr(bitWidth));
-  Value nValue = arith::ConstantOp::create(elseBuilder,
-      elementType, elseBuilder.getIntegerAttr(elementType, 0));
+  Value oneIndex = arith::ConstantOp::create(elseBuilder, indexType,
+                                             elseBuilder.getIndexAttr(1));
+  Value oneValue = arith::ConstantOp::create(
+      elseBuilder, elementType, elseBuilder.getIntegerAttr(elementType, 1));
+  Value bitWidthIndex = arith::ConstantOp::create(
+      elseBuilder, indexType, elseBuilder.getIndexAttr(bitWidth));
+  Value nValue = arith::ConstantOp::create(
+      elseBuilder, elementType, elseBuilder.getIntegerAttr(elementType, 0));
 
-  auto loop = scf::ForOp::create(elseBuilder,
-      oneIndex, bitWidthIndex, oneIndex,
+  auto loop = scf::ForOp::create(
+      elseBuilder, oneIndex, bitWidthIndex, oneIndex,
       // Initial values for two loop induction variables, the arg which is being
       // shifted left in each iteration, and the n value which tracks the count
       // of leading zeros.
@@ -725,10 +730,10 @@ static func::FuncOp createCtlzFunc(ModuleOp *module, Type elementType) {
         Value argIter = args[0];
         Value nIter = args[1];
 
-        Value argIsNonNegative = arith::CmpIOp::create(b,
-            loc, arith::CmpIPredicate::slt, argIter, zeroValue);
-        scf::IfOp ifOp = scf::IfOp::create(b,
-            loc, argIsNonNegative,
+        Value argIsNonNegative = arith::CmpIOp::create(
+            b, loc, arith::CmpIPredicate::slt, argIter, zeroValue);
+        scf::IfOp ifOp = scf::IfOp::create(
+            b, loc, argIsNonNegative,
             [&](OpBuilder &b, Location loc) {
               // If arg is negative, continue (effectively, break)
               scf::YieldOp::create(b, loc, ValueRange{argIter, nIter});

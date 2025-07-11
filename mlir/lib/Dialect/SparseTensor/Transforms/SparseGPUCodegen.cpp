@@ -60,7 +60,7 @@ static gpu::GPUModuleOp genGPUModule(OpBuilder &builder, ModuleOp topModule) {
   markAsGPUContainer(topModule);
   builder.setInsertionPointToStart(topModule.getBody());
   return gpu::GPUModuleOp::create(builder, topModule->getLoc(),
-                                          "sparse_kernels");
+                                  "sparse_kernels");
 }
 
 /// Constructs a new GPU kernel in the given GPU module.
@@ -157,7 +157,7 @@ static gpu::AllocOp genAllocMemRef(OpBuilder &builder, Location loc, Value mem,
     }
   }
   return gpu::AllocOp::create(builder, loc, TypeRange({memTp, token.getType()}),
-                                      token, dynamicSizes, ValueRange());
+                              token, dynamicSizes, ValueRange());
 }
 
 // Allocates a typed buffer on the host with given size.
@@ -172,7 +172,7 @@ static gpu::AllocOp genAllocBuffer(OpBuilder &builder, Location loc, Type type,
                                    Value size, Value token) {
   const auto memTp = MemRefType::get({ShapedType::kDynamic}, type);
   return gpu::AllocOp::create(builder, loc, TypeRange({memTp, token.getType()}),
-                                      token, size, ValueRange());
+                              token, size, ValueRange());
 }
 
 // Allocates a void buffer on the device with given size.
@@ -524,12 +524,12 @@ static Operation *genSpMat(OpBuilder &builder, Location loc,
     if (enableRT) {
       assert(colA);
       return gpu::CreateCooOp::create(builder, loc, handleTp, tokenTp, token,
-                                              sz1, sz2, nseA, rowA, colA, valA);
+                                      sz1, sz2, nseA, rowA, colA, valA);
     }
 #ifdef CUSPARSE_COO_AOS
     assert(!colA);
     return gpu::CreateCooAoSOp::create(builder, loc, handleTp, tokenTp, token,
-                                               sz1, sz2, nseA, rowA, valA);
+                                       sz1, sz2, nseA, rowA, valA);
 #else
     llvm_unreachable("gpu::CreateCooAoSOp is deprecated");
 #endif
@@ -537,10 +537,10 @@ static Operation *genSpMat(OpBuilder &builder, Location loc,
   assert(colA);
   if (format == CuSparseFormat::kCSR)
     return gpu::CreateCsrOp::create(builder, loc, handleTp, tokenTp, token, sz1,
-                                            sz2, nseA, rowA, colA, valA);
+                                    sz2, nseA, rowA, colA, valA);
   if (format == CuSparseFormat::kCSC)
     return gpu::CreateCscOp::create(builder, loc, handleTp, tokenTp, token, sz1,
-                                            sz2, nseA, rowA, colA, valA);
+                                    sz2, nseA, rowA, colA, valA);
   // BSR requires a bit more work since we need to pass in the block size
   // and all others sizes in terms of blocks (#block-rows, #block-cols,
   // #nonzero-blocks).
@@ -551,11 +551,10 @@ static Operation *genSpMat(OpBuilder &builder, Location loc,
   Value bSz = constantIndex(builder, loc, b);
   Value bRows = arith::DivUIOp::create(builder, loc, sz1, bSz);
   Value bCols = arith::DivUIOp::create(builder, loc, sz2, bSz);
-  Value bNum = arith::DivUIOp::create(builder,
-      loc, nseA, constantIndex(builder, loc, b * b));
+  Value bNum = arith::DivUIOp::create(builder, loc, nseA,
+                                      constantIndex(builder, loc, b * b));
   return gpu::CreateBsrOp::create(builder, loc, handleTp, tokenTp, token, bRows,
-                                          bCols, bNum, bSz, bSz, rowA, colA,
-                                          valA);
+                                  bCols, bNum, bSz, bSz, rowA, colA, valA);
 }
 
 /// Match and rewrite SpMV kernel.
@@ -606,19 +605,19 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
                nseA, rowA, colA, valA, format, enableRT);
   Value spMatA = spGenA->getResult(0);
   token = spGenA->getResult(1);
-  auto dvecX = gpu::CreateDnTensorOp::create(rewriter,
-      loc, dnTensorHandleTp, tokenTp, token, vecX, szX);
+  auto dvecX = gpu::CreateDnTensorOp::create(rewriter, loc, dnTensorHandleTp,
+                                             tokenTp, token, vecX, szX);
   Value dnX = dvecX.getResult(0);
   token = dvecX.getAsyncToken();
-  auto dvecY = gpu::CreateDnTensorOp::create(rewriter,
-      loc, dnTensorHandleTp, tokenTp, token, vecY, szY);
+  auto dvecY = gpu::CreateDnTensorOp::create(rewriter, loc, dnTensorHandleTp,
+                                             tokenTp, token, vecY, szY);
   Value dnY = dvecY.getResult(0);
   token = dvecY.getAsyncToken();
   auto dnYType = llvm::cast<ShapedType>(y.getType()).getElementType();
 
   // Precompute buffersize for SpMV.
-  auto bufferComp = gpu::SpMVBufferSizeOp::create(rewriter,
-      loc, indexTp, tokenTp, token, spMatA, dnX, dnY,
+  auto bufferComp = gpu::SpMVBufferSizeOp::create(
+      rewriter, loc, indexTp, tokenTp, token, spMatA, dnX, dnY,
       /*computeType=*/dnYType);
   Value bufferSz = bufferComp.getResult(0);
   token = bufferComp.getAsyncToken();
@@ -627,8 +626,9 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
   token = buf.getAsyncToken();
 
   // Perform the SpMV.
-  auto spmvComp = gpu::SpMVOp::create(rewriter,
-      loc, tokenTp, token, spMatA, dnX, dnY, /*computeType=*/dnYType, buffer);
+  auto spmvComp =
+      gpu::SpMVOp::create(rewriter, loc, tokenTp, token, spMatA, dnX, dnY,
+                          /*computeType=*/dnYType, buffer);
   token = spmvComp.getAsyncToken();
 
   // Copy data back to host and free all the resoures.
@@ -704,21 +704,21 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
                nseA, rowA, colA, valA, format, enableRT);
   Value spMatA = spGenA->getResult(0);
   token = spGenA->getResult(1);
-  auto dmatB = gpu::CreateDnTensorOp::create(rewriter,
-      loc, dnTensorHandleTp, tokenTp, token, matB,
-      SmallVector<Value>{szk, szn});
+  auto dmatB =
+      gpu::CreateDnTensorOp::create(rewriter, loc, dnTensorHandleTp, tokenTp,
+                                    token, matB, SmallVector<Value>{szk, szn});
   Value dnB = dmatB.getResult(0);
   token = dmatB.getAsyncToken();
-  auto dmatC = gpu::CreateDnTensorOp::create(rewriter,
-      loc, dnTensorHandleTp, tokenTp, token, matC,
-      SmallVector<Value>{szm, szn});
+  auto dmatC =
+      gpu::CreateDnTensorOp::create(rewriter, loc, dnTensorHandleTp, tokenTp,
+                                    token, matC, SmallVector<Value>{szm, szn});
   Value dnC = dmatC.getResult(0);
   token = dmatC.getAsyncToken();
   auto dmatCType = llvm::cast<ShapedType>(c.getType()).getElementType();
 
   // Precompute buffersize for SpMM.
-  auto bufferComp = gpu::SpMMBufferSizeOp::create(rewriter,
-      loc, indexTp, tokenTp, token, spMatA, dnB, dnC,
+  auto bufferComp = gpu::SpMMBufferSizeOp::create(
+      rewriter, loc, indexTp, tokenTp, token, spMatA, dnB, dnC,
       /*computeType=*/dmatCType);
   Value bufferSz = bufferComp.getResult(0);
   token = bufferComp.getAsyncToken();
@@ -728,8 +728,9 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
   auto dnCType = llvm::cast<ShapedType>(c.getType()).getElementType();
 
   // Perform the SpMM.
-  auto spmmComp = gpu::SpMMOp::create(rewriter,
-      loc, tokenTp, token, spMatA, dnB, dnC, /*computeType=*/dnCType, buffer);
+  auto spmmComp =
+      gpu::SpMMOp::create(rewriter, loc, tokenTp, token, spMatA, dnB, dnC,
+                          /*computeType=*/dnCType, buffer);
   token = spmmComp.getAsyncToken();
 
   // Copy data back to host and free all the resoures.
@@ -839,41 +840,44 @@ static LogicalResult rewriteSpGEMM(PatternRewriter &rewriter,
       gpu::SpGEMMCreateDescrOp::create(rewriter, loc, descTp, tokenTp, token);
   Value desc = descOp->getResult(0);
   token = descOp->getResult(1);
-  Operation *work1 = gpu::SpGEMMWorkEstimationOrComputeOp::create(rewriter,
-      loc, indexTp, tokenTp, token, desc, gpu::TransposeMode::NON_TRANSPOSE,
-      gpu::TransposeMode::NON_TRANSPOSE, spMatA, spMatB, spMatC, dnCType, zero,
-      valC, gpu::SpGEMMWorkEstimationOrComputeKind::WORK_ESTIMATION);
+  Operation *work1 = gpu::SpGEMMWorkEstimationOrComputeOp::create(
+      rewriter, loc, indexTp, tokenTp, token, desc,
+      gpu::TransposeMode::NON_TRANSPOSE, gpu::TransposeMode::NON_TRANSPOSE,
+      spMatA, spMatB, spMatC, dnCType, zero, valC,
+      gpu::SpGEMMWorkEstimationOrComputeKind::WORK_ESTIMATION);
   Value bufferSz1 = work1->getResult(0);
   token = work1->getResult(1);
   auto buf1 = genAllocBuffer(rewriter, loc, bufferSz1, token);
   Value buffer1 = buf1.getResult(0);
   token = buf1.getAsyncToken();
-  Operation *work2 = gpu::SpGEMMWorkEstimationOrComputeOp::create(rewriter,
-      loc, indexTp, tokenTp, token, desc, gpu::TransposeMode::NON_TRANSPOSE,
-      gpu::TransposeMode::NON_TRANSPOSE, spMatA, spMatB, spMatC, dnCType,
-      bufferSz1, buffer1,
+  Operation *work2 = gpu::SpGEMMWorkEstimationOrComputeOp::create(
+      rewriter, loc, indexTp, tokenTp, token, desc,
+      gpu::TransposeMode::NON_TRANSPOSE, gpu::TransposeMode::NON_TRANSPOSE,
+      spMatA, spMatB, spMatC, dnCType, bufferSz1, buffer1,
       gpu::SpGEMMWorkEstimationOrComputeKind::WORK_ESTIMATION);
   token = work2->getResult(1);
 
   // Compute step.
-  Operation *compute1 = gpu::SpGEMMWorkEstimationOrComputeOp::create(rewriter,
-      loc, indexTp, tokenTp, token, desc, gpu::TransposeMode::NON_TRANSPOSE,
-      gpu::TransposeMode::NON_TRANSPOSE, spMatA, spMatB, spMatC, dnCType, zero,
-      valC, gpu::SpGEMMWorkEstimationOrComputeKind::COMPUTE);
+  Operation *compute1 = gpu::SpGEMMWorkEstimationOrComputeOp::create(
+      rewriter, loc, indexTp, tokenTp, token, desc,
+      gpu::TransposeMode::NON_TRANSPOSE, gpu::TransposeMode::NON_TRANSPOSE,
+      spMatA, spMatB, spMatC, dnCType, zero, valC,
+      gpu::SpGEMMWorkEstimationOrComputeKind::COMPUTE);
   Value bufferSz2 = compute1->getResult(0);
   token = compute1->getResult(1);
   auto buf2 = genAllocBuffer(rewriter, loc, bufferSz2, token);
   Value buffer2 = buf2.getResult(0);
   token = buf2.getAsyncToken();
-  Operation *compute2 = gpu::SpGEMMWorkEstimationOrComputeOp::create(rewriter,
-      loc, indexTp, tokenTp, token, desc, gpu::TransposeMode::NON_TRANSPOSE,
-      gpu::TransposeMode::NON_TRANSPOSE, spMatA, spMatB, spMatC, dnCType,
-      bufferSz2, buffer2, gpu::SpGEMMWorkEstimationOrComputeKind::COMPUTE);
+  Operation *compute2 = gpu::SpGEMMWorkEstimationOrComputeOp::create(
+      rewriter, loc, indexTp, tokenTp, token, desc,
+      gpu::TransposeMode::NON_TRANSPOSE, gpu::TransposeMode::NON_TRANSPOSE,
+      spMatA, spMatB, spMatC, dnCType, bufferSz2, buffer2,
+      gpu::SpGEMMWorkEstimationOrComputeKind::COMPUTE);
   token = compute2->getResult(1);
 
   // Get sizes.
-  Operation *sizes = gpu::SpMatGetSizeOp::create(rewriter,
-      loc, indexTp, indexTp, indexTp, tokenTp, token, spMatC);
+  Operation *sizes = gpu::SpMatGetSizeOp::create(
+      rewriter, loc, indexTp, indexTp, indexTp, tokenTp, token, spMatC);
   Value nnz = sizes->getResult(2);
   token = sizes->getResult(3);
   auto a2 = genAllocBuffer(rewriter, loc, cTp.getCrdType(), nnz, token);
@@ -884,11 +888,11 @@ static LogicalResult rewriteSpGEMM(PatternRewriter &rewriter,
   token = a3.getAsyncToken();
 
   // Update C with new pointers and copy final product back into C.
-  Operation *update = gpu::SetCsrPointersOp::create(rewriter,
-      loc, tokenTp, token, spMatC, rowC, colC, valC);
+  Operation *update = gpu::SetCsrPointersOp::create(
+      rewriter, loc, tokenTp, token, spMatC, rowC, colC, valC);
   token = update->getResult(0);
-  Operation *copy = gpu::SpGEMMCopyOp::create(rewriter,
-      loc, tokenTp, token, desc, gpu::TransposeMode::NON_TRANSPOSE,
+  Operation *copy = gpu::SpGEMMCopyOp::create(
+      rewriter, loc, tokenTp, token, desc, gpu::TransposeMode::NON_TRANSPOSE,
       gpu::TransposeMode::NON_TRANSPOSE, spMatA, spMatB, spMatC, dnCType);
   token = copy->getResult(0);
 
@@ -925,12 +929,12 @@ static LogicalResult rewriteSpGEMM(PatternRewriter &rewriter,
   tokens.clear();
 
   // Done.
-  Value vt = bufferization::ToTensorOp::create(rewriter,
-      loc, memref::getTensorTypeFromMemRefType(valH.getType()), valH);
-  Value rt = bufferization::ToTensorOp::create(rewriter,
-      loc, memref::getTensorTypeFromMemRefType(rowH.getType()), rowH);
-  Value ct = bufferization::ToTensorOp::create(rewriter,
-      loc, memref::getTensorTypeFromMemRefType(colH.getType()), colH);
+  Value vt = bufferization::ToTensorOp::create(
+      rewriter, loc, memref::getTensorTypeFromMemRefType(valH.getType()), valH);
+  Value rt = bufferization::ToTensorOp::create(
+      rewriter, loc, memref::getTensorTypeFromMemRefType(rowH.getType()), rowH);
+  Value ct = bufferization::ToTensorOp::create(
+      rewriter, loc, memref::getTensorTypeFromMemRefType(colH.getType()), colH);
   rewriter.replaceOpWithNewOp<AssembleOp>(op, c.getType(), ValueRange{rt, ct},
                                           vt);
   return success();
@@ -980,19 +984,19 @@ static LogicalResult rewrite2To4SpMM(PatternRewriter &rewriter,
   Type spMatHandleTp = rewriter.getType<gpu::SparseSpMatHandleType>();
   Type tokenTp = rewriter.getType<gpu::AsyncTokenType>();
   Value token = genFirstWait(rewriter, loc);
-  Operation *spGenA = gpu::Create2To4SpMatOp::create(rewriter,
-      loc, spMatHandleTp, tokenTp, token, szm, szk,
+  Operation *spGenA = gpu::Create2To4SpMatOp::create(
+      rewriter, loc, spMatHandleTp, tokenTp, token, szm, szk,
       gpu::Prune2To4SpMatFlag::PRUNE_AND_CHECK, matA);
   Value spMatA = spGenA->getResult(0);
   token = spGenA->getResult(1);
-  auto dmatB = gpu::CreateDnTensorOp::create(rewriter,
-      loc, dnTensorHandleTp, tokenTp, token, matB,
-      SmallVector<Value>{szk, szn});
+  auto dmatB =
+      gpu::CreateDnTensorOp::create(rewriter, loc, dnTensorHandleTp, tokenTp,
+                                    token, matB, SmallVector<Value>{szk, szn});
   Value dnB = dmatB.getResult(0);
   token = dmatB.getAsyncToken();
-  auto dmatC = gpu::CreateDnTensorOp::create(rewriter,
-      loc, dnTensorHandleTp, tokenTp, token, matC,
-      SmallVector<Value>{szm, szn});
+  auto dmatC =
+      gpu::CreateDnTensorOp::create(rewriter, loc, dnTensorHandleTp, tokenTp,
+                                    token, matC, SmallVector<Value>{szm, szn});
   Value dnC = dmatC.getResult(0);
   token = dmatC.getAsyncToken();
   auto dmatCType = llvm::cast<ShapedType>(matC.getType()).getElementType();
@@ -1000,9 +1004,10 @@ static LogicalResult rewrite2To4SpMM(PatternRewriter &rewriter,
   // Precompute buffersize for SpMM.
   SmallVector<Type> bufferTypes_{indexTp, indexTp, indexTp};
   TypeRange bufferTypes(bufferTypes_);
-  auto bufferComp = gpu::SpMMBufferSizeOp::create(rewriter,
-      loc, bufferTypes, tokenTp, token, gpu::TransposeMode::NON_TRANSPOSE,
-      gpu::TransposeMode::NON_TRANSPOSE, spMatA, dnB, dnC,
+  auto bufferComp = gpu::SpMMBufferSizeOp::create(
+      rewriter, loc, bufferTypes, tokenTp, token,
+      gpu::TransposeMode::NON_TRANSPOSE, gpu::TransposeMode::NON_TRANSPOSE,
+      spMatA, dnB, dnC,
       /*computeType=*/dmatCType);
   token = bufferComp.getAsyncToken();
 
@@ -1022,8 +1027,8 @@ static LogicalResult rewrite2To4SpMM(PatternRewriter &rewriter,
 
   // Perform the SpMM.
   auto dnCType = llvm::cast<ShapedType>(matC.getType()).getElementType();
-  auto spmmComp = gpu::SpMMOp::create(rewriter,
-      loc, tokenTp, token, spMatA, dnB, dnC, /*computeType=*/dnCType,
+  auto spmmComp = gpu::SpMMOp::create(
+      rewriter, loc, tokenTp, token, spMatA, dnB, dnC, /*computeType=*/dnCType,
       SmallVector<Value>{buffer1, buffer2, buffer3});
   token = spmmComp.getAsyncToken();
 
@@ -1096,12 +1101,14 @@ static LogicalResult rewriteSDDMM(PatternRewriter &rewriter,
   Type spMatHandleTp = rewriter.getType<gpu::SparseSpMatHandleType>();
   Type tokenTp = rewriter.getType<gpu::AsyncTokenType>();
   Value token = genFirstWait(rewriter, loc);
-  auto dmatA = gpu::CreateDnTensorOp::create(rewriter,
-      loc, dnMatHandleTp, tokenTp, token, matA, SmallVector<Value>{szm, szk});
+  auto dmatA =
+      gpu::CreateDnTensorOp::create(rewriter, loc, dnMatHandleTp, tokenTp,
+                                    token, matA, SmallVector<Value>{szm, szk});
   Value dnA = dmatA.getResult(0);
   token = dmatA.getAsyncToken();
-  auto dmatB = gpu::CreateDnTensorOp::create(rewriter,
-      loc, dnMatHandleTp, tokenTp, token, matB, SmallVector<Value>{szk, szn});
+  auto dmatB =
+      gpu::CreateDnTensorOp::create(rewriter, loc, dnMatHandleTp, tokenTp,
+                                    token, matB, SmallVector<Value>{szk, szn});
   Value dnB = dmatB.getResult(0);
   token = dmatB.getAsyncToken();
   Operation *spGenC =
@@ -1112,8 +1119,8 @@ static LogicalResult rewriteSDDMM(PatternRewriter &rewriter,
   auto dnCType = llvm::cast<ShapedType>(c.getType()).getElementType();
 
   // Precompute buffersize for SDDMM.
-  auto bufferComp = gpu::SDDMMBufferSizeOp::create(rewriter,
-      loc, indexTp, tokenTp, token, dnA, dnB, spMatC, dnCType);
+  auto bufferComp = gpu::SDDMMBufferSizeOp::create(
+      rewriter, loc, indexTp, tokenTp, token, dnA, dnB, spMatC, dnCType);
   Value bufferSz = bufferComp.getResult(0);
   token = bufferComp.getAsyncToken();
   auto buf = genAllocBuffer(rewriter, loc, bufferSz, token);
@@ -1122,7 +1129,7 @@ static LogicalResult rewriteSDDMM(PatternRewriter &rewriter,
 
   // Perform the SDDMM.
   auto sddmmComp = gpu::SDDMMOp::create(rewriter, loc, tokenTp, token, dnA, dnB,
-                                                 spMatC, dnCType, buffer);
+                                        spMatC, dnCType, buffer);
   token = sddmmComp.getAsyncToken();
 
   // Copy data back to host and free all the resoures.

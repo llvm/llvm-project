@@ -49,7 +49,7 @@ Operation *complex::ComplexDialect::materializeConstant(OpBuilder &builder,
                                                         Location loc) {
   if (complex::ConstantOp::isBuildableWith(value, type)) {
     return complex::ConstantOp::create(builder, loc, type,
-                                               llvm::cast<ArrayAttr>(value));
+                                       llvm::cast<ArrayAttr>(value));
   }
   return arith::ConstantOp::materialize(builder, value, type, loc);
 }

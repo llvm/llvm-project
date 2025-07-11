@@ -116,10 +116,10 @@ static Value genVectorLoad(PatternRewriter &rewriter, Location loc, VL vl,
     Value indexVec = idxs.back();
     scalarArgs.back() = constantIndex(rewriter, loc, 0);
     return vector::GatherOp::create(rewriter, loc, vtp, mem, scalarArgs,
-                                             indexVec, vmask, pass);
+                                    indexVec, vmask, pass);
   }
   return vector::MaskedLoadOp::create(rewriter, loc, vtp, mem, idxs, vmask,
-                                               pass);
+                                      pass);
 }
 
 /// Generates a vectorized store a[ind[lo:hi]] = rhs or a[lo:hi] = rhs
@@ -133,7 +133,7 @@ static void genVectorStore(PatternRewriter &rewriter, Location loc, Value mem,
     Value indexVec = idxs.back();
     scalarArgs.back() = constantIndex(rewriter, loc, 0);
     vector::ScatterOp::create(rewriter, loc, mem, scalarArgs, indexVec, vmask,
-                                       rhs);
+                              rhs);
     return;
   }
   vector::MaskedStoreOp::create(rewriter, loc, mem, idxs, vmask, rhs);
@@ -198,13 +198,13 @@ static Value genVectorReducInit(PatternRewriter &rewriter, Location loc,
   case vector::CombiningKind::XOR:
     // Initialize reduction vector to: | 0 | .. | 0 | r |
     return vector::InsertOp::create(rewriter, loc, r,
-                                             constantZero(rewriter, loc, vtp),
-                                             constantIndex(rewriter, loc, 0));
+                                    constantZero(rewriter, loc, vtp),
+                                    constantIndex(rewriter, loc, 0));
   case vector::CombiningKind::MUL:
     // Initialize reduction vector to: | 1 | .. | 1 | r |
     return vector::InsertOp::create(rewriter, loc, r,
-                                             constantOne(rewriter, loc, vtp),
-                                             constantIndex(rewriter, loc, 0));
+                                    constantOne(rewriter, loc, vtp),
+                                    constantIndex(rewriter, loc, 0));
   case vector::CombiningKind::AND:
   case vector::CombiningKind::OR:
     // Initialize reduction vector to: | r | .. | r | r |
@@ -300,11 +300,11 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
         Type etp = llvm::cast<VectorType>(vload.getType()).getElementType();
         if (!llvm::isa<IndexType>(etp)) {
           if (etp.getIntOrFloatBitWidth() < 32)
-            vload = arith::ExtUIOp::create(rewriter,
-                loc, vectorType(vl, rewriter.getI32Type()), vload);
+            vload = arith::ExtUIOp::create(
+                rewriter, loc, vectorType(vl, rewriter.getI32Type()), vload);
           else if (etp.getIntOrFloatBitWidth() < 64 && !vl.enableSIMDIndex32)
-            vload = arith::ExtUIOp::create(rewriter,
-                loc, vectorType(vl, rewriter.getI64Type()), vload);
+            vload = arith::ExtUIOp::create(
+                rewriter, loc, vectorType(vl, rewriter.getI64Type()), vload);
         }
         idxs.push_back(vload);
       }
@@ -341,7 +341,7 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
 #define UNAOP(xxx)                                                             \
   if (isa<xxx>(def)) {                                                         \
     if (codegen)                                                               \
-      vexp = xxx::create(rewriter, loc, vx);                                    \
+      vexp = xxx::create(rewriter, loc, vx);                                   \
     return true;                                                               \
   }
 
@@ -349,7 +349,7 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
   if (auto x = dyn_cast<xxx>(def)) {                                           \
     if (codegen) {                                                             \
       VectorType vtp = vectorType(vl, x.getType());                            \
-      vexp = xxx::create(rewriter, loc, vtp, vx);                               \
+      vexp = xxx::create(rewriter, loc, vtp, vx);                              \
     }                                                                          \
     return true;                                                               \
   }
@@ -357,7 +357,7 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
 #define BINOP(xxx)                                                             \
   if (isa<xxx>(def)) {                                                         \
     if (codegen)                                                               \
-      vexp = xxx::create(rewriter, loc, vx, vy);                                \
+      vexp = xxx::create(rewriter, loc, vx, vy);                               \
     return true;                                                               \
   }
 
@@ -533,8 +533,8 @@ static bool vectorizeStmt(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
       VectorType vtp = vectorType(vl, init.getType());
       Value vinit = genVectorReducInit(rewriter, loc, yield->getOperand(0),
                                        forOp.getRegionIterArg(0), init, vtp);
-      forOpNew = scf::ForOp::create(rewriter,
-          loc, forOp.getLowerBound(), forOp.getUpperBound(), step, vinit);
+      forOpNew = scf::ForOp::create(rewriter, loc, forOp.getLowerBound(),
+                                    forOp.getUpperBound(), step, vinit);
       forOpNew->setAttr(
           LoopEmitter::getLoopEmitterLoopAttrName(),
           forOp->getAttr(LoopEmitter::getLoopEmitterLoopAttrName()));

@@ -50,12 +50,11 @@ struct CastOpInterface
       Value srcRank = RankOp::create(builder, loc, castOp.getSource());
       Value resultRank =
           arith::ConstantIndexOp::create(builder, loc, resultType.getRank());
-      Value isSameRank = arith::CmpIOp::create(builder,
-          loc, arith::CmpIPredicate::eq, srcRank, resultRank);
-      cf::AssertOp::create(builder,
-          loc, isSameRank,
-          RuntimeVerifiableOpInterface::generateErrorMessage(op,
-                                                             "rank mismatch"));
+      Value isSameRank = arith::CmpIOp::create(
+          builder, loc, arith::CmpIPredicate::eq, srcRank, resultRank);
+      cf::AssertOp::create(builder, loc, isSameRank,
+                           RuntimeVerifiableOpInterface::generateErrorMessage(
+                               op, "rank mismatch"));
     }
 
     // Check dimension sizes.
@@ -73,10 +72,10 @@ struct CastOpInterface
           DimOp::create(builder, loc, castOp.getSource(), it.index());
       Value resultDimSz =
           arith::ConstantIndexOp::create(builder, loc, it.value());
-      Value isSameSz = arith::CmpIOp::create(builder,
-          loc, arith::CmpIPredicate::eq, srcDimSz, resultDimSz);
-      cf::AssertOp::create(builder,
-          loc, isSameSz,
+      Value isSameSz = arith::CmpIOp::create(
+          builder, loc, arith::CmpIPredicate::eq, srcDimSz, resultDimSz);
+      cf::AssertOp::create(
+          builder, loc, isSameSz,
           RuntimeVerifiableOpInterface::generateErrorMessage(
               op, "size mismatch of dim " + std::to_string(it.index())));
     }
@@ -91,8 +90,9 @@ struct DimOpInterface
     auto dimOp = cast<DimOp>(op);
     Value rank = RankOp::create(builder, loc, dimOp.getSource());
     Value zero = arith::ConstantIndexOp::create(builder, loc, 0);
-    cf::AssertOp::create(builder,
-        loc, generateInBoundsCheck(builder, loc, dimOp.getIndex(), zero, rank),
+    cf::AssertOp::create(
+        builder, loc,
+        generateInBoundsCheck(builder, loc, dimOp.getIndex(), zero, rank),
         RuntimeVerifiableOpInterface::generateErrorMessage(
             op, "index is out of bounds"));
   }
@@ -134,10 +134,9 @@ struct ExtractInsertOpInterface
           i > 0 ? builder.createOrFold<arith::AndIOp>(loc, assertCond, inBounds)
                 : inBounds;
     }
-    cf::AssertOp::create(builder,
-        loc, assertCond,
-        RuntimeVerifiableOpInterface::generateErrorMessage(
-            op, "out-of-bounds access"));
+    cf::AssertOp::create(builder, loc, assertCond,
+                         RuntimeVerifiableOpInterface::generateErrorMessage(
+                             op, "out-of-bounds access"));
   }
 };
 
@@ -167,8 +166,8 @@ struct ExtractSliceOpInterface
           loc, extractSliceOp.getSource(), i);
       Value offsetInBounds =
           generateInBoundsCheck(builder, loc, offset, zero, dimSize);
-      cf::AssertOp::create(builder,
-          loc, offsetInBounds,
+      cf::AssertOp::create(
+          builder, loc, offsetInBounds,
           RuntimeVerifiableOpInterface::generateErrorMessage(
               op, "offset " + std::to_string(i) + " is out-of-bounds"));
 
@@ -180,8 +179,8 @@ struct ExtractSliceOpInterface
           arith::AddIOp::create(builder, loc, offset, sizeMinusOneTimesStride);
       Value lastPosInBounds =
           generateInBoundsCheck(builder, loc, lastPos, zero, dimSize);
-      cf::AssertOp::create(builder,
-          loc, lastPosInBounds,
+      cf::AssertOp::create(
+          builder, loc, lastPosInBounds,
           RuntimeVerifiableOpInterface::generateErrorMessage(
               op, "extract_slice runs out-of-bounds along dimension " +
                       std::to_string(i)));

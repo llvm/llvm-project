@@ -144,8 +144,9 @@ void GPUToSPIRVPass::runOnOperation() {
     if (targetEnvSupportsKernelCapability(moduleOp)) {
       moduleOp.walk([&](gpu::GPUFuncOp funcOp) {
         builder.setInsertionPoint(funcOp);
-        auto newFuncOp = func::FuncOp::create(builder,
-            funcOp.getLoc(), funcOp.getName(), funcOp.getFunctionType());
+        auto newFuncOp =
+            func::FuncOp::create(builder, funcOp.getLoc(), funcOp.getName(),
+                                 funcOp.getFunctionType());
         auto entryBlock = newFuncOp.addEntryBlock();
         builder.setInsertionPointToEnd(entryBlock);
         func::ReturnOp::create(builder, funcOp.getLoc());

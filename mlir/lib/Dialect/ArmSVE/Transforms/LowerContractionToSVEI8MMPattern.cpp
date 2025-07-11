@@ -234,25 +234,25 @@ public:
     for (int64_t i = 0; i < M; i += 2) {
       // Extract two consecutive rows of the LHS tile.
       auto r0 = vector::ExtractOp::create(rewriter, loc, *maybeLhs,
-                                                   ArrayRef<int64_t>{i});
+                                          ArrayRef<int64_t>{i});
       auto r1 = vector::ExtractOp::create(rewriter, loc, *maybeLhs,
-                                                   ArrayRef<int64_t>{i + 1});
+                                          ArrayRef<int64_t>{i + 1});
       // Concatenate to obtain a 16 x i8 flattened sub-tile.
-      auto t = vector::ShuffleOp::create(rewriter,
-          loc, r0, r1,
+      auto t = vector::ShuffleOp::create(
+          rewriter, loc, r0, r1,
           llvm::ArrayRef<int64_t>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
                                   14, 15});
       // Turn it into a scalable vector.
-      auto s = vector::ScalableInsertOp::create(rewriter,
-          loc, t, ub::PoisonOp::create(rewriter, loc, nxv16i8), 0);
+      auto s = vector::ScalableInsertOp::create(
+          rewriter, loc, t, ub::PoisonOp::create(rewriter, loc, nxv16i8), 0);
       // Replicate the sub-tile VSCALE times to fill the entire vector.
       auto r = arm_sve::DupQLaneOp::create(rewriter, loc, s, 0);
       lhsTile.push_back(r);
     }
 
     // "Flatten" the RHS tile from <[N]x8> to <[8*N]>.
-    auto rhs = vector::ShapeCastOp::create(rewriter,
-        maybeRhs->getLoc(),
+    auto rhs = vector::ShapeCastOp::create(
+        rewriter, maybeRhs->getLoc(),
         VectorType::get(/*shape=*/8 * N, rewriter.getI8Type(),
                         /*scalableDims=*/{true}),
         *maybeRhs);
@@ -260,8 +260,8 @@ public:
     // Extract the RHS sub-tiles with logical shape <8x[2]>.
     SmallVector<Value> rhsTile;
     for (int64_t j = 0; j < N; j += 2)
-      rhsTile.push_back(
-          vector::ScalableExtractOp::create(rewriter, loc, nxv16i8, rhs, j * 8));
+      rhsTile.push_back(vector::ScalableExtractOp::create(rewriter, loc,
+                                                          nxv16i8, rhs, j * 8));
 
     // Handy types for packing/unpacking of the accumulator tile.
     auto accRowTy = VectorType::get(/*shape=*/N, rewriter.getI32Type(),
@@ -278,9 +278,9 @@ public:
     for (int64_t i = 0; i < M; i += 2) {
       // Extract two consecutive rows of the accumulator tile.
       auto r0 = vector::ExtractOp::create(rewriter, loc, op.getAcc(),
-                                                   ArrayRef<int64_t>{i});
+                                          ArrayRef<int64_t>{i});
       auto r1 = vector::ExtractOp::create(rewriter, loc, op.getAcc(),
-                                                   ArrayRef<int64_t>{i + 1});
+                                          ArrayRef<int64_t>{i + 1});
       Value accTileVec;
       if (mmlaOp == MMLA::MixedSwapped) {
         // We need to swap the positions of the LHS and RHS (since we don't have
@@ -295,7 +295,8 @@ public:
 
         // Interleave the rows, effectively flattening each 2x2 tile into 4
         // consecutive elements.
-        auto intrI64 = vector::InterleaveOp::create(rewriter, loc, r0I64, r1I64);
+        auto intrI64 =
+            vector::InterleaveOp::create(rewriter, loc, r0I64, r1I64);
 
         // Bitcast back to 32-bit elements.
         accTileVec =
@@ -303,8 +304,8 @@ public:
       }
       // Extract ACC sub-tiles.
       for (int64_t j = 0; j < N; j += 2)
-        accTile.push_back(vector::ScalableExtractOp::create(rewriter,
-            loc, nxv4i32, accTileVec, j * 2));
+        accTile.push_back(vector::ScalableExtractOp::create(
+            rewriter, loc, nxv4i32, accTileVec, j * 2));
     }
 
     // Emit sub-tile matrix multiplications.
@@ -322,8 +323,8 @@ public:
       // Collect a number of sub-tiles in a row.
       Value row = ub::PoisonOp::create(rewriter, loc, accRowX2Ty);
       for (int64_t j = 0; j < N / 2; ++j)
-        row = vector::ScalableInsertOp::create(rewriter,
-            loc, outTile[i * N / 2 + j], row, j * 4);
+        row = vector::ScalableInsertOp::create(
+            rewriter, loc, outTile[i * N / 2 + j], row, j * 4);
 
       // Unpack the row to obtain two rows of the output. If we have the out
       // sub-tiles transposed we obtain two consecutive output rows by
@@ -336,14 +337,15 @@ public:
         out1 = tmp.getRes2();
       } else {
         // Deinterleave by pairs.
-        auto row64 = vector::BitCastOp::create(rewriter, loc, accRowX264Ty, row);
+        auto row64 =
+            vector::BitCastOp::create(rewriter, loc, accRowX264Ty, row);
         auto deintr64 = vector::DeinterleaveOp::create(rewriter, loc, row64);
 
         // Bitcast back into 32-bit elements and insert into the result.
         out0 = vector::BitCastOp::create(rewriter, loc, accRowTy,
-                                                  deintr64.getRes1());
+                                         deintr64.getRes1());
         out1 = vector::BitCastOp::create(rewriter, loc, accRowTy,
-                                                  deintr64.getRes2());
+                                         deintr64.getRes2());
       }
       result = vector::InsertOp::create(rewriter, loc, out0, result, i * 2);
       result = vector::InsertOp::create(rewriter, loc, out1, result, i * 2 + 1);

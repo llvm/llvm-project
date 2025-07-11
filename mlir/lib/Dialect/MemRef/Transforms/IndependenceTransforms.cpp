@@ -71,11 +71,11 @@ propagateSubViewOp(RewriterBase &rewriter,
   MemRefType newResultType = SubViewOp::inferRankReducedResultType(
       op.getType().getShape(), op.getSourceType(), op.getMixedOffsets(),
       op.getMixedSizes(), op.getMixedStrides());
-  Value newSubview = SubViewOp::create(rewriter,
-      op.getLoc(), newResultType, conversionOp.getOperand(0),
+  Value newSubview = SubViewOp::create(
+      rewriter, op.getLoc(), newResultType, conversionOp.getOperand(0),
       op.getMixedOffsets(), op.getMixedSizes(), op.getMixedStrides());
-  auto newConversionOp = UnrealizedConversionCastOp::create(rewriter,
-      op.getLoc(), op.getType(), newSubview);
+  auto newConversionOp = UnrealizedConversionCastOp::create(
+      rewriter, op.getLoc(), op.getType(), newSubview);
   rewriter.replaceAllUsesWith(op.getResult(), newConversionOp->getResult(0));
   return newConversionOp;
 }
@@ -106,8 +106,8 @@ static void replaceAndPropagateMemRefType(RewriterBase &rewriter,
   SmallVector<UnrealizedConversionCastOp> unrealizedConversions;
   for (const auto &it :
        llvm::enumerate(llvm::zip(from->getResults(), to->getResults()))) {
-    unrealizedConversions.push_back(UnrealizedConversionCastOp::create(rewriter,
-        to->getLoc(), std::get<0>(it.value()).getType(),
+    unrealizedConversions.push_back(UnrealizedConversionCastOp::create(
+        rewriter, to->getLoc(), std::get<0>(it.value()).getType(),
         std::get<1>(it.value())));
     rewriter.replaceAllUsesWith(from->getResult(it.index()),
                                 unrealizedConversions.back()->getResult(0));

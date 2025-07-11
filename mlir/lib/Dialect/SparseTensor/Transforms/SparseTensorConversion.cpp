@@ -168,12 +168,12 @@ static Value genLvlPtrsBuffers(OpBuilder &builder, Location loc,
 
   // Passing in value buffer pointers.
   lvlBarePtrs.push_back(extractBarePtrFromTensor(builder, loc, valTensor));
-  Value idxPtr = memref::ExtractAlignedPointerAsIndexOp::create(builder,
-      loc, allocaBuffer(builder, loc, lvlBarePtrs));
+  Value idxPtr = memref::ExtractAlignedPointerAsIndexOp::create(
+      builder, loc, allocaBuffer(builder, loc, lvlBarePtrs));
   Value idxCast =
       arith::IndexCastOp::create(builder, loc, builder.getI64Type(), idxPtr);
   return LLVM::IntToPtrOp::create(builder, loc, getOpaquePointerType(builder),
-                                          idxCast);
+                                  idxCast);
 }
 
 /// This class abstracts over the API of `_mlir_ciface_newSparseTensor`:
@@ -690,12 +690,12 @@ public:
     // operation is amortized over the innermost loops for the access
     // pattern expansion. As noted in the operation doc, we would like
     // to amortize this setup cost even between kernels.
-    linalg::FillOp::create(rewriter,
-        loc, ValueRange{constantZero(rewriter, loc, eltType)},
-        ValueRange{values});
-    linalg::FillOp::create(rewriter,
-        loc, ValueRange{constantZero(rewriter, loc, boolType)},
-        ValueRange{filled});
+    linalg::FillOp::create(rewriter, loc,
+                           ValueRange{constantZero(rewriter, loc, eltType)},
+                           ValueRange{values});
+    linalg::FillOp::create(rewriter, loc,
+                           ValueRange{constantZero(rewriter, loc, boolType)},
+                           ValueRange{filled});
     // Replace expansion op with these buffers and initial coordinate.
     assert(op.getNumResults() == 4);
     rewriter.replaceOp(op, {values, filled, lastLvlCoordinates, zero});
@@ -867,9 +867,9 @@ public:
     // Converts MemRefs back to Tensors.
     assert(retVal.size() + retLen.size() == op.getNumResults());
     for (unsigned i = 0, sz = retVal.size(); i < sz; i++) {
-      auto tensor = bufferization::ToTensorOp::create(rewriter,
-          loc, memref::getTensorTypeFromMemRefType(retVal[i].getType()),
-          retVal[i]);
+      auto tensor = bufferization::ToTensorOp::create(
+          rewriter, loc,
+          memref::getTensorTypeFromMemRefType(retVal[i].getType()), retVal[i]);
       retVal[i] =
           tensor::CastOp::create(rewriter, loc, op.getResultTypes()[i], tensor);
     }

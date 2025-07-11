@@ -828,8 +828,8 @@ public:
       if (allocLikeOp.getType() == baseBufferType)
         results.push_back(allocLikeOp);
       else
-        results.push_back(memref::ReinterpretCastOp::create(rewriter,
-            loc, baseBufferType, allocLikeOp, offset,
+        results.push_back(memref::ReinterpretCastOp::create(
+            rewriter, loc, baseBufferType, allocLikeOp, offset,
             /*sizes=*/ArrayRef<int64_t>(),
             /*strides=*/ArrayRef<int64_t>()));
     }
@@ -900,8 +900,8 @@ public:
     if (getGlobalOp.getType() == baseBufferType)
       results.push_back(getGlobalOp);
     else
-      results.push_back(memref::ReinterpretCastOp::create(rewriter,
-          loc, baseBufferType, getGlobalOp, offset,
+      results.push_back(memref::ReinterpretCastOp::create(
+          rewriter, loc, baseBufferType, getGlobalOp, offset,
           /*sizes=*/ArrayRef<int64_t>(),
           /*strides=*/ArrayRef<int64_t>()));
 
@@ -1008,9 +1008,8 @@ class ExtractStridedMetadataOpReinterpretCastFolder
     SmallVector<OpFoldResult> results;
     results.resize_for_overwrite(rank * 2 + 2);
 
-    auto newExtractStridedMetadata =
-        memref::ExtractStridedMetadataOp::create(rewriter,
-            loc, reinterpretCastOp.getSource());
+    auto newExtractStridedMetadata = memref::ExtractStridedMetadataOp::create(
+        rewriter, loc, reinterpretCastOp.getSource());
 
     // Register the base_buffer.
     results[0] = newExtractStridedMetadata.getBaseBuffer();
@@ -1082,9 +1081,8 @@ class ExtractStridedMetadataOpCastFolder
     SmallVector<OpFoldResult> results;
     results.resize_for_overwrite(rank * 2 + 2);
 
-    auto newExtractStridedMetadata =
-        memref::ExtractStridedMetadataOp::create(rewriter, loc,
-                                                          castOp.getSource());
+    auto newExtractStridedMetadata = memref::ExtractStridedMetadataOp::create(
+        rewriter, loc, castOp.getSource());
 
     // Register the base_buffer.
     results[0] = newExtractStridedMetadata.getBaseBuffer();
@@ -1142,9 +1140,8 @@ class ExtractStridedMetadataOpMemorySpaceCastFolder
     auto memSpaceCastOp = source.getDefiningOp<memref::MemorySpaceCastOp>();
     if (!memSpaceCastOp)
       return failure();
-    auto newExtractStridedMetadata =
-        memref::ExtractStridedMetadataOp::create(rewriter,
-            loc, memSpaceCastOp.getSource());
+    auto newExtractStridedMetadata = memref::ExtractStridedMetadataOp::create(
+        rewriter, loc, memSpaceCastOp.getSource());
     SmallVector<Value> results(newExtractStridedMetadata.getResults());
     // As with most other strided metadata rewrite patterns, don't introduce
     // a use of the base pointer where non existed. This needs to happen here,
@@ -1158,8 +1155,8 @@ class ExtractStridedMetadataOpMemorySpaceCastFolder
       MemRefType::Builder newTypeBuilder(baseBufferType);
       newTypeBuilder.setMemorySpace(
           memSpaceCastOp.getResult().getType().getMemorySpace());
-      results[0] = memref::MemorySpaceCastOp::create(rewriter,
-          loc, Type{newTypeBuilder}, baseBuffer);
+      results[0] = memref::MemorySpaceCastOp::create(
+          rewriter, loc, Type{newTypeBuilder}, baseBuffer);
     } else {
       results[0] = nullptr;
     }

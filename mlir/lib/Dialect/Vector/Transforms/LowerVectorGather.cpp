@@ -75,8 +75,8 @@ struct UnrollGather : OpRewritePattern<vector::GatherOp> {
     Value maskVec = op.getMask();
     Value passThruVec = op.getPassThru();
 
-    Value result = arith::ConstantOp::create(rewriter,
-        loc, resultTy, rewriter.getZeroAttr(resultTy));
+    Value result = arith::ConstantOp::create(rewriter, loc, resultTy,
+                                             rewriter.getZeroAttr(resultTy));
 
     VectorType subTy = VectorType::Builder(resultTy).dropDim(0);
 
@@ -89,9 +89,9 @@ struct UnrollGather : OpRewritePattern<vector::GatherOp> {
           vector::ExtractOp::create(rewriter, loc, maskVec, thisIdx);
       Value passThruSubVec =
           vector::ExtractOp::create(rewriter, loc, passThruVec, thisIdx);
-      Value subGather = vector::GatherOp::create(rewriter,
-          loc, subTy, op.getBase(), op.getIndices(), indexSubVec, maskSubVec,
-          passThruSubVec);
+      Value subGather = vector::GatherOp::create(
+          rewriter, loc, subTy, op.getBase(), op.getIndices(), indexSubVec,
+          maskSubVec, passThruSubVec);
       result =
           vector::InsertOp::create(rewriter, loc, subGather, result, thisIdx);
     }
@@ -159,24 +159,24 @@ struct RemoveStrideFromGatherSource : OpRewritePattern<vector::GatherOp> {
 
     // 1. Collapse the input memref so that it's "flat".
     SmallVector<ReassociationIndices> reassoc = {{0, 1}};
-    Value collapsed = memref::CollapseShapeOp::create(rewriter,
-        op.getLoc(), subview.getSource(), reassoc);
+    Value collapsed = memref::CollapseShapeOp::create(
+        rewriter, op.getLoc(), subview.getSource(), reassoc);
 
     // 2. Generate new gather indices that will model the
     // strided access.
     IntegerAttr stride = rewriter.getIndexAttr(srcTrailingDim);
     VectorType vType = op.getIndexVec().getType();
-    Value mulCst = arith::ConstantOp::create(rewriter,
-        op.getLoc(), vType, DenseElementsAttr::get(vType, stride));
+    Value mulCst = arith::ConstantOp::create(
+        rewriter, op.getLoc(), vType, DenseElementsAttr::get(vType, stride));
 
     Value newIdxs =
         arith::MulIOp::create(rewriter, op.getLoc(), op.getIndexVec(), mulCst);
 
     // 3. Create an updated gather op with the collapsed input memref and the
     // updated indices.
-    Value newGather = vector::GatherOp::create(rewriter,
-        op.getLoc(), op.getResult().getType(), collapsed, op.getIndices(),
-        newIdxs, op.getMask(), op.getPassThru());
+    Value newGather = vector::GatherOp::create(
+        rewriter, op.getLoc(), op.getResult().getType(), collapsed,
+        op.getIndices(), newIdxs, op.getMask(), op.getPassThru());
     rewriter.replaceOp(op, newGather);
 
     return success();

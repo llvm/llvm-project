@@ -81,8 +81,8 @@ struct ConstantOpToArmSMELowering : public OpRewritePattern<arith::ConstantOp> {
                             Value currentTile) {
       // Create 'arm_sme.insert_tile_slice' to write vector to tile
       // slice.
-      auto nextTile = arm_sme::InsertTileSliceOp::create(b,
-          loc, tileType, constantOp1D, currentTile, tileSliceIndex);
+      auto nextTile = arm_sme::InsertTileSliceOp::create(
+          b, loc, tileType, constantOp1D, currentTile, tileSliceIndex);
       return nextTile.getResult();
     };
     auto forOp = mlir::arm_sme::createLoopOverTileSlices(

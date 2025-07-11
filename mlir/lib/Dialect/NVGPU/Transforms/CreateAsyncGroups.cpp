@@ -110,15 +110,15 @@ static Value buildNumReadElements(OpBuilder &b, Location loc,
                                   transferMask->createMaskOp->getOperands())) {
     Value cmp =
         arith::CmpIOp::create(b, loc, arith::CmpIPredicate::slt,
-                                arith::ConstantIndexOp::create(b, loc, pos), sz);
+                              arith::ConstantIndexOp::create(b, loc, pos), sz);
     if (!cond) {
       cond = cmp;
       continue;
     }
     cond = arith::AndIOp::create(b, loc, cmp, cond);
   }
-  return arith::SelectOp::create(b,
-      loc, cond, transferMask->createMaskOp->getOperands().back(),
+  return arith::SelectOp::create(
+      b, loc, cond, transferMask->createMaskOp->getOperands().back(),
       arith::ConstantIndexOp::create(b, loc, 0));
 }
 
@@ -251,8 +251,9 @@ void nvgpu::createAsyncGroups(RewriterBase &rewriter, Operation *op,
       int64_t sizeInBytes =
           (dstMemref.getElementTypeBitWidth() * numElements) / 8;
       // bypass_l1 only possible with 16 byte transfer.
-      Value token = nvgpu::DeviceAsyncCopyOp::create(rewriter,
-          writeOp->getLoc(), nvgpu::DeviceAsyncTokenType::get(op->getContext()),
+      Value token = nvgpu::DeviceAsyncCopyOp::create(
+          rewriter, writeOp->getLoc(),
+          nvgpu::DeviceAsyncTokenType::get(op->getContext()),
           /*dst=*/storeBase, /*dstIndices=*/nvgpu::getIndices(writeOp),
           /*src=*/loadBase,
           /*srcIndices=*/nvgpu::getIndices(readOp),
@@ -264,11 +265,11 @@ void nvgpu::createAsyncGroups(RewriterBase &rewriter, Operation *op,
     }
 
     // Create the group and wait for it right after.
-    Value groupToken = nvgpu::DeviceAsyncCreateGroupOp::create(rewriter,
-        op->getLoc(), nvgpu::DeviceAsyncTokenType::get(op->getContext()),
-        tokens);
+    Value groupToken = nvgpu::DeviceAsyncCreateGroupOp::create(
+        rewriter, op->getLoc(),
+        nvgpu::DeviceAsyncTokenType::get(op->getContext()), tokens);
     nvgpu::DeviceAsyncWaitOp::create(rewriter, op->getLoc(), groupToken,
-                                              nullptr);
+                                     nullptr);
     // Clean up old stores.
     for (Operation *writeOp : group)
       rewriter.eraseOp(writeOp);

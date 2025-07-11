@@ -196,8 +196,8 @@ LogicalResult DeallocationState::getMemrefsAndConditionsToDeallocate(
     // Simply cast unranked MemRefs to ranked memrefs with 0 dimensions such
     // that we can call extract_strided_metadata on it.
     if (auto unrankedMemRefTy = dyn_cast<UnrankedMemRefType>(memref.getType()))
-      memref = memref::ReinterpretCastOp::create(builder,
-          loc, memref,
+      memref = memref::ReinterpretCastOp::create(
+          builder, loc, memref,
           /*offset=*/builder.getIndexAttr(0),
           /*sizes=*/ArrayRef<OpFoldResult>{},
           /*strides=*/ArrayRef<OpFoldResult>{});
@@ -296,8 +296,8 @@ FailureOr<Operation *> deallocation_impl::insertDeallocOpForReturnLike(
   if (memrefs.empty() && toRetain.empty())
     return op;
 
-  auto deallocOp = bufferization::DeallocOp::create(builder,
-      op->getLoc(), memrefs, conditions, toRetain);
+  auto deallocOp = bufferization::DeallocOp::create(
+      builder, op->getLoc(), memrefs, conditions, toRetain);
 
   // We want to replace the current ownership of the retained values with the
   // result values of the dealloc operation as they are always unique.

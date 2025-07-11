@@ -156,16 +156,16 @@ handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
   // Stitch results together into one large vector.
   Type resultEltType = cast<VectorType>(results[0].getType()).getElementType();
   Type resultExpandedType = VectorType::get(expandedShape, resultEltType);
-  Value result = arith::ConstantOp::create(builder,
-      resultExpandedType, builder.getZeroAttr(resultExpandedType));
+  Value result = arith::ConstantOp::create(
+      builder, resultExpandedType, builder.getZeroAttr(resultExpandedType));
 
   for (int64_t i = 0; i < maxIndex; ++i)
     result = vector::InsertOp::create(builder, results[i], result,
-                                              delinearize(i, strides));
+                                      delinearize(i, strides));
 
   // Reshape back to the original vector shape.
-  return vector::ShapeCastOp::create(builder,
-      VectorType::get(inputShape, resultEltType), result);
+  return vector::ShapeCastOp::create(
+      builder, VectorType::get(inputShape, resultEltType), result);
 }
 
 //----------------------------------------------------------------------------//
@@ -181,7 +181,7 @@ static Value floatCst(ImplicitLocOpBuilder &builder, float value,
   assert((elementType.isF16() || elementType.isF32()) &&
          "x must be f16 or f32 type.");
   return arith::ConstantOp::create(builder,
-      builder.getFloatAttr(elementType, value));
+                                   builder.getFloatAttr(elementType, value));
 }
 
 static Value f32Cst(ImplicitLocOpBuilder &builder, double value) {
@@ -203,14 +203,16 @@ static Value f32FromBits(ImplicitLocOpBuilder &builder, uint32_t bits) {
 
 // Return the minimum of the two values or NaN if value is NaN
 static Value min(ImplicitLocOpBuilder &builder, Value value, Value bound) {
-  return arith::SelectOp::create(builder,
+  return arith::SelectOp::create(
+      builder,
       arith::CmpFOp::create(builder, arith::CmpFPredicate::ULT, value, bound),
       value, bound);
 }
 
 // Return the maximum of the two values or NaN if value is NaN
 static Value max(ImplicitLocOpBuilder &builder, Value value, Value bound) {
-  return arith::SelectOp::create(builder,
+  return arith::SelectOp::create(
+      builder,
       arith::CmpFOp::create(builder, arith::CmpFPredicate::UGT, value, bound),
       value, bound);
 }
@@ -252,8 +254,8 @@ static std::pair<Value, Value> frexp(ImplicitLocOpBuilder &builder, Value arg,
 
   // Compute exponent.
   Value arg0 = isPositive ? arg : math::AbsFOp::create(builder, arg);
-  Value biasedExponentBits = arith::ShRUIOp::create(builder,
-      arith::BitcastOp::create(builder, i32Vec, arg0),
+  Value biasedExponentBits = arith::ShRUIOp::create(
+      builder, arith::BitcastOp::create(builder, i32Vec, arg0),
       bcast(i32Cst(builder, 23)));
   Value biasedExponent =
       arith::SIToFPOp::create(builder, f32Vec, biasedExponentBits);
@@ -301,7 +303,7 @@ Value makePolynomialCalculation(ImplicitLocOpBuilder &builder,
     return coeffs[0];
 
   Value res = math::FmaOp::create(builder, x, coeffs[coeffs.size() - 1],
-                                          coeffs[coeffs.size() - 2]);
+                                  coeffs[coeffs.size() - 2]);
   for (auto i = ptrdiff_t(coeffs.size()) - 3; i >= 0; --i) {
     res = math::FmaOp::create(builder, x, res, coeffs[i]);
   }
@@ -511,18 +513,20 @@ Atan2Approximation::matchAndRewrite(math::Atan2Op op,
   // Handle x = 0, y > 0
   Value xZero =
       arith::CmpFOp::create(builder, arith::CmpFPredicate::OEQ, x, zero);
-  Value yGt = arith::CmpFOp::create(builder, arith::CmpFPredicate::OGT, y, zero);
+  Value yGt =
+      arith::CmpFOp::create(builder, arith::CmpFPredicate::OGT, y, zero);
   Value isHalfPi = arith::AndIOp::create(builder, xZero, yGt);
   auto halfPi = broadcast(builder, f32Cst(builder, 1.57079632679f), shape);
   result = arith::SelectOp::create(builder, isHalfPi, halfPi, result);
 
   // Handle x = 0, y < 0
-  Value yLt = arith::CmpFOp::create(builder, arith::CmpFPredicate::OLT, y, zero);
+  Value yLt =
+      arith::CmpFOp::create(builder, arith::CmpFPredicate::OLT, y, zero);
   Value isNegativeHalfPiPi = arith::AndIOp::create(builder, xZero, yLt);
   auto negativeHalfPiPi =
       broadcast(builder, f32Cst(builder, -1.57079632679f), shape);
-  result = arith::SelectOp::create(builder, isNegativeHalfPiPi, negativeHalfPiPi,
-                                           result);
+  result = arith::SelectOp::create(builder, isNegativeHalfPiPi,
+                                   negativeHalfPiPi, result);
 
   // Handle x = 0, y = 0;
   Value yZero =
@@ -569,9 +573,9 @@ TanhApproximation::matchAndRewrite(math::TanhOp op,
 
   // Mask for tiny values that are approximated with `operand`.
   Value tiny = bcast(f32Cst(builder, 0.0004f));
-  Value tinyMask = arith::CmpFOp::create(builder,
-      arith::CmpFPredicate::OLT, math::AbsFOp::create(builder, op.getOperand()),
-      tiny);
+  Value tinyMask = arith::CmpFOp::create(
+      builder, arith::CmpFPredicate::OLT,
+      math::AbsFOp::create(builder, op.getOperand()), tiny);
 
   // The monomial coefficients of the numerator polynomial (odd).
   Value alpha1 = bcast(f32Cst(builder, 4.89352455891786e-03f));
@@ -606,8 +610,8 @@ TanhApproximation::matchAndRewrite(math::TanhOp op,
   q = math::FmaOp::create(builder, x2, q, beta0);
 
   // Divide the numerator by the denominator.
-  Value res = arith::SelectOp::create(builder,
-      tinyMask, x, arith::DivFOp::create(builder, p, q));
+  Value res = arith::SelectOp::create(builder, tinyMask, x,
+                                      arith::DivFOp::create(builder, p, q));
 
   rewriter.replaceOp(op, res);
 
@@ -691,12 +695,12 @@ LogApproximationBase<Op>::logMatchAndRewrite(Op op, PatternRewriter &rewriter,
   //     x = x + x - 1.0;
   //   } else { x = x - 1.0; }
   Value mask = arith::CmpFOp::create(builder, arith::CmpFPredicate::OLT, x,
-                                             cstCephesSQRTHF);
+                                     cstCephesSQRTHF);
   Value tmp = arith::SelectOp::create(builder, mask, x, cstZero);
 
   x = arith::SubFOp::create(builder, x, cstOne);
-  e = arith::SubFOp::create(builder,
-      e, arith::SelectOp::create(builder, mask, cstOne, cstZero));
+  e = arith::SubFOp::create(
+      builder, e, arith::SelectOp::create(builder, mask, cstOne, cstZero));
   x = arith::AddFOp::create(builder, x, tmp);
 
   Value x2 = arith::MulFOp::create(builder, x, x);
@@ -726,20 +730,20 @@ LogApproximationBase<Op>::logMatchAndRewrite(Op op, PatternRewriter &rewriter,
   }
 
   Value invalidMask = arith::CmpFOp::create(builder, arith::CmpFPredicate::ULT,
-                                                    op.getOperand(), cstZero);
+                                            op.getOperand(), cstZero);
   Value zeroMask = arith::CmpFOp::create(builder, arith::CmpFPredicate::OEQ,
-                                                 op.getOperand(), cstZero);
+                                         op.getOperand(), cstZero);
   Value posInfMask = arith::CmpFOp::create(builder, arith::CmpFPredicate::OEQ,
-                                                   op.getOperand(), cstPosInf);
+                                           op.getOperand(), cstPosInf);
 
   // Filter out invalid values:
   //  • x == 0     -> -INF
   //  • x < 0      ->  NAN
   //  • x == +INF  -> +INF
-  Value aproximation = arith::SelectOp::create(builder,
-      zeroMask, cstMinusInf,
-      arith::SelectOp::create(builder,
-          invalidMask, cstNan,
+  Value aproximation = arith::SelectOp::create(
+      builder, zeroMask, cstMinusInf,
+      arith::SelectOp::create(
+          builder, invalidMask, cstNan,
           arith::SelectOp::create(builder, posInfMask, cstPosInf, x)));
 
   rewriter.replaceOp(op, aproximation);
@@ -811,11 +815,12 @@ Log1pApproximation::matchAndRewrite(math::Log1pOp op,
   Value logU = math::LogOp::create(builder, u);
   Value uInf =
       arith::CmpFOp::create(builder, arith::CmpFPredicate::OEQ, u, logU);
-  Value logLarge = arith::MulFOp::create(builder,
-      x, arith::DivFOp::create(builder,
-             logU, arith::SubFOp::create(builder, u, cstOne)));
-  Value approximation = arith::SelectOp::create(builder,
-      arith::OrIOp::create(builder, uSmall, uInf), x, logLarge);
+  Value logLarge = arith::MulFOp::create(
+      builder, x,
+      arith::DivFOp::create(builder, logU,
+                            arith::SubFOp::create(builder, u, cstOne)));
+  Value approximation = arith::SelectOp::create(
+      builder, arith::OrIOp::create(builder, uSmall, uInf), x, logLarge);
   rewriter.replaceOp(op, approximation);
   return success();
 }
@@ -866,7 +871,9 @@ AsinPolynomialApproximation::matchAndRewrite(math::AsinOp op,
 
   auto abs = [&](Value a) -> Value { return math::AbsFOp::create(builder, a); };
 
-  auto sqrt = [&](Value a) -> Value { return math::SqrtOp::create(builder, a); };
+  auto sqrt = [&](Value a) -> Value {
+    return math::SqrtOp::create(builder, a);
+  };
 
   auto scopy = [&](Value a, Value b) -> Value {
     return math::CopySignOp::create(builder, a, b);
@@ -880,9 +887,8 @@ AsinPolynomialApproximation::matchAndRewrite(math::AsinOp op,
   Value aa = mul(operand, operand);
   Value opp = sqrt(sub(bcast(floatCst(builder, 1.0, elementType)), aa));
 
-  Value gt =
-      arith::CmpFOp::create(builder, arith::CmpFPredicate::OGT, aa,
-                                    bcast(floatCst(builder, 0.5, elementType)));
+  Value gt = arith::CmpFOp::create(builder, arith::CmpFPredicate::OGT, aa,
+                                   bcast(floatCst(builder, 0.5, elementType)));
 
   Value x = sel(gt, opp, abso);
 
@@ -978,8 +984,8 @@ AcosPolynomialApproximation::matchAndRewrite(math::AcosOp op,
   r = arith::SelectOp::create(builder, firstPred, trueVal, falseVal);
 
   // Check whether the operand lies in between [-1.0, 0.0).
-  Value greaterThanNegOne =
-      arith::CmpFOp::create(builder, arith::CmpFPredicate::OGE, operand, negOne);
+  Value greaterThanNegOne = arith::CmpFOp::create(
+      builder, arith::CmpFPredicate::OGE, operand, negOne);
 
   Value lessThanZero =
       arith::CmpFOp::create(builder, arith::CmpFPredicate::OLT, operand, zero);
@@ -1094,22 +1100,22 @@ ErfPolynomialApproximation::matchAndRewrite(math::ErfOp op,
         arith::CmpFOp::create(builder, arith::CmpFPredicate::OLT, x, bounds[j]);
     for (int i = 0; i <= polyDegree; ++i) {
       p[i] = arith::SelectOp::create(builder, isLessThanBound[j], p[i],
-                                             pp[j + 1][i]);
+                                     pp[j + 1][i]);
       q[i] = arith::SelectOp::create(builder, isLessThanBound[j], q[i],
-                                             qq[j + 1][i]);
+                                     qq[j + 1][i]);
     }
     offset = arith::SelectOp::create(builder, isLessThanBound[j], offset,
-                                             offsets[j + 1]);
+                                     offsets[j + 1]);
   }
-  isLessThanBound[intervalsCount - 1] = arith::CmpFOp::create(builder,
-      arith::CmpFPredicate::ULT, x, bounds[intervalsCount - 1]);
+  isLessThanBound[intervalsCount - 1] = arith::CmpFOp::create(
+      builder, arith::CmpFPredicate::ULT, x, bounds[intervalsCount - 1]);
 
   Value pPoly = makePolynomialCalculation(builder, p, x);
   Value qPoly = makePolynomialCalculation(builder, q, x);
   Value rationalPoly = arith::DivFOp::create(builder, pPoly, qPoly);
   Value formula = arith::AddFOp::create(builder, offset, rationalPoly);
-  formula = arith::SelectOp::create(builder, isLessThanBound[intervalsCount - 1],
-                                            formula, one);
+  formula = arith::SelectOp::create(
+      builder, isLessThanBound[intervalsCount - 1], formula, one);
 
   // erf is odd function: erf(x) = -erf(-x).
   Value negFormula = arith::NegFOp::create(builder, formula);
@@ -1160,8 +1166,9 @@ ErfcPolynomialApproximation::matchAndRewrite(math::ErfcOp op,
   Value r = arith::DivFOp::create(builder, one, p);
   Value q = math::FmaOp::create(builder, neg4, r, one);
   Value t = math::FmaOp::create(builder, arith::AddFOp::create(builder, q, one),
-                                        neg2, a);
-  Value e = math::FmaOp::create(builder, arith::NegFOp::create(builder, a), q, t);
+                                neg2, a);
+  Value e =
+      math::FmaOp::create(builder, arith::NegFOp::create(builder, a), q, t);
   q = math::FmaOp::create(builder, r, e, q);
 
   p = bcast(floatCst(builder, -0x1.a4a000p-12f, et));        // -4.01139259e-4
@@ -1197,23 +1204,24 @@ ErfcPolynomialApproximation::matchAndRewrite(math::ErfcOp op,
   e = math::ExpOp::create(builder, arith::NegFOp::create(builder, s));
 
   t = math::FmaOp::create(builder, arith::NegFOp::create(builder, a), a, s);
-  r = math::FmaOp::create(builder,
-      r, e,
+  r = math::FmaOp::create(
+      builder, r, e,
       arith::MulFOp::create(builder, arith::MulFOp::create(builder, r, e), t));
 
-  Value isNotLessThanInf = arith::XOrIOp::create(builder,
+  Value isNotLessThanInf = arith::XOrIOp::create(
+      builder,
       arith::CmpFOp::create(builder, arith::CmpFPredicate::OLT, a, posInf),
       trueValue);
   r = arith::SelectOp::create(builder, isNotLessThanInf,
-                                      arith::AddFOp::create(builder, x, x), r);
+                              arith::AddFOp::create(builder, x, x), r);
   Value isGreaterThanClamp =
       arith::CmpFOp::create(builder, arith::CmpFPredicate::OGT, a, clampVal);
   r = arith::SelectOp::create(builder, isGreaterThanClamp, zero, r);
 
   Value isNegative =
       arith::CmpFOp::create(builder, arith::CmpFPredicate::OLT, x, zero);
-  r = arith::SelectOp::create(builder,
-      isNegative, arith::SubFOp::create(builder, pos2, r), r);
+  r = arith::SelectOp::create(builder, isNegative,
+                              arith::SubFOp::create(builder, pos2, r), r);
 
   rewriter.replaceOp(op, r);
   return success();
@@ -1235,8 +1243,9 @@ Value clampWithNormals(ImplicitLocOpBuilder &builder,
   };
 
   auto selectCmp = [&builder](auto pred, Value value, Value bound) {
-    return arith::SelectOp::create(builder,
-        arith::CmpFOp::create(builder, pred, value, bound), value, bound);
+    return arith::SelectOp::create(
+        builder, arith::CmpFOp::create(builder, pred, value, bound), value,
+        bound);
   };
 
   // Note: prefer UGE/ULE vs. UGT/ULT, since they generate vmaxps/vminps vs.
@@ -1434,8 +1443,8 @@ ExpM1Approximation::matchAndRewrite(math::ExpM1Op op,
   Value uEqOneOrNaN =
       arith::CmpFOp::create(builder, arith::CmpFPredicate::UEQ, u, cstOne);
   Value uMinusOne = arith::SubFOp::create(builder, u, cstOne);
-  Value uMinusOneEqNegOne = arith::CmpFOp::create(builder,
-      arith::CmpFPredicate::OEQ, uMinusOne, cstNegOne);
+  Value uMinusOneEqNegOne = arith::CmpFOp::create(
+      builder, arith::CmpFPredicate::OEQ, uMinusOne, cstNegOne);
   // logU = log(u) ~= x
   Value logU = math::LogOp::create(builder, u);
 
@@ -1444,11 +1453,11 @@ ExpM1Approximation::matchAndRewrite(math::ExpM1Op op,
       arith::CmpFOp::create(builder, arith::CmpFPredicate::OEQ, logU, u);
 
   // (u - 1) * (x / ~x)
-  Value expm1 = arith::MulFOp::create(builder,
-      uMinusOne, arith::DivFOp::create(builder, x, logU));
+  Value expm1 = arith::MulFOp::create(builder, uMinusOne,
+                                      arith::DivFOp::create(builder, x, logU));
   expm1 = arith::SelectOp::create(builder, isInf, u, expm1);
-  Value approximation = arith::SelectOp::create(builder,
-      uEqOneOrNaN, x,
+  Value approximation = arith::SelectOp::create(
+      builder, uEqOneOrNaN, x,
       arith::SelectOp::create(builder, uMinusOneEqNegOne, cstNegOne, expm1));
   rewriter.replaceOp(op, approximation);
   return success();
@@ -1723,10 +1732,10 @@ RsqrtApproximation::matchAndRewrite(math::RsqrtOp op,
 
   // Select only the inverse sqrt of positive normals (denormals are
   // flushed to zero).
-  Value ltMinMask = arith::CmpFOp::create(builder,
-      arith::CmpFPredicate::OLT, op.getOperand(), cstMinNormPos);
+  Value ltMinMask = arith::CmpFOp::create(builder, arith::CmpFPredicate::OLT,
+                                          op.getOperand(), cstMinNormPos);
   Value infMask = arith::CmpFOp::create(builder, arith::CmpFPredicate::OEQ,
-                                                op.getOperand(), cstPosInf);
+                                        op.getOperand(), cstPosInf);
   Value notNormalFiniteMask = arith::OrIOp::create(builder, ltMinMask, infMask);
 
   // Compute an approximate result.

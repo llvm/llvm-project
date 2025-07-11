@@ -120,8 +120,8 @@ struct GPUSubgroupReduceOpLowering
     auto int32Type = IntegerType::get(rewriter.getContext(), 32);
     Value offset = LLVM::ConstantOp::create(rewriter, loc, int32Type, -1);
 
-    auto reduxOp = NVVM::ReduxOp::create(rewriter, loc, int32Type, op.getValue(),
-                                                  mode.value(), offset);
+    auto reduxOp = NVVM::ReduxOp::create(rewriter, loc, int32Type,
+                                         op.getValue(), mode.value(), offset);
 
     rewriter.replaceOp(op, reduxOp->getResult(0));
     return success();
@@ -161,19 +161,19 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     Value one = LLVM::ConstantOp::create(rewriter, loc, int32Type, 1);
     Value minusOne = LLVM::ConstantOp::create(rewriter, loc, int32Type, -1);
     Value thirtyTwo = LLVM::ConstantOp::create(rewriter, loc, int32Type, 32);
-    Value numLeadInactiveLane = LLVM::SubOp::create(rewriter,
-        loc, int32Type, thirtyTwo, adaptor.getWidth());
+    Value numLeadInactiveLane = LLVM::SubOp::create(
+        rewriter, loc, int32Type, thirtyTwo, adaptor.getWidth());
     // Bit mask of active lanes: `(-1) >> (32 - activeWidth)`.
     Value activeMask = LLVM::LShrOp::create(rewriter, loc, int32Type, minusOne,
-                                                     numLeadInactiveLane);
+                                            numLeadInactiveLane);
     Value maskAndClamp;
     if (op.getMode() == gpu::ShuffleMode::UP) {
       // Clamp lane: `32 - activeWidth`
       maskAndClamp = numLeadInactiveLane;
     } else {
       // Clamp lane: `activeWidth - 1`
-      maskAndClamp =
-          LLVM::SubOp::create(rewriter, loc, int32Type, adaptor.getWidth(), one);
+      maskAndClamp = LLVM::SubOp::create(rewriter, loc, int32Type,
+                                         adaptor.getWidth(), one);
     }
 
     bool predIsUsed = !op->getResult(1).use_empty();
@@ -184,9 +184,10 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
       resultTy = LLVM::LLVMStructType::getLiteral(rewriter.getContext(),
                                                   {valueTy, predTy});
     }
-    Value shfl = NVVM::ShflOp::create(rewriter,
-        loc, resultTy, activeMask, adaptor.getValue(), adaptor.getOffset(),
-        maskAndClamp, convertShflKind(op.getMode()), returnValueAndIsValidAttr);
+    Value shfl = NVVM::ShflOp::create(
+        rewriter, loc, resultTy, activeMask, adaptor.getValue(),
+        adaptor.getOffset(), maskAndClamp, convertShflKind(op.getMode()),
+        returnValueAndIsValidAttr);
     if (predIsUsed) {
       Value shflValue = LLVM::ExtractValueOp::create(rewriter, loc, shfl, 0);
       Value isActiveSrcLane =
@@ -220,11 +221,11 @@ struct GPULaneIdOpToNVVM : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
     // by the LLVMTypeConverter options.
     const unsigned indexBitwidth = getTypeConverter()->getIndexTypeBitwidth();
     if (indexBitwidth > 32) {
-      newOp = LLVM::SExtOp::create(rewriter,
-          loc, IntegerType::get(context, indexBitwidth), newOp);
+      newOp = LLVM::SExtOp::create(
+          rewriter, loc, IntegerType::get(context, indexBitwidth), newOp);
     } else if (indexBitwidth < 32) {
-      newOp = LLVM::TruncOp::create(rewriter,
-          loc, IntegerType::get(context, indexBitwidth), newOp);
+      newOp = LLVM::TruncOp::create(
+          rewriter, loc, IntegerType::get(context, indexBitwidth), newOp);
     }
     rewriter.replaceOp(op, {newOp});
     return success();
@@ -272,7 +273,7 @@ struct AssertOpToAssertfailLowering
         rewriter.splitBlock(assertBlock, ++assertOp->getIterator());
     rewriter.setInsertionPointToEnd(beforeBlock);
     cf::CondBranchOp::create(rewriter, loc, adaptor.getArg(), afterBlock,
-                                      assertBlock);
+                             assertBlock);
     rewriter.setInsertionPointToEnd(assertBlock);
     cf::BranchOp::create(rewriter, loc, afterBlock);
 
@@ -301,12 +302,12 @@ struct AssertOpToAssertfailLowering
     // Create constants.
     auto getGlobal = [&](LLVM::GlobalOp global) {
       // Get a pointer to the format string's first element.
-      Value globalPtr = LLVM::AddressOfOp::create(rewriter,
-          loc, LLVM::LLVMPointerType::get(ctx, global.getAddrSpace()),
+      Value globalPtr = LLVM::AddressOfOp::create(
+          rewriter, loc, LLVM::LLVMPointerType::get(ctx, global.getAddrSpace()),
           global.getSymNameAttr());
       Value start =
           LLVM::GEPOp::create(rewriter, loc, ptrType, global.getGlobalType(),
-                                       globalPtr, ArrayRef<LLVM::GEPArg>{0, 0});
+                              globalPtr, ArrayRef<LLVM::GEPArg>{0, 0});
       return start;
     };
     Value assertMessage = getGlobal(getOrCreateStringConstant(

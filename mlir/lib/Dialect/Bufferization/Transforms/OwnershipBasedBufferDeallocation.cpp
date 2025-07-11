@@ -750,19 +750,18 @@ Value BufferDeallocation::materializeMemrefWithGuaranteedOwnership(
 
   // Insert a runtime check and only clone if we still don't have ownership at
   // runtime.
-  Value maybeClone =
-      builder
-          .create<scf::IfOp>(
-              memref.getLoc(), condition,
-              [&](OpBuilder &builder, Location loc) {
-                scf::YieldOp::create(builder, loc, newMemref);
-              },
-              [&](OpBuilder &builder, Location loc) {
-                Value clone =
-                    bufferization::CloneOp::create(builder, loc, newMemref);
-                scf::YieldOp::create(builder, loc, clone);
-              })
-          .getResult(0);
+  Value maybeClone = builder
+                         .create<scf::IfOp>(
+                             memref.getLoc(), condition,
+                             [&](OpBuilder &builder, Location loc) {
+                               scf::YieldOp::create(builder, loc, newMemref);
+                             },
+                             [&](OpBuilder &builder, Location loc) {
+                               Value clone = bufferization::CloneOp::create(
+                                   builder, loc, newMemref);
+                               scf::YieldOp::create(builder, loc, clone);
+                             })
+                         .getResult(0);
   Value trueVal = buildBoolValue(builder, memref.getLoc(), true);
   state.updateOwnership(maybeClone, trueVal);
   state.addMemrefToDeallocate(maybeClone, maybeClone.getParentBlock());
@@ -797,8 +796,8 @@ BufferDeallocation::handleInterface(BranchOpInterface op) {
   state.getMemrefsToRetain(block, op->getSuccessor(0), forwardedOperands,
                            toRetain);
 
-  auto deallocOp = bufferization::DeallocOp::create(builder,
-      op.getLoc(), memrefs, conditions, toRetain);
+  auto deallocOp = bufferization::DeallocOp::create(
+      builder, op.getLoc(), memrefs, conditions, toRetain);
 
   // We want to replace the current ownership of the retained values with the
   // result values of the dealloc operation as they are always unique.
@@ -885,12 +884,11 @@ BufferDeallocation::handleInterface(MemoryEffectOpInterface op) {
       builder.setInsertionPoint(op);
       Ownership ownership = state.getOwnership(operand, block);
       if (ownership.isUnique()) {
-        Value ownershipInverted = arith::XOrIOp::create(builder,
-            op.getLoc(), ownership.getIndicator(),
+        Value ownershipInverted = arith::XOrIOp::create(
+            builder, op.getLoc(), ownership.getIndicator(),
             buildBoolValue(builder, op.getLoc(), true));
-        cf::AssertOp::create(builder,
-            op.getLoc(), ownershipInverted,
-            "expected that the block does not have ownership");
+        cf::AssertOp::create(builder, op.getLoc(), ownershipInverted,
+                             "expected that the block does not have ownership");
       }
     }
   }

@@ -341,8 +341,8 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
       inBoundsVal[i] = (sourceShape[i] == inputVectorSizes[i]) &&
                        ShapedType::isStatic(sourceShape[i]);
   }
-  auto transferReadOp = vector::TransferReadOp::create(builder,
-      loc,
+  auto transferReadOp = vector::TransferReadOp::create(
+      builder, loc,
       /*vectorType=*/vectorType,
       /*source=*/source,
       /*indices=*/SmallVector<Value>(readRank, zero),

@@ -92,21 +92,22 @@ struct BreakDownSubgroupReduce final : OpRewritePattern<gpu::SubgroupReduceOp> {
         extracted =
             vector::ExtractOp::create(rewriter, loc, op.getValue(), startIdx);
       } else {
-        extracted = vector::ExtractStridedSliceOp::create(rewriter,
-            loc, op.getValue(), /*offsets=*/startIdx, /*sizes=*/numElems,
+        extracted = vector::ExtractStridedSliceOp::create(
+            rewriter, loc, op.getValue(), /*offsets=*/startIdx,
+            /*sizes=*/numElems,
             /*strides=*/1);
       }
 
-      Value reduce = gpu::SubgroupReduceOp::create(rewriter,
-          loc, extracted, op.getOp(), op.getUniform(), op.getClusterSize(),
-          op.getClusterStride());
+      Value reduce = gpu::SubgroupReduceOp::create(
+          rewriter, loc, extracted, op.getOp(), op.getUniform(),
+          op.getClusterSize(), op.getClusterStride());
       if (numElems == 1) {
         res = vector::InsertOp::create(rewriter, loc, reduce, res, startIdx);
         continue;
       }
 
-      res = vector::InsertStridedSliceOp::create(rewriter,
-          loc, reduce, res, /*offsets=*/startIdx, /*strides=*/1);
+      res = vector::InsertStridedSliceOp::create(
+          rewriter, loc, reduce, res, /*offsets=*/startIdx, /*strides=*/1);
     }
 
     rewriter.replaceOp(op, res);
@@ -138,10 +139,11 @@ struct ScalarizeSingleElementReduce final
     assert(vecTy.getRank() == 1 && "Unexpected vector type");
     assert(!vecTy.isScalable() && "Unexpected vector type");
     Location loc = op.getLoc();
-    Value extracted = vector::ExtractOp::create(rewriter, loc, op.getValue(), 0);
-    Value reduce = gpu::SubgroupReduceOp::create(rewriter,
-        loc, extracted, op.getOp(), op.getUniform(), op.getClusterSize(),
-        op.getClusterStride());
+    Value extracted =
+        vector::ExtractOp::create(rewriter, loc, op.getValue(), 0);
+    Value reduce = gpu::SubgroupReduceOp::create(
+        rewriter, loc, extracted, op.getOp(), op.getUniform(),
+        op.getClusterSize(), op.getClusterStride());
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(op, vecTy, reduce);
     return success();
   }
@@ -326,10 +328,10 @@ struct VectorSubgroupReduceToShuffles final
         static_cast<int64_t>(elementsPerShuffle), vecTy.getElementType());
     Value extendedInput = op.getValue();
     if (vecBitwidth < shuffleBitwidth) {
-      auto zero = arith::ConstantOp::create(rewriter,
-          loc, rewriter.getZeroAttr(extendedVecTy));
-      extendedInput = vector::InsertStridedSliceOp::create(rewriter,
-          loc, extendedInput, zero, /*offsets=*/0, /*strides=*/1);
+      auto zero = arith::ConstantOp::create(
+          rewriter, loc, rewriter.getZeroAttr(extendedVecTy));
+      extendedInput = vector::InsertStridedSliceOp::create(
+          rewriter, loc, extendedInput, zero, /*offsets=*/0, /*strides=*/1);
     }
 
     auto shuffleIntType = rewriter.getIntegerType(shuffleBitwidth);
@@ -351,8 +353,8 @@ struct VectorSubgroupReduceToShuffles final
         rewriter, loc, extendedInput, op.getOp(), *ci, packFn, unpackFn);
 
     if (vecBitwidth < shuffleBitwidth) {
-      res = vector::ExtractStridedSliceOp::create(rewriter,
-          loc, res, /*offsets=*/0, /*sizes=*/vecTy.getNumElements(),
+      res = vector::ExtractStridedSliceOp::create(
+          rewriter, loc, res, /*offsets=*/0, /*sizes=*/vecTy.getNumElements(),
           /*strides=*/1);
     }
 
@@ -378,8 +380,8 @@ createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp op,
   const bool boundCtrl = true;
   if (ci.clusterSize >= 2) {
     // Perform reduction between all lanes N <-> N+1.
-    dpp = amdgpu::DPPOp::create(rewriter,
-        loc, res.getType(), res, res, amdgpu::DPPPerm::quad_perm,
+    dpp = amdgpu::DPPOp::create(
+        rewriter, loc, res.getType(), res, res, amdgpu::DPPPerm::quad_perm,
         rewriter.getI32ArrayAttr({1, 0, 3, 2}), allRows, allBanks, boundCtrl);
     res = vector::makeArithReduction(rewriter, loc,
                                      gpu::convertReductionKind(mode), res, dpp);
@@ -387,8 +389,8 @@ createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp op,
 
   if (ci.clusterSize >= 4) {
     // Perform reduction between all lanes N <-> N+2.
-    dpp = amdgpu::DPPOp::create(rewriter,
-        loc, res.getType(), res, res, amdgpu::DPPPerm::quad_perm,
+    dpp = amdgpu::DPPOp::create(
+        rewriter, loc, res.getType(), res, res, amdgpu::DPPPerm::quad_perm,
         rewriter.getI32ArrayAttr({2, 3, 0, 1}), allRows, allBanks, boundCtrl);
     res = vector::makeArithReduction(rewriter, loc,
                                      gpu::convertReductionKind(mode), res, dpp);
@@ -396,17 +398,18 @@ createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp op,
   if (ci.clusterSize >= 8) {
     // Perform reduction between all lanes N <-> 7-N,
     // e.g lane[0] <-> lane[7], lane[1] <-> lane[6]..., lane[3] <-> lane[4].
-    dpp = amdgpu::DPPOp::create(rewriter,
-        loc, res.getType(), res, res, amdgpu::DPPPerm::row_half_mirror,
-        rewriter.getUnitAttr(), allRows, allBanks, boundCtrl);
+    dpp = amdgpu::DPPOp::create(rewriter, loc, res.getType(), res, res,
+                                amdgpu::DPPPerm::row_half_mirror,
+                                rewriter.getUnitAttr(), allRows, allBanks,
+                                boundCtrl);
     res = vector::makeArithReduction(rewriter, loc,
                                      gpu::convertReductionKind(mode), res, dpp);
   }
   if (ci.clusterSize >= 16) {
     // Perform reduction between all lanes N <-> 15-N,
     // e.g lane[0] <-> lane[15], lane[1] <-> lane[14]..., lane[7] <-> lane[8].
-    dpp = amdgpu::DPPOp::create(rewriter,
-        loc, res.getType(), res, res, amdgpu::DPPPerm::row_mirror,
+    dpp = amdgpu::DPPOp::create(
+        rewriter, loc, res.getType(), res, res, amdgpu::DPPPerm::row_mirror,
         rewriter.getUnitAttr(), allRows, allBanks, boundCtrl);
     res = vector::makeArithReduction(rewriter, loc,
                                      gpu::convertReductionKind(mode), res, dpp);
@@ -415,20 +418,20 @@ createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp op,
     if (chipset.majorVersion <= 9) {
       // Broadcast last value from each row to next row.
       // Use row mask to avoid polluting rows 1 and 3.
-      dpp = amdgpu::DPPOp::create(rewriter,
-          loc, res.getType(), res, res, amdgpu::DPPPerm::row_bcast_15,
-          rewriter.getUnitAttr(), 0xa, allBanks,
-          /*bound_ctrl*/ false);
+      dpp = amdgpu::DPPOp::create(rewriter, loc, res.getType(), res, res,
+                                  amdgpu::DPPPerm::row_bcast_15,
+                                  rewriter.getUnitAttr(), 0xa, allBanks,
+                                  /*bound_ctrl*/ false);
       res = vector::makeArithReduction(
           rewriter, loc, gpu::convertReductionKind(mode), res, dpp);
     } else if (chipset.majorVersion <= 12) {
       // Use a permute lane to cross rows (row 1 <-> row 0, row 3 <-> row 2).
-      Value uint32Max = arith::ConstantOp::create(rewriter,
-          loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(-1));
+      Value uint32Max = arith::ConstantOp::create(
+          rewriter, loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(-1));
       dpp = ROCDL::PermlaneX16Op::create(rewriter, loc, res.getType(), res, res,
-                                                  uint32Max, uint32Max,
-                                                  /*fi=*/true,
-                                                  /*bound_ctrl=*/false);
+                                         uint32Max, uint32Max,
+                                         /*fi=*/true,
+                                         /*bound_ctrl=*/false);
       res = vector::makeArithReduction(
           rewriter, loc, gpu::convertReductionKind(mode), res, dpp);
     } else {
@@ -437,33 +440,35 @@ createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp op,
               "this device.");
     }
     if (ci.subgroupSize == 32) {
-      Value lane31 = arith::ConstantOp::create(rewriter,
-          loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(31));
-      res = ROCDL::ReadlaneOp::create(rewriter, loc, res.getType(), res, lane31);
+      Value lane31 = arith::ConstantOp::create(
+          rewriter, loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(31));
+      res =
+          ROCDL::ReadlaneOp::create(rewriter, loc, res.getType(), res, lane31);
     }
   }
   if (ci.clusterSize >= 64) {
     if (chipset.majorVersion <= 9) {
       // Broadcast 31st lane value to rows 2 and 3.
-      dpp = amdgpu::DPPOp::create(rewriter,
-          loc, res.getType(), res, res, amdgpu::DPPPerm::row_bcast_31,
-          rewriter.getUnitAttr(), 0xf, allBanks,
-          /*bound_ctrl*/ true);
+      dpp = amdgpu::DPPOp::create(rewriter, loc, res.getType(), res, res,
+                                  amdgpu::DPPPerm::row_bcast_31,
+                                  rewriter.getUnitAttr(), 0xf, allBanks,
+                                  /*bound_ctrl*/ true);
       res = vector::makeArithReduction(
           rewriter, loc, gpu::convertReductionKind(mode), dpp, res);
       // Obtain reduction from last rows, the previous rows are polluted.
-      Value lane63 = arith::ConstantOp::create(rewriter,
-          loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(63));
-      res = ROCDL::ReadlaneOp::create(rewriter, loc, res.getType(), res, lane63);
+      Value lane63 = arith::ConstantOp::create(
+          rewriter, loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(63));
+      res =
+          ROCDL::ReadlaneOp::create(rewriter, loc, res.getType(), res, lane63);
 
     } else if (chipset.majorVersion <= 12) {
       // Assume reduction across 32 lanes has been done.
       // Perform final reduction manually by summing values in lane 0 and
       // lane 32.
-      Value lane31 = arith::ConstantOp::create(rewriter,
-          loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(31));
-      Value lane63 = arith::ConstantOp::create(rewriter,
-          loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(63));
+      Value lane31 = arith::ConstantOp::create(
+          rewriter, loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(31));
+      Value lane63 = arith::ConstantOp::create(
+          rewriter, loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(63));
       lane31 =
           ROCDL::ReadlaneOp::create(rewriter, loc, res.getType(), res, lane31);
       lane63 =

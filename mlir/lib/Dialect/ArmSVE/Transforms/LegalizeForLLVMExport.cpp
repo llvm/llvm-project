@@ -87,8 +87,8 @@ struct SvboolConversionOpLowering : public ConvertOpToLLVMPattern<Op> {
     VectorType sourceType = source.getType();
     VectorType resultType = convertOp.getResult().getType();
 
-    Value result = arith::ConstantOp::create(rewriter,
-        loc, resultType, rewriter.getZeroAttr(resultType));
+    Value result = arith::ConstantOp::create(rewriter, loc, resultType,
+                                             rewriter.getZeroAttr(resultType));
 
     // We want to iterate over the input vector in steps of the trailing
     // dimension. So this creates tile shape where all leading dimensions are 1,
@@ -100,15 +100,15 @@ struct SvboolConversionOpLowering : public ConvertOpToLLVMPattern<Op> {
     for (SmallVector<int64_t> index :
          StaticTileOffsetRange(sourceType.getShape(), tileShape)) {
       auto extractOrInsertPosition = ArrayRef(index).drop_back();
-      auto sourceVector = vector::ExtractOp::create(rewriter,
-          loc, source, extractOrInsertPosition);
+      auto sourceVector = vector::ExtractOp::create(rewriter, loc, source,
+                                                    extractOrInsertPosition);
       VectorType convertedType =
           VectorType::Builder(llvm::cast<VectorType>(sourceVector.getType()))
               .setDim(0, resultType.getShape().back());
       auto convertedVector =
           IntrOp::create(rewriter, loc, TypeRange{convertedType}, sourceVector);
       result = vector::InsertOp::create(rewriter, loc, convertedVector, result,
-                                                 extractOrInsertPosition);
+                                        extractOrInsertPosition);
     }
 
     rewriter.replaceOp(convertOp, result);
@@ -136,11 +136,11 @@ struct PselOpLowering : public ConvertOpToLLVMPattern<PselOp> {
     auto svboolType = VectorType::get(16, rewriter.getI1Type(), true);
     auto loc = pselOp.getLoc();
     auto svboolP1 = ConvertToSvboolIntrOp::create(rewriter, loc, svboolType,
-                                                           adaptor.getP1());
-    auto indexI32 = arith::IndexCastOp::create(rewriter,
-        loc, rewriter.getI32Type(), pselOp.getIndex());
+                                                  adaptor.getP1());
+    auto indexI32 = arith::IndexCastOp::create(
+        rewriter, loc, rewriter.getI32Type(), pselOp.getIndex());
     auto pselIntr = PselIntrOp::create(rewriter, loc, svboolType, svboolP1,
-                                                pselOp.getP2(), indexI32);
+                                       pselOp.getP2(), indexI32);
     rewriter.replaceOpWithNewOp<ConvertFromSvboolIntrOp>(
         pselOp, adaptor.getP1().getType(), pselIntr);
     return success();

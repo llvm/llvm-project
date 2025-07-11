@@ -277,7 +277,7 @@ void NormalizeMemRefs::updateFunctionSignature(func::FuncOp funcOp,
       continue;
     Operation *newCallOp =
         func::CallOp::create(builder, userOp->getLoc(), callOp.getCalleeAttr(),
-                                     resultTypes, userOp->getOperands());
+                             resultTypes, userOp->getOperands());
     bool replacingMemRefUsesFailed = false;
     bool returnTypeChanged = false;
     for (unsigned resIndex : llvm::seq<unsigned>(0, userOp->getNumResults())) {

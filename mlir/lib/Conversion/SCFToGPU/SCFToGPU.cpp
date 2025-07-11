@@ -85,7 +85,7 @@ static Operation::operand_range getUpperBoundOperands(AffineForOp forOp) {
 // materialize a corresponding constant using builder.
 static Value getOrCreateStep(AffineForOp forOp, OpBuilder &builder) {
   return arith::ConstantIndexOp::create(builder, forOp.getLoc(),
-                                                forOp.getStepAsInt());
+                                        forOp.getStepAsInt());
 }
 
 // Get a Value for the loop lower bound.  If the value requires computation,
@@ -191,11 +191,11 @@ AffineLoopToGpuConverter::collectBounds(AffineForOp forOp, unsigned numLoops) {
     }
 
     Value range = arith::SubIOp::create(builder, currentLoop.getLoc(),
-                                                upperBound, lowerBound);
+                                        upperBound, lowerBound);
     Value step = getOrCreateStep(currentLoop, builder);
     if (getConstantIntValue(step) != static_cast<int64_t>(1))
-      range =
-          arith::CeilDivSIOp::create(builder, currentLoop.getLoc(), range, step);
+      range = arith::CeilDivSIOp::create(builder, currentLoop.getLoc(), range,
+                                         step);
     dims.push_back(range);
 
     lbs.push_back(lowerBound);
@@ -232,9 +232,9 @@ void AffineLoopToGpuConverter::createLaunch(AffineForOp rootForOp,
 
   // Create a launch op and move the body region of the innermost loop to the
   // launch op.
-  auto launchOp = gpu::LaunchOp::create(builder,
-      rootForOp.getLoc(), gridSizeX, gridSizeY, gridSizeZ, blockSizeX,
-      blockSizeY, blockSizeZ);
+  auto launchOp =
+      gpu::LaunchOp::create(builder, rootForOp.getLoc(), gridSizeX, gridSizeY,
+                            gridSizeZ, blockSizeX, blockSizeY, blockSizeZ);
 
   // Replace the loop terminator (loops contain only a single block) with the
   // gpu terminator and move the operations from the loop body block to the gpu
@@ -320,7 +320,7 @@ static Value deriveStaticUpperBound(Value upperBound,
     for (const AffineExpr &result : minOp.getMap().getResults()) {
       if (auto constExpr = dyn_cast<AffineConstantExpr>(result)) {
         return arith::ConstantIndexOp::create(rewriter, minOp.getLoc(),
-                                                       constExpr.getValue());
+                                              constExpr.getValue());
       }
     }
   }
@@ -344,8 +344,8 @@ static Value deriveStaticUpperBound(Value upperBound,
         if ((lhs.value() < 0) != (rhs.value() < 0))
           return {};
 
-        return arith::ConstantIndexOp::create(rewriter,
-            multiplyOp.getLoc(), lhs.value() * rhs.value());
+        return arith::ConstantIndexOp::create(rewriter, multiplyOp.getLoc(),
+                                              lhs.value() * rhs.value());
       }
   }
 
@@ -423,7 +423,7 @@ static LogicalResult processParallelLoop(
       return val;
     if (auto constOp = val.getDefiningOp<arith::ConstantOp>())
       return arith::ConstantOp::create(rewriter, constOp.getLoc(),
-                                                constOp.getValue());
+                                       constOp.getValue());
     return {};
   };
 
@@ -453,8 +453,8 @@ static LogicalResult processParallelLoop(
           1, 2,
           rewriter.getAffineDimExpr(0) * rewriter.getAffineSymbolExpr(0) +
               rewriter.getAffineSymbolExpr(1));
-      newIndex = AffineApplyOp::create(rewriter,
-          loc, annotation.getMap().compose(lowerAndStep),
+      newIndex = AffineApplyOp::create(
+          rewriter, loc, annotation.getMap().compose(lowerAndStep),
           ValueRange{operand, ensureLaunchIndependent(step),
                      ensureLaunchIndependent(lowerBound)});
       // If there was also a bound, insert that, too.
@@ -498,8 +498,8 @@ static LogicalResult processParallelLoop(
               1, 2,
               ((rewriter.getAffineDimExpr(0) - rewriter.getAffineSymbolExpr(0))
                    .ceilDiv(rewriter.getAffineSymbolExpr(1))));
-          Value launchBound = AffineApplyOp::create(rewriter,
-              loc, annotation.getBound().compose(stepMap),
+          Value launchBound = AffineApplyOp::create(
+              rewriter, loc, annotation.getBound().compose(stepMap),
               ValueRange{
                   ensureLaunchIndependent(
                       cloningMap.lookupOrDefault(upperBound)),
@@ -517,8 +517,8 @@ static LogicalResult processParallelLoop(
         if (!boundIsPrecise) {
           // We are using an approximation, create a surrounding conditional.
           Value originalBound = std::get<3>(config);
-          arith::CmpIOp pred = arith::CmpIOp::create(rewriter,
-              loc, arith::CmpIPredicate::slt, newIndex,
+          arith::CmpIOp pred = arith::CmpIOp::create(
+              rewriter, loc, arith::CmpIPredicate::slt, newIndex,
               cloningMap.lookupOrDefault(originalBound));
           scf::IfOp ifOp = scf::IfOp::create(rewriter, loc, pred, false);
           rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
@@ -530,10 +530,10 @@ static LogicalResult processParallelLoop(
       }
     } else {
       // Create a sequential for loop.
-      auto loopOp = scf::ForOp::create(rewriter,
-          loc, cloningMap.lookupOrDefault(lowerBound),
-          cloningMap.lookupOrDefault(upperBound),
-          cloningMap.lookupOrDefault(step));
+      auto loopOp = scf::ForOp::create(rewriter, loc,
+                                       cloningMap.lookupOrDefault(lowerBound),
+                                       cloningMap.lookupOrDefault(upperBound),
+                                       cloningMap.lookupOrDefault(step));
       newIndex = loopOp.getInductionVar();
       rewriter.setInsertionPointToStart(loopOp.getBody());
       // Put a sentinel into the worklist so we know when to pop out of the loop
@@ -609,9 +609,9 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
   Location loc = parallelOp.getLoc();
   Value constantOne =
       arith::ConstantIndexOp::create(rewriter, parallelOp.getLoc(), 1);
-  gpu::LaunchOp launchOp = gpu::LaunchOp::create(rewriter,
-      parallelOp.getLoc(), constantOne, constantOne, constantOne, constantOne,
-      constantOne, constantOne);
+  gpu::LaunchOp launchOp = gpu::LaunchOp::create(
+      rewriter, parallelOp.getLoc(), constantOne, constantOne, constantOne,
+      constantOne, constantOne, constantOne);
   rewriter.setInsertionPointToEnd(&launchOp.getBody().front());
   gpu::TerminatorOp::create(rewriter, loc);
   rewriter.setInsertionPointToStart(&launchOp.getBody().front());

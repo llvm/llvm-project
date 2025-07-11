@@ -59,8 +59,8 @@ struct ConvertIndexCeilDivS : mlir::ConvertOpToLLVMPattern<CeilDivSOp> {
     // non-zero, i.e. `(n > 0) == (m > 0) && n != 0`.
     Value nPos =
         LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::sgt, n, zero);
-    Value sameSign =
-        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::eq, nPos, mPos);
+    Value sameSign = LLVM::ICmpOp::create(rewriter, loc,
+                                          LLVM::ICmpPredicate::eq, nPos, mPos);
     Value nNonZero =
         LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::ne, n, zero);
     Value cmp = LLVM::AndOp::create(rewriter, loc, sameSign, nNonZero);
@@ -135,8 +135,8 @@ struct ConvertIndexFloorDivS : mlir::ConvertOpToLLVMPattern<FloorDivSOp> {
     // non-zero, i.e. `(n < 0) != (m < 0) && n != 0`.
     Value nNeg =
         LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::slt, n, zero);
-    Value diffSign =
-        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::ne, nNeg, mNeg);
+    Value diffSign = LLVM::ICmpOp::create(rewriter, loc,
+                                          LLVM::ICmpPredicate::ne, nNeg, mNeg);
     Value nNonZero =
         LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::ne, n, zero);
     Value cmp = LLVM::AndOp::create(rewriter, loc, diffSign, nNonZero);

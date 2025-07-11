@@ -54,9 +54,9 @@ static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
 
   Value padValue = arith::ConstantOp::create(rewriter, loc, padAttr);
 
-  return tensor::PadOp::create(rewriter,
-      loc, RankedTensorType::get(paddedShape, inputETy), input, lowIndices,
-      highIndices, padValue);
+  return tensor::PadOp::create(rewriter, loc,
+                               RankedTensorType::get(paddedShape, inputETy),
+                               input, lowIndices, highIndices, padValue);
 }
 
 static mlir::Value
@@ -160,8 +160,8 @@ static mlir::Value getConvOrPoolOutputDim(Location loc, Value inputDim,
                                           int64_t dilationAttr,
                                           OpBuilder &rewriter) {
   ImplicitLocOpBuilder builder(loc, rewriter);
-  auto one = arith::ConstantOp::create(rewriter,
-      loc, IntegerAttr::get(inputDim.getType(), 1));
+  auto one = arith::ConstantOp::create(rewriter, loc,
+                                       IntegerAttr::get(inputDim.getType(), 1));
   Value padBefore = reifyConstantDim(padBeforeAttr, builder);
   Value paddedBefore = arith::AddIOp::create(builder, inputDim, padBefore);
   Value padAfter = reifyConstantDim(padAfterAttr, builder);
@@ -351,7 +351,7 @@ public:
         Type newWeightTy =
             RankedTensorType::get(newWeightShape, weightTy.getElementType());
         weight = tosa::TransposeOp::create(rewriter, loc, newWeightTy, weight,
-                                                    weightPermAttr);
+                                           weightPermAttr);
       }
     }
 
@@ -373,7 +373,7 @@ public:
       Type newWeightTy =
           RankedTensorType::get(newWeightShape, weightTy.getElementType());
       weight = tosa::TransposeOp::create(rewriter, loc, newWeightTy, weight,
-                                                  weightPermAttr);
+                                         weightPermAttr);
     }
 
     // Extract the attributes for convolution.
@@ -384,8 +384,8 @@ public:
     auto strideAttr = rewriter.getI64TensorAttr(stride);
     auto dilationAttr = rewriter.getI64TensorAttr(dilation);
 
-    Value biasEmptyTensor = tensor::EmptyOp::create(rewriter,
-        loc, resultTy.getShape(), accETy, filteredDims);
+    Value biasEmptyTensor = tensor::EmptyOp::create(
+        rewriter, loc, resultTy.getShape(), accETy, filteredDims);
 
     Value broadcastBias =
         linalgBroadcastAndMaybeExt(rewriter, loc, bias, biasEmptyTensor);
@@ -526,16 +526,16 @@ public:
                               accETy);
 
     auto resultZeroAttr = rewriter.getZeroAttr(accETy);
-    Value emptyTensor = tensor::EmptyOp::create(rewriter,
-        loc, linalgConvTy.getShape(), accETy, filteredDims);
+    Value emptyTensor = tensor::EmptyOp::create(
+        rewriter, loc, linalgConvTy.getShape(), accETy, filteredDims);
     Value zero = arith::ConstantOp::create(rewriter, loc, resultZeroAttr);
     Value zeroTensor = rewriter
                            .create<linalg::FillOp>(loc, ValueRange{zero},
                                                    ValueRange{emptyTensor})
                            .result();
 
-    Value biasEmptyTensor = tensor::EmptyOp::create(rewriter,
-        loc, resultTy.getShape(), resultETy, filteredDims);
+    Value biasEmptyTensor = tensor::EmptyOp::create(
+        rewriter, loc, resultTy.getShape(), resultETy, filteredDims);
 
     // Broadcast the initial value to the output tensor before convolving.
     SmallVector<AffineMap, 4> indexingMaps;
@@ -553,16 +553,16 @@ public:
       // We may need to truncate back to the result type if the accumulator was
       // wider than the result.
       if (accETy != resultETy)
-        conv = tosa::CastOp::create(rewriter,
-            loc,
+        conv = tosa::CastOp::create(
+            rewriter, loc,
             RankedTensorType::get(cast<ShapedType>(conv.getType()).getShape(),
                                   resultETy),
             conv);
 
       SmallVector<ReassociationExprs, 4> reassociationMap;
       createDepthwiseConvCollapseMap(resultRank, reassociationMap, rewriter);
-      Value convReshape = tensor::CollapseShapeOp::create(rewriter,
-          loc, resultTy, conv, reassociationMap);
+      Value convReshape = tensor::CollapseShapeOp::create(
+          rewriter, loc, resultTy, conv, reassociationMap);
 
       Value result =
           rewriter
@@ -575,10 +575,10 @@ public:
                     Value added;
                     if (llvm::isa<FloatType>(inputETy))
                       added = arith::AddFOp::create(nestedBuilder, loc, args[0],
-                                                                  args[1]);
+                                                    args[1]);
                     else
                       added = arith::AddIOp::create(nestedBuilder, loc, args[0],
-                                                                  args[1]);
+                                                    args[1]);
                     linalg::YieldOp::create(nestedBuilder, nestedLoc, added);
                   })
               .getResult(0);
@@ -596,8 +596,8 @@ public:
               .getResult(0);
       SmallVector<ReassociationExprs, 4> reassociationMap;
       createDepthwiseConvCollapseMap(resultRank, reassociationMap, rewriter);
-      Value convReshape = tensor::CollapseShapeOp::create(rewriter,
-          loc, resultTy, conv, reassociationMap);
+      Value convReshape = tensor::CollapseShapeOp::create(
+          rewriter, loc, resultTy, conv, reassociationMap);
       Value result = linalgIntBroadcastExtSIAdd(
           rewriter, loc, bias, convReshape, biasEmptyTensor, indexingMaps);
       rewriter.replaceOp(op, result);
@@ -636,8 +636,9 @@ public:
 
     auto zeroAttr = rewriter.getZeroAttr(outputElementTy);
     Value zero = arith::ConstantOp::create(rewriter, loc, zeroAttr);
-    auto emptyTensor = tensor::EmptyOp::create(rewriter,
-        loc, outputTy.getShape(), outputTy.getElementType(), filteredDims);
+    auto emptyTensor =
+        tensor::EmptyOp::create(rewriter, loc, outputTy.getShape(),
+                                outputTy.getElementType(), filteredDims);
     Value zeroTensor = rewriter
                            .create<linalg::FillOp>(loc, ValueRange{zero},
                                                    ValueRange{emptyTensor})
@@ -670,10 +671,10 @@ public:
       return success();
     }
 
-    auto aZp = arith::ConstantOp::create(rewriter,
-        loc, rewriter.getI32IntegerAttr(aZpVal));
-    auto bZp = arith::ConstantOp::create(rewriter,
-        loc, rewriter.getI32IntegerAttr(bZpVal));
+    auto aZp = arith::ConstantOp::create(rewriter, loc,
+                                         rewriter.getI32IntegerAttr(aZpVal));
+    auto bZp = arith::ConstantOp::create(rewriter, loc,
+                                         rewriter.getI32IntegerAttr(bZpVal));
     rewriter.replaceOpWithNewOp<linalg::QuantizedBatchMatmulOp>(
         op, TypeRange{op.getType()},
         ValueRange{adaptor.getA(), adaptor.getB(), aZp, bZp}, zeroTensor);
@@ -785,8 +786,9 @@ public:
     Attribute dilationAttr = rewriter.getI64VectorAttr({1, 1});
 
     // Create the linalg op that performs pooling.
-    Value emptyTensor = tensor::EmptyOp::create(rewriter,
-        loc, resultTy.getShape(), resultTy.getElementType(), dynamicDims);
+    Value emptyTensor =
+        tensor::EmptyOp::create(rewriter, loc, resultTy.getShape(),
+                                resultTy.getElementType(), dynamicDims);
 
     Value filledEmptyTensor =
         linalg::FillOp::create(rewriter, loc, initialValue, emptyTensor)
@@ -802,8 +804,8 @@ public:
       return llvm::success();
     }
 
-    auto resultOp = linalg::PoolingNhwcMaxOp::create(rewriter,
-        op->getLoc(), ArrayRef<Type>{resultTy},
+    auto resultOp = linalg::PoolingNhwcMaxOp::create(
+        rewriter, op->getLoc(), ArrayRef<Type>{resultTy},
         ValueRange{paddedInput, fakeWindowDims}, filledEmptyTensor, strideAttr,
         dilationAttr);
 
@@ -823,9 +825,10 @@ public:
     // it to include the appropriate checks. If the current value is NaN the
     // old value of pool will be taken otherwise we use the result.
     if (nanMode == "IGNORE") {
-      auto genericOp = linalg::GenericOp::create(rewriter,
-          loc, resultOp.getType(0), resultOp.getInputs(), resultOp.getOutputs(),
-          resultOp.getIndexingMapsArray(), resultOp.getIteratorTypesArray(),
+      auto genericOp = linalg::GenericOp::create(
+          rewriter, loc, resultOp.getType(0), resultOp.getInputs(),
+          resultOp.getOutputs(), resultOp.getIndexingMapsArray(),
+          resultOp.getIteratorTypesArray(),
           [&](OpBuilder &opBuilder, Location loc, ValueRange blockArgs) {
             IRMapping map;
             auto oldBlock = resultOp.getRegion().begin();
@@ -833,11 +836,11 @@ public:
             auto &oldMaxOp = *resultOp.getBlock()->begin();
             map.map(oldArgs, blockArgs);
             auto *newOp = opBuilder.clone(oldMaxOp, map);
-            Value isNaN = arith::CmpFOp::create(opBuilder,
-                loc, arith::CmpFPredicate::UNO, blockArgs.front(),
-                blockArgs.front());
-            auto selectOp = arith::SelectOp::create(opBuilder,
-                loc, isNaN, blockArgs.back(), newOp->getResult(0));
+            Value isNaN =
+                arith::CmpFOp::create(opBuilder, loc, arith::CmpFPredicate::UNO,
+                                      blockArgs.front(), blockArgs.front());
+            auto selectOp = arith::SelectOp::create(
+                opBuilder, loc, isNaN, blockArgs.back(), newOp->getResult(0));
             linalg::YieldOp::create(opBuilder, loc, selectOp.getResult());
           });
       rewriter.replaceOp(resultOp, genericOp);
@@ -903,8 +906,8 @@ public:
     Attribute dilationAttr = rewriter.getI64VectorAttr({1, 1});
 
     // Create the linalg op that performs pooling.
-    Value poolEmptyTensor = tensor::EmptyOp::create(rewriter,
-        loc, accTy.getShape(), accETy, dynamicDims);
+    Value poolEmptyTensor = tensor::EmptyOp::create(
+        rewriter, loc, accTy.getShape(), accETy, dynamicDims);
 
     Value filledEmptyTensor =
         rewriter
@@ -932,12 +935,12 @@ public:
     iH = arith::SubIOp::create(rewriter, loc, iH, one);
     iW = arith::SubIOp::create(rewriter, loc, iW, one);
 
-    Value genericEmptyTensor = tensor::EmptyOp::create(rewriter,
-        loc, resultTy.getShape(), resultETy, dynamicDims);
+    Value genericEmptyTensor = tensor::EmptyOp::create(
+        rewriter, loc, resultTy.getShape(), resultETy, dynamicDims);
 
     auto affineMap = rewriter.getMultiDimIdentityMap(resultTy.getRank());
-    auto genericOp = linalg::GenericOp::create(rewriter,
-        loc, ArrayRef<Type>({resultTy}), ValueRange{poolingOp},
+    auto genericOp = linalg::GenericOp::create(
+        rewriter, loc, ArrayRef<Type>({resultTy}), ValueRange{poolingOp},
         ValueRange{genericEmptyTensor},
         ArrayRef<AffineMap>({affineMap, affineMap}),
         getNParallelLoopsAttrs(resultTy.getRank()),
@@ -981,8 +984,8 @@ public:
           Value kW3 = coverageFn(2, iW);
 
           // Compute the total number of elements and normalize.
-          auto count = arith::IndexCastOp::create(rewriter,
-              loc, rewriter.getI32Type(),
+          auto count = arith::IndexCastOp::create(
+              rewriter, loc, rewriter.getI32Type(),
               arith::MulIOp::create(rewriter, loc, kH3, kW3));
 
           // Divide by the number of summed values. For floats this is just
@@ -1002,8 +1005,8 @@ public:
             // If we have quantization information we need to apply an offset
             // for the input zp value.
             if (inputZpVal != 0) {
-              auto inputZp = arith::ConstantOp::create(rewriter,
-                  loc, b.getIntegerAttr(accETy, inputZpVal));
+              auto inputZp = arith::ConstantOp::create(
+                  rewriter, loc, b.getIntegerAttr(accETy, inputZpVal));
               Value offset =
                   arith::MulIOp::create(rewriter, loc, accETy, count, inputZp);
               poolVal =
@@ -1011,10 +1014,10 @@ public:
             }
 
             // Compute: k = 32 - count_leading_zeros(value - 1)
-            Value one32 = arith::ConstantOp::create(rewriter,
-                loc, rewriter.getI32IntegerAttr(1));
-            Value thirtyTwo32 = arith::ConstantOp::create(rewriter,
-                loc, rewriter.getI32IntegerAttr(32));
+            Value one32 = arith::ConstantOp::create(
+                rewriter, loc, rewriter.getI32IntegerAttr(1));
+            Value thirtyTwo32 = arith::ConstantOp::create(
+                rewriter, loc, rewriter.getI32IntegerAttr(32));
 
             Value countSubOne =
                 arith::SubIOp::create(rewriter, loc, count, one32);
@@ -1026,24 +1029,24 @@ public:
             // Compute: numerator = ((1 << 30) + 1) << k
             Value k64 =
                 arith::ExtUIOp::create(rewriter, loc, rewriter.getI64Type(), k);
-            Value thirtyShiftPlusOne = arith::ConstantOp::create(rewriter,
-                loc, rewriter.getI64IntegerAttr((1 << 30) + 1));
+            Value thirtyShiftPlusOne = arith::ConstantOp::create(
+                rewriter, loc, rewriter.getI64IntegerAttr((1 << 30) + 1));
             Value numerator =
                 arith::ShLIOp::create(rewriter, loc, thirtyShiftPlusOne, k64);
 
             // Compute: scale.multiplier = numerator / value;
-            Value count64 = arith::ExtUIOp::create(rewriter,
-                loc, rewriter.getI64Type(), count);
+            Value count64 = arith::ExtUIOp::create(
+                rewriter, loc, rewriter.getI64Type(), count);
             Value multiplier =
                 arith::DivUIOp::create(rewriter, loc, numerator, count64);
-            multiplier = arith::TruncIOp::create(rewriter,
-                loc, rewriter.getI32Type(), multiplier);
+            multiplier = arith::TruncIOp::create(
+                rewriter, loc, rewriter.getI32Type(), multiplier);
 
             // Compute: scale.shift = 30 + k
             Value k8 =
                 arith::TruncIOp::create(rewriter, loc, rewriter.getI8Type(), k);
-            Value thirty8 = arith::ConstantOp::create(rewriter,
-                loc, rewriter.getI8IntegerAttr(30));
+            Value thirty8 = arith::ConstantOp::create(
+                rewriter, loc, rewriter.getI8IntegerAttr(30));
             Value shift = arith::AddIOp::create(rewriter, loc, k8, thirty8);
 
             auto scaled =
@@ -1056,8 +1059,9 @@ public:
             // If we have quantization information we need to apply output
             // zeropoint.
             if (outputZpVal != 0) {
-              auto outputZp = arith::ConstantOp::create(rewriter,
-                  loc, b.getIntegerAttr(scaled.getType(), outputZpVal));
+              auto outputZp = arith::ConstantOp::create(
+                  rewriter, loc,
+                  b.getIntegerAttr(scaled.getType(), outputZpVal));
               scaled = arith::AddIOp::create(rewriter, loc, scaled, outputZp)
                            .getResult();
             }
@@ -1065,11 +1069,11 @@ public:
             // Apply Clip.
             int64_t outBitwidth = resultETy.getIntOrFloatBitWidth();
 
-            auto min = arith::ConstantIntOp::create(rewriter,
-                loc, accETy,
+            auto min = arith::ConstantIntOp::create(
+                rewriter, loc, accETy,
                 APInt::getSignedMinValue(outBitwidth).getSExtValue());
-            auto max = arith::ConstantIntOp::create(rewriter,
-                loc, accETy,
+            auto max = arith::ConstantIntOp::create(
+                rewriter, loc, accETy,
                 APInt::getSignedMaxValue(outBitwidth).getSExtValue());
             auto clamp = clampIntHelper(loc, scaled, min, max, rewriter,
                                         /*isUnsigned=*/false);
@@ -1107,8 +1111,9 @@ public:
     auto permutedSizes =
         applyTOSAPermutation<OpFoldResult>(inputSizes, constantPerms);
 
-    auto permutedInit = tensor::EmptyOp::create(rewriter,
-        loc, permutedSizes, op.getInput1().getType().getElementType());
+    auto permutedInit =
+        tensor::EmptyOp::create(rewriter, loc, permutedSizes,
+                                op.getInput1().getType().getElementType());
     rewriter.replaceOpWithNewOp<linalg::TransposeOp>(
         op, op.getInput1(), permutedInit,
         llvm::to_vector(llvm::map_range(

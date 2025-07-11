@@ -320,8 +320,8 @@ GenericOp makeMemRefCopyOp(OpBuilder &b, Location loc, Value from, Value to) {
       AffineMap::getMultiDimIdentityMap(memrefTypeTo.getRank(), b.getContext());
   SmallVector<utils::IteratorType> iteratorTypes(memrefTypeTo.getRank(),
                                                  utils::IteratorType::parallel);
-  return linalg::GenericOp::create(b,
-      loc,
+  return linalg::GenericOp::create(
+      b, loc,
       /*inputs=*/from,
       /*outputs=*/to,
       /*indexingMaps=*/llvm::ArrayRef({id, id}),
@@ -483,8 +483,8 @@ static void generateParallelLoopNest(
   case DistributionMethod::None: {
     // Generate a single parallel loop-nest operation for all outermost
     // parallel loops and recurse.
-    scf::ParallelOp::create(b,
-        loc, lbs.take_front(numProcessed), ubs.take_front(numProcessed),
+    scf::ParallelOp::create(
+        b, loc, lbs.take_front(numProcessed), ubs.take_front(numProcessed),
         steps.take_front(numProcessed),
         [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange localIvs) {
           ivStorage.append(localIvs.begin(), localIvs.end());
@@ -499,8 +499,8 @@ static void generateParallelLoopNest(
   case DistributionMethod::Cyclic: {
     // Generate a single parallel loop-nest operation for all outermost
     // parallel loops and recurse.
-    scf::ParallelOp::create(b,
-        loc, lbs.take_front(numProcessed), ubs.take_front(numProcessed),
+    scf::ParallelOp::create(
+        b, loc, lbs.take_front(numProcessed), ubs.take_front(numProcessed),
         steps.take_front(numProcessed),
         [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange localIvs) {
           ivStorage.append(localIvs.begin(), localIvs.end());
@@ -595,13 +595,13 @@ static Operation *materializeTiledShape(OpBuilder &builder, Location loc,
   auto shapedType = dyn_cast<ShapedType>(valueToTile.getType());
   auto *sliceOp = TypeSwitch<ShapedType, Operation *>(shapedType)
                       .Case([&](MemRefType) {
-                        return memref::SubViewOp::create(builder,
-                            loc, valueToTile, sliceParams.offsets,
+                        return memref::SubViewOp::create(
+                            builder, loc, valueToTile, sliceParams.offsets,
                             sliceParams.sizes, sliceParams.strides);
                       })
                       .Case([&](RankedTensorType) {
-                        return tensor::ExtractSliceOp::create(builder,
-                            loc, valueToTile, sliceParams.offsets,
+                        return tensor::ExtractSliceOp::create(
+                            builder, loc, valueToTile, sliceParams.offsets,
                             sliceParams.sizes, sliceParams.strides);
                       })
                       .Default([](ShapedType) -> Operation * {
@@ -793,8 +793,8 @@ SmallVector<Value> insertSlicesBack(OpBuilder &builder, Location loc,
     // `tiledOperands`.
     Value outputTensor = operands[opOperand.getOperandNumber()];
     if (auto sliceOp = outputTensor.getDefiningOp<tensor::ExtractSliceOp>()) {
-      Value inserted = tensor::InsertSliceOp::create(builder,
-          loc, sliceOp.getSource().getType(), results[resultIdx],
+      Value inserted = tensor::InsertSliceOp::create(
+          builder, loc, sliceOp.getSource().getType(), results[resultIdx],
           sliceOp.getSource(), sliceOp.getOffsets(), sliceOp.getSizes(),
           sliceOp.getStrides(), sliceOp.getStaticOffsets(),
           sliceOp.getStaticSizes(), sliceOp.getStaticStrides());

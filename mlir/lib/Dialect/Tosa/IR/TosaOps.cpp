@@ -180,12 +180,12 @@ Operation *TosaDialect::materializeConstant(OpBuilder &builder, Attribute value,
   // Tosa dialect constants only support ElementsAttr unlike standard dialect
   // constant which supports all attributes.
   if (llvm::isa<shapeType>(type) && llvm::isa<DenseIntElementsAttr>(value)) {
-    return tosa::ConstShapeOp::create(builder,
-        loc, type, llvm::cast<DenseIntElementsAttr>(value));
+    return tosa::ConstShapeOp::create(builder, loc, type,
+                                      llvm::cast<DenseIntElementsAttr>(value));
   }
   if (llvm::isa<ElementsAttr>(value))
     return tosa::ConstOp::create(builder, loc, type,
-                                         llvm::cast<ElementsAttr>(value));
+                                 llvm::cast<ElementsAttr>(value));
   return nullptr;
 }
 
