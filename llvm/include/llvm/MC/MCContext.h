@@ -178,6 +178,9 @@ private:
   /// SHT_LLVM_BB_ADDR_MAP version to emit.
   uint8_t BBAddrMapVersion = 3;
 
+  /// LLVM_FUNC_ADDR_MAP version to emit.
+  uint8_t FuncAddrMapVersion = 1;
+
   /// The file name of the log file from the environment variable
   /// AS_SECURE_LOG_FILE.  Which must be set before the .secure_log_unique
   /// directive is used or it is an error.
@@ -671,6 +674,8 @@ public:
   LLVM_ABI MCSubtargetInfo &getSubtargetCopy(const MCSubtargetInfo &STI);
 
   uint8_t getBBAddrMapVersion() const { return BBAddrMapVersion; }
+
+  uint8_t getFuncAddrMapVersion() const { return FuncAddrMapVersion; }
 
   /// @}
 

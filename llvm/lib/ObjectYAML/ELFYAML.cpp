@@ -721,6 +721,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
   ECase(SHT_LLVM_PART_EHDR);
   ECase(SHT_LLVM_PART_PHDR);
   ECase(SHT_LLVM_BB_ADDR_MAP);
+  ECase(SHT_LLVM_FUNC_ADDR_MAP);
   ECase(SHT_LLVM_OFFLOADING);
   ECase(SHT_LLVM_LTO);
   ECase(SHT_GNU_ATTRIBUTES);
@@ -1436,6 +1437,12 @@ static void sectionMapping(IO &IO, ELFYAML::RawContentSection &Section) {
   IO.mapOptional("Info", Section.Info);
 }
 
+static void sectionMapping(IO &IO, ELFYAML::FuncAddrMapSection &Section) {
+  commonSectionMapping(IO, Section);
+  IO.mapOptional("Content", Section.Content);
+  IO.mapOptional("Entries", Section.Entries);
+}
+
 static void sectionMapping(IO &IO, ELFYAML::BBAddrMapSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapOptional("Content", Section.Content);
@@ -1736,6 +1743,11 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
       Section.reset(new ELFYAML::BBAddrMapSection());
     sectionMapping(IO, *cast<ELFYAML::BBAddrMapSection>(Section.get()));
     break;
+  case ELF::SHT_LLVM_FUNC_ADDR_MAP:
+    if (!IO.outputting())
+      Section.reset(new ELFYAML::FuncAddrMapSection());
+    sectionMapping(IO, *cast<ELFYAML::FuncAddrMapSection>(Section.get()));
+    break;
   default:
     if (!IO.outputting()) {
       StringRef Name;
@@ -1857,6 +1869,15 @@ void MappingTraits<ELFYAML::StackSizeEntry>::mapping(
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapOptional("Address", E.Address, Hex64(0));
   IO.mapRequired("Size", E.Size);
+}
+
+void MappingTraits<ELFYAML::FuncAddrMapEntry>::mapping(
+    IO &IO, ELFYAML::FuncAddrMapEntry &E) {
+  assert(IO.getContext() && "The IO context is not initialized");
+  IO.mapRequired("Version", E.Version);
+  IO.mapOptional("Feature", E.Feature, Hex8(0));
+  IO.mapOptional("Address", E.Address, Hex64(0));
+  IO.mapOptional("DynInstCnt", E.DynamicInstCount, Hex64(0));
 }
 
 void MappingTraits<ELFYAML::BBAddrMapEntry>::mapping(

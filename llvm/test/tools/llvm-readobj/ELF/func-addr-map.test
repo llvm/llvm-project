@@ -1,0 +1,96 @@
+## This test checks how we handle the --func-addr-map option.
+
+## Check 64-bit:
+# RUN: yaml2obj --docnum=1 %s -DBITS=64 -DADDR=0x999999999 -o %t1.x64.o
+# RUN: llvm-readobj %t1.x64.o --func-addr-map 2>&1 | FileCheck %s -DADDR=0x999999999 -DFILE=%t1.x64.o --check-prefix=CHECK
+# RUN: llvm-readelf %t1.x64.o --func-addr-map | FileCheck %s --check-prefix=GNU
+
+## Check 32-bit:
+# RUN: yaml2obj --docnum=1 %s -DBITS=32 -o %t1.x32.o
+# RUN: llvm-readobj %t1.x32.o --func-addr-map 2>&1 | FileCheck -DADDR=0x11111 %s -DFILE=%t1.x32.o --check-prefix=CHECK
+# RUN: llvm-readelf %t1.x32.o --func-addr-map | FileCheck %s --check-prefix=GNU
+
+## Check that a malformed section can be handled.
+# RUN: yaml2obj --docnum=1 %s -DBITS=32 -DSIZE=3 -o %t2.o
+# RUN: llvm-readobj %t2.o --func-addr-map 2>&1 | FileCheck %s -DOFFSET=0x3 -DFILE=%t2.o --check-prefix=TRUNCATED
+
+# CHECK:      FuncAddrMap [
+# CHECK-NEXT:   Function {
+# CHECK-NEXT:     At: [[ADDR]]
+# CHECK-NEXT: warning: '[[FILE]]': could not identify function symbol for address ([[ADDR]]) in SHT_LLVM_FUNC_ADDR_MAP section with index 3
+# CHECK-NEXT:     Name: <?>
+# CHECK-NEXT:     DynamicInstCount: 10
+# CHECK-NEXT:  }
+# CHECK-NEXT:   Function {
+# CHECK-NEXT:     At: 0x22222
+# CHECK-NEXT:     Name: foo
+# CHECK-NEXT:     DynamicInstCount: 16
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
+# CHECK-NEXT: FuncAddrMap [
+# CHECK-NEXT:   Function {
+# CHECK-NEXT:     At: 0x33333
+# CHECK-NEXT:     Name: bar
+# CHECK-NEXT:     DynamicInstCount: 10
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
+
+# GNU: GNUStyle::printFuncAddrMaps not implemented
+
+# TRUNCATED:      FuncAddrMap [
+# TRUNCATED-NEXT:   warning: '[[FILE]]': unable to dump SHT_LLVM_FUNC_ADDR_MAP section with index 3: unexpected end of data at offset [[OFFSET]]
+# TRUNCATED-NEXT: ]
+## Check that the other valid section is properly dumped.
+# TRUNCATED-NEXT: FuncAddrMap [
+# TRUNCATED-NEXT:   Function {
+# TRUNCATED-NEXT:     At: 0x33333
+# TRUNCATED-NEXT:     Name: bar
+# TRUNCATED-NEXT:     DynamicInstCount: 10
+# TRUNCATED-NEXT:   }
+# TRUNCATED-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS[[BITS]]
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:   .text
+    Type:   SHT_PROGBITS
+    Flags:  [SHF_ALLOC]
+  - Name:   .text.bar
+    Type:   SHT_PROGBITS
+    Flags:  [SHF_ALLOC]
+  - Name:   .llvm_func_addr_map
+    Type:   SHT_LLVM_FUNC_ADDR_MAP
+    ShSize: [[SIZE=<none>]]
+    Link:   .text
+    Entries:
+      - Version: 1
+        Feature: 0x1
+        Address: [[ADDR=0x11111]]
+        DynInstCnt: 0xA
+      - Version: 1
+        Feature: 0x1
+        Address: 0x22222
+        DynInstCnt: 0x10
+  - Name: dummy_section
+    Type: SHT_PROGBITS
+    Size: 16
+  - Name: '.llvm_func_addr_map_2'
+    Type: SHT_LLVM_FUNC_ADDR_MAP
+    Link: .text.bar
+    Entries:
+      - Version: 1
+        Feature: 0x1
+        Address: 0x33333
+        DynInstCnt: 0xA
+Symbols:
+  - Name:    foo
+    Section: .text
+    Type:    STT_FUNC
+    Value:   0x22222
+  - Name:    bar
+    Section: .text.bar
+    Type:    STT_FUNC
+    Value:   0x33333
