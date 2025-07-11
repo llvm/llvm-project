@@ -218,6 +218,20 @@ struct EncodingIDAndOpcode {
 using EncodingIDsVec = std::vector<EncodingIDAndOpcode>;
 using NamespacesHwModesMap = std::map<std::string, std::set<StringRef>>;
 
+// A struct to represent the C++ type for the instruction payload.
+struct CPPType {
+  enum TypeKind { TemplateTy, UIntTy, APIntTy, BitsetTy } Kind;
+  unsigned Bitwidth; // 0 for TemplateTy.
+
+  CPPType(unsigned Bitwidth, bool IsVarLenInst);
+
+  // Returns the C++ type name for code generation.
+  std::string getName() const;
+
+  // Returns the parameter declration for code generation.
+  std::string getParamDecl() const;
+};
+
 class DecoderEmitter {
   const RecordKeeper &RK;
   std::vector<EncodingAndInst> NumberedEncodings;
@@ -236,8 +250,7 @@ public:
   void emitPredicateFunction(formatted_raw_ostream &OS,
                              PredicateSet &Predicates) const;
   void emitDecoderFunction(formatted_raw_ostream &OS, DecoderSet &Decoders,
-                           StringRef SpecializedInsnType,
-                           StringRef Suffix) const;
+                           const CPPType &Type, StringRef Suffix) const;
 
   // run - Output the code emitter
   void run(raw_ostream &o);
@@ -1061,56 +1074,107 @@ void DecoderEmitter::emitPredicateFunction(formatted_raw_ostream &OS,
   OS << "}\n\n";
 }
 
-static void emitTemplate(formatted_raw_ostream &OS,
-                         StringRef SpecializedInsnType) {
-  if (SpecializedInsnType.empty())
-    OS << "template <typename InsnType>\n";
+// ----------------------------------------------------------------------------
+// CPPType implementation.
+
+CPPType::CPPType(unsigned Bitwidth, bool IsVarLenInst) : Bitwidth(Bitwidth) {
+  if (IsVarLenInst)
+    Kind = APIntTy;
+  else if (Bitwidth == 0)
+    Kind = TemplateTy;
+  else if (Bitwidth == 8 || Bitwidth == 16 || Bitwidth == 32 || Bitwidth == 64)
+    Kind = UIntTy;
+  else
+    Kind = BitsetTy;
 }
 
-static StringRef getInsnType(StringRef SpecializedInsnType) {
-  return SpecializedInsnType.empty() ? "InsnType" : SpecializedInsnType;
+std::string CPPType::getName() const {
+  switch (Kind) {
+  case TemplateTy:
+    return "InsnType";
+  case UIntTy:
+    return "uint" + std::to_string(Bitwidth) + "_t";
+  case APIntTy:
+    return "APInt";
+  case BitsetTy:
+    return "std::bitset<" + std::to_string(Bitwidth) + ">";
+  }
+  llvm_unreachable("Unexpected kind");
+}
+
+std::string CPPType::getParamDecl() const {
+  switch (Kind) {
+  case TemplateTy:
+  case BitsetTy:
+    return "const " + getName() + " &insn";
+  case UIntTy:
+    return getName() + " insn";
+  case APIntTy:
+    return "APInt &insn";
+  }
+  llvm_unreachable("Unexpected kind");
+}
+
+static void emitTemplate(formatted_raw_ostream &OS, const CPPType &Type) {
+  if (Type.Kind == CPPType::TemplateTy)
+    OS << "template <typename InsnType>\n";
 }
 
 void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
                                          DecoderSet &Decoders,
-                                         StringRef SpecializedInsnType,
+                                         const CPPType &Type,
                                          StringRef Suffix) const {
   // The decoder function is just a big switch statement or a table of function
   // pointers based on the input decoder index.
-  StringRef InsnType = getInsnType(SpecializedInsnType);
+  const std::string TypeName = Type.getName();
+  const std::string TypeParamDecl = Type.getParamDecl();
 
   // TODO: When InsnType is large, using uint64_t limits all fields to 64 bits
   // It would be better for emitBinaryParser to use a 64-bit tmp whenever
   // possible but fall back to an InsnType-sized tmp for truly large fields.
-  auto TmpTypeDecl = formatv(
-      "using TmpType = std::conditional_t<std::is_integral<{0}>::value, {0}, "
-      "uint64_t>;\n",
-      InsnType);
+  auto emitTmpTypeDec = [&Type, &TypeName, &OS]() {
+    if (Type.Kind == CPPType::TemplateTy)
+      OS << formatv(
+          "  using TmpType = std::conditional_t<std::is_integral<{0}>::value, "
+          "{0}, uint64_t>;\n",
+          TypeName);
+  };
 
-  // Use a reference for `insn` parameter if its not a standard integer type.
-  StringRef Reference = InsnType.starts_with("uint") ? "" : "&";
+  // Returns the type to use for the `tmp` variable.
+  StringRef TmpType = [&Type, &TypeName]() -> StringRef {
+    switch (Type.Kind) {
+    case CPPType::TemplateTy:
+      return "TmpType";
+    case CPPType::UIntTy:
+      return TypeName;
+    default:
+      return "uint64_t";
+    }
+  }();
 
   auto DecodeParams =
-      formatv("DecodeStatus S, const {} {}insn, MCInst &MI, uint64_t Address, "
+      formatv("DecodeStatus S, {}, MCInst &MI, uint64_t Address, "
               "const MCDisassembler *Decoder, bool &DecodeComplete",
-              InsnType, Reference);
+              TypeParamDecl);
 
   if (UseFnTableInDecodeToMCInst) {
     // Emit a function for each case first.
     for (const auto &[Index, Decoder] : enumerate(Decoders)) {
-      emitTemplate(OS, SpecializedInsnType);
+      emitTemplate(OS, Type);
       OS << "DecodeStatus decodeFn" << Suffix << '_' << Index << "("
          << DecodeParams << ") {\n";
-      OS << "  " << TmpTypeDecl;
-      OS << "  [[maybe_unused]] TmpType tmp;\n";
+      emitTmpTypeDec();
+      OS << "  [[maybe_unused]] " << TmpType << " tmp;\n";
       OS << Decoder;
       OS << "  return S;\n";
       OS << "}\n\n";
     }
   }
 
+  assert(!Decoders.empty() && "Did not find any decoders");
+
   OS << "// Handling " << Decoders.size() << " cases.\n";
-  emitTemplate(OS, SpecializedInsnType);
+  emitTemplate(OS, Type);
   OS << "static DecodeStatus decodeToMCInst" << Suffix << "(unsigned Idx, "
      << DecodeParams << ") {\n";
   OS << "  DecodeComplete = true;\n";
@@ -1127,8 +1191,8 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
     OS << "return decodeFnTable[Idx](S, insn, MI, Address, Decoder, "
           "DecodeComplete);\n";
   } else {
-    OS << "  " << TmpTypeDecl;
-    OS << "  TmpType tmp;\n";
+    emitTmpTypeDec();
+    OS << "  " << TmpType << " tmp;\n";
     OS << "  switch (Idx) {\n";
     OS << "    default: llvm_unreachable(\"Invalid index!\");\n";
     for (const auto &[Index, Decoder] : enumerate(Decoders)) {
@@ -2183,27 +2247,34 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
 
 // emitFieldFromInstruction - Emit the templated helper function
 // fieldFromInstruction().
-// On Windows we make sure that this function is not inlined when
-// using the VS compiler. It has a bug which causes the function
-// to be optimized out in some circumstances. See llvm.org/pr38292
-static void emitFieldFromInstruction(formatted_raw_ostream &OS,
-                                     bool IsTemplated, bool IsVarLenInst) {
-  OS << R"(
-// Helper functions for extracting fields from encoded instructions.
-// InsnType must either be integral or an APInt-like object that must:
-// * be default-constructible and copy-constructible
-// * Support extractBitsAsZExtValue(Size, StartBit)
-// * Support the ~, &, ==, and != operators with other objects of the same type
-// * Support the != and bitwise & with uint64_t
+//
+// On Windows we make sure that this function is not inlined when using the VS
+// compiler. It has a bug which causes the function to be optimized out in some
+// circumstances. See llvm.org/pr38292
+//
+// There are 4 variants of this function that can be generated under different
+// conditions:
+//
+// 1. Integer types (for non-templated code when using integer types and when
+//                   generating templated code).
+// 2. bitset types (for non-templated code with bitset type).
+// 3. APInt type (for variable length instructions).
+// 4. Non-Integer `InsnType` (when generating templated code)
 
-// Helper macro to disable inlining of `fieldFromInstruction`.
+static void emitFieldFromInstruction(formatted_raw_ostream &OS,
+                                     bool GenerateIntType,
+                                     bool GenerateBitsetType,
+                                     bool GenerateAPIntType,
+                                     bool GenerateTemplateType) {
+  if (GenerateIntType) {
+    OS << R"(
+// Helper macro to disable inlining of `fieldFromInstruction` for integer types.
 #if defined(_MSC_VER) && !defined(__clang__)
 #define DEC_EMIT_NO_INLINE __declspec(noinline)
 #else
 #define DEC_EMIT_NO_INLINE
 #endif
 
-// This is the version that works with integeral types, and its always emitted.
 template <typename IntType>
 DEC_EMIT_NO_INLINE static 
 std::enable_if_t<std::is_integral_v<IntType>, IntType>
@@ -2218,19 +2289,12 @@ fieldFromInstruction(const IntType &Insn, unsigned StartBit, unsigned Size) {
     fieldMask = (((IntType)1 << Size) - 1) << StartBit;
   return (Insn & fieldMask) >> StartBit;
 }
+#undef DEC_EMIT_NO_INLINE
 
 )";
-  if (IsVarLenInst || IsTemplated) {
-    // The templated version also works with APIntType.
-    OS << R"(
-template <typename InsnType>
-static std::enable_if_t<!std::is_integral_v<InsnType>, uint64_t>
-fieldFromInstruction(const InsnType &Insn, unsigned StartBit,
-                     unsigned Size) {
-  return Insn.extractBitsAsZExtValue(Size, StartBit);
-}
-)";
-  } else {
+  }
+
+  if (GenerateBitsetType) {
     // Emit a version that will work with a std::bitset.
     OS << R"(
 template <size_t N>
@@ -2245,7 +2309,34 @@ uint64_t fieldFromInstruction(const std::bitset<N>& Insn, unsigned StartBit,
 }
 )";
   }
-  OS << "#undef DEC_EMIT_NO_INLINE\n\n";
+
+  if (GenerateAPIntType) {
+    // The templated version also works with APInt.
+    OS << R"(
+static uint64_t fieldFromInstruction(const APInt &Insn, unsigned StartBit,
+                     unsigned Size) {
+  return Insn.extractBitsAsZExtValue(Size, StartBit);
+}
+)";
+  }
+
+  if (GenerateTemplateType) {
+    OS << R"(
+// Helper functions for extracting fields from encoded instructions.
+// InsnType must either be integral or an APInt-like object that must:
+// * be default-constructible and copy-constructible
+// * Support extractBitsAsZExtValue(Size, StartBit)
+// * Support the ~, &, ==, and != operators with other objects of the same type
+// * Support the != and bitwise & with uint64_t
+
+template <typename InsnType>
+static std::enable_if_t<!std::is_integral_v<InsnType>, uint64_t>
+fieldFromInstruction(const InsnType &Insn, unsigned StartBit,
+                     unsigned Size) {
+  return Insn.extractBitsAsZExtValue(Size, StartBit);
+}
+)";
+  }
 }
 
 // emitInsertBits - Emit the helper function insertBits().
@@ -2269,8 +2360,7 @@ insertBits(IntType &field, IntType bits, unsigned startBit, unsigned numBits) {
 
 // emitDecodeInstruction - Emit the entry function function decodeInstruction().
 static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
-                                  unsigned OpcodeMask,
-                                  StringRef SpecializedInsnType,
+                                  unsigned OpcodeMask, const CPPType &Type,
                                   StringRef Suffix) {
   const bool HasTryDecode = OpcodeMask & ((1 << MCD::OPC_TryDecode) |
                                           (1 << MCD::OPC_TryDecodeOrFail));
@@ -2279,26 +2369,17 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
       ((1 << MCD::OPC_CheckPredicate) | (1 << MCD::OPC_CheckPredicateOrFail));
   const bool HasSoftFail = OpcodeMask & (1 << MCD::OPC_SoftFail);
 
-  StringRef InsnType = getInsnType(SpecializedInsnType);
-
-  // Use a reference for `insn` parameter if its not a standard integer type.
-  StringRef Reference = InsnType.starts_with("uint") ? "" : "&";
-
-  // For variable length instructions, use a non-const reference to match the
-  // signature of the `makeUp` function passed in.
-  StringRef Const = IsVarLenInst ? "" : "const ";
-
   auto emitFn = [&](StringRef FnSuffix) {
     OS << formatv("static DecodeStatus decodeInstruction{}(const uint8_t "
-                  "DecodeTable[], MCInst &MI, {}{} {}insn, uint64_t Address, "
+                  "DecodeTable[], MCInst &MI, {}, uint64_t Address, "
                   "const MCDisassembler *DisAsm, const MCSubtargetInfo &STI",
-                  FnSuffix, Const, InsnType, Reference);
+                  FnSuffix, Type.getParamDecl());
     if (IsVarLenInst)
       OS << ", llvm::function_ref<void(APInt &, uint64_t)> makeUp";
     OS << ") {\n";
   };
 
-  emitTemplate(OS, SpecializedInsnType);
+  emitTemplate(OS, Type);
   emitFn(Suffix);
   if (HasCheckPredicate)
     OS << "  const FeatureBitset &Bits = STI.getFeatureBits();\n";
@@ -2712,16 +2793,18 @@ namespace {
     }
   }
 
-  // For variable instruction, we emit a instruction length table
-  // to let the decoder know how long the instructions are.
-  // You can see example usage in M68k's disassembler.
-  if (IsVarLenInst)
-    emitInstrLenTable(OS, InstrLen);
-
   const bool GenerateTemplated =
       Target.getInstructionSet()->getValueAsBit("GenerateTemplatedDecoder");
 
-  emitFieldFromInstruction(OS, GenerateTemplated, IsVarLenInst);
+  // For variable instruction, we emit a instruction length table to let the
+  // decoder know how long the instructions are. You can see example usage in
+  // M68k's disassembler.
+  if (IsVarLenInst) {
+    if (GenerateTemplated)
+      PrintFatalError(
+          "Templated decoder not needed for variable length instruction");
+    emitInstrLenTable(OS, InstrLen);
+  }
 
   DecoderTableInfo TableInfo;
   bool HasCheckPredicate = false;
@@ -2729,17 +2812,16 @@ namespace {
   // Helper lambda to emit the decoder code for a given instruction Bitwidth
   // and associated C++ type. If `Bitwidth` is 0 (and CPPType is empty) it will
   // generate templated decoder code.
-  auto emitDecoder = [&](unsigned Bitwidth, StringRef CPPType,
-                         StringRef Suffix) {
+  auto emitDecoder = [&](const CPPType &Type, StringRef Suffix) {
     // Reset the Decoders for each non-templated type.
     TableInfo.Decoders.clear();
     unsigned OpcodeMask = 0;
 
-    if (!CPPType.empty()) {
+    const bool IsTemplate = Type.Kind == CPPType::TemplateTy;
+    if (!IsTemplate) {
       OS << "// ------------------------------------------------------------\n";
-      OS << "// Decoder tables and functions for " << Bitwidth
-         << "-bit instructions.\n";
-      OS << "// Using C++ type `" << CPPType << "` for payload.\n\n";
+      OS << "// Decoder tables for " << Type.Bitwidth << "-bit instructions.\n";
+      OS << "// Using C++ type `" << Type.getName() << "` for payload.\n\n";
     }
 
     for (const auto &[NSAndByteSize, EncodingIDs] : OpcMap) {
@@ -2747,7 +2829,7 @@ namespace {
       const unsigned InstrBitwidth =
           IsVarLenInst ? MaxInstLen : 8 * NSAndByteSize.second;
 
-      if (Bitwidth != 0 && InstrBitwidth != Bitwidth)
+      if (!IsTemplate && InstrBitwidth != Type.Bitwidth)
         continue;
 
       // Emit the decoder table for this namespace+ bitwidth combination.
@@ -2779,48 +2861,46 @@ namespace {
     }
 
     // Emit the decoder function for this Bitwidth.
-    emitDecoderFunction(OS, TableInfo.Decoders, CPPType, Suffix);
+    emitDecoderFunction(OS, TableInfo.Decoders, Type, Suffix);
 
     HasCheckPredicate |= OpcodeMask & ((1 << MCD::OPC_CheckPredicate) |
                                        (1 << MCD::OPC_CheckPredicateOrFail));
 
-    emitDecodeInstruction(OS, IsVarLenInst, OpcodeMask, CPPType, Suffix);
-  };
-
-  auto InferCPPType = [IsVarLenInst](unsigned Bitwidth) -> std::string {
-    // For variable length instructions, we need to use APInt type for the
-    // instruction payload to support the `makeUp` function.
-    if (IsVarLenInst)
-      return "APInt";
-
-    switch (Bitwidth) {
-    case 8:
-      return "uint8_t";
-    case 16:
-      return "uint16_t";
-    case 32:
-      return "uint32_t";
-    case 64:
-      return "uint64_t";
-    default:
-      return "std::bitset<" + std::to_string(Bitwidth) + ">";
-    }
+    emitDecodeInstruction(OS, IsVarLenInst, OpcodeMask, Type, Suffix);
   };
 
   if (GenerateTemplated) {
-    emitDecoder(0, "", "");
+    // Generate the tempated variaant of `fieldFromInstruction`.
+    emitFieldFromInstruction(
+        OS, /*GenerateIntType=*/true, /*GenerateBitsetType=*/false,
+        /*GenerateAPIntType=*/false, /*GenerateTemplateType=*/true);
+    emitDecoder(CPPType(0, false), /*Suffix=*/"");
   } else {
-    // Collect all allowed Bitwidths for instructions.
+    // Collect all allowed Bitwidths for instructions and keep track of the
+    // variants of `fieldFromInstruction` we need to generate.
     SmallSet<unsigned, 4> InstrBitwidths;
+    bool GenerateIntType = false;
+    bool GenerateBitsetType = false;
     for (const auto &[NSAndByteSize, _] : OpcMap) {
-      const unsigned Bitwidth = 8 * NSAndByteSize.second;
+      const unsigned Bitwidth =
+          IsVarLenInst ? MaxInstLen : 8 * NSAndByteSize.second;
       InstrBitwidths.insert(Bitwidth);
+      const CPPType::TypeKind Kind = CPPType(Bitwidth, IsVarLenInst).Kind;
+      GenerateIntType |= Kind == CPPType::UIntTy;
+      GenerateBitsetType |= Kind == CPPType::BitsetTy;
     }
+    assert((!IsVarLenInst || InstrBitwidths.size() == 1) &&
+           "Expect a single instruction bitwidth "
+           "for variable length instructions");
+
+    // Generate required variants of `fieldFromInstruction`.
+    emitFieldFromInstruction(OS, GenerateIntType, GenerateBitsetType,
+                             /*GenerateAPIntType=*/IsVarLenInst,
+                             /*GenerateTemplateType=*/false);
     const bool AddSuffix = InstrBitwidths.size() > 1;
     for (unsigned Bitwidth : InstrBitwidths) {
-      std::string CPPType = InferCPPType(Bitwidth);
       std::string Suffix = AddSuffix ? std::to_string(Bitwidth) : "";
-      emitDecoder(Bitwidth, CPPType, Suffix);
+      emitDecoder(CPPType(Bitwidth, IsVarLenInst), Suffix);
     }
   }
 
