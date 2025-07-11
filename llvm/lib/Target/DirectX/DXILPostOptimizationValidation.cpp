@@ -10,9 +10,12 @@
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
@@ -123,6 +126,70 @@ tripleToVisibility(llvm::Triple::EnvironmentType ET) {
   }
 }
 
+static uint32_t parameterToRangeType(uint32_t Type) {
+  switch (Type) {
+  case llvm::to_underlying(dxbc::RootParameterType::CBV):
+    return llvm::to_underlying(dxbc::DescriptorRangeType::CBV);
+  break;
+  case llvm::to_underlying(dxbc::RootParameterType::SRV):
+      return llvm::to_underlying(dxbc::DescriptorRangeType::SRV);
+  break;
+  case llvm::to_underlying(dxbc::RootParameterType::UAV):
+        return llvm::to_underlying(dxbc::DescriptorRangeType::UAV);
+  break;
+  default:
+    llvm_unreachable("Root Parameter Type has no Range Type equivalent");
+  }
+}
+
+static RootSignatureBindingValidation initRsBindingValdation(const mcdxbc::RootSignatureDesc &RSD, dxbc::ShaderVisibility Visibility) {
+
+  RootSignatureBindingValidation Validation;
+
+  for (size_t I = 0; I < RSD.ParametersContainer.size(); I++) {
+    const auto &[Type, Loc] =
+        RSD.ParametersContainer.getTypeAndLocForParameter(I);
+
+    const auto &Header = RSD.ParametersContainer.getHeader(I);
+    if (Header.ShaderVisibility !=
+          llvm::to_underlying(dxbc::ShaderVisibility::All) &&
+          Header.ShaderVisibility != llvm::to_underlying(Visibility))
+          continue;
+          
+    switch (Type) {
+    case llvm::to_underlying(dxbc::RootParameterType::SRV):
+    case llvm::to_underlying(dxbc::RootParameterType::UAV):
+    case llvm::to_underlying(dxbc::RootParameterType::CBV): {
+      dxbc::RTS0::v2::RootDescriptor Desc =
+          RSD.ParametersContainer.getRootDescriptor(Loc);
+
+      llvm::dxil::ResourceInfo::ResourceBinding Binding;
+      Binding.LowerBound = Desc.ShaderRegister;
+      Binding.Space = Desc.RegisterSpace;
+      Binding.Size = 1;
+  
+      Validation.addBinding(parameterToRangeType(Type), Binding);
+      break;
+    }
+    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+      const mcdxbc::DescriptorTable &Table =
+          RSD.ParametersContainer.getDescriptorTable(Loc);
+
+      for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
+          llvm::dxil::ResourceInfo::ResourceBinding Binding;
+          Binding.LowerBound = Range.BaseShaderRegister;
+          Binding.Space = Range.RegisterSpace;
+          Binding.Size = Range.NumDescriptors;
+          Validation.addBinding(Range.RangeType, Binding);
+      }
+      break;
+    }
+    }
+  }
+
+  return Validation;
+}
+
 std::optional<mcdxbc::RootSignatureDesc>
 getRootSignature(RootSignatureBindingInfo &RSBI,
                  dxil::ModuleMetadataInfo &MMI) {
@@ -133,6 +200,27 @@ getRootSignature(RootSignatureBindingInfo &RSBI,
   if (!RootSigDesc)
     return std::nullopt;
   return RootSigDesc;
+}
+
+static void reportUnboundRegisters(
+    Module &M,
+    const std::vector<llvm::dxil::ResourceInfo::ResourceBinding> &Bindings,
+    iterator_range<SmallVector<dxil::ResourceInfo>::iterator> &Resources) {
+  for (auto Res = Resources.begin(), End = Resources.end(); Res != End; Res++) {
+    bool Bound = false;
+    ResourceInfo::ResourceBinding ResBinding = Res->getBinding();
+    for (const auto &Binding : Bindings) {
+      if (ResBinding.Space == Binding.Space &&
+          ResBinding.LowerBound >= Binding.LowerBound &&
+          ResBinding.LowerBound < Binding.LowerBound + Binding.Size) {
+        Bound = true;
+        break;
+      }
+    }
+    if (!Bound) {
+      reportRegNotBound(M, Res->getName(), Res->getBinding());
+    }
+  }
 }
 
 static void reportErrors(Module &M, DXILResourceMap &DRM,
@@ -150,71 +238,20 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
 
   if (auto RSD = getRootSignature(RSBI, MMI)) {
 
-    RootSignatureBindingValidation Validation;
-    Validation.addRsBindingInfo(*RSD, tripleToVisibility(MMI.ShaderProfile));
+    RootSignatureBindingValidation Validation = initRsBindingValdation(*RSD, tripleToVisibility(MMI.ShaderProfile));
 
-    for (const ResourceInfo &CBuf : DRM.cbuffers()) {
-      ResourceInfo::ResourceBinding Binding = CBuf.getBinding();
-      if (!Validation.checkCRegBinding(Binding))
-        reportRegNotBound(M, "cbuffer", Binding);
-    }
+    auto Cbufs = DRM.cbuffers();
+    auto SRVs = DRM.srvs();
+    auto UAVs = DRM.uavs();
+    auto Samplers = DRM.samplers();
 
-    for (const ResourceInfo &SRV : DRM.srvs()) {
-      ResourceInfo::ResourceBinding Binding = SRV.getBinding();
-      if (!Validation.checkTRegBinding(Binding))
-        reportRegNotBound(M, "srv", Binding);
-    }
-
-    for (const ResourceInfo &UAV : DRM.uavs()) {
-      ResourceInfo::ResourceBinding Binding = UAV.getBinding();
-      if (!Validation.checkURegBinding(Binding))
-        reportRegNotBound(M, "uav", Binding);
-    }
-
-    for (const ResourceInfo &Sampler : DRM.samplers()) {
-      ResourceInfo::ResourceBinding Binding = Sampler.getBinding();
-      if (!Validation.checkSamplerBinding(Binding))
-        reportRegNotBound(M, "sampler", Binding);
-    }
+    reportUnboundRegisters(M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::CBV), Cbufs);
+    reportUnboundRegisters(M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::UAV), UAVs);
+    reportUnboundRegisters(M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::Sampler), Samplers);
+    reportUnboundRegisters(M, Validation.getBindingsOfType(dxbc::DescriptorRangeType::SRV), SRVs);
   }
 }
 } // namespace
-
-void RootSignatureBindingValidation::addRsBindingInfo(
-    mcdxbc::RootSignatureDesc &RSD, dxbc::ShaderVisibility Visibility) {
-  for (size_t I = 0; I < RSD.ParametersContainer.size(); I++) {
-    const auto &[Type, Loc] =
-        RSD.ParametersContainer.getTypeAndLocForParameter(I);
-
-    const auto &Header = RSD.ParametersContainer.getHeader(I);
-    switch (Type) {
-    case llvm::to_underlying(dxbc::RootParameterType::SRV):
-    case llvm::to_underlying(dxbc::RootParameterType::UAV):
-    case llvm::to_underlying(dxbc::RootParameterType::CBV): {
-      dxbc::RTS0::v2::RootDescriptor Desc =
-          RSD.ParametersContainer.getRootDescriptor(Loc);
-
-      if (Header.ShaderVisibility ==
-              llvm::to_underlying(dxbc::ShaderVisibility::All) ||
-          Header.ShaderVisibility == llvm::to_underlying(Visibility))
-        addRange(Desc, Type);
-      break;
-    }
-    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
-      const mcdxbc::DescriptorTable &Table =
-          RSD.ParametersContainer.getDescriptorTable(Loc);
-
-      for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
-        if (Header.ShaderVisibility ==
-                llvm::to_underlying(dxbc::ShaderVisibility::All) ||
-            Header.ShaderVisibility == llvm::to_underlying(Visibility))
-          addRange(Range);
-      }
-      break;
-    }
-    }
-  }
-}
 
 PreservedAnalyses
 DXILPostOptimizationValidation::run(Module &M, ModuleAnalysisManager &MAM) {
@@ -252,8 +289,8 @@ public:
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
     AU.addRequired<DXILResourceWrapperPass>();
     AU.addRequired<DXILResourceBindingWrapperPass>();
-    AU.addRequired<RootSignatureAnalysisWrapper>();
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
+    AU.addRequired<RootSignatureAnalysisWrapper>();
     AU.addPreserved<DXILResourceWrapperPass>();
     AU.addPreserved<DXILResourceBindingWrapperPass>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
@@ -269,6 +306,7 @@ INITIALIZE_PASS_BEGIN(DXILPostOptimizationValidationLegacy, DEBUG_TYPE,
 INITIALIZE_PASS_DEPENDENCY(DXILResourceBindingWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(RootSignatureAnalysisWrapper)
 INITIALIZE_PASS_END(DXILPostOptimizationValidationLegacy, DEBUG_TYPE,
                     "DXIL Post Optimization Validation", false, false)
 

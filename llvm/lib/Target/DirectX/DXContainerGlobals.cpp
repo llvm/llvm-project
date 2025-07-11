@@ -65,7 +65,7 @@ public:
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
     AU.addRequired<DXILResourceTypeWrapperPass>();
     AU.addRequired<DXILResourceWrapperPass>();
-    AU.addPreserved<RootSignatureAnalysisWrapper>();
+    AU.addRequired<RootSignatureAnalysisWrapper>();
   }
 };
 
