@@ -2560,6 +2560,7 @@ void DXILBitcodeWriter::writeFunctionLevelValueSymbolTable(
   SmallVector<const ValueName *, 16> SortedTable;
 
   MallocAllocator Allocator;
+  SmallVector<ValueName *, 2> LifetimeValueNames;
   for (auto &VI : VST) {
     ValueName *VN = VI.second->getValueName();
     // Clang mangles lifetime intrinsic names by appending '.p0' to the end,
@@ -2570,9 +2571,11 @@ void DXILBitcodeWriter::writeFunctionLevelValueSymbolTable(
     if (const Function *Fn = dyn_cast<Function>(VI.getValue());
         Fn && Fn->isIntrinsic()) {
       Intrinsic::ID IID = Fn->getIntrinsicID();
-      if (IID == Intrinsic::lifetime_start || IID == Intrinsic::lifetime_end)
+      if (IID == Intrinsic::lifetime_start || IID == Intrinsic::lifetime_end) {
         VN = ValueName::create(Intrinsic::getBaseName(IID), Allocator,
                                VI.second);
+        LifetimeValueNames.push_back(VN);
+      }
     }
     SortedTable.push_back(VN);
   }
@@ -2625,6 +2628,8 @@ void DXILBitcodeWriter::writeFunctionLevelValueSymbolTable(
     NameVals.clear();
   }
   Stream.ExitBlock();
+  for (auto *VN : LifetimeValueNames)
+    VN->Destroy(Allocator);
 }
 
 /// Emit a function body to the module stream.
