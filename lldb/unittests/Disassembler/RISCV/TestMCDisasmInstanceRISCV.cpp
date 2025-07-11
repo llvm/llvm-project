@@ -96,15 +96,21 @@ TEST_F(TestMCDisasmInstanceRISCV, TestOpcodeBytePrinter) {
   ArchSpec arch("riscv32-*-linux");
 
   const unsigned num_of_instructions = 7;
+  // clang-format off
   uint8_t data[] = {
-      0x41, 0x11,                               // addi   sp, sp, -0x10
-      0x06, 0xc6,                               // sw     ra, 0xc(sp)
-      0x23, 0x2a, 0xa4, 0xfe,                   // sw     a0, -0xc(s0)
-      0x23, 0x28, 0xa4, 0xfe,                   // sw     a0, -0x10(s0)
-      0x22, 0x44,                               // lw     s0, 0x8(sp)
-      0x20, 0x00, 0x20, 0x09, 0x40, 0x00, 0x3F, // 64 bit custom instruction
-      0x10, 0x00, 0x00, 0x00, 0x02, 0x1f // 48 bit xqci.e.li rd=8 imm=0x1000
+      0x41, 0x11,             // addi   sp, sp, -0x10
+      0x06, 0xc6,             // sw     ra, 0xc(sp)
+      0x23, 0x2a, 0xa4, 0xfe, // sw     a0, -0xc(s0)
+      0x23, 0x28, 0xa4, 0xfe, // sw     a0, -0x10(s0)
+      0x22, 0x44,             // lw     s0, 0x8(sp)
+
+      0x3f, 0x00, 0x40, 0x09, // Fake 64-bit instruction
+      0x20, 0x00, 0x20, 0x00,
+
+      0x1f, 0x02,             // 48 bit xqci.e.li rd=8 imm=0x1000
+      0x00, 0x00, 0x00, 0x10,
   };
+  // clang-format on
 
   // clang-format off
   const char *expected_outputs[] = {
@@ -117,8 +123,9 @@ TEST_F(TestMCDisasmInstanceRISCV, TestOpcodeBytePrinter) {
     "021f 0000 1000"
   };
   // clang-format on
+  const unsigned num_of_expected_outputs = sizeof(expected_outputs) / sizeof(char *);
 
-  EXPECT_EQ(num_of_instructions, sizeof(expected_outputs) / sizeof(char *));
+  EXPECT_EQ(num_of_instructions, num_of_expected_outputs);
 
   DisassemblerSP disass_sp;
   Address start_addr(0x100);
@@ -135,7 +142,7 @@ TEST_F(TestMCDisasmInstanceRISCV, TestOpcodeBytePrinter) {
   const InstructionList inst_list(disass_sp->GetInstructionList());
   EXPECT_EQ(num_of_instructions, inst_list.GetSize());
 
-  for (size_t i = 0; i < sizeof(expected_outputs) / sizeof(char *); i++) {
+  for (size_t i = 0; i < num_of_instructions; i++) {
     InstructionSP inst_sp;
     StreamString s;
     inst_sp = inst_list.GetInstructionAtIndex(i);

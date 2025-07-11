@@ -50,7 +50,7 @@ int Opcode::Dump(Stream *s, uint32_t min_byte_width) const {
     else
       memcpy(buf, m_data.inst.bytes, m_data.inst.length);
 
-    const bool format_as_words = !(m_data.inst.length % 4);
+    const bool format_as_words = (m_data.inst.length % 4) == 0;
     uint32_t i = 0;
     while (i < m_data.inst.length) {
       if (i > 0)
