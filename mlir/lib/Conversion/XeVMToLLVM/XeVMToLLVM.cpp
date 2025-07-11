@@ -544,8 +544,11 @@ class LoadStorePrefetchToOCLPattern : public OpConversionPattern<OpType> {
         llvm::formatv("{0}_{1}b_{2}r{3}x{4}c", funcName, op.getElemSizeInBits(),
                       op.getTileHeight(), op.getTileWidth(), op.getVBlocks())
             .str();
+    std::string prefetchCode("");
+    if (!isPrefetch)
+      prefetchCode += "P";
     funcName = llvm::formatv("_Z{0}{1}PU3AS1viiiDv2_i{2}{3}", funcName.size(),
-                             funcName, isPrefetch ? "" : "P", bitWidthId)
+                             funcName, prefetchCode, bitWidthId)
                    .str();
     SmallVector<Type> argTypes;
     for (auto arg : args) {
