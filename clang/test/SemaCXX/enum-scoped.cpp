@@ -349,3 +349,18 @@ enum class B;
 A a;
 B b{a}; // expected-error {{cannot initialize}}
 }
+
+namespace GH147736 {
+template <typename Ty>
+struct S {
+  enum OhBoy : Ty { // expected-error 2 {{'_Atomic' qualifier ignored; operations involving the enumeration type will be non-atomic}}
+    Unimportant
+  } e;
+};
+
+// Okay, was previously rejected. The underlying type is int.
+S<_Atomic(int)> s; // expected-warning {{'_Atomic' is a C11 extension}}
+                   // expected-note@-1 {{in instantiation of template class 'GH147736::S<_Atomic(int)>' requested here}}
+static_assert(__is_same(__underlying_type(S<_Atomic(long long)>::OhBoy), long long), ""); // expected-warning {{'_Atomic' is a C11 extension}}
+                                                                                          // expected-note@-1 {{in instantiation of template class 'GH147736::S<_Atomic(long long)>' requested here}}
+}
