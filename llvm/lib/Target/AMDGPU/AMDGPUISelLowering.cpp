@@ -4940,22 +4940,23 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
             SrcModTrue ? SrcModTrue.getValueType() : SrcModFalse.getValueType();
         SDValue FLHS =
             SrcModTrue ? SrcModTrue : DAG.getNode(ISD::BITCAST, SL, FVT, LHS);
-        SDValue FRHS = SrcModFalse ? SrcModFalse
-                                   : DAG.getNode(ISD::BITCAST, SL, FVT, RHS);
+        SDValue FRHS =
+            SrcModFalse ? SrcModFalse : DAG.getNode(ISD::BITCAST, SL, FVT, RHS);
         SDValue FSelect = DAG.getNode(ISD::SELECT, SL, FVT, Cond, FLHS, FRHS);
         return DAG.getNode(ISD::BITCAST, SL, VT, FSelect);
-    }
-    return SDValue();
-  };
+      }
+      return SDValue();
+    };
 
     // Support source modifiers on integer operands.
     if (VT == MVT::i32 || VT == MVT::v2i32)
       if (SDValue F = FoldSrcMods(True, False, VT))
         return F;
 
-    // For i64 if a source modifier is to be folded in we split into two i32
-    // select of high and low values. The Operator need only be applied to the
-    // high values in order to change the sign bit.
+    // auto SplitSelect = [&]() -> std::pair(
+    //  For i64 if a source modifier is to be folded in we split into two i32
+    //  select of high and low values. The Operator need only be applied to the
+    //  high values in order to change the sign bit.
     if (VT == MVT::i64) {
       bool TrueHasModifierOp =
           (True.getOpcode() == ISD::AND || True.getOpcode() == ISD::OR ||
@@ -5036,7 +5037,7 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
         return Res;
       }
     }
-}
+  }
 
   // There's no reason to not do this if the condition has other uses.
   return performCtlz_CttzCombine(SDLoc(N), Cond, True, False, DCI);
