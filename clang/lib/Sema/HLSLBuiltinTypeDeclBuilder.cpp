@@ -613,8 +613,6 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleMember(
     ResourceClass RC, bool IsROV, bool RawBuffer, AccessSpecifier Access) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
 
-  ResClass = RC;
-
   ASTContext &Ctx = SemaRef.getASTContext();
   TypeSourceInfo *ElementTypeInfo =
       Ctx.getTrivialTypeSourceInfo(getHandleElementType(), SourceLocation());
@@ -622,7 +620,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleMember(
   // add handle member with resource type attributes
   QualType AttributedResTy = QualType();
   SmallVector<const Attr *> Attrs = {
-      HLSLResourceClassAttr::CreateImplicit(Ctx, ResClass),
+      HLSLResourceClassAttr::CreateImplicit(Ctx, RC),
       IsROV ? HLSLROVAttr::CreateImplicit(Ctx) : nullptr,
       RawBuffer ? HLSLRawBufferAttr::CreateImplicit(Ctx) : nullptr,
       ElementTypeInfo
@@ -699,7 +697,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addArraySubscriptOperators() {
       AST.DeclarationNames.getCXXOperatorName(OO_Subscript);
 
   addHandleAccessFunction(Subscript, /*IsConst=*/true, /*IsRef=*/true);
-  if (ResClass == llvm::dxil::ResourceClass::UAV)
+  if (getResourceAttrs().ResourceClass == llvm::dxil::ResourceClass::UAV)
     addHandleAccessFunction(Subscript, /*IsConst=*/false, /*IsRef=*/true);
 
   return *this;
@@ -740,6 +738,12 @@ QualType BuiltinTypeDeclBuilder::getHandleElementType() {
     return getFirstTemplateTypeParam();
   // TODO: Should we default to VoidTy? Using `i8` is arguably ambiguous.
   return SemaRef.getASTContext().Char8Ty;
+}
+
+HLSLAttributedResourceType::Attributes
+BuiltinTypeDeclBuilder::getResourceAttrs() {
+  QualType HandleType = getResourceHandleField()->getType();
+  return cast<HLSLAttributedResourceType>(HandleType)->getAttrs();
 }
 
 // BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::startDefinition() {

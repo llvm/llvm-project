@@ -52,7 +52,6 @@ private:
   ClassTemplateDecl *PrevTemplate = nullptr;
   NamespaceDecl *HLSLNamespace = nullptr;
   llvm::StringMap<FieldDecl *> Fields;
-  ResourceClass ResClass;
 
 public:
   friend struct TemplateParameterListBuilder;
@@ -96,6 +95,7 @@ private:
   QualType getFirstTemplateTypeParam();
   QualType getHandleElementType();
   Expr *getConstantIntExpr(int value);
+  HLSLAttributedResourceType::Attributes getResourceAttrs();
 };
 
 } // namespace hlsl
