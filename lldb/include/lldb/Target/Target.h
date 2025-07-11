@@ -1093,7 +1093,7 @@ public:
 
   Architecture *GetArchitecturePlugin() const { return m_arch.GetPlugin(); }
 
-  Debugger &GetDebugger() { return m_debugger; }
+  Debugger &GetDebugger() const { return m_debugger; }
 
   size_t ReadMemoryFromFileCache(const Address &addr, void *dst, size_t dst_len,
                                  Status &error);
