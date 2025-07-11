@@ -15025,10 +15025,13 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG,
 
 // Optimize (add (shl x, c0), (shl y, c1)) ->
 //          (SLLI (SH*ADD x, y), c0), if c1-c0 equals to [1|2|3].
+// or
+//          (SLLI (QC.SHLADD x, y, c1 - c0), c0), if 4 <= (c1-c0) <=31.
 static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
                                   const RISCVSubtarget &Subtarget) {
-  // Perform this optimization only in the zba/xandesperf extension.
-  if (!Subtarget.hasStdExtZba() && !Subtarget.hasVendorXAndesPerf())
+  // Perform this optimization only in the zba/xandesperf/xqciac extension.
+  if (!Subtarget.hasStdExtZba() && !Subtarget.hasVendorXAndesPerf() &&
+      !Subtarget.hasVendorXqciac())
     return SDValue();
 
   // Skip for vector types and larger types.
@@ -15056,7 +15059,10 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
   // Skip if SH1ADD/SH2ADD/SH3ADD are not applicable.
   int64_t Bits = std::min(C0, C1);
   int64_t Diff = std::abs(C0 - C1);
-  if (Diff != 1 && Diff != 2 && Diff != 3)
+  if (Diff != 1 && Diff != 2 && Diff != 3 && !Subtarget.hasVendorXqciac())
+    return SDValue();
+
+  if (!Diff || Diff > 31)
     return SDValue();
 
   // Build nodes.
