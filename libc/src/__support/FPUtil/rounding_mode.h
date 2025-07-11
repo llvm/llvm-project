@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_ROUNDING_MODE_H
 
 #include "hdr/fenv_macros.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
 
@@ -63,7 +64,10 @@ LIBC_INLINE bool fenv_is_round_to_zero() {
 }
 
 // Quick free standing get rounding mode based on the above observations.
-LIBC_INLINE int quick_get_round() {
+LIBC_INLINE constexpr int quick_get_round() {
+  if constexpr (cpp::is_constant_evaluated())
+    return FE_TONEAREST;
+
   static volatile float x = 0x1.0p-24f;
   float y = x;
   float z = (0x1.000002p0f + y) + (-1.0f - y);
