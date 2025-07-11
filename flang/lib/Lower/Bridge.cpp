@@ -4842,8 +4842,6 @@ private:
                   .detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
         if (details->cudaDataAttr() &&
             *details->cudaDataAttr() != Fortran::common::CUDADataAttr::Pinned) {
-          // TODO: This should probably being checked in semantic and give a
-          // proper error.
           assert(
               nbDeviceResidentObject <= 1 &&
               "Only one reference to the device resident object is supported");
