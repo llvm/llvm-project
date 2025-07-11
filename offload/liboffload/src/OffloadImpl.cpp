@@ -84,7 +84,15 @@ struct ol_program_impl_t {
         DeviceImage(DeviceImage) {}
   plugin::DeviceImageTy *Image;
   std::unique_ptr<llvm::MemoryBuffer> ImageData;
+  std::vector<std::unique_ptr<ol_symbol_impl_t>> Symbols;
   __tgt_device_image DeviceImage;
+};
+
+struct ol_symbol_impl_t {
+  ol_symbol_impl_t(GenericKernelTy *Kernel)
+      : PluginImpl(Kernel), Kind(OL_SYMBOL_KIND_KERNEL) {}
+  std::variant<GenericKernelTy *> PluginImpl;
+  ol_symbol_kind_t Kind;
 };
 
 namespace llvm {
@@ -653,7 +661,7 @@ Error olDestroyProgram_impl(ol_program_handle_t Program) {
 }
 
 Error olGetKernel_impl(ol_program_handle_t Program, const char *KernelName,
-                       ol_kernel_handle_t *Kernel) {
+                       ol_symbol_handle_t *Kernel) {
 
   auto &Device = Program->Image->getDevice();
   auto KernelImpl = Device.constructKernel(KernelName);
@@ -663,13 +671,15 @@ Error olGetKernel_impl(ol_program_handle_t Program, const char *KernelName,
   if (auto Err = KernelImpl->init(Device, *Program->Image))
     return Err;
 
-  *Kernel = &*KernelImpl;
+  *Kernel = Program->Symbols
+                .emplace_back(std::make_unique<ol_symbol_impl_t>(&*KernelImpl))
+                .get();
 
   return Error::success();
 }
 
 Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
-                          ol_kernel_handle_t Kernel, const void *ArgumentsData,
+                          ol_symbol_handle_t Kernel, const void *ArgumentsData,
                           size_t ArgumentsSize,
                           const ol_kernel_launch_size_args_t *LaunchSizeArgs,
                           ol_event_handle_t *EventOut) {
@@ -679,6 +689,10 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
         ErrorCode::INVALID_DEVICE,
         "device specified does not match the device of the given queue");
   }
+
+  if (Kernel->Kind != OL_SYMBOL_KIND_KERNEL)
+    return createOffloadError(ErrorCode::SYMBOL_KIND,
+                              "provided symbol is not a kernel");
 
   auto *QueueImpl = Queue ? Queue->AsyncInfo : nullptr;
   AsyncInfoWrapperTy AsyncInfoWrapper(*DeviceImpl, QueueImpl);
@@ -698,7 +712,7 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   // Don't do anything with pointer indirection; use arg data as-is
   LaunchArgs.Flags.IsCUDA = true;
 
-  auto *KernelImpl = reinterpret_cast<GenericKernelTy *>(Kernel);
+  auto *KernelImpl = std::get<GenericKernelTy *>(Kernel->PluginImpl);
   auto Err = KernelImpl->launch(*DeviceImpl, LaunchArgs.ArgPtrs, nullptr,
                                 LaunchArgs, AsyncInfoWrapper);
 
