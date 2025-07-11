@@ -39,17 +39,6 @@ int Opcode::Dump(Stream *s, uint32_t min_byte_width) const {
     break;
 
   case Opcode::eType16_32Tuples: {
-    uint8_t buf[m_data.inst.length];
-    // Swap the byte order if lldb and the
-    // target are different endian.  May be
-    // any of 2/4/6/8/etc bytes long, easiest
-    // to reverse the bytes manually.
-    if (GetEndianSwap())
-      for (int i = 0; i < m_data.inst.length; i++)
-        buf[m_data.inst.length - i - 1] = m_data.inst.bytes[i];
-    else
-      memcpy(buf, m_data.inst.bytes, m_data.inst.length);
-
     const bool format_as_words = (m_data.inst.length % 4) == 0;
     uint32_t i = 0;
     while (i < m_data.inst.length) {
@@ -58,13 +47,13 @@ int Opcode::Dump(Stream *s, uint32_t min_byte_width) const {
       if (format_as_words) {
         // Format as words; print 1 or more UInt32 values.
         uint32_t value;
-        memcpy(&value, &buf[i], 4);
+        memcpy(&value, &m_data.inst.bytes[i], 4);
         s->Printf("%8.8x", value);
         i += 4;
       } else {
         // Format as halfwords; print 1 or more UInt16 values.
         uint16_t value;
-        memcpy(&value, &buf[i], 2);
+        memcpy(&value, &m_data.inst.bytes[i], 2);
         s->Printf("%4.4x", value);
         i += 2;
       }
