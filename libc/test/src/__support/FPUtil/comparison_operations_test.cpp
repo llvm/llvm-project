@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/ComparisonOperations.h"
+#include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -18,16 +19,19 @@ using LIBC_NAMESPACE::fputil::greater_than_or_equals;
 using LIBC_NAMESPACE::fputil::less_than;
 using LIBC_NAMESPACE::fputil::less_than_or_equals;
 
+using BFloat16 = LIBC_NAMESPACE::fputil::BFloat16;
+
 template <typename T>
 class ComparisonOperationsTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   DECLARE_SPECIAL_CONSTANTS(T)
 
-  static constexpr T normal1 = T(3.14);
-  static constexpr T normal2 = T(2.71);
-  static constexpr T small = T(0.1);
-  static constexpr T neg_small = T(-0.1);
-  static constexpr T large = T(10000.0);
-  static constexpr T neg_large = T(-10000.0);
+  const T normal1 = T(3.14);
+  const T neg_normal1 = T(-3.14);
+  const T normal2 = T(2.71);
+  const T small = T(0.1);
+  const T neg_small = T(-0.1);
+  const T large = T(10000.0);
+  const T neg_large = T(-10000.0);
 
 public:
   void test_equals() {
@@ -43,7 +47,7 @@ public:
     EXPECT_TRUE(equals(normal1, normal1));
     EXPECT_TRUE(equals(normal2, normal2));
     EXPECT_FALSE(equals(normal1, normal2));
-    EXPECT_FALSE(equals(normal1, -normal1));
+    EXPECT_FALSE(equals(normal1, neg_normal1));
 
     auto test_qnan = [&](T x, T y) {
       LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
@@ -329,3 +333,5 @@ TEST_COMPARISON_OPS(Float16, float16)
 #ifdef LIBC_TYPES_HAS_FLOAT128
 TEST_COMPARISON_OPS(Float128, float128)
 #endif // LIBC_TYPES_HAS_FLOAT128
+
+TEST_COMPARISON_OPS(BFloat16, BFloat16)
