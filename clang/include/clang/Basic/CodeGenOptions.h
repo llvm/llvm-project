@@ -169,6 +169,14 @@ public:
     Never,    // No loop is assumed to be finite.
   };
 
+  enum class HeterogeneousDwarfOpts {
+    Disabled,     //< Do not emit any heterogeneous dwarf metadata.
+    DIExpression, //< Enable DIExpression-based metadata.
+  };
+  bool isHeterogeneousDwarfEnabled() const {
+    return getHeterogeneousDwarfMode() != HeterogeneousDwarfOpts::Disabled;
+  }
+
   enum AssignmentTrackingOpts {
     Disabled,
     Enabled,

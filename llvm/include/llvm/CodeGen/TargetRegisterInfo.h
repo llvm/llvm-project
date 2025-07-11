@@ -1113,6 +1113,14 @@ public:
   prependOffsetExpression(const DIExpression *Expr, unsigned PrependFlags,
                           const StackOffset &Offset) const;
 
+  /// If the register corresponding to DwarfReg is a vector register that holds
+  /// a per-thread value in each lane, return the size in bytes of the lane.
+  /// Otherwise return nullopt.
+  virtual std::optional<unsigned> getDwarfRegLaneSize(int64_t DwarfReg,
+                                                      bool isEH) const {
+    return std::nullopt;
+  }
+
   virtual int64_t getDwarfRegNumForVirtReg(Register RegNum, bool isEH) const {
     llvm_unreachable("getDwarfRegNumForVirtReg does not exist on this target");
   }

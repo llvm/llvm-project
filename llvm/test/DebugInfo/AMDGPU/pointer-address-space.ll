@@ -13,26 +13,31 @@
 ; }
 
 ; CHECK:      DW_AT_name {{.*}}"FuncVar0"
+; CHECK-NEXT: DW_AT_LLVM_memory_space [DW_FORM_data4] (DW_MSPACE_LLVM_private)
 ; CHECK-NEXT: DW_AT_decl_file
 ; CHECK-NEXT: DW_AT_decl_line
 ; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x{{[a-f0-9]+}} => {0x[[NONE:[a-f0-9]+]]}
 
 ; CHECK:      DW_AT_name {{.*}}"FuncVar1"
+; CHECK-NEXT: DW_AT_LLVM_memory_space [DW_FORM_data4] (DW_MSPACE_LLVM_private)
 ; CHECK-NEXT: DW_AT_decl_file
 ; CHECK-NEXT: DW_AT_decl_line
 ; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x{{[a-f0-9]+}} => {0x[[NONE]]}
 
 ; CHECK:      DW_AT_name {{.*}}"FuncVar2"
+; CHECK-NEXT: DW_AT_LLVM_memory_space [DW_FORM_data4] (DW_MSPACE_LLVM_private)
 ; CHECK-NEXT: DW_AT_decl_file
 ; CHECK-NEXT: DW_AT_decl_line
-; CHECK-NEXT:      DW_AT_type [DW_FORM_ref4] (cu + 0x{{[a-f0-9]+}} => {0x[[LOCAL:[a-f0-9]+]]}
+; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x{{[a-f0-9]+}} => {0x[[LOCAL:[a-f0-9]+]]}
 
 ; CHECK:      DW_AT_name {{.*}}"FuncVar3"
+; CHECK-NEXT: DW_AT_LLVM_memory_space [DW_FORM_data4] (DW_MSPACE_LLVM_private)
 ; CHECK-NEXT: DW_AT_decl_file
 ; CHECK-NEXT: DW_AT_decl_line
 ; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x{{[a-f0-9]+}} => {0x[[PRIVATE:[a-f0-9]+]]}
 
 ; CHECK:      DW_AT_name {{.*}}"FuncVar4"
+; CHECK-NEXT: DW_AT_LLVM_memory_space [DW_FORM_data4] (DW_MSPACE_LLVM_private)
 ; CHECK-NEXT: DW_AT_decl_file
 ; CHECK-NEXT: DW_AT_decl_line
 ; CHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x{{[a-f0-9]+}} => {0x[[NONE]]}
@@ -40,14 +45,20 @@
 ; CHECK:      0x[[NONE]]: DW_TAG_pointer_type
 ; CHECK-NEXT:               DW_AT_type
 ; CHECK-NOT:                DW_AT_address_class
+; CHECK-NOT:                DW_AT_LLVM_address_space
+; CHECK-NOT:                DW_AT_LLVM_memory_space
 
 ; CHECK:      0x[[LOCAL]]: DW_TAG_pointer_type
 ; CHECK-NEXT:                DW_AT_type
 ; CHECK-NEXT:                DW_AT_address_class [DW_FORM_data4] (0x00000002)
+; CHECK-NEXT:                DW_AT_LLVM_address_space [DW_FORM_data4] (0x00000002 "DW_ASPACE_LLVM_AMDGPU_region")
+; CHECK-NEXT:                DW_AT_LLVM_memory_space [DW_FORM_data4] (DW_MSPACE_LLVM_group)
 
 ; CHECK:      0x[[PRIVATE]]: DW_TAG_pointer_type
 ; CHECK-NEXT:                  DW_AT_type
 ; CHECK-NEXT:                  DW_AT_address_class [DW_FORM_data4] (0x00000001)
+; CHECK-NEXT:                  DW_AT_LLVM_address_space [DW_FORM_data4] (0x00000001 "DW_ASPACE_LLVM_AMDGPU_generic")
+; CHECK-NEXT:                  DW_AT_LLVM_memory_space [DW_FORM_data4] (DW_MSPACE_LLVM_private)
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
@@ -86,19 +97,19 @@ entry:
 !7 = distinct !DISubprogram(name: "kernel1", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: false, unit: !0, retainedNodes: !2)
 !8 = !DISubroutineType(types: !9)
 !9 = !{null}
-!10 = !DILocalVariable(name: "FuncVar0", scope: !7, file: !1, line: 2, type: !11)
+!10 = !DILocalVariable(name: "FuncVar0", scope: !7, file: !1, line: 2, type: !11, memorySpace: DW_MSPACE_LLVM_private)
 !11 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !12, size: 64)
 !12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !13 = !DIExpression()
 !14 = !DILocation(line: 2, column: 15, scope: !7)
-!15 = !DILocalVariable(name: "FuncVar1", scope: !7, file: !1, line: 3, type: !11)
+!15 = !DILocalVariable(name: "FuncVar1", scope: !7, file: !1, line: 3, type: !11, memorySpace: DW_MSPACE_LLVM_private)
 !16 = !DILocation(line: 3, column: 17, scope: !7)
-!17 = !DILocalVariable(name: "FuncVar2", scope: !7, file: !1, line: 4, type: !18)
-!18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !12, size: 32, dwarfAddressSpace: 2)
+!17 = !DILocalVariable(name: "FuncVar2", scope: !7, file: !1, line: 4, type: !18, memorySpace: DW_MSPACE_LLVM_private)
+!18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !12, size: 32, addressSpace: 2, memorySpace: DW_MSPACE_LLVM_group)
 !19 = !DILocation(line: 4, column: 14, scope: !7)
-!20 = !DILocalVariable(name: "FuncVar3", scope: !7, file: !1, line: 5, type: !21)
-!21 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !12, size: 32, dwarfAddressSpace: 1)
+!20 = !DILocalVariable(name: "FuncVar3", scope: !7, file: !1, line: 5, type: !21, memorySpace: DW_MSPACE_LLVM_private)
+!21 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !12, size: 32, addressSpace: 1, memorySpace: DW_MSPACE_LLVM_private)
 !22 = !DILocation(line: 5, column: 16, scope: !7)
-!23 = !DILocalVariable(name: "FuncVar4", scope: !7, file: !1, line: 6, type: !11)
+!23 = !DILocalVariable(name: "FuncVar4", scope: !7, file: !1, line: 6, type: !11, memorySpace: DW_MSPACE_LLVM_private)
 !24 = !DILocation(line: 6, column: 8, scope: !7)
 !25 = !DILocation(line: 7, column: 1, scope: !7)
