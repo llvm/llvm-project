@@ -4598,8 +4598,11 @@ struct OmpClauseList {
 struct OmpDirectiveSpecification {
   ENUM_CLASS(Flags, None, DeprecatedSyntax);
   TUPLE_CLASS_BOILERPLATE(OmpDirectiveSpecification);
+  const OmpDirectiveName &DirName() const {
+    return std::get<OmpDirectiveName>(t);
+  }
   llvm::omp::Directive DirId() const { //
-    return std::get<OmpDirectiveName>(t).v;
+    return DirName().v;
   }
   const OmpArgumentList &Arguments() const;
   const OmpClauseList &Clauses() const;
@@ -4839,17 +4842,17 @@ struct OpenMPExecutableAllocate {
       t;
 };
 
-EMPTY_CLASS(OmpEndAllocators);
-
-// 6.7 Allocators construct [OpenMP 5.2]
-//     allocators-construct -> ALLOCATORS [allocate-clause [,]]
-//                                allocate-stmt
-//                             [omp-end-allocators-construct]
+// Ref: [5.2:180-181], [6.0:315]
+//
+// allocators-construct ->
+//    ALLOCATORS [allocate-clause...]
+//    block
+//    [END ALLOCATORS]
 struct OpenMPAllocatorsConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPAllocatorsConstruct);
   CharBlock source;
-  std::tuple<Verbatim, OmpClauseList, Statement<AllocateStmt>,
-      std::optional<OmpEndAllocators>>
+  std::tuple<OmpDirectiveSpecification, Block,
+      std::optional<OmpDirectiveSpecification>>
       t;
 };
 
