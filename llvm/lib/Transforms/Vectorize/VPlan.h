@@ -958,8 +958,10 @@ public:
     ExtractPenultimateElement,
     LogicalAnd, // Non-poison propagating logical And.
     // Add an offset in bytes (second operand) to a base pointer (first
-    // operand). Only generates scalar values (either for the first lane only or
-    // for all lanes, depending on its uses).
+    // operand). The base pointer must be scalar, but the offset can be a
+    // scalar, multiple scalars, or a vector. If the offset is multiple scalars
+    // then it will generate multiple scalar values (either for the first lane
+    // only or for all lanes, depending on its uses).
     PtrAdd,
     // Returns a scalar boolean value, which is true if any lane of its
     // (boolean) vector operands is true. It produces the reduced value across
@@ -998,7 +1000,7 @@ private:
   /// values per all lanes, stemming from an original ingredient. This method
   /// identifies the (rare) cases of VPInstructions that do so as well, w/o an
   /// underlying ingredient.
-  bool doesGeneratePerAllLanes() const;
+  bool doesGeneratePerAllLanes(VPTransformState &State) const;
 
   /// Returns true if we can generate a scalar for the first lane only if
   /// needed.
