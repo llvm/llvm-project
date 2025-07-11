@@ -334,7 +334,6 @@ namespace pointer_comparisons {
                                           // nointerpreter-note {{comparison between pointers to unrelated objects '&extern_n' and '&extern_n2' has unspecified value}} \
                                           // interpreter-note {{initializer of 'extern_n' is unknown}}
   void f2(const int &n) {
-    // We can prove these two aren't equal, but for now we don't try.
     constexpr int x = &x == &n; // nointerpreter-error {{must be initialized by a constant expression}} \
                                 // nointerpreter-note {{comparison between pointers to unrelated objects '&x' and '&n' has unspecified value}}
     // Distinct variables are not equal, even if they're local variables.
@@ -343,16 +342,18 @@ namespace pointer_comparisons {
   }
   constexpr int f3() {
     int x;
-    return &x == &extern_n; // interpreter-note {{initializer of 'extern_n' is unknown}}
+    return &x == &extern_n; // nointerpreter-note {{comparison between pointers to unrelated objects '&x' and '&extern_n' has unspecified value}} \
+                            // interpreter-note {{initializer of 'extern_n' is unknown}}
   }
-  static_assert(!f3()); // interpreter-error {{static assertion expression is not an integral constant expression}} \
-                        // interpreter-note {{in call to 'f3()'}}
+  static_assert(!f3()); // expected-error {{static assertion expression is not an integral constant expression}} \
+                        // expected-note {{in call to 'f3()'}}
   constexpr int f4() {
     int *p = new int;
-    bool b = p == &extern_n; // interpreter-note {{initializer of 'extern_n' is unknown}}
+    bool b = p == &extern_n; // nointerpreter-note {{comparison between pointers to unrelated objects '&{*new int#0}' and '&extern_n' has unspecified value}} \
+                             // interpreter-note {{initializer of 'extern_n' is unknown}}
     delete p;
     return b;
   }
-  static_assert(!f4()); // interpreter-error {{static assertion expression is not an integral constant expression}} \
-                        // interpreter-note {{in call to 'f4()'}}
+  static_assert(!f4()); // expected-error {{static assertion expression is not an integral constant expression}} \
+                        // expected-note {{in call to 'f4()'}}
 }

@@ -14538,20 +14538,7 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
           (LHSValue.Base && isZeroSized(RHSValue)))
         return DiagComparison(
             diag::note_constexpr_pointer_comparison_zero_sized);
-      // A constexpr-unknown reference can be equal to any other lvalue, except
-      // for variables allocated during constant evaluation. (The "lifetime
-      // [...] includes the entire constant evaluation", so it has to be
-      // distinct from anything allocated during constant evaluation.)
-      //
-      // Theoretically we could handle other cases, but the standard doesn't say
-      // what other cases we need to handle; it just says an "equality
-      // operator where the result is unspecified" isn't a constant expression.
-      auto AllocatedDuringEval = [](LValue &Value) {
-        return Value.Base.is<DynamicAllocLValue>() ||
-               Value.getLValueCallIndex();
-      };
-      if ((LHSValue.AllowConstexprUnknown && !AllocatedDuringEval(RHSValue)) ||
-          (RHSValue.AllowConstexprUnknown && !AllocatedDuringEval(LHSValue)))
+      if (LHSValue.AllowConstexprUnknown || RHSValue.AllowConstexprUnknown)
         return DiagComparison(
             diag::note_constexpr_pointer_comparison_unspecified);
       // FIXME: Verify both variables are live.

@@ -923,6 +923,7 @@ Bug Fixes to C++ Support
 - Improved handling of variables with ``consteval`` constructors, to
   consistently treat the initializer as manifestly constant-evaluated.
   (#GH135281)
+- Fixed constant evaluation of equality comparisons of constexpr-unknown references. (#GH147663)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
