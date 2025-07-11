@@ -194,7 +194,7 @@ static bool isLiteralType(const Type *T, const ASTContext &Ctx,
   if (T->isLiteralType(Ctx))
     return true;
 
-  if (const auto *Rec = T->getAsCXXRecordDecl()) {
+  if (const CXXRecordDecl *Rec = T->getAsCXXRecordDecl()) {
     if (llvm::any_of(Rec->ctors(), [](const CXXConstructorDecl *Ctor) {
           return !Ctor->isCopyOrMoveConstructor() &&
                  Ctor->isConstexprSpecified();
@@ -227,7 +227,7 @@ static bool satisfiesProperties11(
     return true;
 
   const LangOptions LO = Ctx.getLangOpts();
-  const CXXMethodDecl *Method = llvm::dyn_cast<CXXMethodDecl>(FDecl);
+  const auto *Method = llvm::dyn_cast<CXXMethodDecl>(FDecl);
   if (Method && !Method->isStatic() &&
       !Method->getParent()->hasConstexprNonCopyMoveConstructor() &&
       !AddConstexprToMethodOfClassWithoutConstexprConstructor)
@@ -337,7 +337,7 @@ static bool satisfiesProperties11(
     }
 
     bool WalkUpFromCXXConstructExpr(CXXConstructExpr *CE) {
-      if (const auto *Ctor = CE->getConstructor();
+      if (const CXXConstructorDecl *Ctor = CE->getConstructor();
           Ctor && !Ctor->isConstexprSpecified()) {
         Possible = false;
         return false;
@@ -392,7 +392,7 @@ static bool satisfiesProperties1417(
     return true;
 
   const LangOptions LO = Ctx.getLangOpts();
-  const CXXMethodDecl *Method = llvm::dyn_cast<CXXMethodDecl>(FDecl);
+  const auto *Method = llvm::dyn_cast<CXXMethodDecl>(FDecl);
   if (Method && !Method->isStatic() &&
       !Method->getParent()->hasConstexprNonCopyMoveConstructor() &&
       !AddConstexprToMethodOfClassWithoutConstexprConstructor)
@@ -451,7 +451,7 @@ static bool satisfiesProperties1417(
       return false;
     }
     bool TraverseVarDecl(VarDecl *VD) {
-      const auto StorageDur = VD->getStorageDuration();
+      const StorageDuration StorageDur = VD->getStorageDuration();
       Possible = VD->hasInit() &&
                  isLiteralType(VD->getType(), VD->getASTContext(),
                                ConservativeLiteralType) &&
@@ -523,7 +523,7 @@ static bool satisfiesProperties1417(
     }
 
     bool WalkUpFromCXXConstructExpr(CXXConstructExpr *CE) {
-      if (const auto *Ctor = CE->getConstructor();
+      if (const CXXConstructorDecl *Ctor = CE->getConstructor();
           Ctor && !Ctor->isConstexprSpecified()) {
         Possible = false;
         return false;
@@ -573,7 +573,7 @@ static bool satisfiesProperties20(
     return true;
 
   const LangOptions LO = Ctx.getLangOpts();
-  const CXXMethodDecl *Method = llvm::dyn_cast<CXXMethodDecl>(FDecl);
+  const auto *Method = llvm::dyn_cast<CXXMethodDecl>(FDecl);
   if (Method && !Method->isStatic() &&
       !Method->getParent()->hasConstexprNonCopyMoveConstructor() &&
       !AddConstexprToMethodOfClassWithoutConstexprConstructor)
@@ -628,7 +628,7 @@ static bool satisfiesProperties20(
       return false;
     }
     bool TraverseVarDecl(VarDecl *VD) {
-      const auto StorageDur = VD->getStorageDuration();
+      const StorageDuration StorageDur = VD->getStorageDuration();
       Possible = isLiteralType(VD->getType(), VD->getASTContext(),
                                ConservativeLiteralType) &&
                  (StorageDur != StorageDuration::SD_Static &&
@@ -699,7 +699,7 @@ static bool satisfiesProperties20(
     }
 
     bool WalkUpFromCXXConstructExpr(CXXConstructExpr *CE) {
-      if (const auto *Ctor = CE->getConstructor();
+      if (const CXXConstructorDecl *Ctor = CE->getConstructor();
           Ctor && !Ctor->isConstexprSpecified()) {
         Possible = false;
         return false;
@@ -739,7 +739,7 @@ static bool satisfiesProperties2326(
     return true;
 
   const LangOptions LO = Ctx.getLangOpts();
-  const CXXMethodDecl *Method = llvm::dyn_cast<CXXMethodDecl>(FDecl);
+  const auto *Method = llvm::dyn_cast<CXXMethodDecl>(FDecl);
   if (Method && !Method->isStatic() &&
       !Method->getParent()->hasConstexprNonCopyMoveConstructor() &&
       !AddConstexprToMethodOfClassWithoutConstexprConstructor)
@@ -827,8 +827,8 @@ AST_MATCHER_P(VarDecl, satisfiesVariableProperties, bool,
   if (!Finder->getASTContext().getLangOpts().CPlusPlus20)
     return true;
 
-  const auto *RDecl = T->getAsCXXRecordDecl();
-  const auto *const ArrayOrPtrElement = T->getPointeeOrArrayElementType();
+  const CXXRecordDecl *RDecl = T->getAsCXXRecordDecl();
+  const Type *const ArrayOrPtrElement = T->getPointeeOrArrayElementType();
   if (ArrayOrPtrElement)
     RDecl = ArrayOrPtrElement->getAsCXXRecordDecl();
 
@@ -938,7 +938,7 @@ void UseConstexprCheck::onEndOfTranslationUnit() {
   };
 
   for (const auto &[Var, FuncCtx] : VariableMapping) {
-    const auto IsAddingConstexprToFuncCtx = Functions.contains(FuncCtx);
+    const bool IsAddingConstexprToFuncCtx = Functions.contains(FuncCtx);
     if (FuncCtx && getLangOpts().CPlusPlus23 && Var->isStaticLocal() &&
         IsAddingConstexprToFuncCtx)
       continue;
