@@ -291,12 +291,8 @@ mlir::Value ComplexExprEmitter::VisitInitListExpr(const InitListExpr *e) {
   }
 
   assert(e->getNumInits() == 0 && "Unexpected number of inits");
-  QualType complexElemTy =
-      e->getType()->castAs<clang::ComplexType>()->getElementType();
-  mlir::Type complexElemLLVMTy = cgf.convertType(complexElemTy);
-  mlir::TypedAttr defaultValue = builder.getZeroInitAttr(complexElemLLVMTy);
-  auto complexAttr = cir::ConstComplexAttr::get(defaultValue, defaultValue);
-  return builder.create<cir::ConstantOp>(loc, complexAttr);
+  mlir::Type complexTy = cgf.convertType(e->getType());
+  return builder.getNullValue(complexTy, loc);
 }
 
 mlir::Value

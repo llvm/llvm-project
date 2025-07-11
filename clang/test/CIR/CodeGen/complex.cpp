@@ -31,7 +31,7 @@ float _Complex cf2 = { 1.0f, 2.0f };
 void foo() { int _Complex c = {}; }
 
 // CIR: %[[INIT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["c", init]
-// CIR: %[[COMPLEX:.*]] = cir.const #cir.const_complex<#cir.int<0> : !s32i, #cir.int<0> : !s32i> : !cir.complex<!s32i>
+// CIR: %[[COMPLEX:.*]] = cir.const #cir.zero : !cir.complex<!s32i>
 // CIR: cir.store{{.*}} %[[COMPLEX]], %[[INIT]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
 // LLVM: %[[INIT:.*]] = alloca { i32, i32 }, i64 1, align 4
@@ -741,7 +741,7 @@ void foo29() {
 }
 
 // CIR: %[[INIT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["a", init]
-// CIR: %[[COMPLEX:.*]] = cir.const #cir.const_complex<#cir.int<0> : !s32i, #cir.int<0> : !s32i> : !cir.complex<!s32i>
+// CIR: %[[COMPLEX:.*]] = cir.const #cir.zero : !cir.complex<!s32i>
 // CIR: cir.store{{.*}} %[[COMPLEX]], %[[INIT]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
 // LLVM: %[[INIT:.*]] = alloca { i32, i32 }, i64 1, align 4
