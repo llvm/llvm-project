@@ -82,3 +82,12 @@ let Predicates = [HasVSX, IsISAFuture] in {
                                    "stxvprll $XTp, $RA, $RB", IIC_LdStLFD, []>;
   }
 }
+
+def : Pat<(v4i32 (int_ppc_vsx_lxvrl addr:$RA, i64:$RB)), (LXVRL $RA, $RB)>;
+def : Pat<(v4i32 (int_ppc_vsx_lxvrll addr:$RA, i64:$RB)), (LXVRLL $RA, $RB)>;
+def : Pat<(v256i1 (int_ppc_vsx_lxvprl addr:$RA, i64:$RB)), (LXVPRL $RA, $RB)>;
+def : Pat<(v256i1 (int_ppc_vsx_lxvprll addr:$RA, i64:$RB)), (LXVPRLL $RA, $RB)>;
+/*
+def : Pat<(int_ppc_vsx_stxvrl v256i1:$XT, addr:$RA, i64:$RB),
+          (STXVRL $XT, $RA, $RB)>;
+*/
