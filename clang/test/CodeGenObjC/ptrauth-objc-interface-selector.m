@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -O0 -Wno-objc-root-class -fptrauth-intrinsics -fptrauth-calls -nostdsysteminc -triple arm64e-apple-ios -emit-llvm -fptrauth-objc-interface-sel -o - %s | FileCheck --check-prefix=CHECK-AUTHENTICATED-SEL %s
-// RUN: %clang_cc1 -O0 -Wno-objc-root-class -fptrauth-intrinsics -fptrauth-calls -nostdsysteminc -triple arm64e-apple-ios -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-UNAUTHENTICATED-SEL %s
+// RUN: %clang_cc1 -O0 -Wno-objc-root-class -fptrauth-intrinsics -fptrauth-calls -nostdsysteminc -triple arm64-apple-ios -emit-llvm -fptrauth-objc-interface-sel -o - %s | FileCheck --check-prefix=CHECK-AUTHENTICATED-SEL %s
+// RUN: %clang_cc1 -O0 -Wno-objc-root-class -fptrauth-intrinsics -fptrauth-calls -nostdsysteminc -triple arm64-apple-ios -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-UNAUTHENTICATED-SEL %s
 
 #include <ptrauth.h>
 #define __ptrauth_objc_sel_override                 \

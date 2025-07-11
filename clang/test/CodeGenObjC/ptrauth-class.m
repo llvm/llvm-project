@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-everything -fblocks -fptrauth-intrinsics -triple arm64e -fobjc-runtime=ios-12.2 -emit-llvm -no-enable-noundef-analysis -fobjc-arc -O2 -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -Wno-everything -fblocks -fptrauth-intrinsics -triple arm64-apple-ios -fobjc-runtime=ios-12.2 -emit-llvm -no-enable-noundef-analysis -fobjc-arc -O2 -disable-llvm-passes -o - %s | FileCheck %s
 
 #if __has_feature(ptrauth_objc_signable_class)
 struct TestStruct {

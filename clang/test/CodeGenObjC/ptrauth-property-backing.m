@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64e -fptrauth-calls -emit-llvm -fexceptions -fptrauth-intrinsics -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -emit-llvm -fexceptions -fptrauth-intrinsics -o - %s | FileCheck %s
 
 typedef void (*func)();
 
