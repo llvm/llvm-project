@@ -2766,6 +2766,33 @@ SDValue DAGCombiner::visitPTRADD(SDNode *N) {
     }
   }
 
+  // Transform (ptradd a, b) -> (or disjoint a, b) if it is equivalent and if
+  // that transformation can't block an offset folding at any use of the ptradd.
+  // This should be done late, after legalization, so that it doesn't block
+  // other ptradd combines that could enable more offset folding.
+  if (LegalOperations && DAG.haveNoCommonBitsSet(N0, N1)) {
+    bool TransformCanBreakAddrMode = false;
+    if (auto *C = dyn_cast<ConstantSDNode>(N1)) {
+      TargetLoweringBase::AddrMode AM;
+      AM.HasBaseReg = true;
+      AM.BaseOffs = C->getSExtValue();
+      TransformCanBreakAddrMode = any_of(N->users(), [&](SDNode *User) {
+        if (auto *LoadStore = dyn_cast<MemSDNode>(User);
+            LoadStore && LoadStore->getBasePtr().getNode() == N) {
+          unsigned AS = LoadStore->getAddressSpace();
+          EVT AccessVT = LoadStore->getMemoryVT();
+          Type *AccessTy = AccessVT.getTypeForEVT(*DAG.getContext());
+          return TLI.isLegalAddressingMode(DAG.getDataLayout(), AM, AccessTy,
+                                           AS);
+        }
+        return false;
+      });
+    }
+
+    if (!TransformCanBreakAddrMode)
+      return DAG.getNode(ISD::OR, DL, PtrVT, N0, N1, SDNodeFlags::Disjoint);
+  }
+
   return SDValue();
 }
 
