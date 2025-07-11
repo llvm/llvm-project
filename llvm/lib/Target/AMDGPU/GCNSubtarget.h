@@ -1100,6 +1100,8 @@ public:
     return getGeneration() >= GFX10 || hasGFX940Insts();
   }
 
+  bool hasFmaakFmamkF64Insts() const { return hasGFX1250Insts(); }
+
   bool hasImageInsts() const {
     return HasImageInsts;
   }
