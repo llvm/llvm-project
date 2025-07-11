@@ -16,6 +16,7 @@ set(LIBCXXABI_SOURCES
   # Internal files
   abort_message.cpp
   fallback_malloc.cpp
+  log_error_and_continue.cpp
   private_typeinfo.cpp
 )
 
