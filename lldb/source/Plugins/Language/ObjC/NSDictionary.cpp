@@ -119,7 +119,7 @@ private:
 
   struct DataDescriptor_64 {
     uint64_t _used : 58;
-    uint32_t _szidx : 6;
+    uint64_t _szidx : 6;
   };
 
   struct DictionaryItemDescriptor {
@@ -273,7 +273,7 @@ namespace Foundation1100 {
     
     struct DataDescriptor_64 {
       uint64_t _used : 58;
-      uint32_t _kvo : 1;
+      uint64_t _kvo : 1;
       uint64_t _size;
       uint64_t _mutations;
       uint64_t _objs_addr;
@@ -308,7 +308,7 @@ namespace Foundation1428 {
     
     struct DataDescriptor_64 {
       uint64_t _used : 58;
-      uint32_t _kvo : 1;
+      uint64_t _kvo : 1;
       uint64_t _size;
       uint64_t _buffer;
       uint64_t GetSize() { return _size; }
