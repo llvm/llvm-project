@@ -99,7 +99,7 @@ struct GcnBufferFormatInfo {
 struct MAIInstInfo {
   uint16_t Opcode;
   bool is_dgemm;
-  bool is_gfx940_xdl;
+  bool is_sgemm;
 };
 
 struct MFMA_F8F6F4_Info {
@@ -590,8 +590,9 @@ bool isVOPCAsmOnly(unsigned Opc);
 LLVM_READONLY
 bool getMAIIsDGEMM(unsigned Opc);
 
+/// Returns true if MAI operation is a single precision (non xf32) GEMM.
 LLVM_READONLY
-bool getMAIIsGFX940XDL(unsigned Opc);
+bool getMAIIsSGEMM(unsigned Opc);
 
 // Get an equivalent BitOp3 for a binary logical \p Opc.
 // \returns BitOp3 modifier for the logical operation or zero.
