@@ -1862,10 +1862,9 @@ define i32 @or_and_not_not_extra_not_use1(i32 %a, i32 %b, i32 %c) {
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B]], [[A]]
 ; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[A]], [[C]]
-; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[OR2]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[B]], [[NOT2]]
-; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[AND]], [[NOT1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[C]], [[B]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], [[A]]
+; CHECK-NEXT:    [[OR3:%.*]] = xor i32 [[TMP2]], -1
 ; CHECK-NEXT:    call void @use(i32 [[NOT1]])
 ; CHECK-NEXT:    ret i32 [[OR3]]
 ;
@@ -1926,11 +1925,9 @@ define i32 @or_and_not_not_extra_or_use1(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: define {{[^@]+}}@or_and_not_not_extra_or_use1
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
 ; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[B]], [[A]]
-; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[OR1]], -1
-; CHECK-NEXT:    [[OR2:%.*]] = or i32 [[A]], [[C]]
-; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[OR2]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[B]], [[NOT2]]
-; CHECK-NEXT:    [[OR3:%.*]] = or i32 [[AND]], [[NOT1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[C]], [[B]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], [[A]]
+; CHECK-NEXT:    [[OR3:%.*]] = xor i32 [[TMP2]], -1
 ; CHECK-NEXT:    call void @use(i32 [[OR1]])
 ; CHECK-NEXT:    ret i32 [[OR3]]
 ;
@@ -2177,10 +2174,9 @@ define i32 @and_or_not_not_extra_not_use1(i32 %a, i32 %b, i32 %c) {
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[B]], [[A]]
 ; CHECK-NEXT:    [[NOT1:%.*]] = xor i32 [[AND1]], -1
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[A]], [[C]]
-; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[AND2]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], [[NOT2]]
-; CHECK-NEXT:    [[AND3:%.*]] = xor i32 [[AND1]], [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[C]], [[B]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[A]]
+; CHECK-NEXT:    [[AND3:%.*]] = xor i32 [[TMP2]], -1
 ; CHECK-NEXT:    call void @use(i32 [[NOT1]])
 ; CHECK-NEXT:    ret i32 [[AND3]]
 ;
@@ -2241,10 +2237,9 @@ define i32 @and_or_not_not_extra_or_use1(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: define {{[^@]+}}@and_or_not_not_extra_or_use1
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]]) {
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[B]], [[A]]
-; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[A]], [[C]]
-; CHECK-NEXT:    [[NOT2:%.*]] = xor i32 [[AND2]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], [[NOT2]]
-; CHECK-NEXT:    [[AND3:%.*]] = xor i32 [[AND1]], [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[C]], [[B]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[A]]
+; CHECK-NEXT:    [[AND3:%.*]] = xor i32 [[TMP2]], -1
 ; CHECK-NEXT:    call void @use(i32 [[AND1]])
 ; CHECK-NEXT:    ret i32 [[AND3]]
 ;
