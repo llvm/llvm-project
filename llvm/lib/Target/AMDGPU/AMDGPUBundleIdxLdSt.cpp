@@ -72,6 +72,8 @@ private:
   bool bundleIdxLdSt(MachineInstr *MI);
   bool sinkInstruction(MachineInstr &MI, bool &SawStore);
   bool sinkLoadsAndCoreMIs(MachineFunction &MF);
+  void lowerLanesharedPseudoInst(MachineInstr &MI);
+  bool lowerLanesharedPseudoInsts(MachineFunction &MF);
   SmallVector<std::pair<MachineBasicBlock *, MachineBasicBlock::iterator>, 4>
   findSuccsToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB);
   void recoverIdx0ForPrivateUse(SmallVector<BundleItem, 4> &Worklist,
@@ -676,6 +678,91 @@ AMDGPUBundleIdxLdSt::tryGetDefInsertPt(SmallVector<BundleItem, 4> &Worklist,
   return Worklist.begin() + 1;
 }
 
+// Lower the pseudo instruction to another pseudo and V_STORE_IDX
+void AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInst(MachineInstr &MI) {
+  MachineBasicBlock *MBB = MI.getParent();
+  MachineFunction *MF = MBB->getParent();
+  unsigned Opc = 0;
+  switch (MI.getOpcode()) {
+  case AMDGPU::CLUSTER_LOAD_B32_LANESHARED: {
+    Opc = AMDGPU::CLUSTER_LOAD_B32;
+    break;
+  }
+  case AMDGPU::CLUSTER_LOAD_B32_LANESHARED_SADDR: {
+    Opc = AMDGPU::CLUSTER_LOAD_B32_SADDR;
+    break;
+  }
+  case AMDGPU::CLUSTER_LOAD_B64_LANESHARED: {
+    Opc = AMDGPU::CLUSTER_LOAD_B64;
+    break;
+  }
+  case AMDGPU::CLUSTER_LOAD_B64_LANESHARED_SADDR: {
+    Opc = AMDGPU::CLUSTER_LOAD_B64_SADDR;
+    break;
+  }
+  case AMDGPU::CLUSTER_LOAD_B128_LANESHARED: {
+    Opc = AMDGPU::CLUSTER_LOAD_B128;
+    break;
+  }
+  case AMDGPU::CLUSTER_LOAD_B128_LANESHARED_SADDR: {
+    Opc = AMDGPU::CLUSTER_LOAD_B128_SADDR;
+    break;
+  }
+  default: {
+    // TODO Implement DS and DDS laneshared pseudos
+    return;
+  }
+  }
+  const MCInstrDesc &II = STI->get(Opc);
+  Register DataReg = MRI->createVirtualRegister(
+      TRI->getAllocatableClass(TII->getRegClass(II, 0, TRI, *MF)));
+  auto CoreMIB = BuildMI(*MBB, MI, MI.getDebugLoc(), II, DataReg);
+  unsigned OpsToCopy = II.getNumOperands() - 1; // -1 for dst reg;
+  constexpr unsigned NumStoreOps = 2;
+  unsigned NumMIOps = MI.getNumExplicitOperands();
+  assert(OpsToCopy + NumStoreOps == NumMIOps &&
+         "Unexpected number of operands in laneshared pseudo");
+  for (unsigned I = 0, E = OpsToCopy; I < E; ++I) {
+    CoreMIB.add(MI.getOperand(I));
+  }
+  auto *LoadMMO = *MI.memoperands_begin();
+  CoreMIB.addMemOperand(LoadMMO);
+
+  auto StoreMIB = BuildMI(*MBB, MI, MI.getDebugLoc(),
+                          STI->get(AMDGPU::V_STORE_IDX))
+                      .addReg(DataReg)                   // data
+                      .add(MI.getOperand(NumMIOps - 2))  // idx
+                      .add(MI.getOperand(NumMIOps - 1)); // offset
+
+  // Synthesize MMO for V_STORE_IDX.
+  MachinePointerInfo StorePtrI = MachinePointerInfo(AMDGPUAS::LANE_SHARED);
+  auto Flags = LoadMMO->getFlags() & ~MachineMemOperand::MOLoad |
+               MachineMemOperand::MOStore;
+  MachineMemOperand *StoreMMO =
+      MF->getMachineMemOperand(StorePtrI, Flags, LoadMMO->getSize(),
+                               LoadMMO->getBaseAlign(), LoadMMO->getAAInfo());
+  StoreMIB.addMemOperand(StoreMMO);
+
+  LLVM_DEBUG(dbgs() << " *** Expanded pseudo: "; MI.print(dbgs()));
+  MI.eraseFromParent();
+}
+
+// To fulfill the programming model, these instructions must not fail to map
+// their destination into laneshared VGPRs. Therefore we expand their temporary
+// pseudos into bundles as late as possible
+bool AMDGPUBundleIdxLdSt::lowerLanesharedPseudoInsts(MachineFunction &MF) {
+  bool Changed = false;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : make_early_inc_range(MBB)) {
+      if (SIInstrInfo::mustHaveLanesharedResult(MI)) {
+        Changed = true;
+        lowerLanesharedPseudoInst(MI);
+      }
+    }
+  }
+  return Changed;
+}
+
 bool AMDGPUBundleIdxLdSt::bundleIdxLdSt(MachineInstr *MI) {
   LLVM_DEBUG(dbgs() << "BB." << MI->getParent()->getNumber() << " :: ";
              MI->print(dbgs()));
@@ -959,12 +1046,19 @@ bool AMDGPUBundleIdxLdSt::runOnMachineFunction(MachineFunction &MF) {
   STI = ST->getInstrInfo();
   TII = MF.getSubtarget().getInstrInfo();
   MRI = &MF.getRegInfo();
+
+  bool Changed = false;
+  LLVM_DEBUG(
+      dbgs()
+      << "===== AMDGPUBundleIdxLdSt :: Lower pseudo-Instructions =====\n");
+  Changed |= lowerLanesharedPseudoInsts(MF);
+
   if (auto *AAR = getAnalysisIfAvailable<AAResultsWrapperPass>())
     AA = &AAR->getAAResults();
   CI = &getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();
 
   LLVM_DEBUG(dbgs() << "===== AMDGPUBundleIdxLdSt :: Sinking Phase =====\n");
-  bool Changed = sinkLoadsAndCoreMIs(MF);
+  Changed |= sinkLoadsAndCoreMIs(MF);
 
   LLVM_DEBUG(dbgs() << "===== AMDGPUBundleIdxLdSt :: Bundling Phase =====\n");
   MFI = MF.getInfo<SIMachineFunctionInfo>();

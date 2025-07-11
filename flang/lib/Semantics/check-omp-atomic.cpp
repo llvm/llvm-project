@@ -47,42 +47,11 @@ static bool operator!=(const evaluate::Expr<T> &e, const evaluate::Expr<U> &f) {
   return !(e == f);
 }
 
-// There is no consistent way to get the source of a given ActionStmt, so
-// extract the source information from Statement<ActionStmt> when we can,
-// and keep it around for error reporting in further analyses.
-struct SourcedActionStmt {
-  const parser::ActionStmt *stmt{nullptr};
-  parser::CharBlock source;
-
-  operator bool() const { return stmt != nullptr; }
-};
-
 struct AnalyzedCondStmt {
   SomeExpr cond{evaluate::NullPointer{}}; // Default ctor is deleted
   parser::CharBlock source;
   SourcedActionStmt ift, iff;
 };
-
-static SourcedActionStmt GetActionStmt(
-    const parser::ExecutionPartConstruct *x) {
-  if (x == nullptr) {
-    return SourcedActionStmt{};
-  }
-  if (auto *exec{std::get_if<parser::ExecutableConstruct>(&x->u)}) {
-    using ActionStmt = parser::Statement<parser::ActionStmt>;
-    if (auto *stmt{std::get_if<ActionStmt>(&exec->u)}) {
-      return SourcedActionStmt{&stmt->statement, stmt->source};
-    }
-  }
-  return SourcedActionStmt{};
-}
-
-static SourcedActionStmt GetActionStmt(const parser::Block &block) {
-  if (block.size() == 1) {
-    return GetActionStmt(&block.front());
-  }
-  return SourcedActionStmt{};
-}
 
 // Compute the `evaluate::Assignment` from parser::ActionStmt. The assumption
 // is that the ActionStmt will be either an assignment or a pointer-assignment,

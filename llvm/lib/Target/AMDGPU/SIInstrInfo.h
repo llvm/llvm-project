@@ -923,8 +923,17 @@ public:
   static bool mustHaveLanesharedResult(const MachineInstr &MI) {
     switch (MI.getOpcode()) {
     case AMDGPU::CLUSTER_LOAD_B32:
+    case AMDGPU::CLUSTER_LOAD_B32_LANESHARED:
+    case AMDGPU::CLUSTER_LOAD_B32_SADDR:
+    case AMDGPU::CLUSTER_LOAD_B32_LANESHARED_SADDR:
     case AMDGPU::CLUSTER_LOAD_B64:
+    case AMDGPU::CLUSTER_LOAD_B64_LANESHARED:
+    case AMDGPU::CLUSTER_LOAD_B64_SADDR:
+    case AMDGPU::CLUSTER_LOAD_B64_LANESHARED_SADDR:
     case AMDGPU::CLUSTER_LOAD_B128:
+    case AMDGPU::CLUSTER_LOAD_B128_LANESHARED:
+    case AMDGPU::CLUSTER_LOAD_B128_SADDR:
+    case AMDGPU::CLUSTER_LOAD_B128_LANESHARED_SADDR:
     case AMDGPU::DS_LOAD_MCAST_B32:
     case AMDGPU::DS_LOAD_MCAST_B64:
     case AMDGPU::DS_LOAD_MCAST_B128:
@@ -1377,8 +1386,8 @@ public:
 
   void legalizeOperandsSMRD(MachineRegisterInfo &MRI, MachineInstr &MI) const;
   void legalizeOperandsFLAT(MachineRegisterInfo &MRI, MachineInstr &MI) const;
-  void legalizeOperandsVLdStIdx(MachineRegisterInfo &MRI,
-                                MachineInstr &MI) const;
+  void legalizeOperandsVLdStIdx(MachineRegisterInfo &MRI, MachineInstr &MI,
+                                unsigned OpNo) const;
 
   void legalizeGenericOperand(MachineBasicBlock &InsertMBB,
                               MachineBasicBlock::iterator I,

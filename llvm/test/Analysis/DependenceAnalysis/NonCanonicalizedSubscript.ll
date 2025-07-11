@@ -18,7 +18,7 @@ define void @i32_subscript(ptr %a, ptr %b) {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %a.addr, align 4 --> Dst: %0 = load i32, ptr %a.addr, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %a.addr, align 4 --> Dst: store i32 %1, ptr %a.addr.2, align 4
-; CHECK-NEXT:    da analyze - anti [=|<]!
+; CHECK-NEXT:    da analyze - anti [0|<]!
 ; CHECK-NEXT:  Src: store i32 %1, ptr %a.addr.2, align 4 --> Dst: store i32 %1, ptr %a.addr.2, align 4
 ; CHECK-NEXT:    da analyze - none!
 ;

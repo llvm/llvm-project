@@ -6894,8 +6894,9 @@ void SIInstrInfo::legalizeOperandsFLAT(MachineRegisterInfo &MRI,
 }
 
 void SIInstrInfo::legalizeOperandsVLdStIdx(MachineRegisterInfo &MRI,
-                                           MachineInstr &MI) const {
-  MachineOperand &Idx = MI.getOperand(1);
+                                           MachineInstr &MI,
+                                           unsigned OpNo) const {
+  MachineOperand &Idx = MI.getOperand(OpNo);
   if (Idx.isReg() && RI.hasVectorRegisters(MRI.getRegClass(Idx.getReg())))
     Idx.setReg(readlaneVGPRToSGPR(Idx.getReg(), MI, MRI));
 }
@@ -7264,6 +7265,26 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return CreatedBB;
   }
 
+  if (mustHaveLanesharedResult(MI)) {
+    switch (MI.getOpcode()) {
+    case AMDGPU::CLUSTER_LOAD_B32_LANESHARED:
+    case AMDGPU::CLUSTER_LOAD_B64_LANESHARED:
+    case AMDGPU::CLUSTER_LOAD_B128_LANESHARED:
+    case AMDGPU::CLUSTER_LOAD_B32_LANESHARED_SADDR:
+    case AMDGPU::CLUSTER_LOAD_B64_LANESHARED_SADDR:
+    case AMDGPU::CLUSTER_LOAD_B128_LANESHARED_SADDR: {
+      unsigned OpNo =
+          AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::idx);
+      legalizeOperandsVLdStIdx(MRI, MI, OpNo);
+      break;
+    }
+    default:
+      // The rest don't require legalization.
+      break;
+    }
+    return CreatedBB;
+  }
+
   // Legalize FLAT
   if (isFLAT(MI)) {
     legalizeOperandsFLAT(MRI, MI);
@@ -7271,7 +7292,7 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
   }
 
   if (isVLdStIdx(MI.getOpcode())) {
-    legalizeOperandsVLdStIdx(MRI, MI);
+    legalizeOperandsVLdStIdx(MRI, MI, 1);
     return CreatedBB;
   }
 

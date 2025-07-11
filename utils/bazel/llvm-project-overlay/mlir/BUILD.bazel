@@ -5435,6 +5435,7 @@ cc_library(
         ":Transforms",
         ":VCIXToLLVMIRTranslation",
         ":VectorDialect",
+        ":XeVMDialect",
         ":config",
         "//llvm:Core",
         "//llvm:MC",

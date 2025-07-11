@@ -6,7 +6,7 @@ target datalayout = "A5"
 @dst2 = external local_unnamed_addr addrspace(10) global <8 x float>, align 32
 
 ; TODO: add ds and dds src to private vgprs
-; TODO: add ds and dds src to laneshared
+; TODO: add dds src to laneshared
 ; TODO: globalisel
 
 ;///////////////////////////////laneshared tests/////////////////////////////

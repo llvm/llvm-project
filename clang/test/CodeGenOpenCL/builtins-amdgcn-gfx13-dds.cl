@@ -2,6 +2,9 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx1300 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-GFX13
 
+typedef int    v2i   __attribute__((ext_vector_type(2)));
+typedef int    v4i   __attribute__((ext_vector_type(4)));
+
 // CHECK-GFX13-LABEL: @test_amdgcn_map_shared_rank(
 // CHECK-GFX13-NEXT:  entry:
 // CHECK-GFX13-NEXT:    [[TMP0:%.*]] = tail call ptr addrspace(11) @llvm.amdgcn.map.shared.rank(ptr addrspace(3) [[PTR:%.*]], i32 [[RANK:%.*]])
@@ -20,4 +23,34 @@ __attribute__((address_space(11))) void* test_amdgcn_map_shared_rank(__local voi
 int test_amdgcn_query_shared_rank(__attribute__((address_space(11))) const void* ptr)
 {
   return __builtin_amdgcn_query_shared_rank(ptr);
+}
+
+// CHECK-GFX13-LABEL: @test_amdgcn_dds_load_async_to_lds_b32(
+// CHECK-GFX13-NEXT:  entry:
+// CHECK-GFX13-NEXT:    tail call void @llvm.amdgcn.dds.load.async.to.lds.b32(ptr addrspace(11) [[GADDR:%.*]], ptr addrspace(3) [[LADDR:%.*]], i32 16, i32 0)
+// CHECK-GFX13-NEXT:    ret void
+//
+void test_amdgcn_dds_load_async_to_lds_b32(__attribute__((address_space(11))) int* gaddr, local int* laddr)
+{
+  __builtin_amdgcn_dds_load_async_to_lds_b32(gaddr, laddr, 16, 0);
+}
+
+// CHECK-GFX13-LABEL: @test_amdgcn_dds_load_async_to_lds_b64(
+// CHECK-GFX13-NEXT:  entry:
+// CHECK-GFX13-NEXT:    tail call void @llvm.amdgcn.dds.load.async.to.lds.b64(ptr addrspace(11) [[GADDR:%.*]], ptr addrspace(3) [[LADDR:%.*]], i32 16, i32 0)
+// CHECK-GFX13-NEXT:    ret void
+//
+void test_amdgcn_dds_load_async_to_lds_b64(__attribute__((address_space(11))) v2i* gaddr, local v2i* laddr)
+{
+  __builtin_amdgcn_dds_load_async_to_lds_b64(gaddr, laddr, 16, 0);
+}
+
+// CHECK-GFX13-LABEL: @test_amdgcn_dds_load_async_to_lds_b128(
+// CHECK-GFX13-NEXT:  entry:
+// CHECK-GFX13-NEXT:    tail call void @llvm.amdgcn.dds.load.async.to.lds.b128(ptr addrspace(11) [[GADDR:%.*]], ptr addrspace(3) [[LADDR:%.*]], i32 16, i32 0)
+// CHECK-GFX13-NEXT:    ret void
+//
+void test_amdgcn_dds_load_async_to_lds_b128(__attribute__((address_space(11))) v4i* gaddr, local v4i* laddr)
+{
+  __builtin_amdgcn_dds_load_async_to_lds_b128(gaddr, laddr, 16, 0);
 }
