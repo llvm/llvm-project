@@ -91,9 +91,12 @@ struct OffloadPlatformTest : OffloadDeviceTest {
 // Fixture for a generic program test. If you want a different program, use
 // offloadQueueTest and create your own program handle with the binary you want.
 struct OffloadProgramTest : OffloadDeviceTest {
-  void SetUp() override {
+  void SetUp() override { SetUpWith("foo"); }
+
+  void SetUpWith(const char *ProgramName) {
     RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::SetUp());
-    ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Device, DeviceBin));
+    ASSERT_TRUE(
+        TestEnvironment::loadDeviceBinary(ProgramName, Device, DeviceBin));
     ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
     ASSERT_SUCCESS(olCreateProgram(Device, DeviceBin->getBufferStart(),
                                    DeviceBin->getBufferSize(), &Program));
@@ -121,6 +124,20 @@ struct OffloadKernelTest : OffloadProgramTest {
   }
 
   ol_symbol_handle_t Kernel = nullptr;
+};
+
+struct OffloadGlobalTest : OffloadProgramTest {
+  void SetUp() override {
+    RETURN_ON_FATAL_FAILURE(OffloadProgramTest::SetUpWith("global"));
+    ASSERT_SUCCESS(olGetSymbol(Program, "global",
+                               OL_SYMBOL_KIND_GLOBAL_VARIABLE, &Global));
+  }
+
+  void TearDown() override {
+    RETURN_ON_FATAL_FAILURE(OffloadProgramTest::TearDown());
+  }
+
+  ol_symbol_handle_t Global = nullptr;
 };
 
 struct OffloadQueueTest : OffloadDeviceTest {
