@@ -142,12 +142,16 @@ namespace function {
   static int f26(Empty x) {
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f26' can be declared 'constexpr' [modernize-use-constexpr]
   // CHECK-FIXES-23: constexpr static int f26(Empty x) {
-  // CHECK-MESSAGES-14-CLT: :[[@LINE-3]]:14: warning: function 'f26' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-14-CLT: constexpr static int f26(Empty x) {
+  // CHECK-MESSAGES-20-CLT: :[[@LINE-3]]:14: warning: function 'f26' can be declared 'constexpr' [modernize-use-constexpr]
+  // CHECK-FIXES-20-CLT: constexpr static int f26(Empty x) {
     auto R = Range0To10{};
     for (const int i: R) { }
     return 0;
   }
+
+  const auto f27 = [](int X){ return X + 1; }(10);
+  // CHECK-MESSAGES-17: :[[@LINE-1]]:14: warning: variable 'f27' can be declared 'constexpr' [modernize-use-constexpr]
+  // CHECK-FIXES-17: constexpr  auto f27 = [](int X){ return X + 1; }(10);
 } // namespace function
 namespace function_non_literal {
   struct NonLiteral{
@@ -416,9 +420,26 @@ namespace function_non_literal_ref {
   }
   // CHECK-MESSAGES-23: :[[@LINE-5]]:14: warning: function 'f26' can be declared 'constexpr' [modernize-use-constexpr]
   // CHECK-FIXES-23: constexpr static int f26(NonLiteral& x) {
-  // CHECK-MESSAGES-14-CLT: :[[@LINE-7]]:14: warning: function 'f26' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-14-CLT: constexpr static int f26(NonLiteral& x) {
+  // CHECK-MESSAGES-20-CLT: :[[@LINE-7]]:14: warning: function 'f26' can be declared 'constexpr' [modernize-use-constexpr]
+  // CHECK-FIXES-20-CLT: constexpr static int f26(NonLiteral& x) {
 } // namespace function_non_literal_ref
+
+template <typename T>
+static T forwardDeclared();
+
+template <typename T>
+static T forwardDeclared() { return T{}; }
+// CHECK-MESSAGES-11: :[[@LINE-1]]:10: warning: function 'forwardDeclared' can be declared 'constexpr' [modernize-use-constexpr]
+// CHECK-FIXES-11: template <typename T>
+// CHECK-FIXES-11: constexpr static T forwardDeclared();
+// CHECK-FIXES-11: template <typename T>
+// CHECK-FIXES-11: constexpr static T forwardDeclared() { return T{}; }
+
+static void useForwardDeclared() {
+// CHECK-MESSAGES-23: :[[@LINE-1]]:13: warning: function 'useForwardDeclared' can be declared 'constexpr' [modernize-use-constexpr]
+// CHECK-FIXES-23: constexpr static void useForwardDeclared() {
+    forwardDeclared<int>() + forwardDeclared<double>() + forwardDeclared<char>();
+}
 
 namespace {
 namespace variable {
@@ -459,6 +480,20 @@ namespace variable {
             // CHECK-FIXES-17: constexpr  auto check = [](const int & ref) { };
         }
     } // namespace literal_type
+
+    namespace non_literal_type {
+        void unreferencedVolatile() {
+        // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'unreferencedVolatile' can be declared 'constexpr' [modernize-use-constexpr]
+        // CHECK-FIXES-23: constexpr void unreferencedVolatile() {
+            const volatile int x = 0;
+        }
+        void referencedVolatile() {
+        // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'referencedVolatile' can be declared 'constexpr' [modernize-use-constexpr]
+        // CHECK-FIXES-23: constexpr void referencedVolatile() {
+            const volatile int x = 0;
+            int y = x;
+        }
+    } // namespace non_literal_type
 
     namespace struct_type {
         struct AStruct { int val; };

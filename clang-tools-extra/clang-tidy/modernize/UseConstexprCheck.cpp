@@ -215,7 +215,8 @@ static bool isLiteralType(const Type *T, const ASTContext &Ctx,
 
 static bool isLiteralType(QualType QT, const ASTContext &Ctx,
                           const bool ConservativeLiteralType) {
-  return isLiteralType(QT.getTypePtr(), Ctx, ConservativeLiteralType);
+  return !QT.isVolatileQualified() &&
+         isLiteralType(QT.getTypePtr(), Ctx, ConservativeLiteralType);
 }
 
 static bool satisfiesProperties11(
@@ -266,7 +267,7 @@ static bool satisfiesProperties11(
 
     bool WalkUpFromNullStmt(NullStmt *) {
       Possible = false;
-      return true;
+      return false;
     }
     bool WalkUpFromDeclStmt(DeclStmt *DS) {
       for (const Decl *D : DS->decls())
@@ -292,7 +293,7 @@ static bool satisfiesProperties11(
       return false;
     }
 
-    bool WalkUpFromReturnStmt(ReturnStmt *) {
+    bool WalkUpFromReturnStmt(ReturnStmt *S) {
       ++NumReturns;
       if (NumReturns != 1U) {
         Possible = false;
@@ -357,6 +358,14 @@ static bool satisfiesProperties11(
     bool TraverseCXXNewExpr(CXXNewExpr *) {
       Possible = false;
       return false;
+    }
+
+    bool TraverseDeclRefExpr(DeclRefExpr *DRef) {
+      if (DRef->getType().isVolatileQualified()) {
+        Possible = false;
+        return false;
+      }
+      return Base::TraverseDeclRefExpr(DRef);
     }
 
     ASTContext &Ctx;
@@ -471,6 +480,11 @@ static bool satisfiesProperties1417(
         Possible = false;
         return false;
       }
+
+      if (DRef->getType().isVolatileQualified()) {
+        Possible = false;
+        return false;
+      }
       return true;
     }
 
@@ -497,35 +511,6 @@ static bool satisfiesProperties1417(
       Possible = false;
       return false;
     }
-
-    const bool CXX17;
-    bool Possible = true;
-    ASTContext &Ctx;
-    const bool ConservativeLiteralType;
-    const bool AddConstexprToMethodOfClassWithoutConstexprConstructor;
-  };
-
-  Visitor14 V{Ctx.getLangOpts().CPlusPlus17 != 0, Ctx, ConservativeLiteralType,
-              AddConstexprToMethodOfClassWithoutConstexprConstructor};
-  V.TraverseDecl(const_cast<FunctionDecl *>(FDecl));
-  if (!V.Possible)
-    return false;
-
-  if (const auto *Ctor = llvm::dyn_cast<CXXConstructorDecl>(FDecl);
-      Ctor && !satisfiesConstructorPropertiesUntil20(Ctor, Ctx))
-    return false;
-
-  if (const auto *Dtor = llvm::dyn_cast<CXXDestructorDecl>(FDecl);
-      Dtor && !Dtor->isTrivial())
-    return false;
-
-  class BodyVisitor : public clang::RecursiveASTVisitor<BodyVisitor> {
-  public:
-    using Base = clang::RecursiveASTVisitor<BodyVisitor>;
-    bool shouldVisitImplicitCode() const { return true; }
-
-    explicit BodyVisitor(ASTContext &Ctx, bool ConservativeLiteralType)
-        : Ctx(Ctx), ConservativeLiteralType(ConservativeLiteralType) {}
 
     bool TraverseType(QualType QT) {
       if (QT.isNull())
@@ -556,22 +541,27 @@ static bool satisfiesProperties1417(
       return true;
     }
 
-    bool TraverseCXXNewExpr(CXXNewExpr *) {
-      Possible = false;
-      return false;
-    }
-
+    const bool CXX17;
+    bool Possible = true;
     ASTContext &Ctx;
     const bool ConservativeLiteralType;
-    bool Possible = true;
+    const bool AddConstexprToMethodOfClassWithoutConstexprConstructor;
   };
 
-  if (FDecl->hasBody() && ConservativeLiteralType) {
-    BodyVisitor Visitor(Ctx, ConservativeLiteralType);
-    Visitor.TraverseStmt(FDecl->getBody());
-    if (!Visitor.Possible)
-      return false;
-  }
+  Visitor14 V{Ctx.getLangOpts().CPlusPlus17 != 0, Ctx, ConservativeLiteralType,
+              AddConstexprToMethodOfClassWithoutConstexprConstructor};
+  V.TraverseDecl(const_cast<FunctionDecl *>(FDecl));
+  if (!V.Possible)
+    return false;
+
+  if (const auto *Ctor = llvm::dyn_cast<CXXConstructorDecl>(FDecl);
+      Ctor && !satisfiesConstructorPropertiesUntil20(Ctor, Ctx))
+    return false;
+
+  if (const auto *Dtor = llvm::dyn_cast<CXXDestructorDecl>(FDecl);
+      Dtor && !Dtor->isTrivial())
+    return false;
+
   return true;
 }
 
@@ -663,6 +653,14 @@ static bool satisfiesProperties20(
     bool TraverseCXXReinterpretCastExpr(CXXReinterpretCastExpr *) {
       Possible = false;
       return false;
+    }
+
+    bool TraverseDeclRefExpr(DeclRefExpr *DRef) {
+      if (DRef->getType().isVolatileQualified()) {
+        Possible = false;
+        return false;
+      }
+      return true;
     }
 
     bool Possible = true;
@@ -808,7 +806,7 @@ AST_MATCHER_P(VarDecl, satisfiesVariableProperties, bool,
   if (!T)
     return false;
 
-  if (!isLiteralType(T, Ctx, ConservativeLiteralType))
+  if (!isLiteralType(QT, Ctx, ConservativeLiteralType))
     return false;
 
   const bool IsDeclaredInsideConstexprFunction = std::invoke([&Node]() {
