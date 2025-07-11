@@ -1753,11 +1753,14 @@ TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering3) {
                                  GlobalValue::InternalLinkage, Init, "V2");
   Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
   BasicBlock *BB = BasicBlock::Create(Context, "entry", F);
-  Value *C0 = ICmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_EQ, V0, Null, "c0", BB);
-  Value *C1 = ICmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_EQ, V1, Null, "c1", BB);
-  Value *C2 = ICmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_EQ, V2, Null, "c2", BB);
-  Value*Or0 = BinaryOperator::CreateOr(C0, C1, "or0", BB);
-  Value*Or1 = BinaryOperator::CreateOr(Or0, C2, "or1", BB);
+  Value *C0 = ICmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_EQ, V0, Null,
+                               "c0", BB);
+  Value *C1 = ICmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_EQ, V1, Null,
+                               "c1", BB);
+  Value *C2 = ICmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_EQ, V2, Null,
+                               "c2", BB);
+  Value *Or0 = BinaryOperator::CreateOr(C0, C1, "or0", BB);
+  Value *Or1 = BinaryOperator::CreateOr(Or0, C2, "or1", BB);
   ReturnInst::Create(Context, nullptr, BB);
   ScalarEvolution SE = buildSE(*F);
   // When _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG, this will
