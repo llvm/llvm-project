@@ -3,11 +3,6 @@
 
 ; (select (icmp x, 0, eq), 0, (umin x, y)) -> (umin x, y)
 define i64 @umin_select(i64 %a, i64 %b) {
-; FIXED-ZERO-LABEL: @umin_select(
-; FIXED-ZERO-NEXT:    [[B_FR:%.*]] = freeze i64 [[B:%.*]]
-; FIXED-ZERO-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[A:%.*]], i64 [[B_FR]])
-; FIXED-ZERO-NEXT:    ret i64 [[UMIN]]
-;
 ; CHECK-LABEL: @umin_select(
 ; CHECK-NEXT:    [[B_FR:%.*]] = freeze i64 [[B:%.*]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[A:%.*]], i64 [[B_FR]])
@@ -21,11 +16,6 @@ define i64 @umin_select(i64 %a, i64 %b) {
 
 ; (select (icmp x, 0, eq), 0, (mul x, y)) -> (mul x, y)
 define i64 @mul_select(i64 %a, i64 %b) {
-; FIXED-ZERO-LABEL: @mul_select(
-; FIXED-ZERO-NEXT:    [[B_FR:%.*]] = freeze i64 [[B:%.*]]
-; FIXED-ZERO-NEXT:    [[MUL:%.*]] = mul i64 [[A:%.*]], [[B_FR]]
-; FIXED-ZERO-NEXT:    ret i64 [[MUL]]
-;
 ; CHECK-LABEL: @mul_select(
 ; CHECK-NEXT:    [[B_FR:%.*]] = freeze i64 [[B:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[A:%.*]], [[B_FR]]
@@ -39,11 +29,6 @@ define i64 @mul_select(i64 %a, i64 %b) {
 
 ; (select (icmp x, 0, eq), 0, (shl x, y)) -> (shl x, y)
 define i64 @shl_select(i64 %a, i64 %b) {
-; FIXED-ZERO-LABEL: @shl_select(
-; FIXED-ZERO-NEXT:    [[B_FR:%.*]] = freeze i64 [[B:%.*]]
-; FIXED-ZERO-NEXT:    [[SHL:%.*]] = shl i64 [[A:%.*]], [[B_FR]]
-; FIXED-ZERO-NEXT:    ret i64 [[SHL]]
-;
 ; CHECK-LABEL: @shl_select(
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[A:%.*]], 0
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[A]], [[B_FR:%.*]]
@@ -58,11 +43,6 @@ define i64 @shl_select(i64 %a, i64 %b) {
 
 ; (select (icmp x, 0, eq), 0, (and x, y)) -> (and x, y)
 define i64 @and_select(i64 %a, i64 %b) {
-; FIXED-ZERO-LABEL: @and_select(
-; FIXED-ZERO-NEXT:    [[B_FR:%.*]] = freeze i64 [[B:%.*]]
-; FIXED-ZERO-NEXT:    [[AND:%.*]] = and i64 [[A:%.*]], [[B_FR]]
-; FIXED-ZERO-NEXT:    ret i64 [[AND]]
-;
 ; CHECK-LABEL: @and_select(
 ; CHECK-NEXT:    [[B_FR:%.*]] = freeze i64 [[B:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[A:%.*]], [[B_FR]]
@@ -76,11 +56,6 @@ define i64 @and_select(i64 %a, i64 %b) {
 
 ; (select (icmp x, 0, ne), (ashr x, y), 0) -> (ashr x, y)
 define i64 @ashr_select(i64 %a, i64 %b) {
-; FIXED-ZERO-LABEL: @ashr_select(
-; FIXED-ZERO-NEXT:    [[B_FR:%.*]] = freeze i64 [[B:%.*]]
-; FIXED-ZERO-NEXT:    [[ASHR:%.*]] = ashr i64 [[A:%.*]], [[B_FR]]
-; FIXED-ZERO-NEXT:    ret i64 [[ASHR]]
-;
 ; CHECK-LABEL: @ashr_select(
 ; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp eq i64 [[A:%.*]], 0
 ; CHECK-NEXT:    [[ASHR:%.*]] = ashr i64 [[A]], [[B_FR:%.*]]
@@ -95,11 +70,6 @@ define i64 @ashr_select(i64 %a, i64 %b) {
 
 ; (select (icmp x, 0, ne), (lshr x, y), 0) -> (lshr x, y)
 define i64 @lshr_select(i64 %a, i64 %b) {
-; FIXED-ZERO-LABEL: @lshr_select(
-; FIXED-ZERO-NEXT:    [[B_FR:%.*]] = freeze i64 [[B:%.*]]
-; FIXED-ZERO-NEXT:    [[LSHR:%.*]] = lshr i64 [[A:%.*]], [[B_FR]]
-; FIXED-ZERO-NEXT:    ret i64 [[LSHR]]
-;
 ; CHECK-LABEL: @lshr_select(
 ; CHECK-NEXT:    [[COND_NOT:%.*]] = icmp eq i64 [[A:%.*]], 0
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i64 [[A]], [[B_FR:%.*]]
@@ -114,11 +84,6 @@ define i64 @lshr_select(i64 %a, i64 %b) {
 
 ; (select (icmp x, 0, eq), 0, fshr(x, x, y)) -> fshr(x, x, y)
 define i64 @fshr_select(i64 %a, i64 %b) {
-; FIXED-ZERO-LABEL: @fshr_select(
-; FIXED-ZERO-NEXT:    [[B_FR:%.*]] = freeze i64 [[B:%.*]]
-; FIXED-ZERO-NEXT:    [[FSHR:%.*]] = call i64 @llvm.fshr.i64(i64 [[A:%.*]], i64 [[A]], i64 [[B_FR]])
-; FIXED-ZERO-NEXT:    ret i64 [[FSHR]]
-;
 ; CHECK-LABEL: @fshr_select(
 ; CHECK-NEXT:    [[B_FR:%.*]] = freeze i64 [[B:%.*]]
 ; CHECK-NEXT:    [[FSHR:%.*]] = call i64 @llvm.fshr.i64(i64 [[A:%.*]], i64 [[A]], i64 [[B_FR]])
@@ -132,11 +97,6 @@ define i64 @fshr_select(i64 %a, i64 %b) {
 
 ; (select (icmp x, 0, eq), 0, (fshl x, x, y)) -> (fshl x, x, y)
 define i64 @fshl_select(i64 %a, i64 %b) {
-; FIXED-ZERO-LABEL: @fshl_select(
-; FIXED-ZERO-NEXT:    [[B_FR:%.*]] = freeze i64 [[B:%.*]]
-; FIXED-ZERO-NEXT:    [[FSHL:%.*]] = call i64 @llvm.fshl.i64(i64 [[A:%.*]], i64 [[A]], i64 [[B_FR]])
-; FIXED-ZERO-NEXT:    ret i64 [[FSHL]]
-;
 ; CHECK-LABEL: @fshl_select(
 ; CHECK-NEXT:    [[B_FR:%.*]] = freeze i64 [[B:%.*]]
 ; CHECK-NEXT:    [[FSHL:%.*]] = call i64 @llvm.fshl.i64(i64 [[A:%.*]], i64 [[A]], i64 [[B_FR]])
@@ -150,12 +110,6 @@ define i64 @fshl_select(i64 %a, i64 %b) {
 
 ; (select (icmp x, 0, eq), 0, (fshr x, z, y)) -> leave as is
 define i64 @fshr_select_no_combine(i64 %a, i64 %b, i64 %c) {
-; FIXED-ZERO-LABEL: @fshr_select_no_combine(
-; FIXED-ZERO-NEXT:    [[COND:%.*]] = icmp eq i64 [[A:%.*]], 0
-; FIXED-ZERO-NEXT:    [[FSHR:%.*]] = call i64 @llvm.fshr.i64(i64 [[A]], i64 [[B:%.*]], i64 [[C:%.*]])
-; FIXED-ZERO-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], i64 0, i64 [[FSHR]]
-; FIXED-ZERO-NEXT:    ret i64 [[SELECT]]
-;
 ; CHECK-LABEL: @fshr_select_no_combine(
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[A:%.*]], 0
 ; CHECK-NEXT:    [[FSHR:%.*]] = call i64 @llvm.fshr.i64(i64 [[A]], i64 [[B:%.*]], i64 [[C:%.*]])
@@ -170,11 +124,6 @@ define i64 @fshr_select_no_combine(i64 %a, i64 %b, i64 %c) {
 
 ; (select (icmp x, 0, eq), 0, (sdiv x, y)) -> (sdiv x, y)
 define i64 @sdiv_select(i64 %a, i64 %b) {
-; FIXED-ZERO-LABEL: @sdiv_select(
-; FIXED-ZERO-NEXT:    [[B:%.*]] = freeze i64 [[B1:%.*]]
-; FIXED-ZERO-NEXT:    [[DIV:%.*]] = sdiv i64 [[A:%.*]], [[B]]
-; FIXED-ZERO-NEXT:    ret i64 [[DIV]]
-;
 ; CHECK-LABEL: @sdiv_select(
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 [[A:%.*]], [[B_FR:%.*]]
 ; CHECK-NEXT:    ret i64 [[DIV]]
@@ -187,11 +136,6 @@ define i64 @sdiv_select(i64 %a, i64 %b) {
 
 ; (select (icmp x, 0, eq), 0, (udiv x, y)) -> (udiv x, y)
 define i64 @udiv_select(i64 %a, i64 %b) {
-; FIXED-ZERO-LABEL: @udiv_select(
-; FIXED-ZERO-NEXT:    [[B:%.*]] = freeze i64 [[B1:%.*]]
-; FIXED-ZERO-NEXT:    [[DIV:%.*]] = udiv i64 [[A:%.*]], [[B]]
-; FIXED-ZERO-NEXT:    ret i64 [[DIV]]
-;
 ; CHECK-LABEL: @udiv_select(
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[A:%.*]], [[B_FR:%.*]]
 ; CHECK-NEXT:    ret i64 [[DIV]]
@@ -228,10 +172,6 @@ define i64 @urem_select(i64 %a, i64 %b) {
 
 ; (select (icmp x, 0, eq), 0, (icmp x, 0, slt)) -> (icmp x, 0, slt)
 define i1 @icmp_slt_select(i64 %a) {
-; FIXED-ZERO-LABEL: @icmp_slt_select(
-; FIXED-ZERO-NEXT:    [[ICMP:%.*]] = icmp slt i64 [[A:%.*]], 0
-; FIXED-ZERO-NEXT:    ret i1 [[ICMP]]
-;
 ; CHECK-LABEL: @icmp_slt_select(
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp slt i64 [[A:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[ICMP]]
@@ -244,10 +184,6 @@ define i1 @icmp_slt_select(i64 %a) {
 
 ; (select (icmp x, 0, eq), 0, (sub 0, x)) -> (sub 0, x)
 define i64 @sub_select(i64 %a) {
-; FIXED-ZERO-LABEL: @sub_select(
-; FIXED-ZERO-NEXT:    [[SUB:%.*]] = sub i64 0, [[A:%.*]]
-; FIXED-ZERO-NEXT:    ret i64 [[SUB]]
-;
 ; CHECK-LABEL: @sub_select(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i64 0, [[A:%.*]]
 ; CHECK-NEXT:    ret i64 [[SUB]]
