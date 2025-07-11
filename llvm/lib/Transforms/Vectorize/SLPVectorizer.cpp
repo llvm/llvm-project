@@ -16292,7 +16292,7 @@ Value *BoUpSLP::gather(
             if (auto *SV = dyn_cast<ShuffleVectorInst>(InsElt);
                 SV && SV->getOperand(0) != V && SV->getOperand(1) != V) {
               // Find shufflevector, caused by resize.
-              auto FindOperand = [&](Value *Vec, Value *V) -> Instruction * {
+              auto FindOperand = [](Value *Vec, Value *V) -> Instruction * {
                 if (auto *SV = dyn_cast<ShuffleVectorInst>(Vec)) {
                   if (SV->getOperand(0) == V)
                     return SV;
@@ -16301,6 +16301,7 @@ Value *BoUpSLP::gather(
                 }
                 return nullptr;
               };
+              InsElt = nullptr;
               if (Instruction *User = FindOperand(SV->getOperand(0), V))
                 InsElt = User;
               else if (Instruction *User = FindOperand(SV->getOperand(1), V))
@@ -16877,6 +16878,11 @@ public:
                                          V, SimplifyQuery(*R.DL));
                                    }));
           unsigned InsertionIndex = Idx * getNumElements(ScalarTy);
+          // Use scalar version of the SCalarType to correctly handle shuffles
+          // for revectorization. The revectorization mode operates by the
+          // vectors, but here we need to operate on the scalars, because the
+          // masks were already transformed for the vector elements and we don't
+          // need doing this transformation again.
           Type *OrigScalarTy = ScalarTy;
           ScalarTy = ScalarTy->getScalarType();
           Vec = createInsertVector(
