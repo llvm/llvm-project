@@ -876,15 +876,32 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
   // Step 3: Apply subgroup to workitem distribution patterns.
   RewritePatternSet patterns(&getContext());
   xegpu::populateXeGPUSubgroupDistributePatterns(patterns);
-  // TODO: distributionFn and shuffleFn are not used at this point.
+  // distributionFn is used by vector distribution patterns to determine the
+  // distributed vector type for a given vector value. In XeGPU subgroup
+  // distribution context, we compute this based on lane layout.
   auto distributionFn = [](Value val) {
     VectorType vecType = dyn_cast<VectorType>(val.getType());
     int64_t vecRank = vecType ? vecType.getRank() : 0;
-    OpBuilder builder(val.getContext());
     if (vecRank == 0)
       return AffineMap::get(val.getContext());
-    return AffineMap::getMultiDimIdentityMap(vecRank, val.getContext());
+    // Get the layout of the vector type.
+    xegpu::LayoutAttr layout = xegpu::getLayoutAttr(val);
+    // If no layout is specified, assume the inner most dimension is distributed
+    // for now.
+    if (!layout)
+      return AffineMap::getMultiDimMapWithTargets(
+          vecRank, {static_cast<unsigned int>(vecRank - 1)}, val.getContext());
+    SmallVector<unsigned int> distributedDims;
+    // Get the distributed dimensions based on the layout.
+    ArrayRef<int> laneLayout = layout.getLaneLayout().asArrayRef();
+    for (unsigned i = 0; i < laneLayout.size(); ++i) {
+      if (laneLayout[i] > 1)
+        distributedDims.push_back(i);
+    }
+    return AffineMap::getMultiDimMapWithTargets(vecRank, distributedDims,
+                                                val.getContext());
   };
+  // TODO: shuffleFn is not used.
   auto shuffleFn = [](Location loc, OpBuilder &builder, Value val, Value srcIdx,
                       int64_t warpSz) { return Value(); };
   vector::populatePropagateWarpVectorDistributionPatterns(
