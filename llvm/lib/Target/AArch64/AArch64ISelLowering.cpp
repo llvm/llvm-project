@@ -26283,16 +26283,24 @@ static SDValue commuteInsertVectorEltFMul(SDNode *N, SelectionDAG &DAG) {
 
   // Insert into the operand of FMUL instead.
   SDValue FMulOp = InsertVec.getOperand(0);
+  SDValue FMulOp2 = InsertVec.getOperand(1);
 
-  if (!InsertVec.hasOneUse() || !FMulOp.hasOneUse())
+  if (!InsertVec.hasOneUse())
     return SDValue();
+
+  if (!InsertVec->isOnlyUserOf(FMulOp.getNode())) {
+    if (!InsertVec->isOnlyUserOf(FMulOp2.getNode()))
+      return SDValue();
+    std::swap(FMulOp, FMulOp2);
+  }
 
   SDValue InsertOp =
       DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(N), FMulOp.getValueType(),
                   FMulOp, InsertVal, InsertIdx);
-  SDValue FMul =
-      DAG.getNode(ISD::FMUL, SDLoc(InsertVec), InsertVec.getValueType(),
-                  InsertOp, InsertVec.getOperand(1));
+  if (FMulOp == FMulOp2)
+    FMulOp2 = InsertOp;
+  SDValue FMul = DAG.getNode(ISD::FMUL, SDLoc(InsertVec),
+                             InsertVec.getValueType(), InsertOp, FMulOp2);
   DAG.ReplaceAllUsesWith(N, &FMul);
   return FMul;
 }

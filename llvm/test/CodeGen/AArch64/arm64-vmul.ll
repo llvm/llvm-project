@@ -1197,6 +1197,42 @@ define <4 x float> @fmul_insert_zero(<4 x float> %A, <4 x float> %B) {
   ret <4 x float> %mul_set_lane
 }
 
+define <4 x float> @fmul_insert_zero_same(<4 x float> %A) {
+; CHECK-LABEL: fmul_insert_zero_same:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov.s v0[3], wzr
+; CHECK-NEXT:    fmul.4s v0, v0, v0
+; CHECK-NEXT:    ret
+  %mul = fmul <4 x float> %A, %A
+  %mul_set_lane = insertelement <4 x float> %mul, float 0.000000e+00, i64 3
+  ret <4 x float> %mul_set_lane
+}
+
+define <4 x float> @fmul_insert_zero1(<4 x float> %A, <4 x float> %B, <4 x float> %C) {
+; CHECK-LABEL: fmul_insert_zero1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fsub.4s v0, v2, v0
+; CHECK-NEXT:    mov.s v1[3], wzr
+; CHECK-NEXT:    fmul.4s v0, v1, v0
+; CHECK-NEXT:    ret
+  %sub = fsub <4 x float> %C, %A
+  %mul = fmul <4 x float> %B, %sub
+  %mul_set_lane = insertelement <4 x float> %mul, float 0.000000e+00, i64 3
+  ret <4 x float> %mul_set_lane
+}
+
+define <4 x float> @fmul_insert_zero2(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: fmul_insert_zero2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov.s v0[3], wzr
+; CHECK-NEXT:    fmul.4s v0, v0, v1
+; CHECK-NEXT:    fsub.4s v0, v1, v0
+; CHECK-NEXT:    ret
+  %mul = fmul <4 x float> %B, %A
+  %mul_set_lane = insertelement <4 x float> %mul, float 0.000000e+00, i64 3
+  %sub = fsub <4 x float> %B, %mul_set_lane
+  ret <4 x float> %sub
+}
 
 define <2 x float> @fmulx_lane_2s(<2 x float> %A, <2 x float> %B) nounwind {
 ; CHECK-LABEL: fmulx_lane_2s:
