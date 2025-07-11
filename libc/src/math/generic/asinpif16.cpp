@@ -121,7 +121,7 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   //    x = cos(pi/2 - y)
   //      let z = pi/2 - y,
   //    x = cos(z)
-  //      becuase: cos(2a) = 1 - 2 * sin^2(a), z = 2a, a = z/2
+  //      because: cos(2a) = 1 - 2 * sin^2(a), z = 2a, a = z/2
   //      therefore:
   //    cos(z) = 1 - 2 * sin^2(z/2)
   //    sin(z/2) = sqrt((1 - cos(z))/2)
