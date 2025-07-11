@@ -45,3 +45,15 @@ module {
     cir.return
   }
 }
+
+
+// -----
+
+module {
+  cir.func @complex_real_ptr_invalid_result_type() -> !cir.double {
+    %0 = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["c"]
+    // expected-error @below {{result type does not match operand type}}
+    %1 = cir.complex.real_ptr %0 : !cir.ptr<!cir.complex<!cir.double>> -> !cir.ptr<!cir.float>
+    cir.return
+  }
+}

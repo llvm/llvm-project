@@ -2098,6 +2098,24 @@ OpFoldResult cir::ComplexImagOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexRealPtrOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ComplexRealPtrOp::verify() {
+  mlir::Type resultPointeeTy = getType().getPointee();
+  cir::PointerType operandPtrTy = getOperand().getType();
+  auto operandPointeeTy =
+      mlir::cast<cir::ComplexType>(operandPtrTy.getPointee());
+
+  if (resultPointeeTy != operandPointeeTy.getElementType()) {
+    emitOpError() << ": result type does not match operand type";
+    return failure();
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
