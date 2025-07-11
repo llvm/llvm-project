@@ -25,6 +25,8 @@ page](https://llvm.org/releases/).
 ## Major New Features
 
 * Initial support for VOLATILE variables and procedure interface arguments has been added.
+* OpenMP support is stable and no longer considered experimental. All of OpenMP 3.1 is
+  supported, along with much of OpenMP 4.0 and some parts of later standards.
 
 ## Bug Fixes
 
