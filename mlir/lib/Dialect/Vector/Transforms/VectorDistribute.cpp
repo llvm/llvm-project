@@ -1749,10 +1749,10 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
       : WarpDistributionPattern(ctx, b), distributionMapFn(std::move(fn)) {}
   LogicalResult matchAndRewrite(WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    auto newWarpOpYield = cast<gpu::YieldOp>(
+    auto warpOpYield = cast<gpu::YieldOp>(
         warpOp.getBodyRegion().getBlocks().begin()->getTerminator());
     // Only pick up `ForOp` if it is the last op in the region.
-    Operation *lastNode = newWarpOpYield->getPrevNode();
+    Operation *lastNode = warpOpYield->getPrevNode();
     auto forOp = dyn_cast_or_null<scf::ForOp>(lastNode);
     if (!forOp)
       return failure();
@@ -1789,7 +1789,7 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     SmallVector<Value> nonForYieldedValues;
     SmallVector<unsigned> nonForResultIndices;
     llvm::SmallDenseMap<unsigned, unsigned> forResultMapping;
-    for (OpOperand &yieldOperand : newWarpOpYield->getOpOperands()) {
+    for (OpOperand &yieldOperand : warpOpYield->getOpOperands()) {
       // Yielded value is not a result of the forOp.
       if (yieldOperand.get().getDefiningOp() != forOp.getOperation()) {
         nonForYieldedValues.push_back(yieldOperand.get());
@@ -1827,9 +1827,9 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     // types. We also create a mapping between the non-`ForOp` yielded value
     // index and the corresponding new `WarpOp` yield value index (needed to
     // update users later).
-    llvm::SmallDenseMap<unsigned, unsigned> warpResultMapping;
+    llvm::SmallDenseMap<unsigned, unsigned> nonForResultMapping;
     for (auto [i, v] : llvm::enumerate(nonForYieldedValues)) {
-      warpResultMapping[nonForResultIndices[i]] = newWarpOpYieldValues.size();
+      nonForResultMapping[nonForResultIndices[i]] = newWarpOpYieldValues.size();
       newWarpOpYieldValues.push_back(v);
       newWarpOpDistTypes.push_back(
           warpOp.getResult(nonForResultIndices[i]).getType());
@@ -1837,8 +1837,6 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     // Create the new `WarpOp` with the updated yield values and types.
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndReplaceReturns(
         rewriter, warpOp, newWarpOpYieldValues, newWarpOpDistTypes);
-    newWarpOpYield = cast<gpu::YieldOp>(
-        newWarpOp.getBodyRegion().getBlocks().begin()->getTerminator());
 
     // Next, we create a new `ForOp` with the init args yielded by the new
     // `WarpOp`.
@@ -1912,7 +1910,7 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
                                     newForOp.getResult(newIdx), newForOp);
     // Similarly, update any users of the `WarpOp` results that were not
     // results of the `ForOp`.
-    for (auto [origIdx, newIdx] : warpResultMapping)
+    for (auto [origIdx, newIdx] : nonForResultMapping)
       rewriter.replaceAllUsesWith(warpOp.getResult(origIdx),
                                   newWarpOp.getResult(newIdx));
     // Remove the original `WarpOp` and `ForOp`, they should not have any uses
