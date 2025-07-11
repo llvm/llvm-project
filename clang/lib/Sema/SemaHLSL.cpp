@@ -1116,7 +1116,8 @@ bool SemaHLSL::handleRootSignatureElements(
   const uint32_t VersionEnum = Version - 1;
   auto ReportFlagError = [this, &HadError, VersionEnum](SourceLocation Loc) {
     HadError = true;
-    this->Diag(Loc, diag::err_hlsl_invalid_rootsig_flag) << VersionEnum;
+    this->Diag(Loc, diag::err_hlsl_invalid_rootsig_flag)
+        << /*version minor*/ VersionEnum;
   };
 
   // Iterate through the elements and do basic validations
