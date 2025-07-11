@@ -1738,15 +1738,42 @@ void addInstrRequirements(const MachineInstr &MI,
     break;
   case SPIRV::OpConvertHandleToImageINTEL:
   case SPIRV::OpConvertHandleToSamplerINTEL:
-  case SPIRV::OpConvertHandleToSampledImageINTEL:
+  case SPIRV::OpConvertHandleToSampledImageINTEL: {
     if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bindless_images))
       report_fatal_error("OpConvertHandleTo[Image/Sampler/SampledImage]INTEL "
                          "instructions require the following SPIR-V extension: "
                          "SPV_INTEL_bindless_images",
                          false);
+    SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
+    SPIRV::AddressingModel::AddressingModel AddrModel;
+    unsigned PointerSize = ST.getPointerSize();
+    AddrModel = PointerSize == 32 ? SPIRV::AddressingModel::Physical32
+                                  : SPIRV::AddressingModel::Physical64;
+    SPIRVType *TyDef = GR->getSPIRVTypeForVReg(MI.getOperand(1).getReg());
+    if (!(TyDef->getOpcode() == SPIRV::OpTypeImage &&
+          MI.getOpcode() == SPIRV::OpConvertHandleToImageINTEL) &&
+        !(TyDef->getOpcode() == SPIRV::OpTypeSampler &&
+          MI.getOpcode() == SPIRV::OpConvertHandleToSamplerINTEL) &&
+        !(TyDef->getOpcode() == SPIRV::OpTypeSampledImage &&
+          MI.getOpcode() == SPIRV::OpConvertHandleToSampledImageINTEL))
+      report_fatal_error("Incorrect return type of the instruction", false);
+    SPIRVType *SpvTy = GR->getSPIRVTypeForVReg(MI.getOperand(2).getReg());
+    if (SpvTy->getOpcode() != SPIRV::OpTypeInt) {
+      SpvTy = GR->getSPIRVTypeForVReg(SpvTy->getOperand(1).getReg());
+    }
+    unsigned Bitwidth = GR->getScalarOrVectorBitWidth(SpvTy);
+    if (!(Bitwidth == 32 && AddrModel == SPIRV::AddressingModel::Physical32) &&
+        !(Bitwidth == 64 && AddrModel == SPIRV::AddressingModel::Physical64)) {
+      report_fatal_error(
+          "Parameter value must be a 32-bit scalar in case of "
+          "Physical32 addressing model or a 64-bit scalar in case of "
+          "Physical64 addressing model",
+          false);
+    }
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bindless_images);
     Reqs.addCapability(SPIRV::Capability::BindlessImagesINTEL);
     break;
+  }
   case SPIRV::OpSubgroup2DBlockLoadINTEL:
   case SPIRV::OpSubgroup2DBlockLoadTransposeINTEL:
   case SPIRV::OpSubgroup2DBlockLoadTransformINTEL:
