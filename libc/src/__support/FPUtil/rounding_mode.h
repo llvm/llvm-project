@@ -63,6 +63,14 @@ LIBC_INLINE bool fenv_is_round_to_zero() {
   return ((0x1.000002p0f + y) + (-1.0f - y) == 0x1.0p-23f);
 }
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++23-extensions"
+#elif defined(__GNUC__)
+#pragma gcc diagnostic push
+#pragma gcc diagnostic ignored "-Wc++23-extensions"
+#endif
+
 // Quick free standing get rounding mode based on the above observations.
 LIBC_INLINE constexpr int quick_get_round() {
   if constexpr (cpp::is_constant_evaluated())
@@ -78,6 +86,12 @@ LIBC_INLINE constexpr int quick_get_round() {
     return FE_TOWARDZERO;
   return (2.0f + y == 2.0f) ? FE_TONEAREST : FE_UPWARD;
 }
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#pragma gcc diagnostic pop
+#endif
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL
