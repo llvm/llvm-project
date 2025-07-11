@@ -668,7 +668,7 @@ Error LinuxKernelRewriter::readORCTables() {
       // As such, we can ignore alternative ORC entries. They will be preserved
       // in the binary, but will not get printed in the instruction stream.
       Inst = BF->getInstructionContainingOffset(Offset);
-      if (Inst || BC.MIB->hasAnnotation(*Inst, "AltInst"))
+      if (Inst && BC.MIB->hasAnnotation(*Inst, "AltInst"))
         continue;
 
       return createStringError(
