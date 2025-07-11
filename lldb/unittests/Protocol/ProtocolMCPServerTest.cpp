@@ -265,7 +265,7 @@ TEST_F(ProtocolServerMCPTest, ToolsCallError) {
   llvm::StringLiteral request =
       R"json({"method":"tools/call","params":{"name":"error","arguments":{"arguments":"foo","debugger_id":0}},"jsonrpc":"2.0","id":11})json";
   llvm::StringLiteral response =
-      R"json({"error":{"code":-1,"message":"error"},"id":11,"jsonrpc":"2.0"})json";
+      R"json({"error":{"code":-32603,"message":"error"},"id":11,"jsonrpc":"2.0"})json";
 
   ASSERT_THAT_ERROR(Write(request), llvm::Succeeded());
 

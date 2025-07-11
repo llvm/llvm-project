@@ -35,15 +35,15 @@ public:
   ReadResource(llvm::StringRef uri) const override;
 
 private:
-  static protocol::Resource GetDebuggerResource(lldb::user_id_t target_id);
-  static protocol::Resource GetTargetResource(lldb::user_id_t debugger_id,
-                                              lldb::user_id_t target_id);
+  static protocol::Resource GetDebuggerResource(Debugger &debugger);
+  static protocol::Resource GetTargetResource(size_t target_idx,
+                                              Target &target);
 
   static llvm::Expected<protocol::ResourceResult>
-  ReadDebuggerResource(llvm::StringRef uri, lldb::user_id_t target_id);
+  ReadDebuggerResource(llvm::StringRef uri, lldb::user_id_t debugger_id);
   static llvm::Expected<protocol::ResourceResult>
   ReadTargetResource(llvm::StringRef uri, lldb::user_id_t debugger_id,
-                     lldb::user_id_t target_id);
+                     size_t target_idx);
 };
 
 } // namespace lldb_private::mcp

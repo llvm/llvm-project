@@ -65,7 +65,7 @@ CommandTool::Call(const protocol::ToolArguments &args) {
     return root.getError();
 
   lldb::DebuggerSP debugger_sp =
-      Debugger::GetDebuggerAtIndex(arguments.debugger_id);
+      Debugger::FindDebuggerWithID(arguments.debugger_id);
   if (!debugger_sp)
     return createStringError(
         llvm::formatv("no debugger with id {0}", arguments.debugger_id));

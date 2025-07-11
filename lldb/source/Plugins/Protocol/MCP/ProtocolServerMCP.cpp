@@ -84,7 +84,7 @@ ProtocolServerMCP::Handle(protocol::Request request) {
   }
 
   return make_error<MCPError>(
-      llvm::formatv("no handler for request: {0}", request.method).str(), 1);
+      llvm::formatv("no handler for request: {0}", request.method).str());
 }
 
 void ProtocolServerMCP::Handle(protocol::Notification notification) {
@@ -225,7 +225,7 @@ ProtocolServerMCP::HandleData(llvm::StringRef data) {
           response.takeError(),
           [&](const MCPError &err) { protocol_error = err.toProtcolError(); },
           [&](const llvm::ErrorInfoBase &err) {
-            protocol_error.error.code = -1;
+            protocol_error.error.code = MCPError::kInternalError;
             protocol_error.error.message = err.message();
           });
       protocol_error.id = request->id;
@@ -253,6 +253,8 @@ ProtocolServerMCP::HandleData(llvm::StringRef data) {
 protocol::Capabilities ProtocolServerMCP::GetCapabilities() {
   protocol::Capabilities capabilities;
   capabilities.tools.listChanged = true;
+  // FIXME: Support sending notifications when a debugger/target are
+  // added/removed.
   capabilities.resources.listChanged = false;
   return capabilities;
 }
@@ -403,5 +405,6 @@ ProtocolServerMCP::ResourcesReadHandler(const protocol::Request &request) {
   }
 
   return make_error<MCPError>(
-      llvm::formatv("no resource handler for uri: {0}", uri_str).str(), 1);
+      llvm::formatv("no resource handler for uri: {0}", uri_str).str(),
+      MCPError::kResourceNotFound);
 }
