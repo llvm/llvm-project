@@ -696,6 +696,10 @@ constexpr vector4char vector4charConst1 = {0, 1, 2, 3};
 constexpr vector4char vector4charConst2 = {4, 5, 6, 7};
 constexpr vector8char vector8intConst = {8, 9, 10, 11, 12, 13, 14, 15};
 
+
+constexpr vector4char vectorShuffle =
+    __builtin_shufflevector(vector4charConst1, vector4charConst2);// expected-error {{too few arguments to function call, expected at least 3, have 2}}
+
 constexpr vector4char vectorShuffle1 =
     __builtin_shufflevector(vector4charConst1, vector4charConst2, 0, 1, 2, 3);
 static_assert(__builtin_bit_cast(unsigned, vectorShuffle1) ==
