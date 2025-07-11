@@ -27,7 +27,7 @@ TEST_F(LlvmLibcAsinpif16Test, PositiveRange) {
   for (uint16_t v = POS_START; v <= POS_STOP; ++v) {
     float16 x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asinpi, x,
-                                   LIBC_NAMESPACE::asinpif16(x), 0.5f);
+                                   LIBC_NAMESPACE::asinpif16(x), 0.5);
   }
 }
 
