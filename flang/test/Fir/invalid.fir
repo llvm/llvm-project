@@ -1269,7 +1269,7 @@ func.func @dc_invalid_reduction(%arg0: index, %arg1: index) {
 func.func @dc_reduce_no_attr() {
   %3 = fir.alloca i32 {bindc_name = "s", uniq_name = "dc_reduce"}
   %4:2 = hlfir.declare %3 {uniq_name = "dc_reduce"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %c1 = arith.constant 1 : index
+  %c1 = arith.constant 1 : index 
   // expected-error@+2 {{expected attribute value}}
   fir.do_concurrent {
     fir.do_concurrent.loop (%arg0) = (%c1) to (%c1) step (%c1) reduce(@add_reduction_i32 %4#0 -> %arg1 : !fir.ref<i32>) {

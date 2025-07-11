@@ -80,3 +80,4 @@ fir.declare_reduction @add_reduction_i32 : i32 init {
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
+

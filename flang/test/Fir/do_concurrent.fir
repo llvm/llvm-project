@@ -165,7 +165,7 @@ func.func @do_concurrent_with_locality_specs() {
 func.func @dc_reduce() {
   %3 = fir.alloca i32 {bindc_name = "s", uniq_name = "dc_reduce"}
   %4:2 = hlfir.declare %3 {uniq_name = "dc_reduce"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %c1 = arith.constant 1 : index
+  %c1 = arith.constant 1 : index 
   fir.do_concurrent {
     fir.do_concurrent.loop (%arg0) = (%c1) to (%c1) step (%c1) reduce(byref @add_reduction_i32 #fir.reduce_attr<add> %4#0 -> %arg1 : !fir.ref<i32>) {
     }
@@ -190,10 +190,10 @@ func.func @dc_reduce_2() {
   %5 = fir.alloca i32 {bindc_name = "m", uniq_name = "dc_reduce"}
   %6:2 = hlfir.declare %5 {uniq_name = "dc_reduce"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-  %c1 = arith.constant 1 : index
+  %c1 = arith.constant 1 : index 
 
   fir.do_concurrent {
-    fir.do_concurrent.loop (%arg0) = (%c1) to (%c1) step (%c1)
+    fir.do_concurrent.loop (%arg0) = (%c1) to (%c1) step (%c1) 
       reduce(@add_reduction_i32 #fir.reduce_attr<add> %4#0 -> %arg1,
              @mul_reduction_i32 #fir.reduce_attr<multiply> %6#0 -> %arg2
              : !fir.ref<i32>, !fir.ref<i32>) {
@@ -210,7 +210,7 @@ func.func @dc_reduce_2() {
 // CHECK:          %[[M_ALLOC:.*]] = fir.alloca i32 {bindc_name = "m", uniq_name = "dc_reduce"}
 // CHECK:          %[[M_DECL:.*]]:2 = hlfir.declare %[[M_ALLOC]] {uniq_name = "dc_reduce"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:          fir.do_concurrent {
-// CHECK:            fir.do_concurrent.loop (%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{[^[:space:]]+}})
+// CHECK:            fir.do_concurrent.loop (%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{[^[:space:]]+}}) 
 // CHECK-SAME:         reduce(
 // CHECK-SAME:           @add_reduction_i32 #fir.reduce_attr<add> %[[S_DECL]]#0 -> %[[S_ARG:[^,]+]],
 // CHECK-SAME:           @mul_reduction_i32 #fir.reduce_attr<multiply> %[[M_DECL]]#0 -> %[[M_ARG:[^[:space:]]+]]
@@ -219,3 +219,4 @@ func.func @dc_reduce_2() {
 // CHECK:          }
 // CHECK:          return
 // CHECK:        }
+
