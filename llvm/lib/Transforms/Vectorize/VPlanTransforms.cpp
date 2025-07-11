@@ -2675,6 +2675,107 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
   WidenIVR->replaceAllUsesWith(WidePHI);
 }
 
+/// Expand a VPWidenPointerInductionRecipe into executable recipes, for the
+/// initial value, phi and backedge value. In the following example:
+///
+///  <x1> vector loop: {
+///    vector.body:
+///      EMIT ir<%ptr.iv> = WIDEN-POINTER-INDUCTION %start, %step, %vf
+///      ...
+///      EMIT branch-on-count ...
+///  }
+///
+/// WIDEN-POINTER-INDUCTION will get expanded to:
+///
+///  <x1> vector loop: {
+///    vector.body:
+///      EMIT-SCALAR %pointer.phi = phi %start, %ptr.ind
+///      EMIT %mul = mul %stepvector, %step
+///      EMIT %vector.gep = ptradd %pointer.phi, %add
+///      ...
+///      EMIT %ptr.ind = ptradd %pointer.phi, %vf
+///      EMIT branch-on-count ...
+///  }
+static void
+expandVPWidenPointerInductionRecipe(VPWidenPointerInductionRecipe *R,
+                                    VPTypeAnalysis &TypeInfo) {
+  VPlan *Plan = R->getParent()->getPlan();
+
+  assert(R->getInductionDescriptor().getKind() ==
+             InductionDescriptor::IK_PtrInduction &&
+         "Not a pointer induction according to InductionDescriptor!");
+  assert(TypeInfo.inferScalarType(R)->isPointerTy() && "Unexpected type.");
+  assert(!R->onlyScalarsGenerated(Plan->hasScalableVF()) &&
+         "Recipe should have been replaced");
+
+  unsigned CurrentPart = 0;
+  if (R->getNumOperands() > 3)
+    CurrentPart =
+        cast<ConstantInt>(R->getOperand(4)->getLiveInIRValue())->getZExtValue();
+
+  VPBuilder Builder(R);
+  DebugLoc DL = R->getDebugLoc();
+
+  // Build a pointer phi
+  VPPhi *Phi;
+  if (CurrentPart == 0) {
+    Phi = Builder.createScalarPhi({R->getStartValue()}, R->getDebugLoc(),
+                                  "pointer.phi");
+  } else {
+    // The recipe has been unrolled. In that case, fetch the single pointer phi
+    // shared among all unrolled parts of the recipe.
+    auto *PtrAdd = cast<VPInstruction>(R->getOperand(3));
+    Phi = cast<VPPhi>(PtrAdd->getOperand(0)->getDefiningRecipe());
+  }
+
+  Builder.setInsertPoint(R->getParent(), R->getParent()->getFirstNonPhi());
+
+  // A pointer induction, performed by using a gep
+  Type *PhiType = TypeInfo.inferScalarType(R->getStepValue());
+  VPValue *RuntimeVF = Builder.createScalarZExtOrTrunc(
+      &Plan->getVF(), PhiType, TypeInfo.inferScalarType(&Plan->getVF()), DL);
+  if (CurrentPart == 0) {
+    // The recipe represents the first part of the pointer induction. Create the
+    // GEP to increment the phi across all unrolled parts.
+    VPValue *NumUnrolledElems = Builder.createScalarZExtOrTrunc(
+        R->getOperand(2), PhiType, TypeInfo.inferScalarType(R->getOperand(2)),
+        DL);
+    VPValue *Offset = Builder.createNaryOp(
+        Instruction::Mul, {R->getStepValue(), NumUnrolledElems});
+
+    VPBuilder::InsertPointGuard Guard(Builder);
+    VPBasicBlock *ExitingBB =
+        Plan->getVectorLoopRegion()->getExitingBasicBlock();
+    Builder.setInsertPoint(ExitingBB,
+                           ExitingBB->getTerminator()->getIterator());
+
+    VPValue *InductionGEP = Builder.createPtrAdd(Phi, Offset, DL, "ptr.ind");
+    Phi->addOperand(InductionGEP);
+  }
+
+  VPValue *CurrentPartV =
+      Plan->getOrAddLiveIn(ConstantInt::get(PhiType, CurrentPart));
+
+  // Create actual address geps that use the pointer phi as base and a
+  // vectorized version of the step value (<step*0, ..., step*N>) as offset.
+  VPValue *StartOffsetScalar =
+      Builder.createNaryOp(Instruction::Mul, {RuntimeVF, CurrentPartV});
+  VPValue *StartOffset =
+      Builder.createNaryOp(VPInstruction::Broadcast, StartOffsetScalar);
+  // Create a vector of consecutive numbers from zero to VF.
+  StartOffset = Builder.createNaryOp(
+      Instruction::Add,
+      {StartOffset,
+       Builder.createNaryOp(VPInstruction::StepVector, {}, PhiType)});
+
+  VPValue *PtrAdd = Builder.createPtrAdd(
+      Phi,
+      Builder.createNaryOp(Instruction::Mul, {StartOffset, R->getStepValue()}),
+      DL, "vector.gep");
+
+  R->replaceAllUsesWith(PtrAdd);
+}
+
 void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {
   // Replace loop regions with explicity CFG.
   SmallVector<VPRegionBlock *> LoopRegions;
@@ -2707,6 +2808,12 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
 
       if (auto *WidenIVR = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
         expandVPWidenIntOrFpInduction(WidenIVR, TypeInfo);
+        ToRemove.push_back(WidenIVR);
+        continue;
+      }
+
+      if (auto *WidenIVR = dyn_cast<VPWidenPointerInductionRecipe>(&R)) {
+        expandVPWidenPointerInductionRecipe(WidenIVR, TypeInfo);
         ToRemove.push_back(WidenIVR);
         continue;
       }
