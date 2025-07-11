@@ -630,6 +630,8 @@ struct LinearizeVectorCreateMask final
 /// is converted to:
 ///   vector.load %arg0[%c0, %c0] : memref<1x4xf32>, vector<4xf32>
 ///   vector.shape_cast %load_result : vector<4xf32> to vector<1x4xf32>
+/// For generic cases, the vector unroll pass should be used to unroll the load
+/// to vector<1x1x...xN> form and then linearized
 struct LinearizeVectorLoad final : public OpConversionPattern<vector::LoadOp> {
   using OpConversionPattern::OpConversionPattern;
   LinearizeVectorLoad(const TypeConverter &typeConverter, MLIRContext *context,
@@ -673,6 +675,8 @@ struct LinearizeVectorLoad final : public OpConversionPattern<vector::LoadOp> {
 ///   vector.shape_cast %arg0 : vector<1x4xf32> to vector<4xf32>
 ///   vector.store %arg0, %arg1[%c0, %c0]
 ///     : vector<4xf32>, memref<1x4xf32>
+/// For generic cases, the vector unroll pass should be used to unroll the store
+/// to vector<1x1x...xN> form and then linearized
 struct LinearizeVectorStore final
     : public OpConversionPattern<vector::StoreOp> {
   using OpConversionPattern::OpConversionPattern;
