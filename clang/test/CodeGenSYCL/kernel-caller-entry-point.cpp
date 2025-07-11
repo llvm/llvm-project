@@ -100,8 +100,7 @@ int main() {
 
 // Verify that SYCL kernel caller functions are emitted for each device target.
 //
-// main() shouldn't be emitted in device code. It is not annotated with
-// sycl_kernel_entry_point or sycl_external attributes.
+// main() shouldn't be emitted in device code.
 // CHECK-NOT: define {{[a-z_ ]*}}noundef i32 @main() #0
 
 // IR for the SYCL kernel caller function generated for

@@ -4084,16 +4084,18 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
            diag::note_carries_dependency_missing_first_decl) << 0/*Function*/;
     }
 
-    // SYCL spec 2020
-    //   The first declaration of a function with external linkage must
-    //   specify sycl_external attribute.
-    //   Subsequent declarations may optionally specify this attribute.
+    // SYCL 2020 section 5.10.1, "SYCL functions and member functions linkage":
+    //   When a function is declared with sycl_external, that attribute must be
+    //   used on the first declaration of that function in the translation unit.
+    //   Redeclarations of the function in the same translation unit may
+    //   optionally use sycl_external, but this is not required.
     if (LangOpts.SYCLIsDevice) {
       const SYCLExternalAttr *SEA = New->getAttr<SYCLExternalAttr>();
       if (SEA && !Old->hasAttr<SYCLExternalAttr>()) {
-        Diag(SEA->getLocation(), diag::err_sycl_attribute_missing_on_first_decl)
+        Diag(SEA->getLocation(), diag::err_attribute_missing_on_first_decl)
             << SEA;
         Diag(Old->getLocation(), diag::note_previous_declaration);
+        New->dropAttr<SYCLExternalAttr>();
       }
     }
 

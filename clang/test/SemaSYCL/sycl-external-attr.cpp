@@ -18,7 +18,7 @@ namespace {
 // The first declaration of a SYCL external function is required to have this attribute.
 int foo(); // expected-note {{previous declaration is here}}
 
-[[clang::sycl_external]] int foo(); // expected-error {{'sycl_external' must be applied to the first declaration}}
+[[clang::sycl_external]] int foo(); // expected-error {{'clang::sycl_external' attribute does not appear on the first declaration}}
 
 // Subsequent declrations of a SYCL external function may optionally specify this attribute.
 [[clang::sycl_external]] int boo();
