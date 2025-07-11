@@ -43,7 +43,7 @@ struct LaunchSingleKernelTestBase : LaunchKernelTestBase {
     ASSERT_SUCCESS(olGetKernel(Program, kernel, &Kernel));
   }
 
-  ol_kernel_handle_t Kernel = nullptr;
+  ol_symbol_handle_t Kernel = nullptr;
 };
 
 #define KERNEL_TEST(NAME, KERNEL)                                              \
@@ -70,7 +70,7 @@ struct LaunchMultipleKernelTestBase : LaunchKernelTestBase {
       ASSERT_SUCCESS(olGetKernel(Program, K, &Kernels[I++]));
   }
 
-  std::vector<ol_kernel_handle_t> Kernels;
+  std::vector<ol_symbol_handle_t> Kernels;
 };
 
 #define KERNEL_MULTI_TEST(NAME, PROGRAM, ...)                                  \

@@ -5049,6 +5049,9 @@ multiclass sve_int_un_pred_arit_bitwise_fp<bits<3> opc, string asm,
   def : SVE_1_Op_Passthru_Pat<nxv4f32, op, nxv4i1, nxv4f32, !cast<Instruction>(NAME # _S)>;
   def : SVE_1_Op_Passthru_Pat<nxv2f32, op, nxv2i1, nxv2f32, !cast<Instruction>(NAME # _S)>;
   def : SVE_1_Op_Passthru_Pat<nxv2f64, op, nxv2i1, nxv2f64, !cast<Instruction>(NAME # _D)>;
+  def : SVE_1_Op_Passthru_Pat<nxv8bf16, op, nxv8i1, nxv8bf16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_1_Op_Passthru_Pat<nxv4bf16, op, nxv4i1, nxv4bf16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_1_Op_Passthru_Pat<nxv2bf16, op, nxv2i1, nxv2bf16, !cast<Instruction>(NAME # _H)>;
 
   def _H_UNDEF : PredOneOpPassthruPseudo<NAME # _H, ZPR16>;
   def _S_UNDEF : PredOneOpPassthruPseudo<NAME # _S, ZPR32>;
@@ -5060,6 +5063,9 @@ multiclass sve_int_un_pred_arit_bitwise_fp<bits<3> opc, string asm,
   defm : SVE_1_Op_PassthruUndef_Pat<nxv4f32, op, nxv4i1, nxv4f32, !cast<Pseudo>(NAME # _S_UNDEF)>;
   defm : SVE_1_Op_PassthruUndef_Pat<nxv2f32, op, nxv2i1, nxv2f32, !cast<Pseudo>(NAME # _S_UNDEF)>;
   defm : SVE_1_Op_PassthruUndef_Pat<nxv2f64, op, nxv2i1, nxv2f64, !cast<Pseudo>(NAME # _D_UNDEF)>;
+  defm : SVE_1_Op_PassthruUndef_Pat<nxv8bf16, op, nxv8i1, nxv8bf16, !cast<Pseudo>(NAME # _H_UNDEF)>;
+  defm : SVE_1_Op_PassthruUndef_Pat<nxv4bf16, op, nxv4i1, nxv4bf16, !cast<Pseudo>(NAME # _H_UNDEF)>;
+  defm : SVE_1_Op_PassthruUndef_Pat<nxv2bf16, op, nxv2i1, nxv2bf16, !cast<Pseudo>(NAME # _H_UNDEF)>;
 }
 
 multiclass sve_int_un_pred_arit_bitwise_fp_z<bits<3> opc, string asm, SDPatternOperator op> {

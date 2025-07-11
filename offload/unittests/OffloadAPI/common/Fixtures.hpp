@@ -120,7 +120,7 @@ struct OffloadKernelTest : OffloadProgramTest {
     RETURN_ON_FATAL_FAILURE(OffloadProgramTest::TearDown());
   }
 
-  ol_kernel_handle_t Kernel = nullptr;
+  ol_symbol_handle_t Kernel = nullptr;
 };
 
 struct OffloadQueueTest : OffloadDeviceTest {

@@ -171,6 +171,11 @@
 /// for both functions and classes. On windows its turned in to dllimport for
 /// library consumers, for other platforms its a default visibility attribute.
 ///
+/// LLVM_ABI_FOR_TEST is for annotating symbols that are only exported because
+/// they are imported from a test. These symbols are not technically part of the
+/// LLVM public interface and could be conditionally excluded when not building
+/// tests in the future.
+///
 #ifndef LLVM_ABI_GENERATING_ANNOTATIONS
 // Marker to add to classes or functions in public headers that should not have
 // export macros added to them by the clang tool
@@ -210,6 +215,7 @@
 #define LLVM_EXPORT_TEMPLATE
 #define LLVM_ABI_EXPORT
 #endif
+#define LLVM_ABI_FOR_TEST LLVM_ABI
 #endif
 
 #if defined(__GNUC__)

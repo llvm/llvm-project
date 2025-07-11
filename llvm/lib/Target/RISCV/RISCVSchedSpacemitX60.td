@@ -345,15 +345,11 @@ def : ReadAdvance<ReadSingleBitImm, 0>;
 // Unsupported extensions
 defm : UnsupportedSchedQ;
 defm : UnsupportedSchedV;
-defm : UnsupportedSchedXsfvcp;
-defm : UnsupportedSchedXSfvfnrclipxfqf;
-defm : UnsupportedSchedXSfvfwmaccqqq;
-defm : UnsupportedSchedXSfvqmaccdod;
-defm : UnsupportedSchedXSfvqmaccqoq;
 defm : UnsupportedSchedZabha;
 defm : UnsupportedSchedZbkb;
 defm : UnsupportedSchedZbkx;
 defm : UnsupportedSchedZfa;
 defm : UnsupportedSchedZvk;
 defm : UnsupportedSchedSFB;
+defm : UnsupportedSchedXsf;
 }

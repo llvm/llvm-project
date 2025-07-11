@@ -1423,8 +1423,9 @@ bool SystemZTargetLowering::isLegalAddressingMode(const DataLayout &DL,
 }
 
 bool SystemZTargetLowering::findOptimalMemOpLowering(
-    std::vector<EVT> &MemOps, unsigned Limit, const MemOp &Op, unsigned DstAS,
-    unsigned SrcAS, const AttributeList &FuncAttributes) const {
+    LLVMContext &Context, std::vector<EVT> &MemOps, unsigned Limit,
+    const MemOp &Op, unsigned DstAS, unsigned SrcAS,
+    const AttributeList &FuncAttributes) const {
   const int MVCFastLen = 16;
 
   if (Limit != ~unsigned(0)) {
@@ -1437,12 +1438,13 @@ bool SystemZTargetLowering::findOptimalMemOpLowering(
       return false; // Memset zero: Use XC
   }
 
-  return TargetLowering::findOptimalMemOpLowering(MemOps, Limit, Op, DstAS,
-                                                  SrcAS, FuncAttributes);
+  return TargetLowering::findOptimalMemOpLowering(Context, MemOps, Limit, Op,
+                                                  DstAS, SrcAS, FuncAttributes);
 }
 
-EVT SystemZTargetLowering::getOptimalMemOpType(const MemOp &Op,
-                                   const AttributeList &FuncAttributes) const {
+EVT SystemZTargetLowering::getOptimalMemOpType(
+    LLVMContext &Context, const MemOp &Op,
+    const AttributeList &FuncAttributes) const {
   return Subtarget.hasVector() ? MVT::v2i64 : MVT::Other;
 }
 
