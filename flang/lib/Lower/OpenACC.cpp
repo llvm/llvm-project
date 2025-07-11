@@ -743,15 +743,15 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
     // For UseDeviceOp, if operand is one of a pair resulting from a
     // declare operation, create a UseDeviceOp for the other operand as well.
     if constexpr (std::is_same_v<Op, mlir::acc::UseDeviceOp>) {
-      if (auto declareOp = mlir::dyn_cast<hlfir::DeclareOp>(baseAddr.getDefiningOp())) {
+      if (auto declareOp =
+              mlir::dyn_cast<hlfir::DeclareOp>(baseAddr.getDefiningOp())) {
         mlir::Value otherAddr = declareOp.getResult(1);
         if (baseAddr != otherAddr) {
-          Op op = createDataEntryOp<Op>(
-            builder, operandLocation, otherAddr,
-            asFortran, bounds, structured, implicit, dataClause,
-            otherAddr.getType(), async,
-            asyncDeviceTypes, asyncOnlyDeviceTypes, unwrapBoxAddr,
-            info.isPresent);
+          Op op = createDataEntryOp<Op>(builder, operandLocation, otherAddr,
+                                        asFortran, bounds, structured, implicit,
+                                        dataClause, otherAddr.getType(), async,
+                                        asyncDeviceTypes, asyncOnlyDeviceTypes,
+                                        unwrapBoxAddr, info.isPresent);
           dataOperands.push_back(op.getAccVar());
         }
       }
