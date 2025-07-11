@@ -3,7 +3,9 @@
 
 include "llvm/Target/Target.td"
 
-def ArchInstrInfo : InstrInfo { }
+def ArchInstrInfo : InstrInfo {
+  let GenerateTemplatedDecoder = false;
+}
 
 def Arch : Target {
   let InstructionSet = ArchInstrInfo;
