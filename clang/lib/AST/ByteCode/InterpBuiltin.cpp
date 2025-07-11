@@ -18,6 +18,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SipHash.h"
 
 namespace clang {
@@ -1673,6 +1674,12 @@ static bool interp__builtin_vector_reduce(InterpState &S, CodePtr OpPC,
         (void)T::bitOr(Result, Elem, BitWidth, &Result);
       } else if (ID == Builtin::BI__builtin_reduce_xor) {
         (void)T::bitXor(Result, Elem, BitWidth, &Result);
+      } else if (ID == Builtin::BI__builtin_reduce_min) {
+        if (Elem < Result)
+          Result = Elem;
+      } else if (ID == Builtin::BI__builtin_reduce_max) {
+        if (Elem > Result)
+          Result = Elem;
       } else {
         llvm_unreachable("Unhandled vector reduce builtin");
       }
@@ -1686,12 +1693,18 @@ static bool interp__builtin_vector_reduce(InterpState &S, CodePtr OpPC,
 /// Can be called with an integer or vector as the first and only parameter.
 static bool interp__builtin_elementwise_popcount(InterpState &S, CodePtr OpPC,
                                                  const InterpFrame *Frame,
-                                                 const CallExpr *Call) {
+                                                 const CallExpr *Call,
+                                                 unsigned BuiltinID) {
   assert(Call->getNumArgs() == 1);
   if (Call->getArg(0)->getType()->isIntegerType()) {
     PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
     APSInt Val = popToAPSInt(S.Stk, ArgT);
-    pushInteger(S, Val.popcount(), Call->getType());
+
+    if (BuiltinID == Builtin::BI__builtin_elementwise_popcount) {
+      pushInteger(S, Val.popcount(), Call->getType());
+    } else {
+      pushInteger(S, Val.reverseBits(), Call->getType());
+    }
     return true;
   }
   // Otherwise, the argument must be a vector.
@@ -1710,8 +1723,13 @@ static bool interp__builtin_elementwise_popcount(InterpState &S, CodePtr OpPC,
   // FIXME: Reading from uninitialized vector elements?
   for (unsigned I = 0; I != NumElems; ++I) {
     INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-      Dst.atIndex(I).deref<T>() =
-          T::from(Arg.atIndex(I).deref<T>().toAPSInt().popcount());
+      if (BuiltinID == Builtin::BI__builtin_elementwise_popcount) {
+        Dst.atIndex(I).deref<T>() =
+            T::from(Arg.atIndex(I).deref<T>().toAPSInt().popcount());
+      } else {
+        Dst.atIndex(I).deref<T>() = T::from(
+            Arg.atIndex(I).deref<T>().toAPSInt().reverseBits().getZExtValue());
+      }
       Dst.atIndex(I).initialize();
     });
   }
@@ -2234,6 +2252,78 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_elementwise_sat(InterpState &S, CodePtr OpPC,
+                                            const CallExpr *Call,
+                                            unsigned BuiltinID) {
+  Call->dumpColor();
+  assert(Call->getNumArgs() == 2);
+
+  // Single integer case.
+  if (!Call->getArg(0)->getType()->isVectorType()) {
+    assert(!Call->getArg(1)->getType()->isVectorType());
+    APSInt RHS = popToAPSInt(
+        S.Stk, *S.getContext().classify(Call->getArg(1)->getType()));
+    APSInt LHS = popToAPSInt(
+        S.Stk, *S.getContext().classify(Call->getArg(0)->getType()));
+    APInt Result;
+    if (BuiltinID == Builtin::BI__builtin_elementwise_add_sat) {
+      Result = LHS.isSigned() ? LHS.sadd_sat(RHS) : LHS.uadd_sat(RHS);
+    } else if (BuiltinID == Builtin::BI__builtin_elementwise_sub_sat) {
+      Result = LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
+    } else {
+      llvm_unreachable("Wrong builtin ID");
+    }
+
+    pushInteger(S, APSInt(Result, !LHS.isSigned()), Call->getType());
+    return true;
+  }
+
+  // Vector case.
+  assert(Call->getArg(0)->getType()->isVectorType() &&
+         Call->getArg(1)->getType()->isVectorType());
+  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
+  assert(VT->getElementType() ==
+         Call->getArg(1)->getType()->castAs<VectorType>()->getElementType());
+  assert(VT->getNumElements() ==
+         Call->getArg(1)->getType()->castAs<VectorType>()->getNumElements());
+  assert(VT->getElementType()->isIntegralOrEnumerationType());
+
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  PrimType ElemT = *S.getContext().classify(VT->getElementType());
+  unsigned NumElems = VT->getNumElements();
+  for (unsigned I = 0; I != NumElems; ++I) {
+    APSInt Elem1;
+    APSInt Elem2;
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+      Elem1 = LHS.atIndex(I).deref<T>().toAPSInt();
+      Elem2 = RHS.atIndex(I).deref<T>().toAPSInt();
+    });
+
+    APSInt Result;
+    if (BuiltinID == Builtin::BI__builtin_elementwise_add_sat) {
+      Result = APSInt(Elem1.isSigned() ? Elem1.sadd_sat(Elem2)
+                                       : Elem1.uadd_sat(Elem2),
+                      Call->getType()->isUnsignedIntegerOrEnumerationType());
+    } else if (BuiltinID == Builtin::BI__builtin_elementwise_sub_sat) {
+      Result = APSInt(Elem1.isSigned() ? Elem1.ssub_sat(Elem2)
+                                       : Elem1.usub_sat(Elem2),
+                      Call->getType()->isUnsignedIntegerOrEnumerationType());
+    } else {
+      llvm_unreachable("Wrong builtin ID");
+    }
+
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+      const Pointer &E = Dst.atIndex(I);
+      E.deref<T>() = static_cast<T>(Result);
+      E.initialize();
+    });
+  }
+
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
@@ -2592,10 +2682,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_reduce_and:
   case Builtin::BI__builtin_reduce_or:
   case Builtin::BI__builtin_reduce_xor:
+  case Builtin::BI__builtin_reduce_min:
+  case Builtin::BI__builtin_reduce_max:
     return interp__builtin_vector_reduce(S, OpPC, Call, BuiltinID);
 
   case Builtin::BI__builtin_elementwise_popcount:
-    return interp__builtin_elementwise_popcount(S, OpPC, Frame, Call);
+  case Builtin::BI__builtin_elementwise_bitreverse:
+    return interp__builtin_elementwise_popcount(S, OpPC, Frame, Call,
+                                                BuiltinID);
 
   case Builtin::BI__builtin_memcpy:
   case Builtin::BImemcpy:
@@ -2632,6 +2726,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case Builtin::BI__builtin_is_within_lifetime:
     return interp__builtin_is_within_lifetime(S, OpPC, Call);
+
+  case Builtin::BI__builtin_elementwise_add_sat:
+  case Builtin::BI__builtin_elementwise_sub_sat:
+    return interp__builtin_elementwise_sat(S, OpPC, Call, BuiltinID);
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
