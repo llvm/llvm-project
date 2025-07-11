@@ -675,8 +675,11 @@ void TransferFunctions::reportUse(const Expr *ex, const VarDecl *vd) {
 
 void TransferFunctions::reportConstRefUse(const Expr *ex, const VarDecl *vd) {
   Value v = vals[vd];
-  if (isAlwaysUninit(v))
-    handler.handleConstRefUseOfUninitVariable(vd, getUninitUse(ex, vd, v));
+  if (isAlwaysUninit(v)) {
+    auto use = getUninitUse(ex, vd, v);
+    use.setConstRefUse();
+    handler.handleUseOfUninitVariable(vd, use);
+  }
 }
 
 void TransferFunctions::VisitObjCForCollectionStmt(ObjCForCollectionStmt *FS) {
@@ -887,12 +890,6 @@ struct PruneBlocksHandler : public UninitVariablesHandler {
 
   void handleUseOfUninitVariable(const VarDecl *vd,
                                  const UninitUse &use) override {
-    hadUse[currentBlock] = true;
-    hadAnyUse = true;
-  }
-
-  void handleConstRefUseOfUninitVariable(const VarDecl *vd,
-                                         const UninitUse &use) override {
     hadUse[currentBlock] = true;
     hadAnyUse = true;
   }
