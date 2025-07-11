@@ -70,3 +70,31 @@ entry:
   ret void
 }
 declare void @llvm.ppc.vsx.stxvrll(<4 x i32>, ptr, i64)
+
+define void @testSTXVPRL(ptr %v, ptr %vp, i64 %len) {
+; CHECK-LABEL: testSTXVPRL:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lxv v2
+; CHECK-NEXT:    lxv v3
+; CHECK-NEXT:    stxvprl vsp34, r4, r5
+; CHECK-NEXT:    blr
+entry:
+  %0 = load <256 x i1>, ptr %v, align 32
+  tail call void @llvm.ppc.vsx.stxvprl(<256 x i1> %0, ptr %vp, i64 %len)
+  ret void
+}
+declare void @llvm.ppc.vsx.stxvprl(<256 x i1>, ptr, i64)
+
+define void @testSTXVPRLL(ptr %v, ptr %vp, i64 %len) {
+; CHECK-LABEL: testSTXVPRLL:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lxv v2
+; CHECK-NEXT:    lxv v3
+; CHECK-NEXT:    stxvprll vsp34, r4, r5
+; CHECK-NEXT:    blr
+entry:
+  %0 = load <256 x i1>, ptr %v, align 32
+  tail call void @llvm.ppc.vsx.stxvprll(<256 x i1> %0, ptr %vp, i64 %len)
+  ret void
+}
+declare void @llvm.ppc.vsx.stxvprll(<256 x i1>, ptr, i64)
