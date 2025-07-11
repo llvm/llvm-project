@@ -17,8 +17,10 @@
 // 2. An aliases_views of two text_encoding objects that represent the same ID but hold different names return the same front()
 // 3. An aliases_views of two text_encoding objects that represent different IDs return different front()
 
+// TODO: The Generic-modules build fails to compile this test without the (seemingly redundant) <ranges> include, due to .front() not being a member of text_encoding::aliases_view.
 #include <cassert>
 #include <cstdlib>
+#include <ranges>
 #include <text_encoding>
 
 #include "platform_support.h"
@@ -38,7 +40,7 @@ int main() {
   }
 
   {
-    auto te1 = std::text_encoding("ANSI_X3.4-1968");
+    auto te1 = std::text_encoding("US-ASCII");
     auto te2 = std::text_encoding("ANSI_X3.4-1986");
 
     auto view1 = te1.aliases();

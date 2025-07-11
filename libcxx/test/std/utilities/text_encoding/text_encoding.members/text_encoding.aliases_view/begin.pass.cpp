@@ -19,12 +19,9 @@
 
 #include <cassert>
 #include <cstdlib>
-#include <text_encoding>
 #include <ranges>
+#include <text_encoding>
 
-#include "platform_support.h"
-#include "test_macros.h"
-#include "test_text_encoding.h"
 
 using id = std::text_encoding::id;
 
@@ -35,6 +32,7 @@ int main() {
     auto view2 = te.aliases();
 
     assert(std::ranges::begin(view1) == std::ranges::begin(view2));
+    assert(view1.begin() == view2.begin());
   }
 
   {
@@ -44,6 +42,7 @@ int main() {
     auto view1 = te1.aliases();
     auto view2 = te2.aliases();
 
+    assert(view1.begin() == view2.begin());
     assert(std::ranges::begin(view1) == std::ranges::begin(view2));
   }
 
@@ -54,6 +53,7 @@ int main() {
     auto view1 = te1.aliases();
     auto view2 = te2.aliases();
 
+    assert(!(view1.begin() == view2.begin()));
     assert(!(std::ranges::begin(view1) == std::ranges::begin(view2)));
   }
 }
