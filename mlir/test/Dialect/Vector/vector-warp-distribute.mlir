@@ -532,6 +532,35 @@ func.func @warp_scf_for_swap_no_yield(%arg0: index) {
 }
 
 // -----
+// scf.for result is not distributed in this case.
+// CHECK-PROP-LABEL:   func @warp_scf_for_broadcasted_result(
+// CHECK-PROP:  %[[W0:.*]] = gpu.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<1xf32>) {
+// CHECK-PROP:    %[[INI:.*]] = "some_def"() : () -> vector<1xf32>
+// CHECK-PROP:    gpu.yield %[[INI]] : vector<1xf32>
+// CHECK-PROP:  }
+// CHECK-PROP:  %[[F:.*]] = scf.for {{.*}} iter_args(%[[ARG2:.*]] = %[[W0]]) -> (vector<1xf32>) {
+// CHECK-PROP:    %[[W1:.*]] = gpu.warp_execute_on_lane_0(%{{.*}})[32] args(%[[ARG2]] : vector<1xf32>) -> (vector<1xf32>) {
+// CHECK-PROP:    ^bb0(%{{.*}}: vector<1xf32>):
+// CHECK-PROP:      %[[T0:.*]] = "some_op"(%{{.*}}) : (vector<1xf32>) -> vector<1xf32>
+// CHECK-PROP:      gpu.yield %[[T0]] : vector<1xf32>
+// CHECK-PROP:    }
+// CHECK-PROP:    scf.yield %[[W1]] : vector<1xf32>
+func.func @warp_scf_for_broadcasted_result(%arg0: index) -> vector<1xf32> {
+  %c128 = arith.constant 128 : index
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %2 = gpu.warp_execute_on_lane_0(%arg0)[32] -> (vector<1xf32>) {
+    %ini = "some_def"() : () -> (vector<1xf32>)
+    %0 = scf.for %arg3 = %c0 to %c128 step %c1 iter_args(%arg4 = %ini) -> (vector<1xf32>) {
+      %1 = "some_op"(%arg4) : (vector<1xf32>) -> (vector<1xf32>)
+      scf.yield %1 : vector<1xf32>
+    }
+    gpu.yield %0 : vector<1xf32>
+  }
+  return %2 : vector<1xf32>
+}
+
+// -----
 
 #map = affine_map<()[s0] -> (s0 * 4)>
 #map1 = affine_map<()[s0] -> (s0 * 128 + 128)>
