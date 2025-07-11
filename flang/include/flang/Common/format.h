@@ -30,25 +30,21 @@
 namespace Fortran::common {
 
 // AddOverflow and MulOverflow are copied from
-// llvm/include/llvm/Support/MathExtras.h. It is ok to include llvm headers in
-// flang, but this flang header is also used in flang-rt, which cannot use llvm
-// headers.
+// llvm/include/llvm/Support/MathExtras.h and specialised to int64_t.
 
 /// Add two signed integers, computing the two's complement truncated result,
 /// returning true if overflow occurred.
-template <typename T>
-std::enable_if_t<std::is_signed_v<T>, T> AddOverflow(T X, T Y, T &Result) {
+bool AddOverflow(int64_t X, int64_t Y, int64_t &Result) {
 #if __has_builtin(__builtin_add_overflow)
   return __builtin_add_overflow(X, Y, &Result);
 #else
   // Perform the unsigned addition.
-  using U = std::make_unsigned_t<T>;
-  const U UX = static_cast<U>(X);
-  const U UY = static_cast<U>(Y);
-  const U UResult = UX + UY;
+  const uint64_t UX = static_cast<uint64_t>(X);
+  const uint64_t UY = static_cast<uint64_t>(Y);
+  const uint64_t UResult = UX + UY;
 
   // Convert to signed.
-  Result = static_cast<T>(UResult);
+  Result = static_cast<int64_t>(UResult);
 
   // Adding two positive numbers should result in a positive number.
   if (X > 0 && Y > 0)
@@ -62,16 +58,14 @@ std::enable_if_t<std::is_signed_v<T>, T> AddOverflow(T X, T Y, T &Result) {
 
 /// Multiply two signed integers, computing the two's complement truncated
 /// result, returning true if an overflow occurred.
-template <typename T>
-std::enable_if_t<std::is_signed_v<T>, T> MulOverflow(T X, T Y, T &Result) {
+int64_t MulOverflow(int64_t X, int64_t Y, int64_t &Result) {
 #if __has_builtin(__builtin_mul_overflow)
   return __builtin_mul_overflow(X, Y, &Result);
 #else
   // Perform the unsigned multiplication on absolute values.
-  using U = std::make_unsigned_t<T>;
-  const U UX = X < 0 ? (0 - static_cast<U>(X)) : static_cast<U>(X);
-  const U UY = Y < 0 ? (0 - static_cast<U>(Y)) : static_cast<U>(Y);
-  const U UResult = UX * UY;
+  const uint64_t UX = X < 0 ? (0 - static_cast<uint64_t>(X)) : static_cast<uint64_t>(X);
+  const uint64_t UY = Y < 0 ? (0 - static_cast<uint64_t>(Y)) : static_cast<uint64_t>(Y);
+  const uint64_t UResult = UX * UY;
 
   // Convert to signed.
   const bool IsNegative = (X < 0) ^ (Y < 0);
@@ -85,9 +79,9 @@ std::enable_if_t<std::is_signed_v<T>, T> MulOverflow(T X, T Y, T &Result) {
   // Check how the max allowed absolute value (2^n for negative, 2^(n-1) for
   // positive) divided by an argument compares to the other.
   if (IsNegative)
-    return UX > (static_cast<U>(std::numeric_limits<T>::max()) + U(1)) / UY;
+    return UX > (static_cast<uint64_t>(std::numeric_limits<T>::max()) + uint64_t(1)) / UY;
   else
-    return UX > (static_cast<U>(std::numeric_limits<T>::max())) / UY;
+    return UX > (static_cast<uint64_t>(std::numeric_limits<T>::max())) / UY;
 #endif
 }
 
