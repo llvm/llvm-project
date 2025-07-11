@@ -753,9 +753,28 @@ Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
                                 void *PropValue, size_t *PropSizeRet) {
   InfoWriter Info(PropSize, PropValue, PropSizeRet);
 
+  auto CheckKind = [&](ol_symbol_kind_t Required) {
+    if (Symbol->Kind != Required) {
+      std::string ErrBuffer;
+      llvm::raw_string_ostream(ErrBuffer)
+          << PropName << ": Expected a symbol of Kind " << Required
+          << " but given a symbol of Kind " << Symbol->Kind;
+      return Plugin::error(ErrorCode::SYMBOL_KIND, ErrBuffer.c_str());
+    }
+    return Plugin::success();
+  };
+
   switch (PropName) {
   case OL_SYMBOL_INFO_KIND:
     return Info.write<ol_symbol_kind_t>(Symbol->Kind);
+  case OL_SYMBOL_INFO_GLOBAL_VARIABLE_ADDRESS:
+    if (auto Err = CheckKind(OL_SYMBOL_KIND_GLOBAL_VARIABLE))
+      return Err;
+    return Info.write<void *>(std::get<GlobalTy>(Symbol->PluginImpl).getPtr());
+  case OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE:
+    if (auto Err = CheckKind(OL_SYMBOL_KIND_GLOBAL_VARIABLE))
+      return Err;
+    return Info.write<size_t>(std::get<GlobalTy>(Symbol->PluginImpl).getSize());
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetSymbolInfo enum '%i' is invalid", PropName);
