@@ -235,6 +235,20 @@ func.func @udot_acc_sat_vector_4xi16_i64(%a: vector<4xi16>, %acc: i64) -> i64 {
 }
 
 //===----------------------------------------------------------------------===//
+// Dot Product op with bfloat16
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: dot_vector_4xbf16_bf16
+func.func @dot_vector_4xbf16_bf16(%a: vector<4xbf16>, %b: vector<4xbf16>) -> bf16 {
+  // CHECK: min version: v1.0
+  // CHECK: max version: v1.6
+  // CHECK: extensions: [ [SPV_KHR_bfloat16] ]
+  // CHECK: capabilities: [ [BFloat16DotProductKHR] ]
+  %r = spirv.Dot %a, %a: vector<4xbf16> -> bf16
+  return %r: bf16
+}
+
+//===----------------------------------------------------------------------===//
 // Primitive ops
 //===----------------------------------------------------------------------===//
 

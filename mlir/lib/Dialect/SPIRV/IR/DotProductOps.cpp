@@ -1,4 +1,4 @@
-//===- IntegerDotProductOps.cpp - MLIR SPIR-V Integer Dot Product Ops  ----===//
+//===- DotProductOps.cpp - MLIR SPIR-V Dot Product Ops  -------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Defines the Integer Dot Product operations in the SPIR-V dialect.
+// Defines the Dot Product operations in the SPIR-V dialect.
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,6 +20,44 @@
 using namespace mlir::spirv::AttrNames;
 
 namespace mlir::spirv {
+
+//===----------------------------------------------------------------------===//
+// Dot Product ops
+//===----------------------------------------------------------------------===//
+
+static std::optional<spirv::Version> getDotProductMinVersion() {
+  return spirv::Version::V_1_0; // Available in SPIR-V >= 1.0.
+}
+
+static std::optional<spirv::Version> getDotProductMaxVersion() {
+  return spirv::Version::V_1_6; // Available in SPIR-V <= 1.6.
+}
+
+SmallVector<ArrayRef<spirv::Extension>, 1> DotOp::getExtensions() {
+  if (isa<BFloat16Type>(getType())) {
+    static const auto extension = spirv::Extension::SPV_KHR_bfloat16;
+    return {extension};
+  }
+
+  return {};
+}
+
+SmallVector<ArrayRef<spirv::Capability>, 1> DotOp::getCapabilities() {
+  if (isa<BFloat16Type>(getType())) {
+    static const auto capability = spirv::Capability::BFloat16DotProductKHR;
+    return {capability};
+  }
+
+  return {};
+}
+
+std::optional<spirv::Version> DotOp::getMinVersion() {
+  return getDotProductMinVersion();
+}
+
+std::optional<spirv::Version> DotOp::getMaxVersion() {
+  return getDotProductMaxVersion();
+}
 
 //===----------------------------------------------------------------------===//
 // Integer Dot Product ops
@@ -69,14 +107,6 @@ static LogicalResult verifyIntegerDotProduct(Operation *op) {
                       resultBitWidth, factorBitWidth));
 
   return success();
-}
-
-static std::optional<spirv::Version> getIntegerDotProductMinVersion() {
-  return spirv::Version::V_1_0; // Available in SPIR-V >= 1.0.
-}
-
-static std::optional<spirv::Version> getIntegerDotProductMaxVersion() {
-  return spirv::Version::V_1_6; // Available in SPIR-V <= 1.6.
 }
 
 static SmallVector<ArrayRef<spirv::Extension>, 1>
@@ -136,10 +166,10 @@ getIntegerDotProductCapabilities(Operation *op) {
     return getIntegerDotProductCapabilities<OpName>(*this);                    \
   }                                                                            \
   std::optional<spirv::Version> OpName::getMinVersion() {                      \
-    return getIntegerDotProductMinVersion();                                   \
+    return getDotProductMinVersion();                                          \
   }                                                                            \
   std::optional<spirv::Version> OpName::getMaxVersion() {                      \
-    return getIntegerDotProductMaxVersion();                                   \
+    return getDotProductMaxVersion();                                          \
   }
 
 SPIRV_IMPL_INTEGER_DOT_PRODUCT_OP(SDotOp)
