@@ -1203,11 +1203,22 @@ static void maybeAssignMask(OpBuilder &b, OpTy xferOp, OpTy newXferOp,
   if (xferOp.getMaskType().getRank() > 1) {
     // Unpack one dimension of the mask.
     OpBuilder::InsertionGuard guard(b);
+    Location loc = xferOp.getLoc();
     b.setInsertionPoint(newXferOp); // Insert load before newXfer.
 
+    auto expr = dyn_cast<AffineDimExpr>(
+        compressUnusedDims(xferOp.getPermutationMap()).getResult(0));
+    assert(expr && "cannot extract from dimension");
+    // Transpose dim to be the outer most dimension, so we can use
+    // vector.extract on it.
+    TypedValue<VectorType> mask = xferOp.getMask();
+    SmallVector<int64_t> perm =
+        llvm::to_vector(llvm::seq<int64_t>(mask.getType().getRank()));
+    std::swap(perm[0], perm[expr.getPosition()]);
+    mask = b.create<vector::TransposeOp>(loc, mask, perm);
+    // Extract from the transposed mask.
     llvm::SmallVector<int64_t, 1> indices({i});
-    Location loc = xferOp.getLoc();
-    auto newMask = b.create<vector::ExtractOp>(loc, xferOp.getMask(), indices);
+    auto newMask = b.create<vector::ExtractOp>(loc, mask, indices);
     newXferOp.getMaskMutable().assign(newMask);
   }
 
