@@ -2350,4 +2350,15 @@ define i8 @fold_add_umax_to_usub_multiuse(i8 %a) {
   ret i8 %sel
 }
 
+define i32 @add_check_zero(i32 %num) {
+; CHECK-LABEL: @add_check_zero(
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[NUM:%.*]], i32 1)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %add = add i32 %num, 1
+  %cmp = icmp eq i32 %add, 0
+  %cond = select i1 %cmp, i32 -1, i32 %add
+  ret i32 %cond
+}
+
 declare void @usei8(i8)

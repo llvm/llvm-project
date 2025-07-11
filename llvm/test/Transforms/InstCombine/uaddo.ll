@@ -158,7 +158,7 @@ define i1 @uaddo_1(i8 %x, ptr %p) {
 ; CHECK-LABEL: @uaddo_1(
 ; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], 1
 ; CHECK-NEXT:    store i8 [[A]], ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[A]], 0
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[X]], -1
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %a = add i8 %x, 1

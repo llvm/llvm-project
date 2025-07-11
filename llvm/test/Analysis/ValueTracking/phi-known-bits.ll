@@ -1119,7 +1119,7 @@ define i32 @issue_124275_wrong_br_direction(i32 noundef %inp) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor i32 [[INP:%.*]], -2
 ; CHECK-NEXT:    [[XOR_INP_NEG:%.*]] = add i32 [[TMP0]], 1
-; CHECK-NEXT:    [[CMP_NE_NOT:%.*]] = icmp eq i32 [[XOR_INP_NEG]], 0
+; CHECK-NEXT:    [[CMP_NE_NOT:%.*]] = icmp eq i32 [[INP]], 1
 ; CHECK-NEXT:    br i1 [[CMP_NE_NOT]], label [[B1:%.*]], label [[B0:%.*]]
 ; CHECK:       B0:
 ; CHECK-NEXT:    [[PHI_B0:%.*]] = phi i32 [ [[PHI_B1:%.*]], [[B1]] ], [ [[XOR_INP_NEG]], [[ENTRY:%.*]] ]

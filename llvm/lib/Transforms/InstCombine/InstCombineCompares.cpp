@@ -3171,7 +3171,7 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
       return replaceInstUsesWith(Cmp, Cond);
   }
   const APInt *C2;
-  if (Cmp.isEquality() || !match(Y, m_APInt(C2)))
+  if (!match(Y, m_APInt(C2)))
     return nullptr;
 
   // Fold icmp pred (add X, C2), C.
@@ -3195,8 +3195,9 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
       return new ICmpInst(Pred, X, ConstantInt::get(Ty, NewC));
   }
 
-  if (ICmpInst::isUnsigned(Pred) && Add->hasNoSignedWrap() &&
-      C.isNonNegative() && (C - *C2).isNonNegative() &&
+  if (!Cmp.isEquality() && ICmpInst::isUnsigned(Pred) &&
+      Add->hasNoSignedWrap() && C.isNonNegative() &&
+      (C - *C2).isNonNegative() &&
       computeConstantRange(X, /*ForSigned=*/true).add(*C2).isAllNonNegative())
     return new ICmpInst(ICmpInst::getSignedPredicate(Pred), X,
                         ConstantInt::get(Ty, C - *C2));
@@ -3215,6 +3216,9 @@ Instruction *InstCombinerImpl::foldICmpAddConstant(ICmpInst &Cmp,
     if (Upper.isMinValue())
       return new ICmpInst(ICmpInst::ICMP_UGE, X, ConstantInt::get(Ty, Lower));
   }
+
+  if (Cmp.isEquality())
+    return nullptr;
 
   // This set of folds is intentionally placed after folds that use no-wrapping
   // flags because those folds are likely better for later analysis/codegen.
