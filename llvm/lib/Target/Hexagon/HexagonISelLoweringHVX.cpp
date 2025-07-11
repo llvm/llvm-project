@@ -2018,7 +2018,7 @@ HexagonTargetLowering::LowerHvxBitcast(SDValue Op, SelectionDAG &DAG) const {
     SDValue Splat = DAG.getNode(ISD::SPLAT_VECTOR, dl, VecTy, Val32);
     SmallVector<SDValue, 32> Mask;
     for (unsigned i = 0; i < 32; ++i)
-      Mask.push_back(DAG.getConstant(1u << i, dl, MVT::i32));
+      Mask.push_back(DAG.getConstant(1ull << i, dl, MVT::i32));
 
     SDValue MaskVec = DAG.getBuildVector(VecTy, dl, Mask);
     SDValue Anded = DAG.getNode(ISD::AND, dl, VecTy, Splat, MaskVec);
