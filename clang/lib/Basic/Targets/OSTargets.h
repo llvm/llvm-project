@@ -16,12 +16,15 @@
 
 namespace clang {
 namespace targets {
-
 template <typename TgtInfo>
 class LLVM_LIBRARY_VISIBILITY OSTargetInfo : public TgtInfo {
 protected:
   virtual void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                             MacroBuilder &Builder) const = 0;
+
+  virtual const char *getThreadSafeMacroName() const {
+    llvm::report_fatal_error("unimplemented for target");
+  }
 
 public:
   OSTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
@@ -31,6 +34,13 @@ public:
                         MacroBuilder &Builder) const override {
     TgtInfo::getTargetDefines(Opts, Builder);
     getOSDefines(Opts, TgtInfo::getTriple(), Builder);
+  }
+
+  void setThreadSafeDefines(const LangOptions &Opts,
+                            MacroBuilder &Builder) const {
+    if (Opts.POSIXThreads) {
+      Builder.defineMacro(getThreadSafeMacroName());
+    }
   }
 };
 
@@ -268,11 +278,12 @@ protected:
     DefineStd(Builder, "unix", Opts);
     Builder.defineMacro("__FreeBSD_kernel__");
     Builder.defineMacro("__GLIBC__");
-    if (Opts.POSIXThreads)
-      Builder.defineMacro("_REENTRANT");
+    this->setThreadSafeDefines(Opts, Builder);
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
   }
+
+  const char *getThreadSafeMacroName() const override { return "_REENTRANT"; }
 
 public:
   using OSTargetInfo<Target>::OSTargetInfo;
@@ -321,11 +332,13 @@ protected:
     Builder.defineMacro("__gnu_hurd__");
     Builder.defineMacro("__MACH__");
     Builder.defineMacro("__GLIBC__");
-    if (Opts.POSIXThreads)
-      Builder.defineMacro("_REENTRANT");
+    this->setThreadSafeDefines(Opts, Builder);
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
   }
+
+  const char *getThreadSafeMacroName() const override { return "_REENTRANT"; }
+
 public:
   using OSTargetInfo<Target>::OSTargetInfo;
 };
@@ -351,10 +364,9 @@ protected:
         Builder.defineMacro("__ANDROID_API__", "__ANDROID_MIN_SDK_VERSION__");
       }
     } else {
-        Builder.defineMacro("__gnu_linux__");
+      Builder.defineMacro("__gnu_linux__");
     }
-    if (Opts.POSIXThreads)
-      Builder.defineMacro("_REENTRANT");
+    this->setThreadSafeDefines(Opts, Builder);
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
     if (this->HasFloat128)
@@ -364,6 +376,8 @@ protected:
       Builder.defineMacro("_TIME_BITS", "64");
     }
   }
+
+  const char *getThreadSafeMacroName() const override { return "_REENTRANT"; }
 
 public:
   LinuxTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
@@ -434,11 +448,12 @@ protected:
     // NetBSD defines; list based off of gcc output
     Builder.defineMacro("__NetBSD__");
     Builder.defineMacro("__unix__");
-    if (Opts.POSIXThreads)
-      Builder.defineMacro("_REENTRANT");
+    this->setThreadSafeDefines(Opts, Builder);
     if (this->HasFloat128)
       Builder.defineMacro("__FLOAT128__");
   }
+
+  const char *getThreadSafeMacroName() const override { return "_REENTRANT"; }
 
 public:
   NetBSDTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
@@ -465,14 +480,15 @@ protected:
 
     Builder.defineMacro("__OpenBSD__");
     DefineStd(Builder, "unix", Opts);
-    if (Opts.POSIXThreads)
-      Builder.defineMacro("_REENTRANT");
+    this->setThreadSafeDefines(Opts, Builder);
     if (this->HasFloat128)
       Builder.defineMacro("__FLOAT128__");
 
     if (Opts.C11)
       Builder.defineMacro("__STDC_NO_THREADS__");
   }
+
+  const char *getThreadSafeMacroName() const override { return "_REENTRANT"; }
 
 public:
   OpenBSDTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
@@ -657,11 +673,12 @@ protected:
     Builder.defineMacro("_LARGEFILE_SOURCE");
     Builder.defineMacro("_LARGEFILE64_SOURCE");
     Builder.defineMacro("__EXTENSIONS__");
-    if (Opts.POSIXThreads)
-      Builder.defineMacro("_REENTRANT");
+    this->setThreadSafeDefines(Opts, Builder);
     if (this->HasFloat128)
       Builder.defineMacro("__FLOAT128__");
   }
+
+  const char *getThreadSafeMacroName() const override { return "_REENTRANT"; }
 
 public:
   SolarisTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
@@ -683,8 +700,7 @@ public:
 };
 
 // AIX Target
-template <typename Target>
-class AIXTargetInfo : public OSTargetInfo<Target> {
+template <typename Target> class AIXTargetInfo : public OSTargetInfo<Target> {
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
@@ -735,10 +751,7 @@ protected:
     // FIXME: Do not define _LONG_LONG when -fno-long-long is specified.
     Builder.defineMacro("_LONG_LONG");
 
-    if (Opts.POSIXThreads) {
-      Builder.defineMacro("_THREAD_SAFE");
-    }
-
+    this->setThreadSafeDefines(Opts, Builder);
     if (this->PointerWidth == 64) {
       Builder.defineMacro("__64BIT__");
     }
@@ -749,6 +762,8 @@ protected:
       Builder.defineMacro("_WCHAR_T");
     }
   }
+
+  const char *getThreadSafeMacroName() const override { return "_THREAD_SAFE"; }
 
 public:
   AIXTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
@@ -870,14 +885,15 @@ class LLVM_LIBRARY_VISIBILITY NaClTargetInfo : public OSTargetInfo<Target> {
 protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
-    if (Opts.POSIXThreads)
-      Builder.defineMacro("_REENTRANT");
+    this->setThreadSafeDefines(Opts, Builder);
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
 
     DefineStd(Builder, "unix", Opts);
     Builder.defineMacro("__native_client__");
   }
+
+  const char *getThreadSafeMacroName() const override { return "_REENTRANT"; }
 
 public:
   NaClTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
@@ -919,8 +935,7 @@ protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
     Builder.defineMacro("__Fuchsia__");
-    if (Opts.POSIXThreads)
-      Builder.defineMacro("_REENTRANT");
+    this->setThreadSafeDefines(Opts, Builder);
     // Required by the libc++ locale support.
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
@@ -928,6 +943,8 @@ protected:
     this->PlatformName = "fuchsia";
     this->PlatformMinVersion = VersionTuple(Opts.FuchsiaAPILevel);
   }
+
+  const char *getThreadSafeMacroName() const override { return "_REENTRANT"; }
 
 public:
   FuchsiaTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
@@ -946,14 +963,15 @@ protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
     // A common platform macro.
-    if (Opts.POSIXThreads)
-      Builder.defineMacro("_REENTRANT");
+    this->setThreadSafeDefines(Opts, Builder);
     // Follow g++ convention and predefine _GNU_SOURCE for C++.
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
     // Indicate that we have __float128.
     Builder.defineMacro("__FLOAT128__");
   }
+
+  const char *getThreadSafeMacroName() const override { return "_REENTRANT"; }
 
 public:
   explicit WebAssemblyOSTargetInfo(const llvm::Triple &Triple,
@@ -1038,13 +1056,14 @@ protected:
       Builder.defineMacro("__LITEOS__");
     }
 
-    if (Opts.POSIXThreads)
-      Builder.defineMacro("_REENTRANT");
+    this->setThreadSafeDefines(Opts, Builder);
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
     if (this->HasFloat128)
       Builder.defineMacro("__FLOAT128__");
   }
+
+  const char *getThreadSafeMacroName() const override { return "_REENTRANT"; }
 
 public:
   OHOSTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
@@ -1065,7 +1084,6 @@ public:
     return ".text.startup";
   }
 };
-
 } // namespace targets
 } // namespace clang
 #endif // LLVM_CLANG_LIB_BASIC_TARGETS_OSTARGETS_H
