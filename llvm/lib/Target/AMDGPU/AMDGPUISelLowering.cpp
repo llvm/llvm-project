@@ -4931,23 +4931,112 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
       return MinMax;
     }
 
-    // Support source modifiers on integer types.
-    if (VT == MVT::i32 || VT == MVT::v2i32 || VT == MVT::i64) {
-      SDValue SrcModTrue = getBitwiseToSrcModifierOp(True, DCI);
-      SDValue SrcModFalse = getBitwiseToSrcModifierOp(False, DCI);
+    auto FoldSrcMods = [&](SDValue LHS, SDValue RHS, EVT VT) -> SDValue {
+      SDValue SrcModTrue = getBitwiseToSrcModifierOp(LHS, DCI);
+      SDValue SrcModFalse = getBitwiseToSrcModifierOp(RHS, DCI);
       if (SrcModTrue || SrcModFalse) {
         SDLoc SL(N);
         EVT FVT =
             SrcModTrue ? SrcModTrue.getValueType() : SrcModFalse.getValueType();
         SDValue FLHS =
-            SrcModTrue ? SrcModTrue : DAG.getNode(ISD::BITCAST, SL, FVT, True);
+            SrcModTrue ? SrcModTrue : DAG.getNode(ISD::BITCAST, SL, FVT, LHS);
         SDValue FRHS = SrcModFalse ? SrcModFalse
-                                   : DAG.getNode(ISD::BITCAST, SL, FVT, False);
+                                   : DAG.getNode(ISD::BITCAST, SL, FVT, RHS);
         SDValue FSelect = DAG.getNode(ISD::SELECT, SL, FVT, Cond, FLHS, FRHS);
         return DAG.getNode(ISD::BITCAST, SL, VT, FSelect);
+    }
+    return SDValue();
+  };
+
+    // Support source modifiers on integer operands.
+    if (VT == MVT::i32 || VT == MVT::v2i32)
+      if (SDValue F = FoldSrcMods(True, False, VT))
+        return F;
+
+    // For i64 if a source modifier is to be folded in we split into two i32
+    // select of high and low values. The Operator need only be applied to the
+    // high values in order to change the sign bit.
+    if (VT == MVT::i64) {
+      bool TrueHasModifierOp =
+          (True.getOpcode() == ISD::AND || True.getOpcode() == ISD::OR ||
+           True.getOpcode() == ISD::XOR);
+
+      bool FalseHasModifierOp =
+          (False.getOpcode() == ISD::AND || False.getOpcode() == ISD::OR ||
+           False.getOpcode() == ISD::XOR);
+
+      ConstantSDNode *CTrueRHS = nullptr;
+      if (TrueHasModifierOp) {
+        SDValue TrueRHS = True->getOperand(1);
+        CTrueRHS = dyn_cast<ConstantSDNode>(TrueRHS);
+      }
+
+      ConstantSDNode *CFalseRHS = nullptr;
+      if (FalseHasModifierOp) {
+        SDValue FalseRHS = False->getOperand(1);
+        CFalseRHS = dyn_cast<ConstantSDNode>(FalseRHS);
+      }
+
+      // If True or False is a candidate for source modifier folding, extract
+      // the high value using APInt and reconstruct a ConstantSDNode.
+      SDValue TrueHiOp;
+      SDValue BCTrue = DAG.getNode(ISD::BITCAST, SDLoc(N), MVT::i64, True);
+      SDValue TrueLo;
+      SDValue TrueHi;
+      if (CTrueRHS) {
+        SDValue TrueLHS = True->getOperand(0);
+        SDValue TrueLHSHiVal = getHiHalf64(BCTrue, DAG);
+        TrueLo = getLoHalf64(TrueLHS, DAG);
+        APInt CTrueRHSHiBits =
+            CTrueRHS->getAPIntValue().getHiBits(32).trunc(32);
+        SDValue CTrueRHSHiVal =
+            DAG.getConstant(CTrueRHSHiBits, SDLoc(N), MVT::i32);
+        unsigned OpcTrue = True.getOpcode();
+        TrueHiOp = DAG.getNode(OpcTrue, SDLoc(N), MVT::i32, TrueLHSHiVal,
+                               CTrueRHSHiVal);
+      } else {
+        TrueLo = getLoHalf64(BCTrue, DAG);
+        TrueHi = getHiHalf64(BCTrue, DAG);
+      }
+
+      SDValue FalseHiOp;
+      SDValue BCFalse = DAG.getNode(ISD::BITCAST, SDLoc(N), MVT::i64, False);
+      SDValue FalseLo;
+      SDValue FalseHi;
+      if (CFalseRHS) {
+        SDValue FalseLHS = False->getOperand(0);
+        FalseLo = getLoHalf64(FalseLHS, DAG);
+        SDValue FalseLHSHiVal = getHiHalf64(BCFalse, DAG);
+        APInt CFalseRHSHiBits =
+            CFalseRHS->getAPIntValue().getHiBits(32).trunc(32);
+        SDValue CFalseRHSHiVal =
+            DAG.getConstant(CFalseRHSHiBits, SDLoc(N), MVT::i32);
+        unsigned OpcFalse = False.getOpcode();
+        FalseHiOp = DAG.getNode(OpcFalse, SDLoc(N), MVT::i32, FalseLHSHiVal,
+                                CFalseRHSHiVal);
+      } else {
+        FalseLo = getLoHalf64(BCFalse, DAG);
+        FalseHi = getHiHalf64(BCFalse, DAG);
+      }
+
+      if (CTrueRHS || CFalseRHS) {
+        // Place the low bits directly into the select. The operator is unneeded
+        // for these.
+        SDValue LoSelect =
+            DAG.getNode(ISD::SELECT, SDLoc(N), MVT::i32, Cond, TrueLo, FalseLo);
+        // If a source modifier may be folded use the bitwise-op of the high
+        // values, otherwise just pass the high part of the value.
+        SDValue FoldedHi =
+            FoldSrcMods(CTrueRHS ? TrueHiOp : TrueHi,
+                        CFalseRHS ? FalseHiOp : FalseHi, MVT::i32);
+
+        SDValue ResV =
+            DAG.getBuildVector(MVT::v2i32, SDLoc(N), {FoldedHi, LoSelect});
+        SDValue Res = DAG.getNode(ISD::BITCAST, SDLoc(N), MVT::i64, ResV);
+        return Res;
       }
     }
-  }
+}
 
   // There's no reason to not do this if the condition has other uses.
   return performCtlz_CttzCombine(SDLoc(N), Cond, True, False, DCI);
