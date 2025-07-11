@@ -580,7 +580,7 @@ void WebAssemblyAsmPrinter::EmitFunctionAttributes(Module &M) {
     // The second field is a pointer to a global annotation string.
     auto *GV = cast<GlobalVariable>(CS->getOperand(1)->stripPointerCasts());
     StringRef AnnotationString;
-    getConstantStringInfo(GV, AnnotationString);
+    getConstantStringInfo(GV, AnnotationString, /*CharWidth=*/8);
     auto *Sym = cast<MCSymbolWasm>(getSymbol(F));
     CustomSections[AnnotationString].push_back(Sym);
   }

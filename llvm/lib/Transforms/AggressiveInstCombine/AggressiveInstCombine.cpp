@@ -1036,6 +1036,8 @@ private:
 /// handled by the instcombine pass.
 ///
 bool StrNCmpInliner::optimizeStrNCmp() {
+  unsigned CharWidth = DL.getByteWidth();
+
   if (StrNCmpInlineThreshold < 2)
     return false;
 
@@ -1049,8 +1051,10 @@ bool StrNCmpInliner::optimizeStrNCmp() {
     return false;
 
   StringRef Str1, Str2;
-  bool HasStr1 = getConstantStringInfo(Str1P, Str1, /*TrimAtNul=*/false);
-  bool HasStr2 = getConstantStringInfo(Str2P, Str2, /*TrimAtNul=*/false);
+  bool HasStr1 =
+      getConstantStringInfo(Str1P, Str1, CharWidth, /*TrimAtNul=*/false);
+  bool HasStr2 =
+      getConstantStringInfo(Str2P, Str2, CharWidth, /*TrimAtNul=*/false);
   if (HasStr1 == HasStr2)
     return false;
 
@@ -1180,12 +1184,14 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
 /// Convert memchr with a small constant string into a switch
 static bool foldMemChr(CallInst *Call, DomTreeUpdater *DTU,
                        const DataLayout &DL) {
+  unsigned CharWidth = DL.getByteWidth();
+
   if (isa<Constant>(Call->getArgOperand(1)))
     return false;
 
   StringRef Str;
   Value *Base = Call->getArgOperand(0);
-  if (!getConstantStringInfo(Base, Str, /*TrimAtNul=*/false))
+  if (!getConstantStringInfo(Base, Str, CharWidth, /*TrimAtNul=*/false))
     return false;
 
   uint64_t N = Str.size();

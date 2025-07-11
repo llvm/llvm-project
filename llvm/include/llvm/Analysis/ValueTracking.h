@@ -404,7 +404,7 @@ LLVM_ABI bool getConstantDataArrayInfo(const Value *V,
 /// trailing null characters as well as any other characters that come after
 /// it.
 LLVM_ABI bool getConstantStringInfo(const Value *V, StringRef &Str,
-                                    bool TrimAtNul = true);
+                                    unsigned CharWidth, bool TrimAtNul = true);
 
 /// If we can compute the length of the string pointed to by the specified
 /// pointer, return 'len+1'.  If we can't, return 0.

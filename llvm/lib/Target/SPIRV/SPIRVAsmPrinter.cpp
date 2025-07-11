@@ -591,7 +591,7 @@ void SPIRVAsmPrinter::outputAnnotations(const Module &M) {
           cast<GlobalVariable>(CS->getOperand(1)->stripPointerCasts());
 
       StringRef AnnotationString;
-      getConstantStringInfo(GV, AnnotationString);
+      getConstantStringInfo(GV, AnnotationString, /*CharWidth=*/8);
       MCInst Inst;
       Inst.setOpcode(SPIRV::OpDecorate);
       Inst.addOperand(MCOperand::createReg(Reg));
