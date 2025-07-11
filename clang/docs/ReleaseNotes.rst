@@ -76,6 +76,9 @@ C++ Specific Potentially Breaking Changes
   whose nested-name-specifier doesn't refer to a base class such as
   ``using CurrentClass::Foo;`` is now rejected in C++98 mode.
 
+- Clang now emits errors for coroutine `await_suspend` functions whose return type is not
+  one of `void`, `bool`, or `std::coroutine_handle`.
+
 ABI Changes in This Version
 ---------------------------
 
