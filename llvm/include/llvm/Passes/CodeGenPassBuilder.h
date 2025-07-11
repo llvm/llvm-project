@@ -579,8 +579,10 @@ protected:
   void insertPass(InsertedPassT &&Pass) const {
     AfterCallbacks.emplace_back(
         [&](StringRef Name, MachineFunctionPassManager &MFPM) mutable {
-          if (Name == TargetPassT::name())
-            MFPM.addPass(std::forward<InsertedPassT>(Pass));
+          if (Name == TargetPassT::name()) {
+            if (runBeforeAdding(InsertedPassT::name()))
+              MFPM.addPass(std::forward<InsertedPassT>(Pass));
+          }
         });
   }
 
