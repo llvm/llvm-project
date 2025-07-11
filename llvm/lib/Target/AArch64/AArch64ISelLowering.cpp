@@ -17834,17 +17834,19 @@ bool AArch64TargetLowering::shouldConsiderGEPOffsetSplit() const {
 
 bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(
     const MachineFunction &MF, EVT VT) const {
-  VT = VT.getScalarType();
+  EVT ScalarVT = VT.getScalarType();
 
-  if (!VT.isSimple())
+  if (!ScalarVT.isSimple())
     return false;
 
-  switch (VT.getSimpleVT().SimpleTy) {
+  switch (ScalarVT.getSimpleVT().SimpleTy) {
   case MVT::f16:
     return Subtarget->hasFullFP16();
   case MVT::f32:
   case MVT::f64:
     return true;
+  case MVT::bf16:
+    return VT.isScalableVector() && Subtarget->hasSVEB16B16();
   default:
     break;
   }
