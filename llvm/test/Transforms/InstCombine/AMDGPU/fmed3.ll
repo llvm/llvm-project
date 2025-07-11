@@ -521,6 +521,96 @@ define float @fmed3_neg2_3_snan1_f32(float %x, float %y) #1 {
   ret float %med3
 }
 
+define float @fmed3_inf_x_y_f32(float %x, float %y) #1 {
+; IEEE1-LABEL: define float @fmed3_inf_x_y_f32(
+; IEEE1-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.maxnum.f32(float [[X]], float [[Y]])
+; IEEE1-NEXT:    ret float [[MED3]]
+;
+; IEEE0-LABEL: define float @fmed3_inf_x_y_f32(
+; IEEE0-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.maximumnum.f32(float [[X]], float [[Y]])
+; IEEE0-NEXT:    ret float [[MED3]]
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float 0x7FF0000000000000, float %x, float %y)
+  ret float %med3
+}
+
+define float @fmed3_x_inf_y_f32(float %x, float %y) #1 {
+; IEEE1-LABEL: define float @fmed3_x_inf_y_f32(
+; IEEE1-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.maxnum.f32(float [[X]], float [[Y]])
+; IEEE1-NEXT:    ret float [[MED3]]
+;
+; IEEE0-LABEL: define float @fmed3_x_inf_y_f32(
+; IEEE0-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.maximumnum.f32(float [[X]], float [[Y]])
+; IEEE0-NEXT:    ret float [[MED3]]
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float 0x7FF0000000000000, float %y)
+  ret float %med3
+}
+
+define float @fmed3_x_y_inf_f32(float %x, float %y) #1 {
+; IEEE1-LABEL: define float @fmed3_x_y_inf_f32(
+; IEEE1-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.maxnum.f32(float [[X]], float [[Y]])
+; IEEE1-NEXT:    ret float [[MED3]]
+;
+; IEEE0-LABEL: define float @fmed3_x_y_inf_f32(
+; IEEE0-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.maximumnum.f32(float [[X]], float [[Y]])
+; IEEE0-NEXT:    ret float [[MED3]]
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float 0x7FF0000000000000)
+  ret float %med3
+}
+
+define float @fmed3_ninf_x_y_f32(float %x, float %y) #1 {
+; IEEE1-LABEL: define float @fmed3_ninf_x_y_f32(
+; IEEE1-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.minnum.f32(float [[X]], float [[Y]])
+; IEEE1-NEXT:    ret float [[MED3]]
+;
+; IEEE0-LABEL: define float @fmed3_ninf_x_y_f32(
+; IEEE0-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.minimumnum.f32(float [[X]], float [[Y]])
+; IEEE0-NEXT:    ret float [[MED3]]
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float 0xFFF0000000000000, float %x, float %y)
+  ret float %med3
+}
+
+define float @fmed3_x_ninf_y_f32(float %x, float %y) #1 {
+; IEEE1-LABEL: define float @fmed3_x_ninf_y_f32(
+; IEEE1-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.minnum.f32(float [[X]], float [[Y]])
+; IEEE1-NEXT:    ret float [[MED3]]
+;
+; IEEE0-LABEL: define float @fmed3_x_ninf_y_f32(
+; IEEE0-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.minimumnum.f32(float [[X]], float [[Y]])
+; IEEE0-NEXT:    ret float [[MED3]]
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float 0xFFF0000000000000, float %y)
+  ret float %med3
+}
+
+define float @fmed3_x_y_ninf_f32(float %x, float %y) #1 {
+; IEEE1-LABEL: define float @fmed3_x_y_ninf_f32(
+; IEEE1-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; IEEE1-NEXT:    [[MED3:%.*]] = call float @llvm.minnum.f32(float [[X]], float [[Y]])
+; IEEE1-NEXT:    ret float [[MED3]]
+;
+; IEEE0-LABEL: define float @fmed3_x_y_ninf_f32(
+; IEEE0-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR1]] {
+; IEEE0-NEXT:    [[MED3:%.*]] = call float @llvm.minimumnum.f32(float [[X]], float [[Y]])
+; IEEE0-NEXT:    ret float [[MED3]]
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float 0xFFF0000000000000)
+  ret float %med3
+}
+
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.fmed3 with default mode implied by shader CC
 ; --------------------------------------------------------------------

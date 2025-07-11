@@ -468,7 +468,7 @@ struct SourceArguments {
   /// The reference to the source. This is the same as `source.sourceReference`.
   /// This is provided for backward compatibility since old clients do not
   /// understand the `source` attribute.
-  int64_t sourceReference;
+  int64_t sourceReference = LLDB_DAP_INVALID_SRC_REF;
 };
 bool fromJSON(const llvm::json::Value &, SourceArguments &, llvm::json::Path);
 
@@ -874,6 +874,107 @@ struct ReadMemoryResponseBody {
   std::vector<std::byte> data;
 };
 llvm::json::Value toJSON(const ReadMemoryResponseBody &);
+
+/// Arguments for `modules` request.
+struct ModulesArguments {
+  /// The index of the first module to return; if omitted modules start at 0.
+  uint32_t startModule = 0;
+
+  /// The number of modules to return. If `moduleCount` is not specified or 0,
+  /// all modules are returned.
+  uint32_t moduleCount = 0;
+};
+bool fromJSON(const llvm::json::Value &, ModulesArguments &, llvm::json::Path);
+
+/// Response to `modules` request.
+struct ModulesResponseBody {
+  /// All modules or range of modules.
+  std::vector<Module> modules;
+
+  /// The total number of modules available.
+  uint32_t totalModules = 0;
+};
+llvm::json::Value toJSON(const ModulesResponseBody &);
+
+/// Arguments for `variables` request.
+struct VariablesArguments {
+  /// The variable for which to retrieve its children. The `variablesReference`
+  /// must have been obtained in the current suspended state. See 'Lifetime of
+  /// Object References' in the Overview section for details.
+  uint64_t variablesReference;
+
+  enum VariablesFilter : unsigned {
+    eVariablesFilterBoth = 0,
+    eVariablesFilterIndexed = 1 << 0,
+    eVariablesFilterNamed = 1 << 1,
+  };
+
+  /// Filter to limit the child variables to either named or indexed. If
+  /// omitted, both types are fetched.
+  VariablesFilter filter = eVariablesFilterBoth;
+
+  /// The index of the first variable to return; if omitted children start at 0.
+  ///
+  /// The attribute is only honored by a debug adapter if the corresponding
+  /// capability `supportsVariablePaging` is true.
+  uint64_t start = 0;
+
+  /// The number of variables to return. If count is missing or 0, all variables
+  /// are returned.
+  ///
+  /// The attribute is only honored by a debug adapter if the corresponding
+  /// capability `supportsVariablePaging` is true.
+  uint64_t count = 0;
+
+  /// Specifies details on how to format the Variable values.
+  ///
+  /// The attribute is only honored by a debug adapter if the corresponding
+  /// capability `supportsValueFormattingOptions` is true.
+  std::optional<ValueFormat> format;
+};
+bool fromJSON(const llvm::json::Value &Param,
+              VariablesArguments::VariablesFilter &VA, llvm::json::Path Path);
+bool fromJSON(const llvm::json::Value &, VariablesArguments &,
+              llvm::json::Path);
+
+/// Response to `variables` request.
+struct VariablesResponseBody {
+  /// All (or a range) of variables for the given variable reference.
+  std::vector<Variable> variables;
+};
+llvm::json::Value toJSON(const VariablesResponseBody &);
+
+/// Arguments for `writeMemory` request.
+struct WriteMemoryArguments {
+  /// Memory reference to the base location to which data should be written.
+  lldb::addr_t memoryReference;
+
+  /// Offset (in bytes) to be applied to the reference location before writing
+  /// data. Can be negative.
+  std::optional<int64_t> offset;
+
+  /// Property to control partial writes. If true, the debug adapter should
+  /// attempt to write memory even if the entire memory region is not writable.
+  /// In such a case the debug adapter should stop after hitting the first byte
+  /// of memory that cannot be written and return the number of bytes written in
+  /// the response via the `offset` and `bytesWritten` properties.
+  /// If false or missing, a debug adapter should attempt to verify the region
+  /// is writable before writing, and fail the response if it is not.
+  std::optional<bool> allowPartial;
+
+  /// Bytes to write, encoded using base64.
+  std::string data;
+};
+bool fromJSON(const llvm::json::Value &, WriteMemoryArguments &,
+              llvm::json::Path);
+
+/// Response to writeMemory request.
+struct WriteMemoryResponseBody {
+  /// Property that should be returned when `allowPartial` is true to indicate
+  /// the number of bytes starting from address that were successfully written.
+  uint64_t bytesWritten = 0;
+};
+llvm::json::Value toJSON(const WriteMemoryResponseBody &);
 
 } // namespace lldb_dap::protocol
 

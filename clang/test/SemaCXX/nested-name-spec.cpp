@@ -1,4 +1,11 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c++98 -verify -fblocks %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++98 -verify=expected,cxx98,cxx98-11 -fblocks %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify=expected,since-cxx11,cxx98-11 -fblocks %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++14 -verify=expected,since-cxx11 -fblocks %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify=expected,since-cxx11 -fblocks %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++20 -verify=expected,since-cxx11,since-cxx20 -fblocks %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++23 -verify=expected,since-cxx11,since-cxx20 -fblocks %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++26 -verify=expected,since-cxx11,since-cxx20 -fblocks %s
+
 namespace A {
   struct C {
     static int cx;
@@ -118,7 +125,7 @@ namespace E {
     };
 
     int f() {
-      return E::X; // expected-warning{{use of enumeration in a nested name specifier is a C++11 extension}}
+      return E::X; // cxx98-warning{{use of enumeration in a nested name specifier is a C++11 extension}}
     }
   }
 }
@@ -170,8 +177,9 @@ void ::global_func2(int) { } // expected-warning{{extra qualification on member 
 
 void N::f() { } // okay
 
-struct Y;  // expected-note{{forward declaration of 'Y'}}
-Y::foo y; // expected-error{{incomplete type 'Y' named in nested name specifier}}
+// FIXME (GH147000): duplicate diagnostics
+struct Y;  // expected-note{{forward declaration of 'Y'}} since-cxx20-note{{forward declaration of 'Y'}}
+Y::foo y; // expected-error{{incomplete type 'Y' named in nested name specifier}} since-cxx20-error{{incomplete type 'Y' named in nested name specifier}}
 
 namespace PR25156 {
 struct Y;  // expected-note{{forward declaration of 'PR25156::Y'}}
@@ -189,7 +197,9 @@ bool (foo_S::value);
 
 
 namespace somens {
-  struct a { }; // expected-note{{candidate constructor (the implicit copy constructor)}}
+  struct a { };
+  // expected-note@-1 {{candidate constructor (the implicit copy constructor)}}
+  // since-cxx11-note@-2 {{candidate constructor (the implicit move constructor)}}
 }
 
 template <typename T>
@@ -432,20 +442,20 @@ namespace PR16951 {
     };
   }
 
-  int x1 = ns::an_enumeration::ENUMERATOR; // expected-warning{{use of enumeration in a nested name specifier is a C++11 extension}}
+  int x1 = ns::an_enumeration::ENUMERATOR; // cxx98-warning{{use of enumeration in a nested name specifier is a C++11 extension}}
 
-  int x2 = ns::an_enumeration::ENUMERATOR::vvv; // expected-warning{{use of enumeration in a nested name specifier is a C++11 extension}} \
+  int x2 = ns::an_enumeration::ENUMERATOR::vvv; // cxx98-warning{{use of enumeration in a nested name specifier is a C++11 extension}} \
                                                 // expected-error{{'ENUMERATOR' is not a class, namespace, or enumeration}} \
 
-  int x3 = ns::an_enumeration::X; // expected-warning{{use of enumeration in a nested name specifier is a C++11 extension}} \
+  int x3 = ns::an_enumeration::X; // cxx98-warning {{use of enumeration in a nested name specifier is a C++11 extension}} \
                                   // expected-error{{no member named 'X'}}
 
   enum enumerator_2 {
     ENUMERATOR_2
   };
 
-  int x4 = enumerator_2::ENUMERATOR_2; // expected-warning{{use of enumeration in a nested name specifier is a C++11 extension}}
-  int x5 = enumerator_2::X2; // expected-warning{{use of enumeration in a nested name specifier is a C++11 extension}} \
+  int x4 = enumerator_2::ENUMERATOR_2; // cxx98-warning{{use of enumeration in a nested name specifier is a C++11 extension}}
+  int x5 = enumerator_2::X2; // cxx98-warning{{use of enumeration in a nested name specifier is a C++11 extension}} \
                              // expected-error{{no member named 'X2' in 'PR16951::enumerator_2'}} \
                              // expected-error{{cannot initialize a variable of type 'int' with an lvalue of type 'int (*)()'}}
 
@@ -487,7 +497,7 @@ struct x; // expected-note {{template is declared here}}
 
 template <typename T>
 int issue55962 = x::a; // expected-error {{use of class template 'x' requires template arguments}} \
-                       // expected-warning {{variable templates are a C++14 extension}}
+                       // cxx98-11-warning {{variable templates are a C++14 extension}}
 
 namespace ForwardDeclared {
   typedef class A B;
@@ -495,4 +505,12 @@ namespace ForwardDeclared {
     enum C {};
     void F(B::C);
   };
+}
+
+namespace GH63254 {
+template <typename...> struct V {}; // cxx98-warning {{variadic templates are a C++11 extension}}
+struct S : V<> {
+  using S::V; // expected-error {{using declaration refers to its own class}}
+  V<> v; // no crash
+};
 }

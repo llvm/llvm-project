@@ -31,12 +31,12 @@ define void @loop1(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    add x13, x13, #32
 ; CHECK-NEXT:    fcmgt v3.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    fcmgt v4.4s, v2.4s, v0.4s
-; CHECK-NEXT:    fcmlt v5.4s, v1.4s, #0.0
-; CHECK-NEXT:    fcmlt v6.4s, v2.4s, #0.0
-; CHECK-NEXT:    bit v1.16b, v0.16b, v3.16b
-; CHECK-NEXT:    bit v2.16b, v0.16b, v4.16b
-; CHECK-NEXT:    bic v1.16b, v1.16b, v5.16b
-; CHECK-NEXT:    bic v2.16b, v2.16b, v6.16b
+; CHECK-NEXT:    bsl v3.16b, v0.16b, v1.16b
+; CHECK-NEXT:    bsl v4.16b, v0.16b, v2.16b
+; CHECK-NEXT:    fcmlt v1.4s, v1.4s, #0.0
+; CHECK-NEXT:    fcmlt v2.4s, v2.4s, #0.0
+; CHECK-NEXT:    bic v1.16b, v3.16b, v1.16b
+; CHECK-NEXT:    bic v2.16b, v4.16b, v2.16b
 ; CHECK-NEXT:    fcvtzs v1.4s, v1.4s
 ; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
 ; CHECK-NEXT:    xtn v1.4h, v1.4s

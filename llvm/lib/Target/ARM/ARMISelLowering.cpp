@@ -505,12 +505,10 @@ const ARMBaseTargetMachine &ARMTargetLowering::getTM() const {
 
 ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
                                      const ARMSubtarget &STI)
-    : TargetLowering(TM_), Subtarget(&STI) {
-
+    : TargetLowering(TM_), Subtarget(&STI),
+      RegInfo(Subtarget->getRegisterInfo()),
+      Itins(Subtarget->getInstrItineraryData()) {
   const auto &TM = static_cast<const ARMBaseTargetMachine &>(TM_);
-
-  RegInfo = Subtarget->getRegisterInfo();
-  Itins = Subtarget->getInstrItineraryData();
 
   setBooleanContents(ZeroOrOneBooleanContent);
   setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
@@ -524,189 +522,188 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       // clang-format off
       static const struct {
         const RTLIB::Libcall Op;
-        const char * const Name;
-        const CmpInst::Predicate Cond;
+        const RTLIB::LibcallImpl Impl;
       } LibraryCalls[] = {
         // Single-precision floating-point arithmetic.
-        { RTLIB::ADD_F32, "__addsf3vfp", CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::SUB_F32, "__subsf3vfp", CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::MUL_F32, "__mulsf3vfp", CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::DIV_F32, "__divsf3vfp", CmpInst::BAD_ICMP_PREDICATE },
+        { RTLIB::ADD_F32, RTLIB::__addsf3vfp },
+        { RTLIB::SUB_F32, RTLIB::__subsf3vfp },
+        { RTLIB::MUL_F32, RTLIB::__mulsf3vfp },
+        { RTLIB::DIV_F32, RTLIB::__divsf3vfp },
 
         // Double-precision floating-point arithmetic.
-        { RTLIB::ADD_F64, "__adddf3vfp", CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::SUB_F64, "__subdf3vfp", CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::MUL_F64, "__muldf3vfp", CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::DIV_F64, "__divdf3vfp", CmpInst::BAD_ICMP_PREDICATE },
+        { RTLIB::ADD_F64, RTLIB::__adddf3vfp },
+        { RTLIB::SUB_F64, RTLIB::__subdf3vfp },
+        { RTLIB::MUL_F64, RTLIB::__muldf3vfp },
+        { RTLIB::DIV_F64, RTLIB::__divdf3vfp },
 
         // Single-precision comparisons.
-        { RTLIB::OEQ_F32, "__eqsf2vfp",    CmpInst::ICMP_NE },
-        { RTLIB::UNE_F32, "__nesf2vfp",    CmpInst::ICMP_NE },
-        { RTLIB::OLT_F32, "__ltsf2vfp",    CmpInst::ICMP_NE },
-        { RTLIB::OLE_F32, "__lesf2vfp",    CmpInst::ICMP_NE },
-        { RTLIB::OGE_F32, "__gesf2vfp",    CmpInst::ICMP_NE },
-        { RTLIB::OGT_F32, "__gtsf2vfp",    CmpInst::ICMP_NE },
-        { RTLIB::UO_F32,  "__unordsf2vfp", CmpInst::ICMP_NE },
+        { RTLIB::OEQ_F32, RTLIB::__eqsf2vfp },
+        { RTLIB::UNE_F32, RTLIB::__nesf2vfp },
+        { RTLIB::OLT_F32, RTLIB::__ltsf2vfp },
+        { RTLIB::OLE_F32, RTLIB::__lesf2vfp },
+        { RTLIB::OGE_F32, RTLIB::__gesf2vfp },
+        { RTLIB::OGT_F32, RTLIB::__gtsf2vfp },
+        { RTLIB::UO_F32,  RTLIB::__unordsf2vfp },
 
         // Double-precision comparisons.
-        { RTLIB::OEQ_F64, "__eqdf2vfp",    CmpInst::ICMP_NE },
-        { RTLIB::UNE_F64, "__nedf2vfp",    CmpInst::ICMP_NE },
-        { RTLIB::OLT_F64, "__ltdf2vfp",    CmpInst::ICMP_NE },
-        { RTLIB::OLE_F64, "__ledf2vfp",    CmpInst::ICMP_NE },
-        { RTLIB::OGE_F64, "__gedf2vfp",    CmpInst::ICMP_NE },
-        { RTLIB::OGT_F64, "__gtdf2vfp",    CmpInst::ICMP_NE },
-        { RTLIB::UO_F64,  "__unorddf2vfp", CmpInst::ICMP_NE },
+        { RTLIB::OEQ_F64, RTLIB::__eqdf2vfp },
+        { RTLIB::UNE_F64, RTLIB::__nedf2vfp },
+        { RTLIB::OLT_F64, RTLIB::__ltdf2vfp },
+        { RTLIB::OLE_F64, RTLIB::__ledf2vfp },
+        { RTLIB::OGE_F64, RTLIB::__gedf2vfp },
+        { RTLIB::OGT_F64, RTLIB::__gtdf2vfp },
+        { RTLIB::UO_F64,  RTLIB::__unorddf2vfp },
 
         // Floating-point to integer conversions.
         // i64 conversions are done via library routines even when generating VFP
         // instructions, so use the same ones.
-        { RTLIB::FPTOSINT_F64_I32, "__fixdfsivfp",    CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::FPTOUINT_F64_I32, "__fixunsdfsivfp", CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::FPTOSINT_F32_I32, "__fixsfsivfp",    CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::FPTOUINT_F32_I32, "__fixunssfsivfp", CmpInst::BAD_ICMP_PREDICATE },
+        { RTLIB::FPTOSINT_F64_I32, RTLIB::__fixdfsivfp },
+        { RTLIB::FPTOUINT_F64_I32, RTLIB::__fixunsdfsivfp },
+        { RTLIB::FPTOSINT_F32_I32, RTLIB::__fixsfsivfp },
+        { RTLIB::FPTOUINT_F32_I32, RTLIB::__fixunssfsivfp },
 
         // Conversions between floating types.
-        { RTLIB::FPROUND_F64_F32, "__truncdfsf2vfp",  CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::FPEXT_F32_F64,   "__extendsfdf2vfp", CmpInst::BAD_ICMP_PREDICATE },
+        { RTLIB::FPROUND_F64_F32, RTLIB::__truncdfsf2vfp },
+        { RTLIB::FPEXT_F32_F64,   RTLIB::__extendsfdf2vfp },
 
         // Integer to floating-point conversions.
         // i64 conversions are done via library routines even when generating VFP
         // instructions, so use the same ones.
         // FIXME: There appears to be some naming inconsistency in ARM libgcc:
         // e.g., __floatunsidf vs. __floatunssidfvfp.
-        { RTLIB::SINTTOFP_I32_F64, "__floatsidfvfp",    CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::UINTTOFP_I32_F64, "__floatunssidfvfp", CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::SINTTOFP_I32_F32, "__floatsisfvfp",    CmpInst::BAD_ICMP_PREDICATE },
-        { RTLIB::UINTTOFP_I32_F32, "__floatunssisfvfp", CmpInst::BAD_ICMP_PREDICATE },
+        { RTLIB::SINTTOFP_I32_F64, RTLIB::__floatsidfvfp },
+        { RTLIB::UINTTOFP_I32_F64, RTLIB::__floatunssidfvfp },
+        { RTLIB::SINTTOFP_I32_F32, RTLIB::__floatsisfvfp },
+        { RTLIB::UINTTOFP_I32_F32, RTLIB::__floatunssisfvfp },
       };
       // clang-format on
 
-      for (const auto &LC : LibraryCalls) {
-        setLibcallName(LC.Op, LC.Name);
-        if (LC.Cond != CmpInst::BAD_ICMP_PREDICATE)
-          setCmpLibcallCC(LC.Op, LC.Cond);
-      }
+      for (const auto &LC : LibraryCalls)
+        setLibcallImpl(LC.Op, LC.Impl);
     }
   }
 
   // RTLIB
   if (TM.isAAPCS_ABI() && (TT.isTargetAEABI() || TT.isTargetGNUAEABI() ||
                            TT.isTargetMuslAEABI() || TT.isAndroid())) {
+    // FIXME: This does not depend on the subtarget and should go directly into
+    // RuntimeLibcalls. This is only here because of missing support for setting
+    // the calling convention of an implementation.
     // clang-format off
     static const struct {
       const RTLIB::Libcall Op;
-      const char * const Name;
-      const CallingConv::ID CC;
-      const CmpInst::Predicate Cond;
+      const RTLIB::LibcallImpl Impl;
     } LibraryCalls[] = {
       // Double-precision floating-point arithmetic helper functions
       // RTABI chapter 4.1.2, Table 2
-      { RTLIB::ADD_F64, "__aeabi_dadd", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::DIV_F64, "__aeabi_ddiv", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::MUL_F64, "__aeabi_dmul", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::SUB_F64, "__aeabi_dsub", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::ADD_F64, RTLIB::__aeabi_dadd },
+      { RTLIB::DIV_F64, RTLIB::__aeabi_ddiv },
+      { RTLIB::MUL_F64, RTLIB::__aeabi_dmul },
+      { RTLIB::SUB_F64, RTLIB::__aeabi_dsub },
 
       // Double-precision floating-point comparison helper functions
       // RTABI chapter 4.1.2, Table 3
-      { RTLIB::OEQ_F64, "__aeabi_dcmpeq", CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
-      { RTLIB::UNE_F64, "__aeabi_dcmpeq", CallingConv::ARM_AAPCS, CmpInst::ICMP_EQ },
-      { RTLIB::OLT_F64, "__aeabi_dcmplt", CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
-      { RTLIB::OLE_F64, "__aeabi_dcmple", CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
-      { RTLIB::OGE_F64, "__aeabi_dcmpge", CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
-      { RTLIB::OGT_F64, "__aeabi_dcmpgt", CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
-      { RTLIB::UO_F64,  "__aeabi_dcmpun", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::OEQ_F64, RTLIB::__aeabi_dcmpeq__oeq },
+      { RTLIB::UNE_F64, RTLIB::__aeabi_dcmpeq__une },
+      { RTLIB::OLT_F64, RTLIB::__aeabi_dcmplt },
+      { RTLIB::OLE_F64, RTLIB::__aeabi_dcmple },
+      { RTLIB::OGE_F64, RTLIB::__aeabi_dcmpge },
+      { RTLIB::OGT_F64, RTLIB::__aeabi_dcmpgt },
+      { RTLIB::UO_F64,  RTLIB::__aeabi_dcmpun },
 
       // Single-precision floating-point arithmetic helper functions
       // RTABI chapter 4.1.2, Table 4
-      { RTLIB::ADD_F32, "__aeabi_fadd", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::DIV_F32, "__aeabi_fdiv", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::MUL_F32, "__aeabi_fmul", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::SUB_F32, "__aeabi_fsub", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::ADD_F32, RTLIB::__aeabi_fadd },
+      { RTLIB::DIV_F32, RTLIB::__aeabi_fdiv },
+      { RTLIB::MUL_F32, RTLIB::__aeabi_fmul },
+      { RTLIB::SUB_F32, RTLIB::__aeabi_fsub },
 
       // Single-precision floating-point comparison helper functions
       // RTABI chapter 4.1.2, Table 5
-      { RTLIB::OEQ_F32, "__aeabi_fcmpeq", CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
-      { RTLIB::UNE_F32, "__aeabi_fcmpeq", CallingConv::ARM_AAPCS, CmpInst::ICMP_EQ },
-      { RTLIB::OLT_F32, "__aeabi_fcmplt", CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
-      { RTLIB::OLE_F32, "__aeabi_fcmple", CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
-      { RTLIB::OGE_F32, "__aeabi_fcmpge", CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
-      { RTLIB::OGT_F32, "__aeabi_fcmpgt", CallingConv::ARM_AAPCS, CmpInst::ICMP_NE },
-      { RTLIB::UO_F32,  "__aeabi_fcmpun", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::OEQ_F32, RTLIB::__aeabi_fcmpeq__oeq },
+      { RTLIB::UNE_F32, RTLIB::__aeabi_fcmpeq__une },
+      { RTLIB::OLT_F32, RTLIB::__aeabi_fcmplt},
+      { RTLIB::OLE_F32, RTLIB::__aeabi_fcmple },
+      { RTLIB::OGE_F32, RTLIB::__aeabi_fcmpge },
+      { RTLIB::OGT_F32, RTLIB::__aeabi_fcmpgt },
+      { RTLIB::UO_F32,  RTLIB::__aeabi_fcmpun },
 
       // Floating-point to integer conversions.
       // RTABI chapter 4.1.2, Table 6
-      { RTLIB::FPTOSINT_F64_I32, "__aeabi_d2iz",  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::FPTOUINT_F64_I32, "__aeabi_d2uiz", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::FPTOSINT_F64_I64, "__aeabi_d2lz",  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::FPTOUINT_F64_I64, "__aeabi_d2ulz", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::FPTOSINT_F32_I32, "__aeabi_f2iz",  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::FPTOUINT_F32_I32, "__aeabi_f2uiz", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::FPTOSINT_F32_I64, "__aeabi_f2lz",  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::FPTOUINT_F32_I64, "__aeabi_f2ulz", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::FPTOSINT_F64_I32, RTLIB::__aeabi_d2iz },
+      { RTLIB::FPTOUINT_F64_I32, RTLIB::__aeabi_d2uiz },
+      { RTLIB::FPTOSINT_F64_I64, RTLIB::__aeabi_d2lz },
+      { RTLIB::FPTOUINT_F64_I64, RTLIB::__aeabi_d2ulz },
+      { RTLIB::FPTOSINT_F32_I32, RTLIB::__aeabi_f2iz },
+      { RTLIB::FPTOUINT_F32_I32, RTLIB::__aeabi_f2uiz },
+      { RTLIB::FPTOSINT_F32_I64, RTLIB::__aeabi_f2lz },
+      { RTLIB::FPTOUINT_F32_I64, RTLIB::__aeabi_f2ulz },
 
       // Conversions between floating types.
       // RTABI chapter 4.1.2, Table 7
-      { RTLIB::FPROUND_F64_F32, "__aeabi_d2f", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::FPROUND_F64_F16, "__aeabi_d2h", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::FPEXT_F32_F64,   "__aeabi_f2d", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::FPROUND_F64_F32, RTLIB::__aeabi_d2f },
+      { RTLIB::FPROUND_F64_F16, RTLIB::__aeabi_d2h },
+      { RTLIB::FPEXT_F32_F64,   RTLIB::__aeabi_f2d },
 
       // Integer to floating-point conversions.
       // RTABI chapter 4.1.2, Table 8
-      { RTLIB::SINTTOFP_I32_F64, "__aeabi_i2d",  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::UINTTOFP_I32_F64, "__aeabi_ui2d", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::SINTTOFP_I64_F64, "__aeabi_l2d",  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::UINTTOFP_I64_F64, "__aeabi_ul2d", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::SINTTOFP_I32_F32, "__aeabi_i2f",  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::UINTTOFP_I32_F32, "__aeabi_ui2f", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::SINTTOFP_I64_F32, "__aeabi_l2f",  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::UINTTOFP_I64_F32, "__aeabi_ul2f", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::SINTTOFP_I32_F64, RTLIB::__aeabi_i2d },
+      { RTLIB::UINTTOFP_I32_F64, RTLIB::__aeabi_ui2d },
+      { RTLIB::SINTTOFP_I64_F64, RTLIB::__aeabi_l2d },
+      { RTLIB::UINTTOFP_I64_F64, RTLIB::__aeabi_ul2d },
+      { RTLIB::SINTTOFP_I32_F32, RTLIB::__aeabi_i2f },
+      { RTLIB::UINTTOFP_I32_F32, RTLIB::__aeabi_ui2f },
+      { RTLIB::SINTTOFP_I64_F32, RTLIB::__aeabi_l2f },
+      { RTLIB::UINTTOFP_I64_F32, RTLIB::__aeabi_ul2f },
 
       // Long long helper functions
       // RTABI chapter 4.2, Table 9
-      { RTLIB::MUL_I64, "__aeabi_lmul", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::SHL_I64, "__aeabi_llsl", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::SRL_I64, "__aeabi_llsr", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::SRA_I64, "__aeabi_lasr", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::MUL_I64, RTLIB::__aeabi_lmul },
+      { RTLIB::SHL_I64, RTLIB::__aeabi_llsl },
+      { RTLIB::SRL_I64, RTLIB::__aeabi_llsr },
+      { RTLIB::SRA_I64, RTLIB::__aeabi_lasr },
 
       // Integer division functions
       // RTABI chapter 4.3.1
-      { RTLIB::SDIV_I8,  "__aeabi_idiv",     CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::SDIV_I16, "__aeabi_idiv",     CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::SDIV_I32, "__aeabi_idiv",     CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::SDIV_I64, "__aeabi_ldivmod",  CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::UDIV_I8,  "__aeabi_uidiv",    CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::UDIV_I16, "__aeabi_uidiv",    CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::UDIV_I32, "__aeabi_uidiv",    CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
-      { RTLIB::UDIV_I64, "__aeabi_uldivmod", CallingConv::ARM_AAPCS, CmpInst::BAD_ICMP_PREDICATE },
+      { RTLIB::SDIV_I8,  RTLIB::__aeabi_idiv__i8 },
+      { RTLIB::SDIV_I16, RTLIB::__aeabi_idiv__i16 },
+      { RTLIB::SDIV_I32, RTLIB::__aeabi_idiv__i32},
+      { RTLIB::SDIV_I64, RTLIB::__aeabi_ldivmod },
+      { RTLIB::UDIV_I8,  RTLIB::__aeabi_uidiv__i8 },
+      { RTLIB::UDIV_I16, RTLIB::__aeabi_uidiv__i16 },
+      { RTLIB::UDIV_I32, RTLIB::__aeabi_uidiv__i32 },
+      { RTLIB::UDIV_I64, RTLIB::__aeabi_uldivmod },
     };
     // clang-format on
 
-    for (const auto &LC : LibraryCalls) {
-      setLibcallName(LC.Op, LC.Name);
-      setLibcallCallingConv(LC.Op, LC.CC);
-      if (LC.Cond != CmpInst::BAD_ICMP_PREDICATE)
-        setCmpLibcallCC(LC.Op, LC.Cond);
-    }
+    for (const auto &LC : LibraryCalls)
+      setLibcallImpl(LC.Op, LC.Impl);
 
     // EABI dependent RTLIB
     if (TM.Options.EABIVersion == EABI::EABI4 ||
         TM.Options.EABIVersion == EABI::EABI5) {
       static const struct {
         const RTLIB::Libcall Op;
-        const char *const Name;
-        const CallingConv::ID CC;
+        const RTLIB::LibcallImpl Impl;
       } MemOpsLibraryCalls[] = {
           // Memory operations
           // RTABI chapter 4.3.4
-          {RTLIB::MEMCPY, "__aeabi_memcpy", CallingConv::ARM_AAPCS},
-          {RTLIB::MEMMOVE, "__aeabi_memmove", CallingConv::ARM_AAPCS},
-          {RTLIB::MEMSET, "__aeabi_memset", CallingConv::ARM_AAPCS},
+          {RTLIB::MEMCPY, RTLIB::__aeabi_memcpy},
+          {RTLIB::MEMMOVE, RTLIB::__aeabi_memmove},
+          {RTLIB::MEMSET, RTLIB::__aeabi_memset},
+          {RTLIB::AEABI_MEMCPY4, RTLIB::__aeabi_memcpy4},
+          {RTLIB::AEABI_MEMCPY8, RTLIB::__aeabi_memcpy8},
+          {RTLIB::AEABI_MEMMOVE4, RTLIB::__aeabi_memmove4},
+          {RTLIB::AEABI_MEMMOVE8, RTLIB::__aeabi_memmove8},
+          {RTLIB::AEABI_MEMSET4, RTLIB::__aeabi_memset4},
+          {RTLIB::AEABI_MEMSET8, RTLIB::__aeabi_memset8},
+          {RTLIB::AEABI_MEMCLR, RTLIB::__aeabi_memclr},
+          {RTLIB::AEABI_MEMCLR4, RTLIB::__aeabi_memclr4},
+          {RTLIB::AEABI_MEMCLR8, RTLIB::__aeabi_memclr8},
       };
 
-      for (const auto &LC : MemOpsLibraryCalls) {
-        setLibcallName(LC.Op, LC.Name);
-        setLibcallCallingConv(LC.Op, LC.CC);
-      }
+      for (const auto &LC : MemOpsLibraryCalls)
+        setLibcallImpl(LC.Op, LC.Impl);
     }
   }
 
@@ -715,36 +712,41 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   // hard-float calling convention by default.
   if (!TT.isWatchABI()) {
     if (TM.isAAPCS_ABI()) {
-      setLibcallCallingConv(RTLIB::FPROUND_F32_F16, CallingConv::ARM_AAPCS);
-      setLibcallCallingConv(RTLIB::FPROUND_F64_F16, CallingConv::ARM_AAPCS);
-      setLibcallCallingConv(RTLIB::FPEXT_F16_F32, CallingConv::ARM_AAPCS);
+      setLibcallImplCallingConv(RTLIB::__truncsfhf2, CallingConv::ARM_AAPCS);
+      setLibcallImplCallingConv(RTLIB::__truncdfhf2, CallingConv::ARM_AAPCS);
+      setLibcallImplCallingConv(RTLIB::__extendhfsf2, CallingConv::ARM_AAPCS);
+      setLibcallImplCallingConv(RTLIB::__gnu_h2f_ieee, CallingConv::ARM_AAPCS);
+      setLibcallImplCallingConv(RTLIB::__gnu_f2h_ieee, CallingConv::ARM_AAPCS);
     } else {
-      setLibcallCallingConv(RTLIB::FPROUND_F32_F16, CallingConv::ARM_APCS);
-      setLibcallCallingConv(RTLIB::FPROUND_F64_F16, CallingConv::ARM_APCS);
-      setLibcallCallingConv(RTLIB::FPEXT_F16_F32, CallingConv::ARM_APCS);
+      setLibcallImplCallingConv(RTLIB::__truncsfhf2, CallingConv::ARM_APCS);
+      setLibcallImplCallingConv(RTLIB::__truncdfhf2, CallingConv::ARM_APCS);
+      setLibcallImplCallingConv(RTLIB::__extendhfsf2, CallingConv::ARM_APCS);
+      setLibcallImplCallingConv(RTLIB::__gnu_h2f_ieee, CallingConv::ARM_APCS);
+      setLibcallImplCallingConv(RTLIB::__gnu_f2h_ieee, CallingConv::ARM_APCS);
     }
   }
 
   // In EABI, these functions have an __aeabi_ prefix, but in GNUEABI they have
   // a __gnu_ prefix (which is the default).
   if (TT.isTargetAEABI()) {
+    // FIXME: This does not depend on the subtarget and should go directly into
+    // RuntimeLibcalls. This is only here because of missing support for setting
+    // the calling convention of an implementation.
     static const struct {
       const RTLIB::Libcall Op;
-      const char * const Name;
-      const CallingConv::ID CC;
+      const RTLIB::LibcallImpl Impl;
     } LibraryCalls[] = {
-      { RTLIB::FPROUND_F32_F16, "__aeabi_f2h", CallingConv::ARM_AAPCS },
-      { RTLIB::FPROUND_F64_F16, "__aeabi_d2h", CallingConv::ARM_AAPCS },
-      { RTLIB::FPEXT_F16_F32, "__aeabi_h2f", CallingConv::ARM_AAPCS },
+        {RTLIB::FPROUND_F32_F16, RTLIB::__aeabi_f2h},
+        {RTLIB::FPROUND_F64_F16, RTLIB::__aeabi_d2h},
+        {RTLIB::FPEXT_F16_F32, RTLIB::__aeabi_h2f},
     };
 
     for (const auto &LC : LibraryCalls) {
-      setLibcallName(LC.Op, LC.Name);
-      setLibcallCallingConv(LC.Op, LC.CC);
+      setLibcallImpl(LC.Op, LC.Impl);
     }
   } else if (!TT.isOSBinFormatMachO()) {
-    setLibcallName(RTLIB::FPROUND_F32_F16, "__gnu_f2h_ieee");
-    setLibcallName(RTLIB::FPEXT_F16_F32, "__gnu_h2f_ieee");
+    setLibcallImpl(RTLIB::FPROUND_F32_F16, RTLIB::__gnu_f2h_ieee);
+    setLibcallImpl(RTLIB::FPEXT_F16_F32, RTLIB::__gnu_h2f_ieee);
   }
 
   if (Subtarget->isThumb1Only())
@@ -1379,8 +1381,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   setOperationAction(ISD::EH_SJLJ_SETJMP, MVT::i32, Custom);
   setOperationAction(ISD::EH_SJLJ_LONGJMP, MVT::Other, Custom);
   setOperationAction(ISD::EH_SJLJ_SETUP_DISPATCH, MVT::Other, Custom);
-  if (Subtarget->useSjLjEH())
-    setLibcallName(RTLIB::UNWIND_RESUME, "_Unwind_SjLj_Resume");
 
   setOperationAction(ISD::SETCC,     MVT::i32, Expand);
   setOperationAction(ISD::SETCC,     MVT::f32, Expand);
@@ -1522,6 +1522,21 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::FMINIMUM, MVT::v4f32, Legal);
     setOperationAction(ISD::FMAXIMUM, MVT::v4f32, Legal);
 
+    if (Subtarget->hasV8Ops()) {
+      setOperationAction(ISD::FFLOOR, MVT::v2f32, Legal);
+      setOperationAction(ISD::FFLOOR, MVT::v4f32, Legal);
+      setOperationAction(ISD::FROUND, MVT::v2f32, Legal);
+      setOperationAction(ISD::FROUND, MVT::v4f32, Legal);
+      setOperationAction(ISD::FROUNDEVEN, MVT::v2f32, Legal);
+      setOperationAction(ISD::FROUNDEVEN, MVT::v4f32, Legal);
+      setOperationAction(ISD::FCEIL, MVT::v2f32, Legal);
+      setOperationAction(ISD::FCEIL, MVT::v4f32, Legal);
+      setOperationAction(ISD::FTRUNC, MVT::v2f32, Legal);
+      setOperationAction(ISD::FTRUNC, MVT::v4f32, Legal);
+      setOperationAction(ISD::FRINT, MVT::v2f32, Legal);
+      setOperationAction(ISD::FRINT, MVT::v4f32, Legal);
+    }
+
     if (Subtarget->hasFullFP16()) {
       setOperationAction(ISD::FMINNUM, MVT::v4f16, Legal);
       setOperationAction(ISD::FMAXNUM, MVT::v4f16, Legal);
@@ -1532,6 +1547,19 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       setOperationAction(ISD::FMAXIMUM, MVT::v4f16, Legal);
       setOperationAction(ISD::FMINIMUM, MVT::v8f16, Legal);
       setOperationAction(ISD::FMAXIMUM, MVT::v8f16, Legal);
+
+      setOperationAction(ISD::FFLOOR, MVT::v4f16, Legal);
+      setOperationAction(ISD::FFLOOR, MVT::v8f16, Legal);
+      setOperationAction(ISD::FROUND, MVT::v4f16, Legal);
+      setOperationAction(ISD::FROUND, MVT::v8f16, Legal);
+      setOperationAction(ISD::FROUNDEVEN, MVT::v4f16, Legal);
+      setOperationAction(ISD::FROUNDEVEN, MVT::v8f16, Legal);
+      setOperationAction(ISD::FCEIL, MVT::v4f16, Legal);
+      setOperationAction(ISD::FCEIL, MVT::v8f16, Legal);
+      setOperationAction(ISD::FTRUNC, MVT::v4f16, Legal);
+      setOperationAction(ISD::FTRUNC, MVT::v8f16, Legal);
+      setOperationAction(ISD::FRINT, MVT::v4f16, Legal);
+      setOperationAction(ISD::FRINT, MVT::v8f16, Legal);
     }
   }
 
@@ -2745,9 +2773,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Build a sequence of copy-to-reg nodes chained together with token chain
   // and flag operands which copy the outgoing args into the appropriate regs.
   SDValue InGlue;
-  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
-    Chain = DAG.getCopyToReg(Chain, dl, RegsToPass[i].first,
-                             RegsToPass[i].second, InGlue);
+  for (const auto &[Reg, N] : RegsToPass) {
+    Chain = DAG.getCopyToReg(Chain, dl, Reg, N, InGlue);
     InGlue = Chain.getValue(1);
   }
 
@@ -2931,9 +2958,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Add argument registers to the end of the list so that they are known live
   // into the call.
-  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i)
-    Ops.push_back(DAG.getRegister(RegsToPass[i].first,
-                                  RegsToPass[i].second.getValueType()));
+  for (const auto &[Reg, N] : RegsToPass)
+    Ops.push_back(DAG.getRegister(Reg, N.getValueType()));
 
   // Add a register mask operand representing the call-preserved registers.
   const uint32_t *Mask;
@@ -5479,6 +5505,39 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue FalseVal = Op.getOperand(3);
   ConstantSDNode *CFVal = dyn_cast<ConstantSDNode>(FalseVal);
   ConstantSDNode *CTVal = dyn_cast<ConstantSDNode>(TrueVal);
+  ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS);
+  if (Op.getValueType().isInteger()) {
+    // Check for sign pattern (SELECT_CC setgt, iN lhs, -1, 1, -1) and transform
+    // into (OR (ASR lhs, N-1), 1), which requires less instructions for the
+    // supported types.
+    if (CC == ISD::SETGT && RHSC && RHSC->isAllOnes() && CTVal && CFVal &&
+        CTVal->isOne() && CFVal->isAllOnes() &&
+        LHS.getValueType() == TrueVal.getValueType()) {
+      EVT VT = LHS.getValueType();
+      SDValue Shift =
+          DAG.getNode(ISD::SRA, dl, VT, LHS,
+                      DAG.getConstant(VT.getSizeInBits() - 1, dl, VT));
+      return DAG.getNode(ISD::OR, dl, VT, Shift, DAG.getConstant(1, dl, VT));
+    }
+
+    // Check for SMAX(lhs, 0) and SMIN(lhs, 0) patterns.
+    // (SELECT_CC setgt, lhs, 0, lhs, 0) -> (BIC lhs, (SRA lhs, typesize-1))
+    // (SELECT_CC setlt, lhs, 0, lhs, 0) -> (AND lhs, (SRA lhs, typesize-1))
+    // Both require less instructions than compare and conditional select.
+    if ((CC == ISD::SETGT || CC == ISD::SETLT) && LHS == TrueVal && RHSC &&
+        RHSC->isZero() && CFVal && CFVal->isZero() &&
+        LHS.getValueType() == RHS.getValueType()) {
+      EVT VT = LHS.getValueType();
+      SDValue Shift =
+          DAG.getNode(ISD::SRA, dl, VT, LHS,
+                      DAG.getConstant(VT.getSizeInBits() - 1, dl, VT));
+
+      if (CC == ISD::SETGT)
+        Shift = DAG.getNOT(dl, Shift, VT);
+
+      return DAG.getNode(ISD::AND, dl, VT, LHS, Shift);
+    }
+  }
 
   if (Subtarget->hasV8_1MMainlineOps() && CFVal && CTVal &&
       LHS.getValueType() == MVT::i32 && RHS.getValueType() == MVT::i32) {
@@ -6125,9 +6184,6 @@ SDValue ARMTargetLowering::LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const{
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MFI.setReturnAddressIsTaken(true);
 
-  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
-
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
   unsigned Depth = Op.getConstantOperandVal(0);
@@ -6188,7 +6244,7 @@ static void ExpandREAD_REGISTER(SDNode *N, SmallVectorImpl<SDValue> &Results,
 
   Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Read.getValue(0),
                     Read.getValue(1)));
-  Results.push_back(Read.getOperand(0));
+  Results.push_back(Read.getValue(2)); // Chain
 }
 
 /// \p BC is a bitcast that is about to be turned into a VMOVDRR.
@@ -12299,6 +12355,11 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MachineBasicBlock *SinkBB  = Fn->CreateMachineBasicBlock(LLVM_BB);
     Fn->insert(BBI, RSBBB);
     Fn->insert(BBI, SinkBB);
+
+    // Set the call frame size on entry to the new basic blocks.
+    unsigned CallFrameSize = TII->getCallFrameSizeAt(MI);
+    RSBBB->setCallFrameSize(CallFrameSize);
+    SinkBB->setCallFrameSize(CallFrameSize);
 
     Register ABSSrcReg = MI.getOperand(1).getReg();
     Register ABSDstReg = MI.getOperand(0).getReg();
@@ -19180,9 +19241,9 @@ bool ARMTargetLowering::allowsMisalignedMemoryAccesses(EVT VT, unsigned,
   return false;
 }
 
-
 EVT ARMTargetLowering::getOptimalMemOpType(
-    const MemOp &Op, const AttributeList &FuncAttributes) const {
+    LLVMContext &Context, const MemOp &Op,
+    const AttributeList &FuncAttributes) const {
   // See if we can use NEON instructions for this...
   if ((Op.isMemcpy() || Op.isZeroMemset()) && Subtarget->hasNEON() &&
       !FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat)) {
@@ -21897,14 +21958,16 @@ Register ARMTargetLowering::getExceptionPointerRegister(
     const Constant *PersonalityFn) const {
   // Platforms which do not use SjLj EH may return values in these registers
   // via the personality function.
-  return Subtarget->useSjLjEH() ? Register() : ARM::R0;
+  ExceptionHandling EM = getTargetMachine().getExceptionModel();
+  return EM == ExceptionHandling::SjLj ? Register() : ARM::R0;
 }
 
 Register ARMTargetLowering::getExceptionSelectorRegister(
     const Constant *PersonalityFn) const {
   // Platforms which do not use SjLj EH may return values in these registers
   // via the personality function.
-  return Subtarget->useSjLjEH() ? Register() : ARM::R1;
+  ExceptionHandling EM = getTargetMachine().getExceptionModel();
+  return EM == ExceptionHandling::SjLj ? Register() : ARM::R1;
 }
 
 void ARMTargetLowering::initializeSplitCSR(MachineBasicBlock *Entry) const {

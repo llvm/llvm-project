@@ -603,8 +603,7 @@ static inline bool inheritsFrom(InstructionContext child,
   case IC_EVEX_W_OPSIZE_KZ_B_U:
     return false;
   default:
-    errs() << "Unknown instruction class: "
-           << stringForContext((InstructionContext)parent) << "\n";
+    errs() << "Unknown instruction class: " << stringForContext(parent) << "\n";
     llvm_unreachable("Unknown instruction class");
   }
 }

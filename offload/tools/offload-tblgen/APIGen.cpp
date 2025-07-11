@@ -34,7 +34,8 @@ static std::string MakeComment(StringRef in) {
     }
     out += std::string("/// ") +
            in.substr(LineStart, LineBreak - LineStart).str() + "\n";
-    LineStart = LineBreak + 1;
+    if (LineBreak != std::string::npos)
+      LineStart = LineBreak + 1;
   }
 
   return out;
@@ -47,7 +48,7 @@ static void ProcessHandle(const HandleRec &H, raw_ostream &OS) {
     exit(1);
   }
 
-  auto ImplName = H.getName().substr(0, H.getName().size() - 9) + "_impl_t";
+  auto ImplName = getHandleImplName(H);
   OS << CommentsHeader;
   OS << formatv("/// @brief {0}\n", H.getDesc());
   OS << formatv("typedef struct {0} *{1};\n", ImplName, H.getName());
@@ -143,11 +144,11 @@ static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
                   EnumVal.getName(), EtorVal++);
   }
 
-  // Add force uint32 val
-  OS << formatv(TAB_1 "/// @cond\n" TAB_1
+  // Add last_element/force uint32 val
+  OS << formatv(TAB_1 "/// @cond\n" TAB_1 "{0}_LAST = {1},\n" TAB_1
                       "{0}_FORCE_UINT32 = 0x7fffffff\n" TAB_1
                       "/// @endcond\n\n",
-                Enum.getEnumValNamePrefix());
+                Enum.getEnumValNamePrefix(), EtorVal);
 
   OS << formatv("} {0};\n", Enum.getName());
 }

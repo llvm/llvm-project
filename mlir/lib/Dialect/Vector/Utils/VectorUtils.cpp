@@ -321,8 +321,7 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
                                      ArrayRef<int64_t> inputVectorSizes,
                                      Value padValue,
                                      bool useInBoundsInsteadOfMasking) {
-  assert(llvm::none_of(inputVectorSizes,
-                       [](int64_t s) { return s == ShapedType::kDynamic; }) &&
+  assert(!llvm::is_contained(inputVectorSizes, ShapedType::kDynamic) &&
          "invalid input vector sizes");
   auto sourceShapedType = cast<ShapedType>(source.getType());
   auto sourceShape = sourceShapedType.getShape();
@@ -340,7 +339,7 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
     // FIXME: This computation is too weak - it ignores the read indices.
     for (unsigned i = 0; i < readRank; i++)
       inBoundsVal[i] = (sourceShape[i] == inputVectorSizes[i]) &&
-                       !ShapedType::isDynamic(sourceShape[i]);
+                       ShapedType::isStatic(sourceShape[i]);
   }
   auto transferReadOp = builder.create<vector::TransferReadOp>(
       loc,

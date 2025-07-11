@@ -5,7 +5,7 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-android21 -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
-// CIR: cir.global "private" cir_private dsolocal @[[STR1_GLOBAL:.*]] = #cir.const_array<"abcd\00" : !cir.array<!s8i x 5>> : !cir.array<!s8i x 5>
+// CIR: cir.global "private" cir_private dso_local @[[STR1_GLOBAL:.*]] = #cir.const_array<"abcd\00" : !cir.array<!s8i x 5>> : !cir.array<!s8i x 5>
 
 // LLVM: @[[STR1_GLOBAL:.*]] = private global [5 x i8] c"abcd\00"
 

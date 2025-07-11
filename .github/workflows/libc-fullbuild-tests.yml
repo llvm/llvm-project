@@ -15,9 +15,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build_type: [Debug, Release, MinSizeRel]
+        # Build basic linux configuration with Debug/Release/MinSizeRel and all
+        # other configurations in Debug only.
         include:
           - os: ubuntu-24.04
+            build_type: Debug
+            ccache-variant: sccache
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
+            target: x86_64-unknown-linux-llvm
+            include_scudo: ON
+          - os: ubuntu-24.04
+            build_type: Release
+            ccache-variant: sccache
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
+            target: x86_64-unknown-linux-llvm
+            include_scudo: ON
+          - os: ubuntu-24.04
+            build_type: MinSizeRel
             ccache-variant: sccache
             c_compiler: clang-21
             cpp_compiler: clang++-21
@@ -25,12 +41,14 @@ jobs:
             include_scudo: ON
           # TODO: remove ccache logic when https://github.com/hendrikmuhs/ccache-action/issues/279 is resolved.
           - os: ubuntu-24.04-arm
+            build_type: Debug
             ccache-variant: ccache
             c_compiler: clang-21
             cpp_compiler: clang++-21
             target: aarch64-unknown-linux-llvm
             include_scudo: ON
           - os: ubuntu-24.04
+            build_type: Debug
             ccache-variant: ccache
             c_compiler: clang-21
             cpp_compiler: clang++-21
@@ -97,7 +115,7 @@ jobs:
         -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache-variant }} \
         -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache-variant }} \
         -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }} \
-        -DLLVM_RUNTIMES_TARGET=${{ matrix.target }} \
+        -DLLVM_RUNTIME_TARGETS=${{ matrix.target }} \
         -DLLVM_ENABLE_RUNTIMES="$RUNTIMES" \
         -DLLVM_LIBC_FULL_BUILD=ON \
         -G Ninja \

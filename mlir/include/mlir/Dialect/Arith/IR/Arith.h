@@ -65,6 +65,10 @@ public:
   static void build(OpBuilder &builder, OperationState &result, Type type,
                     int64_t value);
 
+  /// Build a constant int op that produces an integer from an APInt
+  static void build(OpBuilder &builder, OperationState &result, Type type,
+                    const APInt &value);
+
   inline int64_t value() {
     return cast<IntegerAttr>(arith::ConstantOp::getValue()).getInt();
   }
@@ -154,6 +158,11 @@ Value getReductionOp(AtomicRMWKind op, OpBuilder &builder, Location loc,
                      Value lhs, Value rhs);
 
 arith::CmpIPredicate invertPredicate(arith::CmpIPredicate pred);
+
+/// Creates an `arith.constant` operation with a zero value of type `type`. This
+/// method asserts if `type` is invalid for representing zero with
+/// `arith.constant`.
+Value getZeroConstant(OpBuilder &builder, Location loc, Type type);
 } // namespace arith
 } // namespace mlir
 
