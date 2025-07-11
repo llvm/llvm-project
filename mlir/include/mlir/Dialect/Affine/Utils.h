@@ -296,14 +296,14 @@ void createAffineComputationSlice(Operation *opInst,
 /// Emit code that computes the given affine expression using standard
 /// arithmetic operations applied to the provided dimension and symbol values.
 Value expandAffineExpr(OpBuilder &builder, Location loc, AffineExpr expr,
-                       ValueRange dimValues, ValueRange symbolValues);
+                       ValueRange dimValues, ValueRange symbolValues,
+                       Type type = {});
 
 /// Create a sequence of operations that implement the `affineMap` applied to
 /// the given `operands` (as it it were an AffineApplyOp).
-std::optional<SmallVector<Value, 8>> expandAffineMap(OpBuilder &builder,
-                                                     Location loc,
-                                                     AffineMap affineMap,
-                                                     ValueRange operands);
+std::optional<SmallVector<Value, 8>>
+expandAffineMap(OpBuilder &builder, Location loc, AffineMap affineMap,
+                ValueRange operands, Type type = {});
 
 /// Holds the result of (div a, b)  and (mod a, b).
 struct DivModValue {

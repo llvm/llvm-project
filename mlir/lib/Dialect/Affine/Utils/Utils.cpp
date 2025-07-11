@@ -45,9 +45,9 @@ public:
   /// This internal class expects arguments to be non-null, checks must be
   /// performed at the call site.
   AffineApplyExpander(OpBuilder &builder, ValueRange dimValues,
-                      ValueRange symbolValues, Location loc)
+                      ValueRange symbolValues, Location loc, Type type)
       : builder(builder), dimValues(dimValues), symbolValues(symbolValues),
-        loc(loc) {}
+        loc(loc), type(type) {}
 
   template <typename OpTy>
   Value buildBinaryExpr(AffineBinaryOpExpr expr,
@@ -188,8 +188,16 @@ public:
   }
 
   Value visitConstantExpr(AffineConstantExpr expr) {
-    auto op = builder.create<arith::ConstantIndexOp>(loc, expr.getValue());
-    return op.getResult();
+    int64_t value = expr.getValue();
+    if (isa<IndexType>(type))
+      return builder.create<arith::ConstantIndexOp>(loc, value);
+
+    if (auto shaped = dyn_cast<ShapedType>(type)) {
+      auto elements = DenseIntElementsAttr::get(shaped, value);
+      return builder.create<arith::ConstantOp>(loc, elements);
+    }
+
+    llvm_unreachable("AffineApplyExpander: Unsupported type");
   }
 
   Value visitDimExpr(AffineDimExpr expr) {
@@ -210,6 +218,7 @@ private:
   ValueRange symbolValues;
 
   Location loc;
+  Type type;
 };
 } // namespace
 
@@ -218,23 +227,28 @@ private:
 mlir::Value mlir::affine::expandAffineExpr(OpBuilder &builder, Location loc,
                                            AffineExpr expr,
                                            ValueRange dimValues,
-                                           ValueRange symbolValues) {
-  return AffineApplyExpander(builder, dimValues, symbolValues, loc).visit(expr);
+                                           ValueRange symbolValues, Type type) {
+  if (!type)
+    type = builder.getIndexType();
+
+  return AffineApplyExpander(builder, dimValues, symbolValues, loc, type)
+      .visit(expr);
 }
 
 /// Create a sequence of operations that implement the `affineMap` applied to
 /// the given `operands` (as it it were an AffineApplyOp).
 std::optional<SmallVector<Value, 8>>
 mlir::affine::expandAffineMap(OpBuilder &builder, Location loc,
-                              AffineMap affineMap, ValueRange operands) {
+                              AffineMap affineMap, ValueRange operands,
+                              Type type) {
   auto numDims = affineMap.getNumDims();
   auto expanded = llvm::to_vector<8>(
-      llvm::map_range(affineMap.getResults(),
-                      [numDims, &builder, loc, operands](AffineExpr expr) {
-                        return expandAffineExpr(builder, loc, expr,
-                                                operands.take_front(numDims),
-                                                operands.drop_front(numDims));
-                      }));
+      llvm::map_range(affineMap.getResults(), [numDims, &builder, loc, operands,
+                                               type](AffineExpr expr) {
+        return expandAffineExpr(builder, loc, expr,
+                                operands.take_front(numDims),
+                                operands.drop_front(numDims), type);
+      }));
   if (llvm::all_of(expanded, [](Value v) { return v; }))
     return expanded;
   return std::nullopt;

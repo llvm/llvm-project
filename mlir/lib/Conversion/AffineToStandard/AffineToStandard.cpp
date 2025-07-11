@@ -335,7 +335,7 @@ public:
                                 PatternRewriter &rewriter) const override {
     auto maybeExpandedMap =
         expandAffineMap(rewriter, op.getLoc(), op.getAffineMap(),
-                        llvm::to_vector<8>(op.getOperands()));
+                        llvm::to_vector<8>(op.getOperands()), op.getType());
     if (!maybeExpandedMap)
       return failure();
     rewriter.replaceOp(op, *maybeExpandedMap);

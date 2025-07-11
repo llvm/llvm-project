@@ -907,6 +907,10 @@ class TypeOrValueSemanticsContainer<Type allowedType, string name>
 // bools.
 def BoolLike : TypeOrValueSemanticsContainer<I1, "bool-like">;
 
+// Type constraint for index-like types: index, vectors of index, tensors of
+// index.
+def IndexLike : TypeOrValueSemanticsContainer<Index, "index-like">;
+
 // Type constraint for signless-integer-like types: signless integers or
 // value-semantics containers of signless integers.
 def SignlessIntegerLike : TypeOrValueSemanticsContainer<

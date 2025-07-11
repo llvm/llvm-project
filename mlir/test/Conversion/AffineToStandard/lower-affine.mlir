@@ -429,8 +429,9 @@ func.func @min_reduction_tree(%v1 : index, %v2 : index, %v3 : index, %v4 : index
 #map5 = affine_map<(d0,d1,d2) -> (d0,d1,d2)>
 #map6 = affine_map<(d0,d1,d2) -> (d0 + d1 + d2)>
 
-// CHECK-LABEL: func @affine_applies(
-func.func @affine_applies(%arg0 : index) {
+// CHECK-LABEL: func @affine_applies
+//  CHECK-SAME:   (%[[ARG0:.*]]: index, %[[ARG1:.*]]: vector<4xindex>)
+func.func @affine_applies(%arg0 : index, %arg1 : vector<4xindex>) {
 // CHECK: %[[c0:.*]] = arith.constant 0 : index
   %zero = affine.apply #map0()
 
@@ -448,24 +449,29 @@ func.func @affine_applies(%arg0 : index) {
   %one = affine.apply #map3(%symbZero)[%zero]
 
 // CHECK-NEXT: %[[c2:.*]] = arith.constant 2 : index
-// CHECK-NEXT: %[[v2:.*]] = arith.muli %arg0, %[[c2]] overflow<nsw> : index
-// CHECK-NEXT: %[[v3:.*]] = arith.addi %arg0, %[[v2]] : index
+// CHECK-NEXT: %[[v2:.*]] = arith.muli %[[ARG0]], %[[c2]] overflow<nsw> : index
+// CHECK-NEXT: %[[v3:.*]] = arith.addi %[[ARG0]], %[[v2]] : index
 // CHECK-NEXT: %[[c3:.*]] = arith.constant 3 : index
-// CHECK-NEXT: %[[v4:.*]] = arith.muli %arg0, %[[c3]] overflow<nsw> : index
+// CHECK-NEXT: %[[v4:.*]] = arith.muli %[[ARG0]], %[[c3]] overflow<nsw> : index
 // CHECK-NEXT: %[[v5:.*]] = arith.addi %[[v3]], %[[v4]] : index
 // CHECK-NEXT: %[[c4:.*]] = arith.constant 4 : index
-// CHECK-NEXT: %[[v6:.*]] = arith.muli %arg0, %[[c4]] overflow<nsw> : index
+// CHECK-NEXT: %[[v6:.*]] = arith.muli %[[ARG0]], %[[c4]] overflow<nsw> : index
 // CHECK-NEXT: %[[v7:.*]] = arith.addi %[[v5]], %[[v6]] : index
 // CHECK-NEXT: %[[c5:.*]] = arith.constant 5 : index
-// CHECK-NEXT: %[[v8:.*]] = arith.muli %arg0, %[[c5]] overflow<nsw> : index
+// CHECK-NEXT: %[[v8:.*]] = arith.muli %[[ARG0]], %[[c5]] overflow<nsw> : index
 // CHECK-NEXT: %[[v9:.*]] = arith.addi %[[v7]], %[[v8]] : index
 // CHECK-NEXT: %[[c6:.*]] = arith.constant 6 : index
-// CHECK-NEXT: %[[v10:.*]] = arith.muli %arg0, %[[c6]] overflow<nsw> : index
+// CHECK-NEXT: %[[v10:.*]] = arith.muli %[[ARG0]], %[[c6]] overflow<nsw> : index
 // CHECK-NEXT: %[[v11:.*]] = arith.addi %[[v9]], %[[v10]] : index
 // CHECK-NEXT: %[[c7:.*]] = arith.constant 7 : index
-// CHECK-NEXT: %[[v12:.*]] = arith.muli %arg0, %[[c7]] overflow<nsw> : index
+// CHECK-NEXT: %[[v12:.*]] = arith.muli %[[ARG0]], %[[c7]] overflow<nsw> : index
 // CHECK-NEXT: %[[v13:.*]] = arith.addi %[[v11]], %[[v12]] : index
   %four = affine.apply #map4(%arg0, %arg0, %arg0, %arg0)[%arg0, %arg0, %arg0]
+
+// CHECK-NEXT: %[[v14:.*]] = arith.addi %[[ARG1]], %[[ARG1]] : vector<4xindex>
+// CHECK-NEXT: %[[cst:.*]] = arith.constant dense<1> : vector<4xindex>
+// CHECK-NEXT: %[[v15:.*]] = arith.addi %[[v14]], %[[cst]] : vector<4xindex>
+  %vec = affine.apply #map3(%arg1)[%arg1] : vector<4xindex>
   return
 }
 

@@ -502,20 +502,37 @@ static void printDimAndSymbolList(Operation::operand_iterator begin,
     printer << '[' << operands.drop_front(numDims) << ']';
 }
 
-/// Parses dimension and symbol list and returns true if parsing failed.
-ParseResult mlir::affine::parseDimAndSymbolList(
-    OpAsmParser &parser, SmallVectorImpl<Value> &operands, unsigned &numDims) {
-  SmallVector<OpAsmParser::UnresolvedOperand, 8> opInfos;
+/// Parse dimension and symbol list, but not resolve yet, as we may not know the
+/// operands types.
+static ParseResult parseDimAndSymbolListImpl(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &opInfos,
+    unsigned &numDims) {
   if (parser.parseOperandList(opInfos, OpAsmParser::Delimiter::Paren))
     return failure();
+
   // Store number of dimensions for validation by caller.
   numDims = opInfos.size();
 
   // Parse the optional symbol operands.
+  if (parser.parseOperandList(opInfos, OpAsmParser::Delimiter::OptionalSquare))
+    return failure();
+
+  return success();
+}
+
+/// Parses dimension and symbol list and returns true if parsing failed.
+ParseResult mlir::affine::parseDimAndSymbolList(
+    OpAsmParser &parser, SmallVectorImpl<Value> &operands, unsigned &numDims) {
+  SmallVector<OpAsmParser::UnresolvedOperand, 8> opInfos;
+  if (parseDimAndSymbolListImpl(parser, opInfos, numDims))
+    return failure();
+
   auto indexTy = parser.getBuilder().getIndexType();
-  return failure(parser.parseOperandList(
-                     opInfos, OpAsmParser::Delimiter::OptionalSquare) ||
-                 parser.resolveOperands(opInfos, indexTy, operands));
+  if (parser.resolveOperands(opInfos, indexTy, operands))
+    return failure();
+
+  return success();
 }
 
 /// Utility function to verify that a set of operands are valid dimension and
@@ -549,14 +566,25 @@ AffineValueMap AffineApplyOp::getAffineValueMap() {
 
 ParseResult AffineApplyOp::parse(OpAsmParser &parser, OperationState &result) {
   auto &builder = parser.getBuilder();
-  auto indexTy = builder.getIndexType();
 
   AffineMapAttr mapAttr;
   unsigned numDims;
+  SmallVector<OpAsmParser::UnresolvedOperand, 8> opInfos;
   if (parser.parseAttribute(mapAttr, "map", result.attributes) ||
-      parseDimAndSymbolList(parser, result.operands, numDims) ||
+      parseDimAndSymbolListImpl(parser, opInfos, numDims) ||
       parser.parseOptionalAttrDict(result.attributes))
     return failure();
+
+  Type type;
+  if (parser.parseOptionalColon()) {
+    type = builder.getIndexType();
+  } else if (parser.parseType(type)) {
+    return failure();
+  }
+
+  if (parser.resolveOperands(opInfos, type, result.operands))
+    return failure();
+
   auto map = mapAttr.getValue();
 
   if (map.getNumDims() != numDims ||
@@ -565,7 +593,7 @@ ParseResult AffineApplyOp::parse(OpAsmParser &parser, OperationState &result) {
                             "dimension or symbol index mismatch");
   }
 
-  result.types.append(map.getNumResults(), indexTy);
+  result.types.append(map.getNumResults(), type);
   return success();
 }
 
@@ -574,9 +602,18 @@ void AffineApplyOp::print(OpAsmPrinter &p) {
   printDimAndSymbolList(operand_begin(), operand_end(),
                         getAffineMap().getNumDims(), p);
   p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{"map"});
+  Type resType = getType();
+  if (!isa<IndexType>(resType))
+    p << ":" << resType;
 }
 
 LogicalResult AffineApplyOp::verify() {
+  // Check all operand and result types are the same.
+  // We cannot use `SameOperandsAndResultType` as it expects at least 1 operand.
+  if (!llvm::all_equal(
+          llvm::concat<Type>(getOperandTypes(), (*this)->getResultTypes())))
+    return emitOpError("requires the same type for all operands and results");
+
   // Check input and output dimensions match.
   AffineMap affineMap = getMap();
 
