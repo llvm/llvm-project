@@ -880,11 +880,11 @@ _mm_sll_si64(__m64 __m, __m64 __count)
 ///    A 32-bit integer value.
 /// \returns A 64-bit integer vector containing the left-shifted value. If
 ///     \a __count is greater or equal to 64, the result is set to 0.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_slli_si64(__m64 __m, int __count)
-{
-    return __trunc64(__builtin_ia32_psllqi128((__v2di)__anyext128(__m),
-                                              __count));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2 _mm_slli_si64(__m64 __m,
+                                                              int __count) {
+  if (__builtin_constant_p(__count))
+    return (__m64)((__count > 63) ? 0 : ((long long)__m << __count));
+  return __trunc64(__builtin_ia32_psllqi128((__v2di)__anyext128(__m), __count));
 }
 
 /// Right-shifts each 16-bit integer element of the first parameter,
@@ -1115,11 +1115,11 @@ _mm_srl_si64(__m64 __m, __m64 __count)
 /// \param __count
 ///    A 32-bit integer value.
 /// \returns A 64-bit integer vector containing the right-shifted value.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_srli_si64(__m64 __m, int __count)
-{
-    return __trunc64(__builtin_ia32_psrlqi128((__v2di)__anyext128(__m),
-                                              __count));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2 _mm_srli_si64(__m64 __m,
+                                                              int __count) {
+  if (__builtin_constant_p(__count))
+    return (__m64)((__count > 63) ? 0 : ((long long)__m >> __count));
+  return __trunc64(__builtin_ia32_psrlqi128((__v2di)__anyext128(__m), __count));
 }
 
 /// Performs a bitwise AND of two 64-bit integer vectors.
