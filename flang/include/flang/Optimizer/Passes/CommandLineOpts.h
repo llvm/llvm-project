@@ -55,6 +55,7 @@ extern llvm::cl::opt<bool> disableCfgConversion;
 extern llvm::cl::opt<bool> disableFirAvc;
 extern llvm::cl::opt<bool> disableFirMao;
 
+extern llvm::cl::opt<bool> enableAffineOpt;
 extern llvm::cl::opt<bool> disableFirAliasTags;
 extern llvm::cl::opt<bool> useOldAliasTags;
 
