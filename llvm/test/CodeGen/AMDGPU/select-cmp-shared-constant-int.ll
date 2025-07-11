@@ -12,16 +12,15 @@ define i32 @icmp_select_fold_eq_i32_imm(i32 %arg, i32 %other) {
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_movk_i32 s4, 0x1092
-; GFX900-NEXT:    v_mov_b32_e32 v2, 0x1092
-; GFX900-NEXT:    v_cmp_ne_u32_e32 vcc, s4, v0
-; GFX900-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX900-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v0
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1010-LABEL: icmp_select_fold_eq_i32_imm:
 ; GFX1010:       ; %bb.0: ; %entry
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1010-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0x1092, v0
-; GFX1010-NEXT:    v_cndmask_b32_e32 v0, 0x1092, v1, vcc_lo
+; GFX1010-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0x1092, v0
+; GFX1010-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %cmp = icmp eq i32 %arg, 4242
@@ -35,16 +34,15 @@ define i32 @icmp_select_fold_eq_imm_i32(i32 %arg, i32 %other) {
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_movk_i32 s4, 0x1092
-; GFX900-NEXT:    v_mov_b32_e32 v2, 0x1092
-; GFX900-NEXT:    v_cmp_ne_u32_e32 vcc, s4, v0
-; GFX900-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX900-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v0
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1010-LABEL: icmp_select_fold_eq_imm_i32:
 ; GFX1010:       ; %bb.0: ; %entry
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1010-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0x1092, v0
-; GFX1010-NEXT:    v_cndmask_b32_e32 v0, 0x1092, v1, vcc_lo
+; GFX1010-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0x1092, v0
+; GFX1010-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %cmp = icmp eq i32 4242, %arg
@@ -58,16 +56,15 @@ define i32 @icmp_select_fold_ne_i32_imm(i32 %arg, i32 %other) {
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_movk_i32 s4, 0x1092
-; GFX900-NEXT:    v_mov_b32_e32 v2, 0x1092
 ; GFX900-NEXT:    v_cmp_ne_u32_e32 vcc, s4, v0
-; GFX900-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1010-LABEL: icmp_select_fold_ne_i32_imm:
 ; GFX1010:       ; %bb.0: ; %entry
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0x1092, v0
-; GFX1010-NEXT:    v_cndmask_b32_e32 v0, 0x1092, v1, vcc_lo
+; GFX1010-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %cmp = icmp ne i32 %arg, 4242
@@ -81,16 +78,15 @@ define i32 @icmp_select_fold_ne_imm_i32(i32 %arg, i32 %other) {
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_movk_i32 s4, 0x1092
-; GFX900-NEXT:    v_mov_b32_e32 v2, 0x1092
 ; GFX900-NEXT:    v_cmp_ne_u32_e32 vcc, s4, v0
-; GFX900-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1010-LABEL: icmp_select_fold_ne_imm_i32:
 ; GFX1010:       ; %bb.0: ; %entry
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0x1092, v0
-; GFX1010-NEXT:    v_cndmask_b32_e32 v0, 0x1092, v1, vcc_lo
+; GFX1010-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %cmp = icmp ne i32 4242, %arg
@@ -241,11 +237,9 @@ define i64 @icmp_select_fold_eq_i64_imm(i64 %arg, i64 %other) {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_mov_b32 s4, 0xc6d1a9b2
 ; GFX900-NEXT:    s_movk_i32 s5, 0x62
-; GFX900-NEXT:    v_cmp_ne_u64_e32 vcc, s[4:5], v[0:1]
-; GFX900-NEXT:    v_mov_b32_e32 v4, 0xc6d1a9b2
-; GFX900-NEXT:    v_mov_b32_e32 v1, 0x62
-; GFX900-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc
-; GFX900-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
+; GFX900-NEXT:    v_cmp_eq_u64_e32 vcc, s[4:5], v[0:1]
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; GFX900-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1010-LABEL: icmp_select_fold_eq_i64_imm:
@@ -253,9 +247,9 @@ define i64 @icmp_select_fold_eq_i64_imm(i64 %arg, i64 %other) {
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    s_mov_b32 s4, 0xc6d1a9b2
 ; GFX1010-NEXT:    s_movk_i32 s5, 0x62
-; GFX1010-NEXT:    v_cmp_ne_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX1010-NEXT:    v_cndmask_b32_e32 v0, 0xc6d1a9b2, v2, vcc_lo
-; GFX1010-NEXT:    v_cndmask_b32_e32 v1, 0x62, v3, vcc_lo
+; GFX1010-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
+; GFX1010-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc_lo
+; GFX1010-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc_lo
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %cmp = icmp eq i64 %arg, 424242424242
@@ -270,11 +264,9 @@ define i64 @icmp_select_fold_eq_imm_i64(i64 %arg, i64 %other) {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_mov_b32 s4, 0xc6d1a9b2
 ; GFX900-NEXT:    s_movk_i32 s5, 0x62
-; GFX900-NEXT:    v_cmp_ne_u64_e32 vcc, s[4:5], v[0:1]
-; GFX900-NEXT:    v_mov_b32_e32 v4, 0xc6d1a9b2
-; GFX900-NEXT:    v_mov_b32_e32 v1, 0x62
-; GFX900-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc
-; GFX900-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
+; GFX900-NEXT:    v_cmp_eq_u64_e32 vcc, s[4:5], v[0:1]
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; GFX900-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1010-LABEL: icmp_select_fold_eq_imm_i64:
@@ -282,9 +274,9 @@ define i64 @icmp_select_fold_eq_imm_i64(i64 %arg, i64 %other) {
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    s_mov_b32 s4, 0xc6d1a9b2
 ; GFX1010-NEXT:    s_movk_i32 s5, 0x62
-; GFX1010-NEXT:    v_cmp_ne_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX1010-NEXT:    v_cndmask_b32_e32 v0, 0xc6d1a9b2, v2, vcc_lo
-; GFX1010-NEXT:    v_cndmask_b32_e32 v1, 0x62, v3, vcc_lo
+; GFX1010-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
+; GFX1010-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc_lo
+; GFX1010-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc_lo
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %cmp = icmp eq i64 424242424242, %arg
@@ -300,9 +292,7 @@ define i64 @icmp_select_fold_ne_i64_imm(i64 %arg, i64 %other) {
 ; GFX900-NEXT:    s_mov_b32 s4, 0xc6d1a9b2
 ; GFX900-NEXT:    s_movk_i32 s5, 0x62
 ; GFX900-NEXT:    v_cmp_ne_u64_e32 vcc, s[4:5], v[0:1]
-; GFX900-NEXT:    v_mov_b32_e32 v4, 0xc6d1a9b2
-; GFX900-NEXT:    v_mov_b32_e32 v1, 0x62
-; GFX900-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
 ; GFX900-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -312,8 +302,8 @@ define i64 @icmp_select_fold_ne_i64_imm(i64 %arg, i64 %other) {
 ; GFX1010-NEXT:    s_mov_b32 s4, 0xc6d1a9b2
 ; GFX1010-NEXT:    s_movk_i32 s5, 0x62
 ; GFX1010-NEXT:    v_cmp_ne_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX1010-NEXT:    v_cndmask_b32_e32 v0, 0xc6d1a9b2, v2, vcc_lo
-; GFX1010-NEXT:    v_cndmask_b32_e32 v1, 0x62, v3, vcc_lo
+; GFX1010-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc_lo
+; GFX1010-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc_lo
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %cmp = icmp ne i64 %arg, 424242424242
@@ -329,9 +319,7 @@ define i64 @icmp_select_fold_ne_imm_i64(i64 %arg, i64 %other) {
 ; GFX900-NEXT:    s_mov_b32 s4, 0xc6d1a9b2
 ; GFX900-NEXT:    s_movk_i32 s5, 0x62
 ; GFX900-NEXT:    v_cmp_ne_u64_e32 vcc, s[4:5], v[0:1]
-; GFX900-NEXT:    v_mov_b32_e32 v4, 0xc6d1a9b2
-; GFX900-NEXT:    v_mov_b32_e32 v1, 0x62
-; GFX900-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
 ; GFX900-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -341,8 +329,8 @@ define i64 @icmp_select_fold_ne_imm_i64(i64 %arg, i64 %other) {
 ; GFX1010-NEXT:    s_mov_b32 s4, 0xc6d1a9b2
 ; GFX1010-NEXT:    s_movk_i32 s5, 0x62
 ; GFX1010-NEXT:    v_cmp_ne_u64_e32 vcc_lo, s[4:5], v[0:1]
-; GFX1010-NEXT:    v_cndmask_b32_e32 v0, 0xc6d1a9b2, v2, vcc_lo
-; GFX1010-NEXT:    v_cndmask_b32_e32 v1, 0x62, v3, vcc_lo
+; GFX1010-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc_lo
+; GFX1010-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc_lo
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %cmp = icmp ne i64 424242424242, %arg
@@ -515,16 +503,15 @@ define i16 @icmp_select_fold_eq_i16_imm(i16 %arg, i16 %other) {
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_movk_i32 s4, 0x1092
-; GFX900-NEXT:    v_mov_b32_e32 v2, 0x1092
-; GFX900-NEXT:    v_cmp_ne_u16_e32 vcc, s4, v0
-; GFX900-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX900-NEXT:    v_cmp_eq_u16_e32 vcc, s4, v0
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1010-LABEL: icmp_select_fold_eq_i16_imm:
 ; GFX1010:       ; %bb.0: ; %entry
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1010-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0x1092, v0
-; GFX1010-NEXT:    v_cndmask_b32_e32 v0, 0x1092, v1, vcc_lo
+; GFX1010-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0x1092, v0
+; GFX1010-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %cmp = icmp eq i16 %arg, 4242
@@ -538,16 +525,15 @@ define i16 @icmp_select_fold_eq_imm_i16(i16 %arg, i16 %other) {
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_movk_i32 s4, 0x1092
-; GFX900-NEXT:    v_mov_b32_e32 v2, 0x1092
-; GFX900-NEXT:    v_cmp_ne_u16_e32 vcc, s4, v0
-; GFX900-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX900-NEXT:    v_cmp_eq_u16_e32 vcc, s4, v0
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1010-LABEL: icmp_select_fold_eq_imm_i16:
 ; GFX1010:       ; %bb.0: ; %entry
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1010-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0x1092, v0
-; GFX1010-NEXT:    v_cndmask_b32_e32 v0, 0x1092, v1, vcc_lo
+; GFX1010-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0x1092, v0
+; GFX1010-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %cmp = icmp eq i16 4242, %arg
@@ -561,16 +547,15 @@ define i16 @icmp_select_fold_ne_i16_imm(i16 %arg, i16 %other) {
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_movk_i32 s4, 0x1092
-; GFX900-NEXT:    v_mov_b32_e32 v2, 0x1092
 ; GFX900-NEXT:    v_cmp_ne_u16_e32 vcc, s4, v0
-; GFX900-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1010-LABEL: icmp_select_fold_ne_i16_imm:
 ; GFX1010:       ; %bb.0: ; %entry
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0x1092, v0
-; GFX1010-NEXT:    v_cndmask_b32_e32 v0, 0x1092, v1, vcc_lo
+; GFX1010-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %cmp = icmp ne i16 %arg, 4242
@@ -584,16 +569,15 @@ define i16 @icmp_select_fold_ne_imm_i16(i16 %arg, i16 %other) {
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_movk_i32 s4, 0x1092
-; GFX900-NEXT:    v_mov_b32_e32 v2, 0x1092
 ; GFX900-NEXT:    v_cmp_ne_u16_e32 vcc, s4, v0
-; GFX900-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1010-LABEL: icmp_select_fold_ne_imm_i16:
 ; GFX1010:       ; %bb.0: ; %entry
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0x1092, v0
-; GFX1010-NEXT:    v_cndmask_b32_e32 v0, 0x1092, v1, vcc_lo
+; GFX1010-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %cmp = icmp ne i16 4242, %arg
@@ -743,17 +727,16 @@ define i8 @icmp_select_fold_eq_i8_imm(i8 %arg, i8 %other) {
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_movk_i32 s4, 0x7b
-; GFX900-NEXT:    v_mov_b32_e32 v2, 0x7b
-; GFX900-NEXT:    v_cmp_ne_u16_sdwa vcc, v0, s4 src0_sel:BYTE_0 src1_sel:DWORD
-; GFX900-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX900-NEXT:    v_cmp_eq_u16_sdwa vcc, v0, s4 src0_sel:BYTE_0 src1_sel:DWORD
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1010-LABEL: icmp_select_fold_eq_i8_imm:
 ; GFX1010:       ; %bb.0: ; %entry
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    v_mov_b32_e32 v2, 0x7b
-; GFX1010-NEXT:    v_cmp_ne_u16_sdwa vcc_lo, v0, v2 src0_sel:BYTE_0 src1_sel:DWORD
-; GFX1010-NEXT:    v_cndmask_b32_e32 v0, 0x7b, v1, vcc_lo
+; GFX1010-NEXT:    v_cmp_eq_u16_sdwa vcc_lo, v0, v2 src0_sel:BYTE_0 src1_sel:DWORD
+; GFX1010-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %cmp = icmp eq i8 %arg, 123
@@ -767,17 +750,16 @@ define i8 @icmp_select_fold_eq_imm_i8(i8 %arg, i8 %other) {
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_movk_i32 s4, 0x7b
-; GFX900-NEXT:    v_mov_b32_e32 v2, 0x7b
-; GFX900-NEXT:    v_cmp_ne_u16_sdwa vcc, v0, s4 src0_sel:BYTE_0 src1_sel:DWORD
-; GFX900-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX900-NEXT:    v_cmp_eq_u16_sdwa vcc, v0, s4 src0_sel:BYTE_0 src1_sel:DWORD
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1010-LABEL: icmp_select_fold_eq_imm_i8:
 ; GFX1010:       ; %bb.0: ; %entry
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    v_mov_b32_e32 v2, 0x7b
-; GFX1010-NEXT:    v_cmp_ne_u16_sdwa vcc_lo, v0, v2 src0_sel:BYTE_0 src1_sel:DWORD
-; GFX1010-NEXT:    v_cndmask_b32_e32 v0, 0x7b, v1, vcc_lo
+; GFX1010-NEXT:    v_cmp_eq_u16_sdwa vcc_lo, v0, v2 src0_sel:BYTE_0 src1_sel:DWORD
+; GFX1010-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %cmp = icmp eq i8 123, %arg
@@ -791,9 +773,8 @@ define i8 @icmp_select_fold_ne_i8_imm(i8 %arg, i8 %other) {
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_movk_i32 s4, 0x7b
-; GFX900-NEXT:    v_mov_b32_e32 v2, 0x7b
 ; GFX900-NEXT:    v_cmp_ne_u16_sdwa vcc, v0, s4 src0_sel:BYTE_0 src1_sel:DWORD
-; GFX900-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1010-LABEL: icmp_select_fold_ne_i8_imm:
@@ -801,7 +782,7 @@ define i8 @icmp_select_fold_ne_i8_imm(i8 %arg, i8 %other) {
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    v_mov_b32_e32 v2, 0x7b
 ; GFX1010-NEXT:    v_cmp_ne_u16_sdwa vcc_lo, v0, v2 src0_sel:BYTE_0 src1_sel:DWORD
-; GFX1010-NEXT:    v_cndmask_b32_e32 v0, 0x7b, v1, vcc_lo
+; GFX1010-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %cmp = icmp ne i8 %arg, 123
@@ -815,9 +796,8 @@ define i8 @icmp_select_fold_ne_imm_i8(i8 %arg, i8 %other) {
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_movk_i32 s4, 0x7b
-; GFX900-NEXT:    v_mov_b32_e32 v2, 0x7b
 ; GFX900-NEXT:    v_cmp_ne_u16_sdwa vcc, v0, s4 src0_sel:BYTE_0 src1_sel:DWORD
-; GFX900-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1010-LABEL: icmp_select_fold_ne_imm_i8:
@@ -825,7 +805,7 @@ define i8 @icmp_select_fold_ne_imm_i8(i8 %arg, i8 %other) {
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    v_mov_b32_e32 v2, 0x7b
 ; GFX1010-NEXT:    v_cmp_ne_u16_sdwa vcc_lo, v0, v2 src0_sel:BYTE_0 src1_sel:DWORD
-; GFX1010-NEXT:    v_cndmask_b32_e32 v0, 0x7b, v1, vcc_lo
+; GFX1010-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
 ; GFX1010-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %cmp = icmp ne i8 123, %arg
