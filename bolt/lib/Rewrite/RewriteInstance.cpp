@@ -304,6 +304,11 @@ MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
     return createRISCVMCPlusBuilder(Analysis, Info, RegInfo, STI);
 #endif
 
+#ifdef POWERPC_AVAILABLE
+  if (Arch == Triple::ppc64 || Arch == Triple::ppc64le)
+    return createPowerPCMCPlusBuilder(Analysis, Info, RegInfo, STI);
+#endif
+
   llvm_unreachable("architecture unsupported by MCPlusBuilder");
 }
 
