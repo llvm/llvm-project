@@ -333,8 +333,10 @@ public:
         methodSignature(std::forward<RetTypeT>(retType),
                         std::forward<NameT>(name), std::forward<Args>(args)...),
         methodBody(properties & Declaration) {
-    assert(methodPropertiesAreCompatible(properties) &&
-           "invalid combination of properties specified");
+    if (!methodPropertiesAreCompatible(properties)) {
+      llvm::report_fatal_error(
+          "Invalid combination of method properties specified");
+    }
   }
   /// Create a method with a return type, a name, method properties, and a list
   /// of parameters.
@@ -342,8 +344,10 @@ public:
          std::initializer_list<MethodParameter> params)
       : properties(properties), methodSignature(retType, name, params),
         methodBody(properties & Declaration) {
-    assert(methodPropertiesAreCompatible(properties) &&
-           "invalid combination of properties specified");
+    if (!methodPropertiesAreCompatible(properties)) {
+      llvm::report_fatal_error(
+          "Invalid combination of method properties specified");
+    }
   }
 
   // Define move constructor and assignment operator to prevent copying.
