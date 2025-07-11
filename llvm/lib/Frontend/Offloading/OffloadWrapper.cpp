@@ -374,11 +374,19 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP,
   FunctionCallee RegVar = M.getOrInsertFunction(
       IsHIP ? "__hipRegisterVar" : "__cudaRegisterVar", RegVarTy);
 
-  // Get the __cudaRegisterSurface function declaration.
+  // Get the __cudaRegisterManagedVar function declaration.
+  SmallVector<llvm::Type *, 8> RegisterManagedVarParams;
+  if (IsHIP)
+    RegisterManagedVarParams = {Int8PtrPtrTy,  Int8PtrTy,
+                                Int8PtrTy,     Int8PtrTy,
+                                getSizeTTy(M), Type::getInt32Ty(C)};
+  else
+    RegisterManagedVarParams = {Int8PtrPtrTy,        Int8PtrPtrTy,
+                                Int8PtrTy,           Int8PtrTy,
+                                Type::getInt32Ty(C), getSizeTTy(M),
+                                Type::getInt32Ty(C), Type::getInt32Ty(C)};
   FunctionType *RegManagedVarTy =
-      FunctionType::get(Type::getVoidTy(C),
-                        {Int8PtrPtrTy, Int8PtrTy, Int8PtrTy, Int8PtrTy,
-                         getSizeTTy(M), Type::getInt32Ty(C)},
+      FunctionType::get(Type::getVoidTy(C), RegisterManagedVarParams,
                         /*isVarArg=*/false);
   FunctionCallee RegManagedVar = M.getOrInsertFunction(
       IsHIP ? "__hipRegisterManagedVar" : "__cudaRegisterManagedVar",
@@ -516,8 +524,21 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP,
 
   // Create managed variable registration code.
   Builder.SetInsertPoint(SwManagedBB);
-  Builder.CreateCall(RegManagedVar, {RegGlobalsFn->arg_begin(), AuxAddr, Addr,
-                                     Name, Size, Data});
+  if (IsHIP)
+    Builder.CreateCall(RegManagedVar, {RegGlobalsFn->arg_begin(), AuxAddr, Addr,
+                                       Name, Size, Data});
+  else {
+    llvm::GlobalVariable *NvInitManagedRt = new llvm::GlobalVariable(
+        M, Type::getInt8Ty(C), /*isConstant=*/false,
+        GlobalValue::InternalLinkage, ConstantInt::get(Type::getInt8Ty(C), 0),
+        ".nv_inited_managed_rt");
+    Builder.CreateCall(RegManagedVar,
+                       {RegGlobalsFn->arg_begin(), AuxAddr, Name, Name, Extern,
+                        Size, Const, ConstantInt::get(Type::getInt32Ty(C), 0)});
+
+    Builder.CreateStore(ConstantInt::get(Type::getInt8Ty(C), 1),
+                        NvInitManagedRt);
+  }
   Builder.CreateBr(IfEndBB);
   Switch->addCase(Builder.getInt32(llvm::offloading::OffloadGlobalManagedEntry),
                   SwManagedBB);
@@ -620,8 +641,25 @@ void createRegisterFatbinFunction(Module &M, GlobalVariable *FatbinDesc,
                                                        Suffix,
                                                        EmitSurfacesAndTextures),
                          Handle);
-  if (!IsHIP)
+  if (!IsHIP) {
     CtorBuilder.CreateCall(RegFatbinEnd, Handle);
+    auto *IfThenBB = BasicBlock::Create(C, "if.then", CtorFunc);
+    auto *IfEndBB = BasicBlock::Create(C, "if.end", CtorFunc);
+    auto *NvInitManagedRt = M.getNamedGlobal(".nv_inited_managed_rt");
+    auto *InitManagedRt =
+        CtorBuilder.CreateLoad(Type::getInt8Ty(C), NvInitManagedRt);
+    auto *Cmp = CtorBuilder.CreateICmpNE(
+        InitManagedRt, ConstantInt::get(Type::getInt8Ty(C), 0));
+    CtorBuilder.CreateCondBr(Cmp, IfThenBB, IfEndBB);
+    CtorBuilder.SetInsertPoint(IfThenBB);
+    // Call __cudaInitModule(GpuBinaryHandle) for managed variables
+    llvm::FunctionCallee NvInitManagedRtWithModule = M.getOrInsertFunction(
+        "__cudaInitModule",
+        llvm::FunctionType::get(Type::getInt8Ty(C), PtrTy, false));
+    CtorBuilder.CreateCall(NvInitManagedRtWithModule, Handle);
+    CtorBuilder.CreateBr(IfEndBB);
+    CtorBuilder.SetInsertPoint(IfEndBB);
+  }
   CtorBuilder.CreateCall(AtExit, DtorFunc);
   CtorBuilder.CreateRetVoid();
 

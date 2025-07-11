@@ -34,26 +34,26 @@
 // CUDA-DAG: define weak_odr {{.*}}void @[[KERN:_ZN12_GLOBAL__N_16kernelEv__intern__b04fd23c98500190]](
 // CUDA-DAG: define weak_odr {{.*}}void @[[KTX:_Z2ktIN12_GLOBAL__N_11XEEvT___intern__b04fd23c98500190]](
 // CUDA-DAG: define weak_odr {{.*}}void @[[KTL:_Z2ktIN12_GLOBAL__N_1UlvE_EEvT___intern__b04fd23c98500190]](
+// CUDA-DAG: @[[VM:_ZN12_GLOBAL__N_12vmE__static__b04fd23c98500190]] = addrspace(1) externally_initialized global
 // CUDA-DAG: @[[VC:_ZN12_GLOBAL__N_12vcE__static__b04fd23c98500190]] = addrspace(4) externally_initialized constant
 // CUDA-DAG: @[[VT:_Z2vtIN12_GLOBAL__N_11XEE__static__b04fd23c98500190]] = addrspace(1) externally_initialized global
 
 // COMMON-DAG: @_ZN12_GLOBAL__N_12vdE = internal addrspace(1) global
 // COMNEG-NOT: @{{.*}} = {{.*}} c"_ZN12_GLOBAL__N_12vdE{{.*}}\00"
 
-// HIP-DAG: @llvm.compiler.used = {{.*}}@[[VM]]{{.*}}@[[VT]]{{.*}}@[[VC]]
-// CUDA-DAG: @llvm.compiler.used = {{.*}}@[[VT]]{{.*}}@[[VC]]
+// COMMON-DAG: @llvm.compiler.used = {{.*}}@[[VM]]{{.*}}@[[VT]]{{.*}}@[[VC]]
 
 // COMMON-DAG: @[[KERNSTR:.*]] = {{.*}} c"[[KERN]]\00"
 // COMMON-DAG: @[[KTXSTR:.*]] = {{.*}} c"[[KTX]]\00"
 // COMMON-DAG: @[[KTLSTR:.*]] = {{.*}} c"[[KTL]]\00"
-// HIP-DAG: @[[VMSTR:.*]] = {{.*}} c"[[VM]]\00"
+// COMMON-DAG: @[[VMSTR:.*]] = {{.*}} c"[[VM]]\00"
 // COMMON-DAG: @[[VCSTR:.*]] = {{.*}} c"[[VC]]\00"
 // COMMON-DAG: @[[VTSTR:.*]] = {{.*}} c"[[VT]]\00"
 
 // COMMON-DAG: call i32 @__{{.*}}RegisterFunction({{.*}}@[[KERNSTR]]
 // COMMON-DAG: call i32 @__{{.*}}RegisterFunction({{.*}}@[[KTXSTR]]
 // COMMON-DAG: call i32 @__{{.*}}RegisterFunction({{.*}}@[[KTLSTR]]
-// HIP-DAG: call void @__{{.*}}RegisterManagedVar({{.*}}@[[VMSTR]]
+// COMMON-DAG: call void @__{{.*}}RegisterManagedVar({{.*}}@[[VMSTR]]
 // COMMON-DAG: call void @__{{.*}}RegisterVar({{.*}}@[[VCSTR]]
 // COMMON-DAG: call void @__{{.*}}RegisterVar({{.*}}@[[VTSTR]]
 
@@ -67,9 +67,7 @@ namespace {
   struct X {};
   X x;
   auto lambda = [](){};
-#if __HIP__
   __managed__ int vm = 1;
-#endif
   __constant__ int vc = 2;
 
   // C should not be externalized since it is used by device code only.
@@ -89,9 +87,7 @@ void test() {
 
   // A, B, and tempVar<X> should be externalized since they are
   // used by host code.
-#if __HIP__
   getSymbol(&vm);
-#endif
   getSymbol(&vc);
   getSymbol(&vt<X>);
 }

@@ -42,7 +42,7 @@ class CGNVCUDARuntime : public CGCUDARuntime {
   StringRef Prefix;
 
 private:
-  llvm::IntegerType *IntTy, *SizeTy;
+  llvm::IntegerType *IntTy, *SizeTy, *CharTy;
   llvm::Type *VoidTy;
   llvm::PointerType *PtrTy;
 
@@ -231,6 +231,7 @@ CGNVCUDARuntime::CGNVCUDARuntime(CodeGenModule &CGM)
   SizeTy = CGM.SizeTy;
   VoidTy = CGM.VoidTy;
   PtrTy = CGM.DefaultPtrTy;
+  CharTy = CGM.CharTy;
 
   if (CGM.getLangOpts().OffloadViaLLVM)
     Prefix = "llvm";
@@ -547,10 +548,11 @@ void CGNVCUDARuntime::emitDeviceStubBodyLegacy(CodeGenFunction &CGF,
 }
 
 // Replace the original variable Var with the address loaded from variable
-// ManagedVar populated by HIP runtime.
+// ManagedVar populated by HIP/CUDA runtime.
 static void replaceManagedVar(llvm::GlobalVariable *Var,
                               llvm::GlobalVariable *ManagedVar) {
   SmallVector<SmallVector<llvm::User *, 8>, 8> WorkList;
+
   for (auto &&VarUse : Var->uses()) {
     WorkList.push_back({VarUse.getUser()});
   }
@@ -661,8 +663,15 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
       addUnderscoredPrefixToName("RegisterVar"));
   // void __hipRegisterManagedVar(void **, char *, char *, const char *,
   //                              size_t, unsigned)
-  llvm::Type *RegisterManagedVarParams[] = {PtrTy, PtrTy,     PtrTy,
-                                            PtrTy, VarSizeTy, IntTy};
+  // void __cudaRegisterManagedVar(void **, void **, char *, const char *,
+  //                               int, size_t, int, int)
+  SmallVector<llvm::Type *, 8> RegisterManagedVarParams;
+  if (CGM.getLangOpts().HIP)
+    RegisterManagedVarParams = {PtrTy, PtrTy, PtrTy, PtrTy, VarSizeTy, IntTy};
+  else
+    RegisterManagedVarParams = {PtrTy, PtrTy,     PtrTy, PtrTy,
+                                IntTy, VarSizeTy, IntTy, IntTy};
+
   llvm::FunctionCallee RegisterManagedVar = CGM.CreateRuntimeFunction(
       llvm::FunctionType::get(VoidTy, RegisterManagedVarParams, false),
       addUnderscoredPrefixToName("RegisterManagedVar"));
@@ -693,13 +702,23 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
                "HIP managed variables not transformed");
         auto *ManagedVar = CGM.getModule().getNamedGlobal(
             Var->getName().drop_back(StringRef(".managed").size()));
-        llvm::Value *Args[] = {
-            &GpuBinaryHandlePtr,
-            ManagedVar,
-            Var,
-            VarName,
-            llvm::ConstantInt::get(VarSizeTy, VarSize),
-            llvm::ConstantInt::get(IntTy, Var->getAlignment())};
+        SmallVector<llvm::Value *, 8> Args;
+        if (CGM.getLangOpts().HIP)
+          Args = {&GpuBinaryHandlePtr,
+                  ManagedVar,
+                  Var,
+                  VarName,
+                  llvm::ConstantInt::get(VarSizeTy, VarSize),
+                  llvm::ConstantInt::get(IntTy, Var->getAlignment())};
+        else
+          Args = {&GpuBinaryHandlePtr,
+                  ManagedVar,
+                  VarName,
+                  VarName,
+                  llvm::ConstantInt::get(IntTy, Info.Flags.isExtern()),
+                  llvm::ConstantInt::get(VarSizeTy, VarSize),
+                  llvm::ConstantInt::get(IntTy, Info.Flags.isConstant()),
+                  llvm::ConstantInt::get(IntTy, 0)};
         if (!Var->isDeclaration())
           Builder.CreateCall(RegisterManagedVar, Args);
       } else {
@@ -965,6 +984,18 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
           "__cudaRegisterFatBinaryEnd");
       CtorBuilder.CreateCall(RegisterFatbinEndFunc, RegisterFatbinCall);
     }
+    // Call __cudaInitModule(GpuBinaryHandle) for managed variables
+    for (auto &&Info : DeviceVars) {
+      llvm::GlobalVariable *Var = Info.Var;
+      if (!Var->isDeclaration() && Info.Flags.isManaged()) {
+        llvm::FunctionCallee NvInitManagedRtWithModule =
+            CGM.CreateRuntimeFunction(
+                llvm::FunctionType::get(CharTy, PtrTy, false),
+                "__cudaInitModule");
+        CtorBuilder.CreateCall(NvInitManagedRtWithModule, GpuBinaryHandle);
+        break;
+      }
+    }
   } else {
     // Generate a unique module ID.
     SmallString<64> ModuleID;
@@ -1158,6 +1189,9 @@ void CGNVCUDARuntime::handleVarRegistration(const VarDecl *D,
 // transformed managed variable. The transformed managed variable contains
 // the address of managed memory which will be allocated by the runtime.
 void CGNVCUDARuntime::transformManagedVars() {
+  // CUDA managed variables directly access in device code
+  if (!CGM.getLangOpts().HIP && CGM.getLangOpts().CUDAIsDevice)
+    return;
   for (auto &&Info : DeviceVars) {
     llvm::GlobalVariable *Var = Info.Var;
     if (Info.Flags.getKind() == DeviceVarFlags::Variable &&
