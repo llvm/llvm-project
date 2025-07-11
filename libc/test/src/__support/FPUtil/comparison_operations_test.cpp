@@ -25,15 +25,27 @@ template <typename T>
 class ComparisonOperationsTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   DECLARE_SPECIAL_CONSTANTS(T)
 
-  const T normal1 = T(3.14);
-  const T neg_normal1 = T(-3.14);
-  const T normal2 = T(2.71);
-  const T small = T(0.1);
-  const T neg_small = T(-0.1);
-  const T large = T(10000.0);
-  const T neg_large = T(-10000.0);
+  T normal1;
+  T neg_normal1;
+  T normal2;
+  T small;
+  T neg_small;
+  T large;
+  T neg_large;
 
 public:
+  void SetUp() override {
+    with_fenv_preserved([this]() {
+      normal1 = T(3.14);
+      neg_normal1 = T(-3.14);
+      normal2 = T(2.71);
+      small = T(0.1);
+      neg_small = T(-0.1);
+      large = T(10000.0);
+      neg_large = T(-10000.0);
+    });
+  }
+
   void test_equals() {
     EXPECT_TRUE(equals(neg_zero, neg_zero));
     EXPECT_TRUE(equals(zero, neg_zero));
@@ -71,6 +83,7 @@ public:
       LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
       EXPECT_FALSE(equals(x, y));
       EXPECT_FP_EXCEPTION(FE_INVALID);
+      LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
     };
 
     test_snan(sNaN, sNaN);
