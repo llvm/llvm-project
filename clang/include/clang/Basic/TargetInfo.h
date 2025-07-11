@@ -467,6 +467,10 @@ public:
   virtual IntType getLeastIntTypeByWidth(unsigned BitWidth,
                                          bool IsSigned) const;
 
+  /// Return the fastest integer type with at least the specified width.
+  virtual IntType getFastIntTypeByWidth(unsigned BitWidth,
+                                        bool IsSigned, bool Fast) const;
+
   /// Return floating point type with specified width. On PPC, there are
   /// three possible types for 128-bit floating point: "PPC double-double",
   /// IEEE 754R quad precision, and "long double" (which under the covers
