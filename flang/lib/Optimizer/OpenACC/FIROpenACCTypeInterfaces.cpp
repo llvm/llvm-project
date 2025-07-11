@@ -540,8 +540,7 @@ template <typename Ty>
 mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
-    mlir::ValueRange extents,
-    mlir::Value initVal) const {
+    mlir::ValueRange extents, mlir::Value initVal) const {
   mlir::Value retVal;
   mlir::Type unwrappedTy = fir::unwrapRefType(type);
   mlir::ModuleOp mod = builder.getInsertionBlock()
@@ -653,8 +652,7 @@ OpenACCMappableModel<fir::ReferenceType>::generatePrivateInit(
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
     mlir::ValueRange extents, mlir::Value initVal) const;
 
-template mlir::Value
-OpenACCMappableModel<fir::HeapType>::generatePrivateInit(
+template mlir::Value OpenACCMappableModel<fir::HeapType>::generatePrivateInit(
     mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
     mlir::ValueRange extents, mlir::Value initVal) const;
