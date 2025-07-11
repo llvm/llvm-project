@@ -576,22 +576,13 @@ bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isConst() || Ptr.isMutable())
     return true;
 
-  // The This pointer is writable in constructors and destructors,
-  // even if isConst() returns true.
-  // TODO(perf): We could be hitting this code path quite a lot in complex
-  // constructors. Is there a better way to do this?
-  if (S.Current->getFunction()) {
-    for (const InterpFrame *Frame = S.Current; Frame; Frame = Frame->Caller) {
-      if (const Function *Func = Frame->getFunction();
-          Func && (Func->isConstructor() || Func->isDestructor()) &&
-          Ptr.block() == Frame->getThis().block()) {
-        return true;
-      }
-    }
-  }
-
   if (!Ptr.isBlockPointer())
     return false;
+
+  // The This pointer is writable in constructors and destructors,
+  // even if isConst() returns true.
+  if (llvm::find(S.InitializingBlocks, Ptr.block()))
+    return true;
 
   const QualType Ty = Ptr.getType();
   const SourceInfo &Loc = S.Current->getSource(OpPC);
@@ -1524,6 +1515,9 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
       return false;
     if (Func->isDestructor() && !CheckDestructor(S, OpPC, ThisPtr))
       return false;
+
+    if (Func->isConstructor() || Func->isDestructor())
+      S.InitializingBlocks.push_back(ThisPtr.block());
   }
 
   if (!Func->isFullyCompiled())
@@ -1550,16 +1544,21 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   // Note that we cannot assert(CallResult.hasValue()) here since
   // Ret() above only sets the APValue if the curent frame doesn't
   // have a caller set.
-  if (Interpret(S)) {
-    NewFrame.release(); // Frame was delete'd already.
-    assert(S.Current == FrameBefore);
-    return true;
+  bool Success = Interpret(S);
+  // Remove initializing  block again.
+  if (Func->isConstructor() || Func->isDestructor())
+    S.InitializingBlocks.pop_back();
+
+  if (!Success) {
+    // Interpreting the function failed somehow. Reset to
+    // previous state.
+    S.Current = FrameBefore;
+    return false;
   }
 
-  // Interpreting the function failed somehow. Reset to
-  // previous state.
-  S.Current = FrameBefore;
-  return false;
+  NewFrame.release(); // Frame was delete'd already.
+  assert(S.Current == FrameBefore);
+  return true;
 }
 
 bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
