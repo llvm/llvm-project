@@ -275,6 +275,11 @@ cl::opt<unsigned>
               cl::init(0), cl::ZeroOrMore, cl::cat(BoltCategory),
               cl::sub(cl::SubCommand::getAll()));
 
+cl::opt<bool> AllowPacret(
+    "allow-experimental-pacret",
+    cl::desc("Enable processing binaries with pac-ret (experimental)"),
+    cl::init(false), cl::cat(BoltOptCategory));
+
 bool processAllFunctions() {
   if (opts::AggregateOnly)
     return false;
