@@ -184,29 +184,30 @@ template <size_t Bits> struct DyadicFloat {
 
     int unbiased_exp = get_unbiased_exponent();
 
-    if (unbiased_exp + FPBits::EXP_BIAS >= FPBits::MAX_BIASED_EXPONENT) {
-      if constexpr (ShouldSignalExceptions) {
-        set_errno_if_required(ERANGE);
-        raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
-      }
+    if constexpr (!cpp::is_constant_evaluated())
+      if (unbiased_exp + FPBits::EXP_BIAS >= FPBits::MAX_BIASED_EXPONENT) {
+        if constexpr (ShouldSignalExceptions) {
+          set_errno_if_required(ERANGE);
+          raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
+        }
 
-      switch (quick_get_round()) {
-      case FE_TONEAREST:
-        return FPBits::inf(sign).get_val();
-      case FE_TOWARDZERO:
-        return FPBits::max_normal(sign).get_val();
-      case FE_DOWNWARD:
-        if (sign.is_pos())
-          return FPBits::max_normal(Sign::POS).get_val();
-        return FPBits::inf(Sign::NEG).get_val();
-      case FE_UPWARD:
-        if (sign.is_neg())
-          return FPBits::max_normal(Sign::NEG).get_val();
-        return FPBits::inf(Sign::POS).get_val();
-      default:
-        __builtin_unreachable();
+        switch (quick_get_round()) {
+        case FE_TONEAREST:
+          return FPBits::inf(sign).get_val();
+        case FE_TOWARDZERO:
+          return FPBits::max_normal(sign).get_val();
+        case FE_DOWNWARD:
+          if (sign.is_pos())
+            return FPBits::max_normal(Sign::POS).get_val();
+          return FPBits::inf(Sign::NEG).get_val();
+        case FE_UPWARD:
+          if (sign.is_neg())
+            return FPBits::max_normal(Sign::NEG).get_val();
+          return FPBits::inf(Sign::POS).get_val();
+        default:
+          __builtin_unreachable();
+        }
       }
-    }
 
     StorageType out_biased_exp = 0;
     StorageType out_mantissa = 0;
@@ -245,22 +246,23 @@ template <size_t Bits> struct DyadicFloat {
     StorageType result =
         FPBits::create_value(sign, out_biased_exp, out_mantissa).uintval();
 
-    switch (quick_get_round()) {
-    case FE_TONEAREST:
-      if (round && (lsb || sticky))
-        ++result;
-      break;
-    case FE_DOWNWARD:
-      if (sign.is_neg() && (round || sticky))
-        ++result;
-      break;
-    case FE_UPWARD:
-      if (sign.is_pos() && (round || sticky))
-        ++result;
-      break;
-    default:
-      break;
-    }
+    if constexpr (!cpp::is_constant_evaluated())
+      switch (quick_get_round()) {
+      case FE_TONEAREST:
+        if (round && (lsb || sticky))
+          ++result;
+        break;
+      case FE_DOWNWARD:
+        if (sign.is_neg() && (round || sticky))
+          ++result;
+        break;
+      case FE_UPWARD:
+        if (sign.is_pos() && (round || sticky))
+          ++result;
+        break;
+      default:
+        break;
+      }
 
     if (ShouldSignalExceptions && (round || sticky)) {
       int excepts = FE_INEXACT;
