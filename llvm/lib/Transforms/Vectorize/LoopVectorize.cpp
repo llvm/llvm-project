@@ -4833,11 +4833,10 @@ LoopVectorizationCostModel::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   }
 
   // Try to get the exact trip count, or an estimate based on profiling data or
-  // ConstantMax from PSE, failing that.
-  auto BestKnownTC = getSmallBestKnownTC(PSE, TheLoop);
-
-  // For fixed length VFs treat a scalable trip count as unknown.
-  if (BestKnownTC && (BestKnownTC->isFixed() || VF.isScalable())) {
+  // ConstantMax from PSE, failing that. For fixed length VFs treat a scalable
+  // trip count as if unknown.
+  if (auto BestKnownTC = getSmallBestKnownTC(PSE, TheLoop);
+      BestKnownTC && (BestKnownTC->isFixed() || VF.isScalable())) {
     // Re-evaluate VF to be in the same numerical space as the trip count.
     unsigned EstimatedVF = VF.getKnownMinValue();
     if (VF.isScalable() && BestKnownTC->isFixed())
