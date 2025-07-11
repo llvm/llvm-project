@@ -120,8 +120,13 @@ extern "C" [[gnu::flatten]] uint64_t __emupac_pacda_impl(uint64_t ptr,
   return (ptr & ~pac_mask) | (hash & pac_mask);
 }
 
-__asm__(".globl __emupac_pacda\n"
-        "__emupac_pacda:\n" FRAME_POINTER_WRAP(__emupac_pacda_impl));
+// clang-format off
+__asm__(
+  ".globl " ASM_SYMBOL(__emupac_pacda) "\n"
+  ASM_SYMBOL(__emupac_pacda) ":\n"
+  FRAME_POINTER_WRAP(__emupac_pacda_impl)
+);
+// clang-format on
 
 extern "C" [[gnu::flatten]] uint64_t __emupac_autda_impl(uint64_t ptr,
                                                          uint64_t disc) {
@@ -142,5 +147,10 @@ extern "C" [[gnu::flatten]] uint64_t __emupac_autda_impl(uint64_t ptr,
   return ptr_without_pac;
 }
 
-__asm__(".globl __emupac_autda\n"
-        "__emupac_autda:\n" FRAME_POINTER_WRAP(__emupac_autda_impl));
+// clang-format off
+__asm__(
+  ".globl " ASM_SYMBOL(__emupac_autda) "\n"
+  ASM_SYMBOL(__emupac_autda) ":\n"
+  FRAME_POINTER_WRAP(__emupac_autda_impl)
+);
+// clang-format on
