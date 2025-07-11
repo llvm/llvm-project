@@ -944,7 +944,6 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE32-O0-NEXT:    v_writelane_b32 v32, s0, 1
 ; WAVE32-O0-NEXT:    v_mov_b32_e32 v3, 42
 ; WAVE32-O0-NEXT:    buffer_store_dword v3, off, s[20:23], 0
-; WAVE32-O0-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; WAVE32-O0-NEXT:    s_waitcnt_vscnt null, 0x0
 ; WAVE32-O0-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; WAVE32-O0-NEXT:    s_mov_b64 s[2:3], s[22:23]
@@ -1055,7 +1054,6 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE64-O0-NEXT:    v_writelane_b32 v32, s0, 1
 ; WAVE64-O0-NEXT:    v_mov_b32_e32 v3, 42
 ; WAVE64-O0-NEXT:    buffer_store_dword v3, off, s[24:27], 0
-; WAVE64-O0-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; WAVE64-O0-NEXT:    s_waitcnt_vscnt null, 0x0
 ; WAVE64-O0-NEXT:    s_mov_b64 s[0:1], s[24:25]
 ; WAVE64-O0-NEXT:    s_mov_b64 s[2:3], s[26:27]
@@ -1167,7 +1165,6 @@ define amdgpu_kernel void @kernel_stacksave_stackrestore_call_with_stack_objects
 ; WAVE32-WWM-PREALLOC-NEXT:    v_writelane_b32 v32, s0, 1
 ; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v3, 42
 ; WAVE32-WWM-PREALLOC-NEXT:    buffer_store_dword v3, off, s[20:23], 0
-; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt_vscnt null, 0x0
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b64 s[0:1], s[20:21]
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b64 s[2:3], s[22:23]
@@ -1353,7 +1350,6 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() {
 ; WAVE32-O0-NEXT:    v_writelane_b32 v33, s16, 1
 ; WAVE32-O0-NEXT:    v_mov_b32_e32 v0, 42
 ; WAVE32-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s33
-; WAVE32-O0-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; WAVE32-O0-NEXT:    s_waitcnt_vscnt null, 0x0
 ; WAVE32-O0-NEXT:    s_mov_b64 s[22:23], s[2:3]
 ; WAVE32-O0-NEXT:    s_mov_b64 s[20:21], s[0:1]
@@ -1465,7 +1461,6 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() {
 ; WAVE64-O0-NEXT:    v_writelane_b32 v33, s16, 1
 ; WAVE64-O0-NEXT:    v_mov_b32_e32 v0, 42
 ; WAVE64-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s33
-; WAVE64-O0-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; WAVE64-O0-NEXT:    s_waitcnt_vscnt null, 0x0
 ; WAVE64-O0-NEXT:    s_mov_b64 s[22:23], s[2:3]
 ; WAVE64-O0-NEXT:    s_mov_b64 s[20:21], s[0:1]
@@ -1577,7 +1572,6 @@ define void @func_stacksave_stackrestore_call_with_stack_objects() {
 ; WAVE32-WWM-PREALLOC-NEXT:    v_writelane_b32 v32, s16, 1
 ; WAVE32-WWM-PREALLOC-NEXT:    v_mov_b32_e32 v0, 42
 ; WAVE32-WWM-PREALLOC-NEXT:    buffer_store_dword v0, off, s[0:3], s33
-; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; WAVE32-WWM-PREALLOC-NEXT:    s_waitcnt_vscnt null, 0x0
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b64 s[22:23], s[2:3]
 ; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b64 s[20:21], s[0:1]

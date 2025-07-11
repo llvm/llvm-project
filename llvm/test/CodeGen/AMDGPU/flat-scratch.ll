@@ -1946,8 +1946,8 @@ define amdgpu_kernel void @store_load_vindex_small_offset_kernel(i32 %n) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_add_nc_u32_e32 v1, 0x100, v0
 ; GFX10-NEXT:    scratch_store_dword v1, v2, off offset:128
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_lshl_b32 s0, s0, 7
 ; GFX10-NEXT:    s_addk_i32 s0, 0x100
 ; GFX10-NEXT:    v_sub_nc_u32_e32 v0, s0, v0
@@ -1963,8 +1963,8 @@ define amdgpu_kernel void @store_load_vindex_small_offset_kernel(i32 %n) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-NEXT:    scratch_store_b32 v0, v1, off offset:384 dlc
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_lshl_b32 s0, s0, 7
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_addk_i32 s0, 0x100
@@ -2080,8 +2080,8 @@ define amdgpu_kernel void @store_load_vindex_small_offset_kernel(i32 %n) {
 ; GFX1030-PAL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1030-PAL-NEXT:    v_add_nc_u32_e32 v1, 0x100, v0
 ; GFX1030-PAL-NEXT:    scratch_store_dword v1, v2, off offset:128
-; GFX1030-PAL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1030-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX1030-PAL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1030-PAL-NEXT:    s_lshl_b32 s0, s0, 7
 ; GFX1030-PAL-NEXT:    s_addk_i32 s0, 0x100
 ; GFX1030-PAL-NEXT:    v_sub_nc_u32_e32 v0, s0, v0
@@ -2097,8 +2097,8 @@ define amdgpu_kernel void @store_load_vindex_small_offset_kernel(i32 %n) {
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-PAL-NEXT:    scratch_store_b32 v0, v1, off offset:384 dlc
-; GFX11-PAL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-PAL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-PAL-NEXT:    s_lshl_b32 s0, s0, 7
 ; GFX11-PAL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-PAL-NEXT:    s_addk_i32 s0, 0x100
@@ -3242,8 +3242,8 @@ define amdgpu_kernel void @store_load_vindex_large_offset_kernel(i32 %n) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_add_nc_u32_e32 v1, 0x4004, v0
 ; GFX10-NEXT:    scratch_store_dword v1, v2, off offset:128
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_lshl_b32 s0, s0, 7
 ; GFX10-NEXT:    s_addk_i32 s0, 0x4004
 ; GFX10-NEXT:    v_sub_nc_u32_e32 v0, s0, v0
@@ -3379,8 +3379,8 @@ define amdgpu_kernel void @store_load_vindex_large_offset_kernel(i32 %n) {
 ; GFX1030-PAL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1030-PAL-NEXT:    v_add_nc_u32_e32 v1, 0x4004, v0
 ; GFX1030-PAL-NEXT:    scratch_store_dword v1, v2, off offset:128
-; GFX1030-PAL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1030-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX1030-PAL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1030-PAL-NEXT:    s_lshl_b32 s0, s0, 7
 ; GFX1030-PAL-NEXT:    s_addk_i32 s0, 0x4004
 ; GFX1030-PAL-NEXT:    v_sub_nc_u32_e32 v0, s0, v0

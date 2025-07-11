@@ -880,8 +880,8 @@ define amdgpu_kernel void @store_load_vindex_small_offset_kernel(i32 %n) {
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
 ; GFX10-NEXT:    v_add_nc_u32_e32 v0, 0x100, v0
 ; GFX10-NEXT:    scratch_store_dword v0, v2, off offset:128
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_lshl_b32 s0, s0, 7
 ; GFX10-NEXT:    s_add_u32 s0, 0x100, s0
 ; GFX10-NEXT:    v_add_nc_u32_e32 v1, s0, v1
@@ -921,8 +921,8 @@ define amdgpu_kernel void @store_load_vindex_small_offset_kernel(i32 %n) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
 ; GFX11-NEXT:    scratch_store_b32 v0, v2, off offset:384 dlc
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_lshl_b32 s0, s0, 7
 ; GFX11-NEXT:    s_add_u32 s0, 0x100, s0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -991,8 +991,8 @@ define amdgpu_kernel void @store_load_vindex_small_offset_kernel(i32 %n) {
 ; UNALIGNED_GFX10-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
 ; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v0, 0x100, v0
 ; UNALIGNED_GFX10-NEXT:    scratch_store_dword v0, v2, off offset:128
-; UNALIGNED_GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; UNALIGNED_GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNALIGNED_GFX10-NEXT:    s_lshl_b32 s0, s0, 7
 ; UNALIGNED_GFX10-NEXT:    s_add_u32 s0, 0x100, s0
 ; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v1, s0, v1
@@ -1032,8 +1032,8 @@ define amdgpu_kernel void @store_load_vindex_small_offset_kernel(i32 %n) {
 ; UNALIGNED_GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
 ; UNALIGNED_GFX11-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
 ; UNALIGNED_GFX11-NEXT:    scratch_store_b32 v0, v2, off offset:384 dlc
-; UNALIGNED_GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNALIGNED_GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; UNALIGNED_GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNALIGNED_GFX11-NEXT:    s_lshl_b32 s0, s0, 7
 ; UNALIGNED_GFX11-NEXT:    s_add_u32 s0, 0x100, s0
 ; UNALIGNED_GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
@@ -1520,8 +1520,8 @@ define amdgpu_kernel void @store_load_vindex_large_offset_kernel(i32 %n) {
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
 ; GFX10-NEXT:    v_add_nc_u32_e32 v0, 0x4004, v0
 ; GFX10-NEXT:    scratch_store_dword v0, v2, off offset:128
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_lshl_b32 s0, s0, 7
 ; GFX10-NEXT:    s_add_u32 s0, 0x4004, s0
 ; GFX10-NEXT:    v_add_nc_u32_e32 v1, s0, v1
@@ -1633,8 +1633,8 @@ define amdgpu_kernel void @store_load_vindex_large_offset_kernel(i32 %n) {
 ; UNALIGNED_GFX10-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
 ; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v0, 0x4004, v0
 ; UNALIGNED_GFX10-NEXT:    scratch_store_dword v0, v2, off offset:128
-; UNALIGNED_GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNALIGNED_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; UNALIGNED_GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNALIGNED_GFX10-NEXT:    s_lshl_b32 s0, s0, 7
 ; UNALIGNED_GFX10-NEXT:    s_add_u32 s0, 0x4004, s0
 ; UNALIGNED_GFX10-NEXT:    v_add_nc_u32_e32 v1, s0, v1

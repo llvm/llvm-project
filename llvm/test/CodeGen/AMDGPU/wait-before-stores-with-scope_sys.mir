@@ -36,7 +36,6 @@ body: |
     ; GFX12-NEXT: S_WAIT_KMCNT_soft 0
     ; GFX12-NEXT: S_WAIT_STORECNT_soft 0
     ; GFX12-NEXT: GLOBAL_STORE_DWORD killed renamable $vgpr1_vgpr2, killed renamable $vgpr0, 0, 24, implicit $exec :: (volatile store (s32), addrspace 1)
-    ; GFX12-NEXT: S_WAIT_LOADCNT_soft 63
     ; GFX12-NEXT: S_WAIT_STORECNT_soft 0
     ; GFX12-NEXT: S_ENDPGM 0
     GLOBAL_STORE_DWORD killed renamable $vgpr1_vgpr2, killed renamable $vgpr0, 0, 0, implicit $exec :: (volatile store (s32), addrspace 1)

@@ -1074,6 +1074,8 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
                                     SIAtomicAddrSpace AddrSpace, SIMemOp Op,
                                     bool IsCrossAddrSpaceOrdering, Position Pos,
                                     AtomicOrdering Order) const {
+  bool Changed = false;
+
   MachineBasicBlock &MBB = *MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
 
@@ -1147,19 +1149,25 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     }
   }
 
-  // Always emit a soft wait count, even if it is trivially ~0. SIInsertWaitcnts
-  // will later use this marker to add additional waits such as those required
+  // Always emit a soft wait count at a release, even if it is trivially ~0.
+  // SIInsertWaitcnts will later add additional waits such as those required
   // from direct load to LDS (formerly known as LDS DMA).
-  unsigned WaitCntImmediate = AMDGPU::encodeWaitcnt(
-      IV, VMCnt ? 0 : getVmcntBitMask(IV), getExpcntBitMask(IV),
-      LGKMCnt ? 0 : getLgkmcntBitMask(IV));
-  BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_soft))
-      .addImm(WaitCntImmediate);
+  if (VMCnt || LGKMCnt ||
+      (isReleaseOrStronger(Order) && Scope >= SIAtomicScope::WORKGROUP)) {
+    unsigned WaitCntImmediate =
+      AMDGPU::encodeWaitcnt(IV,
+                            VMCnt ? 0 : getVmcntBitMask(IV),
+                            getExpcntBitMask(IV),
+                            LGKMCnt ? 0 : getLgkmcntBitMask(IV));
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_soft))
+        .addImm(WaitCntImmediate);
+    Changed = true;
+  }
 
   if (Pos == Position::AFTER)
     --MI;
 
-  return true;
+  return Changed;
 }
 
 bool SIGfx6CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
@@ -1962,6 +1970,8 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
                                      SIAtomicAddrSpace AddrSpace, SIMemOp Op,
                                      bool IsCrossAddrSpaceOrdering,
                                      Position Pos, AtomicOrdering Order) const {
+  bool Changed = false;
+
   MachineBasicBlock &MBB = *MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
 
@@ -2051,25 +2061,32 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     }
   }
 
-  // Always emit a soft wait count, even if it is trivially ~0. SIInsertWaitcnts
-  // will later use this marker to add additional waits such as those required
+  // Always emit a soft wait count at a release, even if it is trivially ~0.
+  // SIInsertWaitcnts will later add additional waits such as those required
   // from direct load to LDS (formerly known as LDS DMA).
-  unsigned WaitCntImmediate = AMDGPU::encodeWaitcnt(
-      IV, VMCnt ? 0 : getVmcntBitMask(IV), getExpcntBitMask(IV),
-      LGKMCnt ? 0 : getLgkmcntBitMask(IV));
-  BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_soft))
-      .addImm(WaitCntImmediate);
+  if (VMCnt || LGKMCnt ||
+      (isReleaseOrStronger(Order) && Scope >= SIAtomicScope::WORKGROUP)) {
+    unsigned WaitCntImmediate =
+      AMDGPU::encodeWaitcnt(IV,
+                            VMCnt ? 0 : getVmcntBitMask(IV),
+                            getExpcntBitMask(IV),
+                            LGKMCnt ? 0 : getLgkmcntBitMask(IV));
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_soft))
+        .addImm(WaitCntImmediate);
+    Changed = true;
+  }
 
   if (VSCnt) {
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT_soft))
         .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
         .addImm(0);
+    Changed = true;
   }
 
   if (Pos == Position::AFTER)
     --MI;
 
-  return true;
+  return Changed;
 }
 
 bool SIGfx10CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
@@ -2278,6 +2295,8 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
                                      SIAtomicAddrSpace AddrSpace, SIMemOp Op,
                                      bool IsCrossAddrSpaceOrdering,
                                      Position Pos, AtomicOrdering Order) const {
+  bool Changed = false;
+
   MachineBasicBlock &MBB = *MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
 
@@ -2361,26 +2380,30 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_SAMPLECNT_soft)).addImm(0);
     }
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_LOADCNT_soft)).addImm(0);
-  } else {
-    // Always emit a soft wait count, even if it is trivially ~0.
-    // SIInsertWaitcnts will later use this marker to add additional waits such
-    // as those required from direct load to LDS (formerly known as LDS DMA).
+    Changed = true;
+  } else if (isReleaseOrStronger(Order) && Scope >= SIAtomicScope::WORKGROUP) {
+    // Always emit a soft wait count at a release, even if it is trivially ~0.
+    // SIInsertWaitcnts will later add additional waits such as those required
+    // from direct load to LDS (formerly known as LDS DMA).
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_LOADCNT_soft))
         .addImm(getLoadcntBitMask(IV));
+    Changed = true;
   }
 
   if (STORECnt) {
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_STORECNT_soft)).addImm(0);
+    Changed = true;
   }
 
   if (DSCnt) {
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_DSCNT_soft)).addImm(0);
+    Changed = true;
   }
 
   if (Pos == Position::AFTER)
     --MI;
 
-  return true;
+  return Changed;
 }
 
 bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,

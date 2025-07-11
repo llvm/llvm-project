@@ -51,8 +51,8 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform(i32 %n) {
 ; GFX11-SDAG-NEXT:    s_mov_b32 s33, 0
 ; GFX11-SDAG-NEXT:    s_mov_b32 s1, s32
 ; GFX11-SDAG-NEXT:    scratch_store_b32 off, v0, s1 dlc
-; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_add_i32 s0, s0, 15
@@ -70,8 +70,8 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform(i32 %n) {
 ; GFX11-GISEL-NEXT:    s_mov_b32 s33, 0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s0, s32
 ; GFX11-GISEL-NEXT:    scratch_store_b32 off, v0, s0 dlc
-; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_lshl2_add_u32 s1, s1, 15
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_b32 s1, s1, -16
@@ -135,8 +135,8 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform_over_aligned(i
 ; GFX11-SDAG-NEXT:    s_mov_b32 s33, 0
 ; GFX11-SDAG-NEXT:    s_and_b32 s1, s1, 0xfffff000
 ; GFX11-SDAG-NEXT:    scratch_store_b32 off, v0, s1 dlc
-; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_add_i32 s0, s0, 15
@@ -155,8 +155,8 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform_over_aligned(i
 ; GFX11-GISEL-NEXT:    s_mov_b32 s33, 0
 ; GFX11-GISEL-NEXT:    s_and_b32 s1, s1, 0xfffff000
 ; GFX11-GISEL-NEXT:    scratch_store_b32 off, v0, s1 dlc
-; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_lshl2_add_u32 s0, s0, 15
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_b32 s0, s0, -16
@@ -216,8 +216,8 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform_under_aligned(
 ; GFX11-SDAG-NEXT:    s_mov_b32 s33, 0
 ; GFX11-SDAG-NEXT:    s_mov_b32 s1, s32
 ; GFX11-SDAG-NEXT:    scratch_store_b32 off, v0, s1 dlc
-; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_add_i32 s0, s0, 15
@@ -235,8 +235,8 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_uniform_under_aligned(
 ; GFX11-GISEL-NEXT:    s_mov_b32 s33, 0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s0, s32
 ; GFX11-GISEL-NEXT:    scratch_store_b32 off, v0, s0 dlc
-; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_lshl2_add_u32 s1, s1, 15
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_b32 s1, s1, -16

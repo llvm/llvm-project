@@ -93,8 +93,8 @@ define void @with_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) #0 {
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, 0, s5, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
 ; GFX10-NEXT:    flat_store_dword v[0:1], v2
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %stof = addrspacecast ptr addrspace(5) %ptr to ptr
   store volatile i32 0, ptr %stof
@@ -723,8 +723,8 @@ define void @calls_intrin_ascast(ptr addrspace(3) %ptr) #0 {
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 7
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX10-NEXT:    flat_store_dword v[0:1], v2
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %1 = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p3(ptr addrspace(3) %ptr)
   store volatile i32 7, ptr %1, align 4

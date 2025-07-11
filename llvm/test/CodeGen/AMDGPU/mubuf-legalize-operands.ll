@@ -346,8 +346,8 @@ define void @mubuf_vgpr_adjacent_in_block(ptr addrspace(8) %i, ptr addrspace(8) 
 ; GFX1010_W32-NEXT:    s_mov_b32 exec_lo, s5
 ; GFX1010_W32-NEXT:    s_waitcnt vmcnt(1)
 ; GFX1010_W32-NEXT:    global_store_dword v[9:10], v13, off
-; GFX1010_W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010_W32-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX1010_W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010_W32-NEXT:    global_store_dword v[11:12], v0, off
 ; GFX1010_W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1010_W32-NEXT:    s_setpc_b64 s[30:31]
@@ -392,8 +392,8 @@ define void @mubuf_vgpr_adjacent_in_block(ptr addrspace(8) %i, ptr addrspace(8) 
 ; GFX1010_W64-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX1010_W64-NEXT:    s_waitcnt vmcnt(1)
 ; GFX1010_W64-NEXT:    global_store_dword v[9:10], v13, off
-; GFX1010_W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010_W64-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX1010_W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010_W64-NEXT:    global_store_dword v[11:12], v0, off
 ; GFX1010_W64-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1010_W64-NEXT:    s_setpc_b64 s[30:31]
@@ -441,8 +441,8 @@ define void @mubuf_vgpr_adjacent_in_block(ptr addrspace(8) %i, ptr addrspace(8) 
 ; GFX1100_W32-NEXT:    s_mov_b32 exec_lo, s1
 ; GFX1100_W32-NEXT:    s_waitcnt vmcnt(1)
 ; GFX1100_W32-NEXT:    global_store_b32 v[9:10], v13, off dlc
-; GFX1100_W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100_W32-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX1100_W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100_W32-NEXT:    global_store_b32 v[11:12], v0, off dlc
 ; GFX1100_W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100_W32-NEXT:    s_setpc_b64 s[30:31]
@@ -490,8 +490,8 @@ define void @mubuf_vgpr_adjacent_in_block(ptr addrspace(8) %i, ptr addrspace(8) 
 ; GFX1100_W64-NEXT:    s_mov_b64 exec, s[2:3]
 ; GFX1100_W64-NEXT:    s_waitcnt vmcnt(1)
 ; GFX1100_W64-NEXT:    global_store_b32 v[9:10], v13, off dlc
-; GFX1100_W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100_W64-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX1100_W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100_W64-NEXT:    global_store_b32 v[11:12], v0, off dlc
 ; GFX1100_W64-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100_W64-NEXT:    s_setpc_b64 s[30:31]

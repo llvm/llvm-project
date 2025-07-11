@@ -845,7 +845,6 @@ define amdgpu_kernel void @local_nontemporal_volatile_load(
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX7-NEXT:    ds_read_b32 v2, v0
-; GFX7-NEXT:    s_waitcnt vmcnt(15) expcnt(7) lgkmcnt(15)
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)

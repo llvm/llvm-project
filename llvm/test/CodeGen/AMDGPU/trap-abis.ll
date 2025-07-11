@@ -83,7 +83,6 @@ define amdgpu_kernel void @trap(ptr addrspace(1) nocapture readonly %arg0) {
 ; HSA-TRAP-GFX1100-O0-NEXT:    v_mov_b32_e32 v1, 1
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; HSA-TRAP-GFX1100-O0-NEXT:    global_store_b32 v0, v1, s[0:1] dlc
-; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt_vscnt null, 0x0
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_trap 2
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_GET_DOORBELL)
@@ -249,7 +248,6 @@ define amdgpu_kernel void @non_entry_trap(ptr addrspace(1) nocapture readonly %a
 ; HSA-TRAP-GFX1100-O0-NEXT:    v_mov_b32_e32 v0, 0
 ; HSA-TRAP-GFX1100-O0-NEXT:    v_mov_b32_e32 v1, 3
 ; HSA-TRAP-GFX1100-O0-NEXT:    global_store_b32 v0, v1, s[0:1] dlc
-; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt_vscnt null, 0x0
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_endpgm
 ; HSA-TRAP-GFX1100-O0-NEXT:  .LBB1_3: ; =>This Inner Loop Header: Depth=1
@@ -384,7 +382,6 @@ define amdgpu_kernel void @trap_with_use_after(ptr addrspace(1) %arg0, ptr addrs
 ; HSA-TRAP-GFX1100-O0-NEXT:    scratch_load_b32 v1, off, off offset:4 ; 4-byte Folded Reload
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt vmcnt(0)
 ; HSA-TRAP-GFX1100-O0-NEXT:    global_store_b32 v0, v1, s[0:1] dlc
-; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt_vscnt null, 0x0
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_endpgm
 ; HSA-TRAP-GFX1100-O0-NEXT:  .LBB2_2:
@@ -485,12 +482,10 @@ define amdgpu_kernel void @debugtrap(ptr addrspace(1) nocapture readonly %arg0) 
 ; HSA-TRAP-GFX1100-O0-NEXT:    v_mov_b32_e32 v1, 1
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; HSA-TRAP-GFX1100-O0-NEXT:    global_store_b32 v0, v1, s[0:1] dlc
-; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt_vscnt null, 0x0
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_trap 3
 ; HSA-TRAP-GFX1100-O0-NEXT:    v_mov_b32_e32 v1, 2
 ; HSA-TRAP-GFX1100-O0-NEXT:    global_store_b32 v0, v1, s[0:1] dlc
-; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt vmcnt(63) expcnt(7) lgkmcnt(63)
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt_vscnt null, 0x0
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_endpgm
   store volatile i32 1, ptr addrspace(1) %arg0
