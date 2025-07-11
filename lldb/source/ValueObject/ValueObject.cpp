@@ -689,13 +689,21 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
       ValueObjectSP pointee_sp = Dereference(error);
       if (error.Fail() || pointee_sp.get() == nullptr)
         return 0;
-      return pointee_sp->GetData(data, error);
+
+      auto data_or_err = llvm::expectedToOptional(pointee_sp->GetData());
+      if (!data_or_err)
+        return 0;
+      data = *data_or_err;
+      return data.GetByteSize();
     } else {
       ValueObjectSP child_sp = GetChildAtIndex(0);
       if (child_sp.get() == nullptr)
         return 0;
-      Status error;
-      return child_sp->GetData(data, error);
+      auto data_or_err = llvm::expectedToOptional(child_sp->GetData());
+      if (!data_or_err)
+        return 0;
+      data = *data_or_err;
+      return data.GetByteSize();
     }
     return true;
   } else /* (items > 1) */
@@ -763,22 +771,25 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
   return 0;
 }
 
-uint64_t ValueObject::GetData(DataExtractor &data, Status &error) {
+llvm::Expected<DataExtractor> ValueObject::GetData() {
   UpdateValueIfNeeded(false);
   ExecutionContext exe_ctx(GetExecutionContextRef());
-  error = m_value.GetValueAsData(&exe_ctx, data, GetModule().get());
+  DataExtractor data;
+  Status error = m_value.GetValueAsData(&exe_ctx, data, GetModule().get());
   if (error.Fail()) {
     if (m_data.GetByteSize()) {
       data = m_data;
       error.Clear();
-      return data.GetByteSize();
+      data.SetAddressByteSize(m_data.GetAddressByteSize());
+      data.SetByteOrder(m_data.GetByteOrder());
+      return data;
     } else {
-      return 0;
+      return llvm::createStringError("GetData failed: %s", error.AsCString());
     }
   }
   data.SetAddressByteSize(m_data.GetAddressByteSize());
   data.SetByteOrder(m_data.GetByteOrder());
-  return data.GetByteSize();
+  return data;
 }
 
 bool ValueObject::SetData(DataExtractor &data, Status &error) {

@@ -215,17 +215,16 @@ Status ABISysV_i386::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   const uint32_t type_flags = compiler_type.GetTypeInfo();
   Thread *thread = frame_sp->GetThread().get();
   RegisterContext *reg_ctx = thread->GetRegisterContext().get();
-  DataExtractor data;
-  Status data_error;
-  size_t num_bytes = new_value_sp->GetData(data, data_error);
+  auto data_or_err = new_value_sp->GetData();
   bool register_write_successful = true;
 
-  if (data_error.Fail()) {
-    error = Status::FromErrorStringWithFormat(
-        "Couldn't convert return value to raw data: %s",
-        data_error.AsCString());
-    return error;
-  }
+  if (auto error = data_or_err.takeError())
+    return Status::FromError(llvm::joinErrors(
+        llvm::createStringError("Couldn't convert return value to raw data"),
+        std::move(error)));
+
+  auto data = std::move(*data_or_err);
+  size_t num_bytes = data.GetByteSize();
 
   // Following "IF ELSE" block categorizes various 'Fundamental Data Types'.
   // The terminology 'Fundamental Data Types' used here is adopted from Table

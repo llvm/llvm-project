@@ -761,7 +761,7 @@ public:
   virtual size_t GetPointeeData(DataExtractor &data, uint32_t item_idx = 0,
                                 uint32_t item_count = 1);
 
-  virtual uint64_t GetData(DataExtractor &data, Status &error);
+  virtual llvm::Expected<DataExtractor> GetData();
 
   virtual bool SetData(DataExtractor &data, Status &error);
 

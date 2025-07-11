@@ -247,10 +247,16 @@ static lldb::addr_t GetVTableAddress(Process &process,
   // We have an object already read from process memory,
   // so just extract VTable pointer from it
 
-  DataExtractor data;
-  Status err;
-  auto size = valobj.GetData(data, err);
-  if (err.Fail() || vbtable_ptr_offset + data.GetAddressByteSize() > size)
+  auto data_or_err = valobj.GetData();
+  if (!data_or_err) {
+    LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), data_or_err.takeError(),
+                    "Extracted data is an invalid address: {0}");
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  auto data = std::move(*data_or_err);
+  auto size = data.GetByteSize();
+  if (vbtable_ptr_offset + data.GetAddressByteSize() > size)
     return LLDB_INVALID_ADDRESS;
 
   return data.GetAddress(&vbtable_ptr_offset);

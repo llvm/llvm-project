@@ -478,19 +478,20 @@ public:
     }
 
     if (m_is_reference) {
-      DataExtractor valobj_extractor;
-      Status extract_error;
-      valobj_sp->GetData(valobj_extractor, extract_error);
+      auto valobj_extractor_or_err = valobj_sp->GetData();
 
-      if (!extract_error.Success()) {
-        err = Status::FromErrorStringWithFormat(
-            "couldn't read contents of reference variable %s: %s",
-            GetName().AsCString(), extract_error.AsCString());
+      if (auto error = valobj_extractor_or_err.takeError()) {
+        err = Status::FromError(llvm::joinErrors(
+            llvm::createStringError(
+                "couldn't read contents of reference variable %s: ",
+                GetName().AsCString()),
+            std::move(error)));
         return;
       }
 
       lldb::offset_t offset = 0;
-      lldb::addr_t reference_addr = valobj_extractor.GetAddress(&offset);
+      lldb::addr_t reference_addr =
+          valobj_extractor_or_err->GetAddress(&offset);
 
       Status write_error;
       map.WritePointerToMemory(load_addr, reference_addr, write_error);
@@ -516,15 +517,16 @@ public:
           return;
         }
       } else {
-        DataExtractor data;
-        Status extract_error;
-        valobj_sp->GetData(data, extract_error);
-        if (!extract_error.Success()) {
-          err = Status::FromErrorStringWithFormat(
-              "couldn't get the value of %s: %s", GetName().AsCString(),
-              extract_error.AsCString());
+        auto data_or_err = valobj_sp->GetData();
+        if (auto error = data_or_err.takeError()) {
+          err = Status::FromError(llvm::joinErrors(
+              llvm::createStringError("couldn't get the value of %s: ",
+                                      GetName().AsCString()),
+              std::move(error)));
           return;
         }
+
+        auto data = std::move(*data_or_err);
 
         if (m_temporary_allocation != LLDB_INVALID_ADDRESS) {
           err = Status::FromErrorStringWithFormat(
@@ -576,8 +578,8 @@ public:
 
         m_temporary_allocation_size = data.GetByteSize();
 
-        m_original_data = std::make_shared<DataBufferHeap>(data.GetDataStart(),
-                                                           data.GetByteSize());
+        m_original_data = std::make_shared<DataBufferHeap>(
+            data.GetDataStart(), data.GetByteSize());
 
         Status write_error;
 

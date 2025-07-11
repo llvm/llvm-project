@@ -1703,15 +1703,16 @@ Status ABIMacOSX_arm::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   bool set_it_simple = false;
   if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||
       compiler_type.IsPointerType()) {
-    DataExtractor data;
-    Status data_error;
-    size_t num_bytes = new_value_sp->GetData(data, data_error);
-    if (data_error.Fail()) {
-      error = Status::FromErrorStringWithFormat(
-          "Couldn't convert return value to raw data: %s",
-          data_error.AsCString());
-      return error;
+    auto data_or_err = new_value_sp->GetData();
+    if (auto error = data_or_err.takeError()) {
+      return Status::FromError(llvm::joinErrors(
+          llvm::createStringError("Couldn't convert return value to raw data"),
+          std::move(error)));
     }
+
+    auto data = std::move(*data_or_err);
+
+    size_t num_bytes = data.GetByteSize();
     lldb::offset_t offset = 0;
     if (num_bytes <= 8) {
       const RegisterInfo *r0_info = reg_ctx->GetRegisterInfoByName("r0", 0);
