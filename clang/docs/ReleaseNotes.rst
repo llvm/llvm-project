@@ -1076,6 +1076,8 @@ RISC-V Support
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
+* Provide a __device__ version of std::__glibcxx_assert_fail() in a header wrapper.
+
 CUDA Support
 ^^^^^^^^^^^^
 
