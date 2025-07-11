@@ -67,6 +67,12 @@ static bool pac_supported() {
 #define CFI_INST(inst)
 #endif
 
+#ifdef __APPLE__
+#define ASM_SYMBOL(symbol) "_" #symbol
+#else
+#define ASM_SYMBOL(symbol) #symbol
+#endif
+
 // clang-format off
 #define FRAME_POINTER_WRAP(sym) \
   CFI_INST(".cfi_startproc\n") \
@@ -76,7 +82,7 @@ static bool pac_supported() {
   CFI_INST(".cfi_def_cfa w29, 16\n") \
   CFI_INST(".cfi_offset w30, -8\n") \
   CFI_INST(".cfi_offset w29, -16\n") \
-  "bl " #sym "\n" \
+  "bl " ASM_SYMBOL(sym) "\n" \
   CFI_INST(".cfi_def_cfa wsp, 16\n") \
   "ldp x29, x30, [sp], #16\n" \
   CFI_INST(".cfi_def_cfa_offset 0\n") \
@@ -91,8 +97,8 @@ static const uint8_t emu_da_key[16] = {0xb5, 0xd4, 0xc9, 0xeb, 0x79, 0x10,
                                        0x4a, 0x79, 0x6f, 0xec, 0x8b, 0x1b,
                                        0x42, 0x87, 0x81, 0xd4};
 
-extern "C" [[gnu::flatten]] uint64_t
-__emupac_pacda_impl(uint64_t ptr, uint64_t disc) {
+extern "C" [[gnu::flatten]] uint64_t __emupac_pacda_impl(uint64_t ptr,
+                                                         uint64_t disc) {
   if (pac_supported()) {
     __asm__ __volatile__(".arch_extension pauth\npacda %0, %1"
                          : "+r"(ptr)
@@ -110,15 +116,20 @@ __emupac_pacda_impl(uint64_t ptr, uint64_t disc) {
   }
   uint64_t hash;
   siphash<1, 3>(reinterpret_cast<uint8_t *>(&ptr), 8, emu_da_key,
-                *reinterpret_cast<uint8_t(*)[8]>(&hash));
+                *reinterpret_cast<uint8_t (*)[8]>(&hash));
   return (ptr & ~pac_mask) | (hash & pac_mask);
 }
 
-__asm__(".globl __emupac_pacda\n"
-        "__emupac_pacda:\n" FRAME_POINTER_WRAP(__emupac_pacda_impl));
+// clang-format off
+__asm__(
+  ".globl " ASM_SYMBOL(__emupac_pacda) "\n"
+  ASM_SYMBOL(__emupac_pacda) ":\n"
+  FRAME_POINTER_WRAP(__emupac_pacda_impl)
+);
+// clang-format on
 
-extern "C" [[gnu::flatten]] uint64_t
-__emupac_autda_impl(uint64_t ptr, uint64_t disc) {
+extern "C" [[gnu::flatten]] uint64_t __emupac_autda_impl(uint64_t ptr,
+                                                         uint64_t disc) {
   if (pac_supported()) {
     __asm__ __volatile__(".arch_extension pauth\nautda %0, %1"
                          : "+r"(ptr)
@@ -129,12 +140,17 @@ __emupac_autda_impl(uint64_t ptr, uint64_t disc) {
       (ptr & ttbr1_mask) ? (ptr | pac_mask) : (ptr & ~pac_mask);
   uint64_t hash;
   siphash<1, 3>(reinterpret_cast<uint8_t *>(&ptr_without_pac), 8, emu_da_key,
-                *reinterpret_cast<uint8_t(*)[8]>(&hash));
+                *reinterpret_cast<uint8_t (*)[8]>(&hash));
   if (((ptr & ~pac_mask) | (hash & pac_mask)) != ptr) {
     __builtin_trap();
   }
   return ptr_without_pac;
 }
 
-__asm__(".globl __emupac_autda\n"
-        "__emupac_autda:\n" FRAME_POINTER_WRAP(__emupac_autda_impl));
+// clang-format off
+__asm__(
+  ".globl " ASM_SYMBOL(__emupac_autda) "\n"
+  ASM_SYMBOL(__emupac_autda) ":\n"
+  FRAME_POINTER_WRAP(__emupac_autda_impl)
+);
+// clang-format on
