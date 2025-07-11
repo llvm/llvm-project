@@ -546,8 +546,8 @@ Sections:
   - Name: .data.3
     Type: SHT_PROGBITS
     Flags: [ SHF_WRITE, SHF_ALLOC ]
-# Use an abitrary size. Also use an address that is larger than the previous
-# section, because the tools expect segment addresses to be in order.
+## Use an abitrary size. Also use an address that is larger than the previous
+## section, because the tools expect segment addresses to be in order.
     Size: 0x1
     Address: 0x200000030
   - Name: .bss.large
