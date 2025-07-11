@@ -110,43 +110,31 @@ static std::string getPrintableName(StringRef Name) {
   return OutputName;
 }
 
-// Store all the names that TargetLibraryInfo knows about; the bool indicates
-// whether TLI has it marked as "available" for the target of interest.
-// This is a vector to preserve the sorted order for better reporting.
-struct TLINameList : std::vector<std::pair<StringRef, bool>> {
-  // Record all the TLI info in the vector.
-  void initialize(StringRef TargetTriple);
-  // Print out what we found.
-  void dump();
-};
-static TLINameList TLINames;
+static void reportNumberOfEntries(const TargetLibraryInfo &TLI,
+                                  StringRef TargetTriple) {
+  unsigned NumAvailable = 0;
 
-void TLINameList::initialize(StringRef TargetTriple) {
-  Triple T(TargetTriple);
-  TargetLibraryInfoImpl TLII(T);
-  TargetLibraryInfo TLI(TLII);
-
-  reserve(LibFunc::NumLibFuncs);
-  size_t NumAvailable = 0;
+  // Assume this gets called after initialize(), so we have the above line of
+  // output as a header.  So, for example, no need to repeat the triple.
   for (unsigned FI = 0; FI != LibFunc::NumLibFuncs; ++FI) {
-    LibFunc LF = (LibFunc)FI;
-    bool Available = TLI.has(LF);
-    // getName returns names only for available funcs.
-    TLII.setAvailable(LF);
-    emplace_back(TLI.getName(LF), Available);
-    if (Available)
+    if (TLI.has(static_cast<LibFunc>(FI)))
       ++NumAvailable;
   }
+
   outs() << "TLI knows " << LibFunc::NumLibFuncs << " symbols, " << NumAvailable
          << " available for '" << TargetTriple << "'\n";
 }
 
-void TLINameList::dump() {
+static void dumpTLIEntries(const TargetLibraryInfo &TLI) {
   // Assume this gets called after initialize(), so we have the above line of
   // output as a header.  So, for example, no need to repeat the triple.
-  for (auto &TLIName : TLINames) {
-    outs() << (TLIName.second ? "    " : "not ")
-           << "available: " << getPrintableName(TLIName.first) << '\n';
+  for (unsigned FI = 0; FI != LibFunc::NumLibFuncs; ++FI) {
+    LibFunc LF = static_cast<LibFunc>(FI);
+    bool IsAvailable = TLI.has(LF);
+    StringRef FuncName = TargetLibraryInfo::getStandardName(LF);
+
+    outs() << (IsAvailable ? "    " : "not ")
+           << "available: " << getPrintableName(FuncName) << '\n';
   }
 }
 
@@ -271,11 +259,16 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
-  TLINames.initialize(Args.getLastArgValue(OPT_triple_EQ));
+  StringRef TripleStr = Args.getLastArgValue(OPT_triple_EQ);
+  Triple TargetTriple(TripleStr);
+  TargetLibraryInfoImpl TLII(TargetTriple);
+  TargetLibraryInfo TLI(TLII);
+
+  reportNumberOfEntries(TLI, TripleStr);
 
   // --dump-tli doesn't require any input files.
   if (Args.hasArg(OPT_dump_tli)) {
-    TLINames.dump();
+    dumpTLIEntries(TLI);
     return 0;
   }
 
@@ -321,9 +314,13 @@ int main(int argc, char *argv[]) {
     unsigned TLIdoesntSDKdoes = 0;
     unsigned TLIandSDKboth = 0;
     unsigned TLIandSDKneither = 0;
-    for (auto &TLIName : TLINames) {
-      bool TLIHas = TLIName.second;
-      bool SDKHas = SDKNames.count(TLIName.first) == 1;
+
+    for (unsigned FI = 0; FI != LibFunc::NumLibFuncs; ++FI) {
+      LibFunc LF = static_cast<LibFunc>(FI);
+
+      StringRef TLIName = TLI.getStandardName(LF);
+      bool TLIHas = TLI.has(LF);
+      bool SDKHas = SDKNames.count(TLIName) == 1;
       int Which = int(TLIHas) * 2 + int(SDKHas);
       switch (Which) {
       case 0: ++TLIandSDKneither; break;
@@ -338,8 +335,7 @@ int main(int argc, char *argv[]) {
         constexpr char YesNo[2][4] = {"no ", "yes"};
         constexpr char Indicator[4][3] = {"!!", ">>", "<<", "=="};
         outs() << Indicator[Which] << " TLI " << YesNo[TLIHas] << " SDK "
-               << YesNo[SDKHas] << ": " << getPrintableName(TLIName.first)
-               << '\n';
+               << YesNo[SDKHas] << ": " << getPrintableName(TLIName) << '\n';
       }
     }
 
