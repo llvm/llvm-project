@@ -1524,6 +1524,14 @@ def: Pat<(or  I32:$Rs, anyimm:$s10),   (A2_orir   I32:$Rs,  imm:$s10)>;
 def: Pat<(and I32:$Rs, anyimm:$s10),   (A2_andir  I32:$Rs,  imm:$s10)>;
 def: Pat<(sub anyimm:$s10, I32:$Rs),   (A2_subri  imm:$s10, I32:$Rs)>;
 
+class OpR_RR_pat_sat<InstHexagon MI, SDNode Op, ValueType ResType,
+                     PatFrag RxPred>
+  : Pat<(ResType (Op RxPred:$Rs, RxPred:$Rt)),
+        (MI RxPred:$Rs, RxPred:$Rt)>;
+
+def: OpR_RR_pat_sat<A2_addsat,  saddsat, i32, I32>;
+def: OpR_RR_pat_sat<A2_addpsat, saddsat, i64, I64>;
+
 def: OpR_RR_pat<A2_add,       Add,        i32,   I32>;
 def: OpR_RR_pat<A2_sub,       Sub,        i32,   I32>;
 def: OpR_RR_pat<A2_and,       And,        i32,   I32>;
