@@ -37,7 +37,6 @@
     ret void
   }
 
-  ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
   declare float @llvm.amdgcn.rcp.f32(float)
 
   !0 = !{}
