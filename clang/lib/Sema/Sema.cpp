@@ -2095,31 +2095,36 @@ Sema::SemaDiagnosticBuilder
 Sema::targetDiag(SourceLocation Loc, unsigned DiagID, FunctionDecl *FD) {
   FD = FD ? FD : getCurFunctionDecl();
 
-  SemaDiagnosticBuilder SDB = [&]() -> SemaDiagnosticBuilder {
-    if (LangOpts.OpenMP) {
-      return LangOpts.OpenMPIsTargetDevice
-                 ? OpenMP().diagIfOpenMPDeviceCode(Loc, DiagID, FD)
-                 : OpenMP().diagIfOpenMPHostCode(Loc, DiagID, FD);
+  if (LangOpts.OpenMP) {
+    if (LangOpts.OpenMPIsTargetDevice) {
+      return OpenMP().diagIfOpenMPDeviceCode(Loc, DiagID, FD);
     }
 
-    if (getLangOpts().CUDA) {
-      return getLangOpts().CUDAIsDevice ? CUDA().DiagIfDeviceCode(Loc, DiagID)
-                                        : CUDA().DiagIfHostCode(Loc, DiagID);
+    SemaDiagnosticBuilder SDB = OpenMP().diagIfOpenMPHostCode(Loc, DiagID, FD);
+    if (SDB.isDeferred()) {
+      FD->setInvalidDecl();
     }
-
-    if (getLangOpts().SYCLIsDevice) {
-      return SYCL().DiagIfDeviceCode(Loc, DiagID);
-    }
-
-    return SemaDiagnosticBuilder(SemaDiagnosticBuilder::K_Immediate, Loc,
-                                 DiagID, FD, *this);
-  }();
-
-  if (SDB.isDeferred()) {
-    FD->setInvalidDecl();
+    return SDB;
   }
 
-  return SDB;
+  if (getLangOpts().CUDA) {
+    if (getLangOpts().CUDAIsDevice) {
+      return CUDA().DiagIfDeviceCode(Loc, DiagID);
+    }
+
+    SemaDiagnosticBuilder SDB = CUDA().DiagIfHostCode(Loc, DiagID);
+    if (SDB.isDeferred()) {
+      FD->setInvalidDecl();
+    }
+    return SDB;
+  }
+
+  if (getLangOpts().SYCLIsDevice) {
+    return SYCL().DiagIfDeviceCode(Loc, DiagID);
+  }
+
+  return SemaDiagnosticBuilder(SemaDiagnosticBuilder::K_Immediate, Loc, DiagID,
+                               FD, *this);
 }
 
 void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
