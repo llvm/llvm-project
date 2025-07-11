@@ -16464,8 +16464,10 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
   }
 
   // (conv (conv x, t1), t2) -> (conv x, t2)
-  if (N0.getOpcode() == ISD::BITCAST)
+  if (N0.getOpcode() == ISD::BITCAST) {
+    DAG.salvageDebugInfo(*N0.getNode());
     return DAG.getBitcast(VT, N0.getOperand(0));
+  }
 
   // fold (conv (logicop (conv x), (c))) -> (logicop x, (conv c))
   // iff the current bitwise logicop type isn't legal

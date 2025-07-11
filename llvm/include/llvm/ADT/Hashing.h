@@ -57,6 +57,7 @@
 #include <string>
 #include <tuple>
 #include <utility>
+#include <variant>
 
 namespace llvm {
 template <typename T, typename Enable> struct DenseMapInfo;
@@ -125,8 +126,12 @@ hash_code hash_value(const std::tuple<Ts...> &arg);
 template <typename T>
 hash_code hash_value(const std::basic_string<T> &arg);
 
-/// Compute a hash_code for a standard string.
+/// Compute a hash_code for an optional.
 template <typename T> hash_code hash_value(const std::optional<T> &arg);
+
+/// Compute a hash_code for a variant.
+template <typename... Ts> hash_code hash_value(const std::variant<Ts...> &arg);
+
 
 // All of the implementation details of actually computing the various hash
 // code values are held within this namespace. These routines are included in
@@ -654,6 +659,12 @@ hash_code hash_value(const std::basic_string<T> &arg) {
 
 template <typename T> hash_code hash_value(const std::optional<T> &arg) {
   return arg ? hash_combine(true, *arg) : hash_value(false);
+}
+
+template <typename... Ts> hash_code hash_value(const std::variant<Ts...> &arg) {
+  return std::visit(
+      [&](auto &&Alt) { return hash_combine(arg.index(), hash_value(Alt)); },
+      arg);
 }
 
 template <> struct DenseMapInfo<hash_code, void> {

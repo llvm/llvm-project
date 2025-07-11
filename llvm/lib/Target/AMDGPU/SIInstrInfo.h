@@ -280,6 +280,21 @@ public:
                     MachineBasicBlock::iterator I, const DebugLoc &DL,
                     Register SrcReg, int Value)  const;
 
+private:
+  void storeRegToStackSlotImpl(MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator MI, Register SrcReg,
+                               bool isKill, int FrameIndex,
+                               const TargetRegisterClass *RC,
+                               const TargetRegisterInfo *TRI, Register VReg,
+                               MachineInstr::MIFlag Flags, bool NeedsCFI) const;
+
+public:
+  void storeRegToStackSlotCFI(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MI, Register SrcReg,
+                              bool isKill, int FrameIndex,
+                              const TargetRegisterClass *RC,
+                              const TargetRegisterInfo *TRI) const;
+                              
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;
 
@@ -668,6 +683,7 @@ public:
   static bool isBlockLoadStore(uint16_t Opcode) {
     switch (Opcode) {
     case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
+    case AMDGPU::SI_BLOCK_SPILL_V1024_CFI_SAVE:
     case AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE:
     case AMDGPU::SCRATCH_STORE_BLOCK_SADDR:
     case AMDGPU::SCRATCH_LOAD_BLOCK_SADDR:

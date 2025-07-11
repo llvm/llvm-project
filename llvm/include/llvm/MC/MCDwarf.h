@@ -529,6 +529,42 @@ public:
     OpGnuArgsSize,
     OpLabel,
     OpValOffset,
+    OpLLVMRegisterPair,
+    OpLLVMVectorRegisters,
+    OpLLVMVectorOffset,
+    OpLLVMVectorRegisterMask,
+  };
+
+  /// Some extra fields used when Operation is OpLLVMRegisterPair.
+  struct RegisterPairExtraFields {
+    unsigned Reg1, Reg2;
+    unsigned Reg1SizeInBits, Reg2SizeInBits;
+  };
+
+  struct VectorRegisterWithLane {
+    unsigned Register;
+    unsigned Lane;
+    unsigned SizeInBits;
+  };
+
+  /// Some extra fields used when Operation is OpLLVMVectorRegisters.
+  struct VectorRegistersExtraFields {
+    std::vector<VectorRegisterWithLane> VectorRegisters;
+  };
+
+  /// Some extra fields used when Operation is OpLLVMVectorOffset.
+  struct VectorOffsetExtraFields {
+    unsigned MaskRegister;
+    unsigned MaskRegisterSizeInBits;
+    unsigned RegisterSizeInBits;
+  };
+
+  /// Some extra fields used when Operation is OpLLVMVectorRegisterMask.
+  struct VectorRegisterMaskExtraFields {
+    unsigned SpillRegister;
+    unsigned SpillRegisterLaneSizeInBits;
+    unsigned MaskRegister;
+    unsigned MaskRegisterSizeInBits;
   };
 
 private:
@@ -554,6 +590,14 @@ private:
   std::vector<char> Values;
   std::string Comment;
 
+  // FIXME: We could probably save some space and complexity by moving all
+  // Operation-specific fields to this variant. Leaving them as-is for now to
+  // avoid a diff with upstream.
+  std::variant<std::monostate, RegisterPairExtraFields,
+               VectorRegistersExtraFields, VectorOffsetExtraFields,
+               VectorRegisterMaskExtraFields>
+      ExtraFields;
+
   MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int64_t O, SMLoc Loc,
                    StringRef V = "", StringRef Comment = "")
       : Label(L), Operation(Op), Loc(Loc), Values(V.begin(), V.end()),
@@ -571,6 +615,14 @@ private:
       : Label(L), Operation(Op), Loc(Loc) {
     assert(Op == OpLLVMDefAspaceCfa);
     U.RIA = {R, O, AS};
+  }
+
+  template <class ExtraFieldsTy>
+  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int O,
+                   ExtraFieldsTy &&ExtraFields, SMLoc Loc)
+      : Label(L), Operation(Op), Loc(Loc),
+        ExtraFields(std::forward<ExtraFieldsTy>(ExtraFields)) {
+    U.RI = {R, O};
   }
 
   MCCFIInstruction(OpType Op, MCSymbol *L, MCSymbol *CfiLabel, SMLoc Loc)
@@ -710,6 +762,62 @@ public:
     return MCCFIInstruction(OpLabel, L, CfiLabel, Loc);
   }
 
+  /// .cfi_llvm_register_pair Previous value of Register is saved in R1:R2.
+  static MCCFIInstruction
+  createLLVMRegisterPair(MCSymbol *L, unsigned Register, unsigned R1,
+                         unsigned R1SizeInBits, unsigned R2,
+                         unsigned R2SizeInBits, SMLoc Loc = {}) {
+    RegisterPairExtraFields Extra{R1, R2, R1SizeInBits, R2SizeInBits};
+    return MCCFIInstruction(OpLLVMRegisterPair, L, Register, 0, Extra, Loc);
+  }
+
+  /// .cfi_llvm_vector_registers Previous value of Register is saved in lanes of
+  /// vector registers.
+  static MCCFIInstruction
+  createLLVMVectorRegisters(MCSymbol *L, unsigned Register,
+                            std::vector<VectorRegisterWithLane> VectorRegisters,
+                            SMLoc Loc = {}) {
+    VectorRegistersExtraFields Extra{std::move(VectorRegisters)};
+    return MCCFIInstruction(OpLLVMVectorRegisters, L, Register, 0,
+                            std::move(Extra), Loc);
+  }
+
+  /// .cfi_llvm_vector_offset Previous value of Register is saved at Offset from
+  /// CFA. MaskRegister specifies the active lanes of register.
+  static MCCFIInstruction
+  createLLVMVectorOffset(MCSymbol *L, unsigned Register,
+                         unsigned RegisterSizeInBits, unsigned MaskRegister,
+                         unsigned MaskRegisterSizeInBits, int Offset,
+                         SMLoc Loc = {}) {
+    VectorOffsetExtraFields Extra{MaskRegister, MaskRegisterSizeInBits,
+                                  RegisterSizeInBits};
+    return MCCFIInstruction(OpLLVMVectorOffset, L, Register, Offset, Extra,
+                            Loc);
+  }
+
+  /// .cfi_llvm_vector_register_mask Previous value of Register is saved in
+  /// SpillRegister, predicated on the value of MaskRegister.
+  static MCCFIInstruction createLLVMVectorRegisterMask(
+      MCSymbol *L, unsigned Register, unsigned SpillRegister,
+      unsigned SpillRegisterLaneSizeInBits, unsigned MaskRegister,
+      unsigned MaskRegisterSizeInBits, SMLoc Loc = {}) {
+    VectorRegisterMaskExtraFields Extra{
+        SpillRegister,
+        SpillRegisterLaneSizeInBits,
+        MaskRegister,
+        MaskRegisterSizeInBits,
+    };
+    return MCCFIInstruction(OpLLVMVectorRegisterMask, L, Register, 0,
+                            std::move(Extra), Loc);
+  }
+
+  template <class ExtraFieldsTy> ExtraFieldsTy &getExtraFields() {
+    return std::get<ExtraFieldsTy>(ExtraFields);
+  }
+
+  template <class ExtraFieldsTy> const ExtraFieldsTy &getExtraFields() const {
+    return std::get<ExtraFieldsTy>(ExtraFields);
+  }
   /// .cfi_val_offset Previous value of Register is offset Offset from the
   /// current CFA register.
   static MCCFIInstruction createValOffset(MCSymbol *L, unsigned Register,
@@ -728,6 +836,9 @@ public:
     assert(Operation == OpDefCfa || Operation == OpOffset ||
            Operation == OpRestore || Operation == OpUndefined ||
            Operation == OpSameValue || Operation == OpDefCfaRegister ||
+           Operation == OpLLVMVectorRegisters ||
+           Operation == OpLLVMRegisterPair || Operation == OpLLVMVectorOffset ||
+           Operation == OpLLVMVectorRegisterMask ||
            Operation == OpRelOffset || Operation == OpValOffset);
     return U.RI.Register;
   }
@@ -748,6 +859,7 @@ public:
     assert(Operation == OpDefCfa || Operation == OpOffset ||
            Operation == OpRelOffset || Operation == OpDefCfaOffset ||
            Operation == OpAdjustCfaOffset || Operation == OpGnuArgsSize ||
+           Operation == OpLLVMVectorOffset ||
            Operation == OpValOffset);
     return U.RI.Offset;
   }
@@ -764,6 +876,9 @@ public:
 
   StringRef getComment() const { return Comment; }
   SMLoc getLoc() const { return Loc; }
+
+  /// Replaces in place all references to FromReg with ToReg.
+  void replaceRegister(unsigned FromReg, unsigned ToReg);
 };
 
 struct MCDwarfFrameInfo {

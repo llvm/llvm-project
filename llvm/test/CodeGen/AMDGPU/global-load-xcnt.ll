@@ -129,18 +129,31 @@ define i32 @test_v64i32_load_store(ptr addrspace(1) %ptr, i32 %idx, ptr addrspac
 ; GCN-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GCN-SDAG-NEXT:    s_clause 0xd
 ; GCN-SDAG-NEXT:    scratch_store_b32 off, v40, s32 offset:52
+; GCN-SDAG-NEXT:    ; meta instruction
 ; GCN-SDAG-NEXT:    scratch_store_b32 off, v41, s32 offset:48
+; GCN-SDAG-NEXT:    ; meta instruction
 ; GCN-SDAG-NEXT:    scratch_store_b32 off, v42, s32 offset:44
+; GCN-SDAG-NEXT:    ; meta instruction
 ; GCN-SDAG-NEXT:    scratch_store_b32 off, v43, s32 offset:40
+; GCN-SDAG-NEXT:    ; meta instruction
 ; GCN-SDAG-NEXT:    scratch_store_b32 off, v44, s32 offset:36
+; GCN-SDAG-NEXT:    ; meta instruction
 ; GCN-SDAG-NEXT:    scratch_store_b32 off, v45, s32 offset:32
+; GCN-SDAG-NEXT:    ; meta instruction
 ; GCN-SDAG-NEXT:    scratch_store_b32 off, v56, s32 offset:28
+; GCN-SDAG-NEXT:    ; meta instruction
 ; GCN-SDAG-NEXT:    scratch_store_b32 off, v57, s32 offset:24
+; GCN-SDAG-NEXT:    ; meta instruction
 ; GCN-SDAG-NEXT:    scratch_store_b32 off, v58, s32 offset:20
+; GCN-SDAG-NEXT:    ; meta instruction
 ; GCN-SDAG-NEXT:    scratch_store_b32 off, v59, s32 offset:16
+; GCN-SDAG-NEXT:    ; meta instruction
 ; GCN-SDAG-NEXT:    scratch_store_b32 off, v60, s32 offset:12
+; GCN-SDAG-NEXT:    ; meta instruction
 ; GCN-SDAG-NEXT:    scratch_store_b32 off, v61, s32 offset:8
+; GCN-SDAG-NEXT:    ; meta instruction
 ; GCN-SDAG-NEXT:    scratch_store_b32 off, v62, s32 offset:4
+; GCN-SDAG-NEXT:    ; meta instruction
 ; GCN-SDAG-NEXT:    scratch_store_b32 off, v63, s32
 ; GCN-SDAG-NEXT:    global_load_b128 v[6:9], v[0:1], off offset:224
 ; GCN-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
@@ -211,20 +224,35 @@ define i32 @test_v64i32_load_store(ptr addrspace(1) %ptr, i32 %idx, ptr addrspac
 ; GCN-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GCN-GISEL-NEXT:    s_clause 0xf
 ; GCN-GISEL-NEXT:    scratch_store_b32 off, v40, s32 offset:60
+; GCN-GISEL-NEXT:    ; meta instruction
 ; GCN-GISEL-NEXT:    scratch_store_b32 off, v41, s32 offset:56
+; GCN-GISEL-NEXT:    ; meta instruction
 ; GCN-GISEL-NEXT:    scratch_store_b32 off, v42, s32 offset:52
+; GCN-GISEL-NEXT:    ; meta instruction
 ; GCN-GISEL-NEXT:    scratch_store_b32 off, v43, s32 offset:48
+; GCN-GISEL-NEXT:    ; meta instruction
 ; GCN-GISEL-NEXT:    scratch_store_b32 off, v44, s32 offset:44
+; GCN-GISEL-NEXT:    ; meta instruction
 ; GCN-GISEL-NEXT:    scratch_store_b32 off, v45, s32 offset:40
+; GCN-GISEL-NEXT:    ; meta instruction
 ; GCN-GISEL-NEXT:    scratch_store_b32 off, v46, s32 offset:36
+; GCN-GISEL-NEXT:    ; meta instruction
 ; GCN-GISEL-NEXT:    scratch_store_b32 off, v47, s32 offset:32
+; GCN-GISEL-NEXT:    ; meta instruction
 ; GCN-GISEL-NEXT:    scratch_store_b32 off, v56, s32 offset:28
+; GCN-GISEL-NEXT:    ; meta instruction
 ; GCN-GISEL-NEXT:    scratch_store_b32 off, v57, s32 offset:24
+; GCN-GISEL-NEXT:    ; meta instruction
 ; GCN-GISEL-NEXT:    scratch_store_b32 off, v58, s32 offset:20
+; GCN-GISEL-NEXT:    ; meta instruction
 ; GCN-GISEL-NEXT:    scratch_store_b32 off, v59, s32 offset:16
+; GCN-GISEL-NEXT:    ; meta instruction
 ; GCN-GISEL-NEXT:    scratch_store_b32 off, v60, s32 offset:12
+; GCN-GISEL-NEXT:    ; meta instruction
 ; GCN-GISEL-NEXT:    scratch_store_b32 off, v61, s32 offset:8
+; GCN-GISEL-NEXT:    ; meta instruction
 ; GCN-GISEL-NEXT:    scratch_store_b32 off, v62, s32 offset:4
+; GCN-GISEL-NEXT:    ; meta instruction
 ; GCN-GISEL-NEXT:    scratch_store_b32 off, v63, s32
 ; GCN-GISEL-NEXT:    s_wait_xcnt 0x8
 ; GCN-GISEL-NEXT:    v_dual_mov_b32 v46, v3 :: v_dual_mov_b32 v47, v4
@@ -304,8 +332,11 @@ define i64 @test_v16i64_load_store(ptr addrspace(1) %ptr_a, ptr addrspace(1) %pt
 ; GCN-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GCN-SDAG-NEXT:    s_clause 0x3
 ; GCN-SDAG-NEXT:    scratch_store_b32 off, v40, s32 offset:12
+; GCN-SDAG-NEXT:    ; meta instruction
 ; GCN-SDAG-NEXT:    scratch_store_b32 off, v41, s32 offset:8
+; GCN-SDAG-NEXT:    ; meta instruction
 ; GCN-SDAG-NEXT:    scratch_store_b32 off, v42, s32 offset:4
+; GCN-SDAG-NEXT:    ; meta instruction
 ; GCN-SDAG-NEXT:    scratch_store_b32 off, v43, s32
 ; GCN-SDAG-NEXT:    s_clause 0x7
 ; GCN-SDAG-NEXT:    global_load_b128 v[6:9], v[0:1], off offset:112
@@ -391,10 +422,15 @@ define i64 @test_v16i64_load_store(ptr addrspace(1) %ptr_a, ptr addrspace(1) %pt
 ; GCN-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GCN-GISEL-NEXT:    s_clause 0x5
 ; GCN-GISEL-NEXT:    scratch_store_b32 off, v40, s32 offset:20
+; GCN-GISEL-NEXT:    ; meta instruction
 ; GCN-GISEL-NEXT:    scratch_store_b32 off, v41, s32 offset:16
+; GCN-GISEL-NEXT:    ; meta instruction
 ; GCN-GISEL-NEXT:    scratch_store_b32 off, v42, s32 offset:12
+; GCN-GISEL-NEXT:    ; meta instruction
 ; GCN-GISEL-NEXT:    scratch_store_b32 off, v43, s32 offset:8
+; GCN-GISEL-NEXT:    ; meta instruction
 ; GCN-GISEL-NEXT:    scratch_store_b32 off, v44, s32 offset:4
+; GCN-GISEL-NEXT:    ; meta instruction
 ; GCN-GISEL-NEXT:    scratch_store_b32 off, v45, s32
 ; GCN-GISEL-NEXT:    s_clause 0x7
 ; GCN-GISEL-NEXT:    global_load_b128 v[6:9], v[0:1], off offset:80
