@@ -48,7 +48,13 @@ struct GPUToSPIRVPass final : impl::ConvertGPUToSPIRVBase<GPUToSPIRVPass> {
   void runOnOperation() override;
 
 private:
+  /// Queries the target environment from 'targets' attribute of the given
+  /// `moduleOp`.
   spirv::TargetEnvAttr lookupTargetEnvInTargets(gpu::GPUModuleOp moduleOp);
+
+  /// Queries the target environment from 'targets' attribute of the given
+  /// `moduleOp` or returns target environment as returned by
+  /// `spirv::lookupTargetEnvOrDefault` if not provided by 'targets'.
   spirv::TargetEnvAttr lookupTargetEnvOrDefault(gpu::GPUModuleOp moduleOp);
   bool mapMemorySpace;
 };
