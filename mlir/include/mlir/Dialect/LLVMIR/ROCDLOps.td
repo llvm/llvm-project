@@ -251,6 +251,11 @@ def ROCDL_SWaitcntOp : ROCDL_ConcreteNonMemIntrOp<"s.waitcnt", [], 0, [0], ["bit
   let assemblyFormat = "attr-dict $bitfield";
 }
 
+def ROCDL_SSleepOp : ROCDL_ConcreteNonMemIntrOp<"s.sleep", [], 0, [0], ["count"]>,
+  Arguments<(ins I32Attr:$count)> {
+  let assemblyFormat = "attr-dict $count";
+}
+
 def ROCDL_SBarrierOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier", [], 0> {
   let assemblyFormat = "attr-dict";
 }

@@ -22548,8 +22548,10 @@ public:
           continue;
         }
         V.reorderTopToBottom();
-        // No need to reorder the root node at all.
-        V.reorderBottomToTop(/*IgnoreReorder=*/true);
+        // No need to reorder the root node at all for reassociative reduction.
+        V.reorderBottomToTop(/*IgnoreReorder=*/RdxFMF.allowReassoc() ||
+                             VL.front()->getType()->isIntOrIntVectorTy() ||
+                             ReductionLimit > 2);
         // Keep extracted other reduction values, if they are used in the
         // vectorization trees.
         BoUpSLP::ExtraValueToDebugLocsMap LocalExternallyUsedValues(
@@ -23812,8 +23814,9 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
   std::optional<int> BestCandidate = R.findBestRootPair(Candidates);
   if (!BestCandidate)
     return false;
-  return TryToReduce(I, {Candidates[*BestCandidate].first,
-                         Candidates[*BestCandidate].second}) ||
+  return (*BestCandidate == 0 &&
+          TryToReduce(I, {Candidates[*BestCandidate].first,
+                          Candidates[*BestCandidate].second})) ||
          tryToVectorizeList({Candidates[*BestCandidate].first,
                              Candidates[*BestCandidate].second},
                             R);
