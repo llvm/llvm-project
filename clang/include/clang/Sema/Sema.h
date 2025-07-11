@@ -3110,9 +3110,6 @@ private:
 
     bool operator==(const MisalignedMember &m) { return this->E == m.E; }
   };
-  /// Small set of gathered accesses to potentially misaligned members
-  /// due to the packed attribute.
-  SmallVector<MisalignedMember, 4> MisalignedMembers;
 
   /// Adds an expression to the set of gathered misaligned members.
   void AddPotentialMisalignedMembers(Expr *E, RecordDecl *RD, ValueDecl *MD,
@@ -6764,6 +6761,10 @@ public:
     /// extend lifetime. Add MaterializeTemporaryExpr* if the value of
     /// InLifetimeExtendingContext is true.
     SmallVector<MaterializeTemporaryExpr *, 8> ForRangeLifetimeExtendTemps;
+
+    /// Small set of gathered accesses to potentially misaligned members
+    /// due to the packed attribute.
+    SmallVector<MisalignedMember, 4> MisalignedMembers;
 
     /// \brief Describes whether we are in an expression constext which we have
     /// to handle differently.
