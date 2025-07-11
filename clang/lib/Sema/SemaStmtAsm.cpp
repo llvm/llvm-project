@@ -520,8 +520,8 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
 
   // Using unwind clobber and asm-goto together is not supported right now.
   if (UnwindClobberLoc && NumLabels > 0) {
-    return StmtError(
-        targetDiag(*UnwindClobberLoc, diag::err_asm_unwind_and_goto));
+    targetDiag(*UnwindClobberLoc, diag::err_asm_unwind_and_goto);
+    return CreateGCCAsmStmt();
   }
 
   GCCAsmStmt *NS = CreateGCCAsmStmt();
