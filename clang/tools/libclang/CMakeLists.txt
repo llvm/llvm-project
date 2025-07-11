@@ -163,17 +163,10 @@ if(ENABLE_SHARED)
       VERSION ${LIBCLANG_LIBRARY_VERSION}
       DEFINE_SYMBOL _CINDEX_LIB_)
     if (CYGWIN)
-      # On Cygwin, a shared library target generates "cyg${OUTPUT_NAME}-${VERSION}.dll"
-      # and "lib${OUTPUT_NAME}.dll.a", but does not generate an unversioned symlink
-      # "cyg${OUTPUT_NAME}.dll" as is common on other Unix platforms.
-      # However, tools like clang-python or direct dlopen() calls usually expect the
-      # unversioned form (e.g. "cygclang.dll").
-      # Therefore, we create a symlink named without the version suffix to
-      # improve compatibility.
-      set(UNPAINTED_TARGET_NAME "$<TARGET_FILE_DIR:libclang>/$<TARGET_FILE_PREFIX:libclang>clang$<TARGET_FILE_SUFFIX:libclang>")
+      # cygclang.dll is needed in build-tree for testsuite of python bindings.
       add_custom_command(TARGET libclang POST_BUILD
-                         COMMAND ${CMAKE_COMMAND} -E create_symlink "$<TARGET_FILE_NAME:libclang>" "${UNPAINTED_TARGET_NAME}")
-      install(FILES "${UNPAINTED_TARGET_NAME}" DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT libclang)
+        COMMAND ${CMAKE_COMMAND} -E create_symlink "$<TARGET_FILE_NAME:libclang>"
+        "$<TARGET_FILE_DIR:libclang>/$<TARGET_FILE_PREFIX:libclang>clang$<TARGET_FILE_SUFFIX:libclang>")
     endif()
     # Avoid declaring clang c++ symbols that are statically linked into libclang as dllimport'ed.
     # If llvm/libclang-cpp dll is also being built for windows clang c++ symbols will still be
