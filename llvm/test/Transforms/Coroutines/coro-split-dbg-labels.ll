@@ -88,8 +88,8 @@ coro_Suspend:                                     ; preds = %for.cond, %if.then,
 ; CHECK: ![[DESTROY_0]] = !DILabel(scope: !{{[0-9]+}}, name: "__coro_resume_0", file: !{{[0-9]*}}, line: 12, column: 6, isArtificial: true, coroSuspendIdx: 0)
 ; CHECK: ![[DESTROY_1]] = !DILabel(scope: !{{[0-9]+}}, name: "__coro_resume_1", file: !{{[0-9]*}}, line: 14, column: 6, isArtificial: true, coroSuspendIdx: 1)
 
-; Check the we do not emit any DILabels in LineTableOnly mode.
-; The DWARF emitter cannot handle this and would run into an assertion
+; Check the we do not emit any DILabels in LineTablesOnly mode.
+; The DWARF emitter cannot handle this and would run into an assertion.
 ; LINE-TABLE: !DICompileUnit{{.*}}LineTablesOnly
 ; LINE-TABLE-NOT: DILabel
 
