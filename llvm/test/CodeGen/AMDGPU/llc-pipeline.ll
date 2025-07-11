@@ -255,6 +255,7 @@
 ; GCN-O1-NEXT:        Uniformity Analysis
 ; GCN-O1-NEXT:        AMDGPU IR late optimizations
 ; GCN-O1-NEXT:        Post-Dominator Tree Construction
+; GCN-O1-NEXT:        Uniformity Analysis
 ; GCN-O1-NEXT:        Unify divergent function exit nodes
 ; GCN-O1-NEXT:        Dominator Tree Construction
 ; GCN-O1-NEXT:        Cycle Info Analysis
@@ -557,6 +558,7 @@
 ; GCN-O1-OPTS-NEXT:        Uniformity Analysis
 ; GCN-O1-OPTS-NEXT:        AMDGPU IR late optimizations
 ; GCN-O1-OPTS-NEXT:        Post-Dominator Tree Construction
+; GCN-O1-OPTS-NEXT:        Uniformity Analysis
 ; GCN-O1-OPTS-NEXT:        Unify divergent function exit nodes
 ; GCN-O1-OPTS-NEXT:        Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Cycle Info Analysis
@@ -871,6 +873,7 @@
 ; GCN-O2-NEXT:        Uniformity Analysis
 ; GCN-O2-NEXT:        AMDGPU IR late optimizations
 ; GCN-O2-NEXT:        Post-Dominator Tree Construction
+; GCN-O2-NEXT:        Uniformity Analysis
 ; GCN-O2-NEXT:        Unify divergent function exit nodes
 ; GCN-O2-NEXT:        Dominator Tree Construction
 ; GCN-O2-NEXT:        Cycle Info Analysis
@@ -1200,6 +1203,7 @@
 ; GCN-O3-NEXT:        Uniformity Analysis
 ; GCN-O3-NEXT:        AMDGPU IR late optimizations
 ; GCN-O3-NEXT:        Post-Dominator Tree Construction
+; GCN-O3-NEXT:        Uniformity Analysis
 ; GCN-O3-NEXT:        Unify divergent function exit nodes
 ; GCN-O3-NEXT:        Dominator Tree Construction
 ; GCN-O3-NEXT:        Cycle Info Analysis
