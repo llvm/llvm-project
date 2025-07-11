@@ -228,7 +228,7 @@ class FLAT_Load_Pseudo<
     RegisterClass VaddrRC = !if(EnableSaddr, VGPR_32, VReg_64)>
     : FLAT_Pseudo<opName, (outs), (ins), ""> {
 
-  defvar vdata_op = getLdStRegisterOperand<regClass>.ret;
+  RegisterOperand vdata_op = getLdStRegisterOperand<regClass>.ret;
   let OutOperandList = (outs vdata_op:$vdst);
   let InOperandList = !con(
       !if(EnableSaddr, (ins SaddrRC:$saddr), (ins)),
@@ -250,6 +250,25 @@ class FLAT_Load_Pseudo<
 
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
   let DisableEncoding = !if(HasTiedOutput, "$vdst_in", "");
+}
+
+class FLAT_Load_LANESHARED<
+    string opName, RegisterClass regClass, bit HasTiedOutput = 0,
+    bit HasSaddr = 0, bit EnableSaddr = 0, bit HasVaddr = 1,
+    RegisterClass SaddrRC = SReg_64_XEXEC_XNULL,
+    RegisterClass VaddrRC = !if(EnableSaddr, VGPR_32, VReg_64)>
+    : FLAT_Load_Pseudo<opName, regClass, HasTiedOutput, HasSaddr, EnableSaddr,
+                       HasVaddr, SaddrRC, VaddrRC> {
+  let OutOperandList = (outs);
+  defvar BasicIns = !con(
+      !if(EnableSaddr, (ins SaddrRC:$saddr), (ins)),
+      !if(HasVaddr, (ins VaddrRC:$vaddr), (ins)),
+      (ins flat_offset:$offset),
+      !if(HasTiedOutput, (ins CPol:$cpol, vdata_op:$vdst_in),
+                         (ins CPol_0:$cpol)));
+  defvar V_STORE_IDX_Ins = (ins VGPR_IDX_IDX_OP:$idx, i32imm:$dyn_offset);
+  let InOperandList = !con(BasicIns, V_STORE_IDX_Ins);
+  let mayStore = 1;
 }
 
 multiclass FLAT_Flat_Load_Pseudo<string opName, RegisterClass regClass, bit HasTiedInput = 0> {
@@ -313,6 +332,17 @@ multiclass FLAT_Global_Load_Pseudo<string opName, RegisterClass regClass, bit Ha
     def _SADDR : FLAT_Load_Pseudo<opName, regClass, HasTiedInput, 1, 1>,
       GlobalSaddrTable<1, opName>;
   }
+}
+
+multiclass FLAT_Global_Load_LANESHARED<string opName, RegisterClass regClass, bit HasTiedInput = 0> {
+  let SubtargetPredicate = isGFX1250Plus in
+    defm "" : FLAT_Global_Load_Pseudo<opName, regClass, HasTiedInput>;
+  let SubtargetPredicate = isGFX13Plus, is_flat_global = 1 in {
+    def _LANESHARED : FLAT_Load_LANESHARED<opName#"_LANESHARED", regClass, HasTiedInput, 1>,
+      GlobalSaddrTable<0, opName#"_LANESHARED">;
+    def _LANESHARED_SADDR : FLAT_Load_LANESHARED<opName#"_LANESHARED", regClass, HasTiedInput, 1, 1>,
+      GlobalSaddrTable<1, opName#"_LANESHARED">;
+  } // End SubtargetPredicate = isGFX13Plus, is_flat_global = 1
 }
 
 multiclass FLAT_DDS_Load_Pseudo<string opName, RegisterClass regClass> {
@@ -1459,13 +1489,13 @@ defm GLOBAL_LOAD_MONITOR_B64  : FLAT_Global_Load_Pseudo <"global_load_monitor_b6
 defm GLOBAL_LOAD_MONITOR_B128 : FLAT_Global_Load_Pseudo <"global_load_monitor_b128", VReg_128>;
 } // End SubtargetPredicate = isGFX125xOnly
 
-let SubtargetPredicate = isGFX1250Plus, WaveSizePredicate = isWave32 in {
+let WaveSizePredicate = isWave32 in {
 let Uses = [M0, EXEC] in { // Use M0 for broadcast workgroup mask.
-defm CLUSTER_LOAD_B32         : FLAT_Global_Load_Pseudo <"cluster_load_b32",  VGPR_32>;
-defm CLUSTER_LOAD_B64         : FLAT_Global_Load_Pseudo <"cluster_load_b64",  VReg_64>;
-defm CLUSTER_LOAD_B128        : FLAT_Global_Load_Pseudo <"cluster_load_b128", VReg_128>;
+defm CLUSTER_LOAD_B32         : FLAT_Global_Load_LANESHARED <"cluster_load_b32",  VGPR_32>;
+defm CLUSTER_LOAD_B64         : FLAT_Global_Load_LANESHARED <"cluster_load_b64",  VReg_64>;
+defm CLUSTER_LOAD_B128        : FLAT_Global_Load_LANESHARED <"cluster_load_b128", VReg_128>;
 } // End Uses = [M0, EXEC]
-} // End SubtargetPredicate = isGFX1250Plus, WaveSizePredicate = isWave32
+} // End WaveSizePredicate = isWave32
 
 let SubtargetPredicate = isGFX12Plus in {
   let Uses = [EXEC, M0] in {

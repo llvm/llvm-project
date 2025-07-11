@@ -3132,11 +3132,11 @@ void AMDGPUDAGToDAGISel::SelectLOAD_MCAST(MemIntrinsicSDNode *N,
       MCastOps.push_back(V2);
       MCastOps.push_back(V3);
       if (Size == 32)
-        Opcode = AMDGPU::CLUSTER_LOAD_B32_SADDR;
+        Opcode = AMDGPU::CLUSTER_LOAD_B32_LANESHARED_SADDR;
       else if (Size == 64)
-        Opcode = AMDGPU::CLUSTER_LOAD_B64_SADDR;
+        Opcode = AMDGPU::CLUSTER_LOAD_B64_LANESHARED_SADDR;
       else if (Size == 128)
-        Opcode = AMDGPU::CLUSTER_LOAD_B128_SADDR;
+        Opcode = AMDGPU::CLUSTER_LOAD_B128_LANESHARED_SADDR;
       else
         llvm_unreachable("Unsupported size for multicast load");
       break;
@@ -3147,11 +3147,11 @@ void AMDGPUDAGToDAGISel::SelectLOAD_MCAST(MemIntrinsicSDNode *N,
       MCastOps.push_back(V1);
       MCastOps.push_back(N->getOperand(N->getNumOperands() - 2) /*CPol*/);
       if (Size == 32)
-        Opcode = AMDGPU::CLUSTER_LOAD_B32;
+        Opcode = AMDGPU::CLUSTER_LOAD_B32_LANESHARED;
       else if (Size == 64)
-        Opcode = AMDGPU::CLUSTER_LOAD_B64;
+        Opcode = AMDGPU::CLUSTER_LOAD_B64_LANESHARED;
       else if (Size == 128)
-        Opcode = AMDGPU::CLUSTER_LOAD_B128;
+        Opcode = AMDGPU::CLUSTER_LOAD_B128_LANESHARED;
       else
         llvm_unreachable("Unsupported size for multicast load");
       break;
@@ -3196,38 +3196,58 @@ void AMDGPUDAGToDAGISel::SelectLOAD_MCAST(MemIntrinsicSDNode *N,
     return;
   }
 
-  glueCopyToM0(N, N->getOperand(N->getNumOperands() - 1));
-  // N has new chain and glued m0 now
-  MCastOps.push_back(N->getOperand(0));                       // Chain
-  MCastOps.push_back(N->getOperand(N->getNumOperands() - 1)); // Glue
-  MachineSDNode *MCast = CurDAG->getMachineNode(
-      Opcode, SL, MVT::getIntegerVT(Size), MVT::Other, MCastOps);
   MachineMemOperand *LoadMMO = N->getMemOperand();
-  CurDAG->setNodeMemRefs(MCast, {LoadMMO});
 
-  // V_STORE_IDX operands are in units of dwords.
-  SDNode *Shift =
-      CurDAG->getMachineNode(AMDGPU::S_LSHR_B32, SL, MVT::i32,
-                             {N->getOperand(2), // offset
-                              CurDAG->getTargetConstant(2, SL, MVT::i32)});
-  SmallVector<SDValue, 4> StoreOps;
-  StoreOps.push_back(SDValue(MCast, 0));
-  StoreOps.push_back(SDValue(Shift, 0)); // dst
-  StoreOps.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32));
-  StoreOps.push_back(SDValue(MCast, 1)); // Chain
-  SDNode *Selected =
-      CurDAG->SelectNodeTo(N, AMDGPU::V_STORE_IDX, MVT::Other, StoreOps);
+  if (AS == AMDGPUAS::GLOBAL_ADDRESS) {
+    // V_STORE_IDX operands are in units of dwords.
+    SDNode *Shift =
+        CurDAG->getMachineNode(AMDGPU::S_LSHR_B32, SL, MVT::i32,
+                               {N->getOperand(2), // offset
+                                CurDAG->getTargetConstant(2, SL, MVT::i32)});
+    MCastOps.push_back(SDValue(Shift, 0));                          // dst
+    MCastOps.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32)); // 0 offset?
 
-  // Synthesize MMO for V_STORE_IDX.
-  MachinePointerInfo StorePtrI = MachinePointerInfo(AMDGPUAS::LANE_SHARED);
-  auto F = LoadMMO->getFlags() &
-           ~(MachineMemOperand::MOStore | MachineMemOperand::MOLoad);
-  MachineFunction &MF = CurDAG->getMachineFunction();
-  MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
-      StorePtrI, F | MachineMemOperand::MOStore, LoadMMO->getSize(),
-      LoadMMO->getBaseAlign(), LoadMMO->getAAInfo());
+    glueCopyToM0(N, N->getOperand(N->getNumOperands() - 1));
+    // N has new chain and glued m0 now
+    MCastOps.push_back(N->getOperand(0));                       // Chain
+    MCastOps.push_back(N->getOperand(N->getNumOperands() - 1)); // Glue
+    SDNode *MCast = CurDAG->SelectNodeTo(N, Opcode, MVT::Other, MCastOps);
+    CurDAG->setNodeMemRefs(cast<MachineSDNode>(MCast), {LoadMMO});
 
-  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Selected), {StoreMMO});
+  } else {
+    // Two code paths for now, remove this one when all laneshared pseudos are
+    // implemented
+    glueCopyToM0(N, N->getOperand(N->getNumOperands() - 1));
+    // N has new chain and glued m0 now
+    MCastOps.push_back(N->getOperand(0));                       // Chain
+    MCastOps.push_back(N->getOperand(N->getNumOperands() - 1)); // Glue
+    MachineSDNode *MCast = CurDAG->getMachineNode(
+        Opcode, SL, MVT::getIntegerVT(Size), MVT::Other, MCastOps);
+    CurDAG->setNodeMemRefs(MCast, {LoadMMO});
+
+    // V_STORE_IDX operands are in units of dwords.
+    SDNode *Shift =
+        CurDAG->getMachineNode(AMDGPU::S_LSHR_B32, SL, MVT::i32,
+                               {N->getOperand(2), // offset
+                                CurDAG->getTargetConstant(2, SL, MVT::i32)});
+    SmallVector<SDValue, 4> StoreOps;
+    StoreOps.push_back(SDValue(MCast, 0));
+    StoreOps.push_back(SDValue(Shift, 0)); // dst
+    StoreOps.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32));
+    StoreOps.push_back(SDValue(MCast, 1)); // Chain
+    SDNode *Selected =
+        CurDAG->SelectNodeTo(N, AMDGPU::V_STORE_IDX, MVT::Other, StoreOps);
+
+    // Synthesize MMO for V_STORE_IDX.
+    MachinePointerInfo StorePtrI = MachinePointerInfo(AMDGPUAS::LANE_SHARED);
+    auto F = LoadMMO->getFlags() &
+             ~(MachineMemOperand::MOStore | MachineMemOperand::MOLoad);
+    MachineFunction &MF = CurDAG->getMachineFunction();
+    MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+        StorePtrI, F | MachineMemOperand::MOStore, LoadMMO->getSize(),
+        LoadMMO->getBaseAlign(), LoadMMO->getAAInfo());
+    CurDAG->setNodeMemRefs(cast<MachineSDNode>(Selected), {StoreMMO});
+  }
 }
 
 void AMDGPUDAGToDAGISel::SelectInterpP1F16(SDNode *N) {
