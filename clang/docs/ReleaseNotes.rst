@@ -923,6 +923,8 @@ Bug Fixes to C++ Support
 - Improved handling of variables with ``consteval`` constructors, to
   consistently treat the initializer as manifestly constant-evaluated.
   (#GH135281)
+- Fixed a crash involving list-initialization of an empty class with a
+  non-empty initializer list. (#GH147949)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
