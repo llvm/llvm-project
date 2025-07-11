@@ -748,5 +748,33 @@ Error olGetSymbol_impl(ol_program_handle_t Program, const char *Name,
   }
 }
 
+Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
+                                ol_symbol_info_t PropName, size_t PropSize,
+                                void *PropValue, size_t *PropSizeRet) {
+  InfoWriter Info(PropSize, PropValue, PropSizeRet);
+
+  switch (PropName) {
+  case OL_SYMBOL_INFO_KIND:
+    return Info.write<ol_symbol_kind_t>(Symbol->Kind);
+  default:
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "olGetSymbolInfo enum '%i' is invalid", PropName);
+  }
+
+  return Error::success();
+}
+
+Error olGetSymbolInfo_impl(ol_symbol_handle_t Symbol, ol_symbol_info_t PropName,
+                           size_t PropSize, void *PropValue) {
+
+  return olGetSymbolInfoImplDetail(Symbol, PropName, PropSize, PropValue,
+                                   nullptr);
+}
+
+Error olGetSymbolInfoSize_impl(ol_symbol_handle_t Symbol,
+                               ol_symbol_info_t PropName, size_t *PropSizeRet) {
+  return olGetSymbolInfoImplDetail(Symbol, PropName, 0, nullptr, PropSizeRet);
+}
+
 } // namespace offload
 } // namespace llvm
