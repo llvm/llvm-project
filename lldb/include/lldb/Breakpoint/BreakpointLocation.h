@@ -128,15 +128,11 @@ public:
   /// Set the breakpoint location's condition.
   ///
   /// \param[in] condition
-  ///    The condition expression to evaluate when the breakpoint is hit.
-  void SetCondition(const char *condition);
+  ///    The condition to evaluate when the breakpoint is hit.
+  void SetCondition(StopCondition condition);
 
-  /// Return a pointer to the text of the condition expression.
-  ///
-  /// \return
-  ///    A pointer to the condition expression text, or nullptr if no
-  //     condition has been set.
-  const char *GetConditionText(size_t *hash = nullptr) const;
+  /// Return the breakpoint condition.
+  const StopCondition &GetCondition() const;
 
   bool ConditionSaysStop(ExecutionContext &exe_ctx, Status &error);
 
