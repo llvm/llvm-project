@@ -28,7 +28,6 @@ For example, consider this `test.cc` example here with the forward declared
 class `FWD` and the defined class `A`, both in the namespace `a`.
 
 .. code-block:: c++
-  :linenos:
 
   namespace a {
   class FWD;
@@ -40,6 +39,7 @@ class `FWD` and the defined class `A`, both in the namespace `a`.
 And now let's change the namespace `a` to `x`.
 
 .. code-block:: console
+
   clang-change-namespace \
     --old_namespace "a" \
     --new_namespace "x" \
@@ -52,7 +52,6 @@ stayed in the namespace `a`. It wasn't moved to the new namespace because it
 wasn't defined/declared here in `a` but only forward declared.
 
 .. code-block:: c++
-  :linenos:
 
   namespace a {
   class FWD;
@@ -71,7 +70,6 @@ Another example
 Consider this `test.cc` file:
 
 .. code-block:: c++
-  :linenos:
 
   namespace na {
   class X {};
@@ -96,7 +94,6 @@ To move the definition of class `Y` from namespace `na::nb` to `x::y`, run:
 This will overwrite `test.cc` to look like this:
 
 .. code-block:: c++
-  :linenos:
 
   namespace na {
   class X {};
