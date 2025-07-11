@@ -11,10 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClauseProcessor.h"
+#include "flang/Lower/OpenMP/Utils.h"
 
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/OpenMP/Clauses.h"
-#include "flang/Lower/OpenMP/Utils.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/ReductionProcessor.h"
 #include "flang/Parser/tools.h"

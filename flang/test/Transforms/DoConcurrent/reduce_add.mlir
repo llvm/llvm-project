@@ -70,3 +70,4 @@ func.func @_QPdo_concurrent_reduce() {
 
 // CHECK:           return
 // CHECK:         }
+
