@@ -75,7 +75,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     PSInputAddr = AMDGPU::getInitialPSInputAddr(F);
   }
 
-  MayNeedAGPRs = ST.hasMAIInsts() & !MFMAVGPRForm;
+  MayNeedAGPRs = ST.hasMAIInsts() && !MFMAVGPRForm;
   if (!MFMAVGPRForm && ST.hasGFX90AInsts() &&
       ST.getMaxNumVGPRs(F) <= AMDGPU::VGPR_32RegClass.getNumRegs() &&
       !mayUseAGPRs(F))
