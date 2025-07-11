@@ -5,6 +5,7 @@ int sub_overflow(int a, int b) {
     return a - b;
 }
 
+// CHECK-LABEL: @sub_overflow
 // CHECK: call void @llvm.ubsantrap(i8 21) {{.*}}!dbg [[LOC:![0-9]+]]
 // CHECK: [[LOC]] = !DILocation(line: 0, scope: [[MSG:![0-9]+]], {{.+}})
 // CHECK: [[MSG]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Signed integer subtraction overflowed"

@@ -17,7 +17,7 @@ void bar(volatile int a) __attribute__((optnone)) {
 }
 
 // With optimisations enabled the traps are merged and need to share a debug location
-// CHECK: [[LOC]] = !DILocation(line: 0,
+// CHECK: [[LOC]] = !DILocation(line: 0
 
 // With optimisations disabled the traps are not merged and retain accurate debug locations
  // CHECK-DAG: [[SRC2:![0-9]+]] = !DILocation(line: 15, column: 9,

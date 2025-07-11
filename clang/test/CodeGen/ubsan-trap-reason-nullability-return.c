@@ -13,6 +13,7 @@ int* _Nonnull nullability_return(bool fail)
     return &x;
 }
 
+// CHECK-LABEL: @nullability_return
 // CHECK: call void @llvm.ubsantrap(i8 15) {{.*}}!dbg [[LOC:![0-9]+]]
 // CHECK: [[LOC]] = !DILocation(line: 0, scope: [[MSG:![0-9]+]], {{.+}})
 // CHECK: [[MSG]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Returning null from a function with a return type annotated with _Nonnull"

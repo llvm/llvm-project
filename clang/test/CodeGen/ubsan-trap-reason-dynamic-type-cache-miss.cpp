@@ -18,6 +18,9 @@ int dynamic_type_cache_miss() {
   return 0;
 }
 
+// CHECK-LABEL: @_ZN1A3fooEv
+// CHECK-LABEL: @_ZN1B3barEv
+// CHECK-LABEL: @_Z23dynamic_type_cache_missv
 // CHECK: call void @llvm.ubsantrap(i8 4) {{.*}}!dbg [[LOC:![0-9]+]]
 // CHECK: [[LOC]] = !DILocation(line: 0, scope: [[MSG:![0-9]+]], {{.+}})
 // CHECK: [[MSG]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Dynamic type cache miss, member call made on an object whose dynamic type differs from the expected type"

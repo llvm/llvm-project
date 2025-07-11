@@ -5,6 +5,7 @@ int add_overflow(int a, int b) {
   return a + b;
 }
 
+// CHECK-LABEL: @add_overflow
 // CHECK: call void @llvm.ubsantrap(i8 0) {{.*}}!dbg [[LOC:![0-9]+]]
 // CHECK: [[LOC]] = !DILocation(line: 0, scope: [[MSG:![0-9]+]], {{.+}})
 // CHECK: [[MSG]] = distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Signed integer addition overflowed"
