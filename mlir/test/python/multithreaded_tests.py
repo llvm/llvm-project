@@ -511,6 +511,45 @@ class TestAllMultiThreaded(unittest.TestCase):
             with InsertionPoint(module.body), Location.name("c"):
                 arith.constant(dtype, py_values[2])
 
+    def test_check_pyoperation_race(self):
+        num_workers = 40
+        num_runs = 20
+
+        barrier = threading.Barrier(num_workers)
+
+        def check_op(op):
+            op_name = op.operation.name
+
+        def walk_operations(op):
+            check_op(op)
+            for region in op.operation.regions:
+                for block in region:
+                    for op in block:
+                        walk_operations(op)
+
+        with Context():
+            mlir_module = Module.parse(
+                """
+    module @jit_sin attributes {mhlo.num_partitions = 1 : i32, mhlo.num_replicas = 1 : i32} {
+    func.func public @main(%arg0: tensor<f32>) -> (tensor<f32> {jax.result_info = ""}) {
+        return %arg0 : tensor<f32>
+    }
+    }
+                """
+            )
+
+        def closure():
+            barrier.wait()
+
+            for _ in range(num_runs):
+                walk_operations(mlir_module)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+            futures = []
+            for i in range(num_workers):
+                futures.append(executor.submit(closure))
+            assert len(list(f.result() for f in futures)) == num_workers
+
 
 if __name__ == "__main__":
     # Do not run the tests on CPython with GIL
