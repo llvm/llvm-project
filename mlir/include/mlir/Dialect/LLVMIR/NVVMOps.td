@@ -2000,13 +2000,13 @@ def NVVM_StMatrixOp: NVVM_PTXBuilder_Op<"stmatrix">,
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() {
       int d = getSources().size();
-      std::string ptx = "stmatrix.sync.aligned";
+      std::string ptx = "stmatrix.sync.aligned.m8n8";
       ptx += ".x" + std::to_string(d);
       if (getLayout() == NVVM::MMALayout::col)
         ptx += ".trans";
-      if(d == 1) ptx += ".m8n8.shared.b16 [%0], {%1};";
-      if(d == 2) ptx += ".m8n8.shared.b16 [%0], {%1, %2};";
-      if(d == 4) ptx += ".m8n8.shared.b16 [%0], {%1, %2, %3, %4};";
+      if(d == 1) ptx += ".shared.b16 [%0], {%1};";
+      if(d == 2) ptx += ".shared.b16 [%0], {%1, %2};";
+      if(d == 4) ptx += ".shared.b16 [%0], {%1, %2, %3, %4};";
       return ptx;
     }
   }];
