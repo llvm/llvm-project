@@ -26,6 +26,12 @@ run_statement = Template(
 """
 )
 
+def get_addrspace_cast(addrspace):
+    if addrspace == 0:
+        return ""
+    else:
+        return " addrspace({})".format(str(addrspace))
+
 TESTS = [(60, 50), (70, 63), (90, 87)]
 
 LLVM_SCOPES = ["", "block", "cluster", "device"]
@@ -42,47 +48,87 @@ ADDRSPACES = [0, 1, 3]
 
 ADDRSPACE_NUM_TO_ADDRSPACE = {0: "generic", 1: "global", 3: "shared"}
 
+
+
 if __name__ == "__main__":
     for sm, ptx in TESTS:
         with open("cmpxchg-sm{}.ll".format(str(sm)), "w") as fp:
             print(run_statement.substitute(sm=sm, ptx=ptx), file=fp)
-            for size, success, failure, addrspace, llvm_scope in product(
-                SIZES, SUCCESS_ORDERINGS, FAILURE_ORDERINGS, ADDRSPACES, LLVM_SCOPES
+
+            # Our test space is: SIZES X SUCCESS_ORDERINGS X FAILURE_ORDERINGS X ADDRSPACES X LLVM_SCOPES
+            # This is very large, so we instead test 3 slices.
+
+            # First slice:  are all orderings correctly supported, with and without emulation loops?
+            # set addrspace to global, scope to cta, generate all possible orderings, for all operation sizes
+            addrspace, llvm_scope = 1, "block"
+            for size, success, failure in product(
+                SIZES, SUCCESS_ORDERINGS, FAILURE_ORDERINGS
             ):
-                # cluster ordering is supported from SM90 onwards
-                if sm != 90 and llvm_scope == "cluster":
-                    continue
-                if addrspace == 0:
-                    addrspace_cast = ""
-                else:
-                    addrspace_cast = " addrspace({})".format(str(addrspace))
-                # Test default scope
-                print(
-                    cmpxchg_func_no_scope.substitute(
+                 print(
+                    cmpxchg_func.substitute(
                         success=success,
                         failure=failure,
                         size=size,
                         addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
-                        addrspace_cast=addrspace_cast,
+                        addrspace_cast=get_addrspace_cast(addrspace),
                         llvm_scope=llvm_scope,
                         ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
                     ),
                     file=fp,
                 )
 
-                for llvm_scope in LLVM_SCOPES:
-                    # cluster ordering is supported from SM90 onwards
-                    if sm < 90 and llvm_scope == "cluster":
-                        continue
-                    print(
-                        cmpxchg_func.substitute(
-                            success=success,
-                            failure=failure,
-                            size=size,
-                            addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
-                            addrspace_cast=addrspace_cast,
-                            llvm_scope=llvm_scope,
-                            ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
-                        ),
-                        file=fp,
-                    )
+            # Second slice: Are all scopes correctlly supported, with and without emulation loops?
+            # fix addrspace, ordering, generate all possible scopes, for operation sizes i8, i32
+            addrspace, success, failure = 1, "acq_rel", "acquire"
+            for size in [8, 32]:
+                 print(
+                    cmpxchg_func_no_scope.substitute(
+                        success=success,
+                        failure=failure,
+                        size=size,
+                        addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
+                        addrspace_cast=get_addrspace_cast(addrspace),
+                    ),
+                    file=fp,
+                )
+
+            for llvm_scope in LLVM_SCOPES:
+                if sm < 90 and llvm_scope == "cluster":
+                    continue
+                if llvm_scope == "block":
+                    # skip (acq_rel, acquire, global, cta)
+                    continue
+                print(
+                    cmpxchg_func.substitute(
+                        success=success,
+                        failure=failure,
+                        size=size,
+                        addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
+                        addrspace_cast=get_addrspace_cast(addrspace),
+                        llvm_scope=llvm_scope,
+                        ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
+                    ),
+                    file=fp,
+                )
+ 
+             # Third slice: Are all address spaces correctly supported?
+             # fix ordering, scope, generate all possible address spaces, for operation sizes i8, i32
+            success, failure, llvm_scope = "acq_rel", "acquire", "block"
+            for size, addrspace in product(
+                [8, 32], ADDRSPACES
+            ):
+                if addrspace == 1:
+                    # skip (acq_rel, acquire, global, cta)
+                    continue
+                print(
+                    cmpxchg_func.substitute(
+                        success=success,
+                        failure=failure,
+                        size=size,
+                        addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
+                        addrspace_cast=get_addrspace_cast(addrspace),
+                        llvm_scope=llvm_scope,
+                        ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
+                    ),
+                    file=fp,
+                )
