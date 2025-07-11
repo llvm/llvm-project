@@ -449,10 +449,11 @@ struct LinearizeVectorExtract final
       linearizedOffset += offsets[i] * size;
     }
 
+    Value srcVector = adaptor.getVector();
     if (!isa<VectorType>(extractOp.getType())) {
       // Scalar case: generate a 1-D extract.
       Value result = rewriter.createOrFold<vector::ExtractOp>(
-          extractOp.getLoc(), adaptor.getVector(), linearizedOffset);
+          extractOp.getLoc(), srcVector, linearizedOffset);
       rewriter.replaceOp(extractOp, result);
       return success();
     }
@@ -461,8 +462,8 @@ struct LinearizeVectorExtract final
 
     llvm::SmallVector<int64_t, 2> indices(size);
     std::iota(indices.begin(), indices.end(), linearizedOffset);
-    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
-        extractOp, dstTy, adaptor.getVector(), adaptor.getVector(), indices);
+    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(extractOp, dstTy, srcVector,
+                                                   srcVector, indices);
 
     return success();
   }
