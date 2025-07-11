@@ -33,6 +33,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include <cstddef>
@@ -3869,7 +3870,7 @@ LogicalResult AllocateDirOp::verify() {
   std::optional<u_int64_t> align = this->getAlign();
 
   if (align.has_value()) {
-    if ((align.value() > 0) && ((align.value() & (align.value() - 1)) != 0))
+    if ((align.value() > 0) && !llvm::has_single_bit(align.value()))
       return emitError() << "ALIGN value : " << align.value()
                          << " must be power of 2";
   }
