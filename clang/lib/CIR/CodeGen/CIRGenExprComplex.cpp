@@ -291,8 +291,8 @@ mlir::Value ComplexExprEmitter::VisitInitListExpr(const InitListExpr *e) {
   }
 
   assert(e->getNumInits() == 0 && "Unexpected number of inits");
-  mlir::Type compleTy = cgf.convertType(e->getType());
-  return builder.getNullValue(compleTy, loc);
+  mlir::Type complexTy = cgf.convertType(e->getType());
+  return builder.getNullValue(complexTy, loc);
 }
 
 mlir::Value
