@@ -323,6 +323,12 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
         Worklist.push_back(std::make_pair(UserMI, Bits));
         break;
 
+      case RISCV::BREV8:
+      case RISCV::ORC_B:
+        // BREV8 and ORC_B work on bytes. Round Bits down to the nearest byte.
+        Worklist.push_back(std::make_pair(UserMI, alignDown(Bits, 8)));
+        break;
+
       case RISCV::PseudoCCMOVGPR:
       case RISCV::PseudoCCMOVGPRNoX0:
         // Either operand 4 or operand 5 is returned by this instruction. If
