@@ -4844,16 +4844,14 @@ LoopVectorizationCostModel::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   // trip count as if unknown.
   if (auto BestKnownTC = getSmallBestKnownTC(PSE, TheLoop);
       BestKnownTC && (BestKnownTC->isFixed() || VF.isScalable())) {
-    // Re-evaluate VF to be in the same numerical space as the trip count.
-    unsigned EstimatedVF = VF.getKnownMinValue();
-    if (VF.isScalable() && BestKnownTC->isFixed())
-      EstimatedVF = getEstimatedRuntimeVF(VF, VScaleForTuning);
+    // Re-evaluate trip counts and VFs to be in the same numerical space.
+    unsigned AvailableTC = getEstimatedRuntimeVF(*BestKnownTC, VScaleForTuning);
+    unsigned EstimatedVF = getEstimatedRuntimeVF(VF, VScaleForTuning);
 
     // At least one iteration must be scalar when this constraint holds. So the
     // maximum available iterations for interleaving is one less.
-    unsigned AvailableTC = requiresScalarEpilogue(VF.isVector())
-                               ? BestKnownTC->getKnownMinValue() - 1
-                               : BestKnownTC->getKnownMinValue();
+    if (requiresScalarEpilogue(VF.isVector()))
+      --AvailableTC;
 
     unsigned InterleaveCountLB = bit_floor(std::max(
         1u, std::min(AvailableTC / (EstimatedVF * 2), MaxInterleaveCount)));
