@@ -89,6 +89,38 @@ Type convertMemRefType(MemRefType opTy, const TypeConverter *typeConverter) {
   return resultTy;
 }
 
+struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(memref::AllocOp allocOp, OpAdaptor operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = allocOp.getLoc();
+    auto memrefType = allocOp.getType();
+    if (!memrefType.hasStaticShape())
+      return rewriter.notifyMatchFailure(
+          allocOp.getLoc(), "cannot transform alloc op with dynamic shape");
+
+    int64_t totalSize =
+        memrefType.getNumElements() * memrefType.getElementTypeBitWidth() / 8;
+    auto alignment = allocOp.getAlignment();
+    if (alignment) {
+      int64_t alignVal = alignment.value();
+      totalSize = (totalSize + alignVal - 1) / alignVal * alignVal;
+    }
+    mlir::Value sizeBytes = rewriter.create<emitc::ConstantOp>(
+        loc, rewriter.getIndexType(),
+        rewriter.getIntegerAttr(rewriter.getIndexType(), totalSize));
+    auto mallocPtrType = emitc::PointerType::get(rewriter.getContext(),
+                                                 memrefType.getElementType());
+    auto mallocCall = rewriter.create<emitc::CallOpaqueOp>(
+        loc, mallocPtrType, rewriter.getStringAttr("malloc"),
+        mlir::ValueRange{sizeBytes});
+
+    rewriter.replaceOp(allocOp, mallocCall);
+    return success();
+  }
+};
+
 struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
   using OpConversionPattern::OpConversionPattern;
 
@@ -252,6 +284,6 @@ void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
 
 void mlir::populateMemRefToEmitCConversionPatterns(
     RewritePatternSet &patterns, const TypeConverter &converter) {
-  patterns.add<ConvertAlloca, ConvertGlobal, ConvertGetGlobal, ConvertLoad,
-               ConvertStore>(converter, patterns.getContext());
+  patterns.add<ConvertAlloca, ConvertAlloc, ConvertGlobal, ConvertGetGlobal,
+               ConvertLoad, ConvertStore>(converter, patterns.getContext());
 }
