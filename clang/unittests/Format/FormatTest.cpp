@@ -9024,6 +9024,55 @@ TEST_F(FormatTest, FormatsDeclarationBreakAlways) {
       BreakAlways);
 }
 
+TEST_F(FormatTest, ApplyAlwaysOnePerLineToTemplateArguments) {
+  FormatStyle Style = getGoogleStyle();
+  Style.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+
+  // Case 1: Template arguments split by AlwaysOnePerLine
+  Style.ApplyAlwaysOnePerLineToTemplateArguments = true;
+  verifyFormat("template <typename T, int N>\n"
+               "struct Foo {\n"
+               "  T mData[N];\n"
+               "  Foo<T,\n"
+               "      N>\n"
+               "  operator+(const Foo<T,\n"
+               "                      N> &other) const {}\n"
+               "  Foo<T,\n"
+               "      N>\n"
+               "  bar(const Foo<T,\n"
+               "                N> &other,\n"
+               "      float t) const {}\n"
+               "};\n",
+               Style);
+
+  // Case 2: Template arguments not split by The
+  // ApplyAlwaysOnePerLineToTemplateArguments
+  Style.ApplyAlwaysOnePerLineToTemplateArguments = false;
+  verifyFormat("template <typename T, int N>\n"
+               "struct Foo {\n"
+               "  T mData[N];\n"
+               "  Foo<T, N> operator+(const Foo<T, N> &other) const {}\n"
+               "  Foo<T, N> bar(const Foo<T, N> &other,\n"
+               "                float t) const {}\n"
+               "};\n",
+               Style);
+
+  // Case 3: Template arguments not split by the
+  // ApplyAlwaysOnePerLineToTemplateArguments but using the
+  // BreakFunctionDefinitionParameters flag
+  Style.BreakFunctionDefinitionParameters = true;
+  verifyFormat("template <typename T, int N>\n"
+               "struct Foo {\n"
+               "  T mData[N];\n"
+               "  Foo<T, N> operator+(\n"
+               "      const Foo<T, N> &other) const {}\n"
+               "  Foo<T, N> bar(\n"
+               "      const Foo<T, N> &other,\n"
+               "      float t) const {}\n"
+               "};\n",
+               Style);
+}
+
 TEST_F(FormatTest, FormatsDefinitionBreakAlways) {
   FormatStyle BreakAlways = getGoogleStyle();
   BreakAlways.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
