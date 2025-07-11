@@ -36,15 +36,3 @@ llvm::getMinimalTypeForRange(uint64_t Range,
     return "uint16_t";
   return "uint8_t";
 }
-
-std::string llvm::getTypeForBitwidth(unsigned Bitwidth) {
-  if (Bitwidth <= 8)
-    return "uint8_t";
-  if (Bitwidth <= 16)
-    return "uint16_t";
-  if (Bitwidth <= 32)
-    return "uint32_t";
-  if (Bitwidth <= 64)
-    return "uint64_t";
-  return "std::bitset<" + std::to_string(Bitwidth) + ">";
-}

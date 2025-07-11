@@ -804,15 +804,6 @@ std::string ListInit::getAsString() const {
   return Result + "]";
 }
 
-std::vector<int64_t> ListInit::getAsListOfInts() const {
-  if (!isa<IntRecTy>(getElementType()))
-    PrintFatalError("List does not contain integer values");
-  std::vector<int64_t> Ints;
-  for (const Init *I : getElements())
-    Ints.push_back(cast<IntInit>(I)->getValue());
-  return Ints;
-}
-
 const Init *OpInit::getBit(unsigned Bit) const {
   if (getType() == BitRecTy::get(getRecordKeeper()))
     return this;
@@ -3128,26 +3119,32 @@ int64_t Record::getValueAsInt(StringRef FieldName) const {
 std::vector<int64_t>
 Record::getValueAsListOfInts(StringRef FieldName) const {
   const ListInit *List = getValueAsListInit(FieldName);
-  if (!isa<IntRecTy>(List->getElementType()))
-    PrintFatalError(getLoc(),
-                    Twine("Record `") + getName() + "', field `" + FieldName +
-                        "' exists but does not have a list of ints value: " +
-                        List->getAsString());
-  return List->getAsListOfInts();
+  std::vector<int64_t> Ints;
+  for (const Init *I : List->getElements()) {
+    if (const auto *II = dyn_cast<IntInit>(I))
+      Ints.push_back(II->getValue());
+    else
+      PrintFatalError(getLoc(),
+                      Twine("Record `") + getName() + "', field `" + FieldName +
+                          "' exists but does not have a list of ints value: " +
+                          I->getAsString());
+  }
+  return Ints;
 }
 
 std::vector<StringRef>
 Record::getValueAsListOfStrings(StringRef FieldName) const {
   const ListInit *List = getValueAsListInit(FieldName);
-  if (!isa<StringRecTy>(List->getElementType()))
-    PrintFatalError(getLoc(),
-                    Twine("Record `") + getName() + "', field `" + FieldName +
-                        "' exists but does not have a list of string value: " +
-                        List->getAsString());
-
   std::vector<StringRef> Strings;
-  for (const Init *I : List->getElements())
-    Strings.push_back(cast<StringInit>(I)->getValue());
+  for (const Init *I : List->getElements()) {
+    if (const auto *SI = dyn_cast<StringInit>(I))
+      Strings.push_back(SI->getValue());
+    else
+      PrintFatalError(
+          getLoc(), Twine("Record `") + getName() + "', field `" + FieldName +
+                        "' exists but does not have a list of strings value: " +
+                        I->getAsString());
+  }
   return Strings;
 }
 
