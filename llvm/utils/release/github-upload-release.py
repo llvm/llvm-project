@@ -140,7 +140,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "command",
     type=str,
-    choices=["create", "upload", "check-permissions", "uncomment_download_links"]
+    choices=["create", "upload", "check-permissions", "uncomment_download_links"],
 )
 
 # All args
