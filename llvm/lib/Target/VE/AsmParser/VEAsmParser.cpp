@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/VEMCExpr.h"
+#include "MCTargetDesc/VEMCAsmInfo.h"
 #include "MCTargetDesc/VEMCTargetDesc.h"
 #include "TargetInfo/VETargetInfo.h"
 #include "VE.h"
@@ -25,6 +25,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 
@@ -408,7 +409,7 @@ public:
   /// getEndLoc - Get the location of the last token of this operand.
   SMLoc getEndLoc() const override { return EndLoc; }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case k_Token:
       OS << "Token: " << getToken() << "\n";
@@ -421,29 +422,43 @@ public:
       break;
     case k_MemoryRegRegImm:
       assert(getMemOffset() != nullptr);
-      OS << "Mem: #" << getMemBase() << "+#" << getMemIndexReg() << "+"
-         << *getMemOffset() << "\n";
+      OS << "Mem: #" << getMemBase() << "+#" << getMemIndexReg() << "+";
+      MAI.printExpr(OS, *getMemOffset());
+      OS << "\n";
       break;
     case k_MemoryRegImmImm:
       assert(getMemIndex() != nullptr && getMemOffset() != nullptr);
-      OS << "Mem: #" << getMemBase() << "+" << *getMemIndex() << "+"
-         << *getMemOffset() << "\n";
+      OS << "Mem: #" << getMemBase() << "+";
+      MAI.printExpr(OS, *getMemIndex());
+      OS << "+";
+      MAI.printExpr(OS, *getMemOffset());
+      OS << "\n";
       break;
     case k_MemoryZeroRegImm:
       assert(getMemOffset() != nullptr);
-      OS << "Mem: 0+#" << getMemIndexReg() << "+" << *getMemOffset() << "\n";
+      OS << "Mem: 0+#" << getMemIndexReg() << "+";
+      MAI.printExpr(OS, *getMemOffset());
+      OS << "\n";
       break;
     case k_MemoryZeroImmImm:
       assert(getMemIndex() != nullptr && getMemOffset() != nullptr);
-      OS << "Mem: 0+" << *getMemIndex() << "+" << *getMemOffset() << "\n";
+      OS << "Mem: 0+";
+      MAI.printExpr(OS, *getMemIndex());
+      OS << "+";
+      MAI.printExpr(OS, *getMemOffset());
+      OS << "\n";
       break;
     case k_MemoryRegImm:
       assert(getMemOffset() != nullptr);
-      OS << "Mem: #" << getMemBase() << "+" << *getMemOffset() << "\n";
+      OS << "Mem: #" << getMemBase() << "+";
+      MAI.printExpr(OS, *getMemOffset());
+      OS << "\n";
       break;
     case k_MemoryZeroImm:
       assert(getMemOffset() != nullptr);
-      OS << "Mem: 0+" << *getMemOffset() << "\n";
+      OS << "Mem: 0+";
+      MAI.printExpr(OS, *getMemOffset());
+      OS << "\n";
       break;
     case k_CCOp:
       OS << "CCOp: " << getCCVal() << "\n";
@@ -1510,7 +1525,7 @@ ParseStatus VEAsmParser::parseVEAsmOperand(std::unique_ptr<VEOperand> &Op) {
 }
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVEAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVEAsmParser() {
   RegisterMCAsmParser<VEAsmParser> A(getTheVETarget());
 }
 

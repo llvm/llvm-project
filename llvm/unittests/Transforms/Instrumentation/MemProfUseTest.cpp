@@ -91,7 +91,7 @@ declare !dbg !19 void @_Z2f3v()
   auto *F = M->getFunction("_Z3foov");
   ASSERT_NE(F, nullptr);
 
-  TargetLibraryInfoWrapperPass WrapperPass;
+  TargetLibraryInfoWrapperPass WrapperPass(M->getTargetTriple());
   auto &TLI = WrapperPass.getTLI(*F);
   auto Calls = extractCallsFromIR(*M, TLI);
 
@@ -191,7 +191,7 @@ declare !dbg !25 void @_Z2g2v() local_unnamed_addr
   auto *F = M->getFunction("_Z3foov");
   ASSERT_NE(F, nullptr);
 
-  TargetLibraryInfoWrapperPass WrapperPass;
+  TargetLibraryInfoWrapperPass WrapperPass(M->getTargetTriple());
   auto &TLI = WrapperPass.getTLI(*F);
   auto Calls = extractCallsFromIR(*M, TLI);
 
@@ -282,7 +282,7 @@ attributes #2 = { builtin allocsize(0) }
   auto *F = M->getFunction("_Z3foov");
   ASSERT_NE(F, nullptr);
 
-  TargetLibraryInfoWrapperPass WrapperPass;
+  TargetLibraryInfoWrapperPass WrapperPass(M->getTargetTriple());
   auto &TLI = WrapperPass.getTLI(*F);
   auto Calls = extractCallsFromIR(*M, TLI);
 
@@ -398,7 +398,7 @@ attributes #1 = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "t
   auto *F = M->getFunction("_Z3foov");
   ASSERT_NE(F, nullptr);
 
-  TargetLibraryInfoWrapperPass WrapperPass;
+  TargetLibraryInfoWrapperPass WrapperPass(M->getTargetTriple());
   auto &TLI = WrapperPass.getTLI(*F);
   auto Calls = extractCallsFromIR(*M, TLI);
 

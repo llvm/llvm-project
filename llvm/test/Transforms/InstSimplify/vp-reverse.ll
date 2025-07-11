@@ -3,9 +3,7 @@
 
 define <vscale x 4 x i32> @rev_of_rev(<vscale x 4 x i32> %a, i32 %evl) {
 ; CHECK-LABEL: @rev_of_rev(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL:%.*]])
-; CHECK-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> [[A_REV]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[RES]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A:%.*]]
 ;
   %a.rev = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse(<vscale x 4 x i32> %a, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   %res = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse(<vscale x 4 x i32> %a.rev, <vscale x 4 x i1> splat (i1 true), i32 %evl)
@@ -25,8 +23,7 @@ define <vscale x 4 x i32> @rev_of_rev_diffevl(<vscale x 4 x i32> %a, i32 %evl) {
 
 define <vscale x 4 x i32> @rev_of_poison(i32 %evl) {
 ; CHECK-LABEL: @rev_of_poison(
-; CHECK-NEXT:    [[REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i1> splat (i1 true), i32 [[EVL:%.*]])
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[REV]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> poison
 ;
   %rev = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse(<vscale x 4 x i32> poison, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i32> %rev
@@ -34,8 +31,7 @@ define <vscale x 4 x i32> @rev_of_poison(i32 %evl) {
 
 define <vscale x 4 x i32> @rev_of_undef(i32 %evl) {
 ; CHECK-LABEL: @rev_of_undef(
-; CHECK-NEXT:    [[REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> splat (i1 true), i32 [[EVL:%.*]])
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[REV]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> undef
 ;
   %rev = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse(<vscale x 4 x i32> undef, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i32> %rev
@@ -43,8 +39,7 @@ define <vscale x 4 x i32> @rev_of_undef(i32 %evl) {
 
 define <vscale x 4 x i32> @rev_of_zero(i32 %evl) {
 ; CHECK-LABEL: @rev_of_zero(
-; CHECK-NEXT:    [[REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i1> splat (i1 true), i32 [[EVL:%.*]])
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[REV]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> zeroinitializer
 ;
   %rev = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x i32> %rev
@@ -54,8 +49,7 @@ define <vscale x 4 x i32> @rev_of_splat(i32 %a, i32 %evl) {
 ; CHECK-LABEL: @rev_of_splat(
 ; CHECK-NEXT:    [[A_INS:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[A:%.*]], i32 0
 ; CHECK-NEXT:    [[A_VEC:%.*]] = shufflevector <vscale x 4 x i32> [[A_INS]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> [[A_VEC]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL:%.*]])
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[REV]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A_VEC]]
 ;
   %a.ins = insertelement <vscale x 4 x i32> poison, i32 %a, i32 0
   %a.vec = shufflevector <vscale x 4 x i32> %a.ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
@@ -67,8 +61,7 @@ define <vscale x 4 x i32> @rev_of_splat2(i32 %a, <vscale x 4 x i1> %m, i32 %evl)
 ; CHECK-LABEL: @rev_of_splat2(
 ; CHECK-NEXT:    [[A_INS:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[A:%.*]], i32 0
 ; CHECK-NEXT:    [[A_VEC:%.*]] = shufflevector <vscale x 4 x i32> [[A_INS]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[REV:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> [[A_VEC]], <vscale x 4 x i1> [[M:%.*]], i32 [[EVL:%.*]])
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[REV]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A_VEC]]
 ;
   %a.ins = insertelement <vscale x 4 x i32> poison, i32 %a, i32 0
   %a.vec = shufflevector <vscale x 4 x i32> %a.ins, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer

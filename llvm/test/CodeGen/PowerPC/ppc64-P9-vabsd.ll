@@ -764,13 +764,8 @@ define <16 x i8> @sub_absv_8_ext(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ;
 ; CHECK-PWR7-LABEL: sub_absv_8_ext:
 ; CHECK-PWR7:       # %bb.0: # %entry
-; CHECK-PWR7-NEXT:    stdu r1, -512(r1)
-; CHECK-PWR7-NEXT:    .cfi_def_cfa_offset 512
-; CHECK-PWR7-NEXT:    .cfi_offset r14, -144
-; CHECK-PWR7-NEXT:    .cfi_offset r15, -136
-; CHECK-PWR7-NEXT:    .cfi_offset r16, -128
-; CHECK-PWR7-NEXT:    .cfi_offset r17, -120
-; CHECK-PWR7-NEXT:    .cfi_offset r18, -112
+; CHECK-PWR7-NEXT:    stdu r1, -448(r1)
+; CHECK-PWR7-NEXT:    .cfi_def_cfa_offset 448
 ; CHECK-PWR7-NEXT:    .cfi_offset r19, -104
 ; CHECK-PWR7-NEXT:    .cfi_offset r20, -96
 ; CHECK-PWR7-NEXT:    .cfi_offset r21, -88
@@ -783,244 +778,258 @@ define <16 x i8> @sub_absv_8_ext(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-PWR7-NEXT:    .cfi_offset r28, -32
 ; CHECK-PWR7-NEXT:    .cfi_offset r29, -24
 ; CHECK-PWR7-NEXT:    .cfi_offset r30, -16
-; CHECK-PWR7-NEXT:    .cfi_offset r31, -8
-; CHECK-PWR7-NEXT:    .cfi_offset r2, -152
-; CHECK-PWR7-NEXT:    addi r3, r1, 320
-; CHECK-PWR7-NEXT:    std r14, 368(r1) # 8-byte Folded Spill
-; CHECK-PWR7-NEXT:    std r15, 376(r1) # 8-byte Folded Spill
-; CHECK-PWR7-NEXT:    std r16, 384(r1) # 8-byte Folded Spill
-; CHECK-PWR7-NEXT:    std r17, 392(r1) # 8-byte Folded Spill
-; CHECK-PWR7-NEXT:    std r18, 400(r1) # 8-byte Folded Spill
-; CHECK-PWR7-NEXT:    std r19, 408(r1) # 8-byte Folded Spill
-; CHECK-PWR7-NEXT:    std r20, 416(r1) # 8-byte Folded Spill
-; CHECK-PWR7-NEXT:    std r21, 424(r1) # 8-byte Folded Spill
-; CHECK-PWR7-NEXT:    std r22, 432(r1) # 8-byte Folded Spill
-; CHECK-PWR7-NEXT:    std r23, 440(r1) # 8-byte Folded Spill
-; CHECK-PWR7-NEXT:    std r24, 448(r1) # 8-byte Folded Spill
-; CHECK-PWR7-NEXT:    std r25, 456(r1) # 8-byte Folded Spill
-; CHECK-PWR7-NEXT:    std r26, 464(r1) # 8-byte Folded Spill
-; CHECK-PWR7-NEXT:    std r27, 472(r1) # 8-byte Folded Spill
-; CHECK-PWR7-NEXT:    std r28, 480(r1) # 8-byte Folded Spill
-; CHECK-PWR7-NEXT:    std r29, 488(r1) # 8-byte Folded Spill
-; CHECK-PWR7-NEXT:    std r30, 496(r1) # 8-byte Folded Spill
-; CHECK-PWR7-NEXT:    std r31, 504(r1) # 8-byte Folded Spill
-; CHECK-PWR7-NEXT:    std r2, 360(r1) # 8-byte Folded Spill
+; CHECK-PWR7-NEXT:    addi r3, r1, 304
+; CHECK-PWR7-NEXT:    std r19, 344(r1) # 8-byte Folded Spill
+; CHECK-PWR7-NEXT:    std r20, 352(r1) # 8-byte Folded Spill
+; CHECK-PWR7-NEXT:    std r21, 360(r1) # 8-byte Folded Spill
+; CHECK-PWR7-NEXT:    std r22, 368(r1) # 8-byte Folded Spill
+; CHECK-PWR7-NEXT:    std r23, 376(r1) # 8-byte Folded Spill
+; CHECK-PWR7-NEXT:    std r24, 384(r1) # 8-byte Folded Spill
+; CHECK-PWR7-NEXT:    std r25, 392(r1) # 8-byte Folded Spill
+; CHECK-PWR7-NEXT:    std r26, 400(r1) # 8-byte Folded Spill
+; CHECK-PWR7-NEXT:    std r27, 408(r1) # 8-byte Folded Spill
+; CHECK-PWR7-NEXT:    std r28, 416(r1) # 8-byte Folded Spill
+; CHECK-PWR7-NEXT:    std r29, 424(r1) # 8-byte Folded Spill
+; CHECK-PWR7-NEXT:    std r30, 432(r1) # 8-byte Folded Spill
 ; CHECK-PWR7-NEXT:    stxvw4x v2, 0, r3
-; CHECK-PWR7-NEXT:    lbz r3, 320(r1)
-; CHECK-PWR7-NEXT:    addi r4, r1, 336
-; CHECK-PWR7-NEXT:    stw r3, 60(r1) # 4-byte Folded Spill
-; CHECK-PWR7-NEXT:    stxvw4x v3, 0, r4
-; CHECK-PWR7-NEXT:    lbz r15, 334(r1)
-; CHECK-PWR7-NEXT:    lbz r14, 350(r1)
-; CHECK-PWR7-NEXT:    lbz r31, 335(r1)
-; CHECK-PWR7-NEXT:    lbz r2, 351(r1)
-; CHECK-PWR7-NEXT:    sub r15, r15, r14
-; CHECK-PWR7-NEXT:    sub r14, r31, r2
-; CHECK-PWR7-NEXT:    srawi r2, r14, 31
-; CHECK-PWR7-NEXT:    xor r14, r14, r2
-; CHECK-PWR7-NEXT:    lbz r3, 333(r1)
-; CHECK-PWR7-NEXT:    lbz r19, 331(r1)
-; CHECK-PWR7-NEXT:    lbz r18, 347(r1)
-; CHECK-PWR7-NEXT:    sub r19, r19, r18
-; CHECK-PWR7-NEXT:    lbz r17, 332(r1)
-; CHECK-PWR7-NEXT:    lbz r16, 348(r1)
-; CHECK-PWR7-NEXT:    sub r17, r17, r16
-; CHECK-PWR7-NEXT:    lbz r23, 329(r1)
-; CHECK-PWR7-NEXT:    sub r14, r14, r2
-; CHECK-PWR7-NEXT:    lbz r2, 349(r1)
-; CHECK-PWR7-NEXT:    lbz r22, 345(r1)
-; CHECK-PWR7-NEXT:    lbz r4, 336(r1)
-; CHECK-PWR7-NEXT:    lbz r5, 321(r1)
-; CHECK-PWR7-NEXT:    lbz r6, 337(r1)
-; CHECK-PWR7-NEXT:    lbz r7, 322(r1)
-; CHECK-PWR7-NEXT:    lbz r8, 338(r1)
-; CHECK-PWR7-NEXT:    lbz r9, 323(r1)
-; CHECK-PWR7-NEXT:    lbz r10, 339(r1)
-; CHECK-PWR7-NEXT:    lbz r11, 324(r1)
-; CHECK-PWR7-NEXT:    lbz r12, 340(r1)
-; CHECK-PWR7-NEXT:    lbz r0, 325(r1)
-; CHECK-PWR7-NEXT:    lbz r30, 341(r1)
-; CHECK-PWR7-NEXT:    lbz r29, 326(r1)
-; CHECK-PWR7-NEXT:    lbz r28, 342(r1)
-; CHECK-PWR7-NEXT:    lbz r27, 327(r1)
-; CHECK-PWR7-NEXT:    lbz r26, 343(r1)
-; CHECK-PWR7-NEXT:    sub r3, r3, r2
-; CHECK-PWR7-NEXT:    lbz r25, 328(r1)
-; CHECK-PWR7-NEXT:    lbz r24, 344(r1)
-; CHECK-PWR7-NEXT:    lbz r21, 330(r1)
-; CHECK-PWR7-NEXT:    lbz r20, 346(r1)
-; CHECK-PWR7-NEXT:    sub r5, r5, r6
-; CHECK-PWR7-NEXT:    srawi r18, r3, 31
-; CHECK-PWR7-NEXT:    sub r7, r7, r8
-; CHECK-PWR7-NEXT:    sub r9, r9, r10
-; CHECK-PWR7-NEXT:    sub r11, r11, r12
-; CHECK-PWR7-NEXT:    sub r0, r0, r30
-; CHECK-PWR7-NEXT:    sub r29, r29, r28
-; CHECK-PWR7-NEXT:    sub r27, r27, r26
-; CHECK-PWR7-NEXT:    sub r25, r25, r24
-; CHECK-PWR7-NEXT:    srawi r31, r15, 31
-; CHECK-PWR7-NEXT:    ld r2, 360(r1) # 8-byte Folded Reload
-; CHECK-PWR7-NEXT:    xor r3, r3, r18
-; CHECK-PWR7-NEXT:    srawi r6, r5, 31
-; CHECK-PWR7-NEXT:    srawi r8, r7, 31
-; CHECK-PWR7-NEXT:    srawi r10, r9, 31
+; CHECK-PWR7-NEXT:    addi r3, r1, 320
+; CHECK-PWR7-NEXT:    lbz r7, 304(r1)
+; CHECK-PWR7-NEXT:    stxvw4x v3, 0, r3
+; CHECK-PWR7-NEXT:    lbz r8, 320(r1)
+; CHECK-PWR7-NEXT:    lbz r9, 305(r1)
+; CHECK-PWR7-NEXT:    lbz r10, 321(r1)
+; CHECK-PWR7-NEXT:    lbz r26, 325(r1)
+; CHECK-PWR7-NEXT:    clrlwi r7, r7, 24
+; CHECK-PWR7-NEXT:    clrlwi r8, r8, 24
+; CHECK-PWR7-NEXT:    clrlwi r9, r9, 24
+; CHECK-PWR7-NEXT:    clrlwi r10, r10, 24
+; CHECK-PWR7-NEXT:    lbz r11, 306(r1)
+; CHECK-PWR7-NEXT:    lbz r12, 322(r1)
+; CHECK-PWR7-NEXT:    lbz r23, 314(r1)
+; CHECK-PWR7-NEXT:    clrlwi r22, r26, 24
+; CHECK-PWR7-NEXT:    lbz r26, 330(r1)
+; CHECK-PWR7-NEXT:    sub r8, r7, r8
+; CHECK-PWR7-NEXT:    lbz r7, 315(r1)
+; CHECK-PWR7-NEXT:    sub r20, r9, r10
+; CHECK-PWR7-NEXT:    lbz r9, 331(r1)
+; CHECK-PWR7-NEXT:    lbz r0, 307(r1)
+; CHECK-PWR7-NEXT:    lbz r30, 323(r1)
+; CHECK-PWR7-NEXT:    clrlwi r11, r11, 24
+; CHECK-PWR7-NEXT:    clrlwi r12, r12, 24
+; CHECK-PWR7-NEXT:    clrlwi r23, r23, 24
+; CHECK-PWR7-NEXT:    clrlwi r21, r26, 24
+; CHECK-PWR7-NEXT:    clrlwi r7, r7, 24
+; CHECK-PWR7-NEXT:    clrlwi r9, r9, 24
+; CHECK-PWR7-NEXT:    clrlwi r0, r0, 24
+; CHECK-PWR7-NEXT:    clrlwi r30, r30, 24
+; CHECK-PWR7-NEXT:    lbz r29, 308(r1)
+; CHECK-PWR7-NEXT:    lbz r28, 324(r1)
+; CHECK-PWR7-NEXT:    lbz r27, 309(r1)
+; CHECK-PWR7-NEXT:    lbz r25, 310(r1)
+; CHECK-PWR7-NEXT:    lbz r24, 326(r1)
+; CHECK-PWR7-NEXT:    sub r19, r11, r12
+; CHECK-PWR7-NEXT:    sub r11, r23, r21
+; CHECK-PWR7-NEXT:    sub r9, r7, r9
+; CHECK-PWR7-NEXT:    sub r26, r0, r30
 ; CHECK-PWR7-NEXT:    srawi r12, r11, 31
-; CHECK-PWR7-NEXT:    srawi r30, r0, 31
-; CHECK-PWR7-NEXT:    sub r3, r3, r18
-; CHECK-PWR7-NEXT:    srawi r18, r19, 31
-; CHECK-PWR7-NEXT:    srawi r28, r29, 31
-; CHECK-PWR7-NEXT:    ld r16, 384(r1) # 8-byte Folded Reload
-; CHECK-PWR7-NEXT:    sldi r3, r3, 56
-; CHECK-PWR7-NEXT:    srawi r26, r27, 31
-; CHECK-PWR7-NEXT:    srawi r24, r25, 31
-; CHECK-PWR7-NEXT:    xor r19, r19, r18
-; CHECK-PWR7-NEXT:    xor r15, r15, r31
-; CHECK-PWR7-NEXT:    xor r5, r5, r6
-; CHECK-PWR7-NEXT:    std r3, 272(r1)
-; CHECK-PWR7-NEXT:    std r3, 280(r1)
-; CHECK-PWR7-NEXT:    srawi r3, r17, 31
-; CHECK-PWR7-NEXT:    sub r19, r19, r18
-; CHECK-PWR7-NEXT:    xor r7, r7, r8
-; CHECK-PWR7-NEXT:    sub r15, r15, r31
-; CHECK-PWR7-NEXT:    xor r17, r17, r3
-; CHECK-PWR7-NEXT:    xor r9, r9, r10
+; CHECK-PWR7-NEXT:    srawi r0, r9, 31
+; CHECK-PWR7-NEXT:    lbz r3, 312(r1)
+; CHECK-PWR7-NEXT:    clrlwi r29, r29, 24
+; CHECK-PWR7-NEXT:    clrlwi r28, r28, 24
+; CHECK-PWR7-NEXT:    clrlwi r27, r27, 24
+; CHECK-PWR7-NEXT:    clrlwi r25, r25, 24
+; CHECK-PWR7-NEXT:    clrlwi r24, r24, 24
 ; CHECK-PWR7-NEXT:    xor r11, r11, r12
-; CHECK-PWR7-NEXT:    xor r0, r0, r30
-; CHECK-PWR7-NEXT:    xor r29, r29, r28
-; CHECK-PWR7-NEXT:    xor r27, r27, r26
-; CHECK-PWR7-NEXT:    sub r3, r17, r3
-; CHECK-PWR7-NEXT:    xor r25, r25, r24
-; CHECK-PWR7-NEXT:    sub r25, r25, r24
-; CHECK-PWR7-NEXT:    sub r27, r27, r26
-; CHECK-PWR7-NEXT:    sub r29, r29, r28
-; CHECK-PWR7-NEXT:    sldi r3, r3, 56
-; CHECK-PWR7-NEXT:    sub r0, r0, r30
-; CHECK-PWR7-NEXT:    sub r11, r11, r12
-; CHECK-PWR7-NEXT:    sub r9, r9, r10
-; CHECK-PWR7-NEXT:    sub r7, r7, r8
+; CHECK-PWR7-NEXT:    xor r9, r9, r0
+; CHECK-PWR7-NEXT:    sub r28, r29, r28
+; CHECK-PWR7-NEXT:    sub r30, r27, r22
+; CHECK-PWR7-NEXT:    sub r29, r25, r24
+; CHECK-PWR7-NEXT:    sub r27, r11, r12
+; CHECK-PWR7-NEXT:    sub r24, r9, r0
+; CHECK-PWR7-NEXT:    lbz r9, 316(r1)
+; CHECK-PWR7-NEXT:    lbz r11, 332(r1)
+; CHECK-PWR7-NEXT:    lbz r4, 328(r1)
+; CHECK-PWR7-NEXT:    lbz r5, 311(r1)
+; CHECK-PWR7-NEXT:    lbz r6, 327(r1)
+; CHECK-PWR7-NEXT:    clrlwi r11, r11, 24
+; CHECK-PWR7-NEXT:    clrlwi r3, r3, 24
+; CHECK-PWR7-NEXT:    clrlwi r4, r4, 24
+; CHECK-PWR7-NEXT:    clrlwi r5, r5, 24
+; CHECK-PWR7-NEXT:    clrlwi r6, r6, 24
+; CHECK-PWR7-NEXT:    sub r3, r3, r4
 ; CHECK-PWR7-NEXT:    sub r5, r5, r6
-; CHECK-PWR7-NEXT:    sldi r14, r14, 56
-; CHECK-PWR7-NEXT:    sldi r15, r15, 56
-; CHECK-PWR7-NEXT:    ld r31, 504(r1) # 8-byte Folded Reload
-; CHECK-PWR7-NEXT:    std r3, 256(r1)
-; CHECK-PWR7-NEXT:    std r3, 264(r1)
-; CHECK-PWR7-NEXT:    sldi r3, r19, 56
-; CHECK-PWR7-NEXT:    sldi r25, r25, 56
+; CHECK-PWR7-NEXT:    clrlwi r9, r9, 24
+; CHECK-PWR7-NEXT:    srawi r4, r3, 31
+; CHECK-PWR7-NEXT:    srawi r6, r5, 31
+; CHECK-PWR7-NEXT:    xor r3, r3, r4
 ; CHECK-PWR7-NEXT:    sldi r27, r27, 56
-; CHECK-PWR7-NEXT:    std r3, 240(r1)
-; CHECK-PWR7-NEXT:    std r3, 248(r1)
-; CHECK-PWR7-NEXT:    sub r3, r23, r22
-; CHECK-PWR7-NEXT:    srawi r23, r3, 31
-; CHECK-PWR7-NEXT:    sub r22, r21, r20
-; CHECK-PWR7-NEXT:    srawi r21, r22, 31
-; CHECK-PWR7-NEXT:    sldi r29, r29, 56
-; CHECK-PWR7-NEXT:    sldi r0, r0, 56
-; CHECK-PWR7-NEXT:    sldi r11, r11, 56
-; CHECK-PWR7-NEXT:    xor r3, r3, r23
-; CHECK-PWR7-NEXT:    xor r22, r22, r21
+; CHECK-PWR7-NEXT:    xor r5, r5, r6
+; CHECK-PWR7-NEXT:    sub r9, r9, r11
+; CHECK-PWR7-NEXT:    sub r3, r3, r4
+; CHECK-PWR7-NEXT:    sldi r24, r24, 56
+; CHECK-PWR7-NEXT:    sldi r3, r3, 56
+; CHECK-PWR7-NEXT:    srawi r11, r9, 31
+; CHECK-PWR7-NEXT:    std r27, 208(r1)
+; CHECK-PWR7-NEXT:    sub r4, r5, r6
+; CHECK-PWR7-NEXT:    std r27, 216(r1)
+; CHECK-PWR7-NEXT:    srawi r27, r29, 31
+; CHECK-PWR7-NEXT:    lbz r10, 313(r1)
+; CHECK-PWR7-NEXT:    xor r9, r9, r11
+; CHECK-PWR7-NEXT:    std r24, 224(r1)
+; CHECK-PWR7-NEXT:    lbz r22, 329(r1)
+; CHECK-PWR7-NEXT:    std r24, 232(r1)
+; CHECK-PWR7-NEXT:    srawi r24, r30, 31
+; CHECK-PWR7-NEXT:    ld r21, 360(r1) # 8-byte Folded Reload
+; CHECK-PWR7-NEXT:    sub r23, r9, r11
+; CHECK-PWR7-NEXT:    lbz r9, 317(r1)
+; CHECK-PWR7-NEXT:    lbz r11, 333(r1)
+; CHECK-PWR7-NEXT:    xor r29, r29, r27
+; CHECK-PWR7-NEXT:    std r3, 176(r1)
+; CHECK-PWR7-NEXT:    std r3, 184(r1)
+; CHECK-PWR7-NEXT:    sldi r3, r4, 56
+; CHECK-PWR7-NEXT:    sldi r23, r23, 56
+; CHECK-PWR7-NEXT:    xor r30, r30, r24
+; CHECK-PWR7-NEXT:    clrlwi r9, r9, 24
+; CHECK-PWR7-NEXT:    clrlwi r11, r11, 24
+; CHECK-PWR7-NEXT:    sub r4, r30, r24
+; CHECK-PWR7-NEXT:    ld r30, 432(r1) # 8-byte Folded Reload
+; CHECK-PWR7-NEXT:    std r3, 160(r1)
+; CHECK-PWR7-NEXT:    std r3, 168(r1)
+; CHECK-PWR7-NEXT:    sub r9, r9, r11
+; CHECK-PWR7-NEXT:    sub r3, r29, r27
+; CHECK-PWR7-NEXT:    std r23, 240(r1)
+; CHECK-PWR7-NEXT:    ld r29, 424(r1) # 8-byte Folded Reload
+; CHECK-PWR7-NEXT:    srawi r11, r9, 31
+; CHECK-PWR7-NEXT:    std r23, 248(r1)
+; CHECK-PWR7-NEXT:    ld r27, 408(r1) # 8-byte Folded Reload
+; CHECK-PWR7-NEXT:    srawi r23, r28, 31
+; CHECK-PWR7-NEXT:    sldi r3, r3, 56
+; CHECK-PWR7-NEXT:    xor r28, r28, r23
+; CHECK-PWR7-NEXT:    xor r9, r9, r11
+; CHECK-PWR7-NEXT:    std r3, 144(r1)
+; CHECK-PWR7-NEXT:    ld r24, 384(r1) # 8-byte Folded Reload
+; CHECK-PWR7-NEXT:    std r3, 152(r1)
+; CHECK-PWR7-NEXT:    sldi r3, r4, 56
+; CHECK-PWR7-NEXT:    sub r25, r9, r11
+; CHECK-PWR7-NEXT:    lbz r9, 318(r1)
+; CHECK-PWR7-NEXT:    lbz r11, 334(r1)
+; CHECK-PWR7-NEXT:    std r3, 128(r1)
+; CHECK-PWR7-NEXT:    sldi r25, r25, 56
+; CHECK-PWR7-NEXT:    std r3, 136(r1)
+; CHECK-PWR7-NEXT:    sub r3, r28, r23
+; CHECK-PWR7-NEXT:    sldi r3, r3, 56
+; CHECK-PWR7-NEXT:    std r3, 112(r1)
+; CHECK-PWR7-NEXT:    ld r28, 416(r1) # 8-byte Folded Reload
+; CHECK-PWR7-NEXT:    clrlwi r9, r9, 24
+; CHECK-PWR7-NEXT:    clrlwi r11, r11, 24
+; CHECK-PWR7-NEXT:    clrlwi r10, r10, 24
+; CHECK-PWR7-NEXT:    std r25, 256(r1)
+; CHECK-PWR7-NEXT:    std r25, 264(r1)
+; CHECK-PWR7-NEXT:    sub r9, r9, r11
+; CHECK-PWR7-NEXT:    srawi r25, r26, 31
+; CHECK-PWR7-NEXT:    xor r26, r26, r25
+; CHECK-PWR7-NEXT:    ld r23, 376(r1) # 8-byte Folded Reload
+; CHECK-PWR7-NEXT:    srawi r11, r9, 31
+; CHECK-PWR7-NEXT:    std r3, 120(r1)
+; CHECK-PWR7-NEXT:    sub r4, r26, r25
+; CHECK-PWR7-NEXT:    clrlwi r22, r22, 24
+; CHECK-PWR7-NEXT:    srawi r7, r8, 31
+; CHECK-PWR7-NEXT:    sub r10, r10, r22
+; CHECK-PWR7-NEXT:    ld r26, 400(r1) # 8-byte Folded Reload
+; CHECK-PWR7-NEXT:    xor r9, r9, r11
+; CHECK-PWR7-NEXT:    sldi r3, r4, 56
+; CHECK-PWR7-NEXT:    srawi r22, r10, 31
+; CHECK-PWR7-NEXT:    xor r8, r8, r7
+; CHECK-PWR7-NEXT:    xor r10, r10, r22
+; CHECK-PWR7-NEXT:    sub r10, r10, r22
+; CHECK-PWR7-NEXT:    ld r25, 392(r1) # 8-byte Folded Reload
+; CHECK-PWR7-NEXT:    sub r12, r9, r11
+; CHECK-PWR7-NEXT:    lbz r9, 319(r1)
+; CHECK-PWR7-NEXT:    lbz r11, 335(r1)
+; CHECK-PWR7-NEXT:    std r3, 96(r1)
+; CHECK-PWR7-NEXT:    sldi r12, r12, 56
+; CHECK-PWR7-NEXT:    std r3, 104(r1)
+; CHECK-PWR7-NEXT:    ld r22, 368(r1) # 8-byte Folded Reload
+; CHECK-PWR7-NEXT:    sldi r10, r10, 56
+; CHECK-PWR7-NEXT:    std r10, 192(r1)
+; CHECK-PWR7-NEXT:    clrlwi r9, r9, 24
+; CHECK-PWR7-NEXT:    clrlwi r11, r11, 24
+; CHECK-PWR7-NEXT:    sub r9, r9, r11
+; CHECK-PWR7-NEXT:    std r12, 272(r1)
+; CHECK-PWR7-NEXT:    std r12, 280(r1)
+; CHECK-PWR7-NEXT:    srawi r12, r19, 31
+; CHECK-PWR7-NEXT:    xor r0, r19, r12
+; CHECK-PWR7-NEXT:    ld r19, 344(r1) # 8-byte Folded Reload
+; CHECK-PWR7-NEXT:    sub r3, r0, r12
+; CHECK-PWR7-NEXT:    srawi r11, r9, 31
+; CHECK-PWR7-NEXT:    std r10, 200(r1)
+; CHECK-PWR7-NEXT:    xor r9, r9, r11
+; CHECK-PWR7-NEXT:    sldi r3, r3, 56
+; CHECK-PWR7-NEXT:    sub r9, r9, r11
+; CHECK-PWR7-NEXT:    std r3, 80(r1)
+; CHECK-PWR7-NEXT:    std r3, 88(r1)
 ; CHECK-PWR7-NEXT:    sldi r9, r9, 56
-; CHECK-PWR7-NEXT:    sldi r7, r7, 56
-; CHECK-PWR7-NEXT:    sldi r5, r5, 56
-; CHECK-PWR7-NEXT:    ld r30, 496(r1) # 8-byte Folded Reload
-; CHECK-PWR7-NEXT:    ld r28, 480(r1) # 8-byte Folded Reload
-; CHECK-PWR7-NEXT:    sub r3, r3, r23
-; CHECK-PWR7-NEXT:    sub r22, r22, r21
-; CHECK-PWR7-NEXT:    std r14, 304(r1)
-; CHECK-PWR7-NEXT:    ld r26, 464(r1) # 8-byte Folded Reload
-; CHECK-PWR7-NEXT:    sldi r3, r3, 56
-; CHECK-PWR7-NEXT:    sldi r22, r22, 56
-; CHECK-PWR7-NEXT:    ld r24, 448(r1) # 8-byte Folded Reload
-; CHECK-PWR7-NEXT:    ld r23, 440(r1) # 8-byte Folded Reload
-; CHECK-PWR7-NEXT:    std r14, 312(r1)
-; CHECK-PWR7-NEXT:    std r15, 288(r1)
-; CHECK-PWR7-NEXT:    std r3, 208(r1)
-; CHECK-PWR7-NEXT:    std r3, 216(r1)
-; CHECK-PWR7-NEXT:    lwz r3, 60(r1) # 4-byte Folded Reload
-; CHECK-PWR7-NEXT:    std r15, 296(r1)
-; CHECK-PWR7-NEXT:    ld r21, 424(r1) # 8-byte Folded Reload
-; CHECK-PWR7-NEXT:    ld r20, 416(r1) # 8-byte Folded Reload
-; CHECK-PWR7-NEXT:    std r22, 224(r1)
-; CHECK-PWR7-NEXT:    std r22, 232(r1)
-; CHECK-PWR7-NEXT:    sub r4, r3, r4
-; CHECK-PWR7-NEXT:    std r25, 192(r1)
-; CHECK-PWR7-NEXT:    ld r22, 432(r1) # 8-byte Folded Reload
-; CHECK-PWR7-NEXT:    ld r19, 408(r1) # 8-byte Folded Reload
-; CHECK-PWR7-NEXT:    srawi r3, r4, 31
-; CHECK-PWR7-NEXT:    std r25, 200(r1)
-; CHECK-PWR7-NEXT:    ld r25, 456(r1) # 8-byte Folded Reload
-; CHECK-PWR7-NEXT:    std r27, 176(r1)
-; CHECK-PWR7-NEXT:    std r27, 184(r1)
-; CHECK-PWR7-NEXT:    xor r4, r4, r3
-; CHECK-PWR7-NEXT:    std r29, 160(r1)
-; CHECK-PWR7-NEXT:    ld r27, 472(r1) # 8-byte Folded Reload
-; CHECK-PWR7-NEXT:    std r29, 168(r1)
-; CHECK-PWR7-NEXT:    std r0, 144(r1)
-; CHECK-PWR7-NEXT:    sub r3, r4, r3
-; CHECK-PWR7-NEXT:    std r0, 152(r1)
-; CHECK-PWR7-NEXT:    ld r29, 488(r1) # 8-byte Folded Reload
-; CHECK-PWR7-NEXT:    ld r18, 400(r1) # 8-byte Folded Reload
-; CHECK-PWR7-NEXT:    sldi r3, r3, 56
-; CHECK-PWR7-NEXT:    std r11, 128(r1)
-; CHECK-PWR7-NEXT:    ld r17, 392(r1) # 8-byte Folded Reload
-; CHECK-PWR7-NEXT:    std r11, 136(r1)
-; CHECK-PWR7-NEXT:    std r9, 112(r1)
+; CHECK-PWR7-NEXT:    std r9, 288(r1)
+; CHECK-PWR7-NEXT:    std r9, 296(r1)
+; CHECK-PWR7-NEXT:    srawi r9, r20, 31
+; CHECK-PWR7-NEXT:    xor r11, r20, r9
+; CHECK-PWR7-NEXT:    ld r20, 352(r1) # 8-byte Folded Reload
+; CHECK-PWR7-NEXT:    sub r4, r11, r9
+; CHECK-PWR7-NEXT:    sldi r3, r4, 56
 ; CHECK-PWR7-NEXT:    std r3, 64(r1)
 ; CHECK-PWR7-NEXT:    std r3, 72(r1)
-; CHECK-PWR7-NEXT:    addi r3, r1, 304
-; CHECK-PWR7-NEXT:    std r9, 120(r1)
-; CHECK-PWR7-NEXT:    ld r15, 376(r1) # 8-byte Folded Reload
-; CHECK-PWR7-NEXT:    std r7, 96(r1)
-; CHECK-PWR7-NEXT:    std r7, 104(r1)
-; CHECK-PWR7-NEXT:    std r5, 80(r1)
-; CHECK-PWR7-NEXT:    std r5, 88(r1)
-; CHECK-PWR7-NEXT:    lxvw4x v2, 0, r3
+; CHECK-PWR7-NEXT:    sub r3, r8, r7
+; CHECK-PWR7-NEXT:    sldi r3, r3, 56
+; CHECK-PWR7-NEXT:    std r3, 48(r1)
+; CHECK-PWR7-NEXT:    std r3, 56(r1)
 ; CHECK-PWR7-NEXT:    addi r3, r1, 288
-; CHECK-PWR7-NEXT:    lxvw4x v3, 0, r3
+; CHECK-PWR7-NEXT:    lxvw4x v2, 0, r3
 ; CHECK-PWR7-NEXT:    addi r3, r1, 272
-; CHECK-PWR7-NEXT:    ld r14, 368(r1) # 8-byte Folded Reload
-; CHECK-PWR7-NEXT:    vmrghb v2, v3, v2
 ; CHECK-PWR7-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-PWR7-NEXT:    addi r3, r1, 256
-; CHECK-PWR7-NEXT:    lxvw4x v4, 0, r3
+; CHECK-PWR7-NEXT:    vmrghb v2, v3, v2
+; CHECK-PWR7-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-PWR7-NEXT:    addi r3, r1, 240
+; CHECK-PWR7-NEXT:    lxvw4x v4, 0, r3
+; CHECK-PWR7-NEXT:    addi r3, r1, 224
 ; CHECK-PWR7-NEXT:    vmrghb v3, v4, v3
 ; CHECK-PWR7-NEXT:    vmrghh v2, v3, v2
 ; CHECK-PWR7-NEXT:    lxvw4x v3, 0, r3
-; CHECK-PWR7-NEXT:    addi r3, r1, 224
-; CHECK-PWR7-NEXT:    lxvw4x v4, 0, r3
 ; CHECK-PWR7-NEXT:    addi r3, r1, 208
-; CHECK-PWR7-NEXT:    vmrghb v3, v4, v3
 ; CHECK-PWR7-NEXT:    lxvw4x v4, 0, r3
 ; CHECK-PWR7-NEXT:    addi r3, r1, 192
-; CHECK-PWR7-NEXT:    lxvw4x v5, 0, r3
+; CHECK-PWR7-NEXT:    vmrghb v3, v4, v3
+; CHECK-PWR7-NEXT:    lxvw4x v4, 0, r3
 ; CHECK-PWR7-NEXT:    addi r3, r1, 176
+; CHECK-PWR7-NEXT:    lxvw4x v5, 0, r3
+; CHECK-PWR7-NEXT:    addi r3, r1, 160
 ; CHECK-PWR7-NEXT:    vmrghb v4, v5, v4
 ; CHECK-PWR7-NEXT:    vmrghh v3, v4, v3
 ; CHECK-PWR7-NEXT:    xxmrghw vs0, v3, v2
 ; CHECK-PWR7-NEXT:    lxvw4x v2, 0, r3
-; CHECK-PWR7-NEXT:    addi r3, r1, 160
-; CHECK-PWR7-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-PWR7-NEXT:    addi r3, r1, 144
-; CHECK-PWR7-NEXT:    vmrghb v2, v3, v2
 ; CHECK-PWR7-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-PWR7-NEXT:    addi r3, r1, 128
-; CHECK-PWR7-NEXT:    lxvw4x v4, 0, r3
-; CHECK-PWR7-NEXT:    vmrghb v3, v4, v3
+; CHECK-PWR7-NEXT:    vmrghb v2, v3, v2
+; CHECK-PWR7-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-PWR7-NEXT:    addi r3, r1, 112
+; CHECK-PWR7-NEXT:    lxvw4x v4, 0, r3
+; CHECK-PWR7-NEXT:    addi r3, r1, 96
+; CHECK-PWR7-NEXT:    vmrghb v3, v4, v3
 ; CHECK-PWR7-NEXT:    vmrghh v2, v3, v2
 ; CHECK-PWR7-NEXT:    lxvw4x v3, 0, r3
-; CHECK-PWR7-NEXT:    addi r3, r1, 96
-; CHECK-PWR7-NEXT:    lxvw4x v4, 0, r3
 ; CHECK-PWR7-NEXT:    addi r3, r1, 80
-; CHECK-PWR7-NEXT:    vmrghb v3, v4, v3
 ; CHECK-PWR7-NEXT:    lxvw4x v4, 0, r3
 ; CHECK-PWR7-NEXT:    addi r3, r1, 64
+; CHECK-PWR7-NEXT:    vmrghb v3, v4, v3
+; CHECK-PWR7-NEXT:    lxvw4x v4, 0, r3
+; CHECK-PWR7-NEXT:    addi r3, r1, 48
 ; CHECK-PWR7-NEXT:    lxvw4x v5, 0, r3
 ; CHECK-PWR7-NEXT:    vmrghb v4, v5, v4
 ; CHECK-PWR7-NEXT:    vmrghh v3, v4, v3
 ; CHECK-PWR7-NEXT:    xxmrghw vs1, v3, v2
 ; CHECK-PWR7-NEXT:    xxmrghd v2, vs1, vs0
-; CHECK-PWR7-NEXT:    addi r1, r1, 512
+; CHECK-PWR7-NEXT:    addi r1, r1, 448
 ; CHECK-PWR7-NEXT:    blr
 entry:
   %vecext = extractelement <16 x i8> %a, i32 0

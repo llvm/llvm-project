@@ -27,6 +27,18 @@ public:
   ~WebAssemblyMCAsmInfo() override;
 };
 
+namespace WebAssembly {
+enum Specifier {
+  S_None,
+  S_FUNCINDEX, // Wasm function index
+  S_GOT,
+  S_GOT_TLS,   // Wasm global index of TLS symbol
+  S_MBREL,     // Memory address relative to __memory_base
+  S_TBREL,     // Table index relative to __table_base
+  S_TLSREL,    // Memory address relative to __tls_base
+  S_TYPEINDEX, // Reference to a symbol's type (signature)
+};
+}
 } // end namespace llvm
 
 #endif

@@ -29,6 +29,7 @@
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/Analyses/CalledOnceCheck.h"
 #include "clang/Analysis/Analyses/Consumed.h"
+#include "clang/Analysis/Analyses/LifetimeSafety.h"
 #include "clang/Analysis/Analyses/ReachableCode.h"
 #include "clang/Analysis/Analyses/ThreadSafety.h"
 #include "clang/Analysis/Analyses/UninitializedValues.h"
@@ -49,6 +50,7 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Debug.h"
 #include <algorithm>
 #include <deque>
 #include <iterator>
@@ -643,7 +645,7 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
       ReturnsVoid = CBody->getFallthroughHandler() != nullptr;
     else
       ReturnsVoid = FD->getReturnType()->isVoidType();
-    HasNoReturn = FD->isNoReturn();
+    HasNoReturn = FD->isNoReturn() || FD->hasAttr<InferredNoReturnAttr>();
   }
   else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
     ReturnsVoid = MD->getReturnType()->isVoidType();
@@ -681,6 +683,28 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
       if (CD.diag_FallThrough_HasNoReturn)
         S.Diag(RBrace, CD.diag_FallThrough_HasNoReturn) << CD.FunKind;
     } else if (!ReturnsVoid && CD.diag_FallThrough_ReturnsNonVoid) {
+      // If the final statement is a call to an always-throwing function,
+      // don't warn about the fall-through.
+      if (D->getAsFunction()) {
+        if (const auto *CS = dyn_cast<CompoundStmt>(Body);
+            CS && !CS->body_empty()) {
+          const Stmt *LastStmt = CS->body_back();
+          // Unwrap ExprWithCleanups if necessary.
+          if (const auto *EWC = dyn_cast<ExprWithCleanups>(LastStmt)) {
+            LastStmt = EWC->getSubExpr();
+          }
+          if (const auto *CE = dyn_cast<CallExpr>(LastStmt)) {
+            if (const FunctionDecl *Callee = CE->getDirectCallee();
+                Callee && Callee->hasAttr<InferredNoReturnAttr>()) {
+              return; // Don't warn about fall-through.
+            }
+          }
+          // Direct throw.
+          if (isa<CXXThrowExpr>(LastStmt)) {
+            return; // Don't warn about fall-through.
+          }
+        }
+      }
       bool NotInAllControlPaths = FallThroughType == MaybeFallThrough;
       S.Diag(RBrace, CD.diag_FallThrough_ReturnsNonVoid)
           << CD.FunKind << NotInAllControlPaths;
@@ -963,11 +987,10 @@ static void DiagUninitUse(Sema &S, const VarDecl *VD, const UninitUse &Use,
 }
 
 /// Diagnose uninitialized const reference usages.
-static bool DiagnoseUninitializedConstRefUse(Sema &S, const VarDecl *VD,
+static void DiagnoseUninitializedConstRefUse(Sema &S, const VarDecl *VD,
                                              const UninitUse &Use) {
   S.Diag(Use.getUser()->getBeginLoc(), diag::warn_uninit_const_reference)
       << VD->getDeclName() << Use.getUser()->getSourceRange();
-  return true;
 }
 
 /// DiagnoseUninitializedUse -- Helper function for diagnosing uses of an
@@ -1509,14 +1532,13 @@ class UninitValsDiagReporter : public UninitVariablesHandler {
   // order of diagnostics when calling flushDiagnostics().
   typedef llvm::MapVector<const VarDecl *, MappedType> UsesMap;
   UsesMap uses;
-  UsesMap constRefUses;
 
 public:
   UninitValsDiagReporter(Sema &S) : S(S) {}
   ~UninitValsDiagReporter() override { flushDiagnostics(); }
 
-  MappedType &getUses(UsesMap &um, const VarDecl *vd) {
-    MappedType &V = um[vd];
+  MappedType &getUses(const VarDecl *vd) {
+    MappedType &V = uses[vd];
     if (!V.getPointer())
       V.setPointer(new UsesVec());
     return V;
@@ -1524,18 +1546,10 @@ public:
 
   void handleUseOfUninitVariable(const VarDecl *vd,
                                  const UninitUse &use) override {
-    getUses(uses, vd).getPointer()->push_back(use);
+    getUses(vd).getPointer()->push_back(use);
   }
 
-  void handleConstRefUseOfUninitVariable(const VarDecl *vd,
-                                         const UninitUse &use) override {
-    getUses(constRefUses, vd).getPointer()->push_back(use);
-  }
-
-  void handleSelfInit(const VarDecl *vd) override {
-    getUses(uses, vd).setInt(true);
-    getUses(constRefUses, vd).setInt(true);
-  }
+  void handleSelfInit(const VarDecl *vd) override { getUses(vd).setInt(true); }
 
   void flushDiagnostics() {
     for (const auto &P : uses) {
@@ -1558,6 +1572,9 @@ public:
         // guaranteed to produce them in line/column order, this will provide
         // a stable ordering.
         llvm::sort(*vec, [](const UninitUse &a, const UninitUse &b) {
+          // Move ConstRef uses to the back.
+          if (a.isConstRefUse() != b.isConstRefUse())
+            return b.isConstRefUse();
           // Prefer a more confident report over a less confident one.
           if (a.getKind() != b.getKind())
             return a.getKind() > b.getKind();
@@ -1565,6 +1582,11 @@ public:
         });
 
         for (const auto &U : *vec) {
+          if (U.isConstRefUse()) {
+            DiagnoseUninitializedConstRefUse(S, vd, U);
+            break;
+          }
+
           // If we have self-init, downgrade all uses to 'may be uninitialized'.
           UninitUse Use = hasSelfInit ? UninitUse(U.getUser(), false) : U;
 
@@ -1580,32 +1602,6 @@ public:
     }
 
     uses.clear();
-
-    // Flush all const reference uses diags.
-    for (const auto &P : constRefUses) {
-      const VarDecl *vd = P.first;
-      const MappedType &V = P.second;
-
-      UsesVec *vec = V.getPointer();
-      bool hasSelfInit = V.getInt();
-
-      if (!vec->empty() && hasSelfInit && hasAlwaysUninitializedUse(vec))
-        DiagnoseUninitializedUse(S, vd,
-                                 UninitUse(vd->getInit()->IgnoreParenCasts(),
-                                           /* isAlwaysUninit */ true),
-                                 /* alwaysReportSelfInit */ true);
-      else {
-        for (const auto &U : *vec) {
-          if (DiagnoseUninitializedConstRefUse(S, vd, U))
-            break;
-        }
-      }
-
-      // Release the uses vector.
-      delete vec;
-    }
-
-    constRefUses.clear();
   }
 
 private:
@@ -2722,6 +2718,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       .setAlwaysAdd(Stmt::UnaryOperatorClass);
   }
 
+  bool EnableLifetimeSafetyAnalysis = !Diags.isIgnored(
+      diag::warn_experimental_lifetime_safety_dummy_warning, D->getBeginLoc());
   // Install the logical handler.
   std::optional<LogicalErrorHandler> LEH;
   if (LogicalErrorHandler::hasActiveDiagnostics(Diags, D->getBeginLoc())) {
@@ -2844,6 +2842,12 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     }
   }
 
+  // TODO: Enable lifetime safety analysis for other languages once it is
+  // stable.
+  if (EnableLifetimeSafetyAnalysis && S.getLangOpts().CPlusPlus) {
+    if (CFG *cfg = AC.getCFG())
+      runLifetimeSafetyAnalysis(*cast<DeclContext>(D), *cfg, AC);
+  }
   // Check for violations of "called once" parameter properties.
   if (S.getLangOpts().ObjC && !S.getLangOpts().CPlusPlus &&
       shouldAnalyzeCalledOnceParameters(Diags, D->getBeginLoc())) {

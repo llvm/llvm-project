@@ -60,11 +60,7 @@ class TestFrameVarDILArraySubscript(TestBase):
         self.expect_var_path("*(&int_arr[1])", value="2")
 
         # Test for negative index.
-        self.expect(
-            "frame var 'int_arr[-1]'",
-            error=True,
-            substrs=["failed to parse integer constant"],
-        )
+        self.expect_var_path("int_ptr_1[-1]", True, value="1")
 
         # Test for floating point index
         self.expect(

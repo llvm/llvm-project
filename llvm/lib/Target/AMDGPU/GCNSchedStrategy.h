@@ -440,8 +440,6 @@ public:
 /// estimates reducing spilling or increasing occupancy is possible, as few
 /// instructions as possible are rematerialized to reduce potential negative
 /// effects on function latency.
-///
-/// TODO: We should extend this to work on SGPRs and AGPRs as well.
 class PreRARematStage : public GCNSchedStage {
 private:
   /// Useful information about a rematerializable instruction.
