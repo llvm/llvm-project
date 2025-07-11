@@ -13,7 +13,7 @@
 #define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
   _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE FUNCTION(                               \
       volatile ADDRSPACE __CLC_GENTYPE *Ptr) {                                 \
-    return __IMPL_FUNCTION(Ptr, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);      \
+    return __IMPL_FUNCTION(Ptr, __ATOMIC_SEQ_CST, __MEMORY_SCOPE_DEVICE);      \
   }
 
 __CLC_DEFINE_ATOMIC(global)
