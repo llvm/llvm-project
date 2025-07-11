@@ -121,7 +121,7 @@ def uncomment_download_links(repo, release):
         "DOWNLOAD_LINKS_END",
         "DOWNLOAD_LINKS_PLACEHOLDER",
     ]
-    for line in release.message.splitlines():
+    for line in release.body.splitlines():
         for comment in to_remove:
             if comment in line:
                 break
@@ -129,7 +129,7 @@ def uncomment_download_links(repo, release):
             new_message.append(line)
 
     release.update_release(
-        name=release.name,
+        name=release.title,
         message="\n".join(new_message),
         draft=release.draft,
         prerelease=release.prerelease,
