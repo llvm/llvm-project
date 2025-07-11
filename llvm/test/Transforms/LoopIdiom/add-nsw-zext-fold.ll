@@ -9,9 +9,10 @@ define void @fold_add_zext_to_sext(ptr %dst, i1 %start) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i1 [[START]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 25, [[START_EXT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 0, [[START_EXT]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nsw i64 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP5]], 100
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[SCEVGEP]], i8 0, i64 [[TMP4]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
