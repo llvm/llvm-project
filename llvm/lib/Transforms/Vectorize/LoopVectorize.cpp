@@ -431,11 +431,18 @@ static ElementCount getSmallConstantTripCount(ScalarEvolution *SE,
   if (isa<SCEVVScale>(ExitCount))
     return ElementCount::getScalable(1);
 
-  if (auto *Mul = dyn_cast<SCEVMulExpr>(ExitCount))
+  if (auto *Mul = dyn_cast<SCEVMulExpr>(ExitCount)) {
+    if (!Mul->hasNoUnsignedWrap())
+      return ElementCount::getFixed(0);
+
     if (Mul->getNumOperands() == 2 && isa<SCEVConstant>(Mul->getOperand(0)) &&
-        isa<SCEVVScale>(Mul->getOperand(1)))
-      return ElementCount::getScalable(
-          cast<SCEVConstant>(Mul->getOperand(0))->getValue()->getZExtValue());
+        isa<SCEVVScale>(Mul->getOperand(1))) {
+      ConstantInt *Scale = cast<SCEVConstant>(Mul->getOperand(0))->getValue();
+      if (Scale->getValue().getActiveBits() > 32)
+        return ElementCount::getFixed(0);
+      return ElementCount::getScalable(Scale->getZExtValue());
+    }
+  }
 
   return ElementCount::getFixed(0);
 }
