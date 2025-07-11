@@ -12,8 +12,8 @@
 
 target triple = "wasm32-unknown-unknown"
 
-define void @all_true_splat_not_all_none_zero(ptr %ptr) {
-; CHECK-LABEL: define void @all_true_splat_not_all_none_zero(
+define void @all_true_splat_not_all_non_zero(ptr %ptr) {
+; CHECK-LABEL: define void @all_true_splat_not_all_non_zero(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    store volatile i32 0, ptr [[PTR]], align 4
 ; CHECK-NEXT:    store volatile i32 0, ptr [[PTR]], align 4
@@ -22,19 +22,19 @@ define void @all_true_splat_not_all_none_zero(ptr %ptr) {
 ; CHECK-NEXT:    store volatile i32 0, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %a = tail call i32 @llvm.wasm.alltrue(<16 x i8> <i8 0, i8 1, i8 2, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
+  %a = call i32 @llvm.wasm.alltrue(<16 x i8> <i8 0, i8 1, i8 2, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
   store volatile i32 %a, ptr %ptr
 
-  %b = tail call i32 @llvm.wasm.alltrue(<8 x i16> <i16 0, i16 1, i16 2, i16 1, i16 1, i16 1, i16 1, i16 1>)
+  %b = call i32 @llvm.wasm.alltrue(<8 x i16> <i16 0, i16 1, i16 2, i16 1, i16 1, i16 1, i16 1, i16 1>)
   store volatile i32 %b, ptr %ptr
 
-  %c = tail call i32 @llvm.wasm.alltrue(<4 x i32> <i32 0, i32 1, i32 1, i32 1>)
+  %c = call i32 @llvm.wasm.alltrue(<4 x i32> <i32 0, i32 1, i32 1, i32 1>)
   store volatile i32 %c, ptr %ptr
 
-  %d = tail call i32 @llvm.wasm.alltrue(<2 x i64> <i64 0, i64 42>)
+  %d = call i32 @llvm.wasm.alltrue(<2 x i64> <i64 0, i64 42>)
   store volatile i32 %d, ptr %ptr
 
-  %e = tail call i32 @llvm.wasm.alltrue(<4 x i64> <i64 0, i64 1, i64 1, i64 1>)
+  %e = call i32 @llvm.wasm.alltrue(<4 x i64> <i64 0, i64 1, i64 1, i64 1>)
   store volatile i32 %e, ptr %ptr
 
   ret void
@@ -50,19 +50,19 @@ define void @all_true_splat_all_non_zero(ptr %ptr) {
 ; CHECK-NEXT:    store volatile i32 1, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %a = tail call i32 @llvm.wasm.alltrue(<16 x i8> <i8 1, i8 3, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
+  %a = call i32 @llvm.wasm.alltrue(<16 x i8> <i8 1, i8 3, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
   store volatile i32 %a, ptr %ptr
 
-  %b = tail call i32 @llvm.wasm.alltrue(<8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
+  %b = call i32 @llvm.wasm.alltrue(<8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
   store volatile i32 %b, ptr %ptr
 
-  %c = tail call i32 @llvm.wasm.alltrue(<4 x i32> <i32 1, i32 1, i32 1, i32 1>)
+  %c = call i32 @llvm.wasm.alltrue(<4 x i32> <i32 1, i32 1, i32 1, i32 1>)
   store volatile i32 %c, ptr %ptr
 
-  %d = tail call i32 @llvm.wasm.alltrue(<2 x i64> <i64 2, i64 2>)
+  %d = call i32 @llvm.wasm.alltrue(<2 x i64> <i64 2, i64 2>)
   store volatile i32 %d, ptr %ptr
 
-  %e = tail call i32 @llvm.wasm.alltrue(<4 x i64> <i64 1, i64 2, i64 1, i64 1>)
+  %e = call i32 @llvm.wasm.alltrue(<4 x i64> <i64 1, i64 2, i64 1, i64 1>)
   store volatile i32 %e, ptr %ptr
 
   ret void
@@ -79,19 +79,19 @@ define void @any_true_splat_all_zero(ptr %ptr) {
 ; CHECK-NEXT:    store volatile i32 0, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %a = tail call i32 @llvm.wasm.anytrue(<16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>)
+  %a = call i32 @llvm.wasm.anytrue(<16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>)
   store volatile i32 %a, ptr %ptr
 
-  %b = tail call i32 @llvm.wasm.anytrue(<8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>)
+  %b = call i32 @llvm.wasm.anytrue(<8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>)
   store volatile i32 %b, ptr %ptr
 
-  %c = tail call i32 @llvm.wasm.anytrue(<4 x i32> <i32 0, i32 0, i32 0, i32 0>)
+  %c = call i32 @llvm.wasm.anytrue(<4 x i32> <i32 0, i32 0, i32 0, i32 0>)
   store volatile i32 %c, ptr %ptr
 
-  %d = tail call i32 @llvm.wasm.anytrue(<2 x i64> <i64 0, i64 0>)
+  %d = call i32 @llvm.wasm.anytrue(<2 x i64> <i64 0, i64 0>)
   store volatile i32 %d, ptr %ptr
 
-  %e = tail call i32 @llvm.wasm.anytrue(<4 x i64> <i64 0, i64 0, i64 0, i64 0>)
+  %e = call i32 @llvm.wasm.anytrue(<4 x i64> <i64 0, i64 0, i64 0, i64 0>)
   store volatile i32 %e, ptr %ptr
 
   ret void
@@ -108,19 +108,19 @@ define void @any_true_splat_not_all_zero(ptr %ptr) {
 ; CHECK-NEXT:    store volatile i32 1, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %a = tail call i32 @llvm.wasm.anytrue(<16 x i8> <i8 1, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>)
+  %a = call i32 @llvm.wasm.anytrue(<16 x i8> <i8 1, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>)
   store volatile i32 %a, ptr %ptr
 
-  %b = tail call i32 @llvm.wasm.anytrue(<8 x i16> <i16 3, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>)
+  %b = call i32 @llvm.wasm.anytrue(<8 x i16> <i16 3, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>)
   store volatile i32 %b, ptr %ptr
 
-  %c = tail call i32 @llvm.wasm.anytrue(<4 x i32> <i32 1, i32 0, i32 0, i32 0>)
+  %c = call i32 @llvm.wasm.anytrue(<4 x i32> <i32 1, i32 0, i32 0, i32 0>)
   store volatile i32 %c, ptr %ptr
 
-  %d = tail call i32 @llvm.wasm.anytrue(<2 x i64> <i64 -1, i64 0>)
+  %d = call i32 @llvm.wasm.anytrue(<2 x i64> <i64 -1, i64 0>)
   store volatile i32 %d, ptr %ptr
 
-  %e = tail call i32 @llvm.wasm.anytrue(<4 x i64> <i64 2, i64 0, i64 0, i64 0>)
+  %e = call i32 @llvm.wasm.anytrue(<4 x i64> <i64 2, i64 0, i64 0, i64 0>)
   store volatile i32 %e, ptr %ptr
 
   ret void
