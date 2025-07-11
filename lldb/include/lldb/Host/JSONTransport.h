@@ -123,7 +123,8 @@ public:
             else
               callback(loop, llvm::json::parse<T>(message));
 
-          // On EOF, request termination after handling all the messages.
+          // On EOF, notify the callback after the remaining messages were
+          // handled.
           if (len == 0)
             callback(loop, llvm::make_error<TransportEOFError>());
         },
