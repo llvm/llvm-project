@@ -124,8 +124,9 @@ def uncomment_download_links(repo, release):
     for line in release.message.splitlines():
         for comment in to_remove:
             if comment in line:
-                continue
-        new_message.append(line)
+                break
+        else:
+            new_message.append(line)
 
     release.update_release(
         name=release.name,
@@ -137,7 +138,9 @@ def uncomment_download_links(repo, release):
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "command", type=str, choices=["create", "upload", "check-permissions"]
+    "command",
+    type=str,
+    choices=["create", "upload", "check-permissions", "uncomment_download_links"],
 )
 
 # All args
