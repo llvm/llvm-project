@@ -15,7 +15,8 @@
 using namespace lldb;
 
 bool lldb_private::formatters::IsMsvcStlSmartPointer(ValueObject &valobj) {
-  return valobj.GetChildMemberWithName("_Ptr") != nullptr;
+  ValueObjectSP valobj_sp = valobj.GetNonSyntheticValue();
+  return valobj_sp->GetChildMemberWithName("_Ptr") != nullptr;
 }
 
 bool lldb_private::formatters::MsvcStlSmartPointerSummaryProvider(
