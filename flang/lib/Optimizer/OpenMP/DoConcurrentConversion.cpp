@@ -314,9 +314,9 @@ private:
 
     // For `local` (and `local_init`) opernads, emit corresponding `private`
     // clauses and attach these clauses to the workshare loop.
-    if (!loop.getLocalOperands().empty())
+    if (!loop.getLocalVars().empty())
       for (auto [op, sym, arg] : llvm::zip_equal(
-               loop.getLocalOperands(),
+               loop.getLocalVars(),
                loop.getLocalSymsAttr().getAsRange<mlir::SymbolRefAttr>(),
                loop.getRegionLocalArgs())) {
         auto localizer = mlir::SymbolTable::lookupNearestSymbolFrom<
