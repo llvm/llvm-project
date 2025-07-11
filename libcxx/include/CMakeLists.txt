@@ -944,6 +944,7 @@ set(files
   __vector/vector_bool.h
   __vector/vector_bool_formatter.h
   __verbose_abort
+  __verbose_trap
   algorithm
   any
   array
