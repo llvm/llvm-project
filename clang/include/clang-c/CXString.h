@@ -67,6 +67,12 @@ CINDEX_LINKAGE void clang_disposeStringSet(CXStringSet *set);
  * @}
  */
 
+ // Get Non-null-terminated string pointer
+ CINDEX_LINKAGE const char *clang_getCXString_ptr(CXString string);
+
+ // Get Non-null-terminated string length
+ CINDEX_LINKAGE unsigned clang_getCXString_len(CXString string);
+
 LLVM_CLANG_C_EXTERN_C_END
 
 #endif
