@@ -2025,7 +2025,7 @@ static bool matchSubIntegerPackFromVector(Value *V, Value *&Vec,
       const unsigned RhsIdx = ShuffleIdx - NumLhsElts;
       auto *RhsElt =
           dyn_cast<ConstantInt>(RhsConst->getAggregateElement(RhsIdx));
-      if (!RhsElt || RhsElt->getZExtValue() != 0)
+      if (!RhsElt || !RhsElt->isNullValue())
         return false;
       continue;
     }
@@ -2059,17 +2059,12 @@ bool VectorCombine::foldIntegerPackFromVector(Instruction &I) {
   if (LhsVec != RhsVec || LhsVecOffset != RhsVecOffset)
     return false;
 
-  // Convert into shufflevector -> bitcast
-  SmallVector<int> ShuffleMask;
-  ShuffleMask.reserve(Mask.size());
+  // Convert into shufflevector -> bitcast;
   const unsigned ZeroVecIdx =
       cast<FixedVectorType>(LhsVec->getType())->getNumElements();
-  for (unsigned Idx = 0; Idx < Mask.size(); ++Idx) {
-    if (Mask.test(Idx))
-      ShuffleMask.push_back(LhsVecOffset + Idx);
-    else
-      ShuffleMask.push_back(ZeroVecIdx);
-  }
+  SmallVector<int> ShuffleMask(Mask.size(), ZeroVecIdx);
+  for (unsigned Idx : Mask.set_bits())
+    ShuffleMask[Idx] = LhsVecOffset + Idx;
 
   Value *MaskedVec = Builder.CreateShuffleVector(
       LhsVec, Constant::getNullValue(LhsVec->getType()), ShuffleMask,
