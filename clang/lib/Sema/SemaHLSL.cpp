@@ -1145,7 +1145,7 @@ bool SemaHLSL::handleRootSignatureElements(
              "By construction, parseFloatParam can't produce a NaN from a "
              "float_literal token");
 
-      if (16 < Sampler->MaxAnisotropy)
+      if (!llvm::hlsl::rootsig::verifyMaxAnisotropy(Sampler->MaxAnisotropy))
         ReportError(Loc, 0, 16);
       if (!llvm::hlsl::rootsig::verifyMipLODBias(Sampler->MipLODBias))
         ReportFloatError(Loc, -16.f, 15.99);
