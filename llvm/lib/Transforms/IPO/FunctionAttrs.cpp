@@ -137,6 +137,16 @@ static void addLocAccess(MemoryEffects &ME, const MemoryLocation &Loc,
     ME |= MemoryEffects::argMemOnly(MR);
     return;
   }
+  if (auto *CI = dyn_cast<CallInst>(UO)) {
+    if (auto *Callee = CI->getCalledFunction()) {
+      static constexpr auto ErrnoFnNames = {"__errno_location", "_errno",
+                                            "__errno", "___errno"};
+      if (is_contained(ErrnoFnNames, Callee->getName())) {
+        ME |= MemoryEffects::errnoMemOnly(MR);
+        return;
+      }
+    }
+  }
 
   // If it's not an identified object, it might be an argument.
   if (!isIdentifiedObject(UO))
@@ -259,6 +269,7 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
     if (I.isVolatile())
       ME |= MemoryEffects::inaccessibleMemOnly(MR);
 
+    // Refine memory effects for the given location.
     addLocAccess(ME, *Loc, MR, AAR);
   }
 
