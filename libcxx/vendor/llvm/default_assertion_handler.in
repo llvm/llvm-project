@@ -15,6 +15,7 @@
 #  include <__cxx03/__verbose_abort>
 #else
 #  include <__config>
+#  include <__verbose_trap>
 #  include <__verbose_abort>
 #endif
 
@@ -28,18 +29,7 @@
 
 #else
 
-#  if __has_builtin(__builtin_verbose_trap)
-// AppleClang shipped a slightly different version of __builtin_verbose_trap from the upstream
-// version before upstream Clang actually got the builtin.
-// TODO: Remove once AppleClang supports the two-arguments version of the builtin.
-#    if defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1700
-#      define _LIBCPP_ASSERTION_HANDLER(message) __builtin_verbose_trap(message)
-#    else
-#      define _LIBCPP_ASSERTION_HANDLER(message) __builtin_verbose_trap("libc++", message)
-#    endif
-#  else
-#    define _LIBCPP_ASSERTION_HANDLER(message) ((void)message, __builtin_trap())
-#  endif
+#  define _LIBCPP_ASSERTION_HANDLER(message) _LIBCPP_VERBOSE_TRAP(message)
 
 #endif // _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
 
