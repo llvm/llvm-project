@@ -11,9 +11,8 @@
 
 #include "src/__support/FPUtil/triple_double.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/number_pair.h"
 #include "src/__support/math/exp_constants.h"
-
+#include "src/__support/number_pair.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

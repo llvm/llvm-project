@@ -27,7 +27,6 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-
 namespace LIBC_NAMESPACE_DECL {
 
 using fputil::DoubleDouble;
@@ -162,7 +161,7 @@ static constexpr Float128 exp_f128(double x, double kd, int idx1, int idx2) {
 
 // Compute exp(x) with double-double precision.
 static constexpr DoubleDouble exp_double_double(double x, double kd,
-                               const DoubleDouble &exp_mid) {
+                                                const DoubleDouble &exp_mid) {
   // Recalculate dx:
   //   dx = x - k * 2^-12 * log(2)
   double t1 = fputil::multiply_add(kd, MLOG_2_EXP2_M12_HI, x); // exact
