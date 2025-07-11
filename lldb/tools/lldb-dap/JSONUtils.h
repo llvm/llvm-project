@@ -388,13 +388,17 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit);
 ///     launcher uses it on Linux tell the kernel that it should allow the
 ///     debugger process to attach.
 ///
+/// \param[in] external
+///     If set to true, the program will run in an external terminal window
+///     instead of IDE's integrated terminal.
+///
 /// \return
 ///     A "runInTerminal" JSON object that follows the specification outlined by
 ///     Microsoft.
 llvm::json::Object CreateRunInTerminalReverseRequest(
     llvm::StringRef program, const std::vector<std::string> &args,
     const llvm::StringMap<std::string> &env, llvm::StringRef cwd,
-    llvm::StringRef comm_file, lldb::pid_t debugger_pid);
+    llvm::StringRef comm_file, lldb::pid_t debugger_pid, bool external);
 
 /// Create a "Terminated" JSON object that contains statistics
 ///
