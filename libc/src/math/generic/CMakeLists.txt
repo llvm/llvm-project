@@ -956,6 +956,25 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  rsqrtf16
+  SRCS
+  rsqrtf16.cpp
+  HDRS
+    ../rsqrtf16.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types  
+)
+
+add_entrypoint_object(
   lround
   SRCS
     lround.cpp
