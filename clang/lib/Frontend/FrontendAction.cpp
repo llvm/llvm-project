@@ -1029,8 +1029,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       if (!FS.exists(cacheFile)) {
         // FIXME: very quick printing of the summary to the cache file
         llvm::raw_fd_ostream fd(cacheFile, EC, llvm::sys::fs::CD_CreateAlways);
-        CI.getSummarySerializer().serialize(
-            CI.getSummaryContext()->FunctionSummaries, fd);
+        CI.getSummarySerializer().serialize(fd);
       }
     }
   }

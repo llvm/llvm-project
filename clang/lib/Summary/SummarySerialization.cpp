@@ -4,87 +4,149 @@
 
 namespace llvm {
 namespace yaml {
-template <> struct MappingTraits<clang::FunctionSummary> {
-  static void mapping(IO &io, clang::FunctionSummary &FS) {
-    io.mapRequired("id", FS.ID);
+struct FunctionSummaryProxy {
+  size_t ID;
+  std::vector<size_t> Attrs;
+  std::vector<size_t> Calls;
+  bool CallsOpaque;
 
-    std::vector<std::string> Attrs;
-    for (auto &&Attr : FS.Attrs)
-      Attrs.emplace_back(Attr->serialize());
-    io.mapRequired("fn_attrs", Attrs);
-    if (!io.outputting()) {
-      std::set<const clang::SummaryAttr *> FunctionAttrs;
-      for (auto parsedAttr : Attrs) {
-        for (auto &&Attr :
-             ((clang::SummaryContext *)io.getContext())->Attributes) {
-          if (Attr->parse(parsedAttr))
-            FunctionAttrs.emplace(Attr.get());
-        }
-      }
+  FunctionSummaryProxy() = default;
+  FunctionSummaryProxy(const clang::FunctionSummary &Summary)
+      : ID(Summary.getID()), CallsOpaque(Summary.callsOpaqueObject()) {
+    for (auto &&Attr : Summary.getAttributes())
+      Attrs.emplace_back(Attr->getKind());
 
-      FS.Attrs = std::move(FunctionAttrs);
-    }
-
-    io.mapRequired("opaque_calls", FS.CallsOpaque);
-
-    std::vector<std::string> Calls(FS.Calls.begin(), FS.Calls.end());
-    io.mapRequired("calls", Calls);
-    if (!io.outputting())
-      FS.Calls = std::set(Calls.begin(), Calls.end());
+    for (auto &&Call : Summary.getCalls())
+      Calls.emplace_back(Call);
   }
 };
 
-template <>
-struct SequenceTraits<std::vector<std::unique_ptr<clang::FunctionSummary>>> {
-  static size_t
-  size(IO &io, std::vector<std::unique_ptr<clang::FunctionSummary>> &seq) {
+template <> struct MappingTraits<FunctionSummaryProxy> {
+  static void mapping(IO &io, FunctionSummaryProxy &FS) {
+    io.mapRequired("id", FS.ID);
+    io.mapRequired("fn_attrs", FS.Attrs);
+    io.mapRequired("opaque_calls", FS.CallsOpaque);
+    io.mapRequired("calls", FS.Calls);
+  }
+};
+
+template <> struct SequenceTraits<std::vector<FunctionSummaryProxy>> {
+  static size_t size(IO &io, std::vector<FunctionSummaryProxy> &seq) {
     return seq.size();
   }
 
-  static clang::FunctionSummary &
-  element(IO &io, std::vector<std::unique_ptr<clang::FunctionSummary>> &seq,
-          size_t index) {
-    if (index >= seq.size()) {
-      seq.resize(index + 1);
-      seq[index].reset(new clang::FunctionSummary("", {}, {}, false));
-    }
-    return *seq[index];
+  static FunctionSummaryProxy &
+  element(IO &io, std::vector<FunctionSummaryProxy> &seq, size_t index) {
+    if (index >= seq.size())
+      seq.emplace_back();
+
+    return seq[index];
   }
 };
 
+template <> struct MappingTraits<clang::SummaryContext> {
+  static void mapping(IO &io, clang::SummaryContext &Ctx) {
+    std::vector<StringRef> Identifiers = Ctx.GetIdentifiers();
+    io.mapRequired("identifiers", Identifiers);
+
+    std::map<size_t, size_t> LocalToContextID;
+    if (!io.outputting()) {
+      for (auto &&ID : Identifiers)
+        LocalToContextID[LocalToContextID.size()] =
+            Ctx.GetOrInsertStoredIdentifierIdx(ID);
+    }
+
+    std::vector<std::string> Attributes;
+    for (auto &&Attr : Ctx.GetAttributes())
+      Attributes.emplace_back(Attr->serialize());
+    io.mapRequired("attributes", Attributes);
+
+    std::map<size_t, const clang::SummaryAttr *> AttrIDToPtr;
+    std::set<const clang::SummaryAttr *> Seen;
+    if (!io.outputting()) {
+      for (auto &&Attribute : Attributes) {
+        for (auto &&Attr : Ctx.GetAttributes())
+          if (Attr->parse(Attribute)) {
+            if (!Seen.emplace(Attr.get()).second)
+              break;
+            ;
+
+            AttrIDToPtr[AttrIDToPtr.size()] = Attr.get();
+            break;
+          }
+      }
+    }
+
+    std::vector<FunctionSummaryProxy> SummaryProxies;
+    for (auto &&Summary : Ctx.GetSummaries())
+      SummaryProxies.emplace_back(*Summary);
+    io.mapRequired("summaries", SummaryProxies);
+    if (!io.outputting()) {
+      for (auto &&Proxy : SummaryProxies) {
+        if (Proxy.ID >= LocalToContextID.size())
+          continue;
+
+        std::set<const clang::SummaryAttr *> Attrs;
+        for (auto &&Attr : Proxy.Attrs) {
+          if (Attr >= AttrIDToPtr.size())
+            continue;
+
+          Attrs.emplace(AttrIDToPtr[Attr]);
+        }
+
+        std::set<size_t> Calls;
+        for (auto &&Call : Proxy.Calls) {
+          if (Call >= LocalToContextID.size())
+            continue;
+
+          Calls.emplace(LocalToContextID[Call]);
+        }
+
+        Ctx.CreateSummary(LocalToContextID[Proxy.ID], std::move(Attrs),
+                          std::move(Calls), Proxy.CallsOpaque);
+      }
+    }
+  }
+};
 } // namespace yaml
 } // namespace llvm
 
 namespace clang {
-void JSONSummarySerializer::serialize(
-    const std::vector<std::unique_ptr<FunctionSummary>> &Summaries,
-    raw_ostream &OS) {
+void JSONSummarySerializer::serialize(raw_ostream &OS) {
   llvm::json::OStream JOS(OS, 2);
-  JOS.arrayBegin();
+  JOS.objectBegin();
 
-  for (auto &&Summary : Summaries) {
-    JOS.object([&] {
-      JOS.attribute("id", llvm::json::Value(Summary->getID()));
-      JOS.attributeObject("attrs", [&] {
-        JOS.attributeArray("function", [&] {
+  JOS.attributeArray("identifiers", [&] {
+    for (auto &&Identifier : SummaryCtx->GetIdentifiers())
+      JOS.value(Identifier);
+  });
+
+  JOS.attributeArray("attributes", [&] {
+    for (auto &&Attribute : SummaryCtx->GetAttributes())
+      JOS.value(Attribute->serialize());
+  });
+
+  JOS.attributeArray("summaries", [&] {
+    for (auto &&Summary : SummaryCtx->GetSummaries()) {
+      JOS.object([&] {
+        JOS.attribute("id", llvm::json::Value(Summary->getID()));
+        JOS.attributeArray("fn_attrs", [&] {
           for (auto &&Attr : Summary->getAttributes()) {
-            JOS.value(llvm::json::Value(Attr->serialize()));
+            JOS.value(llvm::json::Value(static_cast<size_t>(Attr->getKind())));
           }
         });
-      });
-      JOS.attributeObject("calls", [&] {
-        JOS.attribute("opaque",
+        JOS.attribute("opaque_calls",
                       llvm::json::Value(Summary->callsOpaqueObject()));
-        JOS.attributeArray("functions", [&] {
+        JOS.attributeArray("calls", [&] {
           for (auto &&Call : Summary->getCalls()) {
-            JOS.object([&] { JOS.attribute("id", llvm::json::Value(Call)); });
+            JOS.value(llvm::json::Value(Call));
           }
         });
       });
-    });
-  }
+    }
+  });
 
-  JOS.arrayEnd();
+  JOS.objectEnd();
   JOS.flush();
 }
 
@@ -97,86 +159,101 @@ void JSONSummarySerializer::parse(StringRef Buffer) {
     return;
   }
 
-  auto *JSONSummaries = JSON->getAsArray();
+  auto *JSONObject = JSON->getAsObject();
+  if (!JSONObject)
+    return;
+
+  auto *JSONIdentifiers = JSONObject->getArray("identifiers");
+  if (!JSONIdentifiers)
+    return;
+
+  std::map<size_t, size_t> LocalToContextID;
+  for (auto &&Identifier : *JSONIdentifiers) {
+    auto IdentifierStr = Identifier.getAsString();
+    if (!IdentifierStr)
+      return;
+
+    LocalToContextID[LocalToContextID.size()] =
+        SummaryCtx->GetOrInsertStoredIdentifierIdx(*IdentifierStr);
+  }
+
+  auto *JSONAttributes = JSONObject->getArray("attributes");
+  if (!JSONAttributes)
+    return;
+
+  std::map<size_t, const SummaryAttr *> AttrIDToPtr;
+  std::set<const SummaryAttr *> Seen;
+  for (auto &&Attribute : *JSONAttributes) {
+    auto AttributeStr = Attribute.getAsString();
+
+    for (auto &&Attr : SummaryCtx->GetAttributes())
+      if (Attr->parse(*AttributeStr)) {
+        if (!Seen.emplace(Attr.get()).second)
+          return;
+
+        AttrIDToPtr[AttrIDToPtr.size()] = Attr.get();
+        break;
+      }
+  }
+
+  auto *JSONSummaries = JSONObject->getArray("summaries");
   if (!JSONSummaries)
     return;
 
   for (auto &&JSONSummary : *JSONSummaries) {
-    const llvm::json::Object *JSONSummaryObject = JSONSummary.getAsObject();
+    auto *JSONSummaryObject = JSONSummary.getAsObject();
     if (!JSONSummaryObject)
       continue;
 
-    std::optional<StringRef> ID = JSONSummaryObject->getString("id");
-    if (!ID)
+    std::optional<size_t> ID = JSONSummaryObject->getInteger("id");
+    if (!ID || *ID >= LocalToContextID.size())
       continue;
 
-    const llvm::json::Object *JSONAttributes =
-        JSONSummaryObject->getObject("attrs");
+    auto *JSONAttributes = JSONSummaryObject->getArray("fn_attrs");
     if (!JSONAttributes)
       continue;
 
-    const llvm::json::Array *JSONFunctionAttributes =
-        JSONAttributes->getArray("function");
-    if (!JSONFunctionAttributes)
-      continue;
-
     std::set<const SummaryAttr *> FunctionAttrs;
-    for (auto &&JSONAttr : *JSONFunctionAttributes)
-      for (auto &&CtxAttr : SummaryCtx->Attributes)
-        if (auto JSONAttrStr = JSONAttr.getAsString();
-            JSONAttrStr && CtxAttr->parse(*JSONAttrStr))
-          FunctionAttrs.emplace(CtxAttr.get());
+    for (auto &&JSONAttr : *JSONAttributes) {
+      std::optional<size_t> AttrID = JSONAttr.getAsUINT64();
+      if (!AttrID || *AttrID >= AttrIDToPtr.size())
+        return;
 
-    const llvm::json::Object *JSONCallsObject =
-        JSONSummaryObject->getObject("calls");
-    if (!JSONCallsObject)
-      continue;
+      FunctionAttrs.emplace(AttrIDToPtr[*AttrID]);
+    }
 
-    std::optional<bool> CallsOpaue = *JSONCallsObject->getBoolean("opaque");
+    std::optional<bool> CallsOpaue =
+        *JSONSummaryObject->getBoolean("opaque_calls");
     if (!CallsOpaue)
       continue;
 
-    std::set<std::string> Calls;
-    const llvm::json::Array *JSONCallEntries =
-        JSONCallsObject->getArray("functions");
+    std::set<size_t> Calls;
+    auto *JSONCallEntries = JSONSummaryObject->getArray("calls");
     if (!JSONCallEntries)
       continue;
 
     for (auto &&JSONCall : *JSONCallEntries) {
-      auto *JSONCallObj = JSONCall.getAsObject();
-      if (!JSONCallObj)
+      std::optional<size_t> CallID = JSONCall.getAsUINT64();
+      if (!CallID || *CallID >= LocalToContextID.size())
         continue;
 
-      std::optional<StringRef> CallID = JSONCallObj->getString("id");
-      if (!CallID)
-        continue;
-
-      Calls.emplace(CallID->str());
+      Calls.emplace(LocalToContextID[*CallID]);
     }
 
-    SummaryCtx->CreateSummary(ID->str(), std::move(FunctionAttrs),
+    SummaryCtx->CreateSummary(LocalToContextID[*ID], std::move(FunctionAttrs),
                               std::move(Calls), *CallsOpaue);
   }
 }
 
-void YAMLSummarySerializer::serialize(
-    const std::vector<std::unique_ptr<FunctionSummary>> &Summaries,
-    raw_ostream &OS) {
+void YAMLSummarySerializer::serialize(raw_ostream &OS) {
   llvm::yaml::Output YOUT(OS);
-  YOUT << ((SummaryContext *)SummaryCtx)->FunctionSummaries;
+  YOUT << *SummaryCtx;
   OS.flush();
 }
 
 void YAMLSummarySerializer::parse(StringRef Buffer) {
-  std::vector<std::unique_ptr<clang::FunctionSummary>> summaries;
-
-  llvm::yaml::Input YIN(Buffer, SummaryCtx);
-  YIN >> summaries;
-
-  for (auto &&summary : summaries)
-    SummaryCtx->CreateSummary(summary->getID().str(), summary->getAttributes(),
-                              summary->getCalls(),
-                              summary->callsOpaqueObject());
+  llvm::yaml::Input YIN(Buffer);
+  YIN >> *SummaryCtx;
 }
 
 void BinarySummarySerializer::PopulateBlockInfo() {
@@ -190,26 +267,6 @@ void BinarySummarySerializer::PopulateBlockInfo() {
   Stream.ExitBlock();
 }
 
-void BinarySummarySerializer::EmitAttributeBlock() {
-  Stream.EnterSubblock(ATTRIBUTE_BLOCK_ID, 3);
-
-  auto Abv = std::make_shared<llvm::BitCodeAbbrev>();
-  Abv->Add(llvm::BitCodeAbbrevOp(ATTR));
-  Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Array));
-  Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed, 8));
-  unsigned Abbrev = Stream.EmitAbbrev(std::move(Abv));
-
-  uint64_t ID = 0;
-  uint64_t Record[] = {ATTR};
-
-  for (auto &&Attr : SummaryCtx->Attributes) {
-    AttrIDs[Attr.get()] = ID++;
-    Stream.EmitRecordWithArray(Abbrev, Record, Attr->serialize());
-  }
-
-  Stream.ExitBlock();
-}
-
 void BinarySummarySerializer::EmitIdentifierBlock() {
   Stream.EnterSubblock(IDENTIFIER_BLOCK_ID, 3);
 
@@ -219,21 +276,25 @@ void BinarySummarySerializer::EmitIdentifierBlock() {
   Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed, 8));
   unsigned Abbrev = Stream.EmitAbbrev(std::move(Abv));
 
-  uint64_t ID = 0;
   uint64_t Record[] = {IDENTIFIER};
+  for (auto &&Identifier : SummaryCtx->GetIdentifiers())
+    Stream.EmitRecordWithArray(Abbrev, Record, Identifier);
 
-  for (auto &&Summary : SummaryCtx->FunctionSummaries) {
-    FunctionIDs[Summary->getID().str()] = ID++;
-    Stream.EmitRecordWithArray(Abbrev, Record, Summary->getID());
+  Stream.ExitBlock();
+}
 
-    for (auto &&Call : Summary->getCalls()) {
-      if (FunctionIDs.count(Call))
-        continue;
+void BinarySummarySerializer::EmitAttributeBlock() {
+  Stream.EnterSubblock(ATTRIBUTE_BLOCK_ID, 3);
 
-      FunctionIDs[Call] = ID++;
-      Stream.EmitRecordWithArray(Abbrev, Record, Call);
-    }
-  }
+  auto Abv = std::make_shared<llvm::BitCodeAbbrev>();
+  Abv->Add(llvm::BitCodeAbbrevOp(ATTR));
+  Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Array));
+  Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed, 8));
+  unsigned Abbrev = Stream.EmitAbbrev(std::move(Abv));
+
+  uint64_t Record[] = {ATTR};
+  for (auto &&Attr : SummaryCtx->GetAttributes())
+    Stream.EmitRecordWithArray(Abbrev, Record, Attr->serialize());
 
   Stream.ExitBlock();
 }
@@ -254,7 +315,7 @@ void BinarySummarySerializer::EmitSummaryBlock() {
   Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed, 32));
   unsigned Abbrev = Stream.EmitAbbrev(std::move(Abv));
 
-  for (auto &&Summary : SummaryCtx->FunctionSummaries) {
+  for (auto &&Summary : SummaryCtx->GetSummaries()) {
     SmallVector<uint64_t, 64> Record;
 
     Record.push_back(Summary->getAttributes().size());
@@ -263,11 +324,11 @@ void BinarySummarySerializer::EmitSummaryBlock() {
 
     Record.push_back(1 + Summary->getAttributes().size() +
                      Summary->getCalls().size());
-    Record.push_back(FunctionIDs[Summary->getID().str()]);
+    Record.push_back(Summary->getID());
     for (auto &&Attr : Summary->getAttributes())
-      Record.push_back(AttrIDs[Attr]);
+      Record.push_back(Attr->getKind());
     for (auto &&Call : Summary->getCalls())
-      Record.push_back(FunctionIDs[Call]);
+      Record.push_back(Call);
 
     Stream.EmitRecord(FUNCTION, Record, Abbrev);
   }
@@ -294,16 +355,15 @@ void BinarySummarySerializer::EmitRecord(unsigned ID, const char *Name) {
   Stream.EmitRecord(llvm::bitc::BLOCKINFO_CODE_SETRECORDNAME, Buffer);
 }
 
-void BinarySummarySerializer::serialize(
-    const std::vector<std::unique_ptr<FunctionSummary>> &, raw_ostream &OS) {
+void BinarySummarySerializer::serialize(raw_ostream &OS) {
   Stream.Emit((unsigned)'C', 8);
   Stream.Emit((unsigned)'T', 8);
   Stream.Emit((unsigned)'U', 8);
   Stream.Emit((unsigned)'S', 8);
 
   PopulateBlockInfo();
-  EmitAttributeBlock();
   EmitIdentifierBlock();
+  EmitAttributeBlock();
   EmitSummaryBlock();
 
   Stream.FlushToWord();
@@ -360,20 +420,14 @@ llvm::Error BinarySummarySerializer::handleBlockRecordsCommon(
 }
 
 llvm::Error
-BinarySummarySerializer::parseAttributeBlock(llvm::BitstreamCursor &Stream) {
-  if (llvm::Error Err = handleBlockStartCommon(ATTRIBUTE_BLOCK_ID, Stream))
+BinarySummarySerializer::parseIdentifierBlock(llvm::BitstreamCursor &Stream) {
+  if (llvm::Error Err = handleBlockStartCommon(IDENTIFIER_BLOCK_ID, Stream))
     return Err;
 
-  ParsedAttrIDs.clear();
   if (llvm::Error Err = handleBlockRecordsCommon(Stream, [&](auto &&Record) {
-        for (auto &&CtxAttr : SummaryCtx->Attributes) {
-          llvm::SmallString<64> AttributeStr(Record.begin(), Record.end());
-
-          if (CtxAttr->parse(AttributeStr.str())) {
-            ParsedAttrIDs.push_back(CtxAttr.get());
-            break;
-          }
-        }
+        llvm::SmallString<64> IdentifierStr(Record.begin(), Record.end());
+        LocalToContextID[LocalToContextID.size()] =
+            SummaryCtx->GetOrInsertStoredIdentifierIdx(IdentifierStr);
       }))
     return Err;
 
@@ -381,14 +435,24 @@ BinarySummarySerializer::parseAttributeBlock(llvm::BitstreamCursor &Stream) {
 }
 
 llvm::Error
-BinarySummarySerializer::parseIdentifierBlock(llvm::BitstreamCursor &Stream) {
-  if (llvm::Error Err = handleBlockStartCommon(IDENTIFIER_BLOCK_ID, Stream))
+BinarySummarySerializer::parseAttributeBlock(llvm::BitstreamCursor &Stream) {
+  if (llvm::Error Err = handleBlockStartCommon(ATTRIBUTE_BLOCK_ID, Stream))
     return Err;
 
-  ParsedFunctionIDs.clear();
   if (llvm::Error Err = handleBlockRecordsCommon(Stream, [&](auto &&Record) {
-        llvm::SmallString<64> IdentifierStr(Record.begin(), Record.end());
-        ParsedFunctionIDs.emplace_back(IdentifierStr.str().str());
+        std::set<const clang::SummaryAttr *> Seen;
+
+        for (auto &&Attr : SummaryCtx->GetAttributes()) {
+          llvm::SmallString<64> AttributeStr(Record.begin(), Record.end());
+
+          if (Attr->parse(AttributeStr.str())) {
+            if (!Seen.emplace(Attr.get()).second)
+              break;
+
+            AttrIDToPtr[AttrIDToPtr.size()] = Attr.get();
+            break;
+          }
+        }
       }))
     return Err;
 
@@ -404,24 +468,35 @@ BinarySummarySerializer::parseSummaryBlock(llvm::BitstreamCursor &Stream) {
         int AttrCnt = Record[0];
         int CallCnt = Record[1];
         bool Opaque = Record[2];
-        int ID = Record[4];
+        size_t ID = Record[4];
         int I = 0;
+
+        if (ID >= LocalToContextID.size())
+          return;
 
         std::set<const SummaryAttr *> Attrs;
         while (AttrCnt) {
-          Attrs.emplace(ParsedAttrIDs[Record[5 + I]]);
+          size_t AttrID = Record[5 + I];
+          if (AttrID >= AttrIDToPtr.size())
+            return;
+
+          Attrs.emplace(AttrIDToPtr[AttrID]);
           ++I;
           --AttrCnt;
         }
 
-        std::set<std::string> Calls;
+        std::set<size_t> Calls;
         while (CallCnt) {
-          Calls.emplace(ParsedFunctionIDs[Record[5 + I]]);
+          size_t CallID = Record[5 + I];
+          if (CallID >= LocalToContextID.size())
+            return;
+
+          Calls.emplace(LocalToContextID[CallID]);
           ++I;
           --CallCnt;
         }
 
-        SummaryCtx->CreateSummary(ParsedFunctionIDs[ID], std::move(Attrs),
+        SummaryCtx->CreateSummary(LocalToContextID[ID], std::move(Attrs),
                                   std::move(Calls), Opaque);
       }))
     return Err;
@@ -441,11 +516,11 @@ llvm::Error BinarySummarySerializer::parseBlock(unsigned ID,
     return llvm::Error::success();
   }
 
-  if (ID == ATTRIBUTE_BLOCK_ID)
-    return parseAttributeBlock(Stream);
-
   if (ID == IDENTIFIER_BLOCK_ID)
     return parseIdentifierBlock(Stream);
+
+  if (ID == ATTRIBUTE_BLOCK_ID)
+    return parseAttributeBlock(Stream);
 
   if (ID == SUMMARY_BLOCK_ID)
     return parseSummaryBlock(Stream);
@@ -455,6 +530,8 @@ llvm::Error BinarySummarySerializer::parseBlock(unsigned ID,
 
 llvm::Error BinarySummarySerializer::parseImpl(StringRef Buffer) {
   llvm::BitstreamCursor Stream(Buffer);
+  LocalToContextID.clear();
+  AttrIDToPtr.clear();
 
   llvm::SimpleBitstreamCursor::word_t Magic[4] = {0};
   unsigned char ExpectedMagic[] = {'C', 'T', 'U', 'S'};

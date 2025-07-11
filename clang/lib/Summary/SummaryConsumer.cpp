@@ -9,6 +9,6 @@ SerializingSummaryConsumer::SerializingSummaryConsumer(
       Serializer(&Serializer) {}
 
 void SerializingSummaryConsumer::ProcessEndOfSourceFile() {
-  Serializer->serialize(SummaryCtx->FunctionSummaries, OS);
+  Serializer->serialize(OS);
 }
 } // namespace clang

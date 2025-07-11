@@ -14,7 +14,8 @@ std::string GetUSR(const FunctionDecl *FD) {
 }
 
 class CallCollector : public ast_matchers::MatchFinder::MatchCallback {
-  std::set<std::string> Calls;
+  SummaryContext *Context;
+  std::set<size_t> Calls;
   bool callsOpaqueSymbol = false;
 
   virtual void
@@ -40,11 +41,13 @@ class CallCollector : public ast_matchers::MatchFinder::MatchCallback {
       return;
     }
 
-    Calls.emplace(GetUSR(Callee));
+    Calls.emplace(Context->GetOrInsertStoredIdentifierIdx(GetUSR(Callee)));
   }
 
 public:
-  std::pair<std::set<std::string>, bool> collect(const FunctionDecl *FD) {
+  CallCollector(SummaryContext &Context) : Context(&Context) {}
+
+  std::pair<std::set<size_t>, bool> collect(const FunctionDecl *FD) {
     using namespace ast_matchers;
     MatchFinder Finder;
 
@@ -57,44 +60,64 @@ public:
 };
 } // namespace
 
-FunctionSummary::FunctionSummary(std::string ID,
+FunctionSummary::FunctionSummary(size_t ID,
                                  std::set<const SummaryAttr *> FunctionAttrs,
-                                 std::set<std::string> Calls, bool CallsOpaque)
-    : ID(std::move(ID)), Attrs(std::move(FunctionAttrs)),
-      Calls(std::move(Calls)), CallsOpaque(CallsOpaque) {}
+                                 std::set<size_t> Calls, bool CallsOpaque)
+    : ID(ID), Attrs(std::move(FunctionAttrs)), Calls(std::move(Calls)),
+      CallsOpaque(CallsOpaque) {}
 
-template <typename T> void SummaryContext::registerAttr() {
+template <typename T> void SummaryContext::RegisterAttr() {
   std::unique_ptr<T> attr(new T());
   SummaryAttrKind Kind = attr->getKind();
 
   if (KindToAttribute.count(Kind))
     return;
 
+  if (!Attributes.empty())
+    assert(Attributes.back()->getKind() == Kind - 1 &&
+           "attributes are not stored continously");
+
   KindToAttribute[Kind] = Attributes.emplace_back(std::move(attr)).get();
 }
 
 SummaryContext::SummaryContext() {
-  registerAttr<NoWriteGlobalAttr>();
-  registerAttr<NoWritePtrParameterAttr>();
+  RegisterAttr<NoWriteGlobalAttr>();
+  RegisterAttr<NoWritePtrParameterAttr>();
 }
 
-void SummaryContext::CreateSummary(std::string ID,
+size_t SummaryContext::GetOrInsertStoredIdentifierIdx(StringRef ID) {
+  auto &&[Element, Inserted] =
+      IdentifierToID.try_emplace(ID.str(), IdentifierToID.size());
+  if (Inserted)
+    Identifiers.emplace_back(Element->first);
+
+  return Element->second;
+}
+
+std::optional<size_t>
+SummaryContext::GetStoredIdentifierIdx(StringRef ID) const {
+  if (IdentifierToID.count(ID.str()))
+    return IdentifierToID.at(ID.str());
+
+  return std::nullopt;
+}
+
+void SummaryContext::CreateSummary(size_t ID,
                                    std::set<const SummaryAttr *> Attrs,
-                                   std::set<std::string> Calls,
-                                   bool CallsOpaque) {
+                                   std::set<size_t> Calls, bool CallsOpaque) {
   if (IDToSummary.count(ID))
     return;
 
   auto Summary = std::make_unique<FunctionSummary>(
-      std::move(ID), std::move(Attrs), std::move(Calls), CallsOpaque);
+      ID, std::move(Attrs), std::move(Calls), CallsOpaque);
   auto *SummaryPtr = FunctionSummaries.emplace_back(std::move(Summary)).get();
   IDToSummary[SummaryPtr->getID()] = SummaryPtr;
 }
 
 const FunctionSummary *
 SummaryContext::GetSummary(const FunctionDecl *FD) const {
-  auto USR = GetUSR(FD);
-  return IDToSummary.count(USR) ? IDToSummary.at(USR) : nullptr;
+  std::optional<size_t> ID = GetStoredIdentifierIdx(GetUSR(FD));
+  return ID ? IDToSummary.at(*ID) : nullptr;
 }
 
 void SummaryContext::SummarizeFunctionBody(const FunctionDecl *FD) {
@@ -105,9 +128,9 @@ void SummaryContext::SummarizeFunctionBody(const FunctionDecl *FD) {
       Attrs.emplace(Attr.get());
   }
 
-  auto [calls, opaque] = CallCollector().collect(FD);
-
-  CreateSummary(GetUSR(FD), std::move(Attrs), std::move(calls), opaque);
+  auto [CollectedCalls, Opaque] = CallCollector(*this).collect(FD);
+  CreateSummary(GetOrInsertStoredIdentifierIdx(GetUSR(FD)), std::move(Attrs),
+                std::move(CollectedCalls), Opaque);
 }
 
 bool SummaryContext::ReduceFunctionSummary(FunctionSummary &Function) {

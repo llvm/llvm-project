@@ -16,8 +16,7 @@ public:
   SummarySerializer(SummaryContext &SummaryCtx) : SummaryCtx(&SummaryCtx) {};
   virtual ~SummarySerializer() = default;
 
-  virtual void serialize(const std::vector<std::unique_ptr<FunctionSummary>> &,
-                         raw_ostream &OS) = 0;
+  virtual void serialize(raw_ostream &OS) = 0;
   virtual void parse(StringRef) = 0;
 };
 
@@ -26,8 +25,7 @@ public:
   JSONSummarySerializer(SummaryContext &SummaryCtx)
       : SummarySerializer(SummaryCtx) {};
 
-  void serialize(const std::vector<std::unique_ptr<FunctionSummary>> &,
-                 raw_ostream &OS) override;
+  void serialize(raw_ostream &OS) override;
   void parse(StringRef) override;
 };
 
@@ -36,15 +34,14 @@ public:
   YAMLSummarySerializer(SummaryContext &SummaryCtx)
       : SummarySerializer(SummaryCtx) {};
 
-  void serialize(const std::vector<std::unique_ptr<FunctionSummary>> &,
-                 raw_ostream &OS) override;
+  void serialize(raw_ostream &OS) override;
   void parse(StringRef) override;
 };
 
 class BinarySummarySerializer : public SummarySerializer {
   enum BlockIDs {
-    ATTRIBUTE_BLOCK_ID = llvm::bitc::FIRST_APPLICATION_BLOCKID,
-    IDENTIFIER_BLOCK_ID,
+    IDENTIFIER_BLOCK_ID = llvm::bitc::FIRST_APPLICATION_BLOCKID,
+    ATTRIBUTE_BLOCK_ID,
     SUMMARY_BLOCK_ID
   };
 
@@ -58,12 +55,8 @@ class BinarySummarySerializer : public SummarySerializer {
 
   enum SummaryRecordTypes { FUNCTION = 1 };
 
-  // FIXME: get rid of this global state
-  std::map<const SummaryAttr *, uint64_t> AttrIDs;
-  std::map<std::string, uint64_t> FunctionIDs;
-
-  std::vector<const SummaryAttr *> ParsedAttrIDs;
-  std::vector<std::string> ParsedFunctionIDs;
+  std::map<size_t, size_t> LocalToContextID;
+  std::map<size_t, const clang::SummaryAttr *> AttrIDToPtr;
 
   llvm::SmallVector<char, 32> Buffer;
   llvm::BitstreamWriter Stream;
@@ -92,8 +85,7 @@ public:
   BinarySummarySerializer(SummaryContext &SummaryCtx)
       : SummarySerializer(SummaryCtx), Stream(Buffer) {};
 
-  void serialize(const std::vector<std::unique_ptr<FunctionSummary>> &,
-                 raw_ostream &OS) override;
+  void serialize(raw_ostream &OS) override;
   void parse(StringRef) override;
 };
 
