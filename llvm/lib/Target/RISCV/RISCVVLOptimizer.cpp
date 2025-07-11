@@ -748,12 +748,11 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   }
 
   // Vector Register Gather with 16-bit Index Elements Instruction
-  // vrgatherei16.vv vd, vs2, vs1
   // Dest and source data EEW=SEW. Index vector EEW=16.
   case RISCV::VRGATHEREI16_VV: {
-    if (MO.getOperandNo() == 0 || MO.getOperandNo() == 1)
-      return MILog2SEW;
-    return 4; // vs1 index vector has EEW=16, log2(16)=4
+    if (MO.getOperandNo() == 2)
+      return 4;
+    return MILog2SEW;
   }
 
   default:
