@@ -7,81 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/JSONTransport.h"
-#include "lldb/Utility/IOObject.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/SelectHelper.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
-#include <optional>
 #include <string>
 #include <utility>
 
 using namespace llvm;
 using namespace lldb;
 using namespace lldb_private;
-
-/// ReadFull attempts to read the specified number of bytes. If EOF is
-/// encountered, an empty string is returned.
-static Expected<std::string>
-ReadFull(IOObject &descriptor, size_t length,
-         std::optional<std::chrono::microseconds> timeout = std::nullopt) {
-  if (!descriptor.IsValid())
-    return llvm::make_error<TransportInvalidError>();
-
-  bool timeout_supported = true;
-  // FIXME: SelectHelper does not work with NativeFile on Win32.
-#if _WIN32
-  timeout_supported = descriptor.GetFdType() == IOObject::eFDTypeSocket;
-#endif
-
-  if (timeout && timeout_supported) {
-    SelectHelper sh;
-    sh.SetTimeout(*timeout);
-    sh.FDSetRead(
-        reinterpret_cast<lldb::socket_t>(descriptor.GetWaitableHandle()));
-    Status status = sh.Select();
-    if (status.Fail()) {
-      // Convert timeouts into a specific error.
-      if (status.GetType() == lldb::eErrorTypePOSIX &&
-          status.GetError() == ETIMEDOUT)
-        return make_error<TransportTimeoutError>();
-      return status.takeError();
-    }
-  }
-
-  std::string data;
-  data.resize(length);
-  Status status = descriptor.Read(data.data(), length);
-  if (status.Fail())
-    return status.takeError();
-
-  // Read returns '' on EOF.
-  if (length == 0)
-    return make_error<TransportEOFError>();
-
-  // Return the actual number of bytes read.
-  return data.substr(0, length);
-}
-
-static Expected<std::string>
-ReadUntil(IOObject &descriptor, StringRef delimiter,
-          std::optional<std::chrono::microseconds> timeout = std::nullopt) {
-  std::string buffer;
-  buffer.reserve(delimiter.size() + 1);
-  while (!llvm::StringRef(buffer).ends_with(delimiter)) {
-    Expected<std::string> next =
-        ReadFull(descriptor, buffer.empty() ? delimiter.size() : 1, timeout);
-    if (auto Err = next.takeError())
-      return std::move(Err);
-    buffer += *next;
-  }
-  return buffer.substr(0, buffer.size() - delimiter.size());
-}
 
 JSONTransport::JSONTransport(IOObjectSP input, IOObjectSP output)
     : m_input(std::move(input)), m_output(std::move(output)) {}
@@ -90,44 +29,55 @@ void JSONTransport::Log(llvm::StringRef message) {
   LLDB_LOG(GetLog(LLDBLog::Host), "{0}", message);
 }
 
-Expected<std::string>
-HTTPDelimitedJSONTransport::ReadImpl(const std::chrono::microseconds &timeout) {
-  if (!m_input || !m_input->IsValid())
-    return llvm::make_error<TransportInvalidError>();
+Expected<std::vector<std::string>> HTTPDelimitedJSONTransport::Parse() {
+  if (m_buffer.empty())
+    return std::vector<std::string>{};
 
-  IOObject *input = m_input.get();
-  Expected<std::string> message_header =
-      ReadFull(*input, kHeaderContentLength.size(), timeout);
-  if (!message_header)
-    return message_header.takeError();
-  if (*message_header != kHeaderContentLength)
-    return createStringError(formatv("expected '{0}' and got '{1}'",
-                                     kHeaderContentLength, *message_header)
-                                 .str());
+  std::vector<std::string> messages;
+  llvm::StringRef buf = m_buffer;
+  size_t content_length = 0, end_of_last_message = 0, cursor = 0;
+  do {
+    auto idx = buf.find(kHeaderSeparator, cursor);
+    if (idx == StringRef::npos)
+      break;
 
-  Expected<std::string> raw_length = ReadUntil(*input, kHeaderSeparator);
-  if (!raw_length)
-    return handleErrors(raw_length.takeError(),
-                        [&](const TransportEOFError &E) -> llvm::Error {
-                          return createStringError(
-                              "unexpected EOF while reading header separator");
-                        });
+    auto header = buf.slice(cursor, idx);
+    cursor = idx + kHeaderSeparator.size();
 
-  size_t length;
-  if (!to_integer(*raw_length, length))
-    return createStringError(
-        formatv("invalid content length {0}", *raw_length).str());
+    // An empty line separates the headers from the message body.
+    if (header.empty()) {
+      // Not enough data, wait for the next chunk to arrive.
+      if (content_length + cursor > buf.size())
+        break;
 
-  Expected<std::string> raw_json = ReadFull(*input, length);
-  if (!raw_json)
-    return handleErrors(
-        raw_json.takeError(), [&](const TransportEOFError &E) -> llvm::Error {
-          return createStringError("unexpected EOF while reading JSON");
-        });
+      std::string body = buf.substr(cursor, content_length).str();
+      end_of_last_message = cursor + content_length;
+      cursor += content_length;
+      Log(llvm::formatv("--> {0}", body).str());
+      messages.push_back(body);
+      content_length = 0;
+      continue;
+    }
 
-  Log(llvm::formatv("--> {0}", *raw_json).str());
+    // HTTP Headers are `<field-name>: [<field-value>]`.
+    if (!header.contains(kHeaderFieldSeparator))
+      return make_error<StringError>("malformed content header",
+                                     inconvertibleErrorCode());
 
-  return raw_json;
+    auto [name, value] = header.split(kHeaderFieldSeparator);
+    if (name.lower() == kHeaderContentLength.lower()) {
+      value = value.trim();
+      if (value.trim().consumeInteger(10, content_length))
+        return make_error<StringError>(
+            formatv("invalid content length: {0}", value).str(),
+            inconvertibleErrorCode());
+    }
+  } while (cursor < buf.size());
+
+  // Store the remainder of the buffer for the next read callback.
+  m_buffer = buf.substr(end_of_last_message);
+
+  return messages;
 }
 
 Error HTTPDelimitedJSONTransport::WriteImpl(const std::string &message) {
@@ -138,25 +88,29 @@ Error HTTPDelimitedJSONTransport::WriteImpl(const std::string &message) {
 
   std::string Output;
   raw_string_ostream OS(Output);
-  OS << kHeaderContentLength << message.length() << kHeaderSeparator << message;
+  OS << kHeaderContentLength << kHeaderFieldSeparator << ' ' << message.length()
+     << kHeaderSeparator << kHeaderSeparator << message;
   size_t num_bytes = Output.size();
   return m_output->Write(Output.data(), num_bytes).takeError();
 }
 
-Expected<std::string>
-JSONRPCTransport::ReadImpl(const std::chrono::microseconds &timeout) {
-  if (!m_input || !m_input->IsValid())
-    return make_error<TransportInvalidError>();
+Expected<std::vector<std::string>> JSONRPCTransport::Parse() {
+  std::vector<std::string> messages;
+  StringRef buf = m_buffer;
+  do {
+    size_t idx = buf.find(kMessageSeparator);
+    if (idx == StringRef::npos)
+      break;
+    std::string raw_json = buf.substr(0, idx).str();
+    buf = buf.substr(idx + 1);
+    Log(llvm::formatv("--> {0}", raw_json).str());
+    messages.push_back(raw_json);
+  } while (!buf.empty());
 
-  IOObject *input = m_input.get();
-  Expected<std::string> raw_json =
-      ReadUntil(*input, kMessageSeparator, timeout);
-  if (!raw_json)
-    return raw_json.takeError();
+  // Store the remainder of the buffer for the next read callback.
+  m_buffer = buf.str();
 
-  Log(llvm::formatv("--> {0}", *raw_json).str());
-
-  return *raw_json;
+  return messages;
 }
 
 Error JSONRPCTransport::WriteImpl(const std::string &message) {
