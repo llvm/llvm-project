@@ -30,7 +30,7 @@
 
 using id = std::text_encoding::id;
 int main() {
-  auto env_te = std::text_encoding(id::ASCII);
+  auto env_te = std::text_encoding::environment();
   // 1
   {
     auto mib = env_te.mib();
