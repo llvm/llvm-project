@@ -1086,7 +1086,7 @@ multiclass VOP1_Real_FULL_with_name_gfx1250_gfx13<
 
 multiclass VOP1_Real_FULL_with_name_gfx11_gfx12_not_gfx1250_gfx13<
     bits<9> op, string opName, string asmName> :
-  VOP1_Real_FULL_with_name<GFX11Not12_50Gen, op, opName, asmName>,
+  VOP1_Real_FULL_with_name<GFX11Gen, op, opName, asmName>,
   VOP1_Real_FULL_with_name<GFX12Not12_50Gen, op, opName, asmName>,
   VOP1_Real_FULL_with_name<GFX13Gen, op, opName, asmName>;
 
