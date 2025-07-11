@@ -15,14 +15,14 @@ define dso_local i32 @mul(i32 %a, i32 %b) local_unnamed_addr #0 {
 ;
 ; RV32IMXQCIAC-LABEL: mul:
 ; RV32IMXQCIAC:       # %bb.0: # %entry
-; RV32IMXQCIAC-NEXT:    li a0, 33
-; RV32IMXQCIAC-NEXT:    mul a0, a1, a0
+; RV32IMXQCIAC-NEXT:    slli a0, a1, 5
+; RV32IMXQCIAC-NEXT:    add a0, a0, a1
 ; RV32IMXQCIAC-NEXT:    ret
 ;
 ; RV32IZBAMXQCIAC-LABEL: mul:
 ; RV32IZBAMXQCIAC:       # %bb.0: # %entry
-; RV32IZBAMXQCIAC-NEXT:    li a0, 33
-; RV32IZBAMXQCIAC-NEXT:    mul a0, a1, a0
+; RV32IZBAMXQCIAC-NEXT:    slli a0, a1, 5
+; RV32IZBAMXQCIAC-NEXT:    add a0, a0, a1
 ; RV32IZBAMXQCIAC-NEXT:    ret
 entry:
   %mul = mul nsw i32 %b, 33
@@ -52,6 +52,29 @@ entry:
   ret i32 %add
 }
 
+define dso_local i32 @muliadd2(i32 %a, i32 %b) local_unnamed_addr #0 {
+; RV32IM-LABEL: muliadd2:
+; RV32IM:       # %bb.0: # %entry
+; RV32IM-NEXT:    li a2, 1111
+; RV32IM-NEXT:    mul a1, a1, a2
+; RV32IM-NEXT:    add a0, a1, a0
+; RV32IM-NEXT:    ret
+;
+; RV32IMXQCIAC-LABEL: muliadd2:
+; RV32IMXQCIAC:       # %bb.0: # %entry
+; RV32IMXQCIAC-NEXT:    qc.muliadd a0, a1, 1111
+; RV32IMXQCIAC-NEXT:    ret
+;
+; RV32IZBAMXQCIAC-LABEL: muliadd2:
+; RV32IZBAMXQCIAC:       # %bb.0: # %entry
+; RV32IZBAMXQCIAC-NEXT:    qc.muliadd a0, a1, 1111
+; RV32IZBAMXQCIAC-NEXT:    ret
+entry:
+  %mul = mul nsw i32 %b, 1111
+  %add = add nsw i32 %mul, %a
+  ret i32 %add
+}
+
 define dso_local i32 @muliadd_neg(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; RV32IM-LABEL: muliadd_neg:
 ; RV32IM:       # %bb.0: # %entry
@@ -75,6 +98,29 @@ entry:
   ret i32 %add
 }
 
+define dso_local i32 @muliadd_neg2(i32 %a, i32 %b) local_unnamed_addr #0 {
+; RV32IM-LABEL: muliadd_neg2:
+; RV32IM:       # %bb.0: # %entry
+; RV32IM-NEXT:    li a2, -2045
+; RV32IM-NEXT:    mul a1, a1, a2
+; RV32IM-NEXT:    add a0, a1, a0
+; RV32IM-NEXT:    ret
+;
+; RV32IMXQCIAC-LABEL: muliadd_neg2:
+; RV32IMXQCIAC:       # %bb.0: # %entry
+; RV32IMXQCIAC-NEXT:    qc.muliadd a0, a1, -2045
+; RV32IMXQCIAC-NEXT:    ret
+;
+; RV32IZBAMXQCIAC-LABEL: muliadd_neg2:
+; RV32IZBAMXQCIAC:       # %bb.0: # %entry
+; RV32IZBAMXQCIAC-NEXT:    qc.muliadd a0, a1, -2045
+; RV32IZBAMXQCIAC-NEXT:    ret
+entry:
+  %mul = mul nsw i32 %b, -2045
+  %add = add nsw i32 %mul, %a
+  ret i32 %add
+}
+
 define dso_local i32 @pow2immplus1(i32 %a, i32 %b) local_unnamed_addr #0 {
 ; RV32IM-LABEL: pow2immplus1:
 ; RV32IM:       # %bb.0: # %entry
@@ -85,15 +131,78 @@ define dso_local i32 @pow2immplus1(i32 %a, i32 %b) local_unnamed_addr #0 {
 ;
 ; RV32IMXQCIAC-LABEL: pow2immplus1:
 ; RV32IMXQCIAC:       # %bb.0: # %entry
-; RV32IMXQCIAC-NEXT:    qc.muliadd a0, a1, 33
+; RV32IMXQCIAC-NEXT:    slli a2, a1, 5
+; RV32IMXQCIAC-NEXT:    add a0, a0, a1
+; RV32IMXQCIAC-NEXT:    add a0, a0, a2
 ; RV32IMXQCIAC-NEXT:    ret
 ;
 ; RV32IZBAMXQCIAC-LABEL: pow2immplus1:
 ; RV32IZBAMXQCIAC:       # %bb.0: # %entry
-; RV32IZBAMXQCIAC-NEXT:    qc.muliadd a0, a1, 33
+; RV32IZBAMXQCIAC-NEXT:    slli a2, a1, 5
+; RV32IZBAMXQCIAC-NEXT:    add a0, a0, a1
+; RV32IZBAMXQCIAC-NEXT:    add a0, a0, a2
 ; RV32IZBAMXQCIAC-NEXT:    ret
 entry:
   %mul = mul nsw i32 %b, 33
+  %add = add nsw i32 %mul, %a
+  ret i32 %add
+}
+
+define dso_local i32 @pow2immminus2(i32 %a, i32 %b) local_unnamed_addr #0 {
+; RV32IM-LABEL: pow2immminus2:
+; RV32IM:       # %bb.0: # %entry
+; RV32IM-NEXT:    slli a2, a1, 1
+; RV32IM-NEXT:    slli a1, a1, 7
+; RV32IM-NEXT:    sub a1, a1, a2
+; RV32IM-NEXT:    add a0, a1, a0
+; RV32IM-NEXT:    ret
+;
+; RV32IMXQCIAC-LABEL: pow2immminus2:
+; RV32IMXQCIAC:       # %bb.0: # %entry
+; RV32IMXQCIAC-NEXT:    slli a2, a1, 1
+; RV32IMXQCIAC-NEXT:    slli a1, a1, 7
+; RV32IMXQCIAC-NEXT:    sub a1, a1, a2
+; RV32IMXQCIAC-NEXT:    add a0, a0, a1
+; RV32IMXQCIAC-NEXT:    ret
+;
+; RV32IZBAMXQCIAC-LABEL: pow2immminus2:
+; RV32IZBAMXQCIAC:       # %bb.0: # %entry
+; RV32IZBAMXQCIAC-NEXT:    slli a2, a1, 1
+; RV32IZBAMXQCIAC-NEXT:    slli a1, a1, 7
+; RV32IZBAMXQCIAC-NEXT:    sub a1, a1, a2
+; RV32IZBAMXQCIAC-NEXT:    add a0, a0, a1
+; RV32IZBAMXQCIAC-NEXT:    ret
+entry:
+  %mul = mul nsw i32 %b, 126
+  %add = add nsw i32 %mul, %a
+  ret i32 %add
+}
+
+define dso_local i32 @pow2minuspow2(i32 %a, i32 %b) local_unnamed_addr #0 {
+; RV32IM-LABEL: pow2minuspow2:
+; RV32IM:       # %bb.0: # %entry
+; RV32IM-NEXT:    slli a2, a1, 7
+; RV32IM-NEXT:    slli a1, a1, 9
+; RV32IM-NEXT:    sub a1, a1, a2
+; RV32IM-NEXT:    add a0, a1, a0
+; RV32IM-NEXT:    ret
+;
+; RV32IMXQCIAC-LABEL: pow2minuspow2:
+; RV32IMXQCIAC:       # %bb.0: # %entry
+; RV32IMXQCIAC-NEXT:    slli a2, a1, 7
+; RV32IMXQCIAC-NEXT:    slli a1, a1, 9
+; RV32IMXQCIAC-NEXT:    sub a1, a1, a2
+; RV32IMXQCIAC-NEXT:    add a0, a0, a1
+; RV32IMXQCIAC-NEXT:    ret
+;
+; RV32IZBAMXQCIAC-LABEL: pow2minuspow2:
+; RV32IZBAMXQCIAC:       # %bb.0: # %entry
+; RV32IZBAMXQCIAC-NEXT:    sh1add a1, a1, a1
+; RV32IZBAMXQCIAC-NEXT:    slli a1, a1, 7
+; RV32IZBAMXQCIAC-NEXT:    add a0, a0, a1
+; RV32IZBAMXQCIAC-NEXT:    ret
+entry:
+  %mul = mul nsw i32 %b, 384
   %add = add nsw i32 %mul, %a
   ret i32 %add
 }
