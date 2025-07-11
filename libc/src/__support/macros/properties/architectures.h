@@ -61,10 +61,4 @@
 #define LIBC_TARGET_ARCH_IS_ANY_RISCV
 #endif
 
-#if !defined(LIBC_TARGET_ARCH_IS_GPU) && !defined(__linux__) &&                \
-    !defined(__APPLE__) && !defined(__Fuchsia__) && !defined(_WIN32) &&        \
-    !defined(__UEFI__) && defined(__ELF__)
-#define LIBC_TARGET_ARCH_IS_BAREMETAL
-#endif
-
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_ARCHITECTURES_H

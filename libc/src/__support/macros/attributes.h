@@ -18,6 +18,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_ATTRIBUTES_H
 
 #include "properties/architectures.h"
+#include "properties/os.h"
 
 #ifndef __has_attribute
 #define __has_attribute(x) 0
@@ -30,7 +31,7 @@
 
 // TODO: we need a proper way to only turn this on for single-threaded baremetal
 // We cannot use LIBC_THREAD_MODE because libcxx doesn't define that
-#if defined(LIBC_TARGET_ARCH_IS_GPU) || defined(LIBC_TARGET_ARCH_IS_BAREMETAL)
+#if defined(LIBC_TARGET_ARCH_IS_GPU) || defined(LIBC_TARGET_OS_IS_BAREMETAL)
 #define LIBC_THREAD_LOCAL
 #else
 #define LIBC_THREAD_LOCAL thread_local
