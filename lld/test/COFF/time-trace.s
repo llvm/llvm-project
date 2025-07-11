@@ -4,7 +4,7 @@
 
 # Test implicit trace file name
 # RUN: lld-link %t.obj /entry:main /out:%t1.exe --time-trace --time-trace-granularity=0
-# RUN: cat %t1.exe.time-trace \
+# RUN: cat %t1.exe.time-trace.json \
 # RUN:   | %python -c 'import json, sys; json.dump(json.loads(sys.stdin.read()), sys.stdout, sort_keys=True, indent=2)' \
 # RUN:   | FileCheck %s
 
