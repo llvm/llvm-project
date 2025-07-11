@@ -1741,9 +1741,12 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     // 2. Values that are results of the `ForOp`:
     //    In this case, we record the index mapping between the `WarpOp` result
     //    index and matching `ForOp` result index.
+    // Additionally, we keep track of the distributed types for all `ForOp`
+    // vector results.
     SmallVector<Value> nonForYieldedValues;
     SmallVector<unsigned> nonForResultIndices;
     llvm::SmallDenseMap<unsigned, unsigned> forResultMapping;
+    llvm::SmallDenseMap<unsigned, VectorType> forResultDistTypes;
     for (OpOperand &yieldOperand : warpOpYield->getOpOperands()) {
       // Yielded value is not a result of the forOp.
       if (yieldOperand.get().getDefiningOp() != forOp.getOperation()) {
@@ -1752,8 +1755,15 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
         continue;
       }
       OpResult forResult = cast<OpResult>(yieldOperand.get());
-      forResultMapping[yieldOperand.getOperandNumber()] =
-          forResult.getResultNumber();
+      unsigned int forResultNumber = forResult.getResultNumber();
+      forResultMapping[yieldOperand.getOperandNumber()] = forResultNumber;
+      // If this `ForOp` result is vector type and it is yielded by the
+      // `WarpOp`, we keep track the distributed type for this result.
+      if (!isa<VectorType>(forResult.getType()))
+        continue;
+      VectorType distType = cast<VectorType>(
+          warpOp.getResult(yieldOperand.getOperandNumber()).getType());
+      forResultDistTypes[forResultNumber] = distType;
     }
 
     // Newly created `WarpOp` will yield values in following order:
@@ -1767,8 +1777,13 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
       // Compute the distributed type for this init arg.
       Type distType = initArg.getType();
       if (auto vecType = dyn_cast<VectorType>(distType)) {
+        // If the `ForOp` result corresponds to this init arg is already yielded
+        // we can get the distributed type from `forResultDistTypes` map.
+        // Otherwise, we compute it using distributionMapFn.
         AffineMap map = distributionMapFn(initArg);
-        distType = getDistributedType(vecType, map, warpOp.getWarpSize());
+        distType = forResultDistTypes.count(i)
+                       ? forResultDistTypes[i]
+                       : getDistributedType(vecType, map, warpOp.getWarpSize());
       }
       newWarpOpDistTypes.push_back(distType);
     }
