@@ -238,31 +238,44 @@ void CIRGenFunction::emitCtorPrologue(const CXXConstructorDecl *cd,
   bool constructVBases = ctorType != Ctor_Base &&
                          classDecl->getNumVBases() != 0 &&
                          !classDecl->isAbstract();
-  if (constructVBases) {
-    cgm.errorNYI(cd->getSourceRange(), "emitCtorPrologue: virtual base");
+  if (constructVBases &&
+      !cgm.getTarget().getCXXABI().hasConstructorVariants()) {
+    cgm.errorNYI(cd->getSourceRange(),
+                 "emitCtorPrologue: virtual base without variants");
     return;
   }
 
   const mlir::Value oldThisValue = cxxThisValue;
-  if (!constructVBases && b != e && (*b)->isBaseInitializer() &&
-      (*b)->isBaseVirtual()) {
-    cgm.errorNYI(cd->getSourceRange(),
-                 "emitCtorPrologue: virtual base initializer");
-    return;
+
+  // Initialize virtual bases.
+  auto emitInitializer = [&](CXXCtorInitializer *baseInit) {
+    if (cgm.getCodeGenOpts().StrictVTablePointers &&
+        cgm.getCodeGenOpts().OptimizationLevel > 0 &&
+        isInitializerOfDynamicClass(baseInit)) {
+      // It's OK to continue after emitting the error here. The missing code
+      // just "launders" the 'this' pointer.
+      cgm.errorNYI(cd->getSourceRange(),
+                   "emitCtorPrologue: strict vtable pointers for vbase");
+    }
+    emitBaseInitializer(getLoc(cd->getBeginLoc()), classDecl, baseInit);
+  };
+
+  for (; b != e && (*b)->isBaseInitializer() && (*b)->isBaseVirtual(); b++) {
+    if (!constructVBases)
+      continue;
+    emitInitializer(*b);
   }
+
+  // The loop above and the loop below could obviously be merged in their
+  // current form, but when we implement support for the MS C++ ABI, we will
+  // need to insert a branch after the last virtual base initializer, so
+  // separate loops will be useful then. The missing code is covered by the
+  // "virtual base without variants" diagnostic above.
 
   // Handle non-virtual base initializers.
   for (; b != e && (*b)->isBaseInitializer(); b++) {
     assert(!(*b)->isBaseVirtual());
-
-    if (cgm.getCodeGenOpts().StrictVTablePointers &&
-        cgm.getCodeGenOpts().OptimizationLevel > 0 &&
-        isInitializerOfDynamicClass(*b)) {
-      cgm.errorNYI(cd->getSourceRange(),
-                   "emitCtorPrologue: strict vtable pointers");
-      return;
-    }
-    emitBaseInitializer(getLoc(cd->getBeginLoc()), classDecl, *b);
+    emitInitializer(*b);
   }
 
   cxxThisValue = oldThisValue;
@@ -370,7 +383,7 @@ void CIRGenFunction::initializeVTablePointers(mlir::Location loc,
       initializeVTablePointer(loc, vptr);
 
   if (rd->getNumVBases())
-    cgm.errorNYI(loc, "initializeVTablePointers: virtual base");
+    cgm.getCXXABI().initializeHiddenVirtualInheritanceMembers(*this, rd);
 }
 
 CIRGenFunction::VPtrsVector
@@ -418,8 +431,17 @@ void CIRGenFunction::getVTablePointers(BaseSubobject base,
     const CXXRecordDecl *nextBaseDecl;
 
     if (nextBase.isVirtual()) {
-      cgm.errorNYI(rd->getSourceRange(), "getVTablePointers: virtual base");
-      return;
+      // Check if we've visited this virtual base before.
+      if (!vbases.insert(baseDecl).second)
+        continue;
+
+      const ASTRecordLayout &layout =
+          getContext().getASTRecordLayout(vtableClass);
+
+      nextBaseDecl = nearestVBase;
+      baseOffset = layout.getVBaseClassOffset(baseDecl);
+      baseOffsetFromNearestVBase = CharUnits::Zero();
+      baseDeclIsNonVirtualPrimaryBase = false;
     } else {
       const ASTRecordLayout &layout = getContext().getASTRecordLayout(rd);
 
