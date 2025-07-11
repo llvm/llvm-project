@@ -1310,7 +1310,6 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     }
     break;
   case ISD::FCANONICALIZE: {
-    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     SDLoc dl(Node);
     SDValue Result = TLI.expandFCanonicalizeWithStrictFmul(Node, dl, DAG);
     Results.push_back(Result);
