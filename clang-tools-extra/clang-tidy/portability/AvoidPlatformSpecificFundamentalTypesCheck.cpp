@@ -133,45 +133,35 @@ std::string AvoidPlatformSpecificFundamentalTypesCheck::getFloatReplacement(
 
 void AvoidPlatformSpecificFundamentalTypesCheck::registerMatchers(
     MatchFinder *Finder) {
-  // Create the type matcher using the three separate matchers
   auto PlatformSpecificFundamentalType = qualType(
       allOf(builtinType(),
             anyOf(WarnOnInts ? isBuiltinInt() : unless(anything()),
                   WarnOnFloats ? isBuiltinFloat() : unless(anything()),
                   WarnOnChars ? isBuiltinChar() : unless(anything()))));
 
-  // If no types are enabled, return early
   if (!WarnOnInts && !WarnOnFloats && !WarnOnChars)
     return;
 
-  // Match variable declarations with platform-specific fundamental types
   Finder->addMatcher(
       varDecl(hasType(PlatformSpecificFundamentalType)).bind("var_decl"), this);
 
-  // Match function declarations with platform-specific fundamental return types
   Finder->addMatcher(
       functionDecl(returns(PlatformSpecificFundamentalType)).bind("func_decl"),
       this);
 
-  // Match function parameters with platform-specific fundamental types
   Finder->addMatcher(
       parmVarDecl(hasType(PlatformSpecificFundamentalType)).bind("param_decl"),
       this);
 
-  // Match field declarations with platform-specific fundamental types
   Finder->addMatcher(
       fieldDecl(hasType(PlatformSpecificFundamentalType)).bind("field_decl"),
       this);
 
-  // Match typedef declarations with platform-specific fundamental underlying
-  // types
   Finder->addMatcher(
       typedefDecl(hasUnderlyingType(PlatformSpecificFundamentalType))
           .bind("typedef_decl"),
       this);
 
-  // Match type alias declarations with platform-specific fundamental underlying
-  // types
   Finder->addMatcher(typeAliasDecl(hasType(PlatformSpecificFundamentalType))
                          .bind("alias_decl"),
                      this);
@@ -220,14 +210,11 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
     return;
   }
 
-  // Get the type name for the diagnostic
   const std::string TypeName = QT.getAsString();
 
-  // Check the type category
   const auto *BT = QT->getAs<BuiltinType>();
 
   if (BT->isFloatingPoint()) {
-    // Handle floating point types
     const std::string Replacement = getFloatReplacement(BT, *Result.Context);
     if (!Replacement.empty()) {
       auto Diag =
@@ -251,12 +238,10 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
              BT->getKind() == BuiltinType::Char_U ||
              BT->getKind() == BuiltinType::SChar ||
              BT->getKind() == BuiltinType::UChar) {
-    // Handle char types
     diag(Loc, "avoid using platform-dependent character type '%0'; "
               "consider using char8_t for text or std::byte for bytes")
         << TypeName;
   } else {
-    // Handle integer types
     diag(Loc, "avoid using platform-dependent fundamental integer type '%0'; "
               "consider using a typedef or fixed-width type instead")
         << TypeName;
