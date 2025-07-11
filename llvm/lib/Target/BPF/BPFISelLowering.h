@@ -71,27 +71,6 @@ public:
   // JX instruction location and target basic block label.
   virtual unsigned getJumpTableEncoding() const override;
 
-  // This is a label for JX instructions, used for jump table offsets
-  // computation, e.g.:
-  //
-  //   .LBPF.JX.0.0:                         <------- this is the anchor
-  //        .reloc 0, FK_SecRel_8, BPF.JT.0.0
-  //        gotox r1
-  //        ...
-  //   .section        .jumptables,"",@progbits
-  //   .L0_0_set_7 = ((LBB0_7-.LBPF.JX.0.0)>>3)-1
-  //   ...
-  //   BPF.JT.0.0:                           <------- JT definition
-  //        .long   .L0_0_set_7
-  //        ...
-  static MCSymbol *getJXAnchorSymbol(const MachineFunction *MF, unsigned JTI);
-
-  // Refers to a symbol returned by getJXAnchorSymbol(), used by
-  // AsmPrinter::emitJumpTableInfo() to define the .L0_0_set_7 etc above.
-  virtual const MCExpr *
-  getPICJumpTableRelocBaseExpr(const MachineFunction *MF, unsigned JTI,
-                               MCContext &Ctx) const override;
-
 private:
   // Control Instruction Selection Features
   bool HasAlu32;

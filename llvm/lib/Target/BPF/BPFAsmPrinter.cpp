@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "BPFAsmPrinter.h"
 #include "BPF.h"
 #include "BPFInstrInfo.h"
 #include "BPFMCInstLower.h"
@@ -38,33 +39,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
-
-namespace {
-class BPFAsmPrinter : public AsmPrinter {
-public:
-  explicit BPFAsmPrinter(TargetMachine &TM,
-                         std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer), ID), BTF(nullptr) {}
-
-  StringRef getPassName() const override { return "BPF Assembly Printer"; }
-  bool doInitialization(Module &M) override;
-  void printOperand(const MachineInstr *MI, int OpNum, raw_ostream &O);
-  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       const char *ExtraCode, raw_ostream &O) override;
-  bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNum,
-                             const char *ExtraCode, raw_ostream &O) override;
-
-  void emitInstruction(const MachineInstr *MI) override;
-  virtual MCSymbol *GetJTISymbol(unsigned JTID,
-                                 bool isLinkerPrivate = false) const override;
-  virtual void emitJumpTableInfo() override;
-
-  static char ID;
-
-private:
-  BTFDebug *BTF;
-};
-} // namespace
 
 bool BPFAsmPrinter::doInitialization(Module &M) {
   AsmPrinter::doInitialization(M);
@@ -159,11 +133,31 @@ void BPFAsmPrinter::emitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, TmpInst);
 }
 
-MCSymbol *BPFAsmPrinter::GetJTISymbol(unsigned JTID,
-                                      bool isLinkerPrivate) const {
+// This is a label for JX instructions, used for jump table offsets
+// computation, e.g.:
+//
+//   .LBPF.JX.0.0:                         <------- this is the anchor
+//        .reloc 0, FK_SecRel_8, BPF.JT.0.0
+//        gotox r1
+//        ...
+//   .section        .jumptables,"",@progbits
+//   .L0_0_set_7 = ((LBB0_7-.LBPF.JX.0.0)>>3)-1
+//   ...
+//   BPF.JT.0.0:                           <------- JT definition
+//        .long   .L0_0_set_7
+//        ...
+MCSymbol *BPFAsmPrinter::getJXAnchorSymbol(unsigned JTI) {
+  const MCAsmInfo *MAI = MF->getContext().getAsmInfo();
+  SmallString<60> Name;
+  raw_svector_ostream(Name) << MAI->getPrivateGlobalPrefix() << "BPF.JX."
+                            << MF->getFunctionNumber() << '.' << JTI;
+  return MF->getContext().getOrCreateSymbol(Name);
+}
+
+MCSymbol *BPFAsmPrinter::getJTPublicSymbol(unsigned JTI) {
   SmallString<60> Name;
   raw_svector_ostream(Name)
-      << "BPF.JT." << MF->getFunctionNumber() << '.' << JTID;
+      << "BPF.JT." << MF->getFunctionNumber() << '.' << JTI;
   MCSymbol *S = OutContext.getOrCreateSymbol(Name);
   if (auto *ES = dyn_cast<MCSymbolELF>(S))
     ES->setBinding(ELF::STB_GLOBAL);
@@ -191,8 +185,7 @@ void BPFAsmPrinter::emitJumpTableInfo() {
       continue;
 
     SmallPtrSet<const MachineBasicBlock *, 16> EmittedSets;
-    const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
-    const MCExpr *Base = TLI->getPICJumpTableRelocBaseExpr(MF, JTI, OutContext);
+    auto *Base = MCSymbolRefExpr::create(getJXAnchorSymbol(JTI), OutContext);
     for (const MachineBasicBlock *MBB : JTBBs) {
       if (!EmittedSets.insert(MBB).second)
         continue;
@@ -215,7 +208,7 @@ void BPFAsmPrinter::emitJumpTableInfo() {
     //    .long   .L0_0_set_2
     //    ...
     //    .size   BPF.JT.0.0, 128
-    MCSymbol *JTStart = GetJTISymbol(JTI);
+    MCSymbol *JTStart = getJTPublicSymbol(JTI);
     OutStreamer->emitLabel(JTStart);
     for (const MachineBasicBlock *MBB : JTBBs) {
       MCSymbol *SetSymbol = GetJTSetSymbol(JTI, MBB->getNumber());

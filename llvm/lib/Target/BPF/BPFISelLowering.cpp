@@ -1092,20 +1092,6 @@ bool BPFTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   return true;
 }
 
-MCSymbol *BPFTargetLowering::getJXAnchorSymbol(const MachineFunction *MF,
-                                               unsigned JTI) {
-  const MCAsmInfo *MAI = MF->getContext().getAsmInfo();
-  SmallString<60> Name;
-  raw_svector_ostream(Name) << MAI->getPrivateGlobalPrefix() << "BPF.JX."
-                            << MF->getFunctionNumber() << '.' << JTI;
-  return MF->getContext().getOrCreateSymbol(Name);
-}
-
 unsigned BPFTargetLowering::getJumpTableEncoding() const {
   return MachineJumpTableInfo::EK_LabelDifference32;
-}
-
-const MCExpr *BPFTargetLowering::getPICJumpTableRelocBaseExpr(
-    const MachineFunction *MF, unsigned JTI, MCContext &Ctx) const {
-  return MCSymbolRefExpr::create(getJXAnchorSymbol(MF, JTI), Ctx);
 }
