@@ -64,7 +64,7 @@ static inline void eraseFromModule(T &ToErase) {
   ToErase.eraseFromParent();
 }
 
-static inline bool checkIfSupported(GlobalVariable &G) {
+static bool checkIfSupported(GlobalVariable &G) {
   if (!G.isThreadLocal())
     return true;
 
@@ -115,7 +115,7 @@ static inline void clearModule(Module &M) { // TODO: simplify.
     eraseFromModule(*M.ifuncs().begin());
 }
 
-static inline SmallVector<std::reference_wrapper<Use>>
+static SmallVector<std::reference_wrapper<Use>>
 collectIndirectableUses(GlobalVariable *G) {
   // We are interested only in use chains that end in an Instruction.
   SmallVector<std::reference_wrapper<Use>> Uses;
@@ -163,7 +163,7 @@ static inline GlobalVariable *getIndirectionGlobal(Module *M) {
   return NewG;
 }
 
-static inline Constant *
+static Constant *
 appendIndirectedGlobal(const GlobalVariable *IndirectionTable,
                        SmallVector<Constant *> &SymbolIndirections,
                        GlobalVariable *ToIndirect) {
@@ -214,7 +214,8 @@ static void replaceWithIndirectUse(const Use &U, const GlobalVariable *G,
   auto *I = cast<Instruction>(U.getUser());
 
   IRBuilder<> Builder(I);
-  Value *Op = I->getOperand(U.getOperandNo());
+  unsigned OpIdx = U.getOperandNo();
+  Value *Op = I->getOperand(OpIdx);
 
   // We walk back up the use chain, which could be an arbitrarily long sequence
   // of constexpr AS casts, ptr-to-int and GEP instructions, until we reach the
@@ -229,13 +230,13 @@ static void replaceWithIndirectUse(const Use &U, const GlobalVariable *G,
     I->replaceUsesOfWith(Op, NewI);
     I = NewI;
     Op = I->getOperand(0);
+    OpIdx = 0;
     Builder.SetInsertPoint(I);
   }
 
   assert(Op == G && "Must reach indirected global!");
 
-  Builder.GetInsertPoint()->setOperand(
-      0, Builder.CreateLoad(G->getType(), IndirectedG));
+  I->setOperand(OpIdx, Builder.CreateLoad(G->getType(), IndirectedG));
 }
 
 static inline bool isValidIndirectionTable(GlobalVariable *IndirectionTable) {
