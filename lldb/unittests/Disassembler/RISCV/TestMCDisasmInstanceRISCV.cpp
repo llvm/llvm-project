@@ -106,10 +106,17 @@ TEST_F(TestMCDisasmInstanceRISCV, TestOpcodeBytePrinter) {
       0x10, 0x00, 0x00, 0x00, 0x02, 0x1f // 48 bit xqci.e.li rd=8 imm=0x1000
   };
 
-  const char *expected_outputs[] = {"1141",          "c606",
-                                    "fea42a23",      "fea42823",
-                                    "4422",          "0940003f 00200020",
-                                    "021f 0000 1000"};
+  // clang-format off
+  const char *expected_outputs[] = {
+    "1141",
+    "c606",
+    "fea42a23",
+    "fea42823",
+    "4422",
+    "0940003f 00200020",
+    "021f 0000 1000"
+  };
+  // clang-format on
 
   EXPECT_EQ(num_of_instructions, sizeof(expected_outputs) / sizeof(char *));
 
