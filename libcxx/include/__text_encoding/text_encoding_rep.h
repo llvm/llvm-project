@@ -381,7 +381,7 @@ public:
 
       _LIBCPP_HIDE_FROM_ABI constexpr difference_type operator-(const __iterator& __other) const {
         _LIBCPP_ASSERT(__other.__mib_rep_ == __mib_rep_, "Subtracting ranges of two different text encodings!");
-        return __mib_rep_ - __other.__mib_rep_;
+        return __data_ - __other.__data_;
       }
 
       _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator-(difference_type __n, __iterator& __it) {
