@@ -3450,6 +3450,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   if (ctx.arg.emachine == EM_RISCV)
     mergeRISCVAttributesSections(ctx);
 
+  // Merge .hexagon.attributes sections.
+  if (ctx.arg.emachine == EM_HEXAGON)
+    mergeHexagonAttributesSections(ctx);
+
   {
     llvm::TimeTraceScope timeScope("Assign sections");
 
