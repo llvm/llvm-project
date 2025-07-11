@@ -774,14 +774,21 @@ LogicalResult spirv::EXTConstantCompositeReplicateOp::verify() {
   if (auto typedAttr = dyn_cast<TypedAttr>(getValue())) {
     valueType = typedAttr.getType();
   } else if (auto arrayAttr = dyn_cast<ArrayAttr>(getValue())) {
-    auto elementType = dyn_cast<TypedAttr>(arrayAttr[0]).getType();
-    valueType = spirv::ArrayType::get(elementType, arrayAttr.size());
+    auto typedElemAttr = dyn_cast<TypedAttr>(arrayAttr[0]);
+    if (!typedElemAttr)
+      return emitError("value attribute is not typed");
+    valueType =
+        spirv::ArrayType::get(typedElemAttr.getType(), arrayAttr.size());
   } else {
     return emitError("unknown value attribute type");
   }
 
-  Type compositeElementType =
-      dyn_cast<spirv::CompositeType>(getType()).getElementType(0);
+  auto compositeType = dyn_cast<spirv::CompositeType>(getType());
+  if (!compositeType)
+    return emitError("result type is not a composite type");
+
+  Type compositeElementType = compositeType.getElementType(0);
+
   SmallVector<Type, 3> possibleTypes = {compositeElementType};
   while (auto type = dyn_cast<spirv::CompositeType>(compositeElementType)) {
     compositeElementType = type.getElementType(0);
@@ -1948,6 +1955,8 @@ LogicalResult spirv::EXTSpecConstantCompositeReplicateOp::verify() {
         "splat spec constant reference defining constituent not found");
 
   auto constituentSpecConstOp = dyn_cast<spirv::SpecConstantOp>(constituentOp);
+  if (!constituentSpecConstOp)
+    return emitError("constituent is not a spec constant");
 
   Type constituentType = constituentSpecConstOp.getDefaultValue().getType();
   Type compositeElementType = compositeType.getElementType(0);
