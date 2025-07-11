@@ -190,7 +190,7 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
         would terminate a recipe.
 
         The `extents` are optional and can be empty - it is only when a
-        slice of the private variable needs allocated.
+        slice of the private variable needs allocation.
         The `initVal` can be empty - it is primarily needed for reductions
         to ensure the variable is also initialized with appropriate value.
 
