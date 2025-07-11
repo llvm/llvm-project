@@ -546,8 +546,8 @@ public:
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<UniformityInfoWrapperPass>();
-    // makes changes that can invalidate Uniformity Analysis,
-    // so don't preserveAll here (see new PM version above)
+    // This pass makes changes that can invalidate Uniformity Analysis,
+    // so don't setPreserveAll() here (see new PM version above).
     AU.setPreservesCFG();
   }
 
