@@ -83,10 +83,6 @@ AST_MATCHER(Decl, allRedeclsInSameFile) {
   }
   return true;
 }
-
-AST_MATCHER(FunctionDecl, isConstexprSpecified) {
-  return Node.isConstexprSpecified();
-}
 } // namespace
 
 static bool
@@ -850,14 +846,6 @@ void UseConstexprCheck::registerMatchers(MatchFinder *Finder) {
           satisfiesProperties(
               ConservativeLiteralType,
               AddConstexprToMethodOfClassWithoutConstexprConstructor))
-          .bind("func"),
-      this);
-
-  Finder->addMatcher(
-      functionDecl(isConstexpr(), isImplicit(), unless(isConstexprSpecified()),
-                   unless(anyOf(isInStdNamespace(), isExpansionInSystemHeader(),
-                                isInMacro())),
-                   allRedeclsInSameFile())
           .bind("func"),
       this);
 
