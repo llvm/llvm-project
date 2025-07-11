@@ -331,7 +331,7 @@ public:
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       unsigned *Fast = nullptr) const override;
 
-  EVT getOptimalMemOpType(const MemOp &Op,
+  EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
 
   bool splitValueIntoRegisterParts(
@@ -437,16 +437,14 @@ public:
   bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
                              unsigned Factor) const override;
 
-  bool lowerDeinterleaveIntrinsicToLoad(LoadInst *LI,
-                                        ArrayRef<Value *> DeinterleaveValues,
-                                        unsigned Factor) const override;
+  bool lowerDeinterleaveIntrinsicToLoad(
+      LoadInst *LI, ArrayRef<Value *> DeinterleaveValues) const override;
 
   bool lowerInterleaveIntrinsicToStore(
       StoreInst *SI, ArrayRef<Value *> InterleaveValues) const override;
 
   bool lowerInterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
-                              ArrayRef<Value *> DeinterleaveRes,
-                              unsigned Factor) const override;
+                              ArrayRef<Value *> DeinterleaveRes) const override;
 
   bool lowerInterleavedVPStore(VPIntrinsic *Store, Value *Mask,
                                ArrayRef<Value *> InterleaveOps) const override;
@@ -469,6 +467,12 @@ public:
                                             MachineBasicBlock *MBB) const;
 
   ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
+
+  /// Match a mask which "spreads" the leading elements of a vector evenly
+  /// across the result.  Factor is the spread amount, and Index is the
+  /// offset applied.
+  static bool isSpreadMask(ArrayRef<int> Mask, unsigned Factor,
+                           unsigned &Index);
 
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
