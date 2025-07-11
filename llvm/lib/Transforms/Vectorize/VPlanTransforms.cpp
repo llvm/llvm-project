@@ -3140,7 +3140,12 @@ static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
 }
 
 /// Returns true if \p VPValue is a narrow VPValue.
-static bool isAlreadyNarrow(VPValue *VPV) { return VPV->isLiveIn(); }
+static bool isAlreadyNarrow(VPValue *VPV) {
+  if (VPV->isLiveIn())
+    return true;
+  auto *RepR = dyn_cast<VPReplicateRecipe>(VPV);
+  return RepR && RepR->isSingleScalar();
+}
 
 void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
                                              unsigned VectorRegWidth) {
@@ -3158,6 +3163,10 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   for (auto &R : *VectorLoop->getEntryBasicBlock()) {
     if (isa<VPCanonicalIVPHIRecipe>(&R) ||
         match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())))
+      continue;
+
+    if (isa<VPDerivedIVRecipe, VPScalarIVStepsRecipe>(&R) &&
+        vputils::onlyFirstLaneUsed(cast<VPSingleDefRecipe>(&R)))
       continue;
 
     // Bail out on recipes not supported at the moment:

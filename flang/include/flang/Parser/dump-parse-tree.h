@@ -578,7 +578,6 @@ public:
   NODE(parser, OmpDetachClause)
   NODE(parser, OmpDoacrossClause)
   NODE(parser, OmpDestroyClause)
-  NODE(parser, OmpEndAllocators)
   NODE(parser, OmpEndBlockDirective)
   NODE(parser, OmpEndCriticalDirective)
   NODE(parser, OmpEndLoopDirective)

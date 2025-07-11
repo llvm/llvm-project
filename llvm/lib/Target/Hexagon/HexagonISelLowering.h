@@ -336,7 +336,7 @@ public:
   /// the immediate into a register.
   bool isLegalICmpImmediate(int64_t Imm) const override;
 
-  EVT getOptimalMemOpType(const MemOp &Op,
+  EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
 
   bool allowsMemoryAccess(LLVMContext &Context, const DataLayout &DL, EVT VT,

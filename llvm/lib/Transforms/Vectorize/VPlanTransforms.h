@@ -17,6 +17,7 @@
 #include "VPlanVerifier.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -53,7 +54,8 @@ struct VPlanTransforms {
       verifyVPlanIsValid(Plan);
   }
 
-  static std::unique_ptr<VPlan> buildPlainCFG(Loop *TheLoop, LoopInfo &LI);
+  LLVM_ABI_FOR_TEST static std::unique_ptr<VPlan> buildPlainCFG(Loop *TheLoop,
+                                                                LoopInfo &LI);
 
   /// Prepare the plan for vectorization. It will introduce a dedicated
   /// VPBasicBlock for the vector pre-header as well as a VPBasicBlock as exit
@@ -63,16 +65,14 @@ struct VPlanTransforms {
   /// blocks. \p InductionTy is the type of the canonical induction and used for
   /// related values, like the trip count expression.  It also creates a VPValue
   /// expression for the original trip count.
-  static void prepareForVectorization(VPlan &Plan, Type *InductionTy,
-                                      PredicatedScalarEvolution &PSE,
-                                      bool RequiresScalarEpilogueCheck,
-                                      bool TailFolded, Loop *TheLoop,
-                                      DebugLoc IVDL, bool HasUncountableExit,
-                                      VFRange &Range);
+  LLVM_ABI_FOR_TEST static void prepareForVectorization(
+      VPlan &Plan, Type *InductionTy, PredicatedScalarEvolution &PSE,
+      bool RequiresScalarEpilogueCheck, bool TailFolded, Loop *TheLoop,
+      DebugLoc IVDL, bool HasUncountableExit, VFRange &Range);
 
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
   /// flat CFG into a hierarchical CFG.
-  static void createLoopRegions(VPlan &Plan);
+  LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan);
 
   /// Wrap runtime check block \p CheckBlock in a VPIRBB and \p Cond in a
   /// VPValue and connect the block to \p Plan, using the VPValue as branch
@@ -83,7 +83,7 @@ struct VPlanTransforms {
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
   /// to a wide recipe if needed.
-  static bool tryToConvertVPInstructionsToVPRecipes(
+  LLVM_ABI_FOR_TEST static bool tryToConvertVPInstructionsToVPRecipes(
       VPlanPtr &Plan,
       function_ref<const InductionDescriptor *(PHINode *)>
           GetIntOrFpInductionDescriptor,

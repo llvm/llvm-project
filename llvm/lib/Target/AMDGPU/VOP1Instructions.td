@@ -140,10 +140,14 @@ multiclass VOP1Inst <string opName, VOPProfile P,
   if P.HasExtDPP then
     def _dpp : VOP1_DPP_Pseudo <opName, P>;
 
-  let SubtargetPredicate = isGFX11Plus in {
-    if P.HasExtVOP3DPP then
-      def _e64_dpp  : VOP3_DPP_Pseudo <opName, P>;
-  } // End SubtargetPredicate = isGFX11Plus
+  if P.HasExtVOP3DPP then
+    def _e64_dpp  : VOP3_DPP_Pseudo <opName, P> {
+      let SubtargetPredicate = isGFX11Plus;
+    }
+  else if P.HasExt64BitDPP then
+    def _e64_dpp  : VOP3_DPP_Pseudo <opName, P> {
+      let OtherPredicates = [HasDPALU_DPP];
+    }
 
   def : LetDummies, AMDGPUMnemonicAlias<opName#"_e32", opName>;
   def : LetDummies, AMDGPUMnemonicAlias<opName#"_e64", opName>;
@@ -236,7 +240,7 @@ def VOPProfile_MOV : VOPProfile <[i32, i32, untyped, untyped]> {
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 defm V_MOV_B32 : VOP1Inst <"v_mov_b32", VOPProfile_MOV, null_frag, 0x8>;
 
-let SubtargetPredicate = isGFX940Plus, SchedRW = [Write64Bit] in
+let SubtargetPredicate = isGFX940orGFX1250, SchedRW = [Write64Bit] in
 defm V_MOV_B64 : VOP1Inst <"v_mov_b64", VOP_I64_I64>;
 } // End isMoveImm = 1
 
@@ -888,6 +892,8 @@ class VOP1_DPP16_Gen<bits<8> op, VOP1_DPP_Pseudo ps, GFXGen Gen, VOPProfile p = 
     VOP1_DPP16 <op, ps, Gen.Subtarget, p> {
   let AssemblerPredicate = Gen.AssemblerPredicate;
   let DecoderNamespace = Gen.DecoderNamespace;
+  let OtherPredicates = !listconcat(ps.OtherPredicates,
+                                    !if(p.HasExt64BitDPP, [HasDPALU_DPP], []));
 }
 
 class VOP1_DPP8<bits<8> op, VOP1_Pseudo ps, VOPProfile p = ps.Pfl> :
@@ -963,7 +969,8 @@ multiclass VOP1_Real_dpp_with_name<GFXGen Gen, bits<9> op, string opName,
 
 multiclass VOP1_Real_dpp8<GFXGen Gen, bits<9> op, string opName = NAME> {
   defvar ps = !cast<VOP1_Pseudo>(opName#"_e32");
-  def _dpp8#Gen.Suffix : VOP1_DPP8_Gen<op{7-0}, ps, Gen>;
+  if !not(ps.Pfl.HasExt64BitDPP) then
+    def _dpp8#Gen.Suffix : VOP1_DPP8_Gen<op{7-0}, ps, Gen>;
 }
 
 multiclass VOP1_Real_dpp8_with_name<GFXGen Gen, bits<9> op, string opName,
@@ -972,7 +979,8 @@ multiclass VOP1_Real_dpp8_with_name<GFXGen Gen, bits<9> op, string opName,
   let AsmString = asmName # ps.Pfl.AsmDPP8,
       DecoderNamespace = Gen.DecoderNamespace #
                          !if(ps.Pfl.IsRealTrue16, "", "_FAKE16") in {
-    defm NAME : VOP1_Real_dpp8<Gen, op, opName>;
+    if !not(ps.Pfl.HasExt64BitDPP) then
+      defm NAME : VOP1_Real_dpp8<Gen, op, opName>;
   }
 }
 
@@ -1116,6 +1124,8 @@ defm V_CVT_NORM_U16_F16      : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12<0x064>;
 
 defm V_CVT_F16_F32           : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12<0x00a>;
 defm V_CVT_F32_F16           : VOP1_Real_FULL_t16_and_fake16_gfx11_gfx12<0x00b>;
+
+defm V_MOV_B64 : VOP1_Real_FULL <GFX1250Gen, 0x1d>;
 
 defm V_CVT_F32_BF16          : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x072, "v_cvt_f32_bf16", "V_CVT_F32_BF16_gfx1250">;
 defm V_CVT_PK_F16_FP8        : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x075>;
@@ -1552,17 +1562,34 @@ def : GCNPat<
 >;
 
 def : GCNPat<
-  (i64 (anyext i16:$src)),
+  (i64 (UniformUnaryFrag<anyext> i16:$src)),
+  (REG_SEQUENCE VReg_64,
+     (i32 (COPY $src)), sub0,
+     (V_MOV_B32_e32 (i32 0)), sub1)
+>;
+
+def : GCNPat<
+  (i64 (DivergentUnaryFrag<anyext> i16:$src)),
   (REG_SEQUENCE VReg_64, $src, lo16, (i16 (IMPLICIT_DEF)), hi16, (i32 (IMPLICIT_DEF)), sub1)
 >;
 
 def : GCNPat<
-  (i16 (trunc i32:$src)),
+  (i16 (UniformUnaryFrag<trunc> i32:$src)),
+  (COPY $src)
+>;
+
+def : GCNPat<
+  (i16 (DivergentUnaryFrag<trunc> i32:$src)),
   (EXTRACT_SUBREG $src, lo16)
 >;
 
 def : GCNPat <
-  (i16 (trunc i64:$src)),
+  (i16 (UniformUnaryFrag<trunc> i64:$src)),
+  (EXTRACT_SUBREG $src, sub0)
+>;
+
+def : GCNPat <
+  (i16 (DivergentUnaryFrag<trunc> i64:$src)),
   (EXTRACT_SUBREG $src, lo16)
 >;
 

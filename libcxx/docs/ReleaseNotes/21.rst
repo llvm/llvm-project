@@ -100,7 +100,7 @@ Deprecations and Removals
 - libc++ no longer adds ``constexpr`` to ``std::hash<std::vector<bool, A>>::operator()``, as the ``constexpr`` addition
   since C++20 was an unintended extension.
 
-- TODO: The non-conforming extension ``packaged_task::result_type`` has been removed in LLVM 21.
+- The non-conforming extension ``packaged_task::result_type`` has been removed in LLVM 21.
 
 Potentially breaking changes
 ----------------------------

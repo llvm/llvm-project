@@ -2571,7 +2571,7 @@ public:
     Word(ToUpperCaseLetters(common::EnumToString(x)));
   }
 
-  void Unparse(const OpenMPAtomicConstruct &x) {
+  template <typename Construct> void UnparseBlockConstruct(const Construct &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(std::get<OmpDirectiveSpecification>(x.t));
@@ -2585,6 +2585,10 @@ public:
       Put("\n");
       EndOpenMP();
     }
+  }
+
+  void Unparse(const OpenMPAtomicConstruct &x) { //
+    UnparseBlockConstruct(x);
   }
 
   void Unparse(const OpenMPExecutableAllocate &x) {
@@ -2614,22 +2618,8 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OmpEndAllocators &x) {
-    BeginOpenMP();
-    Word("!$OMP END ALLOCATE");
-    Put("\n");
-    EndOpenMP();
-  }
-  void Unparse(const OpenMPAllocatorsConstruct &x) {
-    BeginOpenMP();
-    Word("!$OMP ALLOCATE");
-    Walk(std::get<OmpClauseList>(x.t));
-    Put("\n");
-    EndOpenMP();
-    Walk(std::get<Statement<AllocateStmt>>(x.t));
-    if (const auto &end = std::get<std::optional<OmpEndAllocators>>(x.t)) {
-      Walk(*end);
-    }
+  void Unparse(const OpenMPAllocatorsConstruct &x) { //
+    UnparseBlockConstruct(x);
   }
   void Unparse(const OmpAssumeDirective &x) {
     BeginOpenMP();

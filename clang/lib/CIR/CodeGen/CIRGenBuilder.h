@@ -394,6 +394,15 @@ public:
     return createGlobal(module, loc, uniqueName, type, linkage);
   }
 
+  mlir::Value createSetBitfield(mlir::Location loc, mlir::Type resultType,
+                                mlir::Value dstAddr, mlir::Type storageType,
+                                mlir::Value src, const CIRGenBitFieldInfo &info,
+                                bool isLvalueVolatile, bool useVolatile) {
+    return create<cir::SetBitfieldOp>(loc, resultType, dstAddr, storageType,
+                                      src, info.name, info.size, info.offset,
+                                      info.isSigned, isLvalueVolatile);
+  }
+
   mlir::Value createGetBitfield(mlir::Location loc, mlir::Type resultType,
                                 mlir::Value addr, mlir::Type storageType,
                                 const CIRGenBitFieldInfo &info,

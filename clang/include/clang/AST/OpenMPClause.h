@@ -1776,7 +1776,8 @@ public:
   }
 };
 
-/// This represents 'severity' clause in the '#pragma omp error' directive
+/// This represents the 'severity' clause in the '#pragma omp error' and the
+/// '#pragma omp parallel' directives.
 ///
 /// \code
 /// #pragma omp error severity(fatal)
@@ -1856,7 +1857,8 @@ public:
   }
 };
 
-/// This represents 'message' clause in the '#pragma omp error' directive
+/// This represents the 'message' clause in the '#pragma omp error' and the
+/// '#pragma omp parallel' directives.
 ///
 /// \code
 /// #pragma omp error message("GNU compiler required.")
