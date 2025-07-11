@@ -1449,7 +1449,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUF(SDValue Addr, SDValue &Ptr, SDValue &VAddr,
       C1 = nullptr;
   }
 
-  if (N0.getOpcode() == ISD::ADD) {
+  if (N0->isAnyAdd()) {
     // (add N2, N3) -> addr64, or
     // (add (add N2, N3), C1) -> addr64
     SDValue N2 = N0.getOperand(0);
@@ -1899,7 +1899,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
   }
 
   // Match the variable offset.
-  if (Addr.getOpcode() == ISD::ADD) {
+  if (Addr->isAnyAdd()) {
     LHS = Addr.getOperand(0);
     RHS = Addr.getOperand(1);
 
@@ -2230,7 +2230,7 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBaseOffset(SDValue Addr, SDValue &SBase,
 
   SDValue N0, N1;
   // Extract the base and offset if possible.
-  if (CurDAG->isBaseWithConstantOffset(Addr) || Addr.getOpcode() == ISD::ADD) {
+  if (Addr->isAnyAdd() || CurDAG->isADDLike(Addr)) {
     N0 = Addr.getOperand(0);
     N1 = Addr.getOperand(1);
   } else if (getBaseWithOffsetUsingSplitOR(*CurDAG, Addr, N0, N1)) {
