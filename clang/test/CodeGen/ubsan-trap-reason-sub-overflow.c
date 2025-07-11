@@ -1,9 +1,7 @@
 // RUN: %clang_cc1 -triple arm64-apple-macosx14.0.0 -O0 -debug-info-kind=standalone -dwarf-version=5 \
 // RUN: -fsanitize=signed-integer-overflow -fsanitize-trap=signed-integer-overflow -emit-llvm %s -o - | FileCheck %s
 
-int sub_overflow(int a, int b) {
-    return a - b;
-}
+int sub_overflow(int a, int b) { return a - b; }
 
 // CHECK-LABEL: @sub_overflow
 // CHECK: call void @llvm.ubsantrap(i8 21) {{.*}}!dbg [[LOC:![0-9]+]]

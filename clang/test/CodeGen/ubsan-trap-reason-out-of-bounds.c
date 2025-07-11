@@ -1,10 +1,9 @@
 // RUN: %clang_cc1 -triple arm64-apple-macosx14.0.0 -O0 -debug-info-kind=standalone -dwarf-version=5 \
 // RUN: -fsanitize=array-bounds -fsanitize-trap=array-bounds -emit-llvm %s -o - | FileCheck %s
 
-int out_of_bounds()
-{
-    int a[1] = {0};
-    return a[1];
+int out_of_bounds() {
+  int a[1] = {0};
+  return a[1];
 }
 
 // CHECK-LABEL: @out_of_bounds

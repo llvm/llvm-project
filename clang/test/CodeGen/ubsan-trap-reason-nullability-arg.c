@@ -3,15 +3,9 @@
 
 #include <stddef.h>
 
-int nullability_arg(int* _Nonnull p)
-{
-    return *p;
-}
+int nullability_arg(int *_Nonnull p) { return *p; }
 
-int trigger_nullability_arg()
-{
-    return nullability_arg(NULL);
-}
+int trigger_nullability_arg(void) { return nullability_arg(NULL); }
 
 // CHECK-LABEL: @nullability_arg
 // CHECK-LABEL: @trigger_nullability_arg

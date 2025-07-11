@@ -3,10 +3,9 @@
 
 int n = 0;
 
-int vla_bound_not_positive()
-{
-    int a[n];
-    return sizeof a;
+int vla_bound_not_positive(void) {
+  int a[n];
+  return sizeof a;
 }
 
 // CHECK-LABEL: @vla_bound_not_positive

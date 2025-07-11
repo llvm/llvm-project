@@ -3,22 +3,18 @@
 
 typedef int (*fp_t)(int);
 
-int good(int x) {
-    return x + 1;
-}
+int good(int x) { return x + 1; }
 
-int bad(void) {
-    return 0;
-}
+int bad(void) { return 0; }
 
 int cfi_trigger(int a) {
-    fp_t p = good;
-    int r1 = p(a);
+  fp_t p = good;
+  int r1 = p(a);
 
-    p = (fp_t)(void*)bad;
-    int r2 = p(a);
+  p = (fp_t)(void *)bad;
+  int r2 = p(a);
 
-    return r1 + r2;
+  return r1 + r2;
 }
 
 // CHECK-LABEL: @good

@@ -4,13 +4,12 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-int* _Nonnull nullability_return(bool fail)
-{
-    if (fail)
-        return NULL;
+int *_Nonnull nullability_return(bool fail) {
+  if (fail)
+    return NULL;
 
-    static int x = 0;
-    return &x;
+  static int x = 0;
+  return &x;
 }
 
 // CHECK-LABEL: @nullability_return

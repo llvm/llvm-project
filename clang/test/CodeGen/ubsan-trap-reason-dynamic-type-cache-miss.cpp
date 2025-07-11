@@ -8,12 +8,12 @@ struct B {
   virtual void bar();
 };
 
-void A::foo() { }
-void B::bar() { }
+void A::foo() {}
+void B::bar() {}
 
 int dynamic_type_cache_miss() {
   B b;
-  A &a = reinterpret_cast<A&>(b);
+  A &a = reinterpret_cast<A &>(b);
   a.foo();
   return 0;
 }

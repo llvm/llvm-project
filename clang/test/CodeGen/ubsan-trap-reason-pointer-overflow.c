@@ -4,11 +4,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
-int* pointer_overflow(void)
-{
-    int buf[4];
-    volatile size_t n = (SIZE_MAX / sizeof(int)) - 1;
-    return buf + n;
+int *pointer_overflow(void) {
+  int buf[4];
+  volatile size_t n = (SIZE_MAX / sizeof(int)) - 1;
+  return buf + n;
 }
 
 // CHECK-LABEL: @pointer_overflow

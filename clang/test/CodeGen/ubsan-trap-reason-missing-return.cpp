@@ -2,8 +2,8 @@
 // RUN: -fsanitize=return -fsanitize-trap=return -emit-llvm %s -o - | FileCheck %s
 
 int missing_return(int x) {
-    if (x > 0)
-        return x;
+  if (x > 0)
+    return x;
 }
 
 // CHECK-LABEL: @_Z14missing_return

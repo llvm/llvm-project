@@ -1,12 +1,9 @@
 // RUN: %clang_cc1 -triple arm64-apple-macosx14.0.0 -O0 -debug-info-kind=standalone -dwarf-version=5 \
 // RUN: -fsanitize=implicit-unsigned-integer-truncation -fsanitize-trap=implicit-unsigned-integer-truncation -emit-llvm %s -o - | FileCheck %s
 
-unsigned long long big; 
+unsigned long long big;
 
-unsigned implicit_conversion()
-{
-    return big;
-}
+unsigned implicit_conversion(void) { return big; }
 
 // CHECK-LABEL: @implicit_conversion
 // CHECK: call void @llvm.ubsantrap(i8 7) {{.*}}!dbg [[LOC:![0-9]+]]

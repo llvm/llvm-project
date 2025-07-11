@@ -2,11 +2,11 @@
 // RUN: -fsanitize=alignment -fsanitize-trap=alignment -emit-llvm %s -o - | FileCheck %s
 
 #include <stdint.h>
-int32_t* get_int(void) __attribute__((assume_aligned(16)));
+int32_t *get_int(void) __attribute__((assume_aligned(16)));
 
 void retrieve_int(void) {
-    int* i = get_int();
-    *i = 7;
+  int *i = get_int();
+  *i = 7;
 }
 
 // CHECK-LABEL: @retrieve_int
