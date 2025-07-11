@@ -138,9 +138,7 @@ def uncomment_download_links(repo, release):
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "command",
-    type=str,
-    choices=["create", "upload", "check-permissions", "uncomment_download_links"],
+    "command", type=str, choices=["create", "upload", "check-permissions", "uncomment_download_links"]
 )
 
 # All args
