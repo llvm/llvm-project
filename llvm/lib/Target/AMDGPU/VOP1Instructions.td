@@ -1048,6 +1048,11 @@ multiclass VOP1_Real_FULL_with_name<GFXGen Gen, bits<9> op, string opName,
   VOP1_Real_dpp8_with_name<Gen, op, opName, asmName>,
   VOP1_Realtriple_e64_with_name<Gen, op, opName, asmName>;
 
+multiclass VOP1_Real_FULL_with_name_gfx11_gfx12_not_gfx1250<
+    bits<9> op, string opName, string asmName> :
+  VOP1_Real_FULL_with_name<GFX11Gen, op, opName, asmName>,
+  VOP1_Real_FULL_with_name<GFX12Not12_50Gen, op, opName, asmName>;
+
 multiclass VOP1_Real_NO_DPP<GFXGen Gen, bits<9> op> :
   VOP1_Real_e32<Gen, op>, VOP1_Real_e64<Gen, op>;
 
@@ -1101,8 +1106,7 @@ multiclass VOP1_Real_OpSelIsDPP_gfx1250<bits<9> op> : VOP1_Real_e32<GFX1250Gen, 
 }
 
 
-defm V_CVT_F32_FP8      : VOP1_Real_FULL_with_name<GFX11Not12_50Gen, 0x06c, "V_CVT_F32_FP8_OP_SEL", "v_cvt_f32_fp8">;
-defm V_CVT_F32_FP8      : VOP1_Real_FULL_with_name<GFX12Not12_50Gen, 0x06c, "V_CVT_F32_FP8_OP_SEL", "v_cvt_f32_fp8">;
+defm V_CVT_F32_FP8      : VOP1_Real_FULL_with_name_gfx11_gfx12_not_gfx1250<0x06c, "V_CVT_F32_FP8_OP_SEL", "v_cvt_f32_fp8">;
 defm V_CVT_F32_FP8      : VOP1_Real_FULL_with_name<GFX1250Gen, 0x06c, "V_CVT_F32_FP8_gfx1250", "v_cvt_f32_fp8">;
 
 defm V_CVT_F32_BF8           : VOP1_Real_FULL_with_name_gfx11_gfx12<0x06d, "V_CVT_F32_BF8_OP_SEL", "v_cvt_f32_bf8">;
