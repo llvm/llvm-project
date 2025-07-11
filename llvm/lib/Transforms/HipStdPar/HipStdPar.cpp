@@ -120,14 +120,13 @@ collectIndirectableUses(GlobalVariable *G) {
   // We are interested only in use chains that end in an Instruction.
   SmallVector<std::reference_wrapper<Use>> Uses;
 
-  SmallVector<std::reference_wrapper<Use>> Tmp(G->use_begin(), G->use_end());
-  while (!Tmp.empty()) {
-    Use &U = Tmp.back();
-    Tmp.pop_back();
+  SmallVector<std::reference_wrapper<Use>> Stack(G->use_begin(), G->use_end());
+  while (!Stack.empty()) {
+    Use &U = Stack.pop_back_val();
     if (isa<Instruction>(U.getUser()))
       Uses.emplace_back(U);
     else
-      transform(U.getUser()->uses(), std::back_inserter(Tmp),
+      transform(U.getUser()->uses(), std::back_inserter(Stack),
                 [](auto &&U) { return std::ref(U); });
   }
 
