@@ -1612,9 +1612,9 @@ def LLVM_IFuncOp : LLVM_Op<"mlir.ifunc",
     TypeAttr:$i_func_type,
     FlatSymbolRefAttr:$resolver,
     TypeAttr:$resolver_type,
+    Linkage:$linkage,
     UnitAttr:$dso_local,
     DefaultValuedAttr<ConfinedAttr<I32Attr, [IntNonNegative]>, "0">:$address_space,
-    DefaultValuedAttr<Linkage, "mlir::LLVM::Linkage::External">:$linkage,
     DefaultValuedAttr<UnnamedAddr, "mlir::LLVM::UnnamedAddr::None">:$unnamed_addr,
     DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_
   );
@@ -1625,6 +1625,31 @@ def LLVM_IFuncOp : LLVM_Op<"mlir.ifunc",
     IFuncs can be called as regular functions. The function type is the same
     as the IFuncType. The symbol is resolved at runtime by calling a resolver
     function.
+
+    Examples:
+
+    ```mlir
+    // IFuncs have @-identifier and use a resolver function.
+    llvm.mlir.ifunc external @foo: !llvm.func<f32 (i64)>, !llvm.ptr @resolver
+
+    llvm.func @foo_1(i64) -> f32
+    llvm.func @foo_2(i64) -> f32
+
+    llvm.func @resolve_foo() -> !llvm.ptr attributes {
+      %0 = llvm.mlir.addressof @foo_2 : !llvm.ptr
+      %1 = llvm.mlir.addressof @foo_1 : !llvm.ptr
+
+      // ... Logic selecting from foo_{1, 2}
+
+      // Return function pointer to the selected function
+      llvm.return %7 : !llvm.ptr
+    }
+
+    llvm.func @use_foo() {
+      // IFuncs are called as regular functions
+      %res = llvm.call @foo(%value) : i64 -> f32
+    }
+    ```
   }];
 
   let builders = [
@@ -1634,7 +1659,7 @@ def LLVM_IFuncOp : LLVM_Op<"mlir.ifunc",
   ];
 
   let assemblyFormat = [{
-    (custom<LLVMLinkage>($linkage)^)? ($visibility_^)? ($unnamed_addr^)?
+    custom<LLVMLinkage>($linkage) ($visibility_^)? ($unnamed_addr^)?
     $sym_name `:` $i_func_type `,` $resolver_type $resolver attr-dict
   }];
   let hasVerifier = 1;

@@ -1387,8 +1387,8 @@ LogicalResult ModuleImport::convertIFunc(llvm::GlobalIFunc *ifunc) {
   Type resolverType = convertType(resolver->getType());
   builder.create<IFuncOp>(mlirModule.getLoc(), ifunc->getName(), type,
                           resolver->getName(), resolverType,
-                          ifunc->isDSOLocal(), ifunc->getAddressSpace(),
                           convertLinkageFromLLVM(ifunc->getLinkage()),
+                          ifunc->isDSOLocal(), ifunc->getAddressSpace(),
                           convertUnnamedAddrFromLLVM(ifunc->getUnnamedAddr()),
                           convertVisibilityFromLLVM(ifunc->getVisibility()));
   return success();
@@ -1998,9 +1998,9 @@ ModuleImport::convertCallOperands(llvm::CallBase *callInst,
   // treated as indirect calls to constant operands that need to be converted.
   // Skip the callee operand if it's inline assembly, as it's handled separately
   // in InlineAsmOp.
-  llvm::Value *caleeOperand = callInst->getCalledOperand();
-  if (!isa<llvm::Function, llvm::GlobalIFunc>(caleeOperand) && !isInlineAsm) {
-    FailureOr<Value> called = convertValue(caleeOperand);
+  llvm::Value *calleeOperand = callInst->getCalledOperand();
+  if (!isa<llvm::Function, llvm::GlobalIFunc>(calleeOperand) && !isInlineAsm) {
+    FailureOr<Value> called = convertValue(calleeOperand);
     if (failed(called))
       return failure();
     operands.push_back(*called);
@@ -2066,8 +2066,7 @@ ModuleImport::convertFunctionType(llvm::CallBase *callInst,
   if (callee) {
     origCalleeType = callee->getFunctionType();
   } else if (auto *ifunc = dyn_cast<llvm::GlobalIFunc>(calledOperand)) {
-    origCalleeType =
-        dyn_cast_or_null<llvm::FunctionType>(ifunc->getValueType());
+    origCalleeType = cast<llvm::FunctionType>(ifunc->getValueType());
   }
 
   // For indirect calls, return the type of the call itself.

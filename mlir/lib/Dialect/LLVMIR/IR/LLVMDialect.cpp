@@ -143,7 +143,7 @@ static void printLLVMLinkage(OpAsmPrinter &p, Operation *, LinkageAttr val) {
   p << stringifyLinkage(val.getLinkage());
 }
 
-static OptionalParseResult parseLLVMLinkage(OpAsmParser &p, LinkageAttr &val) {
+static ParseResult parseLLVMLinkage(OpAsmParser &p, LinkageAttr &val) {
   val = LinkageAttr::get(
       p.getContext(),
       parseOptionalLLVMKeyword<LLVM::Linkage>(p, LLVM::Linkage::External));
@@ -2702,26 +2702,29 @@ void IFuncOp::build(OpBuilder &builder, OperationState &result, StringRef name,
                     Type iFuncType, StringRef resolverName, Type resolverType,
                     Linkage linkage, LLVM::Visibility visibility) {
   return build(builder, result, name, iFuncType, resolverName, resolverType,
-               /* dso_local */ false, /* addr_space */ 0, linkage,
+               linkage, /*dso_local=*/false, /*address_space=*/0,
                UnnamedAddr::None, visibility);
 }
+
 LogicalResult IFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  return success();
   Operation *symbol =
       symbolTable.lookupSymbolIn(parentLLVMModule(*this), getResolverAttr());
   auto resolver = dyn_cast<LLVMFuncOp>(symbol);
-  if (!resolver)
-    return emitOpError("IFunc must have a Function resolver");
-
-  // Copying logic from llvm/lib/IR/Verifier.cpp
+  if (!resolver) {
+    // FIXME: Strip aliases to find the called function
+    if (isa<AliasOp>(symbol))
+      return success();
+    return emitOpError("must have a function resolver");
+  }
+  // This matches LLVM IR verification logic, see from llvm/lib/IR/Verifier.cpp
   Linkage linkage = resolver.getLinkage();
   if (resolver.isExternal() || linkage == Linkage::AvailableExternally)
-    return emitOpError("IFunc resolver must be a definition");
+    return emitOpError("resolver must be a definition");
   if (!isa<LLVMPointerType>(resolver.getFunctionType().getReturnType()))
-    return emitOpError("IFunc resolver must return a pointer");
+    return emitOpError("resolver must return a pointer");
   auto resolverPtr = dyn_cast<LLVMPointerType>(getResolverType());
   if (!resolverPtr || resolverPtr.getAddressSpace() != getAddressSpace())
-    return emitOpError("IFunc resolver has incorrect type");
+    return emitOpError("resolver has incorrect type");
   return success();
 }
 

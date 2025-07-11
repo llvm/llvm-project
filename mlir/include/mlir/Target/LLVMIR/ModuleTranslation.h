@@ -376,6 +376,8 @@ private:
   /// aliases.
   DenseMap<Operation *, llvm::GlobalValue *> aliasesMapping;
 
+  /// Mappings between llvm.mlir.ifunc definitions and corresponding global
+  /// ifuncs.
   DenseMap<Operation *, llvm::GlobalValue *> ifuncMapping;
 
   /// A stateful object used to translate types.

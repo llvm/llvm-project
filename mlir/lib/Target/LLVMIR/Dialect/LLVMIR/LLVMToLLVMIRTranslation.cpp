@@ -426,9 +426,9 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
               moduleTranslation.lookupFunction(attr.getValue())) {
         call = builder.CreateCall(function, operandsRef, opBundles);
       } else {
-        Operation *module = parentLLVMModule(&opInst);
+        Operation *moduleOp = parentLLVMModule(&opInst);
         Operation *ifuncOp =
-            moduleTranslation.symbolTable().lookupSymbolIn(module, attr);
+            moduleTranslation.symbolTable().lookupSymbolIn(moduleOp, attr);
         llvm::GlobalValue *ifunc = moduleTranslation.lookupIFunc(ifuncOp);
         llvm::FunctionType *calleeType = llvm::cast<llvm::FunctionType>(
             moduleTranslation.convertType(callOp.getCalleeFunctionType()));

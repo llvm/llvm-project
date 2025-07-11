@@ -1875,12 +1875,18 @@ LogicalResult ModuleTranslation::convertIFuncs() {
     llvm::Type *type = convertType(op.getIFuncType());
     llvm::GlobalValue::LinkageTypes linkage =
         convertLinkageToLLVM(op.getLinkage());
-    llvm::Constant *cst =
-        dyn_cast<llvm::Constant>(lookupFunction(op.getResolver()));
+    llvm::Constant *resolver;
+    if (auto *resolverFn = lookupFunction(op.getResolver())) {
+      resolver = dyn_cast<llvm::Constant>(resolverFn);
+    } else {
+      Operation *aliasTrg = symbolTable().lookupSymbolIn(parentLLVMModule(op),
+                                                         op.getResolverAttr());
+      resolver = cast<llvm::Constant>(lookupAlias(aliasTrg));
+    }
 
     auto *ifunc =
         llvm::GlobalIFunc::create(type, op.getAddressSpace(), linkage,
-                                  op.getSymName(), cst, llvmModule.get());
+                                  op.getSymName(), resolver, llvmModule.get());
     addRuntimePreemptionSpecifier(op.getDsoLocal(), ifunc);
     ifunc->setUnnamedAddr(convertUnnamedAddrToLLVM(op.getUnnamedAddr()));
     ifunc->setVisibility(convertVisibilityToLLVM(op.getVisibility_()));

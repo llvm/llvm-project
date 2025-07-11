@@ -323,7 +323,7 @@ private:
   /// Converts an LLVM global alias variable into an MLIR LLVM dialect alias
   /// operation if a conversion exists. Otherwise, returns failure.
   LogicalResult convertAlias(llvm::GlobalAlias *alias);
-  // Converts an LLVM global ifunc into an MLIR LLVM diaeclt ifunc operation
+  // Converts an LLVM global ifunc into an MLIR LLVM dialect ifunc operation
   LogicalResult convertIFunc(llvm::GlobalIFunc *ifunc);
   /// Returns personality of `func` as a FlatSymbolRefAttr.
   FlatSymbolRefAttr getPersonalityAsAttr(llvm::Function *func);
