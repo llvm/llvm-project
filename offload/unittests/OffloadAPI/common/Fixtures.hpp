@@ -120,7 +120,7 @@ struct OffloadKernelTest : OffloadProgramTest {
     RETURN_ON_FATAL_FAILURE(OffloadProgramTest::TearDown());
   }
 
-  ol_kernel_handle_t Kernel = nullptr;
+  ol_symbol_handle_t Kernel = nullptr;
 };
 
 struct OffloadQueueTest : OffloadDeviceTest {
@@ -137,6 +137,31 @@ struct OffloadQueueTest : OffloadDeviceTest {
   }
 
   ol_queue_handle_t Queue = nullptr;
+};
+
+struct OffloadEventTest : OffloadQueueTest {
+  void SetUp() override {
+    RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
+
+    // Get an event from a memcpy. We can still use it in olGetEventInfo etc
+    // after it has been waited on.
+    void *Alloc;
+    uint32_t Value = 42;
+    ASSERT_SUCCESS(
+        olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, sizeof(Value), &Alloc));
+    ASSERT_SUCCESS(
+        olMemcpy(Queue, Alloc, Device, &Value, Host, sizeof(Value), &Event));
+    ASSERT_SUCCESS(olWaitEvent(Event));
+    ASSERT_SUCCESS(olMemFree(Alloc));
+  }
+
+  void TearDown() override {
+    if (Event)
+      olDestroyEvent(Event);
+    RETURN_ON_FATAL_FAILURE(OffloadQueueTest::TearDown());
+  }
+
+  ol_event_handle_t Event = nullptr;
 };
 
 #define OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(FIXTURE)                      \

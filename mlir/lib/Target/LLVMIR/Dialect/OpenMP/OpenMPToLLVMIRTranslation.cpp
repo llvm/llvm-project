@@ -1291,6 +1291,11 @@ initReductionVars(OP op, ArrayRef<BlockArgument> reductionArgs,
     mapInitializationArgs(op, moduleTranslation, reductionDecls,
                           reductionVariableMap, i);
 
+    // TODO In some cases (specially on the GPU), the init regions may
+    // contains stack alloctaions. If the region is inlined in a loop, this is
+    // problematic. Instead of just inlining the region, handle allocations by
+    // hoisting fixed length allocations to the function entry and using
+    // stacksave and restore for variable length ones.
     if (failed(inlineConvertOmpRegions(reductionDecls[i].getInitializerRegion(),
                                        "omp.reduction.neutral", builder,
                                        moduleTranslation, &phis)))
@@ -2847,11 +2852,10 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   auto simdOp = cast<omp::SimdOp>(opInst);
 
-  // TODO: Replace this with proper composite translation support.
-  // Currently, simd information on composite constructs is ignored, so e.g.
-  // 'do/for simd' will be treated the same as a standalone 'do/for'. This is
-  // allowed by the spec, since it's equivalent to using a SIMD length of 1.
-  if (simdOp.isComposite()) {
+  // Ignore simd in composite constructs with unsupported clauses
+  // TODO: Replace this once simd + clause combinations are properly supported
+  if (simdOp.isComposite() &&
+      (simdOp.getReductionByref().has_value() || simdOp.getIfExpr())) {
     if (failed(convertIgnoredWrapper(simdOp, moduleTranslation)))
       return failure();
 
@@ -2894,7 +2898,8 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
           .failed())
     return failure();
 
-  // TODO: no call to copyFirstPrivateVars?
+  // No call to copyFirstPrivateVars because FIRSTPRIVATE is not allowed for
+  // SIMD.
 
   assert(afterAllocas.get()->getSinglePredecessor());
   if (failed(initReductionVars(simdOp, reductionArgs, builder,
@@ -3087,6 +3092,67 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
   // potential further loop transformations. Use the insertion point stored
   // before collapsing loops instead.
   builder.restoreIP(afterIP);
+  return success();
+}
+
+/// Convert an omp.canonical_loop to LLVM-IR
+static LogicalResult
+convertOmpCanonicalLoopOp(omp::CanonicalLoopOp op, llvm::IRBuilderBase &builder,
+                          LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+
+  llvm::OpenMPIRBuilder::LocationDescription loopLoc(builder);
+  Value loopIV = op.getInductionVar();
+  Value loopTC = op.getTripCount();
+
+  llvm::Value *llvmTC = moduleTranslation.lookupValue(loopTC);
+
+  llvm::Expected<llvm::CanonicalLoopInfo *> llvmOrError =
+      ompBuilder->createCanonicalLoop(
+          loopLoc,
+          [&](llvm::OpenMPIRBuilder::InsertPointTy ip, llvm::Value *llvmIV) {
+            // Register the mapping of MLIR induction variable to LLVM-IR
+            // induction variable
+            moduleTranslation.mapValue(loopIV, llvmIV);
+
+            builder.restoreIP(ip);
+            llvm::Expected<llvm::BasicBlock *> bodyGenStatus =
+                convertOmpOpRegions(op.getRegion(), "omp.loop.region", builder,
+                                    moduleTranslation);
+
+            return bodyGenStatus.takeError();
+          },
+          llvmTC, "omp.loop");
+  if (!llvmOrError)
+    return op.emitError(llvm::toString(llvmOrError.takeError()));
+
+  llvm::CanonicalLoopInfo *llvmCLI = *llvmOrError;
+  llvm::IRBuilderBase::InsertPoint afterIP = llvmCLI->getAfterIP();
+  builder.restoreIP(afterIP);
+
+  // Register the mapping of MLIR loop to LLVM-IR OpenMPIRBuilder loop
+  if (Value cli = op.getCli())
+    moduleTranslation.mapOmpLoop(cli, llvmCLI);
+
+  return success();
+}
+
+/// Apply a `#pragma omp unroll` / "!$omp unroll" transformation using the
+/// OpenMPIRBuilder.
+static LogicalResult
+applyUnrollHeuristic(omp::UnrollHeuristicOp op, llvm::IRBuilderBase &builder,
+                     LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+
+  Value applyee = op.getApplyee();
+  assert(applyee && "Loop to apply unrolling on required");
+
+  llvm::CanonicalLoopInfo *consBuilderCLI =
+      moduleTranslation.lookupOMPLoop(applyee);
+  llvm::OpenMPIRBuilder::LocationDescription loc(builder);
+  ompBuilder->unrollLoopHeuristic(loc.DL, consBuilderCLI);
+
+  moduleTranslation.invalidateOmpLoop(applyee);
   return success();
 }
 
@@ -3530,11 +3596,13 @@ static llvm::Value *
 getRefPtrIfDeclareTarget(mlir::Value value,
                          LLVM::ModuleTranslation &moduleTranslation) {
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  Operation *op = value.getDefiningOp();
+  if (auto addrCast = llvm::dyn_cast_if_present<LLVM::AddrSpaceCastOp>(op))
+    op = addrCast->getOperand(0).getDefiningOp();
 
   // An easier way to do this may just be to keep track of any pointer
   // references and their mapping to their respective operation
-  if (auto addressOfOp =
-          llvm::dyn_cast_if_present<LLVM::AddressOfOp>(value.getDefiningOp())) {
+  if (auto addressOfOp = llvm::dyn_cast_if_present<LLVM::AddressOfOp>(op)) {
     if (auto gOp = llvm::dyn_cast_or_null<LLVM::GlobalOp>(
             addressOfOp->getParentOfType<mlir::ModuleOp>().lookupSymbol(
                 addressOfOp.getGlobalName()))) {
@@ -5395,8 +5463,26 @@ static LogicalResult
 convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
                  LLVM::ModuleTranslation &moduleTranslation) {
   auto targetOp = cast<omp::TargetOp>(opInst);
+  // The current debug location already has the DISubprogram for the outlined
+  // function that will be created for the target op. We save it here so that
+  // we can set it on the outlined function.
+  llvm::DebugLoc outlinedFnLoc = builder.getCurrentDebugLocation();
   if (failed(checkImplementationStatus(opInst)))
     return failure();
+
+  // During the handling of target op, we will generate instructions in the
+  // parent function like call to the oulined function or branch to a new
+  // BasicBlock. We set the debug location here to parent function so that those
+  // get the correct debug locations. For outlined functions, the normal MLIR op
+  // conversion will automatically pick the correct location.
+  llvm::BasicBlock *parentBB = builder.GetInsertBlock();
+  assert(parentBB && "No insert block is set for the builder");
+  llvm::Function *parentLLVMFn = parentBB->getParent();
+  assert(parentLLVMFn && "Parent Function must be valid");
+  if (llvm::DISubprogram *SP = parentLLVMFn->getSubprogram())
+    builder.SetCurrentDebugLocation(llvm::DILocation::get(
+        parentLLVMFn->getContext(), outlinedFnLoc.getLine(),
+        outlinedFnLoc.getCol(), SP, outlinedFnLoc.getInlinedAt()));
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   bool isTargetDevice = ompBuilder->Config.isTargetDevice();
@@ -5490,6 +5576,9 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
     llvmOutlinedFn = codeGenIP.getBlock()->getParent();
     assert(llvmParentFn && llvmOutlinedFn &&
            "Both parent and outlined functions must exist at this point");
+
+    if (outlinedFnLoc && llvmParentFn->getSubprogram())
+      llvmOutlinedFn->setSubprogram(outlinedFnLoc->getScope()->getSubprogram());
 
     if (auto attr = llvmParentFn->getFnAttribute("target-cpu");
         attr.isStringAttribute())
@@ -5961,6 +6050,23 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
                 // etc. and then discarded
                 return success();
               })
+          .Case([&](omp::NewCliOp op) {
+            // Meta-operation: Doesn't do anything by itself, but used to
+            // identify a loop.
+            return success();
+          })
+          .Case([&](omp::CanonicalLoopOp op) {
+            return convertOmpCanonicalLoopOp(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::UnrollHeuristicOp op) {
+            // FIXME: Handling omp.unroll_heuristic as an executable requires
+            // that the generator (e.g. omp.canonical_loop) has been seen first.
+            // For construct that require all codegen to occur inside a callback
+            // (e.g. OpenMPIRBilder::createParallel), all codegen of that
+            // contained region including their transformations must occur at
+            // the omp.canonical_loop.
+            return applyUnrollHeuristic(op, builder, moduleTranslation);
+          })
           .Default([&](Operation *inst) {
             return inst->emitError()
                    << "not yet implemented: " << inst->getName();

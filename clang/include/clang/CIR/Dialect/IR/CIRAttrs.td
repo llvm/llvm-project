@@ -453,4 +453,67 @@ def CIR_VisibilityAttr : CIR_EnumAttr<CIR_VisibilityKind, "visibility"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// BitfieldInfoAttr
+//===----------------------------------------------------------------------===//
+
+def BitfieldInfoAttr : CIR_Attr<"BitfieldInfo", "bitfield_info"> {
+  let summary = "Represents info for a bit-field member";
+  let description = [{
+    Holds the following information about bitfields: name, storage type, size
+    and position in the storage, and signedness.
+    Example:
+      Given the following struct with bitfields:
+        ```c++
+        typedef struct {
+          int a : 4;
+          int b : 27;
+          int c : 17;
+          int d : 2;
+          int e : 15;
+        } S;
+        ```
+
+      The CIR representation of the struct `S` might look like:
+      ```mlir
+        !rec_S = !cir.record<struct "S" packed padded {!u64i, !u16i,
+                                                       !cir.array<!u8i x 2>}>
+      ```
+      And the bitfield info attribute for member `a` would be:
+      ```mlir
+        #bfi_a = #cir.bitfield_info<name = "a", storage_type = !u64i,
+                                    size = 4, offset = 0, is_signed = true>
+      ```
+
+      This metadata describes that field `a` is stored in a 64-bit integer,
+      is 4 bits wide, starts at offset 0, and is signed.
+  }];
+  let parameters = (ins "mlir::StringAttr":$name,
+                        "mlir::Type":$storage_type,
+                        "uint64_t":$size,
+                        "uint64_t":$offset,
+                        "bool":$is_signed);
+
+  let assemblyFormat = [{`<` struct($name,
+                                    $storage_type,
+                                    $size,
+                                    $offset,
+                                    $is_signed)
+                         `>`
+                        }];
+
+  let builders = [
+    AttrBuilder<(ins "llvm::StringRef":$name,
+                     "mlir::Type":$storage_type,
+                     "uint64_t":$size,
+                     "uint64_t":$offset,
+                     "bool":$is_signed
+                     ), [{
+      return $_get($_ctxt, mlir::StringAttr::get($_ctxt, name), storage_type,
+                   size, offset, is_signed);
+    }]>
+  ];
+}
+
+
 #endif // LLVM_CLANG_CIR_DIALECT_IR_CIRATTRS_TD

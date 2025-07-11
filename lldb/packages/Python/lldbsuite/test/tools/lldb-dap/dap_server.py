@@ -199,8 +199,8 @@ class DebugCommunication(object):
         finally:
             dump_dap_log(self.log_file)
 
-    def get_modules(self):
-        module_list = self.request_modules()["body"]["modules"]
+    def get_modules(self, startModule: int = 0, moduleCount: int = 0):
+        module_list = self.request_modules(startModule, moduleCount)["body"]["modules"]
         modules = {}
         for module in module_list:
             modules[module["name"]] = module
@@ -831,6 +831,20 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
+    def request_writeMemory(self, memoryReference, data, offset=0, allowPartial=True):
+        args_dict = {
+            "memoryReference": memoryReference,
+            "offset": offset,
+            "allowPartial": allowPartial,
+            "data": data,
+        }
+        command_dict = {
+            "command": "writeMemory",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
+
     def request_evaluate(self, expression, frameIndex=0, threadId=None, context=None):
         stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
         if stackFrame is None:
@@ -894,7 +908,7 @@ class DebugCommunication(object):
         disableASLR=False,
         disableSTDIO=False,
         shellExpandArguments=False,
-        runInTerminal=False,
+        console: Optional[str] = None,
         enableAutoVariableSummaries=False,
         displayExtendedBacktrace=False,
         enableSyntheticChildDebugging=False,
@@ -944,8 +958,8 @@ class DebugCommunication(object):
             args_dict["launchCommands"] = launchCommands
         if sourceMap:
             args_dict["sourceMap"] = sourceMap
-        if runInTerminal:
-            args_dict["runInTerminal"] = runInTerminal
+        if console:
+            args_dict["console"] = console
         if postRunCommands:
             args_dict["postRunCommands"] = postRunCommands
         if customFrameFormat:
@@ -1143,8 +1157,14 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
-    def request_modules(self):
-        return self.send_recv({"command": "modules", "type": "request"})
+    def request_modules(self, startModule: int, moduleCount: int):
+        return self.send_recv(
+            {
+                "command": "modules",
+                "type": "request",
+                "arguments": {"startModule": startModule, "moduleCount": moduleCount},
+            }
+        )
 
     def request_stackTrace(
         self, threadId=None, startFrame=None, levels=None, format=None, dump=False

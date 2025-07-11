@@ -2081,14 +2081,14 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   if (StrideAScaled == StrideBScaled)
     CommonStride = StrideAScaled;
 
-  // TODO: Historically, we don't retry with runtime checks unless the
-  // (unscaled) strides are the same. Fix this once the condition for runtime
-  // checks in isDependent is fixed.
-  bool ShouldRetryWithRuntimeCheck = StrideAPtrInt == StrideBPtrInt;
+  // TODO: FoundNonConstantDistanceDependence is used as a necessary condition
+  // to consider retrying with runtime checks. Historically, we did not set it
+  // when (unscaled) strides were different but there is no inherent reason to.
+  if (!isa<SCEVConstant>(Dist))
+    FoundNonConstantDistanceDependence |= StrideAPtrInt == StrideBPtrInt;
 
   return DepDistanceStrideAndSizeInfo(Dist, MaxStride, CommonStride,
-                                      ShouldRetryWithRuntimeCheck, TypeByteSize,
-                                      AIsWrite, BIsWrite);
+                                      TypeByteSize, AIsWrite, BIsWrite);
 }
 
 MemoryDepChecker::Dependence::DepType
@@ -2103,15 +2103,11 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   if (std::holds_alternative<Dependence::DepType>(Res))
     return std::get<Dependence::DepType>(Res);
 
-  auto &[Dist, MaxStride, CommonStride, ShouldRetryWithRuntimeCheck,
-         TypeByteSize, AIsWrite, BIsWrite] =
+  auto &[Dist, MaxStride, CommonStride, TypeByteSize, AIsWrite, BIsWrite] =
       std::get<DepDistanceStrideAndSizeInfo>(Res);
   bool HasSameSize = TypeByteSize > 0;
 
   if (isa<SCEVCouldNotCompute>(Dist)) {
-    // TODO: Relax requirement that there is a common unscaled stride to retry
-    // with non-constant distance dependencies.
-    FoundNonConstantDistanceDependence |= ShouldRetryWithRuntimeCheck;
     LLVM_DEBUG(dbgs() << "LAA: Dependence because of uncomputable distance.\n");
     return Dependence::Unknown;
   }
@@ -2173,14 +2169,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     // forward dependency will allow vectorization using any width.
 
     if (IsTrueDataDependence && EnableForwardingConflictDetection) {
-      if (!ConstDist) {
-        // TODO: FoundNonConstantDistanceDependence is used as a necessary
-        // condition to consider retrying with runtime checks. Historically, we
-        // did not set it when strides were different but there is no inherent
-        // reason to.
-        FoundNonConstantDistanceDependence |= ShouldRetryWithRuntimeCheck;
+      if (!ConstDist)
         return Dependence::Unknown;
-      }
       if (!HasSameSize ||
           couldPreventStoreLoadForward(ConstDist, TypeByteSize)) {
         LLVM_DEBUG(
@@ -2195,22 +2185,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
 
   int64_t MinDistance = SE.getSignedRangeMin(Dist).getSExtValue();
   // Below we only handle strictly positive distances.
-  if (MinDistance <= 0) {
-    FoundNonConstantDistanceDependence |= ShouldRetryWithRuntimeCheck;
+  if (MinDistance <= 0)
     return Dependence::Unknown;
-  }
-
-  if (!ConstDist) {
-    // Previously this case would be treated as Unknown, possibly setting
-    // FoundNonConstantDistanceDependence to force re-trying with runtime
-    // checks. Until the TODO below is addressed, set it here to preserve
-    // original behavior w.r.t. re-trying with runtime checks.
-    // TODO: FoundNonConstantDistanceDependence is used as a necessary
-    // condition to consider retrying with runtime checks. Historically, we
-    // did not set it when strides were different but there is no inherent
-    // reason to.
-    FoundNonConstantDistanceDependence |= ShouldRetryWithRuntimeCheck;
-  }
 
   if (!HasSameSize) {
     LLVM_DEBUG(dbgs() << "LAA: ReadWrite-Write positive dependency with "
@@ -2280,22 +2256,6 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     return Dependence::Backward;
   }
 
-  // Positive distance bigger than max vectorization factor.
-  // FIXME: Should use max factor instead of max distance in bytes, which could
-  // not handle different types.
-  // E.g. Assume one char is 1 byte in memory and one int is 4 bytes.
-  //      void foo (int *A, char *B) {
-  //        for (unsigned i = 0; i < 1024; i++) {
-  //          A[i+2] = A[i] + 1;
-  //          B[i+2] = B[i] + 1;
-  //        }
-  //      }
-  //
-  // This case is currently unsafe according to the max safe distance. If we
-  // analyze the two accesses on array B, the max safe dependence distance
-  // is 2. Then we analyze the accesses on array A, the minimum distance needed
-  // is 8, which is less than 2 and forbidden vectorization, But actually
-  // both A and B could be vectorized by 2 iterations.
   MinDepDistBytes =
       std::min(static_cast<uint64_t>(MinDistance), MinDepDistBytes);
 
