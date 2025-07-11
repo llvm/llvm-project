@@ -829,5 +829,5 @@ func.func @acc_loop_container() {
 // -----
 
 %value = memref.alloc() : memref<f32>
-// expected-error @below {{invalid data clause modifiers: alwaysin}}
-%0 = acc.create varPtr(%value : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier zero,capture,always>}
+// expected-error @below {{invalid data clause modifiers: readonly}}
+%0 = acc.create varPtr(%value : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier readonly,zero,capture,always>}

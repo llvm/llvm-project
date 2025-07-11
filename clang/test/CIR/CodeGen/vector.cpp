@@ -1203,3 +1203,18 @@ void foo23() {
 // OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[VEC_A]], align 16
 // OGCG: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[VEC_B]], align 16
 // OGCG: %[[SHUF:.*]] = shufflevector <4 x i32> %[[TMP_A]], <4 x i32> %[[TMP_B]], <4 x i32> <i32 poison, i32 1, i32 poison, i32 1>
+
+void foo24() {
+  vi4 a;
+  unsigned long size = __builtin_vectorelements(a);
+}
+
+// CIR: %[[INIT:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["size", init]
+// CIR: %[[SIZE:.*]] = cir.const #cir.int<4> : !u64i
+// CIR: cir.store align(8) %[[SIZE]], %[[INIT]] : !u64i, !cir.ptr<!u64i>
+
+// LLVM: %[[SIZE:.*]] = alloca i64, i64 1, align 8
+// LLVM: store i64 4, ptr %[[SIZE]], align 8
+
+// OGCG: %[[SIZE:.*]] = alloca i64, align 8
+// OGCG: store i64 4, ptr %[[SIZE]], align 8

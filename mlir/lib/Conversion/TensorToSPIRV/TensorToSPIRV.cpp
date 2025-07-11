@@ -11,14 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/TensorToSPIRV/TensorToSPIRV.h"
-#include "../SPIRVCommon/Pattern.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AffineMap.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "tensor-to-spirv-pattern"
 

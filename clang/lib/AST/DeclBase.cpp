@@ -1133,6 +1133,8 @@ bool Decl::isInExportDeclContext() const {
 }
 
 bool Decl::isModuleLocal() const {
+  if (isa<NamespaceDecl, TranslationUnitDecl>(this))
+    return false;
   auto *M = getOwningModule();
   return M && M->isNamedModule() &&
          getModuleOwnershipKind() == ModuleOwnershipKind::ReachableWhenImported;

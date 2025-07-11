@@ -8,7 +8,6 @@
 
 #include "InterpFrame.h"
 #include "Boolean.h"
-#include "Floating.h"
 #include "Function.h"
 #include "InterpStack.h"
 #include "InterpState.h"

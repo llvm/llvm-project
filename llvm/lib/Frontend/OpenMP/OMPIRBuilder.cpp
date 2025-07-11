@@ -2617,7 +2617,7 @@ void OpenMPIRBuilder::emitReductionListCopy(
 Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
     const LocationDescription &Loc, ArrayRef<ReductionInfo> ReductionInfos,
     AttributeList FuncAttrs) {
-  InsertPointTy SavedIP = Builder.saveIP();
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   LLVMContext &Ctx = M.getContext();
   FunctionType *FuncTy = FunctionType::get(
       Builder.getVoidTy(), {Builder.getPtrTy(), Builder.getInt32Ty()},
@@ -2630,6 +2630,7 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
   WcFunc->addParamAttr(1, Attribute::NoUndef);
   BasicBlock *EntryBB = BasicBlock::Create(M.getContext(), "entry", WcFunc);
   Builder.SetInsertPoint(EntryBB);
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   // ReduceList: thread local Reduce list.
   // At the stage of the computation when this function is called, partially
@@ -2844,7 +2845,6 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
   }
 
   Builder.CreateRetVoid();
-  Builder.restoreIP(SavedIP);
 
   return WcFunc;
 }
@@ -2853,6 +2853,7 @@ Function *OpenMPIRBuilder::emitShuffleAndReduceFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Function *ReduceFn,
     AttributeList FuncAttrs) {
   LLVMContext &Ctx = M.getContext();
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   FunctionType *FuncTy =
       FunctionType::get(Builder.getVoidTy(),
                         {Builder.getPtrTy(), Builder.getInt16Ty(),
@@ -2871,6 +2872,7 @@ Function *OpenMPIRBuilder::emitShuffleAndReduceFunction(
   SarFunc->addParamAttr(3, Attribute::SExt);
   BasicBlock *EntryBB = BasicBlock::Create(M.getContext(), "entry", SarFunc);
   Builder.SetInsertPoint(EntryBB);
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   // Thread local Reduce list used to host the values of data to be reduced.
   Argument *ReduceListArg = SarFunc->getArg(0);
@@ -3017,7 +3019,7 @@ Function *OpenMPIRBuilder::emitShuffleAndReduceFunction(
 Function *OpenMPIRBuilder::emitListToGlobalCopyFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Type *ReductionsBufferTy,
     AttributeList FuncAttrs) {
-  OpenMPIRBuilder::InsertPointTy OldIP = Builder.saveIP();
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   LLVMContext &Ctx = M.getContext();
   FunctionType *FuncTy = FunctionType::get(
       Builder.getVoidTy(),
@@ -3033,6 +3035,7 @@ Function *OpenMPIRBuilder::emitListToGlobalCopyFunction(
 
   BasicBlock *EntryBlock = BasicBlock::Create(Ctx, "entry", LtGCFunc);
   Builder.SetInsertPoint(EntryBlock);
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   // Buffer: global reduction buffer.
   Argument *BufferArg = LtGCFunc->getArg(0);
@@ -3120,14 +3123,13 @@ Function *OpenMPIRBuilder::emitListToGlobalCopyFunction(
   }
 
   Builder.CreateRetVoid();
-  Builder.restoreIP(OldIP);
   return LtGCFunc;
 }
 
 Function *OpenMPIRBuilder::emitListToGlobalReduceFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Function *ReduceFn,
     Type *ReductionsBufferTy, AttributeList FuncAttrs) {
-  OpenMPIRBuilder::InsertPointTy OldIP = Builder.saveIP();
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   LLVMContext &Ctx = M.getContext();
   FunctionType *FuncTy = FunctionType::get(
       Builder.getVoidTy(),
@@ -3143,6 +3145,7 @@ Function *OpenMPIRBuilder::emitListToGlobalReduceFunction(
 
   BasicBlock *EntryBlock = BasicBlock::Create(Ctx, "entry", LtGRFunc);
   Builder.SetInsertPoint(EntryBlock);
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   // Buffer: global reduction buffer.
   Argument *BufferArg = LtGRFunc->getArg(0);
@@ -3203,14 +3206,13 @@ Function *OpenMPIRBuilder::emitListToGlobalReduceFunction(
   Builder.CreateCall(ReduceFn, {LocalReduceListAddrCast, ReduceList})
       ->addFnAttr(Attribute::NoUnwind);
   Builder.CreateRetVoid();
-  Builder.restoreIP(OldIP);
   return LtGRFunc;
 }
 
 Function *OpenMPIRBuilder::emitGlobalToListCopyFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Type *ReductionsBufferTy,
     AttributeList FuncAttrs) {
-  OpenMPIRBuilder::InsertPointTy OldIP = Builder.saveIP();
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   LLVMContext &Ctx = M.getContext();
   FunctionType *FuncTy = FunctionType::get(
       Builder.getVoidTy(),
@@ -3226,6 +3228,7 @@ Function *OpenMPIRBuilder::emitGlobalToListCopyFunction(
 
   BasicBlock *EntryBlock = BasicBlock::Create(Ctx, "entry", LtGCFunc);
   Builder.SetInsertPoint(EntryBlock);
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   // Buffer: global reduction buffer.
   Argument *BufferArg = LtGCFunc->getArg(0);
@@ -3311,14 +3314,13 @@ Function *OpenMPIRBuilder::emitGlobalToListCopyFunction(
   }
 
   Builder.CreateRetVoid();
-  Builder.restoreIP(OldIP);
   return LtGCFunc;
 }
 
 Function *OpenMPIRBuilder::emitGlobalToListReduceFunction(
     ArrayRef<ReductionInfo> ReductionInfos, Function *ReduceFn,
     Type *ReductionsBufferTy, AttributeList FuncAttrs) {
-  OpenMPIRBuilder::InsertPointTy OldIP = Builder.saveIP();
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   LLVMContext &Ctx = M.getContext();
   auto *FuncTy = FunctionType::get(
       Builder.getVoidTy(),
@@ -3334,6 +3336,7 @@ Function *OpenMPIRBuilder::emitGlobalToListReduceFunction(
 
   BasicBlock *EntryBlock = BasicBlock::Create(Ctx, "entry", LtGRFunc);
   Builder.SetInsertPoint(EntryBlock);
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   // Buffer: global reduction buffer.
   Argument *BufferArg = LtGRFunc->getArg(0);
@@ -3394,7 +3397,6 @@ Function *OpenMPIRBuilder::emitGlobalToListReduceFunction(
   Builder.CreateCall(ReduceFn, {ReduceList, ReductionList})
       ->addFnAttr(Attribute::NoUnwind);
   Builder.CreateRetVoid();
-  Builder.restoreIP(OldIP);
   return LtGRFunc;
 }
 
@@ -3407,6 +3409,7 @@ std::string OpenMPIRBuilder::getReductionFuncName(StringRef Name) const {
 Expected<Function *> OpenMPIRBuilder::createReductionFunction(
     StringRef ReducerName, ArrayRef<ReductionInfo> ReductionInfos,
     ReductionGenCBKind ReductionGenCBKind, AttributeList FuncAttrs) {
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   auto *FuncTy = FunctionType::get(Builder.getVoidTy(),
                                    {Builder.getPtrTy(), Builder.getPtrTy()},
                                    /* IsVarArg */ false);
@@ -3419,6 +3422,7 @@ Expected<Function *> OpenMPIRBuilder::createReductionFunction(
   BasicBlock *EntryBB =
       BasicBlock::Create(M.getContext(), "entry", ReductionFunc);
   Builder.SetInsertPoint(EntryBB);
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   // Need to alloca memory here and deal with the pointers before getting
   // LHS/RHS pointers out
@@ -3746,10 +3750,12 @@ static Error populateReductionFunction(
     Function *ReductionFunc,
     ArrayRef<OpenMPIRBuilder::ReductionInfo> ReductionInfos,
     IRBuilder<> &Builder, ArrayRef<bool> IsByRef, bool IsGPU) {
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   Module *Module = ReductionFunc->getParent();
   BasicBlock *ReductionFuncBlock =
       BasicBlock::Create(Module->getContext(), "", ReductionFunc);
   Builder.SetInsertPoint(ReductionFuncBlock);
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
   Value *LHSArrayPtr = nullptr;
   Value *RHSArrayPtr = nullptr;
   if (IsGPU) {
@@ -6891,23 +6897,19 @@ static void FixupDebugInfoForOutlinedFunction(
   if (!NewSP)
     return;
 
-  DenseMap<const MDNode *, MDNode *> Cache;
   SmallDenseMap<DILocalVariable *, DILocalVariable *> RemappedVariables;
 
   auto GetUpdatedDIVariable = [&](DILocalVariable *OldVar, unsigned arg) {
-    auto NewSP = Func->getSubprogram();
     DILocalVariable *&NewVar = RemappedVariables[OldVar];
     // Only use cached variable if the arg number matches. This is important
     // so that DIVariable created for privatized variables are not discarded.
     if (NewVar && (arg == NewVar->getArg()))
       return NewVar;
 
-    DILocalScope *NewScope = DILocalScope::cloneScopeForSubprogram(
-        *OldVar->getScope(), *NewSP, Builder.getContext(), Cache);
     NewVar = llvm::DILocalVariable::get(
-        Builder.getContext(), NewScope, OldVar->getName(), OldVar->getFile(),
-        OldVar->getLine(), OldVar->getType(), arg, OldVar->getFlags(),
-        OldVar->getAlignInBits(), OldVar->getAnnotations());
+        Builder.getContext(), OldVar->getScope(), OldVar->getName(),
+        OldVar->getFile(), OldVar->getLine(), OldVar->getType(), arg,
+        OldVar->getFlags(), OldVar->getAlignInBits(), OldVar->getAnnotations());
     return NewVar;
   };
 
@@ -6921,7 +6923,8 @@ static void FixupDebugInfoForOutlinedFunction(
         ArgNo = std::get<1>(Iter->second) + 1;
       }
     }
-    DR->setVariable(GetUpdatedDIVariable(OldVar, ArgNo));
+    if (ArgNo != 0)
+      DR->setVariable(GetUpdatedDIVariable(OldVar, ArgNo));
   };
 
   // The location and scope of variable intrinsics and records still point to
@@ -7000,36 +7003,9 @@ static Expected<Function *> createOutlinedFunction(
 
   // Save insert point.
   IRBuilder<>::InsertPointGuard IPG(Builder);
-  // If there's a DISubprogram associated with current function, then
-  // generate one for the outlined function.
-  if (Function *ParentFunc = BB->getParent()) {
-    if (DISubprogram *SP = ParentFunc->getSubprogram()) {
-      DICompileUnit *CU = SP->getUnit();
-      DIBuilder DB(*M, true, CU);
-      DebugLoc DL = Builder.getCurrentDebugLocation();
-      if (DL) {
-        // TODO: We are using nullopt for arguments at the moment. This will
-        // need to be updated when debug data is being generated for variables.
-        DISubroutineType *Ty =
-            DB.createSubroutineType(DB.getOrCreateTypeArray({}));
-        DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagDefinition |
-                                          DISubprogram::SPFlagOptimized |
-                                          DISubprogram::SPFlagLocalToUnit;
-
-        DISubprogram *OutlinedSP = DB.createFunction(
-            CU, FuncName, FuncName, SP->getFile(), DL.getLine(), Ty,
-            DL.getLine(), DINode::DIFlags::FlagArtificial, SPFlags);
-
-        // Attach subprogram to the function.
-        Func->setSubprogram(OutlinedSP);
-        // Update the CurrentDebugLocation in the builder so that right scope
-        // is used for things inside outlined function.
-        Builder.SetCurrentDebugLocation(
-            DILocation::get(Func->getContext(), DL.getLine(), DL.getCol(),
-                            OutlinedSP, DL.getInlinedAt()));
-      }
-    }
-  }
+  // We will generate the entries in the outlined function but the debug
+  // location may still be pointing to the parent function. Reset it now.
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   // Generate the region into the function.
   BasicBlock *EntryBB = BasicBlock::Create(Builder.getContext(), "entry", Func);
@@ -9846,7 +9822,7 @@ void OffloadEntriesInfoManager::getTargetRegionEntryFnName(
 TargetRegionEntryInfo
 OpenMPIRBuilder::getTargetEntryUniqueInfo(FileIdentifierInfoCallbackTy CallBack,
                                           StringRef ParentName) {
-  sys::fs::UniqueID ID;
+  sys::fs::UniqueID ID(0xdeadf17e, 0);
   auto FileIDInfo = CallBack();
   uint64_t FileID = 0;
   std::error_code EC = sys::fs::getUniqueID(std::get<0>(FileIDInfo), ID);

@@ -676,11 +676,12 @@ public:
   }
 
   /// Create a direct initialization for a functional cast.
-  static InitializationKind CreateFunctionalCast(SourceRange TypeRange,
+  static InitializationKind CreateFunctionalCast(SourceLocation StartLoc,
+                                                 SourceRange ParenRange,
                                                  bool InitList) {
     return InitializationKind(InitList ? IK_DirectList : IK_Direct,
-                              IC_FunctionalCast, TypeRange.getBegin(),
-                              TypeRange.getBegin(), TypeRange.getEnd());
+                              IC_FunctionalCast, StartLoc,
+                              ParenRange.getBegin(), ParenRange.getEnd());
   }
 
   /// Create a copy initialization.

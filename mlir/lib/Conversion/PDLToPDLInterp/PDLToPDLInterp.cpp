@@ -9,14 +9,12 @@
 #include "mlir/Conversion/PDLToPDLInterp/PDLToPDLInterp.h"
 
 #include "PredicateTree.h"
-#include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -991,7 +989,7 @@ void PDLToPDLInterpPass::runOnOperation() {
       module.getLoc(), pdl_interp::PDLInterpDialect::getMatcherFunctionName(),
       builder.getFunctionType(builder.getType<pdl::OperationType>(),
                               /*results=*/{}),
-      /*attrs=*/std::nullopt);
+      /*attrs=*/ArrayRef<NamedAttribute>());
 
   // Create a nested module to hold the functions invoked for rewriting the IR
   // after a successful match.

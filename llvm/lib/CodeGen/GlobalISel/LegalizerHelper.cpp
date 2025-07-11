@@ -7695,6 +7695,22 @@ LegalizerHelper::lowerU64ToF64BitFloatOps(MachineInstr &MI) {
   return Legalized;
 }
 
+/// i64->fp16 itofp can be lowered to i64->f64,f64->f32,f32->f16. We cannot
+/// convert fpround f64->f16 without double-rounding, so we manually perform the
+/// lowering here where we know it is valid.
+static LegalizerHelper::LegalizeResult
+loweri64tof16ITOFP(MachineInstr &MI, Register Dst, LLT DstTy, Register Src,
+                   LLT SrcTy, MachineIRBuilder &MIRBuilder) {
+  auto M1 = MI.getOpcode() == TargetOpcode::G_UITOFP
+                ? MIRBuilder.buildUITOFP(SrcTy, Src)
+                : MIRBuilder.buildSITOFP(SrcTy, Src);
+  LLT S32Ty = SrcTy.changeElementSize(32);
+  auto M2 = MIRBuilder.buildFPTrunc(S32Ty, M1);
+  MIRBuilder.buildFPTrunc(Dst, M2);
+  MI.eraseFromParent();
+  return LegalizerHelper::Legalized;
+}
+
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerUITOFP(MachineInstr &MI) {
   auto [Dst, DstTy, Src, SrcTy] = MI.getFirst2RegLLTs();
 
@@ -7705,6 +7721,9 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerUITOFP(MachineInstr &MI) {
     MI.eraseFromParent();
     return Legalized;
   }
+
+  if (DstTy.getScalarSizeInBits() == 16 && SrcTy.getScalarSizeInBits() == 64)
+    return loweri64tof16ITOFP(MI, Dst, DstTy, Src, SrcTy, MIRBuilder);
 
   if (SrcTy != LLT::scalar(64))
     return UnableToLegalize;
@@ -7736,6 +7755,9 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSITOFP(MachineInstr &MI) {
     MI.eraseFromParent();
     return Legalized;
   }
+
+  if (DstTy.getScalarSizeInBits() == 16 && SrcTy.getScalarSizeInBits() == 64)
+    return loweri64tof16ITOFP(MI, Dst, DstTy, Src, SrcTy, MIRBuilder);
 
   if (SrcTy != S64)
     return UnableToLegalize;
@@ -9250,7 +9272,7 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
   APInt AllOneMantissa = APFloat::getLargest(Semantics).bitcastToAPInt() & ~Inf;
   APInt QNaNBitMask =
       APInt::getOneBitSet(BitSize, AllOneMantissa.getActiveBits() - 1);
-  APInt InvertionMask = APInt::getAllOnes(DstTy.getScalarSizeInBits());
+  APInt InversionMask = APInt::getAllOnes(DstTy.getScalarSizeInBits());
 
   auto SignBitC = MIRBuilder.buildConstant(IntTy, SignBit);
   auto ValueMaskC = MIRBuilder.buildConstant(IntTy, ValueMask);
@@ -9378,7 +9400,7 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
       NormalRes = MIRBuilder.buildAnd(DstTy, NormalRes, Sign);
     else if (PartialCheck == fcPosNormal) {
       auto PosSign = MIRBuilder.buildXor(
-          DstTy, Sign, MIRBuilder.buildConstant(DstTy, InvertionMask));
+          DstTy, Sign, MIRBuilder.buildConstant(DstTy, InversionMask));
       NormalRes = MIRBuilder.buildAnd(DstTy, NormalRes, PosSign);
     }
     appendToRes(NormalRes);
@@ -10099,10 +10121,6 @@ LegalizerHelper::lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
   }
 
   bool IsVolatile = MemOp->isVolatile();
-  if (Opc == TargetOpcode::G_MEMCPY_INLINE)
-    return lowerMemcpyInline(MI, Dst, Src, KnownLen, DstAlign, SrcAlign,
-                             IsVolatile);
-
   // Don't try to optimize volatile.
   if (IsVolatile)
     return UnableToLegalize;

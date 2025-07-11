@@ -59,11 +59,6 @@ private:
   bool S27_2_reloc;
   bool SignMismatch;
 };
-
-static inline HexagonMCExpr::VariantKind
-getVariantKind(const MCSymbolRefExpr *SRE) {
-  return HexagonMCExpr::VariantKind(SRE->getKind());
-}
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_HEXAGON_HEXAGONMCEXPR_H

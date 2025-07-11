@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLDB_TOOLS_LLDB_DAP_DAPERROR_H
+#define LLDB_TOOLS_LLDB_DAP_DAPERROR_H
+
 #include "llvm/Support/Error.h"
 #include <optional>
 #include <string>
@@ -50,3 +53,5 @@ public:
 };
 
 } // namespace lldb_dap
+
+#endif // LLDB_TOOLS_LLDB_DAP_DAPERROR_H

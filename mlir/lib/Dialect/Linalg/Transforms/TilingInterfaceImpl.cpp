@@ -22,7 +22,10 @@
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
+#include "llvm/Support/Debug.h"
 #include <optional>
+
+#define DEBUG_TYPE "linalg-tiling-interface-impl"
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -148,55 +151,82 @@ struct LinalgOpTilingInterface
   /// Utility to fetch the offsets and sizes when applied as per the indexing
   /// map of the linalg op. This helps in fusing the linalg op as a consumer of
   /// a given slice op.
-  void
-  getMappedOffsetAndSize(LinalgOp linalgOp, OpBuilder &b, AffineMap indexingMap,
-                         ArrayRef<OpFoldResult> offsets,
-                         ArrayRef<OpFoldResult> sizes,
-                         SmallVectorImpl<OpFoldResult> &mappedOffsets,
-                         SmallVectorImpl<OpFoldResult> &mappedSizes) const {
-    unsigned numLoops = linalgOp.getNumLoops();
-    auto tilingInterfaceOp = cast<TilingInterface>(linalgOp.getOperation());
-    mappedOffsets.resize(numLoops);
-    mappedSizes.resize(numLoops);
-    if (!indexingMap.isPermutation()) {
-      SmallVector<Range> iterationDomain =
-          tilingInterfaceOp.getIterationDomain(b);
-      for (const auto &&[index, value] : llvm::enumerate(iterationDomain)) {
-        mappedOffsets[index] = value.offset;
-        mappedSizes[index] = value.size;
+  static LogicalResult
+  getMappedOffsetAndSize(LinalgOp linalgOp, OpBuilder &b,
+                         ArrayRef<AffineMap> indexingMaps,
+                         ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+                         ArrayRef<SmallVector<OpFoldResult>> allSizes,
+                         SmallVectorImpl<OpFoldResult> &mappedOffsetsVec,
+                         SmallVectorImpl<OpFoldResult> &mappedSizesVec) {
+    DenseMap<unsigned, OpFoldResult> mappedOffsets, mappedSizes;
+
+    for (auto [indexingMap, offsets, sizes] :
+         llvm::zip_equal(indexingMaps, allOffsets, allSizes)) {
+      for (auto [resultExpr, offset, size] :
+           llvm::zip_equal(indexingMap.getResults(), offsets, sizes)) {
+        auto dimExpr = dyn_cast<AffineDimExpr>(resultExpr);
+        if (!dimExpr)
+          continue;
+        unsigned position = dimExpr.getPosition();
+        auto it = mappedOffsets.find(position);
+        if (it != mappedOffsets.end()) {
+          OpFoldResult seenOffset = it->second;
+          OpFoldResult seenSize = mappedSizes.lookup(position);
+          if (seenOffset != offset || seenSize != size) {
+            LLVM_DEBUG({
+              llvm::dbgs() << "inconsistent iteration space mapping from "
+                              "offsets/sizes of operands/results";
+            });
+            return failure();
+          }
+        } else {
+          mappedOffsets[position] = offset;
+          mappedSizes[position] = size;
+        }
       }
     }
-    for (const auto &&[index, value] :
-         llvm::enumerate(indexingMap.getResults())) {
-      unsigned dimPosition = cast<AffineDimExpr>(value).getPosition();
-      mappedOffsets[dimPosition] = offsets[index];
-      mappedSizes[dimPosition] = sizes[index];
+
+    // Aggregate from the given operand offsets and sizes, or default to
+    // iteration space values.
+    SmallVector<Range> iterationDomain =
+        cast<TilingInterface>(linalgOp.getOperation()).getIterationDomain(b);
+    mappedOffsetsVec.resize(iterationDomain.size());
+    mappedSizesVec.resize(iterationDomain.size());
+    for (auto [index, domain] : llvm::enumerate(iterationDomain)) {
+      auto it = mappedOffsets.find(index);
+      if (it != mappedOffsets.end()) {
+        mappedOffsetsVec[index] = it->second;
+        mappedSizesVec[index] = mappedSizes.lookup(index);
+        continue;
+      }
+      mappedOffsetsVec[index] = domain.offset;
+      mappedSizesVec[index] = domain.size;
     }
+    return success();
   }
 
   /// Method to return the position of the result tile computed by the tiled
   /// operation.
-  LogicalResult getIterationDomainTileFromOperandTile(
-      Operation *op, OpBuilder &b, unsigned operandNumber,
-      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
+  LogicalResult getIterationDomainTileFromOperandTiles(
+      Operation *op, OpBuilder &b, ArrayRef<unsigned> operandNumbers,
+      ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+      ArrayRef<SmallVector<OpFoldResult>> allSizes,
       SmallVectorImpl<OpFoldResult> &iterDomainOffsets,
       SmallVectorImpl<OpFoldResult> &iterDomainSizes) const {
     auto linalgOp = cast<LinalgOp>(op);
 
-    // Check that the indexing map used for the operand is a projected
-    // permutation. This could be relaxed with a more general approach that can
-    // map the offsets and sizes from the operand to iteration space tiles
-    // (filling in full extent for dimensions not used to access the result).
-    AffineMap indexingMap =
-        linalgOp.getMatchingIndexingMap(&op->getOpOperand(operandNumber));
-    if (!indexingMap.isProjectedPermutation()) {
-      return op->emitError()
-             << "unhandled get iter domain position when operand is not "
-                "accessed using a permuted projection";
+    std::optional<SmallVector<OpFoldResult>> iterationSpaceOffsets,
+        iterationSpaceSizes;
+    SmallVector<AffineMap> indexingMaps =
+        llvm::map_to_vector(operandNumbers, [&](unsigned operandNumber) {
+          OpOperand &opOperand = linalgOp->getOpOperand(operandNumber);
+          return linalgOp.getMatchingIndexingMap(&opOperand);
+        });
+    if (failed(getMappedOffsetAndSize(linalgOp, b, indexingMaps, allOffsets,
+                                      allSizes, iterDomainOffsets,
+                                      iterDomainSizes))) {
+      return failure();
     }
-
-    getMappedOffsetAndSize(linalgOp, b, indexingMap, offsets, sizes,
-                           iterDomainOffsets, iterDomainSizes);
     return success();
   }
 
@@ -247,8 +277,13 @@ struct LinalgOpTilingInterface
           "accessed using a permuted projection");
     }
 
-    getMappedOffsetAndSize(linalgOp, b, indexingMap, offsets, sizes,
-                           iterDomainOffsets, iterDomainSizes);
+    SmallVector<OpFoldResult> allOffsets = llvm::to_vector(offsets);
+    SmallVector<OpFoldResult> allSizes = llvm::to_vector(sizes);
+    auto status =
+        getMappedOffsetAndSize(linalgOp, b, indexingMap, {allOffsets},
+                               {allSizes}, iterDomainOffsets, iterDomainSizes);
+    (void)status;
+    assert(succeeded(status) && "unexpected error in offset calculation");
     return success();
   }
 
@@ -279,12 +314,13 @@ struct LinalgOpTilingInterface
 
   /// Method to generate the tiled implementation of an operation from the tile
   /// of the operand.
-  FailureOr<TilingResult> getTiledImplementationFromOperandTile(
-      Operation *op, OpBuilder &b, unsigned operandNumber,
-      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes) const {
+  FailureOr<TilingResult> getTiledImplementationFromOperandTiles(
+      Operation *op, OpBuilder &b, ArrayRef<unsigned> operandNumbers,
+      ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+      ArrayRef<SmallVector<OpFoldResult>> allSizes) const {
     SmallVector<OpFoldResult> mappedOffsets, mappedSizes;
-    if (failed(getIterationDomainTileFromOperandTile(
-            op, b, operandNumber, offsets, sizes, mappedOffsets,
+    if (failed(getIterationDomainTileFromOperandTiles(
+            op, b, operandNumbers, allOffsets, allSizes, mappedOffsets,
             mappedSizes))) {
       return failure();
     }
@@ -837,13 +873,20 @@ struct PackOpTiling
   /// Method to return the position of iteration domain tile computed by the
   /// tiled operation. In current `tensor.pack` context, the `resultOffsets` and
   /// `resultSizes` only cover outer dimensions.
-  LogicalResult getIterationDomainTileFromOperandTile(
-      Operation *op, OpBuilder &b, unsigned operandNumber,
-      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
+  LogicalResult getIterationDomainTileFromOperandTiles(
+      Operation *op, OpBuilder &b, ArrayRef<unsigned> operandNumbers,
+      ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+      ArrayRef<SmallVector<OpFoldResult>> allSizes,
       SmallVectorImpl<OpFoldResult> &resultOffsets,
       SmallVectorImpl<OpFoldResult> &resultSizes) const {
-    if (operandNumber != 0)
+    if (operandNumbers.size() != 1 || operandNumbers[0] != 0) {
+      LLVM_DEBUG(
+          { llvm::dbgs() << "unsupported operands for consumer fusion"; });
       return failure();
+    }
+
+    ArrayRef<OpFoldResult> offsets(allOffsets[0]);
+    ArrayRef<OpFoldResult> sizes(allSizes[0]);
 
     auto packOp = cast<PackOp>(op);
     // It is not trivial to infer dest tile from source tile if `packOp` has
@@ -904,11 +947,18 @@ struct PackOpTiling
   }
 
   /// Method to return the tiled implementation of tensor.pack as a consumer.
-  FailureOr<TilingResult> getTiledImplementationFromOperandTile(
-      Operation *op, OpBuilder &b, unsigned operandNumber,
-      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes) const {
-    if (operandNumber != 0)
+  FailureOr<TilingResult> getTiledImplementationFromOperandTiles(
+      Operation *op, OpBuilder &b, ArrayRef<unsigned> operandNumbers,
+      ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+      ArrayRef<SmallVector<OpFoldResult>> allSizes) const {
+    if (operandNumbers.size() != 1 || operandNumbers[0] != 0) {
+      LLVM_DEBUG(
+          { llvm ::dbgs() << "unhandled operands for consumer fusion"; });
       return failure();
+    }
+
+    ArrayRef<OpFoldResult> offsets(allOffsets[0]);
+    ArrayRef<OpFoldResult> sizes(allSizes[0]);
 
     auto packOp = cast<PackOp>(op);
     Location loc = packOp.getLoc();
@@ -923,8 +973,8 @@ struct PackOpTiling
     tiledOperands.push_back(sourceSlice);
 
     SmallVector<OpFoldResult> outerDimOffsets, outerDimSizes;
-    if (failed(getIterationDomainTileFromOperandTile(
-            op, b, /*operandNumber=*/0, offsets, sizes, outerDimOffsets,
+    if (failed(getIterationDomainTileFromOperandTiles(
+            op, b, operandNumbers, allOffsets, allSizes, outerDimOffsets,
             outerDimSizes)))
       return failure();
 
@@ -1182,12 +1232,21 @@ struct UnPackOpTiling
 
   /// Method to return the position of iteration domain tile computed by the
   /// tiled operation.
-  LogicalResult getIterationDomainTileFromOperandTile(
-      Operation *op, OpBuilder &b, unsigned operandNumber,
-      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
+  LogicalResult getIterationDomainTileFromOperandTiles(
+      Operation *op, OpBuilder &b, ArrayRef<unsigned> operandNumbers,
+      ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+      ArrayRef<SmallVector<OpFoldResult>> allSizes,
       SmallVectorImpl<OpFoldResult> &resultOffsets,
       SmallVectorImpl<OpFoldResult> &resultSizes) const {
+    if (operandNumbers.size() != 1) {
+      LLVM_DEBUG({ llvm::dbgs() << "unable to handle multiple operands"; });
+      return failure();
+    }
     auto unPackOp = cast<UnPackOp>(op);
+    unsigned operandNumber = operandNumbers[0];
+    ArrayRef<OpFoldResult> offsets(allOffsets[0]);
+    ArrayRef<OpFoldResult> sizes(allSizes[0]);
+
     // If the operand tile is the dest, then no adjustment is needed.
     if (operandNumber == unPackOp.getDestMutable().getOperandNumber()) {
       resultOffsets = llvm::to_vector(offsets);
@@ -1241,10 +1300,18 @@ struct UnPackOpTiling
   }
 
   /// Method to return the tiled implementation of tensor.unpack as a consumer.
-  FailureOr<TilingResult> getTiledImplementationFromOperandTile(
-      Operation *op, OpBuilder &b, unsigned operandNumber,
-      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes) const {
+  FailureOr<TilingResult> getTiledImplementationFromOperandTiles(
+      Operation *op, OpBuilder &b, ArrayRef<unsigned> operandNumbers,
+      ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+      ArrayRef<SmallVector<OpFoldResult>> allSizes) const {
+    if (operandNumbers.size() != 1 || operandNumbers[0] != 0) {
+      LLVM_DEBUG({ llvm::dbgs() << "unhandled operands for consumer fusion"; });
+      return failure();
+    }
     auto unPackOp = cast<UnPackOp>(op);
+    ArrayRef<OpFoldResult> offsets(allOffsets[0]);
+    ArrayRef<OpFoldResult> sizes(allSizes[0]);
+
     // tensor.unpack op is fusible (as a consumer) only if inner dims are not
     // tiled.
     int64_t numTiles = unPackOp.getInnerDimsPos().size();
@@ -1259,8 +1326,8 @@ struct UnPackOpTiling
     // Fetch offset/size for creating the slice of the dest operand of
     // unpack op.
     SmallVector<OpFoldResult> outputOffsets, outputSizes;
-    if (failed(getIterationDomainTileFromOperandTile(
-            op, b, /*operandNumber=*/0, offsets, sizes, outputOffsets,
+    if (failed(getIterationDomainTileFromOperandTiles(
+            op, b, operandNumbers, allOffsets, allSizes, outputOffsets,
             outputSizes)))
       return failure();
 

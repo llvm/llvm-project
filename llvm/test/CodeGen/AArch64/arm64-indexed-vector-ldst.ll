@@ -13340,9 +13340,9 @@ define <16 x i8> @test_v16i8_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <16 
 define <16 x i8> @test_v16i8_post_reg_ld1lane_zero(ptr %bar, ptr %ptr, i64 %inc) {
 ; CHECK-SD-LABEL: test_v16i8_post_reg_ld1lane_zero:
 ; CHECK-SD:       ; %bb.0:
-; CHECK-SD-NEXT:    movi.2d v0, #0000000000000000
-; CHECK-SD-NEXT:    ld1.b { v0 }[0], [x0], x2
-; CHECK-SD-NEXT:    str x0, [x1]
+; CHECK-SD-NEXT:    ldr b0, [x0]
+; CHECK-SD-NEXT:    add x8, x0, x2
+; CHECK-SD-NEXT:    str x8, [x1]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_reg_ld1lane_zero:
@@ -14133,17 +14133,15 @@ define i32 @load_single_extract_variable_index_masked2_i32(ptr %A, i32 %idx) {
 define void @chained_insert_zero(ptr noundef %fenc, ptr noundef %pred, ptr noundef %residual, i32 noundef %stride) {
 ; CHECK-SD-LABEL: chained_insert_zero:
 ; CHECK-SD:       ; %bb.0: ; %entry
-; CHECK-SD-NEXT:    movi.2d v0, #0000000000000000
-; CHECK-SD-NEXT:    movi.2d v1, #0000000000000000
+; CHECK-SD-NEXT:    ldr s0, [x1]
+; CHECK-SD-NEXT:    ldr s1, [x0]
 ; CHECK-SD-NEXT:    ; kill: def $w3 killed $w3 def $x3
 ; CHECK-SD-NEXT:    sxtw x8, w3
-; CHECK-SD-NEXT:    ld1.s { v0 }[0], [x0], x8
-; CHECK-SD-NEXT:    ld1.s { v1 }[0], [x1], x8
-; CHECK-SD-NEXT:    sbfiz x8, x3, #1, #32
-; CHECK-SD-NEXT:    usubl.8h v0, v0, v1
+; CHECK-SD-NEXT:    usubl.8h v0, v1, v0
 ; CHECK-SD-NEXT:    str d0, [x2]
-; CHECK-SD-NEXT:    ldr s0, [x0]
-; CHECK-SD-NEXT:    ldr s1, [x1]
+; CHECK-SD-NEXT:    ldr s0, [x0, x8]
+; CHECK-SD-NEXT:    ldr s1, [x1, x8]
+; CHECK-SD-NEXT:    sbfiz x8, x3, #1, #32
 ; CHECK-SD-NEXT:    usubl.8h v0, v0, v1
 ; CHECK-SD-NEXT:    str d0, [x2, x8]
 ; CHECK-SD-NEXT:    ret
