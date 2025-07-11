@@ -13,7 +13,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/LogicalResult.h"
 
 using namespace mlir;
