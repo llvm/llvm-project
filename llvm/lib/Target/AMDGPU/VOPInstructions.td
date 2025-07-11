@@ -352,13 +352,13 @@ class VOP3FP8OpSel_src_bytesel_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3e_gf
   let Inst{14} = !if(!and(p.HasOpSel, p.HasDst), src0_modifiers{3}, 0);
 }
 
- class VOP3FP8OpSel_dst_bytesel_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p> {
-   bits<2> byte_sel;
+class VOP3FP8OpSel_dst_bytesel_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p> {
+  bits<2> byte_sel;
 
-   let Inst{11} = 0; // op_sel0
-   let Inst{12} = 0; // op_sel1
-   let Inst{14-13} = byte_sel;  // op_sel2/3
- }
+  let Inst{11} = !if(!and(p.HasOpSel, p.HasSrc0Mods), src0_modifiers{2}, 0); // op_sel0
+  let Inst{12} = !if(!and(p.HasOpSel, p.HasSrc1Mods), src1_modifiers{2}, 0); // op_sel1
+  let Inst{14-13} = byte_sel;  // op_sel2/3
+}
 
 class VOP3DotOpSel_gfx11_gfx12<bits<10> op, VOPProfile p> :
     VOP3e_t16_gfx11_gfx12<op, p>{

@@ -354,7 +354,8 @@ public:
   void ResolveProvenances(const AllCookedSources &);
   void Emit(llvm::raw_ostream &, const AllCookedSources &,
       bool echoSourceLines = true,
-      const common::LanguageFeatureControl *hintFlags = nullptr) const;
+      const common::LanguageFeatureControl *hintFlags = nullptr,
+      std::size_t maxErrorsToEmit = 0) const;
   void AttachTo(Message &, std::optional<Severity> = std::nullopt);
   bool AnyFatalError() const;
 

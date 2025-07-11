@@ -3029,7 +3029,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   LocalInstantiationScope Scope(SemaRef, MergeWithParentScope);
 
   Sema::LambdaScopeForCallOperatorInstantiationRAII LambdaScope(
-      SemaRef, const_cast<CXXMethodDecl *>(D), TemplateArgs, Scope);
+      SemaRef, D, TemplateArgs, Scope);
 
   // Instantiate enclosing template arguments for friends.
   SmallVector<TemplateParameterList *, 4> TempParamLists;
@@ -6103,7 +6103,8 @@ void Sema::InstantiateVariableInitializer(
   ContextRAII SwitchContext(*this, Var->getDeclContext());
 
   EnterExpressionEvaluationContext Evaluated(
-      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var);
+      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var,
+      ExpressionEvaluationContextRecord::EK_VariableInit);
   currentEvaluationContext().InLifetimeExtendingContext =
       parentEvaluationContext().InLifetimeExtendingContext;
   currentEvaluationContext().RebuildDefaultArgOrDefaultInit =

@@ -62,7 +62,7 @@ define void @test_b128_input_from_select(ptr nocapture readonly %flag) {
 ; CHECK-NEXT:    ld.param.b64 %rd2, [test_b128_input_from_select_param_0];
 ; CHECK-NEXT:    cvta.to.global.u64 %rd3, %rd2;
 ; CHECK-NEXT:    ld.global.b8 %rs1, [%rd3];
-; CHECK-NEXT:    setp.eq.s16 %p1, %rs1, 0;
+; CHECK-NEXT:    setp.eq.b16 %p1, %rs1, 0;
 ; CHECK-NEXT:    selp.b64 %rd4, 24, 42, %p1;
 ; CHECK-NEXT:    mov.b64 %rd5, 0;
 ; CHECK-NEXT:    mov.b128 %rq1, {%rd4, %rd5};

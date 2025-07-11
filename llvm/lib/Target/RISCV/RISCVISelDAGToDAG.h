@@ -79,6 +79,7 @@ public:
   bool tryShrinkShlLogicImm(SDNode *Node);
   bool trySignedBitfieldExtract(SDNode *Node);
   bool trySignedBitfieldInsertInSign(SDNode *Node);
+  bool trySignedBitfieldInsertInMask(SDNode *Node);
   bool tryUnsignedBitfieldExtract(SDNode *Node, const SDLoc &DL, MVT VT,
                                   SDValue X, unsigned Msb, unsigned Lsb);
   bool tryUnsignedBitfieldInsertInZero(SDNode *Node, const SDLoc &DL, MVT VT,
@@ -124,7 +125,7 @@ public:
   bool selectNegImm(SDValue N, SDValue &Val);
   bool selectInvLogicImm(SDValue N, SDValue &Val);
 
-  bool orIsAdd(const SDNode *Node) const;
+  bool orDisjoint(const SDNode *Node) const;
   bool hasAllNBitUsers(SDNode *Node, unsigned Bits,
                        const unsigned Depth = 0) const;
   bool hasAllBUsers(SDNode *Node) const { return hasAllNBitUsers(Node, 8); }

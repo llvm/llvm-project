@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_sin.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/sin.h>
 
 #define FUNCTION sin
 #define __CLC_BODY <clc/shared/unary_def.inc>

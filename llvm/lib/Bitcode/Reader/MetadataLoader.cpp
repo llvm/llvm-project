@@ -1426,7 +1426,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_LOCATION: {
-    if (Record.size() != 5 && Record.size() != 6)
+    // 5: inlinedAt, 6: isImplicit, 8: Key Instructions fields.
+    if (Record.size() != 5 && Record.size() != 6 && Record.size() != 8)
       return error("Invalid record");
 
     IsDistinct = Record[0];
@@ -1434,10 +1435,12 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     unsigned Column = Record[2];
     Metadata *Scope = getMD(Record[3]);
     Metadata *InlinedAt = getMDOrNull(Record[4]);
-    bool ImplicitCode = Record.size() == 6 && Record[5];
+    bool ImplicitCode = Record.size() >= 6 && Record[5];
+    uint64_t AtomGroup = Record.size() == 8 ? Record[6] : 0;
+    uint8_t AtomRank = Record.size() == 8 ? Record[7] : 0;
     MetadataList.assignValue(
         GET_OR_DISTINCT(DILocation, (Context, Line, Column, Scope, InlinedAt,
-                                     ImplicitCode)),
+                                     ImplicitCode, AtomGroup, AtomRank)),
         NextMetadataNo);
     NextMetadataNo++;
     break;
@@ -1890,7 +1893,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_SUBPROGRAM: {
-    if (Record.size() < 18 || Record.size() > 21)
+    if (Record.size() < 18 || Record.size() > 22)
       return error("Invalid record");
 
     bool HasSPFlags = Record[0] & 4;
@@ -1942,6 +1945,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     bool HasTargetFuncName = false;
     unsigned OffsetA = 0;
     unsigned OffsetB = 0;
+    // Key instructions won't be enabled in old-format bitcode, so only
+    // check it if HasSPFlags is true.
+    bool UsesKeyInstructions = false;
     if (!HasSPFlags) {
       OffsetA = 2;
       OffsetB = 2;
@@ -1954,7 +1960,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     } else {
       HasAnnotations = Record.size() >= 19;
       HasTargetFuncName = Record.size() >= 20;
+      UsesKeyInstructions = Record.size() >= 21 ? Record[20] : 0;
     }
+
     Metadata *CUorFn = getMDOrNull(Record[12 + OffsetB]);
     DISubprogram *SP = GET_OR_DISTINCT(
         DISubprogram,
@@ -1980,8 +1988,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
          HasAnnotations ? getMDOrNull(Record[18 + OffsetB])
                         : nullptr, // annotations
          HasTargetFuncName ? getMDString(Record[19 + OffsetB])
-                           : nullptr // targetFuncName
-         ));
+                           : nullptr, // targetFuncName
+         UsesKeyInstructions));
     MetadataList.assignValue(SP, NextMetadataNo);
     NextMetadataNo++;
 

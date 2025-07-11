@@ -861,7 +861,9 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
 
   // Write Result to ResultPtr and put Overflow on the stack.
   assignInteger(S, ResultPtr, ResultT, Result);
-  ResultPtr.initialize();
+  if (ResultPtr.canBeInitialized())
+    ResultPtr.initialize();
+
   assert(Call->getDirectCallee()->getReturnType()->isBooleanType());
   S.Stk.push<Boolean>(Overflow);
   return true;
@@ -1564,7 +1566,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
                                 DynamicAllocator::Form::Operator);
   assert(B);
-  S.Stk.push<Pointer>(Pointer(B).atIndex(0));
+  S.Stk.push<Pointer>(Pointer(B).atIndex(0).narrow());
   return true;
 }
 
@@ -2206,7 +2208,7 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
   if (Ptr.isOnePastEnd())
     return Error(1);
 
-  bool Result = true;
+  bool Result = Ptr.getLifetime() != Lifetime::Ended;
   if (!Ptr.isActive()) {
     Result = false;
   } else {
@@ -2214,7 +2216,19 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
       return false;
     if (!CheckMutable(S, OpPC, Ptr))
       return false;
+    if (!CheckDummy(S, OpPC, Ptr, AK_Read))
+      return false;
   }
+
+  // Check if we're currently running an initializer.
+  for (InterpFrame *Frame = S.Current; Frame; Frame = Frame->Caller) {
+    if (const Function *F = Frame->getFunction();
+        F && F->isConstructor() && Frame->getThis().block() == Ptr.block()) {
+      return Error(2);
+    }
+  }
+  if (S.EvaluatingDecl && Ptr.getDeclDesc()->asVarDecl() == S.EvaluatingDecl)
+    return Error(2);
 
   pushInteger(S, Result, Call->getType());
   return true;

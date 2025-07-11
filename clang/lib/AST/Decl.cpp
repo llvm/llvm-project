@@ -2450,7 +2450,8 @@ bool VarDecl::hasInitWithSideEffects() const {
     ES->HasSideEffects =
         E->HasSideEffects(getASTContext()) &&
         // We can get a value-dependent initializer during error recovery.
-        (E->isValueDependent() || !evaluateValue());
+        (E->isValueDependent() || getType()->isDependentType() ||
+         !evaluateValue());
     ES->CheckedForSideEffects = true;
   }
   return ES->HasSideEffects;

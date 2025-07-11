@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/shared/vload.h>
 #include <clc/shared/clc_vload.h>
 
 #define __CLC_BODY "vload.inc"

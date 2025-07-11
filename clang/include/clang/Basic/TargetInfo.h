@@ -289,6 +289,8 @@ protected:
 
   std::optional<llvm::Triple> DarwinTargetVariantTriple;
 
+  bool HasMicrosoftRecordLayout = false;
+
   // TargetInfo Constructor.  Default initializes all fields.
   TargetInfo(const llvm::Triple &T);
 
@@ -1331,7 +1333,8 @@ public:
   /// Apply changes to the target information with respect to certain
   /// language options which change the target configuration and adjust
   /// the language based on the target options where applicable.
-  virtual void adjust(DiagnosticsEngine &Diags, LangOptions &Opts);
+  virtual void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+                      const TargetInfo *Aux);
 
   /// Initialize the map with the default set of target features for the
   /// CPU this should include all legal feature strings on the target.
@@ -1845,6 +1848,8 @@ public:
                                     DiagnosticsEngine &Diags) const;
 
   virtual void setAuxTarget(const TargetInfo *Aux) {}
+
+  bool hasMicrosoftRecordLayout() const { return HasMicrosoftRecordLayout; }
 
   /// Whether target allows debuginfo types for decl only variables/functions.
   virtual bool allowDebugInfoForExternalRef() const { return false; }

@@ -60,7 +60,7 @@ protected:
 private:
   void CreateImplementationIfNeeded(lldb::BreakpointSP bkpt);
   ScriptInterpreter *GetScriptInterpreter();
-  
+
   std::string m_class_name;
   lldb::SearchDepth m_depth;
   StructuredDataImpl m_args;

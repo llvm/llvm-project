@@ -36,7 +36,7 @@ def VectorElementTypeInterface : TypeInterface<"VectorElementTypeInterface"> {
     This may change in the future, for example, to require types to provide
     their size or alignment given a data layout. Please post an RFC before
     adding this interface to additional types. Implementing this interface on
-    downstream types is discourged, until we specified the exact properties of
+    downstream types is discouraged, until we specified the exact properties of
     a vector element type in more detail.
   }];
 }
@@ -221,7 +221,17 @@ def ShapedTypeInterface : TypeInterface<"ShapedType"> {
 
     /// Whether the given shape has any size that indicates a dynamic dimension.
     static bool isDynamicShape(ArrayRef<int64_t> dSizes) {
-      return any_of(dSizes, [](int64_t dSize) { return isDynamic(dSize); });
+      return llvm::any_of(dSizes, isDynamic);
+    }
+
+    /// Whether the given dimension size indicates a statically-sized dimension.
+    static constexpr bool isStatic(int64_t dValue) {
+      return dValue != kDynamic;
+    }
+
+    /// Whether the given shape has static dimensions only.
+    static bool isStaticShape(ArrayRef<int64_t> dSizes) {
+      return llvm::all_of(dSizes, isStatic);
     }
 
     /// Return the number of elements present in the given shape.
@@ -273,11 +283,18 @@ def ShapedTypeInterface : TypeInterface<"ShapedType"> {
       return ::mlir::ShapedType::isDynamic($_type.getShape()[idx]);
     }
 
+    /// Returns true if this dimension has a static size (for ranked types);
+    /// aborts for unranked types.
+    bool isStaticDim(unsigned idx) const {
+      assert(idx < getRank() && "invalid index for shaped type");
+      return ::mlir::ShapedType::isStatic($_type.getShape()[idx]);
+    }
+
     /// Returns if this type has a static shape, i.e. if the type is ranked and
     /// all dimensions have known size (>= 0).
     bool hasStaticShape() const {
       return $_type.hasRank() &&
-             !::mlir::ShapedType::isDynamicShape($_type.getShape());
+             ::mlir::ShapedType::isStaticShape($_type.getShape());
     }
 
     /// Returns if this type has a static shape and the shape is equal to

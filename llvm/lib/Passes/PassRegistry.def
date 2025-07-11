@@ -70,6 +70,7 @@ MODULE_PASS("ctx-prof-flatten-prethinlink",
 MODULE_PASS("noinline-nonprevailing", NoinlineNonPrevailing())
 MODULE_PASS("deadargelim", DeadArgumentEliminationPass())
 MODULE_PASS("debugify", NewPMDebugifyPass())
+MODULE_PASS("declare-runtime-libcalls", DeclareRuntimeLibcallsPass())
 MODULE_PASS("dfsan", DataFlowSanitizerPass())
 MODULE_PASS("dot-callgraph", CallGraphDOTPrinterPass())
 MODULE_PASS("dxil-upgrade", DXILUpgradePass())

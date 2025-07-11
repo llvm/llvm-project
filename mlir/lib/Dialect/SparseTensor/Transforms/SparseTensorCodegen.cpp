@@ -1348,7 +1348,7 @@ struct SparseAssembleOpConverter : public OpConversionPattern<AssembleOp> {
     Level trailCOORank = stt.getLvlRank() - trailCOOStart;
     // Sets up SparseTensorSpecifier.
     for (Level lvl = 0, lvlRank = stt.getLvlRank(); lvl < lvlRank; lvl++) {
-      assert(!ShapedType::isDynamic(stt.getDimShape()[lvl]));
+      assert(ShapedType::isStatic(stt.getDimShape()[lvl]));
 
       // Sets up the level size.
       auto lvlSize = constantIndex(rewriter, loc, stt.getLvlShape()[lvl]);

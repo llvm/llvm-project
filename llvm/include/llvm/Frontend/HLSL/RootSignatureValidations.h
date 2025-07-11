@@ -21,6 +21,25 @@ namespace llvm {
 namespace hlsl {
 namespace rootsig {
 
+// Basic verification of RootElements
+
+bool verifyRootFlag(uint32_t Flags);
+bool verifyVersion(uint32_t Version);
+bool verifyRegisterValue(uint32_t RegisterValue);
+bool verifyRegisterSpace(uint32_t RegisterSpace);
+bool verifyRootDescriptorFlag(uint32_t Version, uint32_t FlagsVal);
+bool verifyRangeType(uint32_t Type);
+bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
+                               uint32_t FlagsVal);
+bool verifyNumDescriptors(uint32_t NumDescriptors);
+bool verifySamplerFilter(uint32_t Value);
+bool verifyAddress(uint32_t Address);
+bool verifyMipLODBias(float MipLODBias);
+bool verifyMaxAnisotropy(uint32_t MaxAnisotropy);
+bool verifyComparisonFunc(uint32_t ComparisonFunc);
+bool verifyBorderColor(uint32_t BorderColor);
+bool verifyLOD(float LOD);
+
 struct RangeInfo {
   const static uint32_t Unbounded = ~0u;
 
@@ -28,7 +47,7 @@ struct RangeInfo {
   uint32_t LowerBound;
   uint32_t UpperBound;
 
-  // Information retained for diagnostics
+  // Information retained for determining overlap
   llvm::dxil::ResourceClass Class;
   uint32_t Space;
   llvm::dxbc::ShaderVisibility Visibility;
@@ -84,6 +103,38 @@ public:
   // (equivalent to getOverlapping)
   LLVM_ABI std::optional<const RangeInfo *> insert(const RangeInfo &Info);
 };
+
+struct OverlappingRanges {
+  const RangeInfo *A;
+  const RangeInfo *B;
+
+  OverlappingRanges(const RangeInfo *A, const RangeInfo *B) : A(A), B(B) {}
+};
+
+/// The following conducts analysis on resource ranges to detect and report
+/// any overlaps in resource ranges.
+///
+/// A resource range overlaps with another resource range if they have:
+/// - equivalent ResourceClass (SRV, UAV, CBuffer, Sampler)
+/// - equivalent resource space
+/// - overlapping visbility
+///
+/// The algorithm is implemented in the following steps:
+///
+/// 1. The user will collect RangeInfo from relevant RootElements:
+///   - RangeInfo will retain the interval, ResourceClass, Space and Visibility
+///   - It will also contain an index so that it can be associated to
+/// additional diagnostic information
+/// 2. Sort the RangeInfo's such that they are grouped together by
+///  ResourceClass and Space
+/// 3. Iterate through the collected RangeInfos by their groups
+///   - For each group we will have a ResourceRange for each visibility
+///   - As we iterate through we will:
+///      A: Insert the current RangeInfo into the corresponding Visibility
+///   ResourceRange
+///      B: Check for overlap with any overlapping Visibility ResourceRange
+llvm::SmallVector<OverlappingRanges>
+findOverlappingRanges(llvm::SmallVector<RangeInfo> &Infos);
 
 } // namespace rootsig
 } // namespace hlsl

@@ -3470,3 +3470,32 @@ func.func @fold_insert_constant_indices(%arg : vector<4x1xi32>) -> vector<4x1xi3
   %res = vector.insert %1, %arg[%0, %0] : i32 into vector<4x1xi32>
   return %res : vector<4x1xi32>
 }
+
+// -----
+
+// CHECK-LABEL: @fold_insert_use_chain(
+//  CHECK-SAME:   %[[ARG:.*]]: vector<4x4xf32>,
+//  CHECK-SAME:   %[[VAL:.*]]: f32,
+//  CHECK-SAME:   %[[POS:.*]]: index) -> vector<4x4xf32> {
+//  CHECK-NEXT:   %[[RES:.*]] = vector.insert %[[VAL]], %[[ARG]] {{\[}}%[[POS]], 0] : f32 into vector<4x4xf32>
+//  CHECK-NEXT:   return %[[RES]] : vector<4x4xf32>
+func.func @fold_insert_use_chain(%arg : vector<4x4xf32>, %val : f32, %pos: index) -> vector<4x4xf32> {
+  %v_0 = vector.insert %val, %arg[%pos, 0] : f32 into vector<4x4xf32>
+  %v_1 = vector.insert %val, %v_0[%pos, 0] : f32 into vector<4x4xf32>
+  %v_2 = vector.insert %val, %v_1[%pos, 0] : f32 into vector<4x4xf32>
+  return %v_2 : vector<4x4xf32>  
+}
+
+// -----
+
+// CHECK-LABEL: @no_fold_insert_use_chain_mismatch_static_position(
+//  CHECK-SAME:   %[[ARG:.*]]: vector<4xf32>,
+//  CHECK-SAME:   %[[VAL:.*]]: f32) -> vector<4xf32> {
+//       CHECK:   %[[V_0:.*]] = vector.insert %[[VAL]], %[[ARG]] [0] : f32 into vector<4xf32>
+//       CHECK:   %[[V_1:.*]] = vector.insert %[[VAL]], %[[V_0]] [1] : f32 into vector<4xf32>
+//       CHECK:   return %[[V_1]] : vector<4xf32>
+func.func @no_fold_insert_use_chain_mismatch_static_position(%arg : vector<4xf32>, %val : f32) -> vector<4xf32> {
+  %v_0 = vector.insert %val, %arg[0] : f32 into vector<4xf32>
+  %v_1 = vector.insert %val, %v_0[1] : f32 into vector<4xf32>
+  return %v_1 : vector<4xf32>  
+}

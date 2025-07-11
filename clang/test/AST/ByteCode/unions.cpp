@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -std=c++20 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -verify=ref,both %s
-// RUN: %clang_cc1 -std=c++20 -verify=ref,both %s
+// RUN: %clang_cc1            -verify=expected,both %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 -verify=expected,both %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1            -verify=ref,both      %s
+// RUN: %clang_cc1 -std=c++20 -verify=ref,both      %s
 
 union U {
   int a;
@@ -611,6 +611,106 @@ namespace CopyEmptyUnion {
      return 1;
   }
   static_assert(foo() == 1);
+}
+
+namespace BitFields {
+  constexpr bool simple() {
+    union U {
+      unsigned a : 1;
+      unsigned b : 1;
+    };
+
+    U u{1};
+    u.b = 1;
+    return u.b;
+  }
+  static_assert(simple());
+}
+
+namespace deactivateRecurses {
+
+  constexpr int foo() {
+    struct A {
+      struct {
+        int a;
+      };
+      int b;
+    };
+    struct B {
+      struct {
+        int a;
+        int b;
+      };
+    };
+
+    union U {
+      A a;
+      B b;
+    } u;
+
+    u.b.a = 10;
+    ++u.b.a;
+
+    u.a.a = 10;
+    ++u.a.a;
+
+    if (__builtin_constant_p(u.b.a))
+      return 10;
+
+    return 1;
+  }
+  static_assert(foo() == 1);
+}
+
+namespace AnonymousUnion {
+  struct Long {
+    struct {
+      unsigned is_long;
+    };
+    unsigned Size;
+  };
+
+  struct Short {
+    struct {
+      unsigned is_long;
+      unsigned Size;
+    };
+    char data;
+  };
+
+  union Rep {
+    Short S;
+    Long L;
+  };
+
+#define assert_active(F)   if (!__builtin_is_within_lifetime(&F)) (1/0);
+#define assert_inactive(F) if ( __builtin_is_within_lifetime(&F)) (1/0);
+  consteval int test() {
+    union UU {
+      struct {
+        Rep R;
+        int a;
+      };
+    } U;
+
+    U.R.S.Size = 10;
+    assert_active(U);
+    assert_active(U.R);
+    assert_active(U.R.S);
+    assert_active(U.R.S.Size);
+
+    U.a = 10;
+    assert_active(U.a);
+    assert_active(U);
+
+    assert_active(U);
+    assert_active(U.R);
+    assert_active(U.R.S);
+    assert_active(U.R.S.Size);
+
+    return 1;
+  }
+  static_assert(test() == 1);
 }
 #endif
 
