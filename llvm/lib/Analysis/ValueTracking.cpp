@@ -6068,21 +6068,22 @@ bool llvm::canIgnoreSignBitOfNaN(const Use &U) {
 }
 
 Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
+  unsigned ByteWidth = DL.getByteWidth();
 
   // All byte-wide stores are splatable, even of arbitrary variables.
-  if (V->getType()->isIntegerTy(8))
+  if (V->getType()->isIntegerTy(ByteWidth))
     return V;
 
   LLVMContext &Ctx = V->getContext();
 
   // Undef don't care.
-  auto *UndefInt8 = UndefValue::get(Type::getInt8Ty(Ctx));
+  auto *UndefByte = UndefValue::get(Type::getIntNTy(Ctx, ByteWidth));
   if (isa<UndefValue>(V))
-    return UndefInt8;
+    return UndefByte;
 
   // Return poison for zero-sized type.
   if (DL.getTypeStoreSize(V->getType()).isZero())
-    return PoisonValue::get(Type::getInt8Ty(Ctx));
+    return PoisonValue::get(Type::getIntNTy(Ctx, ByteWidth));
 
   Constant *C = dyn_cast<Constant>(V);
   if (!C) {
@@ -6097,7 +6098,7 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
 
   // Handle 'null' ConstantArrayZero etc.
   if (C->isNullValue())
-    return Constant::getNullValue(Type::getInt8Ty(Ctx));
+    return Constant::getNullValue(Type::getIntNTy(Ctx, ByteWidth));
 
   // Constant floating-point values can be handled as integer values if the
   // corresponding integer value is "byteable".  An important case is 0.0.
@@ -6114,13 +6115,14 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
               : nullptr;
   }
 
-  // We can handle constant integers that are multiple of 8 bits.
+  // We can handle constant integers that are multiple of the byte width.
   if (ConstantInt *CI = dyn_cast<ConstantInt>(C)) {
-    if (CI->getBitWidth() % 8 == 0) {
-      assert(CI->getBitWidth() > 8 && "8 bits should be handled above!");
-      if (!CI->getValue().isSplat(8))
+    if (CI->getBitWidth() % ByteWidth == 0) {
+      assert(CI->getBitWidth() > ByteWidth &&
+             "single byte should be handled above!");
+      if (!CI->getValue().isSplat(ByteWidth))
         return nullptr;
-      return ConstantInt::get(Ctx, CI->getValue().trunc(8));
+      return ConstantInt::get(Ctx, CI->getValue().trunc(ByteWidth));
     }
   }
 
@@ -6140,15 +6142,15 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
       return LHS;
     if (!LHS || !RHS)
       return nullptr;
-    if (LHS == UndefInt8)
+    if (LHS == UndefByte)
       return RHS;
-    if (RHS == UndefInt8)
+    if (RHS == UndefByte)
       return LHS;
     return nullptr;
   };
 
   if (ConstantDataSequential *CA = dyn_cast<ConstantDataSequential>(C)) {
-    Value *Val = UndefInt8;
+    Value *Val = UndefByte;
     for (uint64_t I = 0, E = CA->getNumElements(); I != E; ++I)
       if (!(Val = Merge(Val, isBytewiseValue(CA->getElementAsConstant(I), DL))))
         return nullptr;
@@ -6156,7 +6158,7 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
   }
 
   if (isa<ConstantAggregate>(C)) {
-    Value *Val = UndefInt8;
+    Value *Val = UndefByte;
     for (Value *Op : C->operands())
       if (!(Val = Merge(Val, isBytewiseValue(Op, DL))))
         return nullptr;
