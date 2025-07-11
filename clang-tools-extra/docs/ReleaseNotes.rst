@@ -354,6 +354,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/redundant-smartptr-get>` check by fixing
   some false positives involving smart pointers to arrays.
 
+- Improved :doc:`readability-uppercase-literal-suffix
+  <clang-tidy/checks/readability/uppercase-literal-suffix>` check to recognize
+  literal suffixes added in C++23 and C23.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
