@@ -174,8 +174,46 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
       sgDataDim[i] = rewriter.create<arith::ConstantIndexOp>(loc, sgShape[i]);
     }
 
+    // Check if there is warp specialization.
+    auto isWarpSpecialized = [](Operation *op, int64_t &startRange,
+                                int64_t &endRange) -> bool {
+      Operation *parent = op->getParentOp();
+      // Find the outermost scf::IfOp with xegpu.sg_id_range.
+      while (parent) {
+        if (auto ifOp = dyn_cast<scf::IfOp>(parent)) {
+          if (Attribute attr = ifOp->getAttr("xegpu.sg_id_range")) {
+            if (auto denseAttr = dyn_cast<DenseI32ArrayAttr>(attr)) {
+              auto values = denseAttr.asArrayRef();
+              if (values.size() == 2) {
+                startRange = values[0];
+                endRange = values[1];
+              }
+            }
+            break;
+          }
+        }
+        parent = parent->getParentOp();
+      }
+      // Return false if startRange is 0
+      return (startRange > 0 && endRange > startRange);
+    };
+
+    int64_t startRange = -1, endRange = -1;
+    bool warpSpecialized = isWarpSpecialized(op, startRange, endRange);
+
+    // If warp specialization is detected, adjust the subgroup id accordingly
+    Value adjustedSgId = linearSgId;
+    if (warpSpecialized) {
+      // Subtract startRange from the original subgroup id to get the adjusted
+      // sg id
+      Value startRangeVal =
+          rewriter.create<arith::ConstantIndexOp>(loc, startRange);
+      adjustedSgId =
+          rewriter.createOrFold<index::SubOp>(loc, linearSgId, startRangeVal);
+    }
+
     auto deLinearizeSgId =
-        affine::delinearizeIndex(rewriter, loc, linearSgId, sgLayoutDim);
+        affine::delinearizeIndex(rewriter, loc, adjustedSgId, sgLayoutDim);
     if (failed(deLinearizeSgId))
       return failure();
     SmallVector<Value> sgIds = *deLinearizeSgId;
