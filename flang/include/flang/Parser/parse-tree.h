@@ -4939,19 +4939,11 @@ struct OpenMPDepobjConstruct {
 //                    nocontext-clause |
 //                    novariants-clause |
 //                    nowait-clause
-struct OmpDispatchDirective {
-  TUPLE_CLASS_BOILERPLATE(OmpDispatchDirective);
-  CharBlock source;
-  std::tuple<Verbatim, OmpClauseList> t;
-};
-
-EMPTY_CLASS(OmpEndDispatchDirective);
-
 struct OpenMPDispatchConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPDispatchConstruct);
   CharBlock source;
-  std::tuple<OmpDispatchDirective, Block,
-      std::optional<OmpEndDispatchDirective>>
+  std::tuple<OmpDirectiveSpecification, Block,
+      std::optional<OmpDirectiveSpecification>>
       t;
 };
 

@@ -2758,6 +2758,9 @@ public:
     Put("\n");
     EndOpenMP();
   }
+  void Unparse(const OpenMPDispatchConstruct &x) { //
+    UnparseBlockConstruct(x);
+  }
   void Unparse(const OpenMPRequiresConstruct &y) {
     BeginOpenMP();
     Word("!$OMP REQUIRES ");
@@ -2776,15 +2779,6 @@ public:
   bool Pre(const OmpMessageClause &x) {
     Walk(x.v);
     return false;
-  }
-  void Unparse(const OmpDispatchDirective &x) {
-    Word("!$OMP DISPATCH");
-    Walk(x.t);
-    Put("\n");
-  }
-  void Unparse(const OmpEndDispatchDirective &) {
-    Word("!$OMP END DISPATCH");
-    Put("\n");
   }
   void Unparse(const OmpErrorDirective &x) {
     Word("!$OMP ERROR ");
