@@ -34,7 +34,7 @@
 //       Depends on NewDeleteChecker.
 //
 //   * MismatchedDeallocatorChecker
-//       Enables checking whether memory is deallocated with the correspending
+//       Enables checking whether memory is deallocated with the corresponding
 //       allocation function in MallocChecker, such as malloc() allocated
 //       regions are only freed by free(), new by delete, new[] by delete[].
 //
@@ -1372,8 +1372,8 @@ void MallocChecker::checkIfFreeNameIndex(ProgramStateRef State,
   C.addTransition(State);
 }
 
-const Expr *getPlacementNewBufferArg(const CallExpr *CE,
-                                     const FunctionDecl *FD) {
+static const Expr *getPlacementNewBufferArg(const CallExpr *CE,
+                                            const FunctionDecl *FD) {
   // Checking for signature:
   // void* operator new  ( std::size_t count, void* ptr );
   // void* operator new[]( std::size_t count, void* ptr );
@@ -1682,17 +1682,15 @@ ProgramStateRef MallocChecker::ProcessZeroAllocCheck(
     const RefState *RS = State->get<RegionState>(Sym);
     if (RS) {
       if (RS->isAllocated())
-        return TrueState->set<RegionState>(Sym,
-                                          RefState::getAllocatedOfSizeZero(RS));
-      else
-        return State;
-    } else {
-      // Case of zero-size realloc. Historically 'realloc(ptr, 0)' is treated as
-      // 'free(ptr)' and the returned value from 'realloc(ptr, 0)' is not
-      // tracked. Add zero-reallocated Sym to the state to catch references
-      // to zero-allocated memory.
-      return TrueState->add<ReallocSizeZeroSymbols>(Sym);
+        return TrueState->set<RegionState>(
+            Sym, RefState::getAllocatedOfSizeZero(RS));
+      return State;
     }
+    // Case of zero-size realloc. Historically 'realloc(ptr, 0)' is treated as
+    // 'free(ptr)' and the returned value from 'realloc(ptr, 0)' is not
+    // tracked. Add zero-reallocated Sym to the state to catch references
+    // to zero-allocated memory.
+    return TrueState->add<ReallocSizeZeroSymbols>(Sym);
   }
 
   // Assume the value is non-zero going forward.
@@ -1890,7 +1888,7 @@ void MallocChecker::reportTaintBug(StringRef Msg, ProgramStateRef State,
                                         "Tainted Memory Allocation",
                                         categories::TaintedData));
     auto R = std::make_unique<PathSensitiveBugReport>(*BT_TaintedAlloc, Msg, N);
-    for (auto TaintedSym : TaintedSyms) {
+    for (const auto *TaintedSym : TaintedSyms) {
       R->markInteresting(TaintedSym);
     }
     C.emitReport(std::move(R));
@@ -2277,11 +2275,12 @@ MallocChecker::FreeMemAux(CheckerContext &C, const Expr *ArgExpr,
       HandleDoubleFree(C, ParentExpr->getSourceRange(), RsBase->isReleased(),
                        SymBase, PreviousRetStatusSymbol);
       return nullptr;
+    }
 
     // If the pointer is allocated or escaped, but we are now trying to free it,
     // check that the call to free is proper.
-    } else if (RsBase->isAllocated() || RsBase->isAllocatedOfSizeZero() ||
-               RsBase->isEscaped()) {
+    if (RsBase->isAllocated() || RsBase->isAllocatedOfSizeZero() ||
+        RsBase->isEscaped()) {
 
       // Check if an expected deallocation function matches the real one.
       bool DeallocMatchesAlloc = RsBase->getAllocationFamily() == Family;
@@ -2857,9 +2856,7 @@ MallocChecker::ReallocMemAux(CheckerContext &C, const CallEvent &Call,
 
   const CallExpr *CE = cast<CallExpr>(Call.getOriginExpr());
 
-  if (SuffixWithN && CE->getNumArgs() < 3)
-    return nullptr;
-  else if (CE->getNumArgs() < 2)
+  if ((SuffixWithN && CE->getNumArgs() < 3) || CE->getNumArgs() < 2)
     return nullptr;
 
   const Expr *arg0Expr = CE->getArg(0);

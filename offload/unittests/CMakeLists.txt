@@ -81,9 +81,34 @@ function(add_offload_unittest test_dirname)
   target_include_directories(${target_name} PRIVATE ${PLUGINS_TEST_INCLUDE})
 endfunction()
 
+function(add_conformance_test test_name)
+  set(target_name "${test_name}.conformance")
+
+  list(TRANSFORM ARGN PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/" OUTPUT_VARIABLE files)
+
+  if(NOT TARGET libc)
+    message(WARNING "Cannot run conformance tests without the LLVM C library")
+    return()
+  endif()
+
+  add_executable(${target_name} ${files})
+  add_dependencies(${target_name} ${PLUGINS_TEST_COMMON} ${test_name}.bin)
+  target_compile_definitions(${target_name} PRIVATE DEVICE_CODE_PATH="${CONFORMANCE_TEST_DEVICE_CODE_PATH}")
+  target_link_libraries(${target_name} PRIVATE ${PLUGINS_TEST_COMMON} libc)
+  target_include_directories(${target_name} PRIVATE ${PLUGINS_TEST_INCLUDE})
+  set_target_properties(${target_name} PROPERTIES EXCLUDE_FROM_ALL TRUE)
+
+  add_custom_target(offload.conformance.${test_name}
+    COMMAND $<TARGET_FILE:${target_name}>
+    DEPENDS ${target_name}
+    COMMENT "Running conformance test ${test_name}")
+  add_dependencies(offload.conformance offload.conformance.${test_name})
+endfunction()
+
 set(OFFLOAD_TESTS_FORCE_NVPTX_ARCH "" CACHE STRING
   "Force building of NVPTX device code for Offload unit tests with the given arch, e.g. sm_61")
 set(OFFLOAD_TESTS_FORCE_AMDGPU_ARCH "" CACHE STRING
   "Force building of AMDGPU device code for Offload unit tests with the given arch, e.g. gfx1030")
 
 add_subdirectory(OffloadAPI)
+add_subdirectory(Conformance)

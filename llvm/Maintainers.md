@@ -263,8 +263,6 @@ amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitH
 
 #### PowerPC backend
 
-Zheng Chen \
-czhengsz@cn.ibm.com (email), [chenzheng1030](https://github.com/chenzheng1030) (GitHub)
 
 #### RISCV backend
 
@@ -522,7 +520,8 @@ Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Releas
 Kostya Serebryany ([kcc](https://github.com/kcc)) -- Sanitizers \
 Michael Spencer (bigcheesegs@gmail.com), [Bigcheese](https://github.com/Bigcheese)) -- Windows support in object tools \
 Alexei Starovoitov (alexei.starovoitov@gmail.com, [4ast](https://github.com/4ast)) -- BPF backend \
-Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) -- Sanitizers
+Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) -- Sanitizers \
+Zheng Chen (czhengsz@cn.ibm.com, [chenzheng1030](https://github.com/chenzheng1030)) -- PowerPC backend
 
 ### Former maintainers of removed components
 

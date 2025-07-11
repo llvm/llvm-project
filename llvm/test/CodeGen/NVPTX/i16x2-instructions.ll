@@ -23,11 +23,10 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 define <2 x i16> @test_ret_const() #0 {
 ; COMMON-LABEL: test_ret_const(
 ; COMMON:       {
-; COMMON-NEXT:    .reg .b32 %r<2>;
+; COMMON-EMPTY:
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    mov.b32 %r1, 131073;
-; COMMON-NEXT:    st.param.b32 [func_retval0], %r1;
+; COMMON-NEXT:    st.param.b32 [func_retval0], 131073;
 ; COMMON-NEXT:    ret;
   ret <2 x i16> <i16 1, i16 2>
 }
@@ -647,12 +646,7 @@ define <2 x i16> @test_call(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-NEXT:    .param .align 4 .b8 param1[4];
 ; COMMON-NEXT:    st.param.b32 [param1], %r2;
 ; COMMON-NEXT:    .param .align 4 .b8 retval0[4];
-; COMMON-NEXT:    call.uni (retval0),
-; COMMON-NEXT:    test_callee,
-; COMMON-NEXT:    (
-; COMMON-NEXT:    param0,
-; COMMON-NEXT:    param1
-; COMMON-NEXT:    );
+; COMMON-NEXT:    call.uni (retval0), test_callee, (param0, param1);
 ; COMMON-NEXT:    ld.param.b32 %r3, [retval0];
 ; COMMON-NEXT:    } // callseq 0
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r3;
@@ -675,12 +669,7 @@ define <2 x i16> @test_call_flipped(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-NEXT:    .param .align 4 .b8 param1[4];
 ; COMMON-NEXT:    st.param.b32 [param1], %r1;
 ; COMMON-NEXT:    .param .align 4 .b8 retval0[4];
-; COMMON-NEXT:    call.uni (retval0),
-; COMMON-NEXT:    test_callee,
-; COMMON-NEXT:    (
-; COMMON-NEXT:    param0,
-; COMMON-NEXT:    param1
-; COMMON-NEXT:    );
+; COMMON-NEXT:    call.uni (retval0), test_callee, (param0, param1);
 ; COMMON-NEXT:    ld.param.b32 %r3, [retval0];
 ; COMMON-NEXT:    } // callseq 1
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r3;
@@ -703,12 +692,7 @@ define <2 x i16> @test_tailcall_flipped(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-NEXT:    .param .align 4 .b8 param1[4];
 ; COMMON-NEXT:    st.param.b32 [param1], %r1;
 ; COMMON-NEXT:    .param .align 4 .b8 retval0[4];
-; COMMON-NEXT:    call.uni (retval0),
-; COMMON-NEXT:    test_callee,
-; COMMON-NEXT:    (
-; COMMON-NEXT:    param0,
-; COMMON-NEXT:    param1
-; COMMON-NEXT:    );
+; COMMON-NEXT:    call.uni (retval0), test_callee, (param0, param1);
 ; COMMON-NEXT:    ld.param.b32 %r3, [retval0];
 ; COMMON-NEXT:    } // callseq 2
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r3;
@@ -920,9 +904,9 @@ define <2 x i32> @test_zext_2xi32(<2 x i16> %a) #0 {
 ; COMMON-NEXT:  // %bb.0:
 ; COMMON-NEXT:    ld.param.b32 %r1, [test_zext_2xi32_param_0];
 ; COMMON-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; COMMON-NEXT:    cvt.u32.u16 %r2, %rs1;
-; COMMON-NEXT:    cvt.u32.u16 %r3, %rs2;
-; COMMON-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r3};
+; COMMON-NEXT:    cvt.u32.u16 %r2, %rs2;
+; COMMON-NEXT:    cvt.u32.u16 %r3, %rs1;
+; COMMON-NEXT:    st.param.v2.b32 [func_retval0], {%r3, %r2};
 ; COMMON-NEXT:    ret;
   %r = zext <2 x i16> %a to <2 x i32>
   ret <2 x i32> %r
@@ -975,14 +959,11 @@ define i32 @test_bitcast_2xi16_to_i32(<2 x i16> %a) #0 {
 define <2 x half> @test_bitcast_2xi16_to_2xhalf(i16 %a) #0 {
 ; COMMON-LABEL: test_bitcast_2xi16_to_2xhalf(
 ; COMMON:       {
-; COMMON-NEXT:    .reg .b16 %rs<3>;
-; COMMON-NEXT:    .reg .b32 %r<2>;
+; COMMON-NEXT:    .reg .b16 %rs<2>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
 ; COMMON-NEXT:    ld.param.b16 %rs1, [test_bitcast_2xi16_to_2xhalf_param_0];
-; COMMON-NEXT:    mov.b16 %rs2, 5;
-; COMMON-NEXT:    mov.b32 %r1, {%rs1, %rs2};
-; COMMON-NEXT:    st.param.b32 [func_retval0], %r1;
+; COMMON-NEXT:    st.param.v2.b16 [func_retval0], {%rs1, 5};
 ; COMMON-NEXT:    ret;
   %ins.0 = insertelement <2 x i16> undef, i16 %a, i32 0
   %ins.1 = insertelement <2 x i16> %ins.0, i16 5, i32 1

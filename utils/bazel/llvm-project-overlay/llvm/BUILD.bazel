@@ -493,6 +493,7 @@ cc_library(
         ":DebugInfo",
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":DebugInfoPDB",
         ":Demangle",
         ":MC",
@@ -572,8 +573,23 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":DebugInfo",
+        ":DebugInfoDWARFLowLevel",
         ":MC",
         ":Object",
+        ":Support",
+        ":TargetParser",
+    ],
+)
+
+cc_library(
+    name = "DebugInfoDWARFLowLevel",
+    srcs = glob([
+        "lib/DebugInfo/DWARF/LowLevel/*.cpp",
+    ]),
+    hdrs = glob(["include/llvm/DebugInfo/DWARF/LowLevel/*.h"]),
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
         ":Support",
         ":TargetParser",
     ],
@@ -655,6 +671,7 @@ cc_binary(
         "utils/TableGen/Basic/DirectiveEmitter.cpp",
         "utils/TableGen/Basic/IntrinsicEmitter.cpp",
         "utils/TableGen/Basic/RISCVTargetDefEmitter.cpp",
+        "utils/TableGen/Basic/RuntimeLibcallsEmitter.cpp",
         "utils/TableGen/Basic/SDNodeProperties.cpp",
         "utils/TableGen/Basic/SDNodeProperties.h",
         "utils/TableGen/Basic/SequenceToOffsetTable.h",
@@ -756,6 +773,14 @@ gentbl_cc_library(
     tblgen = ":llvm-min-tblgen",
     td_file = "include/llvm/IR/Intrinsics.td",
     deps = [":CommonTargetTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "runtime_libcalls_gen",
+    tbl_outs = {"include/llvm/IR/RuntimeLibcalls.inc": ["-gen-runtime-libcalls"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "include/llvm/IR/RuntimeLibcalls.td",
+    deps = [":IRTdFiles"],
 )
 
 gentbl_cc_library(
@@ -960,11 +985,12 @@ cc_library(
         "include/llvm/Analysis/SimplifyQuery.h",
         "include/llvm/Analysis/ValueTracking.h",
         "include/llvm/Analysis/WithCache.h",
+        "include/llvm/ProfileData/InstrProf.h",
+        "include/llvm/ProfileData/InstrProfData.inc",
     ] + [":llvm_intrinsics_headers"],
     copts = llvm_copts,
     textual_hdrs = glob([
         "include/llvm/IR/*.def",
-        "lib/IR/*.def",
     ]),
     deps = [
         ":BinaryFormat",
@@ -976,6 +1002,7 @@ cc_library(
         ":config",
         ":intrinsic_enums_gen",
         ":intrinsics_impl_gen",
+        ":runtime_libcalls_gen",
     ],
 )
 
@@ -1154,6 +1181,7 @@ cc_library(
         ":Core",
         ":DebugInfo",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":Demangle",
         ":Object",
         ":Support",
@@ -1682,6 +1710,7 @@ cc_library(
     ]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
         ":Core",
         ":Support",
     ],
@@ -2081,6 +2110,7 @@ cc_library(
         ":Core",
         ":DebugInfoCodeView",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":IPO",
         ":IRPrinter",
         ":Instrumentation",
@@ -3222,6 +3252,7 @@ cc_library(
         ":CodeGenTypes",
         ":DWARFLinkerBase",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":MC",
         ":Support",
         ":Target",
@@ -3240,6 +3271,7 @@ cc_library(
         ":BinaryFormat",
         ":CodeGen",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":Support",
         ":Target",
     ],
@@ -3540,6 +3572,7 @@ cc_library(
         ":DWARFLinkerParallel",
         ":DebugInfo",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":DsymutilTableGen",
         ":MC",
         ":Object",
@@ -3957,6 +3990,7 @@ cc_binary(
         ":BinaryFormat",
         ":DebugInfo",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":MC",
         ":Object",
         ":Support",
@@ -3988,6 +4022,7 @@ cc_binary(
         ":DWARFLinker",
         ":DWARFLinkerParallel",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":DwarfutilOptionsTableGen",
         ":MC",
         ":ObjCopy",
@@ -4605,6 +4640,7 @@ cc_library(
         ":DebugInfo",
         ":DebugInfoBTF",
         ":DebugInfoDWARF",
+        ":DebugInfoDWARFLowLevel",
         ":Debuginfod",
         ":Demangle",
         ":MC",
@@ -5125,6 +5161,11 @@ cc_binary(
     deps = [
         ":Support",
     ],
+)
+
+filegroup(
+    name = "gdb-scripts",
+    srcs = glob(["utils/gdb-scripts/*"]),
 )
 
 ################################################################################

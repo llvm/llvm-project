@@ -337,11 +337,9 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // tokens in a file (excluding the global module fragment.).
   if (getLangOpts().CPlusPlusModules && !IntroducerIsFirstPPToken && !SeenGMF) {
     Diag(ModuleLoc, diag::err_module_decl_not_at_start);
-    SourceLocation BeginLoc = PP.getMainFileFirstPPToken().getLocation();
-    if (BeginLoc.isValid()) {
-      Diag(BeginLoc, diag::note_global_module_introducer_missing)
-          << FixItHint::CreateInsertion(BeginLoc, "module;\n");
-    }
+    SourceLocation BeginLoc = PP.getMainFileFirstPPTokenLoc();
+    Diag(BeginLoc, diag::note_global_module_introducer_missing)
+        << FixItHint::CreateInsertion(BeginLoc, "module;\n");
   }
 
   // C++23 [module.unit]p1: ... The identifiers module and import shall not

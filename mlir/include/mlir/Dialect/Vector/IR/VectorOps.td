@@ -703,8 +703,9 @@ def Vector_ExtractOp :
      InferTypeOpAdaptorWithIsCompatible]> {
   let summary = "extract operation";
   let description = [{
-    Takes an n-D vector and a k-D position and extracts the (n-k)-D vector at
-    the proper position. Degenerates to an element type if n-k is zero.
+    Extracts an (n − k)-D result sub-vector from an n-D source vector at a
+    specified k-D position. When n = k, the result degenerates to a scalar
+    element.
 
     Static and dynamic indices must be greater or equal to zero and less than
     the size of the corresponding dimension. The result is undefined if any
@@ -716,7 +717,6 @@ def Vector_ExtractOp :
     ```mlir
     %1 = vector.extract %0[3]: vector<8x16xf32> from vector<4x8x16xf32>
     %2 = vector.extract %0[2, 1, 3]: f32 from vector<4x8x16xf32>
-    %3 = vector.extract %1[]: vector<f32> from vector<f32>
     %4 = vector.extract %0[%a, %b, %c]: f32 from vector<4x8x16xf32>
     %5 = vector.extract %0[2, %b]: vector<16xf32> from vector<4x8x16xf32>
     %6 = vector.extract %10[-1, %c]: f32 from vector<4x16xf32>
@@ -949,9 +949,9 @@ def Vector_InsertOp :
      AllTypesMatch<["dest", "result"]>]> {
   let summary = "insert operation";
   let description = [{
-    Takes an n-D source vector, an (n+k)-D destination vector and a k-D position
-    and inserts the n-D source into the (n+k)-D destination at the proper
-    position. Degenerates to a scalar or a 0-d vector source type when n = 0.
+    Inserts an (n - k)-D sub-vector (value-to-store) into an n-D destination
+    vector at a specified k-D position. When n = 0, value-to-store degenerates
+    to a scalar element inserted into the n-D destination vector.
 
     Static and dynamic indices must be greater or equal to zero and less than
     the size of the corresponding dimension. The result is undefined if any
@@ -963,8 +963,7 @@ def Vector_InsertOp :
     ```mlir
     %2 = vector.insert %0, %1[3] : vector<8x16xf32> into vector<4x8x16xf32>
     %5 = vector.insert %3, %4[2, 1, 3] : f32 into vector<4x8x16xf32>
-    %8 = vector.insert %6, %7[] : f32 into vector<f32>
-    %11 = vector.insert %9, %10[%a, %b, %c] : vector<f32> into vector<4x8x16xf32>
+    %11 = vector.insert %9, %10[%a, %b, %c] : f32 into vector<4x8x16xf32>
     %12 = vector.insert %4, %10[2, %b] : vector<16xf32> into vector<4x8x16xf32>
     %13 = vector.insert %20, %1[-1, %c] : f32 into vector<4x16xf32>
     ```
@@ -1544,30 +1543,29 @@ def Vector_TransferReadOp :
   }];
 
   let builders = [
-    /// 1. Builder that sets padding to zero and an empty mask (variant with attrs).
+    /// 1. Builder that sets padding to `padding` or poison if not provided and
+    /// an empty mask (variant with attrs).
     OpBuilder<(ins "VectorType":$vectorType,
                    "Value":$source,
                    "ValueRange":$indices,
+                   "std::optional<Value>":$padding,
                    "AffineMapAttr":$permutationMapAttr,
                    "ArrayAttr":$inBoundsAttr)>,
-    /// 2. Builder that sets padding to zero and an empty mask (variant without attrs).
+    /// 2. Builder that sets padding to `padding` or poison if not provided and
+    /// an empty mask (variant without attrs).
     OpBuilder<(ins "VectorType":$vectorType,
                    "Value":$source,
                    "ValueRange":$indices,
+                   "std::optional<Value>":$padding,
                    "AffineMap":$permutationMap,
                    CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
-    /// 3. Builder that sets permutation map to 'getMinorIdentityMap'.
+    /// 3. Builder that sets padding to `padding` or poison if not provided and
+    /// permutation map to 'getMinorIdentityMap'.
     OpBuilder<(ins "VectorType":$vectorType,
                    "Value":$source,
                    "ValueRange":$indices,
-                   "Value":$padding,
-                   CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
-    /// 4. Builder that sets padding to zero and permutation map to
-    /// 'getMinorIdentityMap'.
-    OpBuilder<(ins "VectorType":$vectorType,
-                   "Value":$source,
-                   "ValueRange":$indices,
-                   CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
+                   "std::optional<Value>":$padding,
+                   CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>
   ];
 
   let extraClassDeclaration = [{
@@ -2494,6 +2492,7 @@ def Vector_ConstantMaskOp :
 
   let assemblyFormat = "$mask_dim_sizes attr-dict `:` type(results)";
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 def Vector_CreateMaskOp :
@@ -2920,8 +2919,8 @@ def Vector_SplatOp : Vector_Op<"splat", [
   ]> {
   let summary = "vector splat or broadcast operation";
   let description = [{
-    Broadcast the operand to all elements of the result vector. The operand is
-    required to be of integer/index/float type.
+    Broadcast the operand to all elements of the result vector. The type of the
+    operand must match the element type of the vector type.
 
     Example:
 
@@ -2931,8 +2930,7 @@ def Vector_SplatOp : Vector_Op<"splat", [
     ```
   }];
 
-  let arguments = (ins AnyTypeOf<[AnySignlessInteger, Index, AnyFloat],
-                                 "integer/index/float type">:$input);
+  let arguments = (ins AnyType:$input);
   let results = (outs AnyVectorOfAnyRank:$aggregate);
 
   let builders = [

@@ -6,5 +6,5 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_FUNCTION atomic_and
+#define FUNCTION atomic_and
 #include <clc/opencl/atomic/atomic_decl.inc>

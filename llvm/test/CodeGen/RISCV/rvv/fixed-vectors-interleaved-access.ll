@@ -302,15 +302,11 @@ define {<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>} @vpload_factor4_intrinsics(p
 ; CHECK-NEXT:    vlseg4e32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %wide.masked.load = call <8 x i32> @llvm.vp.load.v8i32.p0(ptr %ptr, <8 x i1> splat (i1 true), i32 8)
-  %d0 = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> %wide.masked.load)
-  %d0.0 = extractvalue { <4 x i32>, <4 x i32> } %d0, 0
-  %d0.1 = extractvalue { <4 x i32>, <4 x i32> } %d0, 1
-  %d1 = call { <2 x i32>, <2 x i32> } @llvm.vector.deinterleave2.v4i32(<4 x i32> %d0.0)
-  %t0 = extractvalue { <2 x i32>, <2 x i32> } %d1, 0
-  %t2 = extractvalue { <2 x i32>, <2 x i32> } %d1, 1
-  %d2 = call { <2 x i32>, <2 x i32> } @llvm.vector.deinterleave2.v4i32(<4 x i32> %d0.1)
-  %t1 = extractvalue { <2 x i32>, <2 x i32> } %d2, 0
-  %t3 = extractvalue { <2 x i32>, <2 x i32> } %d2, 1
+  %d = call { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @llvm.vector.deinterleave4.v8i32(<8 x i32> %wide.masked.load)
+  %t0 = extractvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } %d, 0
+  %t1 = extractvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } %d, 1
+  %t2 = extractvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } %d, 2
+  %t3 = extractvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } %d, 3
 
   %res0 = insertvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } poison, <2 x i32> %t0, 0
   %res1 = insertvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } %res0, <2 x i32> %t1, 1

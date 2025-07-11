@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_FUNCTION fdim
+#define FUNCTION fdim
 #define __CLC_BODY <clc/shared/binary_decl.inc>
 
 #include <clc/math/gentype.inc>
 
-#undef __CLC_FUNCTION
+#undef FUNCTION

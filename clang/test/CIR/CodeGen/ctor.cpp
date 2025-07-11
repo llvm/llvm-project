@@ -16,20 +16,20 @@ void baz() {
 //       constructors here. The handling of constructor aliases is currently
 //       NYI, but when it is added this test should be updated to add a RUN
 //       line that passes '-mconstructor-aliases' to clang_cc1.
-// CHECK:   cir.func @_ZN5StrukC2Ev(%arg0: !cir.ptr<!rec_Struk>
+// CHECK:   cir.func{{.*}} @_ZN5StrukC2Ev(%arg0: !cir.ptr<!rec_Struk>
 // CHECK-NEXT:     %[[THIS_ADDR:.*]] = cir.alloca !cir.ptr<!rec_Struk>, !cir.ptr<!cir.ptr<!rec_Struk>>, ["this", init] {alignment = 8 : i64}
 // CHECK-NEXT:     cir.store %arg0, %[[THIS_ADDR]] : !cir.ptr<!rec_Struk>, !cir.ptr<!cir.ptr<!rec_Struk>>
 // CHECK-NEXT:     %[[THIS:.*]] = cir.load %[[THIS_ADDR]] : !cir.ptr<!cir.ptr<!rec_Struk>>, !cir.ptr<!rec_Struk>
 // CHECK-NEXT:     cir.return
 
-// CHECK:   cir.func @_ZN5StrukC1Ev(%arg0: !cir.ptr<!rec_Struk>
+// CHECK:   cir.func{{.*}} @_ZN5StrukC1Ev(%arg0: !cir.ptr<!rec_Struk>
 // CHECK-NEXT:     %[[THIS_ADDR:.*]] = cir.alloca !cir.ptr<!rec_Struk>, !cir.ptr<!cir.ptr<!rec_Struk>>, ["this", init] {alignment = 8 : i64}
 // CHECK-NEXT:     cir.store %arg0, %[[THIS_ADDR]] : !cir.ptr<!rec_Struk>, !cir.ptr<!cir.ptr<!rec_Struk>>
 // CHECK-NEXT:     %[[THIS:.*]] = cir.load %[[THIS_ADDR]] : !cir.ptr<!cir.ptr<!rec_Struk>>, !cir.ptr<!rec_Struk>
 // CHECK-NEXT:     cir.call @_ZN5StrukC2Ev(%[[THIS]]) : (!cir.ptr<!rec_Struk>) -> ()
 // CHECK-NEXT:     cir.return
 
-// CHECK:   cir.func @_Z3bazv()
+// CHECK:   cir.func{{.*}} @_Z3bazv()
 // CHECK-NEXT:     %[[S_ADDR:.*]] = cir.alloca !rec_Struk, !cir.ptr<!rec_Struk>, ["s", init] {alignment = 4 : i64}
 // CHECK-NEXT:     cir.call @_ZN5StrukC1Ev(%[[S_ADDR]]) : (!cir.ptr<!rec_Struk>) -> ()
 // CHECK-NEXT:     cir.return
@@ -45,9 +45,9 @@ void bar() {
 
 // When a variadic constructor is present, we call the C2 constructor directly.
 
-// CHECK-NOT: cir.func @_ZN13VariadicStrukC2Eiz
+// CHECK-NOT: cir.func{{.*}} @_ZN13VariadicStrukC2Eiz
 
-// CHECK:      cir.func @_ZN13VariadicStrukC1Eiz(%arg0: !cir.ptr<!rec_VariadicStruk>
+// CHECK:      cir.func{{.*}} @_ZN13VariadicStrukC1Eiz(%arg0: !cir.ptr<!rec_VariadicStruk>
 // CHECK-SAME:                                   %arg1: !s32i
 // CHECK-SAME:                                   ...) {
 // CHECK-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
@@ -60,7 +60,7 @@ void bar() {
 // CHECK-NEXT:   cir.store{{.*}} %[[N]], %[[A_ADDR]]
 // CHECK-NEXT:   cir.return
 
-// CHECK:  cir.func @_Z3barv
+// CHECK:  cir.func{{.*}} @_Z3barv
 // CHECK-NEXT:    %[[S_ADDR:.*]] = cir.alloca !rec_VariadicStruk, !cir.ptr<!rec_VariadicStruk>, ["s", init]
 // CHECK-NEXT:    %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CHECK-NEXT:    %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
@@ -78,7 +78,7 @@ void bam() {
   DelegatingStruk s;
 }
 
-// CHECK:       cir.func @_ZN15DelegatingStrukC2Ei(%arg0: !cir.ptr<!rec_DelegatingStruk>
+// CHECK:       cir.func{{.*}} @_ZN15DelegatingStrukC2Ei(%arg0: !cir.ptr<!rec_DelegatingStruk>
 // CHECK-SAME:                                     %arg1: !s32i
 // CHECK-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
 // CHECK-NEXT:   %[[N_ADDR:.*]] = cir.alloca {{.*}} ["n", init]
@@ -90,7 +90,7 @@ void bam() {
 // CHECK-NEXT:   cir.store{{.*}} %[[N]], %[[A_ADDR]]
 // CHECK-NEXT:   cir.return
 
-// CHECK:       cir.func @_ZN15DelegatingStrukC1Ei(%arg0: !cir.ptr<!rec_DelegatingStruk>
+// CHECK:       cir.func{{.*}} @_ZN15DelegatingStrukC1Ei(%arg0: !cir.ptr<!rec_DelegatingStruk>
 // CHECK-SAME:                                     %arg1: !s32i
 // CHECK-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
 // CHECK-NEXT:   %[[N_ADDR:.*]] = cir.alloca {{.*}} ["n", init]
@@ -101,7 +101,7 @@ void bam() {
 // CHECK-NEXT:   cir.call @_ZN15DelegatingStrukC2Ei(%[[THIS]], %[[N]])
 // CHECK-NEXT:   cir.return
 
-// CHECK: cir.func @_ZN15DelegatingStrukC1Ev(%arg0: !cir.ptr<!rec_DelegatingStruk>
+// CHECK: cir.func{{.*}} @_ZN15DelegatingStrukC1Ev(%arg0: !cir.ptr<!rec_DelegatingStruk>
 // CHECK-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
 // CHECK-NEXT:   cir.store %arg0, %[[THIS_ADDR]]
 // CHECK-NEXT:   %[[THIS:.*]] = cir.load{{.*}} %[[THIS_ADDR]]
@@ -109,7 +109,7 @@ void bam() {
 // CHECK-NEXT:   cir.call @_ZN15DelegatingStrukC1Ei(%[[THIS]], %[[ZERO]])
 // CHECK-NEXT:   cir.return
 
-// CHECK: cir.func @_Z3bamv
+// CHECK: cir.func{{.*}} @_Z3bamv
 // CHECK-NEXT:    %[[S_ADDR:.*]] = cir.alloca {{.*}} ["s", init]
 // CHECK-NEXT:    cir.call @_ZN15DelegatingStrukC1Ev(%[[S_ADDR]])
 // CHECK-NEXT:    cir.return
@@ -123,7 +123,7 @@ void init_member() {
   MemberInitStruk s;
 }
 
-// CHECK:      cir.func @_ZN15MemberInitStrukC2Ev(%arg0: !cir.ptr<!rec_MemberInitStruk>
+// CHECK:      cir.func{{.*}} @_ZN15MemberInitStrukC2Ev(%arg0: !cir.ptr<!rec_MemberInitStruk>
 // CHECK-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
 // CHECK-NEXT:   cir.store %arg0, %[[THIS_ADDR]]
 // CHECK-NEXT:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
@@ -132,14 +132,14 @@ void init_member() {
 // CHECK-NEXT:   cir.store align(4) %[[ZERO]], %[[A_ADDR]]
 // CHECK-NEXT:   cir.return
 
-// CHECK:      cir.func @_ZN15MemberInitStrukC1Ev(%arg0: !cir.ptr<!rec_MemberInitStruk>
+// CHECK:      cir.func{{.*}} @_ZN15MemberInitStrukC1Ev(%arg0: !cir.ptr<!rec_MemberInitStruk>
 // CHECK-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
 // CHECK-NEXT:   cir.store %arg0, %[[THIS_ADDR]]
 // CHECK-NEXT:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
 // CHECK-NEXT:   cir.call @_ZN15MemberInitStrukC2Ev(%[[THIS]])
 // CHECK-NEXT:   cir.return
 
-// CHECK: cir.func @_Z11init_memberv
+// CHECK: cir.func{{.*}} @_Z11init_memberv
 // CHECK-NEXT:    %[[S_ADDR:.*]] = cir.alloca {{.*}} ["s", init]
 // CHECK-NEXT:    cir.call @_ZN15MemberInitStrukC1Ev(%[[S_ADDR]])
 // CHECK-NEXT:    cir.return
@@ -153,7 +153,7 @@ void init_param_member() {
   ParamMemberInitStruk s(0);
 }
 
-// CHECK:      cir.func @_ZN20ParamMemberInitStrukC2Ei(%arg0: !cir.ptr<!rec_ParamMemberInitStruk>
+// CHECK:      cir.func{{.*}} @_ZN20ParamMemberInitStrukC2Ei(%arg0: !cir.ptr<!rec_ParamMemberInitStruk>
 // CHECK-SAME:                                         %arg1: !s32i
 // CHECK-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
 // CHECK-NEXT:   %[[N_ADDR:.*]] = cir.alloca {{.*}} ["n", init]
@@ -165,7 +165,7 @@ void init_param_member() {
 // CHECK-NEXT:   cir.store{{.*}} %[[N]], %[[A_ADDR]]
 // CHECK-NEXT:   cir.return
 
-// CHECK:      cir.func @_ZN20ParamMemberInitStrukC1Ei(%arg0: !cir.ptr<!rec_ParamMemberInitStruk>
+// CHECK:      cir.func{{.*}} @_ZN20ParamMemberInitStrukC1Ei(%arg0: !cir.ptr<!rec_ParamMemberInitStruk>
 // CHECK-SAME:                                         %arg1: !s32i
 // CHECK-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
 // CHECK-NEXT:   %[[N_ADDR:.*]] = cir.alloca {{.*}} ["n", init]
@@ -176,7 +176,7 @@ void init_param_member() {
 // CHECK-NEXT:   cir.call @_ZN20ParamMemberInitStrukC2Ei(%[[THIS]], %[[N]])
 // CHECK-NEXT:   cir.return
 
-// CHECK: cir.func @_Z17init_param_memberv
+// CHECK: cir.func{{.*}} @_Z17init_param_memberv
 // CHECK-NEXT:    %[[S_ADDR:.*]] = cir.alloca {{.*}} ["s", init]
 // CHECK-NEXT:    %[[ZERO:.*]] = cir.const #cir.int<0>
 // CHECK-NEXT:    cir.call @_ZN20ParamMemberInitStrukC1Ei(%[[S_ADDR]], %[[ZERO]])
@@ -197,7 +197,7 @@ void init_union() {
   UnionInitStruk s;
 }
 
-// CHECK:      cir.func @_ZN14UnionInitStrukC2Ev(%arg0: !cir.ptr<!rec_UnionInitStruk>
+// CHECK:      cir.func{{.*}} @_ZN14UnionInitStrukC2Ev(%arg0: !cir.ptr<!rec_UnionInitStruk>
 // CHECK-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
 // CHECK-NEXT:   cir.store %arg0, %[[THIS_ADDR]]
 // CHECK-NEXT:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
@@ -208,14 +208,14 @@ void init_union() {
 // CHECK-NEXT:   cir.store{{.*}} %[[ZERO]], %[[C_ADDR]]
 // CHECK-NEXT:   cir.return
 
-// CHECK:      cir.func @_ZN14UnionInitStrukC1Ev(%arg0: !cir.ptr<!rec_UnionInitStruk>
+// CHECK:      cir.func{{.*}} @_ZN14UnionInitStrukC1Ev(%arg0: !cir.ptr<!rec_UnionInitStruk>
 // CHECK-NEXT:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
 // CHECK-NEXT:   cir.store %arg0, %[[THIS_ADDR]]
 // CHECK-NEXT:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
 // CHECK-NEXT:   cir.call @_ZN14UnionInitStrukC2Ev
 // CHECK-NEXT:   cir.return
 
-// CHECK: cir.func @_Z10init_unionv
+// CHECK: cir.func{{.*}} @_Z10init_unionv
 // CHECK-NEXT:    %[[S_ADDR:.*]] = cir.alloca {{.*}} ["s", init]
 // CHECK-NEXT:    cir.call @_ZN14UnionInitStrukC1Ev(%[[S_ADDR]])
 // CHECK-NEXT:    cir.return

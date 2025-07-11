@@ -261,9 +261,8 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, TilingInterface opToPad,
     // 2.a. Skip scalar-like operands.
     Type operandType = operand.getType();
     if (!isa<RankedTensorType>(operandType)) {
-      assert(!isa<ShapedType>(operandType) ||
-             isa<VectorType>(operandType) &&
-                 "Unexpected non-vector ShapedType");
+      assert((!isa<ShapedType>(operandType) || isa<VectorType>(operandType)) &&
+             "Unexpected non-vector ShapedType");
       newOperands.push_back(operand);
       continue;
     }
