@@ -144,7 +144,7 @@ void ARMMachObjectWriter::recordARMScatteredHalfRelocation(
     return;
   }
 
-  unsigned IsPCRel = Writer->isFixupKindPCRel(Asm, Fixup.getKind());
+  unsigned IsPCRel = Fixup.isPCRel();
   unsigned Type = MachO::ARM_RELOC_HALF;
 
   // See <reloc.h>.
@@ -251,7 +251,7 @@ void ARMMachObjectWriter::recordARMScatteredRelocation(
     return;
   }
 
-  unsigned IsPCRel = Writer->isFixupKindPCRel(Asm, Fixup.getKind());
+  unsigned IsPCRel = Fixup.isPCRel();
 
   // See <reloc.h>.
   const MCSymbol *A = Target.getAddSym();
@@ -358,7 +358,7 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
                                            const MCFragment *Fragment,
                                            const MCFixup &Fixup, MCValue Target,
                                            uint64_t &FixedValue) {
-  unsigned IsPCRel = Writer->isFixupKindPCRel(Asm, Fixup.getKind());
+  unsigned IsPCRel = Fixup.isPCRel();
   unsigned Log2Size;
   unsigned RelocType = MachO::ARM_RELOC_VANILLA;
   if (!getARMFixupKindMachOInfo(Fixup.getKind(), RelocType, Log2Size)) {

@@ -13,9 +13,15 @@
 #include "flang/Lower/Support/Utils.h"
 
 #include "flang/Common/indirection.h"
+#include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/IterationSpace.h"
 #include "flang/Lower/Support/PrivateReductionUtils.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
+#include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Semantics/tools.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include <cstdint>
 #include <optional>
 #include <type_traits>
@@ -662,9 +668,7 @@ void privatizeSymbol(
 
   const semantics::Symbol *sym =
       isDoConcurrent ? &symToPrivatize->GetUltimate() : symToPrivatize;
-  const lower::SymbolBox hsb = isDoConcurrent
-                                   ? converter.shallowLookupSymbol(*sym)
-                                   : converter.lookupOneLevelUpSymbol(*sym);
+  const lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*sym);
   assert(hsb && "Host symbol box not found");
 
   mlir::Location symLoc = hsb.getAddr().getLoc();

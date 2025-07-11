@@ -18,6 +18,8 @@ add_lldb_library(lldbDataFormatters NO_PLUGIN_DEPENDENCIES
   ValueObjectPrinter.cpp
   VectorType.cpp
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/DataFormatters
   LINK_COMPONENTS
     Support
   LINK_LIBS

@@ -41,9 +41,14 @@ class LoopInfo;
 class MDNode;
 class StringRef;
 class TargetLibraryInfo;
+class IntrinsicInst;
 template <typename T> class ArrayRef;
 
 constexpr unsigned MaxAnalysisRecursionDepth = 6;
+
+/// The max limit of the search depth in DecomposeGEPExpression() and
+/// getUnderlyingObject().
+constexpr unsigned MaxLookupSearchDepth = 10;
 
 /// Determine which bits of V are known to be either zero or one and return
 /// them in the KnownZero/KnownOne bit sets.
@@ -307,11 +312,11 @@ LLVM_ABI std::optional<bool> computeKnownFPSignBit(const Value *V,
 
 /// Return true if the sign bit of the FP value can be ignored by the user when
 /// the value is zero.
-bool canIgnoreSignBitOfZero(const Use &U);
+LLVM_ABI bool canIgnoreSignBitOfZero(const Use &U);
 
 /// Return true if the sign bit of the FP value can be ignored by the user when
 /// the value is NaN.
-bool canIgnoreSignBitOfNaN(const Use &U);
+LLVM_ABI bool canIgnoreSignBitOfNaN(const Use &U);
 
 /// If the specified value can be set by repeating the same byte in memory,
 /// return the i8 value that it is represented with. This is true for all i8
@@ -432,9 +437,10 @@ LLVM_ABI bool isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
 /// original object being addressed. Note that the returned value has pointer
 /// type if the specified value does. If the \p MaxLookup value is non-zero, it
 /// limits the number of instructions to be stripped off.
-LLVM_ABI const Value *getUnderlyingObject(const Value *V,
-                                          unsigned MaxLookup = 6);
-inline Value *getUnderlyingObject(Value *V, unsigned MaxLookup = 6) {
+LLVM_ABI const Value *
+getUnderlyingObject(const Value *V, unsigned MaxLookup = MaxLookupSearchDepth);
+inline Value *getUnderlyingObject(Value *V,
+                                  unsigned MaxLookup = MaxLookupSearchDepth) {
   // Force const to avoid infinite recursion.
   const Value *VConst = V;
   return const_cast<Value *>(getUnderlyingObject(VConst, MaxLookup));
@@ -475,7 +481,7 @@ LLVM_ABI const Value *getUnderlyingObjectAggressive(const Value *V);
 LLVM_ABI void getUnderlyingObjects(const Value *V,
                                    SmallVectorImpl<const Value *> &Objects,
                                    const LoopInfo *LI = nullptr,
-                                   unsigned MaxLookup = 6);
+                                   unsigned MaxLookup = MaxLookupSearchDepth);
 
 /// This is a wrapper around getUnderlyingObjects and adds support for basic
 /// ptrtoint+arithmetic+inttoptr sequences.
@@ -721,6 +727,9 @@ LLVM_ABI bool isGuaranteedToExecuteForEveryIteration(const Instruction *I,
 /// getGuaranteedNonPoisonOp.
 LLVM_ABI bool propagatesPoison(const Use &PoisonOp);
 
+/// Return whether this intrinsic propagates poison for all operands.
+LLVM_ABI bool intrinsicPropagatesPoison(Intrinsic::ID IID);
+
 /// Return true if the given instruction must trigger undefined behavior
 /// when I is executed with any operands which appear in KnownPoison holding
 /// a poison value at the point of execution.
@@ -960,6 +969,21 @@ LLVM_ABI bool matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
 LLVM_ABI bool matchSimpleRecurrence(const BinaryOperator *I, PHINode *&P,
                                     Value *&Start, Value *&Step);
 
+/// Attempt to match a simple value-accumulating recurrence of the form:
+///   %llvm.intrinsic.acc = phi Ty [%Init, %Entry], [%llvm.intrinsic, %backedge]
+///   %llvm.intrinsic = call Ty @llvm.intrinsic(%OtherOp, %llvm.intrinsic.acc)
+/// OR
+///   %llvm.intrinsic.acc = phi Ty [%Init, %Entry], [%llvm.intrinsic, %backedge]
+///   %llvm.intrinsic = call Ty @llvm.intrinsic(%llvm.intrinsic.acc, %OtherOp)
+///
+/// The recurrence relation is of kind:
+///   X_0 = %a (initial value),
+///   X_i = call @llvm.binary.intrinsic(X_i-1, %b)
+/// Where %b is not required to be loop-invariant.
+LLVM_ABI bool matchSimpleBinaryIntrinsicRecurrence(const IntrinsicInst *I,
+                                                   PHINode *&P, Value *&Init,
+                                                   Value *&OtherOp);
+
 /// Return true if RHS is known to be implied true by LHS.  Return false if
 /// RHS is known to be implied false by LHS.  Otherwise, return std::nullopt if
 /// no implication can be made. A & B must be i1 (boolean) values or a vector of
@@ -993,6 +1017,11 @@ isImpliedByDomCondition(CmpPredicate Pred, const Value *LHS, const Value *RHS,
 LLVM_ABI void
 findValuesAffectedByCondition(Value *Cond, bool IsAssume,
                               function_ref<void(Value *)> InsertAffected);
+
+/// Returns the inner value X if the expression has the form f(X)
+/// where f(X) == 0 if and only if X == 0, otherwise returns nullptr.
+LLVM_ABI Value *stripNullTest(Value *V);
+LLVM_ABI const Value *stripNullTest(const Value *V);
 
 } // end namespace llvm
 

@@ -15,7 +15,8 @@
 #include "SourcePrinter.h"
 #include "llvm-objdump.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -109,7 +110,7 @@ void LiveVariable::print(raw_ostream &OS, const MCRegisterInfo &MRI) const {
     return {};
   };
 
-  Expression.printCompact(OS, GetRegName);
+  printDwarfExpressionCompact(&Expression, OS, GetRegName);
 }
 
 void LiveVariable::dump(raw_ostream &OS) const {

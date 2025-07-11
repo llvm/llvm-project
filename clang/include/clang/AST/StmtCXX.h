@@ -80,8 +80,8 @@ class CXXTryStmt final : public Stmt,
   CXXTryStmt(EmptyShell Empty, unsigned numHandlers)
     : Stmt(CXXTryStmtClass), NumHandlers(numHandlers) { }
 
-  Stmt *const *getStmts() const { return getTrailingObjects<Stmt *>(); }
-  Stmt **getStmts() { return getTrailingObjects<Stmt *>(); }
+  Stmt *const *getStmts() const { return getTrailingObjects(); }
+  Stmt **getStmts() { return getTrailingObjects(); }
 
 public:
   static CXXTryStmt *Create(const ASTContext &C, SourceLocation tryLoc,
@@ -339,9 +339,9 @@ class CoroutineBodyStmt final
   friend class ASTReader;
   friend TrailingObjects;
 
-  Stmt **getStoredStmts() { return getTrailingObjects<Stmt *>(); }
+  Stmt **getStoredStmts() { return getTrailingObjects(); }
 
-  Stmt *const *getStoredStmts() const { return getTrailingObjects<Stmt *>(); }
+  Stmt *const *getStoredStmts() const { return getTrailingObjects(); }
 
 public:
 

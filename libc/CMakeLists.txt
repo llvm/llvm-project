@@ -4,7 +4,7 @@ set(LLVM_SUBPROJECT_TITLE "libc")
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   message(FATAL_ERROR "Builds rooted in the libc directory are not supported. "
     "Builds should be rooted in the runtimes directory instead. "
-    "Please see the documentation at https://libc.llvm.org/usage_modes.html for more info.")
+    "Please see the documentation at https://libc.llvm.org/build_and_test.html for more info.")
 endif()
 
 # Include LLVM's cmake policies.
@@ -135,6 +135,7 @@ endif()
 option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" ${default_to_full_build})
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
+option(LLVM_LIBC_ALL_HEADERS "Outputs all functions in header files, regardless of whether they are enabled on this target" OFF)
 
 option(LIBC_CONFIG_PATH "The path to user provided folder that configures the build for the target system." OFF)
 

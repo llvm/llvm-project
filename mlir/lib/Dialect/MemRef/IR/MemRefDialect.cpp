@@ -52,8 +52,9 @@ void mlir::memref::MemRefDialect::initialize() {
   declarePromisedInterface<ConvertToLLVMPatternInterface, MemRefDialect>();
   declarePromisedInterfaces<bufferization::AllocationOpInterface, AllocOp,
                             AllocaOp, ReallocOp>();
-  declarePromisedInterfaces<RuntimeVerifiableOpInterface, CastOp, ExpandShapeOp,
-                            LoadOp, ReinterpretCastOp, StoreOp, SubViewOp>();
+  declarePromisedInterfaces<RuntimeVerifiableOpInterface, AssumeAlignmentOp,
+                            AtomicRMWOp, CastOp, CopyOp, DimOp, ExpandShapeOp,
+                            GenericAtomicRMWOp, LoadOp, StoreOp, SubViewOp>();
   declarePromisedInterfaces<ValueBoundsOpInterface, AllocOp, AllocaOp, CastOp,
                             DimOp, GetGlobalOp, RankOp, SubViewOp>();
   declarePromisedInterface<DestructurableTypeInterface, MemRefType>();

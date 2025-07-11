@@ -70,10 +70,6 @@ public:
     Config.PostPrunePasses.push_back(printGraph);
   }
 
-  void notifyLoaded(MaterializationResponsibility &MR) override {
-    outs() << "Loading object defining " << MR.getSymbols() << "\n";
-  }
-
   Error notifyEmitted(MaterializationResponsibility &MR) override {
     outs() << "Emitted object defining " << MR.getSymbols() << "\n";
     return Error::success();

@@ -3,7 +3,7 @@
 ; CHECK-LABEL: {{^}}qux
 ; CHECK: .set qux.num_vgpr, 13
 ; CHECK: .set qux.num_agpr, 0
-; CHECK: .set qux.numbered_sgpr, 0
+; CHECK: .set qux.numbered_sgpr, 32
 ; CHECK: .set qux.private_seg_size, 0
 ; CHECK: .set qux.uses_vcc, 0
 ; CHECK: .set qux.uses_flat_scratch, 0

@@ -282,7 +282,7 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
 
   /// We need to fixup the reported store size for certain value types because
   /// we invert the interpretation of ValVT and LocVT in certain cases. This is
-  /// for compatability with the DAG call lowering implementation, which we're
+  /// for compatibility with the DAG call lowering implementation, which we're
   /// currently building on top of.
   LLT getStackValueStoreType(const DataLayout &DL, const CCValAssign &VA,
                              ISD::ArgFlagsTy Flags) const override {

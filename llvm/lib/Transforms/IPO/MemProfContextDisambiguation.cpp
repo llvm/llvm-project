@@ -181,6 +181,12 @@ static cl::opt<bool> AllowRecursiveContexts(
     "memprof-allow-recursive-contexts", cl::init(true), cl::Hidden,
     cl::desc("Allow cloning of contexts having recursive cycles"));
 
+// Set the minimum absolute count threshold for allowing inlining of indirect
+// calls promoted during cloning.
+static cl::opt<unsigned> MemProfICPNoInlineThreshold(
+    "memprof-icp-noinline-threshold", cl::init(2), cl::Hidden,
+    cl::desc("Minimum absolute count for promoted target to be inlinable"));
+
 namespace llvm {
 cl::opt<bool> EnableMemProfContextDisambiguation(
     "enable-memprof-context-disambiguation", cl::init(false), cl::Hidden,
@@ -1642,7 +1648,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   // this entry.
   DenseSet<uint32_t> LastNodeContextIds = LastNode->getContextIds();
 
-  bool PrevIterCreatedNode = false;
+  [[maybe_unused]] bool PrevIterCreatedNode = false;
   bool CreatedNode = false;
   for (unsigned I = 0; I < Calls.size();
        I++, PrevIterCreatedNode = CreatedNode) {
@@ -4001,6 +4007,9 @@ ModuleCallsiteContextGraph::cloneFunctionForCallsite(
   std::string Name = getMemProfFuncName(Func.func()->getName(), CloneNo);
   assert(!Func.func()->getParent()->getFunction(Name));
   NewFunc->setName(Name);
+  if (auto *SP = NewFunc->getSubprogram())
+    SP->replaceLinkageName(
+        MDString::get(NewFunc->getParent()->getContext(), Name));
   for (auto &Inst : CallsWithMetadataInFunc) {
     // This map always has the initial version in it.
     assert(Inst.cloneNo() == 0);
@@ -4939,6 +4948,9 @@ static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
       PrevF->eraseFromParent();
     } else
       NewF->setName(Name);
+    if (auto *SP = NewF->getSubprogram())
+      SP->replaceLinkageName(
+          MDString::get(NewF->getParent()->getContext(), Name));
     ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofClone", &F)
              << "created clone " << ore::NV("NewFunction", NewF));
 
@@ -5567,6 +5579,15 @@ void MemProfContextDisambiguation::performICP(
                                  .getCallee());
         }
         DirectCall.setCalledFunction(TargetToUse);
+        // During matching we generate synthetic VP metadata for indirect calls
+        // not already having any, from the memprof profile's callee GUIDs. If
+        // we subsequently promote and inline those callees, we currently lose
+        // the ability to generate this synthetic VP metadata. Optionally apply
+        // a noinline attribute to promoted direct calls, where the threshold is
+        // set to capture synthetic VP metadata targets which get a count of 1.
+        if (MemProfICPNoInlineThreshold &&
+            Candidate.Count < MemProfICPNoInlineThreshold)
+          DirectCall.setIsNoInline();
         ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofCall", CBClone)
                  << ore::NV("Call", CBClone) << " in clone "
                  << ore::NV("Caller", CBClone->getFunction())

@@ -369,7 +369,11 @@ Align AsmPrinter::getGVAlignment(const GlobalObject *GV, const DataLayout &DL,
     Alignment = InAlign;
 
   // If the GV has a specified alignment, take it into account.
-  const MaybeAlign GVAlign(GV->getAlign());
+  MaybeAlign GVAlign;
+  if (auto *GVar = dyn_cast<GlobalVariable>(GV))
+    GVAlign = GVar->getAlign();
+  else if (auto *F = dyn_cast<Function>(GV))
+    GVAlign = F->getAlign();
   if (!GVAlign)
     return Alignment;
 
@@ -561,8 +565,11 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   if (MAI->doesSupportDebugInformation()) {
     bool EmitCodeView = M.getCodeViewFlag();
-    if (EmitCodeView &&
-        (TM.getTargetTriple().isOSWindows() || TM.getTargetTriple().isUEFI()))
+    // On Windows targets, emit minimal CodeView compiler info even when debug
+    // info is disabled.
+    if ((TM.getTargetTriple().isOSWindows() &&
+         M.getNamedMetadata("llvm.dbg.cu")) ||
+        (TM.getTargetTriple().isUEFI() && EmitCodeView))
       Handlers.push_back(std::make_unique<CodeViewDebug>(this));
     if (!EmitCodeView || M.getDwarfVersion()) {
       if (hasDebugInfo()) {
@@ -1074,13 +1081,6 @@ void AsmPrinter::emitFunctionHeader() {
 /// function.  This can be overridden by targets as required to do custom stuff.
 void AsmPrinter::emitFunctionEntryLabel() {
   CurrentFnSym->redefineIfPossible();
-
-  // The function label could have already been emitted if two symbols end up
-  // conflicting due to asm renaming.  Detect this and emit an error.
-  if (CurrentFnSym->isVariable())
-    report_fatal_error("'" + Twine(CurrentFnSym->getName()) +
-                       "' is a protected alias");
-
   OutStreamer->emitLabel(CurrentFnSym);
 
   if (TM.getTargetTriple().isOSBinFormatELF()) {
@@ -1391,7 +1391,8 @@ static uint32_t getBBAddrMapMetadata(const MachineBasicBlock &MBB) {
 }
 
 static llvm::object::BBAddrMap::Features
-getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
+getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
+                    bool HasCalls) {
   // Ensure that the user has not passed in additional options while also
   // specifying all or none.
   if ((PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::None) ||
@@ -1419,15 +1420,19 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
         "BB entries info is required for BBFreq and BrProb "
         "features");
   }
-  return {FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
+  return {FuncEntryCountEnabled,
+          BBFreqEnabled,
+          BrProbEnabled,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
-          static_cast<bool>(BBAddrMapSkipEmitBBEntries)};
+          static_cast<bool>(BBAddrMapSkipEmitBBEntries),
+          HasCalls};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   MCSection *BBAddrMapSection =
       getObjFileLowering().getBBAddrMapSection(*MF.getSection());
   assert(BBAddrMapSection && ".llvm_bb_addr_map section is not initialized.");
+  bool HasCalls = !CurrentFnCallsiteSymbols.empty();
 
   const MCSymbol *FunctionSymbol = getFunctionBegin();
 
@@ -1437,7 +1442,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   uint8_t BBAddrMapVersion = OutStreamer->getContext().getBBAddrMapVersion();
   OutStreamer->emitInt8(BBAddrMapVersion);
   OutStreamer->AddComment("feature");
-  auto Features = getBBAddrMapFeature(MF, MBBSectionRanges.size());
+  auto Features = getBBAddrMapFeature(MF, MBBSectionRanges.size(), HasCalls);
   OutStreamer->emitInt8(Features.encode());
   // Emit BB Information for each basic block in the function.
   if (Features.MultiBBRange) {
@@ -1480,26 +1485,33 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     }
 
     if (!Features.OmitBBEntries) {
-      // TODO: Remove this check when version 1 is deprecated.
-      if (BBAddrMapVersion > 1) {
-        OutStreamer->AddComment("BB id");
-        // Emit the BB ID for this basic block.
-        // We only emit BaseID since CloneID is unset for
-        // -basic-block-adress-map.
-        // TODO: Emit the full BBID when labels and sections can be mixed
-        // together.
-        OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
-      }
+      OutStreamer->AddComment("BB id");
+      // Emit the BB ID for this basic block.
+      // We only emit BaseID since CloneID is unset for
+      // -basic-block-adress-map.
+      // TODO: Emit the full BBID when labels and sections can be mixed
+      // together.
+      OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
       // Emit the basic block offset relative to the end of the previous block.
       // This is zero unless the block is padded due to alignment.
       emitLabelDifferenceAsULEB128(MBBSymbol, PrevMBBEndSymbol);
-      // Emit the basic block size. When BBs have alignments, their size cannot
-      // always be computed from their offsets.
-      emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), MBBSymbol);
+      const MCSymbol *CurrentLabel = MBBSymbol;
+      if (HasCalls) {
+        auto CallsiteSymbols = CurrentFnCallsiteSymbols.lookup(&MBB);
+        OutStreamer->AddComment("number of callsites");
+        OutStreamer->emitULEB128IntValue(CallsiteSymbols.size());
+        for (const MCSymbol *CallsiteSymbol : CallsiteSymbols) {
+          // Emit the callsite offset.
+          emitLabelDifferenceAsULEB128(CallsiteSymbol, CurrentLabel);
+          CurrentLabel = CallsiteSymbol;
+        }
+      }
+      // Emit the offset to the end of the block, which can be used to compute
+      // the total block size.
+      emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), CurrentLabel);
       // Emit the Metadata.
       OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
     }
-
     PrevMBBEndSymbol = MBB.getEndSymbol();
   }
 
@@ -1828,6 +1840,8 @@ void AsmPrinter::emitFunctionBody() {
           !MI.isDebugInstr()) {
         HasAnyRealCode = true;
       }
+      if (MI.isCall() && MF->getTarget().Options.BBAddrMap)
+        OutStreamer->emitLabel(createCallsiteSymbol(MBB));
 
       // If there is a pre-instruction symbol, emit a label for it here.
       if (MCSymbol *S = MI.getPreInstrSymbol())
@@ -2139,16 +2153,20 @@ void AsmPrinter::emitFunctionBody() {
 }
 
 /// Compute the number of Global Variables that uses a Constant.
-static unsigned getNumGlobalVariableUses(const Constant *C) {
-  if (!C)
+static unsigned getNumGlobalVariableUses(const Constant *C,
+                                         bool &HasNonGlobalUsers) {
+  if (!C) {
+    HasNonGlobalUsers = true;
     return 0;
+  }
 
   if (isa<GlobalVariable>(C))
     return 1;
 
   unsigned NumUses = 0;
   for (const auto *CU : C->users())
-    NumUses += getNumGlobalVariableUses(dyn_cast<Constant>(CU));
+    NumUses +=
+        getNumGlobalVariableUses(dyn_cast<Constant>(CU), HasNonGlobalUsers);
 
   return NumUses;
 }
@@ -2159,7 +2177,8 @@ static unsigned getNumGlobalVariableUses(const Constant *C) {
 /// candidates are skipped and are emitted later in case at least one cstexpr
 /// isn't replaced by a PC relative GOT entry access.
 static bool isGOTEquivalentCandidate(const GlobalVariable *GV,
-                                     unsigned &NumGOTEquivUsers) {
+                                     unsigned &NumGOTEquivUsers,
+                                     bool &HasNonGlobalUsers) {
   // Global GOT equivalents are unnamed private globals with a constant
   // pointer initializer to another global symbol. They must point to a
   // GlobalVariable or Function, i.e., as GlobalValue.
@@ -2171,7 +2190,8 @@ static bool isGOTEquivalentCandidate(const GlobalVariable *GV,
   // To be a got equivalent, at least one of its users need to be a constant
   // expression used by another global variable.
   for (const auto *U : GV->users())
-    NumGOTEquivUsers += getNumGlobalVariableUses(dyn_cast<Constant>(U));
+    NumGOTEquivUsers +=
+        getNumGlobalVariableUses(dyn_cast<Constant>(U), HasNonGlobalUsers);
 
   return NumGOTEquivUsers > 0;
 }
@@ -2189,9 +2209,13 @@ void AsmPrinter::computeGlobalGOTEquivs(Module &M) {
 
   for (const auto &G : M.globals()) {
     unsigned NumGOTEquivUsers = 0;
-    if (!isGOTEquivalentCandidate(&G, NumGOTEquivUsers))
+    bool HasNonGlobalUsers = false;
+    if (!isGOTEquivalentCandidate(&G, NumGOTEquivUsers, HasNonGlobalUsers))
       continue;
-
+    // If non-global variables use it, we still need to emit it.
+    // Add 1 here, then emit it in `emitGlobalGOTEquivs`.
+    if (HasNonGlobalUsers)
+      NumGOTEquivUsers += 1;
     const MCSymbol *GOTEquivSym = getSymbol(&G);
     GlobalGOTEquivs[GOTEquivSym] = std::make_pair(&G, NumGOTEquivUsers);
   }
@@ -2376,6 +2400,15 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   if (!RS.needsSection())
     return;
 
+  MCSection *RemarksSection =
+      OutContext.getObjectFileInfo()->getRemarksSection();
+  if (!RemarksSection) {
+    OutContext.reportWarning(SMLoc(), "Current object file format does not "
+                                      "support remarks sections. Use the yaml "
+                                      "remark format instead.");
+    return;
+  }
+
   remarks::RemarkSerializer &RemarkSerializer = RS.getSerializer();
 
   std::optional<SmallString<128>> Filename;
@@ -2393,10 +2426,7 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   MetaSerializer->emit();
 
   // Switch to the remarks section.
-  MCSection *RemarksSection =
-      OutContext.getObjectFileInfo()->getRemarksSection();
   OutStreamer->switchSection(RemarksSection);
-
   OutStreamer->emitBinaryData(Buf);
 }
 
@@ -2759,6 +2789,14 @@ MCSymbol *AsmPrinter::getMBBExceptionSym(const MachineBasicBlock &MBB) {
   return Res.first->second;
 }
 
+MCSymbol *AsmPrinter::createCallsiteSymbol(const MachineBasicBlock &MBB) {
+  MCContext &Ctx = MF->getContext();
+  MCSymbol *Sym = Ctx.createTempSymbol("BB" + Twine(MF->getFunctionNumber()) +
+                                       "_" + Twine(MBB.getNumber()) + "_CS");
+  CurrentFnCallsiteSymbols[&MBB].push_back(Sym);
+  return Sym;
+}
+
 void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   this->MF = &MF;
   const Function &F = MF.getFunction();
@@ -2793,6 +2831,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   CurrentFnBegin = nullptr;
   CurrentFnBeginLocal = nullptr;
   CurrentSectionBeginSym = nullptr;
+  CurrentFnCallsiteSymbols.clear();
   MBBSectionRanges.clear();
   MBBSectionExceptionSyms.clear();
   bool NeedsLocalForSize = MAI->needsLocalForSize();
@@ -3194,7 +3233,10 @@ bool AsmPrinter::emitSpecialLLVMGlobal(const GlobalVariable *GV) {
     return true;
   }
 
-  report_fatal_error("unknown special variable with appending linkage");
+  GV->getContext().emitError(
+      "unknown special variable with appending linkage: " +
+      GV->getNameOrAsOperand());
+  return true;
 }
 
 /// EmitLLVMUsedList - For targets that define a MAI::UsedDirective, mark each
@@ -3230,9 +3272,11 @@ void AsmPrinter::preprocessXXStructorList(const DataLayout &DL,
     S.Priority = Priority->getLimitedValue(65535);
     S.Func = CS->getOperand(1);
     if (!CS->getOperand(2)->isNullValue()) {
-      if (TM.getTargetTriple().isOSAIX())
-        llvm::report_fatal_error(
+      if (TM.getTargetTriple().isOSAIX()) {
+        CS->getContext().emitError(
             "associated data of XXStructor list is not yet supported on AIX");
+      }
+
       S.ComdatKey =
           dyn_cast<GlobalValue>(CS->getOperand(2)->stripPointerCasts());
     }
@@ -3590,10 +3634,11 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
   // Otherwise report the problem to the user.
   std::string S;
   raw_string_ostream OS(S);
-  OS << "Unsupported expression in static initializer: ";
+  OS << "unsupported expression in static initializer: ";
   CE->printAsOperand(OS, /*PrintType=*/false,
                      !MF ? nullptr : MF->getFunction().getParent());
-  report_fatal_error(Twine(S));
+  CE->getContext().emitError(S);
+  return MCConstantExpr::create(0, Ctx);
 }
 
 static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *C,
@@ -4606,12 +4651,10 @@ void AsmPrinter::emitXRayTable() {
 
   // We then emit a single entry in the index per function. We use the symbols
   // that bound the instrumentation map as the range for a specific function.
-  // Each entry here will be 2 * word size aligned, as we're writing down two
-  // pointers. This should work for both 32-bit and 64-bit platforms.
+  // Each entry contains 2 words and needs to be word-aligned.
   if (FnSledIndex) {
     OutStreamer->switchSection(FnSledIndex);
-    OutStreamer->emitCodeAlignment(Align(2 * WordSizeBytes),
-                                   &getSubtargetInfo());
+    OutStreamer->emitValueToAlignment(Align(WordSizeBytes));
     // For Mach-O, use an "l" symbol as the atom of this subsection. The label
     // difference uses a SUBTRACTOR external relocation which references the
     // symbol.

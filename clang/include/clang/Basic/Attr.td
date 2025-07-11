@@ -492,9 +492,22 @@ def TargetHasDLLImportExport : TargetSpec {
 def TargetItaniumCXXABI : TargetSpec {
   let CustomCode = [{ Target.getCXXABI().isItaniumFamily() }];
 }
+
 def TargetMicrosoftCXXABI : TargetArch<["x86", "x86_64", "arm", "thumb", "aarch64"]> {
   let CustomCode = [{ Target.getCXXABI().isMicrosoft() }];
 }
+
+// The target follows Microsoft record layout. Usually this happens in two
+// cases: 1. the target itself has Microsoft C++ ABI, e.g. x86_64 in MSVC
+// environment on Windows 2. an offloading target e.g. amdgcn or nvptx with
+// a host target in MSVC environment on Windows.
+def TargetMicrosoftRecordLayout : TargetArch<["x86", "x86_64", "arm", "thumb",
+                                              "aarch64", "amdgcn", "nvptx",
+                                              "nvptx64", "spirv", "spirv32",
+                                              "spirv64"]> {
+  let CustomCode = [{ Target.hasMicrosoftRecordLayout() }];
+}
+
 def TargetELF : TargetSpec {
   let ObjectFormats = ["ELF"];
 }
@@ -965,6 +978,13 @@ def AnalyzerNoReturn : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def InferredNoReturn : InheritableAttr {
+  let Spellings = []; 
+  let SemaHandler = 0;
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [InternalOnly];
+}
+
 def Annotate : InheritableParamOrStmtAttr {
   let Spellings = [Clang<"annotate">];
   let Args = [StringArgument<"Annotation">, VariadicExprArgument<"Args">];
@@ -1111,6 +1131,8 @@ static llvm::StringRef canonicalizePlatformName(llvm::StringRef Platform) {
     return llvm::StringSwitch<llvm::StringRef>(Platform)
              .Case("iOS", "ios")
              .Case("macOS", "macos")
+             .Case("macOSX", "macos")
+             .Case("macosx", "macos")
              .Case("tvOS", "tvos")
              .Case("watchOS", "watchos")
              .Case("iOSApplicationExtension", "ios_app_extension")
@@ -1175,6 +1197,26 @@ static llvm::Triple::EnvironmentType getEnvironmentType(llvm::StringRef Environm
              .Case("library", llvm::Triple::Library)
              .Default(llvm::Triple::UnknownEnvironment);
 }
+
+static llvm::Triple::OSType getOSType(llvm::StringRef Platform) {
+    using OSType = llvm::Triple::OSType;
+    return llvm::StringSwitch<OSType>(Platform)
+             .Case("ios", OSType::IOS)
+             .Case("macos", OSType::MacOSX)
+             .Case("maccatalyst", OSType::IOS)
+             .Case("tvos", OSType::TvOS)
+             .Case("watchos", OSType::WatchOS)
+             .Case("bridgeos", OSType::BridgeOS)
+             .Case("ios_app_extension", OSType::IOS)
+             .Case("maccatalyst_app_extension", OSType::IOS)
+             .Case("macos_app_extension", OSType::MacOSX)
+             .Case("tvos_app_extension", OSType::TvOS)
+             .Case("watchos_app_extension", OSType::WatchOS)
+             .Case("xros", OSType::XROS)
+             .Case("xros_app_extension", OSType::XROS)
+             .Default(OSType::UnknownOS);
+}
+
 }];
   let HasCustomParsing = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -1590,11 +1632,11 @@ def DeviceKernel : DeclOrTypeAttr {
     // list, but here we have the same spelling with unscores and without,
     // so handle that case manually.
       return A.getAttributeSpellingListIndex() == Keyword_kernel ||
-      A.getAttrName()->getName() == "kernel";
+      (A.getAttrName() && A.getAttrName()->getName() == "kernel");
     }
     static inline bool isOpenCLSpelling(const AttributeCommonInfo* A) {
-    if (!A) return false;
-    return isOpenCLSpelling(*A);
+      if (!A) return false;
+      return isOpenCLSpelling(*A);
     }
 }];
 }
@@ -1760,7 +1802,7 @@ def Destructor : InheritableAttr {
   let Documentation = [CtorDtorDocs];
 }
 
-def EmptyBases : InheritableAttr, TargetSpecificAttr<TargetMicrosoftCXXABI> {
+def EmptyBases : InheritableAttr, TargetSpecificAttr<TargetMicrosoftRecordLayout> {
   let Spellings = [Declspec<"empty_bases">];
   let Subjects = SubjectList<[CXXRecord]>;
   let Documentation = [EmptyBasesDocs];
@@ -1992,7 +2034,7 @@ def Restrict : InheritableAttr {
   let Documentation = [RestrictDocs];
 }
 
-def LayoutVersion : InheritableAttr, TargetSpecificAttr<TargetMicrosoftCXXABI> {
+def LayoutVersion : InheritableAttr, TargetSpecificAttr<TargetMicrosoftRecordLayout> {
   let Spellings = [Declspec<"layout_version">];
   let Args = [UnsignedArgument<"Version">];
   let Subjects = SubjectList<[CXXRecord]>;
@@ -2210,7 +2252,7 @@ def NoUniqueAddress : InheritableAttr {
   let Spellings = [CXX11<"", "no_unique_address", 201803>, CXX11<"msvc", "no_unique_address", 201803>];
   let TargetSpecificSpellings = [
     TargetSpecificSpelling<TargetItaniumCXXABI, [CXX11<"", "no_unique_address", 201803>]>,
-    TargetSpecificSpelling<TargetMicrosoftCXXABI, [CXX11<"msvc", "no_unique_address", 201803>]>,
+    TargetSpecificSpelling<TargetMicrosoftRecordLayout, [CXX11<"msvc", "no_unique_address", 201803>]>,
   ];
   let Documentation = [NoUniqueAddressDocs];
 }
@@ -3026,6 +3068,26 @@ def Regparm : TypeAttr {
   let ASTNode = 0;
 }
 
+def SwiftType : Attr {
+  // This attribute has no spellings as it is only ever created implicitly
+  // from API notes.
+  let Spellings = [];
+  let Args = [StringArgument<"TypeString">];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
+}
+
+def SwiftNullability : Attr {
+  // This attribute has no spellings as it is only ever created implicitly
+  // from API notes.
+  let Spellings = [];
+  let Args = [EnumArgument<"Kind", "Kind", /*is_string=*/false,
+                           ["non_null", "nullable", "unspecified", "nullable_result"],
+                           ["NonNull", "Nullable", "Unspecified", "NullableResult"]>];
+  let SemaHandler = 0;
+  let Documentation = [InternalOnly];
+}
+
 def SwiftAsyncName : InheritableAttr {
   let Spellings = [GNU<"swift_async_name">];
   let Args = [StringArgument<"Name">];
@@ -3713,6 +3775,7 @@ def Visibility : InheritableAttr {
                            ["default", "hidden", "internal", "protected"],
                            ["Default", "Hidden", "Hidden", "Protected"]>];
   let MeaningfulToClassTemplateDefinition = 1;
+  let PragmaAttributeSupport = 1;
   let Documentation = [Undocumented];
 }
 
@@ -4608,6 +4671,7 @@ def OMPDeclareVariant : InheritableAttr {
     OMPTraitInfoArgument<"TraitInfos">,
     VariadicExprArgument<"AdjustArgsNothing">,
     VariadicExprArgument<"AdjustArgsNeedDevicePtr">,
+    VariadicExprArgument<"AdjustArgsNeedDeviceAddr">,
     VariadicOMPInteropInfoArgument<"AppendArgs">,
   ];
   let AdditionalMembers = [{
@@ -4879,6 +4943,13 @@ def HLSLResourceBinding: InheritableAttr {
   }];
 }
 
+def HLSLSV_Position : HLSLAnnotationAttr {
+  let Spellings = [HLSLAnnotation<"sv_position">];
+  let Subjects = SubjectList<[ParmVar, Field]>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLSV_PositionDocs];
+}
+
 def HLSLPackOffset: HLSLAnnotationAttr {
   let Spellings = [HLSLAnnotation<"packoffset">];
   let LangOpts = [HLSL];
@@ -4991,6 +5062,14 @@ def HLSLVkExtBuiltinInput : InheritableAttr {
   let Subjects = SubjectList<[HLSLInputBuiltin], ErrorDiag>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLVkExtBuiltinInputDocs];
+}
+
+def HLSLVkConstantId : InheritableAttr {
+  let Spellings = [CXX11<"vk", "constant_id">];
+  let Args = [IntArgument<"Id">];
+  let Subjects = SubjectList<[ExternalGlobalVar]>;
+  let LangOpts = [HLSL];
+  let Documentation = [VkConstantIdDocs];
 }
 
 def RandomizeLayout : InheritableAttr {

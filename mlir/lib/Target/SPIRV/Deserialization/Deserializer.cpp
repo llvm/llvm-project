@@ -867,11 +867,15 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
     typeMap[operands[0]] = IntegerType::get(context, operands[1], sign);
   } break;
   case spirv::Opcode::OpTypeFloat: {
-    if (operands.size() != 2)
-      return emitError(unknownLoc, "OpTypeFloat must have bitwidth parameter");
+    if (operands.size() != 2 && operands.size() != 3)
+      return emitError(unknownLoc,
+                       "OpTypeFloat expects either 2 operands (type, bitwidth) "
+                       "or 3 operands (type, bitwidth, encoding), but got ")
+             << operands.size();
+    uint32_t bitWidth = operands[1];
 
     Type floatTy;
-    switch (operands[1]) {
+    switch (bitWidth) {
     case 16:
       floatTy = opBuilder.getF16Type();
       break;
@@ -883,8 +887,20 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
       break;
     default:
       return emitError(unknownLoc, "unsupported OpTypeFloat bitwidth: ")
-             << operands[1];
+             << bitWidth;
     }
+
+    if (operands.size() == 3) {
+      if (spirv::FPEncoding(operands[2]) != spirv::FPEncoding::BFloat16KHR)
+        return emitError(unknownLoc, "unsupported OpTypeFloat FP encoding: ")
+               << operands[2];
+      if (bitWidth != 16)
+        return emitError(unknownLoc,
+                         "invalid OpTypeFloat bitwidth for bfloat16 encoding: ")
+               << bitWidth << " (expected 16)";
+      floatTy = opBuilder.getBF16Type();
+    }
+
     typeMap[operands[0]] = floatTy;
   } break;
   case spirv::Opcode::OpTypeVector: {
@@ -919,6 +935,8 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
     return processStructType(operands);
   case spirv::Opcode::OpTypeMatrix:
     return processMatrixType(operands);
+  case spirv::Opcode::OpTypeTensorARM:
+    return processTensorARMType(operands);
   default:
     return emitError(unknownLoc, "unhandled type instruction");
   }
@@ -1223,6 +1241,55 @@ spirv::Deserializer::processMatrixType(ArrayRef<uint32_t> operands) {
 }
 
 LogicalResult
+spirv::Deserializer::processTensorARMType(ArrayRef<uint32_t> operands) {
+  unsigned size = operands.size();
+  if (size < 2 || size > 4)
+    return emitError(unknownLoc, "OpTypeTensorARM must have 2-4 operands "
+                                 "(result_id, element_type, (rank), (shape)) ")
+           << size;
+
+  Type elementTy = getType(operands[1]);
+  if (!elementTy)
+    return emitError(unknownLoc,
+                     "OpTypeTensorARM references undefined element type ")
+           << operands[1];
+
+  if (size == 2) {
+    typeMap[operands[0]] = TensorArmType::get({}, elementTy);
+    return success();
+  }
+
+  IntegerAttr rankAttr = getConstantInt(operands[2]);
+  if (!rankAttr)
+    return emitError(unknownLoc, "OpTypeTensorARM rank must come from a "
+                                 "scalar integer constant instruction");
+  unsigned rank = rankAttr.getValue().getZExtValue();
+  if (size == 3) {
+    SmallVector<int64_t, 4> shape(rank, ShapedType::kDynamic);
+    typeMap[operands[0]] = TensorArmType::get(shape, elementTy);
+    return success();
+  }
+
+  std::optional<std::pair<Attribute, Type>> shapeInfo =
+      getConstant(operands[3]);
+  if (!shapeInfo)
+    return emitError(unknownLoc, "OpTypeTensorARM shape must come from a "
+                                 "constant instruction of type OpTypeArray");
+
+  ArrayAttr shapeArrayAttr = llvm::dyn_cast<ArrayAttr>(shapeInfo->first);
+  SmallVector<int64_t, 1> shape;
+  for (auto dimAttr : shapeArrayAttr.getValue()) {
+    auto dimIntAttr = llvm::dyn_cast<IntegerAttr>(dimAttr);
+    if (!dimIntAttr)
+      return emitError(unknownLoc, "OpTypeTensorARM shape has an invalid "
+                                   "dimension size");
+    shape.push_back(dimIntAttr.getValue().getSExtValue());
+  }
+  typeMap[operands[0]] = TensorArmType::get(shape, elementTy);
+  return success();
+}
+
+LogicalResult
 spirv::Deserializer::processTypeForwardPointer(ArrayRef<uint32_t> operands) {
   if (operands.size() != 2)
     return emitError(unknownLoc,
@@ -1399,6 +1466,9 @@ LogicalResult spirv::Deserializer::processConstant(ArrayRef<uint32_t> operands,
     } else if (floatType.isF16()) {
       APInt data(16, operands[2]);
       value = APFloat(APFloat::IEEEhalf(), data);
+    } else if (floatType.isBF16()) {
+      APInt data(16, operands[2]);
+      value = APFloat(APFloat::BFloat(), data);
     }
 
     auto attr = opBuilder.getFloatAttr(floatType, value);
@@ -1468,11 +1538,11 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
   }
 
   auto resultID = operands[1];
-  if (auto vectorType = dyn_cast<VectorType>(resultType)) {
-    auto attr = DenseElementsAttr::get(vectorType, elements);
+  if (auto shapedType = dyn_cast<ShapedType>(resultType)) {
+    auto attr = DenseElementsAttr::get(shapedType, elements);
     // For normal constants, we just record the attribute (and its type) for
     // later materialization at use sites.
-    constantMap.try_emplace(resultID, attr, resultType);
+    constantMap.try_emplace(resultID, attr, shapedType);
   } else if (auto arrayType = dyn_cast<spirv::ArrayType>(resultType)) {
     auto attr = opBuilder.getArrayAttr(elements);
     constantMap.try_emplace(resultID, attr, resultType);

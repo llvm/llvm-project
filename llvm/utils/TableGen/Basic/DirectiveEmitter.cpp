@@ -685,7 +685,8 @@ static void emitLeafTable(const DirectiveLanguage &DirLang, raw_ostream &OS,
     auto &LeavesB = LeafTable[B];
     int DirA = LeavesA[0], DirB = LeavesB[0];
     // First of all, end directives compare greater than non-end directives.
-    int IsEndA = EndDirectives.count(DirA), IsEndB = EndDirectives.count(DirB);
+    bool IsEndA = EndDirectives.contains(DirA);
+    bool IsEndB = EndDirectives.contains(DirB);
     if (IsEndA != IsEndB)
       return IsEndA < IsEndB;
     if (LeavesA[1] == 0 && LeavesB[1] == 0)
@@ -725,7 +726,7 @@ static void emitLeafTable(const DirectiveLanguage &DirLang, raw_ostream &OS,
 
   // Emit a marker where the first "end directive" is.
   auto FirstE = find_if(Ordering, [&](int RowIdx) {
-    return EndDirectives.count(LeafTable[RowIdx][0]);
+    return EndDirectives.contains(LeafTable[RowIdx][0]);
   });
   OS << "[[maybe_unused]] static auto " << TableName
      << "EndDirective = " << TableName << " + "

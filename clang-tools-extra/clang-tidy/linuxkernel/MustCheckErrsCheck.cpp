@@ -19,8 +19,7 @@ void MustCheckErrsCheck::registerMatchers(MatchFinder *Finder) {
                               "ERR_CAST", "PTR_ERR_OR_ZERO"));
   auto NonCheckingStmts = stmt(anyOf(compoundStmt(), labelStmt()));
   Finder->addMatcher(
-      callExpr(callee(ErrFn), hasParent(NonCheckingStmts)).bind("call"),
-      this);
+      callExpr(callee(ErrFn), hasParent(NonCheckingStmts)).bind("call"), this);
 
   auto ReturnToCheck = returnStmt(hasReturnValue(callExpr(callee(ErrFn))));
   auto ReturnsErrFn = functionDecl(hasDescendant(ReturnToCheck));
