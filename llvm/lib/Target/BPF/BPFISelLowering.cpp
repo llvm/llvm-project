@@ -72,8 +72,10 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   setStackPointerRegisterToSaveRestore(BPF::R11);
 
   setOperationAction(ISD::BR_CC, MVT::i64, Custom);
-  setOperationAction(ISD::BR_JT, MVT::Other, Custom);
   setOperationAction(ISD::BRCOND, MVT::Other, Expand);
+  LegalizeAction IndirectBrAction = STI.hasGotox() ? Custom : Expand;
+  setOperationAction(ISD::BR_JT, MVT::Other, IndirectBrAction);
+  setOperationAction(ISD::BRIND, MVT::Other, IndirectBrAction);
 
   setOperationAction(ISD::TRAP, MVT::Other, Custom);
 
