@@ -2404,8 +2404,8 @@ void VPlanTransforms::simplifyEVLIVs(VPlan &Plan) {
     EVLPhi->eraseFromParent();
 
     // Find the latch-exiting block and convert to variable-length stepping.
-    // Before: (branch-on-cond CanonicalIVInc, VectorTripCount)
-    // After: (branch-on-cond EVLIVInc, TripCount)
+    // Before: (branch-on-count CanonicalIVInc, VectorTripCount)
+    // After: (branch-on-count EVLIVInc, TripCount)
     auto FindLatchExiting = [](VPBasicBlock *Entry) {
       auto Range =
           VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(Entry));
