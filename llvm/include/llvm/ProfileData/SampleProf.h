@@ -324,7 +324,8 @@ struct LineLocationHash {
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
 
-/// Key represents the id of a vtable and value represents its count.
+/// FunctionId refers to vtable symbol (the type of C++ polymorphic class), and
+/// value represents its count.
 /// TODO: Rename class FunctionId to SymbolId in a separate PR.
 using TypeCountMap = std::map<FunctionId, uint64_t>;
 
@@ -1016,13 +1017,12 @@ public:
     return CallsiteSamples;
   }
 
-  /// Return all the callsite type samples collected in the body of the
-  /// function.
+  /// Return vtable access sampels for the C++ types collected.
   const CallsiteTypeMap &getCallsiteTypeCounts() const {
     return VirtualCallsiteTypeCounts;
   }
 
-  /// Returns the type samples for the un-drifted location of \p Loc.
+  /// Returns vtable access samples for the un-drifted location of \p Loc.
   TypeCountMap &getTypeSamplesAt(const LineLocation &Loc) {
     return VirtualCallsiteTypeCounts[mapIRLocToProfileLoc(Loc)];
   }
@@ -1353,10 +1353,11 @@ private:
   /// collected in the call to baz() at line offset 8.
   CallsiteSampleMap CallsiteSamples;
 
-  /// Map virtual callsites to the vtable from which they are loaded.
+  /// Map a virtual callsite to the lsit of accessed vtables, The virtual
+  /// callsite is referenced by its source location, and the value is the list
+  /// of vtables and their sampled counts.
   ///
-  /// Each entry is a mapping from the location to the list of vtables and their
-  /// sampled counts. For example, given:
+  /// For example, given:
   ///
   ///     void foo() {
   ///       ...
