@@ -1,16 +1,16 @@
 # Key Instructions debug info in LLVM
 
-Key Instructions reduces the jumpiness of optimized code debug stepping. This document explains the feature and how it is implemented in LLVM. For Clang support please see the Clang docs.
+Key Instructions reduces the jumpiness of optimized code debug stepping. This document explains the feature and how it is implemented in LLVM. For Clang support please see the [Clang docs](../../clang/docs/KeyInstructionsClang.md)
 
 ## Status
 
-In development - some details may change with little notice.
+In development, but mostly complete. The feature is currently disabled for coroutines.
 
 Tell Clang [not] to produce Key Instructions metadata with `-g[no-]key-instructions`. See the Clang docs for implementation info.
 
 The feature improves optimized code stepping; it's intended for the feature to be used with optimisations enabled. Although the feature works at O0 it is not recommended because in some cases the effect of editing variables may not always be immediately realised. (This is a quirk of the current implementation, rather than fundemental limitation, covered in more detail later).
 
-There is currently no plan to support CodeView.
+This is a DWARF-based feature. There is currently no plan to support CodeView.
 
 Set LLVM flag `-dwarf-use-key-instructions` to `false` to ignore Key Instructions metadata when emitting DWARF.
 
@@ -18,9 +18,9 @@ Set LLVM flag `-dwarf-use-key-instructions` to `false` to ignore Key Instruction
 
 A lot of the noise in stepping comes from code motion and instruction scheduling. Consider a long expression on a single line. It may involve multiple operations that optimisations move, re-order, and interleave with other instructions that have different line numbers.
 
-DWARF provides a helpful tool the compiler can employ to mitigate this jumpiness, the is_stmt flag, which indicates that an instruction is a recommended breakpoint location. However, LLVM's current approach to deciding is_stmt placement essentially reduces down to "is the associated line number different to the previous instruction's?".
+DWARF provides a helpful tool the compiler can employ to mitigate this jumpiness, the `is_stmt` flag, which indicates that an instruction is a recommended breakpoint location. However, LLVM's current approach to deciding `is_stmt` placement essentially reduces down to "is the associated line number different to the previous instruction's?".
 
-(Note: It's up to the debugger if it wants to interpret is_stmt or not, and at time of writing LLDB doesn't; possibly because LLVM's is_stmts convey no information that can't already be deduced from the rest of the line table.)
+(Note: It's up to the debugger if it wants to interpret `is_stmt` or not, and at time of writing LLDB doesn't; possibly because until now LLVM's is_stmts convey no information that can't already be deduced from the rest of the line table.)
 
 ## Solution overview
 
@@ -39,27 +39,27 @@ From the perspective of a source-level debugger user:
 1. `DILocation` has 2 new fields, `atomGroup` and `atomRank`. `DISubprogram` has a new field `keyInstructions`.
 2. Clang creates `DILocations` using the new fields to communicate which instructions are "interesting", and sets `keyInstructions` true in `DISubprogram`s to tell LLVM to interpret the new metadata in those functions.
 3. There’s some bookkeeping required by optimisations that duplicate control flow.
-4. During DWARF emission, the new metadata is collected (linear scan over instructions) to decide is_stmt placements.
+4. During DWARF emission, the new metadata is collected (linear scan over instructions) to decide `is_stmt` placements.
 
-1. *The metadata* - The two new `DILocation` fields are `atomGroup` and `atomRank`. Both are unsigned integers. Instructions in the same function with the same `(atomGroup, inlinedAt)` pair are part of the same source atom. `atomRank` determines is_stmt preference within that group, where a lower number is higher precedence. Higher rank instructions act as "backup" is_stmt locations, providing good fallback locations if/when the primary candidate gets optimized away. The default values of 0 indicate the instruction isn’t interesting - it's not an is_stmt candidate. If `keyInstructions` in `DISubprogram` is false (default) then the new `DILocation` metadata is ignored for the function (including inlined instances) when emitting DWARF.
+1. *The metadata* - The two new `DILocation` fields are `atomGroup` and `atomRank` and are both are unsigned integers. `atomGroup` is 61 bits and `atomRank` 3 bits. Instructions in the same function with the same `(atomGroup, inlinedAt)` pair are part of the same source atom. `atomRank` determines `is_stmt` preference within that group, where a lower number is higher precedence. Higher rank instructions act as "backup" `is_stmt` locations, providing good fallback locations if/when the primary candidate gets optimized away. The default values of 0 indicate the instruction isn’t interesting - it's not an `is_stmt` candidate. If `keyInstructions` in `DISubprogram` is false (default) then the new `DILocation` metadata is ignored for the function (including inlined instances) when emitting DWARF.
 
 2. *Clang annotates key instructions* with the new metadata. Variable assignments (stores, memory intrinsics), control flow (branches and their conditions, some unconditional branches), and exception handling instructions are annotated. Calls are ignored as they're unconditionally marked is_stmt.
 
-3. *Throughout optimisation*, the DILocation is propagated normally. Cloned instructions get the original’s DILocation, the new fields get merged in getMergedLocation, etc. However, pass writers need to intercede in cases where a code path is duplicated, e.g. unrolling, jump-threading. In these cases we want to emit key instructions in both the original and duplicated code, so the duplicated must be assigned new `atomGroup` numbers, in a similar way that instruction operands must get remapped. There’s facilities to help this: `mapAtomInstance(const DebugLoc &DL, ValueToValueMapTy &VMap)` adds an entry to `VMap` which can later be used for remapping using `llvm::RemapSourceAtom(Instruction *I, ValueToValueMapTy &VM)`. `mapAtomInstance` is called from `llvm::CloneBasicBlock` and `llvm::RemapSourceAtom` is called from `llvm::RemapInstruction` so in many cases no additional effort is actually needed.
+3. *Throughout optimisation*, the `DILocation` is propagated normally. Cloned instructions get the original’s `DILocation`, the new fields get merged in `getMergedLocation`, etc. However, pass writers need to intercede in cases where a code path is duplicated, e.g. unrolling, jump-threading. In these cases we want to emit key instructions in both the original and duplicated code, so the duplicated must be assigned new `atomGroup` numbers, in a similar way that instruction operands must get remapped. There are facilities to help this: `mapAtomInstance(const DebugLoc &DL, ValueToValueMapTy &VMap)` adds an entry to `VMap` which can later be used for remapping using `llvm::RemapSourceAtom(Instruction *I, ValueToValueMapTy &VM)`. `mapAtomInstance` is called from `llvm::CloneBasicBlock` and `llvm::RemapSourceAtom` is called from `llvm::RemapInstruction` so in many cases no additional work is actually needed.
 
 `mapAtomInstance` ensures `LLVMContextImpl::NextAtomGroup` is kept up to date, which is the global “next available atom number”.
 
 The `DILocations` carry over from IR to MIR as normal, without any changes.
 
-4. *DWARF emission* - Iterate over all instructions in a function. For each `(atomGroup, inlinedAt)` pair we find the set of instructions sharing the lowest rank. Only the last of these instructions in each basic block is included in the set. The instructions in this set get is_stmt applied to their source locations. That `is_stmt` then "floats" to the top of contiguous sequence of instructions with the same line number in the same block. That has two benefits when optimisations are enabled. First, this floats `is_stmt` to the top of epilogue instructions (rather than applying it to the `ret` instruction itself) which is important to avoid losing variable location coverage at return statements. Second, it reduces the difference in optimized code stepping behaviour between when Key Instructions is enabled and disabled in “uninteresting” cases. I.e., it appears to generally reduce unnecessary changes in stepping.
+4. *DWARF emission* - Iterate over all instructions in a function. For each `(atomGroup, inlinedAt)` pair we find the set of instructions sharing the lowest rank. Only the last of these instructions in each basic block is included in the set. The instructions in this set get `is_stmt` applied to their source locations. That `is_stmt` then "floats" to the top of contiguous sequence of instructions with the same line number in the same basic block. That has two benefits when optimisations are enabled. First, this floats `is_stmt` to the top of epilogue instructions (rather than applying it to the `ret` instruction itself) which is important to avoid losing variable location coverage at return statements. Second, it reduces the difference in optimized code stepping behaviour between when Key Instructions is enabled and disabled in “uninteresting” cases. I.e., it appears to generally reduce unnecessary changes in stepping.
 
 We’ve used contiguous line numbers rather than atom membership as the test there because of our choice to represent source atoms with a single integer ID. We can’t have instructions belonging to multiple atom groups or represent any kind of grouping hierarchy. That means we can’t rely on all the call setup instructions being in the same group currently (e.g., if one of the argument expressions contains key functionality such as a store, it will be in its own group).
 
 ## Adding the feature to a front end
 
-Front ends that want to use the feature need to do some heavy lifting; they need to annotate Key Instructions and their backups with `DILocations` with the necessary `atomGroup` and `atomRank` values.  It also needs to set `keyInstructions` true in `DISubprogram`s to tell LLVM to interpret the new metadata in those functions.
+Front ends that want to use the feature need to do some heavy lifting; they need to annotate Key Instructions and their backups with `DILocations` with the necessary `atomGroup` and `atomRank` values. They also need to set `keyInstructions` true in `DISubprogram`s to tell LLVM to interpret the new metadata in those functions.
 
-The prototype had LLVM annotate instructions (instead of Clang) using simple heuristics (just looking at kind of instructions). This doesn't exist anywhere upstream, but could be shared if there's interest (e.g., so another front end can try it out before committing to a full implementation ), feel fre to reach out on Discourse (@OCHyams).
+The prototype had LLVM annotate instructions (instead of Clang) using simple heuristics (just looking at kind of instructions). This doesn't exist anywhere upstream, but could be shared if there's interest (e.g., so another front end can try it out before committing to a full implementation), feel fre to reach out on Discourse (@OCHyams, @jmorse).
 
 ## Limitations
 
