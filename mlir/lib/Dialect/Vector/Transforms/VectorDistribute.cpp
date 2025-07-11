@@ -17,12 +17,8 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Value.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/RegionUtils.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -1787,11 +1783,11 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     // index and the corresponding new `WarpOp` yield value index (needed to
     // update users later).
     llvm::SmallDenseMap<unsigned, unsigned> nonForResultMapping;
-    for (auto [i, v] : llvm::enumerate(nonForYieldedValues)) {
-      nonForResultMapping[nonForResultIndices[i]] = newWarpOpYieldValues.size();
+    for (auto [i, v] :
+         llvm::zip_equal(nonForResultIndices, nonForYieldedValues)) {
+      nonForResultMapping[i] = newWarpOpYieldValues.size();
       newWarpOpYieldValues.push_back(v);
-      newWarpOpDistTypes.push_back(
-          warpOp.getResult(nonForResultIndices[i]).getType());
+      newWarpOpDistTypes.push_back(warpOp.getResult(i).getType());
     }
     // Create the new `WarpOp` with the updated yield values and types.
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndReplaceReturns(
