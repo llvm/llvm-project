@@ -6215,8 +6215,25 @@ void CodeGenModule::HandleCXXStaticMemberVarInstantiation(VarDecl *VD) {
   EmitTopLevelDecl(VD);
 }
 
+static llvm::DenseSet<llvm::CallBase *> collectCallSites(llvm::Function *Fn) {
+  llvm::DenseSet<llvm::CallBase *> CIs;
+  for (auto &BB : *Fn) {
+    for (auto &I : BB) {
+      if (auto *CI = dyn_cast<llvm::CallBase>(&I))
+        CIs.insert(CI);
+    }
+  }
+  return CIs;
+}
+
 static bool hasInlineAttr(const FunctionDecl *Decl) {
   return Decl->hasAttr<AlwaysInlineAttr>() || Decl->hasAttr<GNUInlineAttr>();
+}
+
+static bool isLinuxInitCall(const FunctionDecl *Decl) {
+  if (auto *Attr = Decl->getAttr<SectionAttr>())
+    return Attr->getName() == ".init.text";
+  return false;
 }
 
 void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
@@ -6245,6 +6262,8 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
                 getModule().getNamedValue(II->getName())) {
           GVDef->replaceAllUsesWith(GV);
           GVDef->eraseFromParent();
+        } else if (isLinuxInitCall(D)) {
+          RenamedInlineFunctions[cast<llvm::Function>(GV)] = D->getName();
         } else {
           // Create a GlobalAlias to the original symbol in case it was
           // referenced in the inline assembly
@@ -6298,44 +6317,49 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
 
   // Avoid extra uses of the internal GlobalAlias if Callee has
   // __attribute__((error)) or inline assembly.
-  for (auto BB = Fn->begin(); GA && BB != Fn->end(); BB++) {
-    for (auto &I : *BB) {
-      bool shouldEraseAlias = false;
-      if (auto *CI = dyn_cast<llvm::CallBase>(&I)) {
+  if (GA) {
+    bool shouldEraseAlias = false;
+    auto CallSites = collectCallSites(Fn);
+    for (auto &CI : CallSites) {
+      if (auto *Callee = CI->getCalledFunction()) {
+        // Callee is a known always inline that contains either inline assembly
+        // or __attribute__((error))
+        if (MustInlinedFunctions.contains(Callee->getName()) ||
+            Callee->hasFnAttribute("dontcall-error"))
+          shouldEraseAlias = true;
+      } else if (CI->isInlineAsm() && hasInlineAttr(D)) {
+        // Avoid alias towards always inline assembly to allow inlining
+        shouldEraseAlias = true;
+        RenamedInlineFunctions[Fn] = D->getName();
+      }
+    }
+
+    if (shouldEraseAlias) {
+      if (hasInlineAttr(D))
+        MustInlinedFunctions.insert(Fn->getName());
+      else
+        RenamedInlineFunctions[Fn] = D->getName();
+      GA->eraseFromParent();
+      GA = nullptr;
+    } else {
+      // Collect callee info if it hasn't been seen yet, and deferred the
+      // process later
+      for (auto &CI : CallSites) {
         if (auto *Callee = CI->getCalledFunction()) {
           GlobalDecl CalleeDecl;
-          if (MustInlinedFunctions.contains(Callee->getName())) {
-            // Callee is a known always inline, inline assembly
-            shouldEraseAlias = true;
-          } else if (Callee->hasFnAttribute("dontcall-error")) {
-            // Callee has Error Attribute
-            shouldEraseAlias = true;
-          } else if (Callee->isDeclaration() && !Callee->isIntrinsic() &&
-                     hasInlineAttr(D)) {
+          if (Callee->isDeclaration() && !Callee->isIntrinsic() &&
+              hasInlineAttr(D)) {
             // Callee has not emitted. Defer this check to a later stage
-            DeferredMaybeInlineFunctions[GD] = Callee;
+            DeferredMaybeInlineFunctions[GD].insert(Callee);
             GA = nullptr;
-            break;
           } else if (lookupRepresentativeDecl(Callee->getName(), CalleeDecl)) {
             // Defer if Callee is also deferred
             if (DeferredMaybeInlineFunctions.contains(CalleeDecl)) {
-              DeferredMaybeInlineFunctions[GD] = Callee;
+              DeferredMaybeInlineFunctions[GD].insert(Callee);
               GA = nullptr;
-              break;
             }
           }
-        } else if (CI->isInlineAsm() && hasInlineAttr(D)) {
-          // Avoid alias towards always inline assembly to allow inlining
-          shouldEraseAlias = true;
-          RenamedAsmInlineFunctions[Fn] = D->getName();
         }
-      }
-      if (shouldEraseAlias) {
-        if (hasInlineAttr(D))
-          MustInlinedFunctions.insert(Fn->getName());
-        GA->eraseFromParent();
-        GA = nullptr;
-        break;
       }
     }
   }
@@ -7637,7 +7661,9 @@ void CodeGenModule::FixupMaybeInlineFunctions() {
       const auto *D = cast<FunctionDecl>(I->first.getDecl());
       auto *GA = GetGlobalValue(D->getName());
       StringRef MangledName = getMangledName(I->first);
-      if (GA && MustInlinedFunctions.contains(I->second->getName())) {
+      if (GA && llvm::any_of(I->second, [this](auto *C) {
+            return this->MustInlinedFunctions.contains(C->getName());
+          })) {
         MustInlinedFunctions.insert(MangledName);
         GA->eraseFromParent();
         I = DeferredMaybeInlineFunctions.erase(I);
@@ -7646,7 +7672,7 @@ void CodeGenModule::FixupMaybeInlineFunctions() {
     }
   }
   // Fixup attributes
-  for (auto &[Decl, Callee] : DeferredMaybeInlineFunctions) {
+  for (auto &[Decl, _] : DeferredMaybeInlineFunctions) {
     const auto *D = cast<FunctionDecl>(Decl.getDecl());
     auto *GA = GetGlobalValue(D->getName());
     StringRef MangledName = getMangledName(Decl);
@@ -7664,7 +7690,7 @@ void CodeGenModule::FixupMaybeInlineFunctions() {
   // here is to parse the inline assembly and figure out what kind of assembly
   // constraints must inline (e.g. "i" through constant folding), but this might
   // be difficult in the frontend..
-  for (auto &[Fn, Name] : RenamedAsmInlineFunctions) {
+  for (auto &[Fn, Name] : RenamedInlineFunctions) {
     Fn->setName(Name);
   }
 }
