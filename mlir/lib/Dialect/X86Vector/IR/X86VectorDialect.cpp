@@ -90,19 +90,20 @@ SmallVector<Value> x86vector::DotInt8Op::getIntrinsicOperands(
     ArrayRef<Value> operands, const LLVMTypeConverter &typeConverter,
     RewriterBase &rewriter) {
   SmallVector<Value, 3> intrinsicOprnds;
-  intrinsicOprnds.push_back(operands[0]);
+  Adaptor adaptor(operands, *this);
+  intrinsicOprnds.push_back(adaptor.getW());
   // Bitcast `a` and `b` to i32
   Value bitcast_a = rewriter.create<LLVM::BitcastOp>(
       getLoc(),
       VectorType::get((getA().getType().getShape()[0] / 4),
                       rewriter.getIntegerType(32)),
-      operands[1]);
+      adaptor.getA());
   intrinsicOprnds.push_back(bitcast_a);
   Value bitcast_b = rewriter.create<LLVM::BitcastOp>(
       getLoc(),
       VectorType::get((getB().getType().getShape()[0] / 4),
                       rewriter.getIntegerType(32)),
-      operands[2]);
+      adaptor.getB());
   intrinsicOprnds.push_back(bitcast_b);
 
   return intrinsicOprnds;
