@@ -582,6 +582,13 @@ def: Pat<(v8i1 (trunc V8I8:$Rs)),
          (A4_vcmpbeqi (Combinew (A2_andir (HiReg $Rs), (i32 0x01010101)),
                                 (A2_andir (LoReg $Rs), (i32 0x01010101))),
                       (i32 1))>;
+def : Pat<(v4i1 (trunc V4I8:$Rs)),
+          (A4_vcmpheqi (Combinew (A2_andir (HiReg (S2_vzxtbh $Rs)), 0x00010001),
+                                 (A2_andir (LoReg (S2_vzxtbh $Rs)), 0x00010001)),
+                       (i32 1))>;
+def: Pat<(v2i1 (trunc V2I16:$Rs)),
+          (A4_vcmpweqi (A2_andp (S2_vzxthw $Rs), (A2_combineii (i32 1), (i32 1))),
+                      (i32 1))>;
 
 
 // Saturation:
