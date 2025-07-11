@@ -39,7 +39,7 @@ using namespace mlir::vector;
 namespace {
 
 // Indentation unit for debug output formatting.
-constexpr unsigned kIndScale = 2;
+[[maybe_unused]] constexpr unsigned kIndScale = 2;
 
 /// Represents a closed interval of elements (e.g., [0, 7] = 8 elements).
 using Interval = std::pair<unsigned, unsigned>;

@@ -923,6 +923,13 @@ llvm.func @rocdl.s.waitcnt() {
   llvm.return
 }
 
+llvm.func @rocdl.s.sleep() {
+  // CHECK-LABEL: rocdl.s.sleep
+  // CHECK: rocdl.s.sleep 0
+  rocdl.s.sleep 0
+  llvm.return
+}
+
 llvm.func @rocdl.s.barrier() {
   // CHECK-LABEL: rocdl.s.barrier
   // CHECK: rocdl.s.barrier
