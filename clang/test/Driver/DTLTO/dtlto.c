@@ -5,7 +5,7 @@
 /// Create a response file for all FileCheck invocations to share. These implicit
 /// checks ensure that all lines which mention DTLTO options are checked,
 /// and that no unexpected warnings appear.
-// RUN: echo " \"%s\" --implicit-check-not=distributor \
+// RUN: echo " \"%/s\" --implicit-check-not=distributor \
 // RUN:   --implicit-check-not=remote-compiler \
 // RUN:   --implicit-check-not=warning:" > %t_f.rsp
 
