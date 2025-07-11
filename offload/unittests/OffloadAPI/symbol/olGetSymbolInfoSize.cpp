@@ -28,6 +28,20 @@ TEST_P(olGetSymbolInfoSizeGlobalTest, SuccessKind) {
   ASSERT_EQ(Size, sizeof(ol_symbol_kind_t));
 }
 
+TEST_P(olGetSymbolInfoSizeGlobalTest, SuccessAddress) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(olGetSymbolInfoSize(
+      Global, OL_SYMBOL_INFO_GLOBAL_VARIABLE_ADDRESS, &Size));
+  ASSERT_EQ(Size, sizeof(void *));
+}
+
+TEST_P(olGetSymbolInfoSizeGlobalTest, SuccessSize) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(
+      olGetSymbolInfoSize(Global, OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE, &Size));
+  ASSERT_EQ(Size, sizeof(size_t));
+}
+
 TEST_P(olGetSymbolInfoSizeKernelTest, InvalidNullHandle) {
   size_t Size = 0;
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
