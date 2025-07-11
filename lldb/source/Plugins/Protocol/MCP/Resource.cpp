@@ -14,9 +14,9 @@ using namespace lldb_private::mcp;
 
 namespace {
 struct DebuggerResource {
-  uint64_t debugger_id;
+  uint64_t debugger_id = 0;
   std::string name;
-  uint64_t num_targets;
+  uint64_t num_targets = 0;
 };
 
 llvm::json::Value toJSON(const DebuggerResource &DR) {
@@ -28,8 +28,10 @@ llvm::json::Value toJSON(const DebuggerResource &DR) {
 }
 
 struct TargetResource {
-  size_t debugger_id;
-  size_t target_idx;
+  size_t debugger_id = 0;
+  size_t target_idx = 0;
+  bool selected = false;
+  bool dummy = false;
   std::string arch;
   std::string path;
   std::string platform;
@@ -37,7 +39,9 @@ struct TargetResource {
 
 llvm::json::Value toJSON(const TargetResource &TR) {
   llvm::json::Object Result{{"debugger_id", TR.debugger_id},
-                            {"target_idx", TR.target_idx}};
+                            {"target_idx", TR.target_idx},
+                            {"selected", TR.selected},
+                            {"dummy", TR.dummy}};
   if (!TR.arch.empty())
     Result.insert({"arch", TR.arch});
   if (!TR.path.empty())
@@ -194,6 +198,8 @@ DebuggerResourceProvider::ReadTargetResource(llvm::StringRef uri,
   target_resource.debugger_id = debugger_id;
   target_resource.target_idx = target_idx;
   target_resource.arch = target_sp->GetArchitecture().GetTriple().str();
+  target_resource.dummy = target_sp->IsDummyTarget();
+  target_resource.selected = target_sp == debugger_sp->GetSelectedTarget();
 
   if (Module *exe_module = target_sp->GetExecutableModulePointer())
     target_resource.path = exe_module->GetFileSpec().GetPath();
