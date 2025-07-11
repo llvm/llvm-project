@@ -1003,7 +1003,9 @@ Arm and AArch64 Support
   `as specified here <https://github.com/ARM-software/acle/blob/main/main/acle.md#modal-8-bit-floating-point-extensions>`_
   is now available.
 - Support has been added for the following processors (command-line identifiers in parentheses):
+
   - Arm Cortex-A320 (``cortex-a320``)
+
 - For ARM targets, cc1as now considers the FPU's features for the selected CPU or Architecture.
 - The ``+nosimd`` attribute is now fully supported for ARM. Previously, this had no effect when being used with
   ARM targets, however this will now disable NEON instructions being generated. The ``simd`` option is
@@ -1012,15 +1014,17 @@ Arm and AArch64 Support
 - When NEON is disabled (``+nosimd``), all features that depend on NEON will now be disabled.
 
 - Pointer authentication
+
   - Support for __ptrauth type qualifier has been added.
-  - Objective-C hardening
-    - isa and super pointers are protected with address diversity and separate
+  - Objective-C adoption of pointer authentication
+
+    - ``isa`` and ``super`` pointers are protected with address diversity and separate
       usage specific discriminators.
-    - methodlist pointers and content are protected with address diversity and
-      methodlist pointers have a usage specific discriminator.
-    - class_ro_t pointers are protected with address diversity and usage
-      specific discriminators.
-    - SEL typed ivars are protected with address diversity and usage specific
+    - methodlist pointers and content are protected with address diversity and methodlist
+      pointers have a usage specific discriminator.
+    - ``class_ro_t`` pointers are protected with address diversity and usage specific
+      discriminators.
+    - ``SEL`` typed ivars are protected with address diversity and usage specific
       discriminators.
 
 - For AArch64, added support for generating executable-only code sections by using the
