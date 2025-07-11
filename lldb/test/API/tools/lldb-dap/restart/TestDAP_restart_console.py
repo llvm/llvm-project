@@ -10,7 +10,7 @@ from lldbsuite.test.lldbtest import line_number
 
 
 @skipIfBuildType(["debug"])
-class TestDAP_restart_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_restart_console(lldbdap_testcase.DAPTestCaseBase):
     def verify_stopped_on_entry(self, stopped_events: List[Dict[str, Any]]):
         seen_stopped_event = 0
         for stopped_event in stopped_events:
@@ -44,7 +44,7 @@ class TestDAP_restart_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         line_B = line_number("main.c", "// breakpoint B")
 
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, runInTerminal=True)
+        self.build_and_launch(program, console="integratedTerminal")
         [bp_A, bp_B] = self.set_source_breakpoints("main.c", [line_A, line_B])
 
         # Verify we hit A, then B.
@@ -86,10 +86,10 @@ class TestDAP_restart_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
     @skipIf(oslist=["linux"], archs=["arm$"])  # Always times out on buildbot
     def test_stopOnEntry(self):
         """
-        Check that stopOnEntry works correctly when using runInTerminal.
+        Check that stopOnEntry works correctly when using console.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, runInTerminal=True, stopOnEntry=True)
+        self.build_and_launch(program, console="integratedTerminal", stopOnEntry=True)
         [bp_main] = self.set_function_breakpoints(["main"])
 
         self.dap_server.request_continue()  # sends configuration done
