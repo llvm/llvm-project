@@ -86,22 +86,25 @@ x86vector::DotOp::getIntrinsicOperands(ArrayRef<Value> operands,
   return intrinsicOperands;
 }
 
-SmallVector<Value>
-x86vector::DotInt8Op::getIntrinsicOperands(ArrayRef<Value> operands,
-                                       const LLVMTypeConverter &typeConverter,
-                                       RewriterBase &rewriter) {
+SmallVector<Value> x86vector::DotInt8Op::getIntrinsicOperands(
+    ArrayRef<Value> operands, const LLVMTypeConverter &typeConverter,
+    RewriterBase &rewriter) {
   SmallVector<Value, 3> intrinsicOprnds;
   intrinsicOprnds.push_back(operands[0]);
-
-  //Bit-cast `a` and `b` to i32
+  // Bitcast `a` and `b` to i32
   Value bitcast_a = rewriter.create<LLVM::BitcastOp>(
-                        getLoc(), VectorType::get((getA().getType().getShape()[0]/4), rewriter.getIntegerType(32)),
-                        operands[1]);
+      getLoc(),
+      VectorType::get((getA().getType().getShape()[0] / 4),
+                      rewriter.getIntegerType(32)),
+      operands[1]);
   intrinsicOprnds.push_back(bitcast_a);
   Value bitcast_b = rewriter.create<LLVM::BitcastOp>(
-                        getLoc(), VectorType::get((getA().getType().getShape()[0]/4), rewriter.getIntegerType(32)),
-                        operands[2]);
+      getLoc(),
+      VectorType::get((getB().getType().getShape()[0] / 4),
+                      rewriter.getIntegerType(32)),
+      operands[2]);
   intrinsicOprnds.push_back(bitcast_b);
+
   return intrinsicOprnds;
 }
 
