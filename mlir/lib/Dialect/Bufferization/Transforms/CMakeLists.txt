@@ -11,7 +11,7 @@ add_mlir_dialect_library(MLIRBufferizationTransforms
   FuncBufferizableOpInterfaceImpl.cpp
   LowerDeallocations.cpp
   OneShotAnalysis.cpp
-  OneShotModuleBufferize.cpp
+  OneShotRootBufferize.cpp
   OwnershipBasedBufferDeallocation.cpp
   TensorCopyInsertion.cpp
   OptimizeAllocationLiveness.cpp

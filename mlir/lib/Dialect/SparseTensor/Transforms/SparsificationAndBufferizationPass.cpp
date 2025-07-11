@@ -13,7 +13,7 @@
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
-#include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
+#include "mlir/Dialect/Bufferization/Transforms/OneShotRootBufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -116,12 +116,12 @@ public:
 
     bufferization::BufferizationState bufferizationState;
 
-    if (failed(bufferization::bufferizeModuleOp(cast<ModuleOp>(getOperation()),
-                                                updatedOptions,
-                                                bufferizationState)))
+    if (failed(bufferization::bufferizeRootOp(getOperation(),
+                                              updatedOptions,
+                                              bufferizationState)))
       return failure();
 
-    bufferization::removeBufferizationAttributesInModule(getOperation());
+    bufferization::removeBufferizationAttributesInRoot(getOperation());
     return success();
   }
 

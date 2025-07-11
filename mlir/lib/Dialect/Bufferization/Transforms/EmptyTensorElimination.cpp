@@ -11,7 +11,7 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
-#include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
+#include "mlir/Dialect/Bufferization/Transforms/OneShotRootBufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dominance.h"
@@ -209,7 +209,7 @@ LogicalResult mlir::bufferization::eliminateEmptyTensors(RewriterBase &rewriter,
   OneShotAnalysisState state(op, options);
   if (moduleOp) {
     // Module analysis takes into account function boundaries.
-    if (failed(analyzeModuleOp(moduleOp, state)))
+    if (failed(analyzeRootOp(moduleOp, state)))
       return failure();
   } else {
     // Regular One-Shot Bufferize ignores func.func block arguments, func.call,
