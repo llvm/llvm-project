@@ -89,7 +89,7 @@ x86vector::DotOp::getIntrinsicOperands(ArrayRef<Value> operands,
 SmallVector<Value> x86vector::DotInt8Op::getIntrinsicOperands(
     ArrayRef<Value> operands, const LLVMTypeConverter &typeConverter,
     RewriterBase &rewriter) {
-  SmallVector<Value, 3> intrinsicOprnds;
+  SmallVector<Value> intrinsicOprnds;
   Adaptor adaptor(operands, *this);
   intrinsicOprnds.push_back(adaptor.getW());
   // Bitcast `a` and `b` to i32
