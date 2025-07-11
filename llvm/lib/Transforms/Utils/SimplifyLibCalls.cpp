@@ -364,13 +364,15 @@ static StringRef substr(StringRef Str, uint64_t Len) {
 //===----------------------------------------------------------------------===//
 
 Value *LibCallSimplifier::optimizeStrCat(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
+
   // Extract some information from the instruction
   Value *Dst = CI->getArgOperand(0);
   Value *Src = CI->getArgOperand(1);
   annotateNonNullNoUndefBasedOnAccess(CI, {0, 1});
 
   // See if we can get the length of the input string.
-  uint64_t Len = GetStringLength(Src);
+  uint64_t Len = getStringLength(Src, CharWidth);
   if (Len)
     annotateDereferenceableBytes(CI, 1, Len);
   else
@@ -386,6 +388,8 @@ Value *LibCallSimplifier::optimizeStrCat(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::emitStrLenMemCpy(Value *Src, Value *Dst, uint64_t Len,
                                            IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
+
   // We need to find the end of the destination string.  That's where the
   // memory is to be moved to. We just generate a call to strlen.
   Value *DstLen = emitStrLen(Dst, B, DL, TLI);
@@ -395,7 +399,8 @@ Value *LibCallSimplifier::emitStrLenMemCpy(Value *Src, Value *Dst, uint64_t Len,
   // Now that we have the destination's length, we must index into the
   // destination's pointer to get the actual memcpy destination (end of
   // the string .. we're concatenating).
-  Value *CpyDst = B.CreateInBoundsGEP(B.getInt8Ty(), Dst, DstLen, "endptr");
+  Value *CpyDst =
+      B.CreateInBoundsGEP(B.getIntNTy(CharWidth), Dst, DstLen, "endptr");
 
   // We have enough information to now generate the memcpy call to do the
   // concatenation for us.  Make a memcpy to copy the nul byte with align = 1.
@@ -405,6 +410,8 @@ Value *LibCallSimplifier::emitStrLenMemCpy(Value *Src, Value *Dst, uint64_t Len,
 }
 
 Value *LibCallSimplifier::optimizeStrNCat(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
+
   // Extract some information from the instruction.
   Value *Dst = CI->getArgOperand(0);
   Value *Src = CI->getArgOperand(1);
@@ -426,7 +433,7 @@ Value *LibCallSimplifier::optimizeStrNCat(CallInst *CI, IRBuilderBase &B) {
   }
 
   // See if we can get the length of the input string.
-  uint64_t SrcLen = GetStringLength(Src);
+  uint64_t SrcLen = getStringLength(Src, CharWidth);
   if (SrcLen) {
     annotateDereferenceableBytes(CI, 1, SrcLen);
     --SrcLen; // Unbias length.
@@ -457,7 +464,7 @@ static Value* memChrToCharCompare(CallInst *CI, Value *NBytes,
   Value *CharVal = CI->getArgOperand(1);
 
   // Fold memchr(A, C, N) == A to N && *A == C.
-  Type *CharTy = B.getInt8Ty();
+  Type *CharTy = B.getIntNTy(DL.getByteWidth());
   Value *Char0 = B.CreateLoad(CharTy, Src);
   CharVal = B.CreateTrunc(CharVal, CharTy);
   Value *Cmp = B.CreateICmpEQ(Char0, CharVal, "char0cmp");
@@ -485,7 +492,7 @@ Value *LibCallSimplifier::optimizeStrChr(CallInst *CI, IRBuilderBase &B) {
   // of the input string and turn this into memchr.
   ConstantInt *CharC = dyn_cast<ConstantInt>(CharVal);
   if (!CharC) {
-    uint64_t Len = GetStringLength(SrcStr);
+    uint64_t Len = getStringLength(SrcStr, CharWidth);
     if (Len)
       annotateDereferenceableBytes(CI, 0, Len);
     else
@@ -519,7 +526,8 @@ Value *LibCallSimplifier::optimizeStrChr(CallInst *CI, IRBuilderBase &B) {
   if (!getConstantStringInfo(SrcStr, Str, CharWidth)) {
     if (CharC->isZero()) // strchr(p, 0) -> p + strlen(p)
       if (Value *StrLen = emitStrLen(SrcStr, B, DL, TLI))
-        return B.CreateInBoundsGEP(B.getInt8Ty(), SrcStr, StrLen, "strchr");
+        return B.CreateInBoundsGEP(B.getIntNTy(CharWidth), SrcStr, StrLen,
+                                   "strchr");
     return nullptr;
   }
 
@@ -576,19 +584,30 @@ Value *LibCallSimplifier::optimizeStrCmp(CallInst *CI, IRBuilderBase &B) {
     return ConstantInt::get(CI->getType(),
                             std::clamp(Str1.compare(Str2), -1, 1));
 
-  if (HasStr1 && Str1.empty()) // strcmp("", x) -> -*x
-    return B.CreateNeg(B.CreateZExt(
-        B.CreateLoad(B.getInt8Ty(), Str2P, "strcmpload"), CI->getType()));
+  uint64_t Len1 = getStringLength(Str1P, CharWidth);
+  uint64_t Len2 = getStringLength(Str2P, CharWidth);
 
-  if (HasStr2 && Str2.empty()) // strcmp(x,"") -> *x
-    return B.CreateZExt(B.CreateLoad(B.getInt8Ty(), Str1P, "strcmpload"),
-                        CI->getType());
+  if (Len1 == 1) {
+    Value *RHS0 = B.CreateLoad(B.getIntNTy(CharWidth), Str2P, "strcmpload");
+    // strcmp("", x) -> -*x
+    if (CharWidth < CI->getType()->getIntegerBitWidth())
+      return B.CreateNeg(B.CreateZExt(RHS0, CI->getType()));
+    // strcmp("", x) -> sext(*x != '\0')
+    return B.CreateSExt(B.CreateIsNotNull(RHS0), CI->getType());
+  }
+
+  if (Len2 == 1) {
+    Value *LHS0 = B.CreateLoad(B.getIntNTy(CharWidth), Str1P, "strcmpload");
+    // strcmp(x, "") -> *x
+    if (CharWidth < CI->getType()->getIntegerBitWidth())
+      return B.CreateZExt(LHS0, CI->getType());
+    // strcmp(x, "") -> zext(*x != '\0')
+    return B.CreateZExt(B.CreateIsNotNull(LHS0), CI->getType());
+  }
 
   // strcmp(P, "x") -> memcmp(P, "x", 2)
-  uint64_t Len1 = GetStringLength(Str1P);
   if (Len1)
     annotateDereferenceableBytes(CI, 0, Len1);
-  uint64_t Len2 = GetStringLength(Str2P);
   if (Len2)
     annotateDereferenceableBytes(CI, 1, Len2);
 
@@ -658,18 +677,29 @@ Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilderBase &B) {
                             std::clamp(SubStr1.compare(SubStr2), -1, 1));
   }
 
-  if (HasStr1 && Str1.empty()) // strncmp("", x, n) -> -*x
-    return B.CreateNeg(B.CreateZExt(
-        B.CreateLoad(B.getInt8Ty(), Str2P, "strcmpload"), CI->getType()));
+  uint64_t Len1 = getStringLength(Str1P, CharWidth);
+  uint64_t Len2 = getStringLength(Str2P, CharWidth);
 
-  if (HasStr2 && Str2.empty()) // strncmp(x, "", n) -> *x
-    return B.CreateZExt(B.CreateLoad(B.getInt8Ty(), Str1P, "strcmpload"),
-                        CI->getType());
+  if (Len1 == 1) {
+    Value *RHS0 = B.CreateLoad(B.getIntNTy(CharWidth), Str2P, "strcmpload");
+    // strncmp("", x, n) -> -*x
+    if (CharWidth < CI->getType()->getIntegerBitWidth())
+      return B.CreateNeg(B.CreateZExt(RHS0, CI->getType()));
+    // strncmp("", x, n) -> sext(*x != '\0')
+    return B.CreateSExt(B.CreateIsNotNull(RHS0), CI->getType());
+  }
 
-  uint64_t Len1 = GetStringLength(Str1P);
+  if (Len2 == 1) {
+    // strncmp(x, "", n) -> *x
+    Value *LHS0 = B.CreateLoad(B.getIntNTy(CharWidth), Str1P, "strcmpload");
+    if (CharWidth < CI->getType()->getIntegerBitWidth())
+      return B.CreateZExt(LHS0, CI->getType());
+    // strncmp(x, "", n) -> zext(*x != '\0')
+    return B.CreateZExt(B.CreateIsNotNull(LHS0), CI->getType());
+  }
+
   if (Len1)
     annotateDereferenceableBytes(CI, 0, Len1);
-  uint64_t Len2 = GetStringLength(Str2P);
   if (Len2)
     annotateDereferenceableBytes(CI, 1, Len2);
 
@@ -692,9 +722,11 @@ Value *LibCallSimplifier::optimizeStrNCmp(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeStrNDup(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
   Value *Src = CI->getArgOperand(0);
   ConstantInt *Size = dyn_cast<ConstantInt>(CI->getArgOperand(1));
-  uint64_t SrcLen = GetStringLength(Src);
+
+  uint64_t SrcLen = getStringLength(Src, CharWidth);
   if (SrcLen && Size) {
     annotateDereferenceableBytes(CI, 0, SrcLen);
     if (SrcLen <= Size->getZExtValue() + 1)
@@ -705,13 +737,15 @@ Value *LibCallSimplifier::optimizeStrNDup(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeStrCpy(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
+
   Value *Dst = CI->getArgOperand(0), *Src = CI->getArgOperand(1);
   if (Dst == Src) // strcpy(x,x)  -> x
     return Src;
 
   annotateNonNullNoUndefBasedOnAccess(CI, {0, 1});
   // See if we can get the length of the input string.
-  uint64_t Len = GetStringLength(Src);
+  uint64_t Len = getStringLength(Src, CharWidth);
   if (Len)
     annotateDereferenceableBytes(CI, 1, Len);
   else
@@ -726,6 +760,7 @@ Value *LibCallSimplifier::optimizeStrCpy(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeStpCpy(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
   Value *Dst = CI->getArgOperand(0), *Src = CI->getArgOperand(1);
 
   // stpcpy(d,s) -> strcpy(d,s) if the result is not used.
@@ -734,11 +769,12 @@ Value *LibCallSimplifier::optimizeStpCpy(CallInst *CI, IRBuilderBase &B) {
 
   if (Dst == Src) { // stpcpy(x,x)  -> x+strlen(x)
     Value *StrLen = emitStrLen(Src, B, DL, TLI);
-    return StrLen ? B.CreateInBoundsGEP(B.getInt8Ty(), Dst, StrLen) : nullptr;
+    return StrLen ? B.CreateInBoundsGEP(B.getIntNTy(CharWidth), Dst, StrLen)
+                  : nullptr;
   }
 
   // See if we can get the length of the input string.
-  uint64_t Len = GetStringLength(Src);
+  uint64_t Len = getStringLength(Src, CharWidth);
   if (Len)
     annotateDereferenceableBytes(CI, 1, Len);
   else
@@ -746,7 +782,7 @@ Value *LibCallSimplifier::optimizeStpCpy(CallInst *CI, IRBuilderBase &B) {
 
   Value *LenV = TLI->getAsSizeT(Len, *CI->getModule());
   Value *DstEnd = B.CreateInBoundsGEP(
-      B.getInt8Ty(), Dst, TLI->getAsSizeT(Len - 1, *CI->getModule()));
+      B.getIntNTy(CharWidth), Dst, TLI->getAsSizeT(Len - 1, *CI->getModule()));
 
   // We have enough information to now generate the memcpy call to do the
   // copy for us.  Make a memcpy to copy the nul byte with align = 1.
@@ -780,7 +816,7 @@ Value *LibCallSimplifier::optimizeStrLCpy(CallInst *CI, IRBuilderBase &B) {
   if (NBytes <= 1) {
     if (NBytes == 1)
       // For a call to strlcpy(D, S, 1) first store a nul in *D.
-      B.CreateStore(B.getInt8(0), Dst);
+      B.CreateStore(B.getIntN(CharWidth, 0), Dst);
 
     // Transform strlcpy(D, S, 0) to a call to strlen(S).
     return copyFlags(*CI, emitStrLen(Src, B, DL, TLI));
@@ -861,7 +897,7 @@ Value *LibCallSimplifier::optimizeStringNCpy(CallInst *CI, bool RetEnd,
     return Dst;
 
   if (N == 1) {
-    Type *CharTy = B.getInt8Ty();
+    Type *CharTy = B.getIntNTy(CharWidth);
     Value *CharVal = B.CreateLoad(CharTy, Src, "stxncpy.char0");
     B.CreateStore(CharVal, Dst);
     if (!RetEnd)
@@ -878,7 +914,7 @@ Value *LibCallSimplifier::optimizeStringNCpy(CallInst *CI, bool RetEnd,
   }
 
   // If the length of the input string is known set SrcLen to it.
-  uint64_t SrcLen = GetStringLength(Src);
+  uint64_t SrcLen = getStringLength(Src, CharWidth);
   if (SrcLen)
     annotateDereferenceableBytes(CI, 1, SrcLen);
   else
@@ -890,7 +926,8 @@ Value *LibCallSimplifier::optimizeStringNCpy(CallInst *CI, bool RetEnd,
     // Transform st{p,r}ncpy(D, "", N) to memset(D, '\0', N) for any N.
     Align MemSetAlign =
       CI->getAttributes().getParamAttrs(0).getAlignment().valueOrOne();
-    CallInst *NewCI = B.CreateMemSet(Dst, B.getInt8('\0'), Size, MemSetAlign);
+    CallInst *NewCI =
+        B.CreateMemSet(Dst, B.getIntN(CharWidth, 0), Size, MemSetAlign);
     AttrBuilder ArgAttrs(CI->getContext(), CI->getAttributes().getParamAttrs(0));
     NewCI->setAttributes(NewCI->getAttributes().addParamAttributes(
         CI->getContext(), 0, ArgAttrs));
@@ -926,14 +963,14 @@ Value *LibCallSimplifier::optimizeStringNCpy(CallInst *CI, bool RetEnd,
   // stpncpy(D, S, N) returns the address of the first null in D if it writes
   // one, otherwise D + N.
   Value *Off = B.getInt64(std::min(SrcLen, N));
-  return B.CreateInBoundsGEP(B.getInt8Ty(), Dst, Off, "endptr");
+  return B.CreateInBoundsGEP(B.getIntNTy(CharWidth), Dst, Off, "endptr");
 }
 
 Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
-                                               unsigned CharSize,
+                                               unsigned CharWidth,
                                                Value *Bound) {
   Value *Src = CI->getArgOperand(0);
-  Type *CharTy = B.getIntNTy(CharSize);
+  Type *CharTy = B.getIntNTy(CharWidth);
 
   if (isOnlyUsedInZeroEqualityComparison(CI) &&
       (!Bound || isKnownNonZero(Bound, DL))) {
@@ -963,7 +1000,7 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
     }
   }
 
-  if (uint64_t Len = GetStringLength(Src, CharSize)) {
+  if (uint64_t Len = getStringLength(Src, CharWidth)) {
     Value *LenC = ConstantInt::get(CI->getType(), Len - 1);
     // Fold strlen("xyz") -> 3 and strnlen("xyz", 2) -> 2
     // and strnlen("xyz", Bound) -> min(3, Bound) for nonconstant Bound.
@@ -986,11 +1023,11 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
   // very uncommon.
   if (GEPOperator *GEP = dyn_cast<GEPOperator>(Src)) {
     // TODO: Handle subobjects.
-    if (!isGEPBasedOnPointerToString(GEP, CharSize))
+    if (!isGEPBasedOnPointerToString(GEP, CharWidth))
       return nullptr;
 
     ConstantDataArraySlice Slice;
-    if (getConstantDataArrayInfo(GEP->getOperand(0), Slice, CharSize)) {
+    if (getConstantDataArrayInfo(GEP->getOperand(0), Slice, CharWidth)) {
       uint64_t NullTermIdx;
       if (Slice.Array == nullptr) {
         NullTermIdx = 0;
@@ -1029,8 +1066,8 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
 
   // strlen(x?"foo":"bars") --> x ? 3 : 4
   if (SelectInst *SI = dyn_cast<SelectInst>(Src)) {
-    uint64_t LenTrue = GetStringLength(SI->getTrueValue(), CharSize);
-    uint64_t LenFalse = GetStringLength(SI->getFalseValue(), CharSize);
+    uint64_t LenTrue = getStringLength(SI->getTrueValue(), CharWidth);
+    uint64_t LenFalse = getStringLength(SI->getFalseValue(), CharWidth);
     if (LenTrue && LenFalse) {
       ORE.emit([&]() {
         return OptimizationRemark("instcombine", "simplify-libcalls", CI)
@@ -1046,7 +1083,7 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
 }
 
 Value *LibCallSimplifier::optimizeStrLen(CallInst *CI, IRBuilderBase &B) {
-  if (Value *V = optimizeStringLength(CI, B, 8))
+  if (Value *V = optimizeStringLength(CI, B, DL.getByteWidth()))
     return V;
   annotateNonNullNoUndefBasedOnAccess(CI, 0);
   return nullptr;
@@ -1054,7 +1091,7 @@ Value *LibCallSimplifier::optimizeStrLen(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizeStrNLen(CallInst *CI, IRBuilderBase &B) {
   Value *Bound = CI->getArgOperand(1);
-  if (Value *V = optimizeStringLength(CI, B, 8, Bound))
+  if (Value *V = optimizeStringLength(CI, B, DL.getByteWidth(), Bound))
     return V;
 
   if (isKnownNonZero(Bound, DL))
@@ -1064,12 +1101,12 @@ Value *LibCallSimplifier::optimizeStrNLen(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizeWcslen(CallInst *CI, IRBuilderBase &B) {
   Module &M = *CI->getModule();
-  unsigned WCharSize = TLI->getWCharSize(M) * 8;
+  unsigned WCharWidth = TLI->getWCharSize(M) * DL.getByteWidth();
   // We cannot perform this optimization without wchar_size metadata.
-  if (WCharSize == 0)
+  if (WCharWidth == 0)
     return nullptr;
 
-  return optimizeStringLength(CI, B, WCharSize);
+  return optimizeStringLength(CI, B, WCharWidth);
 }
 
 Value *LibCallSimplifier::optimizeStrPBrk(CallInst *CI, IRBuilderBase &B) {
@@ -1238,9 +1275,10 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
     if (LenC->isOne()) {
       // Fold memrchr(x, y, 1) --> *x == y ? x : null for any x and y,
       // constant or otherwise.
-      Value *Val = B.CreateLoad(B.getInt8Ty(), SrcStr, "memrchr.char0");
+      Type *CharTy = B.getIntNTy(CharWidth);
+      Value *Val = B.CreateLoad(CharTy, SrcStr, "memrchr.char0");
       // Slice off the character's high end bits.
-      CharVal = B.CreateTrunc(CharVal, B.getInt8Ty());
+      CharVal = B.CreateTrunc(CharVal, CharTy);
       Value *Cmp = B.CreateICmpEQ(Val, CharVal, "memrchr.char0cmp");
       return B.CreateSelect(Cmp, SrcStr, NullPtr, "memrchr.sel");
     }
@@ -1334,9 +1372,10 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
     if (LenC->isOne()) {
       // Fold memchr(x, y, 1) --> *x == y ? x : null for any x and y,
       // constant or otherwise.
-      Value *Val = B.CreateLoad(B.getInt8Ty(), SrcStr, "memchr.char0");
+      Type *CharTy = B.getIntNTy(CharWidth);
+      Value *Val = B.CreateLoad(CharTy, SrcStr, "memchr.char0");
       // Slice off the character's high end bits.
-      CharVal = B.CreateTrunc(CharVal, B.getInt8Ty());
+      CharVal = B.CreateTrunc(CharVal, CharTy);
       Value *Cmp = B.CreateICmpEQ(Val, CharVal, "memchr.char0cmp");
       return B.CreateSelect(Cmp, SrcStr, NullPtr, "memchr.sel");
     }
@@ -1553,23 +1592,33 @@ static Value *optimizeMemCmpVarSize(CallInst *CI, Value *LHS, Value *RHS,
 static Value *optimizeMemCmpConstantSize(CallInst *CI, Value *LHS, Value *RHS,
                                          uint64_t Len, IRBuilderBase &B,
                                          const DataLayout &DL) {
+  unsigned CharWidth = DL.getByteWidth();
+
   if (Len == 0) // memcmp(s1,s2,0) -> 0
     return Constant::getNullValue(CI->getType());
 
-  // memcmp(S1,S2,1) -> *(unsigned char*)LHS - *(unsigned char*)RHS
   if (Len == 1) {
-    Value *LHSV = B.CreateZExt(B.CreateLoad(B.getInt8Ty(), LHS, "lhsc"),
-                               CI->getType(), "lhsv");
-    Value *RHSV = B.CreateZExt(B.CreateLoad(B.getInt8Ty(), RHS, "rhsc"),
-                               CI->getType(), "rhsv");
-    return B.CreateSub(LHSV, RHSV, "chardiff");
+    Type *CharTy = B.getIntNTy(CharWidth);
+    Value *LHSC = B.CreateLoad(CharTy, LHS, "lhsc");
+    Value *RHSC = B.CreateLoad(CharTy, RHS, "rhsc");
+
+    // memcmp(S1,S2,1) -> *(unsigned char*)LHS - *(unsigned char*)RHS
+    if (CharWidth < CI->getType()->getIntegerBitWidth()) {
+      Value *LHSV = B.CreateZExt(LHSC, CI->getType(), "lhsv");
+      Value *RHSV = B.CreateZExt(RHSC, CI->getType(), "rhsv");
+      return B.CreateSub(LHSV, RHSV, "chardiff");
+    }
+
+    // memcmp(LHS, RHS, 1) -> *(unsigned char *)LHS <=> *(unsigned char *)RHS
+    return B.CreateIntrinsic(CI->getType(), Intrinsic::ucmp, {LHSC, RHSC});
   }
 
   // memcmp(S1,S2,N/8)==0 -> (*(intN_t*)S1 != *(intN_t*)S2)==0
   // TODO: The case where both inputs are constants does not need to be limited
   // to legal integers or equality comparison. See block below this.
-  if (DL.isLegalInteger(Len * 8) && isOnlyUsedInZeroEqualityComparison(CI)) {
-    IntegerType *IntType = IntegerType::get(CI->getContext(), Len * 8);
+  if (DL.isLegalInteger(Len * CharWidth) &&
+      isOnlyUsedInZeroEqualityComparison(CI)) {
+    IntegerType *IntType = IntegerType::get(CI->getContext(), Len * CharWidth);
     Align PrefAlignment = DL.getPrefTypeAlign(IntType);
 
     // First, see if we can fold either argument to a constant.
@@ -1693,6 +1742,7 @@ Value *LibCallSimplifier::optimizeMemCCpy(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeMemPCpy(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
   Value *Dst = CI->getArgOperand(0);
   Value *N = CI->getArgOperand(2);
   // mempcpy(x, y, n) -> llvm.memcpy(align 1 x, align 1 y, n), x + n
@@ -1702,7 +1752,7 @@ Value *LibCallSimplifier::optimizeMemPCpy(CallInst *CI, IRBuilderBase &B) {
   // any return attributes are compliant.
   // TODO: Attach return value attributes to the 1st operand to preserve them?
   mergeAttributesAndFlags(NewCI, *CI);
-  return B.CreateInBoundsGEP(B.getInt8Ty(), Dst, N);
+  return B.CreateInBoundsGEP(B.getIntNTy(CharWidth), Dst, N);
 }
 
 Value *LibCallSimplifier::optimizeMemMove(CallInst *CI, IRBuilderBase &B) {
@@ -1719,13 +1769,14 @@ Value *LibCallSimplifier::optimizeMemMove(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeMemSet(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
   Value *Size = CI->getArgOperand(2);
   annotateNonNullAndDereferenceable(CI, 0, Size, DL);
   if (isa<IntrinsicInst>(CI))
     return nullptr;
 
   // memset(p, v, n) -> llvm.memset(align 1 p, v, n)
-  Value *Val = B.CreateIntCast(CI->getArgOperand(1), B.getInt8Ty(), false);
+  Value *Val = B.CreateTrunc(CI->getArgOperand(1), B.getIntNTy(CharWidth));
   CallInst *NewCI = B.CreateMemSet(CI->getArgOperand(0), Val, Size, Align(1));
   mergeAttributesAndFlags(NewCI, *CI);
   return CI->getArgOperand(0);
@@ -3474,7 +3525,7 @@ Value *LibCallSimplifier::optimizeSPrintFString(CallInst *CI,
       // sprintf(dest, "%s", str) -> strcpy(dest, str)
       return copyFlags(*CI, emitStrCpy(Dest, CI->getArgOperand(2), B, TLI));
 
-    uint64_t SrcLen = GetStringLength(CI->getArgOperand(2));
+    uint64_t SrcLen = getStringLength(CI->getArgOperand(2), /*CharWidth=*/8);
     if (SrcLen) {
       B.CreateMemCpy(Dest, Align(1), CI->getArgOperand(2), Align(1),
                      TLI->getAsSizeT(SrcLen, *CI->getModule()));
@@ -3765,6 +3816,7 @@ Value *LibCallSimplifier::optimizeFPrintF(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeFWrite(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
   optimizeErrorReporting(CI, B, 3);
 
   // Get the element size and count.
@@ -3780,7 +3832,8 @@ Value *LibCallSimplifier::optimizeFWrite(CallInst *CI, IRBuilderBase &B) {
     // If this is writing one byte, turn it into fputc.
     // This optimisation is only valid, if the return value is unused.
     if (Bytes == 1 && CI->use_empty()) { // fwrite(S,1,1,F) -> fputc(S[0],F)
-      Value *Char = B.CreateLoad(B.getInt8Ty(), CI->getArgOperand(0), "char");
+      Value *Char =
+          B.CreateLoad(B.getIntNTy(CharWidth), CI->getArgOperand(0), "char");
       Type *IntTy = B.getIntNTy(TLI->getIntSize());
       Value *Cast = B.CreateIntCast(Char, IntTy, /*isSigned*/ true, "chari");
       Value *NewCI = emitFPutC(Cast, CI->getArgOperand(3), B, TLI);
@@ -3792,6 +3845,8 @@ Value *LibCallSimplifier::optimizeFWrite(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeFPuts(CallInst *CI, IRBuilderBase &B) {
+  unsigned CharWidth = DL.getByteWidth();
+
   optimizeErrorReporting(CI, B, 1);
 
   // Don't rewrite fputs to fwrite when optimising for size because fwrite
@@ -3805,7 +3860,7 @@ Value *LibCallSimplifier::optimizeFPuts(CallInst *CI, IRBuilderBase &B) {
     return nullptr;
 
   // fputs(s,F) --> fwrite(s,strlen(s),1,F)
-  uint64_t Len = GetStringLength(CI->getArgOperand(0));
+  uint64_t Len = getStringLength(CI->getArgOperand(0), CharWidth);
   if (!Len)
     return nullptr;
 
@@ -4331,7 +4386,8 @@ bool FortifiedLibCallSimplifier::isFortifiedCallFoldable(
     if (OnlyLowerUnknownSize)
       return false;
     if (StrOp) {
-      uint64_t Len = GetStringLength(CI->getArgOperand(*StrOp));
+      uint64_t Len = getStringLength(CI->getArgOperand(*StrOp),
+                                     CI->getDataLayout().getByteWidth());
       // If the length is 0 we don't know how long it is and so we can't
       // remove the check.
       if (Len)
@@ -4377,7 +4433,8 @@ Value *FortifiedLibCallSimplifier::optimizeMemMoveChk(CallInst *CI,
 Value *FortifiedLibCallSimplifier::optimizeMemSetChk(CallInst *CI,
                                                      IRBuilderBase &B) {
   if (isFortifiedCallFoldable(CI, 3, 2)) {
-    Value *Val = B.CreateIntCast(CI->getArgOperand(1), B.getInt8Ty(), false);
+    Type *CharTy = B.getIntNTy(CI->getDataLayout().getByteWidth());
+    Value *Val = B.CreateIntCast(CI->getArgOperand(1), CharTy, false);
     CallInst *NewCI = B.CreateMemSet(CI->getArgOperand(0), Val,
                                      CI->getArgOperand(2), Align(1));
     mergeAttributesAndFlags(NewCI, *CI);
@@ -4401,13 +4458,15 @@ Value *FortifiedLibCallSimplifier::optimizeStrpCpyChk(CallInst *CI,
                                                       IRBuilderBase &B,
                                                       LibFunc Func) {
   const DataLayout &DL = CI->getDataLayout();
+  unsigned CharWidth = DL.getByteWidth();
   Value *Dst = CI->getArgOperand(0), *Src = CI->getArgOperand(1),
         *ObjSize = CI->getArgOperand(2);
 
   // __stpcpy_chk(x,x,...)  -> x+strlen(x)
   if (Func == LibFunc_stpcpy_chk && !OnlyLowerUnknownSize && Dst == Src) {
     Value *StrLen = emitStrLen(Src, B, DL, TLI);
-    return StrLen ? B.CreateInBoundsGEP(B.getInt8Ty(), Dst, StrLen) : nullptr;
+    return StrLen ? B.CreateInBoundsGEP(B.getIntNTy(CharWidth), Dst, StrLen)
+                  : nullptr;
   }
 
   // If a) we don't have any length information, or b) we know this will
@@ -4426,7 +4485,7 @@ Value *FortifiedLibCallSimplifier::optimizeStrpCpyChk(CallInst *CI,
     return nullptr;
 
   // Maybe we can stil fold __st[rp]cpy_chk to __memcpy_chk.
-  uint64_t Len = GetStringLength(Src);
+  uint64_t Len = getStringLength(Src, CharWidth);
   if (Len)
     annotateDereferenceableBytes(CI, 1, Len);
   else
@@ -4439,7 +4498,7 @@ Value *FortifiedLibCallSimplifier::optimizeStrpCpyChk(CallInst *CI,
   // If the function was an __stpcpy_chk, and we were able to fold it into
   // a __memcpy_chk, we still need to return the correct end pointer.
   if (Ret && Func == LibFunc_stpcpy_chk)
-    return B.CreateInBoundsGEP(B.getInt8Ty(), Dst,
+    return B.CreateInBoundsGEP(B.getIntNTy(CharWidth), Dst,
                                ConstantInt::get(SizeTTy, Len - 1));
   return copyFlags(*CI, cast<CallInst>(Ret));
 }

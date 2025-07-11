@@ -3144,8 +3144,9 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   if (MadeChange)
     return &GEP;
 
-  // Canonicalize constant GEPs to i8 type.
-  if (!GEPEltType->isIntegerTy(8) && GEP.hasAllConstantIndices()) {
+  // Canonicalize constant GEPs to byte type.
+  if (!GEPEltType->isIntegerTy(DL.getByteWidth()) &&
+      GEP.hasAllConstantIndices()) {
     APInt Offset(DL.getIndexTypeSizeInBits(GEPType), 0);
     if (GEP.accumulateConstantOffset(DL, Offset))
       return replaceInstUsesWith(

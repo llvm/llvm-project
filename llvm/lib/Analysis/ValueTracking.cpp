@@ -6357,17 +6357,14 @@ bool llvm::isGEPBasedOnPointerToString(const GEPOperator *GEP,
 }
 
 // If V refers to an initialized global constant, set Slice either to
-// its initializer if the size of its elements equals ElementSize, or,
-// for ElementSize == 8, to its representation as an array of unsiged
-// char. Return true on success.
-// Offset is in the unit "nr of ElementSize sized elements".
+// its initializer if the bit width of its elements equals ElementBitWidth,
+// or, for ElementBitWidth == CHAR_BIT, to its representation as an array
+// of unsigned char. Return true on success.
+// Offset is in the unit "nr of ElementBitWidth sized elements".
 bool llvm::getConstantDataArrayInfo(const Value *V,
                                     ConstantDataArraySlice &Slice,
-                                    unsigned ElementSize, uint64_t Offset) {
+                                    unsigned ElementBitWidth, uint64_t Offset) {
   assert(V && "V should not be null.");
-  assert((ElementSize % 8) == 0 &&
-         "ElementSize expected to be a multiple of the size of a byte.");
-  unsigned ElementSizeInBytes = ElementSize / 8;
 
   // Drill down into the pointer expression V, ignoring any intervening
   // casts, and determine the identity of the object it references along
@@ -6379,6 +6376,11 @@ bool llvm::getConstantDataArrayInfo(const Value *V,
     return false;
 
   const DataLayout &DL = GV->getDataLayout();
+  unsigned ByteWidth = DL.getByteWidth();
+  assert((ElementBitWidth % ByteWidth) == 0 &&
+         "ElementBitWidth is expected to be a multiple of the byte width");
+  unsigned ElementSizeInBytes = ElementBitWidth / ByteWidth;
+
   APInt Off(DL.getIndexTypeSizeInBits(V->getType()), 0);
 
   if (GV != V->stripAndAccumulateConstantOffsets(DL, Off,
@@ -6418,7 +6420,7 @@ bool llvm::getConstantDataArrayInfo(const Value *V,
   auto *Init = const_cast<Constant *>(GV->getInitializer());
   if (auto *ArrayInit = dyn_cast<ConstantDataArray>(Init)) {
     Type *InitElTy = ArrayInit->getElementType();
-    if (InitElTy->isIntegerTy(ElementSize)) {
+    if (InitElTy->isIntegerTy(ElementBitWidth)) {
       // If Init is an initializer for an array of the expected type
       // and size, use it as is.
       Array = ArrayInit;
@@ -6427,7 +6429,7 @@ bool llvm::getConstantDataArrayInfo(const Value *V,
   }
 
   if (!Array) {
-    if (ElementSize != 8)
+    if (ElementBitWidth != CHAR_BIT)
       // TODO: Handle conversions to larger integral types.
       return false;
 
@@ -6505,9 +6507,9 @@ bool llvm::getConstantStringInfo(const Value *V, StringRef &Str,
 
 /// If we can compute the length of the string pointed to by
 /// the specified pointer, return 'len+1'.  If we can't, return 0.
-static uint64_t GetStringLengthH(const Value *V,
-                                 SmallPtrSetImpl<const PHINode*> &PHIs,
-                                 unsigned CharSize) {
+static uint64_t getStringLength(const Value *V,
+                                SmallPtrSetImpl<const PHINode *> &PHIs,
+                                unsigned CharWidth) {
   // Look through noop bitcast instructions.
   V = V->stripPointerCasts();
 
@@ -6520,7 +6522,7 @@ static uint64_t GetStringLengthH(const Value *V,
     // If it was new, see if all the input strings are the same length.
     uint64_t LenSoFar = ~0ULL;
     for (Value *IncValue : PN->incoming_values()) {
-      uint64_t Len = GetStringLengthH(IncValue, PHIs, CharSize);
+      uint64_t Len = getStringLength(IncValue, PHIs, CharWidth);
       if (Len == 0) return 0; // Unknown length -> unknown.
 
       if (Len == ~0ULL) continue;
@@ -6536,9 +6538,9 @@ static uint64_t GetStringLengthH(const Value *V,
 
   // strlen(select(c,x,y)) -> strlen(x) ^ strlen(y)
   if (const SelectInst *SI = dyn_cast<SelectInst>(V)) {
-    uint64_t Len1 = GetStringLengthH(SI->getTrueValue(), PHIs, CharSize);
+    uint64_t Len1 = getStringLength(SI->getTrueValue(), PHIs, CharWidth);
     if (Len1 == 0) return 0;
-    uint64_t Len2 = GetStringLengthH(SI->getFalseValue(), PHIs, CharSize);
+    uint64_t Len2 = getStringLength(SI->getFalseValue(), PHIs, CharWidth);
     if (Len2 == 0) return 0;
     if (Len1 == ~0ULL) return Len2;
     if (Len2 == ~0ULL) return Len1;
@@ -6548,7 +6550,7 @@ static uint64_t GetStringLengthH(const Value *V,
 
   // Otherwise, see if we can read the string.
   ConstantDataArraySlice Slice;
-  if (!getConstantDataArrayInfo(V, Slice, CharSize))
+  if (!getConstantDataArrayInfo(V, Slice, CharWidth))
     return 0;
 
   if (Slice.Array == nullptr)
@@ -6570,12 +6572,12 @@ static uint64_t GetStringLengthH(const Value *V,
 
 /// If we can compute the length of the string pointed to by
 /// the specified pointer, return 'len+1'.  If we can't, return 0.
-uint64_t llvm::GetStringLength(const Value *V, unsigned CharSize) {
+uint64_t llvm::getStringLength(const Value *V, unsigned CharWidth) {
   if (!V->getType()->isPointerTy())
     return 0;
 
   SmallPtrSet<const PHINode*, 32> PHIs;
-  uint64_t Len = GetStringLengthH(V, PHIs, CharSize);
+  uint64_t Len = ::getStringLength(V, PHIs, CharWidth);
   // If Len is ~0ULL, we had an infinite phi cycle: this is dead code, so return
   // an empty string as a length.
   return Len == ~0ULL ? 1 : Len;

@@ -394,7 +394,7 @@ struct ConstantDataArraySlice {
 /// with an appropriate offset.
 LLVM_ABI bool getConstantDataArrayInfo(const Value *V,
                                        ConstantDataArraySlice &Slice,
-                                       unsigned ElementSize,
+                                       unsigned ElementBitWidth,
                                        uint64_t Offset = 0);
 
 /// This function computes the length of a null-terminated C string pointed to
@@ -408,7 +408,7 @@ LLVM_ABI bool getConstantStringInfo(const Value *V, StringRef &Str,
 
 /// If we can compute the length of the string pointed to by the specified
 /// pointer, return 'len+1'.  If we can't, return 0.
-LLVM_ABI uint64_t GetStringLength(const Value *V, unsigned CharSize = 8);
+LLVM_ABI uint64_t getStringLength(const Value *V, unsigned CharWidth);
 
 /// This function returns call pointer argument that is considered the same by
 /// aliasing rules. You CAN'T use it to replace one value with another. If
