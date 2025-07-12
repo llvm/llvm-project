@@ -2669,6 +2669,33 @@ def ComplexAddOp : CIR_Op<"complex.add", [Pure, SameOperandsAndResultType]> {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexSubOp
+//===----------------------------------------------------------------------===//
+
+def ComplexSubOp : CIR_Op<"complex.sub", [Pure, SameOperandsAndResultType]> {
+  let summary = "Complex subtraction";
+  let description = [{
+    The `cir.complex.sub` operation takes two complex numbers and returns
+    their difference.
+
+    Example:
+
+    ```mlir
+    %2 = cir.complex.sub %0, %1 : !cir.complex<!cir.float>
+    ```
+  }];
+
+  let arguments = (ins CIR_ComplexType:$lhs, CIR_ComplexType:$rhs);
+
+  let results = (outs CIR_ComplexType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs `:` qualified(type($result)) attr-dict
+  }];
+}
+
+
+//===----------------------------------------------------------------------===//
 // Bit Manipulation Operations
 //===----------------------------------------------------------------------===//
 
