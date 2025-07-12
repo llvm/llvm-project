@@ -1100,6 +1100,8 @@ public:
     return getGeneration() >= GFX10 || hasGFX940Insts();
   }
 
+  bool hasFmaakFmamkF64Insts() const { return hasGFX1250Insts(); }
+
   bool hasImageInsts() const {
     return HasImageInsts;
   }
@@ -1481,6 +1483,8 @@ public:
   bool hasSignedScratchOffsets() const { return getGeneration() >= GFX12; }
 
   bool hasGFX1250Insts() const { return GFX1250Insts; }
+
+  bool hasVOPD3() const { return GFX1250Insts; }
 
   // \returns true if target has S_SETPRIO_INC_WG instruction.
   bool hasSetPrioIncWgInst() const { return HasSetPrioIncWgInst; }

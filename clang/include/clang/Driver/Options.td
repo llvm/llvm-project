@@ -1891,6 +1891,12 @@ defm apinotes_modules : BoolOption<"f", "apinotes-modules",
     NegFlag<SetFalse, [], [ClangOption], "Disable">,
     BothFlags<[], [ClangOption, CC1Option], " module-based external API notes support">>,
     Group<f_clang_Group>;
+defm swift_version_independent_apinotes : BoolOption<"f", "swift-version-independent-apinotes",
+  LangOpts<"SwiftVersionIndependentAPINotes">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption, CC1Option], " version-independent external API notes support">>,
+  Group<f_clang_Group>;
 def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
   Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
   MetaVarName<"<version>">,

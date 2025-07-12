@@ -967,6 +967,22 @@ func.func @reduction_minui(%v : vector<3xi32>, %s: i32) -> i32 {
 
 // -----
 
+module attributes { spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [BFloat16DotProductKHR], [SPV_KHR_bfloat16]>, #spirv.resource_limits<>> } {
+
+// CHECK-LABEL: func @reduction_bf16_addf_mulf
+//  CHECK-SAME:  (%[[ARG0:.+]]: vector<4xbf16>, %[[ARG1:.+]]: vector<4xbf16>)
+//  CHECK:       %[[DOT:.+]] = spirv.Dot %[[ARG0]], %[[ARG1]] : vector<4xbf16> -> bf16
+//  CHECK:       return %[[DOT]] : bf16
+func.func @reduction_bf16_addf_mulf(%arg0: vector<4xbf16>, %arg1: vector<4xbf16>) -> bf16 {
+  %mul = arith.mulf %arg0, %arg1 : vector<4xbf16>
+  %red = vector.reduction <add>, %mul : vector<4xbf16> into bf16
+  return %red : bf16
+}
+
+} // end module
+
+// -----
+
 // CHECK-LABEL: @shape_cast_same_type
 //  CHECK-SAME: (%[[ARG0:.*]]: vector<2xf32>)
 //       CHECK:   return %[[ARG0]]
