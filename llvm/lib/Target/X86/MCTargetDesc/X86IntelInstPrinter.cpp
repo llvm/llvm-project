@@ -383,7 +383,7 @@ void X86IntelInstPrinter::printMemReference(const MCInst *MI, unsigned Op,
   // binary object.
   if (SymbolizeOperands && MIA) {
     uint64_t Target;
-    if (MIA->evaluateBranch(*MI, 0, 0, Target))
+    if (MIA->findTargetAddress(*MI, 0, 0, Target))
       return;
     if (MIA->evaluateMemoryOperandAddress(*MI, /*STI=*/nullptr, 0, 0))
       return;
