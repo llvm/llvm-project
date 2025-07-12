@@ -433,7 +433,7 @@ class MapInfoFinalizationPass
                                    getDescriptorMapType(mapType, target)),
             op.getMapCaptureTypeAttr(), /*varPtrPtr=*/mlir::Value{}, newMembers,
             newMembersAttr, /*bounds=*/mlir::SmallVector<mlir::Value>{},
-            /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getNameAttr(),
+            op.getMapperIdAttr(), op.getNameAttr(),
             /*partial_map=*/builder.getBoolAttr(false));
     op.replaceAllUsesWith(newDescParentMapOp.getResult());
     op->erase();
