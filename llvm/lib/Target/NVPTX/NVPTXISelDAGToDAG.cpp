@@ -494,7 +494,7 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
   return true;
 }
 
-static std::optional<unsigned> convertAS(unsigned AS) {
+static std::optional<NVPTX::AddressSpace> convertAS(unsigned AS) {
   switch (AS) {
   case llvm::ADDRESS_SPACE_LOCAL:
     return NVPTX::AddressSpace::Local;
@@ -515,9 +515,38 @@ static std::optional<unsigned> convertAS(unsigned AS) {
   }
 }
 
-static unsigned int getCodeAddrSpace(const MemSDNode *N) {
+NVPTX::AddressSpace NVPTXDAGToDAGISel::getAddrSpace(const MemSDNode *N) {
   return convertAS(N->getMemOperand()->getAddrSpace())
       .value_or(NVPTX::AddressSpace::Generic);
+}
+
+NVPTX::Ordering NVPTXDAGToDAGISel::getMemOrder(const MemSDNode *N) const {
+  // No "sem" orderings for SM/PTX versions which do not support memory ordering
+  if (!Subtarget->hasMemoryOrdering())
+    return NVPTX::Ordering::NotAtomic;
+  auto Ordering = N->getMergedOrdering();
+  switch (Ordering) {
+  case AtomicOrdering::NotAtomic:
+  case AtomicOrdering::Unordered:
+    return NVPTX::Ordering::NotAtomic;
+  case AtomicOrdering::Monotonic:
+    return NVPTX::Ordering::Relaxed;
+  case AtomicOrdering::Acquire:
+    return NVPTX::Ordering::Acquire;
+  case AtomicOrdering::Release:
+    return NVPTX::Ordering::Release;
+  case AtomicOrdering::AcquireRelease:
+    return NVPTX::Ordering::AcquireRelease;
+  case AtomicOrdering::SequentiallyConsistent:
+    return NVPTX::Ordering::SequentiallyConsistent;
+  }
+}
+
+NVPTX::Scope NVPTXDAGToDAGISel::getAtomicScope(const MemSDNode *N) const {
+  // No "scope" modifier for SM/PTX versions which do not support scoped atomics
+  if (!Subtarget->hasAtomScope())
+    return NVPTX::Scope::Thread;
+  return Scopes[N->getSyncScopeID()];
 }
 
 namespace {
@@ -532,7 +561,7 @@ struct OperationOrderings {
 static OperationOrderings
 getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   AtomicOrdering Ordering = N->getSuccessOrdering();
-  auto CodeAddrSpace = getCodeAddrSpace(N);
+  auto CodeAddrSpace = NVPTXDAGToDAGISel::getAddrSpace(N);
 
   bool HasMemoryOrdering = Subtarget->hasMemoryOrdering();
   bool HasRelaxedMMIO = Subtarget->hasRelaxedMMIO();
@@ -1025,7 +1054,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   const MVT LoadedVT = LoadedEVT.getSimpleVT();
 
   // Address Space Setting
-  const unsigned CodeAddrSpace = getCodeAddrSpace(LD);
+  const unsigned CodeAddrSpace = getAddrSpace(LD);
   if (canLowerToLDG(*LD, *Subtarget, CodeAddrSpace))
     return tryLDG(LD);
 
@@ -1097,7 +1126,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   const MVT MemVT = MemEVT.getSimpleVT();
 
   // Address Space Setting
-  const unsigned CodeAddrSpace = getCodeAddrSpace(LD);
+  const unsigned CodeAddrSpace = getAddrSpace(LD);
   if (canLowerToLDG(*LD, *Subtarget, CodeAddrSpace))
     return tryLDG(LD);
 
@@ -1313,7 +1342,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
     return false;
 
   // Address Space Setting
-  const unsigned CodeAddrSpace = getCodeAddrSpace(ST);
+  const unsigned CodeAddrSpace = getAddrSpace(ST);
 
   SDLoc DL(ST);
   SDValue Chain = ST->getChain();
@@ -1363,7 +1392,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   assert(StoreVT.isSimple() && "Store value is not simple");
 
   // Address Space Setting
-  const unsigned CodeAddrSpace = getCodeAddrSpace(ST);
+  const unsigned CodeAddrSpace = getAddrSpace(ST);
   if (CodeAddrSpace == NVPTX::AddressSpace::Const) {
     report_fatal_error("Cannot store to pointer that points to constant "
                        "memory space");
