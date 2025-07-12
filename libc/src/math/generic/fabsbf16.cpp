@@ -8,9 +8,9 @@
 
 #include "src/math/fabsbf16.h"
 
+#include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/bfloat16.h"
-#include "src/__support/FPUtil/BasicOperations.h" // fputil::abs
-#include "src/__support/macros/config.h"          // LIBC_NAMESPACE_DECL
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

@@ -556,4 +556,3 @@ add_math_entrypoint_object(ufromfpxf)
 add_math_entrypoint_object(ufromfpxl)
 add_math_entrypoint_object(ufromfpxf16)
 add_math_entrypoint_object(ufromfpxf128)
-
