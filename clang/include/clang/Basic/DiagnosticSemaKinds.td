@@ -13098,6 +13098,7 @@ def err_hlsl_resource_range_overlap: Error<
   "resource ranges %sub{subst_hlsl_format_ranges}0,1,2,3 and %sub{subst_hlsl_format_ranges}4,5,6,7 "
   "overlap within space = %8 and visibility = "
   "%select{All|Vertex|Hull|Domain|Geometry|Pixel|Amplification|Mesh}9">;
+def note_hlsl_resource_range_here: Note<"overlapping resource range here">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
