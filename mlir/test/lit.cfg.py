@@ -301,6 +301,17 @@ if "MLIR_OPT_CHECK_IR_ROUNDTRIP" in os.environ:
             ToolSubst("mlir-opt", "mlir-opt --verify-roundtrip", unresolved="fatal"),
         ]
     )
+elif "MLIR_GENERATE_PATTERN_CATALOG" in os.environ:
+    tools.extend(
+        [
+            ToolSubst(
+                "mlir-opt",
+                "mlir-opt --debug-only=pattern-logging-listener --mlir-disable-threading",
+                unresolved="fatal",
+            ),
+            ToolSubst("FileCheck", "FileCheck --dump-input=always", unresolved="fatal"),
+        ]
+    )
 else:
     tools.extend(["mlir-opt"])
 
