@@ -1280,7 +1280,9 @@ static bool FormatFunctionNameForLanguage(Stream &s,
     return false;
 
   FormatEntity::Entry format = language_plugin->GetFunctionNameFormat();
-  if (!format)
+
+  // Bail on invalid or empty format.
+  if (!format || format == FormatEntity::Entry(Entry::Type::Root))
     return false;
 
   StreamString name_stream;
