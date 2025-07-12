@@ -603,6 +603,22 @@ class RangedTypesMatchWith<string summary, string lhsArg, string rhsArg,
                            string transform>
   : TypesMatchWith<summary, lhsArg, rhsArg, transform, "llvm::equal">;
 
+// Checks that each inputArg has the same type as the corresponding entry
+// in allowedTypes
+class InputMatchesTypes<list<string> inputArgs, list<Type> allowedTypes> :
+    PredOpTrait<"operands {" # !interleave(inputArgs, ", ") # "} match expected types",
+                !foldl(TruePred, !range(!size(inputArgs)), acc, i,
+                       And<[acc,
+                           SubstLeaves<"$_self", "$" # inputArgs[i] # ".getType()",
+                                      allowedTypes[i].predicate>
+                       ]>)> {
+    assert !eq(!size(inputArgs), !size(allowedTypes)),
+           "inputArgs and allowedTypes lists must have the same length";
+
+    list<string> inputArgList = inputArgs;
+    list<Type> allowedTypeList = allowedTypes;
+}
+
 // Type Constraint operand `idx`'s Element type is `type`.
 class TCopVTEtIs<int idx, Type type> : And<[
    CPred<"$_op.getNumOperands() > " # idx>,
