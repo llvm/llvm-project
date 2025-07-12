@@ -325,3 +325,94 @@ int test_builtin_popcountg(unsigned x) {
 
 // OGCG-LABEL: _Z22test_builtin_popcountgj
 // OGCG:         %{{.+}} = call i32 @llvm.ctpop.i32(i32 %{{.+}})
+
+unsigned char test_builtin_bitreverse8(unsigned char x) {
+  return __builtin_bitreverse8(x);
+}
+
+// CIR-LABEL: @_Z24test_builtin_bitreverse8h
+// CIR:         %{{.+}} = cir.bit.reverse(%{{.+}} : !u8i) : !u8i
+
+// LLVM-LABEL: @_Z24test_builtin_bitreverse8h
+// LLVM:         %{{.+}} = call i8 @llvm.bitreverse.i8(i8 %{{.+}})
+
+// OGCG-LABEL: @_Z24test_builtin_bitreverse8h
+// OGCG:         %{{.+}} = call i8 @llvm.bitreverse.i8(i8 %{{.+}})
+
+unsigned short test_builtin_bitreverse16(unsigned short x) {
+  return __builtin_bitreverse16(x);
+}
+
+// CIR-LABEL: @_Z25test_builtin_bitreverse16t
+// CIR:         %{{.+}} = cir.bit.reverse(%{{.+}} : !u16i) : !u16i
+
+// LLVM-LABEL: @_Z25test_builtin_bitreverse16t
+// LLVM:         %{{.+}} = call i16 @llvm.bitreverse.i16(i16 %{{.+}})
+
+// OGCG-LABEL: @_Z25test_builtin_bitreverse16t
+// OGCG:         %{{.+}} = call i16 @llvm.bitreverse.i16(i16 %{{.+}})
+
+unsigned test_builtin_bitreverse32(unsigned x) {
+  return __builtin_bitreverse32(x);
+}
+
+// CIR-LABEL: @_Z25test_builtin_bitreverse32j
+// CIR:         %{{.+}} = cir.bit.reverse(%{{.+}} : !u32i) : !u32i
+
+// LLVM-LABEL: @_Z25test_builtin_bitreverse32j
+// LLVM:         %{{.+}} = call i32 @llvm.bitreverse.i32(i32 %{{.+}})
+
+// OGCG-LABEL: @_Z25test_builtin_bitreverse32j
+// OGCG:         %{{.+}} = call i32 @llvm.bitreverse.i32(i32 %{{.+}})
+
+unsigned long long test_builtin_bitreverse64(unsigned long long x) {
+  return __builtin_bitreverse64(x);
+}
+
+// CIR-LABEL: @_Z25test_builtin_bitreverse64y
+// CIR:         %{{.+}} = cir.bit.reverse(%{{.+}} : !u64i) : !u64i
+
+// LLVM-LABEL: @_Z25test_builtin_bitreverse64y
+// LLVM:         %{{.+}} = call i64 @llvm.bitreverse.i64(i64 %{{.+}})
+
+// OGCG-LABEL: @_Z25test_builtin_bitreverse64y
+// OGCG:         %{{.+}} = call i64 @llvm.bitreverse.i64(i64 %{{.+}})
+
+unsigned short test_builtin_bswap16(unsigned short x) {
+  return __builtin_bswap16(x);
+}
+
+// CIR-LABEL: @_Z20test_builtin_bswap16t
+// CIR:         %{{.+}} = cir.byte_swap(%{{.+}} : !u16i) : !u16i
+
+// LLVM-LABEL: @_Z20test_builtin_bswap16t
+// LLVM:         %{{.+}} = call i16 @llvm.bswap.i16(i16 %{{.+}})
+
+// OGCG-LABEL: @_Z20test_builtin_bswap16t
+// OGCG:         %{{.+}} = call i16 @llvm.bswap.i16(i16 %{{.+}})
+
+unsigned test_builtin_bswap32(unsigned x) {
+  return __builtin_bswap32(x);
+}
+
+// CIR-LABEL: @_Z20test_builtin_bswap32j
+// CIR:         %{{.+}} = cir.byte_swap(%{{.+}} : !u32i) : !u32i
+
+// LLVM-LABEL: @_Z20test_builtin_bswap32j
+// LLVM:         %{{.+}} = call i32 @llvm.bswap.i32(i32 %{{.+}})
+
+// OGCG-LABEL: @_Z20test_builtin_bswap32j
+// OGCG:         %{{.+}} = call i32 @llvm.bswap.i32(i32 %{{.+}})
+
+unsigned long long test_builtin_bswap64(unsigned long long x) {
+  return __builtin_bswap64(x);
+}
+
+// CIR-LABEL: @_Z20test_builtin_bswap64y
+// CIR:         %{{.+}} = cir.byte_swap(%{{.+}} : !u64i) : !u64i
+
+// LLVM-LABEL: @_Z20test_builtin_bswap64y
+// LLVM:         %{{.+}} = call i64 @llvm.bswap.i64(i64 %{{.+}})
+
+// OGCG-LABEL: @_Z20test_builtin_bswap64y
+// OGCG:         %{{.+}} = call i64 @llvm.bswap.i64(i64 %{{.+}})
