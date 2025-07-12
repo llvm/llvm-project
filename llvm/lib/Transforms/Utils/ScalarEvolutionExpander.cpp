@@ -1223,6 +1223,39 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
   return Result;
 }
 
+Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
+  Type *STy = S->getType();
+  const Loop *L = S->getLoop();
+  BasicBlock *EB = L->getExitBlock();
+  if (!EB || !EB->getSinglePredecessor() ||
+      !SE.DT.dominates(EB, Builder.GetInsertBlock()))
+    return nullptr;
+
+  for (auto &PN : EB->phis()) {
+    if (!SE.isSCEVable(PN.getType()))
+      continue;
+    auto *ExitSCEV = SE.getSCEV(&PN);
+    Type *PhiTy = PN.getType();
+    if (STy->isIntegerTy() && PhiTy->isPointerTy())
+      ExitSCEV = SE.getPtrToIntExpr(ExitSCEV, STy);
+    else if (S->getType() != PN.getType())
+      continue;
+    const SCEV *Diff = SE.getMinusSCEV(S, ExitSCEV);
+    if (isa<SCEVCouldNotCompute>(Diff) ||
+        SCEVExprContains(Diff,
+                         [](const SCEV *S) { return isa<SCEVAddRecExpr>(S); }))
+      continue;
+
+    Value *DiffV = expand(Diff);
+    Value *BaseV = &PN;
+    if (DiffV->getType()->isIntegerTy() && PhiTy->isPointerTy())
+      BaseV = Builder.CreatePtrToInt(BaseV, DiffV->getType());
+    return Builder.CreateAdd(BaseV, DiffV);
+  }
+
+  return nullptr;
+}
+
 Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
   // In canonical mode we compute the addrec as an expression of a canonical IV
   // using evaluateAtIteration and expand the resulting SCEV expression. This
@@ -1261,6 +1294,11 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
     V = expand(SE.getTruncateExpr(SE.getUnknown(V), Ty), NewInsertPt);
     return V;
   }
+
+  // If there S is expanded outside the defining loop, check if there is a
+  // matching LCSSA phi node for it.
+  if (Value *V = tryToReuseLCSSAPhi(S))
+    return V;
 
   // {X,+,F} --> X + {0,+,F}
   if (!S->getStart()->isZero()) {
