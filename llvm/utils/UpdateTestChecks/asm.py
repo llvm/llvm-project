@@ -32,7 +32,7 @@ ASM_FUNCTION_X86_RE = re.compile(
 )
 
 ASM_FUNCTION_ARM_RE = re.compile(
-    r'^(?P<func>[0-9a-zA-Z_$]+):[ \t]*@+[ \t]*@"?(?P=func)"?\n'  # f: (name of function)
+    r'^(?P<func>[0-9a-zA-Z_$]+):[ \t]*(@+[ \t]*@"?(?P=func)"?)?\n'  # f: (name of function)
     r"(?:\.L(?P=func)\$local:\n)?"  # drop .L<func>$local:
     r"(?:\s*\.type\s+\.L(?P=func)\$local,@function\n)?"  # drop .type .L<func>$local
     r"\s+\.fnstart\n"  # .fnstart
