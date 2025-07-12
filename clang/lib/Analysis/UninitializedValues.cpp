@@ -276,13 +276,7 @@ namespace {
 /// escaped the analysis and will be treated as an initialization.
 class ClassifyRefs : public StmtVisitor<ClassifyRefs> {
 public:
-  enum Class {
-    Init,
-    Use,
-    SelfInit,
-    ConstRefUse,
-    Ignore
-  };
+  enum Class { Init, Use, SelfInit, ConstRefUse, ConstPtrUse, Ignore };
 
 private:
   const DeclContext *DC;
@@ -451,8 +445,9 @@ void ClassifyRefs::VisitCallExpr(CallExpr *CE) {
       const Expr *Ex = stripCasts(DC->getParentASTContext(), *I);
       const auto *UO = dyn_cast<UnaryOperator>(Ex);
       if (UO && UO->getOpcode() == UO_AddrOf)
-        Ex = UO->getSubExpr();
-      classify(Ex, Ignore);
+        classify(UO->getSubExpr(), isTrivialBody ? Ignore : ConstPtrUse);
+      else
+        classify(Ex, Ignore);
     }
   }
 }
@@ -496,6 +491,7 @@ public:
 
   void reportUse(const Expr *ex, const VarDecl *vd);
   void reportConstRefUse(const Expr *ex, const VarDecl *vd);
+  void reportConstPtrUse(const Expr *ex, const VarDecl *vd);
 
   void VisitBinaryOperator(BinaryOperator *bo);
   void VisitBlockExpr(BlockExpr *be);
@@ -682,6 +678,15 @@ void TransferFunctions::reportConstRefUse(const Expr *ex, const VarDecl *vd) {
   }
 }
 
+void TransferFunctions::reportConstPtrUse(const Expr *ex, const VarDecl *vd) {
+  Value v = vals[vd];
+  if (isAlwaysUninit(v)) {
+    auto use = getUninitUse(ex, vd, v);
+    use.setConstPtrUse();
+    handler.handleUseOfUninitVariable(vd, use);
+  }
+}
+
 void TransferFunctions::VisitObjCForCollectionStmt(ObjCForCollectionStmt *FS) {
   // This represents an initialization of the 'element' value.
   if (const auto *DS = dyn_cast<DeclStmt>(FS->getElement())) {
@@ -753,6 +758,9 @@ void TransferFunctions::VisitDeclRefExpr(DeclRefExpr *dr) {
     break;
   case ClassifyRefs::ConstRefUse:
     reportConstRefUse(dr, cast<VarDecl>(dr->getDecl()));
+    break;
+  case ClassifyRefs::ConstPtrUse:
+    reportConstPtrUse(dr, cast<VarDecl>(dr->getDecl()));
     break;
   }
 }
