@@ -306,14 +306,14 @@ IncludeInserter::calculateIncludePath(const HeaderFile &InsertedHeader,
     return std::nullopt;
   bool IsAngled = false;
   for (auto &Filter : AngledHeaders) {
-    if (Filter(Suggested)) {
+    if (Filter(InsertedHeader.File)) {
       IsAngled = true;
       break;
     }
   }
   bool IsQuoted = false;
   for (auto &Filter : QuotedHeaders) {
-    if (Filter(Suggested)) {
+    if (Filter(InsertedHeader.File)) {
       IsQuoted = true;
       break;
     }
@@ -324,7 +324,7 @@ IncludeInserter::calculateIncludePath(const HeaderFile &InsertedHeader,
     if (IsAngled && IsQuoted) {
       elog("Header '{0}' matches both quoted and angled regexes, default will "
            "be used.",
-           Suggested);
+           InsertedHeader.File);
     }
     IsAngled = IsAngledByDefault;
   }
