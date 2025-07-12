@@ -314,7 +314,7 @@ std::optional<PrimType> Context::classify(QualType T) const {
   }
 
   if (const auto *ET = T->getAs<EnumType>()) {
-    const auto *D = ET->getDecl();
+    const auto *D = ET->getOriginalDecl()->getDefinitionOrSelf();
     if (!D->isComplete())
       return std::nullopt;
     return classify(D->getIntegerType());

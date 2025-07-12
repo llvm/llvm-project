@@ -159,7 +159,7 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
     } else if (const auto *M = dyn_cast<CXXMethodDecl>(F)) {
       print(OS, This, S.getASTContext(),
             S.getASTContext().getLValueReferenceType(
-                S.getASTContext().getRecordType(M->getParent())));
+                S.getASTContext().getCanonicalTagType(M->getParent())));
       OS << ".";
     }
   }
