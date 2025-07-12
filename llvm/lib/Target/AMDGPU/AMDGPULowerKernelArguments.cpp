@@ -13,6 +13,7 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
+#include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
@@ -86,6 +87,9 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
       Attribute::getWithDereferenceableBytes(Ctx, TotalKernArgSize));
 
   uint64_t ExplicitArgOffset = 0;
+
+  addAliasScopeMetadataForFunction(F, F.getParent()->getDataLayout());
+
   for (Argument &Arg : F.args()) {
     const bool IsByRef = Arg.hasByRefAttr();
     Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
@@ -123,11 +127,6 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
       if ((PT->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
            PT->getAddressSpace() == AMDGPUAS::REGION_ADDRESS) &&
           !ST.hasUsableDSOffset())
-        continue;
-
-      // FIXME: We can replace this with equivalent alias.scope/noalias
-      // metadata, but this appears to be a lot of work.
-      if (Arg.hasNoAliasAttr())
         continue;
     }
 
@@ -214,8 +213,6 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM) {
                                  Builder.getInt64Ty(), ParamAlign->value()))));
       }
     }
-
-    // TODO: Convert noalias arg to !noalias
 
     if (DoShiftOpt) {
       Value *ExtractBits = OffsetDiff == 0 ?
