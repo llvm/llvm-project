@@ -85,16 +85,18 @@ struct ol_program_impl_t {
   plugin::DeviceImageTy *Image;
   std::unique_ptr<llvm::MemoryBuffer> ImageData;
   std::vector<std::unique_ptr<ol_symbol_impl_t>> Symbols;
+  std::mutex SymbolListMutex;
   __tgt_device_image DeviceImage;
 };
 
 struct ol_symbol_impl_t {
-  ol_symbol_impl_t(GenericKernelTy *Kernel)
-      : PluginImpl(Kernel), Kind(OL_SYMBOL_KIND_KERNEL) {}
-  ol_symbol_impl_t(GlobalTy &&Global)
-      : PluginImpl(Global), Kind(OL_SYMBOL_KIND_GLOBAL_VARIABLE) {}
+  ol_symbol_impl_t(const char *Name, GenericKernelTy *Kernel)
+      : PluginImpl(Kernel), Kind(OL_SYMBOL_KIND_KERNEL), Name(Name) {}
+  ol_symbol_impl_t(const char *Name, GlobalTy &&Global)
+      : PluginImpl(Global), Kind(OL_SYMBOL_KIND_GLOBAL_VARIABLE), Name(Name) {}
   std::variant<GenericKernelTy *, GlobalTy> PluginImpl;
   ol_symbol_kind_t Kind;
+  const char *Name;
 };
 
 namespace llvm {
@@ -714,6 +716,18 @@ Error olGetSymbol_impl(ol_program_handle_t Program, const char *Name,
                        ol_symbol_kind_t Kind, ol_symbol_handle_t *Symbol) {
   auto &Device = Program->Image->getDevice();
 
+  std::lock_guard<std::mutex> Lock{Program->SymbolListMutex};
+
+  // If it already exists, return an existing handle
+  auto Check = std::find_if(
+      Program->Symbols.begin(), Program->Symbols.end(), [&](auto &Sym) {
+        return Sym->Kind == Kind && !std::strcmp(Sym->Name, Name);
+      });
+  if (Check != Program->Symbols.end()) {
+    *Symbol = Check->get();
+    return Error::success();
+  }
+
   switch (Kind) {
   case OL_SYMBOL_KIND_KERNEL: {
     auto KernelImpl = Device.constructKernel(Name);
@@ -723,10 +737,10 @@ Error olGetSymbol_impl(ol_program_handle_t Program, const char *Name,
     if (auto Err = KernelImpl->init(Device, *Program->Image))
       return Err;
 
-    *Symbol =
-        Program->Symbols
-            .emplace_back(std::make_unique<ol_symbol_impl_t>(&*KernelImpl))
-            .get();
+    *Symbol = Program->Symbols
+                  .emplace_back(std::make_unique<ol_symbol_impl_t>(
+                      KernelImpl->getName(), &*KernelImpl))
+                  .get();
     return Error::success();
   }
   case OL_SYMBOL_KIND_GLOBAL_VARIABLE: {
@@ -736,8 +750,8 @@ Error olGetSymbol_impl(ol_program_handle_t Program, const char *Name,
       return Res;
 
     *Symbol = Program->Symbols
-                  .emplace_back(
-                      std::make_unique<ol_symbol_impl_t>(std::move(GlobalObj)))
+                  .emplace_back(std::make_unique<ol_symbol_impl_t>(
+                      GlobalObj.getName().c_str(), std::move(GlobalObj)))
                   .get();
 
     return Error::success();
