@@ -1121,6 +1121,8 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VFSGNJN_VF:
   case RISCV::VFSGNJX_VF:
   case RISCV::VFSGNJX_VV:
+  // Vector Floating-Point Classify Instruction
+  case RISCV::VFCLASS_V:
   // Vector Floating-Point Compare Instructions
   case RISCV::VMFEQ_VF:
   case RISCV::VMFEQ_VV:
