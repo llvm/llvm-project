@@ -1156,8 +1156,8 @@ bool SemaHLSL::handleRootSignatureElements(
   }
 
   // 2. Sort with the RangeInfo <operator to prepare it for findOverlapping
-  std::sort(InfoPairs.begin(), InfoPairs.end(),
-            [](InfoPairT A, InfoPairT B) { return A.first < B.first; });
+  llvm::sort(InfoPairs,
+             [](InfoPairT A, InfoPairT B) { return A.first < B.first; });
 
   llvm::SmallVector<RangeInfo> Infos;
   for (const InfoPairT &Pair : InfoPairs)
