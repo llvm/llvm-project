@@ -818,7 +818,8 @@ bool mlir::LLVM::isCompatibleVectorType(Type type) {
     if (auto intType = llvm::dyn_cast<IntegerType>(elementType))
       return intType.isSignless();
     return llvm::isa<BFloat16Type, Float16Type, Float32Type, Float64Type,
-                     Float80Type, Float128Type, LLVMPointerType>(elementType);
+                     Float80Type, Float128Type, LLVMPointerType,
+                     LLVMTargetExtType>(elementType);
   }
   return false;
 }

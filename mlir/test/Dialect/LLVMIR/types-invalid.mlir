@@ -140,3 +140,11 @@ func.func private @target_ext_no_name() {
   // expected-error@below {{failed to parse LLVMTargetExtType parameter 'extTypeName' which is to be a `::llvm::StringRef`}}
   "some.op"() : () -> !llvm.target<i32, 42>
 }
+
+// -----
+
+func.func @invalid_nested_vector_target_ext() {
+  // expected-error@+1 {{vector elements must be int/index/float or be a vector element type}}
+  "some.op"() : () -> vector<2xvector<4x!llvm.target<"spirv.Event">>>
+  return
+}
