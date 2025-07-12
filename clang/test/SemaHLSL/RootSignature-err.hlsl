@@ -17,24 +17,89 @@ void bad_root_signature_2() {}
 [RootSignature(""), RootSignature("")] // expected-warning {{attribute 'RootSignature' is already applied}}
 void bad_root_signature_3() {}
 
-[RootSignature("DescriptorTable(), invalid")] // expected-error {{expected end of stream to denote end of parameters, or, another valid parameter of RootSignature}}
+// expected-error@+1 {{invalid parameter of RootSignature}}
+[RootSignature("DescriptorTable(), invalid")]
 void bad_root_signature_4() {}
 
-// expected-error@+1 {{expected ')' to denote end of parameters, or, another valid parameter of RootConstants}}
-[RootSignature("RootConstants(b0, num32BitConstants = 1, invalid)")]
+// expected-error@+1 {{expected ')' or ','}}
+[RootSignature("RootConstants(b0 num32BitConstants = 1)")]
 void bad_root_signature_5() {}
 
 #define MultiLineRootSignature \
  "CBV(b0)," \
  "RootConstants(num32BitConstants = 3, b0, invalid)"
 
-// CHECK: [[@LINE-2]]:42: note: expanded from macro 'MultiLineRootSignature'
+// CHECK: [[@LINE-2]]:44: note: expanded from macro 'MultiLineRootSignature'
 // CHECK-NEXT: [[@LINE-3]] | "RootConstants(num32BitConstants = 3, b0, invalid)"
-// CHECK-NEXT:             |                                         ^
-// expected-error@+1 {{expected ')' to denote end of parameters, or, another valid parameter of RootConstants}}
+// CHECK-NEXT:             |                                           ^
+// expected-error@+1 {{invalid parameter of RootConstants}}
 [RootSignature(MultiLineRootSignature)]
 void bad_root_signature_6() {}
 
-// expected-error@+1 {{expected end of stream to denote end of parameters, or, another valid parameter of RootSignature}}
+// expected-error@+1 {{expected end of stream or ','}}
 [RootSignature("RootFlags() RootConstants(b0, num32BitConstants = 1)")]
 void bad_root_signature_7() {}
+
+// expected-error@+1 {{invalid parameter of RootConstants}}
+[RootSignature("RootConstants(b0, num32BitConstantsTypo = 1))")]
+void bad_root_signature_8() {}
+
+// expected-error@+1 {{invalid parameter of UAV}}
+[RootSignature("UAV(b3")]
+void bad_root_signature_9() {}
+
+// expected-error@+1 {{invalid parameter of SRV}}
+[RootSignature("DescriptorTable(SRV(s1, invalid))")]
+void bad_root_signature_10() {}
+
+// expected-error@+1 {{invalid parameter of DescriptorTable}}
+[RootSignature("DescriptorTable(invalid))")]
+void bad_root_signature_11() {}
+
+// expected-error@+1 {{expected integer literal after '+'}}
+[RootSignature("CBV(space = +invalid))")]
+void bad_root_signature_12() {}
+
+// expected-error@+1 {{expected integer literal after '='}}
+[RootSignature("CBV(space = invalid))")]
+void bad_root_signature_13() {}
+
+// expected-error@+1 {{expected '(' after UAV}}
+[RootSignature("UAV invalid")]
+void bad_root_signature_14() {}
+
+// expected-error@+1 {{invalid value of visibility}}
+[RootSignature("StaticSampler(s0, visibility = visibility_typo)")]
+void bad_root_signature_15() {}
+
+// expected-error@+1 {{invalid value of filter}}
+[RootSignature("StaticSampler(s0, filter = filter_typo)")]
+void bad_root_signature_16() {}
+
+// expected-error@+1 {{invalid value of addressU}}
+[RootSignature("StaticSampler(s0, addressU = addressU_typo)")]
+void bad_root_signature_17() {}
+
+// expected-error@+1 {{invalid value of addressV}}
+[RootSignature("StaticSampler(s0, addressV = addressV_typo)")]
+void bad_root_signature_18() {}
+
+// expected-error@+1 {{invalid value of comparisonFunc}}
+[RootSignature("StaticSampler(s0, comparisonFunc = comparisonFunc_typo)")]
+void bad_root_signature_19() {}
+
+// expected-error@+1 {{invalid value of borderColor}}
+[RootSignature("StaticSampler(s0, borderColor = borderColor_typo)")]
+void bad_root_signature_20() {}
+
+// expected-error@+1 {{invalid value of flags}}
+[RootSignature("CBV(b0, flags = DATA_VOLATILE | root_descriptor_flag_typo)")]
+void bad_root_signature_21() {}
+
+// expected-error@+1 {{invalid value of flags}}
+[RootSignature("DescriptorTable(SRV(t0, flags = descriptor_range_flag_typo)")]
+void bad_root_signature_22() {}
+
+// expected-error@+1 {{invalid value of RootFlags}}
+[RootSignature("RootFlags(local_root_signature | root_flag_typo)")]
+void bad_root_signature_23() {}
