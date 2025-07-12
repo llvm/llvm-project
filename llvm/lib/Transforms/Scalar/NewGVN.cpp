@@ -4076,6 +4076,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
                 if (!match(DefI, m_Intrinsic<Intrinsic::ssa_copy>()))
                   patchReplacementInstruction(DefI, DominatingLeader);
 
+                salvageDebugInfo(*DefI);
                 markInstructionForDeletion(DefI);
               }
             }
