@@ -1,6 +1,7 @@
 add_subdirectory(Transforms)
 
 add_mlir_dialect_library(MLIRLLVMDialect
+  IR/DataLayoutImporter.cpp
   IR/FunctionCallUtils.cpp
   IR/LLVMAttrs.cpp
   IR/LLVMDialect.cpp
@@ -13,6 +14,7 @@ add_mlir_dialect_library(MLIRLLVMDialect
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
 
   DEPENDS
+  MLIRLLVMTargetFeaturesAttrsIncGen
   MLIRLLVMOpsIncGen
   MLIRLLVMTypesIncGen
   MLIRLLVMIntrinsicOpsIncGen
@@ -26,10 +28,19 @@ add_mlir_dialect_library(MLIRLLVMDialect
   BitReader
   BitWriter
   Core
+  MC
+  Target
+  Support
+  TargetParser
+  AllTargetsAsmParsers
+  AllTargetsCodeGens
+  AllTargetsDescs
+  AllTargetsInfos
 
   LINK_LIBS PUBLIC
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
+  MLIRDLTIDialect
   MLIRDataLayoutInterfaces
   MLIRFunctionInterfaces
   MLIRInferTypeOpInterface

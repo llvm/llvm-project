@@ -3,7 +3,6 @@ add_subdirectory(Dialect)
 set(LLVM_OPTIONAL_SOURCES
   ConvertFromLLVMIR.cpp
   ConvertToLLVMIR.cpp
-  DataLayoutImporter.cpp
   DebugTranslation.cpp
   DebugImporter.cpp
   LoopAnnotationImporter.cpp
@@ -63,7 +62,6 @@ add_mlir_translation_library(MLIRToLLVMIRTranslationRegistration
   )
 
 add_mlir_translation_library(MLIRTargetLLVMIRImport
-  DataLayoutImporter.cpp
   DebugImporter.cpp
   LoopAnnotationImporter.cpp
   ModuleImport.cpp

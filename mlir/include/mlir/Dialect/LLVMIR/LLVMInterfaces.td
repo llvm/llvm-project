@@ -14,6 +14,7 @@
 #define LLVMIR_INTERFACES
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/DataLayoutInterfaces.td"
 
 def FastmathFlagsInterface : OpInterface<"FastmathFlagsInterface"> {
   let description = [{
@@ -529,6 +530,58 @@ def LLVM_DIRecursiveTypeAttrInterface
       Build a rec-self instance using the provided `recId`.
     }], "DIRecursiveTypeAttrInterface", "getRecSelf",
     (ins "DistinctAttr":$recId)>
+  ];
+}
+
+def LLVM_TargetAttrInterface
+  : AttrInterface<"TargetAttrInterface", [DLTIQueryInterface]> {
+  let description = [{
+    Interface for attributes that describe LLVM targets.
+
+    These attributes should be able to return the specified target
+    `triple`, `chip` and `features` and are expected to be able to
+    produce the corresponding `llvm::TargetMachine` and
+    `llvm::DataLayout`. These methods can fail in case the backend
+    is not available.
+
+    Implementing attributes should provide a
+    `DLTIQueryInterface::query()` implementation which responds to
+    keys `"triple"`, `"chip"` and `"features"` by returning an
+    appropriate `StringAttr`, `StringAttr` and
+    `LLVM_TargetFeaturesAttr`.
+  }];
+  let cppNamespace = "::mlir::LLVM";
+  let methods = [
+    InterfaceMethod<
+      /*description=*/"Returns the target triple identifier.",
+      /*retTy=*/"::llvm::StringRef",
+      /*methodName=*/"getTriple",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the target chip (i.e. \"cpu\") identifier.",
+      /*retTy=*/"::llvm::StringRef",
+      /*methodName=*/"getChip",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the target features as a string.",
+      /*retTy=*/"::mlir::LLVM::TargetFeaturesAttr",
+      /*methodName=*/"getFeatures",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the target machine.",
+      /*retTy=*/"FailureOr<::llvm::TargetMachine *>",
+      /*methodName=*/"getTargetMachine",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the data layout associated to the target machine.",
+      /*retTy=*/"FailureOr<::llvm::DataLayout>",
+      /*methodName=*/"getDataLayout",
+      /*args=*/(ins)
+    >
   ];
 }
 
