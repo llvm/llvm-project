@@ -43,6 +43,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cmath>
 #include <cstddef>
@@ -1098,7 +1099,8 @@ bool SemaHLSL::handleRootSignatureElements(
                                             float UpperBound) {
     HadError = true;
     this->Diag(Loc, diag::err_hlsl_invalid_rootsig_value)
-        << std::to_string(LowerBound) << std::to_string(UpperBound);
+        << llvm::formatv("{0:f}", LowerBound).sstr<6>()
+        << llvm::formatv("{0:f}", UpperBound).sstr<6>();
   };
 
   auto VerifyRegister = [ReportError](SourceLocation Loc, uint32_t Register) {
