@@ -9,6 +9,7 @@
 #ifndef LLDB_VALUEOBJECT_DILAST_H
 #define LLDB_VALUEOBJECT_DILAST_H
 
+#include "lldb/ValueObject/DILLexer.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
@@ -19,10 +20,12 @@ namespace lldb_private::dil {
 /// The various types DIL AST nodes (used by the DIL parser).
 enum class NodeKind {
   eArraySubscriptNode,
+  eBinaryOpNode,
   eBitExtractionNode,
   eErrorNode,
   eIdentifierNode,
   eMemberOfNode,
+  eScalarLiteralNode,
   eUnaryOpNode,
 };
 
@@ -31,6 +34,14 @@ enum class UnaryOpKind {
   AddrOf, // "&"
   Deref,  // "*"
 };
+
+enum class BinaryOpKind {
+  Add, // "+"
+  Sub, // "-"
+};
+
+/// Translates DIL tokens to BinaryOpKind.
+BinaryOpKind GetBinaryOpKindFromToken(Token::Kind token_kind);
 
 /// Forward declaration, for use in DIL AST nodes. Definition is at the very
 /// end of this file.
@@ -178,6 +189,49 @@ private:
   int64_t m_last_index;
 };
 
+class ScalarLiteralNode : public ASTNode {
+public:
+  ScalarLiteralNode(uint32_t location, lldb::BasicType type, Scalar value)
+      : ASTNode(location, NodeKind::eScalarLiteralNode), m_type(type),
+        m_value(value) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  lldb::BasicType GetType() const { return m_type; }
+  Scalar GetValue() const & { return m_value; }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eScalarLiteralNode;
+  }
+
+private:
+  lldb::BasicType m_type;
+  Scalar m_value;
+};
+
+class BinaryOpNode : public ASTNode {
+public:
+  BinaryOpNode(uint32_t location, BinaryOpKind kind, ASTNodeUP lhs,
+               ASTNodeUP rhs)
+      : ASTNode(location, NodeKind::eBinaryOpNode), m_kind(kind),
+        m_lhs(std::move(lhs)), m_rhs(std::move(rhs)) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  BinaryOpKind GetKind() const { return m_kind; }
+  ASTNode *GetLHS() const { return m_lhs.get(); }
+  ASTNode *GetRHS() const { return m_rhs.get(); }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eBinaryOpNode;
+  }
+
+private:
+  BinaryOpKind m_kind;
+  ASTNodeUP m_lhs;
+  ASTNodeUP m_rhs;
+};
+
 /// This class contains one Visit method for each specialized type of
 /// DIL AST node. The Visit methods are used to dispatch a DIL AST node to
 /// the correct function in the DIL expression evaluator for evaluating that
@@ -195,6 +249,10 @@ public:
   Visit(const ArraySubscriptNode *node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const BitFieldExtractionNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const ScalarLiteralNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const BinaryOpNode *node) = 0;
 };
 
 } // namespace lldb_private::dil
