@@ -13,6 +13,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LOOPROTATIONUTILS_H
 #define LLVM_TRANSFORMS_UTILS_LOOPROTATIONUTILS_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -32,12 +33,14 @@ class TargetTransformInfo;
 /// header. If the loop header's size exceeds the threshold, the loop rotation
 /// will give up. The flag IsUtilMode controls the heuristic used in the
 /// LoopRotation. If it is true, the profitability heuristic will be ignored.
-LLVM_ABI bool LoopRotation(Loop *L, LoopInfo *LI,
-                           const TargetTransformInfo *TTI, AssumptionCache *AC,
-                           DominatorTree *DT, ScalarEvolution *SE,
-                           MemorySSAUpdater *MSSAU, const SimplifyQuery &SQ,
-                           bool RotationOnly, unsigned Threshold,
-                           bool IsUtilMode, bool PrepareForLTO = false);
+/// The ProfitabilityCheck function can override general profitability check.
+LLVM_ABI bool LoopRotation(
+    Loop *L, LoopInfo *LI, const TargetTransformInfo *TTI, AssumptionCache *AC,
+    DominatorTree *DT, ScalarEvolution *SE, MemorySSAUpdater *MSSAU,
+    const SimplifyQuery &SQ, bool RotationOnly, unsigned Threshold,
+    bool IsUtilMode, bool PrepareForLTO = false,
+    function_ref<bool(Loop *, ScalarEvolution *)> ProfitabilityCheck =
+        [](Loop *, ScalarEvolution *) { return false; });
 
 } // namespace llvm
 

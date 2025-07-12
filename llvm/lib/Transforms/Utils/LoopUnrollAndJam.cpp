@@ -239,14 +239,16 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
 
   // We use the runtime remainder in cases where we don't know trip multiple
   if (TripMultiple % Count != 0) {
-    if (!UnrollRuntimeLoopRemainder(L, Count, /*AllowExpensiveTripCount*/ false,
-                                    /*UseEpilogRemainder*/ true,
-                                    UnrollRemainder, /*ForgetAllSCEV*/ false,
-                                    LI, SE, DT, AC, TTI, true,
-                                    SCEVCheapExpansionBudget, EpilogueLoop)) {
+    auto UnrollReminderResult = UnrollRuntimeLoopRemainder(
+        L, Count, /*AllowExpensiveTripCount*/ false,
+        /*UseEpilogRemainder*/ true, UnrollRemainder, /*ForgetAllSCEV*/ false,
+        LI, SE, DT, AC, TTI, true, SCEVCheapExpansionBudget, EpilogueLoop);
+    if (UnrollReminderResult != LoopReminderUnrollResult::Unrolled) {
       LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; remainder loop could not be "
                            "generated when assuming runtime trip count\n");
-      return LoopUnrollResult::Unmodified;
+      return UnrollReminderResult == LoopReminderUnrollResult::Rotated
+                 ? LoopUnrollResult::Modified
+                 : LoopUnrollResult::Unmodified;
     }
   }
 

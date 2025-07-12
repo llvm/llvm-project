@@ -37,6 +37,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/LoopRotationUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
@@ -574,7 +575,7 @@ static Value *CreateTripRemainder(IRBuilder<> &B, Value *BECount,
 ///        if (extraiters != 0) jump Epil: // Omitted if unroll factor is 2.
 /// EpilExit:
 
-bool llvm::UnrollRuntimeLoopRemainder(
+LoopReminderUnrollResult llvm::UnrollRuntimeLoopRemainder(
     Loop *L, unsigned Count, bool AllowExpensiveTripCount,
     bool UseEpilogRemainder, bool UnrollRemainder, bool ForgetAllSCEV,
     LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
@@ -586,10 +587,31 @@ bool llvm::UnrollRuntimeLoopRemainder(
   LLVM_DEBUG(UseEpilogRemainder ? dbgs() << "Using epilog remainder.\n"
                                 : dbgs() << "Using prolog remainder.\n");
 
+  LoopReminderUnrollResult Result = LoopReminderUnrollResult::Unmodified;
+
+  // Rotate loop if it makes the exit count from the latch computable.
+  BasicBlock *OrigHeader = L->getHeader();
+  BranchInst *BI = dyn_cast<BranchInst>(OrigHeader->getTerminator());
+  if (BI && !BI->isUnconditional() &&
+      isa<SCEVCouldNotCompute>(SE->getExitCount(L, L->getLoopLatch())) &&
+      !isa<SCEVCouldNotCompute>(SE->getExitCount(L, OrigHeader))) {
+    LLVM_DEBUG(
+        dbgs() << "  Rotating loop to make the exit count computable.\n");
+    SimplifyQuery SQ{OrigHeader->getDataLayout()};
+    SQ.TLI = nullptr;
+    SQ.DT = DT;
+    SQ.AC = AC;
+    if (llvm::LoopRotation(L, LI, TTI, AC, DT, SE, nullptr /*MemorySSAUpdater*/,
+                           SQ, false /*RotationOnly*/, 16 /*Threshold*/,
+                           false /*IsUtilMode*/, false /*PrepareForLTO*/,
+                           [](Loop *, ScalarEvolution *) { return true; }))
+      Result = LoopReminderUnrollResult::Rotated;
+  }
+
   // Make sure the loop is in canonical form.
   if (!L->isLoopSimplifyForm()) {
     LLVM_DEBUG(dbgs() << "Not in simplify form!\n");
-    return false;
+    return Result;
   }
 
   // Guaranteed by LoopSimplifyForm.
@@ -603,7 +625,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     LLVM_DEBUG(
         dbgs()
         << "Loop latch not terminated by a conditional branch.\n");
-    return false;
+    return Result;
   }
 
   unsigned ExitIndex = LatchBR->getSuccessor(0) == Header ? 1 : 0;
@@ -615,7 +637,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     LLVM_DEBUG(
         dbgs()
         << "One of the loop latch successors must be the exit block.\n");
-    return false;
+    return Result;
   }
 
   // These are exit blocks other than the target of the latch exiting block.
@@ -627,12 +649,12 @@ bool llvm::UnrollRuntimeLoopRemainder(
     // We rely on LCSSA form being preserved when the exit blocks are transformed.
     // (Note that only an off-by-default mode of the old PM disables PreserveLCCA.)
     if (!PreserveLCSSA)
-      return false;
+      return Result;
 
     // Priority goes to UnrollRuntimeMultiExit if it's supplied.
     if (UnrollRuntimeMultiExit.getNumOccurrences()) {
       if (!UnrollRuntimeMultiExit)
-        return false;
+        return Result;
     } else {
       // Otherwise perform multi-exit unrolling, if either the target indicates
       // it is profitable or the general profitability heuristics apply.
@@ -641,14 +663,14 @@ bool llvm::UnrollRuntimeLoopRemainder(
                                                    UseEpilogRemainder)) {
         LLVM_DEBUG(dbgs() << "Multiple exit/exiting blocks in loop and "
                              "multi-exit unrolling not enabled!\n");
-        return false;
+        return Result;
       }
     }
   }
   // Use Scalar Evolution to compute the trip count. This allows more loops to
   // be unrolled than relying on induction var simplification.
   if (!SE)
-    return false;
+    return Result;
 
   // Only unroll loops with a computable trip count.
   // We calculate the backedge count by using getExitCount on the Latch block,
@@ -658,7 +680,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
   const SCEV *BECountSC = SE->getExitCount(L, Latch);
   if (isa<SCEVCouldNotCompute>(BECountSC)) {
     LLVM_DEBUG(dbgs() << "Could not compute exit block SCEV\n");
-    return false;
+    return Result;
   }
 
   unsigned BEWidth = cast<IntegerType>(BECountSC->getType())->getBitWidth();
@@ -669,7 +691,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
       SE->getAddExpr(BECountSC, SE->getConstant(BECountSC->getType(), 1));
   if (isa<SCEVCouldNotCompute>(TripCountSC)) {
     LLVM_DEBUG(dbgs() << "Could not compute trip count SCEV.\n");
-    return false;
+    return Result;
   }
 
   BasicBlock *PreHeader = L->getLoopPreheader();
@@ -680,7 +702,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
       Expander.isHighCostExpansion(TripCountSC, L, SCEVExpansionBudget, TTI,
                                    PreHeaderBR)) {
     LLVM_DEBUG(dbgs() << "High cost for expanding trip count scev!\n");
-    return false;
+    return Result;
   }
 
   // This constraint lets us deal with an overflowing trip count easily; see the
@@ -689,7 +711,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     LLVM_DEBUG(
         dbgs()
         << "Count failed constraint on overflow trip count calculation.\n");
-    return false;
+    return Result;
   }
 
   // Loop structure is the following:
@@ -1035,5 +1057,5 @@ bool llvm::UnrollRuntimeLoopRemainder(
   if (ResultLoop && UnrollResult != LoopUnrollResult::FullyUnrolled)
     *ResultLoop = remainderLoop;
   NumRuntimeUnrolled++;
-  return true;
+  return LoopReminderUnrollResult::Unrolled;
 }
