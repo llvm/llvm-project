@@ -836,7 +836,8 @@ private:
                                        SmallVectorImpl<SDValue> &Results,
                                        SelectionDAG &DAG) const;
 
-  bool shouldNormalizeToSelectSequence(LLVMContext &, EVT) const override;
+  bool shouldNormalizeToSelectSequence(LLVMContext &, EVT,
+                                       SDNode *) const override;
 
   void finalizeLowering(MachineFunction &MF) const override;
 
