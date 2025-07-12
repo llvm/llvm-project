@@ -6709,7 +6709,7 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
         const llvm::Triple &Triple = Context.getTargetInfo().getTriple();
         if (Triple.isSPIRV() && Triple.getVendor() == llvm::Triple::AMD)
           AMDGPU().AddPotentiallyUnguardedBuiltinUser(cast<FunctionDecl>(
-              getFunctionLevelDeclContext(/*AllowLambda=*/ true)));
+              getFunctionLevelDeclContext(/*AllowLambda=*/true)));
       }
 
       // Rewrite the function decl for this builtin by replacing parameters

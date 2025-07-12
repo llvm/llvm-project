@@ -458,12 +458,12 @@ bool SemaAMDGPU::HasPotentiallyUnguardedBuiltinUsage(FunctionDecl *FD) const {
 }
 
 namespace {
-  /// This class implements -Wamdgpu-unguarded-builtin-usage.
-  ///
-  /// This is done with a traversal of the AST of a function that includes a
-  /// call to a target specific builtin. Whenever we encounter an \c if of the
-  /// form: \c if(__builtin_amdgcn_is_invocable), we consider the then statement
-  /// guarded.
+/// This class implements -Wamdgpu-unguarded-builtin-usage.
+///
+/// This is done with a traversal of the AST of a function that includes a
+/// call to a target specific builtin. Whenever we encounter an \c if of the
+/// form: \c if(__builtin_amdgcn_is_invocable), we consider the then statement
+/// guarded.
 class DiagnoseUnguardedBuiltins : public DynamicRecursiveASTVisitor {
   // TODO: this is conservative, and should be extended to:
   //       - warn on unguarded ASM usage (__builtin_amdgcn_processor_is as the
@@ -477,11 +477,13 @@ class DiagnoseUnguardedBuiltins : public DynamicRecursiveASTVisitor {
   Sema &SemaRef;
 
   unsigned Guards;
+
 public:
   DiagnoseUnguardedBuiltins(Sema &SemaRef) : SemaRef(SemaRef), Guards(0u) {}
 
   bool TraverseLambdaExpr(LambdaExpr *LE) override {
-    if (SemaRef.AMDGPU().HasPotentiallyUnguardedBuiltinUsage(LE->getCallOperator()))
+    if (SemaRef.AMDGPU().HasPotentiallyUnguardedBuiltinUsage(
+            LE->getCallOperator()))
       return true; // We have already handled this.
     return DynamicRecursiveASTVisitor::TraverseLambdaExpr(LE);
   }
@@ -530,26 +532,26 @@ bool DiagnoseUnguardedBuiltins::TraverseIfStmt(IfStmt *If) {
 }
 
 bool DiagnoseUnguardedBuiltins::VisitCallExpr(CallExpr *CE) {
-    if (Guards)
-      return true;
-
-    unsigned ID = CE->getBuiltinCallee();
-
-    if (!ID)
-      return true;
-    if (!SemaRef.getASTContext().BuiltinInfo.isTSBuiltin(ID))
-      return true;
-    if (ID == AMDGPU::BI__builtin_amdgcn_processor_is ||
-        ID == AMDGPU::BI__builtin_amdgcn_is_invocable)
-      return true;
-
-    SemaRef.Diag(CE->getExprLoc(), diag::warn_amdgcn_unguarded_builtin)
-        << CE->getDirectCallee();
-    SemaRef.Diag(CE->getExprLoc(), diag::note_amdgcn_unguarded_builtin_silence)
-        << CE->getDirectCallee();
-
+  if (Guards)
     return true;
-  }
+
+  unsigned ID = CE->getBuiltinCallee();
+
+  if (!ID)
+    return true;
+  if (!SemaRef.getASTContext().BuiltinInfo.isTSBuiltin(ID))
+    return true;
+  if (ID == AMDGPU::BI__builtin_amdgcn_processor_is ||
+      ID == AMDGPU::BI__builtin_amdgcn_is_invocable)
+    return true;
+
+  SemaRef.Diag(CE->getExprLoc(), diag::warn_amdgcn_unguarded_builtin)
+      << CE->getDirectCallee();
+  SemaRef.Diag(CE->getExprLoc(), diag::note_amdgcn_unguarded_builtin_silence)
+      << CE->getDirectCallee();
+
+  return true;
+}
 } // Unnamed namespace
 
 void SemaAMDGPU::DiagnoseUnguardedBuiltinUsage(FunctionDecl *FD) {
