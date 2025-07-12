@@ -232,6 +232,12 @@ def NonnullGlobalConstantsChecker: Checker<"NonnilStringConstants">,
   Hidden;
 
 def UnsequencedAccessChecker : Checker<"UnsequencedAccess">,
+    CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "PrintDebugLog",
+                  "Print debug logs for checkers.",
+                  "false",
+                  Released>]>,
    Documentation<NotDocumented>;
 
 } // end "core"
