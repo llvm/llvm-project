@@ -42,6 +42,12 @@ LogicalResult forallToForLoop(RewriterBase &rewriter, ForallOp forallOp,
 LogicalResult forallToParallelLoop(RewriterBase &rewriter, ForallOp forallOp,
                                    ParallelOp *result = nullptr);
 
+/// Try converting scf.forall into an scf.parallel loop.
+/// The conversion is only supported for forall operations with no results.
+LogicalResult parallelForToNestedFors(RewriterBase &rewriter,
+                                      ParallelOp parallelOp,
+                                      ForOp *result = nullptr);
+
 /// Fuses all adjacent scf.parallel operations with identical bounds and step
 /// into one scf.parallel operations. Uses a naive aliasing and dependency
 /// analysis.
