@@ -1632,8 +1632,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffset(SDNode *Parent,
                                                   SDValue &SRsrc,
                                                   SDValue &SOffset,
                                                   SDValue &Offset) const {
-  const SIRegisterInfo *TRI =
-      static_cast<const SIRegisterInfo *>(Subtarget->getRegisterInfo());
+  const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
   const SIInstrInfo *TII = Subtarget->getInstrInfo();
   MachineFunction &MF = CurDAG->getMachineFunction();
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
@@ -3885,10 +3884,8 @@ SDValue AMDGPUDAGToDAGISel::getHi16Elt(SDValue In) const {
 bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
   assert(CurDAG->getTarget().getTargetTriple().isAMDGCN());
 
-  const SIRegisterInfo *SIRI =
-    static_cast<const SIRegisterInfo *>(Subtarget->getRegisterInfo());
-  const SIInstrInfo * SII =
-    static_cast<const SIInstrInfo *>(Subtarget->getInstrInfo());
+  const SIRegisterInfo *SIRI = Subtarget->getRegisterInfo();
+  const SIInstrInfo *SII = Subtarget->getInstrInfo();
 
   unsigned Limit = 0;
   bool AllUsesAcceptSReg = true;
