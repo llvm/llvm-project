@@ -15,7 +15,8 @@ define fastcc i64 @zot(float %arg, float %arg1, float %arg2, float %arg3, float 
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <4 x float> <float 0.000000e+00, float 0.000000e+00, float 1.000000e+00, float 1.000000e+00>, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> <float poison, float 0.000000e+00>, float [[ARG3]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast <2 x float> [[TMP4]], <float 1.000000e+00, float 0.000000e+00>
-; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> [[TMP2]], <2 x float> [[TMP5]], i64 0)
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> [[TMP9]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <4 x float> [[TMP6]], <float 2.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
 ; CHECK-NEXT:    br i1 [[ARG6:%.*]], label [[BB18:%.*]], label [[BB57:%.*]]
 ; CHECK:       bb18:

@@ -36,7 +36,7 @@ bool fromJSON(const llvm::json::Value &, Request &, llvm::json::Path);
 struct ErrorInfo {
   int64_t code = 0;
   std::string message;
-  std::optional<std::string> data;
+  std::string data;
 };
 
 llvm::json::Value toJSON(const ErrorInfo &);
@@ -76,16 +76,74 @@ struct ToolCapability {
 llvm::json::Value toJSON(const ToolCapability &);
 bool fromJSON(const llvm::json::Value &, ToolCapability &, llvm::json::Path);
 
+struct ResourceCapability {
+  /// Whether this server supports notifications for changes to the resources
+  /// list.
+  bool listChanged = false;
+
+  ///  Whether subscriptions are supported.
+  bool subscribe = false;
+};
+
+llvm::json::Value toJSON(const ResourceCapability &);
+bool fromJSON(const llvm::json::Value &, ResourceCapability &,
+              llvm::json::Path);
+
 /// Capabilities that a server may support. Known capabilities are defined here,
 /// in this schema, but this is not a closed set: any server can define its own,
 /// additional capabilities.
 struct Capabilities {
-  /// Present if the server offers any tools to call.
+  /// Tool capabilities of the server.
   ToolCapability tools;
+
+  /// Resource capabilities of the server.
+  ResourceCapability resources;
 };
 
 llvm::json::Value toJSON(const Capabilities &);
 bool fromJSON(const llvm::json::Value &, Capabilities &, llvm::json::Path);
+
+/// A known resource that the server is capable of reading.
+struct Resource {
+  /// The URI of this resource.
+  std::string uri;
+
+  /// A human-readable name for this resource.
+  std::string name;
+
+  /// A description of what this resource represents.
+  std::string description;
+
+  /// The MIME type of this resource, if known.
+  std::string mimeType;
+};
+
+llvm::json::Value toJSON(const Resource &);
+bool fromJSON(const llvm::json::Value &, Resource &, llvm::json::Path);
+
+/// The contents of a specific resource or sub-resource.
+struct ResourceContents {
+  /// The URI of this resource.
+  std::string uri;
+
+  /// The text of the item. This must only be set if the item can actually be
+  /// represented as text (not binary data).
+  std::string text;
+
+  /// The MIME type of this resource, if known.
+  std::string mimeType;
+};
+
+llvm::json::Value toJSON(const ResourceContents &);
+bool fromJSON(const llvm::json::Value &, ResourceContents &, llvm::json::Path);
+
+/// The server's response to a resources/read request from the client.
+struct ResourceResult {
+  std::vector<ResourceContents> contents;
+};
+
+llvm::json::Value toJSON(const ResourceResult &);
+bool fromJSON(const llvm::json::Value &, ResourceResult &, llvm::json::Path);
 
 /// Text provided to or from an LLM.
 struct TextContent {
@@ -109,7 +167,7 @@ struct ToolDefinition {
   std::string name;
 
   /// Human-readable description.
-  std::optional<std::string> description;
+  std::string description;
 
   // JSON Schema for the tool's parameters.
   std::optional<llvm::json::Value> inputSchema;

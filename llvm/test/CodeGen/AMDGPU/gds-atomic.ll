@@ -1,4 +1,3 @@
-; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
 ; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s

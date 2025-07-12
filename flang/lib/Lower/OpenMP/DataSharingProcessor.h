@@ -12,9 +12,9 @@
 #ifndef FORTRAN_LOWER_DATASHARINGPROCESSOR_H
 #define FORTRAN_LOWER_DATASHARINGPROCESSOR_H
 
-#include "Clauses.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/OpenMP.h"
+#include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/symbol.h"

@@ -263,7 +263,7 @@ static void DiagnoseCastQual(Sema &Self, const ExprResult &SrcExpr,
 // %2: Destination Type
 static TryCastResult TryLValueToRValueCast(Sema &Self, Expr *SrcExpr,
                                            QualType DestType, bool CStyle,
-                                           CastKind &Kind,
+                                           SourceRange OpRange, CastKind &Kind,
                                            CXXCastPath &BasePath,
                                            unsigned &msg);
 static TryCastResult
@@ -1425,8 +1425,8 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
   // C++11 [expr.static.cast]p3:
   //   A glvalue of type "cv1 T1" can be cast to type "rvalue reference to cv2
   //   T2" if "cv2 T2" is reference-compatible with "cv1 T1".
-  tcr = TryLValueToRValueCast(Self, SrcExpr.get(), DestType, CStyle, Kind,
-                              BasePath, msg);
+  tcr = TryLValueToRValueCast(Self, SrcExpr.get(), DestType, CStyle, OpRange,
+                              Kind, BasePath, msg);
   if (tcr != TC_NotApplicable)
     return tcr;
 
@@ -1602,8 +1602,8 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
 /// Tests whether a conversion according to N2844 is valid.
 TryCastResult TryLValueToRValueCast(Sema &Self, Expr *SrcExpr,
                                     QualType DestType, bool CStyle,
-                                    CastKind &Kind, CXXCastPath &BasePath,
-                                    unsigned &msg) {
+                                    SourceRange OpRange, CastKind &Kind,
+                                    CXXCastPath &BasePath, unsigned &msg) {
   // C++11 [expr.static.cast]p3:
   //   A glvalue of type "cv1 T1" can be cast to type "rvalue reference to
   //   cv2 T2" if "cv2 T2" is reference-compatible with "cv1 T1".
@@ -1616,7 +1616,6 @@ TryCastResult TryLValueToRValueCast(Sema &Self, Expr *SrcExpr,
 
   // Because we try the reference downcast before this function, from now on
   // this is the only cast possibility, so we issue an error if we fail now.
-  // FIXME: Should allow casting away constness if CStyle.
   QualType FromType = SrcExpr->getType();
   QualType ToType = R->getPointeeType();
   if (CStyle) {
@@ -1640,13 +1639,12 @@ TryCastResult TryLValueToRValueCast(Sema &Self, Expr *SrcExpr,
 
   if (RefConv & Sema::ReferenceConversions::DerivedToBase) {
     Kind = CK_DerivedToBase;
-    CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
-                       /*DetectVirtual=*/true);
-    if (!Self.IsDerivedFrom(SrcExpr->getBeginLoc(), SrcExpr->getType(),
-                            R->getPointeeType(), Paths))
-      return TC_NotApplicable;
-
-    Self.BuildBasePathArray(Paths, BasePath);
+    if (Self.CheckDerivedToBaseConversion(FromType, ToType,
+                                          SrcExpr->getBeginLoc(), OpRange,
+                                          &BasePath, CStyle)) {
+      msg = 0;
+      return TC_Failed;
+    }
   } else
     Kind = CK_NoOp;
 

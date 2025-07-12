@@ -12,8 +12,8 @@
 
 #include "Decomposer.h"
 
-#include "Clauses.h"
 #include "Utils.h"
+#include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Tools/CrossToolHelpers.h"

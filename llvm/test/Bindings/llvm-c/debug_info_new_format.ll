@@ -3,30 +3,36 @@
 
 ; CHECK: ; ModuleID = 'debuginfo.c'
 ; CHECK-NEXT: source_filename = "debuginfo.c"
-
-; CHECK:      define i64 @foo(i64 %0, i64 %1, <10 x i64> %2) !dbg !36 {
+ 
+; CHECK:      define i64 @foo(i64 %0, i64 %1, <10 x i64> %2) !dbg !44 {
 ; CHECK-NEXT: entry:
-; CHECK-NEXT:     #dbg_declare(i64 0, !43, !DIExpression(), !50)
-; CHECK-NEXT:     #dbg_declare(i64 0, !44, !DIExpression(), !50)
-; CHECK-NEXT:     #dbg_declare(i64 0, !45, !DIExpression(), !50)
-; CHECK-NEXT:     #dbg_label(!51, !50)
+; CHECK-NEXT:     #dbg_declare(i64 0, !49, !DIExpression(), !58)
+; CHECK-NEXT:     #dbg_declare(i64 0, !50, !DIExpression(), !58)
+; CHECK-NEXT:     #dbg_declare(i64 0, !51, !DIExpression(), !58)
+; CHECK-NEXT:     #dbg_label(!59, !58)
 ; CHECK-NEXT:   br label %vars
-; CHECK-NEXT:     #dbg_label(!52, !50)
+; CHECK-NEXT:     #dbg_label(!60, !58)
 ; CHECK-NEXT:   br label %vars
-; CHECK:      vars:
+ 
+; CHECK:      vars:                                             ; preds = %entry, %entry
 ; CHECK-NEXT:   %p1 = phi i64 [ 0, %entry ]
 ; CHECK-NEXT:   %p2 = phi i64 [ 0, %entry ]
-; CHECK-NEXT:     #dbg_value(i64 0, !46, !DIExpression(DW_OP_constu, 0, DW_OP_stack_value), !53)
-; CHECK-NEXT:     #dbg_value(i64 1, !48, !DIExpression(DW_OP_constu, 1, DW_OP_stack_value), !53)
+; CHECK-NEXT:     #dbg_value(i64 0, !42, !DIExpression(DW_OP_constu, 0, DW_OP_stack_value), !61)
+; CHECK-NEXT:     #dbg_value(i64 1, !52, !DIExpression(DW_OP_constu, 1, DW_OP_stack_value), !61)
 ; CHECK-NEXT:   %a = add i64 %p1, %p2
 ; CHECK-NEXT:   ret i64 0
 ; CHECK-NEXT: }
-
+ 
 ; CHECK:      !llvm.dbg.cu = !{!0}
 ; CHECK-NEXT: !FooType = !{!33}
 ; CHECK-NEXT: !EnumTest = !{!3}
 ; CHECK-NEXT: !LargeEnumTest = !{!11}
-
+; CHECK-NEXT: !SubrangeType = !{!36}
+; CHECK-NEXT: !SetType1 = !{!37}
+; CHECK-NEXT: !SetType2 = !{!38}
+; CHECK-NEXT: !DynType = !{!39}
+; CHECK-NEXT: !ClassType = !{!54}
+ 
 ; CHECK:      !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "llvm-c-test", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !16, imports: !24, macros: !28, splitDebugInlining: false, sysroot: "/")
 ; CHECK-NEXT: !1 = !DIFile(filename: "debuginfo.c", directory: ".")
 ; CHECK-NEXT: !2 = !{!3, !11}
@@ -63,21 +69,29 @@
 ; CHECK-NEXT: !33 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !34, size: 192, dwarfAddressSpace: 0)
 ; CHECK-NEXT: !34 = !DICompositeType(tag: DW_TAG_structure_type, name: "MyStruct", scope: !4, file: !1, size: 192, elements: !35, runtimeLang: DW_LANG_C89, identifier: "MyStruct")
 ; CHECK-NEXT: !35 = !{!6, !6, !6}
-; CHECK-NEXT: !36 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: !1, file: !1, line: 42, type: !37, scopeLine: 42, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !0, retainedNodes: !42)
-; CHECK-NEXT: !37 = !DISubroutineType(types: !38)
-; CHECK-NEXT: !38 = !{!6, !6, !39}
-; CHECK-NEXT: !39 = !DICompositeType(tag: DW_TAG_array_type, baseType: !6, size: 640, flags: DIFlagVector, elements: !40)
+; CHECK-NEXT: !36 = !DISubrangeType(name: "foo", scope: !1, file: !1, line: 42, size: 64, baseType: !6, lowerBound: i64 0, upperBound: i64 1, stride: i64 8, bias: i64 4)
+; CHECK-NEXT: !37 = !DIDerivedType(tag: DW_TAG_set_type, name: "enumset", scope: !1, file: !1, line: 42, baseType: !3, size: 64)
+; CHECK-NEXT: !38 = !DIDerivedType(tag: DW_TAG_set_type, name: "subrangeset", scope: !1, file: !1, line: 42, baseType: !36, size: 64)
+; CHECK-NEXT: !39 = !DICompositeType(tag: DW_TAG_array_type, name: "foo", scope: !1, file: !1, line: 42, baseType: !6, size: 640, elements: !40, dataLocation: !DIExpression(), associated: !42, rank: !DIExpression())
 ; CHECK-NEXT: !40 = !{!41}
 ; CHECK-NEXT: !41 = !DISubrange(count: 10, lowerBound: 0)
-; CHECK-NEXT: !42 = !{!43, !44, !45, !46, !48, !49}
-; CHECK-NEXT: !43 = !DILocalVariable(name: "a", arg: 1, scope: !36, file: !1, line: 42, type: !6)
-; CHECK-NEXT: !44 = !DILocalVariable(name: "b", arg: 2, scope: !36, file: !1, line: 42, type: !6)
-; CHECK-NEXT: !45 = !DILocalVariable(name: "c", arg: 3, scope: !36, file: !1, line: 42, type: !39)
-; CHECK-NEXT: !46 = !DILocalVariable(name: "d", scope: !47, file: !1, line: 43, type: !6)
-; CHECK-NEXT: !47 = distinct !DILexicalBlock(scope: !36, file: !1, line: 42)
-; CHECK-NEXT: !48 = !DILocalVariable(name: "e", scope: !47, file: !1, line: 44, type: !6)
-; CHECK-NEXT: !49 = !DILabel(scope: !36, name: "label3", file: !1, line: 42)
-; CHECK-NEXT: !50 = !DILocation(line: 42, scope: !36)
-; CHECK-NEXT: !51 = !DILabel(scope: !36, name: "label1", file: !1, line: 42)
-; CHECK-NEXT: !52 = !DILabel(scope: !36, name: "label2", file: !1, line: 42)
-; CHECK-NEXT: !53 = !DILocation(line: 43, scope: !36)
+; CHECK-NEXT: !42 = !DILocalVariable(name: "d", scope: !43, file: !1, line: 43, type: !6)
+; CHECK-NEXT: !43 = distinct !DILexicalBlock(scope: !44, file: !1, line: 42)
+; CHECK-NEXT: !44 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: !1, file: !1, line: 42, type: !45, scopeLine: 42, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !0, retainedNodes: !48)
+; CHECK-NEXT: !45 = !DISubroutineType(types: !46)
+; CHECK-NEXT: !46 = !{!6, !6, !47}
+; CHECK-NEXT: !47 = !DICompositeType(tag: DW_TAG_array_type, baseType: !6, size: 640, flags: DIFlagVector, elements: !40)
+; CHECK-NEXT: !48 = !{!49, !50, !51, !42, !52, !53}
+; CHECK-NEXT: !49 = !DILocalVariable(name: "a", arg: 1, scope: !44, file: !1, line: 42, type: !6)
+; CHECK-NEXT: !50 = !DILocalVariable(name: "b", arg: 2, scope: !44, file: !1, line: 42, type: !6)
+; CHECK-NEXT: !51 = !DILocalVariable(name: "c", arg: 3, scope: !44, file: !1, line: 42, type: !47)
+; CHECK-NEXT: !52 = !DILocalVariable(name: "e", scope: !43, file: !1, line: 44, type: !6)
+; CHECK-NEXT: !53 = !DILabel(scope: !44, name: "label3", file: !1, line: 42)
+; CHECK-NEXT: !54 = !DICompositeType(tag: DW_TAG_class_type, name: "Class", scope: !4, file: !1, size: 192, flags: DIFlagFwdDecl, elements: !55, identifier: "FooClass")
+; CHECK-NEXT: !55 = !{!56}
+; CHECK-NEXT: !56 = !{!6, !6, !57}
+; CHECK-NEXT: !57 = !DIBasicType(name: "Int32", size: 32)
+; CHECK-NEXT: !58 = !DILocation(line: 42, scope: !44)
+; CHECK-NEXT: !59 = !DILabel(scope: !44, name: "label1", file: !1, line: 42)
+; CHECK-NEXT: !60 = !DILabel(scope: !44, name: "label2", file: !1, line: 42)
+; CHECK-NEXT: !61 = !DILocation(line: 43, scope: !44)

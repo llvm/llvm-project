@@ -3717,6 +3717,30 @@ Value *InstCombinerImpl::reassociateDisjointOr(Value *LHS, Value *RHS) {
   return nullptr;
 }
 
+/// Fold Res, Overflow = (umul.with.overflow x c1); (or Overflow (ugt Res c2))
+/// --> (ugt x (c2/c1)). This code checks whether a multiplication of two
+/// unsigned numbers (one is a constant) is mathematically greater than a
+/// second constant.
+static Value *foldOrUnsignedUMulOverflowICmp(BinaryOperator &I,
+                                             InstCombiner::BuilderTy &Builder,
+                                             const DataLayout &DL) {
+  Value *WOV, *X;
+  const APInt *C1, *C2;
+  if (match(&I,
+            m_c_Or(m_ExtractValue<1>(
+                       m_CombineAnd(m_Intrinsic<Intrinsic::umul_with_overflow>(
+                                        m_Value(X), m_APInt(C1)),
+                                    m_Value(WOV))),
+                   m_OneUse(m_SpecificCmp(ICmpInst::ICMP_UGT,
+                                          m_ExtractValue<0>(m_Deferred(WOV)),
+                                          m_APInt(C2))))) &&
+      !C1->isZero()) {
+    Constant *NewC = ConstantInt::get(X->getType(), C2->udiv(*C1));
+    return Builder.CreateICmp(ICmpInst::ICMP_UGT, X, NewC);
+  }
+  return nullptr;
+}
+
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -4149,6 +4173,11 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
       return BinaryOperator::CreateOr(Ov, NewCmp);
     }
   }
+
+  // Try to fold the pattern "Overflow | icmp pred Res, C2" into a single
+  // comparison instruction for umul.with.overflow.
+  if (Value *R = foldOrUnsignedUMulOverflowICmp(I, Builder, DL))
+    return replaceInstUsesWith(I, R);
 
   // (~x) | y  -->  ~(x & (~y))  iff that gets rid of inversions
   if (sinkNotIntoOtherHandOfLogicalOp(I))

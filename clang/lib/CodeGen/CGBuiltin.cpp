@@ -5987,8 +5987,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       auto *Zero = llvm::ConstantInt::get(IntTy, 0);
       for (unsigned I = First; I < NumArgs; ++I) {
         auto *Index = llvm::ConstantInt::get(IntTy, I - First);
-        auto *GEP = Builder.CreateGEP(Tmp.getElementType(), TmpPtr,
-                                      {Zero, Index});
+        auto *GEP =
+            Builder.CreateGEP(Tmp.getElementType(), Alloca, {Zero, Index});
         if (I == First)
           ElemPtr = GEP;
         auto *V =

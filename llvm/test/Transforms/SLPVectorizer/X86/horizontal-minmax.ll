@@ -977,9 +977,12 @@ define i32 @maxi8_wrong_parent(i32) {
 ; SSE4:       pp:
 ; SSE4-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 2), align 8
 ; SSE4-NEXT:    [[TMP8:%.*]] = load <2 x i32>, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 6), align 8
-; SSE4-NEXT:    [[TMP5:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> poison, <4 x i32> [[TMP4]], i64 0)
-; SSE4-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v2i32(<8 x i32> [[TMP5]], <2 x i32> [[TMP8]], i64 4)
-; SSE4-NEXT:    [[TMP7:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v2i32(<8 x i32> [[TMP6]], <2 x i32> [[TMP2]], i64 6)
+; SSE4-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE4-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP8]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE4-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i32> [[TMP8]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; SSE4-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> [[TMP10]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 poison, i32 poison>
+; SSE4-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; SSE4-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i32> [[TMP11]], <8 x i32> [[TMP9]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
 ; SSE4-NEXT:    [[OP_RDX7:%.*]] = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> [[TMP7]])
 ; SSE4-NEXT:    ret i32 [[OP_RDX7]]
 ;
@@ -989,8 +992,9 @@ define i32 @maxi8_wrong_parent(i32) {
 ; AVX:       pp:
 ; AVX-NEXT:    [[TMP4:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 2), align 8
 ; AVX-NEXT:    [[TMP7:%.*]] = load <2 x i32>, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 6), align 8
-; AVX-NEXT:    [[TMP5:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> poison, <2 x i32> [[TMP7]], i64 0)
-; AVX-NEXT:    [[TMP6:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> [[TMP5]], <2 x i32> [[TMP2]], i64 2)
+; AVX-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP7]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; AVX-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; AVX-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP7]], <2 x i32> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; AVX-NEXT:    [[RDX_OP:%.*]] = icmp sgt <4 x i32> [[TMP4]], [[TMP6]]
 ; AVX-NEXT:    [[RDX_OP1:%.*]] = select <4 x i1> [[RDX_OP]], <4 x i32> [[TMP4]], <4 x i32> [[TMP6]]
 ; AVX-NEXT:    [[OP_RDX7:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[RDX_OP1]])
@@ -1002,9 +1006,12 @@ define i32 @maxi8_wrong_parent(i32) {
 ; THRESH:       pp:
 ; THRESH-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 2), align 8
 ; THRESH-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr getelementptr inbounds ([32 x i32], ptr @arr, i64 0, i64 6), align 8
-; THRESH-NEXT:    [[TMP5:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> poison, <4 x i32> [[TMP3]], i64 0)
-; THRESH-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v2i32(<8 x i32> [[TMP5]], <2 x i32> [[TMP4]], i64 4)
-; THRESH-NEXT:    [[TMP7:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v2i32(<8 x i32> [[TMP6]], <2 x i32> [[TMP2]], i64 6)
+; THRESH-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; THRESH-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; THRESH-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; THRESH-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP10]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 poison, i32 poison>
+; THRESH-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; THRESH-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i32> [[TMP11]], <8 x i32> [[TMP9]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
 ; THRESH-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> [[TMP7]])
 ; THRESH-NEXT:    ret i32 [[TMP8]]
 ;

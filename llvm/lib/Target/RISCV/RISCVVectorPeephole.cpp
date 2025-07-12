@@ -521,15 +521,22 @@ bool RISCVVectorPeephole::convertToUnmasked(MachineInstr &MI) const {
 /// Check if it's safe to move From down to To, checking that no physical
 /// registers are clobbered.
 static bool isSafeToMove(const MachineInstr &From, const MachineInstr &To) {
-  assert(From.getParent() == To.getParent() && !From.hasImplicitDef());
-  SmallVector<Register> PhysUses;
+  assert(From.getParent() == To.getParent());
+  SmallVector<Register> PhysUses, PhysDefs;
   for (const MachineOperand &MO : From.all_uses())
     if (MO.getReg().isPhysical())
       PhysUses.push_back(MO.getReg());
+  for (const MachineOperand &MO : From.all_defs())
+    if (MO.getReg().isPhysical())
+      PhysDefs.push_back(MO.getReg());
   bool SawStore = false;
-  for (auto II = From.getIterator(); II != To.getIterator(); II++) {
+  for (auto II = std::next(From.getIterator()); II != To.getIterator(); II++) {
     for (Register PhysReg : PhysUses)
       if (II->definesRegister(PhysReg, nullptr))
+        return false;
+    for (Register PhysReg : PhysDefs)
+      if (II->definesRegister(PhysReg, nullptr) ||
+          II->readsRegister(PhysReg, nullptr))
         return false;
     if (II->mayStore()) {
       SawStore = true;

@@ -6,24 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains Offload API definitions related to loading and launching
-// kernels
+// This file contains Offload API definitions related to launching kernels
 //
 //===----------------------------------------------------------------------===//
-
-def : Function {
-    let name = "olGetKernel";
-    let desc = "Get a kernel from the function identified by `KernelName` in the given program.";
-    let details = [
-        "Symbol handles are owned by the program and do not need to be manually destroyed."
-    ];
-    let params = [
-        Param<"ol_program_handle_t", "Program", "handle of the program", PARAM_IN>,
-        Param<"const char*", "KernelName", "name of the kernel entry point in the program", PARAM_IN>,
-        Param<"ol_symbol_handle_t*", "Kernel", "output pointer for the fetched kernel", PARAM_OUT>
-    ];
-    let returns = [];
-}
 
 def : Struct {
     let name = "ol_kernel_launch_size_args_t";

@@ -468,6 +468,12 @@ public:
 
   ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
 
+  /// Match a mask which "spreads" the leading elements of a vector evenly
+  /// across the result.  Factor is the spread amount, and Index is the
+  /// offset applied.
+  static bool isSpreadMask(ArrayRef<int> Mask, unsigned Factor,
+                           unsigned &Index);
+
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
                         const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,

@@ -875,3 +875,52 @@ svbool_t test_svdupq_n_b64(bool x0, bool x1) MODE_ATTR
 {
   return SVE_ACLE_FUNC(svdupq,_n,_b64,)(x0, x1);
 }
+
+// CHECK-LABEL: @test_svdupq_lane_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], i64 [[INDEX:%.*]])
+// CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
+//
+// CPP-CHECK-LABEL: @_Z21test_svdupq_lane_bf16u14__SVBfloat16_tm(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], i64 [[INDEX:%.*]])
+// CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
+//
+svbfloat16_t test_svdupq_lane_bf16(svbfloat16_t data, uint64_t index) MODE_ATTR {
+  // expected-warning@+1 {{implicit declaration of function 'svdupq_lane_bf16'}}
+  return SVE_ACLE_FUNC(svdupq_lane, _bf16, , )(data, index);
+}
+// CHECK-LABEL: @test_svdupq_n_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x bfloat> poison, bfloat [[X0:%.*]], i64 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x bfloat> [[TMP0]], bfloat [[X1:%.*]], i64 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x bfloat> [[TMP1]], bfloat [[X2:%.*]], i64 2
+// CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x bfloat> [[TMP2]], bfloat [[X3:%.*]], i64 3
+// CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x bfloat> [[TMP3]], bfloat [[X4:%.*]], i64 4
+// CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x bfloat> [[TMP4]], bfloat [[X5:%.*]], i64 5
+// CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x bfloat> [[TMP5]], bfloat [[X6:%.*]], i64 6
+// CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x bfloat> [[TMP6]], bfloat [[X7:%.*]], i64 7
+// CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> poison, <8 x bfloat> [[TMP7]], i64 0)
+// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> [[TMP8]], i64 0)
+// CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP9]]
+//
+// CPP-CHECK-LABEL: @_Z18test_svdupq_n_bf16u6__bf16u6__bf16u6__bf16u6__bf16u6__bf16u6__bf16u6__bf16u6__bf16(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x bfloat> poison, bfloat [[X0:%.*]], i64 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x bfloat> [[TMP0]], bfloat [[X1:%.*]], i64 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x bfloat> [[TMP1]], bfloat [[X2:%.*]], i64 2
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x bfloat> [[TMP2]], bfloat [[X3:%.*]], i64 3
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x bfloat> [[TMP3]], bfloat [[X4:%.*]], i64 4
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x bfloat> [[TMP4]], bfloat [[X5:%.*]], i64 5
+// CPP-CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x bfloat> [[TMP5]], bfloat [[X6:%.*]], i64 6
+// CPP-CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x bfloat> [[TMP6]], bfloat [[X7:%.*]], i64 7
+// CPP-CHECK-NEXT:    [[TMP8:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> poison, <8 x bfloat> [[TMP7]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> [[TMP8]], i64 0)
+// CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP9]]
+//
+svbfloat16_t test_svdupq_n_bf16(bfloat16_t x0, bfloat16_t x1, bfloat16_t x2, bfloat16_t x3,
+                                bfloat16_t x4, bfloat16_t x5, bfloat16_t x6, bfloat16_t x7) MODE_ATTR {
+  // <assume other insertelement>
+  // expected-warning@+1 {{implicit declaration of function 'svdupq_n_bf16'}}
+  return SVE_ACLE_FUNC(svdupq, _n, _bf16, )(x0, x1, x2, x3, x4, x5, x6, x7);
+}

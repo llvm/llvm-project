@@ -1,6 +1,7 @@
 #include <gpuintrin.h>
 #include <stdint.h>
 
+[[gnu::visibility("default")]]
 uint32_t global[64];
 
 __gpu_kernel void write() {

@@ -117,6 +117,75 @@ static void emitMemberInitializer(CIRGenFunction &cgf,
   cgf.emitInitializerForField(field, lhs, memberInit->getInit());
 }
 
+static bool isInitializerOfDynamicClass(const CXXCtorInitializer *baseInit) {
+  const Type *baseType = baseInit->getBaseClass();
+  const auto *baseClassDecl =
+      cast<CXXRecordDecl>(baseType->castAs<RecordType>()->getDecl());
+  return baseClassDecl->isDynamicClass();
+}
+
+/// Gets the address of a direct base class within a complete object.
+/// This should only be used for (1) non-virtual bases or (2) virtual bases
+/// when the type is known to be complete (e.g. in complete destructors).
+///
+/// The object pointed to by 'thisAddr' is assumed to be non-null.
+Address CIRGenFunction::getAddressOfDirectBaseInCompleteClass(
+    mlir::Location loc, Address thisAddr, const CXXRecordDecl *derived,
+    const CXXRecordDecl *base, bool baseIsVirtual) {
+  // 'thisAddr' must be a pointer (in some address space) to Derived.
+  assert(thisAddr.getElementType() == convertType(derived));
+
+  // Compute the offset of the virtual base.
+  CharUnits offset;
+  const ASTRecordLayout &layout = getContext().getASTRecordLayout(derived);
+  if (baseIsVirtual)
+    offset = layout.getVBaseClassOffset(base);
+  else
+    offset = layout.getBaseClassOffset(base);
+
+  return builder.createBaseClassAddr(loc, thisAddr, convertType(base),
+                                     offset.getQuantity(),
+                                     /*assumeNotNull=*/true);
+}
+
+void CIRGenFunction::emitBaseInitializer(mlir::Location loc,
+                                         const CXXRecordDecl *classDecl,
+                                         CXXCtorInitializer *baseInit) {
+  assert(curFuncDecl && "loading 'this' without a func declaration?");
+  assert(isa<CXXMethodDecl>(curFuncDecl));
+
+  assert(baseInit->isBaseInitializer() && "Must have base initializer!");
+
+  Address thisPtr = loadCXXThisAddress();
+
+  const Type *baseType = baseInit->getBaseClass();
+  const auto *baseClassDecl =
+      cast<CXXRecordDecl>(baseType->castAs<RecordType>()->getDecl());
+
+  bool isBaseVirtual = baseInit->isBaseVirtual();
+
+  // If the initializer for the base (other than the constructor
+  // itself) accesses 'this' in any way, we need to initialize the
+  // vtables.
+  if (classDecl->isDynamicClass()) {
+    cgm.errorNYI(loc, "emitBaseInitializer: dynamic class");
+    return;
+  }
+
+  // We can pretend to be a complete class because it only matters for
+  // virtual bases, and we only do virtual bases for complete ctors.
+  Address v = getAddressOfDirectBaseInCompleteClass(
+      loc, thisPtr, classDecl, baseClassDecl, isBaseVirtual);
+  assert(!cir::MissingFeatures::aggValueSlotGC());
+  AggValueSlot aggSlot = AggValueSlot::forAddr(
+      v, Qualifiers(), AggValueSlot::IsDestructed, AggValueSlot::IsNotAliased,
+      getOverlapForBaseInit(classDecl, baseClassDecl, isBaseVirtual));
+
+  emitAggExpr(baseInit->getInit(), aggSlot);
+
+  assert(!cir::MissingFeatures::requiresCleanups());
+}
+
 /// This routine generates necessary code to initialize base classes and
 /// non-static data members belonging to this constructor.
 void CIRGenFunction::emitCtorPrologue(const CXXConstructorDecl *cd,
@@ -154,11 +223,28 @@ void CIRGenFunction::emitCtorPrologue(const CXXConstructorDecl *cd,
     return;
   }
 
-  if ((*b)->isBaseInitializer()) {
+  const mlir::Value oldThisValue = cxxThisValue;
+  if (!constructVBases && (*b)->isBaseInitializer() && (*b)->isBaseVirtual()) {
     cgm.errorNYI(cd->getSourceRange(),
-                 "emitCtorPrologue: non-virtual base initializer");
+                 "emitCtorPrologue: virtual base initializer");
     return;
   }
+
+  // Handle non-virtual base initializers.
+  for (; b != e && (*b)->isBaseInitializer(); b++) {
+    assert(!(*b)->isBaseVirtual());
+
+    if (cgm.getCodeGenOpts().StrictVTablePointers &&
+        cgm.getCodeGenOpts().OptimizationLevel > 0 &&
+        isInitializerOfDynamicClass(*b)) {
+      cgm.errorNYI(cd->getSourceRange(),
+                   "emitCtorPrologue: strict vtable pointers");
+      return;
+    }
+    emitBaseInitializer(getLoc(cd->getBeginLoc()), classDecl, *b);
+  }
+
+  cxxThisValue = oldThisValue;
 
   if (classDecl->isDynamicClass()) {
     cgm.errorNYI(cd->getSourceRange(),

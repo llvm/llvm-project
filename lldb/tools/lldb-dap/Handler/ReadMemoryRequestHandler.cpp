@@ -37,7 +37,7 @@ ReadMemoryRequestHandler::Run(const protocol::ReadMemoryArguments &args) const {
   const size_t memory_count = dap.target.GetProcess().ReadMemory(
       raw_address, buffer.data(), buffer.size(), error);
 
-  response.address = "0x" + llvm::utohexstr(raw_address);
+  response.address = raw_address;
 
   // reading memory may fail for multiple reasons. memory not readable,
   // reading out of memory range and gaps in memory. return from

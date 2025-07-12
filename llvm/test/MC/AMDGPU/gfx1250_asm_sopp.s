@@ -1,6 +1,26 @@
 // RUN: llvm-mc -triple=amdgcn -show-encoding -mcpu=gfx1250 %s | FileCheck --check-prefix=GFX1250 %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX12-ERR --implicit-check-not=error: -strict-whitespace %s
 
+s_wait_asynccnt 0x1234
+// GFX1250: [0x34,0x12,0xca,0xbf]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_wait_asynccnt 0xc1d1
+// GFX1250: [0xd1,0xc1,0xca,0xbf]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_wait_tensorcnt 0x0
+// GFX1250: [0x00,0x00,0xcb,0xbf]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_wait_tensorcnt 0x1
+// GFX1250: [0x01,0x00,0xcb,0xbf]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_wait_tensorcnt 0x3
+// GFX1250: [0x03,0x00,0xcb,0xbf]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 s_wait_xcnt 0x0
 // GFX1250: [0x00,0x00,0xc5,0xbf]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU

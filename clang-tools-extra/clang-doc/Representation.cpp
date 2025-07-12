@@ -290,6 +290,8 @@ void SymbolInfo::merge(SymbolInfo &&Other) {
   auto *Last = llvm::unique(Loc);
   Loc.erase(Last, Loc.end());
   mergeBase(std::move(Other));
+  if (MangledName.empty())
+    MangledName = std::move(Other.MangledName);
 }
 
 NamespaceInfo::NamespaceInfo(SymbolID USR, StringRef Name, StringRef Path)
