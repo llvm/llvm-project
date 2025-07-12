@@ -57,6 +57,13 @@ bool operator<(const AccessStmt& A, const AccessStmt& B) {
         (A.isStore() == B.isStore() && (A.getStmt() < B.getStmt() || 
             (A.getStmt() == B.getStmt() && A.getFrame() < B.getFrame())));
 }
+} // namespace
+
+REGISTER_SET_FACTORY_WITH_PROGRAMSTATE(AccessStmtSet, AccessStmt);
+REGISTER_MAP_WITH_PROGRAMSTATE(Loads, const MemRegion*, AccessStmtSet);
+REGISTER_MAP_WITH_PROGRAMSTATE(Stores, const MemRegion*, AccessStmtSet);
+
+namespace {
 
 class UnsequencedAccessChecker
     : public Checker<check::Location> {
@@ -66,6 +73,9 @@ class UnsequencedAccessChecker
                                         ParentMapContext& ParentMap);
     static int findCommonAncestorIdx(const StmtVec& A, const StmtVec& B);
 
+    void checkAgainstSet(const AccessStmtSet* Set, AccessStmt CurrentAccess,
+                         const StmtVec& Ancestors, CheckerContext& C,
+                         bool* FoundSame) const;
     bool checkAncestors(int Common, AccessStmt A, const StmtVec& AVec,
                         AccessStmt B, const StmtVec& BVec,
                         const LangOptions& Opts) const;
@@ -85,9 +95,6 @@ public:
     bool PrintDebugLog;
 };
 } // namespace
-
-REGISTER_SET_FACTORY_WITH_PROGRAMSTATE(AccessStmtSet, AccessStmt);
-REGISTER_MAP_WITH_PROGRAMSTATE(Accesses, const MemRegion*, AccessStmtSet);
 
 StmtVec UnsequencedAccessChecker::getAllASTAncestors(
             const Stmt* CurrentS, const StackFrameContext* CurrentFrame,
@@ -127,12 +134,19 @@ static void print_ancestors(const StmtVec& ancestors) {
     }
 }
 
+static int get_stmt_line_num(const Stmt* S, CheckerContext& C) {
+    SourceLocation Loc = S->getBeginLoc();
+    int Line = C.getSourceManager().getSpellingLineNumber(Loc);
+    return Line;
+}
+
 ProgramStateRef UnsequencedAccessChecker::resetState(ProgramStateRef S) const {
     if (PrintDebugLog) {
         std::cout << "Reset State\n\n";
     }
-    auto& MapFactory = S->get_context<Accesses>();
-    return S->set<Accesses>(MapFactory.getEmptyMap());
+    auto& MapFactory = S->get_context<Loads>();
+    return S->set<Loads>(MapFactory.getEmptyMap())
+            ->set<Stores>(MapFactory.getEmptyMap());
 }
 
 void UnsequencedAccessChecker::checkLocation(
@@ -144,53 +158,123 @@ void UnsequencedAccessChecker::checkLocation(
     AccessStmtSet::Factory& SetFactory = State->get_context<AccessStmtSet>();
 
     const MemRegion* Region = Location.getAsRegion();
-    AccessStmt Current(S, !isLoad, C.getStackFrame());
+    AccessStmt CurrentAccess(S, !isLoad, C.getStackFrame());
     StmtVec Ancestors = getAllASTAncestors(S, C.getStackFrame(), ParentMap);
 
     if (PrintDebugLog) {
-        SourceLocation Loc = S->getBeginLoc();
-        int Line = C.getSourceManager().getSpellingLineNumber(Loc);
-        std::cout << (isLoad ? "Load" : "Store") << " on line " << Line
-                  << std::endl;
+        std::cout << (isLoad ? "Load" : "Store") << " on line "
+                  << get_stmt_line_num(S, C) << std::endl;
         print_ancestors(Ancestors);
         std::cout << std::endl;
     }
 
-    if (State->contains<Accesses>(Region)) {
+    bool FoundSameLoad = false;
+    bool FoundSameStore = false;
 
-        const AccessStmtSet* Accs = State->get<Accesses>(Region);
+    if (!isLoad && State->contains<Loads>(Region))
+        checkAgainstSet(State->get<Loads>(Region), CurrentAccess, Ancestors, C, 
+                        &FoundSameLoad);
 
-        for (AccessStmt AS : *Accs) {
-            if (AS.isStore() || !isLoad) {
-                StmtVec CurrentAncestors =
-                    getAllASTAncestors(AS.getStmt(), AS.getFrame(), ParentMap);
+    if (State->contains<Stores>(Region))
+        checkAgainstSet(State->get<Stores>(Region), CurrentAccess, Ancestors, C, 
+                        &FoundSameStore);
 
-                int CommonIdx =
-                    findCommonAncestorIdx(Ancestors, CurrentAncestors);
+    if (!isLoad && !State->contains<Stores>(Region)) {
 
-                if (CommonIdx == -1)
-                    continue;
+        AccessStmtSet Updated = SetFactory.add(SetFactory.getEmptySet(),
+                                               CurrentAccess);
 
-                if(checkAncestors(CommonIdx, AS, Ancestors, Current,
-                                  CurrentAncestors, C.getLangOpts())) {
-                    const Stmt* CommonS =
-                        Ancestors[Ancestors.size() - CommonIdx];
-                    reportBug(C, CommonS, AS, Current);
-                }
-
-            }
+        C.addTransition(State->set<Stores>(Region, Updated));
+        if (PrintDebugLog) {
+            std::cout << "Region is new, adding.\n\n";
         }
-        AccessStmtSet Updated =
-            SetFactory.add(*Accs, AccessStmt(S, !isLoad, C.getStackFrame()));
+        return;
+    }
 
-        C.addTransition(State->set<Accesses>(Region, Updated));
-    } else {
-        AccessStmtSet NewSet = SetFactory.add(
-                SetFactory.getEmptySet(),
-                AccessStmt(S, !isLoad, C.getStackFrame()));
+    if (isLoad && !FoundSameLoad && !FoundSameStore) {
 
-        ProgramStateRef LocAdded = State->set<Accesses>(Region, NewSet);
-        C.addTransition(LocAdded);
+        AccessStmtSet CurrSet = State->contains<Loads>(Region) 
+            ? *State->get<Loads>(Region) : SetFactory.getEmptySet();
+
+        AccessStmtSet Updated = SetFactory.add(CurrSet, CurrentAccess);
+
+        C.addTransition(State->set<Loads>(Region, Updated));
+    } 
+
+    if (PrintDebugLog && isLoad) {
+        std::cout << "Not adding load: " << CurrentAccess.getStmt()
+                  << std::endl << std::endl;
+    }
+
+    if (!isLoad && !FoundSameStore) {
+
+        if (FoundSameLoad) {
+            if (PrintDebugLog) {
+                std::cout << "Removing load: " << CurrentAccess.getStmt()
+                          << std::endl << std::endl;
+            }
+
+            AccessStmt LoadAccess(CurrentAccess.getStmt(), /*isStore*/false,
+                                  CurrentAccess.getFrame());
+            AccessStmtSet LoadRemoved =
+                SetFactory.remove(*State->get<Loads>(Region), LoadAccess);
+            State = State->set<Loads>(Region, LoadRemoved);
+        }
+
+        AccessStmtSet CurrSet = State->contains<Stores>(Region) 
+            ? *State->get<Stores>(Region) : SetFactory.getEmptySet();
+
+        AccessStmtSet Updated = SetFactory.add(CurrSet, CurrentAccess);
+
+        C.addTransition(State->set<Stores>(Region, Updated));
+    }
+
+    if (PrintDebugLog && !isLoad) {
+        std::cout << "Not adding store: " << CurrentAccess.getStmt()
+                  << std::endl << std::endl;
+    }
+}
+
+void UnsequencedAccessChecker::checkAgainstSet(
+        const AccessStmtSet* Set, AccessStmt CurrentAccess,
+        const StmtVec& Ancestors, CheckerContext& C, bool* FoundSame) const {
+
+    ASTContext& ASTCtx = C.getASTContext();
+    ParentMapContext& ParentMap = ASTCtx.getParentMapContext();
+
+    for (AccessStmt OtherAccess : *Set) {
+
+        if (CurrentAccess.getStmt() == OtherAccess.getStmt() &&
+            CurrentAccess.getFrame() == OtherAccess.getFrame()) {
+            *FoundSame = true;
+            if (PrintDebugLog) {
+                std::cout << "Found same, continuing.\n";
+            }
+            continue;
+        }
+
+        StmtVec CurrentAncestors =
+            getAllASTAncestors(OtherAccess.getStmt(), OtherAccess.getFrame(),
+                               ParentMap);
+
+        int CommonIdx = findCommonAncestorIdx(Ancestors, CurrentAncestors);
+        if (CommonIdx == -1)
+            continue;
+
+        if(checkAncestors(CommonIdx, OtherAccess, Ancestors, CurrentAccess,
+                          CurrentAncestors, C.getLangOpts())) {
+
+            const Stmt* CommonS = Ancestors[Ancestors.size() - CommonIdx];
+
+            if (PrintDebugLog) {
+                std::cout << "Common found: " << CommonS << " "
+                          << CommonS->getStmtClassName() << " Line " 
+                          << get_stmt_line_num(CommonS, C) << std::endl
+                          << std::endl;
+            }
+
+            reportBug(C, CommonS, OtherAccess, CurrentAccess);
+        }
     }
 }
 
@@ -232,6 +316,16 @@ bool UnsequencedAccessChecker::checkAncestors(
             if (Accessed == B.getStmt() && !A.isStore())
                 return false;
         }
+
+        return true;
+    }
+
+    if (const auto* AS = dyn_cast<ArraySubscriptExpr>(CommonS)) {
+        if (Opts.CPlusPlus17)
+            return false;
+
+        if (A.getStmt() == AS || B.getStmt() == AS)
+            return false;
 
         return true;
     }

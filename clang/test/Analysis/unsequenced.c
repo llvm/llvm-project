@@ -5,6 +5,7 @@ static void binary_op_checks_inline(void) {
     int a1 = 0;
     int b = 0;
     int* ip;
+    int arr[10];
     
     b = a1 + (a1++);
     // expected-warning@-1{{unsequenced modification and access}}
@@ -57,6 +58,20 @@ static void binary_op_checks_inline(void) {
     // expected-warning@-2{{unsequenced write to and read from variable}}
     // expected-note@-3{{variable is written to here}}
     // expected-note@-4{{variable is read from here}}
+
+    // Array subscript expressions are essentially just addition
+
+    (arr + a1)[a1++] = 0;
+    // expected-warning@-1{{unsequenced modification and access}}
+    // expected-warning@-2{{unsequenced write to and read from variable}}
+    // expected-note@-3{{variable is written to here}}
+    // expected-note@-4{{variable is read from here}}
+    
+    (arr + --a1)[a1] = 1;
+    // expected-warning@-1{{unsequenced modification and access}}
+    // expected-warning@-2{{unsequenced write to and read from variable}}
+    // expected-note@-3{{variable is written to here}}
+    // expected-note@-4{{variable is read from here}}
     
     (void)a1; (void)b;
 }
@@ -91,8 +106,11 @@ static void function_checks_inline(void) {
     does_nothing2(a++, a++);
     // expected-warning@-1{{multiple unsequenced modifications}}
     // expected-warning@-2{{unsequenced write to and read from variable}}
-    // expected-note@-3{{variable is written to here}}
-    // expected-note@-4{{variable is read from here}}
+    // expected-warning@-3{{unsequenced writes to variable}}
+    // expected-note@-4{{variable is written to here}}
+    // expected-note@-5{{variable is read from here}}
+    // expected-note@-6{{variable is written to here}}
+    // expected-note@-7{{variable is written to here}}
 }
 
 static int* inc_and_return(int* a) {
