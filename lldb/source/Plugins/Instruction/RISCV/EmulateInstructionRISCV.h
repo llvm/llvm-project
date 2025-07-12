@@ -57,11 +57,12 @@ public:
 
   static bool SupportsThisInstructionType(InstructionType inst_type) {
     switch (inst_type) {
-    case eInstructionTypeAny:
-    case eInstructionTypePCModifying:
+    case lldb_private::eInstructionTypeAny:
+    case lldb_private::eInstructionTypePrologueEpilogue:
       return true;
-    case eInstructionTypePrologueEpilogue:
-    case eInstructionTypeAll:
+
+    case lldb_private::eInstructionTypePCModifying:
+    case lldb_private::eInstructionTypeAll:
       return false;
     }
     llvm_unreachable("Fully covered switch above!");
@@ -93,6 +94,8 @@ public:
                      OptionValueDictionary *test_data) override;
   std::optional<RegisterInfo> GetRegisterInfo(lldb::RegisterKind reg_kind,
                                               uint32_t reg_num) override;
+
+  bool CreateFunctionEntryUnwind(UnwindPlan &unwind_plan) override;
 
   std::optional<DecodeResult> ReadInstructionAt(lldb::addr_t addr);
   std::optional<DecodeResult> Decode(uint32_t inst);
