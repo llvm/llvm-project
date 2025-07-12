@@ -133,6 +133,51 @@ struct TestOptionsSuperPass
       llvm::cl::desc("Example list of PassPipelineOptions option")};
 };
 
+struct TestOptionsPassA
+    : public PassWrapper<TestOptionsPassA, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestOptionsPassA)
+
+  struct Options : public PassPipelineOptions<Options> {
+    Option<bool> foo{*this, "foo", llvm::cl::desc("Example boolean option")};
+  };
+
+  TestOptionsPassA() = default;
+  TestOptionsPassA(const TestOptionsPassA &) : PassWrapper() {}
+  TestOptionsPassA(const Options &options) { this->options.foo = options.foo; }
+
+  void runOnOperation() final {}
+  StringRef getArgument() const final { return "test-options-pass-a"; }
+  StringRef getDescription() const final {
+    return "Test superset options parsing capabilities - subset A";
+  }
+
+  Options options;
+};
+
+struct TestOptionsPassB
+    : public PassWrapper<TestOptionsPassB, OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestOptionsPassB)
+
+  struct Options : public PassPipelineOptions<Options> {
+    Option<bool> bar{*this, "bar", llvm::cl::desc("Example boolean option")};
+  };
+
+  TestOptionsPassB() = default;
+  TestOptionsPassB(const TestOptionsPassB &) : PassWrapper() {}
+  TestOptionsPassB(const Options &options) { this->options.bar = options.bar; }
+
+  void runOnOperation() final {}
+  StringRef getArgument() const final { return "test-options-pass-b"; }
+  StringRef getDescription() const final {
+    return "Test superset options parsing capabilities - subset B";
+  }
+
+  Options options;
+};
+
+struct TestPipelineOptionsSuperSetAB : TestOptionsPassA::Options,
+                                       TestOptionsPassB::Options {};
+
 /// A test pass that always aborts to enable testing the crash recovery
 /// mechanism of the pass manager.
 struct TestCrashRecoveryPass
@@ -270,6 +315,9 @@ void registerPassManagerTestPass() {
   PassRegistration<TestOptionsPass>();
   PassRegistration<TestOptionsSuperPass>();
 
+  PassRegistration<TestOptionsPassA>();
+  PassRegistration<TestOptionsPassB>();
+
   PassRegistration<TestModulePass>();
 
   PassRegistration<TestFunctionPass>();
@@ -305,6 +353,17 @@ void registerPassManagerTestPass() {
           "registration",
           [](OpPassManager &pm, const TestOptionsSuperPass::Options &options) {
             pm.addPass(std::make_unique<TestOptionsSuperPass>(options));
+          });
+
+  PassPipelineRegistration<TestPipelineOptionsSuperSetAB>
+      registerPipelineOptionsSuperSetABPipeline(
+          "test-options-super-set-ab-pipeline",
+          "Parses options of PassPipelineOptions using pass pipeline "
+          "registration",
+          [](OpPassManager &pm, const TestPipelineOptionsSuperSetAB &options) {
+            // Pass superset AB options to subset options A and B
+            pm.addPass(std::make_unique<TestOptionsPassA>(options));
+            pm.addPass(std::make_unique<TestOptionsPassB>(options));
           });
 }
 } // namespace mlir
