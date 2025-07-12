@@ -1,0 +1,115 @@
+# RUN: not llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs -start-before=greedy,1 -stop-after=virtregrewriter,2 -o - -verify-regalloc %s 2> %t.err | FileCheck %s
+# RUN: FileCheck -check-prefix=ERR %s < %t.err
+
+# Make sure there's no machine verifier error after failure.
+
+# ERR: error: inline assembly requires more registers than available
+# ERR: error: inline assembly requires more registers than available
+# ERR: error: inline assembly requires more registers than available
+# ERR: error: inline assembly requires more registers than available
+
+# This testcase cannot be compiled with the enforced register
+# budget. Previously, tryLastChanceRecoloring would assert here. It
+# was attempting to recolor a superregister with an overlapping
+# subregister over the same range.
+
+--- |
+  define void @dead_copy() #0 {
+    ret void
+  }
+
+  define void @copy_kill() #0 {
+    ret void
+  }
+
+  define void @copy_subreg() #0 {
+    ret void
+  }
+
+  define void @copy_subreg2() #0 {
+    ret void
+  }
+
+  attributes #0 = { "amdgpu-num-vgpr"="6" }
+
+...
+
+# CHECK-LABEL: name: dead_copy
+# CHECK: renamable $agpr0_agpr1_agpr2 = IMPLICIT_DEF
+# CHECK: dead renamable $vgpr0_vgpr1_vgpr2 = COPY renamable $agpr0_agpr1_agpr2
+
+---
+name:            dead_copy
+tracksRegLiveness: true
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+
+    INLINEASM &"; def $0 $1 $2 $3 $4", 1 /* sideeffect attdialect */, 11534346 /* regdef:VReg_512 */, def %0:vreg_512, 10158090 /* regdef:VReg_256 */, def %1:vreg_256, 4784138 /* regdef:VReg_128 */, def %2:vreg_128, 3670026 /* regdef:VReg_96 */, def %3:vreg_96, 3670026 /* regdef:VReg_96 */, def %4:vreg_96
+    %5:vreg_96 = COPY %3
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 3670025 /* reguse:VReg_96 */, %3
+    SI_RETURN
+
+...
+
+
+# CHECK-LABEL: name: copy_kill
+# CHECK: renamable $vgpr0_vgpr1_vgpr2 = IMPLICIT_DEF
+
+---
+name:            copy_kill
+tracksRegLiveness: true
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+
+    INLINEASM &"; def $0 $1 $2 $3 $4", 1 /* sideeffect attdialect */, 11534346 /* regdef:VReg_512 */, def %0:vreg_512, 10158090 /* regdef:VReg_256 */, def %1:vreg_256, 4784138 /* regdef:VReg_128 */, def %2:vreg_128, 3670026 /* regdef:VReg_96 */, def %3:vreg_96, 3670026 /* regdef:VReg_96 */, def %4:vreg_96
+    %5:vreg_96 = COPY %3
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 3670025 /* reguse:VReg_96 */, %5
+    SI_RETURN
+...
+
+# CHECK-LABEL: name: copy_subreg
+# CHECK: renamable $vgpr1_vgpr2 = IMPLICIT_DEF
+# CHECK: renamable $vgpr0 = COPY renamable $vgpr1
+---
+name:            copy_subreg
+tracksRegLiveness: true
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+
+    INLINEASM &"; def $0 $1 $2 $3 $4", 1 /* sideeffect attdialect */, 11534346 /* regdef:VReg_512 */, def %0:vreg_512, 10158090 /* regdef:VReg_256 */, def %1:vreg_256, 4784138 /* regdef:VReg_128 */, def %2:vreg_128, 3670026 /* regdef:VReg_96 */, def %3:vreg_96, 3670026 /* regdef:VReg_96 */, def %4:vreg_96
+    %3.sub0 = COPY %3.sub1
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 3670025 /* reguse:VReg_96 */, %3
+    SI_RETURN
+...
+
+# CHECK-LABEL: name: copy_subreg2
+# CHECK: renamable $vgpr0_vgpr1_vgpr2 = IMPLICIT_DEF
+
+---
+name:            copy_subreg2
+tracksRegLiveness: true
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  frameOffsetReg:  '$sgpr33'
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+
+    INLINEASM &"; def $0 $1 $2 $3 $4", 1 /* sideeffect attdialect */, 11534346 /* regdef:VReg_512 */, def %0:vreg_512, 10158090 /* regdef:VReg_256 */, def %1:vreg_256, 4784138 /* regdef:VReg_128 */, def %2:vreg_128, 3670026 /* regdef:VReg_96 */, def %3:vreg_96, 3670026 /* regdef:VReg_96 */, def %4:vreg_96
+    undef %5.sub0:vreg_96 = COPY %3.sub0
+    %5.sub1_sub2:vreg_96 = COPY %3.sub1_sub2
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 3670025 /* reguse:VReg_96 */, %5
+    SI_RETURN
+...
