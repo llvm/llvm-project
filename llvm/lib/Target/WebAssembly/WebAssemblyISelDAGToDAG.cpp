@@ -15,12 +15,14 @@
 #include "WebAssembly.h"
 #include "WebAssemblyISelLowering.h"
 #include "WebAssemblyTargetMachine.h"
+#include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h" // To access function attributes.
 #include "llvm/IR/IntrinsicsWebAssembly.h"
+#include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -118,6 +120,47 @@ static SDValue getTagSymNode(int Tag, SelectionDAG *DAG) {
   return DAG->getTargetExternalSymbol(SymName, PtrVT);
 }
 
+static APInt encodeFunctionSignature(SelectionDAG *DAG, SDLoc &DL,
+                                     SmallVector<MVT, 4> &Params,
+                                     SmallVector<MVT, 1> &Returns) {
+  auto toWasmValType = [&DAG, &DL](MVT VT) {
+    if (VT == MVT::i32) {
+      return wasm::ValType::I32;
+    }
+    if (VT == MVT::i64) {
+      return wasm::ValType::I64;
+    }
+    if (VT == MVT::f32) {
+      return wasm::ValType::F32;
+    }
+    if (VT == MVT::f64) {
+      return wasm::ValType::F64;
+    }
+    DAG->getContext()->diagnose(
+        DiagnosticInfoUnsupported(DAG->getMachineFunction().getFunction(),
+                                  "Unhandled type!", DL.getDebugLoc()));
+  };
+  auto NParams = Params.size();
+  auto NReturns = Returns.size();
+  auto BitWidth = (NParams + NReturns + 2) * 64;
+  auto Sig = APInt(BitWidth, 0);
+
+  Sig |= NParams;
+  for (auto &Param : Params) {
+    auto V = toWasmValType(Param);
+    Sig <<= 64;
+    Sig |= (int64_t)V;
+  }
+  Sig <<= 64;
+  Sig |= NReturns;
+  for (auto &Return : Returns) {
+    auto V = toWasmValType(Return);
+    Sig <<= 64;
+    Sig |= (int64_t)V;
+  }
+  return Sig;
+}
+
 void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we already have selected!
   if (Node->isMachineOpcode()) {
@@ -187,6 +230,42 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
           GlobalGetIns, DL, PtrVT,
           CurDAG->getTargetExternalSymbol("__tls_align", PtrVT));
       ReplaceNode(Node, TLSAlign);
+      return;
+    }
+    case Intrinsic::wasm_ref_test_func: {
+      // First emit the TABLE_GET instruction to convert function pointer ==>
+      // funcref
+      MachineFunction &MF = CurDAG->getMachineFunction();
+      auto PtrVT = MVT::getIntegerVT(MF.getDataLayout().getPointerSizeInBits());
+      MCSymbol *Table = WebAssembly::getOrCreateFunctionTableSymbol(
+          MF.getContext(), Subtarget);
+      SDValue TableSym = CurDAG->getMCSymbol(Table, PtrVT);
+      SDValue FuncRef = SDValue(
+          CurDAG->getMachineNode(WebAssembly::TABLE_GET_FUNCREF, DL,
+                                 MVT::funcref, TableSym, Node->getOperand(1)),
+          0);
+
+      // Encode the signature information into the type index placeholder.
+      // This gets decoded and converted into the actual type signature in
+      // WebAssemblyMCInstLower.cpp.
+      SmallVector<MVT, 4> Params;
+      SmallVector<MVT, 1> Results;
+
+      MVT VT = Node->getOperand(2).getValueType().getSimpleVT();
+      if (VT != MVT::Untyped) {
+        Params.push_back(VT);
+      }
+      for (unsigned I = 3; I < Node->getNumOperands(); ++I) {
+        MVT VT = Node->getOperand(I).getValueType().getSimpleVT();
+        Results.push_back(VT);
+      }
+      auto Sig = encodeFunctionSignature(CurDAG, DL, Params, Results);
+
+      auto SigOp = CurDAG->getTargetConstant(
+          Sig, DL, EVT::getIntegerVT(*CurDAG->getContext(), Sig.getBitWidth()));
+      MachineSDNode *RefTestNode = CurDAG->getMachineNode(
+          WebAssembly::REF_TEST_FUNCREF, DL, MVT::i32, {SigOp, FuncRef});
+      ReplaceNode(Node, RefTestNode);
       return;
     }
     }

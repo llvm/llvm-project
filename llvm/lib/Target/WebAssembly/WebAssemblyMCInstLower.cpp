@@ -15,13 +15,18 @@
 #include "WebAssemblyMCInstLower.h"
 #include "MCTargetDesc/WebAssemblyMCAsmInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssemblyAsmPrinter.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyUtilities.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -152,6 +157,29 @@ MCOperand WebAssemblyMCInstLower::lowerTypeIndexOperand(
   return MCOperand::createExpr(Expr);
 }
 
+MCOperand
+WebAssemblyMCInstLower::lowerEncodedFunctionSignature(const APInt &Sig) const {
+  auto NumWords = Sig.getNumWords();
+  SmallVector<wasm::ValType, 4> Params;
+  SmallVector<wasm::ValType, 2> Returns;
+
+  int Idx = NumWords;
+
+  auto GetWord = [&Idx, &Sig]() {
+    Idx--;
+    return Sig.extractBitsAsZExtValue(64, 64 * Idx);
+  };
+  int NParams = GetWord();
+  for (int I = 0; I < NParams; I++) {
+    Params.push_back(static_cast<wasm::ValType>(GetWord()));
+  }
+  int NReturns = GetWord();
+  for (int I = 0; I < NReturns; I++) {
+    Returns.push_back(static_cast<wasm::ValType>(GetWord()));
+  }
+  return lowerTypeIndexOperand(std::move(Params), std::move(Returns));
+}
+
 static void getFunctionReturns(const MachineInstr *MI,
                                SmallVectorImpl<wasm::ValType> &Returns) {
   const Function &F = MI->getMF()->getFunction();
@@ -196,11 +224,30 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
       MCOp = MCOperand::createReg(WAReg);
       break;
     }
+    case llvm::MachineOperand::MO_CImmediate: {
+      // Lower type index placeholder for ref.test
+      // Currently this is the only way that CImmediates show up so panic if we
+      // get confused.
+      unsigned DescIndex = I - NumVariadicDefs;
+      if (DescIndex >= Desc.NumOperands) {
+        llvm_unreachable("unexpected CImmediate operand");
+      }
+      const MCOperandInfo &Info = Desc.operands()[DescIndex];
+      if (Info.OperandType != WebAssembly::OPERAND_TYPEINDEX) {
+        llvm_unreachable("unexpected CImmediate operand");
+      }
+      MCOp = lowerEncodedFunctionSignature(MO.getCImm()->getValue());
+      break;
+    }
     case MachineOperand::MO_Immediate: {
       unsigned DescIndex = I - NumVariadicDefs;
       if (DescIndex < Desc.NumOperands) {
         const MCOperandInfo &Info = Desc.operands()[DescIndex];
+        // Replace type index placeholder with actual type index. The type index
+        // placeholders are Immediates and have an operand type of
+        // OPERAND_TYPEINDEX or OPERAND_SIGNATURE.
         if (Info.OperandType == WebAssembly::OPERAND_TYPEINDEX) {
+          // Lower type index placeholder for a CALL_INDIRECT instruction
           SmallVector<wasm::ValType, 4> Returns;
           SmallVector<wasm::ValType, 4> Params;
 
@@ -228,6 +275,7 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
           break;
         }
         if (Info.OperandType == WebAssembly::OPERAND_SIGNATURE) {
+          // Lower type index placeholder for blocks
           auto BT = static_cast<WebAssembly::BlockType>(MO.getImm());
           assert(BT != WebAssembly::BlockType::Invalid);
           if (BT == WebAssembly::BlockType::Multivalue) {
