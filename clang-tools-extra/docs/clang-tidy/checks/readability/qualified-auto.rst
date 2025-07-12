@@ -96,3 +96,23 @@ Note in the LLVM alias, the default value is `false`.
   matched against only the type name (i.e. ``Type``). E.g. to suppress reports
   for ``std::array`` iterators use `std::array<.*>::(const_)?iterator` string.
   The default is an empty string.
+
+.. option:: RespectOpaqueTypes
+
+  If set to `false` the check will use the canonical type to determine the type that ``auto`` is deduced to.
+  If set to `true` the check will not look beyond the first type alias. Default value is `false`.
+
+.. code-block:: c++
+
+   using IntPtr = int*;
+   IntPtr foo();
+
+   auto bar = foo();
+
+If RespectOpaqueTypes is set to `false`, it will be transformed into:
+
+.. code-block:: c++
+
+   auto *bar = foo();
+
+Otherwise no changes will occur.

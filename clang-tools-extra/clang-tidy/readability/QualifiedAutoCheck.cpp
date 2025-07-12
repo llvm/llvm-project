@@ -106,12 +106,14 @@ QualifiedAutoCheck::QualifiedAutoCheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       AddConstToQualified(Options.get("AddConstToQualified", true)),
       AllowedTypes(
-          utils::options::parseStringList(Options.get("AllowedTypes", ""))) {}
+          utils::options::parseStringList(Options.get("AllowedTypes", ""))),
+      RespectOpaqueTypes(Options.get("RespectOpaqueTypes", false)) {}
 
 void QualifiedAutoCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AddConstToQualified", AddConstToQualified);
   Options.store(Opts, "AllowedTypes",
                 utils::options::serializeStringList(AllowedTypes));
+  Options.store(Opts, "RespectOpaqueTypes", RespectOpaqueTypes);
 }
 
 void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
@@ -134,14 +136,27 @@ void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
 
   auto IsBoundToType = refersToType(equalsBoundNode("type"));
   auto UnlessFunctionType = unless(hasUnqualifiedDesugaredType(functionType()));
-  auto IsAutoDeducedToPointer = [](const std::vector<StringRef> &AllowedTypes,
-                                   const auto &...InnerMatchers) {
-    return autoType(hasDeducedType(
-        hasUnqualifiedDesugaredType(pointerType(pointee(InnerMatchers...))),
-        unless(hasUnqualifiedType(
-            matchers::matchesAnyListedTypeName(AllowedTypes, false))),
-        unless(pointerType(pointee(hasUnqualifiedType(
-            matchers::matchesAnyListedTypeName(AllowedTypes, false)))))));
+  auto RespectOpaqueTypes = this->RespectOpaqueTypes;
+  auto IsAutoDeducedToPointer = [&RespectOpaqueTypes](
+                                    const std::vector<StringRef> &AllowedTypes,
+                                    const auto &...InnerMatchers) {
+    if (!RespectOpaqueTypes) {
+      return autoType(hasDeducedType(
+          hasUnqualifiedDesugaredType(pointerType(pointee(InnerMatchers...))),
+          unless(hasUnqualifiedType(
+              matchers::matchesAnyListedTypeName(AllowedTypes, false))),
+          unless(pointerType(pointee(hasUnqualifiedType(
+              matchers::matchesAnyListedTypeName(AllowedTypes, false)))))));
+    } else {
+      return autoType(hasDeducedType(
+          anyOf(qualType(pointerType(pointee(InnerMatchers...))),
+                qualType(substTemplateTypeParmType(hasReplacementType(
+                    pointerType(pointee(InnerMatchers...)))))),
+          unless(hasUnqualifiedType(
+              matchers::matchesAnyListedTypeName(AllowedTypes, false))),
+          unless(pointerType(pointee(hasUnqualifiedType(
+              matchers::matchesAnyListedTypeName(AllowedTypes, false)))))));
+    }
   };
 
   Finder->addMatcher(
