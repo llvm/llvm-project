@@ -34,6 +34,10 @@ cl::opt<bool>
     TerminalTrap("terminal-trap",
                  cl::desc("Assume that execution stops at trap instruction"),
                  cl::init(true), cl::Hidden, cl::cat(BoltCategory));
+cl::opt<bool> InvokeTerminator("invoke-terminator",
+                               cl::desc("Invoke is a block terminator"),
+                               cl::init(false), cl::Hidden,
+                               cl::cat(BoltCategory));
 }
 
 bool MCPlusBuilder::equals(const MCInst &A, const MCInst &B,
@@ -133,6 +137,7 @@ bool MCPlusBuilder::equals(const MCSpecifierExpr &A, const MCSpecifierExpr &B,
 
 bool MCPlusBuilder::isTerminator(const MCInst &Inst) const {
   return Analysis->isTerminator(Inst) ||
+         (opts::InvokeTerminator && isInvoke(Inst)) ||
          (opts::TerminalTrap && Info->get(Inst.getOpcode()).isTrap());
 }
 
