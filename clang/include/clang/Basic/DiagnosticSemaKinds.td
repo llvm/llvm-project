@@ -9365,6 +9365,16 @@ def warn_atomic_implicit_seq_cst : Warning<
   InGroup<DiagGroup<"atomic-implicit-seq-cst">>, DefaultIgnore;
 def err_atomic_unsupported : Error<
   "atomic types are not supported in '%0'">;
+def warn_cv_stripped_in_enum : Warning<
+  "%enum_select<CVQualList>{"
+    "%Both{'const' and 'volatile' qualifiers}|"
+    "%Const{'const' qualifier}|"
+    "%Volatile{'volatile' qualifier}}0 in enumeration underlying type ignored">,
+  InGroup<DiagGroup<"underlying-cv-qualifier-ignored">>;
+def warn_atomic_stripped_in_enum : Warning<
+  "'_Atomic' qualifier ignored; operations involving the enumeration type will "
+  "be non-atomic">,
+  InGroup<DiagGroup<"underlying-atomic-qualifier-ignored">>, DefaultError;
 
 def err_overflow_builtin_must_be_int : Error<
   "operand argument to %select{overflow builtin|checked integer operation}0 "
@@ -13088,6 +13098,7 @@ def err_hlsl_resource_range_overlap: Error<
   "resource ranges %sub{subst_hlsl_format_ranges}0,1,2,3 and %sub{subst_hlsl_format_ranges}4,5,6,7 "
   "overlap within space = %8 and visibility = "
   "%select{All|Vertex|Hull|Domain|Geometry|Pixel|Amplification|Mesh}9">;
+def note_hlsl_resource_range_here: Note<"overlapping resource range here">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
