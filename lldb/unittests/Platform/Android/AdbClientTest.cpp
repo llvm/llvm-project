@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "gtest/gtest.h"
 #include "Plugins/Platform/Android/AdbClient.h"
+#include "Plugins/Platform/Android/AdbSyncService.h"
+#include "gtest/gtest.h"
 #include <cstdlib>
 
 static void set_env(const char *var, const char *value) {
@@ -31,20 +32,28 @@ public:
   void TearDown() override { set_env("ANDROID_SERIAL", ""); }
 };
 
-TEST(AdbClientTest, CreateByDeviceId) {
+TEST_F(AdbClientTest, CreateByDeviceId) {
   AdbClient adb;
   Status error = AdbClient::CreateByDeviceID("device1", adb);
   EXPECT_TRUE(error.Success());
   EXPECT_EQ("device1", adb.GetDeviceID());
 }
 
-TEST(AdbClientTest, CreateByDeviceId_ByEnvVar) {
+TEST_F(AdbClientTest, CreateByDeviceId_ByEnvVar) {
   set_env("ANDROID_SERIAL", "device2");
 
   AdbClient adb;
   Status error = AdbClient::CreateByDeviceID("", adb);
   EXPECT_TRUE(error.Success());
   EXPECT_EQ("device2", adb.GetDeviceID());
+}
+
+TEST_F(AdbClientTest, SyncServiceCreation) {
+  AdbSyncService sync_service("test_device");
+  
+  EXPECT_EQ(sync_service.GetDeviceId(), "test_device");
+  
+  EXPECT_FALSE(sync_service.IsConnected());
 }
 
 } // end namespace platform_android
