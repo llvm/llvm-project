@@ -185,6 +185,14 @@ General purpose options
    ship the IANA time zone database. When time zones are not supported,
    time zone support in <chrono> will be disabled.
 
+.. option:: LIBCXX_STACKTRACE_ALLOW_TOOLS_AT_RUNTIME:BOOL
+
+   **Default**: ``ON``
+
+   For C++23 <stacktrace>: whether to allow invocation of ``addr2line``, ``llvm-addr2line``, or ``atos``
+   at runtime (if it's available in ``PATH``) to resolve call-chain addresses in the stacktrace
+   into source locations, if other methods are not available.
+
 .. option:: LIBCXX_INSTALL_LIBRARY_DIR:PATH
 
   **Default**: ``lib${LIBCXX_LIBDIR_SUFFIX}``
