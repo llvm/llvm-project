@@ -322,7 +322,8 @@ LLVM_ABI TransformationMode hasLICMVersioningTransformation(const Loop *L);
 LLVM_ABI void addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
                                       unsigned V = 0);
 
-/// Returns a loop's estimated trip count based on branch weight metadata.
+/// Returns a loop's estimated trip count based on
+/// llvm.loop.estimated_trip_count metadata or, if none, branch weight metadata.
 /// In addition if \p EstimatedLoopInvocationWeight is not null it is
 /// initialized with weight of loop's latch leading to the exit.
 /// Returns a valid positive trip count, saturated at UINT_MAX, or std::nullopt
@@ -331,13 +332,21 @@ LLVM_ABI std::optional<unsigned>
 getLoopEstimatedTripCount(Loop *L,
                           unsigned *EstimatedLoopInvocationWeight = nullptr);
 
-/// Set a loop's branch weight metadata to reflect that loop has \p
-/// EstimatedTripCount iterations and \p EstimatedLoopInvocationWeight exits
-/// through latch. Returns true if metadata is successfully updated, false
-/// otherwise. Note that loop must have a latch block which controls loop exit
-/// in order to succeed.
-LLVM_ABI bool setLoopEstimatedTripCount(Loop *L, unsigned EstimatedTripCount,
-                                        unsigned EstimatedLoopInvocationWeight);
+/// Set a loop's llvm.loop.estimated_trip_count metadata and, if \p
+/// EstimatedLoopInvocationWeight, branch weight metadata to reflect that loop
+/// has \p EstimatedTripCount iterations and \p EstimatedLoopInvocationWeight
+/// exit weight through latch. Returns true if metadata is successfully updated,
+/// false otherwise. Note that loop must have a latch block which controls loop
+/// exit in order to succeed.
+///
+/// The use case for not setting branch weight metadata is when the original
+/// branch weight metadata is correct for computing block frequencies but the
+/// trip count has changed due to a loop transformation.  The branch weight
+/// metadata cannot be adjusted to reflect the new trip count, so we store the
+/// new trip count separately.
+LLVM_ABI bool setLoopEstimatedTripCount(
+    Loop *L, unsigned EstimatedTripCount,
+    std::optional<unsigned> EstimatedLoopInvocationWeight);
 
 /// Check inner loop (L) backedge count is known to be invariant on all
 /// iterations of its outer loop. If the loop has no parent, this is trivially

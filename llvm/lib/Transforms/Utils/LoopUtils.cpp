@@ -54,6 +54,8 @@ using namespace llvm::PatternMatch;
 
 static const char *LLVMLoopDisableNonforced = "llvm.loop.disable_nonforced";
 static const char *LLVMLoopDisableLICM = "llvm.licm.disable";
+static const char *LLVMLoopEstimatedTripCount =
+    "llvm.loop.estimated_trip_count";
 
 bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
                                    MemorySSAUpdater *MSSAU,
@@ -850,14 +852,18 @@ llvm::getLoopEstimatedTripCount(Loop *L,
             getEstimatedTripCount(LatchBranch, L, ExitWeight)) {
       if (EstimatedLoopInvocationWeight)
         *EstimatedLoopInvocationWeight = ExitWeight;
+      if (auto EstimatedTripCount =
+              getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount))
+        return EstimatedTripCount;
       return *EstTripCount;
     }
   }
   return std::nullopt;
 }
 
-bool llvm::setLoopEstimatedTripCount(Loop *L, unsigned EstimatedTripCount,
-                                     unsigned EstimatedloopInvocationWeight) {
+bool llvm::setLoopEstimatedTripCount(
+    Loop *L, unsigned EstimatedTripCount,
+    std::optional<unsigned> EstimatedloopInvocationWeight) {
   // At the moment, we currently support changing the estimate trip count of
   // the latch branch only.  We could extend this API to manipulate estimated
   // trip counts for any exit.
@@ -865,12 +871,16 @@ bool llvm::setLoopEstimatedTripCount(Loop *L, unsigned EstimatedTripCount,
   if (!LatchBranch)
     return false;
 
+  addStringMetadataToLoop(L, LLVMLoopEstimatedTripCount, EstimatedTripCount);
+  if (!EstimatedloopInvocationWeight)
+    return true;
+
   // Calculate taken and exit weights.
   unsigned LatchExitWeight = 0;
   unsigned BackedgeTakenWeight = 0;
 
   if (EstimatedTripCount > 0) {
-    LatchExitWeight = EstimatedloopInvocationWeight;
+    LatchExitWeight = *EstimatedloopInvocationWeight;
     BackedgeTakenWeight = (EstimatedTripCount - 1) * LatchExitWeight;
   }
 
