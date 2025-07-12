@@ -22,7 +22,6 @@
 #include "UnwrappedLineFormatter.h"
 #include "UsingDeclarationsSorter.h"
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
-
 #include "llvm/ADT/Sequence.h"
 #include <limits>
 
