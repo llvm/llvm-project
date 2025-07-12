@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s cppcoreguidelines-interfaces-global-init %t
+// RUN: %check_clang_tidy %s cppcoreguidelines-interfaces-global-init %t
 
 constexpr int makesInt() { return 3; }
 constexpr int takesInt(int i) { return i + 1; }
@@ -14,18 +14,22 @@ static int GlobalScopeBadInit3 = takesIntPtr(&ExternGlobal);
 static int GlobalScopeBadInit4 = 3 * (ExternGlobal + 2);
 // CHECK-MESSAGES: [[@LINE-1]]:12: warning: initializing non-local variable with non-const expression depending on uninitialized non-local variable 'ExternGlobal'
 
+#if __cplusplus >= 202002L
 extern constinit int ExternConstinitGlobal;
 static int GlobalScopeConstinit1 = ExternConstinitGlobal;
 static int GlobalScopeConstinit2 = takesInt(ExternConstinitGlobal);
 static int GlobalScopeConstinit3 = takesIntPtr(&ExternConstinitGlobal);
 static int GlobalScopeConstinit4 = 3 * (ExternConstinitGlobal + 2);
+#endif
 
 namespace ns {
 static int NamespaceScope = makesInt();
 static int NamespaceScopeBadInit = takesInt(ExternGlobal);
 // CHECK-MESSAGES: [[@LINE-1]]:12: warning: initializing non-local variable with non-const expression depending on uninitialized non-local variable 'ExternGlobal'
 
+#if __cplusplus >= 202002L
 static int NamespaceScopeConstinit = takesInt(ExternConstinitGlobal);
+#endif
 
 struct A {
   static int ClassScope;
@@ -38,6 +42,7 @@ int A::ClassScopeBadInit = takesInt(ExternGlobal);
 static int FromClassBadInit = takesInt(A::ClassScope);
 // CHECK-MESSAGES: [[@LINE-1]]:12: warning: initializing non-local variable with non-const expression depending on uninitialized non-local variable 'ClassScope'
 
+#if __cplusplus >= 202002L
 struct B {
   static constinit int ClassScopeConstinit;
   static int ClassScopeFromConstinit;
@@ -45,6 +50,7 @@ struct B {
 
 int B::ClassScopeFromConstinit = takesInt(ExternConstinitGlobal);
 static int FromClassScopeConstinit = takesInt(B::ClassScopeConstinit);
+#endif
 
 } // namespace ns
 
@@ -59,6 +65,7 @@ const int B1::J;
 // CHECK-MESSAGES: [[@LINE-1]]:15: warning: initializing non-local variable with non-const expression depending on uninitialized non-local variable 'I'
 const int B1::I;
 
+#if __cplusplus >= 202002L
 class D {
   static const constinit int I = 0;
   static const int J = I;
@@ -66,6 +73,7 @@ class D {
 
 const int D::J;
 const int D::I;
+#endif
 
 void f() {
   // This is fine, it's executed after dynamic initialization occurs.
