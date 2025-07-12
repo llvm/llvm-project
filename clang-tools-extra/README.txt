@@ -11,9 +11,8 @@ All discussion regarding Clang, Clang-based tools, and code in this repository
 should be held using the standard Clang forum:
   https://discourse.llvm.org/c/clang
 
-Code review for this tree should take place on the standard Clang patch and
-commit lists:
-  http://lists.llvm.org/mailman/listinfo/cfe-commits
+Code review for this tree should take place on Github:
+  https://github.com/llvm/llvm-project/pulls?q=label%3Aclang-tools-extra
 
 If you find a bug in these tools, please file it in the LLVM bug tracker:
   https://github.com/llvm/llvm-project/issues/
