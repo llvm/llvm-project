@@ -15,6 +15,7 @@
 #include <ranges>
 
 #include "types.h"
+
 struct Container {
   int* begin() const;
   int* end() const;
