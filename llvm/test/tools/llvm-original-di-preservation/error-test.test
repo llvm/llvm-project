@@ -1,0 +1,38 @@
+RUN: not %llvm-original-di-preservation %p/Inputs/sample.json --error-test | FileCheck %s
+CHECK:      DILocation Bugs:
+CHECK-NEXT:   test.ll:
+CHECK-NEXT:     no-name:
+CHECK-NEXT:     - action: not-generate
+CHECK-NEXT:       bb_name: no-name
+CHECK-NEXT:       fn_name: fn
+CHECK-NEXT:       instr: extractvalue
+CHECK-NEXT:     - action: not-generate
+CHECK-NEXT:       bb_name: no-name
+CHECK-NEXT:       fn_name: fn
+CHECK-NEXT:       instr: insertvalue
+CHECK-NEXT:     - action: not-generate
+CHECK-NEXT:       bb_name: no-name
+CHECK-NEXT:       fn_name: fn1
+CHECK-NEXT:       instr: insertvalue
+CHECK-NEXT:     - action: not-generate
+CHECK-NEXT:       bb_name: no-name
+CHECK-NEXT:       fn_name: fn1
+CHECK-NEXT:       instr: extractvalue
+CHECK:      Errors detected for:
+
+RUN: not %llvm-original-di-preservation %p/Inputs/sample.json --error-test --compress | FileCheck %s --check-prefix=COMPRESS
+COMPRESS:      DILocation Bugs:
+COMPRESS-NEXT:   test.ll:
+COMPRESS-NEXT:     no-name:
+COMPRESS-NEXT:     - action: not-generate
+COMPRESS-NEXT:       bb_name: no-name
+COMPRESS-NEXT:       fn_name: fn
+COMPRESS-NEXT:       instr: extractvalue
+COMPRESS-NEXT:     - action: not-generate
+COMPRESS-NEXT:       bb_name: no-name
+COMPRESS-NEXT:       fn_name: fn
+COMPRESS-NEXT:       instr: insertvalue
+COMPRESS:      Errors detected for:
+
+RUN: %llvm-original-di-preservation %p/Inputs/non-existent.json --error-test | FileCheck %s --check-prefix=EMPTY
+EMPTY: No errors detected for:
