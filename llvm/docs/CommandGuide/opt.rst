@@ -46,12 +46,13 @@ OPTIONS
 
  Write output in LLVM intermediate language (instead of bitcode).
 
-.. option:: -{passname}
+.. option:: --passes=<string>
 
- :program:`opt` provides the ability to run any of LLVM's optimization or
- analysis passes in any order.  The :option:`-help` option lists all the passes
- available.  The order in which the options occur on the command line are the
- order in which they are executed (within pass constraints).
+ A textual (comma separated) description of the pass pipeline
+ e.g.,-passes="foo,bar", to have analysis passes available before a pass, add
+ "require<foo-analysis>". See `Using the New Pass Manager
+ <../NewPassManager.html>`_, section ``#invoking-opt`` for more details on the
+ pass pipeline syntax.
 
 .. option:: -strip-debug
 
