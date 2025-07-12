@@ -418,7 +418,33 @@ static bool hasIrregularType(Type *Ty, const DataLayout &DL) {
 /// ElementCount to include loops whose trip count is a function of vscale.
 static ElementCount getSmallConstantTripCount(ScalarEvolution *SE,
                                               const Loop *L) {
-  return ElementCount::getFixed(SE->getSmallConstantTripCount(L));
+  if (unsigned ExpectedTC = SE->getSmallConstantTripCount(L))
+    return ElementCount::getFixed(ExpectedTC);
+
+  const SCEV *BTC = SE->getBackedgeTakenCount(L);
+
+  if (isa<SCEVCouldNotCompute>(BTC))
+    return ElementCount::getFixed(0);
+
+  const SCEV *ExitCount = SE->getTripCountFromExitCount(BTC, BTC->getType(), L);
+
+  if (isa<SCEVVScale>(ExitCount))
+    return ElementCount::getScalable(1);
+
+  if (auto *Mul = dyn_cast<SCEVMulExpr>(ExitCount)) {
+    if (!Mul->hasNoUnsignedWrap())
+      return ElementCount::getFixed(0);
+
+    if (Mul->getNumOperands() == 2 && isa<SCEVConstant>(Mul->getOperand(0)) &&
+        isa<SCEVVScale>(Mul->getOperand(1))) {
+      ConstantInt *Scale = cast<SCEVConstant>(Mul->getOperand(0))->getValue();
+      if (Scale->getValue().getActiveBits() > 32)
+        return ElementCount::getFixed(0);
+      return ElementCount::getScalable(Scale->getZExtValue());
+    }
+  }
+
+  return ElementCount::getFixed(0);
 }
 
 /// Returns "best known" trip count, which is either a valid positive trip count
@@ -4697,16 +4723,19 @@ LoopVectorizationCostModel::selectInterleaveCount(VPlan &Plan, ElementCount VF,
       MaxInterleaveCount = ForceTargetMaxVectorInterleaveFactor;
   }
 
-  unsigned EstimatedVF = getEstimatedRuntimeVF(VF, VScaleForTuning);
-
   // Try to get the exact trip count, or an estimate based on profiling data or
-  // ConstantMax from PSE, failing that.
-  if (auto BestKnownTC = getSmallBestKnownTC(PSE, TheLoop)) {
+  // ConstantMax from PSE, failing that. For fixed length VFs treat a scalable
+  // trip count as if unknown.
+  if (auto BestKnownTC = getSmallBestKnownTC(PSE, TheLoop);
+      BestKnownTC && (BestKnownTC->isFixed() || VF.isScalable())) {
+    // Re-evaluate trip counts and VFs to be in the same numerical space.
+    unsigned AvailableTC = getEstimatedRuntimeVF(*BestKnownTC, VScaleForTuning);
+    unsigned EstimatedVF = getEstimatedRuntimeVF(VF, VScaleForTuning);
+
     // At least one iteration must be scalar when this constraint holds. So the
     // maximum available iterations for interleaving is one less.
-    unsigned AvailableTC = requiresScalarEpilogue(VF.isVector())
-                               ? BestKnownTC->getFixedValue() - 1
-                               : BestKnownTC->getFixedValue();
+    if (requiresScalarEpilogue(VF.isVector()))
+      --AvailableTC;
 
     unsigned InterleaveCountLB = bit_floor(std::max(
         1u, std::min(AvailableTC / (EstimatedVF * 2), MaxInterleaveCount)));
