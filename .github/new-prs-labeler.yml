@@ -784,18 +784,20 @@ backend:NVPTX:
 backend:MIPS:
   - '**/*mips*'
   - '**/*Mips*'
+  - '**/*mips*/**'
+  - '**/*Mips*/**'
 
 backend:RISC-V:
-  - clang/**/*riscv*
-  - clang/**/*RISCV*
-  - llvm/**/*riscv*
-  - llvm/**/*RISCV*
+  - '**/*riscv*'
+  - '**/*RISCV*'
+  - '**/*riscv*/**'
+  - '**/*RISCV*/**'
 
 backend:Xtensa:
-  - clang/**/*xtensa*
-  - clang/**/*Xtensa*
-  - llvm/**/*xtensa*
-  - llvm/**/*Xtensa*
+  - '**/*xtensa*'
+  - '**/*Xtensa*'
+  - '**/*xtensa*/**'
+  - '**/*Xtensa*/**'
 
 lld:coff:
   - lld/**/COFF/**
