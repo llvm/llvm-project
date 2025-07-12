@@ -1608,11 +1608,19 @@ void parseDocumentationParagraph(llvm::StringRef Text, markup::Paragraph &Out) {
 }
 
 void parseDocumentation(llvm::StringRef Input, markup::Document &Output) {
+  // A documentation string is treated as a sequence of paragraphs,
+  // where the paragraphs are seperated by at least one empty line
+  // (meaning 2 consecutive newline characters).
+  // Possible leading empty lines (introduced by an odd number > 1 of
+  // empty lines between 2 paragraphs) will be removed later in the Markup
+  // renderer.
   llvm::StringRef Paragraph, Rest;
   for (std::tie(Paragraph, Rest) = Input.split("\n\n");
        !(Paragraph.empty() && Rest.empty());
        std::tie(Paragraph, Rest) = Rest.split("\n\n")) {
 
+    // The Paragraph will be empty if there is an even number of newline
+    // characters between two paragraphs, so we skip it.
     if (!Paragraph.empty())
       parseDocumentationParagraph(Paragraph, Output.addParagraph());
   }

@@ -3823,6 +3823,36 @@ TEST(Hover, ParseDocumentation) {
                    "foo\n\nbar",
                },
                {
+                   "foo\n\n\n\nbar",
+                   "foo\n\nbar",
+                   "foo\n\nbar",
+                   "foo\n\nbar",
+               },
+               {
+                   "foo\n\n\n\n\tbar",
+                   "foo\n\n\tbar",
+                   "foo\n\n\tbar",
+                   "foo\n\nbar",
+               },
+               {
+                   "foo\n\n\n\n    bar",
+                   "foo\n\n    bar",
+                   "foo\n\n    bar",
+                   "foo\n\nbar",
+               },
+               {
+                   "foo\n\n\n\n   bar",
+                   "foo\n\n   bar",
+                   "foo\n\n   bar",
+                   "foo\n\nbar",
+               },
+               {
+                   "foo\n\n\n\n bar",
+                   "foo\n\n bar",
+                   "foo\n\n bar",
+                   "foo\n\nbar",
+               },
+               {
                    "foo.\nbar",
                    "foo.\nbar",
                    "foo.\nbar",

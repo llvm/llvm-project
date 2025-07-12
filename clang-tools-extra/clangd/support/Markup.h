@@ -37,6 +37,14 @@ public:
 
   virtual bool isRuler() const { return false; }
   virtual ~Block() = default;
+
+protected:
+  /// Estimated size of the string representation of this block.
+  /// Used to reserve space in the output string.
+  /// Each time block content is added, this value is updated.
+  /// This is an estimate, so it may not be accurate but can help
+  /// reducing dynamically reallocating string memory.
+  unsigned EstimatedStringSize = 0;
 };
 
 /// Represents parts of the markup that can contain strings, like inline code,
@@ -67,7 +75,7 @@ public:
   Paragraph &appendSpace();
 
 private:
-  typedef enum { PlainText, InlineCode, Bold, Emphasized } ChunkKind;
+  enum ChunkKind { PlainText, InlineCode, Bold, Emphasized };
   struct Chunk {
     ChunkKind Kind = PlainText;
     // Preserve chunk markers in plaintext.
@@ -88,12 +96,6 @@ private:
   bool punctuationIndicatesLineBreak(llvm::StringRef Line) const;
   bool isHardLineBreakIndicator(llvm::StringRef Rest) const;
   bool isHardLineBreakAfter(llvm::StringRef Line, llvm::StringRef Rest) const;
-};
-
-class ListItemParagraph : public Paragraph {
-public:
-  void renderEscapedMarkdown(llvm::raw_ostream &OS) const override;
-  void renderMarkdown(llvm::raw_ostream &OS) const override;
 };
 
 /// Represents a sequence of one or more documents. Knows how to print them in a
@@ -142,6 +144,9 @@ public:
 
   BulletList &addBulletList();
 
+  /// Doesn't contain any trailing newlines and escaped markdown syntax.
+  /// It is expected that the result of this function
+  /// is rendered as markdown.
   std::string asEscapedMarkdown() const;
   /// Doesn't contain any trailing newlines.
   /// It is expected that the result of this function

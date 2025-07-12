@@ -168,7 +168,8 @@ bool needsLeadingEscapePlaintext(char C, llvm::StringRef Before,
 ///
 /// \param C The character to check.
 /// \param After The string that follows \p C .
-//  This is used to determine if \p C is part of a tag or an entity reference.
+/// This is used to determine if \p C is part of a tag or an entity reference.
+///
 /// \returns true if \p C should be escaped, false otherwise.
 bool needsLeadingEscapeMarkdown(char C, llvm::StringRef After) {
   switch (C) {
@@ -198,23 +199,25 @@ bool needsLeadingEscape(char C, llvm::StringRef Before, llvm::StringRef After,
   return needsLeadingEscapeMarkdown(C, After);
 }
 
-/// Escape a markdown text block. Ensures the punctuation will not introduce
+/// Escape a markdown text block.
+/// If \p EscapeMarkdown is true it ensures the punctuation will not introduce
 /// any of the markdown constructs.
+/// Else, markdown syntax is not escaped, only HTML tags and entities.
 std::string renderText(llvm::StringRef Input, bool StartsLine,
-                       bool EscapeMarkdown = false) {
+                       bool EscapeMarkdown) {
   std::string R;
+  R.reserve(Input.size());
 
   // split the input into lines, and escape each line separately.
   llvm::StringRef Line, Rest;
 
-  bool StartsLineIntern = StartsLine;
   bool IsFirstLine = true;
 
   for (std::tie(Line, Rest) = Input.split('\n');
        !(Line.empty() && Rest.empty());
        std::tie(Line, Rest) = Rest.split('\n')) {
 
-    StartsLineIntern = IsFirstLine ? StartsLine : true;
+    bool StartsLineIntern = IsFirstLine ? StartsLine : true;
 
     // Ignore leading spaces for the escape logic, but preserve them in the
     // output.
@@ -243,6 +246,7 @@ std::string renderText(llvm::StringRef Input, bool StartsLine,
 /// is surrounded by backticks and the inner contents are properly escaped.
 std::string renderInlineBlock(llvm::StringRef Input) {
   std::string R;
+  R.reserve(Input.size());
   // Double all backticks to make sure we don't close the inline block early.
   for (size_t From = 0; From < Input.size();) {
     size_t Next = Input.find("`", From);
@@ -401,17 +405,21 @@ public:
   Heading(size_t Level) : Level(Level) {}
 
   void renderEscapedMarkdown(llvm::raw_ostream &OS) const override {
-    OS << std::string(Level, '#') << ' ';
+    insertHeadingMarkers(OS);
     Paragraph::renderEscapedMarkdown(OS);
   }
 
   void renderMarkdown(llvm::raw_ostream &OS) const override {
-    OS << std::string(Level, '#') << ' ';
+    insertHeadingMarkers(OS);
     Paragraph::renderMarkdown(OS);
   }
 
 private:
   size_t Level;
+
+  void insertHeadingMarkers(llvm::raw_ostream &OS) const {
+    OS << std::string(Level, '#') << ' ';
+  }
 };
 
 } // namespace
@@ -445,16 +453,18 @@ void Paragraph::renderEscapedMarkdown(llvm::raw_ostream &OS) const {
       OS << " ";
     switch (C.Kind) {
     case ChunkKind::PlainText:
-      OS << renderText(C.Contents, !HasChunks, true);
+      OS << renderText(C.Contents, !HasChunks, /*EscapeMarkdown=*/true);
       break;
     case ChunkKind::InlineCode:
       OS << renderInlineBlock(C.Contents);
       break;
     case ChunkKind::Bold:
-      OS << renderText("**" + C.Contents + "**", !HasChunks, true);
+      OS << renderText("**" + C.Contents + "**", !HasChunks,
+                       /*EscapeMarkdown=*/true);
       break;
     case ChunkKind::Emphasized:
-      OS << renderText("*" + C.Contents + "*", !HasChunks, true);
+      OS << renderText("*" + C.Contents + "*", !HasChunks,
+                       /*EscapeMarkdown=*/true);
       break;
     }
     HasChunks = true;
@@ -472,16 +482,18 @@ void Paragraph::renderMarkdown(llvm::raw_ostream &OS) const {
       OS << " ";
     switch (C.Kind) {
     case ChunkKind::PlainText:
-      OS << renderText(C.Contents, !HasChunks);
+      OS << renderText(C.Contents, !HasChunks, /*EscapeMarkdown=*/false);
       break;
     case ChunkKind::InlineCode:
       OS << renderInlineBlock(C.Contents);
       break;
     case ChunkKind::Bold:
-      OS << "**" << renderText(C.Contents, !HasChunks) << "**";
+      OS << "**" << renderText(C.Contents, !HasChunks, /*EscapeMarkdown=*/false)
+         << "**";
       break;
     case ChunkKind::Emphasized:
-      OS << "*" << renderText(C.Contents, !HasChunks) << "*";
+      OS << "*" << renderText(C.Contents, !HasChunks, /*EscapeMarkdown=*/false)
+         << "*";
       break;
     }
     HasChunks = true;
@@ -545,6 +557,8 @@ bool Paragraph::isHardLineBreakAfter(llvm::StringRef Line,
 void Paragraph::renderPlainText(llvm::raw_ostream &OS) const {
   bool NeedsSpace = false;
   std::string ConcatenatedText;
+  ConcatenatedText.reserve(EstimatedStringSize);
+
   llvm::raw_string_ostream ConcatenatedOS(ConcatenatedText);
 
   for (auto &C : Chunks) {
@@ -573,6 +587,18 @@ void Paragraph::renderPlainText(llvm::raw_ostream &OS) const {
 
   // We go through the contents line by line to handle the newlines
   // and required spacing correctly.
+  //
+  // Newlines are added if:
+  // - the line ends with 2 spaces and a newline follows
+  // - the line ends with punctuation that indicates a line break (.:,;!?)
+  // - the next line starts with a hard line break indicator (-@>#`, or a digit
+  //   followed by '.' or ')'), ignoring leading whitespace.
+  //
+  // Otherwise, newlines in the input are replaced with a single space.
+  //
+  // Multiple spaces are collapsed into a single space.
+  //
+  // Lines containing only whitespace are ignored.
   llvm::StringRef Line, Rest;
 
   for (std::tie(Line, Rest) =
@@ -580,6 +606,17 @@ void Paragraph::renderPlainText(llvm::raw_ostream &OS) const {
        !(Line.empty() && Rest.empty());
        std::tie(Line, Rest) = Rest.split('\n')) {
 
+    // Remove lines which only contain whitespace.
+    //
+    // Note: this also handles the case when there are multiple newlines
+    // in a row, since all leading newlines are removed.
+    //
+    // The documentation parsing treats multiple newlines as paragraph
+    // separators, hence it will create a new Paragraph instead of adding
+    // multiple newlines to the same Paragraph.
+    // Therfore multiple newlines are never added to a paragraph
+    // except if the user explicitly adds them using
+    // e.g. appendText("user text\n\nnext text").
     Line = Line.ltrim();
     if (Line.empty())
       continue;
@@ -589,6 +626,9 @@ void Paragraph::renderPlainText(llvm::raw_ostream &OS) const {
     if (isHardLineBreakAfter(Line, Rest))
       OS << '\n';
     else if (!Rest.empty())
+      // Since we removed any trailing whitespace from the input using trim(),
+      // we know that the next line contains non-whitespace characters.
+      // Therefore, we can add a space without worrying about trailing spaces.
       OS << ' ';
   }
 
@@ -606,7 +646,7 @@ void BulletList::renderEscapedMarkdown(llvm::raw_ostream &OS) const {
     // rid of the copies, if it turns out to be a bottleneck.
     OS << "- " << indentLines(M) << '\n';
   }
-  // We need a new line after list to terminate it in markdown.
+  // We add 2 newlines after list to terminate it in markdown.
   OS << "\n\n";
 }
 
@@ -617,7 +657,7 @@ void BulletList::renderMarkdown(llvm::raw_ostream &OS) const {
     // rid of the copies, if it turns out to be a bottleneck.
     OS << "- " << indentLines(M) << '\n';
   }
-  // We need a new line after list to terminate it in markdown.
+  // We add 2 newlines after list to terminate it in markdown.
   OS << "\n\n";
 }
 
@@ -641,8 +681,10 @@ Paragraph &Paragraph::appendChunk(llvm::StringRef Contents, ChunkKind K) {
     return *this;
   Chunks.emplace_back();
   Chunk &C = Chunks.back();
-  C.Contents = std::move(Contents);
+  C.Contents = Contents;
   C.Kind = K;
+
+  EstimatedStringSize += Contents.size();
   return *this;
 }
 
@@ -652,7 +694,7 @@ Paragraph &Paragraph::appendText(llvm::StringRef Text) {
     return *this;
   }
 
-  return appendChunk(Text, ChunkKind::PlainText);
+  return appendChunk(std::move(Text), ChunkKind::PlainText);
 }
 
 Paragraph &Paragraph::appendEmphasizedText(llvm::StringRef Text) {
@@ -677,6 +719,8 @@ Paragraph &Paragraph::appendCode(llvm::StringRef Code, bool Preserve) {
   C.Preserve = Preserve;
   // Disallow adjacent code spans without spaces, markdown can't render them.
   C.SpaceBefore = AdjacentCode;
+
+  EstimatedStringSize += Norm.size();
   return *this;
 }
 
