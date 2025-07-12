@@ -14,6 +14,9 @@
 // RUN: %clang_cc1 -O2 -flto -flto-unit -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=ITANIUM-OPT --check-prefix=ITANIUM-OPT-LAYOUT %s
 // RUN: %clang_cc1 -flto -flto-unit -triple x86_64-pc-windows-msvc -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=VTABLE-OPT --check-prefix=MS --check-prefix=MS-TYPEMETADATA --check-prefix=TT-MS %s
 
+// Test for the whole-program-vtables feature in nonlto mode:
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=VTABLE-OPT --check-prefix=TT-ITANIUM-DEFAULT-NOLTO  %s
+
 // Tests for cfi + whole-program-vtables:
 // RUN: %clang_cc1 -flto -flto-unit -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-VT --check-prefix=ITANIUM-HIDDEN --check-prefix=ITANIUM-COMMON-MD --check-prefix=TC-ITANIUM --check-prefix=ITANIUM-NO-RV-MD %s
 // RUN: %clang_cc1 -flto -flto-unit -triple x86_64-pc-windows-msvc -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-VT --check-prefix=MS --check-prefix=MS-TYPEMETADATA --check-prefix=TC-MS %s
@@ -178,6 +181,7 @@ void af(A *a) {
   // TT-ITANIUM-HIDDEN: [[P:%[^ ]*]] = call i1 @llvm.type.test(ptr [[VT:%[^ ]*]], metadata !"_ZTS1A")
   // TT-ITANIUM-DEFAULT: [[P:%[^ ]*]] = call i1 @llvm.public.type.test(ptr [[VT:%[^ ]*]], metadata !"_ZTS1A")
   // TT-MS: [[P:%[^ ]*]] = call i1 @llvm.type.test(ptr [[VT:%[^ ]*]], metadata !"?AUA@@")
+  // TT-ITANIUM-DEFAULT-NOLTO: [[P:%[^ ]*]] = call i1 @llvm.public.type.test(ptr [[VT:%[^ ]*]], metadata !"_ZTS1A")
   // TC-ITANIUM:    [[PAIR:%[^ ]*]] = call { ptr, i1 } @llvm.type.checked.load(ptr {{%[^ ]*}}, i32 0, metadata !"_ZTS1A")
   // TC-ITANIUM-RV: [[PAIR:%[^ ]*]] = call { ptr, i1 } @llvm.type.checked.load.relative(ptr {{%[^ ]*}}, i32 0, metadata !"_ZTS1A")
   // TC-MS: [[PAIR:%[^ ]*]] = call { ptr, i1 } @llvm.type.checked.load(ptr {{%[^ ]*}}, i32 0, metadata !"?AUA@@")
@@ -212,6 +216,7 @@ void df1(D *d) {
   // TT-ITANIUM-HIDDEN: {{%[^ ]*}} = call i1 @llvm.type.test(ptr {{%[^ ]*}}, metadata ![[DTYPE:[0-9]+]])
   // TT-ITANIUM-DEFAULT: {{%[^ ]*}} = call i1 @llvm.type.test(ptr {{%[^ ]*}}, metadata ![[DTYPE:[0-9]+]])
   // TT-MS: {{%[^ ]*}} = call i1 @llvm.type.test(ptr {{%[^ ]*}}, metadata !"?AUA@@")
+  // TT-ITANIUM-DEFAULT-NOLTO: {{%[^ ]*}} = call i1 @llvm.type.test(ptr {{%[^ ]*}}, metadata ![[DTYPE:[0-9]+]])
   // TC-ITANIUM:    {{%[^ ]*}} = call { ptr, i1 } @llvm.type.checked.load(ptr {{%[^ ]*}}, i32 0, metadata ![[DTYPE:[0-9]+]])
   // TC-ITANIUM-RV: {{%[^ ]*}} = call { ptr, i1 } @llvm.type.checked.load.relative(ptr {{%[^ ]*}}, i32 0, metadata ![[DTYPE:[0-9]+]])
   // TC-MS: {{%[^ ]*}} = call { ptr, i1 } @llvm.type.checked.load(ptr {{%[^ ]*}}, i32 0, metadata !"?AUA@@")
@@ -224,6 +229,7 @@ void dg1(D *d) {
   // TT-ITANIUM-HIDDEN: {{%[^ ]*}} = call i1 @llvm.type.test(ptr {{%[^ ]*}}, metadata !"_ZTS1B")
   // TT-ITANIUM-DEFAULT: {{%[^ ]*}} = call i1 @llvm.public.type.test(ptr {{%[^ ]*}}, metadata !"_ZTS1B")
   // TT-MS: {{%[^ ]*}} = call i1 @llvm.type.test(ptr {{%[^ ]*}}, metadata !"?AUB@@")
+  // TT-ITANIUM-DEFAULT-NOLTO: {{%[^ ]*}} = call i1 @llvm.public.type.test(ptr {{%[^ ]*}}, metadata !"_ZTS1B")
   // TC-ITANIUM:    {{%[^ ]*}} = call { ptr, i1 } @llvm.type.checked.load(ptr {{%[^ ]*}}, i32 8, metadata !"_ZTS1B")
   // TC-ITANIUM-RV: {{%[^ ]*}} = call { ptr, i1 } @llvm.type.checked.load.relative(ptr {{%[^ ]*}}, i32 4, metadata !"_ZTS1B")
   // TC-MS: {{%[^ ]*}} = call { ptr, i1 } @llvm.type.checked.load(ptr {{%[^ ]*}}, i32 0, metadata !"?AUB@@")
@@ -236,6 +242,7 @@ void dh1(D *d) {
   // TT-ITANIUM-HIDDEN: {{%[^ ]*}} = call i1 @llvm.type.test(ptr {{%[^ ]*}}, metadata ![[DTYPE]])
   // TT-ITANIUM-DEFAULT: {{%[^ ]*}} = call i1 @llvm.type.test(ptr {{%[^ ]*}}, metadata ![[DTYPE]])
   // TT-MS: {{%[^ ]*}} = call i1 @llvm.type.test(ptr {{%[^ ]*}}, metadata ![[DTYPE:[0-9]+]])
+  // TT-ITANIUM-DEFAULT-NOLTO: {{%[^ ]*}} = call i1 @llvm.type.test(ptr {{%[^ ]*}}, metadata ![[DTYPE]])
   // TC-ITANIUM:    {{%[^ ]*}} = call { ptr, i1 } @llvm.type.checked.load(ptr {{%[^ ]*}}, i32 16, metadata ![[DTYPE]])
   // TC-ITANIUM-RV: {{%[^ ]*}} = call { ptr, i1 } @llvm.type.checked.load.relative(ptr {{%[^ ]*}}, i32 8, metadata ![[DTYPE]])
   // TC-MS: {{%[^ ]*}} = call { ptr, i1 } @llvm.type.checked.load(ptr {{%[^ ]*}}, i32 8, metadata ![[DTYPE:[0-9]+]])
@@ -297,6 +304,7 @@ void f(D *d) {
   // TT-ITANIUM-HIDDEN: {{%[^ ]*}} = call i1 @llvm.type.test(ptr {{%[^ ]*}}, metadata !"_ZTSN5test21DE")
   // TT-ITANIUM-DEFAULT: {{%[^ ]*}} = call i1 @llvm.public.type.test(ptr {{%[^ ]*}}, metadata !"_ZTSN5test21DE")
   // TT-MS: {{%[^ ]*}} = call i1 @llvm.type.test(ptr {{%[^ ]*}}, metadata !"?AUA@test2@@")
+  // TT-ITANIUM-DEFAULT-NOLTO: {{%[^ ]*}} = call i1 @llvm.public.type.test(ptr {{%[^ ]*}}, metadata !"_ZTSN5test21DE")
   // TC-ITANIUM:    {{%[^ ]*}} = call { ptr, i1 } @llvm.type.checked.load(ptr {{%[^ ]*}}, i32 8, metadata !"_ZTSN5test21DE")
   // TC-ITANIUM-RV: {{%[^ ]*}} = call { ptr, i1 } @llvm.type.checked.load.relative(ptr {{%[^ ]*}}, i32 4, metadata !"_ZTSN5test21DE")
   // TC-MS: {{%[^ ]*}} = call { ptr, i1 } @llvm.type.checked.load(ptr {{%[^ ]*}}, i32 0, metadata !"?AUA@test2@@")

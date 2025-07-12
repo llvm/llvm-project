@@ -221,6 +221,14 @@ static cl::opt<WPDCheckMode> DevirtCheckMode(
                clEnumValN(WPDCheckMode::Fallback, "fallback",
                           "Fallback to indirect when incorrect")));
 
+// This pass runs mainly in lto mode, it can run in nonlto mode for limited
+// features. For testing, provide a way to tell that we are running in nonlto
+// mode.
+static cl::opt<bool>
+    TestNoLTOMode("wholeprogramdevirt-nolto", cl::Hidden,
+                  cl::desc("Run whole program devirt outside LTO mode."),
+                  cl::init(false));
+
 namespace {
 struct PatternList {
   std::vector<GlobPattern> Patterns;
@@ -804,6 +812,9 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
     return FAM.getResult<DominatorTreeAnalysis>(F);
   };
   if (UseCommandLine) {
+    if (TestNoLTOMode)
+      // we are outside LTO mode. enable speculative devirtualization:
+      DevirtCheckMode = WPDCheckMode::Fallback;
     if (!DevirtModule::runForTesting(M, AARGetter, OREGetter, LookupDomTree))
       return PreservedAnalyses::all();
     return PreservedAnalyses::none();
@@ -2475,18 +2486,16 @@ bool DevirtModule::run() {
                  .WPDRes[S.first.ByteOffset];
     if (tryFindVirtualCallTargets(TargetsForSlot, TypeMemberInfos,
                                   S.first.ByteOffset, ExportSummary)) {
-      trySingleImplDevirt(ExportSummary, TargetsForSlot, S.second, Res);
+      bool SingleImplDevirt =
+          trySingleImplDevirt(ExportSummary, TargetsForSlot, S.second, Res);
       // In Speculative devirt mode, we skip virtual constant propagation
       // and branch funneling to minimize the drawback if we got wrong
       // speculation during devirtualization.
-      if (DevirtCheckMode != WPDCheckMode::Fallback) {
-        if (!trySingleImplDevirt(ExportSummary, TargetsForSlot, S.second,
-                                 Res)) {
-          DidVirtualConstProp |=
-              tryVirtualConstProp(TargetsForSlot, S.second, Res, S.first);
+      if (!SingleImplDevirt && DevirtCheckMode != WPDCheckMode::Fallback) {
+        DidVirtualConstProp |=
+            tryVirtualConstProp(TargetsForSlot, S.second, Res, S.first);
 
-          tryICallBranchFunnel(TargetsForSlot, S.second, Res, S.first);
-        }
+        tryICallBranchFunnel(TargetsForSlot, S.second, Res, S.first);
       }
 
       // Collect functions devirtualized at least for one call site for stats.
