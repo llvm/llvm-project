@@ -15062,7 +15062,7 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
   if (Diff != 1 && Diff != 2 && Diff != 3 && !Subtarget.hasVendorXqciac())
     return SDValue();
 
-  if (!Diff || Diff > 31)
+  if (Diff == 0 || Diff > 31)
     return SDValue();
 
   // Build nodes.
