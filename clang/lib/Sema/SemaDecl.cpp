@@ -4084,6 +4084,21 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
            diag::note_carries_dependency_missing_first_decl) << 0/*Function*/;
     }
 
+    // SYCL 2020 section 5.10.1, "SYCL functions and member functions linkage":
+    //   When a function is declared with sycl_external, that attribute must be
+    //   used on the first declaration of that function in the translation unit.
+    //   Redeclarations of the function in the same translation unit may
+    //   optionally use sycl_external, but this is not required.
+    if (LangOpts.SYCLIsDevice) {
+      const SYCLExternalAttr *SEA = New->getAttr<SYCLExternalAttr>();
+      if (SEA && !Old->hasAttr<SYCLExternalAttr>()) {
+        Diag(SEA->getLocation(), diag::err_attribute_missing_on_first_decl)
+            << SEA;
+        Diag(Old->getLocation(), diag::note_previous_declaration);
+        New->dropAttr<SYCLExternalAttr>();
+      }
+    }
+
     // (C++98 8.3.5p3):
     //   All declarations for a function shall agree exactly in both the
     //   return type and the parameter-type-list.
@@ -12251,6 +12266,9 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
   if (NewFD->hasAttr<SYCLKernelEntryPointAttr>())
     SYCL().CheckSYCLEntryPointFunctionDecl(NewFD);
 
+  if (NewFD->hasAttr<SYCLExternalAttr>())
+    SYCL().CheckSYCLExternalFunctionDecl(NewFD);
+
   // Semantic checking for this function declaration (in isolation).
 
   if (getLangOpts().CPlusPlus) {
@@ -12437,6 +12455,14 @@ void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
         << FD->hasAttr<DeviceKernelAttr>();
     FD->setInvalidDecl();
     return;
+  }
+
+  if (getLangOpts().SYCLIsDevice) {
+    if (FD->hasAttr<SYCLExternalAttr>()) {
+      Diag(FD->getLocation(), diag::err_sycl_attribute_avoid_main);
+      FD->setInvalidDecl();
+      return;
+    }
   }
 
   // Functions named main in hlsl are default entries, but don't have specific

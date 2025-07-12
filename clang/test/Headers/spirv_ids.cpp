@@ -80,7 +80,7 @@
 // NV: call noundef i32 @_Z18__spirv_SubgroupIdv() #2
 // NV: call noundef i32 @_Z33__spirv_SubgroupLocalInvocationIdv() #2
 
-void test_id_and_range() {
+[[clang::sycl_external]] void test_id_and_range() {
   __spirv_NumWorkgroups(0);
   __spirv_NumWorkgroups(1);
   __spirv_NumWorkgroups(2);
