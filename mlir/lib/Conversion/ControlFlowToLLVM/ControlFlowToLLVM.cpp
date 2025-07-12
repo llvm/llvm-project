@@ -138,7 +138,7 @@ struct BranchOpLowering : public ConvertOpToLLVMPattern<cf::BranchOp> {
                           TypeRange(adaptor.getOperands()));
     if (failed(convertedBlock))
       return failure();
-    auto attrs = op->getAttrDictionary();
+    DictionaryAttr attrs = op->getAttrDictionary();
     Operation *newOp = rewriter.replaceOpWithNewOp<LLVM::BrOp>(
         op, adaptor.getOperands(), *convertedBlock);
     // TODO: We should not just forward all attributes like that. But there are
@@ -167,7 +167,7 @@ struct CondBranchOpLowering : public ConvertOpToLLVMPattern<cf::CondBranchOp> {
                           TypeRange(adaptor.getFalseDestOperands()));
     if (failed(convertedFalseBlock))
       return failure();
-    auto attrs = op->getAttrDictionary();
+    DictionaryAttr attrs = op->getAttrDictionary();
     auto newOp = rewriter.replaceOpWithNewOp<LLVM::CondBrOp>(
         op, adaptor.getCondition(), adaptor.getTrueDestOperands(),
         adaptor.getFalseDestOperands(), op.getBranchWeightsAttr(),
