@@ -78,14 +78,6 @@ LifetimeMover::LifetimeMover(Function &F, const DominatorTree &DT,
       CriticalPoints.push_back(&I);
     else if (isa<InvokeInst>(I))
       CriticalPoints.push_back(&I);
-    else if (auto *Cmp = dyn_cast<ICmpInst>(&I)) {
-      // If both sides are alloca, reject the function
-      if (isa<AllocaInst>(Cmp->getOperand(0)->stripPointerCastsAndAliases()) &&
-          isa<AllocaInst>(Cmp->getOperand(1)->stripPointerCastsAndAliases())) {
-        Allocas.clear();
-        return;
-      }
-    }
   }
 }
 
@@ -332,7 +324,7 @@ void LifetimeMover::reset() {
 
 PreservedAnalyses LifetimeMovePass::run(Function &F,
                                         FunctionAnalysisManager &AM) {
-  // Works for coroutine for now
+  // FIXME: Only enable by default for coroutines for now
   if (!F.isPresplitCoroutine())
     return PreservedAnalyses::all();
 
