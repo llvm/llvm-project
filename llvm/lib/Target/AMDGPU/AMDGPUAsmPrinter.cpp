@@ -202,15 +202,12 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
     // symbol value. This is used by a front-end to have functions that are
     // chained rather than called, and a dispatcher that dynamically resizes
     // the VGPR count before dispatching to a function.
-    ResourceUsage = &getAnalysis<AMDGPUResourceUsageAnalysis>();
-    const AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo &Info =
-        ResourceUsage->getResourceInfo();
     MCContext &Ctx = MF->getContext();
-    unsigned EncodedNumVGPRs = (Info.NumVGPR - 1) >> 1 & 0x38;
+    unsigned EncodedNumVGPRs = (ResourceUsage->NumVGPR - 1) >> 1 & 0x38;
     MCSymbol *CurPCSym = Ctx.createTempSymbol();
     OutStreamer->emitLabel(CurPCSym);
     const MCExpr *DVgprFuncVal = MCBinaryExpr::createAdd(
-        MCSymbolRefExpr::create(CurPCSym, MCSymbolRefExpr::VK_None, Ctx),
+        MCSymbolRefExpr::create(CurPCSym, Ctx),
         MCConstantExpr::create(EncodedNumVGPRs, Ctx), Ctx);
     MCSymbol *DVgprFuncSym =
         Ctx.getOrCreateSymbol(Twine("_dvgpr$") + MF->getFunction().getName());
