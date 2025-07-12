@@ -37,6 +37,18 @@ bool MsvcStlSmartPointerSummaryProvider(ValueObject &valobj, Stream &stream,
 lldb_private::SyntheticChildrenFrontEnd *
 MsvcStlSmartPointerSyntheticFrontEndCreator(lldb::ValueObjectSP valobj_sp);
 
+bool IsMsvcStlTreeIter(ValueObject &valobj);
+bool MsvcStlTreeIterSummaryProvider(ValueObject &valobj, Stream &stream,
+                                    const TypeSummaryOptions &options);
+lldb_private::SyntheticChildrenFrontEnd *
+MsvcStlTreeIterSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                        lldb::ValueObjectSP valobj_sp);
+
+// std::map,set,multimap,multiset
+bool IsMsvcStlMapLike(ValueObject &valobj);
+lldb_private::SyntheticChildrenFrontEnd *
+MsvcStlMapLikeSyntheticFrontEndCreator(lldb::ValueObjectSP valobj_sp);
+
 } // namespace formatters
 } // namespace lldb_private
 
