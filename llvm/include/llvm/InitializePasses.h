@@ -237,6 +237,7 @@ initializeOptimizationRemarkEmitterWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeOptimizePHIsLegacyPass(PassRegistry &);
 LLVM_ABI void initializePEILegacyPass(PassRegistry &);
 LLVM_ABI void initializePHIEliminationPass(PassRegistry &);
+LLVM_ABI void initializePackedIntegerCombineLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializePartiallyInlineLibCallsLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializePatchableFunctionLegacyPass(PassRegistry &);
 LLVM_ABI void initializePeepholeOptimizerLegacyPass(PassRegistry &);

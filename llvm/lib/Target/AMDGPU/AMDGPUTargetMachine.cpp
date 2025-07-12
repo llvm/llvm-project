@@ -105,6 +105,7 @@
 #include "llvm/Transforms/Scalar/InferAddressSpaces.h"
 #include "llvm/Transforms/Scalar/LoopDataPrefetch.h"
 #include "llvm/Transforms/Scalar/NaryReassociate.h"
+#include "llvm/Transforms/Scalar/PackedIntegerCombinePass.h"
 #include "llvm/Transforms/Scalar/SeparateConstOffsetFromGEP.h"
 #include "llvm/Transforms/Scalar/Sink.h"
 #include "llvm/Transforms/Scalar/StraightLineStrengthReduce.h"
@@ -1379,8 +1380,11 @@ void AMDGPUPassConfig::addCodeGenPrepare() {
 
   TargetPassConfig::addCodeGenPrepare();
 
-  if (isPassEnabled(EnableLoadStoreVectorizer))
+  if (isPassEnabled(EnableLoadStoreVectorizer)) {
     addPass(createLoadStoreVectorizerPass());
+    // LSV pass opens up more opportunities for packed integer combining.
+    addPass(createPackedIntegerCombinePass());
+  }
 
   // LowerSwitch pass may introduce unreachable blocks that can
   // cause unexpected behavior for subsequent passes. Placing it
@@ -2104,8 +2108,11 @@ void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
 
   Base::addCodeGenPrepare(addPass);
 
-  if (isPassEnabled(EnableLoadStoreVectorizer))
+  if (isPassEnabled(EnableLoadStoreVectorizer)) {
     addPass(LoadStoreVectorizerPass());
+    // LSV pass opens up more opportunities for packed integer combining.
+    addPass(PackedIntegerCombinePass());
+  }
 
   // LowerSwitch pass may introduce unreachable blocks that can cause unexpected
   // behavior for subsequent passes. Placing it here seems better that these

@@ -541,6 +541,7 @@
 ; GCN-O1-OPTS-NEXT:        Natural Loop Information
 ; GCN-O1-OPTS-NEXT:        Scalar Evolution Analysis
 ; GCN-O1-OPTS-NEXT:        GPU Load and Store Vectorizer
+; GCN-O1-OPTS-NEXT:        Packed Integer Combine
 ; GCN-O1-OPTS-NEXT:        Lazy Value Information Analysis
 ; GCN-O1-OPTS-NEXT:        Lower SwitchInst's to branches
 ; GCN-O1-OPTS-NEXT:        Lower invoke and unwind, for unwindless code generators
@@ -856,6 +857,7 @@
 ; GCN-O2-NEXT:        Natural Loop Information
 ; GCN-O2-NEXT:        Scalar Evolution Analysis
 ; GCN-O2-NEXT:        GPU Load and Store Vectorizer
+; GCN-O2-NEXT:        Packed Integer Combine
 ; GCN-O2-NEXT:        Lazy Value Information Analysis
 ; GCN-O2-NEXT:        Lower SwitchInst's to branches
 ; GCN-O2-NEXT:        Lower invoke and unwind, for unwindless code generators
@@ -1186,6 +1188,7 @@
 ; GCN-O3-NEXT:        Natural Loop Information
 ; GCN-O3-NEXT:        Scalar Evolution Analysis
 ; GCN-O3-NEXT:        GPU Load and Store Vectorizer
+; GCN-O3-NEXT:        Packed Integer Combine
 ; GCN-O3-NEXT:        Lazy Value Information Analysis
 ; GCN-O3-NEXT:        Lower SwitchInst's to branches
 ; GCN-O3-NEXT:        Lower invoke and unwind, for unwindless code generators
