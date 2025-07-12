@@ -186,8 +186,12 @@ namespace {
       HandlingTopLevelDeclRAII HandlingDecl(*this);
 
       // Make sure to emit all elements of a Decl.
-      for (auto &I : DG)
+      for (auto &I : DG) {
+        if (I->isInvalidDecl()) {
+          continue;
+        }
         Builder->EmitTopLevelDecl(I);
+      }
 
       return true;
     }
