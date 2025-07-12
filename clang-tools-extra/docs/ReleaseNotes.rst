@@ -166,6 +166,13 @@ New checks
   Finds potentially erroneous calls to ``reset`` method on smart pointers when
   the pointee type also has a ``reset`` method.
 
+- New :doc:`readability-use-concise-preprocessor-directives
+  <clang-tidy/checks/readability/use-concise-preprocessor-directives>` check.
+
+  Finds uses of ``#if`` that can be simplified to ``#ifdef`` or ``#ifndef`` and,
+  since C23 and C++23, uses of ``#elif`` that can be simplified to ``#elifdef``
+  or ``#elifndef``.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
