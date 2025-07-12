@@ -1867,40 +1867,78 @@ pair<typename __tree<_Tp, _Compare, _Allocator>::iterator, bool>
   bool __inserted              = false;
   if (__child == nullptr) {
     __node_holder __h = __construct_node(std::forward<_Args>(__args)...);
-    // std::unique_ptr<std::__tree_node<std::__value_type<int, double>, min_pointer<void>>,
-    // std::__tree_node_destructor<min_allocator<std::__tree_node<std::__value_type<int, double>, min_pointer<void>>>>>
 
-    // *h
-    // std::__tree_node<std::__value_type<int, double>, min_pointer<void>>
-    // (*__h).fooooo;
-    // std::__tree_node<std::__value_type<int, double>, min_pointer<void>>
+/*
+ error: cannot convert 
+ '__node_holder'
+ (aka 
+' unique_ptr<
+    __tree_node<
+      std::__value_type<int, double>,
+      min_pointer<void, std::integral_constant<unsigned long, 0> >
+    >,
+    __tree_node_destructor<
+      min_allocator<
+        std::__tree_node<
+          std::__value_type<int, double>,
+          min_pointer<void, std::integral_constant<unsigned long, 0> >
+        >
+      >
+    >
+  >
+'
+ )
+  to 'double' without a conversion operator
+*/
+    // double d2 =static_cast<double>(__h);
+    // (void)d2;
 
-    // __h.get().foooooo;
-    // min_pointer<std::__tree_node<std::__value_type<int, double>, min_pointer<void>>>
+/*
+  error: cannot convert 'pointer'
+  (aka
+' min_pointer<
+    std::__tree_node<
+      std::__value_type<int, double>,
+      min_pointer<void, std::integral_constant<unsigned long, 0>>
+    >
+  >
+') to 'double' without a conversion operator
+ */
+    // double d =static_cast<double>(__h.get());
+    // (void)d;
 
-    // __node_base_pointer  = min_pointer<std::__tree_node_base<                                min_pointer<void>>>
-    // __h.get()            = min_pointer<std::__tree_node     <std::__value_type<int, double>, min_pointer<void>>>
+/*
+error: cannot convert '__node_base_pointer' (aka
+' min_pointer<
+    std::__tree_node_base<
+      min_pointer<void, std::integral_constant<unsigned long, 0>>
+    >,
+    std::integral_constant<unsigned long, 0>
+  >
+') to 'double' without a conversion operator
+*/
 
-    // static_assert();
+// __node_base_pointer xxx = nullptr;
+// (void)xxx;
+    // double d3 =static_cast<double>(xxx);
+    // (void)d3;
 
-    // __tree_node::__node_value_type = std::__value_type<int, double>
-
-    /*
-    without 233
-    no matching conversion for static_cast
-    from 'pointer' (aka
-      'min_pointer<std::__tree_node<std::__value_type<int, double>, min_pointer<void, std::integral_constant<unsigned
-    long, 0>>>>'
-    )
-    to '__node_base_pointer' (aka
-      'min_pointer<std::__tree_node_base<min_pointer<void, std::integral_constant<unsigned long, 0>>>,
-    std::integral_constant<unsigned long, 0>>'
-    )
-    */
-
-    __node_base_pointer __foo = static_cast<__node_base_pointer>(__h.get());
-    (void)__foo;
+    // __node_base_pointer __foo = static_cast<__node_base_pointer>(__h.get());
+    // (void)__foo;
     // __maybe_unused__ __node_base_pointer __foo2 = __node_base_pointer(__h.get());
+
+/*
+error: cannot convert '__tree<std::__value_type<int, double>, std::__map_value_compare<int, std::pair<const int, double>, std::less<int>, true>, min_allocator<std::pair<const int, double>>>::__node_holder' (aka 'unique_ptr<__tree_node<std::__value_type<int, double>, min_pointer<void, std::integral_constant<unsigned long, 0>>>, __tree_node_destructor<min_allocator<std::__tree_node<std::__value_type<int, double>, min_pointer<void, std::integral_constant<unsigned long, 0>>>>>>') to 'double' without a conversion operator
+*/
+    // __tree<_Tp, _Compare, _Allocator>::__node_holder __tmp_nh;
+    // double __xxx = static_cast<double>(__tmp_nh);
+
+
+/*
+error: cannot convert 'pointer' (aka 'min_pointer<std::__tree_node<std::__value_type<int, double>, min_pointer<void, std::integral_constant<unsigned long, 0>>>>') to 'double' without a conversion operator
+*/
+    // __tree<_Tp, _Compare, _Allocator>::__node_holder __tmp_nh;
+    // double __xxx = static_cast<double>(__tmp_nh.get());
 
     /*
     note:
@@ -1911,9 +1949,18 @@ pair<typename __tree<_Tp, _Compare, _Allocator>::iterator, bool>
       'std::__tree_node_base<min_pointer<void>>'
     */
 
-    // i believe this cast fails because the lifetime of __h.get() has not begun
+if(__libcpp_is_constant_evaluated()){
 
+typename __tree<_Tp, _Compare, _Allocator>::__node_holder::pointer cast = static_cast<
+__tree<_Tp, _Compare, _Allocator>::__node_holder::pointer>(__h.get());
+__node_base_pointer base = static_cast<__node_base_pointer>(cast);
+
+
+    __insert_node_at(__parent, __child, base);
+}else {
     __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
+}
+
     __r        = __h.release();
     __inserted = true;
   }
