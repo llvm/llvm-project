@@ -185,8 +185,8 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/optional-value-conversion>` check to detect
   conversion in argument of ``std::make_optional``.
 
-- Improved :doc: `bugprone-sizeof-expression
-  <clang-tidy/checks/bugprone/bugprone-sizeof-expression>` check by adding
+- Improved :doc:`bugprone-sizeof-expression
+  <clang-tidy/checks/bugprone/sizeof-expression>` check by adding
   `WarnOnSizeOfInLoopTermination` option to detect misuses of ``sizeof``
   expression in loop conditions.
 
