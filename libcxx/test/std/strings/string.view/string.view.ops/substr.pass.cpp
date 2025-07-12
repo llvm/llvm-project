@@ -11,6 +11,10 @@
 // <string_view>
 
 // constexpr basic_string_view substr(size_type pos = 0, size_type n = npos) const;
+// constexpr basic_string_view subview(size_type pos = 0,
+//                                     size_type n = npos) const;      // freestanding-deleted
+
+// subview is alternative name of substr
 
 // Throws: out_of_range if pos > size().
 // Effects: Determines the effective length rlen of the string to reference as the smaller of n and size() - pos.
@@ -25,15 +29,21 @@
 #include "test_macros.h"
 
 template <typename CharT>
-void test1(std::basic_string_view<CharT> sv, std::size_t n, size_t pos) {
+struct Test {
+  typedef std::basic_string_view<CharT> (std::basic_string_view<CharT>::*Sub)(
+      typename std::basic_string_view<CharT>::size_type, typename std::basic_string_view<CharT>::size_type) const;
+};
+
+template <typename CharT, typename Test<CharT>::Sub TestSub>
+void testDetail(std::basic_string_view<CharT> sv, std::size_t n, size_t pos) {
   std::basic_string_view<CharT> sv1;
 #ifdef TEST_HAS_NO_EXCEPTIONS
   if (pos > sv.size())
     return; // would throw if exceptions were enabled
-  sv1 = sv.substr(pos, n);
+  sv1 = (sv.*TestSub)(pos, n);
 #else
   try {
-    sv1 = sv.substr(pos, n);
+    sv1 = (sv.*TestSub)(pos, n);
     assert(pos <= sv.size());
   } catch (const std::out_of_range&) {
     assert(pos > sv.size());
@@ -46,79 +56,101 @@ void test1(std::basic_string_view<CharT> sv, std::size_t n, size_t pos) {
     assert(sv[pos + i] == sv1[i]);
 }
 
-template <typename CharT>
-void test(const CharT* s) {
-  typedef std::basic_string_view<CharT> string_view_t;
+template <typename CharT, typename Test<CharT>::Sub TestSub>
+void testCases(const CharT* s) {
+  std::basic_string_view<CharT> sv(s);
 
-  string_view_t sv1(s);
+  testDetail<CharT, TestSub>(sv, 0, 0);
+  testDetail<CharT, TestSub>(sv, 1, 0);
+  testDetail<CharT, TestSub>(sv, 20, 0);
+  testDetail<CharT, TestSub>(sv, sv.size(), 0);
 
-  test1(sv1, 0, 0);
-  test1(sv1, 1, 0);
-  test1(sv1, 20, 0);
-  test1(sv1, sv1.size(), 0);
+  testDetail<CharT, TestSub>(sv, 100, 3);
 
-  test1(sv1, 0, 3);
-  test1(sv1, 2, 3);
-  test1(sv1, 100, 3);
+  testDetail<CharT, TestSub>(sv, 0, std::basic_string_view<CharT>::npos);
+  testDetail<CharT, TestSub>(sv, 2, std::basic_string_view<CharT>::npos);
+  testDetail<CharT, TestSub>(sv, sv.size(), std::basic_string_view<CharT>::npos);
 
-  test1(sv1, 0, string_view_t::npos);
-  test1(sv1, 2, string_view_t::npos);
-  test1(sv1, sv1.size(), string_view_t::npos);
-
-  test1(sv1, sv1.size() + 1, 0);
-  test1(sv1, sv1.size() + 1, 1);
-  test1(sv1, sv1.size() + 1, string_view_t::npos);
+  testDetail<CharT, TestSub>(sv, sv.size() + 1, 0);
+  testDetail<CharT, TestSub>(sv, sv.size() + 1, 1);
+  testDetail<CharT, TestSub>(sv, sv.size() + 1, std::basic_string_view<CharT>::npos);
 }
 
-int main(int, char**) {
-  test("ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE");
-  test("ABCDE");
-  test("a");
-  test("");
+template <typename CharT>
+void testSubs(const CharT* s) {
+  testCases<CharT, &std::basic_string_view<CharT>::substr>(s);
+#if TEST_STD_VER >= 26
+  testCases<CharT, &std::basic_string_view<CharT>::subview>(s);
+#endif // TEST_STD_VER >= 26
+}
+
+void test() {
+  testSubs("ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE");
+  testSubs("ABCDE");
+  testSubs("a");
+  testSubs("");
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  test(L"ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE");
-  test(L"ABCDE");
-  test(L"a");
-  test(L"");
+  testSubs(
+      L"ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE");
+  testSubs(L"ABCDE");
+  testSubs(L"a");
+  testSubs(L"");
 #endif
 
 #if TEST_STD_VER >= 11
-  test(u"ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE");
-  test(u"ABCDE");
-  test(u"a");
-  test(u"");
+  testSubs(
+      u"ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE");
+  testSubs(u"ABCDE");
+  testSubs(u"a");
+  testSubs(u"");
 
-  test(U"ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE");
-  test(U"ABCDE");
-  test(U"a");
-  test(U"");
+  testSubs(
+      U"ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE");
+  testSubs(U"ABCDE");
+  testSubs(U"a");
+  testSubs(U"");
+#endif
+}
+
+#if TEST_STD_VER >= 14
+template <typename Test<char>::Sub TestSub>
+constexpr void testConstexprDetail() {
+  constexpr std::string_view sv{"ABCDE", 5};
+  {
+    constexpr std::string_view sv2 = (sv.*TestSub)(0, 3);
+
+    static_assert(sv2.size() == 3, "");
+    static_assert(sv2[0] == 'A', "");
+    static_assert(sv2[1] == 'B', "");
+    static_assert(sv2[2] == 'C', "");
+  }
+
+  {
+    constexpr std::string_view sv2 = (sv.*TestSub)(3, 0);
+    static_assert(sv2.size() == 0, "");
+  }
+
+  {
+    constexpr std::string_view sv2 = (sv.*TestSub)(3, 3);
+    static_assert(sv2.size() == 2, "");
+    static_assert(sv2[0] == 'D', "");
+    static_assert(sv2[1] == 'E', "");
+  }
+}
+
+void test_constexpr() {
+  testConstexprDetail<&std::string_view::substr>();
+#  if TEST_STD_VER >= 26
+  testConstexprDetail<&std::string_view::subview>();
+#  endif
+}
 #endif
 
-#if TEST_STD_VER > 11
-  {
-    constexpr std::string_view sv1{"ABCDE", 5};
-
-    {
-      constexpr std::string_view sv2 = sv1.substr(0, 3);
-      static_assert(sv2.size() == 3, "");
-      static_assert(sv2[0] == 'A', "");
-      static_assert(sv2[1] == 'B', "");
-      static_assert(sv2[2] == 'C', "");
-    }
-
-    {
-      constexpr std::string_view sv2 = sv1.substr(3, 0);
-      static_assert(sv2.size() == 0, "");
-    }
-
-    {
-      constexpr std::string_view sv2 = sv1.substr(3, 3);
-      static_assert(sv2.size() == 2, "");
-      static_assert(sv2[0] == 'D', "");
-      static_assert(sv2[1] == 'E', "");
-    }
-  }
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 14
+  test_constexpr();
 #endif
 
   return 0;
