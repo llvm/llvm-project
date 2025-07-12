@@ -947,6 +947,7 @@ define amdgpu_gfx <512 x i32> @return_512xi32() #0 {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:1020
+; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:1028
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:2044
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:2040
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:2036
@@ -1201,7 +1202,6 @@ define amdgpu_gfx <512 x i32> @return_512xi32() #0 {
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:1040
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:1036
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:1032
-; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:1028
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:1024
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:1016
 ; GFX9-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:1012
@@ -1466,6 +1466,7 @@ define amdgpu_gfx <512 x i32> @return_512xi32() #0 {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:1020
+; GFX10-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:1028
 ; GFX10-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:2044
 ; GFX10-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:2040
 ; GFX10-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:2036
@@ -1720,7 +1721,6 @@ define amdgpu_gfx <512 x i32> @return_512xi32() #0 {
 ; GFX10-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:1040
 ; GFX10-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:1036
 ; GFX10-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:1032
-; GFX10-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:1028
 ; GFX10-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:1024
 ; GFX10-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:1016
 ; GFX10-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:1012
