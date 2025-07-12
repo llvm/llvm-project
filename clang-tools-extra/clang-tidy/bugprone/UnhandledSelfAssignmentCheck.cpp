@@ -69,6 +69,22 @@ void UnhandledSelfAssignmentCheck::registerMatchers(MatchFinder *Finder) {
       cxxMethodDecl(unless(hasDescendant(cxxMemberCallExpr(callee(cxxMethodDecl(
           hasName("operator="), ofClass(equalsBoundNode("class"))))))));
 
+  // Checking that some kind of constructor is called and followed by a `swap`:
+  // T& operator=(const T& other) {
+  //    T tmp{this->internal_data(), some, other, args};
+  //    swap(tmp);
+  //    return *this;
+  // }
+  const auto HasCopyAndSwap = cxxMethodDecl(
+      ofClass(cxxRecordDecl(unless(hasAncestor(classTemplateDecl())))),
+      hasDescendant(
+          stmt(hasDescendant(
+                   varDecl(hasType(cxxRecordDecl(equalsBoundNode("class"))))
+                       .bind("tmp_var")),
+               hasDescendant(callExpr(callee(functionDecl(hasName("swap"))),
+                                      hasAnyArgument(declRefExpr(to(varDecl(
+                                          equalsBoundNode("tmp_var"))))))))));
+
   DeclarationMatcher AdditionalMatcher = cxxMethodDecl();
   if (WarnOnlyIfThisHasSuspiciousField) {
     // Matcher for standard smart pointers.
@@ -89,14 +105,14 @@ void UnhandledSelfAssignmentCheck::registerMatchers(MatchFinder *Finder) {
                             hasType(arrayType())))))));
   }
 
-  Finder->addMatcher(cxxMethodDecl(ofClass(cxxRecordDecl().bind("class")),
-                                   isCopyAssignmentOperator(), IsUserDefined,
-                                   HasReferenceParam, HasNoSelfCheck,
-                                   unless(HasNonTemplateSelfCopy),
-                                   unless(HasTemplateSelfCopy),
-                                   HasNoNestedSelfAssign, AdditionalMatcher)
-                         .bind("copyAssignmentOperator"),
-                     this);
+  Finder->addMatcher(
+      cxxMethodDecl(
+          ofClass(cxxRecordDecl().bind("class")), isCopyAssignmentOperator(),
+          IsUserDefined, HasReferenceParam, HasNoSelfCheck,
+          unless(HasNonTemplateSelfCopy), unless(HasTemplateSelfCopy),
+          unless(HasCopyAndSwap), HasNoNestedSelfAssign, AdditionalMatcher)
+          .bind("copyAssignmentOperator"),
+      this);
 }
 
 void UnhandledSelfAssignmentCheck::check(
