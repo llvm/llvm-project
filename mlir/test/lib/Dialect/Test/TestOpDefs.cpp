@@ -10,9 +10,12 @@
 #include "TestOps.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
+#include "llvm/Support/LogicalResult.h"
 
 using namespace mlir;
 using namespace test;
@@ -1453,4 +1456,33 @@ test::TestCreateTensorOp::getBufferType(
 
   return cast<mlir::bufferization::BufferLikeType>(test::TestMemrefType::get(
       getContext(), type.getShape(), type.getElementType(), nullptr));
+}
+
+//===----------------------------------------------------------------------===//
+// CustomTypeFormatFuncOp
+//===----------------------------------------------------------------------===//
+
+ParseResult CustomTypeFormatFuncOp::parse(OpAsmParser &parser,
+                                          OperationState &result) {
+  auto buildFuncType =
+      [](Builder &builder, ArrayRef<Type> argTypes, ArrayRef<Type> results,
+         function_interface_impl::VariadicFlag,
+         std::string &) { return builder.getFunctionType(argTypes, results); };
+
+  auto typeParser = [&](AsmParser &p, Type &ty) {
+    return failure(p.parseKeyword("type") || p.parseColon() || p.parseType(ty));
+  };
+
+  return function_interface_impl::parseFunctionOp(
+      parser, result, /*allowVariadic=*/false,
+      getFunctionTypeAttrName(result.name), buildFuncType,
+      getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name),
+      typeParser);
+}
+
+void CustomTypeFormatFuncOp::print(OpAsmPrinter &p) {
+  auto typePrinter = [&](AsmPrinter &p, Type ty) { p << "type:" << ty; };
+  function_interface_impl::printFunctionOp(
+      p, *this, /*isVariadic=*/false, getFunctionTypeAttrName(),
+      getArgAttrsAttrName(), getResAttrsAttrName(), typePrinter);
 }
