@@ -64,6 +64,20 @@ struct BFloat16 {
     return result.get_val();
   }
 
+  // TODO: this need to be changed!
+  LIBC_INLINE constexpr BFloat16 operator+(BFloat16 x) {
+    float a = static_cast<float>(*this);
+    float b = static_cast<float>(x);
+    return BFloat16(a + b);
+  }
+
+  // TODO: this need to be changed!
+  LIBC_INLINE constexpr BFloat16 operator-(BFloat16 x) {
+    float a = static_cast<float>(*this);
+    float b = static_cast<float>(x);
+    return BFloat16(a - b);
+  }
+
 }; // struct BFloat16
 
 } // namespace fputil
