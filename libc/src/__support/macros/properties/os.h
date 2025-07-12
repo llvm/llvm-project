@@ -29,4 +29,12 @@
 #define LIBC_TARGET_OS_IS_FUCHSIA
 #endif
 
+#if !defined(LIBC_TARGET_OS_IS_FREEBSD) &&                                     \
+    !defined(LIBC_TARGET_OS_IS_ANDROID) &&                                     \
+    !defined(LIBC_TARGET_OS_IS_LINUX) &&                                       \
+    !defined(LIBC_TARGET_OS_IS_WINDOWS) &&                                     \
+    !defined(LIBC_TARGET_OS_IS_FUCHSIA) && defined(__ELF__)
+#define LIBC_TARGET_OS_IS_BAREMETAL
+#endif
+
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_PROPERTIES_OS_H
