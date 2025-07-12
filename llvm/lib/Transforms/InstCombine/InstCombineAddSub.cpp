@@ -2146,13 +2146,35 @@ CommonPointerBase CommonPointerBase::compute(Value *LHS, Value *RHS) {
   return Base;
 }
 
+bool CommonPointerBase::isExpensive() const {
+  bool SeenConst = false;
+  unsigned NumGEPs = 0;
+  auto ProcessGEPs = [&SeenConst, &NumGEPs](ArrayRef<GEPOperator *> GEPs) {
+    bool SeenMultiUse = false;
+    for (GEPOperator *GEP : GEPs) {
+      // Only count GEPs after the first multi-use GEP. For the first one,
+      // we will directly reuse the offset.
+      if (SeenMultiUse) {
+        bool IsConst = GEP->hasAllConstantIndices();
+        SeenConst |= IsConst;
+        NumGEPs += !IsConst;
+      }
+      SeenMultiUse |= !GEP->hasOneUse();
+    }
+  };
+  ProcessGEPs(LHSGEPs);
+  ProcessGEPs(RHSGEPs);
+  NumGEPs += SeenConst;
+  return NumGEPs > 2;
+}
+
 /// Optimize pointer differences into the same array into a size.  Consider:
 ///  &A[10] - &A[0]: we should compile this to "10".  LHS/RHS are the pointer
 /// operands to the ptrtoint instructions for the LHS/RHS of the subtract.
 Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
                                                    Type *Ty, bool IsNUW) {
   CommonPointerBase Base = CommonPointerBase::compute(LHS, RHS);
-  if (!Base.Ptr)
+  if (!Base.Ptr || Base.isExpensive())
     return nullptr;
 
   // To avoid duplicating the offset arithmetic, rewrite the GEP to use the
