@@ -52,9 +52,11 @@ struct CGPassBuilderOption {
   bool EnableMachineFunctionSplitter = false;
   bool EnableSinkAndFold = false;
   bool EnableTailMerge = true;
+  bool EnableLoopTermFold = false;
   bool MISchedPostRA = false;
   bool EarlyLiveIntervals = false;
   bool GCEmptyBlocks = false;
+  bool SplitStaticData = false;
 
   bool DisableLSR = false;
   bool DisableCGP = false;
@@ -66,6 +68,9 @@ struct CGPassBuilderOption {
   bool DisableExpandReductions = false;
   bool DisableRAFSProfileLoader = false;
   bool DisableCFIFixup = false;
+  bool DisableReplaceWithVecLib = false;
+  bool DisableLayoutFSProfileLoader = false;
+  bool DisablePrologEpilogInserterPass = false;
   bool PrintAfterISel = false;
   bool PrintISelInput = false;
   bool RequiresCodeGenSCCOrder = false;
