@@ -377,7 +377,8 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
   DiagnoseAvailabilityOfDecl(D, Locs, UnknownObjCClass, ObjCPropertyAccess,
                              AvoidPartialAvailabilityChecks, ClassReceiver);
 
-  DiagnoseFeatureAvailabilityOfDecl(D, Locs);
+  if (!AvoidPartialAvailabilityChecks)
+    DiagnoseFeatureAvailabilityOfDecl(D, Locs);
 
   DiagnoseUnusedOfDecl(*this, D, Loc);
 

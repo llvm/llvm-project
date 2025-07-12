@@ -151,7 +151,7 @@ __attribute__((availability(domain:feature1, UNAVAIL)))
 @end
 
 __attribute__((availability(domain:feature1, AVAIL)))
-@interface Base4 <P1> // expected-error {{use of 'P1' requires feature 'feature1' to be unavailable}}
+@interface Base4 <P1>
 @end
 
 __attribute__((availability(domain:feature1, AVAIL)))
@@ -170,8 +170,10 @@ __attribute__((availability(domain:feature1, AVAIL)))
 @end
 
 __attribute__((availability(domain:feature1, UNAVAIL)))
-@interface Base5(Cat4) <P2> // expected-error {{use of 'P2' requires feature 'feature1' to be available}}
+@interface Base5(Cat4) <P2>
 @end
 
-@interface Base6 <P1, P2> // expected-error {{use of 'P1' requires feature 'feature1' to be unavailable}} expected-error {{use of 'P2' requires feature 'feature1' to be available}}
+@interface Base6 <P1, P2>
 @end
+
+void foo(id<P1>); // expected-error {{use of 'P1' requires feature 'feature1' to be unavailable}}
