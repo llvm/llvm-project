@@ -93,8 +93,8 @@ LLVM_LIBC_FUNCTION(float, tanpif, (float x)) {
     fputil::set_errno_if_required(EDOM);
     fputil::raise_except_if_required(FE_DIVBYZERO);
 
-    int32_t x_mp5_u = static_cast<int32_t>(x - 0.5);
-    return ((x_mp5_u & 0x1) ? -1 : 1) * FPBits::inf().get_val();
+    int32_t x_mp5_i = static_cast<int32_t>(xd - 0.5);
+    return FPBits::inf((x_mp5_i & 0x1) ? Sign::NEG : Sign::POS).get_val();
   }
 
   using fputil::multiply_add;
