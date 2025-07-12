@@ -166,6 +166,90 @@ readMemInfoBlocksV4(const char *Ptr) {
   return Items;
 }
 
+llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>>
+readMemInfoBlocksV5(const char *Ptr) {
+  using namespace support;
+
+  const uint64_t NumItemsToRead =
+      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+
+  llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>> Items;
+  for (uint64_t I = 0; I < NumItemsToRead; I++) {
+    const uint64_t Id =
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+
+    MemInfoBlock MIB;
+    MIB.AllocCount =
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.TotalAccessCount =
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.MinAccessCount =
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.MaxAccessCount =
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.TotalSize =
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.MinSize =
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.MaxSize =
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.AllocTimestamp =
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.DeallocTimestamp =
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.TotalLifetime =
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.MinLifetime =
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.MaxLifetime =
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.AllocCpuId =
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.DeallocCpuId =
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.NumMigratedCpu =
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.NumLifetimeOverlaps =
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.NumSameAllocCpu =
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.NumSameDeallocCpu =
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.DataTypeId =
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.TotalAccessDensity =
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.MinAccessDensity =
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.MaxAccessDensity =
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.TotalLifetimeAccessDensity =
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.MinLifetimeAccessDensity =
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.MaxLifetimeAccessDensity =
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.AccessHistogramSize =
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
+    MIB.AccessHistogram =
+        endian::readNext<uintptr_t, llvm::endianness::little, unaligned>(Ptr);
+
+    if (MIB.AccessHistogramSize > 0) {
+      // The in-memory representation uses uint64_t for histogram entries.
+      MIB.AccessHistogram =
+          (uintptr_t)malloc(MIB.AccessHistogramSize * sizeof(uint64_t));
+      for (uint64_t J = 0; J < MIB.AccessHistogramSize; J++) {
+        // The on-disk format for V5 uses uint8_t.
+        const uint8_t Val =
+            endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Ptr);
+        ((uint64_t *)MIB.AccessHistogram)[J] = Val;
+      }
+    }
+    Items.push_back({Id, MIB});
+  }
+  return Items;
+}
+
 CallStackMap readStackInfo(const char *Ptr) {
   using namespace support;
 
@@ -658,6 +742,8 @@ RawMemProfReader::readMemInfoBlocks(const char *Ptr) {
     return readMemInfoBlocksV3(Ptr);
   if (MemprofRawVersion == 4ULL)
     return readMemInfoBlocksV4(Ptr);
+  if (MemprofRawVersion == 5ULL)
+    return readMemInfoBlocksV5(Ptr);
   llvm_unreachable(
       "Panic: Unsupported version number when reading MemInfoBlocks");
 }
