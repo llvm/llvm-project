@@ -48,6 +48,7 @@ enum {
   MO_IE_PC64_HI,
   MO_LD_PC_HI,
   MO_GD_PC_HI,
+  MO_CALL30,
   MO_CALL36,
   MO_DESC_PC_HI,
   MO_DESC_PC_LO,
@@ -58,6 +59,11 @@ enum {
   MO_LE_HI_R,
   MO_LE_ADD_R,
   MO_LE_LO_R,
+  MO_PCADD_HI,
+  MO_PCADD_LO,
+  MO_PCADD_GOT_HI,
+  MO_PCADD_IE_HI,
+  MO_PCADD_DESC_HI,
   // TODO: Add more flags.
 
   // Used to differentiate between target-specific "direct" flags and "bitmask"

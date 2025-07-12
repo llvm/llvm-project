@@ -26,6 +26,9 @@ public:
   ~LoongArchELFObjectWriter() override;
 
   bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override {
+    // PCADD_LO12_I must be relocated with a symbol, and its addend must be 0
+    if (Type == ELF::R_LARCH_PCADD_LO12_I)
+      return true;
     return EnableRelax;
   }
 
