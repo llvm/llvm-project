@@ -23,7 +23,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace {
 
-void log_fatal_error(const char* message) noexcept {
+void log_security_failure(const char* message) noexcept {
   // On Apple platforms, use the `os_fault_with_payload` OS function that simulates a crash.
 #if defined(__APPLE__) && __has_include(<os/reason_private.h>)
   os_fault_with_payload(
@@ -54,7 +54,7 @@ void __log_error(_LogErrorReason reason, const char* message) noexcept {
   switch (reason) {
   case _LogErrorReason::_HardeningFailure:
   default:
-    log_fatal_error(message);
+    log_security_failure(message);
   }
 }
 
