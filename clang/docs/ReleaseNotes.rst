@@ -1045,6 +1045,8 @@ Windows Support
   extensions are enabled. This allows for properly processing ``intsafe.h`` in
   the Windows SDK.
 
+- Clang now supports `mipsel-windows-gnu` and `mipsel-windows-msvc` targets.
+
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
