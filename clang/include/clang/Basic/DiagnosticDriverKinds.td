@@ -874,4 +874,9 @@ def warn_drv_openacc_without_cir
     : Warning<"OpenACC directives will result in no runtime behavior; use "
               "-fclangir to enable runtime effect">,
       InGroup<SourceUsesOpenACC>;
+
+def warn_drv_sanitize_trap_mismatch : Warning<
+  "-fsanitize-trap=%0 has no effect because the matching sanitizer is not enabled; "
+  "did you mean to pass \"-fsanitize=%0\" as well?">,
+  InGroup<SanitizeTrapMismatch>;
 }
