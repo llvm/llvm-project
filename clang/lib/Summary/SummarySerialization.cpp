@@ -13,9 +13,11 @@ struct FunctionSummaryProxy {
   FunctionSummaryProxy() = default;
   FunctionSummaryProxy(const clang::FunctionSummary &Summary)
       : ID(Summary.getID()), CallsOpaque(Summary.callsOpaqueObject()) {
+    Attrs.reserve(Summary.getAttributes().size());
     for (auto &&Attr : Summary.getAttributes())
       Attrs.emplace_back(Attr->getKind());
 
+    Calls.reserve(Summary.getCalls().size());
     for (auto &&Call : Summary.getCalls())
       Calls.emplace_back(Call);
   }
@@ -46,65 +48,72 @@ template <> struct SequenceTraits<std::vector<FunctionSummaryProxy>> {
 
 template <> struct MappingTraits<clang::SummaryContext> {
   static void mapping(IO &io, clang::SummaryContext &Ctx) {
-    std::vector<StringRef> Identifiers = Ctx.GetIdentifiers();
-    io.mapRequired("identifiers", Identifiers);
+    if (io.outputting()) {
+      std::vector<StringRef> Identifiers = Ctx.GetIdentifiers();
+      io.mapRequired("identifiers", Identifiers);
 
-    std::map<size_t, size_t> LocalToContextID;
-    if (!io.outputting()) {
-      for (auto &&ID : Identifiers)
-        LocalToContextID[LocalToContextID.size()] =
-            Ctx.GetOrInsertStoredIdentifierIdx(ID);
+      std::vector<std::string> Attributes;
+      Attributes.reserve(Ctx.GetAttributes().size());
+      for (auto &&Attr : Ctx.GetAttributes())
+        Attributes.emplace_back(Attr->serialize());
+      io.mapRequired("attributes", Attributes);
+
+      std::vector<FunctionSummaryProxy> SummaryProxies;
+      SummaryProxies.reserve(Ctx.GetSummaries().size());
+      for (auto &&Summary : Ctx.GetSummaries())
+        SummaryProxies.emplace_back(*Summary);
+      io.mapRequired("summaries", SummaryProxies);
+
+      return;
     }
 
-    std::vector<std::string> Attributes;
-    for (auto &&Attr : Ctx.GetAttributes())
-      Attributes.emplace_back(Attr->serialize());
-    io.mapRequired("attributes", Attributes);
+    std::vector<StringRef> Identifiers;
+    io.mapRequired("identifiers", Identifiers);
+    std::map<size_t, size_t> LocalToContextID;
+    for (auto &&ID : Identifiers) {
+      LocalToContextID[LocalToContextID.size()] =
+          Ctx.GetOrInsertStoredIdentifierIdx(ID);
+    }
 
+    std::vector<StringRef> Attributes;
+    io.mapRequired("attributes", Attributes);
     std::map<size_t, const clang::SummaryAttr *> AttrIDToPtr;
     std::set<const clang::SummaryAttr *> Seen;
-    if (!io.outputting()) {
-      for (auto &&Attribute : Attributes) {
-        for (auto &&Attr : Ctx.GetAttributes())
-          if (Attr->parse(Attribute)) {
-            if (!Seen.emplace(Attr.get()).second)
-              break;
-            ;
-
-            AttrIDToPtr[AttrIDToPtr.size()] = Attr.get();
+    for (auto &&Attribute : Attributes) {
+      for (auto &&Attr : Ctx.GetAttributes())
+        if (Attr->parse(Attribute)) {
+          if (!Seen.emplace(Attr.get()).second)
             break;
-          }
-      }
+
+          AttrIDToPtr[AttrIDToPtr.size()] = Attr.get();
+          break;
+        }
     }
 
     std::vector<FunctionSummaryProxy> SummaryProxies;
-    for (auto &&Summary : Ctx.GetSummaries())
-      SummaryProxies.emplace_back(*Summary);
     io.mapRequired("summaries", SummaryProxies);
-    if (!io.outputting()) {
-      for (auto &&Proxy : SummaryProxies) {
-        if (Proxy.ID >= LocalToContextID.size())
+    for (auto &&Proxy : SummaryProxies) {
+      if (Proxy.ID >= LocalToContextID.size())
+        continue;
+
+      std::set<const clang::SummaryAttr *> Attrs;
+      for (auto &&Attr : Proxy.Attrs) {
+        if (Attr >= AttrIDToPtr.size())
           continue;
 
-        std::set<const clang::SummaryAttr *> Attrs;
-        for (auto &&Attr : Proxy.Attrs) {
-          if (Attr >= AttrIDToPtr.size())
-            continue;
-
-          Attrs.emplace(AttrIDToPtr[Attr]);
-        }
-
-        std::set<size_t> Calls;
-        for (auto &&Call : Proxy.Calls) {
-          if (Call >= LocalToContextID.size())
-            continue;
-
-          Calls.emplace(LocalToContextID[Call]);
-        }
-
-        Ctx.CreateSummary(LocalToContextID[Proxy.ID], std::move(Attrs),
-                          std::move(Calls), Proxy.CallsOpaque);
+        Attrs.emplace(AttrIDToPtr[Attr]);
       }
+
+      std::set<size_t> Calls;
+      for (auto &&Call : Proxy.Calls) {
+        if (Call >= LocalToContextID.size())
+          continue;
+
+        Calls.emplace(LocalToContextID[Call]);
+      }
+
+      Ctx.CreateSummary(LocalToContextID[Proxy.ID], std::move(Attrs),
+                        std::move(Calls), Proxy.CallsOpaque);
     }
   }
 };

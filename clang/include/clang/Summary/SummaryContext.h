@@ -69,10 +69,6 @@ public:
   const FunctionSummary *GetSummary(const FunctionDecl *FD) const;
   void SummarizeFunctionBody(const FunctionDecl *FD);
   void ReduceSummaries();
-
-  friend struct llvm::yaml::SequenceTraits<
-      std::vector<std::unique_ptr<clang::FunctionSummary>>>;
-  friend class YAMLSummarySerializer;
 };
 } // namespace clang
 
