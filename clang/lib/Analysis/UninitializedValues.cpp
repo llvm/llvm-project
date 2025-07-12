@@ -451,8 +451,7 @@ void ClassifyRefs::VisitCallExpr(CallExpr *CE) {
       const Expr *Ex = stripCasts(DC->getParentASTContext(), *I);
       const auto *UO = dyn_cast<UnaryOperator>(Ex);
       if (UO && UO->getOpcode() == UO_AddrOf)
-        Ex = UO->getSubExpr();
-      classify(Ex, Ignore);
+        classify(UO->getSubExpr(), Ignore);
     }
   }
 }
