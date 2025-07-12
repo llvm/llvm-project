@@ -4420,21 +4420,6 @@ public:
 
   void reorderDecls(const SmallVectorImpl<Decl *> &Decls);
 
-  /// Determines whether this declaration represents the
-  /// injected class name.
-  ///
-  /// The injected class name in C++ is the name of the class that
-  /// appears inside the class itself. For example:
-  ///
-  /// \code
-  /// struct C {
-  ///   // C is implicitly declared here as a synonym for the class name.
-  /// };
-  ///
-  /// C::C c; // same as "C c;"
-  /// \endcode
-  bool isInjectedClassName() const;
-
   /// Determine whether this record is a class describing a lambda
   /// function object.
   bool isLambda() const;

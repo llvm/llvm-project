@@ -1129,7 +1129,8 @@ static void diagnoseBadDirectAccess(Sema &S,
     else if (TypedefNameDecl *TND = dyn_cast<TypedefNameDecl>(D))
       PrevDecl = TND->getPreviousDecl();
     else if (TagDecl *TD = dyn_cast<TagDecl>(D)) {
-      if (isa<RecordDecl>(D) && cast<RecordDecl>(D)->isInjectedClassName())
+      if (auto *RD = dyn_cast<CXXRecordDecl>(D);
+          RD && RD->isInjectedClassName())
         break;
       PrevDecl = TD->getPreviousDecl();
     }
