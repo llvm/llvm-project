@@ -1759,7 +1759,7 @@ add_entrypoint_object(
   HDRS
     ../frexpf.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.frexpf
 )
 
 add_entrypoint_object(
