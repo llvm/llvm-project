@@ -66,15 +66,16 @@ extern "C" void *__libc_stack_end;
 void *__libc_stack_end = 0;
 #endif
 
-#if SANITIZER_LINUX && (defined(__aarch64__) || defined(__loongarch_lp64)) && \
-    !SANITIZER_GO
-# define INIT_LONGJMP_XOR_KEY 1
-#else
-# define INIT_LONGJMP_XOR_KEY 0
-#endif
+#  if SANITIZER_LINUX &&                                                      \
+      (defined(__aarch64__) || defined(__loongarch_lp64)) && !SANITIZER_GO && \
+      !SANITIZER_ANDROID
+#    define INIT_LONGJMP_XOR_KEY 1
+#  else
+#    define INIT_LONGJMP_XOR_KEY 0
+#  endif
 
-#if INIT_LONGJMP_XOR_KEY
-#include "interception/interception.h"
+#  if INIT_LONGJMP_XOR_KEY
+#    include "interception/interception.h"
 // Must be declared outside of other namespaces.
 DECLARE_REAL(int, _setjmp, void *env)
 #endif
@@ -415,7 +416,7 @@ void InitializePlatform() {
   // is not compiled with -pie.
 #if !SANITIZER_GO
   {
-#    if SANITIZER_LINUX && (defined(__aarch64__) || defined(__loongarch_lp64))
+#    if INIT_LONGJMP_XOR_KEY
     // Initialize the xor key used in {sig}{set,long}jump.
     InitializeLongjmpXorKey();
 #    endif
@@ -484,6 +485,7 @@ int ExtractRecvmsgFDs(void *msgp, int *fds, int nfd) {
   return res;
 }
 
+#    if !SANITIZER_ANDROID
 // Reverse operation of libc stack pointer mangling
 static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 #if defined(__x86_64__)
@@ -527,28 +529,29 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 #      error "Unknown platform"
 #    endif
 }
+#    endif  // !SANITIZER_ANDROID
 
-#if SANITIZER_NETBSD
-# ifdef __x86_64__
-#  define LONG_JMP_SP_ENV_SLOT 6
-# else
-#  error unsupported
-# endif
-#elif defined(__powerpc__)
-# define LONG_JMP_SP_ENV_SLOT 0
-#elif SANITIZER_FREEBSD
-# ifdef __aarch64__
-#  define LONG_JMP_SP_ENV_SLOT 1
-# else
-#  define LONG_JMP_SP_ENV_SLOT 2
-# endif
-#elif SANITIZER_LINUX
-# ifdef __aarch64__
-#  define LONG_JMP_SP_ENV_SLOT 13
-# elif defined(__loongarch__)
-#  define LONG_JMP_SP_ENV_SLOT 1
-# elif defined(__mips64)
-#  define LONG_JMP_SP_ENV_SLOT 1
+#    if SANITIZER_NETBSD
+#      ifdef __x86_64__
+#        define LONG_JMP_SP_ENV_SLOT 6
+#      else
+#        error unsupported
+#      endif
+#    elif defined(__powerpc__)
+#      define LONG_JMP_SP_ENV_SLOT 0
+#    elif SANITIZER_FREEBSD
+#      ifdef __aarch64__
+#        define LONG_JMP_SP_ENV_SLOT 1
+#      else
+#        define LONG_JMP_SP_ENV_SLOT 2
+#      endif
+#    elif SANITIZER_LINUX && !SANITIZER_ANDROID
+#      ifdef __aarch64__
+#        define LONG_JMP_SP_ENV_SLOT 13
+#      elif defined(__loongarch__)
+#        define LONG_JMP_SP_ENV_SLOT 1
+#      elif defined(__mips64)
+#        define LONG_JMP_SP_ENV_SLOT 1
 #      elif SANITIZER_RISCV64
 #        define LONG_JMP_SP_ENV_SLOT 13
 #      elif defined(__s390x__)
@@ -556,11 +559,24 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 #      else
 #        define LONG_JMP_SP_ENV_SLOT 6
 #      endif
-#endif
+#    elif SANITIZER_ANDROID
+#      ifdef __aarch64__
+#        define LONG_JMP_SP_ENV_SLOT 3
+#        define LONG_JMP_COOKIE_ENV_SLOT 0
+#      else
+#        error unsupported
+#      endif
+#    endif
 
 uptr ExtractLongJmpSp(uptr *env) {
   uptr mangled_sp = env[LONG_JMP_SP_ENV_SLOT];
+#    if SANITIZER_ANDROID
+  // This only works for Android arm64
+  // https://android.googlesource.com/platform/bionic/+/refs/heads/android16-release/libc/arch-arm64/bionic/setjmp.S#46
+  return mangled_sp ^ (env[LONG_JMP_COOKIE_ENV_SLOT] & ~1ULL);
+#    else
   return UnmangleLongJmpSp(mangled_sp);
+#    endif
 }
 
 #if INIT_LONGJMP_XOR_KEY
@@ -653,6 +669,14 @@ ThreadState *cur_thread() {
     }
     CHECK_EQ(0, internal_sigprocmask(SIG_SETMASK, &oldset, nullptr));
   }
+
+  // This is a temporary workaround.
+  // Somewhere wrote get_android_tls_ptr unexpected.
+  uptr addr = reinterpret_cast<uptr>(thr);
+  if (addr % 2 != 0) {
+    return reinterpret_cast<ThreadState *>(addr & ~1ULL);
+  }
+
   return thr;
 }
 

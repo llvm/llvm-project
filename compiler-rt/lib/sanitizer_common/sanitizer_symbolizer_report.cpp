@@ -89,7 +89,7 @@ static inline bool ReportSupportsColors() { return true; }
 bool ColorizeReports() {
   // FIXME: Add proper Windows support to AnsiColorDecorator and re-enable color
   // printing on Windows.
-  if (SANITIZER_WINDOWS)
+  if (SANITIZER_WINDOWS || SANITIZER_ANDROID)
     return false;
 
   const char *flag = common_flags()->color;
