@@ -201,11 +201,9 @@ unsigned ARMAsmBackend::getRelaxedOpcode(unsigned Op,
   }
 }
 
-bool ARMAsmBackend::mayNeedRelaxation(const MCInst &Inst,
+bool ARMAsmBackend::mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand>,
                                       const MCSubtargetInfo &STI) const {
-  if (getRelaxedOpcode(Inst.getOpcode(), STI) != Inst.getOpcode())
-    return true;
-  return false;
+  return getRelaxedOpcode(Opcode, STI) != Opcode;
 }
 
 static const char *checkPCRelOffset(uint64_t Value, int64_t Min, int64_t Max) {
@@ -329,15 +327,7 @@ bool ARMAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
 void ARMAsmBackend::relaxInstruction(MCInst &Inst,
                                      const MCSubtargetInfo &STI) const {
   unsigned RelaxedOp = getRelaxedOpcode(Inst.getOpcode(), STI);
-
-  // Return a diagnostic if we get here w/ a bogus instruction.
-  if (RelaxedOp == Inst.getOpcode()) {
-    SmallString<256> Tmp;
-    raw_svector_ostream OS(Tmp);
-    Inst.dump_pretty(OS);
-    OS << "\n";
-    report_fatal_error("unexpected instruction to relax: " + OS.str());
-  }
+  assert(RelaxedOp != Inst.getOpcode());
 
   // If we are changing Thumb CBZ or CBNZ instruction to a NOP, aka tHINT, we
   // have to change the operands too.
