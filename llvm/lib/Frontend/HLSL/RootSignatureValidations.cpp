@@ -247,6 +247,8 @@ llvm::SmallVector<OverlappingRanges>
 findOverlappingRanges(ArrayRef<RangeInfo> Infos) {
   // It is expected that Infos is filled with valid RangeInfos and that
   // they are sorted with respect to the RangeInfo <operator
+  assert(llvm::is_sorted(Infos) && "Ranges must be sorted");
+
   llvm::SmallVector<OverlappingRanges> Overlaps;
   using GroupT = std::pair<dxil::ResourceClass, /*Space*/ uint32_t>;
 
