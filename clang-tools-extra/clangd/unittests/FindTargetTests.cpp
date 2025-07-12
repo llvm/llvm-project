@@ -992,7 +992,7 @@ TEST_F(TargetDeclTest, DependentTypes) {
       )cpp";
   EXPECT_DECLS("DependentNameTypeLoc", "struct B");
 
-  // Heuristic resolution of dependent type name which doesn't get a TypeLoc
+  // Heuristic resolution of dependent type name within a NestedNameSpecifierLoc
   Code = R"cpp(
         template <typename>
         struct A { struct B { struct C {}; }; };
@@ -1000,7 +1000,7 @@ TEST_F(TargetDeclTest, DependentTypes) {
         template <typename T>
         void foo(typename A<T>::[[B]]::C);
       )cpp";
-  EXPECT_DECLS("NestedNameSpecifierLoc", "struct B");
+  EXPECT_DECLS("DependentNameTypeLoc", "struct B");
 
   // Heuristic resolution of dependent type name whose qualifier is also
   // dependent
