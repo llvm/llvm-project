@@ -76,6 +76,6 @@ class TestDAP_locations(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(val_loc_func_ref["body"]["line"], 3)
 
         # `evaluate` responses for function pointers also have locations associated
-        eval_res = self.dap_server.request_evaluate("greet")
-        self.assertTrue(eval_res["success"])
+        eval_res = self.dap_server.request_evaluate("greet", context="repl")
+        self.assertTrue(eval_res["success"], f"evaluate failed: {eval_res}")
         self.assertIn("valueLocationReference", eval_res["body"].keys())

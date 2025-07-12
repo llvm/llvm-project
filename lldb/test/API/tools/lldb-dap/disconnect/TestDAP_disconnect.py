@@ -2,7 +2,6 @@
 Test lldb-dap disconnect request
 """
 
-
 import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -71,7 +70,9 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         lldbutil.wait_for_file_on_target(self, sync_file_path)
 
         self.attach(pid=self.process.pid, disconnectAutomatically=False)
-        response = self.dap_server.request_evaluate("wait_for_attach = false;")
+        response = self.dap_server.request_evaluate(
+            "`expr -- wait_for_attach = false;", context="repl"
+        )
         self.assertTrue(response["success"])
 
         # verify we haven't produced the side effect file yet
