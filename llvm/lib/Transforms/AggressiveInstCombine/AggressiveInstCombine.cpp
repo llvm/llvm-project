@@ -842,6 +842,138 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   return true;
 }
 
+/// ValWidth bits starting at ValOffset of Val stored at PtrBase+PtrOffset.
+struct PartStore {
+  Value *PtrBase;
+  APInt PtrOffset;
+  Value *Val;
+  uint64_t ValOffset;
+  uint64_t ValWidth;
+  StoreInst *Store;
+
+  bool isCompatibleWith(const PartStore &Other) const {
+    return PtrBase == Other.PtrBase && Val == Other.Val;
+  }
+
+  bool operator<(const PartStore &Other) const {
+    return PtrOffset.slt(Other.PtrOffset);
+  }
+};
+
+static std::optional<PartStore> matchPartStore(Instruction &I,
+                                               const DataLayout &DL) {
+  auto *Store = dyn_cast<StoreInst>(&I);
+  if (!Store || !Store->isSimple())
+    return std::nullopt;
+
+  Value *StoredVal = Store->getValueOperand();
+  Type *StoredTy = StoredVal->getType();
+  if (!StoredTy->isIntegerTy() || !DL.typeSizeEqualsStoreSize(StoredTy))
+    return std::nullopt;
+
+  uint64_t ValWidth = StoredTy->getPrimitiveSizeInBits();
+  uint64_t ValOffset = 0;
+  Value *Val;
+  if (!match(StoredVal, m_CombineOr(m_Trunc(m_LShr(m_Value(Val),
+                                                   m_ConstantInt(ValOffset))),
+                                    m_Trunc(m_Value(Val)))))
+    return std::nullopt;
+
+  Value *Ptr = Store->getPointerOperand();
+  APInt PtrOffset(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
+  Value *PtrBase = Ptr->stripAndAccumulateConstantOffsets(
+      DL, PtrOffset, /*AllowNonInbounds=*/true);
+  return {{PtrBase, PtrOffset, Val, ValOffset, ValWidth, Store}};
+}
+
+static bool mergePartStores(SmallVectorImpl<PartStore> &Parts,
+                            const DataLayout &DL, TargetTransformInfo &TTI) {
+  if (Parts.size() < 2)
+    return false;
+
+  // We now have multiple parts of the same value stored to the same pointer.
+  // Sort the parts by pointer offset, and make sure they are consistent with
+  // the value offsets. Also check that the value is fully covered without
+  // overlaps.
+  // FIXME: We could support merging stores for only part of the value here.
+  llvm::sort(Parts);
+  int64_t LastEndOffsetFromFirst = 0;
+  const PartStore &First = Parts[0];
+  for (const PartStore &Part : Parts) {
+    APInt PtrOffsetFromFirst = Part.PtrOffset - First.PtrOffset;
+    int64_t ValOffsetFromFirst = Part.ValOffset - First.ValOffset;
+    if (PtrOffsetFromFirst * 8 != ValOffsetFromFirst ||
+        LastEndOffsetFromFirst != ValOffsetFromFirst)
+      return false;
+    LastEndOffsetFromFirst = ValOffsetFromFirst + Part.ValWidth;
+  }
+
+  // Check whether combining the stores is profitable.
+  // FIXME: We could generate smaller stores if we can't produce a large one.
+  LLVMContext &Ctx = First.Store->getContext();
+  Type *NewTy = Type::getIntNTy(Ctx, LastEndOffsetFromFirst);
+  unsigned Fast = 0;
+  if (!TTI.isTypeLegal(NewTy) ||
+      !TTI.allowsMisalignedMemoryAccesses(Ctx, LastEndOffsetFromFirst,
+                                          First.Store->getPointerAddressSpace(),
+                                          First.Store->getAlign(), &Fast) ||
+      !Fast)
+    return false;
+
+  // Generate the combined store.
+  IRBuilder<> Builder(First.Store);
+  Value *Val = First.Val;
+  if (First.ValOffset != 0)
+    Val = Builder.CreateLShr(Val, First.ValOffset);
+  Val = Builder.CreateTrunc(Val, NewTy);
+  StoreInst *Store = Builder.CreateAlignedStore(
+      Val, First.Store->getPointerOperand(), First.Store->getAlign());
+
+  AAMDNodes AATags = First.Store->getAAMetadata();
+  for (const PartStore &Part : drop_begin(Parts))
+    AATags = AATags.concat(Part.Store->getAAMetadata());
+  Store->setAAMetadata(AATags);
+
+  // Remove the old stores.
+  for (const PartStore &Part : Parts)
+    Part.Store->eraseFromParent();
+
+  return true;
+}
+
+static bool foldConsecutiveStores(BasicBlock &BB, const DataLayout &DL,
+                                  TargetTransformInfo &TTI, AliasAnalysis &AA) {
+  // FIXME: Add big endian support.
+  if (DL.isBigEndian())
+    return false;
+
+  SmallVector<PartStore, 8> Parts;
+  bool MadeChange = false;
+  for (Instruction &I : make_early_inc_range(BB)) {
+    if (std::optional<PartStore> Part = matchPartStore(I, DL)) {
+      if (Parts.empty() || Part->isCompatibleWith(Parts[0])) {
+        Parts.push_back(std::move(*Part));
+        continue;
+      }
+
+      MadeChange |= mergePartStores(Parts, DL, TTI);
+      Parts.clear();
+      Parts.push_back(std::move(*Part));
+      continue;
+    }
+
+    // FIXME: Use AA to make this more precise.
+    if (I.mayReadOrWriteMemory() || I.mayThrow()) {
+      MadeChange |= mergePartStores(Parts, DL, TTI);
+      Parts.clear();
+      continue;
+    }
+  }
+
+  MadeChange |= mergePartStores(Parts, DL, TTI);
+  return MadeChange;
+}
+
 /// Combine away instructions providing they are still equivalent when compared
 /// against 0. i.e do they have any bits set.
 static Value *optimizeShiftInOrChain(Value *V, IRBuilder<> &Builder) {
@@ -1330,6 +1462,9 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       // bugs.
       MadeChange |= foldLibCalls(I, TTI, TLI, AC, DT, DL, MadeCFGChange);
     }
+
+    // Do this separately to avoid redundantly scanning stores multiple times.
+    MadeChange |= foldConsecutiveStores(BB, DL, TTI, AA);
   }
 
   // We're done with transforms, so remove dead instructions.
