@@ -115,18 +115,12 @@ public:
                   MutableArrayRef<char>, uint64_t Value,
                   bool IsResolved) override;
 
-  bool mayNeedRelaxation(const MCInst &Inst,
+  bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override {
     // Not implemented yet.  For example, if we have a branch with
     // lager than SIMM32 immediate value, we want to relaxation such
     // branch instructions.
     return false;
-  }
-
-  void relaxInstruction(MCInst &Inst,
-                        const MCSubtargetInfo &STI) const override {
-    // Aurora VE doesn't support relaxInstruction yet.
-    llvm_unreachable("relaxInstruction() should not be called");
   }
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,

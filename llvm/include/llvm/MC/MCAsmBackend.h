@@ -32,6 +32,7 @@ class MCInst;
 class MCObjectStreamer;
 class MCObjectTargetWriter;
 class MCObjectWriter;
+class MCOperand;
 class MCSubtargetInfo;
 class MCValue;
 class raw_pwrite_stream;
@@ -147,12 +148,9 @@ public:
   /// \name Target Relaxation Interfaces
   /// @{
 
-  /// Check whether the given instruction may need relaxation.
-  ///
-  /// \param Inst - The instruction to test.
-  /// \param STI - The MCSubtargetInfo in effect when the instruction was
-  /// encoded.
-  virtual bool mayNeedRelaxation(const MCInst &Inst,
+  /// Check whether the given instruction (encoded as Opcode+Operands) may need
+  /// relaxation.
+  virtual bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                                  const MCSubtargetInfo &STI) const {
     return false;
   }
@@ -174,7 +172,11 @@ public:
   /// instruction.
   /// \param STI the subtarget information for the associated instruction.
   virtual void relaxInstruction(MCInst &Inst,
-                                const MCSubtargetInfo &STI) const {};
+                                const MCSubtargetInfo &STI) const {
+    llvm_unreachable(
+        "Needed if fixupNeedsRelaxation/fixupNeedsRelaxationAdvanced may "
+        "return true");
+  }
 
   // Defined by linker relaxation targets.
   virtual bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,

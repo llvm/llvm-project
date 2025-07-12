@@ -238,6 +238,8 @@ class SelectionDAG {
   LLVMContext *Context;
   CodeGenOptLevel OptLevel;
 
+  bool DivergentTarget = false;
+
   UniformityInfo *UA = nullptr;
   FunctionLoweringInfo * FLI = nullptr;
 
@@ -471,14 +473,16 @@ public:
                      Pass *PassPtr, const TargetLibraryInfo *LibraryInfo,
                      UniformityInfo *UA, ProfileSummaryInfo *PSIin,
                      BlockFrequencyInfo *BFIin, MachineModuleInfo &MMI,
-                     FunctionVarLocs const *FnVarLocs);
+                     FunctionVarLocs const *FnVarLocs, bool HasDivergency);
 
   void init(MachineFunction &NewMF, OptimizationRemarkEmitter &NewORE,
             MachineFunctionAnalysisManager &AM,
             const TargetLibraryInfo *LibraryInfo, UniformityInfo *UA,
             ProfileSummaryInfo *PSIin, BlockFrequencyInfo *BFIin,
-            MachineModuleInfo &MMI, FunctionVarLocs const *FnVarLocs) {
-    init(NewMF, NewORE, nullptr, LibraryInfo, UA, PSIin, BFIin, MMI, FnVarLocs);
+            MachineModuleInfo &MMI, FunctionVarLocs const *FnVarLocs,
+            bool HasDivergency) {
+    init(NewMF, NewORE, nullptr, LibraryInfo, UA, PSIin, BFIin, MMI, FnVarLocs,
+         HasDivergency);
     MFAM = &AM;
   }
 
@@ -2030,6 +2034,11 @@ public:
   LLVM_ABI SDValue foldConstantFPMath(unsigned Opcode, const SDLoc &DL, EVT VT,
                                       ArrayRef<SDValue> Ops);
 
+  /// Fold BUILD_VECTOR of constants/undefs to the destination type
+  /// BUILD_VECTOR of constants/undefs elements.
+  LLVM_ABI SDValue FoldConstantBuildVector(BuildVectorSDNode *BV,
+                                           const SDLoc &DL, EVT DstEltVT);
+
   /// Constant fold a setcc to true or false.
   LLVM_ABI SDValue FoldSetCC(EVT VT, SDValue N1, SDValue N2, ISD::CondCode Cond,
                              const SDLoc &dl);
@@ -2479,8 +2488,7 @@ public:
 
   /// Check if a value \op N is a constant using the target's BooleanContent for
   /// its type.
-  LLVM_ABI std::optional<bool>
-  isBoolConstant(SDValue N, bool AllowTruncation = false) const;
+  LLVM_ABI std::optional<bool> isBoolConstant(SDValue N) const;
 
   /// Set CallSiteInfo to be associated with Node.
   void addCallSiteInfo(const SDNode *Node, CallSiteInfo &&CallInfo) {

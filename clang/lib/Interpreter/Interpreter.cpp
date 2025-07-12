@@ -132,7 +132,8 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
                                    "Initialization failed. "
                                    "Target is missing");
 
-  Clang->getTarget().adjust(Clang->getDiagnostics(), Clang->getLangOpts());
+  Clang->getTarget().adjust(Clang->getDiagnostics(), Clang->getLangOpts(),
+                            Clang->getAuxTarget());
 
   // Don't clear the AST before backend codegen since we do codegen multiple
   // times, reusing the same AST.

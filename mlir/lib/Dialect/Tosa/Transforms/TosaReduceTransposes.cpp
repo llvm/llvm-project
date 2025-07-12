@@ -72,9 +72,7 @@
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/IR/Iterators.h"
-#include "mlir/IR/Matchers.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include <memory>
 #include <set>
 #include <stack>
 
