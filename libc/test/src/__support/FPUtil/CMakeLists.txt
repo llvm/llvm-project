@@ -59,7 +59,5 @@ add_fp_unittest(
   DEPENDS
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.comparison_operations
-    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.macros.properties.types
-    libc.src.__support.sign
 )

@@ -184,14 +184,17 @@ template <size_t Bits> struct DyadicFloat {
 
     int unbiased_exp = get_unbiased_exponent();
 
-    if constexpr (!cpp::is_constant_evaluated())
       if (unbiased_exp + FPBits::EXP_BIAS >= FPBits::MAX_BIASED_EXPONENT) {
         if constexpr (ShouldSignalExceptions) {
           set_errno_if_required(ERANGE);
           raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
         }
 
-        switch (quick_get_round()) {
+      int rounding_mode = FE_TONEAREST;
+      if constexpr (!cpp::is_constant_evaluated())
+        rounding_mode = quick_get_round();
+
+      switch (rounding_mode) {
         case FE_TONEAREST:
           return FPBits::inf(sign).get_val();
         case FE_TOWARDZERO:
@@ -246,8 +249,11 @@ template <size_t Bits> struct DyadicFloat {
     StorageType result =
         FPBits::create_value(sign, out_biased_exp, out_mantissa).uintval();
 
+    int rounding_mode = FE_TONEAREST;
     if constexpr (!cpp::is_constant_evaluated())
-      switch (quick_get_round()) {
+      rounding_mode = quick_get_round();
+
+    switch (rounding_mode) {
       case FE_TONEAREST:
         if (round && (lsb || sticky))
           ++result;
