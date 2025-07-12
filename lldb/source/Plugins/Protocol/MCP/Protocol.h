@@ -36,7 +36,7 @@ bool fromJSON(const llvm::json::Value &, Request &, llvm::json::Path);
 struct ErrorInfo {
   int64_t code = 0;
   std::string message;
-  std::optional<std::string> data;
+  std::string data;
 };
 
 llvm::json::Value toJSON(const ErrorInfo &);
@@ -112,10 +112,10 @@ struct Resource {
   std::string name;
 
   /// A description of what this resource represents.
-  std::optional<std::string> description;
+  std::string description;
 
   /// The MIME type of this resource, if known.
-  std::optional<std::string> mimeType;
+  std::string mimeType;
 };
 
 llvm::json::Value toJSON(const Resource &);
@@ -131,7 +131,7 @@ struct ResourceContents {
   std::string text;
 
   /// The MIME type of this resource, if known.
-  std::optional<std::string> mimeType;
+  std::string mimeType;
 };
 
 llvm::json::Value toJSON(const ResourceContents &);
@@ -167,7 +167,7 @@ struct ToolDefinition {
   std::string name;
 
   /// Human-readable description.
-  std::optional<std::string> description;
+  std::string description;
 
   // JSON Schema for the tool's parameters.
   std::optional<llvm::json::Value> inputSchema;
