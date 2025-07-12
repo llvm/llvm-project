@@ -956,6 +956,12 @@ public:
                                       SourceLocation StartLoc,
                                       SourceLocation LParenLoc,
                                       SourceLocation EndLoc);
+  /// Called on well-formed 'threadset' clause.
+  OMPClause *ActOnOpenMPThreadsetClause(OpenMPThreadsetKind Kind,
+                                        SourceLocation KindLoc,
+                                        SourceLocation StartLoc,
+                                        SourceLocation LParenLoc,
+                                        SourceLocation EndLoc);
   /// Called on well-formed 'proc_bind' clause.
   OMPClause *ActOnOpenMPProcBindClause(llvm::omp::ProcBindKind Kind,
                                        SourceLocation KindLoc,
