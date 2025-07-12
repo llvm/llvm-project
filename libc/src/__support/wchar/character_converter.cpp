@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/types/char32_t.h"
 #include "hdr/types/char8_t.h"
 #include "src/__support/CPP/bit.h"
@@ -76,7 +77,7 @@ int CharacterConverter::push(char8_t utf8_byte) {
     else {
       // bytes_stored and total_bytes will always be 0 here
       state->partial = static_cast<char32_t>(0);
-      return -1;
+      return EILSEQ;
     }
     state->partial = static_cast<char32_t>(utf8_byte);
     state->bytes_stored++;
@@ -93,7 +94,7 @@ int CharacterConverter::push(char8_t utf8_byte) {
   }
   // Invalid byte -> reset the state
   clear();
-  return -1;
+  return EILSEQ;
 }
 
 int CharacterConverter::push(char32_t utf32) {
@@ -115,7 +116,7 @@ int CharacterConverter::push(char32_t utf32) {
   // `utf32` contains a value that is too large to actually represent a valid
   // unicode character
   clear();
-  return -1;
+  return EILSEQ;
 }
 
 ErrorOr<char32_t> CharacterConverter::pop_utf32() {

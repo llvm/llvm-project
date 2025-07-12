@@ -2582,7 +2582,7 @@ Type *ExtractValueInst::getIndexedType(Type *Agg,
       return nullptr;
     }
   }
-  return const_cast<Type*>(Agg);
+  return Agg;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3488,7 +3488,7 @@ CmpInst::CmpInst(Type *ty, OtherOps op, Predicate predicate, Value *LHS,
     : Instruction(ty, op, AllocMarker, InsertBefore) {
   Op<0>() = LHS;
   Op<1>() = RHS;
-  setPredicate((Predicate)predicate);
+  setPredicate(predicate);
   setName(Name);
   if (FlagsSource)
     copyIRFlags(FlagsSource);

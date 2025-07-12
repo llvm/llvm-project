@@ -17,7 +17,6 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 

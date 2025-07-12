@@ -151,12 +151,6 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     if (tryLoadParam(N))
       return;
     break;
-  case NVPTXISD::StoreRetval:
-  case NVPTXISD::StoreRetvalV2:
-  case NVPTXISD::StoreRetvalV4:
-    if (tryStoreRetval(N))
-      return;
-    break;
   case NVPTXISD::StoreParam:
   case NVPTXISD::StoreParamV2:
   case NVPTXISD::StoreParamV4:
@@ -369,23 +363,29 @@ bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {
 
 // Map ISD:CONDCODE value to appropriate CmpMode expected by
 // NVPTXInstPrinter::printCmpMode()
-static unsigned getPTXCmpMode(const CondCodeSDNode &CondCode, bool FTZ) {
+SDValue NVPTXDAGToDAGISel::getPTXCmpMode(const CondCodeSDNode &CondCode) {
   using NVPTX::PTXCmpMode::CmpMode;
-  unsigned PTXCmpMode = [](ISD::CondCode CC) {
+  const unsigned PTXCmpMode = [](ISD::CondCode CC) {
     switch (CC) {
     default:
       llvm_unreachable("Unexpected condition code.");
     case ISD::SETOEQ:
+    case ISD::SETEQ:
       return CmpMode::EQ;
     case ISD::SETOGT:
+    case ISD::SETGT:
       return CmpMode::GT;
     case ISD::SETOGE:
+    case ISD::SETGE:
       return CmpMode::GE;
     case ISD::SETOLT:
+    case ISD::SETLT:
       return CmpMode::LT;
     case ISD::SETOLE:
+    case ISD::SETLE:
       return CmpMode::LE;
     case ISD::SETONE:
+    case ISD::SETNE:
       return CmpMode::NE;
     case ISD::SETO:
       return CmpMode::NUM;
@@ -403,45 +403,29 @@ static unsigned getPTXCmpMode(const CondCodeSDNode &CondCode, bool FTZ) {
       return CmpMode::LEU;
     case ISD::SETUNE:
       return CmpMode::NEU;
-    case ISD::SETEQ:
-      return CmpMode::EQ;
-    case ISD::SETGT:
-      return CmpMode::GT;
-    case ISD::SETGE:
-      return CmpMode::GE;
-    case ISD::SETLT:
-      return CmpMode::LT;
-    case ISD::SETLE:
-      return CmpMode::LE;
-    case ISD::SETNE:
-      return CmpMode::NE;
     }
   }(CondCode.get());
-
-  if (FTZ)
-    PTXCmpMode |= NVPTX::PTXCmpMode::FTZ_FLAG;
-
-  return PTXCmpMode;
+  return CurDAG->getTargetConstant(PTXCmpMode, SDLoc(), MVT::i32);
 }
 
 bool NVPTXDAGToDAGISel::SelectSETP_F16X2(SDNode *N) {
-  unsigned PTXCmpMode =
-      getPTXCmpMode(*cast<CondCodeSDNode>(N->getOperand(2)), useF32FTZ());
+  SDValue PTXCmpMode = getPTXCmpMode(*cast<CondCodeSDNode>(N->getOperand(2)));
   SDLoc DL(N);
   SDNode *SetP = CurDAG->getMachineNode(
-      NVPTX::SETP_f16x2rr, DL, MVT::i1, MVT::i1, N->getOperand(0),
-      N->getOperand(1), CurDAG->getTargetConstant(PTXCmpMode, DL, MVT::i32));
+      NVPTX::SETP_f16x2rr, DL, MVT::i1, MVT::i1,
+      {N->getOperand(0), N->getOperand(1), PTXCmpMode,
+       CurDAG->getTargetConstant(useF32FTZ() ? 1 : 0, DL, MVT::i1)});
   ReplaceNode(N, SetP);
   return true;
 }
 
 bool NVPTXDAGToDAGISel::SelectSETP_BF16X2(SDNode *N) {
-  unsigned PTXCmpMode =
-      getPTXCmpMode(*cast<CondCodeSDNode>(N->getOperand(2)), useF32FTZ());
+  SDValue PTXCmpMode = getPTXCmpMode(*cast<CondCodeSDNode>(N->getOperand(2)));
   SDLoc DL(N);
   SDNode *SetP = CurDAG->getMachineNode(
-      NVPTX::SETP_bf16x2rr, DL, MVT::i1, MVT::i1, N->getOperand(0),
-      N->getOperand(1), CurDAG->getTargetConstant(PTXCmpMode, DL, MVT::i32));
+      NVPTX::SETP_bf16x2rr, DL, MVT::i1, MVT::i1,
+      {N->getOperand(0), N->getOperand(1), PTXCmpMode,
+       CurDAG->getTargetConstant(useF32FTZ() ? 1 : 0, DL, MVT::i1)});
   ReplaceNode(N, SetP);
   return true;
 }
@@ -462,11 +446,18 @@ bool NVPTXDAGToDAGISel::tryUNPACK_VECTOR(SDNode *N) {
 bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
   SDValue Vector = N->getOperand(0);
 
-  // We only care about 16x2 as it's the only real vector type we
-  // need to deal with.
   MVT VT = Vector.getSimpleValueType();
-  if (!Isv2x16VT(VT))
+  if (!(NVPTX::isPackedVectorTy(VT) && VT.getVectorNumElements() == 2))
     return false;
+
+  unsigned Opcode;
+  if (VT.is32BitVector())
+    Opcode = NVPTX::I32toV2I16;
+  else if (VT.is64BitVector())
+    Opcode = NVPTX::I64toV2I32;
+  else
+    llvm_unreachable("Unhandled packed type");
+
   // Find and record all uses of this vector that extract element 0 or 1.
   SmallVector<SDNode *, 4> E0, E1;
   for (auto *U : Vector.getNode()->users()) {
@@ -490,11 +481,11 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
   if (E0.empty() || E1.empty())
     return false;
 
-  // Merge (f16 extractelt(V, 0), f16 extractelt(V,1))
-  // into f16,f16 SplitF16x2(V)
+  // Merge (EltTy extractelt(V, 0), EltTy extractelt(V,1))
+  // into EltTy,EltTy Split[EltTy]x2(V)
   MVT EltVT = VT.getVectorElementType();
   SDNode *ScatterOp =
-      CurDAG->getMachineNode(NVPTX::I32toV2I16, SDLoc(N), EltVT, EltVT, Vector);
+      CurDAG->getMachineNode(Opcode, SDLoc(N), EltVT, EltVT, Vector);
   for (auto *Node : E0)
     ReplaceUses(SDValue(Node, 0), SDValue(ScatterOp, 0));
   for (auto *Node : E1)
@@ -1010,6 +1001,7 @@ pickOpcodeForVT(MVT::SimpleValueType VT, std::optional<unsigned> Opcode_i8,
   case MVT::i32:
   case MVT::f32:
     return Opcode_i32;
+  case MVT::v2f32:
   case MVT::i64:
   case MVT::f64:
     return Opcode_i64;
@@ -1504,84 +1496,6 @@ bool NVPTXDAGToDAGISel::tryLoadParam(SDNode *Node) {
   return true;
 }
 
-bool NVPTXDAGToDAGISel::tryStoreRetval(SDNode *N) {
-  SDLoc DL(N);
-  SDValue Chain = N->getOperand(0);
-  SDValue Offset = N->getOperand(1);
-  unsigned OffsetVal = Offset->getAsZExtVal();
-  MemSDNode *Mem = cast<MemSDNode>(N);
-
-  // How many elements do we have?
-  unsigned NumElts = 1;
-  switch (N->getOpcode()) {
-  default:
-    return false;
-  case NVPTXISD::StoreRetval:
-    NumElts = 1;
-    break;
-  case NVPTXISD::StoreRetvalV2:
-    NumElts = 2;
-    break;
-  case NVPTXISD::StoreRetvalV4:
-    NumElts = 4;
-    break;
-  }
-
-  // Build vector of operands
-  SmallVector<SDValue, 6> Ops;
-  for (unsigned i = 0; i < NumElts; ++i)
-    Ops.push_back(N->getOperand(i + 2));
-  Ops.append({CurDAG->getTargetConstant(OffsetVal, DL, MVT::i32), Chain});
-
-  // Determine target opcode
-  // If we have an i1, use an 8-bit store. The lowering code in
-  // NVPTXISelLowering will have already emitted an upcast.
-  std::optional<unsigned> Opcode = 0;
-  switch (NumElts) {
-  default:
-    return false;
-  case 1:
-    Opcode = pickOpcodeForVT(Mem->getMemoryVT().getSimpleVT().SimpleTy,
-                             NVPTX::StoreRetvalI8, NVPTX::StoreRetvalI16,
-                             NVPTX::StoreRetvalI32, NVPTX::StoreRetvalI64);
-    if (Opcode == NVPTX::StoreRetvalI8) {
-      // Fine tune the opcode depending on the size of the operand.
-      // This helps to avoid creating redundant COPY instructions in
-      // InstrEmitter::AddRegisterOperand().
-      switch (Ops[0].getSimpleValueType().SimpleTy) {
-      default:
-        break;
-      case MVT::i32:
-        Opcode = NVPTX::StoreRetvalI8TruncI32;
-        break;
-      case MVT::i64:
-        Opcode = NVPTX::StoreRetvalI8TruncI64;
-        break;
-      }
-    }
-    break;
-  case 2:
-    Opcode = pickOpcodeForVT(Mem->getMemoryVT().getSimpleVT().SimpleTy,
-                             NVPTX::StoreRetvalV2I8, NVPTX::StoreRetvalV2I16,
-                             NVPTX::StoreRetvalV2I32, NVPTX::StoreRetvalV2I64);
-    break;
-  case 4:
-    Opcode = pickOpcodeForVT(Mem->getMemoryVT().getSimpleVT().SimpleTy,
-                             NVPTX::StoreRetvalV4I8, NVPTX::StoreRetvalV4I16,
-                             NVPTX::StoreRetvalV4I32, {/* no v4i64 */});
-    break;
-  }
-  if (!Opcode)
-    return false;
-
-  SDNode *Ret = CurDAG->getMachineNode(*Opcode, DL, MVT::Other, Ops);
-  MachineMemOperand *MemRef = cast<MemSDNode>(N)->getMemOperand();
-  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Ret), {MemRef});
-
-  ReplaceNode(N, Ret);
-  return true;
-}
-
 // Helpers for constructing opcode (ex: NVPTX::StoreParamV4F32_iiri)
 #define getOpcV2H(ty, opKind0, opKind1)                                        \
   NVPTX::StoreParamV2##ty##_##opKind0##opKind1
@@ -2037,7 +1951,7 @@ bool NVPTXDAGToDAGISel::tryBF16ArithToFMA(SDNode *N) {
     llvm_unreachable("Unexpected opcode");
   };
 
-  int Opcode = IsVec ? NVPTX::BFMA16x2rrr : NVPTX::BFMA16rrr;
+  int Opcode = IsVec ? NVPTX::FMA_BF16x2rrr : NVPTX::FMA_BF16rrr;
   MachineSDNode *FMA = CurDAG->getMachineNode(Opcode, DL, VT, Operands);
   ReplaceNode(N, FMA);
   return true;
@@ -2241,16 +2155,9 @@ bool NVPTXScopes::empty() const { return Scopes.size() == 0; }
        ? NVPTX::CP_ASYNC_BULK_TENSOR_##dir##_##dim##_SHARED32_##mode##suffix   \
        : NVPTX::CP_ASYNC_BULK_TENSOR_##dir##_##dim##_##mode##suffix)
 
-#define CP_ASYNC_BULK_TENSOR_OPCODE_S2G_IMPL(op, dim, mode, is_ch, is_s32)     \
-  (is_ch ? (CP_ASYNC_BULK_TENSOR_OPCODE(op, dim, mode, is_s32, _CH))           \
-         : (CP_ASYNC_BULK_TENSOR_OPCODE(op, dim, mode, is_s32, )))
-
-#define GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(dim, mode, is_reduce, is_ch,       \
-                                            is_s32)                            \
-  (is_reduce                                                                   \
-       ? (CP_ASYNC_BULK_TENSOR_OPCODE_S2G_IMPL(RED, dim, mode, is_ch, is_s32)) \
-       : (CP_ASYNC_BULK_TENSOR_OPCODE_S2G_IMPL(S2G, dim, mode, is_ch,          \
-                                               is_s32)))
+#define GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G_RED(dim, mode, is_ch, is_s32)      \
+  (is_ch ? (CP_ASYNC_BULK_TENSOR_OPCODE(RED, dim, mode, is_s32, _CH))          \
+         : (CP_ASYNC_BULK_TENSOR_OPCODE(RED, dim, mode, is_s32, )))
 
 #define GET_CP_ASYNC_BULK_TENSOR_OPCODE_G2S(dim, mode, is_mc, is_ch, is_s32)   \
   [&]() -> auto {                                                              \
@@ -2263,48 +2170,45 @@ bool NVPTXScopes::empty() const { return Scopes.size() == 0; }
     return CP_ASYNC_BULK_TENSOR_OPCODE(G2S, dim, mode, is_s32, );              \
   }()
 
-#define GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(dim, mode, is_ch)             \
-  (is_ch ? NVPTX::CP_ASYNC_BULK_TENSOR_PREFETCH_##dim##_##mode##_CH            \
-         : NVPTX::CP_ASYNC_BULK_TENSOR_PREFETCH_##dim##_##mode)
-
-static unsigned GetCpAsyncBulkTensorS2GOpcode(size_t Dim, bool IsShared32,
-                                              bool IsCacheHint, bool IsIm2Col,
-                                              bool IsReduce = false) {
+static unsigned GetCpAsyncBulkTensorS2GReductionOpcode(size_t Dim,
+                                                       bool IsShared32,
+                                                       bool IsCacheHint,
+                                                       bool IsIm2Col) {
   if (IsIm2Col) {
     switch (Dim) {
     case 3:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(3D, IM2COL, IsReduce,
-                                                 IsCacheHint, IsShared32);
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G_RED(3D, IM2COL, IsCacheHint,
+                                                     IsShared32);
     case 4:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(4D, IM2COL, IsReduce,
-                                                 IsCacheHint, IsShared32);
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G_RED(4D, IM2COL, IsCacheHint,
+                                                     IsShared32);
     case 5:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(5D, IM2COL, IsReduce,
-                                                 IsCacheHint, IsShared32);
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G_RED(5D, IM2COL, IsCacheHint,
+                                                     IsShared32);
     default:
       llvm_unreachable("Invalid Dimension in im2col mode for "
-                       "GetCpAsyncBulkTensorS2GOpcode.");
+                       "GetCpAsyncBulkTensorS2GReductionOpcode.");
     }
   } else {
     switch (Dim) {
     case 1:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(1D, TILE, IsReduce,
-                                                 IsCacheHint, IsShared32);
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G_RED(1D, TILE, IsCacheHint,
+                                                     IsShared32);
     case 2:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(2D, TILE, IsReduce,
-                                                 IsCacheHint, IsShared32);
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G_RED(2D, TILE, IsCacheHint,
+                                                     IsShared32);
     case 3:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(3D, TILE, IsReduce,
-                                                 IsCacheHint, IsShared32);
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G_RED(3D, TILE, IsCacheHint,
+                                                     IsShared32);
     case 4:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(4D, TILE, IsReduce,
-                                                 IsCacheHint, IsShared32);
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G_RED(4D, TILE, IsCacheHint,
+                                                     IsShared32);
     case 5:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G(5D, TILE, IsReduce,
-                                                 IsCacheHint, IsShared32);
+      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_S2G_RED(5D, TILE, IsCacheHint,
+                                                     IsShared32);
     default:
-      llvm_unreachable(
-          "Invalid Dimension in tile mode for GetCpAsyncBulkTensorS2GOpcode.");
+      llvm_unreachable("Invalid Dimension in tile mode for "
+                       "GetCpAsyncBulkTensorS2GReductionOpcode.");
     }
   }
 }
@@ -2347,39 +2251,6 @@ static unsigned GetCpAsyncBulkTensorG2SOpcode(size_t Dim, bool IsShared32,
     default:
       llvm_unreachable(
           "Invalid Dimension in tile mode for GetCpAsyncBulkTensorG2SOpcode.");
-    }
-  }
-}
-
-static unsigned GetCpAsyncBulkTensorPrefetchOpcode(size_t Dim, bool IsCacheHint,
-                                                   bool IsIm2Col) {
-  if (IsIm2Col) {
-    switch (Dim) {
-    case 3:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(3D, IM2COL, IsCacheHint);
-    case 4:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(4D, IM2COL, IsCacheHint);
-    case 5:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(5D, IM2COL, IsCacheHint);
-    default:
-      llvm_unreachable("Invalid Dimension in im2col mode for "
-                       "GetCpAsyncBulkTensorPrefetchOpcode.");
-    }
-  } else {
-    switch (Dim) {
-    case 1:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(1D, TILE, IsCacheHint);
-    case 2:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(2D, TILE, IsCacheHint);
-    case 3:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(3D, TILE, IsCacheHint);
-    case 4:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(4D, TILE, IsCacheHint);
-    case 5:
-      return GET_CP_ASYNC_BULK_TENSOR_OPCODE_PREFETCH(5D, TILE, IsCacheHint);
-    default:
-      llvm_unreachable("Invalid Dimension in tile mode for "
-                       "GetCpAsyncBulkTensorPrefetchOpcode.");
     }
   }
 }
@@ -2448,52 +2319,6 @@ void NVPTXDAGToDAGISel::SelectCpAsyncBulkTensorG2SCommon(SDNode *N,
   ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
 }
 
-void NVPTXDAGToDAGISel::SelectCpAsyncBulkTensorS2GCommon(SDNode *N,
-                                                         bool IsIm2Col) {
-  // We have {Chain, Intrinsic-ID} followed by the actual intrisic args:
-  // src, dst, dims{d0...dN}, cache_hint, cache_hint_flag
-  // NumOperands = {Chain, IID} + {Actual intrinsic args}
-  //             = {2}          + {4 + dims}
-  size_t NumOps = N->getNumOperands();
-  size_t NumDims = NumOps - 6;
-  bool IsCacheHint = N->getConstantOperandVal(NumOps - 1) == 1;
-  size_t NumArgs = NumDims + (IsCacheHint ? 3 : 2); // src, dst, cache_hint
-
-  SDLoc DL(N);
-  SmallVector<SDValue, 8> Ops(N->ops().slice(2, NumArgs));
-  Ops.push_back(N->getOperand(0)); // Chain operand
-
-  bool IsShared32 =
-      CurDAG->getDataLayout().getPointerSizeInBits(ADDRESS_SPACE_SHARED) == 32;
-  unsigned Opcode =
-      GetCpAsyncBulkTensorS2GOpcode(NumDims, IsShared32, IsCacheHint, IsIm2Col);
-  ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
-}
-
-void NVPTXDAGToDAGISel::SelectCpAsyncBulkTensorPrefetchCommon(SDNode *N,
-                                                              bool IsIm2Col) {
-  // We have {Chain, Intrinsic-ID} followed by the actual intrisic args:
-  // {src, dims{d0...dN}, im2col_offsets{dims-2}
-  // cache_hint, cache_hint_flag}
-  // NumOperands = {Chain, IID} + {Actual intrinsic args}
-  //             = {2}          + {3 + dims + im2col_offsets}
-  size_t NumOps = N->getNumOperands();
-  size_t NumDims = IsIm2Col ? GetDimsFromIntrinsic(N->getConstantOperandVal(1))
-                            : (NumOps - 5);
-  // Offsets is always 'NumDims - 2' and only for im2col mode
-  size_t NumOffsets = IsIm2Col ? (NumDims - 2) : 0;
-  bool IsCacheHint = N->getConstantOperandVal(NumOps - 1) == 1;
-  size_t NumArgs = NumDims + NumOffsets + (IsCacheHint ? 2 : 1);
-
-  SDLoc DL(N);
-  SmallVector<SDValue, 12> Ops(N->ops().slice(2, NumArgs));
-  Ops.push_back(N->getOperand(0)); // Chain operand
-
-  unsigned Opcode =
-      GetCpAsyncBulkTensorPrefetchOpcode(NumDims, IsCacheHint, IsIm2Col);
-  ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
-}
-
 void NVPTXDAGToDAGISel::SelectCpAsyncBulkTensorReduceCommon(SDNode *N,
                                                             unsigned RedOp,
                                                             bool IsIm2Col) {
@@ -2513,8 +2338,8 @@ void NVPTXDAGToDAGISel::SelectCpAsyncBulkTensorReduceCommon(SDNode *N,
 
   bool IsShared32 =
       CurDAG->getDataLayout().getPointerSizeInBits(ADDRESS_SPACE_SHARED) == 32;
-  unsigned Opcode = GetCpAsyncBulkTensorS2GOpcode(
-      NumDims, IsShared32, IsCacheHint, IsIm2Col, /*IsReduce=*/true);
+  unsigned Opcode = GetCpAsyncBulkTensorS2GReductionOpcode(
+      NumDims, IsShared32, IsCacheHint, IsIm2Col);
   ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
 }
 
@@ -2634,18 +2459,6 @@ bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
   switch (IID) {
   default:
     return false;
-  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_1d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_2d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_3d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_4d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_tile_5d:
-    SelectCpAsyncBulkTensorS2GCommon(N);
-    return true;
-  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_3d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_4d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_s2g_im2col_5d:
-    SelectCpAsyncBulkTensorS2GCommon(N, /*IsIm2Col=*/true);
-    return true;
   case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_1d:
   case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_2d:
   case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_3d:
@@ -2657,18 +2470,6 @@ bool NVPTXDAGToDAGISel::tryIntrinsicVoid(SDNode *N) {
   case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_4d:
   case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_5d:
     SelectCpAsyncBulkTensorG2SCommon(N, /*IsIm2Col=*/true);
-    return true;
-  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_1d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_2d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_3d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_4d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_tile_5d:
-    SelectCpAsyncBulkTensorPrefetchCommon(N);
-    return true;
-  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_3d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_4d:
-  case Intrinsic::nvvm_cp_async_bulk_tensor_prefetch_im2col_5d:
-    SelectCpAsyncBulkTensorPrefetchCommon(N, /*IsIm2Col=*/true);
     return true;
   case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_tile_1d:
   case Intrinsic::nvvm_cp_async_bulk_tensor_reduce_add_tile_2d:

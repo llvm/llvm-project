@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
@@ -37,6 +38,7 @@
 #include <cctype>
 #include <deque>
 using namespace llvm;
+using namespace llvm::SDPatternMatch;
 
 /// NOTE: The TargetMachine owns TLOF.
 TargetLowering::TargetLowering(const TargetMachine &tm)
@@ -179,10 +181,12 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
     Args.push_back(Entry);
   }
 
-  if (LC == RTLIB::UNKNOWN_LIBCALL)
-    report_fatal_error("Unsupported library call operation!");
-  SDValue Callee = DAG.getExternalSymbol(getLibcallName(LC),
-                                         getPointerTy(DAG.getDataLayout()));
+  const char *LibcallName = getLibcallName(LC);
+  if (LC == RTLIB::UNKNOWN_LIBCALL || !LibcallName)
+    reportFatalInternalError("unsupported library call operation");
+
+  SDValue Callee =
+      DAG.getExternalSymbol(LibcallName, getPointerTy(DAG.getDataLayout()));
 
   Type *RetTy = RetVT.getTypeForEVT(*DAG.getContext());
   TargetLowering::CallLoweringInfo CLI(DAG);
@@ -206,13 +210,14 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
 }
 
 bool TargetLowering::findOptimalMemOpLowering(
-    std::vector<EVT> &MemOps, unsigned Limit, const MemOp &Op, unsigned DstAS,
-    unsigned SrcAS, const AttributeList &FuncAttributes) const {
+    LLVMContext &Context, std::vector<EVT> &MemOps, unsigned Limit,
+    const MemOp &Op, unsigned DstAS, unsigned SrcAS,
+    const AttributeList &FuncAttributes) const {
   if (Limit != ~unsigned(0) && Op.isMemcpyWithFixedDstAlign() &&
       Op.getSrcAlign() < Op.getDstAlign())
     return false;
 
-  EVT VT = getOptimalMemOpType(Op, FuncAttributes);
+  EVT VT = getOptimalMemOpType(Context, Op, FuncAttributes);
 
   if (VT == MVT::Other) {
     // Use the largest integer type whose alignment constraints are satisfied.
@@ -420,7 +425,13 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
   NewLHS = Call.first;
   NewRHS = DAG.getConstant(0, dl, RetVT);
 
-  CCCode = getICmpCondCode(getSoftFloatCmpLibcallPredicate(LC1));
+  RTLIB::LibcallImpl LC1Impl = getLibcallImpl(LC1);
+  if (LC1Impl == RTLIB::Unsupported) {
+    reportFatalUsageError(
+        "no libcall available to soften floating-point compare");
+  }
+
+  CCCode = getSoftFloatCmpLibcallPredicate(LC1Impl);
   if (ShouldInvertCC) {
     assert(RetVT.isInteger());
     CCCode = getSetCCInverse(CCCode, RetVT);
@@ -430,6 +441,12 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
     // Update Chain.
     Chain = Call.second;
   } else {
+    RTLIB::LibcallImpl LC2Impl = getLibcallImpl(LC2);
+    if (LC2Impl == RTLIB::Unsupported) {
+      reportFatalUsageError(
+          "no libcall available to soften floating-point compare");
+    }
+
     assert(CCCode == (ShouldInvertCC ? ISD::SETEQ : ISD::SETNE) &&
            "unordered call should be simple boolean");
 
@@ -442,7 +459,7 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
 
     SDValue Tmp = DAG.getSetCC(dl, SetCCVT, NewLHS, NewRHS, CCCode);
     auto Call2 = makeLibCall(DAG, LC2, RetVT, Ops, CallOptions, dl, Chain);
-    CCCode = getICmpCondCode(getSoftFloatCmpLibcallPredicate(LC2));
+    CCCode = getSoftFloatCmpLibcallPredicate(LC2Impl);
     if (ShouldInvertCC)
       CCCode = getSetCCInverse(CCCode, RetVT);
     NewLHS = DAG.getSetCC(dl, SetCCVT, Call2.first, NewRHS, CCCode);
@@ -4225,6 +4242,42 @@ SDValue TargetLowering::foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1,
   return SDValue();
 }
 
+/// This helper function of SimplifySetCC tries to optimize the comparison when
+/// either operand of the SetCC node is a bitwise-or instruction.
+/// For now, this just transforms (X | Y) ==/!= Y into X & ~Y ==/!= 0.
+SDValue TargetLowering::foldSetCCWithOr(EVT VT, SDValue N0, SDValue N1,
+                                        ISD::CondCode Cond, const SDLoc &DL,
+                                        DAGCombinerInfo &DCI) const {
+  if (N1.getOpcode() == ISD::OR && N0.getOpcode() != ISD::OR)
+    std::swap(N0, N1);
+
+  SelectionDAG &DAG = DCI.DAG;
+  EVT OpVT = N0.getValueType();
+  if (!N0.hasOneUse() || !OpVT.isInteger() ||
+      (Cond != ISD::SETEQ && Cond != ISD::SETNE))
+    return SDValue();
+
+  // (X | Y) == Y
+  // (X | Y) != Y
+  SDValue X;
+  if (sd_match(N0, m_Or(m_Value(X), m_Specific(N1))) && hasAndNotCompare(X)) {
+    // If the target supports an 'and-not' or 'and-complement' logic operation,
+    // try to use that to make a comparison operation more efficient.
+
+    // Bail out if the compare operand that we want to turn into a zero is
+    // already a zero (otherwise, infinite loop).
+    if (isNullConstant(N1))
+      return SDValue();
+
+    // Transform this into: X & ~Y ==/!= 0.
+    SDValue NotY = DAG.getNOT(SDLoc(N1), N1, OpVT);
+    SDValue NewAnd = DAG.getNode(ISD::AND, SDLoc(N0), OpVT, X, NotY);
+    return DAG.getSetCC(DL, VT, NewAnd, DAG.getConstant(0, DL, OpVT), Cond);
+  }
+
+  return SDValue();
+}
+
 /// There are multiple IR patterns that could be checking whether certain
 /// truncation of a signed number would be lossy or not. The pattern which is
 /// best at IR level, may not lower optimally. Thus, we want to unfold it.
@@ -5519,6 +5572,9 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         return V;
 
     if (SDValue V = foldSetCCWithAnd(VT, N0, N1, Cond, dl, DCI))
+      return V;
+
+    if (SDValue V = foldSetCCWithOr(VT, N0, N1, Cond, dl, DCI))
       return V;
   }
 
@@ -7369,17 +7425,6 @@ TargetLowering::prepareSREMEqFold(EVT SETCCVT, SDValue REMNode,
   return Blended;
 }
 
-bool TargetLowering::
-verifyReturnAddressArgumentIsConstant(SDValue Op, SelectionDAG &DAG) const {
-  if (!isa<ConstantSDNode>(Op.getOperand(0))) {
-    DAG.getContext()->emitError("argument to '__builtin_return_address' must "
-                                "be a constant integer");
-    return true;
-  }
-
-  return false;
-}
-
 SDValue TargetLowering::getSqrtInputTest(SDValue Op, SelectionDAG &DAG,
                                          const DenormalMode &Mode) const {
   SDLoc DL(Op);
@@ -9009,14 +9054,14 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
   APInt AllOneMantissa = APFloat::getLargest(Semantics).bitcastToAPInt() & ~Inf;
   APInt QNaNBitMask =
       APInt::getOneBitSet(BitSize, AllOneMantissa.getActiveBits() - 1);
-  APInt InvertionMask = APInt::getAllOnes(ResultVT.getScalarSizeInBits());
+  APInt InversionMask = APInt::getAllOnes(ResultVT.getScalarSizeInBits());
 
   SDValue ValueMaskV = DAG.getConstant(ValueMask, DL, IntVT);
   SDValue SignBitV = DAG.getConstant(SignBit, DL, IntVT);
   SDValue ExpMaskV = DAG.getConstant(ExpMask, DL, IntVT);
   SDValue ZeroV = DAG.getConstant(0, DL, IntVT);
   SDValue InfV = DAG.getConstant(Inf, DL, IntVT);
-  SDValue ResultInvertionMask = DAG.getConstant(InvertionMask, DL, ResultVT);
+  SDValue ResultInversionMask = DAG.getConstant(InversionMask, DL, ResultVT);
 
   SDValue Res;
   const auto appendResult = [&](SDValue PartialRes) {
@@ -9160,7 +9205,7 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
       PartialRes = DAG.getNode(ISD::AND, DL, ResultVT, PartialRes, SignV);
     else if (PartialCheck == fcPosNormal) {
       SDValue PosSignV =
-          DAG.getNode(ISD::XOR, DL, ResultVT, SignV, ResultInvertionMask);
+          DAG.getNode(ISD::XOR, DL, ResultVT, SignV, ResultInversionMask);
       PartialRes = DAG.getNode(ISD::AND, DL, ResultVT, PartialRes, PosSignV);
     }
     if (IsF80)
@@ -9172,7 +9217,7 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
   if (!Res)
     return DAG.getConstant(IsInverted, DL, ResultVT);
   if (IsInverted)
-    Res = DAG.getNode(ISD::XOR, DL, ResultVT, Res, ResultInvertionMask);
+    Res = DAG.getNode(ISD::XOR, DL, ResultVT, Res, ResultInversionMask);
   return Res;
 }
 

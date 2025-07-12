@@ -11,7 +11,6 @@
 #include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Host/Socket.h"
@@ -32,14 +31,6 @@
 #include <cstring>
 #include <sys/stat.h>
 #include <variant>
-
-#if defined(__APPLE__)
-#define DEBUGSERVER_BASENAME "debugserver"
-#elif defined(_WIN32)
-#define DEBUGSERVER_BASENAME "lldb-server.exe"
-#else
-#define DEBUGSERVER_BASENAME "lldb-server"
-#endif
 
 #if HAVE_LIBCOMPRESSION
 #include <compression.h>
@@ -836,76 +827,10 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
   return GDBRemoteCommunication::PacketType::Invalid;
 }
 
-FileSpec GDBRemoteCommunication::GetDebugserverPath(Platform *platform) {
-  Log *log = GetLog(GDBRLog::Process);
-  // If we locate debugserver, keep that located version around
-  static FileSpec g_debugserver_file_spec;
-  FileSpec debugserver_file_spec;
-
-  Environment host_env = Host::GetEnvironment();
-
-  // Always check to see if we have an environment override for the path to the
-  // debugserver to use and use it if we do.
-  std::string env_debugserver_path = host_env.lookup("LLDB_DEBUGSERVER_PATH");
-  if (!env_debugserver_path.empty()) {
-    debugserver_file_spec.SetFile(env_debugserver_path,
-                                  FileSpec::Style::native);
-    LLDB_LOGF(log,
-              "GDBRemoteCommunication::%s() gdb-remote stub exe path set "
-              "from environment variable: %s",
-              __FUNCTION__, env_debugserver_path.c_str());
-  } else
-    debugserver_file_spec = g_debugserver_file_spec;
-  bool debugserver_exists =
-      FileSystem::Instance().Exists(debugserver_file_spec);
-  if (!debugserver_exists) {
-    // The debugserver binary is in the LLDB.framework/Resources directory.
-    debugserver_file_spec = HostInfo::GetSupportExeDir();
-    if (debugserver_file_spec) {
-      debugserver_file_spec.AppendPathComponent(DEBUGSERVER_BASENAME);
-      debugserver_exists = FileSystem::Instance().Exists(debugserver_file_spec);
-      if (debugserver_exists) {
-        LLDB_LOGF(log,
-                  "GDBRemoteCommunication::%s() found gdb-remote stub exe '%s'",
-                  __FUNCTION__, debugserver_file_spec.GetPath().c_str());
-
-        g_debugserver_file_spec = debugserver_file_spec;
-      } else {
-        if (platform)
-          debugserver_file_spec =
-              platform->LocateExecutable(DEBUGSERVER_BASENAME);
-        else
-          debugserver_file_spec.Clear();
-        if (debugserver_file_spec) {
-          // Platform::LocateExecutable() wouldn't return a path if it doesn't
-          // exist
-          debugserver_exists = true;
-        } else {
-          LLDB_LOGF(log,
-                    "GDBRemoteCommunication::%s() could not find "
-                    "gdb-remote stub exe '%s'",
-                    __FUNCTION__, debugserver_file_spec.GetPath().c_str());
-        }
-        // Don't cache the platform specific GDB server binary as it could
-        // change from platform to platform
-        g_debugserver_file_spec.Clear();
-      }
-    }
-  }
-  return debugserver_file_spec;
-}
-
 Status GDBRemoteCommunication::StartDebugserverProcess(
-    std::variant<llvm::StringRef, shared_fd_t> comm, Platform *platform,
+    std::variant<llvm::StringRef, shared_fd_t> comm,
     ProcessLaunchInfo &launch_info, const Args *inferior_args) {
   Log *log = GetLog(GDBRLog::Process);
-
-  FileSpec debugserver_file_spec = GetDebugserverPath(platform);
-  if (!debugserver_file_spec)
-    return Status::FromErrorString("unable to locate " DEBUGSERVER_BASENAME);
-
-  launch_info.SetExecutableFile(debugserver_file_spec,
-                                /*add_exe_file_as_first_arg=*/true);
 
   Args &debugserver_args = launch_info.GetArguments();
 

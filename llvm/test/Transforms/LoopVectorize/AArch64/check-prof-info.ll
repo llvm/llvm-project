@@ -92,7 +92,7 @@ for.cond.cleanup:                                 ; preds = %for.body
 ; CHECK-V1-IC1: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK-V1-IC1: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK-V1-IC1: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-V1-IC1: [[PROF4]] = !{!"branch_weights", i32 1, i32 3}
+; CHECK-V1-IC1: [[PROF4]] = !{!"branch_weights", i32 1, i32 7}
 ; CHECK-V1-IC1: [[PROF5]] = !{!"branch_weights", i32 0, i32 0}
 ; CHECK-V1-IC1: [[LOOP6]] = distinct !{[[LOOP6]], [[META3]], [[META2]]}
 ;.

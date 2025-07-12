@@ -3,15 +3,10 @@
 // RUN: | FileCheck %s --match-full-lines
 // CHECK: crosscheck-with-z3-max-attempts-per-query = 3
 
-// RUN: rm -rf %t && mkdir %t
-// RUN: %host_cxx -shared -fPIC -I %z3_include_dir        \
-// RUN:   %S/z3/Inputs/MockZ3_solver_check.cpp            \
-// RUN:   -o %t/MockZ3_solver_check.so
-
-// DEFINE: %{mocked_clang} =                              \
-// DEFINE: LD_PRELOAD="%t/MockZ3_solver_check.so"         \
-// DEFINE: %clang_cc1 %s -analyze -setup-static-analyzer  \
-// DEFINE:   -analyzer-config crosscheck-with-z3=true     \
+// DEFINE: %{mocked_clang} =                                      \
+// DEFINE: LD_PRELOAD="%llvmshlibdir/MockZ3SolverCheck%pluginext" \
+// DEFINE: %clang_analyze_cc1 %s                                  \
+// DEFINE:   -analyzer-config crosscheck-with-z3=true             \
 // DEFINE:   -analyzer-checker=core
 
 // DEFINE: %{attempts} = -analyzer-config crosscheck-with-z3-max-attempts-per-query
@@ -32,7 +27,7 @@
 // RUN: Z3_SOLVER_RESULTS="UNDEF,UNDEF,SAT"   %{mocked_clang} %{attempts}=3 -verify=accepted
 
 
-// REQUIRES: z3, asserts, shell, system-linux
+// REQUIRES: z3, z3-mock, asserts, shell, system-linux
 
 // refuted-no-diagnostics
 

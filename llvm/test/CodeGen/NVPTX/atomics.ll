@@ -424,7 +424,7 @@ define half @atomicrmw_add_f16_generic(ptr %addr, half %val) {
 ; CHECK-LABEL: atomicrmw_add_f16_generic(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b16 %rs<4>;
 ; CHECK-NEXT:    .reg .b32 %r<20>;
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
@@ -453,13 +453,12 @@ define half @atomicrmw_add_f16_generic(ptr %addr, half %val) {
 ; CHECK-NEXT:    or.b32 %r17, %r16, %r15;
 ; CHECK-NEXT:    membar.sys;
 ; CHECK-NEXT:    atom.cas.b32 %r5, [%rd1], %r19, %r17;
-; CHECK-NEXT:    setp.ne.s32 %p1, %r5, %r19;
+; CHECK-NEXT:    setp.ne.b32 %p1, %r5, %r19;
 ; CHECK-NEXT:    mov.b32 %r19, %r5;
 ; CHECK-NEXT:    @%p1 bra $L__BB24_1;
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
 ; CHECK-NEXT:    shr.u32 %r18, %r5, %r1;
-; CHECK-NEXT:    cvt.u16.u32 %rs4, %r18;
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs4;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %r18;
 ; CHECK-NEXT:    ret;
   %ret = atomicrmw fadd ptr %addr, half %val seq_cst
   ret half %ret
