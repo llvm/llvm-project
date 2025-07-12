@@ -1,4 +1,4 @@
-//===-- Implementation of frexpf16 function -------------------------------===//
+//===-- Implementation header for tanpif ------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/frexpf16.h"
+#ifndef LLVM_LIBC_SRC_MATH_TANPIF_H
+#define LLVM_LIBC_SRC_MATH_TANPIF_H
 
-#include "src/__support/math/frexpf16.h"
+#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float16, frexpf16, (float16 x, int *exp)) {
-  return math::frexpf16(x, exp);
-}
+float tanpif(float x);
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC_MATH_TANPIF_H
