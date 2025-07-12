@@ -10088,7 +10088,8 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
 }
 
 LegalizerHelper::LegalizeResult
-LegalizerHelper::lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
+LegalizerHelper::lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen,
+                                   bool SkipVolatile) {
   const unsigned Opc = MI.getOpcode();
   // This combine is fairly complex so it's not written with a separate
   // matcher function.
@@ -10121,8 +10122,8 @@ LegalizerHelper::lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
   }
 
   bool IsVolatile = MemOp->isVolatile();
-  // Don't try to optimize volatile.
-  if (IsVolatile)
+  // Don't try to optimize volatile when not allowed.
+  if (SkipVolatile && IsVolatile)
     return UnableToLegalize;
 
   if (MaxLen && KnownLen > MaxLen)
