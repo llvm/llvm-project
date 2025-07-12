@@ -4058,6 +4058,7 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   // the sequence "<::" will be unconditionally treated as "[:".
   // Cf. Lexer::LexTokenInternal.
   LangOpts.Digraphs = SinceCpp11;
+  LangOpts.Trigraphs = Style.isCpp();
 
   LangOpts.LineComment = 1;
   LangOpts.Bool = 1;
