@@ -25,7 +25,6 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -33,10 +32,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MathExtras.h"
 
-#include <functional>
 #include <optional>
 
 #define DEBUG_TYPE "mlir-spirv-conversion"
