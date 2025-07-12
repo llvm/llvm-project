@@ -34,6 +34,8 @@ struct __attribute__((availability(domain:feature1, AVAIL))) S1 {};
 -(struct S1)m3 __attribute__((availability(domain:feature1, UNAVAIL))); // expected-error {{use of 'S1' requires feature 'feature1' to be available}}
 @end
 
+@class Base0;
+
 __attribute__((availability(domain:feature1, AVAIL))) // expected-note 2 {{is incompatible with __attribute__((availability(domain:feature1, 0)))}}
 @interface Base0 {
   struct S0 ivar0; // expected-error {{use of 'S0' requires feature 'feature1' to be unavailable}}
@@ -133,6 +135,8 @@ __attribute__((availability(domain:feature1, AVAIL)))
 __attribute__((availability(domain:feature1, AVAIL))) // expected-error {{feature attributes cannot be applied to ObjC category implementations}}
 @implementation Derived2(Cat1)
 @end
+
+@protocol P1;
 
 __attribute__((availability(domain:feature1, UNAVAIL)))
 @protocol P1

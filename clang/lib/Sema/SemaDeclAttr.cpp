@@ -4018,9 +4018,25 @@ void Sema::copyFeatureAvailability(Decl *Dst, Decl *Src) {
   }
 }
 
+static bool isForwardDeclaration(Decl *Prev, Decl *D) {
+  if (Prev->getCanonicalDecl() != D->getCanonicalDecl())
+    return false;
+  if (auto *ID = dyn_cast<ObjCInterfaceDecl>(Prev))
+    return !ID->getPreviousDecl();
+  if (auto *PD = dyn_cast<ObjCProtocolDecl>(Prev))
+    return !PD->getPreviousDecl();
+  return false;
+}
+
 void Sema::copyFeatureAvailabilityCheck(Decl *Dst, NamedDecl *Src,
                                         bool Redeclaration) {
   if (Dst->isInvalidDecl())
+    return;
+
+  // Don't check whether a new feature is being added if Src is a
+  // forward declaration of classes and protocols as they cannnot be
+  // annotated with attributes.
+  if (isForwardDeclaration(Src, Dst))
     return;
 
   llvm::SmallDenseMap<StringRef, DomainAvailabilityAttr *> DstToAttr;
