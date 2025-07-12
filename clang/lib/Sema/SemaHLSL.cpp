@@ -1085,10 +1085,10 @@ bool SemaHLSL::handleRootSignatureElements(
     ArrayRef<hlsl::RootSignatureElement> Elements) {
   using RangeInfo = llvm::hlsl::rootsig::RangeInfo;
   using OverlappingRanges = llvm::hlsl::rootsig::OverlappingRanges;
-  using InfoPair = std::pair<RangeInfo, const hlsl::RootSignatureElement *>;
+  using InfoPairT = std::pair<RangeInfo, const hlsl::RootSignatureElement *>;
 
   // 1. Collect RangeInfos
-  llvm::SmallVector<InfoPair> InfoPairs;
+  llvm::SmallVector<InfoPairT> InfoPairs;
   for (const hlsl::RootSignatureElement &RootSigElem : Elements) {
     const llvm::hlsl::rootsig::RootElement &Elem = RootSigElem.getElement();
     if (const auto *Descriptor =
@@ -1149,18 +1149,18 @@ bool SemaHLSL::handleRootSignatureElements(
       // The last Table->NumClauses elements of Infos are the owned Clauses
       // generated RangeInfo
       auto TableInfos =
-          MutableArrayRef<InfoPair>(InfoPairs).take_back(Table->NumClauses);
-      for (InfoPair &Pair : TableInfos)
+          MutableArrayRef<InfoPairT>(InfoPairs).take_back(Table->NumClauses);
+      for (InfoPairT &Pair : TableInfos)
         Pair.first.Visibility = Table->Visibility;
     }
   }
 
   // 2. Sort with the RangeInfo <operator to prepare it for findOverlapping
   std::sort(InfoPairs.begin(), InfoPairs.end(),
-            [](InfoPair A, InfoPair B) { return A.first < B.first; });
+            [](InfoPairT A, InfoPairT B) { return A.first < B.first; });
 
   llvm::SmallVector<RangeInfo> Infos;
-  for (const InfoPair &Pair : InfoPairs)
+  for (const InfoPairT &Pair : InfoPairs)
     Infos.push_back(Pair.first);
 
   // Helpers to report diagnostics
