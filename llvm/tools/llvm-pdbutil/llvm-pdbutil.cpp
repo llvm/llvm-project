@@ -1375,7 +1375,6 @@ static void mergePdbs() {
 }
 
 static void explain() {
-  std::unique_ptr<IPDBSession> Session;
   InputFile IF =
       ExitOnErr(InputFile::open(opts::explain::InputFilename.front(), true));
 

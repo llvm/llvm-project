@@ -424,12 +424,13 @@ static std::optional<bool> evaluateIsSpace(Intrinsic::ID IID, unsigned AS) {
   case Intrinsic::nvvm_isspacep_local:
     return AS == NVPTXAS::ADDRESS_SPACE_LOCAL;
   case Intrinsic::nvvm_isspacep_shared:
+    // If shared cluster this can't be evaluated at compile time.
+    if (AS == NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER)
+      return std::nullopt;
     return AS == NVPTXAS::ADDRESS_SPACE_SHARED;
   case Intrinsic::nvvm_isspacep_shared_cluster:
-    // We can't tell shared from shared_cluster at compile time from AS alone,
-    // but it can't be either is AS is not shared.
-    return AS == NVPTXAS::ADDRESS_SPACE_SHARED ? std::nullopt
-                                               : std::optional{false};
+    return AS == NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER ||
+           AS == NVPTXAS::ADDRESS_SPACE_SHARED;
   case Intrinsic::nvvm_isspacep_const:
     return AS == NVPTXAS::ADDRESS_SPACE_CONST;
   default:
@@ -491,7 +492,7 @@ NVPTXTTIImpl::getInstructionCost(const User *U,
       // since it is classified as a call in the IR. A better cost model would
       // be to return the number of asm instructions embedded in the asm
       // string.
-      auto &AsmStr = IA->getAsmString();
+      StringRef AsmStr = IA->getAsmString();
       const unsigned InstCount =
           count_if(split(AsmStr, ';'), [](StringRef AsmInst) {
             // Trim off scopes denoted by '{' and '}' as these can be ignored
@@ -588,6 +589,13 @@ Value *NVPTXTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   }
   }
   return nullptr;
+}
+
+unsigned NVPTXTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
+  // 256 bit loads/stores are currently only supported for global address space
+  if (ST->has256BitVectorLoadStore(AddrSpace))
+    return 256;
+  return 128;
 }
 
 unsigned NVPTXTTIImpl::getAssumedAddrSpace(const Value *V) const {

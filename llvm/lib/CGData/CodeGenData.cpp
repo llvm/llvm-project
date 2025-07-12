@@ -18,8 +18,6 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/WithColor.h"
 
 #define DEBUG_TYPE "cg-data"
@@ -188,7 +186,7 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Curr) {
     return make_error<CGDataError>(cgdata_error::unsupported_version);
   H.DataKind = endian::readNext<uint32_t, endianness::little, unaligned>(Curr);
 
-  static_assert(IndexedCGData::CGDataVersion::CurrentVersion == Version2,
+  static_assert(IndexedCGData::CGDataVersion::CurrentVersion == Version3,
                 "Please update the offset computation below if a new field has "
                 "been added to the header.");
   H.OutlinedHashTreeOffset =
@@ -233,6 +231,9 @@ void saveModuleForTwoRounds(const Module &TheModule, unsigned Task,
 
   WriteBitcodeToFile(TheModule, *Stream->OS,
                      /*ShouldPreserveUseListOrder=*/true);
+
+  if (Error Err = Stream->commit())
+    report_fatal_error(std::move(Err));
 }
 
 std::unique_ptr<Module> loadModuleForTwoRounds(BitcodeModule &OrigModule,

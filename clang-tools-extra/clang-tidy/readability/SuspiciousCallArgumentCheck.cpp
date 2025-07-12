@@ -12,7 +12,6 @@
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include <optional>
-#include <sstream>
 
 using namespace clang::ast_matchers;
 namespace optutils = clang::tidy::utils::options;
@@ -218,7 +217,7 @@ static bool applyJaroWinklerHeuristic(StringRef Arg, StringRef Param,
   SmallVector<int, SmallVectorSize> ArgFlags(ArgLen);
   SmallVector<int, SmallVectorSize> ParamFlags(ParamLen);
   std::ptrdiff_t Range =
-      std::max(std::ptrdiff_t{0}, std::max(ArgLen, ParamLen) / 2 - 1);
+      std::max(std::ptrdiff_t{0}, (std::max(ArgLen, ParamLen) / 2) - 1);
 
   // Calculate matching characters.
   for (std::ptrdiff_t I = 0; I < ParamLen; ++I)
@@ -261,7 +260,7 @@ static bool applyJaroWinklerHeuristic(StringRef Arg, StringRef Param,
   // Calculate common string prefix up to 4 chars.
   L = 0;
   for (std::ptrdiff_t I = 0;
-       I < std::min(std::min(ArgLen, ParamLen), std::ptrdiff_t{4}); ++I)
+       I < std::min({ArgLen, ParamLen, std::ptrdiff_t{4}}); ++I)
     if (tolower(Arg[I]) == tolower(Param[I]))
       ++L;
 

@@ -113,7 +113,7 @@ void MultiwayPathsCoveredCheck::check(const MatchFinder::MatchResult &Result) {
   }
   // Warns for degenerated 'switch' statements that neither define a case nor
   // a default label.
-  // FIXME: Evaluate, if emitting a fix-it to simplify that statement is 
+  // FIXME: Evaluate, if emitting a fix-it to simplify that statement is
   // reasonable.
   if (!SwitchHasDefault && SwitchCaseCount == 0) {
     diag(Switch->getBeginLoc(),

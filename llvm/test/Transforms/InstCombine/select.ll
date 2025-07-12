@@ -2736,7 +2736,7 @@ define i32 @pr47322_more_poisonous_replacement(i32 %arg) {
 ; CHECK-LABEL: @pr47322_more_poisonous_replacement(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ARG:%.*]], 0
 ; CHECK-NEXT:    [[TRAILING:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[ARG]], i1 true)
-; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[ARG]], [[TRAILING]]
+; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr exact i32 [[ARG]], [[TRAILING]]
 ; CHECK-NEXT:    [[R1_SROA_0_1:%.*]] = select i1 [[CMP]], i32 0, i32 [[SHIFTED]]
 ; CHECK-NEXT:    ret i32 [[R1_SROA_0_1]]
 ;
@@ -5046,4 +5046,51 @@ define <2 x ptr> @select_freeze_constant_expression_vector_gep(i1 %cond, <2 x pt
   %freeze = freeze <2 x ptr> <ptr poison, ptr getelementptr inbounds (%struct.1, ptr @glb.struct.1, i64 100)>
   %sel = select i1 %cond, <2 x ptr> %y, <2 x ptr> %freeze
   ret <2 x ptr> %sel
+}
+
+define void @no_fold_masked_min_loop(ptr nocapture readonly %vals, ptr nocapture readonly %masks, ptr nocapture %out, i64 %n) {
+; CHECK-LABEL: @no_fold_masked_min_loop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[NEXT_INDEX:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi i8 [ -1, [[ENTRY]] ], [ [[RES:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[VAL_PTR:%.*]] = getelementptr inbounds i8, ptr [[VALS:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[MASK_PTR:%.*]] = getelementptr inbounds i8, ptr [[MASKS:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i8, ptr [[VAL_PTR]], align 1
+; CHECK-NEXT:    [[MASK:%.*]] = load i8, ptr [[MASK_PTR]], align 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[MASK]], 0
+; CHECK-NEXT:    [[MASKED_VAL:%.*]] = select i1 [[COND]], i8 [[VAL]], i8 -1
+; CHECK-NEXT:    [[RES]] = call i8 @llvm.umin.i8(i8 [[ACC]], i8 [[MASKED_VAL]])
+; CHECK-NEXT:    [[NEXT_INDEX]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXT_INDEX]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    store i8 [[RES]], ptr [[OUT:%.*]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %index = phi i64 [0, %entry], [%next_index, %loop]
+  %acc = phi i8 [255, %entry], [%res, %loop]
+
+  %val_ptr = getelementptr inbounds i8, ptr %vals, i64 %index
+  %mask_ptr = getelementptr inbounds i8, ptr %masks, i64 %index
+
+  %val = load i8, ptr %val_ptr, align 1
+  %mask = load i8, ptr %mask_ptr, align 1
+
+  %cond = icmp eq i8 %mask, 0
+  %masked_val = select i1 %cond, i8 %val, i8 -1
+  %res = call i8 @llvm.umin.i8(i8 %acc, i8 %masked_val)
+
+  %next_index = add i64 %index, 1
+  %done = icmp eq i64 %next_index, %n
+  br i1 %done, label %exit, label %loop
+
+exit:
+  store i8 %res, ptr %out, align 1
+  ret void
 }

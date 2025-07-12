@@ -65,6 +65,34 @@ template <> struct ScalarEnumerationTraits<InfoType> {
   }
 };
 
+template <> struct ScalarEnumerationTraits<clang::doc::CommentKind> {
+  static void enumeration(IO &IO, clang::doc::CommentKind &Value) {
+    IO.enumCase(Value, "FullComment", clang::doc::CommentKind::CK_FullComment);
+    IO.enumCase(Value, "ParagraphComment",
+                clang::doc::CommentKind::CK_ParagraphComment);
+    IO.enumCase(Value, "TextComment", clang::doc::CommentKind::CK_TextComment);
+    IO.enumCase(Value, "InlineCommandComment",
+                clang::doc::CommentKind::CK_InlineCommandComment);
+    IO.enumCase(Value, "HTMLStartTagComment",
+                clang::doc::CommentKind::CK_HTMLStartTagComment);
+    IO.enumCase(Value, "HTMLEndTagComment",
+                clang::doc::CommentKind::CK_HTMLEndTagComment);
+    IO.enumCase(Value, "BlockCommandComment",
+                clang::doc::CommentKind::CK_BlockCommandComment);
+    IO.enumCase(Value, "ParamCommandComment",
+                clang::doc::CommentKind::CK_ParamCommandComment);
+    IO.enumCase(Value, "TParamCommandComment",
+                clang::doc::CommentKind::CK_TParamCommandComment);
+    IO.enumCase(Value, "VerbatimBlockComment",
+                clang::doc::CommentKind::CK_VerbatimBlockComment);
+    IO.enumCase(Value, "VerbatimBlockLineComment",
+                clang::doc::CommentKind::CK_VerbatimBlockLineComment);
+    IO.enumCase(Value, "VerbatimLineComment",
+                clang::doc::CommentKind::CK_VerbatimLineComment);
+    IO.enumCase(Value, "Unknown", clang::doc::CommentKind::CK_Unknown);
+  }
+};
+
 // Scalars to YAML output.
 template <unsigned U> struct ScalarTraits<SmallString<U>> {
 
@@ -149,7 +177,7 @@ static void recordInfoMapping(IO &IO, RecordInfo &I) {
 }
 
 static void commentInfoMapping(IO &IO, CommentInfo &I) {
-  IO.mapOptional("Kind", I.Kind, SmallString<16>());
+  IO.mapOptional("Kind", I.Kind, CommentKind::CK_Unknown);
   IO.mapOptional("Text", I.Text, SmallString<64>());
   IO.mapOptional("Name", I.Name, SmallString<16>());
   IO.mapOptional("Direction", I.Direction, SmallString<8>());
@@ -169,7 +197,7 @@ static void commentInfoMapping(IO &IO, CommentInfo &I) {
 
 template <> struct MappingTraits<Location> {
   static void mapping(IO &IO, Location &Loc) {
-    IO.mapOptional("LineNumber", Loc.LineNumber, 0);
+    IO.mapOptional("LineNumber", Loc.StartLineNumber, 0);
     IO.mapOptional("Filename", Loc.Filename, SmallString<32>());
   }
 };
@@ -379,6 +407,10 @@ llvm::Error YAMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
     break;
   case InfoType::IT_typedef:
     InfoYAML << *static_cast<clang::doc::TypedefInfo *>(I);
+    break;
+  case InfoType::IT_concept:
+  case InfoType::IT_variable:
+  case InfoType::IT_friend:
     break;
   case InfoType::IT_default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),

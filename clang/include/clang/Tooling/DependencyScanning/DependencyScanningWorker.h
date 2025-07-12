@@ -59,6 +59,8 @@ public:
 
   virtual void handleDirectModuleDependency(ModuleID MD) = 0;
 
+  virtual void handleVisibleModule(std::string ModuleName) = 0;
+
   virtual void handleContextHash(std::string Hash) = 0;
 };
 

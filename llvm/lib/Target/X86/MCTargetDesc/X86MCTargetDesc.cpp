@@ -17,6 +17,7 @@
 #include "X86IntelInstPrinter.h"
 #include "X86MCAsmInfo.h"
 #include "X86TargetStreamer.h"
+#include "llvm-c/Visibility.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/MC/MCDwarf.h"
@@ -451,8 +452,6 @@ static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
       MAI = new X86MCAsmInfoMicrosoft(TheTriple);
   } else if (TheTriple.isOSCygMing() ||
              TheTriple.isWindowsItaniumEnvironment()) {
-    MAI = new X86MCAsmInfoGNUCOFF(TheTriple);
-  } else if (TheTriple.isUEFI()) {
     MAI = new X86MCAsmInfoGNUCOFF(TheTriple);
   } else {
     // The default is ELF.

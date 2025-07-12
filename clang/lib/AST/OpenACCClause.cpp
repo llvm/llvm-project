@@ -109,13 +109,12 @@ OpenACCSelfClause *OpenACCSelfClause::Create(const ASTContext &C,
 
 OpenACCSelfClause::OpenACCSelfClause(SourceLocation BeginLoc,
                                      SourceLocation LParenLoc,
-                                     llvm::ArrayRef<Expr *> VarList,
+                                     ArrayRef<Expr *> VarList,
                                      SourceLocation EndLoc)
     : OpenACCClauseWithParams(OpenACCClauseKind::Self, BeginLoc, LParenLoc,
                               EndLoc),
       HasConditionExpr(std::nullopt), NumExprs(VarList.size()) {
-  std::uninitialized_copy(VarList.begin(), VarList.end(),
-                          getTrailingObjects<Expr *>());
+  llvm::uninitialized_copy(VarList, getTrailingObjects());
 }
 
 OpenACCSelfClause::OpenACCSelfClause(SourceLocation BeginLoc,
@@ -127,8 +126,7 @@ OpenACCSelfClause::OpenACCSelfClause(SourceLocation BeginLoc,
   assert((!ConditionExpr || ConditionExpr->isInstantiationDependent() ||
           ConditionExpr->getType()->isScalarType()) &&
          "Condition expression type not scalar/dependent");
-  std::uninitialized_copy(&ConditionExpr, &ConditionExpr + 1,
-                          getTrailingObjects<Expr *>());
+  llvm::uninitialized_copy(ArrayRef(ConditionExpr), getTrailingObjects());
 }
 
 OpenACCClause::child_range OpenACCClause::children() {
@@ -167,11 +165,8 @@ OpenACCGangClause::OpenACCGangClause(SourceLocation BeginLoc,
     : OpenACCClauseWithExprs(OpenACCClauseKind::Gang, BeginLoc, LParenLoc,
                              EndLoc) {
   assert(GangKinds.size() == IntExprs.size() && "Mismatch exprs/kind?");
-  std::uninitialized_copy(IntExprs.begin(), IntExprs.end(),
-                          getTrailingObjects<Expr *>());
-  setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), IntExprs.size()));
-  std::uninitialized_copy(GangKinds.begin(), GangKinds.end(),
-                          getTrailingObjects<OpenACCGangKind>());
+  setExprs(getTrailingObjects<Expr *>(IntExprs.size()), IntExprs);
+  llvm::uninitialized_copy(GangKinds, getTrailingObjects<OpenACCGangKind>());
 }
 
 OpenACCNumWorkersClause *
@@ -865,7 +860,7 @@ void OpenACCClausePrinter::VisitReductionClause(
 
 void OpenACCClausePrinter::VisitWaitClause(const OpenACCWaitClause &C) {
   OS << "wait";
-  if (!C.getLParenLoc().isInvalid()) {
+  if (C.hasExprs()) {
     OS << "(";
     if (C.hasDevNumExpr()) {
       OS << "devnum: ";

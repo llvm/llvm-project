@@ -32,7 +32,8 @@ unsigned R600TTIImpl::getHardwareNumberOfRegisters(bool Vec) const {
   return 4 * 128; // XXX - 4 channels. Should these count as vector instead?
 }
 
-unsigned R600TTIImpl::getNumberOfRegisters(bool Vec) const {
+unsigned R600TTIImpl::getNumberOfRegisters(unsigned ClassID) const {
+  bool Vec = ClassID == 1;
   return getHardwareNumberOfRegisters(Vec);
 }
 
@@ -109,8 +110,9 @@ InstructionCost R600TTIImpl::getCFInstrCost(unsigned Opcode,
 
 InstructionCost R600TTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                                 TTI::TargetCostKind CostKind,
-                                                unsigned Index, Value *Op0,
-                                                Value *Op1) const {
+                                                unsigned Index,
+                                                const Value *Op0,
+                                                const Value *Op1) const {
   switch (Opcode) {
   case Instruction::ExtractElement:
   case Instruction::InsertElement: {

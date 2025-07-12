@@ -268,7 +268,8 @@ Expected<std::string> findProgram(StringRef Name, ArrayRef<StringRef> Paths) {
 bool linkerSupportsLTO(const ArgList &Args) {
   llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
   return Triple.isNVPTX() || Triple.isAMDGPU() ||
-         Args.getLastArgValue(OPT_linker_path_EQ).ends_with("lld");
+         (!Triple.isGPU() &&
+          Args.getLastArgValue(OPT_linker_path_EQ).ends_with("lld"));
 }
 
 /// Returns the hashed value for a constant string.
@@ -310,22 +311,21 @@ Error relocateOffloadSection(const ArgList &Args, StringRef Output) {
   // Remove the old .llvm.offloading section to prevent further linking.
   ObjcopyArgs.emplace_back("--remove-section");
   ObjcopyArgs.emplace_back(".llvm.offloading");
-  for (StringRef Prefix : {"omp", "cuda", "hip"}) {
-    auto Section = (Prefix + "_offloading_entries").str();
-    // Rename the offloading entires to make them private to this link unit.
-    ObjcopyArgs.emplace_back("--rename-section");
-    ObjcopyArgs.emplace_back(
-        Args.MakeArgString(Section + "=" + Section + Suffix));
+  StringRef Prefix = "llvm";
+  auto Section = (Prefix + "_offload_entries").str();
+  // Rename the offloading entires to make them private to this link unit.
+  ObjcopyArgs.emplace_back("--rename-section");
+  ObjcopyArgs.emplace_back(
+      Args.MakeArgString(Section + "=" + Section + Suffix));
 
-    // Rename the __start_ / __stop_ symbols appropriately to iterate over the
-    // newly renamed section containing the offloading entries.
-    ObjcopyArgs.emplace_back("--redefine-sym");
-    ObjcopyArgs.emplace_back(Args.MakeArgString("__start_" + Section + "=" +
-                                                "__start_" + Section + Suffix));
-    ObjcopyArgs.emplace_back("--redefine-sym");
-    ObjcopyArgs.emplace_back(Args.MakeArgString("__stop_" + Section + "=" +
-                                                "__stop_" + Section + Suffix));
-  }
+  // Rename the __start_ / __stop_ symbols appropriately to iterate over the
+  // newly renamed section containing the offloading entries.
+  ObjcopyArgs.emplace_back("--redefine-sym");
+  ObjcopyArgs.emplace_back(Args.MakeArgString("__start_" + Section + "=" +
+                                              "__start_" + Section + Suffix));
+  ObjcopyArgs.emplace_back("--redefine-sym");
+  ObjcopyArgs.emplace_back(Args.MakeArgString("__stop_" + Section + "=" +
+                                              "__stop_" + Section + Suffix));
 
   if (Error Err = executeCommands(*ObjcopyPath, ObjcopyArgs))
     return Err;
@@ -417,9 +417,6 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
       "clang-offload-bundler", {getMainExecutable("clang-offload-bundler")});
   if (!OffloadBundlerPath)
     return OffloadBundlerPath.takeError();
-
-  llvm::Triple Triple(
-      Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
 
   // Create a new file to write the linked device image to.
   auto TempFileOrErr =
@@ -758,7 +755,6 @@ bundleCuda(ArrayRef<OffloadingImage> Images, const ArgList &Args) {
     InputFiles.emplace_back(std::make_pair(Image.Image->getBufferIdentifier(),
                                            Image.StringData.lookup("arch")));
 
-  Triple TheTriple = Triple(Images.front().StringData.lookup("triple"));
   auto FileOrErr = nvptx::fatbinary(InputFiles, Args);
   if (!FileOrErr)
     return FileOrErr.takeError();
@@ -781,7 +777,6 @@ bundleHIP(ArrayRef<OffloadingImage> Images, const ArgList &Args) {
     InputFiles.emplace_back(std::make_pair(Image.Image->getBufferIdentifier(),
                                            Image.StringData.lookup("arch")));
 
-  Triple TheTriple = Triple(Images.front().StringData.lookup("triple"));
   auto FileOrErr = amdgcn::fatbinary(InputFiles, Args);
   if (!FileOrErr)
     return FileOrErr.takeError();
@@ -1307,6 +1302,9 @@ getDeviceInput(const ArgList &Args) {
   // after every regular input file so that libraries may be included out of
   // order. This follows 'ld.lld' semantics which are more lenient.
   bool Extracted = true;
+  llvm::DenseSet<StringRef> ShouldExtract;
+  for (auto &Arg : Args.getAllArgValues(OPT_should_extract))
+    ShouldExtract.insert(Arg);
   while (Extracted) {
     Extracted = false;
     for (OffloadFile &Binary : ArchiveFilesToExtract) {
@@ -1320,8 +1318,9 @@ getDeviceInput(const ArgList &Args) {
           CompatibleTargets.emplace_back(ID);
 
       for (const auto &[Index, ID] : llvm::enumerate(CompatibleTargets)) {
-        // Only extract an if we have an an object matching this target.
-        if (!InputFiles.count(ID))
+        // Only extract an if we have an an object matching this target or it
+        // was specifically requested.
+        if (!InputFiles.count(ID) && !ShouldExtract.contains(ID.second))
           continue;
 
         Expected<bool> ExtractOrErr =
@@ -1335,7 +1334,7 @@ getDeviceInput(const ArgList &Args) {
 
         // Skip including the file if it is an archive that does not resolve
         // any symbols.
-        if (!Extracted)
+        if (!Extracted && !ShouldExtract.contains(ID.second))
           continue;
 
         // If another target needs this binary it must be copied instead.
@@ -1404,7 +1403,7 @@ int main(int Argc, char **Argv) {
   PassPlugins.setCallback([&](const std::string &PluginPath) {
     auto Plugin = PassPlugin::Load(PluginPath);
     if (!Plugin)
-      report_fatal_error(Plugin.takeError(), /*gen_crash_diag=*/false);
+      reportFatalUsageError(Plugin.takeError());
     PluginList.emplace_back(Plugin.get());
   });
   cl::ParseCommandLineOptions(NewArgv.size(), &NewArgv[0]);

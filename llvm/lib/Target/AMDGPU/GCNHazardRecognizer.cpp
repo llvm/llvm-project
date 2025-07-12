@@ -44,6 +44,11 @@ static cl::opt<unsigned, false, MFMAPaddingRatioParser>
                      cl::desc("Fill a percentage of the latency between "
                               "neighboring MFMA with s_nops."));
 
+// This is intended for debugging purposes only.
+static cl::opt<unsigned>
+    NopPadding("amdgpu-snop-padding", cl::init(0), cl::Hidden,
+               cl::desc("Insert a s_nop x before every instruction"));
+
 //===----------------------------------------------------------------------===//
 // Hazard Recognizer Implementation
 //===----------------------------------------------------------------------===//
@@ -183,10 +188,7 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   if (ST.hasNoDataDepHazard())
     return NoHazard;
 
-  // FIXME: Should flat be considered vmem?
-  if ((SIInstrInfo::isVMEM(*MI) ||
-       SIInstrInfo::isFLAT(*MI))
-      && checkVMEMHazards(MI) > 0)
+  if (SIInstrInfo::isVMEM(*MI) && checkVMEMHazards(MI) > 0)
     return HazardType;
 
   if (SIInstrInfo::isVALU(*MI) && checkVALUHazards(MI) > 0)
@@ -202,8 +204,8 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
     return HazardType;
 
   if ((SIInstrInfo::isVALU(*MI) || SIInstrInfo::isVMEM(*MI) ||
-       SIInstrInfo::isFLAT(*MI) || SIInstrInfo::isDS(*MI) ||
-       SIInstrInfo::isEXP(*MI)) && checkMAIVALUHazards(MI) > 0)
+       SIInstrInfo::isDS(*MI) || SIInstrInfo::isEXP(*MI)) &&
+      checkMAIVALUHazards(MI) > 0)
     return HazardType;
 
   if (isSGetReg(MI->getOpcode()) && checkGetRegHazards(MI) > 0)
@@ -229,9 +231,8 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   if (SIInstrInfo::isMAI(*MI) && checkMAIHazards(MI) > 0)
     return HazardType;
 
-  if ((SIInstrInfo::isVMEM(*MI) ||
-       SIInstrInfo::isFLAT(*MI) ||
-       SIInstrInfo::isDS(*MI)) && checkMAILdStHazards(MI) > 0)
+  if ((SIInstrInfo::isVMEM(*MI) || SIInstrInfo::isDS(*MI)) &&
+      checkMAILdStHazards(MI) > 0)
     return HazardType;
 
   if (MI->isInlineAsm() && checkInlineAsmHazards(MI) > 0)
@@ -304,7 +305,7 @@ unsigned GCNHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
   unsigned W = PreEmitNoopsCommon(MI);
   fixHazards(MI);
   CurrCycleInstr = nullptr;
-  return W;
+  return std::max(W, NopPadding.getValue());
 }
 
 unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) {
@@ -324,7 +325,7 @@ unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) {
   if (ST.hasNoDataDepHazard())
     return WaitStates;
 
-  if (SIInstrInfo::isVMEM(*MI) || SIInstrInfo::isFLAT(*MI))
+  if (SIInstrInfo::isVMEM(*MI))
     WaitStates = std::max(WaitStates, checkVMEMHazards(MI));
 
   if (SIInstrInfo::isVALU(*MI))
@@ -340,8 +341,8 @@ unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) {
     WaitStates = std::max(WaitStates, checkRWLaneHazards(MI));
 
   if ((SIInstrInfo::isVALU(*MI) || SIInstrInfo::isVMEM(*MI) ||
-       SIInstrInfo::isFLAT(*MI) || SIInstrInfo::isDS(*MI) ||
-       SIInstrInfo::isEXP(*MI)) && checkMAIVALUHazards(MI) > 0)
+       SIInstrInfo::isDS(*MI) || SIInstrInfo::isEXP(*MI)) &&
+      checkMAIVALUHazards(MI) > 0)
     WaitStates = std::max(WaitStates, checkMAIVALUHazards(MI));
 
   if (MI->isInlineAsm())
@@ -369,9 +370,7 @@ unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) {
   if (SIInstrInfo::isMAI(*MI))
     return std::max(WaitStates, checkMAIHazards(MI));
 
-  if (SIInstrInfo::isVMEM(*MI) ||
-      SIInstrInfo::isFLAT(*MI) ||
-      SIInstrInfo::isDS(*MI))
+  if (SIInstrInfo::isVMEM(*MI) || SIInstrInfo::isDS(*MI))
     return std::max(WaitStates, checkMAILdStHazards(MI));
 
   if (ST.hasGFX950Insts() && isPermlane(*MI))
@@ -423,7 +422,8 @@ void GCNHazardRecognizer::AdvanceCycle() {
 }
 
 void GCNHazardRecognizer::RecedeCycle() {
-  llvm_unreachable("hazard recognizer does not support bottom-up scheduling.");
+  assert(!IsHazardRecognizerMode &&
+         "Bottom-up scheduling shouldn't run in hazard recognizer mode");
 }
 
 //===----------------------------------------------------------------------===//
@@ -598,7 +598,7 @@ static bool breaksSMEMSoftClause(MachineInstr *MI) {
 }
 
 static bool breaksVMEMSoftClause(MachineInstr *MI) {
-  return !SIInstrInfo::isVMEM(*MI) && !SIInstrInfo::isFLAT(*MI);
+  return !SIInstrInfo::isVMEM(*MI);
 }
 
 int GCNHazardRecognizer::checkSoftClauseHazards(MachineInstr *MEM) {
@@ -1250,8 +1250,7 @@ bool GCNHazardRecognizer::fixVMEMtoScalarWriteHazards(MachineInstr *MI) {
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
   auto IsHazardFn = [TRI, MI](const MachineInstr &I) {
-    if (!SIInstrInfo::isVMEM(I) && !SIInstrInfo::isDS(I) &&
-        !SIInstrInfo::isFLAT(I))
+    if (!SIInstrInfo::isVMEM(I) && !SIInstrInfo::isDS(I))
       return false;
 
     for (const MachineOperand &Def : MI->defs()) {
@@ -1425,8 +1424,8 @@ static bool shouldRunLdsBranchVmemWARHazardFixup(const MachineFunction &MF,
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
       HasLds |= SIInstrInfo::isDS(MI);
-      HasVmem |=
-          SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI);
+      HasVmem |= (SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
+                 SIInstrInfo::isSegmentSpecificFLAT(MI);
       if (HasLds && HasVmem)
         return true;
     }
@@ -1450,7 +1449,8 @@ bool GCNHazardRecognizer::fixLdsBranchVmemWARHazard(MachineInstr *MI) {
   auto IsHazardInst = [](const MachineInstr &MI) {
     if (SIInstrInfo::isDS(MI))
       return 1;
-    if (SIInstrInfo::isVMEM(MI) || SIInstrInfo::isSegmentSpecificFLAT(MI))
+    if ((SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
+        SIInstrInfo::isSegmentSpecificFLAT(MI))
       return 2;
     return 0;
   };
@@ -1517,8 +1517,8 @@ bool GCNHazardRecognizer::fixLdsDirectVALUHazard(MachineInstr *MI) {
     if (WaitStates >= NoHazardWaitStates)
       return true;
     // Instructions which cause va_vdst==0 expire hazard
-    return SIInstrInfo::isVMEM(I) || SIInstrInfo::isFLAT(I) ||
-           SIInstrInfo::isDS(I) || SIInstrInfo::isEXP(I);
+    return SIInstrInfo::isVMEM(I) || SIInstrInfo::isDS(I) ||
+           SIInstrInfo::isEXP(I);
   };
   auto GetWaitStatesFn = [](const MachineInstr &MI) {
     return SIInstrInfo::isVALU(MI) ? 1 : 0;
@@ -1549,8 +1549,7 @@ bool GCNHazardRecognizer::fixLdsDirectVMEMHazard(MachineInstr *MI) {
   const Register VDSTReg = VDST->getReg();
 
   auto IsHazardFn = [this, VDSTReg](const MachineInstr &I) {
-    if (!SIInstrInfo::isVMEM(I) && !SIInstrInfo::isFLAT(I) &&
-        !SIInstrInfo::isDS(I))
+    if (!SIInstrInfo::isVMEM(I) && !SIInstrInfo::isDS(I))
       return false;
     return I.readsRegister(VDSTReg, &TRI) || I.modifiesRegister(VDSTReg, &TRI);
   };
@@ -1635,8 +1634,8 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
       return HazardExpired;
 
     // Instructions which cause va_vdst==0 expire hazard
-    if (SIInstrInfo::isVMEM(I) || SIInstrInfo::isFLAT(I) ||
-        SIInstrInfo::isDS(I) || SIInstrInfo::isEXP(I) ||
+    if (SIInstrInfo::isVMEM(I) || SIInstrInfo::isDS(I) ||
+        SIInstrInfo::isEXP(I) ||
         (I.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
          AMDGPU::DepCtr::decodeFieldVaVdst(I.getOperand(0).getImm()) == 0))
       return HazardExpired;
@@ -1772,8 +1771,8 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
       return HazardExpired;
 
     // Instructions which cause va_vdst==0 expire hazard
-    if (SIInstrInfo::isVMEM(I) || SIInstrInfo::isFLAT(I) ||
-        SIInstrInfo::isDS(I) || SIInstrInfo::isEXP(I) ||
+    if (SIInstrInfo::isVMEM(I) || SIInstrInfo::isDS(I) ||
+        SIInstrInfo::isEXP(I) ||
         (I.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
          I.getOperand(0).getImm() == 0x0fff))
       return HazardExpired;
@@ -2003,7 +2002,7 @@ int GCNHazardRecognizer::checkFPAtomicToDenormModeHazard(MachineInstr *MI) {
     return 0;
 
   auto IsHazardFn = [](const MachineInstr &I) {
-    if (!SIInstrInfo::isVMEM(I) && !SIInstrInfo::isFLAT(I))
+    if (!SIInstrInfo::isVMEM(I))
       return false;
     return SIInstrInfo::isFPAtomic(I);
   };
@@ -2625,9 +2624,7 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) {
 
   int WaitStatesNeeded = 0;
 
-  bool IsMem = SIInstrInfo::isVMEM(*MI) ||
-               SIInstrInfo::isFLAT(*MI) ||
-               SIInstrInfo::isDS(*MI);
+  bool IsMem = SIInstrInfo::isVMEM(*MI) || SIInstrInfo::isDS(*MI);
   bool IsMemOrExport = IsMem || SIInstrInfo::isEXP(*MI);
   bool IsVALU = SIInstrInfo::isVALU(*MI);
 

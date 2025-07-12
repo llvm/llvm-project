@@ -69,6 +69,10 @@ bool isASafeCallArg(const clang::Expr *E);
 /// \returns true if E is a MemberExpr accessing a const smart pointer type.
 bool isConstOwnerPtrMemberExpr(const clang::Expr *E);
 
+/// \returns true if E is a MemberExpr accessing a member variable which
+/// supports CheckedPtr.
+bool isExprToGetCheckedPtrCapableMember(const clang::Expr *E);
+
 /// \returns true if E is a CXXMemberCallExpr which returns a const smart
 /// pointer type.
 class EnsureFunctionAnalysis {

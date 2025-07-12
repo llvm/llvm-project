@@ -53,7 +53,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
@@ -67,20 +66,18 @@
 using namespace clang;
 
 CompilerInstance::CompilerInstance(
+    std::shared_ptr<CompilerInvocation> Invocation,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     ModuleCache *ModCache)
     : ModuleLoader(/*BuildingModule=*/ModCache),
-      Invocation(new CompilerInvocation()),
+      Invocation(std::move(Invocation)),
       ModCache(ModCache ? ModCache : createCrossProcessModuleCache()),
-      ThePCHContainerOperations(std::move(PCHContainerOps)) {}
+      ThePCHContainerOperations(std::move(PCHContainerOps)) {
+  assert(this->Invocation && "Invocation must not be null");
+}
 
 CompilerInstance::~CompilerInstance() {
   assert(OutputFiles.empty() && "Still output files in flight?");
-}
-
-void CompilerInstance::setInvocation(
-    std::shared_ptr<CompilerInvocation> Value) {
-  Invocation = std::move(Value);
 }
 
 bool CompilerInstance::shouldBuildGlobalModuleIndex() const {
@@ -110,7 +107,7 @@ void CompilerInstance::setAuxTarget(TargetInfo *Value) { AuxTarget = Value; }
 bool CompilerInstance::createTarget() {
   // Create the target instance.
   setTarget(TargetInfo::CreateTargetInfo(getDiagnostics(),
-                                         getInvocation().TargetOpts));
+                                         getInvocation().getTargetOpts()));
   if (!hasTarget())
     return false;
 
@@ -119,14 +116,14 @@ bool CompilerInstance::createTarget() {
   if (!getAuxTarget() &&
       (getLangOpts().CUDA || getLangOpts().isTargetDevice()) &&
       !getFrontendOpts().AuxTriple.empty()) {
-    auto TO = std::make_shared<TargetOptions>();
+    auto &TO = AuxTargetOpts = std::make_unique<TargetOptions>();
     TO->Triple = llvm::Triple::normalize(getFrontendOpts().AuxTriple);
     if (getFrontendOpts().AuxTargetCPU)
       TO->CPU = *getFrontendOpts().AuxTargetCPU;
     if (getFrontendOpts().AuxTargetFeatures)
       TO->FeaturesAsWritten = *getFrontendOpts().AuxTargetFeatures;
     TO->HostTriple = getTarget().getTriple().str();
-    setAuxTarget(TargetInfo::CreateTargetInfo(getDiagnostics(), TO));
+    setAuxTarget(TargetInfo::CreateTargetInfo(getDiagnostics(), *TO));
   }
 
   if (!getTarget().hasStrictFP() && !getLangOpts().ExpStrictFP) {
@@ -151,7 +148,7 @@ bool CompilerInstance::createTarget() {
   // Inform the target of the language options.
   // FIXME: We shouldn't need to do this, the target should be immutable once
   // created. This complexity should be lifted elsewhere.
-  getTarget().adjust(getDiagnostics(), getLangOpts());
+  getTarget().adjust(getDiagnostics(), getLangOpts(), getAuxTarget());
 
   if (auto *Aux = getAuxTarget())
     getTarget().setAuxTarget(Aux);
@@ -282,20 +279,20 @@ static void collectVFSEntries(CompilerInstance &CI,
 }
 
 // Diagnostics
-static void SetUpDiagnosticLog(DiagnosticOptions *DiagOpts,
+static void SetUpDiagnosticLog(DiagnosticOptions &DiagOpts,
                                const CodeGenOptions *CodeGenOpts,
                                DiagnosticsEngine &Diags) {
   std::error_code EC;
   std::unique_ptr<raw_ostream> StreamOwner;
   raw_ostream *OS = &llvm::errs();
-  if (DiagOpts->DiagnosticLogFile != "-") {
+  if (DiagOpts.DiagnosticLogFile != "-") {
     // Create the output stream.
     auto FileOS = std::make_unique<llvm::raw_fd_ostream>(
-        DiagOpts->DiagnosticLogFile, EC,
+        DiagOpts.DiagnosticLogFile, EC,
         llvm::sys::fs::OF_Append | llvm::sys::fs::OF_TextWithCRLF);
     if (EC) {
       Diags.Report(diag::warn_fe_cc_log_diagnostics_failure)
-          << DiagOpts->DiagnosticLogFile << EC.message();
+          << DiagOpts.DiagnosticLogFile << EC.message();
     } else {
       FileOS->SetUnbuffered();
       OS = FileOS.get();
@@ -317,7 +314,7 @@ static void SetUpDiagnosticLog(DiagnosticOptions *DiagOpts,
   }
 }
 
-static void SetupSerializedDiagnostics(DiagnosticOptions *DiagOpts,
+static void SetupSerializedDiagnostics(DiagnosticOptions &DiagOpts,
                                        DiagnosticsEngine &Diags,
                                        StringRef OutputFile) {
   auto SerializedConsumer =
@@ -335,12 +332,12 @@ static void SetupSerializedDiagnostics(DiagnosticOptions *DiagOpts,
 void CompilerInstance::createDiagnostics(llvm::vfs::FileSystem &VFS,
                                          DiagnosticConsumer *Client,
                                          bool ShouldOwnClient) {
-  Diagnostics = createDiagnostics(VFS, &getDiagnosticOpts(), Client,
+  Diagnostics = createDiagnostics(VFS, getDiagnosticOpts(), Client,
                                   ShouldOwnClient, &getCodeGenOpts());
 }
 
 IntrusiveRefCntPtr<DiagnosticsEngine> CompilerInstance::createDiagnostics(
-    llvm::vfs::FileSystem &VFS, DiagnosticOptions *Opts,
+    llvm::vfs::FileSystem &VFS, DiagnosticOptions &Opts,
     DiagnosticConsumer *Client, bool ShouldOwnClient,
     const CodeGenOptions *CodeGenOpts) {
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
@@ -351,25 +348,24 @@ IntrusiveRefCntPtr<DiagnosticsEngine> CompilerInstance::createDiagnostics(
   // implementing -verify.
   if (Client) {
     Diags->setClient(Client, ShouldOwnClient);
-  } else if (Opts->getFormat() == DiagnosticOptions::SARIF) {
+  } else if (Opts.getFormat() == DiagnosticOptions::SARIF) {
     Diags->setClient(new SARIFDiagnosticPrinter(llvm::errs(), Opts));
   } else
     Diags->setClient(new TextDiagnosticPrinter(llvm::errs(), Opts));
 
   // Chain in -verify checker, if requested.
-  if (Opts->VerifyDiagnostics)
+  if (Opts.VerifyDiagnostics)
     Diags->setClient(new VerifyDiagnosticConsumer(*Diags));
 
   // Chain in -diagnostic-log-file dumper, if requested.
-  if (!Opts->DiagnosticLogFile.empty())
+  if (!Opts.DiagnosticLogFile.empty())
     SetUpDiagnosticLog(Opts, CodeGenOpts, *Diags);
 
-  if (!Opts->DiagnosticSerializationFile.empty())
-    SetupSerializedDiagnostics(Opts, *Diags,
-                               Opts->DiagnosticSerializationFile);
+  if (!Opts.DiagnosticSerializationFile.empty())
+    SetupSerializedDiagnostics(Opts, *Diags, Opts.DiagnosticSerializationFile);
 
   // Configure our handling of diagnostics.
-  ProcessWarningOptions(*Diags, *Opts, VFS);
+  ProcessWarningOptions(*Diags, Opts, VFS);
 
   return Diags;
 }
@@ -458,7 +454,7 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
                                       getSourceManager(), *HeaderInfo, *this,
                                       /*IdentifierInfoLookup=*/nullptr,
                                       /*OwnsHeaderSearch=*/true, TUKind);
-  getTarget().adjust(getDiagnostics(), getLangOpts());
+  getTarget().adjust(getDiagnostics(), getLangOpts(), getAuxTarget());
   PP->Initialize(getTarget(), getAuxTarget());
 
   if (PPOpts.DetailedRecord)
@@ -536,6 +532,9 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
                            /*ShowAllHeaders=*/true, /*OutputPath=*/"",
                            /*ShowDepth=*/true, /*MSStyle=*/true);
   }
+
+  if (GetDependencyDirectives)
+    PP->setDependencyDirectivesGetter(*GetDependencyDirectives);
 }
 
 std::string CompilerInstance::getSpecificModuleCachePath(StringRef ModuleHash) {
@@ -579,13 +578,13 @@ struct ReadModuleNames : ASTReaderListener {
     ModuleMap &MM = PP.getHeaderSearchInfo().getModuleMap();
     for (const std::string &LoadedModule : LoadedModules)
       MM.cacheModuleLoad(*PP.getIdentifierInfo(LoadedModule),
-                         MM.findModule(LoadedModule));
+                         MM.findOrLoadModule(LoadedModule));
     LoadedModules.clear();
   }
 
   void markAllUnavailable() {
     for (const std::string &LoadedModule : LoadedModules) {
-      if (Module *M = PP.getHeaderSearchInfo().getModuleMap().findModule(
+      if (Module *M = PP.getHeaderSearchInfo().getModuleMap().findOrLoadModule(
               LoadedModule)) {
         M->HasIncompatibleModuleFile = true;
 
@@ -637,8 +636,9 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
       PP, ModCache, &Context, PCHContainerRdr, Extensions,
       Sysroot.empty() ? "" : Sysroot.data(), DisableValidation,
       AllowPCHWithCompilerErrors, /*AllowConfigurationMismatch*/ false,
-      HSOpts.ModulesValidateSystemHeaders, HSOpts.ValidateASTInputFilesContent,
-      UseGlobalModuleIndex));
+      HSOpts.ModulesValidateSystemHeaders,
+      HSOpts.ModulesForceValidateUserHeaders,
+      HSOpts.ValidateASTInputFilesContent, UseGlobalModuleIndex));
 
   // We need the external source to be set up before we read the AST, because
   // eagerly-deserialized declarations may use it.
@@ -1153,7 +1153,7 @@ static Language getLanguageFromOptions(const LangOptions &LangOpts) {
 std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
     SourceLocation ImportLoc, StringRef ModuleName, FrontendInputFile Input,
     StringRef OriginalModuleMapFile, StringRef ModuleFileName,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
+    std::optional<ThreadSafeCloneConfig> ThreadSafeConfig) {
   // Construct a compiler invocation for creating this module.
   auto Invocation = std::make_shared<CompilerInvocation>(getInvocation());
 
@@ -1191,7 +1191,7 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   FrontendOpts.OriginalModuleMap = std::string(OriginalModuleMapFile);
   // Force implicitly-built modules to hash the content of the module file.
   HSOpts.ModulesHashContent = true;
-  FrontendOpts.Inputs = {Input};
+  FrontendOpts.Inputs = {std::move(Input)};
 
   // Don't free the remapped file buffers; they are owned by our caller.
   PPOpts.RetainRemappedFileBuffers = true;
@@ -1207,43 +1207,60 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   // CompilerInstance::CompilerInstance is responsible for finalizing the
   // buffers to prevent use-after-frees.
   auto InstancePtr = std::make_unique<CompilerInstance>(
-      getPCHContainerOperations(), &getModuleCache());
+      std::move(Invocation), getPCHContainerOperations(), &getModuleCache());
   auto &Instance = *InstancePtr;
 
-  auto &Inv = *Invocation;
-  Instance.setInvocation(std::move(Invocation));
+  auto &Inv = Instance.getInvocation();
 
-  if (VFS) {
-    Instance.createFileManager(std::move(VFS));
+  if (ThreadSafeConfig) {
+    Instance.createFileManager(ThreadSafeConfig->getVFS());
   } else if (FrontendOpts.ModulesShareFileManager) {
     Instance.setFileManager(&getFileManager());
   } else {
     Instance.createFileManager(&getVirtualFileSystem());
   }
 
-  Instance.createDiagnostics(
-      Instance.getVirtualFileSystem(),
-      new ForwardingDiagnosticConsumer(getDiagnosticClient()),
-      /*ShouldOwnClient=*/true);
+  if (ThreadSafeConfig) {
+    Instance.createDiagnostics(Instance.getVirtualFileSystem(),
+                               &ThreadSafeConfig->getDiagConsumer(),
+                               /*ShouldOwnClient=*/false);
+  } else {
+    Instance.createDiagnostics(
+        Instance.getVirtualFileSystem(),
+        new ForwardingDiagnosticConsumer(getDiagnosticClient()),
+        /*ShouldOwnClient=*/true);
+  }
   if (llvm::is_contained(DiagOpts.SystemHeaderWarningsModules, ModuleName))
     Instance.getDiagnostics().setSuppressSystemWarnings(false);
 
   Instance.createSourceManager(Instance.getFileManager());
   SourceManager &SourceMgr = Instance.getSourceManager();
 
-  // Note that this module is part of the module build stack, so that we
-  // can detect cycles in the module graph.
-  SourceMgr.setModuleBuildStack(getSourceManager().getModuleBuildStack());
-  SourceMgr.pushModuleBuildStack(ModuleName,
-                                 FullSourceLoc(ImportLoc, getSourceManager()));
+  if (ThreadSafeConfig) {
+    // Detecting cycles in the module graph is responsibility of the client.
+  } else {
+    // Note that this module is part of the module build stack, so that we
+    // can detect cycles in the module graph.
+    SourceMgr.setModuleBuildStack(getSourceManager().getModuleBuildStack());
+    SourceMgr.pushModuleBuildStack(
+        ModuleName, FullSourceLoc(ImportLoc, getSourceManager()));
+  }
 
   // Make a copy for the new instance.
   Instance.FailedModules = FailedModules;
 
-  // If we're collecting module dependencies, we need to share a collector
-  // between all of the module CompilerInstances. Other than that, we don't
-  // want to produce any dependency output from the module build.
-  Instance.setModuleDepCollector(getModuleDepCollector());
+  if (GetDependencyDirectives)
+    Instance.GetDependencyDirectives =
+        GetDependencyDirectives->cloneFor(Instance.getFileManager());
+
+  if (ThreadSafeConfig) {
+    Instance.setModuleDepCollector(ThreadSafeConfig->getModuleDepCollector());
+  } else {
+    // If we're collecting module dependencies, we need to share a collector
+    // between all of the module CompilerInstances. Other than that, we don't
+    // want to produce any dependency output from the module build.
+    Instance.setModuleDepCollector(getModuleDepCollector());
+  }
   Inv.getDependencyOutputOpts() = DependencyOutputOptions();
 
   return InstancePtr;
@@ -1268,7 +1285,7 @@ bool CompilerInstance::compileModule(SourceLocation ImportLoc,
 
   // Execute the action to actually build the module in-place. Use a separate
   // thread so that we get a stack large enough.
-  bool Crashed = !llvm::CrashRecoveryContext().RunSafelyOnThread(
+  bool Crashed = !llvm::CrashRecoveryContext().RunSafelyOnNewStack(
       [&]() {
         GenerateModuleFromModuleMapAction Action;
         Instance.ExecuteAction(Action);
@@ -1322,7 +1339,7 @@ static OptionalFileEntryRef getPublicModuleMap(FileEntryRef File,
 
 std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
     SourceLocation ImportLoc, Module *Module, StringRef ModuleFileName,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
+    std::optional<ThreadSafeCloneConfig> ThreadSafeConfig) {
   StringRef ModuleName = Module->getTopLevelModuleName();
 
   InputKind IK(getLanguageFromOptions(getLangOpts()), InputKind::ModuleMap);
@@ -1368,7 +1385,7 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
         ImportLoc, ModuleName,
         FrontendInputFile(ModuleMapFilePath, IK, IsSystem),
         ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName,
-        std::move(VFS));
+        std::move(ThreadSafeConfig));
   }
 
   // FIXME: We only need to fake up an input file here as a way of
@@ -1386,7 +1403,7 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
       ImportLoc, ModuleName,
       FrontendInputFile(FakeModuleMapFile, IK, +Module->IsSystem),
       ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName,
-      std::move(VFS));
+      std::move(ThreadSafeConfig));
 
   std::unique_ptr<llvm::MemoryBuffer> ModuleMapBuffer =
       llvm::MemoryBuffer::getMemBufferCopy(InferredModuleMapContent);
@@ -1734,6 +1751,7 @@ void CompilerInstance::createASTReader() {
       PPOpts.DisablePCHOrModuleValidation,
       /*AllowASTWithCompilerErrors=*/FEOpts.AllowPCMWithCompilerErrors,
       /*AllowConfigurationMismatch=*/false, HSOpts.ModulesValidateSystemHeaders,
+      HSOpts.ModulesForceValidateUserHeaders,
       HSOpts.ValidateASTInputFilesContent,
       getFrontendOpts().UseGlobalModuleIndex, std::move(ReadTimer));
   if (hasASTConsumer()) {
