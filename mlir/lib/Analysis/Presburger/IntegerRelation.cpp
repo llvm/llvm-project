@@ -2481,6 +2481,41 @@ void IntegerRelation::applyDomain(const IntegerRelation &rel) {
 
 void IntegerRelation::applyRange(const IntegerRelation &rel) { compose(rel); }
 
+IntegerRelation IntegerRelation::rangeProduct(const IntegerRelation &rel) {
+  /// R1: (i, j) -> k : f(i, j, k) = 0
+  /// R2: (i, j) -> l : g(i, j, l) = 0
+  /// R1.rangeProduct(R2): (i, j) -> (k, l) : f(i, j, k) = 0 and g(i, j, l) = 0
+  assert(getNumDomainVars() == rel.getNumDomainVars() &&
+         "Range product is only defined for relations with equal domains");
+
+  // explicit copy of the context relation
+  IntegerRelation result = *this;
+  unsigned srcOffset = getVarKindOffset(VarKind::Range);
+  unsigned newNumRangeVars = rel.getNumRangeVars();
+
+  result.appendVar(VarKind::Range, newNumRangeVars);
+
+  for (unsigned i = 0; i < rel.getNumEqualities(); ++i) {
+    // Add a new equality that uses the new range variables.
+    // The old equality is a list of coefficients of the variables
+    // from `rel`, and so the range variables need to be shifted
+    // right by the number of range variables added to `result`.
+    SmallVector<DynamicAPInt> copy =
+        SmallVector<DynamicAPInt>(rel.getEquality(i));
+    copy.insert(copy.begin() + srcOffset, newNumRangeVars, DynamicAPInt(0));
+    result.addEquality(copy);
+  }
+
+  for (unsigned i = 0; i < rel.getNumInequalities(); ++i) {
+    SmallVector<DynamicAPInt> copy =
+        SmallVector<DynamicAPInt>(rel.getInequality(i));
+    copy.insert(copy.begin() + srcOffset, newNumRangeVars, DynamicAPInt(0));
+    result.addInequality(copy);
+  }
+
+  return result;
+}
+
 void IntegerRelation::printSpace(raw_ostream &os) const {
   space.print(os);
   os << getNumConstraints() << " constraints\n";
