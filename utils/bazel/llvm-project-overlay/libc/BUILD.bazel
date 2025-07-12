@@ -2177,6 +2177,16 @@ libc_support_library(
     ],
 )
 
+libc_support_library(
+    name = "__support_math_ldexpf128",
+    hdrs = ["src/__support/math/ldexpf128.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_properties_types",
+        ":llvm_libc_types_float128"
+    ],
+)
+
 ############################### complex targets ################################
 
 libc_function(
@@ -3330,7 +3340,12 @@ libc_math_function(name = "ldexpf")
 
 libc_math_function(name = "ldexpl")
 
-libc_math_function(name = "ldexpf128")
+libc_math_function(
+    name = "ldexpf128",
+    additional_deps = [
+        ":__support_math_ldexpf128",
+    ],
+)
 
 libc_math_function(name = "ldexpf16")
 
