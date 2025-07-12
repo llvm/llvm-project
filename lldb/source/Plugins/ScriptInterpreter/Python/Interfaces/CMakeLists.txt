@@ -20,6 +20,7 @@ if (LLDB_ENABLE_LIBEDIT)
 endif()
 
 add_lldb_library(lldbPluginScriptInterpreterPythonInterfaces PLUGIN
+  JITLoaderPythonInterface.cpp
   OperatingSystemPythonInterface.cpp
   ScriptInterpreterPythonInterfaces.cpp
   ScriptedPlatformPythonInterface.cpp
@@ -39,5 +40,3 @@ add_lldb_library(lldbPluginScriptInterpreterPythonInterfaces PLUGIN
     ${Python3_LIBRARIES}
     ${LLDB_LIBEDIT_LIBS}
   )
-
-
