@@ -553,6 +553,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMComplexSubOpLowering
+    : public mlir::OpConversionPattern<cir::ComplexSubOp> {
+public:
+  using mlir::OpConversionPattern<cir::ComplexSubOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ComplexSubOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMSetBitfieldOpLowering
     : public mlir::OpConversionPattern<cir::SetBitfieldOp> {
 public:
