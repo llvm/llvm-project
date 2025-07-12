@@ -4669,6 +4669,7 @@ static inline int __kmp_adjust_gtid_for_hidden_helpers(int gtid) {
 }
 
 // Support for error directive
+// See definition in offload/DeviceRTL DeviceTypes.h
 typedef enum kmp_severity_t {
   severity_warning = 1,
   severity_fatal = 2
