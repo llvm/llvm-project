@@ -45,7 +45,8 @@ enum CondCode {
 };
 
 CondCode getOppositeBranchCondition(CondCode);
-unsigned getBrCond(CondCode CC, unsigned SelectOpc = 0);
+unsigned getBrCond(const RISCVSubtarget &STI, CondCode CC,
+                   unsigned SelectOpc = 0, bool Imm = false);
 
 } // end of namespace RISCVCC
 

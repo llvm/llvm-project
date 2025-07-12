@@ -961,6 +961,7 @@ RISCVCC::CondCode RISCVInstrInfo::getCondFromBranchOpc(unsigned Opc) {
   default:
     return RISCVCC::COND_INVALID;
   case RISCV::BEQ:
+  case RISCV::BEQI:
   case RISCV::CV_BEQIMM:
   case RISCV::QC_BEQI:
   case RISCV::QC_E_BEQI:
@@ -968,6 +969,7 @@ RISCVCC::CondCode RISCVInstrInfo::getCondFromBranchOpc(unsigned Opc) {
   case RISCV::NDS_BEQC:
     return RISCVCC::COND_EQ;
   case RISCV::BNE:
+  case RISCV::BNEI:
   case RISCV::QC_BNEI:
   case RISCV::QC_E_BNEI:
   case RISCV::CV_BNEIMM:
@@ -1027,16 +1029,17 @@ static void parseCondBranch(MachineInstr &LastInst, MachineBasicBlock *&Target,
   Cond.push_back(LastInst.getOperand(1));
 }
 
-unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC, unsigned SelectOpc) {
+unsigned RISCVCC::getBrCond(const RISCVSubtarget &STI, CondCode CC,
+                            unsigned SelectOpc, bool Imm) {
   switch (SelectOpc) {
   default:
     switch (CC) {
     default:
       llvm_unreachable("Unexpected condition code!");
     case RISCVCC::COND_EQ:
-      return RISCV::BEQ;
+      return (Imm && STI.hasStdExtZibi()) ? RISCV::BEQI : RISCV::BEQ;
     case RISCVCC::COND_NE:
-      return RISCV::BNE;
+      return (Imm && STI.hasStdExtZibi()) ? RISCV::BNEI : RISCV::BNE;
     case RISCVCC::COND_LT:
       return RISCV::BLT;
     case RISCVCC::COND_GE:
@@ -1365,8 +1368,14 @@ bool RISCVInstrInfo::reverseBranchCondition(
   case RISCV::BEQ:
     Cond[0].setImm(RISCV::BNE);
     break;
+  case RISCV::BEQI:
+    Cond[0].setImm(RISCV::BNEI);
+    break;
   case RISCV::BNE:
     Cond[0].setImm(RISCV::BEQ);
+    break;
+  case RISCV::BNEI:
+    Cond[0].setImm(RISCV::BEQI);
     break;
   case RISCV::BLT:
     Cond[0].setImm(RISCV::BGE);
@@ -1542,7 +1551,7 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     return Register();
   };
 
-  unsigned NewOpc = RISCVCC::getBrCond(getOppositeBranchCondition(CC));
+  unsigned NewOpc = RISCVCC::getBrCond(STI, getOppositeBranchCondition(CC));
 
   // Might be case 1.
   // Don't change 0 to 1 since we can use x0.
@@ -1617,6 +1626,8 @@ bool RISCVInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   case RISCV::BGE:
   case RISCV::BLTU:
   case RISCV::BGEU:
+  case RISCV::BEQI:
+  case RISCV::BNEI:
   case RISCV::CV_BEQIMM:
   case RISCV::CV_BNEIMM:
   case RISCV::QC_BEQI:
@@ -2816,6 +2827,9 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           // clang-format on
         case RISCVOp::OPERAND_UIMM2_LSB0:
           Ok = isShiftedUInt<1, 1>(Imm);
+          break;
+        case RISCVOp::OPERAND_UIMM5_ZIBI:
+          Ok = (isUInt<5>(Imm) && Imm != 0) || Imm == -1;
           break;
         case RISCVOp::OPERAND_UIMM5_LSB0:
           Ok = isShiftedUInt<4, 1>(Imm);

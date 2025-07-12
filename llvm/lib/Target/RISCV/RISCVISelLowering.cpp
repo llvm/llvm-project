@@ -21476,7 +21476,8 @@ EmitLoweredCascadedSelect(MachineInstr &First, MachineInstr &Second,
   Register FLHS = First.getOperand(1).getReg();
   Register FRHS = First.getOperand(2).getReg();
   // Insert appropriate branch.
-  BuildMI(FirstMBB, DL, TII.get(RISCVCC::getBrCond(FirstCC, First.getOpcode())))
+  BuildMI(FirstMBB, DL,
+          TII.get(RISCVCC::getBrCond(Subtarget, FirstCC, First.getOpcode())))
       .addReg(FLHS)
       .addReg(FRHS)
       .addMBB(SinkMBB);
@@ -21489,7 +21490,7 @@ EmitLoweredCascadedSelect(MachineInstr &First, MachineInstr &Second,
   auto SecondCC = static_cast<RISCVCC::CondCode>(Second.getOperand(3).getImm());
   // Insert appropriate branch.
   BuildMI(ThisMBB, DL,
-          TII.get(RISCVCC::getBrCond(SecondCC, Second.getOpcode())))
+          TII.get(RISCVCC::getBrCond(Subtarget, SecondCC, Second.getOpcode())))
       .addReg(SLHS)
       .addReg(SRHS)
       .addMBB(SinkMBB);
@@ -21624,12 +21625,14 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
 
   // Insert appropriate branch.
   if (MI.getOperand(2).isImm())
-    BuildMI(HeadMBB, DL, TII.get(RISCVCC::getBrCond(CC, MI.getOpcode())))
+    BuildMI(HeadMBB, DL,
+            TII.get(RISCVCC::getBrCond(Subtarget, CC, MI.getOpcode(), true)))
         .addReg(LHS)
         .addImm(MI.getOperand(2).getImm())
         .addMBB(TailMBB);
   else
-    BuildMI(HeadMBB, DL, TII.get(RISCVCC::getBrCond(CC, MI.getOpcode())))
+    BuildMI(HeadMBB, DL,
+            TII.get(RISCVCC::getBrCond(Subtarget, CC, MI.getOpcode())))
         .addReg(LHS)
         .addReg(RHS)
         .addMBB(TailMBB);
