@@ -72,6 +72,15 @@ static void binary_op_checks_inline(void) {
     // expected-warning@-2{{unsequenced write to and read from variable}}
     // expected-note@-3{{variable is written to here}}
     // expected-note@-4{{variable is read from here}}
+
+    if (((*ip = 1 || b == 2) ? 0 : 3) + a1) {}
+    // expected-warning@-1{{unsequenced write to and read from variable}}
+    // expected-note@-2{{variable is written to here}}
+    // expected-note@-3{{variable is read from here}}
+
+    (arr + sizeof(a1))[1] = a1++;
+
+    b = a1 + (long)&a1;
     
     (void)a1; (void)b;
 }
@@ -115,9 +124,84 @@ static void function_checks_inline(void) {
 
 static int* inc_and_return(int* a) {
     ++*a;
+    // expected-note@-1{{variable is written to here}}
     return a;
 }
 
+int globalInt;
+
 static void function_checks(void) {
+
+    float a2 = 0.1f;
+    float* fp = &a2;
+
+    if (inc_and_return(&globalInt) + globalInt) {}
+    // expected-warning@-1{{unsequenced write to and read from variable}}
+    // expected-note@-2{{variable is read from here}}
     
+    if (inc_and_return(&globalInt) || globalInt) {}
+
+    a2 = ++a2;
+    // expected-warning@-1{{unsequenced writes to variable}}
+    // expected-note@-2{{variable is written to here}}
+    // expected-note@-3{{variable is written to here}}
+    // expected-warning@-4{{multiple unsequenced modifications}}
+    
+    *fp = ++*fp;
+    // expected-warning@-1{{unsequenced writes to variable}}
+    // expected-note@-2{{variable is written to here}}
+    // expected-note@-3{{variable is written to here}}
+    
+    a2 = ++*fp;
+    // expected-warning@-1{{unsequenced writes to variable}}
+    // expected-note@-2{{variable is written to here}}
+    // expected-note@-3{{variable is written to here}}
+}
+
+static void loop_checks(void) {
+    char* str[3] = {0, 0, 0};
+
+    char c = 'c';
+
+    unsigned i;
+
+    str[2] = &c;
+
+    for (i = 0; i < sizeof(str) / sizeof(*str); i++) {
+        if (str[i]) {
+            *(str[i]) = c++;
+            // expected-warning@-1{{unsequenced writes to variable}}
+            // expected-note@-2{{variable is written to here}}
+            // expected-note@-3{{variable is written to here}}
+        }
+    }
+}
+
+int globalI1;
+int globalI2;
+
+static int incGlobalI1(void) {
+    return ++globalI1;
+    // expected-note@-1{{variable is written to here}}
+    // expected-note@-2{{variable is written to here}}
+    // expected-note@-3{{variable is written to here}}
+    // expected-note@-4{{variable is read from here}}
+}
+
+static int incGlobalI2(void) {
+    return ++globalI2;
+}
+
+static int branch1(void) {
+    return incGlobalI1();
+}
+
+static int branch2(void) {
+    return incGlobalI2(), incGlobalI1();
+}
+
+static int branching_function_check(void) {
+    return branch1() + branch2();
+    // expected-warning@-1{{unsequenced write to and read from variable}}
+    // expected-warning@-2{{unsequenced writes to variable}}
 }
