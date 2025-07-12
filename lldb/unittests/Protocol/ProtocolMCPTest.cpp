@@ -257,8 +257,8 @@ TEST(ProtocolMCPTest, ResourceWithoutOptionals) {
 
   EXPECT_EQ(resource.uri, deserialized_resource->uri);
   EXPECT_EQ(resource.name, deserialized_resource->name);
-  EXPECT_FALSE(deserialized_resource->description.has_value());
-  EXPECT_FALSE(deserialized_resource->mimeType.has_value());
+  EXPECT_TRUE(deserialized_resource->description.empty());
+  EXPECT_TRUE(deserialized_resource->mimeType.empty());
 }
 
 TEST(ProtocolMCPTest, ResourceContents) {
@@ -287,7 +287,7 @@ TEST(ProtocolMCPTest, ResourceContentsWithoutMimeType) {
 
   EXPECT_EQ(contents.uri, deserialized_contents->uri);
   EXPECT_EQ(contents.text, deserialized_contents->text);
-  EXPECT_FALSE(deserialized_contents->mimeType.has_value());
+  EXPECT_TRUE(deserialized_contents->mimeType.empty());
 }
 
 TEST(ProtocolMCPTest, ResourceResult) {

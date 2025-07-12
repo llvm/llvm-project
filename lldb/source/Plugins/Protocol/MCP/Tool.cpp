@@ -45,7 +45,7 @@ Tool::Tool(std::string name, std::string description)
 protocol::ToolDefinition Tool::GetDefinition() const {
   protocol::ToolDefinition definition;
   definition.name = m_name;
-  definition.description.emplace(m_description);
+  definition.description = m_description;
 
   if (std::optional<llvm::json::Value> input_schema = GetSchema())
     definition.inputSchema = *input_schema;
