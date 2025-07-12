@@ -468,7 +468,7 @@ Some subprojects maintain their own list of per-component maintainers.
 
 [Compiler-rt maintainers](https://github.com/llvm/llvm-project/blob/main/compiler-rt/Maintainers.md)
 
-[Flang maintainers](https://github.com/llvm/llvm-project/blob/main/flang/Maintainers.txt)
+[Flang maintainers](https://github.com/llvm/llvm-project/blob/main/flang/Maintainers.md)
 
 [libc++ maintainers](https://github.com/llvm/llvm-project/blob/main/libcxx/Maintainers.md)
 
