@@ -80,9 +80,7 @@ template <typename T> void SummaryContext::RegisterAttr() {
   KindToAttribute[Kind] = Attributes.emplace_back(std::move(attr)).get();
 }
 
-SummaryContext::SummaryContext() {
-  RegisterAttr<NoWriteGlobalAttr>();
-}
+SummaryContext::SummaryContext() { RegisterAttr<NoWriteGlobalAttr>(); }
 
 size_t SummaryContext::GetOrInsertStoredIdentifierIdx(StringRef ID) {
   auto &&[Element, Inserted] =
