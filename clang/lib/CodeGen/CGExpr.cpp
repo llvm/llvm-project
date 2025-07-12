@@ -397,9 +397,10 @@ pushTemporaryCleanup(CodeGenFunction &CGF, const MaterializeTemporaryExpr *M,
       if (const RecordType *RT =
               E->getType()->getBaseElementTypeUnsafe()->getAs<RecordType>()) {
         // Get the destructor for the reference temporary.
-        if (auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl());
+        if (auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl());
             ClassDecl && !ClassDecl->hasTrivialDestructor())
-          ReferenceTemporaryDtor = ClassDecl->getDestructor();
+          ReferenceTemporaryDtor =
+              ClassDecl->getDefinitionOrSelf()->getDestructor();
       }
 
       if (!ReferenceTemporaryDtor)
@@ -1198,9 +1199,10 @@ llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
     return nullptr;
 
   Indices.push_back(Builder.getInt32(0));
-  return Builder.CreateInBoundsGEP(
-      ConvertType(QualType(RD->getTypeForDecl(), 0)), Res,
-      RecIndicesTy(llvm::reverse(Indices)), "counted_by.gep");
+  CanQualType T = CGM.getContext().getCanonicalTagType(RD);
+  return Builder.CreateInBoundsGEP(ConvertType(T), Res,
+                                   RecIndicesTy(llvm::reverse(Indices)),
+                                   "counted_by.gep");
 }
 
 /// This method is typically called in contexts where we can't generate
@@ -1748,9 +1750,11 @@ static bool isConstantEmittableObjectType(QualType type) {
   // Otherwise, all object types satisfy this except C++ classes with
   // mutable subobjects or non-trivial copy/destroy behavior.
   if (const auto *RT = dyn_cast<RecordType>(type))
-    if (const auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl()))
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl())) {
+      RD = RD->getDefinitionOrSelf();
       if (RD->hasMutableFields() || !RD->isTrivial())
         return false;
+    }
 
   return true;
 }
@@ -1911,8 +1915,10 @@ static bool getRangeForType(CodeGenFunction &CGF, QualType Ty,
                             llvm::APInt &Min, llvm::APInt &End,
                             bool StrictEnums, bool IsBool) {
   const EnumType *ET = Ty->getAs<EnumType>();
-  bool IsRegularCPlusPlusEnum = CGF.getLangOpts().CPlusPlus && StrictEnums &&
-                                ET && !ET->getDecl()->isFixed();
+  const EnumDecl *ED =
+      ET ? ET->getOriginalDecl()->getDefinitionOrSelf() : nullptr;
+  bool IsRegularCPlusPlusEnum =
+      CGF.getLangOpts().CPlusPlus && StrictEnums && ET && !ED->isFixed();
   if (!IsBool && !IsRegularCPlusPlusEnum)
     return false;
 
@@ -1920,7 +1926,6 @@ static bool getRangeForType(CodeGenFunction &CGF, QualType Ty,
     Min = llvm::APInt(CGF.getContext().getTypeSize(Ty), 0);
     End = llvm::APInt(CGF.getContext().getTypeSize(Ty), 2);
   } else {
-    const EnumDecl *ED = ET->getDecl();
     ED->getValueRange(End, Min);
   }
   return true;
@@ -4266,7 +4271,9 @@ static bool IsPreserveAIArrayBase(CodeGenFunction &CGF, const Expr *ArrayBase) {
     const auto *PointeeT = PtrT->getPointeeType()
                              ->getUnqualifiedDesugaredType();
     if (const auto *RecT = dyn_cast<RecordType>(PointeeT))
-      return RecT->getDecl()->hasAttr<BPFPreserveAccessIndexAttr>();
+      return RecT->getOriginalDecl()
+          ->getMostRecentDecl()
+          ->hasAttr<BPFPreserveAccessIndexAttr>();
     return false;
   }
 
@@ -5032,10 +5039,12 @@ LValue CodeGenFunction::EmitLValueForLambdaField(const FieldDecl *Field,
       Address Base = GetAddressOfBaseClass(
           LambdaLV.getAddress(), ThisTy, BasePathArray.begin(),
           BasePathArray.end(), /*NullCheckValue=*/false, SourceLocation());
-      LambdaLV = MakeAddrLValue(Base, QualType{LambdaTy->getTypeForDecl(), 0});
+      CanQualType T = getContext().getCanonicalTagType(LambdaTy);
+      LambdaLV = MakeAddrLValue(Base, T);
     }
   } else {
-    QualType LambdaTagType = getContext().getTagDeclType(Field->getParent());
+    CanQualType LambdaTagType =
+        getContext().getCanonicalTagType(Field->getParent());
     LambdaLV = MakeNaturalAlignAddrLValue(ThisValue, LambdaTagType);
   }
   return EmitLValueForField(LambdaLV, Field);
@@ -5160,7 +5169,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
         }
       } else {
         llvm::DIType *DbgInfo = getDebugInfo()->getOrCreateRecordType(
-            getContext().getRecordType(rec), rec->getLocation());
+            getContext().getCanonicalTagType(rec), rec->getLocation());
         Addr = Builder.CreatePreserveStructAccessIndex(
             Addr, Idx, getDebugInfoFIndex(rec, field->getFieldIndex()),
             DbgInfo);
@@ -5622,7 +5631,9 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_DerivedToBase: {
     const auto *DerivedClassTy =
         E->getSubExpr()->getType()->castAs<RecordType>();
-    auto *DerivedClassDecl = cast<CXXRecordDecl>(DerivedClassTy->getDecl());
+    auto *DerivedClassDecl =
+        cast<CXXRecordDecl>(DerivedClassTy->getOriginalDecl())
+            ->getDefinitionOrSelf();
 
     LValue LV = EmitLValue(E->getSubExpr());
     Address This = LV.getAddress();
@@ -5642,7 +5653,9 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
     return EmitAggExprToLValue(E);
   case CK_BaseToDerived: {
     const auto *DerivedClassTy = E->getType()->castAs<RecordType>();
-    auto *DerivedClassDecl = cast<CXXRecordDecl>(DerivedClassTy->getDecl());
+    auto *DerivedClassDecl =
+        cast<CXXRecordDecl>(DerivedClassTy->getOriginalDecl())
+            ->getDefinitionOrSelf();
 
     LValue LV = EmitLValue(E->getSubExpr());
 
@@ -6700,7 +6713,7 @@ void CodeGenFunction::FlattenAccessAndType(
         WorkList.emplace_back(CAT->getElementType(), IdxListCopy);
       }
     } else if (const auto *RT = dyn_cast<RecordType>(T)) {
-      const RecordDecl *Record = RT->getDecl();
+      const RecordDecl *Record = RT->getOriginalDecl()->getDefinitionOrSelf();
       assert(!Record->isUnion() && "Union types not supported in flat cast.");
 
       const CXXRecordDecl *CXXD = dyn_cast<CXXRecordDecl>(Record);

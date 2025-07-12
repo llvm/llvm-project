@@ -2493,7 +2493,7 @@ void CGObjCCommonMac::BuildRCBlockVarRecordLayout(const RecordType *RT,
                                                   CharUnits BytePos,
                                                   bool &HasUnion,
                                                   bool ByrefLayout) {
-  const RecordDecl *RD = RT->getDecl();
+  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
   SmallVector<const FieldDecl *, 16> Fields(RD->fields());
   llvm::Type *Ty = CGM.getTypes().ConvertType(QualType(RT, 0));
   const llvm::StructLayout *RecLayout =
@@ -3352,7 +3352,8 @@ static bool hasWeakMember(QualType type) {
   }
 
   if (auto recType = type->getAs<RecordType>()) {
-    for (auto *field : recType->getDecl()->fields()) {
+    for (auto *field :
+         recType->getOriginalDecl()->getDefinitionOrSelf()->fields()) {
       if (hasWeakMember(field->getType()))
         return true;
     }
@@ -5174,7 +5175,7 @@ CGObjCCommonMac::GetIvarLayoutName(IdentifierInfo *Ident,
 }
 
 void IvarLayoutBuilder::visitRecord(const RecordType *RT, CharUnits offset) {
-  const RecordDecl *RD = RT->getDecl();
+  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
 
   // If this is a union, remember that we had one, because it might mess
   // up the ordering of layout entries.
@@ -5660,7 +5661,7 @@ ObjCCommonTypesHelper::ObjCCommonTypesHelper(CodeGen::CodeGenModule &cgm)
                                 nullptr, false, ICIS_NoInit));
   RD->completeDefinition();
 
-  SuperCTy = Ctx.getTagDeclType(RD);
+  SuperCTy = Ctx.getCanonicalTagType(RD);
   SuperPtrCTy = Ctx.getPointerType(SuperCTy);
 
   SuperTy = cast<llvm::StructType>(Types.ConvertType(SuperCTy));
@@ -6006,7 +6007,7 @@ ObjCNonFragileABITypesHelper::ObjCNonFragileABITypesHelper(
                                 false, ICIS_NoInit));
   RD->completeDefinition();
 
-  MessageRefCTy = Ctx.getTagDeclType(RD);
+  MessageRefCTy = Ctx.getCanonicalTagType(RD);
   MessageRefCPtrTy = Ctx.getPointerType(MessageRefCTy);
   MessageRefTy = cast<llvm::StructType>(Types.ConvertType(MessageRefCTy));
 
