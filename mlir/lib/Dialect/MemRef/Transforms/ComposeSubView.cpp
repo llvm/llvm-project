@@ -80,10 +80,6 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
     for (auto &&[opOffset, sourceOffset, sourceStride, opSize] :
          llvm::zip(op.getMixedOffsets(), sourceOp.getMixedOffsets(),
                    sourceOp.getMixedStrides(), op.getMixedSizes())) {
-      // We only support static sizes.
-      if (isa<Value>(opSize)) {
-        return failure();
-      }
       sizes.push_back(opSize);
       Attribute opOffsetAttr = llvm::dyn_cast_if_present<Attribute>(opOffset),
                 sourceOffsetAttr =
