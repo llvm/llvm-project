@@ -118,8 +118,8 @@ New checks
   Detects default initialization (to 0) of variables with ``enum`` type where
   the enum has no enumerator with value of 0.
 
-- New :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses
-  <clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-accesses>`
+- New :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-access
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-access>`
   check.
 
   Finds calls to ``operator[]`` in STL containers and suggests replacing them
