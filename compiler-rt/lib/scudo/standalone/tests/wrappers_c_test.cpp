@@ -45,6 +45,8 @@ int malloc_iterate(uintptr_t base, size_t size,
                    void *arg);
 void *valloc(size_t size);
 void *pvalloc(size_t size);
+void free_sized(void *ptr, size_t size);
+void free_aligned_sized(void *ptr, size_t alignment, size_t size);
 
 #ifndef SCUDO_ENABLE_HOOKS_TESTS
 #define SCUDO_ENABLE_HOOKS_TESTS 0
@@ -184,6 +186,184 @@ TEST_F(ScudoWrappersCDeathTest, Malloc) {
   errno = 0;
   EXPECT_EQ(malloc(SIZE_MAX), nullptr);
   EXPECT_EQ(errno, ENOMEM);
+}
+
+TEST_F(ScudoWrappersCTest, MallocFreeSized) {
+  void *P = malloc(Size);
+  EXPECT_NE(P, nullptr);
+  EXPECT_LE(Size, malloc_usable_size(P));
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(P) % FIRST_32_SECOND_64(8U, 16U), 0U);
+  verifyAllocHookPtr(P);
+  verifyAllocHookSize(Size);
+
+  if (!SKIP_DEALLOC_TYPE_MISMATCH) {
+    EXPECT_DEATH(free_sized(P, Size - 1), "");
+    EXPECT_DEATH(free_sized(P, Size + 1), "");
+  }
+
+  // An update to this warning in Clang now triggers in this line, but it's ok
+  // because the check is expecting a bad pointer and should fail.
+#if defined(__has_warning) && __has_warning("-Wfree-nonheap-object")
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wfree-nonheap-object"
+#endif
+  EXPECT_DEATH(
+      free_sized(reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(P) | 1U),
+                 Size),
+      "");
+#if defined(__has_warning) && __has_warning("-Wfree-nonheap-object")
+#pragma GCC diagnostic pop
+#endif
+
+  free_sized(P, Size);
+  verifyDeallocHookPtr(P);
+  EXPECT_DEATH(free_sized(P, Size), "");
+}
+
+TEST_F(ScudoWrappersCTest, AlignedAllocFreeAlignedSized) {
+  const size_t Alignment = 4096U;
+  const size_t Size = Alignment * 4U;
+  void *P = aligned_alloc(Alignment, Size);
+  EXPECT_NE(P, nullptr);
+  EXPECT_LE(Size, malloc_usable_size(P));
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(P) % Alignment, 0U);
+  verifyAllocHookPtr(P);
+  verifyAllocHookSize(Size);
+
+  if (!SKIP_DEALLOC_TYPE_MISMATCH) {
+    EXPECT_DEATH(free_aligned_sized(P, Alignment, Size - 1), "");
+    EXPECT_DEATH(free_aligned_sized(P, Alignment, Size + 1), "");
+    EXPECT_DEATH(
+        free_aligned_sized(P, size_t{1} << (sizeof(size_t) * 8 - 1), Size), "");
+  }
+
+  // An update to this warning in Clang now triggers in this line, but it's ok
+  // because the check is expecting a bad pointer and should fail.
+#if defined(__has_warning) && __has_warning("-Wfree-nonheap-object")
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wfree-nonheap-object"
+#endif
+  EXPECT_DEATH(free_aligned_sized(reinterpret_cast<void *>(
+                                      reinterpret_cast<uintptr_t>(P) | 1U),
+                                  Alignment, Size),
+               "");
+#if defined(__has_warning) && __has_warning("-Wfree-nonheap-object")
+#pragma GCC diagnostic pop
+#endif
+
+  free_aligned_sized(P, Alignment, Size);
+  verifyDeallocHookPtr(P);
+  EXPECT_DEATH(free_aligned_sized(P, Alignment, Size), "");
+}
+
+TEST_F(ScudoWrappersCDeathTest, MallocFreeAlignedSized) {
+  if (SKIP_DEALLOC_TYPE_MISMATCH)
+    TEST_SKIP("Dealloc type mismatch disabled.");
+
+  void *P = malloc(Size);
+  EXPECT_NE(P, nullptr);
+  EXPECT_LE(Size, malloc_usable_size(P));
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(P) % FIRST_32_SECOND_64(8U, 16U), 0U);
+  verifyAllocHookPtr(P);
+  verifyAllocHookSize(Size);
+
+  EXPECT_DEATH(free_aligned_sized(P, 8, Size), "");
+  EXPECT_DEATH(free_aligned_sized(P, alignof(std::max_align_t), Size), "");
+
+  free_sized(P, Size);
+  verifyDeallocHookPtr(P);
+}
+
+TEST_F(ScudoWrappersCDeathTest, AlignedAllocFreeSized) {
+  if (SKIP_DEALLOC_TYPE_MISMATCH)
+    TEST_SKIP("Dealloc type mismatch disabled.");
+
+  const size_t Alignment = 4096U;
+  const size_t Size = Alignment * 4U;
+  void *P = aligned_alloc(Alignment, Size);
+  EXPECT_NE(P, nullptr);
+  EXPECT_LE(Size, malloc_usable_size(P));
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(P) % Alignment, 0U);
+  verifyAllocHookPtr(P);
+  verifyAllocHookSize(Size);
+
+  EXPECT_DEATH(free_sized(P, Size), "");
+
+  free_aligned_sized(P, Alignment, Size);
+  verifyDeallocHookPtr(P);
+}
+
+TEST_F(ScudoWrappersCDeathTest, PosixMemalignFreeSized) {
+  if (SKIP_DEALLOC_TYPE_MISMATCH)
+    TEST_SKIP("Dealloc type mismatch disabled.");
+
+  const size_t Alignment = 4096U;
+  const size_t Size = Alignment * 4U;
+  void *P;
+  EXPECT_EQ(posix_memalign(&P, Alignment, Size), 0);
+  EXPECT_NE(P, nullptr);
+  EXPECT_LE(Size, malloc_usable_size(P));
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(P) % Alignment, 0U);
+  verifyAllocHookPtr(P);
+  verifyAllocHookSize(Size);
+
+  EXPECT_DEATH(free_sized(P, Size), "");
+
+  free(P);
+  verifyDeallocHookPtr(P);
+}
+
+TEST_F(ScudoWrappersCDeathTest, MemalignFreeSized) {
+  if (SKIP_DEALLOC_TYPE_MISMATCH)
+    TEST_SKIP("Dealloc type mismatch disabled.");
+
+  const size_t Alignment = 4096U;
+  const size_t Size = Alignment * 4U;
+  void *P = memalign(Alignment, Size);
+  EXPECT_NE(P, nullptr);
+  EXPECT_LE(Size, malloc_usable_size(P));
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(P) % Alignment, 0U);
+  verifyAllocHookPtr(P);
+  verifyAllocHookSize(Size);
+
+  EXPECT_DEATH(free_sized(P, Size), "");
+
+  free(P);
+  verifyDeallocHookPtr(P);
+}
+
+TEST_F(ScudoWrappersCDeathTest, PvallocFreeSized) {
+  if (SKIP_DEALLOC_TYPE_MISMATCH)
+    TEST_SKIP("Dealloc type mismatch disabled.");
+
+  const size_t Size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+  void *P = pvalloc(Size);
+  EXPECT_NE(P, nullptr);
+  EXPECT_LE(Size, malloc_usable_size(P));
+  verifyAllocHookPtr(P);
+  verifyAllocHookSize(Size);
+
+  EXPECT_DEATH(free_sized(P, Size), "");
+
+  free(P);
+  verifyDeallocHookPtr(P);
+}
+
+TEST_F(ScudoWrappersCDeathTest, VallocFreeSized) {
+  if (SKIP_DEALLOC_TYPE_MISMATCH)
+    TEST_SKIP("Dealloc type mismatch disabled.");
+
+  const size_t Size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+  void *P = valloc(Size);
+  EXPECT_NE(P, nullptr);
+  EXPECT_LE(Size, malloc_usable_size(P));
+  verifyAllocHookPtr(P);
+  verifyAllocHookSize(Size);
+
+  EXPECT_DEATH(free_sized(P, Size), "");
+
+  free(P);
+  verifyDeallocHookPtr(P);
 }
 
 TEST_F(ScudoWrappersCTest, Calloc) {
