@@ -187,6 +187,7 @@
 ; GCN-O1-NEXT:    Externalize enqueued block runtime handles
 ; GCN-O1-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O1-NEXT:    Lower uses of LDS variables from non-kernel functions
+; GCN-O1-NEXT:    AMDGPU Split Kernel Arguments
 ; GCN-O1-NEXT:    FunctionPass Manager
 ; GCN-O1-NEXT:      Dominator Tree Construction
 ; GCN-O1-NEXT:      Cycle Info Analysis
@@ -470,6 +471,7 @@
 ; GCN-O1-OPTS-NEXT:    Externalize enqueued block runtime handles
 ; GCN-O1-OPTS-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O1-OPTS-NEXT:    Lower uses of LDS variables from non-kernel functions
+; GCN-O1-OPTS-NEXT:    AMDGPU Split Kernel Arguments
 ; GCN-O1-OPTS-NEXT:    FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:      Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:      Cycle Info Analysis
@@ -783,6 +785,7 @@
 ; GCN-O2-NEXT:    Externalize enqueued block runtime handles
 ; GCN-O2-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O2-NEXT:    Lower uses of LDS variables from non-kernel functions
+; GCN-O2-NEXT:    AMDGPU Split Kernel Arguments
 ; GCN-O2-NEXT:    FunctionPass Manager
 ; GCN-O2-NEXT:      Dominator Tree Construction
 ; GCN-O2-NEXT:      Cycle Info Analysis
@@ -1100,6 +1103,7 @@
 ; GCN-O3-NEXT:    Externalize enqueued block runtime handles
 ; GCN-O3-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O3-NEXT:    Lower uses of LDS variables from non-kernel functions
+; GCN-O3-NEXT:    AMDGPU Split Kernel Arguments
 ; GCN-O3-NEXT:    FunctionPass Manager
 ; GCN-O3-NEXT:      Dominator Tree Construction
 ; GCN-O3-NEXT:      Cycle Info Analysis
