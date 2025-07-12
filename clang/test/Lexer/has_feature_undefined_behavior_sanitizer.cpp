@@ -1,27 +1,29 @@
-// RUN: %clang -E -fsanitize=undefined %s -o - | FileCheck --check-prefix=CHECK-UBSAN %s
-// RUN: %clang -E -fsanitize=alignment %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-ALIGNMENT %s
-// RUN: %clang -E -fsanitize=bool %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-BOOL %s
-// RUN: %clang -E -fsanitize=builtin %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-BUILTIN %s
-// RUN: %clang -E -fsanitize=array-bounds %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-ARRAY-BOUNDS %s
-// RUN: %clang -E -fsanitize=enum %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-ENUM %s
-// RUN: %clang -E -fsanitize=float-cast-overflow %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-FLOAT-CAST-OVERFLOW %s
-// RUN: %clang -E -fsanitize=integer-divide-by-zero %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-INTEGER-DIVIDE-BY-ZERO %s
-// RUN: %clang -E -fsanitize=nonnull-attribute %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-NONNULL-ATTRIBUTE %s
-// RUN: %clang -E -fsanitize=null %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-NULL %s
+// RUN: %clang -E -target x86-linux-gnu -fsanitize=undefined %s -o - | FileCheck --check-prefix=CHECK-UBSAN %s
+// RUN: %clang -E -target x86-linux-gnu -fsanitize=alignment %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-ALIGNMENT %s
+// RUN: %clang -E -target x86-linux-gnu -fsanitize=bool %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-BOOL %s
+// RUN: %clang -E -target x86-linux-gnu -fsanitize=builtin %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-BUILTIN %s
+// RUN: %clang -E -target x86-linux-gnu -fsanitize=array-bounds %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-ARRAY-BOUNDS %s
+// RUN: %clang -E -target x86-linux-gnu -fsanitize=enum %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-ENUM %s
+// RUN: %clang -E -target x86-linux-gnu -fsanitize=float-cast-overflow %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-FLOAT-CAST-OVERFLOW %s
+// RUN: %clang -E -target x86-linux-gnu -fsanitize=integer-divide-by-zero %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-INTEGER-DIVIDE-BY-ZERO %s
+// RUN: %clang -E -target x86-linux-gnu -fsanitize=nonnull-attribute %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-NONNULL-ATTRIBUTE %s
+// RUN: %clang -E -target x86-linux-gnu -fsanitize=null %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-NULL %s
 // object-size is a no-op at O0.
-// RUN: %clang -E -O2 -fsanitize=object-size %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-OBJECT-SIZE %s
-// RUN: %clang -E -fsanitize=pointer-overflow %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-POINTER-OVERFLOW %s
-// RUN: %clang -E -fsanitize=return %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-RETURN %s
-// RUN: %clang -E -fsanitize=returns-nonnull-attribute %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-RETURNS-NONNULL-ATTRIBUTE %s
-// RUN: %clang -E -fsanitize=shift-base %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-SHIFT-BASE,CHECK-SHIFT %s
-// RUN: %clang -E -fsanitize=shift-exponent %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-SHIFT-EXPONENT,CHECK-SHIFT %s
-// RUN: %clang -E -fsanitize=shift %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-SHIFT %s
-// RUN: %clang -E -fsanitize=signed-integer-overflow %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-SIGNED-INTEGER-OVERFLOW %s
-// RUN: %clang -E -fsanitize=unreachable %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-UNREACHABLE %s
-// RUN: %clang -E -fsanitize=vla-bound %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-VLA-BOUND %s
-// RUN: %clang -E -fsanitize=function %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-FUNCTION %s
+// RUN: %clang -E -target x86-linux-gnu -O2 -fsanitize=object-size %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-OBJECT-SIZE %s
+// RUN: %clang -E -target x86-linux-gnu -fsanitize=pointer-overflow %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-POINTER-OVERFLOW %s
+// RUN: %clang -E -target x86-linux-gnu -fsanitize=return %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-RETURN %s
+// RUN: %clang -E -target x86-linux-gnu -fsanitize=returns-nonnull-attribute %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-RETURNS-NONNULL-ATTRIBUTE %s
+// RUN: %clang -E -target x86-linux-gnu -fsanitize=shift-base %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-SHIFT-BASE,CHECK-SHIFT %s
+// RUN: %clang -E -target x86-linux-gnu -fsanitize=shift-exponent %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-SHIFT-EXPONENT,CHECK-SHIFT %s
+// RUN: %clang -E -target x86-linux-gnu -fsanitize=shift %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-SHIFT %s
+// RUN: %clang -E -target x86-linux-gnu -fsanitize=signed-integer-overflow %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-SIGNED-INTEGER-OVERFLOW %s
+// RUN: %clang -E -target x86-linux-gnu -fsanitize=unreachable %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-UNREACHABLE %s
+// RUN: %clang -E -target x86-linux-gnu -fsanitize=vla-bound %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-VLA-BOUND %s
+// RUN: %clang -E -target x86-linux-gnu -fsanitize=function %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-FUNCTION %s
 
 // RUN: %clang -E  %s -o - | FileCheck --check-prefix=CHECK-NO-UBSAN %s
+
+// REQUIRES: x86-registered-target
 
 #if !__has_feature(undefined_behavior_sanitizer_finegrained_feature_checks)
 #error "Missing undefined_behavior_sanitizer_finegrained_feature_checks"
