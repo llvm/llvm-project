@@ -352,17 +352,26 @@ def MIPS16_RET_DF : RuntimeLibcall;
 def MIPS16_RET_SC : RuntimeLibcall;
 def MIPS16_RET_SF : RuntimeLibcall;
 
-multiclass LibmLongDoubleLibCall<string libcall_basename = !toupper(NAME),
-                                 string rtbasename = NAME> {
+// Produce libcall impls for all float types. If provided, `rtbasename` should
+// contain an `X` that will be replaced with the `f`/`l`/`fX` suffix (if not
+// provided, it is appended to the def name).
+multiclass LibmLibcallImpls<string libcall_basename = !toupper(NAME),
+                            string rtbasename = !strconcat(NAME, "X")> {
+  def NAME#"f"
+      : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_F32"),
+                           !subst("X", "f", rtbasename)>;
+  def NAME#""
+      : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_F64"),
+                           !subst("X", "", rtbasename)>;
   def NAME#"_f128"
       : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_F128"),
-                           !strconcat(rtbasename, "l")>;
+                           !subst("X", "l", rtbasename)>;
   def NAME#"_ppcf128"
       : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_PPCF128"),
-                           !strconcat(rtbasename, "l")>;
+                           !subst("X", "l", rtbasename)>;
   def NAME#"_f80"
       : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_F80"),
-                           !strconcat(rtbasename, "l")>;
+                           !subst("X", "l", rtbasename)>;
 }
 
 // AArch64 calls
@@ -692,217 +701,55 @@ def __riscv_flush_icache : RuntimeLibcallImpl<RISCV_FLUSH_ICACHE>;
 // libm
 //--------------------------------------------------------------------
 
-def fmodf : RuntimeLibcallImpl<REM_F32>;
-def fmod : RuntimeLibcallImpl<REM_F64>;
-def fmodl_f128 : RuntimeLibcallImpl<REM_F128, "fmodl">;
-def fmodl_f80 : RuntimeLibcallImpl<REM_F80, "fmodl">;
-def fmodl_ppc128 : RuntimeLibcallImpl<REM_PPCF128, "fmodl">;
-
-def fmaf : RuntimeLibcallImpl<FMA_F32>;
-def fma : RuntimeLibcallImpl<FMA_F64>;
-defm fma : LibmLongDoubleLibCall;
-
-def sqrtf : RuntimeLibcallImpl<SQRT_F32>;
-def sqrt : RuntimeLibcallImpl<SQRT_F64>;
-defm sqrt : LibmLongDoubleLibCall;
-
-def cbrtf : RuntimeLibcallImpl<CBRT_F32>;
-def cbrt : RuntimeLibcallImpl<CBRT_F64>;
-defm cbrt : LibmLongDoubleLibCall;
-
-def logf : RuntimeLibcallImpl<LOG_F32>;
-def log : RuntimeLibcallImpl<LOG_F64>;
-defm log : LibmLongDoubleLibCall;
-
-def __logf_finite : RuntimeLibcallImpl<LOG_FINITE_F32>;
-def __log_finite : RuntimeLibcallImpl<LOG_FINITE_F64>;
-def __logl_finite_f80 : RuntimeLibcallImpl<LOG_FINITE_F80, "__logl_finite">;
-def __logl_finite_f128 : RuntimeLibcallImpl<LOG_FINITE_F128, "__logl_finite">;
-def __logl_finite_ppcf128 : RuntimeLibcallImpl<LOG_FINITE_PPCF128, "__logl_finite">;
-
-def log2f : RuntimeLibcallImpl<LOG2_F32>;
-def log2 : RuntimeLibcallImpl<LOG2_F64>;
-defm log2 : LibmLongDoubleLibCall;
-
-def __log2f_finite : RuntimeLibcallImpl<LOG2_FINITE_F32>;
-def __log2_finite : RuntimeLibcallImpl<LOG2_FINITE_F64>;
-def __log2l_finite_f80 : RuntimeLibcallImpl<LOG2_FINITE_F80, "__log2l_finite">;
-def __log2l_finite_f128 : RuntimeLibcallImpl<LOG2_FINITE_F128, "__log2l_finite">;
-def __log2l_finite_ppcf128 : RuntimeLibcallImpl<LOG2_FINITE_PPCF128, "__log2l_finite">;
-
-def log10f : RuntimeLibcallImpl<LOG10_F32>;
-def log10 : RuntimeLibcallImpl<LOG10_F64>;
-defm log10 : LibmLongDoubleLibCall;
-
-def __log10f_finite : RuntimeLibcallImpl<LOG10_FINITE_F32>;
-def __log10_finite : RuntimeLibcallImpl<LOG10_FINITE_F64>;
-def __log10l_finite_f80 : RuntimeLibcallImpl<LOG10_FINITE_F80, "__log10l_finite">;
-def __log10l_finite_f128 : RuntimeLibcallImpl<LOG10_FINITE_F128, "__log10l_finite">;
-def __log10l_finite_ppcf128 : RuntimeLibcallImpl<LOG10_FINITE_PPCF128, "__log10l_finite">;
-
-def expf : RuntimeLibcallImpl<EXP_F32>;
-def exp : RuntimeLibcallImpl<EXP_F64>;
-defm exp : LibmLongDoubleLibCall<"EXP", "exp">;
-
-def __expf_finite : RuntimeLibcallImpl<EXP_FINITE_F32>;
-def __exp_finite : RuntimeLibcallImpl<EXP_FINITE_F64>;
-def __expl_finite_f80 : RuntimeLibcallImpl<EXP_FINITE_F80, "__expl_finite">;
-def __expl_finite_f128 : RuntimeLibcallImpl<EXP_FINITE_F128, "__expl_finite">;
-def __expl_finite_ppcf128 : RuntimeLibcallImpl<EXP_FINITE_PPCF128, "__expl_finite">;
-
-def exp2f : RuntimeLibcallImpl<EXP2_F32>;
-def exp2 : RuntimeLibcallImpl<EXP2_F64>;
-defm exp2 : LibmLongDoubleLibCall<"EXP2", "exp2">;
-
-def __exp2f_finite : RuntimeLibcallImpl<EXP2_FINITE_F32>;
-def __exp2_finite : RuntimeLibcallImpl<EXP2_FINITE_F64>;
-def __exp2l_finite_f80 : RuntimeLibcallImpl<EXP2_FINITE_F80, "__exp2l_finite">;
-def __exp2l_finite_f128 : RuntimeLibcallImpl<EXP2_FINITE_F128, "__exp2l_finite">;
-def __exp2l_finite_ppcf128 : RuntimeLibcallImpl<EXP2_FINITE_PPCF128, "__exp2l_finite">;
-
-def exp10f : RuntimeLibcallImpl<EXP10_F32>;
-def exp10 : RuntimeLibcallImpl<EXP10_F64>;
-def exp10l_f80 : RuntimeLibcallImpl<EXP10_F80, "exp10l">;
-def exp10l_f128 : RuntimeLibcallImpl<EXP10_F128, "exp10l">;
-def exp10l_ppcf128 : RuntimeLibcallImpl<EXP10_PPCF128, "exp10l">;
-
-def sinf : RuntimeLibcallImpl<SIN_F32>;
-def sin : RuntimeLibcallImpl<SIN_F64>;
-defm sin : LibmLongDoubleLibCall;
-
-def cosf : RuntimeLibcallImpl<COS_F32>;
-def cos : RuntimeLibcallImpl<COS_F64>;
-defm cos : LibmLongDoubleLibCall;
-
-def tanf : RuntimeLibcallImpl<TAN_F32>;
-def tan : RuntimeLibcallImpl<TAN_F64>;
-defm tan : LibmLongDoubleLibCall;
-
-def sinhf : RuntimeLibcallImpl<SINH_F32>;
-def sinh : RuntimeLibcallImpl<SINH_F64>;
-defm sinh : LibmLongDoubleLibCall;
-
-def coshf : RuntimeLibcallImpl<COSH_F32>;
-def cosh : RuntimeLibcallImpl<COSH_F64>;
-defm cosh : LibmLongDoubleLibCall;
-
-def tanhf : RuntimeLibcallImpl<TANH_F32>;
-def tanh : RuntimeLibcallImpl<TANH_F64>;
-defm tanh : LibmLongDoubleLibCall;
-
-def asinf : RuntimeLibcallImpl<ASIN_F32>;
-def asin : RuntimeLibcallImpl<ASIN_F64>;
-defm asin : LibmLongDoubleLibCall;
-
-def acosf : RuntimeLibcallImpl<ACOS_F32>;
-def acos : RuntimeLibcallImpl<ACOS_F64>;
-defm acos : LibmLongDoubleLibCall;
-
-def atanf : RuntimeLibcallImpl<ATAN_F32>;
-def atan : RuntimeLibcallImpl<ATAN_F64>;
-defm atan : LibmLongDoubleLibCall;
-
-def atan2f : RuntimeLibcallImpl<ATAN2_F32>;
-def atan2 : RuntimeLibcallImpl<ATAN2_F64>;
-defm atan2 : LibmLongDoubleLibCall;
-
-def powf : RuntimeLibcallImpl<POW_F32>;
-def pow : RuntimeLibcallImpl<POW_F64>;
-defm pow : LibmLongDoubleLibCall;
-
-def __powf_finite : RuntimeLibcallImpl<POW_FINITE_F32>;
-def __pow_finite : RuntimeLibcallImpl<POW_FINITE_F64>;
-def __powl_finite_f80 : RuntimeLibcallImpl<POW_FINITE_F80, "__powl_finite">;
-def __powl_finite_f128 : RuntimeLibcallImpl<POW_FINITE_F128, "__powl_finite">;
-def __powl_finite_ppcf128 : RuntimeLibcallImpl<POW_FINITE_PPCF128, "__powl_finite">;
-
-def ceilf : RuntimeLibcallImpl<CEIL_F32>;
-def ceil : RuntimeLibcallImpl<CEIL_F64>;
-defm ceil : LibmLongDoubleLibCall;
-
-def truncf : RuntimeLibcallImpl<TRUNC_F32>;
-def trunc : RuntimeLibcallImpl<TRUNC_F64>;
-defm trunc : LibmLongDoubleLibCall;
-
-def rintf : RuntimeLibcallImpl<RINT_F32>;
-def rint : RuntimeLibcallImpl<RINT_F64>;
-defm rint : LibmLongDoubleLibCall;
-
-def nearbyintf : RuntimeLibcallImpl<NEARBYINT_F32>;
-def nearbyint : RuntimeLibcallImpl<NEARBYINT_F64>;
-defm nearbyint : LibmLongDoubleLibCall;
-
-def roundf : RuntimeLibcallImpl<ROUND_F32>;
-def round : RuntimeLibcallImpl<ROUND_F64>;
-defm round : LibmLongDoubleLibCall;
-
-def roundevenf : RuntimeLibcallImpl<ROUNDEVEN_F32>;
-def roundeven : RuntimeLibcallImpl<ROUNDEVEN_F64>;
-defm roundeven : LibmLongDoubleLibCall;
-
-def floorf : RuntimeLibcallImpl<FLOOR_F32>;
-def floor : RuntimeLibcallImpl<FLOOR_F64>;
-defm floor : LibmLongDoubleLibCall;
-
-def copysignf : RuntimeLibcallImpl<COPYSIGN_F32>;
-def copysign : RuntimeLibcallImpl<COPYSIGN_F64>;
-defm copysign : LibmLongDoubleLibCall;
-
-def fminf : RuntimeLibcallImpl<FMIN_F32>;
-def fmin : RuntimeLibcallImpl<FMIN_F64>;
-defm fmin : LibmLongDoubleLibCall;
-
-def fmaxf : RuntimeLibcallImpl<FMAX_F32>;
-def fmax : RuntimeLibcallImpl<FMAX_F64>;
-defm fmax : LibmLongDoubleLibCall;
-
-def fminimumf : RuntimeLibcallImpl<FMINIMUM_F32>;
-def fminimum : RuntimeLibcallImpl<FMINIMUM_F64>;
-defm fminimum : LibmLongDoubleLibCall;
-
-def fmaximumf : RuntimeLibcallImpl<FMAXIMUM_F32>;
-def fmaximum : RuntimeLibcallImpl<FMAXIMUM_F64>;
-defm fmaximum : LibmLongDoubleLibCall;
-
-def fminimum_numf : RuntimeLibcallImpl<FMINIMUM_NUM_F32>;
-def fminimum_num : RuntimeLibcallImpl<FMINIMUM_NUM_F64>;
-defm fminimum_num : LibmLongDoubleLibCall;
-
-def fmaximum_numf : RuntimeLibcallImpl<FMAXIMUM_NUM_F32>;
-def fmaximum_num : RuntimeLibcallImpl<FMAXIMUM_NUM_F64>;
-defm fmaximum_num : LibmLongDoubleLibCall;
-
-def lroundf : RuntimeLibcallImpl<LROUND_F32>;
-def lround : RuntimeLibcallImpl<LROUND_F64>;
-defm lround : LibmLongDoubleLibCall;
-
-def llroundf : RuntimeLibcallImpl<LLROUND_F32>;
-def llround : RuntimeLibcallImpl<LLROUND_F64>;
-defm llround : LibmLongDoubleLibCall;
-
-def lrintf : RuntimeLibcallImpl<LRINT_F32>;
-def lrint : RuntimeLibcallImpl<LRINT_F64>;
-defm lrint : LibmLongDoubleLibCall;
-
-def llrintf : RuntimeLibcallImpl<LLRINT_F32>;
-def llrint : RuntimeLibcallImpl<LLRINT_F64>;
-defm llrint : LibmLongDoubleLibCall;
-
-def ldexpf : RuntimeLibcallImpl<LDEXP_F32>;
-def ldexp : RuntimeLibcallImpl<LDEXP_F64>;
-defm ldexp : LibmLongDoubleLibCall;
-
-def frexpf : RuntimeLibcallImpl<FREXP_F32>;
-def frexp : RuntimeLibcallImpl<FREXP_F64>;
-defm frexp : LibmLongDoubleLibCall;
-
-def sincospif : RuntimeLibcallImpl<SINCOSPI_F32>;
-def sincospi : RuntimeLibcallImpl<SINCOSPI_F64>;
-defm sincospi : LibmLongDoubleLibCall;
-
-def modff : RuntimeLibcallImpl<MODF_F32>;
-def modf : RuntimeLibcallImpl<MODF_F64>;
-defm modf : LibmLongDoubleLibCall;
+defm fmod : LibmLibcallImpls<"REM">;
+defm fma : LibmLibcallImpls;
+defm sqrt : LibmLibcallImpls;
+defm cbrt : LibmLibcallImpls;
+defm log : LibmLibcallImpls;
+defm __log_finite : LibmLibcallImpls<"LOG_FINITE", "__logX_finite">;
+defm log2 : LibmLibcallImpls;
+defm __log2_finite : LibmLibcallImpls<"LOG2_FINITE", "__log2X_finite">;
+defm log10 : LibmLibcallImpls;
+defm __log10_finite : LibmLibcallImpls<"LOG10_FINITE", "__log10X_finite">;
+defm exp : LibmLibcallImpls;
+defm __exp_finite : LibmLibcallImpls<"EXP_FINITE", "__expX_finite">;
+defm exp2 : LibmLibcallImpls;
+defm __exp2_finite : LibmLibcallImpls<"EXP2_FINITE", "__exp2X_finite">;
+defm exp10 : LibmLibcallImpls;
+defm sin : LibmLibcallImpls;
+defm cos : LibmLibcallImpls;
+defm tan : LibmLibcallImpls;
+defm sinh : LibmLibcallImpls;
+defm cosh : LibmLibcallImpls;
+defm tanh : LibmLibcallImpls;
+defm asin : LibmLibcallImpls;
+defm acos : LibmLibcallImpls;
+defm atan : LibmLibcallImpls;
+defm atan2 : LibmLibcallImpls;
+defm pow : LibmLibcallImpls;
+defm __pow_finite : LibmLibcallImpls<"POW_FINITE", "__powX_finite">;
+defm ceil : LibmLibcallImpls;
+defm trunc : LibmLibcallImpls;
+defm rint : LibmLibcallImpls;
+defm nearbyint : LibmLibcallImpls;
+defm round : LibmLibcallImpls;
+defm roundeven : LibmLibcallImpls;
+defm floor : LibmLibcallImpls;
+defm copysign : LibmLibcallImpls;
+defm fmin : LibmLibcallImpls;
+defm fmax : LibmLibcallImpls;
+defm fminimum : LibmLibcallImpls;
+defm fmaximum : LibmLibcallImpls;
+defm fminimum_num : LibmLibcallImpls;
+defm fmaximum_num : LibmLibcallImpls;
+defm lround : LibmLibcallImpls;
+defm llround : LibmLibcallImpls;
+defm lrint : LibmLibcallImpls;
+defm llrint : LibmLibcallImpls;
+defm ldexp : LibmLibcallImpls;
+defm frexp : LibmLibcallImpls;
+defm sincospi : LibmLibcallImpls;
+defm modf : LibmLibcallImpls;
 
 // Floating point environment
 def fegetenv : RuntimeLibcallImpl<FEGETENV>;
@@ -939,9 +786,7 @@ def __exp10 : RuntimeLibcallImpl<EXP10_F64>;
 def __sincosf_stret : RuntimeLibcallImpl<SINCOS_STRET_F32>;
 def __sincos_stret : RuntimeLibcallImpl<SINCOS_STRET_F64>;
 
-def sincosf : RuntimeLibcallImpl<SINCOS_F32>;
-def sincos : RuntimeLibcallImpl<SINCOS_F64>;
-defm sincos : LibmLongDoubleLibCall;
+defm sincos : LibmLibcallImpls;
 
 def bzero : RuntimeLibcallImpl<BZERO>;
 def __bzero : RuntimeLibcallImpl<BZERO>;
