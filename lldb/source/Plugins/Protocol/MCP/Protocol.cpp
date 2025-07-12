@@ -42,7 +42,7 @@ bool fromJSON(const llvm::json::Value &V, Request &R, llvm::json::Path P) {
 
 llvm::json::Value toJSON(const ErrorInfo &EI) {
   llvm::json::Object Result{{"code", EI.code}, {"message", EI.message}};
-  if (EI.data)
+  if (!EI.data.empty())
     Result.insert({"data", EI.data});
   return Result;
 }
@@ -132,9 +132,9 @@ bool fromJSON(const llvm::json::Value &V, Resource &R, llvm::json::Path P) {
 
 llvm::json::Value toJSON(const Resource &R) {
   llvm::json::Object Result{{"uri", R.uri}, {"name", R.name}};
-  if (R.description)
+  if (!R.description.empty())
     Result.insert({"description", R.description});
-  if (R.mimeType)
+  if (!R.mimeType.empty())
     Result.insert({"mimeType", R.mimeType});
   return Result;
 }
@@ -146,7 +146,7 @@ bool fromJSON(const llvm::json::Value &V, Capabilities &C, llvm::json::Path P) {
 
 llvm::json::Value toJSON(const ResourceContents &RC) {
   llvm::json::Object Result{{"uri", RC.uri}, {"text", RC.text}};
-  if (RC.mimeType)
+  if (!RC.mimeType.empty())
     Result.insert({"mimeType", RC.mimeType});
   return Result;
 }
@@ -188,7 +188,7 @@ bool fromJSON(const llvm::json::Value &V, TextResult &TR, llvm::json::Path P) {
 
 llvm::json::Value toJSON(const ToolDefinition &TD) {
   llvm::json::Object Result{{"name", TD.name}};
-  if (TD.description)
+  if (!TD.description.empty())
     Result.insert({"description", TD.description});
   if (TD.inputSchema)
     Result.insert({"inputSchema", TD.inputSchema});
