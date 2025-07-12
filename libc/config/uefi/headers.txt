@@ -1,4 +1,7 @@
 set(TARGET_PUBLIC_HEADERS
+    libc.include.assert
     libc.include.errno
+    libc.include.inttypes
+    libc.include.time
     libc.include.uefi
 )

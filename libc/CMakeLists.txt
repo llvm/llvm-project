@@ -260,6 +260,13 @@ endif()
 
 if(LIBC_TARGET_OS_IS_GPU)
   include(prepare_libc_gpu_build)
+endif()
+
+if(LIBC_TARGET_OS_IS_UEFI)
+  set(uefi_test_exe "${LIBC_SOURCE_DIR}/test/scripts/uefi_runner.py")
+endif()
+
+if(LIBC_TARGET_OS_IS_GPU OR LIBC_TARGET_OS_IS_UEFI)
   set(LIBC_ENABLE_UNITTESTS OFF)
 endif()
 

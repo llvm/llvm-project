@@ -1,6 +1,10 @@
 set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.errno
+
+    # string.h entrypoints
+    libc.src.string.memcpy
+    libc.src.string.memset
 )
 
 set(TARGET_LIBM_ENTRYPOINTS)

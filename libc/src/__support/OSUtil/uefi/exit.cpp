@@ -7,7 +7,7 @@
 //===-----------------------------------------------------------------===//
 
 #include "src/__support/OSUtil/exit.h"
-#include "config/uefi.h"
+#include "config/app.h"
 #include "include/llvm-libc-types/EFI_SYSTEM_TABLE.h"
 #include "src/__support/macros/config.h"
 
@@ -15,8 +15,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 [[noreturn]] void exit(int status) {
-  app.system_table->BootServices->Exit(__llvm_libc_efi_image_handle, status, 0,
-                                       nullptr);
+  app.system_table->BootServices->Exit(app.image_handle, status, 0, nullptr);
   __builtin_unreachable();
 }
 
