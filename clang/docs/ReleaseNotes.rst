@@ -955,6 +955,8 @@ Bug Fixes to C++ Support
   consistently treat the initializer as manifestly constant-evaluated.
   (#GH135281)
 - Fix a crash in the presence of invalid base classes. (#GH147186)
+- Fixed a crash involving list-initialization of an empty class with a
+  non-empty initializer list. (#GH147949)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
