@@ -110,23 +110,27 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     Variadic<Index>: $offsets,
     Variadic<Index>: $shape,
     Variadic<Index>: $strides,
-    DenseI64ArrayAttr: $const_offsets,
+    OptionalAttr<DenseI64ArrayAttr>: $const_offsets,
     OptionalAttr<DenseI64ArrayAttr>: $const_shape,
     OptionalAttr<DenseI64ArrayAttr>: $const_strides
   );
   let results = (outs XeGPU_TensorDesc: $TensorDesc);
 
-  let assemblyFormat = [{
-    $source ``
-    custom<DynamicIndexList>($offsets, $const_offsets)
-    (`,` custom<DynamicIndexList>($shape, $const_shape)^
-     `,` custom<DynamicIndexList>($strides, $const_strides))?
-    attr-dict `:` type($source) `->` qualified(type($TensorDesc))
-  }];
-
   let hasVerifier = 1;
 
+  let hasCustomAssemblyFormat = 1;
+
   let builders = [
+    OpBuilder<(ins "Type": $tdesc, "TypedValue<MemRefType>": $source)>,
+
+    OpBuilder<(ins "Type": $tdesc, "TypedValue<MemRefType> ": $source,
+                   "llvm::ArrayRef<OpFoldResult>": $shape,
+                   "llvm::ArrayRef<OpFoldResult>": $strides)>,
+
+    OpBuilder<(ins "Type": $tdesc, "TypedValue<IntegerType> ": $source,
+                   "llvm::ArrayRef<OpFoldResult>": $shape,
+                   "llvm::ArrayRef<OpFoldResult>": $strides)>,
+
     OpBuilder<(ins "Type": $tdesc, "TypedValue<MemRefType>": $source,
                    "llvm::ArrayRef<OpFoldResult>": $offsets)>,
 
@@ -163,8 +167,29 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     }
 
     ArrayRef<int64_t> getStaticOffsets(){
-      return getConstOffsets();
+      auto attr = getConstOffsetsAttr();
+
+      if (attr) 
+        return attr;
+
+      auto memrefType = llvm::dyn_cast<MemRefType>(getSourceType());
+      int rank = 0;
+      if (memrefType) {
+        //use source memref's rank, as source memref rank may be higher
+        rank = memrefType.getRank();
+      } else {
+        //nd_tdesc created from ui64, use nd_tdesc's rank
+        rank = getTensorDescShape().size();
+      };
+
+      // The offsets are allowed to be empty. The Traits verification of OffsetSizeAndStrideOpInterface interface assumes offsets being present.
+      // It is set to be MAX to indicate user not passed any value, instead of kDynamic which means offsets passed as value.
+      setConstOffsets(llvm::SmallVector<int64_t, 4>(rank, std::numeric_limits<int64_t>::max()));
+
+      attr = getConstOffsetsAttr();
+      return attr;
     }
+
 
     /// wrapper for matching with OffsetSizeAndStrideOpInterface
     /// If source is IntegerType or `const_shape` is filled,
