@@ -1,0 +1,50 @@
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP___LOG_ERROR
+#define _LIBCPP___LOG_ERROR
+
+#include <__config>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+enum class _LogErrorReason {
+  // Where possible, it logs in a way that indicates a fatal error (which might include capturing the stack trace).
+  _HardeningFailure
+};
+
+// This function should never be called directly from the code -- it should only be called through the
+// `_LIBCPP_LOG_ERROR` macro.
+_LIBCPP_AVAILABILITY_LOG_ERROR _LIBCPP_EXPORTED_FROM_ABI void
+__log_error(_LogErrorReason __reason, const char* __message) _NOEXCEPT;
+
+// _LIBCPP_LOG_ERROR(message)
+//
+// This macro is used to log an error without terminating the program (as is the case for hardening failures if the
+// `observe` assertion semantic is used, for example).
+
+#if !defined(_LIBCPP_LOG_ERROR)
+
+#  if !_LIBCPP_AVAILABILITY_HAS_LOG_ERROR
+// The decltype is there to suppress -Wunused warnings in this configuration.
+void __use(const char*);
+#    define _LIBCPP_LOG_ERROR(__message) (decltype(::std::__use(__message))())
+#  else
+#    define _LIBCPP_LOG_ERROR(__reason, __message) ::std::__log_error(__reason, __message)
+#  endif
+
+#endif // !defined(_LIBCPP_LOG_ERROR)
+
+_LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP___LOG_ERROR

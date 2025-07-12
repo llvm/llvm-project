@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <__config>
-#include <__log_hardening_failure>
+#include <__log_error>
 #include <cstdio>
 
 #ifdef __BIONIC__
@@ -21,7 +21,9 @@ extern "C" void android_set_abort_message(const char* msg);
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-_LIBCPP_WEAK void __libcpp_log_hardening_failure(const char* message) noexcept {
+namespace {
+
+void log_fatal_error(const char* message) noexcept {
   // On Apple platforms, use the `os_fault_with_payload` OS function that simulates a crash.
 #if defined(__APPLE__) && __has_include(<os/reason_private.h>)
   os_fault_with_payload(
@@ -44,6 +46,16 @@ _LIBCPP_WEAK void __libcpp_log_hardening_failure(const char* message) noexcept {
 #else
   fprintf(stderr, "%s", message);
 #endif
+}
+
+} // namespace
+
+void __log_error(_LogErrorReason reason, const char* message) noexcept {
+  switch (reason) {
+  case _LogErrorReason::_HardeningFailure:
+  default:
+    log_fatal_error(message);
+  }
 }
 
 _LIBCPP_END_NAMESPACE_STD
