@@ -1670,6 +1670,94 @@ def GetGlobalOp : CIR_Op<"get_global",
 }
 
 //===----------------------------------------------------------------------===//
+// SetBitfieldOp
+//===----------------------------------------------------------------------===//
+
+def SetBitfieldOp : CIR_Op<"set_bitfield"> {
+  let summary = "Set the value of a bitfield member";
+  let description = [{
+    The `cir.set_bitfield` operation provides a store-like access to
+    a bit field of a record.
+
+    A bitfield info attribute must be provided to describe the location of
+    the bitfield within the memory referenced by the $addr argument.
+    The $src argument is inserted at the appropriate place in the memory and
+    the value that was stored. Returns the value being stored.
+
+    A unit attribute `volatile` can be used to indicate a volatile store of the
+    bitfield.
+      ```mlir
+        cir.set_bitfield(#bfi, %0 : !cir.ptr<!u32i>, %1 : !s32i) {is_volatile}
+                                                                       -> !s32i
+      ```
+
+    Example.
+    Suppose we have a struct with multiple bitfields stored in
+    different storages. The `cir.set_bitfield` operation sets the value
+    of the bitfield.
+    ```C++
+    typedef struct {
+      int a : 4;
+      int b : 27;
+      int c : 17;
+      int d : 2;
+      int e : 15;
+    } S;
+
+    void store_bitfield(S& s) {
+      s.e = 3;
+    }
+    ```
+
+    ```mlir
+    // 'e' is in the storage with the index 1
+    !record_type = !cir.record<struct "S" packed padded {!u64i, !u16i,
+                               !cir.array<!u8i x 2>} #cir.record.decl.ast>
+    #bfi_e = #cir.bitfield_info<name = "e", storage_type = !u16i, size = 15,
+                                offset = 0, is_signed = true>
+
+    %1 = cir.const #cir.int<3> : !s32i
+    %2 = cir.load %0 : !cir.ptr<!cir.ptr<!record_type>>, !cir.ptr<!record_type>
+    %3 = cir.get_member %2[1] {name = "e"} : !cir.ptr<!record_type>
+                                                             -> !cir.ptr<!u16i>
+    %4 = cir.set_bitfield(#bfi_e, %3 : !cir.ptr<!u16i>, %1 : !s32i) -> !s32i
+    ```
+   }];
+
+  let arguments = (ins
+    Arg<CIR_PointerType, "the address to store the value", [MemWrite]>:$addr,
+    CIR_AnyType:$src,
+    BitfieldInfoAttr:$bitfield_info,
+    UnitAttr:$is_volatile
+  );
+
+  let results = (outs CIR_IntType:$result);
+
+  let assemblyFormat = [{ `(`$bitfield_info`,` $addr`:`qualified(type($addr))`,`
+    $src`:`type($src) `)`  attr-dict `->` type($result) }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$type,
+                   "mlir::Value":$addr,
+                   "mlir::Type":$storage_type,
+                   "mlir::Value":$src,
+                   "llvm::StringRef":$name,
+                   "unsigned":$size,
+                   "unsigned":$offset,
+                   "bool":$is_signed,
+                   "bool":$is_volatile
+                   ),
+   [{
+      BitfieldInfoAttr info =
+        BitfieldInfoAttr::get($_builder.getContext(),
+                              name, storage_type,
+                              size, offset, is_signed);
+      build($_builder, $_state, type, addr, src, info, is_volatile);
+    }]>
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // GetBitfieldOp
 //===----------------------------------------------------------------------===//
 
@@ -1685,6 +1773,9 @@ def GetBitfieldOp : CIR_Op<"get_bitfield"> {
 
     A unit attribute `volatile` can be used to indicate a volatile load of the
     bitfield.
+    ```mlir
+      cir.get_bitfield(#bfi, %0 {is_volatile} : !cir.ptr<!u64i>) -> !s32i
+    ```
 
     Example:
     Suppose we have a struct with multiple bitfields stored in
@@ -2522,6 +2613,62 @@ def ComplexImagOp : CIR_Op<"complex.imag", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexRealPtrOp
+//===----------------------------------------------------------------------===//
+
+def ComplexRealPtrOp : CIR_Op<"complex.real_ptr", [Pure]> {
+  let summary = "Derive a pointer to the real part of a complex value";
+  let description = [{
+    `cir.complex.real_ptr` operation takes a pointer operand that points to a
+    complex value of type `!cir.complex` and yields a pointer to the real part
+    of the operand.
+
+    Example:
+
+    ```mlir
+    %1 = cir.complex.real_ptr %0 : !cir.ptr<!cir.complex<!cir.double>>
+      -> !cir.ptr<!cir.double>
+    ```
+  }];
+
+  let results = (outs CIR_PtrToIntOrFloatType:$result);
+  let arguments = (ins CIR_PtrToComplexType:$operand);
+
+  let assemblyFormat = [{
+    $operand `:`
+    qualified(type($operand)) `->` qualified(type($result)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexAddOp
+//===----------------------------------------------------------------------===//
+
+def ComplexAddOp : CIR_Op<"complex.add", [Pure, SameOperandsAndResultType]> {
+  let summary = "Complex addition";
+  let description = [{
+    The `cir.complex.add` operation takes two complex numbers and returns
+    their sum.
+
+    Example:
+
+    ```mlir
+    %2 = cir.complex.add %0, %1 : !cir.complex<!cir.float>
+    ```
+  }];
+
+  let arguments = (ins CIR_ComplexType:$lhs, CIR_ComplexType:$rhs);
+
+  let results = (outs CIR_ComplexType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs `:` qualified(type($result)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Bit Manipulation Operations
 //===----------------------------------------------------------------------===//
 
@@ -2657,6 +2804,45 @@ def BitPopcountOp : CIR_BitOpBase<"bit.popcnt",
     %0 = cir.const #cir.int<104> : !u32i
     // %1 will be 3 since there are 3 1-bits in %0
     %1 = cir.bit.popcnt(%0 : !u32i) : !u32i
+    ```
+  }];
+}
+
+def BitReverseOp : CIR_BitOpBase<"bit.reverse",
+                                 CIR_UIntOfWidths<[8, 16, 32, 64]>> {
+  let summary = "Reverse the bit pattern of the operand integer";
+  let description = [{
+    The `cir.bit.reverse` operation reverses the bits of the operand integer.
+    Its only argument must be of unsigned integer types of width 8, 16, 32, or
+    64.
+
+    This operation covers the C/C++ builtin function `__builtin_bitreverse`.
+
+    Example:
+
+    ```mlir
+    %1 = cir.bit.reverse(%0 : !u32i): !u32i
+    ```
+  }];
+}
+
+def ByteSwapOp : CIR_BitOpBase<"byte_swap", CIR_UIntOfWidths<[16, 32, 64]>> {
+  let summary = "Reverse the bytes in the object representation of the operand";
+  let description = [{
+    The `cir.byte_swap` operation takes an integer as operand, reverse the bytes
+    in the object representation of the operand integer, and returns the result.
+
+    The operand integer must be an unsigned integer. Its widths must be either
+    16, 32, or 64.
+
+    Example:
+
+    ```mlir
+    // %0 = 0x12345678
+    %0 = cir.const #cir.int<305419896> : !u32i
+
+    // %1 should be 0x78563412
+    %1 = cir.byte_swap(%0 : !u32i) : !u32i
     ```
   }];
 }

@@ -27,10 +27,11 @@ bool verifyRootFlag(uint32_t Flags);
 bool verifyVersion(uint32_t Version);
 bool verifyRegisterValue(uint32_t RegisterValue);
 bool verifyRegisterSpace(uint32_t RegisterSpace);
-bool verifyDescriptorFlag(uint32_t Flags);
+bool verifyRootDescriptorFlag(uint32_t Version, uint32_t FlagsVal);
 bool verifyRangeType(uint32_t Type);
 bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
                                uint32_t FlagsVal);
+bool verifyNumDescriptors(uint32_t NumDescriptors);
 bool verifySamplerFilter(uint32_t Value);
 bool verifyAddress(uint32_t Address);
 bool verifyMipLODBias(float MipLODBias);
@@ -50,6 +51,18 @@ struct RangeInfo {
   llvm::dxil::ResourceClass Class;
   uint32_t Space;
   llvm::dxbc::ShaderVisibility Visibility;
+
+  bool operator==(const RangeInfo &RHS) const {
+    return std::tie(LowerBound, UpperBound, Class, Space, Visibility) ==
+           std::tie(RHS.LowerBound, RHS.UpperBound, RHS.Class, RHS.Space,
+                    RHS.Visibility);
+  }
+
+  bool operator<(const RangeInfo &RHS) const {
+    return std::tie(Class, Space, LowerBound, UpperBound, Visibility) <
+           std::tie(RHS.Class, RHS.Space, RHS.LowerBound, RHS.UpperBound,
+                    RHS.Visibility);
+  }
 };
 
 class ResourceRange {
@@ -124,8 +137,8 @@ struct OverlappingRanges {
 ///   - RangeInfo will retain the interval, ResourceClass, Space and Visibility
 ///   - It will also contain an index so that it can be associated to
 /// additional diagnostic information
-/// 2. Sort the RangeInfo's such that they are grouped together by
-///  ResourceClass and Space
+/// 2. The user is required to sort the RangeInfo's such that they are grouped
+/// together by ResourceClass and Space
 /// 3. Iterate through the collected RangeInfos by their groups
 ///   - For each group we will have a ResourceRange for each visibility
 ///   - As we iterate through we will:
@@ -133,7 +146,7 @@ struct OverlappingRanges {
 ///   ResourceRange
 ///      B: Check for overlap with any overlapping Visibility ResourceRange
 llvm::SmallVector<OverlappingRanges>
-findOverlappingRanges(llvm::SmallVector<RangeInfo> &Infos);
+findOverlappingRanges(ArrayRef<RangeInfo> Infos);
 
 } // namespace rootsig
 } // namespace hlsl

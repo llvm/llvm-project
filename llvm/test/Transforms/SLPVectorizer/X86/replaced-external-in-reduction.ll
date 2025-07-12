@@ -16,9 +16,10 @@ define void @test(i32 %0, ptr %p) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[TMP9:%.*]] = phi <8 x i32> [ [[TMP8]], [[ENTRY:%.*]] ], [ [[TMP6]], [[PH]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i32> [ [[TMP5]], [[ENTRY]] ], [ zeroinitializer, [[PH]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v8i32(<8 x i32> [[TMP9]], i64 0)
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i32> [[TMP9]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[RDX_OP:%.*]] = or <4 x i32> [[TMP10]], [[TMP7]]
-; CHECK-NEXT:    [[TMP11:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> [[TMP9]], <4 x i32> [[RDX_OP]], i64 0)
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i32> [[RDX_OP]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i32> [[TMP9]], <8 x i32> [[TMP12]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[OP_RDX5:%.*]] = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> [[TMP11]])
 ; CHECK-NEXT:    [[OP_RDX2:%.*]] = or i32 [[OP_RDX5]], [[OP_RDX]]
 ; CHECK-NEXT:    store i32 [[OP_RDX2]], ptr [[P]], align 4

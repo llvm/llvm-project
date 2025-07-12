@@ -2017,7 +2017,7 @@ public:
   /// It returns EVT::Other if the type should be determined using generic
   /// target-independent logic.
   virtual EVT
-  getOptimalMemOpType(const MemOp &Op,
+  getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                       const AttributeList & /*FuncAttributes*/) const {
     return MVT::Other;
   }
@@ -3230,8 +3230,7 @@ public:
   /// \p Mask is a mask value
   /// \p DeinterleaveRes is a list of deinterleaved results.
   virtual bool lowerInterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
-                                      ArrayRef<Value *> DeinterleaveRes,
-                                      unsigned Factor) const {
+                                      ArrayRef<Value *> DeinterleaveRes) const {
     return false;
   }
 
@@ -3254,8 +3253,7 @@ public:
   /// \p DeinterleaveValues contains the deinterleaved values.
   virtual bool
   lowerDeinterleaveIntrinsicToLoad(LoadInst *LI,
-                                   ArrayRef<Value *> DeinterleaveValues,
-                                   unsigned Factor) const {
+                                   ArrayRef<Value *> DeinterleaveValues) const {
     return false;
   }
 
@@ -4111,8 +4109,9 @@ public:
   /// It returns the types of the sequence of memory ops to perform
   /// memset / memcpy by reference.
   virtual bool
-  findOptimalMemOpLowering(std::vector<EVT> &MemOps, unsigned Limit,
-                           const MemOp &Op, unsigned DstAS, unsigned SrcAS,
+  findOptimalMemOpLowering(LLVMContext &Context, std::vector<EVT> &MemOps,
+                           unsigned Limit, const MemOp &Op, unsigned DstAS,
+                           unsigned SrcAS,
                            const AttributeList &FuncAttributes) const;
 
   /// Check to see if the specified operand of the specified instruction is a
@@ -4371,6 +4370,11 @@ public:
     return Op.getOpcode() == ISD::SPLAT_VECTOR ||
            Op.getOpcode() == ISD::SPLAT_VECTOR_PARTS;
   }
+
+  /// Return true if the given select/vselect should be considered canonical and
+  /// not be transformed. Currently only used for "vselect (not Cond), N1, N2 ->
+  /// vselect Cond, N2, N1".
+  virtual bool isTargetCanonicalSelect(SDNode *N) const { return false; }
 
   struct DAGCombinerInfo {
     void *DC;  // The DAG Combiner object.

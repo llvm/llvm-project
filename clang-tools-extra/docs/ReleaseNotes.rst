@@ -142,6 +142,12 @@ New checks
   Finds unscoped (non-class) ``enum`` declarations and suggests using
   ``enum class`` instead.
 
+- New :doc:`llvm-prefer-static-over-anonymous-namespace
+  <clang-tidy/checks/llvm/prefer-static-over-anonymous-namespace>` check.
+
+  Finds function and variable declarations inside anonymous namespace and
+  suggests replacing them with ``static`` declarations.
+
 - New :doc:`modernize-use-scoped-lock
   <clang-tidy/checks/modernize/use-scoped-lock>` check.
 
@@ -215,7 +221,7 @@ Changes in existing checks
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by adding a
   flag to specify the function used for forwarding instead of ``std::forward``.
-   
+
 - Improved :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check by
   fixing false positives when calling indexing operators that do not perform
@@ -341,6 +347,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/math-missing-parentheses>` check by fixing
   false negatives where math expressions are the operand of assignment operators
   or comparison operators.
+
+- Improved :doc:`readability-named-parameter
+  <clang-tidy/checks/readability/named-parameter>` check by adding the option
+  `InsertPlainNamesInForwardDecls` to insert parameter names without comments
+  for forward declarations only.
 
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
