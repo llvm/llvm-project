@@ -537,6 +537,71 @@ unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
   return getMaxNumVGPRs(MF.getFunction());
 }
 
+bool GCNSubtarget::isRealSchedDependency(MachineInstr *DefI, int DefOpIdx,
+                                         MachineInstr *UseI,
+                                         int UseOpIdx) const {
+  // From the (gfx942, for example) ISA:
+  // "Packed 32-bit instructions operate on 2 dwords at a time and those
+  // operands must be two-dword aligned (i.e. an even VGPR address). Output
+  // modifiers are not supported for these instructions. OPSEL and OPSEL_HI work
+  // to select the first or second DWORD for each source."
+  // -> We can save dependencies on VGPRs by analyzing the operand selection.
+  // See also
+  // https://llvm.org/docs/AMDGPUModifierSyntax.html#amdgpu-synid-op-sel
+
+  if (!InstrInfo.isVOP3P(*UseI))
+    return true;
+  MachineOperand &DefOp = DefI->getOperand(DefOpIdx);
+  if (!DefOp.isReg() || !DefOp.getReg().isPhysical())
+    return true;
+  MachineOperand &UseOp = UseI->getOperand(UseOpIdx);
+  if (!UseOp.isReg() || !UseOp.getReg().isPhysical())
+    return true;
+
+  AMDGPU::OpName UseModName;
+  if (AMDGPU::getNamedOperandIdx(UseI->getOpcode(), AMDGPU::OpName::src0) ==
+      UseOpIdx)
+    UseModName = AMDGPU::OpName::src0_modifiers;
+  else if (AMDGPU::getNamedOperandIdx(UseI->getOpcode(),
+                                      AMDGPU::OpName::src1) == UseOpIdx)
+    UseModName = AMDGPU::OpName::src1_modifiers;
+  else if (AMDGPU::getNamedOperandIdx(UseI->getOpcode(),
+                                      AMDGPU::OpName::src2) == UseOpIdx)
+    UseModName = AMDGPU::OpName::src2_modifiers;
+  else
+    return true;
+  MachineOperand *UseOpMod = InstrInfo.getNamedOperand(*UseI, UseModName);
+  if (!UseOpMod)
+    return true;
+  // Check whether all parts of the register are being used (= op_sel and
+  // op_sel_hi differ). In that case we can return early.
+  int64_t OpSel = UseOpMod->getImm() & SISrcMods::OP_SEL_0;
+  int64_t OpSelHi = UseOpMod->getImm() & SISrcMods::OP_SEL_1;
+  if ((!OpSel || !OpSelHi) && (OpSel || OpSelHi))
+    return true;
+
+  const SIRegisterInfo *TRI = getRegisterInfo();
+  const MachineRegisterInfo &MRI = UseI->getParent()->getParent()->getRegInfo();
+  MCRegister DefReg = DefOp.getReg().asMCReg();
+  MCRegister UseReg = UseOp.getReg().asMCReg();
+  // We specifically look for a packed 32bit Use and smaller Def.
+  if (TRI->getRegSizeInBits(UseReg, MRI) != 64 ||
+      TRI->getRegSizeInBits(DefReg, MRI) > 32)
+    return true;
+  SmallVector<MCRegUnit, 2> DefRegUnits(TRI->regunits(DefReg));
+  assert(DefRegUnits.size() <= 2 && "unexpected number of register units");
+  SmallVector<MCRegUnit, 4> UseRegUnits(TRI->regunits(UseReg));
+  assert(UseRegUnits.size() == 4 && "unexpected number of register units");
+
+  auto FindRegunit = [&DefRegUnits](MCRegUnit A, MCRegUnit B) {
+    return llvm::find_if(DefRegUnits, [A, B](MCRegUnit RU) {
+             return RU == A || RU == B;
+           }) != DefRegUnits.end();
+  };
+  return OpSel ? FindRegunit(UseRegUnits[2], UseRegUnits[3])
+               : FindRegunit(UseRegUnits[0], UseRegUnits[1]);
+}
+
 void GCNSubtarget::adjustSchedDependency(
     SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx, SDep &Dep,
     const TargetSchedModel *SchedModel) const {
@@ -546,6 +611,11 @@ void GCNSubtarget::adjustSchedDependency(
 
   MachineInstr *DefI = Def->getInstr();
   MachineInstr *UseI = Use->getInstr();
+
+  if (!isRealSchedDependency(DefI, DefOpIdx, UseI, UseOpIdx)) {
+    Dep = SDep(Def, SDep::Artificial);
+    return; // this is not a data dependency anymore
+  }
 
   if (DefI->isBundle()) {
     const SIRegisterInfo *TRI = getRegisterInfo();
