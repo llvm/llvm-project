@@ -81,7 +81,7 @@ struct Message {
 // A trivial object to catch the Message, this enables custom logging and
 // returning from the test function, see LIBC_TEST_SCAFFOLDING_ below.
 struct Failure {
-  void operator=(Message msg) {}
+  void operator=([[maybe_unused]] Message msg) {}
 };
 
 struct RunContext {
