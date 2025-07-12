@@ -110,7 +110,7 @@ public:
 
   lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) override;
 
-  XcodeSDK ParseXcodeSDK(CompileUnit &comp_unit) override;
+  XcodeSDKPath ParseXcodeSDK(CompileUnit &comp_unit) override;
 
   size_t ParseFunctions(CompileUnit &comp_unit) override;
 
