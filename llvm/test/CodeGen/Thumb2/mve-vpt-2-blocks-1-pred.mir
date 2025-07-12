@@ -68,12 +68,12 @@ body:             |
     ; CHECK: successors: %bb.0(0x80000000)
     ; CHECK: liveins: $lr, $q0, $q1, $q2, $q3, $q4, $q5, $r0, $r1, $r2, $r7, $r8, $r9, $r10, $r11, $r12
     ; CHECK: renamable $r4 = t2ADDrr renamable $r2, renamable $r10, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: BUNDLE implicit-def $vpr, implicit-def $q6, implicit-def $d12, implicit-def $s24, implicit-def $s25, implicit-def $d13, implicit-def $s26, implicit-def $s27, implicit $q1, implicit $q5, implicit killed $r4 {
+    ; CHECK: BUNDLE implicit-def $vpr, implicit-def $q6, implicit $q1, implicit $q5, implicit killed $r4 {
     ; CHECK:   MVE_VPTv4u32 8, renamable $q1, renamable $q5, 2, implicit-def $vpr
     ; CHECK:   renamable $q6 = MVE_VLDRBU32 killed renamable $r4, 0, 1, internal renamable $vpr, $noreg
     ; CHECK: }
     ; CHECK: renamable $r4 = t2ADDrr renamable $r11, renamable $r10, 14 /* CC::al */, $noreg, $noreg
-    ; CHECK: BUNDLE implicit-def $q7, implicit-def $d14, implicit-def $s28, implicit-def $s29, implicit-def $d15, implicit-def $s30, implicit-def $s31, implicit killed $vpr, implicit killed $r4 {
+    ; CHECK: BUNDLE implicit-def $q7, implicit killed $vpr, implicit killed $r4 {
     ; CHECK:   MVE_VPST 8, implicit $vpr
     ; CHECK:   renamable $q7 = MVE_VLDRBU32 killed renamable $r4, 0, 1, killed renamable $vpr, $noreg
     ; CHECK: }
