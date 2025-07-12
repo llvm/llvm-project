@@ -142,6 +142,12 @@ New checks
   Finds unscoped (non-class) ``enum`` declarations and suggests using
   ``enum class`` instead.
 
+- New :doc:`llvm-prefer-static-over-anonymous-namespace
+  <clang-tidy/checks/llvm/prefer-static-over-anonymous-namespace>` check.
+
+  Finds function and variable declarations inside anonymous namespace and
+  suggests replacing them with ``static`` declarations.
+
 - New :doc:`modernize-use-scoped-lock
   <clang-tidy/checks/modernize/use-scoped-lock>` check.
 

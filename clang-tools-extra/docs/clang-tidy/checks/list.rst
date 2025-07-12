@@ -250,6 +250,7 @@ Clang-Tidy Checks
    :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
    :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals <llvm/prefer-isa-or-dyn-cast-in-conditionals>`, "Yes"
    :doc:`llvm-prefer-register-over-unsigned <llvm/prefer-register-over-unsigned>`, "Yes"
+   :doc:`llvm-prefer-static-over-anonymous-namespace <llvm/prefer-static-over-anonymous-namespace>`,
    :doc:`llvm-twine-local <llvm/twine-local>`, "Yes"
    :doc:`llvmlibc-callee-namespace <llvmlibc/callee-namespace>`,
    :doc:`llvmlibc-implementation-in-namespace <llvmlibc/implementation-in-namespace>`,
