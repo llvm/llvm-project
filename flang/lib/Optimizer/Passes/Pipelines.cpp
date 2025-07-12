@@ -113,6 +113,7 @@ void addFIRToLLVMPass(mlir::PassManager &pm,
   options.forceUnifiedTBAATree = useOldAliasTags;
   options.typeDescriptorsRenamedForAssembly =
       !disableCompilerGeneratedNamesConversion;
+  options.ComplexRange = config.ComplexRange;
   addPassConditionally(pm, disableFirToLlvmIr,
                        [&]() { return fir::createFIRToLLVMPass(options); });
   // The dialect conversion framework may leave dead unrealized_conversion_cast
@@ -358,6 +359,8 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
     framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::NonLeaf;
   else if (config.FramePointerKind == llvm::FramePointerKind::All)
     framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::All;
+  else if (config.FramePointerKind == llvm::FramePointerKind::Reserved)
+    framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::Reserved;
   else
     framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::None;
 

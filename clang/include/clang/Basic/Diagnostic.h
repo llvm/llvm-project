@@ -289,6 +289,9 @@ public:
 
     /// Expr *
     ak_expr,
+
+    /// AttributeCommonInfo *
+    ak_attr_info,
   };
 
   /// Represents on argument value, which is a union discriminated

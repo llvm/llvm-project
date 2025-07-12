@@ -18,8 +18,7 @@ using namespace clang::ast_matchers;
 using clang::ast_matchers::internal::Matcher;
 using clang::tidy::utils::hasPtrOrReferenceInFunc;
 
-namespace clang {
-namespace tidy::bugprone {
+namespace clang::tidy::bugprone {
 
 namespace {
 /// matches a Decl if it has a  "no return" attribute of any kind
@@ -327,5 +326,4 @@ void InfiniteLoopCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace tidy::bugprone
-} // namespace clang
+} // namespace clang::tidy::bugprone
