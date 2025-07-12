@@ -396,8 +396,7 @@ private:
     uint64_t MaxStride;
     std::optional<uint64_t> CommonStride;
 
-    /// TypeByteSize is either the common store size of both accesses, or 0 when
-    /// store sizes mismatch.
+    /// TypeByteSize is the store size of the sink.
     uint64_t TypeByteSize;
 
     bool AIsWrite;
@@ -412,13 +411,9 @@ private:
   };
 
   /// Get the dependence distance, strides, type size and whether it is a write
-  /// for the dependence between A and B. Returns a DepType, if we can prove
-  /// there's no dependence or the analysis fails. Outlined to lambda to limit
-  /// he scope of various temporary variables, like A/BPtr, StrideA/BPtr and
-  /// others. Returns either the dependence result, if it could already be
-  /// determined, or a DepDistanceStrideAndSizeInfo struct, noting that
-  /// TypeByteSize could be 0 when store sizes mismatch, and this should be
-  /// checked in the caller.
+  /// for the dependence between A and B. Returns either a DepType, the
+  /// dependence result, if it could already be determined, or a
+  /// DepDistanceStrideAndSizeInfo struct.
   std::variant<Dependence::DepType, DepDistanceStrideAndSizeInfo>
   getDependenceDistanceStrideAndSize(const MemAccessInfo &A, Instruction *AInst,
                                      const MemAccessInfo &B,

@@ -106,55 +106,22 @@ define void @runtime_checks_ptr_inductions(ptr %dst.1, ptr %dst.2, i1 %c) {
 ; CHECK-LABEL: define void @runtime_checks_ptr_inductions(
 ; CHECK-SAME: ptr [[DST_1:%.*]], ptr [[DST_2:%.*]], i1 [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[DST_11:%.*]] = ptrtoint ptr [[DST_1]] to i64
 ; CHECK-NEXT:    br label %[[LOOP_1:.*]]
 ; CHECK:       [[LOOP_1]]:
-; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], %[[LOOP_1]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[PTR_IV_1:%.*]] = phi ptr [ [[DST_1]], %[[ENTRY]] ], [ [[PTR_IV_1_NEXT:%.*]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @val()
 ; CHECK-NEXT:    [[SEL_DST:%.*]] = select i1 [[C]], ptr [[DST_1]], ptr [[DST_2]]
 ; CHECK-NEXT:    [[PTR_IV_1_NEXT]] = getelementptr i8, ptr [[PTR_IV_1]], i64 1
 ; CHECK-NEXT:    [[EC_1:%.*]] = icmp eq i32 [[CALL]], 0
-; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
 ; CHECK-NEXT:    br i1 [[EC_1]], label %[[LOOP_2_HEADER_PREHEADER:.*]], label %[[LOOP_1]]
 ; CHECK:       [[LOOP_2_HEADER_PREHEADER]]:
-; CHECK-NEXT:    [[SEL_DST_LCSSA2:%.*]] = phi ptr [ [[SEL_DST]], %[[LOOP_1]] ]
-; CHECK-NEXT:    [[INDVAR_LCSSA:%.*]] = phi i64 [ [[INDVAR]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[PTR_IV_1_LCSSA:%.*]] = phi ptr [ [[PTR_IV_1]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[SEL_DST_LCSSA:%.*]] = phi ptr [ [[SEL_DST]], %[[LOOP_1]] ]
-; CHECK-NEXT:    [[SEL_DST_LCSSA23:%.*]] = ptrtoint ptr [[SEL_DST_LCSSA2]] to i64
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
-; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDVAR_LCSSA]], [[DST_11]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[SEL_DST_LCSSA23]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 2
-; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR_IV_1_LCSSA]], i64 1022
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[SEL_DST_LCSSA]], i64 1022
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR_IV_1_LCSSA]], i64 [[INDEX]]
-; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[SEL_DST_LCSSA]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[NEXT_GEP4]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[TMP4]], align 1
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
-; CHECK-NEXT:    store <2 x i8> [[WIDE_LOAD]], ptr [[TMP5]], align 1
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1022
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1023, %[[MIDDLE_BLOCK]] ], [ 1, %[[LOOP_2_HEADER_PREHEADER]] ], [ 1, %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi ptr [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ [[PTR_IV_1_LCSSA]], %[[LOOP_2_HEADER_PREHEADER]] ], [ [[PTR_IV_1_LCSSA]], %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi ptr [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[SEL_DST_LCSSA]], %[[LOOP_2_HEADER_PREHEADER]] ], [ [[SEL_DST_LCSSA]], %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP_2_HEADER:.*]]
 ; CHECK:       [[LOOP_2_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[DEC7:%.*]], %[[LOOP_2_LATCH:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[PTR_IV_2:%.*]] = phi ptr [ [[PTR_IV_2_NEXT:%.*]], %[[LOOP_2_LATCH]] ], [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[PTR_IV_3:%.*]] = phi ptr [ [[PTR_IV_3_NEXT:%.*]], %[[LOOP_2_LATCH]] ], [ [[BC_RESUME_VAL6]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[DEC7:%.*]], %[[LOOP_2_LATCH:.*]] ], [ 1, %[[LOOP_2_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[PTR_IV_2:%.*]] = phi ptr [ [[PTR_IV_2_NEXT:%.*]], %[[LOOP_2_LATCH]] ], [ [[PTR_IV_1_LCSSA]], %[[LOOP_2_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[PTR_IV_3:%.*]] = phi ptr [ [[PTR_IV_3_NEXT:%.*]], %[[LOOP_2_LATCH]] ], [ [[SEL_DST_LCSSA]], %[[LOOP_2_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[EC_2:%.*]] = icmp eq i32 [[IV]], 1024
 ; CHECK-NEXT:    br i1 [[EC_2]], label %[[EXIT:.*]], label %[[LOOP_2_LATCH]]
 ; CHECK:       [[LOOP_2_LATCH]]:
@@ -163,7 +130,7 @@ define void @runtime_checks_ptr_inductions(ptr %dst.1, ptr %dst.2, i1 %c) {
 ; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[PTR_IV_3]], align 1
 ; CHECK-NEXT:    [[PTR_IV_2_NEXT]] = getelementptr i8, ptr [[PTR_IV_2]], i64 1
 ; CHECK-NEXT:    store i8 [[L]], ptr [[PTR_IV_2]], align 1
-; CHECK-NEXT:    br label %[[LOOP_2_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br label %[[LOOP_2_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
