@@ -27,11 +27,14 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/FormatVariadic.h"
 
 namespace llvm {
+LLVM_ABI extern cl::opt<std::string> CFGFontName;
+
 class ModuleSlotTracker;
 
 template <class GraphType> struct GraphTraits;
@@ -321,9 +324,14 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
                                 ? (getHeatColor(0))
                                 : (getHeatColor(1));
 
+    std::string FontName = "Courier";
+    if (!CFGFontName.empty()) {
+      FontName = CFGFontName;
+    }
+
     std::string Attrs = "color=\"" + EdgeColor + "ff\", style=filled," +
-                        " fillcolor=\"" + Color + "70\"" +
-                        " fontname=\"Courier\"";
+                        " fillcolor=\"" + Color + "70\"" + " fontname=\"" +
+                        FontName + "\"";
     return Attrs;
   }
   LLVM_ABI bool isNodeHidden(const BasicBlock *Node,
