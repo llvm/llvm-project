@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_library(clangTidyPerformanceModule STATIC
   AvoidEndlCheck.cpp
+  ConstexprNonStaticInScopeCheck.cpp
   EnumSizeCheck.cpp
   FasterStringFindCheck.cpp
   ForRangeCopyCheck.cpp
