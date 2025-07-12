@@ -955,6 +955,7 @@ Bug Fixes to C++ Support
   consistently treat the initializer as manifestly constant-evaluated.
   (#GH135281)
 - Fix a crash in the presence of invalid base classes. (#GH147186)
+- Suppress -Wdeprecated-declarations in implicitly generated special-member functions for deprecated data-members; only explicit uses still warn. (Issue #147293)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
