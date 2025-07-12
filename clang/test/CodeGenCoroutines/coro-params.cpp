@@ -69,7 +69,7 @@ struct [[clang::trivial_abi]] TrivialABI {
 void consume(int,int,int,int) noexcept;
 
 // TODO: Add support for CopyOnly params
-// CHECK: define{{.*}} void @_Z1fi8MoveOnly11MoveAndCopy10TrivialABI(i32 noundef %val, ptr noundef %[[MoParam:.+]], ptr noundef %[[McParam:.+]], i32 %[[TrivialParam:.+]]) #0 personality ptr @__gxx_personality_v0
+// CHECK: define{{.*}} void @_Z1fi8MoveOnly11MoveAndCopy10TrivialABI(i32 noundef %val, ptr dead_on_return noundef %[[MoParam:.+]], ptr dead_on_return noundef %[[McParam:.+]], i32 %[[TrivialParam:.+]]) #0 personality ptr @__gxx_personality_v0
 void f(int val, MoveOnly moParam, MoveAndCopy mcParam, TrivialABI trivialParam) {
   // CHECK: %[[TrivialAlloca:.+]] = alloca %struct.TrivialABI,
   // CHECK-SAME: !coro.outside.frame
@@ -121,7 +121,7 @@ void f(int val, MoveOnly moParam, MoveAndCopy mcParam, TrivialABI trivialParam) 
   // CHECK: call void @_ZN10TrivialABID1Ev(ptr {{[^,]*}} %[[TrivialAlloca]])
 }
 
-// CHECK-LABEL: void @_Z16dependent_paramsI1A1BEvT_T0_S3_(ptr noundef %x, ptr noundef %0, ptr noundef %y)
+// CHECK-LABEL: void @_Z16dependent_paramsI1A1BEvT_T0_S3_(ptr dead_on_return noundef %x, ptr dead_on_return noundef %0, ptr dead_on_return noundef %y)
 template <typename T, typename U>
 void dependent_params(T x, U, U y) {
   // CHECK: %[[x_copy:.+]] = alloca %struct.A,

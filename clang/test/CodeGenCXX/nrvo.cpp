@@ -1918,7 +1918,7 @@ X test15(bool b) { // http://wg21.link/p2025r2#ex-15
 // CHECK-EH-11-NEXT:    invoke void @"_ZZ6test16vENK3$_0clEv"(ptr dead_on_unwind writable sret([[CLASS_X]]) align 1 [[AGG_TMP]], ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP]])
 // CHECK-EH-11-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK-EH-11:       invoke.cont:
-// CHECK-EH-11-NEXT:    invoke void @_Z8ConsumeX1X(ptr noundef [[AGG_TMP]])
+// CHECK-EH-11-NEXT:    invoke void @_Z8ConsumeX1X(ptr dead_on_return noundef [[AGG_TMP]])
 // CHECK-EH-11-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD1:%.*]]
 // CHECK-EH-11:       invoke.cont2:
 // CHECK-EH-11-NEXT:    call void @_ZN1XD1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_TMP]]) #[[ATTR6]]
@@ -2197,7 +2197,7 @@ void test16() { // http://wg21.link/p2025r2#ex-9
 // CHECK-EH-11-NEXT:    br i1 [[CMP9]], label [[IF_THEN10:%.*]], label [[IF_END11:%.*]]
 // CHECK-EH-11:       if.then10:
 // CHECK-EH-11-NEXT:    store i32 3, ptr [[CLEANUP_DEST_SLOT]], align 4
-// CHECK-EH-11-NEXT:    br label [[CLEANUP]], !llvm.loop [[LOOP3:![0-9]+]]
+// CHECK-EH-11-NEXT:    br label [[CLEANUP]], !llvm.loop [[LOOP4:![0-9]+]]
 // CHECK-EH-11:       if.end11:
 // CHECK-EH-11-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I_ADDR]], align 4
 // CHECK-EH-11-NEXT:    [[CMP12:%.*]] = icmp eq i32 [[TMP4]], 3
@@ -2239,7 +2239,7 @@ void test16() { // http://wg21.link/p2025r2#ex-9
 // CHECK-EH-11-NEXT:      i32 2, label [[IMPOSSIBLE]]
 // CHECK-EH-11-NEXT:    ]
 // CHECK-EH-11:       cleanup.cont:
-// CHECK-EH-11-NEXT:    br label [[WHILE_BODY]], !llvm.loop [[LOOP3]]
+// CHECK-EH-11-NEXT:    br label [[WHILE_BODY]], !llvm.loop [[LOOP4]]
 // CHECK-EH-11:       while.end:
 // CHECK-EH-11-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]])
 // CHECK-EH-11-NEXT:    br label [[RETURN]]

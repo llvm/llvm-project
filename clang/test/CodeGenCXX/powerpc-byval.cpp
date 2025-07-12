@@ -9,4 +9,4 @@ void byval(S one, S two) {
   one = two;
 }
 
-// CHECK: define{{.*}} void @_Z5byval1SS_(ptr noundef %one, ptr noundef %two)
+// CHECK: define{{.*}} void @_Z5byval1SS_(ptr dead_on_return noundef %one, ptr dead_on_return noundef %two)

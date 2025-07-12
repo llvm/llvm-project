@@ -42,7 +42,7 @@ void h() {
 
   // CHECK: call {{.*}} @_Z1fv(ptr dead_on_unwind writable sret({{.*}}) align 4 %[[A]])
   // CHECK-NOT: call
-  // CHECK: call {{.*}} @_Z1f1A(ptr noundef %[[A]])
+  // CHECK: call {{.*}} @_Z1f1A(ptr dead_on_return noundef %[[A]])
   f(f());
   // CHECK-NOT: call
   // CHECK: call void @_ZN1AD1Ev(ptr {{[^,]*}} %[[A]])

@@ -15,7 +15,7 @@ struct AddrDiscStrong1 {
 
 // Check that AddrDiscStrong0 is destructed in the callee.
 
-// CHECK: define void @_Z24testParamAddrDiscStrong015AddrDiscStrong0(ptr noundef %[[A:.*]])
+// CHECK: define void @_Z24testParamAddrDiscStrong015AddrDiscStrong0(ptr dead_on_return noundef %[[A:.*]])
 // CHECK: call noundef ptr @_ZN15AddrDiscStrong0D1Ev(ptr noundef nonnull align {{[0-9]+}} dereferenceable(16) %[[A]])
 // CHECK: ret void
 
@@ -27,7 +27,7 @@ void testParamAddrDiscStrong0(AddrDiscStrong0 a) {
 // Check that AddrDiscStrong1 is not destructed in the callee because it has a
 // non-trivial copy constructor.
 
-// CHECK: define void @_Z24testParamAddrDiscStrong115AddrDiscStrong1(ptr noundef %{{.*}})
+// CHECK: define void @_Z24testParamAddrDiscStrong115AddrDiscStrong1(ptr dead_on_return noundef %{{.*}})
 // CHECK-NOT: call
 // CHECK: ret void
 
