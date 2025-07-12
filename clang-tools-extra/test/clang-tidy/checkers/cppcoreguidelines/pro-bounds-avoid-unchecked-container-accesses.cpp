@@ -64,7 +64,7 @@
 // RUN: -config='{CheckOptions: {cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.FixMode: function, \
 // RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.FixFunction: "f", cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.FixFunctionEmptyArgs: "g", }}' -- -I%t -DCXX_23=1
 
-// RUN: %check_clang_tidy -std=c++23 -check-suffixes=FUNC-EMPTY-ARGS-EMPTY-CXX-23 %t/cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses-cxx-23.cpp \
+// RUN: %check_clang_tidy -std=c++23 -check-suffix=FUNC-EMPTY-ARGS-EMPTY-CXX-23 %t/cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses-cxx-23.cpp \
 // RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses %t -- \
 // RUN: -config='{CheckOptions: {cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.FixMode: function, \
 // RUN: cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses.FixFunctionEmptyArgs: "", }}' -- -I%t -DCXX_23=1
@@ -320,19 +320,22 @@ auto b23 = a[];
 // CHECK-FIXES-AT-CXX-23: auto b23 = a.at();
 // CHECK-FIXES-FUNC-CXX-23: auto b23 = f(a);
 // CHECK-FIXES-FUNC-EMPTY-ARGS-CXX-23: auto b23 = g(a);
-// CHECK-MESSAGES-NOT: :[[@LINE-5]]:{{.*}}: note: FIX-IT applied suggested code changes 
+// CHECK-MESSAGES-FUNC-EMPTY-ARGS-EMPTY-CXX-23: :[[@LINE-5]]:13: warning: possibly unsafe 'operator[]' [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses] 
+// CHECK-MESSAGES-FUNC-EMPTY-ARGS-EMPTY-CXX-23-NOT: :[[@LINE-6]]:{{.*}}: note: FIX-IT applied suggested code changes 
 
 auto fa23 = (&a)->operator[]();
 // CHECK-MESSAGES-DEFAULT-CXX-23: :[[@LINE-1]]:13: warning: possibly unsafe 'operator[]', consider bounds-safe alternatives [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
 // CHECK-FIXES-AT-CXX-23: auto fa23 = (&a)->at();
 // CHECK-FIXES-FUNC-CXX-23: auto fa23 = f(*(&a));
 // CHECK-FIXES-FUNC-EMPTY-ARGS-CXX-23: auto fa23 = g(*(&a));
-// CHECK-MESSAGES-NOT: :[[@LINE-5]]:{{.*}}: note: FIX-IT applied suggested code changes 
+// CHECK-MESSAGES-FUNC-EMPTY-ARGS-EMPTY-CXX-23: :[[@LINE-5]]:13: warning: possibly unsafe 'operator[]' [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses] 
+// CHECK-MESSAGES-FUNC-EMPTY-ARGS-EMPTY-CXX-23-NOT: :[[@LINE-6]]:{{.*}}: note: FIX-IT applied suggested code changes 
 
 auto fd23 = a.operator[]();
 // CHECK-MESSAGES-DEFAULT-CXX-23: :[[@LINE-1]]:13: warning: possibly unsafe 'operator[]', consider bounds-safe alternatives [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses]
 // CHECK-FIXES-AT-CXX-23: auto fd23 = a.at();
 // CHECK-FIXES-FUNC-CXX-23: auto fd23 = f(a);
 // CHECK-FIXES-FUNC-EMPTY-ARGS-CXX-23: auto fd23 = g(a);
-// CHECK-MESSAGES-NOT: :[[@LINE-5]]:{{.*}}: note: FIX-IT applied suggested code changes 
+// CHECK-MESSAGES-FUNC-EMPTY-ARGS-EMPTY-CXX-23: :[[@LINE-5]]:13: warning: possibly unsafe 'operator[]' [cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses] 
+// CHECK-MESSAGES-FUNC-EMPTY-ARGS-EMPTY-CXX-23-NOT: :[[@LINE-6]]:{{.*}}: note: FIX-IT applied suggested code changes 
 #endif

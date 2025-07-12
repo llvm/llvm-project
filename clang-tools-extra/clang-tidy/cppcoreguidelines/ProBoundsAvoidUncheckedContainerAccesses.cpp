@@ -154,15 +154,16 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
           MatchedExpr->getDirectCallee()->getNumParams() == 0;
 
       if (EmptySubscript) {
+        auto D = diag(MatchedExpr->getCallee()->getBeginLoc(),
+                      "possibly unsafe 'operator[]'%select{, use safe "
+                      "function '%1() instead|}0")
+                 << FixFunctionEmptyArgs.empty() << FixFunctionEmptyArgs.str()
+                 << MatchedExpr->getCallee()->getSourceRange();
         if (!FixFunctionEmptyArgs.empty()) {
-          diag(MatchedExpr->getCallee()->getBeginLoc(),
-               "possibly unsafe 'operator[]', use safe function '%0()' instead")
-              << FixFunctionEmptyArgs.str()
-              << MatchedExpr->getCallee()->getSourceRange()
-              << FixItHint::CreateInsertion(OCE->getArg(0)->getBeginLoc(),
-                                            FixFunctionEmptyArgs.str() + "(")
-              << FixItHint::CreateRemoval(LeftBracket)
-              << FixItHint::CreateReplacement(RightBracket, ")");
+          D << FixItHint::CreateInsertion(OCE->getArg(0)->getBeginLoc(),
+                                          FixFunctionEmptyArgs.str() + "(")
+            << FixItHint::CreateRemoval(LeftBracket)
+            << FixItHint::CreateReplacement(RightBracket, ")");
         }
       } else {
         diag(MatchedExpr->getCallee()->getBeginLoc(),
@@ -219,15 +220,18 @@ void ProBoundsAvoidUncheckedContainerAccesses::check(
       // Since C++23, the subscript operator may also be called without an
       // argument, which makes the following distinction necessary
       if (EmptySubscript) {
+        auto D = diag(MatchedExpr->getCallee()->getBeginLoc(),
+                      "possibly unsafe 'operator[]'%select{, use safe "
+                      "function '%1()' instead|}0")
+                 << FixFunctionEmptyArgs.empty() << FixFunctionEmptyArgs.str()
+                 << Callee->getSourceRange();
+
         if (!FixFunctionEmptyArgs.empty()) {
-          diag(Callee->getBeginLoc(),
-               "possibly unsafe 'operator[]', use safe function '%0()' instead")
-              << FixFunctionEmptyArgs.str() << Callee->getSourceRange()
-              << FixItHint::CreateInsertion(MatchedExpr->getBeginLoc(),
-                                            BeginInsertion)
-              << FixItHint::CreateRemoval(
-                     SourceRange(Callee->getOperatorLoc(),
-                                 MCE->getRParenLoc().getLocWithOffset(-1)));
+          D << FixItHint::CreateInsertion(MatchedExpr->getBeginLoc(),
+                                          BeginInsertion)
+            << FixItHint::CreateRemoval(
+                   SourceRange(Callee->getOperatorLoc(),
+                               MCE->getRParenLoc().getLocWithOffset(-1)));
         }
       } else {
         diag(Callee->getBeginLoc(),
