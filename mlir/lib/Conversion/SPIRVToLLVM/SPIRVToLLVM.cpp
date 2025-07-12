@@ -779,13 +779,15 @@ public:
     auto linkage = storageClass == spirv::StorageClass::Private
                        ? LLVM::Linkage::Private
                        : LLVM::Linkage::External;
+    StringAttr locationAttrName = op.getLocationAttrName();
+    IntegerAttr locationAttr = op.getLocationAttr();
     auto newGlobalOp = rewriter.replaceOpWithNewOp<LLVM::GlobalOp>(
         op, dstType, isConstant, linkage, op.getSymName(), Attribute(),
         /*alignment=*/0, storageClassToAddressSpace(clientAPI, storageClass));
 
     // Attach location attribute if applicable
-    if (op.getLocationAttr())
-      newGlobalOp->setAttr(op.getLocationAttrName(), op.getLocationAttr());
+    if (locationAttr)
+      newGlobalOp->setAttr(locationAttrName, locationAttr);
 
     return success();
   }
@@ -1426,7 +1428,6 @@ public:
         headerBlock->getOperations().front());
     if (!condBrOp)
       return failure();
-    rewriter.eraseBlock(headerBlock);
 
     // Branch from merge block to continue block.
     auto *mergeBlock = op.getMergeBlock();
@@ -1444,6 +1445,7 @@ public:
                                     falseBlock,
                                     condBrOp.getFalseTargetOperands());
 
+    rewriter.eraseBlock(headerBlock);
     rewriter.inlineRegionBefore(op.getBody(), continueBlock);
     rewriter.replaceOp(op, continueBlock->getArguments());
     return success();
