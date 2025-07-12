@@ -4923,7 +4923,8 @@ public:
   bool checkTargetAttr(SourceLocation LiteralLoc, StringRef Str);
 
   /// Check Target Version attrs
-  bool checkTargetVersionAttr(SourceLocation Loc, Decl *D, StringRef Str);
+  bool checkTargetVersionAttr(SourceLocation Loc, Decl *D, StringRef Str,
+                              SmallString<64> &);
   bool checkTargetClonesAttrString(
       SourceLocation LiteralLoc, StringRef Str, const StringLiteral *Literal,
       Decl *D, bool &HasDefault, bool &HasCommas, bool &HasNotDefault,

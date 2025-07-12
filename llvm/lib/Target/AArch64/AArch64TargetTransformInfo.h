@@ -92,6 +92,7 @@ public:
                                 unsigned DefaultCallPenalty) const override;
 
   uint64_t getFeatureMask(const Function &F) const override;
+  uint64_t getPriorityMask(const Function &F) const override;
 
   bool isMultiversionedFunction(const Function &F) const override;
 
