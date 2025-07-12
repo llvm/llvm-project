@@ -8438,8 +8438,12 @@ void SelectionDAGBuilder::visitVPLoad(
   MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
   bool AddToChain = !BatchAA || !BatchAA->pointsToConstantMemory(ML);
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  MachineMemOperand::Flags MMOFlags =
+      MachineMemOperand::MOLoad | TLI.getTargetMMOFlags(VPIntrin) |
+      SelectionDAG::getNonTemporalMemFlag(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
+      MachinePointerInfo(PtrOperand), MMOFlags,
       LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo, Ranges);
   LD = DAG.getLoadVP(VT, DL, InChain, OpValues[0], OpValues[1], OpValues[2],
                      MMO, false /*IsExpanding */);
@@ -8490,9 +8494,12 @@ void SelectionDAGBuilder::visitVPGather(
     Alignment = DAG.getEVTAlign(VT.getScalarType());
   unsigned AS =
     PtrOperand->getType()->getScalarType()->getPointerAddressSpace();
+  MachineMemOperand::Flags MMOFlags =
+      MachineMemOperand::MOLoad | TLI.getTargetMMOFlags(VPIntrin) |
+      SelectionDAG::getNonTemporalMemFlag(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(AS), MachineMemOperand::MOLoad,
-      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo, Ranges);
+      MachinePointerInfo(AS), MMOFlags, LocationSize::beforeOrAfterPointer(),
+      *Alignment, AAInfo, Ranges);
   SDValue Base, Index, Scale;
   ISD::MemIndexType IndexType;
   bool UniformBase = getUniformBase(PtrOperand, Base, Index, IndexType, Scale,
@@ -8530,8 +8537,12 @@ void SelectionDAGBuilder::visitVPStore(
     Alignment = DAG.getEVTAlign(VT);
   SDValue Ptr = OpValues[1];
   SDValue Offset = DAG.getUNDEF(Ptr.getValueType());
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  MachineMemOperand::Flags MMOFlags =
+      MachineMemOperand::MOStore | TLI.getTargetMMOFlags(VPIntrin) |
+      SelectionDAG::getNonTemporalMemFlag(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(PtrOperand), MachineMemOperand::MOStore,
+      MachinePointerInfo(PtrOperand), MMOFlags,
       LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo);
   ST = DAG.getStoreVP(getMemoryRoot(), DL, OpValues[0], Ptr, Offset,
                       OpValues[2], OpValues[3], VT, MMO, ISD::UNINDEXED,
@@ -8553,9 +8564,12 @@ void SelectionDAGBuilder::visitVPScatter(
     Alignment = DAG.getEVTAlign(VT.getScalarType());
   unsigned AS =
       PtrOperand->getType()->getScalarType()->getPointerAddressSpace();
+  MachineMemOperand::Flags MMOFlags =
+      MachineMemOperand::MOStore | TLI.getTargetMMOFlags(VPIntrin) |
+      SelectionDAG::getNonTemporalMemFlag(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(AS), MachineMemOperand::MOStore,
-      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo);
+      MachinePointerInfo(AS), MMOFlags, LocationSize::beforeOrAfterPointer(),
+      *Alignment, AAInfo);
   SDValue Base, Index, Scale;
   ISD::MemIndexType IndexType;
   bool UniformBase = getUniformBase(PtrOperand, Base, Index, IndexType, Scale,
@@ -8596,9 +8610,13 @@ void SelectionDAGBuilder::visitVPStridedLoad(
   bool AddToChain = !BatchAA || !BatchAA->pointsToConstantMemory(ML);
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
   unsigned AS = PtrOperand->getType()->getPointerAddressSpace();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  MachineMemOperand::Flags MMOFlags =
+      MachineMemOperand::MOLoad | TLI.getTargetMMOFlags(VPIntrin) |
+      SelectionDAG::getNonTemporalMemFlag(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(AS), MachineMemOperand::MOLoad,
-      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo, Ranges);
+      MachinePointerInfo(AS), MMOFlags, LocationSize::beforeOrAfterPointer(),
+      *Alignment, AAInfo, Ranges);
 
   SDValue LD = DAG.getStridedLoadVP(VT, DL, InChain, OpValues[0], OpValues[1],
                                     OpValues[2], OpValues[3], MMO,
@@ -8619,9 +8637,13 @@ void SelectionDAGBuilder::visitVPStridedStore(
     Alignment = DAG.getEVTAlign(VT.getScalarType());
   AAMDNodes AAInfo = VPIntrin.getAAMetadata();
   unsigned AS = PtrOperand->getType()->getPointerAddressSpace();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  MachineMemOperand::Flags MMOFlags =
+      MachineMemOperand::MOStore | TLI.getTargetMMOFlags(VPIntrin) |
+      SelectionDAG::getNonTemporalMemFlag(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(AS), MachineMemOperand::MOStore,
-      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo);
+      MachinePointerInfo(AS), MMOFlags, LocationSize::beforeOrAfterPointer(),
+      *Alignment, AAInfo);
 
   SDValue ST = DAG.getStridedStoreVP(
       getMemoryRoot(), DL, OpValues[0], OpValues[1],
