@@ -2167,6 +2167,11 @@ module std [system] {
     module no_destroy                 { header "__utility/no_destroy.h" }
     module pair                       { header "__utility/pair.h" }
     module piecewise_construct        { header "__utility/piecewise_construct.h" }
+    module pointer_int_pair           {
+      header "__utility/pointer_int_pair.h"
+
+      export std_core.fwd.tuple
+    }
     module priority_tag               { header "__utility/priority_tag.h" }
     module private_constructor_tag    { header "__utility/private_constructor_tag.h" }
     module rel_ops                    { header "__utility/rel_ops.h" }
