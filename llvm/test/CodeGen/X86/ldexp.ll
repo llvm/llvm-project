@@ -565,18 +565,12 @@ define fp128 @ldexp_f128(fp128 %arg0, i32 %arg1) nounwind {
 ; WIN64-LABEL: ldexp_f128:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $56, %rsp
-; WIN64-NEXT:    .seh_stackalloc 56
-; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    movaps (%rcx), %xmm0
 ; WIN64-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN64-NEXT:    callq ldexpl
-; WIN64-NEXT:    nop
-; WIN64-NEXT:    .seh_startepilogue
 ; WIN64-NEXT:    addq $56, %rsp
-; WIN64-NEXT:    .seh_endepilogue
 ; WIN64-NEXT:    retq
-; WIN64-NEXT:    .seh_endproc
 ;
 ; WIN32-LABEL: ldexp_f128:
 ; WIN32:       # %bb.0:
