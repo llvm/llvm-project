@@ -16,7 +16,9 @@
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/TypeRange.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
@@ -83,7 +85,7 @@ struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
   LogicalResult
   matchAndRewrite(memref::GlobalOp op, OpAdaptor operands,
                   ConversionPatternRewriter &rewriter) const override {
-
+    MemRefType type = op.getType();
     if (!op.getType().hasStaticShape()) {
       return rewriter.notifyMatchFailure(
           op.getLoc(), "cannot transform global with dynamic shape");
@@ -95,7 +97,13 @@ struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
           op.getLoc(), "global variable with alignment requirement is "
                        "currently not supported");
     }
-    auto resultTy = getTypeConverter()->convertType(op.getType());
+
+    Type resultTy;
+    if (type.getRank() == 0)
+      resultTy = getTypeConverter()->convertType(type.getElementType());
+    else
+      resultTy = getTypeConverter()->convertType(type);
+
     if (!resultTy) {
       return rewriter.notifyMatchFailure(op.getLoc(),
                                          "cannot convert result type");
@@ -114,6 +122,10 @@ struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
     bool externSpecifier = !staticSpecifier;
 
     Attribute initialValue = operands.getInitialValueAttr();
+    if (type.getRank() == 0) {
+      auto elementsAttr = llvm::cast<ElementsAttr>(*op.getInitialValue());
+      initialValue = elementsAttr.getSplatValue<Attribute>();
+    }
     if (isa_and_present<UnitAttr>(initialValue))
       initialValue = {};
 
@@ -132,7 +144,17 @@ struct ConvertGetGlobal final
   matchAndRewrite(memref::GetGlobalOp op, OpAdaptor operands,
                   ConversionPatternRewriter &rewriter) const override {
 
-    auto resultTy = getTypeConverter()->convertType(op.getType());
+    MemRefType type = op.getType();
+    Type resultTy;
+    if (type.getRank() == 0)
+      resultTy = emitc::LValueType::get(
+          getTypeConverter()->convertType(type.getElementType()));
+    else
+      resultTy = getTypeConverter()->convertType(type);
+
+    if (!resultTy)
+      return rewriter.notifyMatchFailure(op.getLoc(), "cannot convert type");
+
     if (!resultTy) {
       return rewriter.notifyMatchFailure(op.getLoc(),
                                          "cannot convert result type");
