@@ -166,6 +166,68 @@ readMemInfoBlocksV4(const char *Ptr) {
   return Items;
 }
 
+llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>>
+readMemInfoBlocksV5(const char *Ptr) {
+  using namespace support;
+
+  const uint64_t NumItemsToRead =
+      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+
+  llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>> Items;
+  for (uint64_t I = 0; I < NumItemsToRead; I++) {
+    const uint64_t Id =
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+
+    MemInfoBlock MIB;
+#define READ_MIB_FIELD(FIELD)                                                  \
+  MIB.FIELD = endian::readNext<decltype(MIB.FIELD), llvm::endianness::little,  \
+                               unaligned>(Ptr)
+
+    READ_MIB_FIELD(AllocCount);
+    READ_MIB_FIELD(TotalAccessCount);
+    READ_MIB_FIELD(MinAccessCount);
+    READ_MIB_FIELD(MaxAccessCount);
+    READ_MIB_FIELD(TotalSize);
+    READ_MIB_FIELD(MinSize);
+    READ_MIB_FIELD(MaxSize);
+    READ_MIB_FIELD(AllocTimestamp);
+    READ_MIB_FIELD(DeallocTimestamp);
+    READ_MIB_FIELD(TotalLifetime);
+    READ_MIB_FIELD(MinLifetime);
+    READ_MIB_FIELD(MaxLifetime);
+    READ_MIB_FIELD(AllocCpuId);
+    READ_MIB_FIELD(DeallocCpuId);
+    READ_MIB_FIELD(NumMigratedCpu);
+    READ_MIB_FIELD(NumLifetimeOverlaps);
+    READ_MIB_FIELD(NumSameAllocCpu);
+    READ_MIB_FIELD(NumSameDeallocCpu);
+    READ_MIB_FIELD(DataTypeId);
+    READ_MIB_FIELD(TotalAccessDensity);
+    READ_MIB_FIELD(MinAccessDensity);
+    READ_MIB_FIELD(MaxAccessDensity);
+    READ_MIB_FIELD(TotalLifetimeAccessDensity);
+    READ_MIB_FIELD(MinLifetimeAccessDensity);
+    READ_MIB_FIELD(MaxLifetimeAccessDensity);
+    READ_MIB_FIELD(AccessHistogramSize);
+    READ_MIB_FIELD(AccessHistogram);
+#undef READ_MIB_FIELD
+
+    if (MIB.AccessHistogramSize > 0) {
+      // The in-memory representation uses uint64_t for histogram entries.
+      MIB.AccessHistogram =
+          (uintptr_t)malloc(MIB.AccessHistogramSize * sizeof(uint64_t));
+      for (uint64_t J = 0; J < MIB.AccessHistogramSize; J++) {
+        // The on-disk format for V5 uses uint8_t.
+        const uint8_t Val =
+            endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Ptr);
+        ((uint64_t *)MIB.AccessHistogram)[J] = Val;
+      }
+    }
+    Items.push_back({Id, MIB});
+  }
+  return Items;
+}
+
 CallStackMap readStackInfo(const char *Ptr) {
   using namespace support;
 
@@ -658,6 +720,8 @@ RawMemProfReader::readMemInfoBlocks(const char *Ptr) {
     return readMemInfoBlocksV3(Ptr);
   if (MemprofRawVersion == 4ULL)
     return readMemInfoBlocksV4(Ptr);
+  if (MemprofRawVersion == 5ULL)
+    return readMemInfoBlocksV5(Ptr);
   llvm_unreachable(
       "Panic: Unsupported version number when reading MemInfoBlocks");
 }

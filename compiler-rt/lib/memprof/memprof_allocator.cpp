@@ -333,7 +333,8 @@ struct Allocator {
       u8 Counter =
           *((u8 *)HISTOGRAM_MEM_TO_SHADOW(p + HISTOGRAM_GRANULARITY * i));
       // Cap the counter at HISTOGRAM_MAX_COUNTER (255) to prevent overflow
-      ((uint8_t *)Histogram)[i] = (Counter > HISTOGRAM_MAX_COUNTER) ? HISTOGRAM_MAX_COUNTER : Counter;
+      ((uint8_t *)Histogram)[i] =
+          (Counter > HISTOGRAM_MAX_COUNTER) ? HISTOGRAM_MAX_COUNTER : Counter;
     }
     MemInfoBlock newMIB(user_size, c, m->timestamp_ms, curtime, m->cpu_id,
                         GetCpuId(), Histogram, HistogramSize);
