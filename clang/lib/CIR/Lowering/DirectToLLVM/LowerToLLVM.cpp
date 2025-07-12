@@ -535,6 +535,13 @@ mlir::LogicalResult CIRToLLVMBitPopcountOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
+mlir::LogicalResult CIRToLLVMBitReverseOpLowering::matchAndRewrite(
+    cir::BitReverseOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<mlir::LLVM::BitReverseOp>(op, adaptor.getInput());
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMBrCondOpLowering::matchAndRewrite(
     cir::BrCondOp brOp, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -549,6 +556,13 @@ mlir::LogicalResult CIRToLLVMBrCondOpLowering::matchAndRewrite(
       brOp.getDestFalse(), adaptor.getDestOperandsFalse());
 
   return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMByteSwapOpLowering::matchAndRewrite(
+    cir::ByteSwapOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ByteSwapOp>(op, adaptor.getInput());
+  return mlir::LogicalResult::success();
 }
 
 mlir::Type CIRToLLVMCastOpLowering::convertTy(mlir::Type ty) const {
@@ -2044,8 +2058,10 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMBitCtzOpLowering,
                CIRToLLVMBitParityOpLowering,
                CIRToLLVMBitPopcountOpLowering,
+               CIRToLLVMBitReverseOpLowering,
                CIRToLLVMBrCondOpLowering,
                CIRToLLVMBrOpLowering,
+               CIRToLLVMByteSwapOpLowering,
                CIRToLLVMCallOpLowering,
                CIRToLLVMCmpOpLowering,
                CIRToLLVMComplexAddOpLowering,

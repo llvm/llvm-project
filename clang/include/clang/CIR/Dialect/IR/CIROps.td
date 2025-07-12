@@ -2808,6 +2808,45 @@ def BitPopcountOp : CIR_BitOpBase<"bit.popcnt",
   }];
 }
 
+def BitReverseOp : CIR_BitOpBase<"bit.reverse",
+                                 CIR_UIntOfWidths<[8, 16, 32, 64]>> {
+  let summary = "Reverse the bit pattern of the operand integer";
+  let description = [{
+    The `cir.bit.reverse` operation reverses the bits of the operand integer.
+    Its only argument must be of unsigned integer types of width 8, 16, 32, or
+    64.
+
+    This operation covers the C/C++ builtin function `__builtin_bitreverse`.
+
+    Example:
+
+    ```mlir
+    %1 = cir.bit.reverse(%0 : !u32i): !u32i
+    ```
+  }];
+}
+
+def ByteSwapOp : CIR_BitOpBase<"byte_swap", CIR_UIntOfWidths<[16, 32, 64]>> {
+  let summary = "Reverse the bytes in the object representation of the operand";
+  let description = [{
+    The `cir.byte_swap` operation takes an integer as operand, reverse the bytes
+    in the object representation of the operand integer, and returns the result.
+
+    The operand integer must be an unsigned integer. Its widths must be either
+    16, 32, or 64.
+
+    Example:
+
+    ```mlir
+    // %0 = 0x12345678
+    %0 = cir.const #cir.int<305419896> : !u32i
+
+    // %1 should be 0x78563412
+    %1 = cir.byte_swap(%0 : !u32i) : !u32i
+    ```
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Assume Operations
 //===----------------------------------------------------------------------===//
