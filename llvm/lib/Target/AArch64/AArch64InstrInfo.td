@@ -2036,7 +2036,7 @@ let Predicates = [HasPAuth] in {
     def DZB  : SignAuthZero<prefix_z,  0b11, !strconcat(asm, "dzb"), op>;
   }
 
-  defm PAC : SignAuth<0b000, 0b010, "pac", int_ptrauth_sign>;
+  defm PAC : SignAuth<0b000, 0b010, "pac", null_frag>;
   defm AUT : SignAuth<0b001, 0b011, "aut", null_frag>;
 
   def XPACI : ClearAuth<0, "xpaci">;
@@ -2155,6 +2155,25 @@ let Predicates = [HasPAuth] in {
     let Defs = [NZCV];
     let Uses = [];
   }
+
+  // PAC pseudo instruction. Is AsmPrinter, it is expanded into an actual PAC*
+  // instruction immediately preceded by the discriminator computation.
+  // This enforces the expected immediate modifier is used for signing, even
+  // if an attacker is able to substitute AddrDisc.
+  def PAC : Pseudo<(outs GPR64:$SignedVal),
+                   (ins GPR64:$Val, i32imm:$Key, i64imm:$Disc, GPR64noip:$AddrDisc),
+                   [], "$SignedVal = $Val">, Sched<[WriteI, ReadI]> {
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 0;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let Size = 12;
+    let Defs = [X17];
+    let usesCustomInserter = 1;
+  }
+
+  def : Pat<(int_ptrauth_sign GPR64:$Val, timm:$Key, GPR64noip:$AddrDisc),
+            (PAC GPR64:$Val, $Key, 0, GPR64noip:$AddrDisc)>;
 
   // AUT and re-PAC a value, using different keys/data.
   // This directly manipulates x16/x17, which are the only registers that
