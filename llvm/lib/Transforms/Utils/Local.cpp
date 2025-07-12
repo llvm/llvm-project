@@ -3381,6 +3381,10 @@ static void combineMetadata(Instruction *K, const Instruction *J,
           K->setMetadata(Kind,
                          MDNode::getMostGenericNoaliasAddrspace(JMD, KMD));
         break;
+      case LLVMContext::MD_nosanitize:
+        // Preserve !nosanitize if both K and J have it.
+        K->setMetadata(Kind, JMD);
+        break;
     }
   }
   // Set !invariant.group from J if J has it. If both instructions have it
