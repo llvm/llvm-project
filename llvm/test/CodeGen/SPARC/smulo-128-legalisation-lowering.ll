@@ -5,93 +5,106 @@
 
 define { i128, i8 } @muloti_test(i128 %l, i128 %r) nounwind {
 ; SPARC-LABEL: muloti_test:
-; SPARC:       ! %bb.0: ! %start
+; SPARC:       ! %bb.0: ! %overflow.entry
 ; SPARC-NEXT:    save %sp, -96, %sp
-; SPARC-NEXT:    ld [%fp+96], %l2
-; SPARC-NEXT:    mov %i3, %g2
-; SPARC-NEXT:    mov %i2, %g3
-; SPARC-NEXT:    umul %i1, %l2, %l0
-; SPARC-NEXT:    rd %y, %i2
-; SPARC-NEXT:    ld [%fp+92], %l1
-; SPARC-NEXT:    umul %i0, %l2, %i3
-; SPARC-NEXT:    rd %y, %g4
-; SPARC-NEXT:    addcc %i3, %i2, %i2
-; SPARC-NEXT:    addxcc %g4, 0, %i3
-; SPARC-NEXT:    umul %i1, %l1, %g4
+; SPARC-NEXT:    ld [%fp+96], %g3
+; SPARC-NEXT:    ld [%fp+92], %l0
+; SPARC-NEXT:    sra %i2, 31, %g2
+; SPARC-NEXT:    xor %i0, %g2, %g4
+; SPARC-NEXT:    xor %i1, %g2, %g2
+; SPARC-NEXT:    or %g2, %g4, %g2
+; SPARC-NEXT:    cmp %g2, 0
+; SPARC-NEXT:    sra %l0, 31, %g2
+; SPARC-NEXT:    xor %i4, %g2, %g4
+; SPARC-NEXT:    xor %i5, %g2, %g2
+; SPARC-NEXT:    be .LBB0_4
+; SPARC-NEXT:    or %g2, %g4, %g2
+; SPARC-NEXT:  ! %bb.1: ! %overflow.lhs
+; SPARC-NEXT:    cmp %g2, 0
+; SPARC-NEXT:    be .LBB0_15
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  ! %bb.2: ! %overflow
+; SPARC-NEXT:    umul %i1, %g3, %l1
+; SPARC-NEXT:    rd %y, %g2
+; SPARC-NEXT:    umul %i0, %g3, %g4
+; SPARC-NEXT:    rd %y, %l2
+; SPARC-NEXT:    addcc %g4, %g2, %g2
+; SPARC-NEXT:    addxcc %l2, 0, %g4
+; SPARC-NEXT:    umul %i1, %l0, %l2
 ; SPARC-NEXT:    rd %y, %l3
-; SPARC-NEXT:    addcc %g4, %i2, %l4
-; SPARC-NEXT:    addxcc %l3, 0, %i2
-; SPARC-NEXT:    addcc %i3, %i2, %i2
-; SPARC-NEXT:    addxcc %g0, 0, %i3
-; SPARC-NEXT:    umul %i0, %l1, %g4
-; SPARC-NEXT:    rd %y, %l3
-; SPARC-NEXT:    addcc %g4, %i2, %i2
+; SPARC-NEXT:    addcc %l2, %g2, %l2
+; SPARC-NEXT:    addxcc %l3, 0, %g2
+; SPARC-NEXT:    addcc %g4, %g2, %g2
+; SPARC-NEXT:    addxcc %g0, 0, %l3
+; SPARC-NEXT:    umul %i0, %l0, %g4
+; SPARC-NEXT:    rd %y, %l4
+; SPARC-NEXT:    addcc %g4, %g2, %g2
 ; SPARC-NEXT:    sra %i0, 31, %g4
-; SPARC-NEXT:    smul %l1, %g4, %l5
-; SPARC-NEXT:    umul %l2, %g4, %l6
+; SPARC-NEXT:    smul %l0, %g4, %l5
+; SPARC-NEXT:    umul %g3, %g4, %l6
 ; SPARC-NEXT:    rd %y, %l7
-; SPARC-NEXT:    addxcc %l3, %i3, %l3
-; SPARC-NEXT:    add %l7, %l6, %i3
-; SPARC-NEXT:    add %i3, %l5, %l5
-; SPARC-NEXT:    addcc %i2, %l6, %l6
-; SPARC-NEXT:    umul %g2, %l2, %i3
-; SPARC-NEXT:    rd %y, %i2
-; SPARC-NEXT:    addxcc %l3, %l5, %l3
-; SPARC-NEXT:    umul %g3, %l2, %l2
-; SPARC-NEXT:    rd %y, %l5
-; SPARC-NEXT:    addcc %l2, %i2, %i2
+; SPARC-NEXT:    addxcc %l4, %l3, %l3
+; SPARC-NEXT:    add %l7, %l6, %l4
+; SPARC-NEXT:    add %l4, %l5, %l4
+; SPARC-NEXT:    addcc %g2, %l6, %l5
+; SPARC-NEXT:    umul %i3, %g3, %g2
+; SPARC-NEXT:    rd %y, %l6
+; SPARC-NEXT:    addxcc %l3, %l4, %l3
+; SPARC-NEXT:    umul %i2, %g3, %g3
+; SPARC-NEXT:    rd %y, %l4
+; SPARC-NEXT:    addcc %g3, %l6, %g3
+; SPARC-NEXT:    addxcc %l4, 0, %l4
+; SPARC-NEXT:    umul %i3, %l0, %l6
+; SPARC-NEXT:    rd %y, %l7
+; SPARC-NEXT:    addcc %l6, %g3, %g3
+; SPARC-NEXT:    addxcc %l7, 0, %l6
+; SPARC-NEXT:    addcc %l4, %l6, %l4
+; SPARC-NEXT:    addxcc %g0, 0, %l6
+; SPARC-NEXT:    umul %i2, %l0, %l0
+; SPARC-NEXT:    rd %y, %l7
+; SPARC-NEXT:    addcc %l0, %l4, %l0
+; SPARC-NEXT:    addxcc %l7, %l6, %l4
+; SPARC-NEXT:    addcc %l1, %l0, %l0
+; SPARC-NEXT:    addxcc %l2, %l4, %l1
 ; SPARC-NEXT:    addxcc %l5, 0, %l2
-; SPARC-NEXT:    umul %g2, %l1, %l5
-; SPARC-NEXT:    rd %y, %l7
-; SPARC-NEXT:    addcc %l5, %i2, %i2
-; SPARC-NEXT:    addxcc %l7, 0, %l5
-; SPARC-NEXT:    addcc %l2, %l5, %l2
-; SPARC-NEXT:    addxcc %g0, 0, %l5
-; SPARC-NEXT:    umul %g3, %l1, %l1
-; SPARC-NEXT:    rd %y, %l7
-; SPARC-NEXT:    addcc %l1, %l2, %l1
-; SPARC-NEXT:    addxcc %l7, %l5, %l2
-; SPARC-NEXT:    addcc %l0, %l1, %l0
-; SPARC-NEXT:    addxcc %l4, %l2, %l1
-; SPARC-NEXT:    addxcc %l6, 0, %l2
-; SPARC-NEXT:    addxcc %l3, 0, %l3
-; SPARC-NEXT:    umul %g2, %i5, %l4
+; SPARC-NEXT:    umul %i2, %i5, %l4
 ; SPARC-NEXT:    rd %y, %l5
-; SPARC-NEXT:    sra %l3, 31, %l6
-; SPARC-NEXT:    umul %g3, %i5, %l7
-; SPARC-NEXT:    rd %y, %o0
-; SPARC-NEXT:    addcc %l7, %l5, %l5
-; SPARC-NEXT:    addxcc %o0, 0, %l7
-; SPARC-NEXT:    umul %g2, %i4, %o0
+; SPARC-NEXT:    addxcc %l3, 0, %l3
+; SPARC-NEXT:    umul %i3, %i5, %l6
+; SPARC-NEXT:    rd %y, %l7
+; SPARC-NEXT:    sra %l3, 31, %o0
+; SPARC-NEXT:    addcc %l4, %l7, %l4
+; SPARC-NEXT:    addxcc %l5, 0, %l5
+; SPARC-NEXT:    umul %i3, %i4, %l7
 ; SPARC-NEXT:    rd %y, %o1
-; SPARC-NEXT:    addcc %o0, %l5, %l5
-; SPARC-NEXT:    addxcc %o1, 0, %o0
-; SPARC-NEXT:    addcc %l7, %o0, %l7
-; SPARC-NEXT:    addxcc %g0, 0, %o0
-; SPARC-NEXT:    umul %g3, %i4, %o1
+; SPARC-NEXT:    addcc %l7, %l4, %l4
+; SPARC-NEXT:    addxcc %o1, 0, %l7
+; SPARC-NEXT:    addcc %l5, %l7, %l5
+; SPARC-NEXT:    addxcc %g0, 0, %l7
+; SPARC-NEXT:    umul %i2, %i4, %o1
 ; SPARC-NEXT:    rd %y, %o2
-; SPARC-NEXT:    addcc %o1, %l7, %l7
+; SPARC-NEXT:    addcc %o1, %l5, %l5
 ; SPARC-NEXT:    sra %i4, 31, %o1
-; SPARC-NEXT:    smul %o1, %g3, %g3
-; SPARC-NEXT:    umul %o1, %g2, %g2
+; SPARC-NEXT:    smul %o1, %i2, %i2
+; SPARC-NEXT:    umul %o1, %i3, %i3
 ; SPARC-NEXT:    rd %y, %o3
-; SPARC-NEXT:    addxcc %o2, %o0, %o0
-; SPARC-NEXT:    add %o3, %g3, %g3
-; SPARC-NEXT:    add %g3, %g2, %g3
-; SPARC-NEXT:    addcc %l7, %g2, %l7
-; SPARC-NEXT:    addxcc %o0, %g3, %o0
-; SPARC-NEXT:    addcc %l4, %l0, %g2
-; SPARC-NEXT:    addxcc %l5, %l1, %g3
-; SPARC-NEXT:    addxcc %l7, 0, %l0
-; SPARC-NEXT:    addxcc %o0, 0, %l1
+; SPARC-NEXT:    addxcc %o2, %l7, %l7
+; SPARC-NEXT:    add %o3, %i2, %i2
+; SPARC-NEXT:    add %i2, %i3, %i2
+; SPARC-NEXT:    addcc %l5, %i3, %i3
+; SPARC-NEXT:    addxcc %l7, %i2, %l5
+; SPARC-NEXT:    addcc %l6, %l0, %i2
+; SPARC-NEXT:    addxcc %l4, %l1, %l0
+; SPARC-NEXT:    addxcc %i3, 0, %i3
+; SPARC-NEXT:    addxcc %l5, 0, %l1
 ; SPARC-NEXT:    sra %l1, 31, %l4
-; SPARC-NEXT:    addcc %l2, %l0, %l0
+; SPARC-NEXT:    addcc %l2, %i3, %i3
 ; SPARC-NEXT:    addxcc %l3, %l1, %l1
-; SPARC-NEXT:    addxcc %l6, %l4, %l2
+; SPARC-NEXT:    addxcc %o0, %l4, %l2
 ; SPARC-NEXT:    smul %i4, %g4, %l3
 ; SPARC-NEXT:    umul %i5, %g4, %g4
 ; SPARC-NEXT:    rd %y, %l5
-; SPARC-NEXT:    addxcc %l6, %l4, %l4
+; SPARC-NEXT:    addxcc %o0, %l4, %l4
 ; SPARC-NEXT:    add %l5, %g4, %l5
 ; SPARC-NEXT:    smul %o1, %i0, %l6
 ; SPARC-NEXT:    umul %o1, %i1, %l7
@@ -113,150 +126,1050 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) nounwind {
 ; SPARC-NEXT:    addxcc %l7, 0, %i5
 ; SPARC-NEXT:    addcc %l5, %i5, %i5
 ; SPARC-NEXT:    addxcc %g0, 0, %l5
-; SPARC-NEXT:    umul %i0, %i4, %i0
-; SPARC-NEXT:    rd %y, %i4
-; SPARC-NEXT:    addcc %i0, %i5, %i0
-; SPARC-NEXT:    addxcc %i4, %l5, %i4
-; SPARC-NEXT:    addcc %i0, %g4, %i0
-; SPARC-NEXT:    addxcc %i4, %l3, %i4
-; SPARC-NEXT:    addcc %l6, %l0, %i5
+; SPARC-NEXT:    umul %i0, %i4, %i4
+; SPARC-NEXT:    mov %l0, %i0
+; SPARC-NEXT:    rd %y, %l0
+; SPARC-NEXT:    addcc %i4, %i5, %i4
+; SPARC-NEXT:    addxcc %l0, %l5, %i5
+; SPARC-NEXT:    addcc %i4, %g4, %i4
+; SPARC-NEXT:    addxcc %i5, %l3, %i5
+; SPARC-NEXT:    addcc %l6, %i3, %i3
 ; SPARC-NEXT:    addxcc %i1, %l1, %i1
-; SPARC-NEXT:    addxcc %i0, %l2, %i0
-; SPARC-NEXT:    addxcc %i4, %l4, %i4
-; SPARC-NEXT:    sra %g3, 31, %g4
-; SPARC-NEXT:    xor %i4, %g4, %i4
+; SPARC-NEXT:    addxcc %i4, %l2, %i4
+; SPARC-NEXT:    addxcc %i5, %l4, %i5
+; SPARC-NEXT:    sra %i0, 31, %g4
+; SPARC-NEXT:    xor %i5, %g4, %i5
 ; SPARC-NEXT:    xor %i1, %g4, %i1
-; SPARC-NEXT:    or %i1, %i4, %i1
-; SPARC-NEXT:    xor %i0, %g4, %i0
-; SPARC-NEXT:    xor %i5, %g4, %i4
-; SPARC-NEXT:    or %i4, %i0, %i0
-; SPARC-NEXT:    or %i0, %i1, %i0
-; SPARC-NEXT:    cmp %i0, 0
-; SPARC-NEXT:    bne .LBB0_2
+; SPARC-NEXT:    or %i1, %i5, %i1
+; SPARC-NEXT:    xor %i4, %g4, %i4
+; SPARC-NEXT:    xor %i3, %g4, %i3
+; SPARC-NEXT:    or %i3, %i4, %i3
+; SPARC-NEXT:    or %i3, %i1, %i1
+; SPARC-NEXT:    cmp %i1, 0
+; SPARC-NEXT:    bne .LBB0_110
 ; SPARC-NEXT:    nop
-; SPARC-NEXT:  ! %bb.1: ! %start
-; SPARC-NEXT:    ba .LBB0_3
+; SPARC-NEXT:  ! %bb.3: ! %overflow
+; SPARC-NEXT:    ba .LBB0_111
+; SPARC-NEXT:    mov %g0, %g4
+; SPARC-NEXT:  .LBB0_4: ! %overflow.no.lhs
+; SPARC-NEXT:    cmp %g2, 0
+; SPARC-NEXT:    be .LBB0_25
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  ! %bb.5: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov 1, %g4
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bl .LBB0_7
+; SPARC-NEXT:    mov %g4, %g2
+; SPARC-NEXT:  ! %bb.6: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %g0, %g2
+; SPARC-NEXT:  .LBB0_7: ! %overflow.no.lhs.only
+; SPARC-NEXT:    subcc %g0, %i3, %l4
+; SPARC-NEXT:    subxcc %g0, %i2, %l3
+; SPARC-NEXT:    subxcc %g0, %i1, %l1
+; SPARC-NEXT:    subxcc %g0, %i0, %l2
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bl .LBB0_26
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  ! %bb.8: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %i3, %l4
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bge .LBB0_27
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_9: ! %overflow.no.lhs.only
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bl .LBB0_28
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_10: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %i0, %l2
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bge .LBB0_29
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_11: ! %overflow.no.lhs.only
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bl .LBB0_30
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_12: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %i1, %l1
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bge .LBB0_31
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_13: ! %overflow.no.lhs.only
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bl .LBB0_32
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_14: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %i2, %l3
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bge .LBB0_33
+; SPARC-NEXT:    nop
+; SPARC-NEXT:    ba .LBB0_34
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_15: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov 1, %g4
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bl .LBB0_17
+; SPARC-NEXT:    mov %g4, %g2
+; SPARC-NEXT:  ! %bb.16: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %g0, %g2
+; SPARC-NEXT:  .LBB0_17: ! %overflow.no.rhs.only
+; SPARC-NEXT:    subcc %g0, %g3, %l4
+; SPARC-NEXT:    subxcc %g0, %l0, %l3
+; SPARC-NEXT:    subxcc %g0, %i5, %l1
+; SPARC-NEXT:    subxcc %g0, %i4, %l2
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bl .LBB0_44
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  ! %bb.18: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %g3, %l4
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bge .LBB0_45
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_19: ! %overflow.no.rhs.only
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bl .LBB0_46
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_20: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %i4, %l2
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bge .LBB0_47
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_21: ! %overflow.no.rhs.only
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bl .LBB0_48
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_22: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %i5, %l1
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bge .LBB0_49
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_23: ! %overflow.no.rhs.only
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bl .LBB0_50
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_24: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %l0, %l3
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bge .LBB0_51
+; SPARC-NEXT:    nop
+; SPARC-NEXT:    ba .LBB0_52
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_25: ! %overflow.no
+; SPARC-NEXT:    smul %g3, %i0, %g2
+; SPARC-NEXT:    umul %g3, %i1, %i0
+; SPARC-NEXT:    rd %y, %l1
+; SPARC-NEXT:    mov %g0, %g4
+; SPARC-NEXT:    add %l1, %g2, %g2
+; SPARC-NEXT:    smul %l0, %i1, %i1
+; SPARC-NEXT:    smul %i5, %i2, %l1
+; SPARC-NEXT:    umul %i5, %i3, %i5
+; SPARC-NEXT:    rd %y, %l2
+; SPARC-NEXT:    add %g2, %i1, %i1
+; SPARC-NEXT:    add %l2, %l1, %g2
+; SPARC-NEXT:    smul %i4, %i3, %i4
+; SPARC-NEXT:    add %g2, %i4, %i4
+; SPARC-NEXT:    addcc %i5, %i0, %i0
+; SPARC-NEXT:    umul %i3, %g3, %g2
+; SPARC-NEXT:    rd %y, %i5
+; SPARC-NEXT:    addxcc %i4, %i1, %i4
+; SPARC-NEXT:    umul %i2, %g3, %i1
+; SPARC-NEXT:    rd %y, %g3
+; SPARC-NEXT:    addcc %i1, %i5, %i1
+; SPARC-NEXT:    addxcc %g3, 0, %i5
+; SPARC-NEXT:    umul %i3, %l0, %i3
+; SPARC-NEXT:    rd %y, %l1
+; SPARC-NEXT:    addcc %i3, %i1, %g3
+; SPARC-NEXT:    addxcc %l1, 0, %i1
+; SPARC-NEXT:    addcc %i5, %i1, %i1
+; SPARC-NEXT:    addxcc %g0, 0, %i3
+; SPARC-NEXT:    umul %i2, %l0, %i2
+; SPARC-NEXT:    rd %y, %i5
+; SPARC-NEXT:    addcc %i2, %i1, %i1
+; SPARC-NEXT:    addxcc %i5, %i3, %i2
+; SPARC-NEXT:    addcc %i1, %i0, %i1
+; SPARC-NEXT:    ba .LBB0_112
+; SPARC-NEXT:    addxcc %i2, %i4, %i0
+; SPARC-NEXT:  .LBB0_26: ! %overflow.no.lhs.only
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bl .LBB0_9
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_27: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %i2, %l3
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bge .LBB0_10
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_28: ! %overflow.no.lhs.only
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bl .LBB0_11
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_29: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %i1, %l1
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bge .LBB0_12
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_30: ! %overflow.no.lhs.only
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bl .LBB0_13
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_31: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %i0, %l2
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bge .LBB0_14
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_32: ! %overflow.no.lhs.only
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bl .LBB0_34
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_33: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %i3, %l4
+; SPARC-NEXT:  .LBB0_34: ! %overflow.no.lhs.only
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bl .LBB0_36
+; SPARC-NEXT:    mov %g4, %i0
+; SPARC-NEXT:  ! %bb.35: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %g0, %i0
+; SPARC-NEXT:  .LBB0_36: ! %overflow.no.lhs.only
+; SPARC-NEXT:    subcc %g0, %g3, %l6
+; SPARC-NEXT:    subxcc %g0, %l0, %l5
+; SPARC-NEXT:    subxcc %g0, %i5, %i2
+; SPARC-NEXT:    subxcc %g0, %i4, %i1
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bl .LBB0_62
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  ! %bb.37: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %g3, %l6
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bge .LBB0_63
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_38: ! %overflow.no.lhs.only
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bl .LBB0_64
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_39: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %i5, %i2
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bge .LBB0_65
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_40: ! %overflow.no.lhs.only
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bl .LBB0_66
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_41: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %i4, %i1
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bge .LBB0_67
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_42: ! %overflow.no.lhs.only
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bl .LBB0_68
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_43: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %l0, %l5
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bge .LBB0_69
+; SPARC-NEXT:    nop
+; SPARC-NEXT:    ba .LBB0_70
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_44: ! %overflow.no.rhs.only
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bl .LBB0_19
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_45: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %l0, %l3
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bge .LBB0_20
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_46: ! %overflow.no.rhs.only
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bl .LBB0_21
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_47: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %i5, %l1
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bge .LBB0_22
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_48: ! %overflow.no.rhs.only
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bl .LBB0_23
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_49: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %i4, %l2
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bge .LBB0_24
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_50: ! %overflow.no.rhs.only
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bl .LBB0_52
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_51: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %g3, %l4
+; SPARC-NEXT:  .LBB0_52: ! %overflow.no.rhs.only
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bl .LBB0_54
+; SPARC-NEXT:    mov %g4, %i4
+; SPARC-NEXT:  ! %bb.53: ! %overflow.no.rhs.only
 ; SPARC-NEXT:    mov %g0, %i4
-; SPARC-NEXT:  .LBB0_2:
-; SPARC-NEXT:    mov 1, %i4
-; SPARC-NEXT:  .LBB0_3: ! %start
-; SPARC-NEXT:    mov %g3, %i0
+; SPARC-NEXT:  .LBB0_54: ! %overflow.no.rhs.only
+; SPARC-NEXT:    subcc %g0, %i3, %l5
+; SPARC-NEXT:    subxcc %g0, %i2, %l0
+; SPARC-NEXT:    subxcc %g0, %i1, %g3
+; SPARC-NEXT:    subxcc %g0, %i0, %i5
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bl .LBB0_85
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  ! %bb.55: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %i3, %l5
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bge .LBB0_86
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_56: ! %overflow.no.rhs.only
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bl .LBB0_87
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_57: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %i1, %g3
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bge .LBB0_88
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_58: ! %overflow.no.rhs.only
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bl .LBB0_89
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_59: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %i0, %i5
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bge .LBB0_90
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_60: ! %overflow.no.rhs.only
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bl .LBB0_91
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_61: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %i2, %l0
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bge .LBB0_92
+; SPARC-NEXT:    nop
+; SPARC-NEXT:    ba .LBB0_93
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_62: ! %overflow.no.lhs.only
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bl .LBB0_38
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_63: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %l0, %l5
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bge .LBB0_39
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_64: ! %overflow.no.lhs.only
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bl .LBB0_40
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_65: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %i4, %i1
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bge .LBB0_41
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_66: ! %overflow.no.lhs.only
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bl .LBB0_42
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_67: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %i5, %i2
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bge .LBB0_43
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_68: ! %overflow.no.lhs.only
+; SPARC-NEXT:    cmp %i4, 0
+; SPARC-NEXT:    bl .LBB0_70
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_69: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %g3, %l6
+; SPARC-NEXT:  .LBB0_70: ! %overflow.no.lhs.only
+; SPARC-NEXT:    umul %l4, %l6, %i3
+; SPARC-NEXT:    rd %y, %i4
+; SPARC-NEXT:    umul %l3, %l6, %i5
+; SPARC-NEXT:    rd %y, %g3
+; SPARC-NEXT:    addcc %i5, %i4, %i4
+; SPARC-NEXT:    addxcc %g3, 0, %i5
+; SPARC-NEXT:    umul %l4, %l5, %g3
+; SPARC-NEXT:    rd %y, %l0
+; SPARC-NEXT:    addcc %g3, %i4, %i4
+; SPARC-NEXT:    addxcc %l0, 0, %g3
+; SPARC-NEXT:    addcc %i5, %g3, %i5
+; SPARC-NEXT:    addxcc %g0, 0, %g3
+; SPARC-NEXT:    umul %l3, %l5, %l0
+; SPARC-NEXT:    rd %y, %l7
+; SPARC-NEXT:    addcc %l0, %i5, %i5
+; SPARC-NEXT:    smul %l6, %l2, %l0
+; SPARC-NEXT:    umul %l6, %l1, %l6
+; SPARC-NEXT:    rd %y, %o0
+; SPARC-NEXT:    addxcc %l7, %g3, %l7
+; SPARC-NEXT:    add %o0, %l0, %g3
+; SPARC-NEXT:    smul %l5, %l1, %l0
+; SPARC-NEXT:    add %g3, %l0, %l0
+; SPARC-NEXT:    addcc %i5, %l6, %g3
+; SPARC-NEXT:    umul %l4, %i2, %l5
+; SPARC-NEXT:    rd %y, %l6
+; SPARC-NEXT:    addxcc %l7, %l0, %i5
+; SPARC-NEXT:    umul %l3, %i2, %l0
+; SPARC-NEXT:    rd %y, %l7
+; SPARC-NEXT:    addcc %l0, %l6, %l0
+; SPARC-NEXT:    addxcc %l7, 0, %l6
+; SPARC-NEXT:    umul %l4, %i1, %l4
+; SPARC-NEXT:    rd %y, %l7
+; SPARC-NEXT:    addcc %l4, %l0, %l4
+; SPARC-NEXT:    addxcc %l7, 0, %l0
+; SPARC-NEXT:    addcc %l6, %l0, %l0
+; SPARC-NEXT:    addxcc %g0, 0, %l6
+; SPARC-NEXT:    umul %l3, %i1, %l3
+; SPARC-NEXT:    rd %y, %l7
+; SPARC-NEXT:    addcc %l3, %l0, %l0
+; SPARC-NEXT:    smul %i2, %l2, %l2
+; SPARC-NEXT:    umul %i2, %l1, %i2
+; SPARC-NEXT:    rd %y, %l3
+; SPARC-NEXT:    addxcc %l7, %l6, %l6
+; SPARC-NEXT:    add %l3, %l2, %l2
+; SPARC-NEXT:    smul %i1, %l1, %i1
+; SPARC-NEXT:    add %l2, %i1, %i1
+; SPARC-NEXT:    addcc %l0, %i2, %l0
+; SPARC-NEXT:    addxcc %l6, %i1, %l1
+; SPARC-NEXT:    addcc %g3, %l5, %i1
+; SPARC-NEXT:    addxcc %i5, %l4, %i2
+; SPARC-NEXT:    cmp %i2, %i5
+; SPARC-NEXT:    bcs .LBB0_72
+; SPARC-NEXT:    mov %g4, %l2
+; SPARC-NEXT:  ! %bb.71: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %g0, %l2
+; SPARC-NEXT:  .LBB0_72: ! %overflow.no.lhs.only
+; SPARC-NEXT:    cmp %i1, %g3
+; SPARC-NEXT:    bcs .LBB0_74
+; SPARC-NEXT:    mov %g4, %g3
+; SPARC-NEXT:  ! %bb.73: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %g0, %g3
+; SPARC-NEXT:  .LBB0_74: ! %overflow.no.lhs.only
+; SPARC-NEXT:    cmp %i2, %i5
+; SPARC-NEXT:    be .LBB0_76
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  ! %bb.75: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %l2, %g3
+; SPARC-NEXT:  .LBB0_76: ! %overflow.no.lhs.only
+; SPARC-NEXT:    addcc %l0, %g3, %i5
+; SPARC-NEXT:    addxcc %l1, 0, %l0
+; SPARC-NEXT:    xor %i0, %g2, %i0
+; SPARC-NEXT:    sub %g0, %i0, %l1
+; SPARC-NEXT:    xor %i4, %l1, %i4
+; SPARC-NEXT:    xor %i3, %l1, %i3
+; SPARC-NEXT:    addcc %i3, %i0, %g2
+; SPARC-NEXT:    addxcc %i4, 0, %g3
+; SPARC-NEXT:    cmp %g2, %i0
+; SPARC-NEXT:    bcs .LBB0_78
+; SPARC-NEXT:    mov %g4, %i3
+; SPARC-NEXT:  ! %bb.77: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %g0, %i3
+; SPARC-NEXT:  .LBB0_78: ! %overflow.no.lhs.only
+; SPARC-NEXT:    cmp %g3, 0
+; SPARC-NEXT:    be .LBB0_80
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  ! %bb.79: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %g0, %i3
+; SPARC-NEXT:  .LBB0_80: ! %overflow.no.lhs.only
+; SPARC-NEXT:    xor %i1, %l1, %i0
+; SPARC-NEXT:    xor %i2, %l1, %i2
+; SPARC-NEXT:    addcc %i0, %i3, %i1
+; SPARC-NEXT:    addxcc %i2, 0, %i0
+; SPARC-NEXT:    cmp %i1, %i3
+; SPARC-NEXT:    bcs .LBB0_82
+; SPARC-NEXT:    mov %g4, %i2
+; SPARC-NEXT:  ! %bb.81: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %g0, %i2
+; SPARC-NEXT:  .LBB0_82: ! %overflow.no.lhs.only
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    be .LBB0_84
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  ! %bb.83: ! %overflow.no.lhs.only
+; SPARC-NEXT:    mov %g0, %i2
+; SPARC-NEXT:  .LBB0_84: ! %overflow.no.lhs.only
+; SPARC-NEXT:    xor %i5, %l1, %i3
+; SPARC-NEXT:    xor %l0, %l1, %i4
+; SPARC-NEXT:    addcc %i3, %i2, %i2
+; SPARC-NEXT:    ba .LBB0_108
+; SPARC-NEXT:    addxcc %i4, 0, %i3
+; SPARC-NEXT:  .LBB0_85: ! %overflow.no.rhs.only
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bl .LBB0_56
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_86: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %i2, %l0
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bge .LBB0_57
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_87: ! %overflow.no.rhs.only
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bl .LBB0_58
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_88: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %i0, %i5
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bge .LBB0_59
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_89: ! %overflow.no.rhs.only
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bl .LBB0_60
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_90: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %i1, %g3
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bge .LBB0_61
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_91: ! %overflow.no.rhs.only
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    bl .LBB0_93
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  .LBB0_92: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %i3, %l5
+; SPARC-NEXT:  .LBB0_93: ! %overflow.no.rhs.only
+; SPARC-NEXT:    umul %l4, %l5, %i0
+; SPARC-NEXT:    rd %y, %i1
+; SPARC-NEXT:    umul %l3, %l5, %i2
+; SPARC-NEXT:    rd %y, %i3
+; SPARC-NEXT:    addcc %i2, %i1, %i1
+; SPARC-NEXT:    addxcc %i3, 0, %i2
+; SPARC-NEXT:    umul %l4, %l0, %i3
+; SPARC-NEXT:    rd %y, %l6
+; SPARC-NEXT:    addcc %i3, %i1, %i1
+; SPARC-NEXT:    addxcc %l6, 0, %i3
+; SPARC-NEXT:    addcc %i2, %i3, %i2
+; SPARC-NEXT:    addxcc %g0, 0, %i3
+; SPARC-NEXT:    umul %l3, %l0, %l6
+; SPARC-NEXT:    rd %y, %l7
+; SPARC-NEXT:    addcc %l6, %i2, %i2
+; SPARC-NEXT:    smul %l5, %l2, %l6
+; SPARC-NEXT:    umul %l5, %l1, %l5
+; SPARC-NEXT:    rd %y, %o0
+; SPARC-NEXT:    addxcc %l7, %i3, %l7
+; SPARC-NEXT:    add %o0, %l6, %i3
+; SPARC-NEXT:    smul %l0, %l1, %l0
+; SPARC-NEXT:    add %i3, %l0, %l0
+; SPARC-NEXT:    addcc %i2, %l5, %i3
+; SPARC-NEXT:    umul %l4, %g3, %l5
+; SPARC-NEXT:    rd %y, %l6
+; SPARC-NEXT:    addxcc %l7, %l0, %i2
+; SPARC-NEXT:    umul %l3, %g3, %l0
+; SPARC-NEXT:    rd %y, %l7
+; SPARC-NEXT:    addcc %l0, %l6, %l0
+; SPARC-NEXT:    addxcc %l7, 0, %l6
+; SPARC-NEXT:    umul %l4, %i5, %l4
+; SPARC-NEXT:    rd %y, %l7
+; SPARC-NEXT:    addcc %l4, %l0, %l0
+; SPARC-NEXT:    addxcc %l7, 0, %l4
+; SPARC-NEXT:    addcc %l6, %l4, %l4
+; SPARC-NEXT:    addxcc %g0, 0, %l6
+; SPARC-NEXT:    umul %l3, %i5, %l3
+; SPARC-NEXT:    rd %y, %l7
+; SPARC-NEXT:    addcc %l3, %l4, %l3
+; SPARC-NEXT:    smul %g3, %l2, %l2
+; SPARC-NEXT:    umul %g3, %l1, %g3
+; SPARC-NEXT:    rd %y, %l4
+; SPARC-NEXT:    addxcc %l7, %l6, %l6
+; SPARC-NEXT:    add %l4, %l2, %l2
+; SPARC-NEXT:    smul %i5, %l1, %i5
+; SPARC-NEXT:    add %l2, %i5, %i5
+; SPARC-NEXT:    addcc %l3, %g3, %g3
+; SPARC-NEXT:    addxcc %l6, %i5, %l1
+; SPARC-NEXT:    addcc %i3, %l5, %i5
+; SPARC-NEXT:    addxcc %i2, %l0, %l0
+; SPARC-NEXT:    cmp %l0, %i2
+; SPARC-NEXT:    bcs .LBB0_95
+; SPARC-NEXT:    mov %g4, %l2
+; SPARC-NEXT:  ! %bb.94: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %g0, %l2
+; SPARC-NEXT:  .LBB0_95: ! %overflow.no.rhs.only
+; SPARC-NEXT:    cmp %i5, %i3
+; SPARC-NEXT:    bcs .LBB0_97
+; SPARC-NEXT:    mov %g4, %i3
+; SPARC-NEXT:  ! %bb.96: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %g0, %i3
+; SPARC-NEXT:  .LBB0_97: ! %overflow.no.rhs.only
+; SPARC-NEXT:    cmp %l0, %i2
+; SPARC-NEXT:    be .LBB0_99
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  ! %bb.98: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %l2, %i3
+; SPARC-NEXT:  .LBB0_99: ! %overflow.no.rhs.only
+; SPARC-NEXT:    addcc %g3, %i3, %i2
+; SPARC-NEXT:    addxcc %l1, 0, %i3
+; SPARC-NEXT:    xor %g2, %i4, %l1
+; SPARC-NEXT:    sub %g0, %l1, %i4
+; SPARC-NEXT:    xor %i1, %i4, %i1
+; SPARC-NEXT:    xor %i0, %i4, %i0
+; SPARC-NEXT:    addcc %i0, %l1, %g2
+; SPARC-NEXT:    addxcc %i1, 0, %g3
+; SPARC-NEXT:    cmp %g2, %l1
+; SPARC-NEXT:    bcs .LBB0_101
+; SPARC-NEXT:    mov %g4, %l1
+; SPARC-NEXT:  ! %bb.100: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %g0, %l1
+; SPARC-NEXT:  .LBB0_101: ! %overflow.no.rhs.only
+; SPARC-NEXT:    cmp %g3, 0
+; SPARC-NEXT:    be .LBB0_103
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  ! %bb.102: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %g0, %l1
+; SPARC-NEXT:  .LBB0_103: ! %overflow.no.rhs.only
+; SPARC-NEXT:    xor %i5, %i4, %i0
+; SPARC-NEXT:    xor %l0, %i4, %i5
+; SPARC-NEXT:    addcc %i0, %l1, %i1
+; SPARC-NEXT:    addxcc %i5, 0, %i0
+; SPARC-NEXT:    cmp %i1, %l1
+; SPARC-NEXT:    bcs .LBB0_105
+; SPARC-NEXT:    mov %g4, %i5
+; SPARC-NEXT:  ! %bb.104: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %g0, %i5
+; SPARC-NEXT:  .LBB0_105: ! %overflow.no.rhs.only
+; SPARC-NEXT:    cmp %i0, 0
+; SPARC-NEXT:    be .LBB0_107
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  ! %bb.106: ! %overflow.no.rhs.only
+; SPARC-NEXT:    mov %g0, %i5
+; SPARC-NEXT:  .LBB0_107: ! %overflow.no.rhs.only
+; SPARC-NEXT:    xor %i2, %i4, %i2
+; SPARC-NEXT:    xor %i3, %i4, %i3
+; SPARC-NEXT:    addcc %i2, %i5, %i2
+; SPARC-NEXT:    addxcc %i3, 0, %i3
+; SPARC-NEXT:  .LBB0_108: ! %overflow.no.rhs.only
+; SPARC-NEXT:    or %i2, %i3, %i2
+; SPARC-NEXT:    cmp %i2, 0
+; SPARC-NEXT:    bne .LBB0_112
+; SPARC-NEXT:    nop
+; SPARC-NEXT:  ! %bb.109: ! %overflow.no.rhs.only
+; SPARC-NEXT:    ba .LBB0_112
+; SPARC-NEXT:    mov %g0, %g4
+; SPARC-NEXT:  .LBB0_110:
+; SPARC-NEXT:    mov 1, %g4
+; SPARC-NEXT:  .LBB0_111: ! %overflow
+; SPARC-NEXT:    mov %i2, %i1
+; SPARC-NEXT:  .LBB0_112: ! %overflow.res
+; SPARC-NEXT:    and %g4, 1, %i4
+; SPARC-NEXT:    mov %g3, %i2
 ; SPARC-NEXT:    ret
-; SPARC-NEXT:    restore %g0, %g2, %o1
+; SPARC-NEXT:    restore %g0, %g2, %o3
 ;
 ; SPARC64-LABEL: muloti_test:
 ; SPARC64:         .register %g2, #scratch
 ; SPARC64-NEXT:    .register %g3, #scratch
-; SPARC64-NEXT:  ! %bb.0: ! %start
+; SPARC64-NEXT:  ! %bb.0: ! %overflow.entry
 ; SPARC64-NEXT:    save %sp, -176, %sp
-; SPARC64-NEXT:    mov %i3, %i4
-; SPARC64-NEXT:    mov %i1, %i5
-; SPARC64-NEXT:    mov %i0, %l2
-; SPARC64-NEXT:    srax %i0, 63, %i3
-; SPARC64-NEXT:    mov %i3, %o0
+; SPARC64-NEXT:    mov %i1, %i4
+; SPARC64-NEXT:    srax %i1, 63, %i1
+; SPARC64-NEXT:    cmp %i0, %i1
+; SPARC64-NEXT:    be %xcc, .LBB0_3
+; SPARC64-NEXT:    srax %i3, 63, %i1
+; SPARC64-NEXT:  ! %bb.1: ! %overflow.lhs
+; SPARC64-NEXT:    cmp %i2, %i1
+; SPARC64-NEXT:    be %xcc, .LBB0_5
+; SPARC64-NEXT:    nop
+; SPARC64-NEXT:  ! %bb.2: ! %overflow
+; SPARC64-NEXT:    srax %i0, 63, %i5
+; SPARC64-NEXT:    mov %i5, %o0
 ; SPARC64-NEXT:    mov %i0, %o1
 ; SPARC64-NEXT:    mov %g0, %o2
 ; SPARC64-NEXT:    call __multi3
-; SPARC64-NEXT:    mov %i4, %o3
+; SPARC64-NEXT:    mov %i3, %o3
 ; SPARC64-NEXT:    mov %o0, %l0
 ; SPARC64-NEXT:    mov %o1, %l1
 ; SPARC64-NEXT:    mov %g0, %o0
-; SPARC64-NEXT:    mov %i1, %o1
+; SPARC64-NEXT:    mov %i4, %o1
+; SPARC64-NEXT:    mov %g0, %o2
+; SPARC64-NEXT:    call __multi3
+; SPARC64-NEXT:    mov %i3, %o3
+; SPARC64-NEXT:    mov %o1, %i1
+; SPARC64-NEXT:    mov %g0, %i3
+; SPARC64-NEXT:    add %l1, %o0, %l2
+; SPARC64-NEXT:    cmp %l2, %l1
+; SPARC64-NEXT:    movcs %xcc, 1, %i3
+; SPARC64-NEXT:    srl %i3, 0, %i3
+; SPARC64-NEXT:    add %l0, %i3, %l0
+; SPARC64-NEXT:    srax %l0, 63, %l1
+; SPARC64-NEXT:    srax %i2, 63, %i3
+; SPARC64-NEXT:    mov %g0, %o0
+; SPARC64-NEXT:    mov %i4, %o1
+; SPARC64-NEXT:    mov %i3, %o2
+; SPARC64-NEXT:    call __multi3
+; SPARC64-NEXT:    mov %i2, %o3
+; SPARC64-NEXT:    mov %g0, %i4
+; SPARC64-NEXT:    mov %g0, %g2
+; SPARC64-NEXT:    add %o1, %l2, %g3
+; SPARC64-NEXT:    cmp %g3, %o1
+; SPARC64-NEXT:    movcs %xcc, 1, %i4
+; SPARC64-NEXT:    srl %i4, 0, %i4
+; SPARC64-NEXT:    add %o0, %i4, %i4
+; SPARC64-NEXT:    srax %i4, 63, %g4
+; SPARC64-NEXT:    add %l1, %g4, %g4
+; SPARC64-NEXT:    add %l0, %i4, %i4
+; SPARC64-NEXT:    cmp %i4, %l0
+; SPARC64-NEXT:    movcs %xcc, 1, %g2
+; SPARC64-NEXT:    srl %g2, 0, %g2
+; SPARC64-NEXT:    add %g4, %g2, %l0
+; SPARC64-NEXT:    mov %i5, %o0
+; SPARC64-NEXT:    mov %i0, %o1
+; SPARC64-NEXT:    mov %g3, %i0
+; SPARC64-NEXT:    mov %i3, %o2
+; SPARC64-NEXT:    call __multi3
+; SPARC64-NEXT:    mov %i2, %o3
+; SPARC64-NEXT:    mov %g0, %i3
+; SPARC64-NEXT:    mov %g0, %i2
+; SPARC64-NEXT:    add %o0, %l0, %i5
+; SPARC64-NEXT:    add %o1, %i4, %i4
+; SPARC64-NEXT:    cmp %i4, %o1
+; SPARC64-NEXT:    movcs %xcc, 1, %i3
+; SPARC64-NEXT:    srl %i3, 0, %i3
+; SPARC64-NEXT:    add %i5, %i3, %i3
+; SPARC64-NEXT:    srax %i0, 63, %i5
+; SPARC64-NEXT:    xor %i3, %i5, %i3
+; SPARC64-NEXT:    xor %i4, %i5, %i4
+; SPARC64-NEXT:    ba .LBB0_7
+; SPARC64-NEXT:    or %i4, %i3, %i3
+; SPARC64-NEXT:  .LBB0_3: ! %overflow.no.lhs
+; SPARC64-NEXT:    cmp %i2, %i1
+; SPARC64-NEXT:    be %xcc, .LBB0_8
+; SPARC64-NEXT:    nop
+; SPARC64-NEXT:  ! %bb.4: ! %overflow.no.lhs.only
+; SPARC64-NEXT:    mov %g0, %i5
+; SPARC64-NEXT:    mov %g0, %i1
+; SPARC64-NEXT:    mov %g0, %l0
+; SPARC64-NEXT:    mov %g0, %g2
+; SPARC64-NEXT:    movrnz %i4, 1, %i1
+; SPARC64-NEXT:    srl %i1, 0, %i1
+; SPARC64-NEXT:    add %i0, %i1, %i1
+; SPARC64-NEXT:    sub %g0, %i1, %i1
+; SPARC64-NEXT:    mov %i0, %g3
+; SPARC64-NEXT:    movrlz %i0, %i1, %g3
+; SPARC64-NEXT:    sub %g0, %i4, %i1
+; SPARC64-NEXT:    mov %i4, %g4
+; SPARC64-NEXT:    movrlz %i0, %i1, %g4
+; SPARC64-NEXT:    movrlz %i0, 1, %i5
+; SPARC64-NEXT:    movrlz %i0, %g4, %i4
+; SPARC64-NEXT:    movrlz %i0, %g3, %i0
+; SPARC64-NEXT:    movrlz %i2, 1, %l0
+; SPARC64-NEXT:    sub %g0, %i3, %i1
+; SPARC64-NEXT:    mov %i3, %g3
+; SPARC64-NEXT:    movrlz %i2, %i1, %g3
+; SPARC64-NEXT:    movrnz %i3, 1, %g2
+; SPARC64-NEXT:    srl %g2, 0, %i1
+; SPARC64-NEXT:    add %i2, %i1, %i1
+; SPARC64-NEXT:    sub %g0, %i1, %i1
+; SPARC64-NEXT:    mov %i2, %g2
+; SPARC64-NEXT:    movrlz %i2, %i1, %g2
+; SPARC64-NEXT:    movrlz %i2, %g3, %i3
+; SPARC64-NEXT:    movrlz %i2, %g2, %i2
+; SPARC64-NEXT:    mov %i0, %o0
+; SPARC64-NEXT:    mov %i4, %o1
+; SPARC64-NEXT:    mov %g0, %o2
+; SPARC64-NEXT:    call __multi3
+; SPARC64-NEXT:    mov %i3, %o3
+; SPARC64-NEXT:    mov %o0, %i1
+; SPARC64-NEXT:    mov %o1, %i3
+; SPARC64-NEXT:    mov %i0, %o0
+; SPARC64-NEXT:    mov %i4, %o1
+; SPARC64-NEXT:    mov %g0, %o2
+; SPARC64-NEXT:    call __multi3
+; SPARC64-NEXT:    mov %i2, %o3
+; SPARC64-NEXT:    mov %g0, %i0
+; SPARC64-NEXT:    mov %g0, %i4
+; SPARC64-NEXT:    mov %g0, %g2
+; SPARC64-NEXT:    mov %g0, %i2
+; SPARC64-NEXT:    add %i1, %o1, %g3
+; SPARC64-NEXT:    cmp %g3, %i1
+; SPARC64-NEXT:    movcs %xcc, 1, %i0
+; SPARC64-NEXT:    srl %i0, 0, %i0
+; SPARC64-NEXT:    add %o0, %i0, %g4
+; SPARC64-NEXT:    xor %l0, %i5, %i0
+; SPARC64-NEXT:    and %i0, 1, %i1
+; SPARC64-NEXT:    sub %g0, %i1, %i5
+; SPARC64-NEXT:    srl %i0, 0, %i0
+; SPARC64-NEXT:    xor %i3, %i5, %i1
+; SPARC64-NEXT:    add %i1, %i0, %i1
+; SPARC64-NEXT:    cmp %i1, %i0
+; SPARC64-NEXT:    movcs %xcc, 1, %i4
+; SPARC64-NEXT:    ba .LBB0_6
+; SPARC64-NEXT:    srl %i4, 0, %i3
+; SPARC64-NEXT:  .LBB0_5: ! %overflow.no.rhs.only
+; SPARC64-NEXT:    mov %g0, %i5
+; SPARC64-NEXT:    mov %g0, %i1
+; SPARC64-NEXT:    mov %g0, %l0
+; SPARC64-NEXT:    mov %g0, %g2
+; SPARC64-NEXT:    movrnz %i3, 1, %i1
+; SPARC64-NEXT:    srl %i1, 0, %i1
+; SPARC64-NEXT:    add %i2, %i1, %i1
+; SPARC64-NEXT:    sub %g0, %i1, %i1
+; SPARC64-NEXT:    mov %i2, %g3
+; SPARC64-NEXT:    movrlz %i2, %i1, %g3
+; SPARC64-NEXT:    sub %g0, %i3, %i1
+; SPARC64-NEXT:    mov %i3, %g4
+; SPARC64-NEXT:    movrlz %i2, %i1, %g4
+; SPARC64-NEXT:    movrlz %i2, 1, %i5
+; SPARC64-NEXT:    movrlz %i2, %g4, %i3
+; SPARC64-NEXT:    movrlz %i2, %g3, %i2
+; SPARC64-NEXT:    movrlz %i0, 1, %l0
+; SPARC64-NEXT:    sub %g0, %i4, %i1
+; SPARC64-NEXT:    mov %i4, %g3
+; SPARC64-NEXT:    movrlz %i0, %i1, %g3
+; SPARC64-NEXT:    movrnz %i4, 1, %g2
+; SPARC64-NEXT:    srl %g2, 0, %i1
+; SPARC64-NEXT:    add %i0, %i1, %i1
+; SPARC64-NEXT:    sub %g0, %i1, %i1
+; SPARC64-NEXT:    mov %i0, %g2
+; SPARC64-NEXT:    movrlz %i0, %i1, %g2
+; SPARC64-NEXT:    movrlz %i0, %g3, %i4
+; SPARC64-NEXT:    movrlz %i0, %g2, %i0
+; SPARC64-NEXT:    mov %i2, %o0
+; SPARC64-NEXT:    mov %i3, %o1
 ; SPARC64-NEXT:    mov %g0, %o2
 ; SPARC64-NEXT:    call __multi3
 ; SPARC64-NEXT:    mov %i4, %o3
-; SPARC64-NEXT:    mov %o1, %i1
+; SPARC64-NEXT:    mov %o0, %i1
+; SPARC64-NEXT:    mov %o1, %i4
+; SPARC64-NEXT:    mov %i2, %o0
+; SPARC64-NEXT:    mov %i3, %o1
+; SPARC64-NEXT:    mov %g0, %o2
+; SPARC64-NEXT:    call __multi3
+; SPARC64-NEXT:    mov %i0, %o3
 ; SPARC64-NEXT:    mov %g0, %i0
-; SPARC64-NEXT:    add %l1, %o0, %l3
-; SPARC64-NEXT:    cmp %l3, %l1
+; SPARC64-NEXT:    mov %g0, %i3
+; SPARC64-NEXT:    mov %g0, %g2
+; SPARC64-NEXT:    mov %g0, %i2
+; SPARC64-NEXT:    add %i1, %o1, %g3
+; SPARC64-NEXT:    cmp %g3, %i1
 ; SPARC64-NEXT:    movcs %xcc, 1, %i0
 ; SPARC64-NEXT:    srl %i0, 0, %i0
-; SPARC64-NEXT:    add %l0, %i0, %l0
-; SPARC64-NEXT:    srax %l0, 63, %l1
-; SPARC64-NEXT:    srax %i2, 63, %i4
-; SPARC64-NEXT:    mov %g0, %o0
-; SPARC64-NEXT:    mov %i5, %o1
-; SPARC64-NEXT:    mov %i4, %o2
-; SPARC64-NEXT:    call __multi3
-; SPARC64-NEXT:    mov %i2, %o3
-; SPARC64-NEXT:    mov %g0, %i5
-; SPARC64-NEXT:    mov %g0, %g2
-; SPARC64-NEXT:    add %o1, %l3, %i0
-; SPARC64-NEXT:    cmp %i0, %o1
-; SPARC64-NEXT:    movcs %xcc, 1, %i5
-; SPARC64-NEXT:    srl %i5, 0, %i5
-; SPARC64-NEXT:    add %o0, %i5, %i5
-; SPARC64-NEXT:    srax %i5, 63, %g3
-; SPARC64-NEXT:    add %l1, %g3, %g3
-; SPARC64-NEXT:    add %l0, %i5, %i5
-; SPARC64-NEXT:    cmp %i5, %l0
+; SPARC64-NEXT:    add %o0, %i0, %g4
+; SPARC64-NEXT:    xor %i5, %l0, %i0
+; SPARC64-NEXT:    and %i0, 1, %i1
+; SPARC64-NEXT:    sub %g0, %i1, %i5
+; SPARC64-NEXT:    srl %i0, 0, %i0
+; SPARC64-NEXT:    xor %i4, %i5, %i1
+; SPARC64-NEXT:    add %i1, %i0, %i1
+; SPARC64-NEXT:    cmp %i1, %i0
+; SPARC64-NEXT:    movcs %xcc, 1, %i3
+; SPARC64-NEXT:    srl %i3, 0, %i3
+; SPARC64-NEXT:  .LBB0_6: ! %overflow.res
+; SPARC64-NEXT:    xor %g3, %i5, %i0
+; SPARC64-NEXT:    add %i0, %i3, %i0
+; SPARC64-NEXT:    cmp %i0, %i3
 ; SPARC64-NEXT:    movcs %xcc, 1, %g2
-; SPARC64-NEXT:    srl %g2, 0, %g2
-; SPARC64-NEXT:    add %g3, %g2, %l0
-; SPARC64-NEXT:    mov %i3, %o0
-; SPARC64-NEXT:    mov %l2, %o1
-; SPARC64-NEXT:    mov %i4, %o2
+; SPARC64-NEXT:    srl %g2, 0, %i3
+; SPARC64-NEXT:    xor %g4, %i5, %i4
+; SPARC64-NEXT:    add %i4, %i3, %i3
+; SPARC64-NEXT:  .LBB0_7: ! %overflow.res
+; SPARC64-NEXT:    ba .LBB0_9
+; SPARC64-NEXT:    movrnz %i3, 1, %i2
+; SPARC64-NEXT:  .LBB0_8: ! %overflow.no
+; SPARC64-NEXT:    mov %i0, %o0
+; SPARC64-NEXT:    mov %i4, %o1
+; SPARC64-NEXT:    mov %i2, %o2
 ; SPARC64-NEXT:    call __multi3
-; SPARC64-NEXT:    mov %i2, %o3
+; SPARC64-NEXT:    mov %i3, %o3
+; SPARC64-NEXT:    mov %o0, %i0
+; SPARC64-NEXT:    mov %o1, %i1
 ; SPARC64-NEXT:    mov %g0, %i2
-; SPARC64-NEXT:    mov %g0, %i3
-; SPARC64-NEXT:    add %o0, %l0, %i4
-; SPARC64-NEXT:    add %o1, %i5, %i5
-; SPARC64-NEXT:    cmp %i5, %o1
-; SPARC64-NEXT:    movcs %xcc, 1, %i2
-; SPARC64-NEXT:    srl %i2, 0, %i2
-; SPARC64-NEXT:    add %i4, %i2, %i2
-; SPARC64-NEXT:    srax %i0, 63, %i4
-; SPARC64-NEXT:    xor %i2, %i4, %i2
-; SPARC64-NEXT:    xor %i5, %i4, %i4
-; SPARC64-NEXT:    or %i4, %i2, %i2
-; SPARC64-NEXT:    movrnz %i2, 1, %i3
-; SPARC64-NEXT:    srl %i3, 0, %i2
+; SPARC64-NEXT:  .LBB0_9: ! %overflow.res
+; SPARC64-NEXT:    and %i2, 1, %i2
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore
 ;
 ; SPARC64-VIS3-LABEL: muloti_test:
 ; SPARC64-VIS3:         .register %g2, #scratch
 ; SPARC64-VIS3-NEXT:    .register %g3, #scratch
-; SPARC64-VIS3-NEXT:  ! %bb.0: ! %start
+; SPARC64-VIS3-NEXT:  ! %bb.0: ! %overflow.entry
 ; SPARC64-VIS3-NEXT:    save %sp, -128, %sp
-; SPARC64-VIS3-NEXT:    mov %g0, %i5
-; SPARC64-VIS3-NEXT:    umulxhi %i0, %i3, %i4
-; SPARC64-VIS3-NEXT:    srax %i0, 63, %g2
-; SPARC64-VIS3-NEXT:    mulx %g2, %i3, %g3
-; SPARC64-VIS3-NEXT:    add %i4, %g3, %i4
+; SPARC64-VIS3-NEXT:    srax %i1, 63, %i4
+; SPARC64-VIS3-NEXT:    cmp %i0, %i4
+; SPARC64-VIS3-NEXT:    be %xcc, .LBB0_3
+; SPARC64-VIS3-NEXT:    srax %i3, 63, %i4
+; SPARC64-VIS3-NEXT:  ! %bb.1: ! %overflow.lhs
+; SPARC64-VIS3-NEXT:    cmp %i2, %i4
+; SPARC64-VIS3-NEXT:    be %xcc, .LBB0_5
+; SPARC64-VIS3-NEXT:    nop
+; SPARC64-VIS3-NEXT:  ! %bb.2: ! %overflow
+; SPARC64-VIS3-NEXT:    mov %g0, %i4
+; SPARC64-VIS3-NEXT:    srax %i0, 63, %i5
+; SPARC64-VIS3-NEXT:    mulx %i5, %i3, %g2
+; SPARC64-VIS3-NEXT:    umulxhi %i0, %i3, %g3
+; SPARC64-VIS3-NEXT:    add %g3, %g2, %g2
 ; SPARC64-VIS3-NEXT:    umulxhi %i1, %i3, %g3
 ; SPARC64-VIS3-NEXT:    mulx %i0, %i3, %g4
 ; SPARC64-VIS3-NEXT:    addcc %g4, %g3, %g3
-; SPARC64-VIS3-NEXT:    addxccc %i4, %g0, %g4
-; SPARC64-VIS3-NEXT:    umulxhi %i1, %i2, %i4
-; SPARC64-VIS3-NEXT:    srax %i2, 63, %g5
-; SPARC64-VIS3-NEXT:    mulx %i1, %g5, %l0
-; SPARC64-VIS3-NEXT:    add %i4, %l0, %l0
-; SPARC64-VIS3-NEXT:    mulx %i1, %i2, %i4
-; SPARC64-VIS3-NEXT:    addcc %i4, %g3, %i4
-; SPARC64-VIS3-NEXT:    addxccc %l0, %g0, %g3
-; SPARC64-VIS3-NEXT:    srax %g3, 63, %l0
-; SPARC64-VIS3-NEXT:    addcc %g4, %g3, %g3
-; SPARC64-VIS3-NEXT:    srax %g4, 63, %g4
-; SPARC64-VIS3-NEXT:    addxccc %g4, %l0, %g4
-; SPARC64-VIS3-NEXT:    and %g5, %i0, %g5
-; SPARC64-VIS3-NEXT:    and %g2, %i2, %g2
-; SPARC64-VIS3-NEXT:    add %g2, %g5, %g2
-; SPARC64-VIS3-NEXT:    umulxhi %i0, %i2, %g5
-; SPARC64-VIS3-NEXT:    sub %g5, %g2, %g2
-; SPARC64-VIS3-NEXT:    mulx %i0, %i2, %i0
-; SPARC64-VIS3-NEXT:    addcc %i0, %g3, %i0
-; SPARC64-VIS3-NEXT:    addxccc %g2, %g4, %i2
-; SPARC64-VIS3-NEXT:    srax %i4, 63, %g2
+; SPARC64-VIS3-NEXT:    addxccc %g2, %g0, %g2
+; SPARC64-VIS3-NEXT:    srax %i2, 63, %g4
+; SPARC64-VIS3-NEXT:    mulx %i1, %g4, %g5
+; SPARC64-VIS3-NEXT:    umulxhi %i1, %i2, %l0
+; SPARC64-VIS3-NEXT:    add %l0, %g5, %g5
+; SPARC64-VIS3-NEXT:    mulx %i1, %i2, %l0
+; SPARC64-VIS3-NEXT:    addcc %l0, %g3, %g3
+; SPARC64-VIS3-NEXT:    addxccc %g5, %g0, %g5
+; SPARC64-VIS3-NEXT:    srax %g5, 63, %l0
+; SPARC64-VIS3-NEXT:    addcc %g2, %g5, %g5
+; SPARC64-VIS3-NEXT:    srax %g2, 63, %g2
+; SPARC64-VIS3-NEXT:    addxccc %g2, %l0, %g2
+; SPARC64-VIS3-NEXT:    and %g4, %i0, %g4
+; SPARC64-VIS3-NEXT:    and %i5, %i2, %i5
+; SPARC64-VIS3-NEXT:    add %i5, %g4, %i5
+; SPARC64-VIS3-NEXT:    umulxhi %i0, %i2, %g4
+; SPARC64-VIS3-NEXT:    sub %g4, %i5, %i5
+; SPARC64-VIS3-NEXT:    mulx %i0, %i2, %i2
+; SPARC64-VIS3-NEXT:    mov %g3, %i0
+; SPARC64-VIS3-NEXT:    addcc %i2, %g5, %i2
+; SPARC64-VIS3-NEXT:    addxccc %i5, %g2, %i5
+; SPARC64-VIS3-NEXT:    srax %g3, 63, %g2
+; SPARC64-VIS3-NEXT:    xor %i5, %g2, %i5
 ; SPARC64-VIS3-NEXT:    xor %i2, %g2, %i2
-; SPARC64-VIS3-NEXT:    xor %i0, %g2, %i0
-; SPARC64-VIS3-NEXT:    or %i0, %i2, %i0
-; SPARC64-VIS3-NEXT:    movrnz %i0, 1, %i5
+; SPARC64-VIS3-NEXT:    or %i2, %i5, %i2
+; SPARC64-VIS3-NEXT:    ba .LBB0_7
+; SPARC64-VIS3-NEXT:    movrnz %i2, 1, %i4
+; SPARC64-VIS3-NEXT:  .LBB0_3: ! %overflow.no.lhs
+; SPARC64-VIS3-NEXT:    cmp %i2, %i4
+; SPARC64-VIS3-NEXT:    be %xcc, .LBB0_6
+; SPARC64-VIS3-NEXT:    nop
+; SPARC64-VIS3-NEXT:  ! %bb.4: ! %overflow.no.lhs.only
+; SPARC64-VIS3-NEXT:    mov %g0, %i5
+; SPARC64-VIS3-NEXT:    mov %g0, %g3
+; SPARC64-VIS3-NEXT:    mov %g0, %g2
+; SPARC64-VIS3-NEXT:    mov %g0, %g4
+; SPARC64-VIS3-NEXT:    mov %g0, %g5
+; SPARC64-VIS3-NEXT:    mov %g0, %l0
+; SPARC64-VIS3-NEXT:    mov %g0, %l1
+; SPARC64-VIS3-NEXT:    mov %g0, %i4
+; SPARC64-VIS3-NEXT:    sub %g0, %i1, %l2
+; SPARC64-VIS3-NEXT:    mov %i1, %l3
+; SPARC64-VIS3-NEXT:    movrlz %i0, %l2, %l3
+; SPARC64-VIS3-NEXT:    movrnz %i1, 1, %g3
+; SPARC64-VIS3-NEXT:    srl %g3, 0, %g3
+; SPARC64-VIS3-NEXT:    add %i0, %g3, %g3
+; SPARC64-VIS3-NEXT:    sub %g0, %g3, %g3
+; SPARC64-VIS3-NEXT:    mov %i0, %l2
+; SPARC64-VIS3-NEXT:    movrlz %i0, %g3, %l2
+; SPARC64-VIS3-NEXT:    movrlz %i0, 1, %i5
+; SPARC64-VIS3-NEXT:    movrlz %i0, %l3, %i1
+; SPARC64-VIS3-NEXT:    movrlz %i0, %l2, %i0
+; SPARC64-VIS3-NEXT:    sub %g0, %i3, %g3
+; SPARC64-VIS3-NEXT:    mov %i3, %l2
+; SPARC64-VIS3-NEXT:    movrlz %i2, %g3, %l2
+; SPARC64-VIS3-NEXT:    movrnz %i3, 1, %g4
+; SPARC64-VIS3-NEXT:    srl %g4, 0, %g3
+; SPARC64-VIS3-NEXT:    add %i2, %g3, %g3
+; SPARC64-VIS3-NEXT:    sub %g0, %g3, %g3
+; SPARC64-VIS3-NEXT:    mov %i2, %g4
+; SPARC64-VIS3-NEXT:    movrlz %i2, %g3, %g4
+; SPARC64-VIS3-NEXT:    movrlz %i2, 1, %g2
+; SPARC64-VIS3-NEXT:    movrlz %i2, %l2, %i3
+; SPARC64-VIS3-NEXT:    movrlz %i2, %g4, %i2
+; SPARC64-VIS3-NEXT:    umulxhi %i1, %i3, %g3
+; SPARC64-VIS3-NEXT:    mulx %i0, %i3, %g4
+; SPARC64-VIS3-NEXT:    add %g3, %g4, %g3
+; SPARC64-VIS3-NEXT:    mulx %i0, %i2, %i0
+; SPARC64-VIS3-NEXT:    umulxhi %i1, %i2, %g4
+; SPARC64-VIS3-NEXT:    add %g4, %i0, %i0
+; SPARC64-VIS3-NEXT:    mulx %i1, %i3, %i3
+; SPARC64-VIS3-NEXT:    mulx %i1, %i2, %i1
+; SPARC64-VIS3-NEXT:    add %g3, %i1, %i2
+; SPARC64-VIS3-NEXT:    cmp %i2, %g3
+; SPARC64-VIS3-NEXT:    movcs %xcc, 1, %g5
+; SPARC64-VIS3-NEXT:    srl %g5, 0, %i1
+; SPARC64-VIS3-NEXT:    add %i0, %i1, %g3
+; SPARC64-VIS3-NEXT:    xor %g2, %i5, %i0
+; SPARC64-VIS3-NEXT:    and %i0, 1, %i1
+; SPARC64-VIS3-NEXT:    sub %g0, %i1, %i5
+; SPARC64-VIS3-NEXT:    srl %i0, 0, %i0
+; SPARC64-VIS3-NEXT:    xor %i3, %i5, %i1
+; SPARC64-VIS3-NEXT:    add %i1, %i0, %i1
+; SPARC64-VIS3-NEXT:    cmp %i1, %i0
+; SPARC64-VIS3-NEXT:    movcs %xcc, 1, %l0
+; SPARC64-VIS3-NEXT:    srl %l0, 0, %i3
+; SPARC64-VIS3-NEXT:    xor %i2, %i5, %i0
+; SPARC64-VIS3-NEXT:    add %i0, %i3, %i0
+; SPARC64-VIS3-NEXT:    cmp %i0, %i3
+; SPARC64-VIS3-NEXT:    movcs %xcc, 1, %l1
+; SPARC64-VIS3-NEXT:    srl %l1, 0, %i2
+; SPARC64-VIS3-NEXT:    xor %g3, %i5, %i3
+; SPARC64-VIS3-NEXT:    add %i3, %i2, %i2
+; SPARC64-VIS3-NEXT:    ba .LBB0_8
+; SPARC64-VIS3-NEXT:    movrnz %i2, 1, %i4
+; SPARC64-VIS3-NEXT:  .LBB0_5: ! %overflow.no.rhs.only
+; SPARC64-VIS3-NEXT:    mov %g0, %i5
+; SPARC64-VIS3-NEXT:    mov %g0, %g3
+; SPARC64-VIS3-NEXT:    mov %g0, %g2
+; SPARC64-VIS3-NEXT:    mov %g0, %g4
+; SPARC64-VIS3-NEXT:    mov %g0, %g5
+; SPARC64-VIS3-NEXT:    mov %g0, %l0
+; SPARC64-VIS3-NEXT:    mov %g0, %l1
+; SPARC64-VIS3-NEXT:    mov %g0, %i4
+; SPARC64-VIS3-NEXT:    sub %g0, %i3, %l2
+; SPARC64-VIS3-NEXT:    mov %i3, %l3
+; SPARC64-VIS3-NEXT:    movrlz %i2, %l2, %l3
+; SPARC64-VIS3-NEXT:    movrnz %i3, 1, %g3
+; SPARC64-VIS3-NEXT:    srl %g3, 0, %g3
+; SPARC64-VIS3-NEXT:    add %i2, %g3, %g3
+; SPARC64-VIS3-NEXT:    sub %g0, %g3, %g3
+; SPARC64-VIS3-NEXT:    mov %i2, %l2
+; SPARC64-VIS3-NEXT:    movrlz %i2, %g3, %l2
+; SPARC64-VIS3-NEXT:    movrlz %i2, 1, %i5
+; SPARC64-VIS3-NEXT:    movrlz %i2, %l3, %i3
+; SPARC64-VIS3-NEXT:    movrlz %i2, %l2, %i2
+; SPARC64-VIS3-NEXT:    sub %g0, %i1, %g3
+; SPARC64-VIS3-NEXT:    mov %i1, %l2
+; SPARC64-VIS3-NEXT:    movrlz %i0, %g3, %l2
+; SPARC64-VIS3-NEXT:    movrnz %i1, 1, %g4
+; SPARC64-VIS3-NEXT:    srl %g4, 0, %g3
+; SPARC64-VIS3-NEXT:    add %i0, %g3, %g3
+; SPARC64-VIS3-NEXT:    sub %g0, %g3, %g3
+; SPARC64-VIS3-NEXT:    mov %i0, %g4
+; SPARC64-VIS3-NEXT:    movrlz %i0, %g3, %g4
+; SPARC64-VIS3-NEXT:    movrlz %i0, 1, %g2
+; SPARC64-VIS3-NEXT:    movrlz %i0, %l2, %i1
+; SPARC64-VIS3-NEXT:    movrlz %i0, %g4, %i0
+; SPARC64-VIS3-NEXT:    umulxhi %i3, %i1, %g3
+; SPARC64-VIS3-NEXT:    mulx %i2, %i1, %g4
+; SPARC64-VIS3-NEXT:    add %g3, %g4, %g3
+; SPARC64-VIS3-NEXT:    mulx %i2, %i0, %i2
+; SPARC64-VIS3-NEXT:    umulxhi %i3, %i0, %g4
+; SPARC64-VIS3-NEXT:    add %g4, %i2, %i2
+; SPARC64-VIS3-NEXT:    mulx %i3, %i1, %i1
+; SPARC64-VIS3-NEXT:    mulx %i3, %i0, %i0
+; SPARC64-VIS3-NEXT:    add %g3, %i0, %i0
+; SPARC64-VIS3-NEXT:    cmp %i0, %g3
+; SPARC64-VIS3-NEXT:    movcs %xcc, 1, %g5
+; SPARC64-VIS3-NEXT:    srl %g5, 0, %i3
+; SPARC64-VIS3-NEXT:    add %i2, %i3, %i2
+; SPARC64-VIS3-NEXT:    xor %i5, %g2, %i3
+; SPARC64-VIS3-NEXT:    and %i3, 1, %i5
+; SPARC64-VIS3-NEXT:    sub %g0, %i5, %i5
+; SPARC64-VIS3-NEXT:    srl %i3, 0, %i3
+; SPARC64-VIS3-NEXT:    xor %i1, %i5, %i1
+; SPARC64-VIS3-NEXT:    add %i1, %i3, %i1
+; SPARC64-VIS3-NEXT:    cmp %i1, %i3
+; SPARC64-VIS3-NEXT:    movcs %xcc, 1, %l0
+; SPARC64-VIS3-NEXT:    srl %l0, 0, %i3
+; SPARC64-VIS3-NEXT:    xor %i0, %i5, %i0
+; SPARC64-VIS3-NEXT:    add %i0, %i3, %i0
+; SPARC64-VIS3-NEXT:    cmp %i0, %i3
+; SPARC64-VIS3-NEXT:    movcs %xcc, 1, %l1
+; SPARC64-VIS3-NEXT:    srl %l1, 0, %i3
+; SPARC64-VIS3-NEXT:    xor %i2, %i5, %i2
+; SPARC64-VIS3-NEXT:    add %i2, %i3, %i2
+; SPARC64-VIS3-NEXT:    ba .LBB0_8
+; SPARC64-VIS3-NEXT:    movrnz %i2, 1, %i4
+; SPARC64-VIS3-NEXT:  .LBB0_6: ! %overflow.no
+; SPARC64-VIS3-NEXT:    mov %g0, %i4
+; SPARC64-VIS3-NEXT:    mulx %i1, %i2, %i2
+; SPARC64-VIS3-NEXT:    umulxhi %i1, %i3, %i5
+; SPARC64-VIS3-NEXT:    add %i5, %i2, %i2
+; SPARC64-VIS3-NEXT:    mulx %i0, %i3, %i0
+; SPARC64-VIS3-NEXT:    add %i2, %i0, %i0
+; SPARC64-VIS3-NEXT:  .LBB0_7: ! %overflow.res
 ; SPARC64-VIS3-NEXT:    mulx %i1, %i3, %i1
-; SPARC64-VIS3-NEXT:    srl %i5, 0, %i2
+; SPARC64-VIS3-NEXT:  .LBB0_8: ! %overflow.res
+; SPARC64-VIS3-NEXT:    and %i4, 1, %i2
 ; SPARC64-VIS3-NEXT:    ret
-; SPARC64-VIS3-NEXT:    restore %g0, %i4, %o0
+; SPARC64-VIS3-NEXT:    restore
 start:
   %0 = tail call { i128, i1 } @llvm.smul.with.overflow.i128(i128 %l, i128 %r)
   %1 = extractvalue { i128, i1 } %0, 0
