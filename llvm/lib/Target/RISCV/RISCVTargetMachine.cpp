@@ -104,6 +104,11 @@ static cl::opt<bool> EnablePostMISchedLoadStoreClustering(
     cl::desc("Enable PostRA load and store clustering in the machine scheduler"),
     cl::init(true));
 
+static cl::opt<bool> EnableVTypeRegDepMutation(
+    "riscv-postmisched-vtype-reg-dep-mutation", cl::Hidden,
+    cl::desc("Remove unnecessary dependencies on vtype register"),
+    cl::init(false));
+
 static cl::opt<bool>
     EnableVLOptimizer("riscv-enable-vl-optimizer",
                       cl::desc("Enable the RISC-V VL Optimizer pass"),
@@ -323,6 +328,8 @@ RISCVTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
     DAG->addMutation(createStoreClusterDAGMutation(
         DAG->TII, DAG->TRI, /*ReorderWhileClustering=*/true));
   }
+  if (EnableVTypeRegDepMutation)
+    DAG->addMutation(createRISCVVTypeRegDepMutation(DAG->TRI));
 
   return DAG;
 }
