@@ -5,7 +5,6 @@ define <32 x i8> @concat_poison_v32i8_1(<16 x i8> %a) {
 ; CHECK-LABEL: concat_poison_v32i8_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <16 x i8> %a, <16 x i8> poison,
@@ -20,7 +19,6 @@ define <32 x i8> @concat_poison_v32i8_2(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: concat_poison_v32i8_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vori.b $vr0, $vr1, 0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <16 x i8> %b, <16 x i8> poison,
@@ -51,7 +49,6 @@ define <16 x i16> @concat_poison_v16i16_1(<8 x i16> %a) {
 ; CHECK-LABEL: concat_poison_v16i16_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <8 x i16> %a, <8 x i16> poison,
@@ -64,7 +61,6 @@ define <16 x i16> @concat_poison_v16i16_2(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: concat_poison_v16i16_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vori.b $vr0, $vr1, 0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <8 x i16> %b, <8 x i16> poison,
@@ -91,7 +87,6 @@ define <8 x i32> @concat_poison_v8i32_1(<4 x i32> %a) {
 ; CHECK-LABEL: concat_poison_v8i32_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <4 x i32> %a, <4 x i32> poison,
@@ -103,7 +98,6 @@ define <8 x i32> @concat_poison_v8i32_2(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: concat_poison_v8i32_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vori.b $vr0, $vr1, 0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <4 x i32> %b, <4 x i32> poison,
@@ -128,7 +122,6 @@ define <8 x float> @concat_poison_v8f32_1(<4 x float> %a) {
 ; CHECK-LABEL: concat_poison_v8f32_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <4 x float> %a, <4 x float> poison,
@@ -140,7 +133,6 @@ define <8 x float> @concat_poison_v8f32_2(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: concat_poison_v8f32_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vori.b $vr0, $vr1, 0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <4 x float> %b, <4 x float> poison,
@@ -165,7 +157,6 @@ define <4 x i64> @concat_poison_v8i64_1(<2 x i64> %a) {
 ; CHECK-LABEL: concat_poison_v8i64_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <2 x i64> %a, <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -176,7 +167,6 @@ define <4 x i64> @concat_poison_v8i64_2(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: concat_poison_v8i64_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vori.b $vr0, $vr1, 0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <2 x i64> %b, <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -199,7 +189,6 @@ define <4 x double> @concat_poison_v8f64_1(<2 x double> %a) {
 ; CHECK-LABEL: concat_poison_v8f64_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <2 x double> %a, <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -210,7 +199,6 @@ define <4 x double> @concat_poison_v8f64_2(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: concat_poison_v8f64_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vori.b $vr0, $vr1, 0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <2 x double> %b, <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
