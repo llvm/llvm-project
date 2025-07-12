@@ -3929,6 +3929,14 @@ def CFICanonicalJumpTable : InheritableAttr {
   let SimpleHandler = 1;
 }
 
+def KCFISalt : DeclOrTypeAttr {
+  let Spellings = [Clang<"kcfi_salt">];
+  let Args = [StringArgument<"Salt">];
+  let Subjects = SubjectList<[Function, Field, Var, TypedefName], ErrorDiag>;
+  let Documentation = [KCFISaltDocs];
+  let LangOpts = [COnly];
+}
+
 // C/C++ Thread safety attributes (e.g. for deadlock, data race checking)
 // Not all of these attributes will be given a [[]] spelling. The attributes
 // which require access to function parameter names cannot use the [[]] spelling
