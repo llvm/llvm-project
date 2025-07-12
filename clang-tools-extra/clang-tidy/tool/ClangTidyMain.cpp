@@ -623,17 +623,37 @@ int clangTidyMain(int argc, const char **argv) {
   }
 
   SmallString<256> FilePath = makeAbsolute(FileName);
-  ClangTidyOptions EffectiveOptions = OptionsProvider->getOptions(FilePath);
+  llvm::ErrorOr<ClangTidyOptions> EffectiveOptions =
+      OptionsProvider->getOptions(FilePath);
+
+  if (!EffectiveOptions)
+    return 1;
+
+  // Validate the configuration files associated with all input files so we can
+  // return an error up front.
+  if (PathList.size() > 1) {
+    for (auto iter = PathList.begin() + 1; iter != PathList.end(); ++iter) {
+      llvm::ErrorOr<ClangTidyOptions> Options =
+          OptionsProvider->getOptions(*iter);
+      if (!Options)
+        return 1;
+    }
+  }
 
   std::vector<std::string> EnabledChecks =
-      getCheckNames(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers);
+      getCheckNames(*EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers);
 
   if (ExplainConfig) {
     // FIXME: Show other ClangTidyOptions' fields, like ExtraArg.
-    std::vector<clang::tidy::ClangTidyOptionsProvider::OptionsSource>
+    llvm::ErrorOr<
+        std::vector<clang::tidy::ClangTidyOptionsProvider::OptionsSource>>
         RawOptions = OptionsProvider->getRawOptions(FilePath);
+
+    if (!RawOptions)
+      return 1;
+
     for (const std::string &Check : EnabledChecks) {
-      for (const auto &[Opts, Source] : llvm::reverse(RawOptions)) {
+      for (const auto &[Opts, Source] : llvm::reverse(*RawOptions)) {
         if (Opts.Checks && GlobList(*Opts.Checks).contains(Check)) {
           llvm::outs() << "'" << Check << "' is enabled in the " << Source
                        << ".\n";
@@ -657,21 +677,23 @@ int clangTidyMain(int argc, const char **argv) {
   }
 
   if (DumpConfig) {
-    EffectiveOptions.CheckOptions =
-        getCheckOptions(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers);
+    EffectiveOptions->CheckOptions =
+        getCheckOptions(*EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers);
     llvm::outs() << configurationAsText(ClangTidyOptions::getDefaults().merge(
-                        EffectiveOptions, 0))
+                        *EffectiveOptions, 0))
                  << "\n";
     return 0;
   }
 
   if (VerifyConfig) {
-    std::vector<ClangTidyOptionsProvider::OptionsSource> RawOptions =
-        OptionsProvider->getRawOptions(FileName);
+    llvm::ErrorOr<std::vector<ClangTidyOptionsProvider::OptionsSource>>
+        RawOptions = OptionsProvider->getRawOptions(FileName);
+    if (!RawOptions)
+      return 1;
     ChecksAndOptions Valid =
         getAllChecksAndOptions(AllowEnablingAnalyzerAlphaCheckers);
     bool AnyInvalid = false;
-    for (const auto &[Opts, Source] : RawOptions) {
+    for (const auto &[Opts, Source] : *RawOptions) {
       if (Opts.Checks)
         AnyInvalid |= verifyChecks(Valid.Checks, *Opts.Checks, Source);
       if (Opts.HeaderFileExtensions && Opts.ImplementationFileExtensions)

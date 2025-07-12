@@ -114,6 +114,9 @@ Improvements to clang-tidy
 - Fixed bug in :program:`run_clang_tidy.py` where the program would not
   correctly display the checks enabled by the top-level `.clang-tidy` file.
 
+- Changed :program:`clang-tidy` to exit with an error code if it encounters an
+  invalid configuration file.
+
 New checks
 ^^^^^^^^^^
 
