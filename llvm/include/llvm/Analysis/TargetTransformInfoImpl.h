@@ -210,10 +210,9 @@ public:
     // These are all likely to be optimized into something smaller.
     if (Name == "pow" || Name == "powf" || Name == "powl" ||
         Name == "powf128" || Name == "exp2" || Name == "exp2f" ||
-        Name == "exp2l" || Name == "powf128" || Name == "floor" ||
-        Name == "floorf" || Name == "ceil" || Name == "round" ||
-        Name == "ffs" || Name == "ffsl" || Name == "abs" || Name == "labs" ||
-        Name == "llabs")
+        Name == "exp2l" || Name == "floor" || Name == "floorf" ||
+        Name == "ceil" || Name == "round" || Name == "ffs" || Name == "ffsl" ||
+        Name == "abs" || Name == "labs" || Name == "llabs")
       return false;
 
     return true;
