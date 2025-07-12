@@ -1378,6 +1378,14 @@
 //
 // CHECK-RELOCATABLE-LINK-ASAN-UBSAN-RTLIB-NOT: "{{.*}}(asan|ubsan){{.*}}"
 
+// RUN: %clang -fsanitize=address -r -fsanitize-link-runtime -### %s 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck %s --check-prefix=CHECK-RELOCATABLE-LINK-FORCE-LINK-ASAN
+//
+// CHECK-RELOCATABLE-LINK-FORCE-LINK-ASAN: "{{.*}}asan{{.*}}"
+
 // RUN: %clang -fsanitize=thread -r -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \

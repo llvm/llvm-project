@@ -1160,7 +1160,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   LinkRuntimes =
       Args.hasFlag(options::OPT_fsanitize_link_runtime,
                    options::OPT_fno_sanitize_link_runtime, LinkRuntimes) &&
-      !Args.hasArg(options::OPT_r);
+      Args.hasFlag(options::OPT_fsanitize_link_runtime, options::OPT_r,
+                   LinkRuntimes);
 
   // Parse -link-cxx-sanitizer flag.
   LinkCXXRuntimes = D.CCCIsCXX();
