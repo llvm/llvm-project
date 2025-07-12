@@ -55,3 +55,12 @@ add_header_library(
     libc.src.__support.macros.optimization
     libc.include.llvm-libc-macros.float16_macros
 )
+
+add_header_library(
+  frexpf128
+  HDRS
+    frexpf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.manipulation_functions
+)
