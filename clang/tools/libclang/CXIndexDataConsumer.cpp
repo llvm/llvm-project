@@ -988,8 +988,8 @@ bool CXIndexDataConsumer::handleCXXRecordDecl(const CXXRecordDecl *RD,
         const CXIdxBaseClassInfo *baseInfo = BaseList.getBases()[i];
         if (baseInfo->base) {
           const NamedDecl *BaseD = BaseList.BaseEntities[i].Dcl;
-          SourceLocation
-            Loc = SourceLocation::getFromRawEncoding(baseInfo->loc.int_data);
+          SourceLocation Loc = SourceLocation::getFromRawEncoding32(
+              Ctx->getSourceManager(), baseInfo->loc.int_data);
           markEntityOccurrenceInFile(BaseD, Loc);
         }
       }
@@ -1077,9 +1077,11 @@ CXIdxLoc CXIndexDataConsumer::getIndexLoc(SourceLocation Loc) const {
   CXIdxLoc idxLoc =  { {nullptr, nullptr}, 0 };
   if (Loc.isInvalid())
     return idxLoc;
-
+  uint32_t LocRaw;
+  if (!Loc.getRawEncoding32(LocRaw))
+    return idxLoc;
   idxLoc.ptr_data[0] = const_cast<CXIndexDataConsumer *>(this);
-  idxLoc.int_data = Loc.getRawEncoding();
+  idxLoc.int_data = LocRaw;
   return idxLoc;
 }
 

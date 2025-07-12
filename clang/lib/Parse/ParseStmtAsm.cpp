@@ -183,7 +183,8 @@ ClangAsmParserCallback::translateLocation(const llvm::SourceMgr &LSM,
   if (TokIndex < AsmToks.size()) {
     const Token &Tok = AsmToks[TokIndex];
     Loc = Tok.getLocation();
-    Loc = Loc.getLocWithOffset(Offset - TokOffset);
+    Loc = Loc.getLocWithOffset(static_cast<SourceLocation::UIntTy>(Offset) -
+                               TokOffset);
   }
   return Loc;
 }

@@ -110,7 +110,7 @@ public:
   /// returns non-zero for GetNumKnownSelectors().
   ///
   /// The default implementation of this method is a no-op.
-  virtual Selector GetExternalSelector(uint32_t ID);
+  virtual Selector GetExternalSelector(uint64_t ID);
 
   /// Returns the number of selectors known to the external AST
   /// source.
