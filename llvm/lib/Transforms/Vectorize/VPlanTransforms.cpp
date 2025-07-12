@@ -1297,38 +1297,17 @@ static void simplifyBlends(VPlan &Plan) {
         }
       }
 
-      SmallVector<VPValue *, 4> OperandsWithMask;
-      OperandsWithMask.push_back(Blend->getIncomingValue(StartIndex));
-
+      VPBuilder Builder(&R);
+      VPValue *Select = Blend->getIncomingValue(StartIndex);
       for (unsigned I = 0; I != Blend->getNumIncomingValues(); ++I) {
         if (I == StartIndex)
           continue;
-        OperandsWithMask.push_back(Blend->getIncomingValue(I));
-        OperandsWithMask.push_back(Blend->getMask(I));
+        Select =
+            Builder.createSelect(Blend->getMask(I), Blend->getIncomingValue(I),
+                                 Select, R.getDebugLoc(), "predphi");
+        Select->setUnderlyingValue(Blend->getUnderlyingValue());
       }
-
-      auto *NewBlend = new VPBlendRecipe(
-          cast<PHINode>(Blend->getUnderlyingValue()), OperandsWithMask);
-      NewBlend->insertBefore(&R);
-
-      VPValue *DeadMask = Blend->getMask(StartIndex);
-      Blend->replaceAllUsesWith(NewBlend);
-      Blend->eraseFromParent();
-      recursivelyDeleteDeadRecipes(DeadMask);
-
-      /// Simplify BLEND %a, %b, Not(%mask) -> BLEND %b, %a, %mask.
-      VPValue *NewMask;
-      if (NewBlend->getNumOperands() == 3 &&
-          match(NewBlend->getMask(1), m_Not(m_VPValue(NewMask)))) {
-        VPValue *Inc0 = NewBlend->getOperand(0);
-        VPValue *Inc1 = NewBlend->getOperand(1);
-        VPValue *OldMask = NewBlend->getOperand(2);
-        NewBlend->setOperand(0, Inc1);
-        NewBlend->setOperand(1, Inc0);
-        NewBlend->setOperand(2, NewMask);
-        if (OldMask->getNumUsers() == 0)
-          cast<VPInstruction>(OldMask)->eraseFromParent();
-      }
+      Blend->replaceAllUsesWith(Select);
     }
   }
 }
@@ -2159,18 +2138,20 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
         return new VPReductionEVLRecipe(*Red, EVL, NewMask);
       })
       .Case<VPInstruction>([&](VPInstruction *VPI) -> VPRecipeBase * {
-        VPValue *LHS, *RHS;
+        VPValue *LHS, *RHS, *Mask = &AllOneMask;
         // Transform select with a header mask condition
-        //   select(header_mask, LHS, RHS)
+        //   select(mask, LHS, RHS)
         // into vector predication merge.
-        //   vp.merge(all-true, LHS, RHS, EVL)
-        if (!match(VPI, m_Select(m_Specific(HeaderMask), m_VPValue(LHS),
-                                 m_VPValue(RHS))))
+        //   vp.merge(opt_mask, LHS, RHS, EVL)
+        // TODO: Make m_LogicalAnd commutative?
+        if (!match(VPI,
+                   m_Select(m_CombineOr(m_Specific(HeaderMask),
+                                        m_LogicalAnd(m_Specific(HeaderMask),
+                                                     m_VPValue(Mask))),
+                            m_VPValue(LHS), m_VPValue(RHS))))
           return nullptr;
-        // Use all true as the condition because this transformation is
-        // limited to selects whose condition is a header mask.
         return new VPWidenIntrinsicRecipe(
-            Intrinsic::vp_merge, {&AllOneMask, LHS, RHS, &EVL},
+            Intrinsic::vp_merge, {Mask, LHS, RHS, &EVL},
             TypeInfo.inferScalarType(LHS), VPI->getDebugLoc());
       })
       .Default([&](VPRecipeBase *R) { return nullptr; });
