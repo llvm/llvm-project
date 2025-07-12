@@ -128,13 +128,13 @@ static bool fixupDllMain(COFFLinkerContext &ctx, llvm::object::Archive *file,
             file->getFileName() +
                 ": could not get the buffer for a child buffer of the archive");
   if (identify_magic(mb.getBuffer()) == file_magic::coff_import_library) {
-    if (ctx.config.warnExportedDllMain) {
+    if (ctx.config.warnImportedDllMain) {
       // We won't place DllMain symbols in the symbol table if they are
       // coming from a import library. This message can be ignored with the flag
-      // '/ignore:exporteddllmain'
+      // '/ignore:importeddllmain'
       Warn(ctx)
           << file->getFileName()
-          << ": skipping exported DllMain symbol [exporteddllmain]\nNOTE: this "
+          << ": skipping imported DllMain symbol [importeddllmain]\nNOTE: this "
              "might be a mistake when the DLL/library was produced.";
     }
     skipDllMain = true;
@@ -207,10 +207,10 @@ void ArchiveFile::parse() {
   // Read the symbol table to construct Lazy objects.
   bool skipDllMain = false;
   for (const Archive::Symbol &sym : file->symbols()) {
-    // If the DllMain symbol was exported by mistake, skip importing it
-    // otherwise we might end up with a import thunk in the final binary which
-    // is wrong.
-    if (sym.getName() == "__imp_DllMain" || sym.getName() == "DllMain") {
+    // If an import library provides the DllMain symbol, skip importing it, as
+    // we should be using our own DllMain, not another DLL's DllMain.
+    if (sym.getName() == "__imp_DllMain" || sym.getName() == "DllMain" ||
+        sym.getName() == "_DllMain") {
       if (fixupDllMain(ctx, file.get(), sym, skipDllMain))
         continue;
     }
