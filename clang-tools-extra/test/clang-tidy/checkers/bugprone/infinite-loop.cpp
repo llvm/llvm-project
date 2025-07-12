@@ -592,6 +592,21 @@ void test_structured_bindings_bad() {
   }
 }
 
+std::tuple<uint8_t *, size_t> get_chunk() {
+  static uint8_t buf[10];
+  return { &buf[0], 2 };
+}
+
+void test_structured_bindings_tuple() {
+  auto [ p, size ] = get_chunk();
+  size_t maxLen = 8;
+
+  while (size < maxLen) {
+    // No warning. The loop is finite because 'size' is being incremented in each iteration and compared against 'maxLen' for termination
+    p[size++] = ' ';
+  }
+}
+
 void test_volatile_cast() {
   // This is a no-op cast. Clang ignores the qualifier, we should too.
   for (int i = 0; (volatile int)i < 10;) {
