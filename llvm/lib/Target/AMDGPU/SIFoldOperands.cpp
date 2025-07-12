@@ -1761,7 +1761,9 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
   for (MachineInstr *Copy : CopiesToReplace)
     Copy->addImplicitDefUseOperands(*MF);
 
-  for (FoldCandidate &Fold : FoldList) {
+  for (auto FoldIt = FoldList.begin(), End = FoldList.end(); FoldIt != End;
+       ++FoldIt) {
+    FoldCandidate &Fold = *FoldIt;
     assert(!Fold.isReg() || Fold.Def.OpToFold);
     if (Fold.isReg() && Fold.getReg().isVirtual()) {
       Register Reg = Fold.getReg();
@@ -1785,9 +1787,13 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
 
       if (Fold.isImm() && tryConstantFoldOp(Fold.UseMI)) {
         LLVM_DEBUG(dbgs() << "Constant folded " << *Fold.UseMI);
+        // The instruction was folded into a copy, we have to skip any other
+        // occurence of UseMI in the fold list
+        End = std::remove_if(FoldIt + 1, End, [&](const FoldCandidate &F) {
+          return F.UseMI == Fold.UseMI;
+        });
         Changed = true;
       }
-
     } else if (Fold.Commuted) {
       // Restoring instruction's original operand order if fold has failed.
       TII->commuteInstruction(*Fold.UseMI, false);
