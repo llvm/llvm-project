@@ -553,6 +553,21 @@ bool RegionInfoBase<Tr>::isRegion(BlockT *entry, BlockT *exit) const {
 
   using DST = typename DomFrontierT::DomSetType;
 
+  // Make sure that a region involving a callbr contains every successor
+  // blocks up to the ones that postdominate the callbr block. Otherwise,
+  // StructurizeCFG will tear the callbr apart.
+  // TODO? post domination frontier?
+  if constexpr (std::is_same_v<BlockT, BasicBlock>) {
+    if (DomTreeNodeT *PDTNode = PDT->getNode(exit); PDTNode) {
+      for (DomTreeNodeT *PredNode : *PDTNode) {
+        for (BasicBlock *Pred : predecessors(PredNode->getBlock())) {
+          if (isa<CallBrInst>(Pred->getTerminator()))
+            return false;
+        }
+      }
+    }
+  }
+
   DST *entrySuccs = &DF->find(entry)->second;
 
   // Exit is the header of a loop that contains the entry. In this case,

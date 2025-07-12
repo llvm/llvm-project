@@ -535,9 +535,11 @@ public:
 private:
   // These all get lowered before this pass.
   void visitInvoke(const InvokeInst &I);
-  void visitCallBr(const CallBrInst &I);
   void visitCallBrLandingPad(const CallInst &I);
   void visitResume(const ResumeInst &I);
+
+  void visitCallBr(const CallBrInst &I);
+  void visitCallBrIntrinsic(const CallBrInst &I);
 
   void visitUnary(const User &I, unsigned Opcode);
   void visitFNeg(const User &I) { visitUnary(I, ISD::FNEG); }
@@ -708,6 +710,17 @@ private:
                        MCSymbol *&BeginLabel);
   SDValue lowerEndEH(SDValue Chain, const InvokeInst *II,
                      const BasicBlock *EHPadBB, MCSymbol *BeginLabel);
+
+  std::pair<bool, bool> getTargetIntrinsicCallProperties(const CallBase &I);
+  SmallVector<SDValue, 8> getTargetIntrinsicOperands(
+      const CallBase &I, bool HasChain, bool OnlyLoad,
+      TargetLowering::IntrinsicInfo *TgtMemIntrinsicInfo = nullptr);
+  SDVTList getTargetIntrinsicVTList(const CallBase &I, bool HasChain);
+  SDValue getTargetNonMemIntrinsicNode(const CallBase &I, bool HasChain,
+                                       SmallVector<SDValue, 8> &Ops,
+                                       SDVTList &VTs);
+  SDValue handleTargetIntrinsicRet(const CallBase &I, bool HasChain,
+                                   bool OnlyLoad, SDValue Result);
 };
 
 /// This struct represents the registers (physical or virtual)
