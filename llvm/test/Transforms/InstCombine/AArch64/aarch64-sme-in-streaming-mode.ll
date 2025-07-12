@@ -22,7 +22,7 @@ define i1 @test_in_streaming_mode_streaming() "aarch64_pstate_sm_enabled" {
 
 define i1 @test_in_streaming_mode_streaming_compatible_streaming_body() "aarch64_pstate_sm_compatible" "aarch64_pstate_sm_body" {
 ; CHECK-LABEL: define i1 @test_in_streaming_mode_streaming_compatible_streaming_body(
-; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    ret i1 true
 ;
   %sm = tail call i1 @llvm.aarch64.sme.in.streaming.mode()
@@ -31,7 +31,7 @@ define i1 @test_in_streaming_mode_streaming_compatible_streaming_body() "aarch64
 
 define i1 @test_in_streaming_mode_streaming_body() "aarch64_pstate_sm_body" {
 ; CHECK-LABEL: define i1 @test_in_streaming_mode_streaming_body(
-; CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    ret i1 true
 ;
   %sm = tail call i1 @llvm.aarch64.sme.in.streaming.mode()
@@ -40,7 +40,7 @@ define i1 @test_in_streaming_mode_streaming_body() "aarch64_pstate_sm_body" {
 
 define i1 @test_in_streaming_mode_non_streaming() {
 ; CHECK-LABEL: define i1 @test_in_streaming_mode_non_streaming(
-; CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    ret i1 false
 ;
   %sm = tail call i1 @llvm.aarch64.sme.in.streaming.mode()
