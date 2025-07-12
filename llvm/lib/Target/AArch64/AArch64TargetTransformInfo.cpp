@@ -2726,11 +2726,11 @@ static std::optional<Instruction *> instCombineSVEUxt(InstCombiner &IC,
 static std::optional<Instruction *>
 instCombineInStreamingMode(InstCombiner &IC, IntrinsicInst &II) {
   SMEAttrs FnSMEAttrs(*II.getFunction());
-  if (FnSMEAttrs.hasStreamingCompatibleInterface())
-    return std::nullopt;
   bool IsStreaming = FnSMEAttrs.hasStreamingInterfaceOrBody();
-  return IC.replaceInstUsesWith(
-      II, ConstantInt::getBool(II.getType(), IsStreaming));
+  if (IsStreaming || !FnSMEAttrs.hasStreamingCompatibleInterface())
+    return IC.replaceInstUsesWith(
+        II, ConstantInt::getBool(II.getType(), IsStreaming));
+  return std::nullopt;
 }
 
 std::optional<Instruction *>
