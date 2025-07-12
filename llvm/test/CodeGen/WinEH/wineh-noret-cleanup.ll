@@ -46,15 +46,15 @@ catch.body.2:
 ; CXX-LABEL: $ip2state$test:
 ; CXX-NEXT:   .long   .Lfunc_begin0@IMGREL
 ; CXX-NEXT:   .long   -1
-; CXX-NEXT:   .long   .Ltmp0@IMGREL+1
+; CXX-NEXT:   .long   .Ltmp0@IMGREL
 ; CXX-NEXT:   .long   1
-; CXX-NEXT:   .long   .Ltmp1@IMGREL+1
+; CXX-NEXT:   .long   .Ltmp1@IMGREL
 ; CXX-NEXT:   .long   -1
 ; CXX-NEXT:   .long   "?catch$3@?0?test@4HA"@IMGREL
 ; CXX-NEXT:   .long   2
-; CXX-NEXT:   .long   .Ltmp2@IMGREL+1
+; CXX-NEXT:   .long   .Ltmp2@IMGREL
 ; CXX-NEXT:   .long   3
-; CXX-NEXT:   .long   .Ltmp3@IMGREL+1
+; CXX-NEXT:   .long   .Ltmp3@IMGREL
 ; CXX-NEXT:   .long   2
 ; CXX-NEXT:   .long   "?catch$5@?0?test@4HA"@IMGREL
 ; CXX-NEXT:   .long   4
@@ -62,19 +62,19 @@ catch.body.2:
 ; SEH-LABEL: test:
 ; SEH-LABEL: .Llsda_begin0:
 ; SEH-NEXT:    .long   .Ltmp0@IMGREL
-; SEH-NEXT:    .long   .Ltmp1@IMGREL+1
+; SEH-NEXT:    .long   .Ltmp1@IMGREL
 ; SEH-NEXT:    .long   dummy_filter@IMGREL
 ; SEH-NEXT:    .long   .LBB0_3@IMGREL
 ; SEH-NEXT:    .long   .Ltmp0@IMGREL
-; SEH-NEXT:    .long   .Ltmp1@IMGREL+1
+; SEH-NEXT:    .long   .Ltmp1@IMGREL
 ; SEH-NEXT:    .long   dummy_filter@IMGREL
 ; SEH-NEXT:    .long   .LBB0_5@IMGREL
 ; SEH-NEXT:    .long   .Ltmp2@IMGREL
-; SEH-NEXT:    .long   .Ltmp3@IMGREL+1
+; SEH-NEXT:    .long   .Ltmp3@IMGREL
 ; SEH-NEXT:    .long   "?dtor$2@?0?test@4HA"@IMGREL
 ; SEH-NEXT:    .long   0
 ; SEH-NEXT:    .long   .Ltmp2@IMGREL
-; SEH-NEXT:    .long   .Ltmp3@IMGREL+1
+; SEH-NEXT:    .long   .Ltmp3@IMGREL
 ; SEH-NEXT:    .long   dummy_filter@IMGREL
 ; SEH-NEXT:    .long   .LBB0_5@IMGREL
 ; SEH-NEXT:  .Llsda_end0:
