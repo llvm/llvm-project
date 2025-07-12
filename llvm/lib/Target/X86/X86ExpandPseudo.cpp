@@ -376,8 +376,7 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::EH_RETURN64: {
     MachineOperand &DestAddr = MBBI->getOperand(0);
     assert(DestAddr.isReg() && "Offset should be in register!");
-    const bool Uses64BitFramePtr =
-        STI->isTarget64BitLP64() || STI->isTargetNaCl64();
+    const bool Uses64BitFramePtr = STI->isTarget64BitLP64();
     Register StackPtr = TRI->getStackRegister();
     BuildMI(MBB, MBBI, DL,
             TII->get(Uses64BitFramePtr ? X86::MOV64rr : X86::MOV32rr), StackPtr)
