@@ -1369,3 +1369,129 @@
 // CHECK-DSO-SHARED-HWASAN-AARCH64-LINUX-NOT: "-lresolv"
 // CHECK-DSO-SHARED-HWASAN-AARCH64-LINUX-NOT: "--export-dynamic"
 // CHECK-DSO-SHARED-HWASAN-AARCH64-LINUX-NOT: "--dynamic-list"
+
+// RUN: %clang -fsanitize=address -### %s 2>&1 \
+// RUN:     --target=powerpc-ibm-aix \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/Inputs/aix_ppc_tree \
+// RUN:   | FileCheck --check-prefixes=CHECK-ASAN-LINK-RUNTIME-AIX,CHECK-ASAN-LINK-RUNTIME-AIX32 %s
+//
+// RUN: %clang -fsanitize=address -### %s 2>&1 \
+// RUN:     --target=powerpc64-ibm-aix \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/Inputs/aix_ppc_tree \
+// RUN:   | FileCheck --check-prefixes=CHECK-ASAN-LINK-RUNTIME-AIX,CHECK-ASAN-LINK-RUNTIME-AIX64 %s
+//
+// RUN: %clang --driver-mode=g++ -fsanitize=address -### %s 2>&1 \
+// RUN:     --target=powerpc-ibm-aix \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/Inputs/aix_ppc_tree \
+// RUN:   | FileCheck --check-prefixes=CHECK-ASAN-LINK-RUNTIME-AIX,CHECK-ASAN-LINK-RUNTIME-AIX32,CHECK-ASAN-LINK-RUNTIME-AIXCXX32,CHECK-ASAN-LINK-RUNTIME-AIXCXX %s
+//
+// RUN: %clang --driver-mode=g++ -fsanitize=address -### %s 2>&1 \
+// RUN:     --target=powerpc64-ibm-aix \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/Inputs/aix_ppc_tree \
+// RUN:   | FileCheck --check-prefixes=CHECK-ASAN-LINK-RUNTIME-AIX,CHECK-ASAN-LINK-RUNTIME-AIX64,CHECK-ASAN-LINK-RUNTIME-AIXCXX64,CHECK-ASAN-LINK-RUNTIME-AIXCXX %s
+//
+// RUN: %clang -fsanitize=address -### %s 2>&1 \
+// RUN:     -static-libsan --target=powerpc-ibm-aix \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/Inputs/aix_ppc_tree \
+// RUN:   | FileCheck --check-prefixes=CHECK-ASAN-LINK-RUNTIME-AIX,CHECK-ASAN-LINK-RUNTIME-AIX32 %s
+//
+// RUN: %clang -fsanitize=address -### %s 2>&1 \
+// RUN:     -static-libsan --target=powerpc64-ibm-aix \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/Inputs/aix_ppc_tree \
+// RUN:   | FileCheck --check-prefixes=CHECK-ASAN-LINK-RUNTIME-AIX,CHECK-ASAN-LINK-RUNTIME-AIX64 %s
+//
+// CHECK-ASAN-LINK-RUNTIME-AIX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ASAN-LINK-RUNTIME-AIX32: "-b32"
+// CHECK-ASAN-LINK-RUNTIME-AIX64: "-b64"
+// CHECK-ASAN-LINK-RUNTIME-AIX: "-bcdtors:all:0:s"
+// CHECK-ASAN-LINK-RUNTIME-AIX32: "{{.*}}libclang_rt.asan.a"
+// CHECK-ASAN-LINK-RUNTIME-AIX64: "{{.*}}libclang_rt.asan.a"
+// CHECK-ASAN-LINK-RUNTIME-AIX: "-bE:{{.*}}asan.link_with_main_exec.txt"
+// CHECK-ASAN-LINK-RUNTIME-AIXCXX32: "{{.*}}libclang_rt.asan_cxx.a"
+// CHECK-ASAN-LINK-RUNTIME-AIXCXX64: "{{.*}}libclang_rt.asan_cxx.a"
+// CHECK-ASAN-LINK-RUNTIME-AIXCXX: "-bE:{{.*}}asan_cxx.link_with_main_exec.txt"
+// CHECK-ASAN-LINK-RUNTIME-AIX: "-lpthread"
+// CHECK-ASAN-LINK-RUNTIME-AIX: "-latomic"
+// CHECK-ASAN-LINK-RUNTIME-AIX: "-lunwind"
+// CHECK-ASAN-LINK-RUNTIME-AIX: "-lc"
+
+// RUN: not %clang -fsanitize=address -### %s 2>&1 \
+// RUN:     -shared-libsan --target=powerpc-ibm-aix \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/Inputs/aix_ppc_tree \
+// RUN:   | FileCheck --check-prefixes=CHECK-SHARED-ASAN-AIX %s
+//
+// RUN: not %clang -fsanitize=address -### %s 2>&1 \
+// RUN:     -shared-libsan --target=powerpc64-ibm-aix \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/Inputs/aix_ppc_tree \
+// RUN:   | FileCheck --check-prefixes=CHECK-SHARED-ASAN-AIX %s
+//
+// CHECK-SHARED-ASAN-AIX: {{.*}}error: shared AddressSanitizer runtime is not supported on AIX
+
+// RUN: not %clang -fsanitize=address -### %s 2>&1 \
+// RUN:     --target=powerpc-ibm-aix \
+// RUN:     -resource-dir=/missing_resource_dir \
+// RUN:     --sysroot=%S/Inputs/aix_ppc_tree \
+// RUN:     | FileCheck --check-prefixes=CHECK-MISSING-EXPORT-AIX %s
+// CHECK-MISSING-EXPORT-AIX: {{.*}}error: cannot link 'asan': export file missing from resource directories
+
+// RUN: not %clang -fsanitize=address -### %s 2>&1 \
+// RUN:     -shared --target=powerpc-ibm-aix \
+// RUN:     -resource-dir=/missing_resource_dir \
+// RUN:     --sysroot=%S/Inputs/aix_ppc_tree \
+// RUN:     | FileCheck --check-prefixes=CHECK-MISSING-IMPORT-AIX %s
+// CHECK-MISSING-IMPORT-AIX: {{.*}}error: cannot link 'AddressSanitizer': import file missing from resource directories
+
+// RUN: not %clang -fsanitize=address --driver-mode=g++ -### %s 2>&1 \
+// RUN:     -shared --target=powerpc-ibm-aix \
+// RUN:     -resource-dir=/missing_resource_dir \
+// RUN:     --sysroot=%S/Inputs/aix_ppc_tree \
+// RUN:     | FileCheck --check-prefixes=CHECK-MISSING-CXX-IMPORT-AIX %s
+// CHECK-MISSING-CXX-IMPORT-AIX: {{.*}}error: cannot link 'AddressSanitizer': C++ import file
+// missing from resource directories
+
+// RUN: %clang -fsanitize=address -shared -### %s 2>&1 \
+// RUN:     --target=powerpc-ibm-aix \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/Inputs/aix_ppc_tree \
+// RUN:   | FileCheck --check-prefixes=CHECK-ASAN-SHARED-LIBRARY-AIX,CHECK-ASAN-SHARED-LIBRARY-AIX32 %s
+//
+// RUN: %clang -fsanitize=address -shared -### %s 2>&1 \
+// RUN:     --target=powerpc64-ibm-aix \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/Inputs/aix_ppc_tree \
+// RUN:   | FileCheck --check-prefixes=CHECK-ASAN-SHARED-LIBRARY-AIX,CHECK-ASAN-SHARED-LIBRARY-AIX64 %s
+//
+// RUN: %clang -fsanitize=address --driver-mode=g++ -shared -### %s 2>&1 \
+// RUN:     --target=powerpc-ibm-aix \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/Inputs/aix_ppc_tree \
+// RUN:   | FileCheck --check-prefixes=CHECK-ASAN-SHARED-LIBRARY-AIX,CHECK-ASAN-SHARED-LIBRARY-AIX32,CHECK-ASAN-SHARED-LIBRARY-AIXCXX %s
+//
+// RUN: %clang -fsanitize=address --driver-mode=g++ -shared -### %s 2>&1 \
+// RUN:     --target=powerpc64-ibm-aix \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/Inputs/aix_ppc_tree \
+// RUN:   | FileCheck --check-prefixes=CHECK-ASAN-SHARED-LIBRARY-AIX,CHECK-ASAN-SHARED-LIBRARY-AIX64,CHECK-ASAN-SHARED-LIBRARY-AIXCXX %s
+//
+// CHECK-ASAN-SHARED-LIBRARY-AIX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ASAN-SHARED-LIBRARY-AIX32: "-b32"
+// CHECK-ASAN-SHARED-LIBRARY-AIX64: "-b64"
+// CHECK-ASAN-SHARED-LIBRARY-AIX: "-bcdtors:all:0:s"
+// CHECK-ASAN-SHARED-LIBRARY-AIX: "-bI:{{.*}}asan.link_with_main_exec.txt"
+// CHECK-ASAN-SHARED-LIBRARY-AIXCXX: "-bI:{{.*}}asan_cxx.link_with_main_exec.txt"
+// CHECK-ASAN-SHARED-LIBRARY-AIX32-NOT: "{{.*}}libclang_rt.asan.a"
+// CHECK-ASAN-SHARED-LIBRARY-AIX64-NOT: "{{.*}}libclang_rt.asan.a"
+// CHECK-ASAN-SHARED-LIBRARY-AIXCXX-NOT: "{{.*}}libclang_rt.asan_cxx.a"
+// CHECK-ASAN-SHARED-LIBRARY-AIX-NOT: "-lpthread"
+// CHECK-ASAN-SHARED-LIBRARY-AIX-NOT: "-latomic"
+// CHECK-ASAN-SHARED-LIBRARY-AIX: "-lunwind"
+// CHECK-ASAN-SHARED-LIBRARY-AIX: "-lc"
+
