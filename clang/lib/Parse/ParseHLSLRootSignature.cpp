@@ -33,32 +33,32 @@ bool RootSignatureParser::parse() {
       auto Flags = parseRootFlags();
       if (!Flags.has_value())
         return true;
-      Elements.emplace_back(RootSignatureElement(ElementLoc, *Flags));
+      Elements.emplace_back(ElementLoc, *Flags);
     } else if (tryConsumeExpectedToken(TokenKind::kw_RootConstants)) {
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Constants = parseRootConstants();
       if (!Constants.has_value())
         return true;
-      Elements.emplace_back(RootSignatureElement(ElementLoc, *Constants));
+      Elements.emplace_back(ElementLoc, *Constants);
     } else if (tryConsumeExpectedToken(TokenKind::kw_DescriptorTable)) {
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Table = parseDescriptorTable();
       if (!Table.has_value())
         return true;
-      Elements.emplace_back(RootSignatureElement(ElementLoc, *Table));
+      Elements.emplace_back(ElementLoc, *Table);
     } else if (tryConsumeExpectedToken(
                    {TokenKind::kw_CBV, TokenKind::kw_SRV, TokenKind::kw_UAV})) {
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Descriptor = parseRootDescriptor();
       if (!Descriptor.has_value())
         return true;
-      Elements.emplace_back(RootSignatureElement(ElementLoc, *Descriptor));
+      Elements.emplace_back(ElementLoc, *Descriptor);
     } else if (tryConsumeExpectedToken(TokenKind::kw_StaticSampler)) {
       SourceLocation ElementLoc = getTokenLocation(CurToken);
       auto Sampler = parseStaticSampler();
       if (!Sampler.has_value())
         return true;
-      Elements.emplace_back(RootSignatureElement(ElementLoc, *Sampler));
+      Elements.emplace_back(ElementLoc, *Sampler);
     }
 
     // ',' denotes another element, otherwise, expected to be at end of stream
@@ -254,7 +254,7 @@ std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {
       auto Clause = parseDescriptorTableClause();
       if (!Clause.has_value())
         return std::nullopt;
-      Elements.emplace_back(RootSignatureElement(ElementLoc, *Clause));
+      Elements.emplace_back(ElementLoc, *Clause);
       Table.NumClauses++;
     } else if (tryConsumeExpectedToken(TokenKind::kw_visibility)) {
       // visibility = SHADER_VISIBILITY
