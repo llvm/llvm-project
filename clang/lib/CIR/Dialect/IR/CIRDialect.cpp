@@ -21,6 +21,7 @@
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/Support/LogicalResult.h"
 
 #include <numeric>
 
@@ -2108,10 +2109,26 @@ LogicalResult cir::ComplexRealPtrOp::verify() {
       mlir::cast<cir::ComplexType>(operandPtrTy.getPointee());
 
   if (resultPointeeTy != operandPointeeTy.getElementType()) {
-    emitOpError() << ": result type does not match operand type";
-    return failure();
+    return emitOpError() << ": result type does not match operand type";
   }
 
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexImagPtrOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ComplexImagPtrOp::verify() {
+  mlir::Type resultPointeeTy = getType().getPointee();
+  cir::PointerType operandPtrTy = getOperand().getType();
+  auto operandPointeeTy =
+      mlir::cast<cir::ComplexType>(operandPtrTy.getPointee());
+
+  if (resultPointeeTy != operandPointeeTy.getElementType()) {
+    return emitOpError()
+           << "cir.complex.imag_ptr result type does not match operand type";
+  }
   return success();
 }
 
