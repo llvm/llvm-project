@@ -1016,6 +1016,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         }
       }
 
+      llvm::sort(paths);
+
       for (auto &&path : paths) {
         std::ifstream t(path);
         std::stringstream buffer;
