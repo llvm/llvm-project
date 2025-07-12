@@ -19,6 +19,11 @@
 #include "../abort_message.h"
 #endif
 
+#ifndef _LIBCPP_LOG_HARDENING_FAILURE
+#define _LIBCPP_LOG_HARDENING_FAILURE(message) __log_error_and_continue(message)
+#include "../log_error_and_continue.h"
+#endif
+
 #include <version>
 
 #ifdef _MSC_VER
