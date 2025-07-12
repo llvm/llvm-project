@@ -94,6 +94,38 @@ func.func @single_iteration_reduce(%A: index, %B: index) -> (index, index) {
 
 // -----
 
+func.func @single_iteration_with_attributes(%A: memref<?x?x?xi32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c6 = arith.constant 6 : index
+  %c7 = arith.constant 7 : index
+  %c10 = arith.constant 10 : index
+  scf.parallel (%i0, %i1, %i2) = (%c0, %c3, %c7) to (%c1, %c6, %c10) step (%c1, %c2, %c3) {
+    %c42 = arith.constant 42 : i32
+    memref.store %c42, %A[%i0, %i1, %i2] : memref<?x?x?xi32>
+    scf.reduce
+  } {some_attr}
+  return
+}
+
+// CHECK-LABEL:   func @single_iteration_with_attributes(
+// CHECK-SAME:                        [[ARG0:%.*]]: memref<?x?x?xi32>) {
+// CHECK-DAG:           [[C42:%.*]] = arith.constant 42 : i32
+// CHECK-DAG:           [[C7:%.*]] = arith.constant 7 : index
+// CHECK-DAG:           [[C6:%.*]] = arith.constant 6 : index
+// CHECK-DAG:           [[C3:%.*]] = arith.constant 3 : index
+// CHECK-DAG:           [[C2:%.*]] = arith.constant 2 : index
+// CHECK-DAG:           [[C0:%.*]] = arith.constant 0 : index
+// CHECK:           scf.parallel ([[V0:%.*]]) = ([[C3]]) to ([[C6]]) step ([[C2]]) {
+// CHECK:             memref.store [[C42]], [[ARG0]]{{\[}}[[C0]], [[V0]], [[C7]]] : memref<?x?x?xi32>
+// CHECK:             scf.reduce
+// CHECK:           } {some_attr}
+// CHECK:           return
+
+// -----
+
 func.func @nested_parallel(%0: memref<?x?x?xf64>) -> memref<?x?x?xf64> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
