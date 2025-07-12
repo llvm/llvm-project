@@ -169,6 +169,10 @@ function(add_compiler_rt_runtime name type)
             "type argument must be OBJECT, STATIC, SHARED or MODULE")
     return()
   endif()
+  if(type STREQUAL "SHARED" AND NOT COMPILER_RT_BUILD_SHARED_LIBS)
+    message(STATUS "Skipping shared library ${name} because COMPILER_RT_BUILD_SHARED_LIBS is OFF")
+    return()
+  endif()
   cmake_parse_arguments(LIB
     ""
     "PARENT_TARGET"
