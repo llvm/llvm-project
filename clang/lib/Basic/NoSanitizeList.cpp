@@ -22,7 +22,8 @@ using namespace clang;
 NoSanitizeList::NoSanitizeList(const std::vector<std::string> &NoSanitizePaths,
                                SourceManager &SM)
     : SSCL(SanitizerSpecialCaseList::createOrDie(
-          NoSanitizePaths, SM.getFileManager().getVirtualFileSystem())),
+          NoSanitizePaths, SM.getFileManager().getVirtualFileSystem(),
+          SM.getDiagnostics())),
       SM(SM) {}
 
 NoSanitizeList::~NoSanitizeList() = default;
