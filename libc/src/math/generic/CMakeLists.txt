@@ -157,6 +157,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+    ceilbf16
+  SRCS
+    ceilbf16.cpp
+  HDRS
+    ../ceilbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.common
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_entrypoint_object(
   daddl
   SRCS
     daddl.cpp
@@ -776,6 +791,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+    truncbf16
+  SRCS
+    truncbf16.cpp
+  HDRS
+    ../truncbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.common
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_entrypoint_object(
   floor
   SRCS
     floor.cpp
@@ -833,6 +863,21 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
+    floorbf16
+  SRCS
+    floorbf16.cpp
+  HDRS
+    ../floorbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.common
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -896,6 +941,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+    roundbf16
+  SRCS
+    roundbf16.cpp
+  HDRS
+    ../roundbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.common
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_entrypoint_object(
   roundeven
   SRCS
     roundeven.cpp
@@ -953,6 +1013,21 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
+)
+
+add_entrypoint_object(
+    roundevenbf16
+  SRCS
+    roundevenbf16.cpp
+  HDRS
+    ../roundevenbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.common
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
