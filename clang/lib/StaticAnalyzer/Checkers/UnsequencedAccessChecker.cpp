@@ -23,9 +23,9 @@
 using namespace clang;
 using namespace ento;
 
-using StmtVec = llvm::SmallVector<const Stmt*>;
-
 namespace {
+
+using StmtVec = llvm::SmallVector<const Stmt*>;
 
 class AccessStmt {
     llvm::PointerIntPair<const Stmt*, 1, bool> StmtAndIsStore;
@@ -62,21 +62,27 @@ class UnsequencedAccessChecker
     : public Checker<check::Location> {
 
     static StmtVec getAllASTAncestors(const Stmt* CurrentS,
-                                      const StackFrameContext* CurrentFrame,
-                                      ParentMapContext& ParentMap);
-    static const Stmt* findCommonAncestor(const StmtVec& A, const StmtVec& B);
+                                        const StackFrameContext* CurrentFrame,
+                                        ParentMapContext& ParentMap);
+    static int findCommonAncestorIdx(const StmtVec& A, const StmtVec& B);
 
-    void checkCommonAncestor(const Stmt* Common, AccessStmt A, AccessStmt B,
-                             CheckerContext& C) const;
+    bool checkAncestors(int Common, AccessStmt A, const StmtVec& AVec,
+                        AccessStmt B, const StmtVec& BVec,
+                        const LangOptions& Opts) const;
 
     void reportBug(CheckerContext& C, const Stmt* Common, AccessStmt A,
                    AccessStmt B) const;
+
+    ProgramStateRef resetState(ProgramStateRef S) const;
 
     BugType BT{this, "Unsequenced-access", categories::LogicError};
 
 public:
     void checkLocation(SVal Location, bool isLoad, const Stmt *S,
                        CheckerContext &C) const;
+
+    // Checker Options
+    bool PrintDebugLog;
 };
 } // namespace
 
@@ -90,24 +96,43 @@ StmtVec UnsequencedAccessChecker::getAllASTAncestors(
     StmtVec Ancestors;
 
     while (CurrentS) {
-        Ancestors.push_back(CurrentS);
 
         DynTypedNodeList PL = ParentMap.getParents(*CurrentS);
         if (PL.size() != 1)
             break;
 
-        CurrentS = PL[0].get<Stmt>();
+        const Stmt* ParentS = PL[0].get<Stmt>();
 
-        if (!CurrentS) {
+        if (!ParentS) {
             if (CurrentFrame->inTopFrame())
                 break;
 
-            CurrentS = CurrentFrame->getCallSite();
+            ParentS = CurrentFrame->getCallSite();
             CurrentFrame = CurrentFrame->getParent()->getStackFrame();
         }
+
+        Ancestors.push_back(CurrentS);
+
+        CurrentS = ParentS;
     }
 
+    Ancestors.push_back(CurrentS);
+
     return Ancestors;
+}
+
+static void print_ancestors(const StmtVec& ancestors) {
+    for (const Stmt* S : ancestors) {
+        std::cout << S->getStmtClassName() << " " << S << std::endl;
+    }
+}
+
+ProgramStateRef UnsequencedAccessChecker::resetState(ProgramStateRef S) const {
+    if (PrintDebugLog) {
+        std::cout << "Reset State\n\n";
+    }
+    auto& MapFactory = S->get_context<Accesses>();
+    return S->set<Accesses>(MapFactory.getEmptyMap());
 }
 
 void UnsequencedAccessChecker::checkLocation(
@@ -117,10 +142,19 @@ void UnsequencedAccessChecker::checkLocation(
     ParentMapContext& ParentMap = ASTCtx.getParentMapContext();
     ProgramStateRef State = C.getState();
     AccessStmtSet::Factory& SetFactory = State->get_context<AccessStmtSet>();
-    auto& MapFactory = State->get_context<Accesses>();
 
     const MemRegion* Region = Location.getAsRegion();
+    AccessStmt Current(S, !isLoad, C.getStackFrame());
     StmtVec Ancestors = getAllASTAncestors(S, C.getStackFrame(), ParentMap);
+
+    if (PrintDebugLog) {
+        SourceLocation Loc = S->getBeginLoc();
+        int Line = C.getSourceManager().getSpellingLineNumber(Loc);
+        std::cout << (isLoad ? "Load" : "Store") << " on line " << Line
+                  << std::endl;
+        print_ancestors(Ancestors);
+        std::cout << std::endl;
+    }
 
     if (State->contains<Accesses>(Region)) {
 
@@ -128,17 +162,21 @@ void UnsequencedAccessChecker::checkLocation(
 
         for (AccessStmt AS : *Accs) {
             if (AS.isStore() || !isLoad) {
-                StmtVec OtherAncestors = 
+                StmtVec CurrentAncestors =
                     getAllASTAncestors(AS.getStmt(), AS.getFrame(), ParentMap);
-                const Stmt* Common = 
-                    findCommonAncestor(Ancestors, OtherAncestors);
 
-                if (!Common) {
-                    State = State->set<Accesses>(MapFactory.getEmptyMap());
-                    break;
+                int CommonIdx =
+                    findCommonAncestorIdx(Ancestors, CurrentAncestors);
+
+                if (CommonIdx == -1)
+                    continue;
+
+                if(checkAncestors(CommonIdx, AS, Ancestors, Current,
+                                  CurrentAncestors, C.getLangOpts())) {
+                    const Stmt* CommonS =
+                        Ancestors[Ancestors.size() - CommonIdx];
+                    reportBug(C, CommonS, AS, Current);
                 }
-
-                checkCommonAncestor(Common, AccessStmt(S, !isLoad, C.getStackFrame()), AS, C);
 
             }
         }
@@ -156,8 +194,8 @@ void UnsequencedAccessChecker::checkLocation(
     }
 }
 
-const Stmt* UnsequencedAccessChecker::findCommonAncestor(const StmtVec& A,
-                                                         const StmtVec& B) {
+int UnsequencedAccessChecker::findCommonAncestorIdx(const StmtVec& A,
+                                                    const StmtVec& B) {
     unsigned I = 1;
     while (I <= std::min(A.size(), B.size())) {
         if (A[A.size() - I] != B[B.size() - I]) {
@@ -167,49 +205,111 @@ const Stmt* UnsequencedAccessChecker::findCommonAncestor(const StmtVec& A,
     }
 
     if (I == 1)
-        return nullptr;
+        return -1;
 
-    return A[A.size() - (I - 1)];
+    return (I - 1);
 }
 
-void UnsequencedAccessChecker::checkCommonAncestor(
-        const Stmt* Common, AccessStmt A, AccessStmt B,
-        CheckerContext& C) const {
+bool UnsequencedAccessChecker::checkAncestors(
+        int CommonIdx, AccessStmt A, const StmtVec& AVec, AccessStmt B,
+        const StmtVec& BVec, const LangOptions& Opts) const {
 
-    if (const auto* BO = dyn_cast<BinaryOperator>(Common)) {
-        if (BO->isAdditiveOp()) {
-            reportBug(C, Common, A, B);
+    const Stmt* CommonS = AVec[AVec.size() - CommonIdx];
+
+    if (const auto* BO = dyn_cast<BinaryOperator>(CommonS)) {
+        if (BO->isLogicalOp() || BO->isCommaOp() || BO->isPtrMemOp())
+            return false;
+
+        if (Opts.CPlusPlus17 && BO->isShiftOp()) {
+            return false;
         }
+
+        if (BO->isAssignmentOp()) {
+            const Stmt* Accessed = BO->getLHS()->IgnoreParens();
+            if (Accessed == A.getStmt() && !B.isStore())
+                return false;
+
+            if (Accessed == B.getStmt() && !A.isStore())
+                return false;
+        }
+
+        return true;
     }
 
-    if (const auto* CE = dyn_cast<CallExpr>(Common)) {
-        reportBug(C, Common, A, B);
+    if (const auto* CE = dyn_cast<CallExpr>(CommonS)) {
+        if (A.getStmt() == CommonS || B.getStmt() == CommonS) {
+            // i.e. CommonS is the first element of one or both vectors.
+            return false;
+        }
+
+        int MinSize = std::min(AVec.size(), BVec.size());
+        assert(CommonIdx < MinSize);
+
+        bool AFound = false;
+        bool BFound = false;
+
+        const Stmt* AFirstChild = AVec[AVec.size() - CommonIdx - 1];
+        const Stmt* BFirstChild = BVec[BVec.size() - CommonIdx - 1];
+
+        if (!Opts.CPlusPlus17 && AFirstChild == CE->getCallee())
+            AFound = true;
+
+        if (!Opts.CPlusPlus17 && BFirstChild == CE->getCallee())
+            BFound = true;
+
+        for (const Stmt* Arg : CE->arguments()) {
+            if (Arg == AFirstChild)
+                AFound = true;
+
+            if (Arg == BFirstChild)
+                BFound = true;
+
+            if (AFound && BFound)
+                return true;
+        }
+
+        return false;
     }
+
+    return false;
 }
 
 void UnsequencedAccessChecker::reportBug(CheckerContext& C, const Stmt* Common,
                                          AccessStmt A, AccessStmt B) const {
-    if (ExplodedNode* N = C.generateErrorNode()) {
-        auto BR = std::make_unique<PathSensitiveBugReport>(BT,
-                A.isStore() ? "unsequenced write to variable" 
-                            : "unsequenced read from variable", N);
+    if (ExplodedNode* N = C.generateNonFatalErrorNode()) {
+        PathDiagnosticLocation CommonLoc(Common, C.getSourceManager(),
+                                         C.getLocationContext());
+
+        PathDiagnosticLocation ALoc(A.getStmt(), C.getSourceManager(),
+                                    C.getLocationContext());
 
         PathDiagnosticLocation BLoc(B.getStmt(), C.getSourceManager(),
                                     C.getLocationContext());
+
+        bool bothStore = A.isStore() && B.isStore();
+
+        auto BR = std::make_unique<PathSensitiveBugReport>(BT,
+                bothStore ? "unsequenced writes to variable" 
+                          : "unsequenced write to and read from variable", N,
+                CommonLoc, nullptr);
+
+        BR->addNote(A.isStore() ? "variable is written to here" 
+                                : "variable is read from here", ALoc);
+
         BR->addNote(B.isStore() ? "variable is written to here" 
                                 : "variable is read from here", BLoc);
 
-        PathDiagnosticLocation CommLoc(Common, C.getSourceManager(),
-                                       C.getLocationContext());
-        BR->addNote("unsequenced expression here", CommLoc);
         C.emitReport(std::move(BR));
     }
 }
 
 void ento::registerUnsequencedAccessChecker(CheckerManager &mgr) {
-  mgr.registerChecker<UnsequencedAccessChecker>();
+  auto* Checker = mgr.registerChecker<UnsequencedAccessChecker>();
+  const AnalyzerOptions &Opts = mgr.getAnalyzerOptions();
+  Checker->PrintDebugLog = Opts.getCheckerBooleanOption(Checker,
+                                                        "PrintDebugLog");
 }
 
 bool ento::shouldRegisterUnsequencedAccessChecker(const CheckerManager &mgr) {
-  return true;
+  return !mgr.getLangOpts().ObjC;
 }
