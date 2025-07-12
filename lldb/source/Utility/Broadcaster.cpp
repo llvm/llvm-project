@@ -335,6 +335,18 @@ bool Broadcaster::BroadcasterImpl::HijackBroadcaster(
       "{0} Broadcaster(\"{1}\")::HijackBroadcaster (listener(\"{2}\")={3})",
       static_cast<void *>(this), GetBroadcasterName(),
       listener_sp->m_name.c_str(), static_cast<void *>(listener_sp.get()));
+
+  // Move pending events from the previous listener to the hijack listener.
+  // This ensures that no relevant event queued before the transition is missed
+  // by the hijack listener.
+  ListenerSP prev_listener;
+  if (!m_hijacking_listeners.empty())
+    prev_listener = m_hijacking_listeners.back();
+  else if (m_primary_listener_sp)
+    prev_listener = m_primary_listener_sp;
+  if (prev_listener && listener_sp)
+    prev_listener->MoveEvents(listener_sp, &m_broadcaster, event_mask);
+
   m_hijacking_listeners.push_back(listener_sp);
   m_hijacking_masks.push_back(event_mask);
   return true;
@@ -367,6 +379,19 @@ void Broadcaster::BroadcasterImpl::RestoreBroadcaster() {
              static_cast<void *>(this), GetBroadcasterName(),
              listener_sp->m_name.c_str(),
              static_cast<void *>(listener_sp.get()));
+
+    // Move any remaining events from the hijack listener back to
+    // the previous listener. This ensures that no events are dropped when
+    // restoring the original listener.
+    ListenerSP prev_listener;
+    if (m_hijacking_listeners.size() > 1)
+      prev_listener = m_hijacking_listeners[m_hijacking_listeners.size() - 2];
+    else if (m_primary_listener_sp)
+      prev_listener = m_primary_listener_sp;
+    if (listener_sp && prev_listener && !m_hijacking_masks.empty())
+      listener_sp->MoveEvents(prev_listener, &m_broadcaster,
+                              m_hijacking_masks.back());
+
     m_hijacking_listeners.pop_back();
   }
   if (!m_hijacking_masks.empty())
