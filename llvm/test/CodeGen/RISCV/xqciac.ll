@@ -377,6 +377,32 @@ entry:
   ret i32 %add
 }
 
+define dso_local i32 @shxaddc1c2(i32 %a, i32 %b) local_unnamed_addr #0 {
+; RV32IM-LABEL: shxaddc1c2:
+; RV32IM:       # %bb.0: # %entry
+; RV32IM-NEXT:    slli a0, a0, 31
+; RV32IM-NEXT:    slli a1, a1, 28
+; RV32IM-NEXT:    add a0, a0, a1
+; RV32IM-NEXT:    ret
+;
+; RV32IMXQCIAC-LABEL: shxaddc1c2:
+; RV32IMXQCIAC:       # %bb.0: # %entry
+; RV32IMXQCIAC-NEXT:    slli a1, a1, 28
+; RV32IMXQCIAC-NEXT:    qc.shladd a0, a1, a0, 31
+; RV32IMXQCIAC-NEXT:    ret
+;
+; RV32IZBAMXQCIAC-LABEL: shxaddc1c2:
+; RV32IZBAMXQCIAC:       # %bb.0: # %entry
+; RV32IZBAMXQCIAC-NEXT:    sh3add a0, a0, a1
+; RV32IZBAMXQCIAC-NEXT:    slli a0, a0, 28
+; RV32IZBAMXQCIAC-NEXT:    ret
+entry:
+  %shlc1 = shl nsw i32 %a, 31
+  %shlc2 = shl nsw i32 %b, 28
+  %add = add nsw i32 %shlc1, %shlc2
+  ret i32 %add
+}
+
 define dso_local i64 @shladdc1c264(i64 %a, i64 %b) local_unnamed_addr #0 {
 ; RV32IM-LABEL: shladdc1c264:
 ; RV32IM:       # %bb.0: # %entry
