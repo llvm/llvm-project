@@ -252,7 +252,7 @@ findOverlappingRanges(ArrayRef<RangeInfo> Infos) {
   llvm::SmallVector<OverlappingRanges> Overlaps;
   using GroupT = std::pair<dxil::ResourceClass, /*Space*/ uint32_t>;
 
-  // 3. First we will init our state to track:
+  // First we will init our state to track:
   if (Infos.size() == 0)
     return Overlaps; // No ranges to overlap
   GroupT CurGroup = {Infos[0].Class, Infos[0].Space};
@@ -276,7 +276,7 @@ findOverlappingRanges(ArrayRef<RangeInfo> Infos) {
       Range.clear();
   };
 
-  // 3: Iterate through collected RangeInfos
+  // Iterate through collected RangeInfos
   for (const RangeInfo &Info : Infos) {
     GroupT InfoGroup = {Info.Class, Info.Space};
     // Reset our ResourceRanges when we enter a new group
@@ -285,12 +285,12 @@ findOverlappingRanges(ArrayRef<RangeInfo> Infos) {
       CurGroup = InfoGroup;
     }
 
-    // 3A: Insert range info into corresponding Visibility ResourceRange
+    // Insert range info into corresponding Visibility ResourceRange
     ResourceRange &VisRange = Ranges[llvm::to_underlying(Info.Visibility)];
     if (std::optional<const RangeInfo *> Overlapping = VisRange.insert(Info))
       Overlaps.push_back(OverlappingRanges(&Info, Overlapping.value()));
 
-    // 3B: Check for overlap in all overlapping Visibility ResourceRanges
+    // Check for overlap in all overlapping Visibility ResourceRanges
     //
     // If the range that we are inserting has ShaderVisiblity::All it needs to
     // check for an overlap in all other visibility types as well.
