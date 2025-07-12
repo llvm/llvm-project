@@ -132,7 +132,8 @@ template <typename T> bool isAnyArm64(T Machine) {
 }
 
 template <typename T> bool is64Bit(T Machine) {
-  return Machine == IMAGE_FILE_MACHINE_AMD64 || isAnyArm64(Machine);
+  return Machine == IMAGE_FILE_MACHINE_AMD64 || isAnyArm64(Machine) ||
+         IMAGE_FILE_MACHINE_RISCV64;
 }
 
 enum Characteristics : unsigned {
@@ -726,7 +727,10 @@ enum BaseRelocationType : unsigned {
   IMAGE_REL_BASED_HIGHADJ = 4,
   IMAGE_REL_BASED_MIPS_JMPADDR = 5,
   IMAGE_REL_BASED_ARM_MOV32A = 5,
+  IMAGE_REL_BASED_RISCV_HI20 = 5,
   IMAGE_REL_BASED_ARM_MOV32T = 7,
+  IMAGE_REL_BASED_RISCV_LOW12I = 7,
+  IMAGE_REL_BASED_RISCV_LOW12S = 8,
   IMAGE_REL_BASED_MIPS_JMPADDR16 = 9,
   IMAGE_REL_BASED_DIR64 = 10
 };

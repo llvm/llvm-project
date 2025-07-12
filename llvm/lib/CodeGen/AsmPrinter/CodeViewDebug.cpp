@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/CodeViewRecordIO.h"
 #include "llvm/DebugInfo/CodeView/ContinuationRecordBuilder.h"
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
@@ -125,6 +126,9 @@ static CPUType mapArchToCVCPUType(Triple::ArchType Type) {
     return CPUType::ARM64;
   case Triple::ArchType::mipsel:
     return CPUType::MIPS;
+  case llvm::Triple::ArchType::riscv32:
+  case llvm::Triple::ArchType::riscv64:
+    return CPUType::Unknown;
   case Triple::ArchType::UnknownArch:
     return CPUType::Unknown;
   default:

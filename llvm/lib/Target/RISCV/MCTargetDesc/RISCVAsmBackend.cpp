@@ -895,6 +895,30 @@ bool RISCVAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
   return true;
 }
 
+namespace {
+
+class WindowsRISCVAsmBackend : public RISCVAsmBackend {
+  bool is64Bit;
+
+public:
+  WindowsRISCVAsmBackend(const Target &T, const MCSubtargetInfo &STI,
+                         const MCRegisterInfo &MRI,
+                         const MCTargetOptions &Options)
+      : RISCVAsmBackend(
+            STI,
+            MCELFObjectTargetWriter::getOSABI(STI.getTargetTriple().getOS()),
+            STI.getTargetTriple().isArch64Bit(), Options) {
+    is64Bit = STI.getTargetTriple().isArch64Bit();
+  }
+
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createRISCVWinCOFFObjectWriter(is64Bit);
+  }
+};
+
+} // namespace
+
 std::unique_ptr<MCObjectTargetWriter>
 RISCVAsmBackend::createObjectTargetWriter() const {
   return createRISCVELFObjectWriter(OSABI, Is64Bit);
@@ -905,6 +929,11 @@ MCAsmBackend *llvm::createRISCVAsmBackend(const Target &T,
                                           const MCRegisterInfo &MRI,
                                           const MCTargetOptions &Options) {
   const Triple &TT = STI.getTargetTriple();
+
+  if (TT.isOSWindows() && TT.isOSBinFormatCOFF()) {
+    return new WindowsRISCVAsmBackend(T, STI, MRI, Options);
+  }
+
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
   return new RISCVAsmBackend(STI, OSABI, TT.isArch64Bit(), Options);
 }

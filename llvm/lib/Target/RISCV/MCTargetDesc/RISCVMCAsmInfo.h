@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVMCASMINFO_H
 #define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVMCASMINFO_H
 
+#include "llvm/MC/MCAsmInfoCOFF.h"
 #include "llvm/MC/MCAsmInfoELF.h"
 #include "llvm/MC/MCFixup.h"
 
@@ -29,6 +30,13 @@ public:
                                     MCStreamer &Streamer) const override;
   void printSpecifierExpr(raw_ostream &OS,
                           const MCSpecifierExpr &Expr) const override;
+};
+
+class RISCVCOFFMCAsmInfo : public MCAsmInfoGNUCOFF {
+  void anchor() override;
+
+public:
+  explicit RISCVCOFFMCAsmInfo();
 };
 
 namespace RISCV {
