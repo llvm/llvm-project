@@ -2075,19 +2075,36 @@ OperationLegalizer::legalize(Operation *op,
 
   auto &logger = rewriter.getImpl().logger;
 #endif
+
+  // Check to see if the operation is ignored and doesn't need to be converted.
+  bool isIgnored = rewriter.getImpl().isOpIgnored(op);
+
   LLVM_DEBUG({
     logger.getOStream() << "\n";
     logger.startLine() << logLineComment;
-    logger.startLine() << "Legalizing operation : '" << op->getName() << "'("
-                       << op << ") {\n";
+    logger.startLine() << "Legalizing operation : ";
+    // Do not print the operation name if the operation is ignored. Ignored ops
+    // may have been erased and should not be accessed. The pointer can be
+    // printed safely.
+    if (!isIgnored)
+      logger.getOStream() << "'" << op->getName() << "' ";
+    logger.getOStream() << "(" << op << ") {\n";
     logger.indent();
 
     // If the operation has no regions, just print it here.
-    if (op->getNumRegions() == 0) {
+    if (!isIgnored && op->getNumRegions() == 0) {
       op->print(logger.startLine(), OpPrintingFlags().printGenericOpForm());
       logger.getOStream() << "\n\n";
     }
   });
+
+  if (isIgnored) {
+    LLVM_DEBUG({
+      logSuccess(logger, "operation marked 'ignored' during conversion");
+      logger.startLine() << logLineComment;
+    });
+    return success();
+  }
 
   // Check if this operation is legal on the target.
   if (auto legalityInfo = target.isLegal(op)) {
@@ -2109,15 +2126,6 @@ OperationLegalizer::legalize(Operation *op,
       });
     }
 
-    return success();
-  }
-
-  // Check to see if the operation is ignored and doesn't need to be converted.
-  if (rewriter.getImpl().isOpIgnored(op)) {
-    LLVM_DEBUG({
-      logSuccess(logger, "operation marked 'ignored' during conversion");
-      logger.startLine() << logLineComment;
-    });
     return success();
   }
 
