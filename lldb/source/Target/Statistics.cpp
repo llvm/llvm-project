@@ -411,7 +411,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
         module_stat.path.append(1, ')');
       }
       module_stat.uuid = module->GetUUID().GetAsString();
-      module_stat.triple = module->GetArchitecture().GetTriple().str();
+      module_stat.triple = module->GetArchitecture().GetTriple().str(4);
       json_modules.emplace_back(module_stat.ToJSON());
     }
   }
