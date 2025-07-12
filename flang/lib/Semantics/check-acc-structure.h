@@ -81,18 +81,31 @@ public:
 
 private:
   bool CheckAllowedModifier(llvm::acc::Clause clause);
-  bool IsComputeConstruct(llvm::acc::Directive directive) const;
   bool IsInsideComputeConstruct() const;
+  bool IsInsideLoopConstruct() const;
+  bool IsInsideDirectiveContext(std::function<bool(llvm::acc::Directive)> pred,
+      bool skipFirst = false) const;
   void CheckNotInComputeConstruct();
   void CheckMultipleOccurrenceInDeclare(
       const parser::AccObjectList &, llvm::acc::Clause);
   void CheckMultipleOccurrenceInDeclare(
       const parser::AccObjectListWithModifier &, llvm::acc::Clause);
+  static bool IsComputeConstruct(llvm::acc::Directive directive) {
+    return directive == llvm::acc::ACCD_parallel ||
+        directive == llvm::acc::ACCD_parallel_loop ||
+        directive == llvm::acc::ACCD_serial ||
+        directive == llvm::acc::ACCD_serial_loop ||
+        directive == llvm::acc::ACCD_kernels ||
+        directive == llvm::acc::ACCD_kernels_loop;
+  }
+  static bool IsLoopConstruct(llvm::acc::Directive directive) {
+    return directive == llvm::acc::ACCD_loop;
+  }
   llvm::StringRef getClauseName(llvm::acc::Clause clause) override;
   llvm::StringRef getDirectiveName(llvm::acc::Directive directive) override;
 
   llvm::SmallDenseMap<Symbol *, llvm::acc::Clause> declareSymbols;
-  unsigned loopNestLevel = 0;
+  std::vector<const parser::DoConstruct *> loopNests;
 };
 
 } // namespace Fortran::semantics

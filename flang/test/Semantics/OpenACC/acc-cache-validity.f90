@@ -43,4 +43,33 @@ program openacc_cache_validity
   !ERROR: The CACHE directive must be inside a loop
   !$acc cache(a)
 
+
+  !ERROR: DO loop with CACHE directive must have loop control
+  do
+    !BECAUSE: This CACHE directive implies a LOOP directive
+    !$acc cache(a)
+  end do
+
+  !ERROR: DO loop with CACHE directive must have loop control
+  do
+    do i = 1, N
+      !BECAUSE: This CACHE directive implies a LOOP directive
+      !$acc cache(a(i))
+    end do
+  end do
+
+  do i = 1, N
+    !ERROR: DO loop with CACHE directive must have loop control
+    do
+      !BECAUSE: This CACHE directive implies a LOOP directive
+      !$acc cache(a)
+    end do
+  end do
+
+  do i = 1, N
+    !$acc cache(a)
+    do
+    end do
+  end do
+
 end program openacc_cache_validity
