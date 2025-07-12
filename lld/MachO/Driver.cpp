@@ -288,71 +288,72 @@ class DeferredFile {
 public:
   StringRef path;
   bool isLazy;
-  std::optional<MemoryBufferRef> buffer;
-  const char *start;
-  size_t size;
+  MemoryBufferRef buffer;
 };
 using DeferredFiles = std::vector<DeferredFile>;
 
-class PageInState {
-  DeferredFiles deferred;
-  size_t counter = 0, total = 0, pageSize;
-  std::mutex mutex, *busy;
+// Most input files have been mapped but not yet paged in.
+// This code forces the page-ins on multiple threads so
+// the process is not stalled waiting on disk buffer i/o.
+void multiThreadedPageInBackground(const DeferredFiles &deferred) {
+  static size_t pageSize = Process::getPageSizeEstimate(), totalBytes;
+  size_t index = 0;
+  std::mutex mutex;
 
-public:
-  PageInState(DeferredFiles &deferred, std::mutex *busy) {
-    this->deferred = deferred;
-    this->busy = busy;
-    pageSize = llvm::sys::Process::getPageSizeEstimate();
-  }
-
-  // Most input files have been mapped but not yet paged in.
-  // This code forces the page-ins on multiple threads so
-  // the process is not stalled waiting on disk buffer i/o.
-  void multiThreadedPageInBackground() {
-    static size_t totalBytes;
-
-    parallelFor(0, config->readThreads, [&](size_t I) {
-      while (true) {
-        mutex.lock();
-        if (counter >= deferred.size()) {
-          mutex.unlock();
-          return;
-        }
-        DeferredFile &file = deferred[counter];
-        totalBytes += file.size;
-        counter += 1;
+  parallelFor(0, config->readThreads, [&](size_t I) {
+    while (true) {
+      mutex.lock();
+      if (index >= deferred.size()) {
         mutex.unlock();
-
-        int t = 0; // Reference each page to load it into memory.
-        for (const char *page = file.start, *end = page + file.size; page < end;
-             page += pageSize)
-          t += *page;
-        total += t; // Avoids the loop being optimised out.
+        return;
       }
-    });
+      const StringRef &buff = deferred[index].buffer.getBuffer();
+      totalBytes += buff.size();
+      index += 1;
+      mutex.unlock();
 
-    if (getenv("LLD_MULTI_THREAD_PAGE"))
-      llvm::dbgs() << "multiThreadedPageIn " << totalBytes << "/"
-                   << deferred.size() << "\n";
+      volatile int t = 0; // Reference each page to load it into memory.
+      for (const char *page = buff.data(), *end = page + buff.size();
+           page < end; page += pageSize)
+        t += *page;
+    }
+  });
 
-    busy->unlock();
-    delete this;
-  }
-};
+  if (getenv("LLD_MULTI_THREAD_PAGE"))
+    llvm::dbgs() << "multiThreadedPageIn " << totalBytes << "/"
+                 << deferred.size() << "\n";
+}
 
-static void multiThreadedPageIn(DeferredFiles deferred) {
+static void multiThreadedPageIn(const DeferredFiles &deferred) {
   static std::thread *running;
-  static std::mutex busy;
+  static std::mutex mutex;
+  static std::deque<DeferredFiles *> queue;
 
-  busy.lock();
+  mutex.lock();
   if (running) {
     running->join();
     delete running;
+    running = nullptr;
   }
 
-  running = new std::thread(&PageInState::multiThreadedPageInBackground,
-                            new PageInState(deferred, &busy));
+  if (!deferred.empty()) {
+    queue.emplace_back(new DeferredFiles(deferred));
+    running = new std::thread([&]() {
+      while (true) {
+        mutex.lock();
+        if (queue.empty()) {
+          mutex.unlock();
+          return;
+        }
+        DeferredFiles *deferred = queue.front();
+        queue.pop_front();
+        mutex.unlock();
+        multiThreadedPageInBackground(*deferred);
+        delete deferred;
+      }
+    });
+  }
+  mutex.unlock();
 }
 
 static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
@@ -454,9 +455,7 @@ static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
           }
 
           if (archiveContents)
-            archiveContents->push_back({path, isLazy, std::nullopt,
-                                        mb->getBuffer().data(),
-                                        mb->getBuffer().size()});
+            archiveContents->push_back({path, isLazy, *mb});
           if (!hasObjCSection(*mb))
             continue;
           if (Error e = file->fetch(c, "-ObjC"))
@@ -530,9 +529,10 @@ static InputFile *addFile(StringRef path, LoadType loadType,
 
 static void deferFile(StringRef path, bool isLazy, DeferredFiles &deferred) {
   std::optional<MemoryBufferRef> buffer = readFile(path);
+  if (!buffer)
+    return;
   if (config->readThreads)
-    deferred.push_back({path, isLazy, buffer, buffer->getBuffer().data(),
-                        buffer->getBuffer().size()});
+    deferred.push_back({path, isLazy, *buffer});
   else
     processFile(buffer, nullptr, path, LoadType::CommandLine, isLazy);
 }
@@ -1400,11 +1400,12 @@ static void createFiles(const InputArgList &args) {
 
     DeferredFiles archiveContents;
     std::vector<ArchiveFile *> archives;
-    for (auto &file : deferredFiles)
-      if (ArchiveFile *archive = dyn_cast<ArchiveFile>(
-              processFile(file.buffer, &archiveContents, file.path,
-                          LoadType::CommandLine, file.isLazy)))
+    for (auto &file : deferredFiles) {
+      auto inputFile = processFile(file.buffer, &archiveContents, file.path,
+                                   LoadType::CommandLine, file.isLazy);
+      if (ArchiveFile *archive = dyn_cast<ArchiveFile>(inputFile))
         archives.push_back(archive);
+    }
 
     if (!archiveContents.empty()) {
       multiThreadedPageIn(archiveContents);
