@@ -1,4 +1,5 @@
-//===- ModuleBufferization.cpp - Bufferization across Func. Boundaries ----===//
+//===- OneShotRootBufferize.cpp - Bufferization across Func. Boundaries
+//----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Module Bufferization is an extension of One-Shot Bufferize that
+// Root Bufferization is an extension of One-Shot Bufferize that
 // bufferizes function boundaries. It provides `BufferizableOpInterface`
 // implementations for FuncOp, CallOp and ReturnOp.
 //
-// Module Bufferization is run via `runOneShotModuleBufferize(ModuleOp, ...)`.
-// This function analyzes the given module and determines the order of analysis
+// Root Bufferization is run via `runOneShotRootBufferize(RootOp, ...)`.
+// This function analyzes the given op and determines the order of analysis
 // and bufferization: Functions that are called are processed before their
 // respective callers.
 //
@@ -24,7 +25,7 @@
 // * `funcOpBbArgReadWriteAnalysis` determines whether or not a tensor bbArg is
 //   read/written.
 //
-// Module Bufferization implements the following calling convention.
+// Root Bufferization implements the following calling convention.
 //
 // * In the absence of conflicts within a FuncOp, the FuncOp's bbArgs may always
 //   be written to in-place.
@@ -57,7 +58,7 @@
 // TODO: Add FuncOp attributes so that bbArgs of external FuncOps can be marked
 // as "not reading" and/or "not writing".
 
-#include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
+#include "mlir/Dialect/Bufferization/Transforms/OneShotRootBufferize.h"
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
@@ -299,7 +300,7 @@ static bool hasTensorSignature(func::FuncOp funcOp) {
                       llvm::IsaPred<TensorType>);
 }
 
-/// Store all functions of the `moduleOp` in `orderedFuncOps`, sorted by
+/// Store all functions of the `rootOp` in `orderedFuncOps`, sorted by
 /// callee-caller order (i.e., callees without callers first). Store all
 /// remaining functions (i.e., the ones that call each other recursively) in
 /// `remainingFuncOps`. Does not traverse nested symbol tables.
@@ -309,7 +310,7 @@ static bool hasTensorSignature(func::FuncOp funcOp) {
 /// Return `failure()` if we are unable to retrieve the called FuncOp from
 /// any func::CallOp.
 static LogicalResult getFuncOpsOrderedByCalls(
-    ModuleOp moduleOp, SmallVectorImpl<func::FuncOp> &orderedFuncOps,
+    Operation *rootOp, SmallVectorImpl<func::FuncOp> &orderedFuncOps,
     SmallVectorImpl<func::FuncOp> &remainingFuncOps, FuncCallerMap &callerMap,
     SymbolTableCollection &symbolTables) {
   // For each FuncOp, the set of functions called by it (i.e. the union of
@@ -317,26 +318,29 @@ static LogicalResult getFuncOpsOrderedByCalls(
   DenseMap<func::FuncOp, DenseSet<func::FuncOp>> calledBy;
   // For each FuncOp, the number of func::CallOp it contains.
   DenseMap<func::FuncOp, unsigned> numberCallOpsContainedInFuncOp;
+  for (mlir::Region &region : rootOp->getRegions()) {
+    for (mlir::Block &block : region.getBlocks()) {
+      for (func::FuncOp funcOp : block.getOps<func::FuncOp>()) {
+        // Collect function calls and populate the caller map.
+        numberCallOpsContainedInFuncOp[funcOp] = 0;
+        WalkResult res = funcOp.walk([&](func::CallOp callOp) -> WalkResult {
+          func::FuncOp calledFunction = getCalledFunction(callOp);
+          assert(calledFunction && "could not retrieved called func::FuncOp");
+          // If the called function does not have any tensors in its signature,
+          // then it is not necessary to bufferize the callee before the caller.
+          if (!hasTensorSignature(calledFunction))
+            return WalkResult::skip();
 
-  for (func::FuncOp funcOp : moduleOp.getOps<func::FuncOp>()) {
-    // Collect function calls and populate the caller map.
-    numberCallOpsContainedInFuncOp[funcOp] = 0;
-    WalkResult res = funcOp.walk([&](func::CallOp callOp) -> WalkResult {
-      func::FuncOp calledFunction = getCalledFunction(callOp, symbolTables);
-      assert(calledFunction && "could not retrieved called func::FuncOp");
-      // If the called function does not have any tensors in its signature, then
-      // it is not necessary to bufferize the callee before the caller.
-      if (!hasTensorSignature(calledFunction))
-        return WalkResult::skip();
-
-      callerMap[calledFunction].insert(callOp);
-      if (calledBy[calledFunction].insert(funcOp).second) {
-        numberCallOpsContainedInFuncOp[funcOp]++;
+          callerMap[calledFunction].insert(callOp);
+          if (calledBy[calledFunction].insert(funcOp).second) {
+            numberCallOpsContainedInFuncOp[funcOp]++;
+          }
+          return WalkResult::advance();
+        });
+        if (res.wasInterrupted())
+          return failure();
       }
-      return WalkResult::advance();
-    });
-    if (res.wasInterrupted())
-      return failure();
+    }
   }
 
   // Iteratively remove function operations that do not call any of the
@@ -447,9 +451,9 @@ static void foldMemRefCasts(func::FuncOp funcOp) {
 }
 
 LogicalResult
-mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
-                                     OneShotAnalysisState &state,
-                                     BufferizationStatistics *statistics) {
+mlir::bufferization::analyzeRootOp(Operation *rootOp,
+                                   OneShotAnalysisState &state,
+                                   BufferizationStatistics *statistics) {
   assert(state.getOptions().bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
   FuncAnalysisState &funcState = getOrCreateFuncAnalysisState(state);
@@ -465,9 +469,8 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
   // A mapping of FuncOps to their callers.
   FuncCallerMap callerMap;
 
-  if (failed(getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps,
-                                      remainingFuncOps, callerMap,
-                                      funcState.symbolTables)))
+  if (failed(getFuncOpsOrderedByCalls(rootOp, orderedFuncOps, remainingFuncOps,
+                                      callerMap, funcState.symbolTables)))
     return failure();
 
   // Analyze functions in order. Starting with functions that are not calling
@@ -511,20 +514,24 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
   return success();
 }
 
-void mlir::bufferization::removeBufferizationAttributesInModule(
-    ModuleOp moduleOp) {
-  for (auto op : moduleOp.getOps<func::FuncOp>()) {
-    for (BlockArgument bbArg : op.getArguments())
-      removeBufferizationAttributes(bbArg);
+void mlir::bufferization::removeBufferizationAttributesInRoot(
+    Operation *rootOp) {
+  for (mlir::Region &region : rootOp->getRegions()) {
+    for (mlir::Block &block : region.getBlocks()) {
+      for (func::FuncOp funcOp : block.getOps<func::FuncOp>()) {
+        for (BlockArgument bbArg : funcOp.getArguments())
+          removeBufferizationAttributes(bbArg);
+      }
+    }
   }
 }
 
-LogicalResult mlir::bufferization::bufferizeModuleOp(
-    ModuleOp moduleOp, const OneShotBufferizationOptions &options,
+LogicalResult mlir::bufferization::bufferizeRootOp(
+    Operation *rootOp, const OneShotBufferizationOptions &options,
     BufferizationState &state, BufferizationStatistics *statistics) {
   assert(options.bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
-  IRRewriter rewriter(moduleOp.getContext());
+  IRRewriter rewriter(rootOp->getContext());
 
   // A list of non-circular functions in the order in which they are analyzed
   // and bufferized.
@@ -542,9 +549,8 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
   // accurate buffer types for function return values. Functions that call
   // each other recursively are bufferized in an unspecified order at the end.
   // We may use unnecessarily "complex" (in terms of layout map) buffer types.
-  if (failed(getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps,
-                                      remainingFuncOps, callerMap,
-                                      state.getSymbolTables())))
+  if (failed(getFuncOpsOrderedByCalls(rootOp, orderedFuncOps, remainingFuncOps,
+                                      callerMap, state.getSymbolTables())))
     return failure();
   llvm::append_range(orderedFuncOps, remainingFuncOps);
 
@@ -571,22 +577,27 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
   }
 
   // Bufferize all other ops.
-  for (Operation &op : llvm::make_early_inc_range(moduleOp.getOps())) {
-    // Functions were already bufferized.
-    if (isa<func::FuncOp>(&op) || op.hasTrait<OpTrait::SymbolTable>())
-      continue;
-    if (failed(bufferizeOp(&op, options, state, statistics)))
-      return failure();
+  for (mlir::Region &region : rootOp->getRegions()) {
+    for (mlir::Block &block : region.getBlocks()) {
+      for (mlir::Operation &op :
+           llvm::make_early_inc_range(block.getOperations())) {
+        // Functions were already bufferized.
+        if (isa<func::FuncOp>(&op) || op.hasTrait<OpTrait::SymbolTable>())
+          continue;
+        if (failed(bufferizeOp(&op, options, state, statistics)))
+          return failure();
+      }
+    }
   }
 
   // Post-pass cleanup of function argument attributes.
-  removeBufferizationAttributesInModule(moduleOp);
+  removeBufferizationAttributesInRoot(rootOp);
 
   return success();
 }
 
-LogicalResult mlir::bufferization::runOneShotModuleBufferize(
-    ModuleOp moduleOp, const OneShotBufferizationOptions &options,
+LogicalResult mlir::bufferization::runOneShotRootBufferize(
+    Operation *rootOp, const OneShotBufferizationOptions &options,
     BufferizationState &state, BufferizationStatistics *statistics) {
   assert(options.bufferizeFunctionBoundaries &&
          "expected that function boundary bufferization is activated");
@@ -594,7 +605,7 @@ LogicalResult mlir::bufferization::runOneShotModuleBufferize(
          "invalid combination of bufferization flags");
   if (!options.copyBeforeWrite) {
     if (options.noAnalysisFuncFilter.empty()) {
-      if (failed(insertTensorCopies(moduleOp, options, state, statistics)))
+      if (failed(insertTensorCopies(rootOp, options, state, statistics)))
         return failure();
     } else {
       // FuncOps whose names are specified in options.noAnalysisFuncFilter will
@@ -610,14 +621,13 @@ LogicalResult mlir::bufferization::runOneShotModuleBufferize(
       };
       OneShotBufferizationOptions updatedOptions(options);
       updatedOptions.opFilter.denyOperation(analysisFilterFn);
-      if (failed(
-              insertTensorCopies(moduleOp, updatedOptions, state, statistics)))
+      if (failed(insertTensorCopies(rootOp, updatedOptions, state, statistics)))
         return failure();
     }
   }
   if (options.testAnalysisOnly)
     return success();
-  if (failed(bufferizeModuleOp(moduleOp, options, state, statistics)))
+  if (failed(bufferizeRootOp(moduleOp, options, state, statistics)))
     return failure();
   return success();
 }

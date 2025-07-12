@@ -10,7 +10,7 @@
 
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
-#include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
+#include "mlir/Dialect/Bufferization/Transforms/OneShotRootBufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -92,8 +92,8 @@ transform::OneShotBufferizeOp::apply(transform::TransformRewriter &rewriter,
     if (options.bufferizeFunctionBoundaries) {
       if (!moduleOp)
         return emitSilenceableError() << "expected module target";
-      if (failed(bufferization::runOneShotModuleBufferize(moduleOp, options,
-                                                          bufferizationState)))
+      if (failed(bufferization::runOneShotRootBufferize(moduleOp, options,
+                                                        bufferizationState)))
         return emitSilenceableError() << "bufferization failed";
     } else {
       if (failed(bufferization::runOneShotBufferize(target, options,

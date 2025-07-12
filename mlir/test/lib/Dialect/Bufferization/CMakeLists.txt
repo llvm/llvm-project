@@ -1,5 +1,6 @@
 # Exclude tests from libMLIR.so
 add_mlir_library(MLIRBufferizationTestPasses
+  TestOneShotRootBufferize.cpp
   TestTensorCopyInsertion.cpp
   TestTensorLikeAndBufferLike.cpp
 
