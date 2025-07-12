@@ -31,17 +31,25 @@ define bfloat @faddv_nxv4bf16(<vscale x 4 x bfloat> %a) {
 }
 
 define bfloat @faddv_nxv8bf16(<vscale x 8 x bfloat> %a) {
-; CHECK-LABEL: faddv_nxv8bf16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z1.s, z0.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    lsl z1.s, z1.s, #16
-; CHECK-NEXT:    lsl z0.s, z0.s, #16
-; CHECK-NEXT:    fadd z0.s, z0.s, z1.s
-; CHECK-NEXT:    faddv s0, p0, z0.s
-; CHECK-NEXT:    bfcvt h0, s0
-; CHECK-NEXT:    ret
+; SVE-LABEL: faddv_nxv8bf16:
+; SVE:       // %bb.0:
+; SVE-NEXT:    movi v1.2d, #0000000000000000
+; SVE-NEXT:    fmov z2.s, #1.00000000
+; SVE-NEXT:    ptrue p0.s
+; SVE-NEXT:    bfdot z1.s, z0.h, z2.h
+; SVE-NEXT:    faddv s0, p0, z1.s
+; SVE-NEXT:    bfcvt h0, s0
+; SVE-NEXT:    ret
+;
+; SME-LABEL: faddv_nxv8bf16:
+; SME:       // %bb.0:
+; SME-NEXT:    fmov z1.s, #1.00000000
+; SME-NEXT:    mov z2.s, #0 // =0x0
+; SME-NEXT:    ptrue p0.s
+; SME-NEXT:    bfdot z2.s, z0.h, z1.h
+; SME-NEXT:    faddv s0, p0, z2.s
+; SME-NEXT:    bfcvt h0, s0
+; SME-NEXT:    ret
   %res = call fast bfloat @llvm.vector.reduce.fadd.nxv8bf16(bfloat zeroinitializer, <vscale x 8 x bfloat> %a)
   ret bfloat %res
 }
