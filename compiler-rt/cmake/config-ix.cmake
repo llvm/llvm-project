@@ -132,8 +132,8 @@ check_cxx_compiler_flag(-g COMPILER_RT_HAS_G_FLAG)
 check_cxx_compiler_flag(/Zi COMPILER_RT_HAS_Zi_FLAG)
 
 # Warnings.
-check_cxx_compiler_flag(-Wall COMPILER_RT_HAS_WALL_FLAG)
 check_cxx_compiler_flag(-Werror COMPILER_RT_HAS_WERROR_FLAG)
+check_cxx_compiler_flag("-Werror -Wall" COMPILER_RT_HAS_WALL_FLAG)
 check_cxx_compiler_flag("-Werror -Wframe-larger-than=512" COMPILER_RT_HAS_WFRAME_LARGER_THAN_FLAG)
 check_cxx_compiler_flag("-Werror -Wglobal-constructors"   COMPILER_RT_HAS_WGLOBAL_CONSTRUCTORS_FLAG)
 check_cxx_compiler_flag("-Werror -Wc99-extensions"     COMPILER_RT_HAS_WC99_EXTENSIONS_FLAG)
@@ -146,9 +146,9 @@ check_cxx_compiler_flag("-Werror -Wsuggest-override"   COMPILER_RT_HAS_WSUGGEST_
 check_cxx_compiler_flag("-Werror -Wthread-safety" COMPILER_RT_HAS_WTHREAD_SAFETY_FLAG)
 check_cxx_compiler_flag("-Werror -Wthread-safety-reference" COMPILER_RT_HAS_WTHREAD_SAFETY_REFERENCE_FLAG)
 check_cxx_compiler_flag("-Werror -Wthread-safety-beta" COMPILER_RT_HAS_WTHREAD_SAFETY_BETA_FLAG)
-check_cxx_compiler_flag(-Wno-pedantic COMPILER_RT_HAS_WNO_PEDANTIC)
-check_cxx_compiler_flag(-Wno-format COMPILER_RT_HAS_WNO_FORMAT)
-check_cxx_compiler_flag(-Wno-format-pedantic COMPILER_RT_HAS_WNO_FORMAT_PEDANTIC)
+check_cxx_compiler_flag("-Werror -Wno-pedantic" COMPILER_RT_HAS_WNO_PEDANTIC)
+check_cxx_compiler_flag("-Werror -Wno-format" COMPILER_RT_HAS_WNO_FORMAT)
+check_cxx_compiler_flag("-Werror -Wno-format-pedantic" COMPILER_RT_HAS_WNO_FORMAT_PEDANTIC)
 
 check_cxx_compiler_flag("/experimental:external /external:W0" COMPILER_RT_HAS_EXTERNAL_FLAG)
 
