@@ -15,7 +15,7 @@
 
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_FREEBSD || SANITIZER_FUCHSIA || SANITIZER_LINUX || \
-    SANITIZER_NETBSD || SANITIZER_SOLARIS || SANITIZER_HAIKU
+    SANITIZER_NETBSD || SANITIZER_SOLARIS || SANITIZER_HAIKU || SANITIZER_AIX
 
 #  include "asan_allocator.h"
 #  include "asan_interceptors.h"
@@ -60,6 +60,24 @@ INTERCEPTOR(void, cfree, void *ptr) {
   asan_free(ptr, &stack, FROM_MALLOC);
 }
 #endif // SANITIZER_INTERCEPT_CFREE
+
+#  if SANITIZER_AIX
+INTERCEPTOR(void *, vec_malloc, uptr size) {
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Allocate(size);
+  AsanInitFromRtl();
+  GET_STACK_TRACE_MALLOC;
+  return asan_malloc(size, &stack);
+}
+
+INTERCEPTOR(void *, vec_calloc, uptr nmemb, uptr size) {
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Callocate(nmemb, size);
+  AsanInitFromRtl();
+  GET_STACK_TRACE_MALLOC;
+  return asan_calloc(nmemb, size, &stack);
+}
+#  endif
 
 INTERCEPTOR(void*, malloc, uptr size) {
   if (DlsymAlloc::Use())
