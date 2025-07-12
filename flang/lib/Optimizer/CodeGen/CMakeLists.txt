@@ -36,6 +36,7 @@ add_flang_library(FIRCodeGen
   MLIRComplexToLLVM
   MLIRComplexToStandard
   MLIRGPUDialect
+  MLIRIndexToLLVM
   MLIRMathToFuncs
   MLIRMathToLLVM
   MLIRMathToLibm
