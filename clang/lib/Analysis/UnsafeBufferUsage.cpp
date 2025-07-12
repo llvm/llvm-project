@@ -479,6 +479,8 @@ static bool isPtrBufferSafe(const Expr *Ptr, const Expr *Size,
 
       if (!DREOfPtr || !DREOfSize)
         return false; // not in safe pattern
+      // We need to make sure 'a' is identical to 'b' for 'a.data()' and
+      // 'b.size()' otherwise we do not know they match:
       if (DREOfPtr->getDecl() != DREOfSize->getDecl())
         return false;
       if (MCEPtr->getMethodDecl()->getName() != "data")
