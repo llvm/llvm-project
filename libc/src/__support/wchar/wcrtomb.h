@@ -18,7 +18,12 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-ErrorOr<size_t> wcrtomb(char *__restrict s, wchar_t wc, mbstate *__restrict ps);
+struct wcrtomb_result {
+    char mbs[4];
+    size_t count = 0;    
+};
+
+ErrorOr<wcrtomb_result> wcrtomb(wchar_t wc, mbstate* ps);
 
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
