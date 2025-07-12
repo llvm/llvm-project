@@ -1401,3 +1401,96 @@ define i32 @sext_maybe_zero(i16 %x) {
   %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
   ret i32 %r
 }
+
+define i32 @xor_known_nonzero_neg_case(i32 %xx) {
+; X86-LABEL: xor_known_nonzero_neg_case:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl $256, %eax # imm = 0x100
+; X86-NEXT:    shll %cl, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: xor_known_nonzero_neg_case:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %ecx
+; X64-NEXT:    movl $256, %eax # imm = 0x100
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shll %cl, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
+; X64-NEXT:    retq
+  %x = shl nuw nsw i32 256, %xx
+  %z = xor i32 0, %x
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+define i32 @xor_known_nonzero_ne_case(i32 %xx, i32 %yy) {
+; X86-LABEL: xor_known_nonzero_ne_case:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    orl $64, %ecx
+; X86-NEXT:    andl $-65, %eax
+; X86-NEXT:    xorl %ecx, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: xor_known_nonzero_ne_case:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    orl $64, %eax
+; X64-NEXT:    andl $-65, %edi
+; X64-NEXT:    xorl %eax, %edi
+; X64-NEXT:    rep bsfl %edi, %eax
+; X64-NEXT:    retq
+  %x = or i32 %xx, 64
+  %y = and i32 %xx, -65
+  %z = xor i32 %y, %x
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+define i32 @xor_maybe_zero(i32 %x) {
+; X86-LABEL: xor_maybe_zero:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    orl $64, %ecx
+; X86-NEXT:    xorl %eax, %ecx
+; X86-NEXT:    bsfl %ecx, %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: xor_maybe_zero:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %ecx
+; X64-NEXT:    orl $64, %ecx
+; X64-NEXT:    xorl %edi, %ecx
+; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    rep bsfl %ecx, %eax
+; X64-NEXT:    retq
+  %y = or i32 %x, 64
+  %z = xor i32 %y, %x
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+define i32 @xor_maybe_zero2(i32 %x) {
+; X86-LABEL: xor_maybe_zero2:
+; X86:       # %bb.0:
+; X86-NEXT:    bsfl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: xor_maybe_zero2:
+; X64:       # %bb.0:
+; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    rep bsfl %edi, %eax
+; X64-NEXT:    retq
+  %z = xor i32 0, %x
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
