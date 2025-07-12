@@ -6,9 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_FUNCTION hypot
+#ifndef __CLC_OPENCL_MATH_HYPOT_H__
+#define __CLC_OPENCL_MATH_HYPOT_H__
+
+#define FUNCTION hypot
 #define __CLC_BODY <clc/shared/binary_decl.inc>
 
 #include <clc/math/gentype.inc>
 
-#undef __CLC_FUNCTION
+#undef FUNCTION
+
+#endif // __CLC_OPENCL_MATH_HYPOT_H__
