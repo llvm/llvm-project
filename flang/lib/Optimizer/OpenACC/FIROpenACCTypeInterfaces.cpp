@@ -25,6 +25,7 @@
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 namespace fir::acc {
@@ -524,5 +525,142 @@ OpenACCPointerLikeModel<fir::LLVMPointerType>::getPointeeTypeCategory(
     mlir::Type varType) const {
   return categorizePointee(pointer, varPtr, varType);
 }
+
+static fir::ShapeOp genShapeOp(mlir::OpBuilder &builder,
+                               fir::SequenceType seqTy, mlir::Location loc) {
+  llvm::SmallVector<mlir::Value> extents;
+  mlir::Type idxTy = builder.getIndexType();
+  for (auto extent : seqTy.getShape())
+    extents.push_back(builder.create<mlir::arith::ConstantOp>(
+        loc, idxTy, builder.getIntegerAttr(idxTy, extent)));
+  return builder.create<fir::ShapeOp>(loc, extents);
+}
+
+template <typename Ty>
+mlir::Value OpenACCMappableModel<Ty>::generatePrivateInit(
+    mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
+    mlir::ValueRange extents, mlir::Value initVal) const {
+  mlir::Value retVal;
+  mlir::Type unwrappedTy = fir::unwrapRefType(type);
+  mlir::ModuleOp mod = builder.getInsertionBlock()
+                           ->getParent()
+                           ->getParentOfType<mlir::ModuleOp>();
+  fir::FirOpBuilder firBuilder(builder, mod);
+
+  auto getDeclareOpForType = [&](mlir::Type ty) -> hlfir::DeclareOp {
+    auto alloca = firBuilder.create<fir::AllocaOp>(loc, ty);
+    return firBuilder.create<hlfir::DeclareOp>(
+        loc, alloca, varName, /*shape=*/nullptr, llvm::ArrayRef<mlir::Value>{},
+        /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
+  };
+
+  if (fir::isa_trivial(unwrappedTy)) {
+    auto declareOp = getDeclareOpForType(unwrappedTy);
+    if (initVal) {
+      auto convert = firBuilder.createConvert(loc, unwrappedTy, initVal);
+      firBuilder.create<fir::StoreOp>(loc, convert, declareOp.getBase());
+    }
+    retVal = declareOp.getBase();
+  } else if (auto seqTy =
+                 mlir::dyn_cast_or_null<fir::SequenceType>(unwrappedTy)) {
+    if (fir::isa_trivial(seqTy.getEleTy())) {
+      mlir::Value shape;
+      if (seqTy.hasDynamicExtents()) {
+        shape = firBuilder.create<fir::ShapeOp>(loc, llvm::to_vector(extents));
+      } else {
+        shape = genShapeOp(firBuilder, seqTy, loc);
+      }
+      auto alloca = firBuilder.create<fir::AllocaOp>(
+          loc, seqTy, /*typeparams=*/mlir::ValueRange{}, extents);
+      auto declareOp = firBuilder.create<hlfir::DeclareOp>(
+          loc, alloca, varName, shape, llvm::ArrayRef<mlir::Value>{},
+          /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
+
+      if (initVal) {
+        mlir::Type idxTy = firBuilder.getIndexType();
+        mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
+        llvm::SmallVector<fir::DoLoopOp> loops;
+        llvm::SmallVector<mlir::Value> ivs;
+
+        if (seqTy.hasDynamicExtents()) {
+          firBuilder.create<hlfir::AssignOp>(loc, initVal, declareOp.getBase());
+        } else {
+          for (auto ext : seqTy.getShape()) {
+            auto lb = firBuilder.createIntegerConstant(loc, idxTy, 0);
+            auto ub = firBuilder.createIntegerConstant(loc, idxTy, ext - 1);
+            auto step = firBuilder.createIntegerConstant(loc, idxTy, 1);
+            auto loop = firBuilder.create<fir::DoLoopOp>(loc, lb, ub, step,
+                                                         /*unordered=*/false);
+            firBuilder.setInsertionPointToStart(loop.getBody());
+            loops.push_back(loop);
+            ivs.push_back(loop.getInductionVar());
+          }
+          auto coord = firBuilder.create<fir::CoordinateOp>(
+              loc, refTy, declareOp.getBase(), ivs);
+          firBuilder.create<fir::StoreOp>(loc, initVal, coord);
+          firBuilder.setInsertionPointAfter(loops[0]);
+        }
+      }
+      retVal = declareOp.getBase();
+    }
+  } else if (auto boxTy =
+                 mlir::dyn_cast_or_null<fir::BaseBoxType>(unwrappedTy)) {
+    mlir::Type innerTy = fir::unwrapRefType(boxTy.getEleTy());
+    if (fir::isa_trivial(innerTy)) {
+      retVal = getDeclareOpForType(unwrappedTy).getBase();
+    } else if (mlir::isa<fir::SequenceType>(innerTy)) {
+      hlfir::Entity source = hlfir::Entity{var};
+      auto [temp, cleanup] = hlfir::createTempFromMold(loc, firBuilder, source);
+      if (fir::isa_ref_type(type)) {
+        // When the temp is created - it is not a reference - thus we can
+        // end up with a type inconsistency. Therefore ensure storage is created
+        // for it.
+        retVal = getDeclareOpForType(unwrappedTy).getBase();
+        mlir::Value storeDst = retVal;
+        if (fir::unwrapRefType(retVal.getType()) != temp.getType()) {
+          // `createTempFromMold` makes the unfortunate choice to lose the
+          // `fir.heap` and `fir.ptr` types when wrapping with a box. Namely,
+          // when wrapping a `fir.heap<fir.array>`, it will create instead a
+          // `fir.box<fir.array>`. Cast here to deal with this inconsistency.
+          storeDst = firBuilder.createConvert(
+              loc, firBuilder.getRefType(temp.getType()), retVal);
+        }
+        builder.create<fir::StoreOp>(loc, temp, storeDst);
+      } else {
+        retVal = temp;
+      }
+    } else {
+      TODO(loc, "Unsupported boxed type for OpenACC private-like recipe");
+    }
+    if (initVal) {
+      builder.create<hlfir::AssignOp>(loc, initVal, retVal);
+    }
+  }
+  return retVal;
+}
+
+template mlir::Value
+OpenACCMappableModel<fir::BaseBoxType>::generatePrivateInit(
+    mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
+    mlir::ValueRange extents, mlir::Value initVal) const;
+
+template mlir::Value
+OpenACCMappableModel<fir::ReferenceType>::generatePrivateInit(
+    mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
+    mlir::ValueRange extents, mlir::Value initVal) const;
+
+template mlir::Value OpenACCMappableModel<fir::HeapType>::generatePrivateInit(
+    mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
+    mlir::ValueRange extents, mlir::Value initVal) const;
+
+template mlir::Value
+OpenACCMappableModel<fir::PointerType>::generatePrivateInit(
+    mlir::Type type, mlir::OpBuilder &builder, mlir::Location loc,
+    mlir::TypedValue<mlir::acc::MappableType> var, llvm::StringRef varName,
+    mlir::ValueRange extents, mlir::Value initVal) const;
 
 } // namespace fir::acc
