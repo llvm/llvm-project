@@ -28,7 +28,8 @@ using namespace mlir;
 using namespace mlir::vector;
 
 namespace {
-/// Progressive lowering of BroadcastOp.
+/// Progressive lowering of vector.broadcast, towards vector.broadcast
+/// operations that have scalar operands.
 class BroadcastOpLowering : public OpRewritePattern<vector::BroadcastOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
@@ -40,20 +41,20 @@ public:
     VectorType srcType = dyn_cast<VectorType>(op.getSourceType());
     Type eltType = dstType.getElementType();
 
-    // Scalar to any vector can use splat.
-    if (!srcType) {
-      rewriter.replaceOpWithNewOp<vector::SplatOp>(op, dstType, op.getSource());
-      return success();
-    }
+    // A broadcast from a scalar is considered to be in the lowered form.
+    if (!srcType)
+      return failure();
 
     // Determine rank of source and destination.
     int64_t srcRank = srcType.getRank();
     int64_t dstRank = dstType.getRank();
 
-    // Stretching scalar inside vector (e.g. vector<1xf32>) can use splat.
-    if (srcRank <= 1 && dstRank == 1) {
-      Value ext = rewriter.create<vector::ExtractOp>(loc, op.getSource());
-      rewriter.replaceOpWithNewOp<vector::SplatOp>(op, dstType, ext);
+    if (srcType.getNumElements() == 1) {
+      SmallVector<int64_t> fullRankPosition(srcRank, 0);
+      Value ext = rewriter.create<vector::ExtractOp>(loc, op.getSource(),
+                                                     fullRankPosition);
+      assert(!isa<VectorType>(ext.getType()) && "expected scalar");
+      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(op, dstType, ext);
       return success();
     }
 

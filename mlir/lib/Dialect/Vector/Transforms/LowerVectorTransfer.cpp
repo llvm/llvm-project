@@ -471,7 +471,7 @@ struct TransferReadToVectorLoadLowering
             read, "vector type is not rank 1, can't create masked load, needs "
                   "VectorToSCF");
 
-      Value fill = rewriter.create<vector::SplatOp>(
+      Value fill = rewriter.create<vector::BroadcastOp>(
           read.getLoc(), unbroadcastedVectorType, read.getPadding());
       res = rewriter.create<vector::MaskedLoadOp>(
           read.getLoc(), unbroadcastedVectorType, read.getBase(),
