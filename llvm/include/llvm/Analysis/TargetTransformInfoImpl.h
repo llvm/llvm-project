@@ -185,35 +185,35 @@ public:
     if (F->hasLocalLinkage() || !F->hasName())
       return true;
 
-    StringRef Name = F->getName();
+    // StringRef Name = F->getName();
 
-    // These will all likely lower to a single selection DAG node.
-    // clang-format off
-    if (Name == "copysign" || Name == "copysignf" || Name == "copysignl" || Name == "copysignl128" ||
-        Name == "fabs"  || Name == "fabsf"  || Name == "fabsl" || Name == "fabsl128" ||
-        Name == "fmin"  || Name == "fminf"  || Name == "fminl" || Name == "fminl128" ||
-        Name == "fmax"  || Name == "fmaxf"  || Name == "fmaxl" || Name == "fmaxl128" ||
-        Name == "sin"   || Name == "sinf"   || Name == "sinl"  || Name == "sinl128"  ||
-        Name == "cos"   || Name == "cosf"   || Name == "cosl"  || Name == "cosl128"  ||
-        Name == "tan"   || Name == "tanf"   || Name == "tanl"  || Name == "tanl128"  ||
-        Name == "asin"  || Name == "asinf"  || Name == "asinl" || Name == "asinl128" ||
-        Name == "acos"  || Name == "acosf"  || Name == "acosl" || Name == "acosl128" ||
-        Name == "atan"  || Name == "atanf"  || Name == "atanl" || Name == "atanl128" ||
-        Name == "atan2" || Name == "atan2f" || Name == "atan2l"|| Name == "atan2128l"||
-        Name == "sinh"  || Name == "sinhf"  || Name == "sinhl" || Name == "sinhl128" ||
-        Name == "cosh"  || Name == "coshf"  || Name == "coshl" || Name == "coshl128" ||
-        Name == "tanh"  || Name == "tanhf"  || Name == "tanhl" || Name == "tanhl128" ||
-        Name == "sqrt"  || Name == "sqrtf"  || Name == "sqrtl" || Name == "sqrtl128" ||
-        Name == "exp10" || Name == "exp10f" || Name == "exp10l"|| Name == "exp10f128")
-      return false;
-    // clang-format on
-    // These are all likely to be optimized into something smaller.
-    if (Name == "pow" || Name == "powf" || Name == "powl" ||
-        Name == "powf128" || Name == "exp2" || Name == "exp2f" ||
-        Name == "exp2l" || Name == "floor" || Name == "floorf" ||
-        Name == "ceil" || Name == "round" || Name == "ffs" || Name == "ffsl" ||
-        Name == "abs" || Name == "labs" || Name == "llabs")
-      return false;
+    // // These will all likely lower to a single selection DAG node.
+    // // clang-format off
+    // if (Name == "copysign" || Name == "copysignf" || Name == "copysignl" || Name == "copysignl128" ||
+    //     Name == "fabs"  || Name == "fabsf"  || Name == "fabsl" || Name == "fabsl128" ||
+    //     Name == "fmin"  || Name == "fminf"  || Name == "fminl" || Name == "fminl128" ||
+    //     Name == "fmax"  || Name == "fmaxf"  || Name == "fmaxl" || Name == "fmaxl128" ||
+    //     Name == "sin"   || Name == "sinf"   || Name == "sinl"  || Name == "sinl128"  ||
+    //     Name == "cos"   || Name == "cosf"   || Name == "cosl"  || Name == "cosl128"  ||
+    //     Name == "tan"   || Name == "tanf"   || Name == "tanl"  || Name == "tanl128"  ||
+    //     Name == "asin"  || Name == "asinf"  || Name == "asinl" || Name == "asinl128" ||
+    //     Name == "acos"  || Name == "acosf"  || Name == "acosl" || Name == "acosl128" ||
+    //     Name == "atan"  || Name == "atanf"  || Name == "atanl" || Name == "atanl128" ||
+    //     Name == "atan2" || Name == "atan2f" || Name == "atan2l"|| Name == "atan2128l"||
+    //     Name == "sinh"  || Name == "sinhf"  || Name == "sinhl" || Name == "sinhl128" ||
+    //     Name == "cosh"  || Name == "coshf"  || Name == "coshl" || Name == "coshl128" ||
+    //     Name == "tanh"  || Name == "tanhf"  || Name == "tanhl" || Name == "tanhl128" ||
+    //     Name == "sqrt"  || Name == "sqrtf"  || Name == "sqrtl" || Name == "sqrtl128" ||
+    //     Name == "exp10" || Name == "exp10f" || Name == "exp10l"|| Name == "exp10f128")
+    //   return false;
+    // // clang-format on
+    // // These are all likely to be optimized into something smaller.
+    // if (Name == "pow" || Name == "powf" || Name == "powl" ||
+    //     Name == "powf128" || Name == "exp2" || Name == "exp2f" ||
+    //     Name == "exp2l" || Name == "floor" || Name == "floorf" ||
+    //     Name == "ceil" || Name == "round" || Name == "ffs" || Name == "ffsl" ||
+    //     Name == "abs" || Name == "labs" || Name == "llabs")
+    //   return false;
 
     return true;
   }
