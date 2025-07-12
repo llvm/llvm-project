@@ -142,6 +142,11 @@ New checks
   Finds unscoped (non-class) ``enum`` declarations and suggests using
   ``enum class`` instead.
 
+- New :doc:`modernize-use-constexpr
+  <clang-tidy/checks/modernize/use-constexpr>` check.
+
+  Finds functions and variables that can be declared `constexpr`.
+
 - New :doc:`modernize-use-scoped-lock
   <clang-tidy/checks/modernize/use-scoped-lock>` check.
 
