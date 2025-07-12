@@ -8,7 +8,7 @@
 
 #include "llvm/Support/Parallel.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/ManagedStatic.h" // IWYU pragma: keep
 #include "llvm/Support/Threading.h"
 
 #include <atomic>
