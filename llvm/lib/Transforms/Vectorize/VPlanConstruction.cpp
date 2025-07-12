@@ -628,3 +628,111 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
     Term->addMetadata(LLVMContext::MD_prof, BranchWeights);
   }
 }
+
+static VPValue *getMinMaxCompareValue(VPSingleDefRecipe *MinMaxOp,
+                                      VPReductionPHIRecipe *RedPhi) {
+  auto *RepR = dyn_cast<VPReplicateRecipe>(MinMaxOp);
+  if (!isa<VPWidenIntrinsicRecipe>(MinMaxOp) &&
+      !(RepR && (isa<IntrinsicInst>(RepR->getUnderlyingInstr()))))
+    return nullptr;
+
+  if (MinMaxOp->getOperand(0) == RedPhi)
+    return MinMaxOp->getOperand(1);
+  return MinMaxOp->getOperand(0);
+}
+
+bool VPlanTransforms::handleMaxMinNumReductionsWithoutFastMath(VPlan &Plan) {
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPValue *AnyNaN = nullptr;
+  VPReductionPHIRecipe *RedPhiR = nullptr;
+  VPRecipeWithIRFlags *MinMaxOp = nullptr;
+  for (auto &R : LoopRegion->getEntryBasicBlock()->phis()) {
+    auto *Cur = dyn_cast<VPReductionPHIRecipe>(&R);
+    if (!Cur)
+      continue;
+    if (RedPhiR)
+      return false;
+    if (Cur->getRecurrenceKind() != RecurKind::FMaxNumNoFMFs &&
+        Cur->getRecurrenceKind() != RecurKind::FMinNumNoFMFs)
+      continue;
+
+    RedPhiR = Cur;
+
+    MinMaxOp = dyn_cast<VPRecipeWithIRFlags>(
+        RedPhiR->getBackedgeValue()->getDefiningRecipe());
+    if (!MinMaxOp)
+      return false;
+    VPValue *In = getMinMaxCompareValue(MinMaxOp, RedPhiR);
+    if (!In)
+      return false;
+
+    auto *IsNaN =
+        new VPInstruction(Instruction::FCmp, {In, In}, {CmpInst::FCMP_UNO}, {});
+    IsNaN->insertBefore(MinMaxOp);
+    AnyNaN = new VPInstruction(VPInstruction::AnyOf, {IsNaN});
+    AnyNaN->getDefiningRecipe()->insertAfter(IsNaN);
+  }
+
+  if (!AnyNaN)
+    return true;
+
+  auto *MiddleVPBB = Plan.getMiddleBlock();
+  auto *RdxResult = cast<VPSingleDefRecipe>(&MiddleVPBB->front());
+  auto *ScalarPH = Plan.getScalarPreheader();
+  // Update the resume phis in the scalar preheader. They all must either resume
+  // from the reduction result or the canonical induction. Bail out if there are
+  // other resume phis.
+  for (auto &R : ScalarPH->phis()) {
+    auto *ResumeR = cast<VPPhi>(&R);
+    VPValue *VecV = ResumeR->getOperand(0);
+    VPValue *BypassV = ResumeR->getOperand(ResumeR->getNumOperands() - 1);
+    if (VecV != RdxResult && VecV != &Plan.getVectorTripCount())
+      return false;
+    ResumeR->setOperand(
+        1, VecV == &Plan.getVectorTripCount() ? Plan.getCanonicalIV() : VecV);
+    ResumeR->addOperand(BypassV);
+  }
+
+  // Create a new reduction phi recipe with either FMin/FMax, replacing
+  // FMinNumNoFMFs/FMaxNumNoFMFs.
+  RecurKind NewRK = RedPhiR->getRecurrenceKind() != RecurKind::FMinNumNoFMFs
+                        ? RecurKind::FMin
+                        : RecurKind::FMax;
+  auto *NewRedPhiR = new VPReductionPHIRecipe(
+      cast<PHINode>(RedPhiR->getUnderlyingValue()), NewRK,
+      *RedPhiR->getStartValue(), RedPhiR->isInLoop(), RedPhiR->isOrdered());
+  NewRedPhiR->addOperand(RedPhiR->getOperand(1));
+  NewRedPhiR->insertBefore(RedPhiR);
+  RedPhiR->replaceAllUsesWith(NewRedPhiR);
+  RedPhiR->eraseFromParent();
+
+  // Update the loop exit condition to exit if either any of the inputs is NaN
+  // or the vector trip count is reached.
+  VPBasicBlock *LatchVPBB = LoopRegion->getExitingBasicBlock();
+  VPBuilder Builder(LatchVPBB->getTerminator());
+  auto *LatchExitingBranch = cast<VPInstruction>(LatchVPBB->getTerminator());
+  assert(LatchExitingBranch->getOpcode() == VPInstruction::BranchOnCount &&
+         "Unexpected terminator");
+  auto *IsLatchExitTaken =
+      Builder.createICmp(CmpInst::ICMP_EQ, LatchExitingBranch->getOperand(0),
+                         LatchExitingBranch->getOperand(1));
+  auto *AnyExitTaken =
+      Builder.createNaryOp(Instruction::Or, {AnyNaN, IsLatchExitTaken});
+  Builder.createNaryOp(VPInstruction::BranchOnCond, AnyExitTaken);
+  LatchExitingBranch->eraseFromParent();
+
+  // Split the middle block and introduce a new block, branching to the scalar
+  // preheader to resume iteration in the scalar loop if any NaNs have been
+  // encountered.
+  MiddleVPBB->splitAt(std::prev(MiddleVPBB->end()));
+  Builder.setInsertPoint(MiddleVPBB, MiddleVPBB->begin());
+  auto *NewSel =
+      Builder.createSelect(AnyNaN, NewRedPhiR, RdxResult->getOperand(1));
+  RdxResult->setOperand(1, NewSel);
+  Builder.setInsertPoint(MiddleVPBB);
+  Builder.createNaryOp(VPInstruction::BranchOnCond, AnyNaN);
+  VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
+  MiddleVPBB->swapSuccessors();
+  std::swap(ScalarPH->getPredecessors()[1], ScalarPH->getPredecessors().back());
+  return true;
+}
