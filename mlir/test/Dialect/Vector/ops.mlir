@@ -1218,3 +1218,13 @@ func.func @step() {
   %1 = vector.step : vector<[4]xindex>
   return
 }
+
+// CHECK-LABEL: func @test_load_store_alignment
+func.func @test_load_store_alignment(%memref: memref<4xi32>) {
+  %c0 = arith.constant 0 : index
+  // CHECK: vector.load {{.*}} {alignment = 16 : i64}
+  %val = vector.load %memref[%c0] { alignment = 16 } : memref<4xi32>, vector<4xi32>
+  // CHECK: vector.store {{.*}} {alignment = 16 : i64}
+  vector.store %val, %memref[%c0] { alignment = 16 } : memref<4xi32>, vector<4xi32>
+  return
+}
