@@ -1085,6 +1085,9 @@ RISC-V Support
 
 - Add support for the `__builtin_riscv_pause()` intrinsic from the `Zihintpause` extension.
 
+- Add `-march=unset` to clear any previous `-march=` value. This ISA string will
+  be computed from `-mcpu` or the platform default.
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
