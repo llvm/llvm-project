@@ -88,7 +88,7 @@
 #
 # UNWINDINFO:       DW_CFA_def_cfa_offset: +16
 # UNWINDINFO-NEXT:  DW_CFA_offset: reg29 -16
-# UNWINDINFO:       DW_CFA_def_cfa_offset: +32 
+# UNWINDINFO:       DW_CFA_def_cfa_offset: +32
 # UNWINDINFO:       DW_CFA_def_cfa_expression: DW_OP_breg31 +0, DW_OP_consts +32, DW_OP_plus, DW_OP_consts +16, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
 # UNWINDINFO:       DW_CFA_def_cfa: reg31 +32
 # UNWINDINFO:       DW_CFA_def_cfa_offset: +16
@@ -166,7 +166,7 @@ body:             |
 # UNWINDINFO:       DW_CFA_offset: reg20 -8
 # UNWINDINFO-NEXT:  DW_CFA_offset: reg21 -16
 # UNWINDINFO-NEXT:  DW_CFA_offset: reg29 -32
-# UNWINDINFO:       DW_CFA_def_cfa_offset: +48 
+# UNWINDINFO:       DW_CFA_def_cfa_offset: +48
 # UNWINDINFO:       DW_CFA_def_cfa_expression: DW_OP_breg31 +0, DW_OP_consts +48, DW_OP_plus, DW_OP_consts +16, DW_OP_bregx 0x2e +0, DW_OP_mul, DW_OP_plus
 #
 # UNWINDINFO:       DW_CFA_def_cfa: reg31 +48
@@ -918,7 +918,7 @@ body:             |
 # ASM-NEXT:  .cfi_escape 0x10, 0x4d, 0x0a, 0x11, 0x60, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 32 - 48 * VG
 # ASM-NEXT:  .cfi_escape 0x10, 0x4e, 0x0a, 0x11, 0x60, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 32 - 56 * VG
 # ASM-NEXT:  .cfi_escape 0x10, 0x4f, 0x0a, 0x11, 0x60, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 32 - 64 * VG
-# ASM:       .cfi_escape 0x0f, 0x0e, 0x8f, 0x00, 0x11, 0xc0, 0x00, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 64 + 144 * VG 
+# ASM:       .cfi_escape 0x0f, 0x0e, 0x8f, 0x00, 0x11, 0xc0, 0x00, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 64 + 144 * VG
 # ASM:       .cfi_escape 0x0f, 0x0e, 0x8f, 0x00, 0x11, 0xc0, 0x00, 0x22, 0x11, 0x98, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 64 + 152 * VG
 #
 # ASM:       .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x20, 0x22, 0x11, 0x98, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 32 + 152 * VG
@@ -1165,19 +1165,19 @@ body:             |
 # CHECK:        - { id: 2, name: '', type: default, offset: -112, size: 16, alignment: 16,
 # CHECK-NEXT:       stack-id: scalable-vector,
 # CHECK:        - { id: 3, name: '', type: default, offset: -114, size: 2, alignment: 2,
-# CHECK-NEXT:       stack-id: scalable-vector,
+# CHECK-NEXT:       stack-id: scalable-predicate-vector,
 # CHECK:        - { id: 4, name: '', type: spill-slot, offset: -144, size: 16, alignment: 16,
 # CHECK-NEXT:       stack-id: scalable-vector,
 # CHECK:        - { id: 5, name: '', type: spill-slot, offset: -146, size: 2, alignment: 2,
-# CHECK-NEXT:       stack-id: scalable-vector,
+# CHECK-NEXT:       stack-id: scalable-predicate-vector,
 # CHECK:        - { id: 6, name: '', type: spill-slot, offset: -16, size: 16, alignment: 16,
 # CHECK-NEXT:       stack-id: scalable-vector, callee-saved-register: '$z8',
 # CHECK:        - { id: 7, name: '', type: spill-slot, offset: -32, size: 16, alignment: 16,
 # CHECK-NEXT:       stack-id: scalable-vector, callee-saved-register: '$z23',
 # CHECK:        - { id: 8, name: '', type: spill-slot, offset: -34, size: 2, alignment: 2,
-# CHECK-NEXT:       stack-id: scalable-vector, callee-saved-register: '$p4',
+# CHECK-NEXT:       stack-id: scalable-predicate-vector, callee-saved-register: '$p4',
 # CHECK:        - { id: 9, name: '', type: spill-slot, offset: -36, size: 2, alignment: 2,
-# CHECK-NEXT:       stack-id: scalable-vector, callee-saved-register: '$p15',
+# CHECK-NEXT:       stack-id: scalable-predicate-vector, callee-saved-register: '$p15',
 # CHECK:        - { id: 10, name: '', type: spill-slot, offset: -16, size: 8, alignment: 16,
 # CHECK-NEXT:       stack-id: default, callee-saved-register: '$fp',
 #
@@ -1241,9 +1241,9 @@ stack:
   - { id: 0, type: default,    size:  32, alignment: 16, stack-id: scalable-vector }
   - { id: 1, type: default,    size:   4, alignment:  2, stack-id: scalable-vector }
   - { id: 2, type: default,    size:  16, alignment: 16, stack-id: scalable-vector }
-  - { id: 3, type: default,    size:   2, alignment:  2, stack-id: scalable-vector }
+  - { id: 3, type: default,    size:   2, alignment:  2, stack-id: scalable-predicate-vector }
   - { id: 4, type: spill-slot, size:  16, alignment: 16, stack-id: scalable-vector }
-  - { id: 5, type: spill-slot, size:   2, alignment:  2, stack-id: scalable-vector }
+  - { id: 5, type: spill-slot, size:   2, alignment:  2, stack-id: scalable-predicate-vector }
 body:             |
   bb.0.entry:
 
