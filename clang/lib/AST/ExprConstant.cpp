@@ -66,6 +66,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstring>
 #include <functional>
+#include <limits>
 #include <optional>
 
 #define DEBUG_TYPE "exprconstant"
