@@ -294,11 +294,6 @@ ParseResult parseOptionalDynamicIndexList(
   if (parser.parseOperand(sourceRawOperand))
     return ::mlir::failure();
 
-  // skip the "offsets :" at the begining if it exists
-  // if (::mlir::succeeded(parser.parseOptionalKeyword("offsets"))) {
-  //  if (parser.parseColon())
-  // return ::mlir::failure();
-  //}
   offsetsOperandsLoc = parser.getCurrentLocation();
 
   DenseBoolArrayAttr scalableFlags;
@@ -399,8 +394,7 @@ ParseResult parseOptionalDynamicIndexList(
 void CreateNdDescOp::print(::mlir::OpAsmPrinter &_odsPrinter) {
   _odsPrinter << ' ';
   _odsPrinter << getSource();
-  // Print offsets if getConstOffsetsAttr() exists, is not empty, and its first
-  // value is not int64_t::max.
+
   auto constOffsetsAttr = getConstOffsetsAttr();
   bool printOffsets = false;
   if (constOffsetsAttr && constOffsetsAttr.size() > 0) {
