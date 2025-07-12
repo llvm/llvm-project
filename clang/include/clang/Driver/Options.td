@@ -4504,6 +4504,9 @@ defm ptrauth_init_fini_address_discrimination : OptInCC1FFlag<"ptrauth-init-fini
   "Enable address discrimination of function pointers in init/fini arrays">;
 defm ptrauth_elf_got : OptInCC1FFlag<"ptrauth-elf-got", "Enable authentication of pointers from GOT (ELF only)">;
 defm aarch64_jump_table_hardening: OptInCC1FFlag<"aarch64-jump-table-hardening", "Use hardened lowering for jump-table dispatch">;
+defm ptrauth_objc_isa : OptInCC1FFlag<"ptrauth-objc-isa", "Enable signing and authentication of Objective-C object's 'isa' field">;
+defm ptrauth_objc_interface_sel : OptInCC1FFlag<"ptrauth-objc-interface-sel", "Enable signing and authentication of Objective-C object's 'SEL' fields">;
+defm ptrauth_objc_class_ro : OptInCC1FFlag<"ptrauth-objc-class-ro", "Enable signing and authentication for ObjC class_ro pointers">;
 }
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
