@@ -683,3 +683,60 @@ EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {
 
   return TPR.TargetPointer;
 }
+
+EXTERN int omp_target_is_accessible(const void *Ptr, size_t Size,
+                                    int DeviceNum) {
+  TIMESCOPE();
+  // OpenMP 5.1, sec. 3.8.4 "omp_target_is_accessible", p. 417, L21-22:
+  // "This routine returns true if the storage of size bytes starting at the
+  // address given by Ptr is accessible from device device_num. Otherwise, it
+  // returns false."
+  //
+  // The meaning of "accessible" for unified shared memory is established in
+  // OpenMP 5.1, sec. 2.5.1 "requires directive".  More generally, the specified
+  // host memory is accessible if it can be accessed from the device either
+  // directly (because of unified shared memory or because DeviceNum is the
+  // value returned by omp_get_initial_device()) or indirectly (because it's
+  // mapped to the device).
+  DP("Call to omp_target_is_accessible for device %d and address " DPxMOD "\n",
+     DeviceNum, DPxPTR(Ptr));
+
+  // FIXME: Is this right?
+  //
+  // Null pointer is permitted:
+  //
+  // OpenMP 5.1, sec. 3.8.4 "omp_target_is_accessible", p. 417, L15:
+  // "The value of ptr must be a valid host pointer or NULL (or C_NULL_PTR, for
+  // Fortran)."
+  //
+  // However, I found no specification of behavior in this case.
+  // omp_target_is_present has the same problem and is implemented the same way.
+  // Should Size have any effect on the result when Ptr is NULL?
+  if (!Ptr) {
+    DP("Call to omp_target_is_accessible with NULL Ptr, returning false\n");
+    return false;
+  }
+
+  if (DeviceNum == omp_get_initial_device()) {
+    DP("Call to omp_target_is_accessible on host, returning true\n");
+    return true;
+  }
+  
+  auto DeviceOrErr = PM->getDevice(DeviceNum);
+  if (!DeviceOrErr)
+    FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
+
+  // TODO: How does the spec intend for the Size=0 case to be handled?
+  // Currently, for the case where arr[N:M] is mapped, we return true for any
+  // address within arr[0:N+M].  However, Size>1 returns true only for arr[N:M].
+  // This is based on the discussion so far at the time of this writing at
+  // <https://github.com/llvm/llvm-project/issues/54899>.  If the behavior
+  // changes, keep comments for omp_get_accessible_buffer in omp.h.var in sync.
+  TargetPointerResultTy TPR =
+      DeviceOrErr->getMappingInfo().getTgtPtrBegin(const_cast<void *>(Ptr), Size,
+                                                   /*UpdateRefCount=*/false,
+                                                   /*UseHoldRefCount=*/false);
+  int Rc = TPR.isPresent();
+  DP("Call to omp_target_is_accessible returns %d\n", Rc);
+  return Rc;
+}
