@@ -297,8 +297,8 @@ using DeferredFiles = std::vector<DeferredFile>;
 // the process is not stalled waiting on disk buffer i/o.
 void multiThreadedPageInBackground(const DeferredFiles &deferred) {
   static size_t pageSize = Process::getPageSizeEstimate(), totalBytes;
+  static std::mutex mutex;
   size_t index = 0;
-  std::mutex mutex;
 
   parallelFor(0, config->readThreads, [&](size_t I) {
     while (true) {
@@ -324,13 +324,14 @@ void multiThreadedPageInBackground(const DeferredFiles &deferred) {
                  << deferred.size() << "\n";
 }
 
-static void multiThreadedPageIn(const DeferredFiles &deferred) {
+static void
+multiThreadedPageIn(const DeferredFiles &deferred = DeferredFiles()) {
   static std::thread *running;
   static std::mutex mutex;
   static std::deque<DeferredFiles *> queue;
 
   mutex.lock();
-  if (running) {
+  if (running && (queue.empty() || deferred.empty())) {
     running->join();
     delete running;
     running = nullptr;
@@ -338,20 +339,19 @@ static void multiThreadedPageIn(const DeferredFiles &deferred) {
 
   if (!deferred.empty()) {
     queue.emplace_back(new DeferredFiles(deferred));
-    running = new std::thread([&]() {
-      while (true) {
+    if (!running)
+      running = new std::thread([&]() {
         mutex.lock();
-        if (queue.empty()) {
+        while (!queue.empty()) {
+          DeferredFiles *deferred = queue.front();
           mutex.unlock();
-          return;
+          multiThreadedPageInBackground(*deferred);
+          delete deferred;
+          mutex.lock();
+          queue.pop_front();
         }
-        DeferredFiles *deferred = queue.front();
-        queue.pop_front();
         mutex.unlock();
-        multiThreadedPageInBackground(*deferred);
-        delete deferred;
-      }
-    });
+      });
   }
   mutex.unlock();
 }
@@ -1413,8 +1413,8 @@ static void createFiles(const InputArgList &args) {
         archive->addLazySymbols();
     }
 
-    // flush threads
-    multiThreadedPageIn(DeferredFiles());
+    // reap threads
+    // multiThreadedPageIn();
   }
 }
 
