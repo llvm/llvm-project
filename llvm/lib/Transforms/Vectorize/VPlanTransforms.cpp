@@ -2195,42 +2195,50 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   // VPTypeAnalysis cache.
   SmallVector<VPRecipeBase *> ToErase;
 
-  // Create a scalar phi to track the previous EVL if fixed-order recurrence is
-  // contained.
-  bool ContainsFORs =
-      any_of(Header->phis(), IsaPred<VPFirstOrderRecurrencePHIRecipe>);
-  if (ContainsFORs) {
-    // TODO: Use VPInstruction::ExplicitVectorLength to get maximum EVL.
-    VPValue *MaxEVL = &Plan.getVF();
-    // Emit VPScalarCastRecipe in preheader if VF is not a 32 bits integer.
-    VPBuilder Builder(LoopRegion->getPreheaderVPBB());
-    MaxEVL = Builder.createScalarZExtOrTrunc(MaxEVL, Type::getInt32Ty(Ctx),
-                                             TypeInfo.inferScalarType(MaxEVL),
-                                             DebugLoc());
+  // When unrolling splices may not use VPFirstOrderRecurrencePHIRecipes, so the
+  // below transformation will need to be fixed.
+  assert(!Plan.isUnrolled() &&
+         "Unrolling not supported with EVL tail folding.");
 
-    Builder.setInsertPoint(Header, Header->getFirstNonPhi());
-    VPValue *PrevEVL =
-        Builder.createScalarPhi({MaxEVL, &EVL}, DebugLoc(), "prev.evl");
+  // Replace FirstOrderRecurrenceSplice with experimental_vp_splice intrinsics.
+  VPValue *PrevEVL = nullptr;
+  for (VPRecipeBase &PhiR : Header->phis()) {
+    auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&PhiR);
+    if (!FOR)
+      continue;
 
-    for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-             vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
-      for (VPRecipeBase &R : *VPBB) {
-        using namespace VPlanPatternMatch;
-        VPValue *V1, *V2;
-        if (!match(&R,
-                   m_VPInstruction<VPInstruction::FirstOrderRecurrenceSplice>(
-                       m_VPValue(V1), m_VPValue(V2))))
-          continue;
-        VPValue *Imm = Plan.getOrAddLiveIn(
-            ConstantInt::getSigned(Type::getInt32Ty(Ctx), -1));
-        VPWidenIntrinsicRecipe *VPSplice = new VPWidenIntrinsicRecipe(
-            Intrinsic::experimental_vp_splice,
-            {V1, V2, Imm, AllOneMask, PrevEVL, &EVL},
-            TypeInfo.inferScalarType(R.getVPSingleValue()), R.getDebugLoc());
-        VPSplice->insertBefore(&R);
-        R.getVPSingleValue()->replaceAllUsesWith(VPSplice);
-        ToErase.push_back(&R);
-      }
+    // Create a scalar phi to track the previous EVL if fixed-order recurrence
+    // is contained.
+    if (!PrevEVL) {
+      // TODO: Use VPInstruction::ExplicitVectorLength to get maximum EVL.
+      VPValue *MaxEVL = &Plan.getVF();
+      // Emit VPScalarCastRecipe in preheader if VF is not a 32 bits integer.
+      VPBuilder Builder(LoopRegion->getPreheaderVPBB());
+      MaxEVL = Builder.createScalarZExtOrTrunc(MaxEVL, Type::getInt32Ty(Ctx),
+                                               TypeInfo.inferScalarType(MaxEVL),
+                                               DebugLoc());
+
+      Builder.setInsertPoint(Header, Header->getFirstNonPhi());
+      PrevEVL = Builder.createScalarPhi({MaxEVL, &EVL}, DebugLoc(), "prev.evl");
+    }
+
+    for (VPUser *User : FOR->users()) {
+      auto *R = cast<VPRecipeBase>(User);
+      using namespace VPlanPatternMatch;
+      VPValue *V1, *V2;
+      if (!match(R, m_VPInstruction<VPInstruction::FirstOrderRecurrenceSplice>(
+                        m_VPValue(V1), m_VPValue(V2))))
+        continue;
+      VPValue *Imm = Plan.getOrAddLiveIn(
+          ConstantInt::getSigned(Type::getInt32Ty(Ctx), -1));
+      VPWidenIntrinsicRecipe *VPSplice = new VPWidenIntrinsicRecipe(
+          Intrinsic::experimental_vp_splice,
+          {V1, V2, Imm, AllOneMask, PrevEVL, &EVL},
+          TypeInfo.inferScalarType(R->getVPSingleValue()), R->getDebugLoc());
+
+      VPSplice->insertBefore(R);
+      R->getVPSingleValue()->replaceAllUsesWith(VPSplice);
+      ToErase.push_back(R);
     }
   }
 
