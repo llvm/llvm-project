@@ -18,11 +18,15 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
-template <class T> LIBC_INLINE constexpr const T &max(const T &a, const T &b) {
+template <class T>
+LIBC_INLINE constexpr const T &max(LIBC_LIFETIMEBOUND const T &a,
+                                   LIBC_LIFETIMEBOUND const T &b) {
   return (a < b) ? b : a;
 }
 
-template <class T> LIBC_INLINE constexpr const T &min(const T &a, const T &b) {
+template <class T>
+LIBC_INLINE constexpr const T &min(LIBC_LIFETIMEBOUND const T &a,
+                                   LIBC_LIFETIMEBOUND const T &b) {
   return (a < b) ? a : b;
 }
 
