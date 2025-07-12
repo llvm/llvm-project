@@ -10,8 +10,6 @@
 
 // REQUIRES: std-at-least-c++26
 
-// UNSUPPORTED: no-localization
-
 // class text_encoding
 
 // text_encoding::text_encoding() noexcept
