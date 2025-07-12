@@ -2164,22 +2164,6 @@ let AddedComplexity = 400, Predicates = [IsISA3_1, HasVSX] in {
 class XXEvalPattern <ValueType vt, dag pattern, bits<8> imm> :
   Pat<(vt pattern), (XXEVAL $vA, $vB, $vC, imm)> {}
 
-  // Helper class to generate binary operation DAGs for various vector types.
-  // For v4i32, emits (op B C).
-  // For other types, bitcasts operands to v4i32, applies the op, then bitcasts back.
-class BinaryOpDag<ValueType vt, SDPatternOperator op > {
-  // The DAG for the binary operation.
-  dag OpDag = !if( !eq(vt, v4i32),
-                      (op vt:$vB, vt:$vC),
-                      (vt (bitconvert (op (v4i32 (bitconvert vt:$vB)), (v4i32 (bitconvert vt:$vC)))))                 
-                    );
-  // The DAG for the binary operation with a NOT applied to the result.
-  dag VnotOpDag = !if( !eq(vt, v4i32),
-                          (vnot (op vt:$vB, vt:$vC)),
-                          (vt (bitconvert (vnot (op (v4i32 (bitconvert vt:$vB)), (v4i32 (bitconvert vt:$vC))))))                 
-                        );
-}
-
   // Helper class to generate unary NOT patterns for vector types.
   // For v4i32, emits (vnot B) or (vnot C).
   // For other types, bitcasts operand to v4i32, applies vnot, then bitcasts back.
@@ -2197,10 +2181,15 @@ class XXEvalUnaryNotPattern<ValueType vt> {
   // Wrapper class for binary patterns with optional NOT on the result.
   // If 'not' is 0, emits the binary op; if 1, emits vnot of the binary op.
 class XXEvalBinaryPattern<ValueType vt, SDPatternOperator op, bit not = 0> {
-  dag opPat = !if( !eq(not, 0),
-                    BinaryOpDag<vt, op>.OpDag,
-                    BinaryOpDag<vt, op>.VnotOpDag
-                  );
+  dag opPat = !if(!eq(not, 0),
+                    // DAG for the binary operation.
+                    !if(!eq(vt, v4i32),
+                        (op vt:$vB, vt:$vC),
+                        (vt (bitconvert (op (v4i32 (bitconvert vt:$vB)), (v4i32 (bitconvert vt:$vC)))))),
+                    // DAG for the binary operation with a NOT applied to the result.  
+                    !if(!eq(vt, v4i32),
+                        (vnot (op vt:$vB, vt:$vC)),
+                        (vt (bitconvert (vnot (op (v4i32 (bitconvert vt:$vB)), (v4i32 (bitconvert vt:$vC))))))));
 }
 
 multiclass XXEvalVSelectWithXAnd<ValueType vt, bits<8> baseImm> {
@@ -2389,7 +2378,7 @@ multiclass XXEvalVSelectWithXXorCast<ValueType vt, bits<8> baseImm>{
 
 // Instantiate XXEval patterns for all vector types
 let Predicates = [HasP10Vector] in {
-  let AddedComplexity = 500 in {
+  let AddedComplexity = 400 in {
       // For types directly supported by XXEVAL (v4i32, v2i64)
       foreach type = [v4i32, v2i64] in {
           defm : XXEvalVSelectWithXAnd<type, 22>;
