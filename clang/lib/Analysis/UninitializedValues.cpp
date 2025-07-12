@@ -276,14 +276,7 @@ namespace {
 /// escaped the analysis and will be treated as an initialization.
 class ClassifyRefs : public StmtVisitor<ClassifyRefs> {
 public:
-  enum Class {
-    Init,
-    Use,
-    SelfInit,
-    ConstRefUse,
-    ConstPtrUse,
-    Ignore
-  };
+  enum Class { Init, Use, SelfInit, ConstRefUse, ConstPtrUse, Ignore };
 
 private:
   const DeclContext *DC;
