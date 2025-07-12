@@ -2341,8 +2341,15 @@ llvm::Value *CodeGenFunction::EmitDynamicCast(Address ThisAddr,
   } else if (IsExact) {
     // If the destination type is effectively final, this pointer points to the
     // right type if and only if its vptr has the right value.
-    Value = CGM.getCXXABI().emitExactDynamicCast(
-        *this, ThisAddr, SrcRecordTy, DestTy, DestRecordTy, CastEnd, CastNull);
+    std::optional<llvm::Value *> ExactCast =
+        CGM.getCXXABI().emitExactDynamicCast(*this, ThisAddr, SrcRecordTy,
+                                             DestTy, DestRecordTy, CastEnd,
+                                             CastNull);
+    if (!ExactCast) {
+      Value = llvm::Constant::getNullValue(VoidPtrTy);
+      EmitBranch(CastNull);
+    } else
+      Value = *ExactCast;
   } else {
     assert(DestRecordTy->isRecordType() &&
            "destination type must be a record type!");
@@ -2364,7 +2371,7 @@ llvm::Value *CodeGenFunction::EmitDynamicCast(Address ThisAddr,
 
   EmitBlock(CastEnd);
 
-  if (CastNull) {
+  if (CastNull && CastNotNull) {
     llvm::PHINode *PHI = Builder.CreatePHI(Value->getType(), 2);
     PHI->addIncoming(Value, CastNotNull);
     PHI->addIncoming(NullValue, CastNull);
