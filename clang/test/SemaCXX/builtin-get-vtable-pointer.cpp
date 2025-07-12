@@ -53,7 +53,7 @@ const void *getThing(const Bar<T> *b = nullptr) {
   return __builtin_get_vtable_pointer(b->ty()); // expected-error{{__builtin_get_vtable_pointer requires an argument of class pointer type, but 'SubType *' (aka 'int *') was provided}}
                                                 // expected-error@-1{{__builtin_get_vtable_pointer requires an argument of polymorphic class pointer type, but 'Thing1' has no virtual methods}}
                                                 // expected-error@-2{{__builtin_get_vtable_pointer requires an argument of polymorphic class pointer type, but 'NonPolymorphic' has no virtual methods}}
-                                                // expected-error@-3{{__builtin_get_vtable_pointer requires an argument with a complete type, but 'SubType' (aka 'basic::ForwardDeclaration') is incomplete}}
+                                                // expected-error@-3{{__builtin_get_vtable_pointer requires an argument with a complete type, but 'SubType' (aka 'ForwardDeclaration') is incomplete}}
 }
 template <typename>
 struct IncompleteTemplate; // expected-note{{template is declared here}}
