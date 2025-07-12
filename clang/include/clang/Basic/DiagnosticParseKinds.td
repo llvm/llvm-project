@@ -1863,8 +1863,7 @@ def err_hlsl_virtual_inheritance
     : Error<"virtual inheritance is unsupported in HLSL">;
 
 // HLSL Root Signature Parser Diagnostics
-def err_hlsl_unexpected_end_of_params
-    : Error<"expected %0 to denote end of parameters, or, another valid parameter of %1">;
+def err_hlsl_invalid_token : Error<"invalid %select{parameter|value}0 of %1">;
 def err_hlsl_rootsig_repeat_param : Error<"specified the same parameter '%0' multiple times">;
 def err_hlsl_rootsig_missing_param : Error<"did not specify mandatory parameter '%0'">;
 def err_hlsl_number_literal_overflow : Error<
