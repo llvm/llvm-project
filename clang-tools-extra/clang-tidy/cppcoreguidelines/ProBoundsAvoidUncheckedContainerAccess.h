@@ -1,4 +1,4 @@
-//===--- ProBoundsAvoidUncheckedContainerAccesses.h - clang-tidy *- C++ -*-===//
+//===--- ProBoundsAvoidUncheckedContainerAccess.h - clang-tidy---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PRO_BOUNDS_AVOID_UNCHECKED_CONTAINER_ACCESSES_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PRO_BOUNDS_AVOID_UNCHECKED_CONTAINER_ACCESSES_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PRO_BOUNDS_AVOID_UNCHECKED_CONTAINER_ACCESS_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PRO_BOUNDS_AVOID_UNCHECKED_CONTAINER_ACCESS_H
 
 #include "../ClangTidyCheck.h"
 
@@ -19,11 +19,11 @@ namespace clang::tidy::cppcoreguidelines {
 /// See
 /// https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#slcon3-avoid-bounds-errors
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-accesses.html
-class ProBoundsAvoidUncheckedContainerAccesses : public ClangTidyCheck {
+/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-access.html
+class ProBoundsAvoidUncheckedContainerAccess : public ClangTidyCheck {
 public:
-  ProBoundsAvoidUncheckedContainerAccesses(StringRef Name,
-                                           ClangTidyContext *Context);
+  ProBoundsAvoidUncheckedContainerAccess(StringRef Name,
+                                         ClangTidyContext *Context);
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
@@ -46,11 +46,11 @@ private:
 namespace clang::tidy {
 template <>
 struct OptionEnumMapping<
-    cppcoreguidelines::ProBoundsAvoidUncheckedContainerAccesses::FixModes> {
+    cppcoreguidelines::ProBoundsAvoidUncheckedContainerAccess::FixModes> {
   static ArrayRef<std::pair<
-      cppcoreguidelines::ProBoundsAvoidUncheckedContainerAccesses::FixModes,
+      cppcoreguidelines::ProBoundsAvoidUncheckedContainerAccess::FixModes,
       StringRef>>
   getEnumMapping();
 };
 } // namespace clang::tidy
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PRO_BOUNDS_AVOID_UNCHECKED_CONTAINER_ACCESSES_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_PRO_BOUNDS_AVOID_UNCHECKED_CONTAINER_ACCESS_H

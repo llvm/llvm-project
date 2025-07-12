@@ -1,7 +1,7 @@
-.. title:: clang-tidy - cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses
+.. title:: clang-tidy - cppcoreguidelines-pro-bounds-avoid-unchecked-container-access
 
-cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses
-===============================================================
+cppcoreguidelines-pro-bounds-avoid-unchecked-container-access
+=============================================================
 
 Finds calls to ``operator[]`` in STL containers and suggests replacing them
 with safe alternatives.
