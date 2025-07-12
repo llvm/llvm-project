@@ -36,8 +36,7 @@
 #define MEMPROF_RAW_VERSION 5ULL
 
 // Currently supported versions.
-#define MEMPROF_RAW_SUPPORTED_VERSIONS                                         \
-  { 3ULL, 4ULL, 5ULL }
+#define MEMPROF_RAW_SUPPORTED_VERSIONS {3ULL, 4ULL, 5ULL}
 
 #define MEMPROF_V3_MIB_SIZE 132ULL;
 

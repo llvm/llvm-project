@@ -6,7 +6,8 @@
 int main() {
   // Allocate memory that will create a histogram
   char *buffer = (char *)malloc(1024);
-  if (!buffer) return 1;
+  if (!buffer)
+    return 1;
 
   for (int i = 0; i < 10; ++i) {
     // Access every 8th byte (since shadow granularity is 8b.
@@ -18,7 +19,7 @@ int main() {
   }
 
   for (int j = 0; j < 400; ++j) {
-    buffer[16] = 'B';  // Count is saturated at 255
+    buffer[16] = 'B'; // Count is saturated at 255
   }
 
   // Free the memory to trigger MIB creation with histogram
