@@ -969,7 +969,6 @@ void shared_flexbase_self_assign_reverse(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
 // CHECK-NEXT:    [[AGG_TEMP1:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.0", align 8
 // CHECK-NEXT:    [[AGG_TEMP2:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.0", align 8
-// CHECK-NEXT:    [[AGG_TEMP5:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.0", align 8
 // CHECK-NEXT:    [[AGG_TEMP16:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
 // CHECK-NEXT:    [[AGG_TEMP23:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
 // CHECK-NEXT:    [[AGG_TEMP26:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
@@ -982,12 +981,11 @@ void shared_flexbase_self_assign_reverse(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT:    store ptr [[P]], ptr [[P_INDIRECT_ADDR]], align 8
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[P]], ptr align 8 [[P]], i64 24, i1 false)
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP1]], ptr align 8 [[P]], i64 24, i1 false)
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP2]], ptr align 8 [[AGG_TEMP1]], i64 24, i1 false)
-// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP2]], i32 0, i32 0
+// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP1]], i32 0, i32 0
 // CHECK-NEXT:    [[WIDE_PTR_PTR:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP2]], i32 0, i32 1
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP1]], i32 0, i32 1
 // CHECK-NEXT:    [[WIDE_PTR_UB:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP2]], i32 0, i32 2
+// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP1]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_SHARED:%.*]], ptr [[WIDE_PTR_PTR]], i64 1
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[WIDE_PTR_UB]], !annotation [[META2]]
@@ -1004,12 +1002,12 @@ void shared_flexbase_self_assign_reverse(struct Shared * __bidi_indexable p) {
 // CHECK:       [[CONT4]]:
 // CHECK-NEXT:    [[LEN:%.*]] = getelementptr inbounds nuw [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[LEN]], align 8
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP5]], ptr align 8 [[AGG_TEMP1]], i64 24, i1 false)
-// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR6:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP5]], i32 0, i32 0
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP2]], ptr align 8 [[P]], i64 24, i1 false)
+// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR6:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP2]], i32 0, i32 0
 // CHECK-NEXT:    [[WIDE_PTR_PTR7:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR6]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR8:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP5]], i32 0, i32 1
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR8:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP2]], i32 0, i32 1
 // CHECK-NEXT:    [[WIDE_PTR_UB9:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR8]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR10:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP5]], i32 0, i32 2
+// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR10:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP2]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB11:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR10]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR7]], i64 1
 // CHECK-NEXT:    [[TMP5:%.*]] = icmp ule ptr [[TMP4]], [[WIDE_PTR_UB9]], !annotation [[META2]]
@@ -1154,7 +1152,6 @@ void shared_flexbase_self_assign_fr(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
 // CHECK-NEXT:    [[AGG_TEMP1:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.0", align 8
 // CHECK-NEXT:    [[AGG_TEMP2:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.0", align 8
-// CHECK-NEXT:    [[AGG_TEMP5:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.0", align 8
 // CHECK-NEXT:    [[AGG_TEMP16:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
 // CHECK-NEXT:    [[AGG_TEMP23:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
 // CHECK-NEXT:    [[AGG_TEMP26:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable.1", align 8
@@ -1167,12 +1164,11 @@ void shared_flexbase_self_assign_fr(struct Shared * __bidi_indexable p) {
 // CHECK-NEXT:    store ptr [[P]], ptr [[P_INDIRECT_ADDR]], align 8
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[P]], ptr align 8 [[P]], i64 24, i1 false)
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP1]], ptr align 8 [[P]], i64 24, i1 false)
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP2]], ptr align 8 [[AGG_TEMP1]], i64 24, i1 false)
-// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP2]], i32 0, i32 0
+// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP1]], i32 0, i32 0
 // CHECK-NEXT:    [[WIDE_PTR_PTR:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP2]], i32 0, i32 1
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP1]], i32 0, i32 1
 // CHECK-NEXT:    [[WIDE_PTR_UB:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP2]], i32 0, i32 2
+// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP1]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_SHARED:%.*]], ptr [[WIDE_PTR_PTR]], i64 1
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[WIDE_PTR_UB]], !annotation [[META2]]
@@ -1189,12 +1185,12 @@ void shared_flexbase_self_assign_fr(struct Shared * __bidi_indexable p) {
 // CHECK:       [[CONT4]]:
 // CHECK-NEXT:    [[LEN:%.*]] = getelementptr inbounds nuw [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[LEN]], align 8
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP5]], ptr align 8 [[AGG_TEMP1]], i64 24, i1 false)
-// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR6:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP5]], i32 0, i32 0
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP2]], ptr align 8 [[P]], i64 24, i1 false)
+// CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR6:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP2]], i32 0, i32 0
 // CHECK-NEXT:    [[WIDE_PTR_PTR7:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR6]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR8:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP5]], i32 0, i32 1
+// CHECK-NEXT:    [[WIDE_PTR_UB_ADDR8:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP2]], i32 0, i32 1
 // CHECK-NEXT:    [[WIDE_PTR_UB9:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR8]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR10:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP5]], i32 0, i32 2
+// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR10:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP2]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB11:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR10]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SHARED]], ptr [[WIDE_PTR_PTR7]], i64 1
 // CHECK-NEXT:    [[TMP5:%.*]] = icmp ule ptr [[TMP4]], [[WIDE_PTR_UB9]], !annotation [[META2]]

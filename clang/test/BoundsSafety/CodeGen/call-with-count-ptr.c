@@ -241,11 +241,11 @@ int arr[] = {0, 1, 2, 3, 4, 5};
 // CHECK_X64_O0-NEXT:    br label [[LAND_END]]
 // CHECK_X64_O0:       land.end:
 // CHECK_X64_O0-NEXT:    [[TMP38:%.*]] = phi i1 [ false, [[LAND_LHS_TRUE]] ], [ false, [[CONT]] ], [ [[CMP116]], [[LAND_RHS]] ], {{!annotation ![0-9]+}}
-// CHECK_X64_O0-NEXT:    br i1 [[TMP38]], label [[CONT118:%.*]], label [[TRAP117:%.*]], {{!annotation ![0-9]+}}
-// CHECK_X64_O0:       trap117:
+// CHECK_X64_O0-NEXT:    br i1 [[TMP38]], label %[[CONT118:.*]], label %[[TRAP117:.*]], {{!prof ![0-9]+}}, {{!annotation ![0-9]+}}
+// CHECK_X64_O0:       [[TRAP117]]:
 // CHECK_X64_O0-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], {{!annotation ![0-9]+}}
 // CHECK_X64_O0-NEXT:    unreachable
-// CHECK_X64_O0:       cont118:
+// CHECK_X64_O0:       [[CONT118]]:
 // CHECK_X64_O0-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP119]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false)
 // CHECK_X64_O0-NEXT:    [[WIDE_PTR_PTR_ADDR120:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP119]], i32 0, i32 0
 // CHECK_X64_O0-NEXT:    [[WIDE_PTR_PTR121:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR120]], align 8
@@ -491,11 +491,11 @@ int arr[] = {0, 1, 2, 3, 4, 5};
 // CHECK_ARM64_O0-NEXT:    br label [[LAND_END]]
 // CHECK_ARM64_O0:       land.end:
 // CHECK_ARM64_O0-NEXT:    [[TMP38:%.*]] = phi i1 [ false, [[LAND_LHS_TRUE]] ], [ false, [[CONT]] ], [ [[CMP116]], [[LAND_RHS]] ], {{!annotation ![0-9]+}}
-// CHECK_ARM64_O0-NEXT:    br i1 [[TMP38]], label [[CONT118:%.*]], label [[TRAP117:%.*]], {{!annotation ![0-9]+}}
-// CHECK_ARM64_O0:       trap117:
+// CHECK_ARM64_O0-NEXT:    br i1 [[TMP38]], label %[[CONT118:.*]], label %[[TRAP117:.*]], {{!prof ![0-9]+}}, {{!annotation ![0-9]+}}
+// CHECK_ARM64_O0:       [[TRAP117]]:
 // CHECK_ARM64_O0-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], {{!annotation ![0-9]+}}
 // CHECK_ARM64_O0-NEXT:    unreachable
-// CHECK_ARM64_O0:       cont118:
+// CHECK_ARM64_O0:       [[CONT118]]:
 // CHECK_ARM64_O0-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP119]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false)
 // CHECK_ARM64_O0-NEXT:    [[WIDE_PTR_PTR_ADDR120:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP119]], i32 0, i32 0
 // CHECK_ARM64_O0-NEXT:    [[WIDE_PTR_PTR121:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR120]], align 8

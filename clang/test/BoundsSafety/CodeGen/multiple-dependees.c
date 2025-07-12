@@ -26,7 +26,6 @@ struct T {
 // CHECK-NEXT:    [[AGG_TEMP20:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
 // CHECK-NEXT:    [[AGG_TEMP32:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
 // CHECK-NEXT:    [[AGG_TEMP40:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
-// CHECK-NEXT:    [[AGG_TEMP41:%.*]] = alloca [[STRUCT_T]], align 8
 // CHECK-NEXT:    store i32 [[IDX:%.*]], ptr [[IDX_ADDR]], align 4
 // CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ARR]], i8 0, i64 64, i1 false)
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [16 x i32], ptr [[ARR]], i64 0, i64 0
@@ -111,12 +110,11 @@ struct T {
 // CHECK-NEXT:    [[WIDE_PTR_LB38:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR37]], align 8
 // CHECK-NEXT:    [[PTR39:%.*]] = getelementptr inbounds nuw [[STRUCT_T]], ptr [[T]], i32 0, i32 2
 // CHECK-NEXT:    store ptr [[WIDE_PTR_PTR34]], ptr [[PTR39]], align 8
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP41]], ptr align 8 [[T]], i64 16, i1 false)
-// CHECK-NEXT:    [[CNT142:%.*]] = getelementptr inbounds nuw [[STRUCT_T]], ptr [[AGG_TEMP41]], i32 0, i32 0
+// CHECK-NEXT:    [[CNT142:%.*]] = getelementptr inbounds nuw [[STRUCT_T]], ptr [[T]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[CNT142]], align 8
-// CHECK-NEXT:    [[CNT243:%.*]] = getelementptr inbounds nuw [[STRUCT_T]], ptr [[AGG_TEMP41]], i32 0, i32 1
+// CHECK-NEXT:    [[CNT243:%.*]] = getelementptr inbounds nuw [[STRUCT_T]], ptr [[T]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[CNT243]], align 4
-// CHECK-NEXT:    [[PTR44:%.*]] = getelementptr inbounds nuw [[STRUCT_T]], ptr [[AGG_TEMP41]], i32 0, i32 2
+// CHECK-NEXT:    [[PTR44:%.*]] = getelementptr inbounds nuw [[STRUCT_T]], ptr [[T]], i32 0, i32 2
 // CHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[PTR44]], align 8
 // CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 2, [[TMP5]]
 // CHECK-NEXT:    [[MUL45:%.*]] = mul nsw i32 3, [[TMP6]]
@@ -140,23 +138,23 @@ struct T {
 // CHECK-NEXT:    [[WIDE_PTR_LB51:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR50]], align 8
 // CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[ARRAYIDX]], i64 1, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP13:%.*]] = icmp ule ptr [[TMP12]], [[WIDE_PTR_UB49]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TMP13]], label [[CONT53:%.*]], label [[TRAP52:%.*]], !prof [[PROF4]], {{!annotation ![0-9]+}}
-// CHECK:       trap52:
+// CHECK-NEXT:    br i1 [[TMP13]], label %[[CONT53:.*]], label %[[TRAP52:.*]], !prof [[PROF4]], {{!annotation ![0-9]+}}
+// CHECK:       [[TRAP52]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
-// CHECK:       cont53:
+// CHECK:       [[CONT53]]:
 // CHECK-NEXT:    [[TMP14:%.*]] = icmp ule ptr [[ARRAYIDX]], [[TMP12]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TMP14]], label [[CONT55:%.*]], label [[TRAP54:%.*]], !prof [[PROF4]], {{!annotation ![0-9]+}}
-// CHECK:       trap54:
+// CHECK-NEXT:    br i1 [[TMP14]], label %[[CONT55:.*]], label %[[TRAP54:.*]], !prof [[PROF4]], {{!annotation ![0-9]+}}
+// CHECK:       [[TRAP54]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
-// CHECK:       cont55:
+// CHECK:       [[CONT55]]:
 // CHECK-NEXT:    [[TMP15:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB51]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TMP15]], label [[CONT57:%.*]], label [[TRAP56:%.*]], !prof [[PROF4]], {{!annotation ![0-9]+}}
-// CHECK:       trap56:
+// CHECK-NEXT:    br i1 [[TMP15]], label %[[CONT57:.*]], label %[[TRAP56:.*]], !prof [[PROF4]], {{!annotation ![0-9]+}}
+// CHECK:       [[TRAP56]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
-// CHECK:       cont57:
+// CHECK:       [[CONT57]]:
 // CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 // CHECK-NEXT:    ret i32 [[TMP16]]
 //
