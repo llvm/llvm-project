@@ -2453,7 +2453,8 @@ Sema::PopFunctionScopeInfo(const AnalysisBasedWarnings::Policy *WP,
 
   // Issue any analysis-based warnings.
   if (WP && D) {
-    inferNoReturnAttr(*this, D);
+    AnalysisWarnings.InferNoReturnAttributes(
+        *this, getASTContext().getTranslationUnitDecl());
     AnalysisWarnings.IssueWarnings(*WP, Scope.get(), D, BlockType);
   } else
     for (const auto &PUD : Scope->PossiblyUnreachableDiags)
