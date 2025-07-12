@@ -28,7 +28,7 @@ will generate a warning.
 STL containers that do not access memory outside the memory allocated by the
 container via ``operator[]`` are excluded from this check. Excluded classes,
 including the STL containers excluded by default, can be customized via
-:option:`ExcludedClasses`.
+:option:`ExcludeClasses`.
 
 This check enforces part of the `SL.con.3
 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#slcon3-avoid-bounds-errors>`
