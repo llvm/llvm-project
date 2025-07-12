@@ -41,7 +41,7 @@ constexpr bool test() {
   }
 
   {
-    // underlying non-const to const not convertible
+    // Check when we can't perform a non-const-to-const conversion of the ziperator
     std::ranges::zip_transform_view v(MakeTuple{}, ConstIterIncompatibleView{buffer});
     auto iter1 = v.begin();
     auto iter2 = std::as_const(v).begin();
