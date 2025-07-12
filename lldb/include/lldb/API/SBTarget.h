@@ -23,6 +23,7 @@
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBWatchpoint.h"
 #include "lldb/API/SBWatchpointOptions.h"
+#include "lldb/lldb-types.h"
 
 namespace lldb_private {
 namespace python {
@@ -736,6 +737,11 @@ public:
   lldb::SBBreakpoint BreakpointCreateByAddress(addr_t address);
 
   lldb::SBBreakpoint BreakpointCreateBySBAddress(SBAddress &address);
+
+  lldb::SBBreakpoint
+  BreakpointCreateByFileAddress(const SBFileSpec &file_spec, addr_t file_addr,
+                                addr_t offset = 0,
+                                addr_t instructions_offset = 0);
 
   /// Create a breakpoint using a scripted resolver.
   ///

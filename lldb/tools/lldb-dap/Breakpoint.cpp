@@ -8,10 +8,14 @@
 
 #include "Breakpoint.h"
 #include "DAP.h"
+#include "LLDBUtils.h"
+#include "Protocol/DAPTypes.h"
 #include "ProtocolUtils.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBBreakpointLocation.h"
+#include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBLineEntry.h"
+#include "lldb/API/SBModule.h"
 #include "lldb/API/SBMutex.h"
 #include "llvm/ADT/StringExtras.h"
 #include <cstddef>
@@ -20,6 +24,22 @@
 #include <string>
 
 using namespace lldb_dap;
+
+static std::optional<protocol::PersistenceData>
+GetPersistenceDataForAddress(lldb::SBAddress &addr) {
+  protocol::PersistenceData persistence_data;
+  lldb::SBModule module = addr.GetModule();
+  if (!module.IsValid())
+    return std::nullopt;
+
+  lldb::SBFileSpec file_spec = module.GetFileSpec();
+  if (!file_spec.IsValid())
+    return std::nullopt;
+
+  persistence_data.module = GetSBFileSpecPath(file_spec);
+  persistence_data.fileAddress = addr.GetFileAddress();
+  return persistence_data;
+}
 
 void Breakpoint::SetCondition() { m_bp.SetCondition(m_condition.c_str()); }
 
@@ -73,15 +93,24 @@ protocol::Breakpoint Breakpoint::ToProtocolBreakpoint() {
       const auto column = line_entry.GetColumn();
       if (column != LLDB_INVALID_COLUMN_NUMBER)
         breakpoint.column = column;
-    } else {
+    } else if (source) {
       // Assembly breakpoint.
       auto symbol = bp_addr.GetSymbol();
       if (symbol.IsValid()) {
-        breakpoint.line =
-            m_bp.GetTarget()
-                .ReadInstructions(symbol.GetStartAddress(), bp_addr, nullptr)
-                .GetSize() +
-            1;
+        lldb::SBAddress start_address = symbol.GetStartAddress();
+        breakpoint.line = m_bp.GetTarget()
+                              .ReadInstructions(start_address, bp_addr, nullptr)
+                              .GetSize() +
+                          1;
+
+        // Add persistent data so that the breakpoint can be resolved
+        // in future sessions.
+        std::optional<protocol::PersistenceData> persistence_data =
+            GetPersistenceDataForAddress(start_address);
+        if (persistence_data) {
+          source->adapterData =
+              protocol::SourceLLDBData{std::move(persistence_data)};
+        }
       }
     }
 

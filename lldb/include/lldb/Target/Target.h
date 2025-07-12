@@ -18,6 +18,7 @@
 #include "lldb/Breakpoint/BreakpointList.h"
 #include "lldb/Breakpoint/BreakpointName.h"
 #include "lldb/Breakpoint/WatchpointList.h"
+#include "lldb/Core/Address.h"
 #include "lldb/Core/Architecture.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/ModuleList.h"
@@ -723,11 +724,11 @@ public:
   lldb::BreakpointSP CreateBreakpoint(lldb::addr_t load_addr, bool internal,
                                       bool request_hardware);
 
-  // Use this to create a breakpoint from a load address and a module file spec
-  lldb::BreakpointSP CreateAddressInModuleBreakpoint(lldb::addr_t file_addr,
-                                                     bool internal,
-                                                     const FileSpec &file_spec,
-                                                     bool request_hardware);
+  // Use this to create a breakpoint from a file address and a module file spec
+  lldb::BreakpointSP CreateAddressInModuleBreakpoint(
+      lldb::addr_t file_addr, bool internal, const FileSpec &file_spec,
+      bool request_hardware, lldb::addr_t offset = 0,
+      lldb::addr_t instructions_offset = 0);
 
   // Use this to create Address breakpoints:
   lldb::BreakpointSP CreateBreakpoint(const Address &addr, bool internal,
@@ -1327,6 +1328,10 @@ public:
   CompilerType GetRegisterType(const std::string &name,
                                const lldb_private::RegisterFlags &flags,
                                uint32_t byte_size);
+
+  lldb::DisassemblerSP ReadInstructions(const Address &start_addr,
+                                        uint32_t count,
+                                        const char *flavor_string = nullptr);
 
   // Target Stop Hooks
   class StopHook : public UserID {

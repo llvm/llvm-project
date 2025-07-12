@@ -30,6 +30,14 @@ BreakpointResolverAddress::BreakpointResolverAddress(const BreakpointSP &bkpt,
     : BreakpointResolver(bkpt, BreakpointResolver::AddressResolver),
       m_addr(addr), m_resolved_addr(LLDB_INVALID_ADDRESS) {}
 
+BreakpointResolverAddress::BreakpointResolverAddress(
+    const BreakpointSP &bkpt, const Address &addr, const FileSpec &module_spec,
+    lldb::addr_t offset, lldb::addr_t instructions_offset)
+    : BreakpointResolver(bkpt, BreakpointResolver::AddressResolver, offset,
+                         instructions_offset),
+      m_addr(addr), m_resolved_addr(LLDB_INVALID_ADDRESS),
+      m_module_filespec(module_spec) {}
+
 BreakpointResolverSP BreakpointResolverAddress::CreateFromStructuredData(
     const StructuredData::Dictionary &options_dict, Status &error) {
   llvm::StringRef module_name;
@@ -133,6 +141,11 @@ Searcher::CallbackReturn BreakpointResolverAddress::SearchCallback(
           Address tmp_address;
           if (module_sp->ResolveFileAddress(m_addr.GetOffset(), tmp_address))
             m_addr = tmp_address;
+          else
+            return Searcher::eCallbackReturnStop;
+        } else {
+          // If we didn't find the module, then we can't resolve the address.
+          return Searcher::eCallbackReturnStop;
         }
       }
 
