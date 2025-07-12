@@ -528,12 +528,12 @@ void DataAggregator::imputeFallThroughs() {
   uint64_t InferredTraces = 0;
 
   // Helper map with whether the instruction is a call/ret/unconditional branch
-  std::unordered_map<uint64_t, bool> IsUncondJumpMap;
-  auto checkUncondJump = [&](const uint64_t Addr) {
-    auto isUncondJump = [&](const MCInst &MI) -> bool {
-      return BC->MIB->IsUnconditionalJump(MI);
+  std::unordered_map<uint64_t, bool> IsUncondCTMap;
+  auto checkUnconditionalControlTransfer = [&](const uint64_t Addr) {
+    auto isUncondCT = [&](const MCInst &MI) -> bool {
+      return BC->MIB->isUnconditionalControlTransfer(MI);
     };
-    return testAndSet<bool>(Addr, isUncondJump, IsUncondJumpMap).value_or(true);
+    return testAndSet<bool>(Addr, isUncondCT, IsUncondCTMap).value_or(true);
   };
 
   // Traces are sorted by their component addresses (Branch, From, To).
@@ -557,9 +557,10 @@ void DataAggregator::imputeFallThroughs() {
     if (Trace.To == Trace::BR_ONLY) {
       // If the group is not empty, use aggregate values, otherwise 0-length
       // for unconditional jumps (call/ret/uncond branch) or 1-length for others
-      uint64_t InferredBytes = PrevBranch == CurrentBranch
-                                   ? AggregateFallthroughSize / AggregateCount
-                                   : !checkUncondJump(Trace.From);
+      uint64_t InferredBytes =
+          PrevBranch == CurrentBranch
+              ? AggregateFallthroughSize / AggregateCount
+              : !checkUnconditionalControlTransfer(Trace.From);
       Trace.To = Trace.From + InferredBytes;
       LLVM_DEBUG(dbgs() << "imputed " << Trace << " (" << InferredBytes
                         << " bytes)\n");

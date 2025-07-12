@@ -430,10 +430,15 @@ public:
     return Analysis->isIndirectBranch(Inst);
   }
 
-  bool IsUnconditionalJump(const MCInst &Inst) const {
+  /// Returns true if the instruction unconditionally transfers the control to
+  /// another program point, interrupting sequential code execution, e.g. by a
+  /// call, return, or unconditional jump. This explicitly leaves out
+  /// conditional branches as they may not be taken, but does allow transferring
+  /// the control to the next instruction (zero-displacement jump/call).
+  bool isUnconditionalControlTransfer(const MCInst &Inst) const {
     const MCInstrDesc &Desc = Info->get(Inst.getOpcode());
     // barrier captures returns and unconditional branches
-    return Desc.isCall() || Desc.isBarrier();
+    return Desc.isBarrier() || Desc.isCall();
   }
 
   /// Returns true if the instruction is memory indirect call or jump
