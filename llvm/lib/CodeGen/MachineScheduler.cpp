@@ -190,7 +190,7 @@ cl::opt<MISched::Direction> PreRADirection(
         clEnumValN(MISched::Bidirectional, "bidirectional",
                    "Force bidirectional pre reg-alloc list scheduling")));
 
-static cl::opt<MISched::Direction> PostRADirection(
+cl::opt<MISched::Direction> PostRADirection(
     "misched-postra-direction", cl::Hidden,
     cl::desc("Post reg-alloc list scheduling direction"),
     cl::init(MISched::Unspecified),
