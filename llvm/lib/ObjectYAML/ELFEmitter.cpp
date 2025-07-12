@@ -481,7 +481,11 @@ void ELFState<ELFT>::writeELFHeader(raw_ostream &OS) {
 
   Header.e_version = EV_CURRENT;
   Header.e_entry = Doc.Header.Entry;
-  Header.e_flags = Doc.Header.Flags;
+  if (Doc.Header.Flags)
+    Header.e_flags = *Doc.Header.Flags;
+  else
+    Header.e_flags = 0;
+
   Header.e_ehsize = sizeof(Elf_Ehdr);
 
   if (Doc.Header.EPhOff)
