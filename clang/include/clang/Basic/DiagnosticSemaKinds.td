@@ -8308,6 +8308,9 @@ def err_need_header_before_typeid : Error<
 def err_need_header_before_placement_new : Error<
   "no matching %0 function for non-allocating placement new expression; "
   "include <new>">;
+def err_placement_new_into_const_qualified_storage : Error<
+  "placement new expression with a const-qualified argument of type %0 "
+  "is not allowed">;
 def err_ms___leave_not_in___try : Error<
   "'__leave' statement not in __try block">;
 def err_uuidof_without_guid : Error<
