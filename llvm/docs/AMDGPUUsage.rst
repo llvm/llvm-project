@@ -1844,6 +1844,20 @@ The AMDGPU backend supports the following calling conventions:
                                      ..TODO::
                                      Describe.
 
+     ``amdgpu_gfx_whole_wave``       Used for AMD graphics targets. Functions with this calling convention
+                                     cannot be used as entry points. They must have an i1 as the first argument,
+                                     which will be mapped to the value of EXEC on entry into the function. Other
+                                     arguments will contain poison in their inactive lanes. Similarly, the return
+                                     value for the inactive lanes is poison.
+
+                                     The function will run with all lanes enabled, i.e. EXEC will be set to -1 in the
+                                     prologue and restored to its original value in the epilogue. The inactive lanes
+                                     will be preserved for all the registers used by the function. Active lanes only
+                                     will only be preserved for the callee saved registers.
+
+                                     In all other respects, functions with this calling convention behave like
+                                     ``amdgpu_gfx`` functions.
+
      ``amdgpu_gs``                   Used for Mesa/AMDPAL geometry shaders.
                                      ..TODO::
                                      Describe.
