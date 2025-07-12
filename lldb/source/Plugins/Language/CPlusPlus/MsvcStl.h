@@ -37,6 +37,15 @@ bool MsvcStlSmartPointerSummaryProvider(ValueObject &valobj, Stream &stream,
 lldb_private::SyntheticChildrenFrontEnd *
 MsvcStlSmartPointerSyntheticFrontEndCreator(lldb::ValueObjectSP valobj_sp);
 
+// For both std::list and std::forward_list
+bool IsMsvcStlList(ValueObject &valobj);
+SyntheticChildrenFrontEnd *
+MsvcStlForwardListSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                           lldb::ValueObjectSP valobj_sp);
+SyntheticChildrenFrontEnd *
+MsvcStlListSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                    lldb::ValueObjectSP valobj_sp);
+
 } // namespace formatters
 } // namespace lldb_private
 
