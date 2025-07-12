@@ -74,3 +74,11 @@ add_header_library(
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.manipulation_functions
 )
+
+add_header_library(
+  frexpf
+  HDRS
+    frexpf.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+)
