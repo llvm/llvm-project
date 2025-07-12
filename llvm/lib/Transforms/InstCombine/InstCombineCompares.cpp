@@ -5866,6 +5866,24 @@ static void collectOffsetOp(Value *V, SmallVectorImpl<OffsetOp> &Offsets,
     Offsets.emplace_back(Instruction::Xor, Inst->getOperand(1));
     Offsets.emplace_back(Instruction::Xor, Inst->getOperand(0));
     break;
+  case Instruction::Or:
+    if (cast<PossiblyDisjointInst>(Inst)->isDisjoint())
+      Offsets.emplace_back(Instruction::Xor, Inst->getOperand(1));
+    Offsets.emplace_back(Instruction::Xor, Inst->getOperand(0));
+    break;
+  case Instruction::Shl:
+    if (auto *OBO = cast<OverflowingBinaryOperator>(Inst)) {
+      if (OBO->hasNoSignedWrap())
+        Offsets.emplace_back(Instruction::AShr, Inst->getOperand(1));
+      else if (OBO->hasNoUnsignedWrap())
+        Offsets.emplace_back(Instruction::LShr, Inst->getOperand(1));
+    }
+    break;
+  case Instruction::AShr:
+  case Instruction::LShr:
+    if (auto *PEO = cast<PossiblyExactOperator>(Inst); PEO && PEO->isExact())
+      Offsets.emplace_back(Instruction::Shl, Inst->getOperand(1));
+    break;
   case Instruction::Select:
     if (AllowRecursion) {
       collectOffsetOp(Inst->getOperand(1), Offsets, /*AllowRecursion=*/false);

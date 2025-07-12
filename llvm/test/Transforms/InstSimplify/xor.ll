@@ -301,3 +301,21 @@ define <2 x i4> @xor_or_and_not_poison_elt(<2 x i4> %a, <2 x i4> %b) {
   %r = xor <2 x i4> %or, %and
   ret <2 x i4> %r
 }
+
+define i8 @xor_or_disjoint(i8 %a, i8 %b) {
+; CHECK-LABEL: @xor_or_disjoint(
+; CHECK-NEXT:    ret i8 [[B:%.*]]
+;
+  %or = or disjoint i8 %a, %b
+  %xor = xor i8 %or, %a
+  ret i8 %xor
+}
+
+define i8 @xor_or_disjoint_c(i8 %a, i8 %b) {
+; CHECK-LABEL: @xor_or_disjoint_c(
+; CHECK-NEXT:    ret i8 [[B:%.*]]
+;
+  %or = or disjoint i8 %b, %a
+  %xor = xor i8 %a, %or
+  ret i8 %xor
+}
