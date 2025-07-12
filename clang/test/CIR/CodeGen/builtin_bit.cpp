@@ -10,7 +10,7 @@ int test_builtin_clrsb(int x) {
 }
 
 // CIR-LABEL: _Z18test_builtin_clrsbi
-// CIR:         [[TMP:%.+]] = cir.bit.clrsb(%{{.+}} : !s32i) : !s32i
+// CIR:         [[TMP:%.+]] = cir.clrsb %{{.+}} : !s32i
 
 // LLVM-LABEL: _Z18test_builtin_clrsbi
 // LLVM:         %[[X:.+]] = load i32, ptr %{{.+}}, align 4
@@ -33,7 +33,7 @@ int test_builtin_clrsbl(long x) {
 }
 
 // CIR-LABEL: _Z19test_builtin_clrsbll
-// CIR:         [[TMP:%.+]] = cir.bit.clrsb(%{{.+}} : !s64i) : !s64i
+// CIR:         [[TMP:%.+]] = cir.clrsb %{{.+}} : !s64i
 // CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !s64i), !s32i
 
 // LLVM-LABEL: _Z19test_builtin_clrsbll
@@ -57,7 +57,7 @@ int test_builtin_clrsbll(long long x) {
 }
 
 // CIR-LABEL: _Z20test_builtin_clrsbllx
-// CIR:         [[TMP:%.+]] = cir.bit.clrsb(%{{.+}} : !s64i) : !s64i
+// CIR:         [[TMP:%.+]] = cir.clrsb %{{.+}} : !s64i
 // CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !s64i), !s32i
 
 // LLVM-LABEL: _Z20test_builtin_clrsbllx
@@ -81,7 +81,7 @@ int test_builtin_ctzs(unsigned short x) {
 }
 
 // CIR-LABEL: _Z17test_builtin_ctzst
-// CIR:         [[TMP:%.+]] = cir.bit.ctz(%{{.+}} : !u16i) poison_zero : !u16i
+// CIR:         [[TMP:%.+]] = cir.ctz %{{.+}} poison_zero : !u16i
 // CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u16i), !s32i
 
 // LLVM-LABEL: _Z17test_builtin_ctzst
@@ -95,7 +95,7 @@ int test_builtin_ctz(unsigned x) {
 }
 
 // CIR-LABEL: _Z16test_builtin_ctzj
-// CIR:         [[TMP:%.+]] = cir.bit.ctz(%{{.+}} : !u32i) poison_zero : !u32i
+// CIR:         [[TMP:%.+]] = cir.ctz %{{.+}} poison_zero : !u32i
 // CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u32i), !s32i
 
 // LLVM-LABEL: _Z16test_builtin_ctzj
@@ -109,7 +109,7 @@ int test_builtin_ctzl(unsigned long x) {
 }
 
 // CIR-LABEL: _Z17test_builtin_ctzlm
-// CIR:         [[TMP:%.+]] = cir.bit.ctz(%{{.+}} : !u64i) poison_zero : !u64i
+// CIR:         [[TMP:%.+]] = cir.ctz %{{.+}} poison_zero : !u64i
 // CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u64i), !s32i
 
 // LLVM-LABEL: _Z17test_builtin_ctzlm
@@ -123,7 +123,7 @@ int test_builtin_ctzll(unsigned long long x) {
 }
 
 // CIR-LABEL: _Z18test_builtin_ctzlly
-// CIR:         [[TMP:%.+]] = cir.bit.ctz(%{{.+}} : !u64i) poison_zero : !u64i
+// CIR:         [[TMP:%.+]] = cir.ctz %{{.+}} poison_zero : !u64i
 // CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u64i), !s32i
 
 // LLVM-LABEL: _Z18test_builtin_ctzlly
@@ -137,7 +137,7 @@ int test_builtin_ctzg(unsigned x) {
 }
 
 // CIR-LABEL: _Z17test_builtin_ctzgj
-// CIR:         [[TMP:%.+]] = cir.bit.ctz(%{{.+}} : !u32i) poison_zero : !u32i
+// CIR:         [[TMP:%.+]] = cir.ctz %{{.+}} poison_zero : !u32i
 // CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u32i), !s32i
 
 // LLVM-LABEL: _Z17test_builtin_ctzgj
@@ -151,7 +151,7 @@ int test_builtin_clzs(unsigned short x) {
 }
 
 // CIR-LABEL: _Z17test_builtin_clzst
-// CIR:         [[TMP:%.+]] = cir.bit.clz(%{{.+}} : !u16i) poison_zero : !u16i
+// CIR:         [[TMP:%.+]] = cir.clz %{{.+}} poison_zero : !u16i
 // CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u16i), !s32i
 
 // LLVM-LABEL: _Z17test_builtin_clzst
@@ -165,7 +165,7 @@ int test_builtin_clz(unsigned x) {
 }
 
 // CIR-LABEL: _Z16test_builtin_clzj
-// CIR:         [[TMP:%.+]] = cir.bit.clz(%{{.+}} : !u32i) poison_zero : !u32i
+// CIR:         [[TMP:%.+]] = cir.clz %{{.+}} poison_zero : !u32i
 // CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u32i), !s32i
 
 // LLVM-LABEL: _Z16test_builtin_clzj
@@ -179,7 +179,7 @@ int test_builtin_clzl(unsigned long x) {
 }
 
 // CIR-LABEL: _Z17test_builtin_clzlm
-// CIR:         [[TMP:%.+]] = cir.bit.clz(%{{.+}} : !u64i) poison_zero : !u64i
+// CIR:         [[TMP:%.+]] = cir.clz %{{.+}} poison_zero : !u64i
 // CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u64i), !s32i
 
 // LLVM-LABEL: _Z17test_builtin_clzlm
@@ -193,7 +193,7 @@ int test_builtin_clzll(unsigned long long x) {
 }
 
 // CIR-LABEL: _Z18test_builtin_clzlly
-// CIR:         [[TMP:%.+]] = cir.bit.clz(%{{.+}} : !u64i) poison_zero : !u64i
+// CIR:         [[TMP:%.+]] = cir.clz %{{.+}} poison_zero : !u64i
 // CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u64i), !s32i
 
 // LLVM-LABEL: _Z18test_builtin_clzlly
@@ -207,7 +207,7 @@ int test_builtin_clzg(unsigned x) {
 }
 
 // CIR-LABEL: _Z17test_builtin_clzgj
-// CIR:         [[TMP:%.+]] = cir.bit.clz(%{{.+}} : !u32i) poison_zero : !u32i
+// CIR:         [[TMP:%.+]] = cir.clz %{{.+}} poison_zero : !u32i
 // CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u32i), !s32i
 
 // LLVM-LABEL: _Z17test_builtin_clzgj
@@ -221,7 +221,7 @@ int test_builtin_parity(unsigned x) {
 }
 
 // CIR-LABEL: _Z19test_builtin_parityj
-// CIR:         [[TMP:%.+]] = cir.bit.parity(%{{.+}} : !u32i) : !u32i
+// CIR:         [[TMP:%.+]] = cir.parity %{{.+}} : !u32i
 // CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u32i), !s32i
 
 // LLVM-LABEL: _Z19test_builtin_parityj
@@ -239,7 +239,7 @@ int test_builtin_parityl(unsigned long x) {
 }
 
 // CIR-LABEL: _Z20test_builtin_paritylm
-// CIR:         [[TMP:%.+]] = cir.bit.parity(%{{.+}} : !u64i) : !u64i
+// CIR:         [[TMP:%.+]] = cir.parity %{{.+}} : !u64i
 // CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u64i), !s32i
 
 // LLVM-LABEL: _Z20test_builtin_paritylm
@@ -257,7 +257,7 @@ int test_builtin_parityll(unsigned long long x) {
 }
 
 // CIR-LABEL: _Z21test_builtin_paritylly
-// CIR:         [[TMP:%.+]] = cir.bit.parity(%{{.+}} : !u64i) : !u64i
+// CIR:         [[TMP:%.+]] = cir.parity %{{.+}} : !u64i
 // CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u64i), !s32i
 
 // LLVM-LABEL: _Z21test_builtin_paritylly
@@ -275,7 +275,7 @@ int test_builtin_popcount(unsigned x) {
 }
 
 // CIR-LABEL: _Z21test_builtin_popcountj
-// CIR:         [[TMP:%.+]] = cir.bit.popcnt(%{{.+}} : !u32i) : !u32i
+// CIR:         [[TMP:%.+]] = cir.popcount %{{.+}} : !u32i
 // CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u32i), !s32i
 
 // LLVM-LABEL: _Z21test_builtin_popcountj
@@ -289,7 +289,7 @@ int test_builtin_popcountl(unsigned long x) {
 }
 
 // CIR-LABEL: _Z22test_builtin_popcountlm
-// CIR:         [[TMP:%.+]] = cir.bit.popcnt(%{{.+}} : !u64i) : !u64i
+// CIR:         [[TMP:%.+]] = cir.popcount %{{.+}} : !u64i
 // CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u64i), !s32i
 
 // LLVM-LABEL: _Z22test_builtin_popcountlm
@@ -303,7 +303,7 @@ int test_builtin_popcountll(unsigned long long x) {
 }
 
 // CIR-LABEL: _Z23test_builtin_popcountlly
-// CIR:         [[TMP:%.+]] = cir.bit.popcnt(%{{.+}} : !u64i) : !u64i
+// CIR:         [[TMP:%.+]] = cir.popcount %{{.+}} : !u64i
 // CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u64i), !s32i
 
 // LLVM-LABEL: _Z23test_builtin_popcountlly
@@ -317,7 +317,7 @@ int test_builtin_popcountg(unsigned x) {
 }
 
 // CIR-LABEL: _Z22test_builtin_popcountgj
-// CIR:         [[TMP:%.+]] = cir.bit.popcnt(%{{.+}} : !u32i) : !u32i
+// CIR:         [[TMP:%.+]] = cir.popcount %{{.+}} : !u32i
 // CIR:         {{%.+}} = cir.cast(integral, [[TMP]] : !u32i), !s32i
 
 // LLVM-LABEL: _Z22test_builtin_popcountgj
@@ -331,7 +331,7 @@ unsigned char test_builtin_bitreverse8(unsigned char x) {
 }
 
 // CIR-LABEL: @_Z24test_builtin_bitreverse8h
-// CIR:         %{{.+}} = cir.bit.reverse(%{{.+}} : !u8i) : !u8i
+// CIR:         %{{.+}} = cir.bitreverse %{{.+}} : !u8i
 
 // LLVM-LABEL: @_Z24test_builtin_bitreverse8h
 // LLVM:         %{{.+}} = call i8 @llvm.bitreverse.i8(i8 %{{.+}})
@@ -344,7 +344,7 @@ unsigned short test_builtin_bitreverse16(unsigned short x) {
 }
 
 // CIR-LABEL: @_Z25test_builtin_bitreverse16t
-// CIR:         %{{.+}} = cir.bit.reverse(%{{.+}} : !u16i) : !u16i
+// CIR:         %{{.+}} = cir.bitreverse %{{.+}} : !u16i
 
 // LLVM-LABEL: @_Z25test_builtin_bitreverse16t
 // LLVM:         %{{.+}} = call i16 @llvm.bitreverse.i16(i16 %{{.+}})
@@ -357,7 +357,7 @@ unsigned test_builtin_bitreverse32(unsigned x) {
 }
 
 // CIR-LABEL: @_Z25test_builtin_bitreverse32j
-// CIR:         %{{.+}} = cir.bit.reverse(%{{.+}} : !u32i) : !u32i
+// CIR:         %{{.+}} = cir.bitreverse %{{.+}} : !u32i
 
 // LLVM-LABEL: @_Z25test_builtin_bitreverse32j
 // LLVM:         %{{.+}} = call i32 @llvm.bitreverse.i32(i32 %{{.+}})
@@ -370,7 +370,7 @@ unsigned long long test_builtin_bitreverse64(unsigned long long x) {
 }
 
 // CIR-LABEL: @_Z25test_builtin_bitreverse64y
-// CIR:         %{{.+}} = cir.bit.reverse(%{{.+}} : !u64i) : !u64i
+// CIR:         %{{.+}} = cir.bitreverse %{{.+}} : !u64i
 
 // LLVM-LABEL: @_Z25test_builtin_bitreverse64y
 // LLVM:         %{{.+}} = call i64 @llvm.bitreverse.i64(i64 %{{.+}})
@@ -383,7 +383,7 @@ unsigned short test_builtin_bswap16(unsigned short x) {
 }
 
 // CIR-LABEL: @_Z20test_builtin_bswap16t
-// CIR:         %{{.+}} = cir.byte_swap(%{{.+}} : !u16i) : !u16i
+// CIR:         %{{.+}} = cir.byte_swap %{{.+}} : !u16i
 
 // LLVM-LABEL: @_Z20test_builtin_bswap16t
 // LLVM:         %{{.+}} = call i16 @llvm.bswap.i16(i16 %{{.+}})
@@ -396,7 +396,7 @@ unsigned test_builtin_bswap32(unsigned x) {
 }
 
 // CIR-LABEL: @_Z20test_builtin_bswap32j
-// CIR:         %{{.+}} = cir.byte_swap(%{{.+}} : !u32i) : !u32i
+// CIR:         %{{.+}} = cir.byte_swap %{{.+}} : !u32i
 
 // LLVM-LABEL: @_Z20test_builtin_bswap32j
 // LLVM:         %{{.+}} = call i32 @llvm.bswap.i32(i32 %{{.+}})
@@ -409,7 +409,7 @@ unsigned long long test_builtin_bswap64(unsigned long long x) {
 }
 
 // CIR-LABEL: @_Z20test_builtin_bswap64y
-// CIR:         %{{.+}} = cir.byte_swap(%{{.+}} : !u64i) : !u64i
+// CIR:         %{{.+}} = cir.byte_swap %{{.+}} : !u64i
 
 // LLVM-LABEL: @_Z20test_builtin_bswap64y
 // LLVM:         %{{.+}} = call i64 @llvm.bswap.i64(i64 %{{.+}})
