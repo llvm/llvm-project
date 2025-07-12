@@ -82,7 +82,6 @@ template <typename T> void SummaryContext::RegisterAttr() {
 
 SummaryContext::SummaryContext() {
   RegisterAttr<NoWriteGlobalAttr>();
-  RegisterAttr<NoWritePtrParameterAttr>();
 }
 
 size_t SummaryContext::GetOrInsertStoredIdentifierIdx(StringRef ID) {

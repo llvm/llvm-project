@@ -259,9 +259,6 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
     findPtrToConstParams(PreserveArgs, *this);
 
   for (unsigned Idx = 0, Count = getNumArgs(); Idx != Count; ++Idx) {
-    if (Summary && Summary->hasAttribute<NoWritePtrParameterAttr>())
-      continue;
-
     // Mark this region for invalidation.  We batch invalidate regions
     // below for efficiency.
     if (PreserveArgs.count(Idx))
