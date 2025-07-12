@@ -7,23 +7,23 @@
 
 static int f1() { return 0; }
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: function 'f1' can be declared 'constexpr' [modernize-use-constexpr]
-// CHECK-FIXES: CXPR static int f1() { return 0; }
+// CHECK-FIXES: static CXPR int f1() { return 0; }
 // CHECK-MESSAGES-23: :[[@LINE-3]]:12: warning: function 'f1' can be declared 'constexpr' [modernize-use-constexpr]
-// CHECK-FIXES-23: CXPR static int f1() { return 0; }
+// CHECK-FIXES-23: static CXPR int f1() { return 0; }
 // CHECK-MESSAGES-23-STATIC: :[[@LINE-5]]:12: warning: function 'f1' can be declared 'constexpr' [modernize-use-constexpr]
-// CHECK-FIXES-23-STATIC: CXPR static int f1() { return 0; }
+// CHECK-FIXES-23-STATIC: static CXPR int f1() { return 0; }
 
 #define FUNC(N) void func##N()
 FUNC(0) {
     static int f1 = 1;
     static const int f2 = 2;
     // CHECK-MESSAGES-23: :[[@LINE-1]]:22: warning: variable 'f2' can be declared 'constexpr' [modernize-use-constexpr]
-    // CHECK-FIXES-23: CXPR static int f2 = 2;
+    // CHECK-FIXES-23: static CXPR int f2 = 2;
     // CHECK-MESSAGES-23-STATIC: :[[@LINE-3]]:22: warning: variable 'f2' can be declared 'constexpr' [modernize-use-constexpr]
-    // CHECK-FIXES-23-STATIC: CXPR static int f2 = 2;
+    // CHECK-FIXES-23-STATIC: static CXPR int f2 = 2;
     const int f3 = 3;
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: variable 'f3' can be declared 'constexpr' [modernize-use-constexpr]
-    // CHECK-FIXES: CXPR  int f3 = 3;
+    // CHECK-FIXES: CXPR int f3 = 3;
     // CHECK-MESSAGES-23: :[[@LINE-3]]:15: warning: variable 'f3' can be declared 'constexpr' [modernize-use-constexpr]
     // CHECK-FIXES-23: static CXPR  int f3 = 3;
     // CHECK-MESSAGES-23-STATIC: :[[@LINE-5]]:15: warning: variable 'f3' can be declared 'constexpr' [modernize-use-constexpr]

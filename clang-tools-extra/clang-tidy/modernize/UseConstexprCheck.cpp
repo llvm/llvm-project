@@ -59,7 +59,7 @@ AST_MATCHER(Expr, isCXX11ConstantExpr) {
 
 AST_MATCHER(DeclaratorDecl, isInMacro) {
   const SourceRange R =
-      SourceRange(Node.getInnerLocStart(), Node.getLocation());
+      SourceRange(Node.getTypeSpecStartLoc(), Node.getLocation());
 
   return Node.getLocation().isMacroID() || Node.getEndLoc().isMacroID() ||
          utils::rangeContainsMacroExpansion(
@@ -888,14 +888,14 @@ void UseConstexprCheck::onEndOfTranslationUnit() {
   const std::string FunctionReplacement = ConstexprString + " ";
   for (const FunctionDecl *Func : Functions) {
     const SourceRange R =
-        SourceRange(Func->getInnerLocStart(), Func->getLocation());
+        SourceRange(Func->getTypeSpecStartLoc(), Func->getLocation());
     auto Diag =
         diag(Func->getLocation(), "function %0 can be declared 'constexpr'")
         << Func << R;
 
     for (const Decl *D : Func->redecls())
       if (const auto *FDecl = llvm::dyn_cast<FunctionDecl>(D))
-        Diag << FixItHint::CreateInsertion(FDecl->getInnerLocStart(),
+        Diag << FixItHint::CreateInsertion(FDecl->getTypeSpecStartLoc(),
                                            FunctionReplacement);
   }
 
@@ -928,12 +928,12 @@ void UseConstexprCheck::onEndOfTranslationUnit() {
         IsAddingConstexprToFuncCtx)
       continue;
     const SourceRange R =
-        SourceRange(Var->getInnerLocStart(), Var->getLocation());
+        SourceRange(Var->getTypeSpecStartLoc(), Var->getLocation());
     auto Diag =
         diag(Var->getLocation(), "variable %0 can be declared 'constexpr'")
         << Var << R
         << FixItHint::CreateInsertion(
-               Var->getInnerLocStart(),
+               Var->getTypeSpecStartLoc(),
                VariableReplacement(Var, FuncCtx, IsAddingConstexprToFuncCtx));
     // Since either of the locs can be in a macro, use `makeFileCharRange` to be
     // sure that we have a consistent `CharSourceRange`, located entirely in the

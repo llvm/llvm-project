@@ -42,92 +42,92 @@ namespace function {
 
   static void f1() {}
   // CHECK-MESSAGES-23: :[[@LINE-1]]:15: warning: function 'f1' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static void f1() {}
+  // CHECK-FIXES-23: static constexpr void f1() {}
 
   static int f2() { return 0; }
   // CHECK-MESSAGES-11: :[[@LINE-1]]:14: warning: function 'f2' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-11: constexpr static int f2() { return 0; }
+  // CHECK-FIXES-11: static constexpr int f2() { return 0; }
 
   static int f3(int x) { return x; }
   // CHECK-MESSAGES-11: :[[@LINE-1]]:14: warning: function 'f3' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-11: constexpr static int f3(int x) { return x; }
+  // CHECK-FIXES-11: static constexpr int f3(int x) { return x; }
 
   static int f4(Empty x) { return 0; }
   // CHECK-MESSAGES-11: :[[@LINE-1]]:14: warning: function 'f4' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-11: constexpr static int f4(Empty x) { return 0; }
+  // CHECK-FIXES-11: static constexpr int f4(Empty x) { return 0; }
 
   static int f5(Empty x) { return 0; }
   // CHECK-MESSAGES-11: :[[@LINE-1]]:14: warning: function 'f5' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-11: constexpr static int f5(Empty x) { return 0; }
+  // CHECK-FIXES-11: static constexpr int f5(Empty x) { return 0; }
 
   static int f6(Empty x) { ; return 0; }
   // CHECK-MESSAGES-14: :[[@LINE-1]]:14: warning: function 'f6' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-14: constexpr static int f6(Empty x) { ; return 0; }
+  // CHECK-FIXES-14: static constexpr int f6(Empty x) { ; return 0; }
 
   static int f7(Empty x) { static_assert(0 == 0, ""); return 0; }
   // CHECK-MESSAGES-11: :[[@LINE-1]]:14: warning: function 'f7' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-11: constexpr static int f7(Empty x) { static_assert(0 == 0, ""); return 0; }
+  // CHECK-FIXES-11: static constexpr int f7(Empty x) { static_assert(0 == 0, ""); return 0; }
 
   static int f8(Empty x) { using my_int = int; return 0; }
   // CHECK-MESSAGES-11: :[[@LINE-1]]:14: warning: function 'f8' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-11: constexpr static int f8(Empty x) { using my_int = int; return 0; }
+  // CHECK-FIXES-11: static constexpr int f8(Empty x) { using my_int = int; return 0; }
 
   static int f9(Empty x) { using my::point; return 0; }
   // CHECK-MESSAGES-11: :[[@LINE-1]]:14: warning: function 'f9' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-11: constexpr static int f9(Empty x) { using my::point; return 0; }
+  // CHECK-FIXES-11: static constexpr int f9(Empty x) { using my::point; return 0; }
 
   static int f10(Empty x) { return 10; return 0; }
   // CHECK-MESSAGES-14: :[[@LINE-1]]:14: warning: function 'f10' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-14: constexpr static int f10(Empty x) { return 10; return 0; }
+  // CHECK-FIXES-14: static constexpr int f10(Empty x) { return 10; return 0; }
 
   static int f11(Empty x) { if (true) return 10; return 0; }
   // CHECK-MESSAGES-14: :[[@LINE-1]]:14: warning: function 'f11' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-14: constexpr static int f11(Empty x) { if (true) return 10; return 0; }
+  // CHECK-FIXES-14: static constexpr int f11(Empty x) { if (true) return 10; return 0; }
 
   static int f12(Empty x) { label: ; goto label; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f12' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f12(Empty x) { label: ; goto label; return 0; }
+  // CHECK-FIXES-23: static constexpr int f12(Empty x) { label: ; goto label; return 0; }
   static int f13(Empty x) { try { throw 0; } catch(int) {}; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f13' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f13(Empty x) { try { throw 0; } catch(int) {}; return 0; }
+  // CHECK-FIXES-23: static constexpr int f13(Empty x) { try { throw 0; } catch(int) {}; return 0; }
   static int f14(Empty x) { asm ("mov %rax, %rax"); }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f14' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f14(Empty x) { asm ("mov %rax, %rax"); }
+  // CHECK-FIXES-23: static constexpr int f14(Empty x) { asm ("mov %rax, %rax"); }
   static int f15(Empty x) { int y; return 0; }
   // CHECK-MESSAGES-20: :[[@LINE-1]]:14: warning: function 'f15' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-20: constexpr static int f15(Empty x) { int y; return 0; }
+  // CHECK-FIXES-20: static constexpr int f15(Empty x) { int y; return 0; }
   static int f16(Empty x) { static int y = 0; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f16' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f16(Empty x) { static int y = 0; return 0; }
+  // CHECK-FIXES-23: static constexpr int f16(Empty x) { static int y = 0; return 0; }
   static int f17(Empty x) { thread_local int y = 0; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f17' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f17(Empty x) { thread_local int y = 0; return 0; }
+  // CHECK-FIXES-23: static constexpr int f17(Empty x) { thread_local int y = 0; return 0; }
   static int f18(Empty x) { [](){ label: ; goto label; return 0;  }; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f18' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f18(Empty x) { [](){ label: ; goto label; return 0;  }; return 0; }
+  // CHECK-FIXES-23: static constexpr int f18(Empty x) { [](){ label: ; goto label; return 0;  }; return 0; }
   static int f19(Empty x) { [](){ try { throw 0; } catch(int) {}; return 0;  }; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f19' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f19(Empty x) { [](){ try { throw 0; } catch(int) {}; return 0;  }; return 0; }
+  // CHECK-FIXES-23: static constexpr int f19(Empty x) { [](){ try { throw 0; } catch(int) {}; return 0;  }; return 0; }
   static int f20(Empty x) { [](){ asm ("mov %rax, %rax");  }; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f20' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f20(Empty x) { [](){ asm ("mov %rax, %rax");  }; return 0; }
+  // CHECK-FIXES-23: static constexpr int f20(Empty x) { [](){ asm ("mov %rax, %rax");  }; return 0; }
   static int f21(Empty x) { [](){ int y; return 0;  }; return 0; }
   // CHECK-MESSAGES-20: :[[@LINE-1]]:14: warning: function 'f21' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-20: constexpr static int f21(Empty x) { [](){ int y; return 0;  }; return 0; }
+  // CHECK-FIXES-20: static constexpr int f21(Empty x) { [](){ int y; return 0;  }; return 0; }
   static int f22(Empty x) { [](){ static int y = 0; return 0;  }; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f22' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f22(Empty x) { [](){ static int y = 0; return 0;  }; return 0; }
+  // CHECK-FIXES-23: static constexpr int f22(Empty x) { [](){ static int y = 0; return 0;  }; return 0; }
   static int f23(Empty x) { [](){ thread_local int y = 0; return 0;  }; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f23' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f23(Empty x) { [](){ thread_local int y = 0; return 0;  }; return 0; }
+  // CHECK-FIXES-23: static constexpr int f23(Empty x) { [](){ thread_local int y = 0; return 0;  }; return 0; }
 
   static int f24(Empty x) { return [](){ return 0; }(); }
   // CHECK-MESSAGES-17: :[[@LINE-1]]:14: warning: function 'f24' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-17: constexpr static int f24(Empty x) { return [](){ return 0; }(); }
+  // CHECK-FIXES-17: static constexpr int f24(Empty x) { return [](){ return 0; }(); }
 
   static int f25(Empty x) { new int; return 0; }
   // CHECK-MESSAGES-20: :[[@LINE-1]]:14: warning: function 'f25' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-20: constexpr static int f25(Empty x) { new int; return 0; }
+  // CHECK-FIXES-20: static constexpr int f25(Empty x) { new int; return 0; }
 
   struct Range0To10 {
     struct iterator {
@@ -141,9 +141,9 @@ namespace function {
   };
   static int f26(Empty x) {
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f26' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f26(Empty x) {
+  // CHECK-FIXES-23: static constexpr int f26(Empty x) {
   // CHECK-MESSAGES-20-CLT: :[[@LINE-3]]:14: warning: function 'f26' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-20-CLT: constexpr static int f26(Empty x) {
+  // CHECK-FIXES-20-CLT: static constexpr int f26(Empty x) {
     auto R = Range0To10{};
     for (const int i: R) { }
     return 0;
@@ -152,6 +152,10 @@ namespace function {
   const auto f27 = [](int X){ return X + 1; }(10);
   // CHECK-MESSAGES-17: :[[@LINE-1]]:14: warning: variable 'f27' can be declared 'constexpr' [modernize-use-constexpr]
   // CHECK-FIXES-17: constexpr  auto f27 = [](int X){ return X + 1; }(10);
+
+  [[nodiscard]] static int f28() { return 0; }
+  // CHECK-MESSAGES-11: :[[@LINE-1]]:28: warning: function 'f28' can be declared 'constexpr' [modernize-use-constexpr]
+  // CHECK-FIXES-11: {{\[\[nodiscard\]\]}} static constexpr int f28() { return 0; }
 } // namespace function
 namespace function_non_literal {
   struct NonLiteral{
@@ -170,92 +174,92 @@ namespace function_non_literal {
 
   static void f1() {}
   // CHECK-MESSAGES-23: :[[@LINE-1]]:15: warning: function 'f1' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static void f1() {}
+  // CHECK-FIXES-23: static constexpr void f1() {}
 
   static int f2() { return 0; }
   // CHECK-MESSAGES-11: :[[@LINE-1]]:14: warning: function 'f2' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-11: constexpr static int f2() { return 0; }
+  // CHECK-FIXES-11: static constexpr int f2() { return 0; }
 
   static int f3(int x) { return x; }
   // CHECK-MESSAGES-11: :[[@LINE-1]]:14: warning: function 'f3' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-11: constexpr static int f3(int x) { return x; }
+  // CHECK-FIXES-11: static constexpr int f3(int x) { return x; }
 
   static int f4(NonLiteral x) { return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f4' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f4(NonLiteral x) { return 0; }
+  // CHECK-FIXES-23: static constexpr int f4(NonLiteral x) { return 0; }
 
   static int f5(NonLiteral x) { return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f5' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f5(NonLiteral x) { return 0; }
+  // CHECK-FIXES-23: static constexpr int f5(NonLiteral x) { return 0; }
 
   static int f6(NonLiteral x) { ; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f6' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f6(NonLiteral x) { ; return 0; }
+  // CHECK-FIXES-23: static constexpr int f6(NonLiteral x) { ; return 0; }
 
   static int f7(NonLiteral x) { static_assert(0 == 0, ""); return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f7' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f7(NonLiteral x) { static_assert(0 == 0, ""); return 0; }
+  // CHECK-FIXES-23: static constexpr int f7(NonLiteral x) { static_assert(0 == 0, ""); return 0; }
 
   static int f8(NonLiteral x) { using my_int = int; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f8' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f8(NonLiteral x) { using my_int = int; return 0; }
+  // CHECK-FIXES-23: static constexpr int f8(NonLiteral x) { using my_int = int; return 0; }
 
   static int f9(NonLiteral x) { using my::point; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f9' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f9(NonLiteral x) { using my::point; return 0; }
+  // CHECK-FIXES-23: static constexpr int f9(NonLiteral x) { using my::point; return 0; }
 
   static int f10(NonLiteral x) { return 10; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f10' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f10(NonLiteral x) { return 10; return 0; }
+  // CHECK-FIXES-23: static constexpr int f10(NonLiteral x) { return 10; return 0; }
 
   static int f11(NonLiteral x) { if (true) return 10; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f11' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f11(NonLiteral x) { if (true) return 10; return 0; }
+  // CHECK-FIXES-23: static constexpr int f11(NonLiteral x) { if (true) return 10; return 0; }
 
   static int f12(NonLiteral x) { label: ; goto label; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f12' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f12(NonLiteral x) { label: ; goto label; return 0; }
+  // CHECK-FIXES-23: static constexpr int f12(NonLiteral x) { label: ; goto label; return 0; }
   static int f13(NonLiteral x) { try { throw 0; } catch(int) {}; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f13' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f13(NonLiteral x) { try { throw 0; } catch(int) {}; return 0; }
+  // CHECK-FIXES-23: static constexpr int f13(NonLiteral x) { try { throw 0; } catch(int) {}; return 0; }
   static int f14(NonLiteral x) { asm ("mov %rax, %rax"); }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f14' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f14(NonLiteral x) { asm ("mov %rax, %rax"); }
+  // CHECK-FIXES-23: static constexpr int f14(NonLiteral x) { asm ("mov %rax, %rax"); }
   static int f15(NonLiteral x) { int y; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f15' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f15(NonLiteral x) { int y; return 0; }
+  // CHECK-FIXES-23: static constexpr int f15(NonLiteral x) { int y; return 0; }
   static int f16(NonLiteral x) { static int y = 0; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f16' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f16(NonLiteral x) { static int y = 0; return 0; }
+  // CHECK-FIXES-23: static constexpr int f16(NonLiteral x) { static int y = 0; return 0; }
   static int f17(NonLiteral x) { thread_local int y = 0; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f17' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f17(NonLiteral x) { thread_local int y = 0; return 0; }
+  // CHECK-FIXES-23: static constexpr int f17(NonLiteral x) { thread_local int y = 0; return 0; }
   static int f18(NonLiteral x) { [](){ label: ; goto label; return 0;  }; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f18' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f18(NonLiteral x) { [](){ label: ; goto label; return 0;  }; return 0; }
+  // CHECK-FIXES-23: static constexpr int f18(NonLiteral x) { [](){ label: ; goto label; return 0;  }; return 0; }
   static int f19(NonLiteral x) { [](){ try { throw 0; } catch(int) {}; return 0;  }; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f19' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f19(NonLiteral x) { [](){ try { throw 0; } catch(int) {}; return 0;  }; return 0; }
+  // CHECK-FIXES-23: static constexpr int f19(NonLiteral x) { [](){ try { throw 0; } catch(int) {}; return 0;  }; return 0; }
   static int f20(NonLiteral x) { [](){ asm ("mov %rax, %rax");  }; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f20' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f20(NonLiteral x) { [](){ asm ("mov %rax, %rax");  }; return 0; }
+  // CHECK-FIXES-23: static constexpr int f20(NonLiteral x) { [](){ asm ("mov %rax, %rax");  }; return 0; }
   static int f21(NonLiteral x) { [](){ int y; return 0;  }; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f21' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f21(NonLiteral x) { [](){ int y; return 0;  }; return 0; }
+  // CHECK-FIXES-23: static constexpr int f21(NonLiteral x) { [](){ int y; return 0;  }; return 0; }
   static int f22(NonLiteral x) { [](){ static int y = 0; return 0;  }; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f22' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f22(NonLiteral x) { [](){ static int y = 0; return 0;  }; return 0; }
+  // CHECK-FIXES-23: static constexpr int f22(NonLiteral x) { [](){ static int y = 0; return 0;  }; return 0; }
   static int f23(NonLiteral x) { [](){ thread_local int y = 0; return 0;  }; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f23' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f23(NonLiteral x) { [](){ thread_local int y = 0; return 0;  }; return 0; }
+  // CHECK-FIXES-23: static constexpr int f23(NonLiteral x) { [](){ thread_local int y = 0; return 0;  }; return 0; }
 
   static int f24(NonLiteral x) { return [](){ return 0; }(); }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f24' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f24(NonLiteral x) { return [](){ return 0; }(); }
+  // CHECK-FIXES-23: static constexpr int f24(NonLiteral x) { return [](){ return 0; }(); }
 
   static int f25(NonLiteral x) { new int; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f25' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f25(NonLiteral x) { new int; return 0; }
+  // CHECK-FIXES-23: static constexpr int f25(NonLiteral x) { new int; return 0; }
 
   struct Range0To10 {
     struct iterator {
@@ -273,7 +277,7 @@ namespace function_non_literal {
     return 0;
   }
   // CHECK-MESSAGES-23: :[[@LINE-5]]:14: warning: function 'f26' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f26(NonLiteral x) {
+  // CHECK-FIXES-23: static constexpr int f26(NonLiteral x) {
 } // namespace function_non_literal
 namespace function_non_literal_ref {
   struct NonLiteral{
@@ -292,116 +296,116 @@ namespace function_non_literal_ref {
 
   static void f1() {}
   // CHECK-MESSAGES-23: :[[@LINE-1]]:15: warning: function 'f1' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static void f1() {}
+  // CHECK-FIXES-23: static constexpr void f1() {}
 
   static int f2() { return 0; }
   // CHECK-MESSAGES-11: :[[@LINE-1]]:14: warning: function 'f2' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-11: constexpr static int f2() { return 0; }
+  // CHECK-FIXES-11: static constexpr int f2() { return 0; }
 
   static int f3(int x) { return x; }
   // CHECK-MESSAGES-11: :[[@LINE-1]]:14: warning: function 'f3' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-11: constexpr static int f3(int x) { return x; }
+  // CHECK-FIXES-11: static constexpr int f3(int x) { return x; }
 
   static int f4(NonLiteral& x) { return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f4' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f4(NonLiteral& x) { return 0; }
+  // CHECK-FIXES-23: static constexpr int f4(NonLiteral& x) { return 0; }
   // CHECK-MESSAGES-11-CLT: :[[@LINE-3]]:14: warning: function 'f4' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-11-CLT: constexpr static int f4(NonLiteral& x) { return 0; }
+  // CHECK-FIXES-11-CLT: static constexpr int f4(NonLiteral& x) { return 0; }
 
   static int f5(NonLiteral& x) { return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f5' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f5(NonLiteral& x) { return 0; }
+  // CHECK-FIXES-23: static constexpr int f5(NonLiteral& x) { return 0; }
   // CHECK-MESSAGES-11-CLT: :[[@LINE-3]]:14: warning: function 'f5' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-11-CLT: constexpr static int f5(NonLiteral& x) { return 0; }
+  // CHECK-FIXES-11-CLT: static constexpr int f5(NonLiteral& x) { return 0; }
 
   static int f6(NonLiteral& x) { ; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f6' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f6(NonLiteral& x) { ; return 0; }
+  // CHECK-FIXES-23: static constexpr int f6(NonLiteral& x) { ; return 0; }
   // CHECK-MESSAGES-14-CLT: :[[@LINE-3]]:14: warning: function 'f6' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-14-CLT: constexpr static int f6(NonLiteral& x) { ; return 0; }
+  // CHECK-FIXES-14-CLT: static constexpr int f6(NonLiteral& x) { ; return 0; }
 
   static int f7(NonLiteral& x) { static_assert(0 == 0, ""); return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f7' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f7(NonLiteral& x) { static_assert(0 == 0, ""); return 0; }
+  // CHECK-FIXES-23: static constexpr int f7(NonLiteral& x) { static_assert(0 == 0, ""); return 0; }
   // CHECK-MESSAGES-11-CLT: :[[@LINE-3]]:14: warning: function 'f7' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-11-CLT: constexpr static int f7(NonLiteral& x) { static_assert(0 == 0, ""); return 0; }
+  // CHECK-FIXES-11-CLT: static constexpr int f7(NonLiteral& x) { static_assert(0 == 0, ""); return 0; }
 
   static int f8(NonLiteral& x) { using my_int = int; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f8' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f8(NonLiteral& x) { using my_int = int; return 0; }
+  // CHECK-FIXES-23: static constexpr int f8(NonLiteral& x) { using my_int = int; return 0; }
   // CHECK-MESSAGES-11-CLT: :[[@LINE-3]]:14: warning: function 'f8' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-11-CLT: constexpr static int f8(NonLiteral& x) { using my_int = int; return 0; }
+  // CHECK-FIXES-11-CLT: static constexpr int f8(NonLiteral& x) { using my_int = int; return 0; }
 
   static int f9(NonLiteral& x) { using my::point; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f9' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f9(NonLiteral& x) { using my::point; return 0; }
+  // CHECK-FIXES-23: static constexpr int f9(NonLiteral& x) { using my::point; return 0; }
   // CHECK-MESSAGES-11-CLT: :[[@LINE-3]]:14: warning: function 'f9' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-11-CLT: constexpr static int f9(NonLiteral& x) { using my::point; return 0; }
+  // CHECK-FIXES-11-CLT: static constexpr int f9(NonLiteral& x) { using my::point; return 0; }
 
   static int f10(NonLiteral& x) { return 10; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f10' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f10(NonLiteral& x) { return 10; return 0; }
+  // CHECK-FIXES-23: static constexpr int f10(NonLiteral& x) { return 10; return 0; }
   // CHECK-MESSAGES-14-CLT: :[[@LINE-3]]:14: warning: function 'f10' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-14-CLT: constexpr static int f10(NonLiteral& x) { return 10; return 0; }
+  // CHECK-FIXES-14-CLT: static constexpr int f10(NonLiteral& x) { return 10; return 0; }
 
   static int f11(NonLiteral& x) { if (true) return 10; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f11' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f11(NonLiteral& x) { if (true) return 10; return 0; }
+  // CHECK-FIXES-23: static constexpr int f11(NonLiteral& x) { if (true) return 10; return 0; }
   // CHECK-MESSAGES-14-CLT: :[[@LINE-3]]:14: warning: function 'f11' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-14-CLT: constexpr static int f11(NonLiteral& x) { if (true) return 10; return 0; }
+  // CHECK-FIXES-14-CLT: static constexpr int f11(NonLiteral& x) { if (true) return 10; return 0; }
 
   static int f12(NonLiteral& x) { label: ; goto label; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f12' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f12(NonLiteral& x) { label: ; goto label; return 0; }
+  // CHECK-FIXES-23: static constexpr int f12(NonLiteral& x) { label: ; goto label; return 0; }
   static int f13(NonLiteral& x) { try { throw 0; } catch(int) {}; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f13' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f13(NonLiteral& x) { try { throw 0; } catch(int) {}; return 0; }
+  // CHECK-FIXES-23: static constexpr int f13(NonLiteral& x) { try { throw 0; } catch(int) {}; return 0; }
   static int f14(NonLiteral& x) { asm ("mov %rax, %rax"); }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f14' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f14(NonLiteral& x) { asm ("mov %rax, %rax"); }
+  // CHECK-FIXES-23: static constexpr int f14(NonLiteral& x) { asm ("mov %rax, %rax"); }
   static int f15(NonLiteral& x) { int y; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f15' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f15(NonLiteral& x) { int y; return 0; }
+  // CHECK-FIXES-23: static constexpr int f15(NonLiteral& x) { int y; return 0; }
   // CHECK-MESSAGES-20-CLT: :[[@LINE-3]]:14: warning: function 'f15' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-20-CLT: constexpr static int f15(NonLiteral& x) { int y; return 0; }
+  // CHECK-FIXES-20-CLT: static constexpr int f15(NonLiteral& x) { int y; return 0; }
   static int f16(NonLiteral& x) { static int y = 0; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f16' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f16(NonLiteral& x) { static int y = 0; return 0; }
+  // CHECK-FIXES-23: static constexpr int f16(NonLiteral& x) { static int y = 0; return 0; }
   static int f17(NonLiteral& x) { thread_local int y = 0; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f17' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f17(NonLiteral& x) { thread_local int y = 0; return 0; }
+  // CHECK-FIXES-23: static constexpr int f17(NonLiteral& x) { thread_local int y = 0; return 0; }
   static int f18(NonLiteral& x) { [](){ label: ; goto label; return 0;  }; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f18' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f18(NonLiteral& x) { [](){ label: ; goto label; return 0;  }; return 0; }
+  // CHECK-FIXES-23: static constexpr int f18(NonLiteral& x) { [](){ label: ; goto label; return 0;  }; return 0; }
   static int f19(NonLiteral& x) { [](){ try { throw 0; } catch(int) {}; return 0;  }; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f19' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f19(NonLiteral& x) { [](){ try { throw 0; } catch(int) {}; return 0;  }; return 0; }
+  // CHECK-FIXES-23: static constexpr int f19(NonLiteral& x) { [](){ try { throw 0; } catch(int) {}; return 0;  }; return 0; }
   static int f20(NonLiteral& x) { [](){ asm ("mov %rax, %rax");  }; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f20' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f20(NonLiteral& x) { [](){ asm ("mov %rax, %rax");  }; return 0; }
+  // CHECK-FIXES-23: static constexpr int f20(NonLiteral& x) { [](){ asm ("mov %rax, %rax");  }; return 0; }
   static int f21(NonLiteral& x) { [](){ int y; return 0;  }; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f21' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f21(NonLiteral& x) { [](){ int y; return 0;  }; return 0; }
+  // CHECK-FIXES-23: static constexpr int f21(NonLiteral& x) { [](){ int y; return 0;  }; return 0; }
   // CHECK-MESSAGES-20-CLT: :[[@LINE-3]]:14: warning: function 'f21' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-20-CLT: constexpr static int f21(NonLiteral& x) { [](){ int y; return 0;  }; return 0; }
+  // CHECK-FIXES-20-CLT: static constexpr int f21(NonLiteral& x) { [](){ int y; return 0;  }; return 0; }
   static int f22(NonLiteral& x) { [](){ static int y = 0; return 0;  }; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f22' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f22(NonLiteral& x) { [](){ static int y = 0; return 0;  }; return 0; }
+  // CHECK-FIXES-23: static constexpr int f22(NonLiteral& x) { [](){ static int y = 0; return 0;  }; return 0; }
   static int f23(NonLiteral& x) { [](){ thread_local int y = 0; return 0;  }; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f23' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f23(NonLiteral& x) { [](){ thread_local int y = 0; return 0;  }; return 0; }
+  // CHECK-FIXES-23: static constexpr int f23(NonLiteral& x) { [](){ thread_local int y = 0; return 0;  }; return 0; }
 
   static int f24(NonLiteral& x) { return [](){ return 0; }(); }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f24' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f24(NonLiteral& x) { return [](){ return 0; }(); }
+  // CHECK-FIXES-23: static constexpr int f24(NonLiteral& x) { return [](){ return 0; }(); }
   // CHECK-MESSAGES-17-CLT: :[[@LINE-3]]:14: warning: function 'f24' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-17-CLT: constexpr static int f24(NonLiteral& x) { return [](){ return 0; }(); }
+  // CHECK-FIXES-17-CLT: static constexpr int f24(NonLiteral& x) { return [](){ return 0; }(); }
 
   static int f25(NonLiteral& x) { new int; return 0; }
   // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'f25' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f25(NonLiteral& x) { new int; return 0; }
+  // CHECK-FIXES-23: static constexpr int f25(NonLiteral& x) { new int; return 0; }
   // CHECK-MESSAGES-20-CLT: :[[@LINE-3]]:14: warning: function 'f25' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-20-CLT: constexpr static int f25(NonLiteral& x) { new int; return 0; }
+  // CHECK-FIXES-20-CLT: static constexpr int f25(NonLiteral& x) { new int; return 0; }
 
   struct Range0To10 {
     struct iterator {
@@ -419,9 +423,9 @@ namespace function_non_literal_ref {
     return 0;
   }
   // CHECK-MESSAGES-23: :[[@LINE-5]]:14: warning: function 'f26' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-23: constexpr static int f26(NonLiteral& x) {
+  // CHECK-FIXES-23: static constexpr int f26(NonLiteral& x) {
   // CHECK-MESSAGES-20-CLT: :[[@LINE-7]]:14: warning: function 'f26' can be declared 'constexpr' [modernize-use-constexpr]
-  // CHECK-FIXES-20-CLT: constexpr static int f26(NonLiteral& x) {
+  // CHECK-FIXES-20-CLT: static constexpr int f26(NonLiteral& x) {
 
   template <typename> void f27() {
     [](int N) { N; };
@@ -436,13 +440,13 @@ template <typename T>
 static T forwardDeclared() { return T{}; }
 // CHECK-MESSAGES-11: :[[@LINE-1]]:10: warning: function 'forwardDeclared' can be declared 'constexpr' [modernize-use-constexpr]
 // CHECK-FIXES-11: template <typename T>
-// CHECK-FIXES-11: constexpr static T forwardDeclared();
+// CHECK-FIXES-11: static constexpr T forwardDeclared();
 // CHECK-FIXES-11: template <typename T>
-// CHECK-FIXES-11: constexpr static T forwardDeclared() { return T{}; }
+// CHECK-FIXES-11: static constexpr T forwardDeclared() { return T{}; }
 
 static void useForwardDeclared() {
 // CHECK-MESSAGES-23: :[[@LINE-1]]:13: warning: function 'useForwardDeclared' can be declared 'constexpr' [modernize-use-constexpr]
-// CHECK-FIXES-23: constexpr static void useForwardDeclared() {
+// CHECK-FIXES-23: static constexpr void useForwardDeclared() {
     forwardDeclared<int>() + forwardDeclared<double>() + forwardDeclared<char>();
 }
 
@@ -457,10 +461,10 @@ namespace variable {
         static int B1 = 0;
         static const int C1 = 0;
         // CHECK-MESSAGES-11: :[[@LINE-1]]:26: warning: variable 'C1' can be declared 'constexpr' [modernize-use-constexpr]
-        // CHECK-FIXES-11: constexpr static int C1 = 0;
+        // CHECK-FIXES-11: static constexpr int C1 = 0;
         static const int D1 = f1();
         // CHECK-MESSAGES-11: :[[@LINE-1]]:26: warning: variable 'D1' can be declared 'constexpr' [modernize-use-constexpr]
-        // CHECK-FIXES-11: constexpr static int D1 = f1();
+        // CHECK-FIXES-11: static constexpr int D1 = f1();
         static const int E1 = g1();
 
         template <typename T>
@@ -483,6 +487,10 @@ namespace variable {
             const auto check = [](const int & ref) { };
             // CHECK-MESSAGES-17: :[[@LINE-1]]:24: warning: variable 'check' can be declared 'constexpr' [modernize-use-constexpr]
             // CHECK-FIXES-17: constexpr  auto check = [](const int & ref) { };
+            
+            [[maybe_unused]] const int f1 = 4;
+            // CHECK-MESSAGES-11: :[[@LINE-1]]:40: warning: variable 'f1' can be declared 'constexpr' [modernize-use-constexpr]
+            // CHECK-FIXES-11: {{\[\[maybe_unused\]\]}} constexpr int f1 = 4;
         }
     } // namespace literal_type
 
@@ -510,10 +518,10 @@ namespace variable {
         static AStruct B2 = {};
         static const AStruct C2 = {};
         // CHECK-MESSAGES-11: :[[@LINE-1]]:30: warning: variable 'C2' can be declared 'constexpr' [modernize-use-constexpr]
-        // CHECK-FIXES-11: constexpr static AStruct C2 = {};
+        // CHECK-FIXES-11: static constexpr AStruct C2 = {};
         static const AStruct D2 = f2();
         // CHECK-MESSAGES-11: :[[@LINE-1]]:30: warning: variable 'D2' can be declared 'constexpr' [modernize-use-constexpr]
-        // CHECK-FIXES-11: constexpr static AStruct D2 = f2();
+        // CHECK-FIXES-11: static constexpr AStruct D2 = f2();
         static const AStruct E2 = g2();
         void h2() {
         // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'h2' can be declared 'constexpr' [modernize-use-constexpr]
@@ -585,10 +593,10 @@ namespace variable {
         static AStruct B5 = {};
         static const AStruct C5 = {};
         // CHECK-MESSAGES-11: :[[@LINE-1]]:30: warning: variable 'C5' can be declared 'constexpr' [modernize-use-constexpr]
-        // CHECK-FIXES-11: constexpr static AStruct C5 = {};
+        // CHECK-FIXES-11: static constexpr AStruct C5 = {};
         static const AStruct D5 = f5();
         // CHECK-MESSAGES-11: :[[@LINE-1]]:30: warning: variable 'D5' can be declared 'constexpr' [modernize-use-constexpr]
-        // CHECK-FIXES-11: constexpr static AStruct D5 = f5();
+        // CHECK-FIXES-11: static constexpr AStruct D5 = f5();
         static const AStruct E5 = g5();
         void h5() {
         // CHECK-MESSAGES-23: :[[@LINE-1]]:14: warning: function 'h5' can be declared 'constexpr' [modernize-use-constexpr]
