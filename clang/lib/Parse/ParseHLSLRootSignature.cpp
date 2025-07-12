@@ -59,6 +59,11 @@ bool RootSignatureParser::parse() {
       if (!Sampler.has_value())
         return true;
       Elements.emplace_back(ElementLoc, *Sampler);
+    } else {
+      consumeNextToken(); // let diagnostic be at the start of invalid token
+      reportDiag(diag::err_hlsl_invalid_token)
+          << /*parameter=*/0 << /*param of*/ TokenKind::kw_RootSignature;
+      return true;
     }
 
     // ',' denotes another element, otherwise, expected to be at end of stream
@@ -67,8 +72,7 @@ bool RootSignatureParser::parse() {
   }
 
   return consumeExpectedToken(TokenKind::end_of_stream,
-                              diag::err_hlsl_unexpected_end_of_params,
-                              /*param of=*/TokenKind::kw_RootSignature);
+                              diag::err_expected_either, TokenKind::pu_comma);
 }
 
 template <typename FlagType>
@@ -89,6 +93,10 @@ std::optional<llvm::dxbc::RootFlags> RootSignatureParser::parseRootFlags() {
     return std::nullopt;
 
   std::optional<llvm::dxbc::RootFlags> Flags = llvm::dxbc::RootFlags::None;
+
+  // Handle valid empty case
+  if (tryConsumeExpectedToken(TokenKind::pu_r_paren))
+    return Flags;
 
   // Handle the edge-case of '0' to specify no flags set
   if (tryConsumeExpectedToken(TokenKind::int_literal)) {
@@ -115,13 +123,17 @@ std::optional<llvm::dxbc::RootFlags> RootSignatureParser::parseRootFlags() {
         default:
           llvm_unreachable("Switch for consumed enum token was not provided");
         }
+      } else {
+        consumeNextToken(); // consume token to point at invalid token
+        reportDiag(diag::err_hlsl_invalid_token)
+            << /*value=*/1 << /*value of*/ TokenKind::kw_RootFlags;
+        return std::nullopt;
       }
     } while (tryConsumeExpectedToken(TokenKind::pu_or));
   }
 
-  if (consumeExpectedToken(TokenKind::pu_r_paren,
-                           diag::err_hlsl_unexpected_end_of_params,
-                           /*param of=*/TokenKind::kw_RootFlags))
+  if (consumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_either,
+                           TokenKind::pu_comma))
     return std::nullopt;
 
   return Flags;
@@ -141,9 +153,8 @@ std::optional<RootConstants> RootSignatureParser::parseRootConstants() {
   if (!Params.has_value())
     return std::nullopt;
 
-  if (consumeExpectedToken(TokenKind::pu_r_paren,
-                           diag::err_hlsl_unexpected_end_of_params,
-                           /*param of=*/TokenKind::kw_RootConstants))
+  if (consumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_either,
+                           TokenKind::pu_comma))
     return std::nullopt;
 
   // Check mandatory parameters where provided
@@ -204,13 +215,12 @@ std::optional<RootDescriptor> RootSignatureParser::parseRootDescriptor() {
   }
   Descriptor.setDefaultFlags(Version);
 
-  auto Params = parseRootDescriptorParams(ExpectedReg);
+  auto Params = parseRootDescriptorParams(DescriptorKind, ExpectedReg);
   if (!Params.has_value())
     return std::nullopt;
 
-  if (consumeExpectedToken(TokenKind::pu_r_paren,
-                           diag::err_hlsl_unexpected_end_of_params,
-                           /*param of=*/DescriptorKind))
+  if (consumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_either,
+                           TokenKind::pu_comma))
     return std::nullopt;
 
   // Check mandatory parameters were provided
@@ -266,9 +276,14 @@ std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      Visibility = parseShaderVisibility();
+      Visibility = parseShaderVisibility(TokenKind::kw_visibility);
       if (!Visibility.has_value())
         return std::nullopt;
+    } else {
+      consumeNextToken(); // let diagnostic be at the start of invalid token
+      reportDiag(diag::err_hlsl_invalid_token)
+          << /*parameter=*/0 << /*param of*/ TokenKind::kw_DescriptorTable;
+      return std::nullopt;
     }
 
     // ',' denotes another element, otherwise, expected to be at ')'
@@ -276,9 +291,8 @@ std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {
       break;
   }
 
-  if (consumeExpectedToken(TokenKind::pu_r_paren,
-                           diag::err_hlsl_unexpected_end_of_params,
-                           /*param of=*/TokenKind::kw_DescriptorTable))
+  if (consumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_either,
+                           TokenKind::pu_comma))
     return std::nullopt;
 
   // Fill in optional visibility
@@ -326,13 +340,12 @@ RootSignatureParser::parseDescriptorTableClause() {
   }
   Clause.setDefaultFlags(Version);
 
-  auto Params = parseDescriptorTableClauseParams(ExpectedReg);
+  auto Params = parseDescriptorTableClauseParams(ParamKind, ExpectedReg);
   if (!Params.has_value())
     return std::nullopt;
 
-  if (consumeExpectedToken(TokenKind::pu_r_paren,
-                           diag::err_hlsl_unexpected_end_of_params,
-                           /*param of=*/ParamKind))
+  if (consumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_either,
+                           TokenKind::pu_comma))
     return std::nullopt;
 
   // Check mandatory parameters were provided
@@ -373,9 +386,8 @@ std::optional<StaticSampler> RootSignatureParser::parseStaticSampler() {
   if (!Params.has_value())
     return std::nullopt;
 
-  if (consumeExpectedToken(TokenKind::pu_r_paren,
-                           diag::err_hlsl_unexpected_end_of_params,
-                           /*param of=*/TokenKind::kw_StaticSampler))
+  if (consumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_either,
+                           TokenKind::pu_comma))
     return std::nullopt;
 
   // Check mandatory parameters were provided
@@ -484,10 +496,15 @@ RootSignatureParser::parseRootConstantParams() {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto Visibility = parseShaderVisibility();
+      auto Visibility = parseShaderVisibility(TokenKind::kw_visibility);
       if (!Visibility.has_value())
         return std::nullopt;
       Params.Visibility = Visibility;
+    } else {
+      consumeNextToken(); // let diagnostic be at the start of invalid token
+      reportDiag(diag::err_hlsl_invalid_token)
+          << /*parameter=*/0 << /*param of*/ TokenKind::kw_RootConstants;
+      return std::nullopt;
     }
 
     // ',' denotes another element, otherwise, expected to be at ')'
@@ -499,7 +516,8 @@ RootSignatureParser::parseRootConstantParams() {
 }
 
 std::optional<RootSignatureParser::ParsedRootDescriptorParams>
-RootSignatureParser::parseRootDescriptorParams(TokenKind RegType) {
+RootSignatureParser::parseRootDescriptorParams(TokenKind DescKind,
+                                               TokenKind RegType) {
   assert(CurToken.TokKind == TokenKind::pu_l_paren &&
          "Expects to only be invoked starting at given token");
 
@@ -539,7 +557,7 @@ RootSignatureParser::parseRootDescriptorParams(TokenKind RegType) {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto Visibility = parseShaderVisibility();
+      auto Visibility = parseShaderVisibility(TokenKind::kw_visibility);
       if (!Visibility.has_value())
         return std::nullopt;
       Params.Visibility = Visibility;
@@ -553,10 +571,15 @@ RootSignatureParser::parseRootDescriptorParams(TokenKind RegType) {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto Flags = parseRootDescriptorFlags();
+      auto Flags = parseRootDescriptorFlags(TokenKind::kw_flags);
       if (!Flags.has_value())
         return std::nullopt;
       Params.Flags = Flags;
+    } else {
+      consumeNextToken(); // let diagnostic be at the start of invalid token
+      reportDiag(diag::err_hlsl_invalid_token)
+          << /*parameter=*/0 << /*param of*/ DescKind;
+      return std::nullopt;
     }
 
     // ',' denotes another element, otherwise, expected to be at ')'
@@ -568,7 +591,8 @@ RootSignatureParser::parseRootDescriptorParams(TokenKind RegType) {
 }
 
 std::optional<RootSignatureParser::ParsedClauseParams>
-RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
+RootSignatureParser::parseDescriptorTableClauseParams(TokenKind ClauseKind,
+                                                      TokenKind RegType) {
   assert(CurToken.TokKind == TokenKind::pu_l_paren &&
          "Expects to only be invoked starting at given token");
 
@@ -648,10 +672,15 @@ RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto Flags = parseDescriptorRangeFlags();
+      auto Flags = parseDescriptorRangeFlags(TokenKind::kw_flags);
       if (!Flags.has_value())
         return std::nullopt;
       Params.Flags = Flags;
+    } else {
+      consumeNextToken(); // let diagnostic be at the start of invalid token
+      reportDiag(diag::err_hlsl_invalid_token)
+          << /*parameter=*/0 << /*param of*/ ClauseKind;
+      return std::nullopt;
     }
 
     // ',' denotes another element, otherwise, expected to be at ')'
@@ -689,7 +718,7 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto Filter = parseSamplerFilter();
+      auto Filter = parseSamplerFilter(TokenKind::kw_filter);
       if (!Filter.has_value())
         return std::nullopt;
       Params.Filter = Filter;
@@ -703,7 +732,7 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto AddressU = parseTextureAddressMode();
+      auto AddressU = parseTextureAddressMode(TokenKind::kw_addressU);
       if (!AddressU.has_value())
         return std::nullopt;
       Params.AddressU = AddressU;
@@ -717,7 +746,7 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto AddressV = parseTextureAddressMode();
+      auto AddressV = parseTextureAddressMode(TokenKind::kw_addressV);
       if (!AddressV.has_value())
         return std::nullopt;
       Params.AddressV = AddressV;
@@ -731,7 +760,7 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto AddressW = parseTextureAddressMode();
+      auto AddressW = parseTextureAddressMode(TokenKind::kw_addressW);
       if (!AddressW.has_value())
         return std::nullopt;
       Params.AddressW = AddressW;
@@ -773,7 +802,7 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto CompFunc = parseComparisonFunc();
+      auto CompFunc = parseComparisonFunc(TokenKind::kw_comparisonFunc);
       if (!CompFunc.has_value())
         return std::nullopt;
       Params.CompFunc = CompFunc;
@@ -787,7 +816,7 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto BorderColor = parseStaticBorderColor();
+      auto BorderColor = parseStaticBorderColor(TokenKind::kw_borderColor);
       if (!BorderColor.has_value())
         return std::nullopt;
       Params.BorderColor = BorderColor;
@@ -843,10 +872,15 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (consumeExpectedToken(TokenKind::pu_equal))
         return std::nullopt;
 
-      auto Visibility = parseShaderVisibility();
+      auto Visibility = parseShaderVisibility(TokenKind::kw_visibility);
       if (!Visibility.has_value())
         return std::nullopt;
       Params.Visibility = Visibility;
+    } else {
+      consumeNextToken(); // let diagnostic be at the start of invalid token
+      reportDiag(diag::err_hlsl_invalid_token)
+          << /*parameter=*/0 << /*param of*/ TokenKind::kw_StaticSampler;
+      return std::nullopt;
     }
 
     // ',' denotes another element, otherwise, expected to be at ')'
@@ -934,7 +968,7 @@ std::optional<float> RootSignatureParser::parseFloatParam() {
 }
 
 std::optional<llvm::dxbc::ShaderVisibility>
-RootSignatureParser::parseShaderVisibility() {
+RootSignatureParser::parseShaderVisibility(TokenKind Context) {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
 
@@ -943,8 +977,12 @@ RootSignatureParser::parseShaderVisibility() {
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   };
 
-  if (!tryConsumeExpectedToken(Expected))
+  if (!tryConsumeExpectedToken(Expected)) {
+    consumeNextToken(); // consume token to point at invalid token
+    reportDiag(diag::err_hlsl_invalid_token)
+        << /*value=*/1 << /*value of*/ Context;
     return std::nullopt;
+  }
 
   switch (CurToken.TokKind) {
 #define SHADER_VISIBILITY_ENUM(NAME, LIT)                                      \
@@ -960,7 +998,7 @@ RootSignatureParser::parseShaderVisibility() {
 }
 
 std::optional<llvm::dxbc::SamplerFilter>
-RootSignatureParser::parseSamplerFilter() {
+RootSignatureParser::parseSamplerFilter(TokenKind Context) {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
 
@@ -969,8 +1007,12 @@ RootSignatureParser::parseSamplerFilter() {
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   };
 
-  if (!tryConsumeExpectedToken(Expected))
+  if (!tryConsumeExpectedToken(Expected)) {
+    consumeNextToken(); // consume token to point at invalid token
+    reportDiag(diag::err_hlsl_invalid_token)
+        << /*value=*/1 << /*value of*/ Context;
     return std::nullopt;
+  }
 
   switch (CurToken.TokKind) {
 #define FILTER_ENUM(NAME, LIT)                                                 \
@@ -986,7 +1028,7 @@ RootSignatureParser::parseSamplerFilter() {
 }
 
 std::optional<llvm::dxbc::TextureAddressMode>
-RootSignatureParser::parseTextureAddressMode() {
+RootSignatureParser::parseTextureAddressMode(TokenKind Context) {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
 
@@ -995,8 +1037,12 @@ RootSignatureParser::parseTextureAddressMode() {
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   };
 
-  if (!tryConsumeExpectedToken(Expected))
+  if (!tryConsumeExpectedToken(Expected)) {
+    consumeNextToken(); // consume token to point at invalid token
+    reportDiag(diag::err_hlsl_invalid_token)
+        << /*value=*/1 << /*value of*/ Context;
     return std::nullopt;
+  }
 
   switch (CurToken.TokKind) {
 #define TEXTURE_ADDRESS_MODE_ENUM(NAME, LIT)                                   \
@@ -1012,7 +1058,7 @@ RootSignatureParser::parseTextureAddressMode() {
 }
 
 std::optional<llvm::dxbc::ComparisonFunc>
-RootSignatureParser::parseComparisonFunc() {
+RootSignatureParser::parseComparisonFunc(TokenKind Context) {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
 
@@ -1021,8 +1067,12 @@ RootSignatureParser::parseComparisonFunc() {
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   };
 
-  if (!tryConsumeExpectedToken(Expected))
+  if (!tryConsumeExpectedToken(Expected)) {
+    consumeNextToken(); // consume token to point at invalid token
+    reportDiag(diag::err_hlsl_invalid_token)
+        << /*value=*/1 << /*value of*/ Context;
     return std::nullopt;
+  }
 
   switch (CurToken.TokKind) {
 #define COMPARISON_FUNC_ENUM(NAME, LIT)                                        \
@@ -1038,7 +1088,7 @@ RootSignatureParser::parseComparisonFunc() {
 }
 
 std::optional<llvm::dxbc::StaticBorderColor>
-RootSignatureParser::parseStaticBorderColor() {
+RootSignatureParser::parseStaticBorderColor(TokenKind Context) {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
 
@@ -1047,8 +1097,12 @@ RootSignatureParser::parseStaticBorderColor() {
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   };
 
-  if (!tryConsumeExpectedToken(Expected))
+  if (!tryConsumeExpectedToken(Expected)) {
+    consumeNextToken(); // consume token to point at invalid token
+    reportDiag(diag::err_hlsl_invalid_token)
+        << /*value=*/1 << /*value of*/ Context;
     return std::nullopt;
+  }
 
   switch (CurToken.TokKind) {
 #define STATIC_BORDER_COLOR_ENUM(NAME, LIT)                                    \
@@ -1064,7 +1118,7 @@ RootSignatureParser::parseStaticBorderColor() {
 }
 
 std::optional<llvm::dxbc::RootDescriptorFlags>
-RootSignatureParser::parseRootDescriptorFlags() {
+RootSignatureParser::parseRootDescriptorFlags(TokenKind Context) {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
 
@@ -1096,6 +1150,11 @@ RootSignatureParser::parseRootDescriptorFlags() {
       default:
         llvm_unreachable("Switch for consumed enum token was not provided");
       }
+    } else {
+      consumeNextToken(); // consume token to point at invalid token
+      reportDiag(diag::err_hlsl_invalid_token)
+          << /*value=*/1 << /*value of*/ Context;
+      return std::nullopt;
     }
   } while (tryConsumeExpectedToken(TokenKind::pu_or));
 
@@ -1103,7 +1162,7 @@ RootSignatureParser::parseRootDescriptorFlags() {
 }
 
 std::optional<llvm::dxbc::DescriptorRangeFlags>
-RootSignatureParser::parseDescriptorRangeFlags() {
+RootSignatureParser::parseDescriptorRangeFlags(TokenKind Context) {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
 
@@ -1135,6 +1194,11 @@ RootSignatureParser::parseDescriptorRangeFlags() {
       default:
         llvm_unreachable("Switch for consumed enum token was not provided");
       }
+    } else {
+      consumeNextToken(); // consume token to point at invalid token
+      reportDiag(diag::err_hlsl_invalid_token)
+          << /*value=*/1 << /*value of*/ Context;
+      return std::nullopt;
     }
   } while (tryConsumeExpectedToken(TokenKind::pu_or));
 
@@ -1282,10 +1346,11 @@ bool RootSignatureParser::consumeExpectedToken(TokenKind Expected,
   case diag::err_expected:
     DB << Expected;
     break;
-  case diag::err_hlsl_unexpected_end_of_params:
   case diag::err_expected_either:
-  case diag::err_expected_after:
     DB << Expected << Context;
+    break;
+  case diag::err_expected_after:
+    DB << Context << Expected;
     break;
   default:
     break;
