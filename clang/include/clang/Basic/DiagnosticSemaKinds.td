@@ -13485,4 +13485,10 @@ def err_amdgcn_predicate_type_needs_explicit_bool_cast
             "guarding of target dependent code, and thus should be avoided">;
 def note_amdgcn_protected_by_predicate : Note<"jump enters statement controlled"
                                               " by AMDGPU feature predicate">;
+def warn_amdgcn_unguarded_builtin :
+  Warning<"%0 might be unavailable on some AMDGPU targets">,
+  InGroup<UnguardedBuiltinUsageAMDGPU>, DefaultIgnore;
+def note_amdgcn_unguarded_builtin_silence
+  : Note<"enclose %0 in a __builtin_amdgcn_is_invocable check to silence "
+         "this warning">;
 } // end of sema component.

@@ -45,6 +45,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
@@ -16602,8 +16603,12 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
       return nullptr;
     }
 
-    if (Body && FSI->HasPotentialAvailabilityViolations)
-      DiagnoseUnguardedAvailabilityViolations(dcl);
+    if (Body) {
+      if (FSI->HasPotentialAvailabilityViolations)
+        DiagnoseUnguardedAvailabilityViolations(dcl);
+      else if (AMDGPU().HasPotentiallyUnguardedBuiltinUsage(FD))
+        AMDGPU().DiagnoseUnguardedBuiltinUsage(FD);
+    }
 
     assert(!FSI->ObjCShouldCallSuper &&
            "This should only be set for ObjC methods, which should have been "
