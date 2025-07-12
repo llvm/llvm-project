@@ -1131,6 +1131,73 @@ define <2 x i32> @test_frexp_v2f64_v2i32_only_use_exp(<2 x double> %a) nounwind 
   ret <2 x i32> %result.1
 }
 
+
+define { fp128, i32 } @test_frexp_f128_i32(fp128 %a) nounwind {
+; CHECK-LABEL: test_frexp_f128_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    add x0, sp, #12
+; CHECK-NEXT:    bl frexpl
+; CHECK-NEXT:    ldr w0, [sp, #12]
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+;
+; WINDOWS-LABEL: test_frexp_f128_i32:
+; WINDOWS:       // %bb.0:
+; WINDOWS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; WINDOWS-NEXT:    add x0, sp, #12
+; WINDOWS-NEXT:    bl frexpl
+; WINDOWS-NEXT:    ldr w0, [sp, #12]
+; WINDOWS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; WINDOWS-NEXT:    ret
+  %result = call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %a)
+  ret { fp128, i32 } %result
+}
+
+define fp128 @test_frexp_f128_i32_only_use_fract(fp128 %a) nounwind {
+; CHECK-LABEL: test_frexp_f128_i32_only_use_fract:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    add x0, sp, #12
+; CHECK-NEXT:    bl frexpl
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+;
+; WINDOWS-LABEL: test_frexp_f128_i32_only_use_fract:
+; WINDOWS:       // %bb.0:
+; WINDOWS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; WINDOWS-NEXT:    add x0, sp, #12
+; WINDOWS-NEXT:    bl frexpl
+; WINDOWS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; WINDOWS-NEXT:    ret
+  %result = call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %a)
+  %result.0 = extractvalue { fp128, i32 } %result, 0
+  ret fp128 %result.0
+}
+
+define i32 @test_frexp_f128_i32_only_use_exp(fp128 %a) nounwind {
+; CHECK-LABEL: test_frexp_f128_i32_only_use_exp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    add x0, sp, #12
+; CHECK-NEXT:    bl frexpl
+; CHECK-NEXT:    ldr w0, [sp, #12]
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+;
+; WINDOWS-LABEL: test_frexp_f128_i32_only_use_exp:
+; WINDOWS:       // %bb.0:
+; WINDOWS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; WINDOWS-NEXT:    add x0, sp, #12
+; WINDOWS-NEXT:    bl frexpl
+; WINDOWS-NEXT:    ldr w0, [sp, #12]
+; WINDOWS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; WINDOWS-NEXT:    ret
+  %result = call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %a)
+  %result.0 = extractvalue { fp128, i32 } %result, 1
+  ret i32 %result.0
+}
+
 declare { float, i32 } @llvm.frexp.f32.i32(float) #0
 declare { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float>) #0
 declare { <4 x float>, <4 x i32> } @llvm.frexp.v4f32.v4i32(<4 x float>) #0

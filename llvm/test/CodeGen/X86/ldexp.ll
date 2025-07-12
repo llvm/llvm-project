@@ -557,6 +557,57 @@ define half @ldexp_f16(half %arg0, i32 %arg1) nounwind {
   ret half %ldexp
 }
 
+define fp128 @ldexp_f128(fp128 %arg0, i32 %arg1) nounwind {
+; X64-LABEL: ldexp_f128:
+; X64:       # %bb.0:
+; X64-NEXT:    jmp ldexpl@PLT # TAILCALL
+;
+; WIN64-LABEL: ldexp_f128:
+; WIN64:       # %bb.0:
+; WIN64-NEXT:    subq $56, %rsp
+; WIN64-NEXT:    movaps (%rcx), %xmm0
+; WIN64-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN64-NEXT:    callq ldexpl
+; WIN64-NEXT:    addq $56, %rsp
+; WIN64-NEXT:    retq
+;
+; WIN32-LABEL: ldexp_f128:
+; WIN32:       # %bb.0:
+; WIN32-NEXT:    pushl %ebp
+; WIN32-NEXT:    movl %esp, %ebp
+; WIN32-NEXT:    pushl %edi
+; WIN32-NEXT:    pushl %esi
+; WIN32-NEXT:    andl $-16, %esp
+; WIN32-NEXT:    subl $16, %esp
+; WIN32-NEXT:    movl 8(%ebp), %esi
+; WIN32-NEXT:    movl %esp, %eax
+; WIN32-NEXT:    pushl 28(%ebp)
+; WIN32-NEXT:    pushl 24(%ebp)
+; WIN32-NEXT:    pushl 20(%ebp)
+; WIN32-NEXT:    pushl 16(%ebp)
+; WIN32-NEXT:    pushl 12(%ebp)
+; WIN32-NEXT:    pushl %eax
+; WIN32-NEXT:    calll _ldexpl
+; WIN32-NEXT:    addl $24, %esp
+; WIN32-NEXT:    movl (%esp), %eax
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; WIN32-NEXT:    movl %edi, 12(%esi)
+; WIN32-NEXT:    movl %edx, 8(%esi)
+; WIN32-NEXT:    movl %ecx, 4(%esi)
+; WIN32-NEXT:    movl %eax, (%esi)
+; WIN32-NEXT:    movl %esi, %eax
+; WIN32-NEXT:    leal -8(%ebp), %esp
+; WIN32-NEXT:    popl %esi
+; WIN32-NEXT:    popl %edi
+; WIN32-NEXT:    popl %ebp
+; WIN32-NEXT:    retl
+  %ldexp = call fp128 @llvm.ldexp.f128.i32(fp128 %arg0, i32 %arg1)
+  ret fp128 %ldexp
+}
+
 declare double @llvm.ldexp.f64.i32(double, i32) #0
 declare float @llvm.ldexp.f32.i32(float, i32) #0
 declare <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float>, <2 x i32>) #0
