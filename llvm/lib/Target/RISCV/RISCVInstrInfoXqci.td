@@ -1417,7 +1417,7 @@ def : PatGprNoX0GprNoX0<sshlsat, QC_SHLSAT>;
 
 /// Branches
 
-let Predicates = [HasVendorXqcibi, IsRV32], AddedComplexity = 2 in {
+let Predicates = [HasVendorXqcibi, IsRV32] in {
 def : BcciPat<SETEQ, QC_BEQI, simm5nonzero>;
 def : BcciPat<SETNE, QC_BNEI, simm5nonzero>;
 def : BcciPat<SETLT, QC_BLTI, simm5nonzero>;
@@ -1445,7 +1445,7 @@ def : SelectQCbi<SETLT, simm16nonzero, Select_GPRNoX0_Using_CC_SImm16NonZero_QC>
 def : SelectQCbi<SETGE, simm16nonzero, Select_GPRNoX0_Using_CC_SImm16NonZero_QC>;
 def : SelectQCbi<SETULT, uimm16nonzero, Select_GPRNoX0_Using_CC_UImm16NonZero_QC>;
 def : SelectQCbi<SETUGE, uimm16nonzero, Select_GPRNoX0_Using_CC_UImm16NonZero_QC>;
-} // let Predicates = [HasVendorXqcibi, IsRV32], AddedComplexity = 2
+} // let Predicates = [HasVendorXqcibi, IsRV32]
 
 let Predicates = [HasVendorXqcibm, IsRV32] in {
 def : Pat<(sext_inreg (i32 GPR:$rs1), i1), (QC_EXT GPR:$rs1, 1, 0)>;
