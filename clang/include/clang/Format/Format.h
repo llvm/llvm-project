@@ -2786,6 +2786,11 @@ struct FormatStyle {
   /// \version 3.7
   std::vector<std::string> ForEachMacros;
 
+  /// A vector of function-like macros whose invocations should be skipped by
+  /// ``RemoveParentheses``.
+  /// \version 21
+  std::vector<std::string> FunctionLikeMacros;
+
   tooling::IncludeStyle IncludeStyle;
 
   /// A vector of macros that should be interpreted as conditionals
@@ -5382,6 +5387,7 @@ struct FormatStyle {
                R.ExperimentalAutoDetectBinPacking &&
            FixNamespaceComments == R.FixNamespaceComments &&
            ForEachMacros == R.ForEachMacros &&
+           FunctionLikeMacros == R.FunctionLikeMacros &&
            IncludeStyle.IncludeBlocks == R.IncludeStyle.IncludeBlocks &&
            IncludeStyle.IncludeCategories == R.IncludeStyle.IncludeCategories &&
            IncludeStyle.IncludeIsMainRegex ==
